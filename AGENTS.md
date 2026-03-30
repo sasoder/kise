@@ -67,7 +67,7 @@ Add a `<Composition>` entry in `src/Root.tsx` that imports the new component:
 ### 3. Render to file
 
 ```bash
-bunx remotion render src/index.ts <CompositionId> out/<name>.mp4
+bunx remotion render src/index.ts <CompositionId> out/<name>.mov
 ```
 
 Output always goes to `out/`. The filename should match the composition name in lowercase/kebab-case.
@@ -77,7 +77,7 @@ Output always goes to `out/`. The filename should match the composition name in 
 After rendering, open the file so the user can see it immediately:
 
 ```bash
-open out/<name>.mp4
+open out/<name>.mov
 ```
 
 ### 5. Iterate

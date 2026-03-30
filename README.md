@@ -16,7 +16,7 @@ Describe what you want to the agent. It will:
 
 1. Create a Remotion component in `generated/components/`.
 2. Register a composition in `src/Root.tsx`.
-3. Render to MP4 and open the file for you to watch.
+3. Render to MOV and open the file for you to watch.
 4. Iterate based on your feedback until you're happy.
 
 When a prompt is broad, the project usually maps best to concise motion-graphics work.
