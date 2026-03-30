@@ -21,6 +21,20 @@ Abstract loops or purely decorative animation are better treated as opt-in unles
 
 It is normal for the project to start with no approved components in the registry and no prebuilt scenes in `generated/components/`. In that case, the first user request establishes the initial scene.
 
+## Execution bias
+
+Most requests in this repo are one-off motion graphics.
+
+For user requests that clearly describe a new animation, inspect only the minimum files needed to place and render the scene:
+
+- `src/lib/component-registry.ts`
+- `src/Root.tsx`
+- directly relevant Remotion rule files only if needed
+
+Then implement immediately.
+
+Do not inspect project-wide config such as lint, TypeScript, or unrelated source files unless blocked by a real error during implementation or render.
+
 ## File pipeline
 
 All paths below are relative to the project root.
