@@ -49,6 +49,7 @@ Write a single `.tsx` file to `generated/components/<Name>.tsx`.
 - Use Remotion's `useCurrentFrame()`, `interpolate()`, and `spring()` for animation.
 - Use Zod schemas for composition props when they have configurable parameters.
 - Default-export the component.
+- For fonts, use `@remotion/google-fonts` (preferred) or `@remotion/fonts` for local files — see `.agents/skills/remotion-best-practices/rules/fonts.md`.
 - Consult `.agents/skills/remotion-best-practices/rules/` for best practices.
 
 ### 2. Register the composition
