@@ -19,6 +19,8 @@ When a request is broad, this repo tends to work best for concise, communication
 
 Abstract loops or purely decorative animation are better treated as opt-in unless the user clearly points in that direction.
 
+Unless the user explicitly asks for a background, compositions should default to transparent and should not set a full-frame background color on `AbsoluteFill`.
+
 It is normal for the project to start with no approved components in the registry and no prebuilt scenes in `generated/components/`. In that case, the first user request establishes the initial scene.
 
 ## Execution bias
