@@ -5,11 +5,4 @@ export type ComponentEntry = {
   tags: string[];
 };
 
-export const registry: ComponentEntry[] = [
-  {
-    name: 'GeneratedScene',
-    path: 'generated/components/GeneratedScene.tsx',
-    description: 'Minimal intro/title scene with spring animation.',
-    tags: ['intro', 'title'],
-  },
-];
+export const registry: ComponentEntry[] = [];

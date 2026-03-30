@@ -1,36 +1,32 @@
-# Remotion agent prototype
+# hisa
 
-A small prototype for testing this loop:
+Agent-driven motion graphics harness built on [Remotion](https://remotion.dev).
 
-1. The model checks what components already exist.
-2. If none fit, it writes a new Remotion component.
-3. It renders a preview.
-4. The user gives feedback.
-5. If the user likes it, the component stays and becomes reusable.
+An AI agent creates, previews, and iterates on motion graphics components based on natural-language requests. Components are Remotion compositions rendered as square (1080×1080) video at 30fps.
 
-Intentionally light on safeguards — this is for testing the workflow, not production hardening.
-
-## Install
+## Setup
 
 ```bash
 bun install
 ```
 
-## Run the studio
+## Usage
 
-```bash
-bun run dev
+Describe what you want to the agent. It will:
+
+1. Create a Remotion component in `generated/components/`.
+2. Register a composition in `src/Root.tsx`.
+3. Render to MP4 and open the file for you to watch.
+4. Iterate based on your feedback until you're happy.
+
+## Project structure
+
 ```
-
-## Render
-
-```bash
-bun run render
+src/
+  index.ts                    Entry point
+  Root.tsx                    Composition definitions
+  lib/component-registry.ts  Reusable component registry
+generated/components/         Agent-created scenes
+out/                          Rendered output (gitignored)
+.agents/skills/               Remotion best-practice rules
 ```
-
-## How it works
-
-- `src/Root.tsx` registers Remotion compositions.
-- `generated/components/` holds generated scene components.
-- `src/lib/component-registry.ts` tracks what exists.
-- The agent reads the registry, creates or reuses components, and renders previews.
