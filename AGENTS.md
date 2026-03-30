@@ -13,6 +13,14 @@ You are working in a Remotion project that serves as a harness for AI agents to 
 - **Frame rate:** 30fps
 - **Default duration:** 180 frames (6 seconds) — adjust per composition as needed
 
+## Creative defaults
+
+When a request is broad, this repo tends to work best for concise, communication-first motion graphics rather than open-ended animation studies.
+
+Abstract loops or purely decorative animation are better treated as opt-in unless the user clearly points in that direction.
+
+It is normal for the project to start with no approved components in the registry and no prebuilt scenes in `generated/components/`. In that case, the first user request establishes the initial scene.
+
 ## File pipeline
 
 All paths below are relative to the project root.

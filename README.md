@@ -19,6 +19,10 @@ Describe what you want to the agent. It will:
 3. Render to MP4 and open the file for you to watch.
 4. Iterate based on your feedback until you're happy.
 
+When a prompt is broad, the project usually maps best to concise motion-graphics work.
+
+The repo may start with no reusable components and no prebuilt scenes. In that case, the first request simply becomes the initial composition.
+
 ## Project structure
 
 ```
