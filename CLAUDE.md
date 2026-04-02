@@ -29,6 +29,7 @@ Most requests in this repo are one-off motion graphics.
 
 For user requests that clearly describe a new animation, inspect only the minimum files needed to place and render the scene:
 
+- `MEMORY.md`
 - `src/lib/component-registry.ts`
 - `src/Root.tsx`
 - directly relevant Remotion rule files only if needed
@@ -36,6 +37,14 @@ For user requests that clearly describe a new animation, inspect only the minimu
 Then implement immediately.
 
 Do not inspect project-wide config such as lint, TypeScript, or unrelated source files unless blocked by a real error during implementation or render.
+
+## Session memory
+
+**Always read `MEMORY.md` at the start of every session.** It contains persistent user preferences and hard constraints that apply across all compositions.
+
+When the user states a clear, absolute imperative — something that should always or never happen (e.g. "never use the colour green", "always use Inter for body text") — append it as a single concise bullet to `MEMORY.md`. Do not rephrase at length; keep entries terse. Do not add soft preferences, one-off feedback, or context that only applies to the current composition.
+
+Keep the file lean. If a new entry contradicts an existing one, replace the old entry.
 
 ## File pipeline
 
