@@ -94,7 +94,7 @@ open out/<name>.mov
 
 ### 5. Iterate
 
-Ask the user for feedback on composition, typography, motion, and color. Edit the component file in place and re-render. Repeat until approved.
+Ask the user for feedback on composition, typography, motion, and color. Edit the component file in place and re-render. Repeat until approved. Be sure to prompt the user if they want to save the graphic to the registry.
 
 ### 6. Promote to registry (only if user approves)
 
