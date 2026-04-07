@@ -1,4 +1,4 @@
-# hisa
+# kise
 
 Agent-driven motion graphics harness built on [Remotion](https://remotion.dev).
 

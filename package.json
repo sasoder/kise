@@ -1,10 +1,9 @@
 {
-  "name": "hisa",
+  "name": "Kise",
   "version": "0.1.0",
   "description": "Agent-driven motion graphics harness built on Remotion",
   "repository": {},
-  "license": "UNLICENSED",
-  "private": true,
+  "license": "MIT",
   "dependencies": {
     "@remotion/cli": "4.0.441",
     "@remotion/media": "4.0.441",
