@@ -2,23 +2,28 @@
 
 Agent-driven motion graphics harness built on [Remotion](https://remotion.dev).
 
-Describe what you want in natural language. The agent creates a Remotion component, renders it, and opens the video for you. Iterate with feedback until it's right.
+Describe what you want in natural language. The agent creates a Remotion component, renders it, and shows you the video. Iterate with feedback until it's right.
 
-Over time, kise learns how you work. Preferred fonts, colors, and motion styles are saved to a persistent memory file (`MEMORY.md`). Compositions you approve get added to a reusable registry. The more you use it, the less you have to explain.
+Over time, kise learns how you work. Preferred fonts, colors, and motion styles are saved to a persistent memory file (`MEMORY.md`). Compositions you approve get added to a reusable registry.
+
+![kise.gif](./kise.gif)
 
 ## Setup
 
 ```bash
+git clone https://github.com/sasoder/kise.git
+cd kise
 bun install
 ```
 
 ## How it works
 
-1. **You describe** a motion graphic in plain language.
-2. **The agent builds** a Remotion component, loads the relevant best-practice rules, and renders it.
-3. **You watch and iterate.** The agent explains its creative choices and suggests improvements.
-4. **Preferences stick.** Recurring choices (fonts, palettes, easing) can be saved to memory so future sessions start closer to what you want.
-5. **Good components are reusable.** Approve a composition and it joins the registry for future use with different props.
+1. Open any agent harness you want to use (OpenCode, Codex, Cursor, Claude, etc. - they all have skills locally installed)
+2. You describe a motion graphic in plain language
+3. The agent builds a Remotion component, loads the relevant best-practice rules, and renders it
+4. The agent explains its creative choices and suggests possible improvements
+5. Recurring choices (fonts, palettes, easing) can be saved to memory so future sessions start closer to what you want
+6. Good components are reusable. Approve a composition and it joins the registry for future use
 
 ## Defaults
 
