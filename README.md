@@ -4,7 +4,7 @@ Agent-driven motion graphics harness built on [Remotion](https://remotion.dev).
 
 Describe what you want in natural language. The agent creates a Remotion component, renders it, and opens the video for you. Iterate with feedback until it's right.
 
-Over time, Kise learns how you work. Preferred fonts, colors, and motion styles are saved to a persistent memory file (`MEMORY.md`). Compositions you approve get added to a reusable registry. The more you use it, the less you have to explain.
+Over time, kise learns how you work. Preferred fonts, colors, and motion styles are saved to a persistent memory file (`MEMORY.md`). Compositions you approve get added to a reusable registry. The more you use it, the less you have to explain.
 
 ## Setup
 

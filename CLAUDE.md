@@ -1,4 +1,4 @@
-# Kise — Agent-driven motion graphics
+# kise — Agent-driven motion graphics
 
 You are working in a Remotion project that serves as a harness for AI agents to create high-quality motion graphics on behalf of users.
 
