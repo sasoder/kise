@@ -2,7 +2,9 @@
 
 Agent-driven motion graphics harness built on [Remotion](https://remotion.dev).
 
-An AI agent creates, previews, and iterates on motion graphics components based on natural-language requests. Components are Remotion compositions rendered as square (1080×1080) video at 30fps.
+Describe what you want in natural language. The agent creates a Remotion component, renders it, and opens the video for you. Iterate with feedback until it's right.
+
+Over time, Kise learns how you work. Preferred fonts, colors, and motion styles are saved to a persistent memory file (`MEMORY.md`). Compositions you approve get added to a reusable registry. The more you use it, the less you have to explain.
 
 ## Setup
 
@@ -10,18 +12,25 @@ An AI agent creates, previews, and iterates on motion graphics components based 
 bun install
 ```
 
-## Usage
+## How it works
 
-Describe what you want to the agent. It will:
+1. **You describe** a motion graphic in plain language.
+2. **The agent builds** a Remotion component, loads the relevant best-practice rules, and renders it.
+3. **You watch and iterate.** The agent explains its creative choices and suggests improvements.
+4. **Preferences stick.** Recurring choices (fonts, palettes, easing) can be saved to memory so future sessions start closer to what you want.
+5. **Good components are reusable.** Approve a composition and it joins the registry for future use with different props.
 
-1. Create a Remotion component in `generated/components/`.
-2. Register a composition in `src/Root.tsx`.
-3. Render to MOV and open the file for you to watch.
-4. Iterate based on your feedback until you're happy.
+## Defaults
 
-When a prompt is broad, the project usually maps best to concise motion-graphics work.
+| Setting    | Default        | Configurable? |
+|------------|----------------|---------------|
+| Resolution | 1080×1080      | Yes           |
+| Frame rate | 30fps          | Yes           |
+| Duration   | 180 frames (6s)| Yes           |
+| Background | Transparent    | Yes           |
+| Codec      | ProRes 4444    | Yes           |
 
-The repo may start with no reusable components and no prebuilt scenes. In that case, the first request simply becomes the initial composition.
+Override any default per composition as needed.
 
 ## Project structure
 
@@ -32,5 +41,10 @@ src/
   lib/component-registry.ts  Reusable component registry
 generated/components/         Agent-created scenes
 out/                          Rendered output (gitignored)
-.agents/skills/               Remotion best-practice rules
+MEMORY.md                     Persistent user preferences
+.agents/skills/               Remotion best-practice rules (36 rule files)
 ```
+
+## License
+
+MIT
