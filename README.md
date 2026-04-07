@@ -19,24 +19,24 @@ bun install
 
 ## How it works
 
-1. Open any agent harness you want to use (OpenCode, Codex, Cursor, Claude, etc.)
+1. Open the folder with any agent harness (OpenCode, Codex, Cursor, Claude, etc.)
 2. You describe a motion graphic in plain language
 3. The agent builds a Remotion component, loads the relevant best-practice rules, and renders it
 4. The agent explains its creative choices and suggests possible improvements
 5. Recurring choices (fonts, palettes, easing) can be saved to memory so future sessions start closer to what you want
-6. Good components are reusable. Approve a composition and it joins the registry for future use
+6. Approve a composition and it joins the registry for future use
 
 ## Defaults
 
-| Setting    | Default        | Configurable? |
-|------------|----------------|---------------|
-| Resolution | 1080×1080      | Yes           |
-| Frame rate | 30fps          | Yes           |
-| Duration   | 180 frames (6s)| Yes           |
-| Background | Transparent    | Yes           |
-| Codec      | ProRes 4444    | Yes           |
+| Setting    | Default        | 
+|------------|----------------|
+| Resolution | 1080×1080      |
+| Frame rate | 30fps          |
+| Duration   | 180 frames (6s)|
+| Background | Transparent    |
+| Codec      | ProRes 4444    |
 
-Override any default per composition as needed.
+Override any default by simply asking the agent.
 
 ## Project structure
 
