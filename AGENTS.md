@@ -86,3 +86,4 @@ Add an entry to `src/lib/component-registry.ts`. Check the registry before creat
 - Don't add components to the registry unless the user explicitly approves.
 - Don't use npm or npx. Always bun/bunx.
 - Don't ask the user to open Remotion Studio. Render and open the file directly.
+- Don't add multiple compositions to Root.tsx. Replace the existing composition with the new one when a new composition is requested.
