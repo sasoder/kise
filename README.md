@@ -2,11 +2,12 @@
 
 Agent-driven motion graphics harness built on [Remotion](https://remotion.dev).
 
-Describe what you want in natural language. The agent creates a Remotion component, renders it, and shows you the video. Iterate with feedback until it's right.
+Describe what you want in natural language. kise will create a Remotion component, render it, show you the video and iterate with you until it's right.
 
 Over time, kise learns how you work. Preferred fonts, colors, and motion styles are saved to a persistent memory file (`MEMORY.md`). Compositions you approve get added to a reusable registry.
 
 ![kise.gif](./kise.gif)
+One-shot overview of how kise works 🧑‍💻
 
 ## Setup
 
@@ -18,7 +19,7 @@ bun install
 
 ## How it works
 
-1. Open any agent harness you want to use (OpenCode, Codex, Cursor, Claude, etc. - they all have skills locally installed)
+1. Open any agent harness you want to use (OpenCode, Codex, Cursor, Claude, etc.)
 2. You describe a motion graphic in plain language
 3. The agent builds a Remotion component, loads the relevant best-practice rules, and renders it
 4. The agent explains its creative choices and suggests possible improvements
