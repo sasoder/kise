@@ -14,7 +14,7 @@ One-shot overview of how kise works 🧑‍💻
 ```bash
 git clone https://github.com/sasoder/kise.git
 cd kise
-bun install
+bun install # install deps + remotion skills
 ```
 
 ## How it works
