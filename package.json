@@ -24,6 +24,7 @@
     "typescript": "5.9.3"
   },
   "scripts": {
+    "postinstall": "bunx @remotion/cli skills add",
     "studio": "remotion studio",
     "render": "remotion render src/index.ts",
     "upgrade": "remotion upgrade",
