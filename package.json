@@ -27,6 +27,7 @@
     "postinstall": "bunx @remotion/cli skills add",
     "studio": "remotion studio",
     "render": "remotion render src/index.ts",
+    "review": "bun scripts/review.mjs",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"
   }
