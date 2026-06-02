@@ -65,20 +65,53 @@ Add a `<Composition>` entry in `src/Root.tsx`:
 />
 ```
 
-### 3. Render and show
+### 3. Render, review, show
 
 ```bash
 bunx remotion render src/index.ts <CompositionId> out/<name>.mov
+bun run review out/<name>.mov   # builds a contact sheet — then READ it
 open out/<name>.mov
 ```
 
-### 4. Iterate
+`review` samples frames across the timeline (including the first and last) and
+tiles them over a checkerboard, so transparency is unmistakable. **Read the
+generated `out/review/<name>/<name>-contact-sheet.jpg` before showing the user.**
+You can't watch the video, but you can see these frames — use them to catch what
+a render log won't:
 
-Edit the component in place and re-render. Repeat until the user is happy. Prompt them about saving to the registry.
+- empty or blank frames (especially frame 0 and the final frame)
+- content clipped at the edges or outside safe margins
+- illegible text — too small, low contrast, colliding with other elements
+- an animation that never resolves to a clean final state
 
-### 5. Promote to registry (only if user approves)
+Fix concrete issues yourself before involving the user. Only show output you'd
+be willing to put your name on.
 
-Add an entry to `src/lib/component-registry.ts`. Check the registry before creating new components — reuse with different props when possible.
+### 4. Check in with the user
+
+After showing the render, don't just wait — drive the conversation:
+
+1. **Explain** the creative choices you made (palette, type, motion, pacing) so
+   feedback can be targeted.
+2. **Ask if they're happy** or what they'd change. Offer one or two concrete
+   directions if you see room to push it further.
+3. When they're satisfied, **ask the two persistence questions explicitly**:
+   - "Want me to save any of these choices (font, palette, easing) to `MEMORY.md`
+     for next time?"
+   - "Should I promote this to the component registry so it's reusable?"
+
+Never save to memory or the registry silently — always ask first, and only act
+on a clear yes.
+
+### 5. Iterate
+
+Edit the component in place, re-render, and re-run `review`. Repeat until the
+user is happy.
+
+### 6. Promote to registry (only if user approves)
+
+Add an entry to `src/lib/component-registry.ts`. Check the registry before
+creating new components — reuse with different props when possible.
 
 ## What NOT to do
 
