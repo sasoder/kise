@@ -25,9 +25,11 @@
   },
   "scripts": {
     "postinstall": "bunx @remotion/cli skills add",
-    "studio": "remotion studio",
-    "render": "remotion render src/index.ts",
-    "upgrade": "remotion upgrade",
+    "studio": "bunx remotion studio",
+    "render": "bunx remotion render src/index.ts",
+    "review:contact-sheet": "bun scripts/contact-sheet.mjs",
+    "review:render": "bun scripts/review-render.mjs",
+    "upgrade": "bunx remotion upgrade",
     "lint": "eslint src && tsc"
   }
 }
