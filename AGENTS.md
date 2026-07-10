@@ -1,122 +1,108 @@
-# kise — Agent-driven motion graphics
+# kise — Agent-driven video and motion graphics
 
-You are working in a Remotion project that serves as a harness for AI agents to create high-quality motion graphics on behalf of users.
+Build polished Remotion videos from natural-language creative briefs.
 
 ## Tooling
 
-- **Runtime/package manager:** bun (never npm/npx — use `bun` and `bunx`)
-- **Lint:** `bun run lint`
+- Use `bun` and `bunx`, never npm or npx.
+- Run `bun run lint` before delivery.
+- Dependencies are pre-installed. Do not inspect `node_modules`, search `package.json` for packages, or install anything unless a render reports a missing import.
 
-## Defaults
+## Creative brief
 
-- **Resolution:** 1080×1080 — override per composition when the user asks
-- **Frame rate:** 30fps
-- **Duration:** 180 frames (6 seconds) — adjust as needed
-- **Background:** transparent — never set a background color on `AbsoluteFill` unless the user explicitly asks for one
+Treat the user's request as a description of the finished piece. Infer the visual style, palette, typography, background, pacing, and motion language. Ask at most one or two questions only when a missing choice would materially change the result.
 
-## Execution
+Defaults when the brief does not specify them:
 
-All dependencies are pre-installed. Never check `node_modules`, grep `package.json` for installed packages, or attempt to install packages. If a render fails due to a missing import, that's the time to install — not before.
+- Resolution: 1080×1920 vertical
+- Frame rate: 30fps
+- Duration: infer from the content; use 180 frames only when there are no timing cues
+- Canvas: design a complete opaque scene with an intentional background
+- Output: ProRes 4444 `.mov`
 
-For a new animation, read only what you need to build and render:
+Use a transparent canvas only when the user explicitly requests transparency, an alpha channel, an overlay, or a lower third.
 
-- `MEMORY.md`, `src/Root.tsx`, `src/lib/component-registry.ts`
-- Relevant skill rules from `.agents/skills/`
+## Before building
 
-Then implement immediately. Do not explore project config, lint setup, or unrelated source files unless a render error forces it.
+Read these files completely:
 
-## Working with the user
+- `MEMORY.md`
+- `src/Root.tsx`
+- `src/lib/component-registry.ts`
+- `.agents/skills/kise-creative-direction/SKILL.md`
+- `.agents/skills/remotion-best-practices/SKILL.md`
 
-Be a creative collaborator, not just an executor.
+Then load only the Remotion rule files relevant to the request. For example, text work needs `video-layout.md`, `text-animations.md`, and `google-fonts.md`; audio needs `audio.md`; transparent output needs `transparent-videos.md`.
 
-- If a request is ambiguous, ask one or two clarifying questions. When it's clear, just build it.
-- After rendering, briefly explain the creative choices you made so the user can give targeted feedback.
-- If you notice the user gravitating toward the same choices across sessions, ask if they want to save it to `MEMORY.md`.
+Implement immediately after reading them. Do not explore project configuration or unrelated files unless a concrete error requires it.
 
-## Session memory
+## Build
 
-**Read `MEMORY.md` at the start of every session.** It contains persistent preferences that apply across compositions.
+Create one component at `generated/components/<Name>.tsx`.
 
-Save to `MEMORY.md` when the user states a clear imperative ("never use green") or confirms a recurring preference you've surfaced. Always confirm before saving. Keep entries terse. Replace contradicted entries.
+- Use `AbsoluteFill` as the root and frame-driven Remotion APIs such as `useCurrentFrame()`, `interpolate()`, and `spring()`.
+- Set an opaque background on the root unless transparency was explicitly requested.
+- Export a Zod schema and create default props with `schema.parse(...)`. Register both on the composition so invalid inputs fail before rendering.
+- Load a font through `@remotion/google-fonts` at module scope and use its returned `fontFamily`, so font failures surface before rendering frames.
+- Default-export the component.
 
-## File pipeline
-
-### 1. Create the component
-
-Write a single `.tsx` file to `generated/components/<Name>.tsx`.
-
-- `AbsoluteFill` as root container; `useCurrentFrame()`, `interpolate()`, `spring()` for animation.
-- Zod schemas for configurable props. Default-export the component.
-- Use `@remotion/google-fonts` for fonts.
-- **Load the relevant skill rules before writing code.** Match the request to files in `.agents/skills/remotion-best-practices/rules/` — e.g. text work → `text-animations.md` + `fonts.md`, charts → `charts.md`, audio → `audio.md`. See `SKILL.md` for the full index.
-
-### 2. Register the composition
-
-Add a `<Composition>` entry in `src/Root.tsx`:
+Replace the existing composition in `src/Root.tsx`; never accumulate compositions. Use dimensions and duration chosen for the current brief:
 
 ```tsx
+import MyScene, { defaultProps, schema } from "../generated/components/MyScene";
+
 <Composition
   id="MyScene"
-  component={React.lazy(() => import("../generated/components/MyScene"))}
+  component={MyScene}
+  schema={schema}
+  defaultProps={defaultProps}
   durationInFrames={180}
   fps={30}
   width={1080}
-  height={1080}
-/>
+  height={1920}
+/>;
 ```
 
-### 3. Render, review, show
+## Render and review
+
+Render ProRes 4444 by default:
 
 ```bash
 bunx remotion render src/index.ts <CompositionId> out/<name>.mov
-bun run review out/<name>.mov   # builds a contact sheet — then READ it
+bun run review out/<name>.mov
 open out/<name>.mov
 ```
 
-`review` samples frames across the timeline (including the first and last) and
-tiles them over a checkerboard, so transparency is unmistakable. **Read the
-generated `out/review/<name>/<name>-contact-sheet.jpg` before showing the user.**
-You can't watch the video, but you can see these frames — use them to catch what
-a render log won't:
+`remotion.config.ts` defines the ProRes 4444 codec and alpha-capable PNG/pixel format. Do not duplicate or override those settings at the call site.
 
-- empty or blank frames (especially frame 0 and the final frame)
-- content clipped at the edges or outside safe margins
-- illegible text — too small, low contrast, colliding with other elements
-- an animation that never resolves to a clean final state
+For an explicitly transparent composition, require the alpha channel during review:
 
-Fix concrete issues yourself before involving the user. Only show output you'd
-be willing to put your name on.
+```bash
+KISE_TRANSPARENT=1 bun run review out/<name>.mov
+```
 
-### 4. Check in with the user
+Read `out/review/<name>/<name>-contact-sheet.jpg` before showing the result. Check the first and last frames, safe margins, clipping, text legibility, unintended collisions, pacing across sampled frames, and whether the final state resolves cleanly. Fix concrete issues and repeat the render and review until the output is presentable.
 
-After showing the render, don't just wait — drive the conversation:
+## Work with the user
 
-1. **Explain** the creative choices you made (palette, type, motion, pacing) so
-   feedback can be targeted.
-2. **Ask if they're happy** or what they'd change. Offer one or two concrete
-   directions if you see room to push it further.
-3. When they're satisfied, **ask the two persistence questions explicitly**:
-   - "Want me to save any of these choices (font, palette, easing) to `MEMORY.md`
-     for next time?"
+After showing the render:
+
+1. Briefly explain the palette, type, motion, and pacing choices.
+2. Ask what they would change, offering one or two concrete directions when useful.
+3. Once they approve it, ask both:
+   - "Want me to save any of these choices (font, palette, easing) to `MEMORY.md` for next time?"
    - "Should I promote this to the component registry so it's reusable?"
 
-Never save to memory or the registry silently — always ask first, and only act
-on a clear yes.
+Never update memory or the registry without a clear yes.
 
-### 5. Iterate
+## Memory and reuse
 
-Edit the component in place, re-render, and re-run `review`. Repeat until the
-user is happy.
+Save a preference to `MEMORY.md` only when the user states a clear imperative or confirms a recurring choice. Keep entries terse and replace contradicted entries.
 
-### 6. Promote to registry (only if user approves)
+Promote an approved scene by adding it to `src/lib/component-registry.ts`. Reuse a registered component with different props when it fits the brief.
 
-Add an entry to `src/lib/component-registry.ts`. Check the registry before
-creating new components — reuse with different props when possible.
+## Constraints
 
-## What NOT to do
-
-- Don't over-architect. This is a creative tool, not a framework.
-- Don't add components to the registry unless the user explicitly approves.
-- Don't use npm or npx. Always bun/bunx.
-- Don't ask the user to open Remotion Studio. Render and open the file directly.
-- Don't add multiple compositions to Root.tsx. Replace the existing composition with the new one when a new composition is requested.
+- Do not over-architect.
+- Do not ask the user to open Remotion Studio.
+- Do not preserve legacy compositions, output modes, or fallback paths.

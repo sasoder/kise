@@ -1,54 +1,53 @@
 # kise
 
-Agent-driven motion graphics harness built on [Remotion](https://remotion.dev).
+Agent-driven video and motion graphics built with [Remotion](https://remotion.dev).
 
-Describe what you want in natural language. kise will create a Remotion component, render it, show you the video and iterate with you until it's right.
-
-Over time, kise learns how you work. Preferred fonts, colors, and motion styles are saved to a persistent memory file (`MEMORY.md`). Compositions you approve get added to a reusable registry.
+Describe the finished piece in natural language. Kise interprets the creative brief, builds and renders the composition, visually reviews it, and iterates with you until it is right.
 
 ![kise.gif](./kise.gif)
-One-shot overview of how kise works 🧑‍💻
 
 ## Setup
 
 ```bash
 git clone https://github.com/sasoder/kise.git
 cd kise
-bun install # install deps + remotion skills
+bun install
 ```
 
-## How it works
+`bun install` also installs the current Remotion best-practice skill for supported coding agents. Run `bun run install:skills` to refresh it later.
 
-1. Open the folder with any agent harness (OpenCode, Codex, Cursor, Claude, etc.)
-2. You describe a motion graphic in plain language
-3. The agent builds a Remotion component, loads the relevant best-practice rules, and renders it
-4. The agent explains its creative choices and suggests possible improvements
-5. Recurring choices (fonts, palettes, easing) can be saved to memory so future sessions start closer to what you want
-6. Approve a composition and it joins the registry for future use
+## Use
+
+1. Open the folder with a coding agent (Codex, Claude Code, Cursor etc.).
+2. Describe the video you want, including only the constraints you care about (transparency, font, colors, etc.)
+3. Kise chooses the remaining creative direction, builds the Remotion composition, renders a ProRes MOV, and checks sampled frames for visual problems.
+4. Refine it conversationally.
+5. Save recurring preferences or promote an approved composition for reuse when Kise asks.
 
 ## Defaults
 
-| Setting    | Default        | 
-|------------|----------------|
-| Resolution | 1080×1080      |
-| Frame rate | 30fps          |
-| Duration   | 180 frames (6s)|
-| Background | Transparent    |
-| Codec      | ProRes 4444    |
+| Setting    | Default                                         |
+| ---------- | ----------------------------------------------- |
+| Resolution | 1080×1920 vertical                              |
+| Frame rate | 30fps                                           |
+| Duration   | Inferred from the brief; 6s without timing cues |
+| Canvas     | Complete opaque scene                           |
+| Output     | ProRes 4444 MOV                                 |
 
-Override any default by simply asking the agent.
+Ask for a transparent background, alpha channel, overlay, or lower third when you need compositing output.
 
 ## Project structure
 
-```
+```text
 src/
   index.ts                    Entry point
-  Root.tsx                    Composition definitions
-  lib/component-registry.ts  Reusable component registry
+  Root.tsx                    Current composition
+  lib/component-registry.ts  Approved reusable components
 generated/components/         Agent-created scenes
-out/                          Rendered output (gitignored)
-MEMORY.md                     Persistent user preferences
-.agents/skills/               Remotion best-practice rules (36 rule files)
+.agents/skills/               Kise and installed Remotion guidance
+scripts/review.mjs             Render contact-sheet review
+out/                           Rendered output (gitignored)
+MEMORY.md                     Persistent creative preferences
 ```
 
 ## License

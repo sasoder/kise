@@ -2,14 +2,15 @@
 // Build a contact sheet from a rendered video so the agent can SEE its output.
 //
 // - Pulls frames straight from the .mov (no re-rendering of stills).
-// - Composites over a checkerboard so transparency is unmistakable — an empty
-//   frame looks empty, not black.
+// - Composites over a checkerboard so alpha is visible when present and an
+//   empty frame never looks black by accident.
 // - Samples evenly across the timeline, always including the first and last
 //   frame, with the frame number burned into each tile.
 //
 // Usage:
 //   bun scripts/review.mjs out/<name>.mov [--frames 9]
 //   bun scripts/review.mjs --video out/<name>.mov [--frames 9]
+//   KISE_TRANSPARENT=1 bun scripts/review.mjs out/<name>.mov
 //
 // Output: out/review/<name>/<name>-contact-sheet.jpg  (Read this image)
 
@@ -84,6 +85,12 @@ const totalFrames =
   Number.parseInt(vstream.nb_frames, 10) || Math.max(1, Math.round(duration * fps));
 const lastFrame = totalFrames - 1;
 const hasAlpha = /^(yuva|rgba|argb|bgra|abgr|ya)/.test(pixFmt);
+const expectsAlpha = process.env.KISE_TRANSPARENT === "1";
+
+if (expectsAlpha && !hasAlpha) {
+  console.error(`Transparent render has no alpha channel (pixel format: ${pixFmt}).`);
+  process.exit(1);
+}
 
 // Evenly spaced frame indices, always including first + last, deduped.
 const indices = [
@@ -135,13 +142,12 @@ run("ffmpeg", [
 
 // --- Report -----------------------------------------------------------------
 const bytes = (await stat(sheetPath)).size;
-const transparentBg = process.env.KISE_BG !== "opaque"; // default expectation
 console.log(
   [
     `Contact sheet: ${sheetPath}  (${(bytes / 1024).toFixed(0)} KB)`,
     `Source:        ${video}`,
     `Format:        ${width}x${height}  ${duration.toFixed(2)}s  ${fps}fps  ${totalFrames} frames`,
-    `Pixel format:  ${pixFmt}${hasAlpha ? "  (has alpha)" : transparentBg ? "  ⚠ NO alpha channel — transparency may be lost" : ""}`,
+    `Pixel format:  ${pixFmt}${hasAlpha ? "  (has alpha)" : ""}`,
     `Sampled:       ${indices.map((f) => `f${f}`).join(", ")}`,
     canLabel
       ? "Layout:        frame number burned into each tile (top-left)."

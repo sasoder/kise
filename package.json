@@ -24,7 +24,8 @@
     "typescript": "5.9.3"
   },
   "scripts": {
-    "postinstall": "bunx @remotion/cli skills add",
+    "postinstall": "bun run install:skills",
+    "install:skills": "bunx skills@1.5.15 add remotion-dev/skills --skill remotion-best-practices --agent codex --agent claude-code --agent cursor --agent opencode --agent gemini-cli --yes",
     "studio": "remotion studio",
     "render": "remotion render src/index.ts",
     "review": "bun scripts/review.mjs",

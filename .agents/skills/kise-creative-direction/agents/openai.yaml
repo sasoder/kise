@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kise Creative Direction"
+  short_description: "Turn broad prompts into polished motion briefs"
+  default_prompt: "Use $kise-creative-direction to turn my idea into a polished short."
