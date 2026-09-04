@@ -20,7 +20,7 @@ Defaults when the brief does not specify them:
 - Canvas: design a complete opaque scene with an intentional background
 - Output: ProRes 4444 `.mov`
 
-Use a transparent canvas only when the user explicitly requests transparency, an alpha channel, an overlay, or a lower third.
+Use a transparent canvas when the user requests transparency, an alpha channel, an overlay, or a lower third, or when the requested approved style in `MEMORY.md` specifies it. Explicit brief constraints and applicable approved styles override defaults.
 
 ## Before building
 
@@ -32,18 +32,21 @@ Read these files completely:
 - `.agents/skills/kise-creative-direction/SKILL.md`
 - `.agents/skills/remotion-best-practices/SKILL.md`
 
-Then load only the Remotion rule files relevant to the request. For example, text work needs `video-layout.md`, `text-animations.md`, and `google-fonts.md`; audio needs `audio.md`; transparent output needs `transparent-videos.md`.
+Follow the installed Remotion skill router and load only references relevant to the request. Its file layout can change; do not assume old rule filenames exist.
 
-Implement immediately after reading them. Do not explore project configuration or unrelated files unless a concrete error requires it.
+For video creation, implement after reading them and choosing the visual language and named beats described in the creative-direction skill. Keep those decisions beside the scene, not in a separate planning system. Do not explore unrelated configuration. For harness maintenance, inspect and change the relevant tooling without replacing the current composition.
+
+Check `git status` before edits. Preserve unrelated work; use an isolated worktree for a harness PR when the current checkout contains unfinished scenes.
 
 ## Build
 
 Create one component at `generated/components/<Name>.tsx`.
 
 - Use `AbsoluteFill` as the root and frame-driven Remotion APIs such as `useCurrentFrame()`, `interpolate()`, and `spring()`.
-- Set an opaque background on the root unless transparency was explicitly requested.
+- Set the root background according to the brief or applicable approved style; otherwise use an opaque background.
 - Export a Zod schema and create default props with `schema.parse(...)`. Register both on the composition so invalid inputs fail before rendering.
-- Load a font through `@remotion/google-fonts` at module scope and use its returned `fontFamily`, so font failures surface before rendering frames.
+- When using text, load its font at module scope and use the returned `fontFamily`, so font failures surface before rendering frames. Use `@remotion/google-fonts`, or the approved local font when the brief/style supplies one. A text-free scene needs no font import.
+- Keep visual tokens and named beats in small objects. Related scenes share their style/motion constants; geometry stays local. Drive coupled events from the same progress value.
 - Default-export the component.
 
 Replace the existing composition in `src/Root.tsx`; never accumulate compositions. Use dimensions and duration chosen for the current brief:
@@ -69,8 +72,8 @@ Render ProRes 4444 by default:
 
 ```bash
 bunx remotion render src/index.ts <CompositionId> out/<name>.mov
-bun run review out/<name>.mov
-open out/<name>.mov
+bun run review out/<name>.mov --preview
+open out/review/<name>/<name>-preview.mp4
 ```
 
 `remotion.config.ts` defines the ProRes 4444 codec and alpha-capable PNG/pixel format. Do not duplicate or override those settings at the call site.
@@ -78,10 +81,12 @@ open out/<name>.mov
 For an explicitly transparent composition, require the alpha channel during review:
 
 ```bash
-KISE_TRANSPARENT=1 bun run review out/<name>.mov
+KISE_TRANSPARENT=1 bun run review out/<name>.mov --background dark --preview
 ```
 
-Read `out/review/<name>/<name>-contact-sheet.jpg` before showing the result. Check the first and last frames, safe margins, clipping, text legibility, unintended collisions, pacing across sampled frames, and whether the final state resolves cleanly. Fix concrete issues and repeat the render and review until the output is presentable.
+Read `out/review/<name>/<name>-contact-sheet.jpg` and watch the preview at normal speed before showing the result. Pass important named beat frames with `--at 24,60,105` (use actual scene frames); review includes each beat and its neighbours as well as evenly spaced samples. Use `--background light` or `--background '#141414'` to judge overlays on their intended backing; the default checkerboard helps inspect alpha edges. The preview is a review copy; deliver the original ProRes master.
+
+Check meaning and staging first, then continuity and rhythm, then surface polish as described in the creative-direction skill. For loops, watch the seam across repeated playback; for related scenes, compare the outgoing and incoming poses. Fix concrete issues and repeat render/review. If playback cannot be inspected, say so; sampled frames cannot prove smooth motion. The JSON review report records technical evidence, not creative approval.
 
 ## Work with the user
 
