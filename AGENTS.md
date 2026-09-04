@@ -90,10 +90,14 @@ passes review, commit it and push — do not batch several scenes into one commi
 at the end of a session, and do not leave generated work sitting uncommitted.
 
 ```bash
-git add generated/ public/ src/ scripts/
+git add -A
 git commit -m "Add <SceneName>: <one-line description>"
 git push
 ```
+
+`git add -A` is safe here: `node_modules`, `out`, `.claude/` and the installed
+skills are all gitignored. It also picks up `MEMORY.md` and the component
+registry, which a narrower `git add` would silently leave behind.
 
 Work stays on a single branch, used as a folder. Do not create branches or
 worktrees for individual scenes: unpushed work in a side worktree is invisible
