@@ -6,6 +6,7 @@
   "license": "MIT",
   "dependencies": {
     "@remotion/cli": "4.0.441",
+    "@remotion/fonts": "4.0.441",
     "@remotion/google-fonts": "4.0.441",
     "@remotion/media": "4.0.441",
     "@remotion/three": "4.0.441",
@@ -19,13 +20,17 @@
     "@remotion/eslint-config-flat": "4.0.441",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
+    "d3-geo": "^3.1.1",
     "eslint": "9.19.0",
     "prettier": "3.8.1",
-    "typescript": "5.9.3"
+    "topojson-client": "^3.1.0",
+    "typescript": "5.9.3",
+    "world-atlas": "^2.0.2"
   },
   "scripts": {
     "postinstall": "bun run install:skills",
     "install:skills": "bunx skills@1.5.15 add remotion-dev/skills --skill remotion-best-practices --agent codex --agent claude-code --agent cursor --agent opencode --agent gemini-cli --yes",
+    "build:map": "bun scripts/build-europe-map.mjs",
     "studio": "remotion studio",
     "render": "remotion render src/index.ts",
     "review": "bun scripts/review.mjs",
