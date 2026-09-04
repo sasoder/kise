@@ -35,4 +35,20 @@ export const registry: ComponentEntry[] = [
       "A funnel of counts: many agents lift out of the crowd into a band, a rare few rise into a locked row, an empty dashed slot draws under the human, a white check sweeps every case and finds none. Grid background, 24fps.",
     tags: ["dwarkesh", "grid", "crowd", "tiers", "human", "24fps"],
   },
+  {
+    name: "NameTag",
+    path: "generated/components/NameTag.tsx",
+    description:
+      "Core memory podcast style name-tag lower third. Transparent 1080x1920 overlay, bottom-left. A black bar (capped at 50% opacity) slides up and fades in while the Name (Barlow 800) over Job (Barlow 700) text enters at the same time with the 'core memory' channel-split entrance (orange/magenta/indigo/periwinkle RGB split rising from below and converging to a crisp white core). Text uses proper capitalization and a subtle sharp black offset shadow for readability. Props: name, job. Reuse this for any core-memory-style name tag by swapping props.",
+    tags: [
+      "name-tag",
+      "lower-third",
+      "core-memory-podcast-style",
+      "channel-split",
+      "overlay",
+      "transparent",
+      "barlow",
+      "caption",
+    ],
+  },
 ];

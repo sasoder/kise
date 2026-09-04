@@ -1,5 +1,19 @@
 # Memory
 
+## Creative direction (North Star)
+
+For transcript graphics, use somewhat abstract, visually meaningful metaphors that
+complement and elevate the voiceover. Avoid text by default and avoid illustrating each
+spoken phrase literally.
+
+Make the underlying relationship apparent through motion and physical cause and effect;
+viewers should not have to decode arbitrary shapes. Visual consistency must preserve
+meaning. Keep corner treatment, visual weight, spacing, and motion coherent across the
+scene.
+
+User feedback on the Dario opening, 2026-09-05: free-floating modules lost the message;
+the labelled graph and UI restated the sentence too literally.
+
 ## Animated icons from static PNGs
 
 Whenever the user supplies static icons (black line art or solid glyphs, transparent
