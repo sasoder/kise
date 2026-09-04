@@ -83,6 +83,27 @@ KISE_TRANSPARENT=1 bun run review out/<name>.mov
 
 Read `out/review/<name>/<name>-contact-sheet.jpg` before showing the result. Check the first and last frames, safe margins, clipping, text legibility, unintended collisions, pacing across sampled frames, and whether the final state resolves cleanly. Fix concrete issues and repeat the render and review until the output is presentable.
 
+## Commit and push
+
+Required after every animation you generate. As soon as a scene renders and
+passes review, commit it and push — do not batch several scenes into one commit
+at the end of a session, and do not leave generated work sitting uncommitted.
+
+```bash
+git add generated/ public/ src/ scripts/
+git commit -m "Add <SceneName>: <one-line description>"
+git push
+```
+
+Work stays on a single branch, used as a folder. Do not create branches or
+worktrees for individual scenes: unpushed work in a side worktree is invisible
+in the branch list and is lost the moment that directory is cleaned up. If you
+are already on a side branch, push it to the same place rather than opening
+another.
+
+Commit the scene file and any assets it references together, so a fresh
+checkout renders it without missing `staticFile` targets.
+
 ## Work with the user
 
 After showing the render:
