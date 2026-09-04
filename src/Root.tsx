@@ -1,19 +1,19 @@
 import {Composition} from 'remotion';
-import NicheProductsDoingBetterV2, {
+import ChangingUnderYou, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NicheProductsDoingBetterV2';
+} from '../generated/components/ChangingUnderYou';
 
-// tobi-more-businesses-than-any-government-policy — V2 sleek pass.
+// dario - always the first day — "the technology is changing under you".
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:25.760 -> 0:30.440 */}
+      {/* 0:08.080 -> 0:12.419 */}
       <Composition
-        id="NicheProductsDoingBetterV2"
-        component={NicheProductsDoingBetterV2}
+        id="ChangingUnderYou"
+        component={ChangingUnderYou}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}

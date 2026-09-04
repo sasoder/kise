@@ -1,0 +1,137 @@
+{
+  "charts": [
+    {
+      "label": "mat",
+      "inFrame": 60,
+      "outFrame": 815,
+      "items": [
+        {
+          "label": "macka",
+          "image": "real_macka.png",
+          "aspect": 1.805,
+          "ticks": [
+            83,
+            158,
+            193,
+            370
+          ],
+          "scale": 1,
+          "nudgeY": 0,
+          "numberNudgeY": 0
+        },
+        {
+          "label": "kvarg",
+          "image": "real_kvarg.png",
+          "aspect": 1.033,
+          "ticks": [
+            217
+          ],
+          "scale": 1,
+          "nudgeY": 0,
+          "numberNudgeY": 0
+        },
+        {
+          "label": "agg",
+          "image": "03_agg.png",
+          "aspect": 0.985,
+          "ticks": [
+            275
+          ],
+          "scale": 1,
+          "nudgeY": 0,
+          "numberNudgeY": 0
+        },
+        {
+          "label": "hamburgare",
+          "image": "04_hamburgare.png",
+          "aspect": 1.185,
+          "ticks": [
+            637
+          ],
+          "scale": 1,
+          "nudgeY": 0,
+          "numberNudgeY": 0
+        },
+        {
+          "label": "yoghurt",
+          "image": "real_yoghurt.png",
+          "aspect": 1.06,
+          "ticks": [
+            705
+          ],
+          "scale": 1,
+          "nudgeY": 0,
+          "numberNudgeY": 0
+        }
+      ]
+    },
+    {
+      "label": "dryck",
+      "inFrame": 820,
+      "outFrame": 1200,
+      "items": [
+        {
+          "label": "juice",
+          "image": "real_juice.png",
+          "aspect": 0.352,
+          "ticks": [
+            866,
+            976
+          ],
+          "scale": 1,
+          "nudgeY": 0,
+          "numberNudgeY": -60
+        },
+        {
+          "label": "mjolk",
+          "image": "real_mjolk.png",
+          "aspect": 0.453,
+          "ticks": [
+            877
+          ],
+          "scale": 1,
+          "nudgeY": 0,
+          "numberNudgeY": 40
+        },
+        {
+          "label": "vatten",
+          "image": "real_vatten.png",
+          "aspect": 0.287,
+          "ticks": [
+            928
+          ],
+          "scale": 1,
+          "nudgeY": 0,
+          "numberNudgeY": 0
+        },
+        {
+          "label": "kaffe",
+          "image": "real_kaffe.png",
+          "aspect": 0.772,
+          "ticks": [
+            946,
+            1040
+          ],
+          "scale": 1,
+          "nudgeY": 0,
+          "numberNudgeY": -25
+        },
+        {
+          "label": "oboy",
+          "image": "oboy.png",
+          "aspect": 0.663,
+          "ticks": [
+            1114
+          ],
+          "scale": 1.05,
+          "nudgeY": 0,
+          "numberNudgeY": 30
+        }
+      ]
+    }
+  ],
+  "snapshot": null,
+  "barColor": "#FFCD00",
+  "numberColor": "#FFFFFF",
+  "numberSize": 96
+}
