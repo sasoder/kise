@@ -9,3 +9,6 @@ out
 # Installed by `bun run install:skills`; Kise's own skills remain tracked.
 .agents/skills/remotion-best-practices
 skills-lock.json
+
+# Agent scratch: worktrees (multi-GB node_modules) and the symlinked skills dir.
+.claude/
