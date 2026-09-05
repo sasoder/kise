@@ -85,8 +85,8 @@ type Crowd = {
   ring: { cy: number; rx: number; ry: number };
 };
 
-const A: Crowd = { x: X0 - 500, cols: 7, rows: 3, front: 5, back: 4, ring: { cy: 1388, rx: 213, ry: 122 } };
-const B: Crowd = { x: X0 - 150, cols: 5, rows: 7, front: 3, back: 2, ring: { cy: 1304, rx: 167, ry: 205 } };
+const A: Crowd = { x: X0 - 500, cols: 7, rows: 3, front: 5, back: 4, ring: { cy: 1382, rx: 213, ry: 118 } };
+const B: Crowd = { x: X0 - 150, cols: 5, rows: 7, front: 3, back: 2, ring: { cy: 1300, rx: 167, ry: 200 } };
 
 const heapHalf = (c: Crowd) => ((c.cols - 1) * COL_STEP) / 2 + DOT_R;
 const heapTop = (c: Crowd) => FLOOR_Y - c.rows * ROW_STEP;
@@ -473,7 +473,8 @@ const BestForecasterInKansas: React.FC<Props> = ({
                   strokeDasharray={1000}
                   strokeDashoffset={1000 * (1 - drawn)}
                 />
-                {!onGuy ? <circle cx={tip.x} cy={tip.y} r={9} fill={ink} opacity={0.95} /> : null}
+                {/* The tip shows only while the thread is travelling; on a hold the ring takes over. */}
+                {!onGuy && !onA && !onB ? <circle cx={tip.x} cy={tip.y} r={9} fill={ink} opacity={0.95} /> : null}
               </>
             ) : null}
 
