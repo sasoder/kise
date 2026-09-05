@@ -110,16 +110,25 @@ const PROD_W = 6 * G;
 const IGNITE = 146;
 const FRONT_T = 54;
 const FRONT_MAX = 1500;
-const FRONT_EDGE = 90;
+// How wide the transitions are, in world units — not frames. The front peaks
+// at about 55 units a frame, so a 26-unit ramp turned every person on inside
+// half a frame: three hundred hard pops travelling in a wave, which reads as
+// a strobe rather than as something spreading. These are sized so a person
+// takes three or four frames to come up and the bright edge is a band you can
+// see rather than a line that flicks past.
+const FRONT_RAMP = 180;
+const FRONT_EDGE = 190;
 
 const ez = (e: (t: number) => number, x: number) => e(clamp01(x));
 
-// Rise, hold, decay. Everything an attempt does happens inside this.
+// Rise, hold, decay. Eased at both ends: straight ramps kink where they meet
+// the hold, and with six of these going off in three seconds the kinks are
+// what the eye reads as roughness.
 const life = (age: number) => {
   if (age < 0) return 0;
-  if (age < 4) return age / 4;
-  if (age < 10) return 1;
-  return clamp01(1 - (age - 10) / 14);
+  if (age < 5) return ez(GLIDE, age / 5);
+  if (age < 11) return 1;
+  return 1 - ez(GLIDE, (age - 11) / 15);
 };
 
 export const schema = z.object({
@@ -192,17 +201,29 @@ const CatchesOn: React.FC<Props> = ({
 }) => {
   const frame = useCurrentFrame();
 
-  // Four movements, not one. It drifts around the field while things are
-  // being tried and none of them works — a coarse authored lean toward where
-  // the action is, damped, never following an attempt. It gives up and settles
-  // when he says "because a". It pushes in hard on the model, which is the
-  // only amber in the piece and the only thing that turns out to matter. Then
-  // it rides the front out, from 1.46 to 0.46 — a bigger reveal than the shot
-  // has earned at any earlier point, because the crowd's real size is the
-  // payoff and it is withheld until something reaches them.
-  const CAM_F = [0, 26, 50, 69, 103, 130, 146, 176, 200, DURATION];
-  const CAM_K = [1.22, 1.26, 1.22, 1.16, 1.26, 1.46, 1.42, 0.86, 0.55, 0.52];
-  const CAM_CY = [1352, 1469, 1372, 1348, 1399, 1386, 1388, 1445, 1527, 1540];
+  // Three movements on seven keys. Earlier versions leaned toward each
+  // attempt in turn, which put four reversals into the first seventy frames —
+  // and a damped follower changing direction every twenty frames is not a
+  // camera hand, it is a wobble. So act one is now one slow widening drift in
+  // a single direction while nothing works. Then one push in to 1.46 on the
+  // model, which is the only amber in the piece and the only thing that turns
+  // out to matter. Then one long accelerating pull out to 0.52, its rate
+  // rising once at f172 to ride the front — a bigger reveal than the shot has
+  // earned at any earlier point, because the crowd's real size is the payoff
+  // and it is withheld until something reaches them.
+  // Both moves are tapered at both ends. A key track that simply stops when it
+  // arrives makes the follower decelerate hard over its whole settle, which is
+  // a slam, not a hand: the first cut of this peaked at 0.51 %/frame of zoom
+  // acceleration going into the resting frame. Ramping the rate in and then
+  // stepping it down 1.7 / 1.25 / 0.67 / 0.3 per cent a frame on the way out
+  // takes that to 0.14 and the pan from 4.5 to 1.8 px/frame squared.
+  const CAM_F = [0, 95, 112, 134, 150, 156, 162, 180, 196, 208, 220, DURATION];
+  const CAM_K = [
+    1.24, 1.16, 1.26, 1.44, 1.46, 1.43, 1.36, 1.05, 0.78, 0.63, 0.55, 0.52,
+  ];
+  const CAM_CY = [
+    1370, 1420, 1399, 1387, 1386, 1387, 1392, 1419, 1460, 1498, 1527, 1540,
+  ];
   const { cy, k } = React.useMemo(
     () => runCamera(frame, CAM_F, CAM_K, CAM_CY),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -294,14 +315,14 @@ const CatchesOn: React.FC<Props> = ({
 
               // And whether the one that caught has reached them yet.
               const d0 = Math.hypot(px - X0, py - Y0);
-              const adopt = front > 0 ? clamp01((front - d0) / 26) : 0;
+              const adopt = front > 0 ? ez(GLIDE, (front - d0) / FRONT_RAMP) : 0;
               const edge =
                 front > 0 && front < FRONT_MAX
                   ? clamp01(1 - Math.abs(front - d0) / FRONT_EDGE)
                   : 0;
 
               const s = Math.max(adopt, touched);
-              const r = DOT_R * (0.75 + hash(i * 11 + 3) * 0.5) * (1 + 0.28 * s + 0.4 * edge);
+              const r = DOT_R * (0.75 + hash(i * 11 + 3) * 0.5) * (1 + 0.28 * s + 0.3 * edge);
               return (
                 <circle
                   key={`d-${i}`}
@@ -309,7 +330,7 @@ const CatchesOn: React.FC<Props> = ({
                   cy={y}
                   r={r}
                   fill={ink}
-                  opacity={Math.min(1, dotDim + (dotLit - dotDim) * s + 0.3 * edge)}
+                  opacity={Math.min(1, dotDim + (dotLit - dotDim) * s + 0.22 * edge)}
                 />
               );
             })}
