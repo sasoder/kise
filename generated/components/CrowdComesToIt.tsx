@@ -69,13 +69,39 @@ const SCATTER = 0.42;
 const HALF_X = ((COLS - 1) / 2) * STEP_X;
 const HALF_Y = ((ROWS - 1) / 2) * STEP_Y;
 
+// Nothing is placed off the grid. A block stands in a cell of the crowd's own
+// grid and the person who would have stood there is not there — six cells for
+// the attempts, and two at the middle for the model and the product above it.
+// Clearance follows from that rather than from luck: a neighbour can lean a
+// scatter's worth toward a cell, which leaves 96 across and 91 down of free
+// space around its centre, and the widest block is 66 by 22.
+type Cell = { c: number; r: number };
+const MODEL_CELLS: Cell[] = [
+  { c: 0, r: 0 },
+  { c: 0, r: -1 },
+];
+const ATTEMPT_CELLS: Cell[] = [
+  { c: -1, r: -1 },
+  { c: 1, r: 1 },
+  { c: -1, r: 2 },
+  { c: 1, r: -2 },
+  { c: -2, r: 0 },
+  { c: 0, r: -2 },
+];
+const cellKey = (c: number, r: number) => `${c},${r}`;
+const TAKEN = new Set(
+  [...MODEL_CELLS, ...ATTEMPT_CELLS].map((x) => cellKey(x.c, x.r)),
+);
+
 // Where they end up.
 // Derived from the widest figure rather than picked, so the no-overlap
 // guarantee is in the code and not in a comment: a full ring's arc spacing is
 // 2piR/floor(2piR/RING_S) >= RING_S, the radial gap between rings is RING_S,
 // and squashing y only ever increases separation.
 const RING_S = Math.round(SIZE_MAX * 1.14);
-const RING_R0 = 132; // clears the product and the model at the centre
+// Far enough out that no ring-0 figure, at any bearing, touches the model or
+// the product standing on it.
+const RING_R0 = 210;
 const Y_SQUASH = 1.25; // scaling y only ever increases separation
 
 type Person = {
@@ -91,12 +117,11 @@ type Person = {
 const PEOPLE: Person[] = (() => {
   const raw: { hx: number; hy: number; i: number }[] = [];
   for (let i = 0; i < COLS * ROWS; i++) {
-    const ox =
-      ((i % COLS) - (COLS - 1) / 2) * STEP_X +
-      (hash(i * 3 + 1) - 0.5) * STEP_X * SCATTER;
-    const oy =
-      (Math.floor(i / COLS) - (ROWS - 1) / 2) * STEP_Y +
-      (hash(i * 7 + 5) - 0.5) * STEP_Y * SCATTER;
+    const c = (i % COLS) - (COLS - 1) / 2;
+    const r = Math.floor(i / COLS) - (ROWS - 1) / 2;
+    if (TAKEN.has(cellKey(c, r))) continue;
+    const ox = c * STEP_X + (hash(i * 3 + 1) - 0.5) * STEP_X * SCATTER;
+    const oy = r * STEP_Y + (hash(i * 7 + 5) - 0.5) * STEP_Y * SCATTER;
     if (Math.hypot(ox / HALF_X, oy / HALF_Y) > 1.02 + (hash(i * 17 + 3) - 0.5) * 0.22)
       continue;
     raw.push({ hx: ox, hy: oy, i });
@@ -158,16 +183,20 @@ const PEOPLE: Person[] = (() => {
 const N = PEOPLE.length;
 
 type Attempt = { x: number; y: number; at: number; reach: number; w: number };
-const ATTEMPTS: Attempt[] = [
-  { x: -150, y: -130, at: -8, reach: 265, w: 5 * G },
-  { x: 120, y: 110, at: 8, reach: 280, w: 4 * G },
-  { x: -95, y: 250, at: 20, reach: 258, w: 5 * G },
-  { x: 130, y: -230, at: 32, reach: 292, w: 6 * G },
-  { x: -140, y: 70, at: 44, reach: 276, w: 4 * G },
-  // "catch on" — the near miss, and the only one allowed to reach the whole
-  // frame. It comes to nothing all the same.
-  { x: 0, y: -190, at: 55, reach: 520, w: 5 * G },
-];
+const ATTEMPTS: Attempt[] = ATTEMPT_CELLS.map((cell, i) => ({
+  x: cell.c * STEP_X,
+  y: cell.r * STEP_Y,
+  ...[
+    { at: -8, reach: 265, w: 5 * G },
+    { at: 8, reach: 280, w: 4 * G },
+    { at: 20, reach: 258, w: 5 * G },
+    { at: 32, reach: 292, w: 6 * G },
+    { at: 44, reach: 276, w: 4 * G },
+    // "catch on" — the near miss, and the only one that reaches the whole
+    // frame. It comes to nothing all the same.
+    { at: 55, reach: 520, w: 5 * G },
+  ][i],
+}));
 const A_R0 = 70;
 const A_GROW = 16;
 const A_H = 2 * G;
@@ -297,6 +326,11 @@ const CrowdComesToIt: React.FC<Props> = ({
   const prodFilled = frame >= PROD_CLICK;
   const prodClick = clamp01(1 - (frame - PROD_CLICK) / FLASH);
 
+  // The record of what was tried clears as the model arrives — partly because
+  // the past attempts stop mattering, and partly so that nobody walks over an
+  // outline on their way in.
+  const spentFade = 1 - ez(GLIDE, (frame - MODEL_AT) / 22);
+
   const live = ATTEMPTS.map((a) => {
     const age = frame - a.at;
     return { a, l: life(age), r: A_R0 + a.reach * ez(GLIDE, age / A_GROW) };
@@ -418,7 +452,7 @@ const CrowdComesToIt: React.FC<Props> = ({
                   fillOpacity={0.92 * l}
                   stroke={ink}
                   strokeWidth={3}
-                  strokeOpacity={spentOpacity * (1 - l)}
+                  strokeOpacity={spentOpacity * (1 - l) * spentFade}
                 />
               );
             })}
