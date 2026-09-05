@@ -37,7 +37,11 @@ export const DURATION = 129;
 // two encodings that would then have to be kept in agreement.
 //
 // Countable, on one grid: nine plates, eight folded garments, and every small
-// job in the field is one, two or three of its own unit. The rule sits 240
+// job in the field is one, two or three of its own unit. Every one of them is
+// the same object at a different size — one corner treatment (a full pill at
+// whatever height it is), one width per tower, one breathing rule — so the
+// field reads as one material and the only things that vary are the things the
+// line is actually about: how many, and how tall. The rule sits 240
 // above the ground — clear of the tallest small job, a third of the way up the
 // shorter tower — and runs off both edges, because the constraint applies to
 // everything including what the frame cannot show.
@@ -45,14 +49,17 @@ export const DURATION = 129;
 const GY = 1500; // the ground
 const SLAB_W = 240;
 const SLAB_H = 66;
-const PITCH = 100; // slab plus 34 of air, so a stack stays countable
+// One gap, everywhere. A tower slab and a field slab are different sizes but
+// they stack on the same rhythm, so neither reads as its own system.
+const GAP = 30;
+const PITCH = SLAB_H + GAP;
 const DISHES_N = 9;
 const LAUNDRY_N = 8;
 const DISHES_X = 400;
 const LAUNDRY_X = 680;
 
 const SMALL_H = 48;
-const SMALL_PITCH = 66;
+const SMALL_PITCH = SMALL_H + GAP;
 
 const RULE_Y = GY - 240;
 const RULE_H = 10;
@@ -97,7 +104,7 @@ const CAP_GAP = 90;
 // change itself and the two cannot drift apart if this is ever retimed.
 const AMBER_F = 45;
 const AMBER_SPAN = 13;
-const AMBER_TOP = 700;
+const AMBER_TOP = 666; // the top of the taller tower
 
 // The pulse that runs out along the finished rule on "start with", lighting
 // each job it passes. Reach covers the farthest job in the field; it leaves two
@@ -225,7 +232,7 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
   // burned-in captions.
   const CAM_F = [0, beats.automate, beats.veryPoor, beats.ruleLands, 100, 126];
   const CAM_K = [1.22, 1.04, 1.02, 0.98, 0.95, 0.92];
-  const CAM_CY = [1249, 1067, 1070, 1075, 1079, 1083];
+  const CAM_CY = [1257, 1083, 1086, 1091, 1095, 1099];
   const { cy, k } = React.useMemo(
     () => runCamera(frame, CAM_F, CAM_K, CAM_CY),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -287,7 +294,6 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
     capPath: string,
     capBox: number,
     lead: number,
-    cloth: boolean,
   ) => {
     const wipeT = wipe(cx, SLAB_W);
     const slabs = [];
@@ -308,12 +314,10 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
       const h = SLAB_H * (1 - 0.14 * squash);
       const wSquash = 1 + 0.05 * squash;
 
-      // Cloth is never stacked square: garments sit off-centre and breathe;
-      // crockery does not. This is the one ambient layer, and it is the
-      // material itself rather than a decoration laid over it.
-      const sway = cloth ? Math.sin((frame + i * 17) * 0.052) * 3 : 0;
-      const skew = cloth ? (((i * 37) % 11) - 5) * 1.8 : 0;
-      const w = (cloth ? SLAB_W - 14 + ((i * 29) % 5) * 7 : SLAB_W) * wSquash;
+      // The one ambient layer: both stacks breathe on the same rule, offset by
+      // slab and by tower, so neither stack is ragged against the other.
+      const sway = Math.sin((frame + i * 17 + lead * 40) * 0.052) * 2;
+      const w = SLAB_W * wSquash;
 
       const base_y = slabTop(i) + SLAB_H - FALL_H * (1 - fall);
       const centre = slabTop(i) + SLAB_H / 2;
@@ -325,11 +329,11 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
       slabs.push(
         <rect
           key={`${key}-${i}`}
-          x={cx - w / 2 + sway + skew}
+          x={cx - w / 2 + sway}
           y={base_y - h}
           width={w}
           height={h}
-          rx={cloth ? 12 : SLAB_H / 2}
+          rx={h / 2}
           fill={interpolateColors(amber, [0, 1], [ink, accent])}
           opacity={born * Math.min(1, towerInk + 0.06 * amber)}
         />,
@@ -407,6 +411,7 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
               y={GY}
               width={RULE_X1 - RULE_X0 + 120}
               height={GROUND_W}
+              rx={GROUND_W / 2}
               fill={ink}
               opacity={GROUND_O}
             />
@@ -423,7 +428,7 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
                   y={GY - (j + 1) * SMALL_PITCH + (SMALL_PITCH - SMALL_H)}
                   width={s.w}
                   height={SMALL_H}
-                  rx={9}
+                  rx={SMALL_H / 2}
                   fill={ink}
                   opacity={unknownOpacity + (readOpacity - unknownOpacity) * on}
                 />
@@ -440,7 +445,6 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
               ICON_FLATWARE,
               CAP_D,
               0,
-              false,
             )}
             {tower(
               "laundry",
@@ -452,7 +456,6 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
               ICON_LAUNDRY,
               CAP_L,
               2,
-              true,
             )}
 
             {/* What you can actually reach on day one. */}
@@ -463,6 +466,7 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
                   y={RULE_Y - (RULE_H + 5 * ruleAssert) / 2}
                   width={Math.max(0, tipX - RULE_X0)}
                   height={RULE_H + 5 * ruleAssert}
+                  rx={(RULE_H + 5 * ruleAssert) / 2}
                   fill={accent}
                   opacity={0.88 + 0.12 * Math.max(ruleLand, ruleAssert)}
                 />
