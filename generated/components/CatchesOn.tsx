@@ -25,7 +25,9 @@ export const FPS = 24;
 // "it's very hard to tell what's going to catch on, because a new model may
 // suddenly be good at something that makes a product possible."
 // SRT 21.219s -> 28.780s at 24fps.
-export const DURATION = 181;
+// 181 frames covers the line exactly; it runs to 230 so the spread has room
+// to finish and settle, and so there is a tail to trim against.
+export const DURATION = 230;
 
 // ---------------------------------------------------------------------------
 // Catching on
@@ -56,16 +58,16 @@ const RX = 11;
 const WORLD_W = 2400;
 const WORLD_H = 2600;
 const X0 = 1200;
-const Y0 = 1200;
+const Y0 = 1300;
 
-const COLS = 13;
-const ROWS = 17;
+const COLS = 17;
+const ROWS = 23;
 const STEP_X = 108;
 const STEP_Y = 104;
 const N = COLS * ROWS;
 const HALF_X = ((COLS - 1) / 2) * STEP_X;
 const HALF_Y = ((ROWS - 1) / 2) * STEP_Y;
-const DOT_R = 13;
+const DOT_R = 15;
 const SCATTER = 0.84; // off-cell, so it reads as a crowd and not a lattice
 
 // A rectangle of people reads as a swatch, and the hard vertical sides are the
@@ -105,9 +107,9 @@ const PROD_T = 16;
 const PROD_CLICK = 145;
 const PROD_W = 6 * G;
 
-const IGNITE = 150;
-const FRONT_T = 26;
-const FRONT_MAX = 1160;
+const IGNITE = 146;
+const FRONT_T = 54;
+const FRONT_MAX = 1500;
 const FRONT_EDGE = 90;
 
 const ez = (e: (t: number) => number, x: number) => e(clamp01(x));
@@ -190,12 +192,19 @@ const CatchesOn: React.FC<Props> = ({
 }) => {
   const frame = useCurrentFrame();
 
-  // Locked off while nothing is spreading, then one fast widening driven by
-  // the front. The crowd's real size is the payoff, so it is withheld.
-  const CAM_F = [0, 40, 69, 103, 135, 152, 164, DURATION];
-  const CAM_K = [1.35, 1.33, 1.28, 1.14, 1.08, 1.0, 0.72, 0.66];
+  // Four movements, not one. It drifts around the field while things are
+  // being tried and none of them works — a coarse authored lean toward where
+  // the action is, damped, never following an attempt. It gives up and settles
+  // when he says "because a". It pushes in hard on the model, which is the
+  // only amber in the piece and the only thing that turns out to matter. Then
+  // it rides the front out, from 1.46 to 0.46 — a bigger reveal than the shot
+  // has earned at any earlier point, because the crowd's real size is the
+  // payoff and it is withheld until something reaches them.
+  const CAM_F = [0, 26, 50, 69, 103, 130, 146, 176, 200, DURATION];
+  const CAM_K = [1.22, 1.26, 1.22, 1.16, 1.26, 1.46, 1.42, 0.86, 0.55, 0.52];
+  const CAM_CY = [1352, 1469, 1372, 1348, 1399, 1386, 1388, 1445, 1527, 1540];
   const { cy, k } = React.useMemo(
-    () => runCamera(frame, CAM_F, CAM_K, (kk: number) => Y0 + 125 / kk),
+    () => runCamera(frame, CAM_F, CAM_K, CAM_CY),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [frame],
   );
@@ -233,7 +242,7 @@ const CatchesOn: React.FC<Props> = ({
       <AbsoluteFill style={{ overflow: "hidden" }}>
         <Img
           src={staticFile(backgroundSrc)}
-          style={backdropStyle(frame, cy, k, Y0 + 125 / CAM_K[0], backgroundBlur, backgroundDim)}
+          style={backdropStyle(frame, cy, k, CAM_CY[0], backgroundBlur, backgroundDim)}
         />
       </AbsoluteFill>
 
@@ -353,7 +362,7 @@ const CatchesOn: React.FC<Props> = ({
                 fillOpacity={prodFilled ? 0.96 : 0}
                 stroke={ink}
                 strokeWidth={3}
-                strokeOpacity={prodFilled ? 0.96 * prodClick : 0.42}
+                strokeOpacity={prodFilled ? 0.96 * prodClick : 0.5}
               />
             ) : null}
           </svg>
