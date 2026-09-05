@@ -26,6 +26,10 @@ export const DURATION = 129;
 // ---------------------------------------------------------------------------
 // The reach rule
 //
+// The world below is exported: `ButNotBefore` is the payoff to this cut and
+// reprises it exactly, so the two must be the same object rather than the same
+// numbers typed twice.
+//
 // The line contains exactly two objects and one reversal: the same pair scores
 // highest on one measure and lowest on another, and the surprise is that it is
 // the same pair. So the scene is one pair of towers measured twice, never two
@@ -46,29 +50,29 @@ export const DURATION = 129;
 // tower — and runs off both edges, because the constraint applies to
 // everything including what the frame cannot show.
 // ---------------------------------------------------------------------------
-const GY = 1500; // the ground
-const SLAB_W = 240;
-const SLAB_H = 66;
+export const GY = 1500; // the ground
+export const SLAB_W = 240;
+export const SLAB_H = 66;
 // One gap, everywhere. A tower slab and a field slab are different sizes but
 // they stack on the same rhythm, so neither reads as its own system.
-const GAP = 30;
-const PITCH = SLAB_H + GAP;
-const DISHES_N = 9;
-const LAUNDRY_N = 8;
-const DISHES_X = 400;
-const LAUNDRY_X = 680;
+export const GAP = 30;
+export const PITCH = SLAB_H + GAP;
+export const DISHES_N = 9;
+export const LAUNDRY_N = 8;
+export const DISHES_X = 400;
+export const LAUNDRY_X = 680;
 
-const SMALL_H = 48;
-const SMALL_PITCH = SMALL_H + GAP;
+export const SMALL_H = 48;
+export const SMALL_PITCH = SMALL_H + GAP;
 
 // The rule is on the same grid as everything standing on the ground: it
 // threads the air above the third slab rather than slicing through one, so it
 // reads as part of the spacing instead of a line laid over the top of it.
 const RULE_SLAB = 2;
 const RULE_Y = GY - (RULE_SLAB + 1) * PITCH + GAP / 2;
-const RULE_H = 10;
-const RULE_X0 = -280;
-const RULE_X1 = 1360;
+export const RULE_H = 10;
+export const RULE_X0 = -280;
+export const RULE_X1 = 1360;
 
 const WORLD_W = 1080;
 const WORLD_H = 1920;
@@ -76,7 +80,7 @@ const X0 = 540; // the column axis everything is gathered on
 
 // The rest of what a robot could be doing. Widths and counts vary so the field
 // reads as a row of different jobs rather than a lattice.
-const SMALL = [
+export const SMALL = [
   { cx: -100, w: 104, n: 2 },
   { cx: 40, w: 92, n: 1 },
   { cx: 180, w: 108, n: 3 },
@@ -85,7 +89,7 @@ const SMALL = [
   { cx: 1180, w: 88, n: 1 },
 ];
 
-const slabTop = (i: number) => GY - (i + 1) * PITCH + (PITCH - SLAB_H);
+export const slabTop = (i: number) => GY - (i + 1) * PITCH + (PITCH - SLAB_H);
 
 // Arrivals. Both towers are already standing at frame 0 — the previous
 // sentence named them — and the rest of each stack arrives across "those are
@@ -101,7 +105,7 @@ const FALL = 12;
 // Shorter than the gap the cap keeps above the stack, so an arriving slab
 // never crosses the mark that names the tower.
 const FALL_H = 72;
-const CAP_GAP = 90;
+export const CAP_GAP = 90;
 
 // The value read. Amber floods up from the ground on "automate"; each slab
 // converts when the front reaches its own centre, so the front is the colour
@@ -188,11 +192,11 @@ export const defaultProps: Props = schema.parse({
 // 452x384 box. Equal ink puts laundry at 0.82x flatware and equal box at 0.92x;
 // the blend is the 0.87x below.
 // ---------------------------------------------------------------------------
-const CAP_D = 150;
-const CAP_L = Math.round(CAP_D * 0.87);
-const ICON_FLATWARE =
+export const CAP_D = 150;
+export const CAP_L = Math.round(CAP_D * 0.87);
+export const ICON_FLATWARE =
   "M208.5-128.5Q200-137 200-150v-381q-33 0-56.5-23.5T120-611v-206q0-9 7-16t16-7q9 0 16.5 7t7.5 16v142h40v-142q0-9 7-16t16-7q9 0 16 7t7 16v142h40v-142q0-9 7.5-16t16.5-7q9 0 16 7t7 16v206q0 33-23.5 56.5T260-531v381q0 13-8.5 21.5T230-120q-13 0-21.5-8.5Zm280 0Q480-137 480-150v-383q-41-23-62-62t-21-90q0-60 30.5-107.5T511-840q53 0 83.5 47.5T625-685q0 51-22 90t-63 62v383q0 13-8.5 21.5T510-120q-13 0-21.5-8.5Zm214 0Q694-137 694-150v-653q0-12 9-21t21-9q43 0 79.5 43.5T840-694v214q0 13-8.5 21.5T810-450h-56v300q0 13-8.5 21.5T724-120q-13 0-21.5-8.5Z";
-const ICON_LAUNDRY =
+export const ICON_LAUNDRY =
   "M167-212q-8-10-7-22.5t11-20.5l56-47q23-19 51-29t57-10q29 0 56.5 10t50.5 29l116 99q14 12 31.5 17.5T626-180q19 0 36.5-5.5T694-203l56-49q10-8 22.5-7t20.5 11q8 10 7 22.5T789-205l-56 47q-23 19-50.5 28.5T626-120q-29 0-57-9.5T518-158l-115-99q-14-12-31.5-17.5T335-280q-19 0-36.5 5.5T267-257l-57 49q-10 8-22.5 7T167-212Zm73-168v-141l-49 27q-11 6-23 3t-18-14L60-662q-6-11-3-23t14-18l214-123q11-7 23.5-10.5T334-840q12 0 21.5 7t14.5 18q14 38 42.5 66.5T480-720q39 0 67.5-28.5T590-815q5-11 15-18t22-7q13 0 25 3.5t23 10.5l214 123q11 6 14 18t-3 23l-90 157q-6 11-18 14t-23-3l-49-27v216l-60 51q-7 7-15.5 11t-18.5 4q-8 0-15.5-2.5T597-249l-116-99q-31-26-68.5-39.5T335-401q-25 0-48.5 5T240-380Z";
 
 // Where each cap sits: on top of its own tower, stepping up ahead of the slab
