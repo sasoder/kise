@@ -1,10 +1,10 @@
 import {Composition} from 'remotion';
-import ProgressStopped, {
+import ModelsStopFalling, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ProgressStopped';
+} from '../generated/components/ModelsStopFalling';
 
 // dario - always the first day — "if the progress in models stopped".
 export const RemotionRoot = () => {
@@ -12,8 +12,8 @@ export const RemotionRoot = () => {
     <>
       {/* 0:00.000 -> 0:04.879 */}
       <Composition
-        id="ProgressStopped"
-        component={ProgressStopped}
+        id="ModelsStopFalling"
+        component={ModelsStopFalling}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
