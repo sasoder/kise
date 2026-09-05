@@ -1,19 +1,19 @@
 import {Composition} from 'remotion';
-import ChangingUnderYou, {
+import ProgressStopped, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ChangingUnderYou';
+} from '../generated/components/ProgressStopped';
 
-// dario - always the first day — "the technology is changing under you".
+// dario - always the first day — "if the progress in models stopped".
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:08.080 -> 0:12.419 */}
+      {/* 0:00.000 -> 0:04.879 */}
       <Composition
-        id="ChangingUnderYou"
-        component={ChangingUnderYou}
+        id="ProgressStopped"
+        component={ProgressStopped}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
