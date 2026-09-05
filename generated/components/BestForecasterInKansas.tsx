@@ -28,10 +28,18 @@ import {
 
 export const FPS = 24;
 // Kalshi, "monitoring the situation" — 00:00:23,160 -> 00:00:34,100 of the
-// source cut. round(10.94 * 24) = 263.
-export const DURATION = 263;
+// source cut. round(10.94 * 24) = 263, plus a 12-frame tail the user asked
+// for, held resolved.
+export const DURATION = 275;
 
 const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+
+// One weight for every line — thread, rings, slot — matching the floor.
+const STROKE = GROUND_W;
+// One state ladder for every thing on the floor, people and heaps alike.
+const UNKNOWN = 0.14;
+const READ = 0.9;
+const RECEDE = 0.3;
 const ez = (e: (t: number) => number, t: number) => e(clamp01(t));
 
 // ---------------------------------------------------------------------------
@@ -66,7 +74,7 @@ const COL_STEP = 46;
 const ROW_STEP = 42;
 
 // One unit for a person. The glyph's ink fills ~84% of its box.
-const P = 74;
+const P = 74; // everyone, him included
 
 // ---------------------------------------------------------------------------
 // The lineup
@@ -95,8 +103,8 @@ const AIR = B.x - heapHalf(B) - (A.x + heapHalf(A));
 if (AIR < GAP) throw new Error(`heaps too close: ${AIR}px < ${GAP}px`);
 
 const GX = X0 + 430;
-const GUY_P = 82;
-const GUY_RING_R = 92;
+const GUY_P = P;
+const GUY_RING_R = 84;
 
 type Dot = { x: number; y: number; r: number; seed: number };
 const heapDots = (c: Crowd, base: number): Dot[] =>
@@ -147,14 +155,14 @@ const B_PEOPLE = crowdPeople(B, 4000);
 // Five lines, one per beat of the drop, each the width of the slot. They
 // stack where his heap would have been, and he rises one line at a time.
 // ---------------------------------------------------------------------------
-const LINE_W = 120;
-const LINE_H = 9;
-const LINE_STEP = 22;
+const LINE_W = 112;
+const LINE_H = 8;
+const LINE_STEP = 20;
 const N_LINES = 5;
 const LINE_FALL = 7;
 const LINE_EVERY = 5;
 const SLOT_HALF = 68;
-const SLOT_H = N_LINES * LINE_STEP + 14;
+const SLOT_H = N_LINES * LINE_STEP + 12;
 
 // The Kalshi wordmark (public/kalshi-wordmark.svg, the 2026 mark from
 // Wikimedia Commons, 772x226, filled white). The brand's own mark, so it is
@@ -162,7 +170,7 @@ const SLOT_H = N_LINES * LINE_STEP + 14;
 const MARK = staticFile("kalshi-wordmark.svg");
 const MARK_RATIO = 226 / 772;
 const MARK_Y = 800;
-const MARK_W = 420;
+const MARK_W = 340;
 const MARK_INK_BOTTOM = MARK_Y + (MARK_W * MARK_RATIO) / 2;
 
 export const schema = z.object({
@@ -269,16 +277,18 @@ const track = (frame: number, keys: Key[]) => {
 // ---------------------------------------------------------------------------
 // Camera
 //
-// Four moves, damped: open on the whole lineup with him at the right edge; a
-// slight push left onto the two crowds while they are read; a track right
-// onto him for "this guy"; then one long pull-back from "Kansas" that holds
-// to the cut with everything in the band above the captions. cy is a
+// Three moves and three holds, on the beat. Each key ramp is short and starts
+// ahead of its word, so the damped follow (which trails a coarse key by about
+// thirteen frames) has settled by the time the word lands: the push onto the
+// crowds is still by "institutions", the track onto him arrives with the
+// thread on "guy", and the pull-back is done before "traded". Between moves
+// the keys hold, so the only thing moving on a hold is the thread. cy is a
 // function of the zoom so the content centre sits at screen y 835.
 // ---------------------------------------------------------------------------
 const CONTENT_CY = 1110;
-const camF = (b: Beats) => [0, b.none + 8, b.institutions + 6, b.hedge + 3, b.guy + 7, b.guy + 22, b.kansas + 40, DURATION];
+const camF = (b: Beats) => [0, b.none - 6, b.none + 6, b.guy - 4, b.guy + 8, b.kansas - 6, b.kansas + 16, DURATION];
 const CAM_K = [0.8, 0.8, 1.0, 1.0, 1.0, 1.0, 0.74, 0.74];
-const CAM_CX = [X0 - 100, X0 - 100, X0 - 330, X0 - 300, X0 + 250, X0 + 250, X0 - 50, X0 - 50];
+const CAM_CX = [X0 - 100, X0 - 100, X0 - 300, X0 - 300, X0 + 250, X0 + 250, X0 - 50, X0 - 50];
 const cyOf = (k: number) => CONTENT_CY + 125 / k;
 
 const BestForecasterInKansas: React.FC<Props> = ({
@@ -354,13 +364,12 @@ const BestForecasterInKansas: React.FC<Props> = ({
   const ringG = ringIn(keys[6].f + 4);
 
   // -- states ---------------------------------------------------------------
-  const unknown = 0.14;
-  const crowdO = (read: number, leave: number) => unknown + (0.88 - unknown) * read - (0.88 - 0.3) * leave;
-  const heapO = (read: number, leave: number) => unknown + (0.7 - unknown) * read - (0.7 - 0.24) * leave;
-  const aO = crowdO(readA, leaveA);
-  const bO = crowdO(readB, leaveB);
-  const aH = heapO(readA, leaveA);
-  const bH = heapO(readB, leaveB);
+  const unknown = UNKNOWN;
+  const stateO = (read: number, leave: number) => UNKNOWN + (READ - UNKNOWN) * read - (READ - RECEDE) * leave;
+  const aO = stateO(readA, leaveA);
+  const bO = stateO(readB, leaveB);
+  const aH = aO;
+  const bH = bO;
 
   const guyFlash = found >= 0 && found < FLASH;
   const guyColor = readGuy > 0 && !guyFlash && found >= FLASH ? accent : ink;
@@ -466,7 +475,7 @@ const BestForecasterInKansas: React.FC<Props> = ({
                   d={threadD}
                   fill="none"
                   stroke={threadColor}
-                  strokeWidth={5.5}
+                  strokeWidth={STROKE}
                   strokeLinecap="round"
                   opacity={threadO}
                   pathLength={1000}
@@ -488,11 +497,11 @@ const BestForecasterInKansas: React.FC<Props> = ({
                 rx={8}
                 fill="none"
                 stroke={ink}
-                strokeWidth={3}
+                strokeWidth={STROKE}
                 pathLength={1000}
                 strokeDasharray={slotDraw >= 1 ? "40 30" : "1000 1000"}
                 strokeDashoffset={slotDraw >= 1 ? -(slotSpin * 0.6) : 1000 * (1 - slotDraw)}
-                opacity={0.5}
+                opacity={0.45}
               />
             ) : null}
 
@@ -514,20 +523,20 @@ const BestForecasterInKansas: React.FC<Props> = ({
                   height={LINE_H}
                   rx={LINE_H / 2}
                   fill={ink}
-                  opacity={age < 0 ? 0.9 : 0.92}
+                  opacity={READ}
                 />
               );
             })}
 
             {/* Rings. */}
             {ringA > 0 ? (
-              <ellipse cx={A.x} cy={A.ring.cy} rx={A.ring.rx * (1.35 - 0.35 * ringA)} ry={A.ring.ry * (1.35 - 0.35 * ringA)} fill="none" stroke={ink} strokeWidth={4} opacity={0.9 * clamp01(ringA * 1.5)} />
+              <ellipse cx={A.x} cy={A.ring.cy} rx={A.ring.rx * (1.35 - 0.35 * ringA)} ry={A.ring.ry * (1.35 - 0.35 * ringA)} fill="none" stroke={ink} strokeWidth={STROKE} opacity={READ * clamp01(ringA * 1.5)} />
             ) : null}
             {ringB > 0 ? (
-              <ellipse cx={B.x} cy={B.ring.cy} rx={B.ring.rx * (1.35 - 0.35 * ringB)} ry={B.ring.ry * (1.35 - 0.35 * ringB)} fill="none" stroke={ink} strokeWidth={4} opacity={0.9 * clamp01(ringB * 1.5)} />
+              <ellipse cx={B.x} cy={B.ring.cy} rx={B.ring.rx * (1.35 - 0.35 * ringB)} ry={B.ring.ry * (1.35 - 0.35 * ringB)} fill="none" stroke={ink} strokeWidth={STROKE} opacity={READ * clamp01(ringB * 1.5)} />
             ) : null}
             {ringG > 0 ? (
-              <circle cx={GX} cy={guyBase - GUY_P * 0.5} r={GUY_RING_R * (1.35 - 0.35 * ringG)} fill="none" stroke={accent} strokeWidth={4} opacity={clamp01(ringG * 1.5)} />
+              <circle cx={GX} cy={guyBase - GUY_P * 0.5} r={GUY_RING_R * (1.35 - 0.35 * ringG)} fill="none" stroke={accent} strokeWidth={STROKE} opacity={clamp01(ringG * 1.5)} />
             ) : null}
           </svg>
 
