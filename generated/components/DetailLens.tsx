@@ -27,9 +27,13 @@ const hash = (i: number, k: number) => {
 // One repeating unit — a line of review material — on one grid, with one gap.
 // Nothing here is a glyph; the indents and the ragged right edge are what make
 // a stack of rounded bars read as dense text rather than as a bar chart.
-// A line carries three levels of granularity of itself, and which one you see
-// is purely a function of how much the lens is magnifying it: whole line,
-// words, characters. That is the only thing "detail" means in this piece.
+//
+// A line is stored as proportions, not as fixed rectangles, because it has to
+// be drawable at three levels of resolution without any of them being a
+// separate object: whole line, words, characters. Opening the gaps is the only
+// difference between them, and the ink redistributes so the line keeps its
+// length — so subdividing is one continuous move rather than a crossfade
+// between two drawings of the same thing.
 // ---------------------------------------------------------------------------
 const CX = 540;
 const COL_W = 560;
@@ -41,15 +45,14 @@ const COL_W = 560;
 const COL_X = 343;
 const BAND_TOP = 212;
 const BAND_BOT = 1452;
-const LH = 58;
-const BH = 17;
+const LH = 64;
+const BH = 18;
 const INDENT = 44;
 const WORD_GAP = 13;
-const CHAR_GAP = 5;
-const N_LINES = 72;
+const CHAR_GAP = 7;
+const N_LINES = 48;
 
-type Seg = {x: number; w: number};
-type Line = {x: number; w: number; words: Seg[]; chars: Seg[]};
+type Line = {x: number; w: number; fracs: number[]; chars: number[]};
 
 const LINES: Line[] = (() => {
   const out: Line[] = [];
@@ -69,8 +72,7 @@ const LINES: Line[] = (() => {
     const room = COL_W - x;
     const w = room * (level === 0 ? 0.52 + hash(i, 2) * 0.34 : 0.3 + hash(i, 3) * 0.52);
 
-    const n = 3 + Math.floor(hash(i, 4) * 4);
-    const avail = w - (n - 1) * WORD_GAP;
+    const n = 3 + Math.floor(hash(i, 4) * 3);
     const wts: number[] = [];
     let sum = 0;
     for (let k = 0; k < n; k++) {
@@ -78,22 +80,18 @@ const LINES: Line[] = (() => {
       wts.push(wt);
       sum += wt;
     }
-    const words: Seg[] = [];
-    const chars: Seg[] = [];
-    let cur = 0;
-    wts.forEach((wt, k) => {
-      const ww = (avail * wt) / sum;
-      words.push({x: cur, w: ww});
-      // Characters partition the word they belong to, so subdividing never
-      // changes where the ink is — only how finely it is broken up.
-      const m = Math.max(3, Math.round(ww / 15));
-      const cw = (ww - (m - 1) * CHAR_GAP) / m;
-      for (let c = 0; c < m; c++) chars.push({x: cur + c * (cw + CHAR_GAP), w: cw});
-      cur += ww + WORD_GAP;
-      void k;
-    });
+    const fracs = wts.map((wt) => wt / sum);
+    // Character count is fixed per word, taken from its settled width, so the
+    // grain never changes count while it is opening.
+    const settled = w - (n - 1) * WORD_GAP;
+    // A word only subdivides if every piece would still be clearly wider than
+    // the line is tall. Below that a piece stops reading as part of a line and
+    // starts reading as a bead, so short words simply stay whole.
+    const chars = fracs.map((f) =>
+      Math.max(1, Math.floor((settled * f + CHAR_GAP) / (26 + CHAR_GAP))),
+    );
 
-    out.push({x, w, words, chars});
+    out.push({x, w, fracs, chars});
     inGroup++;
   }
   return out;
@@ -102,20 +100,19 @@ const LINES: Line[] = (() => {
 // ---------------------------------------------------------------------------
 // The scroll
 //
-// Authored as a velocity track and integrated, so the column never changes
-// speed abruptly and the write head, which rides on it, cannot drift out of
-// step with the material it is producing.
-//
-//   f0-38    the log runs fast and settles
-//   f24-70   steady read
-//   f74-104  "because we go through things" — a surge of material
-//   f116-130 "detail" — everything decelerates onto one magnified fragment
+// One speed, reached before the clip starts and held almost all the way
+// through, with a single soft deceleration onto the last beat. Authored as a
+// velocity track and integrated, so the write head — which rides on it —
+// cannot drift out of step with the material it is producing, and so there is
+// never a change of pace for the eye to catch on.
 // ---------------------------------------------------------------------------
-const VF = [0, 14, 28, 38, 70, 86, 104, 116, 126, 130];
-const VV = [46, 34, 16, 10.4, 10.4, 24, 24, 8, 1.4, 1.4];
+const VF = [0, 40, 108, 126, 130];
+const VV = [8.4, 7, 7, 1, 1];
 
-// The clip cuts in mid-sentence, so the log is already running at frame 0.
-const PRE = 980;
+// The log is already running when the clip cuts in, past the point where the
+// head stops descending — so the first frame is a full column already moving
+// at its cruising speed, with no start transient at all.
+const PRE = 1180;
 
 const PS: number[] = (() => {
   const out = [PRE];
@@ -127,17 +124,15 @@ const PS: number[] = (() => {
   return out;
 })();
 
-// Once the head has written this far, it stops descending and the column
-// scrolls under it instead — so it settles below the lens and stays there.
+// Once the head has written this far it stops descending and the column
+// scrolls under it instead, so it settles below the lens and stays there.
 const HEAD_ANCHOR = 1118;
-const WRITE_F = 6;
+// At cruising speed a line arrives every nine frames and takes eight to draw,
+// so there is almost always exactly one line in flight — never a flock.
+const WRITE_F = 8;
 
-// Each line starts drawing when the head reaches it. During the flood several
-// are in flight at once; once the scroll settles they barely overlap.
 const WSTART = LINES.map((_, i) => {
   const target = i * LH;
-  // Lines the head already passed before the cut start off-screen in time, so
-  // the first frame shows a flood in progress rather than an empty column.
   if (PS[0] >= target) return (target - PRE) / VV[0];
   for (let f = 0; f < PS.length; f++) if (PS[f] >= target) return f;
   return Infinity;
@@ -153,7 +148,10 @@ export const schema = z.object({
   readOpacity: z.number().min(0).max(1),
   lensCy: z.number().min(400).max(1520),
   lensR: z.number().min(120).max(420),
-  // Magnification at the settled read, and at "detail".
+  // How much of the disc's radius the edge falls off over. The magnified copy
+  // and the plain one are complementary there, so the seam reads as a lens
+  // rather than as a cut.
+  feather: z.number().min(0).max(0.4),
   magnify: z.number().min(1).max(4),
   magnifyDetail: z.number().min(1).max(6),
   beats: z.object({
@@ -163,8 +161,10 @@ export const schema = z.object({
     //   f105 things in     f117 detail (ends f130)
     lensOpen: z.number().int(),
     lensSet: z.number().int(),
-    magIn: z.number().int(),
-    magSet: z.number().int(),
+    readOpen: z.number().int(),
+    readSet: z.number().int(),
+    wordsOpen: z.number().int(),
+    wordsSet: z.number().int(),
     detail: z.number().int(),
     detailSet: z.number().int(),
   }),
@@ -176,19 +176,22 @@ export const defaultProps: DetailLensProps = schema.parse({
   ink: '#FFFFFF',
   accent: '#FFC543',
   shadow: 'rgba(0,0,0,0.28)',
-  rawOpacity: 0.24,
-  readOpacity: 0.92,
+  rawOpacity: 0.28,
+  readOpacity: 0.9,
   lensCy: 832,
   lensR: 250,
-  magnify: 1.9,
-  magnifyDetail: 3.0,
+  feather: 0.06,
+  magnify: 1.75,
+  magnifyDetail: 2.5,
   beats: {
     lensOpen: 24,
-    lensSet: 38,
-    magIn: 26,
-    magSet: 50,
+    lensSet: 40,
+    readOpen: 25,
+    readSet: 52,
+    wordsOpen: 28,
+    wordsSet: 54,
     detail: 114,
-    detailSet: 128,
+    detailSet: 129,
   },
 });
 
@@ -204,6 +207,7 @@ export const DetailLens: React.FC<DetailLensProps> = ({
   readOpacity,
   lensCy,
   lensR,
+  feather,
   magnify,
   magnifyDetail,
   beats,
@@ -213,37 +217,53 @@ export const DetailLens: React.FC<DetailLensProps> = ({
   const head = PS[Math.max(0, Math.min(PS.length - 1, Math.round(frame)))];
   const scroll = Math.max(0, head - HEAD_ANCHOR);
 
-  // The iris. It lands with the shared overshoot, so the lens arrives rather
-  // than fades up.
+  const irisP = interpolate(frame, [beats.lensOpen, beats.lensSet], [0, 1], {
+    ...CLAMP,
+    easing: RISE,
+  });
   const rNow =
     lensR *
     interpolate(frame, [beats.lensOpen, beats.lensSet], [0, 1], {
       ...CLAMP,
       easing: LAND,
     });
-  const lensOn = interpolate(frame, [beats.lensOpen, beats.lensSet], [0, 1], {
-    ...CLAMP,
-    easing: RISE,
-  });
 
+  // Words separate as the lens settles; characters separate at "detail". Same
+  // partition both times, opened one step further — no second drawing of the
+  // line is ever faded in over the first.
+  const wordOpen = interpolate(frame, [beats.wordsOpen, beats.wordsSet], [0, 1], {
+    ...CLAMP,
+    easing: GLIDE,
+  });
+  const charOpen = interpolate(frame, [beats.detail, beats.detailSet], [0, 1], {
+    ...CLAMP,
+    easing: GLIDE,
+  });
   const mag = interpolate(
     frame,
-    [beats.magIn, beats.magSet, beats.detail, beats.detailSet],
+    [beats.wordsOpen, beats.wordsSet, beats.detail, beats.detailSet],
     [1, magnify, magnify, magnifyDetail],
     {...CLAMP, easing: GLIDE},
   );
-  // Words break into characters as the magnification passes through. The two
-  // partitions occupy the same ink, so this reads as one thing subdividing.
-  const grain = clamp01((mag - 2.25) / 0.45);
+
+  // The understood state does not flip on as a block when the lens opens: a
+  // wave travels outward from the disc over its own, longer window, so the
+  // reveal is a sweep rather than the whole column changing colour at once.
+  const readP = interpolate(frame, [beats.readOpen, beats.readSet], [0, 1], {
+    ...CLAMP,
+    easing: GLIDE,
+  });
+  const lensOnAt = (y: number) =>
+    clamp01(readP * 2 - clamp01((lensCy - lensR - y) / 760));
 
   // A line's state is a function of where it sits against the lens, not of a
   // parallel timer, so the ladder cannot drift if the scroll is retimed.
-  const stateOf = (yBase: number) =>
-    clamp01((lensCy + lensR - yBase) / (2 * lensR)) * lensOn;
+  const stateOf = (y: number) =>
+    clamp01((lensCy + lensR - y) / (2 * lensR)) * lensOnAt(y);
   const opacityOf = (t: number) =>
-    interpolate(t, [0, 0.35, 1], [rawOpacity, readOpacity, 0.95], CLAMP);
+    interpolate(t, [0, 0.4, 1], [rawOpacity, readOpacity, 0.94], CLAMP);
   const colourOf = (t: number) =>
-    interpolateColors(clamp01((t - 0.45) / 0.45), [0, 1], [ink, accent]);
+    interpolateColors(clamp01((t - 0.5) / 0.42), [0, 1], [ink, accent]);
 
   type Row = {i: number; y: number; t: number; wp: number};
   const rows: Row[] = [];
@@ -251,16 +271,40 @@ export const DetailLens: React.FC<DetailLensProps> = ({
     const start = WSTART[i];
     if (!Number.isFinite(start) || frame < start) return;
     const y = BAND_TOP + i * LH - scroll;
-    if (y < 150 || y > BAND_BOT + 60) return;
-    rows.push({
-      i,
-      y,
-      t: stateOf(y),
-      wp: clamp01((frame - start) / WRITE_F),
-    });
+    if (y < 140 || y > BAND_BOT + 60) return;
+    rows.push({i, y, t: stateOf(y), wp: clamp01((frame - start) / WRITE_F)});
   });
 
   const ease = (v: number) => 1 - (1 - v) * (1 - v);
+
+  // The line at the current opening. Sub-units that are still touching are
+  // merged into one run before anything is drawn — otherwise a closed-up line
+  // is a row of butted capsules, whose semicircular ends pinch it into a
+  // string of beads. Merged, the same partition draws as one bar, then as
+  // words, then as syllables, with nothing crossfading.
+  const runs = (L: Line, reach: number) => {
+    const n = L.fracs.length;
+    const gw = WORD_GAP * wordOpen;
+    const gc = CHAR_GAP * charOpen;
+    const availW = L.w - (n - 1) * gw;
+    const out: {x: number; w: number}[] = [];
+    let cur = 0;
+    for (let k = 0; k < n; k++) {
+      const ww = availW * L.fracs[k];
+      const m = L.chars[k];
+      const cw = (ww - (m - 1) * gc) / m;
+      for (let c = 0; c < m; c++) {
+        const x = cur + c * (cw + gc);
+        if (x >= reach) break;
+        const w = Math.min(cw, reach - x);
+        const prev = out[out.length - 1];
+        if (prev && x - (prev.x + prev.w) < 0.6) prev.w = x + w - prev.x;
+        else out.push({x, w});
+      }
+      cur += ww + gw;
+    }
+    return out;
+  };
 
   return (
     <AbsoluteFill>
@@ -277,9 +321,30 @@ export const DetailLens: React.FC<DetailLensProps> = ({
             <stop offset="0.93" stopColor="#FFFFFF" />
             <stop offset="1" stopColor="#000000" />
           </linearGradient>
+          <radialGradient
+            id="dl-inside"
+            gradientUnits="userSpaceOnUse"
+            cx={CX}
+            cy={lensCy}
+            r={Math.max(1, rNow)}
+          >
+            <stop offset={1 - feather} stopColor="#FFFFFF" />
+            <stop offset="1" stopColor="#000000" />
+          </radialGradient>
+          <radialGradient
+            id="dl-outside"
+            gradientUnits="userSpaceOnUse"
+            cx={CX}
+            cy={lensCy}
+            r={Math.max(1, rNow)}
+          >
+            <stop offset={1 - feather} stopColor="#000000" />
+            <stop offset="1" stopColor="#FFFFFF" />
+          </radialGradient>
           {/* The column is a viewport that fades at both ends, with the lens
-              punched out of it — inside the disc you only ever see the
-              magnified copy, never both at once. */}
+              taken out of it. The two masks are complementary, so the disc
+              edge is a falloff between two resolutions of the same line
+              rather than a cut between them. */}
           <mask id="dl-base" maskUnits="userSpaceOnUse" x="0" y="0" width="1080" height="1920">
             <rect
               x="0"
@@ -288,23 +353,22 @@ export const DetailLens: React.FC<DetailLensProps> = ({
               height={BAND_BOT - BAND_TOP + 92}
               fill="url(#dl-fade)"
             />
-            <circle cx={CX} cy={lensCy} r={rNow} fill="#000000" />
+            <circle cx={CX} cy={lensCy} r={rNow} fill="url(#dl-outside)" />
           </mask>
-          <clipPath id="dl-lens">
-            <circle cx={CX} cy={lensCy} r={Math.max(0, rNow - 1)} />
-          </clipPath>
+          <mask id="dl-lens" maskUnits="userSpaceOnUse" x="0" y="0" width="1080" height="1920">
+            <circle cx={CX} cy={lensCy} r={rNow} fill="url(#dl-inside)" />
+          </mask>
         </defs>
 
         <g mask="url(#dl-base)">
           {rows.map(({i, y, t, wp}) => {
             const L = LINES[i];
-            const w = L.w * ease(wp);
             return (
               <rect
                 key={i}
                 x={COL_X + L.x}
                 y={y}
-                width={Math.max(0.01, w)}
+                width={Math.max(0.01, L.w * ease(wp))}
                 height={BH}
                 rx={BH / 2}
                 fill={colourOf(t)}
@@ -321,60 +385,40 @@ export const DetailLens: React.FC<DetailLensProps> = ({
               <rect
                 key={`c${i}`}
                 x={COL_X + L.x + L.w * ease(wp)}
-                y={y - 5}
-                width={5}
-                height={BH + 10}
-                rx={2.5}
+                y={y - 4}
+                width={4}
+                height={BH + 8}
+                rx={2}
                 fill={ink}
-                opacity={0.85 * (0.35 + 0.65 * (1 - wp))}
+                opacity={0.7 * (0.3 + 0.7 * (1 - wp))}
               />
             );
           })}
         </g>
 
-        <g clipPath="url(#dl-lens)">
+        <g mask="url(#dl-lens)">
           <g
             transform={`translate(${CX} ${lensCy}) scale(${mag.toFixed(4)}) translate(${-CX} ${-lensCy})`}
           >
             {rows.map(({i, y, t, wp}) => {
-              const yMag = lensCy + (y - lensCy) * mag;
-              if (Math.abs(yMag - lensCy) > lensR + 80) return null;
+              if (Math.abs((y - lensCy) * mag) > lensR + 90) return null;
               const L = LINES[i];
-              const reach = L.w * ease(wp);
               const c = colourOf(t);
               const o = opacityOf(t);
               return (
                 <g key={`m${i}`}>
-                  {L.words.map((s, k) =>
-                    s.x >= reach ? null : (
-                      <rect
-                        key={`w${k}`}
-                        x={COL_X + L.x + s.x}
-                        y={y}
-                        width={Math.max(0.01, Math.min(s.w, reach - s.x))}
-                        height={BH}
-                        rx={BH / 2}
-                        fill={c}
-                        opacity={o * (1 - grain)}
-                      />
-                    ),
-                  )}
-                  {grain > 0
-                    ? L.chars.map((s, k) =>
-                        s.x >= reach ? null : (
-                          <rect
-                            key={`h${k}`}
-                            x={COL_X + L.x + s.x}
-                            y={y}
-                            width={Math.max(0.01, Math.min(s.w, reach - s.x))}
-                            height={BH}
-                            rx={BH / 3}
-                            fill={c}
-                            opacity={o * grain}
-                          />
-                        ),
-                      )
-                    : null}
+                  {runs(L, L.w * ease(wp)).map((s, k) => (
+                    <rect
+                      key={k}
+                      x={COL_X + L.x + s.x}
+                      y={y}
+                      width={Math.max(0.01, s.w)}
+                      height={BH}
+                      rx={Math.min(BH / 2, s.w / 2)}
+                      fill={c}
+                      opacity={o}
+                    />
+                  ))}
                 </g>
               );
             })}
@@ -387,21 +431,21 @@ export const DetailLens: React.FC<DetailLensProps> = ({
           r={rNow}
           fill="none"
           stroke={ink}
-          strokeWidth={4.5}
-          opacity={0.9 * lensOn}
+          strokeWidth={4}
+          opacity={0.88 * irisP}
         />
         <circle
           cx={CX}
           cy={lensCy}
-          r={rNow + 16}
+          r={rNow + 15}
           fill="none"
           stroke={interpolateColors(
             interpolate(frame, [beats.detail, beats.detailSet], [0, 1], CLAMP),
             [0, 1],
             [ink, accent],
           )}
-          strokeWidth={1.8}
-          opacity={0.24 * lensOn}
+          strokeWidth={1.6}
+          opacity={0.18 * irisP}
         />
       </svg>
     </AbsoluteFill>
