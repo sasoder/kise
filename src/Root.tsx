@@ -1,19 +1,19 @@
 import {Composition} from 'remotion';
-import ReachLurches, {
+import CatchesOn, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ReachLurches';
+} from '../generated/components/CatchesOn';
 
 // dario - always the first day — "what's going to catch on".
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:21.260 -> 0:32.780 */}
+      {/* 0:21.219 -> 0:28.780 */}
       <Composition
-        id="ReachLurches"
-        component={ReachLurches}
+        id="CatchesOn"
+        component={CatchesOn}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
