@@ -1,19 +1,19 @@
 import {Composition} from 'remotion';
-import ModelsStopFalling, {
+import ReachLurches, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ModelsStopFalling';
+} from '../generated/components/ReachLurches';
 
-// dario - always the first day — "if the progress in models stopped".
+// dario - always the first day — "what's going to catch on".
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:00.000 -> 0:04.879 */}
+      {/* 0:21.260 -> 0:32.780 */}
       <Composition
-        id="ModelsStopFalling"
-        component={ModelsStopFalling}
+        id="ReachLurches"
+        component={ReachLurches}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
