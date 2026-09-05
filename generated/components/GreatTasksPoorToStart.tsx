@@ -82,13 +82,15 @@ const slabTop = (i: number) => GY - (i + 1) * PITCH + (PITCH - SLAB_H);
 // frames and the growth is never one tower's private event.
 const DISH_BASE = 5;
 const LAUN_BASE = 4;
-const DISH_ARRIVE = [12, 24, 34, 42];
-const LAUN_ARRIVE = [18, 29, 38, 45];
-const FALL = 10;
+// The first fall starts at frame 2, so frame 0 is a clean standing pair rather
+// than a pair with a half-faded slab already in the air above it.
+const DISH_ARRIVE = [14, 24, 34, 42];
+const LAUN_ARRIVE = [19, 29, 37, 45];
+const FALL = 12;
 // Shorter than the gap the cap keeps above the stack, so an arriving slab
 // never crosses the mark that names the tower.
-const FALL_H = 30;
-const CAP_GAP = 44;
+const FALL_H = 72;
+const CAP_GAP = 90;
 
 // The value read. Amber floods up from the ground on "automate"; each slab
 // converts when the front reaches its own centre, so the front is the colour
@@ -98,10 +100,14 @@ const AMBER_SPAN = 13;
 const AMBER_TOP = 700;
 
 // The pulse that runs out along the finished rule on "start with", lighting
-// each job it passes. Reach covers the farthest job in the field.
-const PULSE_F = 92;
-const PULSE_SPAN = 18;
-const PULSE_REACH = 900;
+// each job it passes. Reach covers the farthest job in the field; it leaves two
+// frames early so the nearest job lights on the word rather than after it.
+const PULSE_LEAD = 2;
+const PULSE_SPAN = 20;
+// It leaves from just outside the pair rather than from dead centre, so it is
+// never a white lump sitting on a white tower.
+const PULSE_FROM = 300;
+const PULSE_REACH = 1000;
 
 export const schema = z.object({
   ink: z.string(),
@@ -122,7 +128,6 @@ export const schema = z.object({
   //   54 "i think they're" · 62 "very poor" · 79 "tasks to" · 94 "start with"
   //   106 "counterintuitively" · 129 end
   beats: z.object({
-    thoseAreGreat: z.number().int(),
     automate: z.number().int(),
     veryPoor: z.number().int(),
     ruleLands: z.number().int(),
@@ -147,10 +152,9 @@ export const defaultProps: Props = schema.parse({
   readOpacity: 0.92,
   // Not 0.42: on kraft a low floor goes muddy rather than receding, the same
   // lesson the grid background taught at 0.5.
-  recedeOpacity: 0.58,
+  recedeOpacity: 0.62,
   capOpacity: 0.55,
   beats: {
-    thoseAreGreat: 16,
     automate: 45,
     veryPoor: 62,
     ruleLands: 88,
@@ -221,7 +225,7 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
   // burned-in captions.
   const CAM_F = [0, beats.automate, beats.veryPoor, beats.ruleLands, 100, 126];
   const CAM_K = [1.22, 1.04, 1.02, 0.98, 0.95, 0.92];
-  const CAM_CY = [1272, 1090, 1093, 1098, 1102, 1106];
+  const CAM_CY = [1249, 1067, 1070, 1075, 1079, 1083];
   const { cy, k } = React.useMemo(
     () => runCamera(frame, CAM_F, CAM_K, CAM_CY),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,24 +241,31 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
       easing,
     });
 
-  // The rule. It draws in ink behind a white tip — it is being read, not yet
-  // understood — and only becomes accent once it has crossed everything.
+  // The rule. Accent from the moment it appears: it is not a thing being read
+  // up the ladder, it is the constraint being imposed — and an ink rule would
+  // be invisible for the six frames it spends crossing a white tower.
   const tipX = ease([beats.veryPoor, beats.ruleLands], [RULE_X0, RULE_X1]);
   const ruleDrawing = frame >= beats.veryPoor && frame < beats.ruleLands;
-  const ruleDone = clamp01((frame - beats.ruleLands) / 8);
-  const ruleColour = interpolateColors(ruleDone, [0, 1], [ink, accent]);
   const ruleLand = clamp01(1 - Math.abs(frame - beats.ruleLands) / 7);
+  // "counterintuitively" is the punchline, and a slow dim is not an event. The
+  // line asserts itself once, full length, as the two towers go out of reach.
+  const ruleAssert = clamp01(1 - Math.abs(frame - beats.counterintuitively) / 7);
 
-  // As the tip crosses a tower it wipes the value read off it, left to right,
-  // across the tower's own width. The withdrawal is caused by the line
-  // arriving, not by a frame number sitting next to it.
+  // As the tip crosses a tower the value read drains out of it, top slab
+  // first, down into the line — the withdrawal is caused by the rule arriving,
+  // not by a frame number sitting next to it. Top-down because that is the
+  // direction the argument runs: the part furthest out of reach goes first.
   const wipe = (cx: number, w: number) =>
     frame < beats.veryPoor ? 0 : clamp01((tipX - (cx - w / 2 - 60)) / (w + 120));
+  const drain = (wipeT: number, s: number) => clamp01(wipeT * 1.45 - (1 - s) * 0.45);
 
   // "start with": a bright pulse runs out along the finished rule from the
   // centre, and each job it passes comes up to the read state.
-  const pulseX = ease([PULSE_F, PULSE_F + PULSE_SPAN], [0, PULSE_REACH]);
-  const pulseAlive = clamp01((frame - PULSE_F) / 3) * ease([PULSE_F + PULSE_SPAN - 5, PULSE_F + PULSE_SPAN + 3], [1, 0]);
+  const pulseF = beats.startWith - PULSE_LEAD;
+  const pulseX = ease([pulseF, pulseF + PULSE_SPAN], [PULSE_FROM, PULSE_REACH]);
+  const pulseAlive =
+    clamp01((frame - pulseF) / 3) *
+    ease([pulseF + PULSE_SPAN - 5, pulseF + PULSE_SPAN + 3], [1, 0]);
 
   // "counterintuitively": the two tallest are the two that recede.
   const towerInk = ease(
@@ -278,6 +289,7 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
     lead: number,
     cloth: boolean,
   ) => {
+    const wipeT = wipe(cx, SLAB_W);
     const slabs = [];
     for (let i = 0; i < n; i++) {
       const at = i < base ? -999 : arrive[i - base];
@@ -288,9 +300,11 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
       const born = i < base ? 1 : clamp01((frame - (at - FALL)) / 4);
 
       // Weight on landing: the slab takes the impact as a squash and gives the
-      // width back, so an arrival has a body rather than just a stop.
-      const settle = i < base ? 1 : clamp01((frame - at) / 6);
-      const squash = i < base ? 0 : (1 - settle) * Math.max(0, drop * 2 - 1);
+      // width back, so an arrival has a body rather than just a stop. LAND
+      // covers the distance in the first 40% of the fall, so contact is there.
+      const impact = at - FALL * 0.6;
+      const squash =
+        i < base || frame < impact ? 0 : clamp01(1 - (frame - impact) / 6);
       const h = SLAB_H * (1 - 0.14 * squash);
       const wSquash = 1 + 0.05 * squash;
 
@@ -305,7 +319,8 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
       const centre = slabTop(i) + SLAB_H / 2;
       const amberAt =
         AMBER_F + lead + (AMBER_SPAN * (GY - centre)) / (GY - AMBER_TOP);
-      const amber = clamp01((frame - amberAt) / 5) * (1 - wipe(cx, SLAB_W));
+      const amber =
+        clamp01((frame - amberAt) / 5) * (1 - drain(wipeT, n > 1 ? i / (n - 1) : 1));
 
       slabs.push(
         <rect
@@ -330,9 +345,10 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
       CAP_GAP -
       capBox +
       Math.sin(frame * 0.058 + lead) * 3;
+    // The cap sits above the top slab, so it drains with it.
     const capAmber =
       clamp01((frame - (AMBER_F + lead + AMBER_SPAN * 0.94)) / 6) *
-      (1 - wipe(cx, SLAB_W));
+      (1 - drain(wipeT, 1));
 
     return (
       <g key={key}>
@@ -444,26 +460,25 @@ const GreatTasksPoorToStart: React.FC<Props> = ({
               <>
                 <rect
                   x={RULE_X0}
-                  y={RULE_Y - RULE_H / 2}
+                  y={RULE_Y - (RULE_H + 5 * ruleAssert) / 2}
                   width={Math.max(0, tipX - RULE_X0)}
-                  height={RULE_H}
-                  fill={ruleColour}
-                  opacity={0.9 + 0.1 * ruleLand}
+                  height={RULE_H + 5 * ruleAssert}
+                  fill={accent}
+                  opacity={0.88 + 0.12 * Math.max(ruleLand, ruleAssert)}
                 />
                 {ruleDrawing ? (
                   <circle cx={tipX} cy={RULE_Y} r={11} fill={ink} opacity={0.95} />
                 ) : null}
+                {/* Same tip that drew the rule, now running out along it. */}
                 {pulseAlive > 0.01
                   ? [-1, 1].map((d) => (
-                      <rect
+                      <circle
                         key={`pulse-${d}`}
-                        x={X0 + d * pulseX - 55}
-                        y={RULE_Y - RULE_H / 2 - 2}
-                        width={110}
-                        height={RULE_H + 4}
-                        rx={RULE_H / 2 + 2}
+                        cx={X0 + d * pulseX}
+                        cy={RULE_Y}
+                        r={11}
                         fill={ink}
-                        opacity={0.85 * pulseAlive}
+                        opacity={0.95 * pulseAlive}
                       />
                     ))
                   : null}
