@@ -22,89 +22,141 @@ import {
 export const FPS = 24;
 // "it's very hard to tell what's going to catch on, because a new model may
 // suddenly be good at something that makes a product possible."
-// SRT 21.219s -> 28.780s at 24fps; runs to 230 for a tail.
+// SRT 21.219s -> 28.780s at 24fps; runs to 230 so the gather can finish.
 export const DURATION = 230;
 
 // ---------------------------------------------------------------------------
 // They come to the one that works
 //
 // "Catch on" is adoption, so the only thing that matters is whether anybody
-// moves. People are people — a head and shoulders, not a dot, because a field
-// of dots is a diagram and this needs to be a crowd. Products are the same
-// tile the rest of the edit uses.
+// moves. People are the house glyph — public/person.png, painted as ink behind
+// its own alpha with a CSS mask rather than a filter, which is how the rest of
+// the library draws crowds. Products are the same tile as the other cutaways.
 //
-// You try things. Each attempt appears where you tried it and the people
-// nearest it lean toward it — a step, a look — and then it goes nowhere and
-// they settle back. Six times. The sixth pulls a dozen of them most of the way
-// out of their places before it dies, which is the one you would have bet on.
-//
-// Then the model arrives. It is the only amber in the piece, and the product
-// that becomes possible is built directly on top of it. That one they come to:
-// nearest first, then further and further out, until everybody has left where
-// they were standing and the field they came from is empty paper.
+// Nothing here is placed by eye. Everyone stands on a grid whose scatter is
+// bounded so no two figures can touch; the lean toward an attempt is capped by
+// the gradient of its own falloff over one grid step, so a group leaning
+// together stays a group and does not pile up; and where they end up is a ring
+// packing — concentric rings sized off one spacing, alternate rings offset by
+// half a slot, the outer ring re-spaced evenly to whatever is left over — so
+// the crowd that forms around the product has exactly one figure per slot and
+// no overlaps anywhere in it.
 // ---------------------------------------------------------------------------
 const G = 22;
 const RX = 11;
+const PERSON = staticFile("person.png");
 
 const WORLD_W = 2400;
 const WORLD_H = 2600;
 const X0 = 1200;
 const Y0 = 1300;
 
+const SIZE = 70; // person.png is square; its ink fills ~84% of the box
+const S_MIN = 0.86;
+const S_VAR = 0.28;
+const SIZE_MAX = SIZE * (S_MIN + S_VAR); // 75.6
+
+// Where they stand. A crowd has to look scattered, and a small scatter on a
+// tight grid reads as a lattice — so the grid is wide enough that a large
+// scatter still clears: the closest any two can get is the step less the
+// scatter, 100 across and 96 down, which stays clear of SIZE_MAX with the
+// lean and the idle drift on top of it.
 const COLS = 13;
-const ROWS = 15;
-const STEP_X = 118;
-const STEP_Y = 112;
+const ROWS = 13;
+const STEP_X = 172;
+const STEP_Y = 166;
+const SCATTER = 0.42;
 const HALF_X = ((COLS - 1) / 2) * STEP_X;
 const HALF_Y = ((ROWS - 1) / 2) * STEP_Y;
-const SCATTER = 0.8;
 
-// Where they end up: keep each person's bearing so they walk straight in, and
-// compress the radius by rank so the crowd packs from the middle outward. The
-// disc is taller than it is wide because the frame is.
-const RX_MIN = 110;
-const RX_PACK = 380;
-const RY_MIN = 150;
-const RY_PACK = 530;
+// Where they end up.
+// Derived from the widest figure rather than picked, so the no-overlap
+// guarantee is in the code and not in a comment: a full ring's arc spacing is
+// 2piR/floor(2piR/RING_S) >= RING_S, the radial gap between rings is RING_S,
+// and squashing y only ever increases separation.
+const RING_S = Math.round(SIZE_MAX * 1.14);
+const RING_R0 = 132; // clears the product and the model at the centre
+const Y_SQUASH = 1.25; // scaling y only ever increases separation
 
-type Person = { hx: number; hy: number; tx: number; ty: number; s: number; ph: number };
+type Person = {
+  hx: number;
+  hy: number;
+  tx: number;
+  ty: number;
+  s: number;
+  ph: number;
+  rank: number;
+};
 
 const PEOPLE: Person[] = (() => {
   const raw: { hx: number; hy: number; i: number }[] = [];
   for (let i = 0; i < COLS * ROWS; i++) {
     const ox =
-      (((i % COLS) - (COLS - 1) / 2) * STEP_X) +
+      ((i % COLS) - (COLS - 1) / 2) * STEP_X +
       (hash(i * 3 + 1) - 0.5) * STEP_X * SCATTER;
     const oy =
-      ((Math.floor(i / COLS) - (ROWS - 1) / 2) * STEP_Y) +
+      (Math.floor(i / COLS) - (ROWS - 1) / 2) * STEP_Y +
       (hash(i * 7 + 5) - 0.5) * STEP_Y * SCATTER;
-    // A ragged elliptical edge — a crowd has no boundary you could draw.
-    if (Math.hypot(ox / HALF_X, oy / HALF_Y) > 1.02 + (hash(i * 17 + 3) - 0.5) * 0.26)
+    if (Math.hypot(ox / HALF_X, oy / HALF_Y) > 1.02 + (hash(i * 17 + 3) - 0.5) * 0.22)
       continue;
     raw.push({ hx: ox, hy: oy, i });
   }
-  const order = raw
-    .map((p, n) => ({ n, d: Math.hypot(p.hx, p.hy) }))
-    .sort((a, b) => a.d - b.d);
-  const out: Person[] = new Array(raw.length);
-  order.forEach((o, rank) => {
-    const p = raw[o.n];
-    const th = Math.atan2(p.hy, p.hx) + (hash(p.i * 23 + 7) - 0.5) * 0.26;
-    const rr = Math.sqrt((rank + 0.5) / raw.length);
-    out[o.n] = {
-      hx: p.hx,
-      hy: p.hy,
-      tx: Math.cos(th) * (RX_MIN + rr * (RX_PACK - RX_MIN)),
-      ty: Math.sin(th) * (RY_MIN + rr * (RY_PACK - RY_MIN)),
-      s: 0.85 + hash(p.i * 11 + 3) * 0.3,
-      ph: hash(p.i * 13 + 9) * 6.283,
-    };
+  const n = raw.length;
+
+  // Rings, inner to outer, until everybody has a slot.
+  const rings: { R: number; count: number }[] = [];
+  let placed = 0;
+  for (let j = 0; placed < n; j++) {
+    const R = RING_R0 + j * RING_S;
+    const cap = Math.max(1, Math.floor((2 * Math.PI * R) / RING_S));
+    const count = Math.min(cap, n - placed);
+    rings.push({ R, count });
+    placed += count;
+  }
+
+  const byDist = raw
+    .map((p, idx) => ({ idx, d: Math.hypot(p.hx, p.hy), a: Math.atan2(p.hy, p.hx) }))
+    .sort((x, y) => x.d - y.d);
+
+  const out: Person[] = new Array(n);
+  let cursor = 0;
+  rings.forEach((ring, j) => {
+    const group = byDist.slice(cursor, cursor + ring.count);
+    cursor += ring.count;
+    // The last ring is re-spaced over however many are left, so it is evenly
+    // filled rather than a full ring with holes in it.
+    const step = (Math.PI * 2) / ring.count;
+    const base = j % 2 ? step / 2 : 0;
+    const sorted = [...group].sort((x, y) => x.a - y.a);
+    // Rotate the ring so the first arrival keeps roughly its own bearing.
+    let rot = 0;
+    let best = Infinity;
+    for (let m = 0; m < ring.count; m++) {
+      let d = Math.abs(base + m * step - (sorted[0].a + Math.PI * 2)) % (Math.PI * 2);
+      if (d > Math.PI) d = Math.PI * 2 - d;
+      if (d < best) {
+        best = d;
+        rot = m;
+      }
+    }
+    sorted.forEach((g, m) => {
+      const a = base + ((rot + m) % ring.count) * step;
+      const p = raw[g.idx];
+      out[g.idx] = {
+        hx: p.hx,
+        hy: p.hy,
+        tx: Math.cos(a) * ring.R,
+        ty: Math.sin(a) * ring.R * Y_SQUASH,
+        s: S_MIN + hash(p.i * 11 + 3) * S_VAR,
+        ph: hash(p.i * 13 + 9) * 6.283,
+        rank: byDist.findIndex((b) => b.idx === g.idx),
+      };
+    });
   });
   return out;
 })();
+const N = PEOPLE.length;
 
-// Six attempts, authored against the words. One is already fading at frame 0
-// so the shot opens mid-try.
 type Attempt = { x: number; y: number; at: number; reach: number; w: number };
 const ATTEMPTS: Attempt[] = [
   { x: -150, y: -130, at: -8, reach: 265, w: 5 * G },
@@ -112,14 +164,18 @@ const ATTEMPTS: Attempt[] = [
   { x: -95, y: 250, at: 20, reach: 258, w: 5 * G },
   { x: 130, y: -230, at: 32, reach: 292, w: 6 * G },
   { x: -140, y: 70, at: 44, reach: 276, w: 4 * G },
-  // "catch on" — the near miss. It pulls people most of the way out of their
-  // places and still comes to nothing.
+  // "catch on" — the near miss, and the only one allowed to reach the whole
+  // frame. It comes to nothing all the same.
   { x: 0, y: -190, at: 55, reach: 520, w: 5 * G },
 ];
 const A_R0 = 70;
 const A_GROW = 16;
 const A_H = 2 * G;
-const LEAN = 62;
+// A step, not a lunge. At 24 the most a lean can close the gap between two
+// neighbours is about eight world units, which keeps them clear.
+const LEAN = 24;
+const IDLE_X = 3.5;
+const IDLE_Y = 4;
 
 const MODEL_AT = 103;
 const MODEL_FLARE = 116;
@@ -130,9 +186,9 @@ const PROD_T = 16;
 const PROD_CLICK = 145;
 const PROD_W = 6 * G;
 
-const COME_AT = 144;
-const COME_T = 38;
-const COME_STAGGER = 0.034; // frames per world unit out — near ones go first
+const COME_AT = 142;
+const COME_T = 34;
+const COME_SPREAD = 38; // inner rings are settled before the outer arrive
 
 const ez = (e: (t: number) => number, x: number) => e(clamp01(x));
 
@@ -182,8 +238,8 @@ export const defaultProps: Props = schema.parse({
   shadowY: 2,
   shadowBlur: 9,
   shadowOpacity: 0.22,
-  restOpacity: 0.44,
-  keenOpacity: 0.95,
+  restOpacity: 0.46,
+  keenOpacity: 0.96,
   spentOpacity: 0.2,
   beats: {
     catchOn: 55,
@@ -211,13 +267,16 @@ const CrowdComesToIt: React.FC<Props> = ({
 }) => {
   const frame = useCurrentFrame();
 
-  // Three movements, each tapered at both ends so the damped follower never
-  // has to stop dead. A slow drift while nothing works; one push in to 1.40 on
-  // the model; then wide enough to watch them all coming, and back in to
-  // settle on what they formed.
-  const CAM_F = [0, 95, 112, 134, 150, 158, 170, 186, 202, 216, DURATION];
-  const CAM_K = [1.18, 1.1, 1.2, 1.38, 1.4, 1.36, 1.1, 0.74, 0.7, 0.86, 0.92];
-  const CAM_CY = [1372, 1420, 1404, 1391, 1389, 1392, 1414, 1469, 1479, 1445, 1436];
+  // Three movements, tapered at both ends so the follower never stops dead: a
+  // slow drift while nothing works, one push in to 1.40 on the model, and one
+  // long accelerating pull out that eases into its resting frame.
+  const CAM_F = [0, 95, 112, 134, 150, 158, 172, 190, 206, 220, DURATION];
+  const CAM_K = [
+    1.18, 1.1, 1.2, 1.38, 1.4, 1.36, 1.12, 0.88, 0.79, 0.765, 0.76,
+  ];
+  const CAM_CY = [
+    1372, 1420, 1404, 1391, 1389, 1392, 1412, 1442, 1458, 1463, 1464,
+  ];
   const { cy, k } = React.useMemo(
     () => runCamera(frame, CAM_F, CAM_K, CAM_CY),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -243,6 +302,22 @@ const CrowdComesToIt: React.FC<Props> = ({
     return { a, l: life(age), r: A_R0 + a.reach * ez(GLIDE, age / A_GROW) };
   });
 
+  const glyph = (o: number, x: number, y: number, w: number): React.CSSProperties => ({
+    position: "absolute",
+    left: x - w / 2,
+    top: y - w / 2,
+    width: w,
+    height: w,
+    backgroundColor: ink,
+    maskImage: `url(${PERSON})`,
+    WebkitMaskImage: `url(${PERSON})`,
+    maskSize: "100% 100%",
+    WebkitMaskSize: "100% 100%",
+    maskRepeat: "no-repeat",
+    WebkitMaskRepeat: "no-repeat",
+    opacity: o,
+  });
+
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
       <AbsoluteFill style={{ overflow: "hidden" }}>
@@ -251,6 +326,9 @@ const CrowdComesToIt: React.FC<Props> = ({
           style={backdropStyle(frame, cy, k, CAM_CY[0], backgroundBlur, backgroundDim)}
         />
       </AbsoluteFill>
+
+      {/* Gates every frame on the glyph being loaded. */}
+      <Img src={PERSON} style={{ position: "absolute", width: 1, height: 1, opacity: 0 }} />
 
       <AbsoluteFill
         style={{
@@ -268,6 +346,54 @@ const CrowdComesToIt: React.FC<Props> = ({
             transform: `translate(${tx}px, ${ty}px) scale(${k})`,
           }}
         >
+          {PEOPLE.map((p, i) => {
+            let pull = 0;
+            let pdx = 0;
+            let pdy = 0;
+            for (const { a, l, r } of live) {
+              if (l <= 0) continue;
+              const dx = a.x - p.hx;
+              const dy = a.y - p.hy;
+              const d = Math.hypot(dx, dy);
+              if (d >= r || d < 1) continue;
+              const w = l * ez(GLIDE, (1 - d / r) * 1.8);
+              if (w > pull) {
+                pull = w;
+                pdx = dx / d;
+                pdy = dy / d;
+              }
+            }
+
+            const come = ez(
+              GLIDE,
+              (frame - COME_AT - (p.rank / N) * COME_SPREAD) / COME_T,
+            );
+            const idle = 1 - come;
+            const x =
+              X0 +
+              p.hx +
+              (p.tx - p.hx) * come +
+              (pdx * LEAN * pull + Math.cos(frame / 47 + p.ph) * IDLE_X) * idle;
+            const y =
+              Y0 +
+              p.hy +
+              (p.ty - p.hy) * come +
+              (pdy * LEAN * pull + Math.sin(frame / 39 + p.ph) * IDLE_Y) * idle;
+
+            const s = Math.max(pull, come);
+            return (
+              <div
+                key={`p-${i}`}
+                style={glyph(
+                  restOpacity + (keenOpacity - restOpacity) * s,
+                  x,
+                  y,
+                  SIZE * p.s,
+                )}
+              />
+            );
+          })}
+
           <svg
             width={WORLD_W}
             height={WORLD_H}
@@ -294,59 +420,6 @@ const CrowdComesToIt: React.FC<Props> = ({
                   strokeWidth={3}
                   strokeOpacity={spentOpacity * (1 - l)}
                 />
-              );
-            })}
-
-            {PEOPLE.map((p, i) => {
-              // Who is pulling on them right now, and how hard.
-              let pull = 0;
-              let pdx = 0;
-              let pdy = 0;
-              for (const { a, l, r } of live) {
-                if (l <= 0) continue;
-                const dx = a.x - p.hx;
-                const dy = a.y - p.hy;
-                const d = Math.hypot(dx, dy);
-                if (d >= r || d < 1) continue;
-                const w = l * ez(GLIDE, ((1 - d / r) * 1.8) as number);
-                if (w > pull) {
-                  pull = w;
-                  pdx = dx / d;
-                  pdy = dy / d;
-                }
-              }
-
-              // And whether they have left for good yet. The delay is their
-              // distance from the product, so it reads as word of mouth
-              // travelling outward rather than everyone starting at once.
-              const delay = Math.hypot(p.hx, p.hy) * COME_STAGGER;
-              const come = ez(GLIDE, (frame - COME_AT - delay) / COME_T);
-
-              const idleX = Math.cos(frame / 47 + p.ph) * 5;
-              const idleY = Math.sin(frame / 39 + p.ph) * 6;
-              const x =
-                X0 +
-                p.hx +
-                (p.tx - p.hx) * come +
-                (pdx * LEAN * pull + idleX) * (1 - come);
-              const y =
-                Y0 +
-                p.hy +
-                (p.ty - p.hy) * come +
-                (pdy * LEAN * pull + idleY) * (1 - come);
-
-              const s = Math.max(pull, come);
-              const sc = p.s * (1 + 0.08 * s);
-              return (
-                <g
-                  key={`p-${i}`}
-                  transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${sc.toFixed(3)})`}
-                  fill={ink}
-                  opacity={restOpacity + (keenOpacity - restOpacity) * s}
-                >
-                  <circle cx={0} cy={-15} r={9} />
-                  <path d="M-15 21 L-15 8 A15 15 0 0 1 15 8 L15 21 Z" />
-                </g>
               );
             })}
 
