@@ -58,12 +58,12 @@ const RULE_HALF = 360;
 const MGR_Y = 1740;
 const MGR_R = 42;
 
-const HIM_Y = 1060;
+const HIM_Y = 1170;
 const HIM_R = 58;
 
 const GROUND_Y = 2160;
-const GROUND_HALF = 440;
-const SRC_PITCH = 138;
+const GROUND_HALF = 450;
+const SRC_PITCH = 118;
 
 const tileX = (i: number) => X0 + (i - (N - 1) / 2) * SLOT_PITCH;
 
@@ -113,7 +113,7 @@ const bezAt = (
 // pulled back on the whole structure.
 const CAM_F = [0, 26, 46, 80, 108, 140, DURATION];
 const CAM_K = [1.18, 1.14, 1.08, 1.05, 1.0, 0.92, 0.92];
-const CAM_CY = [1900, 1840, 1790, 1775, 1780, 1730, 1730];
+const CAM_CY = [1930, 1870, 1820, 1810, 1800, 1770, 1770];
 
 export const schema = z.object({
   ink: z.string(),
@@ -162,7 +162,7 @@ export const defaultProps: SkipLevelReviewProps = schema.parse({
     feed: 23,
     carry: 33,
     bypass: 68,
-    first: 78,
+    first: 76,
     lift: 124,
     resolve: 132,
   },
@@ -171,7 +171,7 @@ export const defaultProps: SkipLevelReviewProps = schema.parse({
 const FEED_DRAW = 13;
 const FEED_STAG = 3;
 const CARRY_DRAW = 12;
-const SEND_STAG = 7;
+const SEND_STAG = 6;
 const SEND_DRAW = 15;
 const TILE_IN = 9;
 
@@ -212,9 +212,9 @@ export const SkipLevelReview: React.FC<SkipLevelReviewProps> = ({
     easing: LAND,
   });
 
-  // The one thing that got said. It is drawn up, it sits alone on a rule wide
-  // enough for seven, and when the channel gives way it goes back down the way
-  // it came instead of being cut — the voice is not deleted, it is bypassed.
+  // The one thing that got said: drawn up, sitting alone on a rule wide enough
+  // for seven. The voice is never deleted, only bypassed, so when the channel
+  // gives way both the thread and the tile retrace it downward.
   const carryDraw = interpolate(
     frame,
     [beats.carry, beats.carry + CARRY_DRAW],
@@ -234,18 +234,23 @@ export const SkipLevelReview: React.FC<SkipLevelReviewProps> = ({
       { ...CLAMP, easing: LAND },
     ) * carryBack;
 
-  const feedFade = interpolate(frame, [beats.bypass, beats.bypass + 12], [1, 0], CLAMP);
+  const feedFade = interpolate(frame, [beats.bypass, beats.bypass + 18], [1, 0], CLAMP);
   const ruleLift = interpolate(
     frame,
     [beats.lift, beats.lift + 15],
     [GROUND_O, GROUND_LIFT],
     { ...CLAMP, easing: GLIDE },
   );
-  const ruleHue = interpolate(frame, [beats.resolve + 4, beats.resolve + 24], [0, 1], {
-    ...CLAMP,
-    easing: GLIDE,
-  });
-  const himIn = interpolate(frame, [0, 40], [0.55, 1], { ...CLAMP, easing: GLIDE });
+  // He is off the top of the frame until the camera has lifted, so he fades
+  // in behind his own arrival rather than being clipped by the edge.
+  const himIn = interpolate(frame, [30, 56], [0, 1], { ...CLAMP, easing: GLIDE });
+  // Nothing is static at the head of the cut: the ground draws out from the
+  // centre, the people land on it one after another, and the rule the review
+  // happens on is drawn before anything is put on it.
+  // Both start before the cut, so the first frame is already a world with the
+  // move in progress rather than a blank sheet.
+  const groundIn = interpolate(frame, [-9, 8], [0.34, 1], { ...CLAMP, easing: GLIDE });
+  const ruleIn = interpolate(frame, [20, 36], [0, 1], { ...CLAMP, easing: GLIDE });
 
   const MGR_CX = X0 + 0;
   const carryCtrl = { x: X0 + 34, y: (MGR_Y + RULE_Y) / 2 };
@@ -280,21 +285,21 @@ export const SkipLevelReview: React.FC<SkipLevelReviewProps> = ({
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
             <rect
-              x={X0 - GROUND_HALF}
+              x={X0 - GROUND_HALF * groundIn}
               y={GROUND_Y}
-              width={GROUND_HALF * 2}
+              width={GROUND_HALF * 2 * groundIn}
               height={GROUND_W}
               rx={GROUND_W / 2}
               fill={ink}
               opacity={GROUND_O}
             />
             <rect
-              x={X0 - RULE_HALF}
+              x={X0 - RULE_HALF * ruleIn}
               y={RULE_Y}
-              width={RULE_HALF * 2}
+              width={RULE_HALF * 2 * ruleIn}
               height={GROUND_W}
               rx={GROUND_W / 2}
-              fill={interpolateColors(ruleHue, [0, 1], [ink, accent])}
+              fill={ink}
               opacity={ruleLift}
             />
 
@@ -318,7 +323,7 @@ export const SkipLevelReview: React.FC<SkipLevelReviewProps> = ({
                     { ...CLAMP, easing: RISE },
                   );
                   if (t <= 0) return null;
-                  const cxc = (p.x + MGR_CX) / 2 + p.bow * 0.22;
+                  const cxc = (p.x + MGR_CX) / 2 + p.bow * 0.5;
                   const cyc = (p.y - p.r + MGR_Y) / 2;
                   const per = 34;
                   const u = ((frame - beats.feed) / per + hash(i * 17 + 9)) % 1;
@@ -367,17 +372,33 @@ export const SkipLevelReview: React.FC<SkipLevelReviewProps> = ({
               />
             ) : null}
 
-            {oneIn > 0 ? (
-              <rect
-                x={X0 - (TILE_W / 2) * oneIn}
-                y={RULE_Y - TILE_H * oneIn}
-                width={TILE_W * oneIn}
-                height={TILE_H * oneIn}
-                rx={8 * oneIn}
-                fill={ink}
-                opacity={0.95}
-              />
-            ) : null}
+            {oneIn > 0
+              ? (() => {
+                  // It rides its own thread back down as the channel
+                  // withdraws, so the one thing that got said leaves the
+                  // review the way it arrived instead of being deleted off it.
+                  const q = bezAt(
+                    MGR_CX,
+                    MGR_Y - mgrR,
+                    carryCtrl.x,
+                    carryCtrl.y,
+                    X0,
+                    RULE_Y,
+                    carryBack,
+                  );
+                  return (
+                    <rect
+                      x={q.x - (TILE_W / 2) * oneIn}
+                      y={q.y - TILE_H * oneIn}
+                      width={TILE_W * oneIn}
+                      height={TILE_H * oneIn}
+                      rx={8 * oneIn}
+                      fill={ink}
+                      opacity={0.95}
+                    />
+                  );
+                })()
+              : null}
 
             {/* Phase two: each of them says its own thing. One thread, one
                 tile, one slot — the count on the rule is the sentence. */}
@@ -431,9 +452,29 @@ export const SkipLevelReview: React.FC<SkipLevelReviewProps> = ({
               );
             })}
 
-            {PEOPLE.map((p, i) => (
-              <circle key={`p${i}`} cx={p.x} cy={p.y} r={p.r} fill={ink} opacity={0.88} />
-            ))}
+            {/* A person lands only once the ground has reached them, so the
+                build runs centre-outward and nobody is ever standing past the
+                end of the floor. The order is the ground's, not a timer's. */}
+            {PEOPLE.map((p, i) => {
+              const reach = GROUND_HALF * groundIn;
+              const pop = interpolate(
+                reach - (Math.abs(p.x - X0) + p.r),
+                [0, 80],
+                [0, 1],
+                { ...CLAMP, easing: LAND },
+              );
+              if (pop <= 0) return null;
+              return (
+                <circle
+                  key={`p${i}`}
+                  cx={p.x}
+                  cy={GROUND_Y - p.r * pop}
+                  r={p.r * pop}
+                  fill={ink}
+                  opacity={0.88}
+                />
+              );
+            })}
           </svg>
         </div>
       </AbsoluteFill>
