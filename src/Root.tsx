@@ -1,19 +1,19 @@
 import {Composition} from 'remotion';
-import GreatTasksPoorToStart, {
+import BestForecasterInKansas, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/GreatTasksPoorToStart';
+} from '../generated/components/BestForecasterInKansas';
 
-// kyle — why the home robot won't do your dishes first.
+// kalshi — monitoring the situation: the best inflation forecaster is a guy in Kansas.
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:05.059 -> 0:10.419 */}
+      {/* 0:23.160 -> 0:34.100 */}
       <Composition
-        id="GreatTasksPoorToStart"
-        component={GreatTasksPoorToStart}
+        id="BestForecasterInKansas"
+        component={BestForecasterInKansas}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
