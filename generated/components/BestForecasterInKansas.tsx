@@ -24,7 +24,6 @@ import {
   hash,
   qbez,
   runCamera,
-  sgnRand as sgn,
 } from "./cheekyPintSystem";
 
 export const FPS = 24;
@@ -62,12 +61,12 @@ const FLOOR_Y = 1500;
 const PERSON = staticFile("person.png");
 
 // One unit for a trade, one grid for every heap.
-const DOT_R = 21;
-const COL_STEP = 52;
-const ROW_STEP = 47;
+const DOT_R = 18;
+const COL_STEP = 46;
+const ROW_STEP = 42;
 
 // One unit for a person. The glyph's ink fills ~84% of its box.
-const P = 92;
+const P = 74;
 
 // ---------------------------------------------------------------------------
 // The lineup
@@ -86,8 +85,8 @@ type Crowd = {
   ring: { cy: number; rx: number; ry: number };
 };
 
-const A: Crowd = { x: X0 - 500, cols: 7, rows: 3, front: 6, back: 5, ring: { cy: 1370, rx: 238, ry: 135 } };
-const B: Crowd = { x: X0 - 150, cols: 5, rows: 7, front: 4, back: 3, ring: { cy: 1281, rx: 172, ry: 225 } };
+const A: Crowd = { x: X0 - 500, cols: 7, rows: 3, front: 5, back: 4, ring: { cy: 1388, rx: 213, ry: 122 } };
+const B: Crowd = { x: X0 - 150, cols: 5, rows: 7, front: 3, back: 2, ring: { cy: 1304, rx: 167, ry: 205 } };
 
 const heapHalf = (c: Crowd) => ((c.cols - 1) * COL_STEP) / 2 + DOT_R;
 const heapTop = (c: Crowd) => FLOOR_Y - c.rows * ROW_STEP;
@@ -96,8 +95,8 @@ const AIR = B.x - heapHalf(B) - (A.x + heapHalf(A));
 if (AIR < GAP) throw new Error(`heaps too close: ${AIR}px < ${GAP}px`);
 
 const GX = X0 + 430;
-const GUY_P = 100;
-const GUY_RING_R = 100;
+const GUY_P = 82;
+const GUY_RING_R = 92;
 
 type Dot = { x: number; y: number; r: number; seed: number };
 const heapDots = (c: Crowd, base: number): Dot[] =>
@@ -105,10 +104,12 @@ const heapDots = (c: Crowd, base: number): Dot[] =>
     const seed = base + i;
     const col = i % c.cols;
     const row = Math.floor(i / c.cols);
+    // A clean stack: every trade on its cell, every dot the same size. The
+    // heaps are institutions, and they should look like it.
     return {
-      x: c.x + (col - (c.cols - 1) / 2) * COL_STEP + sgn(seed * 3 + 1) * COL_STEP * 0.22,
-      y: FLOOR_Y - row * ROW_STEP - ROW_STEP / 2 + sgn(seed * 7 + 5) * ROW_STEP * 0.18,
-      r: DOT_R * (0.86 + hash(seed * 11 + 3) * 0.3),
+      x: c.x + (col - (c.cols - 1) / 2) * COL_STEP,
+      y: FLOOR_Y - row * ROW_STEP - ROW_STEP / 2,
+      r: DOT_R,
       seed,
     };
   });
@@ -117,21 +118,22 @@ type Figure = { x: number; base: number; w: number; o: number; seed: number };
 const crowdPeople = (c: Crowd, base: number): Figure[] => {
   const top = heapTop(c);
   const span = (c.cols - 1) * COL_STEP;
-  const row = (n: number, y: number, scale: number, o: number, off: number): Figure[] =>
-    Array.from({ length: n }, (_, i) => {
-      const seed = base + off + i;
-      const t = n === 1 ? 0.5 : i / (n - 1);
-      return {
-        x: c.x + (t - 0.5) * span * 0.92 + sgn(seed * 5 + 2) * 9,
-        base: y + sgn(seed * 9 + 4) * 4,
-        w: P * scale * (0.94 + hash(seed * 13 + 6) * 0.12),
-        o,
-        seed,
-      };
-    });
-  // The back row is drawn first, a little smaller and a little dimmer, so the
-  // crowd has depth without a second material.
-  return [...row(c.back, top - 26, 0.9, 0.82, 100), ...row(c.front, top + 8, 1, 1, 200)];
+  // Evenly spaced along the heap, one size, one baseline. The back row sits
+  // on the half-steps behind the front row, a little dimmer, so the crowd has
+  // depth and a count without a second material or any scatter.
+  const step = span / (c.front - 1);
+  const row = (n: number, x0: number, y: number, o: number, off: number): Figure[] =>
+    Array.from({ length: n }, (_, i) => ({
+      x: x0 + i * step,
+      base: y,
+      w: P,
+      o,
+      seed: base + off + i,
+    }));
+  return [
+    ...row(c.back, c.x - span / 2 + step / 2, top - 24, 0.7, 100),
+    ...row(c.front, c.x - span / 2, top + 6, 1, 200),
+  ];
 };
 
 const A_DOTS = heapDots(A, 1000);
@@ -145,21 +147,23 @@ const B_PEOPLE = crowdPeople(B, 4000);
 // Five lines, one per beat of the drop, each the width of the slot. They
 // stack where his heap would have been, and he rises one line at a time.
 // ---------------------------------------------------------------------------
-const LINE_W = 130;
+const LINE_W = 120;
 const LINE_H = 9;
 const LINE_STEP = 22;
 const N_LINES = 5;
 const LINE_FALL = 7;
 const LINE_EVERY = 5;
-const SLOT_HALF = 74;
+const SLOT_HALF = 68;
 const SLOT_H = N_LINES * LINE_STEP + 14;
 
-// The Kalshi mark — drawn to the same rules as a Simple Icons mark, a solid
-// monochrome K on a 24-box centred on (12,12), at half opacity because it is
-// drawn rather than the brand's own.
+// The Kalshi wordmark (public/kalshi-wordmark.svg, the 2026 mark from
+// Wikimedia Commons, 772x226, filled white). The brand's own mark, so it is
+// ink at full like any other brand actor. The thread hangs from its baseline.
+const MARK = staticFile("kalshi-wordmark.svg");
+const MARK_RATIO = 226 / 772;
 const MARK_Y = 800;
-const MARK_INK_BOTTOM = MARK_Y + ((21 - 12) / 24) * 150;
-const K_D = "M6.2 3V21M6.6 13.6L17.6 3M10 10.4L18.8 21";
+const MARK_W = 420;
+const MARK_INK_BOTTOM = MARK_Y + (MARK_W * MARK_RATIO) / 2;
 
 export const schema = z.object({
   ink: z.string(),
@@ -172,7 +176,7 @@ export const schema = z.object({
   shadowBlur: z.number(),
   shadowOpacity: z.number(),
   markOpacity: z.number(),
-  markSize: z.number(),
+  markWidth: z.number(),
   // Beat frames lifted from the SRT at 24fps, f0 = 00:00:23,160:
   //   0 "the best"  10 "inflation forecaster"  24 "on kalshi"
   //   36 "over the last few"  48 "years is"  72 "not none of the"
@@ -208,8 +212,8 @@ export const defaultProps: Props = schema.parse({
   shadowY: 2,
   shadowBlur: 9,
   shadowOpacity: 0.22,
-  markOpacity: 0.5,
-  markSize: 150,
+  markOpacity: 1,
+  markWidth: MARK_W,
   beats: {
     kalshi: 24,
     years: 36,
@@ -288,7 +292,7 @@ const BestForecasterInKansas: React.FC<Props> = ({
   shadowBlur,
   shadowOpacity,
   markOpacity,
-  markSize,
+  markWidth,
   beats: b,
 }) => {
   const frame = useCurrentFrame();
@@ -455,14 +459,6 @@ const BestForecasterInKansas: React.FC<Props> = ({
             {crowdDots(A_DOTS, aH)}
             {crowdDots(B_DOTS, bH)}
 
-            {/* The mark. */}
-            <g
-              transform={`translate(${X0} ${MARK_Y}) scale(${(markIn * markSize) / 24}) translate(-12 -12)`}
-              opacity={markOpacity * clamp01((frame - b.kalshi) / 5)}
-            >
-              <path d={K_D} fill="none" stroke={ink} strokeWidth={4.4} strokeLinecap="butt" strokeLinejoin="miter" />
-            </g>
-
             {/* The thread. */}
             {threadOn ? (
               <>
@@ -533,6 +529,21 @@ const BestForecasterInKansas: React.FC<Props> = ({
               <circle cx={GX} cy={guyBase - GUY_P * 0.5} r={GUY_RING_R * (1.35 - 0.35 * ringG)} fill="none" stroke={accent} strokeWidth={4} opacity={clamp01(ringG * 1.5)} />
             ) : null}
           </svg>
+
+          {/* The mark. */}
+          <Img
+            src={MARK}
+            style={{
+              position: "absolute",
+              left: X0 - markWidth / 2,
+              top: MARK_Y - (markWidth * MARK_RATIO) / 2,
+              width: markWidth,
+              height: markWidth * MARK_RATIO,
+              transformOrigin: "50% 50%",
+              transform: `scale(${markIn})`,
+              opacity: markOpacity * clamp01((frame - b.kalshi) / 5),
+            }}
+          />
 
           {/* The people, drawn over the thread so it lands behind them. */}
           {crowdFigs(A_PEOPLE, aO, ink)}

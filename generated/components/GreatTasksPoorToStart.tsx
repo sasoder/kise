@@ -41,9 +41,9 @@ export const DURATION = 129;
 // the same object at a different size — one corner treatment (a full pill at
 // whatever height it is), one width per tower, one breathing rule — so the
 // field reads as one material and the only things that vary are the things the
-// line is actually about: how many, and how tall. The rule sits 240
-// above the ground — clear of the tallest small job, a third of the way up the
-// shorter tower — and runs off both edges, because the constraint applies to
+// line is actually about: how many, and how tall. The rule sits in the third
+// gap up — clear of the tallest small job, a third of the way up the shorter
+// tower — and runs off both edges, because the constraint applies to
 // everything including what the frame cannot show.
 // ---------------------------------------------------------------------------
 const GY = 1500; // the ground
@@ -61,7 +61,11 @@ const LAUNDRY_X = 680;
 const SMALL_H = 48;
 const SMALL_PITCH = SMALL_H + GAP;
 
-const RULE_Y = GY - 240;
+// The rule is on the same grid as everything standing on the ground: it
+// threads the air above the third slab rather than slicing through one, so it
+// reads as part of the spacing instead of a line laid over the top of it.
+const RULE_SLAB = 2;
+const RULE_Y = GY - (RULE_SLAB + 1) * PITCH + GAP / 2;
 const RULE_H = 10;
 const RULE_X0 = -280;
 const RULE_X1 = 1360;
