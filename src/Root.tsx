@@ -1,19 +1,19 @@
 import {Composition} from 'remotion';
-import BestForecasterInKansas, {
+import BestForecasterField, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BestForecasterInKansas';
+} from '../generated/components/BestForecasterField';
 
-// kalshi — monitoring the situation: the best inflation forecaster is a guy in Kansas.
+// kalshi — monitoring the situation: the same line in the Dwarkesh grid language.
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:23.160 -> 0:34.100 */}
+      {/* 0:23.160 -> 0:34.100 (+0.5s tail) */}
       <Composition
-        id="BestForecasterInKansas"
-        component={BestForecasterInKansas}
+        id="BestForecasterField"
+        component={BestForecasterField}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
