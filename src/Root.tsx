@@ -1,21 +1,20 @@
 import {Composition} from 'remotion';
-import HumansInTheDark, {
+import DarkAboutTheScope, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HumansInTheDark';
+} from '../generated/components/DarkAboutTheScope';
 
 // three secret ai societies — "all of this happened while humans remained more
-// or less in the dark about the scope of the conspiracy." Opens on the resolved
-// frame of ThreeSecretSocieties.
+// or less in the dark about the scope of the conspiracy."
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:13.000 -> 0:17.899 (+10 frame tail) */}
+      {/* 0:13.000 -> 0:17.899 (+16 frame tail) */}
       <Composition
-        id="HumansInTheDark"
-        component={HumansInTheDark}
+        id="DarkAboutTheScope"
+        component={DarkAboutTheScope}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
