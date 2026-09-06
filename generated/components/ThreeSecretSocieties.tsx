@@ -33,9 +33,9 @@ import {
 export const FPS = 24;
 // Dwarkesh, "[at] OpenAI, three consecutive secret AI societies got started,
 // then got wiped out, only to re-emerge from their predecessor's ashes."
-// SRT 1.399s -> 8.839s. round(7.440 * 24) = 179 frames, plus a 12 frame tail
-// so the third society holds resolved after the pull-back settles.
-export const DURATION = 191;
+// SRT 1.399s -> 8.839s. round(7.440 * 24) = 179 frames, plus a 16 frame tail
+// so the last opening arc can settle before the piece holds resolved.
+export const DURATION = 195;
 
 export const schema = z.object({
   ink: z.string(),
@@ -134,16 +134,10 @@ const MARK = { x: 540, y: 1290, size: 118 };
 const PRE: P[] = [];
 for (let i = 0; i < POP; i++) {
   PRE.push({
-    x: 540 + (hash(i, 41) - 0.5) * 760,
+    x: 540 + (hash(i, 41) - 0.5) * 680,
     y: GROUNDS[0] - 18 - hash(i, 43) * 168,
   });
 }
-
-const THREAD_WINDOW = [
-  { from: 54, span: 16 },
-  { from: 120, span: 8 },
-  { from: 158, span: 12 },
-];
 
 // ---------------------------------------------------------------------------
 // The wipe
@@ -174,35 +168,71 @@ const killFrame = (i: number, gen: number, hit: number, land: number) => {
 // ---------------------------------------------------------------------------
 // Camera
 //
-// All three floors are in frame from the moment they are drawn until the last
-// frame. An earlier cut pushed in on each society in turn, and the count stopped
-// reading: for a hundred frames you could only ever see one floor, so "three"
-// had to be carried by memory rather than by anything on screen. Now the camera
-// only leans in as the first society gathers and eases back out for the resolve,
-// and the two floors still waiting above are visible the whole way up. A damped
-// follow rounds the corners off the coarse key track; the drift across the long
-// hold keeps the frame from going dead while the action climbs.
+// Same model as `DarkAboutTheScope`, so the two cuts move in one hand: a shot is
+// an anchor (the world point that sits in the caption-safe band) and a zoom, one
+// damped progress walks the shot list, zoom is interpolated in log space so a
+// constant rate there is a constant rate on screen, and the centre is not
+// authored at all — for any two framings there is exactly one world point that
+// lands on the same pixel in both, so that point is held still and only the
+// scale changes. Every transition is a pure zoom with no pan in it.
+//
+// This is cut for short form, so it is never parked: a slow monotonic push runs
+// under everything, and every "hold" below is short. The shots alternate tight
+// and wide on purpose — sit on the society that is alive, snap out when its
+// wipe lands, ride back in on the next one — which keeps something opening or
+// closing on screen at all times.
+//
+// Pushing in this far used to cost the count, and no longer does: the floors are
+// 380 apart and a spent one keeps its doubled rule, its ash and the ghost of its
+// web, so the working frame (the live society centred, the spent floor below it,
+// the empty floor above) says where we came from, where we are, and where this
+// is going, all at once.
 // ---------------------------------------------------------------------------
-const CAM_F = [0, 34, 48, 150, 164, DURATION];
-const CAM_CY = [2110, 2110, 2150, 2130, 2060, 2060];
-const CAM_K = [0.88, 0.88, 0.97, 0.97, 0.91, 0.91];
+type Shot = { anchor: number; k: number };
+const SHOTS: Shot[] = [
+  { anchor: 2470, k: 1.18 }, // the loose crowd, before any of it is organised
+  { anchor: 1915, k: 0.86 }, // three floors
+  { anchor: 2457, k: 1.22 }, // the first society
+  { anchor: 2450, k: 0.98 }, // the wipe lands
+  { anchor: 2083, k: 1.3 }, // the second society, the first one spent below it
+  { anchor: 2060, k: 1.02 }, // the wipe lands again, faster
+  { anchor: 1709, k: 1.24 }, // the third
+  { anchor: 1915, k: 0.91 }, // all of it
+];
+const SHOT_CY = SHOTS.map((s) => s.anchor + 125 / s.k);
+
+const PIVOTS = SHOTS.slice(0, -1).map((_, i) => {
+  const ka = SHOTS[i].k;
+  const kb = SHOTS[i + 1].k;
+  const ca = SHOT_CY[i];
+  const cb = SHOT_CY[i + 1];
+  if (Math.abs(ka - kb) < 1e-6) return null;
+  const w = (ca * ka - cb * kb) / (ka - kb);
+  return { w, sy: (w - ca) * ka + 960 };
+});
+
+const CAM_F = [0, 16, 28, 40, 50, 92, 102, 118, 136, 146, 162, 168, 182, DURATION];
+const CAM_P = [0, 0, 1, 1, 2, 2, 3, 4, 4, 5, 6, 6, 7, 7];
+const CAM_CREEP = 0.00045;
 
 const CAM_STIFF = 0.13;
-const CAM_DAMP = 0.56; // zeta ~0.78, settles in ~14 frames
+const CAM_DAMP = 0.56;
 
 const camera = (upto: number) => {
-  let cy = CAM_CY[0];
-  let k = CAM_K[0];
-  let vcy = 0;
-  let vk = 0;
+  let p = CAM_P[0];
+  let v = 0;
   for (let f = 1; f <= upto; f++) {
-    const tcy = interpolate(f, CAM_F, CAM_CY, clamp);
-    const tk = interpolate(f, CAM_F, CAM_K, clamp);
-    vcy += (tcy - cy) * CAM_STIFF - vcy * CAM_DAMP;
-    cy += vcy;
-    vk += (tk - k) * CAM_STIFF - vk * CAM_DAMP;
-    k += vk;
+    const tp = interpolate(f, CAM_F, CAM_P, clamp);
+    v += (tp - p) * CAM_STIFF - v * CAM_DAMP;
+    p += v;
   }
+  const i = Math.max(0, Math.min(SHOTS.length - 2, Math.floor(p)));
+  const t = Math.max(0, Math.min(1, p - i));
+  const k =
+    Math.exp(Math.log(SHOTS[i].k) + (Math.log(SHOTS[i + 1].k) - Math.log(SHOTS[i].k)) * t) *
+    (1 + CAM_CREEP * upto);
+  const pv = PIVOTS[i];
+  const cy = pv ? pv.w - (pv.sy - 960) / k : SHOT_CY[i] + (SHOT_CY[i + 1] - SHOT_CY[i]) * t;
   return { cy, k };
 };
 
@@ -251,7 +281,7 @@ const ThreeSecretSocieties: React.FC<Props> = ({
 
   // The grid sits on its own plane at a fraction of the camera, so the move
   // reads as travel through a space rather than a layer sliding about.
-  const bgY = -(cy - CAM_CY[0]) * k * parallax - frame * 0.25;
+  const bgY = -(cy - SHOT_CY[0]) * k * parallax - frame * 0.25;
   const bgScale = 1 + (k - 1) * 0.3;
 
   const bars = [
@@ -291,10 +321,6 @@ const ThreeSecretSocieties: React.FC<Props> = ({
   type Dot = { x: number; y: number; r: number; opacity: number; lit: number; stage: number };
   const dots: Dot[] = [];
   for (let i = 0; i < POP; i++) {
-    const drift = {
-      x: 6 * Math.sin(frame * 0.055 + hash(i, 3) * 6.28),
-      y: 5 * Math.cos(frame * 0.047 + hash(i, 4) * 6.28),
-    };
 
     // Generation 0: lift off the floor into formation.
     const rise0 = beats.gather + hash(i, 53) * 10;
@@ -330,8 +356,8 @@ const ThreeSecretSocieties: React.FC<Props> = ({
       easing: Easing.inOut(Easing.quad),
     });
     let pos: P = {
-      x: PRE[i].x + (540 - PRE[i].x) * draw + drift.x,
-      y: PRE[i].y + (GROUNDS[0] - 130 - PRE[i].y) * draw + drift.y,
+      x: PRE[i].x + (540 - PRE[i].x) * draw,
+      y: PRE[i].y + (GROUNDS[0] - 130 - PRE[i].y) * draw,
     };
     let lit = 0;
     let stage = 0;
@@ -380,16 +406,28 @@ const ThreeSecretSocieties: React.FC<Props> = ({
       (SLOT_OF[0].has(i) ? ignite(launch1 + 14) : 0) +
       (SLOT_OF[1].has(i) ? ignite(launch2 + 15) : 0);
 
+    // Nothing on this canvas is ever completely still. A settled society sways;
+    // ash on a floor sways a third as much, because it is dead.
+    const sway = 0.35 + 0.65 * lit;
     const breath = 1 + 0.05 * Math.sin(frame * 0.11 + hash(i, 6) * 6.28);
     dots.push({
-      x: pos.x,
-      y: pos.y,
+      x: pos.x + 6 * sway * Math.sin(frame * 0.055 + hash(i, 3) * 6.28),
+      y: pos.y + 5 * sway * Math.cos(frame * 0.047 + hash(i, 4) * 6.28),
       r: dotRadius * (0.75 + 0.5 * hash(i, 7)) * breath * (1 + 0.22 * pop),
       opacity: ashOpacity + (litOpacity - ashOpacity) * lit,
       lit,
       stage,
     });
   }
+
+  // When a dot finishes arriving in generation `g` — the same expressions the
+  // dot loop uses to move it, so a thread can never start before its own ends.
+  const settledAt = (g: number, id: number) =>
+    g === 0
+      ? beats.gather + hash(id, 53) * 10 + 16
+      : g === 1
+        ? beats.launch1 + hash(id, 59) * 8 + 14
+        : beats.launch2 + hash(id, 61) * 9 + 15;
 
   const litOf = (g: number, slot: number) => {
     const d = dots[dotInSlot(g, slot)];
@@ -420,7 +458,14 @@ const ThreeSecretSocieties: React.FC<Props> = ({
     ...clamp,
     easing: Easing.out(Easing.cubic),
   });
-  const markIn = 1;
+  // The mark is the place, not an actor: it bows out rather than being sliced
+  // in half by the top edge whenever the camera pushes past it.
+  const markIn = interpolate(
+    (MARK.y - MARK.size / 2 - cy) * k + 960,
+    [40, 130],
+    [0, 1],
+    clamp,
+  );
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -515,9 +560,14 @@ const ThreeSecretSocieties: React.FC<Props> = ({
 
             {THREADS.map((list, g) =>
               list.map((t, ti) => {
-                const a = SLOTS[g][t.a];
-                const b = SLOTS[g][t.b];
+                const idA = dotInSlot(g, t.a);
+                const idB = dotInSlot(g, t.b);
                 const gate = Math.min(litOf(g, t.a), litOf(g, t.b));
+                // A live web hangs off the dots themselves so it sways with
+                // them; a ruin stays pinned to the slots its society stood in.
+                const live = gate > 0.02;
+                const a = live ? dots[idA] : SLOTS[g][t.a];
+                const b = live ? dots[idB] : SLOTS[g][t.b];
                 // What a wiped society leaves on its floor is not only dots but
                 // the shape it had. The web stays as a ruin at the unknown
                 // level, so a dead floor still reads as somewhere a society was.
@@ -525,16 +575,15 @@ const ThreeSecretSocieties: React.FC<Props> = ({
                 const ruin =
                   g === 2 ? 0 : interpolate(frame, [wiped, wiped + 12], [0, 0.16], clamp);
                 if (gate < 0.02 && ruin < 0.005) return null;
-                const w = THREAD_WINDOW[g];
-                const start = w.from + t.k * w.span;
-                const p = interpolate(frame, [start, start + 7], [0, 1], {
+                const start = Math.max(settledAt(g, idA), settledAt(g, idB)) + 1 + t.k * 4;
+                const p = interpolate(frame, [start, start + 6], [0, 1], {
                   ...clamp,
                   easing: Easing.out(Easing.quad),
                 });
                 if (p <= 0) return null;
                 const hx = a.x + (b.x - a.x) * p;
                 const hy = a.y + (b.y - a.y) * p;
-                const done = interpolate(frame, [start + 7, start + 11], [1, 0], clamp);
+                const done = interpolate(frame, [start + 6, start + 10], [1, 0], clamp);
                 // One ambient layer: packets running the finished threads,
                 // capped so a hold is never still and never busy.
                 const carries = ti % 5 === 0 && p >= 1;
