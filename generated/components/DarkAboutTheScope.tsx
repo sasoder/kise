@@ -3,10 +3,8 @@ import {
   Easing,
   Img,
   interpolate,
-  spring,
   staticFile,
   useCurrentFrame,
-  useVideoConfig,
 } from "remotion";
 import { z } from "zod";
 
@@ -64,7 +62,7 @@ export const defaultProps: Props = schema.parse({
   backgroundDim: 0.32,
   parallax: 0.15,
   humanSrc: "person.png",
-  humanSize: 120,
+  humanSize: 100,
   shadowY: 2,
   shadowBlur: 9,
   shadowOpacity: 0.22,
@@ -133,7 +131,8 @@ const RULE_Y = 900;
 const RULE_HALF = 1500;
 const BR = { x0: 400, x1: 680, y0: 1050, y1: 1250 };
 const BR_C = { x: (BR.x0 + BR.x1) / 2, y: (BR.y0 + BR.y1) / 2 };
-const HUMAN_FOOT = RULE_Y + 10;
+const HUMAN_FOOT = RULE_Y + 8;
+const RISE_HEADROOM = 34; // room above the glyph so its overshoot never clips
 
 const seedOf = (i: number, j: number) => i * 73 + j * 31;
 
@@ -159,31 +158,75 @@ const inBracket = (p: P) => p.x > BR.x0 && p.x < BR.x1 && p.y > BR.y0 && p.y < B
 // ---------------------------------------------------------------------------
 // Camera
 //
-// Four stages, and the last two are one accelerating move rather than two
-// stops, because scope that keeps outrunning you reads bigger than scope you
-// can measure on the first look. Tight on the group, out once when the dark
-// falls to show how much was never looked at, then the long pull.
+// Three framings, and ONE number moving between them.
+//
+// The previous cut authored centre and zoom as two separate key tracks, and
+// they disagreed: through the long pull the centre accelerated (18px a frame,
+// then 55) while the zoom decelerated (0.027, then 0.018). That reads exactly
+// as it sounds — the shot zooms, then the picture slides, as two moves fighting
+// for the same seconds. Zoom was also interpolated linearly, so even inside a
+// single move the *perceived* rate kept changing: a step from 2.0 to 1.9 is a
+// twentieth of the picture, a step from 0.5 to 0.4 is a fifth of it.
+//
+// So: a shot is an anchor (the world point that sits in the caption-safe band)
+// and a zoom. One damped progress walks the shot list, zoom is interpolated in
+// log space so a constant rate there is a constant rate on screen, and the
+// centre is not authored at all — it is solved for. For any two framings there
+// is exactly one world point that lands on the same pixel in both; hold that
+// point still and vary only the scale, and the transition is a pure zoom with
+// no pan in it anywhere.
 // ---------------------------------------------------------------------------
-const CAM_F = [0, 48, 62, 84, 100, 112, DURATION];
-const CAM_CY = [1072, 1072, 1269, 1269, 1560, 2223, 2223];
-const CAM_K = [2.4, 2.4, 1.05, 1.05, 0.62, 0.4, 0.4];
+type Shot = { anchor: number; k: number };
+const SHOTS: Shot[] = [
+  { anchor: 1020, k: 2.0 }, // the group, the human, and the box they drew
+  { anchor: 1150, k: 1.05 }, // and how much of it nobody looked at
+  { anchor: 1910, k: 0.4 }, // all of it
+];
+// 125/k puts the anchor at y 835 rather than dead centre, which is where the
+// content has to sit to clear the burned-in captions.
+const SHOT_CY = SHOTS.map((s) => s.anchor + 125 / s.k);
+
+const PIVOTS = SHOTS.slice(0, -1).map((_, i) => {
+  const ka = SHOTS[i].k;
+  const kb = SHOTS[i + 1].k;
+  const ca = SHOT_CY[i];
+  const cb = SHOT_CY[i + 1];
+  if (Math.abs(ka - kb) < 1e-6) return null;
+  const w = (ca * ka - cb * kb) / (ka - kb);
+  return { w, sy: (w - ca) * ka + 960 };
+});
+
+// Where the shot list is walked. The second leg is authored to accelerate —
+// scope that keeps outrunning you reads bigger than scope you can measure on
+// the first look — and the damper rounds off the corner between its two rates.
+const CAM_F = [0, 46, 64, 84, 100, 112, DURATION];
+const CAM_P = [0, 0, 1, 1, 1.45, 2, 2];
 
 const CAM_STIFF = 0.13;
 const CAM_DAMP = 0.56;
 
-const camera = (upto: number) => {
-  let cy = CAM_CY[0];
-  let k = CAM_K[0];
-  let vcy = 0;
-  let vk = 0;
+const progressAt = (upto: number) => {
+  let p = CAM_P[0];
+  let v = 0;
   for (let f = 1; f <= upto; f++) {
-    const tcy = interpolate(f, CAM_F, CAM_CY, clamp);
-    const tk = interpolate(f, CAM_F, CAM_K, clamp);
-    vcy += (tcy - cy) * CAM_STIFF - vcy * CAM_DAMP;
-    cy += vcy;
-    vk += (tk - k) * CAM_STIFF - vk * CAM_DAMP;
-    k += vk;
+    const tp = interpolate(f, CAM_F, CAM_P, clamp);
+    v += (tp - p) * CAM_STIFF - v * CAM_DAMP;
+    p += v;
   }
+  return p;
+};
+
+const camera = (upto: number) => {
+  const p = progressAt(upto);
+  const i = Math.max(0, Math.min(SHOTS.length - 2, Math.floor(p)));
+  const t = Math.max(0, Math.min(1, p - i));
+  const k = Math.exp(
+    Math.log(SHOTS[i].k) + (Math.log(SHOTS[i + 1].k) - Math.log(SHOTS[i].k)) * t,
+  );
+  const pv = PIVOTS[i];
+  const cy = pv
+    ? pv.w - (pv.sy - 960) / k
+    : SHOT_CY[i] + (SHOT_CY[i + 1] - SHOT_CY[i]) * t;
   return { cy, k };
 };
 
@@ -212,21 +255,20 @@ const DarkAboutTheScope: React.FC<Props> = ({
   beats,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
   const { cy, k } = camera(frame);
   const tx = 540 - 540 * k;
   const ty = 960 - cy * k;
-  const bgY = -(cy - CAM_CY[0]) * k * parallax - frame * 0.25;
+  const bgY = -(cy - SHOT_CY[0]) * k * parallax - frame * 0.25;
   const bgScale = 1 + (k - 1) * 0.3;
 
   // The sweep that reads the agents inside the box. A dot's read state comes off
   // the bar's own position, so the two can never drift apart when retimed.
-  const scanY = interpolate(
-    frame,
-    [beats.scanStart, beats.scanEnd],
-    [BR.y0 - 24, BR.y1 + 24],
-    clamp,
-  );
+  // Eased at both ends rather than cut on and off. The read state is taken from
+  // the bar's position, not from a clock, so shaping its travel costs nothing.
+  const scanY = interpolate(frame, [beats.scanStart, beats.scanEnd], [BR.y0 - 24, BR.y1 + 24], {
+    ...clamp,
+    easing: Easing.inOut(Easing.sin),
+  });
   const scanFade = interpolate(
     frame,
     [beats.scanStart - 3, beats.scanStart, beats.scanEnd, beats.scanEnd + 7],
@@ -301,8 +343,8 @@ const DarkAboutTheScope: React.FC<Props> = ({
         const my = (p.y + q.y) / 2;
         // Each thread keeps its own traffic cycle, so the board is never still
         // and never all on at once — until the last beat, when it is.
-        const cyc = (frame * 0.011 + hash(p.s, kk + 4)) % 1;
-        const blink = interpolate(cyc, [0, 0.07, 0.42, 0.52], [0, 1, 1, 0], clamp);
+        const cyc = (frame * 0.0085 + hash(p.s, kk + 4)) % 1;
+        const blink = interpolate(cyc, [0, 0.1, 0.44, 0.58], [0, 1, 1, 0], clamp);
         const both = inBracket(p) && inBracket(q);
         const level = both ? 1 : vis(mx, my);
         const op2 = threadBase * Math.max(blink, surge) * level;
@@ -316,13 +358,17 @@ const DarkAboutTheScope: React.FC<Props> = ({
     ...clamp,
     easing: Easing.out(Easing.cubic),
   });
-  const land = spring({
-    frame: frame - beats.arrive,
-    fps,
-    config: { damping: 13, stiffness: 118, mass: 0.9 },
+  // The human is drawn into being by the boundary they stand on, rather than
+  // dropped onto it from off-frame. Everything else in this language arrives by
+  // being drawn — rules out from their own centre with a tip on the end, dots
+  // igniting where they land, the box out from the middle of its top edge — and
+  // a raster glyph translating down with a fade was the one element arriving by
+  // a different kind of event altogether. It now rises out of the rule, clipped
+  // by it, and lands with the small overshoot rings and locks use.
+  const rise = interpolate(frame, [beats.arrive, beats.arrive + 17], [0, 1], {
+    ...clamp,
+    easing: Easing.out(Easing.back(1.2)),
   });
-  const humanFoot = interpolate(land, [0, 1], [HUMAN_FOOT - 380, HUMAN_FOOT]);
-  const humanIn = interpolate(frame, [beats.arrive, beats.arrive + 7], [0, 1], clamp);
 
   const brDraw = interpolate(frame, [beats.bracket, beats.bracket + 12], [0, 1], {
     ...clamp,
@@ -372,18 +418,28 @@ const DarkAboutTheScope: React.FC<Props> = ({
             transform: `translate(${tx}px, ${ty}px) scale(${k})`,
           }}
         >
-          <Img
-            src={staticFile(humanSrc)}
+          <div
             style={{
               position: "absolute",
               left: 540 - humanSize / 2,
-              top: humanFoot - humanSize,
+              top: HUMAN_FOOT - humanSize - RISE_HEADROOM,
               width: humanSize,
-              height: humanSize,
-              filter: "brightness(0) invert(1)",
-              opacity: humanIn,
+              height: humanSize + RISE_HEADROOM,
+              overflow: "hidden",
             }}
-          />
+          >
+            <Img
+              src={staticFile(humanSrc)}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: RISE_HEADROOM + humanSize * (1 - rise),
+                width: humanSize,
+                height: humanSize,
+                filter: "brightness(0) invert(1)",
+              }}
+            />
+          </div>
 
           <svg
             width={WORLD_W}
@@ -423,9 +479,9 @@ const DarkAboutTheScope: React.FC<Props> = ({
             {tether > 0 ? (
               <line
                 x1={540}
-                y1={HUMAN_FOOT}
+                y1={RULE_Y}
                 x2={540}
-                y2={HUMAN_FOOT + (BR.y0 - HUMAN_FOOT) * tether}
+                y2={RULE_Y + (BR.y0 - RULE_Y) * tether}
                 stroke={ink}
                 strokeWidth={lineWidth}
                 strokeLinecap="round"
