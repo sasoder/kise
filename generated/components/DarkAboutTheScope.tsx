@@ -79,7 +79,7 @@ export const defaultProps: Props = schema.parse({
   readOpacity: 0.95,
   darkLevel: 0.16,
   revealLevel: 0.8,
-  edgeDensity: 0.5,
+  edgeDensity: 0.44,
   swellGain: 1,
   driftScale: 1,
   beats: {
@@ -206,11 +206,29 @@ const inBox = (p: P) => p.x > BOX.x0 && p.x < BOX.x1 && p.y > BOX.y0 && p.y < BO
 //
 // Each edge runs on its own clock: flight, then rest.
 // ---------------------------------------------------------------------------
-const EDGE_RATE = 0.011;
-const FLIGHT = 0.5; // of the cycle an edge spends carrying
-const PINCH = 0.45; // how far into the flight the sender is still holding on
-const MERGE = 0.55; // and where the receiver starts reaching for it
-const DROP_R = 0.46; // droplet radius, as a fraction of its sender
+const EDGE_RATE = 0.0085;
+const FLIGHT = 0.4; // of the cycle an edge spends carrying
+const PINCH = 0.44; // how far into the flight the sender is still holding on
+const MERGE = 0.56; // and where the receiver starts reaching for it
+const DROP_R = 0.4; // droplet radius, as a fraction of its sender
+const SWELL = 0.18; // what a receiver visibly gains, and roughly half of what
+const DIP = 0.08; // a sender visibly gives up
+
+// Smoothstep, and a bell built out of two of them. Every pulse in the piece
+// runs through this: it leaves and returns to zero with zero slope at both
+// ends, which is the whole difference between an agent taking on volume and an
+// agent flashing. The previous curves were piecewise-linear and reached full
+// value on their first frame, so four hundred agents stepped their radius by a
+// third of themselves in one frame every time a signal landed.
+const ss = (x: number) => {
+  const t = x <= 0 ? 0 : x >= 1 ? 1 : x;
+  return t * t * (3 - 2 * t);
+};
+const bell = (t: number, rise: number) => {
+  if (t <= 0 || t >= 1) return 0;
+  return t < rise ? ss(t / rise) : 1 - ss((t - rise) / (1 - rise));
+};
+const travel = Easing.inOut(Easing.cubic);
 
 const edgeCycle = (ownerS: number, kk: number, frame: number) =>
   (frame * EDGE_RATE + hash(ownerS, kk + 4)) % 1;
@@ -222,13 +240,12 @@ const edgeLive = (ownerS: number, kk: number, density: number) =>
 // clock as the droplet itself so they can never disagree with what is on screen.
 const arrivalPulse = (ownerS: number, kk: number, frame: number, density: number) => {
   if (!edgeLive(ownerS, kk, density)) return 0;
-  const c = edgeCycle(ownerS, kk, frame);
-  const d = c - FLIGHT;
-  return interpolate(d < 0 ? d + 1 : d, [0, 0.04, 0.22], [1, 1, 0], clamp);
+  const d = edgeCycle(ownerS, kk, frame) - FLIGHT;
+  return bell((d < 0 ? d + 1 : d) / 0.3, 0.22);
 };
 const departPulse = (ownerS: number, kk: number, frame: number, density: number) => {
   if (!edgeLive(ownerS, kk, density)) return 0;
-  return interpolate(edgeCycle(ownerS, kk, frame), [0, 0.06, 0.18], [1, 1, 0], clamp);
+  return bell(edgeCycle(ownerS, kk, frame) / 0.22, 0.3);
 };
 
 const fmt = (n: number) => n.toFixed(2);
@@ -248,7 +265,7 @@ const bondPath = (a: P, ra: number, b: P, rb: number, strength: number, half: bo
   const dy = b.y - a.y;
   const d = Math.hypot(dx, dy);
   if (d < 1e-3 || strength <= 0.004) return "";
-  const al = 0.34 + 0.54 * strength;
+  const al = 0.2 + 0.62 * strength;
   const ca = Math.cos(al);
   const sa = Math.sin(al);
   // Everything is scaled off the clear span between the two surfaces, never off
@@ -257,12 +274,16 @@ const bondPath = (a: P, ra: number, b: P, rb: number, strength: number, half: bo
   // what was cutting notches out of the agents.
   const reach = half ? d / 2 : d;
   const gap = reach - ra * ca - (half ? 0 : rb * ca);
-  if (gap <= 2) return ""; // already merged: the filled circles union on their own
+  // As the two close up, the neck thins out of existence instead of being
+  // switched off — a bond that vanishes while it still has width is a flash.
+  const close = ss((gap - 1) / 9);
+  if (close <= 0.001) return ""; // merged: the filled circles union on their own
   const ax = dx / d;
   const ay = dy / d;
   const nx = -ay;
   const ny = ax;
-  const w = Math.min((0.18 + 0.34 * strength) * Math.min(ra, rb), gap * 0.5);
+  const w = Math.min(0.46 * strength * close * Math.min(ra, rb), gap * 0.45);
+  if (w < 0.12) return "";
   const h1 = 0.4 * gap;
   const h2 = 0.28 * gap;
 
@@ -438,9 +459,9 @@ const DarkAboutTheScope: React.FC<Props> = ({
       arrivalPulse(rawAgent(i, j - 1).s, 8, frame, edgeDensity);
     const dip =
       departPulse(p.s, 7, frame, edgeDensity) + departPulse(p.s, 8, frame, edgeDensity);
-    const breath = 1 + 0.05 * Math.sin(frame * driftRate(p.s) * 1.6 + hash(p.s, 6) * TAU);
+    const breath = 1 + 0.045 * Math.sin(frame * driftRate(p.s) + hash(p.s, 6) * TAU);
     const sampled = inBox(p);
-    const read = sampled ? interpolate(scanY - p.y, [0, 5], [0, 1], clamp) : 0;
+    const read = sampled ? ss((scanY - p.y) / 26) : 0;
     const base = liveOpacity + (readOpacity - liveOpacity) * read;
     const out: Live = {
       s: p.s,
@@ -449,7 +470,7 @@ const DarkAboutTheScope: React.FC<Props> = ({
         DOT_R *
         p.rr *
         breath *
-        (1 + 0.34 * swellGain * Math.min(swell, 1.5) - 0.13 * Math.min(dip, 1.4)),
+        (1 + SWELL * swellGain * Math.min(swell, 1.6) - DIP * Math.min(dip, 1.5)),
       op: base * (sampled ? 1 : vis(c.x, c.y)),
     };
     cache.set(key, out);
@@ -466,6 +487,12 @@ const DarkAboutTheScope: React.FC<Props> = ({
   const bodies: { key: number; d: string; op: number }[] = [];
 
   // One edge, seen from whichever end currently owns the droplet.
+  // A droplet belongs to whichever agent it is currently bonded to, because the
+  // two share one path and therefore one opacity. Between letting go and being
+  // caught it belongs to neither, and crosses as its own body on an opacity
+  // lerped from sender to receiver — handing it over at the midpoint instead
+  // stepped its opacity in a single frame, hardest across the box edge and the
+  // wavefront, where the two ends are furthest apart.
   const edgeParts = (
     src: NonNullable<Live>,
     dst: NonNullable<Live>,
@@ -477,18 +504,14 @@ const DarkAboutTheScope: React.FC<Props> = ({
     const cyc = edgeCycle(ownerS, kk, frame);
     let out = "";
     if (cyc < FLIGHT) {
-      const u = cyc / FLIGHT;
-      const holder = u < 0.5 ? "src" : "dst";
-      if (holder === mine) {
-        const dr = DROP_R * src.r;
-        const dp = { x: src.c.x + (dst.c.x - src.c.x) * u, y: src.c.y + (dst.c.y - src.c.y) * u };
-        out += circlePath(dp, dr);
-        if (mine === "src" && u < PINCH) {
-          out += bondPath(src.c, src.r, dp, dr, 1 - u / PINCH, false);
-        }
-        if (mine === "dst" && u > MERGE) {
-          out += bondPath(dp, dr, dst.c, dst.r, (u - MERGE) / (1 - MERGE), false);
-        }
+      const u = travel(cyc / FLIGHT);
+      const dr = DROP_R * src.r;
+      const dp = { x: src.c.x + (dst.c.x - src.c.x) * u, y: src.c.y + (dst.c.y - src.c.y) * u };
+      if (mine === "src" && u < PINCH) {
+        out += circlePath(dp, dr) + bondPath(src.c, src.r, dp, dr, ss(1 - u / PINCH), false);
+      }
+      if (mine === "dst" && u > MERGE) {
+        out += circlePath(dp, dr) + bondPath(dp, dr, dst.c, dst.r, ss((u - MERGE) / (1 - MERGE)), false);
       }
     }
     // On the last beat every pair reaches for the other and holds.
@@ -498,6 +521,28 @@ const DarkAboutTheScope: React.FC<Props> = ({
       out += bondPath(a.c, a.r, b.c, b.r, surge * 0.5, true);
     }
     return out;
+  };
+
+  // The unattached stretch of a crossing, owned by nobody.
+  const inFlight = (
+    src: NonNullable<Live>,
+    dst: NonNullable<Live>,
+    ownerS: number,
+    kk: number,
+  ) => {
+    if (!edgeLive(ownerS, kk, edgeDensity)) return null;
+    const cyc = edgeCycle(ownerS, kk, frame);
+    if (cyc >= FLIGHT) return null;
+    const u = travel(cyc / FLIGHT);
+    if (u < PINCH || u > MERGE) return null;
+    const t = (u - PINCH) / (MERGE - PINCH);
+    return {
+      d: circlePath(
+        { x: src.c.x + (dst.c.x - src.c.x) * u, y: src.c.y + (dst.c.y - src.c.y) * u },
+        DROP_R * src.r,
+      ),
+      op: src.op + (dst.op - src.op) * t,
+    };
   };
 
   for (let i = i0; i <= i1; i++) {
@@ -515,8 +560,16 @@ const DarkAboutTheScope: React.FC<Props> = ({
       const up = liveAt(i, j - 1);
       if (up) d += edgeParts(up, me, up.s, 8, "dst");
 
-      if (me.op < 0.006) continue;
-      bodies.push({ key: me.s, d, op: me.op });
+      if (me.op >= 0.006) bodies.push({ key: me.s, d, op: me.op });
+
+      for (const [n, kk] of [
+        [right, 7],
+        [down, 8],
+      ] as const) {
+        if (!n) continue;
+        const f = inFlight(me, n, me.s, kk);
+        if (f && f.op >= 0.006) bodies.push({ key: me.s * 4 + kk, d: f.d, op: f.op });
+      }
     }
   }
 
