@@ -78,27 +78,27 @@ export const defaultProps: Props = schema.parse({
   // and the threads the agents make between themselves.
   lineWidth: 5,
   threadWidth: 3,
-  ashOpacity: 0.3,
+  ashOpacity: 0.38,
   litOpacity: 0.95,
-  groundFloor: 0.42,
+  groundFloor: 0.47,
   ambient: 0.38,
   beats: {
-    ground1: 2,
-    ground2: 11,
-    ground3: 17,
-    surface: 28,
-    camIn: 30,
-    gather: 51,
+    ground1: 4,
+    ground2: 12,
+    ground3: 20,
+    surface: 30,
+    camIn: 34,
+    gather: 46,
     started: 73,
-    bar1In: 87,
-    bar1Hit: 92,
-    bar1Land: 104,
-    launch1: 110,
+    bar1In: 82,
+    bar1Hit: 87,
+    bar1Land: 99,
+    launch1: 106,
     arrive1: 128,
-    bar2In: 129,
-    bar2Hit: 134,
-    bar2Land: 142,
-    camOut: 146,
+    bar2In: 132,
+    bar2Hit: 137,
+    bar2Land: 144,
+    camOut: 150,
     launch2: 150,
     arrive2: 165,
   },
@@ -124,17 +124,17 @@ const hash = (i: number, k: number) => {
 const WORLD_W = 1080;
 const WORLD_H = 3400;
 
-const MARK = { x: 540, y: 1055, size: 118 };
-const SURFACE_Y = 1220;
-const SURFACE_HALF = 430;
-const GROUNDS = [2600, 2150, 1700]; // first society lowest, third highest
-const GROUND_HALF = 340;
+const MARK = { x: 540, y: 1290, size: 118 };
+const SURFACE_Y = 1440;
+const SURFACE_HALF = 470;
+const GROUNDS = [2600, 2220, 1840]; // first society lowest, third highest
+const GROUND_HALF = 400;
 
 // Each society is tighter and more heavily threaded than the one before it.
 // The population shrinks — some of it stays on the floor as ash — so the
 // organisation has to come from density, not from headcount.
-const SOC_W = [620, 560, 500];
-const SOC_H = [200, 186, 172];
+const SOC_W = [700, 640, 580];
+const SOC_H = [170, 158, 146];
 const CLEAR = 58; // gap between the lowest crowd row and its own floor
 const ROWS = 4;
 
@@ -193,8 +193,8 @@ const dotInSlot = (g: number, s: number) => (g === 0 ? s : TRAVEL[g - 1][s]);
 const PRE: P[] = [];
 for (let i = 0; i < POP; i++) {
   PRE.push({
-    x: 540 + (hash(i, 41) - 0.5) * 800,
-    y: GROUNDS[0] - 30 - hash(i, 43) * 360,
+    x: 540 + (hash(i, 41) - 0.5) * 760,
+    y: GROUNDS[0] - 18 - hash(i, 43) * 168,
   });
 }
 
@@ -225,19 +225,25 @@ const threadsFor = (g: number): Thread[] => {
 const THREADS = [threadsFor(0), threadsFor(1), threadsFor(2)];
 
 const THREAD_WINDOW = [
-  { from: 58, span: 16 },
-  { from: 124, span: 8 },
-  { from: 160, span: 12 },
+  { from: 54, span: 16 },
+  { from: 120, span: 8 },
+  { from: 158, span: 12 },
 ];
 
 // ---------------------------------------------------------------------------
 // The wipe
 //
-// A full-width ink rule that drops out of the surface, flattens a society onto
-// its own floor and lifts away again. A dot's death is read off the bar's
-// position, never off a parallel timer, so the two cannot drift: the sweep is
-// linear between hit and land, which makes the crossing frame for any given
-// dot exact rather than searched for.
+// An ink rule that drops out of the surface, flattens a society onto its own
+// floor and then keeps going — coming to rest just under the floor it killed
+// and staying there for the rest of the piece. That is what makes the count
+// readable in a single frame at the end: a spent floor is a doubled rule with
+// ash and the ghost of a web on it, a live floor is a single rule with a
+// society standing on it. It also has to park *below* the floor rather than on
+// top of the ash, or the survivors would have to climb out from under it.
+//
+// A dot's death is read off the bar's position, never off a parallel timer, so
+// the two cannot drift: the sweep is linear between hit and land, which makes
+// the crossing frame for any given dot exact rather than searched for.
 // ---------------------------------------------------------------------------
 const barSpan = (gen: number) => ({
   top: GROUNDS[gen] - CLEAR - SOC_H[gen] - 30,
@@ -253,17 +259,18 @@ const killFrame = (i: number, gen: number, hit: number, land: number) => {
 // ---------------------------------------------------------------------------
 // Camera
 //
-// Two moves, two holds. Wide on three empty floors, in for the first society,
-// then one long pull-back that resolves on all three at once. The second
-// society needs no move of its own: at k = 1.15 its floor is already in the
-// upper third of the held frame, so the ash simply travels up the picture and
-// the recurrence stays legible in one shot. A damped follow rounds the corners
-// off the coarse key track below; the small drift across the long hold keeps
-// the frame from going dead while the action climbs.
+// All three floors are in frame from the moment they are drawn until the last
+// frame. An earlier cut pushed in on each society in turn, and the count stopped
+// reading: for a hundred frames you could only ever see one floor, so "three"
+// had to be carried by memory rather than by anything on screen. Now the camera
+// only leans in as the first society gathers and eases back out for the resolve,
+// and the two floors still waiting above are visible the whole way up. A damped
+// follow rounds the corners off the coarse key track; the drift across the long
+// hold keeps the frame from going dead while the action climbs.
 // ---------------------------------------------------------------------------
-const CAM_F = [0, 30, 42, 146, 162, DURATION];
-const CAM_CY = [1957, 1957, 2400, 2360, 1957, 1957];
-const CAM_K = [0.82, 0.82, 1.15, 1.15, 0.82, 0.82];
+const CAM_F = [0, 34, 48, 150, 164, DURATION];
+const CAM_CY = [2110, 2110, 2150, 2130, 2060, 2060];
+const CAM_K = [0.88, 0.88, 0.97, 0.97, 0.91, 0.91];
 
 const CAM_STIFF = 0.13;
 const CAM_DAMP = 0.56; // zeta ~0.78, settles in ~14 frames
@@ -335,15 +342,14 @@ const ThreeSecretSocieties: React.FC<Props> = ({
   const bgScale = 1 + (k - 1) * 0.3;
 
   const bars = [
-    { in: beats.bar1In, hit: beats.bar1Hit, land: beats.bar1Land, out: beats.bar1Land + 2 },
-    { in: beats.bar2In, hit: beats.bar2Hit, land: beats.bar2Land, out: beats.bar2Land + 2 },
+    { in: beats.bar1In, hit: beats.bar1Hit, land: beats.bar1Land },
+    { in: beats.bar2In, hit: beats.bar2Hit, land: beats.bar2Land },
   ];
 
   const barState = (gen: number) => {
     const b = bars[gen];
     const { top, ground } = barSpan(gen);
-    const lift = b.out + 8;
-    if (frame < b.in || frame > lift + 4) return null;
+    if (frame < b.in) return null;
     let y: number;
     if (frame <= b.hit) {
       y = interpolate(frame, [b.in, b.hit], [top - 250, top], {
@@ -353,15 +359,19 @@ const ThreeSecretSocieties: React.FC<Props> = ({
     } else if (frame <= b.land) {
       y = interpolate(frame, [b.hit, b.land], [top, ground], clamp);
     } else {
-      y = interpolate(frame, [b.out, lift], [ground, top - 250], {
+      y = interpolate(frame, [b.land, b.land + 6], [ground, ground + 15], {
         ...clamp,
-        easing: Easing.in(Easing.quad),
+        easing: Easing.out(Easing.quad),
       });
     }
-    const opacity =
-      interpolate(frame, [b.in, b.in + 4], [0, 1], clamp) *
-      interpolate(frame, [lift - 6, lift + 4], [1, 0], clamp);
-    return { y, opacity };
+    return {
+      y,
+      opacity:
+        interpolate(frame, [b.in, b.in + 4], [0, 1], clamp) *
+        interpolate(frame, [b.land, b.land + 10], [1, 0.5], clamp),
+      // The tether back to the surface lets go once the rule has landed.
+      stem: interpolate(frame, [b.land - 4, b.land + 8], [0.2, 0], clamp),
+    };
   };
 
   // -- the population --------------------------------------------------------
@@ -408,7 +418,7 @@ const ThreeSecretSocieties: React.FC<Props> = ({
     });
     let pos: P = {
       x: PRE[i].x + (540 - PRE[i].x) * draw + drift.x,
-      y: PRE[i].y + (GROUNDS[0] - 160 - PRE[i].y) * draw + drift.y,
+      y: PRE[i].y + (GROUNDS[0] - 130 - PRE[i].y) * draw + drift.y,
     };
     let lit = 0;
     let stage = 0;
@@ -560,7 +570,7 @@ const ThreeSecretSocieties: React.FC<Props> = ({
               stroke={ink}
               strokeWidth={lineWidth}
               strokeLinecap="round"
-              opacity={0.55 * surfaceDraw}
+              opacity={0.34 * surfaceDraw}
             />
             {surfaceDraw > 0.02 && surfaceDraw < 0.99 ? (
               <>
@@ -600,7 +610,7 @@ const ThreeSecretSocieties: React.FC<Props> = ({
                 // level, so a dead floor still reads as somewhere a society was.
                 const wiped = g === 0 ? beats.bar1Land : beats.bar2Land;
                 const ruin =
-                  g === 2 ? 0 : interpolate(frame, [wiped, wiped + 12], [0, 0.1], clamp);
+                  g === 2 ? 0 : interpolate(frame, [wiped, wiped + 12], [0, 0.16], clamp);
                 if (gate < 0.02 && ruin < 0.005) return null;
                 const w = THREAD_WINDOW[g];
                 const start = w.from + t.k * w.span;
@@ -650,7 +660,7 @@ const ThreeSecretSocieties: React.FC<Props> = ({
             {[0, 1].map((g) => {
               const b = barState(g);
               if (!b) return null;
-              const half = SOC_W[g] / 2 + 52;
+              const half = SOC_W[g] / 2 + 30;
               return (
                 <g key={`bar${g}`} opacity={b.opacity}>
                   <line
@@ -660,7 +670,7 @@ const ThreeSecretSocieties: React.FC<Props> = ({
                     y2={b.y}
                     stroke={ink}
                     strokeWidth={1.5}
-                    opacity={0.2}
+                    opacity={b.stem}
                   />
                   <line
                     x1={540 - half}
