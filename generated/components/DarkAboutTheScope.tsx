@@ -427,10 +427,23 @@ const DarkAboutTheScope: React.FC<Props> = ({
     ...clamp,
     easing: Easing.out(Easing.quad),
   });
-  const surge = interpolate(frame, [beats.conspiracy, beats.conspiracy + 14], [0, 1], {
+  // The field draws itself together as a front spreading out of the one place
+  // the humans had been looking, not as a switch. A single eased scalar put
+  // twenty percent of the bond on every edge in the world on its first frame,
+  // which is a grid appearing out of nowhere rather than a body coalescing.
+  // Each pair now knits when the front reaches it, over a band wide enough that
+  // no single pair snaps on.
+  // inOut(sin) rather than inOut(cubic): a cubic front peaks at twice its own
+  // average speed, which passes a given pair in under a frame and a half out at
+  // the edges — still a snap, just a travelling one. Sine peaks at 1.57x, and
+  // the band is wide enough that every pair takes two to three frames to take
+  // hold however fast the front is going when it arrives.
+  const knitR = interpolate(frame, [beats.conspiracy, beats.conspiracy + 26], [0, 2700], {
     ...clamp,
-    easing: Easing.out(Easing.cubic),
+    easing: Easing.inOut(Easing.sin),
   });
+  const knitAt = (x: number, y: number) =>
+    ss((knitR - Math.hypot(x - BOX_C.x, y - BOX_C.y)) / 400);
 
   const vis = (x: number, y: number) => {
     const rv = interpolate(waveR - Math.hypot(x - BOX_C.x, y - BOX_C.y), [0, 170], [0, 1], clamp);
@@ -514,11 +527,12 @@ const DarkAboutTheScope: React.FC<Props> = ({
         out += circlePath(dp, dr) + bondPath(dp, dr, dst.c, dst.r, ss((u - MERGE) / (1 - MERGE)), false);
       }
     }
-    // On the last beat every pair reaches for the other and holds.
-    if (surge > 0.01) {
+    // On the last beat each pair reaches for the other, as the front arrives.
+    const knit = knitAt((src.c.x + dst.c.x) / 2, (src.c.y + dst.c.y) / 2);
+    if (knit > 0.008) {
       const a = mine === "src" ? src : dst;
       const b = mine === "src" ? dst : src;
-      out += bondPath(a.c, a.r, b.c, b.r, surge * 0.5, true);
+      out += bondPath(a.c, a.r, b.c, b.r, knit * 0.5, true);
     }
     return out;
   };
