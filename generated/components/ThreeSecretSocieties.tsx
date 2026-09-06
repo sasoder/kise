@@ -105,7 +105,7 @@ export const defaultProps: Props = schema.parse({
   groundFloor: 0.47,
   ambient: 0.38,
   beats: {
-    ground1: 4,
+    ground1: 2,
     ground2: 12,
     ground3: 20,
     surface: 30,
@@ -192,7 +192,8 @@ type Shot = { anchor: number; k: number };
 const SHOTS: Shot[] = [
   { anchor: 2470, k: 1.18 }, // the loose crowd, before any of it is organised
   { anchor: 1915, k: 0.86 }, // three floors
-  { anchor: 2457, k: 1.22 }, // the first society
+  { anchor: 2457, k: 1.1 }, // arriving on the first society
+  { anchor: 2457, k: 1.24 }, // and still closing on it while it lives
   { anchor: 2450, k: 0.98 }, // the wipe lands
   { anchor: 2083, k: 1.3 }, // the second society, the first one spent below it
   { anchor: 2060, k: 1.02 }, // the wipe lands again, faster
@@ -211,12 +212,26 @@ const PIVOTS = SHOTS.slice(0, -1).map((_, i) => {
   return { w, sy: (w - ca) * ka + 960 };
 });
 
-const CAM_F = [0, 16, 28, 40, 50, 92, 102, 118, 136, 146, 162, 168, 182, DURATION];
-const CAM_P = [0, 0, 1, 1, 2, 2, 3, 4, 4, 5, 6, 6, 7, 7];
+// Shots 2 and 3 share an anchor and differ only in zoom, which makes that
+// transition a pure push straight into the first society — 30 frames of slow
+// closing across its whole life. Measured on the render, the version without it
+// had a 15 frame stretch where the picture barely changed, right in the middle
+// of the beat that has to sell what a society is.
+//
+// Every shot gets a hold, including the ones the camera only passes through.
+// Without one, progress crosses an integer at full speed and the camera slams
+// straight from zooming out into zooming in — the shot list alternates tight and
+// wide, so every boundary is a reversal, and a reversal at speed is a kink in
+// the velocity even when the position is continuous.
+const CAM_F = [0, 5, 24, 36, 50, 60, 90, 96, 106, 114, 126, 138, 150, 156, 168, 174, 188, DURATION];
+const CAM_P = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8];
 const CAM_CREEP = 0.00045;
 
-const CAM_STIFF = 0.13;
-const CAM_DAMP = 0.56;
+// Critically damped. At zeta 0.78 the progress overshot each hold and settled
+// back through it, so `Math.floor(p)` ran 2 -> 1 -> 2 and the camera crossed the
+// same shot boundary three times.
+const CAM_STIFF = 0.16;
+const CAM_DAMP = 0.8;
 
 const camera = (upto: number) => {
   let p = CAM_P[0];
@@ -228,12 +243,25 @@ const camera = (upto: number) => {
   }
   const i = Math.max(0, Math.min(SHOTS.length - 2, Math.floor(p)));
   const t = Math.max(0, Math.min(1, p - i));
-  const k =
-    Math.exp(Math.log(SHOTS[i].k) + (Math.log(SHOTS[i + 1].k) - Math.log(SHOTS[i].k)) * t) *
-    (1 + CAM_CREEP * upto);
+
+  // The pivot solve is only exact when the zoom really is the authored one, so
+  // the base framing is computed without the creep. Folding the creep into `k`
+  // before this line detunes both ends of every segment, and since neighbouring
+  // segments have different pivots they then disagree about where the centre is
+  // at the shot they share — a step of up to 136px in a single frame.
+  const kBase = Math.exp(
+    Math.log(SHOTS[i].k) + (Math.log(SHOTS[i + 1].k) - Math.log(SHOTS[i].k)) * t,
+  );
   const pv = PIVOTS[i];
-  const cy = pv ? pv.w - (pv.sy - 960) / k : SHOT_CY[i] + (SHOT_CY[i + 1] - SHOT_CY[i]) * t;
-  return { cy, k };
+  const cyBase = pv
+    ? pv.w - (pv.sy - 960) / kBase
+    : SHOT_CY[i] + (SHOT_CY[i + 1] - SHOT_CY[i]) * t;
+
+  // The creep is then its own zoom, about the anchor the shot already puts in
+  // the caption-safe band. That point stays pinned, so this cannot move the
+  // centre discontinuously no matter where in the shot list it is applied.
+  const k = kBase * (1 + CAM_CREEP * upto);
+  return { cy: cyBase - 125 / kBase + 125 / k, k };
 };
 
 // A shallow arc with its own lateral bias, so a group travelling together never
