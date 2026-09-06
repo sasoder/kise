@@ -1,19 +1,21 @@
 import {Composition} from 'remotion';
-import BestForecasterField, {
+import ThreeSecretSocieties, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BestForecasterField';
+} from '../generated/components/ThreeSecretSocieties';
 
-// kalshi — monitoring the situation: the same line in the Dwarkesh grid language.
+// three secret ai societies — "three consecutive secret AI societies got
+// started, then got wiped out, only to re-emerge from their predecessor's
+// ashes." Dwarkesh style on the grid background.
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:23.160 -> 0:34.100 (+0.5s tail) */}
+      {/* 0:01.399 -> 0:08.839 (+12 frame tail) */}
       <Composition
-        id="BestForecasterField"
-        component={BestForecasterField}
+        id="ThreeSecretSocieties"
+        component={ThreeSecretSocieties}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
