@@ -7,6 +7,28 @@ import {
   useCurrentFrame,
 } from "remotion";
 import { z } from "zod";
+import {
+  BG_OVERSIZE,
+  CLEAR,
+  GROUNDS,
+  GROUND_HALF,
+  LID_DROP,
+  POP,
+  SLOTS,
+  SLOT_OF,
+  SOC_H,
+  SOC_W,
+  SURFACE_HALF,
+  SURFACE_Y,
+  THREADS,
+  WORLD_H,
+  WORLD_W,
+  ashRest,
+  clamp,
+  dotInSlot,
+  hash,
+  type P,
+} from "./societiesWorld";
 
 export const FPS = 24;
 // Dwarkesh, "[at] OpenAI, three consecutive secret AI societies got started,
@@ -104,92 +126,11 @@ export const defaultProps: Props = schema.parse({
   },
 });
 
-type P = { x: number; y: number };
-
-const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
-
-const hash = (i: number, k: number) => {
-  const s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
-  return s - Math.floor(s);
-};
-
-// ---------------------------------------------------------------------------
-// The world
-//
-// Three floors stacked up a tall world, an ink surface above all of them, and
-// the OpenAI mark above that. Everything happens under the surface: that is
-// what "secret" buys, and it is also where the wipe comes from later, so the
-// one line does both jobs.
-// ---------------------------------------------------------------------------
-const WORLD_W = 1080;
-const WORLD_H = 3400;
-
 const MARK = { x: 540, y: 1290, size: 118 };
-const SURFACE_Y = 1440;
-const SURFACE_HALF = 470;
-const GROUNDS = [2600, 2220, 1840]; // first society lowest, third highest
-const GROUND_HALF = 400;
 
-// Each society is tighter and more heavily threaded than the one before it.
-// The population shrinks — some of it stays on the floor as ash — so the
-// organisation has to come from density, not from headcount.
-const SOC_W = [700, 640, 580];
-const SOC_H = [170, 158, 146];
-const CLEAR = 58; // gap between the lowest crowd row and its own floor
-const ROWS = 4;
-
-// One population, conserved. Nothing new ever enters the frame — each society
-// is built out of the previous one's dead, minus the ones left lying on the
-// floor as ash. 34 -> 28 -> 22.
-const POP = 34;
-const LEFT_BEHIND = 6;
-const COUNTS = [POP, POP - LEFT_BEHIND, POP - 2 * LEFT_BEHIND];
-
-// A crowd, not a lattice: each dot is thrown off its cell by up to 90% of the
-// step and its radius varied, so the population reads as organic.
-const layout = (gen: number): P[] => {
-  const count = COUNTS[gen];
-  const cols = Math.ceil(count / ROWS);
-  const sx = SOC_W[gen] / cols;
-  const sy = SOC_H[gen] / ROWS;
-  const top = GROUNDS[gen] - CLEAR - SOC_H[gen];
-  const pts: P[] = [];
-  for (let s = 0; s < count; s++) {
-    pts.push({
-      x:
-        540 -
-        SOC_W[gen] / 2 +
-        ((s % cols) + 0.5) * sx +
-        (hash(s, 11 + gen) - 0.5) * sx * 0.9,
-      y: top + (Math.floor(s / cols) + 0.5) * sy + (hash(s, 23 + gen) - 0.5) * sy * 0.9,
-    });
-  }
-  return pts;
-};
-const SLOTS = [layout(0), layout(1), layout(2)];
-
-// Who dies where is drawn from a shuffled roll rather than an index range, so
-// the ash left on a floor is scattered through the crowd's whole width instead
-// of piling up in whichever corner held the lowest indices. Survivors are then
-// shuffled again into their new slots, so the arcs cross on the way up rather
-// than everyone rising in their own column.
-const ROLL = Array.from({ length: POP }, (_, i) => i).sort(
-  (a, b) => hash(a, 91) - hash(b, 91),
-);
-const survivors = (from: number) =>
-  ROLL.slice(from).sort((a, b) => hash(a, 5 + from) - hash(b, 5 + from));
-const TRAVEL = [survivors(LEFT_BEHIND), survivors(2 * LEFT_BEHIND)];
-const SLOT_OF: Map<number, number>[] = TRAVEL.map((ids) => {
-  const m = new Map<number, number>();
-  ids.forEach((id, s) => m.set(id, s));
-  return m;
-});
-// Which dot is standing in slot `s` of generation `g`.
-const dotInSlot = (g: number, s: number) => (g === 0 ? s : TRAVEL[g - 1][s]);
-
-// Where the population lies before any of it organises: loose on and around the
-// first floor, so the first society rises off the ground exactly the way the
-// second and third ones will.
+// Where the population lies before any of it organises: loose on the first
+// floor, so the first society rises off the ground exactly the way the second
+// and third ones will.
 const PRE: P[] = [];
 for (let i = 0; i < POP; i++) {
   PRE.push({
@@ -197,32 +138,6 @@ for (let i = 0; i < POP; i++) {
     y: GROUNDS[0] - 18 - hash(i, 43) * 168,
   });
 }
-
-// Ash lies in a loose band on the floor it died on, spread wider than the
-// crowd was so a dead floor still reads as a floor with something on it.
-const ashRest = (i: number, gen: number): P => ({
-  x: SLOTS[gen][gen === 0 ? i : (SLOT_OF[gen - 1].get(i) as number)].x + (hash(i, 45) - 0.5) * 96,
-  y: GROUNDS[gen] - 9 - hash(i, 47) * 16,
-});
-
-// Threads between near neighbours. The count climbs each generation — the
-// crowd shrinks each time but binds itself harder: 16 -> 22 -> 28 threads.
-const THREAD_COUNTS = [16, 22, 28];
-type Thread = { a: number; b: number; k: number };
-const threadsFor = (g: number): Thread[] => {
-  const p = SLOTS[g];
-  const cand: Thread[] = [];
-  for (let a = 0; a < p.length; a++) {
-    for (let b = a + 1; b < p.length; b++) {
-      if (Math.hypot(p[a].x - p[b].x, p[a].y - p[b].y) < 155) {
-        cand.push({ a, b, k: hash(a * 97 + b, 71 + g) });
-      }
-    }
-  }
-  cand.sort((x, y) => x.k - y.k);
-  return cand.slice(0, THREAD_COUNTS[g]);
-};
-const THREADS = [threadsFor(0), threadsFor(1), threadsFor(2)];
 
 const THREAD_WINDOW = [
   { from: 54, span: 16 },
@@ -291,8 +206,6 @@ const camera = (upto: number) => {
   return { cy, k };
 };
 
-const BG_OVERSIZE = 1.8;
-
 // A shallow arc with its own lateral bias, so a group travelling together never
 // moves as one straight rank. The bow follows the direction of travel: a rise
 // arches over, a descent sags under, which is what makes the two read as
@@ -359,7 +272,7 @@ const ThreeSecretSocieties: React.FC<Props> = ({
     } else if (frame <= b.land) {
       y = interpolate(frame, [b.hit, b.land], [top, ground], clamp);
     } else {
-      y = interpolate(frame, [b.land, b.land + 6], [ground, ground + 15], {
+      y = interpolate(frame, [b.land, b.land + 6], [ground, ground + LID_DROP], {
         ...clamp,
         easing: Easing.out(Easing.quad),
       });
