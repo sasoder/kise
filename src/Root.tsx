@@ -1,21 +1,20 @@
 import {Composition} from 'remotion';
-import ScopeOfTheReport, {
+import InTheDarkAboutTheScope, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ScopeOfTheReport';
+} from '../generated/components/InTheDarkAboutTheScope';
 
-// the scope box — "the investigation from METR and Redwood was limited in scope
-// to how the second civilization of AIs breached Hugging Face, but its scope did
-// not extend to this third civilization of AIs, which breached OpenAI itself."
+// the crowd, one lit patch, and the dark — "all of this happened while humans
+// remained more or less in the dark about the scope of the conspiracy."
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:23.339 -> 0:37.100 (+16 frame tail) */}
+      {/* 0:13.000 -> 0:17.899 (+16 frame tail) */}
       <Composition
-        id="ScopeOfTheReport"
-        component={ScopeOfTheReport}
+        id="InTheDarkAboutTheScope"
+        component={InTheDarkAboutTheScope}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
