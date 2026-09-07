@@ -2,6 +2,8 @@ import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   ACCENT,
+  BG_BASE,
+  BG_DIM,
   DOT_RADIUS,
   FEATHER_STEPS,
   FRAME_H,
@@ -83,6 +85,7 @@ export const DURATION = 272;
 // — because #E0643A at 0.45 over the grid read as rust-brown dirt rather than as
 // a colour. Nothing else moved: the ladder's other rungs, the gestures, the beat
 // frames and the two camera keys are unchanged.
+// background pass: BG_DIM 0.42
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -123,10 +126,10 @@ export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
   accent: ACCENT,
-  backgroundBase: "#232323",
+  backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
-  backgroundDim: 0.32,
+  backgroundDim: BG_DIM,
   parallax: 0.15,
   shadowY: 2,
   shadowBlur: 9,

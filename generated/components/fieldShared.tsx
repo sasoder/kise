@@ -22,6 +22,22 @@ export const OP_READ = 0.9; // the subject; +0.1 when a thread is on it
 export const OP_RECEDE = 0.3; // was the subject, is not any more
 export const OP_DARK = 0.16; // wiped, or unlooked-at
 
+// The grid backdrop's exposure. Shared, because the three cuts are seconds
+// apart in one edit and a field that moves between them reads as a mistake.
+// Brightened from 0.32 to 0.42 on the director's note that the dots had too
+// little contrast against the background. Measured on cut 1 f156: the field
+// goes #525252 -> #6B6B6B (L* 34.9 -> 45.2) and the grid's own lines, which
+// were nearly gone at 0.32, come back (line contrast 1.127 -> 1.163). It is
+// the brightest step that still keeps white line-work above 4:1 against the
+// field (4.71:1; 0.46 is 4.10 and 0.50 falls to 3.57) and still leaves the
+// accent dots a real lightness step above it (dL* 5.9; 0.46 has 3.2, 0.50 has
+// 0.6 and the crowd goes flat). Note that dot-to-field separation FALLS as
+// this rises — a dot is 58% accent over this same field, so the field gains a
+// full step where the dot gains 0.42 of one — so 0.42 is a ceiling reached
+// from below, not a peak.
+export const BG_BASE = "#232323";
+export const BG_DIM = 0.42;
+
 // Idle thread traffic, per 1,200 agents. A field of a different size scales it.
 export const IDLE_THREADS_PER_1200 = 180;
 export const idleThreads = (agents: number) => Math.round((IDLE_THREADS_PER_1200 * agents) / 1200);
@@ -103,6 +119,15 @@ export const worldTransform = (cx: number, cy: number, k: number) => ({
 // The grid, blurred and dimmed, with parallax against the camera and a slow
 // drift of its own. `cyRest` is the camera's opening cy; parallax is measured
 // from there so the background never jumps at frame 0.
+//
+// `cx`/`cxRest` are the same thing sideways, and both are OPTIONAL: a piece
+// whose camera only tilts passes neither and gets exactly the transform it got
+// before they existed, down to the string. A piece that pans passes both and
+// the grid travels with it at the same parallax factor, so a lateral move reads
+// as depth instead of a locked layer. The element is 1.8x the frame with
+// objectFit cover, which at the parallax offsets these pieces reach leaves
+// hundreds of px of slack on every side — check it per piece, and only raise
+// BG_OVERSIZE if a camera can actually pull an edge in.
 export const GridBackground: React.FC<{
   src: string;
   blur: number;
@@ -110,10 +135,17 @@ export const GridBackground: React.FC<{
   frame: number;
   cy: number;
   cyRest: number;
+  cx?: number;
+  cxRest?: number;
   k: number;
   parallax: number;
-}> = ({ src, blur, dim, frame, cy, cyRest, k, parallax }) => {
+}> = ({ src, blur, dim, frame, cy, cyRest, cx, cxRest, k, parallax }) => {
   const bgY = -(cy - cyRest) * k * parallax - frame * 0.3;
+  const bgX = cx === undefined || cxRest === undefined ? 0 : -(cx - cxRest) * k * parallax;
+  const shift =
+    bgX === 0
+      ? `translateY(${bgY.toFixed(2)}px)`
+      : `translate(${bgX.toFixed(2)}px, ${bgY.toFixed(2)}px)`;
   const bgScale = 1 + (k - 1) * 0.3;
   return (
     <AbsoluteFill style={{ overflow: "hidden" }}>
@@ -126,7 +158,7 @@ export const GridBackground: React.FC<{
           width: FRAME_W * BG_OVERSIZE,
           height: FRAME_H * BG_OVERSIZE,
           objectFit: "cover",
-          transform: `translate(-50%, -50%) translateY(${bgY.toFixed(2)}px) scale(${bgScale.toFixed(4)})`,
+          transform: `translate(-50%, -50%) ${shift} scale(${bgScale.toFixed(4)})`,
           filter: `blur(${blur}px) brightness(${dim})`,
         }}
       />

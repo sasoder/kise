@@ -2,6 +2,8 @@ import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } f
 import { z } from "zod";
 import {
   ACCENT,
+  BG_BASE,
+  BG_DIM,
   DOT_RADIUS,
   GridBackground,
   OP_DARK,
@@ -77,6 +79,7 @@ export const DURATION = 166;
 // a 14 x 8 box cut down to (74 and 75 alive); rogues picked at columns 3, 5, 7;
 // the structure's ink packets put back on the shared rung (opacity 1.0).
 // Gestures, beats and the single camera key are unchanged.
+// background pass: BG_DIM 0.42
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -113,10 +116,10 @@ export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
   accent: ACCENT,
-  backgroundBase: "#232323",
+  backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
-  backgroundDim: 0.32,
+  backgroundDim: BG_DIM,
   parallax: 0.15,
   shadowY: 2,
   shadowBlur: 9,
