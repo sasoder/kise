@@ -68,27 +68,56 @@ export const DURATION = 210;
 //       down through the mesh, the box, the machines, the ring and the held
 //       line of access. Everything it passes drops to OP_DARK on contact and
 //       every thread it touches dies. It crosses the breached node and the box
-//       on "shut down" (f70) and reaches the crowd's top edge at f74, then
-//       fades out over f74-88. Ink is the human's colour and it comes down from
-//       where the mark is: this is OpenAI acting.
-//                                — "quickly shut down"                f62-88
-//   HOLD                         — "by openai after"                  f88-117
-//       The structure dark. Only the crowd's own quiet traffic still runs.
-//   G4a the breached node alone rises from dark to receded. The first sign.
-//                                — "first gaining"                    f117-144
-//   G4b the ring re-draws around it, head-led, in accent at the RECEDED rung —
-//       a trace of the privilege they had, not the live ring. No overshoot: it
-//       is a memory, not an event. Complete by f166, held through "privilege".
-//       The held line of access does NOT come back.
-//                                — "this administrator privilege"     f144-175
-//   RESOLVE f194-210: dark mesh, dark box, dark machines, one faint accent ring
-//       on one faintly lit node, the crowd quiet below, the mark behind. Hold.
+//       on "shut down" (f70) and reaches the crowd's top edge at f74. Ink is
+//       the human's colour and it comes down from where the mark is: this is
+//       OpenAI acting.
+//                                — "quickly shut down"                f62-74
+//   G3b the front DOES NOT STOP at the crowd. It broadens from the mesh's width
+//       to the crowd's own — wider than the frame, both sides — and keeps going
+//       at the same 52 world px per frame, every agent dropping to OP_DARK as it
+//       is reached, row by row, exactly the way the mesh's nodes did. It leaves
+//       the bottom of the frame on f102. "They were shut down" is the agents
+//       too, not just the cluster.
+//                                — "by openai after"                  f74-102
+//   HOLD f102-117. Fifteen frames, and that is the whole hold in this piece.
+//       Structure and crowd both dark; the crowd's own traffic still runs
+//       underneath at half its opacity, so the field is never fully still.
+//   G4  the ring RE-FORMS on the breached node — head-led, full accent, and the
+//       node under it comes back to the receded rung FROM THE RING'S OWN DRAW
+//       rather than from a timer. No overshoot: it re-forms, it does not land.
+//                                — "first gaining"                    f117-142
+//   G5  the reach of the privilege, played back dim. Possession spreads out of
+//       the breached node along the mesh's OWN EDGES — the identical mechanism
+//       as `AdminAccessToTheCluster`'s spread: one travelling front radius, each
+//       node claimed at its graph distance, each edge closed by two fronts, one
+//       from each end, meeting at (dA + dB + L) / 2, every arrival derived from
+//       that radius and never from a cue. It covers the mesh, then walks the
+//       cluster's perimeter as two arms out of the point nearest the node, then
+//       fills the machines inside-out. All of it in the GHOST register: accent
+//       at OP_RECEDE over the dead OP_DARK structure, with a smaller, dimmer
+//       white head on each front. It is the memory of how much of this they
+//       owned, not a revival — nothing underneath comes back up, and the CROWD
+//       IS NEVER RELIT. The privilege was over the cluster; the shutdown was
+//       over everything.
+//                                — "this administrator privilege"     f144-188
+//   RESOLVE f190-210: the dark crowd and its residual traffic below; above it
+//       the dead structure under a ghost claim on every node, every edge, the
+//       box and all eighteen machines; the full-accent ring on the breached node
+//       the one bright thing; the mark behind. Held, dead still but for the
+//       traffic. The held line of access does NOT come back.
+//
+// The two travels are opposite and that is the point: the shutdown sweeps DOWN
+// across the whole field, and the memory of the privilege spreads OUTWARD from
+// the node along the structure's own edges — recognisably the same gesture as
+// the original breach, played back dim.
 //
 // Every dark state is derived from the front's y against the element's OWN y —
-// per segment where a line spans the sweep — so nothing can drift out of step
-// with what is on screen. No springs, no flashes, no ripples, no rims, no
-// pulsing, no stretching; there is no bounce anywhere in this piece. One stroke
-// weight, 3, and 3.5 on the ring. `fieldShared`'s ladder only.
+// per segment where a line spans the sweep — and every ghost state from the
+// spread front's own radius against that element's own distance, so nothing can
+// drift out of step with what is on screen. No springs, no flashes, no ripples,
+// no rims, no pulsing, no stretching; there is no bounce anywhere in this piece,
+// the re-formed ring included. One stroke weight, 3, and 3.5 on the ring.
+// `fieldShared`'s ladder only.
 
 export const schema = z.object({
   ink: z.string(),
@@ -242,13 +271,6 @@ const MARK: P = { x: 540, y: 1070 };
 
 // The cluster the breached node opened into, and the machines it holds.
 const BOX = { x0: 355, x1: 725, y0: 1160, y1: 1410 };
-const BOX_LOOP: P[] = [
-  { x: BOX.x0, y: BOX.y0 },
-  { x: BOX.x1, y: BOX.y0 },
-  { x: BOX.x1, y: BOX.y1 },
-  { x: BOX.x0, y: BOX.y1 },
-  { x: BOX.x0, y: BOX.y0 },
-];
 const MACHINE_ROWS = [
   { y: 1226, n: 7, x0: 398, x1: 682, salt: 17 },
   { y: 1284, n: 7, x0: 392, x1: 688, salt: 41 },
@@ -278,6 +300,102 @@ const MACHINES: { x: number; y: number; r: number }[] = (() => {
 // The breached node is sitting in the seat the nineteenth machine would have
 // had, so it is one of the machines and posts like one.
 const MACH_PTS: P[] = [...MACHINES.map((m) => ({ x: m.x, y: m.y })), NODES[BREACHED]];
+
+// ---------------------------------------------------------------------------
+// THE GHOST SPREAD'S METRIC — G5. Lifted whole from `AdminAccessToTheCluster`'s
+// possession: ONE travelling front radius, and every element's arrival read off
+// its OWN distance rather than off a timer. Dijkstra from the breached node
+// along the mesh's own edges gives each node its distance; an edge is closed by
+// two fronts, one from each end, meeting at (dA + dB + L) / 2.
+//
+// What is new is only what comes after the mesh, because in this cut the box
+// and its machines already exist. The cluster is walked as TWO ARMS out of the
+// point on its perimeter nearest the node — (540, 1410), the middle of its
+// bottom wall — round the two sides and back together at the middle of its top
+// wall, which is the same "a front travelling the structure's own path" and not
+// a second device. The machines follow, by their own distance from the node, so
+// they fill inside-out. The mesh's total is the box's zero and the box's total
+// is the machines': the order — mesh, box, machines — is geometry, one radius
+// against one set of distances, rather than three cues.
+// ---------------------------------------------------------------------------
+const EDGE_LEN = EDGES.map(([a, b]) => len(NODES[a], NODES[b]));
+const NODE_DIST = (() => {
+  const d = new Array(NODES.length).fill(Infinity);
+  const adj: { to: number; l: number }[][] = NODES.map(() => []);
+  EDGES.forEach(([a, b], i) => {
+    adj[a].push({ to: b, l: EDGE_LEN[i] });
+    adj[b].push({ to: a, l: EDGE_LEN[i] });
+  });
+  d[BREACHED] = 0;
+  const seen = new Array(NODES.length).fill(false);
+  for (let it = 0; it < NODES.length; it++) {
+    let u = -1;
+    let best = Infinity;
+    for (let i = 0; i < NODES.length; i++) if (!seen[i] && d[i] < best) [best, u] = [d[i], i];
+    if (u < 0) break;
+    seen[u] = true;
+    for (const e of adj[u]) if (d[u] + e.l < d[e.to]) d[e.to] = d[u] + e.l;
+  }
+  return d as number[];
+})();
+const NODE_SOFT = 26; // world px a node takes to be claimed
+// The radius at which the last node is claimed AND the last edge has closed.
+const MESH_MAX =
+  Math.max(
+    ...NODE_DIST,
+    ...EDGES.map(([a, b], i) => (NODE_DIST[a] + NODE_DIST[b] + EDGE_LEN[i]) / 2),
+  ) + NODE_SOFT;
+
+const armOf = (pts: P[]) => {
+  const cum = [0];
+  pts.slice(1).forEach((p, i) => cum.push(cum[i] + len(pts[i], p)));
+  return { pts, cum, total: cum[cum.length - 1] };
+};
+// The two arms are the box: their union is exactly the rectangle it always was.
+// The right arm starts and ends one stroke width in from x 540, so the two
+// arms' round caps ABUT at the middle of the top and bottom walls instead of
+// stacking — two stacked caps at OP_DARK read as 0.29, which is a pip of light
+// on a wall that is supposed to be dead.
+const JOIN = 3; // one stroke width
+const AL = NODES[BREACHED].x;
+const AR = NODES[BREACHED].x + JOIN;
+const BOX_ARMS = [
+  armOf([
+    { x: AL, y: BOX.y1 },
+    { x: BOX.x0, y: BOX.y1 },
+    { x: BOX.x0, y: BOX.y0 },
+    { x: AL, y: BOX.y0 },
+  ]),
+  armOf([
+    { x: AR, y: BOX.y1 },
+    { x: BOX.x1, y: BOX.y1 },
+    { x: BOX.x1, y: BOX.y0 },
+    { x: AR, y: BOX.y0 },
+  ]),
+];
+const BOX_D0 = MESH_MAX;
+const BOX_ARM_LEN = BOX_ARMS[0].total;
+// The machines last, inside-out. The 1.6 is a stretch of their own span so
+// eighteen of them get a beat rather than the last frame of the box's travel.
+const MACH_D0 = BOX_D0 + BOX_ARM_LEN;
+const MACH_SOFT = 20;
+const MACH_DIST = MACH_PTS.map((m) => MACH_D0 + len(m, NODES[BREACHED]) * 1.6);
+const SPREAD_MAX = Math.max(...MACH_DIST) + MACH_SOFT;
+
+const armPt = (a: { pts: P[]; cum: number[] }, d: number): P => {
+  for (let i = 0; i < a.pts.length - 1; i++) {
+    if (d <= a.cum[i + 1]) {
+      const l = a.cum[i + 1] - a.cum[i];
+      return lerpP(a.pts[i], a.pts[i + 1], l === 0 ? 0 : (d - a.cum[i]) / l);
+    }
+  }
+  return a.pts[a.pts.length - 1];
+};
+const inSpans = (spans: [number, number][], t: number) => spans.some(([s, e]) => t >= s && t <= e);
+// The ghost carries the same travelling white tip the original possession did,
+// smaller and dimmer, because this is the memory of that gesture and not it.
+const GHOST_HEAD_R = 3.5;
+const GHOST_HEAD_OP = 0.4;
 
 // Liang-Barsky: where a mesh edge lies INSIDE the cluster. The box already
 // exists at f0, so the three edges the breached node holds are already eaten
@@ -314,6 +432,15 @@ const EDGE_SPANS: [number, number][][] = EDGES.map(([a, b]) => {
   if (h[1] < 0.998) out.push([h[1], 1]);
   return out;
 });
+// Where the ghost first has something to show. The three edges the breached
+// node holds are eaten back to the cluster's wall, so the first 157 world px of
+// the spread happen INSIDE the box, where nothing is drawn. The front starts at
+// that radius rather than at zero, so the ghost comes out of the wall on the
+// frame "this" lands instead of after twelve frames of nothing — and it is the
+// geometry that says 157, not a nudge.
+const SPREAD_MIN = Math.min(
+  ...EDGES.map((e, i) => (e.includes(BREACHED) ? EDGE_SPANS[i][0][0] * EDGE_LEN[i] : Infinity)),
+);
 
 // The held line of access: the third probe of the previous cut, on its own
 // control points, ending on the cluster's left wall. It is here from f0 and it
@@ -353,15 +480,27 @@ const RING_PTS: P[] = Array.from({ length: RING_SEGS + 1 }, (_, i) => {
 // The ink front. One flat line, ink, stroke 3, spanning the mesh's width with a
 // little air either side so it reads as an object crossing the field and not as
 // a wipe of the frame. It starts at 895 — above node 3 at 926, the highest
-// thing in the world — sweeps to the crowd's top edge in twelve frames, and
-// then slows and fades as it enters the crowd. Everything's darkness is read
-// off this y against the element's own y, so the sweep and the damage cannot
-// come apart.
+// thing in the world — and sweeps to the crowd's top edge in twelve frames, at
+// 55 world px a frame. Everything's darkness is read off this y against the
+// element's own y, so the sweep and the damage cannot come apart.
+//
+// It does not stop there. The crowd is 1,374 world px wide against the mesh's
+// 764, so from the crowd's top edge the line BROADENS over 140 px of its own
+// travel to -190..1270 — off both sides of the frame at the k 0.93 hold — and
+// carries on at 52 px a frame until it is past the bottom of the crowd on f102.
+// The widening is not a flourish: an agent at x 1100 has to be reached by
+// something before it is allowed to go dark, and the same y-against-y law is
+// what darkens it. THE SHUTDOWN REACHES EVERYTHING.
 // ---------------------------------------------------------------------------
 const FRONT_X0 = 166;
 const FRONT_X1 = 930;
+const FRONT_X0_WIDE = -190;
+const FRONT_X1_WIDE = 1270;
+const FRONT_WIDEN = 140; // world px of travel the broadening takes
 const FRONT_Y0 = 895;
-const FRONT_Y_END = 1700;
+// Past the lowest jittered seat (2,996 + 7) and 150 below the lowest world y any
+// frame of this camera can see (2,868), so nothing is left lit behind it.
+const FRONT_Y_END = 3020;
 const DARK_BAND = 14; // world px the contact takes to complete
 
 export const defaultProps: Props = schema.parse({
@@ -463,24 +602,36 @@ const QuicklyShutDown: React.FC<Props> = ({
   const frame = useCurrentFrame();
 
   // -- the front, as a function of any frame ---------------------------------
+  // It leaves the bottom of the frame fifteen frames before the ring re-forms,
+  // which is the one hold in the piece — f102 to f117.
+  const frontExit = beats.firstGaining - 15;
   const frontAt = (f: number) =>
     interpolate(
       f,
-      [beats.quickly, beats.quickly + 12, beats.byOpenaiAfter],
+      [beats.quickly, beats.quickly + 12, frontExit],
       [FRONT_Y0, CROWD.top, FRONT_Y_END],
       clamp,
     );
   const frontY = frontAt(frame);
   // Everything's darkness, off the front's y against its own y. Monotonic, so
-  // it latches: a thing the front has passed stays passed.
+  // it latches: a thing the front has passed stays passed. And, once the ghost
+  // spread starts, everything's claim on top of that darkness — one function,
+  // so a thing cannot be dark and claimed by two different rules.
   const darkAt = (y: number) => smooth((frontY - y) / DARK_BAND);
-  const dim = (base: number, y: number) => base + (OP_DARK - base) * darkAt(y);
+  const claimAt = (base: number, d: number, g: number) => {
+    const dk = base + (OP_DARK - base) * d;
+    return dk + Math.max(0, OP_RECEDE - dk) * g;
+  };
+  const dim = (base: number, y: number) => claimAt(base, darkAt(y), 0);
+  const claimed = (base: number, y: number, g: number) => claimAt(base, darkAt(y), g);
+  // No fade-out: the front goes because it has left the frame, not because a
+  // curve took it away.
   const frontOp =
     interpolate(frame, [beats.quickly - 2, beats.quickly], [0, 1], clamp) *
-    interpolate(frame, [beats.quickly + 12, beats.byOpenaiAfter], [1, 0], {
-      ...clamp,
-      easing: Easing.inOut(Easing.cubic),
-    });
+    (frame < frontExit ? 1 : 0);
+  const frontWide = smooth((frontY - CROWD.top) / FRONT_WIDEN);
+  const frontX0 = FRONT_X0 + (FRONT_X0_WIDE - FRONT_X0) * frontWide;
+  const frontX1 = FRONT_X1 + (FRONT_X1_WIDE - FRONT_X1) * frontWide;
 
   // -- the four rates --------------------------------------------------------
   // Each climbs on its own word and each is shut by the front reaching the
@@ -664,10 +815,13 @@ const QuicklyShutDown: React.FC<Props> = ({
 
   // -- the crowd's own traffic, exactly as the previous cut left it -----------
   // Relaxed: a third of the reach, ambient opacity, still aimed at the bundle
-  // point. It never stops, so the field is never dead — including through the
-  // hold on "by openai after".
+  // point. It never stops, so the field is never dead — and once the front has
+  // been over it, it runs on at half of that: the residual traffic of a
+  // population that has been shut down, and the only thing moving in the frame
+  // through the hold and the whole of the resolve.
   const reachScale = 1 - 0.66;
   const opScale = 0.5 - 0.3;
+  const THREAD_RESIDUAL = 0.5;
   const idleEls: { key: number; x1: number; y1: number; x2: number; y2: number; op: number; drawn: number }[] = [];
   for (let j = 0; j < threads; j++) {
     const period = 44 - 12 * hash(j, 4);
@@ -711,23 +865,37 @@ const QuicklyShutDown: React.FC<Props> = ({
       y1: A.y,
       x2: A.x + (B.x - A.x) * drawn,
       y2: A.y + (B.y - A.y) * drawn,
-      op: opScale * fade,
+      op: opScale * fade * (1 - (1 - THREAD_RESIDUAL) * darkAt((A.y + B.y) / 2)),
       drawn,
     });
   }
 
-  // -- G4: the node comes back, then the ring is re-traced -------------------
-  const revive = interpolate(frame, [beats.firstGaining, beats.thisWord], [0, 1], {
-    ...clamp,
-    easing: Easing.inOut(Easing.cubic),
-  });
-  const ringTrace = interpolate(frame, [beats.thisWord, beats.thisWord + 22], [0, 1], {
+  // -- G4: the ring re-forms on the breached node ----------------------------
+  // Head-led, full accent, inOut cubic — no overshoot. It re-forms; it does not
+  // land. The node under it takes its own return FROM THIS, below.
+  const ringTrace = interpolate(frame, [beats.firstGaining, beats.firstGaining + 25], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
   const ringHead = RING_PTS[Math.min(RING_SEGS, Math.round(ringTrace * RING_SEGS))];
-  // Bright enough to lead the trace, dim enough that the trace stays a memory.
-  const TRACE_HEAD_OP = 0.55;
+  const RING_HEAD_OP = 0.85;
+
+  // -- G5: the ghost spread --------------------------------------------------
+  // ONE radius, from "this" to thirteen frames past "privilege". Every node,
+  // every edge, both arms of the box and every machine take their claim from
+  // this number against their own distance — see THE GHOST SPREAD'S METRIC.
+  const spreadFront =
+    frame <= beats.thisWord
+      ? 0
+      : interpolate(
+          frame,
+          [beats.thisWord, beats.privilege + 13],
+          [SPREAD_MIN, SPREAD_MAX],
+          { ...clamp, easing: Easing.inOut(Easing.sin) },
+        );
+  const nodeGhost = NODE_DIST.map((d) => smooth((spreadFront - d) / NODE_SOFT));
+  const machGhost = MACH_DIST.map((d) => smooth((spreadFront - d) / MACH_SOFT));
+  const armFront = spreadFront - BOX_D0;
 
   // -- camera ----------------------------------------------------------------
   const cam = runCamera(frame, CAM_F, CAM_CY, CAM_K);
@@ -739,7 +907,9 @@ const QuicklyShutDown: React.FC<Props> = ({
 
   // A line whose two ends are on different sides of the front is drawn as
   // pieces, each at its own darkness; a line the front is nowhere near is one
-  // line. Nothing here is a timer.
+  // line. `g` is the ghost's claim on that whole piece — the caller has already
+  // cut the line at the spread front, so a piece is claimed or it is not.
+  // Nothing here is a timer.
   const sweptLine = (
     key: string,
     A: P,
@@ -747,11 +917,12 @@ const QuicklyShutDown: React.FC<Props> = ({
     base: number,
     color: string,
     width: number,
+    g: number = 0,
   ): React.ReactNode => {
     const dA = darkAt(A.y);
     const dB = darkAt(B.y);
     if (Math.abs(dA - dB) < 0.004) {
-      const op = base + (OP_DARK - base) * ((dA + dB) / 2);
+      const op = claimAt(base, (dA + dB) / 2, g);
       return (
         <line
           key={key}
@@ -781,7 +952,7 @@ const QuicklyShutDown: React.FC<Props> = ({
           stroke={color}
           strokeWidth={width}
           strokeLinecap="round"
-          opacity={dim(base, (S.y + E.y) / 2)}
+          opacity={claimAt(base, darkAt((S.y + E.y) / 2), g)}
         />,
       );
     }
@@ -838,25 +1009,65 @@ const QuicklyShutDown: React.FC<Props> = ({
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
             {/* the mesh: receded at f0, brought up to read by the leak node by
-                node, eaten back to the cluster's wall where it crosses, and
-                taken by the front */}
+                node, eaten back to the cluster's wall where it crosses, taken
+                by the front — and then claimed back by the ghost, two fronts
+                per edge, one out of each end, meeting in the middle */}
             {EDGES.map(([a, b], i) => {
+              const A = NODES[a];
+              const B = NODES[b];
               const l = Math.min(nodeLit[a], nodeLit[b]);
               const base = OP_RECEDE + (OP_READ - OP_RECEDE) * l;
-              return (
-                <g key={`e${i}`}>
-                  {EDGE_SPANS[i].map((sp, si) =>
-                    sweptLine(
-                      `s${si}`,
-                      lerpP(NODES[a], NODES[b], sp[0]),
-                      lerpP(NODES[a], NODES[b], sp[1]),
-                      base,
-                      accent,
-                      3,
-                    ),
-                  )}
-                </g>
-              );
+              const ga = clamp01((spreadFront - NODE_DIST[a]) / EDGE_LEN[i]);
+              // the second front only ever takes what is left: two bands that
+              // OVERLAP would be drawn twice, and a ghost drawn twice is a
+              // ghost at 0.51 instead of at OP_RECEDE
+              const gb = Math.min(clamp01((spreadFront - NODE_DIST[b]) / EDGE_LEN[i]), 1 - ga);
+              const bands: { s: number; e: number; g: number }[] = [];
+              if (ga > 0) bands.push({ s: 0, e: ga, g: 1 });
+              if (ga + gb < 1) bands.push({ s: ga, e: 1 - gb, g: 0 });
+              if (gb > 0) bands.push({ s: 1 - gb, e: 1, g: 1 });
+              const els: React.ReactNode[] = [];
+              let key = 0;
+              for (const sp of EDGE_SPANS[i]) {
+                for (const bd of bands) {
+                  const s = Math.max(sp[0], bd.s);
+                  const e = Math.min(sp[1], bd.e);
+                  if (e - s <= 0.003) continue;
+                  els.push(
+                    sweptLine(`s${key++}`, lerpP(A, B, s), lerpP(A, B, e), base, accent, 3, bd.g),
+                  );
+                }
+              }
+              // the two ghost heads: each carries a tip until the fronts meet,
+              // and not after — and only where the edge is actually drawn
+              const open = ga + gb < 1;
+              if (open && ga > 0 && inSpans(EDGE_SPANS[i], ga)) {
+                const h = lerpP(A, B, ga);
+                els.push(
+                  <circle
+                    key="ha"
+                    cx={h.x}
+                    cy={h.y}
+                    r={GHOST_HEAD_R}
+                    fill={ink}
+                    opacity={GHOST_HEAD_OP}
+                  />,
+                );
+              }
+              if (open && gb > 0 && inSpans(EDGE_SPANS[i], 1 - gb)) {
+                const h = lerpP(A, B, 1 - gb);
+                els.push(
+                  <circle
+                    key="hb"
+                    cx={h.x}
+                    cy={h.y}
+                    r={GHOST_HEAD_R}
+                    fill={ink}
+                    opacity={GHOST_HEAD_OP}
+                  />,
+                );
+              }
+              return <g key={`e${i}`}>{els}</g>;
             })}
 
             {/* the crowd's own traffic */}
@@ -878,13 +1089,18 @@ const QuicklyShutDown: React.FC<Props> = ({
               </g>
             ))}
 
-            {/* the agents */}
+            {/* the agents. They go dark under the front on exactly the law the
+                mesh's nodes do — their own y against the front's — and they are
+                never relit: the privilege was over the cluster, the shutdown was
+                over them. */}
             {CROWD_POS.map((p, i) => {
               const l = lit[i];
               const bre = breath(frame, hash(i, 9));
               const r = dotRadius * p.r * bre * (1 + 0.35 * l);
-              const op = OP_RECEDE + (OP_READ + 0.1 - OP_RECEDE) * l;
-              return <circle key={i} cx={p.x} cy={p.y} r={r} fill={accent} opacity={op} />;
+              const base = OP_RECEDE + (OP_READ + 0.1 - OP_RECEDE) * l;
+              return (
+                <circle key={i} cx={p.x} cy={p.y} r={r} fill={accent} opacity={dim(base, p.y)} />
+              );
             })}
 
             {/* the activity. A thread dies the moment the front touches it —
@@ -923,28 +1139,83 @@ const QuicklyShutDown: React.FC<Props> = ({
               sweptLine(`a${i}`, ACCESS_PTS[i], p, OP_READ, accent, 3),
             )}
 
-            {/* the mesh's nodes */}
+            {/* the mesh's nodes. Dark under the front, then claimed by the
+                ghost at their own graph distance — the breached node first,
+                because it is the zero of that distance, and because the ring
+                re-forming around it is what brings it back. */}
             {NODES.map((p, i) => {
               const breached = i === BREACHED;
-              const base = breached
-                ? OP_READ
-                : OP_RECEDE + (OP_READ - OP_RECEDE) * nodeLit[i];
-              const darkened = dim(base, p.y);
-              // "first gaining": the breached node alone comes back, to the
-              // receded rung and no further.
-              const op = breached ? darkened + (OP_RECEDE - darkened) * revive : darkened;
-              return <circle key={`n${i}`} cx={p.x} cy={p.y} r={NODE_R} fill={accent} opacity={op} />;
+              const base = breached ? OP_READ : OP_RECEDE + (OP_READ - OP_RECEDE) * nodeLit[i];
+              // the breached node's return is read off THE RING'S OWN DRAW, so
+              // it cannot arrive on a frame the ring is not on
+              const g = breached ? Math.max(nodeGhost[i], ringTrace) : nodeGhost[i];
+              return (
+                <circle
+                  key={`n${i}`}
+                  cx={p.x}
+                  cy={p.y}
+                  r={NODE_R}
+                  fill={accent}
+                  opacity={claimed(base, p.y, g)}
+                />
+              );
             })}
 
-            {/* the ring. Live and at read until the front takes it; re-traced
-                from f144 head-first at the RECEDED rung — a trace of the
-                privilege, not the privilege. */}
+            {/* the cluster, walked by the ghost as two arms out of the middle
+                of its bottom wall and closing again at the middle of its top */}
+            {BOX_ARMS.map((arm, ai) => (
+              <g key={`bx${ai}`}>
+                {arm.pts.slice(1).map((p, si) => {
+                  const S = arm.pts[si];
+                  const cut = clamp01(
+                    (armFront - arm.cum[si]) / (arm.cum[si + 1] - arm.cum[si]),
+                  );
+                  const M = lerpP(S, p, cut);
+                  return (
+                    <g key={si}>
+                      {cut > 0.003 ? sweptLine("g", S, M, OP_READ, accent, 3, 1) : null}
+                      {cut < 0.997 ? sweptLine("d", M, p, OP_READ, accent, 3, 0) : null}
+                    </g>
+                  );
+                })}
+                {armFront > 0 && armFront < arm.total ? (
+                  <circle
+                    cx={armPt(arm, armFront).x}
+                    cy={armPt(arm, armFront).y}
+                    r={GHOST_HEAD_R}
+                    fill={ink}
+                    opacity={GHOST_HEAD_OP}
+                  />
+                ) : null}
+              </g>
+            ))}
+
+            {/* the machines it holds, claimed inside-out */}
+            {MACH_PTS.map((m, i) => {
+              if (i === MACH_PTS.length - 1) return null; // the breached node draws itself
+              const l = machLit[i];
+              const base = OP_READ + 0.1 * l;
+              return (
+                <circle
+                  key={`m${i}`}
+                  cx={m.x}
+                  cy={m.y}
+                  r={dotRadius * MACHINES[i].r * breath(frame, hash(i, 19)) * (1 + 0.2 * l)}
+                  fill={accent}
+                  opacity={claimed(base, m.y, machGhost[i])}
+                />
+              );
+            })}
+
+            {/* the ring. Live and at read until the front takes it; re-formed
+                from f117 head-first at FULL accent — the one bright thing in
+                the resolve, and the only thing the ghost is not. */}
             {RING_PTS.slice(1).map((p, i) => {
               const A = RING_PTS[i];
               const my = (A.y + p.y) / 2;
               const darkened = dim(OP_READ, my);
               const trace = clamp01(ringTrace * RING_SEGS - i);
-              const op = darkened + (OP_RECEDE - darkened) * trace;
+              const op = darkened + (OP_READ - darkened) * trace;
               return (
                 <line
                   key={`r${i}`}
@@ -960,37 +1231,15 @@ const QuicklyShutDown: React.FC<Props> = ({
               );
             })}
             {ringTrace > 0 && ringTrace < 1 ? (
-              <circle cx={ringHead.x} cy={ringHead.y} r={4.5} fill={ink} opacity={TRACE_HEAD_OP} />
+              <circle cx={ringHead.x} cy={ringHead.y} r={4.5} fill={ink} opacity={RING_HEAD_OP} />
             ) : null}
-
-            {/* the cluster */}
-            {BOX_LOOP.slice(1).map((p, i) =>
-              sweptLine(`b${i}`, BOX_LOOP[i], p, OP_READ, accent, 3),
-            )}
-
-            {/* the machines it holds */}
-            {MACH_PTS.map((m, i) => {
-              if (i === MACH_PTS.length - 1) return null; // the breached node draws itself
-              const l = machLit[i];
-              const base = OP_READ + 0.1 * l;
-              return (
-                <circle
-                  key={`m${i}`}
-                  cx={m.x}
-                  cy={m.y}
-                  r={dotRadius * MACHINES[i].r * breath(frame, hash(i, 19)) * (1 + 0.2 * l)}
-                  fill={accent}
-                  opacity={dim(base, m.y)}
-                />
-              );
-            })}
 
             {/* the front */}
             {frontOp > 0.01 ? (
               <line
-                x1={FRONT_X0}
+                x1={frontX0}
                 y1={frontY}
-                x2={FRONT_X1}
+                x2={frontX1}
                 y2={frontY}
                 stroke={ink}
                 strokeWidth={3}
