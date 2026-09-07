@@ -210,6 +210,81 @@ export const runCamera = (upto: number, F: number[], CY: number[], K: number[]) 
   return { cy, k };
 };
 
+// Authoring a move for that camera. The damper is only ever as smooth as the
+// target it is handed, and a coarse key track hands it a bad one: a segment
+// longer than ~20 frames interpolated linearly is a corner at each key with a
+// straight line in between, so the move lurches in, then crawls at a constant
+// speed, then stops. Measured on the three cuts of this clip before this pass:
+// cut 1's zoom fell to 18% of its own peak speed mid-move and then held one
+// speed dead flat for 14 frames; cut 3 held one speed dead flat for 14.
+//
+// `camMove` writes the move as an eased curve instead. `warp` shapes it: 1 is
+// a plain smoothstep, and below 1 it puts the hand's speed earlier in the move
+// without giving the profile a corner — the slope is still zero at both ends
+// for warp > 0.5, so the damper never sees a step in velocity.
+//
+// It evaluates that curve at EVERY integer frame from f0 to f1 and emits a key
+// for each. Sampling it into a handful of keys and letting `interpolate` join
+// them with straight lines puts a corner back into the damper's target at each
+// key: the target's own acceleration is a delta at the key and zero between,
+// and the damper rings on every one. At 6-8 keys that showed up as five extra
+// bumps in the zoom acceleration across each move, ~15% of the peak, spaced
+// about seven frames apart — small, but a visible ripple in a slow pull-back.
+// A key per frame makes the linear interpolation exact: the target the damper
+// sees IS the eased curve, and d2k is a single smooth lobe pair.
+//
+// It also takes cy from the EASED k rather than interpolating cy between the
+// endpoints, which is the other half of the problem: cy = contentCentre +
+// CAM_LIFT / k is not linear in k, so a cy keyed only at the ends drifts away
+// from its own zoom while the move runs and the whole composition sags and
+// recovers. Measured against a content centre put through this same damper —
+// the only fair reference, since the whole camera lags — that sag was 6.4px on
+// cut 1, 4.8px on cut 2 and 20.7px on cut 3. Taking cy off the eased k takes
+// all three under 1.5px.
+//
+// CAM_LIFT is the framing constant the whole set is built on: a content centre
+// at cy - CAM_LIFT / k lands at screen y 960 - 125 = 835, under the captions.
+export const CAM_LIFT = 125;
+
+export const camEase = (u: number, warp: number) => smoothstep(Math.pow(clamp01(u), warp));
+
+export const camMove = ({
+  f0,
+  f1,
+  k0,
+  k1,
+  c0,
+  c1,
+  warp = 1,
+}: {
+  f0: number;
+  f1: number;
+  k0: number;
+  k1: number;
+  c0: number;
+  c1: number;
+  warp?: number;
+}) => {
+  // One key per frame, so `interpolate` never has to guess between two of them.
+  // `runCamera` needs a strictly increasing input range, which f0..f1 is by
+  // construction as long as the move actually lasts a frame.
+  if (f1 <= f0) {
+    throw new Error(`camMove: f${f0}-${f1} is not a forward move`);
+  }
+  const F: number[] = [];
+  const K: number[] = [];
+  const CY: number[] = [];
+  const span = f1 - f0;
+  for (let i = 0; i <= span; i++) {
+    const g = camEase(i / span, warp);
+    const k = k0 + (k1 - k0) * g;
+    F.push(f0 + i);
+    K.push(k);
+    CY.push(c0 + (c1 - c0) * g + CAM_LIFT / k);
+  }
+  return { F, K, CY };
+};
+
 // The hand on the camera: the same slow drift in every piece.
 export const sway = (frame: number) => ({
   dy: 5 * Math.sin(frame / 19),

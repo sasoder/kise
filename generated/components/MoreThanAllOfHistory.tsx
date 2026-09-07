@@ -19,6 +19,7 @@ import {
   SHADOW_Y,
   Vignette,
   breath,
+  camMove,
   clamp,
   feather,
   hash,
@@ -62,13 +63,12 @@ export const DURATION = 270;
 //     own graph with the arrivals until the whole
 //     thing is accent — the AI is inside it       — "and at a higher level
 //                                                    of competence"       f35-68
-//   push in, k 1.25 -> 1.36, keyed f54-72 and
-//     settled by f77, held through the phrase     — "aimed at this training
-//                                                    infrastructure"      f54-77
-//   pull back, k 1.36 -> 0.615, keyed f104-136 and
-//     settled by f148: the field's bottom edge and
-//     the empty ground below it. One long gentle
-//     move; nothing new appears while it runs      — "than has"            f104-148
+//   pull back, k 1.25 -> 0.615 on one continuous
+//     ramp f104-139, settled by f140: the field's
+//     bottom edge and the empty ground below it.
+//     The only camera move in the piece; nothing
+//     new appears while it runs                   — "aimed at this training
+//                                                    infrastructure"      f104-140
 //   the humans arrive from the past: each glyph
 //     enters from beyond the left edge at its
 //     seat's height, on its own shallow arc, and
@@ -103,6 +103,8 @@ export const DURATION = 270;
 // ripe pass: dots solid, no stroke; deep #D98A0C -> ripe #FFB000
 // shadow pass: drop-shadow 2/7/0.12, BG_DIM 0.45
 // icon shadow: drop-shadow 2/3/0.38 per icon (glyphs, structure, marks)
+// camera pass: push dropped, one continuous pull-back f104-f139; field bottom
+//   feather 12 rows with radius taper; per-frame eased target
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -201,18 +203,37 @@ const smooth = (v: number) => {
 const clampi = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 // ---------------------------------------------------------------------------
-// The camera. Three moves, each on a word. cy = contentCentre + 125 / k, so the
-// content block's centre sits at screen y 835 at every camera position.
+// The camera. ONE move: the pull-back, on "training" (f104). cy comes from the
+// eased k at every frame, so the content block's centre sits at screen y 835 at
+// every camera position and not only at the ends of a move.
 //
-//   f0-54     k 1.25  inside the field, structure centred (content centre 0)
-//   f54-72    -> 1.36 the push. A gentler move on a longer ramp than the 1.45
-//                     it was: the damper reaches 1.354 by "aimed at this"
-//                     (f77) and 1.360 by f90, so it is settled under the word
-//                     and reads as one slow lean rather than a shove.
-//   f104-136  -> 0.615 the pull-back, its front lengthened by six frames so the
-//                     push and the pull read as one hand and not two. Content
-//                     centre moves to 772. Settles f148, ahead of
-//                     "cumulatively" (f150).
+// The push it used to open with — k 1.25 -> 1.36 keyed f54-72 — is gone, and
+// the plots are why. Measured through the damper it moved the zoom 8.8% at a
+// peak of 0.0061 per frame: 0.45% of the zoom a frame, an order of magnitude
+// under the pull-back's 2.3%, which at 24fps is below the speed at which a zoom
+// reads as a move at all. It also landed one frame LATE — settled f78, and the
+// word it served, "aimed at this", is f77 — and leading it earlier would only
+// have made an already invisible move slower. Worst of all it was the only
+// direction change in the piece: in, then a dead 26-frame hold, then out. A
+// velocity sign change that is not the start or the end of a move is exactly
+// what "the camera feels awkward" is made of, and folding the push into the
+// pull-back would have kept the reversal and forced the reveal of the empty
+// ground to start twenty-five frames before the word that motivates it. So it
+// is deleted, and the piece has one camera move, which is the house rule.
+//
+// The pull-back itself was keyed f104-136 with cy keyed only at its ends, and
+// that cost it 14 frames of dead-flat constant speed — a mechanical crawl in
+// the middle of the gesture — and a 20.7px sag of the composition against its
+// own zoom at f124. `camMove` eases it on a warped smoothstep (warp 0.75)
+// with cy taken from the eased k: the flat stretch goes to zero frames and
+// the sag to 1.4px.
+//
+//   f0-102     k 1.25   inside the field, structure centred (content centre 0)
+//   f104-139   -> 0.615 the reveal: the field's bottom edge and the empty
+//                       ground below it. Content centre moves to 772. The zoom
+//                       settles f140 and the frame f145, both clear of
+//                       "cumulatively" (f150), so the first human glyph
+//                       arrives into a camera that has already stopped.
 //
 // At the resolved frame the structure's centre sits at screen y 360, the
 // field's bottom edge at 914, the human block runs 965 to 1446, and its side
@@ -224,9 +245,18 @@ const STRUCT_CX = 540;
 const K_FINAL = 0.615;
 const CONTENT_CENTRE = 772;
 const CY_FINAL = CONTENT_CENTRE + 125 / K_FINAL;
-const CAM_F = [0, 54, 72, 104, 136, DURATION];
-const CAM_K = [1.25, 1.25, 1.36, 1.36, K_FINAL, K_FINAL];
-const CAM_CY = [125 / 1.25, 125 / 1.25, 125 / 1.36, 125 / 1.36, CY_FINAL, CY_FINAL];
+const CAM = camMove({
+  f0: 102,
+  f1: 134,
+  k0: 1.25,
+  k1: K_FINAL,
+  c0: 0,
+  c1: CONTENT_CENTRE,
+  warp: 0.75,
+});
+const CAM_F = [0, ...CAM.F, DURATION];
+const CAM_K = [1.25, ...CAM.K, K_FINAL];
+const CAM_CY = [125 / 1.25, ...CAM.CY, CY_FINAL];
 // The frame's own extremes over the whole track: the widest zoom decides how
 // far out the field has to reach sideways, the opening — tight but low —
 // decides how far it has to reach up.
@@ -308,15 +338,27 @@ const NEIGH = RINGS.map((_, r) =>
 //
 // That bottom is not a ruled line. Its nominal height stays world y 900 — the
 // gap to the human block is measured off it — but it undulates along x by
-// `wobble` and the field dissolves into it: over the FEATHER_STEPS rows above
+// `wobble` and the field dissolves into it: over the EDGE_FEATHER rows above
 // the nominal edge a seat only exists if its hash falls under `feather`, and
 // what survives is drawn smaller. The field thins out into the ground instead
 // of stopping at a ruler. 77 x 108 seats laid out, 7,806 before the feather.
+//
+// EDGE_FEATHER is 12 rows, not the shared FEATHER_STEPS of 4. Four rows is
+// 61 world px, 37 screen px at the resolved camera — a transition thin enough
+// that the crowd still reads as ending on a line, which is what the director
+// saw. Twelve rows is 182 world px, 112 screen px, and because the density
+// falls on a smoothstep the band is not uniform: the outermost 2-3 rows keep
+// 2-16% of their seats (a scatter), rows 4-6 keep 25-50% (sparse), and it is
+// only at 12 rows in that the field is solid again. The dissolve extends
+// UPWARD from the nominal edge, so the gap down to the human block is exactly
+// what it was.
 // ---------------------------------------------------------------------------
 const STEP_X = 940 / 39;
 const STEP_Y = 440 / 29;
 const BLEED = 60;
 const FIELD_BOTTOM = 900;
+const EDGE_FEATHER = 12; // rows, this edge only; the shared default is 4
+const EDGE_R_MIN = 0.6; // a surviving seat's radius at the outermost rows
 const EDGE_SEED = 2.1;
 // the nominal bottom edge at world x, in world px
 const edgeAt = (x: number) => FIELD_BOTTOM + wobble(x, EDGE_SEED) * STEP_Y;
@@ -337,12 +379,21 @@ const SEATS: Seat[] = (() => {
       const x = GRID_X0 + gc * STEP_X + (hash(i, 11) - 0.5) * STEP_X * 0.9;
       const y = GRID_Y0 + gr * STEP_Y + (hash(i, 12) - 0.5) * STEP_Y * 0.9;
       // the bottom edge: undulating, and feathered over the rows above it
-      const fe = feather((edgeAt(x) - y) / STEP_Y);
+      const fe = feather((edgeAt(x) - y) / STEP_Y, EDGE_FEATHER);
       if (hash(i, 71) >= fe) continue;
       const d = Math.hypot(x - STRUCT_CX, y);
       const edge = clearingAt(Math.atan2(y, x - STRUCT_CX)) * (1 + (hash(i, 60) - 0.5) * 0.13);
       if (d < edge) continue;
-      out.push({ x, y, r: 0.75 + 0.5 * hash(i, 13), rs: 0.7 + 0.3 * fe, gc, gr });
+      // the radius tapers across the same band, so the seats that do survive
+      // out there are small as well as scarce and the two fade together
+      out.push({
+        x,
+        y,
+        r: 0.75 + 0.5 * hash(i, 13),
+        rs: EDGE_R_MIN + (1 - EDGE_R_MIN) * fe,
+        gc,
+        gr,
+      });
     }
   }
   return out;

@@ -20,6 +20,7 @@ import {
   Vignette,
   WOBBLE_R,
   breath,
+  camMove,
   clamp,
   feather,
   hash,
@@ -61,8 +62,8 @@ export const DURATION = 166;
 //     provenance thread draws head-led to each of
 //     its 3 rogues; the threads stay               — "of Mythos"        f47-90
 //   the OpenAI mark does the same to its 3         — "or Astro or"      f76-115
-//   pull-back keyed f96-110, k 1.4 -> 0.95,
-//     revealing the structure below                — "whatever /
+//   the one pull-back, k 1.4 -> 0.95 on a single
+//     ramp f85-111, revealing the structure below  — "whatever /
 //                                                     have an"          f106-110
 //   the 6 rogues drift toward the structure on
 //     individual shallow arcs and stop ~300 world
@@ -96,6 +97,7 @@ export const DURATION = 166;
 // ripe pass: dots solid, no stroke; deep #D98A0C -> ripe #FFB000
 // shadow pass: drop-shadow 2/7/0.12, BG_DIM 0.45
 // icon shadow: drop-shadow 2/3/0.38 per icon (glyphs, structure, marks)
+// camera pass: longer pull-back ramp; per-frame eased target
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -436,23 +438,35 @@ FIRE_ORDER.forEach((j, rank) => {
 });
 
 // ---------------------------------------------------------------------------
-// The camera. One move. It opens inside the two fleets — at k 1.4 they bleed
-// off both frame edges and the structure is out of frame below — and pulls
-// back to k 0.95, where the whole composition (marks at the top, structure at
-// the bottom) sits in frame. cy = contentCentre + 125/k at both keys, so the
-// content's centre lands at screen y 835 at either zoom.
-//   f0-96     k 1.40  content centre world y -530 (marks + fleets)
-//   f96-110   -> 0.95 content centre world y -300 (marks + structure);
-//                     the damped tracker settles by ~f116, ahead of
-//                     "incentive to" at f117
+// The camera. One move, on a longer ramp. It opens tight on the two fleets —
+// at k 1.4 they and their marks fill the upper frame and the structure sits low
+// and small under them — and pulls back to k 0.95, where the whole composition
+// (marks at the top, structure at the bottom) sits in frame with air around it.
+// cy comes from the eased k at every frame, so the content's centre lands at
+// screen y 835 at every zoom and not only at the two ends.
+//
+// It was keyed f96-110 and the comment here claimed it settled by f116, ahead
+// of "incentive to" at f117. It did not: measured through the damper the zoom
+// was still moving at f120 and the frame at f123, so the move landed three to
+// six frames INSIDE the word it was supposed to be clear of. Keying it from
+// f82 starts the ramp twelve frames earlier and spreads the same 0.45 of zoom
+// over 27 frames instead of 24, which both lands it early and takes 15% off
+// its peak speed (0.0318 -> 0.0272 of zoom a frame).
+//
+//   f0-82     k 1.40  content centre world y -530 (marks + fleets)
+//   f85-111   -> 0.95 content centre world y -300 (marks + structure). The
+//                     zoom settles f112 and the frame f116, so the reveal is
+//                     complete on "whatever / have an" (f106-110) and five
+//                     frames clear of "incentive to" (f117).
 // ---------------------------------------------------------------------------
 const K0 = 1.4;
 const K1 = 0.95;
 const CY0 = -530 + 125 / K0;
 const CY1 = -300 + 125 / K1;
-const CAM_F = [0, 96, 110, DURATION];
-const CAM_K = [K0, K0, K1, K1];
-const CAM_CY = [CY0, CY0, CY1, CY1];
+const CAM = camMove({ f0: 82, f1: 104, k0: K0, k1: K1, c0: -530, c1: -300 });
+const CAM_F = [0, ...CAM.F, DURATION];
+const CAM_K = [K0, ...CAM.K, K1];
+const CAM_CY = [CY0, ...CAM.CY, CY1];
 
 const RogueInstancesInterfere: React.FC<Props> = ({
   ink,

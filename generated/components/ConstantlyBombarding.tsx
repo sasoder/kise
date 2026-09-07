@@ -21,6 +21,7 @@ import {
   Vignette,
   WOBBLE_R,
   breath,
+  camMove,
   clamp,
   hash,
   iconShadow,
@@ -60,11 +61,12 @@ export const DURATION = 272;
 //     and settles at OP_READ                        — "AI companies"    f56-60
 //   wave 1, ~24 dots, arrives from beyond the k1.8
 //     frame edge on individual shallow arcs         — "to have tens"    f80-104
-//   pull-back keyed f92-104, k 1.8 -> 1.15, then
+//   the one pull-back leaves, k 1.8 -> 0.8 on a
+//     single continuous ramp f86-143, then
 //     wave 2, 720 dots, arrives the same way and
 //     lands as a thick disc, not a ring             — "if not hundreds" f100-127
-//   pull-back keyed f110-142, k 1.15 -> 0.8, and
-//     wave 3, the remaining 9,176 dots, pours in
+//   the same move is still running, passing k 1.0,
+//     and wave 3, the remaining 9,176 dots, pours in
 //     outer-seats-first and fills the frame edge to
 //     edge — off the top, sides AND bottom, no bare
 //     band anywhere; idle traffic starts as they
@@ -86,7 +88,7 @@ export const DURATION = 272;
 // ambient: the structure's own packets, from f56 — a 4px ink dot travelling one
 // of its edges over 14 frames, a new one every 7 frames, two alive at once, for
 // the whole piece. Not a gesture; it is what a running thing looks like.
-// No third camera move: the bombardment carries the last third on its own.
+// No second camera move: the bombardment carries the last third on its own.
 //
 // consistency pass: accent #E0643A, feathered crowd edges
 // sleek pass: OP_UNREAD_DOT (0.58) is the crowd's unread rung on every accent
@@ -101,6 +103,7 @@ export const DURATION = 272;
 // ripe pass: dots solid, no stroke; deep #D98A0C -> ripe #FFB000
 // shadow pass: drop-shadow 2/7/0.12, BG_DIM 0.45
 // icon shadow: drop-shadow 2/3/0.38 per icon (glyphs, structure, marks)
+// camera pass: one continuous pull-back f86-f143; per-frame eased target
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -195,17 +198,34 @@ const smooth = (v: number) => {
 const clampi = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 // ---------------------------------------------------------------------------
-// The camera. Three keyed moves at most; here two, both pull-backs, each
-// landing ahead of its word. cy = 125 / k at every key, so the structure at
-// world y 0 sits at screen y 835 whatever the zoom.
+// The camera. ONE move: a single continuous pull-back, k 1.8 -> 0.8, keyed
+// f84-138 and on screen f86-143. cy comes from the eased k at every frame, so
+// the structure at world y 0 sits at screen y 835 whatever the zoom.
 //
-//   f0-92    k 1.8   the structure alone, drawing, the frame tight on it
-//   f92-104  -> 1.15 opens ahead of "if not hundreds" (f112)
-//   f110-142 -> 0.8  the reveal; longer ramp, lands under "of thousands"
+// It was two: k 1.8 -> 1.15 keyed f92-104, a six-frame hold, then 1.15 -> 0.8
+// keyed f110-142. Run through the damper that reads as one gesture with a stall
+// in it — the zoom's speed peaked at 0.052/frame at f104, fell to 0.0094 by
+// f115 (18% of its own peak, an almost-stop), then held 0.0109 dead flat for
+// fourteen frames before stopping. Three changes of acceleration inside one
+// pull-back, and the middle one is the "awkward".
+//
+// Now it is one hand: accelerate once, decelerate once, no hold anywhere.
+// `camMove` eases it on a warped smoothstep (warp 0.70, so the speed is
+// early in the move, which is what keeps the frame near k 1.15 while wave 2 is
+// launching) and the peak speed drops to 0.029/frame.
+//
+//   f0-84    k 1.8   the structure alone, drawing, the frame tight on it
+//   f86-143  -> 0.8  the reveal, one continuous move. It leaves on "to have
+//                    tens" (f86), passes k 1.21 at "if not hundreds" (f112) and
+//                    crosses 1.15 three frames later — wave 2 is laid out to
+//                    arrive at that zoom and every dot is still off-frame when
+//                    it launches — and settles at f143, zoom and frame on the
+//                    same frame, before the "of thousands" pour has finished.
 // ---------------------------------------------------------------------------
-const CAM_F = [0, 92, 104, 110, 142, DURATION];
-const CAM_K = [1.8, 1.8, 1.15, 1.15, 0.8, 0.8];
-const CAM_CY = CAM_K.map((k) => 125 / k);
+const CAM = camMove({ f0: 84, f1: 138, k0: 1.8, k1: 0.8, c0: 0, c1: 0, warp: 0.7 });
+const CAM_F = [0, ...CAM.F, DURATION];
+const CAM_K = [1.8, ...CAM.K, 0.8];
+const CAM_CY = [125 / 1.8, ...CAM.CY, 125 / 0.8];
 const K_FINAL = 0.8;
 const CY_FINAL = 125 / K_FINAL;
 
