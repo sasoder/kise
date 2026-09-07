@@ -1,21 +1,19 @@
 import {Composition} from 'remotion';
-import ScopeOfTheReport, {
+import InventorOfXboxArrow, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ScopeOfTheReport';
+} from '../generated/components/InventorOfXboxArrow';
 
-// the crowd, the box the report drew around its own scope, two breaches — "the
-// investigation from METR and Redwood was limited in scope... but its scope did
-// not extend to this third civilization of AIs, which breached OpenAI itself."
+// the credit and the point — the label lands, then an arrow draws in from above
+// it and points right: "Inventor of Xbox".
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:23.339 -> 0:37.100 (+16 frame tail) */}
       <Composition
-        id="ScopeOfTheReport"
-        component={ScopeOfTheReport}
+        id="InventorOfXboxArrow"
+        component={InventorOfXboxArrow}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
