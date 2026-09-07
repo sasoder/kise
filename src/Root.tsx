@@ -1,19 +1,19 @@
 import {Composition} from 'remotion';
-import InventorOfXboxArrow, {
+import BillGEmail, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/InventorOfXboxArrow';
+} from '../generated/components/BillGEmail';
 
-// the credit and the point — the label lands, then an arrow draws in from above
-// it and points right: "Inventor of Xbox".
+// the living caret — an email compose card typed live on the beats, the chain
+// colours smearing behind the caret. 0:09.519 -> 0:13.740 (+24 frame tail).
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="InventorOfXboxArrow"
-        component={InventorOfXboxArrow}
+        id="BillGEmail"
+        component={BillGEmail}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
