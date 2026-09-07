@@ -110,13 +110,44 @@ const lerpP = (a: P, b: P, t: number): P => ({ x: a.x + (b.x - a.x) * t, y: a.y 
 
 // ---------------------------------------------------------------------------
 // The crowd — copied from AdminAccessToTheCluster, seat for seat: the field's
-// own step, 42 x 60 of them, the same jitter off the same hash salts, so the
+// own step, 58 x 96 of them, the same jitter off the same hash salts, so the
 // two cuts are the same population and not two draws of one idea.
+//
+// It is 58 x 96 rather than 42 x 60 because the field has to FILL THE FRAME to
+// the sides and underneath on every frame of all three cuts. At the k 0.93 wide
+// hold the 42 x 60 slab ended on a ruled line left, right and below, with bare
+// grid beyond it. Same step, same salts, same jitter law, same cx and the same
+// top — only the count changes, so it is still one population across the cuts.
+//
+// The count is DERIVED. Each piece's camera was run frame by frame with the
+// shared damper AND `sway` included and the union of every visible world
+// rectangle taken:
+//   AdminAccessToTheCluster  f0..300  x -43.6..1123.8  y 610.0..2858.3
+//   ThisParticularCluster    f0..83   x -40.6..1123.1  y 741.9..2857.8
+//   QuicklyShutDown          f0..209  x -43.6..1127.8  y 746.6..2867.6
+// The widest frames are the damped k 0.93 holds — admin's minimum k is 0.9297
+// at f34, shutdown's 0.9234 at f39, particular's 0.93 at f0.
+//
+// 58 x 96 seats on the same step, on the same cx 540 and the same top 1555,
+// give a nominal lattice of x -146.9..1226.9 and y 1555..2996.4. Even with every
+// seat jittered the full 45% of a step INWARD the field still reaches
+// x -136.1..1216.1 and down to y 2989.6, so the overrun past the visible
+// rectangle is, per piece (left / right / bottom):
+//   admin       92.4 / 92.2 / 131.2
+//   particular  95.4 / 93.0 / 131.7
+//   shutdown    92.4 / 88.3 / 121.9
+// — never under the 80 world px rule, so there is no crowd edge on the left,
+// the right, the bottom or in any corner on any frame of any of the three cuts.
+// The TOP edge is the one deliberate boundary and does not move: the cluster box
+// is framed against it.
+//
+// Identical in AdminAccessToTheCluster, ThisParticularCluster and
+// QuicklyShutDown, seat for seat — the three cut into each other.
 // ---------------------------------------------------------------------------
 const STEP_X = 940 / 39; // 24.10 — the field's step, identical across cuts
 const STEP_Y = 440 / 29; // 15.17
-const COLS = 42;
-const ROWS = 60;
+const COLS = 58;
+const ROWS = 96;
 const N = COLS * ROWS;
 const CROWD = { cx: 540, top: 1555, w: (COLS - 1) * STEP_X, h: (ROWS - 1) * STEP_Y };
 const CROWD_POS = Array.from({ length: N }, (_, i) => {
