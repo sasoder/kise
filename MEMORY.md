@@ -62,9 +62,11 @@ When they say "dwarkesh style", build to this without re-asking.
 
 - Transparent ProRes 4444 `.mov` with alpha — these are overlays on a talking head,
   so ignore the "opaque background by default" rule in `AGENTS.md`.
-- 1080x1920, 30fps. Review with `KISE_TRANSPARENT=1 bun run review out/<name>.mov`.
-- Duration comes from the SRT: `round((end - start) * 30)` frames. Report the exact
-  timecode the clip is placed at.
+- 1080x1920. **24fps** for every transcript cut since Sep 2026 (the user's standing
+  instruction; the older overlays were 30). Review with
+  `KISE_TRANSPARENT=1 bun run review out/<name>.mov` for transparent ones.
+- Duration comes from the SRT: `round((end - start) * fps)` frames, plus a 16-frame
+  tail so the resolved state holds. Report the exact timecode the clip is placed at.
 - Hold resolved on the last frame. Never fade out — the editor controls the out.
 - Judge renders over dark grey (`0x141414`), not the review checkerboard, which
   consistently overstates faint elements. Build a preview `.mp4` for the user.
@@ -75,7 +77,9 @@ When they say "dwarkesh style", build to this without re-asking.
 - One soft `drop-shadow(0 2px 6px <shadow>)` over the whole graphic, for legibility
   against arbitrary footage. Nothing else.
 - Flat shapes. No glow, no gradients, no blend modes — a glow filter was tried and
-  rejected for turning the accent into a neon tube.
+  rejected for turning the accent into a neon tube. One exception, asked for by the
+  user on 2026-09-07: on the opaque grid look, a quiet vignette over everything
+  (`Vignette` in `fieldShared.tsx`, strength 0.45) for depth.
 - Three states, in this order: unknown (~0.10 ink) -> read (~0.80-0.95 ink) ->
   understood/structural (accent).
 
@@ -271,6 +275,49 @@ moment is allowed when it makes it smoother.
 Reference set: `generated/components/SprawlingProjectV2.tsx`,
 `SubjectiveLongTimeV2.tsx`, `MessageBoardV2.tsx`, `NoneAlertedTiersV2.tsx`.
 Delivered to `dwarkesh podcast/sep/nobody-alerted-the-humans/sleek/`.
+
+**The field (Sep 2026, the "three secret AI societies" set) — the current standard**
+
+Three cuts of one clip built as one world, approved 2026-09-07 with "awesome, I
+want to work in this way in the future". Reference set, in edit order:
+`SocietiesFromTheAshes.tsx` (1.4–8.8s), `InTheDarkAboutTheScope.tsx`
+(13.0–17.9s), `ScopeOfTheReport.tsx` (23.3–37.1s). Everything they share lives
+in `generated/components/fieldShared.tsx` — import it, never copy it:
+
+- The ladder: `OP_UNREAD 0.45`, `OP_READ 0.9` (+0.1 when a thread is on the
+  agent), `OP_RECEDE 0.3`, `OP_DARK 0.16`. Every agent, ash line, floor and mark
+  sits on a rung. The subject is always `OP_READ + 0.1 * lit`.
+- Idle thread traffic `idleThreads(n)` = 180 per 1,200 agents. A "busy" line
+  runs 1.6× that and eases back to it.
+- `runCamera` (stiffness 0.09, damping 0.468), `sway`, `worldTransform`,
+  `GridBackground` (blur 13, brightness 0.32, 1.8× oversize, parallax 0.15,
+  drift −0.3px/frame), `Vignette` last in the tree.
+- `DOT_RADIUS 5.5`, `breath`, `hash`, `clamp`.
+
+Rules that came out of the set:
+- **Less is more.** The header comment lists every gesture with the word it
+  serves and its frames. A gesture with no word is deleted before render. No
+  springs, flashes, ripples, rims, glyph breathing, or a box that stretches.
+  One camera move where one will do; three at most, each on a word.
+- **Every piece opens inside the crowd** (k ≥ 1.25, crowd bleeding off both
+  edges) and the first move is the pull-back that reveals its edges. The crowd
+  resolves at k 1.0 wherever it plays "the crowd"; a piece whose pull-back is
+  the gesture may resolve wider.
+- **The crowd is the material.** 40×30 hashed grid, step 940/39 × 440/29,
+  jitter 0.9, radius 0.75–1.25. A bigger field keeps the same step. A society
+  is a band lifted out of it on individual arcs; a wipe is a fall to a flat
+  dark line; the next society rises from that line. Three placeholder slots
+  (dashed, equal, drawn one after another) make a count readable up front.
+- **The box** (solid, stroke 3, head-led draw, click on close) means "what was
+  looked at". Dashed means "a position in a sequence". Never mix them.
+- **Humans** are `person.png` tinted white when unnamed; a named org is its
+  logo converted to a white-on-alpha PNG in `public/` (`metr-logo.png`,
+  `redwood-logo.png`), ~118 world px. Product marks 108. No text unless asked.
+- Content centred near screen y≈835, crowd bottom ≤ ~1480, margins ≥ 60.
+- Stroke 3 for lines, 3.5 for a ring, 1.5 for seat rings. 16-frame tail.
+
+Delivered to `~/Downloads/` (originals) and `~/Downloads/three-societies-sleek/`
+(the consistency pass); never overwrite a delivered file, make a sibling folder.
 
 ## Cheeky Pint — brown paper background
 
