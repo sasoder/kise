@@ -1,5 +1,20 @@
 import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
+import {
+  DOT_RADIUS,
+  GridBackground,
+  OP_READ,
+  OP_RECEDE,
+  OP_UNREAD,
+  Vignette,
+  breath,
+  clamp,
+  hash,
+  idleThreads,
+  runCamera,
+  sway,
+  worldTransform,
+} from "./fieldShared";
 
 export const FPS = 24;
 // Dwarkesh: "The investigation from METR and Redwood was limited in scope to
@@ -60,8 +75,8 @@ export const defaultProps: Props = schema.parse({
   shadowY: 2,
   shadowBlur: 9,
   shadowOpacity: 0.22,
-  dotRadius: 5.5,
-  threads: 150,
+  dotRadius: DOT_RADIUS,
+  threads: idleThreads(1200),
   beats: {
     investigation: 0,
     limitedInScope: 55,
@@ -80,13 +95,6 @@ type P = { x: number; y: number };
 
 const WORLD_W = 1080;
 const WORLD_H = 2600;
-
-const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
-
-const hash = (i: number, k: number) => {
-  const s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
-  return s - Math.floor(s);
-};
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const smooth = (v: number) => {
@@ -224,34 +232,22 @@ const pourSet = (
 const A_POUR = pourSet(BAND.count, BAND.cols, POUR_A, A_AT_SLOT, 21);
 const B_POUR = pourSet(TIER2.count, TIER2.cols, POUR_B, B_AT_SLOT, 31);
 
-// Camera: one move. It opens on the crowd and tilts up to find the two
-// investigators while their names are said, then holds that frame for the
-// rest of the piece — the whole stack already fits in it.
-// The tilt lands as "METR and Redwood" is said and the box starts to draw, so
-// the frame is never holding on empty space.
+// Camera: one move. It opens INSIDE the crowd — at k 1.3 the field's 940 world
+// width is 1222 on screen, so the crowd runs off both edges and the frame is
+// nothing but agents — and a single damped ramp keyed f12 to f40 both pulls
+// back to k 1.0, revealing the crowd's own edges, and tilts up to find the two
+// investigators while their names are said. It holds that frame for the rest of
+// the piece; the whole stack already fits in it.
+// The move lands as "METR and Redwood" is said and the box starts to draw, so
+// the frame is never holding on empty space, and the logos arrive from above as
+// the tilt settles rather than sitting there waiting.
+// The crowd resolves at k = 1.0 — the same size on screen as the crowd in
+// SocietiesFromTheAshes, which is cut in seconds earlier. cy 1510 holds the
+// content block (the investigators' top edge, 771, down to the crowd's bottom,
+// 2000) centred on screen y 835, with the crowd's bottom at y 1450.
 const CAM_F = [0, 12, 40, DURATION];
 const CAM_CY = [1760, 1760, 1510, 1510];
-const CAM_K = [1.1, 1.1, 1.0, 1.0];
-const CAM_STIFF = 0.09;
-const CAM_DAMP = 0.468;
-
-const camera = (upto: number) => {
-  let cy = CAM_CY[0];
-  let k = CAM_K[0];
-  let vy = 0;
-  let vk = 0;
-  for (let f = 1; f <= upto; f++) {
-    const ty = interpolate(f, CAM_F, CAM_CY, clamp);
-    const tk = interpolate(f, CAM_F, CAM_K, clamp);
-    vy += (ty - cy) * CAM_STIFF - vy * CAM_DAMP;
-    cy += vy;
-    vk += (tk - k) * CAM_STIFF - vk * CAM_DAMP;
-    k += vk;
-  }
-  return { cy, k };
-};
-
-const BG_OVERSIZE = 1.8;
+const CAM_K = [1.3, 1.3, 1.0, 1.0];
 
 // The perimeter of the scope box, so the drawing line can carry a white head.
 const rectPt = (t: number): P => {
@@ -322,7 +318,8 @@ const ScopeOfTheReport: React.FC<Props> = ({
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
-  const dim1 = 1 - 0.7 * recede;
+  // What was the subject drops to the shared receded rung: read x dim1 = 0.3.
+  const dim1 = 1 - (1 - OP_RECEDE) * recede;
   const rise2 = interpolate(frame, [beats.moreConcerning + 2, beats.moreConcerning + 22], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
@@ -529,34 +526,27 @@ const ScopeOfTheReport: React.FC<Props> = ({
   });
 
   // -- camera ----------------------------------------------------------------
-  const cam = camera(frame);
-  const cy = cam.cy + 5 * Math.sin(frame / 19);
-  const cx = 540 + 3 * Math.sin(frame / 23);
+  const cam = runCamera(frame, CAM_F, CAM_CY, CAM_K);
+  const drift = sway(frame);
+  const cy = cam.cy + drift.dy;
+  const cx = 540 + drift.dx;
   const k = cam.k;
-  const tx = 540 - cx * k;
-  const ty = 960 - cy * k;
-  const bgY = -(cy - CAM_CY[0]) * k * parallax - frame * 0.3;
-  const bgScale = 1 + (k - 1) * 0.3;
+  const { tx, ty } = worldTransform(cx, cy, k);
 
   const boxOp = 0.85 * dim1;
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
-      <AbsoluteFill style={{ overflow: "hidden" }}>
-        <Img
-          src={staticFile(backgroundSrc)}
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            width: WORLD_W * BG_OVERSIZE,
-            height: 1920 * BG_OVERSIZE,
-            objectFit: "cover",
-            transform: `translate(-50%, -50%) translateY(${bgY.toFixed(2)}px) scale(${bgScale.toFixed(4)})`,
-            filter: `blur(${backgroundBlur}px) brightness(${backgroundDim})`,
-          }}
-        />
-      </AbsoluteFill>
+      <GridBackground
+        src={backgroundSrc}
+        blur={backgroundBlur}
+        dim={backgroundDim}
+        frame={frame}
+        cy={cy}
+        cyRest={CAM_CY[0]}
+        k={k}
+        parallax={parallax}
+      />
 
       <AbsoluteFill style={{ filter: `drop-shadow(0 ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))` }}>
         <div
@@ -660,7 +650,7 @@ const ScopeOfTheReport: React.FC<Props> = ({
               const l = lit[i];
               const arrived = g.pour > 0 ? smooth((g.pour - 0.88) / 0.12) : 0;
               if (arrived >= 1) return null;
-              const bre = 1 + 0.05 * Math.sin(frame * 0.11 + hash(i, 9) * 6.28);
+              const bre = breath(frame, hash(i, 9));
               // In the air the dot is bigger and fully lit for the whole
               // flight, not just at its midpoint, so the stream reads.
               const fly =
@@ -673,15 +663,20 @@ const ScopeOfTheReport: React.FC<Props> = ({
                 (1 + 0.15 * g.lift) *
                 (1 + 0.5 * fly) *
                 (1 - 0.5 * arrived);
-              // The ladder: inside the box is read (1.0); outside it, unread
-              // (0.45) until it becomes the subject; the crowd sits between.
+              // The shared ladder (fieldShared): unread 0.45, read 0.9 (+0.1
+              // with a thread on it), receded 0.3. Inside the box is what the
+              // report read; the third civilization above it is present but
+              // unread until it becomes the subject, when it rises to the read
+              // form and the box recedes; the crowd underneath is unread
+              // throughout, on the same lit form.
+              const unread = OP_UNREAD + (OP_READ + 0.1 - OP_UNREAD) * l;
               let op: number;
               if (g.tier === 1) {
-                op = Math.min(1, 0.85 + 0.25 * l) * dim1;
+                op = (OP_READ + 0.1 * l) * dim1;
               } else if (g.tier === 2) {
-                op = Math.min(1, 0.45 + 0.55 * rise2 + 0.2 * l);
+                op = Math.min(1, unread * (1 - rise2) + rise2 * (OP_READ + 0.1 * l));
               } else {
-                op = Math.min(1, 0.45 + 0.55 * l + 0.25 * g.lift) * (1 - 0.3 * recede);
+                op = Math.min(1, unread + 0.25 * g.lift) * (1 - 0.3 * recede);
               }
               if (fly > 0) op = Math.max(op, fly);
               op *= 1 - arrived;
@@ -756,13 +751,15 @@ const ScopeOfTheReport: React.FC<Props> = ({
               width: OAI.size,
               height: OAI.size,
               filter: "brightness(0) invert(1)",
-              opacity: oaiIn * (0.45 + 0.55 * rise2),
+              opacity: oaiIn * (OP_UNREAD + (1 - OP_UNREAD) * rise2),
               transform: `scale(${(0.8 + 0.2 * oaiIn) * (1 + 0.1 * oaiSwell)})`,
               transformOrigin: "center center",
             }}
           />
         </div>
       </AbsoluteFill>
+
+      <Vignette />
     </AbsoluteFill>
   );
 };
