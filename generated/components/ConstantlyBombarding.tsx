@@ -88,6 +88,7 @@ export const DURATION = 272;
 // frames and the two camera keys are unchanged.
 // background pass: BG_DIM 0.42
 // dot pass: 1px white stroke on every agent dot
+// colour pass 2: accent #FFC543, dot stroke 1.5px
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({

@@ -89,6 +89,7 @@ export const DURATION = 270;
 // block bottom at 1446. Gestures and beats unchanged.
 // background pass: BG_DIM 0.42
 // dot pass: 1px white stroke on every agent dot
+// colour pass 2: accent #FFC543, dot stroke 1.5px
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({

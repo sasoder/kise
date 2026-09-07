@@ -13,11 +13,11 @@ export const BG_OVERSIZE = 1.8;
 
 // Mono plus one accent. Every piece takes it as a prop and defaults to this, so
 // the three cuts cannot drift apart in the edit.
-export const ACCENT = "#E0643A";
+export const ACCENT = "#FFC543";
 
 // The opacity ladder. Every agent, ash line, floor or mark sits on one rung.
 export const OP_UNREAD = 0.45; // present, not the subject
-export const OP_UNREAD_DOT = 0.58; // the unread rung for accent dots — orange needs more than 0.45 over the grid
+export const OP_UNREAD_DOT = 0.58; // the unread rung for accent dots — the accent needs more than 0.45 over the grid
 export const OP_READ = 0.9; // the subject; +0.1 when a thread is on it
 export const OP_RECEDE = 0.3; // was the subject, is not any more
 export const OP_DARK = 0.16; // wiped, or unlooked-at
@@ -30,11 +30,13 @@ export const OP_DARK = 0.16; // wiped, or unlooked-at
 // were nearly gone at 0.32, come back (line contrast 1.127 -> 1.163). It is
 // the brightest step that still keeps white line-work above 4:1 against the
 // field (4.71:1; 0.46 is 4.10 and 0.50 falls to 3.57) and still leaves the
-// accent dots a real lightness step above it (dL* 5.9; 0.46 has 3.2, 0.50 has
-// 0.6 and the crowd goes flat). Note that dot-to-field separation FALLS as
-// this rises — a dot is 58% accent over this same field, so the field gains a
-// full step where the dot gains 0.42 of one — so 0.42 is a ceiling reached
-// from below, not a peak.
+// accent dots a real lightness step above it (measured on the old #E0643A:
+// dL* 5.9; 0.46 has 3.2, 0.50 has 0.6 and the crowd goes flat). Note that
+// dot-to-field separation FALLS as this rises — a dot is 58% accent over this
+// same field, so the field gains a full step where the dot gains 0.42 of one —
+// so 0.42 is a ceiling reached from below, not a peak. Colour pass 2 widened
+// that margin a long way without touching this number: at #FFC543 the unread
+// dot composites to #C19F54, dL* 21.9 over the field.
 export const BG_BASE = "#232323";
 export const BG_DIM = 0.42;
 
@@ -48,11 +50,13 @@ export const breath = (frame: number, seed: number) => 1 + 0.05 * Math.sin(frame
 // A white rim on every agent dot. One SCREEN pixel at every zoom: the dots are
 // drawn in world space under a `scale(k)`, so a width authored in world units
 // would be k px on screen and the rim would thicken and thin with the camera.
-// Divide the camera's own damped k back out and it measures 1px at k 0.615 and
-// at k 1.8 alike. The rim is part of the dot, not a layer over it — it rides
-// the circle's own `opacity`, so an unread dot has a faint rim and a lit one a
-// bright one, and both fade together.
-export const DOT_STROKE_PX = 1; // screen px, white outline on every agent dot
+// Divide the camera's own damped k back out and it measures 1.5px at k 0.615
+// and at k 1.8 alike. The rim is part of the dot, not a layer over it — it
+// rides the circle's own `opacity`, so an unread dot has a faint rim and a lit
+// one a bright one, and both fade together. Raised 1 -> 1.5 on the director's
+// note; checked at 3x on the unread rung, where the rim composites to #C1C1C1
+// against a #C19F54 dot (dL* 10.9, 1.39:1) and still reads as a rim.
+export const DOT_STROKE_PX = 1.5; // screen px, white outline on every agent dot
 export const dotStrokeWidth = (k: number) => DOT_STROKE_PX / k;
 
 export const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
