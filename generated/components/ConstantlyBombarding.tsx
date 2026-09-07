@@ -32,7 +32,9 @@ export const DURATION = 272;
 // geometry built from the field's own primitives: seven ink rings joined by ink
 // lines, an organic cluster ~370 world px wide sitting at world (540, 0). The
 // hackers are the cyan crowd at exactly the reference field's step, jitter and
-// radius spread — the count is a consequence of the area it has to cover.
+// radius spread — the count is a consequence of the area it has to cover, and
+// the area is the whole frame at the final camera plus a bleed on all four
+// edges: 62 columns x 168 rows, 9,920 seats once the clearing is cut out.
 //
 // Every gesture is one word. Nothing else happens.
 //   left cluster draws: 3 rings, 2 lines, head-led  — "training and"    f0-21
@@ -47,8 +49,11 @@ export const DURATION = 272;
 //     wave 2, 720 dots, arrives the same way and
 //     lands as a thick disc, not a ring             — "if not hundreds" f100-127
 //   pull-back keyed f110-142, k 1.15 -> 0.8, and
-//     wave 3 pours in outer-seats-first to fill
-//     the field; idle traffic starts as they seat   — "of thousands"    f121-153
+//     wave 3, the remaining 9,176 dots, pours in
+//     outer-seats-first and fills the frame edge to
+//     edge — off the top, sides AND bottom, no bare
+//     band anywhere; idle traffic starts as they
+//     seat                                          — "of thousands"    f121-153
 //   the crowd reads OP_UNREAD -> OP_READ as one
 //     slow wave spreading out from the structure    — "extremely
 //                                                     superhuman
@@ -227,9 +232,11 @@ const STRUCTURE: Draw[] = [
 // ---------------------------------------------------------------------------
 // The crowd. Exactly the reference field's step (940/39 x 440/29), jitter 0.9
 // and radius spread 0.75-1.25; only the area is different. The area is fixed by
-// the final camera: the seats bleed 60 world px past the top, left and right
-// frame edges at k 0.8 and stop at screen y ~1490 at the bottom, so the caption
-// band stays quiet. Count is whatever that area holds at that step.
+// the final camera: the seats bleed past all four frame edges at k 0.8, so the
+// field covers the whole frame and is cut off nowhere. Left, right and top run
+// 60 world px out; the bottom runs 60 SCREEN px out (75 world px), which is the
+// same overrun measured the way the director watches it. 62 x 168 = 9,920
+// seats. Count is whatever that area holds at that step.
 // ---------------------------------------------------------------------------
 const STEP_X = 940 / 39;
 const STEP_Y = 440 / 29;
@@ -237,13 +244,13 @@ const BLEED = 60;
 const SEAT_X0 = STRUCT_CX - FRAME_W / 2 / K_FINAL - BLEED;
 const SEAT_X1 = STRUCT_CX + FRAME_W / 2 / K_FINAL + BLEED;
 const SEAT_Y0 = CY_FINAL - FRAME_H / 2 / K_FINAL - BLEED;
-const SEAT_Y1 = CY_FINAL + (1490 - FRAME_H / 2) / K_FINAL;
+const SEAT_Y1 = CY_FINAL + (FRAME_H / 2 + BLEED) / K_FINAL;
 const COLS = Math.round((SEAT_X1 - SEAT_X0) / STEP_X) + 1;
 const ROWS = Math.round((SEAT_Y1 - SEAT_Y0) / STEP_Y) + 1;
 const GRID_X0 = (SEAT_X0 + SEAT_X1) / 2 - ((COLS - 1) * STEP_X) / 2;
 const GRID_Y0 = SEAT_Y1 - (ROWS - 1) * STEP_Y;
-// The bottom is a straight cut, ragged only from the seats' own jitter — the
-// same edge the reference band has. Screen y 1490 at the final camera.
+// The bottom is a straight cut, ragged only from the seats' own jitter, and it
+// lies off the frame: world y 1431.25, screen y 1980 at the final camera.
 const BOTTOM_Y = SEAT_Y1;
 
 // How far from the structure a ray in direction (ux, uy) leaves the frame at
