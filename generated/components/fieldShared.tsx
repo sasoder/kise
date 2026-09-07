@@ -44,15 +44,39 @@ export const OP_DARK = 0.16; // wiped, or unlooked-at
 // goes #525252 -> #6B6B6B (L* 34.9 -> 45.2) and the grid's own lines, which
 // were nearly gone at 0.32, come back (line contrast 1.127 -> 1.163). It is
 // the brightest step that still keeps white line-work above 4:1 against the
-// field (4.71:1; 0.46 is 4.10 and 0.50 falls to 3.57) and still leaves the
-// accent dots a real lightness step above it (measured on the old #E0643A:
-// dL* 5.9; 0.46 has 3.2, 0.50 has 0.6 and the crowd goes flat). That margin
-// was measured back when a dot was part-transparent and therefore part field.
-// It is not any more: a dot is opaque, so it is exactly ACCENT_DEEP or ACCENT
-// over this field whatever the field is doing, and the separation is fixed by
-// the palette rather than by this number. The field it lands on is #6B6B6B.
+// field and still leaves the accent dots a real lightness step above it. That
+// margin was measured back when a dot was part-transparent and therefore part
+// field. It is not any more: a dot is opaque, so it is exactly ACCENT_DEEP or
+// ACCENT over this field whatever the field is doing, and the separation is
+// fixed by the palette rather than by this number.
+//
+// Lifted again from 0.42 to 0.45 on the director's note that the background
+// wanted to be brighter by "an ever so slight tad". 0.44, 0.45 and 0.46 were
+// rendered side by side on cut 1 f156: 0.44 is at the threshold of visible
+// (field 106.3 -> 111.1 of 255, dL* +1.96) and 0.45 is the smallest step that
+// reads as a step in the full frames (field #6A6A6A -> #727272, L* 44.9 ->
+// 48.0). White ink against the field stays at 4.82:1, comfortably over 4:1
+// (0.46 is 4.68). The ripe dot #FFB000 loses a little against the lifting
+// field as expected — 2.94:1 -> 2.63:1, a 10% drop — and still carries the
+// crowd because a dot is opaque and its own colour.
 export const BG_BASE = "#232323";
-export const BG_DIM = 0.42;
+export const BG_DIM = 0.45;
+
+// The one soft drop shadow, for separation from the grid. Shared for the same
+// reason BG_DIM is: three cuts seconds apart in one edit. Each piece still
+// takes y / blur / opacity as props and defaults to these.
+//
+// Softened from 2 / 9 / 0.22 on the director's note that the shadows should be
+// "a bit more subtle". Measured on cut 2 f90 against a shadow-free render of
+// the same frame: the mean darkening in the 6px ring outside the white marks
+// falls from 7.3 and 6.6 (of 255) to 3.7 and 3.4 — half the current halo — and
+// the shadow's reach shortens from ~13px to ~9px. 2 / 8 / 0.14 only took a
+// third off; 1 / 6 / 0.10 took 60% and the marks start reading as pasted flat
+// onto the grid. This is where a dot or a line still lifts off the field at
+// 1:1 with no dark halo around it at 3x.
+export const SHADOW_Y = 2;
+export const SHADOW_BLUR = 7;
+export const SHADOW_OPACITY = 0.12;
 
 // Idle thread traffic, per 1,200 agents. A field of a different size scales it.
 export const IDLE_THREADS_PER_1200 = 180;

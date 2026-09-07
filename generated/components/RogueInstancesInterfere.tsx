@@ -11,6 +11,9 @@ import {
   OP_READ,
   OP_UNREAD,
   OP_UNREAD_DOT,
+  SHADOW_BLUR,
+  SHADOW_OPACITY,
+  SHADOW_Y,
   Vignette,
   WOBBLE_R,
   breath,
@@ -87,6 +90,7 @@ export const DURATION = 166;
 // colour pass 2: accent #FFC543, dot stroke 1.5px
 // solid pass: OP_UNREAD_DOT 0.86, OP_READ_DOT 1.0
 // ripe pass: dots solid, no stroke; deep #D98A0C -> ripe #FFB000
+// shadow pass: drop-shadow 2/7/0.12, BG_DIM 0.45
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -131,9 +135,9 @@ export const defaultProps: Props = schema.parse({
   backgroundBlur: 13,
   backgroundDim: BG_DIM,
   parallax: 0.15,
-  shadowY: 2,
-  shadowBlur: 9,
-  shadowOpacity: 0.22,
+  shadowY: SHADOW_Y,
+  shadowBlur: SHADOW_BLUR,
+  shadowOpacity: SHADOW_OPACITY,
   dotRadius: DOT_RADIUS,
   dotUnread: OP_UNREAD_DOT,
   markSize: 108,
