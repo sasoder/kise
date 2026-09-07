@@ -1,19 +1,21 @@
 import {Composition} from 'remotion';
-import BillGEmail, {
+import AdminAccessToTheCluster, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BillGEmail';
+} from '../generated/components/AdminAccessToTheCluster';
 
-// the living caret — an email compose card typed live on the beats, the chain
-// colours smearing behind the caret. 0:09.519 -> 0:13.740 (+24 frame tail).
+// The field — the crowd's traffic turns on OpenAI's internal network, three
+// probes find a way in, possession spreads along the network's own edges, and
+// the breached node opens into the research cluster and the VMs it carried.
+// Ajeya, 0:01.740 -> 0:13.619 (+16 frame tail).
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="BillGEmail"
-        component={BillGEmail}
+        id="AdminAccessToTheCluster"
+        component={AdminAccessToTheCluster}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
