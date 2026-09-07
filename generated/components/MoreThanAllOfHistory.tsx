@@ -13,6 +13,7 @@ import {
   Vignette,
   breath,
   clamp,
+  dotStrokeWidth,
   feather,
   hash,
   runCamera,
@@ -87,6 +88,7 @@ export const DURATION = 270;
 // resolved framing dropped so the structure sits at screen y 360 and the human
 // block bottom at 1446. Gestures and beats unchanged.
 // background pass: BG_DIM 0.42
+// dot pass: 1px white stroke on every agent dot
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -640,6 +642,8 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
   const cx = STRUCT_CX + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
+  // the field's white rim, one screen px whatever the camera is doing
+  const dotStroke = dotStrokeWidth(k);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -679,7 +683,18 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
               const l = lit[i];
               const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
               const op = OP_UNREAD_DOT + (OP_READ + 0.1 - OP_UNREAD_DOT) * l;
-              return <circle key={i} cx={s.x} cy={s.y} r={r} fill={accent} opacity={op} />;
+              return (
+                <circle
+                  key={i}
+                  cx={s.x}
+                  cy={s.y}
+                  r={r}
+                  fill={accent}
+                  stroke={ink}
+                  strokeWidth={dotStroke}
+                  opacity={op}
+                />
+              );
             })}
 
             {/* threads: idle traffic, then the bombardment. Both head-led. */}

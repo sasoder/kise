@@ -45,6 +45,16 @@ export const idleThreads = (agents: number) => Math.round((IDLE_THREADS_PER_1200
 export const DOT_RADIUS = 5.5;
 export const breath = (frame: number, seed: number) => 1 + 0.05 * Math.sin(frame * 0.11 + seed * 6.28);
 
+// A white rim on every agent dot. One SCREEN pixel at every zoom: the dots are
+// drawn in world space under a `scale(k)`, so a width authored in world units
+// would be k px on screen and the rim would thicken and thin with the camera.
+// Divide the camera's own damped k back out and it measures 1px at k 0.615 and
+// at k 1.8 alike. The rim is part of the dot, not a layer over it — it rides
+// the circle's own `opacity`, so an unread dot has a faint rim and a lit one a
+// bright one, and both fade together.
+export const DOT_STROKE_PX = 1; // screen px, white outline on every agent dot
+export const dotStrokeWidth = (k: number) => DOT_STROKE_PX / k;
+
 export const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
 
 export const hash = (i: number, k: number) => {

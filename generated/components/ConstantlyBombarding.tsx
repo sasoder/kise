@@ -15,6 +15,7 @@ import {
   WOBBLE_R,
   breath,
   clamp,
+  dotStrokeWidth,
   hash,
   runCamera,
   sway,
@@ -86,6 +87,7 @@ export const DURATION = 272;
 // a colour. Nothing else moved: the ladder's other rungs, the gestures, the beat
 // frames and the two camera keys are unchanged.
 // background pass: BG_DIM 0.42
+// dot pass: 1px white stroke on every agent dot
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -645,6 +647,8 @@ const ConstantlyBombarding: React.FC<Props> = ({
   const cx = STRUCT_CX + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
+  // the dots' white rim, one screen px whatever the camera is doing
+  const dotStroke = dotStrokeWidth(k);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -687,7 +691,18 @@ const ConstantlyBombarding: React.FC<Props> = ({
               const r =
                 dotRadius * s.r * breath(frame, hash(i, 9)) * (1 + 0.35 * l) * (1 + 0.3 * d.fly);
               const op = d.base + (OP_READ + 0.1 - d.base) * l;
-              return <circle key={i} cx={d.x} cy={d.y} r={r} fill={accent} opacity={op} />;
+              return (
+                <circle
+                  key={i}
+                  cx={d.x}
+                  cy={d.y}
+                  r={r}
+                  fill={accent}
+                  stroke={ink}
+                  strokeWidth={dotStroke}
+                  opacity={op}
+                />
+              );
             })}
 
             {/* threads: idle traffic, then the bombardment. Both head-led. */}
