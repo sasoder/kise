@@ -1,21 +1,21 @@
 import {Composition} from 'remotion';
-import SocietiesFromTheAshes, {
+import ScopeOfTheReport, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SocietiesFromTheAshes';
+} from '../generated/components/ScopeOfTheReport';
 
-// three societies stacked out of one crowd — "three consecutive secret AI
-// societies got started, then got wiped out, only to re-emerge from their
-// predecessor's ashes."
+// the crowd, the box the report drew around its own scope, two breaches — "the
+// investigation from METR and Redwood was limited in scope... but its scope did
+// not extend to this third civilization of AIs, which breached OpenAI itself."
 export const RemotionRoot = () => {
   return (
     <>
-      {/* 0:01.399 -> 0:08.839 (+16 frame tail) */}
+      {/* 0:23.339 -> 0:37.100 (+16 frame tail) */}
       <Composition
-        id="SocietiesFromTheAshes"
-        component={SocietiesFromTheAshes}
+        id="ScopeOfTheReport"
+        component={ScopeOfTheReport}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
