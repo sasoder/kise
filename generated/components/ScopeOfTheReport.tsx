@@ -1,17 +1,4 @@
-import { loadFont } from "@remotion/fonts";
-import {
-  AbsoluteFill,
-  cancelRender,
-  continueRender,
-  delayRender,
-  Easing,
-  Img,
-  interpolate,
-  spring,
-  staticFile,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 
 export const FPS = 24;
@@ -23,11 +10,15 @@ export const FPS = 24;
 // plus a 16 frame tail so the resolved state holds = 346.
 export const DURATION = 346;
 
-const FONT = "Sohne";
-const fontHandle = delayRender("Loading Sohne Kraftig");
-loadFont({ family: FONT, url: staticFile("Sohne-Kraftig.otf"), weight: "600" })
-  .then(() => continueRender(fontHandle))
-  .catch((err) => cancelRender(err));
+// Every gesture in this piece is one of these, and each one is a word:
+//   the camera tilts up      — "the investigation from METR and Redwood"
+//   the box draws            — "limited in scope"
+//   the band lifts into it   — "the second civilization"
+//   the band pours into HF   — "breached Hugging Face"
+//   the third lifts outside  — "this third civilization"
+//   it pours into OpenAI     — "breached OpenAI itself"
+//   the box recedes, a ring  — "the more concerning incident"
+// Nothing else moves except the crowd's own breathing and threads.
 
 export const schema = z.object({
   ink: z.string(),
@@ -42,7 +33,6 @@ export const schema = z.object({
   shadowOpacity: z.number(),
   dotRadius: z.number(),
   threads: z.number(),
-  investigatorLabel: z.string(),
   beats: z.object({
     investigation: z.number(), // "the investigation from METR and Redwood"
     limitedInScope: z.number(), // "was limited in scope to"
@@ -72,7 +62,6 @@ export const defaultProps: Props = schema.parse({
   shadowOpacity: 0.22,
   dotRadius: 5.5,
   threads: 150,
-  investigatorLabel: "METR · Redwood",
   beats: {
     investigation: 0,
     limitedInScope: 55,
@@ -111,9 +100,9 @@ const smooth = (v: number) => {
 // scope; the third civilization above the box, outside it; the two
 // investigators at the top. Nothing but position says who was looked at.
 //
-// The stack is packed tight — label to box top 48, box bottom to crowd 66 —
-// so the opening frames investigators + box + crowd with nothing dead between
-// them. The box is exactly the band plus the lane the breach flies through.
+// The investigators stand still for the whole piece. The room between them and
+// the box is the room the third civilization arrives into, so the frame never
+// has to change shape to make space for it.
 // ---------------------------------------------------------------------------
 const COLS = 40;
 const ROWS = 30;
@@ -154,11 +143,8 @@ const pourPlan = (i: number, salt: number, start: number) => {
   return { launch, arrive: launch + flight };
 };
 
-// The investigators start pressed against the top of the box and are pushed up
-// by the third civilization arriving underneath them.
-const INVEST = { size: 132, dx: 92 };
-const INVEST_Y0 = BOX.y0 - 170;
-const INVEST_Y1 = 680;
+// The two investigators: their marks, side by side, above everything.
+const INVEST = { size: 118, dx: 104, y: 830 };
 
 const bandRows = Math.ceil(BAND.count / BAND.cols);
 const tier2Rows = Math.ceil(TIER2.count / TIER2.cols);
@@ -238,14 +224,14 @@ const pourSet = (
 const A_POUR = pourSet(BAND.count, BAND.cols, POUR_A, A_AT_SLOT, 21);
 const B_POUR = pourSet(TIER2.count, TIER2.cols, POUR_B, B_AT_SLOT, 31);
 
-// Camera: authored keys, damped. Every move is a short ramp that lands well
-// before the word it serves, and holds in between. The opening key holds the
-// whole stack — investigators, the space the box will claim, the crowd — and
-// the long pull-back at 156-186 opens the room the third civilization arrives
-// into, landing eleven frames before it lifts.
-const CAM_F = [0, 26, 40, 58, 118, 138, 156, 186, DURATION];
-const CAM_CY = [1588, 1588, 1568, 1568, 1568, 1512, 1512, 1449, 1449];
-const CAM_K = [1.04, 1.04, 1.06, 1.06, 1.06, 1.09, 1.09, 0.88, 0.88];
+// Camera: one move. It opens on the crowd and tilts up to find the two
+// investigators while their names are said, then holds that frame for the
+// rest of the piece — the whole stack already fits in it.
+// The tilt lands as "METR and Redwood" is said and the box starts to draw, so
+// the frame is never holding on empty space.
+const CAM_F = [0, 12, 40, DURATION];
+const CAM_CY = [1760, 1760, 1510, 1510];
+const CAM_K = [1.1, 1.1, 1.0, 1.0];
 const CAM_STIFF = 0.09;
 const CAM_DAMP = 0.468;
 
@@ -313,11 +299,9 @@ const ScopeOfTheReport: React.FC<Props> = ({
   shadowOpacity,
   dotRadius,
   threads,
-  investigatorLabel,
   beats,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
   // -- the box ---------------------------------------------------------------
   // Seven frames of anticipation so the head is already travelling when the
@@ -333,26 +317,6 @@ const ScopeOfTheReport: React.FC<Props> = ({
     [0, 1, 0],
     { ...clamp, easing: Easing.inOut(Easing.quad) },
   );
-  // "did not extend": the sides reach up toward the investigators, the top
-  // follows, and it all falls back to where it was.
-  // The sides reach first and let go last, so they are always the ones out in
-  // front and the top edge is never left stranded above them.
-  const sideExt =
-    interpolate(frame, [166, 181], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) }) -
-    interpolate(frame, [196, 210], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
-  const topExt =
-    interpolate(frame, [176, 192], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) }) -
-    interpolate(frame, [192, 206], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
-  const settle = frame > 210 ? Math.sin((frame - 210) * 0.5) * Math.exp(-(frame - 210) / 9) * 8 : 0;
-  const sideTop = BOX.y0 - 104 * sideExt + settle;
-  const topY = BOX.y0 - 104 * topExt + settle;
-  const straining = sideExt - topExt > 0.03;
-
-  // -- the check sweep, which never leaves the box ---------------------------
-  const sweepT = interpolate(frame, [150, 188], [0, 1], { ...clamp, easing: Easing.inOut(Easing.quad) });
-  const sweepX = BOX.x0 + 12 + (BOX.x1 - BOX.x0 - 24) * sweepT;
-  const sweepOn = frame >= 150 && frame <= 190;
-
   // -- the last beat ---------------------------------------------------------
   const recede = interpolate(frame, [beats.moreConcerning, beats.moreConcerning + 22], [0, 1], {
     ...clamp,
@@ -363,19 +327,9 @@ const ScopeOfTheReport: React.FC<Props> = ({
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
-  const flash2 = interpolate(frame, [284, 287, 300], [0, 0.85, 0], {
-    ...clamp,
-    easing: Easing.inOut(Easing.quad),
-  });
+  // One ring, drawn once, around the breach the report never looked at.
   const ringDraw = interpolate(frame, [292, 314], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
-  // Fixed radius: a ring that grew while it drew read as off-centre.
   const ringR = 86;
-  const ringLand = interpolate(frame, [312, 330], [0, 1], {
-    ...clamp,
-    easing: Easing.out(Easing.back(1.6)),
-  });
-  const ringClick = interpolate(frame, [312, 315, 322], [0, 1, 0], { ...clamp, easing: Easing.inOut(Easing.quad) });
-  const ripple = interpolate(frame, [318, 344], [0, 1], { ...clamp, easing: Easing.out(Easing.quad) });
 
   // -- agents ----------------------------------------------------------------
   let hfPulse = 0;
@@ -562,17 +516,8 @@ const ScopeOfTheReport: React.FC<Props> = ({
   }
 
   // -- the two investigators -------------------------------------------------
-  // They stand on the lid of the box until the third civilization arrives
-  // underneath them and pushes them up out of the way.
-  const push =
-    interpolate(frame, [199, 221], [0, 1.05], { ...clamp, easing: Easing.inOut(Easing.cubic) }) -
-    interpolate(frame, [221, 235], [0, 0.05], { ...clamp, easing: Easing.inOut(Easing.cubic) });
-  const investY = INVEST_Y0 + (INVEST_Y1 - INVEST_Y0) * push;
-  const investIn = (k2: number) =>
-    spring({ frame: frame - (4 + k2 * 8), fps, config: { damping: 13, stiffness: 130 } });
-  const labelOp = interpolate(frame, [12, 34], [0, 0.6], clamp);
-  const breath = 1 + 0.02 * Math.sin(frame / 17);
-  const readKick = interpolate(frame, [150, 158, 196], [0, 1, 0], { ...clamp, easing: Easing.inOut(Easing.quad) });
+  // Already there when the camera finds them.
+  const investIn = interpolate(frame, [0, 14], [0, 1], clamp);
 
   const hfIn = interpolate(frame, [beats.breached, beats.huggingFace + 2], [0, 1], {
     ...clamp,
@@ -680,23 +625,17 @@ const ScopeOfTheReport: React.FC<Props> = ({
               </g>
             ) : null}
             {frame >= beats.secondCiv + 2 ? (
-              <g opacity={boxOp}>
-                <path
-                  d={`M ${BOX.x0} ${sideTop} V ${BOX.y1} H ${BOX.x1} V ${sideTop}`}
-                  fill="none"
-                  stroke={ink}
-                  strokeWidth={3}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <line x1={BOX.x0} y1={topY} x2={BOX.x1} y2={topY} stroke={ink} strokeWidth={3} strokeLinecap="round" />
-                {straining ? (
-                  <g>
-                    <circle cx={BOX.x0} cy={sideTop} r={5.5} fill={ink} />
-                    <circle cx={BOX.x1} cy={sideTop} r={5.5} fill={ink} />
-                  </g>
-                ) : null}
-              </g>
+              <rect
+                x={BOX.x0}
+                y={BOX.y0}
+                width={BOX.x1 - BOX.x0}
+                height={BOX.y1 - BOX.y0}
+                fill="none"
+                stroke={ink}
+                strokeWidth={3}
+                strokeLinejoin="round"
+                opacity={boxOp}
+              />
             ) : null}
 
             {/* threads */}
@@ -722,7 +661,6 @@ const ScopeOfTheReport: React.FC<Props> = ({
               const arrived = g.pour > 0 ? smooth((g.pour - 0.88) / 0.12) : 0;
               if (arrived >= 1) return null;
               const bre = 1 + 0.05 * Math.sin(frame * 0.11 + hash(i, 9) * 6.28);
-              const grow = g.tier === 2 ? 1 + 0.18 * rise2 : 1;
               // In the air the dot is bigger and fully lit for the whole
               // flight, not just at its midpoint, so the stream reads.
               const fly =
@@ -733,68 +671,22 @@ const ScopeOfTheReport: React.FC<Props> = ({
                 bre *
                 (1 + 0.35 * l) *
                 (1 + 0.15 * g.lift) *
-                grow *
                 (1 + 0.5 * fly) *
                 (1 - 0.5 * arrived);
+              // The ladder: inside the box is read (1.0); outside it, unread
+              // (0.45) until it becomes the subject; the crowd sits between.
               let op: number;
-              let white = 0;
               if (g.tier === 1) {
-                const swept = clamp01((sweepX - g.x + 30) / 60);
-                op = Math.min(1, 0.45 + 0.55 * swept + 0.25 * l) * dim1;
-                if (sweepOn) white = Math.max(0, 1 - Math.abs(sweepX - g.x) / 40);
+                op = Math.min(1, 0.85 + 0.25 * l) * dim1;
               } else if (g.tier === 2) {
                 op = Math.min(1, 0.45 + 0.55 * rise2 + 0.2 * l);
-                white = flash2;
               } else {
                 op = Math.min(1, 0.45 + 0.55 * l + 0.25 * g.lift) * (1 - 0.3 * recede);
               }
               if (fly > 0) op = Math.max(op, fly);
               op *= 1 - arrived;
-              return (
-                <g key={i}>
-                  <circle cx={g.x} cy={g.y} r={r} fill={accent} opacity={op} />
-                  {white > 0 ? <circle cx={g.x} cy={g.y} r={r} fill={ink} opacity={white * op} /> : null}
-                </g>
-              );
+              return <circle key={i} cx={g.x} cy={g.y} r={r} fill={accent} opacity={op} />;
             })}
-
-            {/* the check, reading everything inside the scope and nothing above it */}
-            {sweepOn ? (
-              <line
-                x1={sweepX}
-                y1={BOX.y0}
-                x2={sweepX}
-                y2={BOX.y1}
-                stroke={ink}
-                strokeWidth={3}
-                strokeLinecap="round"
-                opacity={0.6 * dim1}
-              />
-            ) : null}
-
-            {/* the rim each mark takes as a burst lands in it */}
-            {hfPulse > 0.01 ? (
-              <circle
-                cx={HF.x}
-                cy={HF.y}
-                r={HF.size / 2 + 8 + 6 * hfSwell}
-                fill="none"
-                stroke={ink}
-                strokeWidth={3.5}
-                opacity={0.7 * hfSwell * dim1}
-              />
-            ) : null}
-            {oaiPulse > 0.01 ? (
-              <circle
-                cx={OAI.x}
-                cy={OAI.y}
-                r={OAI.size / 2 + 8 + 6 * oaiSwell}
-                fill="none"
-                stroke={ink}
-                strokeWidth={3.5}
-                opacity={0.7 * oaiSwell}
-              />
-            ) : null}
 
             {/* the ring the third breach earns */}
             {ringDraw > 0 ? (
@@ -804,7 +696,7 @@ const ScopeOfTheReport: React.FC<Props> = ({
                 r={ringR}
                 fill="none"
                 stroke={ink}
-                strokeWidth={3.5 + 1.5 * ringClick}
+                strokeWidth={3.5}
                 pathLength={1000}
                 strokeDasharray={1000}
                 strokeDashoffset={1000 * (1 - ringDraw)}
@@ -820,54 +712,23 @@ const ScopeOfTheReport: React.FC<Props> = ({
                 fill={ink}
               />
             ) : null}
-            {ripple > 0 && ripple < 1 ? (
-              <circle
-                cx={OAI.x}
-                cy={OAI.y}
-                r={ringR + 78 * ripple}
-                fill="none"
-                stroke={ink}
-                strokeWidth={3}
-                opacity={0.45 * (1 - ripple)}
-              />
-            ) : null}
           </svg>
 
           {/* the two investigators */}
-          {[-1, 1].map((s, idx) => (
+          {(["metr-logo.png", "redwood-logo.png"] as const).map((src, idx) => (
             <Img
-              key={idx}
-              src={staticFile("person.png")}
+              key={src}
+              src={staticFile(src)}
               style={{
                 position: "absolute",
-                left: 540 + s * INVEST.dx - INVEST.size / 2,
-                top: investY - INVEST.size / 2,
+                left: 540 + (idx === 0 ? -1 : 1) * INVEST.dx - INVEST.size / 2,
+                top: INVEST.y - INVEST.size / 2,
                 width: INVEST.size,
                 height: INVEST.size,
-                filter: "brightness(0) invert(1)",
-                opacity: Math.min(1, investIn(idx)),
-                transform: `scale(${(0.86 + 0.14 * investIn(idx)) * breath * (1 + 0.05 * readKick)})`,
-                transformOrigin: "center center",
+                opacity: investIn,
               }}
             />
           ))}
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              top: investY + INVEST.size / 2 + 16,
-              width: WORLD_W,
-              textAlign: "center",
-              color: ink,
-              opacity: labelOp,
-              fontFamily: FONT,
-              fontSize: 32,
-              fontWeight: 600,
-              letterSpacing: "0.10em",
-            }}
-          >
-            <span style={{ marginRight: "-0.10em" }}>{investigatorLabel.toUpperCase()}</span>
-          </div>
 
           {/* what the report looked at */}
           <Img
@@ -895,8 +756,8 @@ const ScopeOfTheReport: React.FC<Props> = ({
               width: OAI.size,
               height: OAI.size,
               filter: "brightness(0) invert(1)",
-              opacity: oaiIn * Math.min(1, 0.55 + 0.45 * rise2 + flash2),
-              transform: `scale(${(0.8 + 0.2 * oaiIn) * (1 + 0.1 * oaiSwell) * (1 + 0.05 * rise2) * (1 + 0.05 * ringLand)})`,
+              opacity: oaiIn * (0.45 + 0.55 * rise2),
+              transform: `scale(${(0.8 + 0.2 * oaiIn) * (1 + 0.1 * oaiSwell)})`,
               transformOrigin: "center center",
             }}
           />
