@@ -10,6 +10,9 @@ import {
   FRAME_H,
   FRAME_W,
   GridBackground,
+  ICON_SHADOW_BLUR,
+  ICON_SHADOW_OPACITY,
+  ICON_SHADOW_Y,
   OP_READ,
   OP_UNREAD_DOT,
   SHADOW_BLUR,
@@ -20,6 +23,7 @@ import {
   breath,
   clamp,
   hash,
+  iconShadow,
   makeTone,
   runCamera,
   sway,
@@ -96,6 +100,7 @@ export const DURATION = 272;
 // solid pass: OP_UNREAD_DOT 0.86, OP_READ_DOT 1.0
 // ripe pass: dots solid, no stroke; deep #D98A0C -> ripe #FFB000
 // shadow pass: drop-shadow 2/7/0.12, BG_DIM 0.45
+// icon shadow: drop-shadow 2/3/0.38 per icon (glyphs, structure, marks)
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -110,6 +115,10 @@ export const schema = z.object({
   shadowY: z.number(),
   shadowBlur: z.number(),
   shadowOpacity: z.number(),
+  // the per-icon shadow, in SCREEN px; divided by the camera's k at draw time
+  iconShadowY: z.number(),
+  iconShadowBlur: z.number(),
+  iconShadowOpacity: z.number(),
   dotRadius: z.number(),
   dotUnread: z.number(), // the dot body's opacity; the state ladder is colour
   idleThreadCount: z.number(), // capped, never scaled with the seat count
@@ -147,6 +156,9 @@ export const defaultProps: Props = schema.parse({
   shadowY: SHADOW_Y,
   shadowBlur: SHADOW_BLUR,
   shadowOpacity: SHADOW_OPACITY,
+  iconShadowY: ICON_SHADOW_Y,
+  iconShadowBlur: ICON_SHADOW_BLUR,
+  iconShadowOpacity: ICON_SHADOW_OPACITY,
   dotRadius: DOT_RADIUS,
   dotUnread: OP_UNREAD_DOT,
   idleThreadCount: 180,
@@ -488,6 +500,9 @@ const ConstantlyBombarding: React.FC<Props> = ({
   shadowY,
   shadowBlur,
   shadowOpacity,
+  iconShadowY,
+  iconShadowBlur,
+  iconShadowOpacity,
   dotRadius,
   dotUnread,
   idleThreadCount,
@@ -666,6 +681,15 @@ const ConstantlyBombarding: React.FC<Props> = ({
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
 
+  // -- the per-icon shadow ---------------------------------------------------
+  // One small shadow on each icon: every ring, every line, every packet.
+  // Its lengths are screen px divided by the camera's k, so it is the same
+  // shadow at every zoom. A CSS filter is applied before the element's own
+  // opacity, so an element drawing in or reading up carries its shadow at
+  // exactly its own alpha. The dots, the threads and the seat rings are the
+  // field, not icons, and get nothing.
+  const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
       <GridBackground
@@ -746,7 +770,7 @@ const ConstantlyBombarding: React.FC<Props> = ({
                 const th = -Math.PI / 2 + 2 * Math.PI * d;
                 const ringOp = Math.min(1, op + (1 - op) * ringClick[e.a]);
                 return (
-                  <g key={`e${ei}`}>
+                  <g key={`e${ei}`} style={{ filter: icon }}>
                     <circle
                       cx={R.x}
                       cy={R.y}
@@ -781,7 +805,7 @@ const ConstantlyBombarding: React.FC<Props> = ({
               const hx = x1 + (x2 - x1) * d;
               const hy = y1 + (y2 - y1) * d;
               return (
-                <g key={`e${ei}`}>
+                <g key={`e${ei}`} style={{ filter: icon }}>
                   <line
                     x1={x1}
                     y1={y1}
@@ -798,9 +822,11 @@ const ConstantlyBombarding: React.FC<Props> = ({
             })}
 
             {/* the structure's own packets */}
-            {packets.map((p) => (
-              <circle key={p.key} cx={p.x} cy={p.y} r={PKT_R} fill={ink} />
-            ))}
+            <g style={{ filter: icon }}>
+              {packets.map((p) => (
+                <circle key={p.key} cx={p.x} cy={p.y} r={PKT_R} fill={ink} />
+              ))}
+            </g>
           </svg>
         </div>
       </AbsoluteFill>

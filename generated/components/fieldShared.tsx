@@ -78,6 +78,31 @@ export const SHADOW_Y = 2;
 export const SHADOW_BLUR = 7;
 export const SHADOW_OPACITY = 0.12;
 
+// The per-icon shadow, on the director's note asking for "small shadows like in
+// Tailwind" on the icons — the person glyphs, the structure's rings, lines and
+// packets, and the two model marks. Not the dots, not the threads, not the seat
+// rings: those are the field, and a shadow on ten thousand of them is a haze.
+//
+// It sits OVER the global shadow above, which is untouched: that one is one
+// soft shadow cast by the whole graphic for separation from the grid, this one
+// is the small lift that makes an icon read as a thing lying on the field.
+//
+// Tailwind's own values (`shadow-sm`, 5-10% black) are tuned for a white page
+// and vanish on this #727272 field, so the offset and blur are Tailwind's shape
+// and the opacity is scaled up until it survives the grey. Every length is
+// SCREEN px: an icon lives under the camera's scale(k), so `iconShadow` divides
+// by k and the shadow is the same size at every zoom.
+export const ICON_SHADOW_Y = 2;
+export const ICON_SHADOW_BLUR = 3;
+export const ICON_SHADOW_OPACITY = 0.38;
+
+export const iconShadow = (
+  k: number,
+  y: number = ICON_SHADOW_Y,
+  blur: number = ICON_SHADOW_BLUR,
+  opacity: number = ICON_SHADOW_OPACITY,
+) => `drop-shadow(0 ${(y / k).toFixed(3)}px ${(blur / k).toFixed(3)}px rgba(0,0,0,${opacity}))`;
+
 // Idle thread traffic, per 1,200 agents. A field of a different size scales it.
 export const IDLE_THREADS_PER_1200 = 180;
 export const idleThreads = (agents: number) => Math.round((IDLE_THREADS_PER_1200 * agents) / 1200);
