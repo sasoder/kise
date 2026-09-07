@@ -10,14 +10,15 @@ import {
 import {loadFont} from '@remotion/google-fonts/Barlow';
 import {z} from 'zod';
 
-// "The living caret" — Seamus Blackley emails Bill Gates for a job.
+// Seamus Blackley emails Bill Gates for a job.
 // A compose card typed live on the beats. Two rows only: a "To" line and the
-// body. The show's chain colours live in the CARET and nowhere else.
+// body. The show's chain colours appear once, in the card's entrance; the
+// caret is a plain white block (the coloured trail was tried and cut).
 //
 // 1. Card rises (bar slides up + fades in; "To" label + hairline enter with the
 //    chain slide-up) — "and I wrote an email"
 // 2. Address types `billg` / `@` / `microsoft.com` on the beats — "bill g at microsoft"
-// 3. Caret returns to the body line, trail sweeping diagonally — "I'm like"
+// 3. Caret returns to the body line — "I'm like"
 // 4. Body types `Hey, could` / ` I have a job?` on the beats — "hey could I have a job?"
 // 5. Caret blinks whenever idle — the writer's pause; the ambient layer that
 //    keeps the holds alive.
@@ -84,7 +85,6 @@ const CARET_W = 7;
 const CARET_GAP = 6; // gap after the last typed glyph; 0 on an empty line
 const CARET_DROP = 6; // how far the caret hangs below the baseline
 const CARET_IN = 6; // the caret cuts in with the white core
-const CARET_LAGS = 2; // frames between trail copies
 
 // ---- Chain entrance (core memory podcast style) ----
 const CHAIN_COLORS = ['#FFB765', '#BC37FF', '#0046FF']; // orange, purple, blue
@@ -277,11 +277,11 @@ const BillGEmail: React.FC<BillGEmailProps> = ({
     </div>
   );
 
-  // One hidden measuring row per caret layer: the lagged prefix is rendered in
+  // One hidden measuring row per caret layer: the typed prefix is rendered in
   // the real type at visibility:hidden and the caret block follows it inline,
   // so the caret lands on the true glyph advance with no JS measuring.
-  const Caret = (color: string, lag: number, dx: number, dy: number, key: string) => {
-    const s = caretStateAt(Math.max(CARET_IN, frame - lag));
+  const Caret = (color: string, dx: number, dy: number, key: string) => {
+    const s = caretStateAt(Math.max(CARET_IN, frame));
     const top = (s.row === 0 ? 0 : row2Y) + dy;
     const gap = s.prefix.length > 0 ? CARET_GAP : 0;
     // translateX(-100%) of the wrapper is exactly -(caretX + CARET_W), so
@@ -401,8 +401,7 @@ const BillGEmail: React.FC<BillGEmailProps> = ({
             </span>
           </div>
 
-          {/* The living caret: black shadow, then the chain trailing 2/4/6
-              frames behind the white block. They coincide on any pause. */}
+          {/* The caret: a hard black shadow under a white block. */}
           {frame >= CARET_IN ? (
             <div
               style={{
@@ -412,11 +411,8 @@ const BillGEmail: React.FC<BillGEmailProps> = ({
                 opacity: blinkOn ? 1 : 0,
               }}
             >
-              {Caret('#000000', 0, 3, 3, 'caret-shadow')}
-              {Caret(CHAIN_COLORS[0], 3 * CARET_LAGS, 0, 0, 'caret-orange')}
-              {Caret(CHAIN_COLORS[1], 2 * CARET_LAGS, 0, 0, 'caret-purple')}
-              {Caret(CHAIN_COLORS[2], 1 * CARET_LAGS, 0, 0, 'caret-blue')}
-              {Caret('#FFFFFF', 0, 0, 0, 'caret-core')}
+              {Caret('#000000', 3, 3, 'caret-shadow')}
+              {Caret('#FFFFFF', 0, 0, 'caret-core')}
             </div>
           ) : null}
         </div>
