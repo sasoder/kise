@@ -1,5 +1,20 @@
 import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
+import {
+  DOT_RADIUS,
+  GridBackground,
+  OP_DARK,
+  OP_READ,
+  OP_UNREAD,
+  Vignette,
+  breath,
+  clamp,
+  hash,
+  idleThreads,
+  runCamera,
+  sway,
+  worldTransform,
+} from "./fieldShared";
 
 export const FPS = 24;
 // Dwarkesh: "All of this happened while humans remained more or less in the
@@ -31,7 +46,7 @@ export const schema = z.object({
   shadowOpacity: z.number(),
   dotRadius: z.number(),
   threads: z.number(), // the busy rate, at the top of the line
-  threadsIdle: z.number(), // the rate it settles to once the dark has fallen
+  threadsIdle: z.number(), // the shared idle rate it settles to once the dark has fallen
   beats: z.object({
     allOfThis: z.number(), // "all of this"
     happenedWhile: z.number(), // "happened while"
@@ -58,9 +73,11 @@ export const defaultProps: Props = schema.parse({
   shadowY: 2,
   shadowBlur: 9,
   shadowOpacity: 0.22,
-  dotRadius: 5.5,
-  threads: 480,
-  threadsIdle: 300,
+  dotRadius: DOT_RADIUS,
+  // 2,400 agents, so idle is 360. This line opens on "all of this happened",
+  // so it runs 1.6x idle and eases down to it as the dark falls.
+  threads: Math.round(1.6 * idleThreads(2400)),
+  threadsIdle: idleThreads(2400),
   beats: {
     allOfThis: 0,
     happenedWhile: 12,
@@ -79,13 +96,6 @@ const WORLD_H = 2200;
 // The crowd is wider than the frame, so the drawing surface is too.
 const SVG_X0 = -420;
 const SVG_W = 1920;
-
-const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
-
-const hash = (i: number, k: number) => {
-  const s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
-  return s - Math.floor(s);
-};
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -181,27 +191,9 @@ const CAM_F = [0, 74, 92, DURATION];
 // The opening key sits high enough that the human is near the top of the
 // frame and the crowd fills everything under it: no empty band above.
 const CAM_CY = [1600, 1600, 1780, 1780];
+// This is the one cut that does not resolve at k = 1.0: the pull-back IS the
+// gesture, so it ends wider than the other two. The damping is the shared one.
 const CAM_K = [1.8, 1.8, 0.66, 0.66];
-const CAM_STIFF = 0.09;
-const CAM_DAMP = 0.468;
-
-const camera = (upto: number) => {
-  let cy = CAM_CY[0];
-  let k = CAM_K[0];
-  let vy = 0;
-  let vk = 0;
-  for (let f = 1; f <= upto; f++) {
-    const ty = interpolate(f, CAM_F, CAM_CY, clamp);
-    const tk = interpolate(f, CAM_F, CAM_K, clamp);
-    vy += (ty - cy) * CAM_STIFF - vy * CAM_DAMP;
-    cy += vy;
-    vk += (tk - k) * CAM_STIFF - vk * CAM_DAMP;
-    k += vk;
-  }
-  return { cy, k };
-};
-
-const BG_OVERSIZE = 1.8;
 
 const InTheDarkAboutTheScope: React.FC<Props> = ({
   ink,
@@ -311,34 +303,27 @@ const InTheDarkAboutTheScope: React.FC<Props> = ({
   }
 
   // -- camera ----------------------------------------------------------------
-  const cam = camera(frame);
-  const cy = cam.cy + 5 * Math.sin(frame / 19);
-  const cx = 540 + 3 * Math.sin(frame / 23);
+  const cam = runCamera(frame, CAM_F, CAM_CY, CAM_K);
+  const drift = sway(frame);
+  const cy = cam.cy + drift.dy;
+  const cx = 540 + drift.dx;
   const k = cam.k;
-  const tx = 540 - cx * k;
-  const ty = 960 - cy * k;
-  const bgY = -(cy - CAM_CY[0]) * k * parallax - frame * 0.3;
-  const bgScale = 1 + (k - 1) * 0.3;
+  const { tx, ty } = worldTransform(cx, cy, k);
 
   const head = rectPt(boxDraw);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
-      <AbsoluteFill style={{ overflow: "hidden" }}>
-        <Img
-          src={staticFile(backgroundSrc)}
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            width: WORLD_W * BG_OVERSIZE,
-            height: 1920 * BG_OVERSIZE,
-            objectFit: "cover",
-            transform: `translate(-50%, -50%) translateY(${bgY.toFixed(2)}px) scale(${bgScale.toFixed(4)})`,
-            filter: `blur(${backgroundBlur}px) brightness(${backgroundDim})`,
-          }}
-        />
-      </AbsoluteFill>
+      <GridBackground
+        src={backgroundSrc}
+        blur={backgroundBlur}
+        dim={backgroundDim}
+        frame={frame}
+        cy={cy}
+        cyRest={CAM_CY[0]}
+        k={k}
+        parallax={parallax}
+      />
 
       <AbsoluteFill
         style={{ filter: `drop-shadow(0 ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))` }}
@@ -380,7 +365,7 @@ const InTheDarkAboutTheScope: React.FC<Props> = ({
             {/* agents */}
             {CROWD_POS.map((p, i) => {
               const l = lit[i];
-              const bre = 1 + 0.05 * Math.sin(frame * 0.11 + hash(i, 9) * 6.28);
+              const bre = breath(frame, hash(i, 9));
               const boxed = INSIDE[i];
               const dk = boxed
                 ? 0
@@ -392,12 +377,15 @@ const InTheDarkAboutTheScope: React.FC<Props> = ({
                       { ...clamp, easing: Easing.inOut(Easing.cubic) },
                     ),
                   );
-              // The ladder: unread 0.45, read 1.0, dark 0.16. The box is what
-              // is read; the rest of the conspiracy is more or less dark, and
-              // still just alive enough to see it carrying on.
+              // The shared ladder (fieldShared): unread 0.45, read 0.9 (+0.1
+              // with a thread on it), dark 0.16. The crowd starts unread on the
+              // shared lit form; the box is what is read; the rest of the
+              // conspiracy goes dark, and stays just alive enough to see it
+              // carrying on.
+              const unread = OP_UNREAD + (OP_READ + 0.1 - OP_UNREAD) * l;
               const op = boxed
-                ? Math.min(1, (0.45 + 0.55 * l) * (1 - read) + read * (0.9 + 0.1 * l))
-                : (1 - dk) * (0.45 + 0.55 * l) + dk * (0.16 + 0.1 * l);
+                ? Math.min(1, unread * (1 - read) + read * (OP_READ + 0.1 * l))
+                : (1 - dk) * unread + dk * (OP_DARK + 0.1 * l);
               const r = dotRadius * p.r * bre * (1 + 0.35 * l * (1 - 0.5 * dk));
               return <circle key={i} cx={p.x} cy={p.y} r={r} fill={accent} opacity={op} />;
             })}
@@ -449,6 +437,8 @@ const InTheDarkAboutTheScope: React.FC<Props> = ({
           />
         </div>
       </AbsoluteFill>
+
+      <Vignette />
     </AbsoluteFill>
   );
 };
