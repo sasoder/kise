@@ -11,16 +11,24 @@ export const FPS = 24;
 export const DURATION = 195;
 
 // Every gesture in this piece is one of these, and each one is a word:
-//   the crowd threads, nothing else   — "three consecutive secret AI"   f0-51
-//   a band lifts out of the crowd     — "societies got started"         f49-82
-//   it falls flat into an ash line    — "wiped out"                     f94-112
-//   80% of that ash lifts to tier 2   — "only to re-emerge from their"  f110-137
-//   tier 2 falls to a second ash line — "predecessor's"                 f144-158
-//   80% of that ash lifts to tier 3   — "ashes"                         f159-187
-//   the camera climbs with the stack  — three ramps, settling f66/f121/f157,
-//                                        7-8 frames before the word each serves
-// The resolved frame is the crowd, two dark ash lines, and one lit tightly
-// threaded society on top: that stack is the count of three.
+//   three empty slots draw, bottom up — "three consecutive"             f10-36
+//                                        (starts f10 / f18 / f26, 10 frames each;
+//                                        three draws in a row is "consecutive")
+//   the crowd threads, nothing else   — "secret AI"                     f32-51
+//   a band lifts out of the crowd
+//     into slot 1                     — "societies got started"         f49-82
+//   it falls flat into an ash line
+//     on slot 1's bottom edge         — "wiped out"                     f94-112
+//   80% of that ash lifts to slot 2   — "only to re-emerge from their"  f110-137
+//   slot 2 falls to a second ash line — "predecessor's"                 f144-158
+//   80% of that ash lifts to slot 3   — "ashes"                         f159-187
+//   the camera opens out, once        — one damped ramp keyed f6-f22, landing
+//                                        around f36, so the frame widens on
+//                                        "three" while the three slots appear
+// The slots are positions in a sequence, so they never change again: they do
+// not brighten, fill or fade when a society arrives or is wiped. The resolved
+// frame is three dashed slots — two holding an ash line on the bottom edge,
+// one holding the lit, tightly threaded third society — standing on the crowd.
 // Nothing else moves except the crowd's own breathing and its threads, which
 // keep posting for the whole tail.
 
@@ -144,11 +152,73 @@ type Tier = { cx: number; w: number; top: number; h: number; cols: number; count
 const TIER1: Tier = { cx: 540, w: 600, top: 1330, h: 130, cols: 30, count: 300 };
 const TIER2: Tier = { cx: 540, w: 510, top: 1090, h: 130, cols: 24, count: 240 };
 const TIER3: Tier = { cx: 540, w: 430, top: 850, h: 130, cols: 24, count: 192 };
-// The ash band: the bottom 9px of the tier the society died in. Tight enough
-// that the two per column that stay behind overlap into one line.
+// The ash band is 9px deep — tight enough that the two per column that stay
+// behind overlap into one line — and it lies on the slot's bottom edge, a few
+// px inside the dashed line rather than on or below it.
 const ASH_H = 9;
+const ASH_FLOOR = 13;
 
 const rowsOf = (t: Tier) => Math.ceil(t.count / t.cols);
+
+// ---------------------------------------------------------------------------
+// The three placeholder slots — "three consecutive". One dashed ink rectangle
+// per position in the sequence, drawn before anything has happened, all three
+// the same size so they read as equal placeholders and the narrower bands sit
+// inside them. Size is the widest band's bounding box — tier 1's, including
+// its jitter and its fattest dot — plus padding, and each slot is centred on
+// the band it will hold, so the three sit exactly 240 apart.
+//
+// The side padding is 20. The vertical padding is 10, not 20: the tiers are
+// 240 apart and a band is already 160 deep, so 20 leaves a 40px gap and the
+// three slots read as one ruled table rather than as three things. At 10 the
+// gap is 60 against a 180 box — three to one — and they separate.
+// ---------------------------------------------------------------------------
+type Slot = { x0: number; y0: number; x1: number; y1: number };
+const SLOT_PAD_X = 20;
+const SLOT_PAD_Y = 10;
+const bandHalfW = (t: Tier) => t.w / 2 + 0.45 * (t.w / (t.cols - 1)) + 7;
+const bandHalfH = (t: Tier) =>
+  t.h / 2 + 0.45 * (t.h / Math.max(1, rowsOf(t) - 1)) + 7;
+const TIERS = [TIER1, TIER2, TIER3];
+const SLOT_HW = Math.round(Math.max(...TIERS.map(bandHalfW))) + SLOT_PAD_X;
+const SLOT_HH = Math.round(Math.max(...TIERS.map(bandHalfH))) + SLOT_PAD_Y;
+const slotFor = (t: Tier): Slot => ({
+  x0: t.cx - SLOT_HW,
+  x1: t.cx + SLOT_HW,
+  y0: t.top + t.h / 2 - SLOT_HH,
+  y1: t.top + t.h / 2 + SLOT_HH,
+});
+const SLOT1 = slotFor(TIER1);
+const SLOT2 = slotFor(TIER2);
+const SLOT3 = slotFor(TIER3);
+// Bottom one first, then up. Each takes 10 frames, so the third completes at
+// f36 — the same moment the one camera move lands.
+const SLOTS: Slot[] = [SLOT1, SLOT2, SLOT3];
+const SLOT_STAGGER = 8;
+const SLOT_DRAW = 10;
+const SLOT_PERIM = 2 * (SLOT_HW * 2 + SLOT_HH * 2);
+// The dashes are the reference pattern "45 38", scaled to the nearest whole
+// number of repeats around this perimeter so the ring closes on itself instead
+// of leaving a stub at the corner it started from.
+const SLOT_DASH_N = Math.max(1, Math.round(SLOT_PERIM / 83));
+const SLOT_DASH = `${((SLOT_PERIM / SLOT_DASH_N) * (45 / 83)).toFixed(2)} ${(
+  (SLOT_PERIM / SLOT_DASH_N) *
+  (38 / 83)
+).toFixed(2)}`;
+
+// The perimeter of a slot, so the drawing line can carry a white head.
+const slotPt = (s: Slot, t: number): P => {
+  const w = s.x1 - s.x0;
+  const h = s.y1 - s.y0;
+  let d = clamp01(t) * 2 * (w + h);
+  if (d <= w) return { x: s.x0 + d, y: s.y0 };
+  d -= w;
+  if (d <= h) return { x: s.x1, y: s.y0 + d };
+  d -= h;
+  if (d <= w) return { x: s.x1 - d, y: s.y1 };
+  d -= w;
+  return { x: s.x0, y: s.y1 - d };
+};
 
 const tierPos = (t: Tier, slot: number, salt: number): P => {
   const rows = rowsOf(t);
@@ -193,9 +263,10 @@ const S1_SLOT = new Map<number, number>();
     .forEach((i, k) => S1_SLOT.set(i, order[k]));
 }
 
-// The ash a society leaves: straight down from its own slot, into the band.
-const ash1Y = (i: number) => TIER1.top + TIER1.h - ASH_H * hash(i, 55);
-const ash2Y = (i: number) => TIER2.top + TIER2.h - ASH_H * hash(i, 56);
+// The ash a society leaves: straight down from its own seat, onto the bottom
+// edge of the slot it died in — just inside the dashed line, never on it.
+const ash1Y = (i: number) => SLOT1.y1 - ASH_FLOOR - ASH_H * hash(i, 55);
+const ash2Y = (i: number) => SLOT2.y1 - ASH_FLOOR - ASH_H * hash(i, 56);
 
 // Society 2: about 80% of society 1's ash rises out of it. The other 20% stays
 // where it fell, so the first ash line is still there afterwards.
@@ -268,21 +339,21 @@ const D_RISE2 = 17;
 const D_FALL2 = 10;
 const D_RISE3 = 18;
 
-// Camera: three moves, each one a single damped ramp that lands 10 frames
-// before the word it serves — "started" (73), "-emerge" (128), "ashes" (165) —
-// with holds between. It opens tight on the crowd with room above it for the
-// first tier, and climbs as the stack grows. The last key resolves with tier 3
-// (850) through the crowd's bottom (2000) centred on screen y 835:
-// cy = 1425 + 125/0.88 = 1567, which puts the crowd's bottom at y 1341 and
-// leaves 126px of margin either side of the field. The opening key is 1.10,
-// not tighter: at 1.15 the 940-wide crowd is exactly frame width and reads as
-// a crop rather than a field.
-const CAM_F = [0, 45, 55, 100, 110, 136, 146, DURATION];
-// The opening is inside the crowd — it runs off both sides of the frame — and
-// the first move is as much a pull-back as a climb, so the crowd is revealed
-// as finite at the same moment the first society leaves it.
-const CAM_CY = [1876, 1876, 1779, 1779, 1670, 1670, 1567, 1567];
-const CAM_K = [1.3, 1.3, 1.1, 1.1, 1.0, 1.0, 0.88, 0.88];
+// Camera: one move, not three. It opens inside the crowd — the field runs off
+// both sides of the frame — and a single damped ramp keyed f6 to f22 opens out
+// to the resolved framing, settling around f36. That is the whole camera: the
+// frame widens on "three" and the three slots are seen appearing into the room
+// it makes, and after that nothing moves but the sway. Climbing again on each
+// society would have said "higher" three times over, when the slots already
+// say where the sequence goes.
+//
+// The resolved key holds slot 3's top edge (815) through the crowd's bottom
+// (2007) centred on screen y 835: cy = 1411 + 125/0.88 = 1552, which puts the
+// crowd's bottom at y 1360 and leaves 244px either side of the slots and 126px
+// either side of the field.
+const CAM_F = [0, 6, 22, DURATION];
+const CAM_CY = [1876, 1876, 1552, 1552];
+const CAM_K = [1.3, 1.3, 0.88, 0.88];
 const CAM_STIFF = 0.09;
 const CAM_DAMP = 0.468;
 
@@ -353,6 +424,17 @@ const SocietiesFromTheAshes: React.FC<Props> = ({
 
   const ramp = (t0: number, dur: number, easing: (v: number) => number) =>
     interpolate(frame, [t0, t0 + dur], [0, 1], { ...clamp, easing });
+
+  // "three consecutive": the bottom slot draws first, then the middle, then the
+  // top, head-first and solid, switching to dashes the frame each one closes.
+  const slotDraw = SLOTS.map((_, si) =>
+    interpolate(
+      frame,
+      [beats.three + si * SLOT_STAGGER, beats.three + si * SLOT_STAGGER + SLOT_DRAW],
+      [0, 1],
+      { ...clamp, easing: Easing.out(Easing.cubic) },
+    ),
+  );
   const arcEase = Easing.inOut(Easing.cubic);
   const fallEase = Easing.in(Easing.cubic);
 
@@ -632,6 +714,29 @@ const SocietiesFromTheAshes: React.FC<Props> = ({
                 />
               ) : null,
             )}
+
+            {/* the three placeholder slots: drawn once, then never touched */}
+            {SLOTS.map((s, si) => {
+              const d = slotDraw[si];
+              if (d <= 0) return null;
+              const done = d >= 1;
+              const head = done ? null : slotPt(s, d);
+              return (
+                <g key={`slot${si}`}>
+                  <path
+                    d={`M ${s.x0} ${s.y0} H ${s.x1} V ${s.y1} H ${s.x0} Z`}
+                    fill="none"
+                    stroke={ink}
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    strokeDasharray={done ? SLOT_DASH : SLOT_PERIM}
+                    strokeDashoffset={done ? 0 : SLOT_PERIM * (1 - d)}
+                    opacity={0.45}
+                  />
+                  {head ? <circle cx={head.x} cy={head.y} r={5} fill={ink} /> : null}
+                </g>
+              );
+            })}
 
             {/* threads */}
             {threadEls.map((t) => (
