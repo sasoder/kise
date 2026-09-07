@@ -1,5 +1,21 @@
-import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
+import {
+  DOT_RADIUS,
+  GridBackground,
+  OP_DARK,
+  OP_READ,
+  OP_RECEDE,
+  OP_UNREAD,
+  Vignette,
+  breath,
+  clamp,
+  hash,
+  idleThreads,
+  runCamera,
+  sway,
+  worldTransform,
+} from "./fieldShared";
 
 export const FPS = 24;
 // Dwarkesh: "[At OpenAI,] three consecutive secret AI societies got started,
@@ -77,8 +93,8 @@ export const defaultProps: Props = schema.parse({
   shadowY: 2,
   shadowBlur: 9,
   shadowOpacity: 0.22,
-  dotRadius: 5.5,
-  threads: 200,
+  dotRadius: DOT_RADIUS,
+  threads: idleThreads(1200),
   tierThreads: 90,
   tierGain: 1.35,
   beats: {
@@ -102,13 +118,6 @@ type P = { x: number; y: number };
 
 const WORLD_W = 1080;
 const WORLD_H = 2200;
-
-const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
-
-const hash = (i: number, k: number) => {
-  const s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
-  return s - Math.floor(s);
-};
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const smooth = (v: number) => {
@@ -347,42 +356,21 @@ const D_RISE3 = 18;
 // society would have said "higher" three times over, when the slots already
 // say where the sequence goes.
 //
-// The resolved key holds slot 3's top edge (815) through the crowd's bottom
-// (2007) centred on screen y 835: cy = 1411 + 125/0.88 = 1552, which puts the
-// crowd's bottom at y 1360 and leaves 244px either side of the slots and 126px
-// either side of the field.
+// The crowd resolves at k = 1.0 — the same size on screen as the crowd in
+// ScopeOfTheReport, which is cut in seconds later. The resolved key holds the
+// content block (slot 3's top edge, 825, down to the crowd's bottom, 2000)
+// centred on screen y 835: cy = 1412 + 125/1.0 = 1540. That puts slot 3's top
+// at y 245, the crowd's bottom at y 1420, and leaves 204px either side of the
+// 672-wide slots.
 const CAM_F = [0, 6, 22, DURATION];
-const CAM_CY = [1876, 1876, 1552, 1552];
-const CAM_K = [1.3, 1.3, 0.88, 0.88];
-const CAM_STIFF = 0.09;
-const CAM_DAMP = 0.468;
+const CAM_CY = [1876, 1876, 1540, 1540];
+const CAM_K = [1.3, 1.3, 1.0, 1.0];
 
-const camera = (upto: number) => {
-  let cy = CAM_CY[0];
-  let k = CAM_K[0];
-  let vy = 0;
-  let vk = 0;
-  for (let f = 1; f <= upto; f++) {
-    const ty = interpolate(f, CAM_F, CAM_CY, clamp);
-    const tk = interpolate(f, CAM_F, CAM_K, clamp);
-    vy += (ty - cy) * CAM_STIFF - vy * CAM_DAMP;
-    cy += vy;
-    vk += (tk - k) * CAM_STIFF - vk * CAM_DAMP;
-    k += vk;
-  }
-  return { cy, k };
-};
-
-const BG_OVERSIZE = 1.8;
-
-// The ladder: unread 0.45, read 0.9 (1.0 with traffic on it), receded 0.3,
-// dark 0.16. A society goes dark as it lands; the ash it leaves comes back up
-// to receded exactly as fast as the next society climbs out of it, so what is
-// left of it is context rather than the thing dying.
-const OP_UNREAD = 0.45;
-const OP_READ = 0.9;
-const OP_RECEDED = 0.3;
-const OP_DARK = 0.16;
+// The ladder is shared with the other two cuts (fieldShared): unread 0.45,
+// read 0.9 (1.0 with traffic on it), receded 0.3, dark 0.16. A society goes
+// dark as it lands; the ash it leaves comes back up to receded exactly as fast
+// as the next society climbs out of it, so what is left of it is context
+// rather than the thing dying.
 
 type Agent = {
   x: number;
@@ -560,7 +548,7 @@ const SocietiesFromTheAshes: React.FC<Props> = ({
   const ashRecede = [0, goneFrom(soc2, 2), goneFrom(soc3, 3)];
   for (const g of agents) {
     if (g.ashOf > 0 && g.tier === -1 && !g.moving) {
-      g.base = OP_DARK + (OP_RECEDED - OP_DARK) * ashRecede[g.ashOf];
+      g.base = OP_DARK + (OP_RECEDE - OP_DARK) * ashRecede[g.ashOf];
     }
   }
 
@@ -652,32 +640,25 @@ const SocietiesFromTheAshes: React.FC<Props> = ({
   }
 
   // -- camera ----------------------------------------------------------------
-  const cam = camera(frame);
-  const cy = cam.cy + 5 * Math.sin(frame / 19);
-  const cx = 540 + 3 * Math.sin(frame / 23);
+  const cam = runCamera(frame, CAM_F, CAM_CY, CAM_K);
+  const drift = sway(frame);
+  const cy = cam.cy + drift.dy;
+  const cx = 540 + drift.dx;
   const k = cam.k;
-  const tx = 540 - cx * k;
-  const ty = 960 - cy * k;
-  const bgY = -(cy - CAM_CY[0]) * k * parallax - frame * 0.3;
-  const bgScale = 1 + (k - 1) * 0.3;
+  const { tx, ty } = worldTransform(cx, cy, k);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
-      <AbsoluteFill style={{ overflow: "hidden" }}>
-        <Img
-          src={staticFile(backgroundSrc)}
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            width: WORLD_W * BG_OVERSIZE,
-            height: 1920 * BG_OVERSIZE,
-            objectFit: "cover",
-            transform: `translate(-50%, -50%) translateY(${bgY.toFixed(2)}px) scale(${bgScale.toFixed(4)})`,
-            filter: `blur(${backgroundBlur}px) brightness(${backgroundDim})`,
-          }}
-        />
-      </AbsoluteFill>
+      <GridBackground
+        src={backgroundSrc}
+        blur={backgroundBlur}
+        dim={backgroundDim}
+        frame={frame}
+        cy={cy}
+        cyRest={CAM_CY[0]}
+        k={k}
+        parallax={parallax}
+      />
 
       <AbsoluteFill
         style={{ filter: `drop-shadow(0 ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))` }}
@@ -758,15 +739,20 @@ const SocietiesFromTheAshes: React.FC<Props> = ({
             {/* agents */}
             {agents.map((g, i) => {
               const l = lit[i];
-              const bre = 1 + 0.05 * Math.sin(frame * 0.11 + hash(i, 9) * 6.28);
+              const bre = breath(frame, hash(i, 9));
               const r =
                 dotRadius * CROWD_POS[i].r * bre * (1 + 0.35 * l) * (1 + 0.3 * g.fly);
-              const op = Math.min(1, g.base + 0.55 * l);
+              // One rung to the next: a lit agent reads at OP_READ + 0.1. From
+              // the crowd that is the old 0.45 -> 1.0 ramp unchanged; on a
+              // living society it is 0.9 -> 1.0.
+              const op = g.base + (OP_READ + 0.1 - g.base) * l;
               return <circle key={i} cx={g.x} cy={g.y} r={r} fill={accent} opacity={op} />;
             })}
           </svg>
         </div>
       </AbsoluteFill>
+
+      <Vignette />
     </AbsoluteFill>
   );
 };
