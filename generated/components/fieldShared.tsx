@@ -11,25 +11,28 @@ export const FRAME_W = 1080;
 export const FRAME_H = 1920;
 export const BG_OVERSIZE = 1.8;
 
-// Mono plus one accent. Every piece takes it as a prop and defaults to this, so
-// the three cuts cannot drift apart in the edit.
-export const ACCENT = "#FFC543";
+// Mono plus one accent, and the accent comes in two tones of the same hue.
+// Every piece takes both as props and defaults to these, so the three cuts
+// cannot drift apart in the edit.
+//
+// Ripe pass, on the director's note that the yellow looked "pale from being out
+// in the sun too long" and that the transparency was part of it: an agent dot
+// is now SOLID, and its state is carried by colour alone — deep for an unread
+// dot, ripe for a lit one. Everything that is a line (threads, tips, converted
+// rings and edges, provenance) takes the ripe tone at its own line opacity.
+export const ACCENT = "#FFB000"; // ripe: a lit dot, and every accent line
+export const ACCENT_DEEP = "#D98A0C"; // deep: an unread dot, the same hue a shade down
 
 // The opacity ladder. Every agent, ash line, floor or mark sits on one rung.
 export const OP_UNREAD = 0.45; // present, not the subject
-// The dot rungs. An agent dot is the only thing in these pieces that carries
-// the accent as a FILL, so it is the only thing whose rung has to be read as a
-// colour rather than as a level. Solid pass, on the director's note that the
-// yellow looked half transparent: the lit rung is 1.0 — a lit dot is the pure
-// accent, nothing of the grid left in it — and the unread rung was swept at
-// 0.78 / 0.86 / 0.94 on full-res stills. Measured on cut 1 f156 against the
-// pure accent (#FFC543, C* 70.0): 0.78 composites to #DCAE49 (C* 56.8, 81% of
-// the accent — still the old dusty olive), 0.86 to #E9B746 (C* 62.3, 89%) and
-// 0.94 to #F6BF45 (C* 66.5, 95%). 0.94 is the most saturated but it collapses
-// the ladder: unread -> read is only dL* 1.7 and the f156 and f200 crops are
-// indistinguishable. 0.86 keeps a dL* 4.2 step and still reads as solid yellow.
-export const OP_UNREAD_DOT = 0.86; // the unread rung for accent dots
-export const OP_READ_DOT = 1.0; // a lit agent dot is solid
+// The dot rungs. An agent dot no longer carries its state as transparency: a
+// dot is opaque whatever it knows, because the accent over the grid at any
+// opacity below 1 desaturates into the field and reads as a wash. Both rungs
+// are 1.0 and the unread -> lit ladder is ACCENT_DEEP -> ACCENT instead. They
+// stay named because a piece still multiplies the dot body by its own arrival
+// fade, and that fade starts from this rung.
+export const OP_UNREAD_DOT = 1.0; // an unread dot is solid, in the deep tone
+export const OP_READ_DOT = 1.0; // a lit dot is solid, in the ripe tone
 export const OP_READ = 0.9; // the subject; +0.1 when a thread is on it
 export const OP_RECEDE = 0.3; // was the subject, is not any more
 export const OP_DARK = 0.16; // wiped, or unlooked-at
@@ -43,12 +46,11 @@ export const OP_DARK = 0.16; // wiped, or unlooked-at
 // the brightest step that still keeps white line-work above 4:1 against the
 // field (4.71:1; 0.46 is 4.10 and 0.50 falls to 3.57) and still leaves the
 // accent dots a real lightness step above it (measured on the old #E0643A:
-// dL* 5.9; 0.46 has 3.2, 0.50 has 0.6 and the crowd goes flat). Note that
-// dot-to-field separation FALLS as this rises — a dot is 58% accent over this
-// same field, so the field gains a full step where the dot gains 0.42 of one —
-// so 0.42 is a ceiling reached from below, not a peak. Colour pass 2 widened
-// that margin a long way without touching this number: at #FFC543 the unread
-// dot composites to #C19F54, dL* 21.9 over the field.
+// dL* 5.9; 0.46 has 3.2, 0.50 has 0.6 and the crowd goes flat). That margin
+// was measured back when a dot was part-transparent and therefore part field.
+// It is not any more: a dot is opaque, so it is exactly ACCENT_DEEP or ACCENT
+// over this field whatever the field is doing, and the separation is fixed by
+// the palette rather than by this number. The field it lands on is #6B6B6B.
 export const BG_BASE = "#232323";
 export const BG_DIM = 0.42;
 
@@ -59,17 +61,10 @@ export const idleThreads = (agents: number) => Math.round((IDLE_THREADS_PER_1200
 export const DOT_RADIUS = 5.5;
 export const breath = (frame: number, seed: number) => 1 + 0.05 * Math.sin(frame * 0.11 + seed * 6.28);
 
-// A white rim on every agent dot. One SCREEN pixel at every zoom: the dots are
-// drawn in world space under a `scale(k)`, so a width authored in world units
-// would be k px on screen and the rim would thicken and thin with the camera.
-// Divide the camera's own damped k back out and it measures 1.5px at k 0.615
-// and at k 1.8 alike. The rim is part of the dot, not a layer over it — it
-// rides the circle's own `opacity`, so an unread dot has a faint rim and a lit
-// one a bright one, and both fade together. Raised 1 -> 1.5 on the director's
-// note; checked at 3x on the unread rung, where the rim composites to #C1C1C1
-// against a #C19F54 dot (dL* 10.9, 1.39:1) and still reads as a rim.
-export const DOT_STROKE_PX = 1.5; // screen px, white outline on every agent dot
-export const dotStrokeWidth = (k: number) => DOT_STROKE_PX / k;
+// No rim. A white outline on every agent dot was tried at 1px and 1.5px and
+// removed on the director's note: at field density the rims join up into a pale
+// mesh laid over the crowd, which is most of what made the colour look washed
+// out. A dot is a disc of one flat colour and nothing else.
 
 export const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
 
@@ -82,6 +77,42 @@ export const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 export const smoothstep = (v: number) => {
   const x = clamp01(v);
   return x * x * (3 - 2 * x);
+};
+
+// The dot ladder, as a colour. `makeTone(deep, ripe)` returns t -> a fill, 0 =
+// unread, 1 = lit, quantised to 64 steps and built once per render: a field is
+// ten thousand dots and every one of them asks for its colour every frame.
+// The mix is in plain sRGB — the two tones are the same hue, so the path
+// between them is a lightness ramp and there is nothing for a fancier space to
+// fix.
+const hexToRgb = (h: string): [number, number, number] => {
+  const s = h.replace("#", "");
+  const n = parseInt(
+    s.length === 3
+      ? s
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : s,
+    16,
+  );
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+
+export const TONE_STEPS = 64;
+export const makeTone = (deep: string, ripe: string) => {
+  const a = hexToRgb(deep);
+  const b = hexToRgb(ripe);
+  const ramp: string[] = [];
+  for (let i = 0; i <= TONE_STEPS; i++) {
+    const t = i / TONE_STEPS;
+    ramp.push(
+      `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(
+        a[1] + (b[1] - a[1]) * t,
+      )},${Math.round(a[2] + (b[2] - a[2]) * t)})`,
+    );
+  }
+  return (t: number) => ramp[Math.round(clamp01(t) * TONE_STEPS)];
 };
 
 // ---------------------------------------------------------------------------

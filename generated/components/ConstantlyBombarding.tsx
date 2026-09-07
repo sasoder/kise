@@ -2,6 +2,7 @@ import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   ACCENT,
+  ACCENT_DEEP,
   BG_BASE,
   BG_DIM,
   DOT_RADIUS,
@@ -10,14 +11,13 @@ import {
   FRAME_W,
   GridBackground,
   OP_READ,
-  OP_READ_DOT,
   OP_UNREAD_DOT,
   Vignette,
   WOBBLE_R,
   breath,
   clamp,
-  dotStrokeWidth,
   hash,
+  makeTone,
   runCamera,
   sway,
   wobble,
@@ -62,18 +62,18 @@ export const DURATION = 272;
 //     edge — off the top, sides AND bottom, no bare
 //     band anywhere; idle traffic starts as they
 //     seat                                          — "of thousands"    f121-153
-//   the crowd reads OP_UNREAD_DOT -> OP_READ as one
-//     slow wave spreading out from the structure    — "extremely
+//   the crowd reads deep -> ripe as one slow wave
+//     spreading out from the structure             — "extremely
 //                                                     superhuman
 //                                                     hackers"          f151-188
 //   threads launch from random seats into the
 //     nearest ring, one every ~3 frames; the ring
 //     clicks ink-bright from the thread's arrival,
-//     and the whole crowd recedes OP_READ ->
-//     OP_UNREAD_DOT over 14 frames so the fire reads    — "constantly"      f196-210
+//     and the whole crowd goes back to deep over 14
+//     frames so the fire reads                     — "constantly"      f196-210
 //   the launch rate ramps to ~2.5 a frame           — "bombarding"      f214-228
-//   steady state: field OP_UNREAD_DOT with the
-//     launching seats at OP_READ + 0.1, structure
+//   steady state: the field deep with the
+//     launching seats ripe, structure
 //     OP_READ under constant fire, held to the tail — "it, right?"      f242-272
 //
 // ambient: the structure's own packets, from f56 — a 4px ink dot travelling one
@@ -91,11 +91,13 @@ export const DURATION = 272;
 // dot pass: 1px white stroke on every agent dot
 // colour pass 2: accent #FFC543, dot stroke 1.5px
 // solid pass: OP_UNREAD_DOT 0.86, OP_READ_DOT 1.0
+// ripe pass: dots solid, no stroke; deep #D98A0C -> ripe #FFB000
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
   ink: z.string(),
-  accent: z.string(),
+  accent: z.string(), // ripe: a lit dot, and every accent line
+  accentDeep: z.string(), // deep: an unread dot
   backgroundBase: z.string(),
   backgroundSrc: z.string(),
   backgroundBlur: z.number(),
@@ -105,7 +107,7 @@ export const schema = z.object({
   shadowBlur: z.number(),
   shadowOpacity: z.number(),
   dotRadius: z.number(),
-  dotUnread: z.number(), // the unread rung for accent dots
+  dotUnread: z.number(), // the dot body's opacity; the state ladder is colour
   idleThreadCount: z.number(), // capped, never scaled with the seat count
   beats: z.object({
     training: z.number(), // "training and"
@@ -132,6 +134,7 @@ export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
   accent: ACCENT,
+  accentDeep: ACCENT_DEEP,
   backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
@@ -472,6 +475,7 @@ const PKT_R = 4;
 const ConstantlyBombarding: React.FC<Props> = ({
   ink,
   accent,
+  accentDeep,
   backgroundBase,
   backgroundSrc,
   backgroundBlur,
@@ -486,6 +490,8 @@ const ConstantlyBombarding: React.FC<Props> = ({
   beats,
 }) => {
   const frame = useCurrentFrame();
+  // 0 = unread (deep), 1 = lit (ripe). Built once per frame, read per dot.
+  const tone = makeTone(accentDeep, accent);
 
   // -- the structure ---------------------------------------------------------
   const beatOf = { l: beats.training, r: beats.evaluation, j: beats.infrastructure };
@@ -507,9 +513,9 @@ const ConstantlyBombarding: React.FC<Props> = ({
     [-150, DREL_MAX + 170],
     clamp,
   );
-  // From the first launch the crowd goes back down to OP_UNREAD_DOT as one field —
-  // no wave, no stagger. It is the light going down on the crowd so the fire
-  // over it can be seen; a seat with a thread on it still brightens.
+  // From the first launch the crowd goes back down to the deep tone as one
+  // field — no wave, no stagger. It is the light going down on the crowd so the
+  // fire over it can be seen; a seat with a thread on it still goes ripe.
   const recede = smooth((frame - (beats.constantly - 3)) / 14);
 
   const dots = SEATS.map((s, i) => {
@@ -531,11 +537,13 @@ const ConstantlyBombarding: React.FC<Props> = ({
     const L = Math.hypot(dx, dy) || 1;
     const bow = Math.sin(Math.PI * e) * s.arc;
     const read = smooth((readR - s.dRel) / 150);
-    const level = dotUnread + (OP_READ_DOT - dotUnread) * read * (1 - recede);
     return {
       x: px + (-dy / L) * bow,
       y: py + (dx / L) * bow,
-      base: level * smooth(lin / 0.2),
+      // the dot is solid the moment it lands; only the arrival fades it in
+      base: dotUnread * smooth(lin / 0.2),
+      // where it sits on the deep -> ripe ladder
+      tone: read * (1 - recede),
       moving: lin < 1,
       fly: clamp01(Math.min(lin, 1 - lin) / 0.14),
     };
@@ -653,8 +661,6 @@ const ConstantlyBombarding: React.FC<Props> = ({
   const cx = STRUCT_CX + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
-  // the dots' white rim, one screen px whatever the camera is doing
-  const dotStroke = dotStrokeWidth(k);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -696,17 +702,14 @@ const ConstantlyBombarding: React.FC<Props> = ({
               const s = SEATS[i];
               const r =
                 dotRadius * s.r * breath(frame, hash(i, 9)) * (1 + 0.35 * l) * (1 + 0.3 * d.fly);
-              const op = d.base + (OP_READ_DOT - d.base) * l;
               return (
                 <circle
                   key={i}
                   cx={d.x}
                   cy={d.y}
                   r={r}
-                  fill={accent}
-                  stroke={ink}
-                  strokeWidth={dotStroke}
-                  opacity={op}
+                  fill={tone(d.tone + (1 - d.tone) * l)}
+                  opacity={d.base}
                 />
               );
             })}

@@ -2,6 +2,7 @@ import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } f
 import { z } from "zod";
 import {
   ACCENT,
+  ACCENT_DEEP,
   BG_BASE,
   BG_DIM,
   DOT_RADIUS,
@@ -9,14 +10,13 @@ import {
   FRAME_W,
   GridBackground,
   OP_READ,
-  OP_READ_DOT,
   OP_UNREAD_DOT,
   Vignette,
   breath,
   clamp,
-  dotStrokeWidth,
   feather,
   hash,
+  makeTone,
   runCamera,
   sway,
   wobble,
@@ -45,8 +45,9 @@ export const DURATION = 270;
 //
 // Every gesture is one word. Nothing else happens.
 //   open inside the field at k 1.25, cut 1's steady
-//     state: ~2.5 launches a frame, crowd at
-//     OP_UNREAD_DOT, ink structure under fire         — "maybe more hacking
+//     state: ~2.5 launches a frame, the crowd deep
+//     with the launching seats ripe, ink structure
+//     under fire                                      — "maybe more hacking
 //                                                    effort"              f0
 //   each thread arrival now converts the ring it
 //     hits and one adjoining edge to accent; the
@@ -92,11 +93,13 @@ export const DURATION = 270;
 // dot pass: 1px white stroke on every agent dot
 // colour pass 2: accent #FFC543, dot stroke 1.5px
 // solid pass: OP_UNREAD_DOT 0.86, OP_READ_DOT 1.0
+// ripe pass: dots solid, no stroke; deep #D98A0C -> ripe #FFB000
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
   ink: z.string(),
-  accent: z.string(),
+  accent: z.string(), // ripe: a lit dot, and every accent line
+  accentDeep: z.string(), // deep: an unread dot
   backgroundBase: z.string(),
   backgroundSrc: z.string(),
   backgroundBlur: z.number(),
@@ -106,7 +109,7 @@ export const schema = z.object({
   shadowBlur: z.number(),
   shadowOpacity: z.number(),
   dotRadius: z.number(),
-  dotUnread: z.number(), // the unread rung for accent dots
+  dotUnread: z.number(), // the dot body's opacity; the state ladder is colour
   idleThreadCount: z.number(), // capped, never scaled with the seat count
   beats: z.object({
     maybeMore: z.number(), // "maybe more"
@@ -135,6 +138,7 @@ export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
   accent: ACCENT,
+  accentDeep: ACCENT_DEEP,
   backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
@@ -476,6 +480,7 @@ const PKT_R = 4;
 const MoreThanAllOfHistory: React.FC<Props> = ({
   ink,
   accent,
+  accentDeep,
   backgroundBase,
   backgroundSrc,
   backgroundBlur,
@@ -490,6 +495,9 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
   beats,
 }) => {
   const frame = useCurrentFrame();
+  // 0 = unread (deep), 1 = a seat with a thread on it (ripe). Built once per
+  // frame, read per dot.
+  const tone = makeTone(accentDeep, accent);
 
   // -- idle traffic ----------------------------------------------------------
   // Capped at 180 threads whatever the seat count, at 0.3, so it stays ambient:
@@ -648,8 +656,6 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
   const cx = STRUCT_CX + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
-  // the field's white rim, one screen px whatever the camera is doing
-  const dotStroke = dotStrokeWidth(k);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -688,17 +694,14 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
             {SEATS.map((s, i) => {
               const l = lit[i];
               const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
-              const op = dotUnread + (OP_READ_DOT - dotUnread) * l;
               return (
                 <circle
                   key={i}
                   cx={s.x}
                   cy={s.y}
                   r={r}
-                  fill={accent}
-                  stroke={ink}
-                  strokeWidth={dotStroke}
-                  opacity={op}
+                  fill={tone(l)}
+                  opacity={dotUnread}
                 />
               );
             })}

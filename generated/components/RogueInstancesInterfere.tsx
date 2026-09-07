@@ -2,23 +2,23 @@ import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } f
 import { z } from "zod";
 import {
   ACCENT,
+  ACCENT_DEEP,
   BG_BASE,
   BG_DIM,
   DOT_RADIUS,
   GridBackground,
   OP_DARK,
   OP_READ,
-  OP_READ_DOT,
   OP_UNREAD,
   OP_UNREAD_DOT,
   Vignette,
   WOBBLE_R,
   breath,
   clamp,
-  dotStrokeWidth,
   feather,
   hash,
   idleThreads,
+  makeTone,
   runCamera,
   sway,
   wobble,
@@ -47,7 +47,8 @@ export const DURATION = 166;
 //
 // Every gesture is one phrase. Nothing else happens.
 //   6 rogues lift out of their seats on individual
-//     arcs, leaving dim seat rings behind          — "maybe rogue"      f13-30
+//     arcs, going deep -> ripe as they go and
+//     leaving dim seat rings behind                — "maybe rogue"      f13-30
 //                                                    lands on "instances" f30
 //   the Claude mark clicks ink-bright and a
 //     provenance thread draws head-led to each of
@@ -85,11 +86,13 @@ export const DURATION = 166;
 // dot pass: 1px white stroke on every agent dot
 // colour pass 2: accent #FFC543, dot stroke 1.5px
 // solid pass: OP_UNREAD_DOT 0.86, OP_READ_DOT 1.0
+// ripe pass: dots solid, no stroke; deep #D98A0C -> ripe #FFB000
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
   ink: z.string(),
-  accent: z.string(),
+  accent: z.string(), // ripe: a lit dot, and every accent line
+  accentDeep: z.string(), // deep: an unread dot
   backgroundBase: z.string(),
   backgroundSrc: z.string(),
   backgroundBlur: z.number(),
@@ -99,7 +102,7 @@ export const schema = z.object({
   shadowBlur: z.number(),
   shadowOpacity: z.number(),
   dotRadius: z.number(),
-  dotUnread: z.number(), // the unread rung for accent dots
+  dotUnread: z.number(), // the dot body's opacity; the state ladder is colour
   markSize: z.number(),
   idleThreadCount: z.number(),
   beats: z.object({
@@ -122,6 +125,7 @@ export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
   accent: ACCENT,
+  accentDeep: ACCENT_DEEP,
   backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
@@ -437,6 +441,7 @@ const CAM_CY = [CY0, CY0, CY1, CY1];
 const RogueInstancesInterfere: React.FC<Props> = ({
   ink,
   accent,
+  accentDeep,
   backgroundBase,
   backgroundSrc,
   backgroundBlur,
@@ -452,6 +457,9 @@ const RogueInstancesInterfere: React.FC<Props> = ({
   beats,
 }) => {
   const frame = useCurrentFrame();
+  // 0 = an instance in its fleet (deep), 1 = a rogue, or a dot with a thread on
+  // it (ripe). Built once per frame, read per dot.
+  const tone = makeTone(accentDeep, accent);
 
   // -- the rogues: lift, then drift ------------------------------------------
   const backEase = Easing.out(Easing.back(1.6));
@@ -490,15 +498,16 @@ const RogueInstancesInterfere: React.FC<Props> = ({
       x,
       y,
       lifted: clamp01(lin1),
-      base: dotUnread + (OP_READ_DOT - dotUnread) * smooth(lin1),
+      // a rogue ripens as it breaks out
+      tone: smooth(lin1),
     };
   });
 
   // -- the fleets ------------------------------------------------------------
   const dots = SEATS.map((s, i) => {
     const j = ROGUE_OF[i];
-    if (j >= 0) return { x: rogueState[j].x, y: rogueState[j].y, base: rogueState[j].base };
-    return { x: s.x, y: s.y, base: dotUnread };
+    if (j >= 0) return { x: rogueState[j].x, y: rogueState[j].y, tone: rogueState[j].tone };
+    return { x: s.x, y: s.y, tone: 0 };
   });
 
   // -- idle traffic inside each fleet ----------------------------------------
@@ -636,8 +645,6 @@ const RogueInstancesInterfere: React.FC<Props> = ({
   const cx = STRUCT_CX + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
-  // the instances' white rim, one screen px whatever the camera is doing
-  const dotStroke = dotStrokeWidth(k);
 
   const structLine = (e: Edge) => {
     const A = RINGS[e.a];
@@ -790,17 +797,14 @@ const RogueInstancesInterfere: React.FC<Props> = ({
               const l = Math.max(lit[i], j >= 0 ? provArrived[j] : 0);
               const s = SEATS[i];
               const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
-              const op = d.base + (OP_READ_DOT - d.base) * l;
               return (
                 <circle
                   key={i}
                   cx={d.x}
                   cy={d.y}
                   r={r}
-                  fill={accent}
-                  stroke={ink}
-                  strokeWidth={dotStroke}
-                  opacity={op}
+                  fill={tone(d.tone + (1 - d.tone) * l)}
+                  opacity={dotUnread}
                 />
               );
             })}
