@@ -1,18 +1,23 @@
 import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
+  ACCENT,
   DOT_RADIUS,
   GridBackground,
   OP_DARK,
   OP_READ,
   OP_UNREAD,
+  OP_UNREAD_DOT,
   Vignette,
+  WOBBLE_R,
   breath,
   clamp,
+  feather,
   hash,
   idleThreads,
   runCamera,
   sway,
+  wobble,
   worldTransform,
 } from "./fieldShared";
 
@@ -30,8 +35,9 @@ export const DURATION = 166;
 
 // ---------------------------------------------------------------------------
 // "Provenance and pull". Two model marks — Claude for Mythos, the OpenAI mark
-// for Astro — each standing over its own fleet of instances (14 x 8 hashed
-// seats at the field's step). Six of those instances break out, get tethered
+// for Astro — each standing over its own fleet of instances (a rounded,
+// feathered blob of ~74 hashed seats at the field's step, laid out on a 10 x 9
+// lattice). Six of those instances break out, get tethered
 // back to the model that made them, and lean at the human infrastructure below
 // until they are inside it.
 //
@@ -59,9 +65,18 @@ export const DURATION = 166;
 //   hold resolved, never fading                    — tail               f150-166
 //
 // ambient: each fleet's own idle thread traffic at 0.4 from f0
-// (idleThreads(224) = 34 threads), and the structure's packets — a 4px ink dot
-// travelling one of its edges over 14 frames, a new one every 7 frames — from
-// f0, because the training run is already live when the line starts.
+// (idleThreads(149) = 22 threads, scaled off the alive seat count), and the
+// structure's packets — a 4px ink dot travelling one of its edges over 14
+// frames, a new one every 7 frames — from f0, because the training run is
+// already live when the line starts.
+//
+// consistency pass: accent #E0643A, feathered crowd edges
+// sleek pass: OP_UNREAD_DOT (0.58) on every instance dot, because #E0643A at
+// 0.45 over the grid read as rust-brown noise; the fleets re-laid 10 x 9 at
+// superellipse 2.4 so each one is a rounded blob and not the thin pointed lens
+// a 14 x 8 box cut down to (74 and 75 alive); rogues picked at columns 3, 5, 7;
+// the structure's ink packets put back on the shared rung (opacity 1.0).
+// Gestures, beats and the single camera key are unchanged.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -97,7 +112,7 @@ export type Props = z.infer<typeof schema>;
 
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
-  accent: "#48D9FF",
+  accent: ACCENT,
   backgroundBase: "#232323",
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
@@ -108,7 +123,7 @@ export const defaultProps: Props = schema.parse({
   shadowOpacity: 0.22,
   dotRadius: DOT_RADIUS,
   markSize: 108,
-  idleThreadCount: idleThreads(224),
+  idleThreadCount: idleThreads(149), // 149 seats alive across the two fleets
   beats: {
     onlyWould: 0,
     rogue: 13,
@@ -183,14 +198,27 @@ const PKT_R = 4;
 
 // ---------------------------------------------------------------------------
 // The two models and their fleets. Each mark is 108 world px square, centred
-// 220 world px above its fleet; each fleet is 14 x 8 seats at exactly the
-// field's step (940/39 x 440/29), jitter 0.9, radius 0.75-1.25 — an organic
-// cluster, never a lattice. 112 seats each, 224 in all.
+// 220 world px above its fleet; each fleet is laid out as 10 x 9 seats at
+// exactly the field's step (940/39 x 440/29), jitter 0.9, radius 0.75-1.25 — an
+// organic cluster, never a lattice.
+//
+// A fleet is not a box of agents. The 10 x 9 lattice is only where the seats
+// stand; the fleet's OUTLINE is a superellipse (exponent 2.4) inscribed in that
+// box, undulated by `wobble` along its perimeter and feathered across its outer
+// 1.5 steps, so density falls off toward the edge and the dots that survive out
+// there are smaller. 90 seats laid out per fleet, 74 and 75 alive — 149 in all.
+//
+// The box is nearly as tall as it is wide (241 x 137 world px) so the
+// superellipse cut leaves a rounded blob. The old 14 x 8 box was so much wider
+// than it was tall that the same cut produced a thin pointed lens. The fleets
+// no longer need to bleed off the opening frame: at k 1.4 the frame runs world
+// x 154..926 and fleet 0 spans 185..419, fleet 1 671..899, so each one stands
+// clear of the edge and reads as a countable population.
 // ---------------------------------------------------------------------------
 const STEP_X = 940 / 39;
 const STEP_Y = 440 / 29;
-const F_COLS = 14;
-const F_ROWS = 8;
+const F_COLS = 10;
+const F_ROWS = 9;
 const F_N = F_COLS * F_ROWS;
 
 const FLEETS = [
@@ -198,7 +226,30 @@ const FLEETS = [
   { cx: 780, cy: -420, mx: 780, my: -640, src: "openai-chatgpt-logo.png", tint: "invert(1)" },
 ];
 
-type Seat = { x: number; y: number; r: number; f: number; c: number; row: number };
+const SE_N = 2.4; // superellipse exponent: rounder than a box, flatter than an ellipse
+const BLOB_AX = ((F_COLS - 1) / 2 + 0.5) * STEP_X;
+const BLOB_AY = ((F_ROWS - 1) / 2 + 0.5) * STEP_Y;
+const BLOB_FEATHER = 1.5; // steps, centred on the nominal boundary
+const BLOB_SEED = [2.48, 2.24];
+
+// A seat's signed distance to its fleet's nominal boundary, in grid steps —
+// positive inside. The superellipse is scaled along the seat's own ray, and the
+// step is measured along that ray too, so the feather is the same width in
+// steps whichever way the boundary runs.
+const blobInside = (dx: number, dy: number, seed: number) => {
+  const L = Math.hypot(dx, dy);
+  if (L < 1e-6) return 99;
+  const g = Math.pow(Math.abs(dx) / BLOB_AX, SE_N) + Math.pow(Math.abs(dy) / BLOB_AY, SE_N);
+  const t = Math.pow(g, 1 / SE_N); // 1 exactly on the boundary
+  const stepAlong = L / Math.hypot(dx / STEP_X, dy / STEP_Y);
+  return (
+    (L / t - L) / stepAlong +
+    wobble(Math.atan2(dy, dx) * WOBBLE_R, seed) +
+    BLOB_FEATHER / 2
+  );
+};
+
+type Seat = { x: number; y: number; r: number; rs: number; f: number; c: number; row: number };
 const SEATS: Seat[] = (() => {
   const out: Seat[] = [];
   for (let f = 0; f < FLEETS.length; f++) {
@@ -206,14 +257,12 @@ const SEATS: Seat[] = (() => {
     for (let row = 0; row < F_ROWS; row++) {
       for (let c = 0; c < F_COLS; c++) {
         const i = f * 977 + row * F_COLS + c;
-        out.push({
-          x: F.cx + (c - (F_COLS - 1) / 2) * STEP_X + (hash(i, 11) - 0.5) * STEP_X * 0.9,
-          y: F.cy + (row - (F_ROWS - 1) / 2) * STEP_Y + (hash(i, 12) - 0.5) * STEP_Y * 0.9,
-          r: 0.75 + 0.5 * hash(i, 13),
-          f,
-          c,
-          row,
-        });
+        const x = F.cx + (c - (F_COLS - 1) / 2) * STEP_X + (hash(i, 11) - 0.5) * STEP_X * 0.9;
+        const y = F.cy + (row - (F_ROWS - 1) / 2) * STEP_Y + (hash(i, 12) - 0.5) * STEP_Y * 0.9;
+        const d = blobInside(x - F.cx, y - F.cy, BLOB_SEED[f]);
+        const fe = feather(d, BLOB_FEATHER);
+        if (hash(i, 71) >= fe) continue;
+        out.push({ x, y, r: 0.75 + 0.5 * hash(i, 13), rs: 0.7 + 0.3 * fe, f, c, row });
       }
     }
   }
@@ -221,10 +270,18 @@ const SEATS: Seat[] = (() => {
 })();
 const NSEAT = SEATS.length;
 
+// fleet grid cell -> seat index, so idle traffic can find a neighbour without a
+// search now that most cells are empty.
+const SEAT_AT = new Int32Array(FLEETS.length * F_N).fill(-1);
+SEATS.forEach((s, i) => {
+  SEAT_AT[s.f * F_N + s.row * F_COLS + s.c] = i;
+});
+
 // ---------------------------------------------------------------------------
-// The rogues: three hashed seats out of each fleet, taken from the two lowest
-// rows (so nothing of their own fleet stands between them and the structure)
-// and spread one per third of the fleet's width (so their tethers never cross).
+// The rogues: three seats out of each fleet, taken from the lowest rows that
+// survived the blob cull (so nothing of their own fleet stands between them and
+// the structure) and taken at columns 3, 5 and 7 of the ten — two full steps
+// apart, clear of the blob's cut corners, so their tethers never cross.
 // ---------------------------------------------------------------------------
 // Where they stop when they lean at the run: a spread arc 300 world px off the
 // structure's centre, upper half, Claude's three on the left of it and the
@@ -268,13 +325,29 @@ const adjoiningEdge = (rk: number, j: number) => {
   return near[Math.min(near.length - 1, Math.floor(hash(j, 77) * near.length))];
 };
 
+const ROGUE_COLS = [3, 5, 7];
+
 const ROGUES: Rogue[] = (() => {
   const picks: { gi: number; f: number }[] = [];
   for (let f = 0; f < FLEETS.length; f++) {
-    for (let t = 0; t < 3; t++) {
-      const c = 2 + t * 3 + Math.floor(hash(f * 7 + t, 21) * 3);
-      const row = 6 + (hash(f * 7 + t, 22) < 0.5 ? 0 : 1);
-      picks.push({ gi: f * F_N + row * F_COLS + c, f });
+    const low = SEATS.map((s, i) => ({ s, i })).filter(({ s }) => s.f === f && s.row >= F_ROWS - 3);
+    const taken = new Set<number>();
+    for (const target of ROGUE_COLS) {
+      // The surviving seat nearest this column, lowest row first, in a column
+      // no other rogue has already taken. Nearest-the-column rather than
+      // hashed: with the blob's corners gone a hashed pick can put two rogues
+      // in adjoining columns, and two tethers land on top of each other.
+      const free = low.filter(({ s }) => !taken.has(s.c));
+      const bottom = free.filter(({ s }) => s.row >= F_ROWS - 2);
+      const pool = bottom.length ? bottom : free;
+      pool.sort(
+        (a, b) =>
+          Math.abs(a.s.c - target) - Math.abs(b.s.c - target) ||
+          b.s.row - a.s.row ||
+          hash(a.i, 22) - hash(b.i, 22),
+      );
+      taken.add(pool[0].s.c);
+      picks.push({ gi: pool[0].i, f });
     }
   }
   // sort inside each fleet by x so the stop arc is assigned left to right
@@ -402,14 +475,19 @@ const RogueInstancesInterfere: React.FC<Props> = ({
       x = bx + vx * t2 + (-vy / L) * bow;
       y = by + vy * t2 + (vx / L) * bow;
     }
-    return { x, y, lifted: clamp01(lin1), base: OP_UNREAD + (OP_READ - OP_UNREAD) * smooth(lin1) };
+    return {
+      x,
+      y,
+      lifted: clamp01(lin1),
+      base: OP_UNREAD_DOT + (OP_READ - OP_UNREAD_DOT) * smooth(lin1),
+    };
   });
 
   // -- the fleets ------------------------------------------------------------
   const dots = SEATS.map((s, i) => {
     const j = ROGUE_OF[i];
     if (j >= 0) return { x: rogueState[j].x, y: rogueState[j].y, base: rogueState[j].base };
-    return { x: s.x, y: s.y, base: OP_UNREAD };
+    return { x: s.x, y: s.y, base: OP_UNREAD_DOT };
   });
 
   // -- idle traffic inside each fleet ----------------------------------------
@@ -429,8 +507,8 @@ const RogueInstancesInterfere: React.FC<Props> = ({
     if (ROGUE_OF[a] >= 0) continue;
     const bc = clampi(sa.c + Math.round((hash(seed, 7) - 0.5) * 2 * reach), 0, F_COLS - 1);
     const br = clampi(sa.row + Math.round((hash(seed, 8) - 0.5) * 2 * reach), 0, F_ROWS - 1);
-    const b = sa.f * F_N + br * F_COLS + bc;
-    if (b === a || ROGUE_OF[b] >= 0) continue;
+    const b = SEAT_AT[sa.f * F_N + br * F_COLS + bc];
+    if (b < 0 || b === a || ROGUE_OF[b] >= 0) continue;
     const dn = interpolate(phase, [0, 0.3], [0, 1], { ...clamp, easing: outCubic });
     const fade = interpolate(phase, [0.55, 1], [1, 0], clamp);
     if (fade <= 0.02) continue;
@@ -602,7 +680,7 @@ const RogueInstancesInterfere: React.FC<Props> = ({
                   key={`s${j}`}
                   cx={r.sx}
                   cy={r.sy}
-                  r={dotRadius * SEATS[r.gi].r}
+                  r={dotRadius * SEATS[r.gi].r * SEATS[r.gi].rs}
                   fill="none"
                   stroke={ink}
                   strokeWidth={1.5}
@@ -673,7 +751,7 @@ const RogueInstancesInterfere: React.FC<Props> = ({
 
             {/* the structure's own packets */}
             {packets.map((p) => (
-              <circle key={p.key} cx={p.x} cy={p.y} r={PKT_R} fill={ink} opacity={Math.min(1, structOp + 0.1)} />
+              <circle key={p.key} cx={p.x} cy={p.y} r={PKT_R} fill={ink} />
             ))}
 
             {/* threads: fleet traffic, provenance, then the interference */}
@@ -698,7 +776,7 @@ const RogueInstancesInterfere: React.FC<Props> = ({
               const j = ROGUE_OF[i];
               const l = Math.max(lit[i], j >= 0 ? provArrived[j] : 0);
               const s = SEATS[i];
-              const r = dotRadius * s.r * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
+              const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
               const op = d.base + (OP_READ + 0.1 - d.base) * l;
               return <circle key={i} cx={d.x} cy={d.y} r={r} fill={accent} opacity={op} />;
             })}

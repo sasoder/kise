@@ -1,18 +1,21 @@
 import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
+  ACCENT,
   DOT_RADIUS,
   FRAME_H,
   FRAME_W,
   GridBackground,
   OP_READ,
-  OP_UNREAD,
+  OP_UNREAD_DOT,
   Vignette,
   breath,
   clamp,
+  feather,
   hash,
   runCamera,
   sway,
+  wobble,
   worldTransform,
 } from "./fieldShared";
 
@@ -39,7 +42,7 @@ export const DURATION = 270;
 // Every gesture is one word. Nothing else happens.
 //   open inside the field at k 1.25, cut 1's steady
 //     state: ~2.5 launches a frame, crowd at
-//     OP_UNREAD, ink structure under fire         — "maybe more hacking
+//     OP_UNREAD_DOT, ink structure under fire         — "maybe more hacking
 //                                                    effort"              f0
 //   each thread arrival now converts the ring it
 //     hits and one adjoining edge to accent; the
@@ -47,12 +50,13 @@ export const DURATION = 270;
 //     own graph with the arrivals until the whole
 //     thing is accent — the AI is inside it       — "and at a higher level
 //                                                    of competence"       f35-68
-//   push in, k 1.25 -> 1.45, settled by f77, held
-//     through the phrase                          — "aimed at this training
-//                                                    infrastructure"      f58-77
-//   pull back, k 1.45 -> 0.66, settled by f148:
-//     the field's bottom edge and the empty ground
-//     below it. Nothing new appears while it runs  — "than has"            f110-148
+//   push in, k 1.25 -> 1.36, keyed f54-72 and
+//     settled by f77, held through the phrase     — "aimed at this training
+//                                                    infrastructure"      f54-77
+//   pull back, k 1.36 -> 0.615, keyed f104-136 and
+//     settled by f148: the field's bottom edge and
+//     the empty ground below it. One long gentle
+//     move; nothing new appears while it runs      — "than has"            f104-148
 //   the humans arrive from the past: each glyph
 //     enters from beyond the left edge at its
 //     seat's height, on its own shallow arc, and
@@ -66,9 +70,20 @@ export const DURATION = 270;
 //                                                    history"             f150-245
 //   hold resolved, never fades                     — tail                  f254-270
 //
-// ambient: the idle traffic (180 threads at 0.4), the structure's own packets
+// ambient: the idle traffic (180 threads at 0.3), the structure's own packets
 // (a 4px ink bead running one edge every 7 frames) and the bombardment itself
-// run from f0 to f270. They are not gestures; they are what this world is.
+// run from f0 to f270. They are not gestures; they are what this world is. The
+// bombardment eases from 2.5 to 1.4 launches a frame across f68-92, once the
+// conversion is complete — still constant fire, with air around the structure.
+//
+// consistency pass: accent #E0643A, feathered crowd edges
+// sleek pass: OP_UNREAD_DOT (0.58) on the field's dots, because #E0643A at 0.45
+// over the grid read as dirt; the converted structure held at opacity 1.0 (it
+// is the subject) with the launch rate easing 2.5 -> 1.4 and the idle traffic
+// down to 0.3, so an accent structure inside an accent field still reads; the
+// two camera moves softened to k 1.36 and 0.615 on longer ramps, and the
+// resolved framing dropped so the structure sits at screen y 360 and the human
+// block bottom at 1446. Gestures and beats unchanged.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -110,7 +125,7 @@ export type Props = z.infer<typeof schema>;
 
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
-  accent: "#48D9FF",
+  accent: ACCENT,
   backgroundBase: "#232323",
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
@@ -159,23 +174,29 @@ const clampi = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, 
 // The camera. Three moves, each on a word. cy = contentCentre + 125 / k, so the
 // content block's centre sits at screen y 835 at every camera position.
 //
-//   f0-58     k 1.25  inside the field, structure centred (content centre 0)
-//   f58-70    -> 1.45 the push; the damper lags ~10 frames, so keying it here
-//                     puts the settled 1.44 on "aimed at this" (f77)
-//   f110-136  -> 0.635 the pull-back; content centre moves to 883 (world y
-//                     0..1766: structure at the top, the human block at the
-//                     bottom). Settles f148, ahead of "cumulatively" (f150).
-//                     At the resolved frame the field's bottom edge sits at
-//                     screen y 846, the human block runs 912 to 1396, and the
-//                     block's centre of gravity is on screen y 835.
+//   f0-54     k 1.25  inside the field, structure centred (content centre 0)
+//   f54-72    -> 1.36 the push. A gentler move on a longer ramp than the 1.45
+//                     it was: the damper reaches 1.354 by "aimed at this"
+//                     (f77) and 1.360 by f90, so it is settled under the word
+//                     and reads as one slow lean rather than a shove.
+//   f104-136  -> 0.615 the pull-back, its front lengthened by six frames so the
+//                     push and the pull read as one hand and not two. Content
+//                     centre moves to 772. Settles f148, ahead of
+//                     "cumulatively" (f150).
+//
+// At the resolved frame the structure's centre sits at screen y 360, the
+// field's bottom edge at 914, the human block runs 965 to 1446, and its side
+// margins are 214. The block used to end at 1396 with the structure up at 260;
+// dropping the whole thing is done by taking k from 0.635 to 0.615 and moving
+// the content centre with it, never by moving anything in the world.
 // ---------------------------------------------------------------------------
 const STRUCT_CX = 540;
-const K_FINAL = 0.635;
-const CONTENT_CENTRE = 883;
+const K_FINAL = 0.615;
+const CONTENT_CENTRE = 772;
 const CY_FINAL = CONTENT_CENTRE + 125 / K_FINAL;
-const CAM_F = [0, 58, 70, 110, 136, DURATION];
-const CAM_K = [1.25, 1.25, 1.45, 1.45, K_FINAL, K_FINAL];
-const CAM_CY = [125 / 1.25, 125 / 1.25, 125 / 1.45, 125 / 1.45, CY_FINAL, CY_FINAL];
+const CAM_F = [0, 54, 72, 104, 136, DURATION];
+const CAM_K = [1.25, 1.25, 1.36, 1.36, K_FINAL, K_FINAL];
+const CAM_CY = [125 / 1.25, 125 / 1.25, 125 / 1.36, 125 / 1.36, CY_FINAL, CY_FINAL];
 // The frame's own extremes over the whole track: the widest zoom decides how
 // far out the field has to reach sideways, the opening — tight but low —
 // decides how far it has to reach up.
@@ -252,15 +273,23 @@ const NEIGH = RINGS.map((_, r) =>
 // ---------------------------------------------------------------------------
 // The field. Cut 1's step (940/39 x 440/29), jitter 0.9, radius spread
 // 0.75-1.25; only the area is different. It bleeds past the top, the left and
-// the right of the frame at every camera in this piece, and it stops at world
-// y 900 — a straight cut ragged only by the seats' own jitter, and low enough
-// that the opening frame (bottom at world y 868) is still all crowd. 77 x 108,
-// 7,806 seats once the clearing is cut out.
+// the right of the frame at every camera in this piece, and its bottom is the
+// only edge the camera ever sees.
+//
+// That bottom is not a ruled line. Its nominal height stays world y 900 — the
+// gap to the human block is measured off it — but it undulates along x by
+// `wobble` and the field dissolves into it: over the FEATHER_STEPS rows above
+// the nominal edge a seat only exists if its hash falls under `feather`, and
+// what survives is drawn smaller. The field thins out into the ground instead
+// of stopping at a ruler. 77 x 108 seats laid out, 7,806 before the feather.
 // ---------------------------------------------------------------------------
 const STEP_X = 940 / 39;
 const STEP_Y = 440 / 29;
 const BLEED = 60;
 const FIELD_BOTTOM = 900;
+const EDGE_SEED = 2.1;
+// the nominal bottom edge at world x, in world px
+const edgeAt = (x: number) => FIELD_BOTTOM + wobble(x, EDGE_SEED) * STEP_Y;
 const SEAT_X0 = STRUCT_CX - FRAME_W / 2 / K_WIDEST - BLEED;
 const SEAT_X1 = STRUCT_CX + FRAME_W / 2 / K_WIDEST + BLEED;
 const SEAT_Y0 = CAM_TOP - BLEED;
@@ -269,7 +298,7 @@ const ROWS = Math.round((FIELD_BOTTOM - SEAT_Y0) / STEP_Y) + 1;
 const GRID_X0 = (SEAT_X0 + SEAT_X1) / 2 - ((COLS - 1) * STEP_X) / 2;
 const GRID_Y0 = FIELD_BOTTOM - (ROWS - 1) * STEP_Y;
 
-type Seat = { x: number; y: number; r: number; gc: number; gr: number };
+type Seat = { x: number; y: number; r: number; rs: number; gc: number; gr: number };
 const SEATS: Seat[] = (() => {
   const out: Seat[] = [];
   for (let gr = 0; gr < ROWS; gr++) {
@@ -277,11 +306,13 @@ const SEATS: Seat[] = (() => {
       const i = gr * COLS + gc;
       const x = GRID_X0 + gc * STEP_X + (hash(i, 11) - 0.5) * STEP_X * 0.9;
       const y = GRID_Y0 + gr * STEP_Y + (hash(i, 12) - 0.5) * STEP_Y * 0.9;
-      if (y > FIELD_BOTTOM) continue;
+      // the bottom edge: undulating, and feathered over the rows above it
+      const fe = feather((edgeAt(x) - y) / STEP_Y);
+      if (hash(i, 71) >= fe) continue;
       const d = Math.hypot(x - STRUCT_CX, y);
       const edge = clearingAt(Math.atan2(y, x - STRUCT_CX)) * (1 + (hash(i, 60) - 0.5) * 0.13);
       if (d < edge) continue;
-      out.push({ x, y, r: 0.75 + 0.5 * hash(i, 13), gc, gr });
+      out.push({ x, y, r: 0.75 + 0.5 * hash(i, 13), rs: 0.7 + 0.3 * fe, gc, gr });
     }
   }
   return out;
@@ -404,12 +435,20 @@ const targetRing = (x: number, y: number, j: number) => {
   return near[Math.min(near.length - 1, Math.floor(hash(j, 73) * near.length))];
 };
 
-// The bombardment: draw 10, hold 4, fade 8. Steady state at cut 1's rate.
+// The bombardment: draw 10, hold 4, fade 8. It opens at cut 1's steady rate of
+// 2.5 launches a frame, and once the conversion is complete (f68) it eases down
+// to 1.4 over 24 frames and holds there for the rest of the piece. At 2.5 an
+// accent structure inside an accent field is buried under its own incoming
+// fire; at 1.4 the threads still read as constant bombardment and the structure
+// gets air. The ease is on the rate, not on any element's opacity.
 const T_DRAW = 10;
 const T_HOLD = 4;
 const T_FADE = 8;
 const T_LIFE = T_DRAW + T_HOLD + T_FADE;
-const LAUNCH_RATE = 2.5;
+const RATE_OPEN = 2.5;
+const RATE_HELD = 1.4;
+const RATE_F0 = 68; // the frame the last element finishes converting
+const RATE_RAMP = 24;
 
 // How long an element takes to turn from ink to accent, and the gate on the
 // spread: a ring can only be reached once the conversion next to it has
@@ -442,7 +481,9 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
   const frame = useCurrentFrame();
 
   // -- idle traffic ----------------------------------------------------------
-  // Capped at 180 threads whatever the seat count, at 0.4, so it stays ambient.
+  // Capped at 180 threads whatever the seat count, at 0.3, so it stays ambient:
+  // this piece ends with an accent structure standing in an accent field, and
+  // the traffic between them has to sit below both.
   const lit = new Float32Array(NSEAT);
   type Th = { key: string; x1: number; y1: number; x2: number; y2: number; op: number; head: number };
   const threadEls: Th[] = [];
@@ -472,7 +513,7 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
       y1: sa.y,
       x2: sa.x + (sb.x - sa.x) * dn,
       y2: sa.y + (sb.y - sa.y) * dn,
-      op: 0.4 * fade,
+      op: 0.3 * fade,
       head: dn,
     });
   }
@@ -490,7 +531,7 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
   let acc = 0;
   let launch = 0;
   for (let f = -T_LIFE; f <= frame; f++) {
-    acc += LAUNCH_RATE;
+    acc += RATE_OPEN + (RATE_HELD - RATE_OPEN) * smooth((f - RATE_F0) / RATE_RAMP);
     while (acc >= 1) {
       acc -= 1;
       const j = launch++;
@@ -633,8 +674,8 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
             {/* the field */}
             {SEATS.map((s, i) => {
               const l = lit[i];
-              const r = dotRadius * s.r * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
-              const op = OP_UNREAD + (OP_READ + 0.1 - OP_UNREAD) * l;
+              const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
+              const op = OP_UNREAD_DOT + (OP_READ + 0.1 - OP_UNREAD_DOT) * l;
               return <circle key={i} cx={s.x} cy={s.y} r={r} fill={accent} opacity={op} />;
             })}
 
@@ -655,8 +696,9 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
               </g>
             ))}
 
-            {/* the infrastructure: ink, crossfading to accent where the
-                bombardment has got inside it */}
+            {/* the infrastructure: ink at OP_READ, crossfading to accent at
+                the top of the ladder — once it is converted it is the subject,
+                and it has to hold its own against an accent field */}
             {STRUCTURE.map((e, ei) => {
               const p = conv[ei];
               if (e.kind === "ring") {
@@ -680,7 +722,7 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
                       fill="none"
                       stroke={accent}
                       strokeWidth={3.5}
-                      opacity={op * p}
+                      opacity={p}
                     />
                   </g>
                 );
@@ -714,7 +756,7 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
                     stroke={accent}
                     strokeWidth={3}
                     strokeLinecap="round"
-                    opacity={OP_READ * p}
+                    opacity={p}
                   />
                 </g>
               );

@@ -1,18 +1,22 @@
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
+  ACCENT,
   DOT_RADIUS,
+  FEATHER_STEPS,
   FRAME_H,
   FRAME_W,
   GridBackground,
   OP_READ,
-  OP_UNREAD,
+  OP_UNREAD_DOT,
   Vignette,
+  WOBBLE_R,
   breath,
   clamp,
   hash,
   runCamera,
   sway,
+  wobble,
   worldTransform,
 } from "./fieldShared";
 
@@ -54,7 +58,7 @@ export const DURATION = 272;
 //     edge — off the top, sides AND bottom, no bare
 //     band anywhere; idle traffic starts as they
 //     seat                                          — "of thousands"    f121-153
-//   the crowd reads OP_UNREAD -> OP_READ as one
+//   the crowd reads OP_UNREAD_DOT -> OP_READ as one
 //     slow wave spreading out from the structure    — "extremely
 //                                                     superhuman
 //                                                     hackers"          f151-188
@@ -62,9 +66,9 @@ export const DURATION = 272;
 //     nearest ring, one every ~3 frames; the ring
 //     clicks ink-bright from the thread's arrival,
 //     and the whole crowd recedes OP_READ ->
-//     OP_UNREAD over 14 frames so the fire reads    — "constantly"      f196-210
+//     OP_UNREAD_DOT over 14 frames so the fire reads    — "constantly"      f196-210
 //   the launch rate ramps to ~2.5 a frame           — "bombarding"      f214-228
-//   steady state: field OP_UNREAD with the
+//   steady state: field OP_UNREAD_DOT with the
 //     launching seats at OP_READ + 0.1, structure
 //     OP_READ under constant fire, held to the tail — "it, right?"      f242-272
 //
@@ -72,6 +76,13 @@ export const DURATION = 272;
 // of its edges over 14 frames, a new one every 7 frames, two alive at once, for
 // the whole piece. Not a gesture; it is what a running thing looks like.
 // No third camera move: the bombardment carries the last third on its own.
+//
+// consistency pass: accent #E0643A, feathered crowd edges
+// sleek pass: OP_UNREAD_DOT (0.58) is the crowd's unread rung on every accent
+// dot — the three waves as they land, the field, and the crowd after the recede
+// — because #E0643A at 0.45 over the grid read as rust-brown dirt rather than as
+// a colour. Nothing else moved: the ladder's other rungs, the gestures, the beat
+// frames and the two camera keys are unchanged.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -111,7 +122,7 @@ export type Props = z.infer<typeof schema>;
 
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
-  accent: "#48D9FF",
+  accent: ACCENT,
   backgroundBase: "#232323",
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
@@ -284,6 +295,29 @@ const WAVE_K = [0, 1.8, 1.15, K_FINAL]; // the zoom each wave arrives at
 const W1_N = 24; // "tens"
 const W2_N = 720; // "hundreds"
 
+// ---------------------------------------------------------------------------
+// The wave boundaries. The field's outer extent is never seen — it bleeds off
+// all four edges at the final camera — but waves 1 and 2 ARE seen arriving, and
+// a ring of arrivals whose outer edge is a plain distance threshold lands as a
+// disc someone drew with a compass. So each wave's boundary undulates (wobble,
+// scaled down where the boundary is closer in than the undulation is deep) and
+// is feathered across FEATHER_STEPS.
+//
+// It is done by re-measuring each seat's distance rather than by deleting: a
+// seat's key is its dRel pushed out by the wobble and jittered across the
+// feather by its own hash, with the jitter drawn from `feather`'s own profile
+// (invSmooth is smoothstep inverted, so the jitter has exactly the
+// distribution "in if hash(i, k) < feather(d)"). Ranking on that key and taking
+// the first N is that same soft boundary with N preserved — a seat near it goes
+// to the neighbouring wave instead of vanishing. No seat is lost: 9,920 in, 24
+// on "tens", 720 on "hundreds", the rest on "thousands".
+// ---------------------------------------------------------------------------
+const invSmooth = (u: number) => 0.5 - Math.sin(Math.asin(1 - 2 * clamp01(u)) / 3);
+const stepOn = (dx: number, dy: number) => {
+  const L = Math.hypot(dx, dy) || 1;
+  return L / Math.hypot(dx / STEP_X, dy / STEP_Y);
+};
+
 const SEATS: Seat[] = (() => {
   const raw: {
     x: number;
@@ -293,6 +327,7 @@ const SEATS: Seat[] = (() => {
     gr: number;
     d: number;
     dRel: number;
+    hi: number;
   }[] = [];
   for (let gr = 0; gr < ROWS; gr++) {
     for (let gc = 0; gc < COLS; gc++) {
@@ -304,14 +339,33 @@ const SEATS: Seat[] = (() => {
       // distance measured from the clearing's own edge, not from a circle
       const edge = clearingAt(Math.atan2(y, x - STRUCT_CX)) * (1 + (hash(i, 60) - 0.5) * 0.13);
       if (d < edge) continue;
-      raw.push({ x, y, r: 0.75 + 0.5 * hash(i, 13), gc, gr, d, dRel: d - edge });
+      raw.push({ x, y, r: 0.75 + 0.5 * hash(i, 13), gc, gr, d, dRel: d - edge, hi: i });
     }
   }
   const order = raw.map((_, i) => i).sort((a, b) => raw[a].dRel - raw[b].dRel);
+  // where each boundary nominally sits, before it is softened
+  const D1 = raw[order[W1_N - 1]].dRel;
+  const D2 = raw[order[W1_N + W2_N - 1]].dRel;
+  const waveKey = (n: number, seed: number, nominal: number, hk: number) => {
+    const s = raw[n];
+    const st = stepOn(s.x - STRUCT_CX, s.y);
+    const along = Math.atan2(s.y, s.x - STRUCT_CX) * WOBBLE_R;
+    // an undulation cannot be deeper than the boundary's own stand-off, or the
+    // "tens" break into lobes instead of reading as a soft ring
+    const amp = Math.min(1, nominal / (2 * STEP_Y));
+    const jitter = FEATHER_STEPS * invSmooth(hash(s.hi, hk));
+    return s.dRel - (wobble(along, seed) * amp + FEATHER_STEPS / 2 - jitter) * st;
+  };
+  const k2 = raw.map((_, n) => waveKey(n, 2.9, D2, 71));
+  const k1 = raw.map((_, n) => waveKey(n, 1.3, D1, 72));
   const wave = new Int8Array(raw.length).fill(3);
-  // 24 nearest are "tens"; the next 720 are "hundreds" — enough seats that they
-  // land as a thick disc around the structure and not a two-seat annulus.
-  for (let n = 0; n < order.length; n++) wave[order[n]] = n < W1_N ? 1 : n < W1_N + W2_N ? 2 : 3;
+  const in12 = raw.map((_, n) => n).sort((a, b) => k2[a] - k2[b]).slice(0, W1_N + W2_N);
+  in12.sort((a, b) => k1[a] - k1[b]);
+  // the nearest are "tens"; the next 720 are "hundreds" — enough seats that
+  // they land as a thick disc around the structure and not a two-seat annulus.
+  in12.forEach((n, rank) => {
+    wave[n] = rank < W1_N ? 1 : 2;
+  });
 
   let w3min = Infinity;
   let w3max = 0;
@@ -442,7 +496,7 @@ const ConstantlyBombarding: React.FC<Props> = ({
     [-150, DREL_MAX + 170],
     clamp,
   );
-  // From the first launch the crowd goes back down to OP_UNREAD as one field —
+  // From the first launch the crowd goes back down to OP_UNREAD_DOT as one field —
   // no wave, no stagger. It is the light going down on the crowd so the fire
   // over it can be seen; a seat with a thread on it still brightens.
   const recede = smooth((frame - (beats.constantly - 3)) / 14);
@@ -466,7 +520,7 @@ const ConstantlyBombarding: React.FC<Props> = ({
     const L = Math.hypot(dx, dy) || 1;
     const bow = Math.sin(Math.PI * e) * s.arc;
     const read = smooth((readR - s.dRel) / 150);
-    const level = OP_UNREAD + (OP_READ - OP_UNREAD) * read * (1 - recede);
+    const level = OP_UNREAD_DOT + (OP_READ - OP_UNREAD_DOT) * read * (1 - recede);
     return {
       x: px + (-dy / L) * bow,
       y: py + (dx / L) * bow,

@@ -11,8 +11,13 @@ export const FRAME_W = 1080;
 export const FRAME_H = 1920;
 export const BG_OVERSIZE = 1.8;
 
+// Mono plus one accent. Every piece takes it as a prop and defaults to this, so
+// the three cuts cannot drift apart in the edit.
+export const ACCENT = "#E0643A";
+
 // The opacity ladder. Every agent, ash line, floor or mark sits on one rung.
 export const OP_UNREAD = 0.45; // present, not the subject
+export const OP_UNREAD_DOT = 0.58; // the unread rung for accent dots — orange needs more than 0.45 over the grid
 export const OP_READ = 0.9; // the subject; +0.1 when a thread is on it
 export const OP_RECEDE = 0.3; // was the subject, is not any more
 export const OP_DARK = 0.16; // wiped, or unlooked-at
@@ -30,6 +35,36 @@ export const hash = (i: number, k: number) => {
   const s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
   return s - Math.floor(s);
 };
+
+export const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+export const smoothstep = (v: number) => {
+  const x = clamp01(v);
+  return x * x * (3 - 2 * x);
+};
+
+// ---------------------------------------------------------------------------
+// A crowd's edge. A population of agents never ends on a ruled line — that
+// reads as a box of agents someone drew — so every crowd boundary in these
+// pieces is (a) undulating and (b) feathered: density falls off toward it and
+// the dots that do survive out there are smaller.
+//
+// `feather(insideSteps)` takes a seat's signed distance to the crowd's nominal
+// boundary, measured in grid steps (negative = outside), and returns 0..1: the
+// chance the seat exists, and the scale of its radius. A seat exists if
+// hash(i, 71) < feather(d); its radius is scaled by 0.7 + 0.3 * feather(d).
+//
+// `wobble(along, seed)` offsets that nominal boundary, in steps, as a function
+// of position ALONG it (world px — x for a straight edge, theta * 100 for a
+// closed one, which keeps both harmonics whole around the loop so there is no
+// seam at theta = pi).
+// ---------------------------------------------------------------------------
+export const FEATHER_STEPS = 4;
+export const feather = (insideSteps: number, width: number = FEATHER_STEPS) =>
+  clamp01(smoothstep(insideSteps / width));
+export const wobble = (along: number, seed: number) =>
+  1.2 * Math.sin(along * 0.05 + seed) + 0.7 * Math.sin(along * 0.13 + seed * 2.1);
+// For a closed boundary: the `along` that makes wobble periodic in theta.
+export const WOBBLE_R = 100;
 
 // The camera: authored keys, followed by a damped second-order tracker so a
 // move is a short ramp that settles ahead of its word. Same constants in every
