@@ -9,6 +9,7 @@ import {
   FRAME_W,
   GridBackground,
   OP_READ,
+  OP_READ_DOT,
   OP_UNREAD_DOT,
   Vignette,
   breath,
@@ -90,6 +91,7 @@ export const DURATION = 270;
 // background pass: BG_DIM 0.42
 // dot pass: 1px white stroke on every agent dot
 // colour pass 2: accent #FFC543, dot stroke 1.5px
+// solid pass: OP_UNREAD_DOT 0.86, OP_READ_DOT 1.0
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -104,6 +106,7 @@ export const schema = z.object({
   shadowBlur: z.number(),
   shadowOpacity: z.number(),
   dotRadius: z.number(),
+  dotUnread: z.number(), // the unread rung for accent dots
   idleThreadCount: z.number(), // capped, never scaled with the seat count
   beats: z.object({
     maybeMore: z.number(), // "maybe more"
@@ -141,6 +144,7 @@ export const defaultProps: Props = schema.parse({
   shadowBlur: 9,
   shadowOpacity: 0.22,
   dotRadius: DOT_RADIUS,
+  dotUnread: OP_UNREAD_DOT,
   idleThreadCount: 180,
   beats: {
     maybeMore: 0,
@@ -481,6 +485,7 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
   shadowBlur,
   shadowOpacity,
   dotRadius,
+  dotUnread,
   idleThreadCount,
   beats,
 }) => {
@@ -683,7 +688,7 @@ const MoreThanAllOfHistory: React.FC<Props> = ({
             {SEATS.map((s, i) => {
               const l = lit[i];
               const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
-              const op = OP_UNREAD_DOT + (OP_READ + 0.1 - OP_UNREAD_DOT) * l;
+              const op = dotUnread + (OP_READ_DOT - dotUnread) * l;
               return (
                 <circle
                   key={i}

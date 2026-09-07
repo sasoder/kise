@@ -8,6 +8,7 @@ import {
   GridBackground,
   OP_DARK,
   OP_READ,
+  OP_READ_DOT,
   OP_UNREAD,
   OP_UNREAD_DOT,
   Vignette,
@@ -83,6 +84,7 @@ export const DURATION = 166;
 // background pass: BG_DIM 0.42
 // dot pass: 1px white stroke on every agent dot
 // colour pass 2: accent #FFC543, dot stroke 1.5px
+// solid pass: OP_UNREAD_DOT 0.86, OP_READ_DOT 1.0
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -97,6 +99,7 @@ export const schema = z.object({
   shadowBlur: z.number(),
   shadowOpacity: z.number(),
   dotRadius: z.number(),
+  dotUnread: z.number(), // the unread rung for accent dots
   markSize: z.number(),
   idleThreadCount: z.number(),
   beats: z.object({
@@ -128,6 +131,7 @@ export const defaultProps: Props = schema.parse({
   shadowBlur: 9,
   shadowOpacity: 0.22,
   dotRadius: DOT_RADIUS,
+  dotUnread: OP_UNREAD_DOT,
   markSize: 108,
   idleThreadCount: idleThreads(149), // 149 seats alive across the two fleets
   beats: {
@@ -442,6 +446,7 @@ const RogueInstancesInterfere: React.FC<Props> = ({
   shadowBlur,
   shadowOpacity,
   dotRadius,
+  dotUnread,
   markSize,
   idleThreadCount,
   beats,
@@ -485,7 +490,7 @@ const RogueInstancesInterfere: React.FC<Props> = ({
       x,
       y,
       lifted: clamp01(lin1),
-      base: OP_UNREAD_DOT + (OP_READ - OP_UNREAD_DOT) * smooth(lin1),
+      base: dotUnread + (OP_READ_DOT - dotUnread) * smooth(lin1),
     };
   });
 
@@ -493,7 +498,7 @@ const RogueInstancesInterfere: React.FC<Props> = ({
   const dots = SEATS.map((s, i) => {
     const j = ROGUE_OF[i];
     if (j >= 0) return { x: rogueState[j].x, y: rogueState[j].y, base: rogueState[j].base };
-    return { x: s.x, y: s.y, base: OP_UNREAD_DOT };
+    return { x: s.x, y: s.y, base: dotUnread };
   });
 
   // -- idle traffic inside each fleet ----------------------------------------
@@ -785,7 +790,7 @@ const RogueInstancesInterfere: React.FC<Props> = ({
               const l = Math.max(lit[i], j >= 0 ? provArrived[j] : 0);
               const s = SEATS[i];
               const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
-              const op = d.base + (OP_READ + 0.1 - d.base) * l;
+              const op = d.base + (OP_READ_DOT - d.base) * l;
               return (
                 <circle
                   key={i}

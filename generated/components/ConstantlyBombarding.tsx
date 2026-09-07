@@ -10,6 +10,7 @@ import {
   FRAME_W,
   GridBackground,
   OP_READ,
+  OP_READ_DOT,
   OP_UNREAD_DOT,
   Vignette,
   WOBBLE_R,
@@ -89,6 +90,7 @@ export const DURATION = 272;
 // background pass: BG_DIM 0.42
 // dot pass: 1px white stroke on every agent dot
 // colour pass 2: accent #FFC543, dot stroke 1.5px
+// solid pass: OP_UNREAD_DOT 0.86, OP_READ_DOT 1.0
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -103,6 +105,7 @@ export const schema = z.object({
   shadowBlur: z.number(),
   shadowOpacity: z.number(),
   dotRadius: z.number(),
+  dotUnread: z.number(), // the unread rung for accent dots
   idleThreadCount: z.number(), // capped, never scaled with the seat count
   beats: z.object({
     training: z.number(), // "training and"
@@ -138,6 +141,7 @@ export const defaultProps: Props = schema.parse({
   shadowBlur: 9,
   shadowOpacity: 0.22,
   dotRadius: DOT_RADIUS,
+  dotUnread: OP_UNREAD_DOT,
   idleThreadCount: 180,
   beats: {
     training: 0,
@@ -477,6 +481,7 @@ const ConstantlyBombarding: React.FC<Props> = ({
   shadowBlur,
   shadowOpacity,
   dotRadius,
+  dotUnread,
   idleThreadCount,
   beats,
 }) => {
@@ -526,7 +531,7 @@ const ConstantlyBombarding: React.FC<Props> = ({
     const L = Math.hypot(dx, dy) || 1;
     const bow = Math.sin(Math.PI * e) * s.arc;
     const read = smooth((readR - s.dRel) / 150);
-    const level = OP_UNREAD_DOT + (OP_READ - OP_UNREAD_DOT) * read * (1 - recede);
+    const level = dotUnread + (OP_READ_DOT - dotUnread) * read * (1 - recede);
     return {
       x: px + (-dy / L) * bow,
       y: py + (dx / L) * bow,
@@ -691,7 +696,7 @@ const ConstantlyBombarding: React.FC<Props> = ({
               const s = SEATS[i];
               const r =
                 dotRadius * s.r * breath(frame, hash(i, 9)) * (1 + 0.35 * l) * (1 + 0.3 * d.fly);
-              const op = d.base + (OP_READ + 0.1 - d.base) * l;
+              const op = d.base + (OP_READ_DOT - d.base) * l;
               return (
                 <circle
                   key={i}

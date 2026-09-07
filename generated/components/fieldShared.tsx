@@ -17,7 +17,19 @@ export const ACCENT = "#FFC543";
 
 // The opacity ladder. Every agent, ash line, floor or mark sits on one rung.
 export const OP_UNREAD = 0.45; // present, not the subject
-export const OP_UNREAD_DOT = 0.58; // the unread rung for accent dots — the accent needs more than 0.45 over the grid
+// The dot rungs. An agent dot is the only thing in these pieces that carries
+// the accent as a FILL, so it is the only thing whose rung has to be read as a
+// colour rather than as a level. Solid pass, on the director's note that the
+// yellow looked half transparent: the lit rung is 1.0 — a lit dot is the pure
+// accent, nothing of the grid left in it — and the unread rung was swept at
+// 0.78 / 0.86 / 0.94 on full-res stills. Measured on cut 1 f156 against the
+// pure accent (#FFC543, C* 70.0): 0.78 composites to #DCAE49 (C* 56.8, 81% of
+// the accent — still the old dusty olive), 0.86 to #E9B746 (C* 62.3, 89%) and
+// 0.94 to #F6BF45 (C* 66.5, 95%). 0.94 is the most saturated but it collapses
+// the ladder: unread -> read is only dL* 1.7 and the f156 and f200 crops are
+// indistinguishable. 0.86 keeps a dL* 4.2 step and still reads as solid yellow.
+export const OP_UNREAD_DOT = 0.86; // the unread rung for accent dots
+export const OP_READ_DOT = 1.0; // a lit agent dot is solid
 export const OP_READ = 0.9; // the subject; +0.1 when a thread is on it
 export const OP_RECEDE = 0.3; // was the subject, is not any more
 export const OP_DARK = 0.16; // wiped, or unlooked-at
