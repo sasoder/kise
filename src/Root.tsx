@@ -1,10 +1,10 @@
 import {Composition} from 'remotion';
-import MetrRedwoodScope, {
+import ScopeOfTheReport, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/MetrRedwoodScope';
+} from '../generated/components/ScopeOfTheReport';
 
 // the scope box — "the investigation from METR and Redwood was limited in scope
 // to how the second civilization of AIs breached Hugging Face, but its scope did
@@ -14,8 +14,8 @@ export const RemotionRoot = () => {
     <>
       {/* 0:23.339 -> 0:37.100 (+16 frame tail) */}
       <Composition
-        id="MetrRedwoodScope"
-        component={MetrRedwoodScope}
+        id="ScopeOfTheReport"
+        component={ScopeOfTheReport}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
