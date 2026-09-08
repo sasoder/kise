@@ -53,28 +53,34 @@ export const DURATION = 237;
 // accent threads that leave the bus's two end points.
 //
 // racks pass: six rings -> four server-rack glyphs on a bus (user note 2026-09-08: "make the data center more clear")
+// calm-open pass: nineteen element draws in the first 60 frames -> four moves (user note 2026-09-08: "feels super rushed")
 //
 // There is no crowd in this piece. The field is the grid, the vignette, the
 // global shadow and the per-icon shadow on every rack, the bus, the stubs, the
 // packets and the marks.
 //
 // Every gesture is one word. Nothing else happens.
-//   the plan: the four racks' outer outlines, the
-//     bus and the four stubs draw DASHED (9/7, ink
-//     at OP_UNREAD), head-led, racks 1-4 (each one
-//     closed path from its bottom-left corner,
-//     clockwise), then the bus, then the stubs      — "even at the data
-//                                                     center level"      f0-30
-//   the ink: each rack FILLS SOLID from the baseline
-//     upward behind a 6-frame clip wipe, racks 1-4
-//     opening at f37/41/45/49, the wipe revealing
-//     the slots and the LEDs and swallowing the
-//     rack's own dashed outline as it rises; then
-//     the bus draws solid head-led with the white
-//     tip f50-58 left to right and the four stubs
-//     draw solid f52-60; 4-frame click-bright on
-//     completion at f60, then OP_READ               — "like build a data
-//                                                     center"            f37-60
+//   the plan FADES IN as one drawing: the complete
+//     dashed geometry — four rack outlines, the bus,
+//     the four stubs (9/7, ink at OP_UNREAD) — is
+//     already there and its opacity goes 0 ->
+//     OP_UNREAD, ease-out; no head-led draw, no
+//     stagger, no tips; then it holds still (sway
+//     only) to f38                                  — "even at the data
+//                                                     center level"      f0-14
+//   ONE WIPE raises the four racks: a single clip
+//     rectangle rises from the baseline past the
+//     rack tops across the whole row, ease-out,
+//     filling all four racks solid at once with
+//     their slots and LEDs and swallowing their
+//     dashed outlines as it passes                  — "like build a data
+//                                                     center"            f38-52
+//   the bus draws solid head-led with the white tip,
+//     left to right, the dashed bus disappearing
+//     under the head                                — (same beat)        f50-58
+//   the four stubs drop TOGETHER, solid, from the
+//     bus down to the rack tops; 4-frame click-
+//     bright on completion at f60, then OP_READ     — (same beat)        f56-60
 //   two accent threads leave the BUS'S TWO END
 //     POINTS straight up, left first, right four
 //     frames later, each ending at an empty spot    — "get rented out to" f89-107
@@ -269,6 +275,9 @@ const BUS_Y = -78;
 const RACK_X = RACK_DX.map((dx) => STRUCT_CX + dx);
 const BUS_X0 = RACK_X[0];
 const BUS_X1 = RACK_X[RACK_X.length - 1];
+// the row's outer edges: the one wipe crosses all four racks at once
+const ROW_L = RACK_X[0] - RACK_HW;
+const ROW_R = RACK_X[RACK_X.length - 1] + RACK_HW;
 
 // The glyph, verbatim from the test sheet; drawn under translate(cx, BASELINE).
 const RACK_D = [
@@ -294,27 +303,25 @@ const STRUCTURE: Elem[] = [
   { kind: "stub", i: 2 },
   { kind: "stub", i: 3 },
 ];
-const NELEM = STRUCTURE.length; // 9
+// The plan is NOT drawn element by element any more. It is one complete dashed
+// drawing — all four rack outlines, the bus and the four stubs, already there —
+// and it FADES UP as one thing over f0-14, then holds still to f38. See the
+// calm-open note in the header.
+const PLAN_FADE_DUR = 14;
 
-// The plan: nine elements over 30 frames dashed (off 3, dur 6 -> the last
-// finishes at f30, as it did with thirteen at off 2).
-const PLAN_DUR = 6;
-const PLAN_OFF = (30 - PLAN_DUR) / (NELEM - 1); // 3
-
-// The ink is no longer one draw over one order: a rack FILLS and a line DRAWS.
-// The four racks fill from the baseline up over 6 frames each, opening 4 frames
-// apart from `likeBuild`; the bus draws head-led from +13 to +21; the four
-// stubs draw 3 frames each from +15, the last finishing at +23, so the
+// The ink is two different things: the racks FILL and the lines DRAW. All four
+// racks fill from the baseline up behind ONE clip wipe that rises across the
+// whole row from +1 to +15 (f38-52); the bus draws head-led from +13 to +21
+// (f50-58); the four stubs draw together from +19 to +23 (f56-60), so the
 // structure still completes at f60 and the click-bright is where it was.
-const FILL_DUR = 6;
-const FILL_OFF = 4;
+const FILL_T0 = 1;
+const FILL_DUR = 14;
 const WIPE_OVER = 6; // the wipe runs 6px past the rack top, so no dash survives
 const BUS_INK_T0 = 13;
 const BUS_INK_DUR = 8;
-const STUB_INK_T0 = 15;
-const STUB_INK_OFF = 5 / 3;
-const STUB_INK_DUR = 3;
-const INK_SPAN = STUB_INK_T0 + 3 * STUB_INK_OFF + STUB_INK_DUR; // 23
+const STUB_INK_T0 = 19;
+const STUB_INK_DUR = 4;
+const INK_SPAN = STUB_INK_T0 + STUB_INK_DUR; // 23
 
 const DASH = "9 7";
 const DASH_PERIOD = 16;
@@ -569,34 +576,32 @@ const TenTimesTheCost: React.FC<Props> = ({
   const frame = useCurrentFrame();
 
   // -- the plan and the ink --------------------------------------------------
-  // The plan is one head-led draw over the nine elements in build order. The
-  // ink is two different things: a rack FILLS from the baseline up behind a
-  // clip wipe, and the bus and the stubs DRAW head-led. Either way the dashed
-  // plan is only ever shown where the ink has not reached, so it disappears
-  // under the ink rather than showing through it.
-  const planDrawn = STRUCTURE.map((_, i) =>
-    interpolate(
-      frame,
-      [beats.evenAt + i * PLAN_OFF, beats.evenAt + i * PLAN_OFF + PLAN_DUR],
-      [0, 1],
-      { ...clamp, easing: Easing.out(Easing.cubic) },
-    ),
+  // The plan is the complete dashed drawing, faded up as ONE thing over f0-14.
+  // The ink is two different things: the racks FILL from the baseline up behind
+  // one clip wipe that crosses the whole row, and the bus and the stubs DRAW
+  // head-led. Either way the dashed plan is only ever shown where the ink has
+  // not reached, so it disappears under the ink rather than showing through it.
+  const planFade = interpolate(
+    frame,
+    [beats.evenAt, beats.evenAt + PLAN_FADE_DUR],
+    [0, 1],
+    { ...clamp, easing: Easing.out(Easing.cubic) },
   );
-  // how far each rack's fill has risen, 0 = nothing, 1 = the whole rack
-  const rackFill = RACK_X.map((_, i) =>
-    interpolate(
-      frame,
-      [beats.likeBuild + i * FILL_OFF, beats.likeBuild + i * FILL_OFF + FILL_DUR],
-      [0, 1],
-      { ...clamp, easing: Easing.out(Easing.cubic) },
-    ),
+  // ONE wipe for the whole row: how far the ink has risen, 0 = the baseline,
+  // 1 = past every rack top.
+  const wipe = interpolate(
+    frame,
+    [beats.likeBuild + FILL_T0, beats.likeBuild + FILL_T0 + FILL_DUR],
+    [0, 1],
+    { ...clamp, easing: Easing.out(Easing.cubic) },
   );
+  const wipeTop = BASELINE - (RACK_H + WIPE_OVER) * wipe;
   // the head-led solid draws, one number per element (0 for the racks: their
-  // ink is a fill, and the plan is cleared by the wipe instead)
+  // ink is a fill, and the plan is cleared by the wipe instead). The four stubs
+  // share one number: they drop together.
   const inkDrawn = STRUCTURE.map((e) => {
     if (e.kind === "rack") return 0;
-    const t0 =
-      beats.likeBuild + (e.kind === "bus" ? BUS_INK_T0 : STUB_INK_T0 + e.i * STUB_INK_OFF);
+    const t0 = beats.likeBuild + (e.kind === "bus" ? BUS_INK_T0 : STUB_INK_T0);
     const dur = e.kind === "bus" ? BUS_INK_DUR : STUB_INK_DUR;
     return interpolate(frame, [t0, t0 + dur], [0, 1], {
       ...clamp,
@@ -740,50 +745,42 @@ const TenTimesTheCost: React.FC<Props> = ({
               );
             })}
 
-            {/* the wipes: one per rack, a rect rising from the baseline. The
-                fill is clipped to what is inside it; the rack's dashed outline
-                is clipped to what is still OUTSIDE it, so the plan is swallowed
-                exactly as the ink rises past it. */}
+            {/* the wipe: ONE rect rising from the baseline across the whole
+                row. The fills are clipped to what is inside it; the racks'
+                dashed outlines are clipped to what is still OUTSIDE it, so the
+                plan is swallowed exactly as the ink rises past it. */}
             <defs>
-              {RACK_X.map((cx, i) => {
-                const top = BASELINE - (RACK_H + WIPE_OVER) * rackFill[i];
-                return (
-                  <g key={`cd${i}`}>
-                    <clipPath id={`tc-fill-${i}`}>
-                      <rect
-                        x={cx - RACK_HW - 10}
-                        y={top}
-                        width={2 * RACK_HW + 20}
-                        height={BASELINE - top + 10}
-                      />
-                    </clipPath>
-                    <clipPath id={`tc-plan-${i}`}>
-                      <rect
-                        x={cx - RACK_HW - 20}
-                        y={RACK_TOP - 40}
-                        width={2 * RACK_HW + 40}
-                        height={Math.max(0, top - (RACK_TOP - 40))}
-                      />
-                    </clipPath>
-                  </g>
-                );
-              })}
+              <clipPath id="tc-fill">
+                <rect
+                  x={ROW_L - 10}
+                  y={wipeTop}
+                  width={ROW_R - ROW_L + 20}
+                  height={BASELINE - wipeTop + 10}
+                />
+              </clipPath>
+              <clipPath id="tc-plan">
+                <rect
+                  x={ROW_L - 20}
+                  y={RACK_TOP - 40}
+                  width={ROW_R - ROW_L + 40}
+                  height={Math.max(0, wipeTop - (RACK_TOP - 40))}
+                />
+              </clipPath>
             </defs>
 
-            {/* the plan: the nine elements, dashed, shown only where the ink
-                has not reached */}
+            {/* the plan: the complete dashed drawing, faded up as one thing,
+                shown only where the ink has not reached */}
             {STRUCTURE.map((e, ei) => {
+              if (planFade <= 0) return null;
               const u0 = inkDrawn[ei];
-              const u1 = planDrawn[ei];
-              if (u1 - u0 <= 1e-3) return null;
-              if (e.kind === "rack" && rackFill[e.i] >= 1) return null;
+              if (1 - u0 <= 1e-3) return null;
+              if (e.kind === "rack" && wipe >= 1) return null;
               const g = GEO[ei];
-              const d = g.path(u0, u1);
+              const d = g.path(u0, 1);
               if (!d) return null;
-              const head = g.at(u1);
               return (
                 <g key={`pl${ei}`} style={{ filter: icon }}>
-                  <g clipPath={e.kind === "rack" ? `url(#tc-plan-${e.i})` : undefined}>
+                  <g clipPath={e.kind === "rack" ? "url(#tc-plan)" : undefined}>
                     <path
                       d={d}
                       fill="none"
@@ -792,39 +789,36 @@ const TenTimesTheCost: React.FC<Props> = ({
                       strokeLinecap="butt"
                       strokeDasharray={DASH}
                       strokeDashoffset={(u0 * g.len) % DASH_PERIOD}
-                      opacity={OP_UNREAD}
+                      opacity={OP_UNREAD * planFade}
                     />
                   </g>
-                  {u1 < 1 ? (
-                    <circle cx={head.x} cy={head.y} r={4} fill={ink} opacity={OP_UNREAD + 0.3} />
-                  ) : null}
                 </g>
               );
             })}
 
-            {/* the ink, part one: each rack fills solid from the baseline up,
-                the slots and the LEDs coming with it */}
-            {RACK_X.map((cx, i) =>
-              rackFill[i] <= 0 ? null : (
-                <g key={`rk${i}`} style={{ filter: icon }}>
-                  <g clipPath={`url(#tc-fill-${i})`}>
-                    <g transform={`translate(${cx} ${BASELINE})`}>
-                      <path d={RACK_D} fill={ink} fillRule="evenodd" opacity={inkOp} />
-                      {LED_DY.map((ly) => (
-                        <circle
-                          key={`l${ly}`}
-                          cx={LED_DX}
-                          cy={ly}
-                          r={LED_R}
-                          fill={ink}
-                          opacity={inkOp}
-                        />
-                      ))}
+            {/* the ink, part one: the four racks fill solid from the baseline
+                up behind that one wipe, the slots and the LEDs coming with it */}
+            {wipe <= 0
+              ? null
+              : RACK_X.map((cx, i) => (
+                  <g key={`rk${i}`} style={{ filter: icon }}>
+                    <g clipPath="url(#tc-fill)">
+                      <g transform={`translate(${cx} ${BASELINE})`}>
+                        <path d={RACK_D} fill={ink} fillRule="evenodd" opacity={inkOp} />
+                        {LED_DY.map((ly) => (
+                          <circle
+                            key={`l${ly}`}
+                            cx={LED_DX}
+                            cy={ly}
+                            r={LED_R}
+                            fill={ink}
+                            opacity={inkOp}
+                          />
+                        ))}
+                      </g>
                     </g>
                   </g>
-                </g>
-              ),
-            )}
+                ))}
 
             {/* the ink, part two: the bus and the stubs draw solid, head-led */}
             {STRUCTURE.map((e, ei) => {
