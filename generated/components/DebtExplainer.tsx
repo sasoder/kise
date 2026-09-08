@@ -27,7 +27,7 @@ import {
   sway,
   worldTransform,
 } from "./fieldShared";
-import { BILL_D, BLK_N, BLK_STEP, arcAt } from "./TwentyPercentServicing";
+import { BILL_D, arcAt } from "./TwentyPercentServicing";
 
 // Söhne, the two weights this piece needs, at module scope so a font failure
 // surfaces before a single frame is drawn. Two families rather than two weights
@@ -63,11 +63,11 @@ export const DURATION = 644;
 // arithmetic runs, and three labels say which zone is which.
 //
 // The model, in three zones stacked down one fixed frame:
-//   ZONE 1  the RATE. An ink line at y 380. It steps up a notch (36px) when he
+//   ZONE 1  the RATE. An ink line at y 480. It steps up a notch (36px) when he
 //           says 1%, four more when he says five percentage points, and leaves
 //           a dashed rung behind at every height it left, so the step is still
-//           readable after it has happened. `INTEREST RATE` on the left; the
-//           delta (+1%, +5%) rides the line's right end.
+//           readable after it has happened. `INTEREST RATE` centred under it;
+//           the delta (+1%, +5%) rides the line's right end.
 //   ZONE 2  the DEBT. Five bonds — cut 3's bill glyph, the same object the rest
 //           of the clip calls the debt — in a row centred on x 540. Under each
 //           one its COUPONS: solid ripe dots, what that bond costs in interest
@@ -76,11 +76,20 @@ export const DURATION = 644;
 //           replacement falls in from above through the rate line, carrying
 //           whatever the current rate costs. A YEAR counter ticks on each
 //           landing, so five landings read as five years.
-//   ZONE 3  the TAX REVENUE. A hundred dots, ten by ten. The dots that go to
-//           interest are LIT — ripe and 1.2x — and they fill from the bottom
-//           row up. Twenty of them at the open. The READOUT next to the block
-//           says the same number in Söhne, so the count and the percentage are
-//           the same fact twice.
+//   ZONE 3  the TAX REVENUE. A hundred dots as a WIDE BAR, twenty by five. The
+//           dots that go to interest are LIT — ripe and 1.2x — and they fill
+//           COLUMN BY COLUMN FROM THE LEFT, so the lit share reads as a bar
+//           filling left to right. Twenty of them (four columns) at the open.
+//           The READOUT sits directly under the bar and says the same number
+//           in Söhne, so the count and the percentage are the same fact twice.
+//
+// phone pass: everything centred, the hundred is a 20x5 bar filling left to
+// right, readout under the bar (user note 2026-09-08: "everything is sitting to
+// the left ... viewed on a phone"). One centred column top to bottom — rate,
+// debt, revenue — with nothing left-aligned and nothing parked at an edge, and
+// the readout pulled under the bar so the numeral and the count read as one
+// element. Timing, beats, gestures, mechanics, fonts and tones are untouched;
+// only geometry and label placement moved.
 //
 // The whole piece is the arithmetic running through those three zones:
 //   5 bonds x 4 coupons = 20 of 100. Roll them at the same rate: still 20.
@@ -90,20 +99,34 @@ export const DURATION = 644;
 //   And then the payment itself: sixty-four revenue dots fly up to the
 //   sixty-four coupons, one each.
 //
-// Layout (world px = screen px: k 1.0, cx 540, no camera move, sway only, so
-// every number below is where it lands in the render):
-//   rate line   x 100..1000 at y 380 -> 344 -> 200, stroke 3 at OP_READ; rungs
-//               at 380 and 344, dashed 9/7, stroke 3 at OP_UNREAD.
-//   bonds       88 x 96, centre y 590, pitch 112, row centred on x 540. Five:
-//               x 316..764 (ink 272..808). Eight: x 148..932 (ink 104..976).
-//   coupons     row A y 670, row B y 692, x offsets -33 -11 +11 +33, filled
+// Layout (world px = screen px: k 1.0, cx 540, cy 960, no camera move, sway
+// only, so every number below is where it lands in the render). Everything is
+// centred on x 540 and every label is text-anchor middle, except the delta,
+// which has to ride the line's right end to mean anything:
+//   rate line   x 100..980 (span centred on 540) at y 480 -> 444 -> 300, stroke
+//               3 at OP_READ; rungs at 480 and 444, dashed 9/7, stroke 3 at
+//               OP_UNREAD. `INTEREST RATE` centred, baseline 518. The delta
+//               right-aligned at x 980, baseline lineY - 14, riding the line.
+//   bonds       88 x 96, centre y 690 (glyph 642..738), pitch 112, row centred
+//               on x 540 at every count. Five: x 316..764 (ink 272..808).
+//               Eight: x 148..932 (ink 104..976). `DEBT` centred, baseline 600.
+//   coupons     row A y 770, row B y 792, x offsets -33 -11 +11 +33, filled
 //               A1..A4 then B1..B4, so 4 is one row, 5 is a row and one, 8 is
 //               two rows. They travel with their bond.
-//   the hundred x 100 + 22j, y 850 + 22i. Lit = ripe at 1.2r, unlit = deep at
-//               0.85r; lit fills bottom row up, left to right in a row.
-//   readout     the numeral 150px Dreiviertelfett, left edge x 360, baseline
-//               985; `TO INTEREST PAYMENTS` 28px Kräftig under it at 1035.
-//   labels      28px Kräftig, uppercase, 0.08em, white at 0.70.
+//   counters    centred, baseline 850, in one slot under the bonds: `YEAR n OF
+//               5` while a rollover cycle runs — the "OF 5" says "five-year
+//               basis" without a word — then `+ $2T / YEAR` from f434 on.
+//   the bar     the hundred as 20 columns x 5 rows, step 26: x 293 + 26j
+//               (j 0..19, 293..787), y 980 + 26i (i 0..4, 980..1084), base
+//               radius 7. Lit = ripe at 1.2r, unlit = deep at 0.85r; lit fills
+//               COLUMN-MAJOR FROM THE LEFT (column 0 rows 0..4, then column 1),
+//               so 20 is four columns, 25 is five, 40 is eight and 64 is twelve
+//               columns and four dots of the thirteenth. `TAX REVENUE` centred,
+//               baseline 950.
+//   readout     the numeral 150px Dreiviertelfett, centred on x 540, baseline
+//               1230, directly under the bar; `TO INTEREST PAYMENTS` 30px
+//               Kräftig centred under it at 1275. Nothing below y 1290.
+//   labels      30px Kräftig, uppercase, 0.08em, white at 0.70.
 //   draw order  grid, rungs, rate line, bonds, coupons, labels, hundred,
 //               readout, travellers. Global shadow over all of it; the per-icon
 //               shadow is on the bonds only.
@@ -123,9 +146,9 @@ export const DURATION = 644;
 //     the lesson of rolling at the same rate      — "so every five years
 //                                                   it rolls over"     f56-100
 //                                                   readout 20
-//  3. the rate LINE STEPS UP one notch, 380 -> 344,
+//  3. the rate LINE STEPS UP one notch, 480 -> 444,
 //     10-frame ease-out, and leaves a dashed rung at
-//     380. `+1%` fades in at its right end        — "rates rise ...
+//     480. `+1%` fades in at its right end        — "rates rise ...
 //                                                   one percent"       f118-128
 //                                                   readout 20
 //  4. ROLLOVER CYCLE 2, at the new rate. Bond k rolls
@@ -137,8 +160,8 @@ export const DURATION = 644;
 //                                                   basis ... goes from
 //                                                   20 to 25"          f158-289
 //                                                   readout 20 -> 25
-//  5. the line steps up FOUR MORE notches, 344 -> 200,
-//     12-frame ease-out, rung at 344, `+1%`
+//  5. the line steps up FOUR MORE notches, 444 -> 300,
+//     12-frame ease-out, rung at 444, `+1%`
 //     crossfades to `+5%`                        — "five percentage
 //                                                   points"            f312-324
 //                                                   readout 25
@@ -356,18 +379,22 @@ const WORLD_H = 1920;
 // ---------------------------------------------------------------------------
 const CAM_K = 1;
 const CAM_CX = 540;
-// director pass: the whole composition sat at screen centre ~620 with the
-// identity; cy 810 drops it 150px so the content centre lands near the house
-// y≈835 and the caption band below stays clear. World y = screen y - 150.
-const CAM_CY = 810;
+// phone pass: cy is back on the identity (960) and every constant below is a
+// SCREEN coordinate, which is the whole point — the composition was re-laid out
+// in screen px against the phone frame, so the camera should not be quietly
+// adding 150 to all of them. The drop the old cy 810 gave is now built into the
+// coordinates themselves: the column runs y 264..1290, clear of the caption
+// band from ~1450.
+const CAM_CY = 960;
 
 // -- zone 1: the rate --------------------------------------------------------
+// The span is centred: 100..980 has its midpoint on ROW_CX.
 const RATE_X0 = 100;
-const RATE_X1 = 1000;
-const RATE0 = 380; // where it opens
+const RATE_X1 = 980;
+const RATE0 = 480; // where it opens
 const NOTCH = 36; // one percentage point
-const RATE1 = RATE0 - NOTCH; // 344, after +1%
-const RATE2 = RATE0 - 5 * NOTCH; // 200, after +5%
+const RATE1 = RATE0 - NOTCH; // 444, after +1%
+const RATE2 = RATE0 - 5 * NOTCH; // 300, after +5%
 const STROKE = 3;
 const DASH = "9 7";
 const RUNG_FADE = 4;
@@ -375,12 +402,12 @@ const STEP1_DUR = 10;
 const STEP2_DUR = 12;
 const STEP1_LEAD = 5; // the +1% step straddles its word: f118..f128 on f123
 const DELTA_FADE = 6;
-const RATE_LABEL_Y = 418; // below the line's ORIGINAL height; it does not move
+const RATE_LABEL_Y = 518; // below the line's ORIGINAL height; it does not move
 const DELTA_DY = -14; // the delta label rides the line, just above it
 
 // -- zone 2: the debt --------------------------------------------------------
 const BOND_PITCH = 112;
-const BOND_CY = 590;
+const BOND_CY = 690;
 const ROW_CX = 540;
 const N_OPEN = 5;
 const N_FULL = 8;
@@ -392,41 +419,53 @@ const SLOT_BASE = Array.from(
   (_, i) => ROW_CX + (i - (N_OPEN - 1) / 2) * BOND_PITCH,
 );
 const ROW_SHIFT = BOND_PITCH / 2; // 56 px left per new bond, so the row re-centres
-const DEBT_LABEL_Y = 500;
-const COUNTER_X = 1000;
+const DEBT_LABEL_Y = 600;
+// One centred slot under the bonds carries both counters: `YEAR n OF 5` while a
+// cycle runs, `+ $2T / YEAR` from f434. They never overlap in time — cycle 3's
+// counter is gone at f387.
+const COUNTER_Y = 850;
 
 // The coupons: what a bond costs per year. Rows of four, filled A1..A4 then
-// B1..B4, on the same 22px pitch as the hundred so a coupon and a unit of tax
-// revenue are visibly the same kind of thing. Both rows sit inside the bond's
-// own 88px width, so five bonds carrying eight coupons still read as five
-// groups rather than one bar.
+// B1..B4, on a 22px pitch. Both rows sit inside the bond's own 88px width, so
+// five bonds carrying eight coupons still read as five groups rather than one
+// bar — which matters more now that the revenue block below IS one bar.
 const COUPON_DX = [-33, -11, 11, 33];
-const COUPON_ROW_Y = [670, 692];
+const COUPON_ROW_Y = [770, 792];
 const couponAt = (bx: number, c: number) => ({
   x: bx + COUPON_DX[c % 4],
   y: COUPON_ROW_Y[Math.floor(c / 4)],
 });
 
 // -- zone 3: tax revenue -----------------------------------------------------
-const BLK_X = Array.from({ length: BLK_N }, (_, j) => 100 + BLK_STEP * j); // 100..298
-const BLK_Y = Array.from({ length: BLK_N }, (_, i) => 850 + BLK_STEP * i); // 850..1048
-const HUNDRED = BLK_N * BLK_N;
-const REV_LABEL_Y = 800;
+// The hundred as a WIDE BAR: twenty columns of five, centred on ROW_CX. A
+// ten-by-ten block read as a square of dots you had to count; twenty by five
+// read left to right is a bar with a fill level, and on a phone the lit
+// fraction is legible at a glance — four columns of twenty, twelve and a bit of
+// sixty-four. Same hundred dots, same tone ladder, same radius rule.
+const BAR_COLS = 20;
+const BAR_ROWS = 5;
+const BAR_STEP = 26;
+const BAR_R = 7; // the bar's own base radius; a coupon stays at dotRadius
+const BAR_X = Array.from({ length: BAR_COLS }, (_, j) => ROW_CX - 247 + BAR_STEP * j); // 293..787
+const BAR_Y = Array.from({ length: BAR_ROWS }, (_, i) => 980 + BAR_STEP * i); // 980..1084
+const HUNDRED = BAR_COLS * BAR_ROWS;
+const REV_LABEL_Y = 950;
 const DOT_LIGHT = 6; // frames, deep -> ripe
 const DOT_STAGGER = 2; // frames between the dots of one increment
-// The lit dots fill from the BOTTOM row up, left to right within a row, so the
-// share grows upward out of the twenty that were already there.
-const litSeat = (n: number) => ({ row: BLK_N - 1 - Math.floor(n / BLK_N), col: n % BLK_N });
-const litIndex = (row: number, col: number) => (BLK_N - 1 - row) * BLK_N + col;
+// The lit dots fill COLUMN-MAJOR FROM THE LEFT — column 0 top to bottom, then
+// column 1 — so the lit region is a bar filling left to right and its length is
+// the number. Twenty is four columns, twenty-five five, forty eight, and
+// sixty-four is twelve columns and four dots of the thirteenth.
+const litSeat = (n: number) => ({ row: n % BAR_ROWS, col: Math.floor(n / BAR_ROWS) });
+const litIndex = (row: number, col: number) => col * BAR_ROWS + row;
 
-const READOUT_X = 360;
-const READOUT_Y = 985;
+const READOUT_X = ROW_CX;
+const READOUT_Y = 1230;
 const READOUT_SIZE = 150;
-const SUBLABEL_X = 362;
-const SUBLABEL_Y = 1035;
+const SUBLABEL_Y = 1275;
 
 // -- type --------------------------------------------------------------------
-const LABEL_SIZE = 28;
+const LABEL_SIZE = 30;
 const LABEL_TRACK = "0.08em";
 const LABEL_OP = OP_UNREAD + 0.25; // 0.70
 const LABEL_FADE = 8;
@@ -729,14 +768,15 @@ const DebtExplainer: React.FC<Props> = ({
       const u = (frame - dep) / PAY_DUR;
       if (u <= 0 || u >= 1) continue;
       const seat = litSeat(t);
-      const from = { x: BLK_X[seat.col], y: BLK_Y[seat.row] };
+      const from = { x: BAR_X[seat.col], y: BAR_Y[seat.row] };
       const to = couponPos[PAY_COUPON[t]];
       const p = arcAt(from, to, u, (hash(t, 53) - 0.5) * PAY_ARC);
       travellers.push({
         key: `p${t}`,
         x: p.x,
         y: p.y,
-        r: dotRadius * (1.2 + (1 - 1.2) * u) * breath(frame, hash(t, 9)),
+        // it leaves as a lit bar dot and arrives the size of a coupon
+        r: (BAR_R * 1.2 + (dotRadius - BAR_R * 1.2) * u) * breath(frame, hash(t, 9)),
       });
     }
   }
@@ -753,7 +793,7 @@ const DebtExplainer: React.FC<Props> = ({
     y: number,
     text: string,
     op: number,
-    anchor: "start" | "end" = "start",
+    anchor: "start" | "middle" | "end" = "middle",
   ) => (
     <text
       key={key}
@@ -881,21 +921,21 @@ const DebtExplainer: React.FC<Props> = ({
             {/* the three zone labels, and the two counters in zone 2's slot */}
             {label(
               "l-rate",
-              RATE_X0,
+              ROW_CX,
               RATE_LABEL_Y,
               "INTEREST RATE",
               LABEL_OP * clamp01((frame - 28) / LABEL_FADE),
             )}
             {label(
               "l-debt",
-              RATE_X0,
+              ROW_CX,
               DEBT_LABEL_Y,
               "DEBT",
               LABEL_OP * clamp01((frame - 4) / LABEL_FADE),
             )}
             {label(
               "l-rev",
-              RATE_X0,
+              ROW_CX,
               REV_LABEL_Y,
               "TAX REVENUE",
               LABEL_OP * clamp01((frame - 16) / LABEL_FADE),
@@ -908,28 +948,21 @@ const DebtExplainer: React.FC<Props> = ({
               : label("l-d5", RATE_X1, lineY + DELTA_DY, "+5%", LABEL_OP * d5, "end")}
             {yearOp <= 0
               ? null
-              : label("l-year", COUNTER_X, DEBT_LABEL_Y, `YEAR ${yearN}`, LABEL_OP * yearOp, "end")}
+              : label("l-year", ROW_CX, COUNTER_Y, `YEAR ${yearN} OF 5`, LABEL_OP * yearOp)}
             {borrowOp <= 0
               ? null
-              : label(
-                  "l-borrow",
-                  COUNTER_X,
-                  DEBT_LABEL_Y,
-                  "+ $2T / YEAR",
-                  LABEL_OP * borrowOp,
-                  "end",
-                )}
+              : label("l-borrow", ROW_CX, COUNTER_Y, "+ $2T / YEAR", LABEL_OP * borrowOp)}
 
-            {/* the hundred: tax revenue, and the share of it that is interest */}
-            {BLK_Y.map((y, row) =>
-              BLK_X.map((x, col) => {
+            {/* the hundred, as a bar: tax revenue, and the share that is interest */}
+            {BAR_Y.map((y, row) =>
+              BAR_X.map((x, col) => {
                 const t = litAt(litIndex(row, col));
                 return (
                   <circle
                     key={`h${row}-${col}`}
                     cx={x}
                     cy={y}
-                    r={dotRadius * (0.85 + 0.35 * t) * breath(frame, hash(row * BLK_N + col, 9))}
+                    r={BAR_R * (0.85 + 0.35 * t) * breath(frame, hash(col * BAR_ROWS + row, 9))}
                     fill={tone(t)}
                     opacity={dotOpacity}
                   />
@@ -944,6 +977,7 @@ const DebtExplainer: React.FC<Props> = ({
                 y={READOUT_Y}
                 fill={ink}
                 opacity={outOp}
+                textAnchor="middle"
                 style={{ fontFamily: NUMERAL_FONT, fontWeight: 700, fontSize: READOUT_SIZE }}
               >
                 {`${prevV}%`}
@@ -954,11 +988,12 @@ const DebtExplainer: React.FC<Props> = ({
               y={READOUT_Y}
               fill={ink}
               opacity={inOp}
+              textAnchor="middle"
               style={{ fontFamily: NUMERAL_FONT, fontWeight: 700, fontSize: READOUT_SIZE }}
             >
               {`${curV}%`}
             </text>
-            {label("l-sub", SUBLABEL_X, SUBLABEL_Y, "TO INTEREST PAYMENTS", LABEL_OP)}
+            {label("l-sub", ROW_CX, SUBLABEL_Y, "TO INTEREST PAYMENTS", LABEL_OP)}
 
             {/* the payment: one traveller per lit dot, one coupon each */}
             {travellers.map((t) => (
