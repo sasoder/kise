@@ -1,3 +1,4 @@
+import { loadFont } from "@remotion/google-fonts/RobotoCondensed";
 import { AbsoluteFill, Easing, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
@@ -11,6 +12,8 @@ import {
   ICON_SHADOW_BLUR,
   ICON_SHADOW_OPACITY,
   ICON_SHADOW_Y,
+  OP_READ,
+  OP_UNREAD,
   OP_UNREAD_DOT,
   SHADOW_BLUR,
   SHADOW_OPACITY,
@@ -27,6 +30,10 @@ import {
   worldTransform,
 } from "./fieldShared";
 
+// The house type, loaded at module scope so a font failure surfaces before any
+// frame renders. Roboto Condensed 700 is the only weight this cut uses.
+const robotoCondensed = loadFont("normal", { weights: ["700"], subsets: ["latin"] });
+
 export const FPS = 24;
 // Dylan Patel, clip `Dylan_Hockey_Stick`, cut 3: "But yeah, I think it's
 // completely reasonable that China in 2029 can do 50 gigs. But if most of those
@@ -40,16 +47,25 @@ export const DURATION = 262;
 
 // ---------------------------------------------------------------------------
 // "The exchange". Fifty gigawatts is a countable block of fifty dots under the
-// flag of China — ten wide and five tall, on the field's own crowd step. Most
-// of them turn red: those are the domestic chips. Then the whole block crosses
-// the empty right half of the frame and packs into a block of TWENTY. The ten
-// dots that stayed orange each take their own seat. The forty red ones go FOUR
-// TO A SEAT: the first of the four sits down, the other three fly to the same
-// seat and are absorbed into it. Fifty visibly becomes twenty, and the reason
-// is on screen — four domestic gigawatts are worth one.
+// flag of China — ten wide and five tall, on the field's own crowd step. ALL
+// FIFTY turn red: they are all domestic chips. Then the whole block crosses the
+// empty right half of the frame and packs into a block of TWENTY. Ten of the
+// twenty seats take THREE red dots and ten take TWO: the first to reach a seat
+// sits down and turns ripe, the rest are absorbed into it. Fifty visibly
+// becomes twenty, and the reason is on screen — two or three domestic gigawatts
+// are worth one.
 //
-// No text, no people, no floor. Nothing stands on anything: the two flags float
-// and every position in the piece is measured off them, as in cut 2.
+// And the fifty do not go away. A dot that leaves its seat leaves ITSELF behind
+// there — a red dot at OP_UNREAD, the ladder's "present, not the subject" rung —
+// so at the end the fifty are still countable under China at 0.45 while the
+// twenty stand ripe and solid under the US. The comparison is on screen at once.
+//
+// TEXT. The client asked for the two quantities named, so this cut carries the
+// only two labels in the set: "50 GIGAWATTS" under China and "20 GIGAWATTS"
+// under the US, in the house type (Roboto Condensed 700, uppercase, tracked
+// 0.11em). Both strings are props. No people, no floor. Nothing stands on
+// anything: the two flags float and every position in the piece is measured off
+// them, as in cut 2.
 //
 // FRAMING AND LAYOUT
 //   China flag    cut 1's flag exactly — 240x160 at rx 14, FLAG_RED with the
@@ -58,13 +74,21 @@ export const DURATION = 262;
 //                 and 2: present from f0, no entrance, never fades.
 //   US flag       the same 240x160 rect at rx 14, centred at world x 780 and at
 //                 the same y, so x 660..900, y 1000..1160. 13 stripes, a canton
-//                 96 x 86.15, 50 stars in nine rows of 6/5. Absent before f225.
+//                 96 x 86.15, 50 stars in nine rows of 6/5. Absent before f130.
 //   the fifty     10 wide x 5 tall on the crowd step (940/39 = 24.10), centred
 //                 under the China flag, its TOP ROW 40 world px below the
 //                 flag's bottom edge: y 1200, 1224, 1248, 1272, 1296 and
 //                 x 191.5..408.5 before jitter.
 //   the twenty    5 wide x 4 tall, same step, same top row, centred under the
 //                 US flag position: y 1200..1272, x 731.8..828.2 before jitter.
+//   the labels    38 world px — 48 screen px at the resolved k 1.25; the house 58 was too wide for two side by side, the
+//                 size — each centred on its own flag's x axis, its CAP TOP 40
+//                 world px below the bottom row of the block over it. The two
+//                 blocks are different heights, so the two labels sit at
+//                 different y: cap top 1336.4 under China (the fifty is five
+//                 rows) and 1312.3 under the US (the twenty is four). Drawn in
+//                 WORLD space inside the world transform, so they track the
+//                 camera like everything else.
 //   content box   what is actually on screen, which is not the same box at the
 //                 two ends of the move. At the OPEN it is the China flag and
 //                 the fifty: world y 1000 (the flag's top edge) .. 1296.4 (the
@@ -101,11 +125,17 @@ export const DURATION = 262;
 //     "gigs". Deep orange: a gigawatt of compute       — "reasonable that China
 //                                                        in 2029 can do 50
 //                                                        gigs"             f18-51
-//   FORTY of the fifty ramp deep orange -> red over 6
-//     frames each, in a hashed order, the last of them
-//     completing on "chips". The selection is hashed,
-//     never a region: the ten that stay orange are
-//     scattered through the block. Nothing else moves  — "but if most of those
+//   the "50 GIGAWATTS" label rises 16 world px and
+//     fades 0 -> 1 under the China block,
+//     Easing.out(Easing.cubic), landing on "gigs" as
+//     the fiftieth dot seats. It names the block the
+//     moment the block is finished                     — "can do 50 gigs" f43-51
+//   ALL FIFTY ramp deep orange -> red over 6 frames
+//     each, in a hashed order, the first starting on
+//     "most" and the last completing on "chips". The
+//     order is hashed so the red arrives scattered
+//     through the block and never as a region or a
+//     sweep. Nothing else moves                        — "but if most of those
 //                                                        are domestic chips"
 //                                                                         f77-110
 //   the ONE camera move: a PULL BACK WITH TRAVEL. k
@@ -119,35 +149,53 @@ export const DURATION = 262;
 //     half the twenty needs. Nothing new appears while
 //     it runs                                          — "there is some factor
 //                                                        there"          f116-136
+//   the US flag arrives over the empty right half: it
+//     rises the last 24 world px into place while it
+//     fades in, Easing.out(Easing.cubic), landing on
+//     "there" as the camera settles — the camera is
+//     inside 0.5% of its target at f135 and the flag
+//     lands three frames after it, so the second
+//     subject appears in a frame that has already
+//     stopped moving. No spring and no click — a
+//     label arriving. THE FACTOR IS AMERICA: the flag
+//     is what "there is some factor there" points at,
+//     which is why it no longer waits for the last
+//     word of the sentence                             — "factor there"  f130-138
 //   the crossing. Every dot leaves its seat on its own
 //     shallow quadratic arc — control point 40-90 px
 //     above the chord, hashed, capped per dot so no
 //     arc ever passes behind the China flag — and
 //     flies to a seat in the twenty over 14-20 frames.
-//     The ten orange dots each take their own seat and
-//     land ripe. The forty red dots go four to a seat:
-//     the first to arrive seats there and turns ripe,
-//     the other three are ABSORBED — over the last 20%
-//     of their flight their radius shrinks to zero at
-//     the seat, and the seated dot takes a 3-frame
-//     +25% radius bump on each absorption, off the
-//     arrival itself and not off a timer. The twenty
-//     seats fill bottom row first, left to right;
-//     which are one-orange and which are four-red is
-//     hashed. The twenty fills bottom row first and,
-//     inside a row, the FAR side first — see the note
-//     on TWENTY_SEATS. Landings are uniform in launch
-//     order
-//     from "gigawatts" to "gigawatts", so the first
-//     landing is f157 and the last seating or
-//     absorption is f221                               — "where that 50
+//     Fifty red dots into twenty seats: TEN SEATS TAKE
+//     THREE and ten take two, hashed which. The first
+//     dot to reach a seat lands and turns ripe; the
+//     rest are ABSORBED — over the last 20% of their
+//     flight their radius shrinks to zero at the seat,
+//     and the seated dot takes a 3-frame +25% radius
+//     bump on each absorption, off the arrival itself
+//     and not off a timer. The twenty fills bottom row
+//     first and, inside a row, the FAR side first —
+//     see the note on TWENTY_SEATS. Landings are
+//     uniform in launch order from "gigawatts" to
+//     "gigawatts", so the first landing is f157 and
+//     the last seating or absorption is f221           — "where that 50
 //                                                        gigawatts is really
 //                                                        worth as much as 20
 //                                                        gigawatts"     f143-221
-//   the US flag lands over the twenty: it rises the
-//     last 24 world px into place while it fades in,
-//     Easing.out(Easing.cubic), landing on "America".
-//     No spring and no click — a label arriving        — "in America"    f225-233
+//   the fifty STAY BEHIND. The frame a dot leaves its
+//     seat, a red dot at OP_UNREAD 0.45 appears in it
+//     — same radius, same breath, no fade-in: the
+//     departing dot simply leaves its shadow. Derived
+//     from the launch, so it cannot drift from it.
+//     By f221 the fifty are all still there at 0.45
+//     under China, and the twenty are ripe and solid
+//     under the US                                     — under the crossing
+//                                                                        f143-221
+//   the "20 GIGAWATTS" label rises 16 world px and
+//     fades 0 -> 1 under the US block, the same way
+//     the first label did, landing on "America" — the
+//     last word of the sentence now carries this beat
+//     instead of the flag                              — "in America"    f225-233
 //   hold resolved, never fades                         — tail            f246-262
 //
 // ambient on every hold: the shared `breath` on every seated dot, the grid's
@@ -160,13 +208,11 @@ export const DURATION = 262;
 //     10-14 frames that leaves a 21-frame launch window for fifty dots. 1.5 a
 //     frame would put the last landing at f63, twelve frames past its word.
 //   * The twenty fills bottom row first but, inside a row, the FAR side first
-//     rather than left to right, and an orange dot that falls inside an open
-//     red group waits for the group to close before it lands. Both are forced
-//     by the brief's own harder rule — no dot passes through a seated dot's
-//     disc — and the notes on TWENTY_SEATS and on the crossing order carry the
-//     measurements. Left to right and un-deferred, the sweep finds 183 and 23
-//     overlaps; with both, zero, and the closest a flyer ever comes to a seated
-//     dot is 3.1 px of clear air.
+//     rather than left to right. That is forced by the brief's own harder rule
+//     — no dot passes through a seated dot's disc — and the note on
+//     TWENTY_SEATS carries the measurements. Left to right, the sweep finds 183
+//     overlaps, the worst of them a flyer passing 11.6 px inside a seated disc;
+//     far side first, zero.
 //   * The crossing walks its arc on a smoothstep, not on the emergence's
 //     Easing.out(Easing.cubic), which piled the whole population into the last
 //     stride of a 540 px chord.
@@ -194,6 +240,35 @@ export const DURATION = 262;
 //   to the twenty's: by the time the camera has settled the block that is going
 //   to be there is one row shorter, and framing on the box that no longer
 //   exists left the composition sitting 6 px low.
+//
+// PASS 3 — the client pass. Five notes, and nothing outside them: the
+// emergence, the camera, the crossing's timing and the tail are all untouched.
+//   1. The US flag moves from "in America" (f225) to "there is some factor
+//      there" (f130-138). The client's reading is that the factor IS America —
+//      the flag is the thing the sentence points at, not a caption on the end
+//      of it — so it arrives on the words that name it, three frames after the
+//      camera has settled into the frame that has room for it. The old f225-233
+//      gesture is gone, not duplicated.
+//   2. All fifty redden, not forty. "If MOST of those are domestic chips" was
+//      read as forty-of-fifty; the client reads it as all of them. The hashed
+//      order, the 6-frame ramp and the f77 -> f110 span are unchanged, so the
+//      beat is the same beat with ten more dots in it. `domesticTone` is
+//      untouched.
+//   3. The merge is therefore 50 red -> 20 ripe, not 10 orange + 40 red. Ten
+//      seats take three dots and ten take two, hashed which — the ratio is no
+//      longer a flat four-to-one but an average of two and a half, which is
+//      what fifty into twenty actually is. The groups are still consecutive
+//      runs of the crossing order, which is what keeps the absorptions out of
+//      the seats above them, and the overlap sweep was re-run: zero.
+//   4. The fifty stay behind, at OP_UNREAD. Before this pass the China block
+//      emptied as the crossing ran and the cut ended on twenty dots alone,
+//      which shows the result and not the comparison. The trace rung is the
+//      ladder's own "present, not the subject", so the fifty recede without
+//      leaving — and 50 at 0.45 against 20 at 1.0 is the whole sentence in one
+//      frame.
+//   5. Two labels, on request. The default in this style is no text; the client
+//      asked for the quantities named, so the two numbers that the piece is
+//      about get the house type at the house size and nothing else does.
 // ---------------------------------------------------------------------------
 
 // The flag's red, which is also the colour of a domestic chip. Copied from
@@ -218,6 +293,9 @@ export const schema = z.object({
   iconShadowOpacity: z.number(),
   dotRadius: z.number(),
   dotOpacity: z.number(), // the dot body's opacity; the state ladder is colour
+  traceOpacity: z.number(), // the dot a departing gigawatt leaves in its seat
+  labelChina: z.string(), // what the fifty are called
+  labelUs: z.string(), // what the twenty are called
   beats: z.object({
     butYeahI: z.number(), // "but yeah i"
     thinkIts: z.number(), // "think it's"
@@ -261,6 +339,9 @@ export const defaultProps: Props = schema.parse({
   iconShadowOpacity: ICON_SHADOW_OPACITY,
   dotRadius: DOT_RADIUS,
   dotOpacity: OP_UNREAD_DOT,
+  traceOpacity: OP_UNREAD,
+  labelChina: "50 GIGAWATTS",
+  labelUs: "20 GIGAWATTS",
   beats: {
     butYeahI: 0,
     thinkIts: 6,
@@ -477,15 +558,16 @@ const solveSpan = (u: number[], dur: number[], want: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// Gesture 2 — the reddening. Forty of the fifty, chosen by hash rank so the
-// selection is scattered and never a region, ramp deep -> red over 6 frames
-// each in a hashed order. The stagger is solved so the first starts on "most"
-// and the last COMPLETES on "chips".
+// Gesture 2 — the reddening. ALL FIFTY ramp deep -> red over 6 frames each, in
+// a hashed order so the red arrives scattered through the block and never as a
+// region or a sweep. The stagger is solved so the first starts on "most" and
+// the last COMPLETES on "chips". (Pass 3: it was forty of the fifty. The order,
+// the ramp and the span are the ones the forty had.)
 // ---------------------------------------------------------------------------
 const RED_F0 = 77;
 const RED_LAND = 110;
 const RED_RAMP = 6;
-const N_RED = 40;
+const N_CELLS = FIFTY_COLS * FIFTY_ROWS; // 50
 
 // ---------------------------------------------------------------------------
 // Gesture 4 — the crossing. Landings are uniform from "gigawatts" (f157) to
@@ -509,6 +591,26 @@ const BUMP_FRAMES = 3;
 const BUMP_SCALE = 0.25;
 const RIPEN = 4; // frames a seated dot takes to go to ripe
 
+// Fifty dots into twenty seats. Ten seats take THREE and ten take TWO —
+// 10*3 + 10*2 = 50 — and which is which is hashed, so the twenty is not ten
+// heavy seats next to ten light ones but a block whose seats happen to have
+// swallowed different amounts. The hash ranks the twenty seats and the first
+// ten of that ranking are the threes.
+const N_SEATS = TWENTY_COLS * TWENTY_ROWS; // 20
+const N_THREES = 10;
+const GROUP_SIZES: number[] = (() => {
+  const rank = Array.from({ length: N_SEATS }, (_, i) => ({ i, key: hash(7000 + i, 83) })).sort(
+    (a, b) => a.key - b.key,
+  );
+  const sizes = new Array<number>(N_SEATS).fill(2);
+  for (let j = 0; j < N_THREES; j++) sizes[rank[j].i] = 3;
+  const total = sizes.reduce((a, b) => a + b, 0);
+  if (total !== N_CELLS) {
+    throw new Error(`the twenty has to swallow ${N_CELLS} dots, it swallows ${total}`);
+  }
+  return sizes;
+})();
+
 type Cell = {
   seed: number;
   rad: number; // 0.75-1.25
@@ -516,7 +618,6 @@ type Cell = {
   spawn: Pt;
   eT0: number;
   eDur: number;
-  isRed: boolean;
   redStart: number;
   target: Pt; // its seat in the twenty
   seatIdx: number;
@@ -562,97 +663,53 @@ const CELLS: Cell[] = (() => {
     eT0[n] = EMERGE_F0 + eU[k] * eSpan;
   });
 
-  // --- gesture 2: which forty redden, and when -----------------------------
+  // --- gesture 2: when each of the fifty reddens ----------------------------
+  // All fifty, in hash order, evenly spread so the first STARTS on "most" and
+  // the last COMPLETES on "chips".
   const redRank = base
     .map((b, n) => ({ n, key: hash(b.seed, 61) }))
     .sort((a, b2) => a.key - b2.key);
-  const isRed = base.map(() => false);
   const redStart = base.map(() => Infinity);
-  const redSpan = RED_LAND - RED_RAMP - RED_F0; // the last of the forty STARTS here
-  for (let k = 0; k < N_RED; k++) {
-    const n = redRank[k].n;
-    isRed[n] = true;
-    redStart[n] = RED_F0 + (redSpan * k) / (N_RED - 1);
-  }
+  const redSpan = RED_LAND - RED_RAMP - RED_F0; // the last of the fifty STARTS here
+  redRank.forEach((r, k) => {
+    redStart[r.n] = RED_F0 + (redSpan * k) / (N_CELLS - 1);
+  });
 
-  // --- gesture 4: the order, the seats, and the four-to-one groups ----------
+  // --- gesture 4: the order, the seats, and the 3/2 groups ------------------
   // bottom row of the fifty first, hashed inside a row
-  const rawOrder = base
+  const crossOrder = base
     .map((b, n) => ({ n, key: (FIFTY_ROWS - 1 - b.row) * 10 + hash(b.seed, 71) * 9.5 }))
     .sort((a, b2) => a.key - b2.key)
     .map((o) => o.n);
 
-  // Then one local reordering, which is the whole reason the crossing can obey
-  // "no dot passes through a seated dot's disc". A red group's four dots must
-  // land with NOTHING claiming a seat in between: if an orange dot claims the
-  // next seat while a group is still arriving, that seat is one step nearer on
-  // the same row, and the group's last arrivals fly straight through it —
-  // measured at quarter-frame resolution, 23 overlaps, the worst 6.4 px deep.
-  // So an orange dot that falls inside an open group waits for the group to
-  // close and lands just after it. Nothing else changes: the reds keep their
-  // order exactly, and an orange dot moves at most a few landing slots.
+  // The fifty are cut into the twenty groups as CONSECUTIVE runs of that order,
+  // three long or two long per GROUP_SIZES, and group g takes seat g. That is
+  // not decoration, it is what keeps the absorptions out of the seats above
+  // them: a group's dots land within a few frames of each other, so a seat is
+  // finished before the row over it starts to fill, and an arc descending to a
+  // low seat never has an occupied seat in its way. A hashed partition
+  // scattered each group across the whole crossing, and its last absorption
+  // then had to fly down through two full rows of seated dots — swept at
+  // quarter-frame resolution, 243 overlaps.
   //
-  // With that, a flight's only possible obstacles are seats claimed BEFORE its
-  // own, which after the far-side-first fill are either beyond it on its own
-  // row — and its x only ever rises to its own seat — or on a row below the
-  // height it descends to. Zero overlaps, by construction.
-  const crossOrder: number[] = [];
-  const waiting: number[] = [];
-  let openGroup = 0;
-  for (const n of rawOrder) {
-    if (isRed[n]) {
-      crossOrder.push(n);
-      openGroup = (openGroup + 1) % 4;
-      if (openGroup === 0) {
-        crossOrder.push(...waiting);
-        waiting.length = 0;
-      }
-    } else if (openGroup === 0) {
-      crossOrder.push(n);
-    } else {
-      waiting.push(n);
-    }
-  }
-  crossOrder.push(...waiting);
-
-  // Forty red dots into ten groups of four, taken as CONSECUTIVE runs of the
-  // crossing order. That is not decoration, it is what keeps the absorptions
-  // out of the seats above them: a group's four dots land within a few frames
-  // of each other, so a seat is finished before the row over it starts to
-  // fill, and an arc descending to a low seat never has an occupied seat in its
-  // way. A hashed partition scattered each group's four across the whole
-  // crossing, and its last absorption then had to fly down through two full
-  // rows of seated dots — swept at quarter-frame resolution, 243 overlaps.
-  // Which seats end up one-orange and which four-red is still hashed: it falls
-  // out of where the ten orange dots sit in the crossing order, and that order
-  // is the fifty's rows hashed within themselves.
-  const redInOrder = crossOrder.filter((n) => isRed[n]);
-  const group = new Map<number, number>();
-  redInOrder.forEach((n, j) => group.set(n, Math.floor(j / 4)));
-
+  // Consecutive runs also make "seats fill in landing order" true by
+  // construction: seat g is claimed by the first dot of run g, and the runs are
+  // in order. A flight's only possible obstacles are therefore seats claimed
+  // BEFORE its own, which after the far-side-first fill are either beyond it on
+  // its own row — and its x only ever rises to its own seat — or on a row below
+  // the height it descends to. Zero overlaps, by construction.
   const seatIdx = base.map(() => -1);
   const opener = base.map(() => false);
-  const groupSeat = new Map<number, number>();
-  let nextSeat = 0;
-  for (const n of crossOrder) {
-    if (!isRed[n]) {
-      seatIdx[n] = nextSeat++;
-      opener[n] = true;
-      continue;
+  let p = 0;
+  GROUP_SIZES.forEach((size, g) => {
+    for (let j = 0; j < size; j++) {
+      const n = crossOrder[p++];
+      seatIdx[n] = g;
+      opener[n] = j === 0;
     }
-    const g = group.get(n) as number;
-    const claimed = groupSeat.get(g);
-    if (claimed === undefined) {
-      groupSeat.set(g, nextSeat);
-      seatIdx[n] = nextSeat++;
-      opener[n] = true;
-    } else {
-      seatIdx[n] = claimed;
-      opener[n] = false;
-    }
-  }
-  if (nextSeat !== TWENTY_SEATS.length) {
-    throw new Error(`the twenty needs ${TWENTY_SEATS.length} seats, claimed ${nextSeat}`);
+  });
+  if (p !== crossOrder.length || GROUP_SIZES.length !== TWENTY_SEATS.length) {
+    throw new Error(`the twenty seated ${p} of ${crossOrder.length} dots`);
   }
 
   // Landings uniform across the crossing, in that order; each launch is its own
@@ -724,7 +781,6 @@ const CELLS: Cell[] = (() => {
     spawn: spawns[n],
     eT0: eT0[n],
     eDur: eDur[n],
-    isRed: isRed[n],
     redStart: redStart[n],
     target: TWENTY_SEATS[seatIdx[n]],
     seatIdx: seatIdx[n],
@@ -820,11 +876,82 @@ if (US_STARS.length !== 50) {
 }
 const US_CLIP = "fw-us-clip";
 
-const US_F0 = 225; // it lands on `beats.inAmerica`, f233
+// Pass 3: the flag arrives on "there is some factor there", not on "America".
+// The factor is America — the flag is what the sentence points at — so it lands
+// on the words that name it. f138 is three frames after the camera is inside
+// 0.5% of its target (f135), so the second subject appears in a frame that has
+// already stopped moving.
+const US_F0 = 130;
+const US_LAND = 138;
 const US_RISE = 24; // how far below its resting place it starts
+
+// ---------------------------------------------------------------------------
+// The two labels, the only text in the set. House type: Roboto Condensed 700,
+// uppercase, tracked 0.11em with a compensating -0.11em right margin so the
+// trailing space of the tracking does not throw the pair off its centre.
+//
+// They are drawn in WORLD space, inside the world transform, so they track the
+// camera like the flags and the dots. 46 world px is 58 screen px at the
+// resolved k of 1.25 — the house size at 1080 wide.
+//
+// Each is centred on its own flag's x axis and hangs its CAP TOP 40 world px
+// below the bottom row of the block over it, the same 40 the blocks hang below
+// the flags. The two blocks are different heights, so the two labels sit 24 px
+// apart in y; that is the twenty being one row shorter than the fifty, and it
+// is correct.
+//
+// Cap top, not box top: a text box's top is half-leading plus the font's
+// ascender above the baseline, and the ascender is a long way over the caps. So
+// the box is placed at capTop - LABEL_CAP_TOP, where LABEL_CAP_TOP is that
+// distance for Roboto Condensed at line-height 1 (unitsPerEm 2048, hhea
+// ascender 1900, descender 500, cap height 1456).
+// ---------------------------------------------------------------------------
+const LABEL_SIZE = 38; // director's pass: 46 (58 screen px) put two labels 34/28 px from the frame edges; 38 = 48 screen px, margins ~70
+const LABEL_ASC = 1900 / 2048;
+const LABEL_DESC = 500 / 2048;
+const LABEL_CAP = 1456 / 2048;
+const LABEL_CAP_TOP =
+  LABEL_SIZE * ((1 - (LABEL_ASC + LABEL_DESC)) / 2 + LABEL_ASC - LABEL_CAP); // 6.02
+const LABEL_GAP = 40; // the cap top, below the block's bottom row
+const LABEL_RISE = 16;
+const LABEL_TRACK = 0.11; // em
+const CN_LABEL_CAP_Y = FIFTY_BOTTOM_Y + LABEL_GAP; // 1336.4
+const US_LABEL_CAP_Y = TWENTY_BOTTOM_Y + LABEL_GAP; // 1312.3
+const CN_LABEL_F0 = 43; // lands on `beats.canDo50Gigs`, f51, as the fiftieth seats
+const US_LABEL_F0 = 225; // lands on `beats.inAmerica`, f233
 
 const path = (pts: Pt[]) =>
   pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
+
+// One label. `e` is its entrance, 0 at the start of the rise and 1 landed: it
+// carries both the fade and the last 16 world px of travel, so there is one
+// curve and not two.
+const WorldLabel: React.FC<{ text: string; cx: number; capY: number; e: number }> = ({
+  text,
+  cx,
+  capY,
+  e,
+}) => (
+  <div
+    style={{
+      position: "absolute",
+      left: cx,
+      top: capY - LABEL_CAP_TOP,
+      transform: `translateX(-50%) translateY(${((1 - e) * LABEL_RISE).toFixed(2)}px)`,
+      opacity: e * OP_READ,
+      whiteSpace: "nowrap",
+      fontFamily: robotoCondensed.fontFamily,
+      fontWeight: 700,
+      fontSize: LABEL_SIZE,
+      lineHeight: 1,
+      color: "#FFFFFF",
+    }}
+  >
+    <span style={{ letterSpacing: `${LABEL_TRACK}em`, marginRight: `${-LABEL_TRACK}em` }}>
+      {text}
+    </span>
+  </div>
+);
 
 const FiftyWorthTwenty: React.FC<Props> = ({
   accent,
@@ -843,15 +970,30 @@ const FiftyWorthTwenty: React.FC<Props> = ({
   iconShadowOpacity,
   dotRadius,
   dotOpacity,
+  traceOpacity,
+  labelChina,
+  labelUs,
   beats,
 }) => {
   const frame = useCurrentFrame();
 
-  // The three tones a dot ever takes, each a ramp between two of the palette's
-  // own colours: compute -> domestic chip, and either of those -> seated ripe.
+  // The two tones a dot ever takes, each a ramp between two of the palette's
+  // own colours: compute -> domestic chip, and domestic chip -> seated ripe.
   const toneRed = makeTone(accentDeep, domesticTone);
-  const toneDeepRipe = makeTone(accentDeep, accent);
   const toneRedRipe = makeTone(domesticTone, accent);
+
+  // -- what the fifty leave behind --------------------------------------------
+  // A dot that has left its seat leaves ITSELF there: the same radius, the same
+  // breath, the same red, at the ladder's "present, not the subject" rung. It
+  // appears the frame the dot departs — the test is the launch itself, so the
+  // trace cannot drift from the dot — and it never fades in, because it is not
+  // arriving. It is what is left.
+  const traces = CELLS.filter((c) => frame >= c.xT0).map((c) => ({
+    key: c.seed,
+    x: c.seat.x,
+    y: c.seat.y,
+    r: dotRadius * c.rad * breath(frame, hash(c.seed, 9)),
+  }));
 
   // -- the dots ---------------------------------------------------------------
   const dots = CELLS.map((c) => {
@@ -897,14 +1039,7 @@ const FiftyWorthTwenty: React.FC<Props> = ({
     }
 
     const tRipe = c.opener ? smooth((frame - c.xLand) / RIPEN) : 0;
-    const fill =
-      tRipe > 0
-        ? c.isRed
-          ? toneRedRipe(tRipe)
-          : toneDeepRipe(tRipe)
-        : c.isRed
-          ? toneRed(smooth((frame - c.redStart) / RED_RAMP))
-          : accentDeep;
+    const fill = tRipe > 0 ? toneRedRipe(tRipe) : toneRed(smooth((frame - c.redStart) / RED_RAMP));
 
     return {
       key: c.seed,
@@ -917,8 +1052,16 @@ const FiftyWorthTwenty: React.FC<Props> = ({
 
   // -- the US flag ------------------------------------------------------------
   // It rises the last 24 world px into place while it fades in, and lands on
-  // "America". No spring and no click: it is a label arriving, not an event.
-  const usE = easeOut(clamp01((frame - US_F0) / (beats.inAmerica - US_F0)));
+  // "there" in "there is some factor there". No spring and no click: it is a
+  // label arriving, not an event.
+  const usE = easeOut(clamp01((frame - US_F0) / (US_LAND - US_F0)));
+
+  // -- the two labels ---------------------------------------------------------
+  // The same entrance twice: 16 world px and a fade, on the same curve the flag
+  // takes. The first lands on "gigs" as the fiftieth dot seats, the second on
+  // "America" as the sentence ends.
+  const cnLabelE = easeOut(clamp01((frame - CN_LABEL_F0) / (beats.canDo50Gigs - CN_LABEL_F0)));
+  const usLabelE = easeOut(clamp01((frame - US_LABEL_F0) / (beats.inAmerica - US_LABEL_F0)));
 
   // -- camera -----------------------------------------------------------------
   const cam = runCamera(frame, CAM_FF, CAM_CY, CAM_K);
@@ -972,6 +1115,19 @@ const FiftyWorthTwenty: React.FC<Props> = ({
             viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
+            {/* what the fifty leave behind, under everything: a dot's own seat
+                still holding a red dot at OP_UNREAD after it has gone */}
+            {traces.map((t) => (
+              <circle
+                key={`t${t.key}`}
+                cx={t.x}
+                cy={t.y}
+                r={t.r}
+                fill={domesticTone}
+                opacity={traceOpacity}
+              />
+            ))}
+
             {/* the dots, BELOW the flags, so the fifty are born out of one of
                 them and cannot be seen before they leave it */}
             {dots.map((d) =>
@@ -1054,6 +1210,14 @@ const FiftyWorthTwenty: React.FC<Props> = ({
               </g>
             ) : null}
           </svg>
+
+          {/* the two labels, in world space so they track the camera */}
+          {frame >= CN_LABEL_F0 ? (
+            <WorldLabel text={labelChina} cx={CN_CX} capY={CN_LABEL_CAP_Y} e={cnLabelE} />
+          ) : null}
+          {frame >= US_LABEL_F0 ? (
+            <WorldLabel text={labelUs} cx={US_CX} capY={US_LABEL_CAP_Y} e={usLabelE} />
+          ) : null}
         </div>
       </AbsoluteFill>
 
