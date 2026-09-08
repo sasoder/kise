@@ -5,6 +5,7 @@ import {
   BG_BASE,
   BG_DIM,
   CAM_LIFT,
+  FRAME_H,
   FRAME_W,
   GridBackground,
   ICON_SHADOW_BLUR,
@@ -55,32 +56,39 @@ export const DURATION = 247;
 // No text. No people. A pile 2 wide x 7 tall, a queue of five, one flag, one
 // gate.
 //
-// FRAMING AND LAYOUT (client pass)
-//   flag          240x160 at rx 14, world x 420..660, y 1039..1199. There is
-//                 no floor and no other datum: the lane, the gate, the pile
-//                 and the camera are all derived from these four numbers.
+// FRAMING AND LAYOUT (client pass, then the consistency pass)
+//   flag          240x160 at rx 14, world x 420..660, y 1039..1199 — which is
+//                 300x200 at rx 17.5 SCREEN px at the resolved k 1.25, the size
+//                 the mark takes in all three cuts of this clip. There is no
+//                 floor and no other datum: the lane, the gate, the pile and
+//                 the camera are all derived from these four numbers.
 //   lane          world y 1119 — the flag's vertical CENTRE line. A tool's
 //                 centre y is the flag's centre y, so the lane runs into the
 //                 middle of the flag and the queue forms on that same line.
-//   camera        pure zoom about x 540, k 1.3 -> 1.0, keyed f64-74, warp 0.72
+//   camera        pure zoom about x 540, k 1.6 -> 1.25, keyed f64-74, warp 0.72
+//   framing       held on the FLAG, not on the content box: the flag's centre
+//                 line (world 1119) sits at SCREEN y 830 at BOTH framings, so
+//                 the mark neither moves nor changes size between this cut's
+//                 last frame and cut 3's first. cy is authored as
+//                 FLAG_MID + (960 - 830)/k, which `camMove` takes as a content
+//                 centre five world px below it.
 //   content box   world y 939 (the pile's top edge) .. 1199 (the flag's bottom
-//                 edge), centre 1069, which lands at SCREEN y 835 at BOTH
-//                 framings — the house's 835 exactly, because cy is authored
-//                 as contentCentre + CAM_LIFT/k. That puts the flag's centre
-//                 (world 1119, 50 px below the content centre) at screen y 885
-//                 resolved and 900 at f0.
+//                 edge), centre 1069 — screen y 605..1005, centre 767 at the
+//                 resolve, and 542..958, centre 750 at the open.
 //   unit          32 world px, rx 7
 //   gate          x 360 = flag left edge - 60, from the flag's TOP level to its
 //                 BOTTOM level: 160 tall, exactly the flag's height
-//   queue         pitch 40, five long, standing on the lane's line, back tool's
-//                 left edge at world x 168 = 168 screen px inside the left edge
-//                 at k 1.0
-//   pile          left column's left edge at world x 760 = flag right + 100,
+//   queue         pitch 40, FOUR long, standing on the lane's line, back tool's
+//                 left edge at world x 208 = 125 screen px inside the left edge
+//                 at k 1.25
+//   pile          left column's left edge at world x 790 = flag right + 130,
 //                 column pitch 40, row pitch 38, seven rows = 260 px tall.
 //                 Row 1's BOTTOM EDGE is the flag's bottom edge (1199), so the
 //                 pile grows off the flag's own baseline. Its top edge is world
-//                 y 939, 100 px ABOVE the flag's top. Right edge world x 832,
-//                 248 px inside the right edge.
+//                 y 939, 100 px ABOVE the flag's top. Right edge world x 862,
+//                 137 screen px inside the right edge.
+//   balance       the group runs world x 208..862 and its centre is 535, six
+//                 screen px left of the flag's own centre at 540.
 //
 // Every gesture is one word. Nothing else happens.
 //   the foreign lane runs: a tool enters from beyond
@@ -103,9 +111,9 @@ export const DURATION = 247;
 //     frames — the brake is velocity-matched to the
 //     lane speed, so nothing in the queue ever
 //     changes speed in unison. Slot 0 is down on
-//     f66, slot 3 on f75                             — "controlled"         f58-75
+//     f66, slot 2 on f72                             — "controlled"         f58-72
 //   the ONE camera move: a PURE ZOOM about the
-//     content's centre, k 1.3 -> 1.0 on one warped
+//     flag's own centre line, k 1.6 -> 1.25 on one warped
 //     smoothstep (warp 0.72) keyed f64-74, damped
 //     inside 0.5% of its target by f84, seven frames
 //     before "build". cx is CENTRE_X for the whole
@@ -141,7 +149,8 @@ export const DURATION = 247;
 //   one more foreign tool enters, crosses the frame
 //     and takes the queue's last free slot at f224:
 //     the lane never stopped, it just cannot get in  — tail of "domestically"
-//                                                                          f179-224
+//                                                                          f175-224
+//                                                    (in shot from f203)
 //   hold resolved, never fades                       — tail              f231-247
 //
 // ambient on every hold: the grid's own drift and the shared `sway`. Nothing
@@ -161,7 +170,8 @@ export const DURATION = 247;
 //     set that margin at 140 screen px so the whole group (queue, gate, flag,
 //     pile) sits within ~35 px of the frame's centre: at k 1.0 the left edge is
 //     world x 0, so the last slot that fits is slot 4 and the queue is five.
-//     The pre-gate lane is untouched: four of its tools take slots 0-3 and the
+//     (The consistency pass re-runs that same rule at k 1.25 and gets four.)
+//     The pre-gate lane is untouched: its tools take the slots in order and the
 //     ones that would have taken the slots beyond never spawn — all of them are
 //     still off the left edge of the frame when the gate lands, so nothing
 //     visible changes. The last slot is left for the one late arrival, which is
@@ -176,7 +186,7 @@ export const DURATION = 247;
 //     not true of any tool above row 1: its own column is full underneath it,
 //     and a tool travelling to the right-hand column crosses the left-hand
 //     column. So the slide stops in the corridor between the flag and the pile
-//     (x 710, clear of both by 34 px), the tool moves there to its arc height,
+//     (x 725, clear of both by 49 px), the tool moves there to its arc height,
 //     and the quadratic arc carries it over the pile and sets it down. Nothing
 //     ever overlaps a seated tool.
 //   * WITHIN A ROW THE RIGHT COLUMN SEATS FIRST, so a tool bound for the far
@@ -207,6 +217,24 @@ export const DURATION = 247;
 //     tool is FLAG_RED, exposed as its own `domesticTool` prop. The flag's
 //     stars stay the house yellow and the foreign tools stay ink, so the piece
 //     still reads as one palette and the red belongs to China alone.
+//
+// CONSISTENCY PASS (across the three cuts of this clip). The flag was three
+// different sizes at three different heights in the three cuts; it is now one
+// mark — 300 x 200 screen px at every resolve, its centre on screen y 830 at
+// both of this cut's framings. Four constants moved and nothing else:
+//   * K_OPEN 1.3 -> 1.6 and K_FINAL 1.0 -> 1.25, so the mark is 384 screen px
+//     at the open (cut 3's open exactly) and 300 at the resolve. The keys
+//     (f64-74), the warp (0.72), the damper and the pure-zoom-about-x-540 are
+//     all untouched, and so is every beat and every flight in the cut.
+//   * the camera's cy is authored off FLAG_MID instead of off the content box.
+//   * QUEUE_MARGIN 140 -> 100. The rule did not change — the queue is still
+//     every slot that fits with that much air behind it — but the resolve is
+//     25% tighter, so the same rule now yields FOUR slots rather than five.
+//   * PILE_GAP 100 -> 130, which is what puts the group's centre back on the
+//     flag now that the queue is one tool shorter.
+// The tighter resolve also brings the pile's right edge from 248 to 137 screen
+// px inside the right edge and the queue's back edge from 168 to 125 inside the
+// left: the composition is the same shape, held closer.
 // ---------------------------------------------------------------------------
 
 // The flag's red, which is also the colour of a tool China made itself.
@@ -326,11 +354,16 @@ const LANE_Y = FLAG_MID;
 // columns 100 px clear of the flag's right edge, seven rows, and row 1's BOTTOM
 // EDGE on the flag's bottom edge — the pile grows off the flag's own baseline
 // rather than off a floor.
-const PILE_GAP = 100; // the corridor between the flag and the pile
+// Consistency pass: the corridor comes 100 -> 130. The tighter resolve (k 1.25)
+// makes the whole group narrower on screen, and the group has to sit on the
+// flag: the queue is four tools now, so its back edge is 332 world px left of
+// the flag's centre, and 130 px of corridor puts the pile's right edge 322 px
+// right of it. Balanced on the flag to within 6 screen px.
+const PILE_GAP = 130; // the corridor between the flag and the pile
 const PILE_COL_PITCH = 40; // 32 px tool + 8
 const PILE_ROW_PITCH = 38; // 32 px tool + 6
 const PILE_ROWS = 7;
-const PILE_X0 = FLAG_RIGHT + PILE_GAP + TOOL_HALF; // 776, the left column's centre
+const PILE_X0 = FLAG_RIGHT + PILE_GAP + TOOL_HALF; // 806, the left column's centre
 const ROW1_Y = FLAG_BOTTOM - TOOL_HALF; // 1183
 const pileX = (col: number) => PILE_X0 + col * PILE_COL_PITCH;
 const pileY = (row: number) => ROW1_Y - row * PILE_ROW_PITCH; // row is 0-based
@@ -351,30 +384,58 @@ const PILE_TOP = pileY(PILE_ROWS - 1) - TOOL_HALF; // 939, 100 px above the flag
 // frames, and the move has to be settled before the first domestic tool leaves
 // the flag at f91.
 //
-// With the floor gone, the framing is authored off the CONTENT BOX, which is
-// the pile's top edge (939) down to the flag's bottom edge (1199) — nothing in
-// the piece is above or below those. Its centre is world 1069, and because
-// `camMove` writes cy as contentCentre + CAM_LIFT/k, that centre sits at SCREEN
-// y 835 — the house's number, exactly — at every k the move passes through.
-// The flag's centre is 50 px below the content's, so it lands at screen y 885
-// resolved and 900 at f0.
+// CONSISTENCY PASS: the framing is authored off THE FLAG, not off the content
+// box. The flag is the one element that carries through all three cuts of this
+// clip, and it was resolving at a different size and a different height in each
+// of them — 187 screen px at y 1275 in cut 1, 240 at 885 here, 300 at 759 in
+// cut 3. It is now ONE thing: 300 x 200 SCREEN px wherever a cut resolves, and
+// in cuts 2 and 3 its CENTRE is held at screen y 830 at the open AND at the
+// resolve, so cut 2's last frame and cut 3's first frame are the same mark in
+// the same place. That fixes both ends of this cut's camera:
+//   * k. 300 screen px of a 240 world px flag is k 1.25, so the resolve moves
+//     1.0 -> 1.25; the open keeps the same ratio between the two framings and
+//     goes 1.3 -> 1.6, which is also cut 3's open — 384 screen px — so the two
+//     cuts open on the mark at the same size.
+//   * cy. Held on the flag's own centre line rather than on the content box:
+//     cy = FLAG_MID + (960 - 830)/k. `camMove` writes cy as
+//     contentCentre + CAM_LIFT/k, so the centre it is handed is
+//     FLAG_MID + (960 - 830 - CAM_LIFT)/k — five world px below the flag's
+//     centre line, which is what the house's 835 and this pass's 830 differ by.
+//     Because that offset is 1/k, it is evaluated at each end of the move and
+//     carried between them on the move's own eased curve; the residual against
+//     the exact 1/k curve peaks at 0.08 screen px mid-move.
+// The content box (the pile's top edge 939 down to the flag's bottom edge 1199)
+// is no longer the datum, but it is still the whole of what is on screen: at
+// the resolve its centre lands at screen y 767 and the pile's top edge, the
+// highest thing in the cut, at 605.
 //
-//   f0-63    k 1.3   the flag's centre at screen y 900, the pile's top at 666
-//                    and the flag's bottom at 1004, the lane's tools spaced
-//                    across the frame.
-//   f64-84   -> 1.0  the flag's centre at screen y 885, the settled queue's
-//                    back tool 168 px inside the left edge and the pile's right
-//                    column 248 px inside the right.
+//   f0-63    k 1.6   the flag's centre at screen y 830 and the mark 384 px
+//                    wide, the pile's top at 542 and the flag's bottom at 958,
+//                    the lane's tools spaced across the frame.
+//   f64-84   -> 1.25 the flag's centre still at screen y 830 and the mark 300 px
+//                    wide, the settled queue's back tool 125 px inside the left
+//                    edge and the pile's right edge 942 — the group's own centre
+//                    within a few px of the flag's.
 // ---------------------------------------------------------------------------
-const K_OPEN = 1.3;
-const K_FINAL = 1.0;
+const K_OPEN = 1.6;
+const K_FINAL = 1.25;
 const CAM_F0 = 64;
 const CAM_F1 = 74;
 const CAM_WARP = 0.72;
-// the content box: the pile's top edge down to the flag's bottom edge
-const CONTENT_C = (PILE_TOP + FLAG_BOTTOM) / 2; // 1069
-const CY_OPEN = CONTENT_C + CAM_LIFT / K_OPEN;
-const CY_FINAL = CONTENT_C + CAM_LIFT / K_FINAL;
+// The flag's centre, on screen, at every resolved framing in this clip.
+const FLAG_SCREEN_Y = 830;
+// what `camMove` has to be handed so that FLAG_MID lands on FLAG_SCREEN_Y
+const contentFor = (k: number) => FLAG_MID + (FRAME_H / 2 - FLAG_SCREEN_Y - CAM_LIFT) / k;
+const CONTENT_OPEN = contentFor(K_OPEN); // 1122.13
+const CONTENT_FINAL = contentFor(K_FINAL); // 1123
+const CY_OPEN = CONTENT_OPEN + CAM_LIFT / K_OPEN; // 1200.25
+const CY_FINAL = CONTENT_FINAL + CAM_LIFT / K_FINAL; // 1223
+// The pile's top edge on screen at the resolve: the highest thing in the cut,
+// and the check that raising the flag has not pushed it out of the frame.
+const PILE_TOP_SCREEN = FRAME_H / 2 + (PILE_TOP - CY_FINAL) * K_FINAL; // 605
+if (PILE_TOP_SCREEN < 60) {
+  throw new Error(`the pile's top edge is at screen y ${PILE_TOP_SCREEN.toFixed(0)}`);
+}
 // what the resolved camera can see, which is what decides how long the queue is
 const WORLD_LEFT_FINAL = CENTRE_X - FRAME_W / (2 * K_FINAL);
 
@@ -416,10 +477,19 @@ const slotX = (slot: number) => QUEUE_X0 - slot * QUEUE_PITCH;
 
 // How long the queue is: not a number, a framing rule. The back tool keeps
 // this much air behind it at the resolved camera, and the queue is every slot
-// that fits in front of that. Director's balance pass: the margin is 140 so
-// the queue is FIVE — the group (queue, gate, flag, pile) then sits within
+// that fits in front of that. Director's balance pass: the margin was 140 so
+// the queue was FIVE — the group (queue, gate, flag, pile) then sat within
 // ~35 px of the frame's centre, where six put it 105 px left of it.
-const QUEUE_MARGIN = 140; // screen px
+//
+// Consistency pass: the resolve is k 1.25 now, not 1.0, so the same margin in
+// SCREEN px buys fewer slots — the rule is unchanged, the framing under it
+// moved. At 1.25 the frame's left edge is world x 108, and a 100 px margin
+// leaves room for four slots (the fifth would stand its back edge 47 screen px
+// inside the edge, which is not air, it is a tool falling off the frame). So
+// the queue is FOUR, its back edge at world 208 = screen 125, and the group is
+// balanced on the flag by the pile's corridor instead — see PILE_GAP. 100 is
+// the middle of the band that gives four: anything from 75 to just under 125.
+const QUEUE_MARGIN = 100; // screen px
 const QUEUE_MAX =
   Math.floor(
     (QUEUE_X0 - TOOL_HALF - WORLD_LEFT_FINAL - QUEUE_MARGIN / K_FINAL) / QUEUE_PITCH,
@@ -513,9 +583,9 @@ const foreignX = (t: Foreign, f: number): number | null => {
 // Its right edge is exactly the flag's right edge and it sits on the flag's
 // centre line, so it is entirely occluded until it moves.
 const DOM_SPAWN_X = FLAG_RIGHT - TOOL_HALF; // 644
-// The middle of the corridor: a tool standing here is 34 px clear of the flag
-// and 34 px clear of the pile.
-const LIFT_X = FLAG_RIGHT + PILE_GAP / 2; // 710
+// The middle of the corridor: a tool standing here is 49 px clear of the flag
+// and 49 px clear of the pile (34 before the corridor came to 130).
+const LIFT_X = FLAG_RIGHT + PILE_GAP / 2; // 725
 const LIFT_RISE = 40; // the control point, 40 px above the higher endpoint
 
 const DOM_LAUNCH = [91, 114, 126, 151, 156, 162, 170, 174, 177, 180, 182, 184, 186, 188];
@@ -629,8 +699,8 @@ const CAM = camMove({
   f1: CAM_F1,
   k0: K_OPEN,
   k1: K_FINAL,
-  c0: CONTENT_C,
-  c1: CONTENT_C,
+  c0: CONTENT_OPEN,
+  c1: CONTENT_FINAL,
   warp: CAM_WARP,
 });
 const CAM_FF = [0, ...CAM.F, DURATION];

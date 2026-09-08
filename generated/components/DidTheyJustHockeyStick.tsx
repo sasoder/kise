@@ -128,6 +128,14 @@ export const DURATION = 198;
 // v3: the camera is a pure zoom about the graph's centre (CX_OPEN = CENTRE_X,
 // k 1.08 -> 0.78) and the pitch comes to 116, so the flag holds the frame's
 // midline from the first frame instead of drifting into it on the pull-back.
+//
+// CONSISTENCY PASS (across the three cuts of this clip): the flag is scaled in
+// WORLD space to the shared 300 x 200 SCREEN px it now takes in all three —
+// 384 x 256 at rx 22.4 here, because this cut resolves at k 0.78. The camera,
+// the graph, the beats and the flag's own place in the world (centred on
+// CENTRE_X, top edge 70 world px under the floor) are all untouched, and so is
+// its entrance. WORLD_H comes up to 3300 so the taller mark is inside the
+// world's own box rather than relying on the SVG's overflow.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -216,7 +224,10 @@ export const defaultProps: Props = schema.parse({
 type Pt = { x: number; y: number };
 
 const WORLD_W = 1080;
-const WORLD_H = 3200;
+// 3300, not 3200: the consistency pass takes the flag's bottom edge to world
+// y 3226. Nothing is positioned off WORLD_H — it is the world box's own size —
+// so raising it moves nothing.
+const WORLD_H = 3300;
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const smooth = (v: number) => {
@@ -723,16 +734,31 @@ const FLOOR_LINE = Math.round(FLOOR_Y) + 0.5;
 // The field is flag red; the stars are the piece's own accent, not flag yellow,
 // so the mark belongs to the palette rather than sitting outside it.
 //
-// The star layout is the official 30x20 unit grid at 8 world px to the unit:
-// the large star's centre at (5, 5) with a circumscribed radius of 3 units and
-// a point straight up, and four small stars of radius 1 unit at (10, 2),
-// (12, 4), (12, 7) and (10, 9), each turned so one of its five points aims at
-// the large star's centre.
+// The star layout is the official 30x20 unit grid at FLAG_W/30 world px to the
+// unit: the large star's centre at (5, 5) with a circumscribed radius of 3
+// units and a point straight up, and four small stars of radius 1 unit at
+// (10, 2), (12, 4), (12, 7) and (10, 9), each turned so one of its five points
+// aims at the large star's centre.
+//
+// CONSISTENCY PASS. The flag is the one element that carries through all three
+// cuts of this clip, and it was resolving at a different size in each of them:
+// 187 screen px here (240 world at k 0.78), 240 in cut 2 and 300 in cut 3. It
+// is now ONE thing — 300 x 200 SCREEN px at every resolved framing, corner
+// radius 17.5 screen px — so an edit that runs the three cuts seconds apart
+// never sees the mark change size. Here that is done in WORLD space, because
+// this cut's resolved camera is k 0.78 and its camera is not touched: 240 x 160
+// at rx 14 becomes 384 x 256 at rx 22.4, which is 299.5 x 199.7 at rx 17.5 on
+// screen. FLAG_UNIT is FLAG_W / 30, so the star grid scales with it and the
+// mark is the same drawing, larger. Nothing else moves: it is still centred on
+// CENTRE_X with its top edge 70 world px under the floor, and its entrance is
+// the same 24 px rise and fade landing on "China" at f23. Its bottom edge lands
+// at screen y 1374 resolved (was 1250), still clear of the frame, and the whole
+// mark is inside the opening camera (screen y 1206..1482).
 // ---------------------------------------------------------------------------
-const FLAG_W = 240;
-const FLAG_H = 160; // 3:2
-const FLAG_UNIT = FLAG_W / 30;
-const FLAG_R = 14; // slightly rounded
+const FLAG_W = 384; // 300 screen px at the resolved k 0.78
+const FLAG_H = 256; // 3:2 — 200 screen px
+const FLAG_UNIT = FLAG_W / 30; // 12.8; the star grid scales with the flag
+const FLAG_R = 22.4; // slightly rounded — 17.5 screen px
 const FLAG_X = CENTRE_X - FLAG_W / 2; // centred on the midpoint of the eight positions
 const FLAG_TOP = FLOOR_Y + 70; // its top edge, 70 world px under the floor line
 const FLAG_RED = "#DE2910";

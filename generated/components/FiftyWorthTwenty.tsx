@@ -8,6 +8,7 @@ import {
   BG_DIM,
   CAM_LIFT,
   DOT_RADIUS,
+  FRAME_H,
   GridBackground,
   ICON_SHADOW_BLUR,
   ICON_SHADOW_OPACITY,
@@ -90,15 +91,20 @@ export const DURATION = 262;
 //                 under its own block, so the twenty's sat 24.1 px high of the
 //                 other. Drawn in WORLD space inside the world transform, so
 //                 they track the camera like everything else.
+//   framing       held on the FLAG ROW (consistency pass): both flags are on
+//                 world y 1000..1160, and that row's centre line, world 1080,
+//                 sits at SCREEN y 830 at BOTH ends of the move — the same
+//                 place and the same size the mark holds in cut 2, so cut 2's
+//                 last frame and this cut's first show the same flag.
 //   content box   what is actually on screen, which is not the same box at the
 //                 two ends of the move. At the OPEN it is the China flag and
 //                 the fifty: world y 1000 (the flag's top edge) .. 1296.4 (the
-//                 fifty's bottom row), centre 1148.2. RESOLVED the fifty has
-//                 become the twenty, one row shorter: 1000 .. 1272.3, centre
-//                 1136.2. `camMove` carries the centre from one to the other on
-//                 the move's own eased curve and writes cy as
-//                 contentCentre + CAM_LIFT/k, so the content centre sits at
-//                 SCREEN y 835 at both ends and never leaves it in between.
+//                 fifty's bottom row), centre 1148.2 — screen 702..1176, centre
+//                 939. RESOLVED the fifty has become the twenty, one row
+//                 shorter: 1000 .. 1272.3, centre 1136.2 — screen 730..1070,
+//                 centre 900. Both blocks hang below the flags, so pinning the
+//                 flag row at 830 puts the composition's own centre below the
+//                 house's 835 rather than on it.
 //   camera        two subjects, so one motivated move with lateral travel: it
 //                 opens TIGHT ON THE CHINA FLAG (k 1.6 about world x 350, the
 //                 flag's own centre) and pulls back while it slides right to
@@ -108,14 +114,15 @@ export const DURATION = 262;
 //                 not move it: the China flag's left edge (world 230) sits at
 //                 screen x 348 and the fifty's leftmost dot (world 230.7, with
 //                 its jitter and radius) at 349.1 — both far clear of the 50 px
-//                 margin — the flag's centre is at screen y 726 and the fifty's
-//                 bottom row at 1072. Resolved, the China flag's left edge is
+//                 margin — the flag's centre is at screen y 830 and the fifty's
+//                 bottom row at 1176. Resolved, the China flag's left edge is
 //                 at screen x 152 and the US flag's right edge at 928, both
 //                 well inside the 100 px margin the two labels need; the flags'
-//                 centre is at screen y 765 and the twenty's bottom row at
-//                 1005. The labels, on their one cap top, run 129..475 and
+//                 centre is still at screen y 830 and the twenty's bottom row
+//                 at 1070. The labels, on their one cap top, run 129..475 and
 //                 605..951 — a 130 px gap between them and 129 px to each
-//                 frame edge.
+//                 frame edge — and their cap band ends at screen y 1184,
+//                 clear of the frame's bottom third.
 //
 // Every gesture is one word. Nothing else happens.
 //   the China flag alone, carried over from cut 2      — before "reasonable" f0-18
@@ -302,6 +309,20 @@ export const DURATION = 262;
 //      keyed, not derived from the chord, so the first is still f157 on
 //      "gigawatts" and the last still f221. Re-swept at quarter-frame
 //      resolution: zero flyer/seated overlaps in the twenty.
+//
+// CONSISTENCY PASS (across the three cuts of this clip) — cy, and only cy.
+// Every beat, every frame, both k values, cx, the keys, the warp and all the
+// world geometry are untouched. The flag was three different sizes at three
+// different heights across the three cuts; it is now one mark, 300 x 200 screen
+// px at every resolve with its centre on screen y 830 at both of this cut's
+// framings and at both of cut 2's. This cut already carried the size — its
+// k 1.6 / 1.25 IS the standard, and cut 2's camera was re-scaled to match it —
+// so all that moved here is the camera's datum: from the content box (which
+// changes between the two ends, because the fifty becomes the twenty) to the
+// flag row itself (which does not). The flag's centre goes 726 -> 830 at the
+// open and 759 -> 830 at the resolve; everything hanging off the flags follows
+// it down the frame by the same amount, and the labels' cap band ends at screen
+// y 1184 resolved, 1283 at the open.
 // ---------------------------------------------------------------------------
 
 // The flag's red, which is also the colour of a domestic chip. Copied from
@@ -513,24 +534,41 @@ const TWENTY_SEATS: Pt[] = (() => {
 // hand on the camera is one hand.
 //
 // cy is taken off the EASED k by `camMove`, so the framing settles with the
-// zoom instead of sagging through it. The content centre it is framing on moves
-// too, by 12 world px: at the open the content is the China flag over the
-// fifty (bottom row 1296.4), resolved it is both flags over the TWENTY (bottom
-// row 1272.3, one row shorter). Carrying the centre from one box to the other
-// on the move's own curve keeps the content centre at screen y 835 at both
-// ends; holding the fifty's box would leave the resolved composition 6 px low.
+// zoom instead of sagging through it.
+//
+// CONSISTENCY PASS: what it settles ON is the FLAG ROW, not the content box.
+// The flag is the one element that carries through all three cuts of this clip,
+// and it was resolving at a different size and a different height in each of
+// them — 187 screen px at y 1275 in cut 1, 240 at 885 in cut 2, 300 at 759
+// here. It is now one mark: 300 x 200 SCREEN px wherever a cut resolves, and in
+// cuts 2 and 3 its CENTRE is held at screen y 830 at the open AND at the
+// resolve. This cut already had the size right — 240 world px at k 1.25 is 300
+// on screen, and 384 at the open — so nothing here but cy moved. It is now
+// FLAG_MID + (960 - 830)/k, and `camMove` is handed that minus CAM_LIFT/k: five
+// world px below the flag row's own centre line, which is what the house's 835
+// and this pass's 830 differ by. Because that offset is 1/k, it is evaluated at
+// each end of the move and carried between them on the move's own eased curve;
+// the residual against the exact 1/k curve peaks at 0.08 screen px mid-move.
+//
+// The old datum was the content box, carried 12 world px from the flag-over-
+// fifty box at the open to the flag-over-twenty box at the resolve so that the
+// content centre held screen y 835 at both ends. Holding the flag row instead
+// moves that centre DOWN the frame — to 939 at the open and 900 at the resolve
+// — because both blocks hang below the flags and the flag is now the thing
+// pinned. That is the trade the pass buys: three cuts whose one shared mark
+// never moves, against a composition that sits lower in this one.
 //
 // Keyed f116-126 rather than f118-136: this damper lags its target by about ten
 // frames, and the move has to be settled before the crossing starts at f143.
 //
 //   f0-115    k 1.6      the China flag centred and 384 px wide: its left edge
-//             cx 300     at screen x 348 and the fifty's leftmost dot at 348.6,
-//                        its centre at screen y 726, the fifty's bottom row at
-//                        1072. The right half of the world is off frame.
+//             cx 350     at screen x 348 and the fifty's leftmost dot at 348.6,
+//                        its centre at screen y 830, the fifty's bottom row at
+//                        1176. The right half of the world is off frame.
 //   f116-136  -> k 1.25  both flags held: the China flag's left edge at screen
-//             -> cx 540  x 93 and the US flag's right edge at 993, the flags'
-//                        centre at screen y 759 and the twenty's bottom row at
-//                        999. Inside 0.5% of target by f135.
+//             -> cx 540  x 152 and the US flag's right edge at 928, the flags'
+//                        centre still at screen y 830 and the twenty's bottom
+//                        row at 1070. Inside 0.5% of target by f135.
 // ---------------------------------------------------------------------------
 const K_OPEN = 1.6;
 const K_FINAL = 1.25;
@@ -539,12 +577,22 @@ const CX_FINAL = CENTRE_X; // the midpoint of the two flags
 const CAM_F0 = 116;
 const CAM_F1 = 126;
 const CAM_WARP = 0.72;
-// the content box at each end: the flags' top edge down to whichever block is
-// standing under them at that moment
-const CONTENT_OPEN = (FLAG_TOP + FIFTY_BOTTOM_Y) / 2; // 1148.2
-const CONTENT_FINAL = (FLAG_TOP + TWENTY_BOTTOM_Y) / 2; // 1136.2
-const CY_OPEN = CONTENT_OPEN + CAM_LIFT / K_OPEN;
-const CY_FINAL = CONTENT_FINAL + CAM_LIFT / K_FINAL;
+// The flag row's centre line, and where it sits on screen in every cut of this
+// clip. Both flags are on the same y, so this is one line for the pair.
+const FLAG_MID = FLAG_TOP + FLAG_H / 2; // 1080
+const FLAG_SCREEN_Y = 830;
+// what `camMove` has to be handed so that FLAG_MID lands on FLAG_SCREEN_Y
+const contentFor = (k: number) => FLAG_MID + (FRAME_H / 2 - FLAG_SCREEN_Y - CAM_LIFT) / k;
+const CONTENT_OPEN = contentFor(K_OPEN); // 1083.13
+const CONTENT_FINAL = contentFor(K_FINAL); // 1084
+const CY_OPEN = CONTENT_OPEN + CAM_LIFT / K_OPEN; // 1161.25
+const CY_FINAL = CONTENT_FINAL + CAM_LIFT / K_FINAL; // 1184
+// The twenty's bottom row on screen at the resolve: the lowest dot in the cut,
+// and the check that pinning the flag has not pushed the block out of shot.
+const TWENTY_BOTTOM_SCREEN = FRAME_H / 2 + (TWENTY_BOTTOM_Y - CY_FINAL) * K_FINAL; // 1070
+if (TWENTY_BOTTOM_SCREEN > FRAME_H - 200) {
+  throw new Error(`the twenty's bottom row is at screen y ${TWENTY_BOTTOM_SCREEN.toFixed(0)}`);
+}
 
 const CAM = camMove({
   f0: CAM_F0,
