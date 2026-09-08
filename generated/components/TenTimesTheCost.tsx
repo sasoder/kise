@@ -40,32 +40,44 @@ export const DURATION = 237;
 
 // ---------------------------------------------------------------------------
 // "One into ten". A data center is a human-made thing, so it is ink geometry
-// built from the field's own primitives: six white ink rings in a 3x2 lattice
-// joined by seven ink lines, ~320 world px wide, at world (540, 0), each ring
-// pushed off the lattice by a hashed offset so it is a cluster and not a grid.
+// built from the field's own primitives: FOUR white server racks standing in a
+// row on the baseline, joined by an ink bus above them, 412 world px wide, at
+// world (540, 0). A rack is the `#rack` glyph — a 100 x 130 rounded rectangle
+// (r 10) with three slot cut-outs (56 x 20, r 5) taken out of it by
+// `fillRule="evenodd"`, so the field shows through the slots, plus one static
+// white LED (r 3.5) sitting in each slot.
 // Money is the field's dots: a block of 4 x 3 solid dots at a 22px step is one
 // unit. The cost is ONE block in the deep tone on the left of the building; the
 // rent is TEN blocks in the ripe tone stacked in a column on the right, on the
 // same baseline. The tenants are the two marks above it, tied to it by two
-// accent threads.
+// accent threads that leave the bus's two end points.
+//
+// racks pass: six rings -> four server-rack glyphs on a bus (user note 2026-09-08: "make the data center more clear")
 //
 // There is no crowd in this piece. The field is the grid, the vignette, the
-// global shadow and the per-icon shadow on every ring, line, packet and mark.
+// global shadow and the per-icon shadow on every rack, the bus, the stubs, the
+// packets and the marks.
 //
 // Every gesture is one word. Nothing else happens.
-//   the plan: six rings and seven edges draw DASHED
-//     (9/7, ink at OP_UNREAD), head-led, in reading
-//     order                                        — "even at the data
+//   the plan: the four racks' outer outlines, the
+//     bus and the four stubs draw DASHED (9/7, ink
+//     at OP_UNREAD), head-led, racks 1-4 (each one
+//     closed path from its bottom-left corner,
+//     clockwise), then the bus, then the stubs      — "even at the data
 //                                                     center level"      f0-30
-//   the ink: solid rings and edges draw over the
-//     plan in the same order, head-led with the
-//     white tip, the dashed line disappearing under
-//     the solid one as the head passes; 4-frame
-//     click-bright on completion, then OP_READ      — "like build a data
+//   the ink: each rack FILLS SOLID from the baseline
+//     upward behind a 6-frame clip wipe, racks 1-4
+//     opening at f37/41/45/49, the wipe revealing
+//     the slots and the LEDs and swallowing the
+//     rack's own dashed outline as it rises; then
+//     the bus draws solid head-led with the white
+//     tip f50-58 left to right and the four stubs
+//     draw solid f52-60; 4-frame click-bright on
+//     completion at f60, then OP_READ               — "like build a data
 //                                                     center"            f37-60
-//   two accent threads leave the structure upward,
-//     left first, right four frames later, each
-//     ending at an empty spot                       — "get rented out to" f89-107
+//   two accent threads leave the BUS'S TWO END
+//     POINTS straight up, left first, right four
+//     frames later, each ending at an empty spot    — "get rented out to" f89-107
 //   the Anthropic mark lands at the left thread's
 //     end, 0->1 and 0.86->1 over 6 frames, ease-out  — "Anthropic"        f113
 //   the OpenAI mark lands the same way on the right — "and OpenAI"        f121
@@ -88,11 +100,12 @@ export const DURATION = 237;
 //   nothing new; the resolved frame holds to the
 //     tail                                          — "build it"          f212-237
 //
-// ambient: the structure's own packets from f60 — a 4px ink bead running one of
-// its edges over 14 frames, a new one every 7, two alive at once — and from
-// f125 one small white packet at a time travelling DOWN a thread from a mark to
-// its ring, alternating threads, one every 8 frames. Neither is a gesture; they
-// are what a rented, running building looks like.
+// ambient: the structure's own packets from f60 — a 4px ink bead running the
+// BUS end to end over 14 frames, a new one every 7, two alive at once (the
+// stubs carry nothing) — and from f125 one small white packet at a time
+// travelling DOWN a thread from a mark to the bus end it leaves from,
+// alternating threads, one every 8 frames. Neither is a gesture; they are what
+// a rented, running building looks like.
 //
 // orange dwarkesh style: ACCENT / ACCENT_DEEP, solid dots with no stroke,
 // BG_DIM 0.45, global drop-shadow 2/7/0.12, per-icon drop-shadow 2/3/0.38,
@@ -208,8 +221,10 @@ const smooth = (v: number) => {
 // column's top row of dots at -708 and the cost block's bottom row at +92.
 // At k 1.0 that puts the composition's centre at screen y 835, its top (the
 // tenth block) at 430 and its bottom (the cost block) at 1241, with 211px of
-// margin on each side. The marks at world y -290 sit at screen 853 - well
-// inside it - and nothing is below 1480.
+// margin on each side. The marks at world y -300 sit at screen 843, their
+// boxes topping out at 789 - well inside it - and nothing is below 1480. The
+// racks span world x -206..+206 from the centre; the cost block's left edge is
+// -323 and the column's right edge +323, so the row of racks clears both.
 // ---------------------------------------------------------------------------
 const STRUCT_CX = 540;
 const K_OPEN = 1.5;
@@ -226,117 +241,177 @@ const RIGHT_EDGE = STRUCT_CX + FRAME_W / 2 / K_FINAL;
 const LEFT_EDGE = STRUCT_CX - FRAME_W / 2 / K_FINAL;
 
 // ---------------------------------------------------------------------------
-// The building: six ink rings on a 3x2 lattice 280 x 140 world px, each pushed
-// off its cell by up to +/-10px so the thing reads as a cluster someone built
-// rather than a lattice someone ruled. Radius 22, stroke 3.5; the seven edges
-// are the four row segments and the three column segments, stroke 3, clipped to
-// the ring rims so nothing crosses into a ring.
+// The building: FOUR server racks standing in a row on the baseline, joined by
+// a bus above them. A row is what reads as a data center, so there are no
+// hashed offsets here: the four racks are on a ruled row at 104px pitch.
+//
+// The glyph is `#rack` from the test sheet, verbatim, with its origin at the
+// rack's bottom centre: a rounded rectangle -50..+50 x -130..0 (r 10) filled
+// white, with three 56 x 20 slots (r 5) at y -112, -75, -38 cut out of it by
+// `fillRule="evenodd"` so the field shows through them, and one white LED
+// (r 3.5) at x +24 in each slot. The LEDs are static — no blinking, no
+// breathing; a rack is a thing on the field, not a gadget.
+//
+// The bus is an ink line at y -78 running between the two outer rack centres,
+// with a 40px stub down to each rack's top centre. Stroke 3, round caps, the
+// same weight as every other line in the piece.
 // ---------------------------------------------------------------------------
-const RING_R = 22;
-const RING_BASE: P[] = [
-  { x: -140, y: -70 }, // 0 top left
-  { x: 0, y: -70 }, // 1 top middle
-  { x: 140, y: -70 }, // 2 top right
-  { x: -140, y: 70 }, // 3 bottom left
-  { x: 0, y: 70 }, // 4 bottom middle
-  { x: 140, y: 70 }, // 5 bottom right
-];
-const RINGS: P[] = RING_BASE.map((p, i) => ({
-  x: STRUCT_CX + p.x + (hash(i, 80) - 0.5) * 20,
-  y: p.y + (hash(i, 81) - 0.5) * 20,
-}));
+const RACK_HW = 50; // the glyph is 100 wide
+const RACK_H = 130;
+const RACK_R = 10;
+const RACK_DX = [-156, -52, 52, 156];
 
-// The baseline. Nothing is drawn on it: it is the bottom of the lower rings,
-// world y +92, and both the cost block and the rent column sit on it.
+// The baseline. Nothing is drawn on it: it is where the four racks stand, world
+// y +92, and both the cost block and the rent column sit on it.
 const BASELINE = 92;
+const RACK_TOP = BASELINE - RACK_H; // -38
+const BUS_Y = -78;
+const RACK_X = RACK_DX.map((dx) => STRUCT_CX + dx);
+const BUS_X0 = RACK_X[0];
+const BUS_X1 = RACK_X[RACK_X.length - 1];
 
-type Elem = { kind: "ring" | "line"; a: number; b: number };
-// Reading order: the top row and its two edges, down the left column, the
-// bottom row and its edges, then the two remaining column edges.
+// The glyph, verbatim from the test sheet; drawn under translate(cx, BASELINE).
+const RACK_D = [
+  "M-40,-130 h80 a10,10 0 0 1 10,10 v110 a10,10 0 0 1 -10,10 h-80 a10,10 0 0 1 -10,-10 v-110 a10,10 0 0 1 10,-10 z",
+  "M-28,-112 h56 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-56 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z",
+  "M-28,-75 h56 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-56 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z",
+  "M-28,-38 h56 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-56 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z",
+].join(" ");
+const LED_DX = 24;
+const LED_DY = [-102, -65, -28];
+const LED_R = 3.5;
+
+type Elem = { kind: "rack" | "bus" | "stub"; i: number };
+// Build order: the four racks left to right, then the bus, then the four stubs.
 const STRUCTURE: Elem[] = [
-  { kind: "ring", a: 0, b: 0 },
-  { kind: "line", a: 0, b: 1 },
-  { kind: "ring", a: 1, b: 1 },
-  { kind: "line", a: 1, b: 2 },
-  { kind: "ring", a: 2, b: 2 },
-  { kind: "line", a: 0, b: 3 },
-  { kind: "ring", a: 3, b: 3 },
-  { kind: "line", a: 3, b: 4 },
-  { kind: "ring", a: 4, b: 4 },
-  { kind: "line", a: 1, b: 4 },
-  { kind: "line", a: 4, b: 5 },
-  { kind: "ring", a: 5, b: 5 },
-  { kind: "line", a: 2, b: 5 },
+  { kind: "rack", i: 0 },
+  { kind: "rack", i: 1 },
+  { kind: "rack", i: 2 },
+  { kind: "rack", i: 3 },
+  { kind: "bus", i: 0 },
+  { kind: "stub", i: 0 },
+  { kind: "stub", i: 1 },
+  { kind: "stub", i: 2 },
+  { kind: "stub", i: 3 },
 ];
-const NELEM = STRUCTURE.length;
+const NELEM = STRUCTURE.length; // 9
 
-// The plan and the ink run the same order at two tempos: 13 elements over 30
-// frames dashed (off 2, dur 6 -> the last finishes at f30) and over 23 solid
-// (off 1.5, dur 5 -> the last finishes at f60).
-const PLAN_OFF = 2;
+// The plan: nine elements over 30 frames dashed (off 3, dur 6 -> the last
+// finishes at f30, as it did with thirteen at off 2).
 const PLAN_DUR = 6;
-const INK_OFF = 1.5;
-const INK_DUR = 5;
-const INK_SPAN = (NELEM - 1) * INK_OFF + INK_DUR; // 23
+const PLAN_OFF = (30 - PLAN_DUR) / (NELEM - 1); // 3
+
+// The ink is no longer one draw over one order: a rack FILLS and a line DRAWS.
+// The four racks fill from the baseline up over 6 frames each, opening 4 frames
+// apart from `likeBuild`; the bus draws head-led from +13 to +21; the four
+// stubs draw 3 frames each from +15, the last finishing at +23, so the
+// structure still completes at f60 and the click-bright is where it was.
+const FILL_DUR = 6;
+const FILL_OFF = 4;
+const WIPE_OVER = 6; // the wipe runs 6px past the rack top, so no dash survives
+const BUS_INK_T0 = 13;
+const BUS_INK_DUR = 8;
+const STUB_INK_T0 = 15;
+const STUB_INK_OFF = 5 / 3;
+const STUB_INK_DUR = 3;
+const INK_SPAN = STUB_INK_T0 + 3 * STUB_INK_OFF + STUB_INK_DUR; // 23
 
 const DASH = "9 7";
 const DASH_PERIOD = 16;
 
 // The geometry of one element, as an arc-length parameterisation, so the plan
-// and the ink can both be drawn head-led from it and the dashed remainder can
-// start exactly where the solid head has got to.
+// can be drawn head-led from it and the solid line can start exactly where the
+// dashed one has got to.
 type Geo = {
   len: number;
   at: (u: number) => P;
   path: (u0: number, u1: number) => string;
 };
 
-const ringGeo = (c: P): Geo => {
-  const C = 2 * Math.PI * RING_R;
+// A polyline, walked by arc length. The rack outline is one of these: its four
+// corner arcs are sampled into 6 chords each, which at r 10 is 0.09px off the
+// true arc — invisible under a 3px stroke, and it lets the outline, the bus and
+// the stubs share one head-led draw.
+const polyGeo = (pts: P[]): Geo => {
+  const seg: number[] = [];
+  const cum: number[] = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const l = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    seg.push(l);
+    cum.push(cum[i - 1] + l);
+  }
+  const total = cum[cum.length - 1] || 1;
   const at = (u: number) => {
-    const a = -Math.PI / 2 + 2 * Math.PI * u;
-    return { x: c.x + RING_R * Math.cos(a), y: c.y + RING_R * Math.sin(a) };
+    const d = clamp01(u) * total;
+    let i = 1;
+    while (i < pts.length - 1 && cum[i] < d) i++;
+    const t = seg[i - 1] > 0 ? (d - cum[i - 1]) / seg[i - 1] : 0;
+    return {
+      x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t,
+      y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * t,
+    };
   };
   return {
-    len: C,
+    len: total,
     at,
     path: (u0, u1) => {
       if (u1 - u0 <= 1e-4) return "";
-      const p0 = at(u0);
-      if (u1 - u0 >= 0.9999) {
-        const h = at(u0 + 0.5);
-        return `M ${p0.x} ${p0.y} A ${RING_R} ${RING_R} 0 0 1 ${h.x} ${h.y} A ${RING_R} ${RING_R} 0 0 1 ${p0.x} ${p0.y}`;
-      }
-      const p1 = at(u1);
-      const large = u1 - u0 > 0.5 ? 1 : 0;
-      return `M ${p0.x} ${p0.y} A ${RING_R} ${RING_R} 0 ${large} 1 ${p1.x} ${p1.y}`;
-    },
-  };
-};
-
-const lineGeo = (A: P, B: P): Geo => {
-  const L = Math.hypot(B.x - A.x, B.y - A.y) || 1;
-  const ux = (B.x - A.x) / L;
-  const uy = (B.y - A.y) / L;
-  const p0 = { x: A.x + ux * RING_R, y: A.y + uy * RING_R };
-  const p1 = { x: B.x - ux * RING_R, y: B.y - uy * RING_R };
-  const len = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-  const at = (u: number) => ({ x: p0.x + (p1.x - p0.x) * u, y: p0.y + (p1.y - p0.y) * u });
-  return {
-    len,
-    at,
-    path: (u0, u1) => {
-      if (u1 - u0 <= 1e-4) return "";
+      const d0 = clamp01(u0) * total;
+      const d1 = clamp01(u1) * total;
       const a = at(u0);
+      let s = `M ${a.x.toFixed(2)} ${a.y.toFixed(2)}`;
+      for (let i = 1; i < pts.length; i++) {
+        if (cum[i] <= d0) continue;
+        if (cum[i] >= d1) break;
+        s += ` L ${pts[i].x.toFixed(2)} ${pts[i].y.toFixed(2)}`;
+      }
       const b = at(u1);
-      return `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
+      return `${s} L ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
     },
   };
 };
 
-const GEO: Geo[] = STRUCTURE.map((e) =>
-  e.kind === "ring" ? ringGeo(RINGS[e.a]) : lineGeo(RINGS[e.a], RINGS[e.b]),
-);
+// One rack's OUTER outline (no slots), as a closed polyline starting at the
+// bottom-left corner and running clockwise: up the left side, across the top,
+// down the right, back along the bottom.
+const rackOutline = (cx: number): P[] => {
+  const L = cx - RACK_HW;
+  const R = cx + RACK_HW;
+  const T = RACK_TOP;
+  const B = BASELINE;
+  const r = RACK_R;
+  const pts: P[] = [{ x: L, y: B - r }];
+  const arc = (ax: number, ay: number, a0: number, a1: number) => {
+    for (let i = 1; i <= 6; i++) {
+      const a = a0 + ((a1 - a0) * i) / 6;
+      pts.push({ x: ax + r * Math.cos(a), y: ay + r * Math.sin(a) });
+    }
+  };
+  pts.push({ x: L, y: T + r });
+  arc(L + r, T + r, Math.PI, 1.5 * Math.PI);
+  pts.push({ x: R - r, y: T });
+  arc(R - r, T + r, -Math.PI / 2, 0);
+  pts.push({ x: R, y: B - r });
+  arc(R - r, B - r, 0, Math.PI / 2);
+  pts.push({ x: L + r, y: B });
+  arc(L + r, B - r, Math.PI / 2, Math.PI);
+  return pts;
+};
+
+const GEO: Geo[] = STRUCTURE.map((e) => {
+  if (e.kind === "rack") return polyGeo(rackOutline(RACK_X[e.i]));
+  if (e.kind === "bus") {
+    return polyGeo([
+      { x: BUS_X0, y: BUS_Y },
+      { x: BUS_X1, y: BUS_Y },
+    ]);
+  }
+  return polyGeo([
+    { x: RACK_X[e.i], y: BUS_Y },
+    { x: RACK_X[e.i], y: RACK_TOP },
+  ]);
+});
+const BUS_GEO = GEO[4];
 
 // ---------------------------------------------------------------------------
 // Money. One unit is a block of 4 x 3 solid dots at a 22px step: 66 x 44 world
@@ -437,36 +512,31 @@ const WD_STAGGER = 4;
 const WD_DUR = 5;
 
 // ---------------------------------------------------------------------------
-// The tenants. Two white marks above the building, each tied to it by an accent
-// thread that draws head-led out of a ring's rim into the empty spot where the
-// mark will land, and stays live for the rest of the piece.
+// The tenants. Two white marks above the building, each sitting directly over
+// one END of the bus and tied to it by an accent thread that draws head-led
+// straight up out of that end point into the empty spot where the mark will
+// land, and stays live for the rest of the piece.
 // ---------------------------------------------------------------------------
 const MARK_SIZE = 108;
 const MARKS = [
   // glyphBottom: where the visible glyph ends inside the 108 box (the Anthropic
   // mark is a wide short A\, its PNG has 61px of empty alpha below it) so the
   // thread meets the ink, not the box
-  { src: "anthropic.png", x: STRUCT_CX - 150, y: -290, ring: 0, glyphBottom: 259 / 320 },
-  { src: "openai-chatgpt-logo.png", x: STRUCT_CX + 150, y: -290, ring: 2, glyphBottom: 1 },
+  { src: "anthropic.png", x: BUS_X0, y: -300, glyphBottom: 259 / 320 },
+  { src: "openai-chatgpt-logo.png", x: BUS_X1, y: -300, glyphBottom: 1 },
 ];
-const THREADS = MARKS.map((m) => {
-  const R = RINGS[m.ring];
-  const mx = m.x;
-  const my = m.y - MARK_SIZE / 2 + MARK_SIZE * m.glyphBottom; // the bottom edge of the glyph
-  const L = Math.hypot(mx - R.x, my - R.y) || 1;
-  return {
-    x1: R.x + ((mx - R.x) / L) * RING_R,
-    y1: R.y + ((my - R.y) / L) * RING_R,
-    x2: mx,
-    y2: my,
-  };
-});
+const THREADS = MARKS.map((m) => ({
+  x1: m.x,
+  y1: BUS_Y,
+  x2: m.x,
+  y2: m.y - MARK_SIZE / 2 + MARK_SIZE * m.glyphBottom, // the bottom edge of the glyph
+}));
 const THREAD_T0 = [89, 93];
 const THREAD_DUR = 12;
 
-// The structure's own packets: an ink bead running one of its edges over 14
+// The structure's own packets: an ink bead running the BUS end to end over 14
 // frames, a new one every 7, two alive at once, from the frame it completes.
-const EDGES = STRUCTURE.map((e, i) => (e.kind === "line" ? i : -1)).filter((i) => i >= 0);
+// The stubs carry nothing — they are the racks' connections, not traffic.
 const PKT_PERIOD = 7;
 const PKT_LIFE = 14;
 const PKT_R = 4;
@@ -499,10 +569,11 @@ const TenTimesTheCost: React.FC<Props> = ({
   const frame = useCurrentFrame();
 
   // -- the plan and the ink --------------------------------------------------
-  // Two head-led draws over the same thirteen elements in the same order. The
-  // dashed plan is only ever shown from where the solid ink has got to, so the
-  // plan disappears under the ink as the head passes rather than showing
-  // through its gaps.
+  // The plan is one head-led draw over the nine elements in build order. The
+  // ink is two different things: a rack FILLS from the baseline up behind a
+  // clip wipe, and the bus and the stubs DRAW head-led. Either way the dashed
+  // plan is only ever shown where the ink has not reached, so it disappears
+  // under the ink rather than showing through it.
   const planDrawn = STRUCTURE.map((_, i) =>
     interpolate(
       frame,
@@ -511,14 +582,27 @@ const TenTimesTheCost: React.FC<Props> = ({
       { ...clamp, easing: Easing.out(Easing.cubic) },
     ),
   );
-  const inkDrawn = STRUCTURE.map((_, i) =>
+  // how far each rack's fill has risen, 0 = nothing, 1 = the whole rack
+  const rackFill = RACK_X.map((_, i) =>
     interpolate(
       frame,
-      [beats.likeBuild + i * INK_OFF, beats.likeBuild + i * INK_OFF + INK_DUR],
+      [beats.likeBuild + i * FILL_OFF, beats.likeBuild + i * FILL_OFF + FILL_DUR],
       [0, 1],
       { ...clamp, easing: Easing.out(Easing.cubic) },
     ),
   );
+  // the head-led solid draws, one number per element (0 for the racks: their
+  // ink is a fill, and the plan is cleared by the wipe instead)
+  const inkDrawn = STRUCTURE.map((e) => {
+    if (e.kind === "rack") return 0;
+    const t0 =
+      beats.likeBuild + (e.kind === "bus" ? BUS_INK_T0 : STUB_INK_T0 + e.i * STUB_INK_OFF);
+    const dur = e.kind === "bus" ? BUS_INK_DUR : STUB_INK_DUR;
+    return interpolate(frame, [t0, t0 + dur], [0, 1], {
+      ...clamp,
+      easing: Easing.out(Easing.cubic),
+    });
+  });
   const structureDone = beats.likeBuild + INK_SPAN; // f60
   const completeClick = frame >= structureDone && frame < structureDone + 4 ? 1 : 0;
   const inkOp = OP_READ + (1 - OP_READ) * completeClick;
@@ -562,10 +646,9 @@ const TenTimesTheCost: React.FC<Props> = ({
     if (sf > frame) break;
     const age = frame - sf;
     if (age >= PKT_LIFE) continue;
-    const g = GEO[EDGES[Math.floor(hash(n, 90) * EDGES.length)]];
     const t = age / (PKT_LIFE - 1);
-    const p = hash(n, 92) < 0.5 ? t : 1 - t; // either way along the edge
-    const q = g.at(p);
+    const p = hash(n, 92) < 0.5 ? t : 1 - t; // either way along the bus
+    const q = BUS_GEO.at(p);
     packets.push({ key: `p${n}`, x: q.x, y: q.y });
   }
   // and the rent coming down the threads, one at a time
@@ -657,37 +740,95 @@ const TenTimesTheCost: React.FC<Props> = ({
               );
             })}
 
-            {/* the plan: the same thirteen elements, dashed, shown only from
-                where the ink has got to */}
+            {/* the wipes: one per rack, a rect rising from the baseline. The
+                fill is clipped to what is inside it; the rack's dashed outline
+                is clipped to what is still OUTSIDE it, so the plan is swallowed
+                exactly as the ink rises past it. */}
+            <defs>
+              {RACK_X.map((cx, i) => {
+                const top = BASELINE - (RACK_H + WIPE_OVER) * rackFill[i];
+                return (
+                  <g key={`cd${i}`}>
+                    <clipPath id={`tc-fill-${i}`}>
+                      <rect
+                        x={cx - RACK_HW - 10}
+                        y={top}
+                        width={2 * RACK_HW + 20}
+                        height={BASELINE - top + 10}
+                      />
+                    </clipPath>
+                    <clipPath id={`tc-plan-${i}`}>
+                      <rect
+                        x={cx - RACK_HW - 20}
+                        y={RACK_TOP - 40}
+                        width={2 * RACK_HW + 40}
+                        height={Math.max(0, top - (RACK_TOP - 40))}
+                      />
+                    </clipPath>
+                  </g>
+                );
+              })}
+            </defs>
+
+            {/* the plan: the nine elements, dashed, shown only where the ink
+                has not reached */}
             {STRUCTURE.map((e, ei) => {
               const u0 = inkDrawn[ei];
               const u1 = planDrawn[ei];
               if (u1 - u0 <= 1e-3) return null;
+              if (e.kind === "rack" && rackFill[e.i] >= 1) return null;
               const g = GEO[ei];
               const d = g.path(u0, u1);
               if (!d) return null;
               const head = g.at(u1);
               return (
                 <g key={`pl${ei}`} style={{ filter: icon }}>
-                  <path
-                    d={d}
-                    fill="none"
-                    stroke={ink}
-                    strokeWidth={e.kind === "ring" ? 3.5 : 3}
-                    strokeLinecap="butt"
-                    strokeDasharray={DASH}
-                    strokeDashoffset={(u0 * g.len) % DASH_PERIOD}
-                    opacity={OP_UNREAD}
-                  />
-                  {u1 < 1 && inkDrawn[ei] <= 0 ? (
+                  <g clipPath={e.kind === "rack" ? `url(#tc-plan-${e.i})` : undefined}>
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke={ink}
+                      strokeWidth={3}
+                      strokeLinecap="butt"
+                      strokeDasharray={DASH}
+                      strokeDashoffset={(u0 * g.len) % DASH_PERIOD}
+                      opacity={OP_UNREAD}
+                    />
+                  </g>
+                  {u1 < 1 ? (
                     <circle cx={head.x} cy={head.y} r={4} fill={ink} opacity={OP_UNREAD + 0.3} />
                   ) : null}
                 </g>
               );
             })}
 
-            {/* the ink: solid, over the plan, same order, head-led */}
+            {/* the ink, part one: each rack fills solid from the baseline up,
+                the slots and the LEDs coming with it */}
+            {RACK_X.map((cx, i) =>
+              rackFill[i] <= 0 ? null : (
+                <g key={`rk${i}`} style={{ filter: icon }}>
+                  <g clipPath={`url(#tc-fill-${i})`}>
+                    <g transform={`translate(${cx} ${BASELINE})`}>
+                      <path d={RACK_D} fill={ink} fillRule="evenodd" opacity={inkOp} />
+                      {LED_DY.map((ly) => (
+                        <circle
+                          key={`l${ly}`}
+                          cx={LED_DX}
+                          cy={ly}
+                          r={LED_R}
+                          fill={ink}
+                          opacity={inkOp}
+                        />
+                      ))}
+                    </g>
+                  </g>
+                </g>
+              ),
+            )}
+
+            {/* the ink, part two: the bus and the stubs draw solid, head-led */}
             {STRUCTURE.map((e, ei) => {
+              if (e.kind === "rack") return null;
               const d = inkDrawn[ei];
               if (d <= 0) return null;
               const g = GEO[ei];
@@ -700,7 +841,7 @@ const TenTimesTheCost: React.FC<Props> = ({
                     d={p}
                     fill="none"
                     stroke={ink}
-                    strokeWidth={e.kind === "ring" ? 3.5 : 3}
+                    strokeWidth={3}
                     strokeLinecap="round"
                     opacity={inkOp}
                   />
