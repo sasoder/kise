@@ -58,7 +58,7 @@ import {
   runCameraX,
   BILLS,
   type P,
-} from "./TwentyPercentServicing";
+} from "./debtPileLegacy";
 
 export const FPS = 24;
 // Dylan Patel, clip `Dylan_Debt_Crisis`, cut 4 (cut 3 is `TwentyPercentServicing`,

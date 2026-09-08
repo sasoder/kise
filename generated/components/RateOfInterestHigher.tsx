@@ -26,6 +26,7 @@ import {
   wobble,
   worldTransform,
 } from "./fieldShared";
+import { LABEL_FADE, LABEL_OP, makeLabel } from "./explainerShared";
 
 export const FPS = 24;
 // Dylan Patel, clip `Dylan_Debt_Crisis`, cut 2 (cut 1 is `TenTimesTheCost`):
@@ -255,6 +256,29 @@ const DASH = "9 7";
 const STROKE = 3;
 
 // ---------------------------------------------------------------------------
+// The one label. This cut had no text at all, which made the set read as two
+// styles once the explainer turned out to be all type: `INTEREST RATE` is the
+// same words on the same shared zone label the explainer puts under its own
+// rate line, so the two cuts name the height the same way.
+//
+// It rides in WORLD space at the centre, 16 world px ABOVE the level, moving
+// with it (director pass: fixed under the original height it ended up inside
+// the borrow picket, crossed by threads; above the line nothing ever crosses
+// it, because every thread ends at the line). Same placement logic as the
+// explainer's delta label, which also rides the line.
+//
+// The resolved camera is k 0.7, where a 30px label drawn in the world would
+// read at 21px on screen. It is drawn at LABEL_SIZE and scaled by 1 / K_FINAL
+// about its own anchor, so the world glyph is 42.86px and the screen glyph is
+// the shared 30px once the camera has settled — the same type size the other
+// three cuts carry. Scaling the helper rather than re-declaring the font keeps
+// the family, the weight and the tracking in one place.
+// ---------------------------------------------------------------------------
+const LABEL_X = CX;
+const LABEL_DY = -16; // above the current level, riding with it
+const LABEL_SCALE = 1 / K_FINAL; // 1.4286: 30px on screen at the resolved camera
+
+// ---------------------------------------------------------------------------
 // The crowd. `person.png` white, 56 world px tall, on a grid step 64 x 72,
 // every seat jittered off its cell by up to 0.35 of the step and sized
 // 0.9-1.1 by its own hash, so it is a crowd and not a lattice — a smaller
@@ -428,6 +452,16 @@ const RateOfInterestHigher: React.FC<Props> = ({
     interpolate(frame, [r.t0, r.t0 + RUNG_FADE], [0, OP_UNREAD], clamp),
   );
 
+  // -- the label -------------------------------------------------------------
+  // It fades in on "rate of", so the words and the name arrive together.
+  const label = makeLabel(ink);
+  const labelOp = interpolate(
+    frame,
+    [beats.rateOf1, beats.rateOf1 + LABEL_FADE],
+    [0, LABEL_OP],
+    clamp,
+  );
+
   // -- the threads -----------------------------------------------------------
   // A thread is a vertical line from a head up to the level, drawn head-led.
   // Both streams — the idle traffic and the borrow — are the same mechanism;
@@ -581,6 +615,15 @@ const RateOfInterestHigher: React.FC<Props> = ({
                 opacity={OP_READ}
               />
             </g>
+
+            {/* the name of the height, riding just above the line */}
+            {labelOp <= 0 ? null : (
+              <g
+                transform={`translate(${LABEL_X} ${levelY + LABEL_DY}) scale(${LABEL_SCALE}) translate(${-LABEL_X} ${-(levelY + LABEL_DY)})`}
+              >
+                {label("l-rate", LABEL_X, levelY + LABEL_DY, "INTEREST RATE", labelOp)}
+              </g>
+            )}
           </svg>
 
           {/* everybody else, ON TOP of everything. A pure white glyph with the

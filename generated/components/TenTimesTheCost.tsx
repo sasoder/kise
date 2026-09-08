@@ -27,6 +27,7 @@ import {
   sway,
   worldTransform,
 } from "./fieldShared";
+import { LABEL_FADE, LABEL_OP, makeLabel } from "./explainerShared";
 
 export const FPS = 24;
 // Dylan Patel, clip `Dylan_Debt_Crisis`: "even at the data center level. If you,
@@ -494,6 +495,28 @@ const COST_BLOCK: Flight = {
   t0: 156,
 };
 
+// ---------------------------------------------------------------------------
+// The two labels. This cut had no text at all, which made the set read as two
+// styles once the explainer six seconds later turned out to be all type. They
+// are the shared zone label — Söhne Kräftig, uppercase, LABEL_TRACK, LABEL_OP —
+// drawn in WORLD space so they sway with the money they name, on one baseline
+// 56 world px under the money's own baseline, each centred on its column.
+//
+// A label names a thing that has ARRIVED: each fades in over LABEL_FADE frames
+// starting on its block's landing frame, so the word appears as the money it
+// belongs to settles into its seat and never labels something still in flight.
+// The rent's trigger is the FIRST rent block's landing (RENT_T0 + FLIGHT =
+// f146) — the column keeps growing above it for another forty frames, and the
+// label is the name of the column, not a count of it.
+//
+// The resolved camera is k 1.0 (K_FINAL), so LABEL_SIZE / k is LABEL_SIZE: the
+// shared 30px reads at 30px on screen with no scaling of its own, and the
+// helper is used exactly as the explainer uses it.
+// ---------------------------------------------------------------------------
+const LABEL_Y = BASELINE + 56; // world +148
+const COST_LABEL_T0 = COST_BLOCK.t0 + FLIGHT; // f166, the cost block's landing
+const RENT_LABEL_T0 = RENT_BLOCKS[0].t0 + FLIGHT; // f146, the first rent block's landing
+
 // Where a block is at `frame`, or null before it launches.
 const flightAt = (f: Flight, frame: number) => {
   if (frame < f.t0) return null;
@@ -643,6 +666,21 @@ const TenTimesTheCost: React.FC<Props> = ({
       easing: Easing.out(Easing.cubic),
     });
   });
+
+  // -- the two labels --------------------------------------------------------
+  const label = makeLabel(ink);
+  const costLabelOp = interpolate(
+    frame,
+    [COST_LABEL_T0, COST_LABEL_T0 + LABEL_FADE],
+    [0, LABEL_OP],
+    clamp,
+  );
+  const rentLabelOp = interpolate(
+    frame,
+    [RENT_LABEL_T0, RENT_LABEL_T0 + LABEL_FADE],
+    [0, LABEL_OP],
+    clamp,
+  );
 
   // -- the structure's own packets -------------------------------------------
   const packets: { key: string; x: number; y: number }[] = [];
@@ -882,6 +920,12 @@ const TenTimesTheCost: React.FC<Props> = ({
                     dotOpacity * cost.fade,
                   );
                 })}
+
+            {/* the two labels, one under each column, on one baseline */}
+            {costLabelOp <= 0
+              ? null
+              : label("l-cost", COST_X, LABEL_Y, "COST TO BUILD", costLabelOp)}
+            {rentLabelOp <= 0 ? null : label("l-rent", RENT_X, LABEL_Y, "RENT", rentLabelOp)}
           </svg>
 
           {/* the tenants: two white marks at the ends of the two threads */}

@@ -37,7 +37,7 @@ import {
   TREASURY_PEDIMENT,
   TREASURY_RECTS,
   runCameraX,
-} from "./TwentyPercentServicing";
+} from "./debtPileLegacy";
 
 export const FPS = 24;
 // Dylan Patel, clip `Dylan_Debt_Crisis`, cut 4 (cuts 1-3 are `TenTimesTheCost`,
