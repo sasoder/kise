@@ -69,26 +69,27 @@ export const DURATION = 262;
 //
 // FRAMING AND LAYOUT
 //   China flag    cut 1's flag exactly — 240x160 at rx 14, FLAG_RED with the
-//                 stars in the house accent — centred at world x 300, so
-//                 x 180..420, y 1000..1160. It is the carry-over from cuts 1
+//                 stars in the house accent — centred at world x 350, so
+//                 x 230..470, y 1000..1160. It is the carry-over from cuts 1
 //                 and 2: present from f0, no entrance, never fades.
-//   US flag       the same 240x160 rect at rx 14, centred at world x 780 and at
-//                 the same y, so x 660..900, y 1000..1160. 13 stripes, a canton
+//   US flag       the same 240x160 rect at rx 14, centred at world x 730 and at
+//                 the same y, so x 610..850, y 1000..1160. 13 stripes, a canton
 //                 96 x 86.15, 50 stars in nine rows of 6/5. Absent before f130.
+//                 The two axes are 380 apart (client pass 2, from 480).
 //   the fifty     10 wide x 5 tall on the crowd step (940/39 = 24.10), centred
 //                 under the China flag, its TOP ROW 40 world px below the
 //                 flag's bottom edge: y 1200, 1224, 1248, 1272, 1296 and
-//                 x 191.5..408.5 before jitter.
+//                 x 241.5..458.5 before jitter.
 //   the twenty    5 wide x 4 tall, same step, same top row, centred under the
-//                 US flag position: y 1200..1272, x 731.8..828.2 before jitter.
-//   the labels    38 world px — 48 screen px at the resolved k 1.25; the house 58 was too wide for two side by side, the
-//                 size — each centred on its own flag's x axis, its CAP TOP 40
-//                 world px below the bottom row of the block over it. The two
-//                 blocks are different heights, so the two labels sit at
-//                 different y: cap top 1336.4 under China (the fifty is five
-//                 rows) and 1312.3 under the US (the twenty is four). Drawn in
-//                 WORLD space inside the world transform, so they track the
-//                 camera like everything else.
+//                 US flag position: y 1200..1272, x 681.8..778.2 before jitter.
+//   the labels    38 world px — 48 screen px at the resolved k 1.25; the house
+//                 58 was too wide for two side by side — each centred on its
+//                 own flag's x axis, and BOTH on ONE cap top: 1336.4, which is
+//                 40 world px below the bottom row of the FIFTY, the taller of
+//                 the two blocks. Client pass 2: each label used to hang 40
+//                 under its own block, so the twenty's sat 24.1 px high of the
+//                 other. Drawn in WORLD space inside the world transform, so
+//                 they track the camera like everything else.
 //   content box   what is actually on screen, which is not the same box at the
 //                 two ends of the move. At the OPEN it is the China flag and
 //                 the fifty: world y 1000 (the flag's top edge) .. 1296.4 (the
@@ -99,18 +100,22 @@ export const DURATION = 262;
 //                 contentCentre + CAM_LIFT/k, so the content centre sits at
 //                 SCREEN y 835 at both ends and never leaves it in between.
 //   camera        two subjects, so one motivated move with lateral travel: it
-//                 opens TIGHT ON THE CHINA FLAG (k 1.6 about world x 300, the
+//                 opens TIGHT ON THE CHINA FLAG (k 1.6 about world x 350, the
 //                 flag's own centre) and pulls back while it slides right to
 //                 hold both flags (k 1.25 about x 540, the midpoint of the
-//                 two). Keyed f116-126, warp 0.72, settled by f136.
-//                 At the open the China flag's left edge (world 180) sits at
-//                 screen x 348 and the fifty's leftmost dot (world 180.4, with
-//                 its jitter and radius) at 348.6 — both far clear of the 50 px
+//                 two). Keyed f116-126, warp 0.72, settled by f135.
+//                 The open is framed on the flag, so closing the two flags did
+//                 not move it: the China flag's left edge (world 230) sits at
+//                 screen x 348 and the fifty's leftmost dot (world 230.7, with
+//                 its jitter and radius) at 349.1 — both far clear of the 50 px
 //                 margin — the flag's centre is at screen y 726 and the fifty's
 //                 bottom row at 1072. Resolved, the China flag's left edge is
-//                 at screen x 93 and the US flag's right edge at 993, both
-//                 inside the 80 px margin; the flags' centre is at screen y 759
-//                 and the twenty's bottom row at 999.
+//                 at screen x 152 and the US flag's right edge at 928, both
+//                 well inside the 100 px margin the two labels need; the flags'
+//                 centre is at screen y 765 and the twenty's bottom row at
+//                 1005. The labels, on their one cap top, run 129..475 and
+//                 605..951 — a 130 px gap between them and 129 px to each
+//                 frame edge.
 //
 // Every gesture is one word. Nothing else happens.
 //   the China flag alone, carried over from cut 2      — before "reasonable" f0-18
@@ -164,7 +169,7 @@ export const DURATION = 262;
 //   the crossing. Every dot leaves its seat on its own
 //     shallow quadratic arc — control point 40-90 px
 //     above the chord, hashed, capped per dot so no
-//     arc ever passes behind the China flag — and
+//     arc ever passes behind either flag — and
 //     flies to a seat in the twenty over 14-20 frames.
 //     Fifty red dots into twenty seats: TEN SEATS TAKE
 //     THREE and ten take two, hashed which. The first
@@ -269,6 +274,34 @@ export const DURATION = 262;
 //   5. Two labels, on request. The default in this style is no text; the client
 //      asked for the quantities named, so the two numbers that the piece is
 //      about get the house type at the house size and nothing else does.
+//
+// CLIENT PASS 2 — layout only. Two notes, and nothing outside them: every beat,
+// every frame and the whole camera track are untouched.
+//   1. The labels are LEVEL. Both now hang from one cap top, 1336.4 — the
+//      fifty's bottom row plus the same 40 the blocks hang below the flags —
+//      instead of each hanging 40 under its own block. The twenty is a row
+//      shorter, so "20 GIGAWATTS" sits 24.1 px further below its block than it
+//      did; that is the point. Two numbers being compared are read across one
+//      line, and 24 px of stagger read as a slip rather than as a measurement.
+//   2. The flags close from world x 300/780 to 350/730 — 480 apart to 380 —
+//      which brings the whole composition in toward the centre. Everything
+//      hangs off the two axes, so the blocks, the seats, the labels, the spawn
+//      points and the crossing's arcs all followed and no position is written
+//      down twice. What it buys, at the resolved camera: the China flag's left
+//      edge moves from screen x 93 to 152 and the US flag's right from 993 to
+//      928, and the two 48 px labels — the widest things in the frame — go from
+//      69/71 px off the frame edges to 129, with 130 px of air between them.
+//      The open is framed on the China flag itself (cx = CN_CX), so it did not
+//      move at all: 348 px to the flag's left edge at k 1.6, as before.
+//      One consequence, and it is the only code outside those two constants:
+//      the arcs' flag cap now tests BOTH flags. The chord is 100 px shorter, so
+//      an arc's apex reaches world x 621 where the US flag now starts at 610 —
+//      the sweep found eleven samples up to 1.2 px behind it. Capping against
+//      both puts the worst clearance back at 5.7 px under the US flag and 5.9
+//      under China's, with the crossing's schedule untouched: landings are
+//      keyed, not derived from the chord, so the first is still f157 on
+//      "gigawatts" and the last still f221. Re-swept at quarter-frame
+//      resolution: zero flyer/seated overlaps in the twenty.
 // ---------------------------------------------------------------------------
 
 // The flag's red, which is also the colour of a domestic chip. Copied from
@@ -393,11 +426,16 @@ const FLAG_R = 14;
 const FLAG_TOP = 1000;
 const FLAG_BOTTOM = FLAG_TOP + FLAG_H; // 1160
 
-const CN_CX = 300;
-const CN_X = CN_CX - FLAG_W / 2; // 180
-const CN_RIGHT = CN_X + FLAG_W; // 420
-const US_CX = 780;
-const US_X = US_CX - FLAG_W / 2; // 660
+// Client pass 2: the two flags close from 300/780 (480 apart) to 350/730 (380
+// apart). Every position in the piece hangs off these two axes, so the blocks,
+// the seats, the labels, the spawn points and the crossing's arcs all move with
+// them and nothing else had to be touched.
+const CN_CX = 350;
+const CN_X = CN_CX - FLAG_W / 2; // 230
+const CN_RIGHT = CN_X + FLAG_W; // 470
+const US_CX = 730;
+const US_X = US_CX - FLAG_W / 2; // 610
+const US_RIGHT = US_X + FLAG_W; // 850
 
 // ---------------------------------------------------------------------------
 // The two blocks. Both hang off the flags' bottom edge — there is no floor —
@@ -728,13 +766,21 @@ const CELLS: Cell[] = (() => {
     xT0[n] = land - dur;
   });
 
-  // --- the arcs, and the cap that keeps them out of the flag ---------------
+  // --- the arcs, and the cap that keeps them out of the flags ---------------
   // The control point sits straight above the chord's midpoint, so x is linear
   // in t and the flag test is a bound on the bow rather than a search. A dot is
-  // capped only where its path crosses under the China flag; everywhere else it
-  // keeps its hashed bow. The bow is also floored at half the chord's rise plus
-  // 8, which is what makes the arc monotone in y — so a dot always arrives at
-  // its seat from ABOVE and can never pass through a seated dot's disc.
+  // capped only where its path crosses under a flag; everywhere else it keeps
+  // its hashed bow. The bow is also floored at half the chord's rise plus 8,
+  // which is what makes the arc monotone in y — so a dot always arrives at its
+  // seat from ABOVE and can never pass through a seated dot's disc.
+  //
+  // Client pass 2: BOTH flags, not just China's. At 300/780 an arc's apex sat
+  // at most at world x 618 and the US flag started at 660, so the US flag could
+  // not be reached and the cap only ever had to know about China's — the sweep
+  // measured 2.3 px of clearance under it, unasked for. At 350/730 the apexes
+  // reach x 621 and the US flag starts at 610, and the same sweep found eleven
+  // samples up to 1.2 px behind it. The rule was always "an arc may not pass
+  // behind a flag"; it is now enforced against both.
   const bows = base.map((b, n) => {
     const p0 = b.seat;
     const p2 = TWENTY_SEATS[seatIdx[n]];
@@ -744,14 +790,15 @@ const CELLS: Cell[] = (() => {
     // curve and not a hope, and a dot never rises into its seat from under the
     // row below it.
     const floorBow = Math.abs(p0.y - p2.y) / 2 + 8;
-    // The ceiling: an arc may not pass behind the China flag. x is linear in t
+    // The ceiling: an arc may not pass behind either flag. x is linear in t
     // because the control point sits straight above the chord's midpoint, so
     // this is a bound on the bow rather than a search.
     let cap = Infinity;
     for (let s = 1; s < 60; s++) {
       const t = s / 60;
       const x = p0.x + (p2.x - p0.x) * t;
-      if (x - r > CN_RIGHT || x + r < CN_X) continue;
+      const underFlag = (x + r > CN_X && x - r < CN_RIGHT) || (x + r > US_X && x - r < US_RIGHT);
+      if (!underFlag) continue;
       const chord = p0.y + (p2.y - p0.y) * t;
       const w = 2 * (1 - t) * t;
       cap = Math.min(cap, (chord - r - FLAG_BOTTOM - FLAG_CLEAR) / w);
@@ -891,14 +938,15 @@ const US_RISE = 24; // how far below its resting place it starts
 // trailing space of the tracking does not throw the pair off its centre.
 //
 // They are drawn in WORLD space, inside the world transform, so they track the
-// camera like the flags and the dots. 46 world px is 58 screen px at the
-// resolved k of 1.25 — the house size at 1080 wide.
+// camera like the flags and the dots. 38 world px is 48 screen px at the
+// resolved k of 1.25.
 //
-// Each is centred on its own flag's x axis and hangs its CAP TOP 40 world px
-// below the bottom row of the block over it, the same 40 the blocks hang below
-// the flags. The two blocks are different heights, so the two labels sit 24 px
-// apart in y; that is the twenty being one row shorter than the fifty, and it
-// is correct.
+// Each is centred on its own flag's x axis, and both hang from ONE cap top:
+// 40 world px below the bottom row of the FIFTY, the taller of the two blocks
+// and the same 40 the blocks hang below the flags. Client pass 2 — before it
+// each label hung 40 under its own block, and since the twenty is a row
+// shorter its label sat 24 px high of the other, which read as a slip rather
+// than as a measurement.
 //
 // Cap top, not box top: a text box's top is half-leading plus the font's
 // ascender above the baseline, and the ascender is a long way over the caps. So
@@ -915,8 +963,12 @@ const LABEL_CAP_TOP =
 const LABEL_GAP = 40; // the cap top, below the block's bottom row
 const LABEL_RISE = 16;
 const LABEL_TRACK = 0.11; // em
-const CN_LABEL_CAP_Y = FIFTY_BOTTOM_Y + LABEL_GAP; // 1336.4
-const US_LABEL_CAP_Y = TWENTY_BOTTOM_Y + LABEL_GAP; // 1312.3
+// ONE cap top for BOTH labels, on the client's note that they should read as a
+// pair: the taller block sets it, so it is the fifty's bottom row plus the same
+// 40. The twenty is a row shorter, so "20 GIGAWATTS" now hangs 24.1 px further
+// below its own block than "50 GIGAWATTS" does — intended: the two numbers are
+// being compared, and a comparison is read across one line.
+const LABEL_CAP_Y = FIFTY_BOTTOM_Y + LABEL_GAP; // 1336.4, both labels
 const CN_LABEL_F0 = 43; // lands on `beats.canDo50Gigs`, f51, as the fiftieth seats
 const US_LABEL_F0 = 225; // lands on `beats.inAmerica`, f233
 
@@ -1213,10 +1265,10 @@ const FiftyWorthTwenty: React.FC<Props> = ({
 
           {/* the two labels, in world space so they track the camera */}
           {frame >= CN_LABEL_F0 ? (
-            <WorldLabel text={labelChina} cx={CN_CX} capY={CN_LABEL_CAP_Y} e={cnLabelE} />
+            <WorldLabel text={labelChina} cx={CN_CX} capY={LABEL_CAP_Y} e={cnLabelE} />
           ) : null}
           {frame >= US_LABEL_F0 ? (
-            <WorldLabel text={labelUs} cx={US_CX} capY={US_LABEL_CAP_Y} e={usLabelE} />
+            <WorldLabel text={labelUs} cx={US_CX} capY={LABEL_CAP_Y} e={usLabelE} />
           ) : null}
         </div>
       </AbsoluteFill>
