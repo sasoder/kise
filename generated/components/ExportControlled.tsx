@@ -16,6 +16,7 @@ import {
   SHADOW_OPACITY,
   SHADOW_Y,
   Vignette,
+  camEase,
   camMove,
   clamp,
   hash,
@@ -65,16 +66,27 @@ export const DURATION = 247;
 //   lane          world y 1119 — the flag's vertical CENTRE line. A tool's
 //                 centre y is the flag's centre y, so the lane runs into the
 //                 middle of the flag and the queue forms on that same line.
-//   camera        pure zoom about x 540, k 1.6 -> 1.25, keyed f64-74, warp 0.72
-//   framing       held on the FLAG, not on the content box: the flag's centre
-//                 line (world 1119) sits at SCREEN y 830 at BOTH framings, so
-//                 the mark neither moves nor changes size between this cut's
-//                 last frame and cut 3's first. cy is authored as
-//                 FLAG_MID + (960 - 830)/k, which `camMove` takes as a content
-//                 centre five world px below it.
-//   content box   world y 939 (the pile's top edge) .. 1199 (the flag's bottom
-//                 edge), centre 1069 — screen y 605..1005, centre 767 at the
-//                 resolve, and 542..958, centre 750 at the open.
+//   camera        ONE move, keyed f66-104, warp 0.72: k 1.6 -> 1.25 AND
+//                 cx 540 -> 1140 on the same eased curve. The frame opens on
+//                 the flag and ends on the pile, with the flag, the gate and
+//                 the queue pushed off the left edge.
+//   framing       held on the FLAG's row all the way through: the flag's centre
+//                 line (world 1119) sits at SCREEN y 830 at BOTH framings and
+//                 at every frame between them, so the mark neither moves
+//                 vertically nor changes size between this cut's last frame and
+//                 cut 3's first. cy is authored as FLAG_MID + (960 - 830)/k,
+//                 which `camMove` takes as a content centre five world px below
+//                 it. The pan is lateral only; nothing about the vertical
+//                 framing moved for it.
+//   open frame    cx 540, k 1.6: the visible world runs x 202..878, the flag
+//                 240 world px wide reads 384 on screen, the pile's top edge is
+//                 at screen y 542 and the flag's bottom at 958.
+//   resolved      cx 1140, k 1.25: the visible world runs x 708..1572. The flag
+//   frame         is GONE — its right edge sits at screen x -60 — and so is the
+//                 gate, the queue, card 1 (right edge -10) and the whole left
+//                 half of the piece. What is in frame is the pile (screen
+//                 x 102..192, y 605..930) and the own-compute card beside it
+//                 (352..752, 568..968).
 //   unit          32 world px, rx 7
 //   gate          x 360 = flag left edge - 60, from the flag's TOP level to its
 //                 BOTTOM level: 160 tall, exactly the flag's height
@@ -103,12 +115,14 @@ export const DURATION = 247;
 //     top level to the flag's bottom level, a 4px
 //     ink bead at its tip, closing on f58 with a
 //     4-frame ink click-bright                       — "export controlled"  f50-58
-//   NEWS CARD 1 rises from below the frame and parks
-//     under the flag row, its top edge at screen
-//     y 1020, landing on the same frame the gate
-//     closes. A screen-space insert: 420 px square
-//     whatever the camera is doing                   — "export controlled"  f44-58
-//     (`card1Src`, default public/news-card.png)
+//   NEWS CARD 1 (`export-control.png`) rises from
+//     below the frame and parks in the WORLD under
+//     the flag, 320 px square on the flag's own axis
+//     with its top edge 30 px below the flag's bottom
+//     edge, landing on the same frame the gate closes.
+//     It is anchored into the field, so the camera
+//     carries it off to the left with the flag        — "export controlled"  f44-58
+//     (`card1Src`)
 //   the four tools already past the gate carry on
 //     into the flag and are out of sight by f64;
 //     every tool behind it cruises until it is 30 px
@@ -118,23 +132,28 @@ export const DURATION = 247;
 //     lane speed, so nothing in the queue ever
 //     changes speed in unison. Slot 0 is down on
 //     f66, slot 2 on f72                             — "controlled"         f58-72
-//   the ONE camera move: a PURE ZOOM about the
-//     flag's own centre line, k 1.6 -> 1.25 on one warped
-//     smoothstep (warp 0.72) keyed f64-74, damped
-//     inside 0.5% of its target by f84, seven frames
-//     before "build". cx is CENTRE_X for the whole
-//     track, so the flag holds the middle of the
-//     frame from the first frame to the last, and
-//     the queue and the empty air open up on either
-//     side of it. Nothing new appears while it runs  — "how fast"           f64-84
-//   NEWS CARD 2 drops in from above the frame and
-//     parks over the pile, its top edge at screen
-//     y 140 (bottom 560, clear of the pile's top at
-//     605 by 45 px at the resolve), landing on
-//     "China can build". The camera's tail overlaps
-//     its first frames; the card is in screen space,
-//     so it neither moves nor scales with the zoom    — "how fast / China
-//     (`card2Src`, default public/news-card.png)         can build"         f78-91
+//   the ONE camera move: it zooms out AND pans right
+//     at once, k 1.6 -> 1.25 and cx 540 -> 1140, both
+//     on one warped smoothstep (warp 0.72) keyed
+//     f66-104 and both damped by `runCamera`. The
+//     camera leaves the gate, the queue and the flag
+//     behind and arrives on the empty air the pile is
+//     about to fill: at the resolve the flag's right
+//     edge is at screen x -60 and the pile is at 102.
+//     Inside 0.5% of its target at f109 and 0.02% at
+//     f114, before "their new". The first two pile
+//     tools launch while it is still running — that is
+//     accepted, the camera is going to where they
+//     appear. Nothing else happens while it runs      — "how fast China can
+//                                                        build"            f66-104
+//   NEWS CARD 2 (`own-compute.png`) comes in from
+//     beyond the RIGHT edge of the resolved frame and
+//     parks in the WORLD beside the pile, 320 px
+//     square on the pile's own centre line with its
+//     left edge 128 px clear of the pile's right edge,
+//     landing on "equipment". Anchored into the field
+//     like card 1, and it stays                       — "their new
+//     (`card2Src`)                                       equipment"      f112-126
 //   the fourteen domestic tools leave the flag's
 //     right edge AT THE FLAG'S CENTRE LINE and build
 //     the pile from the flag's bottom edge up, two to
@@ -251,38 +270,36 @@ export const DURATION = 247;
 // left: the composition is the same shape, held closer.
 //
 // CLIENT PASS 2 — the two news cards. The client asked for two headline cards
-// cut into the piece. They are INSERTS, not objects in the world: they are
-// drawn in a screen-space layer that sits OUTSIDE the world's transform, after
-// the world and before the vignette, so they are above the tools, the pile, the
-// flag and the gate and below the vignette, and so they hold their size and
-// their place while the world zooms behind them through f64-84. Nothing in the
-// world moved for them — the lane, the gate, the queue, the camera, the
-// launches, #14 on f202, the pile and the hold are all exactly as they were.
-//   * 420 x 420 screen px, centred on the frame's own centre x 540, so both
-//     cards sit on the flag's axis.
-//   * Card 1 rises from below the frame (top edge starting at 1920) over the
-//     14 frames f44-58 on Easing.out(Easing.cubic) and parks spanning screen y
-//     1020..1440 — under the flag row at both framings and above the caption
-//     band. It lands on the frame the gate closes, so the card and the wall
-//     arrive on "controlled" together.
-//   * Card 2 drops from above the frame (bottom edge starting at 0) over the
-//     13 frames f78-91 on the same ease and parks spanning 140..560. The pile's
-//     top edge is at screen y 605 at the resolve, so it clears the highest
-//     thing in the world by 45 px — asserted below, not assumed. The camera's
-//     tail is still settling for the first ten frames of that entrance, which
-//     is accepted: the card is in screen space and reads as an insert laid over
-//     the move rather than as something the move is carrying.
-//   * Both are drawn with Remotion `<Img src={staticFile(...)}>` so the frame
-//     waits for the image, and both take their path as a prop — `card1Src` and
-//     `card2Src`, defaulting to `news-card.png` — because the supplied artwork
-//     is a PLACEHOLDER and the client will swap the real headlines in later.
-//   * The only treatment is the per-icon shadow at k = 1,
-//     `drop-shadow(0 2px 3px rgba(0,0,0,0.38))`, in screen px like everything
-//     else that shadow is on. No border, no scale, no fade: the card's own
-//     rounded corners and its opacity come from the PNG.
-//   * The shared `sway` translates the whole card layer, so the cards drift
-//     with the hand on the piece instead of reading as glued to the glass.
-//     That is the only thing that moves them after they park.
+// cut into the piece: `export-control.png` on "export controlled" and
+// `own-compute.png` on China's own equipment. Both are 1080 x 1080 opaque
+// artwork with their own rounded corners, drawn at 320 world px square with
+// Remotion `<Img src={staticFile(...)}>` so the frame waits for the image, and
+// both take their path as a prop — `card1Src` and `card2Src`. The only
+// treatment is the per-icon shadow `iconShadow(k)`, the same one every other
+// icon in the cut carries; no border, no fade, no scale, no bounce.
+//
+// CLIENT PASS 3, on two notes:
+//   * "The news articles should be anchored into the background — right now
+//     they don't react to the zoom." They were a screen-space insert layer
+//     sitting outside the world's transform. They are now OBJECTS IN THE WORLD,
+//     drawn inside the world's transform after the svg — above the tools, the
+//     pile, the flag and the gate, below the vignette — so they scale and
+//     travel with the camera exactly like the flag does, and their shadow is
+//     `iconShadow(k)` rather than a fixed one. Every number about them is world
+//     px now, and both are anchored to something in the piece rather than to
+//     the glass: card 1 hangs 30 px under the flag's bottom edge on the flag's
+//     own axis, card 2 stands on the pile's centre line 128 px clear of its
+//     right edge. The screen-space layer is gone.
+//   * "Instead of the own-compute card coming from above, the whole scene pans
+//     right with a smooth in and out, so only the blocks China produces are
+//     visible, and next to that the own-compute article comes in." The pure
+//     zoom is now a zoom AND a pan — see the camera block — and card 2 comes
+//     in from beyond the right edge of the resolved frame and parks beside the
+//     pile, on "equipment" instead of on "China can build". Card 1 still rises
+//     from below on "controlled"; because it is in the world now, the pan
+//     carries it off to the left with the flag afterwards.
+//   Nothing else moved: the lane, the gate on f58, the queue, the launches,
+//   #14 seating on f202, the pile and the hold are all exactly as they were.
 // ---------------------------------------------------------------------------
 
 // The flag's red, which is also the colour of a tool China made itself.
@@ -304,10 +321,9 @@ export const schema = z.object({
   iconShadowY: z.number(),
   iconShadowBlur: z.number(),
   iconShadowOpacity: z.number(),
-  // The two news cards. Placeholders: the client swaps the real headline
-  // artwork in later, so each card takes its own path.
+  // The two news cards, 1080 x 1080 headline artwork drawn at 320 world px.
   card1Src: z.string(), // rises from below on "controlled"
-  card2Src: z.string(), // drops in from above on "China can build"
+  card2Src: z.string(), // comes in from the right on "equipment"
   beats: z.object({
     whetherOrNot: z.number(), // "whether or not"
     toolsContinue: z.number(), // "tools continue"
@@ -343,8 +359,8 @@ export const defaultProps: Props = schema.parse({
   iconShadowY: ICON_SHADOW_Y,
   iconShadowBlur: ICON_SHADOW_BLUR,
   iconShadowOpacity: ICON_SHADOW_OPACITY,
-  card1Src: "news-card.png",
-  card2Src: "news-card.png",
+  card1Src: "export-control.png",
+  card2Src: "own-compute.png",
   beats: {
     whetherOrNot: 0,
     toolsContinue: 14,
@@ -424,19 +440,35 @@ const pileY = (row: number) => ROW1_Y - row * PILE_ROW_PITCH; // row is 0-based
 const PILE_TOP = pileY(PILE_ROWS - 1) - TOOL_HALF; // 939, 100 px above the flag
 
 // ---------------------------------------------------------------------------
-// The camera. ONE move, on "how fast": a PURE ZOOM about the content's centre,
-// k 1.3 -> 1.0, which opens the gate's side and the pile's side at once.
-// `camMove` writes it as a warped smoothstep with a key per frame and takes cy
-// off the eased k, so the framing settles with the zoom instead of sagging
-// through it.
+// The camera. ONE move, on "how fast China can build": it zooms out AND pans
+// right at the same time, k 1.6 -> 1.25 and cx 540 -> 1140, and it ends with
+// the flag, the gate and the queue off the left edge and the empty air the pile
+// is about to fill in the middle of the frame.
 //
-// There is no lateral travel — cx is CENTRE_X from f0 to f247 — because the
-// flag is the one thing in this cut that carries over from the last one and it
-// has to hold the middle of the frame throughout.
+// CLIENT PASS 3. Pass 2 was a PURE ZOOM about x 540 — no lateral travel at all,
+// on the reasoning that the flag carries over from cut 1 and has to hold the
+// middle of the frame — and card 2 dropped in from above the frame to say
+// "China builds its own". The client asked for the card to arrive beside the
+// pile instead, with the scene panning right to it so that "only the blocks
+// China produces are visible". That is one gesture rather than two: the move
+// away from the gate IS the sentence turning from what the West withholds to
+// what China makes, and the card arrives in the space the pan opened.
 //
-// Keyed f64-74 rather than f66-84: this damper lags its target by about ten
-// frames, and the move has to be settled before the first domestic tool leaves
-// the flag at f91.
+// The travel is not a second gesture. `camMove` writes k and cy as a warped
+// smoothstep with a key per frame; CAM_CX below evaluates `camEase` at the same
+// warp on the same frames, so cx is the same curve scaled to a different range.
+// There is one deceleration lobe in the whole move, no separate pan key, and no
+// stall between a zoom and a pan. `runCamera` damps cx exactly as it damps cy —
+// the same second-order tracker, run a second time over the cx track — so the
+// hand on the camera is one hand.
+//
+// Keyed f66-104, a 38-frame ramp rather than pass 2's 10: the move is doing
+// twice the work now (560 world px of pan on top of the zoom) and a short ramp
+// on that distance is a whip. The damper lands inside 0.5% of both targets at
+// f109 and inside 0.02% at f114, before "their new" — the residual at f108 is
+// 0.7%, which on the flag's 300 px mark is 0.6 screen px. The first two pile
+// tools (#1 f91, #2 f114) launch while it is still moving; that is accepted,
+// because the camera is travelling to exactly where they appear.
 //
 // CONSISTENCY PASS: the framing is authored off THE FLAG, not off the content
 // box. The flag is the one element that carries through all three cuts of this
@@ -463,18 +495,40 @@ const PILE_TOP = pileY(PILE_ROWS - 1) - TOOL_HALF; // 939, 100 px above the flag
 // the resolve its centre lands at screen y 767 and the pile's top edge, the
 // highest thing in the cut, at 605.
 //
-//   f0-63    k 1.6   the flag's centre at screen y 830 and the mark 384 px
-//                    wide, the pile's top at 542 and the flag's bottom at 958,
-//                    the lane's tools spaced across the frame.
-//   f64-84   -> 1.25 the flag's centre still at screen y 830 and the mark 300 px
-//                    wide, the settled queue's back tool 125 px inside the left
-//                    edge and the pile's right edge 942 — the group's own centre
-//                    within a few px of the flag's.
+// The pan is lateral only, so the flag row stays on screen y 830 at every frame
+// of the move, not just at its ends: the mark slides sideways out of the frame
+// without ever rising or falling in it.
+//
+//   f0-65     k 1.6   the flag's centre at screen y 830 and the mark 384 px
+//             cx 540  wide, the pile's top at 542 and the flag's bottom at 958,
+//                     the lane's tools spaced across the frame, card 1 rising
+//                     under the flag.
+//   f66-109   -> 1.25 the flag's centre still on screen y 830 the whole way and
+//             -> 1140 the mark 300 px wide, but off the left edge: its right
+//                     edge resolves at screen x -60. The pile is at screen
+//                     x 102..192, y 605..930, and the air to its right — where
+//                     card 2 lands — runs from 192 to the right edge.
 // ---------------------------------------------------------------------------
 const K_OPEN = 1.6;
 const K_FINAL = 1.25;
-const CAM_F0 = 64;
-const CAM_F1 = 74;
+// The lateral half of the same move: the flag's own axis at the open, and the
+// pile's side of the world at the resolve.
+const CX_OPEN = CENTRE_X; // 540
+// 1140, not the 1100 this pass was specified at. The note the pan answers is
+// "so only the blocks China produces are visible", and 1100 does not deliver
+// it: the frame's left edge lands on world x 668, and card 1 — 320 px centred
+// on the flag's axis — reaches to 700, so a 40 SCREEN px strip of the
+// export-control artwork stays pinned to the left edge from f106 to the last
+// frame. Rendered and looked at: it reads as a mistake, not as an object
+// leaving. 1140 puts the frame's left edge on world 708 and takes card 1's
+// right edge to screen x -10, so the card goes off with the flag exactly as
+// the flag's own right edge does at 1100. It costs 40 screen px of the
+// resolved framing: the pile moves from screen x 152..242 to 102..192 and the
+// card from 402..802 to 352..752, which puts the card's own centre on 552 —
+// within 12 px of the frame's centre — with the pile beside it.
+const CX_FINAL = 1140;
+const CAM_F0 = 66;
+const CAM_F1 = 104;
 const CAM_WARP = 0.72;
 // The flag's centre, on screen, at every resolved framing in this clip.
 const FLAG_SCREEN_Y = 830;
@@ -490,27 +544,53 @@ const PILE_TOP_SCREEN = FRAME_H / 2 + (PILE_TOP - CY_FINAL) * K_FINAL; // 605
 if (PILE_TOP_SCREEN < 60) {
   throw new Error(`the pile's top edge is at screen y ${PILE_TOP_SCREEN.toFixed(0)}`);
 }
-// what the resolved camera can see, which is what decides how long the queue is
-const WORLD_LEFT_FINAL = CENTRE_X - FRAME_W / (2 * K_FINAL);
+// The left edge of the frame at the resolved ZOOM, held on the flag's own axis.
+// This is the datum the queue's length is measured from and it is deliberately
+// taken at cx = CENTRE_X, not at the camera's resolved cx: the queue is framed
+// against the composition it forms with the flag and the gate, all of which the
+// pan carries off the left edge together. Nothing about the queue changed when
+// the camera learned to travel.
+const WORLD_LEFT_ON_AXIS = CENTRE_X - FRAME_W / (2 * K_FINAL);
+// what the resolved camera can actually see, once the pan has landed
+const WORLD_RIGHT_FINAL = CX_FINAL + FRAME_W / (2 * K_FINAL); // 1532
 
 // ---------------------------------------------------------------------------
-// The two news cards (client pass 2). Every number here is SCREEN px: the cards
-// live outside the world's transform, so the camera's zoom never touches them.
-// Card 1 comes up from below the frame and parks under the flag row; card 2
-// comes down from above it and parks over the pile.
+// The two news cards (client pass 3). Every number here is WORLD px: the cards
+// are anchored INTO the field now, so the camera scales and travels them the
+// way it scales and travels the flag. Each one is anchored to something in the
+// piece rather than to the glass — card 1 to the flag it is about, card 2 to
+// the pile it is about — and each comes in from beyond the edge of the frame
+// its own camera is showing at the time.
 // ---------------------------------------------------------------------------
-const CARD = 420;
-const CARD_X = CENTRE_X - CARD / 2; // 330 — on the frame's own centre, like the flag
-const CARD1_TOP = 1020; // parked: 1020..1440, under the flag, above the captions
-const CARD1_FROM = FRAME_H; // 1920 — its TOP edge on the bottom of the frame
-const CARD2_TOP = 140; // parked: 140..560
-const CARD2_FROM = -CARD; // -420 — its BOTTOM edge on the top of the frame
-// Card 2 parks over the pile, which is the highest thing in the world. Assert
-// the gap rather than trusting it: if the pile ever grows a row, this fails at
-// import time instead of quietly touching the card.
-const CARD2_CLEARANCE = PILE_TOP_SCREEN - (CARD2_TOP + CARD); // 605 - 560 = 45
-if (CARD2_CLEARANCE < 20) {
-  throw new Error(`card 2 clears the pile's top by only ${CARD2_CLEARANCE.toFixed(0)} screen px`);
+const CARD = 320; // world px; the artwork is 1080 square
+const CARD_SLIDE = 14; // frames of Easing.out(Easing.cubic), the same for both
+
+// Card 1 hangs under the flag on the flag's own axis, 30 px below its bottom
+// edge, so it reads as a caption on the thing the sentence is about.
+const CARD1_GAP = 30;
+const CARD1_X = CENTRE_X - CARD / 2; // 380..700
+const CARD1_TOP = FLAG_BOTTOM + CARD1_GAP; // 1229..1549
+// It rises from below the frame at the OPENING camera, so its top edge starts
+// on the world y that the bottom of the frame is looking at while k is 1.6.
+const CARD1_FROM = CY_OPEN + FRAME_H / (2 * K_OPEN); // 1800.25
+
+// Card 2 stands beside the pile on the pile's own centre line, in the air the
+// pan opens up to the right of it.
+const PILE_MID = (PILE_TOP + FLAG_BOTTOM) / 2; // 1069
+const CARD2_X = 990; // 990..1310
+const CARD2_TOP = PILE_MID - CARD / 2; // 909..1229
+// It comes in from beyond the RIGHT edge of the RESOLVED frame, which is where
+// the camera is by the time it moves.
+const CARD2_FROM = 1600; // beyond the resolved frame's right edge at 1572
+// The corridor between the pile and the card. Asserted rather than trusted: if
+// the pile ever grows a column this fails at import time instead of quietly
+// touching the card.
+const CARD2_GAP = CARD2_X - (pileX(1) + TOOL_HALF); // 990 - 862 = 128
+if (CARD2_GAP < 40) {
+  throw new Error(`card 2 clears the pile's right edge by only ${CARD2_GAP.toFixed(0)} world px`);
+}
+if (CARD2_FROM < WORLD_RIGHT_FINAL) {
+  throw new Error(`card 2 starts inside the resolved frame (${WORLD_RIGHT_FINAL.toFixed(0)})`);
 }
 
 // ---------------------------------------------------------------------------
@@ -566,7 +646,7 @@ const slotX = (slot: number) => QUEUE_X0 - slot * QUEUE_PITCH;
 const QUEUE_MARGIN = 100; // screen px
 const QUEUE_MAX =
   Math.floor(
-    (QUEUE_X0 - TOOL_HALF - WORLD_LEFT_FINAL - QUEUE_MARGIN / K_FINAL) / QUEUE_PITCH,
+    (QUEUE_X0 - TOOL_HALF - WORLD_LEFT_ON_AXIS - QUEUE_MARGIN / K_FINAL) / QUEUE_PITCH,
   ) + 1;
 
 // The brake. Easing.out(Easing.cubic) leaves its start at 3x its average speed,
@@ -780,6 +860,13 @@ const CAM = camMove({
 const CAM_FF = [0, ...CAM.F, DURATION];
 const CAM_K = [K_OPEN, ...CAM.K, K_FINAL];
 const CAM_CY = [CY_OPEN, ...CAM.CY, CY_FINAL];
+// the sideways half of the same move, on the same eased curve at the same warp,
+// evaluated on the same frames — so cx is k's curve scaled to another range
+const CAM_CX = [
+  CX_OPEN,
+  ...CAM.F.map((_, i) => CX_OPEN + (CX_FINAL - CX_OPEN) * camEase(i / (CAM_F1 - CAM_F0), CAM_WARP)),
+  CX_FINAL,
+];
 
 // ---------------------------------------------------------------------------
 // The flag of China. Copied from cut 1 rather than imported, so cut 1 is never
@@ -880,31 +967,33 @@ const ExportControlled: React.FC<Props> = ({
 
   // -- camera ----------------------------------------------------------------
   const cam = runCamera(frame, CAM_FF, CAM_CY, CAM_K);
+  // the same damper, run a second time over the cx track, so the lateral half
+  // of the move has exactly the weight the zoom does
+  const camX = runCamera(frame, CAM_FF, CAM_CX, CAM_K).cy;
   const drift = sway(frame);
   const cy = cam.cy + drift.dy;
-  const cx = CENTRE_X + drift.dx;
+  const cx = camX + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
 
   // Everything in this cut is an icon lying on the field, so everything takes
-  // the small per-icon shadow, in screen px, at every zoom.
+  // the small per-icon shadow, in screen px, at every zoom — the two news cards
+  // included, now that they are objects in the world rather than inserts.
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
-  // The cards are already in screen space, so their copy of that shadow is
-  // taken at k = 1: drop-shadow(0 2px 3px rgba(0,0,0,0.38)).
-  const cardIcon = iconShadow(1, iconShadowY, iconShadowBlur, iconShadowOpacity);
 
   // -- the two news cards ----------------------------------------------------
   // Both slides are read off the beats, not off literal frames, so a retime
   // moves them with the words: card 1 lands the frame the gate closes, card 2
-  // lands on "China can build".
+  // lands on "equipment". Card 1 travels in y (up from below the frame), card 2
+  // in x (left from beyond the right edge); each is 14 frames of easeOut.
   const card1Top =
     CARD1_FROM +
     (CARD1_TOP - CARD1_FROM) *
       easeOut(clamp01((frame - beats.toGetExport) / (beats.controlled - beats.toGetExport)));
-  const card2Top =
+  const card2Left =
     CARD2_FROM +
-    (CARD2_TOP - CARD2_FROM) *
-      easeOut(clamp01((frame - beats.howFast) / (beats.chinaCanBuild - beats.howFast)));
+    (CARD2_X - CARD2_FROM) *
+      easeOut(clamp01((frame - (beats.equipmentThat - CARD_SLIDE)) / CARD_SLIDE));
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -916,7 +1005,7 @@ const ExportControlled: React.FC<Props> = ({
         cy={cy}
         cyRest={CAM_CY[0]}
         cx={cx}
-        cxRest={CENTRE_X}
+        cxRest={CAM_CX[0]}
         k={k}
         parallax={parallax}
       />
@@ -1005,44 +1094,37 @@ const ExportControlled: React.FC<Props> = ({
               </g>
             ) : null}
           </svg>
-        </div>
-      </AbsoluteFill>
 
-      {/* The two news cards. OUTSIDE the world's transform and after it, so
-          they are above everything in the world and hold their size and their
-          place while the camera zooms behind them. The layer carries the shared
-          sway so they drift with the piece rather than sitting on the glass. */}
-      <AbsoluteFill
-        style={{
-          // The world takes the sway through the camera, so on screen it moves
-          // by -drift * k; the cards take the same screen motion so the two
-          // layers drift together (director's fix: the raw sign ran them
-          // against each other).
-          transform: `translate(${(-drift.dx * k).toFixed(2)}px, ${(-drift.dy * k).toFixed(2)}px)`,
-        }}
-      >
-        <Img
-          src={staticFile(card1Src)}
-          style={{
-            position: "absolute",
-            left: CARD_X,
-            top: card1Top,
-            width: CARD,
-            height: CARD,
-            filter: cardIcon,
-          }}
-        />
-        <Img
-          src={staticFile(card2Src)}
-          style={{
-            position: "absolute",
-            left: CARD_X,
-            top: card2Top,
-            width: CARD,
-            height: CARD,
-            filter: cardIcon,
-          }}
-        />
+          {/* The two news cards, INSIDE the world's transform (client pass 3):
+              they scale and travel with the camera like every other icon, and
+              they take the same per-icon shadow. Drawn after the svg, so they
+              are above the tools, the pile, the flag and the gate — and below
+              the vignette, which is still last in the tree. The world div does
+              not clip, so a card is free to sit outside it while it is off
+              frame. */}
+          <Img
+            src={staticFile(card1Src)}
+            style={{
+              position: "absolute",
+              left: CARD1_X,
+              top: card1Top,
+              width: CARD,
+              height: CARD,
+              filter: icon,
+            }}
+          />
+          <Img
+            src={staticFile(card2Src)}
+            style={{
+              position: "absolute",
+              left: card2Left,
+              top: CARD2_TOP,
+              width: CARD,
+              height: CARD,
+              filter: icon,
+            }}
+          />
+        </div>
       </AbsoluteFill>
 
       <Vignette />
