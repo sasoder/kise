@@ -395,3 +395,74 @@ rather than redeclaring any of it:
 Reference set, all approved: `generated/components/MoreBusinessesColumnV2.tsx`,
 `NicheProductsDoingBetterV2.tsx`, `IdeaIntoRetailV2.tsx`. Delivered to
 `cheeky pint/sep/S2E8_Pint_Tobi_FINAL_YT/tobi-more-businesses-than-any-government-policy/v2/`.
+
+## Orange Dwarkesh style (approved 2026-09-08)
+
+The user's third named house style, born on the Ajeya "Superhuman Hackers" clip
+and approved with "I'm really happy with this style … the colours play nicely
+into each other, it's clearly visible what's happening, the camera movement is
+great." When they say "orange dwarkesh style", build to this without re-asking.
+
+It is `## Dwarkesh style — grid background` plus `## Dwarkesh style — the
+agent-crowd language` ("The field") in every respect — 24fps, 1080x1920,
+opaque grid cutaway, beats lifted from the SRT, one gesture per word, header
+gesture list, `fieldShared.tsx` imported never copied, `runCamera` / `sway` /
+`GridBackground` / `Vignette`, the clearing, the structure as ink rings and
+lines with its own packets, humans as `person.png` white, marks white at 108 —
+with these replacements. Every value below is a shared export in
+`generated/components/fieldShared.tsx`; import it, do not restate it.
+
+**Colour: two tones of one warm yellow, dots solid.**
+- `ACCENT_DEEP #D98A0C` = an agent at rest (the unread rung). `ACCENT #FFB000`
+  = a lit agent, every thread, every converted ring/edge, provenance lines.
+- Agent dots are **fully opaque** (`OP_UNREAD_DOT = OP_READ_DOT = 1.0`). The
+  unread → read ladder is carried by tone, not transparency: a read-wave is
+  deep → ripe, a recede is ripe → deep (`makeTone` ramps it). Threads keep
+  their opacities (0.95 live, 0.4 idle); ink keeps `OP_*`.
+- **No stroke on dots.** White outlines were tried at 1px and 1.5px and
+  rejected: they lightened the colour and read as rings.
+- Rejected on the way: cyan (the original), `#E0643A` (too dark, rust over the
+  grid), `#FFC543` at 58% / 86% (pale, "a yellow left out in the sun").
+  Transparency on the dots was the root of "washed out" every time.
+
+**Field and shadows.**
+- `BG_DIM 0.45` over `BG_BASE #232323` (field ≈ `#727272`, white ink ≈ 4.8:1).
+  0.32 read as near-black under orange; 0.46+ started costing the dots.
+- One global `drop-shadow(SHADOW_Y 2, SHADOW_BLUR 7, SHADOW_OPACITY 0.12)`
+  over the graphic — the old 2/9/0.22 was a visible halo.
+- **Per-icon shadow** `iconShadow(k)` = `drop-shadow(2px 3px rgba(0,0,0,.38))`
+  in screen px on every icon: person glyphs, the structure's rings/lines/
+  packets, brand marks. Bodies stay pure white. This is the "slight 3D":
+  a Tailwind `shadow-sm` character. Rejected: emboss/bevel rims (invisible on a
+  silhouette, chrome on a ring), a hard cut-out ledge (good, but the soft
+  shadow won), a receding-ground perspective on the human block (two cameras).
+
+**Crowd shapes: never a box.**
+- `feather(insideSteps, width)` + `wobble(along, seed)` on every crowd
+  boundary that is ever seen: density falls on a smoothstep, radius tapers,
+  the nominal edge undulates. A field edge that stays in frame dissolves over
+  **12 rows** with radius to 0.6× (`EDGE_FEATHER` in `MoreThanAllOfHistory`);
+  4 rows still read as a line. A fleet is a superellipse blob (n ≈ 2.4)
+  inscribed in a ~10×9 box, ~75 alive. Wave boundaries that land as a disc are
+  feathered by re-ranking seats, so counts stay exact.
+- The human block stays a countable rectangle on purpose — finite against an
+  endless field is the point.
+
+**Camera: one move per cut, eased per frame.**
+- `camMove({f0, f1, k0, k1, c0, c1, warp})` writes a warped smoothstep as a
+  key per frame; `runCamera` damps it; `cy = c + CAM_LIFT/k` off the same
+  eased k so zoom and framing settle together (content-centre sag ≤ 2px).
+  Warp 0.7–0.75 puts the speed early in a pull-back.
+- One move where one will do. Two keys close together read as a stall; a push
+  too small to read (<1%/frame) reads as a hesitation — drop it. Landings
+  settle 4–10 frames before their word, never late. Diagnose with a k/dk/d²k
+  plot before re-keying: the target shape is one deceleration lobe and one
+  settle lobe, nothing else.
+
+Reference set, in edit order, all approved: `ConstantlyBombarding.tsx`
+(0:04.379), `RogueInstancesInterfere.tsx` (0:19.940),
+`MoreThanAllOfHistory.tsx` (0:40.200). Delivered as
+`~/Downloads/Ajeya_Superhuman_Hackers-final-v9/` with `placements.txt`; v1–v8
+are the iteration trail. Render each through its private entry under `out/`
+(`out/cb-entry`, `ri-entry`, `mh-entry`) — `src/Root.tsx` is shared with other
+sessions.
