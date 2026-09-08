@@ -213,10 +213,10 @@ export const defaultProps: Props = schema.parse({
   },
 });
 
-type P = { x: number; y: number };
+export type P = { x: number; y: number };
 
-const WORLD_W = 1080;
-const WORLD_H = 2200;
+export const WORLD_W = 1080;
+export const WORLD_H = 2200;
 
 // ---------------------------------------------------------------------------
 // The camera. ONE move, and it is the only one: the pull-back on "spending goes
@@ -248,15 +248,15 @@ const WORLD_H = 2200;
 //           125..1475 and world y -1149..1252, so the pile bleeds off the top,
 //           the right and the bottom.
 // ---------------------------------------------------------------------------
-const BLOCK_CX = 540;
-const CONTENT_CY = -105;
-const K_OPEN = 1.5;
-const K_FINAL = 0.8;
-const CX_OPEN = 540;
-const CX_FINAL = 800;
+export const BLOCK_CX = 540;
+export const CONTENT_CY = -105;
+export const K_OPEN = 1.5;
+export const K_FINAL = 0.8;
+export const CX_OPEN = 540;
+export const CX_FINAL = 800;
 const CAM_F0 = 70;
 const CAM_F1 = 88;
-const CAM_WARP = 0.72;
+export const CAM_WARP = 0.72;
 
 const CAM = camMove({
   f0: CAM_F0,
@@ -292,7 +292,7 @@ const CAM_CX = (() => {
 // A copy of `runCamera`'s spring for the x track — same stiffness, same
 // damping, so the pan has the same weight as the zoom it travels with.
 // fieldShared is shared with three delivered cuts and is not touched for this.
-const runCameraX = (upto: number, F: number[], CX: number[]) => {
+export const runCameraX = (upto: number, F: number[], CX: number[]) => {
   let cx = CX[0];
   let vx = 0;
   for (let f = 1; f <= upto; f++) {
@@ -314,9 +314,9 @@ const runCameraX = (upto: number, F: number[], CX: number[]) => {
 // It is STATIC: it does not build, it does not fade in, nothing about it moves
 // for 172 frames. The word is "currently" — the building is already there.
 // ---------------------------------------------------------------------------
-const TREASURY: P = { x: BLOCK_CX, y: -140 };
-type Rect = { x: number; y: number; w: number; h: number; r: number };
-const TREASURY_RECTS: Rect[] = [
+export const TREASURY: P = { x: BLOCK_CX, y: -140 };
+export type Rect = { x: number; y: number; w: number; h: number; r: number };
+export const TREASURY_RECTS: Rect[] = [
   { x: -170, y: -30, w: 340, h: 30, r: 4 }, // the lower base step
   { x: -150, y: -52, w: 300, h: 24, r: 4 }, // the upper base step
   { x: -134, y: -190, w: 28, h: 140, r: 6 }, // five columns
@@ -326,7 +326,7 @@ const TREASURY_RECTS: Rect[] = [
   { x: 106, y: -190, w: 28, h: 140, r: 6 },
   { x: -156, y: -212, w: 312, h: 24, r: 4 }, // the entablature
 ];
-const TREASURY_PEDIMENT = "M-172,-218 L172,-218 L0,-270 Z";
+export const TREASURY_PEDIMENT = "M-172,-218 L172,-218 L0,-270 Z";
 
 // ---------------------------------------------------------------------------
 // Tax revenue: ONE block of a hundred solid dots, 10 x 10 at a 22px step,
@@ -339,13 +339,13 @@ const TREASURY_PEDIMENT = "M-172,-218 L172,-218 L0,-270 Z";
 // Below, not above: the space above the block is the treasury, and spending
 // leaves a treasury downward before it flows right.
 // ---------------------------------------------------------------------------
-const BLK_N = 10;
-const BLK_STEP = 22;
-const BLK_X = Array.from({ length: BLK_N }, (_, j) => BLOCK_CX - 99 + BLK_STEP * j);
-const BLK_Y = Array.from({ length: BLK_N }, (_, i) => -99 + BLK_STEP * i);
+export const BLK_N = 10;
+export const BLK_STEP = 22;
+export const BLK_X = Array.from({ length: BLK_N }, (_, j) => BLOCK_CX - 99 + BLK_STEP * j);
+export const BLK_Y = Array.from({ length: BLK_N }, (_, i) => -99 + BLK_STEP * i);
 const TIER_ROWS = 2;
-const TIER_ROW0 = BLK_N - TIER_ROWS; // 8: the first block row that leaves
-const TIER_Y = [178, 200];
+export const TIER_ROW0 = BLK_N - TIER_ROWS; // 8: the first block row that leaves
+export const TIER_Y = [178, 200];
 const TWENTY = BLK_N * TIER_ROWS;
 
 // ---------------------------------------------------------------------------
@@ -358,9 +358,9 @@ const TWENTY = BLK_N * TIER_ROWS;
 // stated height; this is the same drawing with eleven 8px teeth instead of
 // twelve, which lands it exactly on 88 x 96 with x -44..44 and y -48..48.)
 // ---------------------------------------------------------------------------
-const BILL_W = 88;
-const BILL_H = 96;
-const BILL_D = [
+export const BILL_W = 88;
+export const BILL_H = 96;
+export const BILL_D = [
   // the body: rounded top corners, straight sides, a torn bottom
   "M-36,-48 h72 a8,8 0 0 1 8,8 v82 l-8,6 l-8,-6 l-8,6 l-8,-6 l-8,6 l-8,-6 l-8,6 l-8,-6 l-8,6 l-8,-6 l-8,6 v-88 a8,8 0 0 1 8,-8 z",
   // four cut-out lines, the last one short
@@ -390,8 +390,8 @@ const BILL_D = [
 // falls under 0.15 + 0.85 * feather, and what survives out there is drawn down
 // to 0.8 scale. The outermost column keeps about one bill in seven.
 // ---------------------------------------------------------------------------
-const STEP_X = 104;
-const STEP_Y = 122;
+export const STEP_X = 104;
+export const STEP_Y = 122;
 const FIELD_X0 = BLOCK_CX + 440; // 980
 const FIELD_X1 = BLOCK_CX + 3200; // 3740
 const FIELD_Y0 = -2400;
@@ -564,7 +564,7 @@ const STREAM_RANK = (() => {
 
 // A dot travelling from A to B on its own shallow arc: eased in, bowed
 // perpendicular to its own path, never overshooting.
-const arcAt = (a: P, b: P, lin: number, arc: number): P => {
+export const arcAt = (a: P, b: P, lin: number, arc: number): P => {
   const e = Easing.out(Easing.cubic)(lin);
   const dx = b.x - a.x;
   const dy = b.y - a.y;
