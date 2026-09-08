@@ -93,9 +93,14 @@ export const DURATION = 210;
 //   HOLD f102-117. Fifteen frames, and that is the whole hold in this piece.
 //       Structure and crowd both dark; the crowd's own traffic still runs
 //       underneath at half its opacity, so the field is never fully still.
-//   G4  the ring RE-FORMS on the breached node — head-led, full accent, and the
-//       node under it comes back to the receded rung FROM THE RING'S OWN DRAW
-//       rather than from a timer. No overshoot: it re-forms, it does not land.
+//   G4  the ring RE-FORMS on the breached node — head-led, full accent, and no
+//       overshoot: it re-forms, it does not land. And THE CLUSTER COMES BACK
+//       WITH IT: the box, its eighteen machines and the node in the nineteenth
+//       seat rise out of the dark to full accent across the ring's own draw,
+//       read off `ringTrace` rather than off a timer, so the research cluster is
+//       properly lit by the time "this administrator privilege" lands. Only the
+//       cluster — the mesh is the wider network and keeps the dim ghost claim
+//       below, and not one agent of the crowd is relit.
 //                                — "first gaining"                    f117-142
 //   G5  the reach of the privilege, played back dim. Possession spreads out of
 //       the breached node along the mesh's OWN EDGES — the identical mechanism
@@ -110,12 +115,20 @@ export const DURATION = 210;
 //       owned, not a revival — nothing underneath comes back up, and the CROWD
 //       IS NEVER RELIT. The privilege was over the cluster; the shutdown was
 //       over everything.
+//       Over the MESH that is the whole gesture and it is unchanged. Over the
+//       box and the machines it is now SUPERSEDED: those are already at their
+//       live rung from G4, which is three times anything the ghost can give, so
+//       the claim is taken as a max and simply loses. The arms' travelling head
+//       still walks the box — it is the one radius carrying on — but the walls
+//       are drawn whole rather than cut at it, because a cut into two pieces at
+//       the same opacity is a pip of stacked caps travelling a lit wall.
 //                                — "this administrator privilege"     f144-188
 //   RESOLVE f190-210: the dark crowd and its residual traffic below; above it
-//       the dead structure under a ghost claim on every node, every edge, the
-//       box and all eighteen machines; the full-accent ring on the breached node
-//       the one bright thing; the mark behind. Held, dead still but for the
-//       traffic. The held line of access does NOT come back.
+//       the dead mesh under a ghost claim on every node and every edge; and
+//       inside it the research cluster back at full accent — the box, its
+//       eighteen machines, the node and the ring around it. The mark behind.
+//       Held, dead still but for the traffic. The held line of access does NOT
+//       come back.
 //
 // The two travels are opposite and that is the point: the shutdown sweeps DOWN
 // across the whole field, and the memory of the privilege spreads OUTWARD from
@@ -971,6 +984,35 @@ const QuicklyShutDown: React.FC<Props> = ({
   const ringHead = RING_PTS[Math.min(RING_SEGS, Math.round(ringTrace * RING_SEGS))];
   const RING_HEAD_OP = 0.85;
 
+  // -- G4b: the cluster comes back -------------------------------------------
+  // On the note that the research cluster itself should light back up to full
+  // orange when the ring is drawn. It is read off THE RING'S OWN DRAW — the same
+  // number the breached node's return has always been read off — so the box, its
+  // machines and the node in the nineteenth seat are properly lit by the frame
+  // the ring closes (f142) and there is no second timer anywhere in it.
+  //
+  // ONLY the cluster. The mesh keeps its dim ghost claim: it is the wider
+  // network, not the cluster. The crowd is not relit by one dot: the privilege
+  // was over the cluster, the shutdown was over everything.
+  const clusterLit = ringTrace;
+  // Where the front left a thing, carried back to its live rung by `clusterLit`,
+  // and the ghost's claim taken as a MAX rather than added: the spread that
+  // walks the box and the machines from f144 reaches at most OP_RECEDE, so
+  // against a cluster already at OP_READ / OP_LIT it is simply superseded — it
+  // cannot draw over it, double it, or pull it back down.
+  // `lit` defaults to the ring's own draw, which is what the box walls and the
+  // breached node take: the container comes back as the ring closes. The
+  // machines pass their OWN arrival instead, so they light one after another
+  // outward from the breached node across "this administrator privilege"
+  // rather than all together on the ring. Without that the whole cluster is
+  // finished by f142 and the last 36 frames have no gesture over the structure
+  // — the same empty tail this piece was reworked to fix.
+  const relit = (base: number, target: number, y: number, g: number, lit = clusterLit) => {
+    const d = darkAt(y);
+    const dk = claimAt(base, d, 0);
+    return Math.max(claimAt(base, d, g), dk + (target - dk) * lit);
+  };
+
   // -- G5: the ghost spread --------------------------------------------------
   // ONE radius, from "this" to thirteen frames past "privilege". Every node,
   // every edge, both arms of the box and every machine take their claim from
@@ -1000,7 +1042,8 @@ const QuicklyShutDown: React.FC<Props> = ({
   // pieces, each at its own darkness; a line the front is nowhere near is one
   // line. `g` is the ghost's claim on that whole piece — the caller has already
   // cut the line at the spread front, so a piece is claimed or it is not.
-  // Nothing here is a timer.
+  // `lit` is the cluster's own return, off the ring's draw, which supersedes the
+  // ghost rather than stacking with it. Nothing here is a timer.
   const sweptLine = (
     key: string,
     A: P,
@@ -1009,11 +1052,16 @@ const QuicklyShutDown: React.FC<Props> = ({
     color: string,
     width: number,
     g: number = 0,
+    lit: number = 0,
   ): React.ReactNode => {
+    const opAt = (d: number) => {
+      const dk = claimAt(base, d, 0);
+      return Math.max(claimAt(base, d, g), dk + (base - dk) * lit);
+    };
     const dA = darkAt(A.y);
     const dB = darkAt(B.y);
     if (Math.abs(dA - dB) < 0.004) {
-      const op = claimAt(base, (dA + dB) / 2, g);
+      const op = opAt((dA + dB) / 2);
       return (
         <line
           key={key}
@@ -1043,7 +1091,7 @@ const QuicklyShutDown: React.FC<Props> = ({
           stroke={color}
           strokeWidth={width}
           strokeLinecap="round"
-          opacity={claimAt(base, darkAt((S.y + E.y) / 2), g)}
+          opacity={opAt(darkAt((S.y + E.y) / 2))}
         />,
       );
     }
@@ -1247,35 +1295,39 @@ const QuicklyShutDown: React.FC<Props> = ({
               // the breached node's return is read off THE RING'S OWN DRAW, so
               // it cannot arrive on a frame the ring is not on
               const g = breached ? Math.max(nodeGhost[i], ringTrace) : nodeGhost[i];
+              // and it comes back the whole way, because it is not mesh: it is
+              // sitting in the nineteenth machine's seat, inside the box, and it
+              // goes where the other eighteen go. Every other node is the wider
+              // network and keeps its dim ghost claim.
               return (
                 <circle
                   key={`n${i}`}
                   cx={p.x}
                   cy={p.y}
                   r={NODE_R}
-                  fill={rung(claimed(base, p.y, g))}
+                  fill={rung(breached ? relit(base, OP_LIT, p.y, g) : claimed(base, p.y, g))}
                   opacity={OP_DOT}
                 />
               );
             })}
 
-            {/* the cluster, walked by the ghost as two arms out of the middle
-                of its bottom wall and closing again at the middle of its top */}
+            {/* the cluster's walls. Dark under the front, then back to their
+                live rung on the ring's own draw. The ghost still walks them as
+                two arms out of the middle of the bottom wall — its travelling
+                head is the mechanism carrying on, and it is the same one radius
+                — but it has nothing left to reveal here, so the wall is drawn
+                WHOLE rather than cut at the front: a cut into two pieces at the
+                same opacity is two round caps stacked on one point, a pip of
+                light travelling a wall that is meant to be one line. Every frame
+                before the spread reaches the box is identical to what it was —
+                the cut was at zero there and the whole segment was drawn. */}
             {BOX_ARMS.map((arm, ai) => (
               <g key={`bx${ai}`}>
-                {arm.pts.slice(1).map((p, si) => {
-                  const S = arm.pts[si];
-                  const cut = clamp01(
-                    (armFront - arm.cum[si]) / (arm.cum[si + 1] - arm.cum[si]),
-                  );
-                  const M = lerpP(S, p, cut);
-                  return (
-                    <g key={si}>
-                      {cut > 0.003 ? sweptLine("g", S, M, OP_READ, accent, 3, 1) : null}
-                      {cut < 0.997 ? sweptLine("d", M, p, OP_READ, accent, 3, 0) : null}
-                    </g>
-                  );
-                })}
+                {arm.pts
+                  .slice(1)
+                  .map((p, si) =>
+                    sweptLine(`w${si}`, arm.pts[si], p, OP_READ, accent, 3, 0, clusterLit),
+                  )}
                 {armFront > 0 && armFront < arm.total ? (
                   <circle
                     cx={armPt(arm, armFront).x}
@@ -1288,7 +1340,10 @@ const QuicklyShutDown: React.FC<Props> = ({
               </g>
             ))}
 
-            {/* the machines it holds, claimed inside-out */}
+            {/* the machines it holds. They come back to full ACCENT with the
+                ring, and the ghost that would have claimed them inside-out is
+                superseded by that: `relit` takes the max, so the spread neither
+                doubles them nor pulls them down. */}
             {MACH_PTS.map((m, i) => {
               if (i === MACH_PTS.length - 1) return null; // the breached node draws itself
               const l = machLit[i];
@@ -1299,7 +1354,7 @@ const QuicklyShutDown: React.FC<Props> = ({
                   cx={m.x}
                   cy={m.y}
                   r={dotRadius * MACHINES[i].r * breath(frame, hash(i, 19)) * (1 + 0.2 * l)}
-                  fill={rung(claimed(base, m.y, machGhost[i]))}
+                  fill={rung(relit(base, OP_LIT, m.y, machGhost[i], machGhost[i]))}
                   opacity={OP_DOT}
                 />
               );

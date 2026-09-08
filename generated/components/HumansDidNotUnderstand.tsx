@@ -76,8 +76,10 @@ export const DURATION = 220;
 //      f120, so the web's oldest lines are its brightest.
 //        — "the coordination that was happening between these agents"  f99-152
 //   G5 the web resolves into a purpose. Every thread swings about its own anchor
-//      until it points at one convergence point among the agents (world 540,
-//      1865 — above and behind the humans), each on its own arc: its swing opens
+//      until it points at one convergence point among the agents — the CENTRE OF
+//      THE MARK, taken off the mark's own box rather than typed as a number, so
+//      the star lands dead on the glyph the whole cut is standing in front of;
+//      it used to sit 145 world px under it. Each on its own arc: its swing opens
 //      somewhere in f152-166 and takes 14-23 frames, so no two travel together
 //      and all of them have landed by f190. A thread whose reach is longer than
 //      its distance to the focus ends ON the focus, so the middle of the web is a
@@ -261,11 +263,6 @@ const HUMANS: { x: number; in: number }[] = [
 ];
 const HUMAN_FADE = 9;
 
-// Where the web ends up pointing. Among the agents, 270 world px above the
-// humans and behind them — screen y 708 at the hold, on the frame's centre line
-// and inside the caption-safe band.
-const FOCUS: P = { x: 540, y: 1865 };
-
 // The reading band. Starts 26 world px above the humans' boxes (which top out
 // at 2076, screen 941) and ends above the visible top of the field at the hold
 // (1244), so it leaves the frame rather than stopping inside it.
@@ -286,6 +283,27 @@ const LOW_RATE = 0.55;
 // half-cropped, and it sits behind the crowd, behind the convergence and above
 // the humans.
 const MARK: P = { x: 540, y: 1720 };
+
+// Where the web ends up pointing: the CENTRE OF THE MARK, on the note that the
+// convergence was landing below it. It is derived from where the mark is
+// actually drawn rather than typed as a number — the Img runs from
+// (MARK - size/2) to (MARK + size/2), and the glyph is centred inside its own
+// alpha (measured on the asset: the alpha bounding box's centre and the alpha
+// centroid both land on 300.0 of 600), so the centre of the drawn square IS the
+// centre of the mark. Move MARK or markSize and the convergence follows.
+//
+// At the hold (k 1.15, cy 2084) that puts the focus on screen y 541, on the
+// frame's centre line, 167 px higher than the 1865 it used to sit at: still
+// well inside the frame, well above the burned-in captions, and 415 world px
+// clear of the humans at 2135 — who read below it exactly as before, since
+// nothing about them moved. No thread reaches past it: a thread keeps its own
+// length unless the focus is nearer, so every endpoint stays within 165 world
+// px of an anchor that was already in the field.
+const focusOf = (size: number): P => {
+  const left = MARK.x - size / 2; // the mark's box, exactly as the Img is placed
+  const top = MARK.y - size / 2;
+  return { x: left + size / 2, y: top + size / 2 };
+};
 
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
@@ -374,7 +392,7 @@ const pickPair = (n: number) => {
 
 // The camera: one damped pull-back, then dead still. cx never moves — the whole
 // piece is on world x 540. Derived off the content centre 1975 (the crowd's own
-// 2002, pulled up toward the focus at 1865) with the house rule
+// 2002, pulled up toward the focus) with the house rule
 // cy = contentCentre + 125/k, which lands that centre on screen y 835:
 //   open k 1.40 -> cy 2064, inside the crowd, field bleeding off all four edges
 //   hold k 1.15 -> cy 2084, the widest the piece goes, and still no field edge
@@ -413,6 +431,8 @@ const HumansDidNotUnderstand: React.FC<Props> = ({
   // The ladder, as a colour: OP_DARK -> ACCENT_SHADE, OP_UNREAD -> ACCENT_DEEP,
   // OP_READ + 0.1 -> ACCENT. Built once per frame, read per dot.
   const rung = makeRung(accentDeep, accent, backgroundBase);
+  // Where the web converges: the centre of the mark, off the mark's own box.
+  const focus = focusOf(markSize);
 
   const RATE_F = [
     PRE,
@@ -595,8 +615,8 @@ const HumansDidNotUnderstand: React.FC<Props> = ({
               let th = th0;
               let l = l0;
               if (p.sw > 0) {
-                const dfx = FOCUS.x - A.x;
-                const dfy = FOCUS.y - A.y;
+                const dfx = focus.x - A.x;
+                const dfy = focus.y - A.y;
                 const thF = Math.atan2(dfy, dfx);
                 let d = thF - th0;
                 while (d > Math.PI) d -= Math.PI * 2;

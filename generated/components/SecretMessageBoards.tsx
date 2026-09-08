@@ -102,6 +102,14 @@ export const DURATION = 112;
 // propagates. The ladder is extended below ACCENT_DEEP for the dark rungs: see
 // THE GRADE'S LOW END below. Not one beat, camera key, world coordinate, count,
 // stroke weight or curve moved; only what a number means at the end of it.
+//
+// AMBIENT LIFE PASS — on the note that the crowd outside the boards sat too
+// still. Every agent that is not inside one of the three boards now carries a
+// quiet continuous drift of a few world px on its own hashed phase and period,
+// plus a downward-only shimmer in the deep end of the ramp. See AMBIENT LIFE
+// below for the amplitudes and why they are what they are. Nothing else: not a
+// beat, not a camera key, not the darkening, not the post system, not the
+// accumulation, not a board's geometry, and not one agent inside a board.
 
 export const schema = z.object({
   ink: z.string(),
@@ -257,6 +265,48 @@ const CROWD_POS = Array.from({ length: N }, (_, i) => {
     r: 0.75 + 0.5 * hash(i, 13),
   };
 });
+
+// ---------------------------------------------------------------------------
+// AMBIENT LIFE, outside the boards. A crowd that is holding still is a diagram
+// of a crowd, so every agent that is NOT inside one of the three boards drifts
+// a few world px about its own seat: its own hashed phase, its own period, and
+// a different period on each axis, so a seat traces a slow open figure rather
+// than rocking along a line and no two agents ever travel together. There is no
+// shared clock in it, so the field cannot pulse as a mass.
+//
+// It is AMBIENT, not a gesture, and the amplitudes say so: 3.0 / 2.4 world px
+// against a step of 24.1 / 15.2, which is a quarter of the jitter the seats
+// already carry, so a seat never travels a sixth of the way toward its
+// neighbour and the drift is far under the reach of a single post inside a
+// board. The periods run 46-92 frames — nothing in the piece's 112 completes
+// more than two and a bit cycles, and no two of them line up, so there is no
+// frame on which the field does anything that could read as a new event.
+//
+// It LAYERS ON `breath`, which is untouched, and every number in it comes off
+// `hash`, so a frame rendered twice is the same frame.
+//
+// The tone shimmer is the same idea in the deep end of the ramp and it only
+// ever goes DOWN: a seat's rung dips by at most IDLE_TONE below where the
+// ladder put it and never rises, so a background agent cannot be mistaken for
+// one that has been lit. It is scaled by the field's own recede, so it exists
+// only once the field has settled onto the deep tone and G1's darkening still
+// plays against a clean field.
+//
+// Agents INSIDE a board have none of this. A board is the subject and its
+// agents are held by their own traffic.
+// ---------------------------------------------------------------------------
+const IDLE_AMP_X = 3.0; // world px, against STEP_X 24.1
+const IDLE_AMP_Y = 2.4; // world px, against STEP_Y 15.2
+const IDLE_TONE = 0.028; // op units, downward, against a deep half of the ramp 0.29 wide
+const TAU = Math.PI * 2;
+const IDLE_DRIFT = Array.from({ length: N }, (_, i) => ({
+  wx: TAU / (46 + 46 * hash(i, 21)),
+  px: hash(i, 22) * TAU,
+  wy: TAU / (52 + 40 * hash(i, 23)),
+  py: hash(i, 24) * TAU,
+  wt: TAU / (38 + 34 * hash(i, 25)),
+  pt: hash(i, 26) * TAU,
+}));
 
 // ---------------------------------------------------------------------------
 // The three boards. They are REGIONS of the crowd, not objects added to it:
@@ -612,7 +662,17 @@ const SecretMessageBoards: React.FC<Props> = ({
               const bre = breath(frame, hash(i, 9));
               const r = dotRadius * p.r * bre * (1 + 0.35 * l);
               const op = base + (OP_LIT - base) * l;
-              return <circle key={i} cx={p.x} cy={p.y} r={r} fill={rung(op)} opacity={OP_DOT} />;
+              // the ambient life, outside the boards only: a slow drift on this
+              // seat's own two periods, and a tone shimmer that only ever dips.
+              const d = bi < 0 ? IDLE_DRIFT[i] : null;
+              const ax = d ? p.x + IDLE_AMP_X * Math.sin(frame * d.wx + d.px) : p.x;
+              const ay = d ? p.y + IDLE_AMP_Y * Math.sin(frame * d.wy + d.py) : p.y;
+              const shim = d
+                ? IDLE_TONE * fieldRecede * (0.5 - 0.5 * Math.cos(frame * d.wt + d.pt))
+                : 0;
+              return (
+                <circle key={i} cx={ax} cy={ay} r={r} fill={rung(op - shim)} opacity={OP_DOT} />
+              );
             })}
           </svg>
         </div>
