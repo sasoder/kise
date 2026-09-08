@@ -360,7 +360,12 @@ export const GridBackground: React.FC<{
 //     CLIENT PASS, on "way too intense — a nice, minimal but still visible
 //     radius, not one, two or three pixels, something stylish": the ratio came
 //     down 0.2 -> 0.11, and a SQUIRCLE_MIN floor of 5 world px keeps the small
-//     shapes from rounding away to nothing. So the rule is
+//     shapes from rounding away to nothing.
+//     CLIENT PASS 2, on "the corners are still way too rounded": 0.11 -> 0.06.
+//     The floor stays at 5 and the smoothing stays at 0.6, so the small shapes
+//     do not move at all and the big ones lose roughly half their corner again
+//     — 240 x 160 flag 17.6 -> 9.6, 320 card 35.2 -> 19.2, cut 1's 384 x 256
+//     flag 28.2 -> 15.4. So the rule is
 //       r = min(short / 2, max(ratio * short, SQUIRCLE_MIN))
 //     — proportional everywhere it can be, 5 px wherever proportional would be
 //     invisible (the 32 px tools, cut 1's 29 px slot), and never more than half
@@ -385,7 +390,7 @@ export const GridBackground: React.FC<{
 //   a, b, c, d       = the control-point offsets of the two cubics either side
 //                      of it, solved so the tangents match at both joins
 // ---------------------------------------------------------------------------
-export const SQUIRCLE_RATIO = 0.11; // corner radius = 11% of the shape's shorter side
+export const SQUIRCLE_RATIO = 0.06; // corner radius = 6% of the shape's shorter side
 export const SQUIRCLE_MIN = 5; // world px floor, so a 32 px tool still reads as rounded
 export const SQUIRCLE_SMOOTH = 0.6; // Figma-style corner smoothing; 0.6 is Apple's continuous corner
 

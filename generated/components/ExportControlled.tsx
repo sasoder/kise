@@ -64,7 +64,7 @@ export const DURATION = 247;
 //                 all three cuts of this clip. There is no floor and no other
 //                 datum: the lane, the gate, the pile and the camera are all
 //                 derived from these four numbers. Its corner is the shared
-//                 squircle at 11% of its shorter side: r 17.6.
+//                 squircle at 6% of its shorter side: r 9.6.
 //   lane          world y 1119 — the flag's vertical CENTRE line. A tool's
 //                 centre y is the flag's centre y, so the lane runs into the
 //                 middle of the flag and the queue forms on that same line.
@@ -103,7 +103,7 @@ export const DURATION = 247;
 //                 Row 1's BOTTOM EDGE is the flag's bottom edge (1199), so the
 //                 pile grows off the flag's own baseline. Its top edge is world
 //                 y 939, 100 px ABOVE the flag's top. Right edge world x 982.
-//   cards         320 world px square, squircle r 35.2. Card 1 hangs under the
+//   cards         320 world px square, squircle r 19.2. Card 1 hangs under the
 //                 flag (world x 380..700, top edge 30 below the flag's bottom);
 //                 card 2 parks 60 world px right of the pile's right edge
 //                 (x 1042..1362) on the pile's own mid line.
@@ -316,24 +316,25 @@ export const DURATION = 247;
 // shapes. Corner smoothing 60% like Apple's guidelines." Every rounded shape in
 // the cut is now `squirclePath(w, h)` from `fieldShared` — the Figma corner-
 // smoothing construction at s 0.6, Apple's continuous corner — and no radius is
-// written down any more: it is SQUIRCLE_RATIO (0.11) of the shape's shorter
+// written down any more: it is SQUIRCLE_RATIO (0.06) of the shape's shorter
 // side, floored at SQUIRCLE_MIN (5 world px), so the three shapes in the cut
 // are rounded by the same rule. TOOL_RX 7 and FLAG_R 14 are gone with it.
 //
 // CLIENT PASS on the squircle: "Way too intense. A nice, minimal but still
 // visible radius — not one, two or three pixels, something stylish." The ratio
-// came down 0.2 -> 0.11 with a 5 px floor under it, so the big shapes lost
-// roughly half their corner and the 32 px tool kept a visible one instead of
-// falling to 3.5.
-//   tool     32 x 32   -> r 5     the SQUIRCLE_MIN floor (0.11 * 32 is 3.5);
+// came down 0.2 -> 0.11 with a 5 px floor under it.
+// CLIENT PASS 2: "The corners are still way too rounded." 0.11 -> 0.06, the
+// floor still 5 and the smoothing still 0.6, so the big shapes halve again and
+// the 32 px tool does not move — it was already on the floor.
+//   tool     32 x 32   -> r 5     the SQUIRCLE_MIN floor (0.06 * 32 is 1.9);
 //                                 a `<path>` translated to the tool's corner
-//   flag     240 x 160 -> r 17.6  the fill AND its star clip take the one path
-//   card     320 x 320 -> r 35.2  a CSS `clip-path: path(...)` on the <Img>,
+//   flag     240 x 160 -> r 9.6   the fill AND its star clip take the one path
+//   card     320 x 320 -> r 19.2  a CSS `clip-path: path(...)` on the <Img>,
 //                                 with the per-icon shadow moved OUT to a
 //                                 wrapper div so the shadow follows the
 //                                 squircle instead of being clipped away by it.
-//                                 The artwork has its own small baked-in
-//                                 corners; a 35.2 px squircle clip covers them.
+//                                 The card artwork is square-cornered, so the
+//                                 19.2 px squircle clip is the only corner.
 //
 // CLIENT PASS 4, on three notes:
 //   * "The first card should come in on 'tools'." Card 1 used to rise the whole
@@ -458,8 +459,8 @@ const CENTRE_X = 540;
 const STROKE = 3;
 
 // The one repeated unit. Its corner is the shared squircle, and at 32 px the
-// SQUIRCLE_MIN floor is what sets it — 5 px, where the 0.11 ratio alone would
-// give 3.5 and the corner would read as square at this size.
+// SQUIRCLE_MIN floor is what sets it — 5 px, where the 0.06 ratio alone would
+// give 1.9 and the corner would read as square at this size.
 const TOOL = 32;
 const TOOL_HALF = TOOL / 2;
 const TOOL_PATH = squirclePath(TOOL, TOOL);
@@ -648,10 +649,9 @@ const WORLD_RIGHT_FINAL = CX_FINAL + FRAME_W / (2 * K_FINAL); // 1532
 // CARD, CARD2_GAP and CARD2_X are declared up with the pile, because the
 // resolved camera is framed on the pile and the card together.
 const CARD_SLIDE = 14; // frames of Easing.out(Easing.cubic), the same for both
-// The one corner in the cut that has to cover something: the artwork is opaque
-// 1080 px square with its own small baked-in corners, and a 35.2 px squircle
-// clip takes them off cleanly rather than leaving a rounded corner inside a
-// rounded corner.
+// The card artwork is opaque, 1080 px square and square-cornered, so the
+// 19.2 px squircle clip is the only corner the card has — nothing baked in
+// underneath it to peek out past the clip.
 const CARD_PATH = squirclePath(CARD, CARD);
 
 // Card 1 hangs under the flag on the flag's own axis, 30 px below its bottom
@@ -994,7 +994,7 @@ const FLAG_SMALL_STARS = [
   [10, 9],
 ].map(([ux, uy]) => starPts(flagPt(ux, uy), FLAG_UNIT, Math.atan2(5 - uy, 5 - ux)));
 const FLAG_CLIP = "ec-flag-clip";
-// The flag's outline: one squircle at 11% of its shorter side (r 17.6), used
+// The flag's outline: one squircle at 6% of its shorter side (r 9.6), used
 // twice — as the red field and as the clip the stars are drawn inside — so the
 // mark cannot end up with two different corners.
 const FLAG_PATH = squirclePath(FLAG_W, FLAG_H);

@@ -70,7 +70,7 @@ export const DURATION = 262;
 // them, as in cut 2.
 //
 // FRAMING AND LAYOUT
-//   China flag    cut 1's flag exactly — 240x160 on the shared squircle,
+//   China flag    cut 1's flag exactly — 240x160 on the shared squircle (r 9.6),
 //                 FLAG_RED with the stars in the house accent — centred at
 //                 world x 350, so x 230..470, y 1000..1160. It is the
 //                 carry-over from cuts 1 and 2: present from f0, no entrance,
@@ -337,10 +337,12 @@ export const DURATION = 262;
 // CLIENT PASS on the squircle: "Way too intense. A nice, minimal but still
 // visible radius — not one, two or three pixels, something stylish." The ratio
 // came down 0.2 -> 0.11 with a SQUIRCLE_MIN floor of 5 world px under it, which
-// nothing in this cut is small enough to reach. r is now 17.6 world px, 22
-// SCREEN px at the resolved k 1.25 — the same fraction of the mark that cut 1's
-// 384 x 256 flag and cut 2's 240 x 160 one carry at their own scales, so the
-// three cuts still show one mark when they run seconds apart.
+// nothing in this cut is small enough to reach.
+// CLIENT PASS 2: "The corners are still way too rounded." 0.11 -> 0.06, floor
+// and smoothing unchanged. r is now 9.6 world px, 12 SCREEN px at the resolved
+// k 1.25 — the same fraction of the mark that cut 1's 384 x 256 flag and cut
+// 2's 240 x 160 one carry at their own scales, so the three cuts still show one
+// mark when they run seconds apart.
 //   China   the red field AND the star clip take the one path
 //   US      the clip the thirteen stripes, the canton and the fifty stars are
 //           drawn inside takes it, so the stripes end on the squircle
@@ -467,7 +469,7 @@ const FLAG_W = 240;
 const FLAG_H = 160; // 3:2
 const FLAG_UNIT = FLAG_W / 30; // 8, the official 30x20 unit grid of cut 1
 // SQUIRCLE PASS: one outline for both marks, at SQUIRCLE_RATIO of the shorter
-// side — 0.11 * 160 = 17.6 world px, 22 SCREEN px at the resolved k 1.25, well
+// side — 0.06 * 160 = 9.6 world px, 12 SCREEN px at the resolved k 1.25, well
 // clear of the SQUIRCLE_MIN floor so the ratio is what sets it. It is
 // used four times: China's field, China's star clip, the US flag's
 // stripe/canton/star clip, and nothing else has a corner in this cut.

@@ -146,18 +146,20 @@ export const DURATION = 198;
 // shapes. Corner smoothing 60% like Apple's guidelines." The two rounded shapes
 // in this cut take `squirclePath` / `squirclePoints` — the Figma corner-
 // smoothing construction at s 0.6, Apple's continuous corner — and neither
-// radius is written down any more: it is SQUIRCLE_RATIO (0.11) of the shape's
+// radius is written down any more: it is SQUIRCLE_RATIO (0.06) of the shape's
 // shorter side, floored at SQUIRCLE_MIN (5 world px), so the flag and the slot
 // are rounded by the same rule. FLAG_R 22.4 and SLOT_R 5 are gone with it.
 //
 // CLIENT PASS on the squircle: "Way too intense. A nice, minimal but still
 // visible radius — not one, two or three pixels, something stylish." The ratio
-// came down 0.2 -> 0.11 and the floor went in; the flag's corner more than
-// halved and the slot's is now the floor rather than the ratio.
-//   flag  384 x 256 -> r 28.2  (22 screen px at the resolved k 0.78); the fill
+// came down 0.2 -> 0.11 and the floor went in.
+// CLIENT PASS 2: "The corners are still way too rounded." 0.11 -> 0.06, floor
+// and smoothing unchanged, so the flag halves again and the slot does not move
+// — it was already on the floor.
+//   flag  384 x 256 -> r 15.4  (12 screen px at the resolved k 0.78); the fill
 //                              AND its star clip take the one path
-//   slot  88.3 x 28.9 -> r 5   the SQUIRCLE_MIN floor, since 0.11 * 28.9 is
-//                              3.18. Drawn as a polyline, because the dashes
+//   slot  88.3 x 28.9 -> r 5   the SQUIRCLE_MIN floor, since 0.06 * 28.9 is
+//                              1.73. Drawn as a polyline, because the dashes
 //                              and the head-led draw are arc lengths around the
 //                              outline. Same pattern, same 12/9 dash, same
 //                              bead, same head-led close on "year".
@@ -667,7 +669,7 @@ const RING_CLICK = 4;
 //
 // SQUIRCLE PASS: its outline is the shared squircle rule applied to its own
 // shorter side — on a 88.3 x 28.9 slot the SQUIRCLE_MIN floor wins, so r is 5
-// world px rather than the ratio's 3.18 — not a hand-set rx 5. It is
+// world px rather than the ratio's 1.73 — not a hand-set rx 5. It is
 // still walked as a POLYLINE, because the dashes and the head-led draw are arc
 // lengths around the outline — see `squirclePoints`.
 const SLOT_W = (COL_W - 1) * STEP + 16;
@@ -705,7 +707,7 @@ const squirclePoints = (
   const short = Math.min(w, h);
   // The identical rule `squirclePath` uses: proportional, floored at
   // SQUIRCLE_MIN, capped at half the shorter side. On the 88.3 x 28.9 slot the
-  // floor is what bites — 0.11 * 28.9 is 3.18, so r is 5.
+  // floor is what bites — 0.06 * 28.9 is 1.73, so r is 5.
   const r = Math.min(short / 2, Math.max(ratio * short, SQUIRCLE_MIN));
   const s = clamp01(smooth);
   const p = Math.min(short / 2, (1 + s) * r);
@@ -906,8 +908,8 @@ const FLAG_SMALL_STARS = [
 const FLAG_CLIP = "hs-flag-clip";
 // SQUIRCLE PASS: the mark's outline, one path used twice — as the red field and
 // as the clip the stars are drawn inside — so the flag cannot end up with two
-// different corners. r is SQUIRCLE_RATIO of the shorter side: 0.11 * 256 = 28.2
-// world px, which is 22 SCREEN px at this cut's resolved k 0.78 — the same
+// different corners. r is SQUIRCLE_RATIO of the shorter side: 0.06 * 256 = 15.4
+// world px, which is 12 SCREEN px at this cut's resolved k 0.78 — the same
 // fraction of the mark that cuts 2 and 3 carry at their own scale.
 const FLAG_PATH = squirclePath(FLAG_W, FLAG_H);
 const FLAG_AT = `translate(${FLAG_X} ${FLAG_TOP})`;
