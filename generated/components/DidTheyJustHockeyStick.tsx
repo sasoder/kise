@@ -60,7 +60,10 @@ export const DURATION = 198;
 //   the floor alone                                 — before "how"           f0-6
 //   the flag of China rises 24 world px into place
 //     under the floor while it fades in, landing on
-//     "China" and never moving again                — "China"               f15-23
+//     "China" and never moving again — not in the
+//     world and, because the camera only zooms about
+//     the graph's centre, not on screen either: it
+//     sits on the frame's midline from f0 to f198   — "China"               f15-23
 //   the 36 dots of the three past columns (2, 3 and
 //     4 rows, 4 dots wide) arrive from beyond the
 //     LEFT edge, each at its seat's height on its
@@ -70,12 +73,17 @@ export const DURATION = 198;
 //                                                    to add"               f6-40
 //   the dashed slot draws head-led around its
 //     outline at position 4 and closes on "year"    — "the subsequent year?" f45-54
-//   the ONE camera move: k 1.25 -> 0.8 on one
+//   the ONE camera move: a PURE ZOOM about the
+//     graph's own centre, k 1.08 -> 0.78 on one
 //     warped smoothstep (warp 0.72) keyed f68-78,
 //     damped to 0.5% of its target by f88, five
-//     frames before "hockey stick". It opens the
-//     empty space above and to the right. Nothing
-//     new appears while it runs                     — "I want to know, did
+//     frames before "hockey stick". No lateral
+//     travel at all — cx is CENTRE_X for the whole
+//     track — because the flag is centred on
+//     CENTRE_X and has to hold the middle of the
+//     frame from the first frame to the last. It
+//     opens the empty space above. Nothing new
+//     appears while it runs                         — "I want to know, did
 //                                                    they just"            f68-88
 //   the curve draws head-led from the top of column
 //     1 along the tops of 2 and 3 (nearly flat),
@@ -88,7 +96,7 @@ export const DURATION = 198;
 //     of column 4, where the line leaves the flat —
 //     its radius landing with Easing.out(back 1.6)
 //     and a 4-frame click-bright                    — "the point at which"  f106-119
-//   the pour: 728 dots enter from beyond the left
+//   the pour: 672 dots enter from beyond the left
 //     edge as ONE stream in a narrow band at the
 //     kink's height, run right along it and each
 //     turns up under its own column into its seat,
@@ -113,8 +121,13 @@ export const DURATION = 198;
 // Counts are geometry, never asserted: a column is 4 dots wide on the crowd
 // step and 2, 3, 4, 7, 14, 28, 56 and 112 rows tall — a doubling from the
 // subsequent year on. Columns 7 and 8 run off the top of the frame at the
-// resolved camera; column 8 is capped at 62 rows, three rows above the frame
-// top, so the pour does not spend dots nobody sees. 704 dots in all.
+// resolved camera; column 8 is capped at 63 rows, three rows above the frame
+// top, so the pour does not spend dots nobody sees. 708 dots in all: 36 in the
+// three past columns, 672 in the pour.
+//
+// v3: the camera is a pure zoom about the graph's centre (CX_OPEN = CENTRE_X,
+// k 1.08 -> 0.78) and the pitch comes to 116, so the flag holds the frame's
+// midline from the first frame instead of drifting into it on the pull-back.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -214,13 +227,15 @@ const smooth = (v: number) => {
 // ---------------------------------------------------------------------------
 // The graph's ground truth. The crowd step is the field's own (940/39), so a
 // column of agents here is made of the same material as every crowd in this
-// set, and a row is that step tall. Eight year positions at a 120px pitch put
-// four dots and a gap of two steps between neighbours: 940 world px end to end.
+// set, and a row is that step tall. Eight year positions at a 116px pitch put
+// four dots and a gap of just under two steps between neighbours: 884 world px
+// end to end. The pitch came in from 120 with the camera's v3 pass, so the whole
+// graph fits a frame centred on the graph rather than opening inside it.
 // ---------------------------------------------------------------------------
 const STEP = 940 / 39;
 const FLOOR_Y = 2900;
 const CENTRE_X = 538;
-const PITCH = 120;
+const PITCH = 116;
 const NCOL = 8;
 const COL_W = 4; // dots across a column
 const colX = (i: number) => CENTRE_X + (i - (NCOL - 1) / 2) * PITCH;
@@ -229,36 +244,50 @@ const colX = (i: number) => CENTRE_X + (i - (NCOL - 1) / 2) * PITCH;
 const ROWS_NOMINAL = [2, 3, 4, 7, 14, 28, 56, 112];
 
 // ---------------------------------------------------------------------------
-// The camera. ONE move, on "I want to know, did they just": a pull-back out of
-// the graph that opens the empty space the hockey stick needs, above and to the
-// right. `camMove` writes it as a warped smoothstep, a key per frame, with cy
-// taken off the eased k so the content centre stays at screen y 835 through the
-// move and not only at its ends. cx rides the SAME eased curve through the same
-// damper, so the pan and the zoom are one hand.
+// The camera. ONE move, on "I want to know, did they just": a PURE ZOOM about
+// the graph's own centre that opens the empty space the hockey stick needs
+// above the floor. `camMove` writes it as a warped smoothstep, a key per frame,
+// with cy taken off the eased k so the content centre stays at screen y 835
+// through the move and not only at its ends.
+//
+// There is no lateral travel: CX_OPEN is CENTRE_X, so CAM_CX is one value from
+// f0 to f198. That is the whole point of the v3 pass. The flag is centred on
+// CENTRE_X, and a camera that opened off to the left and panned right while it
+// zoomed put the flag out to the right of frame at f0 and let it drift into the
+// middle over the move — the mark reading as the thing that moved, when it is
+// the one thing in the piece that must not. Zooming about the graph's midpoint
+// fixes it at the camera rather than at the flag: the flag sits on the frame's
+// midline from the first frame, and everything else grows and shrinks around it.
 //
 // Keyed f68-78 rather than f70-84: this damper lags its target by about ten
 // frames, and the move has to be settled before the curve starts drawing at
-// f86. At f88 the zoom is within 0.5% of 0.8 and the floor is within 0.3px of
+// f86. At f88 the zoom is within 0.5% of 0.78 and the floor is within 0.3px of
 // where it ends up, so the curve draws into a camera that has stopped.
 //
-//   f0-67    k 1.25, cx 340   inside the graph: the floor at screen y 1130 so
-//                             the three past columns sit ON the content centre,
-//                             position 4 inside the frame on the right, and the
-//                             flag fully inside the frame from f0.
-//   f68-88   -> k 0.8, cx 538 the eight positions centred, the floor at screen
-//                             y 1120 with the flag on the ground below it, and
-//                             1400 world px of clear air above the floor for
-//                             the stick.
+//   f0-67    k 1.08, cx 538  inside the graph, but centred on it: the floor at
+//                            screen y 1130 so the three past columns sit ON the
+//                            content centre, all eight positions inside the
+//                            frame (column 1 clears the left edge by 61 screen
+//                            px, column 8 the right by 50), and the flag on the
+//                            midline from f0.
+//   f68-88   -> k 0.78, cx   the same eight positions, the floor at screen y
+//                     538    1120 with the flag on the ground below it, and
+//                            1440 world px of clear air above the floor for the
+//                            stick.
 //
 // Director's pass: the resolved framing sat 300 screen px lower — the floor at
 // y 1420 — and the graph read as hanging off the bottom of the frame. The whole
 // graph is lifted by re-authoring the resolved centre alone (CY_FINAL, and so
 // CONTENT_FINAL), never the world geometry: the move, its keys, its warp and
 // its k values are untouched, and the opening framing is untouched with it.
+//
+// v3: the pan is gone (CX_OPEN = CENTRE_X) and the zoom is re-scaled to hold
+// the whole graph in a centred opening — k 1.08 -> 0.78 with the pitch at 116.
+// The keys, the warp, the damper and the CAM_LIFT framing formula are untouched.
 // ---------------------------------------------------------------------------
-const K_OPEN = 1.25;
-const K_FINAL = 0.8;
-const CX_OPEN = 340;
+const K_OPEN = 1.08;
+const K_FINAL = 0.78;
+const CX_OPEN = CENTRE_X;
 const CX_FINAL = CENTRE_X;
 const CAM_F0 = 68;
 const CAM_F1 = 78;
@@ -295,8 +324,9 @@ const LEFT_EDGE = Math.min(...CAM_K.map((k, i) => CAM_CX[i] - FRAME_W / 2 / k));
 
 // Cap: no seat further than three rows above the highest the frame ever sees,
 // so the pour does not spend dots nobody watches. Column 8's nominal 112 rows
-// become 62 (77 before the graph was raised); every other column, column 7's 56
-// rows included, is under the cap and untouched.
+// become 63 (62 before the camera became a pure zoom, 77 before the graph was
+// raised); every other column, column 7's 56 rows included, is under the cap
+// and untouched.
 const ROW_CAP = Math.ceil((FLOOR_Y - FRAME_TOP) / STEP) + 3;
 const ROWS = ROWS_NOMINAL.map((r) => Math.min(r, ROW_CAP));
 
