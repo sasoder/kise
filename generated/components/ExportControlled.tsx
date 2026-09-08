@@ -4,7 +4,7 @@ import {
   ACCENT,
   BG_BASE,
   BG_DIM,
-  FRAME_H,
+  CAM_LIFT,
   FRAME_W,
   GridBackground,
   ICON_SHADOW_BLUR,
@@ -35,37 +35,52 @@ export const FPS = 24;
 export const DURATION = 247;
 
 // ---------------------------------------------------------------------------
-// "The gate and the pile". Cut 1 left the flag of China standing at the centre
-// of the frame; this cut keeps it there and gives it a floor, a supply line, a
-// wall, and a stack.
+// "The gate and the pile". Cut 1 left the flag of China at the centre of the
+// frame; this cut keeps it there and gives it a supply line, a wall, and a
+// stack. Nothing stands on a ground — there is no floor. The flag floats at the
+// centre of the frame and EVERY position in the piece is measured off it.
 //
 // One repeated unit and nothing else: a tool is a 32px rounded square. Ink
-// tools travel in from beyond the left edge along the floor and go into China
-// (they pass BEHIND the flag and are gone) — that is the export machine
-// running. On "controlled" a gate drops in front of them and they pile up
-// against it. Then China makes its own: accent tools come out from behind the
-// flag's right edge and build a PILE two wide and seven tall beside it, slowly
-// at first and then fast. The rate IS the answer to "how fast" — the quantity
-// is encoded twice, as the spacing of the launches and as the height of the
-// pile, which ends up taller than the flag it is standing next to.
+// tools travel in from beyond the left edge along the flag's own centre line
+// and go into China (they pass BEHIND the flag and are gone) — that is the
+// export machine running. On "controlled" a gate drops in front of them — a
+// wall exactly the height of the flag — and they pile up against it. Then China
+// makes its own: RED tools, the flag's own red because they come from China,
+// come out from behind the flag's right edge and build a PILE two wide and
+// seven tall beside it, slowly at first and then fast. The rate IS the answer
+// to "how fast" — the quantity is encoded twice, as the spacing of the launches
+// and as the height of the pile, which ends up taller than the flag it grew
+// out of.
 //
-// No text. No people. A pile 2 wide x 7 tall, a queue of six, one flag, one
-// floor, one gate.
+// No text. No people. A pile 2 wide x 7 tall, a queue of five, one flag, one
+// gate.
 //
-// FRAMING AND LAYOUT (pass 2)
-//   floor         world y 1200.5, held at SCREEN y 960 at both framings
-//   camera        pure zoom about x 540, k 1.3 -> 1.0, keyed f64-74
-//   content box   world y 939 (pile top) .. 1202 (floor), centre 1070.5,
-//                 which lands at screen y 830.5 at the resolved camera —
-//                 the house's 835 to within 5px
+// FRAMING AND LAYOUT (client pass)
+//   flag          240x160 at rx 14, world x 420..660, y 1039..1199. There is
+//                 no floor and no other datum: the lane, the gate, the pile
+//                 and the camera are all derived from these four numbers.
+//   lane          world y 1119 — the flag's vertical CENTRE line. A tool's
+//                 centre y is the flag's centre y, so the lane runs into the
+//                 middle of the flag and the queue forms on that same line.
+//   camera        pure zoom about x 540, k 1.3 -> 1.0, keyed f64-74, warp 0.72
+//   content box   world y 939 (the pile's top edge) .. 1199 (the flag's bottom
+//                 edge), centre 1069, which lands at SCREEN y 835 at BOTH
+//                 framings — the house's 835 exactly, because cy is authored
+//                 as contentCentre + CAM_LIFT/k. That puts the flag's centre
+//                 (world 1119, 50 px below the content centre) at screen y 885
+//                 resolved and 900 at f0.
 //   unit          32 world px, rx 7
-//   gate          x 330 = flag left edge - 90, 220 tall
-//   queue         pitch 40, six long, back tool's left edge at world x 98
-//                 = 98 screen px inside the left edge at k 1.0
-//   pile          left column's left edge at world x 700 = flag right + 40,
-//                 column pitch 40, row pitch 38, seven rows = 266 px tall,
-//                 top at world y 939, 100 px ABOVE the flag's top (1039).
-//                 Right edge world x 772, 308 px inside the right edge.
+//   gate          x 360 = flag left edge - 60, from the flag's TOP level to its
+//                 BOTTOM level: 160 tall, exactly the flag's height
+//   queue         pitch 40, five long, standing on the lane's line, back tool's
+//                 left edge at world x 168 = 168 screen px inside the left edge
+//                 at k 1.0
+//   pile          left column's left edge at world x 760 = flag right + 100,
+//                 column pitch 40, row pitch 38, seven rows = 260 px tall.
+//                 Row 1's BOTTOM EDGE is the flag's bottom edge (1199), so the
+//                 pile grows off the flag's own baseline. Its top edge is world
+//                 y 939, 100 px ABOVE the flag's top. Right edge world x 832,
+//                 248 px inside the right edge.
 //
 // Every gesture is one word. Nothing else happens.
 //   the foreign lane runs: a tool enters from beyond
@@ -76,46 +91,49 @@ export const DURATION = 247;
 //     half-eaten by the flag's left edge — the world
 //     is already running when the cut opens          — "whether or not tools
 //                                                      continue to get"     f0-58
-//   the gate draws head-led DOWNWARD from 220 world
-//     px above the floor to the floor line, a 4px
+//   the gate draws head-led DOWNWARD from the flag's
+//     top level to the flag's bottom level, a 4px
 //     ink bead at its tip, closing on f58 with a
 //     4-frame ink click-bright                       — "export controlled"  f50-58
-//   the three tools already past the gate carry on
-//     into the flag and are out of sight by f71;
+//   the four tools already past the gate carry on
+//     into the flag and are out of sight by f64;
 //     every tool behind it cruises until it is 30 px
 //     short of its slot and then eases the last 30
 //     on its own Easing.out(Easing.cubic) over 10
 //     frames — the brake is velocity-matched to the
 //     lane speed, so nothing in the queue ever
 //     changes speed in unison. Slot 0 is down on
-//     f71, slot 4 on f81                             — "controlled"         f58-81
+//     f66, slot 3 on f75                             — "controlled"         f58-75
 //   the ONE camera move: a PURE ZOOM about the
-//     floor's centre, k 1.3 -> 1.0 on one warped
+//     content's centre, k 1.3 -> 1.0 on one warped
 //     smoothstep (warp 0.72) keyed f64-74, damped
 //     inside 0.5% of its target by f84, seven frames
 //     before "build". cx is CENTRE_X for the whole
 //     track, so the flag holds the middle of the
 //     frame from the first frame to the last, and
-//     the queue and the empty ground open up on
-//     either side of it. Nothing new appears while
-//     it runs                                        — "how fast"           f64-84
+//     the queue and the empty air open up on either
+//     side of it. Nothing new appears while it runs  — "how fast"           f64-84
 //   the fourteen domestic tools leave the flag's
-//     right edge and build the pile from the floor
-//     up, two to a row: #1 and #2 are the bottom
-//     row, #13 and #14 the seventh. The launches are
-//     f91, 114, 126, 151, 156, 162, then 170, 174,
-//     177, 180, 182, 184, 186, 188 — gaps of 23, 12,
-//     25, 5, 6, 8, 4, 3, 3, 2, 2, 2, 2, so the last
-//     eight build rows 4-7 in eighteen frames. Each
-//     tool slides out from behind the flag along the
-//     floor, rises in the 40 px corridor between the
-//     flag and the pile to 40 px above its seat, and
-//     a quadratic arc with its control point at that
-//     height carries it over and sets it down. The
-//     flight is split 55% slide / 45% lift by
-//     distance. Row 1 has no lift. The last one
-//     seats on "domestically" exactly — its flight
-//     duration is solved from that frame             — "China can build their
+//     right edge AT THE FLAG'S CENTRE LINE and build
+//     the pile from the flag's bottom edge up, two to
+//     a row: #1 and #2 are the bottom row, #13 and
+//     #14 the seventh. The launches are f91, 114,
+//     126, 151, 156, 162, then 170, 174, 177, 180,
+//     182, 184, 186, 188 — gaps of 23, 12, 25, 5, 6,
+//     8, 4, 3, 3, 2, 2, 2, 2, so the last eight build
+//     rows 4-7 in eighteen frames. Each tool slides
+//     out from behind the flag along the centre line,
+//     moves in the 100 px corridor between the flag
+//     and the pile to 40 px above the HIGHER of its
+//     start and its seat, and a quadratic arc with
+//     its control point at that height carries it
+//     over and sets it down — so rows 1 and 2, whose
+//     seats are below the centre line, HOP DOWN, and
+//     rows 3-7 lift up. Never a dip below the seat.
+//     The flight is split 55% slide / 45% lift by
+//     eased progress. The last one seats on
+//     "domestically" exactly — its flight duration is
+//     solved from that frame                         — "China can build their
 //                                                      new equipment that
 //                                                      they're starting to be
 //                                                      able to produce
@@ -123,76 +141,81 @@ export const DURATION = 247;
 //   one more foreign tool enters, crosses the frame
 //     and takes the queue's last free slot at f224:
 //     the lane never stopped, it just cannot get in  — tail of "domestically"
-//                                                                          f187-224
+//                                                                          f179-224
 //   hold resolved, never fades                       — tail              f231-247
 //
 // ambient on every hold: the grid's own drift and the shared `sway`. Nothing
 // else — a tool is a machine, not an agent, so there is no breath on it. The
 // longest stretch with no gesture is f224-247, the resolved hold itself.
 //
-// Deviations from the brief, and why:
-//   * The floor runs off both edges of the frame (world -220 to 1280) rather
-//     than ending at x 40 / 1040. A foreign tool enters at x -160 and is inside
-//     the resolved frame from x -144, so a floor that started at 40 would leave
-//     the lane running on nothing for its first 184 px.
+// Deviation from the brief, and why:
 //   * The foreign lane's post-gate cadence is one tool, not one every 22
 //     frames — see the queue rule below.
 //
 // Pass 2, on the director's note that pass 1 was one thin band at screen y 1120
-// with an empty sky over it. Tighter zoom (1.3 -> 1.0), floor lifted to screen
-// y 960, unit up from 28 to 32, gate in from 130 to 90, queue down from 8 to 6,
+// with an empty sky over it. Tighter zoom (1.3 -> 1.0), unit up from 28 to 32,
 // and the two rows of seven replaced by a pile 2 wide and 7 tall. What that
 // forced, and why:
 //   * THE QUEUE'S LENGTH IS A FRAMING RULE, not a count. The queue is as long
-//     as the resolved framing can hold with the house's 60 px margin: at k 1.0
-//     the left edge is world x 0, so the last slot whose tool still has 60 px
-//     of air behind it is slot 5, and the queue is six. (A seventh would stand
-//     with 58 px — 2 px short, which is exactly why eight was too many.) The
-//     pre-gate lane is untouched: five of its tools take slots 0-4 and the two
-//     that would have taken slots 5 and 6 never spawn — both of them are still
-//     off the left edge of the frame when the gate lands, so nothing visible
-//     changes. The last slot is left for the one late arrival, which is solved
-//     backwards from its landing frame the way the last domestic tool is.
-//   * THE GATE CANNOT CUT A TOOL IN HALF. Moving the gate 40 px right puts a
-//     lane tool straddling the line at f58 (centre 8.5 px short of it, front
-//     edge 7.5 px past). A tool whose body still overlaps the gate as it lands
-//     is through — three tools go into the flag instead of two, all of them out
-//     of sight by f71. The alternative is a tool that has to reverse into its
-//     slot.
+//     as the resolved framing can hold with its margin, and the balance pass
+//     set that margin at 140 screen px so the whole group (queue, gate, flag,
+//     pile) sits within ~35 px of the frame's centre: at k 1.0 the left edge is
+//     world x 0, so the last slot that fits is slot 4 and the queue is five.
+//     The pre-gate lane is untouched: four of its tools take slots 0-3 and the
+//     ones that would have taken the slots beyond never spawn — all of them are
+//     still off the left edge of the frame when the gate lands, so nothing
+//     visible changes. The last slot is left for the one late arrival, which is
+//     solved backwards from its landing frame the way the last domestic tool is.
+//   * THE GATE CANNOT CUT A TOOL IN HALF. A tool whose body still overlaps the
+//     line as the gate lands is through, and carries on into the flag. That is
+//     what makes four tools pass rather than three. The alternative is a tool
+//     that has to reverse into its slot.
 //   * THE LIFT RISES IN THE CORRIDOR, NOT INSIDE ITS OWN COLUMN. The brief asks
 //     for a tool to slide to its column and rise straight up it, "so the only
-//     thing it passes is air". With the pile filled from the floor up, that is
+//     thing it passes is air". With the pile filled from the bottom up, that is
 //     not true of any tool above row 1: its own column is full underneath it,
-//     and a tool sliding along the floor to the right-hand column crosses the
-//     left-hand column's bottom seat. So the slide stops in the 40 px corridor
-//     between the flag and the pile (x 680, clear of both by 4 px), the tool
-//     rises there to 40 px above its seat, and the quadratic arc — control
-//     point exactly 40 px above the seat, as asked — carries it over the pile
-//     and sets it down. Measured clearance over the neighbouring column at its
-//     tallest: 27.7 px. Nothing ever overlaps a seated tool.
-//   * WITHIN A ROW THE RIGHT COLUMN SEATS FIRST. This is what makes the
-//     brief's own "row 1 tools have no lift" true: #1 slides along the floor to
-//     the right column while the pile is empty, and #2 slides to the left
-//     column, which the right column's 8 px gap keeps clear of. With the left
-//     column first, #2 would have to hop over #1 on the floor, and every
-//     right-column tool after it would have to clear a tool at its own seat
-//     height — a 59 px lift, not the 40 px the brief asks for.
-//   * The flight-duration band moved from 14-18 frames to 8-12. The path
-//     lengths roughly trebled (72 px for the shortest row-1 slide, 400 for the
-//     top-right seat) and the fast run launches two frames apart, so the old
-//     band left five tools stacked in the corridor and let #14 — whose duration
-//     is forced by "domestically" — overtake #13. The band was swept against a
-//     frame-by-frame overlap audit of the whole run: at 14-18 two flights
-//     overlapped by 23 px and the landings were out of order, at 10-14 by 15,
-//     and at 8-12 the worst any two flights come is a 10 px corner between two
-//     consecutive tools at f187, in the middle of the burst, with the landings
-//     strictly in launch order. #14 still seats on f202 exactly, and nothing
-//     ever touches a SEATED tool at any frame.
+//     and a tool travelling to the right-hand column crosses the left-hand
+//     column. So the slide stops in the corridor between the flag and the pile
+//     (x 710, clear of both by 34 px), the tool moves there to its arc height,
+//     and the quadratic arc carries it over the pile and sets it down. Nothing
+//     ever overlaps a seated tool.
+//   * WITHIN A ROW THE RIGHT COLUMN SEATS FIRST, so a tool bound for the far
+//     column never has to clear a tool already sitting at its own seat height.
+//   * The flight-duration band is 8-12 frames. The path lengths run 205 to 393
+//     px and the fast run launches two frames apart; a longer band leaves five
+//     tools stacked in the corridor and lets #14 — whose duration is forced by
+//     "domestically" — overtake #13. Swept frame by frame at quarter-frame
+//     resolution over the whole run: ZERO overlapping pairs anywhere, seated or
+//     flying, and the landings strictly in launch order.
+//
+// Client pass, on three notes:
+//   * "The line under the China flag isn't necessary." The floor is GONE —
+//     the horizontal, its constants and its snap. Nothing stands on anything;
+//     the flag floats and every datum is taken off the flag instead. The pile's
+//     base is the flag's bottom edge, so the pile lands in exactly the same
+//     world position it held over the old floor and still ends 100 px taller
+//     than the flag.
+//   * "The white blocks can come in at a middle level to the flag." The lane
+//     runs at the flag's vertical centre line — a tool's centre y IS the flag's
+//     centre y — and the queue forms on that line against the gate. The gate is
+//     now a wall the HEIGHT OF THE FLAG: 160 world px from the flag's top level
+//     to its bottom level (was 220 off the floor), same x, same head-led
+//     downward draw, same click on "controlled" at f58. Moving the lane up by
+//     64 px shortens every domestic flight's rise and changes every duration,
+//     so the whole run was re-solved and re-swept.
+//   * "Change the orange to red since they're coming from China." A domestic
+//     tool is FLAG_RED, exposed as its own `domesticTool` prop. The flag's
+//     stars stay the house yellow and the foreign tools stay ink, so the piece
+//     still reads as one palette and the red belongs to China alone.
 // ---------------------------------------------------------------------------
+
+// The flag's red, which is also the colour of a tool China made itself.
+const FLAG_RED = "#DE2910";
 
 export const schema = z.object({
   ink: z.string(),
-  accent: z.string(), // a tool China made itself
+  accent: z.string(), // the flag's stars, in the house yellow
+  domesticTool: z.string(), // a tool China made itself: the flag's own red
   backgroundBase: z.string(),
   backgroundSrc: z.string(),
   backgroundBlur: z.number(),
@@ -228,6 +251,7 @@ export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
   accent: ACCENT,
+  domesticTool: FLAG_RED,
   backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
@@ -266,20 +290,16 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const easeOut = Easing.out(Easing.cubic);
 
 // ---------------------------------------------------------------------------
-// The ground truth. One horizontal, the flag standing on it at the centre, a
-// gate 90 px to the left of the flag and a pile 40 px to its right. Every
-// position below is derived from those four numbers; nothing is placed by eye.
+// The ground truth, which is not a ground: THE FLAG. It floats at the centre of
+// the frame and every other position in the piece is derived from its four
+// edges and its centre line — the lane, the queue, the gate's height, the
+// pile's base, the camera. Nothing is placed by eye, and nothing stands on
+// anything.
 // ---------------------------------------------------------------------------
 const CENTRE_X = 540;
-const FLOOR_Y = 1200;
-// snapped to a half pixel with an odd stroke, or the rule antialiases into a
-// shimmering pair of rows as the camera zooms
-const FLOOR_LINE = Math.round(FLOOR_Y) + 0.5;
-const FLOOR_STROKE = 3;
-// The floor runs off both edges at the widest framing (which reaches world
-// 0 .. 1080 at k 1.0) so the lane always has ground under it.
-const FLOOR_X0 = -220;
-const FLOOR_X1 = 1280;
+
+// the one line weight in the piece: the gate
+const STROKE = 3;
 
 // The one repeated unit.
 const TOOL = 32;
@@ -287,20 +307,37 @@ const TOOL_HALF = TOOL / 2;
 const TOOL_RX = 7;
 
 // The flag, carried over from cut 1 — same size, same corner, same colours,
-// same star geometry — but standing ON the floor rather than lying under it.
+// same star geometry — floating at the centre of the frame.
 const FLAG_W = 240;
 const FLAG_H = 160; // 3:2
 const FLAG_UNIT = FLAG_W / 30;
 const FLAG_R = 14;
 const FLAG_X = CENTRE_X - FLAG_W / 2; // 420
-// its bottom edge sits on the top of the floor's stroke, not through it
-const FLAG_TOP = FLOOR_LINE - FLOOR_STROKE / 2 - FLAG_H;
-const FLAG_RED = "#DE2910";
+const FLAG_TOP = 1039;
+const FLAG_BOTTOM = FLAG_TOP + FLAG_H; // 1199
+const FLAG_MID = FLAG_TOP + FLAG_H / 2; // 1119, the centre line everything runs on
 const FLAG_LEFT = FLAG_X;
 const FLAG_RIGHT = FLAG_X + FLAG_W; // 660
 
+// The lane's line: a tool's centre y is the flag's centre y.
+const LANE_Y = FLAG_MID;
+
+// The pile's grid, declared here because the camera is framed on it: two
+// columns 100 px clear of the flag's right edge, seven rows, and row 1's BOTTOM
+// EDGE on the flag's bottom edge — the pile grows off the flag's own baseline
+// rather than off a floor.
+const PILE_GAP = 100; // the corridor between the flag and the pile
+const PILE_COL_PITCH = 40; // 32 px tool + 8
+const PILE_ROW_PITCH = 38; // 32 px tool + 6
+const PILE_ROWS = 7;
+const PILE_X0 = FLAG_RIGHT + PILE_GAP + TOOL_HALF; // 776, the left column's centre
+const ROW1_Y = FLAG_BOTTOM - TOOL_HALF; // 1183
+const pileX = (col: number) => PILE_X0 + col * PILE_COL_PITCH;
+const pileY = (row: number) => ROW1_Y - row * PILE_ROW_PITCH; // row is 0-based
+const PILE_TOP = pileY(PILE_ROWS - 1) - TOOL_HALF; // 939, 100 px above the flag
+
 // ---------------------------------------------------------------------------
-// The camera. ONE move, on "how fast": a PURE ZOOM about the floor's centre,
+// The camera. ONE move, on "how fast": a PURE ZOOM about the content's centre,
 // k 1.3 -> 1.0, which opens the gate's side and the pile's side at once.
 // `camMove` writes it as a warped smoothstep with a key per frame and takes cy
 // off the eased k, so the framing settles with the zoom instead of sagging
@@ -314,28 +351,30 @@ const FLAG_RIGHT = FLAG_X + FLAG_W; // 660
 // frames, and the move has to be settled before the first domestic tool leaves
 // the flag at f91.
 //
-// The floor is pinned at SCREEN y 960 at both framings — CY is authored from
-// that, not the other way round — which is what lifts the whole composition off
-// the bottom of the frame. With the floor there, the gate's top (220 above it)
-// and the pile's top (266 above it) put the content box's centre at world
-// 1070.5, which the resolved camera puts at screen y 830.5.
+// With the floor gone, the framing is authored off the CONTENT BOX, which is
+// the pile's top edge (939) down to the flag's bottom edge (1199) — nothing in
+// the piece is above or below those. Its centre is world 1069, and because
+// `camMove` writes cy as contentCentre + CAM_LIFT/k, that centre sits at SCREEN
+// y 835 — the house's number, exactly — at every k the move passes through.
+// The flag's centre is 50 px below the content's, so it lands at screen y 885
+// resolved and 900 at f0.
 //
-//   f0-63    k 1.3   the floor at screen y 960, the flag on the midline, the
-//                    lane's tools spaced across the frame.
-//   f64-84   -> 1.0  the same floor at screen y 960, the settled queue's back
-//                    tool 98 px inside the left edge and the pile's right
-//                    column 308 px inside the right.
+//   f0-63    k 1.3   the flag's centre at screen y 900, the pile's top at 666
+//                    and the flag's bottom at 1004, the lane's tools spaced
+//                    across the frame.
+//   f64-84   -> 1.0  the flag's centre at screen y 885, the settled queue's
+//                    back tool 168 px inside the left edge and the pile's right
+//                    column 248 px inside the right.
 // ---------------------------------------------------------------------------
 const K_OPEN = 1.3;
 const K_FINAL = 1.0;
 const CAM_F0 = 64;
 const CAM_F1 = 74;
 const CAM_WARP = 0.72;
-const FLOOR_SCREEN_Y = 960;
-const CY_OPEN = FLOOR_Y - (FLOOR_SCREEN_Y - FRAME_H / 2) / K_OPEN;
-const CY_FINAL = FLOOR_Y - (FLOOR_SCREEN_Y - FRAME_H / 2) / K_FINAL;
-const CONTENT_OPEN = CY_OPEN - 125 / K_OPEN;
-const CONTENT_FINAL = CY_FINAL - 125 / K_FINAL;
+// the content box: the pile's top edge down to the flag's bottom edge
+const CONTENT_C = (PILE_TOP + FLAG_BOTTOM) / 2; // 1069
+const CY_OPEN = CONTENT_C + CAM_LIFT / K_OPEN;
+const CY_FINAL = CONTENT_C + CAM_LIFT / K_FINAL;
 // what the resolved camera can see, which is what decides how long the queue is
 const WORLD_LEFT_FINAL = CENTRE_X - FRAME_W / (2 * K_FINAL);
 
@@ -359,9 +398,12 @@ const LANE_SPAWN_X = -160;
 // where nobody can see them
 const LANE_KILL_X = 612;
 
+// The gate is a WALL THE HEIGHT OF THE FLAG: it starts at the flag's top level
+// and closes at the flag's bottom level, so the thing that stops the lane is
+// exactly as tall as the thing the lane was feeding.
 const GATE_X = FLAG_LEFT - 60; // 360 (director's balance pass: was -90)
-const GATE_H = 220;
-const GATE_TOP = FLOOR_LINE - GATE_H;
+const GATE_TOP = FLAG_TOP;
+const GATE_BOTTOM = FLAG_BOTTOM;
 const GATE_F0 = 50;
 const GATE_F1 = 58; // it closes on "controlled"
 const GATE_CLICK = 4;
@@ -452,34 +494,29 @@ const foreignX = (t: Foreign, f: number): number | null => {
 };
 
 // ---------------------------------------------------------------------------
-// The pile. Two columns and seven rows, standing on the floor 40 px clear of
-// the flag's right edge, filled from the floor up two to a row — so it GROWS,
-// and by row 5 it is taller than the flag it grew out of.
+// The pile's flights. The grid itself is up with the flag, since the camera is
+// framed on it; this is how a tool gets to its seat.
 //
-// A tool is born fully hidden behind the flag's right edge, slides out along
-// the floor into the corridor between the flag and the pile, rises there to 40
-// px above its seat, and a quadratic arc with its control point at that height
-// carries it over the pile and sets it down. Row 1 has no lift: it just slides.
+// A tool is born fully hidden behind the flag's right edge AT THE FLAG'S CENTRE
+// LINE — the same height the foreign tools come in at, mirrored — slides out
+// along that line into the corridor between the flag and the pile, moves there
+// to 40 px above the HIGHER of its start and its seat, and a quadratic arc with
+// its control point at that height carries it over and sets it down. Rows 1 and
+// 2 sit below the centre line, so their arc is a hop DOWN; rows 3-7 sit above
+// it and lift up. Taking the arc height off the higher endpoint is what keeps
+// it a hop either way: 40 px above the seat alone would put the "arc" of a
+// descending flight below its own seat.
 //
 // The right column of each row seats before the left one. That is what keeps
 // every flight clear of every seated tool — see the header.
 // ---------------------------------------------------------------------------
-const PILE_GAP = 100; // the corridor between the flag and the pile (balance pass: was 40)
-const PILE_COL_PITCH = 40; // 32 px tool + 8
-const PILE_ROW_PITCH = 38; // 32 px tool + 6
-const PILE_ROWS = 7;
-const PILE_X0 = FLAG_RIGHT + PILE_GAP + TOOL_HALF; // 776, the left column's centre
-const ROW1_Y = FLOOR_LINE - FLOOR_STROKE / 2 - TOOL_HALF;
-const pileX = (col: number) => PILE_X0 + col * PILE_COL_PITCH;
-const pileY = (row: number) => ROW1_Y - row * PILE_ROW_PITCH; // row is 0-based
-
-// Its right edge is exactly the flag's right edge, so it is entirely occluded
-// until it moves.
+// Its right edge is exactly the flag's right edge and it sits on the flag's
+// centre line, so it is entirely occluded until it moves.
 const DOM_SPAWN_X = FLAG_RIGHT - TOOL_HALF; // 644
 // The middle of the corridor: a tool standing here is 34 px clear of the flag
 // and 34 px clear of the pile.
 const LIFT_X = FLAG_RIGHT + PILE_GAP / 2; // 710
-const LIFT_RISE = 40; // the control point, 40 px above the seat
+const LIFT_RISE = 40; // the control point, 40 px above the higher endpoint
 
 const DOM_LAUNCH = [91, 114, 126, 151, 156, 162, 170, 174, 177, 180, 182, 184, 186, 188];
 if (DOM_LAUNCH.length !== PILE_ROWS * 2) {
@@ -510,23 +547,20 @@ const atLength = (pts: Pt[], cum: number[], s: number): Pt => {
   };
 };
 
-// pts[0] -> pts[1] is always the slide; everything after it is the lift.
+// pts[0] -> pts[1] is always the slide along the flag's centre line; everything
+// after it is the lift.
 const domPath = (sx: number, row: number): Pt[] => {
-  if (row === 0) {
-    return [
-      { x: DOM_SPAWN_X, y: ROW1_Y },
-      { x: sx, y: ROW1_Y },
-    ];
-  }
   const seatY = pileY(row);
-  const top = seatY - LIFT_RISE;
+  // 40 px above the HIGHER of the two ends, so the path is always a hop and
+  // never dips below the seat on the way to a row under the centre line.
+  const top = Math.min(seatY, LANE_Y) - LIFT_RISE;
   const pts: Pt[] = [
-    { x: DOM_SPAWN_X, y: ROW1_Y },
-    { x: LIFT_X, y: ROW1_Y },
+    { x: DOM_SPAWN_X, y: LANE_Y },
+    { x: LIFT_X, y: LANE_Y },
     { x: LIFT_X, y: top },
   ];
   const p0 = { x: LIFT_X, y: top };
-  const p1 = { x: sx, y: top }; // the control point, 40 px above the seat
+  const p1 = { x: sx, y: top }; // the control point, at the arc's height
   const p2 = { x: sx, y: seatY };
   const N = 12;
   for (let i = 1; i <= N; i++) {
@@ -595,8 +629,8 @@ const CAM = camMove({
   f1: CAM_F1,
   k0: K_OPEN,
   k1: K_FINAL,
-  c0: CONTENT_OPEN,
-  c1: CONTENT_FINAL,
+  c0: CONTENT_C,
+  c1: CONTENT_C,
   warp: CAM_WARP,
 });
 const CAM_FF = [0, ...CAM.F, DURATION];
@@ -613,7 +647,7 @@ const CAM_CY = [CY_OPEN, ...CAM.CY, CY_FINAL];
 // the palette rather than sitting outside it.
 //
 // The one difference is its entrance: it has none. It is the carry-over from
-// cut 1 and it is standing on the floor from the first frame.
+// cut 1 and it is floating at the centre of the frame from the first frame.
 // ---------------------------------------------------------------------------
 const flagPt = (ux: number, uy: number): Pt => ({
   x: FLAG_X + ux * FLAG_UNIT,
@@ -661,6 +695,7 @@ const Tool: React.FC<{ x: number; y: number; fill: string; opacity: number }> = 
 const ExportControlled: React.FC<Props> = ({
   ink,
   accent,
+  domesticTool,
   backgroundBase,
   backgroundSrc,
   backgroundBlur,
@@ -683,9 +718,9 @@ const ExportControlled: React.FC<Props> = ({
   });
 
   // -- the gate --------------------------------------------------------------
-  // Head-led downward from 220 above the floor, a bead at the tip, one 4-frame
-  // ink click as it lands.
-  const gateHead = interpolate(frame, [GATE_F0, beats.controlled], [GATE_TOP, FLOOR_LINE], clamp);
+  // Head-led downward from the flag's top level to the flag's bottom level, a
+  // bead at the tip, one 4-frame ink click as it lands.
+  const gateHead = interpolate(frame, [GATE_F0, beats.controlled], [GATE_TOP, GATE_BOTTOM], clamp);
   const gateDrawing = frame > GATE_F0 && frame < beats.controlled;
   const gateClick = frame >= beats.controlled && frame < beats.controlled + GATE_CLICK ? 1 : 0;
   const gateOp = Math.min(1, OP_READ + (1 - OP_READ) * gateClick);
@@ -744,35 +779,22 @@ const ExportControlled: React.FC<Props> = ({
             viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            {/* the floor, under everything that stands on it */}
-            <g style={{ filter: icon }}>
-              <line
-                x1={FLOOR_X0}
-                y1={FLOOR_LINE}
-                x2={FLOOR_X1}
-                y2={FLOOR_LINE}
-                stroke={ink}
-                strokeWidth={FLOOR_STROKE}
-                strokeLinecap="round"
-                opacity={OP_READ}
-              />
-            </g>
-
-            {/* the foreign lane, BELOW the flag so it is swallowed by it */}
+            {/* the foreign lane, on the flag's centre line and BELOW it, so it
+                is swallowed by the flag */}
             <g style={{ filter: icon }}>
               {foreign.map((t) =>
-                t ? <Tool key={`i${t.key}`} x={t.x} y={ROW1_Y} fill={ink} opacity={OP_READ} /> : null,
+                t ? <Tool key={`i${t.key}`} x={t.x} y={LANE_Y} fill={ink} opacity={OP_READ} /> : null,
               )}
             </g>
 
             {/* the pile, BELOW the flag so it is born out of it */}
             <g style={{ filter: icon }}>
               {domestic.map((d) =>
-                d ? <Tool key={`d${d.key}`} x={d.x} y={d.y} fill={accent} opacity={1} /> : null,
+                d ? <Tool key={`d${d.key}`} x={d.x} y={d.y} fill={domesticTool} opacity={1} /> : null,
               )}
             </g>
 
-            {/* the flag, standing on the floor at the centre of the frame */}
+            {/* the flag, floating at the centre of the frame */}
             <g style={{ filter: icon }}>
               <defs>
                 <clipPath id={FLAG_CLIP}>
@@ -811,7 +833,7 @@ const ExportControlled: React.FC<Props> = ({
                   x2={GATE_X}
                   y2={gateHead}
                   stroke={ink}
-                  strokeWidth={FLOOR_STROKE}
+                  strokeWidth={STROKE}
                   strokeLinecap="round"
                   opacity={gateOp}
                 />
