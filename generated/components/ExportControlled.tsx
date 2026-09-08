@@ -64,7 +64,7 @@ export const DURATION = 247;
 //                 all three cuts of this clip. There is no floor and no other
 //                 datum: the lane, the gate, the pile and the camera are all
 //                 derived from these four numbers. Its corner is the shared
-//                 squircle at 2.5% of its shorter side: r 4.0.
+//                 squircle rule: r 2, the SQUIRCLE_MIN floor.
 //   lane          world y 1119 — the flag's vertical CENTRE line. A tool's
 //                 centre y is the flag's centre y, so the lane runs into the
 //                 middle of the flag and the queue forms on that same line.
@@ -92,7 +92,7 @@ export const DURATION = 247;
 //                 the centre of [pile left edge .. card right edge], so the
 //                 group is centred to the pixel: 257.5 screen px of air on the
 //                 left of the pile and the same 257.5 to the right of the card.
-//   unit          32 world px, squircle r 3 (the SQUIRCLE_MIN floor)
+//   unit          32 world px, squircle r 2 (the SQUIRCLE_MIN floor)
 //   gate          x 360 = flag left edge - 60, from the flag's TOP level to its
 //                 BOTTOM level: 160 tall, exactly the flag's height
 //   queue         pitch 40, FOUR long, standing on the lane's line, back tool's
@@ -103,7 +103,7 @@ export const DURATION = 247;
 //                 Row 1's BOTTOM EDGE is the flag's bottom edge (1199), so the
 //                 pile grows off the flag's own baseline. Its top edge is world
 //                 y 939, 100 px ABOVE the flag's top. Right edge world x 982.
-//   cards         320 world px square, squircle r 8.0. Card 1 hangs under the
+//   cards         320 world px square, squircle r 3.84. Card 1 hangs under the
 //                 flag (world x 380..700, top edge 30 below the flag's bottom);
 //                 card 2 parks 60 world px right of the pile's right edge
 //                 (x 1042..1362) on the pile's own mid line.
@@ -342,6 +342,10 @@ export const DURATION = 247;
 //                                 squircle instead of being clipped away by it.
 //                                 The card artwork is square-cornered, so the
 //                                 8 px squircle clip is the only corner.
+// CLIENT PASS 4: "Even less." 0.025 -> 0.012 and the floor 3 -> 2, rule and
+// smoothing unchanged, so the tool AND the flag now both sit on the floor —
+// tool 3 -> 2, flag 4.0 -> 2 (0.012 * 160 is 1.92, which rounds up to it) —
+// and the card comes down 8.0 -> 3.84. The corner is barely softened now.
 //
 // CARD SHADOW PASS, on the same client note: "And reduce the shading a little
 // on the cards." The cards no longer take `iconShadow(k)` as-is. They keep its
@@ -486,8 +490,8 @@ const CENTRE_X = 540;
 const STROKE = 3;
 
 // The one repeated unit. Its corner is the shared squircle, and at 32 px the
-// SQUIRCLE_MIN floor is what sets it — 3 px, where the 0.025 ratio alone would
-// give 0.8 and the corner would read as square at this size.
+// SQUIRCLE_MIN floor is what sets it — 2 px, where the 0.012 ratio alone would
+// give 0.38 and the corner would read as square at this size.
 const TOOL = 32;
 const TOOL_HALF = TOOL / 2;
 const TOOL_PATH = squirclePath(TOOL, TOOL);
@@ -677,7 +681,7 @@ const WORLD_RIGHT_FINAL = CX_FINAL + FRAME_W / (2 * K_FINAL); // 1532
 // resolved camera is framed on the pile and the card together.
 const CARD_SLIDE = 14; // frames of Easing.out(Easing.cubic), the same for both
 // The card artwork is opaque, 1080 px square and square-cornered, so the
-// 8 px squircle clip is the only corner the card has — nothing baked in
+// 3.84 px squircle clip is the only corner the card has — nothing baked in
 // underneath it to peek out past the clip.
 const CARD_PATH = squirclePath(CARD, CARD);
 
@@ -1021,7 +1025,7 @@ const FLAG_SMALL_STARS = [
   [10, 9],
 ].map(([ux, uy]) => starPts(flagPt(ux, uy), FLAG_UNIT, Math.atan2(5 - uy, 5 - ux)));
 const FLAG_CLIP = "ec-flag-clip";
-// The flag's outline: one squircle at 2.5% of its shorter side (r 4.0), used
+// The flag's outline: one squircle on the shared rule (r 2, the floor), used
 // twice — as the red field and as the clip the stars are drawn inside — so the
 // mark cannot end up with two different corners.
 const FLAG_PATH = squirclePath(FLAG_W, FLAG_H);

@@ -376,9 +376,14 @@ export const GridBackground: React.FC<{
 //     zooms that is ~5 screen px on a flag and 3-4 on a tool: the corner is
 //     softened rather than drawn. So the rule is
 //       r = min(short / 2, max(ratio * short, SQUIRCLE_MIN))
-//     — proportional everywhere it can be, 3 px wherever proportional would be
-//     invisible (the 32 px tools, cut 1's 29 px slot), and never more than half
-//     the shorter side.
+//     — proportional everywhere it can be, the floor wherever proportional
+//     would be invisible (the 32 px tools, cut 1's 29 px slot), and never more
+//     than half the shorter side.
+//     CLIENT PASS 4, on "even less": 0.025 -> 0.012 and the floor 3 -> 2, rule
+//     and smoothing unchanged, so the tools, the slot AND the 240 x 160 flags
+//     all sit on the 2 px floor (1.92 rounds up to it) while cut 1's 384 x 256
+//     flag goes 6.4 -> 3.07 and a 320 card 8.0 -> 3.84. `b` is 0.28 * r for any
+//     r, so it stays positive at r 2 (0.56) — the helper needs no clamp.
 //   * CORNER SMOOTHING 0.6. Apple's continuous corner, which is what Figma's
 //     "corner smoothing" slider produces at 60%: instead of an arc meeting the
 //     straight edges at a curvature step, most of the corner is a pair of cubic
@@ -399,8 +404,8 @@ export const GridBackground: React.FC<{
 //   a, b, c, d       = the control-point offsets of the two cubics either side
 //                      of it, solved so the tangents match at both joins
 // ---------------------------------------------------------------------------
-export const SQUIRCLE_RATIO = 0.025; // corner radius = 2.5% of the shape's shorter side
-export const SQUIRCLE_MIN = 3; // world px floor, so a 32 px tool is still off the sharp corner
+export const SQUIRCLE_RATIO = 0.012; // corner radius = 1.2% of the shape's shorter side
+export const SQUIRCLE_MIN = 2; // world px floor, so a 32 px tool is still off the sharp corner
 export const SQUIRCLE_SMOOTH = 0.6; // Figma-style corner smoothing; 0.6 is Apple's continuous corner
 
 const rad = (deg: number) => (deg * Math.PI) / 180;

@@ -70,7 +70,7 @@ export const DURATION = 262;
 // them, as in cut 2.
 //
 // FRAMING AND LAYOUT
-//   China flag    cut 1's flag exactly — 240x160 on the shared squircle (r 4.0),
+//   China flag    cut 1's flag exactly — 240x160 on the shared squircle (r 2),
 //                 FLAG_RED with the stars in the house accent — centred at
 //                 world x 350, so x 230..470, y 1000..1160. It is the
 //                 carry-over from cuts 1 and 2: present from f0, no entrance,
@@ -346,8 +346,11 @@ export const DURATION = 262;
 // and the smoothing still 0.6. r is now 4.0 world px, 5 SCREEN px at the
 // resolved k 1.25 — the same fraction of the mark that cut 1's 384 x 256 flag
 // and cut 2's 240 x 160 one carry at their own scales, so the three cuts still
-// show one mark when they run seconds apart. Nothing in this cut reaches the
-// floor, so the ratio is still what sets both flags.
+// show one mark when they run seconds apart.
+// CLIENT PASS 4: "Even less." 0.025 -> 0.012 and the floor 3 -> 2, rule and
+// smoothing unchanged. 0.012 * 160 is 1.92, so both flags now land ON the floor
+// at r 2 — the first pass in which this cut reaches it — which is the same 2 px
+// cut 2's identical 240 x 160 flag takes, so the marks still match.
 //   China   the red field AND the star clip take the one path
 //   US      the clip the thirteen stripes, the canton and the fifty stars are
 //           drawn inside takes it, so the stripes end on the squircle
@@ -473,9 +476,9 @@ const CENTRE_X = 540;
 const FLAG_W = 240;
 const FLAG_H = 160; // 3:2
 const FLAG_UNIT = FLAG_W / 30; // 8, the official 30x20 unit grid of cut 1
-// SQUIRCLE PASS: one outline for both marks, at SQUIRCLE_RATIO of the shorter
-// side — 0.025 * 160 = 4.0 world px, 5 SCREEN px at the resolved k 1.25, still
-// clear of the SQUIRCLE_MIN floor so the ratio is what sets it. It is
+// SQUIRCLE PASS: one outline for both marks. After client pass 4 the ratio no
+// longer sets it here — 0.012 * 160 = 1.92, under the SQUIRCLE_MIN floor, so
+// r is 2 world px, 2.5 SCREEN px at the resolved k 1.25. It is
 // used four times: China's field, China's star clip, the US flag's
 // stripe/canton/star clip, and nothing else has a corner in this cut.
 const FLAG_PATH = squirclePath(FLAG_W, FLAG_H);
