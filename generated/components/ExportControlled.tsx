@@ -1,4 +1,4 @@
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   ACCENT,
@@ -103,6 +103,12 @@ export const DURATION = 247;
 //     top level to the flag's bottom level, a 4px
 //     ink bead at its tip, closing on f58 with a
 //     4-frame ink click-bright                       — "export controlled"  f50-58
+//   NEWS CARD 1 rises from below the frame and parks
+//     under the flag row, its top edge at screen
+//     y 1020, landing on the same frame the gate
+//     closes. A screen-space insert: 420 px square
+//     whatever the camera is doing                   — "export controlled"  f44-58
+//     (`card1Src`, default public/news-card.png)
 //   the four tools already past the gate carry on
 //     into the flag and are out of sight by f64;
 //     every tool behind it cruises until it is 30 px
@@ -121,6 +127,14 @@ export const DURATION = 247;
 //     frame from the first frame to the last, and
 //     the queue and the empty air open up on either
 //     side of it. Nothing new appears while it runs  — "how fast"           f64-84
+//   NEWS CARD 2 drops in from above the frame and
+//     parks over the pile, its top edge at screen
+//     y 140 (bottom 560, clear of the pile's top at
+//     605 by 45 px at the resolve), landing on
+//     "China can build". The camera's tail overlaps
+//     its first frames; the card is in screen space,
+//     so it neither moves nor scales with the zoom    — "how fast / China
+//     (`card2Src`, default public/news-card.png)         can build"         f78-91
 //   the fourteen domestic tools leave the flag's
 //     right edge AT THE FLAG'S CENTRE LINE and build
 //     the pile from the flag's bottom edge up, two to
@@ -235,6 +249,40 @@ export const DURATION = 247;
 // The tighter resolve also brings the pile's right edge from 248 to 137 screen
 // px inside the right edge and the queue's back edge from 168 to 125 inside the
 // left: the composition is the same shape, held closer.
+//
+// CLIENT PASS 2 — the two news cards. The client asked for two headline cards
+// cut into the piece. They are INSERTS, not objects in the world: they are
+// drawn in a screen-space layer that sits OUTSIDE the world's transform, after
+// the world and before the vignette, so they are above the tools, the pile, the
+// flag and the gate and below the vignette, and so they hold their size and
+// their place while the world zooms behind them through f64-84. Nothing in the
+// world moved for them — the lane, the gate, the queue, the camera, the
+// launches, #14 on f202, the pile and the hold are all exactly as they were.
+//   * 420 x 420 screen px, centred on the frame's own centre x 540, so both
+//     cards sit on the flag's axis.
+//   * Card 1 rises from below the frame (top edge starting at 1920) over the
+//     14 frames f44-58 on Easing.out(Easing.cubic) and parks spanning screen y
+//     1020..1440 — under the flag row at both framings and above the caption
+//     band. It lands on the frame the gate closes, so the card and the wall
+//     arrive on "controlled" together.
+//   * Card 2 drops from above the frame (bottom edge starting at 0) over the
+//     13 frames f78-91 on the same ease and parks spanning 140..560. The pile's
+//     top edge is at screen y 605 at the resolve, so it clears the highest
+//     thing in the world by 45 px — asserted below, not assumed. The camera's
+//     tail is still settling for the first ten frames of that entrance, which
+//     is accepted: the card is in screen space and reads as an insert laid over
+//     the move rather than as something the move is carrying.
+//   * Both are drawn with Remotion `<Img src={staticFile(...)}>` so the frame
+//     waits for the image, and both take their path as a prop — `card1Src` and
+//     `card2Src`, defaulting to `news-card.png` — because the supplied artwork
+//     is a PLACEHOLDER and the client will swap the real headlines in later.
+//   * The only treatment is the per-icon shadow at k = 1,
+//     `drop-shadow(0 2px 3px rgba(0,0,0,0.38))`, in screen px like everything
+//     else that shadow is on. No border, no scale, no fade: the card's own
+//     rounded corners and its opacity come from the PNG.
+//   * The shared `sway` translates the whole card layer, so the cards drift
+//     with the hand on the piece instead of reading as glued to the glass.
+//     That is the only thing that moves them after they park.
 // ---------------------------------------------------------------------------
 
 // The flag's red, which is also the colour of a tool China made itself.
@@ -256,6 +304,10 @@ export const schema = z.object({
   iconShadowY: z.number(),
   iconShadowBlur: z.number(),
   iconShadowOpacity: z.number(),
+  // The two news cards. Placeholders: the client swaps the real headline
+  // artwork in later, so each card takes its own path.
+  card1Src: z.string(), // rises from below on "controlled"
+  card2Src: z.string(), // drops in from above on "China can build"
   beats: z.object({
     whetherOrNot: z.number(), // "whether or not"
     toolsContinue: z.number(), // "tools continue"
@@ -291,6 +343,8 @@ export const defaultProps: Props = schema.parse({
   iconShadowY: ICON_SHADOW_Y,
   iconShadowBlur: ICON_SHADOW_BLUR,
   iconShadowOpacity: ICON_SHADOW_OPACITY,
+  card1Src: "news-card.png",
+  card2Src: "news-card.png",
   beats: {
     whetherOrNot: 0,
     toolsContinue: 14,
@@ -438,6 +492,26 @@ if (PILE_TOP_SCREEN < 60) {
 }
 // what the resolved camera can see, which is what decides how long the queue is
 const WORLD_LEFT_FINAL = CENTRE_X - FRAME_W / (2 * K_FINAL);
+
+// ---------------------------------------------------------------------------
+// The two news cards (client pass 2). Every number here is SCREEN px: the cards
+// live outside the world's transform, so the camera's zoom never touches them.
+// Card 1 comes up from below the frame and parks under the flag row; card 2
+// comes down from above it and parks over the pile.
+// ---------------------------------------------------------------------------
+const CARD = 420;
+const CARD_X = CENTRE_X - CARD / 2; // 330 — on the frame's own centre, like the flag
+const CARD1_TOP = 1020; // parked: 1020..1440, under the flag, above the captions
+const CARD1_FROM = FRAME_H; // 1920 — its TOP edge on the bottom of the frame
+const CARD2_TOP = 140; // parked: 140..560
+const CARD2_FROM = -CARD; // -420 — its BOTTOM edge on the top of the frame
+// Card 2 parks over the pile, which is the highest thing in the world. Assert
+// the gap rather than trusting it: if the pile ever grows a row, this fails at
+// import time instead of quietly touching the card.
+const CARD2_CLEARANCE = PILE_TOP_SCREEN - (CARD2_TOP + CARD); // 605 - 560 = 45
+if (CARD2_CLEARANCE < 20) {
+  throw new Error(`card 2 clears the pile's top by only ${CARD2_CLEARANCE.toFixed(0)} screen px`);
+}
 
 // ---------------------------------------------------------------------------
 // The foreign lane. Tools travel right at a constant speed and are swallowed by
@@ -777,6 +851,8 @@ const ExportControlled: React.FC<Props> = ({
   iconShadowY,
   iconShadowBlur,
   iconShadowOpacity,
+  card1Src,
+  card2Src,
   beats,
 }) => {
   const frame = useCurrentFrame();
@@ -813,6 +889,22 @@ const ExportControlled: React.FC<Props> = ({
   // Everything in this cut is an icon lying on the field, so everything takes
   // the small per-icon shadow, in screen px, at every zoom.
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+  // The cards are already in screen space, so their copy of that shadow is
+  // taken at k = 1: drop-shadow(0 2px 3px rgba(0,0,0,0.38)).
+  const cardIcon = iconShadow(1, iconShadowY, iconShadowBlur, iconShadowOpacity);
+
+  // -- the two news cards ----------------------------------------------------
+  // Both slides are read off the beats, not off literal frames, so a retime
+  // moves them with the words: card 1 lands the frame the gate closes, card 2
+  // lands on "China can build".
+  const card1Top =
+    CARD1_FROM +
+    (CARD1_TOP - CARD1_FROM) *
+      easeOut(clamp01((frame - beats.toGetExport) / (beats.controlled - beats.toGetExport)));
+  const card2Top =
+    CARD2_FROM +
+    (CARD2_TOP - CARD2_FROM) *
+      easeOut(clamp01((frame - beats.howFast) / (beats.chinaCanBuild - beats.howFast)));
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -914,6 +1006,43 @@ const ExportControlled: React.FC<Props> = ({
             ) : null}
           </svg>
         </div>
+      </AbsoluteFill>
+
+      {/* The two news cards. OUTSIDE the world's transform and after it, so
+          they are above everything in the world and hold their size and their
+          place while the camera zooms behind them. The layer carries the shared
+          sway so they drift with the piece rather than sitting on the glass. */}
+      <AbsoluteFill
+        style={{
+          // The world takes the sway through the camera, so on screen it moves
+          // by -drift * k; the cards take the same screen motion so the two
+          // layers drift together (director's fix: the raw sign ran them
+          // against each other).
+          transform: `translate(${(-drift.dx * k).toFixed(2)}px, ${(-drift.dy * k).toFixed(2)}px)`,
+        }}
+      >
+        <Img
+          src={staticFile(card1Src)}
+          style={{
+            position: "absolute",
+            left: CARD_X,
+            top: card1Top,
+            width: CARD,
+            height: CARD,
+            filter: cardIcon,
+          }}
+        />
+        <Img
+          src={staticFile(card2Src)}
+          style={{
+            position: "absolute",
+            left: CARD_X,
+            top: card2Top,
+            width: CARD,
+            height: CARD,
+            filter: cardIcon,
+          }}
+        />
       </AbsoluteFill>
 
       <Vignette />
