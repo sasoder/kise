@@ -52,10 +52,15 @@ export const DURATION = 198;
 // large amounts of compute" pours the dots in under it, so the stick is
 // countable rather than asserted.
 //
-// No text, no marks, no people. Dots, ink lines, one ring.
+// No text, no people. Dots, ink lines, one ring — and one mark, the flag of
+// China under the floor, which is the only thing in the frame that is not made
+// of the graph.
 //
 // Every gesture is one word. Nothing else happens.
 //   the floor alone                                 — before "how"           f0-6
+//   the flag of China rises 24 world px into place
+//     under the floor while it fades in, landing on
+//     "China" and never moving again                — "China"               f15-23
 //   the 36 dots of the three past columns (2, 3 and
 //     4 rows, 4 dots wide) arrive from beyond the
 //     LEFT edge, each at its seat's height on its
@@ -108,8 +113,8 @@ export const DURATION = 198;
 // Counts are geometry, never asserted: a column is 4 dots wide on the crowd
 // step and 2, 3, 4, 7, 14, 28, 56 and 112 rows tall — a doubling from the
 // subsequent year on. Columns 7 and 8 run off the top of the frame at the
-// resolved camera; column 8 is capped at 77 rows, three rows above the frame
-// top, so the pour does not spend dots nobody sees. 764 dots in all.
+// resolved camera; column 8 is capped at 62 rows, three rows above the frame
+// top, so the pour does not spend dots nobody sees. 704 dots in all.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -238,10 +243,18 @@ const ROWS_NOMINAL = [2, 3, 4, 7, 14, 28, 56, 112];
 //
 //   f0-67    k 1.25, cx 340   inside the graph: the floor at screen y 1130 so
 //                             the three past columns sit ON the content centre,
-//                             position 4 inside the frame on the right.
+//                             position 4 inside the frame on the right, and the
+//                             flag fully inside the frame from f0.
 //   f68-88   -> k 0.8, cx 538 the eight positions centred, the floor at screen
-//                             y 1420 with empty ground below it, and 1125 world
-//                             px of clear air above the floor for the stick.
+//                             y 1120 with the flag on the ground below it, and
+//                             1400 world px of clear air above the floor for
+//                             the stick.
+//
+// Director's pass: the resolved framing sat 300 screen px lower — the floor at
+// y 1420 — and the graph read as hanging off the bottom of the frame. The whole
+// graph is lifted by re-authoring the resolved centre alone (CY_FINAL, and so
+// CONTENT_FINAL), never the world geometry: the move, its keys, its warp and
+// its k values are untouched, and the opening framing is untouched with it.
 // ---------------------------------------------------------------------------
 const K_OPEN = 1.25;
 const K_FINAL = 0.8;
@@ -250,8 +263,8 @@ const CX_FINAL = CENTRE_X;
 const CAM_F0 = 68;
 const CAM_F1 = 78;
 const CAM_WARP = 0.72;
-// the floor lands at screen y 1420 resolved and opens at 1340
-const CY_FINAL = FLOOR_Y - (1420 - FRAME_H / 2) / K_FINAL;
+// the floor lands at screen y 1120 resolved and opens at 1130
+const CY_FINAL = FLOOR_Y - (1120 - FRAME_H / 2) / K_FINAL;
 const CY_OPEN = FLOOR_Y - (1130 - FRAME_H / 2) / K_OPEN;
 const CONTENT_FINAL = CY_FINAL - 125 / K_FINAL;
 const CONTENT_OPEN = CY_OPEN - 125 / K_OPEN;
@@ -282,7 +295,8 @@ const LEFT_EDGE = Math.min(...CAM_K.map((k, i) => CAM_CX[i] - FRAME_W / 2 / k));
 
 // Cap: no seat further than three rows above the highest the frame ever sees,
 // so the pour does not spend dots nobody watches. Column 8's nominal 112 rows
-// become 77; every other column is under the cap and untouched.
+// become 62 (77 before the graph was raised); every other column, column 7's 56
+// rows included, is under the cap and untouched.
 const ROW_CAP = Math.ceil((FLOOR_Y - FRAME_TOP) / STEP) + 3;
 const ROWS = ROWS_NOMINAL.map((r) => Math.min(r, ROW_CAP));
 
@@ -668,6 +682,57 @@ const FLOOR_X0 = colX(0) - ((COL_W - 1) / 2) * STEP - 40;
 const FLOOR_X1 = colX(NCOL - 1) + ((COL_W - 1) / 2) * STEP + 40;
 const FLOOR_LINE = Math.round(FLOOR_Y) + 0.5;
 
+// ---------------------------------------------------------------------------
+// The flag of China, under the floor and centred on the graph. The question is
+// "how much is China able to add", and the graph on its own never says whose
+// years these are — so the one mark in the piece is the flag, laid on the
+// ground under the eight positions like a label under an axis.
+//
+// It is drawn in world space inside the same transform as the graph, so it
+// zooms with it, and it takes the same per-icon shadow the ink structure does.
+// The field is flag red; the stars are the piece's own accent, not flag yellow,
+// so the mark belongs to the palette rather than sitting outside it.
+//
+// The star layout is the official 30x20 unit grid at 8 world px to the unit:
+// the large star's centre at (5, 5) with a circumscribed radius of 3 units and
+// a point straight up, and four small stars of radius 1 unit at (10, 2),
+// (12, 4), (12, 7) and (10, 9), each turned so one of its five points aims at
+// the large star's centre.
+// ---------------------------------------------------------------------------
+const FLAG_W = 240;
+const FLAG_H = 160; // 3:2
+const FLAG_UNIT = FLAG_W / 30;
+const FLAG_R = 14; // slightly rounded
+const FLAG_X = CENTRE_X - FLAG_W / 2; // centred on the midpoint of the eight positions
+const FLAG_TOP = FLOOR_Y + 70; // its top edge, 70 world px under the floor line
+const FLAG_RED = "#DE2910";
+const FLAG_F0 = 15; // absent before this; lands on "China"
+const FLAG_RISE = 24; // how far below its resting place it starts
+
+const flagPt = (ux: number, uy: number): Pt => ({
+  x: FLAG_X + ux * FLAG_UNIT,
+  y: FLAG_TOP + uy * FLAG_UNIT,
+});
+
+// A five-pointed star as a 10-vertex polygon, outer radius R and inner 0.382R,
+// with its first POINT (not gap) at angle a0.
+const STAR_INNER = 0.382;
+const starPts = (c: Pt, r: number, a0: number): Pt[] =>
+  Array.from({ length: 10 }, (_, i) => {
+    const rr = i % 2 === 0 ? r : r * STAR_INNER;
+    const a = a0 + (i * Math.PI) / 5;
+    return { x: c.x + rr * Math.cos(a), y: c.y + rr * Math.sin(a) };
+  });
+
+const FLAG_BIG_STAR = starPts(flagPt(5, 5), 3 * FLAG_UNIT, -Math.PI / 2);
+const FLAG_SMALL_STARS = [
+  [10, 2],
+  [12, 4],
+  [12, 7],
+  [10, 9],
+].map(([ux, uy]) => starPts(flagPt(ux, uy), FLAG_UNIT, Math.atan2(5 - uy, 5 - ux)));
+const FLAG_CLIP = "hs-flag-clip";
+
 const DidTheyJustHockeyStick: React.FC<Props> = ({
   ink,
   accent,
@@ -764,6 +829,13 @@ const DidTheyJustHockeyStick: React.FC<Props> = ({
   const slotOpacity =
     (OP_READ + (OP_DARK - OP_READ) * seatedFrac[3]) * (1 - smooth((frame - COL_FULL[3]) / 8));
 
+  // -- the flag --------------------------------------------------------------
+  // It rises the last 24 world px into place while it fades in, and lands on
+  // "China". No spring and no click: it is a label arriving, not an event.
+  const flagE = Easing.out(Easing.cubic)(
+    clamp01((frame - FLAG_F0) / (beats.chinaAble - FLAG_F0)),
+  );
+
   // -- camera ----------------------------------------------------------------
   const cam = runCamera(frame, CAM_FF, CAM_CY, CAM_K);
   const camX = runCamera(frame, CAM_FF, CAM_CX, CAM_K).cy;
@@ -819,6 +891,42 @@ const DidTheyJustHockeyStick: React.FC<Props> = ({
                 <circle key={d.seed} cx={d.x} cy={d.y} r={d.r} fill={tone(d.t)} opacity={d.op} />
               ) : null,
             )}
+
+            {/* the flag, on the ground under the graph */}
+            {frame >= FLAG_F0 ? (
+              <g
+                style={{ filter: icon }}
+                opacity={flagE}
+                transform={`translate(0 ${((1 - flagE) * FLAG_RISE).toFixed(2)})`}
+              >
+                <defs>
+                  <clipPath id={FLAG_CLIP}>
+                    <rect
+                      x={FLAG_X}
+                      y={FLAG_TOP}
+                      width={FLAG_W}
+                      height={FLAG_H}
+                      rx={FLAG_R}
+                      ry={FLAG_R}
+                    />
+                  </clipPath>
+                </defs>
+                <rect
+                  x={FLAG_X}
+                  y={FLAG_TOP}
+                  width={FLAG_W}
+                  height={FLAG_H}
+                  rx={FLAG_R}
+                  ry={FLAG_R}
+                  fill={FLAG_RED}
+                />
+                <g clipPath={`url(#${FLAG_CLIP})`}>
+                  {[FLAG_BIG_STAR, ...FLAG_SMALL_STARS].map((s, i) => (
+                    <path key={`f${i}`} d={`${path(s)} Z`} fill={accent} />
+                  ))}
+                </g>
+              </g>
+            ) : null}
 
             {/* floor, slot, curve, ring — the ink structure, one weight */}
             <g style={{ filter: icon }}>
