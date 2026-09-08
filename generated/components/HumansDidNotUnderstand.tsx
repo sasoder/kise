@@ -1,14 +1,26 @@
 import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
+  ACCENT,
+  ACCENT_DEEP,
+  BG_BASE,
+  BG_DIM,
   DOT_RADIUS,
   GridBackground,
+  OP_DARK,
   OP_READ,
+  OP_READ_DOT,
+  OP_UNREAD,
+  OP_UNREAD_DOT,
+  SHADOW_BLUR,
+  SHADOW_OPACITY,
+  SHADOW_Y,
   Vignette,
   breath,
   clamp,
   clamp01,
   hash,
+  makeTone,
   runCamera,
   smoothstep,
   sway,
@@ -75,10 +87,20 @@ export const DURATION = 220;
 //      nothing moving but the field's breathing and the residual traffic.
 // Nothing else. No spring, no flash, no ripple, no rim, no pulse; stroke weight
 // is 3 on every line without exception, and there is no text.
+//
+// ORANGE PASS — a grade, and nothing else. The accent is fieldShared's two-tone
+// orange (ACCENT #FFB000 ripe, ACCENT_DEEP #D98A0C deep) instead of the old
+// cyan, an agent dot is SOLID and carries its state as colour rather than as
+// transparency, the background sits at BG_DIM 0.45 and the drop shadow at
+// 2 / 7 / 0.12 — every one of them taken from fieldShared so a future re-grade
+// propagates. The ladder is extended below ACCENT_DEEP for the dark rungs: see
+// THE GRADE'S LOW END below. Not one beat, camera key, world coordinate, count,
+// stroke weight or curve moved; only what a number means at the end of it.
 
 export const schema = z.object({
   ink: z.string(),
-  accent: z.string(),
+  accent: z.string(), // ripe: a lit dot, and every accent line
+  accentDeep: z.string(), // deep: an unread dot
   backgroundBase: z.string(),
   backgroundSrc: z.string(),
   backgroundBlur: z.number(),
@@ -122,6 +144,71 @@ type P = { x: number; y: number };
 
 const WORLD_W = 1080;
 const WORLD_H = 3000;
+
+// ---------------------------------------------------------------------------
+// THE GRADE'S LOW END. Identical in all five cuts of this clip, and in nothing
+// else: `fieldShared` is owned elsewhere and is only consumed here.
+//
+// fieldShared's ladder for an agent dot is ACCENT_DEEP -> ACCENT: a dot is
+// SOLID and carries its state as COLOUR, because the accent over the grid at
+// any opacity below 1 desaturates into the field and reads as a wash. Both of
+// those tones are bright oranges, so that ladder as shipped can say "unread"
+// but it cannot say "wiped" or "hidden" — and the darkenings are the strongest
+// images in these five cuts (three dark pockets in a lit field; an ink front
+// dropping a whole crowd as it passes; nodes receding out of the subject).
+//
+// So the ladder is extended DOWNWARD by one more tone: ACCENT_SHADE, the deep
+// tone carried SHADE_MIX of the way to BG_BASE. Same hue, one shade further
+// down, and — the point — darker than the grid itself, so a dark agent is a
+// HOLE in the field rather than a faded copy of it. Measured as relative luma
+// over the grid at BG_DIM 0.45 (field #727272, 114 of 255):
+//     ACCENT       180   lit        ACCENT_SHADE           77   dark, solid
+//     ACCENT_DEEP  146   unread     ACCENT at OP_DARK     124   dark, by alpha
+// The cyan pass over its darker field (0.32, field 82) had read -> dark = 79
+// and unread -> dark = 41. Solid ACCENT_SHADE gives 103 and 69. Keeping
+// OPACITY for the dark rungs would have given 49 and 21 — under a third of the
+// old gesture — which is what the 32-point brighter field costs, and why the
+// low end had to become colour rather than alpha.
+//
+// `rung(op)` maps the OLD opacity ladder onto that colour ladder, so every
+// interpolation, curve, stagger and beat in this file is untouched: only what
+// the number MEANS at the end of it has changed. The anchors are fieldShared's
+// own rungs — OP_DARK -> ACCENT_SHADE, OP_UNREAD -> ACCENT_DEEP, OP_RECEDE
+// between those two, and OP_READ + 0.1 -> ACCENT ("the subject; +0.1 when a
+// thread is on it"), which leaves OP_READ itself just under ripe so a thread
+// landing on a dot still has somewhere to go. The dot is then drawn at
+// OP_UNREAD_DOT / OP_READ_DOT, which are 1: solid, whatever it knows. An
+// ARRIVAL fade stays an opacity — a dot fading in is not a dot in a state.
+//
+// LINES are untouched and stay on fieldShared's own rule: a thread, a probe, a
+// ring, a mesh edge, a box wall is ripe ACCENT at its own line opacity. Only
+// dots take the colour ladder.
+// ---------------------------------------------------------------------------
+const SHADE_MIX = 0.62; // how far ACCENT_DEEP is carried toward BG_BASE
+const OP_LIT = OP_READ + 0.1; // the top of the ladder: a dot with a thread on it
+const OP_DOT = Math.max(OP_UNREAD_DOT, OP_READ_DOT); // fieldShared holds both dot
+// rungs at 1 — a dot is opaque whatever it knows, and the state is in the tone.
+// Taken off both rather than assumed, so a future re-grade that parts them shows
+// up here rather than silently on one rung.
+const hexMix = (a: string, b: string, t: number) => {
+  const A = parseInt(a.replace("#", ""), 16);
+  const B = parseInt(b.replace("#", ""), 16);
+  const ch = (sh: number) =>
+    Math.round(((A >> sh) & 255) + ((((B >> sh) & 255) - ((A >> sh) & 255)) * t))
+      .toString(16)
+      .padStart(2, "0");
+  return `#${ch(16)}${ch(8)}${ch(0)}`;
+};
+// Built once per render: a field is thousands of dots and every one of them
+// asks for its colour every frame. `makeTone` quantises each half to 64 steps.
+const makeRung = (deep: string, ripe: string, base: string) => {
+  const hi = makeTone(deep, ripe);
+  const lo = makeTone(hexMix(deep, base, SHADE_MIX), deep);
+  return (op: number) =>
+    op >= OP_UNREAD
+      ? hi((op - OP_UNREAD) / (OP_LIT - OP_UNREAD))
+      : lo((op - OP_DARK) / (OP_UNREAD - OP_DARK));
+};
 
 // ---------------------------------------------------------------------------
 // The field. Copied from `SecretMessageBoards` unchanged — the same step, the
@@ -202,15 +289,16 @@ const MARK: P = { x: 540, y: 1720 };
 
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
-  accent: "#48D9FF",
-  backgroundBase: "#232323",
+  accent: ACCENT,
+  accentDeep: ACCENT_DEEP,
+  backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
-  backgroundDim: 0.32,
+  backgroundDim: BG_DIM,
   parallax: 0.15,
-  shadowY: 2,
-  shadowBlur: 9,
-  shadowOpacity: 0.22,
+  shadowY: SHADOW_Y,
+  shadowBlur: SHADOW_BLUR,
+  shadowOpacity: SHADOW_OPACITY,
   vignette: 0.45,
   dotRadius: DOT_RADIUS,
   markSrc: "openai-chatgpt-logo.png",
@@ -301,6 +389,7 @@ const CAM_K = [1.4, 1.4, 1.15, 1.15];
 const HumansDidNotUnderstand: React.FC<Props> = ({
   ink,
   accent,
+  accentDeep,
   backgroundBase,
   backgroundSrc,
   backgroundBlur,
@@ -321,6 +410,9 @@ const HumansDidNotUnderstand: React.FC<Props> = ({
   beats,
 }) => {
   const frame = useCurrentFrame();
+  // The ladder, as a colour: OP_DARK -> ACCENT_SHADE, OP_UNREAD -> ACCENT_DEEP,
+  // OP_READ + 0.1 -> ACCENT. Built once per frame, read per dot.
+  const rung = makeRung(accentDeep, accent, backgroundBase);
 
   const RATE_F = [
     PRE,
@@ -533,13 +625,16 @@ const HumansDidNotUnderstand: React.FC<Props> = ({
             })}
 
             {/* the agents. One rung the whole way through — they are never the
-                thing that changes — lifting only where a thread is on them. */}
+                thing that changes — lifting only where a thread is on them.
+                That rung is OP_READ, just under ripe, so a thread landing on a
+                dot still takes it the last step to ACCENT; the radius carries
+                the rest of the lift, as it always did. */}
             {CROWD_POS.map((p, i) => {
               const l = lit[i];
               const bre = breath(frame, hash(i, 9));
               const r = dotRadius * p.r * bre * (1 + 0.35 * l);
-              const op = OP_READ + 0.1 * l;
-              return <circle key={i} cx={p.x} cy={p.y} r={r} fill={accent} opacity={op} />;
+              const op = OP_READ + (OP_LIT - OP_READ) * l;
+              return <circle key={i} cx={p.x} cy={p.y} r={r} fill={rung(op)} opacity={OP_DOT} />;
             })}
 
             {/* the reading band. Runs past both edges of the field, so it is a

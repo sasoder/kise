@@ -1,16 +1,26 @@
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
+  ACCENT,
+  ACCENT_DEEP,
+  BG_BASE,
+  BG_DIM,
   DOT_RADIUS,
   GridBackground,
   OP_DARK,
   OP_READ,
+  OP_READ_DOT,
   OP_RECEDE,
   OP_UNREAD,
+  OP_UNREAD_DOT,
+  SHADOW_BLUR,
+  SHADOW_OPACITY,
+  SHADOW_Y,
   Vignette,
   breath,
   clamp,
   hash,
+  makeTone,
   runCamera,
   sway,
   worldTransform,
@@ -72,20 +82,31 @@ export const DURATION = 112;
 //      f88. G1 is the piece's first and most important gesture and the mark cost
 //      it a whole board, so the mark goes. The neighbouring cut carries it.
 //   The camera: ONE move. Opens inside the crowd at k 1.40 — the field bleeding
-//      off the left, right and top edges — and pulls back to k 1.15 on keys
-//      f1-f8. It does NOT pull back to the crowd's edges: this cut is about a
-//      population that hides pockets, so the field runs past both side edges at
-//      the hold too (124px of it each side), which reads as more of it than the
-//      frame can show. The damped tracker adds about ten frames of settle to any
+//      off all four edges — and pulls back to k 1.15 on keys f1-f8. It does NOT
+//      pull back to the crowd's edges: this cut is about a population that hides
+//      pockets, so the field runs past every edge at the hold too, and there is
+//      no frame in the piece on which you can see where the crowd stops. That is
+//      what makes it read as more of it than the frame can show rather than as a
+//      rectangle of dots. The damped tracker adds about ten frames of settle to any
 //      key ramp, so keys that ENDED at f14 would still be moving at f19 when the
 //      first thread posts; f1-f8 lands it at f19 within a quarter of a percent
 //      and dead still after. Then it holds: the traffic is the motion.
 // Nothing else. There is no ring, no box, no spring and no bounce in this
 // piece; stroke weight is 3 on every line without exception.
+//
+// ORANGE PASS — a grade, and nothing else. The accent is fieldShared's two-tone
+// orange (ACCENT #FFB000 ripe, ACCENT_DEEP #D98A0C deep) instead of the old
+// cyan, an agent dot is SOLID and carries its state as colour rather than as
+// transparency, the background sits at BG_DIM 0.45 and the drop shadow at
+// 2 / 7 / 0.12 — every one of them taken from fieldShared so a future re-grade
+// propagates. The ladder is extended below ACCENT_DEEP for the dark rungs: see
+// THE GRADE'S LOW END below. Not one beat, camera key, world coordinate, count,
+// stroke weight or curve moved; only what a number means at the end of it.
 
 export const schema = z.object({
   ink: z.string(),
-  accent: z.string(),
+  accent: z.string(), // ripe: a lit dot, and every accent line
+  accentDeep: z.string(), // deep: an unread dot
   backgroundBase: z.string(),
   backgroundSrc: z.string(),
   backgroundBlur: z.number(),
@@ -123,19 +144,110 @@ const smooth = (v: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// The field. Same construction as the previous cut — same step, same jitter,
-// same salts — but 48x88 instead of 42x60, grown outwards about the same centre
-// (2002) so the boards keep their place in it. A bigger field on the SAME step
-// is what makes it the same crowd, only more of it: 1155 x 1320 world px, which
-// at the hold runs off both side edges and leaves no bare grid where the crowd
-// used to stop.
+// THE GRADE'S LOW END. Identical in all five cuts of this clip, and in nothing
+// else: `fieldShared` is owned elsewhere and is only consumed here.
+//
+// fieldShared's ladder for an agent dot is ACCENT_DEEP -> ACCENT: a dot is
+// SOLID and carries its state as COLOUR, because the accent over the grid at
+// any opacity below 1 desaturates into the field and reads as a wash. Both of
+// those tones are bright oranges, so that ladder as shipped can say "unread"
+// but it cannot say "wiped" or "hidden" — and the darkenings are the strongest
+// images in these five cuts (three dark pockets in a lit field; an ink front
+// dropping a whole crowd as it passes; nodes receding out of the subject).
+//
+// So the ladder is extended DOWNWARD by one more tone: ACCENT_SHADE, the deep
+// tone carried SHADE_MIX of the way to BG_BASE. Same hue, one shade further
+// down, and — the point — darker than the grid itself, so a dark agent is a
+// HOLE in the field rather than a faded copy of it. Measured as relative luma
+// over the grid at BG_DIM 0.45 (field #727272, 114 of 255):
+//     ACCENT       180   lit        ACCENT_SHADE           77   dark, solid
+//     ACCENT_DEEP  146   unread     ACCENT at OP_DARK     124   dark, by alpha
+// The cyan pass over its darker field (0.32, field 82) had read -> dark = 79
+// and unread -> dark = 41. Solid ACCENT_SHADE gives 103 and 69. Keeping
+// OPACITY for the dark rungs would have given 49 and 21 — under a third of the
+// old gesture — which is what the 32-point brighter field costs, and why the
+// low end had to become colour rather than alpha.
+//
+// `rung(op)` maps the OLD opacity ladder onto that colour ladder, so every
+// interpolation, curve, stagger and beat in this file is untouched: only what
+// the number MEANS at the end of it has changed. The anchors are fieldShared's
+// own rungs — OP_DARK -> ACCENT_SHADE, OP_UNREAD -> ACCENT_DEEP, OP_RECEDE
+// between those two, and OP_READ + 0.1 -> ACCENT ("the subject; +0.1 when a
+// thread is on it"), which leaves OP_READ itself just under ripe so a thread
+// landing on a dot still has somewhere to go. The dot is then drawn at
+// OP_UNREAD_DOT / OP_READ_DOT, which are 1: solid, whatever it knows. An
+// ARRIVAL fade stays an opacity — a dot fading in is not a dot in a state.
+//
+// LINES are untouched and stay on fieldShared's own rule: a thread, a probe, a
+// ring, a mesh edge, a box wall is ripe ACCENT at its own line opacity. Only
+// dots take the colour ladder.
+// ---------------------------------------------------------------------------
+const SHADE_MIX = 0.62; // how far ACCENT_DEEP is carried toward BG_BASE
+const OP_LIT = OP_READ + 0.1; // the top of the ladder: a dot with a thread on it
+const OP_DOT = Math.max(OP_UNREAD_DOT, OP_READ_DOT); // fieldShared holds both dot
+// rungs at 1 — a dot is opaque whatever it knows, and the state is in the tone.
+// Taken off both rather than assumed, so a future re-grade that parts them shows
+// up here rather than silently on one rung.
+const hexMix = (a: string, b: string, t: number) => {
+  const A = parseInt(a.replace("#", ""), 16);
+  const B = parseInt(b.replace("#", ""), 16);
+  const ch = (sh: number) =>
+    Math.round(((A >> sh) & 255) + ((((B >> sh) & 255) - ((A >> sh) & 255)) * t))
+      .toString(16)
+      .padStart(2, "0");
+  return `#${ch(16)}${ch(8)}${ch(0)}`;
+};
+// Built once per render: a field is thousands of dots and every one of them
+// asks for its colour every frame. `makeTone` quantises each half to 64 steps.
+const makeRung = (deep: string, ripe: string, base: string) => {
+  const hi = makeTone(deep, ripe);
+  const lo = makeTone(hexMix(deep, base, SHADE_MIX), deep);
+  return (op: number) =>
+    op >= OP_UNREAD
+      ? hi((op - OP_UNREAD) / (OP_LIT - OP_UNREAD))
+      : lo((op - OP_DARK) / (OP_UNREAD - OP_DARK));
+};
+
+// ---------------------------------------------------------------------------
+// The field. Same construction as the previous cut — the SAME step, the same
+// jitter, the same salts — grown outwards about the same centre (2002) so the
+// boards keep their place in it. Keeping the step is what makes it the same
+// crowd and not a different one; only the count changes.
+//
+// It is 50x136 rather than 48x88 because the field has to FILL THE FRAME on
+// every frame of the piece — no edge on any side, ever. 48x88 did not: it ran
+// off the sides, but at the hold its bottom row landed on screen y 1625 and its
+// top row on y 93, so a hard horizontal edge with bare grid under it sat in the
+// lower fifth of the frame for three quarters of the cut. A crowd that ends on
+// a ruled line reads as a rectangle of dots someone drew, which is the opposite
+// of a population you are standing inside.
+//
+// The count is DERIVED, not guessed. The camera below was run frame by frame
+// with the damper and `sway` included and the union of every visible world
+// rectangle taken: x 67..1013, y 1244..2924 — the widest frames being the hold
+// (k 1.150, the piece's minimum) rather than the open. The rule is 80 world px
+// of overrun past every edge on every frame, so the field must reach x -13..1093
+// and y 1164..3004. 50 x 136 seats on the same step, centred on (540, 2002),
+// give a nominal lattice of x -51..1131 and y 978..3026, and even where a seat
+// is jittered the full 45% of a step INWARD the field still reaches x -40..1120
+// and y 985..3019. Measured over all 112 frames the closest the field's edge
+// ever comes to a frame edge is 95 world px, at f28 under the bottom; the sides
+// clear by 107 and the top by 259. So there is no field edge on any side or in
+// any corner on any frame.
+//   open k 1.400  sees x 154..926, y 1378..2750 — margins 194 / 194 / 393 / 269
+//   hold k 1.150  sees x  67..1013, y 1254..2924 — margins 107 / 107 / 269 / 95
+// 6,800 seats against 4,224. (The svg overflows its box — the box is only the
+// transform anchor — but nothing outside it is ever in frame: the visible world
+// rectangle stays inside 0..1080 x 0..3000 the whole way through.)
 // ---------------------------------------------------------------------------
 const STEP_X = 940 / 39; // 24.10 — the field's step, identical across cuts
 const STEP_Y = 440 / 29; // 15.17
-const COLS = 48;
-const ROWS = 88;
+const COLS = 50;
+const ROWS = 136;
 const N = COLS * ROWS;
-const CROWD = { cx: 540, top: 1342 }; // rows 1342..2662, centre 2002
+// Centred on (540, 2002), the same centre the 48x88 field had, so the boards
+// keep their world positions and the camera derivation below is untouched.
+const CROWD = { cx: 540, top: 2002 - ((ROWS - 1) * STEP_Y) / 2 }; // rows 978..3026
 const CROWD_POS = Array.from({ length: N }, (_, i) => {
   const c = i % COLS;
   const r = Math.floor(i / COLS);
@@ -157,8 +269,9 @@ const CROWD_POS = Array.from({ length: N }, (_, i) => {
 // rhythm — a big flat one high on the left, a rounder middle one on the right,
 // a small upright one low and between them, so the three sit on a triangle and
 // never on a row. In the deeper field all three clear the crowd's own edges by
-// 260 world px or more, so each one is surrounded on every side by population;
-// at the hold they sit on screen y 425..1123 of 1920, well above the burned-in
+// 210 world px or more, so each one is surrounded on every side by population
+// and no camera position can put a board and a field edge in the same frame; at
+// the hold they sit on screen y 425..1123 of 1920, well above the burned-in
 // captions.
 // ---------------------------------------------------------------------------
 type Board = {
@@ -204,15 +317,16 @@ const BOARD_W = (() => {
 
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
-  accent: "#48D9FF",
-  backgroundBase: "#232323",
+  accent: ACCENT,
+  accentDeep: ACCENT_DEEP,
+  backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
-  backgroundDim: 0.32,
+  backgroundDim: BG_DIM,
   parallax: 0.15,
-  shadowY: 2,
-  shadowBlur: 9,
-  shadowOpacity: 0.22,
+  shadowY: SHADOW_Y,
+  shadowBlur: SHADOW_BLUR,
+  shadowOpacity: SHADOW_OPACITY,
   vignette: 0.45,
   dotRadius: DOT_RADIUS,
   postRate: 16,
@@ -283,15 +397,16 @@ const pickPair = (bi: number, n: number, reach: number) => {
 // piece is on world x 540. Derived off the content centre 1975 (between the
 // crowd's own centre 2002 and the three boards' centroid 1909) with the house
 // rule cy = contentCentre + 125/k, which lands that centre on screen y 835:
-//   open   k 1.40 -> cy 2064: the field bleeding 268px off each side and off
-//          the top, all three pockets inside the frame so "multiple" is
-//          countable from f0.
-//   hold   k 1.15 -> cy 2084: the field on screen 107..1625 and still running
-//          124px past both side edges. The 60px side-margin rule does not apply
-//          here — a crowd that carries hidden pockets should read as bigger
-//          than the frame, so it bleeds rather than resolving to its own edges.
-//          The lowest board's underside sits on screen 1123, clear of the
-//          burned-in captions.
+//   open   k 1.40 -> cy 2064: the field bleeding off all four edges — 194 world
+//          px past each side, 393 above and 269 below — with all three pockets
+//          inside the frame so "multiple" is countable from f0.
+//   hold   k 1.15 -> cy 2084: the widest the piece ever goes, and the field
+//          still runs 107 world px past each side, 269 past the top and 95 past
+//          the bottom, so it fills the frame here too. The 60px side-margin rule
+//          does not apply here — a crowd that carries hidden pockets should read
+//          as bigger than the frame, so it bleeds on every side rather than
+//          resolving to its own edges. The lowest board's underside sits on
+//          screen 1123, clear of the burned-in captions.
 const CAM_F = [0, 1, 8, DURATION];
 const CAM_CY = [2064, 2064, 2084, 2084];
 const CAM_K = [1.4, 1.4, 1.15, 1.15];
@@ -301,6 +416,7 @@ const DRAW = 6; // frames a post takes to draw
 const SecretMessageBoards: React.FC<Props> = ({
   ink,
   accent,
+  accentDeep,
   backgroundBase,
   backgroundSrc,
   backgroundBlur,
@@ -315,6 +431,9 @@ const SecretMessageBoards: React.FC<Props> = ({
   beats,
 }) => {
   const frame = useCurrentFrame();
+  // The ladder, as a colour: OP_DARK -> ACCENT_SHADE, OP_UNREAD -> ACCENT_DEEP,
+  // OP_READ + 0.1 -> ACCENT. Built once per frame, read per dot.
+  const rung = makeRung(accentDeep, accent, backgroundBase);
 
   // -- the one escalation curve ----------------------------------------------
   const escAt = (f: number) =>
@@ -479,7 +598,10 @@ const SecretMessageBoards: React.FC<Props> = ({
 
             {/* the agents. They all start at read; outside the boards they
                 recede once the boards take over, and inside one they fall to
-                dark and come back up only where a thread has landed. */}
+                dark and come back up only where a thread has landed. The rung
+                is the same number it always was — it is now a colour on a solid
+                dot rather than an alpha, so a pocket is a hole in a lit field
+                and not a wash of it. */}
             {CROWD_POS.map((p, i) => {
               const bi = BOARD_OF[i];
               const base =
@@ -489,8 +611,8 @@ const SecretMessageBoards: React.FC<Props> = ({
               const l = lit[i];
               const bre = breath(frame, hash(i, 9));
               const r = dotRadius * p.r * bre * (1 + 0.35 * l);
-              const op = base + (OP_READ + 0.1 - base) * l;
-              return <circle key={i} cx={p.x} cy={p.y} r={r} fill={accent} opacity={op} />;
+              const op = base + (OP_LIT - base) * l;
+              return <circle key={i} cx={p.x} cy={p.y} r={r} fill={rung(op)} opacity={OP_DOT} />;
             })}
           </svg>
         </div>

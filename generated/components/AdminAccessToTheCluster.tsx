@@ -1,16 +1,27 @@
 import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
+  ACCENT,
+  ACCENT_DEEP,
+  BG_BASE,
+  BG_DIM,
   DOT_RADIUS,
   GridBackground,
+  OP_DARK,
   OP_READ,
+  OP_READ_DOT,
   OP_RECEDE,
   OP_UNREAD,
+  OP_UNREAD_DOT,
+  SHADOW_BLUR,
+  SHADOW_OPACITY,
+  SHADOW_Y,
   Vignette,
   breath,
   clamp,
   hash,
   idleThreads,
+  makeTone,
   runCamera,
   sway,
   worldTransform,
@@ -80,10 +91,20 @@ export const DURATION = 301;
 //   f184-196 (lands f206) is "a research cluster"; settle keyed f214-226
 //   (lands f236) frames box and rack for "supported our".
 // Nothing else moves. The residue node never animates and never brightens.
+//
+// ORANGE PASS — a grade, and nothing else. The accent is fieldShared's two-tone
+// orange (ACCENT #FFB000 ripe, ACCENT_DEEP #D98A0C deep) instead of the old
+// cyan, an agent dot is SOLID and carries its state as colour rather than as
+// transparency, the background sits at BG_DIM 0.45 and the drop shadow at
+// 2 / 7 / 0.12 — every one of them taken from fieldShared so a future re-grade
+// propagates. The ladder is extended below ACCENT_DEEP for the dark rungs: see
+// THE GRADE'S LOW END below. Not one beat, camera key, world coordinate, count,
+// stroke weight or curve moved; only what a number means at the end of it.
 
 export const schema = z.object({
   ink: z.string(),
-  accent: z.string(),
+  accent: z.string(), // ripe: a lit dot, and every accent line
+  accentDeep: z.string(), // deep: an unread dot
   backgroundBase: z.string(),
   backgroundSrc: z.string(),
   backgroundBlur: z.number(),
@@ -137,6 +158,71 @@ const smooth = (v: number) => {
 const clampi = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const len = (a: P, b: P) => Math.hypot(b.x - a.x, b.y - a.y);
 const lerpP = (a: P, b: P, t: number): P => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+
+// ---------------------------------------------------------------------------
+// THE GRADE'S LOW END. Identical in all five cuts of this clip, and in nothing
+// else: `fieldShared` is owned elsewhere and is only consumed here.
+//
+// fieldShared's ladder for an agent dot is ACCENT_DEEP -> ACCENT: a dot is
+// SOLID and carries its state as COLOUR, because the accent over the grid at
+// any opacity below 1 desaturates into the field and reads as a wash. Both of
+// those tones are bright oranges, so that ladder as shipped can say "unread"
+// but it cannot say "wiped" or "hidden" — and the darkenings are the strongest
+// images in these five cuts (three dark pockets in a lit field; an ink front
+// dropping a whole crowd as it passes; nodes receding out of the subject).
+//
+// So the ladder is extended DOWNWARD by one more tone: ACCENT_SHADE, the deep
+// tone carried SHADE_MIX of the way to BG_BASE. Same hue, one shade further
+// down, and — the point — darker than the grid itself, so a dark agent is a
+// HOLE in the field rather than a faded copy of it. Measured as relative luma
+// over the grid at BG_DIM 0.45 (field #727272, 114 of 255):
+//     ACCENT       180   lit        ACCENT_SHADE           77   dark, solid
+//     ACCENT_DEEP  146   unread     ACCENT at OP_DARK     124   dark, by alpha
+// The cyan pass over its darker field (0.32, field 82) had read -> dark = 79
+// and unread -> dark = 41. Solid ACCENT_SHADE gives 103 and 69. Keeping
+// OPACITY for the dark rungs would have given 49 and 21 — under a third of the
+// old gesture — which is what the 32-point brighter field costs, and why the
+// low end had to become colour rather than alpha.
+//
+// `rung(op)` maps the OLD opacity ladder onto that colour ladder, so every
+// interpolation, curve, stagger and beat in this file is untouched: only what
+// the number MEANS at the end of it has changed. The anchors are fieldShared's
+// own rungs — OP_DARK -> ACCENT_SHADE, OP_UNREAD -> ACCENT_DEEP, OP_RECEDE
+// between those two, and OP_READ + 0.1 -> ACCENT ("the subject; +0.1 when a
+// thread is on it"), which leaves OP_READ itself just under ripe so a thread
+// landing on a dot still has somewhere to go. The dot is then drawn at
+// OP_UNREAD_DOT / OP_READ_DOT, which are 1: solid, whatever it knows. An
+// ARRIVAL fade stays an opacity — a dot fading in is not a dot in a state.
+//
+// LINES are untouched and stay on fieldShared's own rule: a thread, a probe, a
+// ring, a mesh edge, a box wall is ripe ACCENT at its own line opacity. Only
+// dots take the colour ladder.
+// ---------------------------------------------------------------------------
+const SHADE_MIX = 0.62; // how far ACCENT_DEEP is carried toward BG_BASE
+const OP_LIT = OP_READ + 0.1; // the top of the ladder: a dot with a thread on it
+const OP_DOT = Math.max(OP_UNREAD_DOT, OP_READ_DOT); // fieldShared holds both dot
+// rungs at 1 — a dot is opaque whatever it knows, and the state is in the tone.
+// Taken off both rather than assumed, so a future re-grade that parts them shows
+// up here rather than silently on one rung.
+const hexMix = (a: string, b: string, t: number) => {
+  const A = parseInt(a.replace("#", ""), 16);
+  const B = parseInt(b.replace("#", ""), 16);
+  const ch = (sh: number) =>
+    Math.round(((A >> sh) & 255) + ((((B >> sh) & 255) - ((A >> sh) & 255)) * t))
+      .toString(16)
+      .padStart(2, "0");
+  return `#${ch(16)}${ch(8)}${ch(0)}`;
+};
+// Built once per render: a field is thousands of dots and every one of them
+// asks for its colour every frame. `makeTone` quantises each half to 64 steps.
+const makeRung = (deep: string, ripe: string, base: string) => {
+  const hi = makeTone(deep, ripe);
+  const lo = makeTone(hexMix(deep, base, SHADE_MIX), deep);
+  return (op: number) =>
+    op >= OP_UNREAD
+      ? hi((op - OP_UNREAD) / (OP_LIT - OP_UNREAD))
+      : lo((op - OP_DARK) / (OP_UNREAD - OP_DARK));
+};
 
 // ---------------------------------------------------------------------------
 // The world, bottom to top. The crowd is OpenAI's agents at exactly the field's
@@ -263,15 +349,16 @@ const MARK: P = { x: 540, y: 1070 };
 
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
-  accent: "#48D9FF",
-  backgroundBase: "#232323",
+  accent: ACCENT,
+  accentDeep: ACCENT_DEEP,
+  backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
-  backgroundDim: 0.32,
+  backgroundDim: BG_DIM,
   parallax: 0.15,
-  shadowY: 2,
-  shadowBlur: 9,
-  shadowOpacity: 0.22,
+  shadowY: SHADOW_Y,
+  shadowBlur: SHADOW_BLUR,
+  shadowOpacity: SHADOW_OPACITY,
   vignette: 0.45,
   dotRadius: DOT_RADIUS,
   markSrc: "openai-chatgpt-logo.png",
@@ -590,6 +677,7 @@ const lerpAngle = (a: number, b: number, t: number) => {
 const AdminAccessToTheCluster: React.FC<Props> = ({
   ink,
   accent,
+  accentDeep,
   backgroundBase,
   backgroundSrc,
   backgroundBlur,
@@ -608,6 +696,9 @@ const AdminAccessToTheCluster: React.FC<Props> = ({
   beats,
 }) => {
   const frame = useCurrentFrame();
+  // The ladder, as a colour: OP_DARK -> ACCENT_SHADE, OP_UNREAD -> ACCENT_DEEP,
+  // OP_READ + 0.1 -> ACCENT. Built once per frame, read per dot.
+  const rung = makeRung(accentDeep, accent, backgroundBase);
 
   // -- the escalation curve --------------------------------------------------
   // "This culminated in": tempo and count ride this one curve, which rises
@@ -980,13 +1071,13 @@ const AdminAccessToTheCluster: React.FC<Props> = ({
               </g>
             ))}
 
-            {/* the agents */}
+            {/* the agents. Deep at rest, ripening where a thread is on them. */}
             {CROWD_POS.map((p, i) => {
               const l = lit[i];
               const bre = breath(frame, hash(i, 9));
               const r = dotRadius * p.r * bre * (1 + 0.35 * l);
-              const op = OP_UNREAD + (OP_READ + 0.1 - OP_UNREAD) * l;
-              return <circle key={i} cx={p.x} cy={p.y} r={r} fill={accent} opacity={op} />;
+              const op = OP_UNREAD + (OP_LIT - OP_UNREAD) * l;
+              return <circle key={i} cx={p.x} cy={p.y} r={r} fill={rung(op)} opacity={OP_DOT} />;
             })}
 
             {/* the three probes. Two retreat back into the crowd; the third is
@@ -1029,9 +1120,16 @@ const AdminAccessToTheCluster: React.FC<Props> = ({
             {NODES.map((p, i) => {
               if (nodeIn[i] <= 0) return null;
               const residue = i === RESIDUE;
-              const baseOp = residue ? OP_RECEDE * nodeIn[i] : nodeInkOp[i];
-              const inkO = baseOp * (1 - smooth((nodeAcc[i] - 0.5) / 0.5));
-              const accO = OP_READ * smooth(nodeAcc[i] / 0.5);
+              // The crossfade from the un-possessed node to the possessed one is
+              // an opacity, on both halves — it is one dot dissolving into
+              // another, not a state. What IS a state is the rung each half sits
+              // on, and both accent halves take that as colour now: the residue
+              // at OP_RECEDE (the mark of an earlier visit, never the subject)
+              // and the possessed node at OP_READ. The un-possessed nodes are
+              // INK, so they keep the ladder as alpha, which is the ink register.
+              const fade = 1 - smooth((nodeAcc[i] - 0.5) / 0.5);
+              const inkO = (residue ? OP_DOT * nodeIn[i] : nodeInkOp[i]) * fade;
+              const accO = OP_DOT * smooth(nodeAcc[i] / 0.5);
               return (
                 <g key={`n${i}`}>
                   {inkO > 0.01 ? (
@@ -1039,12 +1137,12 @@ const AdminAccessToTheCluster: React.FC<Props> = ({
                       cx={p.x}
                       cy={p.y}
                       r={NODE_R}
-                      fill={residue ? accent : ink}
+                      fill={residue ? rung(OP_RECEDE) : ink}
                       opacity={inkO}
                     />
                   ) : null}
                   {accO > 0.01 ? (
-                    <circle cx={p.x} cy={p.y} r={NODE_R} fill={accent} opacity={accO} />
+                    <circle cx={p.x} cy={p.y} r={NODE_R} fill={rung(OP_READ)} opacity={accO} />
                   ) : null}
                 </g>
               );
@@ -1104,7 +1202,8 @@ const AdminAccessToTheCluster: React.FC<Props> = ({
               </g>
             ) : null}
 
-            {/* the machines the cluster holds */}
+            {/* the machines the cluster holds. Solid at OP_READ the moment they
+                land; machineIn is an arrival and stays an opacity. */}
             {MACHINES.map((m, i) =>
               machineIn[i] > 0 ? (
                 <circle
@@ -1112,8 +1211,8 @@ const AdminAccessToTheCluster: React.FC<Props> = ({
                   cx={m.x}
                   cy={m.y}
                   r={dotRadius * m.r * breath(frame, hash(i, 19))}
-                  fill={accent}
-                  opacity={OP_READ * machineIn[i]}
+                  fill={rung(OP_READ)}
+                  opacity={OP_DOT * machineIn[i]}
                 />
               ) : null,
             )}
