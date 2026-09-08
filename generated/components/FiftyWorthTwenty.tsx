@@ -27,6 +27,7 @@ import {
   iconShadow,
   makeTone,
   runCamera,
+  squirclePath,
   sway,
   worldTransform,
 } from "./fieldShared";
@@ -69,11 +70,12 @@ export const DURATION = 262;
 // them, as in cut 2.
 //
 // FRAMING AND LAYOUT
-//   China flag    cut 1's flag exactly — 240x160 at rx 14, FLAG_RED with the
-//                 stars in the house accent — centred at world x 350, so
-//                 x 230..470, y 1000..1160. It is the carry-over from cuts 1
-//                 and 2: present from f0, no entrance, never fades.
-//   US flag       the same 240x160 rect at rx 14, centred at world x 730 and at
+//   China flag    cut 1's flag exactly — 240x160 on the shared squircle,
+//                 FLAG_RED with the stars in the house accent — centred at
+//                 world x 350, so x 230..470, y 1000..1160. It is the
+//                 carry-over from cuts 1 and 2: present from f0, no entrance,
+//                 never fades.
+//   US flag       the same 240x160 squircle, centred at world x 730 and at
 //                 the same y, so x 610..850, y 1000..1160. 13 stripes, a canton
 //                 96 x 86.15, 50 stars in nine rows of 6/5. Absent before f130.
 //                 The two axes are 380 apart (client pass 2, from 480).
@@ -323,6 +325,22 @@ export const DURATION = 262;
 // open and 759 -> 830 at the resolve; everything hanging off the flags follows
 // it down the frame by the same amount, and the labels' cap band ends at screen
 // y 1184 resolved, 1283 at the open.
+//
+// SQUIRCLE PASS, on the client's note: "I want to move away from rounded
+// rectangles and use squircles instead. Consistent rounding relative to the
+// shapes. Corner smoothing 60% like Apple's guidelines." The only rounded
+// shapes in this cut are the two flags, and both now take `squirclePath` from
+// `fieldShared` — the Figma corner-smoothing construction at s 0.6, Apple's
+// continuous corner — at SQUIRCLE_RATIO (0.2) of the shorter side rather than
+// at a hand-set radius. FLAG_R 14 is gone: r is 32 world px, 40 SCREEN px at
+// the resolved k 1.25, which is the same fraction of the mark that cut 1's
+// 384 x 256 flag and cut 2's 240 x 160 one carry at their own scales, so the
+// three cuts still show one mark when they run seconds apart.
+//   China   the red field AND the star clip take the one path
+//   US      the clip the thirteen stripes, the canton and the fifty stars are
+//           drawn inside takes it, so the stripes end on the squircle
+// Nothing else moved: the geometry, the beats, the camera and the labels are
+// exactly as they were.
 // ---------------------------------------------------------------------------
 
 // The flag's red, which is also the colour of a domestic chip. Copied from
@@ -443,7 +461,11 @@ const CENTRE_X = 540;
 const FLAG_W = 240;
 const FLAG_H = 160; // 3:2
 const FLAG_UNIT = FLAG_W / 30; // 8, the official 30x20 unit grid of cut 1
-const FLAG_R = 14;
+// SQUIRCLE PASS: one outline for both marks, at SQUIRCLE_RATIO of the shorter
+// side — 0.2 * 160 = 32 world px, 40 SCREEN px at the resolved k 1.25. It is
+// used four times: China's field, China's star clip, the US flag's
+// stripe/canton/star clip, and nothing else has a corner in this cut.
+const FLAG_PATH = squirclePath(FLAG_W, FLAG_H);
 const FLAG_TOP = 1000;
 const FLAG_BOTTOM = FLAG_TOP + FLAG_H; // 1160
 
@@ -896,8 +918,8 @@ CELLS.forEach((c) => {
 
 // ---------------------------------------------------------------------------
 // The flag of China. Copied from cut 1 rather than imported, so cut 1 is never
-// touched: the same 240x160 at rx 14, the same red, the same official 30x20
-// unit star grid at 8 world px to the unit — the large star at (5,5) with a
+// touched: the same 240x160 on the shared squircle, the same red, the same
+// official 30x20 unit star grid at 8 world px to the unit — the large star at (5,5) with a
 // circumscribed radius of 3 units and a point straight up, four small stars of
 // radius 1 unit at (10,2), (12,4), (12,7) and (10,9), each turned so one of its
 // points aims at the large star's centre — and the same accent fill.
@@ -926,10 +948,11 @@ const CN_SMALL_STARS = [
   [10, 9],
 ].map(([ux, uy]) => starPts(cnPt(ux, uy), FLAG_UNIT, Math.atan2(5 - uy, 5 - ux)));
 const CN_CLIP = "fw-cn-clip";
+const CN_AT = `translate(${CN_X} ${FLAG_TOP})`;
 
 // ---------------------------------------------------------------------------
-// The flag of the United States, drawn to the same 240x160 rect at the same
-// rx 14 so the two marks are the same object in two colours.
+// The flag of the United States, drawn to the same 240x160 squircle so the two
+// marks are the same object in two colours.
 //
 //   stripes  13 of them, 160/13 = 12.31 tall, red at the even indices so the
 //            top and the bottom are both red.
@@ -970,6 +993,7 @@ if (US_STARS.length !== 50) {
   throw new Error(`the union needs 50 stars, drew ${US_STARS.length}`);
 }
 const US_CLIP = "fw-us-clip";
+const US_AT = `translate(${US_X} ${FLAG_TOP})`;
 
 // Pass 3: the flag arrives on "there is some factor there", not on "America".
 // The factor is America — the flag is what the sentence points at — so it lands
@@ -1240,25 +1264,10 @@ const FiftyWorthTwenty: React.FC<Props> = ({
             <g style={{ filter: icon }}>
               <defs>
                 <clipPath id={CN_CLIP}>
-                  <rect
-                    x={CN_X}
-                    y={FLAG_TOP}
-                    width={FLAG_W}
-                    height={FLAG_H}
-                    rx={FLAG_R}
-                    ry={FLAG_R}
-                  />
+                  <path d={FLAG_PATH} transform={CN_AT} />
                 </clipPath>
               </defs>
-              <rect
-                x={CN_X}
-                y={FLAG_TOP}
-                width={FLAG_W}
-                height={FLAG_H}
-                rx={FLAG_R}
-                ry={FLAG_R}
-                fill={FLAG_RED}
-              />
+              <path d={FLAG_PATH} transform={CN_AT} fill={FLAG_RED} />
               <g clipPath={`url(#${CN_CLIP})`}>
                 {[CN_BIG_STAR, ...CN_SMALL_STARS].map((s, i) => (
                   <path key={`c${i}`} d={`${path(s)} Z`} fill={accent} />
@@ -1275,14 +1284,7 @@ const FiftyWorthTwenty: React.FC<Props> = ({
               >
                 <defs>
                   <clipPath id={US_CLIP}>
-                    <rect
-                      x={US_X}
-                      y={FLAG_TOP}
-                      width={FLAG_W}
-                      height={FLAG_H}
-                      rx={FLAG_R}
-                      ry={FLAG_R}
-                    />
+                    <path d={FLAG_PATH} transform={US_AT} />
                   </clipPath>
                 </defs>
                 <g clipPath={`url(#${US_CLIP})`}>

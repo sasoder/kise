@@ -18,6 +18,8 @@ import {
   SHADOW_BLUR,
   SHADOW_OPACITY,
   SHADOW_Y,
+  SQUIRCLE_RATIO,
+  SQUIRCLE_SMOOTH,
   Vignette,
   breath,
   camEase,
@@ -27,6 +29,7 @@ import {
   iconShadow,
   makeTone,
   runCamera,
+  squirclePath,
   sway,
   worldTransform,
 } from "./fieldShared";
@@ -131,11 +134,26 @@ export const DURATION = 198;
 //
 // CONSISTENCY PASS (across the three cuts of this clip): the flag is scaled in
 // WORLD space to the shared 300 x 200 SCREEN px it now takes in all three —
-// 384 x 256 at rx 22.4 here, because this cut resolves at k 0.78. The camera,
-// the graph, the beats and the flag's own place in the world (centred on
-// CENTRE_X, top edge 70 world px under the floor) are all untouched, and so is
-// its entrance. WORLD_H comes up to 3300 so the taller mark is inside the
-// world's own box rather than relying on the SVG's overflow.
+// 384 x 256 here, because this cut resolves at k 0.78. The camera, the graph,
+// the beats and the flag's own place in the world (centred on CENTRE_X, top
+// edge 70 world px under the floor) are all untouched, and so is its entrance.
+// WORLD_H comes up to 3300 so the taller mark is inside the world's own box
+// rather than relying on the SVG's overflow.
+//
+// SQUIRCLE PASS, on the client's note: "I want to move away from rounded
+// rectangles and use squircles instead. Consistent rounding relative to the
+// shapes. Corner smoothing 60% like Apple's guidelines." The two rounded shapes
+// in this cut take `squirclePath` / `squirclePoints` — the Figma corner-
+// smoothing construction at s 0.6, Apple's continuous corner — and neither
+// radius is written down any more: it is always SQUIRCLE_RATIO (0.2) of the
+// shape's shorter side, so the flag and the slot are rounded by the same
+// fraction of themselves. FLAG_R 22.4 and SLOT_R 5 are gone with it.
+//   flag  384 x 256 -> r 51.2  (40 screen px at the resolved k 0.78); the fill
+//                              AND its star clip take the one path
+//   slot  88.3 x 28.9 -> r 5.78  as a polyline, because the dashes and the
+//                              head-led draw are arc lengths around the
+//                              outline. Same pattern, same 12/9 dash, same
+//                              bead, same head-led close on "year".
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -639,39 +657,127 @@ const RING_CLICK = 4;
 // The dashed slot: one row tall, one column wide, on the floor at position 4.
 // Dashed, because dashed means "a position in a sequence" — this one is the
 // year the question is actually about.
+//
+// SQUIRCLE PASS: its outline is the shared squircle at SQUIRCLE_RATIO of its own
+// shorter side (5.78 px on a 88.3 x 28.9 slot), not a hand-set rx 5. It is
+// still walked as a POLYLINE, because the dashes and the head-led draw are arc
+// lengths around the outline — see `squirclePoints`.
 const SLOT_W = (COL_W - 1) * STEP + 16;
 const SLOT_H = STEP * 1.2;
-const SLOT_R = 5;
 const SLOT_CX = colX(3);
 const SLOT_BOTTOM = FLOOR_Y - 3;
 const SLOT_F0 = 45; // two frames of anticipation on "subsequent" (f47)
 const SLOT_DASH_ON = 12;
 const SLOT_DASH_OFF = 9;
 
-// the slot's outline as a polyline, clockwise from the top-left corner
-const roundedRect = (cx: number, bottom: number, w: number, h: number, r: number): Pt[] => {
-  const x0 = cx - w / 2;
-  const x1 = cx + w / 2;
-  const y1 = bottom;
-  const y0 = bottom - h;
-  const arc = (ax: number, ay: number, a0: number, a1: number) =>
-    Array.from({ length: 7 }, (_, i) => {
-      const a = a0 + ((a1 - a0) * i) / 6;
-      return { x: ax + r * Math.cos(a), y: ay + r * Math.sin(a) };
-    });
-  return [
-    { x: x0 + r, y: y0 },
-    { x: x1 - r, y: y0 },
-    ...arc(x1 - r, y0 + r, -Math.PI / 2, 0),
-    { x: x1, y: y1 - r },
-    ...arc(x1 - r, y1 - r, 0, Math.PI / 2),
-    { x: x0 + r, y: y1 },
-    ...arc(x0 + r, y1 - r, Math.PI / 2, Math.PI),
-    { x: x0, y: y0 + r },
-    ...arc(x0 + r, y0 + r, Math.PI, 1.5 * Math.PI),
-  ];
+// ---------------------------------------------------------------------------
+// The same squircle `squirclePath` draws, as a POLYLINE. The slot is not a
+// filled shape: it is a dashed outline drawn head-led, and both the dashes and
+// the head are arc lengths measured AROUND the outline, so the piece needs the
+// curve as points rather than as a `d` string.
+//
+// It is the identical construction — the same p, arc measure, section length
+// and a/b/c/d — and the arc between the two cubics of a corner is the corner's
+// own inscribed circle of radius r, centred where a plain rounded rect would
+// put it, swept `arcMeasure` degrees about the corner's diagonal. Verified
+// against `squirclePath` by stroking one over the other: they coincide.
+// ---------------------------------------------------------------------------
+const rad = (deg: number) => (deg * Math.PI) / 180;
+const CUBIC_N = 8; // samples per cubic
+const ARC_N = 6; // samples per arc
+
+const squirclePoints = (
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  ratio: number = SQUIRCLE_RATIO,
+  smooth: number = SQUIRCLE_SMOOTH,
+): Pt[] => {
+  const short = Math.min(w, h);
+  const r = ratio * short;
+  const s = clamp01(smooth);
+  const p = Math.min(short / 2, (1 + s) * r);
+  const arcMeasure = 90 * (1 - s);
+  const arcSectionLength = Math.sin(rad(arcMeasure / 2)) * r * Math.SQRT2;
+  const angleAlpha = (90 - arcMeasure) / 2;
+  const p3ToP4 = r * Math.tan(rad(angleAlpha / 2));
+  const angleBeta = 45 * s;
+  const c = p3ToP4 * Math.cos(rad(angleBeta));
+  const d = c * Math.tan(rad(angleBeta));
+  const b = (p - arcSectionLength - c - d) / 3;
+  const a = 2 * b;
+
+  const out: Pt[] = [];
+  const push = (px: number, py: number) => out.push({ x: x + px, y: y + py });
+  // one cubic, sampled; t = 0 is skipped because the previous segment ended there
+  const cubic = (p0: Pt, p1: Pt, p2: Pt, p3: Pt) => {
+    for (let i = 1; i <= CUBIC_N; i++) {
+      const t = i / CUBIC_N;
+      const m = 1 - t;
+      push(
+        m * m * m * p0.x + 3 * m * m * t * p1.x + 3 * m * t * t * p2.x + t * t * t * p3.x,
+        m * m * m * p0.y + 3 * m * m * t * p1.y + 3 * m * t * t * p2.y + t * t * t * p3.y,
+      );
+    }
+  };
+  // the corner's own circle, swept arcMeasure degrees about its diagonal
+  const arc = (cxx: number, cyy: number, a0: number) => {
+    for (let i = 1; i <= ARC_N; i++) {
+      const ang = rad(a0 + (arcMeasure * i) / ARC_N);
+      push(cxx + r * Math.cos(ang), cyy + r * Math.sin(ang));
+    }
+  };
+  // one corner: cubic in, arc, cubic out. `q` is the corner's start point on
+  // the incoming edge; `u` runs along that edge and `v` into the next one.
+  const corner = (
+    qx: number,
+    qy: number,
+    ux: number,
+    uy: number,
+    vx: number,
+    vy: number,
+    ccx: number,
+    ccy: number,
+    a0: number,
+  ) => {
+    const P0 = { x: qx, y: qy };
+    cubic(
+      P0,
+      { x: qx + ux * a, y: qy + uy * a },
+      { x: qx + ux * (a + b), y: qy + uy * (a + b) },
+      { x: qx + ux * (a + b + c) + vx * d, y: qy + uy * (a + b + c) + vy * d },
+    );
+    arc(ccx, ccy, a0); // the centre is in the shape's own local space
+    const e = out[out.length - 1];
+    const ex = e.x - x;
+    const ey = e.y - y;
+    cubic(
+      { x: ex, y: ey },
+      { x: ex + ux * d + vx * c, y: ey + uy * d + vy * c },
+      { x: ex + ux * d + vx * (b + c), y: ey + uy * d + vy * (b + c) },
+      { x: ex + ux * d + vx * (a + b + c), y: ey + uy * d + vy * (a + b + c) },
+    );
+  };
+
+  push(w - p, 0); // clockwise from the top edge, as `squirclePath` draws it
+  corner(w - p, 0, 1, 0, 0, 1, w - r, r, -90 + angleAlpha);
+  push(w, h - p);
+  corner(w, h - p, 0, 1, -1, 0, w - r, h - r, angleAlpha);
+  push(p, h);
+  corner(p, h, -1, 0, 0, -1, r, h - r, 90 + angleAlpha);
+  push(0, p);
+  corner(0, p, 0, -1, 1, 0, r, r, 180 + angleAlpha);
+  out.push({ ...out[0] }); // closed
+  return out;
 };
-const SLOT_PTS = roundedRect(SLOT_CX, SLOT_BOTTOM, SLOT_W, SLOT_H, SLOT_R);
+
+const SLOT_PTS = squirclePoints(
+  SLOT_CX - SLOT_W / 2,
+  SLOT_BOTTOM - SLOT_H,
+  SLOT_W,
+  SLOT_H,
+);
 
 // --- polyline arithmetic, shared by the curve, the slot and the ring ---------
 const cumulative = (pts: Pt[]) => {
@@ -758,7 +864,6 @@ const FLOOR_LINE = Math.round(FLOOR_Y) + 0.5;
 const FLAG_W = 384; // 300 screen px at the resolved k 0.78
 const FLAG_H = 256; // 3:2 — 200 screen px
 const FLAG_UNIT = FLAG_W / 30; // 12.8; the star grid scales with the flag
-const FLAG_R = 22.4; // slightly rounded — 17.5 screen px
 const FLAG_X = CENTRE_X - FLAG_W / 2; // centred on the midpoint of the eight positions
 const FLAG_TOP = FLOOR_Y + 70; // its top edge, 70 world px under the floor line
 const FLAG_RED = "#DE2910";
@@ -788,6 +893,13 @@ const FLAG_SMALL_STARS = [
   [10, 9],
 ].map(([ux, uy]) => starPts(flagPt(ux, uy), FLAG_UNIT, Math.atan2(5 - uy, 5 - ux)));
 const FLAG_CLIP = "hs-flag-clip";
+// SQUIRCLE PASS: the mark's outline, one path used twice — as the red field and
+// as the clip the stars are drawn inside — so the flag cannot end up with two
+// different corners. r is SQUIRCLE_RATIO of the shorter side: 0.2 * 256 = 51.2
+// world px, which is 40 SCREEN px at this cut's resolved k 0.78 — the same
+// fraction of the mark that cuts 2 and 3 carry at their own scale.
+const FLAG_PATH = squirclePath(FLAG_W, FLAG_H);
+const FLAG_AT = `translate(${FLAG_X} ${FLAG_TOP})`;
 
 const DidTheyJustHockeyStick: React.FC<Props> = ({
   ink,
@@ -957,25 +1069,10 @@ const DidTheyJustHockeyStick: React.FC<Props> = ({
               >
                 <defs>
                   <clipPath id={FLAG_CLIP}>
-                    <rect
-                      x={FLAG_X}
-                      y={FLAG_TOP}
-                      width={FLAG_W}
-                      height={FLAG_H}
-                      rx={FLAG_R}
-                      ry={FLAG_R}
-                    />
+                    <path d={FLAG_PATH} transform={FLAG_AT} />
                   </clipPath>
                 </defs>
-                <rect
-                  x={FLAG_X}
-                  y={FLAG_TOP}
-                  width={FLAG_W}
-                  height={FLAG_H}
-                  rx={FLAG_R}
-                  ry={FLAG_R}
-                  fill={FLAG_RED}
-                />
+                <path d={FLAG_PATH} transform={FLAG_AT} fill={FLAG_RED} />
                 <g clipPath={`url(#${FLAG_CLIP})`}>
                   {[FLAG_BIG_STAR, ...FLAG_SMALL_STARS].map((s, i) => (
                     <path key={`f${i}`} d={`${path(s)} Z`} fill={accent} />

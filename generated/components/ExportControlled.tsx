@@ -22,6 +22,7 @@ import {
   hash,
   iconShadow,
   runCamera,
+  squirclePath,
   sway,
   worldTransform,
 } from "./fieldShared";
@@ -57,19 +58,20 @@ export const DURATION = 247;
 // No text. No people. A pile 2 wide x 7 tall, a queue of five, one flag, one
 // gate.
 //
-// FRAMING AND LAYOUT (client pass, then the consistency pass)
-//   flag          240x160 at rx 14, world x 420..660, y 1039..1199 — which is
-//                 300x200 at rx 17.5 SCREEN px at the resolved k 1.25, the size
-//                 the mark takes in all three cuts of this clip. There is no
-//                 floor and no other datum: the lane, the gate, the pile and
-//                 the camera are all derived from these four numbers.
+// FRAMING AND LAYOUT (client pass, the consistency pass, then client pass 4)
+//   flag          240x160, world x 420..660, y 1039..1199 — which is 300x200
+//                 SCREEN px at the resolved k 1.25, the size the mark takes in
+//                 all three cuts of this clip. There is no floor and no other
+//                 datum: the lane, the gate, the pile and the camera are all
+//                 derived from these four numbers. Its corner is the shared
+//                 squircle at 20% of its shorter side: r 32.
 //   lane          world y 1119 — the flag's vertical CENTRE line. A tool's
 //                 centre y is the flag's centre y, so the lane runs into the
 //                 middle of the flag and the queue forms on that same line.
 //   camera        ONE move, keyed f66-104, warp 0.72: k 1.6 -> 1.25 AND
-//                 cx 540 -> 1140 on the same eased curve. The frame opens on
-//                 the flag and ends on the pile, with the flag, the gate and
-//                 the queue pushed off the left edge.
+//                 cx 540 -> 1136 on the same eased curve. The frame opens on
+//                 the flag and ends CENTRED ON THE PILE-AND-CARD GROUP, with
+//                 the flag, the gate and the queue pushed off the left edge.
 //   framing       held on the FLAG's row all the way through: the flag's centre
 //                 line (world 1119) sits at SCREEN y 830 at BOTH framings and
 //                 at every frame between them, so the mark neither moves
@@ -81,26 +83,30 @@ export const DURATION = 247;
 //   open frame    cx 540, k 1.6: the visible world runs x 202..878, the flag
 //                 240 world px wide reads 384 on screen, the pile's top edge is
 //                 at screen y 542 and the flag's bottom at 958.
-//   resolved      cx 1140, k 1.25: the visible world runs x 708..1572. The flag
-//   frame         is GONE — its right edge sits at screen x -60 — and so is the
-//                 gate, the queue, card 1 (right edge -10) and the whole left
+//   resolved      cx 1136, k 1.25: the visible world runs x 704..1568. The flag
+//   frame         is GONE — its right edge sits at screen x -55 — and so is the
+//                 gate, the queue, card 1 (right edge -5) and the whole left
 //                 half of the piece. What is in frame is the pile (screen
-//                 x 102..192, y 605..930) and the own-compute card beside it
-//                 (352..752, 568..968).
-//   unit          32 world px, rx 7
+//                 x 257.5..347.5, y 605..930) and the own-compute card beside
+//                 it (422.5..822.5, 568..968). CX_FINAL is not a number, it is
+//                 the centre of [pile left edge .. card right edge], so the
+//                 group is centred to the pixel: 257.5 screen px of air on the
+//                 left of the pile and the same 257.5 to the right of the card.
+//   unit          32 world px, squircle r 6.4
 //   gate          x 360 = flag left edge - 60, from the flag's TOP level to its
 //                 BOTTOM level: 160 tall, exactly the flag's height
 //   queue         pitch 40, FOUR long, standing on the lane's line, back tool's
 //                 left edge at world x 208 = 125 screen px inside the left edge
 //                 at k 1.25
-//   pile          left column's left edge at world x 790 = flag right + 130,
+//   pile          left column's left edge at world x 910 = flag right + 250,
 //                 column pitch 40, row pitch 38, seven rows = 260 px tall.
 //                 Row 1's BOTTOM EDGE is the flag's bottom edge (1199), so the
 //                 pile grows off the flag's own baseline. Its top edge is world
-//                 y 939, 100 px ABOVE the flag's top. Right edge world x 862,
-//                 137 screen px inside the right edge.
-//   balance       the group runs world x 208..862 and its centre is 535, six
-//                 screen px left of the flag's own centre at 540.
+//                 y 939, 100 px ABOVE the flag's top. Right edge world x 982.
+//   cards         320 world px square, squircle r 64. Card 1 hangs under the
+//                 flag (world x 380..700, top edge 30 below the flag's bottom);
+//                 card 2 parks 60 world px right of the pile's right edge
+//                 (x 1042..1362) on the pile's own mid line.
 //
 // Every gesture is one word. Nothing else happens.
 //   the foreign lane runs: a tool enters from beyond
@@ -115,13 +121,17 @@ export const DURATION = 247;
 //     top level to the flag's bottom level, a 4px
 //     ink bead at its tip, closing on f58 with a
 //     4-frame ink click-bright                       — "export controlled"  f50-58
-//   NEWS CARD 1 (`export-control.png`) rises from
-//     below the frame and parks in the WORLD under
-//     the flag, 320 px square on the flag's own axis
-//     with its top edge 30 px below the flag's bottom
-//     edge, landing on the same frame the gate closes.
-//     It is anchored into the field, so the camera
-//     carries it off to the left with the flag        — "export controlled"  f44-58
+//   NEWS CARD 1 (`export-control.png`) rises the last
+//     100 world px into its anchor while its opacity
+//     goes 0 -> 1, both on Easing.out(Easing.cubic)
+//     over the SAME fourteen frames, landing on
+//     "tools". It parks in the WORLD under the flag,
+//     320 px square on the flag's own axis with its
+//     top edge 30 px below the flag's bottom edge. It
+//     never starts off frame: it fades up out of the
+//     field where it lands. Anchored into the field,
+//     so the camera carries it off to the left with
+//     the flag                                       — "tools continue"      f0-14
 //     (`card1Src`)
 //   the four tools already past the gate carry on
 //     into the flag and are out of sight by f64;
@@ -133,13 +143,13 @@ export const DURATION = 247;
 //     changes speed in unison. Slot 0 is down on
 //     f66, slot 2 on f72                             — "controlled"         f58-72
 //   the ONE camera move: it zooms out AND pans right
-//     at once, k 1.6 -> 1.25 and cx 540 -> 1140, both
+//     at once, k 1.6 -> 1.25 and cx 540 -> 1136, both
 //     on one warped smoothstep (warp 0.72) keyed
 //     f66-104 and both damped by `runCamera`. The
 //     camera leaves the gate, the queue and the flag
 //     behind and arrives on the empty air the pile is
 //     about to fill: at the resolve the flag's right
-//     edge is at screen x -60 and the pile is at 102.
+//     edge is at screen x -55 and the pile is at 257.
 //     Inside 0.5% of its target at f109 and 0.02% at
 //     f114, before "their new". The first two pile
 //     tools launch while it is still running — that is
@@ -150,7 +160,7 @@ export const DURATION = 247;
 //     beyond the RIGHT edge of the resolved frame and
 //     parks in the WORLD beside the pile, 320 px
 //     square on the pile's own centre line with its
-//     left edge 128 px clear of the pile's right edge,
+//     left edge 60 px clear of the pile's right edge,
 //     landing on "equipment". Anchored into the field
 //     like card 1, and it stays                       — "their new
 //     (`card2Src`)                                       equipment"      f112-126
@@ -300,6 +310,47 @@ export const DURATION = 247;
 //     carries it off to the left with the flag afterwards.
 //   Nothing else moved: the lane, the gate on f58, the queue, the launches,
 //   #14 seating on f202, the pile and the hold are all exactly as they were.
+//
+// SQUIRCLE PASS, on the client's note: "I want to move away from rounded
+// rectangles and use squircles instead. Consistent rounding relative to the
+// shapes. Corner smoothing 60% like Apple's guidelines." Every rounded shape in
+// the cut is now `squirclePath(w, h)` from `fieldShared` — the Figma corner-
+// smoothing construction at s 0.6, Apple's continuous corner — and no radius is
+// written down any more: it is always SQUIRCLE_RATIO (0.2) of the shape's
+// shorter side, so the three shapes in the cut are rounded by the same fraction
+// of themselves. TOOL_RX 7 and FLAG_R 14 are gone with it.
+//   tool     32 x 32   -> r 6.4   a `<path>` translated to the tool's corner
+//   flag     240 x 160 -> r 32    the fill AND its star clip take the one path
+//   card     320 x 320 -> r 64    a CSS `clip-path: path(...)` on the <Img>,
+//                                 with the per-icon shadow moved OUT to a
+//                                 wrapper div so the shadow follows the
+//                                 squircle instead of being clipped away by it.
+//                                 The artwork has its own small baked-in
+//                                 corners; a 64 px squircle clip covers them.
+//
+// CLIENT PASS 4, on three notes:
+//   * "The first card should come in on 'tools'." Card 1 used to rise the whole
+//     height of the frame on "export controlled" (f44-58), which put two
+//     arrivals — the card and the gate — on one word. It now enters over
+//     f0-f14, landing on "tools continue": it rises 100 world px from below its
+//     anchor to its anchor while its opacity goes 0 -> 1, both on
+//     Easing.out(Easing.cubic) over the same fourteen frames. There is no
+//     off-frame start any more, so the piece opens on the flag with the card
+//     resolving under it rather than on an empty lower half. The gate keeps
+//     "controlled" at f58 on its own.
+//   * "The second card closer to the pile." PILE_GAP 130 -> 250 and CARD2_GAP
+//     128 -> 60: the pile moves out into the corridor (columns at world x 926
+//     and 966, extent 910..982) and the card parks 60 px off its right edge at
+//     1042..1362, so the two read as one group rather than as two objects with
+//     a gap between them. LIFT_X follows the corridor and every domestic flight
+//     was re-solved and re-swept on the longer path: zero overlapping pairs,
+//     landings still strictly in launch order, #14 still seating on f202.
+//   * "The group centred." CX_FINAL is no longer a number chosen by eye but the
+//     centre of [pile left edge .. card right edge] = (910 + 1362)/2 = 1136, so
+//     the resolved frame holds the group with 257.5 screen px of air on either
+//     side, equal to the pixel. It also puts the frame's left edge on world
+//     x 704, which is past card 1's right edge (700) and the flag's (660): both
+//     are off the left edge at the resolve, which is what the pan is for.
 // ---------------------------------------------------------------------------
 
 // The flag's red, which is also the colour of a tool China made itself.
@@ -399,17 +450,18 @@ const CENTRE_X = 540;
 // the one line weight in the piece: the gate
 const STROKE = 3;
 
-// The one repeated unit.
+// The one repeated unit. Its corner is the shared squircle at 20% of its own
+// side — 6.4 px — so a tool is rounded by the same fraction of itself as the
+// flag and the cards are of theirs.
 const TOOL = 32;
 const TOOL_HALF = TOOL / 2;
-const TOOL_RX = 7;
+const TOOL_PATH = squirclePath(TOOL, TOOL);
 
 // The flag, carried over from cut 1 — same size, same corner, same colours,
 // same star geometry — floating at the centre of the frame.
 const FLAG_W = 240;
 const FLAG_H = 160; // 3:2
 const FLAG_UNIT = FLAG_W / 30;
-const FLAG_R = 14;
 const FLAG_X = CENTRE_X - FLAG_W / 2; // 420
 const FLAG_TOP = 1039;
 const FLAG_BOTTOM = FLAG_TOP + FLAG_H; // 1199
@@ -424,12 +476,18 @@ const LANE_Y = FLAG_MID;
 // columns 100 px clear of the flag's right edge, seven rows, and row 1's BOTTOM
 // EDGE on the flag's bottom edge — the pile grows off the flag's own baseline
 // rather than off a floor.
-// Consistency pass: the corridor comes 100 -> 130. The tighter resolve (k 1.25)
-// makes the whole group narrower on screen, and the group has to sit on the
-// flag: the queue is four tools now, so its back edge is 332 world px left of
-// the flag's centre, and 130 px of corridor puts the pile's right edge 322 px
-// right of it. Balanced on the flag to within 6 screen px.
-const PILE_GAP = 130; // the corridor between the flag and the pile
+// Consistency pass: the corridor came 100 -> 130 so the group balanced on the
+// flag once the queue was a tool shorter.
+//
+// CLIENT PASS 4: 130 -> 250. The resolved frame is no longer balanced on the
+// flag at all — it is centred on the pile-and-card group, which the flag is not
+// part of — so the corridor is free to be what the pile needs rather than what
+// the old balance needed. Widening it moves the pile out to 910..982 and lets
+// card 2 sit 60 px off it instead of 128, which is the client's note: the card
+// beside the pile, not across a gap from it. The corridor is still the only
+// place a domestic flight rises, and at 250 it is 109 px clear of the flag and
+// 109 px clear of the pile rather than 49 and 49.
+const PILE_GAP = 250; // the corridor between the flag and the pile
 const PILE_COL_PITCH = 40; // 32 px tool + 8
 const PILE_ROW_PITCH = 38; // 32 px tool + 6
 const PILE_ROWS = 7;
@@ -438,6 +496,24 @@ const ROW1_Y = FLAG_BOTTOM - TOOL_HALF; // 1183
 const pileX = (col: number) => PILE_X0 + col * PILE_COL_PITCH;
 const pileY = (row: number) => ROW1_Y - row * PILE_ROW_PITCH; // row is 0-based
 const PILE_TOP = pileY(PILE_ROWS - 1) - TOOL_HALF; // 939, 100 px above the flag
+// The pile's own sides, which the resolved framing is built on.
+const PILE_LEFT = pileX(0) - TOOL_HALF; // 910
+const PILE_RIGHT = pileX(1) + TOOL_HALF; // 982
+
+// The card's size and card 2's place, declared up here with the pile because
+// the resolved camera is framed on the two of them together. Every number is
+// WORLD px — the cards are anchored INTO the field, so the camera scales and
+// travels them the way it scales and travels the flag.
+const CARD = 320; // world px; the artwork is 1080 square
+// Client pass 4: 128 -> 60. The card stands beside the pile, not across a gap
+// from it. Asserted rather than trusted, so a pile that ever grew a column
+// would fail at import time instead of quietly touching the card.
+const CARD2_GAP = 60;
+const CARD2_X = PILE_RIGHT + CARD2_GAP; // 1042
+const CARD2_RIGHT = CARD2_X + CARD; // 1362
+if (CARD2_GAP < 40) {
+  throw new Error(`card 2 clears the pile's right edge by only ${CARD2_GAP.toFixed(0)} world px`);
+}
 
 // ---------------------------------------------------------------------------
 // The camera. ONE move, on "how fast China can build": it zooms out AND pans
@@ -514,19 +590,19 @@ const K_FINAL = 1.25;
 // The lateral half of the same move: the flag's own axis at the open, and the
 // pile's side of the world at the resolve.
 const CX_OPEN = CENTRE_X; // 540
-// 1140, not the 1100 this pass was specified at. The note the pan answers is
-// "so only the blocks China produces are visible", and 1100 does not deliver
-// it: the frame's left edge lands on world x 668, and card 1 — 320 px centred
-// on the flag's axis — reaches to 700, so a 40 SCREEN px strip of the
-// export-control artwork stays pinned to the left edge from f106 to the last
-// frame. Rendered and looked at: it reads as a mistake, not as an object
-// leaving. 1140 puts the frame's left edge on world 708 and takes card 1's
-// right edge to screen x -10, so the card goes off with the flag exactly as
-// the flag's own right edge does at 1100. It costs 40 screen px of the
-// resolved framing: the pile moves from screen x 152..242 to 102..192 and the
-// card from 402..802 to 352..752, which puts the card's own centre on 552 —
-// within 12 px of the frame's centre — with the pile beside it.
-const CX_FINAL = 1140;
+// CLIENT PASS 4: not a number any more. The resolved frame holds ONE thing —
+// the pile with card 2 beside it — so the camera lands on that group's own
+// centre, which makes the two paddings equal by construction rather than by
+// eye: [pile left edge .. card right edge] = [910 .. 1362], centre 1136. At
+// k 1.25 the visible world is 704..1568, so the pile's left edge sits 257.5
+// screen px inside the left edge and the card's right edge 257.5 inside the
+// right.
+//
+// It also has to take the left half of the piece off the frame, which is what
+// the pan is for. 704 is past the flag's right edge (660) by 44 world px and
+// past card 1's right edge (700) by 4, so both are gone at the resolve. Card 1
+// is the tight one — asserted below rather than trusted.
+const CX_FINAL = (PILE_LEFT + CARD2_RIGHT) / 2; // 1136
 const CAM_F0 = 66;
 const CAM_F1 = 104;
 const CAM_WARP = 0.72;
@@ -562,35 +638,45 @@ const WORLD_RIGHT_FINAL = CX_FINAL + FRAME_W / (2 * K_FINAL); // 1532
 // the pile it is about — and each comes in from beyond the edge of the frame
 // its own camera is showing at the time.
 // ---------------------------------------------------------------------------
-const CARD = 320; // world px; the artwork is 1080 square
+// CARD, CARD2_GAP and CARD2_X are declared up with the pile, because the
+// resolved camera is framed on the pile and the card together.
 const CARD_SLIDE = 14; // frames of Easing.out(Easing.cubic), the same for both
+// The one corner in the cut that has to cover something: the artwork is opaque
+// 1080 px square with its own small baked-in corners, and a 64 px squircle clip
+// takes them off cleanly rather than leaving a rounded corner inside a rounded
+// corner.
+const CARD_PATH = squirclePath(CARD, CARD);
 
 // Card 1 hangs under the flag on the flag's own axis, 30 px below its bottom
 // edge, so it reads as a caption on the thing the sentence is about.
 const CARD1_GAP = 30;
 const CARD1_X = CENTRE_X - CARD / 2; // 380..700
+const CARD1_RIGHT = CARD1_X + CARD; // 700
 const CARD1_TOP = FLAG_BOTTOM + CARD1_GAP; // 1229..1549
-// It rises from below the frame at the OPENING camera, so its top edge starts
-// on the world y that the bottom of the frame is looking at while k is 1.6.
-const CARD1_FROM = CY_OPEN + FRAME_H / (2 * K_OPEN); // 1800.25
+// CLIENT PASS 4: it no longer starts off frame. It rises the last 100 world px
+// into its anchor while it fades up, so the piece opens with the card
+// resolving under the flag on "tools" instead of with an empty lower half and
+// a card climbing the whole height of the frame later.
+const CARD1_RISE = 100;
 
 // Card 2 stands beside the pile on the pile's own centre line, in the air the
 // pan opens up to the right of it.
 const PILE_MID = (PILE_TOP + FLAG_BOTTOM) / 2; // 1069
-const CARD2_X = 990; // 990..1310
 const CARD2_TOP = PILE_MID - CARD / 2; // 909..1229
 // It comes in from beyond the RIGHT edge of the RESOLVED frame, which is where
-// the camera is by the time it moves.
-const CARD2_FROM = 1600; // beyond the resolved frame's right edge at 1572
-// The corridor between the pile and the card. Asserted rather than trusted: if
-// the pile ever grows a column this fails at import time instead of quietly
-// touching the card.
-const CARD2_GAP = CARD2_X - (pileX(1) + TOOL_HALF); // 990 - 862 = 128
-if (CARD2_GAP < 40) {
-  throw new Error(`card 2 clears the pile's right edge by only ${CARD2_GAP.toFixed(0)} world px`);
-}
+// the camera is by the time it moves, with 30 px of clearance so it is never
+// seen waiting.
+const CARD2_FROM = WORLD_RIGHT_FINAL + 30; // 1598, past the resolved right edge at 1568
 if (CARD2_FROM < WORLD_RIGHT_FINAL) {
   throw new Error(`card 2 starts inside the resolved frame (${WORLD_RIGHT_FINAL.toFixed(0)})`);
+}
+// The resolve has to have taken the whole left half of the piece off frame.
+// Card 1's right edge is the last thing to go, so it is the one asserted.
+const WORLD_LEFT_FINAL = CX_FINAL - FRAME_W / (2 * K_FINAL); // 704
+if (CARD1_RIGHT > WORLD_LEFT_FINAL) {
+  throw new Error(
+    `card 1's right edge (${CARD1_RIGHT}) is inside the resolved frame (${WORLD_LEFT_FINAL})`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -901,23 +987,26 @@ const FLAG_SMALL_STARS = [
   [10, 9],
 ].map(([ux, uy]) => starPts(flagPt(ux, uy), FLAG_UNIT, Math.atan2(5 - uy, 5 - ux)));
 const FLAG_CLIP = "ec-flag-clip";
+// The flag's outline: one squircle at 20% of its shorter side (r 32), used
+// twice — as the red field and as the clip the stars are drawn inside — so the
+// mark cannot end up with two different corners.
+const FLAG_PATH = squirclePath(FLAG_W, FLAG_H);
+const FLAG_AT = `translate(${FLAG_X} ${FLAG_TOP})`;
 
 const path = (pts: Pt[]) =>
   pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
 
+// One squircle, translated to wherever the tool is. The path's origin is the
+// shape's top-left, so the translate is the tool's top-left corner.
 const Tool: React.FC<{ x: number; y: number; fill: string; opacity: number }> = ({
   x,
   y,
   fill,
   opacity,
 }) => (
-  <rect
-    x={x - TOOL_HALF}
-    y={y - TOOL_HALF}
-    width={TOOL}
-    height={TOOL}
-    rx={TOOL_RX}
-    ry={TOOL_RX}
+  <path
+    d={TOOL_PATH}
+    transform={`translate(${(x - TOOL_HALF).toFixed(2)} ${(y - TOOL_HALF).toFixed(2)})`}
     fill={fill}
     opacity={opacity}
   />
@@ -982,14 +1071,20 @@ const ExportControlled: React.FC<Props> = ({
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
 
   // -- the two news cards ----------------------------------------------------
-  // Both slides are read off the beats, not off literal frames, so a retime
-  // moves them with the words: card 1 lands the frame the gate closes, card 2
-  // lands on "equipment". Card 1 travels in y (up from below the frame), card 2
-  // in x (left from beyond the right edge); each is 14 frames of easeOut.
-  const card1Top =
-    CARD1_FROM +
-    (CARD1_TOP - CARD1_FROM) *
-      easeOut(clamp01((frame - beats.toGetExport) / (beats.controlled - beats.toGetExport)));
+  // Both entrances are read off the beats, not off literal frames, so a retime
+  // moves them with the words: card 1 lands on "tools continue" (f14), card 2
+  // on "equipment" (f126).
+  //
+  // Card 1 (client pass 4) rises the last CARD1_RISE world px into its anchor
+  // while its opacity goes 0 -> 1, both on the SAME fourteen frames of
+  // Easing.out(Easing.cubic), so there is one curve and not two. It never
+  // starts off frame — it fades up out of the field where it lands.
+  const card1E = easeOut(
+    clamp01((frame - beats.whetherOrNot) / (beats.toolsContinue - beats.whetherOrNot)),
+  );
+  const card1Top = CARD1_TOP + (1 - card1E) * CARD1_RISE;
+  // Card 2 travels in x, left from beyond the resolved frame's right edge, over
+  // the same fourteen frames.
   const card2Left =
     CARD2_FROM +
     (CARD2_X - CARD2_FROM) *
@@ -1049,25 +1144,10 @@ const ExportControlled: React.FC<Props> = ({
             <g style={{ filter: icon }}>
               <defs>
                 <clipPath id={FLAG_CLIP}>
-                  <rect
-                    x={FLAG_X}
-                    y={FLAG_TOP}
-                    width={FLAG_W}
-                    height={FLAG_H}
-                    rx={FLAG_R}
-                    ry={FLAG_R}
-                  />
+                  <path d={FLAG_PATH} transform={FLAG_AT} />
                 </clipPath>
               </defs>
-              <rect
-                x={FLAG_X}
-                y={FLAG_TOP}
-                width={FLAG_W}
-                height={FLAG_H}
-                rx={FLAG_R}
-                ry={FLAG_R}
-                fill={FLAG_RED}
-              />
+              <path d={FLAG_PATH} transform={FLAG_AT} fill={FLAG_RED} />
               <g clipPath={`url(#${FLAG_CLIP})`}>
                 {[FLAG_BIG_STAR, ...FLAG_SMALL_STARS].map((s, i) => (
                   <path key={`f${i}`} d={`${path(s)} Z`} fill={accent} />
@@ -1102,8 +1182,13 @@ const ExportControlled: React.FC<Props> = ({
               the vignette, which is still last in the tree. The world div does
               not clip, so a card is free to sit outside it while it is off
               frame. */}
-          <Img
-            src={staticFile(card1Src)}
+          {/* SQUIRCLE PASS: the clip is on the <Img> and the shadow is on the
+              wrapper around it. CSS applies a filter to the element and THEN
+              clips the result, so a clip-path and a drop-shadow on the same
+              element would clip the shadow away; split across two elements the
+              shadow is cast by the already-squircled artwork and follows its
+              corners. */}
+          <div
             style={{
               position: "absolute",
               left: CARD1_X,
@@ -1111,10 +1196,15 @@ const ExportControlled: React.FC<Props> = ({
               width: CARD,
               height: CARD,
               filter: icon,
+              opacity: card1E,
             }}
-          />
-          <Img
-            src={staticFile(card2Src)}
+          >
+            <Img
+              src={staticFile(card1Src)}
+              style={{ display: "block", width: "100%", height: "100%", clipPath: `path("${CARD_PATH}")` }}
+            />
+          </div>
+          <div
             style={{
               position: "absolute",
               left: card2Left,
@@ -1123,7 +1213,12 @@ const ExportControlled: React.FC<Props> = ({
               height: CARD,
               filter: icon,
             }}
-          />
+          >
+            <Img
+              src={staticFile(card2Src)}
+              style={{ display: "block", width: "100%", height: "100%", clipPath: `path("${CARD_PATH}")` }}
+            />
+          </div>
         </div>
       </AbsoluteFill>
 

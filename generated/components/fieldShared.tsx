@@ -347,6 +347,102 @@ export const GridBackground: React.FC<{
   );
 };
 
+// ---------------------------------------------------------------------------
+// THE SQUIRCLE. On the client's note: "I want to move away from rounded
+// rectangles and use squircles instead. Consistent rounding relative to the
+// shapes. Corner smoothing 60% like Apple's guidelines."
+//
+// Two rules come out of that and they are both here rather than in the pieces:
+//   * RELATIVE ROUNDING. A corner's radius is always SQUIRCLE_RATIO of the
+//     shape's SHORTER side, so a 32 px tool, a 240 x 160 flag and a 320 px card
+//     are all rounded by the same fraction of themselves and read as one family
+//     at any zoom. No piece writes an `rx` down any more.
+//   * CORNER SMOOTHING 0.6. Apple's continuous corner, which is what Figma's
+//     "corner smoothing" slider produces at 60%: instead of an arc meeting the
+//     straight edges at a curvature step, most of the corner is a pair of cubic
+//     segments that ease the curvature in and out, and only the middle
+//     `90 * (1 - s)` degrees of it is still a circular arc.
+//
+// `squirclePath(w, h)` returns that outline as an SVG path with its origin at
+// the shape's TOP-LEFT, drawn clockwise from the top edge, closed. Use it as a
+// `<path d=...>` for a filled shape, as a `<clipPath>` for an image, and as a
+// stroked path (dashes and all) for an outline.
+//
+// The construction, per corner, is the `figma-squircle` package's:
+//   p                = how far along each edge the corner reaches, capped at
+//                      half the shorter side so a corner can never overrun the
+//                      opposite one
+//   arcMeasure       = the sweep left to the true circular arc
+//   arcSectionLength = the chord of that arc
+//   a, b, c, d       = the control-point offsets of the two cubics either side
+//                      of it, solved so the tangents match at both joins
+// ---------------------------------------------------------------------------
+export const SQUIRCLE_RATIO = 0.2; // corner radius = 20% of the shape's shorter side
+export const SQUIRCLE_SMOOTH = 0.6; // Figma-style corner smoothing; 0.6 is Apple's continuous corner
+
+const rad = (deg: number) => (deg * Math.PI) / 180;
+
+export const squirclePath = (
+  w: number,
+  h: number,
+  ratio: number = SQUIRCLE_RATIO,
+  smooth: number = SQUIRCLE_SMOOTH,
+): string => {
+  if (w <= 0 || h <= 0) return "";
+  const short = Math.min(w, h);
+  const r = Math.max(0, ratio) * short;
+  if (r <= 0) return `M0 0 L${w} 0 L${w} ${h} L0 ${h} Z`;
+
+  const s = clamp01(smooth);
+  // The corner may not eat more than half the shorter side.
+  const p = Math.min(short / 2, (1 + s) * r);
+  const arcMeasure = 90 * (1 - s); // degrees still drawn as a true arc
+  const arcSectionLength = Math.sin(rad(arcMeasure / 2)) * r * Math.SQRT2;
+  const angleAlpha = (90 - arcMeasure) / 2;
+  const p3ToP4 = r * Math.tan(rad(angleAlpha / 2));
+  const angleBeta = 45 * s;
+  const c = p3ToP4 * Math.cos(rad(angleBeta));
+  const d = c * Math.tan(rad(angleBeta));
+  const b = (p - arcSectionLength - c - d) / 3;
+  const a = 2 * b;
+
+  const n = (v: number) => Number(v.toFixed(4));
+  const abc = n(a + b + c);
+  const bc = n(b + c);
+  const ab = n(a + b);
+  const A = n(a);
+  const D = n(d);
+  const C = n(c);
+  const L = n(arcSectionLength);
+  const R = n(r);
+  const P = n(p);
+
+  return [
+    `M${n(w - p)} 0`,
+    `c${A} 0 ${ab} 0 ${abc} ${D}`,
+    `a${R} ${R} 0 0 1 ${L} ${L}`,
+    `c${D} ${C} ${D} ${bc} ${D} ${abc}`,
+    `L${n(w)} ${n(h - p)}`,
+    `c0 ${A} 0 ${ab} ${n(-d)} ${abc}`,
+    `a${R} ${R} 0 0 1 ${n(-arcSectionLength)} ${L}`,
+    `c${n(-c)} ${D} ${n(-(b + c))} ${D} ${n(-(a + b + c))} ${D}`,
+    `L${P} ${n(h)}`,
+    `c${n(-a)} 0 ${n(-(a + b))} 0 ${n(-(a + b + c))} ${n(-d)}`,
+    `a${R} ${R} 0 0 1 ${n(-arcSectionLength)} ${n(-arcSectionLength)}`,
+    `c${n(-d)} ${n(-c)} ${n(-d)} ${n(-(b + c))} ${n(-d)} ${n(-(a + b + c))}`,
+    `L0 ${P}`,
+    `c0 ${n(-a)} 0 ${n(-(a + b))} ${D} ${n(-(a + b + c))}`,
+    `a${R} ${R} 0 0 1 ${L} ${n(-arcSectionLength)}`,
+    `c${C} ${n(-d)} ${bc} ${n(-d)} ${abc} ${n(-d)}`,
+    "Z",
+  ].join(" ");
+};
+
+// The outline's origin is the shape's top-left, so a shape somewhere in the
+// world is the same `d` under a `transform="translate(x y)"` — and an HTML
+// element clipped by CSS `clip-path: path(...)` needs no translation at all,
+// because that box's own origin is already its top-left corner.
+//
 // A quiet vignette over everything, for depth. Untouched out to ~30% of the
 // way to the corners, then falling to `strength` at the corners. Tested on
 // real frames at 0.35 / 0.5 / 0.65; 0.45 is where it reads as depth and not
