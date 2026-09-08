@@ -357,6 +357,14 @@ export const GridBackground: React.FC<{
 //     shape's SHORTER side, so a 32 px tool, a 240 x 160 flag and a 320 px card
 //     are all rounded by the same fraction of themselves and read as one family
 //     at any zoom. No piece writes an `rx` down any more.
+//     CLIENT PASS, on "way too intense — a nice, minimal but still visible
+//     radius, not one, two or three pixels, something stylish": the ratio came
+//     down 0.2 -> 0.11, and a SQUIRCLE_MIN floor of 5 world px keeps the small
+//     shapes from rounding away to nothing. So the rule is
+//       r = min(short / 2, max(ratio * short, SQUIRCLE_MIN))
+//     — proportional everywhere it can be, 5 px wherever proportional would be
+//     invisible (the 32 px tools, cut 1's 29 px slot), and never more than half
+//     the shorter side.
 //   * CORNER SMOOTHING 0.6. Apple's continuous corner, which is what Figma's
 //     "corner smoothing" slider produces at 60%: instead of an arc meeting the
 //     straight edges at a curvature step, most of the corner is a pair of cubic
@@ -377,7 +385,8 @@ export const GridBackground: React.FC<{
 //   a, b, c, d       = the control-point offsets of the two cubics either side
 //                      of it, solved so the tangents match at both joins
 // ---------------------------------------------------------------------------
-export const SQUIRCLE_RATIO = 0.2; // corner radius = 20% of the shape's shorter side
+export const SQUIRCLE_RATIO = 0.11; // corner radius = 11% of the shape's shorter side
+export const SQUIRCLE_MIN = 5; // world px floor, so a 32 px tool still reads as rounded
 export const SQUIRCLE_SMOOTH = 0.6; // Figma-style corner smoothing; 0.6 is Apple's continuous corner
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
@@ -390,7 +399,8 @@ export const squirclePath = (
 ): string => {
   if (w <= 0 || h <= 0) return "";
   const short = Math.min(w, h);
-  const r = Math.max(0, ratio) * short;
+  // Proportional, floored at SQUIRCLE_MIN, capped at half the shorter side.
+  const r = Math.min(short / 2, Math.max(Math.max(0, ratio) * short, SQUIRCLE_MIN));
   if (r <= 0) return `M0 0 L${w} 0 L${w} ${h} L0 ${h} Z`;
 
   const s = clamp01(smooth);

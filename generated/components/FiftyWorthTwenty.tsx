@@ -331,9 +331,14 @@ export const DURATION = 262;
 // shapes. Corner smoothing 60% like Apple's guidelines." The only rounded
 // shapes in this cut are the two flags, and both now take `squirclePath` from
 // `fieldShared` — the Figma corner-smoothing construction at s 0.6, Apple's
-// continuous corner — at SQUIRCLE_RATIO (0.2) of the shorter side rather than
-// at a hand-set radius. FLAG_R 14 is gone: r is 32 world px, 40 SCREEN px at
-// the resolved k 1.25, which is the same fraction of the mark that cut 1's
+// continuous corner — at SQUIRCLE_RATIO of the shorter side rather than at a
+// hand-set radius. FLAG_R 14 is gone with it.
+//
+// CLIENT PASS on the squircle: "Way too intense. A nice, minimal but still
+// visible radius — not one, two or three pixels, something stylish." The ratio
+// came down 0.2 -> 0.11 with a SQUIRCLE_MIN floor of 5 world px under it, which
+// nothing in this cut is small enough to reach. r is now 17.6 world px, 22
+// SCREEN px at the resolved k 1.25 — the same fraction of the mark that cut 1's
 // 384 x 256 flag and cut 2's 240 x 160 one carry at their own scales, so the
 // three cuts still show one mark when they run seconds apart.
 //   China   the red field AND the star clip take the one path
@@ -462,7 +467,8 @@ const FLAG_W = 240;
 const FLAG_H = 160; // 3:2
 const FLAG_UNIT = FLAG_W / 30; // 8, the official 30x20 unit grid of cut 1
 // SQUIRCLE PASS: one outline for both marks, at SQUIRCLE_RATIO of the shorter
-// side — 0.2 * 160 = 32 world px, 40 SCREEN px at the resolved k 1.25. It is
+// side — 0.11 * 160 = 17.6 world px, 22 SCREEN px at the resolved k 1.25, well
+// clear of the SQUIRCLE_MIN floor so the ratio is what sets it. It is
 // used four times: China's field, China's star clip, the US flag's
 // stripe/canton/star clip, and nothing else has a corner in this cut.
 const FLAG_PATH = squirclePath(FLAG_W, FLAG_H);
