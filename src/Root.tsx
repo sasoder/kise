@@ -1,21 +1,19 @@
 import {Composition} from 'remotion';
-import SecretMessageBoards, {
+import OutNowCoreMemory, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SecretMessageBoards';
+} from '../generated/components/OutNowCoreMemory';
 
-// The field — three regions of the crowd go dark, threads start posting inside
-// them, and the traffic escalates until each pocket is packed solid with held
-// messages inside a field that is otherwise still.
-// Ajeya, 0:16.120 -> 0:20.140 (+16 frame tail).
+// "OUT NOW!" in core memory podcast style: the chain colours slide up one at a
+// time and the white core lands last on top. Transparent 1080x1920 overlay.
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="SecretMessageBoards"
-        component={SecretMessageBoards}
+        id="OutNowCoreMemory"
+        component={OutNowCoreMemory}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}

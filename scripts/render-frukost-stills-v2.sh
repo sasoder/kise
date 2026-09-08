@@ -5,8 +5,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-OUT=out/stills-v2
-PROPS=scripts/frukost-v2-props.json
+OUT=${OUT:-out/stills-v2}
+PROPS=${PROPS:-scripts/frukost-v2-props.json}
 mkdir -p "$OUT"
 rm -f "$OUT"/*.png
 
