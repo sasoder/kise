@@ -64,7 +64,7 @@ export const DURATION = 247;
 //                 all three cuts of this clip. There is no floor and no other
 //                 datum: the lane, the gate, the pile and the camera are all
 //                 derived from these four numbers. Its corner is the shared
-//                 squircle at 6% of its shorter side: r 9.6.
+//                 squircle at 2.5% of its shorter side: r 4.0.
 //   lane          world y 1119 — the flag's vertical CENTRE line. A tool's
 //                 centre y is the flag's centre y, so the lane runs into the
 //                 middle of the flag and the queue forms on that same line.
@@ -92,7 +92,7 @@ export const DURATION = 247;
 //                 the centre of [pile left edge .. card right edge], so the
 //                 group is centred to the pixel: 257.5 screen px of air on the
 //                 left of the pile and the same 257.5 to the right of the card.
-//   unit          32 world px, squircle r 5 (the SQUIRCLE_MIN floor)
+//   unit          32 world px, squircle r 3 (the SQUIRCLE_MIN floor)
 //   gate          x 360 = flag left edge - 60, from the flag's TOP level to its
 //                 BOTTOM level: 160 tall, exactly the flag's height
 //   queue         pitch 40, FOUR long, standing on the lane's line, back tool's
@@ -103,7 +103,7 @@ export const DURATION = 247;
 //                 Row 1's BOTTOM EDGE is the flag's bottom edge (1199), so the
 //                 pile grows off the flag's own baseline. Its top edge is world
 //                 y 939, 100 px ABOVE the flag's top. Right edge world x 982.
-//   cards         320 world px square, squircle r 19.2. Card 1 hangs under the
+//   cards         320 world px square, squircle r 8.0. Card 1 hangs under the
 //                 flag (world x 380..700, top edge 30 below the flag's bottom);
 //                 card 2 parks 60 world px right of the pile's right edge
 //                 (x 1042..1362) on the pile's own mid line.
@@ -285,8 +285,9 @@ export const DURATION = 247;
 // artwork with their own rounded corners, drawn at 320 world px square with
 // Remotion `<Img src={staticFile(...)}>` so the frame waits for the image, and
 // both take their path as a prop — `card1Src` and `card2Src`. The only
-// treatment is the per-icon shadow `iconShadow(k)`, the same one every other
-// icon in the cut carries; no border, no fade, no scale, no bounce.
+// treatment is a shadow — the per-icon offset and blur at the cards' own
+// lighter opacity, see CARD_SHADOW_OPACITY; no border, no fade, no scale, no
+// bounce.
 //
 // CLIENT PASS 3, on two notes:
 //   * "The news articles should be anchored into the background — right now
@@ -295,7 +296,7 @@ export const DURATION = 247;
 //     drawn inside the world's transform after the svg — above the tools, the
 //     pile, the flag and the gate, below the vignette — so they scale and
 //     travel with the camera exactly like the flag does, and their shadow is
-//     `iconShadow(k)` rather than a fixed one. Every number about them is world
+//     an `iconShadow(k)` rather than a fixed one. Every number about them is world
 //     px now, and both are anchored to something in the piece rather than to
 //     the glass: card 1 hangs 30 px under the flag's bottom edge on the flag's
 //     own axis, card 2 stands on the pile's centre line 128 px clear of its
@@ -326,15 +327,29 @@ export const DURATION = 247;
 // CLIENT PASS 2: "The corners are still way too rounded." 0.11 -> 0.06, the
 // floor still 5 and the smoothing still 0.6, so the big shapes halve again and
 // the 32 px tool does not move — it was already on the floor.
-//   tool     32 x 32   -> r 5     the SQUIRCLE_MIN floor (0.06 * 32 is 1.9);
+// CLIENT PASS 3: "It should be really minimal — almost look like it isn't
+// rounded, high taste, harmonious with the rest." 0.06 -> 0.025 and the floor
+// 5 -> 3, smoothing still 0.6. Every corner in the cut comes down at once and
+// the tool moves this time, because the floor itself moved:
+//   tool     32 x 32   -> r 3     the SQUIRCLE_MIN floor (0.025 * 32 is 0.8);
 //                                 a `<path>` translated to the tool's corner
-//   flag     240 x 160 -> r 9.6   the fill AND its star clip take the one path
-//   card     320 x 320 -> r 19.2  a CSS `clip-path: path(...)` on the <Img>,
-//                                 with the per-icon shadow moved OUT to a
+//   flag     240 x 160 -> r 4.0   the fill AND its star clip take the one path;
+//                                 5 SCREEN px at the resolved k 1.25, which is
+//                                 what cut 1's flag reads at its own scale
+//   card     320 x 320 -> r 8.0   a CSS `clip-path: path(...)` on the <Img>,
+//                                 with the card shadow moved OUT to a
 //                                 wrapper div so the shadow follows the
 //                                 squircle instead of being clipped away by it.
 //                                 The card artwork is square-cornered, so the
-//                                 19.2 px squircle clip is the only corner.
+//                                 8 px squircle clip is the only corner.
+//
+// CARD SHADOW PASS, on the same client note: "And reduce the shading a little
+// on the cards." The cards no longer take `iconShadow(k)` as-is. They keep its
+// y (2) and blur (3) — one light in the piece — and drop to opacity 0.20 from
+// the icons' 0.38, exposed as its own `cardShadowOpacity` prop beside the three
+// icon-shadow props. The flag, the tools and the gate are untouched, so the
+// difference is visible side by side at the resolve: the card sits on the
+// field, the tools sit ON it. Nothing else in the cut changed.
 //
 // CLIENT PASS 4, on three notes:
 //   * "The first card should come in on 'tools'." Card 1 used to rise the whole
@@ -364,6 +379,14 @@ export const DURATION = 247;
 // The flag's red, which is also the colour of a tool China made itself.
 const FLAG_RED = "#DE2910";
 
+// CLIENT PASS on the cards' shadow: "reduce the shading a little on the cards."
+// The per-icon shadow is tuned for a 32 px tool; on a 320 px card the same
+// 0.38 black reads as a heavy lip along two whole edges. The cards keep the
+// icon shadow's offset and blur — so the light in the piece is still one light
+// — and take about half its opacity. Nothing else in the cut changes: the flag,
+// the tools and the gate all stay on ICON_SHADOW_OPACITY.
+const CARD_SHADOW_OPACITY = 0.2;
+
 export const schema = z.object({
   ink: z.string(),
   accent: z.string(), // the flag's stars, in the house yellow
@@ -380,6 +403,9 @@ export const schema = z.object({
   iconShadowY: z.number(),
   iconShadowBlur: z.number(),
   iconShadowOpacity: z.number(),
+  // the news cards' own shadow: the icon shadow's y and blur, at a lighter
+  // opacity, because a 320 px card throws far more shadow than a 32 px tool
+  cardShadowOpacity: z.number(),
   // The two news cards, 1080 x 1080 headline artwork drawn at 320 world px.
   card1Src: z.string(), // rises from below on "controlled"
   card2Src: z.string(), // comes in from the right on "equipment"
@@ -418,6 +444,7 @@ export const defaultProps: Props = schema.parse({
   iconShadowY: ICON_SHADOW_Y,
   iconShadowBlur: ICON_SHADOW_BLUR,
   iconShadowOpacity: ICON_SHADOW_OPACITY,
+  cardShadowOpacity: CARD_SHADOW_OPACITY,
   card1Src: "export-control.png",
   card2Src: "own-compute.png",
   beats: {
@@ -459,8 +486,8 @@ const CENTRE_X = 540;
 const STROKE = 3;
 
 // The one repeated unit. Its corner is the shared squircle, and at 32 px the
-// SQUIRCLE_MIN floor is what sets it — 5 px, where the 0.06 ratio alone would
-// give 1.9 and the corner would read as square at this size.
+// SQUIRCLE_MIN floor is what sets it — 3 px, where the 0.025 ratio alone would
+// give 0.8 and the corner would read as square at this size.
 const TOOL = 32;
 const TOOL_HALF = TOOL / 2;
 const TOOL_PATH = squirclePath(TOOL, TOOL);
@@ -650,7 +677,7 @@ const WORLD_RIGHT_FINAL = CX_FINAL + FRAME_W / (2 * K_FINAL); // 1532
 // resolved camera is framed on the pile and the card together.
 const CARD_SLIDE = 14; // frames of Easing.out(Easing.cubic), the same for both
 // The card artwork is opaque, 1080 px square and square-cornered, so the
-// 19.2 px squircle clip is the only corner the card has — nothing baked in
+// 8 px squircle clip is the only corner the card has — nothing baked in
 // underneath it to peek out past the clip.
 const CARD_PATH = squirclePath(CARD, CARD);
 
@@ -994,7 +1021,7 @@ const FLAG_SMALL_STARS = [
   [10, 9],
 ].map(([ux, uy]) => starPts(flagPt(ux, uy), FLAG_UNIT, Math.atan2(5 - uy, 5 - ux)));
 const FLAG_CLIP = "ec-flag-clip";
-// The flag's outline: one squircle at 6% of its shorter side (r 9.6), used
+// The flag's outline: one squircle at 2.5% of its shorter side (r 4.0), used
 // twice — as the red field and as the clip the stars are drawn inside — so the
 // mark cannot end up with two different corners.
 const FLAG_PATH = squirclePath(FLAG_W, FLAG_H);
@@ -1034,6 +1061,7 @@ const ExportControlled: React.FC<Props> = ({
   iconShadowY,
   iconShadowBlur,
   iconShadowOpacity,
+  cardShadowOpacity,
   card1Src,
   card2Src,
   beats,
@@ -1073,9 +1101,11 @@ const ExportControlled: React.FC<Props> = ({
   const { tx, ty } = worldTransform(cx, cy, k);
 
   // Everything in this cut is an icon lying on the field, so everything takes
-  // the small per-icon shadow, in screen px, at every zoom — the two news cards
-  // included, now that they are objects in the world rather than inserts.
+  // the small per-icon shadow, in screen px, at every zoom.
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+  // ...except the two news cards, which take the same offset and blur at a
+  // lighter opacity — see CARD_SHADOW_OPACITY.
+  const cardIcon = iconShadow(k, iconShadowY, iconShadowBlur, cardShadowOpacity);
 
   // -- the two news cards ----------------------------------------------------
   // Both entrances are read off the beats, not off literal frames, so a retime
@@ -1184,12 +1214,13 @@ const ExportControlled: React.FC<Props> = ({
 
           {/* The two news cards, INSIDE the world's transform (client pass 3):
               they scale and travel with the camera like every other icon, and
-              they take the same per-icon shadow. Drawn after the svg, so they
+              they take the icon shadow's offset and blur at their own lighter
+              opacity (CARD_SHADOW_OPACITY). Drawn after the svg, so they
               are above the tools, the pile, the flag and the gate — and below
               the vignette, which is still last in the tree. The world div does
               not clip, so a card is free to sit outside it while it is off
               frame. */}
-          {/* SQUIRCLE PASS: the clip is on the <Img> and the shadow is on the
+          {/* SQUIRCLE PASS: the clip is on the <Img> and `cardIcon` is on the
               wrapper around it. CSS applies a filter to the element and THEN
               clips the result, so a clip-path and a drop-shadow on the same
               element would clip the shadow away; split across two elements the
@@ -1202,7 +1233,7 @@ const ExportControlled: React.FC<Props> = ({
               top: card1Top,
               width: CARD,
               height: CARD,
-              filter: icon,
+              filter: cardIcon,
               opacity: card1E,
             }}
           >
@@ -1218,7 +1249,7 @@ const ExportControlled: React.FC<Props> = ({
               top: CARD2_TOP,
               width: CARD,
               height: CARD,
-              filter: icon,
+              filter: cardIcon,
             }}
           >
             <Img

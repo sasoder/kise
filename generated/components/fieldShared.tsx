@@ -365,9 +365,18 @@ export const GridBackground: React.FC<{
 //     The floor stays at 5 and the smoothing stays at 0.6, so the small shapes
 //     do not move at all and the big ones lose roughly half their corner again
 //     — 240 x 160 flag 17.6 -> 9.6, 320 card 35.2 -> 19.2, cut 1's 384 x 256
-//     flag 28.2 -> 15.4. So the rule is
+//     flag 28.2 -> 15.4.
+//     CLIENT PASS 3, on "it should be really minimal — almost look like it
+//     isn't rounded, high taste, harmonious with the rest": 0.06 -> 0.025 and
+//     the floor 5 -> 3. The smoothing is still 0.6 and the rule is unchanged,
+//     so every shape in all three cuts comes down by the same fraction at once
+//     — 240 x 160 flag 9.6 -> 4.0, 320 card 19.2 -> 8.0, cut 1's 384 x 256
+//     flag 15.4 -> 6.4, and the two shapes already sitting on the floor (the
+//     32 px tools, cut 1's 29 px slot) go 5 -> 3 with it. At the resolved
+//     zooms that is ~5 screen px on a flag and 3-4 on a tool: the corner is
+//     softened rather than drawn. So the rule is
 //       r = min(short / 2, max(ratio * short, SQUIRCLE_MIN))
-//     — proportional everywhere it can be, 5 px wherever proportional would be
+//     — proportional everywhere it can be, 3 px wherever proportional would be
 //     invisible (the 32 px tools, cut 1's 29 px slot), and never more than half
 //     the shorter side.
 //   * CORNER SMOOTHING 0.6. Apple's continuous corner, which is what Figma's
@@ -390,8 +399,8 @@ export const GridBackground: React.FC<{
 //   a, b, c, d       = the control-point offsets of the two cubics either side
 //                      of it, solved so the tangents match at both joins
 // ---------------------------------------------------------------------------
-export const SQUIRCLE_RATIO = 0.06; // corner radius = 6% of the shape's shorter side
-export const SQUIRCLE_MIN = 5; // world px floor, so a 32 px tool still reads as rounded
+export const SQUIRCLE_RATIO = 0.025; // corner radius = 2.5% of the shape's shorter side
+export const SQUIRCLE_MIN = 3; // world px floor, so a 32 px tool is still off the sharp corner
 export const SQUIRCLE_SMOOTH = 0.6; // Figma-style corner smoothing; 0.6 is Apple's continuous corner
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
