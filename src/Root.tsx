@@ -1,19 +1,20 @@
 import {Composition} from 'remotion';
-import OutNowCoreMemory, {
+import ImpossibleTasks, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OutNowCoreMemory';
+} from '../generated/components/ImpossibleTasks';
 
-// "OUT NOW!" in core memory podcast style: the chain colours slide up one at a
-// time and the white core lands last on top. Transparent 1080x1920 overlay.
+// Dwarkesh `impossible-tasks` 0:01.960-0:08.939, orange Dwarkesh style: OpenAI
+// deals five task tiles into a sandbox; their lines stop at the wall, the
+// internet ring sits outside it, and the gate under the ring was never built.
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="OutNowCoreMemory"
-        component={OutNowCoreMemory}
+        id="ImpossibleTasks"
+        component={ImpossibleTasks}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
