@@ -75,7 +75,9 @@ export const DURATION = 184;
 //     click, no flash, no ripple on contact          — "impossible tasks"  f43-57
 //   hold. Only idle threads, breath and sway          — (no word)          f57-96
 //   the internet ring draws head-led and closes
-//     outside the box, and the five line tops then
+//     outside the box, a wifi glyph (three arcs over
+//     a dot, same stroke) fades in inside it as it
+//     closes, and the five line tops then
 //     slide along the wall toward it, so each reach
 //     becomes a diagonal aimed under the ring
 //                                     — "require internet access"          f96-116
@@ -173,6 +175,12 @@ const MARK = { x: CENTRE_X, y: -560 };
 
 // The internet: an ink ring between the mark and the top wall.
 const RING = { x: CENTRE_X, y: -400, r: 40 };
+// Inside it, the internet as the field would draw it: a wifi glyph of three
+// ink arcs over a dot, one stroke weight, centred in the ring. The dot sits
+// 15 px below the ring centre so the whole glyph (dot to outer arc) is centred.
+const WIFI = { radii: [10, 19, 28], dot: 3.5, dy: 15, halfAngle: (50 * Math.PI) / 180 };
+const WIFI_F0 = 106; // fades in as the ring closes (f108)
+const WIFI_DUR = 6;
 
 // The gate: the 120 px of top wall centred under the ring.
 const GATE_X0 = CENTRE_X - 60; // 480
@@ -560,6 +568,9 @@ const ImpossibleTasks: React.FC<Props> = ({
     easing: Easing.out(Easing.cubic),
   });
   const RING_C = 2 * Math.PI * RING.r;
+  const wifiIn = smooth((frame - WIFI_F0) / WIFI_DUR);
+  const wifiCx = RING.x;
+  const wifiCy = RING.y + WIFI.dy;
 
   // -- the gate --------------------------------------------------------------
   const gate = smooth((frame - GATE_F0) / GATE_DUR);
@@ -702,6 +713,18 @@ const ImpossibleTasks: React.FC<Props> = ({
                     r={4}
                     fill={ink}
                   />
+                ) : null}
+                {/* the wifi glyph inside the ring: one fade, no draw */}
+                {wifiIn > 0 ? (
+                  <g opacity={OP_READ * wifiIn} fill="none" stroke={ink} strokeWidth={STROKE} strokeLinecap="round">
+                    {WIFI.radii.map((r) => (
+                      <path
+                        key={r}
+                        d={`M ${wifiCx - r * Math.sin(WIFI.halfAngle)} ${wifiCy - r * Math.cos(WIFI.halfAngle)} A ${r} ${r} 0 0 1 ${wifiCx + r * Math.sin(WIFI.halfAngle)} ${wifiCy - r * Math.cos(WIFI.halfAngle)}`}
+                      />
+                    ))}
+                    <circle cx={wifiCx} cy={wifiCy} r={WIFI.dot} fill={ink} stroke="none" />
+                  </g>
                 ) : null}
               </g>
             ) : null}
