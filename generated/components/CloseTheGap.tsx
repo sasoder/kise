@@ -13,7 +13,6 @@ import {
   ICON_SHADOW_BLUR,
   ICON_SHADOW_OPACITY,
   ICON_SHADOW_Y,
-  OP_READ,
   OP_UNREAD,
   OP_UNREAD_DOT,
   SHADOW_BLUR,
@@ -48,10 +47,9 @@ export const DURATION = 262;
 // "Close the gap" — cut 3's exchange, the other way round.
 //
 // The US flag has a full block of FIFTY orange chips under it: what Nvidia has
-// to sell. Under the China flag is an EMPTY area of fifty seats with a dashed
-// ink line lying across its top: what the US is allowing. Chips cross from the
-// US block into China's seats, bottom row first, at a rate that keeps
-// increasing — "more and more" — stacking up toward the line. They stay orange:
+// to sell. Under the China flag is an EMPTY area of fifty seats. Chips cross
+// from the US block into China's seats, bottom row first, at a rate that keeps
+// increasing — "more and more" — stacking up from the bottom. They stay orange:
 // they are foreign chips inside China. By the last word FORTY-FIVE of the fifty
 // seats are taken and the top row is half empty: the gap has CLOSED, not
 // vanished. Each chip that leaves the US block leaves its trace at OP_UNREAD
@@ -77,12 +75,6 @@ export const DURATION = 262;
 //   China's seats the same 10 x 5 grid on the same rows, centred under the
 //                 China flag: x 241.5..458.5. EMPTY at f0 — a seat is a
 //                 position, not a drawn thing.
-//   the line      a dashed ink horizontal, stroke 3, OP_READ, spanning the
-//                 China block's width plus 12 px each side (x 229.5..470.5) at
-//                 20 world px above the top row's centre — y 1180, so the top
-//                 row sits just under it. Cut 1's 12/9 dash, phased so a whole
-//                 number of periods fits the span. Present from f0. It is the
-//                 quota: what the US is allowing.
 //   tones         a chip is ACCENT_DEEP at rest in the US block; in flight and
 //                 once seated in China it is ACCENT (ripe — it is the
 //                 purchased, live compute); the trace it leaves in the US block
@@ -93,9 +85,10 @@ export const DURATION = 262;
 //                 blocks are inside the frame from f0: at k 1.45 the China
 //                 flag's left edge is at screen x 90.5 and the US flag's right
 //                 edge at 989.5, and the blocks' outer dots at 90.3 and 989.3,
-//                 so the tightest margin in the opening frame is the quota
-//                 line's left end at 89.8 px. At the resolve, k 1.25, those
-//                 edges are at 152.5 and 927.5 — cut 3's own resolve, so this
+//                 so the tightest margin in the opening frame is a block's
+//                 outermost dot at its widest breath, 88.8 px. At the resolve,
+//                 k 1.25, those edges are at 152.5 and 927.5 — cut 3's own
+//                 resolve, so this
 //                 cut's last frame and cut 3's first are the same picture.
 //                 Both flags are on world y 1000..1160 and that row's centre
 //                 line, world 1080, sits at SCREEN y 830 at BOTH ends of the
@@ -103,15 +96,15 @@ export const DURATION = 262;
 //                 the same place the mark holds in cuts 2 and 3.
 //
 // THE GESTURE LIST — one gesture per word, nothing else.
-//   both flags, the full US block, the dashed line
-//     over the empty China area. Breath only        — hold              f0-16
+//   both flags and the full US block, over the
+//     empty China area. Breath only                 — hold              f0-16
 //   the ONE camera move: a PURE ZOOM, k 1.45 ->
 //     1.25 about a fixed cx 540, on one warped
 //     smoothstep (warp 0.72). It opens on BOTH
 //     flags already whole, the US block full on the
-//     right and the empty seats under the line on
-//     the left, and widens to the frame the crossing
-//     needs — the same picture, given room. No
+//     right and the empty seats on the left, and
+//     widens to the frame the crossing needs — the
+//     same picture, given room. No
 //     lateral travel: the sentence names both sides
 //     at once, so the camera has nowhere to go but
 //     out. Keyed f16-26; the damper is inside 0.5%
@@ -156,9 +149,10 @@ export const DURATION = 262;
 //     behind. Derived from the launch, so it cannot
 //     drift from it. Exactly cut 3's trace          — under the crossing
 //                                                                    f43-236
-//   the dashed line CLICK-BRIGHTENS to full ink for
-//     four frames — the house click, on the word
-//     that names it. Nothing else                   — "allowing"     f175-179
+//   NO GESTURE. The word names the quota and the
+//     quota is no longer drawn; the crossing is
+//     running under it, as it is under every word
+//     inside the ellipses above                     — "allowing"          f175
 //   hold resolved, never fades                      — tail           f246-262
 //
 // ambient on every hold: the shared `breath` on every seated dot and every
@@ -180,10 +174,10 @@ export const DURATION = 262;
 // The fix is a pure zoom about the pair's own midpoint: cx 540 for the whole
 // cut, k 1.45 -> 1.25, no lateral travel at all. 1.45 is the tightest k that
 // still holds everything with room — every edge in the opening frame clears the
-// side by at least 89.8 px — and it is close enough to the resolve that the
+// side by at least 88.8 px — and it is close enough to the resolve that the
 // move stays one readable gesture rather than a lurch. Everything else in this
 // file is untouched: the same keys f16-26, the same warp, the same schedule,
-// the same click on f175, the same 45th landing on f236.
+// the same 45th landing on f236.
 //
 // The move also gets simpler than it was. With cx constant there is no lateral
 // track to run through a second damper, so the camera is one `camMove` and one
@@ -209,44 +203,58 @@ export const DURATION = 262;
 // after the one before it, which only ever LENGTHENS a flight and leaves the
 // durations inside 16-24. The order is then true by construction.
 //
-// THE ARCS, AND THE TWO CEILINGS. The control point sits straight above the
+// THE ARCS, AND THE FLAG CEILING. The control point sits straight above the
 // chord's midpoint, so x is linear in t and a ceiling is a bound on the bow
-// rather than a search. Two of them:
-//   * a flag. An arc may not pass behind either mark. The chords run from
-//     x 621..838 to x 242..458, so their midpoints land anywhere in 431..648 —
-//     under the China flag at one end of that range and under the US flag at
-//     the other — and both have to be tested, as they are in cut 3.
-//   * THE LINE. Where an arc is over the China block it may not pass ABOVE the
-//     quota, because the whole point of the picture is that the chips stack up
-//     TOWARD the line from underneath. This is stricter than the flag ceiling
-//     over the same span (1180 against 1160) and it is what flattens the last
-//     few arrivals into the top row: they slide in under the line rather than
-//     dropping through it.
+// rather than a search. One of them: a flag. An arc may not pass behind either
+// mark. The chords run from x 621..838 to x 242..458, so their midpoints land
+// anywhere in 431..648 — under the China flag at one end of that range and
+// under the US flag at the other — and both have to be tested, as they are in
+// cut 3.
 // The bow is also floored at half the chord's rise plus 8, which is what makes
 // the arc monotone in y — so a chip always arrives at its seat from ABOVE and
-// can never rise into it through the row below. Where a ceiling would fall
+// can never rise into it through the row below. Where the ceiling would fall
 // under that floor the floor wins, because monotonicity is the rule the
-// no-overlap proof rests on; the module-scope sweep below counts how often
-// that happens and how far the line is crossed.
+// no-overlap proof rests on.
 //
 // THE SWEEP. Run at module scope at quarter-frame resolution, as cut 3's was.
 // It throws rather than rendering a frame with a chip drawn through a chip.
-// Measured on this build: ZERO flyer/seated overlaps in China; the worst
-// clearance under either flag is 10.9 px; no arc ever reaches the quota, so
-// the line ceiling never had to be overruled by the monotonicity floor; and
-// forty-five chips are seated on f236. The origin is measured separately and
+// Re-run after the client pass, with the quota ceiling gone: ZERO flyer/seated
+// overlaps in China; the worst clearance under either flag is 5.96 px, the
+// arcs now sitting on the 6 px flag ceiling that the quota's stricter one used
+// to hold them off; and forty-five chips are seated on f236. The origin is measured separately and
 // is not a fault — see the note on the sweep itself.
+//
+// CLIENT PASS. "Remove the dotted line under the China flag — it doesn't make
+// any sense." Gone: the dashed quota, its geometry, its click on "allowing",
+// its ceiling on the arcs and the `ink` prop that only ever coloured it. The
+// note is right on its own terms. The line was drawn as a quota the chips
+// stack up toward, but a quota is a NUMBER, not a place, and a horizontal rule
+// hanging over an empty grid reads as a floor, a ledge or an axis long before
+// it reads as a limit — and it reads as one the chips are about to hit, which
+// is the opposite of "close the gap".
+//
+// What carries the meaning was never the line: it is the FIVE EMPTY SEATS in
+// the top row on the US side. Forty-five of fifty taken, five never claimed —
+// the gap is closed, not gone — and that is legible without a caption because
+// the block's own outline is the measure. The line was drawing the same idea a
+// second time, in a second material, and one of the two had to go.
+//
+// Removing it also loosens the arcs, and only in the right direction. The
+// quota ceiling was stricter than the flag's over the China block (1180
+// against 1160) and it was what flattened the last arrivals into the top row.
+// With it gone those arcs are free to take the bow their hash asks for, capped
+// by the flags alone; the sweep re-runs at zero overlaps, so nothing had to be
+// re-timed to pay for it. Untouched: the seats, the schedule (first launch
+// f43, 45th landing f236), the traces, the camera, the hold.
 // ---------------------------------------------------------------------------
 
 // The flag's red. Copied from cuts 1-3 rather than imported, so none of them is
 // ever touched by this file.
 const FLAG_RED = "#DE2910";
-const INK = "#FFFFFF";
 
 export const schema = z.object({
   accent: z.string(), // ripe: a chip in flight, and a chip seated in China
   accentDeep: z.string(), // deep: a chip at rest in the US block, and its trace
-  ink: z.string(), // the quota line
   backgroundBase: z.string(),
   backgroundSrc: z.string(),
   backgroundBlur: z.number(),
@@ -293,7 +301,6 @@ export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({
   accent: ACCENT,
   accentDeep: ACCENT_DEEP,
-  ink: INK,
   backgroundBase: BG_BASE,
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
@@ -389,36 +396,6 @@ const blockSeat = (cx: number, cols: number, row: number, col: number, i: number
   y: BLOCK_TOP_Y + row * STEP + jit(i, 12),
 });
 
-const BLOCK_HALF_W = ((COLS - 1) / 2) * STEP; // 108.46
-
-// ---------------------------------------------------------------------------
-// The quota. A dashed ink horizontal lying across the top of China's empty
-// area, 20 world px above the top row's centre so the top row sits just under
-// it, spanning the block's width plus 12 px each side. Cut 1's 12/9 dash,
-// phased so a whole number of periods fits the span exactly and neither end is
-// a stub. Snapped to a half-pixel with an odd stroke width, as every horizontal
-// rule in this set is.
-// ---------------------------------------------------------------------------
-const LINE_ABOVE = 20;
-const LINE_Y = Math.round(BLOCK_TOP_Y - LINE_ABOVE) + 0.5; // 1180.5
-const LINE_PAD = 12;
-const LINE_X0 = CN_CX - BLOCK_HALF_W - LINE_PAD; // 229.54
-const LINE_X1 = CN_CX + BLOCK_HALF_W + LINE_PAD; // 470.46
-const LINE_DASH_ON = 12;
-const LINE_DASH_OFF = 9;
-// n dashes and n-1 gaps, so the rule starts AND ends on a dash and neither end
-// is a stub: n * on + (n - 1) * off = the span, solved for `on` at the n
-// nearest cut 1's 12/9 period. On this 240.9 px span that is twelve dashes of
-// 11.83 with nine between them — within 1.5% of the pattern cut 1 draws.
-const LINE_DASH: [number, number] = (() => {
-  const len = LINE_X1 - LINE_X0;
-  const period = LINE_DASH_ON + LINE_DASH_OFF;
-  const n = Math.max(1, Math.round((len + LINE_DASH_OFF) / period));
-  const on = (len - (n - 1) * LINE_DASH_OFF) / n;
-  return [on, LINE_DASH_OFF];
-})();
-const LINE_CLICK = 4; // the house click: ink, four frames, on `beats.allowing`
-
 // China's seats, in FILL ORDER: bottom row first, and inside a row the FAR side
 // first — the LEFT, since the chips arrive from the right. Cut 3's rule,
 // mirrored, and it is what makes "no flyer through a seated disc" true by
@@ -464,10 +441,10 @@ if (CHINA_SEATS.length !== N_CELLS) {
 //
 //   f0-15    k 1.45     both flags whole with room: the China flag's left edge
 //            cx 540     at screen x 90.5 and the US flag's right edge at 989.5,
-//                       the blocks' outer dots at 90.3 and 989.3, the quota
-//                       line's left end at 89.8 — every margin over 89 px. The
-//                       flags' centre at screen y 830, the blocks' bottom row
-//                       at 1144.
+//                       the blocks' outer dots at 90.3 and 989.3 — every
+//                       margin over 88 px, the tightest being a dot's outer
+//                       edge at 88.8. The flags' centre at screen y 830, the
+//                       blocks' bottom row at 1144.
 //   f16-36   -> k 1.25  the same picture, wider: those edges at 152.5 and
 //            cx 540     927.5, the flags' centre still at screen y 830 and the
 //                       blocks' bottom row at 1100. Inside 0.5% of target by
@@ -510,14 +487,14 @@ const CAM_FF = [0, ...CAM.F, DURATION];
 const CAM_K = [K_OPEN, ...CAM.K, K_FINAL];
 const CAM_CY = [CY_OPEN, ...CAM.CY, CY_FINAL];
 
-// The opening frame is the whole point of this pass, so it is a test rather
-// than a claim: at K_OPEN about CX, every horizontal extreme in the piece — the
-// two flags' outer edges, the quota line's ends, and both blocks' outermost
-// dots at their largest breath — has to clear the side of the frame by 60 px.
+// The opening frame is the whole point of pass 2, so it is a test rather than a
+// claim: at K_OPEN about CX, every horizontal extreme in the piece — the two
+// flags' outer edges and both blocks' outermost dots at their largest breath —
+// has to clear the side of the frame by 60 px.
 const SIDE_MARGIN_MIN = 60;
 const OPEN_MARGIN = (() => {
   const screenX = (x: number) => FRAME_W / 2 + (x - CX) * K_OPEN;
-  const extremes: number[] = [CN_X, US_RIGHT, LINE_X0, LINE_X1];
+  const extremes: number[] = [CN_X, US_RIGHT];
   const rMax = DOT_RADIUS * 1.25 * 1.05; // the widest a dot ever breathes
   for (const cx of [CN_CX, US_CX]) {
     for (const col of [0, COLS - 1]) {
@@ -558,7 +535,6 @@ if (
 const BOW_MIN = 60; // the control point, above the chord
 const BOW_MAX = 110;
 const FLAG_CLEAR = 6; // how far under a flag an arc has to stay
-const LINE_CLEAR = 3; // how far under the quota an arc has to stay
 const RIPEN = 4; // frames a chip takes to go deep -> ripe once it launches
 
 // The ramp, normalised. gap_i = GAP_FIRST * q^i with q chosen so the last of
@@ -653,8 +629,7 @@ const CELLS: Cell[] = (() => {
   // --- the arcs, and the two ceilings --------------------------------------
   // The control point sits straight above the chord's midpoint, so x is linear
   // in t and a ceiling is a bound on the bow rather than a search. See the
-  // header for the flag ceiling, the quota ceiling and why the monotonicity
-  // floor outranks both.
+  // header for the flag ceiling and why the monotonicity floor outranks it.
   const bows = base.map((b, n) => {
     if (seatIdx[n] < 0) return 0;
     const p0 = b.seat;
@@ -666,16 +641,13 @@ const CELLS: Cell[] = (() => {
       const t = s / 60;
       const x = p0.x + (p2.x - p0.x) * t;
       const underFlag = (x + r > CN_X && x - r < CN_RIGHT) || (x + r > US_X && x - r < US_RIGHT);
-      const overBlock = x + r > LINE_X0 && x - r < LINE_X1;
-      if (!underFlag && !overBlock) continue;
-      let ceiling = -Infinity;
-      if (underFlag) ceiling = Math.max(ceiling, FLAG_BOTTOM + FLAG_CLEAR);
-      if (overBlock) ceiling = Math.max(ceiling, LINE_Y + LINE_CLEAR);
+      if (!underFlag) continue;
+      const ceiling = FLAG_BOTTOM + FLAG_CLEAR;
       const chord = p0.y + (p2.y - p0.y) * t;
       const w = 2 * (1 - t) * t;
       cap = Math.min(cap, (chord - r - ceiling) / w);
     }
-    // Monotonicity outranks the ceilings: an arc that is not monotone in y can
+    // Monotonicity outranks the ceiling: an arc that is not monotone in y can
     // rise into its seat through the row below it, and that is the rule the
     // no-overlap proof rests on.
     return Math.min(Math.max(BOW_MIN + (BOW_MAX - BOW_MIN) * hash(b.seed, 53), floorBow),
@@ -715,9 +687,9 @@ const flyAt = (c: Cell, frame: number): Pt => {
 // Every flyer against every seat already claimed in China. It throws rather
 // than letting a frame render with a chip drawn through a chip.
 //
-// It also measures the two things the ceilings are for: the worst clearance
-// under either flag, and how far above the quota an arc ever gets — and, kept
-// apart from the hard test, how close a departing chip passes to one still
+// It also measures the thing the ceiling is for — the worst clearance under
+// either flag — and, kept apart from the hard test, how close a departing chip
+// passes to one still
 // sitting in its own block. That second number is the ORIGIN, and it is not a
 // fault: a block that empties from the bottom has its lower rows lift off over
 // the rows above them, which is what a departure looks like and is exactly
@@ -732,21 +704,13 @@ export const SWEEP = (() => {
   let originGrazes = 0;
   let stayGrazes = 0;
   let flagClear = Infinity;
-  let overLine = 0;
-  let arcsOverLine = 0;
   for (const c of CROSSING) {
-    let crossed = false;
     const r = DOT_RADIUS * c.rad;
     for (let f = c.xT0; f <= c.xLand; f += 0.25) {
       const p = flyAt(c, f);
       // the flags
       if (p.x + r > CN_X && p.x - r < CN_RIGHT) flagClear = Math.min(flagClear, p.y - r - FLAG_BOTTOM);
       if (p.x + r > US_X && p.x - r < US_RIGHT) flagClear = Math.min(flagClear, p.y - r - FLAG_BOTTOM);
-      // the quota
-      if (p.x + r > LINE_X0 && p.x - r < LINE_X1 && p.y - r < LINE_Y) {
-        overLine = Math.max(overLine, LINE_Y - (p.y - r));
-        crossed = true;
-      }
       // THE HARD TEST: seats already claimed in China
       for (const o of CROSSING) {
         if (o.xLand >= c.xLand || o.xLand > f) continue;
@@ -768,7 +732,6 @@ export const SWEEP = (() => {
         }
       }
     }
-    if (crossed) arcsOverLine++;
   }
   const inFlightAt = (f: number) =>
     CELLS.filter((c) => c.crosses && f >= c.xT0 && f < c.xLand).length;
@@ -778,8 +741,6 @@ export const SWEEP = (() => {
     originGrazes,
     stayGrazes,
     flagClear: Number(flagClear.toFixed(2)),
-    arcsOverLine,
-    overLine: Number(overLine.toFixed(2)),
     span: Number(SCHEDULE.span.toFixed(2)),
     gapFirst: Number((SCHEDULE.launch[1] - SCHEDULE.launch[0]).toFixed(2)),
     gapLast: Number(
@@ -886,7 +847,6 @@ const path = (pts: Pt[]) =>
 const CloseTheGap: React.FC<Props> = ({
   accent,
   accentDeep,
-  ink,
   backgroundBase,
   backgroundSrc,
   backgroundBlur,
@@ -901,7 +861,6 @@ const CloseTheGap: React.FC<Props> = ({
   dotRadius,
   dotOpacity,
   traceOpacity,
-  beats,
 }) => {
   const frame = useCurrentFrame();
 
@@ -946,12 +905,6 @@ const CloseTheGap: React.FC<Props> = ({
     };
   });
 
-  // -- the quota's click ------------------------------------------------------
-  // Four frames of full ink on "allowing", the word that names it. The house
-  // click, and the only thing the line ever does.
-  const lineOpacity =
-    frame >= beats.allowing && frame < beats.allowing + LINE_CLICK ? 1 : OP_READ;
-
   // -- camera -----------------------------------------------------------------
   const cam = runCamera(frame, CAM_FF, CAM_CY, CAM_K);
   // cx is fixed at the flags' midpoint, so the only thing sideways is the hand.
@@ -961,9 +914,8 @@ const CloseTheGap: React.FC<Props> = ({
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
 
-  // The two flags and the quota line are icons lying on the field, so they take
-  // the small per-icon shadow in screen px. The dots never do: they are the
-  // field.
+  // The two flags are icons lying on the field, so they take the small per-icon
+  // shadow in screen px. The dots never do: they are the field.
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
 
   return (
@@ -1018,20 +970,6 @@ const CloseTheGap: React.FC<Props> = ({
             {dots.map((d) => (
               <circle key={d.key} cx={d.x} cy={d.y} r={d.r} fill={d.fill} opacity={dotOpacity} />
             ))}
-
-            {/* the quota: what the US is allowing */}
-            <line
-              x1={LINE_X0}
-              y1={LINE_Y}
-              x2={LINE_X1}
-              y2={LINE_Y}
-              stroke={ink}
-              strokeWidth={3}
-              strokeLinecap="round"
-              strokeDasharray={`${LINE_DASH[0].toFixed(3)} ${LINE_DASH[1].toFixed(3)}`}
-              opacity={lineOpacity}
-              style={{ filter: icon }}
-            />
 
             {/* the flag of China, floating from f0 */}
             <g style={{ filter: icon }}>
