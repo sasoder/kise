@@ -36,7 +36,8 @@ export const FPS = 30;
  *
  * Motion, and nothing else:
  * 1. Intro, frames 0-18: ring + numeral scale 0.92 -> 1 and fade 0 -> 1,
- *    Easing.out(Easing.cubic). Label fades in over frames 8-24.
+ *    Easing.out(Easing.cubic). The label is off by default (empty string); when
+ *    one is passed it fades in over frames 8-24 at the same place as before.
  * 2. Tick, every 30 frames (30, 60 ... 450): the outgoing numeral slides up
  *    130px and the incoming one rises from +130px over 8 frames; the ring
  *    group pops 1 -> 1.03 -> 1 over the same 8 frames. The crossfade is
@@ -53,6 +54,17 @@ export const FPS = 30;
  *    the arc reaches zero length; one thin ring (stroke 6) expands from the
  *    ring radius outward over frames 450-478, ink 0.6 -> 0. Then the
  *    frame holds, frames 478-479. Nothing fades out at the end.
+ *
+ * Outside stroke on the numeral: every digit is drawn twice in the same masked
+ * box — a back copy with `color: transparent` and a centred text stroke of
+ * 2 * strokeWidth, and the front copy carrying the real fill. A centred stroke
+ * half-eats the letterform, so only the outer half survives once the fill is
+ * painted over it: 8px centred reads as 4px outside. Both copies inherit one
+ * set of text metrics from their wrapper and are driven by the same slide and
+ * opacity, so they cannot separate mid-tick. The colour follows the digit's own
+ * state, not the clock's: black under plain ink, white under the gradient, so
+ * the 4 -> 3 tick swaps a black-stroked "4" out for a white-stroked "3" with no
+ * extra animation.
  */
 
 const WIDTH = 1080;
@@ -127,6 +139,12 @@ export const schema = z.object({
 	ink: z.string(),
 	/** Empty string hides the label. */
 	label: z.string(),
+	/** Visible outside band on the numeral, in px at 1080 wide. */
+	strokeWidth: z.number().min(0),
+	/** Stroke under a plain-ink numeral. */
+	strokeInk: z.string(),
+	/** Stroke under a gradient numeral. */
+	strokeAccent: z.string(),
 });
 
 type Props = z.infer<typeof schema>;
@@ -137,7 +155,10 @@ export const defaultProps = schema.parse({
 	accentFrom: '#A300AF',
 	accentTo: '#520EF1',
 	ink: '#FFFFFF',
-	label: 'SEKUNDER',
+	label: '',
+	strokeWidth: 4,
+	strokeInk: '#000000',
+	strokeAccent: '#FFFFFF',
 });
 
 export const DURATION = defaultProps.seconds * FPS + 30;
@@ -150,7 +171,27 @@ const Numeral: React.FC<{
 	accentFrom: string;
 	accentTo: string;
 	ink: string;
-}> = ({value, offsetY, opacity, gradient, accentFrom, accentTo, ink}) => {
+	strokeWidth: number;
+	strokeInk: string;
+	strokeAccent: string;
+}> = ({
+	value,
+	offsetY,
+	opacity,
+	gradient,
+	accentFrom,
+	accentTo,
+	ink,
+	strokeWidth,
+	strokeInk,
+	strokeAccent,
+}) => {
+	/**
+	 * A gradient digit gets the light stroke, a plain one the dark stroke. The
+	 * choice is per numeral, so during a tick the outgoing and incoming digits
+	 * can carry different stroke colours without any extra animation.
+	 */
+	const strokeColor = gradient ? strokeAccent : strokeInk;
 	return (
 		<div
 			style={{
@@ -163,8 +204,16 @@ const Numeral: React.FC<{
 				opacity,
 			}}
 		>
-			<span
+			{/*
+			  One wrapper carries every metric — family, weight, size, tracking,
+			  line-height and the trailing-space balance — so the stroke copy and
+			  the fill copy are laid out from identical text metrics and cannot
+			  drift apart. Both copies are positioned, so DOM order alone decides
+			  which paints on top.
+			*/}
+			<div
 				style={{
+					position: 'relative',
 					fontFamily,
 					fontWeight: 800,
 					fontSize: NUMERAL_SIZE,
@@ -172,16 +221,35 @@ const Numeral: React.FC<{
 					letterSpacing: '-0.02em',
 					// Balances the trailing letter-space so the digits centre.
 					marginRight: '0.02em',
-					color: gradient ? 'transparent' : ink,
-					backgroundImage: gradient
-						? `linear-gradient(90deg, ${accentFrom}, ${accentTo})`
-						: undefined,
-					WebkitBackgroundClip: gradient ? 'text' : undefined,
-					backgroundClip: gradient ? 'text' : undefined,
 				}}
 			>
-				{value}
-			</span>
+				<span
+					style={{
+						position: 'absolute',
+						left: 0,
+						top: 0,
+						color: 'transparent',
+						// Centred, so half of it survives outside the fill.
+						WebkitTextStrokeWidth: `${strokeWidth * 2}px`,
+						WebkitTextStrokeColor: strokeColor,
+					}}
+				>
+					{value}
+				</span>
+				<span
+					style={{
+						position: 'relative',
+						color: gradient ? 'transparent' : ink,
+						backgroundImage: gradient
+							? `linear-gradient(90deg, ${accentFrom}, ${accentTo})`
+							: undefined,
+						WebkitBackgroundClip: gradient ? 'text' : undefined,
+						backgroundClip: gradient ? 'text' : undefined,
+					}}
+				>
+					{value}
+				</span>
+			</div>
 		</div>
 	);
 };
@@ -193,6 +261,9 @@ const SporttouchenTimer: React.FC<Props> = ({
 	accentTo,
 	ink,
 	label,
+	strokeWidth,
+	strokeInk,
+	strokeAccent,
 }) => {
 	const frame = useCurrentFrame();
 	const {fps} = useVideoConfig();
@@ -338,6 +409,9 @@ const SporttouchenTimer: React.FC<Props> = ({
 							accentFrom={accentFrom}
 							accentTo={accentTo}
 							ink={ink}
+							strokeWidth={strokeWidth}
+							strokeInk={strokeInk}
+							strokeAccent={strokeAccent}
 						/>
 					) : null}
 					<Numeral
@@ -348,6 +422,9 @@ const SporttouchenTimer: React.FC<Props> = ({
 						accentFrom={accentFrom}
 						accentTo={accentTo}
 						ink={ink}
+						strokeWidth={strokeWidth}
+						strokeInk={strokeInk}
+						strokeAccent={strokeAccent}
 					/>
 				</div>
 			</AbsoluteFill>
