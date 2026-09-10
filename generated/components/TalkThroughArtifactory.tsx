@@ -59,6 +59,7 @@ import {
   WORLD_W,
   clamp01,
   smooth,
+  K_FINAL,
 } from "./ImpossibleTasks";
 // Cut 2. The state this piece continues from: the farm, the batched
 // neighbours, the seventeen reaches, the pump, the persisted wall beads, the
@@ -70,7 +71,6 @@ import {
   type Box,
   DURATION as TH_DURATION,
   FARM_COLS,
-  K_PUSH,
   NEIGHBOURS,
   OFFSET as TH_OFFSET,
   OUR,
@@ -79,9 +79,6 @@ import {
   PUMP_CAP,
   PUMP_PULL,
   REACHES,
-  TH_CAM_CY,
-  TH_CAM_F,
-  TH_CAM_K,
   THREAD_OP_STEPS,
   type Th,
   WAVE2,
@@ -153,7 +150,10 @@ export const DURATION = 136;
 //     ink ring r 14 stroke 3.5 lands on each over 8
 //     frames with Easing.out(Easing.back(1.6)) and
 //     the agent under it goes deep -> ripe as the
-//     ring lands. Ours, below, left                 — "some agents"     f14, f20, f26
+//     ring lands. Ours on "some agents" f14; the
+//     box below as the first packet lands on it f78;
+//     the left box as it launches f87 (pass 2: the
+//     open is tight, the others are off-frame)      — "some agents"     f14, f78, f87
 //   THE FIRST THREAD FINDS THE WAY OUT. From our
 //     ringed agent an accent packet — a small white
 //     head with a trailing tail, MessageBoardV2's
@@ -286,11 +286,11 @@ export const TH_CLOCK = TH_DURATION; // 231
 // keyed to end on the word is still running past it. Ending at f70 puts the
 // move on screen across f56-78 and dead still under "each other".
 // ---------------------------------------------------------------------------
-export const K_OPEN = K_PUSH; // 0.50, cut 2's resolved zoom
+export const K_OPEN = K_FINAL; // 0.95 — director pass 2: open on cut 2's OPENING framing (tight on our box), not its end
 export const K_WIDE = 0.4;
 export const CONTENT_WIDE = 250;
-export const CAM_MOVE_F0 = 56; // local; the move runs under "talk to"
-export const CAM_MOVE_F1 = 70;
+export const CAM_MOVE_F0 = 52; // local; the move runs under "talk to" — a 2.4x zoom, so a slightly longer ramp
+export const CAM_MOVE_F1 = 72;
 const MOVE = camMove({
   f0: OFFSET + CAM_MOVE_F0,
   f1: OFFSET + CAM_MOVE_F1,
@@ -301,9 +301,11 @@ const MOVE = camMove({
   warp: 0.72,
 });
 const CY_WIDE = CONTENT_WIDE + 125 / K_WIDE;
-export const TA_CAM_F = [...TH_CAM_F, ...MOVE.F, OFFSET + DURATION];
-export const TA_CAM_K = [...TH_CAM_K, ...MOVE.K, K_WIDE];
-export const TA_CAM_CY = [...TH_CAM_CY, ...MOVE.CY, CY_WIDE];
+// The track no longer starts from cut 2's: this piece opens at k 0.95, so the
+// first key IS the opening framing and the damper is at rest on it from f0.
+export const TA_CAM_F = [OFFSET, ...MOVE.F, OFFSET + DURATION];
+export const TA_CAM_K = [K_OPEN, ...MOVE.K, K_WIDE];
+export const TA_CAM_CY = [CONTENT_FINAL + 125 / K_OPEN, ...MOVE.CY, CY_WIDE];
 
 // ---------------------------------------------------------------------------
 // THE PACKAGE MANAGER. One rail, one pipe per box in the two rows either side
@@ -676,7 +678,10 @@ const TalkThroughArtifactory: React.FC<Props> = ({
   // -- the three rings -------------------------------------------------------
   // "some agents": three of them, one to a box. The ring lands with the shared
   // overshoot; the agent under it goes deep -> ripe on the same eight frames.
-  const ringAt = [beats.twelfthSome + 3, beats.twelfthSome + 9, beats.twelfthSome + 15];
+  // director pass 2: the open is tight on our box, so only our agent can ring on
+  // "some agents"; the other two ring the moment they speak — below as the first
+  // packet lands on it (f78), left as it launches (f87).
+  const ringAt = [beats.twelfthSome + 3, FIND_ARRIVE, THIRD_LAUNCH];
   const ringScale = ringAt.map((at) =>
     interpolate(frame, [at, at + RING_LAND], [0.5, 1], {
       ...clamp,
