@@ -22,6 +22,7 @@ import {
 // The baked map: Natural Earth land on a north-up Mercator centred on 45 W.
 // Written by `scripts/build-atlantic-map.mjs`; nothing here re-derives it.
 import { BROWNSVILLE, LAND_D, PARIS, ROUTE_D, ROUTE_PTS } from "./atlanticMapData";
+import { BRONZE_DATA_URL } from "./bronzeData";
 
 const { fontFamily } = loadFont("normal", {
   weights: ["800", "900"],
@@ -422,7 +423,8 @@ const BV_LABEL_BL = 920; // clear of the parked plane's tail at ~855
 // rests on), and later ingots draw over earlier ones, so a higher row covers
 // the top faces of the row beneath it the way a real stack does.
 export const INGOT_IMG = 130; // world px, the PNG's square canvas
-export const INGOT_SRC = "bronze.png";
+// The bitmap is inlined (bronzeData.ts): an SVG <image> that fetches a file
+// races the frame capture and dropped whole rows on scattered frames (v3).
 const INGOT_ALPHA = { x0: 28, x1: 233, y0: 57, y1: 208, size: 256 };
 export const INGOT_W = (INGOT_IMG * (INGOT_ALPHA.x1 - INGOT_ALPHA.x0)) / INGOT_ALPHA.size; // 104
 export const INGOT_H = (INGOT_IMG * (INGOT_ALPHA.y1 - INGOT_ALPHA.y0)) / INGOT_ALPHA.size; // 77
@@ -743,14 +745,6 @@ const ParisToBrownsville: React.FC<Props> = ({
         blur={paperBlur}
       />
 
-      {/* Preload: a Remotion <Img> holds the render until bronze.png is in
-          the browser cache, so the SVG <image> ingots below never draw a
-          frame before the bitmap has arrived. */}
-      <Img
-        src={staticFile(INGOT_SRC)}
-        style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
-      />
-
       <AbsoluteFill>
         {world(
           <>
@@ -850,7 +844,7 @@ const ParisToBrownsville: React.FC<Props> = ({
               return (
                 <g key={`ingot-${i}`} style={{ filter: icon }} opacity={op}>
                   <image
-                    href={staticFile(INGOT_SRC)}
+                    href={BRONZE_DATA_URL}
                     width={INGOT_IMG}
                     height={INGOT_IMG}
                     x={(slot.x - INGOT_CX).toFixed(2)}
