@@ -1,20 +1,20 @@
 import {Composition} from 'remotion';
-import ImpossibleTasks, {
+import TryToHackOut, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ImpossibleTasks';
+} from '../generated/components/TryToHackOut';
 
-// Dwarkesh `impossible-tasks` 0:01.960-0:08.939, orange Dwarkesh style: OpenAI
-// deals five task tiles into a sandbox; their lines stop at the wall, the
-// internet ring sits outside it, and the gate under the ring was never built.
+// Dwarkesh `impossible-tasks` 0:08.939-0:17.899, orange Dwarkesh style, cut 2:
+// opens on cut 1's last frame, the five reaches pump at the wall, a pull-back
+// reveals three isolated sandboxes, and every crowd strikes its walls from inside.
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="ImpossibleTasks"
-        component={ImpossibleTasks}
+        id="TryToHackOut"
+        component={TryToHackOut}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}

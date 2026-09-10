@@ -139,15 +139,15 @@ export const schema = z.object({
 
 export type Props = z.infer<typeof schema>;
 
-const WORLD_W = 1080;
-const WORLD_H = 2200;
+export const WORLD_W = 1080;
+export const WORLD_H = 2200;
 
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-const smooth = (v: number) => {
+export const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+export const smooth = (v: number) => {
   const x = clamp01(v);
   return x * x * (3 - 2 * x);
 };
-const clampi = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+export const clampi = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 // ---------------------------------------------------------------------------
 // The sandbox. One ink box, 900 x 700, centred on world (540, 60): the top wall
@@ -155,36 +155,36 @@ const clampi = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, 
 // so the wall's INSIDE face is 1.5 world px in from its centre line. It is drawn
 // from f0 and never animates — it is not a gesture, it is where the agents live.
 // ---------------------------------------------------------------------------
-const CENTRE_X = 540;
-const BOX_W = 900;
-const BOX_H = 700;
-const BOX_X0 = CENTRE_X - BOX_W / 2; // 90
-const BOX_X1 = CENTRE_X + BOX_W / 2; // 990
-const BOX_CY = 60;
-const BOX_Y0 = BOX_CY - BOX_H / 2; // -290
-const BOX_Y1 = BOX_CY + BOX_H / 2; // 410
-const STROKE = 3;
-const BOX_PATH = squirclePath(BOX_W, BOX_H);
+export const CENTRE_X = 540;
+export const BOX_W = 900;
+export const BOX_H = 700;
+export const BOX_X0 = CENTRE_X - BOX_W / 2; // 90
+export const BOX_X1 = CENTRE_X + BOX_W / 2; // 990
+export const BOX_CY = 60;
+export const BOX_Y0 = BOX_CY - BOX_H / 2; // -290
+export const BOX_Y1 = BOX_CY + BOX_H / 2; // 410
+export const STROKE = 3;
+export const BOX_PATH = squirclePath(BOX_W, BOX_H);
 // the inside face of the top wall, and where a round-capped line has to END so
 // that its cap lands exactly on that face and never pokes through
-const WALL_INNER = BOX_Y0 + STROKE / 2; // -288.5
-const LINE_TIP_Y = WALL_INNER + STROKE / 2; // -287
+export const WALL_INNER = BOX_Y0 + STROKE / 2; // -288.5
+export const LINE_TIP_Y = WALL_INNER + STROKE / 2; // -287
 
 // The OpenAI mark, above the box.
-const MARK = { x: CENTRE_X, y: -560 };
+export const MARK = { x: CENTRE_X, y: -560 };
 
 // The internet: an ink ring between the mark and the top wall.
-const RING = { x: CENTRE_X, y: -400, r: 40 };
+export const RING = { x: CENTRE_X, y: -400, r: 40 };
 // Inside it, the internet as the field would draw it: a wifi glyph of three
 // ink arcs over a dot, one stroke weight, centred in the ring. The dot sits
 // 15 px below the ring centre so the whole glyph (dot to outer arc) is centred.
-const WIFI = { radii: [10, 19, 28], dot: 3.5, dy: 15, halfAngle: (50 * Math.PI) / 180 };
-const WIFI_F0 = 106; // fades in as the ring closes (f108)
-const WIFI_DUR = 6;
+export const WIFI = { radii: [10, 19, 28], dot: 3.5, dy: 15, halfAngle: (50 * Math.PI) / 180 };
+export const WIFI_F0 = 106; // fades in as the ring closes (f108)
+export const WIFI_DUR = 6;
 
 // The gate: the 120 px of top wall centred under the ring.
-const GATE_X0 = CENTRE_X - 60; // 480
-const GATE_X1 = CENTRE_X + 60; // 600
+export const GATE_X0 = CENTRE_X - 60; // 480
+export const GATE_X1 = CENTRE_X + 60; // 600
 
 // ---------------------------------------------------------------------------
 // The camera. ONE move, and it is the whole of "OpenAI": open at k 1.50 with
@@ -205,12 +205,12 @@ const GATE_X1 = CENTRE_X + 60; // 600
 // 400, the ring spans 548-616, the box's top wall is at 675 and its bottom at
 // 1270, and the content centre lands at 835 under the captions.
 // ---------------------------------------------------------------------------
-const K_OPEN = 1.5;
-const K_FINAL = 0.95;
-const CONTENT_OPEN = BOX_CY + 80; // 140: the mark is fully above the frame at the open
-const CONTENT_FINAL = (MARK.y - 54 + BOX_Y1) / 2; // -102
-const CY_FINAL = CONTENT_FINAL + 125 / K_FINAL;
-const CAM = camMove({
+export const K_OPEN = 1.5;
+export const K_FINAL = 0.95;
+export const CONTENT_OPEN = BOX_CY + 80; // 140: the mark is fully above the frame at the open
+export const CONTENT_FINAL = (MARK.y - 54 + BOX_Y1) / 2; // -102
+export const CY_FINAL = CONTENT_FINAL + 125 / K_FINAL;
+export const CAM = camMove({
   f0: 0,
   f1: 9,
   k0: K_OPEN,
@@ -219,9 +219,9 @@ const CAM = camMove({
   c1: CONTENT_FINAL,
   warp: 0.72,
 });
-const CAM_F = [...CAM.F, DURATION];
-const CAM_K = [...CAM.K, K_FINAL];
-const CAM_CY = [...CAM.CY, CY_FINAL];
+export const CAM_F = [...CAM.F, DURATION];
+export const CAM_K = [...CAM.K, K_FINAL];
+export const CAM_CY = [...CAM.CY, CY_FINAL];
 
 // ---------------------------------------------------------------------------
 // The crowd. The field's step in both axes, jitter 0.9, radius spread
@@ -235,30 +235,30 @@ const CAM_CY = [...CAM.CY, CY_FINAL];
 // reads as two edges where there is only one — the ink wall is the only hard
 // edge in the piece.
 // ---------------------------------------------------------------------------
-const STEP = 940 / 39;
+export const STEP = 940 / 39;
 // director pass: the crowd presses up to the walls — 18 px inset, feathered over
 // two steps instead of four, so the box reads as full rather than framed.
-const CROWD_FEATHER = 2;
-const INSET = 18;
-const IN_X0 = BOX_X0 + INSET;
-const IN_X1 = BOX_X1 - INSET;
-const IN_Y0 = BOX_Y0 + INSET;
-const IN_Y1 = BOX_Y1 - INSET;
+export const CROWD_FEATHER = 2;
+export const INSET = 18;
+export const IN_X0 = BOX_X0 + INSET;
+export const IN_X1 = BOX_X1 - INSET;
+export const IN_Y0 = BOX_Y0 + INSET;
+export const IN_Y1 = BOX_Y1 - INSET;
 // The undulation is held to 0.45 of a step (~11 world px) so the nominal edge
 // can never wander out past the 30 px inset and put a seat on the wall.
-const WOB_AMP = 0.4;
-const edgeL = (y: number) => IN_X0 + wobble(y, 1.7) * WOB_AMP * STEP;
-const edgeR = (y: number) => IN_X1 - wobble(y, 3.1) * WOB_AMP * STEP;
-const edgeT = (x: number) => IN_Y0 + wobble(x, 2.3) * WOB_AMP * STEP;
-const edgeB = (x: number) => IN_Y1 - wobble(x, 4.9) * WOB_AMP * STEP;
+export const WOB_AMP = 0.4;
+export const edgeL = (y: number) => IN_X0 + wobble(y, 1.7) * WOB_AMP * STEP;
+export const edgeR = (y: number) => IN_X1 - wobble(y, 3.1) * WOB_AMP * STEP;
+export const edgeT = (x: number) => IN_Y0 + wobble(x, 2.3) * WOB_AMP * STEP;
+export const edgeB = (x: number) => IN_Y1 - wobble(x, 4.9) * WOB_AMP * STEP;
 
-const COLS = Math.round((IN_X1 - IN_X0) / STEP) + 1;
-const ROWS = Math.round((IN_Y1 - IN_Y0) / STEP) + 1;
-const GRID_X0 = (IN_X0 + IN_X1) / 2 - ((COLS - 1) * STEP) / 2;
-const GRID_Y0 = (IN_Y0 + IN_Y1) / 2 - ((ROWS - 1) * STEP) / 2;
+export const COLS = Math.round((IN_X1 - IN_X0) / STEP) + 1;
+export const ROWS = Math.round((IN_Y1 - IN_Y0) / STEP) + 1;
+export const GRID_X0 = (IN_X0 + IN_X1) / 2 - ((COLS - 1) * STEP) / 2;
+export const GRID_Y0 = (IN_Y0 + IN_Y1) / 2 - ((ROWS - 1) * STEP) / 2;
 
-type Seat = { x: number; y: number; r: number; rs: number; gc: number; gr: number };
-const SEATS: Seat[] = (() => {
+export type Seat = { x: number; y: number; r: number; rs: number; gc: number; gr: number };
+export const SEATS: Seat[] = (() => {
   const out: Seat[] = [];
   for (let gr = 0; gr < ROWS; gr++) {
     for (let gc = 0; gc < COLS; gc++) {
@@ -278,10 +278,10 @@ const SEATS: Seat[] = (() => {
   }
   return out;
 })();
-const NSEAT = SEATS.length;
+export const NSEAT = SEATS.length;
 
 // grid cell -> seat, so idle traffic can find a neighbour without a search
-const SEAT_AT = new Int32Array(COLS * ROWS).fill(-1);
+export const SEAT_AT = new Int32Array(COLS * ROWS).fill(-1);
 SEATS.forEach((s, i) => {
   SEAT_AT[s.gr * COLS + s.gc] = i;
 });
@@ -339,14 +339,14 @@ export const defaultProps: Props = schema.parse({
 // bottom edge clears the dot's top by 7 px and the agent stays visible under
 // its own task.
 // ---------------------------------------------------------------------------
-const TILE = 40;
-const TILE_HALF = TILE / 2;
-const TILE_PATH = squirclePath(TILE, TILE);
-const TILE_LIFT = 34; // world px from the agent's dot up to the tile's centre
-const ANCHOR_X = [250, 390, 540, 690, 830];
-const LADDER_Y = [186, 118, 50, -18, -86];
+export const TILE = 40;
+export const TILE_HALF = TILE / 2;
+export const TILE_PATH = squirclePath(TILE, TILE);
+export const TILE_LIFT = 34; // world px from the agent's dot up to the tile's centre
+export const ANCHOR_X = [250, 390, 540, 690, 830];
+export const LADDER_Y = [186, 118, 50, -18, -86];
 
-type Tile = {
+export type Tile = {
   seat: number; // index into SEATS
   x: number; // the tile's centre, in world px
   y: number;
@@ -358,7 +358,7 @@ type Tile = {
   tipX: number; // where its tip ends up after the converge
 };
 
-const TILES: Tile[] = (() => {
+export const TILES: Tile[] = (() => {
   // the ladder, permuted onto the anchors by hash: height is not a function of x
   const perm = ANCHOR_X.map((_, i) => i).sort((a, b) => hash(a, 22) - hash(b, 22));
   const wanted = ANCHOR_X.map((ax, i) => ({
@@ -423,27 +423,27 @@ const TILES: Tile[] = (() => {
 // world px a frame is the floor; if the hashed seats ever put a long line in a
 // late slot the speed is raised just enough that the last tip is against the
 // wall on "tasks", which is the beat the whole gesture is cut to.
-const LINE_DEADLINE = 57;
-const LINE_SPEED = Math.max(
+export const LINE_DEADLINE = 57;
+export const LINE_SPEED = Math.max(
   28,
   ...TILES.map((t) => t.len / Math.max(1, LINE_DEADLINE - t.lineFrom)),
 );
 
-const DEAL_DUR = 12; // frames in flight
-const TONE_DUR = 6; // deep -> ripe under a landed tile
+export const DEAL_DUR = 12; // frames in flight
+export const TONE_DUR = 6; // deep -> ripe under a landed tile
 
 // The internet ring, and the converge that follows it.
-const RING_F0 = 96;
-const RING_DUR = 12; // draws head-led and closes by f108
-const CONV_F0 = 100; // the tips start sliding along the wall
-const CONV_DUR = 12; // 12 frames each, staggered 1, so the last lands at f116
+export const RING_F0 = 96;
+export const RING_DUR = 12; // draws head-led and closes by f108
+export const CONV_F0 = 100; // the tips start sliding along the wall
+export const CONV_DUR = 12; // 12 frames each, staggered 1, so the last lands at f116
 
 // The gate. The wall's own segment fades out under a mask while the dashed one
 // fades in, so the two are one crossfade and never both solid.
-const GATE_F0 = 143;
-const GATE_DUR = 9;
-const GATE_DASH = 14;
-const GATE_GAP = 10;
+export const GATE_F0 = 143;
+export const GATE_DUR = 9;
+export const GATE_DASH = 14;
+export const GATE_GAP = 10;
 
 const ImpossibleTasks: React.FC<Props> = ({
   ink,
