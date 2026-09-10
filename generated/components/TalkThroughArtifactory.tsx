@@ -137,8 +137,11 @@ export const DURATION = 136;
 // running the full width of the farm (-2260..3340) so it bleeds off both frame
 // edges at every camera. Every box in row 0 drops a pipe from the middle of its
 // bottom wall to the rail; every box in row 1 raises one from the middle of its
-// top wall. Under our box the rail runs through the hub: three ink rings on the
-// rail at x 460 / 540 / 620, radii 24 / 34 / 24. No text, no logo.
+// top wall. Under our box the rail runs into THE HUB: one ink ring on the rail
+// at (540, 760), r 40 on stroke 3 — cut 1's internet ring exactly — holding an
+// isometric package glyph. The rail stops at x 500 and resumes at x 580, our
+// pipe ends at y 720 and the lower pipe starts at y 800, so the ring's interior
+// is the glyph's alone. No text, no logo.
 //
 // Every gesture is one word. Nothing else happens.
 //   cut 2's end framing, with the rail, the pipes
@@ -167,26 +170,27 @@ export const DURATION = 136;
 //     below are one picture. It is visually still
 //     five frames before "each other"               — "talk to"         f56-70
 //   THE ROUTE. From f57 the packet continues: down
-//     our pipe, THROUGH THE HUB (the middle ring
-//     clicks ink-bright for 4 frames as the head
-//     passes it, ~f66), down the lower pipe into the
-//     box below and across to its ringed agent,
-//     arriving exactly on the word — that agent's
-//     ring clicks 4 frames and it stays ripe        — "each other"      f78
+//     our pipe, THROUGH THE HUB (the ring and its
+//     package glyph click ink-bright together for 4
+//     frames as the head crosses r 40, ~f66), down
+//     the lower pipe into the box below and across
+//     to its ringed agent, arriving exactly on the
+//     word — that agent's ring clicks 4 frames and
+//     it stays ripe                                 — "each other"      f78
 //   THE REPLY, along the reverse route: up through
 //     the hub, click, into our box, to our agent    — "through this"    f80-96
 //   THE THIRD VOICE. The left agent launches to its
 //     own pipe mouth (-860, 410), down its pipe,
-//     ALONG THE RAIL to the hub (the outer-left ring
-//     clicks, then the middle), up our pipe, to our
-//     agent. Its head is on the rail across the
+//     ALONG THE RAIL to the hub (which clicks as the
+//     head reaches it), up our pipe, to our agent.
+//     Its head is on the rail across the
 //     whole word                       — "through this package manager" f87-120
 //   STEADY EXCHANGE. From "package manager" a new
 //     packet launches every 6 frames among the three
 //     ringed agents, all six directed pairs in a
 //     hashed order, always via the hub and never box
 //     to box. Two to four are in flight at a time;
-//     the hub rings click as heads pass; the three
+//     the hub clicks as heads pass; the three
 //     agents stay ripe                              — "package manager" f101-136
 //   held under traffic, never fades out             — tail              f120-136
 //
@@ -312,18 +316,49 @@ export const TA_CAM_CY = [CONTENT_FINAL + 125 / K_OPEN, ...MOVE.CY, CY_WIDE];
 // of it, and the hub where our column's two pipes meet it. It was established
 // in the sentence before this cut, so it is drawn from f0 and never animates —
 // it is not a gesture, it is what the boxes are plugged into.
+//
+// DIRECTOR'S PASS 3: THE PACKAGE GLYPH. The hub used to be three bare ink rings
+// on the rail (x 460 / 540 / 620, radii 24 / 34 / 24) and it did not say
+// "package manager" — it said "three rings". It is now ONE ring holding a
+// package, drawn exactly the way cut 1 draws the internet: RING's own numbers
+// (r 40, stroke 3, ink at OP_READ, under `iconShadow`) with a glyph inside it.
+// So the two things outside the sandbox — the internet and the package manager
+// — are one language: a ring with a glyph in it, and you read the glyph.
+//
+// Nothing crosses the ring's interior except that glyph. The rail runs in from
+// the left and stops at x 500, picks up again at x 580; our pipe comes down and
+// stops at y 720; the lower pipe starts at y 800. Every one of those is the
+// ring's own edge, so the ring is a hole in the plumbing rather than a washer
+// laid over it. The route geometry is untouched — a packet still passes through
+// (540, 760), it is just that the pipe is not drawn where the ring is.
 // ---------------------------------------------------------------------------
 export const RAIL_Y = (BOX_Y1 + (BOX_Y0 + PITCH_Y)) / 2; // 760: the middle of the gap
 export const RAIL_X0 = CENTRE_X + FARM_COLS[0] * PITCH_X; // -2260
 export const RAIL_X1 = CENTRE_X + FARM_COLS[FARM_COLS.length - 1] * PITCH_X; // 3340
 export const PIPE_TOP_Y = BOX_Y1; // 410, row 0's floor
 export const PIPE_BOT_Y = BOX_Y0 + PITCH_Y; // 1110, row 1's ceiling
-export const HUB = [
-  { x: 460, r: 24 },
-  { x: 540, r: 34 },
-  { x: 620, r: 24 },
+
+// The hub: the internet ring's exact numbers, on the rail under our column.
+export const HUB = { x: CENTRE_X, y: RAIL_Y, r: RING.r }; // (540, 760), r 40
+export const HUB_CLICK = 4; // frames the ring and its glyph stay ink-bright
+// Where the rail and the two pipes stop, so the interior is the glyph's alone.
+export const HUB_LEFT = HUB.x - HUB.r; // 500
+export const HUB_RIGHT = HUB.x + HUB.r; // 580
+export const HUB_TOP = HUB.y - HUB.r; // 720
+export const HUB_BOT = HUB.y + HUB.r; // 800
+
+// The package, in world px about the ring's centre: an isometric parcel — a
+// hexagon seen corner-on, the three edges of the near corner running out of the
+// middle of it, and a strap over the top face. Same treatment as cut 1's wifi
+// glyph: stroke 3, no fill, OP_READ, one <g>, under the same per-icon shadow,
+// present from f0 with the ring. It does not draw in, it is simply there.
+export const PKG_PATHS = [
+  "M 0 -26 L 22 -13 L 22 13 L 0 26 L -22 13 L -22 -13 Z", // the outline
+  "M 0 0 L -22 -13", // the three edges of the near corner
+  "M 0 0 L 22 -13",
+  "M 0 0 L 0 26",
+  "M -11 -19.5 L 11 -6.5", // the strap across the top face
 ];
-export const HUB_CLICK = 4; // frames a ring stays ink-bright once a head is in it
 
 // ---------------------------------------------------------------------------
 // THE THREE RINGED AGENTS. Solved, not placed.
@@ -693,9 +728,9 @@ const TalkThroughArtifactory: React.FC<Props> = ({
 
   // -- the packets -----------------------------------------------------------
   // Alive when the trail's rear has not yet run off the end of the route. The
-  // hub rings and the receiving agents' rings both click FROM THE HEAD, never
+  // hub ring and the receiving agents' rings both click FROM THE HEAD, never
   // from a parallel timer.
-  const hubClick = HUB.map(() => 0);
+  let hubClick = 0;
   const agentClick = [0, 0, 0];
   type Draw = { key: string; segs: { x1: number; y1: number; x2: number; y2: number; op: number }[]; head: P | null };
   const draws: Draw[] = [];
@@ -723,15 +758,13 @@ const TalkThroughArtifactory: React.FC<Props> = ({
     const head = sHead < p.route.total ? pointAt(p.route, sHead) : null;
     draws.push({ key: p.key, segs, head });
 
-    // a hub ring is bright for HUB_CLICK frames from the frame its head first
-    // fell inside it
+    // the hub is bright for HUB_CLICK frames from the frame a head first fell
+    // inside the ring — the same test the middle ring used, on the one ring
     for (let dt = 0; dt < HUB_CLICK; dt++) {
       const f = frame - dt;
       if (f < p.t0) break;
       const hp = pointAt(p.route, headAt(p, f));
-      HUB.forEach((h, hi) => {
-        if (Math.hypot(hp.x - h.x, hp.y - RAIL_Y) <= h.r) hubClick[hi] = 1;
-      });
+      if (Math.hypot(hp.x - HUB.x, hp.y - HUB.y) <= HUB.r) hubClick = 1;
     }
     if (frame >= p.arrive && frame < p.arrive + AGENT_CLICK) agentClick[p.to] = 1;
   }
@@ -926,41 +959,51 @@ const TalkThroughArtifactory: React.FC<Props> = ({
               </g>
             ))}
 
-            {/* THE PACKAGE MANAGER: the rail, the pipes, and the hub. Drawn in
-                that order, so the rail runs UNDER the hub rings and through
-                their open interiors. */}
+            {/* THE PACKAGE MANAGER: the rail, the pipes, and the hub. The rail
+                comes in from either side and STOPS at the ring's edge, and our
+                column's two pipes stop at the ring's top and bottom, so nothing
+                is drawn across the interior the glyph lives in. */}
             <g style={{ filter: icon }} stroke={ink} strokeWidth={STROKE} opacity={OP_READ}>
-              <line x1={RAIL_X0} y1={RAIL_Y} x2={RAIL_X1} y2={RAIL_Y} />
-              {FARM_COLS.map((i) => (
-                <g key={i}>
-                  <line
-                    x1={CENTRE_X + i * PITCH_X}
-                    y1={PIPE_TOP_Y}
-                    x2={CENTRE_X + i * PITCH_X}
-                    y2={RAIL_Y}
-                  />
-                  <line
-                    x1={CENTRE_X + i * PITCH_X}
-                    y1={PIPE_BOT_Y}
-                    x2={CENTRE_X + i * PITCH_X}
-                    y2={RAIL_Y}
-                  />
-                </g>
-              ))}
+              <line x1={RAIL_X0} y1={RAIL_Y} x2={HUB_LEFT} y2={RAIL_Y} />
+              <line x1={HUB_RIGHT} y1={RAIL_Y} x2={RAIL_X1} y2={RAIL_Y} />
+              {FARM_COLS.map((i) => {
+                const px = CENTRE_X + i * PITCH_X;
+                const hub = i === 0; // our column is the one the ring sits on
+                return (
+                  <g key={i}>
+                    <line x1={px} y1={PIPE_TOP_Y} x2={px} y2={hub ? HUB_TOP : RAIL_Y} />
+                    <line x1={px} y1={PIPE_BOT_Y} x2={px} y2={hub ? HUB_BOT : RAIL_Y} />
+                  </g>
+                );
+              })}
             </g>
-            <g style={{ filter: icon }}>
-              {HUB.map((h, hi) => (
-                <circle
-                  key={h.x}
-                  cx={h.x}
-                  cy={RAIL_Y}
-                  r={h.r}
-                  fill="none"
-                  stroke={ink}
-                  strokeWidth={STROKE}
-                  opacity={Math.min(1, OP_READ + (1 - OP_READ) * hubClick[hi])}
-                />
-              ))}
+            {/* the hub: one ring holding a package, on the internet ring's own
+                numbers, ring and glyph clicking together */}
+            <g
+              style={{ filter: icon }}
+              opacity={Math.min(1, OP_READ + (1 - OP_READ) * hubClick)}
+            >
+              <circle
+                cx={HUB.x}
+                cy={HUB.y}
+                r={HUB.r}
+                fill="none"
+                stroke={ink}
+                strokeWidth={STROKE}
+                strokeLinecap="round"
+              />
+              <g
+                transform={`translate(${HUB.x} ${HUB.y})`}
+                fill="none"
+                stroke={ink}
+                strokeWidth={STROKE}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                {PKG_PATHS.map((d) => (
+                  <path key={d} d={d} />
+                ))}
+              </g>
             </g>
           </svg>
         </div>
