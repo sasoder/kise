@@ -356,7 +356,7 @@ export const OFFSET = 168;
 // Six boxes on screen, against twelve at the wide.
 // ---------------------------------------------------------------------------
 const K_WIDE = 0.33; // director pass 3: was 0.21 — the pull-back went too far
-const K_PUSH = 0.5; // director pass 3: the push-in, cut 1's framing at half size
+export const K_PUSH = 0.5; // director pass 3: the push-in, cut 1's framing at half size
 const MARK_TOP = MARK.y - 54; // -614; the mark is 108 world px square
 const MARK_TOP_SCREEN = 300;
 const CONTENT_WIDE = MARK_TOP + (835 - MARK_TOP_SCREEN) / K_WIDE; // 1007.21 at k 0.33
@@ -580,7 +580,7 @@ export const WAVE2: Wave[] = (() => {
 
 // A neighbour's own tasks: 3-5 of them (hashed), at hashed seats, no two closer
 // than TILE_GAP, each with a reach pinned straight up at its own top wall.
-type NTile = { seat: number; x: number; y: number };
+export type NTile = { seat: number; x: number; y: number };
 const boxTiles = (seats: Seat[], n: number, id: number): NTile[] => {
   const count = 3 + Math.floor(hash(id, 30) * 3);
   const out: NTile[] = [];
@@ -602,7 +602,7 @@ const boxTiles = (seats: Seat[], n: number, id: number): NTile[] => {
   return out;
 };
 
-type Box = {
+export type Box = {
   id: number;
   i: number;
   j: number;
@@ -633,7 +633,7 @@ export const NEIGH_HACK_RATE = 0.35;
 export const RECEDE_DUR = 14;
 export const NEIGH_IDLE_FLOOR = 0.5; // the multiplier its idle threads end on
 
-const OUR: Box = {
+export const OUR: Box = {
   id: 0,
   i: 0,
   j: 0,
@@ -791,15 +791,15 @@ export const REACHES: Reach[] = (() => {
 // not begin in unison either. From the strike the cycle hardens to 9 frames
 // with no rest: the same gesture, harder, and no new shape for it.
 // ---------------------------------------------------------------------------
-const PUMP_PULL = 56; // world px the wall end retreats at full pump
-const PUMP_CAP = 0.45; // ...but never more than this much of the reach itself
+export const PUMP_PULL = 56; // world px the wall end retreats at full pump
+export const PUMP_CAP = 0.45; // ...but never more than this much of the reach itself
 const PUMP_IN = 8;
 const PUMP_OUT = 6;
 const HARD_IN = 5;
 const HARD_OUT = 4;
 const PUMP_SPREAD = 12; // the start frames are hashed across this window
 
-const pumpAt = (i: number, f: number, from: number, harden: number) => {
+export const pumpAt = (i: number, f: number, from: number, harden: number) => {
   const start = from + Math.floor(hash(i, 41) * PUMP_SPREAD);
   if (f < start) return 0;
   let t = start;
@@ -859,7 +859,7 @@ const wallHit = (x: number, y: number) => {
   return { ex: BOX_X1 - STROKE, ey: y, fx: BOX_X1, fy: y };
 };
 
-type Th = {
+export type Th = {
   key: string;
   x1: number;
   y1: number;
@@ -868,13 +868,13 @@ type Th = {
   op: number;
   head: number;
 };
-type Bead = { key: string; x: number; y: number; op: number };
+export type Bead = { key: string; x: number; y: number; op: number };
 
 // Cut 1's ambient traffic, verbatim in behaviour, taken as a function so every
 // crowd can run it. `jOff` shifts the hash so each box's schedule is its own;
 // at jOff 0 and frame + OFFSET this reproduces cut 1's threads exactly, which
 // is what makes f0 the same pixels.
-const idleFor = (f: number, box: Box, count: number, lit: Float32Array, out: Th[]) => {
+export const idleFor = (f: number, box: Box, count: number, lit: Float32Array, out: Th[]) => {
   const reach = 5;
   for (let j = 0; j < count; j++) {
     const jj = j + box.jOff;
@@ -907,7 +907,7 @@ const idleFor = (f: number, box: Box, count: number, lit: Float32Array, out: Th[
   }
 };
 
-const hackFor = (
+export const hackFor = (
   frame: number,
   f0: number,
   box: Box,
@@ -966,7 +966,7 @@ const hackFor = (
 // dot in a bucket can be one subpath of one <path> — 65 elements a box instead
 // of 950, with the same geometry. OUR box is exempt: it keeps cut 1's element
 // tree exactly, because f0 is measured against it.
-const dotPaths = (box: Box, lit: Float32Array, F: number, dotRadius: number) => {
+export const dotPaths = (box: Box, lit: Float32Array, F: number, dotRadius: number) => {
   const buckets: string[] = new Array(TONE_STEPS + 1).fill("");
   for (let i = 0; i < box.n; i++) {
     const s = box.seats[i];
@@ -986,8 +986,8 @@ const dotPaths = (box: Box, lit: Float32Array, F: number, dotRadius: number) => 
 // (a 6% step on a line that is at most 0.4 opaque and, at the wide, 0.8 screen
 // px long per world px) and one <path> per bucket for the lines and one for the
 // heads.
-const THREAD_OP_STEPS = 16;
-const threadPaths = (list: Th[], mul = 1) => {
+export const THREAD_OP_STEPS = 16;
+export const threadPaths = (list: Th[], mul = 1) => {
   const lines: string[] = new Array(THREAD_OP_STEPS + 1).fill("");
   const heads: string[] = new Array(THREAD_OP_STEPS + 1).fill("");
   for (const t of list) {
@@ -1005,7 +1005,7 @@ const threadPaths = (list: Th[], mul = 1) => {
 // Is this box worth building at all? Its screen rect, with a 100 px margin for
 // the shadows, against the frame.
 const CULL_MARGIN = 100;
-const onScreen = (box: Box, cx: number, cy: number, k: number) => {
+export const onScreen = (box: Box, cx: number, cy: number, k: number) => {
   const sx0 = (BOX_X0 + box.dx - cx) * k + FRAME_W / 2;
   const sx1 = (BOX_X1 + box.dx - cx) * k + FRAME_W / 2;
   const sy0 = (BOX_Y0 + box.dy - cy) * k + FRAME_H / 2;

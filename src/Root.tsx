@@ -1,20 +1,20 @@
 import {Composition} from 'remotion';
-import TryToHackOut, {
+import TalkThroughArtifactory, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TryToHackOut';
+} from '../generated/components/TalkThroughArtifactory';
 
-// Dwarkesh `impossible-tasks` 0:08.939-0:17.899, orange Dwarkesh style, cut 2:
-// opens on cut 1's last frame, the five reaches pump at the wall, a pull-back
-// reveals three isolated sandboxes, and every crowd strikes its walls from inside.
+// Dwarkesh `impossible-tasks` 0:24.820-0:29.800, orange Dwarkesh style, cut 3:
+// three agents in three sandboxes ring up and start messaging through the
+// package-manager rail and hub that every sandbox taps into.
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="TryToHackOut"
-        component={TryToHackOut}
+        id="TalkThroughArtifactory"
+        component={TalkThroughArtifactory}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
