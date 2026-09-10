@@ -497,7 +497,10 @@ export const TH_CLOCK = FA_TH_CLOCK + CUT7_LEN + GAP; // 799 + 158 + 128 = 1085
 export const OP_DEAD = 0.28;
 
 // ---------------------------------------------------------------------------
-// The camera. Two moves, one per act, with true holds between.
+// The camera. Four moves, one per act, with true holds between. Director pass 3
+// added the return to the hub on "so OpenAI patched" (a slow plain ease in/out,
+// warp 1, over 22 frames) and the pull-back on "and as a result" that takes the
+// piece back out for the wipe.
 // ---------------------------------------------------------------------------
 export const K_OPEN = 0.6;
 export const K_CLOSE = 1.0;
@@ -509,6 +512,11 @@ export const M1_F0 = 0;
 export const M1_F1 = 10;
 export const M2_F0 = 38;
 export const M2_F1 = 52;
+export const K_PATCH = 0.9; // the return: hub centred, ring 72 px, the square 162 px
+export const M3_F0 = 116; // "so OpenAI patched" — on screen from ~f117, settled ~f146, before the seal
+export const M3_F1 = 138;
+export const M4_F0 = 172; // "and as a result" — back out for the wipe, settled well before "inadvertently"
+export const M4_F1 = 186;
 
 const M1 = camMove({
   f0: OFFSET + M1_F0,
@@ -528,11 +536,29 @@ const M2 = camMove({
   c1: C_WIDE,
   warp: CAM_WARP,
 });
+const M3 = camMove({
+  f0: OFFSET + M3_F0,
+  f1: OFFSET + M3_F1,
+  k0: K_WIDE,
+  k1: K_PATCH,
+  c0: C_WIDE,
+  c1: C_HUB,
+  warp: 1, // plain smoothstep: ease in, ease out, no early speed
+});
+const M4 = camMove({
+  f0: OFFSET + M4_F0,
+  f1: OFFSET + M4_F1,
+  k0: K_PATCH,
+  k1: K_WIDE,
+  c0: C_HUB,
+  c1: C_WIDE,
+  warp: CAM_WARP,
+});
 // Move 1 opens ON frame 0, so its own first key IS the opening rest and there
 // is no separate leading key to add — `runCamera` clamps everything before it.
-export const PW_CAM_F = [...M1.F, ...M2.F, OFFSET + DURATION];
-export const PW_CAM_K = [...M1.K, ...M2.K, K_WIDE];
-export const PW_CAM_CY = [...M1.CY, ...M2.CY, C_WIDE + CAM_LIFT / K_WIDE];
+export const PW_CAM_F = [...M1.F, ...M2.F, ...M3.F, ...M4.F, OFFSET + DURATION];
+export const PW_CAM_K = [...M1.K, ...M2.K, ...M3.K, ...M4.K, K_WIDE];
+export const PW_CAM_CY = [...M1.CY, ...M2.CY, ...M3.CY, ...M4.CY, C_WIDE + CAM_LIFT / K_WIDE];
 
 // ---------------------------------------------------------------------------
 // A SPAN OF A STROKE. Everything drawn twice in this piece — the dead accent
