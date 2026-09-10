@@ -379,7 +379,7 @@ export const PKG_PATHS = [
 //     from us has its ring cut by the left edge on "some agents". This one
 //     lands whole at the edge and the camera move brings it fully in.
 // ---------------------------------------------------------------------------
-type P = { x: number; y: number };
+export type P = { x: number; y: number };
 export const OUR_MOUTH: P = { x: CENTRE_X, y: PIPE_TOP_Y }; // (540, 410)
 // THE CONVERSATION LAYER IS DRAWN IN SCREEN PX. The agent-crowd language's
 // numbers — a ring at r 14 on stroke 3.5, a thread's head at r 4 — were written
@@ -396,11 +396,11 @@ export const RING_R = 14; // screen px
 export const RING_STROKE = 3.5; // screen px
 export const RING_LAND = 8; // frames
 
-const wallDist = (x: number, y: number) =>
+export const wallDist = (x: number, y: number) =>
   Math.min(x - BOX_X0, BOX_X1 - x, y - BOX_Y0, BOX_Y1 - y);
 
 // point to segment, for the reach clearance
-const segDist = (px: number, py: number, ax: number, ay: number, bx: number, by: number) => {
+export const segDist = (px: number, py: number, ax: number, ay: number, bx: number, by: number) => {
   const dx = bx - ax;
   const dy = by - ay;
   const L2 = dx * dx + dy * dy || 1;
@@ -408,7 +408,7 @@ const segDist = (px: number, py: number, ax: number, ay: number, bx: number, by:
   return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
 };
 
-const OUR_TILES: P[] = [
+export const OUR_TILES: P[] = [
   ...TILES.map((t) => ({ x: t.x, y: t.y })),
   ...WAVE2.map((w) => ({ x: w.x, y: w.y })),
 ];
@@ -435,12 +435,12 @@ export const OUR_AGENT = (() => {
   return { seat: i, x: SEATS[i].x, y: SEATS[i].y };
 })();
 
-const BELOW = NEIGHBOURS.find((b) => b.i === 0 && b.j === 1) as Box;
-const LEFT = NEIGHBOURS.find((b) => b.i === -1 && b.j === 0) as Box;
+export const BELOW = NEIGHBOURS.find((b) => b.i === 0 && b.j === 1) as Box;
+export const LEFT = NEIGHBOURS.find((b) => b.i === -1 && b.j === 0) as Box;
 
 // A neighbour's ringed seat, under a score of the caller's choosing. `want` is
 // the local-space target the score is measured against.
-const pickSeat = (box: Box, score: (s: { x: number; y: number }) => number) => {
+export const pickSeat = (box: Box, score: (s: { x: number; y: number }) => number) => {
   let best = -1;
   let bs = -Infinity;
   for (let i = 0; i < box.n; i++) {
@@ -495,10 +495,10 @@ export const N_LEFT: Node = {
 };
 export const NODES = [N_OURS, N_BELOW, N_LEFT];
 
-type Seg = { x: number; y: number; ux: number; uy: number; len: number; s0: number };
+export type Seg = { x: number; y: number; ux: number; uy: number; len: number; s0: number };
 export type Route = { segs: Seg[]; total: number };
 
-const makeRoute = (pts: P[]): Route => {
+export const makeRoute = (pts: P[]): Route => {
   const segs: Seg[] = [];
   let s0 = 0;
   for (let i = 0; i + 1 < pts.length; i++) {
@@ -512,7 +512,7 @@ const makeRoute = (pts: P[]): Route => {
   return { segs, total: s0 };
 };
 
-const pointAt = (r: Route, s: number): P => {
+export const pointAt = (r: Route, s: number): P => {
   const t = Math.max(0, Math.min(r.total, s));
   for (const g of r.segs) {
     if (t <= g.s0 + g.len) return { x: g.x + g.ux * (t - g.s0), y: g.y + g.uy * (t - g.s0) };
@@ -521,7 +521,7 @@ const pointAt = (r: Route, s: number): P => {
   return { x: g.x + g.ux * g.len, y: g.y + g.uy * g.len };
 };
 
-const routeBetween = (a: Node, b: Node) =>
+export const routeBetween = (a: Node, b: Node) =>
   makeRoute([{ x: a.x, y: a.y }, a.mouth, a.rail, b.rail, b.mouth, { x: b.x, y: b.y }]);
 
 // every ordered pair, both ways, built once
@@ -556,7 +556,7 @@ export type Pk = {
   to: number; // index into NODES
 };
 
-const simplePk = (key: string, from: number, to: number, t0: number, v: number): Pk => {
+export const simplePk = (key: string, from: number, to: number, t0: number, v: number): Pk => {
   const route = ROUTES[from][to];
   const arrive = t0 + route.total / v;
   return { key, route, F: [t0, arrive], S: [0, route.total], t0, arrive, to };
@@ -620,7 +620,7 @@ export const PACKETS: Pk[] = (() => {
   return out;
 })();
 
-const headAt = (p: Pk, f: number) => interpolate(f, p.F, p.S, clamp);
+export const headAt = (p: Pk, f: number) => interpolate(f, p.F, p.S, clamp);
 
 // ---------------------------------------------------------------------------
 // OUR SCARS. Cut 2's strike ran from its f190 and its beads settle to 0.6 and
