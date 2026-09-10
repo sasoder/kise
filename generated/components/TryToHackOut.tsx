@@ -13,6 +13,7 @@ import {
   ICON_SHADOW_OPACITY,
   ICON_SHADOW_Y,
   OP_READ,
+  OP_RECEDE,
   OP_UNREAD_DOT,
   SHADOW_BLUR,
   SHADOW_OPACITY,
@@ -157,32 +158,60 @@ export const DURATION = 231;
 //     tile-x order so the fan does not cross. The
 //     pump carries on along the new diagonals
 //                                     — "to require internet access"      f93-121
-//   THE ONE CAMERA MOVE: k 0.95 -> 0.26 on a rise
-//     and a pull-back (content centre -102 ->
-//     1443.7, warp 0.72), keyed f118-134 so it runs
-//     ON SCREEN f118-146 and is settled at
-//     "sandboxes" (f144, 0.40% off and drifting
-//     0.48% a frame, under the 1%/f at which a zoom
-//     reads as moving at all). It lands on the FARM:
-//     thirty sandboxes on a 1250 x 1400 pitch, ours
-//     the top-row centre under the mark, twenty-five
-//     of them at least partly on screen and every
-//     edge cut by more of them
-//                       — "trapped inside isolated sandboxes"             f118-146
+//   CAMERA MOVE 1, THE PULL-BACK: k 0.95 -> 0.33 on
+//     a rise and a pull-back (content centre -102 ->
+//     1007.2, warp 0.72), keyed f112-142 so it runs
+//     ON SCREEN f112-150 and is visually still two
+//     frames after "sandboxes" (f144 4.44% off and
+//     drifting 1.66% a frame, f146 2.12% and 0.96%/f
+//     — under the 1%/f at which a zoom reads as
+//     moving at all — f150 0.31% and 0.23%/f, f156
+//     0.04% and 0.003%/f). It lands on the FARM:
+//     thirty sandboxes on a uniform 1400 pitch, ours
+//     the top-row centre under the mark, three
+//     columns and four rows (twelve boxes) on screen
+//     and every edge cut by more of them
+//                       — "trapped inside isolated sandboxes"             f112-150
+//   A TRUE HOLD. Nothing on the camera between the
+//     two moves: the target is flat from f142 and
+//     the damper is inside 0.05% of the wide by f156 — (no word)          f150-164
+//   THE NEIGHBOURS RECEDE: over 14 frames every
+//     neighbour's box stroke, tiles, reaches and
+//     wall beads ease OP_READ -> OP_RECEDE and its
+//     idle traffic halves. Their crowds do not move
+//     and do not dim — a sandbox full of agents is
+//     still a sandbox full of agents; it is just not
+//     the subject any more                          — "they're of"        f167-181
+//   CAMERA MOVE 2, THE PUSH-IN: k 0.33 -> 0.50 back
+//     to content centre -102, warp 0.72, keyed
+//     f164-186 so it is settled by f196 (f190 0.71%
+//     off, f200 0.01%). Cut 1's framing at half the
+//     size: the mark and the ring sit above our box
+//     exactly where cut 1 put them, and the farm
+//     stays in the picture — row 1's top walls at
+//     screen y 1439 and columns +-1 showing ~65 px
+//     at each side edge. The piece's second and last
+//     camera move                — "course going to / try to hack out"    f164-196
 //   EVERY visible crowd strikes its own walls from
 //     inside: a thread launches from a random seat
 //     to the nearest point on its own box's wall,
 //     drawing over 6, holding 3, fading 8; its seat
 //     goes deep -> ripe from the launch and back to
 //     deep 14 frames later; an ink bead marks the
-//     wall on arrival and fades over 8. The rate
-//     ramps from 0 at f190 to 2.2/frame in our box
-//     and 0.7/frame in every neighbour by f206, each
-//     box on its own hashed launch phase so they do
-//     not pulse in unison. Every pump in the farm
-//     hardens to the 9-frame cycle with no rest —
-//     the same gesture, harder. No thread crosses a
-//     wall; nothing gets out                       — "try to hack out"    f190-215
+//     wall on arrival. The rate ramps from 0 at f190
+//     to 3.0/frame in our box and 0.35/frame in every
+//     neighbour by f206, each box on its own hashed
+//     launch phase so they do not pulse in unison.
+//     Every pump in the farm hardens to the 9-frame
+//     cycle with no rest — the same gesture, harder.
+//     No thread crosses a wall; nothing gets out    — "try to hack out"   f190-215
+//   OUR SCARS PERSIST. A bead on OUR wall does not
+//     fade out: it eases to 0.6 over 24 frames and
+//     stays, so by f231 the inside of our four walls
+//     is studded with impact points (the alive bead
+//     count is capped at 200, oldest recycled). A
+//     neighbour's beads keep the 8-frame fade — the
+//     record of the attempt is ours              — "try to hack out" +    f196-231
 //   hold under fire, never fades out                — tail                f215-231
 //
 // ambient: idle thread traffic in every visible box at the shared rate (180 per
@@ -215,6 +244,27 @@ export const DURATION = 231;
 //     at all, and a neighbour's crowd is drawn as one <path> per tone bucket
 //     rather than one <circle> per agent. Our own box keeps cut 1's element
 //     tree exactly — that is what f0 is measured against.
+//
+// ---------------------------------------------------------------------------
+// DIRECTOR'S PASS 3. Three notes, and what each of them changed.
+//
+//   * THE PULL-BACK WAS TOO FAST AND TOO FAR. It was k 0.95 -> 0.21 keyed over
+//     16 frames, an 8.99%/frame hand. It is now k 0.95 -> 0.33 keyed over 30
+//     (f112-142), which halves the peak to 4.51%/frame at f132 and still has
+//     the farm still by f146. At k 0.33 our box is 297 screen px wide under the
+//     mark, three columns show (+-1 cut by the frame edges) and four rows, so
+//     the farm reads as a farm rather than as a wallpaper of slivers.
+//   * ON "TRY TO HACK OUT" THE FOCUS BOX MUST BE THE SUBJECT. Two mechanisms
+//     together, and neither of them is a new shape. (a) A SECOND CAMERA MOVE,
+//     f164-186, back in to k 0.50 at cut 1's own content centre, so the mark,
+//     the ring and our box sit exactly where cut 1 framed them at half the
+//     size, with the neighbours still bleeding in at three edges. (b) THE
+//     NEIGHBOURS RECEDE from f167 while our box fires harder — 3.0/frame
+//     against their 0.35 — and keeps its scars.
+//   * THE SCARS. Our wall beads used to fade over 8 frames like everyone
+//     else's, so at f231 the walls were as clean as at f190 and 41 frames of
+//     hammering had left no evidence. They now settle at 0.6 and stay. It is
+//     the same primitive; only its life changed.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -260,48 +310,61 @@ export const schema = z.object({
 export type Props = z.infer<typeof schema>;
 
 // The join. Cut 1's speech ends at its f168, which is this piece's f0.
-const OFFSET = 168;
+export const OFFSET = 168;
 
 // ---------------------------------------------------------------------------
-// The camera. ONE move, and it is "trapped inside isolated sandboxes": out from
-// cut 1's resolved k 0.95 to k 0.26, with the content centre travelling from
-// CONTENT_FINAL down the farm to CONTENT_WIDE, which is solved so the mark's
-// top lands at screen y 300 — the mark and its ring stay at the top of the
-// frame, above the whole farm, and everything below them is sandboxes.
+// The camera. TWO moves, out and then back, with a true hold between them.
+//
+// MOVE 1 is "trapped inside isolated sandboxes": out from cut 1's resolved
+// k 0.95 to k 0.33, with the content centre travelling from CONTENT_FINAL down
+// the farm to CONTENT_WIDE, which is solved so the mark's top lands at screen
+// y 300 — the mark and its ring stay at the top of the frame, above the whole
+// farm, and everything below them is sandboxes.
 //
 //   screen(y) = (y - c - CAM_LIFT / k) * k + 960, so the content centre c
 //   always lands at 960 - CAM_LIFT = 835 and the mark's top at
 //   835 + (MARK_TOP - c) * k. Setting that to 300 gives
-//   c = MARK_TOP + (835 - 300) / k = -614 + 535 / 0.26 = 1443.69.
+//   c = MARK_TOP + (835 - 300) / k = -614 + 535 / 0.33 = 1007.21.
 //
-// The key track is cut 1's own, unchanged, with this move appended in OFFSET
+// MOVE 2 is "try to hack out": back in to k 0.50 at CONTENT_FINAL — cut 1's own
+// content centre, so the mark, the ring and our box land exactly where cut 1
+// framed them, at half the size. It is a push, not a re-frame: nothing is
+// recomposed, the picture is simply cut 1's again with the farm still in it.
+//
+// The key track is cut 1's own, unchanged, with both moves appended in OFFSET
 // frames. `runCamera(frame + OFFSET, ...)` therefore replays cut 1's damper
 // exactly up to the join and continues from its state, rather than starting a
 // fresh damper that would have to settle again.
 //
-// At the resolved camera: the mark's top is at screen y 301, our box's rect is
-// x 422-656 / y 386-568 (centre 477), the rows below it are 364 screen px
-// apart with row 4 cut by the bottom edge and row 5 off it, and columns +-1 sit
-// fully in frame with +-2 cut by the left and right edges. Twenty-five of the
-// thirty boxes are at least partly on screen.
+// KEYING. `runCamera` damps the target, so a key track that ends where the move
+// should end on screen is still running long past it, and one keyed too tight
+// lands early on a violent hand. Measured over this track:
+//   * move 1, keys f112-142 (30 frames, was 16 in pass 2): peak 4.51%/frame at
+//     f132 — half pass 2's 8.99% — and 4.44% off the wide at f144 drifting
+//     1.66%/f, 2.12% and 0.96%/f at f146 (under the 1%/f at which a zoom reads
+//     as moving at all), 0.31% and 0.23%/f at f150, 0.04% and 0.003%/f at f156.
+//     So it is visually still two frames after "sandboxes" and dead still by
+//     f156, which is the hold.
+//   * the hold f142-164: the target is flat and the damper's residue is at most
+//     0.23%/frame at f150 and 0.003%/frame from f156. A true hold.
+//   * move 2, keys f164-186: peak 2.62%/frame at f174, 0.71% off k 0.50 at
+//     f190 and 0.01% by f200. It settles ON the word rather than before it,
+//     which is what a push-in wants — the arrival is the gesture.
+// At the resolved push: our box's rect is x 316-766 / y 739-1089 (450 screen px
+// wide), the mark's top at screen y 577, the ring above it, row 1's top walls
+// at screen y 1439, and columns +-1 showing 66 and 64 px at the side edges.
+// Six boxes on screen, against twelve at the wide.
 // ---------------------------------------------------------------------------
-const K_WIDE = 0.21; // director pass 3: was 0.26 — wide enough that columns +-2 show ~46 px, not a sliver
+const K_WIDE = 0.33; // director pass 3: was 0.21 — the pull-back went too far
+const K_PUSH = 0.5; // director pass 3: the push-in, cut 1's framing at half size
 const MARK_TOP = MARK.y - 54; // -614; the mark is 108 world px square
 const MARK_TOP_SCREEN = 300;
-const CONTENT_WIDE = MARK_TOP + (835 - MARK_TOP_SCREEN) / K_WIDE; // 1933.7 at k 0.21
-const CAM_MOVE_F0 = 118; // local; "but they're" is f116, the move starts two later
-// Keyed f118-134 rather than to where the move should end on screen, for cut
-// 1's reason: `runCamera` damps the target, so a key track that ends at the
-// on-screen settle is still running long past it. Measured over this track:
-// keys to f144 leave the zoom 9.7% off at f144 and still moving 3.4% a frame;
-// keys to f130 land it early but at a 10.5%/frame peak. Keys to f134 put the
-// move ON SCREEN across f118-146 — 0.40% off at f144 and drifting 0.48% a
-// frame, half the 1%/f at which a zoom reads as moving at all, and inside
-// 0.16% by f150 — at a 8.99%/frame peak. It is a big move (a 3.65x zoom in 28
-// frames), so the peak is necessarily faster than cut 1's 4.77%; this is the
-// slowest hand that still has the farm still under "sandboxes".
-const CAM_MOVE_F1 = 134;
-// (the camera's key track has to exist at module scope, so these two are the
+const CONTENT_WIDE = MARK_TOP + (835 - MARK_TOP_SCREEN) / K_WIDE; // 1007.21 at k 0.33
+const CAM_MOVE_F0 = 112; // local; the move is under "but they're / trapped inside"
+const CAM_MOVE_F1 = 142;
+const CAM_PUSH_F0 = 164; // local; three frames before "they're of", so it is running on the word
+const CAM_PUSH_F1 = 186;
+// (the camera's key track has to exist at module scope, so these four are the
 // only frames in the piece not read straight off the `beats` prop)
 const MOVE = camMove({
   f0: OFFSET + CAM_MOVE_F0,
@@ -312,18 +375,30 @@ const MOVE = camMove({
   c1: CONTENT_WIDE,
   warp: 0.72,
 });
-const CY_WIDE = CONTENT_WIDE + 125 / K_WIDE;
-const TH_CAM_F = [...CAM_F, ...MOVE.F, OFFSET + DURATION];
-const TH_CAM_K = [...CAM_K, ...MOVE.K, K_WIDE];
-const TH_CAM_CY = [...CAM_CY, ...MOVE.CY, CY_WIDE];
+const MOVE2 = camMove({
+  f0: OFFSET + CAM_PUSH_F0,
+  f1: OFFSET + CAM_PUSH_F1,
+  k0: K_WIDE,
+  k1: K_PUSH,
+  c0: CONTENT_WIDE,
+  c1: CONTENT_FINAL,
+  warp: 0.72,
+});
+const CY_PUSH = CONTENT_FINAL + 125 / K_PUSH;
+export const TH_CAM_F = [...CAM_F, ...MOVE.F, ...MOVE2.F, OFFSET + DURATION];
+export const TH_CAM_K = [...CAM_K, ...MOVE.K, ...MOVE2.K, K_PUSH];
+export const TH_CAM_CY = [...CAM_CY, ...MOVE.CY, ...MOVE2.CY, CY_PUSH];
 
 // ---------------------------------------------------------------------------
 // THE FARM. Thirty sandboxes on a lattice: columns i in -2..2, rows j in 0..5,
-// box (i, j) centred on (540 + 1250 i, 60 + 1400 j). Ours is (0, 0), the top
+// box (i, j) centred on (540 + 1400 i, 60 + 1400 j). Ours is (0, 0), the top
 // row's centre, so the mark and the internet ring sit above the whole farm and
 // there is exactly one internet for all of them.
 //
-// PITCH_X is the briefed 1250. PITCH_Y is 1400 and not 1250, and the reason is
+// THE PITCH IS UNIFORM AT 1400 (director pass 3: the horizontal pitch was the
+// briefed 1250 against a vertical 1400, which put twice as much wall-to-wall
+// gap between the rows as between the columns and read as a stretched lattice).
+// PITCH_Y is 1400 and not the briefed 1250, and the reason is
 // the continuity join: at cut 1's resolved camera the frame's bottom edge is
 // world y 1043 (the content centre lands at screen 835, not 960, so the frame
 // reaches 125/k further down the world than a naive centre-of-frame reading
@@ -543,8 +618,20 @@ type Box = {
   idle: number;
 };
 
-export const OUR_HACK_RATE = 2.2;
-export const NEIGH_HACK_RATE = 0.7;
+// Director pass 3: our box fires harder and every neighbour fires less, so the
+// strike has a subject. 2.2 -> 3.0 in our box, 0.7 -> 0.35 in a neighbour, on
+// the same ramp and the same accumulator — the gap is the gesture, not a new
+// mechanism.
+export const OUR_HACK_RATE = 3.0;
+export const NEIGH_HACK_RATE = 0.35;
+
+// The recede. From "they're of" over 14 frames every neighbour's INK — its box
+// stroke, its tiles, its reaches and the beads on its walls — eases OP_READ ->
+// OP_RECEDE, and its idle traffic halves. Its crowd is untouched: the dots keep
+// their tone and their opacity, because a sandbox full of agents is still a
+// sandbox full of agents and dimming them would read as thirty boxes emptying.
+export const RECEDE_DUR = 14;
+export const NEIGH_IDLE_FLOOR = 0.5; // the multiplier its idle threads end on
 
 const OUR: Box = {
   id: 0,
@@ -751,6 +838,14 @@ const T_FADE = 8;
 const T_LIFE = T_DRAW + T_HOLD + T_FADE; // 17
 const SEAT_RIPE = 14; // the launching seat is back to deep here
 const HACK_RAMP = 16; // frames from the first launch to the plateau rate
+// OUR beads do not fade out. Director pass 3: forty-one frames of hammering
+// used to leave the walls exactly as clean as they were at f190, so the strike
+// had no record. A bead on our wall now settles to BEAD_KEEP over BEAD_SETTLE
+// frames and stays there for the rest of the piece. A neighbour's beads keep
+// the 8-frame fade — the scars are ours.
+const BEAD_SETTLE = 24;
+const BEAD_KEEP = 0.6;
+const BEAD_MAX = 200; // alive beads in our box; the oldest are recycled past this
 
 const wallHit = (x: number, y: number) => {
   const dl = x - BOX_X0;
@@ -819,6 +914,7 @@ const hackFor = (
   lit: Float32Array,
   out: Th[],
   beads: Bead[],
+  keepBeads = false,
 ) => {
   if (frame < f0) return;
   // the launch accumulator starts on this box's own hashed phase, so thirty
@@ -831,7 +927,10 @@ const hackFor = (
       acc -= 1;
       const j = n++;
       const age = frame - f;
-      if (age > T_LIFE) continue;
+      // a dead thread whose bead has also gone is nothing at all; when the
+      // beads keep, the launch stays alive for its mark even though its thread
+      // is long gone
+      if (age > T_LIFE && !keepBeads) continue;
       const si = Math.floor(hash(j + box.jOff * 3, 71) * box.n);
       const s = box.seats[si];
       const w = wallHit(s.x, s.y);
@@ -839,10 +938,12 @@ const hackFor = (
       const fade = interpolate(age, [T_DRAW + T_HOLD, T_LIFE], [1, 0], clamp);
       lit[si] = Math.max(lit[si], interpolate(age, [T_DRAW + T_HOLD, SEAT_RIPE], [1, 0], clamp));
       if (age >= T_DRAW) {
-        const fop = interpolate(age, [T_DRAW, T_DRAW + BEAD_FADE], [1, 0], clamp);
+        const fop = keepBeads
+          ? interpolate(age, [T_DRAW, T_DRAW + BEAD_SETTLE], [1, BEAD_KEEP], clamp)
+          : interpolate(age, [T_DRAW, T_DRAW + BEAD_FADE], [1, 0], clamp);
         if (fop > 0.02) beads.push({ key: `k${box.jOff}-${j}`, x: w.fx, y: w.fy, op: fop });
       }
-      if (fade <= 0.02) continue;
+      if (age > T_LIFE || fade <= 0.02) continue;
       out.push({
         key: `h${j}`,
         x1: s.x,
@@ -854,6 +955,9 @@ const hackFor = (
       });
     }
   }
+  // the oldest scars are recycled once the wall is full, so the count is
+  // bounded whatever the rate does
+  if (keepBeads && beads.length > BEAD_MAX) beads.splice(0, beads.length - BEAD_MAX);
 };
 
 // A neighbour's crowd, batched. Twenty-five boxes of ~950 agents is ~24,000
@@ -883,11 +987,11 @@ const dotPaths = (box: Box, lit: Float32Array, F: number, dotRadius: number) => 
 // px long per world px) and one <path> per bucket for the lines and one for the
 // heads.
 const THREAD_OP_STEPS = 16;
-const threadPaths = (list: Th[]) => {
+const threadPaths = (list: Th[], mul = 1) => {
   const lines: string[] = new Array(THREAD_OP_STEPS + 1).fill("");
   const heads: string[] = new Array(THREAD_OP_STEPS + 1).fill("");
   for (const t of list) {
-    const b = Math.round(clamp01(t.op) * THREAD_OP_STEPS);
+    const b = Math.round(clamp01(t.op * mul) * THREAD_OP_STEPS);
     if (b === 0) continue;
     lines[b] +=
       `M${t.x1.toFixed(1)} ${t.y1.toFixed(1)}L${t.x2.toFixed(1)} ${t.y2.toFixed(1)}`;
@@ -969,7 +1073,14 @@ const TryToHackOut: React.FC<Props> = ({
 
   const hackEls: Th[] = [];
   const beads: Bead[] = [];
-  hackFor(frame, beats.tryToHackOut, OUR, lit, hackEls, beads);
+  hackFor(frame, beats.tryToHackOut, OUR, lit, hackEls, beads, true);
+
+  // -- the recede ------------------------------------------------------------
+  // "they're of": the farm stops being the subject. Ink only; the crowds are
+  // untouched.
+  const recede = smooth((frame - beats.theyreOf) / RECEDE_DUR);
+  const neighInk = OP_READ + (OP_RECEDE - OP_READ) * recede;
+  const neighIdle = 1 - (1 - NEIGH_IDLE_FLOOR) * recede;
 
   // -- the farm --------------------------------------------------------------
   const neighbours = NEIGHBOURS.filter((b) => onScreen(b, cx, cy, k)).map((b) => {
@@ -994,7 +1105,7 @@ const TryToHackOut: React.FC<Props> = ({
     return {
       b,
       dots: dotPaths(b, nlit, F, dotRadius),
-      threads: threadPaths(nThreads),
+      threads: threadPaths(nThreads, neighIdle),
       hack: threadPaths(nHack),
       beads: nBeads,
       lines: nLines,
@@ -1153,7 +1264,8 @@ const TryToHackOut: React.FC<Props> = ({
                 {nb.threads.heads.map((d, bi) =>
                   d ? <path key={`t${bi}`} d={d} fill={ink} opacity={bi / THREAD_OP_STEPS} /> : null,
                 )}
-                {/* its own sandbox, its own tasks, its own reaches */}
+                {/* its own sandbox, its own tasks, its own reaches — all of it
+                    on the receding rung from "they're of" */}
                 <g style={{ filter: icon }}>
                   <path
                     d={BOX_PATH}
@@ -1161,7 +1273,7 @@ const TryToHackOut: React.FC<Props> = ({
                     fill="none"
                     stroke={ink}
                     strokeWidth={STROKE}
-                    opacity={OP_READ}
+                    opacity={neighInk}
                   />
                   {nb.lines.map((l) => (
                     <line
@@ -1173,7 +1285,7 @@ const TryToHackOut: React.FC<Props> = ({
                       stroke={ink}
                       strokeWidth={STROKE}
                       strokeLinecap="round"
-                      opacity={OP_READ}
+                      opacity={neighInk}
                     />
                   ))}
                   {nb.b.tiles.map((t, i) => (
@@ -1182,7 +1294,7 @@ const TryToHackOut: React.FC<Props> = ({
                       d={TILE_PATH}
                       transform={`translate(${t.x - TILE_HALF} ${t.y - TILE_HALF})`}
                       fill={ink}
-                      opacity={OP_READ}
+                      opacity={neighInk}
                     />
                   ))}
                 </g>
@@ -1203,8 +1315,11 @@ const TryToHackOut: React.FC<Props> = ({
                 {nb.hack.heads.map((d, bi) =>
                   d ? <path key={`hh${bi}`} d={d} fill={ink} opacity={bi / THREAD_OP_STEPS} /> : null,
                 )}
+                {/* its beads keep the 8-frame fade and ride the same receding
+                    rung as the wall they land on: a mark can never be brighter
+                    than the ink it is a mark ON */}
                 {nb.beads.map((f) => (
-                  <circle key={f.key} cx={f.x} cy={f.y} r={BEAD_R} fill={ink} opacity={OP_READ * f.op} />
+                  <circle key={f.key} cx={f.x} cy={f.y} r={BEAD_R} fill={ink} opacity={neighInk * f.op} />
                 ))}
               </g>
             ))}
