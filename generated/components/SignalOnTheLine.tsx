@@ -244,7 +244,7 @@ export const DURATION = 181;
 //     ambient 0.4 underneath: they are still talking
 //     to each other, that is half the sentence
 //                    — "was going to help you score higher"            f106-140
-//   MOVE 3, keys f128-140, warp 0.72: k 0.90 -> 1.50,
+//   MOVE 3, keys f110-122 (pass 2; was f128-140), warp 0.72: k 0.90 -> 1.50,
 //     content centre 180 -> -480 (the midpoint of the
 //     ring at -400 and the mark at -560), cx 640 ->
 //     540, so the trainer is over the thing being
@@ -377,8 +377,8 @@ export const M1_F0 = 42; // local; "to talk to ... other agents"
 export const M1_F1 = 54;
 export const M2_F0 = 74; // "and access the ... internet"
 export const M2_F1 = 86;
-export const M3_F0 = 128; // "higher during ... training"
-export const M3_F1 = 140;
+export const M3_F0 = 110; // director pass 2: keyed ~1.5 beats earlier (was 128) — on screen from f111, under "to help", settled before "higher during"
+export const M3_F1 = 122;
 export const CAM_WARP = 0.72;
 
 const M1 = camMove({
