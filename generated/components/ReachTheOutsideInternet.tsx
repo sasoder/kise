@@ -567,7 +567,7 @@ const straight = (
 export const EX_EVERY = 5;
 export const EX_START = -90;
 export const EX_STOP = 30;
-const PAIRS6: [number, number][] = (() => {
+export const PAIRS6: [number, number][] = (() => {
   const out: [number, number][] = [];
   for (let a = 0; a < NODES6.length; a++) {
     for (let b = 0; b < NODES6.length; b++) {
@@ -602,7 +602,7 @@ export const ESCAPE_ROUTES: Route[] = OUR_NODES.map((i) =>
   makeRoute([{ x: NODES6[i].x, y: NODES6[i].y }, NODES6[i].mouth, HUB_C, ...EXPLOIT_PTS]),
 );
 const OTHERS = [2, 3, 4, 5];
-const PAIRS4: [number, number][] = (() => {
+export const PAIRS4: [number, number][] = (() => {
   const out: [number, number][] = [];
   for (const a of OTHERS) for (const b of OTHERS) if (a !== b) out.push([a, b]);
   return out.map((_, i) => i).sort((x, y) => hash(x, 47) - hash(y, 47)).map((i) => out[i]);
