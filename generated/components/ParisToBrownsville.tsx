@@ -69,7 +69,7 @@ export const DURATION = 147;
 // and each has exactly one job:
 //   purple #BC37FF   the two city pins, and nothing else
 //   blue   #0046FF   the route ink, and nothing else
-//   orange #FFB765   the bronze ingots, and nothing else
+//   (v3: the ingots are the user's bronze.png bars; nothing in the cut is orange any more)
 //   ink    #1A1A1A   all type, and the plane
 //   white  #FFFFFF   the land
 //
@@ -272,7 +272,6 @@ export const schema = z.object({
   land: z.string(),
   pin: z.string(), // purple: the two cities
   route: z.string(), // blue: the flown line
-  bronze: z.string(), // orange: the ingots
   paperSrc: z.string(),
   parallax: z.number(),
   // v2: the paper is knocked back so the picture sits in front of it. Screen px.
@@ -414,54 +413,42 @@ const BV_LABEL_BL = 920; // clear of the parked plane's tail at ~855
 // last frame. That is the one deliberate break of the hold-to-the-end rule in
 // this set, and it is the whole note this pass was asked for.
 // ---------------------------------------------------------------------------
-export const INGOT_W = 96; // the base
-export const INGOT_TOP_W = 78;
-export const INGOT_H = 38;
-export const INGOT_R = 4; // the corner radius
-export const INGOT_GAP_X = 10;
-export const INGOT_GAP_Y = 6;
+// v3 (user, 2026-09-10): the ingot is the user's own artwork, `public/bronze.png`
+// — a 256x256 PNG with alpha of a bronze bar seen in isometric, the bar itself
+// occupying x 28..233, y 57..208 of the canvas. It is drawn as an SVG <image>
+// at INGOT_IMG world px square, positioned so the bar's alpha bottom sits on
+// the slot's base line and its alpha centre on the slot's x. The rows sit on a
+// pitch shorter than the bar (the top face of a bar is what the row above
+// rests on), and later ingots draw over earlier ones, so a higher row covers
+// the top faces of the row beneath it the way a real stack does.
+export const INGOT_IMG = 130; // world px, the PNG's square canvas
+export const INGOT_SRC = "bronze.png";
+const INGOT_ALPHA = { x0: 28, x1: 233, y0: 57, y1: 208, size: 256 };
+export const INGOT_W = (INGOT_IMG * (INGOT_ALPHA.x1 - INGOT_ALPHA.x0)) / INGOT_ALPHA.size; // 104
+export const INGOT_H = (INGOT_IMG * (INGOT_ALPHA.y1 - INGOT_ALPHA.y0)) / INGOT_ALPHA.size; // 77
+const INGOT_BOTTOM = (INGOT_IMG * INGOT_ALPHA.y1) / INGOT_ALPHA.size; // alpha bottom, from the image top
+const INGOT_CX = (INGOT_IMG * (INGOT_ALPHA.x0 + INGOT_ALPHA.x1)) / 2 / INGOT_ALPHA.size; // alpha centre
+export const INGOT_GAP_X = 8;
+// The bar's side face is 58/256 of the canvas tall (alpha y 116..177 at its
+// left end), so a 30 px row pitch puts each bar exactly on top of the one
+// below it — straight columns, no brick offset: isometric bars only stack
+// convincingly along their own vertical.
+export const ROW_PITCH = 30; // world px between row base lines
 export const PILE_X = FRAME_W / 2;
-export const PILE_BASE = 1170;
-export const PILE_ROWS = [6, 5, 6, 5, 6];
+export const PILE_BASE = 1200;
+export const PILE_ROWS = [6, 6, 6, 6]; // 23 fills 3 rows + 5, six stacks of four (the last, three)
 export const PILE_COUNT = 23;
 export const PILE_STEP = 3; // frames between two ingots
 export const INGOT_DROP = 46; // world px it falls from
 export const INGOT_FRAMES = 7; // frames the drop takes
 export const INGOT_FADE = 3; // frames the opacity takes
 
-const unitTo = (a: { x: number; y: number }, b: { x: number; y: number }) => {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const l = Math.hypot(dx, dy) || 1;
-  return { x: dx / l, y: dy / l };
-};
-
-/** A trapezoid about its own bottom centre, corners rounded with one quadratic each. */
-export const ingotPath = (w: number, topW: number, h: number, r: number) => {
-  const bl = { x: -w / 2, y: 0 };
-  const br = { x: w / 2, y: 0 };
-  const tr = { x: topW / 2, y: -h };
-  const tl = { x: -topW / 2, y: -h };
-  const d = [unitTo(bl, br), unitTo(br, tr), unitTo(tr, tl), unitTo(tl, bl)];
-  const at = (o: { x: number; y: number }, v: { x: number; y: number }, s: number) =>
-    `${(o.x + v.x * s).toFixed(2)},${(o.y + v.y * s).toFixed(2)}`;
-  const corners = [br, tr, tl, bl];
-  const out = [`M${at(bl, d[0], r)}`];
-  for (let i = 0; i < 4; i++) {
-    const c = corners[i];
-    out.push(`L${at(c, d[i], -r)}`, `Q${c.x},${c.y} ${at(c, d[(i + 1) % 4], r)}`);
-  }
-  out.push("Z");
-  return out.join(" ");
-};
-export const INGOT_PATH = ingotPath(INGOT_W, INGOT_TOP_W, INGOT_H, INGOT_R);
-
 /** Where each ingot's base sits, in fill order: bottom row first, left to right. */
 export const INGOT_SLOTS: { x: number; y: number }[] = [];
 for (let r = 0; r < PILE_ROWS.length && INGOT_SLOTS.length < PILE_COUNT; r++) {
   const n = PILE_ROWS[r];
   const rowW = n * INGOT_W + (n - 1) * INGOT_GAP_X;
-  const y = PILE_BASE - r * (INGOT_H + INGOT_GAP_Y);
+  const y = PILE_BASE - r * ROW_PITCH;
   for (let j = 0; j < n && INGOT_SLOTS.length < PILE_COUNT; j++) {
     INGOT_SLOTS.push({
       x: PILE_X - rowW / 2 + INGOT_W / 2 + j * (INGOT_W + INGOT_GAP_X),
@@ -469,7 +456,7 @@ for (let r = 0; r < PILE_ROWS.length && INGOT_SLOTS.length < PILE_COUNT; r++) {
     });
   }
 }
-export const PILE_TOP = Math.min(...INGOT_SLOTS.map((p) => p.y)) - INGOT_H; // 956
+export const PILE_TOP = Math.min(...INGOT_SLOTS.map((p) => p.y)) - INGOT_H; // 1033
 
 // The content block, and therefore the camera's rest: the route's apex down to
 // the pile's base line.
@@ -652,7 +639,6 @@ const ParisToBrownsville: React.FC<Props> = ({
   land,
   pin,
   route,
-  bronze,
   paperSrc,
   parallax,
   paperDim,
@@ -757,6 +743,14 @@ const ParisToBrownsville: React.FC<Props> = ({
         blur={paperBlur}
       />
 
+      {/* Preload: a Remotion <Img> holds the render until bronze.png is in
+          the browser cache, so the SVG <image> ingots below never draw a
+          frame before the bitmap has arrived. */}
+      <Img
+        src={staticFile(INGOT_SRC)}
+        style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+      />
+
       <AbsoluteFill>
         {world(
           <>
@@ -855,10 +849,12 @@ const ParisToBrownsville: React.FC<Props> = ({
               const op = interpolate(frame, [f0, f0 + INGOT_FADE], [0, 1], clamp);
               return (
                 <g key={`ingot-${i}`} style={{ filter: icon }} opacity={op}>
-                  <path
-                    d={INGOT_PATH}
-                    fill={bronze}
-                    transform={`translate(${slot.x} ${(slot.y + dy).toFixed(2)})`}
+                  <image
+                    href={staticFile(INGOT_SRC)}
+                    width={INGOT_IMG}
+                    height={INGOT_IMG}
+                    x={(slot.x - INGOT_CX).toFixed(2)}
+                    y={(slot.y + dy - INGOT_BOTTOM).toFixed(2)}
                   />
                 </g>
               );
