@@ -18,6 +18,7 @@ import {
   TONE_STEPS,
   Vignette,
   breath,
+  camEase,
   camMove,
   clamp,
   hash,
@@ -329,12 +330,41 @@ const MOVE = camMove({
   c1: CONTENT_PUSH,
   warp: 0.72,
 });
-export const RO_CAM_F = [OFFSET, ...MOVE.F, OFFSET + DURATION];
-export const RO_CAM_K = [K_OPEN, ...MOVE.K, K_PUSH];
+// Director pass 2: THE FOLLOW. While the exploit route climbs the outside of
+// our box (f84-108) the camera makes one slow move of its own — up 120 world
+// px and 50 to the right, no zoom — so the eye is carried from the hub to the
+// internet ring as the head arrives. It is an authored drift, not a lock on the
+// head (the head moves 44 px a frame; the camera moves ~5), keyed f80-106 so
+// the damper has settled before "reach the" f116. A plain smoothstep (warp 1)
+// because the climb it accompanies is constant-speed.
+export const CONTENT_FOLLOW = CONTENT_PUSH - 120; // 60
+export const CX_FOLLOW = CENTRE_X + 50; // 590
+export const FOLLOW_F0 = 80; // local
+export const FOLLOW_F1 = 106;
+const FOLLOW = camMove({
+  f0: OFFSET + FOLLOW_F0,
+  f1: OFFSET + FOLLOW_F1,
+  k0: K_PUSH,
+  k1: K_PUSH,
+  c0: CONTENT_PUSH,
+  c1: CONTENT_FOLLOW,
+  warp: 1,
+});
+export const RO_CAM_F = [OFFSET, ...MOVE.F, ...FOLLOW.F, OFFSET + DURATION];
+export const RO_CAM_K = [K_OPEN, ...MOVE.K, ...FOLLOW.K, K_PUSH];
 export const RO_CAM_CY = [
   CONTENT_OPEN + 125 / K_OPEN,
   ...MOVE.CY,
-  CONTENT_PUSH + 125 / K_PUSH,
+  ...FOLLOW.CY,
+  CONTENT_FOLLOW + 125 / K_PUSH,
+];
+// The lateral track rides the same key frames so one damper pass serves it:
+// `runCamera` damps whatever it is handed as CY, and k is ignored on this call.
+export const RO_CAM_CX = [
+  CENTRE_X,
+  ...MOVE.F.map(() => CENTRE_X),
+  ...FOLLOW.F.map((_, i) => CENTRE_X + (CX_FOLLOW - CENTRE_X) * camEase(i / (FOLLOW.F.length - 1), 1)),
+  CX_FOLLOW,
 ];
 
 // ---------------------------------------------------------------------------
@@ -707,9 +737,10 @@ const ReachTheOutsideInternet: React.FC<Props> = ({
 
   // -- camera, first: the cull needs it --------------------------------------
   const cam = runCamera(F, RO_CAM_F, RO_CAM_CY, RO_CAM_K);
+  const camX = runCamera(F, RO_CAM_F, RO_CAM_CX, RO_CAM_K);
   const drift = sway(F);
   const cy = cam.cy + drift.dy;
-  const cx = CENTRE_X + drift.dx;
+  const cx = camX.cy + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
@@ -908,6 +939,8 @@ const ReachTheOutsideInternet: React.FC<Props> = ({
         frame={F}
         cy={cy}
         cyRest={CAM_CY[0]}
+        cx={cx}
+        cxRest={CENTRE_X}
         k={k}
         parallax={parallax}
       />
