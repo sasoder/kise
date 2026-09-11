@@ -9,6 +9,22 @@ import {z} from 'zod';
  * light travelling outward inside it. Nothing is drawn outside the ink — no
  * glow, no rim, no halo, no particles.
  *
+ * The ink is white, so the upgrade cannot be read as "white light added to
+ * white ink" — that is invisible. Instead the mark *rests below full white*:
+ * the thin before-state is drawn at `restOpacity` (0.82), so at f0 it reads as
+ * a clean white logo with a little headroom left above it. The band brings
+ * every piece of ink it crosses up to full white, and the heavier after-state
+ * it reveals is also full white. So behind the band the ink is both brighter
+ * and thicker, and the difference between the first frame and the last is a
+ * real step up in luminance rather than only a change of weight.
+ *
+ * The svg is `overflow: visible` (attribute and style, and the wrapping div
+ * does not clip either). The mark's path touches its own 0 0 24 24 viewBox on
+ * every side — the bottom point sits at y=24 exactly — so the after-state's
+ * extra stroke (weightGain/2 outward) and the settle's scale were being cut
+ * off flush by the svg's box. Letting it overflow keeps the mark at its
+ * designed size and simply stops the clipping.
+ *
  * Timeline (24fps, 96 frames):
  *   f0-20   rest    thin mark, perfectly still. Nothing moves.
  *   f20-40  charge  band sits on the ring of ink around the centre hexagon
@@ -82,6 +98,10 @@ export const schema = z.object({
   surge: z.string(),
   markSize: z.number().min(120).max(1080),
   weightGain: z.number().min(0).max(2),
+  // How bright the mark sits before the light reaches it. The only thing this
+  // touches is the thin before-state path; the revealed heavier path and the
+  // band are always full opacity, so the light always has somewhere to go.
+  restOpacity: z.number().min(0).max(1),
   liveliness: z.number().min(0).max(2),
   backdrop: z.string(),
 });
@@ -89,12 +109,17 @@ export const schema = z.object({
 export type OpenAiUpgradeSurgeProps = z.infer<typeof schema>;
 
 export const defaultProps: OpenAiUpgradeSurgeProps = schema.parse({
-  ink: '#000000',
+  ink: '#FFFFFF',
   surge: '#FFFFFF',
   markSize: 720,
   // Extra stroke on the filled compound path, so the ink dilates evenly on both
   // sides. The mark's own ring is about 2 units thick, so 0.32 is roughly +15%.
   weightGain: 0.32,
+  // Judged on #141414: at 0.72 and 0.78 the resting mark reads silver-grey
+  // rather than white, which is wrong for a white logo; at 0.86 the band's
+  // step up to full white is too small to read as light arriving. 0.82 is the
+  // brightest rest that still leaves a visible lift.
+  restOpacity: 0.82,
   liveliness: 1,
   backdrop: 'transparent',
 });
@@ -104,6 +129,7 @@ const OpenAiUpgradeSurge: React.FC<OpenAiUpgradeSurgeProps> = ({
   surge,
   markSize,
   weightGain,
+  restOpacity,
   liveliness,
   backdrop,
 }) => {
@@ -164,8 +190,26 @@ const OpenAiUpgradeSurge: React.FC<OpenAiUpgradeSurgeProps> = ({
         justifyContent: 'center',
       }}
     >
-      <div style={{width: markSize, height: markSize, scale: `${scale}`}}>
-        <svg viewBox="0 0 24 24" width="100%" height="100%">
+      {/*
+        Neither the div nor the svg may clip: the mark's path runs right up to
+        the edges of its own viewBox, and both the dilated after-state and the
+        settle's scale push past it.
+      */}
+      <div
+        style={{
+          width: markSize,
+          height: markSize,
+          scale: `${scale}`,
+          overflow: 'visible',
+        }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="100%"
+          height="100%"
+          overflow="visible"
+          style={{overflow: 'visible'}}
+        >
           <defs>
             {/* Soft-edged disc that follows the band's trailing edge. */}
             <radialGradient
@@ -229,10 +273,13 @@ const OpenAiUpgradeSurge: React.FC<OpenAiUpgradeSurgeProps> = ({
             </mask>
           </defs>
 
-          {/* 1. Before state: the thin mark, always present. */}
-          <path d={D} fill={ink} />
+          {/*
+            1. Before state: the thin mark, always present, resting a little
+            below full white so the light has headroom to lift it.
+          */}
+          <path d={D} fill={ink} fillOpacity={restOpacity} />
 
-          {/* 2. After state: the same mark dilated, revealed as the band passes. */}
+          {/* 2. After state: the same mark dilated, revealed at full white as the band passes. */}
           <g mask="url(#upgrade-reveal-mask)">
             <path
               d={D}
