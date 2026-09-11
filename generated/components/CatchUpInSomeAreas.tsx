@@ -70,22 +70,30 @@ export const DURATION = 125;
 //     Keyed f36-56, damped, landed and still by f64
 //     — eleven frames clear of "catch". Nothing
 //     else moves while it runs.                    — "comes out"         f38-64
-//   all six stacks grow together off the floor on
-//     one ease: the feathered top rises and new ripe
-//     rows fill in under it. Columns 1, 3 and 5
-//     reach their ledge and LOCK at f88 — over
-//     f78-88 the feather collapses, the wobble goes
-//     out of the edge and the top three rows snap
-//     onto the lattice at one radius, so what lands
-//     under the rule is one straight COMPLETE row
-//     ~9-15 px under it. Columns 2, 4 and 6
-//     decelerate on the same ease and stop short by
-//     f96, tops still feathered and jittered, gaps
-//     of 140 / 190 / 170 world px — 9 to 12 dot
-//     rows — under their own ledges.               — "catch up in some
-//                                                     of these areas"    f66-96
-//   hold resolved, never fades: three stacks flush
-//     under their people, three short              — tail                f96-125
+//   every stack is growing from the very first
+//     frame: a slow steady creep off the floor that
+//     has covered 28% of each column's travel by
+//     f66, so a new row is arriving at every top
+//     edge while the sentence is still setting up.
+//     No column is ever static.                    — under everything    f0-125
+//   the creep speeds up into one acceleration lobe
+//     — the catch-up itself. Columns 1, 3 and 5
+//     take the lobe over f66-88, arrive at their
+//     ledge and LOCK at f88 — over f78-88 the
+//     feather collapses, the wobble goes out of the
+//     edge and the top three rows snap onto the
+//     lattice at one radius, so what lands under
+//     the rule is one straight COMPLETE row ~9-15
+//     px under it. A locked column cannot grow
+//     again: that is what "caught up" means.       — "catch up in some"  f66-88
+//   columns 2, 4 and 6 take the same lobe over
+//     f66-96, peaking at f81, then ease out of it
+//     into a slower creep that never stops: the
+//     last 16% of their travel, a row and a half,
+//     is delivered over f96-124, so the very last
+//     frame still has a row arriving. Tops stay
+//     feathered and jittered throughout and never
+//     reach their ledges — 9 to 12 dot rows short. — "of these areas"    f66-125
 //
 // ambient: breath on every dot and the camera's own sway, from f0 to f125.
 // No idle thread traffic in this piece — a thread between two dots inside a
@@ -379,17 +387,67 @@ const WAVE_Y1 = 250;
 const WAVE_SOFT = 100;
 
 // ---------------------------------------------------------------------------
-// The catch-up. All six start together at f66 on one ease; what differs is how
-// far they go and when they stop. The three that reach their ledge lock on
-// "some" (f88): over the ten frames into it the feather collapses to nothing,
-// the wobble goes out of the edge and the top three rows straighten off their
-// own jitter and their own radius variation onto the lattice, so what lands
-// under the rule is one straight COMPLETE row. The three that do not reach it
-// decelerate on the same ease and stop at f96, tops still feathered.
+// The rise. On the director's note about v3: "make it so that the dots start
+// animating in from the start of the graphic all the way to the end."
+//
+// v3 had the six stacks standing dead still from f0 to f66 and again from f96
+// to f125 — two thirds of the piece with nothing arriving at a top edge. The
+// growth is now ONE continuous rise per column that starts on frame 0 and, for
+// the three short columns, is still delivering a row on frame 124.
+//
+// It is authored as a VELOCITY and integrated, so there are no segments to butt
+// together and the speed is continuous everywhere by construction:
+//
+//   v(f) = creep + (tail - creep) * S(u) + peak * sin^2(pi * u),
+//          u = clamp01((f - f0) / L),   S = smoothstep
+//
+// — a constant baseline rate that hands over smoothly to a second constant
+// rate, plus one smooth acceleration lobe on top of it. S and sin^2 both leave
+// and arrive with zero slope, so dv/df is 0 at f0 and at f0 + L: the lobe
+// starts AT the creep speed rather than from a standstill, and there is no
+// kink at either end. `rise` is its exact integral, normalised so g(0) = 0.
+//
+//   lockers (1, 3, 5)  creep to 28% of travel by f66, then the lobe over
+//                      f66-88 while the creep itself fades to nothing, so
+//                      g = 1 EXACTLY on "some" and the velocity is 0 when it
+//                      gets there. Clamped at 1 afterwards: a locked column
+//                      cannot grow again, which is the point of the lock.
+//   shorts  (2, 4, 6)  the same creep, the same lobe stretched over f66-96
+//                      (peak f81), easing out into a slower creep that runs to
+//                      the last frame. It delivers the final 16% of the travel
+//                      over f96-124, a row and a half, so g(123) < 1 and
+//                      g(124) = 1: the last frame still has a row arriving.
+//
+// The resolved frame is unchanged — every column ends exactly where v3 left it,
+// the lock still lands flush on f88 and the shorts still stop where they stop.
 // ---------------------------------------------------------------------------
 const GROW_LEAD = 6; // frames of anticipation before "of catch"
-const SHORT_TAIL = 8; // the short columns give up this long after the lock
+const SHORT_TAIL = 8; // where the short columns come off the lobe, after the lock
 const FLAT_RAMP = 10; // the lock resolves over this many frames into "some"
+// 0.28 and 0.16, not the 0.20 / 0.12 the first pass was cut at. A short column
+// only has 130-190 world px of travel in it, so a share is worth about a third
+// as much there as in a locker: at 0.20 the shorts moved 11.8 px over f0-30 and
+// 7.8 px over f110-124 — under a dot row either end, and in the crops the top
+// edge was only just different. At 0.28 / 0.16 the opening creep is 16.5 px
+// (1.1 rows) by f30 and the tail delivers 20.8 px (1.4 rows), which is a row
+// arriving at both ends and still leaves the lobe 15x the creep speed.
+const CREEP_SHARE = 0.28; // of the travel, covered by the opening creep by f66
+const TAIL_SHARE = 0.16; // of the travel, left for the short columns' f96-124 creep
+
+// The two integrals the rise is made of: S(t) = t^2(3-2t) and sin^2(pi t),
+// each from 0 to u. Both are 0 at u = 0 and 1/2 at u = 1.
+const intS = (u: number) => u * u * u * (1 - u / 2);
+const intBump = (u: number) => u / 2 - Math.sin(2 * Math.PI * u) / (4 * Math.PI);
+
+// g(f): the fraction of a column's travel covered, monotone and C1 in f.
+const rise = (f: number, f0: number, L: number, creep: number, tail: number, peak: number) => {
+  const u = clamp01((f - f0) / L);
+  return clamp01(
+    creep * Math.min(f, f0) +
+      L * (creep * u + (tail - creep) * intS(u) + peak * intBump(u)) +
+      tail * Math.max(0, f - f0 - L),
+  );
+};
 
 const CatchUpInSomeAreas: React.FC<Props> = ({
   ink,
@@ -423,16 +481,28 @@ const CatchUpInSomeAreas: React.FC<Props> = ({
   const waveY = WAVE_Y0 + (WAVE_Y1 - WAVE_Y0) * smooth((frame - waveF0) / (waveF1 - waveF0));
 
   // -- the catch-up, per column ----------------------------------------------
-  // f66 -> f88 for the three that lock on "some", f66 -> f96 for the three that
-  // run out. `top` is the nominal edge, `flat` is how far the lock has resolved
-  // it.
+  // One continuous rise per column from f0. The lobe runs f66 -> f88 for the
+  // three that lock on "some" and f66 -> f96 for the three that do not, and the
+  // shorts keep creeping on to the last frame. `top` is the nominal edge,
+  // `flat` is how far the lock has resolved it. The rates are solved here from
+  // the beats so the two columns' g land on 1 exactly where they should.
   const growF0 = beats.ofCatch - GROW_LEAD;
   const lockF = beats.some;
+  const shortEnd = lockF + SHORT_TAIL;
+  const lastF = DURATION - 1;
+  const creep = CREEP_SHARE / growF0;
+  const lockL = lockF - growF0;
+  const lockPeak = (1 - CREEP_SHARE - 0.5 * lockL * creep) / (0.5 * lockL);
+  const shortL = shortEnd - growF0;
+  const shortTail = TAIL_SHARE / (lastF - shortEnd);
+  const shortPeak =
+    (1 - CREEP_SHARE - TAIL_SHARE - shortL * (creep + 0.5 * (shortTail - creep))) / (0.5 * shortL);
+  const gLock = rise(frame, growF0, lockL, creep, 0, lockPeak);
+  const gShort = rise(frame, growF0, shortL, creep, shortTail, shortPeak);
   const colTop: number[] = [];
   const colFlat: number[] = [];
   for (let c = 0; c < NCOL; c++) {
-    const end = LOCKS[c] ? lockF : lockF + SHORT_TAIL;
-    const g = smooth((frame - growF0) / (end - growF0));
+    const g = LOCKS[c] ? gLock : gShort;
     colTop.push(REST_TOP[c] + (FINAL_TOP[c] - REST_TOP[c]) * g);
     colFlat.push(LOCKS[c] ? smooth((frame - (lockF - FLAT_RAMP)) / FLAT_RAMP) : 0);
   }
