@@ -189,7 +189,7 @@ export type Props = z.infer<typeof schema>;
 // ---------------------------------------------------------------------------
 export const INK_EM = 0.71372; // ink height / font-size, measured
 export const INK_CENTRE_EM = 0.35308; // ink centre above the baseline, measured
-export const INK_TARGET = 900; // world px of ink, the brief's fallback size
+export const INK_TARGET = 720; // world px of ink; v2 (user): "make the question mark smaller", was 900
 export const FONT_SIZE = Math.round(INK_TARGET / INK_EM); // 1261
 export const CONTENT_C = 835; // the content centre, on screen y 835 at every k
 export const BASELINE = CONTENT_C + INK_CENTRE_EM * FONT_SIZE; // 1280.23
@@ -237,8 +237,8 @@ export const defaultProps: Props = schema.parse({
   blue: BLUE,
   paperSrc: "paper-supaclean-still.png",
   parallax: 0.15,
-  paperDim: 0.88,
-  paperBlur: 2.5,
+  paperDim: 0.8, // v2 (user): "blur and dim slightly" more, was 0.88
+  paperBlur: 4, // v2: was 2.5
   shadowOffset: 8,
   shadowOpacity: 0.22,
   rise: RISE,
