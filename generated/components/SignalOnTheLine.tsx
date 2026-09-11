@@ -102,7 +102,6 @@ import {
   type Route,
   SCARS,
   TAIL_SAMPLES,
-  V_TRAFFIC,
   makeRoute,
   pointAt,
 } from "./TalkThroughArtifactory";
@@ -115,7 +114,6 @@ import {
   HUB_C,
   NODES6,
   OUR_AGENT_2,
-  PAIRS4,
   PAIRS6,
   RINGED_IN,
   RING_BEAD_FADE,
@@ -124,22 +122,19 @@ import {
   ROUTE_OP,
   hubArc,
 } from "./ReachTheOutsideInternet";
-// Cut 5 — THE STATE THIS PIECE CUTS TO, at cut 5's OWN f96: the rail running at
-// every 3 frames, the gateway at every 4, the six ringed agents, the cracked hub,
-// the exploit route lit end to end and the internet ring at full ink. Nothing
+// Cut 5 — THE STATE THIS PIECE CUTS TO, at cut 5's OWN f96: the rail carrying
+// traffic both ways, the gateway serving all six, the six ringed agents, the
+// cracked hub, the exploit route lit end to end and the internet ring at full
+// ink. Its PHASES are imported (RAIL_F0, GATE_F0) and its cadences are not: cut
+// 5 ran every 3 and every 4 in a wide shot, and this close-up re-authors the
+// speed and the cadence — see the screen-speed cap under THE PACKETS. Nothing
 // here is re-derived and nothing in that file was edited: every declaration this
 // piece needs was already exported.
 import {
-  CARRY_EVERY,
-  CARRY_T0,
   CRACK_HALF,
-  ESCAPE6,
-  ESC_ORDER,
   EXPLOIT_PATH,
-  GATE_EVERY,
   GATE_F0,
   OFFSET as MG_OFFSET,
-  RAIL_EVERY,
   RAIL_F0,
   TH_CLOCK as MG_TH_CLOCK,
 } from "./MessageBoardAndGateway";
@@ -174,49 +169,87 @@ export const DURATION = 181;
 // `frame + OFFSET` = `frame + 706 + 96` = `frame + 802` — `sway`, `breath`, the
 // idle-thread schedule and the grid's drift all carry their phase across the cut
 // — and the pump and the reach geometry evaluate on cut 2's own clock, `frame +
-// 634`, because they are cut 2's gesture still running. The traffic is carried
-// in the same way: cut 5's rail sequence launches every 3 frames from its own
-// f46, which is this piece's f-50, and its PAIRS6 index n continues here
-// unbroken; cut 5's gateway launches every 4 frames from its own f62, this
-// piece's f-34, on its own ESC_ORDER index g. So the packets in flight at f0 are
-// cut 5's packets, on cut 5's routes, at cut 5's positions. (Cut 5's own carried
-// -in `s` escapes are all dead before f0; its last `r` exchange, launched at this
-// piece's f-57, is not, so it is carried too.)
+// 634`, because they are cut 2's gesture still running. The traffic keeps its
+// PHASE and its ROUTES: cut 5's rail sequence is anchored to its own f46, which
+// is this piece's f-50, and its PAIRS6 index n continues here unbroken; cut 5's
+// gateway is anchored to its own f62, this piece's f-34. What it does NOT keep
+// is cut 5's SPEED and CADENCE — see the director's pass below. A close-up is a
+// different wire.
 //
 // ONE THING CHANGES ABOUT THE ROUTE, and it is a framing decision rather than a
-// world decision: from f0 on, a NEW packet on the exploit route is emitted by
-// the hub's own centre and leaves through the crack, instead of starting at a
-// named agent three legs earlier. Same route, same speed, same trail — it is the
-// tail of the same journey, minus the legs that are neither on screen nor on the
-// subject. It is what makes the route empty for the one signal at f78 (an
-// agent-origin packet is on the wire for 37-57 frames and could not clear), and
-// it is what fills the ring's rim inside this cut's 181 frames.
+// world decision: a packet on the exploit route is emitted by the hub's own
+// centre and leaves through the crack, instead of starting at a named agent
+// three legs earlier. Same route, same trail — it is the tail of the same
+// journey, minus the legs that are neither on screen nor on the subject. It is
+// what makes the route empty for the one signal (an agent-origin packet is 125
+// to 215 frames long at this cut's speed and could not clear), and it is what
+// fills the ring's rim inside this cut's 181 frames.
+//
+// DIRECTOR'S PASS 3: CALM. On the note — the same one cut 7 was given — that the
+// dots sending signals move "too fast, like it almost looks like it's glitching
+// … more distracting, it takes over". The diagnosis is arithmetic, not taste. A
+// packet at cut 5's traffic speed is 72.391 WORLD px/frame, and this cut opens
+// at k 2.20, so it crosses 159 SCREEN px in a frame — past the point where the
+// eye can join two frames into one moving object, so it reads as a stroboscope.
+// And one launched every 3 frames put three of them inside the ring at once.
+// Both are fixed, and nothing else is:
+//
+//   THE SCREEN-SPEED CAP, 45 screen px/frame for any FREE head, authored against
+//   the tightest k that head is ever seen at. At this cut's opening k 2.20 that
+//   is V_AMBIENT 20 world px/frame — 44 screen px at the close-up, 18 after the
+//   pull-back to k 0.90, 30 after the push-in to k 1.50. Slow is fine: the
+//   traffic is the world here, not the subject.
+//
+//   THE STREAK EXEMPTION, for the two heads whose arrival frame is a BEAT. The
+//   one signal has 2,022.6 px of route to climb between "and access the" and
+//   "internet", and the payoff stream has the same climb to make inside "was
+//   going to help you score higher"; no speed under the cap can do either. A
+//   head only strobes while it is a DOT jumping, so those two take a LONGER
+//   TRAIL instead of a lower speed — 480 px on the one signal at 74.9 px/frame,
+//   240 px on the payoff at 40 — which is 6 frames of travel behind the head in
+//   both cases, the same 6 frames an ambient packet's 120 px trail gives it. The
+//   head's step is a sixth of its own trail, so consecutive frames overlap
+//   heavily and it reads as a line being drawn up the route.
+//
+//   THE DENSITY. A rail packet every 10 frames instead of every 3, a route
+//   packet every 12 instead of every 4, the burst six passes every 3 rather than
+//   eleven every 1.5, and the payoff every 8 ramping to every 4 rather than 4 to
+//   2. The carry-back that keeps the wire in steady state at f0 is derived from
+//   route length and speed rather than written down, so it followed the speed:
+//   235 frames on the rail, 108 on the route.
+//
+// Everything else is untouched: same beats, same three camera moves on the same
+// keys, same burst window f51-f66, same rail hand-over at f66-76, same clicks,
+// same bead mechanism and cap, same colours, same opacities.
 //
 // Every gesture is one word. Nothing else happens.
 //   THE WIRE. Cut 5's traffic, seen from a hand's
 //     breadth away: packets both ways along the rail
-//     and through the hub every 3 frames, each pass
-//     clicking the ring and its parcel, plus one out
-//     through the crack every 4 which climbs and
-//     leaves frame at the right. Nothing new happens;
-//     the close-up itself is the reveal. All rail
-//     traffic is the subject at 0.95, because the rail
-//     IS the subject; the route's packets are ambient
-//     at 0.4                        — "because, as you might imagine"  f0-40
+//     and through the hub every 10 frames, each pass
+//     clicking the ring and its parcel. The route's
+//     own traffic, every 12, is above the crack and
+//     out of frame by f0 — at the capped speed the
+//     climb is 101 frames long and the last launch
+//     that can clear the ring before the one signal is
+//     f-34, so the crack itself is quiet until f74.
+//     Nothing new happens; the close-up itself is the
+//     reveal. All rail traffic is the subject at 0.95,
+//     because the rail IS the subject; the route's
+//     packets are ambient at 0.4    — "because, as you might imagine"  f0-40
 //   MOVE 1, keys f42-54, warp 0.72: cx 400 -> 540, k
 //     and the content centre untouched, so the hub
 //     slides to the middle of the frame. On screen
 //     f43-63, and dead still 3 frames before "other
 //     agents"                       — "to talk to"                     f43-63
-//   A BURST THROUGH THE RING. Eleven more packets
-//     cross the hub, one every 1.5 frames from f51 to
-//     f66, alternating direction, so the traffic
-//     through the ring doubles while the camera
-//     centres it and runs both ways. Each pass clicks
-//     the ring and the parcel. They are scheduled by
-//     their CROSSING and their launches solved back
-//     from it (see the note on the burst below), and
-//     the rate is back to every 3 at f67
+//   A BURST THROUGH THE RING. Six more packets cross
+//     the hub, one every 3 frames from f51 to f66,
+//     alternating direction, so the traffic through
+//     the ring quadruples while the camera centres it
+//     and runs both ways. Each pass clicks the ring and
+//     the parcel. They are scheduled by their CROSSING
+//     and their launches solved back from it (see the
+//     note on the burst below), and the rate is back to
+//     every 10 after f66
 //                                 — "other agents"                     f51-76
 //   MOVE 2, keys f74-86, warp 0.72: k 2.20 -> 0.90,
 //     content centre 760 -> 180, cx 540 -> 640, so the
@@ -224,19 +257,22 @@ export const DURATION = 181;
 //     is one picture. On screen f74-98, and still
 //     before "internet"           — "and access the"                   f74-98
 //   ONE SIGNAL CLIMBS OUT. A single packet leaves the
-//     hub through the crack at f78 — subject at 0.95,
-//     its head 1.5x — and climbs the route at one
-//     speed solved to land on the internet ring's edge
-//     at f99, on the word. It is alone on the route:
-//     the gateway's own launches stop at f46, which is
+//     hub through the crack at f74 — subject at 0.95,
+//     its head 1.5x, its trail 480 px so the climb is
+//     drawn rather than flown — and lands on the
+//     internet ring's edge at f101, two frames inside
+//     the word. It is alone on the route: the
+//     gateway's own launches stop at f-34, which is
 //     the last one that clears the ring before f76,
 //     and the rail drops to ambient 0.4 across f66-76
 //     because the rail is not the subject any more.
 //     On arrival its bead lands on the rim and stays
-//                                 — "internet"                         f78-99
+//                                 — "internet"                         f74-101
 //   THE LINE PAYS OFF. From f106 the route fills: a
-//     packet out of the crack every 4 frames, ramping
-//     to every 2 by f133, all climbing into the ring.
+//     packet out of the crack every 8 frames, ramping
+//     to every 4 by f133, all climbing into the ring
+//     as streaks at 40 px/frame on a 240 px trail, the
+//     first landing at f157.
 //     Every arrival lands its own bead on the rim, and
 //     the beads PERSIST — down to 0.6 over 24 frames
 //     and then held, the newest 40 — so the rim fills
@@ -303,7 +339,10 @@ export const DURATION = 181;
 // likewise a fixed 120 WORLD px rather than a fixed number of frames — 264
 // screen px at k 2.20 — so a packet reads as a signal running down a wire.
 // It is still a motion trail: the rear is the head's own position
-// TRAIL_LEN / v frames ago, so it runs in behind an arrival and the packet dies.
+// trail / v frames ago, so it runs in behind an arrival and the packet dies.
+// The two streaks of the calm pass are the same object with a longer trail and
+// the same six frames of travel in it: 480 world px on the one signal, 240 on
+// the payoff, sampled at the same 20 world px a segment as everything else.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -434,12 +473,52 @@ export const SL_CAM_CX = [
 // THE PACKETS. Cut 3's mechanism, with the two close-up corrections above: the
 // head is at least 4 world px and the trail is a fixed 120 world px, expressed
 // as a per-packet lag so the rear is still the head's own past position.
+//
+// THE SCREEN-SPEED CAP (director's pass 3: calm). Speed and cadence only; the
+// mechanism, the routes and the phases are cut 3's and cut 5's as before.
+//
+//   V_CAP_SCREEN 45 screen px/frame is the ceiling for any FREE head — a head
+//   flying along a line that is already drawn. A head's world speed is authored
+//   against the TIGHTEST k it is ever seen at, which is this cut's own opening
+//   k 2.20, so V_AMBIENT = floor(45 / 2.20) = 20 world px/frame: 44 screen px
+//   at the close-up, 18 at k 0.90 after move 2 and 30 at k 1.50 after move 3.
+//   Cut 5's V_TRAFFIC 72.391 was authored for a wide shot and is 159 screen px
+//   a frame here — a fifth of the frame width per frame at 24fps, which the eye
+//   cannot join into one moving object. That is the whole of the note.
+//
+//   THE STREAK EXEMPTION, for a head whose arrival frame is a BEAT and cannot
+//   be slowed. The one signal has 2,022.6 px to climb between "and access the"
+//   and "internet", and the payoff stream has the same climb to make inside the
+//   35 frames of "was going to help you score higher": both are forced above
+//   the cap by the words. A head is only a strobe while it is a DOT jumping; a
+//   head whose own trail is many times its per-frame step is a line being drawn
+//   and cannot strobe, because the frame before is still on screen underneath
+//   it. So those two take a longer trail instead of a lower speed, sized so the
+//   step is at most a QUARTER of the trail (TRAIL_LEN / V_AMBIENT is 6 frames,
+//   and both of these keep that same 6 frames of travel behind the head):
+//     the one signal  74.9 px/frame, trail 480 — step / trail = 0.156
+//     the payoff      40.0 px/frame, trail 240 — step / trail = 0.167
+//   The trail is sampled at the SAME world resolution as an ordinary packet's
+//   (TAIL_SAMPLES over TRAIL_LEN, so 20 world px a segment), so a longer trail
+//   is more segments rather than coarser ones and it still follows the route's
+//   bends instead of cutting them.
+//
+//   THE DENSITY, the other half of the note. A rail packet every 10 frames
+//   instead of every 3, a route packet every 12 instead of every 4, and the
+//   burst six passes every 3 rather than eleven every 1.5. At 20 px/frame a
+//   packet is on the visible rail for 24 frames, so every 10 keeps about two
+//   heads in the shot and one crossing the ring at a time.
 // ---------------------------------------------------------------------------
 export const TRAIL_LEN = 120; // world px
 export const HEAD_MIN_W = 4; // world px, the close-up floor under HEAD_R / k
 export const HERO_HEAD = 1.5; // the one signal's head, x the ordinary one
 export const OP_SUBJECT = ROUTE_OP; // 0.95
 export const OP_AMBIENT = 0.4;
+export const V_CAP_SCREEN = 45; // screen px/frame, the ceiling for a free head
+export const V_AMBIENT = Math.floor(V_CAP_SCREEN / K_TIGHT); // 20 world px/frame
+// The cadences. Cut 5's every 3 and every 4 are wide-shot rates.
+export const SL_RAIL_EVERY = 10; // was cut 5's RAIL_EVERY 3
+export const SL_ROUTE_EVERY = 12; // was cut 5's GATE_EVERY 4
 // The rail hands the subject over to the route: it is the subject at 0.95 while
 // the shot is on it, and ambient from f76 when the one signal owns the frame.
 export const RAIL_DIM_F0 = 66; // "other agents" ends
@@ -451,7 +530,8 @@ export type Pk = {
   route: Route;
   t0: number;
   arrive: number;
-  lag: number; // frames of trail, = TRAIL_LEN / v
+  lag: number; // frames of trail, = trail / v
+  samples: number; // trail segments, at the same world resolution for every packet
   to: number; // node index for a rail packet; -1 for a route packet
   flow: Flow;
   op: number; // 0 = take the rail's per-frame opacity
@@ -469,12 +549,14 @@ const mk = (
   op: number,
   hero = false,
   bead = -1,
+  trail = TRAIL_LEN, // world px; longer for the two streaks
 ): Pk => ({
   key,
   route,
   t0,
   arrive: t0 + route.total / v,
-  lag: TRAIL_LEN / v,
+  lag: trail / v,
+  samples: Math.round((TAIL_SAMPLES * trail) / TRAIL_LEN),
   to,
   flow,
   op,
@@ -483,9 +565,25 @@ const mk = (
 });
 
 // -- the rail ---------------------------------------------------------------
-// Cut 5's every-3 exchange among the six ringed agents, continuing its PAIRS6
-// index. Its f46 is this piece's f-50.
+// Cut 5's exchange among the six ringed agents, continuing its PAIRS6 index and
+// its phase — its f46 is this piece's f-50 — at this close-up's own cadence of
+// SL_RAIL_EVERY 10 rather than cut 5's every 3.
 export const RAIL_T0 = RAIL_F0 - CUT5_AT; // -50
+//
+// HOW FAR BACK A LAUNCH HAS TO BE CARRIED, so the wire is in steady state at f0
+// rather than filling up from empty. It is a consequence of the speed, not a
+// taste number: a packet is alive for its route's length plus its trail, at
+// V_AMBIENT. At cut 5's 72.391 the longest rail route (4,571.7 world px) took
+// 65 frames and the hand-written -60 window this piece used to carry cut 5's
+// last two exchanges in was about right; at 20 px/frame the same route takes
+// 235 frames, so that window would have left the close-up's own rail empty for
+// the first hundred and fifty frames — every neighbour's packet is still out at
+// its own box. The window is replaced by a DERIVED carry-back on the rail's own
+// stream, which reaches back 235 frames while keeping cut 5's phase and PAIRS6
+// index, exactly as cut 7 does. (That is also why cut 5's two carried-in
+// PAIRS4 exchanges are gone: they WERE the old carry-back, and keeping them
+// alongside a derived one puts four launches inside the ten frames around f-55,
+// which is the density this pass exists to take out.)
 //
 // THE BURST IS SCHEDULED BY ITS PASSES THROUGH THE RING, not by its launches,
 // and that is a consequence of the close-up rather than a liberty. At k 2.20
@@ -500,14 +598,17 @@ export const RAIL_T0 = RAIL_F0 - CUT5_AT; // -50
 //
 // So each burst packet's t0 is SOLVED BACKWARDS from the frame its head is to
 // cross (540, 760) — `hubS` is that crossing's own arclength on its own route —
-// and the crossings are laid out one every 1.5 frames from f51 to f66,
-// alternating direction. Every launch still lands inside this cut (f22-f42), at
-// cut 3's one traffic speed, on cut 3's routes; only the bookkeeping is
-// backwards. The ones that start in our own column come DOWN our pipe and UP the
-// lower one into the ring, which is the shot.
+// and the crossings are laid out from f51 to f66, alternating direction. The
+// bookkeeping is unchanged by the calm pass; only the rate is. At V_AMBIENT a
+// launch is 25-33 frames upstream of the hub when it starts in our own column
+// and 111-114 when it starts in a neighbour's, so the six launches now fall at
+// f21-f36 and f-63 to f-48 — outside this cut at that end, which costs nothing,
+// because a packet solved back from its crossing is on screen only for the 24
+// frames it is inside the visible rail. The ones that start in our own column come DOWN our
+// pipe and UP the lower one into the ring, which is the shot.
 export const BURST_CROSS_F0 = 51; // "to talk to"
-export const BURST_CROSS_EVERY = 1.5;
-export const BURST_N = 11; // f51 .. f66; every 3 again from f67
+export const BURST_CROSS_EVERY = 3; // calm pass; was 1.5
+export const BURST_N = 6; // calm pass; was 11. f51 .. f66; every 10 again after
 // which directed pairs cross the hub, and which way they are going as they do.
 // A pair whose two rail points are the same x (the left column's two agents)
 // never reaches the hub at all and is not in either list.
@@ -527,17 +628,43 @@ export const hubS = (a: number) =>
 export const HERO_ROUTE = makeRoute([HUB_C, ...EXPLOIT_PTS]);
 export const GATE_T0 = GATE_F0 - CUT5_AT; // -34: cut 5's gateway phase, locally
 // The last gateway launch that has cleared the internet ring — head and trail —
-// before move 2 starts, so the route is empty for the one signal.
-export const ROUTE_CLEAR = 76; // the last one clears the ring at f75.6
-export const HERO_F0 = 78;
-export const HERO_F1 = 99; // "internet"
-export const HERO_V = HERO_ROUTE.total / (HERO_F1 - HERO_F0);
-// The payoff: every 4 frames from f106, ramping to every 2 by f133, held to the
+// before move 2 starts, so the route is empty for the one signal. UNCHANGED by
+// the calm pass, and it is the gate that decides how long the crack keeps
+// emitting: at 20 px/frame the 2,022.6 px climb takes 101.1 frames and the trail
+// 6 more, so the last launch that can clear the ring by f76 is f-34 — cut 5's
+// own gateway phase, the first index of this stream. Every later one is on the
+// route when move 2 reveals the whole of it, and the one signal has to be alone
+// up there. So the crack's ambient traffic is the carried-back stream climbing
+// out of frame, and no new packet leaves the crack between f-34 and the hero.
+// The same arithmetic at cut 5's speed let it keep emitting to f46; the cap
+// costs those thirty frames of the crack, and it cannot be bought back without
+// putting eight ambient heads on the route under the one signal.
+export const ROUTE_CLEAR = 76; // the last one clears the ring at f73.1
+// THE ONE SIGNAL, under the streak exemption. The beat is fixed — it leaves on
+// "and access the" and lands on "internet" — and the climb is 2,022.6 px, so no
+// speed inside the cap can do it: at 20 px/frame it would take 101 frames and
+// land 80 frames after the word. It is launched 4 frames earlier instead and
+// arrives 2 frames INSIDE the word rather than on its first frame (the beat at
+// f99 is unmoved), which takes 96.3 px/frame down to 74.9, and it carries a
+// 480 px trail — four times its own step, 6 frames of travel — so it reads as a
+// line being drawn up the route rather than a dot jumping up it.
+export const HERO_F0 = 74; // calm pass; was 78
+export const HERO_F1 = 101; // calm pass; was 99. "internet" + 2
+export const HERO_TRAIL = 480; // world px; the streak
+export const HERO_V = HERO_ROUTE.total / (HERO_F1 - HERO_F0); // 74.91
+// The payoff: every 8 frames from f106, ramping to every 4 by f133, held to the
 // end. The gap is read off the launch's own frame, so the ramp is the schedule.
+// It is the second streak: the same 2,022.6 px climb has to start inside "was
+// going to help you score higher" and arrive inside it, so these run at 40 world
+// px/frame — 36 screen px at k 0.90 and 60 at the end of move 3's push-in — on a
+// 240 px trail, again 6 frames of travel behind the head. Arrivals begin at
+// f156.6.
 export const PAYOFF_F0 = 106;
 export const PAYOFF_F1 = 133;
-export const PAYOFF_EVERY0 = 4;
-export const PAYOFF_EVERY1 = 2;
+export const PAYOFF_EVERY0 = 8; // calm pass; was 4
+export const PAYOFF_EVERY1 = 4; // calm pass; was 2
+export const PAYOFF_V = 40; // world px/frame
+export const PAYOFF_TRAIL = 240; // world px; the streak
 
 // -- what an arrival leaves on the ring --------------------------------------
 // Cut 4's bead, with the one thing this cut needs it to do: from the one signal
@@ -558,60 +685,57 @@ export const beadPt = (slot: number): P => {
   return { x: RING.x + RING.r * Math.sin(a), y: RING.y - RING.r * Math.cos(a) };
 };
 
+// The carry-back, derived: a launch is carried back far enough that the packet
+// it makes is still alive at f0, which is its route's length plus its trail at
+// the speed it travels. The first index at or after it keeps the sequence's own
+// phase and its PAIRS6 / gateway index while reaching further back than 0 does.
+export const RAIL_LEN_MAX = Math.max(...PAIRS6.map(([a, b]) => ROUTES6[a][b].total)); // 4571.71
+const carryBack = (len: number, trail = TRAIL_LEN) => -Math.ceil((len + trail) / V_AMBIENT);
+export const CARRY_BACK = carryBack(RAIL_LEN_MAX); // -235
+export const ROUTE_CARRY_BACK = carryBack(HERO_ROUTE.total); // -108
+const firstIndex = (t0: number, every: number, back: number) => Math.ceil((back - t0) / every);
+const pairAt = (n: number) => PAIRS6[((n % PAIRS6.length) + PAIRS6.length) % PAIRS6.length];
+
 export const PACKETS: Pk[] = (() => {
   const out: Pk[] = [];
 
-  // Cut 5's own carried-in exchange, on ITS clock, for the last few launches
-  // that are still on the wire at this cut's f0. (Its carried-in escapes are all
-  // dead by then, so there is nothing to carry there.)
-  for (let m = 0; ; m++) {
-    const t0 = CARRY_T0 + m * CARRY_EVERY; // cut 5's clock
-    if (t0 >= RAIL_F0) break;
-    const local = t0 - CUT5_AT;
-    if (local < -60) continue; // arrived and run in long before f0
-    const [a, b] = PAIRS4[m % PAIRS4.length];
-    out.push(mk(`c${m}`, ROUTES6[a][b], local, V_TRAFFIC, b, "rail", 0));
-  }
-
-  // the rail: cut 5's every-3 stream, its index unbroken
-  for (let n = 0; ; n++) {
-    const t0 = RAIL_T0 + n * RAIL_EVERY;
+  // the rail: cut 5's stream at this cut's cadence, its phase and its index
+  // unbroken, carried back far enough to be in steady state at f0
+  for (let n = firstIndex(RAIL_T0, SL_RAIL_EVERY, CARRY_BACK); ; n++) {
+    const t0 = RAIL_T0 + n * SL_RAIL_EVERY;
     if (t0 > DURATION) break;
-    const [a, b] = PAIRS6[n % PAIRS6.length];
-    out.push(mk(`x${n}`, ROUTES6[a][b], t0, V_TRAFFIC, b, "rail", 0));
+    const [a, b] = pairAt(n);
+    out.push(mk(`x${n}`, ROUTES6[a][b], t0, V_AMBIENT, b, "rail", 0));
   }
-  // the burst: one more pass through the ring every 1.5 frames, alternating
+  // the burst: one more pass through the ring every 3 frames, alternating
   // direction, each solved back from the frame it is to cross the hub
   for (let j = 0; j < BURST_N; j++) {
     const cross = BURST_CROSS_F0 + j * BURST_CROSS_EVERY;
     const list = j % 2 === 0 ? RAIL_RIGHT : RAIL_LEFT;
     const [a, b] = list[Math.floor(j / 2) % list.length];
-    out.push(mk(`b${j}`, ROUTES6[a][b], cross - hubS(a) / V_TRAFFIC, V_TRAFFIC, b, "rail", 0));
+    out.push(mk(`b${j}`, ROUTES6[a][b], cross - hubS(a) / V_AMBIENT, V_AMBIENT, b, "rail", 0));
   }
 
-  // the gateway, carried in: the packets cut 5 had in flight keep cut 5's own
-  // agent-origin routes and its ESC_ORDER index
-  let g = 0;
-  for (; ; g++) {
-    const t0 = GATE_T0 + g * GATE_EVERY;
-    if (t0 >= 0) break;
-    out.push(mk(`g${g}`, ESCAPE6[ESC_ORDER[g % ESC_ORDER.length]], t0, V_TRAFFIC, -1, "route", OP_AMBIENT));
-  }
-  // and from f0 it is emitted by the hub, on the same cadence and the same
-  // index, up to the last launch that clears the ring before move 2
-  for (; ; g++) {
-    const t0 = GATE_T0 + g * GATE_EVERY;
-    if (t0 + (HERO_ROUTE.total + TRAIL_LEN) / V_TRAFFIC > ROUTE_CLEAR) break;
-    out.push(mk(`g${g}`, HERO_ROUTE, t0, V_TRAFFIC, -1, "route", OP_AMBIENT));
+  // the gateway: emitted by the hub and out through the crack, on cut 5's phase
+  // at this cut's cadence, carried back so the climb is populated at f0 and
+  // stopping at the last launch that clears the ring before move 2
+  for (let g = firstIndex(GATE_T0, SL_ROUTE_EVERY, ROUTE_CARRY_BACK); ; g++) {
+    const t0 = GATE_T0 + g * SL_ROUTE_EVERY;
+    if (t0 + (HERO_ROUTE.total + TRAIL_LEN) / V_AMBIENT > ROUTE_CLEAR) break;
+    out.push(mk(`g${g}`, HERO_ROUTE, t0, V_AMBIENT, -1, "route", OP_AMBIENT));
   }
 
   // the one signal
   let slot = 0;
-  out.push(mk("hero", HERO_ROUTE, HERO_F0, HERO_V, -1, "route", OP_SUBJECT, true, slot++));
+  out.push(
+    mk("hero", HERO_ROUTE, HERO_F0, HERO_V, -1, "route", OP_SUBJECT, true, slot++, HERO_TRAIL),
+  );
 
   // the payoff
   for (let t0 = PAYOFF_F0; t0 <= DURATION; slot++) {
-    out.push(mk(`p${slot}`, HERO_ROUTE, t0, V_TRAFFIC, -1, "route", OP_SUBJECT, false, slot));
+    out.push(
+      mk(`p${slot}`, HERO_ROUTE, t0, PAYOFF_V, -1, "route", OP_SUBJECT, false, slot, PAYOFF_TRAIL),
+    );
     t0 += interpolate(t0, [PAYOFF_F0, PAYOFF_F1], [PAYOFF_EVERY0, PAYOFF_EVERY1], clamp);
   }
   return out;
@@ -738,9 +862,12 @@ const SignalOnTheLine: React.FC<Props> = ({
     if (sRear >= p.route.total - 0.5) continue;
     const op = p.flow === "rail" ? railOp : p.op;
     const segs: Draw["segs"] = [];
-    for (let i = 0; i < TAIL_SAMPLES; i++) {
-      const a = sRear + ((sHead - sRear) * i) / TAIL_SAMPLES;
-      const b = sRear + ((sHead - sRear) * (i + 1)) / TAIL_SAMPLES;
+    // the trail's own resolution, 20 world px a segment for every packet, so a
+    // streak's longer trail is more segments and still follows the route's bends
+    const ns = p.samples;
+    for (let i = 0; i < ns; i++) {
+      const a = sRear + ((sHead - sRear) * i) / ns;
+      const b = sRear + ((sHead - sRear) * (i + 1)) / ns;
       if (b <= 0 || a >= p.route.total || b - a < 0.6) continue;
       const pa = pointAt(p.route, a);
       const pb = pointAt(p.route, b);
@@ -749,7 +876,7 @@ const SignalOnTheLine: React.FC<Props> = ({
         y1: pa.y,
         x2: pb.x,
         y2: pb.y,
-        op: op * (0.2 + 0.8 * ((i + 1) / TAIL_SAMPLES)),
+        op: op * (0.2 + 0.8 * ((i + 1) / ns)),
       });
     }
     draws.push({
