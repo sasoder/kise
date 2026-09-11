@@ -45,16 +45,11 @@ import {z} from 'zod';
  *                   removes the light. The light leaves; the weight stays.
  *   f58-70  settle  whole svg 1 -> 1.02 -> 1, Easing.inOut(Easing.quad), peak
  *                   at f63. The only whole-mark motion in the piece.
- *   f66-82  load    ambient load fades in and then runs to the end: four soft
- *                   slivers of light lapping the mark's outer rim, evenly
- *                   spaced, clockwise, one lap per 144 frames. They are drawn
- *                   behind the ink, so each reads as an aura sliding along the
- *                   rim rather than a shape laid on top of it. The gesture:
- *                   after the upgrade, load runs round the knot — the mark is
- *                   not just heavier, it is live and carrying traffic.
- *   f70-168 hold    the heavier mark, still, with the load running. The last
- *                   frame is the after-state with the pulses mid-travel, so
- *                   the hold can be cut anywhere.
+ *   f66-82  load    ambient load fades in and then runs to the end: three
+ *                   glints (bright head, fading trail) racing clockwise along
+ *                   the outer edge of the mark, evenly spaced, one lap per
+ *                   120 frames, masked to the space outside the ink. After
+ *                   the upgrade, the knot is live.
  */
 
 export const FPS = 24;
@@ -244,11 +239,30 @@ const rimAt = (t: number) => {
   };
 };
 
-// The pulse itself, in the compute-cloud's proportions: about 1.5x the trace
-// width across it and 4x along it (there, rx 12.5 / ry 34 against a 17px
-// trace). Half-width across the rim 0.73*w, half-length along it 2.0*w.
-const PULSE_ACROSS = RIM_W * 0.73;
-const PULSE_ALONG = RIM_W * 2.0;
+// The glint: a small head with a motion trail behind it, the packet mechanism
+// from the field pieces (a bright head, its tail the head's own past positions).
+// It runs just OUTSIDE the ink's outer edge, along the rim, and is masked so
+// nothing of it is ever drawn over ink: it reads as light racing along the
+// edge of the mark.
+const GLINT_LEN = 5.5; // trail length along the rim, in units
+const GLINT_SEGS = 14; // trail segments, opacity fading head -> tail
+const GLINT_W = 0.28; // stroke width of the trail
+const GLINT_HEAD_R = 0.2;
+const GLINT_GAP = 0.1; // clearance between the trail and the ink's edge
+
+// Point at rim parameter t pushed outward, off the ink's outer edge.
+const edgeAt = (t: number, offset: number) => {
+  const p = rimAt(t);
+  const rad = (p.angle * Math.PI) / 180;
+  // Perpendicular to the tangent, on the side away from the centre.
+  let nx = -Math.sin(rad);
+  let ny = Math.cos(rad);
+  if (nx * (p.x - CX) + ny * (p.y - CY) < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  return {x: p.x + nx * offset, y: p.y + ny * offset};
+};
 
 const clamp = {
   extrapolateLeft: 'clamp',
@@ -288,8 +302,8 @@ export const defaultProps: OpenAiUpgradeSurgeProps = schema.parse({
   restOpacity: 0.82,
   // Four pulses evenly spaced on a 144-frame lap: a pulse passes any given
   // point of the rim every 36 frames — a steady load, not a strobe.
-  pulseCount: 4,
-  lapFrames: 144,
+  pulseCount: 3,
+  lapFrames: 120,
   liveliness: 1,
   backdrop: 'transparent',
 });
@@ -354,20 +368,23 @@ const OpenAiUpgradeSurge: React.FC<OpenAiUpgradeSurgeProps> = ({
         });
   const scale = 1 + settle * 0.02 * liveliness;
 
-  // Ambient load. Once the settle is finishing the knot is live: soft slivers
-  // of light lap the outer rim, evenly spaced, clockwise, to the last frame.
-  // The gate opens over f66-82 so the load arrives out of the settle rather
-  // than switching on; before f66 there are no pulses at all.
+  // Ambient load. Once the settle is finishing the knot is live: a few glints
+  // race clockwise along the outer edge of the mark, evenly spaced, to the
+  // last frame. The gate opens over f66-82 so the load arrives out of the
+  // settle rather than switching on; before f66 there are no glints at all.
   const loadGate = interpolate(frame, [66, 82], [0, 1], clamp);
-  const pulses =
+  const edgeOffset = RIM_W / 2 + weightGain / 2 + GLINT_GAP;
+  const glints =
     loadGate <= 0
       ? []
       : Array.from({length: pulseCount}, (_, k) => {
-          const phase = (frame - 66) / lapFrames + k / pulseCount;
-          const p = rimAt(phase);
-          return {key: k, ...p};
+          const head = (frame - 66) / lapFrames + k / pulseCount;
+          const pts = Array.from({length: GLINT_SEGS + 1}, (_, i) =>
+            edgeAt(head - (i / GLINT_SEGS) * (GLINT_LEN / RIM_LEN), edgeOffset),
+          );
+          return {key: k, pts};
         });
-  const pulseOpacity = 0.22 * liveliness * loadGate;
+  const glintOpacity = Math.min(1, 0.8 * liveliness) * loadGate;
 
   return (
     <AbsoluteFill
@@ -458,23 +475,57 @@ const OpenAiUpgradeSurge: React.FC<OpenAiUpgradeSurgeProps> = ({
             >
               <path d={D} fill="#ffffff" />
             </mask>
+            {/* Everything except the (heavier) ink, with a hair of margin. */}
+            <mask
+              id="upgrade-outside-mask"
+              maskUnits="userSpaceOnUse"
+              x={-2}
+              y={-2}
+              width={28}
+              height={28}
+            >
+              <rect x={-2} y={-2} width={28} height={28} fill="#ffffff" />
+              <path
+                d={D}
+                fill="#000000"
+                stroke="#000000"
+                strokeWidth={weightGain + 0.06}
+                strokeLinejoin="round"
+              />
+            </mask>
           </defs>
 
           {/*
-            0. The ambient load, drawn first so it sits BEHIND every piece of
-            ink. Each pulse only shows where its soft aura extends past the
-            rim's edges — it never lies on top of the mark.
+            0. The ambient load: glints racing along the outer edge of the
+            mark, a bright head and a fading trail, masked to the space
+            outside the ink so they never lie on top of the mark.
           */}
-          <g fill={ink} opacity={pulseOpacity}>
-            {pulses.map((p) => (
-              <ellipse
-                key={`load-${p.key}`}
-                cx={p.x}
-                cy={p.y}
-                rx={PULSE_ALONG}
-                ry={PULSE_ACROSS}
-                transform={`rotate(${p.angle} ${p.x} ${p.y})`}
-              />
+          <g
+            mask="url(#upgrade-outside-mask)"
+            opacity={glintOpacity}
+            stroke={surge}
+            fill={surge}
+            strokeWidth={GLINT_W}
+            strokeLinecap="round"
+          >
+            {glints.map((g) => (
+              <g key={`glint-${g.key}`}>
+                {g.pts.slice(0, -1).map((a, i) => {
+                  const b = g.pts[i + 1];
+                  const o = 1 - i / GLINT_SEGS;
+                  return (
+                    <line
+                      key={i}
+                      x1={a.x}
+                      y1={a.y}
+                      x2={b.x}
+                      y2={b.y}
+                      opacity={o * o}
+                    />
+                  );
+                })}
+                <circle cx={g.pts[0].x} cy={g.pts[0].y} r={GLINT_HEAD_R} stroke="none" />
+              </g>
             ))}
           </g>
 
