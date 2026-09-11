@@ -1,5 +1,4 @@
-import { loadFont } from "@remotion/fonts";
-import { AbsoluteFill, Easing, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   ACCENT,
@@ -20,29 +19,68 @@ import {
   camMove,
   clamp,
   clamp01,
-  feather,
   hash,
   iconShadow,
   makeTone,
   runCamera,
   smoothstep,
   sway,
-  wobble,
-  WOBBLE_R,
   worldTransform,
 } from "./fieldShared";
-import { CLAUDE, DEEPSEEK, MINIMAX, MOONSHOT, type BrandGlyph } from "./brandGlyphs";
+import {
+  AXIS,
+  BLOB_B,
+  CLAUDE_SIZE,
+  CLAUDE_Y,
+  FLIGHT_EXTRA,
+  K_REST,
+  MARK_BOTTOM,
+  MARK_SIZE,
+  MARK_Y,
+  MODELS,
+  Mark,
+  PKT_R,
+  THREAD_Y0,
+  THREAD_Y1,
+  THREAD_OPACITY,
+  THREAD_W,
+  flightEase,
+  makeSeats,
+  readoutStyle,
+  siphonPackets,
+} from "./claudeDistilledShared";
+import { CLAUDE } from "./brandGlyphs";
 
 export const FPS = 24;
 // John / Charles / Beren, clip `JohnCharlesBeren_Claude_Distilled`, cut 1:
 // "...people are distilling mostly from Claude, like all the open weight
 // models, right? The diversity of their outputs is a lot lower after RL..."
 //
-// SRT span 0:03.259 (the word "Claude") -> 0:08.179 (the end of "RL") at 24fps.
-// round((8.179 - 3.259) * 24) = round(4.920 * 24) = round(118.08) = 118 frames
-// of speech, plus a 24 frame tail — longer than the usual 16, so the label
-// lands and holds — = 142.
-export const DURATION = 142;
+// The beats are a WORD-LEVEL transcription of the audio, not the SRT's cue
+// boundaries — the SRT put the span at 3.259 -> 8.179 and the words sit a
+// frame or two off that. In-point is "Claude" at 3.260, and a word's frame is
+// round((t - 3.260) * 24):
+//
+//   word        f        word        f
+//   Claude      0        is         75
+//   like       13        a          84
+//   all        17        lot        88
+//   open       23        lower      90
+//   weight     26        after      97
+//   models     32        RL        104
+//   right?     44        RL ends   115  (8.040)
+//   The        49        "and"     118  (the next word, not in this cut)
+//   diversity  51
+//   of         59
+//   their      64
+//   outputs    66
+//
+// Every gesture already sits on those words within a frame or two, so none of
+// them moved in this pass. What changed is the tail: speech ends at f115 and
+// `DURATION = 115 + 48 = 163` gives the editor a 2-second resolved hold to
+// trim into rather than the 24 frames it had. The resolved state holds under
+// `sway`, `breath` and the packets, so the tail is never a still frame.
+export const DURATION = 163;
 
 // ---------------------------------------------------------------------------
 // "The siphon". Claude is the source: the three open-weight models named in the
@@ -74,7 +112,7 @@ export const DURATION = 142;
 //     their mark on shallow arcs and take their
 //     blob seats, top seats first, bottom seats
 //     last, each already in its own tone           — "the diversity of
-//                                                     their outputs"   f49-68
+//                                                     their outputs"   f49-70
 //   THE ONE BIG MOTION: every blob dot travels to
 //     its column seat on one shared smoothstep
 //     (hashed delay <= 3 frames, no spring, no
@@ -82,11 +120,24 @@ export const DURATION = 142;
 //     over the same window. Same 64 dots, same
 //     radius; the spread is gone                   — "a lot lower"     f84-100
 //   the label rises 10px and fades in, and holds   — "after RL"        f99-107
-//   hold resolved, never fades                     — tail              f118-142
+//   hold resolved, never fades                     — tail              f115-163
 //
 // ambient: `sway` on the camera, `breath` on every seated dot, and the packets
 // on the threads from f40 to the last frame. They are not gestures; the siphon
 // is what a running thing looks like.
+//
+// --- harmony pass ----------------------------------------------------------
+// Everything this cut has in common with cuts 2 and 3 now lives in
+// `claudeDistilledShared.tsx` and is imported, never restated: the mark
+// positions and sizes and the `Mark` helper, the blob and column seat
+// generator, the thread geometry and the packet constants, the Söhne face and
+// its readout style, and `K_REST`. Not one number moved — the rewired piece was
+// rendered against the frames it replaced and differs from them by zero pixels.
+//
+// The same pass retimed the clip to a word-level transcription of the audio.
+// Every gesture here was already on its word within a frame or two, so nothing
+// was re-keyed; the only change is the tail, 24 frames -> 48, so the editor has
+// two seconds of resolved hold to trim into.
 //
 // --- v2 pass ---------------------------------------------------------------
 // Three things, and nothing else moved. Beats, gesture list, mechanisms, tone
@@ -117,19 +168,30 @@ export const DURATION = 142;
 //     f84 (+ hashed 0-3) -> f100, ripe -> deep on the same window — but it now
 //     folds the blob rather than a fan. Peak screen speed measured at 19.4 px
 //     a frame (f93) at k 1.35, well under the 45 px/frame close-up cap.
+//
+// --- v3 pass ---------------------------------------------------------------
+// ONE change, and cut 3 takes exactly the same one: the blob arrival's flights
+// are no longer front-loaded. The curve a dot flies on was an ease-out cubic,
+// which over the 2.6-frame flights at the top of the blob spends 77% of the
+// distance on the first frame; the spray peaked at 73.7 screen px/frame with
+// the dot at least half opaque, with 102 of 192 dots over the house's 45
+// px/frame, and read as dots snapping into place rather than settling.
+//
+// The flight is now `flightEase` — a smoothstep, shared with cut 3 in
+// `claudeDistilledShared.tsx` — plus `FLIGHT_EXTRA`, the same two frames added
+// to every flight. Measured on the drawn frames at this cut's own k:
+//   peak while >= 50% opaque   73.7 -> 41.7 screen px/frame
+//   dots over 45 px/frame      102 of 192 -> 0 of 192
+// The smoothstep alone took it to 56.9, still over the cap, which is what the
+// two frames are for.
+//
+// Every `t0` is untouched, so the histogram of START frames is exactly what it
+// was and no dot leaves its mark a frame early or late; only the landings move,
+// all by the same two frames (first arrival f51.9 -> f53.9, last f66.7 ->
+// f68.7, still inside "outputs" and eight frames clear of "is" at f75). The
+// arc, the 3-frame fade, the seat field, the arrival rank, the tone mix, the
+// contraction, the camera and every other beat are untouched.
 // ---------------------------------------------------------------------------
-
-// -- type --------------------------------------------------------------------
-// Söhne Kräftig, at module scope, the way `explainerShared.tsx` loads it, so a
-// font failure surfaces before a single frame is drawn. One label, one weight,
-// no fallback stack: if it does not load the render is wrong and should look
-// wrong.
-const LABEL_FONT = "SohneKraftig";
-loadFont({
-  family: LABEL_FONT,
-  url: staticFile("Sohne-Kraftig.otf"),
-  weight: "500",
-});
 
 export const schema = z.object({
   ink: z.string(),
@@ -160,7 +222,7 @@ export const schema = z.object({
     aLotLower: z.number(), // "a lot lower"
     after: z.number(), // "after"
     rl: z.number(), // "RL"
-    end: z.number(), // speech ends; tail to 142
+    end: z.number(), // speech ends; tail to 163
   }),
 });
 
@@ -194,7 +256,7 @@ export const defaultProps: Props = schema.parse({
     aLotLower: 85,
     after: 97,
     rl: 105,
-    end: 118,
+    end: 115, // "RL" ends 8.040; the tail runs to 163
   },
 });
 
@@ -207,47 +269,28 @@ const WORLD_H = 2200;
 // spans y 485 (the top of the Claude mark) to 1320 (under the label), so its
 // centre is 900 — that is the camera's resolved content centre.
 // ---------------------------------------------------------------------------
-const AXIS = 540;
-
-const CLAUDE_Y = 560;
-const CLAUDE_SIZE = 150; // the 24-unit box scaled to 150; Claude's ink fills it
-const CLAUDE_BOTTOM = CLAUDE_Y + CLAUDE_SIZE / 2; // 635
-
-const MARK_Y = 840;
-const MARK_SIZE = 104;
-const MARK_BOTTOM = MARK_Y + MARK_SIZE / 2; // 892
-
-// The three open-weight models, left to right. `drawDur` is how long that
-// model's thread takes to reach it: the centre one is half the distance of the
-// outer two, so they are given 6 / 8 / 10 frames rather than one speed — three
-// heads arriving together reads as a machine, not as three things happening.
-const MODELS: { name: string; glyph: BrandGlyph; x: number; drawDur: number }[] = [
-  { name: "DeepSeek", glyph: DEEPSEEK, x: 300, drawDur: 8 },
-  { name: "Moonshot", glyph: MOONSHOT, x: AXIS, drawDur: 6 },
-  { name: "MiniMax", glyph: MINIMAX, x: 780, drawDur: 10 },
-];
-
-const THREAD_Y0 = CLAUDE_BOTTOM + 5; // 640, just clear of Claude's bottom edge
-const THREAD_Y1 = 780; // 60px above a mark's centre, 8px above its top edge
+// The marks, the thread geometry, the blob and the column all come from
+// `claudeDistilledShared.tsx`: Claude 150 at (540, 560), the three models 104 at
+// y 840 on x 300 / 540 / 780, the thread from 640 to 780. What is this cut's
+// own is where the blob and the column sit under them, and how long each
+// thread takes to reach its mark.
+//
+// `drawDur`, per model: the centre one is half the distance of the outer two,
+// so they are given 6 / 8 / 10 frames rather than one speed — three heads
+// arriving together reads as a machine, not as three things happening.
+const THREAD_DRAW = [8, 6, 10];
 
 // The outputs: a wide feathered blob under each mark — the style's fleet shape,
 // a superellipse at n 2.4, 230 x 180 world px. Its top edge sits at 920, just
 // under the mark, and half-width 115 leaves the three blobs a ~10px gap at
 // x 415/425 and 655/665, so they read as three clouds and never touch.
-const BLOB_N = 64; // dots per model
 const BLOB_CY = 1010;
-const BLOB_A = 115; // half-width
-const BLOB_B = 90; // half-height
-const BLOB_POW = 2.4; // the superellipse exponent: rounder than an ellipse, no corners
 const BLOB_TOP = BLOB_CY - BLOB_B; // 920
 
-// The column after RL: the same 64 dots, three wide at a 14px pitch. Two wide
-// at 11 read as a solid bar at this zoom; three wide at 14 is a countable
-// column of dots. 64 over three per row is 22 rows, 920 -> 1214.
-const COL_DX = 13;
-const COL_PITCH = 14;
-const COL_TOP = 920;
-const COL_WIDE = 3;
+// The column after RL: the same 64 dots, three wide at a 14px pitch, hung from
+// the blob's own top. Two wide at 11 read as a solid bar at this zoom; three
+// wide at 14 is a countable column of dots. 22 rows, 920 -> 1214.
+const COL_TOP = BLOB_TOP; // 920
 
 const LABEL_Y = 1300;
 const LABEL_SIZE = 48;
@@ -283,7 +326,7 @@ const CONTENT_CENTRE = 900;
 // screen y 275..1402, above the caption band.
 // ---------------------------------------------------------------------------
 const K_OPEN = 1.8;
-const K_FINAL = 1.35;
+const K_FINAL = K_REST;
 const CAM = camMove({
   f0: 6,
   f1: 21,
@@ -298,174 +341,33 @@ const CAM_K = [K_OPEN, ...CAM.K, K_FINAL];
 const CAM_CY = [CLAUDE_Y + CAM_LIFT / K_OPEN, ...CAM.CY, CONTENT_CENTRE + CAM_LIFT / K_FINAL];
 
 // ---------------------------------------------------------------------------
-// The outputs. 64 seats per model inside its blob, and the same 64 re-seated in
-// its column. Both are laid out once, at module scope, off the stable hash.
+// The outputs. `makeSeats` lays out the 3 x 64 seats — the feathered
+// superellipse blob and the three-wide column it folds into — once, at module
+// scope, off the stable hash; this cut only says WHERE (blob centred 1010,
+// column from 920, dots leaving the mark's bottom edge at 892) and WHEN.
 //
-// The blob is a superellipse — |dx/a|^n + |dy/b|^n = 1 at n 2.4 — sampled by
-// rejection out of its bounding box, so the density is uniform everywhere
-// inside and there is no pointed end anywhere on it. Its boundary is the two
-// things the style requires of every crowd edge that is ever seen: it undulates
-// (`wobble` on the nominal edge, by angle so the loop has no seam) and the
-// density falls off toward it (`feather`, over 3 seat steps ≈ 33 world px), so
-// no row of dots ever traces the outline. Seats keep 16 world px apart ACROSS
-// all three blobs, so the scatter is organic without clumping and the ~10px
-// gaps at x 415/425 and 655/665 stay open.
-//
-// The radius is DOT_RADIUS for every seat, in both states, with no taper at the
-// feathered edge: the count and the radius are what must be seen to be
-// unchanged when the blob becomes the column, so only the DENSITY falls off.
+// When, per seat, is read off its depth `v` (0 at the top of the blob, 1 at the
+// bottom): nearest seats first, furthest last, so arrivals run 52 -> 68 and a
+// deeper seat both leaves later and travels longer. `delay` is its hashed
+// stagger into the contraction.
 // ---------------------------------------------------------------------------
-const SEAT_STEP = 11; // world px, the unit `feather` measures its falloff in
-const BLOB_FEATHER = 3; // steps; ~33 world px of dissolve at the blob's edge
-const MIN_SEP = 16; // world px between any two seats, in any blob
-const EDGE_WOBBLE = 1.8; // world px of undulation on a blob boundary
-
-type Seat = {
-  m: number; // which model
-  fx: number;
-  fy: number;
-  cx: number; // its column seat
-  cy: number;
-  v: number; // 0 at the top of the blob, 1 at the bottom
-  ripe: number; // 1 = ACCENT, 0 = ACCENT_DEEP — the mixed tone IS the diversity
-  sx: number; // where it leaves the mark's bottom edge
-  sy: number;
-  arc: number; // perpendicular offset at mid-flight
-  t0: number;
-  dur: number;
-  delay: number; // its hashed delay into the contraction
-  seed: number;
-};
-
-const SEATS: Seat[] = (() => {
-  const out: Seat[] = [];
-  for (let m = 0; m < MODELS.length; m++) {
-    const cxm = MODELS[m].x;
-    const mine: { x: number; y: number; v: number; i: number }[] = [];
-    for (let i = 0; mine.length < BLOB_N && i < 60000; i++) {
-      const dx = (2 * hash(i, 20 + m * 3) - 1) * BLOB_A;
-      const dy = (2 * hash(i, 21 + m * 3) - 1) * BLOB_B;
-      const x = cxm + dx;
-      const y = BLOB_CY + dy;
-      // How far out this seat is, as a fraction of the boundary along its own
-      // ray: 1 is exactly on the edge. The distance left to the edge is then
-      // |d| * (1/r - 1), which is world px and is what `feather` wants.
-      const r = Math.pow(
-        Math.pow(Math.abs(dx) / BLOB_A, BLOB_POW) + Math.pow(Math.abs(dy) / BLOB_B, BLOB_POW),
-        1 / BLOB_POW,
-      );
-      const d = Math.hypot(dx, dy);
-      const toEdge = r < 1e-6 ? BLOB_B : d * (1 / r - 1);
-      // the nominal edge undulates, by angle, so it is periodic around the loop
-      const inSteps =
-        (toEdge + wobble(Math.atan2(dy, dx) * WOBBLE_R, 0.9 + m) * EDGE_WOBBLE) / SEAT_STEP;
-      if (hash(i, 71 + m) >= feather(inSteps, BLOB_FEATHER)) continue;
-      // no clumps, and no interleaving where two blobs come close
-      let clash = false;
-      for (const s of out) {
-        if (Math.hypot(s.fx - x, s.fy - y) < MIN_SEP) {
-          clash = true;
-          break;
-        }
-      }
-      if (!clash) {
-        for (const s of mine) {
-          if (Math.hypot(s.x - x, s.y - y) < MIN_SEP) {
-            clash = true;
-            break;
-          }
-        }
-      }
-      if (clash) continue;
-      // 0 at the top of the blob, 1 at the bottom: its arrival rank, and the
-      // shape of its flight
-      mine.push({ x, y, v: (y - BLOB_TOP) / (2 * BLOB_B), i });
-      // pushed into `out` below, once the column seats are known
-    }
-
-    // The column: the same 64, ranked by depth so the blob folds into it
-    // without crossing — the top dots take the top rows, the bottom dots the
-    // bottom. Three per row, and a row keeps its dots in their own left-to-
-    // right order so no two paths cross inside a row either.
-    const rank = mine.map((_, n) => n).sort((a, b) => mine[a].y - mine[b].y);
-    for (let r = 0; r < rank.length; r += COL_WIDE) {
-      const row = rank.slice(r, r + COL_WIDE).sort((a, b) => mine[a].x - mine[b].x);
-      row.forEach((n, j) => {
-        rank[r + j] = n;
-      });
-    }
-
-    rank.forEach((n, r) => {
-      const s = mine[n];
-      const row = Math.floor(r / COL_WIDE);
-      const i = s.i;
-      // it leaves the mark's own bottom edge, spread across its width
-      const sx = cxm + (hash(i, 30 + m) - 0.5) * 70;
-      const sy = MARK_BOTTOM;
-      const travel = Math.hypot(s.x - sx, s.y - sy);
-      out.push({
-        m,
-        fx: s.x,
-        fy: s.y,
-        // three wide: -COL_DX, 0, +COL_DX, in the row's own left-to-right
-        // order. 64 is not a multiple of three, so the last row holds one dot
-        // and it is centred rather than left in the left-hand slot.
-        cx:
-          cxm +
-          ((r % COL_WIDE) - (Math.min(COL_WIDE, rank.length - row * COL_WIDE) - 1) / 2) * COL_DX,
-        cy: COL_TOP + row * COL_PITCH,
-        v: s.v,
-        ripe: hash(i, 33 + m) < 0.5 ? 1 : 0,
-        sx,
-        sy,
-        // nearest seats first, furthest last: arrivals run 52 -> 68 with v, and
-        // a deeper seat both leaves later and travels longer
-        t0: 49 + 8 * s.v,
-        dur: 3 + 8 * s.v + (hash(i, 34 + m) - 0.5) * 1.4,
-        arc: (hash(i, 35 + m) - 0.5) * Math.min(90, travel * 0.32),
-        delay: hash(i, 40 + m) * 3,
-        seed: i * 7 + m,
-      });
-    });
-  }
-  return out;
-})();
+const SEATS = makeSeats({ blobCy: BLOB_CY, colTop: COL_TOP, markBottom: MARK_BOTTOM }).map((s) => ({
+  ...s,
+  t0: 49 + 8 * s.v,
+  // v3: `FLIGHT_EXTRA` is on `dur` only — every dot leaves on exactly the frame
+  // it always left on, and only the landing is two frames later.
+  dur: 3 + 8 * s.v + (hash(s.i, 34 + s.m) - 0.5) * 1.4 + FLIGHT_EXTRA,
+  delay: hash(s.i, 40 + s.m) * 3,
+}));
 
 // The contraction: ONE shared smoothstep for all 192 dots, hashed delay only.
 const SQUEEZE_F0 = 84;
 const SQUEEZE_F1 = 100;
 
-// The siphon. A 5px ink dot every 6 frames down each thread, 14 frames per
-// transit, the three threads offset by 2 frames so they never pulse together.
+// The siphon starts on "models, right?" and never stops. Its shape — a 5px ink
+// bead every 6 frames down each thread, 14 frames per transit, the three
+// threads offset by 2 — is `siphonPackets`.
 const PKT_START = 40;
-const PKT_PERIOD = 6;
-const PKT_LIFE = 14;
-const PKT_R = 5;
-
-// A brand mark, drawn as its own paths inside the world SVG. Uniform scale
-// about the 24-unit box's centre, so `size` is the box and every mark is on the
-// same em. `landed` is its arrival: opacity 0 -> 1 and scale 0.94 -> 1.
-const Mark: React.FC<{
-  glyph: BrandGlyph;
-  x: number;
-  y: number;
-  size: number;
-  landed: number;
-  ink: string;
-  shadow: string;
-}> = ({ glyph, x, y, size, landed, ink, shadow }) => {
-  if (landed <= 0) return null;
-  const s = (0.94 + 0.06 * landed) * (size / 24);
-  return (
-    <g style={{ filter: shadow }} opacity={landed}>
-      <g transform={`translate(${x} ${y}) scale(${s.toFixed(5)}) translate(-12 -12)`}>
-        {glyph.paths.map((d, i) => (
-          <path key={i} d={d} fill={ink} fillRule="evenodd" />
-        ))}
-      </g>
-    </g>
-  );
-};
 
 const LowerAfterRL: React.FC<Props> = ({
   ink,
@@ -499,13 +401,14 @@ const LowerAfterRL: React.FC<Props> = ({
   // -- the threads and the marks they carry ----------------------------------
   // Each thread draws head-led from Claude's bottom edge to its mark, and the
   // mark lands from the frame its own head arrives — not from a parallel timer.
-  const threads = MODELS.map((mod) => {
+  const threads = MODELS.map((mod, i) => {
     const t0 = beats.openWeight;
-    const drawn = interpolate(frame, [t0, t0 + mod.drawDur], [0, 1], {
+    const drawDur = THREAD_DRAW[i];
+    const drawn = interpolate(frame, [t0, t0 + drawDur], [0, 1], {
       ...clamp,
       easing: Easing.out(Easing.cubic),
     });
-    const arrive = t0 + mod.drawDur;
+    const arrive = t0 + drawDur;
     const landed = interpolate(frame, [arrive, arrive + 6], [0, 1], {
       ...clamp,
       easing: Easing.out(Easing.cubic),
@@ -517,21 +420,7 @@ const LowerAfterRL: React.FC<Props> = ({
   // Packets run DOWN, Claude -> model, from f40 to the last frame. Direction is
   // the whole point of the gesture, so they are placed off their own age and
   // nothing else.
-  const packets: { key: string; x: number; y: number }[] = [];
-  MODELS.forEach((mod, t) => {
-    for (let n = 0; ; n++) {
-      const sf = PKT_START + t * 2 + n * PKT_PERIOD;
-      if (sf > frame) break;
-      const age = frame - sf;
-      if (age >= PKT_LIFE) continue;
-      const p = age / (PKT_LIFE - 1);
-      packets.push({
-        key: `p${t}-${n}`,
-        x: AXIS + (mod.x - AXIS) * p,
-        y: THREAD_Y0 + (THREAD_Y1 - THREAD_Y0) * p,
-      });
-    }
-  });
+  const packets = siphonPackets(frame, { start: PKT_START });
 
   // -- the outputs -----------------------------------------------------------
   // A dot's position is its own arrival progress, then the one shared squeeze.
@@ -539,7 +428,7 @@ const LowerAfterRL: React.FC<Props> = ({
   const dots = SEATS.map((s) => {
     if (frame < s.t0) return null;
     const lin = clamp01((frame - s.t0) / s.dur);
-    const e = Easing.out(Easing.cubic)(lin);
+    const e = flightEase(lin);
     const dx = s.fx - s.sx;
     const dy = s.fy - s.sy;
     const L = Math.hypot(dx, dy) || 1;
@@ -553,9 +442,9 @@ const LowerAfterRL: React.FC<Props> = ({
       y: ay + (s.cy - ay) * q,
       // every ripe dot ramps to deep across the same window
       tone: s.ripe * (1 - q),
-      // a fixed 3-frame ramp, not a fraction of `dur`: an apex seat's flight is
-      // only 3 frames long, and a fade over a fifth of that is a dot appearing
-      // at full strength in one frame — a pop
+      // a fixed 3-frame ramp, not a fraction of `dur`: the shortest flight in
+      // the blob is 5 frames long, and a fade over a fifth of that is a dot
+      // appearing at full strength in one frame — a pop
       fade: smoothstep((frame - s.t0) / 3),
       seated: lin >= 1,
       seed: s.seed,
@@ -626,9 +515,9 @@ const LowerAfterRL: React.FC<Props> = ({
                     x2={AXIS + (t.x - AXIS) * t.drawn}
                     y2={THREAD_Y0 + (THREAD_Y1 - THREAD_Y0) * t.drawn}
                     stroke={accent}
-                    strokeWidth={3}
+                    strokeWidth={THREAD_W}
                     strokeLinecap="round"
-                    opacity={0.95}
+                    opacity={THREAD_OPACITY}
                   />
                   {t.drawn < 1 ? (
                     <circle
@@ -697,10 +586,8 @@ const LowerAfterRL: React.FC<Props> = ({
               width: WORLD_W,
               transform: "translateY(-50%)",
               textAlign: "center",
-              fontFamily: LABEL_FONT,
-              fontSize: LABEL_SIZE,
+              ...readoutStyle(LABEL_SIZE),
               lineHeight: 1,
-              letterSpacing: "-0.01em",
               color: ink,
               opacity: labelIn,
               filter: icon,
