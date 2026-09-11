@@ -1,24 +1,25 @@
 import {Composition} from 'remotion';
-import SporttouchenTimer, {
+import OpenAiUpgradeSurge, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SporttouchenTimer';
+} from '../generated/components/OpenAiUpgradeSurge';
 
-// Sporttouchen 15 s countdown, brand ring + MADE Tommy Soft numeral.
+// OpenAI mark, upgraded: light gathers, surges out through the arms, and
+// leaves the ink heavier. Transparent 1080x1080 overlay asset.
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="SporttouchenTimer"
-        component={SporttouchenTimer}
+        id="OpenAiUpgradeSurge"
+        component={OpenAiUpgradeSurge}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
         fps={FPS}
         width={1080}
-        height={1920}
+        height={1080}
       />
     </>
   );
