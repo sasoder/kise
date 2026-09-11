@@ -80,15 +80,16 @@ export const DURATION = 146;
 //   THE DRAIN: the entire sea contracts into the
 //     person. Every bar's position is P + (p0-P)*s,
 //     P the centre of the person's own column
-//     with s easing from 1 at f74 to 0 at f130 on
-//     1-u^2 — slow start, fastest over "hundred times
-//     more productive". Density is held constant by a
+//     with s easing from 1 at f74 to 0 at f134 on
+//     1-smoothstep(u^1.3) — an ease-in-OUT, fastest
+//     over "hundred times more" and gliding to a stop.
+//     Density is held constant by a
 //     hashed death scale per bar, so the sea reads as
 //     an even disc of texture closing in from every
 //     edge at once, not as a woven pile-up. Bars ripen
 //     to ACCENT inside 150px of the person and fade at
 //     the clearing edge: the code goes in            — "it doesn't make you a
-//                                                       hundred times more"   f74-130
+//                                                       hundred times more"   f74-134
 //   CAMERA 2: push in k 0.75 -> 1.1 keyed f104-f124,
 //     warp 0.7, same content centre. Motivated by the
 //     drain converging; damped still by f134, well
@@ -99,12 +100,13 @@ export const DURATION = 146;
 //
 // GEOMETRY
 //   person   glyph 72 px at (540, 900), so x 504-576, y 864-936
-//   block    left-aligned to the glyph (x 504), 130 wide, first row 16px under
+//   block    every row CENTRED on the person's x (540), laid out into a 130
+//            budget so rows run 114-130 wide => x 475-605, first row 16px under
 //            the feet (y 952), rows on the sea's own 14px pitch growing DOWN,
-//            eleven rows => y 952-1096. Person + block is one centred column,
-//            so the camera's cx is the person's own x, 540.
-//   clearing one superellipse, n 2.8, 132 x 186 at (569, 980) — the union of
-//            glyph and FINAL block (x 504-634, y 864-1096, centred (569,980),
+//            eleven rows => y 952-1096. Person + block is one centred column on
+//            one axis, and the camera's cx is that axis, 540.
+//   clearing one superellipse, n 2.8, 132 x 186 at (540, 980) — the union of
+//            glyph and FINAL block (x 475-605, y 864-1096, centred (540,980),
 //            half-extents 65 x 116) with a 67 x 70 px margin. It never changes
 //            size. The edge is wobbled and each bar carries its own hashed
 //            threshold, so the sea's inner edge is ragged, never ruled.
@@ -162,6 +164,55 @@ export const DURATION = 146;
 //   G. Untouched from v3: the beats, the front and its 1.5 profile, camera 1,
 //      the typing of the first six rows, the sea's material and its outer
 //      boundary, the ink ladder, the per-icon shadow.
+//
+// V5 NOTES (director's pass on the fourth preview: "feels a little bit jittery
+// … can we make the last part, when the orange code gets sucked back in,
+// slightly more smooth. And can we also center the person icon and the text")
+//   1. CENTRED. Each of the eleven ink rows is laid out with its own hashed
+//      lengths and gaps exactly as before and then shifted so the ROW's extent
+//      is centred on the person's x. Rows are 114-130 wide, so the block is
+//      x 475-605 with both edges ragged and the glyph (504-576) centred inside
+//      it. Half-extent 65, which is what the left-aligned block had, so the
+//      clearing keeps its size and only moves: 132 x 186 at (540, 980). The
+//      drain centre moves with it. Person, block, clearing, drain and camera cx
+//      are now one axis, x 540, and the column is centred in the frame.
+//   2. THE JITTER WAS THREE THINGS, and all three are fixed here.
+//      (a) The EXITS. A bar left over ~6 frames as s crossed its death scale,
+//          and five thousand six-frame fades going off at once is flicker by
+//          construction. The exit is EXIT_F = 16 frames now, smoothstepped at
+//          both ends so neither its start nor its finish is an event, and it is
+//          a RECESSION rather than a fade: the bar's length shrinks to 15%
+//          toward its own centre on the same curve as the opacity. A floor
+//          under the rate that window is measured against (45% of the mean)
+//          keeps it 16 frames through the fast middle and longer, never
+//          shorter, at the ends. The death-scale scheme itself is untouched —
+//          alive fraction is still exactly s^2, so density is still even.
+//      (b) The END OF THE EASE. s = 1 - u^2 hits its top speed on the last
+//          frame of the move: the final ring did not arrive, it snapped. It is
+//          an ease-in-out now, s = 1 - smoothstep(u^1.3) over f74-f134. Peak
+//          28.0 world px/frame at r 1000 at f112 (on "times more"), and the
+//          last eight frames decelerate monotonically 13.1 -> 1.4. The 1.3 warp
+//          buys four frames of late travel over a plain smoothstep, so the
+//          sea's own edge is still closing at f126 instead of f123.
+//      (c) SUB-PIXEL SNAP. The path string rounded x, y and w to one decimal —
+//          4% of a frame's travel at the slow end, and the same rounding on
+//          every bar in a row at once. Two decimals now. Nothing anywhere in
+//          the drain is rounded to whole pixels.
+//      Two smaller ones went with them: the clearing-edge fade and the ripe
+//      ramp were LINEAR in the distance outside the edge, so every bar changed
+//      slope in one frame as it crossed the top of its band; both are
+//      smoothstepped now. And the opacity ladder went 16 -> 24 steps, because a
+//      1/16 ladder shows its own steps over a fade that now lasts 16 frames.
+//   3. THE CAMERA IS UNCHANGED at f104-f124, deliberately, and this was checked
+//      rather than assumed. A bar's SCREEN radius is r0 * s * k, so a push-in
+//      and a contraction partly cancel: measured per bar, the screen speed at
+//      r 1000 DIPS from 18.2 to 14.0 px/frame across the middle of the move and
+//      peaks at 23.3. The damper shows one acceleration lobe (f105) and one
+//      deceleration lobe (f116), max dk 0.0226 at f115, still by f134, and the
+//      content centre holds screen y 834.1-835.0 from f100 to the end.
+//   4. Untouched: the first act (typing, the front, the pull-back), the beats,
+//      DURATION 146, the five growth rows at f26/52/78/104/130, the one fixed
+//      clearing, the tones, the opacity ladder and the sea's material.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -246,18 +297,22 @@ const PY = 900;
 const PERSON_SIZE = 72;
 
 // Their own code, UNDER them: rows of ink bars on the sea's own row pitch,
-// left-aligned with the glyph and starting 16px below the feet, growing
-// downward. Same material as the sea — a row of code is bars of hashed lengths
-// with hashed gaps — only in ink.
+// starting 16px below the feet and growing downward. Same material as the sea —
+// a row of code is bars of hashed lengths with hashed gaps — only in ink.
+//
+// V5: CENTRED. Every row is laid out from 0 with its own hashed lengths and
+// gaps exactly as before, and then the whole row is shifted so its extent is
+// centred on the person's own x (540). Rows are 114-130 wide, so the block sits
+// in x 475-605 with a ragged right edge and a ragged left one, and the glyph
+// (504-576) is centred inside it. Person, block, clearing, drain and camera are
+// now all on one axis, x 540.
 //
 // Six rows type in over f1-f19 at three frames a row. Then one more row at
 // f26, f52, f78, f104 and f130, head-led over four frames each: the person's
 // own pace, unchanged by anything the model does. Eleven rows by f134.
 const ROW_PITCH = 14;
 const BAR_H = 4;
-const BLOCK_X0 = PX - PERSON_SIZE / 2; // 504, the glyph's own left edge
-const BLOCK_W = 130;
-const BLOCK_X1 = BLOCK_X0 + BLOCK_W; // 634
+const BLOCK_W = 130; // the width budget a row is laid out into
 const BLOCK_Y0 = PY + PERSON_SIZE / 2 + 16; // 952, 16px under the feet
 const TYPE_ROWS = 6;
 const TYPE_F0 = 1;
@@ -271,21 +326,34 @@ const rowStart = (row: number) => (row < TYPE_ROWS ? TYPE_F0 + row * TYPE_PER_RO
 const rowSpan = (row: number) => (row < TYPE_ROWS ? TYPE_PER_ROW : GROW_T);
 
 type InkBar = { row: number; x: number; w: number };
+// Per-row left edge and width, so the head-led reveal runs from each row's own
+// left edge rather than from a shared one.
+const BLOCK_ROW_X0: number[] = [];
+const BLOCK_ROW_W: number[] = [];
 const BLOCK_BARS: InkBar[] = (() => {
   const out: InkBar[] = [];
   for (let r = 0; r < BLOCK_ROWS; r++) {
-    let x = BLOCK_X0;
+    const seg: { x: number; w: number }[] = [];
+    let x = 0;
     let n = 0;
-    while (x < BLOCK_X1 - 6) {
+    while (x < BLOCK_W - 6) {
       const i = r * 37 + n;
-      const w = Math.min(16 + hash(i, 31) * 40, BLOCK_X1 - x);
-      out.push({ row: r, x, w });
+      const w = Math.min(16 + hash(i, 31) * 40, BLOCK_W - x);
+      seg.push({ x, w });
       x += w + 8 + hash(i, 32) * 8;
       n++;
     }
+    const rowW = seg[seg.length - 1].x + seg[seg.length - 1].w;
+    const x0 = PX - rowW / 2; // the row's extent, centred on the person
+    BLOCK_ROW_X0.push(x0);
+    BLOCK_ROW_W.push(rowW);
+    for (const b of seg) out.push({ row: r, x: x0 + b.x, w: b.w });
   }
   return out;
 })();
+// The block's own extent comes out at x 475-605 — half-extent 65 on the
+// person's axis, the same half-extent the left-aligned block had, which is why
+// the clearing below keeps its size and only moves.
 
 // ---------------------------------------------------------------------------
 // The clearing. Not a box: a superellipse around what the person owns,
@@ -294,9 +362,10 @@ const BLOCK_BARS: InkBar[] = (() => {
 // it is cut around the FINAL eleven-row block from frame 0, so nothing ever has
 // to be pushed out of the way and no edge ever moves.
 //
-// Glyph (504-576, 864-936) + final block (504-634, 952-1096) is x 504-634,
-// y 864-1096: centre (569, 980), half-extents 65 x 116. The shape is 132 x 186,
-// a 67 x 70 px margin. That is a touch over the 40-60 the brief asked for, and
+// Glyph (504-576, 864-936) + final block (475-605, 952-1096) is x 475-605,
+// y 864-1096: centre (540, 980), half-extents 65 x 116 — the same half-extents
+// the left-aligned block had, moved onto the person's own axis. The shape is
+// 132 x 186, a 67 x 70 px margin. That is a touch over the 40-60 asked for, and
 // it is the corners that ask for it: at n 2.8 a superellipse fitted with a
 // 50px margin on both axes pinches diagonally, and a bar's WORST-CASE surviving
 // contour is edge x thr >= (1 - 0.045 - 0.03) x (1 - 0.11) = 0.823 of the
@@ -304,14 +373,14 @@ const BLOCK_BARS: InkBar[] = (() => {
 // ~16px at its tightest, which is v3's approved figure.
 // ---------------------------------------------------------------------------
 const CL_N = 2.8;
-const CL_CX = (BLOCK_X0 + BLOCK_X1) / 2; // 569
+const CL_CX = PX; // 540 — the person's own axis, which the block is now centred on
 const CL_CY = (PY - PERSON_SIZE / 2 + BLOCK_Y1) / 2; // 980
 const CL_RX = 132;
 const CL_RY = 186;
 const CL_MEAN = (CL_RX + CL_RY) / 2; // for turning a q-distance back into px
 const CL_GONE = 25; // px outside the edge within which a drained bar has faded out
-const CL_GONE_MAX = 120;
-const CL_FADE_F = 2; // frames a bar takes to fade as it crosses that band
+const CL_GONE_MAX = 200;
+const CL_FADE_F = 3; // frames a bar takes to fade as it crosses that band
 
 const clearingEdge = (theta: number) =>
   1 + 0.045 * Math.sin(3 * theta + 1.2) + 0.03 * Math.sin(5 * theta - 0.4);
@@ -457,43 +526,61 @@ const SEA = (() => {
 })();
 
 // ---------------------------------------------------------------------------
-// THE DRAIN. From "it doesn't" (f74) to the end of the speech (f130) the whole
-// sea is scaled into the person: p(f) = P + (p0 - P) * s(f), rows staying rows,
-// bars keeping their lengths, nothing rotating.
+// THE DRAIN. From "it doesn't" (f74) the whole sea is scaled into the person:
+// p(f) = P + (p0 - P) * s(f), rows staying rows, bars keeping their lengths,
+// nothing rotating.
 //
-//   s(f) = 1 - u^2,  u = (f - 74) / 56
+//   s(f) = 1 - smoothstep(u^1.3),  u = (f - 74) / 60,  s(134) = 0
 //
-// An ease-IN: ds/du is 0 at f74 and -2 at f130, so the contraction starts as a
-// drift and the fastest part of it lands on "hundred times more productive"
-// (f99-f130). The sea's own boundary (1900 x 2100) crosses the frame's top and
-// bottom around f111 and its sides around f119, which is the edge closing in
-// from every side; the last bars go in around f128 and no orange survives f130.
+// V5, on "make the last part slightly more smooth": this is an ease-in-OUT, not
+// the ease-in it was. v4's s = 1 - u^2 reaches its MAXIMUM speed at the last
+// frame of the move, so the final ring did not arrive, it snapped — 36 world px
+// a frame and still accelerating when it hit zero. A smoothstep is fast in the
+// middle and flat at both ends: the peak is 28 world px/frame at r 1000 (f112,
+// on "times more") and the last eight frames decelerate monotonically to 1.4,
+// so the last bars glide into the person. The 1.3 warp puts the peak a little
+// later than a plain smoothstep would and keeps the sea's own boundary in the
+// frame to f126 rather than f123; the curve still lands at f134, eleven frames
+// clear of the end and on the frame the eleventh ink row finishes.
 //
 // Scaling alone compresses the field by 1/s^2, which is what wove the first
 // attempt into a mat of rays. Each bar therefore carries a death scale s_i
 // (sqrt of a hash, so the alive fraction at s is s^2 — the area factor exactly)
-// and fades out over ~6 frames as s crosses it. Bars per unit area, bar length
-// and bar height are all constant from f74 to the end: an even disc of texture
-// closing on the person.
+// and RECEDES as s crosses it: over EXIT_F frames its length shrinks toward its
+// own centre and its opacity goes to zero on the same smoothstep. Bars per unit
+// area, bar length and bar height are all constant from f74 to the end: an even
+// disc of texture closing on the person.
 // ---------------------------------------------------------------------------
-const DRAIN_P = 2; // s = 1 - u^DRAIN_P; >= 2 is the ease-in
-const DEATH_FADE_F = 6; // frames a bar takes to fade once s crosses its s_i
-const DEATH_FADE_MIN = 0.004; // ...and the floor on that window, so f74 is not a divide by zero
+const DRAIN_TAIL = 4; // the drain lands DRAIN_TAIL frames after `beats.end`: f134
+const DRAIN_WARP = 1.3; // s = 1 - smoothstep(u^DRAIN_WARP)
+// V5: a bar's exit was six frames, and thousands of six-frame fades going off at
+// once is exactly what read as flicker. Sixteen, eased, and a recession rather
+// than a blink — the bar shrinks to 15% of its length as it fades.
+const EXIT_F = 16;
+const EXIT_SHRINK = 0.85;
+// ...and a floor under |ds/df| when the window is measured, so the exit does not
+// collapse at the two ends of the curve where the true rate goes to zero. At
+// 45% of the mean rate the window is 16 frames through the fast middle and
+// LONGER (to ~34) at the ends, never shorter.
+const EXIT_RATE_FLOOR = 0.45;
 const DRAIN_RIPE = 150; // px outside the clearing edge: inside this a bar is ACCENT, going in
 
 // The point everything contracts to is the COLUMN's centre — the clearing's own
-// (569, 980) — and not the glyph's (540, 900). The brief said the person's
-// centre, and the first render is why it is not: the clearing is a tall shape
-// hung 80px below the glyph (it has to hold the eleven-row block), so a sea
-// contracting onto the glyph reaches the clearing's bottom edge long before its
-// top and the last three hundred bars land as a HORSESHOE arching over the
-// person's head. Converging on the shape's own centre makes the closing edge an
-// even ring on every side, which is the gesture. It is the same point by any
-// reading that matters: the centre of the person and the code they own.
+// (540, 980) — and not the glyph's (540, 900). V4's first render is why: the
+// clearing is a tall shape hung 80px below the glyph (it has to hold the
+// eleven-row block), so a sea contracting onto the glyph reaches the clearing's
+// bottom edge long before its top and the last three hundred bars land as a
+// HORSESHOE arching over the person's head. Converging on the shape's own
+// centre makes the closing edge an even ring on every side, which is the
+// gesture. Since V5 centred the block this is on the person's own x anyway: the
+// drain, the clearing, the block and the camera are all on 540.
 const DRAIN_CX = CL_CX;
 const DRAIN_CY = CL_CY;
 
-const OP_STEPS = 16; // opacity quantisation, so a fading bar joins a bucket
+// Opacity quantisation, so a fading bar joins a bucket. V5 takes it 16 -> 24:
+// an exit is sixteen frames now instead of six, so a 1/16 ladder would show its
+// own steps in a fade that lasts two thirds of a second.
+const OP_STEPS = 24;
 
 const SeaOfCode: React.FC<Props> = ({
   ink,
@@ -526,12 +613,16 @@ const SeaOfCode: React.FC<Props> = ({
 
   // -- the drain -------------------------------------------------------------
   // Keyed off the beats prop, so a retime moves the drain with the words.
-  const drainSpan = beats.end - beats.itDoesnt;
+  const drainSpan = beats.end + DRAIN_TAIL - beats.itDoesnt; // 60 frames, f74 -> f134
   const du = clamp01((frame - beats.itDoesnt) / drainSpan);
-  const s = 1 - Math.pow(du, DRAIN_P);
-  const rate = (DRAIN_P * Math.pow(du, DRAIN_P - 1)) / drainSpan; // |ds/df|
+  const dw = Math.pow(du, DRAIN_WARP);
+  const s = 1 - smoothstep(dw);
+  // |ds/df| of that curve, floored so the exit window never collapses where the
+  // curve itself is flat (the first frames, and the landing).
+  const rateRaw = du <= 0 ? 0 : (6 * dw * (1 - dw) * DRAIN_WARP * Math.pow(du, DRAIN_WARP - 1)) / drainSpan;
+  const rate = Math.max(rateRaw, EXIT_RATE_FLOOR / drainSpan);
   const draining = frame > beats.itDoesnt && s < 1;
-  const dsFade = Math.max(rate * DEATH_FADE_F, DEATH_FADE_MIN);
+  const dsFade = rate * EXIT_F; // the exit window, in s
   const ripeGate = smoothstep((frame - beats.itDoesnt) / 8);
   // The fade band at the clearing edge is the drain's own speed there times two
   // frames: a 25px band is less than one frame's travel once the bars arriving
@@ -554,16 +645,26 @@ const SeaOfCode: React.FC<Props> = ({
     const arrive = SEA.a[i];
     if (frame < arrive) continue;
 
-    // dead: s has passed this bar's death scale and its fade is over
+    // The exit. Once s passes this bar's death scale the bar RECEDES over
+    // EXIT_F frames — its length shrinks toward its own centre and it fades on
+    // the same eased curve — rather than winking out over six. Both ends of the
+    // smoothstep are flat, so neither the start nor the finish of an exit is an
+    // event you can see; a thousand of them at once is a softening, not a
+    // flicker.
     let op = 1;
+    let lenF = 1;
     if (draining) {
       const sd = SEA.d[i];
       if (s <= sd - dsFade) continue;
-      if (s < sd) op = (s - (sd - dsFade)) / dsFade;
+      if (s < sd) {
+        const e = smoothstep((sd - s) / dsFade);
+        op = 1 - e;
+        lenF = 1 - EXIT_SHRINK * e;
+      }
     }
 
     const p = clamp01((frame - arrive) / DRAW_T);
-    const w = SEA.w[i] * p;
+    const w = SEA.w[i] * p * lenF;
     if (w < 0.6) continue;
 
     let x = SEA.x[i];
@@ -571,7 +672,9 @@ const SeaOfCode: React.FC<Props> = ({
     if (draining) {
       // the bar TRANSLATES toward the person and keeps its length: scale its
       // centre, not its ends. Scaling the length as well takes the ink density
-      // down by another factor of s and the sea reads as thinning out.
+      // down by another factor of s and the sea reads as thinning out. (The
+      // exit's own shrink is the one exception, and it is around this same
+      // centre — the bar recedes into itself as it leaves.)
       const bcx = SEA.x[i] + SEA.w[i] / 2;
       x = DRAIN_CX + (bcx - DRAIN_CX) * s - w / 2;
       y = DRAIN_CY + (y - DRAIN_CY) * s;
@@ -586,11 +689,15 @@ const SeaOfCode: React.FC<Props> = ({
     let t = 1 - smoothstep((frame - arrive - DRAW_T) / SETTLE_T);
     if (draining) {
       const near = (cl.q / edge - 1) * CL_MEAN; // px outside the clearing edge
-      if (near < clGone) op *= clamp01(near / clGone);
+      // V5: both of these ramps are smoothstepped rather than linear. A linear
+      // ramp has a corner at the top of the band — a bar crossing it changes
+      // slope in one frame — and at these speeds a corner per bar is a step per
+      // bar. A smoothstep is flat at both ends, so nothing has an onset.
+      if (near < clGone) op *= smoothstep(near / clGone);
       // ripe over the last stretch before it goes in, exactly as the pour was:
       // the band widens with the fade band so a fast bar still carries colour.
       const ripeBand = Math.max(DRAIN_RIPE, clGone);
-      if (near < ripeBand) t = Math.max(t, ripeGate * (1 - near / ripeBand));
+      if (near < ripeBand) t = Math.max(t, ripeGate * smoothstep(1 - near / ripeBand));
     }
 
     const o = op >= 0.995 ? OP_STEPS : Math.round(clamp01(op) * OP_STEPS);
@@ -598,7 +705,10 @@ const SeaOfCode: React.FC<Props> = ({
     const b = Math.round(clamp01(t) * TONE_STEPS);
     const key = b * (OP_STEPS + 1) + o;
     const bucket = buckets.get(key);
-    const d = `M${x.toFixed(1)} ${y.toFixed(1)}h${w.toFixed(1)}v${BAR_H}h${(-w).toFixed(1)}z`;
+    // TWO decimals, not one and never an integer: a bar crossing the frame at
+    // 25 px a frame snapped to whole px is a bar that stutters, and 0.1 px is
+    // still a visible 4% of a frame's travel at the slow end of the drain.
+    const d = `M${x.toFixed(2)} ${y.toFixed(2)}h${w.toFixed(2)}v${BAR_H}h${(-w).toFixed(2)}z`;
     if (bucket) bucket.push(d);
     else buckets.set(key, [d]);
   }
@@ -657,7 +767,8 @@ const SeaOfCode: React.FC<Props> = ({
             {/* the person's own code, typed in row by row, under their feet */}
             <g style={{ filter: icon }}>
               {BLOCK_BARS.map((b, i) => {
-                const reveal = BLOCK_X0 + BLOCK_W * blockReveal(b.row);
+                const reveal =
+                  BLOCK_ROW_X0[b.row] + BLOCK_ROW_W[b.row] * blockReveal(b.row);
                 const w = Math.min(b.w, reveal - b.x);
                 if (w <= 0.5) return null;
                 return (
