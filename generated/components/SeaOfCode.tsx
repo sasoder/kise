@@ -687,13 +687,20 @@ const SeaOfCode: React.FC<Props> = ({
     if (cl.q < edge) continue;
 
     let t = 1 - smoothstep((frame - arrive - DRAW_T) / SETTLE_T);
+    const near = (cl.q / edge - 1) * CL_MEAN; // px outside the clearing edge
+    // V5: both of these ramps are smoothstepped rather than linear. A linear
+    // ramp has a corner at the top of the band — a bar crossing it changes
+    // slope in one frame — and at these speeds a corner per bar is a step per
+    // bar. A smoothstep is flat at both ends, so nothing has an onset.
+    //
+    // V6: the fade band is ALWAYS on, not only while draining. Gating it on the
+    // drain meant every bar sitting inside the 25px band at rest went from
+    // full opacity to near zero on the drain's first frame — a ring of code
+    // around the person vanishing in one frame (the user saw it at ~3s). With
+    // the band always applied the rest state already carries the soft edge,
+    // and the drain's first frame changes nothing it did not change smoothly.
+    if (near < clGone) op *= smoothstep(near / clGone);
     if (draining) {
-      const near = (cl.q / edge - 1) * CL_MEAN; // px outside the clearing edge
-      // V5: both of these ramps are smoothstepped rather than linear. A linear
-      // ramp has a corner at the top of the band — a bar crossing it changes
-      // slope in one frame — and at these speeds a corner per bar is a step per
-      // bar. A smoothstep is flat at both ends, so nothing has an onset.
-      if (near < clGone) op *= smoothstep(near / clGone);
       // ripe over the last stretch before it goes in, exactly as the pour was:
       // the band widens with the fade band so a fast bar still carries colour.
       const ripeBand = Math.max(DRAIN_RIPE, clGone);
