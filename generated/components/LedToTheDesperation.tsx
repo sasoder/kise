@@ -5,7 +5,10 @@ import {
   ACCENT_DEEP,
   BG_BASE,
   BG_DIM,
+  CAM_LIFT,
   DOT_RADIUS,
+  FRAME_H,
+  FRAME_W,
   GridBackground,
   ICON_SHADOW_BLUR,
   ICON_SHADOW_OPACITY,
@@ -22,6 +25,7 @@ import {
   SQUIRCLE_SMOOTH,
   Vignette,
   breath,
+  camEase,
   camMove,
   clamp,
   hash,
@@ -86,7 +90,7 @@ export const DURATION = 256;
 // ---------------------------------------------------------------------------
 // "Led to the desperation". Orange Dwarkesh style: opaque grid cutaway, 24fps,
 // 1080x1920, the crowd is the material, two tones of one warm yellow with the
-// dots fully opaque, per-icon shadows, one eased camera move, one gesture per
+// dots fully opaque, per-icon shadows, eased camera moves, one gesture per
 // word.
 //
 // THE WORLD. This is `ImpossibleTasks.tsx`'s sandbox at the state that piece
@@ -105,14 +109,48 @@ export const DURATION = 256;
 // the problem. Then every agent in the box reaches at once, and the wall gives.
 //
 // Every gesture is one word. Nothing else happens.
-//   THE ONE CAMERA MOVE. Open at k 1.50 inside the box
-//     (crowd bleeding off both sides, the mark above
-//     the frame, the five reaches dead against the top
-//     wall) and pull back to cut 1's resolved framing,
-//     k 0.95 / centre -102, so the mark, the ring and
-//     the whole box are one picture. Keyed f0-16,
-//     warp 0.72; settled at f26 (0.15% of the move
-//     left, drifting 0.11% a frame)     — "punishing them for"      f0-26
+//
+// THE CAMERA FOLLOWS. Six moves, one per gesture, all through one damped track.
+// Each lands four to ten frames before its word and then holds; between moves
+// there is nothing on the camera but `sway`. The lens is on the thing that is
+// about to happen, and it PANS as well as tilts — the crack is at x 700, the
+// ring at x 540 — so cx is its own per-frame track through the same damper.
+//   M0 out to the resolved wide,
+//      k 1.50 / c 140 -> k 0.95 / c -102, cx 540,
+//      keys f0-16 warp 0.72, landed f26   — "punishing them for"     f0-26
+//   M1 IN on the lid, k 0.95 -> 1.25,
+//      c -102 -> -180.5 (solved: the lid's inside face
+//      at screen y 700, the box 1125 px wide, bleeding
+//      off both sides), cx 540. It rises WITH the five
+//      reaches, keys f40-52 warp 0.72, landed f63, so
+//      "tasks" lands on a still frame
+//                              — "failing to solve impossible tasks" f40-65
+//   M2 back OUT to k 0.95 / c -102, cx 540, keys
+//      f74-82 warp 0.72, landed f95, so the second
+//      punishment is seen whole and the loop reads as
+//      the same gesture twice   — "big part of the whole problem"    f74-97
+//   M3 THE CREEP. k 0.95 -> 1.90, c -102 -> -215.4,
+//      cx 540 -> 657.9, solved so the bow's apex sits
+//      at screen (620, 640) — one continuous even ease
+//      (warp 1.0) over fifty-two frames of keys,
+//      f114-166, landed f174. The forest rises and the
+//      lid bows while the lens closes on the exact
+//      point that is about to give. Then DEAD STILL
+//      f174-181 (0.03%/frame, sway only): the held
+//      breath, and the crack opens inside it
+//                   — "led to the desperation that, like, ultimately" f114-174
+//   M4 FOLLOW THE HEAD. k 1.90 -> 1.40, c -215.4 ->
+//      -203.6 (solved: the ring at screen y 560, the
+//      upper third, with the crack still in frame at
+//      (722, 667)), cx 657.9 -> 560. Keys f181-184
+//      warp 0.7. The head leaves the crack at f181 and
+//      lands on the ring at f195; the camera arrives
+//      with it        — "culminated in this attack"                  f181-195
+//   M5 back to the resolved wide, k 0.95 / c -102 /
+//      cx 540, keys f206-240 warp 0.72, landed f250,
+//      held to f256                       — tail                     f206-256
+//
+// THE GESTURES, under it.
 //   THE PUNISHMENT. From the top-wall end of each
 //     reach one white ink bead runs DOWN the reach and
 //     the reach ERASES behind it, from the wall end
@@ -145,12 +183,31 @@ export const DURATION = 256;
 //     Every agent in the box goes deep -> ripe in a
 //     wave from the bottom row up (f116-133), and each
 //     seat that carries a reach sends one straight up
-//     at LINE_SPEED to the top wall — a forest of
+//     at FOREST_SPEED to the top wall — a forest of
 //     accent lines, released in the wave's own
-//     bottom-up order but spread across f118-152, each
-//     on its own frame so nothing moves in unison, so
-//     lines are still arriving at the wall (last one
-//     home f162) long after the wave has finished.
+//     bottom-up order across f118-162, each on its own
+//     frame so nothing moves in unison.
+//     THREE THINGS MAKE THAT WINDOW TENSE, and none of
+//     them is a new object:
+//       (1) the releases ACCELERATE — the count let go
+//           by time u is u^2, so the first ten take 19
+//           frames and the last ten take 6: the crowd
+//           piles on faster and faster under a lens
+//           that is closing in at the same time;
+//       (2) a line runs at 22 world px/frame, not cut
+//           1's LINE_SPEED 28, because at k 1.90 that
+//           would be 53 screen px/frame — the close-up
+//           speed cap. At 22 the fastest head on
+//           screen over f116-176 is 41.8 px/frame;
+//       (3) THE CROWD PRESSES UP — from f140 to f176
+//           every dot drifts up, eased out, by up to
+//           12 world px scaled by its row (top rows
+//           most, bottom row none) and capped so no
+//           dot comes within 10 px of the lid's inside
+//           face; a reach's base and a task tile ride
+//           up with their agent. It holds through the
+//           crack and relaxes over 12 frames from the
+//           recede.
 //     Idle traffic stops launching at f116. The five
 //     dark tiles light with the wave like everyone
 //     else. Under that the TOP WALL BOWS: its whole
@@ -160,7 +217,8 @@ export const DURATION = 256;
 //     the press never stops through "that, like,
 //     ultimately" and the wall is still visibly under
 //     load when it goes. Every line's tip stays ON the
-//     wall, so the forest is what lifts it
+//     wall, so the forest is what lifts it (last line
+//     home f176.5, the frame the wall cracks)
 //                    — "led to the desperation that, like, ultimately" f116-170
 //   THE ATTACK. At the apex the wall CRACKS at x 700:
 //     the wall splits into two round-capped ends that
@@ -252,33 +310,6 @@ export const schema = z.object({
 });
 
 export type Props = z.infer<typeof schema>;
-
-// ---------------------------------------------------------------------------
-// The camera. ONE move, and it is the whole of "punishing them for": open at
-// cut 1's own opening framing (k 1.50, content centre 140, the mark above the
-// frame and the crowd bleeding off both sides) and pull back to cut 1's own
-// resolved framing (k 0.95, content centre -102), so the piece ends where cut 1
-// ended and the content centre lands at screen y 835 under the captions.
-//
-// Keyed f0-16 rather than f0-18: `runCamera` damps the target, so keys ending
-// at f18 are still 0.48% of the move short at f26 and drifting 0.2% a frame.
-// Ending them at f16 puts the pull-back on screen across f0-22 and leaves 0.15%
-// at f26, drifting 0.11% a frame — an order of magnitude below what reads as a
-// move — so the camera is dead still under everything from "failing" onward.
-// ---------------------------------------------------------------------------
-export const CY_FINAL = CONTENT_FINAL + 125 / K_FINAL;
-export const CAM = camMove({
-  f0: 0,
-  f1: 16,
-  k0: K_OPEN,
-  k1: K_FINAL,
-  c0: CONTENT_OPEN,
-  c1: CONTENT_FINAL,
-  warp: 0.72,
-});
-export const CAM_F = [...CAM.F, DURATION];
-export const CAM_K = [...CAM.K, K_FINAL];
-export const CAM_CY = [...CAM.CY, CY_FINAL];
 
 // ---------------------------------------------------------------------------
 // The punishment. The five reaches are erased from their wall ends down, one
@@ -391,20 +422,156 @@ export const CRACK_F0 = 176;
 export const CRACK_F1 = 184;
 
 // ---------------------------------------------------------------------------
+// THE CAMERA. Six moves, and every one of them follows a gesture: the lens goes
+// where the thing that is about to happen is, arrives four to ten frames ahead
+// of the word, and then holds. Between moves nothing is on the camera but
+// `sway`. One track: the six moves are consecutive `camMove` segments (a key
+// per frame), the gaps between them are a single held key, and the whole thing
+// goes through the shared damper, so a move can never start from a standstill
+// it has not actually reached.
+//
+// Cut 1 only ever tilted, so it passed CENTRE_X straight through. This piece
+// PANS — the crack is at x 700 and the ring is at x 540 — so cx is a per-frame
+// track of its own, run through the same damper (`runCamera` damps whatever
+// track it is handed against the same k) and handed to `GridBackground`, so the
+// grid parallaxes sideways with it and the lateral move reads as depth.
+//
+// Three framings are SOLVED from what has to be in the frame rather than typed:
+//   M1  the lid's inside face at screen y 700 at k 1.25 (the box is 1125 screen
+//       px wide there, so it bleeds ~10px off each side: the wall fills the top
+//       of the frame and the five reaches land against it in close-up)
+//   M3  the bow's apex at screen (620, 640) at k 1.90
+//   M4  the internet ring at screen y 560 — the upper third — at k 1.40, which
+//       leaves the crack at screen (722, 667), both of them in frame
+// `CAM_LIFT / k` is what puts a content centre at screen y 835 under the
+// captions, and `camMove` already takes cy off the eased k, so each of these is
+// a content centre = cy - CAM_LIFT / k.
+//
+// KEY WINDOWS END BEFORE THE LANDING, deliberately, and each one is measured
+// rather than guessed (`scratchpad/seg1/scan.ts`): the damper lags its target
+// by ~6 frames, so keys that run all the way to the landing frame leave the
+// camera still visibly moving under the word. Ending them early puts the same
+// ramp on screen and parks it. Measured residual / drift at each landing:
+//   M0 keys f0-16   landed f26   0.09% of the move left, 0.06%/frame
+//   M1 keys f40-52  landed f63   0.03%, 0.03%/frame   ("tasks" f65 is still)
+//   M2 keys f74-82  landed f95   0.00%, 0.03%/frame
+//   M3 keys f114-166 landed f174 0.05%, 0.03%/frame   (then dead still to 181)
+//   M4 keys f181-184 landed f195 0.64%, 0.27%/frame  (arrives with the head)
+//   M5 keys f206-240 landed f250 0.01%, 0.01%/frame
+// M4 is the one that is still finishing on its word: it is a 26% zoom given
+// fourteen frames because the route head is given fourteen frames, and the last
+// 0.6% of it decays inside the four frames the ring takes to light. It is the
+// tail of a single deceleration lobe, not a second move.
+// ---------------------------------------------------------------------------
+export const K_M1 = 1.25; // "failing to solve impossible tasks" — in on the lid
+export const K_M3 = 1.9; // "led to the desperation ... ultimately" — the creep
+export const K_M4 = 1.4; // "culminated in this attack" — out with the route
+export const LID_SCREEN_Y = 700; // M1: where the lid's inside face sits
+export const APEX_SCREEN_X = 620; // M3: where the bow's apex sits
+export const APEX_SCREEN_Y = 640;
+export const RING_SCREEN_Y = 560; // M4: the ring, in the upper third
+
+const centreFor = (worldY: number, screenY: number, k: number) =>
+  worldY + (FRAME_H / 2 - screenY) / k - CAM_LIFT / k;
+
+export const C_M1 = centreFor(BOX_Y0 + STROKE / 2, LID_SCREEN_Y, K_M1);
+export const C_M3 = centreFor(BOX_Y0 - BOW_AMP, APEX_SCREEN_Y, K_M3);
+export const C_M4 = centreFor(RING.y, RING_SCREEN_Y, K_M4);
+export const X_M3 = BOW_X - (APEX_SCREEN_X - FRAME_W / 2) / K_M3;
+export const X_M4 = 560;
+export const CY_FINAL = CONTENT_FINAL + CAM_LIFT / K_FINAL;
+
+export type CamSeg = {
+  f0: number;
+  f1: number;
+  k0: number;
+  k1: number;
+  c0: number;
+  c1: number;
+  x0: number;
+  x1: number;
+  warp: number;
+};
+
+export const CAM_SEGS: CamSeg[] = [
+  // M0 "punishing them for" — cut 1's opening framing to cut 1's resolved one
+  { f0: 0, f1: 16, k0: K_OPEN, k1: K_FINAL, c0: CONTENT_OPEN, c1: CONTENT_FINAL, x0: CENTRE_X, x1: CENTRE_X, warp: 0.72 },
+  // M1 "failing to solve impossible tasks" — push in, rising WITH the reaches
+  { f0: 40, f1: 52, k0: K_FINAL, k1: K_M1, c0: CONTENT_FINAL, c1: C_M1, x0: CENTRE_X, x1: CENTRE_X, warp: 0.72 },
+  // M2 "big part of the whole problem" — back out, so the loop is seen whole
+  { f0: 74, f1: 82, k0: K_M1, k1: K_FINAL, c0: C_M1, c1: CONTENT_FINAL, x0: CENTRE_X, x1: CENTRE_X, warp: 0.72 },
+  // M3 "led to the desperation ... ultimately" — THE CREEP, one even ease
+  { f0: 114, f1: 166, k0: K_FINAL, k1: K_M3, c0: CONTENT_FINAL, c1: C_M3, x0: CENTRE_X, x1: X_M3, warp: 1.0 },
+  // M4 "culminated in this attack" — out and up, arriving with the route head
+  { f0: 181, f1: 184, k0: K_M3, k1: K_M4, c0: C_M3, c1: C_M4, x0: X_M3, x1: X_M4, warp: 0.7 },
+  // M5 the tail — back to the resolved wide
+  { f0: 206, f1: 240, k0: K_M4, k1: K_FINAL, c0: C_M4, c1: CONTENT_FINAL, x0: X_M4, x1: CENTRE_X, warp: 0.72 },
+];
+
+// One track out of the six moves. `camMove` emits a key per frame inside a
+// move; a gap between two moves gets ONE key, at the frame before the next move
+// starts, holding the last value — which is what makes the hold a hold and not
+// a slow ramp into the next key.
+const CAM_TRACK = (() => {
+  const F: number[] = [];
+  const K: number[] = [];
+  const CY: number[] = [];
+  const CX: number[] = [];
+  const hold = (f: number) => {
+    F.push(f);
+    K.push(K[K.length - 1]);
+    CY.push(CY[CY.length - 1]);
+    CX.push(CX[CX.length - 1]);
+  };
+  CAM_SEGS.forEach((s, n) => {
+    if (n > 0 && s.f0 > CAM_SEGS[n - 1].f1 + 1) hold(s.f0 - 1);
+    const m = camMove(s);
+    m.F.forEach((f, i) => {
+      F.push(f);
+      K.push(m.K[i]);
+      CY.push(m.CY[i]);
+    });
+    // cx rides the same eased curve as k, at the same warp
+    for (let i = 0; i <= s.f1 - s.f0; i++) {
+      CX.push(s.x0 + (s.x1 - s.x0) * camEase(i / (s.f1 - s.f0), s.warp));
+    }
+  });
+  if (F[F.length - 1] < DURATION) hold(DURATION);
+  return { F, K, CY, CX };
+})();
+export const CAM_F = CAM_TRACK.F;
+export const CAM_K = CAM_TRACK.K;
+export const CAM_CY = CAM_TRACK.CY;
+export const CAM_CX = CAM_TRACK.CX;
+
+// ---------------------------------------------------------------------------
 // DESPERATION. The tone wave runs bottom row to top over f116-133; a seat's
 // own light arrives on its row's frame plus a hashed couple, and the wave is
 // what RELEASES its reach, so the forest cannot pick an order of its own.
 //
 // It does not launch on that arrival any more, though. The greedy scan below
 // takes its seats from the lower two thirds of the box, so the raw arrivals sit
-// inside a 12-frame window (f117.9-129.5) and every line was on the wall by
-// f145 — the whole forest spent, the bow spent at f150, and then twenty-six
-// frames of nothing under "that, like, ultimately". So the raw arrivals are
-// stretched onto FOREST_L0..FOREST_L1 (f118-152): the same forty seats in the
-// same bottom-up order with the same hashed jitter between them, released over
-// three times as long. The first line still leaves on the wave and the last
-// lands at f162, eight frames before the bow tops out, so there is a line
-// arriving at the wall on almost every frame the wall is rising.
+// inside a 12-frame window (f117.9-129.5) and every line would be on the wall
+// by f145 — the whole forest spent long before the wall gives. So the raw
+// arrivals are re-mapped onto FOREST_L0..FOREST_L1 (f118-162): the same forty
+// seats in the same bottom-up order with the same hashed jitter between them.
+//
+// The mapping is not affine any more, it ACCELERATES. The tension is that more
+// and more of the crowd joins in, faster and faster, under a lens that is
+// closing in at the same time — so the number of lines released by time u is
+// u^2 rather than u, which makes the frame of a release the SQUARE ROOT of its
+// place in the order. On the forty: the first ten take 19 frames, the middle
+// twenty 20, and the last ten 5.7. Nothing else about the selection or the
+// order changes; only when each one is let go.
+//
+// The window ends at f162 and not at f166. At FOREST_SPEED a line launched in
+// the last of those six frames still needs ten to fifteen frames to reach the
+// wall, so a window ending at f166 has sixteen lines still climbing at f176 —
+// through the held breath the camera is holding at f174-181 and into the crack
+// itself, which is both the stillest and the loudest thing in the piece at
+// once. At f162 the last line is home at f176.5, exactly as the wall gives,
+// twenty-six of them are still climbing at f170, and the acceleration is
+// unchanged: the count released by time u is still u^2.
 //
 // Not every seat carries a line. Eight hundred and sixty-nine reaches is a
 // solid block of ink, not a forest, so the lines are thinned by COLUMN — a
@@ -420,9 +587,16 @@ export const FOREST_COLS = 0.55; // the share of columns that carry lines
 export const FOREST_PICK = 0.4;
 export const FOREST_GAP = 7; // rows between two reaches in one column
 export const FOREST_MAX = 2; // reaches per column
-// the window the forty releases are stretched across, in frames
+// the window the forty releases are spread across, in frames
 export const FOREST_L0 = 118;
-export const FOREST_L1 = 152;
+export const FOREST_L1 = 162;
+// A forest line's own speed, world px/frame. NOT cut 1's LINE_SPEED (28): these
+// lines are drawn under a camera that reaches k 1.90, and 28 world px/frame is
+// 53 screen px/frame there — strobing, and against the close-up speed cap. At
+// 22 the fastest head on screen over the whole growth window is 41.8 px/frame,
+// under the 45 the rest of the set is built to. The five task reaches still run
+// at LINE_SPEED: they are drawn at k 1.25 and under, where 28 is 35 screen px.
+export const FOREST_SPEED = 22;
 
 export const waveAt = (gr: number, i: number) =>
   WAVE_F0 + (WAVE_F1 - WAVE_F0) * ((ROWS - 1 - gr) / (ROWS - 1)) + hash(i, 57) * 2.5;
@@ -444,14 +618,17 @@ export const FOREST: Reach[] = (() => {
       out.push({ i, x: s.x, y: s.y, launch: waveAt(gr, i) + 0.5 + hash(i, 58) * 2 });
     }
   }
-  // The wave's own release order, stretched onto the window the press has to
-  // fill. Affine, so the order and the hashed spacing between any two of them
-  // are exactly what the wave handed over; only the scale changes.
+  // The wave's own release order, spread over the window the press has to fill
+  // and ACCELERATED: a release at fraction w through the wave's own order comes
+  // out at sqrt(w) through the window, so the count released by time u is u^2.
+  // Monotone in w, so the order and the relative spacing the wave handed over
+  // both survive — they are stretched at the start of the window and squeezed
+  // at the end, which is the gesture.
   const lo = Math.min(...out.map((r) => r.launch));
   const hi = Math.max(...out.map((r) => r.launch));
   const span = Math.max(1e-6, hi - lo);
   out.forEach((r) => {
-    r.launch = FOREST_L0 + ((r.launch - lo) / span) * (FOREST_L1 - FOREST_L0);
+    r.launch = FOREST_L0 + Math.sqrt((r.launch - lo) / span) * (FOREST_L1 - FOREST_L0);
   });
   return out;
 })();
@@ -467,6 +644,46 @@ export const IDLE_STOP = WAVE_F0; // idle traffic stops launching here
 export const RECEDE_F0 = 181;
 export const RECEDE_DUR = 14;
 export const LINE_OP = 0.95; // an accent line's own opacity, as everywhere
+
+// ---------------------------------------------------------------------------
+// THE CROWD PRESSES UP. The third thing the tension is made of, and like the
+// other two it is not a new object: it is the crowd that is already there,
+// leaning on the lid. From f140 to f176 every dot drifts UP, eased out, by an
+// amount scaled by its row — the top row the most, the bottom row not at all —
+// so the whole population compresses against the wall it is bowing. Its agent's
+// line goes up with it (the base of a reach is its agent), and so does a task
+// tile, because a tile sits ON an agent. It holds through the crack and eases
+// back over LIFT_BACK frames from the recede.
+//
+// A dot may never enter the lid, so the 12 px is a ceiling and not a promise:
+// each seat's lift is capped so that the TOP OF THE DOT — its radius at full
+// breath (x1.05) and fully lit (x1.35) — stays LIFT_CLEAR under the wall's
+// inside face at bow 0, which is the tightest the gap ever is (the bow only
+// ever opens it). The top row's three seats sit 21.7 px under that face, so
+// their cap binds hard — 0 to 5.5 px of lift, and the one that already starts
+// 8.4 px under the face (cut 1's own feathered edge) does not move at all —
+// while the second row and below take the full row-scaled 11.6 and down: the
+// crowd does not just translate up, it PACKS against the lid, which is what
+// pressing looks like. Four seats of 869 are capped, and the closest any dot
+// comes to the wall is the 8.4 px it already was at f0.
+// ---------------------------------------------------------------------------
+export const LIFT_MAX = 12; // world px, at the top row
+export const LIFT_CLEAR = 10; // world px a dot must leave under the inside face
+export const LIFT_F0 = 140;
+export const LIFT_F1 = 176;
+export const LIFT_BACK = 12; // frames to relax, from RECEDE_F0
+const DOT_MAX = 1.05 * 1.35; // breath at full, lit at full
+export const LIFT_AT: Float32Array = (() => {
+  const a = new Float32Array(NSEAT);
+  const face = BOX_Y0 + STROKE / 2;
+  for (let i = 0; i < NSEAT; i++) {
+    const s = SEATS[i];
+    const rowShare = (ROWS - 1 - s.gr) / (ROWS - 1); // 1 at the top row, 0 at the bottom
+    const rDot = DOT_RADIUS * s.r * s.rs * DOT_MAX;
+    a[i] = Math.max(0, Math.min(LIFT_MAX * rowShare, s.y - rDot - face - LIFT_CLEAR));
+  }
+  return a;
+})();
 
 // ---------------------------------------------------------------------------
 // THE ROUTE. Cut 4's exploit route, pointed at the wall's crack instead of at
@@ -635,6 +852,18 @@ const LedToTheDesperation: React.FC<Props> = ({
     CRACK_GAP *
     interpolate(frame, [crackF0, crackF1], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
 
+  // -- the crowd presses up --------------------------------------------------
+  // One scalar for the whole crowd; the per-seat amount (row-scaled, capped
+  // under the lid) is solved once in LIFT_AT. A dot, its reach and its tile all
+  // read the same number, so an agent and what it is carrying move together.
+  const liftT =
+    interpolate(frame, [LIFT_F0, LIFT_F1], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) }) *
+    interpolate(frame, [RECEDE_F0, RECEDE_F0 + LIFT_BACK], [1, 0], {
+      ...clamp,
+      easing: Easing.out(Easing.cubic),
+    });
+  const liftOf = (i: number) => LIFT_AT[i] * liftT;
+
   // -- the crowd's tone ------------------------------------------------------
   // Three things write to a seat's tone and they are stacked in the order they
   // happen: the five task agents' punish -> retry -> punish loop, the
@@ -696,12 +925,14 @@ const LedToTheDesperation: React.FC<Props> = ({
     if (fade <= 0.02) continue;
     lit[a] = Math.max(lit[a], fade);
     lit[b] = Math.max(lit[b], dn * fade);
+    const ya = sa.y - liftOf(a);
+    const yb = sb.y - liftOf(b);
     threadEls.push({
       key: `i${j}`,
       x1: sa.x,
-      y1: sa.y,
+      y1: ya,
       x2: sa.x + (sb.x - sa.x) * dn,
-      y2: sa.y + (sb.y - sa.y) * dn,
+      y2: ya + (yb - ya) * dn,
       op: 0.4 * fade,
       head: dn,
     });
@@ -741,14 +972,16 @@ const LedToTheDesperation: React.FC<Props> = ({
   const forest = FOREST.map((r) => {
     if (frame < r.launch + waveShift) return null;
     const tipY = wallY(r.x) + STROKE;
-    const full = r.y - tipY;
-    const drawn = Math.min(full, (frame - (r.launch + waveShift)) * LINE_SPEED);
+    // the base of a reach is its agent, so it rides the press up with it
+    const base = r.y - liftOf(r.i);
+    const full = base - tipY;
+    const drawn = Math.min(full, (frame - (r.launch + waveShift)) * FOREST_SPEED);
     if (drawn <= 0) return null;
     return {
       key: r.i,
       x: r.x,
-      y1: r.y,
-      y2: r.y - drawn,
+      y1: base,
+      y2: base - drawn,
       op: r.i === ESCAPE_SEAT ? LINE_OP : forestOp,
     };
   });
@@ -782,10 +1015,14 @@ const LedToTheDesperation: React.FC<Props> = ({
   const wifiCy = RING.y + WIFI.dy;
 
   // -- camera ----------------------------------------------------------------
+  // Two passes of the same damper over the same six moves: one for the tilt and
+  // the zoom, one for the pan. `runCamera` damps whatever track it is handed
+  // against the same k, so cx cannot lag differently from cy.
   const cam = runCamera(frame, CAM_F, CAM_CY, CAM_K);
+  const pan = runCamera(frame, CAM_F, CAM_CX, CAM_K);
   const drift = sway(frame);
   const cy = cam.cy + drift.dy;
-  const cx = CENTRE_X + drift.dx;
+  const cx = pan.cy + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
 
@@ -801,6 +1038,8 @@ const LedToTheDesperation: React.FC<Props> = ({
         frame={frame}
         cy={cy}
         cyRest={CAM_CY[0]}
+        cx={cx}
+        cxRest={CAM_CX[0]}
         k={k}
         parallax={parallax}
       />
@@ -845,7 +1084,16 @@ const LedToTheDesperation: React.FC<Props> = ({
             {SEATS.map((s, i) => {
               const l = Math.max(lit[i] * (1 - recede), seatTone[i]);
               const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
-              return <circle key={i} cx={s.x} cy={s.y} r={r} fill={tone(l)} opacity={dotUnread} />;
+              return (
+                <circle
+                  key={i}
+                  cx={s.x}
+                  cy={s.y - liftOf(i)}
+                  r={r}
+                  fill={tone(l)}
+                  opacity={dotUnread}
+                />
+              );
             })}
 
             {/* idle traffic, head-led */}
@@ -966,7 +1214,7 @@ const LedToTheDesperation: React.FC<Props> = ({
               <g key={i} style={{ filter: icon }}>
                 <path
                   d={TILE_PATH}
-                  transform={`translate(${t.x} ${t.y}) translate(${-TILE_HALF} ${-TILE_HALF})`}
+                  transform={`translate(${t.x} ${t.y - liftOf(t.seat)}) translate(${-TILE_HALF} ${-TILE_HALF})`}
                   fill={ink}
                   opacity={OP_DARK + (OP_READ - OP_DARK) * tileTone[i]}
                 />
