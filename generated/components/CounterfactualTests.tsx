@@ -45,12 +45,19 @@ import {
   BOX_Y0,
   CENTRE_X,
   COLS,
+  // cut 1's own resolved framing and zoom, reused verbatim as this cut's first
+  // camera landing — the same "mark, box, whole width" picture the sibling cut
+  // rests on, so the two cuts share a frame before this one forks
+  CONTENT_FINAL as CONTENT_BOX0,
   CONTENT_OPEN,
   GATE_DASH,
   GATE_GAP,
   GATE_X0,
   GATE_X1,
+  K_FINAL as K_BOX0,
   K_OPEN,
+  LINE_SPEED,
+  LINE_TIP_Y,
   MARK,
   NSEAT,
   RING,
@@ -83,7 +90,7 @@ export const DURATION = 215;
 // ---------------------------------------------------------------------------
 // "Forks in a hardened box". Orange Dwarkesh style: opaque grid cutaway,
 // 1080x1920, 24fps, two-tone warm yellow dots fully opaque, per-icon shadows,
-// one eased camera move, one gesture per word.
+// eased camera moves that follow the action, one gesture per word.
 //
 // The attacking model is a scientific artifact. A counterfactual test is the
 // SAME model run again with exactly one thing changed — so the box forks into
@@ -92,15 +99,18 @@ export const DURATION = 215;
 // Then one second perimeter draws itself around all three: the same
 // experiments, run in a place that was built to hold them.
 //
-// Every gesture is one word. Nothing else happens.
-//   THE ONE CAMERA MOVE. Opens at k 1.50 with the
-//     content centre at BOX_CY + 80 — inside the box,
-//     the crowd bleeding off both sides, the mark
-//     above the frame — and pulls back to k 0.54 with
-//     the content centre at world y 742. Keyed f0-22,
-//     settled by ~f32, warp 0.72. No other camera move — "to be able to run" f0-32
-//   THE TEST. One task tile is dealt from the mark to
-//     the agent nearest the box's centre: 12 frames on
+// Every gesture is one word, and THE CAMERA FOLLOWS THE ACTION: four moves on
+// one damped track, each landing 4-10 frames ahead of its word and holding.
+//   M0, THE OPEN. k 1.50 with the content centre at
+//     BOX_CY + 80 — inside the box, the crowd bleeding
+//     off both sides, the mark above the frame — out
+//     to cut 1's OWN resolved framing, k 0.95 / c -102
+//     (mark, box, whole width). Keys f0-12, warp 0.72,
+//     landed f23                                      — "to be able to run" f0-23
+//   THE DEAL. One task tile is dealt from the mark to
+//     the agent nearest the box's centre — constrained
+//     to the gate's own x span, so the test that rises
+//     off it later lines up with the gap: 12 frames on
 //     a shallow lateral bow, back-overshoot on the
 //     landing, the agent deep -> ripe over TONE_DUR    — "run"               f23-35
 //   THE FORK. Two copies of box 0 — the box, the same
@@ -115,6 +125,12 @@ export const DURATION = 215;
 //     so the emerging edge reads as a copy peeling out.
 //     Their idle traffic starts when they land
 //                             — "counterfactual tests on this model" f47-73
+//   M1, RIDING THE FORK DOWN. The camera leaves with
+//     the copies: k 0.95 -> 0.54, c -102 -> 742, keys
+//     f47-74, warp 0.75, landed f80 — a few frames
+//     after box 2 rests at f73. The stack arrives in
+//     the frame as it is built
+//                             — "counterfactual tests on this model" f47-80
 //   THE DIFFERENCE. One variable, three states, each a
 //     4-frame crossfade on the same 120 px of top wall:
 //     box 0 stays DASHED (the gate that was never
@@ -122,9 +138,29 @@ export const DURATION = 215;
 //     wall, no gate at all); box 2 goes OPEN at f66
 //     (the dashes clear away, the two wall ends
 //     round-capped). Nothing else changes            — "tests / on this"    f56-70
-//   HOLD. Idle traffic, breath, grid drift, sway. The
-//     line is arguing, the picture is not
-//                        — "and you can try and do that in a much more" f71-108
+//   M2, THE PUSH-IN. Onto BOX 2's top wall — the gate
+//     that stands open. k 0.85 with that wall at
+//     screen y 760, so box 2 and box 1 above it fill
+//     the frame. Keys f80-86, warp 0.72, landed f96 —
+//     ahead of "do" (f93) and "that" (f97)     — "you can try and do that" f80-96
+//   THE TEST. What a counterfactual test IS: the same
+//     run, three times, one thing changed. A reach
+//     rises straight up from the dealt tile in EVERY
+//     box, head-led at cut 1's LINE_SPEED, launching
+//     f88 / f90 / f92 so no two are in unison. Box 0's
+//     stops DEAD on the inside face under the dashed
+//     gate and nothing happens; box 1's stops dead on
+//     the solid wall and nothing happens; box 2's goes
+//     THROUGH the gap and 30 px past the wall's
+//     outside face before it stops, dead, no click.
+//     All three are up by f104. They never fade: they
+//     are what the test showed     — "try and do that in a"           f88-104
+//   HOLD. Idle traffic, breath, grid drift, sway      — "much"              f104-108
+//   M3, BACK OUT. k 0.85 -> 0.54, c 1298 -> 742, keys
+//     f104-120, warp 0.72, landed f130. The enclosure
+//     starts drawing at f108 INSIDE the move, so the
+//     armour and the two heads come into view as the
+//     frame widens                                    — "in a much more"    f104-130
 //   HARDENED. ONE SECOND PERIMETER around the whole
 //     three-box rig — not three shells. A squircle
 //     rectangle 40 px outside the boxes' sides and
@@ -225,36 +261,116 @@ export const schema = z.object({
 export type Props = z.infer<typeof schema>;
 
 // ---------------------------------------------------------------------------
-// THE CAMERA. One move, and it is the whole of "to be able to run": the pull
-// back out of the crowd. Keyed f0-22 and damped by `runCamera`, so it is within
-// 1% of k 0.60 by f32 and every gesture after it happens under a still camera.
-// At f47 the copies do not exist yet, so nothing is clipped while it runs; it
-// simply lands wide early, which is what the fork needs.
+// THE FORK's pitch, which the camera needs before it can be written. Box 0
+// stays at BOX_CY; the two copies rest a PITCH and two PITCHes below it. PITCH
+// is the box plus a 50 px gap, so the three read as one stack rather than three
+// unrelated boxes. 780 -> 750 on the reframe: the stack is what sets the zoom,
+// and 60 px off its height is 60 px the enclosure does not have to spend
+// reaching down into the caption band.
+// ---------------------------------------------------------------------------
+export const PITCH = 750; // 700 box + 50 gap; box centres 60, 810, 1560
+export const BOX2_WALL_Y = BOX_Y0 + 2 * PITCH; // 1210: box 2's top wall, the open gate
+
+// ---------------------------------------------------------------------------
+// THE CAMERA. FOUR moves on one damped track — the director's note on v2 was
+// that the camera should FOLLOW the animations and that there should be more
+// zooming, so the camera is now a character: it opens tight, settles on cut 1's
+// own framing for the deal, rides the fork down, dives onto the box whose gate
+// stands open while the test runs through it, and pulls back out as the armour
+// draws. cx never moves; the whole track is (k, content centre) against frame.
+//
+//   M0  f0-12   k 1.50 -> 0.95   c  140 -> -102    warp 0.72   landed f23
+//   M1  f47-74  k 0.95 -> 0.54   c -102 ->  742    warp 0.75   landed f80
+//   M2  f80-86  k 0.54 -> 0.85   c  742 -> 1298    warp 0.72   landed f96
+//   M3  f104-120 k 0.85 -> 0.54  c 1298 ->  742    warp 0.72   landed f130
+//
+// THE KEY SPANS ARE SHORTER THAN THE ON-SCREEN MOVES, and deliberately.
+// `runCamera` damps the key track, so a move is still running for 8-12 frames
+// after its last key — cut 1 writes its own opening move as f0-9 for exactly
+// this reason. Solved on the damper itself (|k - target| / target):
+//   M0   f18 1.71%   f20 0.67%   f22 0.19%   f23 0.08%   f24 0.01%
+//   M1   f76 2.36%   f78 1.13%   f79 0.75%   f80 0.48%  (M2 takes over here)
+//   M2   f92 3.03%   f94 1.35%   f95 0.85%   f96 0.51%   f98 0.13%
+//   M3  f124 2.22%  f126 0.97%  f128 0.36%  f129 0.19%  f130 0.09%
+// Every landing is on or before the frame the brief asks for; none is late.
+// Content centre error at the same frames: 0.0 px at f24, -5.3 at f80, -7.4 at
+// f96, +0.8 at f130.
+//
+// dk PROFILE. Each move is a single monotone lobe — the damper at CAM_DAMP
+// 0.468 does not ring, so there is no return lobe and no sign flip inside a
+// move, and no interior frame where |dk| falls below 2% of that move's peak
+// while the move is still going. Peaks: M0 0.0498, M1 0.0208, M2 0.0374,
+// M3 0.0235 per frame. The ONE sign change on the whole track is at f81, the
+// bottom of the V where the pull-out (M1) hands over to the push-in (M2); a
+// reversal has to pass through zero and this one takes one frame.
+//
+// SCREEN SPEED, peak px/frame on a box centre while that box is on screen:
+//   M0  27.8 (f7)                       the opening pull-back
+//   M1  box 2 43.3, box 1 35.5, box 0 32.8 — the copies and the camera are
+//       travelling the same way, so the fork is SLOWER on screen than it was
+//       in v2 (54 px/frame) even though nothing about the flight changed
+//   M2  box 2 25.9, box 1 52.1, box 0 80.1 — the subject is nearly still and
+//       the boxes above it race off the top, which is what a dive looks like
+//   M3  box 2 20.7, box 1 37.4, box 0 54.6
+//
+// M2's centre is not dialled: box 2's top wall is put at screen y 760 at
+// k 0.85, and `camMove` lands a content centre at screen 960 - CAM_LIFT = 835,
+// so c = 1210 - (760 - 835) / 0.85 = 1298.235. At that camera box 2 spans
+// screen 760-1355 and box 1 122-717; box 0 is above the frame, so its own
+// reach lands off-screen and is read in the wide after M3.
 // ---------------------------------------------------------------------------
 export const K_FINAL = 0.54;
 export const CONTENT_FINAL = 742;
 export const CY_FINAL = CONTENT_FINAL + CAM_LIFT / K_FINAL;
-export const CAM = camMove({
+export const K_PUSH = 0.85;
+export const PUSH_WALL_SCREEN = 760; // where box 2's top wall sits during M2
+// `camMove` puts a content centre at screen y FRAME_H / 2 - CAM_LIFT = 835.
+export const CONTENT_BAND = 960 - CAM_LIFT; // 835
+export const CONTENT_PUSH = BOX2_WALL_Y - (PUSH_WALL_SCREEN - CONTENT_BAND) / K_PUSH; // 1298.235
+
+export const CAM_M0 = camMove({
   f0: 0,
-  f1: 22,
+  f1: 12,
   k0: K_OPEN,
-  k1: K_FINAL,
+  k1: K_BOX0,
   c0: CONTENT_OPEN,
+  c1: CONTENT_BOX0,
+  warp: 0.72,
+});
+export const CAM_M1 = camMove({
+  f0: 47,
+  f1: 74,
+  k0: K_BOX0,
+  k1: K_FINAL,
+  c0: CONTENT_BOX0,
+  c1: CONTENT_FINAL,
+  warp: 0.75,
+});
+export const CAM_M2 = camMove({
+  f0: 80,
+  f1: 86,
+  k0: K_FINAL,
+  k1: K_PUSH,
+  c0: CONTENT_FINAL,
+  c1: CONTENT_PUSH,
+  warp: 0.72,
+});
+export const CAM_M3 = camMove({
+  f0: 104,
+  f1: 120,
+  k0: K_PUSH,
+  k1: K_FINAL,
+  c0: CONTENT_PUSH,
   c1: CONTENT_FINAL,
   warp: 0.72,
 });
-export const CAM_F = [...CAM.F, DURATION];
-export const CAM_K = [...CAM.K, K_FINAL];
-export const CAM_CY = [...CAM.CY, CY_FINAL];
-
-// ---------------------------------------------------------------------------
-// THE FORK. Box 0 stays at BOX_CY; the two copies rest a PITCH and two PITCHes
-// below it. PITCH is the box plus a 50 px gap, so the three read as one stack
-// rather than three unrelated boxes. 780 -> 750 on the reframe: the stack is
-// what sets the zoom, and 60 px off its height is 60 px the enclosure does not
-// have to spend reaching down into the caption band.
-// ---------------------------------------------------------------------------
-export const PITCH = 750; // 700 box + 50 gap; box centres 60, 810, 1560
+// Consecutive, never touching: each move ends where the next one starts, so the
+// gaps between them (f12-47, f74-80, f86-104, f120-215) interpolate flat and
+// the camera HOLDS there. `runCamera` needs a strictly increasing input range,
+// which four disjoint spans give it.
+export const CAM_F = [...CAM_M0.F, ...CAM_M1.F, ...CAM_M2.F, ...CAM_M3.F, DURATION];
+export const CAM_K = [...CAM_M0.K, ...CAM_M1.K, ...CAM_M2.K, ...CAM_M3.K, K_FINAL];
+export const CAM_CY = [...CAM_M0.CY, ...CAM_M1.CY, ...CAM_M2.CY, ...CAM_M3.CY, CY_FINAL];
 
 // A copy's travel, and the one place the brief's letter had to give way to its
 // own numbers. `Easing.out(Easing.back(1.6))` overshoots by 4s^3/(27(s+1)^2) =
@@ -411,19 +527,31 @@ export const encHead = (s: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE TEST. One tile, dealt from the mark to the agent nearest the box's own
+// THE DEAL. One tile, dealt from the mark to the agent nearest the box's own
 // centre — cut 1's deal exactly: 12 frames on a shallow lateral bow, a
 // back-overshoot landing, the tile's centre TILE_LIFT above the agent's dot so
 // the agent stays visible under its own task.
+//
+// ONE CONSTRAINT ADDED IN v3: the agent has to sit UNDER THE GATE. The test
+// that rises off this tile later is a straight vertical line, and in box 2 it
+// has to go through the gap in the wall rather than into the wall beside it, so
+// the seat is chosen from the seats whose x is inside the gate's own span with
+// a GATE_INSET margin at each end — the reach clears both round caps of the
+// open gap by that margin. It resolves to the same seat the unconstrained
+// search picked (x 548.64, y 65.06, 10.0 px from the box's centre), so the deal
+// itself is unchanged frame for frame; the constraint is here so it cannot
+// silently stop being true if the crowd's hash is ever re-rolled.
 // ---------------------------------------------------------------------------
 export const DEAL_LAUNCH = 23;
 export const DEAL_DUR = 12;
 export const DEAL_LAND = DEAL_LAUNCH + DEAL_DUR; // 35
 
+export const GATE_INSET = 20; // world px in from each end of the 120 px gate
 export const TEST_SEAT = (() => {
   let best = 0;
   let bestD = Infinity;
   SEATS.forEach((s, i) => {
+    if (s.x < GATE_X0 + GATE_INSET || s.x > GATE_X1 - GATE_INSET) return; // 500..580
     const d = Math.hypot(s.x - CENTRE_X, s.y - BOX_CY);
     if (d < bestD) {
       bestD = d;
@@ -436,6 +564,49 @@ export const TEST_X = SEATS[TEST_SEAT].x;
 export const TEST_Y = SEATS[TEST_SEAT].y - TILE_LIFT;
 // its own bow, 45-90 px, hashed like cut 1's five so it is never a straight line
 export const TEST_ARC = (hash(0, 65) < 0.5 ? -1 : 1) * (45 + 45 * hash(0, 66));
+
+// ---------------------------------------------------------------------------
+// THE TEST — what a counterfactual test IS, in one gesture, on "try and do
+// that". The v2 cut held for 37 frames here with nothing but ambient in it; the
+// director's note was that it felt rushed and empty and wanted the eye guided.
+// So the same experiment is RUN in all three boxes and the three results are
+// different, which is the whole of the idea: one variable, one outcome each.
+//
+// The mechanism is cut 1's, verbatim — the reach: a straight vertical line that
+// rises from the tile's top edge, head-led at LINE_SPEED (28 world px a frame),
+// and stops on the wall's inside face with nothing happening when it arrives.
+// Here it rises in EVERY box, out of the same tile at the same seat, so the
+// three lines are the same line three times.
+//
+//   box 0, the gate that was never built (dashed): stops DEAD on the inside
+//     face, under the dashes. Nothing happens.
+//   box 1, walled shut (solid): stops DEAD on the inside face. Nothing happens.
+//   box 2, standing open: passes THROUGH the gap and carries on EXIT_PX past
+//     the wall's outside face before it stops — dead, no click, no click ever.
+//
+// STAGGERED, never in unison: f88 / f90 / f92. One speed for all three, so the
+// two short ones finish first (f99 and f101) and box 2's — the only one with
+// further to go — lands last, at f104, on "in a".
+//
+//   len (box 0 / box 1) = REACH_Y0 - LINE_TIP_Y  = 11.06 - (-287)   = 298.06
+//   len (box 2)         = REACH_Y0 - REACH_TIP_OUT = 11.06 - (-321.5) = 332.56
+//   298.06 / 28 = 10.6 frames -> up at f99 (box 0) and f101 (box 1)
+//   332.56 / 28 = 11.9 frames -> up at f104 (box 2)
+//
+// CLEARANCE, checked rather than assumed. Box 2's tip stops at local y -321.5.
+// Box 1's floor is one PITCH above box 2's top wall, so in box 2's own space it
+// is at BOX_Y1 - PITCH = -340 (centre line) and -338.5 (its outside face). The
+// tip clears the centre line by 18.5 world px and the face by 17; with the
+// line's own round cap (STROKE / 2 = 1.5) that is 17 and 15.5. The 50 px gap
+// between the two boxes is never bridged and nothing is ever touched — the
+// exit is a line poking out of an open door, not a connection.
+// ---------------------------------------------------------------------------
+export const REACH_F = [88, 90, 92]; // box 0, box 1, box 2 — no two in unison
+export const REACH_X = TEST_X;
+export const REACH_Y0 = TEST_Y - TILE_HALF; // the tile's top edge
+export const EXIT_PX = 30; // how far box 2's reach carries on past the wall
+export const REACH_TIP_OUT = BOX_Y0 - STROKE / 2 - EXIT_PX; // -321.5
+export const REACH_TIPS = [LINE_TIP_Y, LINE_TIP_Y, REACH_TIP_OUT];
 
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
@@ -616,6 +787,18 @@ const CounterfactualTests: React.FC<Props> = ({
     };
   })();
 
+  // -- the test --------------------------------------------------------------
+  // The reach, cut 1's mechanism: head-led at LINE_SPEED out of the tile's top
+  // edge, stopping dead where its box's own wall is. `i` is the box, so the
+  // stagger and the tip come off one pair of tables. It never fades.
+  const reachY2 = REACH_F.map((launch, i) => {
+    if (frame < launch) return null;
+    const tip = REACH_TIPS[i];
+    const len = REACH_Y0 - tip;
+    const drawn = clamp01(((frame - launch) * LINE_SPEED) / len);
+    return REACH_Y0 + (tip - REACH_Y0) * drawn;
+  });
+
   // -- the three crowds ------------------------------------------------------
   // Same seats, same tone for the tile's agent; each box's idle schedule is its
   // own, so three identical crowds never pulse in unison. A copy's traffic
@@ -713,6 +896,27 @@ const CounterfactualTests: React.FC<Props> = ({
       )}
     </>
   );
+
+  // The test's reach for one box. Drawn AFTER that box's wall so box 2's can be
+  // seen crossing the open gap, and BEFORE the tile so it comes out from under
+  // its own task rather than over it — cut 1's order exactly.
+  const drawReach = (i: number) => {
+    const y2 = reachY2[i];
+    return y2 === null ? null : (
+      <g style={{ filter: icon }}>
+        <line
+          x1={REACH_X}
+          y1={REACH_Y0}
+          x2={REACH_X}
+          y2={y2}
+          stroke={ink}
+          strokeWidth={STROKE}
+          strokeLinecap="round"
+          opacity={OP_READ}
+        />
+      </g>
+    );
+  };
 
   const drawTile = () =>
     dealt ? (
@@ -863,6 +1067,7 @@ const CounterfactualTests: React.FC<Props> = ({
               </g>
             </g>
 
+            {drawReach(0)}
             {drawTile()}
 
             {/* --------------------------------------------------- THE COPIES
@@ -925,6 +1130,7 @@ const CounterfactualTests: React.FC<Props> = ({
                         ))
                       : null}
                   </g>
+                  {drawReach(fk.f.id)}
                   {drawTile()}
                 </g>
               );
