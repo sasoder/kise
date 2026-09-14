@@ -466,3 +466,28 @@ Reference set, in edit order, all approved: `ConstantlyBombarding.tsx`
 are the iteration trail. Render each through its private entry under `out/`
 (`out/cb-entry`, `ri-entry`, `mh-entry`) — `src/Root.tsx` is shared with other
 sessions.
+
+## Sporttouchen style
+
+The user's named house style for the client Sporttouchen (sporttouchen.nu, Swedish
+sports channel). When they say "sporttouchen style", build to this without re-asking.
+Reference: `generated/components/SporttouchenTimer.tsx` (v2).
+
+- **Type:** MADE Tommy Soft, loaded locally from `public/MADETommySoft-ExtraBold.otf`
+  (display) and `public/MADETommySoft-Medium.otf` with the `loadFont` + `staticFile`
+  pattern in `explainerShared.tsx`. Display numerals ExtraBold, tracking -0.02em with
+  a compensating marginRight. Not Montserrat (the website's fallback).
+- **Colour:** ink `#FFFFFF`; one brand gradient `#A300AF` -> `#520EF1` at 90deg
+  left-to-right; opaque background `#0B0A12` with one low violet radial glow (~18%
+  around y1400); track elements ink at 0.12. No glow, blur or blend modes.
+- **Stroked type:** every big glyph gets a 4px outside stroke made as a stroked copy
+  behind the fill copy. Black under white ink, white whenever the fill is the gradient.
+  No caption label under the hero element.
+- **Motion:** time is linear (ring drains clockwise from 12 o'clock, no easing).
+  8-frame masked swap: outgoing slides up 130px and is gone by frame 3, incoming rises
+  from +130px over frames 2-8; one 1.03 pop per tick, 1.06 plus gradient fill on the
+  last three; payoff is one thin ring (stroke 6) expanding and fading, then a dead
+  hold. Never fade out at the end. 30fps, 1080x1920, hero centred at y880.
+- **Delivery:** two renders every time, opaque and `transparent: true` overlay, both to
+  `~/Downloads/`, versions as `_V2` beside the original. Judge the overlay over
+  mid-grey, not the dark background.
