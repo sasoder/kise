@@ -65,13 +65,13 @@ import {
   TILE_HALF,
   TILE_PATH,
   TONE_DUR,
-  WIFI,
   WORLD_H,
   WORLD_W,
   clamp01,
   clampi,
   smooth,
 } from "./ImpossibleTasks";
+import { HUGGINGFACE } from "./brandGlyphs";
 
 export const FPS = 24;
 // Dwarkesh clip `Ajeya_DC_Way`, Ajeya Cotra on the OpenAI / Hugging Face
@@ -93,12 +93,13 @@ export const DURATION = 256;
 // THE WORLD. This is `ImpossibleTasks.tsx`'s sandbox at the state that piece
 // resolves to, and it simply IS that state at f0: the 900 x 700 ink box at
 // BOX_CY 60 full of agents, the OpenAI mark above it, the internet ring outside
-// with its wifi glyph, and the five task tiles landed on five agents with their
-// five reaches converged on the diagonal and dead against the inside face of
-// the top wall. Nothing draws in. The box, STROKE, the seat grid, SEATS, TILES
-// and their converged tips, LINE_SPEED, RING, WIFI, K_OPEN / K_FINAL /
+// with a mark inside it, and the five task tiles landed on five agents with
+// their five reaches converged on the diagonal and dead against the inside face
+// of the top wall. Nothing draws in. The box, STROKE, the seat grid, SEATS,
+// TILES and their converged tips, LINE_SPEED, RING, K_OPEN / K_FINAL /
 // CONTENT_OPEN / CONTENT_FINAL and TONE_DUR are all imported from cut 1; no
-// geometry is re-derived here.
+// geometry is re-derived here. The one thing inside the ring is not cut 1's:
+// see below.
 //
 // TWO THINGS FROM CUT 1 ARE GONE, on the director's note (v4):
 //   * THE DASHED GATE. Cut 1 leaves a dashed segment in the top wall at
@@ -106,6 +107,13 @@ export const DURATION = 256;
 //     from f0, drawn exactly like the rest of the wall — "a line exactly like
 //     everywhere else". Nothing else about the box changed. What opens in that
 //     wall later is a break, not a door somebody left ajar.
+//   * THE WIFI GLYPH. Cut 1 draws three arcs and a dot inside the internet
+//     ring. On the director's note (v6) that is now the HUGGING FACE MARK,
+//     inline `<path>` geometry from `brandGlyphs`, 54 world px on the same
+//     24-unit em box the whole brand set uses, centred on the ring. Same
+//     colour, same opacity, same shadow, same place in the draw order, same
+//     white -> ACCENT on the first dot's landing — only the shape changed, and
+//     the shape is now the thing the sentence is actually about.
 //   * THE FOREST. v3 sent forty accent lines up out of the crowd and drew one
 //     route line out of the crack. Both are deleted — the launch logic, the
 //     22 px/frame speed, the route's bezier, the ring-rim landing and the "one
@@ -155,8 +163,10 @@ export const DURATION = 256;
 //      decays to 0.07%/frame by f205
 //                          — "culminated in this attack"             f183-205
 //   M5 back to the resolved wide, k 0.95 / c -102,
-//      keys f206-240, warp 0.72, landed f250, held to
-//      f256                               — tail                     f206-256
+//      keys f206-250 (v6), warp 0.72, 99.8% of the move
+//      done at f256 and still widening at the cut: the
+//      frame opens out under the whole tail instead of
+//      parking at f250                    — tail                     f206-256
 //
 // THE GESTURES, under it.
 //   THE PUNISHMENT. From the top-wall end of each
@@ -264,12 +274,39 @@ export const DURATION = 256;
 //     tail is never still and the last few are still
 //     climbing at f255. THE FIRST DOT LANDS ON THE
 //     RING'S RIM AT f195, on "attack", and the ring and
-//     its wifi glyph go white -> accent over the four
-//     frames after it. The crowd left inside recedes
+//     the Hugging Face mark inside it go white ->
+//     accent over the four frames after it. The crowd left inside recedes
 //     ripe -> deep f195-215; the escapees and the swarm
 //     stay ripe and keep breathing. The hollow does not
 //     refill and the lid stays bowed and open
 //                              — "in this attack" and the tail      f183-256
+//   AFTER THE BURST, NOTHING IS STILL (v6). The
+//     director on v5: "I like how the dots start
+//     shaking before it bursts, but after it bursts
+//     they are completely still." Four layers, all of
+//     them made of what is already in the frame:
+//       THE AFTERSHOCK — the freeze stays a freeze
+//         (f176-181, dead still, the held breath), and
+//         then the lid gives and the crowd left inside
+//         picks the same coherent shake back up at 4
+//         world px, halving every 30 frames, on a floor
+//         of 1.5 px it never goes under. The outline
+//         trembles with 0.3 of it. The breath comes
+//         back at 2.2 and eases to 1.2 by f215 and
+//         stays there                                  f181-256
+//       THE SWARM WANDERS — every settled escapee
+//         drifts around its settle point, 3.5 world px,
+//         a 57-105 frame cycle, blended in over its
+//         last six frames of flight. Mostly a common
+//         mode, so the halo keeps its 15 px spacing
+//         exactly while it breathes                    f195-256
+//       TRAFFIC RESUMES — idle threads among the crowd
+//         still inside come back from f205, ramping to
+//         60% of the normal count by f230. None of them
+//         touches an escapee or an empty seat          f205-256
+//       AND THE CAMERA IS STILL MOVING — M5's keys run
+//         to f250 now, so the frame is still widening
+//         at the cut                                   f206-256
 //   held resolved, never fades out       — tail                     f195-256
 //
 // ambient: idle thread traffic across the crowd from f0 at the shared rate (180
@@ -508,8 +545,10 @@ export const CAM_SEGS: CamSeg[] = [
   { f0: 114, f1: 166, k0: K_FINAL, k1: K_M3, c0: CONTENT_FINAL, c1: C_M3, warp: 1.0 },
   // M4 "culminated in this attack" — out and up, following the pour
   { f0: 183, f1: 195, k0: K_M3, k1: K_M4, c0: C_M3, c1: C_M4, warp: 0.7 },
-  // M5 the tail — back to the resolved wide
-  { f0: 206, f1: 240, k0: K_M4, k1: K_FINAL, c0: C_M4, c1: CONTENT_FINAL, warp: 0.72 },
+  // M5 the tail — back to the resolved wide. Its keys run to f250 (v6): the
+  // frame is meant to be STILL WIDENING almost at the cut, so the last thing
+  // the piece does is a move rather than a hold.
+  { f0: 206, f1: 250, k0: K_M4, k1: K_FINAL, c0: C_M4, c1: CONTENT_FINAL, warp: 0.72 },
 ];
 
 // One track out of the five moves. `camMove` emits a key per frame inside a
@@ -600,6 +639,36 @@ export const riseAt = (f: number) => {
 export const freezeAt = (f: number) => clamp01(1 - (f - FREEZE_F0) / FREEZE_DUR);
 export const shakeAt = (f: number) => riseAt(f) * freezeAt(f);
 
+// ---------------------------------------------------------------------------
+// THE AFTERSHOCK (v6). The director on v5: "I like how the dots start shaking
+// before it bursts, but after it bursts they are completely still."
+//
+// The freeze is still the freeze — f176-181 is dead still, and it has to be,
+// because that is the held breath the break lands inside. But the break is not
+// a full stop. From the FRAME THE LID GIVES the crowd left inside picks the
+// shake back up on exactly the same machinery — own oscillation plus the
+// crowd's common mode, the same hashed rates, the same phase tables, which are
+// continuous through the freeze — at a RESIDUAL amplitude: 4 world px at f181,
+// halving every 30 frames, and never falling below 1.5. So it is a jolt on the
+// break, a shiver through the pour, and a floor that is still there at the cut.
+// The box outline's tremble reads 0.3 of it, the same ratio to the crowd it has
+// in the riser (3 of 10).
+//
+// The 1.5 px floor is the point of the whole thing: it is small — at the tail's
+// k 0.95 it is ~1.4 screen px of amplitude and ~0.6 px a frame — but it is
+// never zero, so no dot in the box is ever at rest for the rest of the piece.
+// ---------------------------------------------------------------------------
+export const AFTER_F0 = CRACK_F0; // 181: the frame the lid gives
+export const AFTER_AMP = 4; // world px at the break
+export const AFTER_HALF = 30; // frames to halve it
+export const AFTER_FLOOR = 1.5; // and it never goes below this
+export const AFTER_TREM = 0.3; // the outline's share of it
+
+export const afterAt = (f: number) =>
+  f < AFTER_F0
+    ? 0
+    : Math.max(AFTER_FLOOR, AFTER_AMP * Math.pow(0.5, (f - AFTER_F0) / AFTER_HALF));
+
 export const waveAt = (gr: number, i: number) =>
   WAVE_F0 + (WAVE_F1 - WAVE_F0) * ((ROWS - 1 - gr) / (ROWS - 1)) + hash(i, 57) * 2.5;
 
@@ -659,13 +728,28 @@ export const COMMON_P2 = 1.7;
 export const BREATH_MUL = 1.2; // breath rate 1 -> 2.2
 export const DOT_CLEAR = 8; // world px a dot must leave inside every wall
 
-const phaseTable = (mul: number) => {
+// THE BREATH AFTER THE BREAK (v6). The freeze takes the rate back to 1 — held
+// breath. The lid gives and it comes back at 2.2, the rate the riser left it
+// at, and eases down to 1.2 by f215 and stays there: a crowd that has just been
+// through this does not go back to resting, and a rate of 1.2 is what keeps the
+// swarm and the crowd inside visibly breathing for the whole tail. Only the
+// RATE steps here, never the phase — the table integrates it — so nothing pops.
+export const BREATH_AFTER = 0.2; // the extra rate it holds: rate 1.2
+export const BREATH_CALM = 215; // 2.2 -> 1.2 over f181-215
+
+export const afterBreathAt = (f: number) =>
+  f < AFTER_F0
+    ? 0
+    : BREATH_AFTER +
+      (BREATH_MUL - BREATH_AFTER) * (1 - smooth((f - AFTER_F0) / (BREATH_CALM - AFTER_F0)));
+
+const phaseTable = (extra: (f: number) => number) => {
   const a = new Float64Array(DURATION + 1);
-  for (let f = 1; f <= DURATION; f++) a[f] = a[f - 1] + 1 + mul * shakeAt(f - 0.5);
+  for (let f = 1; f <= DURATION; f++) a[f] = a[f - 1] + 1 + extra(f - 0.5);
   return a;
 };
-export const PH_JIT = phaseTable(JIT_RATE_MUL);
-export const PH_BREATH = phaseTable(BREATH_MUL);
+export const PH_JIT = phaseTable((f) => JIT_RATE_MUL * shakeAt(f));
+export const PH_BREATH = phaseTable((f) => BREATH_MUL * shakeAt(f) + afterBreathAt(f));
 export const phAt = (t: Float64Array, f: number) => t[clampi(Math.round(f), 0, DURATION)];
 
 const TAU = Math.PI * 2;
@@ -687,12 +771,17 @@ export const commonMode = (f: number) => ({
   y: Math.sin(COMMON_P2 + COMMON_W2 * f),
 });
 
+// The one amplitude the whole crowd shakes on: the riser's, and then the
+// aftershock's residual. They never overlap — the riser is zero from f178 and
+// the aftershock starts at f181 — so this is one curve with a six-frame notch
+// of silence in it at the freeze.
+export const jitAmpAt = (f: number) => JIT_AMP * shakeAt(f) + afterAt(f);
+
 // A dot's shake, world px, before the wall clamp: its own oscillation and the
 // crowd's, both on one amplitude.
 export const jitterAt = (i: number, f: number) => {
-  const s = shakeAt(f);
-  if (s <= 0) return { dx: 0, dy: 0 };
-  const A = JIT_AMP * s;
+  const A = jitAmpAt(f);
+  if (A <= 0) return { dx: 0, dy: 0 };
   const pj = phAt(PH_JIT, f);
   const c = commonMode(f);
   return {
@@ -709,6 +798,8 @@ export const jitterAt = (i: number, f: number) => {
 // what keeps the shake reading as pressure inside a container rather than as a
 // camera.
 export const TREM_AMP = 3;
+// The outline's whole amplitude, riser and aftershock together.
+export const tremAmpAt = (f: number) => TREM_AMP * shakeAt(f) + AFTER_TREM * afterAt(f);
 
 // ---------------------------------------------------------------------------
 // THE CROWD PACKS UP. Not a new object: the crowd that is already there,
@@ -762,7 +853,7 @@ export const LIFT_AT: Float32Array = (() => {
 // was: an annulus out to ~170 in every direction, most of which sat directly
 // over the ring. The settle region is now WIDE, THIN and CENTRED ON THE RING —
 // an ellipse of semi-axes 300 x 72 — MINUS a clear disc of 58 around the ring's
-// centre, so the ring and its wifi glyph sit in an open middle with the crowd
+// centre, so the ring and the mark inside it sit in an open middle with the crowd
 // spread out sideways on either side of them. Clipped top and bottom: nothing
 // above the mark's bottom edge minus its 30 px of air, nothing below the lid's
 // outside face plus 12. Hashed, placed by reject-and-retry at SWARM_SEP
@@ -1067,12 +1158,190 @@ export const flightPos = (fl: Flight, frame: number) => {
   return { x: fl.px[lo] + (fl.px[hi] - fl.px[lo]) * t, y: fl.py[lo] + (fl.py[hi] - fl.py[lo]) * t };
 };
 
+// ---------------------------------------------------------------------------
+// THE SWARM IS ALIVE (v6). A settled escapee is not parked: it wanders around
+// its settle point on a slow two-axis oscillation, 3.5 world px, rates in the
+// 0.06-0.11 rad/frame band (a cycle every 57 to 105 frames — about the length
+// of the whole tail, so what the eye gets is a drift, not a wobble). It blends
+// in over the dot's last six frames of flight, so there is no seam between
+// arriving and living.
+//
+// THE CONSTRAINT, AND WHAT IT FORCED. The halo is placed at EXACTLY 15 px
+// separation and it is at its packing limit: the median nearest-neighbour
+// distance is 15.56 px and 172 of the 180 dots have a neighbour inside 18 px.
+// So a wander where every dot oscillates independently breaks 15 px at ANY
+// amplitude worth having — measured over f195-256, a 3.5 px independent wander
+// closes the tightest pair to 6.98 px, and the largest independent amplitude
+// that holds 15.00 is 0.002 px. Reducing the amplitude to what fits is the
+// literal instruction and it deletes the gesture.
+//
+// What holds 15 px exactly, at the full 3.5, is the piece's OWN answer to this
+// problem — the same one the riser's shake uses. Most of the wander is a COMMON
+// MODE: one two-axis oscillation the whole halo takes together, which is a
+// rigid translation and so cannot change the distance between any two dots by
+// anything at all. On top of it each dot gets its OWN oscillation, with its own
+// hashed rate and phase, at a share of the amplitude capped by the room its
+// nearest neighbour actually leaves it:
+//
+//   own_j = min(0.5, (nn_j - 15) / (2 * sqrt(2) * 3.5))
+//
+// Two neighbours can then close on each other by at most
+// sqrt(2) * 3.5 * (own_a + own_b) <= d_ab - 15, so no pair ever gets inside
+// 15 px — measured 15.001 over every frame of f195-256 and every one of the
+// 16,110 pairs. The dots with room (up to 21.3 px of it) get up to half their
+// wander as their own; the packed ones ride the body. Which is also the right
+// picture: a crowd that has just landed somewhere breathes together.
+// ---------------------------------------------------------------------------
+export const WANDER_A = 3.5; // world px
+export const WANDER_LO = 0.06; // rad/frame: a 105-frame cycle
+export const WANDER_HI = 0.11; // rad/frame: a 57-frame cycle
+// The common mode's own two rates, both inside the same band (a 57 and a
+// 65 frame cycle). They are SOLVED rather than picked: a two-axis oscillation
+// whose axes happen to turn on the same frame leaves the whole halo at a
+// standstill for two or three frames, which is the one thing this revision is
+// for. Scanned over the band at 0.002 steps (`scratchpad/seg1/rates_v6.ts`),
+// this pair is the one whose QUIETEST frame is the least quiet: the settled
+// swarm's mean step never falls below 0.29 world px, against 0.03 for the pair
+// I had first.
+export const WANDER_CW1 = 0.11;
+export const WANDER_CW2 = 0.096;
+export const WANDER_CP1 = 0;
+export const WANDER_CP2 = 1.7; // the same two phases the crowd's common mode uses
+export const WANDER_OWN_MAX = 0.5; // no dot gives more than half of it to its own
+export const WANDER_BLEND = 6; // frames of flight it fades in over
+
+export const WAN_W1 = new Float32Array(ESCAPE_N);
+export const WAN_W2 = new Float32Array(ESCAPE_N);
+export const WAN_P1 = new Float32Array(ESCAPE_N);
+export const WAN_P2 = new Float32Array(ESCAPE_N);
+export const WAN_OWN = new Float32Array(ESCAPE_N);
+{
+  const span = 2 * Math.SQRT2 * WANDER_A;
+  for (let j = 0; j < ESCAPE_N; j++) {
+    const i = FLIGHTS[j].seat;
+    WAN_W1[j] = WANDER_LO + (WANDER_HI - WANDER_LO) * hash(i, 101);
+    WAN_W2[j] = WANDER_LO + (WANDER_HI - WANDER_LO) * hash(i, 102);
+    WAN_P1[j] = hash(i, 103) * TAU;
+    WAN_P2[j] = hash(i, 104) * TAU;
+    let nn = Infinity;
+    for (let m = 0; m < ESCAPE_N; m++) {
+      if (m === j) continue;
+      nn = Math.min(nn, Math.hypot(SWARM[j].x - SWARM[m].x, SWARM[j].y - SWARM[m].y));
+    }
+    WAN_OWN[j] = Math.max(0, Math.min(WANDER_OWN_MAX, (nn - SWARM_SEP) / span));
+  }
+}
+
+export const wanderAt = (j: number, f: number) => {
+  const fl = FLIGHTS[j];
+  const t = clamp01((f - (fl.launch + fl.dur - WANDER_BLEND)) / WANDER_BLEND);
+  if (t <= 0) return { dx: 0, dy: 0 };
+  const own = WAN_OWN[j];
+  const com = 1 - own;
+  const A = WANDER_A * t;
+  return {
+    dx: A * (own * Math.sin(WAN_P1[j] + WAN_W1[j] * f) + com * Math.sin(WANDER_CP1 + WANDER_CW1 * f)),
+    dy: A * (own * Math.sin(WAN_P2[j] + WAN_W2[j] * f) + com * Math.sin(WANDER_CP2 + WANDER_CW2 * f)),
+  };
+};
+
+// ---------------------------------------------------------------------------
+// WHERE EVERY AGENT IS, at any frame. Hoisted out of the component (v6) so the
+// scratchpad's measurements read the SAME function the renderer draws, rather
+// than a copy of it that can drift.
+//
+// A dot in its seat is seat + pack-up + shake, clamped so it can never cross a
+// wall. The clamp is against the UNTREMBLED faces: the tremble is 3 px at its
+// worst and DOT_CLEAR is 8, so a dot still has five px of wall even at the
+// extreme of the shake. A dot that has launched is on its flight, plus its
+// wander. A seat a dot has left stays empty: the hollow does not refill.
+// ---------------------------------------------------------------------------
+export const X_LO = BOX_X0 + STROKE / 2 + DOT_CLEAR;
+export const X_HI = BOX_X1 - STROKE / 2 - DOT_CLEAR;
+export const Y_HI = BOX_Y1 - STROKE / 2 - DOT_CLEAR;
+
+export const wallYAt = (x: number, f: number) => BOX_Y0 - BOW_AMP * bowProfile(x) * riseAt(f);
+
+export const seatPosAt = (i: number, f: number) => {
+  const s = SEATS[i];
+  let x = s.x;
+  let y = s.y - LIFT_AT[i] * riseAt(f);
+  if (jitAmpAt(f) > 0) {
+    const j = jitterAt(i, f);
+    x += j.dx;
+    y += j.dy;
+    x = Math.max(X_LO, Math.min(X_HI, x));
+    y = Math.max(wallYAt(x, f) + STROKE / 2 + DOT_CLEAR, Math.min(Y_HI, y));
+  }
+  return { x, y };
+};
+
+export const agentsAt = (f: number) => {
+  const POS: { x: number; y: number }[] = new Array(NSEAT);
+  const GONE = new Uint8Array(NSEAT);
+  for (let i = 0; i < NSEAT; i++) POS[i] = seatPosAt(i, f);
+  FLIGHTS.forEach((fl, j) => {
+    if (f < fl.launch) return;
+    const p = flightPos(fl, f);
+    const w = wanderAt(j, f);
+    POS[fl.seat] = { x: p.x + w.dx, y: p.y + w.dy };
+    GONE[fl.seat] = 1;
+  });
+  return { POS, GONE };
+};
+
+// ---------------------------------------------------------------------------
+// TRAFFIC RESUMES (v6). The idle threads stop launching at f116 — the crowd
+// stops talking to itself and starts pressing. From f205, twenty frames after
+// the first dot is on the ring, they come back: the share of the piece's normal
+// idle count that is allowed to launch ramps 0 -> 60% over f205-TRAFFIC_F1 and
+// then holds, so the field goes quiet, breaks, and then picks up a pulse again.
+//
+// A resumed thread never touches an escapee: neither end may be a seat that is
+// on a flight, whether that dot is still queued in it, in the air or landed on
+// the ring. The source end is DRAWN from the seats that stayed (`INSIDE`), so
+// it cannot be one; the far end is a grid neighbour of it and is dropped if it
+// is. So no thread reaches into the hollow and none of them draws a line out of
+// the box to the swarm — the traffic that comes back is the traffic among the
+// ones who are still inside.
+//
+// A RESUMED THREAD RE-PHASES. The threads' cycles are hashed against f0 and run
+// about 38 frames, so if a resumed thread had to wait for its own next cycle
+// the population would take a whole period to fill in and f230 would be at a
+// third of the target. Instead each allowed thread gets a WAKE FRAME hashed
+// across f205-230 and its cycle clock restarts there: the count then IS the
+// ramp, because a thread is visible from the frame it wakes.
+// ---------------------------------------------------------------------------
+export const TRAFFIC_F0 = 205;
+export const TRAFFIC_F1 = 230;
+export const TRAFFIC_SHARE = 0.6; // of the piece's normal idle count
+
+// the seats that stayed, as a list: a resumed thread's source end
+export const INSIDE: Int32Array = (() => {
+  const a: number[] = [];
+  for (let i = 0; i < NSEAT; i++) if (FLIGHT_OF[i] < 0) a.push(i);
+  return Int32Array.from(a);
+})();
+
 // The crowd that did NOT get out goes back to deep over the twenty frames after
 // the first dot lands. The escapees — in the air, already settled, or still
 // queued in their seat — stay ripe.
 export const RECEDE_F0 = 195;
 export const RECEDE_DUR = 20;
 export const RING_LIT_DUR = 4; // white -> accent, from the first landing
+
+// THE MARK INSIDE THE RING (v6). Cut 1 draws a wifi glyph in there; the
+// director asked for the Hugging Face mark instead, which is also what the line
+// is actually about — the sandbox gets onto the internet, and the internet in
+// this clip is Hugging Face. It is the same 24-unit em box every brand mark in
+// `brandGlyphs` is drawn on, at 54 world px: the ring's inner diameter is
+// 80 - STROKE = 77, so the mark keeps 11.5 px of ring on either side of it, and
+// at the resolved wide (k 0.95) it is 51 screen px across, which is where the
+// face still reads. It is white at OP_READ like the wifi glyph was, carries the
+// same `iconShadow(k)`, sits in the same place in the draw order — under the
+// OpenAI mark, over the swarm — and goes white -> ACCENT with the ring on the
+// first dot's landing.
+export const HF_SIZE = 54; // world px across the 24-unit box
 
 export const defaultProps: Props = schema.parse({
   ink: "#FFFFFF",
@@ -1167,15 +1436,14 @@ const LedToTheDesperation: React.FC<Props> = ({
   const crackF0 = beats.culminated + (CRACK_F0 - FREEZE_F0); // 181
   const crackF1 = crackF0 + (CRACK_F1 - CRACK_F0); // 187
 
-  // -- the riser -------------------------------------------------------------
-  const press = riseAt(frame); // the pack-up and the bow; never relaxes
-  const shake = shakeAt(frame); // jitter, tremble, breath rate; zero after f178
+  // -- the riser, and the aftershock after the break --------------------------
   const common = commonMode(frame); // the lean the whole crowd takes together
-  const tremX = TREM_AMP * shake * common.x;
-  const tremY = TREM_AMP * shake * common.y;
+  const tremA = tremAmpAt(frame); // the outline: 3 * r, then 0.3 * the residual
+  const tremX = tremA * common.x;
+  const tremY = tremA * common.y;
 
   // -- the wall's shape this frame ------------------------------------------
-  const wallY = (x: number) => BOX_Y0 - BOW_AMP * bowProfile(x) * press;
+  const wallY = (x: number) => wallYAt(x, frame);
   const wallPath = (x0: number, x1: number) => {
     const n = Math.max(2, Math.ceil(Math.abs(x1 - x0) / 12));
     let d = "";
@@ -1189,40 +1457,8 @@ const LedToTheDesperation: React.FC<Props> = ({
     CRACK_GAP *
     interpolate(frame, [crackF0, crackF1], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
 
-  // -- a dot's position inside the box --------------------------------------
-  // seat + pack-up + jitter, then clamped so it can never cross a wall. The
-  // clamp is against the UNTREMBLED faces: the tremble is 3 px at its worst and
-  // DOT_CLEAR is 8, so a dot still has five px of wall even at the extreme of
-  // the shake.
-  const X_LO = BOX_X0 + STROKE / 2 + DOT_CLEAR;
-  const X_HI = BOX_X1 - STROKE / 2 - DOT_CLEAR;
-  const Y_HI = BOX_Y1 - STROKE / 2 - DOT_CLEAR;
-  const seatPos = (i: number) => {
-    const s = SEATS[i];
-    let x = s.x;
-    let y = s.y - LIFT_AT[i] * press;
-    if (shake > 0) {
-      const j = jitterAt(i, frame);
-      x += j.dx;
-      y += j.dy;
-      x = Math.max(X_LO, Math.min(X_HI, x));
-      y = Math.max(wallY(x) + STROKE / 2 + DOT_CLEAR, Math.min(Y_HI, y));
-    }
-    return { x, y };
-  };
-
   // -- where every agent actually is this frame ------------------------------
-  // An escapee that has launched is on its flight; everybody else is in its
-  // seat. A seat a dot has left stays empty: the hollow does not refill.
-  const POS: { x: number; y: number }[] = new Array(NSEAT);
-  const GONE = new Uint8Array(NSEAT);
-  for (let i = 0; i < NSEAT; i++) POS[i] = seatPos(i);
-  FLIGHTS.forEach((fl) => {
-    if (frame >= fl.launch) {
-      POS[fl.seat] = flightPos(fl, frame);
-      GONE[fl.seat] = 1;
-    }
-  });
+  const { POS, GONE } = agentsAt(frame);
 
   // -- the crowd's tone ------------------------------------------------------
   // Three things write to a seat's tone and they are stacked in the order they
@@ -1259,9 +1495,11 @@ const LedToTheDesperation: React.FC<Props> = ({
   });
 
   // -- idle traffic ----------------------------------------------------------
-  // Cut 1's ambient, unchanged, with one addition: a thread whose cycle would
-  // BEGIN at or after f116 never launches. The ones already running finish, and
-  // they ride the crowd's jitter, because a thread is between two agents.
+  // Cut 1's ambient. A thread whose cycle BEGINS at or after f116 does not
+  // launch — the ones already running finish, and they ride the crowd's jitter,
+  // because a thread is between two agents. From f205 they come back, on a
+  // share that ramps to 60% by f230, and a resumed one may not touch a seat
+  // that is on a flight.
   const lit = new Float32Array(NSEAT);
   type Th = { key: string; x1: number; y1: number; x2: number; y2: number; op: number; head: number };
   const threadEls: Th[] = [];
@@ -1270,16 +1508,29 @@ const LedToTheDesperation: React.FC<Props> = ({
   for (let j = 0; j < idleThreadCount; j++) {
     const period = 44 - 12 * hash(j, 4);
     const local = frame + hash(j, 5) * period;
-    const cycle = Math.floor(local / period);
-    if (cycle * period - hash(j, 5) * period >= beats.led) continue;
-    const phase = (local - cycle * period) / period;
+    const cyc0 = Math.floor(local / period);
+    const resumed = cyc0 * period - hash(j, 5) * period >= beats.led;
+    let cycle = cyc0;
+    let phase = (local - cyc0 * period) / period;
+    if (resumed) {
+      if (hash(j, 72) >= TRAFFIC_SHARE) continue; // 60% of the normal count
+      const wake = TRAFFIC_F0 + (TRAFFIC_F1 - TRAFFIC_F0) * hash(j, 71);
+      if (frame < wake) continue;
+      const t = (frame - wake) / period;
+      cycle = 1000 + Math.floor(t); // its own clock, so the seed is its own too
+      phase = t - Math.floor(t);
+    }
     const seed = j * 131 + cycle * 7;
-    const a = Math.floor(hash(seed, 6) * NSEAT);
+    const a = resumed
+      ? INSIDE[Math.floor(hash(seed, 6) * INSIDE.length)]
+      : Math.floor(hash(seed, 6) * NSEAT);
     const sa = SEATS[a];
     const bc = clampi(sa.gc + Math.round((hash(seed, 7) - 0.5) * 2 * reach), 0, COLS - 1);
     const br = clampi(sa.gr + Math.round((hash(seed, 8) - 0.5) * 2 * reach), 0, ROWS - 1);
     const b = SEAT_AT[br * COLS + bc];
     if (b < 0 || b === a) continue;
+    // a resumed thread never attaches to an escapee or to an empty seat
+    if (resumed && FLIGHT_OF[b] >= 0) continue;
     const dn = interpolate(phase, [0, 0.3], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
     const fade = interpolate(phase, [0.55, 1], [1, 0], clamp);
     if (fade <= 0.02) continue;
@@ -1330,8 +1581,6 @@ const LedToTheDesperation: React.FC<Props> = ({
 
   // -- the internet ring (cut 1 left it closed and its glyph at full) --------
   const RING_C = 2 * Math.PI * RING.r;
-  const wifiCx = RING.x;
-  const wifiCy = RING.y + WIFI.dy;
 
   // -- camera ----------------------------------------------------------------
   const cam = runCamera(frame, CAM_F, CAM_CY, CAM_K);
@@ -1459,20 +1708,15 @@ const LedToTheDesperation: React.FC<Props> = ({
                 opacity={OP_READ + (1 - OP_READ) * ringLit}
                 transform={`rotate(-90 ${RING.x} ${RING.y})`}
               />
+              {/* the Hugging Face mark, on the same 24-unit em box every brand
+                  mark in this set is drawn on, centred on the ring */}
               <g
                 opacity={OP_READ + (1 - OP_READ) * ringLit}
-                fill="none"
-                stroke={ringCol}
-                strokeWidth={STROKE}
-                strokeLinecap="round"
+                transform={`translate(${RING.x} ${RING.y}) scale(${HF_SIZE / 24}) translate(-12 -12)`}
               >
-                {WIFI.radii.map((r) => (
-                  <path
-                    key={r}
-                    d={`M ${wifiCx - r * Math.sin(WIFI.halfAngle)} ${wifiCy - r * Math.cos(WIFI.halfAngle)} A ${r} ${r} 0 0 1 ${wifiCx + r * Math.sin(WIFI.halfAngle)} ${wifiCy - r * Math.cos(WIFI.halfAngle)}`}
-                  />
+                {HUGGINGFACE.paths.map((d) => (
+                  <path key={d.length} d={d} fill={ringCol} fillRule="evenodd" />
                 ))}
-                <circle cx={wifiCx} cy={wifiCy} r={WIFI.dot} fill={ringCol} stroke="none" />
               </g>
             </g>
 
