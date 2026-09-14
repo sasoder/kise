@@ -65,20 +65,25 @@ export const DURATION = 300;
  *       as a lozenge). STROKE OFF. The ONE change from PlateE: the resting ink
  *       is 0.20, not 0.12, because 0.12 was invisible against the dark body.
  *
- * 2. LOGO — a 240px disc centred at (540, 430), so its bottom edge at y 550
- *    sits 45px clear of the card's top at y 595. Round, no ring, no shadow,
- *    STROKE OFF (it is a mark, not type). Drawn as inline SVG inside the world
- *    (never an <image> pointing at a file, which races frame capture): a
- *    135deg disc gradient clipped to the circle, with the white handlebar
- *    moustache on top. When `logoSrc` is non-empty the whole SVG is replaced by
- *    the client's own PNG through <Img>, same box, same motion.
+ * 2. LOGO — a 200px disc on x 540, the client's own PNG through <Img> at the
+ *    logo size with a 50% radius. Untinted, no ring, no shadow, STROKE OFF: the
+ *    PNG is the mark exactly as delivered and nothing is painted on top of it.
+ *    `logoSrc: ''` falls back to the vector moustache further down, which is
+ *    now only there for a checkout without the asset.
  *
- * 3. WAVEFORM — 13 white bars per side on the logo's own axis y 430, left run
- *    x 80..390 and right run x 690..1000, so the outermost bars line up with
- *    the card's edges and the innermost bar edge stays 30px clear of the disc.
- *    Bar width 12, step 24.833, radius 6 (same thin-element exception as the
- *    track). Full-opacity white, growing symmetrically up and down from y 430,
- *    resting height 12 (a dot), ceiling 132. STROKE OFF.
+ *    Its vertical position is DERIVED, not fixed. V1 pinned the centre to
+ *    y 430, which was right for a four-line card but left a much bigger hole
+ *    above the short two-line F3 card. The logo layer now hangs off the card's
+ *    top edge in the DOM, so the group travels with the card and the gap is
+ *    always LOGO_GAP: centre y = cardTop - 45 - 100. That is y 450 on the
+ *    four-line F1 card (top 595) and about y 522 on the two-line F3 card.
+ *
+ * 3. WAVEFORM — 13 white bars per side on the logo's own axis, left run
+ *    x 132..410 and right run x 670..948: the group is 0.84 of its V1 size and
+ *    symmetric about x 540, and the innermost bar edge stays 30px clear of the
+ *    disc. Bar width 10, step 22.333, radius 5 (same thin-element exception as
+ *    the track). Full-opacity white, growing symmetrically up and down from the
+ *    logo's axis, resting height 10 (a dot), ceiling 110. STROKE OFF.
  *
  * EVERY GESTURE, AND WHAT IT IS FOR:
  *
@@ -142,26 +147,37 @@ const TRACK_RADIUS = 4;
 /** PlateE used 0.12 here; it disappeared on the dark body. */
 const TRACK_INK = 0.2;
 
-/** Logo disc: 240 across, centred above the card with a 45px gap. */
+/**
+ * Logo disc: 200 across (V2 — the whole logo-and-bars group is 0.84 of its
+ * first size, so the mark sits under the card rather than competing with it).
+ * Its vertical position is NOT a constant: the group hangs off the card's top
+ * edge in the DOM, so a short two-line question moves the group down with the
+ * card and the gap stays 45px. See the layout note in the component.
+ */
 const LOGO_CX = 540;
-const LOGO_CY = 430;
-const LOGO_SIZE = 240;
+const LOGO_SIZE = 200;
+/** Clear air between the disc's bottom edge and the card's top edge. */
+const LOGO_GAP = 45;
 
 /**
- * Waveform runs. Each side is 310 wide and holds 13 bars of 12 with an even
- * gap, so the outermost bar's outer edge lands exactly on the card's edge
- * (x 80 / x 1000) and the innermost bar's inner edge lands on x 390 / x 690 —
- * 30px clear of the disc, which is r 120 about x 540.
+ * Waveform runs, scaled with the group. Each side is 278 wide and holds 13 bars
+ * of 10 with an even gap: the outermost bar's outer edge lands on x 132 / x 948
+ * and the innermost bar's inner edge on x 410 / x 670 — 30px clear of the disc,
+ * which is now r 100 about x 540. The whole run is symmetric about x 540.
+ *
+ * The tallest a bar can get is 110, so its half-height of 55 never reaches past
+ * the disc's own half-height of 100: the bars can never poke out below the
+ * group's box and collide with the card.
  */
 const BAR_COUNT = 13;
-const BAR_W = 12;
-const BAR_RADIUS = 6;
-const BAR_RUN = 310;
+const BAR_W = 10;
+const BAR_RADIUS = 5;
+const BAR_RUN = 278;
 const BAR_STEP = (BAR_RUN - BAR_W) / (BAR_COUNT - 1);
-const LEFT_INNER_X = 390 - BAR_W;
-const RIGHT_INNER_X = 690;
-const BAR_MIN_H = 12;
-const BAR_MAX_H = 132;
+const LEFT_INNER_X = 410 - BAR_W;
+const RIGHT_INNER_X = 670;
+const BAR_MIN_H = 10;
+const BAR_MAX_H = 110;
 
 /** Entrance windows, in frames. */
 const CARD_IN = [0, 18] as const;
@@ -330,8 +346,9 @@ export const schema = z.object({
 	 */
 	backdrop: z.enum(['brand', 'grey', 'none']).default('brand'),
 	/**
-	 * Empty draws the vector mark below. A path inside `public/` swaps in the
-	 * client's own logo instead — that is the final-render route.
+	 * A path inside `public/`: the client's own logo, and the default. The
+	 * empty string is the escape hatch back to the vector moustache below,
+	 * which now only exists as a fallback for a machine without the asset.
 	 */
 	logoSrc: z.string(),
 	accentFrom: z.string(),
@@ -357,7 +374,7 @@ export const defaultProps = schema.parse({
 	total: 3,
 	transparent: false,
 	backdrop: 'brand',
-	logoSrc: '',
+	logoSrc: 'sporttouchen-logo.png',
 	accentFrom: '#A300AF',
 	accentTo: '#520EF1',
 	ink: '#FFFFFF',
@@ -465,7 +482,13 @@ const VectorLogo: React.FC = () => (
 			</clipPath>
 		</defs>
 		<g clipPath="url(#sporttouchen-disc-clip)">
-			<rect x="0" y="0" width="1000" height="1000" fill="url(#sporttouchen-disc)" />
+			<rect
+				x="0"
+				y="0"
+				width="1000"
+				height="1000"
+				fill="url(#sporttouchen-disc)"
+			/>
 			<path d={MOUSTACHE} fill="#FFFFFF" />
 		</g>
 	</svg>
@@ -561,146 +584,182 @@ const SporttouchenQuiz: React.FC<Props> = ({
 				/>
 			) : null}
 
-			{/* 2. LOGO — its own box, its own centre, scaled by intro * envelope. */}
-			<div
-				style={{
-					position: 'absolute',
-					left: LOGO_CX - LOGO_SIZE / 2,
-					top: LOGO_CY - LOGO_SIZE / 2,
-					width: LOGO_SIZE,
-					height: LOGO_SIZE,
-					scale: String(logoScale),
-					opacity: intro,
-				}}
-			>
-				{logoSrc === '' ? (
-					<VectorLogo />
-				) : (
-					<Img
-						src={staticFile(logoSrc)}
-						style={{
-							width: LOGO_SIZE,
-							height: LOGO_SIZE,
-							borderRadius: '50%',
-							display: 'block',
-						}}
-					/>
-				)}
-			</div>
-
-			{/* 3. WAVEFORM — bars on the logo's axis, growing up and down from it. */}
-			{bars.map((bar) => (
-				<div
-					key={bar.key}
-					style={{
-						position: 'absolute',
-						left: bar.x,
-						top: LOGO_CY - bar.height / 2,
-						width: BAR_W,
-						height: bar.height,
-						borderRadius: BAR_RADIUS,
-						backgroundColor: ink,
-						opacity: bar.opacity,
-					}}
-				/>
-			))}
-
 			{/*
-			  1. CARD. Height is driven by the wrapped question, and the whole
-			  thing is pulled up by half its own height so its centre lands on the
-			  hero line. `overflow: hidden` is what clips the gradient header and
-			  the body to the 12px corners.
+			  The group. Full frame width, its top edge on the hero line and then
+			  pulled up by half its own height, so whatever height the card wraps
+			  to, the card's centre lands on y 880. The card is this box's only
+			  in-flow child, so the box IS the card's height — which is what lets
+			  the logo layer hang off the card's top edge instead of off a fixed
+			  y. Nothing here is clipped or scaled; the card and the logo each
+			  carry their own transform.
 			*/}
 			<div
 				style={{
 					position: 'absolute',
-					left: PLATE_LEFT,
+					left: 0,
 					top: PLATE_CENTER_Y,
-					width: PLATE_WIDTH,
+					width: WIDTH,
 					translate: '0px -50%',
-					scale: String(introScale),
-					opacity: intro,
-					borderRadius: RADIUS,
-					overflow: 'hidden',
 				}}
 			>
-				{/* 1a. Header band — solid brand gradient, label, no stroke. */}
+				{/*
+				  2 + 3. LOGO AND WAVEFORM, as one layer exactly LOGO_SIZE tall
+				  whose bottom sits LOGO_GAP above the card's top edge
+				  (`bottom: 100%` puts the margin edge on the card's top; the
+				  marginBottom then lifts the box clear of it). Because the layer
+				  is pinned to the card and not to a constant y, a short two-line
+				  question moves the whole group down with the card and the 45px
+				  of air is preserved.
+				*/}
 				<div
 					style={{
-						height: HEADER_HEIGHT,
-						backgroundImage: gradient,
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
+						position: 'absolute',
+						left: 0,
+						width: WIDTH,
+						height: LOGO_SIZE,
+						bottom: '100%',
+						marginBottom: LOGO_GAP,
 					}}
 				>
-					<span
-						style={{
-							fontFamily,
-							fontWeight: 500,
-							fontSize: LABEL_SIZE,
-							lineHeight: 1,
-							letterSpacing: '0.22em',
-							// Balances the trailing letter-space so the label centres.
-							marginRight: '-0.22em',
-							textTransform: 'uppercase',
-							color: ink,
-						}}
-					>
-						{`Fråga ${index} / ${total}`}
-					</span>
-				</div>
-
-				{/* 1b. Body — solid dark surface, the question, then the track. */}
-				<div
-					style={{
-						backgroundColor: surface,
-						padding: `${PAD_TOP}px ${PAD_X}px ${PAD_BOTTOM}px`,
-					}}
-				>
-					<StrokedText
-						color={ink}
-						strokeColor={strokeInk}
-						strokeWidth={strokeWidth}
-						style={{
-							fontFamily,
-							fontWeight: 800,
-							fontSize: QUESTION_SIZE,
-							lineHeight: QUESTION_LINE_HEIGHT,
-							letterSpacing: '-0.02em',
-							// Balances the trailing letter-space so the lines centre.
-							marginRight: '-0.02em',
-							textAlign: 'center',
-							translate: `0px ${questionY}px`,
-							opacity: questionIn,
-						}}
-					>
-						{body.map((line, i) => (
-							<React.Fragment key={line}>
-								{i === 0 ? null : <br />}
-								{line}
-							</React.Fragment>
-						))}
-					</StrokedText>
-
-					{/* 1c. Progress track — ink 0.20 under a gradient segment. */}
+					{/* The mark: the client's PNG, untinted and unstroked. */}
 					<div
 						style={{
-							marginTop: TRACK_GAP,
-							height: TRACK_HEIGHT,
-							borderRadius: TRACK_RADIUS,
-							backgroundColor: hexToRgba(ink, TRACK_INK),
-							overflow: 'hidden',
+							position: 'absolute',
+							left: LOGO_CX - LOGO_SIZE / 2,
+							top: 0,
+							width: LOGO_SIZE,
+							height: LOGO_SIZE,
+							scale: String(logoScale),
+							opacity: intro,
 						}}
 					>
+						{logoSrc === '' ? (
+							<VectorLogo />
+						) : (
+							<Img
+								src={staticFile(logoSrc)}
+								style={{
+									width: LOGO_SIZE,
+									height: LOGO_SIZE,
+									borderRadius: '50%',
+									display: 'block',
+								}}
+							/>
+						)}
+					</div>
+
+					{/* The bars, on the logo's own axis, growing up and down. */}
+					{bars.map((bar) => (
 						<div
+							key={bar.key}
 							style={{
-								width: `${fill * 100}%`,
-								height: '100%',
-								borderRadius: TRACK_RADIUS,
-								backgroundImage: gradient,
+								position: 'absolute',
+								left: bar.x,
+								top: LOGO_SIZE / 2 - bar.height / 2,
+								width: BAR_W,
+								height: bar.height,
+								borderRadius: BAR_RADIUS,
+								backgroundColor: ink,
+								opacity: bar.opacity,
 							}}
 						/>
+					))}
+				</div>
+
+				{/*
+				  1. CARD. In flow, so its wrapped height drives the group above.
+				  `overflow: hidden` is what clips the gradient header and the
+				  body to the 12px corners.
+				*/}
+				<div
+					style={{
+						position: 'relative',
+						marginLeft: PLATE_LEFT,
+						width: PLATE_WIDTH,
+						scale: String(introScale),
+						opacity: intro,
+						borderRadius: RADIUS,
+						overflow: 'hidden',
+					}}
+				>
+					{/* 1a. Header band — solid brand gradient, label, no stroke. */}
+					<div
+						style={{
+							height: HEADER_HEIGHT,
+							backgroundImage: gradient,
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+						}}
+					>
+						<span
+							style={{
+								fontFamily,
+								fontWeight: 500,
+								fontSize: LABEL_SIZE,
+								lineHeight: 1,
+								letterSpacing: '0.22em',
+								// Balances the trailing letter-space so the label centres.
+								marginRight: '-0.22em',
+								textTransform: 'uppercase',
+								color: ink,
+							}}
+						>
+							{`Fråga ${index} / ${total}`}
+						</span>
+					</div>
+
+					{/* 1b. Body — solid dark surface, the question, then the track. */}
+					<div
+						style={{
+							backgroundColor: surface,
+							padding: `${PAD_TOP}px ${PAD_X}px ${PAD_BOTTOM}px`,
+						}}
+					>
+						<StrokedText
+							color={ink}
+							strokeColor={strokeInk}
+							strokeWidth={strokeWidth}
+							style={{
+								fontFamily,
+								fontWeight: 800,
+								fontSize: QUESTION_SIZE,
+								lineHeight: QUESTION_LINE_HEIGHT,
+								letterSpacing: '-0.02em',
+								// Balances the trailing letter-space so the lines centre.
+								marginRight: '-0.02em',
+								textAlign: 'center',
+								translate: `0px ${questionY}px`,
+								opacity: questionIn,
+							}}
+						>
+							{body.map((line, i) => (
+								<React.Fragment key={line}>
+									{i === 0 ? null : <br />}
+									{line}
+								</React.Fragment>
+							))}
+						</StrokedText>
+
+						{/* 1c. Progress track — ink 0.20 under a gradient segment. */}
+						<div
+							style={{
+								marginTop: TRACK_GAP,
+								height: TRACK_HEIGHT,
+								borderRadius: TRACK_RADIUS,
+								backgroundColor: hexToRgba(ink, TRACK_INK),
+								overflow: 'hidden',
+							}}
+						>
+							<div
+								style={{
+									width: `${fill * 100}%`,
+									height: '100%',
+									borderRadius: TRACK_RADIUS,
+									backgroundImage: gradient,
+								}}
+							/>
+						</div>
 					</div>
 				</div>
 			</div>
