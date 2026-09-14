@@ -81,3 +81,72 @@ export const D1Mark: React.FC<{
     </g>
   );
 };
+
+// ---------------------------------------------------------------------------
+// COMPANIES. The user (2026-09-14) on the dot-only first set: "too abstract —
+// add some icons". A stock is now a COMPANY CARD: the same white tile as the
+// D1 mark, with a sector glyph knocked out of it (the paper shows through the
+// stroke), so D1 and the things it shorts are one material and D1 is told
+// apart by its amber dot. Twelve sectors, so "diverse" is visibly twelve
+// different kinds of thing, never twelve copies. Glyphs are Lucide (ISC),
+// 24x24, stroke 2, inlined as raw SVG so nothing is fetched at render time.
+// ---------------------------------------------------------------------------
+export const SECTOR_NAMES = [
+  "CAR", "CPU", "PILL", "LANDMARK", "HOUSE", "SMARTPHONE",
+  "PLANE", "SHOPPING_CART", "FACTORY", "FUEL", "SHIP", "SATELLITE",
+] as const;
+export type SectorName = (typeof SECTOR_NAMES)[number];
+export const SECTOR_GLYPHS: Record<SectorName, string> = {
+  CAR: `<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" /> <circle cx="7" cy="17" r="2" /> <path d="M9 17h6" /> <circle cx="17" cy="17" r="2" />`,
+  CPU: `<path d="M12 20v2" /> <path d="M12 2v2" /> <path d="M17 20v2" /> <path d="M17 2v2" /> <path d="M2 12h2" /> <path d="M2 17h2" /> <path d="M2 7h2" /> <path d="M20 12h2" /> <path d="M20 17h2" /> <path d="M20 7h2" /> <path d="M7 20v2" /> <path d="M7 2v2" /> <rect x="4" y="4" width="16" height="16" rx="2" /> <rect x="8" y="8" width="8" height="8" rx="1" />`,
+  PILL: `<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" /> <path d="m8.5 8.5 7 7" />`,
+  LANDMARK: `<path d="M10 18v-7" /> <path d="M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z" /> <path d="M14 18v-7" /> <path d="M18 18v-7" /> <path d="M3 22h18" /> <path d="M6 18v-7" />`,
+  HOUSE: `<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /> <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />`,
+  SMARTPHONE: `<rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" />`,
+  PLANE: `<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />`,
+  SHOPPING_CART: `<path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18" /> <path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25" /> <circle cx="18" cy="20" r="2" /> <circle cx="8" cy="20" r="2" />`,
+  FACTORY: `<path d="M12 16h.01" /> <path d="M16 16h.01" /> <path d="M3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5a.5.5 0 0 0-.769-.422l-4.462 2.844A.5.5 0 0 1 15 10.5v-2a.5.5 0 0 0-.769-.422L9.77 10.922A.5.5 0 0 1 9 10.5V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z" /> <path d="M8 16h.01" />`,
+  FUEL: `<path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5" /> <path d="M14 21V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16" /> <path d="M2 21h13" /> <path d="M3 9h11" />`,
+  SHIP: `<path d="M12 2v2" /> <path d="M12 9.189V13" /> <path d="M19 12V6a2 2 0 00-2-2H7a2 2 0 00-2 2v6" /> <path d="M19.38 19A11.6 11.6 0 0021 13l-8.188-3.639a2 2 0 00-1.624 0L3 13.001a11.6 11.6 0 002.81 7.76" /> <path d="M2 20c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />`,
+  SATELLITE: `<path d="m13.5 6.5-3.148-3.148a1.205 1.205 0 0 0-1.704 0L6.352 5.648a1.205 1.205 0 0 0 0 1.704L9.5 10.5" /> <path d="M16.5 7.5 19 5" /> <path d="m17.5 10.5 3.148 3.148a1.205 1.205 0 0 1 0 1.704l-2.296 2.296a1.205 1.205 0 0 1-1.704 0L13.5 14.5" /> <path d="M9 21a6 6 0 0 0-6-6" /> <path d="M9.352 10.648a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l4.296-4.296a1.205 1.205 0 0 0 0-1.704l-2.296-2.296a1.205 1.205 0 0 0-1.704 0z" />`,
+};
+
+export const CARD_SIZE = 72; // world px; a company is two thirds of the D1 mark
+export const CARD_GLYPH_FRACTION = 0.6; // the 24-unit glyph box fills this much of the tile
+
+// A company card, centred on (x, y). `sector` picks the glyph. `opacity` is the
+// tile's ink opacity; `k` the camera zoom for the per-icon shadow. The glyph is
+// knocked out via a mask, exactly like the "1" in the D1 mark.
+export const CompanyCard: React.FC<{
+  x: number;
+  y: number;
+  sector: SectorName;
+  size?: number;
+  k: number;
+  opacity?: number;
+}> = ({ x, y, sector, size = CARD_SIZE, k, opacity = OP_READ }) => {
+  const tile = squirclePath(size, size, SQUIRCLE_RATIO, SQUIRCLE_SMOOTH);
+  const g = size * CARD_GLYPH_FRACTION;
+  const s = g / 24;
+  const o = (size - g) / 2;
+  const id = `card-${sector}-${Math.round(x)}-${Math.round(y)}`;
+  return (
+    <g transform={`translate(${x - size / 2} ${y - size / 2})`} style={{ filter: iconShadow(k) }}>
+      <defs>
+        <mask id={id} maskUnits="userSpaceOnUse" x={0} y={0} width={size} height={size}>
+          <rect width={size} height={size} fill="#fff" />
+          <g
+            transform={`translate(${o} ${o}) scale(${s})`}
+            fill="none"
+            stroke="#000"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            dangerouslySetInnerHTML={{ __html: SECTOR_GLYPHS[sector] }}
+          />
+        </mask>
+      </defs>
+      <path d={tile} fill="#FFFFFF" opacity={opacity} mask={`url(#${id})`} />
+    </g>
+  );
+};
