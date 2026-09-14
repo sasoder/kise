@@ -113,6 +113,67 @@ export const SECTOR_GLYPHS: Record<SectorName, string> = {
 
 export const CARD_SIZE = 72; // world px; a company is two thirds of the D1 mark
 export const CARD_GLYPH_FRACTION = 0.6; // the 24-unit glyph box fills this much of the tile
+// V3 (user, 2026-09-14: "the logo is square while the other stuff is like a
+// squircle … not very harmonious"): the tiles were always hard squares; what
+// read as soft was Lucide's round caps and thin 2.2 stroke next to the sharp
+// filled serif "1". Square caps, mitred joins and a heavier stroke put the
+// glyphs in the same family as the numeral.
+export const CARD_GLYPH_STROKE = 2.6;
+export const CARD_GLYPH_CAP = "square" as const;
+export const CARD_GLYPH_JOIN = "miter" as const;
+
+// ---------------------------------------------------------------------------
+// THE ONE WORLD (V3). Every cut of the D1 clip is the same scene: eight
+// companies STAND ON the ground; shorting one is D1 pulling it UNDER the line
+// on a thread; depth is how hard the short is; coins climbing a thread onto
+// D1 are the return. All three cuts import these — nothing is restated.
+// ---------------------------------------------------------------------------
+export const GROUND_Y = 880;
+export const GROUND_X0 = 60;
+export const GROUND_X1 = 1020;
+export const GROUND_W = 5;
+export const GROUND_OP = 0.40;
+
+export const MARK_X = 540;
+export const MARK_Y = 430;
+export const MARK_BOTTOM = MARK_Y + MARK_SIZE / 2; // 484
+export const MARK_TOP = MARK_Y - MARK_SIZE / 2; // 376
+
+// Eight companies, so each is its own thing with a 32 px gap, not a strip.
+export const SECTOR_SET: SectorName[] = ["CAR", "CPU", "PILL", "SMARTPHONE", "LANDMARK", "HOUSE", "PLANE", "SHOPPING_CART"];
+export const N_CARDS = 8;
+export const CARD_PITCH = 104; // 72 tile + 32 gap
+export const cardX = (i: number) => MARK_X + (i - (N_CARDS - 1) / 2) * CARD_PITCH; // 176 … 904
+export const SUBJECT = 3; // the phone: the one company D1 shorts first, x 488
+
+// Depths are the card CENTRE below the ground line. ON the ground = the tile's
+// bottom edge on the line.
+export const DEPTH_ON = -CARD_SIZE / 2; // -36: standing on the ground
+export const DEPTH_SHALLOW = 70; // tile top 34 px clear of the line — visibly under it
+export const DEPTH_MEDIUM = 130;
+export const DEPTH_DEEP = 260; // tile bottom at 1176
+export const cardY = (depth: number) => GROUND_Y + depth;
+
+// Threads leave the mark's bottom edge, spread across it so a fan never pins.
+export const THREAD_W = 2.5;
+export const THREAD_LIVE = 0.95;
+export const THREAD_IDLE = 0.4;
+export const ORIGIN_SPREAD = 34;
+export const originX = (i: number) => MARK_X + ((i - (N_CARDS - 1) / 2) / ((N_CARDS - 1) / 2)) * ORIGIN_SPREAD;
+
+// The return: coins on top of the mark, 4 wide so the pile is a block, not a tower.
+export const COIN_R = 9;
+export const RETURN_X = [507, 529, 551, 573];
+export const RETURN_ROW0_Y = MARK_TOP - 10; // 366
+export const RETURN_ROW_PITCH = 20;
+export const returnCoinPos = (i: number) => ({
+  x: RETURN_X[i % 4],
+  y: RETURN_ROW0_Y - Math.floor(i / 4) * RETURN_ROW_PITCH,
+});
+export const RETURN_PEAK = 12; // cut 2: three rows before "returns going down"
+export const RETURN_AFTER_DROP = 8; // cut 2's resolved pile, cut 3's opening pile
+export const RETURN_FINAL = 24; // cut 3: six rows, two past the old peak
+
 
 // A company card, centred on (x, y). `sector` picks the glyph. `opacity` is the
 // tile's ink opacity; `k` the camera zoom for the per-icon shadow. The glyph is
@@ -139,9 +200,9 @@ export const CompanyCard: React.FC<{
             transform={`translate(${o} ${o}) scale(${s})`}
             fill="none"
             stroke="#000"
-            strokeWidth={2.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            strokeWidth={CARD_GLYPH_STROKE}
+            strokeLinecap={CARD_GLYPH_CAP}
+            strokeLinejoin={CARD_GLYPH_JOIN}
             dangerouslySetInnerHTML={{ __html: SECTOR_GLYPHS[sector] }}
           />
         </mask>
