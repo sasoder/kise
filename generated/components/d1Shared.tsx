@@ -38,8 +38,67 @@ export const KraftBackground: React.FC<{
 }> = (p) => (
   <AbsoluteFill style={{ backgroundColor: KRAFT_BASE }}>
     <GridBackground src={KRAFT_SRC} blur={KRAFT_BLUR} dim={KRAFT_DIM} {...p} />
+    {/* V5 depth: a top light on the sheet. Lighter above the mark, darker under the
+        ground, so the scene sits in a lit room instead of on a flat scan. */}
+    <AbsoluteFill
+      style={{
+        pointerEvents: "none",
+        background: `linear-gradient(180deg, ${DEPTH_TOP_LIGHT} 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0) 62%, ${DEPTH_FOOT_SHADE} 100%)`,
+      }}
+    />
   </AbsoluteFill>
 );
+
+// ---------------------------------------------------------------------------
+// V5 DEPTH (user, 2026-09-14: "a subtle 3d vibe … still 2d motion graphics but
+// with gradients and vignettes etc we give everything a bit more depth").
+// Every value lives here so all cuts change together. Still flat shapes: no
+// bevels, no glow, no blend modes — a lit top, a shaded foot, a soft contact
+// shadow under whatever stands on the ground, and a highlight on every coin.
+// ---------------------------------------------------------------------------
+export const DEPTH_TOP_LIGHT = "rgba(255,244,220,0.10)";
+export const DEPTH_FOOT_SHADE = "rgba(0,0,0,0.22)";
+export const TILE_GRAD_TOP = "#FFFFFF";
+export const TILE_GRAD_BOTTOM = "#E6E1D8"; // paper-warm grey at the tile's foot
+export const TILE_SHADOW = (k: number) => `drop-shadow(0 ${(4 / k).toFixed(2)}px ${(8 / k).toFixed(2)}px rgba(0,0,0,0.34))`;
+export const CONTACT_SHADOW_RX = 0.62; // × tile width
+export const CONTACT_SHADOW_RY = 5; // world px
+export const CONTACT_SHADOW_OP = 0.30;
+export const COIN_GRAD_HI = "#FFD24D"; // top-left highlight on a coin
+export const COIN_GRAD_LO = "#E29A00"; // its lower rim
+export const COIN_DEEP_HI = "#E8A030";
+export const COIN_DEEP_LO = "#B87308";
+export const COIN_DOLLAR = `<line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />`;
+
+// A coin that reads as money: a radial highlight for roundness and a "$"
+// knocked out of it. r defaults to V4.COIN_R_V5. `ripe` false = the deep tone.
+export const Coin: React.FC<{ x: number; y: number; r?: number; ripe?: boolean; opacity?: number; scale?: number }> = ({
+  x,
+  y,
+  r = 11,
+  ripe = true,
+  opacity = 1,
+  scale = 1,
+}) => {
+  const id = `coin-${ripe ? "r" : "d"}`;
+  const s = (r * 2 * 0.62) / 24; // the 24-unit "$" fills 62% of the coin
+  const o = -12 * s;
+  return (
+    <g transform={`translate(${x} ${y}) scale(${scale})`} opacity={opacity}>
+      <defs>
+        <radialGradient id={id} cx="35%" cy="30%" r="75%">
+          <stop offset="0%" stopColor={ripe ? COIN_GRAD_HI : COIN_DEEP_HI} />
+          <stop offset="100%" stopColor={ripe ? COIN_GRAD_LO : COIN_DEEP_LO} />
+        </radialGradient>
+        <mask id={`${id}-m`} maskUnits="userSpaceOnUse" x={-r} y={-r} width={r * 2} height={r * 2}>
+          <rect x={-r} y={-r} width={r * 2} height={r * 2} fill="#fff" />
+          <g transform={`translate(${o} ${o}) scale(${s})`} fill="none" stroke="#000" strokeWidth={2.6} strokeLinecap="square" dangerouslySetInnerHTML={{ __html: COIN_DOLLAR }} />
+        </mask>
+      </defs>
+      <circle r={r} fill={`url(#${id})`} mask={`url(#${id}-m)`} />
+    </g>
+  );
+};
 
 // The D1 Capital mark, redrawn to the house rules but unmistakably the logo:
 // the real mark is a navy square, a white serif "1" and an orange dot at its
@@ -69,14 +128,18 @@ export const D1Mark: React.FC<{
   const tile = squirclePath(D1_TILE, D1_TILE, SQUIRCLE_RATIO, SQUIRCLE_SMOOTH);
   const id = `d1cut-${Math.round(x)}-${Math.round(y)}`;
   return (
-    <g transform={`translate(${x - size / 2} ${y - size / 2}) scale(${s})`} style={{ filter: iconShadow(k) }}>
+    <g transform={`translate(${x - size / 2} ${y - size / 2}) scale(${s})`} style={{ filter: TILE_SHADOW(k * s) }}>
       <defs>
         <mask id={id} maskUnits="userSpaceOnUse" x={0} y={0} width={D1_TILE} height={D1_TILE}>
           <rect width={D1_TILE} height={D1_TILE} fill="#fff" />
           <path d={D1_ONE_PATH} fill="#000" />
         </mask>
       </defs>
-      <path d={tile} fill="#FFFFFF" opacity={opacity} mask={`url(#${id})`} />
+      <linearGradient id={`${id}-g`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={TILE_GRAD_TOP} />
+        <stop offset="100%" stopColor={TILE_GRAD_BOTTOM} />
+      </linearGradient>
+      <path d={tile} fill={`url(#${id}-g)`} opacity={opacity} mask={`url(#${id})`} />
       <circle cx={D1_DOT.cx} cy={D1_DOT.cy} r={D1_DOT.r} fill={dotColor} />
     </g>
   );
@@ -140,11 +203,12 @@ export const MARK_BOTTOM = MARK_Y + MARK_SIZE / 2; // 484
 export const MARK_TOP = MARK_Y - MARK_SIZE / 2; // 376
 
 // Eight companies, so each is its own thing with a 32 px gap, not a strip.
-export const SECTOR_SET: SectorName[] = ["CAR", "CPU", "PILL", "SMARTPHONE", "LANDMARK", "HOUSE", "PLANE", "SHOPPING_CART"];
-export const N_CARDS = 8;
-export const CARD_PITCH = 104; // 72 tile + 32 gap
-export const cardX = (i: number) => MARK_X + (i - (N_CARDS - 1) / 2) * CARD_PITCH; // 176 … 904
-export const SUBJECT = 3; // the phone: the one company D1 shorts first, x 488
+// V5 (user: "slightly overwhelming, cut maybe 2 of the blocks"): six companies.
+export const SECTOR_SET: SectorName[] = ["CAR", "CPU", "PILL", "SMARTPHONE", "PLANE", "SHOPPING_CART"];
+export const N_CARDS = 6;
+export const CARD_PITCH = 120; // 72 tile + 48 gap
+export const cardX = (i: number) => MARK_X + (i - (N_CARDS - 1) / 2) * CARD_PITCH; // 240 … 840
+export const SUBJECT = 3; // the phone: the one company D1 shorts first, x 600
 
 // Depths are the card CENTRE below the ground line. ON the ground = the tile's
 // bottom edge on the line.
@@ -185,14 +249,15 @@ export const CompanyCard: React.FC<{
   size?: number;
   k: number;
   opacity?: number;
-}> = ({ x, y, sector, size = CARD_SIZE, k, opacity = OP_READ }) => {
+  contact?: boolean; // a soft contact shadow on the ground under the tile (V5)
+}> = ({ x, y, sector, size = CARD_SIZE, k, opacity = OP_READ, contact = true }) => {
   const tile = squirclePath(size, size, SQUIRCLE_RATIO, SQUIRCLE_SMOOTH);
   const g = size * CARD_GLYPH_FRACTION;
   const s = g / 24;
   const o = (size - g) / 2;
   const id = `card-${sector}-${Math.round(x)}-${Math.round(y)}`;
   return (
-    <g transform={`translate(${x - size / 2} ${y - size / 2})`} style={{ filter: iconShadow(k) }}>
+    <g transform={`translate(${x - size / 2} ${y - size / 2})`} style={{ filter: TILE_SHADOW(k) }}>
       <defs>
         <mask id={id} maskUnits="userSpaceOnUse" x={0} y={0} width={size} height={size}>
           <rect width={size} height={size} fill="#fff" />
@@ -207,7 +272,14 @@ export const CompanyCard: React.FC<{
           />
         </mask>
       </defs>
-      <path d={tile} fill="#FFFFFF" opacity={opacity} mask={`url(#${id})`} />
+      <linearGradient id={`${id}-g`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={TILE_GRAD_TOP} />
+        <stop offset="100%" stopColor={TILE_GRAD_BOTTOM} />
+      </linearGradient>
+      {contact && (
+        <ellipse cx={size / 2} cy={size + 1} rx={size * CONTACT_SHADOW_RX} ry={CONTACT_SHADOW_RY} fill="#000" opacity={CONTACT_SHADOW_OP} style={{ filter: "blur(3px)" }} />
+      )}
+      <path d={tile} fill={`url(#${id}-g)`} opacity={opacity} mask={`url(#${id})`} />
     </g>
   );
 };
@@ -234,9 +306,10 @@ export const V4 = {
   DROP_SHALLOW: 60, // was 36: at 36 the last leg read as flat, not falling — six shapes have their penultimate vertex at 116-130
   COIN_PER_PX: 1 / 36, // one coin launches per 36 px of NEW low on a tip
   RETURN_COLS: 4,
-  RETURN_X: [507, 529, 551, 573],
-  RETURN_ROW0_Y: 366,
-  RETURN_ROW_PITCH: 20,
+  RETURN_X: [504, 528, 552, 576], // V5: pitch 24 for the r 11 coin
+  RETURN_ROW0_Y: 364,
+  RETURN_ROW_PITCH: 24,
+  COIN_R_V5: 11, // a coin big enough to carry its "$"
   PRICE_W_STROKE: 2.5, // same weight as a thread; ink, not accent
   TIP_R: 5,
 } as const;
@@ -283,11 +356,17 @@ export const PriceLine: React.FC<{
   k: number;
 }> = ({ i, drop, held = false, opacity = OP_READ, k }) => {
   const v = priceVertices(i, drop);
-  const d = v.map((p, j) => `${j === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
+  const body = v.slice(0, -1);
+  const d = body.map((p, j) => `${j === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
+  const knee = v[v.length - 2];
   const tip = v[v.length - 1];
+  // V5: the FALLEN leg is D1's gain, so while a thread holds the tip the last
+  // segment is drawn in the accent — the drop itself is the money.
+  const fallen = held && drop > 0;
   return (
     <g style={{ filter: iconShadow(k) }}>
       <path d={d} fill="none" stroke="#FFFFFF" strokeOpacity={opacity} strokeWidth={V4.PRICE_W_STROKE} strokeLinejoin="miter" strokeLinecap="butt" />
+      <line x1={knee.x} y1={knee.y} x2={tip.x} y2={tip.y} stroke={fallen ? ACCENT : "#FFFFFF"} strokeOpacity={fallen ? 1 : opacity} strokeWidth={V4.PRICE_W_STROKE} strokeLinecap="butt" />
       <circle cx={tip.x} cy={tip.y} r={V4.TIP_R} fill={held ? ACCENT : "#FFFFFF"} opacity={held ? 1 : opacity} />
     </g>
   );
