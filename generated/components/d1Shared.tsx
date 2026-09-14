@@ -211,3 +211,84 @@ export const CompanyCard: React.FC<{
     </g>
   );
 };
+
+// ---------------------------------------------------------------------------
+// V4 (user, 2026-09-14): "the short itself is only implied … make it readable on
+// its own: each company card carries a small price line, and shorting is D1
+// dragging the end of that line DOWN. Profit comes from the drop, not from depth
+// under a line." So in V4 the cards never leave the ground. Each carries a
+// PRICE LINE above it — a zigzag chart from the card's top-left up to a tip —
+// and a short is D1's thread on that tip pulling it down; the last leg of the
+// chart falls. Coins launch from the tip on every NEW LOW (one per COIN_PER_PX
+// of drop) and climb the thread onto D1. V3's DEPTH_* are not used in V4.
+// ---------------------------------------------------------------------------
+export const V4 = {
+  GROUND_Y: 960, // lower than V3 so the price lines have room under the mark
+  CARD_Y: 960 - CARD_SIZE / 2, // 924: every card stands on the ground, always
+  CARD_TOP: 960 - CARD_SIZE, // 888: the chart's baseline
+  PRICE_W: 72, // the chart spans the card's width
+  PRICE_H: 170, // the untouched tip sits this far above the card top (y 718)
+  TIP_MIN: 12, // the tip can never be dragged closer than this to the card top
+  DROP_DEEP: 150, // an aggressive short: the last leg falls almost to the card
+  DROP_MEDIUM: 75,
+  DROP_SHALLOW: 60, // was 36: at 36 the last leg read as flat, not falling — six shapes have their penultimate vertex at 116-130
+  COIN_PER_PX: 1 / 36, // one coin launches per 36 px of NEW low on a tip
+  RETURN_COLS: 4,
+  RETURN_X: [507, 529, 551, 573],
+  RETURN_ROW0_Y: 366,
+  RETURN_ROW_PITCH: 20,
+  PRICE_W_STROKE: 2.5, // same weight as a thread; ink, not accent
+  TIP_R: 5,
+} as const;
+
+// The chart's fixed vertices (heights above CARD_TOP), left → right; the last
+// one is the tip and is the only thing that moves. Seeded per card so the
+// eight charts differ but every one reads "a stock that has been going up".
+const PRICE_SHAPES: number[][] = [
+  [8, 44, 30, 78, 62, 118, 170],
+  [12, 36, 58, 46, 92, 124, 170],
+  [6, 52, 38, 70, 104, 88, 170],
+  [10, 40, 66, 54, 98, 130, 170], // the phone
+  [14, 30, 62, 84, 70, 116, 170],
+  [8, 48, 34, 90, 76, 122, 170],
+  [12, 58, 44, 68, 108, 96, 170],
+  [6, 38, 72, 56, 94, 128, 170],
+];
+export const priceVertices = (i: number, drop: number) => {
+  const shape = PRICE_SHAPES[i % PRICE_SHAPES.length];
+  const x0 = cardX(i) - V4.PRICE_W / 2;
+  const step = V4.PRICE_W / (shape.length - 1);
+  return shape.map((h, j) => {
+    const last = j === shape.length - 1;
+    const hh = last ? Math.max(V4.TIP_MIN, V4.PRICE_H - drop) : h;
+    return { x: x0 + j * step, y: V4.CARD_TOP - hh };
+  });
+};
+export const priceTip = (i: number, drop: number) => {
+  const v = priceVertices(i, drop);
+  return v[v.length - 1];
+};
+export const returnCoinPosV4 = (n: number) => ({
+  x: V4.RETURN_X[n % V4.RETURN_COLS],
+  y: V4.RETURN_ROW0_Y - Math.floor(n / V4.RETURN_COLS) * V4.RETURN_ROW_PITCH,
+});
+
+// A company's price line. `drop` is how far the tip has been dragged down
+// (0 = untouched). `held` tints the tip to the accent while a thread is on it.
+export const PriceLine: React.FC<{
+  i: number;
+  drop: number;
+  held?: boolean;
+  opacity?: number;
+  k: number;
+}> = ({ i, drop, held = false, opacity = OP_READ, k }) => {
+  const v = priceVertices(i, drop);
+  const d = v.map((p, j) => `${j === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
+  const tip = v[v.length - 1];
+  return (
+    <g style={{ filter: iconShadow(k) }}>
+      <path d={d} fill="none" stroke="#FFFFFF" strokeOpacity={opacity} strokeWidth={V4.PRICE_W_STROKE} strokeLinejoin="miter" strokeLinecap="butt" />
+      <circle cx={tip.x} cy={tip.y} r={V4.TIP_R} fill={held ? ACCENT : "#FFFFFF"} opacity={held ? 1 : opacity} />
+    </g>
+  );
+};
