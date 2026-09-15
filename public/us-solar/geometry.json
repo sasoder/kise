@@ -1,0 +1,58 @@
+{
+ "conus_z6": {
+  "origin_world_px": [
+   2435,
+   5521
+  ],
+  "size": [
+   2799,
+   1570
+  ],
+  "square": {
+   "x": 436.3551300054146,
+   "y": 797.6597684863091,
+   "size": 82.71196221139313
+  }
+ },
+ "patch_z8": {
+  "origin_world_px": [
+   10650,
+   24450
+  ],
+  "size": [
+   2002,
+   1948
+  ],
+  "square": {
+   "x": 835.4205200216584,
+   "y": 824.6390739452363,
+   "size": 330.8478488455725
+  },
+  "in_z6_image": {
+   "x": 227.5,
+   "y": 591.5,
+   "scale": 0.25
+  }
+ },
+ "square_centre_lonlat": [
+  -116.0,
+  37.3
+ ],
+ "square_miles": 100,
+ "note": "Web Mercator; z6 image px = z8 image px / 4 (+offset). 100 mi square side in px given per image.",
+ "namerica_z6": {
+  "origin_world_px": [
+   2048,
+   3328
+  ],
+  "size": [
+   3584,
+   5888
+  ],
+  "in_old_world": {
+   "x": -387,
+   "y": -2193
+  },
+  "note": "Extended plate, same zoom-6 pixel space as conus_z6. Draw it at (in_old_world.x, in_old_world.y) in the existing world coords (which are conus_z6 pixel coords); conus_z6 then becomes redundant and should be removed."
+ }
+}
