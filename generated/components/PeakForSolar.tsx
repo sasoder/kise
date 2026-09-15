@@ -34,15 +34,21 @@ export const DURATION = 193;
 // v2, on the director's review: THE CHAIN IS A CROWN, not a left fan (the fan
 // collided with '79's hard shadow two pixels away and read as a divider rather
 // than as the peak's own echo), and the whole chart is scaled up so it reads on
-// a phone.
+// a phone. v3 keys the camera's content centre (see THE CAMERA). v4, on the
+// user's note: the hard shadow comes in from 8 world px to 4, and the paper is
+// knocked back like its two siblings' instead of running raw.
 //
 // THE MATERIAL IS PAPER, and the paper is all there is under the mark:
 // `public/paper-supaclean-still.png`, real squared paper, 3864 x 2164
 // landscape, on its own plane at parallax 0.15 of the camera in BOTH axes (this
 // cut pans) with the same slow -0.3 px/frame drift and the same
-// 1 + (k - 1) * 0.3 scale. Unlike its two siblings it is NOT knocked back:
-// brightness 1, blur 0, `filter: none`. The squares are the graph paper the
-// chart is drawn on, so they have to be legible.
+// 1 + (k - 1) * 0.3 scale. v4: like its two siblings it IS knocked back —
+// `brightness(0.88) blur(3px)`, in SCREEN px, on the image and on nothing else,
+// so the chart sits in front of the paper rather than in it. The filter is
+// INSIDE the oversized box, so the blur's own soft edge — about 3 screen px —
+// is hundreds of px outside the frame at every frame. The squares still read
+// as the graph paper the chart is drawn on. Behind the image the root is
+// #C0C0C0, the dimmed photograph's own mean, not the raw paper's #D8D8D8.
 //   A LOCAL BG_OVERSIZE OF 1.6, not `fieldShared`'s 1.8. The box is
 //   1920*1.6 x 1080*1.6 = 3072 x 1728 laid out landscape and turned 90 deg, so
 //   `objectFit: cover` solves 3864 x 2164 into 3072 x 1728 at
@@ -69,7 +75,8 @@ export const DURATION = 193;
 // THE COLOURS, raw hex, no filter, no blend mode, no gradient, no glow, and no
 // opacity fade on anything, ever:
 //   ink / core  #FFFFFF   white is the ink on this paper — white IS the money
-//   shadow      #000000   hard, zero blur, +8 / +8 WORLD px, drawn as an SVG
+//   shadow      #000000   hard, zero blur, +4 / +4 WORLD px (v4: was 8, which
+//                         the user read as too far off the ink), drawn as an SVG
 //                         copy of the shape and not as a CSS drop-shadow, so it
 //                         is identical behind every white element at every k
 //   orange #FFB765  purple #BC37FF  blue #0046FF — the CORE MEMORY chain, and
@@ -209,11 +216,11 @@ export const DURATION = 193;
 //     label ink bottom is at 1355.5 at OPEN. Lowering k alone could never have
 //     done it — with the centre pinned on the resolved block the label bottom
 //     is 835 + 517.01k, which needs k <= 1.0928.
-//   * '81 RISES AT f93, NOT f92. The wider pitch pushes the '81 column's
-//     shadow out to world x 804 and at f92 the frame reaches 792.7 — 11.3 px
-//     short. f93 is the first frame the whole column is inside, and it is
-//     still inside "history" (f86-97). '87 stays on f107 ("I"): the frame
-//     reaches its 990 from f106, so f107 is already clear.
+//   * '81 RISES AT f93, NOT f92 — and it stays at f93 after the shadow came in
+//     to 4 px. The '81 column now reaches world x 800 rather than 804, and at
+//     f92 the frame reaches 792.7: still 7.3 px short. f93 (804.2) is the first
+//     frame the whole column is inside, and it is still inside "history"
+//     (f86-97). '87 stays on f107 ("I"): the frame reaches its 986 from f106.
 //   * THE PULL-BACK'S KEYS END AT f112, NOT f124 (carried from v1, accepted).
 //     With keys to f124 the damper is still moving 1.42% of the move per frame
 //     at f122 and the numeral would land in a travelling frame.
@@ -221,9 +228,14 @@ export const DURATION = 193;
 //     starts opening from the creep's k at f86 can frame world x 990 by f94 —
 //     the frame is only ~820 world px wide there.
 //   * THE BAR SHADOWS SHARE THE CORES' CLIP (y <= BASE) rather than being
-//     clipped 8 px lower (carried from v1, accepted): clipping them at
-//     BASE + 8 leaves a 2 px black nub under every bar between the rule's
-//     bottom edge and the rule's own shadow.
+//     clipped by the offset lower (carried from v1, accepted): clipping them
+//     lower leaves a black nub under every bar between the rule's bottom edge
+//     and the rule's own shadow. Because they share the clip, nothing a bar
+//     casts ever reaches below the rule's top edge and the nub cannot occur at
+//     any offset. At 4 px the rule's white (BASE..BASE+6) and its shadow
+//     (BASE+4..BASE+10) now overlap, so the visible black band under the rule
+//     is a clean 4 px with no strip of paper between — at 8 px there was a
+//     2 px gap.
 //   * THE RISE CLIP IS EVERYTHING ABOVE THE BASELINE (carried from v1,
 //     accepted): the brief's literal "a rect whose top edge is the baseline"
 //     would hide the bars.
@@ -234,8 +246,10 @@ const BLACK = "#000000";
 const ORANGE = "#FFB765";
 const PURPLE = "#BC37FF";
 const BLUE = "#0046FF";
-// Behind the photograph, so a frame can never show through.
-const PAPER_BASE = "#D8D8D8";
+// Behind the photograph, so a frame can never show through. v4: the paper is
+// knocked back to brightness 0.88, so the base follows it down to the dimmed
+// photograph's own mean rather than the raw paper's #D8D8D8.
+const PAPER_BASE = "#C0C0C0";
 
 // This cut's own background oversize — see the header. `fieldShared`'s 1.8
 // would put the paper over 1.0x of source at the camera's tightest.
@@ -244,6 +258,9 @@ const BG_OVERSIZE_PFS = 1.6;
 export const schema = z.object({
   paperSrc: z.string(),
   parallax: z.number(),
+  // the paper is knocked back so the chart sits in front of it. SCREEN px.
+  paperDim: z.number(),
+  paperBlur: z.number(),
   ink: z.string(),
   shadow: z.string(),
   orange: z.string(),
@@ -430,12 +447,14 @@ export const runCamera2 = (upto: number, F: number[], CY: number[], CX: number[]
 export const defaultProps: Props = schema.parse({
   paperSrc: "paper-supaclean-still.png",
   parallax: 0.15,
+  paperDim: 0.88,
+  paperBlur: 3,
   ink: WHITE,
   shadow: BLACK,
   orange: ORANGE,
   purple: PURPLE,
   blue: BLUE,
-  shadowOffset: 8,
+  shadowOffset: 4,
   bars: [
     { year: "'75", nominalM: 43, cpi: 53.8, realB: 0.26, h: 61, x: BAR_X0 + 0 * BAR_PITCH, rise: 2, peak: false },
     { year: "'79", nominalM: 571, cpi: 72.6, realB: 2.53, h: 590, x: BAR_X0 + 1 * BAR_PITCH, rise: 10, peak: false },
@@ -473,7 +492,9 @@ const PaperGround: React.FC<{
   cxRest: number;
   k: number;
   parallax: number;
-}> = ({ src, frame, cy, cyRest, cx, cxRest, k, parallax }) => {
+  dim: number;
+  blur: number;
+}> = ({ src, frame, cy, cyRest, cx, cxRest, k, parallax, dim, blur }) => {
   const bgY = -(cy - cyRest) * k * parallax - frame * 0.3;
   const bgX = -(cx - cxRest) * k * parallax;
   const bgScale = 1 + (k - 1) * 0.3;
@@ -488,7 +509,7 @@ const PaperGround: React.FC<{
           width: FRAME_H * BG_OVERSIZE_PFS,
           height: FRAME_W * BG_OVERSIZE_PFS,
           objectFit: "cover",
-          filter: "none",
+          filter: `brightness(${dim}) blur(${blur}px)`,
           transform: `translate(-50%, -50%) translate(${bgX.toFixed(2)}px, ${bgY.toFixed(2)}px) scale(${bgScale.toFixed(4)}) rotate(90deg)`,
         }}
       />
@@ -501,6 +522,8 @@ const CLIP_ID = "pfs-above-the-rule";
 const PeakForSolar: React.FC<Props> = ({
   paperSrc,
   parallax,
+  paperDim,
+  paperBlur,
   ink,
   shadow,
   orange,
@@ -599,6 +622,8 @@ const PeakForSolar: React.FC<Props> = ({
         cxRest={PFS_CAM_CX[0]}
         k={k}
         parallax={parallax}
+        dim={paperDim}
+        blur={paperBlur}
       />
 
       <AbsoluteFill>
