@@ -89,6 +89,12 @@ export const FPS = 24;
 //                  LOOP_DRAW_F0 LOOP_DRAW_F1 LOOP_START_DEG passFrame
 //   the stations   STATION_R TRAIN_DEG EVAL_DEG TRAIN EVAL STATIONS RING_DUR
 //                  PASS_TRAIN PASS_EVAL
+//                  and V2: STATION_ICON_TRAIN STATION_ICON_EVAL StationGlyph
+//                  STATION_GLYPH_FRACTION STATION_GLYPH_BOX STATION_GLYPH_SCALE
+//                  STATION_GLYPH_STROKE STATION_GLYPH_CAP STATION_GLYPH_JOIN
+//                  STATION_GLYPH_LEN ICON_LEAD ICON_DUR. Each STATIONS entry
+//                  carries its own `glyph`; cut 4 opens resolved, so it draws a
+//                  station as <StationGlyph ... ringDraw={1} iconDraw={1} />.
 //   the spokes     SPOKE_R0 SPOKE_R1 SPOKE_SINK TRAIN_EDGE EVAL_EDGE SPOKES
 //                  SPOKE_TRAVEL spokePoint SPOKE_LEAD SPOKE_DUR
 //                  TRAIN_FOOT EVAL_FOOT NEAREST_TRAIN NEAREST_EVAL
@@ -131,6 +137,33 @@ export const FPS = 24;
 // that has actually been DRAWN never goes past screen y 1457, 23 px clear of
 // the bottom 440. Nothing else this piece draws gets near it.
 // ---------------------------------------------------------------------------
+// V2, on the director's review of the delivered cut: "since she's mentioning
+// two things and the camera pans to the two circles, we should put relevant
+// icons in there." Three changes, and nothing else in the piece moves — same
+// beats, same camera track, same gestures, same schedule:
+//   * EACH STATION SAYS WHICH ONE IT IS. A Lucide glyph inside the ring at 0.6
+//     of its diameter — `graduation-cap` at TRAINING, `clipboard-check` at
+//     EVALUATION — inline 24-unit paths, drawn white at the ring's own opacity
+//     with the group's `iconShadow(k)`, converting to ACCENT on the ring's own
+//     3-frame ramp because ring and glyph are ONE colour. It draws in head-led
+//     over four frames the moment its ring closes (eval f10.7-14.7, training
+//     f29.3-33.3), on one shared dash so every sub-path draws at one speed.
+//   * THE RING GREW 44 -> 52, because a 24-unit glyph at 0.6 of the diameter
+//     needs the room. SPOKE_R0 and LINE_BOT are both written off STATION_R, so
+//     the spoke's start and the people's line each move in by the same 8 px and
+//     nothing pierces the ring. The block's top goes with the people, so
+//     CONTENT_CENTRE is -22.5 rather than -18.5 and every framing sits 4 world
+//     px lower — measured, the lowest DRAWN point of the loop is now screen
+//     1463 at its worst (f87, k 1.60), still inside the 1480 the caption band
+//     leaves. Nothing else about the camera changes.
+//   * THE LOOP LINE STOPS AT EACH STATION. It used to run straight through the
+//     ring's middle, which is invisible across an empty circle and ruinous
+//     across a glyph. One mask, cut at the ring's own radius, over the ink loop
+//     AND the accent front, so a station reads as a node the loop arrives at.
+//     The draw head is outside the mask and crosses unbroken.
+// `StationGlyph` is exported as the one thing that draws a station, so cut 4
+// opens on exactly these two stations rather than on a copy of them.
+// ---------------------------------------------------------------------------
 //
 // THE GESTURES. Every one of them traces to one word; there is nothing else in
 // the piece.
@@ -147,7 +180,10 @@ export const FPS = 24;
 //     screen speed: it is gone by f10 and at the wide. The head
 //     passes evaluation (2 o'clock) at f6.7 and training (10 o'clock) at f25.3
 //     — each station ring draws head-led over 4 frames from the moment it is
-//     passed and clicks bright as it closes, and each SPOKE draws
+//     passed and clicks bright as it closes, its GLYPH draws head-led over the
+//     four frames after that (V2: the cap at training, the clipboard with the
+//     tick at evaluation, so the two things she names are on the two circles the
+//     camera goes to), and each SPOKE draws
 //     station -> blob over 6 frames starting 2 frames later (eval f8.7-14.7,
 //     training f27.3-33.3). The ring closes at the top at f30. The two people
 //     and their two lines are there from f0; the pull-back brings them in from
@@ -384,7 +420,17 @@ export const BLOB_IDLE_THREADS = idleThreads(NSEAT);
 export const LOOP_C = { x: 540, y: 0 };
 export const LOOP_R = 370;
 export const LOOP_CIRC = TAU * LOOP_R;
-export const STATION_R = 44;
+// V2 (director, on the delivered cut: "since she's mentioning two things and the
+// camera pans to the two circles, we should put relevant icons in there"). The
+// ring was 44 and an empty ring; it now carries a Lucide glyph at 0.6 of its
+// diameter, which needs the room, so it is 52. SPOKE_R0 (the ring's inner edge)
+// and LINE_BOT (the person's line, which lands on the ring's top) are both
+// written off STATION_R, so they move in by the same 8 px on their own and
+// nothing pierces the ring. The block's top moves up 8 with the people, so
+// CONTENT_CENTRE goes -18.5 -> -22.5 and every framing sits 4 world px lower;
+// the loop's lowest drawn point at the tightest k is still clear of the caption
+// band (measured: screen 1463 at k 1.60, 17 px of the 1480 left).
+export const STATION_R = 52;
 export const TRAIN_DEG = 210;
 export const EVAL_DEG = 330;
 
@@ -400,10 +446,95 @@ export const degOf = (deg: number, fromDeg: number) =>
 
 export const TRAIN = onLoop(TRAIN_DEG);
 export const EVAL = onLoop(EVAL_DEG);
+
+// ---------------------------------------------------------------------------
+// V2: WHAT THE TWO STATIONS ARE. The line names two things — training and
+// evaluation — and the camera goes to both circles, so each circle now says
+// which one it is with a glyph rather than being an unlabelled ring: Lucide
+// `graduation-cap` for TRAINING, Lucide `clipboard-check` for EVALUATION,
+// inline 24-unit paths, the d1Shared convention (0.6 of the tile, stroke 2.6,
+// square caps, mitre joins). There is still no text in the piece.
+// ---------------------------------------------------------------------------
+export const STATION_ICON_TRAIN =
+  `<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/>` +
+  `<path d="M22 10v6"/>` +
+  `<path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>`;
+export const STATION_ICON_EVAL =
+  `<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>` +
+  `<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>` +
+  `<path d="m9 14 2 2 4-4"/>`;
+
 export const STATIONS = [
-  { key: "train", deg: TRAIN_DEG, ...TRAIN },
-  { key: "eval", deg: EVAL_DEG, ...EVAL },
+  { key: "train", deg: TRAIN_DEG, glyph: STATION_ICON_TRAIN, ...TRAIN },
+  { key: "eval", deg: EVAL_DEG, glyph: STATION_ICON_EVAL, ...EVAL },
 ] as const;
+
+/** the 24-unit glyph box, as a fraction of the ring's DIAMETER */
+export const STATION_GLYPH_FRACTION = 0.6;
+/** world px of the glyph box: 62.4 inside a 104 px ring */
+export const STATION_GLYPH_BOX = 2 * STATION_R * STATION_GLYPH_FRACTION;
+export const STATION_GLYPH_SCALE = STATION_GLYPH_BOX / 24;
+export const STATION_GLYPH_STROKE = 2.6; // the d1Shared weight, in the 24-unit box
+export const STATION_GLYPH_CAP = "square" as const;
+export const STATION_GLYPH_JOIN = "miter" as const;
+/** Longest sub-path of either glyph in the 24-unit box (the clipboard body is
+ *  54), so one shared dash draws every sub-path head-led at one speed and they
+ *  are all complete at u = 1. */
+export const STATION_GLYPH_LEN = 56;
+
+/** A station: the ink ring and the glyph inside it, both head-led, both the same
+ *  colour — which is how the take converts them together. `ringDraw` and
+ *  `iconDraw` are 0..1 draw progress; cut 4 opens on the resolved state and
+ *  passes 1 and 1. */
+export const StationGlyph: React.FC<{
+  x: number;
+  y: number;
+  glyph: string;
+  colour: string;
+  opacity: number;
+  ringDraw: number;
+  iconDraw: number;
+  /** where the ring's draw starts, degrees — the point the loop's head passes */
+  rotate?: number;
+  /** `iconShadow(k)`; the group carries its own per-icon shadow */
+  shadow?: string;
+  r?: number;
+}> = ({ x, y, glyph, colour, opacity, ringDraw, iconDraw, rotate = 0, shadow, r = STATION_R }) => {
+  const C = TAU * r;
+  const g = 2 * r * STATION_GLYPH_FRACTION;
+  const s = g / 24;
+  return (
+    <g style={shadow ? { filter: shadow } : undefined}>
+      <circle
+        cx={x}
+        cy={y}
+        r={r}
+        fill="none"
+        stroke={colour}
+        strokeWidth={RING_STROKE}
+        strokeLinecap="round"
+        opacity={opacity}
+        strokeDasharray={C}
+        strokeDashoffset={C * (1 - clamp01(ringDraw))}
+        transform={`rotate(${rotate} ${x} ${y})`}
+      />
+      {iconDraw > 0 ? (
+        <g
+          transform={`translate(${x - g / 2} ${y - g / 2}) scale(${s})`}
+          fill="none"
+          stroke={colour}
+          strokeWidth={STATION_GLYPH_STROKE}
+          strokeLinecap={STATION_GLYPH_CAP}
+          strokeLinejoin={STATION_GLYPH_JOIN}
+          opacity={opacity}
+          strokeDasharray={STATION_GLYPH_LEN}
+          strokeDashoffset={STATION_GLYPH_LEN * (1 - clamp01(iconDraw))}
+          dangerouslySetInnerHTML={{ __html: glyph }}
+        />
+      ) : null}
+    </g>
+  );
+};
 
 // The spoke is the ink line from the station ring's inner edge to the blob's
 // edge, along the radius. A bead travels the FULL radius, station centre to
@@ -842,6 +973,10 @@ export const LOOP_DRAW_F0 = 2;
 export const LOOP_DRAW_F1 = 30;
 export const LOOP_START_DEG = 270; // 12 o'clock
 export const RING_DUR = 4;
+/** V2: the glyph draws in head-led over the same four frames, starting the frame
+ *  its ring closes — eval f10.7-14.7, training f29.3-33.3. */
+export const ICON_LEAD = RING_DUR;
+export const ICON_DUR = RING_DUR;
 export const SPOKE_LEAD = 2;
 export const SPOKE_DUR = 6;
 /** The frame the loop's head passes `deg`, going clockwise from 12 o'clock. */
@@ -1188,6 +1323,35 @@ const TheirOwnTraining: React.FC<Props> = ({
                 converted clockwise from the training station in G5 by an accent
                 arc laid over it with a soft leading edge. */}
             <g style={{ filter: icon }}>
+              {/* V2: the loop line used to run straight through the middle of
+                  each station ring, which is fine across an empty circle and
+                  not fine across a glyph. The line now STOPS at each ring —
+                  one mask, cut at the ring's own radius, over the ink loop and
+                  the accent front alike — so a station reads as a node the loop
+                  arrives at rather than a circle laid over a line. The draw head
+                  is outside the mask, so it crosses unbroken. */}
+              <defs>
+                <mask
+                  id="tot-station-gap"
+                  maskUnits="userSpaceOnUse"
+                  x={LOOP_C.x - LOOP_R - 20}
+                  y={LOOP_C.y - LOOP_R - 20}
+                  width={2 * (LOOP_R + 20)}
+                  height={2 * (LOOP_R + 20)}
+                >
+                  <rect
+                    x={LOOP_C.x - LOOP_R - 20}
+                    y={LOOP_C.y - LOOP_R - 20}
+                    width={2 * (LOOP_R + 20)}
+                    height={2 * (LOOP_R + 20)}
+                    fill="#fff"
+                  />
+                  {STATIONS.map((st) => (
+                    <circle key={st.key} cx={st.x} cy={st.y} r={STATION_R} fill="#000" />
+                  ))}
+                </mask>
+              </defs>
+              <g mask="url(#tot-station-gap)">
               <circle
                 cx={LOOP_C.x}
                 cy={LOOP_C.y}
@@ -1229,6 +1393,7 @@ const TheirOwnTraining: React.FC<Props> = ({
                   />
                 </>
               ) : null}
+              </g>
               {loopDrawn > 0 && loopDrawn < 1 ? (
                 <>
                   {/* the tip carries the set's motion smear: at the open the
@@ -1293,33 +1458,31 @@ const TheirOwnTraining: React.FC<Props> = ({
               )}
             </g>
 
-            {/* THE STATIONS, drawn head-led as the loop's head passes them */}
-            <g style={{ filter: icon }}>
-              {STATIONS.map((st, i) => {
-                const pass = i === 0 ? PASS_TRAIN : PASS_EVAL;
-                const u = clamp01((frame - pass) / RING_DUR);
-                if (u <= 0) return null;
-                const C = TAU * STATION_R;
-                const closing = frame >= pass + RING_DUR - 1 && frame < pass + RING_DUR + 1;
-                const col = takes[i].conv > 0 ? takes[i].ringCol : closing ? HIGHLIGHT : ink;
-                return (
-                  <circle
-                    key={st.key}
-                    cx={st.x}
-                    cy={st.y}
-                    r={STATION_R}
-                    fill="none"
-                    stroke={col}
-                    strokeWidth={RING_STROKE}
-                    strokeLinecap="round"
-                    opacity={OP_READ + (1 - OP_READ) * takes[i].conv}
-                    strokeDasharray={C}
-                    strokeDashoffset={C * (1 - u)}
-                    transform={`rotate(${st.deg} ${st.x} ${st.y})`}
-                  />
-                );
-              })}
-            </g>
+            {/* THE STATIONS: the ring drawn head-led as the loop's head passes
+                it, and the glyph that says WHICH station it is drawn head-led
+                over the next four frames. Ring and glyph are one colour, so the
+                take converts them together. */}
+            {STATIONS.map((st, i) => {
+              const pass = i === 0 ? PASS_TRAIN : PASS_EVAL;
+              const u = clamp01((frame - pass) / RING_DUR);
+              if (u <= 0) return null;
+              const closing = frame >= pass + RING_DUR - 1 && frame < pass + RING_DUR + 1;
+              const col = takes[i].conv > 0 ? takes[i].ringCol : closing ? HIGHLIGHT : ink;
+              return (
+                <StationGlyph
+                  key={st.key}
+                  x={st.x}
+                  y={st.y}
+                  glyph={st.glyph}
+                  colour={col}
+                  opacity={OP_READ + (1 - OP_READ) * takes[i].conv}
+                  ringDraw={u}
+                  iconDraw={clamp01((frame - pass - ICON_LEAD) / ICON_DUR)}
+                  rotate={st.deg}
+                  shadow={icon}
+                />
+              );
+            })}
 
             {/* THE BEADS: the process, running */}
             <g style={{ filter: icon }}>
