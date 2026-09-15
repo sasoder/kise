@@ -39,6 +39,7 @@ import {
 } from "./fieldShared";
 import { EASE_ARRIVE, Trail, softFront } from "./levelUp";
 import { CLAUDE } from "./brandGlyphs";
+import { LABEL_FADE, LABEL_OP, makeLabel } from "./explainerShared";
 
 export const FPS = 24;
 
@@ -93,7 +94,9 @@ export const FPS = 24;
 //                line at x 540 hanging 240 from the rule down to y 620 with a
 //                solid r 8 dot where it meets it; six month TICKS, 30 tall,
 //                every 120 world px to the LEFT of the playhead (420, 300, 180,
-//                60, -60, -180).
+//                60, -60, -180). V2: each tick carries its MONTH'S NAME 34 world
+//                px under its foot (baseline y 429.5) and the playhead carries
+//                NOW 34 under its own foot (y 654) — see the V2 block below.
 //
 // ---------------------------------------------------------------------------
 // THE GESTURES. Every one of them is one word, and there is nothing else in
@@ -152,6 +155,21 @@ export const FPS = 24;
 //        the box's centre reaches it, two frames of anticipation: f105.8,
 //        f108.9, f112.0, f115.1, f118.2, f124.0 — read back out of the slide's
 //        own table by inversion, never off a parallel timer.
+//   V2 THE MONTHS WRITTEN OUT — the only change in V2, and it adds no gesture
+//        and moves no frame. The timeline's seven positions are NAMED, in Söhne
+//        Kräftig off `explainerShared` (`makeLabel`, LABEL_OP, LABEL_FADE) at
+//        LABEL_SIZE x 1.30 world px, uppercase, hanging 34 world px under the
+//        FOOT of the mark each one names:
+//          NOW   x 540, under the playhead's foot, f40   — on the playhead's click
+//          JUL   x 420, under its tick, f105.8           — as its tick draws
+//          JUN   x 300, f108.9   MAY x 180, f112.0
+//          APR   x  60, f115.1   MAR x -60, f118.2
+//          FEB   x -180, f126                            — with the box that lands on it
+//        Every one fades up over LABEL_FADE and none of them ever leaves. They
+//        are on the TIMELINE, not on the assembly, so they do not travel with
+//        the box: the box slides left THROUGH a row of months that is being
+//        written as it goes, and what was a count of six anonymous ticks reads
+//        as FEB ... NOW without the viewer counting anything.
 //   RESOLVED      — f126..145
 //        The box at February with its three people using the lit model, six
 //        ticks of empty month between it and the playhead at "now". Packets
@@ -332,6 +350,37 @@ export const TICK_H = 30;
 export const TICKS = Array.from({ length: TICK_N }, (_, i) => PLAY_X - TICK_STEP * (i + 1));
 export const SLIDE_DX = -TICK_STEP * TICK_N; // -900: six months to the left
 
+// -- V2: THE MONTHS, WRITTEN OUT ---------------------------------------------
+// The one change in V2. The timeline had six anonymous ticks and a playhead, so
+// "six months" was a count the viewer had to make; now every position on it is
+// named. SEVEN LABELLED POSITIONS, SIX INTERVALS: the six ticks are the six
+// month positions and the LAST of them (TICKS[5], x -180) is the one the box
+// lands on, so that one is FEB and no tick had to be added — checked on the
+// resolved frame, where the box's centre and the leftmost tick are the same x.
+// Left to right: FEB MAR APR MAY JUN JUL, then the playhead = NOW. TICKS runs
+// right to left, so MONTH_NAMES does too.
+//
+// SIZE. `LABEL_SIZE` x 1.30 in world px. The explainer's 30 was authored at its
+// own k 1.0; this piece resolves at k 0.78, so a label here is smaller on screen
+// than there whatever we do, and 1.30 is as far as it can be pushed before two
+// neighbours meet: "MAR" sets 96 world px wide with LABEL_TRACK and the month is
+// 120, which leaves 24 px of air between adjacent labels.
+//
+// WHERE. A label hangs 34 world px under THE FOOT OF THE MARK IT NAMES, not 34
+// under the rule: the tick hangs 15 below the rule, so a baseline at TL_Y + 34
+// puts the cap line 5 px INSIDE the tick and the tick draws a stroke down
+// through the middle letter. Off the tick's foot the cap line clears it by 9.
+// The same rule puts NOW 34 under the PLAYHEAD'S foot (y 654) rather than in the
+// month row: the playhead is a line hanging 240 px down from x 540, and a NOW
+// centred in the row at x 540 would have that line drawn vertically through the
+// middle of its O. Off the foot it clears the line by the same 9 px the months
+// clear their ticks, and it reads as the label of the thing that hangs.
+export const MONTH_LABEL_SCALE = 1.30;
+export const MONTH_LABEL_DY = 34; // baseline, from the foot of the mark it names
+export const MONTH_LABEL_Y = TL_Y + TICK_H / 2 + MONTH_LABEL_DY; // 429.5
+export const NOW_LABEL_Y = PLAY_Y1 + MONTH_LABEL_DY; // 654
+export const MONTH_NAMES = ["JUL", "JUN", "MAY", "APR", "MAR", "FEB"]; // TICKS order
+
 // ---------------------------------------------------------------------------
 // THE FLEET BLOB. `RogueInstancesInterfere`'s construction, unchanged: the
 // 10 x 9 lattice at the field's own step is only where a seat may STAND; the
@@ -448,6 +497,15 @@ const slideFrameAt = (p: number) => {
 
 // Each tick draws as the box's CENTRE reaches it, two frames early.
 export const TICK_F0 = TICKS.map((x) => slideFrameAt((CENTRE_X - x) / -SLIDE_DX) - TICK_LEAD);
+
+// V2: a month's name appears WITH ITS TICK — the same frame the tick's head
+// leaves the rule, fading up over LABEL_FADE — so the row is written out in the
+// order the box counts back through it: JUL f105.8, JUN f108.9, MAY f112.0,
+// APR f115.1, MAR f118.2. The exception is FEB, which does not come up with its
+// tick at f124 but with the BOX at f126: FEB is not a month the box passes, it
+// is the month the box STOPS in, and it has to be named by the arrival and not
+// two frames before it.
+export const MONTH_LABEL_F0 = TICK_F0.map((f, i) => (i === TICK_N - 1 ? SLIDE_F1 : f));
 
 // ---------------------------------------------------------------------------
 // THE CAMERA TRACK. Authored as consecutive `camMove` segments (a key per
@@ -728,6 +786,9 @@ export const TL_FULL = 1700;
 export const PLAY_F0 = 30;
 export const PLAY_F1 = 40;
 export const CLICK_DUR = 3;
+// V2: NOW is written under the playhead's foot on the frame the playhead CLICKS
+// — the label and the click are one event, the way a month and its tick are.
+export const NOW_LABEL_F0 = PLAY_F1;
 
 export const tlExtent = (f: number) =>
   f < TL_F1
@@ -1026,6 +1087,7 @@ const AsOfFebruary: React.FC<Props> = ({
 }) => {
   const frame = useCurrentFrame();
   const tone = makeTone(accentDeep, accent);
+  const label = makeLabel(ink);
 
   // -- camera ---------------------------------------------------------------
   const cam = cameraAt(frame);
@@ -1207,6 +1269,34 @@ const AsOfFebruary: React.FC<Props> = ({
                     </g>
                   );
                 })}
+                {/* V2: the months, written out. A name comes up with its own
+                    tick (FEB with the box that stops on it), scaled about its
+                    own anchor so `makeLabel`'s type is used unaltered. */}
+                {MONTH_NAMES.map((name, i) => {
+                  const op = LABEL_OP * clamp01((frame - MONTH_LABEL_F0[i]) / LABEL_FADE);
+                  if (op <= 0) return null;
+                  return (
+                    <g
+                      key={`m${name}`}
+                      transform={`translate(${Math.round(TICKS[i]) + 0.5} ${MONTH_LABEL_Y}) scale(${MONTH_LABEL_SCALE})`}
+                    >
+                      {label(`l${name}`, 0, 0, name, op)}
+                    </g>
+                  );
+                })}
+                {frame >= NOW_LABEL_F0 ? (
+                  <g
+                    transform={`translate(${PLAY_X} ${NOW_LABEL_Y}) scale(${MONTH_LABEL_SCALE})`}
+                  >
+                    {label(
+                      "lNOW",
+                      0,
+                      0,
+                      "NOW",
+                      LABEL_OP * clamp01((frame - NOW_LABEL_F0) / LABEL_FADE),
+                    )}
+                  </g>
+                ) : null}
                 {frame >= PLAY_F0 ? (
                   <line
                     x1={PLAY_X}
