@@ -6,6 +6,7 @@ import {
   SQUIRCLE_SMOOTH,
   hash,
   iconShadow,
+  smoothstep,
   squirclePath,
 } from "./fieldShared";
 import {
@@ -315,3 +316,487 @@ export const leakDots = ({
 // ---------------------------------------------------------------------------
 export const K_FINAL_1 = 1.28;
 export const EFX_FINAL = CENTER;
+
+// ===========================================================================
+// V2 (2026-09-15). The user, on the first take: "the balls dropping from the
+// company logo is way too abstract and doesn't feel motivated. Replace the dots
+// with documents so it shows actual data."
+//
+// So the second take restates the clip's one event in two objects, added here
+// and used identically by all three V2 cuts. Nothing above this line changes:
+// the V1 components still import BRAND, BrandTile, DataDot and leakDots and
+// still render byte-identically.
+//
+//   DATA IS A RECORD   — `RecordCard`, a personal file: the house tile
+//                        material at card scale with a person-and-two-lines
+//                        figure knocked out of it, so the paper shows through
+//                        the way it does through every mark in this world.
+//   A BREACH IS THE TILE BREAKING OPEN — `CrackedBrandTile`, the same
+//                        BrandTile split down a jagged crack, the two halves
+//                        prised apart at the foot, records spilling out of the
+//                        break and heaping on the sheet below.
+//
+// Layouts are composed, never hashed: `heapSlots` is rows on a centred axis.
+// The only hashing left is inside a heap — a card's rest angle and its ±3 px
+// of slop — which is the difference between a pile and a stack of tiles.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// A RECORD. Default 34 x 44 world px — a card, portrait, at about the ratio of
+// an ID card. It has to read at two very different sizes: at 34 x 44 in a heap
+// under a full-size tile, and at 12 x 16 under cut 2's 150 x 48 chart tag. Both
+// are verified in the shared still before anything is animated.
+//
+// Every dimension below is a fraction of w or h, so the figure is the same
+// drawing at any size; only the corner radius is capped in absolute px (3 at
+// the default size, proportional under it, so a 12 px card is not a lozenge).
+// ---------------------------------------------------------------------------
+export const RECORD_W = 34;
+export const RECORD_H = 44;
+export const RECORD_RADIUS = 3; // world px at the default size
+export const RECORD_RADIUS_FRACTION = 0.09; // of the card's width, under it
+
+// The figure, in fractions of the card. HEAD/SHOULDER/LINE_* are exported so a
+// cut can measure the glyph (cut 2 checks the person is still resolvable at
+// 12 x 16 on a 270 px phone crop) without re-deriving them.
+export const REC_HEAD_R = 0.14; // x w
+export const REC_HEAD_CY = 0.3; // x h
+// THE SHOULDERS ARE 0.42 w, NOT THE BRIEF'S 0.32. The head is 0.28 w across
+// (r 0.14), so a 0.32 w bust is four per cent wider than the head it carries:
+// rendered at both sizes it reads as a keyhole or a mushroom, not a person.
+// 0.42 puts the shoulders half again as wide as the head, which is the ratio
+// every ID-card glyph uses, and it is the one figure change in this file.
+export const REC_SHOULDER_W = 0.42; // x w
+export const REC_SHOULDER_TOP = 0.42; // x h
+export const REC_SHOULDER_BOTTOM = 0.555; // x h
+export const REC_LINE_STROKE = 0.06; // x h
+export const REC_LINE_1 = { y: 0.68, len: 0.6 };
+export const REC_LINE_2 = { y: 0.8, len: 0.42 };
+
+// The person-and-lines figure as one path, in the card's own w x h space. It is
+// KNOCKED OUT (drawn black into the card's mask), never stroked in ink: a
+// record is made of the same material as everything else in this world.
+export const recordFigure = (w: number, h: number): string => {
+  const cx = w / 2;
+  const r = REC_HEAD_R * w;
+  const hy = REC_HEAD_CY * h;
+  const sw = REC_SHOULDER_W * w;
+  const sr = sw / 2;
+  const sy = REC_SHOULDER_TOP * h;
+  const sb = REC_SHOULDER_BOTTOM * h;
+  const n = (v: number) => v.toFixed(3);
+  // head: a full circle as two arcs. shoulders: a bust with a rounded top.
+  const head =
+    `M${n(cx - r)} ${n(hy)}A${n(r)} ${n(r)} 0 1 1 ${n(cx + r)} ${n(hy)}` +
+    `A${n(r)} ${n(r)} 0 1 1 ${n(cx - r)} ${n(hy)}Z`;
+  const bust =
+    `M${n(cx - sr)} ${n(sb)}L${n(cx - sr)} ${n(sy + sr)}` +
+    `A${n(sr)} ${n(sr)} 0 0 1 ${n(cx + sr)} ${n(sy + sr)}` +
+    `L${n(cx + sr)} ${n(sb)}Z`;
+  // the two lines, as rectangles with square ends (a stroke would need its own
+  // paint server inside the mask; a rect is the same shape and one less node).
+  const line = (spec: { y: number; len: number }) => {
+    const t = REC_LINE_STROKE * h;
+    const l = spec.len * w;
+    return `M${n(cx - l / 2)} ${n(spec.y * h - t / 2)}h${n(l)}v${n(t)}h${n(-l)}Z`;
+  };
+  return `${head}${bust}${line(REC_LINE_1)}${line(REC_LINE_2)}`;
+};
+
+export const RecordCard: React.FC<{
+  x: number; // world px, the card's CENTRE
+  y: number;
+  w?: number;
+  h?: number;
+  rot?: number; // degrees, about the centre
+  k: number; // camera zoom, for the shadow
+  opacity?: number;
+}> = ({ x, y, w = RECORD_W, h = RECORD_H, rot = 0, k, opacity = 1 }) => {
+  const r = Math.min(RECORD_RADIUS, w * RECORD_RADIUS_FRACTION);
+  const id = `rc-${Math.round(w)}-${Math.round(x * 4)}-${Math.round(y * 4)}`;
+  return (
+    <g
+      transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${rot.toFixed(2)}) translate(${(-w / 2).toFixed(2)} ${(-h / 2).toFixed(2)})`}
+      style={{ filter: TILE_SHADOW(k) }}
+    >
+      <defs>
+        <mask id={id} maskUnits="userSpaceOnUse" x={0} y={0} width={w} height={h}>
+          <rect width={w} height={h} fill="#fff" />
+          <path d={recordFigure(w, h)} fill="#000" />
+        </mask>
+        <linearGradient id={`${id}-g`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={TILE_GRAD_TOP} />
+          <stop offset="100%" stopColor={TILE_GRAD_BOTTOM} />
+        </linearGradient>
+      </defs>
+      <rect
+        width={w}
+        height={h}
+        rx={r}
+        ry={r}
+        fill={`url(#${id}-g)`}
+        opacity={opacity}
+        mask={`url(#${id})`}
+      />
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// THE CRACK. A jagged polyline from the tile's TOP edge to its BOTTOM edge,
+// deterministic in `seed`: it starts at 0.56 w on the top and ends at 0.50 w on
+// the bottom, so the break is off-centre at the top and the two halves are
+// different sizes — a snapped tile, not a folded one.
+//
+// THE WANDER IS CLAMPED BY THE TILE'S OWN ASPECT. The brief's +/- 0.08 w is
+// right for a square company tile (84 x 84: +/- 6.7 px over 14 px of rise) and
+// wrong for cut 2's 150 x 48 tag, where it would be +/- 12 px of wander over 8
+// px of rise — segments more horizontal than vertical, which reads as a torn
+// zigzag lying across the tile rather than a crack running down it. So the
+// amplitude is min(0.08 w, 0.55 h / segments): the brief's figure wherever the
+// tile is square enough to carry it, and a crack that stays steep where it is
+// not.
+// ---------------------------------------------------------------------------
+export const CRACK_SEGS = 6;
+export const CRACK_TOP_X = 0.56;
+export const CRACK_FOOT_X = 0.5;
+export const CRACK_WANDER = 0.08; // x w, before the aspect clamp
+
+export const crackAmp = (w: number, h: number) =>
+  Math.min(CRACK_WANDER * w, (0.55 * h) / CRACK_SEGS);
+
+export const crackPoints = (w: number, h: number, seed: number): { x: number; y: number }[] => {
+  const amp = crackAmp(w, h);
+  const pts: { x: number; y: number }[] = [];
+  for (let i = 0; i <= CRACK_SEGS; i++) {
+    const t = i / CRACK_SEGS;
+    const base = (CRACK_TOP_X + (CRACK_FOOT_X - CRACK_TOP_X) * t) * w;
+    // the ends are fixed; between them the crack alternates side, with a hashed
+    // magnitude, so it zig-zags instead of drifting.
+    const wob =
+      i === 0 || i === CRACK_SEGS
+        ? 0
+        : (i % 2 === 0 ? 1 : -1) * (0.4 + 0.6 * hash(i, seed)) * amp;
+    pts.push({ x: base + wob, y: t * h });
+  }
+  return pts;
+};
+
+export const crackPath = (w: number, h: number, seed: number): string => {
+  const pts = crackPoints(w, h, seed);
+  return pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join("");
+};
+
+export const crackFoot = (w: number, h: number, seed: number) => {
+  const pts = crackPoints(w, h, seed);
+  return pts[pts.length - 1];
+};
+
+// The two clip regions, as closed polygons that run well outside the tile so
+// the clip never cuts the tile's own outline. CRACK_OVERLAP is the half-pixel
+// of overlap that keeps the two halves from showing an antialiasing seam while
+// they are still closed; once they separate it is invisible.
+export const CRACK_OVERLAP = 0.5;
+
+const crackHalfPath = (w: number, h: number, seed: number, side: -1 | 1): string => {
+  const pts = crackPoints(w, h, seed);
+  const pad = Math.max(w, h);
+  const o = side * CRACK_OVERLAP;
+  const edge = side < 0 ? -pad : w + pad;
+  const d = [`M${edge.toFixed(2)} ${(-pad).toFixed(2)}`];
+  d.push(`L${(pts[0].x + o).toFixed(2)} ${(-pad).toFixed(2)}`);
+  for (const p of pts) d.push(`L${(p.x + o).toFixed(2)} ${p.y.toFixed(2)}`);
+  d.push(`L${(pts[pts.length - 1].x + o).toFixed(2)} ${(h + pad).toFixed(2)}`);
+  d.push(`L${edge.toFixed(2)} ${(h + pad).toFixed(2)}`);
+  d.push("Z");
+  return d.join("");
+};
+
+// ---------------------------------------------------------------------------
+// A BREACH, AS A PICTURE: THE TILE BREAKS OPEN. `open` 0 is the intact
+// BrandTile — literally, it renders one path, so there is nothing to see at the
+// join — and `open` 1 is the two halves prised apart, the kraft showing through
+// the break.
+//
+// THE MOUTH IS AT THE FOOT. The brief gives the gap as CRACK_GAP 14 world px at
+// the foot and 6 at the top, and separately describes the halves as hinged at
+// their outer feet. Those are opposite pictures — a hinge at the foot splays
+// the TOP — and the gap figures are the ones that matter, because in every V2
+// cut the records come out of the crack's FOOT and fall: the break has to be
+// widest where the data leaves it. So the halves are prised apart 7 px each at
+// the foot and lean back towards each other at the top, which closes the break
+// to 6 px there. The angle is solved from the two gaps rather than written down
+// (the brief's 1.5 degrees is a 48 px tile's answer to this same sum):
+//     sin(theta) = (CRACK_GAP - CRACK_GAP_TOP) / 2 / h
+// so a tag and a full tile break the same way instead of by the same number.
+//
+// ONE SHADOW OVER BOTH HALVES, not one each: the drop shadow is a straight-down
+// offset with an 8/k blur, so a shadow per half paints a soft dark band down
+// the crack of a CLOSED tile. Over the pair it is the silhouette's own shadow,
+// which is also what puts shade INSIDE the break once it opens.
+// ---------------------------------------------------------------------------
+export const CRACK_GAP = 14; // world px, the break at the foot, at open 1
+export const CRACK_GAP_TOP = 6; // world px, the break at the top
+
+export const CrackedBrandTile: React.FC<{
+  x: number;
+  y: number;
+  brand: BrandName;
+  w: number;
+  h: number;
+  k: number;
+  open: number; // 0 intact, 1 broken open
+  opacity?: number;
+  seed?: number;
+  contact?: boolean;
+}> = ({ x, y, brand, w, h, k, open, opacity = OP_READ, seed = 11, contact = false }) => {
+  const o = Math.max(0, Math.min(1, open));
+  if (o <= 0.001)
+    return (
+      <BrandTile x={x} y={y} brand={brand} w={w} h={h} k={k} opacity={opacity} contact={contact} />
+    );
+
+  const b = BRAND[brand];
+  const [vx, vy] = b.viewBox.split(/\s+/).map(Number);
+  const tile = squirclePath(w, h, SQUIRCLE_RATIO, SQUIRCLE_SMOOTH);
+  const word = b.w / b.h > WORD_ASPECT;
+  const s = word
+    ? (w * WORD_FRACTION) / b.w
+    : (Math.min(w, h) * MARK_FRACTION) / Math.max(b.w, b.h);
+  const ox = (w - b.w * s) / 2 - vx * s;
+  const oy = (h - b.h * s) / 2 - vy * s;
+  const id = `cbt-${brand}-${Math.round(w)}-${Math.round(x)}-${Math.round(y)}-${seed}`;
+
+  const dx = (o * CRACK_GAP) / 2;
+  const theta =
+    (Math.asin(Math.min(1, (CRACK_GAP - CRACK_GAP_TOP) / 2 / h)) * 180) / Math.PI * o;
+
+  const half = (side: -1 | 1) => (
+    <g
+      key={side}
+      transform={
+        side < 0
+          ? `translate(${(-dx).toFixed(3)} 0) rotate(${theta.toFixed(3)} 0 ${h})`
+          : `translate(${dx.toFixed(3)} 0) rotate(${(-theta).toFixed(3)} ${w} ${h})`
+      }
+    >
+      <g clipPath={`url(#${id}-c${side < 0 ? "L" : "R"})`}>
+        {contact ? (
+          <ellipse
+            cx={w / 2}
+            cy={h + 1}
+            rx={w * CONTACT_SHADOW_RX}
+            ry={CONTACT_SHADOW_RY}
+            fill="#000"
+            opacity={CONTACT_SHADOW_OP}
+            style={{ filter: "blur(3px)" }}
+          />
+        ) : null}
+        <path d={tile} fill={`url(#${id}-g)`} opacity={opacity} mask={`url(#${id})`} />
+      </g>
+    </g>
+  );
+
+  return (
+    <g transform={`translate(${x - w / 2} ${y - h / 2})`} style={{ filter: TILE_SHADOW(k) }}>
+      <defs>
+        <mask id={id} maskUnits="userSpaceOnUse" x={0} y={0} width={w} height={h}>
+          <rect width={w} height={h} fill="#fff" />
+          <g transform={`translate(${ox.toFixed(4)} ${oy.toFixed(4)}) scale(${s.toFixed(6)})`}>
+            <path d={b.knock} fill="#000" />
+            {b.ink ? <path d={b.ink} fill="#fff" /> : null}
+          </g>
+        </mask>
+        <linearGradient id={`${id}-g`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={TILE_GRAD_TOP} />
+          <stop offset="100%" stopColor={TILE_GRAD_BOTTOM} />
+        </linearGradient>
+        <clipPath id={`${id}-cL`} clipPathUnits="userSpaceOnUse">
+          <path d={crackHalfPath(w, h, seed, -1)} />
+        </clipPath>
+        <clipPath id={`${id}-cR`} clipPathUnits="userSpaceOnUse">
+          <path d={crackHalfPath(w, h, seed, 1)} />
+        </clipPath>
+      </defs>
+      {half(-1)}
+      {half(1)}
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// THE HEAP. Where the records come to rest: rows built up from the sheet, wide
+// at the bottom and narrowing, every row centred on the same axis — a composed
+// layout, not a hashed scatter. Row r holds max(2, maxRow - r) cards; the row
+// pitch is 0.62 h, so each row sits ON the one below with the cards overlapping
+// the way a spilled stack does, and the column pitch is 0.78 w, so they overlap
+// sideways too. `baseY` is the BOTTOM EDGE of row 0.
+//
+// The hashing is inside the pile and nowhere else: +/- 14 degrees of rest angle
+// and +/- 3 px of slop per card (both scaled with the card, so a 12 px card
+// does not wander a quarter of its own width).
+// ---------------------------------------------------------------------------
+export const HEAP_ROW_PITCH = 0.62; // x h
+export const HEAP_COL_PITCH = 0.78; // x w
+export const HEAP_MAX_ROW = 7; // cards in the bottom row, by default
+export const HEAP_ROT = 14; // degrees, +/-
+export const HEAP_SLOP = 3; // world px at the default card size
+
+export type HeapSlot = { x: number; y: number; rot: number };
+
+export const heapSlots = (
+  n: number,
+  cx: number,
+  baseY: number,
+  seed: number,
+  opts: { w?: number; h?: number; maxRow?: number } = {},
+): HeapSlot[] => {
+  const w = opts.w ?? RECORD_W;
+  const h = opts.h ?? RECORD_H;
+  const maxRow = opts.maxRow ?? HEAP_MAX_ROW;
+  const slop = (HEAP_SLOP * w) / RECORD_W;
+  const out: HeapSlot[] = [];
+  let r = 0;
+  while (out.length < n) {
+    const count = Math.max(2, maxRow - r);
+    const y = baseY - h / 2 - r * HEAP_ROW_PITCH * h;
+    for (let c = 0; c < count && out.length < n; c++) {
+      const i = out.length;
+      const x = cx + (c - (count - 1) / 2) * HEAP_COL_PITCH * w;
+      out.push({
+        x: x + (hash(i, seed) * 2 - 1) * slop,
+        y: y + (hash(i, seed + 31) * 2 - 1) * slop * 0.5,
+        rot: (hash(i, seed + 61) * 2 - 1) * HEAP_ROT,
+      });
+    }
+    r++;
+  }
+  return out;
+};
+
+// ---------------------------------------------------------------------------
+// THE SPILL. Records leaving the break and falling into the heap. A pure
+// function of `frame`, like `leakDots` — nothing here is stateful and nothing
+// is random at render time.
+//
+// Card i is born at start + i * rate, jittered by up to 0.6 of the gap on its
+// own hash, and flies for `flight` frames: x on `flow` (eased out of the break,
+// eased into the slot), y on a REAL GRAVITY PARABOLA — the card is pushed out
+// of the break with `peak` world px of lift in it, reaches that apex in the
+// first sixth of its flight and then accelerates downward for the rest of it.
+//
+// IT HAS TO ACCELERATE OR IT IS A CONVEYOR. Written the obvious way — a linear
+// fall with a small -4 p t (1 - t) bow on it — the quadratic term is 16 px
+// against 134 px of linear travel, so a stream of records born at a fixed rate
+// comes out evenly spaced and stays evenly spaced: rendered and looked at, it
+// read as a queue of cards on a belt, not as paper falling out of a hole. So
+// the parabola is solved from the apex instead:
+//     y(t) = y0 - v0 t + G t^2,  G = D + v0,  v0 = 2p + 2 sqrt(p^2 + p D)
+// which is the unique upward-then-falling quadratic that peaks `peak` px above
+// the break and passes through the slot at t = 1.
+//
+// THE LAST SIXTH IS AN ARREST. A card at the bottom of that parabola is moving
+// about 14 world px a frame and the slot is a dead stop, which is a step in the
+// one place the scan exists to protect. So over the last SPILL_ARREST of the
+// flight the fall is blended into the slot on a smoothstep, which is zero-sloped
+// at t = 1: a card hitting a pile of paper, decelerating into it, rather than a
+// card switching off. The first five sixths are pure gravity.
+//
+// THE TUMBLE LANDS WHERE THE HEAP SAYS. The brief writes the spin as "from 0 to
+// rot + 180 * hash", which would leave a card resting at an angle the heap did
+// not choose — up to a half turn from it, which for a card with a head at one
+// end is upside down. So the spin is written as the same half turn, taken as a
+// lobe that is zero at both ends: the card tumbles up to 180 degrees in flight
+// and arrives on its slot's own angle.
+//
+// On arrival, the 4-frame back(0.75) settle, written as a zero-sloped lobe
+// (sin^2) rather than a kink: the card overshoots a tenth of its height into
+// the pile and comes back up onto its slot.
+// ---------------------------------------------------------------------------
+export const SPILL_RATE_SLOW = 5; // frames between records: a ring company
+export const SPILL_RATE_FAST = 2; // Equifax
+export const SPILL_FLIGHT = 26; // frames in the air
+export const SPILL_PEAK = 8; // world px of lift on the arc, at most
+export const SPILL_SETTLE = 4; // frames of back(0.75) on arrival
+export const SPILL_TUMBLE = 180; // degrees, at most
+export const SPILL_ARREST = 0.16; // the last sixth of the flight: into the pile
+export const HEAP_SMALL = 12;
+export const HEAP_BIG = 44;
+
+// `flow` — the house travel ease: eases in over the first `a`, runs flat,
+// eases out over the last `a`. Zero velocity at both ends.
+export const SPILL_FLOW_A = 0.28;
+export const spillFlow = (u: number, a: number = SPILL_FLOW_A) => {
+  const x = Math.max(0, Math.min(1, u));
+  const area = 1 - a;
+  if (x < a) {
+    const g = x / a;
+    return (a * (g * g * g - (g * g * g * g) / 2)) / area;
+  }
+  if (x <= 1 - a) return (a * 0.5 + (x - a)) / area;
+  const g = (1 - x) / a;
+  return (area - a * (g * g * g - (g * g * g * g) / 2)) / area;
+};
+
+export type SpillCard = { key: number; x: number; y: number; rot: number; resting: boolean };
+
+export const spillRecords = ({
+  frame,
+  start,
+  rate,
+  from,
+  slots,
+  seed,
+  flight = SPILL_FLIGHT,
+  peak = SPILL_PEAK,
+  settle = SPILL_SETTLE,
+  h = RECORD_H,
+}: {
+  frame: number;
+  start: number;
+  rate: number;
+  from: { x: number; y: number };
+  slots: HeapSlot[];
+  seed: number;
+  flight?: number;
+  peak?: number;
+  settle?: number;
+  h?: number;
+}): SpillCard[] => {
+  const out: SpillCard[] = [];
+  for (let i = 0; i < slots.length; i++) {
+    const born = start + i * rate + hash(i, seed) * 0.6 * rate;
+    if (frame < born) continue;
+    const s = slots[i];
+    const t = (frame - born) / flight;
+    if (t >= 1) {
+      const u = Math.max(0, Math.min(1, (frame - (born + flight)) / settle));
+      const lobe = Math.sin(Math.PI * u) ** 2;
+      out.push({
+        key: i,
+        x: s.x,
+        y: s.y + 0.1 * h * lobe,
+        rot: s.rot + 3 * lobe * (hash(i, seed + 91) * 2 - 1),
+        resting: true,
+      });
+      continue;
+    }
+    const e = spillFlow(t);
+    const spin = SPILL_TUMBLE * hash(i, seed + 17) * Math.sin(Math.PI * t);
+    // the gravity arc, normalised so q(0) = 0 and q(1) = 1
+    const D = Math.max(1, s.y - from.y);
+    const v0 = 2 * peak + 2 * Math.sqrt(peak * peak + peak * D);
+    const G = D + v0;
+    const qg = (-v0 * t + G * t * t) / D;
+    const b = smoothstep((t - (1 - SPILL_ARREST)) / SPILL_ARREST);
+    const q = qg * (1 - b) + b;
+    out.push({
+      key: i,
+      x: from.x + (s.x - from.x) * e,
+      y: from.y + D * q,
+      rot: s.rot * t + spin * (hash(i, seed + 43) < 0.5 ? -1 : 1),
+      resting: false,
+    });
+  }
+  return out;
+};
