@@ -82,19 +82,20 @@ export const FPS = 24;
 //                a 9 x 11 lattice at the field's own step, wobbled and
 //                feathered, so the fleet is a rounded blob and never a box.
 //                The two of them are one column, 333 world px tall.
-//   THE COMPANY  an ink squircle 700 x 440 centred (540, 0) — x 190..890,
+//   THE COMPANY  an ink squircle 640 x 440 centred (540, 0) — x 220..860,
 //                y -220..220. The mark and the blob stand in its right half,
 //                the three people down its left.
-//   THE PEOPLE   three `person.png` glyphs, white, 110 world px, on a shallow
-//                DESCENDING DIAGONAL — (280, feet 35), (390, 105), (505, 178),
-//                each nudged by its own hash — so that every thread out of them
-//                passes clear above the heads of the ones to its right.
+//   THE PEOPLE   three `person.png` glyphs, white, 118 world px — the size every
+//                other cut in this clip uses — on a shallow DESCENDING DIAGONAL,
+//                (310, feet 35), (402, 105), (497, 178), each nudged by its own
+//                hash, so that every thread out of them passes clear above the
+//                heads of the ones to its right.
 //   THE TIMELINE an ink rule at y 380.5 (snapped, odd stroke) running far past
 //                both frame edges; THE PLAYHEAD = "now" is the vertical ink
 //                line at x 540 hanging 240 from the rule down to y 620 with a
 //                solid r 8 dot where it meets it; six month TICKS, 30 tall,
-//                every 120 world px to the LEFT of the playhead (420, 300, 180,
-//                60, -60, -180). V2: each tick carries its MONTH'S NAME 34 world
+//                every 100 world px to the LEFT of the playhead (440, 340, 240,
+//                140, 40, -60). V2: each tick carries its MONTH'S NAME 34 world
 //                px under its foot (baseline y 429.5) and the playhead carries
 //                NOW 34 under its own foot (y 654) — see the V2 block below.
 //
@@ -131,21 +132,21 @@ export const FPS = 24;
 //        The BOX draws head-led from the bottom-centre BOTH ways, f64-84,
 //        closing at the top-centre with a click on "used" f84. The THREE PEOPLE
 //        descend into it through that still-open top seam on individual arcs —
-//        one speed again (32 world px/frame), launches f64, f68, f69, landings
+//        one speed again (32 world px/frame), launches f65, f68, f69, landings
 //        f76, f80, f83 — each fading up over its first third. Every one of them
 //        is inside before the wall that would have been in its way exists: the
-//        last of the three crosses the top run at f70.6, when the two heads are
-//        still 28 px up the side walls.
+//        last of the three crosses the box's top line at f70.8, when the two
+//        heads are both still on the BOTTOM run, six frames from the corners.
 //        As each lands an ACCENT THREAD draws head-led from its chest to a seat
 //        AT ITS OWN HEIGHT in the blob, at one speed (24 world px/frame). The
-//        three are 316, 236 and 206 px long and land at f89.2, f89.8 and f91.6
+//        three are 287, 243 and 214 px long and land at f88.0, f90.1 and f91.9
 //        — staggered, the last of them on "internally" f92 — and they STAY.
 //        From f92 ACCENT PACKETS run person -> blob and back along all three,
 //        three or four alive at a time, for the rest of the piece: that is
 //        "being used".
 //   G5 BACK TO FEBRUARY — "as of February"            f102..126
 //        THE SLIDE. The whole assembly — box, people, blob, mark, threads,
-//        packets — travels 720 world px LEFT along the timeline (six ticks) on
+//        packets — travels 600 world px LEFT along the timeline (six ticks) on
 //        one trapezoid-velocity profile, f102-126: smoothstep ramps over the
 //        first and last 22% and a long even middle. Peak speed is 1.28x the
 //        average instead of the 3x an in-out cubic gives, and — the reason it
@@ -158,13 +159,13 @@ export const FPS = 24;
 //   V2 THE MONTHS WRITTEN OUT — the only change in V2, and it adds no gesture
 //        and moves no frame. The timeline's seven positions are NAMED, in Söhne
 //        Kräftig off `explainerShared` (`makeLabel`, LABEL_OP, LABEL_FADE) at
-//        LABEL_SIZE x 1.30 world px, uppercase, hanging 34 world px under the
+//        LABEL_SIZE x 1.20 world px, uppercase, hanging 34 world px under the
 //        FOOT of the mark each one names:
 //          NOW   x 540, under the playhead's foot, f40   — on the playhead's click
-//          JUL   x 420, under its tick, f105.8           — as its tick draws
-//          JUN   x 300, f108.9   MAY x 180, f112.0
-//          APR   x  60, f115.1   MAR x -60, f118.2
-//          FEB   x -180, f126                            — with the box that lands on it
+//          JUL   x 440, under its tick, f105.8           — as its tick draws
+//          JUN   x 340, f108.9   MAY x 240, f112.0
+//          APR   x 140, f115.1   MAR x  40, f118.2
+//          FEB   x -60, f126                             — with the box that lands on it
 //        Every one fades up over LABEL_FADE and none of them ever leaves. They
 //        are on the TIMELINE, not on the assembly, so they do not travel with
 //        the box: the box slides left THROUGH a row of months that is being
@@ -190,13 +191,13 @@ export const FPS = 24;
 //        Tight on the blob region: the mark's top lands at screen y 552 and the
 //        blob's bottom at 1130, so the assembly happens dead centre under the
 //        caption band and the dots arrive from outside all four edges.
-//   M1 OUT+LEFT  k 1.70 -> 1.15, cx 690 -> 620, c -7 -> 223
+//   M1 OUT+LEFT  k 1.70 -> 1.371, cx 690 -> 620, c -7 -> 240
 //        keys f21-31, warp 0.72, landed f42     — "as of this recording" f24-42
-//        Opens to take in the rule and the playhead. Peak 3.9% of zoom and 7.0
+//        Opens to take in the rule and the playhead. Peak 2.1% of zoom and 7.0
 //        world px of pan a frame — a move, not a drift. At the landing the
-//        mark's top is at screen y 379 and the playhead's foot at 1293, the
+//        mark's top is at screen y 268 and the playhead's foot at 1357, the
 //        block centred on 836.
-//   M2 OUT+LEFT  k 1.15 -> 0.88, cx 620 -> 520, c 223 -> 180
+//   M2 OUT+LEFT  k 1.371 -> 1.049, cx 620 -> 520, c 240 -> 217
 //        keys f52-84, warp 0.72, landed f92  — "used" f84, "internally" f92
 //        ONE move where there were two. It was a pull-back over the box's draw
 //        (keys f52-62) and then a creep onto the sealed box (keys f73-85), and
@@ -204,7 +205,7 @@ export const FPS = 24;
 //        held that for three frames and set off again — same direction, same
 //        kind of move, so the pair read as one move that hesitated in the
 //        middle rather than as two beats. Merged, the damper sees a single
-//        deceleration lobe: 1.15%/frame at its peak (f68, the middle of the box
+//        deceleration lobe: 1.14%/frame at its peak (f68, the middle of the box
 //        drawing itself), never a second acceleration, and by f88 it is inside
 //        0.15%/frame with the box shut and the threads still landing. It takes
 //        the whole construction of the box in one breath, opens the empty
@@ -213,11 +214,11 @@ export const FPS = 24;
 //   M3 THE HELD BREATH                                            f92-101
 //        TEN FRAMES DEAD STILL, and they are not a gap in the track but the
 //        thing the slide is released out of: measured across them the zoom
-//        moves 0.05% in total, the pan 0.16 world px in total, and the box's
-//        centre sits at screen y 659.0 +- 0.1. Nothing in the frame is still —
+//        moves 0.06% in total, the pan 0.1 world px in total, and the box's
+//        centre sits at screen y 607.0 +- 0.1. Nothing in the frame is still —
 //        the packets run, the crowd breathes — but the LENS is, so when the
 //        slide goes on f102 it is the only thing that moves.
-//   M4 FOLLOW    k 0.88 -> 0.78, cx 520 -> 43, c 180
+//   M4 FOLLOW    k 1.049 -> 0.930, cx 520 -> 112, c 217
 //        keys f102-130, warp 0.6                          — "february" f114
 //        Released on the slide's own first frame and follows it out and left.
 //        Its cx does NOT ride an ease of its own: it rides the SLIDE's profile,
@@ -226,20 +227,20 @@ export const FPS = 24;
 //        and only settles at f140 — the last thing the piece does is a move,
 //        not a park.
 //        SOLVED at the resolved zoom and checked at every frame of the slide:
-//        the box (now x -530..170) keeps 93 screen px of margin on the left and
-//        the playhead 152 px of frame to its right, and the box never comes
-//        closer than 67 px to the left edge on its way there.
+//        the box (now x -420..220) keeps 80 screen px of margin on the left and
+//        NOW 98 px of frame to its right, and across the whole move the box
+//        never comes inside 54.5 px of the left edge (f124) nor NOW inside 97.3
+//        of the right (f132).
 //
 // THE FRAME'S BALANCE. Every content centre above is the MIDPOINT OF THE BLOCK
 // THAT IS ACTUALLY ON SCREEN, and `CAM_LIFT / k` puts that midpoint on screen y
-// 835 at every k — measured, the block's centre is 834-841 at every beat of the
-// piece. At the resolved wide (k 0.780) the block runs screen y 507..1163: the
-// box's centre at 679, the rule at 976, the playhead's foot at 1163, and 317 px
-// of clear frame under it before the captions. The lowest ink the piece ever
-// puts on screen is the now-dot at 1461 on the single frame it opens, f24, with
-// the camera still at k 1.66 and pulling back; from f30 on nothing is below
-// 1305 (the playhead's foot at f37, the deepest the settled frame ever goes).
-// Nothing is ever inside the bottom 440 px.
+// 835 at every k — measured, the block's centre is 834-836 at every beat of the
+// piece. At the resolved wide (k 0.930) the block runs screen y 429..1241: the
+// box's centre at 633, the rule at 987, the playhead's foot at 1210, NOW's
+// baseline at 1241, and 239 px of clear frame under it before the captions. The
+// lowest ink the piece ever puts on screen is the now-dot at 1452 on the single
+// frame it opens, f24, with the camera still at k 1.67 and pulling back; from
+// f30 on nothing is below 1300. Nothing is ever inside the bottom 440 px.
 //
 // ambient, not gestures: idle thread traffic inside the blob from f20 at the
 // shared rate (180 per 1,200 agents = 11 threads), `breath` on every dot,
@@ -258,9 +259,9 @@ export const CENTRE_X = 540;
 // THE WORLD'S SCALE IS SOLVED BACKWARDS FROM THE RESOLVED FRAME, and that is
 // the one thing in this piece that could not be taken off the brief as written.
 //
-// The resolved frame has to hold the slid box's left edge and the playhead at
-// once, with the margins the brief names (60 screen px on the left, 120 on the
-// right). That fixes the zoom:  1080/k >= (540 - boxLeft) + 180/k.  With the
+// The resolved frame has to hold the slid box's left edge and the playhead's
+// own label at once, with margins (50 screen px on the left, 90 on the right).
+// That fixes the zoom:  1080/k >= (NOW's right - boxLeft) + 140/k.  With the
 // brief's 150 px month and its 700 px box that is 1,250 world px and k <= 0.72
 // — and 0.72 is a ceiling, not a value, because at the ceiling the legal camera
 // is a single point and a damped camera cannot sit on a point. Built at the
@@ -268,65 +269,91 @@ export const CENTRE_X = 540;
 // 434 screen px wide, the dots 3.4 px across, and 71% of a 1080 x 1920 frame
 // empty. On a phone at 270 px wide that is a 108 px box.
 //
-// Three numbers move, and nothing else does:
-//   * THE MONTH is 120 world px, not 150, so six of them are 720 and the frame
-//     has to hold 1,070 rather than 1,250. k lands at 0.78 and the box at 546
-//     screen px — half the frame's width instead of two fifths.
-//   * THE BOX is 460 tall, not 520. Its right-hand column (mark, gap, blob) is
-//     303 px and its left-hand one (the people) is 118; 520 left sixty px of
+// V3, THE HARMONY PASS. This cut was delivered at k 0.78 with 110 px people,
+// and cut by cut against the other four it was the odd one out twice over: the
+// smallest picture of the set (the rest resolve at k 1.00-1.05) and the only one
+// whose people were not 118. Two world numbers came in to fix both at once —
+// THE MONTH from 120 to 100 and THE BOX from 700 to 640 wide — which takes what
+// the frame has to hold from 1,190 world px down to 968.8 and lets the zoom go
+// from 0.78 to 0.93. The people then go to 118 and are still 40.7 px inside the
+// left wall and 34.3 clear of the fleet, because their step came down from 110
+// to 92 (see PEOPLE_X — the step is solved against the glyph's ink profile, not
+// its box). Nothing about what the cut DOES changed: same beats, same gestures,
+// same 145 frames, same slide of exactly six months.
+//
+// The rest of the scale:
+//   * THE BOX is 440 tall. Its right-hand column (mark, gap, blob) is 338 px
+//     and its left-hand one (the diagonal of people) 243; 520 left sixty px of
 //     dead air inside it that no gesture ever used.
 //   * THE TIMELINE HANGS LOWER — 160 below the box instead of 80 — because the
 //     9:16 frame is 1,920 px tall and the composition was only using 29% of it.
 //     THE PLAYHEAD DROPS 240, not the brief's 300 and not the 480 this piece
-//     first shipped with: see PLAY_Y1. The content block is 880 world px and at
-//     the resolved zoom it runs screen y 507..1163, centred on 835, with 317 px
+//     first shipped with: see PLAY_Y1. The content block is 874 world px and at
+//     the resolved zoom it runs screen y 429..1241, centred on 835, with 239 px
 //     of clear frame between its foot and the caption band.
-// Everything else — the box's width, the blob, the mark, the people, the six
-// ticks, the 900-to-720 slide being exactly six months — is the brief's.
+// Everything else — the blob, the mark, the six ticks, the slide being exactly
+// six months — is the brief's.
 // ---------------------------------------------------------------------------
 
 // -- the company -------------------------------------------------------------
-export const BOX_W = 700;
+export const BOX_W = 640;
 export const BOX_H = 440;
 export const BOX_CY = 0;
-export const BOX_X0 = CENTRE_X - BOX_W / 2; // 190
-export const BOX_X1 = CENTRE_X + BOX_W / 2; // 890
-export const BOX_Y0 = BOX_CY - BOX_H / 2; // -260
-export const BOX_Y1 = BOX_CY + BOX_H / 2; // 260
+export const BOX_X0 = CENTRE_X - BOX_W / 2; // 220
+export const BOX_X1 = CENTRE_X + BOX_W / 2; // 860
+export const BOX_Y0 = BOX_CY - BOX_H / 2; // -220
+export const BOX_Y1 = BOX_CY + BOX_H / 2; // 220
 export const BOX_PATH = squirclePath(BOX_W, BOX_H);
 
 // -- the model ---------------------------------------------------------------
 // The right-hand column of the box: the mark over the fleet it stands for,
-// 59 world px apart, the pair spanning y -174..159, and the box's height is
-// that column plus 46 of margin at the top and 61 at the bottom — nothing else
-// decides it.
+// 59 world px apart, the pair spanning y -174..164, and the box's height is
+// that column plus 46 of margin at the top and 56 at the bottom — nothing else
+// decides it. Across, the fleet's own seats run x 588..793 and their discs
+// 581..800, so the narrowed box (x 220..860) still leaves the blob 60 world px
+// clear of its right wall, and the mark — 108 wide, x 636..744 — is inside that.
 export const BLOB = { x: 690, y: 76 };
 export const MARK = { x: 690, y: -120 };
 export const MARK_SIZE = 108;
 
 // -- the people --------------------------------------------------------------
-// person.png is a 512 box whose glyph runs to y 471, so the feet sit at 0.920
-// of the drawn height — that is what puts them ON the floor and not through it.
-// 110 rather than the house 118: person.png's ink fills 0.844 of its box, so a
-// 118 glyph is 100 world px of shoulder and three of them will not stand apart
-// inside a 350 px half-box without touching. At 110 the ink is 93 and the three
-// of them keep 19 px of air between them.
-export const PERSON_SIZE = 110;
+// person.png is a 512 box whose glyph runs x 41..470, y 41..471, so the ink is
+// 0.840 of the drawn box across and 0.842 down and the feet sit at 0.922 of the
+// drawn height — that is what puts them ON the floor and not through it.
+//
+// 118, THE SET'S SIZE. This cut shipped at 110 and was the only one of the five
+// that did; side by side with cut 3 its people were visibly the smaller ones, on
+// top of a resolved wide that was itself the widest of the set, so the same
+// person read two sizes in one edit. 118 is the value every other cut states,
+// and the three of them still stand apart inside the box — see PEOPLE_X, where
+// the step is solved against the glyph's real ink and not against its box.
+export const PERSON_SIZE = 118;
 export const PERSON_FOOT = 471 / 512;
 // NOT A ROW. Three people standing level in a line to the left of the blob
 // cannot each have a thread into it: the leftmost one's thread has to cross the
 // other two, and drawn behind a 0.9-opacity glyph it shows through the body as
 // a scratch. Rendered and looked at, that is exactly what it did.
 //
-// So they stand on a shallow DESCENDING DIAGONAL instead — 110 world px apart
+// So they stand on a shallow DESCENDING DIAGONAL instead — 92 world px apart
 // across and 70 down, each nudged by its own hash so the diagonal is not ruled
 // either. Every thread then leaves its own person at a different height and
-// passes clear ABOVE the heads of the ones to its right (the tightest of the
-// three clears by 17 world px, checked against the glyph's real ink box, which
-// is 0.844 of the drawn size). It also puts people down the whole left side of
-// the box instead of in a strip along its floor, which is what that half of the
-// box is for.
-export const PEOPLE_X = [0, 1, 2].map((i) => 280 + i * 110 + (hash(i, 42) - 0.5) * 14);
+// passes clear ABOVE the heads of the ones to its right, checked against the
+// glyph's real ink box. It also puts people down the whole left side of the box
+// instead of in a strip along its floor, which is what that half of the box is
+// for.
+//
+// THE STEP IS 92, NOT 110, AND IT IS SOLVED AGAINST THE GLYPH'S PROFILE. At 118
+// the ink is 99 world px across at the shoulders — but the shoulders are only
+// the bottom third of it; measured band by band off person.png, the top 30% of
+// the ink (the head) is at most 0.40 of the box, 47 px. A person is 70 lower
+// than the one to its left, so the 29 px where the two overlap in y is that
+// one's SHOULDER against this one's HEAD: 49.6 + 23.6 = 73.2 px is what they
+// actually need, and 92 leaves 19-22 px of air there.
+// The left wall moved in with the box (220, not 190), so the base moved out to
+// 310: the leftmost ink then starts at 260.6, 40.6 px inside the wall, and the
+// rightmost ends at 546.7 — 34 px clear of the fleet's leftmost disc at 581,
+// with only a shoulder's 7 px across the box's own midline.
+export const PEOPLE_X = [0, 1, 2].map((i) => 310 + i * 92 + (hash(i, 42) - 0.5) * 8);
 export const PEOPLE_FOOT_Y = [0, 1, 2].map((i) => 40 + i * 70 + (hash(i, 41) - 0.5) * 16);
 
 // -- the timeline ------------------------------------------------------------
@@ -344,27 +371,40 @@ export const PLAY_X = CENTRE_X;
 // rather than a tick, because it is eight times the tick's own 30.
 export const PLAY_Y1 = TL_Y + 240 - 0.5; // 620
 export const PLAY_DOT_R = 8;
-export const TICK_STEP = 120;
+// THE MONTH IS 100 WORLD PX. Six of them plus the box is what the resolved wide
+// has to hold at once, so the pitch is the one number that decides how big
+// everything else can be on screen: at 120 the frame had to carry 1,190 world px
+// and the whole picture resolved at k 0.78 — the smallest, sparsest of the five
+// cuts in the edit. At 100 it carries 970 and resolves at K_FINAL below, which
+// is the set's own zoom. Six ticks are still six months; they are simply not
+// asked to be a third of the frame's width.
+export const TICK_STEP = 100;
 export const TICK_N = 6;
 export const TICK_H = 30;
 export const TICKS = Array.from({ length: TICK_N }, (_, i) => PLAY_X - TICK_STEP * (i + 1));
-export const SLIDE_DX = -TICK_STEP * TICK_N; // -900: six months to the left
+export const SLIDE_DX = -TICK_STEP * TICK_N; // -600: six months to the left
 
 // -- V2: THE MONTHS, WRITTEN OUT ---------------------------------------------
 // The one change in V2. The timeline had six anonymous ticks and a playhead, so
 // "six months" was a count the viewer had to make; now every position on it is
 // named. SEVEN LABELLED POSITIONS, SIX INTERVALS: the six ticks are the six
-// month positions and the LAST of them (TICKS[5], x -180) is the one the box
-// lands on, so that one is FEB and no tick had to be added — checked on the
-// resolved frame, where the box's centre and the leftmost tick are the same x.
+// month positions and the LAST of them (TICKS[5], x -60) is the one the box
+// lands on, so that one is FEB and no tick had to be added —
+// checked on the resolved frame, where the box's centre and the leftmost tick
+// are the same x.
 // Left to right: FEB MAR APR MAY JUN JUL, then the playhead = NOW. TICKS runs
 // right to left, so MONTH_NAMES does too.
 //
-// SIZE. `LABEL_SIZE` x 1.30 in world px. The explainer's 30 was authored at its
-// own k 1.0; this piece resolves at k 0.78, so a label here is smaller on screen
-// than there whatever we do, and 1.30 is as far as it can be pushed before two
-// neighbours meet: "MAR" sets 96 world px wide with LABEL_TRACK and the month is
-// 120, which leaves 24 px of air between adjacent labels.
+// SIZE. `LABEL_SIZE` x 1.20 in world px — 1.30 until the month came in to 100.
+// Measured off Söhne Kräftig's own advance widths at LABEL_SIZE with
+// LABEL_TRACK, the widest of these seven is NOW at 78.9 world px and the widest
+// MONTH pair is MAR (73.7) against APR (67.0) and APR against MAY (73.5). At
+// 1.30 those neighbours would sit 8.5 px apart at a 100 px pitch; at 1.20 they
+// keep 15.6 px of set width and 18.5 of actual ink, since the trailing letter-
+// space of each is blank. The labels are nonetheless BIGGER on screen than they
+// were — 1.20 x 30 at the new k against 1.30 x 30 at 0.78 — which is the point:
+// the frame came in, so the type did not have to grow to be read.
+export const MONTH_LABEL_SCALE = 1.2;
 //
 // WHERE. A label hangs 34 world px under THE FOOT OF THE MARK IT NAMES, not 34
 // under the rule: the tick hangs 15 below the rule, so a baseline at TL_Y + 34
@@ -375,7 +415,6 @@ export const SLIDE_DX = -TICK_STEP * TICK_N; // -900: six months to the left
 // centred in the row at x 540 would have that line drawn vertically through the
 // middle of its O. Off the foot it clears the line by the same 9 px the months
 // clear their ticks, and it reads as the label of the thing that hangs.
-export const MONTH_LABEL_SCALE = 1.30;
 export const MONTH_LABEL_DY = 34; // baseline, from the foot of the mark it names
 export const MONTH_LABEL_Y = TL_Y + TICK_H / 2 + MONTH_LABEL_DY; // 429.5
 export const NOW_LABEL_Y = PLAY_Y1 + MONTH_LABEL_DY; // 654
@@ -522,19 +561,41 @@ export const MONTH_LABEL_F0 = TICK_F0.map((f, i) => (i === TICK_N - 1 ? SLIDE_F1
 // centred THROUGH the move, not only at its ends.
 //   C_OPEN   -7  the mark's top (-174) to the blob's bottom (159): the lockup
 //                sits screen 501..1031 at k 1.70.
-//   C_NOW   223  the mark's top (-174) to the playhead's foot (620) — the block
-//                the piece is showing from the moment the playhead is down.
-//   C_WIDE  180  the box's top (-260) to the playhead's foot (620), the block
-//                every frame from the box's close onward.
+//   C_NOW   240  the mark's top (-174) to NOW's baseline (654) — the block the
+//                piece is showing from the moment the playhead is down.
+//   C_WIDE  217  the box's top (-220) to NOW's baseline (654), the block every
+//                frame from the box's close onward.
+// The foot of both blocks is NOW'S BASELINE and not the playhead's foot: the
+// label is the lowest ink in the frame from f40 to the end, and framing on the
+// line above it left the whole block sitting 16-24 px low, its centre at screen
+// 851-859 instead of 835. That is small and it was wrong in the same direction
+// everywhere, which is exactly the kind of thing this pass is for.
 // ---------------------------------------------------------------------------
+// THE ZOOM LADDER HANGS OFF K_FINAL, and K_OPEN is the one rung that does not.
+//
+// K_FINAL is solved against the frame (see CX_FINAL below) and came in from 0.78
+// to 0.93 on this pass. The two rungs above it are the same MULTIPLES of it the
+// cut always had (1.474, 1.128), so they travel with it and M2 and M4 keep the
+// zoom travel — and so the damped rate — they were tuned to: 23% and 11.4%. Had
+// K_NOW and K_CREEP stayed where they were, M2 would have had 8.8% of travel
+// over 32 frames, 0.28%/frame, which is not a move but a drift.
+//
+// K_OPEN STAYS AT 1.70, typed. The opening is the only framing in the piece that
+// has nothing to do with the box's width or the month's pitch — it is tight on
+// the blob and the mark, and neither of those changed — and the whole arrival
+// solve is written against it (ARRIVE_* below reads the opening frame's real
+// rect). Carried up with the rest of the ladder it would have been 2.03, which
+// puts the rule's first frame at screen y 1566, inside the caption band. It also
+// means M1 travels 19.4% rather than 32%: measured through the damper that is a
+// 2.2%/frame peak, still twice the floor a move has to clear.
+export const K_FINAL = 0.93;
+export const K_CREEP = K_FINAL * (0.88 / 0.78); // 1.049
+export const K_NOW = K_FINAL * (1.15 / 0.78); // 1.371
 export const K_OPEN = 1.7;
-export const K_NOW = 1.15;
-export const K_CREEP = 0.88;
-export const K_FINAL = 0.78;
 
 export const C_OPEN = (MARK.y - MARK_SIZE / 2 + (BLOB.y + BLOB_AY)) / 2; // -7
-export const C_NOW = (MARK.y - MARK_SIZE / 2 + PLAY_Y1) / 2; // 223
-export const C_WIDE = (BOX_Y0 + PLAY_Y1) / 2; // 180
+export const C_NOW = (MARK.y - MARK_SIZE / 2 + NOW_LABEL_Y) / 2; // 240
+export const C_WIDE = (BOX_Y0 + NOW_LABEL_Y) / 2; // 217
 
 export const CX_OPEN = BLOB.x; // 690
 export const CX_NOW = 620;
@@ -542,19 +603,24 @@ export const CX_CREEP = 520;
 
 // K_FINAL and CX_FINAL are SOLVED, not chosen, and they are solved against the
 // WHOLE slide rather than against its last frame. What has to be in frame is
-// the slid box's left edge (BOX_X0 + SLIDE_DX = -530) keeping >= 60 screen px
-// and the playhead (x 540) keeping >= 120 screen px of frame to its right, so
-// the frame has to hold 1,070 world px plus both margins:
-//     1080/k >= 1070 + 180/k   ->   k <= 0.841,
-// and the interval of legal cx at 0.78 is [1.5, 85.4] — 84 px wide, so the
-// damped camera has somewhere to sit. 43 is its middle and puts 93 screen px of
-// margin to the left of the box and 152 to the right of the playhead. The same
-// interval is checked at EVERY frame of the slide, not only at the end: the box
-// travels left at up to 38 world px a frame, and a camera keyed on the zoom's
-// own curve falls behind it in the middle — measured, the box's left edge fell
-// to 40 screen px over f122-125. That is what `xSlide` below is for; with it
-// the box never comes inside 67 screen px of the left edge.
-export const CX_FINAL = 43;
+// the slid box's left edge (BOX_X0 + SLIDE_DX - STROKE/2 = -381.5) keeping >= 50
+// screen px, and on the right the playhead's own label — NOW's right edge at
+// 540 + 47.3 = 587.3, which is further right than the playhead itself — keeping
+// >= 90 screen px. So the frame has to hold 968.8 world px plus both margins:
+//     1080/k >= 968.8 + 140/k   ->   k <= 0.970,
+// and a ceiling is not a value: at the ceiling the legal cx is a single point
+// and a damped camera cannot sit on a point. At k 0.93 the interval is
+// [103.5, 145.3] — 42 px wide, enough for the damper and for `sway`'s +-3.
+//
+// 112 is NOT that interval's middle, and the reason is that the interval is
+// checked at EVERY frame of the slide and not only at the end. The box travels
+// left at up to 27 world px a frame and the damped pan is behind it through the
+// back half of the move, so the tightest frame of the whole piece is f124 — two
+// frames before the box lands — and not f144. Measured frame by frame across
+// f102-145: the box's left edge never comes inside 54.5 screen px (f124) and
+// NOW's right edge never inside 97.3 (f132); on the resolved frame itself they
+// are 80 and 98. At the interval's middle f124 would have been 43.8.
+export const CX_FINAL = 112;
 
 export const CAM_LEAD = 4; // frames: the damper's lag, put back into a followed pan
 
@@ -689,14 +755,14 @@ export const K_AT: Float64Array = (() => {
 // opening framing, on its own shallow arc.
 //
 // The origin is the point where the seat's own ray leaves the OPENING FRAME
-// (solved from k 1.60, cx 690, cy = C_OPEN + CAM_LIFT/1.60 — the real rect,
-// not a guess), pushed a hashed 30-110 px further out and capped at
-// ORIGIN_MAX. The cap is what makes the piece possible: the frame is 675 x 1200
-// world px at that zoom, so a ray straight up leaves it 610 px away and a ray
-// sideways only 338, and without the cap the vertical arrivals would have to
-// run at nearly twice the speed of the lateral ones to land on the same beat.
-// With it every arc is 380-470 px and ONE speed serves all of them, which is
-// also the house habit: one speed, and the START frames carry the stagger.
+// (solved from K_OPEN 1.70, cx 690, cy = C_OPEN + CAM_LIFT/1.70 — the real
+// rect, not a guess), pushed a hashed 30-110 px further out and capped at
+// ORIGIN_MAX. The cap is what makes the piece possible: the frame is 635 x 1129
+// world px at that zoom, so a ray straight up leaves it about 555 px away and a
+// ray sideways only about 318, and without the cap the vertical arrivals would
+// have to run at nearly twice the speed of the lateral ones to land on the same
+// beat. With it every arc is 270-470 px and ONE speed serves all of them, which
+// is also the house habit: one speed, and the START frames carry the stagger.
 //
 // A seat's duration is therefore its own length over that speed, its landing
 // frame is hashed across f12-20, and its launch is the difference — which for
@@ -775,8 +841,8 @@ export const seatAt = (i: number, frame: number) => {
 // then keeps going, off-frame, out to where the slide will need it: the whole
 // point of the gesture is that by the time the box travels left the road is
 // already there, so nothing new ever draws at the left edge under the slide.
-// TL_VIS is how far it has to reach to be off both edges at k 1.15 (the frame
-// runs world x 150..1090 there); TL_FULL is where it stops.
+// TL_VIS is how far it has to reach to be off both edges at M1's landed k 1.371
+// (the frame runs world x 226..1014 there); TL_FULL is where it stops.
 // ---------------------------------------------------------------------------
 export const TL_F0 = 24;
 export const TL_F1 = 36; // head-led, and off both frame edges by here
@@ -821,7 +887,7 @@ export const MARK_CLICK = 56;
 // THE PEOPLE come down through that seam while it is still open, which is the
 // whole reason the box is drawn from the bottom: at every launch and crossing
 // the top run is still unbuilt, so nobody is ever walked through an ink wall
-// and the box shuts BEHIND them on "used". One speed, 38 world px/frame, so
+// and the box shuts BEHIND them on "used". One speed, 32 world px/frame, so
 // the three launches carry the stagger; each fades up over its first fifth.
 //
 // THE THREADS are the only accent line in the piece. One speed for all three
@@ -909,18 +975,19 @@ export const personAt = (i: number, frame: number) => {
 // so the three threads run level rather than up into the crowd.
 export const CHEST_UP = PERSON_SIZE * 0.45;
 // One speed for all three threads, solved so the LAST of them is home on
-// "internally". The three are 316, 236 and 206 px long and each leaves when its
+// "internally". The three are 287, 243 and 214 px long and each leaves when its
 // own person lands (f76, f80, f83), so 24 px/frame — a hair over the house 22,
-// which would put the last one at f92.4 — brings them in at f89.2, f89.8 and
-// f91.6: staggered, and the last of them on the word.
+// which would put the last one at f92.7 — brings them in at f88.0, f90.1 and
+// f91.9: staggered, and the last of them on the word.
 export const THREAD_SPEED = 24;
 
 // Each person's thread goes to the seat at ITS OWN HEIGHT, not to the seat
 // nearest it. Nearest-seat was tried and it does not work here: the middle
 // person's nearest seat is low in the blob, so its thread dives across the
 // person below it and across that person's thread. Three level threads at three
-// heights cross nothing — not the glyphs (the tightest clears a head by 14
-// world px) and not each other — and they read as three separate connections
+// heights cross nothing — not the glyphs (measured against person.png's own
+// per-band ink profile at 118, the tightest passes 13.9 world px over the head
+// below it) and not each other — and they read as three separate connections
 // instead of a fan.
 //
 // The cost is twice `how far off my height` plus a third of `how far off a good
@@ -959,7 +1026,7 @@ export const THREADS: Thread[] = (() => {
 // is 1.2 packets per thread, so three or four are alive at once and no thread
 // is ever empty for long. A packet is an agent-sized disc (DOT_RADIUS) rather
 // than the 4 px bead the structures in this set use, because at the resolved
-// k 0.78 a 4 px bead is three screen px and the gesture disappears.
+// k 0.93 a 4 px bead is under four screen px and the gesture disappears.
 export const PKT_F0 = 92; // "internally"
 export const PKT_PERIOD = 15;
 export const PKT_LIFE = 18;
