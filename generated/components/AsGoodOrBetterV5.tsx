@@ -36,10 +36,6 @@ import {
   Coin,
   CompanyCard,
   D1Mark,
-  GROUND_OP,
-  GROUND_W,
-  GROUND_X0,
-  GROUND_X1,
   KRAFT_BASE,
   KRAFT_BLUR,
   KRAFT_DIM,
@@ -884,18 +880,8 @@ const AsGoodOrBetterV5: React.FC<Props> = ({
             viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            {/* the market's surface, and the height the old peak reached */}
+            {/* V6 (user): no ground line; only the height the old peak reached */}
             <g style={{ filter: icon }}>
-              <line
-                x1={GROUND_X0}
-                y1={V4.GROUND_Y}
-                x2={GROUND_X1}
-                y2={V4.GROUND_Y}
-                stroke={ink}
-                strokeWidth={GROUND_W}
-                strokeLinecap="round"
-                opacity={GROUND_OP}
-              />
               {tickG > 0.002 ? (
                 <>
                   <line

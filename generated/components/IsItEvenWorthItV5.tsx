@@ -29,10 +29,6 @@ import {
   Coin,
   CompanyCard,
   D1Mark,
-  GROUND_OP,
-  GROUND_W,
-  GROUND_X0,
-  GROUND_X1,
   KRAFT_BASE,
   KRAFT_BLUR,
   KRAFT_DIM,
@@ -955,18 +951,8 @@ const IsItEvenWorthItV5: React.FC<Props> = ({
             viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            {/* the market's surface — the six stand on it from f0 */}
+            {/* V6 (user): no ground line — the contact shadows carry the floor */}
             <g style={{ filter: icon }}>
-              <line
-                x1={GROUND_X0}
-                y1={V4.GROUND_Y}
-                x2={GROUND_X1}
-                y2={V4.GROUND_Y}
-                stroke={ink}
-                strokeWidth={GROUND_W}
-                strokeLinecap="round"
-                opacity={GROUND_OP}
-              />
             </g>
 
             {/* the threads: one stroke weight, live until the wave passes */}

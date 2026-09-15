@@ -34,10 +34,6 @@ import {
   Coin,
   CompanyCard,
   D1Mark,
-  GROUND_OP,
-  GROUND_W,
-  GROUND_X0,
-  GROUND_X1,
   KRAFT_BASE,
   KRAFT_BLUR,
   KRAFT_DIM,
@@ -823,18 +819,7 @@ const BackIntoItV5: React.FC<Props> = ({
             viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            {/* the ground: one floor, and every company stands on it */}
-            <line
-              x1={GROUND_X0}
-              y1={V4.GROUND_Y}
-              x2={GROUND_X1}
-              y2={V4.GROUND_Y}
-              stroke={ink}
-              strokeWidth={GROUND_W}
-              strokeLinecap="round"
-              opacity={GROUND_OP}
-              style={{ filter: icon }}
-            />
+            {/* V6 (user): no ground line — the companies' contact shadows carry the floor */}
 
             {/* the threads, under the charts so a head never crosses a line */}
             <g style={{ filter: icon }}>
