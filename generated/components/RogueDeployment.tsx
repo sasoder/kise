@@ -151,6 +151,38 @@ export const DURATION = 190;
 // all SOLVED off those exports rather than typed. The values quoted below are
 // what that solve currently produces, not inputs.
 //
+// V3 — THE HARMONY PASS, against cuts 3 and 5, which share this world. Five
+// things, and not one gesture touched:
+//   1. THE LOOP STOPS AT THE STATION RINGS. This piece drew a bare circle where
+//      cuts 3 and 5 both mask the loop at r = STATION_R on each station, so the
+//      orange line ran straight through the graduation cap and the clipboard on
+//      all 190 frames. It is cut 3's own mask now, `rd-station-gap`.
+//   2. THE REACHES CARRY THE ICON SHADOW. They were drawn in a bare group; cut
+//      3's identical grip lines are inside `filter: icon`, and now these are.
+//   3. THE WIDE IS PINNED TO THE SET. K_WIDE was solved off a margin and came
+//      out at 1.0079 where cuts 3 and 5 both resolve at TOT_K_WIDE 1.05 — the
+//      loop and the two people changed size across the joins. K_WIDE IS
+//      TOT_K_WIDE now, and what pays for it is the external deployment, which
+//      comes in from 150 past the ring to 127 (the first whole pixel at which
+//      its own placement still holds every clearance it declares). The wide
+//      leaves 49.6 px of frame outside the widest ink either side, against the
+//      40 it is held to. At f189 the loop is 777.0 screen px across and a
+//      person 123.9, the same numbers to a tenth as cut 3's last frame.
+//   4. THE CUT LANDS. M4's keys ended at f184 and the damper was still opening
+//      the wide on f190. They end on the speech's own last frame, f174: the
+//      camera is still by f181 (dk under 0.05%/frame from there, 0.68 px of
+//      screen motion at f180) and the last ten frames HOLD while the fourth and
+//      fifth rings keep arriving into them.
+//   5. EVERY MOVE LANDS AHEAD OF ITS WORD. All four key windows were pulled
+//      earlier and three of them tighter; the travel, the warps and the
+//      framings are untouched. M1 landed f52 against "deployment" f40 and now
+//      lands f43; M2 landed f87 against "deployment" f70 and now lands f73; M3,
+//      the creep, landed f136 against "process" f131 and now lands f133 over
+//      the same thirty-eight frames, still by f136 where the held breath
+//      starts. Peak screen motion of the content, per move: M1 15.2, M2 8.8,
+//      M3 7.8 (the creep, warp 1.0, even by construction — its zoom peaks at
+//      0.68%/frame), M4 10.6 px/frame.
+//
 // V2 — THE BOX IS GONE AND THE RING IS THE BOUNDARY. (the director, on the
 // delivered cut: "I'm not really sure — do you really think the square is
 // necessary here? But I like the idea.") There is no company box and nothing
@@ -161,7 +193,8 @@ export const DURATION = 190;
 // they were delivered. What moved: the two deployments, three of the four
 // camera framings (all of them solved off the box before), and the stations,
 // which are now cut 3's own glyphed ones. The picture is bigger for it — the
-// wide comes in at k 1.01 where the box forced it out to 0.85.
+// wide comes in at k 1.05 where the box forced it out to 0.85 — and since the
+// harmony pass that is cut 3's own zoom exactly, not a number of its own.
 //
 // CUT 4'S OWN TWO THINGS:
 //   THE TWO DEPLOYMENTS — MINI_FRAC of the model each (the brief's twelve out
@@ -169,18 +202,20 @@ export const DURATION = 190;
 //     superellipse as the model itself at the same proportion and at 0.85 of
 //     the field's step, one OUTSIDE the ring and one INSIDE it. Neither centre
 //     is typed:
-//       EXTERNAL at EXT_R — the ring + 150 from the loop's centre — on the
-//         highest ray that clears the evaluation station's ring and the person
-//         over it by 70 AND whose thirty-two flights clear that same ring by
-//         FLIGHT_CLEAR 20 with no less than BOW_MIN of their bow left. The
-//         arcs go up over the loop's right shoulder, which is exactly where
-//         that station sits: at 2 o'clock the tallest of them flew through it.
-//         The solve walks down to 4 degrees with the bow at 0.60 — just under
-//         the model's own line, 3 o'clock rather than 2 — so the group leaves
-//         UNDER the station and over the line, and the station it is about to
-//         take stands over the gap it went out through. Measured: 169 off that
-//         station, 295 off its person, 84 outside the line, 20 off the ring at
-//         the tallest point of the tallest arc.
+//       EXTERNAL at EXT_R — the ring + 127 from the loop's centre, and that
+//         offset is solved too: it walks out from 120 to the first whole pixel
+//         at which a ray exists at all — on the highest ray that clears the
+//         evaluation station's ring and the person over it by 70, sits 60
+//         outside the ring's own line, AND whose thirty-two flights clear that
+//         same ring by FLIGHT_CLEAR 20 with no less than BOW_MIN of their bow
+//         left. The arcs go up over the loop's right shoulder, which is exactly
+//         where that station sits: at 2 o'clock the tallest of them flew
+//         through it. The solve walks down to 4 degrees with the bow at 0.62 —
+//         just under the model's own line, 3 o'clock rather than 2 — so the
+//         group leaves UNDER the station and over the line, and the station it
+//         is about to take stands over the gap it went out through. Measured:
+//         154 off that station, 288 off its person, 61 outside the line, 21 off
+//         the ring at the tallest point of the tallest arc.
 //       INTERNAL on the 7 o'clock ray at R 257, centred in the gap between
 //         the model and the ring: 51 clear of the crowd, 42 clear of the
 //         line — against the brief's 50 and 40. Seven
@@ -249,7 +284,7 @@ export const DURATION = 190;
 //     times faster, held under the strobe cap ON SCREEN the whole
 //     way. With the box gone the whole piece is framed a fifth
 //     tighter, so that cap bites harder in world px and the solve
-//     answers with a bigger multiplier — 2.8 where the box's wider
+//     answers with a bigger multiplier — 2.89 where the box's wider
 //     framing needed 2.0 — for the same screen speed and the same
 //     five arrivals. Nothing else moves.
 //   G6 RECURSIVE SELF-IMPROVEMENT "of recursive self-improvement"    f142-190
@@ -279,38 +314,47 @@ export const DURATION = 190;
 //      a continuation rather than a new picture.
 //   M1 "rogue external deployment" — PAN RIGHT, FOLLOWING the group out over
 //      the line until the deployment's far edge and the model's near edge are
-//      both in frame. k 1.050 -> 1.050, cx 540 -> 738, content centre -22.5 ->
-//      18.2. Keys f24-43 warp 0.72, landed f50 with the ring's rightmost
-//      point at screen x 723 and the new blob's far edge at 948, so there is
-//      open field between the line and what got out past it. The open is
-//      already wide enough to hold both ends, so this move costs no zoom at
-//      all: it is a pan, and only a pan.
+//      both in frame. k 1.050 -> 1.050, cx 540 -> 727, content centre -22.5 ->
+//      17.3. Keys f20-36 warp 0.72, LANDED f43 — ahead of "deployment" at f40,
+//      where the old f24-43 keys landed f52, twelve frames behind it — with the
+//      ring's rightmost point at screen x 736 and the new blob's far edge at
+//      939, so there is open field between the line and what got out past it.
+//      The open is already wide enough to hold both ends, so this move costs no
+//      zoom at all: it is a pan, and only a pan, and its sixteen frames carry
+//      the picture at up to 15.2 screen px a frame.
 //   M2 "or rogue internal deployment" — pan back and widen so BOTH
-//      deployments and the whole ring are in frame at once. k 1.050 -> 0.999,
-//      cx 738 -> 647, content centre back to cut 3's. Keys f57-82 warp 0.72,
-//      landed f89 with the ring at screen x 62..804 and the far deployment at
-//      1018. The internal deployment is inside the ring, so it needs no room
-//      of its own: the gap it is flying into is in frame from f60, and the
-//      frame is still opening out under "which is aiding", so the twenty
-//      frames those two thin threads take are not watched from a dead lens.
+//      deployments and the whole ring are in frame at once. k 1.050 -> 1.023,
+//      cx 727 -> 636, content centre back to cut 3's. Keys f50-66 warp 0.72,
+//      LANDED f73 — ahead of "deployment" at f70, where f57-82 landed f87 —
+//      with the ring at screen x 64..821 and the far deployment at 1018. The
+//      internal deployment is inside the ring, so it needs no room of its own:
+//      the gap it is flying into is in frame from f53, and the frame is still
+//      opening out under "which is aiding", so the twenty frames those two thin
+//      threads take are not watched from a dead lens. Peak 8.8 px a frame.
 //   M3 "manipulating the process" — THE CREEP, one even ease (warp 1.0), on
-//      the MODEL, which is the thing about to change. k 0.999 -> 1.221, cx
-//      647 -> 540, content centre -22.5 -> 28.7, solved so the model's centre
+//      the MODEL, which is the thing about to change. k 1.023 -> 1.221, cx
+//      636 -> 540, content centre -22.5 -> 28.7, solved so the model's centre
 //      sits at screen y 800 and the loop still just fits across the frame.
-//      Untouched by the box going. Keys f92-130, thirty-eight of them: it
-//      starts under the aid and runs continuously under the take, so nothing
-//      in the middle of the piece is watched from a parked lens. Landed f138,
-//      then DEAD STILL f138-148 — the held breath, with the circuit running
-//      through it at the new tempo and the first ring landing inside it.
+//      Untouched by the box going. Keys f90-128, thirty-eight of them — the
+//      same length it always was, two earlier: it starts under the aid and runs
+//      continuously under the take, so nothing in the middle of the piece is
+//      watched from a parked lens. LANDED f133, ahead of "process" at f131,
+//      then DEAD STILL f136-148 — the held breath, with the circuit running
+//      through it at the new tempo and the first ring landing inside it. It is
+//      the slowest move in the piece by design: 7.8 screen px a frame at its
+//      peak, its zoom 0.68%/frame, even the whole way.
 //   M4 "of recursive self-improvement" — release and FOLLOW the growth out to
-//      the wide. k 1.221 -> 1.007, cx 540 -> 647, content centre back to cut
-//      3's: at f189 the ring sits at screen x 58..807 with the external
-//      deployment's far edge at 1023, 57 px off the frame, the grown model
-//      filling the ring and every dot in the piece between screen y 439 and
-//      1231. Keys f149-184: it is still opening on the last frame, under the
-//      last ring, rather than parking. It starts three frames AFTER the first
-//      ring so that ring is seen at the creep's zoom and the model visibly
-//      gains on screen as well as against the loop.
+//      the wide. k 1.221 -> 1.050 — CUT 3'S OWN RESOLVED ZOOM, so the piece
+//      lands on the frame the piece before it ended on — cx 540 -> 636, content
+//      centre back to cut 3's: at f189 the ring sits at screen x 51..828 with
+//      the external deployment's far edge at 1026, 54 px off the frame, the
+//      grown model filling the ring and every dot in the piece between screen y
+//      436 and 1250. Keys f149-174, ending on the speech's own last frame: the
+//      damper is still by f181 and the last ten frames HOLD, with the fourth
+//      and fifth rings still arriving into them. It starts four frames AFTER
+//      the first ring so that ring is seen at the creep's zoom and the model
+//      visibly gains on screen as well as against the loop. Peak 10.6 px a
+//      frame.
 //
 // ambient: the circuit, the model's idle threads (their count rising with the
 // population as it grows) and a couple inside each deployment, `breath` on
@@ -330,7 +374,7 @@ export const DURATION = 190;
 // rogue deployment it is without a second shape being drawn for it. The box
 // was the only thing in the piece that was drawn to be a container rather than
 // a mechanism, and the picture is bigger without it: the wide now comes in at
-// k 1.01 where the box forced it out to 0.85.
+// k 1.05 where the box forced it out to 0.85.
 //
 // Everything else is exactly as it was: the same beats, the same gestures, the
 // same growth off the same real bead arrivals, the same M3 creep. What moved:
@@ -552,7 +596,7 @@ export const S_EVAL: number[] = [];
 // deployment at both ends of the cut. So the growth MOVES it — every ring that
 // lands carries it one fifth of the way along a path that ends where the gap
 // is widest, and it keeps its distance from both the crowd and the line the
-// whole way (INT_CLEAR: 53 / 43 at rest, never under 21 at the last ring).
+// whole way (INT_CLEAR: 51 / 42 at rest, never under 21 at the last ring).
 // That is the brief's case 5, and it is a bigger move than its 12 px a ring:
 // on this geometry a radial nudge of any size runs out of ring, so the push
 // rounds the model rather than going straight out — the deployment is shoved
@@ -668,7 +712,18 @@ const arcClear = (d: Deployment, bow: (j: number) => number, sc: number, st: { x
   return m;
 };
 
-export const EXT_R = LOOP_R + 150; // the ring's line, and 150 past it
+// HARMONY: THE DEPLOYMENT COMES IN, THE ZOOM DOES NOT GO OUT. The offset past
+// the ring used to be typed at 150. The wide is now pinned to the set's own
+// resolved zoom (K_WIDE = TOT_K_WIDE, see THE CAMERA), and at 1.05 the span
+// from the ring's left edge to a deployment 150 outside it filled 1005 of the
+// frame's 1080 px — 37.5 px of air a side, under the 40 this piece is held to.
+// So the offset is SOLVED rather than typed: it walks OUT from 120 and stops at
+// the first whole pixel at which the placement below still holds every one of
+// its own clearances. Under 127 the blob cannot sit EXT_RING_CLEAR outside the
+// ring on any ray that also clears the evaluation station, so 127 is where it
+// lands — 927 + 7 world px across, 981 on screen, 49.6 px of air a side.
+export const EXT_OFFSET_MIN = 120;
+export const EXT_OFFSET_MAX = 150;
 export const EXT_STATION_CLEAR = 70; // to the evaluation ring and to its person
 export const EXT_RING_CLEAR = 60; // to the ring's own line
 /** The evaluation station, and the person standing over it — the two things
@@ -702,9 +757,10 @@ const extClear = (c: { x: number; y: number }) => {
  *  line UNDER that station rather than through it. */
 export const FLIGHT_CLEAR = 20;
 export const BOW_MIN = 0.6;
-export const EXT_PLACE = (() => {
+/** The ray solve, at one distance out from the loop's centre. */
+const placeOn = (R: number) => {
   for (let deg = -30; deg <= 25; deg += 0.5) {
-    const c = onLoop(deg, EXT_R);
+    const c = onLoop(deg, R);
     const { st, pe } = extClear(c);
     if (st < EXT_STATION_CLEAR || pe < EXT_STATION_CLEAR) continue;
     if (ringGap(c, EXT_OFF, -1) < EXT_RING_CLEAR) continue;
@@ -717,10 +773,18 @@ export const EXT_PLACE = (() => {
         break;
       }
     }
-    return { deg, dep: d, bow: sc };
+    return { r: R, deg, dep: d, bow: sc };
+  }
+  return null;
+};
+export const EXT_PLACE = (() => {
+  for (let off = EXT_OFFSET_MIN; off <= EXT_OFFSET_MAX; off += 1) {
+    const p = placeOn(LOOP_R + off);
+    if (p) return p;
   }
   throw new Error("RogueDeployment: no ray outside the ring clears the evaluation station");
 })();
+export const EXT_R = EXT_PLACE.r;
 export const EXT_DEG = EXT_PLACE.deg;
 export const EXT_BOW_SCALE = EXT_PLACE.bow;
 export const EXT_C = EXT_PLACE.dep.c;
@@ -860,12 +924,17 @@ export const intDrift = (f: number, lag: number, grow: number[]) => {
 //   M3    the MODEL across the frame with CREEP_MARGIN either side — floored
 //         at the zoom that just fits the whole loop — and the model's centre
 //         at screen y BLOB_SCREEN_Y. Untouched by the box going.
-//   M4    the same span as M2 with a wider margin, because the model is half
-//         as big again by then, on cut 3's own content centre
-// On cut 3 as it stands those come out k 1.050 / 1.050 / 0.999 / 1.221 /
-// 1.007. Every one of them is TIGHTER than the box allowed — the wide is 1.01
+//   M4    NOT SOLVED AT ALL SINCE THE HARMONY PASS: it is cut 3's own resolved
+//         zoom, TOT_K_WIDE, on cut 3's own content centre, centred on the same
+//         span as M2. What used to be the input — the margin — is the test now:
+//         the pin has to leave WIDE_MARGIN_MIN outside the widest ink, and it
+//         leaves 49.6.
+// On cut 3 as it stands those come out k 1.050 / 1.050 / 1.023 / 1.221 /
+// 1.050. Every one of them is TIGHTER than the box allowed — the wide is 1.05
 // where the box forced it out to 0.85 — because a box has to be framed with
-// its corners, and a ring does not.
+// its corners, and a ring does not. And since the harmony pass the last of them
+// is not solved at all: it IS cut 3's own resolved zoom, so the set resolves at
+// one size and the loop does not change size across the joins.
 // ---------------------------------------------------------------------------
 /** The content centre that puts world y `wy` at screen y `sy` at zoom `k`. */
 export const centreFor = (wy: number, sy: number, k: number) =>
@@ -875,8 +944,11 @@ export const camXFor = (wx: number, sx: number, k: number) => wx - (sx - FRAME_W
 
 export const EXT_MARGIN = 90; // M1: screen px outside the model and the deployment
 export const SIDE_MARGIN = 62; // M2: screen px outside the widest thing in frame
-export const WIDE_MARGIN = 58; // M4: the same, after the model has grown
 export const CREEP_MARGIN = 260; // M3: world px outside the MODEL at the creep
+/** M4: the least air the wide may leave outside the widest thing in frame. It
+ *  is now a TEST rather than an input — the wide's zoom is pinned to the set's,
+ *  so what the framing has to prove is that the pin still holds the picture. */
+export const WIDE_MARGIN_MIN = 40;
 export const BLOB_SCREEN_Y = 800; // M3: where the model's centre lands
 
 /** The rightmost ink in the piece: the external deployment's outer dot. */
@@ -903,7 +975,20 @@ export const K_CREEP = Math.min(
   FRAME_W / (2 * (S_ALL[0] * BLOB_AX + CREEP_MARGIN)),
   FRAME_W / (2 * LOOP_R),
 );
-export const K_WIDE = (FRAME_W - 2 * WIDE_MARGIN) / (EXT_RIGHT - RING_LEFT);
+// HARMONY: THE WIDE IS PINNED TO THE SET. It used to be solved off a margin and
+// came out at 1.0079, where cut 3 and cut 5 both resolve at 1.05 — a 4% step in
+// the one place three cuts of the same world are cut together, so the loop and
+// the two people changed size across the joins. The wide is now that zoom
+// exactly, and the margin it leaves is measured rather than asked for: with the
+// external deployment moved in to LOOP_R + 120 it leaves WIDE_MARGIN either
+// side, which has to clear WIDE_MARGIN_MIN.
+export const K_WIDE = TOT_K_WIDE;
+export const WIDE_MARGIN = (FRAME_W - K_WIDE * (EXT_RIGHT - RING_LEFT)) / 2;
+if (WIDE_MARGIN < WIDE_MARGIN_MIN) {
+  throw new Error(
+    `RogueDeployment: the wide at k ${K_WIDE} leaves ${WIDE_MARGIN.toFixed(1)} px of frame, under ${WIDE_MARGIN_MIN}`,
+  );
+}
 
 export const CX_EXT = (EXT_RIGHT + MODEL_LEFT) / 2;
 export const CX_BOTH = (EXT_RIGHT + RING_LEFT) / 2;
@@ -931,16 +1016,28 @@ export type CamSeg = {
   warp: number;
 };
 
+// HARMONY: every key window was pulled EARLIER and TIGHTER. The four moves all
+// landed behind their words — M1 twelve frames behind "deployment", M2
+// seventeen — and the damper was still opening the wide on the last frame. The
+// travel, the warps and the framings are untouched; only the frames they are
+// keyed over moved, so each move now lands ahead of the word it serves and the
+// shorter windows carry it faster while it does.
 export const CAM_SEGS: CamSeg[] = [
-  // M1 "rogue external deployment" — follow the group out over the line
-  { f0: 24, f1: 43, k0: K_OPEN, k1: K_EXT, c0: C_OPEN, c1: C_EXT, x0: CENTRE_X, x1: CX_EXT, warp: 0.72 },
+  // M1 "rogue external deployment" — follow the group out over the line.
+  // f24-43 landed f52 against "deployment" f40; f20-36 lands ahead of it.
+  { f0: 20, f1: 36, k0: K_OPEN, k1: K_EXT, c0: C_OPEN, c1: C_EXT, x0: CENTRE_X, x1: CX_EXT, warp: 0.72 },
   // M2 "or rogue internal deployment" — back and wider, the ring and both
-  // deployments in frame
-  { f0: 57, f1: 82, k0: K_EXT, k1: K_BOTH, c0: C_EXT, c1: C_BOTH, x0: CX_EXT, x1: CX_BOTH, warp: 0.72 },
-  // M3 "manipulating the process" — THE CREEP onto the model, one even ease
-  { f0: 92, f1: 130, k0: K_BOTH, k1: K_CREEP, c0: C_BOTH, c1: C_CREEP, x0: CX_BOTH, x1: CENTRE_X, warp: 1 },
-  // M4 "of recursive self-improvement" — release, and follow the growth out
-  { f0: 149, f1: 184, k0: K_CREEP, k1: K_WIDE, c0: C_CREEP, c1: C_WIDE, x0: CENTRE_X, x1: CX_WIDE, warp: 0.72 },
+  // deployments in frame. f57-82 landed f87 against "deployment" f70.
+  { f0: 50, f1: 66, k0: K_EXT, k1: K_BOTH, c0: C_EXT, c1: C_BOTH, x0: CX_EXT, x1: CX_BOTH, warp: 0.72 },
+  // M3 "manipulating the process" — THE CREEP onto the model, one even ease,
+  // the same thirty-eight frames it always was, two EARLIER: f92-130 landed
+  // f136 against "process" f131, and f90-128 lands f134, ahead of the word and
+  // still by f136, which is where the held breath starts.
+  { f0: 90, f1: 128, k0: K_BOTH, k1: K_CREEP, c0: C_BOTH, c1: C_CREEP, x0: CX_BOTH, x1: CENTRE_X, warp: 1 },
+  // M4 "of recursive self-improvement" — release, and follow the growth out.
+  // The keys end on the last word rather than ten frames past it, so the damper
+  // is still by ~f180 and the last ten frames HOLD while the rings keep landing.
+  { f0: 149, f1: 174, k0: K_CREEP, k1: K_WIDE, c0: C_CREEP, c1: C_WIDE, x0: CENTRE_X, x1: CX_WIDE, warp: 0.72 },
 ];
 
 const CAM_TRACK = (() => {
@@ -1156,8 +1253,8 @@ export const INT_DUR = INT_LAND - (INT_T0 + INT_WINDOW);
 // SPEED_MUL is not typed, it is SEARCHED, and it is the growth that sets it:
 // the five rings have to come off five REAL arrivals, and the value that lands
 // those arrivals closest to the brief's five frames is what the scan returns —
-// 2.0 on cut 3's geometry as it stands, putting them on f142, f154, f167, f176
-// and f183. (`speedAt` then holds it under the strobe cap on screen whatever it
+// 2.89 on cut 3's geometry as it stands, putting them on f145, f153, f167, f177
+// and f184. (`speedAt` then holds it under the strobe cap on screen whatever it
 // comes out at, so the search never has to refuse a value for being too fast.)
 //
 // The whole circuit is simulated frame by frame rather than solved, because it
@@ -2021,18 +2118,46 @@ const RogueDeployment: React.FC<Props> = ({
               </g>
             ))}
 
-            {/* THE LOOP, orange since cut 3 */}
+            {/* THE LOOP, orange since cut 3.
+                HARMONY: it STOPS at each station ring, exactly as cut 3 and cut
+                5 do — the same mask, cut at the ring's own radius. The bare
+                circle this piece inherited ran the orange line straight through
+                the graduation cap and the clipboard on all 190 frames, which is
+                the one place cut 4 disagreed with the world it shares. */}
             <g style={{ filter: icon }}>
-              <circle
-                cx={LOOP_C.x}
-                cy={LOOP_C.y}
-                r={LOOP_R}
-                fill="none"
-                stroke={accent}
-                strokeWidth={STROKE + 0.6}
-                strokeLinecap="round"
-                opacity={OP_READ}
-              />
+              <defs>
+                <mask
+                  id="rd-station-gap"
+                  maskUnits="userSpaceOnUse"
+                  x={LOOP_C.x - LOOP_R - 20}
+                  y={LOOP_C.y - LOOP_R - 20}
+                  width={2 * (LOOP_R + 20)}
+                  height={2 * (LOOP_R + 20)}
+                >
+                  <rect
+                    x={LOOP_C.x - LOOP_R - 20}
+                    y={LOOP_C.y - LOOP_R - 20}
+                    width={2 * (LOOP_R + 20)}
+                    height={2 * (LOOP_R + 20)}
+                    fill="#fff"
+                  />
+                  {STATIONS.map((st) => (
+                    <circle key={st.key} cx={st.x} cy={st.y} r={STATION_R} fill="#000" />
+                  ))}
+                </mask>
+              </defs>
+              <g mask="url(#rd-station-gap)">
+                <circle
+                  cx={LOOP_C.x}
+                  cy={LOOP_C.y}
+                  r={LOOP_R}
+                  fill="none"
+                  stroke={accent}
+                  strokeWidth={STROKE + 0.6}
+                  strokeLinecap="round"
+                  opacity={OP_READ}
+                />
+              </g>
             </g>
 
             {/* THE SPOKES, and cut 3's two grips lying along them */}
@@ -2091,8 +2216,11 @@ const RogueDeployment: React.FC<Props> = ({
               />
             ))}
 
-            {/* G4 + G5: the two reaches, head-led, and they stay */}
-            <g>
+            {/* G4 + G5: the two reaches, head-led, and they stay.
+                HARMONY: inside the icon group. Cut 3's identical grip lines
+                carry the per-icon shadow and these did not, so the same stroke
+                sat flatter here than in the cut before it. */}
+            <g style={{ filter: icon }}>
               {reachEls.map((r, i) =>
                 r ? (
                   <g key={`r${i}`}>
