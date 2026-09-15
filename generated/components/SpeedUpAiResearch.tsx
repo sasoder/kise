@@ -164,8 +164,11 @@ export const FPS = 24;
 //
 // ---------------------------------------------------------------------------
 // THE GESTURES. Every one of them is a word, and there is nothing else in the
-// piece. No click, no highlight, no overshoot: the sweep is one continuous
-// pass and a per-station click would cut it into events.
+// piece. No overshoot; the sweep is one continuous pass. The one punctuation is
+// the set's own: each station CLICKS half a step brighter for two frames as its
+// ring closes, exactly as cut 3's takes do (harmony pass — cut 5 was the only
+// cut in the set whose rings converted silently, and it landed softer than its
+// neighbours for it).
 //
 //   G1 WE DON'T KNOW — "we could maybe be misunderstanding"          f12-24
 //     A THOUGHT BUBBLE goes up over each person exactly the way cut 2's do:
@@ -191,7 +194,9 @@ export const FPS = 24;
 //       * each station converts as the front passes it: training at f62 (the
 //         front's own start) and evaluation at f67.2, each over CONV_DUR
 //         frames, ring and glyph together because cut 3 draws them as one
-//         colour.
+//         colour — and each CLICKS to HIGHLIGHT for HIGHLIGHT_FRAMES as its
+//         ring closes on it, f64-65 and f69-70, which is cut 3's own
+//         `conv + CONV_DUR - 1` rule to the frame.
 //       * each spoke converts with its station, running DOWN from the ring's
 //         inner edge into the model over SPOKE_CONV frames (train f62-67,
 //         eval f67.2-72.2) — the sweep spilling inward. Every spoke is accent
@@ -215,10 +220,14 @@ export const FPS = 24;
 //       (1) BEAD COLOUR   ACCENT -> HIGHLIGHT -> #FFFFFF on ramp^0.75, so the
 //                         smear whitens with its head and the ring carries
 //                         WHITE COMETS by the end: 17% hot at f118, 48% at
-//                         f135, 98% on the last frame
+//                         f135, 98% on the last frame. The HEADS go pure white;
+//                         the smear behind them is held to the set's trail
+//                         ladder x1.5 (0.65 / 0.33 / 0.12 at the top) so the
+//                         LOOP ITSELF still reads orange between the comets —
+//                         see BeadSmear.
 //       (2) BEAD SIZE     BEAD_R -> BEAD_R x 1.5, on the same curve
 //       (3) BEAD SPEED    x1 -> x3.2 asked, x2.60 given: the cap holds the
-//                         peak to exactly 60.0 screen px/frame (at f161)
+//                         peak to exactly 60.0 screen px/frame (from f152)
 //       (4) LAUNCH RATE   x1 -> x6 (interval BEAD_STEP -> BEAD_STEP/6) — the
 //                         ramp's remainder, and what makes the COUNT of beads
 //                         on the ring climb 7 -> 9 -> 11 -> 13 across
@@ -226,7 +235,7 @@ export const FPS = 24;
 //       (5) FLICKER       the 12 seats at each spoke's foot go HIGHLIGHT for
 //                         two frames on every landing / departure: a mean gap
 //                         of 9.4 / 9.9 frames (train / eval) before f100, and
-//                         3.8 / 2.2 over f140-163
+//                         4.3 / 2.2 over f140-163
 //       (6) IDLE THREADS  x1 -> x3 inside the model
 //     PASS 2 added (1) (2) (5), the cap and the rate's ceiling. The first
 //     build had only the speed, the rate on the same curve as the speed, and
@@ -238,8 +247,8 @@ export const FPS = 24;
 //     of the ramped speed, so the acceleration is continuous and a bead that
 //     is mid-arc when the ramp starts simply speeds up. The station pause is
 //     44 world px of route rather than 2 frames, so it shortens with
-//     everything else. DEAD STILL f110-118 (the held breath, only the beads
-//     moving), then camera M3 pulls back WITH the ramp.
+//     everything else. DEAD STILL f110-113 (the held breath, only the beads
+//     moving), then camera M3 pulls back WITH the ramp from f114.
 //     The ramp does NOT settle: it reaches its maximum at f164, which is one
 //     frame past the last rendered frame, so the cut ends mid-acceleration.
 //
@@ -279,24 +288,33 @@ export const FPS = 24;
 //   M2 THE CREEP  k 1.05 -> 1.25 on the same content centre, so the model's
 //                 own centre climbs to screen 905 and the loop fills the
 //                 frame. ONE even ease, warp 1.0, keys f84-102, landed f110,
-//                 peak 1.28%/frame, then DEAD STILL f110-118 (0.06%/frame,
+//                 peak 1.28%/frame, then DEAD STILL f110-113 (<= 0.09%/frame,
 //                 sway only) — the held breath the ramp starts inside. The
 //                 bubbles stay in frame: the block's top is at screen 297 at
 //                 k 1.25, so no cap on k was needed
 //                                            — "and stuff like that"  f84-107
-//   M3 THE RELEASE k 1.25 -> 1.05, keys f120-144 warp 0.7, landed f150, peak
-//                 0.96%/frame at f133 — the pull-back rides the ramp out: the
+//   M3 THE RELEASE k 1.25 -> 1.05, keys f112-136 warp 0.7, LANDED f142, peak
+//                 0.97%/frame at f125 — the pull-back rides the ramp out: the
 //                 frame opens as the loop speeds up, which is the one reading
 //                 that makes a faster loop look faster rather than just
 //                 busier. Pass 2 moved its landing from k 0.95 to k 1.05, so
 //                 the cut ends on M1's own framing — as big as cut 3's wide
-//                 and no smaller: block screen 384..1287, the loop's lowest
-//                 point 193 px clear of the 1480 the captions take and the
-//                 bubbles' tops 384 px down from the top of the frame. It is
-//                 the one move in the piece under the 1%/frame floor, and it
-//                 is under it by four hundredths: shortening the move to buy
-//                 the rate back would land it before the ramp's last third,
-//                 which is the thing it exists to open the frame for.
+//                 and no smaller: block screen 384..1286, the loop's lowest
+//                 point 194 px clear of the 1480 the captions take (1473 at
+//                 its worst frame of the whole piece, sway included) and the
+//                 bubbles' tops 384 px down from the top of the frame.
+//                   HARMONY PASS: the keys came back 8 frames, f120-144 ->
+//                 f112-136, same warp. The delivered build LANDED AT f151 on a
+//                 word that is spoken at f142 — the one late landing in the
+//                 five-cut set, and against a house rule that every move lands
+//                 4-10 frames BEFORE its word. It now releases at f114, one
+//                 frame after "speed" (f113) rather than five after "up", and
+//                 is settled at f142 on "getting". The cost is the held breath,
+//                 which goes from nine frames to four; four frames dead still
+//                 with the beads already accelerating inside them still reads
+//                 as a breath, and a late landing does not read at all. It
+//                 remains the one move in the piece under the 1%/frame floor,
+//                 by three hundredths.
 //                            — "speed-up AI research is really getting" f113-
 //
 // ambient, not gestures: `breath` on every dot, `sway` on the camera, the
@@ -395,10 +413,12 @@ export const CAM_SEGS: CamSeg[] = [
     c1: CONTENT_CENTRE_5,
     warp: 1.0,
   },
-  // M3 "speed-up AI research is really getting" — the release, riding the ramp
+  // M3 "speed-up AI research is really getting" — the release, riding the ramp.
+  // Harmony pass: keys pulled back 8 frames (f120-144 -> f112-136) so the move
+  // LANDS BEFORE "getting" instead of nine frames after it.
   {
-    f0: 120,
-    f1: 144,
+    f0: 112,
+    f1: 136,
     k0: K_CREEP,
     k1: K_OUT,
     c0: CONTENT_CENTRE_5,
@@ -500,11 +520,13 @@ export const hotAt = (f: number) => Math.pow(ramp(f), HOT_POW);
 // px/frame, and past about 60 a bead stops being a thing that moves and
 // becomes a thing that is somewhere else — no smear saves it. So the world
 // speed is capped at whatever 60 screen px/frame is AT THE CAMERA'S OWN k
-// (from f157 on, which holds the peak to exactly 60.0), and the ramp's
+// (from f152 on, which holds the peak to exactly 60.0), and the ramp's
 // remainder is handed to the LAUNCH RATE: its ceiling goes from x4 to x6.
 // `capAt` reads the damped camera, so it is a pure function of the frame like
 // everything else, and because k only falls through M3 while the ramp only
-// rises, the capped speed is still monotonic.
+// rises, the capped speed is monotonic to within the damper's own settling
+// noise (worst backward step over the whole piece: 2.3e-5 x, half a thousandth
+// of a world px per frame — four orders under a rendered pixel).
 //
 // The rate has to outrun the speed for a second reason, and it is the first
 // build's actual bug. The number of beads standing on the ring is
@@ -750,6 +772,20 @@ export const sweepPassF = (deg: number) =>
 export const PASS_TRAIN = sweepPassF(TRAIN_DEG); // 62
 export const PASS_EVAL = sweepPassF(EVAL_DEG); // 67.18
 
+/** THE CLICK ON THE TAKES — harmony pass. Cut 3 clicks every ring it converts:
+ *  `frame >= conv + CONV_DUR - 1` for HIGHLIGHT_FRAMES, ring and glyph together
+ *  (TheirOwnTraining:1227). Cut 5 was the one cut in the set whose stations
+ *  converted with no click at all — the sweep is one continuous pass and the
+ *  first build read a click as cutting it into events. It doesn't: two frames
+ *  half a step brighter on a ring that is already turning is the set's own
+ *  punctuation, and without it cut 5's takes land softer than cuts 3 and 4's.
+ *  The front passes training at f62 and evaluation at f67.2, so the rings close
+ *  and click at f64-65 and f69-70. The pass frame is rounded so each click gets
+ *  its two whole rendered frames. */
+export const CLICK_F = STATIONS.map(
+  (st) => Math.round(sweepPassF(st.deg)) + CONV_DUR - 1,
+); // [64, 69]
+
 /** the spoke runs orange DOWN from its station into the model */
 export const SPOKE_CONV = 5;
 /** the two people's lines die together, on "research" */
@@ -887,13 +923,26 @@ export const defaultProps: Props = schema.parse({
  *      thing moving.
  *    * it GETS HOTTER ON THE RAMP. `hot` is the ramp itself, so below f109 the
  *      smear is exactly cut 3's — 0.45 / 0.22 / 0.08 behind an accent bead on
- *      an accent line, a soft tail on a swelling — and by the last frame it is
- *      opaque. It also takes the BEAD'S OWN COLOUR (`fill`), which on the ramp
- *      is the hot tone, so the tail whitens with its head and what runs round
- *      the ring at the end is a white comet on an orange line rather than a
- *      swelling in a line of its own colour. Length and weight ride with it —
- *      75 world px of faint accent tail at base, 172 px of solid white at
- *      f163, on a stroke 1.5x as thick. */
+ *      an accent line, a soft tail on a swelling. It also takes the BEAD'S OWN
+ *      COLOUR (`fill`), which on the ramp is the hot tone, so the tail whitens
+ *      with its head and what runs round the ring at the end is a white comet
+ *      on an orange line rather than a swelling in a line of its own colour.
+ *
+ *  HARMONY PASS — THE SMEAR MAY NOT BEAT THE SET'S TRAIL LADDER. The delivered
+ *  build ran the layers at `op + (1 - op) * hot`, which drives all three to 1.0
+ *  at full ramp: the three arcs stack into one opaque band and the ring reads as
+ *  a solid WHITE ROPE on the held last frame — cut 5's loop was white where cuts
+ *  3 and 4's are orange, which is the one thing a five-cut set cannot do. So
+ *  TRAIL_OPACITY is the BASE and `hot` may only LIFT it by SMEAR_HOT_LIFT
+ *  (x1.5), and the first layer is clamped to SMEAR_OP_CAP (0.65) so the loop's
+ *  own orange still shows through between the comets:
+ *      0.45 / 0.22 / 0.08  ->  0.65 / 0.33 / 0.12  at ramp 1
+ *  and the width is clamped to SMEAR_W_CAP (2 * BEAD_R * 1.5 = 16.5 world px).
+ *  The bead HEADS still go pure white at full ramp: the HEADS are the read and
+ *  the smear is only the motion behind them. */
+export const SMEAR_HOT_LIFT = 1.5; // the most `hot` may lift a trail layer
+export const SMEAR_OP_CAP = 0.65; // ...and the ceiling on the first layer
+export const SMEAR_W_CAP = 2 * BEAD_R * BEAD_HOT_R; // 16.5 world px
 const BeadSmear: React.FC<{
   frame: number;
   k: number;
@@ -916,16 +965,20 @@ const BeadSmear: React.FC<{
           if (!q) return null;
           pts.push(`${q.x.toFixed(2)},${q.y.toFixed(2)}`);
         }
+        const lifted = Math.min(
+          op * (1 + (SMEAR_HOT_LIFT - 1) * hot),
+          i === 0 ? SMEAR_OP_CAP : 1,
+        );
         return (
           <polyline
             key={i}
             points={pts.join(" ")}
             fill="none"
             stroke={fill}
-            strokeWidth={2 * r * (1 - 0.15 * (i + 1))}
+            strokeWidth={Math.min(2 * r, SMEAR_W_CAP) * (1 - 0.15 * (i + 1))}
             strokeLinecap="round"
             strokeLinejoin="round"
-            opacity={(op + (1 - op) * hot) * factor}
+            opacity={lifted * factor}
           />
         );
       })}
@@ -973,6 +1026,11 @@ const SpeedUpAiResearch: React.FC<Props> = ({
     sweepOn ? softFront(degOf(deg, SWEEP_FROM), front, SWEEP_SOFT) : 0;
   // each station converts as the front passes it; ring and glyph are one colour
   const stationConv = STATIONS.map((st) => smooth((frame - sweepPassF(st.deg)) / CONV_DUR));
+  // ...and clicks half a step brighter for two frames as its ring closes, ring
+  // and glyph together, exactly as cut 3's takes do
+  const stationCol = STATIONS.map((_, i) =>
+    highlightTone(frame, CLICK_F[i], inkToAccent(stationConv[i])),
+  );
   // and each spoke runs orange DOWN from its station into the model
   const spokeConv = STATIONS.map((st) => clamp01((frame - sweepPassF(st.deg)) / SPOKE_CONV));
   const kill = smooth((frame - KILL_F0) / (KILL_F1 - KILL_F0));
@@ -1245,9 +1303,13 @@ const SpeedUpAiResearch: React.FC<Props> = ({
                 station it is. Under them the comet passes behind the ring and
                 the cap and the clipboard stay readable on the last frame. */}
             <g style={{ filter: icon }}>
-              {/* the SMEAR takes the loop's own station gap, so a 208 px comet
-                  cannot lie across a 62 px glyph; the bead itself does not —
-                  an 11 px head crossing a station is cut 3's bead, unchanged */}
+              {/* HEAD AND SMEAR BOTH take the loop's own station gap, so a
+                  comet passes BEHIND a station exactly the way the loop line
+                  does. The delivered build masked only the smear, on the
+                  argument that an 11 px head is cut 3's bead — but on the ramp
+                  the head is 16.5 px and pure WHITE, and it sat dead on the
+                  graduation cap on the held last frame. The glyph says which
+                  station it is; nothing crosses it. */}
               <g mask="url(#sar-station-gap)">
                 {beads.map((b) => (
                   <BeadSmear
@@ -1260,10 +1322,10 @@ const SpeedUpAiResearch: React.FC<Props> = ({
                     hot={hot}
                   />
                 ))}
+                {beads.map((b) => (
+                  <circle key={b.b.key} cx={b.x} cy={b.y} r={b.r} fill={b.col} />
+                ))}
               </g>
-              {beads.map((b) => (
-                <circle key={b.b.key} cx={b.x} cy={b.y} r={b.r} fill={b.col} />
-              ))}
             </g>
 
             {/* THE STATIONS: cut 3's own component, opened resolved (ringDraw 1,
@@ -1274,7 +1336,7 @@ const SpeedUpAiResearch: React.FC<Props> = ({
                 x={st.x}
                 y={st.y}
                 glyph={st.glyph}
-                colour={inkToAccent(stationConv[i])}
+                colour={stationCol[i]}
                 opacity={OP_READ + (1 - OP_READ) * stationConv[i]}
                 ringDraw={1}
                 iconDraw={1}
