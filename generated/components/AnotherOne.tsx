@@ -44,22 +44,23 @@ export const FPS = 24;
 //
 //   PHASE 1 · ON EQUIFAX, AND NOTHING ELSE (f0 -> f49, "Especially 10 to 15
 //   years into this, where you're like")
-//     The sheet holds ONE card. The camera opens at k 4.10 centred exactly on
-//     the Equifax card (540, 803) — 260 world px of card is 1066 screen px, so
-//     the headline "Equifax Data Breach Impacts 143 Million Americans" runs the
-//     full width of the frame, with plain kraft above and below it — and CREEPS
-//     IN, k 4.10 -> 4.38 over f2 -> f40 on a plain smoothstep (warp 1.0),
-//     landing f42. "10 to 15 years into this" is not a beat to hit, it is a slow
-//     tightening: we are deep in it. Held breath f42 -> f48, the only one in the
-//     cut (~7 frames). The other twelve cards are at RADIAL 1.9 of their grid
-//     offset from the centre and are outside the frame at every phase-1 k —
-//     the closest any of them comes is 588 screen px of clear paper between its
-//     box and the frame's edge (see RADIAL, below) — frame 0 is the Forbes
-//     card and the paper, full stop.
+//     The sheet holds ONE card. The camera opens at k 3.55 centred exactly on
+//     the Equifax card (540, 803) — 260 world px of card is 923 screen px, so
+//     the headline "Equifax Data Breach Impacts 143 Million Americans" runs
+//     almost the full width of the frame with 78 px of plain kraft down each
+//     side and bands of kraft above and below it — and CREEPS IN, k 3.55 -> 3.69
+//     over f2 -> f40 on a plain smoothstep (warp 1.0), landing f42 (960 px of
+//     card: the 60 px x-guide exactly). "10 to 15 years into this" is not a beat
+//     to hit, it is a slow tightening: we are deep in it. Held breath f42 -> f48,
+//     the only one in the cut (~7 frames). The other twelve cards are at RADIAL
+//     1.9 of their grid offset from the centre and are outside the frame at
+//     every phase-1 k — the closest any of them comes is 363 screen px of clear
+//     paper between its box and the frame's edge (see RADIAL, below) — frame 0
+//     is the Forbes card and the paper, full stop.
 //
 //   PHASE 2 · OH, ANOTHER ONE (f48 -> f83)
 //     The release and the assembly are the same motion in opposite directions.
-//     The camera: k 4.38 -> K_WIDE 0.86, content centre fixed on (540, 803) the
+//     The camera: k 3.69 -> K_WIDE 0.86, content centre fixed on (540, 803) the
 //     whole cut, keyed f48 -> f74 on warp 0.55 so the hand's speed is spent
 //     EARLY and the last third is a settle. cx never moves and cy never tilts:
 //     Equifax is dead centre on every frame of the cut.
@@ -73,8 +74,8 @@ export const FPS = 24;
 //     them can pass over Equifax, which sits at radial 0 and never moves.
 //     On "one" (f74) the THIRTEENTH card — Change Healthcare, 2024, 100M — is
 //     climbing up out of the bottom of the frame into the empty row-5 centre
-//     slot (screen y 1594 at f74), and settles into it at f82, on the end of
-//     the word. It is the last thing to land, which is the gag.
+//     slot, and settles into it at f82, on the end of the word. It is the last
+//     thing to land, which is the gag.
 //
 //   TAIL (f83 -> f99) · the hand's `sway` and nothing else. The resolved frame:
 //   thirteen news cards, Equifax in the middle, the newest one alone in the
@@ -102,55 +103,49 @@ export const FPS = 24;
 //       position = CENTRE + RADIAL * (slot - CENTRE)
 //     with RADIAL 1.9 until f50 (2.6 in revision 1; see deviation 8) — the
 //     nearest of them, the two row-3 neighbours, are then at x 540 +- 1.9 * 284
-//     = +-1080 and 0 world, which at the tightest phase-1 k (4.38) is +-2363
-//     screen px, more than two frame-widths out; the nearest in the tall
-//     direction, the AT&T card below, clears the frame RECTANGLE by 588 px at
-//     its closest (f8) — and they come home from f50 to f74 on one `flow`. Frame 0 is now the
-//     Forbes card alone on the paper (bands of plain kraft 302 px above and 552
-//     below it), the reveal is a MOTION rather than a cut in framing, and the
-//     camera's content centre no longer has to tilt: (540, 803) from f0 to f99.
-//     THE KEPT COSTS: the card is 1066 screen px wide at f0 and 1139 at the
-//     creep's end, so its white margins bleed 7 -> 29 px off each side and the
-//     headline TYPE spans screen 68 -> 971 at f0 and 37 -> 999 at f42, crossing
-//     the 60 px x-guide from about f20. Nothing is cut and nothing is crowded —
-//     this is one card filling the frame on purpose. The y-band is now HELD
-//     through the close-up as well (card top 302 / bottom 1368 at f0, 266 /
-//     1404 at f42), which the gutter framing could not do.
-//     k 4.10 -> 4.38 is unchanged from the approved first pass: at 4.38 the
-//     card's side edges travel 35 screen px over the 42 frames, ~0.84 px/frame,
-//     which is a live lens rather than a still (4.30 read as a frozen frame on
-//     the 8 fps strip).
+//     = +-1080 and 0 world, which at the tightest phase-1 k (3.69) is +-1992
+//     screen px, nearly two frame-widths out; the nearest in the tall
+//     direction, the AT&T card below, clears the frame RECTANGLE by 363 px at
+//     its closest (f10) — and they come home from f50 to f74 on one `flow`.
+//     Frame 0 is the Forbes card alone on the paper, the reveal is a MOTION
+//     rather than a cut in framing, and the camera's content centre no longer
+//     has to tilt: (540, 803) from f0 to f99.
+//     The whole card is inside the frame with kraft on all four sides at every
+//     frame of phase 1 (see deviation 10 for the numbers); the y-band is HELD
+//     through the close-up as well, which the gutter framing could not do.
+//     The creep is still a live lens rather than a still: the card's side edges
+//     travel 18 screen px over the 42 frames.
 //
 //  2. THE PULL-BACK IS KEYED f48 -> f74 ON WARP 0.55, not f54 -> f68 on warp
 //     0.80, and the landing key is 2 frames past the brief's f72 cap. The speed
 //     scan is why: the outer cards sit up to 635 world px off the centre, so
-//     their screen speed is 635 * |dk/df| and the ratio is 5.1x. On the briefed
-//     keys a parked corner card runs 141.4 screen px/frame; f48-74 / 0.55 is
-//     the slowest release that still has all twelve fully in frame inside
-//     "another", and it takes the parked peak to 89.8. The 45 px/frame cap is
+//     their screen speed is 635 * |dk/df| and the ratio is 4.3x at the revision-3
+//     zoom. On the briefed keys a parked corner card runs well over 120 screen
+//     px/frame; f48-74 / 0.55 is the slowest release that still has all twelve
+//     fully in frame inside "another", and it holds the parked peak to 83.0
+//     (was 89.8 at K_PUSH 4.38). The 45 px/frame cap is
 //     not reachable by ANY key window this line allows — even a 26-frame window
 //     leaves |dk/df| at 0.20 — so the cap is reported, not met. See SCAN NOTE.
 //     UNCHANGED in revision 1; the review approved the wide frame f70 -> f98.
 //
 //  3. THE THIRTEENTH CARD TRAVELS f68 -> f82 (settle to f86), not f56 -> f74.
 //     Its slot is 568 world px below the centre, so it is outside the frame
-//     until the camera is nearly landed (frame bottom in world px: 1177 at f60,
-//     1446 at f66, 1677 at f70, 1896 at f74). A card that starts 700 px below
-//     it and lands at f74 has to cross all of that DURING the pull-back:
-//     scanned at 307 screen px/frame with the whole travel hidden off-frame
-//     until f67 — the arrival would not be seen, only its last four frames.
-//     Instead it starts 10 world px clear of the frame's OWN bottom edge at f68
-//     (ARRIVE_Y0 is read off the camera, not written down — now 1709 world, a
-//     338 px travel; it moved 11 px because the camera's content centre no
-//     longer tilts), so it is genuinely outside the frame on the frame it
-//     starts, climbs through "one" and settles on the end of the word at f82.
-//     Over its VISIBLE frames it peaks at 95.1 screen px/frame, against 112.7
-//     for a card simply parked in that slot under the same camera: the arrival
-//     is SLOWER than the lens, because it climbs against the widening.
+//     until the camera is nearly landed. A card that starts far below it and
+//     lands at f74 has to cross all of that DURING the pull-back, with the whole
+//     travel hidden off-frame until the last handful of frames — the arrival
+//     would not be seen. Instead it starts 10 world px clear of the frame's OWN
+//     bottom edge at f68 (ARRIVE_Y0 is READ OFF THE CAMERA, not written down —
+//     revision 3's slower opening zoom puts the camera further back at f68, so
+//     it is now 1772.5 world, a 401 px travel, up from 1709 / 338), so it is
+//     genuinely outside the frame on the frame it starts, climbs through "one"
+//     and settles on the end of the word at f82. Over its VISIBLE frames it
+//     peaks at 88.9 screen px/frame (was 95.1), against 90.6 for a card simply
+//     parked in that slot under the same camera: the arrival is no faster than
+//     the lens, because it climbs against the widening.
 //
 //  4. THE SETTLE IS 8 WORLD PX, not a literal `Easing.out(Easing.back(0.75))`.
-//     Back-out at 0.75 overshoots ~7% of the travel, which on a 327 px climb is
-//     23 px and reads as a bounce. 8 world px (6.9 screen px at K_WIDE) is the
+//     Back-out at 0.75 overshoots ~7% of the travel, which on a 401 px climb is
+//     28 px and reads as a bounce. 8 world px (6.9 screen px at K_WIDE) is the
 //     house `SETTLE_PX` scaled to this card, and it is written as the zero-
 //     sloped `64 w^3 (1-w)^3` bump (BackIntoItV5's `overshoot`) so it adds
 //     neither a step in speed nor a step in acceleration. The twelve take the
@@ -162,7 +157,7 @@ export const FPS = 24;
 //     cannot not be: it arrives from below the frame into the bottom row. It is
 //     clear of the band from f81 and rests wholly inside it (screen 1211 ->
 //     1435), so the readable half of the arrival — an empty slot filling —
-//     happens in the band. Every other card is inside the band from f77.
+//     happens in the band. Every other card is inside the band from f76.
 //
 //  7. NO TWO CARDS EVER OVERLAP, ON SCREEN OR OFF. (Revision 1 had one
 //     off-frame overlap: at RADIAL 2.6 the row-4 centre card was parked at
@@ -180,19 +175,17 @@ export const FPS = 24;
 //     travel is the SAME f50 -> f74 `flow`, the same camera and the same
 //     thirteenth-card arrival; only the distance shrinks, so every card covers
 //     0.9 of its grid offset instead of 1.6 — a corner card 571 world px
-//     instead of 1016, a row-3 neighbour 256 instead of 455. That takes the
-//     peak screen speed of a card A VIEWER CAN SEE from 175.8 to 140.0
-//     px/frame, and the entry speeds of the eleven that move from
-//     175.8/175.6/164.8/157.5/157.2/157.1/141.4/141.0/137.4/111.1/100.0 down to
-//     140.0/129.2/129.0/125.7/125.3/125.1/124.7/124.4/115.6/88.9/88.1 — nine of
-//     the eleven now enter below 130. The brief's aim for this pass was ~120;
-//     1.9 does not reach it (the AT&T card, which comes in from directly below
-//     and so meets the frame's long edge first, enters at 140.0) and the number
-//     is reported rather than met, because 1.9 is the directed constant. For
-//     the record, the same scan run over R0 gives 1.8 -> 137.5, 1.7 -> 129.9,
-//     1.6 -> 123.6, 1.5 -> 114.6; below 1.4 a corner card's box touches the
-//     frame during the close-up and phase 1 is no longer clean, which is the
-//     floor. Nothing else in the cut changed.
+//     instead of 1016, a row-3 neighbour 256 instead of 455. That took the
+//     peak screen speed of a card A VIEWER CAN SEE from 175.8 to 140.0 px/frame
+//     at the revision-2 camera, and revision 3's shorter zoom ratio (deviation
+//     10) takes it to 122.4. The brief's aim for that pass was ~120, which 1.9
+//     did not reach at K_PUSH 4.38 and does reach now. Revision 3 did NOT touch
+//     R0: 1.9 is the directed constant, and at the new, wider phase-1 k the
+//     twelve still clear the frame rectangle by 363 px at their closest, so
+//     nothing intrudes on the close-up and there is no reason to push them
+//     further out. For the record, the revision-2 scan over R0 gave 1.8 ->
+//     137.5, 1.7 -> 129.9, 1.6 -> 123.6, 1.5 -> 114.6; below 1.4 a corner
+//     card's box touched the frame during the close-up, which is the floor.
 //
 //  9. K_WIDE IS THE BRIEF'S 0.86 and the rows are the brief's
 //     235/519/803/1087/1371. Solved on screen at rest: the grid's top edge
@@ -202,6 +195,41 @@ export const FPS = 24;
 //     and world 954 -> 896.0. `sway` moves all four by at most 4.3 px. The same
 //     content centre now holds through the close-up (deviation 1), so cy is one
 //     number for the whole cut.
+//
+// 10. THE OPENING IS k 3.55 -> 3.69, NOT 4.10 -> 4.38. (Revision 3, on the
+//     user's note on the delivered cut: "the first shot of the first article
+//     has to have some padding — it's getting cut off the screen, there has to
+//     be some space to the edge.") At 4.10 the 260 px card was 1066 screen px
+//     on a 1080 frame and crept to 1139: its own white margins bled off both
+//     sides and the headline type ran to the bezel. Nothing else in the cut
+//     changed — the creep keys (f2 -> f40, warp 1.0, landing f42), the held
+//     breath (f42 -> f48), the pull's keys and warp (f48 -> f74, 0.55), RADIAL
+//     1.9, the twelve's travel, the settle lobes and K_WIDE 0.86 are all as
+//     delivered. Only the two numbers moved.
+//       3.55: card 923 screen px, 78.5 px of kraft each side, screen box
+//             x 79-1002 / y 374-1297 at f0.
+//       3.69: card 959.4 px — the 60 px x-guide exactly — screen box
+//             x 50-1009 / y 341-1299 at f42.
+//     THE ONE THING THE ARITHMETIC DOES NOT COVER is the hand: `sway` is +-3
+//     world px sideways, which at 3.69 is +-11 screen px, so the true minimum
+//     over f0-48 is x 50.1 - 1010.0 and the tightest margin to the 60-1020 /
+//     200-1450 guides is -9.9 px on the LEFT at f43. That is 50 px of clear
+//     kraft between the card and the frame — the card is whole on every frame,
+//     which is what the note asked for — but the LEFT edge is past the x-guide
+//     from f25 to f48 (the right edge never is; it peaks at 1010.0), reaching
+//     -9.9 px at f43. That is the creep's tightest half plus the sway's swing.
+//     For scale, the delivered version crossed the same guide from about f20
+//     and took the card's box to -29 px. It is reported rather than removed
+//     because
+//     K_PUSH 3.69 is the directed constant; K_PUSH 3.60 (card 936 px) is what
+//     would hold the guide with the sway included, at the cost of 12 px of the
+//     creep. Vertically there is no question: y 340.1 - 1304.0 over the whole
+//     of phase 1, 140 px inside the band at the top and 146 at the bottom.
+//     KNOCK-ONS, all read off the camera rather than rewritten: ARRIVE_Y0 is
+//     now 1772.5 world (was 1709 — the camera is further back at f68, so the
+//     thirteenth card starts lower to keep its 10 px of clearance) and its
+//     travel is 401 px (was 338); the zoom ratio over the pull falls from 5.1x
+//     to 4.3x, which lowers every entry speed (deviation 8 and the SCAN NOTE).
 // ---------------------------------------------------------------------------
 
 export const DURATION = 99;
@@ -278,16 +306,16 @@ export const ARRIVE_Y = ROW_Y[4];
 // content centre sits at screen 835 at every zoom and cannot sag away from its
 // own move.
 // ---------------------------------------------------------------------------
-export const K_OPEN = 4.1; // the Equifax card is 1066 screen px wide
-export const K_PUSH = 4.38; // the creep's end: 1139 px
+export const K_OPEN = 3.55; // the Equifax card is 923 screen px wide: 78 px of kraft each side
+export const K_PUSH = 3.69; // the creep's end: 960 px — exactly the 60 px band margin
 export const K_WIDE = 0.86; // the whole grid, inside the band
 
 // ONE content centre for the whole cut: the Equifax card, which is also the
 // grid's centre. There is no tilt to key, because there is no neighbour for the
 // 9:16 slack to land on — the twelve are still out at RADIAL 1.9 while the
 // close-up is on. At CAM_LIFT the card centre sits at screen y 835 on every
-// frame, so at k 4.10 the card runs screen 302 -> 1368 and at 4.38 266 -> 1404,
-// both inside the 200-1450 caption band.
+// frame, so at k 3.55 the card runs screen 374 -> 1297 and at 3.69 341 -> 1299,
+// both comfortably inside the 200-1450 caption band.
 export const C_GRID = CENTER.y;
 
 export const PUSH_F0 = 2;
@@ -374,8 +402,8 @@ const overshoot = (u: number) => {
 // THE TWELVE CLOSING IN. Every card is carried on its OWN radius out of the
 // grid's centre — the slot it will occupy, scaled about (540, 803). At RADIAL
 // 1.9 the nearest pair is +-540 world px off the centre column, which at the
-// tightest close-up k is +-2363 screen px, and the nearest card in the tall
-// direction clears the frame rectangle by 588 px; nothing is in frame but
+// tightest close-up k is +-1992 screen px, and the nearest card in the tall
+// direction clears the frame rectangle by 363 px; nothing is in frame but
 // Equifax. From CLOSE_F0 to CLOSE_F1 the radius runs 1.9 -> 1.0 on ONE `flow`
 // shared by all twelve: no per-card stagger is authored, the distances stagger
 // the arrivals by themselves (a corner card covers 571 world px, a row-3
@@ -433,60 +461,70 @@ export const arriveY = (frame: number) => {
 
 // ---------------------------------------------------------------------------
 // SCAN NOTE (out/ao-scan/scan.tsx, sampled at h = 1 and h = 1/4 — the two agree
-// to within 3.5%, so nothing here is a hidden sub-frame step). REVISION 2, at
-// RADIAL 1.9; the revision-1 number at 2.6 is in brackets where it moved:
-//   ANY of the twelve, any frame                   327.0 / 330.0 px/frame @f57  [483.7]
-//   ANY of the twelve, while ON SCREEN             140.0 / 140.8 px/frame @f58  [175.8]
-//   corner cards, while ON SCREEN                  129.2 / 131.9 px/frame @f68  [175.8]
-//   REFERENCE: the same cards PARKED on the grid    89.8 /  90.3 px/frame @f65  [unchanged]
-//   a card PARKED in the row-5 slot (reference)    112.7 / 113.0 px/frame @f57  [unchanged]
-//   the arriving card, any frame                   179.9 / 180.3 px/frame @f57  [unchanged]
-//   the arriving card, while VISIBLE                95.1 /  96.8 px/frame @f71  [unchanged]
+// to within 1.8%, so nothing here is a hidden sub-frame step). REVISION 3, at
+// K_OPEN 3.55 / K_PUSH 3.69 and RADIAL 1.9; the revision-2 number at 4.10/4.38
+// is in brackets where it moved:
+//   ANY of the twelve, any frame                   268.5 / 270.8 px/frame @f57  [327.0]
+//   ANY of the twelve, while ON SCREEN             122.4 / 123.1 px/frame @f67  [140.0]
+//   corner cards, while ON SCREEN                  122.4 / 123.1 px/frame @f67  [129.2]
+//   REFERENCE: the same cards PARKED on the grid    83.0 /  83.3 px/frame @f63  [ 89.8]
+//   a card PARKED in the row-5 slot (reference)     90.6 /  90.9 px/frame @f57  [112.7]
+//   the arriving card, any frame                   154.8 / 155.1 px/frame @f57  [179.9]
+//   the arriving card, while VISIBLE                88.9 /  90.5 px/frame @f71  [ 95.1]
 //   largest frame-to-frame change in the camera's
-//     screen rate (on a parked corner card)         93.0% / 93.0% @f49 / f48.25 [unchanged]
+//     screen rate (on a parked corner card)         93.1% / 93.1% @f49 / f48.25 [93.0%]
 //
-// THE NUMBER THIS REVISION EXISTS FOR is the visible-card peak: 140.0 px/frame,
-// down from 175.8, against the 89.8 the same cards would do parked on the grid
-// under this same camera. The close-in does NOT subtract from the zoom, it adds
-// to it — both motions carry a card towards the centre of the frame — so a card
-// still crosses the frame edge faster than a parked one. It is not an
-// acceleration and not a discontinuity: each card's own speed decays
+// The shorter zoom ratio (4.3x rather than 5.1x over the same f48-74 keys) is
+// what moved all of these: nothing about the release or the close-in was
+// retimed. The visible-card peak is now 122.4 px/frame — revision 2 aimed at
+// ~120 and missed at 140.0 — against the 83.0 the same cards would do parked on
+// the grid under this same camera. The close-in does NOT subtract from the
+// zoom, it adds to it — both motions carry a card towards the centre of the
+// frame — so a card still crosses the frame edge faster than a parked one. It
+// is not an acceleration and not a discontinuity: each card's own speed decays
 // monotonically from its off-screen peak, and its entry figure is simply the
 // value it still has on the ONE frame its corner first touches the edge. The
-// eleven that move enter at 140.0 (AT&T, f58), 129.2 (Sony, f68), 129.0 (Home
-// Depot, f68), 125.7 (Anthem, f64), 125.3 (T-Mobile, f64), 125.1 (Yahoo, f64),
-// 124.7 (Ticketmaster, f64), 124.4 (OPM, f60), 115.6 (Target, f68), 88.9
-// (Marriott, f64), 88.1 (Capital One, f64) px/frame — nine of the eleven below
-// 130, where revision 1 had seven of them above 137. The whole visible field is
-// under 92 px/frame from f70 and under 31 from f74. The 45 px/frame cap is not
-// reachable by any release this line allows (deviation 2) and is reported, not
-// met; nor is the ~120 this pass aimed at (deviation 8).
+// eleven that move enter at 122.4 (Sony, f67), 122.2 (Home Depot, f67), 119.3
+// (AT&T, f56), 114.6 (Anthem, f63), 114.2 (T-Mobile, f63), 114.0 (Yahoo, f63),
+// 113.6 (Ticketmaster, f63), 109.5 (Target, f67), 109.3 (OPM, f59), 81.1
+// (Marriott, f63), 80.3 (Capital One, f63) px/frame — every one of the eleven
+// now under 123, where revision 2 had two above 130 and revision 1 seven above
+// 137. The 45 px/frame cap is not reachable by any release this line allows
+// (deviation 2) and is reported, not met.
 //
 // The camera's OWN pinned point is stationary on screen by construction (cx and
 // the content centre are both constant), so its speed is identically ~0 and
 // says nothing; the scan therefore measures the camera on a PARKED corner card
-// instead. The 93% at f49 is the authored inflection — the release leaving the
-// held breath — and in absolute terms it is the Equifax card's own right edge
-// going 0.32 -> 2.66 screen px/frame, then 7.0, 11.6, 15.8, 19.3, 21.9: a curve,
-// not a step. Nowhere else is there a change above 15% between adjacent frames.
+// instead. The 93.1% at f49 is the authored inflection — the release leaving
+// the held breath — and in absolute terms it is the Equifax card's own right
+// edge going 0.25 -> 2.14 screen px/frame, then 5.7, 9.3, 12.7, 15.5, 17.6,
+// 19.0: a curve, not a step. Nowhere else is there a change above 15% between
+// adjacent frames.
 //
-// PHASE 1: no card but Equifax is on screen at any frame f0 - f50. The scan's
-// clearance is now the TRUE box-to-rectangle gap (revision 1 printed the weaker
-// "not fully inside" figure of 2471 px): the smallest gap between any of the
-// twelve and the frame rectangle is 588 px, the AT&T card at f8, and the gap is
-// never smaller anywhere in phase 1. The first of the twelve to touch the frame
-// is that same AT&T card at f58 ("like"); they are all fully inside the FRAME
-// from f71 and fully inside the 200-1450 / 60-1020 BAND from f77. From f77 the
-// extremes over all thirteen are top 206.2, bottom 1564.1 (the arriving card,
-// still in transit), left 165.9, right 915.2; at rest top 234.7 / bottom 1435.3
-// / left 184.0 / right 896.0. The arriving card's box crosses screen y 1450 for
-// f69-f80 (deviation 5).
+// PHASE 1: no card but Equifax is on screen at any frame f0 - f50, and the
+// wider opening did not change that. The smallest TRUE box-to-rectangle gap
+// between any of the twelve and the frame is 363 px, the AT&T card at f10 (588
+// px at the old, tighter k — the frame now sees 304 x 541 world px rather than
+// 263 x 468, so the twelve are nearer the edge in screen px but nowhere near
+// it). CLOSE_R0 stays at the directed 1.9. The first of the twelve to touch
+// the frame is that same AT&T card at f56 ("you're"); they are all fully inside
+// the FRAME from f71 and fully inside the 200-1450 / 60-1020 BAND from f76.
+// From f76 the extremes over all thirteen are top 204.5, bottom 1624.1 (the
+// arriving card, still in transit), left 164.5, right 916.4; at rest top 234.7
+// / bottom 1435.3 / left 184.0 / right 896.0. The arriving card's box crosses
+// screen y 1450 for f69-f80 (deviation 5).
+//
+// THE EQUIFAX CARD ITSELF, f0-f48 (the number this revision exists for): its
+// screen box stays inside x 50.1 - 1010.0 and y 340.1 - 1304.0, sway included.
+// Vertically that is 140 px inside the band at the top and 146 at the bottom;
+// sideways the tightest margin to the 60 px guide is -9.9 px, on the left at
+// f43, i.e. 50 px of clear kraft (deviation 10).
 //
 // OVERLAP: over every pair of the thirteen at every quarter-frame the smallest
 // separation-minus-card is +16.0 world px at f76, the crest of the shared
-// settle — and that is now also the minimum over pairs with a card ON SCREEN,
-// i.e. the two are the same number and revision 1's -92.2 off-frame intersection
-// is gone (deviation 7). No card ever crosses, touches or passes over Equifax.
+// settle — and that is also the minimum over pairs with a card ON SCREEN, so
+// the two are the same number (deviation 7). Unchanged by this revision, which
+// touched only the camera. No card ever crosses, touches or passes over Equifax.
 // ---------------------------------------------------------------------------
 
 const NewsCard: React.FC<{
