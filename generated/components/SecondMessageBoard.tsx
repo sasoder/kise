@@ -27,6 +27,7 @@ import {
   iconShadow,
   makeTone,
   runCamera,
+  smoothstep,
   squirclePath,
   sway,
   wobble,
@@ -39,13 +40,21 @@ import {
   EASE_PAYOFF,
   ExperimentsSchema,
   HIGHLIGHT_FRAMES,
+  HOLD_DRIFT_PX,
+  PACKET_HERO,
+  PACKET_PERIOD,
+  Packet,
   Streak,
   TRAIL_FRAMES,
   TRAIL_OPACITY,
   Trail,
+  WAKE_LEAD,
+  arriveEase,
   ease,
   highlightTone,
+  holdDriftK,
   legatoStart,
+  packetsOn,
   trailFactor,
 } from "./levelUp";
 
@@ -282,6 +291,73 @@ export const DURATION = 386;
 //   * `softFront` and `depth` are DECLARED AND UNUSED — see the experiments list
 //     above. Depth bands are cut 1 only by the brief; a soft tone front would be
 //     a gesture with no word in this line.
+//
+// ---------------------------------------------------------------------------
+// THE SLEEK PASS (Sep 2026), on the director's note that the delivered set looked
+// "a bit unfinished ... too static". Same concept, same beats, same words, same
+// camera LANDINGS. What changes is that nothing is ever parked and every live
+// line carries life. No gesture was added; the six mechanisms below are all life
+// on what already existed.
+//
+//  1 NO PARKED CAMERA. Four drift segments through the same `runCamera`, each
+//    starting from the value its move landed on so the landing cannot move, and
+//    each running LINEARLY (`camDrift`) rather than on `camMove`'s smoothstep,
+//    which would park the camera for the ten frames either side of the landing.
+//      D1  f86-116   after "agents" — the pull-back keeps opening, k 1.000 ->
+//                    0.9656, and M2 does its pan at the drifted k
+//      D2  f144-156  after "there"  — M2 was a TRACK, so this one keeps tracking
+//                    left, cx -900 -> -917.7. A pan also carries more life per
+//                    screen px than a zoom, and this is the thinnest stretch in
+//                    the piece
+//      D3  f179-256  the M2b hold   — the push keeps leaning in across the six
+//                    posts and the recede and ARRIVES at K_PUSH, v4's own
+//                    framing, as the board resolves at eight rows: f254's
+//                    framing is unchanged to the pixel and f183's is 9% wider
+//      D4  f309-385  the tail       — M3 pulled back AND tracked right, so the
+//                    tail continues in both, k -> 0.5205 and cx -400 -> -270
+//    Measured, drift alone, on a point at the safe band's corner, over the part
+//    of each hold where the move before it has settled: 1.04 / 1.33 / 1.04 /
+//    1.07 screen px a frame, all inside the brief's 0.8-1.5, never 0 (`sway`
+//    alone is 0.25-0.97 at the quietest frame of each hold) and never over 2
+//    even at the frame's own corners (1.85 at worst, which is vignette).
+//  2 SIGNAL ON EVERY LIVE LINE. A board's NEWEST post line carries one hero
+//    packet running its length left -> right for the frames after it lands —
+//    the post being read — at PACKET_HERO 0.6, and then nothing until the next
+//    post lands. Never on a dim or receded line (PACKET_READ_MIN_OP), which is
+//    why the small board carries none until it is read on "different" and none
+//    again after it recedes. The posting threads ARE the packets already and are
+//    untouched.
+//  3 DARK TRAFFIC is NOT USED and there is nothing for it to do here: this cut
+//    has no OP_DARK field. Its crowd is a band of solid dots on the ACCENT_DEEP
+//    rung, which already carries the idle traffic.
+//  4 ARRIVE, DON'T STOP DEAD. Every thread head and every post-line head
+//    decelerates into its landing on `arriveEase` and still lands on the same
+//    frame. The tail is not the helper's default 0.15 everywhere: `arriveEase`
+//    cruises at (1 + 2 * tail) times nominal, and this set's heads are already
+//    at or over the 45 screen px/frame ceiling at the lenses they are drawn at,
+//    so each head's tail is solved from the fastest k it is ever drawn at
+//    (`arriveTail`). The big board's post lines over the opening k 1.50 get 0 —
+//    they already run at 54 — and everything from the resolved wide onward gets
+//    the full 0.15. The fastest thread went 42.0 -> 44.0, inside the cap.
+//  5 MARCHING DASHES are NOT USED: there is no dashed edge in this cut.
+//  6 WAKE BEFORE YOU ACT. A posting agent's tone ramp starts WAKE_LEAD 8 frames
+//    before its thread launches rather than TONE_DUR 6. Measured on the small
+//    board's first post: it is fully ripe at f184 and its thread leaves at f186,
+//    where before it arrived at ripe ON the launch frame.
+//  + THE CROWD IS BUSY WHILE A BOARD IS RECEIVING. The idle rate lifts by
+//    IDLE_BUSY_LIFT 0.3 while a thread is in the air to either board and eases
+//    back over IDLE_BUSY_EASE. On this cut the signal reads 0.74-1.00 and
+//    averages 0.99, because the legato solve launches the next thread ~2.7
+//    frames after the previous one lands: the big board is receiving for
+//    essentially the whole cut, so the lift is all but permanent here. Every
+//    idle head now carries the shared `Trail` as well.
+//
+// MEASURED ENERGY (half-res luma motion energy per 12 frames, < 0.8 is dead):
+// twelve dead blocks of thirty-three before the pass, ZERO after. The floor went
+// 0.48 -> 0.85 and the three stretches the brief named — f84-108 0.77/0.78,
+// f180-250 0.69-0.98, f312-386 0.53-0.68 — now read 1.04/1.26, 0.85-1.17 and
+// 1.10-1.16. Nothing in the piece exceeds the 45 px/frame head cap.
+// ---------------------------------------------------------------------------
 //
 // PERFORMANCE. The field is 3,199 seats in v2 (11,736 in v1, before the band)
 // and is still not 3,199 <circle>s. Every seat is emitted as a two-arc subpath
@@ -653,6 +729,100 @@ export const M2B_K1 = 168;
 export const M3_K0 = 257; // first moving frame f258, before "sort of like" f261
 export const M3_K1 = 304;
 
+// ---------------------------------------------------------------------------
+// SLEEK PASS — NOTHING IS EVER PARKED. Every hold and the tail carry a `camMove`
+// segment of their own, authored through the same `runCamera`, starting FROM the
+// value the move landed on so the landing itself cannot move. `holdDriftK` gives
+// the k a hold should end on so that a world point DRIFT_REF screen px from the
+// content centre keeps travelling at HOLD_DRIFT_PX a frame.
+//
+// A DRIFT IS AUTHORED LINEARLY, NOT EASED. `camMove` at warp 1.0 is a
+// smoothstep: it starts at zero speed, swells to 1.5x its mean in the middle and
+// ends at zero speed again. That is right for a MOVE and exactly wrong for a
+// hold's drift — it parks the camera for the ten frames either side of the
+// landing, which is the part of the hold the whole mechanism exists to fill.
+// Measured that way the first version of this pass still read 0.65-0.78 of
+// motion energy across f145-156, f181-192 and f313-324, all of them the slow end
+// of a smoothstep. `camDrift` is `camMove`'s construction — a key per frame, cy
+// taken off the key's own k so the composition cannot sag against its own zoom —
+// with the ease replaced by a straight ramp, so the drift runs at ONE speed from
+// the frame after the landing to the frame before the next move and the damper
+// is the only thing that rounds its corners.
+//
+// DRIFT_REF IS 900, and the number is measured rather than chosen. A drift that
+// is a zoom moves a point in proportion to its distance from the content centre,
+// and this frame has two distances that matter: the safe band's corner, 780 px
+// out, which is the farthest anything is ever composed, and the frame's own
+// corner, 1212 px out, which is vignette. At 900 the band corner drifts at 1.04
+// screen px a frame — inside the brief's 0.8-1.5 — and the frame's own corners
+// at 1.62, which with `sway` on top stays under the "never > 2".
+export const DRIFT_REF = 900;
+
+// `camMove`'s construction with a LINEAR ramp in place of `camEase`. Everything
+// else about it is the same: a key per frame so `interpolate` never has to guess
+// between two of them, and CY taken off THIS key's k rather than interpolated
+// between the endpoints.
+export const camDrift = ({
+  f0,
+  f1,
+  k0,
+  k1,
+  c0,
+  c1,
+}: {
+  f0: number;
+  f1: number;
+  k0: number;
+  k1: number;
+  c0: number;
+  c1: number;
+}) => {
+  if (f1 <= f0) throw new Error(`camDrift: f${f0}-${f1} is not a forward drift`);
+  const F: number[] = [];
+  const K: number[] = [];
+  const CY: number[] = [];
+  const span = f1 - f0;
+  for (let i = 0; i <= span; i++) {
+    const g = i / span;
+    const k = k0 + (k1 - k0) * g;
+    F.push(f0 + i);
+    K.push(k);
+    CY.push(c0 + (c1 - c0) * g + CAM_LIFT / k);
+  }
+  return { F, K, CY };
+};
+
+export const D1_F0 = 86; // after M1 lands on "agents" f85
+export const D1_F1 = 116; // ...to the frame before M2's first key
+export const D2_F0 = 144; // after M2 is 99.4% landed at f143
+export const D2_F1 = 156; // ...to the frame before M2b's first key
+export const D3_F0 = 179; // after M2b is 99.4% landed at f178
+export const D3_F1 = 256; // ...to the frame before M3's first key
+export const D4_F0 = 309; // after M3 is 99.4% landed at f308
+export const D4_F1 = DURATION - 1; // ...the tail, to the frame cut 4 opens on
+
+// The two holds in the first half continue M1's pull-back: the lens keeps
+// opening across "these agents" and again across "hours earlier". M2 itself
+// holds the drifted k and does its pan at it.
+export const K_DRIFT1 = holdDriftK(K_MID, D1_F1 - D1_F0, DRIFT_REF, -1);
+// D2 CONTINUES A PAN, NOT A ZOOM. M1 was a pull-back, so the hold after it keeps
+// opening; M2 is a TRACK LEFT, so the hold after IT keeps tracking left. A pan
+// also happens to be the drift that carries the most life per screen px: a zoom
+// leaves the middle of the frame standing still and only moves its edges, and
+// the stretch after "there" is a dim two-row board on a band of dots with the
+// big board out of frame — the thinnest stretch in the piece, and the one v2 and
+// v3 both flagged. Authored as the world px that move the frame HOLD_DRIFT_PX a
+// frame at the k the hold is held at; `holdDriftK`'s screenDist has no meaning
+// for a pan, because a pan moves every point in the frame by the same amount.
+// DRIFT_SHORT_GAIN is the damper, not taste. `runCamera` needs about a dozen
+// frames to reach a ramp's steady rate, so a thirteen-frame hold handed the
+// nominal rate delivers ~0.85 of it; measured on the built track, 1.18 lands the
+// drift on HOLD_DRIFT_PX. The long holds do not need it and do not get it.
+export const DRIFT_SHORT_GAIN = 1.18;
+export const CX_DRIFT2 =
+  SMALL.cx - (HOLD_DRIFT_PX * DRIFT_SHORT_GAIN * (D2_F1 - D2_F0)) / K_DRIFT1;
+// The tail's two halves are solved with K_FINAL, below, where it exists.
+
 // The number of rows a board has FULLY gained by a frame — the count the
 // framings are solved against.
 export const rowsAtInt = (frame: number, rows0: number, landings: number[]) => {
@@ -709,6 +879,18 @@ export const M2B_BLOCK_TOP = panelTop(SMALL_ROWS_FINAL);
 export const K_PUSH = Math.min(1.35, blockK(M2B_BLOCK_TOP, CROWD_BAND_Y));
 export const CONTENT_M2B = blockCentre(M2B_BLOCK_TOP, CROWD_BAND_Y);
 
+// SLEEK PASS — THE PUSH LANDS SHORT AND KEEPS LEANING IN. M2b's framing is
+// exactly full: the resolved eight-row board's top edge lands on TOP_Y 220 and
+// the band's bottom edge on 1450, so a push drift ON TOP of K_PUSH would take
+// both out of the safe band. It is inverted instead: M2b lands on K_PUSH_LAND,
+// which is K_PUSH less the drift, and the hold across the six posts and the
+// recede carries it the rest of the way, arriving at K_PUSH — the framing v4
+// solved — exactly as the board resolves at eight rows. The camera leans in on
+// the posts, which is what the hold is for, and f254 ("much") is the frame it
+// was solved for, unchanged. K_PUSH itself is untouched, so nothing that imports
+// it moves.
+export const K_PUSH_LAND = K_PUSH / (1 + (HOLD_DRIFT_PX * (D3_F1 - D3_F0)) / DRIFT_REF);
+
 // M3: the big board at the LAST frame of the piece, with Facebook over it. This
 // is the one framing where k is the unknown: the block runs from the mark's ink
 // top down to the crowd band's bottom edge and has to fit the safe band.
@@ -717,6 +899,21 @@ export const CONTENT_TOP_FINAL = markInkTop(FACEBOOK, panelTop(BIG_ROWS_END));
 export const K_FINAL = blockK(CONTENT_TOP_FINAL, CROWD_BAND_Y);
 export const CONTENT_FINAL = blockCentre(CONTENT_TOP_FINAL, CROWD_BAND_Y);
 export const CX_FINAL = (SMALL.cx - SMALL.w / 2 + (BIG.cx + BIG.w / 2)) / 2;
+
+// SLEEK PASS — THE TAIL. M3 pulled back AND tracked right, so the tail continues
+// in both its axes and the drift budget is split between them. The zoom carries
+// the brief's own K_FINAL -> ~0.52, a 2.4% open, which on its own is 0.3 screen
+// px a frame at DRIFT_REF over these 76 frames; the pan carries the rest, and it
+// costs the framing nothing because a pan moves every point in the frame by the
+// same amount instead of shrinking the board. `holdDriftK` on its own would have
+// asked for a 9.1% open here, which takes a row from 21.3 screen px down to
+// 19.4 and undoes cut 3's own v2 pass. Measured at f385: the small board's left
+// edge is 144 screen px inside the frame, the big board's right edge 831, the
+// block 244-1426 inside the safe band, and a row is 20.5 screen px.
+export const TAIL_OPEN = 0.024; // the fraction of K_FINAL the tail keeps opening by
+export const K_TAIL = K_FINAL * (1 - TAIL_OPEN);
+export const TAIL_PAN = 130; // world px further right, continuing M3's own track
+export const CX_TAIL = CX_FINAL + TAIL_PAN;
 
 export type CamSeg = {
   f0: number;
@@ -728,6 +925,10 @@ export type CamSeg = {
   x0: number;
   x1: number;
   warp: number;
+  // SLEEK PASS — a hold's drift, run through `camDrift` (a straight ramp) rather
+  // than `camMove` (a smoothstep), so it does not park at either end. Optional;
+  // a segment without it is the eased move it always was.
+  drift?: boolean;
 };
 
 export const CAM_SEGS: CamSeg[] = [
@@ -743,29 +944,69 @@ export const CAM_SEGS: CamSeg[] = [
     x1: BIG.cx,
     warp: 0.72,
   },
-  // M2 "five hours earlier" — track left onto the small board
+  // D1 the hold after "agents" — the pull-back keeps opening
+  {
+    f0: D1_F0,
+    f1: D1_F1,
+    k0: K_MID,
+    k1: K_DRIFT1,
+    c0: CONTENT_M1,
+    c1: CONTENT_M1,
+    x0: BIG.cx,
+    x1: BIG.cx,
+    warp: 1,
+    drift: true,
+  },
+  // M2 "five hours earlier" — track left onto the small board, at the drifted k
   {
     f0: M2_K0,
     f1: M2_K1,
-    k0: K_MID,
-    k1: K_MID,
+    k0: K_DRIFT1,
+    k1: K_DRIFT1,
     c0: CONTENT_M1,
     c1: CONTENT_M2,
     x0: BIG.cx,
     x1: SMALL.cx,
     warp: M2_WARP,
   },
+  // D2 the hold after "there" — the track keeps going left, into the push
+  {
+    f0: D2_F0,
+    f1: D2_F1,
+    k0: K_DRIFT1,
+    k1: K_DRIFT1,
+    c0: CONTENT_M2,
+    c1: CONTENT_M2,
+    x0: SMALL.cx,
+    x1: CX_DRIFT2,
+    warp: 1,
+    drift: true,
+  },
   // M2b "there was a different message board" — the push onto the small board
   {
     f0: M2B_K0,
     f1: M2B_K1,
-    k0: K_MID,
-    k1: K_PUSH,
+    k0: K_DRIFT1,
+    k1: K_PUSH_LAND,
     c0: CONTENT_M2,
+    c1: CONTENT_M2B,
+    x0: CX_DRIFT2,
+    x1: SMALL.cx,
+    warp: 0.72,
+  },
+  // D3 the hold across the six posts and the recede — the push keeps leaning in,
+  // arriving at K_PUSH, v4's own framing, as the board resolves at eight rows
+  {
+    f0: D3_F0,
+    f1: D3_F1,
+    k0: K_PUSH_LAND,
+    k1: K_PUSH,
+    c0: CONTENT_M2B,
     c1: CONTENT_M2B,
     x0: SMALL.cx,
     x1: SMALL.cx,
-    warp: 0.72,
+    warp: 1,
+    drift: true,
   },
   // M3 "and this message board" — out and right, both boards in one frame
   {
@@ -778,6 +1019,19 @@ export const CAM_SEGS: CamSeg[] = [
     x0: SMALL.cx,
     x1: CX_FINAL,
     warp: 0.72,
+  },
+  // D4 the tail — the pull-back keeps opening and the track keeps going right
+  {
+    f0: D4_F0,
+    f1: D4_F1,
+    k0: K_FINAL,
+    k1: K_TAIL,
+    c0: CONTENT_FINAL,
+    c1: CONTENT_FINAL,
+    x0: CX_FINAL,
+    x1: CX_TAIL,
+    warp: 1,
+    drift: true,
   },
 ];
 
@@ -796,12 +1050,15 @@ export const CAM = (() => {
   };
   CAM_SEGS.forEach((s) => {
     if (s.f0 > F[F.length - 1] + 1) hold(s.f0 - 1);
-    const m = camMove(s);
+    // a drift ramps straight; a move is eased. Both emit a key per frame into
+    // the same track, and cx takes the same profile as k and cy.
+    const m = s.drift ? camDrift(s) : camMove(s);
     m.F.forEach((f, i) => {
+      const g = i / (s.f1 - s.f0);
       F.push(f);
       K.push(m.K[i]);
       CY.push(m.CY[i]);
-      CX.push(s.x0 + (s.x1 - s.x0) * camEase(i / (s.f1 - s.f0), s.warp));
+      CX.push(s.x0 + (s.x1 - s.x0) * (s.drift ? g : camEase(g, s.warp)));
     });
   });
   if (F[F.length - 1] < DURATION) hold(DURATION);
@@ -812,6 +1069,50 @@ export const CAM = (() => {
   }
   return { F, K, CY, CX };
 })();
+
+// SLEEK PASS — the damped track, resolved once at module scope. The arrive-eases
+// below have to know the lens a head is drawn at before the head exists, and the
+// tail's last frame is what cut 4 opens on, so both are read off this table
+// rather than off the frame.
+export const CAM_K: number[] = (() => {
+  const out: number[] = [];
+  for (let f = 0; f <= DURATION; f++) out.push(runCamera(f, CAM.F, CAM.CY, CAM.K).k);
+  return out;
+})();
+export const camK = (f: number) => CAM_K[clampi(Math.round(f), 0, DURATION)];
+export const kMaxOver = (f0: number, f1: number) => {
+  let m = 0;
+  for (let f = Math.floor(f0); f <= Math.ceil(f1); f++) m = Math.max(m, camK(f));
+  return m;
+};
+
+// THE LAST FRAME'S CAMERA. Cut 4 opens on it, and with the tail drifting it is
+// no longer K_FINAL / CONTENT_FINAL / CX_FINAL. Exported so cut 4 opens on the
+// state this piece actually ends in rather than on the state it was framed for.
+export const CAM_LAST = (() => {
+  const a = runCamera(DURATION - 1, CAM.F, CAM.CY, CAM.K);
+  const b = runCamera(DURATION - 1, CAM.F, CAM.CX, CAM.K);
+  return { k: a.k, cy: a.cy, cx: b.cy };
+})();
+export const CONTENT_LAST = CAM_LAST.cy - CAM_LIFT / CAM_LAST.k;
+
+// SLEEK PASS — ARRIVE, DON'T STOP DEAD, AND THE CEILING THAT DECIDES HOW MUCH.
+// `arriveEase(u, tail)` cruises at (1 + 2 * tail) times the nominal speed and
+// then decelerates over the last `tail` of the DISTANCE, landing on the same
+// frame. At the default tail 0.15 the cruise is 1.3x — and this set's heads are
+// already at or over the 45 screen px/frame ceiling at the lenses they are drawn
+// at, so the tail is solved per head from the fastest k it is ever drawn at
+// rather than taken as 0.15 everywhere. A head that already runs at the ceiling
+// gets no ease at all, and that is arithmetic, not taste: the only other way to
+// decelerate it is to start it earlier, which moves the launch.
+// 44, one px under the set's own 45: a tail solved exactly to the ceiling puts
+// the cruise ON it, and a head that reads as "at the cap" is not the same thing
+// as one inside it. At 44 the fastest thread in the piece runs 44.0 rather than
+// the 42.0 it ran before the ease, and it now decelerates into the panel.
+export const SPEED_CAP = 44;
+export const ARRIVE_TAIL_MAX = 0.15;
+export const arriveTail = (speed: number, kMax: number) =>
+  Math.max(0, Math.min(ARRIVE_TAIL_MAX, (SPEED_CAP / (speed * kMax) - 1) / 2));
 
 // THE MYSPACE DROP is solved from the framing the mark actually falls through,
 // and in v4 that framing is MOVING: M3 starts at f258 and the mark is drawn from
@@ -990,6 +1291,26 @@ export const smallRows = (frame: number) => rowsAt(frame, ROWS0_SMALL, smallLand
 export const BIG_POSTS_LEGATO = buildBigPosts(true);
 export const BIG_POSTS_FLAT = buildBigPosts(false);
 
+// SLEEK PASS — the arrive tail of every head in the piece, solved once from the
+// fastest k that head is ever drawn at. Index-aligned with the arrays above.
+//
+// CUT 4 IMPORTS THESE FOR CUT 3'S OWN POSTS rather than solving them against its
+// own camera, so the two cuts draw the shared big board's newest post line
+// IDENTICALLY on the frame they share. Past this piece's own duration `camK`
+// clamps to the tail's k 0.520; cut 4's fastest lens is K_M2 0.80-0.84, and both
+// land on the full 0.15 for every post after ~f120, so the clamp costs nothing.
+const threadTails = (posts: Post[]) =>
+  posts.map((p) => arriveTail(THREAD_SPEED, kMaxOver(p.launch, p.landing)));
+export const BIG_THREAD_TAIL_LEGATO = threadTails(BIG_POSTS_LEGATO);
+export const BIG_THREAD_TAIL_FLAT = threadTails(BIG_POSTS_FLAT);
+export const BIG_POST_TAIL = BIG_POSTS_LEGATO.map((p) =>
+  arriveTail(POST_SPEED, kMaxOver(p.landing, p.end)),
+);
+export const SMALL_THREAD_TAIL = threadTails(SMALL_POSTS);
+export const SMALL_POST_TAIL = SMALL_POSTS.map((p) =>
+  arriveTail(POST_SPEED_SMALL, kMaxOver(p.landing, p.end)),
+);
+
 // The one highlight in the cut: the agent of the landing scheduled nearest the
 // briefed f324, which on this tempo is f325.
 export const HIGHLIGHT_LANDING = bigLandings.reduce((a, b) =>
@@ -1086,15 +1407,45 @@ export type IdleThread = {
   y2: number;
   op: number;
   head: number;
+  // SLEEK PASS — where this thread's head was, so it can carry the shared
+  // `Trail` like every other moving head in the set. Null outside its own cycle,
+  // which is what `Trail` wants for a head that did not exist yet.
+  at: (f: number) => { x: number; y: number } | null;
 };
 
 export const IDLE_REACH = 5; // cells, so a thread is always short and local
 export const IDLE_OP = 0.4;
 
-export const idleTraffic = (frame: number, count: number) => {
+// SLEEK PASS — THE CROWD IS BUSY WHILE A BOARD IS RECEIVING. The idle rate lifts
+// by IDLE_BUSY_LIFT while a thread is in the air to a board and eases back to 1x
+// over IDLE_BUSY_EASE frames either side of it. The lift is a POOL of extra
+// threads appended past `count`, each gated by the same signal, so the first
+// `count` threads are bit-for-bit the threads this field has always had and a
+// boost of 0 reproduces the old call exactly.
+//
+// Cut 4 computes the same signal from the same flights, so the shared frame is
+// the same frame in both pieces.
+export const IDLE_BUSY_LIFT = 0.3;
+export const IDLE_BUSY_EASE = 6;
+export type Flight = { launch: number; landing: number };
+export const busyAt = (frame: number, flights: Flight[]) => {
+  let v = 0;
+  for (let i = 0; i < flights.length && v < 1; i++) {
+    const f = flights[i];
+    const d = frame < f.launch ? f.launch - frame : frame > f.landing ? frame - f.landing : 0;
+    if (d < IDLE_BUSY_EASE) v = Math.max(v, smoothstep(1 - d / IDLE_BUSY_EASE));
+  }
+  return v;
+};
+
+export const idleTraffic = (frame: number, count: number, boost = 0) => {
   const lit = new Float32Array(NSEAT);
   const threadEls: IdleThread[] = [];
-  for (let j = 0; j < count; j++) {
+  const total = count + Math.round(count * IDLE_BUSY_LIFT);
+  for (let j = 0; j < total; j++) {
+    // the first `count` threads are the field's own; the rest are the busy pool
+    const gate = j < count ? 1 : boost;
+    if (gate <= 0.02) continue;
     const period = 44 - 12 * hash(j, 4);
     const local = frame + hash(j, 5) * period;
     const cycle = Math.floor(local / period);
@@ -1110,16 +1461,25 @@ export const idleTraffic = (frame: number, count: number) => {
     const dn = ease(phase / 0.3, EASE_ARRIVE);
     const fade = clamp01((1 - phase) / 0.45);
     if (fade <= 0.02) continue;
-    lit[a] = Math.max(lit[a], fade);
-    lit[b] = Math.max(lit[b], dn * fade);
+    lit[a] = Math.max(lit[a], fade * gate);
+    lit[b] = Math.max(lit[b], dn * fade * gate);
     threadEls.push({
       key: `i${j}`,
       x1: sa.x,
       y1: sa.y,
       x2: sa.x + (sb.x - sa.x) * dn,
       y2: sa.y + (sb.y - sa.y) * dn,
-      op: IDLE_OP * fade,
+      op: IDLE_OP * fade * gate,
       head: dn,
+      // this thread's head at any frame INSIDE its own cycle; null outside it,
+      // where the pair of seats it runs between is a different pair
+      at: (f: number) => {
+        const lf = f + hash(j, 5) * period;
+        if (Math.floor(lf / period) !== cycle) return null;
+        const ph = (lf - cycle * period) / period;
+        const d = ease(ph / 0.3, EASE_ARRIVE);
+        return { x: sa.x + (sb.x - sa.x) * d, y: sa.y + (sb.y - sa.y) * d };
+      },
     });
   }
   return { threadEls, lit };
@@ -1174,7 +1534,21 @@ export const MarkGlyph: React.FC<{
 // the click and the `Streak` — everything about a board that must not drift
 // between the two cuts.
 // ---------------------------------------------------------------------------
-export type PostDraw = { row: number; len: number; from: number };
+// SLEEK PASS — `tail` is the arrive-ease this post line's head decelerates over,
+// solved by the caller from the fastest k the line is drawn at (see
+// `arriveTail`). Optional and defaulting to 0, so a `PostDraw` written before
+// this field existed draws exactly as it did.
+export type PostDraw = { row: number; len: number; from: number; tail?: number };
+
+// SLEEK PASS — SIGNAL ON THE NEWEST POST. A board's newest post line, for the
+// frames after it finishes drawing, carries ONE hero packet running its length
+// left -> right: the post being read. Then nothing, until the next post lands.
+// `PACKET_PERIOD` is the window rather than a rate — the packet's own travel
+// (a post is 112-360 world px at PACKET_SPEED 26, so 4.3-13.8 frames) is always
+// shorter than it, so `packetsOn` fires exactly once inside the window and the
+// next launch it would make falls outside it. The phase cancels the helper's own
+// hashed offset so the launch lands on the frame the line finished.
+export const PACKET_READ_MIN_OP = 0.6; // no signal on a dim or receded line
 
 export const Board: React.FC<{
   board: BoardDef;
@@ -1191,8 +1565,34 @@ export const Board: React.FC<{
   // defaults to the shared POST_SPEED, so a board drawn without it is the board
   // that was drawn before this argument existed.
   speed?: number;
-}> = ({ board, rows, posts, inkOp, ink, icon, frame, k, trails, speed = POST_SPEED }) => {
+  // SLEEK PASS — the two experiment switches this unit honours. `packets` is
+  // OPT-IN and defaults to OFF: this component is shared with pieces that are
+  // not this pair's, and a default of on would put a packet on their boards
+  // without their asking. `arrive` defaults to on because it is a no-op unless
+  // the caller also supplies a `tail` on the post. Both left out is exactly the
+  // board this component drew before either existed.
+  packets?: boolean;
+  arrive?: boolean;
+}> = ({
+  board,
+  rows,
+  posts,
+  inkOp,
+  ink,
+  icon,
+  frame,
+  k,
+  trails,
+  speed = POST_SPEED,
+  packets = false,
+  arrive = true,
+}) => {
   const x0 = postX0(board);
+  // the newest post on this board: the only one that ever carries a packet
+  let newest = -Infinity;
+  posts.forEach((p) => {
+    if (p.from > newest) newest = p.from;
+  });
   return (
     <g style={{ filter: icon }}>
       <path
@@ -1204,15 +1604,37 @@ export const Board: React.FC<{
         opacity={inkOp}
       />
       {posts.map((p) => {
-        const drawn = clamp01(((frame - p.from) * speed) / p.len);
+        const dur = p.len / speed;
+        const tail = arrive ? (p.tail ?? 0) : 0;
+        const prog = (f: number) => {
+          const u = clamp01((f - p.from) / dur);
+          return tail > 0 ? arriveEase(u, tail) : u;
+        };
+        const drawn = prog(frame);
         if (drawn <= 0) return null;
-        const done = p.from + p.len / speed;
+        const done = p.from + dur;
         const click = frame >= done && frame < done + CLICK_DUR ? 1 : 0;
         const y = postY(p.row);
-        const at = (f: number) => ({
-          x: x0 + p.len * clamp01(((f - p.from) * speed) / p.len),
-          y,
-        });
+        const at = (f: number) => ({ x: x0 + p.len * prog(f), y });
+        // the read: one hero packet, once, over the post that just landed. `at`
+        // asks the helper for the packet's position at any frame, so the shared
+        // `Trail` behind the head is the helper's own travel and nothing here
+        // restates its speed or its cap.
+        const live =
+          packets && p.from === newest && inkOp >= PACKET_READ_MIN_OP && frame >= done;
+        const packAt = (f: number) => {
+          const r = packetsOn({
+            frame: f,
+            k,
+            from: { x: x0, y },
+            to: { x: x0 + p.len, y },
+            period: PACKET_PERIOD,
+            phase: done - hash(p.row, 41) * PACKET_PERIOD,
+            opacity: PACKET_HERO,
+            seed: p.row,
+          });
+          return r.length ? { x: r[0].x, y: r[0].y } : null;
+        };
         return (
           <g key={p.row}>
             {drawn < 1 ? (
@@ -1236,6 +1658,9 @@ export const Board: React.FC<{
               opacity={inkOp + (1 - inkOp) * click}
             />
             {drawn < 1 ? <circle cx={x0 + p.len * drawn} cy={y} r={4} fill={ink} /> : null}
+            {live && packAt(frame) ? (
+              <Packet frame={frame} k={k} at={packAt} opacity={PACKET_HERO} />
+            ) : null}
           </g>
         );
       })}
@@ -1286,16 +1711,19 @@ const SecondMessageBoard: React.FC<Props> = ({
   // -- the two boards --------------------------------------------------------
   const bigRows = bigRowsAt(frame);
   const smRows = smallRows(frame);
+  const bigThreadTail = experiments.legato ? BIG_THREAD_TAIL_LEGATO : BIG_THREAD_TAIL_FLAT;
   const bigDraw: PostDraw[] = [];
   for (let r = 0; r < ROWS0_BIG; r++) bigDraw.push({ row: r, len: postLen(BIG, r), from: -1000 });
-  bigPosts.forEach((p) => {
-    if (frame >= p.landing) bigDraw.push({ row: p.row, len: p.len, from: p.landing });
+  bigPosts.forEach((p, n) => {
+    if (frame >= p.landing)
+      bigDraw.push({ row: p.row, len: p.len, from: p.landing, tail: BIG_POST_TAIL[n] });
   });
   const smallDraw: PostDraw[] = [];
   for (let r = 0; r < ROWS0_SMALL; r++)
     smallDraw.push({ row: r, len: postLen(SMALL, r), from: -1000 });
-  SMALL_POSTS.forEach((p) => {
-    if (frame >= p.landing) smallDraw.push({ row: p.row, len: p.len, from: p.landing });
+  SMALL_POSTS.forEach((p, n) => {
+    if (frame >= p.landing)
+      smallDraw.push({ row: p.row, len: p.len, from: p.landing, tail: SMALL_POST_TAIL[n] });
   });
 
   // the small board's ink: dim, read on "different", dim again on "take"
@@ -1310,15 +1738,19 @@ const SecondMessageBoard: React.FC<Props> = ({
   // before its thread leaves and goes back down over TONE_DUR once the thread
   // has faded. The six on the small board go back down as a group instead, on
   // "didn't", spread across SMALL_RECEDE_SPREAD by their x under the board.
+  // SLEEK PASS — WAKE BEFORE YOU ACT. The ramp starts WAKE_LEAD frames before the
+  // thread launches rather than TONE_DUR before it, so the agent is already ripe
+  // when its thread leaves instead of arriving at ripe on the launch frame.
   const seatTone = new Float32Array(NSEAT);
+  const lead = experiments.wake ? WAKE_LEAD : TONE_DUR;
   const litPost = (p: Post, downAt: number) => {
-    const up = ease((frame - (p.launch - TONE_DUR)) / TONE_DUR, EASE_ARRIVE);
+    const up = ease((frame - (p.launch - lead)) / TONE_DUR, EASE_ARRIVE);
     const down = ease((frame - downAt) / TONE_DUR, EASE_ARRIVE);
     const v = clamp01(up - down);
     if (v > seatTone[p.seat]) seatTone[p.seat] = v;
   };
   bigPosts.forEach((p) => {
-    if (frame < p.launch - TONE_DUR - 1) return;
+    if (frame < p.launch - WAKE_LEAD - TONE_DUR - 1) return;
     litPost(p, p.landing + GROW_DUR + THREAD_FADE);
   });
   SMALL_POSTS.forEach((p, n) => {
@@ -1327,7 +1759,11 @@ const SecondMessageBoard: React.FC<Props> = ({
   });
 
   // -- idle traffic ----------------------------------------------------------
-  const { threadEls, lit } = idleTraffic(frame, idleThreadCount);
+  // SLEEK PASS — the band runs at IDLE_BUSY_LIFT above the standard rate while a
+  // thread is in the air to either board, and eases back to the standard rate
+  // when nothing is. Cut 4 reads the same signal off the same flights.
+  const busy = experiments.packets ? busyAt(frame, [...bigPosts, ...SMALL_POSTS]) : 0;
+  const { threadEls, lit } = idleTraffic(frame, idleThreadCount, busy);
 
   // -- the posting threads ---------------------------------------------------
   // Straight up at one speed, head-led, dead stop on the panel's bottom edge,
@@ -1335,12 +1771,17 @@ const SecondMessageBoard: React.FC<Props> = ({
   type Live = { key: string; x: number; y1: number; y2: number; op: number; head: number };
   const live: Live[] = [];
   const heads: { key: string; at: (f: number) => { x: number; y: number } | null }[] = [];
-  const addThread = (p: Post, key: string) => {
+  const addThread = (p: Post, key: string, tail: number) => {
     const fadeF0 = p.landing + GROW_DUR;
     if (frame < p.launch || frame > fadeF0 + THREAD_FADE) return;
+    // SLEEK PASS — the head cruises and then decelerates into the panel's bottom
+    // edge instead of stopping dead on it. `arriveEase` keeps the landing frame:
+    // it redistributes the speed inside the same window.
+    const dur = (p.baseY - BOARD_BOTTOM) / THREAD_SPEED;
     const at = (f: number) => {
       if (f < p.launch) return null;
-      const d = clamp01(((f - p.launch) * THREAD_SPEED) / (p.baseY - BOARD_BOTTOM));
+      const u = clamp01((f - p.launch) / dur);
+      const d = tail > 0 ? arriveEase(u, tail) : u;
       return { x: p.x, y: p.baseY + (BOARD_BOTTOM - p.baseY) * d };
     };
     const now = at(frame);
@@ -1351,8 +1792,9 @@ const SecondMessageBoard: React.FC<Props> = ({
     live.push({ key, x: p.x, y1: p.baseY, y2: now.y, op, head: drawn });
     if (drawn < 1) heads.push({ key, at });
   };
-  bigPosts.forEach((p, n) => addThread(p, `b${n}`));
-  SMALL_POSTS.forEach((p, n) => addThread(p, `s${n}`));
+  const tailOn = (t: number) => (experiments.arrive ? t : 0);
+  bigPosts.forEach((p, n) => addThread(p, `b${n}`, tailOn(bigThreadTail[n])));
+  SMALL_POSTS.forEach((p, n) => addThread(p, `s${n}`, tailOn(SMALL_THREAD_TAIL[n])));
 
   // -- the two marks ---------------------------------------------------------
   // Each falls MARK_DROP world px onto a rest position that is itself moving,
@@ -1440,7 +1882,7 @@ const SecondMessageBoard: React.FC<Props> = ({
             )}
             {hero ? <circle cx={hero.x} cy={hero.y} r={hero.r} fill={heroFill} /> : null}
 
-            {/* idle traffic, head-led */}
+            {/* idle traffic, head-led, every moving head on the shared Trail */}
             {threadEls.map((t) => (
               <g key={t.key}>
                 <line
@@ -1453,7 +1895,20 @@ const SecondMessageBoard: React.FC<Props> = ({
                   strokeLinecap="round"
                   opacity={t.op}
                 />
-                {t.head < 1 ? <circle cx={t.x2} cy={t.y2} r={4} fill={ink} opacity={t.op} /> : null}
+                {t.head < 1 ? (
+                  <>
+                    <Trail
+                      frame={frame}
+                      k={k}
+                      at={t.at}
+                      r={4}
+                      fill={ink}
+                      opacity={t.op}
+                      enabled={experiments.trails}
+                    />
+                    <circle cx={t.x2} cy={t.y2} r={4} fill={ink} opacity={t.op} />
+                  </>
+                ) : null}
               </g>
             ))}
 
@@ -1502,6 +1957,8 @@ const SecondMessageBoard: React.FC<Props> = ({
               k={k}
               trails={experiments.trails}
               speed={POST_SPEED_SMALL}
+              packets={experiments.packets}
+              arrive={experiments.arrive}
             />
             <Board
               board={BIG}
@@ -1513,6 +1970,8 @@ const SecondMessageBoard: React.FC<Props> = ({
               frame={frame}
               k={k}
               trails={experiments.trails}
+              packets={experiments.packets}
+              arrive={experiments.arrive}
             />
 
             {/* the two marks, white, each sitting MARK_GAP above its board */}

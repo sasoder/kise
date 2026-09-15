@@ -38,16 +38,27 @@ import {
 // duration a dot takes to ramp deep -> ripe. Imported, never restated.
 import { STROKE, TONE_DUR } from "./ImpossibleTasks";
 import {
+  DARK_TRAFFIC_OPACITY,
   DEPTH_BANDS,
   EASE_ARRIVE,
   ExperimentsSchema,
   HIGHLIGHT,
   HIGHLIGHT_FRAMES,
+  HOLD_DRIFT_MAX,
+  HOLD_DRIFT_PX,
   LEGATO,
+  PACKET_AMBIENT,
+  PACKET_HERO,
+  PACKET_PERIOD,
+  PACKET_R,
+  PACKET_SPEED,
   TRAIL_FRAMES,
   TRAIL_OPACITY,
+  Trail,
+  arriveEase,
   depthK,
   ease,
+  holdDriftK,
   trailFactor,
 } from "./levelUp";
 // THE MARK. Cut 4 derived the Hugging Face mark's ink-area size against the
@@ -81,6 +92,10 @@ import {
   BAND,
   BOARD_DY,
   CAM as HHF_CAM,
+  DARK_K_MIN,
+  DARK_N,
+  DARK_POOL,
+  DARK_STEPS,
   DIM,
   DIM_OPACITY,
   DIM_SEAT_OP,
@@ -92,10 +107,13 @@ import {
   HF_POST_ROWS,
   HF_ROWS,
   HF_X,
+  PAIR_CENTRE,
   REACH_OP,
   convertAt,
+  darkAt,
   dimReachAt,
   reachAt,
+  reachPacketsAt,
 } from "./HackedHuggingFace";
 
 export const FPS = 24;
@@ -205,14 +223,44 @@ export const DURATION = 163;
 //     finding is done — and the heads still in flight
 //     land by f110.23
 //                          — "and cabal"                             f92-108
+// ---------------------------------------------------------------------------
+// THE SLEEK PASS (Sep 2026), on the director's note that the delivered set
+// looked "a bit unfinished ... too static". Same concept, same beats, same
+// camera landings, same words, same 4,366 logs; nothing new that has no word.
+// Five of the six mechanisms are in this cut, all of them `levelUp` v2's:
+//   1 HOLD DRIFT   D1 (f16-44) keeps M1's tilt CLOSING at drift speed until
+//                  M2's keys open, and K_END is re-solved so the tail creep's
+//                  PEAK is inside HOLD_DRIFT_MAX where v1's was 2.1. Both holds
+//                  are asserted at module scope against a point at the frame's
+//                  own edge, sway included
+//   2 PACKETS      cut 0a's five reaches keep carrying ITS packets (they are
+//                  still live lines, and it is also what makes f0 blend), and
+//                  from "cabal" f103 the web itself carries ambient ones —
+//                  about one launch a frame on the logs the frame can see
+//   3 DARK TRAFFIC cut 0a's pool and cut 0a's schedule over the UNLIT field, so
+//                  the tilt down on "and then you're like" lands on a field that
+//                  is alive but unread. A thread stops the frame a log lights
+//                  either of its ends: from there the web is what that seat
+//                  carries
+//   4 ARRIVE EASE  every log head cruises and decelerates into its landing on
+//                  `arriveEase`; every arrival frame, the rate step-ups and the
+//                  lit-seat schedule are bit-for-bit unchanged
+//   6 WAKE         nothing in this cut posts or reaches — a log is found, not
+//                  sent — so there is nothing to wake ahead of. Cut 0a owns the
+//                  wake in this pair
+// Mechanism 5 (`marchDash`) is NOT USED: there is no dashed edge in this cut.
+//
 //   TAIL: hold at k 0.50 with the web at 0.95, and
 //     CAMERA M4 under it — a slow even creep k 0.50 ->
-//     0.47 over f114-162, warp 1.0, 1.10 screen px a
-//     frame at its fastest on a fixed point out at
-//     world y 1500, so the hold is a drift and not a
-//     park. `breath` on every dot and `sway` on the
-//     lens carry the rest of it. It never fades out —
-//     the editor controls the out    — tail            keys f114-162 / f115-162
+//     K_END over f114-162, warp 1.0. The sleek pass
+//     re-solves K_END from `holdDriftK` so that the
+//     creep's PEAK, not its mean, is inside
+//     HOLD_DRIFT_MAX: v1 took 0.47 by hand and measured
+//     2.1 screen px/frame on a point at the frame's
+//     edge, over the max; it is 1.24 now. `breath` on
+//     every dot, `sway` on the lens and the web's own
+//     packets carry the rest of it. It never fades out
+//     — the editor controls the out  — tail            keys f114-162 / f115-162
 //
 // CAMERA. Four moves on ONE damped track that STARTS as cut 0a's: cx is HF_X
 // throughout (the web, the mark and the reaches are all on that axis, so a pan
@@ -239,9 +287,12 @@ export const DURATION = 163;
 // field that is entirely dark and entirely uniform, which is the one place in
 // the set a whip can be spent — see the f2-9 tile in the DONE note.
 //
-// ambient: `breath` on every dot, `sway` on the camera, the grid's own drift.
-// There is no idle thread traffic in this cut and there is none in cut 0a
-// either: the field is unread, and a log is the ONLY line that ever appears.
+// ambient: `breath` on every dot, `sway` on the camera, the grid's own drift,
+// and — the sleek pass — DARK TRAFFIC over the part of the field no log has
+// reached yet, at DARK_TRAFFIC_OPACITY, with no heads, on cut 0a's own pool and
+// cut 1's own schedule. The field is unread, not DEAD; a LOG is still the only
+// BRIGHT line that ever appears, and the distance between the two is what
+// "uncovering" means.
 //
 // ---------------------------------------------------------------------------
 // WHAT IS DERIVED RATHER THAN HAND-SET, each noted where it is computed.
@@ -415,13 +466,47 @@ export const K_HAND = interpolate(HANDOVER, HHF_CAM.F, HHF_CAM.K, clamp);
 export const CY_HAND = interpolate(HANDOVER, HHF_CAM.F, HHF_CAM.CY, clamp);
 export const C_HAND = CY_HAND - CAM_LIFT / K_HAND; // == cut 0a's CONTENT_FINAL
 
-export const C_FIELD = 300; // the web's centre, and the content centre from M1 on
+/** The web's centre, and the content centre from M1 on. Cut 0a owns the number
+ *  — it has to know how wide this cut ever gets, to size the pair's one dark
+ *  traffic pool — so it is imported rather than declared twice. */
+export const C_FIELD = PAIR_CENTRE;
 export const K_TILT = 1.2; // "and then you're like": down into the field
 export const K_BACK = 0.8; // "until you find"
 export const K_VAST = 0.5; // "this like vast conspiracy"
-export const K_END = 0.47; // ...and the tail's creep
+
+// ---------------------------------------------------------------------------
+// SLEEK PASS — NOTHING IS EVER PARKED. v1 landed M1 at f15 and then held the
+// camera dead still for thirty frames while the logs came in, and its tail crept
+// at up to 2.1 screen px/frame on a point at the frame's edge, which is over the
+// sleek pass's own HOLD_DRIFT_MAX. Two `holdDriftK` changes, and nothing else
+// about the camera moves:
+//   * D1, f16-44: M1's TILT KEEPS CLOSING at drift speed until M2's keys open.
+//     It starts FROM the landed K_TILT so M1's landing on "uncovering" f15 does
+//     not move, and M2 then opens from K_TILT_DRIFT instead of from K_TILT.
+//     It drifts k ONLY: the content centre stays at C_FIELD because world
+//     (0, 300) is pinned to screen y 835, the caption-safe line, and a centre
+//     that kept tilting down would walk the whole cut off it — 1.2 px a frame
+//     over the 29 frames of the hold is 35 px of the band. See DEVIATION 6.
+//   * K_END is re-solved rather than taken at v1's 0.47, so the tail creep's
+//     PEAK — not its mean — is inside HOLD_DRIFT_MAX. `camMove`'s smoothstep
+//     peaks at about 1.5x its own mean, so a drift solved flat at
+//     HOLD_DRIFT_PX overshoots; DRIFT_TRIM is the measured factor that brings
+//     the peak back inside, and the pair of holds is ASSERTED below.
+// ---------------------------------------------------------------------------
+/** The screen point every drift here is solved for: the frame's own edge, the
+ *  fastest-moving point on screen at any k. */
+export const DRIFT_TRIM = 0.62;
+export const DRIFT_DIST = FRAME_H / 2 / DRIFT_TRIM;
+export const M1_LAND = 15; // measured: 97.7% of M1, on "uncovering"
+export const D1_F0 = M1_LAND + 1;
+export const D1_F1 = 44; // ...to the frame before M2's keys open
+export const K_TILT_DRIFT = holdDriftK(K_TILT, D1_F1 - D1_F0, DRIFT_DIST, 1);
+export const M4_F0 = 114;
+export const M4_F1 = 162;
+export const K_END = holdDriftK(K_VAST, M4_F1 - M4_F0, DRIFT_DIST, -1);
 
 export type CamSeg = {
+  name: string;
   f0: number;
   f1: number;
   k0: number;
@@ -430,14 +515,32 @@ export type CamSeg = {
   c1: number;
   warp: number;
 };
-export const CAM_SEGS: CamSeg[] = [
-  { f0: 1, f1: 5, k0: K_HAND, k1: K_TILT, c0: C_HAND, c1: C_FIELD, warp: 0.7 },
-  { f0: 45, f1: 50, k0: K_TILT, k1: K_BACK, c0: C_FIELD, c1: C_FIELD, warp: 0.7 },
-  { f0: 59, f1: 66, k0: K_BACK, k1: K_VAST, c0: C_FIELD, c1: C_FIELD, warp: 0.72 },
-  { f0: 114, f1: 162, k0: K_VAST, k1: K_END, c0: C_FIELD, c1: C_FIELD, warp: 1.0 },
-];
+/** The key track, with the sleek pass's drift in or out. `drift: false` is v2's
+ *  own four-move track at v2's own K_END, so the experiment is a real switch. */
+export const camSegs = (drift: boolean): CamSeg[] =>
+  drift
+    ? [
+        { name: "M1", f0: 1, f1: 5, k0: K_HAND, k1: K_TILT, c0: C_HAND, c1: C_FIELD, warp: 0.7 },
+        { name: "D1", f0: D1_F0, f1: D1_F1, k0: K_TILT, k1: K_TILT_DRIFT, c0: C_FIELD, c1: C_FIELD, warp: 1.0 },
+        { name: "M2", f0: 45, f1: 50, k0: K_TILT_DRIFT, k1: K_BACK, c0: C_FIELD, c1: C_FIELD, warp: 0.7 },
+        { name: "M3", f0: 59, f1: 66, k0: K_BACK, k1: K_VAST, c0: C_FIELD, c1: C_FIELD, warp: 0.72 },
+        { name: "M4", f0: M4_F0, f1: M4_F1, k0: K_VAST, k1: K_END, c0: C_FIELD, c1: C_FIELD, warp: 1.0 },
+      ]
+    : [
+        { name: "M1", f0: 1, f1: 5, k0: K_HAND, k1: K_TILT, c0: C_HAND, c1: C_FIELD, warp: 0.7 },
+        { name: "M2", f0: 45, f1: 50, k0: K_TILT, k1: K_BACK, c0: C_FIELD, c1: C_FIELD, warp: 0.7 },
+        { name: "M3", f0: 59, f1: 66, k0: K_BACK, k1: K_VAST, c0: C_FIELD, c1: C_FIELD, warp: 0.72 },
+        { name: "M4", f0: M4_F0, f1: M4_F1, k0: K_VAST, k1: 0.47, c0: C_FIELD, c1: C_FIELD, warp: 1.0 },
+      ];
+export const CAM_SEGS = camSegs(true);
+/** A move by name, so a segment can be inserted without renumbering an assert. */
+export const camSeg = (name: string) => {
+  const s = CAM_SEGS.find((x) => x.name === name);
+  if (!s) throw new Error(`UncoveringTheLogs: no camera move ${name}`);
+  return s;
+};
 
-export const CAM = (() => {
+export const makeCam = (segs: CamSeg[]) => {
   const F: number[] = [];
   const K: number[] = [];
   const CY: number[] = [];
@@ -456,7 +559,7 @@ export const CAM = (() => {
     K.push(K[K.length - 1]);
     CY.push(CY[CY.length - 1]);
   };
-  CAM_SEGS.forEach((s) => {
+  segs.forEach((s) => {
     const g0 = s.f0 + HANDOVER;
     const g1 = s.f1 + HANDOVER;
     if (g0 > F[F.length - 1] + 1) hold(g0 - 1);
@@ -475,7 +578,57 @@ export const CAM = (() => {
     }
   }
   return { F, K, CY };
-})();
+};
+
+export const CAM = makeCam(CAM_SEGS);
+/** ...and v2's own, for `experiments.drift: false`. */
+export const CAM_PLAIN = makeCam(camSegs(false));
+
+// THE TWO HOLDS ARE ASSERTED. A fixed world point at the frame's own edge must
+// keep moving through both of them, and never fast enough for a hold to read as
+// a move. Measured exactly as the sleek brief measures it, `sway` included.
+// M1 is the fastest move in the set and `runCamera` is still bleeding its
+// velocity off well past the landing — 2.26% of a 615 px centre move is left on
+// "uncovering" f15 and it is only gone by f19 — so the HOLD is measured from f20,
+// where the settle has finished and what is left is the drift itself.
+export const M1_SETTLED = 20;
+export const HOLDS: [number, number, string][] = [
+  [M1_SETTLED, 45, "D1, M1 landed -> M2's keys"],
+  [M4_F0, DURATION - 1, "M4, the tail creep"],
+];
+export const driftRange = (
+  track: { F: number[]; K: number[]; CY: number[] },
+  f0: number,
+  f1: number,
+) => {
+  const c0 = runCamera(f0 + HANDOVER, track.F, track.CY, track.K);
+  const wy = c0.cy + FRAME_H / 2 / c0.k; // the point on the frame's bottom edge
+  const at = (f: number) => {
+    const c = runCamera(f + HANDOVER, track.F, track.CY, track.K);
+    return 960 + (wy - (c.cy + sway(f + HANDOVER).dy)) * c.k;
+  };
+  let mn = Infinity;
+  let mx = 0;
+  for (let f = f0 + 1; f <= f1; f++) {
+    const v = Math.abs(at(f) - at(f - 1));
+    mn = Math.min(mn, v);
+    mx = Math.max(mx, v);
+  }
+  return { mn, mx };
+};
+HOLDS.forEach(([f0, f1, what]) => {
+  const d = driftRange(CAM, f0, f1);
+  if (d.mx > HOLD_DRIFT_MAX) {
+    throw new Error(`UncoveringTheLogs: ${what} drifts at ${d.mx.toFixed(2)} px/frame, over the max`);
+  }
+  if (d.mx < HOLD_DRIFT_PX * 0.6) {
+    throw new Error(`UncoveringTheLogs: ${what} is parked — ${d.mx.toFixed(2)} px/frame`);
+  }
+});
+// ...and the pair's dark traffic pool was built for a camera no wider than this.
+if (K_END < DARK_K_MIN) {
+  throw new Error(`UncoveringTheLogs: K_END ${K_END.toFixed(3)} is wider than the pool's ${DARK_K_MIN}`);
+}
 
 // ---------------------------------------------------------------------------
 // THE LOGS. A log is a thread found BETWEEN two agents: it is drawn head-led
@@ -879,11 +1032,64 @@ export const LIT_F_PLAIN = litFrames(LOGS_PLAIN);
 // Nothing may be drawn faster than the set's close-up cap at the hardest zoom a
 // log is ever seen at, which is K_TILT. Asserted rather than assumed.
 export const SPEED_CAP = 45; // screen px/frame, this set's close-up cap
-if (LOG_SPEED * K_TILT > SPEED_CAP) {
+// SLEEK PASS: a log head no longer runs at one speed — it cruises and then
+// decelerates into its landing on `arriveEase`, which puts the CRUISE at
+// (1 + 2 * LOG_TAIL) times the nominal speed and leaves the arrival FRAME
+// exactly where it was. The tail is the helper's own default here, because even
+// at 1.3x this cut's head is less than two thirds of the ceiling. The k it is
+// checked at is the drift's own K_TILT_DRIFT, which is the hardest zoom a log is
+// ever drawn at now that D1 keeps closing past K_TILT.
+export const LOG_TAIL = 0.15;
+export const LOG_CRUISE = LOG_SPEED * (1 + 2 * LOG_TAIL);
+if (LOG_CRUISE * K_TILT_DRIFT > SPEED_CAP) {
   throw new Error(
-    `UncoveringTheLogs: a log head is ${(LOG_SPEED * K_TILT).toFixed(1)} screen px/frame at k ${K_TILT}`,
+    `UncoveringTheLogs: a log head cruises at ${(LOG_CRUISE * K_TILT_DRIFT).toFixed(1)} screen px/frame at k ${K_TILT_DRIFT.toFixed(3)}`,
   );
 }
+/** How far along its line a log's head is at a frame, 0..1. */
+export const logProgress = (l: Log, f: number, arrive = true) => {
+  const u = clamp01((f - l.f0) / (l.arrive - l.f0));
+  return arrive ? arriveEase(u, LOG_TAIL) : u;
+};
+
+// ---------------------------------------------------------------------------
+// SIGNAL ON THE WEB. From "cabal" f103 the network is not a set of records any
+// more, it is ONE THING IN OPERATION — so from that frame ambient packets run on
+// it: a white head r PACKET_R with a `Trail` at PACKET_AMBIENT, travelling the
+// length of a resting log picked at random, about one launch a frame across the
+// whole web. Before f103 the found logs carry NONE: they are records being read,
+// not traffic. The logs still in flight carry none either — they already have a
+// head on them.
+//
+// WEB_PACKET_SLOTS is PACKET_PERIOD * the launch rate, so `~1 a frame` is a
+// property of the pair rather than a number typed twice; a log is ~77 world px
+// and a packet crosses it in about three frames, so about three are ever in
+// flight, well inside the sleek brief's own cap of sixty.
+// ---------------------------------------------------------------------------
+export const WEB_PACKET_RATE = 1; // launches a frame, across the web ON SCREEN
+export const WEB_PACKET_SLOTS = Math.round(PACKET_PERIOD * WEB_PACKET_RATE);
+export const WEB_PACKET_CAP = 60;
+// ...and the traffic is WHERE THE LENS IS, which is cut 1's own rule for its
+// idle threads: its slots draw from a pool of the seats inside its widest
+// camera. By "cabal" the web is 3,272 world px across and the frame at K_VAST
+// reaches about 2,200, so a log picked uniformly out of the whole web is off
+// screen more often than not and one launch a frame would show as one every two
+// or three. The pool is the logs the tail's own frame can see, built once.
+export const webPacketPool = (logs: Log[]): Int32Array => {
+  const cy = C_FIELD + CAM_LIFT / K_END;
+  const hw = FRAME_W / 2 / K_END;
+  const hh = FRAME_H / 2 / K_END;
+  const out: number[] = [];
+  logs.forEach((l, n) => {
+    const A = SEATS[l.a];
+    if (Math.abs(A.x - CX) > hw || Math.abs(A.y - cy) > hh) return;
+    out.push(n);
+  });
+  return Int32Array.from(out);
+};
+export const WEB_POOL_LEGATO = webPacketPool(LOGS_LEGATO);
+export const WEB_POOL_PLAIN = webPacketPool(LOGS_PLAIN);
+export const TRAIL_Q = 4; // the trail's smear factor is quantised this finely
 
 // ---------------------------------------------------------------------------
 // The field is emitted as one <path> of circle arcs per bucket, exactly as cut 1
@@ -1016,8 +1222,8 @@ export const defaultProps: Props = schema.parse({
     [LOG_SCALE_F0, b.logs, "the density ramp's start / logs"],
     [LOG_SCALE_F1, b.vast, "the density ramp's end / vast"],
     [LOG_R_PIN_F, b.until, "the frontier's pinned radius / until"],
-    [CAM_SEGS[1].f0 + 1, b.until, "M2's first moving frame / until"],
-    [CAM_SEGS[2].f0 + 1, b.this, "M3's first moving frame / this"],
+    [camSeg("M2").f0 + 1, b.until, "M2's first moving frame / until"],
+    [camSeg("M3").f0 + 1, b.this, "M3's first moving frame / this"],
   ];
   must.forEach(([got, want, what]) => {
     if (got !== want) {
@@ -1092,9 +1298,11 @@ const UncoveringTheLogs: React.FC<Props> = ({
   const edgeTone = makeTone(ink, accent);
   const LOGS = experiments.legato ? LOGS_LEGATO : LOGS_PLAIN;
   const LIT_F = experiments.legato ? LIT_F_LEGATO : LIT_F_PLAIN;
+  const POOL = experiments.legato ? WEB_POOL_LEGATO : WEB_POOL_PLAIN;
 
   // -- camera ----------------------------------------------------------------
-  const cam = runCamera(wf, CAM.F, CAM.CY, CAM.K);
+  const track = experiments.drift ? CAM : CAM_PLAIN;
+  const cam = runCamera(wf, track.F, track.CY, track.K);
   const drift = sway(wf);
   const cy = cam.cy + drift.dy;
   const cx = CX + drift.dx;
@@ -1186,8 +1394,14 @@ const UncoveringTheLogs: React.FC<Props> = ({
   const rest = new Map<number, string[]>();
   const live: string[] = [];
   const tips: string[] = [];
-  const trails: string[][] = TRAIL_OPACITY.map(() => []);
-  const trailF = experiments.trails ? trailFactor(LOG_SPEED * k) : 0;
+  // SLEEK PASS: a head no longer travels at one speed, so the heads in flight no
+  // longer all share one `trailFactor` — a cruising head smears and a head
+  // decelerating into its landing does not. The factor is quantised into TRAIL_Q
+  // steps and the trail is one <path> per (trail frame, step), which is at most
+  // TRAIL_FRAMES * TRAIL_Q = 12 nodes rather than one per head.
+  const trails: string[][][] = TRAIL_OPACITY.map(() =>
+    Array.from({ length: TRAIL_Q }, () => [] as string[]),
+  );
   for (let n = 0; n < LOGS.length; n++) {
     const l = LOGS[n];
     if (frame < l.f0) continue;
@@ -1206,23 +1420,94 @@ const UncoveringTheLogs: React.FC<Props> = ({
     }
     const ux = (B.x - A.x) / l.len;
     const uy = (B.y - A.y) / l.len;
-    const d = (frame - l.f0) * LOG_SPEED;
+    const p = logProgress(l, frame, experiments.arrive);
+    const d = l.len * p;
     const px = A.x + ux * d;
     const py = A.y + uy * d;
     live.push(seg(A.x, A.y, px, py));
     tips.push(arc(px, py, TIP_R));
-    for (let i = 0; i < TRAIL_FRAMES && trailF > 0; i++) {
-      const db = d - (i + 1) * LOG_SPEED;
-      if (db < 0) break; // the head did not exist that frame
-      trails[i].push(arc(A.x + ux * db, A.y + uy * db, TIP_R * (1 - 0.15 * (i + 1))));
+    if (!experiments.trails) continue;
+    const dPrev = l.len * logProgress(l, frame - 1, experiments.arrive);
+    const tq = Math.round(trailFactor((d - dPrev) * k) * (TRAIL_Q - 1));
+    if (tq <= 0) continue;
+    for (let i = 0; i < TRAIL_FRAMES; i++) {
+      const g = frame - (i + 1);
+      if (g < l.f0) break; // the head did not exist that frame
+      const db = l.len * logProgress(l, g, experiments.arrive);
+      trails[i][tq].push(arc(A.x + ux * db, A.y + uy * db, TIP_R * (1 - 0.15 * (i + 1))));
+    }
+  }
+
+  // -- dark traffic, and signal on the finished web --------------------------
+  // The unlooked-at field is unseen, not dead: cut 0a's pool and cut 0a's
+  // schedule, and a thread is only drawn while BOTH of its ends are still dark.
+  // A seat's traffic stops being dark traffic the moment a log lights it — from
+  // there the web's own lines are what it carries.
+  const darkLines: string[][] = Array.from({ length: DARK_STEPS }, () => []);
+  if (experiments.darkTraffic) {
+    for (let j = 0; j < DARK_N; j++) {
+      const t = darkAt(DARK_POOL, j, wf);
+      if (!t) continue;
+      if (HERO.has(t.a) || HERO.has(t.b)) continue;
+      if (frame >= LIT_F[t.a] || frame >= LIT_F[t.b]) continue;
+      const A = SEATS[t.a];
+      const B = SEATS[t.b];
+      if (Math.min(A.x, B.x) > x1 || Math.max(A.x, B.x) < x0) continue;
+      if (Math.min(A.y, B.y) > y1 || Math.max(A.y, B.y) < y0) continue;
+      const q = Math.min(DARK_STEPS - 1, Math.max(0, Math.round(t.fade * DARK_STEPS) - 1));
+      darkLines[q].push(seg(A.x, A.y, A.x + (B.x - A.x) * t.dn, A.y + (B.y - A.y) * t.dn));
+    }
+  }
+
+  // ...and from "cabal" the network is one thing in operation.
+  const webHeads: string[] = [];
+  const webTrails: string[][] = TRAIL_OPACITY.map(() => []);
+  const webTrailF = experiments.trails ? trailFactor(PACKET_SPEED * k) : 0;
+  // A SCREEN-SPACE radius, which is what `iconShadow` does and for the same
+  // reason: the web's packets only exist from "cabal", at k 0.50 falling to
+  // K_END, where PACKET_R in WORLD px is 1.5 screen px across and the signal is
+  // not there at all. Divided by k it is the same 3 px head cut 0a puts on its
+  // five reaches. Cut 0a's own packets, held here, keep their world radius —
+  // they are hero lines drawn at k 1.0-1.6 and they read as they are.
+  const packetR = PACKET_R / k;
+  if (experiments.packets && frame >= beats.cabal && POOL.length > 0) {
+    for (let j = 0; j < WEB_PACKET_SLOTS && webHeads.length < WEB_PACKET_CAP; j++) {
+      const first = beats.cabal + hash(j, 41) * PACKET_PERIOD;
+      const cyc = Math.floor((frame - first) / PACKET_PERIOD);
+      for (let c = cyc; c >= 0 && c >= cyc - 1; c--) {
+        const launch = first + c * PACKET_PERIOD;
+        const l = LOGS[POOL[Math.floor(hash(j * 977 + c, 53) * POOL.length)]];
+        if (!l || frame < l.arrive) continue;
+        const travel = l.len / PACKET_SPEED;
+        const u = (frame - launch) / travel;
+        if (u < 0 || u > 1) continue;
+        const A = SEATS[l.a];
+        const B = SEATS[l.b];
+        if (A.x > x1 || A.x < x0 || A.y > y1 || A.y < y0) continue;
+        const px = A.x + (B.x - A.x) * u;
+        const py = A.y + (B.y - A.y) * u;
+        webHeads.push(arc(px, py, packetR));
+        for (let i = 0; i < TRAIL_FRAMES && webTrailF > 0; i++) {
+          const ub = u - ((i + 1) / travel);
+          if (ub < 0) break;
+          webTrails[i].push(
+            arc(A.x + (B.x - A.x) * ub, A.y + (B.y - A.y) * ub, packetR * (1 - 0.15 * (i + 1))),
+          );
+        }
+      }
     }
   }
 
   // -- cut 0a's reaches and its mark, at rest --------------------------------
+  // The five are still LIVE lines — that is what the logs are being uncovered
+  // under — so they keep carrying cut 0a's own packets, from cut 0a's own
+  // schedule. This is also what makes f0 blend: that cut's f127 has signal on
+  // them, so this cut's f0 has to have the same signal in the same places.
   const reaches = HACKERS.map((i, n) => {
     const p = reachAt(n, wf);
     return p ? { key: n, x1: SEATS[i].x, y1: SEATS[i].y, x2: p.x, y2: p.y } : null;
   });
+  const reachPackets = reachPacketsAt(wf, k, experiments.packets);
   const dimReaches = DIM.map((i, n) => {
     const p = dimReachAt(n, wf);
     return p ? { key: n, x1: SEATS[i].x, y1: SEATS[i].y, x2: p.x, y2: p.y } : null;
@@ -1271,6 +1556,24 @@ const UncoveringTheLogs: React.FC<Props> = ({
 
           {/* everything that is ink or web, on one plane */}
           <g transform={midTransform}>
+            {/* DARK TRAFFIC, first in the tree exactly as cut 0a draws it, so
+                this cut's f0 IS that cut's f127 down to the draw order. On the
+                middle band with the rest of the ink: a thread whose two ends are
+                in two different parallax bands cannot be drawn in either. */}
+            {darkLines.map((d, q) =>
+              d.length === 0 ? null : (
+                <path
+                  key={`k${q}`}
+                  d={d.join("")}
+                  stroke={accent}
+                  strokeWidth={STROKE}
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity={DARK_TRAFFIC_OPACITY * ((q + 1) / DARK_STEPS)}
+                />
+              ),
+            )}
+
             {/* CUT 0A'S BOARD, held. Drawn exactly as that cut draws it: cut 3's
                 `Board` with an EMPTY post list, because `Board` takes one ink
                 colour for the panel and its posts and here the panel is accent
@@ -1367,12 +1670,34 @@ const UncoveringTheLogs: React.FC<Props> = ({
                 opacity={LOG_LIVE}
               />
             )}
-            {trails.map((d, i) =>
-              d.length === 0 ? null : (
-                <path key={`t${i}`} d={d.join("")} fill={ink} opacity={TRAIL_OPACITY[i] * trailF} />
+            {trails.map((byQ, i) =>
+              byQ.map((d, q) =>
+                d.length === 0 ? null : (
+                  <path
+                    key={`t${i}_${q}`}
+                    d={d.join("")}
+                    fill={ink}
+                    opacity={(TRAIL_OPACITY[i] * q) / (TRAIL_Q - 1)}
+                  />
+                ),
               ),
             )}
             {tips.length === 0 ? null : <path d={tips.join("")} fill={ink} />}
+
+            {/* the signal running on the finished web, from "cabal" */}
+            {webTrails.map((d, i) =>
+              d.length === 0 ? null : (
+                <path
+                  key={`wt${i}`}
+                  d={d.join("")}
+                  fill={ink}
+                  opacity={TRAIL_OPACITY[i] * webTrailF * PACKET_AMBIENT}
+                />
+              ),
+            )}
+            {webHeads.length === 0 ? null : (
+              <path d={webHeads.join("")} fill={ink} opacity={PACKET_AMBIENT} />
+            )}
 
             {/* cut 0a's five reaches, at rest */}
             <g style={{ filter: icon }}>
@@ -1391,6 +1716,26 @@ const UncoveringTheLogs: React.FC<Props> = ({
                   />
                 ) : null,
               )}
+              {reachPackets.map((p) => (
+                <g key={`p${p.key}`}>
+                  <Trail
+                    frame={wf}
+                    k={k}
+                    at={p.at}
+                    r={PACKET_R}
+                    fill={ink}
+                    opacity={PACKET_HERO}
+                    enabled={experiments.trails}
+                  />
+                  <circle
+                    cx={p.at(wf).x}
+                    cy={p.at(wf).y}
+                    r={PACKET_R}
+                    fill={ink}
+                    opacity={PACKET_HERO}
+                  />
+                </g>
+              ))}
             </g>
 
             {/* the mark */}

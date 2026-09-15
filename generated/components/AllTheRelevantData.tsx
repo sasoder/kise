@@ -5,7 +5,9 @@ import {
   ACCENT_DEEP,
   BG_BASE,
   BG_DIM,
+  CAM_DAMP,
   CAM_LIFT,
+  CAM_STIFF,
   DOT_RADIUS,
   FRAME_H,
   FRAME_W,
@@ -44,12 +46,20 @@ import {
   ExperimentsSchema,
   HIGHLIGHT,
   HIGHLIGHT_FRAMES,
+  HOLD_DRIFT_MAX,
   LEGATO,
+  PACKET_AMBIENT,
+  PACKET_PERIOD,
+  PACKET_R,
   Streak,
   Trail,
+  WAKE_LEAD,
   WAVE_FRONT_WIDTH,
+  arriveEase,
   depthK,
   ease,
+  marchDash,
+  packetsOn,
 } from "./levelUp";
 // THE WORLD. Cut 1 built it and this cut does not own one value of it: the
 // seats, the grid they are indexed by, the ring, the wave's final edge, every
@@ -62,6 +72,9 @@ import {
   BUCKETS,
   CAM as TOS_CAM,
   COLS,
+  DARK_OP,
+  DRIFT_SETTLE,
+  DRIFT_TARGET,
   DURATION as TOS_DURATION,
   FIELD_Y0,
   FIELD_Y1_FULL,
@@ -87,6 +100,7 @@ import {
   TIP_R,
   idleAt,
   litAmount,
+  packetStep,
   seatOpacity,
 } from "./ThreeOrSomething";
 
@@ -339,6 +353,50 @@ export const DURATION = 242;
 //      goes from 1.73-2.89 px to 2.29-3.81. At 720 the found seats would have
 //      sat at 600-666 — the middle of the frame, not the upper third — because
 //      they are only 55-119 screen px above the edge.
+//
+// SLEEK PASS (v4), on the director's note that the delivered set looked "a bit
+// unfinished ... too static". Same concept, same beats, same words, same
+// camera landings. Frame 0 is still cut 1's last frame exactly — cut 1's own
+// sleek pass drifts its tail open, so f0 is now k 0.9233 instead of 0.9500,
+// and the blend against it is ZERO pixels. Six things:
+//   1. NO PARKED CAMERA. The 41 frames after M1 lands (f31-71) and the 36
+//      after M3 lands (f158-193) were parked; both now KEEP OPENING at cut 1's
+//      own solved rate — DRIFT_TARGET screen px/frame on the world point at
+//      the frame's corner, with `sway` on it, measured from DRIFT_SETTLE
+//      frames after the landing. Solved: K_D1 0.6060 (M1 landed at 0.62) and
+//      K_D3 0.4119 (M3 landed at K_WIDE 0.42). M2's creep and M4 both leave
+//      from where the drift got to, so neither starts with a step, and both
+//      landings (f128 with the boundary at screen 640, f158 with the box's top
+//      at 300) still land on their frames. The nine frames before "whether"
+//      (f128-137) stay dead still: that is the set's own held breath.
+//   2. SIGNAL ON EVERY LIVE LINE — and the probe threads are not live lines,
+//      they fade. So what was FOUND stays connected instead: each of the three
+//      probes' found seats keeps ONE line back to the nearest fully-lit agent
+//      inside the box, coming up at LINK_OP 0.6 exactly as its probe fades,
+//      carrying ambient packets inward and never going away. One line each,
+//      305-323 world px, ~14 packets over the rest of the piece.
+//   3. DARK TRAFFIC. Every population now draws over unlooked-at seats too, at
+//      DARK_TRAFFIC_OPACITY and with no white head, lerping to its own ambient
+//      opacity with the lit amount of its endpoints. "So much larger" now
+//      reveals a dark field that is alive rather than an empty one.
+//   4. ARRIVE, DON'T STOP DEAD. `arriveEase` on all six probe heads and on
+//      each of the box's three sides, so every head decelerates into its own
+//      corner or its own seat. Frames are unchanged — the ease redistributes
+//      speed inside a gesture — so the click is still f170 and the legato
+//      overlaps are intact. The cost is the cruise: 1.3x, which takes the box
+//      head from 149 to 193 screen px/frame at its peak (the set's 45 cap is a
+//      close-up cap at k >= 2; this cut never goes above k 0.95) and the probe
+//      heads to 29.1.
+//   5. UNCERTAIN EDGES MOVE. The dashed top edge's dashes march from the frame
+//      it stops short on "data", at MARCH_PX divided by the zoom — see the
+//      note at the element for why the division is this cut's own ink rule.
+//   6. WAKE BEFORE YOU ACT. Each probe's source seat swells on the set's 35%
+//      event swell over the WAKE_LEAD frames BEFORE its thread leaves, and
+//      lets the swell go once the thread has gone.
+// Reported, not changed: M4 is a MOVE, not a hold. The revision that added it
+// solved it against the dashed edge at TAIL_DRIFT_CAP 4 screen px/frame, which
+// is what takes the found seats to the upper third; on the corner measure the
+// holds use, it is 22.1 px/frame. Holding M4 to 1.5 would be unbuilding v3.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -559,24 +617,95 @@ export const TAIL_DRIFT_CAP = 4; // screen px/frame, on the dashed top edge
     throw new Error(`AllTheRelevantData: ${n} (k ${k}) can see the field's own top or bottom edge`);
   }
 });
-// ...and the box has to fit, with the margins the brief names.
+// ...and the box has to fit, with the margins the brief names. (Checked again
+// at K_WIDEST once the camera is built: the sleek pass lets M3's hold keep
+// opening, which only ever gives the box MORE margin, but it is measured.)
 if ((FRAME_W - BOX_W * K_WIDE) / 2 < 60) {
   throw new Error(`AllTheRelevantData: the box does not fit at k ${K_WIDE}`);
 }
 
 export type CamSeg = { f0: number; f1: number; k0: number; k1: number; c0: number; c1: number; warp: number };
-// The three moves under the speech. v3 appends a fourth, the tail's drift, whose
-// end is solved below.
-const SPEECH_SEGS: CamSeg[] = [
+
+// ---------------------------------------------------------------------------
+// SLEEK PASS — THE TWO HOLDS BECOME DRIFTS. M1 lands f31 and M2's creep does
+// not leave until f72; M3 lands f158 and M4 does not leave until f194. Both of
+// those were parked cameras. They now KEEP OPENING — continuing the direction
+// of the pull-back they follow — at exactly the rate cut 1 solves its own
+// drifts at: DRIFT_TARGET screen px/frame on the world point at the frame's
+// corner, measured through the damper with `sway` on it, over the window that
+// starts DRIFT_SETTLE frames after the landing (before that the move's own
+// residual is still worth 2-3 px/frame and nothing is parked anyway).
+//
+// Each drift starts FROM the landed k, so no landing moves; the move that
+// follows one leaves from where the drift got to, so no move starts with a
+// step. M2's landing (f128, the boundary at screen 640) and M3's (f158, the
+// box's top edge at screen 300) are both still solved from their screen
+// targets, and both still land on their own frames.
+// ---------------------------------------------------------------------------
+export const M1_HOLD = [31, 71] as const; // M1 lands f31, M2's keys start f72
+export const M3_HOLD = [158, 193] as const; // M3 lands f158, M4's keys start f194
+
+const runTrack = (T: { F: number[]; K: number[]; CY: number[] }) => {
+  const k = new Float64Array(DURATION + 1);
+  const cy = new Float64Array(DURATION + 1);
+  let ccy = T.CY[0];
+  let ck = T.K[0];
+  let vy = 0;
+  let vk = 0;
+  k[0] = ck;
+  cy[0] = ccy;
+  for (let f = 1; f <= DURATION; f++) {
+    const ty = interpolate(f, T.F, T.CY, clamp);
+    const tk = interpolate(f, T.F, T.K, clamp);
+    vy += (ty - ccy) * CAM_STIFF - vy * CAM_DAMP;
+    ccy += vy;
+    vk += (tk - ck) * CAM_STIFF - vk * CAM_DAMP;
+    ck += vk;
+    k[f] = ck;
+    cy[f] = ccy;
+  }
+  return { k, cy };
+};
+
+/** The max screen px/frame of the world point at the frame's bottom-right
+ *  corner on frame `a`, over f a..b, with `sway` on the camera. Cut 1's own
+ *  measurement, on this cut's clock. */
+const driftMax = (T: { F: number[]; K: number[]; CY: number[] }, a: number, b: number) => {
+  const R = runTrack(T);
+  const s0 = sway(a + HANDOVER);
+  const px = RING_CX + s0.dx + FRAME_W / 2 / R.k[a];
+  const py = R.cy[a] + s0.dy + FRAME_H / 2 / R.k[a];
+  let worst = 0;
+  let prevX = 0;
+  let prevY = 0;
+  for (let f = a; f <= b; f++) {
+    const s = sway(f + HANDOVER);
+    const kk = R.k[f];
+    const sx = FRAME_W / 2 + (px - (RING_CX + s.dx)) * kk;
+    const sy = FRAME_H / 2 + (py - (R.cy[f] + s.dy)) * kk;
+    if (f > a) worst = Math.max(worst, Math.hypot(sx - prevX, sy - prevY));
+    prevX = sx;
+    prevY = sy;
+  }
+  return worst;
+};
+
+// The three moves under the speech, plus the two drifts between them. v3
+// appends a sixth segment, the tail's own drift, whose end is solved below.
+const speechSegs = (kD1: number, kD3: number): CamSeg[] => [
   { f0: 7, f1: 21, k0: K_HAND, k1: K_M1, c0: C_HAND, c1: C_M1, warp: 0.7 }, // M1 "so much larger"
+  // ...and it keeps opening until the creep leaves
+  { f0: M1_HOLD[0], f1: M1_HOLD[1], k0: K_M1, k1: kD1, c0: C_M1, c1: C_M1, warp: 1.0 },
   // v2: the creep leaves on "in a way" f72 rather than "very" f93, so the
   // longest the camera is ever parked is 41 frames instead of 62. It is a
   // creep, so its landing (f128) and the still that follows it do not move.
-  { f0: 72, f1: 118, k0: K_M1, k1: K_M2, c0: C_M1, c1: C_M2, warp: 1.0 }, // M2 the creep
+  { f0: 72, f1: 118, k0: kD1, k1: K_M2, c0: C_M1, c1: C_M2, warp: 1.0 }, // M2 the creep
   // v2: the keys close at f147 rather than f154, so M3 lands at f158 — seven
   // frames before "relevant" f165, inside the set's own 4-10 rule — and the box
   // is drawn on a camera that has arrived rather than one still pulling back.
   { f0: 137, f1: 147, k0: K_M2, k1: K_WIDE, c0: C_M2, c1: C_M3, warp: 0.72 }, // M3 the box
+  // ...and it keeps opening under the box, until the tail's own drift leaves
+  { f0: M3_HOLD[0], f1: M3_HOLD[1], k0: K_WIDE, k1: kD3, c0: C_M3, c1: C_M3, warp: 1.0 },
 ];
 
 export const buildCam = (segs: CamSeg[]) => {
@@ -610,20 +739,42 @@ export const buildCam = (segs: CamSeg[]) => {
   return { F, K, CY };
 };
 
-// M4's keys, for a candidate end centre. Nothing before f194 changes: the
-// builder holds M3's own values at f193 where it used to hold them at f242, so
-// the damper's target over f0-f193 is the same number at every frame and f0-f193
-// are the v2 frames exactly (proved by difference blend on f177).
-const tailSegs = (c4: number): CamSeg[] => [
-  ...SPEECH_SEGS,
-  { f0: TAIL_CAM_F0, f1: DURATION, k0: K_WIDE, k1: K_TAIL, c0: C_M3, c1: c4, warp: 1.0 }, // M4 the drift
+// THE TWO DRIFTS, SOLVED FIRST — they are inside the speech and everything
+// after them (M2's start k, M3's start k, M4's start k and therefore C_M4) is
+// built on top of them. Lower k is always more drift, so each measurement is
+// monotone in its own unknown and one bisection settles it.
+const solveDrift = (
+  lo: number,
+  hi: number,
+  hold: readonly [number, number],
+  build: (v: number) => CamSeg[],
+) => {
+  let a = lo;
+  let b = hi;
+  for (let i = 0; i < 40; i++) {
+    const m = (a + b) / 2;
+    if (driftMax(buildCam(build(m)), hold[0] + DRIFT_SETTLE, hold[1]) > DRIFT_TARGET) a = m;
+    else b = m;
+  }
+  return (a + b) / 2;
+};
+export const K_D1 = solveDrift(0.45, K_M1, M1_HOLD, (v) => speechSegs(v, K_WIDE));
+export const K_D3 = solveDrift(0.3, K_WIDE, M3_HOLD, (v) => speechSegs(K_D1, v));
+
+// M4's keys, for a candidate end centre. Nothing before f194 changes when C_M4
+// moves: the builder holds M3's drift's own values at f193 where it used to
+// hold them at f242, so the damper's target over f0-f193 is the same number at
+// every frame whatever c4 is.
+const tailSegs = (kD1: number, kD3: number, c4: number): CamSeg[] => [
+  ...speechSegs(kD1, kD3),
+  { f0: TAIL_CAM_F0, f1: DURATION, k0: kD3, k1: K_TAIL, c0: C_M3, c1: c4, warp: 1.0 }, // M4 the drift
 ];
 
 /** The dashed top edge's own max screen speed over the tail, as the frame
  *  actually shows it: through the damper, with the `sway` on it. This is the
  *  number the brief asks to be logged, and it is what C_M4 is solved against. */
 const dashEdgeMaxSpeed = (c4: number) => {
-  const T = buildCam(tailSegs(c4));
+  const T = buildCam(tailSegs(K_D1, K_D3, c4));
   const edgeAt = (f: number) => {
     const r = runCamera(f, T.F, T.CY, T.K);
     return FRAME_H / 2 + (BOX_Y0 - (r.cy + sway(f + HANDOVER).dy)) * r.k;
@@ -651,20 +802,54 @@ export const C_M4 = (() => {
   return centreFor(BOX_Y0, lo, K_TAIL);
 })();
 export const TAIL_DRIFT_MAX = dashEdgeMaxSpeed(C_M4); // 4.00 screen px/frame
+/** M4 is a MOVE, not a hold — the revision that added it solved it against the
+ *  dashed edge at TAIL_DRIFT_CAP 4 px/frame, which is what puts the found
+ *  seats in the upper third at the last frame. This is the number the sleek
+ *  brief asks to be checked against 1.5: reported, not changed. */
+export const TAIL_CORNER_MAX = () => driftMax(CAM, TAIL_CAM_F0, DURATION - 1);
 
-export const CAM_SEGS: CamSeg[] = tailSegs(C_M4);
+export const CAM_SEGS: CamSeg[] = tailSegs(K_D1, K_D3, C_M4);
 export const CAM = buildCam(CAM_SEGS);
 
-// M4 moves through k and centre together, so its worst frame for the field's own
-// hard top edge is not necessarily either end: every frame of the drift is
-// checked, at the widest depth band, the same test the four keys take above.
-for (let f = TAIL_CAM_F0; f < DURATION; f++) {
-  const r = runCamera(f, CAM.F, CAM.CY, CAM.K);
-  const hh = FRAME_H / 2 / (r.k * Math.min(...DEPTH_BANDS));
-  if (r.cy - hh < FIELD_Y0 || r.cy + hh > FIELD_Y1_FULL) {
-    throw new Error(`AllTheRelevantData: M4 can see the field's own top or bottom edge at f${f}`);
+// Every move in this cut now moves k and the centre together, and two of them
+// are drifts that end somewhere a bisection chose, so the field's own hard top
+// and bottom edges are checked at EVERY frame of the piece at the widest depth
+// band rather than at the four keys. The same loop finds the widest camera the
+// cut actually reaches, which is what the box has to fit inside.
+export const CAM_RUN = runTrack(CAM);
+export const K_WIDEST = (() => {
+  let kMin = Infinity;
+  for (let f = 0; f <= DURATION; f++) {
+    const k = CAM_RUN.k[f];
+    const cy = CAM_RUN.cy[f];
+    const hh = FRAME_H / 2 / (k * Math.min(...DEPTH_BANDS));
+    if (cy - hh < FIELD_Y0 || cy + hh > FIELD_Y1_FULL) {
+      throw new Error(`AllTheRelevantData: f${f} (k ${k.toFixed(3)}) sees the field's top or bottom`);
+    }
+    kMin = Math.min(kMin, k);
   }
-}
+  return kMin;
+})();
+// ...and no drift may read as a move. M4 is a MOVE and is excluded: it is
+// solved against the dashed edge at TAIL_DRIFT_CAP, which the revision that
+// added it chose deliberately (see TAIL_CORNER_MAX).
+([
+  [M1_HOLD, "the hold after M1"],
+  [M3_HOLD, "the hold after M3"],
+] as [readonly [number, number], string][]).forEach(([h, n]) => {
+  const d = driftMax(CAM, h[0] + DRIFT_SETTLE, h[1]);
+  if (d > HOLD_DRIFT_MAX) {
+    throw new Error(`AllTheRelevantData: ${n} drifts at ${d.toFixed(2)} px/frame, over the max`);
+  }
+});
+// The fast path has to BE `runCamera`, or every number solved off it is solved
+// off a different camera than the one the component draws.
+[0, 31, 128, 158, 194, DURATION - 1].forEach((f) => {
+  const r = runCamera(f, CAM.F, CAM.CY, CAM.K);
+  if (Math.abs(r.k - CAM_RUN.k[f]) > 1e-9 || Math.abs(r.cy - CAM_RUN.cy[f]) > 1e-9) {
+    throw new Error(`AllTheRelevantData: the camera fast path disagrees with runCamera at f${f}`);
+  }
+});
 
 // ---------------------------------------------------------------------------
 // THE PROBES. Three threads that leave a lit seat just inside the boundary and
@@ -697,6 +882,20 @@ export const TAIL_ORDER = [2, 0, 1];
 export const TAIL_SLOTS = [200, 212, 224];
 export const TAIL_ANG = [-30, -150, -172]; // degrees, per probe index: a fan
 export const TAIL_LEN = 200;
+// SLEEK PASS — WAKE BEFORE YOU ACT. A seat that is about to throw a thread out
+// past the boundary swells over WAKE_LEAD frames BEFORE it launches, on the
+// set's own 35% event swell, so the crowd wakes INTO the gesture rather than on
+// it. These three seats are already lit — they are inside the blob — so the
+// mechanism's deep -> ripe has nothing to ramp and the swell is the wake.
+export const WAKE_SWELL = 0.35; // the set's event swell, as the found seats get
+// SLEEK PASS — WHAT WAS FOUND STAYS CONNECTED. The probe thread still fades
+// after it lands (it was the reach, and the reach is over), but the found seat
+// then keeps ONE live line back to the nearest LIT seat inside the box, at
+// LINK_OP, carrying ambient packets inward: data that was found out in the dark
+// is now part of what was looked at. One line each, and nothing more.
+export const LINK_OP = 0.6;
+export const LINK_FADE = PROBE_FADE; // it comes up exactly as the probe goes
+export const LINK_PACKET_SEED = 331.7;
 
 export type Probe = {
   src: number; // seat index it leaves
@@ -750,11 +949,51 @@ const TAIL0 = buildTail(PROBES0);
 export const BAND = Uint8Array.from(SEAT_BAND);
 const MID_BAND = DEPTH_BANDS.findIndex((b) => b === 1);
 export const FOUND_INDEX = new Map<number, number>();
+/** seat -> the probe it is the SOURCE of, for the wake. */
+export const SRC_INDEX = new Map<number, number>();
 [...PROBES0, ...TAIL0].forEach((p, i) => {
   BAND[p.src] = MID_BAND;
   BAND[p.dst] = MID_BAND;
   FOUND_INDEX.set(p.dst, i);
+  if (!SRC_INDEX.has(p.src)) SRC_INDEX.set(p.src, i);
 });
+
+/** The nearest seat that is fully lit — i.e. the nearest agent inside what was
+ *  looked at. Found through the grid, ring by ring, so a link always ends on a
+ *  real agent of the crowd and never on a point. */
+const nearestLit = (i: number) => {
+  const s = SEATS[i];
+  for (let ring = 1; ring < 40; ring++) {
+    let best = -1;
+    let bestD = Infinity;
+    for (let dr = -ring; dr <= ring; dr++) {
+      for (let dc = -ring; dc <= ring; dc++) {
+        if (Math.max(Math.abs(dr), Math.abs(dc)) !== ring) continue;
+        const r = s.gr + dr;
+        const c = s.gc + dc;
+        if (r < 0 || c < 0 || r >= ROWS || c >= COLS) continue;
+        const j = r * COLS + c;
+        if (!SEAT_ALIVE[j] || LIT[j] < 0.98) continue;
+        const d = Math.hypot(SX[j] - SX[i], SY[j] - SY[i]);
+        if (d < bestD) {
+          bestD = d;
+          best = j;
+        }
+      }
+    }
+    if (best >= 0) return best;
+  }
+  throw new Error(`AllTheRelevantData: no lit seat near the found seat ${i}`);
+};
+/** The three probes' found seats, each with the lit seat it stays joined to.
+ *  The seats do not depend on the beats, so the lookup is done once. */
+const LINK_SEAT = new Map<number, number>();
+export const buildLinks = (probes: Probe[]) =>
+  probes.map((p) => {
+    if (!LINK_SEAT.has(p.dst)) LINK_SEAT.set(p.dst, nearestLit(p.dst));
+    return { dst: p.dst, lit: LINK_SEAT.get(p.dst) as number, arrive: p.arrive };
+  });
+export const LINKS = buildLinks(PROBES0);
 
 // ---------------------------------------------------------------------------
 // THE BOX. What was looked at, as the set draws it: a squircle, stroke STROKE,
@@ -1022,6 +1261,15 @@ const AllTheRelevantData: React.FC<Props> = ({
   // deep -> ripe over the shared TONE_DUR and stays.
   const probes = buildProbes(beats.ascertain);
   const allProbes = [...probes, ...buildTail(probes)];
+  const links = buildLinks(probes);
+  // WAKE: the source seat swells over WAKE_LEAD frames BEFORE its thread
+  // leaves, and lets the swell go again once the thread has gone.
+  const wakeAmt = allProbes.map((p) =>
+    experiments.wake
+      ? ease((frame - (p.from - WAKE_LEAD)) / WAKE_LEAD, EASE_ARRIVE) *
+        (1 - interpolate(frame, [p.arrive, p.arrive + PROBE_FADE], [0, 1], clamp))
+      : 0,
+  );
   const foundTone = allProbes.map((p) => ease((frame - Math.ceil(p.arrive)) / TONE_DUR, EASE_ARRIVE));
   const foundHot = allProbes.map(
     (p) =>
@@ -1067,9 +1315,14 @@ const AllTheRelevantData: React.FC<Props> = ({
       // the set's own event swell — 35%, as `ImpossibleTasks` and `UnderHeel`
       // give a dot that something happens to. It is an EVENT only: a seat that
       // is merely lit (all 18,000 of them out here) is never swollen, so this
-      // is six dots in the piece and the field is exactly cut 1's.
-      const r =
-        dotRadius * SR[i] * breath(wf, hash(i, 9)) * (fi === undefined ? 1 : 1 + 0.35 * foundTone[fi]);
+      // is six dots in the piece plus the three that wake to throw them, and
+      // the field is exactly cut 1's.
+      const si = SRC_INDEX.get(i);
+      const swell = Math.max(
+        fi === undefined ? 0 : foundTone[fi],
+        si === undefined ? 0 : wakeAmt[si],
+      );
+      const r = dotRadius * SR[i] * breath(wf, hash(i, 9)) * (1 + WAKE_SWELL * swell);
       bucket[band][hot ? BUCKETS : Math.round(l * (BUCKETS - 1))].push(arc(SX[i], SY[i], r));
     }
   }
@@ -1094,7 +1347,13 @@ const AllTheRelevantData: React.FC<Props> = ({
     at: (f: number) => { x: number; y: number } | null,
     op = IDLE_OP,
   ) => {
-    if (litOf(t.a) <= 0.5 || litOf(t.b) <= 0.5) return;
+    // DARK TRAFFIC, cut 1's own rule: a thread is as lit as its dimmer
+    // endpoint, so out past the light it is a bare accent line at
+    // DARK_TRAFFIC_OPACITY with no white head, and inside the box it is the
+    // full ambient thread it always was. "Larger" now reveals a dark field that
+    // is ALIVE rather than an empty one.
+    const lit = Math.min(litOf(t.a), litOf(t.b));
+    if (!experiments.darkTraffic && lit <= 0.5) return;
     const ax = SX[t.a];
     const ay = SY[t.a];
     if (ax < x0 || ax > x1 || ay < y0 || ay > y1) return;
@@ -1106,8 +1365,8 @@ const AllTheRelevantData: React.FC<Props> = ({
       y1: ay,
       x2: ax + (bx - ax) * t.dn,
       y2: ay + (by - ay) * t.dn,
-      op: op * t.fade,
-      head: t.dn,
+      op: (DARK_OP + (op - DARK_OP) * lit) * t.fade,
+      head: lit > 0.5 ? t.dn : 1,
       at,
     });
   };
@@ -1179,15 +1438,54 @@ const AllTheRelevantData: React.FC<Props> = ({
     if (fade <= 0) return null;
     const A = { x: SX[p.src], y: SY[p.src] };
     const B = { x: SX[p.dst], y: SY[p.dst] };
+    // ARRIVE, DON'T STOP DEAD: the head cruises and then decelerates over the
+    // last 15% of its travel. `arriveDuration` is dist / speed, so it still
+    // lands on the frame the constant-speed head landed on.
+    const drawnAt = (f: number) => {
+      const u = clamp01((f - p.from) / (p.len / PROBE_SPEED));
+      return experiments.arrive ? arriveEase(u) : u;
+    };
     const at = (f: number) => {
       if (f < p.from) return null;
-      const d = clamp01(((f - p.from) * PROBE_SPEED) / p.len);
+      const d = drawnAt(f);
       return { x: A.x + (B.x - A.x) * d, y: A.y + (B.y - A.y) * d };
     };
     const q = at(frame);
     if (!q) return null;
-    const drawn = clamp01(((frame - p.from) * PROBE_SPEED) / p.len);
-    return { key: i, x1: A.x, y1: A.y, x2: q.x, y2: q.y, head: drawn, fade, at };
+    return { key: i, x1: A.x, y1: A.y, x2: q.x, y2: q.y, head: drawnAt(frame), fade, at };
+  });
+
+  // -- the links -------------------------------------------------------------
+  // What was found stays connected: one line from each of the three found seats
+  // back to the nearest lit agent inside the box, coming up exactly as the
+  // probe fades, carrying ambient packets inward and never going away.
+  const linkEls = links.map((l, i) => {
+    const up = interpolate(frame, [l.arrive, l.arrive + LINK_FADE], [0, 1], clamp);
+    if (up <= 0) return null;
+    const A = { x: SX[l.dst], y: SY[l.dst] };
+    const B = { x: SX[l.lit], y: SY[l.lit] };
+    const len = Math.hypot(B.x - A.x, B.y - A.y);
+    const du = packetStep(k, len);
+    const packets = experiments.packets
+      ? packetsOn({
+          frame,
+          k,
+          from: A,
+          to: B,
+          period: PACKET_PERIOD,
+          phase: Math.ceil(l.arrive),
+          opacity: PACKET_AMBIENT,
+          seed: LINK_PACKET_SEED + i,
+        }).map((q) => ({
+          key: `${i}-${q.u.toFixed(4)}`,
+          at: (f: number) => {
+            const u = q.u - (frame - f) * du;
+            if (u < 0) return null;
+            return { x: A.x + (B.x - A.x) * clamp01(u), y: A.y + (B.y - A.y) * clamp01(u) };
+          },
+        }))
+      : [];
+    return { key: i, x1: A.x, y1: A.y, x2: B.x, y2: B.y, op: LINK_OP * up, packets };
   });
 
   // -- the box ---------------------------------------------------------------
@@ -1201,19 +1499,27 @@ const AllTheRelevantData: React.FC<Props> = ({
   const bottomEnd = bottomF0 + sideDur(BOX_W);
   const rightF0 = experiments.legato ? BOX_RIGHT_F0 : Math.ceil(bottomEnd) + LEGATO;
   const rightEnd = rightF0 + sideDur(BOX_H);
-  const dLeft = clamp01((frame - leftF0) / (leftEnd - leftF0));
-  const dBottom = clamp01((frame - bottomF0) / (bottomEnd - bottomF0));
-  const dRight = clamp01((frame - rightF0) / (rightEnd - rightF0));
+  // ARRIVE, DON'T STOP DEAD, per side: each side's head cruises and then
+  // decelerates into its own corner. The sides keep their start and end frames
+  // — `arriveEase` redistributes speed inside a gesture, it does not lengthen
+  // one — so the click still lands on f170 and the legato overlaps are intact.
+  const side = (f: number, f0: number, f1: number) => {
+    const u = clamp01((f - f0) / (f1 - f0));
+    return experiments.arrive ? arriveEase(u) : u;
+  };
+  const dLeft = side(frame, leftF0, leftEnd);
+  const dBottom = side(frame, bottomF0, bottomEnd);
+  const dRight = side(frame, rightF0, rightEnd);
   const boxHeadAt = (f: number) => {
     if (f < leftF0) return null;
-    if (f <= leftEnd) return { x: BOX_X0, y: BOX_Y0 + BOX_H * clamp01((f - leftF0) / (leftEnd - leftF0)) };
+    if (f <= leftEnd) return { x: BOX_X0, y: BOX_Y0 + BOX_H * side(f, leftF0, leftEnd) };
     if (f < bottomF0) return null;
     if (f <= bottomEnd) {
-      return { x: BOX_X0 + BOX_W * clamp01((f - bottomF0) / (bottomEnd - bottomF0)), y: BOX_Y1 };
+      return { x: BOX_X0 + BOX_W * side(f, bottomF0, bottomEnd), y: BOX_Y1 };
     }
     if (f < rightF0) return null;
     if (f <= rightEnd) {
-      return { x: BOX_X1, y: BOX_Y1 - BOX_H * clamp01((f - rightF0) / (rightEnd - rightF0)) };
+      return { x: BOX_X1, y: BOX_Y1 - BOX_H * side(f, rightF0, rightEnd) };
     }
     return null;
   };
@@ -1379,6 +1685,60 @@ const AllTheRelevantData: React.FC<Props> = ({
                     )}
                   </g>
 
+                  {/* the links: what was found, joined back to what was looked
+                      at, with the signal running inward */}
+                  <g style={{ filter: icon }}>
+                    {linkEls.map((l) =>
+                      l ? (
+                        <g key={l.key}>
+                          <line
+                            x1={l.x1}
+                            y1={l.y1}
+                            x2={l.x2}
+                            y2={l.y2}
+                            stroke={accent}
+                            strokeWidth={PROBE_STROKE}
+                            strokeLinecap="round"
+                            opacity={l.op}
+                          />
+                          {/* the packet head is drawn at this cut's own ink
+                              weight rather than levelUp's world PACKET_R, for
+                              the reason every other ink gesture here is (see
+                              THE INK'S WEIGHT): a world radius of 3 is 1.26
+                              screen px at K_WIDE, which is a packet nobody can
+                              see. The schedule, the speed cap and the `Trail`
+                              are the shared mechanism, untouched. */}
+                          {experiments.packets
+                            ? l.packets.map((p) => {
+                                const q = p.at(frame);
+                                if (!q) return null;
+                                return (
+                                  <g key={p.key}>
+                                    <Trail
+                                      frame={frame}
+                                      k={k}
+                                      at={p.at}
+                                      r={PACKET_R / K_WIDE}
+                                      fill={ink}
+                                      opacity={PACKET_AMBIENT * (l.op / LINK_OP)}
+                                      enabled={experiments.trails}
+                                    />
+                                    <circle
+                                      cx={q.x}
+                                      cy={q.y}
+                                      r={PACKET_R / K_WIDE}
+                                      fill={ink}
+                                      opacity={PACKET_AMBIENT * (l.op / LINK_OP)}
+                                    />
+                                  </g>
+                                );
+                              })
+                            : null}
+                        </g>
+                      ) : null,
+                    )}
+                  </g>
+
                   {/* the box: three sides of what was looked at, and a top edge
                       that never closes */}
                   {dLeft > 0 ? (
@@ -1402,6 +1762,19 @@ const AllTheRelevantData: React.FC<Props> = ({
                           stroke={ink}
                           strokeWidth={BOX_STROKE}
                           strokeDasharray={`${GATE_DASH} ${GATE_GAP}`}
+                          // UNCERTAIN EDGES MOVE: from the frame the dashed top
+                          // stops short on "data", its dashes keep marching in
+                          // the direction it was drawn (right -> left). The
+                          // edge stopped; the uncertainty did not. MARCH_PX is
+                          // 0.6 px/frame, and it is divided by the zoom for the
+                          // same reason this cut's two ink gestures are (see
+                          // THE INK'S WEIGHT): everything else in the set marches
+                          // at k ~ 1, and at K_WIDE an undivided 0.6 world px is
+                          // a quarter of a screen pixel a frame — a dash that
+                          // does not move is not the mechanism.
+                          strokeDashoffset={
+                            experiments.march ? marchDash(frame, beats.data) / K_WIDE : 0
+                          }
                           opacity={boxOp}
                         />
                       ) : null}

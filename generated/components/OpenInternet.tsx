@@ -35,11 +35,19 @@ import {
   EASE_ARRIVE,
   EASE_PAYOFF,
   ExperimentsSchema,
+  HOLD_DRIFT_MAX,
+  HOLD_DRIFT_PX,
   LEGATO,
+  PACKET_AMBIENT,
+  PACKET_SPEED,
   Streak,
   Trail,
+  WAKE_LEAD,
+  arriveEase,
   ease,
   highlightTone,
+  holdDriftK,
+  packetsOn,
 } from "./levelUp";
 // THE WORLD IS CUT 3'S. Every seat, board, mark, schedule and helper below comes
 // from `SecondMessageBoard`; nothing it defines is restated here. Its frame
@@ -48,20 +56,28 @@ import {
   BIG,
   BIG_POSTS_FLAT,
   BIG_POSTS_LEGATO,
+  BIG_POST_TAIL,
+  BIG_THREAD_TAIL_FLAT,
+  BIG_THREAD_TAIL_LEGATO,
   BOARD_BOTTOM,
   Board,
   type BoardDef,
   CAM as CAM3,
+  CAM_LAST,
   CLICK_DUR,
-  CONTENT_FINAL,
+  CONTENT_LAST,
   CROWD_BAND_Y,
   CROWD_BOT,
   CROWD_TOP,
   CX_FINAL,
+  CX_TAIL,
+  D4_F0 as TAIL3_F0,
+  D4_F1 as TAIL3_F1,
   DURATION as DURATION3,
   FACEBOOK,
   GROW_DUR,
   K_FINAL,
+  K_TAIL,
   MARK_GAP,
   MYSPACE,
   type MarkDef,
@@ -82,9 +98,12 @@ import {
   VIEW_W,
   VIEW_X,
   VIEW_Y,
+  arriveTail,
   bigRowsAt,
   blockCentre,
   blockK,
+  busyAt,
+  camDrift,
   idleTraffic,
   markInkBottom,
   markInkTop,
@@ -332,6 +351,83 @@ const FRAME_PAD = 8; // a few frames past the end, for trail lookups and tables
 //     - 520, - 980 — and the top row's panels are 80-240 world px tall, so at
 //     K_M1 the sky ends on screen 289 and there is nothing the layout can do
 //     about the 289 px over it without moving the rows.
+//
+// ---------------------------------------------------------------------------
+// THE SLEEK PASS (Sep 2026), on the director's note that the delivered set looked
+// "a bit unfinished ... too static". Same concept, same beats, same words, same
+// camera LANDINGS, no new gesture. Cut 3 was rebuilt first and its tail now
+// drifts, so THIS PIECE'S f0 IS ITS NEW LAST FRAME: the camera opens on cut 3's
+// `CAM_LAST` / `CONTENT_LAST` rather than on the K_FINAL / CONTENT_FINAL /
+// CX_FINAL it was framed for, and the difference blend against cut 3's new
+// full-res f385 is still bbox None, max channel delta 0, 0 non-zero pixels of
+// 2,073,600.
+//
+//  1 NO PARKED CAMERA. Four drift segments through the same `runCamera`, each
+//    starting from the value its move landed on and each running LINEARLY
+//    (cut 3's `camDrift`) rather than on `camMove`'s smoothstep, which parks the
+//    camera either side of every landing.
+//      D0  f1-8      cut 3's own tail rate, continued: TAIL3_DK and TAIL3_DX are
+//                    read off its D4 rather than re-derived, so the seam has no
+//                    step in velocity either
+//      D1  f41-112   M1 was a TILT UP, so the hold keeps tilting up — following
+//                    the packets climbing through it. 1.45 screen px a frame,
+//                    the brief's ceiling rather than its target, because through
+//                    this framing the crowd band is 2,000 px BELOW the frame and
+//                    the camera is very nearly the only thing moving in a frame
+//                    that is 85% bare grid. It costs 99 screen px of slide: the
+//                    horizon lands on 835 and ends the hold on 931
+//      D2  f135-172  M2 was a PUSH, so the hold keeps closing, k 0.80 -> 0.8395,
+//                    across the mark's landing and the three "datasets" rows
+//      D3  f212-220  M3 pulled back AND tracked left. K_END is the one k in the
+//                    piece that is solved — the whole world's block fits screen
+//                    220-1450 at it exactly — so the tail keeps the TRACK and
+//                    holds the k
+//    Measured, drift alone, on a point at the safe band's corner: 0.83 / 1.45 /
+//    1.22 / 1.02 screen px a frame, all inside the brief's 0.8-1.5, never 0 and
+//    never over 2 at the frame's own corners either (1.82 at worst).
+//  2 SIGNAL ON EVERY LIVE LINE. The horizon carries traffic from the frame it
+//    clicks: packets BOTH WAYS along the whole line, one launch every
+//    HORIZON_PACKET_PERIOD per direction and the directions half a period apart,
+//    so one leaves every ~6 frames across the line; ~16 in the air at once at
+//    PACKET_AMBIENT 0.4, under the ceiling. They are drawn in THIS cut's packet
+//    language — an accent tail fading into a white head — because a bare
+//    PACKET_R head is 1.4 screen px at K_M1 and the line it sits on is 1.4 px
+//    wide: rendered and looked at, it is invisible. Every board's NEWEST post
+//    line also carries one hero packet for the frames after it lands (cut 3's
+//    `Board` does it), including cut 3's own two, which is how the shared big
+//    board stays identical across the seam.
+//  3 DARK TRAFFIC is NOT USED: this cut has no OP_DARK field either.
+//  4 ARRIVE, DON'T STOP DEAD. Climb heads, outline heads and cut 3's own post
+//    and thread heads decelerate into their landings on `arriveEase`, landing on
+//    the same frames. The tails are SMALL — 0.024-0.049 against the helper's
+//    default 0.15 — and that is arithmetic: every head-led draw here is already
+//    held at 42 screen px a frame by OPEN_SCREEN_CAP / OUTLINE_SCREEN_CAP, one
+//    px under the ceiling, and `arriveEase` cruises at (1 + 2 * tail) times
+//    nominal. The only other way to decelerate a head already at the ceiling is
+//    to launch it earlier, and every launch here is solved backwards from its
+//    landing through one shared travel table: moving them would re-run the
+//    launch cap and re-deal all 38 climbs. Cut 3's post tails are IMPORTED from
+//    cut 3 rather than re-solved here, so the shared board draws identically on
+//    the frame the two cuts share. The Hugging Face drop keeps its EASE_PAYOFF
+//    and its overshoot untouched.
+//  5 MARCHING DASHES are NOT USED: there is no dashed edge in this cut.
+//  6 WAKE BEFORE YOU ACT. Every agent's tone ramp starts WAKE_LEAD 8 frames
+//    before its packet launches rather than TONE_DUR 6. It is under the frame at
+//    M1's and M2's framings, as the brief says it will be, and in shot in the
+//    tail's wide reveal.
+//  + THE CROWD IS BUSY WHILE A BOARD IS RECEIVING: the idle rate lifts by
+//    IDLE_BUSY_LIFT while something is in the air on EITHER clock, and every
+//    idle head now carries the shared `Trail`.
+//
+// MEASURED ENERGY (half-res luma motion energy per 12 frames, < 0.8 is dead):
+// nine dead blocks of nineteen before the pass, ONE after. f48-108 went 0.26-0.44
+// -> 0.79-1.07 and the tail 0.44 -> 0.80. The one that remains is f49-60 at 0.79,
+// one hundredth under the line, and its cause is structural rather than
+// unfinished: the horizon has clicked, the first board is not established until
+// "on" f65 by the brief's own schedule, and the crowd band is 2,000 screen px
+// below the frame. There is no gesture with a word in it to put there.
+// ---------------------------------------------------------------------------
+//
 //   * MARK_DROP STAYS 160, NOT cut 3's 260, even though at this framing the
 //     mark's ink top would now start inside the frame (screen 599 rather than
 //     v1's off-frame): the drop lands at K_M2 0.80, where 260 world px peaks at
@@ -970,7 +1066,12 @@ export const SWAY_X = 3;
 export const OPEN_HALF = Math.max(
   ...OPEN.filter((b) => b.row <= 1).map((b) => Math.abs(b.cx) + b.w / 2),
 );
-export const K_M1 = Math.min(K_FINAL, (540 - SIDE_MARGIN - SWAY_X) / OPEN_HALF);
+// SLEEK PASS — the lens this piece opens on is no longer cut 3's K_FINAL. Cut 3's
+// tail drifts, so its LAST frame sits at CAM_LAST.k 0.5212 on CONTENT_LAST with
+// cx -277.2, and this piece opens on that state rather than on the state cut 3
+// was framed for. The rule is the one it always was: no more zoomed in than the
+// lens this piece inherits.
+export const K_M1 = Math.min(CAM_LAST.k, (540 - SIDE_MARGIN - SWAY_X) / OPEN_HALF);
 export const K_M2 = 0.8;
 export const HORIZON_SCREEN_Y = 835; // the content centre: the line IS the subject
 // the content centre that puts a world y on a screen y at a given k
@@ -1013,6 +1114,81 @@ export const M2_K1 = 124;
 export const M3_K0 = 173; // the speech ends
 export const M3_K1 = 205;
 
+// ---------------------------------------------------------------------------
+// SLEEK PASS — NOTHING IS EVER PARKED. Four drift segments, run through the same
+// `runCamera` as the moves and authored with cut 3's `camDrift` — a straight
+// ramp, not `camMove`'s smoothstep, which parks the camera for the ten frames
+// either side of every landing. Each starts from the value its move landed on,
+// so no landing moves.
+//
+//   D0  f1-8      cut 3's tail drift, continued into this piece: it keeps
+//                 opening and keeps tracking right, at the rate it arrives on,
+//                 until M1 takes over. Without it the first eight frames of the
+//                 cut are the only parked frames in the pair
+//   D1  f41-112   after M1 is 99.4% landed at f40 — M1 was a TILT UP, so the
+//                 hold keeps tilting up, following the packets that are climbing
+//                 through it. A tilt is also a uniform translation, which is the
+//                 drift that carries the most life per screen px, and f48-108 is
+//                 the deadest stretch in the pair (0.26-0.44)
+//   D2  f135-172  after M2 is 99.4% landed at f134 — M2 was a PUSH, so the hold
+//                 keeps closing, k K_M2 -> K_DRIFT2, across the Hugging Face
+//                 mark's landing and the three "datasets" rows
+//   D3  f212-220  after M3 is 99.4% landed at f211 — the pull-back keeps opening
+//                 through the last nine frames
+//
+// DRIFT_REF is cut 3's 900 and means the same thing: the k a zoom drift ends on
+// is solved so that a world point 900 screen px from the content centre moves
+// HOLD_DRIFT_PX a frame, which puts the safe band's own corner (780) at ~1.04
+// and the frame's corners (1212) at ~1.6.
+export const DRIFT_REF = 900;
+export const D0_F0 = 1;
+export const D0_F1 = M1_K0 - 1; // f8, the frame before M1's first key
+export const D1_F0 = 41; // M1 is 99.4% landed at f40
+export const D1_F1 = M2_K0 - 1; // f112
+export const D2_F0 = 135; // M2 is 99.4% landed at f134
+export const D2_F1 = M3_K0 - 1; // f172
+export const D3_F0 = 212; // M3 is 99.4% landed at f211
+export const D3_F1 = DURATION - 1; // f220, the last frame
+
+// D0 carries cut 3's tail on at CUT 3'S OWN RATE rather than at a rate of its
+// own: its tail opens K_FINAL -> K_TAIL and tracks CX_FINAL -> CX_TAIL over its
+// own window, so those two per-frame rates are read off it and continued. Asking
+// `holdDriftK` for a fresh 1.2 px/frame here and adding a pan on top would run
+// the first eight frames of this cut at 1.6, faster than the tail it is
+// supposed to be the continuation of.
+export const TAIL3_DK = (K_TAIL - K_FINAL) / (TAIL3_F1 - TAIL3_F0);
+export const TAIL3_DX = (CX_TAIL - CX_FINAL) / (TAIL3_F1 - TAIL3_F0);
+export const K_DRIFT0 = CAM_LAST.k + TAIL3_DK * (D0_F1 - D0_F0);
+export const CX_DRIFT0 = CAM_LAST.cx + TAIL3_DX * (D0_F1 - D0_F0);
+
+// D1 is a TILT, and a tilt has no `screenDist`: it moves every point in the
+// frame by the same amount, which is why `holdDriftK` does not apply to it. Its
+// size is simply the world px that move the frame HOLD_DRIFT_PX a frame at the k
+// it is held at. The consequence is stated rather than hidden: the horizon,
+// which M1 lands on screen y 835, ends the hold on ~920, and the sky above the
+// open boards grows by the same 85 px. That is what "keep tilting up" costs at
+// this lens, and the sky over the top row is the thing the v3 record already
+// flags for the director.
+// DRIFT_PAN_PX, and it is HOLD_DRIFT_MAX less a hair rather than HOLD_DRIFT_PX,
+// for one measured reason: through M1's framing the crowd band is 2,000 screen
+// px BELOW the frame — the tower is the past, which is the shot — so the camera
+// is very nearly the only thing moving in a frame that is 85% bare grid, and the
+// motion energy across f37-108 is bounded by how fast it moves. At
+// HOLD_DRIFT_PX the stretch measured 0.69-0.82; the drift is therefore run at
+// the ceiling the brief sets rather than at its target. It is still a drift: 1.45
+// screen px a frame is a slide of one frame's width in twelve seconds.
+export const DRIFT_PAN_PX = HOLD_DRIFT_MAX - 0.05;
+export const CONTENT_DRIFT1 = CONTENT_M1 - (DRIFT_PAN_PX * (D1_F1 - D1_F0)) / K_M1;
+// D2 is a PUSH: it keeps closing.
+export const K_DRIFT2 = holdDriftK(K_M2, D2_F1 - D2_F0, DRIFT_REF, 1);
+// D3 CONTINUES M3'S TRACK, NOT ITS ZOOM. M3 did both — it pulled back to K_END
+// AND tracked left from the Hugging Face board to 0 — and K_END is the one k in
+// the piece that is SOLVED: the whole world's block fits screen y 220-1450 at it
+// exactly. Opening past it shrinks that block for no gain, and the two drifts
+// together measured 1.87 screen px a frame, over the brief's own 1.5. So the
+// tail keeps tracking left at HOLD_DRIFT_PX and holds the k it resolved on.
+export const CX_DRIFT3 = CX_END - (HOLD_DRIFT_PX * (D3_F1 - D3_F0)) / K_END;
+
 export type CamSeg = {
   f0: number;
   f1: number;
@@ -1023,20 +1199,49 @@ export type CamSeg = {
   x0: number;
   x1: number;
   warp: number;
+  // SLEEK PASS — a hold's drift, run through cut 3's `camDrift` (a straight ramp)
+  // rather than `camMove` (a smoothstep), so it does not park at either end.
+  drift?: boolean;
 };
 
 export const CAM_SEGS: CamSeg[] = [
+  // D0 cut 3's tail, carried on: still opening, still tracking right
+  {
+    f0: D0_F0,
+    f1: D0_F1,
+    k0: CAM_LAST.k,
+    k1: K_DRIFT0,
+    c0: CONTENT_LAST,
+    c1: CONTENT_LAST,
+    x0: CAM_LAST.cx,
+    x1: CX_DRIFT0,
+    warp: 1,
+    drift: true,
+  },
   // M1 "once the agents had gotten onto the internet" — out and up onto the line
   {
     f0: M1_K0,
     f1: M1_K1,
-    k0: K_FINAL,
+    k0: K_DRIFT0,
     k1: K_M1,
-    c0: CONTENT_FINAL,
+    c0: CONTENT_LAST,
     c1: CONTENT_M1,
-    x0: CX_FINAL,
+    x0: CX_DRIFT0,
     x1: 0,
     warp: 0.7,
+  },
+  // D1 the hold after "they" — the tilt keeps going up, following the climbs
+  {
+    f0: D1_F0,
+    f1: D1_F1,
+    k0: K_M1,
+    k1: K_M1,
+    c0: CONTENT_M1,
+    c1: CONTENT_DRIFT1,
+    x0: 0,
+    x1: 0,
+    warp: 1,
+    drift: true,
   },
   // M2 "including communicating on" — push in on the Hugging Face board
   {
@@ -1044,23 +1249,49 @@ export const CAM_SEGS: CamSeg[] = [
     f1: M2_K1,
     k0: K_M1,
     k1: K_M2,
-    c0: CONTENT_M1,
+    c0: CONTENT_DRIFT1,
     c1: CONTENT_M2,
     x0: 0,
     x1: HF_BOARD.cx,
     warp: 0.72,
   },
+  // D2 the hold across "Hugging Face datasets" — the push keeps closing
+  {
+    f0: D2_F0,
+    f1: D2_F1,
+    k0: K_M2,
+    k1: K_DRIFT2,
+    c0: CONTENT_M2,
+    c1: CONTENT_M2,
+    x0: HF_BOARD.cx,
+    x1: HF_BOARD.cx,
+    warp: 1,
+    drift: true,
+  },
   // M3 the tail — the pull-back that holds the whole world
   {
     f0: M3_K0,
     f1: M3_K1,
-    k0: K_M2,
+    k0: K_DRIFT2,
     k1: K_END,
     c0: CONTENT_M2,
     c1: CONTENT_END,
     x0: HF_BOARD.cx,
     x1: CX_END,
     warp: 0.72,
+  },
+  // D3 the last nine frames — the pull-back keeps opening
+  {
+    f0: D3_F0,
+    f1: D3_F1,
+    k0: K_END,
+    k1: K_END,
+    c0: CONTENT_END,
+    c1: CONTENT_END,
+    x0: CX_END,
+    x1: CX_DRIFT3,
+    warp: 1,
+    drift: true,
   },
 ];
 
@@ -1069,9 +1300,9 @@ export const CAM_SEGS: CamSeg[] = [
 // camera rather than on a framing of its own.
 export const CAM = (() => {
   const F: number[] = [0];
-  const K: number[] = [K_FINAL];
-  const CY: number[] = [CONTENT_FINAL + CAM_LIFT / K_FINAL];
-  const CX: number[] = [CX_FINAL];
+  const K: number[] = [CAM_LAST.k];
+  const CY: number[] = [CAM_LAST.cy];
+  const CX: number[] = [CAM_LAST.cx];
   const hold = (f: number) => {
     F.push(f);
     K.push(K[K.length - 1]);
@@ -1080,12 +1311,13 @@ export const CAM = (() => {
   };
   CAM_SEGS.forEach((s) => {
     if (s.f0 > F[F.length - 1] + 1) hold(s.f0 - 1);
-    const m = camMove(s);
+    const m = s.drift ? camDrift(s) : camMove(s);
     m.F.forEach((f, i) => {
+      const g = i / (s.f1 - s.f0);
       F.push(f);
       K.push(m.K[i]);
       CY.push(m.CY[i]);
-      CX.push(s.x0 + (s.x1 - s.x0) * camEase(i / (s.f1 - s.f0), s.warp));
+      CX.push(s.x0 + (s.x1 - s.x0) * (s.drift ? g : camEase(g, s.warp)));
     });
   });
   if (F[F.length - 1] < DURATION + FRAME_PAD) hold(DURATION + FRAME_PAD);
@@ -1128,6 +1360,35 @@ OPEN.forEach((b) => {
   b.speed = Math.min(OUTLINE_SPEED, OUTLINE_SCREEN_CAP / k);
   b.estDur = outlineLen(b.w) / b.speed;
   b.estStart = b.est - b.estDur;
+});
+
+// SLEEK PASS — ARRIVE, DON'T STOP DEAD, AND THE CEILING THAT DECIDES HOW MUCH.
+// `arriveEase(u, tail)` cruises at (1 + 2 * tail) times nominal and decelerates
+// over the last `tail` of the DISTANCE, landing on the same frame. Every
+// head-led draw in this cut is ALREADY held at OPEN_SCREEN_CAP / OUTLINE_SCREEN_
+// CAP 42 screen px a frame by construction, one px under the ceiling
+// `arriveTail` solves against, so the tail each head can afford is small — and
+// that is arithmetic, not taste. The only other way to decelerate a head that is
+// already at the ceiling is to launch it earlier, and these launches are solved
+// backwards from their landings through one shared travel table: moving them
+// would re-run the launch cap and re-deal the whole schedule.
+//
+// A screen speed is passed as the speed with kMax 1, because both of these are
+// capped in SCREEN px rather than world px.
+export const screenSpeedOver = (f0: number, f1: number, world: number, cap: number) => {
+  let v = 0;
+  for (let f = Math.floor(f0); f <= Math.ceil(f1); f++) {
+    const k = camAt(f).k;
+    v = Math.max(v, Math.min(world, cap / k) * k);
+  }
+  return v;
+};
+export const OUTLINE_TAIL = new Map<string, number>();
+OPEN.forEach((b) => {
+  OUTLINE_TAIL.set(
+    b.key,
+    arriveTail(screenSpeedOver(b.estStart, b.est, OUTLINE_SPEED, OUTLINE_SCREEN_CAP), 1),
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -1235,6 +1496,11 @@ export type Climb = Post & {
   dist: number;
   tries: number;
   hits: number; // boxes the solved segment still crosses; 0 for every one of them
+  // SLEEK PASS — the arrive-ease this packet's head decelerates over, solved from
+  // the fastest SCREEN speed it ever runs at. Applied to the travel table's own
+  // progress, so the cap's shaping — the climbs visibly slowing while the lens is
+  // in — survives, and the landing frame does not move.
+  tail: number;
 };
 
 // The arrival points tried, the hashed one first and then alternates either
@@ -1340,6 +1606,7 @@ const solveClimb = (b: OpenDef, row: number, landing: number): Climb => {
   const baseY = s.y - THREAD_LIFT;
   const bx = best.bx;
   const dist = Math.hypot(bx - s.x, b.bottom - baseY);
+  const launch = launchFor(landing, dist);
   return {
     board: b,
     open: b,
@@ -1353,9 +1620,10 @@ const solveClimb = (b: OpenDef, row: number, landing: number): Climb => {
     dist,
     tries,
     hits: best.hits,
-    launch: launchFor(landing, dist),
+    launch,
     landing,
     end: landing + len / POST_SPEED,
+    tail: arriveTail(screenSpeedOver(launch, landing, OPEN_SPEED, OPEN_SCREEN_CAP), 1),
   };
 };
 
@@ -1441,15 +1709,70 @@ export const DROPPED: { key: string; landing: number }[] = [];
 export const openLegatoIn = (b: OpenDef) => b.estStart - LEGATO;
 
 // where a climb's head is at a frame, in world coordinates
-export const climbAt = (c: Climb, f: number) => {
+export const climbAt = (c: Climb, f: number, arrive = true) => {
   if (f < c.launch) return null;
-  const u = clamp01((travelAt(f) - travelAt(c.launch)) / c.dist);
+  // the travel table's own progress is the constant-speed one, so feeding it to
+  // `arriveEase` decelerates the last 15% of the DISTANCE without unpicking the
+  // screen-speed cap the table already applies
+  const p = clamp01((travelAt(f) - travelAt(c.launch)) / c.dist);
+  const u = arrive && c.tail > 0 ? arriveEase(p, c.tail) : p;
   return { x: c.x + (c.bx - c.x) * u, y: c.baseY + (c.open.bottom - c.baseY) * u };
 };
 
 // The one highlight in the cut: the agent behind the first row that lands on
 // "data".
 export const HIGHLIGHT_LANDING = DATA_LANDINGS[0];
+
+// ---------------------------------------------------------------------------
+// SLEEK PASS — THE HORIZON IS TRAFFIC. From the frame it clicks, packets run
+// BOTH WAYS along the whole line: the open internet is not a shelf, it is the
+// thing everything above and below it is talking across. One launch every
+// HORIZON_PACKET_PERIOD frames per direction, the two directions half a period
+// apart, so across the line a packet leaves every ~6 frames. They are AMBIENT —
+// PACKET_AMBIENT 0.4, under the set's ceiling for anything subordinate — and at
+// PACKET_SPEED a crossing of the 2,460 px line takes ~95 frames, so about six a
+// direction are in the air at once.
+//
+// Each launch is asked for on its own so its `at` can follow THAT packet rather
+// than whichever one happens to be at index 0: `packetsOn` is handed a period
+// longer than the piece (ONE_SHOT) and a phase that cancels its hashed offset,
+// which makes it emit exactly one packet, from its launch frame until it lands.
+//
+// THEY ARE DRAWN THE WAY THIS CUT DRAWS ITS CLIMBS, not as a bare `Packet`. At
+// K_M1 a PACKET_R 3 world px head is 1.4 SCREEN px of radius and the horizon's
+// own stroke is 1.4 px wide: rendered and looked at, a bare head on this line is
+// invisible — it is the same size as the line it is on. This cut's own packet
+// language is a white head with an accent tail behind it fading toward the head
+// (see CLIMB_TAIL), which is what makes the climbs read at this lens, so the
+// horizon's traffic takes it too. The head keeps the shared `Trail`.
+export const HORIZON_PACKET_PERIOD = 12;
+export const HORIZON_PACKET_TAIL = 200; // world px of accent behind the head
+export const ONE_SHOT = 1e6;
+export const HORIZON_DIRS: (1 | -1)[] = [1, -1];
+export const horizonPacketAt =
+  (dir: 1 | -1, n: number, k: number) =>
+  (f: number) => {
+    const phase =
+      HORIZON_CLICK +
+      (dir > 0 ? 0 : HORIZON_PACKET_PERIOD / 2) +
+      n * HORIZON_PACKET_PERIOD -
+      hash(dir > 0 ? 3.1 : 7.9, 41) * ONE_SHOT;
+    const r = packetsOn({
+      frame: f,
+      k,
+      from: { x: -dir * HORIZON_X, y: H_Y },
+      to: { x: dir * HORIZON_X, y: H_Y },
+      period: ONE_SHOT,
+      phase,
+      opacity: PACKET_AMBIENT,
+      seed: dir > 0 ? 3.1 : 7.9,
+    });
+    return r.length ? { x: r[0].x, y: r[0].y } : null;
+  };
+// how far back to look for launches that are still in the air: the whole line at
+// the slowest the packets ever cross it, plus one
+export const HORIZON_PACKET_BACK =
+  Math.ceil((2 * HORIZON_X) / PACKET_SPEED / HORIZON_PACKET_PERIOD) + 1;
 
 // ---------------------------------------------------------------------------
 
@@ -1539,10 +1862,15 @@ const OpenInternet: React.FC<Props> = ({
   // -- cut 3's two boards, still posting -------------------------------------
   const bigRows = bigRowsAt(F);
   const smRows = smallRows(F);
+  // SLEEK PASS — cut 3's own arrive tails, imported rather than re-solved, so the
+  // shared big board draws its newest post line IDENTICALLY on the frame the two
+  // cuts share.
+  const bigThreadTail = experiments.legato ? BIG_THREAD_TAIL_LEGATO : BIG_THREAD_TAIL_FLAT;
   const bigDraw: PostDraw[] = [];
   for (let r = 0; r < ROWS0_BIG; r++) bigDraw.push({ row: r, len: postLen(BIG, r), from: -1000 });
-  bigPosts.forEach((p) => {
-    if (F >= p.landing) bigDraw.push({ row: p.row, len: p.len, from: p.landing });
+  bigPosts.forEach((p, n) => {
+    if (F >= p.landing)
+      bigDraw.push({ row: p.row, len: p.len, from: p.landing, tail: BIG_POST_TAIL[n] });
   });
   const smallDraw: PostDraw[] = [];
   for (let r = 0; r < ROWS0_SMALL; r++)
@@ -1568,24 +1896,36 @@ const OpenInternet: React.FC<Props> = ({
   // Only a posting agent ever leaves the deep tone: it comes up over TONE_DUR
   // before its thread leaves and goes back down over TONE_DUR once the thread
   // has faded. Cut 3's posts run on cut 3's clock, the climbs on this one.
+  // SLEEK PASS — WAKE BEFORE YOU ACT: the ramp starts WAKE_LEAD frames before the
+  // thread or the packet launches, not TONE_DUR before it, so the agent is
+  // already ripe when it sends.
   const seatTone = new Float32Array(NSEAT);
+  const lead = experiments.wake ? WAKE_LEAD : TONE_DUR;
   const litPost = (seat: number, now: number, launch: number, downAt: number) => {
-    const up = ease((now - (launch - TONE_DUR)) / TONE_DUR, EASE_ARRIVE);
+    const up = ease((now - (launch - lead)) / TONE_DUR, EASE_ARRIVE);
     const down = ease((now - downAt) / TONE_DUR, EASE_ARRIVE);
     const v = clamp01(up - down);
     if (v > seatTone[seat]) seatTone[seat] = v;
   };
   bigPosts.forEach((p) => {
-    if (F < p.launch - TONE_DUR - 1) return;
+    if (F < p.launch - WAKE_LEAD - TONE_DUR - 1) return;
     litPost(p.seat, F, p.launch, p.landing + GROW_DUR + THREAD_FADE);
   });
   CLIMBS.forEach((c) => {
-    if (frame < c.launch - TONE_DUR - 1) return;
+    if (frame < c.launch - WAKE_LEAD - TONE_DUR - 1) return;
     litPost(c.seat, frame, c.launch, c.landing + GROW_DUR + THREAD_FADE);
   });
 
   // -- idle traffic ----------------------------------------------------------
-  const { threadEls, lit } = idleTraffic(F, idleThreadCount);
+  // SLEEK PASS — the band runs at IDLE_BUSY_LIFT above the standard rate while
+  // something is in the air to a board, on EITHER clock: cut 3's posts run on F
+  // and this cut's climbs on its own frame. At the frame the two cuts share only
+  // the first term is live, and it is the same term cut 3 evaluates, so the
+  // shared frame is the same frame in both pieces.
+  const busy = experiments.packets
+    ? Math.max(busyAt(F, [...bigPosts, ...SMALL_POSTS]), busyAt(frame, CLIMBS))
+    : 0;
+  const { threadEls, lit } = idleTraffic(F, idleThreadCount, busy);
 
   // -- the posting threads, cut 3's and this cut's ---------------------------
   type Live = {
@@ -1608,12 +1948,14 @@ const OpenInternet: React.FC<Props> = ({
     at: (f: number) => { x: number; y: number } | null;
   }[] = [];
   // cut 3's: straight up at one speed, dead stop on the panel's bottom edge
-  const addPost = (p: Post, key: string) => {
+  const addPost = (p: Post, key: string, tail: number) => {
     const fadeF0 = p.landing + GROW_DUR;
     if (F < p.launch || F > fadeF0 + THREAD_FADE) return;
+    const dur = (p.baseY - BOARD_BOTTOM) / THREAD_SPEED;
     const at = (f: number) => {
       if (f < p.launch) return null;
-      const d = clamp01(((f - p.launch) * THREAD_SPEED) / (p.baseY - BOARD_BOTTOM));
+      const u = clamp01((f - p.launch) / dur);
+      const d = tail > 0 ? arriveEase(u, tail) : u;
       return { x: p.x, y: p.baseY + (BOARD_BOTTOM - p.baseY) * d };
     };
     const now = at(F);
@@ -1627,15 +1969,24 @@ const OpenInternet: React.FC<Props> = ({
       headDots.push({ key, x: p.x, y: now.y, op });
     }
   };
-  bigPosts.forEach((p, n) => addPost(p, `b${n}`));
+  bigPosts.forEach((p, n) =>
+    addPost(p, `b${n}`, experiments.arrive ? bigThreadTail[n] : 0),
+  );
   // this cut's: the long climbs, as packets — a head with at most CLIMB_TAIL
   // world px of accent behind it, faded along its length, leaning past the two
   // boards below and capped in screen speed
   CLIMBS.forEach((c, n) => {
     const travelled = travelAt(frame) - travelAt(c.launch);
     if (travelled <= 0 || travelled - CLIMB_TAIL >= c.dist) return;
-    const hU = clamp01(travelled / c.dist);
-    const tU = clamp01((travelled - CLIMB_TAIL) / c.dist);
+    // SLEEK PASS — the head decelerates into the board over the last 15% of its
+    // distance; the TAIL keeps running at the table's own rate, so once the head
+    // has landed the packet is still absorbed into the board exactly as before.
+    const prog = clamp01(travelled / c.dist);
+    const hU = experiments.arrive && c.tail > 0 ? arriveEase(prog, c.tail) : prog;
+    const tU = Math.max(
+      clamp01((travelled - CLIMB_TAIL) / c.dist),
+      Math.max(0, hU - CLIMB_TAIL / c.dist),
+    );
     if (hU <= tU) return;
     const at = (u: number) => ({
       x: c.x + (c.bx - c.x) * u,
@@ -1666,7 +2017,7 @@ const OpenInternet: React.FC<Props> = ({
     }
     if (hU < 1) {
       const head = at(hU);
-      heads.push({ key, now: frame, at: (f: number) => climbAt(c, f) });
+      heads.push({ key, now: frame, at: (f: number) => climbAt(c, f, experiments.arrive) });
       headDots.push({ key, x: head.x, y: head.y });
     }
   });
@@ -1744,7 +2095,7 @@ const OpenInternet: React.FC<Props> = ({
               ) : null,
             )}
 
-            {/* idle traffic, head-led */}
+            {/* idle traffic, head-led, every moving head on the shared Trail */}
             {threadEls.map((t) => (
               <g key={t.key}>
                 <line
@@ -1757,7 +2108,20 @@ const OpenInternet: React.FC<Props> = ({
                   strokeLinecap="round"
                   opacity={t.op}
                 />
-                {t.head < 1 ? <circle cx={t.x2} cy={t.y2} r={4} fill={ink} opacity={t.op} /> : null}
+                {t.head < 1 ? (
+                  <>
+                    <Trail
+                      frame={F}
+                      k={k}
+                      at={t.at}
+                      r={4}
+                      fill={ink}
+                      opacity={t.op}
+                      enabled={experiments.trails}
+                    />
+                    <circle cx={t.x2} cy={t.y2} r={4} fill={ink} opacity={t.op} />
+                  </>
+                ) : null}
               </g>
             ))}
 
@@ -1820,6 +2184,64 @@ const OpenInternet: React.FC<Props> = ({
                     ) : null}
                   </g>
                 ))}
+                {/* the traffic on it, both ways, from the frame it clicks:
+                    an accent tail fading toward a white head, this cut's own
+                    packet, at the ambient rung */}
+                {experiments.packets && frame >= HORIZON_CLICK
+                  ? HORIZON_DIRS.map((dir) => {
+                      const nNow = Math.floor(
+                        (frame - HORIZON_CLICK) / HORIZON_PACKET_PERIOD,
+                      );
+                      const out: React.ReactNode[] = [];
+                      for (let n = nNow - HORIZON_PACKET_BACK; n <= nNow; n++) {
+                        if (n < 0) continue;
+                        const at = horizonPacketAt(dir, n, k);
+                        const head = at(frame);
+                        if (!head) continue;
+                        const tailX = Math.max(
+                          -HORIZON_X,
+                          Math.min(HORIZON_X, head.x - dir * HORIZON_PACKET_TAIL),
+                        );
+                        out.push(
+                          <g key={`hp${dir}_${n}`}>
+                            {[...Array(CLIMB_TAIL_SAMPLES)].map((_, i) => (
+                              <line
+                                key={i}
+                                x1={tailX + ((head.x - tailX) * i) / CLIMB_TAIL_SAMPLES}
+                                y1={H_Y}
+                                x2={tailX + ((head.x - tailX) * (i + 1)) / CLIMB_TAIL_SAMPLES}
+                                y2={H_Y}
+                                stroke={accent}
+                                strokeWidth={STROKE}
+                                strokeLinecap="round"
+                                opacity={
+                                  PACKET_AMBIENT *
+                                  (0.2 + 0.8 * ((i + 1) / CLIMB_TAIL_SAMPLES))
+                                }
+                              />
+                            ))}
+                            <Trail
+                              frame={frame}
+                              k={k}
+                              at={at}
+                              r={4}
+                              fill={ink}
+                              opacity={PACKET_AMBIENT}
+                              enabled={experiments.trails}
+                            />
+                            <circle
+                              cx={head.x}
+                              cy={H_Y}
+                              r={4}
+                              fill={ink}
+                              opacity={PACKET_AMBIENT}
+                            />
+                          </g>,
+                        );
+                      }
+                      return <g key={`hd${dir}`}>{out}</g>;
+                    })
+                  : null}
               </g>
             ) : null}
 
@@ -1834,6 +2256,8 @@ const OpenInternet: React.FC<Props> = ({
               frame={F}
               k={k}
               trails={experiments.trails}
+              packets={experiments.packets}
+              arrive={experiments.arrive}
             />
             <Board
               board={BIG}
@@ -1845,6 +2269,8 @@ const OpenInternet: React.FC<Props> = ({
               frame={F}
               k={k}
               trails={experiments.trails}
+              packets={experiments.packets}
+              arrive={experiments.arrive}
             />
 
             {/* the sky: fourteen boards in three rows, each under its own
@@ -1854,9 +2280,16 @@ const OpenInternet: React.FC<Props> = ({
                 if (frame < b.estStart) return null;
                 const close = openClose(b);
                 if (frame < close) {
-                  const u = clamp01((frame - b.estStart) / b.estDur);
+                  // SLEEK PASS — the outline's head cruises and decelerates into
+                  // the corner it closes on, landing on the same frame
+                  const oTail = experiments.arrive ? (OUTLINE_TAIL.get(b.key) ?? 0) : 0;
+                  const prog = (f: number) => {
+                    const w = clamp01((f - b.estStart) / b.estDur);
+                    return oTail > 0 ? arriveEase(w, oTail) : w;
+                  };
+                  const u = prog(frame);
                   const head = outlinePointAt(b, u);
-                  const at = (f: number) => outlinePointAt(b, clamp01((f - b.estStart) / b.estDur));
+                  const at = (f: number) => outlinePointAt(b, prog(f));
                   return (
                     <g key={b.key} transform={`translate(0 ${b.dy})`} style={{ filter: icon }}>
                       <path
@@ -1902,6 +2335,8 @@ const OpenInternet: React.FC<Props> = ({
                       frame={frame}
                       k={k}
                       trails={experiments.trails}
+                      packets={experiments.packets}
+                      arrive={experiments.arrive}
                     />
                   </g>
                 );

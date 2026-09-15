@@ -34,15 +34,26 @@ import {
 // duration a dot takes to ramp deep -> ripe. Imported, never restated.
 import { STROKE, TONE_DUR } from "./ImpossibleTasks";
 import {
+  DARK_TRAFFIC_OPACITY,
   DEPTH_BANDS,
   EASE_ARRIVE,
   ExperimentsSchema,
   HIGHLIGHT,
   HIGHLIGHT_FRAMES,
+  HOLD_DRIFT_MAX,
+  HOLD_DRIFT_PX,
   LEGATO,
+  PACKET_HERO,
+  PACKET_PERIOD,
+  PACKET_R,
+  PACKET_SPEED,
   Trail,
+  WAKE_LEAD,
+  arriveEase,
   depthK,
   ease,
+  holdDriftK,
+  packetsOn,
 } from "./levelUp";
 // THE MARK. Cut 4 derived the Hugging Face mark's ink-area size against the
 // whole set's one scale; it is imported, never re-derived.
@@ -72,6 +83,10 @@ import {
   COLS,
   GRID_X0,
   GRID_Y0,
+  IDLE_N,
+  IDLE_POOL,
+  IDLE_REACH,
+  NSEAT,
   ROWS,
   SEATS,
   SEAT_ALIVE,
@@ -80,6 +95,7 @@ import {
   STEP_X,
   STEP_Y,
   TIP_R,
+  idleAt,
 } from "./ThreeOrSomething";
 
 export const FPS = 24;
@@ -161,9 +177,14 @@ export const DURATION = 128;
 //     arrivals, and the cut's only highlight. CAMERA
 //     M1 pushes in k 1.45 -> 1.60 under them
 //                          — "hacked Hugging Face"                  f12-31
-//   (held breath: f33-36, four frames of a dead still
-//     camera on a converted board, the click decaying
-//     out of it)                                                    f33-36
+//   (SLEEK PASS: there is no held breath any more. v2
+//     parked the camera from f23 to f36 and the frame
+//     went dead — measured luma motion energy 0.28 over
+//     f25-36 against the set's 0.8 floor. D1 keeps M1's
+//     push CLOSING at drift speed across those frames
+//     instead, the click still decays out of the board
+//     over them, and the five landed reaches have
+//     started carrying packets)                                     f24-35
 //   IT'S NOT CLEAR: CAMERA M2, the pull-back
 //     k 1.60 -> 1.00. The dark field opens around the
 //     five and they stop being the whole frame
@@ -180,13 +201,42 @@ export const DURATION = 128;
 //     is the sentence
 //                          — "how many"                             f47-66
 //   OR WHY: nothing new. The held picture — the accent
-//     board, five bright reaches, fourteen dim ones —
-//     and CAMERA M3, an even creep k 1.00 -> K_FINAL
-//     0.95 from f62 to f127 (warp 1.0) so the hold is
-//     a drift and not a park: 1.45 screen px/frame at
-//     worst on a point at the frame's edge, against
-//     the set's 4 px dashed-edge rule
-//                          — "or why", and the tail                 f62-127
+//     board, five bright reaches, fourteen dim ones,
+//     the dark field talking to itself underneath and
+//     the five carrying signal — and CAMERA M3, now
+//     ONE continuous opening from the frame M2 lands
+//     (f53) to the last frame, k 1.00 -> K_FINAL 0.95
+//     with the end key still at f115, so f127 is still
+//     K_FINAL and cut 0b still opens on it
+//                          — "or why", and the tail                 f53-127
+//
+// ---------------------------------------------------------------------------
+// THE SLEEK PASS (Sep 2026), on the director's note that the delivered set
+// looked "a bit unfinished ... too static". Same concept, same beats, same
+// camera landings, same words; nothing new that has no word. What changes is
+// that NOTHING IS EVER PARKED and every live line carries life. Five of the six
+// mechanisms are in this cut and all of them are `levelUp` v2's:
+//   1 HOLD DRIFT   D1 (f24-35) keeps M1's push closing until M2's keys open,
+//                  and M3 is pulled back to start on M2's landing at f53 so the
+//                  pull-back's settle and the tail creep are one continuous
+//                  opening. Both are `holdDriftK` solved for a point at the
+//                  frame's own EDGE, which is the fastest point on screen
+//   2 PACKETS      the five reaches carry a white head at PACKET_HERO with a
+//                  `Trail` from the frame each lands, travelling UP into the
+//                  board, one every PACKET_PERIOD with a hashed phase. The
+//                  fourteen dim reaches and the board's two posts carry none
+//   3 DARK TRAFFIC idle threads at DARK_TRAFFIC_OPACITY across the unlooked-at
+//                  field from f0, on cut 1's own schedule over this cut's own
+//                  pool. This is what the opening was missing: the field is
+//                  unseen, not empty
+//   4 ARRIVE EASE  all nineteen heads cruise and decelerate into the board on
+//                  `arriveEase`; every landing frame, the conversion and the
+//                  click are unchanged. The tail is solved from the speed cap
+//                  rather than taken at 0.15 — see ARRIVE_TAIL_MAX
+//   6 WAKE         the five light in LAUNCH order, so each of them wakes ten
+//                  frames before its own reach leaves, and each of the fourteen
+//                  starts rising WAKE_LEAD frames before its own launch
+// Mechanism 5 (`marchDash`) is NOT USED: there is no dashed edge in this cut.
 //
 // CAMERA. Three keys on one damped track, cx = HF_X throughout (everything in
 // this cut is on the board's own axis, so a pan would be motion with nothing to
@@ -211,8 +261,11 @@ export const DURATION = 128;
 //      "it's not clear" are about, and a pull-back that had already finished
 //      before the phrase started (which is what a landing at f45 forces: keys
 //      f29-33, first moving frame f30) leaves the words with nothing
-//   M3 keys f62-115 warp 1.0  the creep. k(127) = 0.94999623, 3.8e-6 under
-//      K_FINAL, which is 0.004 screen px of scale error at the frame's edge —
+//   D1 keys f24-35  warp 1.0  the sleek pass's drift: the push keeps closing
+//      from the LANDED K_PUSH, so M1's landing does not move and M2 opens from
+//      K_PUSH_DRIFT instead of K_PUSH
+//   M3 keys f53-115 warp 1.0  the creep, now starting on M2's landing rather
+//      than on "or" f62. k(127) is still K_FINAL to within a rounding error —
 //      cut 0b opens on this frame and blends against it
 //
 // PAYOFF. EASE_PAYOFF is NOT USED. The brief gives the overshoot budget to no
@@ -270,6 +323,14 @@ export const DURATION = 128;
 //                The nineteen hero seats are forced into the middle band, where
 //                their reaches and the board are drawn, so a seat and its own
 //                reach are never on two parallax planes
+//   drift        D1 and M3's earlier start. `drift: false` is v2's own
+//                three-move key track, unchanged, through `CAM_PLAIN`
+//   packets      the five landed reaches carry signal
+//   darkTraffic  the unlooked-at field's idle threads
+//   arrive       `arriveEase` on all nineteen heads, at the tail the cap allows
+//   march        NOT USED: this cut has no dashed edge
+//   wake         the five light in launch order and the fourteen rise
+//                WAKE_LEAD frames before their own launches
 //
 // DEVIATIONS FROM THE BRIEF, all deliberate and all listed in the DONE note:
 // the board is drawn as cut 3's `Board` with an EMPTY post list plus two post
@@ -438,6 +499,163 @@ export const K_PUSH = 1.6; // the push in with the reaches
 export const K_WIDE = 1.0; // "it's not clear": the dark field opens
 export const K_FINAL = 0.95; // the creep's end, at f127 — cut 0b opens here
 
+/** The set's close-up ceiling. Nothing this cut draws may cross the screen
+ *  faster than this at the k it is actually seen at. */
+export const SPEED_CAP = 45;
+
+// ---------------------------------------------------------------------------
+// THE CAMERA. Four moves on one damped track, cx = HF_X throughout, the content
+// centre CONTENT_FINAL at every k. Every landing is solved against the damper
+// rather than asserted; see the header for the measured frames. The four scales
+// themselves are declared above, with the block.
+//
+// SLEEK PASS — NOTHING IS EVER PARKED. v2 landed M1 at f23 and then held the
+// camera dead still for thirteen frames, and held it again from f53 to f62; the
+// measured luma motion energy over f25-36 was 0.28 against the set's 0.8 floor,
+// which is what "too static" meant. Two things change and both are `holdDriftK`:
+//   * D1, f24-35: M1's push KEEPS CLOSING at drift speed until M2's keys open.
+//     It starts FROM the landed K_PUSH, so M1's landing at f23 — four frames
+//     before "face" — does not move, and M2 then starts from K_PUSH_DRIFT
+//     rather than from K_PUSH.
+//   * M3 starts at f53 instead of f62, so the pull-back's landing and the tail
+//     creep are ONE continuous opening from the frame M2 lands to the last
+//     frame of the cut. The end key f115 and K_FINAL are unchanged, so f127 is
+//     still K_FINAL to within a rounding error and cut 0b still opens on it.
+// `holdDriftK` is solved for a point at the frame's own EDGE (FRAME_H / 2 screen
+// px from the centre), which is the fastest-moving point on screen, so the whole
+// picture drifts at or under HOLD_DRIFT_PX.
+// ---------------------------------------------------------------------------
+/** `sway` rides on top of every drift — 5 world px at 1/19 rad a frame, which is
+ *  another 0.4 screen px a frame at the push — so the drift itself is solved a
+ *  little under HOLD_DRIFT_PX and the PAIR is what is asserted against
+ *  HOLD_DRIFT_MAX below. Measured: at 1.0 the pair peaks at 1.54, over the max. */
+export const DRIFT_TRIM = 0.95;
+/** The screen point every drift in this cut is solved for: the frame's edge,
+ *  which is the fastest-moving point on screen at any k. */
+export const DRIFT_DIST = FRAME_H / 2 / DRIFT_TRIM;
+export const M1_LAND = 23; // measured: 99.5% of M1, four frames before "face"
+export const D1_F0 = M1_LAND + 1;
+export const D1_F1 = 35; // ...to the frame before M2's keys open
+export const K_PUSH_DRIFT = holdDriftK(K_PUSH, D1_F1 - D1_F0, DRIFT_DIST, 1);
+export const M2_LAND = 53; // measured: 99.67% of M2
+
+export type CamSeg = { f0: number; f1: number; k0: number; k1: number; warp: number };
+/** The key track, with the sleek pass's drift segments in or out. `drift: false`
+ *  is v2's own three-move track, unchanged, so the experiment is a real switch
+ *  and not a different piece. */
+export const camSegs = (drift: boolean): CamSeg[] =>
+  drift
+    ? [
+        { f0: 7, f1: 10, k0: K_OPEN, k1: K_PUSH, warp: 0.72 }, // M1 "hacked Hugging Face"
+        { f0: D1_F0, f1: D1_F1, k0: K_PUSH, k1: K_PUSH_DRIFT, warp: 1.0 }, // D1, the push keeps closing
+        { f0: 36, f1: 40, k0: K_PUSH_DRIFT, k1: K_WIDE, warp: 0.7 }, // M2 "it's not clear"
+        { f0: M2_LAND, f1: 115, k0: K_WIDE, k1: K_FINAL, warp: 1.0 }, // M3, one opening to the end
+      ]
+    : [
+        { f0: 7, f1: 10, k0: K_OPEN, k1: K_PUSH, warp: 0.72 },
+        { f0: 36, f1: 40, k0: K_PUSH, k1: K_WIDE, warp: 0.7 },
+        { f0: 62, f1: 115, k0: K_WIDE, k1: K_FINAL, warp: 1.0 },
+      ];
+export const CAM_SEGS = camSegs(true);
+
+export const makeCam = (segs: CamSeg[]) => {
+  const F: number[] = [];
+  const K: number[] = [];
+  const CY: number[] = [];
+  const hold = (f: number) => {
+    F.push(f);
+    K.push(K[K.length - 1]);
+    CY.push(CY[CY.length - 1]);
+  };
+  F.push(0);
+  K.push(K_OPEN);
+  CY.push(CONTENT_FINAL + CAM_LIFT / K_OPEN);
+  segs.forEach((s) => {
+    if (s.f0 > F[F.length - 1] + 1) hold(s.f0 - 1);
+    const m = camMove({ ...s, c0: CONTENT_FINAL, c1: CONTENT_FINAL });
+    m.F.forEach((f, i) => {
+      if (f <= F[F.length - 1]) return;
+      F.push(f);
+      K.push(m.K[i]);
+      CY.push(m.CY[i]);
+    });
+  });
+  if (F[F.length - 1] < DURATION) hold(DURATION);
+  for (let i = 1; i < F.length; i++) {
+    if (F[i] <= F[i - 1]) {
+      throw new Error(`HackedHuggingFace: the camera's moves overlap at f${F[i]}`);
+    }
+  }
+  return { F, K, CY };
+};
+
+/** The cut's camera, and the track cut 0b continues. */
+export const CAM = makeCam(CAM_SEGS);
+/** ...and v2's own, for `experiments.drift: false`. */
+export const CAM_PLAIN = makeCam(camSegs(false));
+
+// ...and the two holds are ASSERTED, not asserted-in-the-note: a fixed world
+// point at the frame's own edge must keep moving through both of them, and never
+// fast enough for the hold to read as a move. Measured exactly as the sleek
+// brief measures it, sway included.
+export const HOLDS: [number, number, string][] = [
+  [M1_LAND, 36, "D1, M1 landed -> M2's keys"],
+  [M2_LAND, DURATION - 1, "M3, M2 landed -> the last frame"],
+];
+export const driftRange = (track: { F: number[]; K: number[]; CY: number[] }, f0: number, f1: number) => {
+  const c0 = runCamera(f0, track.F, track.CY, track.K);
+  const wy = c0.cy + FRAME_H / 2 / c0.k; // the point on the frame's bottom edge
+  const at = (f: number) => {
+    const c = runCamera(f, track.F, track.CY, track.K);
+    return 960 + (wy - (c.cy + sway(f).dy)) * c.k;
+  };
+  let mn = Infinity;
+  let mx = 0;
+  for (let f = f0 + 1; f <= f1; f++) {
+    const v = Math.abs(at(f) - at(f - 1));
+    mn = Math.min(mn, v);
+    mx = Math.max(mx, v);
+  }
+  return { mn, mx };
+};
+HOLDS.forEach(([f0, f1, what]) => {
+  const d = driftRange(CAM, f0, f1);
+  if (d.mx > HOLD_DRIFT_MAX) {
+    throw new Error(`HackedHuggingFace: ${what} drifts at ${d.mx.toFixed(2)} px/frame, over the max`);
+  }
+  if (d.mx < HOLD_DRIFT_PX * 0.6) {
+    throw new Error(`HackedHuggingFace: ${what} is parked — ${d.mx.toFixed(2)} px/frame`);
+  }
+});
+
+/** The largest k anything drawn between two frames is actually seen at — what a
+ *  head's screen speed has to be checked against. */
+export const kMaxOver = (f0: number, f1: number) => {
+  let m = 0;
+  for (let f = Math.floor(f0); f <= Math.ceil(f1); f++) {
+    m = Math.max(m, runCamera(f, CAM.F, CAM.CY, CAM.K).k);
+  }
+  return m;
+};
+
+// ---------------------------------------------------------------------------
+// ARRIVE, DON'T STOP DEAD. Every head in this cut cruises and then decelerates
+// into its landing on `arriveEase`, and the landing keeps its frame:
+// `arriveDuration` is len / speed either way, so nothing about the conversion,
+// the click or the dim deadline moves.
+//
+// THE TAIL IS SOLVED FROM THE SPEED CAP, not taken at the helper's default 0.15.
+// `arriveEase`'s own note: the cruise runs at (1 + 2 * tail) times the nominal
+// speed, which at 0.15 is 1.3x. This cut's nominal speeds were solved in v2 to
+// sit just under the 45 screen px/frame ceiling (36.1 for a reach at the push,
+// ~40 for a dim one), so a flat 1.3x would put both back over it — 47.0 and
+// 52.3. The deepest ease each set can take and stay inside the ceiling is
+// tail = (SPEED_CAP / peak - 1) / 2, and that is what each of them gets.
+// ---------------------------------------------------------------------------
+export const ARRIVE_TAIL_MAX = 0.15; // the helper's own default, the ceiling here
+export const arriveTail = (peakScreen: number) =>
+  Math.min(ARRIVE_TAIL_MAX, Math.max(0, (SPEED_CAP / peakScreen - 1) / 2));
+
 // ---------------------------------------------------------------------------
 // THE FOURTEEN. "how many" — the ones that are there and cannot be counted.
 // Hashed at radius 260-640 world px from (0, 60), no two within 60 world px,
@@ -534,14 +752,87 @@ export const REACH_ARRIVE = REACH_LEN.map((l, n) => REACH_LAUNCH[n] + l / REACH_
 export const REACH_OP = 0.95; // the reaches stay live
 export const CLICK_DUR = 4; // the board's ink click on the last arrival
 
+/** The five light in LAUNCH order, not in index order. v2 lit them left to
+ *  right while handing the launches out longest-first, which left the hacker
+ *  that leaves on f12 waking only four frames ahead of its own reach — under
+ *  the sleek pass's WAKE_LEAD of eight. Lighting them in the order they leave
+ *  gives every one of the five a ten-frame lead and pairs each wake with its own
+ *  line; the five still light across "these agents" f2-10, which is the gesture. */
+export const LIT_ORDER: number[] = HACKERS.map((_, n) => n).sort(
+  (a, b) => REACH_LAUNCH[a] - REACH_LAUNCH[b],
+);
+
+// The largest k a reach head is ever drawn at, and the arrival ease that fits
+// under the cap at it. Measured through the damper, not assumed: D1's drift
+// carries k a little past K_PUSH while the last reaches are still in the air.
+export const REACH_K_MAX = kMaxOver(REACH_F0[0], Math.max(...REACH_ARRIVE));
+export const REACH_TAIL = arriveTail(REACH_SPEED * REACH_K_MAX);
+export const REACH_CRUISE = REACH_SPEED * (1 + 2 * REACH_TAIL);
+if (REACH_CRUISE * REACH_K_MAX > SPEED_CAP + 1e-9) {
+  throw new Error(
+    `HackedHuggingFace: a reach head cruises at ${(REACH_CRUISE * REACH_K_MAX).toFixed(1)} screen px/frame`,
+  );
+}
+
 /** Head position of hacker reach `n` at a frame, or null before it launches.
- *  Exported so cut 0b draws the same five reaches at rest. */
-export const reachAt = (n: number, f: number) => {
+ *  Exported so cut 0b draws the same five reaches at rest.
+ *
+ *  `arrive: false` is v2's own constant-speed head; with it on, the head cruises
+ *  and decelerates into the board over the last REACH_TAIL of its travel, and
+ *  lands on exactly the same frame either way. */
+export const reachAt = (n: number, f: number, arrive = true) => {
   if (f < REACH_LAUNCH[n]) return null;
   const s = SEATS[HACKERS[n]];
-  const d = clamp01(((f - REACH_LAUNCH[n]) * REACH_SPEED) / REACH_LEN[n]);
+  const u = clamp01((f - REACH_LAUNCH[n]) / (REACH_ARRIVE[n] - REACH_LAUNCH[n]));
+  const d = arrive ? arriveEase(u, REACH_TAIL) : u;
   return { x: s.x + (HF_TARGETS[n] - s.x) * d, y: s.y + (HF_BOTTOM - s.y) * d };
 };
+
+// ---------------------------------------------------------------------------
+// SIGNAL ON THE FIVE. From the frame each reach lands, it carries packets: a
+// white head r PACKET_R with a `Trail`, travelling UP the line from the agent
+// into the board, one every PACKET_PERIOD with the phase hashed off the reach's
+// own seed so no two of the five launch or land together. A landed reach is not
+// a line someone drew, it is a line something is going through — which is what
+// "they have it" looks like while the camera holds on it.
+//
+// The fourteen dim reaches carry NOTHING (PACKET_HERO is the only opacity used
+// here and `packetsOn` returns nothing at opacity 0), and neither do the board's
+// two post lines: what the five took is live, what the fourteen are is a count.
+// ---------------------------------------------------------------------------
+export const PACKET_SEED0 = 61;
+if (PACKET_SPEED * K_PUSH > SPEED_CAP) {
+  throw new Error(`HackedHuggingFace: a packet is over the cap at k ${K_PUSH}`);
+}
+/** Position on reach `n` of a packet launched at `launch`, at a frame. */
+export const packetAt = (n: number, launch: number) => (f: number) => {
+  const s = SEATS[HACKERS[n]];
+  const travel = REACH_LEN[n] / PACKET_SPEED;
+  const u = clamp01((f - launch) / travel);
+  return { x: s.x + (HF_TARGETS[n] - s.x) * u, y: s.y + (HF_BOTTOM - s.y) * u };
+};
+
+/** Every packet in flight on the five, at a frame. Exported because CUT 0b
+ *  holds these same five reaches live and opens on THIS cut's last frame: the
+ *  signal on them has to be the same signal, drawn from the same schedule, or
+ *  the two frames do not blend. */
+export const reachPacketsAt = (f: number, k: number, on = true) =>
+  on
+    ? HACKERS.flatMap((i, n) => {
+        if (f < REACH_ARRIVE[n]) return [];
+        const travel = REACH_LEN[n] / PACKET_SPEED;
+        return packetsOn({
+          frame: f,
+          k,
+          from: { x: SEATS[i].x, y: SEATS[i].y },
+          to: { x: HF_TARGETS[n], y: HF_BOTTOM },
+          period: PACKET_PERIOD,
+          phase: REACH_ARRIVE[n],
+          opacity: PACKET_HERO,
+          seed: n + PACKET_SEED0,
+        }).map((p, m) => ({ key: `${n}_${m}`, at: packetAt(n, f - p.u * travel) }));
+      })
+    : [];
 
 // ---------------------------------------------------------------------------
 // THE CONVERSION. The colour grammar's converted edge: on each arrival the
@@ -607,57 +898,105 @@ export const DIM_SPEED = Math.max(
 );
 export const DIM_ARRIVE = DIM_LEN.map((l, n) => DIM_LAUNCH[n] + l / DIM_SPEED);
 
+// The same arrival ease, at the same rule: the deepest tail the fourteen can
+// take and stay inside the cap at the k they are actually seen at. They are
+// faster than the five relative to their zoom, so their tail is shorter.
+export const DIM_K_MAX = kMaxOver(Math.min(...DIM_LAUNCH), Math.max(...DIM_ARRIVE));
+export const DIM_TAIL = arriveTail(DIM_SPEED * DIM_K_MAX);
+export const DIM_CRUISE = DIM_SPEED * (1 + 2 * DIM_TAIL);
+if (DIM_CRUISE * DIM_K_MAX > SPEED_CAP + 1e-9) {
+  throw new Error(
+    `HackedHuggingFace: a dim head cruises at ${(DIM_CRUISE * DIM_K_MAX).toFixed(1)} screen px/frame`,
+  );
+}
+
 /** Head position of dim reach `n` at a frame, or null before it launches. */
-export const dimReachAt = (n: number, f: number) => {
+export const dimReachAt = (n: number, f: number, arrive = true) => {
   if (f < DIM_LAUNCH[n]) return null;
   const s = SEATS[DIM[n]];
-  const d = clamp01(((f - DIM_LAUNCH[n]) * DIM_SPEED) / DIM_LEN[n]);
+  const u = clamp01((f - DIM_LAUNCH[n]) / (DIM_ARRIVE[n] - DIM_LAUNCH[n]));
+  const d = arrive ? arriveEase(u, DIM_TAIL) : u;
   return { x: s.x + (DIM_TARGET_X[n] - s.x) * d, y: s.y + (HF_BOTTOM - s.y) * d };
 };
 
 // ---------------------------------------------------------------------------
-// THE CAMERA. Three moves on one damped track, cx = HF_X throughout, the
-// content centre CONTENT_FINAL at every k. Every landing is solved against the
-// damper rather than asserted; see the header for the measured frames. The four
-// scales themselves are declared above, with the block.
+// DARK TRAFFIC. The sleek pass's third mechanism: the unlooked-at field is not
+// DEAD, it is UNSEEN. Idle threads run across the OP_DARK seats at
+// DARK_TRAFFIC_OPACITY in the accent, with NO heads — they are what the crowd is
+// doing while nobody is looking at it, and they are the reason this cut's
+// opening is a population rather than a board over an empty texture.
+//
+// The MECHANISM is cut 1's own `idleAt`: its period distribution, its head-led
+// draw and its fade curve, imported and not restated. What is swapped is the
+// POOL — `idleAt` is closed over cut 1's pool, which is the seats inside CUT
+// ONE's widest camera, and this cut's widest camera sits 315 world px higher, so
+// the top 250 world px of this frame at K_FINAL would carry no traffic at all.
+// So the schedule comes from `idleAt` and the two seats come from this cut's own
+// pool, at cut 1's own threads-per-seat density (IDLE_N / IDLE_POOL.length), so
+// the traffic looks exactly as dense as it does in cut 1 and nothing is guessed.
 // ---------------------------------------------------------------------------
-export type CamSeg = { f0: number; f1: number; k0: number; k1: number; warp: number };
-export const CAM_SEGS: CamSeg[] = [
-  { f0: 7, f1: 10, k0: K_OPEN, k1: K_PUSH, warp: 0.72 }, // M1 "hacked Hugging Face"
-  { f0: 36, f1: 40, k0: K_PUSH, k1: K_WIDE, warp: 0.7 }, // M2 "it's not clear"
-  { f0: 62, f1: 115, k0: K_WIDE, k1: K_FINAL, warp: 1.0 }, // M3 "or why", the creep
-];
+export const DARK_MARGIN = 60; // cut 1's own pool margin
+export const DARK_PER_SEAT = IDLE_N / IDLE_POOL.length;
 
-export const CAM = (() => {
-  const F: number[] = [];
-  const K: number[] = [];
-  const CY: number[] = [];
-  const hold = (f: number) => {
-    F.push(f);
-    K.push(K[K.length - 1]);
-    CY.push(CY[CY.length - 1]);
-  };
-  F.push(0);
-  K.push(K_OPEN);
-  CY.push(CONTENT_FINAL + CAM_LIFT / K_OPEN);
-  CAM_SEGS.forEach((s) => {
-    if (s.f0 > F[F.length - 1] + 1) hold(s.f0 - 1);
-    const m = camMove({ ...s, c0: CONTENT_FINAL, c1: CONTENT_FINAL });
-    m.F.forEach((f, i) => {
-      if (f <= F[F.length - 1]) return;
-      F.push(f);
-      K.push(m.K[i]);
-      CY.push(m.CY[i]);
-    });
-  });
-  if (F[F.length - 1] < DURATION) hold(DURATION);
-  for (let i = 1; i < F.length; i++) {
-    if (F[i] <= F[i - 1]) {
-      throw new Error(`HackedHuggingFace: the camera's moves overlap at f${F[i]}`);
-    }
+// THE POOL COVERS BOTH CUTS OF THE PAIR, not just this one. Cut 0b opens on
+// THIS cut's last frame and blends against it, so the two have to draw the same
+// dark threads on that frame — which means the same pool and the same slot
+// count, and cut 0b's camera opens to a k this one never reaches. So the pool is
+// the whole strip of field the PAIR can ever see. It costs this cut nothing: a
+// slot outside the current frame does not draw, and the density is cut 1's own
+// threads-per-seat either way, so what is on screen here is unchanged by it.
+/** Cut 0b's content centre. It imports this rather than declaring its own, so
+ *  the pair has one number for where the field is looked at from. */
+export const PAIR_CENTRE = 300;
+/** ...and the widest the pair's camera ever gets. Cut 0b asserts its own K_END
+ *  against this, so opening wider than the pool was built for fails the render. */
+export const DARK_K_MIN = 0.45;
+const darkBox = (c: number, k: number) => ({
+  y0: c + CAM_LIFT / k - FRAME_H / 2 / k - DARK_MARGIN,
+  y1: c + CAM_LIFT / k + FRAME_H / 2 / k + DARK_MARGIN,
+  halfW: FRAME_W / 2 / k + DARK_MARGIN,
+});
+const DARK_A = darkBox(CONTENT_FINAL, K_FINAL); // this cut, at its widest
+const DARK_B = darkBox(PAIR_CENTRE, DARK_K_MIN); // cut 0b, at its widest
+export const DARK_Y0 = Math.min(DARK_A.y0, DARK_B.y0);
+export const DARK_Y1 = Math.max(DARK_A.y1, DARK_B.y1);
+export const DARK_HALF_W = Math.max(DARK_A.halfW, DARK_B.halfW);
+/** Alive seats inside a box on the pair's axis. */
+export const poolIn = (y0: number, y1: number, halfW: number): Int32Array => {
+  const out: number[] = [];
+  for (let i = 0; i < NSEAT; i++) {
+    if (!SEAT_ALIVE[i]) continue;
+    const s = SEATS[i];
+    if (Math.abs(s.x - HF_X) > halfW) continue;
+    if (s.y < y0 || s.y > y1) continue;
+    out.push(i);
   }
-  return { F, K, CY };
-})();
+  return Int32Array.from(out);
+};
+export const DARK_POOL = poolIn(DARK_Y0, DARK_Y1, DARK_HALF_W);
+export const DARK_N = Math.round(DARK_POOL.length * DARK_PER_SEAT);
+export const DARK_STEPS = 8; // the fade is quantised into this many paths
+
+export type DarkThread = { a: number; b: number; dn: number; fade: number };
+/** One idle thread over a dark field: cut 1's schedule, this cut's seats. */
+export const darkAt = (pool: Int32Array, j: number, f: number): DarkThread | null => {
+  const t = idleAt(j, f);
+  if (!t) return null;
+  const seed = j * 7.13 + t.cycle;
+  const a = pool[Math.floor(hash(seed, 63) * pool.length)];
+  const sa = SEATS[a];
+  const gc = Math.max(
+    0,
+    Math.min(COLS - 1, sa.gc + Math.round((hash(seed, 64) - 0.5) * 2 * IDLE_REACH)),
+  );
+  const gr = Math.max(
+    0,
+    Math.min(ROWS - 1, sa.gr + Math.round((hash(seed, 65) - 0.5) * 2 * IDLE_REACH)),
+  );
+  const b = SEAT_AT[gr * COLS + gc];
+  if (b < 0 || b === a) return null;
+  return { a, b, dn: t.dn, fade: t.fade };
+};
 
 // ---------------------------------------------------------------------------
 // THE FIELD, as cut 1 emits it: one <path> of circle arcs per lit bucket per
@@ -672,6 +1011,8 @@ const arc = (x: number, y: number, r: number) => {
     2,
   )} 0 1 0 ${d} 0a${r.toFixed(2)} ${r.toFixed(2)} 0 1 0 -${d} 0`;
 };
+const seg = (x1: number, y1: number, x2: number, y2: number) =>
+  `M${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}`;
 
 // The nineteen hero seats are forced into the middle depth band, because the
 // reaches that leave them are drawn there and a seat and its own reach may not
@@ -762,6 +1103,23 @@ export const defaultProps: Props = schema.parse({
   },
 });
 
+// ---------------------------------------------------------------------------
+// WAKE BEFORE YOU ACT, ASSERTED. The five light against the default beats, so
+// the lead of each wake over its own launch is checkable at module scope: a
+// retime that moves "these agents" without moving the launches fails the render
+// rather than quietly waking an agent on top of its own line.
+// ---------------------------------------------------------------------------
+((b) => {
+  LIT_ORDER.forEach((n, slot) => {
+    const lead = REACH_LAUNCH[n] - (b.these + 2 + slot * 2);
+    if (lead < WAKE_LEAD) {
+      throw new Error(
+        `HackedHuggingFace: hacker ${n} wakes ${lead} frames before its reach, under WAKE_LEAD ${WAKE_LEAD}`,
+      );
+    }
+  });
+})(defaultProps.beats);
+
 const HackedHuggingFace: React.FC<Props> = ({
   ink,
   accent,
@@ -789,7 +1147,8 @@ const HackedHuggingFace: React.FC<Props> = ({
   const edgeTone = makeTone(ink, accent);
 
   // -- camera ----------------------------------------------------------------
-  const cam = runCamera(frame, CAM.F, CAM.CY, CAM.K);
+  const track = experiments.drift ? CAM : CAM_PLAIN;
+  const cam = runCamera(frame, track.F, track.CY, track.K);
   const drift = sway(frame);
   const cy = cam.cy + drift.dy;
   const cx = HF_X + drift.dx;
@@ -800,13 +1159,23 @@ const HackedHuggingFace: React.FC<Props> = ({
   // deep@OP_DARK -> ripe, one every other frame, over the shared TONE_DUR: at a
   // stagger of 2 and a ramp of 6 the five overlap by four frames each, which is
   // the legato. With `legato: false` they wait a LEGATO beat apart instead.
+  // They light in LAUNCH order (see LIT_ORDER), so every one of the five wakes
+  // WAKE_LEAD or more frames before its own reach leaves.
   const litStep = experiments.legato ? 2 : LEGATO;
-  const HACK_F0 = HACKERS.map((_, n) => beats.these + 2 + n * litStep);
+  const HACK_F0 = HACKERS.map(() => 0);
+  (experiments.wake ? LIT_ORDER : HACKERS.map((_, n) => n)).forEach((n, slot) => {
+    HACK_F0[n] = beats.these + 2 + slot * litStep;
+  });
   const hackTone = HACK_F0.map((f0) => ease((frame - f0) / TONE_DUR, EASE_ARRIVE));
 
   // -- the fourteen, half-known ---------------------------------------------
-  // The seat stays DEEP and rises only to DIM_SEAT_OP as its own reach leaves.
-  const dimSeat = DIM.map((_, n) => ease((frame - DIM_LAUNCH[n]) / TONE_DUR, EASE_ARRIVE));
+  // The seat stays DEEP and rises only to DIM_SEAT_OP, and it starts rising
+  // WAKE_LEAD frames BEFORE its own reach leaves rather than on the launch
+  // frame: an agent wakes into the gesture, it does not wake on it.
+  const dimWake = experiments.wake ? WAKE_LEAD : 0;
+  const dimSeat = DIM.map((_, n) =>
+    ease((frame - (DIM_LAUNCH[n] - dimWake)) / TONE_DUR, EASE_ARRIVE),
+  );
 
   // -- the board's edge ------------------------------------------------------
   // One fifth per arrival, and the click on the last of them.
@@ -862,7 +1231,7 @@ const HackedHuggingFace: React.FC<Props> = ({
 
   // -- the five reaches ------------------------------------------------------
   const reaches = HACKERS.map((i, n) => {
-    const p = reachAt(n, frame);
+    const p = reachAt(n, frame, experiments.arrive);
     if (!p) return null;
     const s = SEATS[i];
     const landed = frame >= REACH_ARRIVE[n];
@@ -875,13 +1244,16 @@ const HackedHuggingFace: React.FC<Props> = ({
       y2: p.y,
       landed,
       hot,
-      at: (f: number) => reachAt(n, f),
+      at: (f: number) => reachAt(n, f, experiments.arrive),
     };
   });
 
+  // -- ...and the signal on them, from the frame each one lands --------------
+  const packets = reachPacketsAt(frame, k, experiments.packets);
+
   // -- the fourteen dim reaches ---------------------------------------------
   const dimReaches = DIM.map((i, n) => {
-    const p = dimReachAt(n, frame);
+    const p = dimReachAt(n, frame, experiments.arrive);
     if (!p) return null;
     const s = SEATS[i];
     return {
@@ -891,9 +1263,28 @@ const HackedHuggingFace: React.FC<Props> = ({
       x2: p.x,
       y2: p.y,
       landed: frame >= DIM_ARRIVE[n],
-      at: (f: number) => dimReachAt(n, f),
+      at: (f: number) => dimReachAt(n, f, experiments.arrive),
     };
   });
+
+  // -- dark traffic ----------------------------------------------------------
+  // The field is unseen, not dead. One <path> per quantised fade step, over the
+  // seats the camera can see, and never on one of the nineteen — a hero seat has
+  // its own line and its own state.
+  const darkLines: string[][] = Array.from({ length: DARK_STEPS }, () => []);
+  if (experiments.darkTraffic) {
+    for (let j = 0; j < DARK_N; j++) {
+      const t = darkAt(DARK_POOL, j, frame);
+      if (!t) continue;
+      if (HERO.has(t.a) || HERO.has(t.b)) continue;
+      const A = SEATS[t.a];
+      const B = SEATS[t.b];
+      if (Math.min(A.x, B.x) > x1 || Math.max(A.x, B.x) < x0) continue;
+      if (Math.min(A.y, B.y) > y1 || Math.max(A.y, B.y) < y0) continue;
+      const q = Math.min(DARK_STEPS - 1, Math.max(0, Math.round(t.fade * DARK_STEPS) - 1));
+      darkLines[q].push(seg(A.x, A.y, A.x + (B.x - A.x) * t.dn, A.y + (B.y - A.y) * t.dn));
+    }
+  }
 
   const midT = worldTransform(cx, cy, bandK[MID_BAND]);
   const midTransform = `translate(${midT.tx.toFixed(3)} ${midT.ty.toFixed(3)}) scale(${
@@ -938,6 +1329,25 @@ const HackedHuggingFace: React.FC<Props> = ({
 
           {/* everything that is ink, and the nineteen seats it leaves from */}
           <g transform={midTransform}>
+            {/* DARK TRAFFIC. Under everything else, on the middle band with the
+                rest of the ink: a thread whose two ends are in two different
+                parallax bands cannot be drawn in either of them, and the bands
+                are 3% apart. No heads, no shadow — this is the field talking to
+                itself, not an icon. */}
+            {darkLines.map((d, q) =>
+              d.length === 0 ? null : (
+                <path
+                  key={`k${q}`}
+                  d={d.join("")}
+                  stroke={accent}
+                  strokeWidth={STROKE}
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity={DARK_TRAFFIC_OPACITY * ((q + 1) / DARK_STEPS)}
+                />
+              ),
+            )}
+
             {/* THE BOARD, in cut 3's own frame, moved.
                 The panel is drawn through cut 3's `Board` with an EMPTY post
                 list, because `Board` takes ONE ink colour for the panel and its
@@ -1042,6 +1452,30 @@ const HackedHuggingFace: React.FC<Props> = ({
                   </g>
                 ) : null,
               )}
+              {/* ...and the signal running up them once they have landed. The
+                  head and its smear are drawn separately rather than through
+                  `Packet` only so that `experiments.trails` still switches the
+                  smear off without taking the packet with it. */}
+              {packets.map((p) => (
+                <g key={`p${p.key}`}>
+                  <Trail
+                    frame={frame}
+                    k={k}
+                    at={p.at}
+                    r={PACKET_R}
+                    fill={ink}
+                    opacity={PACKET_HERO}
+                    enabled={experiments.trails}
+                  />
+                  <circle
+                    cx={p.at(frame).x}
+                    cy={p.at(frame).y}
+                    r={PACKET_R}
+                    fill={ink}
+                    opacity={PACKET_HERO}
+                  />
+                </g>
+              ))}
             </g>
 
             {/* the mark, MARK_GAP above the board's top edge */}
