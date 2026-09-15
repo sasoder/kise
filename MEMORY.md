@@ -133,38 +133,82 @@ Reference implementations, all approved: `DomainExpertiseSweep.tsx`,
 `CodebaseComprehensionFold.tsx`, `UnderstandingDepthPlateau.tsx`,
 `HourVersusWeeks.tsx`.
 
-## Cheeky Pint style
+## Cheeky Pint style (rewritten 2026-09-15 — the D1 "year off shorting" set is the standard)
 
-A second named house style for transcript-cut explainer overlays. It is
-`## Dwarkesh style` above in every respect — transparent 1080x1920 ProRes 4444
-at 30fps, duration from the SRT, hold resolved on the last frame, flat shapes,
-one soft `drop-shadow(0 2px 6px rgba(0,0,0,0.28))`, no glow or gradients, three
-states (unknown ~0.10 ink -> read ~0.85 ink -> understood/structural accent),
-beat frames lifted literally from the SRT into a `beats` prop, state derived
-from the visible thing rather than a parallel timer, quantities encoded twice —
-with exactly two differences:
+The user's named house style for the Cheeky Pint podcast cuts. On 2026-09-15 they
+said "overwrite the old cheeky pint style and make this one the new one": the
+amber-accent-overlay definition and the separate "brown paper" variant below are
+gone; THIS is Cheeky Pint. When they say "cheeky pint style", build to it without
+re-asking. Every value named here is an export of
+`generated/components/d1Shared.tsx` (+ `fieldShared.tsx` for the palette and
+camera); import, never restate.
 
-- **Accent is `#FFC543`** (warm amber), not the Dwarkesh cyan `#48D9FF`. Ink
-  stays `#FFFFFF`. The colour grammar is unchanged: ink = raw material, the read
-  state, the human; accent = comprehension, structure, the deep thing, the AI.
-- **Type is Söhne** (Klim, the Stripe face) wherever a scene needs text —
-  replacing Roboto Condensed. Default is still no text; add labels only when
-  asked. Söhne is now vendored in the repo: `public/Sohne-Buch.otf`,
-  `Sohne-Kraftig.otf`, `Sohne-Halbfett.otf`, `Sohne-Dreiviertelfett.otf`
-  (copied from the user's `~/Library/Fonts/StripeSöhne-*.otf`, Klim's Stripe
-  cut). Load it with `loadFont` from `@remotion/fonts` + `staticFile` at module
-  scope (see `ToothPieChart.tsx` for the pattern). Never substitute a lookalike.
+**Output.** 1080x1920, **24fps**, OPAQUE ProRes 4444, rendered `--muted` (video
+stream only). Duration `round((end − start) × 24)` + a 16-frame tail, hold
+resolved, never fade. Each cut renders through its own `out/<abbr>-entry/index.tsx`.
+Delivered to the clip's folder as `<inSeconds>_<Name>.mov` (`15_BackIntoIt.mov`),
+versions `_V2`, `_V3`…, one `placements.txt`.
 
-- **Brand marks come from the Simple Icons set** so any lockup stays one style:
-  `public/si-meta.svg`, `si-shopify.svg`, `si-openai.svg`, `si-spacex.svg` —
-  all monochrome, all `viewBox="0 0 24 24"`, all centred on (12,12). Size a pair
-  by **ink area**, not bounding box: rasterised into a common 24-unit box Meta's
-  mark inks 79.8k px and Shopify's 139.8k, so Shopify is drawn at **0.82x** Meta
-  (a blend of the 0.755 equal-ink and 0.869 equal-bbox factors). Pull a missing
-  mark from
-  `raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/<name>.svg`.
+**The sheet.** `KraftBackground` — the kraft photo (`public/brown-paper-backdrop.jpg`)
+blurred 13, dimmed 0.68, with parallax and drift from `GridBackground`, plus a top
+light (`DEPTH_TOP_LIGHT`) and a foot shade (`DEPTH_FOOT_SHADE`). `<Vignette strength={0.55} />`
+on top. No ground line (user, 2026-09-15): things stand on their contact shadows.
 
-Reference implementation: `SaasNotAllNecessary.tsx`.
+**Palette.** Ink `#FFFFFF`; two tones of one amber, `ACCENT #FFB000` (lit, live,
+held, the gain) and `ACCENT_DEEP #D98A0C` (at rest, waiting). Type, if ever asked
+for, is Söhne (vendored in `public/Sohne-*.otf`).
+
+**Material — one tile, everything is made of it.** A white squircle tile (radius
+floors to 2 px, so hard-square like the D1 logo) with a vertical gradient
+`TILE_GRAD_TOP → TILE_GRAD_BOTTOM`, `TILE_SHADOW`, and the figure KNOCKED OUT so the
+paper shows through:
+- The actor is a brand mark redrawn this way — `D1Mark`: ink tile, the serif "1"
+  knocked out, the logo's dot in the accent. Do the same for any brand (measure the
+  real logo, keep its figure/ground, tile 108 world px).
+- A noun is a `CompanyCard`: tile 72 with a Lucide glyph knocked out (square caps,
+  stroke 2.6, ISC, fetched raw and inlined, never installed). Twelve sectors exist in
+  `SECTOR_GLYPHS`; a cast is **six** (`SECTOR_SET`, pitch 120) — eight read as
+  "overwhelming". Cards get a contact shadow on the ground.
+- Money is a `Coin`: r 11, radial highlight, a "$" knocked out; piled on top of the
+  actor's tile 4 wide (`returnCoinPosV4`), ripe when live, deep when at rest.
+- Connections are threads: 2.5 px, accent, 0.95 live / 0.40 idle, leaving the mark's
+  bottom edge spread across `originX(i)` — never from a knot in mid-air.
+
+**The mechanism must be literal.** A viewer with no sound must be able to name the
+financial action from the picture. A short is `PriceLine`: a zigzag chart rising
+from the card's top-left to a tip; D1's thread drags the tip DOWN so the last leg
+falls; that leg is drawn in the accent while held (the drop IS the gain); a coin is
+MINTED at the tip (5-frame scale-in while the tip is still falling) for every 36 px
+of new low and climbs the thread onto the actor. Depth-under-a-line, abstract dots
+and unlabeled rules were all tried and rejected as "too abstract" / "only implied".
+
+**Motion — one continuous motion per cut.** The words are inflections in one arc,
+never separate events; if a word does not change the motion it is not animated.
+Every moving thing has one authored track spanning the cut; holds carry the motion
+still going (a held tip strains, coins keep climbing); the camera is one damped
+curve (`runCamera`) with at most one ≤ 8-frame held breath; landings 4–10 frames
+before their word; `flow` on travels, `back(0.75)` settles (written as a zero-sloped
+bump, not a kinked max()); at most ONE single-object ink click per cut, groups take
+the half-step `#FFD98A` as a wash; speed cap 45 screen px/frame; band y 200–1450,
+x 60–1020 at every frame. Builders prove continuity with a velocity scan sampled at
+h = 1 and h = ¼ (a real step does not shrink with h).
+
+**Continuity.** All cuts of a clip are one world: same objects meaning the same
+thing, and a later cut opens on the earlier cut's resolved camera, drops and pile
+(import its `K_FINAL / CY_FINAL / RESOLVED_DROPS / RETURN_*`, run `sway`/drift on
+`frame + CONTINUE_FROM`, prove the join with a difference image).
+
+**Loop.** Fable directs (concept in a few lines, then dispatch — no check-in), an
+Opus sub-agent per cut builds in parallel and STOPS at a half-res preview with an
+8 fps strip, per-frame strips at the inflections, the velocity scan and the
+READING TEST ("what would a viewer with no narration say happened?"); Fable reviews
+as motion, runs the cross-cut audit on the three last frames, then final ProRes,
+deliver, commit, push.
+
+Reference set, all approved (Sep 2026): `BackIntoItV5.tsx`, `IsItEvenWorthItV5.tsx`,
+`AsGoodOrBetterV5.tsx` (delivered as `_V6.mov`, the ground line removed), in
+`cheeky pint/sep/Pint_S2E12_Dan_Final_YT/tom_select_dan - year off shorting/`.
+The V1–V4 siblings are the iteration trail: dots → cards → one world → price line.
 
 ## Dwarkesh style — grid background
 
@@ -319,82 +363,13 @@ Rules that came out of the set:
 Delivered to `~/Downloads/` (originals) and `~/Downloads/three-societies-sleek/`
 (the consistency pass); never overwrite a delivered file, make a sibling folder.
 
-## Cheeky Pint — brown paper background
+## Cheeky Pint — brown paper background (superseded 2026-09-15)
 
-A modifier on `## Cheeky Pint style` above, triggered when the user asks for a
-graphic "in cheeky pint style **with the brown paper background**". Everything
-in the Cheeky Pint spec still applies — ink `#FFFFFF`, accent `#FFC543`, beat
-frames lifted from the SRT, flat shapes, one soft drop shadow, the unknown ->
-read -> accent ladder, Söhne if text is ever asked for — with the additions
-below and one consequence.
-
-**The backdrop**
-
-- `public/brown-paper-backdrop.jpg` (canonical:
-  `~/Documents/PERMANENT ASSETS/VISUAL/brown paper backdrop image.png`).
-- `filter: blur(16px) brightness(0.68)` over a `#2B2118` base, at 1.8x the frame
-  with `objectFit: cover`. Kraft is already a midtone, so it wants far less
-  dimming than the grid's 0.32 — 0.68 lands the field near `#67553B`, holds
-  white line-work near 8:1, and drops the paper far enough that the amber reads
-  as its own colour rather than as part of the sheet. The vignette and mottle
-  still come through.
-
-**Consequence: the render is opaque.** A cutaway, not an overlay. ProRes 4444,
-24fps, 1080x1920. Duration is `round((end - start) * 24)` frames from the SRT.
-
-**The shared system**
-
-`generated/components/cheekyPintSystem.ts` holds what has to match across every
-graphic in this style, because they get cut into one edit minutes apart. None of
-it is visible inside a single piece; all of it is visible in a row. Import it
-rather than redeclaring any of it:
-
-- **One camera hand.** `CAM_STIFF 0.145 / CAM_DAMP 0.59` (zeta ~0.77, ~13 frame
-  settle), run over a coarse authored key track by `runCamera`. Three graphics
-  once had three different stiffnesses and read as three different operators.
-- **One ground.** 5px, `0.24`, lifted to `0.40` only where something is actually
-  being measured against it.
-- **One landing.** `Easing.out(Easing.back(1.5))`.
-- **One paper depth.** parallax `0.15`, backdrop scaling at `0.24` of the zoom,
-  a constant `0.25px/frame` drift so a hold is never fully still.
-- **One ambient ceiling.** `0.38` for anything subordinate — packets,
-  impressions, drifting background figures.
-- **One click-bright.** Ink for `4` frames, because ink is the ladder. Dense
-  fronts are the exception: at five arrivals a frame the beat overlaps itself
-  into a pale band laid through the mass, so they take a half-step —
-  `#FFD98A` for `2` frames. Measured on the tower, where full ink left a seam.
-
-**The motion language** — this is what "the same type of thing" means
-
-- **One repeating unit, one grid, one gap.** A dot is a business or a person; a
-  rounded-rect tile is a product. Quantities are countable, never asserted:
-  the ridge of policies is 16, 9 and 4 dots because heap *n* is *n* wide and *n*
-  tall; the mass-market product is exactly six units so every stack that beats
-  it beats it by a number. Derive positions from other geometry — the ridge
-  starts from the tower's own edge — instead of placing them by eye.
-- **A scene is a ground, things standing on it, an actor above, and a
-  connection between them.** The actor is a brand mark (Simple Icons,
-  monochrome, 24x24 box centred on (12,12), sized by ink area — Shopify 0.82x
-  Meta). An actor with no brand gets a mark drawn to those same rules, at half
-  opacity, anchored to the thing it labels. The connection is a beam, a thread,
-  an arc, a relay.
-- **Mechanisms that have worked, reuse them.** A lob between two marks that
-  drops a unit on landing. A pile that becomes a tower its makers ride up on. A
-  broad beam collapsing into individual threads, one per thing it can now reach.
-  Stacks growing past a reference rule drawn out from the thing they beat. A
-  token descending into a rack and relaying through it, each arrival refining
-  what it lands on. Identical coarse blobs becoming specific exact objects.
-- **Comparison is height and count against a shared floor.** Never a chart.
-- **The camera is one continuous authored move**, damped, usually a widening or
-  a climb into a pull-back. It resolves with the composition's centre near
-  y 825 and everything inside y 200–1450, under the burned-in captions.
-- **Density cap: the main action plus one ambient layer.** Count per beat.
-- **Variety over lattice.** Identical repeated objects read as a UI mockup — vary
-  sizes, scatter off the cell, let each thing be its own size.
-
-Reference set, all approved: `generated/components/MoreBusinessesColumnV2.tsx`,
-`NicheProductsDoingBetterV2.tsx`, `IdeaIntoRetailV2.tsx`. Delivered to
-`cheeky pint/sep/S2E8_Pint_Tobi_FINAL_YT/tobi-more-businesses-than-any-government-policy/v2/`.
+Folded into `## Cheeky Pint style` above, which is opaque on kraft by definition
+now. The older brown-paper pieces (`MoreBusinessesColumnV2.tsx`,
+`NicheProductsDoingBetterV2.tsx`, `IdeaIntoRetailV2.tsx`, their shared
+`cheekyPintSystem.ts`) still render as built, but new work does not use that
+system: geometry, materials and depth come from `d1Shared.tsx`.
 
 ## Orange Dwarkesh style (approved 2026-09-08)
 
