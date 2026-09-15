@@ -3,7 +3,7 @@ import {useMemo} from 'react';
 import {z} from 'zod';
 
 /**
- * DesertSolarFill — 4.000 s (96 f @ 24 fps), 1080x1920, opaque.
+ * DesertSolarFill — 5.000 s (120 f @ 24 fps: 120/24 = 5.000), 1080x1920, opaque.
  *
  * A top-down desert fills up with a real solar farm. Photographic: the sand is
  * an aerial photo, every string is a cut of a real top-down panel photo, and
@@ -36,7 +36,7 @@ import {z} from 'zod';
  *    farm edge stays ragged the way a built farm's does.
  *
  * CAMERA
- *  - f0-f95: one continuous push-in, scale 1.000 -> 1.070 about the frame
+ *  - f0-f119: one continuous push-in, scale 1.000 -> 1.070 about the frame
  *    centre, Easing.inOut(Easing.quad) over the full range. No holds, no second
  *    move. Assert: at scale s the frame shows world x in
  *    [213 + 540 - 540/s, 213 + 540 + 540/s] = [248.5, 1257.5] at s = 1.07 and
@@ -44,38 +44,58 @@ import {z} from 'zod';
  *    [92.8, 1885.2] inside 0..1978. The push can never reveal a photo edge.
  *
  * MOTION
- *  - f0-f7: sand only (the camera is already pushing).
- *  - f8-f76: the fill front is ONE DIAGONAL WAVE running from the bottom-left
+ *  - No sand-only hold: the fill runs from the first frame to the last. On f0
+ *    the bottom-left corner strings are already mid-drop; on f119 the last
+ *    top-right string has just finished landing.
+ *  - f0-f119: the fill front is ONE DIAGONAL WAVE running from the bottom-left
  *    corner of the world to the top-right — not rows stepping, and not two
  *    halves stepping. For a string at row i (bottom row = 0, top row = N-1 = 39)
  *    and column c (0 = leftmost column across the FULL world, both halves in one
  *    left-to-right index, M = 8):
  *        t    = 0.78 * i/(N-1) + 0.22 * c/(M-1)
- *        base = 8 + 66 * t
+ *        tw   = max(0, (t - T0) / (T1 - T0))
+ *        base = 0 + 110 * tw
+ *    with T0 = 0.22/(M-1) = 0.031429 (bottom row, column 1) and
+ *    T1 = 0.78*(N-3)/(N-1) + 0.22*(M-2)/(M-1) = 0.928571 (row k = 2,
+ *    column 6). Those are the FIRST and LAST strings the frame can actually
+ *    show: column 0 (x = -79) hangs off the left edge, column 7 (x = 1385) off
+ *    the right, and rows k = 0,1 sit above the top edge once the camera is at
+ *    1.07. A raw 0 + 110*t wave therefore spends its first ~3.5 f and its last
+ *    ~8 f landing strings nobody can see — bare sand at the head and a dead
+ *    hold at the tail, which is exactly the note this pass fixes. Normalising
+ *    on the visible diagonal keeps the direction, the weights and the range.
  *    plus a deterministic +/-2 f hash jitter per string, so the front edge is
  *    soft rather than a ruled line. Row weight dominates column weight 0.78:0.22
- *    so the wave still reads as rising. Last possible landing: 74 + 2 = f76.
- *  - Each string's arrival is 8 f: opacity 0->1 over its first 2 f with
- *    Easing.out(Easing.quad), so a string is three-quarters opaque one frame in
- *    and solid by the second — no translucent ghosts standing at the front.
- *    Scale 1.06->1.00 and translateY -6->0 px still run over all 8 f with
- *    Easing.out(cubic) — it drops onto the sand and stops. Its contact shadow
- *    fades 0->0.32 over frames 3-8 of the arrival.
- *  - f66-f95: one sun sheen. A diagonal soft-edged white band, ~500 px wide,
+ *    so the wave still reads as rising. The FINAL arrival is clamped to
+ *    [0, 111] — 111 + 8 = f119, the last frame, so the latest string finishes
+ *    its drop exactly on the last frame and nothing is cut off.
+ *    ASSERTED over all 269 strings (computed, not estimated): min arrival = 0,
+ *    max arrival = 111, max drop end = 111 + 8 = 119 = DURATION - 1. 3 strings
+ *    arrive at 0, 6 at 111. On-frame check at the live camera scale: f0 has 1
+ *    string mid-drop in the bottom-left corner, f60 has 21 along the diagonal
+ *    front, f112 still has 6 landing in the top-right, f119 has 0 — filled.
+ *  - Each string's arrival is 8 f: opacity 0->1 over dt -1 -> +1 with
+ *    Easing.out(Easing.quad), so a string is three-quarters opaque ON its
+ *    arrival frame and solid one frame later — no translucent ghosts standing
+ *    at the front, and a string whose arrival is f0 is visibly landing on
+ *    frame 0 rather than invisible there. Scale 1.06->1.00 and translateY
+ *    -6->0 px still run over all 8 f with Easing.out(cubic) — it drops onto the
+ *    sand and stops. Its contact shadow fades 0->0.32 over frames 3-8 of the
+ *    arrival.
+ *  - f90-f119: one sun sheen. A diagonal soft-edged white band, ~500 px wide,
  *    peak alpha 0.08, sweeps top-left to bottom-right with
  *    Easing.inOut(Easing.sin). It is painted per string tile (same 200x30 rect,
  *    gradient anchored in world space) so it only ever touches panels, never
- *    sand. The sweep ends at 125% (half-band = 10.15%), so by f95 the band's
+ *    sand. The sweep ends at 125% (half-band = 10.15%), so by f119 the band's
  *    trailing feathered edge sits at 114.8% — fully off the bottom-right corner,
  *    nothing of the sheen left on the panels on the last frame.
- *  - f76-f95: nothing new appears; camera push + sheen exit only.
  *
  * Frame-driven throughout: useCurrentFrame + interpolate(clamp) + Easing. No
  * springs, no CSS transitions or animations, no randomness.
  */
 
 export const FPS = 24;
-export const DURATION = 96;
+export const DURATION = 120;
 
 export const schema = z.object({
   /** Draws the pool-exclusion polygons in red over the bare photo. Calibration only. */
@@ -108,6 +128,11 @@ const NS_LANE_W = 28;
 
 const CAM_FROM = 1.0;
 const CAM_TO = 1.07;
+
+const DROP_F = 8;
+/** Latest arrival: its 8 f drop must end on the last frame. 111 + 8 = 119. */
+const ARRIVE_MAX = DURATION - 1 - DROP_F; // 111
+const SHEEN_FROM = 90;
 
 // ------------------------------------------------------------------ pools ---
 // Source-photo coordinates; scaled to world by PHOTO_SCALE below.
@@ -256,6 +281,17 @@ const buildTiles = (): {tiles: Tile[]; rows: number} => {
   const rows = ys.length;
   const cols = xs.length;
   const tiles: Tile[] = [];
+  // The wave is normalised between the first and last strings the FRAME can
+  // actually show, because the world overhangs the frame at both diagonal ends.
+  //  - column 0 (x = -79) is entirely off the left edge, so the first visible
+  //    string of the bottom row is column 1;
+  //  - column 7 (x = 1385) is entirely off the right edge and rows k = 0,1 are
+  //    above the top edge once the camera is at 1.07, so the last visible
+  //    string is column 6 of row k = 2, i.e. i = rows - 3.
+  // Without this the wave spends its first ~3.5 f and its last ~8 f landing
+  // strings nobody can see: bare sand at the head, a dead hold at the tail.
+  const T0 = 0.22 / (cols - 1);
+  const T1 = 0.78 * ((rows - 3) / (rows - 1)) + 0.22 * ((cols - 2) / (cols - 1));
 
   for (let k = 0; k < rows; k++) {
     const y = ys[k];
@@ -266,14 +302,18 @@ const buildTiles = (): {tiles: Tile[]; rows: number} => {
       // One diagonal wave: row dominates, column tilts it, so the front travels
       // bottom-left -> top-right instead of the halves stepping row by row.
       const t = 0.78 * (i / (rows - 1)) + 0.22 * (c / (cols - 1));
-      const base = 8 + 66 * t;
+      // Re-zeroed on the visible diagonal (see T0/T1): the first on-frame
+      // string starts its drop on f0 and the last one lands at 111, finishing
+      // on f119. Strings past T1 overshoot and are caught by the arrival clamp.
+      const tw = Math.max(0, (t - T0) / (T1 - T0));
+      const base = 0 + 110 * tw;
       const jitter = Math.round((hash01(k, c) * 2 - 1) * 2);
       // Mirror roughly half the tiles: one photo repeated identically across
       // 269 strings reads as a texture swatch, not as a farm.
       const flip = hash01(c, k) < 0.5;
-      // Clamped at 8 so the -2 jitter on the bottom row can never break the
-      // f0-f7 sand-only hold.
-      tiles.push({x, y, arrive: Math.max(8, base + jitter), flip});
+      // Clamped to [0, ARRIVE_MAX]: the first string starts its 8 f drop on
+      // frame 0 and the last finishes on DURATION - 1 = f119.
+      tiles.push({x, y, arrive: Math.min(ARRIVE_MAX, Math.max(0, base + jitter)), flip});
     }
   }
   return {tiles, rows};
@@ -308,7 +348,7 @@ export const DesertSolarFill: React.FC<z.infer<typeof schema>> = ({debug}) => {
     extrapolateRight: 'clamp',
   });
 
-  const sheenPct = interpolate(frame, [66, DURATION - 1], [-12, 125], {
+  const sheenPct = interpolate(frame, [SHEEN_FROM, DURATION - 1], [-12, 125], {
     easing: Easing.inOut(Easing.sin),
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
@@ -374,20 +414,23 @@ export const DesertSolarFill: React.FC<z.infer<typeof schema>> = ({debug}) => {
           ) : (
             tiles.map((t) => {
               const dt = frame - t.arrive;
-              const op = interpolate(dt, [0, 2], [0, 1], {
+              // Anchored at dt = -1 so the tile is 3/4 opaque ON its arrival
+              // frame: a string whose arrival is f0 must be visibly landing on
+              // frame 0, not invisible there.
+              const op = interpolate(dt, [-1, 1], [0, 1], {
                 easing: Easing.out(Easing.quad),
                 extrapolateLeft: 'clamp',
                 extrapolateRight: 'clamp',
               });
               if (op <= 0) return null;
-              const drop = interpolate(dt, [0, 8], [0, 1], {
+              const drop = interpolate(dt, [0, DROP_F], [0, 1], {
                 easing: Easing.out(Easing.cubic),
                 extrapolateLeft: 'clamp',
                 extrapolateRight: 'clamp',
               });
               const sc = 1.06 + (1 - 1.06) * drop;
               const ty = -6 + 6 * drop;
-              const shadow = interpolate(dt, [3, 8], [0, 0.32], {
+              const shadow = interpolate(dt, [3, DROP_F], [0, 0.32], {
                 extrapolateLeft: 'clamp',
                 extrapolateRight: 'clamp',
               });

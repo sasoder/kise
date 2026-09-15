@@ -6,8 +6,9 @@ import DesertSolarFill, {
   schema,
 } from '../generated/components/DesertSolarFill';
 
-// Four seconds, top down: a desert fills up with a real solar farm while the
-// camera pushes in. Opaque 1080x1920.
+// Five seconds, top down: a desert fills up with a real solar farm while the
+// camera pushes in. The fill runs from the first frame to the last.
+// Opaque 1080x1920.
 export const RemotionRoot = () => {
   return (
     <>
