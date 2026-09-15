@@ -75,7 +75,7 @@ export const DURATION = 262;
 //               the line (person.png's ink ends at 471/512 of its box), at
 //               x 540 +- 165 * n, each jittered +-12 by hash. V2: each of them
 //               carries a THOUGHT BUBBLE — an ink squircle 78 x 58 with a white
-//               Lucide `check` in it, its foot 22 px above the head — which
+//               Lucide `check` in it, its foot 26 px above the head — which
 //               goes up on "got away with" and then never changes again.
 //   THE TRUSS   three rows of SERVER RACKS at y 130, 270, 410; 13 to a row
 //               every 160 px, the middle row staggered by 80 (a Warren truss),
@@ -89,9 +89,9 @@ export const DURATION = 262;
 //               trimmed at the rack's OUTLINE, so a line meets a machine
 //               instead of piercing it. All ink at OP_READ, all with the
 //               per-icon shadow. White ink packets run rack to rack from f0.
-//   THE CROWD   a BAND. 60 cols x 36 rows at the field's own step (940/39 x
+//   THE CROWD   a BAND. 60 cols x 30 rows at the field's own step (940/39 x
 //               440/29), jitter 0.9, radius 0.75-1.25, centred x 540, nominal
-//               top edge at y 540 and nominal underside at y 1071. Its side
+//               top edge at y 540 and nominal underside at y 980. Its side
 //               edges bleed off the frame at every k (span x -171 -> 1251
 //               against a widest frame of x -28 -> 1108). Its TOP edge is
 //               feathered over 6 rows on a `wobble`d line — a shoreline, not a
@@ -132,8 +132,10 @@ export const DURATION = 262;
 //   G2 MORE THAN CAN BE COUNTED. Camera M1 tilts
 //      down and pulls back off the people, through
 //      the truss, to the crowd, whose width runs
-//      off both sides of the frame
-//                       — "over a thousand instances"           f25-48
+//      off both sides of the frame. It leaves under
+//      the last two bubbles and is at rest on the
+//      crowd before "instances"
+//                       — "over a thousand instances"           f16-42
 //   G3 SECRETLY. Nothing new is added; what lands
 //      is the STATE. The launch rate steps 5.2 -> 8.3
 //      on one smoothstep over f56-64, so the
@@ -210,7 +212,7 @@ export const DURATION = 262;
 //   landing on the truss from the crowd at one every 6 frames.
 //   Breath and sway only. It holds; it never fades out.
 //
-// THE CAMERA FOLLOWS THE ACTION. Five moves on one track through the shared
+// THE CAMERA FOLLOWS THE ACTION. Four moves on one track through the shared
 // damper, authored with `camMove` (a key per frame) and never panned: cx is 540
 // for the whole piece, so the lens only tilts and zooms and `GridBackground`
 // gets no cx. Every framing below is SOLVED from what has to be in the frame
@@ -219,14 +221,20 @@ export const DURATION = 262;
 //   M0  the opening hold. k 1.22, the floor at screen y 700: the five glyphs
 //       stand across the top of the frame with 63 px of world margin either
 //       side of the outer two, the truss under them and the webbing crowd
-//       under that                                     — "how long"     f0-21
-//   M1  TILT DOWN AND PULL BACK, k 1.22 -> 1.0, solved so the crowd's top edge
-//       sits at screen y 760 with the truss and the people still in the top of
-//       the frame (heads at screen 111). The band's dissolved underside reaches
-//       screen 1291 here and the ground below it is under the captions. The
-//       crowd runs 180 world px past both frame edges at this k: it is wider
-//       than the lens at its widest, which is the word. Keys f22-35 warp 0.72,
-//       landed f44                         — "over a thousand instances" f22-44
+//       under that. This is the one framing in the piece that runs the crowd
+//       off the bottom of the frame — the shot is the PEOPLE, the band starts
+//       at screen 1359 and its last drawn row is off the frame at 1866, so the
+//       ground under the captions is crowd. Everything the piece has to READ
+//       is above 1200                                    — "how long"     f0-21
+//   M1  TILT DOWN AND PULL BACK, k 1.22 -> 1.0, solved so the DRAWN BLOCK — the
+//       top of a thought bubble down to the last drawn seat — is centred on
+//       screen 835: bubbles at 265, heads at 349, the floor at 449, the truss
+//       at 579/719/859, the crowd's shoreline at 989 and its dissolve's last
+//       row at 1405, clear of the caption band by 75 px. The crowd runs 180
+//       world px past both frame edges at this k: it is wider than the lens at
+//       its widest, which is the word. Keys f16-29 warp 0.72; the damper is
+//       under 0.1%/frame by f38 and dead by f42
+//                                          — "over a thousand instances" f16-42
 //   M2  THE CREEP, k 1.0 -> 1.45, solved so the bottom-centre node (540, 410)
 //       — the exact point that is about to change — sits at screen y 580, which
 //       is the framing that takes the FLOOR to screen y -14: the push-in leaves
@@ -237,37 +245,37 @@ export const DURATION = 262;
 //       keys stop at f109 rather than the briefed f116 by measurement — the
 //       damper lags its target by about eight frames, and keys that run to the
 //       landing leave the lens crawling under the word. Measured on this track
-//       the whole breath is under 0.09%/frame, so the take lands inside a
-//       locked frame                       — "and how willing they were"  f86-125
-//   M3  THE RELEASE, k 1.45 -> 1.15, the same node at screen y 700 — which is
-//       where the people come back into the frame, standing on it — keys
-//       f128-140 warp 0.7, landed f149: the frame opens up off the first take
-//       so the whole bottom row is in it   — "infrastructure"             f128-146
-//   M4  RIDE THE FRONT, k 1.15 -> 1.0, solved so the TOP row (y 130) — where
-//       the front is going — sits at screen y 760 at the end, which brings the
-//       people back into the top of the frame as the conversion rises. Keys
-//       f150-186 warp 0.75, landed f189
-//                                — "how successfully ... manage"          f150-192
-//   M5  THE SETTLE, k 1.0 held, the lens coming down 90 world px off the top
-//       row onto the FLOOR — the thing that is converting — at screen y 540:
-//       heads 431, truss bottom row 972, the band's shoreline 1080 and its
-//       dissolve gone by 1611, the whole cross-section in one frame. Keys
-//       f208-228 warp 0.72, landed f237. PASS 2: this was a pull-back to k 0.82
-//       and the resolved still came out a quarter empty sky with the people at
-//       97 px; the resolved wide is k 1.0, which M4 has already reached, so the
-//       last move is a tilt. What carries the span is the FLOOR running out to
-//       both edges under it at 16.5 px/frame, not the lens
+//       the whole breath is under 0.08%/frame and 0.6 px/frame, so the take
+//       lands inside a locked frame — "and how willing they were"         f86-125
+//   M3  RELEASE AND RIDE, k 1.45 -> 1.0, ONE continuous move: the lens opens
+//       off the first take and keeps opening, riding the conversion front out
+//       along the bottom row and up the diagonals, and lands solved so the TOP
+//       row (y 130) — where the front is going — sits at screen y 760 with the
+//       people back in the top of the frame above it. Keys f128-184 warp 0.75,
+//       landed f190, before "to" at f192. It is one deceleration lobe and not
+//       two moves: the slowest frame between f135 and f175 is still turning
+//       0.415%/frame of zoom, so there is nothing in the middle of it that
+//       reads as an arrival
+//                 — "infrastructure ... how successfully they did in fact
+//                    manage"                                             f128-192
+//   M4  THE SETTLE, k 1.0 held, the lens tilting down 181 world px off the top
+//       row onto the FLOOR — the thing that is converting — to the same solved
+//       wide M1 landed on: the whole cross-section in one frame, bubbles 265,
+//       heads 349, floor 449, truss 579/719/859, shoreline 989, the dissolve's
+//       last row 1405 and nothing in the bottom 440. Keys f202-226 warp 0.72,
+//       landed f233, before "companies" at f237. What carries the span is the
+//       FLOOR running out to both edges under it at 16.4 px/frame, not the lens
 //                                — "the infrastructure of these AI
-//                                   companies"                           f208-240
+//                                   companies"                           f202-240
 //
 // LINE SPEED. 22 world px/frame for everything fired by an agent (threads,
 // glances, the verticals). The climb's own speed is SOLVED against its beat
 // (23.65 px/frame on a chord, 10.6 up a diagonal) and the floor's against f236
-// and the frame edge at the k the camera is actually at by then (16.5
-// px/frame, down from 19.8 now that the resolved wide is k 1.0 and the edge it
-// has to clear is 540 px out rather than 659). The fastest head is a chord of
-// the climb under M4's tight end: 33 screen px/frame, inside the 45 px/frame
-// close-up cap.
+// and the frame edge at the k the camera is actually at by then (16.4
+// px/frame, because the resolved wide is k 1.0 and the edge it has to clear is
+// 540 px out). The fastest head is a chord of the climb under M3's still-tight
+// end: 25.4 screen px/frame, inside the 45 px/frame close-up cap. The fastest
+// the LENS ever moves is 28.7 screen px/frame, in the middle of M1.
 //
 // ambient, not gestures: the truss's white packets from f0 (~10 alive, 14
 // frames each), `breath` on every dot, `sway` on the camera, the grid's drift.
@@ -525,8 +533,15 @@ export const VERTS: number[] = NODES.map((n, i) => (n.row === 0 ? i : -1)).filte
 // A BAND, not a wall. PASS 2, on the director's note that 91 rows of seats read
 // as a yellow texture that dwarfs the truss and the people — who are the
 // subject — and as noise at phone size: the width is unchanged (60 columns, so
-// it still runs off both frame edges at every k) and the DEPTH comes down from
+// it still runs off both frame edges at every k) and the DEPTH came down from
 // 91 rows to 36, world y 540 down to 1071.
+//
+// HARMONY PASS: 36 rows down to 30, world y 540 down to 980. Cut 2 was the only
+// cut in the set with content under the captions — the dissolve reached screen
+// 1611 at the resolved wide, 131 px into the bottom 440 — and its drawn block
+// sat at screen 983 rather than the set's 835. Six rows off the underside is
+// 91 world px, which is what buys the block room to sit where the set's content
+// centre is (see BLOCK_MID and the camera below); the feather is untouched.
 //
 // A band has two edges instead of one, so both are dissolved rather than ruled:
 //   TOP    6 rows, on a `wobble`d line — the shoreline, as before. It is the
@@ -535,13 +550,13 @@ export const VERTS: number[] = NODES.map((n, i) => (n.row === 0 ? i : -1)).filte
 //   BOTTOM 12 rows on its own wobble, and the surviving seats out there fall to
 //          0.6x radius as well as thinning: this edge has no job except to not
 //          be a rule, so it dissolves twice as far and fades as it goes. It is
-//          inside the frame at the resolved wide (world 1071 -> screen 1611 at
-//          k 1.0) and at every other framing except M1's, where the ground
-//          below it is under the captions.
+//          inside the frame AND above the caption band at every framing the
+//          piece lands on except the opening one, which is a k 1.22 shot of the
+//          PEOPLE and runs the crowd off the bottom of the frame.
 const STEP_X = 940 / 39;
 const STEP_Y = 440 / 29;
 export const COLS = 60;
-export const BAND_ROWS = 36; // the band: rows 0..35, world y 540..1071
+export const BAND_ROWS = 30; // the band: rows 0..29, world y 540..980
 export const BOT_ROW = BAND_ROWS - 1;
 export const ROW_LO = -4; // rows above the nominal shoreline, so wobble can lift it
 export const ROW_HI = BOT_ROW + 4; // and below the nominal floor, so it can drop
@@ -578,6 +593,16 @@ export const SEATS: Seat[] = (() => {
   return out;
 })();
 export const NSEAT = SEATS.length;
+
+// THE DRAWN BLOCK. Everything the piece ever draws, top to bottom: the top of a
+// thought bubble down to the last seat the underside's dissolve actually leaves
+// behind (the nominal underside is 980, the wobble and the four spare rows put
+// real seats below it, and it is the DRAWN edge that has to clear the captions,
+// not the nominal one). Both wide framings are solved off BLOCK_MID so the
+// block's middle lands on the set's content centre, screen y 835.
+export const BLOCK_TOP = BUB_Y0;
+export const BLOCK_BOT = SEATS.reduce((m, s) => Math.max(m, s.y), 0);
+export const BLOCK_MID = (BLOCK_TOP + BLOCK_BOT) / 2;
 
 const SEAT_AT = (() => {
   const a = new Int32Array((ROW_HI - ROW_LO + 1) * COLS).fill(-1);
@@ -618,8 +643,12 @@ const seatAt = (gr: number, gc: number) => {
 //   step on "communicating" and the same 0.375 ebb — scaled 2.08x, because on
 //   THIS field (1,557 seats, not 5,008) the briefed absolute numbers land the
 //   tone at 16% / 28% and the target is the percentages, not the rates.
-// Measured on the built field: 8% of seats ripe at f44, 29% at f72, 48% at the
-// breath f118, 63% at the resolved hold, and never all of it.
+// Measured on the built field (30 rows, 1,208 seats, a seat counted ripe once
+// its ramp is home): 18% of seats ripe at f44, 32% at f72, 53% at the breath
+// f118, 71% at the resolved hold, and never all of it. The rates are unchanged
+// across the harmony pass; the six rows off the underside are what moved the
+// percentages, and they moved the right way — the ladder is still being spent
+// through the whole second half.
 //
 // WHERE they launch is hashed, with the density falling off with DEPTH (1 down
 // to 0.45 across the band) rather than stopping at a row — a launch pool with a
@@ -718,7 +747,7 @@ export const LIT_AT = (() => {
 })();
 
 // ---------------------------------------------------------------------------
-// THE CAMERA. Five moves, one track, all through the shared damper. Nothing
+// THE CAMERA. Four moves, one track, all through the shared damper. Nothing
 // pans: cx is CENTRE_X for the whole piece. Each framing is solved from the one
 // thing that has to be in the frame.
 // ---------------------------------------------------------------------------
@@ -734,7 +763,6 @@ export const K_OPEN = 1.22; // the five glyphs across the frame, the truss under
 // 180 world px past BOTH frame edges here instead of 150.
 export const K_WIDE = 1.0; // the crowd, running off both sides
 export const K_CREEP = 1.45; // the point that is about to change
-export const K_REL = 1.15; // the whole bottom row, and the people back in it
 export const K_RIDE = 1.0; // riding the front up the truss
 // PASS 2: was 0.82, which put the people at 97 screen px with a quarter of the
 // frame empty sky above them. The resolved wide is 1.0 — the people are 118 px,
@@ -742,16 +770,19 @@ export const K_RIDE = 1.0; // riding the front up the truss
 export const K_FINAL = 1.0; // the resolved wide
 
 export const C_OPEN = centreFor(FLOOR_Y, 700, K_OPEN);
-// PASS 2: the shoreline at 760 rather than 700. The content is 1,180 world px
-// tall (a person's head at -109 to the band's underside at 1071) and there are
-// 1,480 px of frame above the captions to put it in, so 300 px is empty
-// whatever happens; 760 is the split that leaves 111 above the heads and 189
-// below the dissolve, which is as close to even as the picture gets.
-export const C_WIDE = centreFor(CROWD_Y0, 760, K_WIDE);
+// HARMONY PASS: both wide framings are now solved off the DRAWN BLOCK rather
+// than off one landmark inside it. PASS 2 keyed the crowd's shoreline to screen
+// 760, which put the block's middle at 633 at M1 and left 250 px of bare grid
+// between the dissolve and the caption line; the resolved wide was keyed to the
+// floor at 540, which put the block's middle at 983 and pushed 1,256 px of
+// dissolve under the captions. One rule instead of two: BLOCK_MID — the top of
+// a thought bubble to the last drawn seat — sits at the set's content centre,
+// screen y 835, at both. At k 1.0 that is the same number twice, which is the
+// point: the piece opens out of the creep onto the wide it ends on.
+export const C_WIDE = centreFor(BLOCK_MID, 835, K_WIDE);
 export const C_CREEP = centreFor(ROW_Y[2], 580, K_CREEP);
-export const C_REL = centreFor(ROW_Y[2], 700, K_REL);
 export const C_RIDE = centreFor(ROW_Y[0], 760, K_RIDE);
-export const C_FINAL = centreFor(FLOOR_Y, 540, K_FINAL);
+export const C_FINAL = centreFor(BLOCK_MID, 835, K_FINAL);
 
 export type CamSeg = {
   f0: number;
@@ -764,23 +795,31 @@ export type CamSeg = {
 };
 
 export const CAM_SEGS: CamSeg[] = [
-  // M1 "over a thousand instances" — down and out, off the people to the crowd
-  { f0: 22, f1: 35, k0: K_OPEN, k1: K_WIDE, c0: C_OPEN, c1: C_WIDE, warp: 0.72 },
+  // M1 "over a thousand instances" — down and out, off the people to the crowd.
+  // HARMONY PASS: the keys were f22-35 and the damper was not still until f47,
+  // nine frames AFTER "instances" (f38) — the one late landing in the set. The
+  // same move, the same warp, six frames earlier: the lens is at rest before
+  // the word it is framing rather than crawling under it.
+  { f0: 16, f1: 29, k0: K_OPEN, k1: K_WIDE, c0: C_OPEN, c1: C_WIDE, warp: 0.72 },
   // M2 "and how willing they were" — THE CREEP, one even ease onto the node
   { f0: 86, f1: 109, k0: K_WIDE, k1: K_CREEP, c0: C_WIDE, c1: C_CREEP, warp: 1.0 },
-  // M3 "infrastructure" — the release off the first take
-  { f0: 128, f1: 140, k0: K_CREEP, k1: K_REL, c0: C_CREEP, c1: C_REL, warp: 0.7 },
-  // M4 "how successfully they did in fact manage" — ride the front up
-  { f0: 150, f1: 186, k0: K_REL, k1: K_RIDE, c0: C_REL, c1: C_RIDE, warp: 0.75 },
-  // M5 "the infrastructure of these AI companies" — the settle onto the floor.
-  // PASS 2: the resolved wide is k 1.0, which M4 already landed on, so this is
-  // a TILT and not a pull-back: the lens comes down 90 world px off the top row
-  // onto the floor, which is the thing converting, and the whole cross-section
-  // — people, truss, band — sits in one frame at the end. The keys close 4
-  // frames earlier than the old pull-back's (208-228, not 208-232) because the
-  // travel is a third of what it was and keys that run to the landing leave the
-  // damper crawling under "companies".
-  { f0: 208, f1: 228, k0: K_RIDE, k1: K_FINAL, c0: C_RIDE, c1: C_FINAL, warp: 0.72 },
+  // M3 "infrastructure ... how successfully they did in fact manage" — release
+  // and ride, ONE move. HARMONY PASS: this was two (a release to k 1.15 over
+  // f128-140 and a ride to k 1.0 over f150-186) and the first never parked
+  // before the second left — the lens arrived at nothing and set off again,
+  // which is the stall the set has nowhere else. One continuous deceleration
+  // out of the creep instead: k 1.45 -> 1.0 riding the conversion front up the
+  // truss, keys f128-184, landed before "to" at f192.
+  { f0: 128, f1: 184, k0: K_CREEP, k1: K_RIDE, c0: C_CREEP, c1: C_RIDE, warp: 0.75 },
+  // M4 "the infrastructure of these AI companies" — the settle onto the floor.
+  // PASS 2: the resolved wide is k 1.0, which M3 already landed on, so this is
+  // a TILT and not a pull-back: the lens comes down off the top row onto the
+  // floor, which is the thing converting, and the whole cross-section — people,
+  // truss, band — sits in one frame at the end. HARMONY PASS: the tilt is
+  // longer now that the resolved framing is solved off the drawn block rather
+  // than off the floor, so the keys open 6 frames earlier to land in the same
+  // place, before "companies".
+  { f0: 202, f1: 226, k0: K_RIDE, k1: K_FINAL, c0: C_RIDE, c1: C_FINAL, warp: 0.72 },
 ];
 
 // One track: a key per frame inside a move, ONE key holding the last value in
@@ -1210,7 +1249,7 @@ const SubvertTheInfrastructure: React.FC<Props> = ({
     const s = SEATS[i];
     if (s.x < visX0 || s.x > visX1 || s.y < visY0 || s.y > visY1) continue;
     const l = smoothstep((frame - LIT_AT[i]) / TONE_DUR);
-    const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.3 * l);
+    const r = dotRadius * s.r * s.rs * breath(frame, hash(i, 9)) * (1 + 0.35 * l);
     buckets[Math.round(clamp01(l) * TONE_STEPS)].push(dotPath(s.x, s.y, r));
   }
 
