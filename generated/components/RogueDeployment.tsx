@@ -33,7 +33,6 @@ import {
   idleThreads,
   makeTone,
   smoothstep,
-  squirclePath,
   sway,
   wobble,
   worldTransform,
@@ -44,8 +43,8 @@ import { EASE_ARRIVE, ease, highlightTone } from "./levelUp";
 // CUT 3 IS THE WORLD. Every number below that describes the loop, the model,
 // the stations, the spokes, the people or the circuit is IMPORTED from
 // `TheirOwnTraining`; nothing of it is restated or re-derived here. Cut 4 adds
-// exactly three things of its own: the company box, the two mini blobs, and
-// the growth.
+// exactly two things of its own: the two mini blobs — one outside cut 3's own
+// ring and one inside it — and the growth.
 // ---------------------------------------------------------------------------
 import {
   ARC_LOWER,
@@ -60,12 +59,14 @@ import {
   BLOB_FEATHER,
   BLOB_IDLE_THREADS,
   CENTRE_X,
+  CONTENT_CENTRE,
   DURATION as TOT_DURATION,
   EVAL_DEG,
   EVAL_EDGE,
   EVAL_FOOT,
   F_COLS,
   F_ROWS,
+  K_WIDE as TOT_K_WIDE,
   LINE_BOT,
   LINE_TOP,
   LOOP_C,
@@ -75,7 +76,6 @@ import {
   NSEAT,
   PEOPLE,
   PERSON_SIZE,
-  RING_STROKE,
   SEATS,
   SEAT_AT,
   SEAT_RING_STROKE,
@@ -84,6 +84,7 @@ import {
   STATIONS,
   STATION_PAUSE,
   STATION_R,
+  StationGlyph,
   STEP_X,
   STEP_Y,
   STROKE,
@@ -127,46 +128,78 @@ export const DURATION = 190;
 // Imported, never restated: BLOB_C / BLOB_AX / BLOB_AY / SE_N / BLOB_FEATHER /
 // SEATS / NSEAT / SEAT_AT / F_COLS / F_ROWS / STEP_X / STEP_Y /
 // BLOB_IDLE_THREADS (the model), LOOP_C / LOOP_R (the loop), STATIONS /
-// STATION_R / RING_STROKE / TRAIN_DEG / EVAL_DEG / onLoop / arcLen (the
-// stations), SPOKE_R0 / TRAIN_EDGE / EVAL_EDGE / TRAIN_FOOT / EVAL_FOOT /
+// STATION_R / StationGlyph / TRAIN_DEG / EVAL_DEG / onLoop / arcLen (the
+// stations, glyphs and all, since cut 3's own V2), SPOKE_R0 / TRAIN_EDGE / EVAL_EDGE / TRAIN_FOOT / EVAL_FOOT /
 // NEAREST_TRAIN / NEAREST_EVAL (the spokes and the two grips), PEOPLE /
 // PERSON_SIZE / LINE_TOP / LINE_BOT (the people and their dead lines),
 // BEAD_R / BEAD_SPEED / BEAD_STEP / BEAD_F0 / STATION_PAUSE / ARC_UPPER /
-// ARC_LOWER (the circuit), STROKE / SEAT_RING_STROKE / TONE_DUR / CENTRE_X /
-// WORLD_W / WORLD_H / DURATION (as TOT_DURATION). The loop, both stations,
+// ARC_LOWER (the circuit), CONTENT_CENTRE / K_WIDE (as TOT_K_WIDE — cut 3's
+// own resolved framing, which is this piece's open), STROKE /
+// SEAT_RING_STROKE / TONE_DUR / CENTRE_X / WORLD_W / WORLD_H / DURATION (as
+// TOT_DURATION). The loop, both stations,
 // both spokes and every bead are ACCENT at f0 because cut 3 converted them;
 // the two people's lines hang dark; the model is ripe. Cut 3 already exported
 // everything this piece needed, so nothing was added to it.
 //
 // AND NOT ONE OF ITS NUMBERS IS COPIED. Cut 3 was re-cut under this piece
-// while it was being built — the model went from 74 seats to 200, its lattice
-// from 10 x 9 to 14 x 18, the loop from r 330 to r 370, the circuit from a
-// bead every 14 frames to every 10 — and nothing here needed touching,
-// because the box, the two deployments, the growth rings, the growth lattice,
-// every camera framing and the drive on the circuit are all SOLVED off those
-// exports rather than typed. The values quoted below are what that solve
-// currently produces, not inputs.
+// twice — once while it was being built (the model went from 74 seats to 200,
+// the loop from r 330 to r 370) and again in its own V2, which put Lucide
+// glyphs in the two station rings and grew STATION_R from 44 to 52, moving the
+// spokes' tops, the people and CONTENT_CENTRE with it — and nothing here
+// needed touching either time, because the two deployments, the growth rings,
+// the growth lattice, every camera framing and the drive on the circuit are
+// all SOLVED off those exports rather than typed. The values quoted below are
+// what that solve currently produces, not inputs.
 //
-// CUT 4'S OWN THREE THINGS:
-//   THE COMPANY BOX — an ink squircle, AS TIGHT AS THE WORLD ALLOWS: BOX_PAD
-//     90 clear of the loop left, right and below, and PERSON_CLEAR 60 over the
-//     people's heads, which on cut 3 as it stands is 920 x 927 — near square —
-//     at x 80..1000, y -467..460, centred on the loop's own x. It is there at
-//     f0 and is never drawn: the company was always there; the line is about
-//     what gets out of it.
+// V2 — THE BOX IS GONE AND THE RING IS THE BOUNDARY. (the director, on the
+// delivered cut: "I'm not really sure — do you really think the square is
+// necessary here? But I like the idea.") There is no company box and nothing
+// replaces it: OUTSIDE THE LOOP'S RING is external, INSIDE IT is internal, and
+// since that ring is already the process the model is feeding, which side a
+// deployment lands on says which kind of rogue deployment it is with no second
+// shape drawn for it. Every beat, every gesture and the whole growth are as
+// they were delivered. What moved: the two deployments, three of the four
+// camera framings (all of them solved off the box before), and the stations,
+// which are now cut 3's own glyphed ones. The picture is bigger for it — the
+// wide comes in at k 1.01 where the box forced it out to 0.85.
+//
+// CUT 4'S OWN TWO THINGS:
 //   THE TWO DEPLOYMENTS — MINI_FRAC of the model each (the brief's twelve out
 //     of seventy-four, which on a 200-seat model is 32), laid out on the same
-//     superellipse as the model itself at the same proportion, one OUTSIDE the
-//     box 150 px past the right wall and high, one INSIDE it in the lower-left
-//     corner, 60 off both walls and 57 off the loop's arc. Their lattice pitch
-//     is MINI_PITCH 0.85 of the field's own step: that corner will not hold
-//     thirty-two seats at full step without touching the loop, and packing
-//     tighter is what a handful of instances squeezed into a corner of the
-//     company should look like anyway.
+//     superellipse as the model itself at the same proportion and at 0.85 of
+//     the field's step, one OUTSIDE the ring and one INSIDE it. Neither centre
+//     is typed:
+//       EXTERNAL at EXT_R — the ring + 150 from the loop's centre — on the
+//         highest ray that clears the evaluation station's ring and the person
+//         over it by 70 AND whose thirty-two flights clear that same ring by
+//         FLIGHT_CLEAR 20 with no less than BOW_MIN of their bow left. The
+//         arcs go up over the loop's right shoulder, which is exactly where
+//         that station sits: at 2 o'clock the tallest of them flew through it.
+//         The solve walks down to 4 degrees with the bow at 0.60 — just under
+//         the model's own line, 3 o'clock rather than 2 — so the group leaves
+//         UNDER the station and over the line, and the station it is about to
+//         take stands over the gap it went out through. Measured: 169 off that
+//         station, 295 off its person, 84 outside the line, 20 off the ring at
+//         the tallest point of the tallest arc.
+//       INTERNAL on the 7 o'clock ray at R 257, centred in the gap between
+//         the model and the ring: 51 clear of the crowd, 42 clear of the
+//         line — against the brief's 50 and 40. Seven
+//         o'clock is the wide end of the brief's 7-to-8 band — at 8 the
+//         model's own shoulder is further out and thirty-two seats no longer
+//         fit between them at all.
 //   THE GROWTH — five rings on an extension of the model's own lattice, each
 //     one triggered by a REAL bead arriving down the training spoke, each one
 //     GROWTH_RATE of the population the model has when it lands: 43, 52, 63,
-//     76, 92 seats, 200 -> 526 over five turns.
+//     76, 92 seats, 200 -> 526 over five turns. And because the model ends
+//     1.64x its own radius, THE GROWTH PUSHES THE INTERNAL DEPLOYMENT: there
+//     is no fixed place inside the ring that holds thirty-two seats at both
+//     ends of the cut, so every ring that lands carries the deployment a fifth
+//     of the way along a path that ends where the gap is widest — 7 o'clock
+//     (411, 223) round to 6:20 (489, 288), 102 px in five eased steps, each
+//     dot a hashed couple of frames behind the shove. Measured over every frame of the growth, dot
+//     edge to dot edge, it is never nearer than 34 to the crowd or 21 to the
+//     line (CRUSH_MIN). That is the brief's case 5, and it is the rounding
+//     version of it: a radial nudge runs out of ring in two turns.
 //
 // THE GESTURES, one word each, nothing else.
 //   G1 OPEN "could they set up a"                                    f0-26
@@ -181,22 +214,24 @@ export const DURATION = 190;
 //     distance to where they are going, jittered by up to seven
 //     lattice steps so the model THINS toward that side and keeps its
 //     shape rather than losing a wedge out of it. They go one every
-//     0.16 frames from f27, each on its own arc: up and to the right,
-//     OVER the loop line and OVER the box's right wall, and down into
-//     a blob OUTSIDE the box. They stay RIPE and each leaves a dim
+//     0.16 frames from f27, each on its own arc: out to the right,
+//     lifting UNDER the evaluation station, OVER THE RING'S OWN LINE
+//     and down into a blob OUTSIDE it. They stay RIPE and each leaves a dim
 //     seat ring behind. Home by f54, inside "deployment". Every
 //     flight's duration is SOLVED against the strobe cap at the
 //     camera's own damped k, never its speed raised.
 //   G3 INTERNAL "or rogue internal deployment"                       f59-84
-//     The same again from the side that faces the box's lower-left
-//     corner, from f59, on arcs down and out, into a second blob
-//     INSIDE the box in that corner. Home by f81.
+//     The same again from the side that faces the gap inside the ring
+//     at 7 o'clock, from f59, on arcs down and out — short ones now,
+//     so the bow is capped at BOW_FRAC of each flight and keeps the
+//     shape the long ones had — into a second blob INSIDE the ring,
+//     between the model and the line, touching neither. Home by f81.
 //   G4 AIDING "which is aiding them"                                 f85-104
 //     From each deployment an ACCENT thread draws head-led to the
 //     standing seat AT THE FOOT OF THE SPOKE it is going to take —
 //     the training foot for the internal one, the evaluation foot for
-//     the external one, which simply crosses the box's right wall on
-//     the way, nothing opens. Landing on the near edge of the model
+//     the external one, which simply crosses the ring's line on the
+//     way, nothing opens. Landing on the near edge of the model
 //     instead and setting off for the spoke from there put a stub
 //     across the body; coming in to the foot makes G5 a straight
 //     continuation of the same line. Both heads home at f98, on
@@ -211,68 +246,71 @@ export const DURATION = 190;
 //     is taken. From f122 the circuit is DRIVEN over ten frames: the
 //     launch interval halves (BEAD_STEP -> BEAD_STEP/2, so the tempo
 //     on the loop doubles) and the beads themselves run SPEED_MUL
-//     times faster, which the solve currently puts at 2.0, held
-//     under the strobe cap on screen the whole way. Nothing else
-//     moves.
+//     times faster, held under the strobe cap ON SCREEN the whole
+//     way. With the box gone the whole piece is framed a fifth
+//     tighter, so that cap bites harder in world px and the solve
+//     answers with a bigger multiplier — 2.8 where the box's wider
+//     framing needed 2.0 — for the same screen speed and the same
+//     five arrivals. Nothing else moves.
 //   G6 RECURSIVE SELF-IMPROVEMENT "of recursive self-improvement"    f142-190
 //     Every bead that now runs down the training spoke into the model
 //     ADDS A RING OF SEATS to it. The trigger is the bead, not a
 //     timer: the circuit is simulated frame by frame and the growth
-//     reads off its arrivals, which land at f142, f154, f167, f176
-//     and f183. Each ring's seats fly in on their own short arcs from
+//     reads off its arrivals, which land at f145, f153, f167, f177
+//     and f184. Each ring's seats fly in on their own short arcs from
 //     the spoke's FOOT — the point the bead went in at — DEEP, and
 //     ripen over TONE_DUR. The first ring carries the refills with
 //     it, so the dim seat rings the two deployments left behind fill
 //     back up on the model's first turn. The model's outline grows
-//     with them and both spokes SHORTEN as it swallows them. The last
-//     two rings are still arriving on the last frame: nothing
-//     resolves, and the question mark is the picture.
+//     with them, both spokes SHORTEN as it swallows them, and each
+//     arrival SHOVES the internal deployment on round the inside of
+//     the ring ahead of it. The last two rings are still arriving on
+//     the last frame: nothing resolves, and the question mark is the
+//     picture.
 //
 // THE CAMERA. Four moves, one track, cx / cy / k all live, every one of them
 // following a gesture. `camMove` writes a key per frame and takes cy off the
 // EASED k; cx rides the same eased curve; the whole track goes through the
 // shared damper. Every framing is solved (see THE CAMERA below); the numbers
 // here are what that solve currently gives.
-//   M0 the open — THE WHOLE COMPANY, k 1.043, cx 540, content centre -3.5, so
-//      the box sits at screen x 60..1020 and y 351..1319 and its own centre is
-//      on the content line. Cut 3 resolves at k 1.05 on a content centre of
-//      -18.5: this is the SAME FRAMING to within one per cent, so the cut is a
-//      continuation rather than a new picture.
+//   M0 the open — CUT 3'S OWN LAST FRAME, imported: k 1.050, cx 540, content
+//      centre -22.5. With the box gone there is nothing here at f0 that was
+//      not in that frame, so the open is not re-solved at all, and the cut is
+//      a continuation rather than a new picture.
 //   M1 "rogue external deployment" — PAN RIGHT, FOLLOWING the group out over
-//      the wall until its far edge and the model's near edge are both in
-//      frame. k 1.043 -> 1.039, cx 540 -> 784, content centre -3.5 -> -55.
-//      Keys f24-43 warp 0.72, landed f50: the box's right wall lands at screen
-//      x 767 with the new blob's far edge at 992, so there is open field
-//      between the wall and what got out past it. The box is tight enough now
-//      that holding both ends of the gesture costs no zoom at all — this is a
-//      pan, and only a pan.
+//      the line until the deployment's far edge and the model's near edge are
+//      both in frame. k 1.050 -> 1.050, cx 540 -> 738, content centre -22.5 ->
+//      18.2. Keys f24-43 warp 0.72, landed f50 with the ring's rightmost
+//      point at screen x 723 and the new blob's far edge at 948, so there is
+//      open field between the line and what got out past it. The open is
+//      already wide enough to hold both ends, so this move costs no zoom at
+//      all: it is a pan, and only a pan.
 //   M2 "or rogue internal deployment" — pan back and widen so BOTH
-//      deployments, the loop and the box's left wall and floor are in frame at
-//      once. k 1.039 -> 0.846, cx 784 -> 648, content centre -55 -> -3.5.
-//      Keys f57-82 warp 0.72, landed f89 at k 0.842 with the box at screen x
-//      61..835 and the far deployment at 1018. The corner they are flying into
-//      is in frame well before they get there (f75), and the frame is still
-//      opening out under "which is aiding", so the twenty frames those two thin
-//      threads take are not watched from a dead lens.
+//      deployments and the whole ring are in frame at once. k 1.050 -> 0.999,
+//      cx 738 -> 647, content centre back to cut 3's. Keys f57-82 warp 0.72,
+//      landed f89 with the ring at screen x 62..804 and the far deployment at
+//      1018. The internal deployment is inside the ring, so it needs no room
+//      of its own: the gap it is flying into is in frame from f60, and the
+//      frame is still opening out under "which is aiding", so the twenty
+//      frames those two thin threads take are not watched from a dead lens.
 //   M3 "manipulating the process" — THE CREEP, one even ease (warp 1.0), on
-//      the MODEL, which is the thing about to change. k 0.846 -> 1.221, cx
-//      648 -> 540, content centre -3.5 -> 29, solved so the model's centre
+//      the MODEL, which is the thing about to change. k 0.999 -> 1.221, cx
+//      647 -> 540, content centre -22.5 -> 28.7, solved so the model's centre
 //      sits at screen y 800 and the loop still just fits across the frame.
-//      Keys f92-130, thirty-eight of them: it starts under the aid and runs
-//      continuously under the take, so nothing in the middle of the piece is
-//      watched from a parked lens. Landed f138, then DEAD STILL f138-148 —
-//      the held breath, with the circuit running through it at the new tempo
-//      and the first ring landing inside it.
+//      Untouched by the box going. Keys f92-130, thirty-eight of them: it
+//      starts under the aid and runs continuously under the take, so nothing
+//      in the middle of the piece is watched from a parked lens. Landed f138,
+//      then DEAD STILL f138-148 — the held breath, with the circuit running
+//      through it at the new tempo and the first ring landing inside it.
 //   M4 "of recursive self-improvement" — release and FOLLOW the growth out to
-//      the wide. k 1.221 -> 0.853, cx 540 -> 648, content centre back to the
-//      box's own middle, so the grown model, the loop, both deployments with
-//      their threads and the whole box are in frame: at f189 the box sits at
-//      screen x 57..839 with the external deployment's far edge at 1024, 56 px
-//      off the frame, and every dot in the piece between screen y 651 and 1173.
-//      Keys f149-184: it is still opening on the last frame, under the last
-//      ring, rather than parking. It starts three frames AFTER the first ring
-//      so that ring is seen at the creep's zoom and the model visibly gains on
-//      screen as well as against the loop.
+//      the wide. k 1.221 -> 1.007, cx 540 -> 647, content centre back to cut
+//      3's: at f189 the ring sits at screen x 58..807 with the external
+//      deployment's far edge at 1023, 57 px off the frame, the grown model
+//      filling the ring and every dot in the piece between screen y 439 and
+//      1231. Keys f149-184: it is still opening on the last frame, under the
+//      last ring, rather than parking. It starts three frames AFTER the first
+//      ring so that ring is seen at the creep's zoom and the model visibly
+//      gains on screen as well as against the loop.
 //
 // ambient: the circuit, the model's idle threads (their count rising with the
 // population as it grows) and a couple inside each deployment, `breath` on
@@ -280,74 +318,48 @@ export const DURATION = 190;
 // what this field is.
 // ---------------------------------------------------------------------------
 
-const smooth = (u: number) => smoothstep(clamp01(u));
-
 // ---------------------------------------------------------------------------
-// THE COMPANY BOX. An ink squircle around cut 3's whole picture: the loop, the
-// model, both stations and both people are inside it. It exists at f0 and is
-// never drawn in — the company was always there, the line is about what gets
-// out of it.
+// V2 — THERE IS NO BOX. THE RING IS THE BOUNDARY.
+// (the director, on the delivered cut: "I'm not really sure — do you really
+// think the square is necessary here? But I like the idea.")
 //
-// IT IS AS TIGHT AS THE WORLD ALLOWS. A box with slack in it is a box with an
-// empty half, and an empty half is what makes this the smallest picture of the
-// four. So the walls sit the minimum clearance off the things they contain and
-// nothing about them is typed: they are SOLVED off cut 3's own loop and people,
-// so if that world is re-cut — a wider loop, taller people — the box moves with
-// it and the clearances hold exactly:
-//   left / right / bottom   BOX_PAD clear of the loop
-//   top                     whichever is higher, BOX_PAD over the loop or
-//                           PERSON_CLEAR over the people's heads
-// On cut 3 as it stands that is 920 x 927 — near square — centred on the loop's
-// own x: walls at x 80 and 1000, lid at -467, floor at 460, with the clearances
-// in BOX_CLEAR at 90 / 90 / 97 / 90 off the loop and 60 over the heads. The
-// assertion below is what keeps them there.
+// The company box is gone and NOTHING replaces it: the loop's own ring is the
+// line the two deployments are on either side of. "External" is OUTSIDE the
+// ring, "internal" is INSIDE it — and because that ring is already the process
+// the model is feeding, which side a deployment lands on says what kind of
+// rogue deployment it is without a second shape being drawn for it. The box
+// was the only thing in the piece that was drawn to be a container rather than
+// a mechanism, and the picture is bigger without it: the wide now comes in at
+// k 1.01 where the box forced it out to 0.85.
+//
+// Everything else is exactly as it was: the same beats, the same gestures, the
+// same growth off the same real bead arrivals, the same M3 creep. What moved:
+// the two deployments (re-solved against the ring instead of against walls),
+// the three framings that were solved off the box, and the stations, which are
+// now drawn through cut 3's own V2 `StationGlyph` so they carry its icons.
 // ---------------------------------------------------------------------------
-export const BOX_PAD = 90; // loop to wall, left / right / bottom
-export const PERSON_CLEAR = 60; // the lid over the tallest head
-export const BOX_MIN_CLEAR = 60; // the brief's floor, asserted below
-const PERSON_TOP = Math.min(...PEOPLE.map((p) => p.y)) - PERSON_SIZE / 2;
-export const BOX_X0 = LOOP_C.x - LOOP_R - BOX_PAD;
-export const BOX_X1 = LOOP_C.x + LOOP_R + BOX_PAD;
-export const BOX_Y0 = Math.min(LOOP_C.y - LOOP_R - BOX_PAD, PERSON_TOP - PERSON_CLEAR);
-export const BOX_Y1 = LOOP_C.y + LOOP_R + BOX_PAD;
-export const BOX_W = BOX_X1 - BOX_X0;
-export const BOX_H = BOX_Y1 - BOX_Y0;
-export const BOX_PATH = squirclePath(BOX_W, BOX_H);
-/** left, right, top, bottom clearance from the loop to the walls, and the
- *  clearance from the people's heads to the lid. */
-export const BOX_CLEAR = [
-  LOOP_C.x - LOOP_R - BOX_X0,
-  BOX_X1 - (LOOP_C.x + LOOP_R),
-  LOOP_C.y - LOOP_R - BOX_Y0,
-  BOX_Y1 - (LOOP_C.y + LOOP_R),
-  PERSON_TOP - BOX_Y0,
-];
-if (Math.min(...BOX_CLEAR) < BOX_MIN_CLEAR) {
-  throw new Error(`RogueDeployment: the company box only clears by ${Math.min(...BOX_CLEAR)}`);
-}
+
+const smooth = (u: number) => smoothstep(clamp01(u));
 
 // ---------------------------------------------------------------------------
 // THE TWO MINI BLOBS. The same construction as the model — a lattice step,
 // jitter 0.9, radius hashed 0.75-1.25, cut to a superellipse of the same
 // exponent, undulated by `wobble` and feathered — on a 6 x 8 box instead of
 // 14 x 18, so each one is a small rounded blob at the model's own proportion
-// rather than a bar. Forty-four cells are laid out and the thirty-two with the
-// best feather-versus-hash margin survive, which keeps the count exact and the
-// edge ragged.
+// rather than a bar. Forty-eight cells are laid out and the thirty-two with
+// the best feather-versus-hash margin survive, which keeps the count exact and
+// the edge ragged.
 //
-// THEIR PITCH IS SHRUNK 15%. The company box is now as tight as the world
-// allows, and its lower-left corner — walls at x 80 and y 460, the loop's arc
-// cutting across it — will not hold a thirty-two seat blob at the field's own
-// step with 60 px off both walls and a clear gap to the loop. The lattice step
-// shrinks rather than the count: the deployment is still a sixth of the model,
-// just packed a little tighter, which is what a handful of instances squeezed
-// into a corner of the company should look like anyway. Both deployments take
-// the same pitch so they stay the same creature.
+// THEY ARE LAID OUT ONCE, AROUND (0, 0), and placed afterwards. The seats are
+// the same seats the delivered cut had — the same lattice, the same hashes,
+// the same ragged edge — they are simply carried to a centre that is now
+// solved against the ring rather than against a wall, and the internal one is
+// carried further as the model grows into it.
 //
-// Both are PLACED OFF THE BOX, not typed: the external one EXT_OFFSET outside
-// the right wall and high, the internal one inset INT_INSET into the lower-left
-// corner. The clearances that come out of that solve are measured in
-// INT_WALL_CLEAR and INT_LOOP_CLEAR and asserted below.
+// Their pitch is MINI_PITCH 0.85 of the field's own step, unchanged: a handful
+// of instances squeezed in somewhere else should read tighter than the crowd
+// they came out of, and the gap inside the ring holds thirty-two seats at that
+// pitch with the clearances the brief asks for (measured in INT_CLEAR below).
 // ---------------------------------------------------------------------------
 // A DEPLOYMENT IS A FRACTION OF THE MODEL, not a count: the brief's twelve
 // instances out of a seventy-four-seat model is 16.2% of it, and on a model of
@@ -360,53 +372,12 @@ export const MINI_N = Math.max(8, Math.round(NSEAT * MINI_FRAC));
 const MINI_CELLS = Math.ceil(MINI_N / 0.74); // the superellipse and feather keep ~74%
 export const MINI_COLS = Math.max(3, Math.round(Math.sqrt((MINI_CELLS * F_COLS) / F_ROWS)));
 export const MINI_ROWS = Math.max(3, Math.ceil(MINI_CELLS / MINI_COLS));
-/** The corner is tight: the deployments pack at 85% of the field's own step. */
+/** A deployment packs at 85% of the field's own step. */
 export const MINI_PITCH = 0.85;
 export const MINI_SX = STEP_X * MINI_PITCH;
 export const MINI_SY = STEP_Y * MINI_PITCH;
 export const MINI_AX = ((MINI_COLS - 1) / 2 + 0.5) * MINI_SX;
 export const MINI_AY = ((MINI_ROWS - 1) / 2 + 0.5) * MINI_SY;
-export const MINI_CLEAR = 40; // the floor this corner can actually hold, asserted below
-export const EXT_OFFSET = 150; // right wall to the external blob's CENTRE
-export const INT_INSET = 60; // left wall and floor to the internal blob's edge
-// It sits HIGH and right, not level with the model: the dots that leave go up
-// and out over the loop's shoulder and over the wall, which is the shape the
-// line describes, and it puts the composition on a diagonal — deployment high
-// right, deployment low left, the company between them — instead of laying
-// everything out along one horizontal.
-export const EXT_RISE = 0.3; // of the loop's radius, above the model
-export const EXT_C = { x: BOX_X1 + EXT_OFFSET, y: LOOP_C.y - LOOP_R * EXT_RISE };
-export const INT_C = { x: BOX_X0 + INT_INSET + MINI_AX, y: BOX_Y1 - INT_INSET - MINI_AY };
-/** How far a mini blob's nominal boundary is from its centre along a ray —
- *  the superellipse form is homogeneous, so this is closed, and it is what the
- *  clearances below are measured against rather than the bounding half-width. */
-export const miniRadius = (dx: number, dy: number) => {
-  const L = Math.hypot(dx, dy) || 1;
-  const c = Math.abs(dx) / L / MINI_AX;
-  const s = Math.abs(dy) / L / MINI_AY;
-  return Math.pow(Math.pow(c, SE_N) + Math.pow(s, SE_N), -1 / SE_N);
-};
-/** left wall, floor — both INT_INSET by construction, measured back anyway. */
-export const INT_WALL_CLEAR = [
-  INT_C.x - MINI_AX - BOX_X0,
-  BOX_Y1 - (INT_C.y + MINI_AY),
-];
-/** The gap between the internal deployment's outline and the loop's arc. */
-export const INT_LOOP_CLEAR = (() => {
-  const dx = INT_C.x - LOOP_C.x;
-  const dy = INT_C.y - LOOP_C.y;
-  return Math.hypot(dx, dy) - LOOP_R - miniRadius(dx, dy);
-})();
-/** The gap between the external deployment's outline and the box's right wall. */
-export const EXT_WALL_CLEAR = EXT_C.x - MINI_AX - BOX_X1;
-if (INT_LOOP_CLEAR < MINI_CLEAR || Math.min(...INT_WALL_CLEAR) < MINI_CLEAR) {
-  throw new Error(
-    `RogueDeployment: the internal deployment clears by ${INT_LOOP_CLEAR.toFixed(1)} / ${INT_WALL_CLEAR.map((v) => v.toFixed(1)).join(" / ")}`,
-  );
-}
-if (EXT_WALL_CLEAR < MINI_CLEAR) {
-  throw new Error(`RogueDeployment: the external deployment sits on the wall`);
-}
 
 const miniInside = (dx: number, dy: number, seed: number) => {
   const L = Math.hypot(dx, dy);
@@ -418,57 +389,26 @@ const miniInside = (dx: number, dy: number, seed: number) => {
 };
 
 export type MiniSeat = { x: number; y: number; r: number; rs: number };
-const miniSeats = (c: { x: number; y: number }, seed: number, salt: number): MiniSeat[] => {
+/** One deployment's thirty-two seats, as OFFSETS from its centre. */
+const miniOffsets = (seed: number, salt: number): MiniSeat[] => {
   const all: { x: number; y: number; r: number; rs: number; margin: number }[] = [];
   for (let row = 0; row < MINI_ROWS; row++) {
     for (let col = 0; col < MINI_COLS; col++) {
       const i = salt + row * MINI_COLS + col;
-      const x = c.x + (col - (MINI_COLS - 1) / 2) * MINI_SX + (hash(i, 11) - 0.5) * MINI_SX * 0.9;
-      const y = c.y + (row - (MINI_ROWS - 1) / 2) * MINI_SY + (hash(i, 12) - 0.5) * MINI_SY * 0.9;
-      const fe = feather(miniInside(x - c.x, y - c.y, seed), BLOB_FEATHER);
+      const x = (col - (MINI_COLS - 1) / 2) * MINI_SX + (hash(i, 11) - 0.5) * MINI_SX * 0.9;
+      const y = (row - (MINI_ROWS - 1) / 2) * MINI_SY + (hash(i, 12) - 0.5) * MINI_SY * 0.9;
+      const fe = feather(miniInside(x, y, seed), BLOB_FEATHER);
       all.push({ x, y, r: 0.75 + 0.5 * hash(i, 13), rs: 0.7 + 0.3 * fe, margin: hash(i, 71) - fe });
     }
   }
   all.sort((a, b) => a.margin - b.margin);
   return all.slice(0, MINI_N).map(({ x, y, r, rs }) => ({ x, y, r, rs }));
 };
-export const EXT_SEATS = miniSeats(EXT_C, 1.31, 4100);
-export const INT_SEATS = miniSeats(INT_C, 2.77, 5200);
+export const EXT_OFF = miniOffsets(1.31, 4100);
+export const INT_OFF = miniOffsets(2.77, 5200);
+const seatsAt = (off: MiniSeat[], c: { x: number; y: number }): MiniSeat[] =>
+  off.map((o) => ({ x: c.x + o.x, y: c.y + o.y, r: o.r, rs: o.rs }));
 
-// ---------------------------------------------------------------------------
-// WHO LEAVES. Twelve for outside, then twelve for the corner, both ranked on a
-// direction plus a hashed half-step so the hollow they leave is ragged rather
-// than a cut edge. The two seats carrying cut 3's grips on the stations never
-// leave: those two are the model's hold on its own training and evaluation,
-// and the line is about the instances it puts somewhere else.
-// ---------------------------------------------------------------------------
-const GRIPS = new Set([NEAREST_TRAIN, NEAREST_EVAL]);
-const pickSeats = (n: number, score: (i: number) => number, taken: Set<number>) =>
-  SEATS.map((_, i) => i)
-    .filter((i) => !taken.has(i) && !GRIPS.has(i))
-    .sort((a, b) => score(a) - score(b))
-    .slice(0, n);
-
-/** How far a seat's rank may be jittered when a deployment picks it: SEVEN
- *  lattice steps, which is most of the model's own radius. Ranking tightly on
- *  the distance to where they are going takes a clean BITE out of that side
- *  and leaves the model reading as a wedge for the next hundred frames —
- *  which is not what a sixth of a population leaving looks like. At seven
- *  steps the pick is a soft gradient over the whole side that faces the
- *  destination: the model THINS toward it, keeps its shape, and the dim seat
- *  rings left behind are scattered through the crowd rather than punched out
- *  of it. */
-const RAGGED = STEP_X * 7;
-export const EXT_FROM = pickSeats(
-  MINI_N,
-  (i) => Math.hypot(SEATS[i].x - EXT_C.x, SEATS[i].y - EXT_C.y) + (hash(i, 41) - 0.5) * RAGGED,
-  new Set<number>(),
-);
-export const INT_FROM = pickSeats(
-  MINI_N,
-  (i) => Math.hypot(SEATS[i].x - INT_C.x, SEATS[i].y - INT_C.y) + (hash(i, 42) - 0.5) * RAGGED,
-  new Set(EXT_FROM),
-);
 
 // ---------------------------------------------------------------------------
 // THE GROWTH LATTICE. The model's own lattice, extended: same step, same
@@ -587,27 +527,345 @@ export const S_EVAL: number[] = [];
 })();
 
 // ---------------------------------------------------------------------------
+// WHERE THE TWO DEPLOYMENTS GO, with the ring as the only boundary. Neither
+// centre is typed: each is solved off cut 3's own geometry, and every clearance
+// below is measured DOT EDGE TO DOT EDGE against the dots themselves rather
+// than against a nominal outline — the outline is a superellipse that the
+// ragged edge pokes through, and the thing that must not touch is the ink.
+//
+//   EXTERNAL   EXT_R = the ring + 150 from the loop's centre, on the highest
+//              ray — the most 2 o'clock — that clears the evaluation station's
+//              ring and the person standing over it by EXT_STATION_CLEAR,
+//              sits EXT_RING_CLEAR outside the ring's own line, AND whose
+//              thirty-two flights clear that station's ring too. It comes out
+//              at 4 degrees: out to the right, just under the model's own
+//              line, past the ring, with the station it is going to take
+//              standing up and to its left over the gap it left through.
+//   INTERNAL   on the 7 o'clock ray, at the distance that centres it in the
+//              gap between the model and the ring, and it is the WIDEST the
+//              7-to-8 o'clock band gets: at 8 o'clock the model's own shoulder
+//              is further out and thirty-two seats no longer fit at all.
+//
+// AND THE INTERNAL ONE IS PUSHED. The model ends the cut 1.64x its own radius,
+// and at that size the gap it is sitting in is 127 px wide against a blob that
+// is 104 px across: there is no fixed place inside the ring that holds a
+// deployment at both ends of the cut. So the growth MOVES it — every ring that
+// lands carries it one fifth of the way along a path that ends where the gap
+// is widest, and it keeps its distance from both the crowd and the line the
+// whole way (INT_CLEAR: 53 / 43 at rest, never under 21 at the last ring).
+// That is the brief's case 5, and it is a bigger move than its 12 px a ring:
+// on this geometry a radial nudge of any size runs out of ring, so the push
+// rounds the model rather than going straight out — the deployment is shoved
+// along the inside of the wall by the thing it is feeding, which is what the
+// gesture is about anyway.
+// ---------------------------------------------------------------------------
+/** The widest a dot is ever drawn: the top of the hashed range. Every
+ *  clearance is measured with it, so it holds for every dot in the blob. */
+const DOT_MAX = DOT_RADIUS * 1.25;
+/** The model's whole population at each stage: cut 3's seats, then each ring
+ *  the growth adds. POP[0] is the model the two deployments leave from, POP[5]
+ *  the one that is still growing on the last frame. */
+export const POP: { x: number; y: number; r: number }[][] = (() => {
+  const out = [SEATS.map((s) => ({ x: s.x, y: s.y, r: DOT_RADIUS * s.r }))];
+  RINGS.forEach((ring, g) =>
+    out.push(out[g].concat(ring.map((s) => ({ x: s.x, y: s.y, r: DOT_RADIUS * s.r })))),
+  );
+  return out;
+})();
+/** The smallest gap between a blob at `c` and a population, edge to edge. */
+const popGap = (c: { x: number; y: number }, off: MiniSeat[], pop: { x: number; y: number; r: number }[]) => {
+  let m = Infinity;
+  for (const o of off) {
+    const x = c.x + o.x;
+    const y = c.y + o.y;
+    for (const p of pop) {
+      const d = Math.hypot(x - p.x, y - p.y) - p.r - DOT_MAX;
+      if (d < m) m = d;
+    }
+  }
+  return m;
+};
+/** The smallest gap between a blob at `c` and the ring's own line, from the
+ *  inside (`+1`) or from the outside (`-1`). */
+const ringGap = (c: { x: number; y: number }, off: MiniSeat[], side: 1 | -1) => {
+  let m = Infinity;
+  for (const o of off) {
+    const d = Math.hypot(c.x + o.x - LOOP_C.x, c.y + o.y - LOOP_C.y);
+    m = Math.min(m, side * (LOOP_R - d) - DOT_MAX - STROKE / 2);
+  }
+  return m;
+};
+
+// ---------------------------------------------------------------------------
+// WHO LEAVES, AND ON WHAT ARC. This is here, above the placement, because the
+// placement needs it: where a deployment sits decides which seats leave for it
+// and therefore what those seats FLY THROUGH on the way — and on this geometry
+// the thing they fly past is the evaluation station.
+//
+// The two seats carrying cut 3's grips on the stations never leave: those two
+// are the model's hold on its own training and evaluation, and the line is
+// about the instances it puts somewhere else.
+// ---------------------------------------------------------------------------
+const GRIPS = new Set([NEAREST_TRAIN, NEAREST_EVAL]);
+const pickSeats = (n: number, score: (i: number) => number, taken: Set<number>) =>
+  SEATS.map((_, i) => i)
+    .filter((i) => !taken.has(i) && !GRIPS.has(i))
+    .sort((a, b) => score(a) - score(b))
+    .slice(0, n);
+/** How far a seat's rank may be jittered when a deployment picks it: SEVEN
+ *  lattice steps, which is most of the model's own radius. Ranking tightly on
+ *  the distance to where they are going takes a clean BITE out of that side
+ *  and leaves the model reading as a wedge for the next hundred frames —
+ *  which is not what a sixth of a population leaving looks like. At seven
+ *  steps the pick is a soft gradient over the whole side that faces the
+ *  destination: the model THINS toward it, keeps its shape, and the dim seat
+ *  rings left behind are scattered through the crowd rather than punched out
+ *  of it. */
+const RAGGED = STEP_X * 7;
+/** Each group is matched to its blob so the thirty-two paths fan rather than
+ *  cross — the external group by y, the internal one by x. */
+const matched = (from: number[], slots: MiniSeat[], byX: boolean) => {
+  const f = [...from].sort((a, b) => (byX ? SEATS[a].x - SEATS[b].x : SEATS[a].y - SEATS[b].y));
+  const t = slots.map((_, i) => i).sort((a, b) => (byX ? slots[a].x - slots[b].x : slots[a].y - slots[b].y));
+  return f.map((seat, i) => ({ seat, slot: t[i] }));
+};
+export type Deployment = { c: { x: number; y: number }; seats: MiniSeat[]; from: number[]; pairs: { seat: number; slot: number }[] };
+const deployment = (c: { x: number; y: number }, off: MiniSeat[], salt: number, byX: boolean, taken: Set<number>): Deployment => {
+  const seats = seatsAt(off, c);
+  const from = pickSeats(
+    MINI_N,
+    (i) => Math.hypot(SEATS[i].x - c.x, SEATS[i].y - c.y) + (hash(i, salt) - 0.5) * RAGGED,
+    taken,
+  );
+  return { c, seats, from, pairs: matched(from, seats, byX) };
+};
+/** The deepest a departure's arc may bow, as a fraction of its own length: the
+ *  internal deployment is now a third of the distance away that it was outside
+ *  the box, and a fixed 34-64 px bow on a 150 px flight is not an arc, it is a
+ *  loop. */
+export const BOW_FRAC = 0.22;
+const bowFor = (a: { x: number; y: number }, b: { x: number; y: number }, want: number) =>
+  Math.sign(want) * Math.min(Math.abs(want), BOW_FRAC * Math.hypot(b.x - a.x, b.y - a.y));
+export const EXT_BOW = (j: number) => -(36 + hash(j, 51) * 40);
+export const INT_BOW = (j: number) => -(34 + hash(j, 52) * 30);
+/** How close any dot of a group's arcs comes to a station's ring. */
+const arcClear = (d: Deployment, bow: (j: number) => number, sc: number, st: { x: number; y: number }) => {
+  let m = Infinity;
+  d.pairs.forEach((p, j) => {
+    const a = SEATS[p.seat];
+    const b = d.seats[p.slot];
+    const vx = b.x - a.x;
+    const vy = b.y - a.y;
+    const L = Math.hypot(vx, vy) || 1;
+    const h = bowFor(a, b, bow(j)) * sc;
+    for (let e = 0; e <= 1; e += 0.02) {
+      const w = Math.sin(Math.PI * e) * h;
+      const x = a.x + vx * e + (-vy / L) * w;
+      const y = a.y + vy * e + (vx / L) * w;
+      m = Math.min(m, Math.hypot(x - st.x, y - st.y) - STATION_R - DOT_MAX);
+    }
+  });
+  return m;
+};
+
+export const EXT_R = LOOP_R + 150; // the ring's line, and 150 past it
+export const EXT_STATION_CLEAR = 70; // to the evaluation ring and to its person
+export const EXT_RING_CLEAR = 60; // to the ring's own line
+/** The evaluation station, and the person standing over it — the two things
+ *  the external deployment has to stay off on its way out. */
+const EVAL_ST = onLoop(EVAL_DEG);
+const EVAL_PERSON = PEOPLE.reduce((a, b) => (Math.abs(b.x - EVAL_ST.x) < Math.abs(a.x - EVAL_ST.x) ? b : a));
+const extClear = (c: { x: number; y: number }) => {
+  let st = Infinity;
+  let pe = Infinity;
+  for (const o of EXT_OFF) {
+    const x = c.x + o.x;
+    const y = c.y + o.y;
+    st = Math.min(st, Math.hypot(x - EVAL_ST.x, y - EVAL_ST.y) - STATION_R - DOT_MAX);
+    const nx = Math.max(EVAL_PERSON.x - PERSON_SIZE / 2, Math.min(EVAL_PERSON.x + PERSON_SIZE / 2, x));
+    const ny = Math.max(EVAL_PERSON.y - PERSON_SIZE / 2, Math.min(EVAL_PERSON.y + PERSON_SIZE / 2, y));
+    pe = Math.min(pe, Math.hypot(x - nx, y - ny) - DOT_MAX);
+  }
+  return { st, pe };
+};
+/** THE RAY, AND THE BOW, ARE SOLVED TOGETHER. 2 o'clock is -30 degrees, and
+ *  the ray walks down off it until the deployment is clear of the station it is
+ *  reaching for and of the person over it — but a deployment's ray also decides
+ *  what its thirty-two flights FLY THROUGH, and on cut 3's geometry the
+ *  evaluation station sits on exactly the shoulder those arcs go over. At 2
+ *  o'clock the tallest of them went through its ring. So the walk carries a
+ *  second test: the arcs, at no less than BOW_MIN of their own hashed bow —
+ *  below that they are not arcs any more — must clear that ring by
+ *  FLIGHT_CLEAR as well. It comes out at 4 degrees with the bow at 0.60: the
+ *  deployment sits just under the model's own line, out past the ring, with the
+ *  station it is going to take up and to its left, and the group lifts over the
+ *  line UNDER that station rather than through it. */
+export const FLIGHT_CLEAR = 20;
+export const BOW_MIN = 0.6;
+export const EXT_PLACE = (() => {
+  for (let deg = -30; deg <= 25; deg += 0.5) {
+    const c = onLoop(deg, EXT_R);
+    const { st, pe } = extClear(c);
+    if (st < EXT_STATION_CLEAR || pe < EXT_STATION_CLEAR) continue;
+    if (ringGap(c, EXT_OFF, -1) < EXT_RING_CLEAR) continue;
+    const d = deployment(c, EXT_OFF, 41, false, new Set<number>());
+    if (arcClear(d, EXT_BOW, BOW_MIN, EVAL_ST) < FLIGHT_CLEAR) continue;
+    let sc = BOW_MIN;
+    for (let t = 1; t > BOW_MIN; t -= 0.02) {
+      if (arcClear(d, EXT_BOW, t, EVAL_ST) >= FLIGHT_CLEAR) {
+        sc = t;
+        break;
+      }
+    }
+    return { deg, dep: d, bow: sc };
+  }
+  throw new Error("RogueDeployment: no ray outside the ring clears the evaluation station");
+})();
+export const EXT_DEG = EXT_PLACE.deg;
+export const EXT_BOW_SCALE = EXT_PLACE.bow;
+export const EXT_C = EXT_PLACE.dep.c;
+/** station ring, person glyph, the ring's line, and the arcs. */
+export const EXT_CLEAR = [
+  extClear(EXT_C).st,
+  extClear(EXT_C).pe,
+  ringGap(EXT_C, EXT_OFF, -1),
+  arcClear(EXT_PLACE.dep, EXT_BOW, EXT_BOW_SCALE, EVAL_ST),
+];
+
+export const INT_DEG = 120; // 7 o'clock
+export const INT_MODEL_CLEAR = 50; // to the model, at rest
+export const INT_RING_CLEAR = 40; // to the ring's line, at rest
+/** The distance that centres it in the gap: the R with the most room to spare
+ *  on whichever of the two clearances is tighter. */
+export const INT_R = (() => {
+  let best = 0;
+  let score = -Infinity;
+  for (let R = 140; R <= 340; R += 1) {
+    const c = onLoop(INT_DEG, R);
+    const s = Math.min(popGap(c, INT_OFF, POP[0]) - INT_MODEL_CLEAR, ringGap(c, INT_OFF, 1) - INT_RING_CLEAR);
+    if (s > score) {
+      score = s;
+      best = R;
+    }
+  }
+  if (score < 0) throw new Error(`RogueDeployment: the gap inside the ring is ${score.toFixed(1)} short`);
+  return best;
+})();
+/** How far round the push may carry it. The deployment is in the LOWER LEFT —
+ *  that is where the line puts it and where its thread comes from — so the
+ *  shove may round the model as far as 6 o'clock and no further; past that it
+ *  would be crossing to the other side of the crowd it is hiding behind. */
+export const INT_DEG_MIN = 95;
+/** Where the push ends: the place in that band with the most room left when
+ *  the model has taken all five of its rings. Coarse, then refined — every
+ *  candidate is measured against five hundred dots. */
+export const INT_END = (() => {
+  const at = (deg: number, R: number) => {
+    const c = onLoop(deg, R);
+    return Math.min(popGap(c, INT_OFF, POP[RING_COUNT]), ringGap(c, INT_OFF, 1));
+  };
+  let bd = INT_DEG;
+  let bR = INT_R;
+  let bs = -Infinity;
+  for (let deg = INT_DEG_MIN; deg <= INT_DEG; deg += 5) {
+    for (let R = INT_R; R <= 340; R += 8) {
+      const s = at(deg, R);
+      if (s > bs) {
+        bs = s;
+        bd = deg;
+        bR = R;
+      }
+    }
+  }
+  for (let deg = Math.max(INT_DEG_MIN, bd - 5); deg <= bd + 5; deg += 1) {
+    for (let R = bR - 8; R <= bR + 8; R += 2) {
+      const s = at(deg, R);
+      if (s > bs) {
+        bs = s;
+        bd = deg;
+        bR = R;
+      }
+    }
+  }
+  return { deg: bd, r: bR, clear: bs };
+})();
+/** The blob's centre before the growth starts, and after each of the five
+ *  rings: one even sweep along the inside of the ring, a fifth of it a ring. */
+export const INT_PATH = Array.from({ length: RING_COUNT + 1 }, (_, g) => {
+  const u = g / RING_COUNT;
+  return onLoop(INT_DEG + (INT_END.deg - INT_DEG) * u, INT_R + (INT_END.r - INT_R) * u);
+});
+export const INT_C = INT_PATH[0];
+/** What the push actually holds, ring by ring: [to the model, to the line]. */
+export const INT_CLEAR = INT_PATH.map((c, g) => [popGap(c, INT_OFF, POP[g]), ringGap(c, INT_OFF, 1)]);
+// INT_CLEAR is the SETTLED state — every seat of every ring landed, every dot
+// at the top of its hashed radius — and its last entry, 14 / 15, is a state the
+// cut never reaches: the fifth ring is still flying in on the last frame. What
+// the frames actually hold is measured over every frame of the growth, dot by
+// dot, in CRUSH_MIN below; the assertion that matters is there.
+if (INT_CLEAR[0][0] < INT_MODEL_CLEAR || INT_CLEAR[0][1] < INT_RING_CLEAR) {
+  throw new Error(`RogueDeployment: the internal deployment does not fit at rest`);
+}
+
+export const EXT_SEATS = EXT_PLACE.dep.seats;
+export const EXT_FROM = EXT_PLACE.dep.from;
+export const EXT_PAIRS = EXT_PLACE.dep.pairs;
+/** The internal group leaves for where the deployment LANDS, not for where the
+ *  growth later shoves it, and it may not take a seat the external one took. */
+const INT_DEP = deployment(INT_C, INT_OFF, 42, true, new Set(EXT_FROM));
+export const INT_SEATS = INT_DEP.seats;
+export const INT_FROM = INT_DEP.from;
+export const INT_PAIRS = INT_DEP.pairs;
+/** the internal group flies away from its own station, so nothing scales it */
+export const INT_BOW_SCALE = 1;
+export const ARC_CLEAR = [
+  arcClear(EXT_PLACE.dep, EXT_BOW, EXT_BOW_SCALE, EVAL_ST),
+  arcClear(INT_DEP, INT_BOW, INT_BOW_SCALE, onLoop(TRAIN_DEG)),
+];
+
+/** How far the push has carried the internal deployment by `f`, and the frames
+ *  a dot may lag behind the shove — a crowd that is pushed does not move as
+ *  one piece. The steps are the growth's own arrivals: the ring lands, and it
+ *  takes the deployment with it over the same RING_SPAN its own seats fly in
+ *  over. */
+export const INT_LAG = 2.5;
+export const intDrift = (f: number, lag: number, grow: number[]) => {
+  let dx = 0;
+  let dy = 0;
+  for (let g = 0; g < grow.length && g < RING_COUNT; g++) {
+    const u = smooth((f - (grow[g] + lag)) / RING_SPAN);
+    dx += (INT_PATH[g + 1].x - INT_PATH[g].x) * u;
+    dy += (INT_PATH[g + 1].y - INT_PATH[g].y) * u;
+  }
+  return { dx, dy };
+};
+
+
+// ---------------------------------------------------------------------------
 // THE CAMERA. Four moves, one track, and NOT ONE FRAMING IS TYPED: every zoom
 // and every cx is solved from what has to be in the frame at that moment, off
-// cut 3's own geometry and the box that was solved off it.
-//   OPEN  the whole BOX across the frame with OPEN_MARGIN either side, and the
-//         box's own centre on the content line — which is cut 3's resolved
-//         framing to within one per cent, so the world simply carries on
+// cut 3's own geometry.
+//   OPEN  is cut 3's OWN RESOLVED FRAMING, imported rather than re-solved:
+//         TOT_K_WIDE on CONTENT_CENTRE at CENTRE_X. With the box gone there is
+//         nothing in this piece at f0 that was not in cut 3's last frame, so
+//         the cut opens on the frame the piece before it ended on, exactly.
 //   M1    the model's own left edge and the external deployment's right edge
-//         both in frame with EXT_MARGIN to spare, which is the widest the
-//         move may go and still hold both ends of the gesture — the box's
-//         right wall then falls between them, with open field either side
-//   M2    the box's LEFT wall and the external blob's right edge both in
-//         frame with SIDE_MARGIN to spare — the widest the piece has been
+//         both in frame with EXT_MARGIN to spare — and since the open already
+//         holds both of them, the widening that costs is zero and M1 is a PAN,
+//         and only a pan. The ring's line falls between them, with open field
+//         either side of it.
+//   M2    the RING's left edge and the external blob's right edge both in
+//         frame with SIDE_MARGIN to spare — the widest the piece has been, and
+//         the internal deployment is inside the ring so it comes for free
 //   M3    the MODEL across the frame with CREEP_MARGIN either side — floored
 //         at the zoom that just fits the whole loop — and the model's centre
-//         at screen y BLOB_SCREEN_Y
+//         at screen y BLOB_SCREEN_Y. Untouched by the box going.
 //   M4    the same span as M2 with a wider margin, because the model is half
-//         as big again by then, and the box's own centre on the content line
-// On cut 3 as it stands those come out k 1.043 / 1.039 / 0.846 / 1.260 /
-// 0.853, which is the set these gestures were choreographed against. Every one
-// of them is tighter than the loose box gave — the wide is 0.85 where it was
-// 0.70 — because a box with slack in it has to be framed with its slack.
+//         as big again by then, on cut 3's own content centre
+// On cut 3 as it stands those come out k 1.050 / 1.050 / 0.999 / 1.221 /
+// 1.007. Every one of them is TIGHTER than the box allowed — the wide is 1.01
+// where the box forced it out to 0.85 — because a box has to be framed with
+// its corners, and a ring does not.
 // ---------------------------------------------------------------------------
 /** The content centre that puts world y `wy` at screen y `sy` at zoom `k`. */
 export const centreFor = (wy: number, sy: number, k: number) =>
@@ -615,7 +873,6 @@ export const centreFor = (wy: number, sy: number, k: number) =>
 /** The camera x that puts world x `wx` at screen x `sx` at zoom `k`. */
 export const camXFor = (wx: number, sx: number, k: number) => wx - (sx - FRAME_W / 2) / k;
 
-export const OPEN_MARGIN = 60; // M0: screen px outside the BOX at f0
 export const EXT_MARGIN = 90; // M1: screen px outside the model and the deployment
 export const SIDE_MARGIN = 62; // M2: screen px outside the widest thing in frame
 export const WIDE_MARGIN = 58; // M4: the same, after the model has grown
@@ -626,16 +883,18 @@ export const BLOB_SCREEN_Y = 800; // M3: where the model's centre lands
 export const EXT_RIGHT = Math.max(...EXT_SEATS.map((s) => s.x)) + DOT_RADIUS * 1.25;
 /** The model's own left edge before it grows — what M1 may not pan off. */
 export const MODEL_LEFT = BLOB_C.x - S_ALL[0] * BLOB_AX - DOT_RADIUS * 1.25;
+/** The leftmost ink in the piece at any frame: the ring's own line. */
+export const RING_LEFT = LOOP_C.x - LOOP_R - STROKE / 2;
 
-// The open frames THE BOX, not the loop. Cut 3's box was loose enough that its
-// walls bled off the sides at any zoom that held the loop; this one is tight,
-// so the company fits — and the zoom that fits it, 1.04, is within one per cent
-// of the 1.05 cut 3 resolves on, with the box's centre 15 px off cut 3's own
-// content centre. The cut is a continuation, so it opens on the framing the
-// piece before it ended on.
-export const K_OPEN = (FRAME_W - 2 * OPEN_MARGIN) / BOX_W;
-export const K_EXT = (FRAME_W - 2 * EXT_MARGIN) / (EXT_RIGHT - MODEL_LEFT);
-export const K_BOTH = (FRAME_W - 2 * SIDE_MARGIN) / (EXT_RIGHT - BOX_X0);
+// The open IS cut 3's resolved framing. Nothing is in this piece at f0 that was
+// not in cut 3's last frame, so there is nothing to re-solve: the zoom, the
+// content centre and the cx are that piece's own, imported.
+export const K_OPEN = TOT_K_WIDE;
+// M1 may widen to hold both ends of the gesture — but the open is already wide
+// enough to hold them, so it does not: a widening here would be a zoom nobody
+// asked for, and the move is a pan.
+export const K_EXT = Math.min(K_OPEN, (FRAME_W - 2 * EXT_MARGIN) / (EXT_RIGHT - MODEL_LEFT));
+export const K_BOTH = (FRAME_W - 2 * SIDE_MARGIN) / (EXT_RIGHT - RING_LEFT);
 // The creep closes on the MODEL — the thing that is about to change — not on
 // the loop, so the crowd is big enough to watch a ring land on. It is floored
 // at the zoom that just fits the loop across the frame, so the mechanism the
@@ -644,16 +903,17 @@ export const K_CREEP = Math.min(
   FRAME_W / (2 * (S_ALL[0] * BLOB_AX + CREEP_MARGIN)),
   FRAME_W / (2 * LOOP_R),
 );
-export const K_WIDE = (FRAME_W - 2 * WIDE_MARGIN) / (EXT_RIGHT - BOX_X0);
+export const K_WIDE = (FRAME_W - 2 * WIDE_MARGIN) / (EXT_RIGHT - RING_LEFT);
 
 export const CX_EXT = (EXT_RIGHT + MODEL_LEFT) / 2;
-export const CX_BOTH = (EXT_RIGHT + BOX_X0) / 2;
+export const CX_BOTH = (EXT_RIGHT + RING_LEFT) / 2;
 export const CX_WIDE = CX_BOTH;
 
-// The box's own middle on the content line. With the box tight it is 15 px off
-// cut 3's own CONTENT_CENTRE, so this piece opens on the framing cut 3 resolved
-// to and the world simply carries on.
-export const C_BOTH = (BOX_Y0 + BOX_Y1) / 2;
+// Cut 3's own content centre — the middle of the block that runs from the
+// people's heads to the loop's floor — carries every framing in this piece
+// except the creep, which has its own. It is the line the whole set is built
+// on, so the world simply carries on.
+export const C_BOTH = CONTENT_CENTRE;
 export const C_OPEN = C_BOTH;
 export const C_EXT = (BLOB_C.y + EXT_C.y) / 2; // both ends of the gesture, centred
 export const C_CREEP = centreFor(BLOB_C.y, BLOB_SCREEN_Y, K_CREEP);
@@ -672,9 +932,10 @@ export type CamSeg = {
 };
 
 export const CAM_SEGS: CamSeg[] = [
-  // M1 "rogue external deployment" — follow the twelve out over the wall
+  // M1 "rogue external deployment" — follow the group out over the line
   { f0: 24, f1: 43, k0: K_OPEN, k1: K_EXT, c0: C_OPEN, c1: C_EXT, x0: CENTRE_X, x1: CX_EXT, warp: 0.72 },
-  // M2 "or rogue internal deployment" — back and wider, both blobs in frame
+  // M2 "or rogue internal deployment" — back and wider, the ring and both
+  // deployments in frame
   { f0: 57, f1: 82, k0: K_EXT, k1: K_BOTH, c0: C_EXT, c1: C_BOTH, x0: CX_EXT, x1: CX_BOTH, warp: 0.72 },
   // M3 "manipulating the process" — THE CREEP onto the model, one even ease
   { f0: 92, f1: 130, k0: K_BOTH, k1: K_CREEP, c0: C_BOTH, c1: C_CREEP, x0: CX_BOTH, x1: CENTRE_X, warp: 1 },
@@ -854,8 +1115,14 @@ const flightAt = (fl: Flight, f: number) => {
 // THE DEPARTURES. Each group is matched to its mini blob so the twelve paths
 // fan rather than cross — the external group by y, the internal one by x — and
 // each dot takes its own hashed bow. The external arcs bow UP, over the loop's
-// right shoulder and over the box's wall; the internal ones bow DOWN and out,
-// under the loop's lower-left arc.
+// right shoulder and OVER THE RING'S LINE; the internal ones bow DOWN and out,
+// into the gap between the model and that same line, and never reach it.
+//
+// V2: a bow is now capped at BOW_FRAC of its own flight. The internal
+// deployment used to be a long way outside the loop and its arcs were long;
+// inside the ring the same dots have a third of the distance to cover, and a
+// fixed 34-64 px bow on a 150 px flight is not an arc, it is a loop. Capping
+// it keeps the SHAPE of the delivered arcs at every length.
 // ---------------------------------------------------------------------------
 export const EXT_T0 = 27; // "rogue"
 export const EXT_WINDOW = 5; // frames the whole group takes to leave
@@ -867,14 +1134,6 @@ export const EXT_STAGGER = EXT_WINDOW / Math.max(1, MINI_N - 1);
 export const INT_STAGGER = INT_WINDOW / Math.max(1, MINI_N - 1);
 export const EXT_DUR = EXT_LAND - (EXT_T0 + EXT_WINDOW);
 export const INT_DUR = INT_LAND - (INT_T0 + INT_WINDOW);
-
-const matched = (from: number[], slots: MiniSeat[], byX: boolean) => {
-  const f = [...from].sort((a, b) => (byX ? SEATS[a].x - SEATS[b].x : SEATS[a].y - SEATS[b].y));
-  const s = slots.map((_, i) => i).sort((a, b) => (byX ? slots[a].x - slots[b].x : slots[a].y - slots[b].y));
-  return f.map((seat, i) => ({ seat, slot: s[i] }));
-};
-export const EXT_PAIRS = matched(EXT_FROM, EXT_SEATS, false);
-export const INT_PAIRS = matched(INT_FROM, INT_SEATS, true);
 
 // ---------------------------------------------------------------------------
 // THE CIRCUIT, CONTINUED AND THEN DRIVEN.
@@ -1116,14 +1375,14 @@ export const EMPTY_TO = new Float64Array(NSEAT).fill(Infinity);
   EXT_PAIRS.forEach((p, j) => {
     const a = SEATS[p.seat];
     const b = EXT_SEATS[p.slot];
-    const fi = mk(EXT_T0 + j * EXT_STAGGER, EXT_DUR, a, b, -(36 + hash(j, 51) * 40));
+    const fi = mk(EXT_T0 + j * EXT_STAGGER, EXT_DUR, a, b, bowFor(a, b, EXT_BOW(j)) * EXT_BOW_SCALE);
     leaving.set(p.seat, fi);
     group.set(p.seat, 1);
   });
   INT_PAIRS.forEach((p, j) => {
     const a = SEATS[p.seat];
     const b = INT_SEATS[p.slot];
-    const fi = mk(INT_T0 + j * INT_STAGGER, INT_DUR, a, b, -(34 + hash(j, 52) * 30));
+    const fi = mk(INT_T0 + j * INT_STAGGER, INT_DUR, a, b, bowFor(a, b, INT_BOW(j)) * INT_BOW_SCALE);
     leaving.set(p.seat, fi);
     group.set(p.seat, 2);
   });
@@ -1190,6 +1449,43 @@ export const EMPTY_TO = new Float64Array(NSEAT).fill(Infinity);
 })();
 export const NDOT = DOTS.length;
 
+/** WHAT THE FRAMES ACTUALLY HOLD. The push is solved on outlines and on the
+ *  settled state; this measures the drawn picture — every frame from the first
+ *  ring to the last, every seat that has landed by that frame, dot edge to dot
+ *  edge — and it is the number that has to be right, because it is the only
+ *  one anybody sees. [to the model, to the ring's line]. */
+export const CRUSH_MIN: [number, number] = (() => {
+  let m = Infinity;
+  let r = Infinity;
+  for (let f = GROW_F[0] - 2; f <= DURATION; f++) {
+    const int: { x: number; y: number; r: number }[] = [];
+    const model: { x: number; y: number; r: number }[] = [];
+    for (let i = 0; i < NDOT; i++) {
+      const d = DOTS[i];
+      if (f < d.born) continue;
+      const fl = d.flight < 0 ? null : FLIGHTS[d.flight];
+      if (fl && f < fl.t0 + fl.dur) continue; // still in the air
+      const rr = DOT_RADIUS * d.r;
+      if (d.group === 2) {
+        const dr = intDrift(f, hash(d.seed, 27) * INT_LAG, GROW_F);
+        int.push({ x: d.x + dr.dx, y: d.y + dr.dy, r: rr });
+      } else if (d.group === 0) {
+        model.push({ x: d.x, y: d.y, r: rr });
+      }
+    }
+    for (const a of int) {
+      for (const b of model) m = Math.min(m, Math.hypot(a.x - b.x, a.y - b.y) - a.r - b.r);
+      r = Math.min(r, LOOP_R - Math.hypot(a.x - LOOP_C.x, a.y - LOOP_C.y) - a.r - STROKE / 2);
+    }
+  }
+  return [m, r];
+})();
+if (CRUSH_MIN[0] < 30 || CRUSH_MIN[1] < 18) {
+  throw new Error(
+    `RogueDeployment: the growth crushes the internal deployment to ${CRUSH_MIN.map((v) => v.toFixed(1)).join(" / ")}`,
+  );
+}
+
 /** Neighbours for the idle traffic on the grown model: every dot's nearest few
  *  within 2.2 lattice steps, so a thread can find one without a search. */
 export const NEIGHBOURS: number[][] = DOTS.map((a, i) => {
@@ -1255,7 +1551,7 @@ export type Reach = {
  *  deployments have taken twenty-four of them by f85, and a thread that
  *  reached an empty seat would land on nothing. */
 const STAYING = SEATS.map((s, i) => ({ x: s.x, y: s.y, i })).filter(
-  (s) => !EXT_FROM.includes(s.i) && !INT_FROM.includes(s.i),
+  (s) => EXT_FROM.indexOf(s.i) === -1 && INT_FROM.indexOf(s.i) === -1,
 );
 const makeReach = (
   mini: MiniSeat[],
@@ -1346,9 +1642,9 @@ export const schema = z.object({
     a: z.number(), // "a"
     rogue: z.number(), // "rogue"           — twelve leave for outside
     external: z.number(), // "external"
-    deployment: z.number(), // "deployment" — they are outside the box
+    deployment: z.number(), // "deployment" — they are outside the ring
     or: z.number(), // "or"
-    rogueTwo: z.number(), // "rogue"        — twelve leave for the corner
+    rogueTwo: z.number(), // "rogue"        — and a second lot for the gap inside it
     internal: z.number(), // "internal"
     deploymentTwo: z.number(), // "deployment"
     which: z.number(), // "which"
@@ -1474,6 +1770,13 @@ const RogueDeployment: React.FC<Props> = ({
       p = flightAt(fl, frame);
       inAir = true;
     }
+    // the internal deployment is SHOVED by the growth: every ring that lands
+    // carries it a fifth of the way along INT_PATH, each dot a hashed couple of
+    // frames behind the shove so the clump gives rather than slides as a piece
+    if (d.group === 2) {
+      const dr = intDrift(frame, hash(d.seed, 27) * INT_LAG, GROW_F);
+      p = { x: p.x + dr.dx, y: p.y + dr.dy };
+    }
     POS[i] = p;
     SHOW[i] = 1;
     TONE[i] = smooth((frame - d.ripe0) / TONE_DUR);
@@ -1488,11 +1791,15 @@ const RogueDeployment: React.FC<Props> = ({
 
   // -- the two reaches, and the +0.1 they put on what they touch -------------
   const lit = new Float32Array(NDOT);
+  const rootShove = intDrift(frame, INT_LAG / 2, GROW_F);
   const reachEls = REACHES.map((r) => {
     if (frame < r.f0) return null;
     const s = reachAt(r, frame);
     const head = polyPoint(r, s);
-    const pts: { x: number; y: number }[] = [r.pts[0]];
+    // the internal thread's root is a seat in the deployment, so it goes where
+    // the deployment goes; the rest of the polyline is where it was drawn
+    const root = r.station === 0 ? { x: r.pts[0].x + rootShove.dx, y: r.pts[0].y + rootShove.dy } : r.pts[0];
+    const pts: { x: number; y: number }[] = [root];
     for (let i = 1; i <= head.leg; i++) pts.push(r.pts[i]);
     pts.push({ x: head.x, y: head.y });
     // the +0.1 lands when the head does, not when it sets out
@@ -1639,18 +1946,6 @@ const RogueDeployment: React.FC<Props> = ({
             viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            {/* THE COMPANY BOX. It is simply there. */}
-            <g style={{ filter: icon }}>
-              <path
-                d={BOX_PATH}
-                transform={`translate(${BOX_X0} ${BOX_Y0})`}
-                fill="none"
-                stroke={ink}
-                strokeWidth={STROKE}
-                opacity={OP_READ}
-              />
-            </g>
-
             {/* the people's lines: dead since cut 3 took their stations */}
             <g style={{ filter: icon }}>
               {STATIONS.map((st) => (
@@ -1778,22 +2073,23 @@ const RogueDeployment: React.FC<Props> = ({
             </g>
 
             {/* THE STATIONS, orange since cut 3, each clicking as the new
-                thread takes hold of it */}
-            <g style={{ filter: icon }}>
-              {STATIONS.map((st, i) => (
-                <circle
-                  key={st.key}
-                  cx={st.x}
-                  cy={st.y}
-                  r={STATION_R}
-                  fill="none"
-                  stroke={highlightTone(frame, REACHES[i].f2, accent)}
-                  strokeWidth={RING_STROKE}
-                  strokeLinecap="round"
-                  opacity={1}
-                />
-              ))}
-            </g>
+                thread takes hold of it. V2: they are cut 3's own stations,
+                drawn through its `StationGlyph`, so the training cap and the
+                evaluation clipboard are in the rings here too — fully drawn,
+                because this piece opens on the state that one resolved to. */}
+            {STATIONS.map((st, i) => (
+              <StationGlyph
+                key={st.key}
+                x={st.x}
+                y={st.y}
+                glyph={st.glyph}
+                colour={highlightTone(frame, REACHES[i].f2, accent)}
+                opacity={1}
+                ringDraw={1}
+                iconDraw={1}
+                shadow={icon}
+              />
+            ))}
 
             {/* G4 + G5: the two reaches, head-led, and they stay */}
             <g>
