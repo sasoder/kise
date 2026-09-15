@@ -1,25 +1,25 @@
 import {Composition} from 'remotion';
-import OpenAiUpgradeSurge, {
+import DesertSolarFill, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OpenAiUpgradeSurge';
+} from '../generated/components/DesertSolarFill';
 
-// OpenAI mark, upgraded: light gathers, surges out through the arms, and
-// leaves the ink heavier. Transparent 1080x1080 overlay asset.
+// Four seconds, top down: a desert fills up with a real solar farm while the
+// camera pushes in. Opaque 1080x1920.
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="OpenAiUpgradeSurge"
-        component={OpenAiUpgradeSurge}
+        id="DesertSolarFill"
+        component={DesertSolarFill}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
         fps={FPS}
         width={1080}
-        height={1080}
+        height={1920}
       />
     </>
   );
