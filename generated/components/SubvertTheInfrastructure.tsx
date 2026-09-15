@@ -32,6 +32,7 @@ import {
   makeTone,
   runCamera,
   smoothstep,
+  squirclePath,
   sway,
   wobble,
   worldTransform,
@@ -72,14 +73,22 @@ export const DURATION = 262;
 //               runs off both frame edges at every camera position.
 //   THE PEOPLE  five person.png glyphs, white, 118 world px, feet exactly on
 //               the line (person.png's ink ends at 471/512 of its box), at
-//               x 540 +- 165 * n, each jittered +-12 by hash.
-//   THE TRUSS   three rows of ink node rings (r 22, stroke 3.5) at y 130, 270,
-//               410; 13 nodes to a row every 160 px, the middle row staggered
-//               by 80 (a Warren truss), spanning x -420 -> 1580 — wider than
-//               the frame at every k. Members: chords along each row, diagonals
-//               to the two nodes in the row above, and a short vertical from
-//               the floor down to each top node. All ink at OP_READ, all with
-//               the per-icon shadow. White ink packets run on it from f0.
+//               x 540 +- 165 * n, each jittered +-12 by hash. V2: each of them
+//               carries a THOUGHT BUBBLE — an ink squircle 78 x 58 with a white
+//               Lucide `check` in it, its foot 22 px above the head — which
+//               goes up on "got away with" and then never changes again.
+//   THE TRUSS   three rows of SERVER RACKS at y 130, 270, 410; 13 to a row
+//               every 160 px, the middle row staggered by 80 (a Warren truss),
+//               spanning x -420 -> 1580 — wider than the frame at every k.
+//               V2: a node was an abstract ink ring (r 22) and is now the
+//               repo's `#rack` glyph at 0.44 (44 x 57 world px, the ring's
+//               width), solid white with its three slots knocked through to the
+//               field and one static LED in each. Members: chords along each
+//               row, diagonals to the two nodes in the row above, and a short
+//               vertical from the floor down to each top rack — all of them now
+//               trimmed at the rack's OUTLINE, so a line meets a machine
+//               instead of piercing it. All ink at OP_READ, all with the
+//               per-icon shadow. White ink packets run rack to rack from f0.
 //   THE CROWD   a BAND. 60 cols x 36 rows at the field's own step (940/39 x
 //               440/29), jitter 0.9, radius 0.75-1.25, centred x 540, nominal
 //               top edge at y 540 and nominal underside at y 1071. Its side
@@ -109,6 +118,17 @@ export const DURATION = 262;
 //      on the shoreline only ever talks downward,
 //      so nothing crosses the top edge
 //                       — "how long the AIs got away with"      f0-25
+//   G1b THEY DON'T KNOW (V2). A thought bubble goes
+//      up over each of the five, one per frame from
+//      f14 on a hashed 0-4 start: the small trail
+//      dot, then the big one, then the squircle
+//      draws round over 5 frames and a white check
+//      draws head-led inside it over the next 4.
+//      All five are complete by f27 and NOTHING
+//      about them changes for the remaining 235
+//      frames — the tick is still white on the last
+//      frame, over an orange floor
+//                       — "got away with"                        f14-27
 //   G2 MORE THAN CAN BE COUNTED. Camera M1 tilts
 //      down and pulls back off the people, through
 //      the truss, to the crowd, whose width runs
@@ -129,9 +149,9 @@ export const DURATION = 262;
 //      second subject. And the launches begin to
 //      AIM UP: from f88 a thread leaves a
 //      shoreline seat for the
-//      nearest bottom-row node, touches the ring
+//      nearest bottom-row rack, touches its outline
 //      and GLANCES OFF — the head retreats to its
-//      seat over 6 frames and fades. The ring it
+//      seat over 6 frames and fades. The rack it
 //      touched flickers +0.1 and settles. The
 //      tempo climbs on one curve from one every 6
 //      frames at f88 to one every 1.2 by f108 and
@@ -143,9 +163,10 @@ export const DURATION = 262;
 //                       — "and how willing they were"           f86-125
 //   G5 THE FIRST TAKE. One thread does not glance
 //      off: it leaves at f118.6 and LANDS on the
-//      bottom-centre node at f125, which converts
-//      ink -> accent over 3 frames with the one
-//      highlight click in the piece. Its thread
+//      bottom-centre rack at f125, whose FILL
+//      converts ink -> accent over 3 frames (the
+//      LEDs stay white) with the one highlight
+//      click in the piece. Its thread
 //      stays. From f133 the conversion spreads
 //      along that node's own chords, head-led, and
 //      the two neighbours convert on arrival
@@ -183,9 +204,10 @@ export const DURATION = 262;
 //      and do not change
 //                       — "to subvert the infrastructure of
 //                          these AI companies"                  f196-240
-//   RESOLVED f240-262: five white people standing on an orange floor, an
-//   orange truss with orange packets running on it, an orange web below, and
-//   threads still landing on the truss from the crowd at one every 6 frames.
+//   RESOLVED f240-262: five white people with five white ticks over their heads
+//   standing on an orange floor, an orange rack farm with orange packets
+//   running between the machines, an orange web below, and threads still
+//   landing on the truss from the crowd at one every 6 frames.
 //   Breath and sway only. It holds; it never fades out.
 //
 // THE CAMERA FOLLOWS THE ACTION. Five moves on one track through the shared
@@ -322,7 +344,6 @@ const WORLD_H = FRAME_H;
 export const CENTRE_X = 540;
 export const FLOOR_Y = 0;
 export const STROKE = 3; // every line in the piece
-export const RING_STROKE = 3.5; // every ring
 export const TONE_DUR = 10; // the one tone ramp: deep -> ripe
 export const LINE_SPEED = 22; // world px/frame, everything an agent fires
 
@@ -341,18 +362,93 @@ export const FLOOR_LINE_Y = snap(FLOOR_Y);
 // which is what fixes that k.
 export const PERSON_SIZE = 118;
 export const PERSON_FOOT = 471 / 512; // where the glyph's feet are in its box
+export const PERSON_INK_TOP = 40 / 512; // and where the top of its head is
 export const PERSON_GAP = 165;
 export const PEOPLE: number[] = [0, 1, 2, 3, 4].map(
   (i) => CENTRE_X + (i - 2) * PERSON_GAP + (hash(i, 41) - 0.5) * 24,
 );
+// the world y of the top of a head — measured off the PNG's alpha box (its ink
+// runs 40..472 of 512), not off the image box, so the bubble's air is real air
+export const HEAD_TOP_Y =
+  FLOOR_LINE_Y - STROKE / 2 - PERSON_SIZE * (PERSON_FOOT - PERSON_INK_TOP);
 
 // -- the truss --------------------------------------------------------------
 export const ROW_Y = [130, 270, 410]; // top, middle, bottom
-export const NODE_R = 22;
 export const NODE_STEP = 160;
 export const NODE_M = 6; // m runs -6..6: 13 nodes to a row
 export const ROW_STAGGER = 80; // the middle row sits between the other two
-export const VERT_Y1 = ROW_Y[0] - NODE_R; // 108: the top of a top-row ring
+
+// -- the rack ---------------------------------------------------------------
+// V2, on the director's note: "the infrastructure can look a lot better — now
+// it's abstract triangles and circles. Maybe fill the circles with icons, maybe
+// just a data center icon." Every node of the truss — all three rows — is now
+// the repo's approved server-rack glyph, `#rack` from TenTimesTheCost.tsx,
+// verbatim: a 100 x 130 rounded rectangle (r 10) drawn from its BOTTOM CENTRE
+// with three 56 x 20 slots (r 5) cut out of it by fillRule="evenodd" so the
+// field shows through them, and one static LED in each slot. At RACK_SCALE it
+// is 44 x 57 world px, centred on the node, so it is the ring's width and a
+// little more of its height and the truss keeps its exact geometry.
+export const RACK_SCALE = 0.44;
+export const RACK_HW = 50 * RACK_SCALE; // 22 — the old ring's radius, exactly
+export const RACK_HH = 65 * RACK_SCALE; // 28.6
+export const RACK_D = [
+  "M-40,-130 h80 a10,10 0 0 1 10,10 v110 a10,10 0 0 1 -10,10 h-80 a10,10 0 0 1 -10,-10 v-110 a10,10 0 0 1 10,-10 z",
+  "M-28,-112 h56 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-56 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z",
+  "M-28,-75 h56 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-56 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z",
+  "M-28,-38 h56 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-56 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z",
+].join(" ");
+export const LED_DX = 24;
+export const LED_DY = [-102, -65, -28];
+export const LED_R = 3.5;
+
+// How far along a vector out of a node's centre the rack's OUTLINE is: lines
+// now meet racks instead of piercing them, so every member, vertical, thread
+// and glance is trimmed at this point rather than run to the node's centre.
+const boxExit = (dx: number, dy: number) => {
+  const ax = Math.abs(dx);
+  const ay = Math.abs(dy);
+  const tx = ax > 1e-6 ? RACK_HW / ax : Infinity;
+  const ty = ay > 1e-6 ? RACK_HH / ay : Infinity;
+  return Math.min(tx, ty);
+};
+
+export const VERT_Y1 = ROW_Y[0] - RACK_HH; // 101.4: the top edge of a top rack
+
+// -- the thought bubbles ----------------------------------------------------
+// V2, on the director's note: "is there a purpose of the people icons being
+// there? If they should be there, make it clear that they don't know what's
+// going on, because that's what this whole thing is about." The people ARE
+// these AI companies, and what they are doing for the whole 262 frames is
+// thinking everything is fine: an ink squircle over each head with a white
+// Lucide `check` in it. They go up on "got away with" and they NEVER CHANGE —
+// five white ticks over five white people, still white on the last frame over
+// an orange floor. The contrast is the line.
+export const BUB_W = 78;
+export const BUB_H = 58;
+export const BUB_GAP = 26; // air between the bubble's foot and the head
+// the house squircle at its default 1.2% ratio is a 2 px corner on a shape this
+// size, which rendered as a hard SIGN over each head; a thought is soft, so
+// this one shape takes a 22% corner (12.8 px) at the same Figma smoothing
+export const BUB_RATIO = 0.22;
+export const BUB_PATH = squirclePath(BUB_W, BUB_H, BUB_RATIO);
+export const BUB_Y1 = HEAD_TOP_Y - BUB_GAP; // the bubble's foot
+export const BUB_Y0 = BUB_Y1 - BUB_H; // its top: 80 px above the head
+export const BUB_F0 = 14; // "got"
+export const BUB_JITTER = 4; // ... "away with": one bubble per frame, hashed
+export const BUB_DRAW = 5; // frames the squircle takes to draw round
+export const CHECK_DRAW = 4; // and then the check draws inside it
+export const CHECK_D = "M20 6 9 17l-5-5"; // Lucide `check`, 24-unit box (ISC)
+export const CHECK_FRAC = 0.55; // of the bubble's height
+export const CHECK_STROKE = 2.6; // the d1Shared glyph weight, square caps
+export const CHECK_S = (CHECK_FRAC * BUB_H) / 24;
+// the two dots that make it a thought and not a speech balloon, small one
+// first, out of the head and up into the bubble
+export const BUB_TRAIL = [
+  { dx: -6, dy: 7, r: 4, t: 1 },
+  { dx: -11, dy: 16, r: 2.5, t: 0 },
+];
+export const BUB_TRAIL_DUR = 3;
+export const BUB_T0 = PEOPLE.map((_, i) => BUB_F0 + Math.round(hash(i, 81) * BUB_JITTER));
 
 type Node = { x: number; y: number; row: number; m: number };
 export const NODES: Node[] = (() => {
@@ -397,6 +493,24 @@ export const MEMBERS: Member[] = (() => {
   }
   return out;
 })();
+// Where each member actually starts and stops: at the two racks' outlines, not
+// at their centres. A chord loses 22 px at each end and a diagonal 24.8, so a
+// member is a strut BETWEEN two machines and the glyph is never crossed.
+export const MEMBER_END = MEMBERS.map((m) => {
+  const A = NODES[m.a];
+  const B = NODES[m.b];
+  const dx = B.x - A.x;
+  const dy = B.y - A.y;
+  const t = boxExit(dx, dy);
+  return {
+    ax: A.x + dx * t,
+    ay: A.y + dy * t,
+    bx: B.x - dx * t,
+    by: B.y - dy * t,
+    len: Math.hypot(dx, dy) * (1 - 2 * t),
+  };
+});
+
 // which members touch a node, so a packet and the conversion can find them
 const MEMBERS_OF: number[][] = NODES.map(() => []);
 MEMBERS.forEach((mem, i) => {
@@ -764,12 +878,12 @@ const shoreSeatNear = (x: number, seed: number) => {
 
 type Reach = { seat: number; node: number; t0: number; travel: number };
 
-// where a thread's head stops: on the outside of the ring, on its own bearing
-const ringPoint = (seat: Seat, node: Node) => {
+// where a thread's head stops: on the outside of the RACK, on its own bearing
+const rackPoint = (seat: Seat, node: Node) => {
   const dx = node.x - seat.x;
   const dy = node.y - seat.y;
   const d = Math.hypot(dx, dy) || 1;
-  const stop = NODE_R + RING_STROKE / 2;
+  const stop = d * boxExit(dx, dy) + STROKE / 2;
   return { x: node.x - (dx / d) * stop, y: node.y - (dy / d) * stop, d: d - stop };
 };
 
@@ -783,7 +897,7 @@ export const GLANCES: Reach[] = (() => {
     const node = GLANCE_NODES[(n + Math.floor(hash(n, 33) * 3)) % GLANCE_NODES.length];
     const seat = shoreSeatNear(NODES[node].x + (hash(n, 34) - 0.5) * 120, n * 13);
     if (seat >= 0) {
-      const p = ringPoint(SEATS[seat], NODES[node]);
+      const p = rackPoint(SEATS[seat], NODES[node]);
       out.push({ seat, node, t0: f, travel: p.d / LINE_SPEED });
     }
     const interval = interpolate(f, [GLANCE_F0, GLANCE_RAMP], [GLANCE_INT0, GLANCE_INT1], clamp);
@@ -903,7 +1017,7 @@ export const LANDINGS: Reach[] = (() => {
   const add = (node: number, arrive: number, n: number) => {
     const seat = shoreSeatNear(NODES[node].x + (hash(n, 61) - 0.5) * 150, n * 17 + 5);
     if (seat < 0) return;
-    const p = ringPoint(SEATS[seat], NODES[node]);
+    const p = rackPoint(SEATS[seat], NODES[node]);
     const travel = p.d / LINE_SPEED;
     out.push({ seat, node, t0: arrive - travel, travel });
   };
@@ -935,7 +1049,7 @@ export const LANDINGS: Reach[] = (() => {
 // ---------------------------------------------------------------------------
 export const VERT_F0 = 196;
 export const VERT_STEP = 1; // one leaves each frame
-export const VERT_DUR = (ROW_Y[0] - NODE_R - FLOOR_Y) / LINE_SPEED;
+export const VERT_DUR = (ROW_Y[0] - RACK_HH - FLOOR_Y) / LINE_SPEED;
 // centre first, then out both ways
 export const VERT_ORDER = VERTS.slice().sort(
   (a, b) => Math.abs(NODES[a].x - CENTRE_X) - Math.abs(NODES[b].x - CENTRE_X),
@@ -1134,7 +1248,7 @@ const SubvertTheInfrastructure: React.FC<Props> = ({
     const end = g.t0 + g.travel + GLANCE_RETREAT;
     if (frame < g.t0 || frame > end) return;
     const s = SEATS[g.seat];
-    const p = ringPoint(s, NODES[g.node]);
+    const p = rackPoint(s, NODES[g.node]);
     const up = clamp01((frame - g.t0) / g.travel);
     const back = clamp01((frame - (g.t0 + g.travel)) / GLANCE_RETREAT);
     const e = ease(up, EASE_ARRIVE) * (1 - ease(back, EASE_ARRIVE));
@@ -1160,7 +1274,7 @@ const SubvertTheInfrastructure: React.FC<Props> = ({
   LANDINGS.forEach((l, j) => {
     if (frame < l.t0) return;
     const s = SEATS[l.seat];
-    const p = ringPoint(s, NODES[l.node]);
+    const p = rackPoint(s, NODES[l.node]);
     const u = clamp01((frame - l.t0) / l.travel);
     const e = ease(u, EASE_ARRIVE);
     landings.push({
@@ -1265,22 +1379,25 @@ const SubvertTheInfrastructure: React.FC<Props> = ({
 
             {/* the infrastructure */}
             <g style={{ filter: icon }}>
-              {/* members: ink, with the conversion drawn head-led over them */}
+              {/* members: ink, with the conversion drawn head-led over them.
+                  Every one of them now runs rack-edge to rack-edge. */}
               {MEMBERS.map((m, i) => {
                 const A = NODES[m.a];
                 const B = NODES[m.b];
                 if (Math.max(A.x, B.x) < visX0 || Math.min(A.x, B.x) > visX1) return null;
+                const E = MEMBER_END[i];
                 const d = MEMBER_DRAW[i];
-                const F = NODES[d.from];
-                const T = NODES[d.to];
+                const fromA = d.from === m.a;
+                const F = { x: fromA ? E.ax : E.bx, y: fromA ? E.ay : E.by };
+                const T = { x: fromA ? E.bx : E.ax, y: fromA ? E.by : E.ay };
                 const e = memberConv[i];
                 return (
                   <g key={`m${i}`}>
                     <line
-                      x1={A.x}
-                      y1={A.y}
-                      x2={B.x}
-                      y2={B.y}
+                      x1={E.ax}
+                      y1={E.ay}
+                      x2={E.bx}
+                      y2={E.by}
                       stroke={ink}
                       strokeWidth={STROKE}
                       strokeLinecap="round"
@@ -1353,21 +1470,22 @@ const SubvertTheInfrastructure: React.FC<Props> = ({
                 );
               })}
 
-              {/* the node rings */}
+              {/* the nodes: every one of them is a SERVER RACK. The fill is
+                  what converts ink -> accent; the LEDs stay white. */}
               {NODES.map((n, i) => {
-                if (n.x < visX0 - 40 || n.x > visX1 + 40) return null;
+                if (n.x < visX0 - 60 || n.x > visX1 + 60) return null;
                 const c = i === SEED_NODE ? seedCol : inkToAccent(nodeConv[i]);
                 return (
-                  <circle
+                  <g
                     key={`n${i}`}
-                    cx={n.x}
-                    cy={n.y}
-                    r={NODE_R}
-                    fill="none"
-                    stroke={c}
-                    strokeWidth={RING_STROKE}
+                    transform={`translate(${n.x} ${n.y + RACK_HH}) scale(${RACK_SCALE})`}
                     opacity={OP_READ + flick[i]}
-                  />
+                  >
+                    <path d={RACK_D} fill={c} fillRule="evenodd" />
+                    {LED_DY.map((ly) => (
+                      <circle key={ly} cx={LED_DX} cy={ly} r={LED_R} fill={ink} />
+                    ))}
+                  </g>
                 );
               })}
 
@@ -1419,21 +1537,24 @@ const SubvertTheInfrastructure: React.FC<Props> = ({
                 const u = (frame - p.t0) / PKT_LIFE;
                 if (u < 0 || u > 1) return null;
                 const m = MEMBERS[p.m];
-                const A = NODES[p.rev ? m.b : m.a];
-                const B = NODES[p.rev ? m.a : m.b];
+                const E = MEMBER_END[p.m];
+                // a bead runs rack to rack, so it never crosses a glyph
+                const A = p.rev ? { x: E.bx, y: E.by } : { x: E.ax, y: E.ay };
+                const B = p.rev ? { x: E.ax, y: E.ay } : { x: E.bx, y: E.by };
                 if (Math.max(A.x, B.x) < visX0 || Math.min(A.x, B.x) > visX1) return null;
                 const x = A.x + (B.x - A.x) * u;
                 const y = A.y + (B.y - A.y) * u;
                 // accent once the conversion has passed this point
                 const d = MEMBER_DRAW[p.m];
-                const from = NODES[d.from];
+                const from =
+                  d.from === m.a ? { x: E.ax, y: E.ay } : { x: E.bx, y: E.by };
                 // strictly BEHIND the conversion front, and only once the front
                 // exists: `<=` alone paints a packet sitting on the from-node
                 // accent from f0, which puts one orange bead on a white truss
                 // a hundred frames before anything is subverted
                 const along =
                   memberConv[p.m] > 0 &&
-                  Math.hypot(x - from.x, y - from.y) / (m.len || 1) < memberConv[p.m];
+                  Math.hypot(x - from.x, y - from.y) / (E.len || 1) < memberConv[p.m];
                 return (
                   <circle
                     key={`p${j}`}
@@ -1443,6 +1564,66 @@ const SubvertTheInfrastructure: React.FC<Props> = ({
                     fill={along ? accent : ink}
                     opacity={OP_READ}
                   />
+                );
+              })}
+            </g>
+
+            {/* the thought bubbles. They go up on "got away with", and from
+                f27 to f262 they are the only thing in the piece that does not
+                change: five white ticks over the whole takeover. */}
+            <g style={{ filter: icon }}>
+              {PEOPLE.map((x, i) => {
+                const t = frame - BUB_T0[i];
+                if (t < 0) return null;
+                const b = clamp01(t / BUB_DRAW);
+                const c = clamp01((t - BUB_DRAW) / CHECK_DRAW);
+                const g = 24 * CHECK_S;
+                return (
+                  <g key={`b${i}`}>
+                    {BUB_TRAIL.map((p, j) => {
+                      const s = smoothstep((t - p.t) / BUB_TRAIL_DUR);
+                      return s <= 0 ? null : (
+                        <circle
+                          key={j}
+                          cx={x + p.dx}
+                          cy={BUB_Y1 + p.dy}
+                          r={p.r * s}
+                          fill={ink}
+                          opacity={OP_READ}
+                        />
+                      );
+                    })}
+                    <path
+                      d={BUB_PATH}
+                      transform={`translate(${x - BUB_W / 2} ${BUB_Y0})`}
+                      fill="none"
+                      stroke={ink}
+                      strokeWidth={STROKE}
+                      strokeLinecap="round"
+                      opacity={OP_READ}
+                      pathLength={1}
+                      strokeDasharray="1 1"
+                      strokeDashoffset={1 - b}
+                    />
+                    {c > 0 ? (
+                      <g
+                        transform={`translate(${x - g / 2} ${BUB_Y0 + BUB_H / 2 - g / 2}) scale(${CHECK_S})`}
+                      >
+                        <path
+                          d={CHECK_D}
+                          fill="none"
+                          stroke={ink}
+                          strokeWidth={CHECK_STROKE}
+                          strokeLinecap="square"
+                          strokeLinejoin="miter"
+                          opacity={OP_READ}
+                          pathLength={1}
+                          strokeDasharray="1 1"
+                          strokeDashoffset={1 - c}
+                        />
+                      </g>
+                    ) : null}
+                  </g>
                 );
               })}
             </g>
