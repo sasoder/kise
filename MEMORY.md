@@ -205,10 +205,33 @@ READING TEST ("what would a viewer with no narration say happened?"); Fable revi
 as motion, runs the cross-cut audit on the three last frames, then final ProRes,
 deliver, commit, push.
 
-Reference set, all approved (Sep 2026): `BackIntoItV5.tsx`, `IsItEvenWorthItV5.tsx`,
-`AsGoodOrBetterV5.tsx` (delivered as `_V6.mov`, the ground line removed), in
-`cheeky pint/sep/Pint_S2E12_Dan_Final_YT/tom_select_dan - year off shorting/`.
-The V1–V4 siblings are the iteration trail: dots → cards → one world → price line.
+**Charts and type (from the "500 mile hurricane" cut, 2026-09-15).** When a line
+calls for real data, draw it as a chart in the same material: the ink price line
+with the accent tip, minimal axes (a couple of ticks each way, Söhne 26 px ink 0.55,
+no grid, no box), the title in Söhne Halbfett 40 with the relevant `CompanyCard` as
+its badge, start/peak callouts in Söhne (`$17` ink, `$483` accent, the callout pops
+with a 6-frame `back(0.75)` scale-in and the half-step wash). Use exactly the data
+the user gives; never fetch or invent points. The camera opens tight on the dull
+part so the event has somewhere to go, and it REACTS to the line rather than
+leading it (keyed two frames after the spike starts) — the line kicks past the
+frame edge before the frame opens, which is what reads as violent. **Padding:** on
+the resolved frame every label sits inside x 120–960 / y 300–1350 screen, measured
+off the render, with type sizes kept and the chart shrunk in world space instead.
+**Fill the segment:** an animation that resolves halfway through its line reads as
+stopping; stretch the draw so the payoff lands in the last third of the words
+(here: climbing through "hurricane", topping out on "existed"), then hold.
+
+**What the user likes about it, in their words (2026-09-15):** "the overall video
+language is very smooth and motivated" — every move traces to a word, nothing
+restarts, the camera follows the action, and the picture never needs the audio.
+
+Reference set, all approved (Sep 2026), in
+`cheeky pint/sep/Pint_S2E12_Dan_Final_YT/tom_select_dan - year off shorting/`:
+`FiveHundredMileHurricaneV2.tsx` (`7_FiveHundredMileHurricane_V2.mov`),
+`BackIntoItV5.tsx`, `IsItEvenWorthItV5.tsx`, `AsGoodOrBetterV5.tsx` (delivered as
+`_V6.mov`, the ground line removed). The V1–V4 siblings are the iteration trail:
+dots → cards → one world → price line; `AfterGameStopV4.tsx` is an opener the user
+rejected (the clip should open on the speaker).
 
 ## Dwarkesh style — grid background
 
