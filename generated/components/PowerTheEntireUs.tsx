@@ -4,7 +4,7 @@ import {loadFont} from '@remotion/google-fonts/Barlow';
 import {z} from 'zod';
 import outlineJson from '../../public/us-solar/us_outline_z6.json';
 
-const {fontFamily} = loadFont('normal', {weights: ['600', '800'], subsets: ['latin']});
+const {fontFamily} = loadFont('normal', {weights: ['700'], subsets: ['latin']});
 
 /**
  * PowerTheEntireUs — 208 f @ 24 fps, 1080x1920, opaque.
@@ -48,20 +48,23 @@ const {fontFamily} = loadFont('normal', {weights: ['600', '800'], subsets: ['lat
  *    plus the drop tail. The white square stroke fades in f44-f52 as the last
  *    strings land. The #234a8a block under the strings is gated on the camera
  *    (see the Square comment), not on the fill.
- *  - "100" (84-92): the horizontal dimension rule draws left to right above the
- *    square, Easing.out(cubic); "100 mi" fades in f86-f90.
- *  - "by 100" (92-98): the vertical rule draws top to bottom left of the
- *    square; its rotated "100 mi" fades in f95-f99.
- *  - "to" (100-108): both dimension overlays fade out — they would collapse to
- *    nothing under the pull-back otherwise.
+ *  - "miles" (52-58): ONE label, "100 x 100 mi", fades in as the last strings
+ *    land — screen space, centred under the square, cap-top 24 px below its
+ *    bottom edge, recomputed from the camera every frame so it tracks the
+ *    creep. Easing.out(cubic), a 6 px rise settling to 0.
+ *  - "100 by 100" (84-98): NOTHING appears. V2 REVISION: the two dimension
+ *    rules, their end ticks and both "100 mi" texts are gone. The client reads
+ *    the line as ONE 100 x 100 mile square, so the piece keeps one square and
+ *    one label from f58 to f108 and never re-states the measurement.
+ *  - "to" (100-108): the label fades OUT, before the pull-back would shrink or
+ *    slide it. It never returns.
  *  - "power the entire US" (88-118): ONE pull-back, K 7.25 -> 0.380,
  *    Easing.inOut(cubic). Lands on f118, three frames before "u-s" (f121).
- *  - "the entire US" (114-138): the contiguous-US outline TRACES on from the
- *    outline point nearest the square, Easing.inOut(quad).
- *  - "u-s" (120-126): the "100 x 100 mi" label fades in under square 1.
- *  - "a few" (134) and "over" (140): squares 2 and 3 STAMP in beside it, each
- *    an 8 f drop (scale 1.06 -> 1, opacity over 2 f, Easing.out(cubic)).
- *  - f146-f207: camera drift only. K 0.380 -> 0.366. Nothing else appears.
+ *  - "the entire US" (114-142): the contiguous-US outline TRACES on from the
+ *    outline point nearest the square, Easing.inOut(quad). Extended from f138
+ *    so the trace carries the hold a little longer now that nothing stamps in.
+ *  - f142-f207: camera drift only. K 0.380 -> 0.366. Nothing else appears —
+ *    the wide shot is the single square inside the finished outline.
  *
  * CAMERA. screen = (world - C) * K + (540, 835). Content centre is y 835
  * because captions live in the bottom band. K is interpolated in LOG space so
@@ -70,12 +73,12 @@ const {fontFamily} = loadFont('normal', {weights: ['600', '800'], subsets: ['lat
  *                 A slow creep only; the frame is never parked.
  *   f88  -> f118: K 7.25 -> 0.380, Easing.inOut(Easing.cubic).
  *   f96  -> f118: C square centre -> CONUS centre (1394.8, 784.3), same ease.
- *                 DEVIATION from the brief's f88 start: with C moving from f88
- *                 the square has slid 403 screen px left by f96 and the vertical
- *                 dimension rule is off the left edge exactly when it has to
- *                 read. Holding C on the square until f96 keeps the square
- *                 centred through the whole dimension window; the pan still
- *                 lands on f118 and peaks at 42 screen px/frame.
+ *                 DEVIATION from the brief's f88 start, KEPT in V2: with C
+ *                 moving from f88 the square has slid 403 screen px left by f96,
+ *                 dragging the label off-centre while it still reads. Holding C
+ *                 on the square until f96 keeps square and label centred through
+ *                 the whole hold; the pan still lands on f118 and peaks at
+ *                 42 screen px/frame.
  *   f118 -> f207: hold drift, K 0.380 -> 0.366 linear, C fixed.
  * ASSERT at K = 0.380: the outline bbox (world x 81.3-2708.3, y 79.9-1488.6,
  * i.e. 2627.0 x 1408.7) is 998.3 x 535.3 screen px, centred on (540, 835)
@@ -98,7 +101,7 @@ const {fontFamily} = loadFont('normal', {weights: ['600', '800'], subsets: ['lat
  * plus the 20-wide lane come to 1012 and would hang 6 local px off each side of
  * the square. At 158 they sum to exactly 1000: 3*158 + 2*8 = 490 per half,
  * 490 + 20 + 490 = 1000, symmetric, zero margin, the lane exactly 20 wide
- * between two full strings. 25 x 6 = 150 strings per square, 450 in total.
+ * between two full strings. 25 x 6 = 150 strings, one square, 150 in total.
  *
  * Frame-driven throughout: useCurrentFrame + interpolate(clamp) + Easing. No
  * springs, no CSS transitions, no randomness.
@@ -311,40 +314,31 @@ const buildOutline = () => {
 };
 
 const OUTLINE_FROM = 114;
-const OUTLINE_TO = 138;
+const OUTLINE_TO = 142;
 
-// ------------------------------------------------------------------ squares --
-const SQ_GAP = 16;
-const SQ_OFFSET = SQ_SIDE + SQ_GAP; // 98.712 world px
-const STAMP_2 = 134; // "few"
-const STAMP_3 = 140; // "over"
+// -------------------------------------------------------------------- label --
+const LABEL_IN_FROM = 52;
+const LABEL_IN_TO = 58;
+const LABEL_OUT_FROM = 100;
+const LABEL_OUT_TO = 108;
+const LABEL_RISE = 6; // px, settling to 0
+const LABEL_FS = 40;
+const LABEL_GAP = 24; // px from the square's bottom edge to the label's cap-top
+/** Line-box top -> cap top for Barlow 700 at 40 px / 40 px line-height, measured
+ *  off the f60 still (white cap row minus the div's top). The label is placed by
+ *  its cap-top, so the 24 px gap is the gap the eye actually sees. */
+const LABEL_CAP_INSET = 6.4;
 
+// ------------------------------------------------------------------- square --
 const UNDER_COLOR = '#234a8a';
 const UNDER_OPACITY = 0.72;
 
 type SquareProps = {
   frame: number;
   k: number;
-  mode: 'wave' | 'stamp';
-  stamp?: number;
 };
 
-const Square: React.FC<SquareProps> = ({frame, k, mode, stamp}) => {
-  const wave = mode === 'wave';
-
-  // Stamp: the whole square arrives as one 8 f drop.
-  const sf = frame - (stamp ?? 0);
-  const stampDrop = interpolate(sf, [0, DROP_F], [0, 1], {
-    easing: Easing.out(Easing.cubic),
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const stampOp = interpolate(sf, [0, 2], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const stampScale = 1.06 + (1 - 1.06) * stampDrop;
-
+const Square: React.FC<SquareProps> = ({frame, k}) => {
   // The solid block under the strings exists so that at the wide shot, where a
   // string is 0.16 screen px tall, the square reads as one saturated block
   // instead of a moiré. DEVIATION from the brief: it is NOT a flat f0-f48 fade.
@@ -357,14 +351,14 @@ const Square: React.FC<SquareProps> = ({frame, k, mode, stamp}) => {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const fill = wave
-    ? interpolate(frame, [0, 48], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})
-    : 1;
+  const fill = interpolate(frame, [0, 48], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
   const underOp = UNDER_OPACITY * Math.min(fill, blockGate);
-  const strokeOp = wave
-    ? 0.85 *
-      interpolate(frame, [44, 52], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})
-    : 0.85;
+  const strokeOp =
+    0.85 *
+    interpolate(frame, [44, 52], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
   // 1.5 screen px, expressed in local units: the world div scales by k and the
   // square scales by LOCAL_TO_WORLD on top of that.
@@ -389,47 +383,29 @@ const Square: React.FC<SquareProps> = ({frame, k, mode, stamp}) => {
           top: 0,
           width: SQ_LOCAL,
           height: SQ_LOCAL,
-          transform: wave ? undefined : `scale(${stampScale})`,
-          transformOrigin: '500px 500px',
-          opacity: wave ? 1 : stampOp,
-        }}
-      >
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          width: SQ_LOCAL,
-          height: SQ_LOCAL,
           backgroundColor: UNDER_COLOR,
           opacity: underOp,
         }}
       />
       {TILES.map((t) => {
         const dt = frame - t.arrive;
-        const op = wave
-          ? interpolate(dt, [-1, 1], [0, 1], {
-              easing: Easing.out(Easing.quad),
-              extrapolateLeft: 'clamp',
-              extrapolateRight: 'clamp',
-            })
-          : 1;
+        const op = interpolate(dt, [-1, 1], [0, 1], {
+          easing: Easing.out(Easing.quad),
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        });
         if (op <= 0) return null;
-        const drop = wave
-          ? interpolate(dt, [0, DROP_F], [0, 1], {
-              easing: Easing.out(Easing.cubic),
-              extrapolateLeft: 'clamp',
-              extrapolateRight: 'clamp',
-            })
-          : 1;
+        const drop = interpolate(dt, [0, DROP_F], [0, 1], {
+          easing: Easing.out(Easing.cubic),
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        });
         const sc = 1.06 + (1 - 1.06) * drop;
         const ty = -5 + 5 * drop;
-        const shadow = wave
-          ? interpolate(dt, [3, DROP_F], [0, 0.32], {
-              extrapolateLeft: 'clamp',
-              extrapolateRight: 'clamp',
-            })
-          : 0.32;
+        const shadow = interpolate(dt, [3, DROP_F], [0, 0.32], {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        });
         return (
           <div
             key={`${t.x}-${t.y}`}
@@ -489,7 +465,6 @@ const Square: React.FC<SquareProps> = ({frame, k, mode, stamp}) => {
           opacity={strokeOp}
         />
       </svg>
-      </div>
     </div>
   );
 };
@@ -505,61 +480,32 @@ export const PowerTheEntireUs: React.FC<z.infer<typeof schema>> = ({debug}) => {
   const sx = (wx: number) => (wx - cx) * k + SCREEN_CX;
   const sy = (wy: number) => (wy - cy) * k + SCREEN_CY;
 
-  // Square 1 in screen space — the dimension overlay is drawn here, not in the
-  // world, so the rules and the type stay crisp at every camera scale.
+  // The square in screen space — the label is drawn here, not in the world, so
+  // the type stays crisp and a fixed 40 px at every camera scale, and it tracks
+  // the camera creep because these are recomputed every frame.
   const x0 = sx(SQ_X);
   const x1 = sx(SQ_X + SQ_SIDE);
-  const y0 = sy(SQ_Y);
   const y1 = sy(SQ_Y + SQ_SIDE);
-
-  const dimFade = interpolate(frame, [100, 108], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const hDraw = interpolate(frame, [84, 92], [0, 1], {
-    easing: Easing.out(Easing.cubic),
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const vDraw = interpolate(frame, [92, 98], [0, 1], {
-    easing: Easing.out(Easing.cubic),
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const hText =
-    dimFade *
-    interpolate(frame, [86, 90], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-  const vText =
-    dimFade *
-    interpolate(frame, [95, 99], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-
-  // Tick, rule, tick as one path: the dash pattern runs across the subpaths, so
-  // a single dashoffset draws the left tick, then the rule, then the right tick.
-  const ruleY = y0 - 28;
-  const hLen = 10 + (x1 - x0) + 10;
-  const hPath =
-    `M ${x0} ${ruleY - 5} L ${x0} ${ruleY + 5} ` +
-    `M ${x0} ${ruleY} L ${x1} ${ruleY} ` +
-    `M ${x1} ${ruleY - 5} L ${x1} ${ruleY + 5}`;
-
-  const ruleX = x0 - 28;
-  const vLen = 10 + (y1 - y0) + 10;
-  const vPath =
-    `M ${ruleX - 5} ${y0} L ${ruleX + 5} ${y0} ` +
-    `M ${ruleX} ${y0} L ${ruleX} ${y1} ` +
-    `M ${ruleX - 5} ${y1} L ${ruleX + 5} ${y1}`;
 
   const outlineP = interpolate(frame, [OUTLINE_FROM, OUTLINE_TO], [0, 1], {
     easing: Easing.inOut(Easing.quad),
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const labelOp = interpolate(frame, [120, 126], [0, 1], {
+
+  // ONE label, on completion: in as the last strings land (f52-f58), out as the
+  // pull-back starts (f100-f108), never again.
+  const labelIn = interpolate(frame, [LABEL_IN_FROM, LABEL_IN_TO], [0, 1], {
+    easing: Easing.out(Easing.cubic),
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-
-  const shadow = 'drop-shadow(0 2px 6px rgba(0,0,0,0.55))';
+  const labelOut = interpolate(frame, [LABEL_OUT_FROM, LABEL_OUT_TO], [1, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const labelOp = labelIn * labelOut;
+  const labelRise = LABEL_RISE * (1 - labelIn);
 
   return (
     <AbsoluteFill style={{backgroundColor: '#0b1220', overflow: 'hidden'}}>
@@ -661,39 +607,12 @@ export const PowerTheEntireUs: React.FC<z.infer<typeof schema>> = ({debug}) => {
           </div>
         </div>
 
-        {/* PANELS — three squares, each 1000 local units scaled by 0.082712. */}
+        {/* PANEL — ONE square, 1000 local units scaled by 0.082712. */}
         <div
           style={{position: 'absolute', left: SQ_X, top: SQ_Y, width: SQ_SIDE, height: SQ_SIDE}}
         >
-          <Square frame={frame} k={k} mode="wave" />
+          <Square frame={frame} k={k} />
         </div>
-        {frame >= STAMP_2 ? (
-          <div
-            style={{
-              position: 'absolute',
-              left: SQ_X + SQ_OFFSET,
-              top: SQ_Y,
-              width: SQ_SIDE,
-              height: SQ_SIDE,
-            }}
-          >
-            <Square frame={frame} k={k} mode="stamp" stamp={STAMP_2} />
-          </div>
-        ) : null}
-        {frame >= STAMP_3 ? (
-          <div
-            style={{
-              position: 'absolute',
-              left: SQ_X + SQ_OFFSET * 2,
-              top: SQ_Y,
-              width: SQ_SIDE,
-              height: SQ_SIDE,
-            }}
-          >
-            <Square frame={frame} k={k} mode="stamp" stamp={STAMP_3} />
-          </div>
-        ) : null}
-
         {/* US OUTLINE — world space, stroke and shadow divided by k so both are
             constant on screen (a CSS-transformed SVG scales its own stroke). */}
         {outlineP > 0 ? (
@@ -752,85 +671,23 @@ export const PowerTheEntireUs: React.FC<z.infer<typeof schema>> = ({debug}) => {
         ) : null}
       </div>
 
-      {/* DIMENSIONS — screen space, so they stay crisp under the camera. */}
-      {dimFade > 0 && hDraw > 0 ? (
-        <AbsoluteFill style={{pointerEvents: 'none'}}>
-          <svg width={1080} height={1920} style={{position: 'absolute', left: 0, top: 0, filter: shadow}}>
-            <path
-              d={hPath}
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth={1.5}
-              opacity={dimFade}
-              strokeDasharray={hLen}
-              strokeDashoffset={hLen * (1 - hDraw)}
-            />
-            {vDraw > 0 ? (
-              <path
-                d={vPath}
-                fill="none"
-                stroke="#ffffff"
-                strokeWidth={1.5}
-                opacity={dimFade}
-                strokeDasharray={vLen}
-                strokeDashoffset={vLen * (1 - vDraw)}
-              />
-            ) : null}
-          </svg>
-
-          <div
-            style={{
-              position: 'absolute',
-              left: (x0 + x1) / 2,
-              top: ruleY - 14,
-              transform: 'translate(-50%, -100%)',
-              fontFamily,
-              fontWeight: 800,
-              fontSize: 40,
-              lineHeight: '40px',
-              letterSpacing: '0.02em',
-              color: '#ffffff',
-              whiteSpace: 'nowrap',
-              opacity: hText,
-              textShadow: '0 2px 6px rgba(0,0,0,0.55)',
-            }}
-          >
-            100 mi
-          </div>
-
-          <div
-            style={{
-              position: 'absolute',
-              left: ruleX - 34,
-              top: (y0 + y1) / 2,
-              transform: 'translate(-50%, -50%) rotate(-90deg)',
-              fontFamily,
-              fontWeight: 800,
-              fontSize: 40,
-              lineHeight: '40px',
-              letterSpacing: '0.02em',
-              color: '#ffffff',
-              whiteSpace: 'nowrap',
-              opacity: vText,
-              textShadow: '0 2px 6px rgba(0,0,0,0.55)',
-            }}
-          >
-            100 mi
-          </div>
-        </AbsoluteFill>
-      ) : null}
-
-      {/* WIDE LABEL — under square 1, left-aligned to its left edge. */}
+      {/* ONE LABEL — screen space, centred under the square, placed by its
+          cap-top 24 px below the square's bottom edge and recomputed from the
+          camera transform every frame so it tracks the creep. In f52-f58 as the
+          last strings land, out f100-f108 as the pull-back starts. It never
+          returns: the wide shot is the bare square inside the outline. */}
       {labelOp > 0 ? (
         <div
           style={{
             position: 'absolute',
-            left: x0,
-            top: y1 + 14,
+            left: (x0 + x1) / 2,
+            top: y1 + LABEL_GAP - LABEL_CAP_INSET,
+            transform: `translate(-50%, ${labelRise}px)`,
             fontFamily,
-            fontWeight: 600,
-            fontSize: 30,
-            lineHeight: '34px',
+            fontWeight: 700,
+            fontSize: LABEL_FS,
+            lineHeight: `${LABEL_FS}px`,
+            letterSpacing: '0.02em',
             color: '#ffffff',
             whiteSpace: 'nowrap',
             opacity: labelOp,

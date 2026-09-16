@@ -1,21 +1,20 @@
 import {Composition} from 'remotion';
-import OpenAIMission, {
+import PowerTheEntireUs, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OpenAIMission';
+} from '../generated/components/PowerTheEntireUs';
 
-// OpenAI mission lockup: the mark starts dead centre and acts as a curtain —
-// it eases right while the quote slides left out from behind it, resolving as
-// one row with the mark at the text's right end. Transparent overlay asset,
-// 1080x1920 at 24fps.
+// Joel solar clip: one 100 x 100 mile square of solar strings fills in on the
+// satellite plate, one label names it, then a single pull-back drops it into
+// the tracing contiguous-US outline. Opaque 1080x1920 at 24fps.
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="OpenAIMission"
-        component={OpenAIMission}
+        id="PowerTheEntireUs"
+        component={PowerTheEntireUs}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
