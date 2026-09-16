@@ -3,7 +3,6 @@ import { loadFont } from "@remotion/fonts";
 import { Img, staticFile } from "remotion";
 import {
   CONTACT_SHADOW_OP,
-  CONTACT_SHADOW_RX,
   CONTACT_SHADOW_RY,
   TILE_GRAD_BOTTOM,
   TILE_GRAD_TOP,
@@ -553,7 +552,14 @@ export const TABLE_OVAL_RX = 180;
 export const TABLE_OVAL_RY = 100;
 export const TABLE_MARK = 76; // the OPENAI mark, drawn on its 24-unit box
 export const TABLE_SEAT = 34;
-export const TABLE_SEAT_GAP = 14; // kraft between the oval's rim and the seat's near edge
+// Kraft between the oval's rim and the seat's near edge, along the ellipse's
+// own outward normal. RENDERED AT 14 AND BROUGHT IN TO 9 (au4/zoom2x_f199_table,
+// first pass): the ellipse is flat, so at +-60 degrees its normal is almost
+// vertical and a 14 px gap throws the four corner seats up and away from the
+// table — they stopped reading as chairs pulled up to it and read as icons
+// scattered round an oval. At 9 the gap is still plainly kraft and the seats
+// belong to the table.
+export const TABLE_SEAT_GAP = 9;
 export const TABLE_SEAT_OFF = TABLE_SEAT_GAP + TABLE_SEAT / 2; // 31, along the normal
 export const TABLE_SEAT_GLYPH = 20;
 // The knocked-out figure in a 34 px seat is a tenth of the area of a
@@ -584,8 +590,8 @@ export const tableSeat = (deg: number) => {
 
 // The footprint, measured off the geometry above rather than typed: the left
 // end's seat reaches furthest (the right end has none), so the table's ink is
-// 228 left / 180 right of the oval's centre and 133.12 either way vertically —
-// 408 x 266 world px, and 48 px wider on the left than on the right.
+// 223 left / 180 right of the oval's centre and 128.36 either way vertically —
+// 403 x 257 world px, and 43 px wider on the left than on the right.
 const seatExtent = (() => {
   let l = TABLE_OVAL_RX;
   let r = TABLE_OVAL_RX;
@@ -600,12 +606,27 @@ const seatExtent = (() => {
   }
   return { l, r, t, b };
 })();
-export const TABLE_INK_L = seatExtent.l; // 228
+export const TABLE_INK_L = seatExtent.l; // 223
 export const TABLE_INK_R = seatExtent.r; // 180
-export const TABLE_INK_T = seatExtent.t; // 133.12
-export const TABLE_INK_B = seatExtent.b; // 133.12
-export const TABLE_SHADOW_CY = TABLE_INK_B + 4; // under the lowest seat, not under the rim
-export const TABLE_SHADOW_RX = CONTACT_SHADOW_RX * TABLE_OVAL_RX * 2; // 223.2
+export const TABLE_INK_T = seatExtent.t; // 128.36
+export const TABLE_INK_B = seatExtent.b; // 128.36
+// THE ONE CONTACT SHADOW. The house ellipse is CONTACT_SHADOW_RY 5 px tall and
+// CONTACT_SHADOW_RX 0.62 of the width, which under this table is 223 x 5 — and
+// rendered (au4, first pass) that is a straight dark rule running right across
+// the frame under the oval, with nothing above most of it. The house has no
+// ground lines, and V3b's worst note was a shadow hanging under nothing.
+//
+// A table seen from above does not stand on an edge, it LIES ON THE SHEET, so
+// its one contact shadow is its own footprint: the same ellipse, dropped
+// TABLE_SHADOW_CY px, blurred, at a shade under the house opacity. It shows as
+// a soft crescent under the table's foot and is hidden by the table everywhere
+// else — contact, not a rule. CONTACT_SHADOW_RX is still what sets its spread
+// against the oval's width; it is just read as a scale rather than a bar.
+export const TABLE_SHADOW_CY = 12;
+export const TABLE_SHADOW_RX = TABLE_OVAL_RX;
+export const TABLE_SHADOW_RY = TABLE_OVAL_RY;
+export const TABLE_SHADOW_OP = CONTACT_SHADOW_OP * 0.8; // 0.24
+export const TABLE_SHADOW_BLUR = 8;
 // A 34 px seat with the full TILE_SHADOW reads as floating; the same shadow
 // asked for a tile 1.7x smaller is the "small" one.
 export const TABLE_SEAT_SHADOW_K = 1.7;
@@ -620,22 +641,22 @@ export const TABLE_ANCHOR = (x: number, y: number) => ({ x, y: y + TABLE_OVAL_RY
 // Re-solved for the table's ink box. V3's D_FINAL / CX_FINAL / K_FINAL above are
 // LEFT ALONE so the trail still renders; these are V4's.
 //
-// The table is 78 px wider than the bench, so the sides come in 42 px to keep
-// Bret's head the size it was on screen (283 px): D 303 -> 261. ANCHOR_Y_FINAL
-// and CY_FINAL do not move — the table's top (anchor - 233) is still above
+// The table is 73 px wider than the bench, so the sides come in 40 px to keep
+// Bret's head the size it was on screen (283 px): D 303 -> 263. ANCHOR_Y_FINAL
+// and CY_FINAL do not move — the table's top (anchor - 228) is still above
 // nothing, Sam's hair is still the ink's ceiling, and Bret's descender is still
 // its floor. CX_FINAL does move, and a long way: with the right-hand seat
-// missing the table's ink is 48 px wider on its left than on its right, so the
-// ink's own centre sits 38.5 px LEFT of Bret's axis. The camera centres the
-// INK, which is the house rule, so Bret's head resolves 32 screen px right of
-// the frame's centre and the table's five seats balance him.
-export const D_FINAL_V4 = 261;
-export const TABLE_X_FINAL = BRET_X - D_FINAL_V4; // 279
+// missing the table's ink is 43 px wider on its left than on its right, so the
+// ink's own centre sits 36 px LEFT of Bret's axis. The camera centres the INK,
+// which is the house rule, so Bret's head resolves 30 screen px right of the
+// frame's centre and the table's five seats balance him.
+export const D_FINAL_V4 = 263;
+export const TABLE_X_FINAL = BRET_X - D_FINAL_V4; // 277
 export const TABLE_Y_FINAL = anchorToTableY(ANCHOR_Y_FINAL); // 692.4
-export const SAM_X_FINAL_V4 = BRET_X + D_FINAL_V4; // 801
+export const SAM_X_FINAL_V4 = BRET_X + D_FINAL_V4; // 803
 export const SAM_Y_FINAL_V4 = anchorToSamHeadY(ANCHOR_Y_FINAL); // 653.0
-export const K_FINAL_V4 = 0.8325;
-export const CX_FINAL_V4 = 501.477;
+export const K_FINAL_V4 = 0.8334;
+export const CX_FINAL_V4 = 503.977;
 
 // -- THE MINT ---------------------------------------------------------------
 // The coin recipe from d1Shared, read for a whole object: a POP_MINT-frame
@@ -693,10 +714,10 @@ export const BoardTable: React.FC<{
           cx={0}
           cy={TABLE_SHADOW_CY}
           rx={TABLE_SHADOW_RX}
-          ry={CONTACT_SHADOW_RY}
+          ry={TABLE_SHADOW_RY}
           fill="#000"
-          opacity={CONTACT_SHADOW_OP}
-          style={{ filter: "blur(3px)" }}
+          opacity={TABLE_SHADOW_OP}
+          style={{ filter: `blur(${TABLE_SHADOW_BLUR}px)` }}
         />
       )}
       <defs>

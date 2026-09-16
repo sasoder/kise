@@ -97,7 +97,7 @@ import {
 //      it zooms out." V3b opened at k 5.15, his face filling 91% of the frame.
 //      V4 opens at EXACTLY twice the resolved scale — k K_TIGHT = 2 * K_FINAL —
 //      with his head centred on x 540 and its centre at screen y 900. His head
-//      is 566 screen px at f0 and 283 at f199: two to one, measured.
+//      is 567 screen px at f0 and 283 at f199: two to one, measured.
 //
 //   2. THE BOARD AND SAM POP UP ON THEIR WORDS. Director: "the board and Sam
 //      should pop up as he's saying this." In V3b they were STANDING from frame
@@ -168,7 +168,7 @@ import {
 //      always the same distance `d` from Bret's axis and always at the same
 //      anchor height, so they are exact mirrors on every frame, whether or not
 //      both are drawn yet. 24 world px along the line the draw-in will later
-//      come back down — d 286.3 -> 302, the anchor 763.6 -> 745.5, out AND up —
+//      come back down — d 288.2 -> 304, the anchor 763.6 -> 745.5, out AND up —
 //      one flow-eased travel at 0.45 px a frame. Alive, not a travel.
 //
 //   5. SAM IS MINTED           f104          ahead of "Sam" (f110)
@@ -225,8 +225,8 @@ import {
 // land inside the frame the pull-back has already established":
 //
 //   * THE PULL-BACK IS AUTHORED f46 -> f82, NOT f46 -> f92. This one is forced
-//     arithmetic, not taste. The table's left seat sits 228 px left of the
-//     oval's centre, so at the pop it is 486 world px left of the camera's cx:
+//     arithmetic, not taste. The table's left seat sits 223 px left of the
+//     oval's centre, so at the pop it is 479 world px left of the camera's cx:
 //     it only clears the frame's left edge for k <= 1.11, and only clears the
 //     house band (x 60) for k <= 0.99. At f72 the brief's f46-f92 move is 56% of
 //     the way through, which at CAM_WARP 0.62 leaves k 1.10 — the leftmost seat
@@ -236,37 +236,38 @@ import {
 //     warp 0.39, and warp below 0.5 has a non-zero slope at u=0 — a velocity
 //     step the damper rings on. So the move keeps its shape and loses ten
 //     frames: authored f46-f82 at warp 0.62, the damper carries the scale to
-//     f84, and the table's leftmost seat is at screen x 68 on f72, 124 on f78
-//     and 151 by f86. The move still lands well ahead of "board" (f98), and the
+//     f84, and the table's leftmost seat is at screen x 69 on f72 (further in
+//     still while the mint is running — the strike is at 0.6 of full size),
+//     124 on f78 and 152 by f86. The move still lands well ahead of "board" (f98), and the
 //     frame is never parked after it: (6) runs f82 -> f132.
 //
 //   * THE SIDES POP 24 PX INSIDE THEIR APART-MOST POSITION, not exactly on it.
-//     Same arithmetic, 14 px of it: at d 302 the leftmost seat is at world x 10
-//     and is 4 px outside the house band at f72 even with the shortened
-//     pull-back. Popping at d 286.3 and drifting the last 24 px out to f125 puts
-//     it at 68 instead — and the drift is V3b's own gesture (4), which the brief
+//     Same arithmetic, 14 px of it: at d 304 the leftmost seat is at world x 13
+//     and is 3 px outside the house band at f72 even with the shortened
+//     pull-back. Popping at d 288.2 and drifting the last 24 px out to f125 puts
+//     it at 69 instead — and the drift is V3b's own gesture (4), which the brief
 //     keeps, at V3b's own size (24 px against V3b's 20). It runs along the SAME
 //     LINE the draw-in later comes back down, so the two sides only ever move on
 //     one axis in the whole cut.
 //
-//   * THE RESOLVED CAMERA CENTRES 38.5 PX LEFT OF BRET'S AXIS. The table's
+//   * THE RESOLVED CAMERA CENTRES 36 PX LEFT OF BRET'S AXIS. The table's
 //     missing seat is on its RIGHT (it is the seat nearest Sam), so the table's
-//     ink reaches 228 px left of the oval's centre and only 180 right: the whole
-//     picture's ink centre is CX_FINAL_V4 501.5, not Bret's 540. The house rule
+//     ink reaches 223 px left of the oval's centre and only 180 right: the whole
+//     picture's ink centre is CX_FINAL_V4 504.0, not Bret's 540. The house rule
 //     is that the camera centres the ink, and it is kept — Bret's head resolves
-//     32 screen px right of the frame's centre with the five seats balancing
+//     30 screen px right of the frame's centre with the five seats balancing
 //     him, and the air is 45 / 45 px measured analytically inside x 120-960.
-//     Centring Bret instead would put 7 px of kraft on one side and 83 on the
+//     Centring Bret instead would put 15 px of kraft on one side and 75 on the
 //     other.
 //
-//   * THE SIDES COME IN FROM ±303 TO ±261. The table is 408 world px wide
-//     against the bench's 330, so at V3b's distance the resolved ink is 78 px
-//     wider and k has to fall to 0.761 to fit the padding box — Bret's head
-//     would drop from 283 screen px to 259. Nothing about the heads was supposed
-//     to change, so the distance absorbs the table instead: D_FINAL_V4 261 puts
-//     K_FINAL back at 0.8325 and his head back at 283 px, to the pixel. At 261
-//     the oval's right rim is still 52 px clear of the top of Bret's hair and the
-//     nearest seat 92 px clear of his alpha.
+//   * THE SIDES COME IN FROM ±303 TO ±263. The table is 403 world px wide
+//     against the bench's 330, so at V3b's distance the resolved ink is 73 px
+//     wider and k has to fall to 0.765 to fit the padding box — Bret's head
+//     would drop from 283 screen px to 260. Nothing about the heads was supposed
+//     to change, so the distance absorbs the table instead: D_FINAL_V4 263 puts
+//     K_FINAL back at 0.8334 and his head back at 283 px, to the pixel. At 263
+//     the oval's right rim is still 54 px clear of the top of Bret's hair and the
+//     nearest seat 24 px clear of his empty head BOX (90-odd from his alpha).
 //
 //   * THE SEAT GLYPH IS STROKED 3.0, NOT THE HOUSE 2.6. A seat is 34 px against
 //     a CompanyCard's 72, so the house weight comes out at 2.17 world px —
@@ -274,6 +275,23 @@ import {
 //     person. 3.0 puts it at 2.5 world px: the same weight as a thread, which is
 //     the thinnest line this clip already draws. Everything else about the
 //     knock-out is CompanyCard's exactly.
+//
+//   * THE TABLE'S CONTACT SHADOW IS ITS OWN FOOTPRINT, NOT THE HOUSE BAR. The
+//     house ellipse is 0.62 of the width by 5 px, which under a 360 px oval is
+//     a 223 x 5 rule — rendered once (au4, first pass) it is a dark straight
+//     line right across the frame with nothing above most of it, which is both
+//     a ground line (the house has none) and V3b's own worst note repeated. A
+//     table seen from above lies on the sheet rather than standing on an edge,
+//     so its one contact shadow is the oval dropped 12 px and blurred 8: a soft
+//     crescent under its foot, hidden by the table everywhere else. Full
+//     reasoning at TABLE_SHADOW_CY in bretShared.
+//
+//   * THE SEATS SIT 9 PX OFF THE RIM, NOT 14. Rendered at 14 (au4, first pass)
+//     the four corner seats read as icons scattered round an oval rather than
+//     chairs at a table: the ellipse is flat, so at ±60° its normal is almost
+//     vertical and the gap throws them up and away from it. 9 is still plainly
+//     a gap and the seats belong to the table. It also takes 5 px off the
+//     table's left overhang, which is 5 px the pop-framing gets back.
 //
 //   * THE MINT LANDS ON 1 RATHER THAN PASSING IT. "back(0.75)" in this house is
 //     written as a zero-sloped sin^2 bump rather than a kinked max() (MEMORY),
@@ -359,7 +377,7 @@ export const F_POP_SAM = 104; // fully in by "Sam" (f110)
 // apart-most position and the resolved position are collinear, so the two sides
 // only ever travel out along that line and then back down it.
 export type Side = { d: number; y: number };
-export const SIDE_APART: Side = { d: 302, y: ANCHOR_Y_FINAL - 46.9 };
+export const SIDE_APART: Side = { d: 304, y: ANCHOR_Y_FINAL - 46.9 };
 export const SIDE_FINAL: Side = { d: D_FINAL_V4, y: ANCHOR_Y_FINAL };
 
 const unit = (a: Side, b: Side) => {
@@ -372,7 +390,7 @@ const U_IN = unit(SIDE_APART, SIDE_FINAL); // apart -> resolved: inward and down
 
 export const POP_BACK = 24; // how far inside apart the two sides are struck
 export const SIDE_POP: Side = {
-  d: SIDE_APART.d + U_IN.d * POP_BACK, // 286.26
+  d: SIDE_APART.d + U_IN.d * POP_BACK, // 288.20
   y: SIDE_APART.y + U_IN.y * POP_BACK, // 763.57
 };
 
@@ -441,11 +459,11 @@ export const threadSag = (f: number) => {
 // so the damper never sees a corner: creep in, the one big pull-back, the frame
 // giving way under the drift, a hold, the tighten that reacts to the pull-in,
 // and its 8-frame held breath.
-export const K_TIGHT = 2 * K_FINAL_V4; // 1.665 — his head at exactly twice its resolved size
-export const K_CREEP = K_TIGHT * 1.04; // 1.7316
+export const K_TIGHT = 2 * K_FINAL_V4; // 1.6668 — his head at exactly twice its resolved size
+export const K_CREEP = K_TIGHT * 1.04; // 1.7334
 // Solved, not chosen: it puts his head's CENTRE (world y 980) at screen y 900.
 export const OPEN_HEAD_SCREEN_Y = 900;
-export const C_TIGHT = BRET_HEAD_Y - (OPEN_HEAD_SCREEN_Y - (960 - CAM_LIFT)) / K_TIGHT; // 940.96
+export const C_TIGHT = BRET_HEAD_Y - (OPEN_HEAD_SCREEN_Y - (960 - CAM_LIFT)) / K_TIGHT; // 941.00
 export const K_WIDE = 0.8065;
 export const K_SPREAD = 0.7935;
 export const C_WIDE = 857.54;
