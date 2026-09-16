@@ -9,15 +9,18 @@ import {
   TILE_SHADOW,
 } from "./d1Shared";
 import {
+  ACCENT,
   OP_READ,
   SQUIRCLE_RATIO,
   SQUIRCLE_SMOOTH,
+  clamp01,
   iconShadow,
+  smoothstep,
   squirclePath,
 } from "./fieldShared";
 
 // ---------------------------------------------------------------------------
-// bretShared V2 — the world the Bret Taylor / OpenAI-board cuts share.
+// bretShared V3b — the world the Bret Taylor / OpenAI-board cuts share.
 //
 // The clip is Cheeky Pint style (MEMORY, rewritten 2026-09-15): kraft sheet,
 // white ink, one amber, one tile material, threads, damped camera, opaque.
@@ -28,40 +31,46 @@ import {
 // point. Here the two sides of the November 2023 OpenAI board fight — the
 // existing board (a bench of three) and Sam — converge on Bret.
 //
-// V2 CHANGED THREE THINGS AND NOTHING ELSE (director, 2026-09-16):
+// V3b CHANGED THREE THINGS AND NOTHING ELSE (director, 2026-09-16, reviewing
+// the V3 preview). The duotone heads, the mirror triangle and its tracks, the
+// two threads' launch and landing frames, the minted dot, the one ink click,
+// the camera's shape and the alive hold are all V3's and are untouched.
 //
-//  1. THE CAST IS A TRIANGLE, NOT A ROW. V1 stood all three on one foot line,
-//     which caps every one of them at a third of the frame's width and leaves
-//     a 1920-tall frame empty above and below. Here Bret stands LOW and
-//     CENTRE, the bench sits UPPER-LEFT and Sam UPPER-RIGHT, and the threads
-//     run diagonally down to him. Nothing shares a foot line any more: each
-//     piece stands on its own contact shadow at its own FOOT_Y, which is what
-//     "no ground line" was always for.
+//  1. A HEAD IS A CUTOUT, NOT A THING STANDING ON THE GROUND. V3 floated each
+//     head ~88 px above a thin contact shadow, and that shadow — hanging under
+//     nothing, Sam's reading as a stray dash — was the single worst thing in
+//     the frame. Both the float (V3's HEAD_FLOAT_F) and the head contact
+//     shadows are GONE. A head is now exactly its own alpha: its box bottom IS
+//     its lowest alpha pixel, and it carries only the house TILE_SHADOW, the
+//     same soft lift every tile gets. The BENCH keeps its contact shadow — it
+//     is a tile and it stands.
 //
-//  2. EVERY CUTOUT DISSOLVES INTO ITS SHADOW. A bust that ends on a straight
-//     edge reads as a pasted photograph, so the alpha ramp is BAKED into the
-//     PNG (a CSS mask on an <Img> inside the SVG path is not deterministic at
-//     frame-capture time): the bottom 12% of each file fades out, and the
-//     ramp bites SOONER toward the sides, so the two bottom corners go first
-//     and the silhouette ends on nothing along its whole boundary.
+//  2. THE THREADS RUN BEHIND BRET'S HEAD AND THE V'S APEX PEEKS OUT UNDER HIS
+//     CHIN. V3 had to hold the amber point 88 px clear of his jaw so two
+//     straight lines could reach it without crossing his face; with the float
+//     gone the point sits DOT_CHIN_GAP (12 px) under his lowest alpha pixel and
+//     the two threads are simply drawn in a layer BELOW his head. Each one
+//     disappears behind his jaw and the apex, with its minted dot, shows under
+//     his chin: the head SITS ON the apex of the V. Nothing is routed around
+//     his outline any more.
 //
-//  3. A PORTRAIT IS SIZED BY ITS HEAD, NOT BY ITS BOX. The two photographs are
-//     framed differently — Bret is a medium shot of a seated man (his head is
-//     63% of the crop), Sam is a straight-on bust (73%) — so sizing them by
-//     total height sizes them wrongly. Each cutout carries its own measured
-//     geometry below and the cut asks for a head size; the box follows.
+//  3. THE LABELS SIT TIGHT UNDER THE HEADS. "Bret Taylor" hangs
+//     BRET_LABEL_GAP under the dot, so the dot sits between his chin and his
+//     name; "Sam Altman" hangs SAM_LABEL_GAP under Sam's lowest alpha pixel.
 //
 // THE CAST:
-//   * a PORTRAIT is a photographic cutout (transparent PNG), its contact
-//     shadow, and its name in Söhne Buch under it. Nothing else — the photo is
-//     the noun.
+//   * a PORTRAIT is a duotoned head cutout and its name in Söhne Buch under it.
+//     Nothing else — the head is the noun, and it casts no shadow on a ground
+//     it is not standing on.
 //   * the BOARD is one wide house tile with three Lucide "user" glyphs KNOCKED
 //     OUT of it (the CompanyCard recipe: square caps, stroke 2.6, the paper
-//     shows through). A bench of people, no label. It stands on its own little
-//     ground, with its own contact shadow.
+//     shows through). A bench of people, no label. It stands, so it keeps its
+//     contact shadow.
 //   * a THREAD is the house thread: 2.5 px, ACCENT, 0.95, live from the frame
-//     it is drawn. Geometric — source to Bret — so when a side moves the thread
-//     follows it with no extra track.
+//     it is drawn. Geometric — source to the dot — so when a side moves the
+//     thread follows it and shortens on the draw-in with no extra track.
+//   * the DOT is the point they agree on: a solid ACCENT disc, MINTED (the coin
+//     recipe, a 5-frame scale-in) on the frame the two threads land.
 // ---------------------------------------------------------------------------
 
 // -- type -------------------------------------------------------------------
@@ -70,72 +79,112 @@ import {
 export const FONT_LABEL = "SohneBuchAU";
 loadFont({ family: FONT_LABEL, url: staticFile("Sohne-Buch.otf"), weight: "400" });
 
-export const LABEL_SIZE = 26; // world px, the house axis/label size
+export const LABEL_SIZE = 30; // world px; at the resolved k this is the house 26 SCREEN px
 export const LABEL_OP = 0.55; // ink at rest
-export const LABEL_GAP = 35; // top of the label box, below its owner's foot
-export const LABEL_LINE = 26;
+export const LABEL_LINE = 30;
+// Where a 30 px Söhne Buch line's INK actually sits inside its box, measured
+// full-res off the render: the cap tops 6 world px below the box top and the
+// "y" of "Taylor" reaching 40 below it. The resolved framing is solved against
+// these, not against the CSS line box, or the picture sits ~7 screen px low.
+export const LABEL_INK_TOP = 6;
+export const LABEL_INK_BOT = 40;
 export const LABEL_TRACK = 0.2;
+export const LABEL_HALF = 74; // measured full-res off the render: "Bret Taylor" is 144 world px wide, plus 2
+export const SAM_LABEL_HALF = 82; // measured full-res off the render: "Sam Altman" is 163 world px wide
+// Portrait's default gap, kept at V2's value so the superseded V2 cut still
+// renders as delivered. V3b passes BRET_LABEL_GAP / SAM_LABEL_GAP explicitly.
+export const LABEL_GAP = 41;
 
 // -- the world --------------------------------------------------------------
 export const WORLD_W = 1080;
 export const WORLD_H = 1450;
 
 // ---------------------------------------------------------------------------
-// THE TWO CUTOUTS, measured off the PNGs in public/heads by the build script
-// kept beside this cut's preview (scratchpad au2/heads/build_heads.py):
-//   aspect   width / height of the file
-//   headF    the head's height (hair top -> chin) as a fraction of the file's
-//   hcF      the head's centre, as a fraction of the file's height
-//   hcxF     the head's centre across, as a fraction of the file's width
-//   ink*     the bbox of everything at alpha > 64, as fractions of the file
-//
-// Bret: "TechCrunch Disrupt 2024 D2 Bret Taylor-5 (54102610062).jpg" (CC BY
-// 2.0, TechCrunch, 2048x1366), cut with rembg and cropped x1055-1395 /
-// y155-470. V1's photograph had a microphone painted out under the chin and
-// the repair showed as a blur patch; this one has nothing under the chin, no
-// raised hand and a clean quarter-zip collar, so nothing is retouched at all.
-//
-// Sam: the same cutout V1 used, re-cropped (x240-930 / y55-720) so the foot
-// ramp has a whole bust to eat instead of ending on his jaw — V1's crop left
-// him a head on a neck beside a man with shoulders.
+// THE TWO CUTOUTS. Both are the user's own head-only PNGs (800x800 RGBA, hard
+// alpha, no shoulders), trimmed to their alpha bbox and duotoned by
+// au3/build_heads.py. Because they are trimmed, the FILE IS THE HEAD: hair top
+// to chin is the whole height, the head's centre is the box's centre, and — the
+// number V3b turns on — THE BOX'S BOTTOM EDGE IS THE LOWEST ALPHA PIXEL. So the
+// V2 head-fraction constants are all 1.0 / 0.5 and are kept only so the V2 cut
+// still compiles.
+//   bret.png  474 x 643   sam.png  519 x 652
 // ---------------------------------------------------------------------------
-export const BRET_ASPECT = 1.07949;
-export const BRET_HEAD_F = 0.6254;
-export const BRET_HEAD_CENTRE_F = 0.44286;
-export const BRET_HEAD_CX_F = 0.55882;
-export const BRET_INK_X0 = 0.0285;
-export const BRET_INK_X1 = 0.9406;
-export const BRET_INK_Y0 = 0.1192;
-export const BRET_INK_Y1 = 0.9603;
+export const BRET_ASPECT = 474 / 643; // 0.73717
+export const BRET_HEAD_F = 1;
+export const BRET_HEAD_CENTRE_F = 0.5;
+export const BRET_HEAD_CX_F = 0.5;
+export const BRET_INK_X0 = 0;
+export const BRET_INK_X1 = 1;
+export const BRET_INK_Y0 = 0;
+export const BRET_INK_Y1 = 1;
 
-export const SAM_ASPECT = 1.03718;
-export const SAM_HEAD_F = 0.67669;
-export const SAM_HEAD_CENTRE_F = 0.3985;
-export const SAM_INK_X0 = 0.0804;
-export const SAM_INK_X1 = 0.9444;
-export const SAM_INK_Y0 = 0.0615;
-export const SAM_INK_Y1 = 0.9603;
+export const SAM_ASPECT = 519 / 652; // 0.79601
+export const SAM_HEAD_F = 1;
+export const SAM_HEAD_CENTRE_F = 0.5;
+export const SAM_INK_X0 = 0;
+export const SAM_INK_X1 = 1;
+export const SAM_INK_Y0 = 0;
+export const SAM_INK_Y1 = 1;
+// V2 solved its layout against what READ as ink rather than against alpha,
+// because its cutouts ended in a baked foot ramp. V3's alpha is hard, so the
+// visible edge and the alpha edge are the same thing.
+export const SAM_VIS_X1 = 1;
+export const SAM_VIS_Y1 = 1;
 
-// The one size the cut chooses: how tall Bret's HEAD is in world px. Everything
-// else follows. Sam's head is 0.85 of it — he is the further of the two.
-export const BRET_HEAD = 290;
+// Sam's head is TURNED: his lowest alpha pixel — his chin — is not under the
+// middle of his box but at x 0.734 of it (measured on sam.png, alpha > 0, the
+// bottom row runs cols 360..402 of 519). Bret's is dead centre, 0.499. That one
+// measurement is what puts his name under his chin rather than under his ear.
+export const SAM_CHIN_FX = 0.7341;
+export const BRET_CHIN_FX = 0.4989;
+
+// The one size the cut chooses: how tall Bret's head is in world px. Sam's is
+// 0.82 of it — he is the further of the two.
+export const BRET_HEAD = 340;
 export const SAM_HEAD_RATIO = 0.82;
 
-export const BRET_H = BRET_HEAD / BRET_HEAD_F; // 463.7
-export const BRET_W = BRET_H * BRET_ASPECT; // 500.5
-export const SAM_H = (SAM_HEAD_RATIO * BRET_HEAD) / SAM_HEAD_F; // 351.4
-export const SAM_W = SAM_H * SAM_ASPECT; // 364.5
+export const BRET_H = BRET_HEAD; // the box IS the head
+export const BRET_W = BRET_H * BRET_ASPECT; // 250.64
+export const SAM_H = SAM_HEAD_RATIO * BRET_HEAD; // 278.8
+export const SAM_W = SAM_H * SAM_ASPECT; // 221.93
+export const SAM_CHIN_DX = (SAM_CHIN_FX - 0.5) * SAM_W; // 51.95: his chin, off his axis
 
-// Bret is placed by his HEAD, which is not his box's centre (he is turned to
-// his left and the crop keeps his whole shoulder). His head is at x 540 on
-// every frame of every cut, so the camera never has to pan to hold his face.
-export const BRET_X = 540; // his HEAD's centre across; never moves
-export const BRET_FOOT = 1210; // the bottom of his box — where his shadow is
-export const BRET_BOX_CX = BRET_X - (BRET_HEAD_CX_F - 0.5) * BRET_W; // 510.6
-export const BRET_BOX_LEFT = BRET_BOX_CX - BRET_W / 2;
-export const BRET_BOX_TOP = BRET_FOOT - BRET_H; // 746.3
-export const BRET_HEAD_Y = BRET_BOX_TOP + BRET_HEAD_CENTRE_F * BRET_H; // 951.7
-export const BRET_CHIN = BRET_HEAD_Y + BRET_HEAD / 2; // 1096.7
+// -- Bret: low, centre, and he never moves ----------------------------------
+export const BRET_X = 540; // his head's centre across; the mirror's axis
+export const BRET_HEAD_Y = 980; // his head's centre down
+export const BRET_BOX_CX = BRET_X;
+export const BRET_TOP = BRET_HEAD_Y - BRET_H / 2; // 810
+export const BRET_CHIN = BRET_HEAD_Y + BRET_H / 2; // 1150 — his lowest alpha pixel
+export const BRET_FOOT = BRET_CHIN; // the bottom of his box (V2 name)
+
+// -- the amber point --------------------------------------------------------
+// JUST under his chin, on his axis. The threads reach it from behind his head,
+// so this number is a LOOK (how much of the apex shows) and not, as it was in
+// V3, a clearance the whole layout had to be solved around.
+export const DOT_CHIN_GAP = 12;
+export const DOT_X = BRET_X;
+export const DOT_Y = BRET_CHIN + DOT_CHIN_GAP; // 1162
+export const DOT_R = 7;
+export const DOT_MINT = 5; // frames of scale-in, the coin recipe
+export const DOT_OVER = 0.18; // the settle past 1, as a zero-sloped bump
+
+// -- the labels -------------------------------------------------------------
+// Both hang off the thing above them, tight. Bret's is measured from the DOT,
+// so the dot reads as sitting between his chin and his name.
+export const BRET_LABEL_GAP = 30; // the label box's top, below the dot's centre
+export const BRET_LABEL_FROM_CHIN = DOT_CHIN_GAP + BRET_LABEL_GAP; // 42, below his chin
+export const SAM_LABEL_GAP = 28; // the label box's top, below his lowest alpha pixel
+// His name is centred under his CHIN, not under his box (see SAM_CHIN_FX). It
+// is also what keeps the thread off the glyphs: the thread leaves his box
+// centre and runs down-left, so a name centred on the box centre has the thread
+// through its first two letters — rendered and measured, au3b/nudge0_f199.png.
+// His name is 163 world px wide, so SAM_CHIN_DX alone still leaves the thread
+// ON the "S"; 17 px past it — just outside his chin's own right edge, which
+// runs +43..+61 — leaves 9.9 world px of kraft to the label BOX, and 8.9 SCREEN
+// px to the glyphs themselves at the closest frame of the whole cut, measured
+// on the render (au3b/thread-vs-label.txt).
+export const SAM_LABEL_CLEAR = 17;
+export const SAM_LABEL_NUDGE = SAM_CHIN_DX + SAM_LABEL_CLEAR; // 68.95
 
 // -- the board bench --------------------------------------------------------
 export const BOARD_W = 330;
@@ -148,36 +197,60 @@ export const GLYPH_JOIN = "miter" as const;
 
 // Lucide "user" (ISC), fetched raw from
 // https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/user.svg and
-// inlined — nothing is installed and nothing is fetched at render time. One
-// path per seat; the bench is three of them in a row.
+// inlined — nothing is installed and nothing is fetched at render time.
 export const USER_GLYPH = `<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />`;
 export const BENCH_GLYPHS = [USER_GLYPH, USER_GLYPH, USER_GLYPH];
 
+// -- the mirror -------------------------------------------------------------
+// The two sides are ONE track, read twice. `d` is each side's distance from
+// BRET_X and `anchorY` the height at which both hand their thread over: the
+// bench's BOTTOM EDGE and the point directly under Sam's head. So their thread
+// sources are (BRET_X - d, anchorY) and (BRET_X + d, anchorY) — exact mirrors —
+// and the two threads to DOT form a symmetric V on every frame.
+//
+// With the float gone, the anchor IS each side's own foot: the bench's bottom
+// edge and Sam's lowest alpha pixel. Nothing hangs in mid-air.
+export const anchorToSamHeadY = (anchorY: number) => anchorY - SAM_H / 2;
+export const anchorToBoardY = (anchorY: number) => anchorY - BOARD_H / 2;
+
+// -- the resolved picture ---------------------------------------------------
+// What a later cut of this clip opens on. The mirror track (D_FINAL,
+// ANCHOR_Y_FINAL) is V3's, unchanged; the camera is re-solved for V3b's ink box
+// — no float means Sam's head drops 72 px and the dot rises 76 — against the
+// padding contract (screen x 120-960, y 300-1350, 30-60 px of air) and then
+// measured off the render by au-band.py.
+export const D_FINAL = 303; // each side's distance from the axis, resolved
+export const ANCHOR_Y_FINAL = 792.4;
+export const BOARD_X_FINAL = BRET_X - D_FINAL; // 237
+export const BOARD_Y_FINAL = anchorToBoardY(ANCHOR_Y_FINAL); // 737.4
+export const SAM_X_FINAL = BRET_X + D_FINAL; // 843
+export const SAM_Y_FINAL = anchorToSamHeadY(ANCHOR_Y_FINAL); // 653.0
+export const K_FINAL = 0.833;
+export const CX_FINAL = 532.975; // the ink's own centre across
+export const CY_FINAL = 872.8; // the CONTENT centre; the camera's cy adds CAM_LIFT / k
+
 // ---------------------------------------------------------------------------
 // BRET'S SILHOUETTE, sampled off bret.png every 2.5% of its height at alpha >
-// 96: [yFraction, xLeftFraction, xRightFraction]. V1 could clip a thread with
-// one measured row because the sides stood BESIDE him and the threads ran
-// almost horizontally. In the triangle they come down at a steep angle, so
-// where a thread meets him depends on where its source is, and the only honest
-// answer is to walk the line until it is inside him.
+// 96: [yFraction, xLeftFraction, xRightFraction]. V3b does NOT use it: its
+// threads run behind his head on purpose, so there is nothing to route around
+// and no clearance to solve. It is kept only because the superseded V2 cut
+// imports `bretEntry` and `chestAim`, which are built on it.
 // ---------------------------------------------------------------------------
 export const BRET_SIL: [number, number, number][] = [
-  [0.0, 0.5, 0.5], [0.025, 0.5, 0.5], [0.05, 0.5, 0.5], [0.075, 0.5, 0.5],
-  [0.1, 0.5, 0.5], [0.125, 0.5285, 0.6176], [0.15, 0.4727, 0.6758],
-  [0.175, 0.4442, 0.7102], [0.2, 0.424, 0.7304], [0.225, 0.4074, 0.7506],
-  [0.25, 0.3955, 0.766], [0.275, 0.3907, 0.7732], [0.3, 0.3848, 0.7767],
-  [0.325, 0.3789, 0.7755], [0.35, 0.3789, 0.7696], [0.375, 0.361, 0.7672],
-  [0.4, 0.3551, 0.7625], [0.425, 0.3599, 0.7589], [0.45, 0.361, 0.7708],
-  [0.475, 0.3622, 0.7732], [0.5, 0.3705, 0.7672], [0.525, 0.3729, 0.7577],
-  [0.55, 0.3729, 0.747], [0.575, 0.3599, 0.7233], [0.6, 0.3468, 0.6817],
-  [0.625, 0.3373, 0.6746], [0.65, 0.3254, 0.6865], [0.675, 0.3064, 0.7078],
-  [0.7, 0.272, 0.7173], [0.725, 0.2245, 0.6924], [0.75, 0.1734, 0.7031],
-  [0.775, 0.1235, 0.7637], [0.8, 0.0867, 0.8563], [0.825, 0.0618, 0.8884],
-  [0.85, 0.0451, 0.9121], [0.875, 0.038, 0.9252], [0.9, 0.0309, 0.9335],
-  [0.925, 0.2933, 0.7067], [0.95, 0.5, 0.5], [0.975, 0.5, 0.5], [1.0, 0.5, 0.5],
+  [0, 0.5, 0.5], [0.025, 0.3523, 0.6118], [0.05, 0.2743, 0.7089], [0.075, 0.23, 0.7468],
+  [0.1, 0.1857, 0.789], [0.125, 0.1519, 0.8249], [0.15, 0.1329, 0.8544], [0.175, 0.1055, 0.8797],
+  [0.2, 0.0865, 0.8987], [0.225, 0.0675, 0.9093], [0.25, 0.0612, 0.9177], [0.275, 0.057, 0.9262],
+  [0.3, 0.0527, 0.9346], [0.325, 0.0464, 0.9325], [0.35, 0.0464, 0.9325], [0.375, 0.0506, 0.9367],
+  [0.4, 0.0506, 0.9451], [0.425, 0.0506, 0.9536], [0.45, 0.0464, 0.9852], [0.475, 0.0274, 0.9958],
+  [0.5, 0.0042, 0.9979], [0.525, 0, 0.9937], [0.55, 0.0042, 0.9895], [0.575, 0.0148, 0.9831],
+  [0.6, 0.0274, 0.9768], [0.625, 0.038, 0.9662], [0.65, 0.0506, 0.9473], [0.675, 0.0823, 0.9177],
+  [0.7, 0.1392, 0.8861], [0.725, 0.1435, 0.8819], [0.75, 0.1477, 0.8734], [0.775, 0.1561, 0.8629],
+  [0.8, 0.1603, 0.846], [0.825, 0.1814, 0.8291], [0.85, 0.2004, 0.808], [0.875, 0.2152, 0.7848],
+  [0.9, 0.2511, 0.7595], [0.925, 0.308, 0.7257], [0.95, 0.3481, 0.692], [0.975, 0.3861, 0.6456],
+  [1, 0.5, 0.5],
 ];
 
-// Is (x, y) inside Bret, for a bust whose box is at (boxLeft, boxTop)?
+// Is (x, y) inside Bret, for a head whose box is at (boxLeft, boxTop)? V2 only.
 export const bretInside = (x: number, y: number, boxLeft: number, boxTop: number) => {
   const f = (y - boxTop) / BRET_H;
   if (f <= 0 || f >= 1) return false;
@@ -189,9 +262,8 @@ export const bretInside = (x: number, y: number, boxLeft: number, boxTop: number
   return x >= boxLeft + l * BRET_W && x <= boxLeft + r * BRET_W;
 };
 
-// How far along `from -> aim` the thread is drawn: to the point where it first
-// meets him, plus THREAD_BITE px INSIDE his outline. Drawn all the way to his
-// centre the two threads overlap across his chest and the convergence is lost.
+// How far along `from -> aim` a line is drawn before it meets him, plus
+// THREAD_BITE px inside his outline. V2 only.
 export const THREAD_BITE = 20;
 export const bretEntry = (
   from: { x: number; y: number },
@@ -215,57 +287,24 @@ export const bretEntry = (
 // -- threads ----------------------------------------------------------------
 export const THREAD_W = 2.5;
 export const THREAD_LIVE = 0.95;
-// Where each side hands its thread over, and where each thread aims. Both are
-// measured off the tile / cutout rather than typed as world points, so they
-// travel with their owner and no extra track is needed.
-//
-// The bench lets go of its bottom-right corner region; Sam off his lower-left
-// shoulder. Each aims at the far edge of Bret's chest — the LEFT thread at his
-// left outline, the RIGHT one at his right — so the two come down either side
-// of his head and meet him on opposite shoulders. Aimed at his centre instead,
-// both lines run straight through his face.
-export const BENCH_ANCHOR_DX = BOARD_W / 2 - 26;
-export const BOARD_ANCHOR = (x: number, y: number) => ({
-  x: x + BENCH_ANCHOR_DX,
-  y: y + BOARD_H / 2,
-});
-export const SAM_ANCHOR_FX = 0.27; // across his box
-export const SAM_ANCHOR_FY = 0.88; // down his box
-export const SAM_ANCHOR = (x: number, y: number) => ({
-  x: x + (SAM_ANCHOR_FX - 0.5) * SAM_W,
-  y: y + (SAM_ANCHOR_FY - 0.5) * SAM_H,
-});
-export const CHEST_FY = 0.845; // the row of Bret the threads aim at
-export const CHEST_L_FX = 0.0451; // his outline on that row, left and right
+
+// Where each side hands its thread over. Both are measured off the owner rather
+// than typed as world points, so they travel with it and no extra track is
+// needed — and both are the SAME offset from the owner's own centre, which is
+// what keeps the V a mirror: the bench's bottom edge, and the bottom edge of
+// Sam's head box.
+export const BOARD_ANCHOR = (x: number, y: number) => ({ x, y: y + BOARD_H / 2 });
+export const SAM_ANCHOR = (x: number, y: number) => ({ x, y: y + SAM_H / 2 });
+
+// V2 aimed each thread at a row of Bret's chest rather than at one point. V3b
+// does not use this; it is kept because the V2 cut imports it.
+export const CHEST_FY = 0.845;
+export const CHEST_L_FX = 0.0451;
 export const CHEST_R_FX = 0.9121;
 export const chestAim = (bx: number, by: number, left: boolean) => ({
   x: bx - BRET_W / 2 + (left ? CHEST_L_FX : CHEST_R_FX) * BRET_W,
   y: by + CHEST_FY * BRET_H,
 });
-
-// -- the resolved picture ---------------------------------------------------
-// What a later cut of this clip opens on. Solved in AgreedUpon against the
-// padding box (screen x 120-960, y 300-1350, 30-60 px of air) and the world
-// band, then measured off the render by au-band.py.
-export const BOARD_X_FINAL = 363.35;
-export const BOARD_Y_FINAL = 615;
-export const SAM_X_FINAL = 753.35;
-export const SAM_Y_FINAL = 650;
-export const K_FINAL = 1.1;
-export const CX_FINAL = 540;
-export const CY_FINAL = 894; // the CONTENT centre; the camera's cy adds CAM_LIFT / k
-
-// What actually READS as ink against the kraft, as opposed to what has a non-
-// zero alpha. The foot ramp's tail is a dark bust at 10-40% over a mid-brown
-// sheet, which au-band.py's local-contrast test does not see and the eye does
-// not either, so the layout is solved against these rather than against
-// SAM_INK_X1 — measured off the render at f199 and checked every re-render.
-export const SAM_VIS_X1 = 0.858;
-export const SAM_VIS_Y1 = 0.93; // the CONTENT centre; the camera's cy adds CAM_LIFT / k
-
-// A portrait's contact shadow is its footprint, not its shoulder span: a bust
-// is widest at the shoulders and narrowest where it would touch the ground.
-export const PORTRAIT_SHADOW_RX = 0.4;
 
 // ---------------------------------------------------------------------------
 // A PORTRAIT. HTML, not SVG: an SVG <image> pointing at staticFile races frame
@@ -273,10 +312,14 @@ export const PORTRAIT_SHADOW_RX = 0.4;
 // the bitmap is decoded. It lives in a layer that carries the EXACT same world
 // transform as the SVG layer, so a world px is a world px in both.
 //
-// `x` is the cutout BOX's centre across and `footY` the bottom of its box —
-// each portrait stands on its own spot, never on a shared line.
-// `labelColor` / `labelOpacity` carry the one ink click of the cut, and
-// `labelX` lets Bret's name sit under his FACE rather than under his box.
+// `x` is the head box's centre across and `footY` the bottom of the box — the
+// LOWEST ALPHA PIXEL. The name hangs `labelGap` under that, and `labelX` lets it
+// sit off its owner's box axis (Sam's head is turned, so his name is centred
+// under his chin). `labelColor` / `labelOpacity` carry the one ink click.
+//
+// NO CONTACT SHADOW. A head is a cutout, not a thing standing on the ground:
+// it takes the house TILE_SHADOW — the same soft lift every tile gets — and
+// nothing else. V3's thin ellipse hung under nothing and read as a stray dash.
 // ---------------------------------------------------------------------------
 export const Portrait: React.FC<{
   src: string;
@@ -286,10 +329,10 @@ export const Portrait: React.FC<{
   aspect: number;
   label: string;
   labelX?: number;
+  labelGap?: number;
   k: number;
   labelColor: string;
   labelOpacity: number;
-  shadowOpacity?: number;
 }> = ({
   src,
   x,
@@ -298,29 +341,14 @@ export const Portrait: React.FC<{
   aspect,
   label,
   labelX,
+  labelGap = LABEL_GAP,
   k,
   labelColor,
   labelOpacity,
-  shadowOpacity = CONTACT_SHADOW_OP,
 }) => {
   const w = height * aspect;
-  const rx = w * PORTRAIT_SHADOW_RX;
   return (
     <>
-      {/* the contact shadow it stands on — under the cutout, never a ground line */}
-      <div
-        style={{
-          position: "absolute",
-          left: x - rx,
-          top: footY - CONTACT_SHADOW_RY,
-          width: rx * 2,
-          height: CONTACT_SHADOW_RY * 2,
-          borderRadius: "50%",
-          backgroundColor: "#000",
-          opacity: shadowOpacity,
-          filter: "blur(3px)",
-        }}
-      />
       <Img
         src={staticFile(src)}
         style={{
@@ -329,14 +357,14 @@ export const Portrait: React.FC<{
           top: footY - height,
           width: w,
           height,
-          filter: iconShadow(k),
+          filter: TILE_SHADOW(k),
         }}
       />
       <div
         style={{
           position: "absolute",
           left: labelX === undefined ? x : labelX,
-          top: footY + LABEL_GAP,
+          top: footY + labelGap,
           transform: "translateX(-50%)",
           whiteSpace: "nowrap",
           fontFamily: FONT_LABEL,
@@ -359,8 +387,8 @@ export const Portrait: React.FC<{
 // it, exactly the way CompanyCard knocks out its sector glyph: a mask whose
 // white rect is the tile and whose black strokes are the figure, so the kraft
 // shows through the people. SVG, because it is drawn in the same layer as the
-// threads that leave it. `y` is the tile's CENTRE: it stands in the air on its
-// own contact shadow, like everything else in the triangle.
+// threads that leave it. `y` is the tile's CENTRE: it STANDS, so unlike the
+// heads it keeps its contact shadow.
 // ---------------------------------------------------------------------------
 export const BoardBench: React.FC<{
   x: number;
@@ -417,9 +445,10 @@ export const BoardBench: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// A THREAD, drawn tip-first from its source toward Bret. `reach` 0..1 is how
-// far the tip has travelled; `sag` bows it by that many world px, perpendicular
-// to its own run, so a landed thread can strain without moving its ends.
+// A THREAD, drawn tip-first from its source toward the point. `reach` 0..1 is
+// how far the tip has travelled; `sag` bows it by that many world px,
+// perpendicular to its own run, so a landed thread can strain without moving
+// its ends.
 // ---------------------------------------------------------------------------
 export const Thread: React.FC<{
   from: { x: number; y: number };
@@ -454,6 +483,37 @@ export const Thread: React.FC<{
       strokeOpacity={THREAD_LIVE}
       strokeWidth={THREAD_W}
       strokeLinecap="butt"
+      style={{ filter: iconShadow(k) }}
+    />
+  );
+};
+
+// ---------------------------------------------------------------------------
+// THE POINT THEY AGREE ON. A solid ACCENT disc, MINTED the frame the two
+// threads land: the coin recipe from d1Shared — a short scale-in with a
+// zero-sloped settle past 1, so it is struck rather than faded up. It does not
+// exist before `land`.
+// ---------------------------------------------------------------------------
+export const dotScale = (frame: number, land: number) => {
+  if (frame < land) return 0;
+  const u = clamp01((frame - land) / DOT_MINT);
+  const s = Math.sin(Math.PI * u);
+  return smoothstep(u) * (1 + DOT_OVER * s * s);
+};
+
+export const AgreePoint: React.FC<{ x: number; y: number; scale: number; k: number }> = ({
+  x,
+  y,
+  scale,
+  k,
+}) => {
+  if (scale <= 0) return null;
+  return (
+    <circle
+      cx={x}
+      cy={y}
+      r={DOT_R * scale}
+      fill={ACCENT}
       style={{ filter: iconShadow(k) }}
     />
   );
