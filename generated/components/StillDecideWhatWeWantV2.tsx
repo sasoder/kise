@@ -10,7 +10,6 @@ import {
   ICON_SHADOW_BLUR,
   ICON_SHADOW_OPACITY,
   ICON_SHADOW_Y,
-  OP_READ,
   OP_UNREAD_DOT,
   SHADOW_BLUR,
   SHADOW_OPACITY,
@@ -68,14 +67,15 @@ export const DURATION = 149;
 // Vocabulary, Orange Dwarkesh on the grid, unchanged from the approved cut of
 // this clip (HowAssistantsShouldBehaveV3):
 //   the technical work = four white station rings in a row, each with a white
-//                        Lucide glyph inside it (code, wrench, bar chart, and
-//                        the server-rack glyph). The approved station device
-//                        from TheirOwnTraining (STATION_R 52, ring stroke 3.5,
-//                        glyph at 0.6 of the diameter, stroke 2.6, square caps).
+//                        Lucide OUTLINE glyph inside it — code, wrench,
+//                        bar-chart-3, server — all four on the 24 grid, round
+//                        caps, round joins, fill none, the same glyph box and
+//                        the same world stroke weight as the ring around it.
 //   the AIs            = orange dots, solid, ACCENT_DEEP at rest, ACCENT lit
 //   a human            = person.png, ink white, iconShadow, 108 world px
 //   a human decision   = the approved thought bubble (SubvertTheInfrastructure)
-//                        growing off the head, with a Lucide `target` in it
+//                        growing off the head, with a Lucide `flag` in it: the
+//                        mission, not a target to hit
 //   the AIs taking a   = the ring, its glyph and its crowd going white ->
 //     tool               ACCENT_DEEP; being given direction goes DEEP -> ACCENT
 // No text, no numbers. It has to read with the sound off.
@@ -97,28 +97,36 @@ export const DURATION = 149;
 //      camera: creep in on the row, k 1.15 -> 1.23,
 //      content centre 930 -> 908, landing f38, four
 //      frames ahead of "work"                                            f12-38
-//   3. the camera tilts down to the person, centre
-//      899 -> 985, k -> 1.20, landing f68, five frames
-//      before "still"; the person lifts 4 px (wake)
-//      f70-78; the crowds keep milling above, in frame   "we'll have to
-//                                                         still"         f52-78
+//   3. the camera REFRAMES onto the subject: it tilts
+//      down and pans right onto the person-plus-bubble
+//      group and pushes in to k 1.70, so that group's
+//      centre sits at screen (540, 960) and the row of
+//      tools runs out of the top and the left of the
+//      frame. Keyed f50-64; the damper puts it on the
+//      mark at f68 and dead centre at f73. The person
+//      lifts 4 px (wake) f70-78; the crowds keep
+//      milling above                                     "we'll have to
+//                                                         still"         f50-78
 //   4. the thought bubble grows off the head, empty
 //      inside, and then SIX FRAMES OF DEAD-STILL CAMERA
 //      on "that" (the held breath)                       "do a lot of
 //                                                         that"          f79-97
-//   5. a `target` draws inside the bubble in three
-//      head-led strokes: outer ring f100-108, inner
-//      ring f108-116, centre dot f116-120, landing two
-//      frames before "want". Camera pushes toward the
-//      bubble, k -> 1.26, f100-114                       "decide what we
+//   5. a `flag` draws inside the bubble head-led: the
+//      pole bottom-to-top f100-107, then the cloth as
+//      ONE stroke f107-119, landing two frames before
+//      "want". The camera pushes +0.06 into the already
+//      centred bubble f100-114 and takes its hold drift
+//      back out, so the flag lands dead centre          "decide what we
 //                                                         actually"     f100-120
 //   6. one ink line runs head-led from the top of the
-//      bubble up into the row (f122-129) and splits left
-//      and right along it (f129-142.0); as it reaches a
-//      tool, that tool's ring, glyph AND crowd go
-//      ACCENT_DEEP -> ACCENT over 5 f — chart f130.7,
-//      rack f132.9, wrench f136.3, code f142.0. Camera
-//      pulls back to the whole, k 1.30 -> 1.10, f122-140 "want"         f122-142
+//      bubble up into the row (f122-128) and splits left
+//      and right along it (f128-142.0) at one capped
+//      SCREEN speed; as it reaches a tool, that tool's
+//      ring, glyph AND crowd go ACCENT_DEEP -> ACCENT
+//      over 5 f — chart f130.2, rack f132.8, wrench
+//      f136.5, code f142.0. Camera
+//      pulls back to the whole, k 1.82 -> 1.10, f122-140,
+//      and pans back to the column axis with it         "want"         f122-143
 //   7. tail: hold drift, the crowds milling, and one
 //      packet running the bubble->row line every 10 f    -               f133-149
 //
@@ -140,7 +148,14 @@ export const DURATION = 149;
 //   * glyph sway: the person sways +-1.5 screen px on hashed sines, and lifts
 //     4 screen px over f70-78 (WAKE_LEAD, before "still").
 //   * arriveEase on every arrival and every mill hop; screen-space heads on the
-//     bubble->row line and the target's strokes; packets on the landed line.
+//     bubble->row line and on both of the flag's strokes; packets on the line.
+//
+// DEPTH — the ladder in OP_FG / OP_MID / OP_BG below, on the note that
+// "everything looks a bit too uniform". Icons, flag, person, crowd cores and
+// every line head are at 1.0; rings, the bubble's border and its trail, and
+// the two ink lines are at 0.78; the back ~40% of each crowd is at 0.55, 0.8x
+// radius and 1.45x micro-drift, with a hashed threshold so that band is
+// feathered. Every dot also carries a +-18% hashed radius. Tone is untouched.
 //
 // DEVIATIONS from the brief, and why:
 //   * The station row sits at world y 790 and the person at y 1120 (brief: 760
@@ -150,9 +165,16 @@ export const DURATION = 149;
 //     k 1.26 put the person's feet at screen y 1300-1450. Pulling the two ends
 //     30 px toward each other buys the camera its travel back; the picture is
 //     the briefed one.
-//   * For the same reason the camera's y travel is 908 -> 985 rather than
-//     800 -> 1000: at the briefed centres the person leaves the safe band. The
-//     moves keep their frames, their eases and their landings.
+//   * The camera's y travel over the middle of the cut is 898 -> 1040 and it
+//     gains an x travel of 540 -> 680: the centring pass needs the subject
+//     group's own centre under the frame's centre, and that group is off the
+//     column axis because the bubble is.
+//   * The lowest drawn pixel still has to sit at or above screen y 1290 at
+//     every camera position; the binding frame is f51 (the person's feet at
+//     1285) at the bottom of the row creep, not the centred stretch, where
+//     k 1.70 about the group's own centre keeps the feet near 1150. The band's
+//     TOP rule (>= 560) is deliberately broken over f60-125 only: the note
+//     says the row may leave the frame while the person is the subject.
 //   * LIFT = 0, not the set's CAM_LIFT = 125. The director asked for the focus
 //     in the MIDDLE of the frame, so the content centre lands at screen y 960
 //     instead of 835. `camMoveLift` is fieldShared's `camMove` with that one
@@ -164,21 +186,21 @@ export const DURATION = 149;
 //     safe vertical band; at 22 dots spread over it the crowd read as scattered
 //     specks rather than a crowd taking a tool (measured and looked at). Tighter
 //     and denser, each tool is visibly besieged and the four stay four.
-//   * The split of the final line runs at 35.5 world px/frame — the fastest it
-//     can go without breaking the set's 45 screen px/frame head cap while the
-//     camera is still at k 1.27 — so it reaches the code station at f142.0,
-//     which is the frame the brief asks for, and the rise it comes out of runs
-//     f122-129 rather than f122-132.
+//   * The split of the final line is authored in SCREEN px/frame (43, under
+//     the set's 45 cap) rather than world px/frame, and the rise it comes out
+//     of is one frame shorter (f122-128). The camera now pulls back from
+//     k 1.82 rather than 1.30, and at a fixed world speed the head would have
+//     been 60+ screen px/frame on its first frames and 35 on its last. All
+//     four tools still land within half a frame of the approved cut.
 //   * 107 dots (~27 a tool) launch across f10-34, so the rate peaks well above
 //     the briefed ~2/frame: the brief's own completion deadlines (code complete
 //     by f24) do not fit at 2/frame, and a thinner crowd did not read. Launches
 //     are hashed and no two are in unison. A dot that launches before f12 is
 //     still beyond the visible frame edge until ~f13.
-//   * The station glyph, the thought bubble and the rack path are COPIED here
-//     from TheirOwnTraining / SubvertTheInfrastructure / TenTimesTheCost rather
-//     than imported: those modules run large seat and thread simulations at
-//     module scope and importing them would run all of it for every frame of
-//     this render.
+//   * The station device and the thought bubble are COPIED here from
+//     TheirOwnTraining / SubvertTheInfrastructure rather than imported: those
+//     modules run large seat and thread simulations at module scope and
+//     importing them would run all of it for every frame of this render.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -279,11 +301,56 @@ const STROKE = 3; // every ink line in the piece
 const RING_STROKE = 3.5; // a ring — the house ladder, unchanged
 
 // ---------------------------------------------------------------------------
+// THE DEPTH LADDER. Director: "everything looks a bit too uniform — play around
+// with the opacity of the dots and the icons and the borders to give it
+// slightly more depth."
+//
+// Three rungs, and every mark in the piece sits on exactly one of them. Depth
+// here is OPACITY and SIZE only: a dot's COLOUR still means its state (deep =
+// the AIs have the tool, ripe = it has a direction), so the tone ladder is
+// untouched and nothing about the story is carried by these numbers.
+//
+//   FG  1.00  the subject: the icon inside each ring, the flag, the person,
+//             the core of each crowd, every line head and packet.
+//   MID 0.78  the containers: the station rings, the thought-bubble border and
+//             its trail dots, the row line and the rise line. A border is the
+//             box a thing is in, not the thing.
+//   BG  0.55  the back of each crowd, at 0.8x radius and a little more drift.
+//
+// The crowd's split is by DISTANCE FROM THE RING with a hashed jitter on the
+// threshold, so the falloff is a feathered band rather than a drawn circle:
+// ~40% of each cluster ends up on the back rung, and which 40% wobbles.
+// ---------------------------------------------------------------------------
+const OP_FG = 1.0;
+const OP_MID = 0.78;
+const OP_BG = 0.55;
+const BG_R_SCALE = 0.8; // a back dot is smaller as well as dimmer
+const BG_DRIFT = 1.45; // ...and rides ~1.4 px more micro-drift
+const DEPTH_CUT = 0.52; // normalised distance from the ring at which a dot goes back (~38% do)
+const DEPTH_JITTER = 0.34; // hashed, so the band is feathered and not a ring
+const R_SPREAD = 0.18; // +-18% hashed per-dot radius, across every cluster
+
+// ---------------------------------------------------------------------------
 // THE TECHNICAL WORK. Four tools in a row. The station device is the approved
 // one from TheirOwnTraining: a ring of STATION_R with a Lucide glyph at 0.6 of
-// its diameter inside it, glyph stroke 2.6 in the 24-unit box, square caps,
-// mitre joins. Copied rather than imported (see the deviations above).
+// its diameter inside it.
+//
+// ICON FAMILY PASS, on the director's note: "the weight of the technical icons
+// is not consistent, some have sharp edges, some have soft edges, they look
+// like they're taken from different icon packs." All four are now genuine
+// Lucide 24-grid outline icons drawn under identical conventions — fill none,
+// round caps, round joins, the same glyph box in every ring, and ONE stroke
+// weight. The filled custom server-rack glyph (RACK_D, from TenTimesTheCost)
+// is gone; Lucide `server` takes its place, so nothing in the row is a solid
+// any more and the white -> deep -> ripe conversion now runs on `stroke`.
+//
+// The weight itself is set in WORLD px rather than in the 24 grid: Lucide's
+// own stroke 2, scaled by the glyph box (69.6 / 24 = 2.9), lands at 5.8 world
+// px against a ring drawn at 3.5, which is what made the glyphs read heavier
+// than the circles around them. GLYPH_STROKE_WORLD ties the icon to the ring
+// instead, and the local stroke is solved back out of the (breathing) box.
 // ---------------------------------------------------------------------------
+const GLYPH_STROKE_WORLD = RING_STROKE; // icon and ring read as one weight
 const STATION_R = 58;
 const STATION_Y = 790;
 const STATION_X = [240, 440, 640, 840];
@@ -305,34 +372,23 @@ const maskedSegments = (x0: number, x1: number): [number, number][] => {
   return out;
 };
 const STATION_GLYPH_FRACTION = 0.6;
-const STATION_GLYPH_STROKE = 2.6;
 
-
-// Lucide, ISC, inlined as 24-unit paths (the d1Shared convention).
-const ICON_CODE = `<path d="M16 18 22 12 16 6"/><path d="M8 6 2 12 8 18"/>`;
+// Lucide, ISC, inlined verbatim as 24-unit icons (the d1Shared convention).
+// Nothing here is redrawn or simplified: same grid, same commands, same order.
+const ICON_CODE = `<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>`;
 const ICON_WRENCH =
   `<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>`;
 const ICON_CHART =
   `<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>`;
+const ICON_SERVER =
+  `<rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/>`;
 
-// The server-rack glyph, verbatim from TenTimesTheCost (RACK_D): a 100 x 130
-// solid figure drawn about its own foot. It is FILLED, not stroked, which is
-// why it does not go through the Lucide path above.
-const RACK_D = [
-  "M-40,-130 h80 a10,10 0 0 1 10,10 v110 a10,10 0 0 1 -10,10 h-80 a10,10 0 0 1 -10,-10 v-110 a10,10 0 0 1 10,-10 z",
-  "M-28,-112 h56 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-56 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z",
-  "M-28,-75 h56 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-56 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z",
-  "M-28,-38 h56 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-56 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z",
-].join(" ");
-// The rack fills the same 0.6-of-the-diameter box the Lucide glyphs get.
-const RACK_SCALE = (2 * STATION_R * STATION_GLYPH_FRACTION) / 130;
-
-type Station = { x: number; glyph: string; rack: boolean };
+type Station = { x: number; glyph: string };
 const STATIONS: Station[] = [
-  { x: STATION_X[0], glyph: ICON_CODE, rack: false },
-  { x: STATION_X[1], glyph: ICON_WRENCH, rack: false },
-  { x: STATION_X[2], glyph: ICON_CHART, rack: false },
-  { x: STATION_X[3], glyph: "", rack: true },
+  { x: STATION_X[0], glyph: ICON_CODE },
+  { x: STATION_X[1], glyph: ICON_WRENCH },
+  { x: STATION_X[2], glyph: ICON_CHART },
+  { x: STATION_X[3], glyph: ICON_SERVER },
 ];
 const NST = STATIONS.length;
 
@@ -369,15 +425,81 @@ const BUB_TRAIL = [
 ];
 const BUB_TRAIL_DUR = 3;
 
-// The decision itself: Lucide `target`, three concentric strokes, head-led.
-const TARGET_BOX = 0.55 * BUB_H; // 77 world px
-const TARGET_S = TARGET_BOX / 24;
-const TARGET_CY = (BUB_Y0 + BUB_Y1) / 2;
-const TARGET_RINGS = [10, 6].map((r) => r * TARGET_S); // 32.1, 19.2
-const TARGET_DOT = 2 * TARGET_S; // 6.4
-const TGT_OUTER = [100, 108];
-const TGT_INNER = [108, 116];
-const TGT_DOT = [116, 120];
+// The decision itself. A `target` was tried here and read as an aim, a score,
+// a bullseye — a thing to HIT, which is the opposite of the line: "decide what
+// we actually want" is a mission being set, not a shot being taken. Lucide
+// `flag` says goal with no explanation: a pole planted, a cloth on it.
+//
+// Drawn head-led in the same window the target had: the pole first, bottom to
+// top (f100-107), then the cloth as ONE continuous stroke (f107-119), landing
+// two frames before "want". Same white ink, same round caps, and the same
+// GLYPH_STROKE_WORLD as the four tools and the rings.
+const ICON_FLAG_CLOTH = "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z";
+// The flag's INK box on the 24 grid is x 4..20, y 2..22 — the icon is not
+// centred in its own 24 box, so the ink box is what gets centred in the bubble.
+const FLAG_INK = { x0: 4, x1: 20, y0: 2, y1: 22 };
+const FLAG_BOX = 0.55 * BUB_H; // 77 world px tall, as the target was
+const FLAG_S = FLAG_BOX / (FLAG_INK.y1 - FLAG_INK.y0); // 3.85
+const FLAG_CX = (FLAG_INK.x0 + FLAG_INK.x1) / 2;
+const FLAG_CYG = (FLAG_INK.y0 + FLAG_INK.y1) / 2;
+const TARGET_CY = (BUB_Y0 + BUB_Y1) / 2; // the bubble's own centre
+// Grid units -> world, for the two stroke heads.
+const flagWorld = (gx: number, gy: number) => ({
+  x: BUB_CX + (gx - FLAG_CX) * FLAG_S,
+  y: TARGET_CY + (gy - FLAG_CYG) * FLAG_S,
+});
+const FLAG_POLE = [100, 107];
+const FLAG_CLOTH = [107, 119];
+
+// The cloth's stroke head. `strokeDashoffset` reveals the path by ARC LENGTH,
+// so the head has to be placed by arc length too. The path is eight cubic
+// segments (the two `s` runs, the `V` written as a degenerate cubic, and the
+// closing `z`) resolved out of the shorthand above once, at module scope —
+// rather than asking the DOM for `getPointAtLength`, which would make the
+// render depend on a live SVG element.
+const CLOTH_CUBICS: number[][] = [
+  [4, 15, 4, 15, 5, 14, 8, 14],
+  [8, 14, 11, 14, 13, 16, 16, 16],
+  [16, 16, 19, 16, 20, 15, 20, 15],
+  [20, 15, 20, 15, 20, 3, 20, 3], // V3
+  [20, 3, 20, 3, 19, 4, 16, 4],
+  [16, 4, 13, 4, 11, 2, 8, 2],
+  [8, 2, 5, 2, 4, 3, 4, 3],
+  [4, 3, 4, 3, 4, 15, 4, 15], // z
+];
+const CLOTH_WALK = (() => {
+  const pts: { x: number; y: number; s: number }[] = [];
+  let s = 0;
+  let px = CLOTH_CUBICS[0][0];
+  let py = CLOTH_CUBICS[0][1];
+  pts.push({ x: px, y: py, s: 0 });
+  for (const c of CLOTH_CUBICS) {
+    for (let i = 1; i <= 24; i++) {
+      const t = i / 24;
+      const u = 1 - t;
+      const x =
+        u * u * u * c[0] + 3 * u * u * t * c[2] + 3 * u * t * t * c[4] + t * t * t * c[6];
+      const y =
+        u * u * u * c[1] + 3 * u * u * t * c[3] + 3 * u * t * t * c[5] + t * t * t * c[7];
+      s += Math.hypot(x - px, y - py);
+      pts.push({ x, y, s });
+      px = x;
+      py = y;
+    }
+  }
+  const total = s;
+  return { pts, total };
+})();
+const clothHead = (u: number) => {
+  const want = clamp01(u) * CLOTH_WALK.total;
+  const p = CLOTH_WALK.pts;
+  let i = 1;
+  while (i < p.length - 1 && p[i].s < want) i++;
+  const a = p[i - 1];
+  const b = p[i];
+  const t = b.s === a.s ? 0 : (want - a.s) / (b.s - a.s);
+  return flagWorld(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
+};
 
 // ---------------------------------------------------------------------------
 // THE CROWDS. One feathered, wobbling annulus of seats around each tool: the
@@ -390,7 +512,7 @@ const ANN_R1 = 98;
 const ANN_YS = 0.82;
 const ANN_FEATHER = 1.2;
 
-type Seat = { x: number; y: number; r: number };
+type Seat = { x: number; y: number; r: number; back: boolean };
 
 const SEATS: Seat[][] = STATIONS.map((st, s) => {
   const out: Seat[] = [];
@@ -412,7 +534,22 @@ const SEATS: Seat[][] = STATIONS.map((st, s) => {
       const rOut = ANN_R1 + wobble(Math.atan2(dy, dx) * WOBBLE_R, 1.7 + s) * 6;
       const f = feather((rOut - rr) / SEAT_STEP, ANN_FEATHER);
       if (hash(i, 71) >= f) continue;
-      out.push({ x, y, r: (0.78 + 0.44 * hash(i, 13)) * (0.72 + 0.28 * f) });
+      // The depth ladder's crowd split: how far out of the annulus this seat
+      // sits, 0 at the ring and 1 at the nominal outer edge, plus a hashed
+      // jitter so the boundary between core and back is a feathered band.
+      const depth = clamp01(
+        (rr - ANN_R0) / (ANN_R1 - ANN_R0) + (hash(i, 23) - 0.5) * DEPTH_JITTER,
+      );
+      out.push({
+        x,
+        y,
+        // the seat's own size, times the ladder's +-18% per-dot spread
+        r:
+          (0.78 + 0.44 * hash(i, 13)) *
+          (0.72 + 0.28 * f) *
+          (1 + (hash(i, 27) - 0.5) * 2 * R_SPREAD),
+        back: depth > DEPTH_CUT,
+      });
     }
   }
   return out;
@@ -466,6 +603,7 @@ type Dot = {
   launch: number;
   bow: number;
   r: number;
+  back: boolean; // on the depth ladder's back rung: dimmer, smaller, driftier
 };
 
 const DOTS: Dot[] = [];
@@ -496,6 +634,7 @@ SEATS.forEach((seats, s) => {
       launch: land - flight,
       bow: (hash(w.i + s * 53, 35) - 0.5) * 90,
       r: seats[w.i].r,
+      back: seats[w.i].back,
     });
   });
   FIRST_SEAT.push(LAND_FIRST[s]);
@@ -576,13 +715,21 @@ const HOPS: Hop[][] = DOTS.map(() => []);
 // ACCENT_DEEP -> ACCENT: they now have a direction.
 // ---------------------------------------------------------------------------
 const RISE_F0 = 122; // "want"
-const RISE_F1 = 129;
+const RISE_F1 = 128;
 const JUNC_X = BUB_CX;
-const SPLIT_SPEED = 35.5; // world px/frame; peaks at 44.6 screen px/f, under the 45 cap
 const RIPE_DUR = 5;
-const REACHED = STATION_X.map((x) => RISE_F1 + Math.abs(x - JUNC_X) / SPLIT_SPEED);
-const SPLIT_END = Math.max(...REACHED);
 const PACKET_F0 = 134;
+// The split's speed is authored in SCREEN px/frame, not world px/frame. It runs
+// while the camera is pulling back out of the centred stretch, so a fixed world
+// speed is a head that is far over the set's 45 screen px/frame cap on the
+// first frames and far under it on the last. HEAD_CAP holds the head at one
+// legible screen speed and lets the world speed rise as k falls, with
+// SPLIT_MAX as a ceiling so it never outruns a plain line. Integrated frame by
+// frame (SPREAD, below the camera, because it needs k), that lands all four
+// tools within half a frame of the approved cut at ANY centred k — which is
+// what let the reframe go to 1.70 without moving a single beat.
+const HEAD_CAP = 43; // screen px/frame for the split head
+const SPLIT_MAX = 36; // world px/frame ceiling
 
 // ---------------------------------------------------------------------------
 // DARK TRAFFIC. Idle accent threads between neighbouring dots at 0.12, at the
@@ -603,22 +750,60 @@ const micro = (i: number, f: number) => ({
 
 // ---------------------------------------------------------------------------
 // THE CAMERA. fieldShared's `camMove`, with CAM_LIFT swapped for this piece's
-// LIFT of 0 (the director wants the focus in the middle of the frame). Eleven
-// segments through one damped `runCamera`; every landing is followed by a hold
-// drift continuing its direction, and there is exactly one dead-still stretch.
+// LIFT of 0 (the director wants the focus in the middle of the frame), and
+// with a THIRD axis: cx. The set's cameras only ever tilt, so `camMove` only
+// ever wrote cy — but the subject of the middle of this cut (the person AND
+// the bubble that grows off his head) has its centre at world x 680, not on
+// the column axis at 540, so a camera that only tilts cannot put that group in
+// the middle of the frame. cx runs through the same eased key-per-frame track
+// and the same damper, so it is the same move, sideways.
 //
-//   f0-12     k 1.12 -> 1.15, c 942 -> 930   the opening creep
-//   f12-38    k -> 1.23,      c -> 908       creep in on the row ("work" f42)
-//   f38-52    k 1.23,         c -> 899       hold drift, 0.8 screen px/f
-//   f52-68    k -> 1.20,      c -> 985       the tilt down ("still" f73)
-//   f68-79    k 1.20,         c -> 993       hold drift
-//   f79-91    k -> 1.203,     c -> 1000      drift under the bubble
-//   f91-97    DEAD STILL                     the held breath, on "that"
-//   f97-100   k 1.203,        c -> 1002      the breath released
-//   f100-114  k -> 1.26,      c -> 990       the push toward the bubble
-//   f114-122  k -> 1.300,     c -> 988       hold drift (holdDriftK, +1)
-//   f122-140  k -> 1.10,      c -> 931       the pull-back to the whole
-//   f140-149  k -> 1.060,     c -> 929       the tail, still opening
+// CENTRING PASS, on the director's note that the old tilt "lands with the
+// person low and the row still dominant": from the landing through the whole
+// target/flag draw, the SUBJECT GROUP — the person glyph plus the thought
+// bubble, as one thing — is centred at screen (540, 960).
+//
+//   measured group bounds, once the bubble is up:
+//     x 571.5 (the far trail dot) .. 800 (the bubble's right edge)
+//     y 918   (the bubble's top)  .. 1174 (the foot of the person's box)
+//   centre (686, 1046); GX/GY are rounded to (680, 1040), which puts the
+//   person a little left of centre and the bubble a little right of it.
+//
+//   k over the centred stretch is 1.70: the group's framing box — world
+//   x 470-850, the person and the bubble with their breathing room — is then
+//   646 screen px, 60% of the frame width, which is the top of the range the
+//   brief asks for. (The group's drawn INK alone, x 571-800, is 389 px, 36%.)
+//   1.45 was tried first, as the number nearest the brief's ~1.5 that the old
+//   fixed-world-speed split could afford to pull back from; it put the person
+//   only a third bigger than he is in the wide shot and the reframe barely
+//   read. Capping the split by SCREEN speed instead (see HEAD_CAP) took that
+//   constraint off the camera entirely — the reaches land within half a frame
+//   of the approved cut at any centred k — so the push goes to the framing the
+//   note actually asks for. The row of tools leaves the top and the left of
+//   the frame here; that is the trade.
+//
+// The move is keyed f50-64 rather than f52-68 because the damper lags its
+// target by about four frames: keyed to f64 the group actually ARRIVES at
+// screen (551, 971) at f68 and is dead centre (540, 958) at f73, five frames
+// later, which is the landing the brief asks for.
+//
+//   f0-12     k 1.07 -> 1.15, x 540,        c 942 -> 930   the opening creep
+//   f12-38    k -> 1.23,      x 540,        c -> 908       creep in on the row
+//   f38-50    k 1.23,         x -> 545,     c -> 898       hold drift
+//   f50-64    k -> 1.70,      x -> 680,     c -> 1040      onto the person
+//   f64-79    k 1.70,         x -> 683,     c -> 1048      hold drift
+//   f79-91    k 1.70,         x -> 686,     c -> 1056      drift under bubble
+//   f91-97    DEAD STILL                                   the held breath
+//   f97-100   k 1.70,         x -> 687,     c -> 1058      breath released
+//   f100-114  k -> 1.76,      x -> 680,     c -> 1040      push into the flag
+//                                                          (+0.06, and it takes
+//                                                           the drift back out,
+//                                                           so the bubble is
+//                                                           dead centre as the
+//                                                           cloth lands)
+//   f114-122  k -> 1.816,     x -> 682,     c -> 1045      hold drift
+//   f122-140  k -> 1.10,      x -> 540,     c -> 931       the pull-back
+//   f140-149  k -> 1.060,     x -> 538,     c -> 929       the tail
 // ---------------------------------------------------------------------------
 const camMoveLift = ({
   f0,
@@ -627,6 +812,8 @@ const camMoveLift = ({
   k1,
   c0,
   c1,
+  x0,
+  x1,
   warp = 1,
 }: {
   f0: number;
@@ -635,11 +822,14 @@ const camMoveLift = ({
   k1: number;
   c0: number;
   c1: number;
+  x0: number;
+  x1: number;
   warp?: number;
 }) => {
   const F: number[] = [];
   const K: number[] = [];
   const CY: number[] = [];
+  const CXs: number[] = [];
   const span = f1 - f0;
   for (let i = 0; i <= span; i++) {
     const g = camEase(i / span, warp);
@@ -647,43 +837,148 @@ const camMoveLift = ({
     F.push(f0 + i);
     K.push(k);
     CY.push(c0 + (c1 - c0) * g + LIFT / k);
+    CXs.push(x0 + (x1 - x0) * g);
   }
-  return { F, K, CY };
+  return { F, K, CY, CXs };
 };
 
 const DRIFT_DIST = 300; // screen px: where a fixed point in this piece sits
-const K_PUSH = 1.26;
+const GROUP_X = 680; // the person + bubble group's centre
+const GROUP_Y = 1040;
+const K_CENTRE = 1.7; // the group at ~60% of the frame width
+const K_PUSH = K_CENTRE + 0.06;
 const K_PUSH2 = holdDriftK(K_PUSH, 8, DRIFT_DIST, 1);
 const K_TAIL = holdDriftK(1.1, 9, DRIFT_DIST, -1);
 
 const CAM_SEGS = [
-  camMoveLift({ f0: 0, f1: 12, k0: 1.07, k1: 1.15, c0: 942, c1: CONTENT_C, warp: 0.9 }),
-  camMoveLift({ f0: 12, f1: 38, k0: 1.15, k1: 1.23, c0: CONTENT_C, c1: 908, warp: 0.75 }),
-  camMoveLift({ f0: 38, f1: 52, k0: 1.23, k1: 1.23, c0: 908, c1: 896, warp: 1 }),
-  camMoveLift({ f0: 52, f1: 68, k0: 1.23, k1: 1.2, c0: 896, c1: 985, warp: 0.8 }),
-  camMoveLift({ f0: 68, f1: 79, k0: 1.2, k1: 1.2, c0: 985, c1: 997, warp: 1 }),
-  camMoveLift({ f0: 79, f1: 91, k0: 1.2, k1: 1.203, c0: 997, c1: 1010, warp: 1 }),
-  camMoveLift({ f0: 97, f1: 100, k0: 1.203, k1: 1.203, c0: 1010, c1: 1013, warp: 1 }),
-  camMoveLift({ f0: 100, f1: 114, k0: 1.203, k1: K_PUSH, c0: 1013, c1: 995, warp: 0.75 }),
-  camMoveLift({ f0: 114, f1: 122, k0: K_PUSH, k1: K_PUSH2, c0: 995, c1: 993, warp: 1 }),
-  camMoveLift({ f0: 122, f1: 140, k0: K_PUSH2, k1: 1.1, c0: 993, c1: 931, warp: 0.75 }),
-  camMoveLift({ f0: 140, f1: DURATION, k0: 1.1, k1: K_TAIL, c0: 931, c1: 929, warp: 0.8 }),
+  camMoveLift({ f0: 0, f1: 12, k0: 1.07, k1: 1.15, c0: 942, c1: CONTENT_C, x0: CX, x1: CX, warp: 0.9 }),
+  camMoveLift({ f0: 12, f1: 38, k0: 1.15, k1: 1.23, c0: CONTENT_C, c1: 908, x0: CX, x1: CX, warp: 0.75 }),
+  camMoveLift({ f0: 38, f1: 50, k0: 1.23, k1: 1.23, c0: 908, c1: 898, x0: CX, x1: 545, warp: 1 }),
+  camMoveLift({
+    f0: 50,
+    f1: 64,
+    k0: 1.23,
+    k1: K_CENTRE,
+    c0: 898,
+    c1: GROUP_Y,
+    x0: 545,
+    x1: GROUP_X,
+    warp: 0.8,
+  }),
+  camMoveLift({
+    f0: 64,
+    f1: 79,
+    k0: K_CENTRE,
+    k1: K_CENTRE,
+    c0: GROUP_Y,
+    c1: GROUP_Y + 8,
+    x0: GROUP_X,
+    x1: GROUP_X + 3,
+    warp: 1,
+  }),
+  camMoveLift({
+    f0: 79,
+    f1: 91,
+    k0: K_CENTRE,
+    k1: K_CENTRE,
+    c0: GROUP_Y + 8,
+    c1: GROUP_Y + 16,
+    x0: GROUP_X + 3,
+    x1: GROUP_X + 6,
+    warp: 1,
+  }),
+  camMoveLift({
+    f0: 97,
+    f1: 100,
+    k0: K_CENTRE,
+    k1: K_CENTRE,
+    c0: GROUP_Y + 16,
+    c1: GROUP_Y + 18,
+    x0: GROUP_X + 6,
+    x1: GROUP_X + 7,
+    warp: 1,
+  }),
+  camMoveLift({
+    f0: 100,
+    f1: 114,
+    k0: K_CENTRE,
+    k1: K_PUSH,
+    c0: GROUP_Y + 18,
+    c1: GROUP_Y,
+    x0: GROUP_X + 7,
+    x1: GROUP_X,
+    warp: 0.75,
+  }),
+  camMoveLift({
+    f0: 114,
+    f1: 122,
+    k0: K_PUSH,
+    k1: K_PUSH2,
+    c0: GROUP_Y,
+    c1: GROUP_Y + 5,
+    x0: GROUP_X,
+    x1: GROUP_X + 2,
+    warp: 1,
+  }),
+  camMoveLift({
+    f0: 122,
+    f1: 140,
+    k0: K_PUSH2,
+    k1: 1.1,
+    c0: GROUP_Y + 5,
+    c1: 931,
+    x0: GROUP_X + 2,
+    x1: CX,
+    warp: 0.55,
+  }),
+  camMoveLift({ f0: 140, f1: DURATION, k0: 1.1, k1: K_TAIL, c0: 931, c1: 929, x0: CX, x1: 538, warp: 0.8 }),
 ];
 
 const CAM = (() => {
   const F = [0];
   const K = [1.07];
   const CY = [942 + LIFT / 1.07];
+  const CXs = [CX];
   for (const m of CAM_SEGS) {
     for (let i = 0; i < m.F.length; i++) {
       if (m.F[i] <= F[F.length - 1]) continue;
       F.push(m.F[i]);
       K.push(m.K[i]);
       CY.push(m.CY[i]);
+      CXs.push(m.CXs[i]);
     }
   }
-  return { F, K, CY };
+  return { F, K, CY, CX: CXs };
 })();
+
+// The resolved zoom, per frame — the split below is authored in screen px and
+// the camera is the only thing that knows how big a world px is.
+const K_AT: number[] = (() => {
+  const out: number[] = [];
+  for (let f = 0; f <= DURATION; f++) out.push(runCamera(f, CAM.F, CAM.CY, CAM.K).k);
+  return out;
+})();
+
+// How far the split has travelled along the row, integrated frame by frame at
+// HEAD_CAP screen px/frame (SPLIT_MAX world px/frame once the camera is wide
+// enough that the cap stops binding). REACHED is the fractional frame each
+// station's crowd starts going ripe.
+const SPREAD: number[] = (() => {
+  const out: number[] = [];
+  for (let f = 0; f <= DURATION; f++) {
+    out.push(f <= RISE_F1 ? 0 : out[f - 1] + Math.min(SPLIT_MAX, HEAD_CAP / K_AT[f]));
+  }
+  return out;
+})();
+const spreadAt = (f: number) => SPREAD[Math.max(0, Math.min(DURATION, Math.round(f)))];
+const REACHED = STATION_X.map((x) => {
+  const d = Math.abs(x - JUNC_X);
+  for (let f = RISE_F1 + 1; f <= DURATION; f++) {
+    if (SPREAD[f] >= d) return f - 1 + (d - SPREAD[f - 1]) / (SPREAD[f] - SPREAD[f - 1]);
+  }
+  return DURATION;
+});
+const SPLIT_END = Math.max(...REACHED);
 
 // ---------------------------------------------------------------------------
 
@@ -713,9 +1008,12 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
 
   // -- camera ----------------------------------------------------------------
   const cam = runCamera(frame, CAM.F, CAM.CY, CAM.K);
+  // The same damper, handed the cx track: `runCamera` damps whatever it is
+  // given as its "cy", so one more call is the sideways half of the move.
+  const camX = runCamera(frame, CAM.F, CAM.CX, CAM.K).cy;
   const drift = sway(frame);
   const cy = cam.cy + drift.dy;
-  const cx = CX + drift.dx;
+  const cx = camX + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
@@ -779,12 +1077,15 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
       fade = clamp01((frame - d.launch) / 2);
     }
 
+    // the depth ladder: a back dot rides a little more of the drift
     const md = micro(i, frame);
+    const dm = d.back ? BG_DRIFT : 1;
     return {
-      x: x + md.dx,
-      y: y + md.dy,
+      x: x + md.dx * dm,
+      y: y + md.dy * dm,
       st: d.st,
-      r: d.r,
+      r: d.r * (d.back ? BG_R_SCALE : 1),
+      back: d.back,
       moving,
       fade,
       landed: frame >= d.land,
@@ -834,17 +1135,14 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
   // it grows out of the head: the scale origin is the bubble corner nearest it
   const bubOrigin = { x: BUB_CX - BUB_W / 2, y: BUB_Y1 };
 
-  // -- the target ------------------------------------------------------------
-  const tgt = [
-    clamp01((frame - TGT_OUTER[0]) / (TGT_OUTER[1] - TGT_OUTER[0])),
-    clamp01((frame - TGT_INNER[0]) / (TGT_INNER[1] - TGT_INNER[0])),
-  ];
-  const tgtDot = ease((frame - TGT_DOT[0]) / (TGT_DOT[1] - TGT_DOT[0]), EASE_ARRIVE);
+  // -- the flag --------------------------------------------------------------
+  const pole = clamp01((frame - FLAG_POLE[0]) / (FLAG_POLE[1] - FLAG_POLE[0]));
+  const cloth = clamp01((frame - FLAG_CLOTH[0]) / (FLAG_CLOTH[1] - FLAG_CLOTH[0]));
 
   // -- the decision's line ---------------------------------------------------
   const rise = clamp01((frame - RISE_F0) / (RISE_F1 - RISE_F0));
   const riseY = BUB_Y0 + (STATION_Y - BUB_Y0) * rise;
-  const spread = Math.max(0, (frame - RISE_F1) * SPLIT_SPEED);
+  const spread = spreadAt(frame);
   const leftX = Math.max(STATION_X[0], JUNC_X - spread);
   const rightX = Math.min(STATION_X[NST - 1], JUNC_X + spread);
   const lineHead =
@@ -891,6 +1189,8 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
         frame={frame}
         cy={cy}
         cyRest={CAM.CY[0]}
+        cx={cx}
+        cxRest={CAM.CX[0]}
         k={k}
         parallax={parallax}
       />
@@ -932,17 +1232,21 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
               />
             ))}
 
-            {/* the AIs */}
-            {dots.map((d, i) =>
-              d === null ? null : (
-                <circle
-                  key={i}
-                  cx={d.x}
-                  cy={d.y}
-                  r={dotRadius * d.r * breath(frame, hash(i, 9)) * (1 + 0.22 * d.moving)}
-                  fill={ripeT[d.st] > 0 ? toRipe(ripeT[d.st]) : accentDeep}
-                  opacity={dotOpacity * d.fade}
-                />
+            {/* the AIs, on the depth ladder: the back of each crowd first and
+                dimmer, then its core over the top of it. Tone still means
+                state — only opacity and size say how far back a dot is. */}
+            {[true, false].map((backPass) =>
+              dots.map((d, i) =>
+                d === null || d.back !== backPass ? null : (
+                  <circle
+                    key={`${backPass ? "b" : "c"}${i}`}
+                    cx={d.x}
+                    cy={d.y}
+                    r={dotRadius * d.r * breath(frame, hash(i, 9)) * (1 + 0.22 * d.moving)}
+                    fill={ripeT[d.st] > 0 ? toRipe(ripeT[d.st]) : accentDeep}
+                    opacity={dotOpacity * (d.back ? OP_BG : OP_FG) * d.fade}
+                  />
+                ),
               ),
             )}
 
@@ -957,7 +1261,7 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                   stroke={ink}
                   strokeWidth={STROKE}
                   strokeLinecap="round"
-                  opacity={OP_READ}
+                  opacity={OP_MID}
                 />
               ) : null}
               {frame >= RISE_F1
@@ -971,7 +1275,7 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                       stroke={ink}
                       strokeWidth={STROKE}
                       strokeLinecap="round"
-                      opacity={OP_READ}
+                      opacity={OP_MID}
                     />
                   ))
                 : null}
@@ -993,6 +1297,7 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                 const g = glyphBox * br;
                 return (
                   <g key={s}>
+                    {/* the ring is the container: one rung back from its icon */}
                     <circle
                       cx={st.x}
                       cy={STATION_Y + bob}
@@ -1000,26 +1305,21 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                       fill="none"
                       stroke={colour}
                       strokeWidth={RING_STROKE}
-                      opacity={OP_READ}
+                      opacity={OP_MID}
                     />
-                    {st.rack ? (
-                      <g
-                        transform={`translate(${st.x} ${STATION_Y + bob + (130 * RACK_SCALE * br) / 2}) scale(${RACK_SCALE * br})`}
-                      >
-                        <path d={RACK_D} fill={colour} fillRule="evenodd" opacity={OP_READ} />
-                      </g>
-                    ) : (
-                      <g
-                        transform={`translate(${st.x - g / 2} ${STATION_Y + bob - g / 2}) scale(${g / 24})`}
-                        fill="none"
-                        stroke={colour}
-                        strokeWidth={STATION_GLYPH_STROKE}
-                        strokeLinecap="square"
-                        strokeLinejoin="miter"
-                        opacity={OP_READ}
-                        dangerouslySetInnerHTML={{ __html: st.glyph }}
-                      />
-                    )}
+                    {/* the icon: genuine Lucide on the 24 grid, identical
+                        conventions in all four rings, and a local stroke
+                        solved so the WORLD weight equals the ring's */}
+                    <g
+                      transform={`translate(${st.x - g / 2} ${STATION_Y + bob - g / 2}) scale(${g / 24})`}
+                      fill="none"
+                      stroke={colour}
+                      strokeWidth={(GLYPH_STROKE_WORLD * 24) / g}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={OP_FG}
+                      dangerouslySetInnerHTML={{ __html: st.glyph }}
+                    />
                   </g>
                 );
               })}
@@ -1037,7 +1337,7 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                       cy={BUB_Y1 + p.dy}
                       r={p.r * s}
                       fill={ink}
-                      opacity={OP_READ}
+                      opacity={OP_MID}
                     />
                   );
                 })}
@@ -1052,43 +1352,45 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                     stroke={ink}
                     strokeWidth={STROKE}
                     strokeLinecap="round"
-                    opacity={OP_READ}
+                    opacity={OP_MID}
                   />
-                  {TARGET_RINGS.map((r, j) =>
-                    tgt[j] > 0 ? (
-                      <g key={j}>
-                        <circle
-                          cx={BUB_CX}
-                          cy={TARGET_CY}
-                          r={r}
-                          fill="none"
-                          stroke={ink}
-                          strokeWidth={STATION_GLYPH_STROKE * TARGET_S}
-                          strokeLinecap="round"
-                          opacity={OP_READ}
-                          pathLength={1}
-                          strokeDasharray="1 1"
-                          strokeDashoffset={1 - tgt[j]}
-                          transform={`rotate(-90 ${BUB_CX} ${TARGET_CY})`}
-                        />
-                        {tgt[j] < 1 ? (
-                          <circle
-                            cx={BUB_CX + r * Math.cos(2 * Math.PI * tgt[j] - Math.PI / 2)}
-                            cy={TARGET_CY + r * Math.sin(2 * Math.PI * tgt[j] - Math.PI / 2)}
-                            r={4 / k}
-                            fill={ink}
-                          />
-                        ) : null}
-                      </g>
-                    ) : null,
-                  )}
-                  {tgtDot > 0 ? (
+                  {/* the mission. Pole up first, then the cloth as one stroke. */}
+                  <g
+                    transform={`translate(${BUB_CX} ${TARGET_CY}) scale(${FLAG_S}) translate(${-FLAG_CX} ${-FLAG_CYG})`}
+                    fill="none"
+                    stroke={ink}
+                    strokeWidth={GLYPH_STROKE_WORLD / FLAG_S}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={OP_FG}
+                  >
+                    {pole > 0 ? (
+                      <line x1={4} x2={4} y1={22} y2={22 + (15 - 22) * pole} />
+                    ) : null}
+                    {cloth > 0 ? (
+                      <path
+                        d={ICON_FLAG_CLOTH}
+                        pathLength={1}
+                        strokeDasharray="1 1"
+                        strokeDashoffset={1 - cloth}
+                      />
+                    ) : null}
+                  </g>
+                  {/* the two stroke heads, in screen-space radius */}
+                  {pole > 0 && pole < 1 ? (
                     <circle
-                      cx={BUB_CX}
-                      cy={TARGET_CY}
-                      r={TARGET_DOT * tgtDot}
+                      cx={flagWorld(4, 22 + (15 - 22) * pole).x}
+                      cy={flagWorld(4, 22 + (15 - 22) * pole).y}
+                      r={4 / k}
                       fill={ink}
-                      opacity={OP_READ}
+                    />
+                  ) : null}
+                  {cloth > 0 && cloth < 1 ? (
+                    <circle
+                      cx={clothHead(cloth).x}
+                      cy={clothHead(cloth).y}
+                      r={4 / k}
+                      fill={ink}
                     />
                   ) : null}
                 </g>
@@ -1111,7 +1413,7 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
               width: GLYPH,
               height: GLYPH,
               filter: `brightness(0) invert(1) ${icon}`,
-              opacity: OP_READ,
+              opacity: OP_FG,
             }}
           />
         </div>
@@ -1142,6 +1444,20 @@ export const MILL_STATS = {
   inFlightAt: [60, 80, 100, 140].map((f) =>
     HOPS.filter((h) => h.some((q) => f >= q.t0 && f < q.t0 + MILL_DUR)).length,
   ),
+};
+export const DEPTH_STATS = {
+  fg: OP_FG,
+  mid: OP_MID,
+  bg: OP_BG,
+  backDots: DOTS.filter((d) => d.back).length,
+  total: N,
+  perStation: SEATS.map((_, s) => {
+    const mine = DOTS.filter((d) => d.st === s);
+    return `${mine.filter((d) => d.back).length}/${mine.length}`;
+  }),
+  glyphStrokeWorld: GLYPH_STROKE_WORLD,
+  ringStrokeWorld: RING_STROKE,
+  reached: REACHED.map((r) => Number(r.toFixed(1))),
 };
 export const DRAWN_BOUNDS = {
   top: STATION_Y - ANN_R1 * ANN_YS,
