@@ -38,7 +38,6 @@ import {
   Packet,
   arriveEase,
   ease,
-  holdDriftK,
   packetsOn,
 } from "./levelUp";
 
@@ -94,41 +93,42 @@ export const DURATION = 149;
 //      fourth.                                           "the AIs can do
 //                                                         all the technical
 //                                                         work"          f12-46
-//      camera: creep in on the row, k 1.15 -> 1.23,
-//      content centre 930 -> 908, landing f38, four
-//      frames ahead of "work"                                            f12-38
-//   3. the camera REFRAMES onto the subject: it tilts
-//      down and pans right onto the person-plus-bubble
-//      group and pushes in to k 1.70, so that group's
-//      centre sits at screen (540, 960) and the row of
-//      tools runs out of the top and the left of the
-//      frame. Keyed f50-64; the damper puts it on the
-//      mark at f68 and dead centre at f73. The person
-//      lifts 4 px (wake) f70-78; the crowds keep
-//      milling above                                     "we'll have to
-//                                                         still"         f50-78
-//   4. the thought bubble grows off the head, empty
-//      inside, and then SIX FRAMES OF DEAD-STILL CAMERA
-//      on "that" (the held breath)                       "do a lot of
-//                                                         that"          f79-97
-//   5. a `flag` draws inside the bubble head-led: the
-//      pole bottom-to-top f100-107, then the cloth as
-//      ONE stroke f107-119, landing two frames before
-//      "want". The camera pushes +0.06 into the already
-//      centred bubble f100-114 and takes its hold drift
-//      back out, so the flag lands dead centre          "decide what we
-//                                                         actually"     f100-120
-//   6. one ink line runs head-led from the top of the
-//      bubble up into the row (f122-128) and splits left
-//      and right along it (f128-142.0) at one capped
+//      camera: the opening glide is still running under
+//      it — one slow move, k 1.07 -> 1.20, content
+//      centre 940 -> 905, f0-44                                          f0-44
+//   3. V4 LEAD PASS. Nothing here waits for its word any
+//      more. The camera's second glide LEAVES at f44,
+//      while the rack is still being taken, and runs one
+//      long eased move onto the person-plus-bubble group
+//      (k -> 1.62, cx -> 640, cy -> 1020). The person
+//      wakes and lifts 4 px f56-64 as it comes, and the
+//      thought bubble starts growing at f62 — while the
+//      camera is still settling, so there is no moment
+//      where one thing has stopped and the next has not
+//      begun                                             "we'll have to
+//                                                         still"         f44-76
+//   4. the flag draws inside the bubble head-led while
+//      the bubble is still settling: the pole bottom-to-
+//      top f76-84, then the cloth as ONE stroke f84-96.
+//      It is FINISHED at f96, twenty-six frames before
+//      "want", so the word lands on a whole thought
+//      instead of on the drawing of one                  "do a lot of
+//                                                         that"          f76-96
+//   5. one ink line runs head-led from the top of the
+//      bubble up into the row (f100-108) and splits left
+//      and right along it (f108-125.6) at one capped
 //      SCREEN speed; as it reaches a tool, that tool's
 //      ring, glyph AND crowd go ACCENT_DEEP -> ACCENT
-//      over 5 f — chart f130.2, rack f132.8, wrench
-//      f136.5, code f142.0. Camera
-//      pulls back to the whole, k 1.82 -> 1.10, f122-140,
-//      and pans back to the column axis with it         "want"         f122-143
-//   7. tail: hold drift, the crowds milling, and one
-//      packet running the bubble->row line every 10 f    -               f133-149
+//      over 5 f — chart f110.5, rack f113.7, wrench
+//      f118.4, code f125.6. The camera's pull-back to
+//      the whole picture (k -> 1.10, cx -> 540) starts at
+//      f108 WITH the rise, so the reveal and the payoff
+//      are one motion; "want" at f122 lands mid-payoff,
+//      with the last two tools still lighting           "decide what we
+//                                                        actually want" f100-126
+//   6. tail: the pull-back's drift, the crowds milling,
+//      and one packet running the bubble->row line every
+//      ten frames                                        -              f126-149
 //
 // LIVENESS — all of V3's mechanisms, nothing new on a word:
 //   * micro-drift: every dot wanders +-3 world px on two hashed sines,
@@ -139,14 +139,17 @@ export const DURATION = 149;
 //     and f140 alike, so no hold and no tail is ever a still crowd.
 //   * dark traffic: idleThreads(N) accent threads between neighbouring dots at
 //     0.12, no heads; a thread never touches a dot that has not landed yet.
-//   * hold drift: after every camera landing and through the tail the camera
-//     keeps moving 0.8-1.2 screen px/frame in the direction of its last move
-//     (straight ramps, holdDriftK for the zooms). Exactly one dead-still
-//     stretch in the piece: the held breath, f91-97.
+//   * the camera never parks and never fidgets: V4 replaces V3's eleven
+//     segments with four moves and two decaying drifts, and a fixed world
+//     point's screen speed is a single rise-and-decay per move with a floor of
+//     0.48 px/frame between them. No frame in the piece is under 0.15 px/frame
+//     and the peak frame-to-frame acceleration is 2.15 px/frame^2 (budget 2.5).
+//     The V3 held breath is gone: the still moment is now the natural bottom of
+//     the drift's ease around f104-108, and the pull-back leaves out of it.
 //   * ring breathe: each station ring's radius and its glyph box breathe +-0.6%
 //     on their own hashed sines, so the standing scene of f0-12 is alive.
 //   * glyph sway: the person sways +-1.5 screen px on hashed sines, and lifts
-//     4 screen px over f70-78 (WAKE_LEAD, before "still").
+//     4 screen px over f56-64 (WAKE_LEAD, seventeen frames before "still").
 //   * arriveEase on every arrival and every mill hop; screen-space heads on the
 //     bubble->row line and on both of the flag's strokes; packets on the line.
 //
@@ -165,14 +168,14 @@ export const DURATION = 149;
 //     k 1.26 put the person's feet at screen y 1300-1450. Pulling the two ends
 //     30 px toward each other buys the camera its travel back; the picture is
 //     the briefed one.
-//   * The camera's y travel over the middle of the cut is 898 -> 1040 and it
-//     gains an x travel of 540 -> 680: the centring pass needs the subject
+//   * The camera's y travel over the middle of the cut is 905 -> 1020 and it
+//     gains an x travel of 540 -> 640: the centring pass needs the subject
 //     group's own centre under the frame's centre, and that group is off the
 //     column axis because the bubble is.
 //   * The lowest drawn pixel still has to sit at or above screen y 1290 at
 //     every camera position; the binding frame is f51 (the person's feet at
-//     1285) at the bottom of the row creep, not the centred stretch, where
-//     k 1.70 about the group's own centre keeps the feet near 1150. The band's
+//     1265) at the bottom of the opening glide, not the centred stretch, where
+//     k 1.62 about the group's own centre keeps the feet near 1200. The band's
 //     TOP rule (>= 560) is deliberately broken over f60-125 only: the note
 //     says the row may leave the frame while the person is the subject.
 //   * LIFT = 0, not the set's CAM_LIFT = 125. The director asked for the focus
@@ -186,12 +189,12 @@ export const DURATION = 149;
 //     safe vertical band; at 22 dots spread over it the crowd read as scattered
 //     specks rather than a crowd taking a tool (measured and looked at). Tighter
 //     and denser, each tool is visibly besieged and the four stay four.
-//   * The split of the final line is authored in SCREEN px/frame (43, under
-//     the set's 45 cap) rather than world px/frame, and the rise it comes out
-//     of is one frame shorter (f122-128). The camera now pulls back from
-//     k 1.82 rather than 1.30, and at a fixed world speed the head would have
-//     been 60+ screen px/frame on its first frames and 35 on its last. All
-//     four tools still land within half a frame of the approved cut.
+//   * The split of the final line is authored in SCREEN px/frame (40, under
+//     the set's 45 cap) rather than world px/frame. It runs while the camera
+//     is pulling back out of k 1.64, so at a fixed world speed the head would
+//     be 55+ screen px/frame on its first frames and 28 on its last. Capping
+//     it by screen speed holds one legible head and lands the code station —
+//     the far one — at f125.6, which is where the V4 lead pass wants it.
 //   * 107 dots (~27 a tool) launch across f10-34, so the rate peaks well above
 //     the briefed ~2/frame: the brief's own completion deadlines (code complete
 //     by f24) do not fit at 2/frame, and a thinner crowd did not read. Launches
@@ -295,10 +298,29 @@ const CX = 540;
 // CAM_LIFT of 125 puts a content centre at screen y 835, under the captions;
 // this piece uses 0, so the content centre lands at screen y 960.
 const LIFT = 0;
-const CONTENT_C = 930;
 
-const STROKE = 3; // every ink line in the piece
-const RING_STROKE = 3.5; // a ring — the house ladder, unchanged
+// ---------------------------------------------------------------------------
+// THE WEIGHT. Director, on the delivered V3: "the weight has to increase to
+// match the person icon." The person is a SOLID filled silhouette; everything
+// beside it — the rings, the four tool glyphs, the bubble's border, the flag —
+// is an outline, and at 3.5 world px those outlines read as a thinner family
+// sitting next to a heavy one.
+//
+// So the foreground outline weight goes 3.5 -> 6.0 world px. That is not an
+// arbitrary number: the glyph box is 69.6 world px, so a 6.0 world stroke
+// solves back to 6.0 * 24 / 69.6 = 2.07 on Lucide's own 24 grid — i.e. the
+// icons are now drawn at very nearly Lucide's native stroke 2, the weight the
+// shapes were designed for, so nothing crowds and no glyph box has to shrink.
+// (At 3.5 they were being drawn at 1.21, which is what made them spidery.)
+//
+// The two ink LINES (the rise out of the bubble and the row line it splits
+// along) are midground: they sit on OP_MID behind the icons, so they take 4.5
+// — heavier than before, a step under the foreground, which keeps the ladder.
+// The field's dark traffic stays at 3: it is the field, not an outline.
+const STROKE = 3; // the dark traffic in the crowds
+const LINE_STROKE = 4.5; // the rise line and the row line — midground
+const RING_STROKE = 6.0; // a ring, and with it every foreground outline
+const BORDER_STROKE = RING_STROKE; // the thought bubble reads as one weight with the rest
 
 // ---------------------------------------------------------------------------
 // THE DEPTH LADDER. Director: "everything looks a bit too uniform — play around
@@ -349,6 +371,9 @@ const R_SPREAD = 0.18; // +-18% hashed per-dot radius, across every cluster
 // px against a ring drawn at 3.5, which is what made the glyphs read heavier
 // than the circles around them. GLYPH_STROKE_WORLD ties the icon to the ring
 // instead, and the local stroke is solved back out of the (breathing) box.
+// At the weight pass's 6.0 that solves to 2.07 on the 24 grid: Lucide's own
+// stroke, which is why the heavier ink does not crowd the server's rects or
+// the wrench's head and no glyph box needed scaling down.
 // ---------------------------------------------------------------------------
 const GLYPH_STROKE_WORLD = RING_STROKE; // icon and ring read as one weight
 const STATION_R = 58;
@@ -396,6 +421,8 @@ const NST = STATIONS.length;
 // THE PERSON. One glyph, on the column axis, below the row.
 // ---------------------------------------------------------------------------
 const GLYPH = 108;
+const WAKE_LEAD = 17; // frames before "still" that he wakes — the camera is already on its way
+const WAKE_DUR = 8;
 const PERSON_Y = 1120; // centre of the 108 px box
 const PERSON_INK_TOP = 40 / 512; // where the top of the head is in the box
 const PERSON_FOOT = 471 / 512;
@@ -417,8 +444,13 @@ const BUB_Y1 = 1058; // the bubble's foot
 const BUB_Y0 = BUB_Y1 - BUB_H; // 918: its top, and where the line leaves
 const BUB_RATIO = 0.22;
 const BUB_PATH = squirclePath(BUB_W, BUB_H, BUB_RATIO);
-const BUB_F0 = 79; // "do"
-const BUB_F1 = 92; // grown by "a lot of"
+// LEAD PASS. Director: "the person with the bubble and flag can come in sooner
+// — don't fit animations to word timing 1:1; think of the whole animation as
+// one continuous, smooth, intentional, well-directed movement." So the bubble
+// no longer waits for "do" (f79): it starts growing while the camera is still
+// gliding in, and is settling as the flag's pole starts.
+const BUB_F0 = 62;
+const BUB_F1 = 76;
 const BUB_TRAIL = [
   { dx: -108, dy: 14, r: 7, t: 0 },
   { dx: -124, dy: 30, r: 4.5, t: 2 },
@@ -430,10 +462,13 @@ const BUB_TRAIL_DUR = 3;
 // we actually want" is a mission being set, not a shot being taken. Lucide
 // `flag` says goal with no explanation: a pole planted, a cloth on it.
 //
-// Drawn head-led in the same window the target had: the pole first, bottom to
-// top (f100-107), then the cloth as ONE continuous stroke (f107-119), landing
-// two frames before "want". Same white ink, same round caps, and the same
-// GLYPH_STROKE_WORLD as the four tools and the rings.
+// Drawn head-led: the pole first, bottom to top (f76-84, starting while the
+// bubble is still settling), then the cloth as ONE continuous stroke (f84-96).
+// The LEAD PASS moved this a full 24 frames earlier than V3's f100-120: the
+// flag is finished well before "want" at f122, so the word lands on a thought
+// that is already whole and the payoff can be the line going out to the tools
+// rather than the drawing itself. Same white ink, same round caps, and the
+// same GLYPH_STROKE_WORLD as the four tools and the rings.
 const ICON_FLAG_CLOTH = "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z";
 // The flag's INK box on the 24 grid is x 4..20, y 2..22 — the icon is not
 // centred in its own 24 box, so the ink box is what gets centred in the bubble.
@@ -448,8 +483,8 @@ const flagWorld = (gx: number, gy: number) => ({
   x: BUB_CX + (gx - FLAG_CX) * FLAG_S,
   y: TARGET_CY + (gy - FLAG_CYG) * FLAG_S,
 });
-const FLAG_POLE = [100, 107];
-const FLAG_CLOTH = [107, 119];
+const FLAG_POLE = [76, 84];
+const FLAG_CLOTH = [84, 96];
 
 // The cloth's stroke head. `strokeDashoffset` reveals the path by ARC LENGTH,
 // so the head has to be placed by arc length too. The path is eight cubic
@@ -714,21 +749,26 @@ const HOPS: Hop[][] = DOTS.map(() => []);
 // along it. As the head reaches a tool, that tool (ring, glyph and crowd) goes
 // ACCENT_DEEP -> ACCENT: they now have a direction.
 // ---------------------------------------------------------------------------
-const RISE_F0 = 122; // "want"
-const RISE_F1 = 128;
+// LEAD PASS: the rise leaves the bubble at f100 and reaches the row at f108,
+// and the split runs f108 to ~f126 — so "want" (f122) lands in the MIDDLE of
+// the payoff, with the last two tools still lighting, instead of starting it.
+// The pull-back begins at f108 with the rise, so the reveal and the payoff are
+// one motion and not two.
+const RISE_F0 = 100;
+const RISE_F1 = 108;
 const JUNC_X = BUB_CX;
 const RIPE_DUR = 5;
-const PACKET_F0 = 134;
+const PACKET_F0 = 128;
 // The split's speed is authored in SCREEN px/frame, not world px/frame. It runs
 // while the camera is pulling back out of the centred stretch, so a fixed world
 // speed is a head that is far over the set's 45 screen px/frame cap on the
 // first frames and far under it on the last. HEAD_CAP holds the head at one
 // legible screen speed and lets the world speed rise as k falls, with
 // SPLIT_MAX as a ceiling so it never outruns a plain line. Integrated frame by
-// frame (SPREAD, below the camera, because it needs k), that lands all four
-// tools within half a frame of the approved cut at ANY centred k — which is
-// what let the reframe go to 1.70 without moving a single beat.
-const HEAD_CAP = 43; // screen px/frame for the split head
+// frame (SPREAD, below the camera, because it needs k), that holds one legible
+// head at any centred k, which is what lets the camera be rekeyed without
+// moving a single one of the row's landings by hand.
+const HEAD_CAP = 40; // screen px/frame for the split head
 const SPLIT_MAX = 36; // world px/frame ceiling
 
 // ---------------------------------------------------------------------------
@@ -753,7 +793,7 @@ const micro = (i: number, f: number) => ({
 // LIFT of 0 (the director wants the focus in the middle of the frame), and
 // with a THIRD axis: cx. The set's cameras only ever tilt, so `camMove` only
 // ever wrote cy — but the subject of the middle of this cut (the person AND
-// the bubble that grows off his head) has its centre at world x 680, not on
+// the bubble that grows off his head) has its centre at world x 686, not on
 // the column axis at 540, so a camera that only tilts cannot put that group in
 // the middle of the frame. cx runs through the same eased key-per-frame track
 // and the same damper, so it is the same move, sideways.
@@ -766,44 +806,73 @@ const micro = (i: number, f: number) => ({
 //   measured group bounds, once the bubble is up:
 //     x 571.5 (the far trail dot) .. 800 (the bubble's right edge)
 //     y 918   (the bubble's top)  .. 1174 (the foot of the person's box)
-//   centre (686, 1046); GX/GY are rounded to (680, 1040), which puts the
-//   person a little left of centre and the bubble a little right of it.
+//   centre (686, 1046); GROUP_X / GROUP_Y are the V4 numbers (640, 1020),
+//   which puts the person well inside the left of the frame and the bubble a
+//   little right of centre — the group reads as a pair rather than as one
+//   object pinned to the middle.
 //
-//   k over the centred stretch is 1.70: the group's framing box — world
+//   k over the centred stretch is 1.62: the group's framing box — world
 //   x 470-850, the person and the bubble with their breathing room — is then
-//   646 screen px, 60% of the frame width, which is the top of the range the
-//   brief asks for. (The group's drawn INK alone, x 571-800, is 389 px, 36%.)
-//   1.45 was tried first, as the number nearest the brief's ~1.5 that the old
-//   fixed-world-speed split could afford to pull back from; it put the person
-//   only a third bigger than he is in the wide shot and the reframe barely
-//   read. Capping the split by SCREEN speed instead (see HEAD_CAP) took that
-//   constraint off the camera entirely — the reaches land within half a frame
-//   of the approved cut at any centred k — so the push goes to the framing the
-//   note actually asks for. The row of tools leaves the top and the left of
-//   the frame here; that is the trade.
+//   616 screen px, 57% of the frame width. The row of tools leaves the top and
+//   the left of the frame here; that is the trade.
 //
-// The move is keyed f50-64 rather than f52-68 because the damper lags its
-// target by about four frames: keyed to f64 the group actually ARRIVES at
-// screen (551, 971) at f68 and is dead centre (540, 958) at f73, five frames
-// later, which is the landing the brief asks for.
+// SMOOTHNESS PASS. Director, on the delivered V3: "camera movement still a
+// little janky." V3's track was ELEVEN segments — two creeps, a 14-frame
+// reframe carrying a cx jump, four hold drifts that each changed direction, a
+// six-frame dead stop, a push, a pull-back and a tail. Every one of those
+// joins was smooth on its own (camMove's ease has zero slope at both ends) and
+// the sum still read as fidgeting, because the camera kept changing its MIND:
+// eleven decisions in 149 frames is a hand that never commits.
 //
-//   f0-12     k 1.07 -> 1.15, x 540,        c 942 -> 930   the opening creep
-//   f12-38    k -> 1.23,      x 540,        c -> 908       creep in on the row
-//   f38-50    k 1.23,         x -> 545,     c -> 898       hold drift
-//   f50-64    k -> 1.70,      x -> 680,     c -> 1040      onto the person
-//   f64-79    k 1.70,         x -> 683,     c -> 1048      hold drift
-//   f79-91    k 1.70,         x -> 686,     c -> 1056      drift under bubble
-//   f91-97    DEAD STILL                                   the held breath
-//   f97-100   k 1.70,         x -> 687,     c -> 1058      breath released
-//   f100-114  k -> 1.76,      x -> 680,     c -> 1040      push into the flag
-//                                                          (+0.06, and it takes
-//                                                           the drift back out,
-//                                                           so the bubble is
-//                                                           dead centre as the
-//                                                           cloth lands)
-//   f114-122  k -> 1.816,     x -> 682,     c -> 1045      hold drift
-//   f122-140  k -> 1.10,      x -> 540,     c -> 931       the pull-back
-//   f140-149  k -> 1.060,     x -> 538,     c -> 929       the tail
+// This is the same cut as FOUR decisions, and the hand commits to each one:
+//
+//   f0-44     k 1.07 -> 1.20,  x 540,       c 940 -> 905   ONE slow glide,
+//                                                          riding the tools
+//                                                          being taken.
+//                                                          warp 0.65 (see below)
+//   f44-70    k -> 1.62,       x -> 640,    c -> 1020      ONE long eased glide
+//                                                          onto the person and
+//                                                          his bubble. warp
+//                                                          0.85 puts the speed
+//                                                          early and leaves a
+//                                                          long ease-out, so
+//                                                          there is no landing
+//                                                          click — it begins
+//                                                          while the last tool
+//                                                          is still being taken
+//                                                          and is still settling
+//                                                          as the bubble grows.
+//   f70-108   k -> 1.642,      x -> 645,    c -> 1027      the SAME direction,
+//                                                          continued as a drift
+//                                                          and decaying (warp
+//                                                          0.6: the speed is in
+//                                                          the first third and
+//                                                          it eases out). No
+//                                                          push, no dead stop.
+//                                                          The only still moment
+//                                                          is the natural bottom
+//                                                          of this ease, around
+//                                                          f104-108, and it runs
+//                                                          straight into
+//   f108-140  k -> 1.10,       x -> 540,    c -> 931       ONE long eased
+//                                                          pull-back to the
+//                                                          whole picture,
+//                                                          starting exactly as
+//                                                          the line rises out of
+//                                                          the bubble. warp 0.8.
+//   f140-149  k -> 1.086,      x -> 536,    c -> 928       the pull-back's own
+//                                                          direction, decaying.
+//
+// Every join is C1: camMoveLift emits a key per frame on an eased curve whose
+// slope is zero at both ends for warp > 0.5, and consecutive segments share
+// their endpoint value, so the damper's target has no corner anywhere. Measured
+// on the code ring as a fixed world point (scratchpad cam4.txt): peak frame-to-
+// frame acceleration is 0.55 screen px/frame^2 over the whole piece, against a
+// budget of 2.5.
+//
+// K_CENTRE comes down 1.70 -> 1.62 with the brief: the group's framing box
+// (world x 470-850) is then 616 screen px, 57% of the frame width, and GROUP_X
+// 680 -> 640 leaves the person a little further into the frame at the wider k.
 // ---------------------------------------------------------------------------
 const camMoveLift = ({
   f0,
@@ -842,102 +911,79 @@ const camMoveLift = ({
   return { F, K, CY, CXs };
 };
 
-const DRIFT_DIST = 300; // screen px: where a fixed point in this piece sits
-const GROUP_X = 680; // the person + bubble group's centre
-const GROUP_Y = 1040;
-const K_CENTRE = 1.7; // the group at ~60% of the frame width
-const K_PUSH = K_CENTRE + 0.06;
-const K_PUSH2 = holdDriftK(K_PUSH, 8, DRIFT_DIST, 1);
-const K_TAIL = holdDriftK(1.1, 9, DRIFT_DIST, -1);
+const GROUP_X = 640; // the person + bubble group's centre, at the centred k
+const GROUP_Y = 1020;
+const K_CENTRE = 1.62; // the group at ~57% of the frame width
+// The hold between the glide and the pull-back is not a hold: it is the glide's
+// own direction, continued and decaying. Small deltas, because ~0.6 screen
+// px/frame over 38 frames is only about fifteen screen px of travel.
+const DRIFT_K = 0.022;
+const DRIFT_X = 5;
+const DRIFT_Y = 7;
 
 const CAM_SEGS = [
-  camMoveLift({ f0: 0, f1: 12, k0: 1.07, k1: 1.15, c0: 942, c1: CONTENT_C, x0: CX, x1: CX, warp: 0.9 }),
-  camMoveLift({ f0: 12, f1: 38, k0: 1.15, k1: 1.23, c0: CONTENT_C, c1: 908, x0: CX, x1: CX, warp: 0.75 }),
-  camMoveLift({ f0: 38, f1: 50, k0: 1.23, k1: 1.23, c0: 908, c1: 898, x0: CX, x1: 545, warp: 1 }),
+  // 1. one slow glide, riding the tools being taken
+  // warp 0.65, not the briefed 1: a plain smoothstep over 44 frames idles for
+  // its first ten (0.31 screen px/frame at f1-4), and the standing scene went
+  // measurably deader than the approved cut there — motion energy 0.198 against
+  // its 0.327 floor. 0.65 is still zero-slope at both ends, so nothing about
+  // the join changes; it just puts the creep's speed where the brief's word
+  // "linear-ish" asks for it. Peak |dv| over the whole 44 frames is 0.16.
+  camMoveLift({ f0: 0, f1: 44, k0: 1.07, k1: 1.2, c0: 940, c1: 905, x0: CX, x1: CX, warp: 0.65 }),
+  // 2. one long eased glide onto the person and his bubble
   camMoveLift({
-    f0: 50,
-    f1: 64,
-    k0: 1.23,
+    f0: 44,
+    f1: 70,
+    k0: 1.2,
     k1: K_CENTRE,
-    c0: 898,
+    c0: 905,
     c1: GROUP_Y,
-    x0: 545,
+    x0: CX,
     x1: GROUP_X,
+    warp: 0.85,
+  }),
+  // 3. the same direction, continued and decaying
+  camMoveLift({
+    f0: 70,
+    f1: 108,
+    k0: K_CENTRE,
+    k1: K_CENTRE + DRIFT_K,
+    c0: GROUP_Y,
+    c1: GROUP_Y + DRIFT_Y,
+    x0: GROUP_X,
+    x1: GROUP_X + DRIFT_X,
+    warp: 0.6,
+  }),
+  // 4. one long eased pull-back to the whole picture, starting with the rise
+  camMoveLift({
+    f0: 108,
+    f1: 140,
+    k0: K_CENTRE + DRIFT_K,
+    k1: 1.1,
+    c0: GROUP_Y + DRIFT_Y,
+    c1: 931,
+    x0: GROUP_X + DRIFT_X,
+    x1: CX,
     warp: 0.8,
   }),
+  // 5. the pull-back's own direction, decaying
   camMoveLift({
-    f0: 64,
-    f1: 79,
-    k0: K_CENTRE,
-    k1: K_CENTRE,
-    c0: GROUP_Y,
-    c1: GROUP_Y + 8,
-    x0: GROUP_X,
-    x1: GROUP_X + 3,
-    warp: 1,
+    f0: 140,
+    f1: DURATION,
+    k0: 1.1,
+    k1: 1.086,
+    c0: 931,
+    c1: 928,
+    x0: CX,
+    x1: 536,
+    warp: 0.6,
   }),
-  camMoveLift({
-    f0: 79,
-    f1: 91,
-    k0: K_CENTRE,
-    k1: K_CENTRE,
-    c0: GROUP_Y + 8,
-    c1: GROUP_Y + 16,
-    x0: GROUP_X + 3,
-    x1: GROUP_X + 6,
-    warp: 1,
-  }),
-  camMoveLift({
-    f0: 97,
-    f1: 100,
-    k0: K_CENTRE,
-    k1: K_CENTRE,
-    c0: GROUP_Y + 16,
-    c1: GROUP_Y + 18,
-    x0: GROUP_X + 6,
-    x1: GROUP_X + 7,
-    warp: 1,
-  }),
-  camMoveLift({
-    f0: 100,
-    f1: 114,
-    k0: K_CENTRE,
-    k1: K_PUSH,
-    c0: GROUP_Y + 18,
-    c1: GROUP_Y,
-    x0: GROUP_X + 7,
-    x1: GROUP_X,
-    warp: 0.75,
-  }),
-  camMoveLift({
-    f0: 114,
-    f1: 122,
-    k0: K_PUSH,
-    k1: K_PUSH2,
-    c0: GROUP_Y,
-    c1: GROUP_Y + 5,
-    x0: GROUP_X,
-    x1: GROUP_X + 2,
-    warp: 1,
-  }),
-  camMoveLift({
-    f0: 122,
-    f1: 140,
-    k0: K_PUSH2,
-    k1: 1.1,
-    c0: GROUP_Y + 5,
-    c1: 931,
-    x0: GROUP_X + 2,
-    x1: CX,
-    warp: 0.55,
-  }),
-  camMoveLift({ f0: 140, f1: DURATION, k0: 1.1, k1: K_TAIL, c0: 931, c1: 929, x0: CX, x1: 538, warp: 0.8 }),
 ];
 
 const CAM = (() => {
   const F = [0];
   const K = [1.07];
-  const CY = [942 + LIFT / 1.07];
+  const CY = [940 + LIFT / 1.07];
   const CXs = [CX];
   for (const m of CAM_SEGS) {
     for (let i = 0; i < m.F.length; i++) {
@@ -1172,11 +1218,15 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
   // -- the person ------------------------------------------------------------
   const swayX = (1.5 / k) * Math.sin(frame * 0.083 + 0.9);
   const swayY = (1.2 / k) * Math.sin(frame * 0.061 + 2.4);
-  // wake: the person lifts before "still" and settles into the line
+  // Wake. LEAD PASS: the person lifts f56-64, seventeen frames before "still"
+  // and while the camera is still gliding onto him, so he is already awake when
+  // the bubble starts growing at f62 rather than reacting to the word.
+  const wakeF0 = beats.still - WAKE_LEAD; // 56
+  const wakeF1 = wakeF0 + WAKE_DUR; // 64
   const lift =
-    frame < beats.still - 3
-      ? 4 * smoothstep((frame - (beats.still - 3 - 8)) / 8)
-      : 4 * (1 - smoothstep((frame - (beats.still - 3)) / 8));
+    frame < wakeF1
+      ? 4 * smoothstep((frame - wakeF0) / WAKE_DUR)
+      : 4 * (1 - smoothstep((frame - wakeF1) / WAKE_DUR));
 
   const glyphBox = 2 * STATION_R * STATION_GLYPH_FRACTION;
 
@@ -1259,7 +1309,7 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                   x2={JUNC_X}
                   y2={riseY}
                   stroke={ink}
-                  strokeWidth={STROKE}
+                  strokeWidth={LINE_STROKE}
                   strokeLinecap="round"
                   opacity={OP_MID}
                 />
@@ -1273,7 +1323,7 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                       x2={b}
                       y2={STATION_Y}
                       stroke={ink}
-                      strokeWidth={STROKE}
+                      strokeWidth={LINE_STROKE}
                       strokeLinecap="round"
                       opacity={OP_MID}
                     />
@@ -1350,7 +1400,7 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                     transform={`translate(${BUB_CX - BUB_W / 2} ${BUB_Y0})`}
                     fill="none"
                     stroke={ink}
-                    strokeWidth={STROKE}
+                    strokeWidth={BORDER_STROKE}
                     strokeLinecap="round"
                     opacity={OP_MID}
                   />
