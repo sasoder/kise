@@ -1,28 +1,27 @@
 import {Composition} from 'remotion';
-import PowerTheEntireUs, {
+import TwitterToX, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/PowerTheEntireUs';
+} from '../generated/components/TwitterToX';
 
-// Joel, 28.719 s: "it takes 100 square miles ... 100 by 100 to power the entire
-// US a few times over". A 100 x 100 mile square fills with real solar strings on
-// satellite desert, gets its dimensions, then one pull-back reveals the whole
-// contiguous US with the square tiny in the West and two more stamping in.
-// Opaque 1080x1920.
+// Musk buys Twitter: the Twitter tile holds dead still, cracks along its
+// corner-to-corner diagonal, splits in two, and the X tile comes up from inside
+// the gap and shoves the halves out of frame. Transparent overlay asset,
+// 1080x1080 at 24fps.
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="PowerTheEntireUs"
-        component={PowerTheEntireUs}
+        id="TwitterToX"
+        component={TwitterToX}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}
         fps={FPS}
         width={1080}
-        height={1920}
+        height={1080}
       />
     </>
   );
