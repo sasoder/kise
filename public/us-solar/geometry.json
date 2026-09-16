@@ -54,5 +54,76 @@
    "y": -2193
   },
   "note": "Extended plate, same zoom-6 pixel space as conus_z6. Draw it at (in_old_world.x, in_old_world.y) in the existing world coords (which are conus_z6 pixel coords); conus_z6 then becomes redundant and should be removed."
+ },
+ "appalachia_z8": {
+  "origin_world_px": [
+   17152,
+   24576
+  ],
+  "size": [
+   1536,
+   1536
+  ],
+  "in_world": {
+   "x": 1853.0,
+   "y": 623.0,
+   "scale": 0.25
+  },
+  "note": "zoom-8 patch; draw at in_world x,y at scale 0.25 in the existing world (conus_z6 pixel) coords"
+ },
+ "coalfield_polygon_world": {
+  "points": [
+   [
+    2025.09,
+    769.8
+   ],
+   [
+    2061.5,
+    781.42
+   ],
+   [
+    2075.15,
+    804.55
+   ],
+   [
+    2066.05,
+    833.29
+   ],
+   [
+    2034.19,
+    861.84
+   ],
+   [
+    1997.78,
+    873.21
+   ],
+   [
+    1965.92,
+    856.15
+   ],
+   [
+    1956.82,
+    827.56
+   ],
+   [
+    1979.58,
+    798.78
+   ],
+   [
+    2002.33,
+    775.61
+   ]
+  ],
+  "centroid": [
+   2016.44,
+   818.22
+  ],
+  "bbox": [
+   1956.8,
+   769.8,
+   2075.2,
+   873.2
+  ],
+  "note": "central Appalachian coalfield (WV/KY/VA), approximate, world coords; mining land region for CoalMiningLand"
  }
 }
