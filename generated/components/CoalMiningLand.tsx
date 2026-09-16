@@ -5,7 +5,7 @@ import {z} from 'zod';
 import outlineJson from '../../public/us-solar/us_outline_z6.json';
 import geometry from '../../public/us-solar/geometry.json';
 
-const {fontFamily} = loadFont('normal', {weights: ['700'], subsets: ['latin']});
+const {fontFamily} = loadFont('normal', {weights: ['800'], subsets: ['latin']});
 
 /**
  * CoalMiningLand — 136 f @ 24 fps, 1080x1920, opaque.
@@ -50,10 +50,21 @@ const {fontFamily} = loadFont('normal', {weights: ['700'], subsets: ['latin']});
  *    Nothing is visible before f50.
  *  - NO polygon stroke anywhere. The ragged string cluster alone is the shape
  *    of the land; an outline sat far outside the strings and read as a ring.
- *  - "right?" (f97-f103): ONE label, "coal mining land", fades in with a 6 px
- *    rise — screen space, centred on the polygon centroid's screen x, cap-top
- *    24 px below the polygon bbox's bottom edge, recomputed from the camera
- *    every frame so it rides the creep. It stays to f135.
+ *  - "right?" (f97-f125): ONE label, "Coal mining land", in the CORE MEMORY
+ *    PODCAST STYLE — screen space, centred on the polygon centroid's screen x,
+ *    cap-top 24 px below the polygon bbox's bottom edge, recomputed from the
+ *    camera every frame so it rides the creep. It stays to f135.
+ *    Five stacked copies of the same Barlow 800 / 40 px text at one final
+ *    position, back to front: a hard black shadow (#000, zero blur, +1 px x /
+ *    +1 px y = 2.5% of the size), orange #FFB765, purple #BC37FF, blue #0046FF,
+ *    then the white #FFFFFF core. Raw hex, no blend mode, no filter, no bloom.
+ *    Every layer runs the same slide-up: 60 px rise (the title cards' 130 px
+ *    scaled to a 40 px label), Easing.bezier(0.16, 1, 0.3, 1), 22-frame travel.
+ *    Nothing fades — a layer is simply not rendered before its start frame.
+ *    Starts: orange f97 ("right?"), purple f99, blue f101, white core f103, and
+ *    the shadow rides with the core (f103). All landed by f125, each colour
+ *    overlapping the one before it so the band under the core is blue; at rest
+ *    the colours are fully hidden behind the core.
  *  - f50-f135: hold creep, K 6.5 -> 6.75 linear, C fixed. Never parked.
  *
  * CAMERA. screen = (world - C) * K + (540, 835); content centre y 835 because
@@ -90,11 +101,12 @@ const {fontFamily} = loadFont('normal', {weights: ['700'], subsets: ['latin']});
  * springs, no CSS transitions, no randomness.
  *
  * PREVIEW (half-res h264, as in the sister cut):
- *   bunx remotion render src/index.ts CoalMiningLand \
- *     <scratchpad>/CoalMiningLand_preview.mp4 \
+ *   bunx remotion render src/entry.CoalMiningLand.ts CoalMiningLand \
+ *     <scratchpad>/CoalMiningLand_v3_preview.mp4 \
  *     --config=<scratchpad>/preview.config.ts --scale=0.5 --muted
  * FINAL:
- *   bunx remotion render src/index.ts CoalMiningLand out/CoalMiningLand.mov --muted
+ *   bunx remotion render src/entry.CoalMiningLand.ts CoalMiningLand \
+ *     out/CoalMiningLand_V3.mov --muted
  */
 
 export const FPS = 24;
@@ -345,15 +357,32 @@ const buildOutline = () => {
 };
 
 // -------------------------------------------------------------------- label --
-const LABEL_IN_FROM = 97;
-const LABEL_IN_TO = 103;
-const LABEL_RISE = 6; // px, settling to 0
+const LABEL_TEXT = 'Coal mining land';
 const LABEL_FS = 40;
 const LABEL_GAP = 24; // px from the polygon's bottom edge to the label's cap-top
-/** Line-box top -> cap top for Barlow 700 at 40 px / 40 px line-height, as in
- *  the sister cut. The label is placed by its cap-top, so the 24 px gap is the
- *  gap the eye actually sees. */
+/** Line-box top -> cap top for Barlow at 40 px / 40 px line-height, as in the
+ *  sister cut. The label is placed by its cap-top, so the 24 px gap is the gap
+ *  the eye actually sees. */
 const LABEL_CAP_INSET = 6.4;
+
+/** CORE MEMORY PODCAST STYLE, scaled from the title cards to a 40 px label.
+ *  The chain colours are used raw — no blend mode, no filter, no bloom — and
+ *  every layer runs the same slide, sampled at its own start frame. Nothing
+ *  fades: a layer does not exist before its start. */
+const LABEL_RISE = 60; // px, the title cards' 130 px at 40 px type
+const LABEL_TRAVEL = 22; // frames of slide per layer
+/** Back to front. Orange arrives first and blue last, so the band sitting
+ *  directly under the white core is blue. */
+const LABEL_TRAIL: {color: string; start: number}[] = [
+  {color: '#FFB765', start: 97}, // "right?"
+  {color: '#BC37FF', start: 99},
+  {color: '#0046FF', start: 101},
+];
+const LABEL_CORE_START = 103; // all landed by 103 + 22 = 125
+const LABEL_CORE_COLOR = '#FFFFFF';
+/** Hard shadow: zero blur, +1 px on both axes (2.5% of the 40 px size for this
+ *  weight), riding the core's motion and sitting behind every colour. */
+const LABEL_SHADOW_OFFSET = 1;
 
 // ---------------------------------------------------------------- coalfield --
 const UNDER_COLOR = '#234a8a';
@@ -484,13 +513,31 @@ export const CoalMiningLand: React.FC<z.infer<typeof schema>> = ({debug}) => {
   // because these are recomputed every frame.
   const labelX = sx(CF_CX);
   const labelY = sy(POLY_MAX_Y);
+  const labelTop = labelY + LABEL_GAP - LABEL_CAP_INSET;
 
-  const labelIn = interpolate(frame, [LABEL_IN_FROM, LABEL_IN_TO], [0, 1], {
-    easing: Easing.out(Easing.cubic),
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const labelRise = LABEL_RISE * (1 - labelIn);
+  // One shared slide, sampled at a different start frame per layer.
+  const labelOffset = (start: number) => {
+    const t = interpolate(frame, [start, start + LABEL_TRAVEL], [0, 1], {
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    return (1 - t) * LABEL_RISE;
+  };
+
+  const labelBase: React.CSSProperties = {
+    position: 'absolute',
+    left: labelX,
+    top: labelTop,
+    fontFamily,
+    fontWeight: 800,
+    fontSize: LABEL_FS,
+    lineHeight: `${LABEL_FS}px`,
+    letterSpacing: '0.02em',
+    whiteSpace: 'nowrap',
+  };
+
+  const coreOffset = labelOffset(LABEL_CORE_START);
 
   return (
     <AbsoluteFill style={{backgroundColor: '#0b1220', overflow: 'hidden'}}>
@@ -653,27 +700,57 @@ export const CoalMiningLand: React.FC<z.infer<typeof schema>> = ({debug}) => {
 
       {/* ONE LABEL — screen space, centred on the polygon centroid's screen x,
           placed by its cap-top 24 px below the polygon bbox's bottom edge and
-          recomputed from the camera transform every frame so it rides the
-          creep. In f97-f103 on "right?", and it stays to the end. */}
-      {labelIn > 0 ? (
+          recomputed from the camera transform every frame so the whole stack
+          rides the creep. CORE MEMORY PODCAST STYLE: five copies of the same
+          text at the same final position, each sliding 60 px up into place over
+          22 frames on Easing.bezier(0.16, 1, 0.3, 1). Orange cuts in on
+          "right?" (f97), then purple f99, blue f101, and the white core with
+          its hard shadow f103; all landed by f125. */}
+
+      {/* Hard black shadow, at the very back so it never darkens a colour it
+          crosses. Zero blur, rides the core. */}
+      {frame >= LABEL_CORE_START ? (
         <div
           style={{
-            position: 'absolute',
-            left: labelX,
-            top: labelY + LABEL_GAP - LABEL_CAP_INSET,
-            transform: `translate(-50%, ${labelRise}px)`,
-            fontFamily,
-            fontWeight: 700,
-            fontSize: LABEL_FS,
-            lineHeight: `${LABEL_FS}px`,
-            letterSpacing: '0.02em',
-            color: '#ffffff',
-            whiteSpace: 'nowrap',
-            opacity: labelIn,
-            textShadow: '0 2px 6px rgba(0,0,0,0.55)',
+            ...labelBase,
+            zIndex: 1,
+            transform: `translate(-50%, ${coreOffset}px) translate(${LABEL_SHADOW_OFFSET}px, ${LABEL_SHADOW_OFFSET}px)`,
+            color: '#000000',
           }}
         >
-          coal mining land
+          {LABEL_TEXT}
+        </div>
+      ) : null}
+
+      {/* Arrival order and stacking order are the same: orange at the back,
+          then purple, then blue. */}
+      {LABEL_TRAIL.map(({color, start}, i) =>
+        frame >= start ? (
+          <div
+            key={color}
+            style={{
+              ...labelBase,
+              zIndex: i + 2,
+              transform: `translate(-50%, ${labelOffset(start)}px)`,
+              color,
+            }}
+          >
+            {LABEL_TEXT}
+          </div>
+        ) : null,
+      )}
+
+      {/* Core: the white mark, last to arrive and on top of all. */}
+      {frame >= LABEL_CORE_START ? (
+        <div
+          style={{
+            ...labelBase,
+            zIndex: LABEL_TRAIL.length + 2,
+            transform: `translate(-50%, ${coreOffset}px)`,
+            color: LABEL_CORE_COLOR,
+          }}
+        >
+          {LABEL_TEXT}
         </div>
       ) : null}
     </AbsoluteFill>
