@@ -24,7 +24,7 @@ export const schema = z.object({
 export type TwitterToXProps = z.infer<typeof schema>;
 
 export const defaultProps: TwitterToXProps = schema.parse({
-  tileSize: 640,
+  tileSize: 480,
   crackWidth: 3,
   partDistance: 150,
   liveliness: 1,
