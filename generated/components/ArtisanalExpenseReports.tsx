@@ -41,7 +41,8 @@ import {
 // The clip's one world. Cut 1's builder owns this module; nothing here edits it
 // and nothing here restates a value from it: the field, its pitch, its coin, the
 // "$" knockout, the breath and the strain all come from there, so a coin in this
-// cut is the same object as a coin in cuts 1 and 2 down to its jitter.
+// cut is the same object as a coin in cuts 1 and 2 down to its place on the
+// lattice.
 import {
   CoinDefs,
   FIELD_COINS,
@@ -106,14 +107,14 @@ import {
 //      point of Texas and the notch it leaves is a clean arc. Each coin's path
 //      is a near-vertical cubic that pulls in to a 68 px wide throat for the
 //      middle of its flight and spreads to its slot only in the last quarter, so
-//      the stream is never wider than the mouth (measured worst 72.2 against the
-//      mouth's 75) and no coin crosses more than 45 px of lateral. A coin stops
+//      the stream is never wider than the mouth (measured worst 71.5 against the
+//      mouth's 75) and no coin crosses more than 44 px of lateral. A coin stops
 //      where it meets the pile: the arrivals are assigned bottom-up to a
 //      hex-packed slot list that fills the cone at the FIELD's own pitch —
 //      nothing about a coin changed except where it is. The column is unbroken
-//      from f5 to f26 (worst step along it 12.5 px against the field's own 9.53
+//      from f5 to f26 (worst step along it 13.2 px against the field's own 9.53
 //      row pitch); from f27 the coast is spent and the last of the pour falls
-//      in, the last coin landing f40.7, so the pour tapers off under "Like I
+//      in, the last coin landing f40.8, so the pour tapers off under "Like I
 //      think people are doing" instead of stopping dead on a word. Every arrival
 //      NUDGES the coins it lands among. Nothing drips yet, and from here the
 //      funnel stays full for the rest of the cut: the backlog is permanent.
@@ -129,7 +130,7 @@ import {
 //
 //   4. THE HELD BREATH                                           f50 -> f56
 //      The cut's ONE authored held breath, six frames, and it is the beat before
-//      the payoff: the camera is landed, the pour is spent (f40.7), the funnel
+//      the payoff: the camera is landed, the pour is spent (f40.8), the funnel
 //      is full and nothing has come out of it yet. The heap still strains, the
 //      coin in the spout still strains, the field still breathes — the quietest
 //      frame of the cut measures 0.90 screen px/frame, against the 0.6 floor.
@@ -165,13 +166,13 @@ import {
 //   f7  -> f46    the camera's one react; landed f50
 //   f5  -> f26    the column is unbroken, coast to cone: the stream is attached
 //                 to the field it is coming off and there is no hole in it
-//   f16.1         the last coin leaves the coast; the notch is complete
+//   f16.2         the last coin leaves the coast; the notch is complete
 //   f17 -> f33    the receipt rises into frame from below the bottom edge
 //   f23.25        the fastest thing in the cut that is not the camera's own
 //                 translation: a sliding coin, 35.4 screen px/frame, vs 45
-//   f27 -> f41    the last of the pour falls in: 20 of the 81 at rest by f35,
+//   f27 -> f41    the last of the pour falls in: 21 of the 81 at rest by f35,
 //                 73 by f40, all 81 by f41
-//   f40.7         the last of the pour lands; the funnel is full
+//   f40.8         the last of the pour lands; the funnel is full
 //   f50 -> f56    the held breath
 //   f54 / f61     drip 1 leaves / lands · rule 1 · the cut's ONE ink click
 //   f84 / f91     drip 2 · rule 2
@@ -186,7 +187,7 @@ import {
 //   worst screen speed      39.38 px/frame at f24 (h = 1) · 39.50 (h = 1/4),
 //                            and it is the RECEIPT's foot under the camera's own
 //                            descent, not anything the cut moves
-//   worst moving coin        35.24 px/frame at f24 (h = 1) · 35.36 (h = 1/4)
+//   worst moving coin        35.34 px/frame at f24 (h = 1) · 35.46 (h = 1/4)
 //   worst camera-only speed  37.13 px/frame at f24, at the cone's mouth
 //   drip fall peaks          32.4 / 29.9 / 28.5 / 29.9 screen px/frame
 //   worst discontinuity      ratio 1.03 between the h = 1 and h = 1/4 speed
@@ -195,11 +196,11 @@ import {
 //                            measuring the same small settle agreeing to within
 //                            a pixel, not a jump. (The ratio is only meaningful
 //                            against a large step; nothing in the cut has one.)
-//   the pour's own width     72.2 px of half-width at f12, against the mouth's 75
-//   the column's worst step  12.5 px at f24, against the field's 9.53 row pitch,
+//   the pour's own width     71.5 px of half-width at f12, against the mouth's 75
+//   the column's worst step  13.2 px at f24, against the field's 9.53 row pitch,
 //                            over f5-f26; it opens deliberately from f27 as the
 //                            last of the pour falls in
-//   worst airborne gap       16.1 px at f17 between a coin in the stream and the
+//   worst airborne gap       15.8 px at f20 between a coin in the stream and the
 //                            nearest coin of any kind (field pitch 11)
 //   quietest frame           0.90 screen px/frame at f167
 //   band                     the CUT's content (cone, crown, heap, every coin
@@ -212,6 +213,33 @@ import {
 //                            top edge on its way down out of the field (it is a
 //                            field coin until it moves, and the field is
 //                            full-bleed at this zoom in all three cuts)
+//
+// ---------------------------------------------------------------------------
+// V2 — `FIELD_JITTER` 1.2 -> 0 (rampShared; the user, 2026-09-16: the coins
+// wanted "consistent spacing", "some of them are overlapping"). The field this
+// cut pours out of is a clean hex lattice now — every nearest neighbour exactly
+// the 11 px pitch, 0 overlapping pairs where there were 390 — and the HEAP,
+// which was always slotted at the field's own pitch, now matches it exactly.
+// Nothing here was authored differently. What re-solved, and what it measures:
+//   the source column   573 coins inside |x - 540| <= 75 (85 needed); the
+//                       nearest 85 are still a clean arc, and the notch it
+//                       leaves is still the point of Texas coming away
+//   the heap            N_HEAP 81, rows 1,2,3,4,5,6,7,8,9,10,13,10,3, the file
+//                       13 deep — all unchanged, and it still fills to 81 by f41
+//   the pour            half-width 72.2 -> 71.5 against the mouth's 75; the
+//                       column's worst step 12.5 -> 13.2 (row pitch 9.53), so
+//                       it is still unbroken f5 -> f26; worst airborne gap
+//                       16.1 -> 15.8; the pour's own lateral 45 -> 44
+//   the drips           UNMOVED: leave f54/84/114/144, land f61/91/121/151,
+//                       receipt 40/58/76/94/112, four rules, one per 30 frames
+//   speeds              worst screen speed 39.38 (h = 1) / 39.50 (h = 1/4), the
+//                       receipt's foot under the camera, as before; worst
+//                       moving coin 35.34 / 35.46; drip peaks 32.4 / 29.9 /
+//                       28.5 / 29.9 — every one of them unchanged or within a
+//                       tenth of a pixel
+//   the band            still clean from f34 to the end, with the same two
+//                       documented allowances (the receipt rising f16-f33, a
+//                       refill coin crossing the top edge out of the field)
 //
 // DEVIATIONS from the brief, and why (each is forced by the brief's own
 // geometry or by the house rules):
@@ -413,14 +441,14 @@ export const lobe = (u: number) => {
 //    in it. Which of them fills which slot is then decided one cone ROW at a
 //    time: the row's n sources and its n slots are both sorted by x and paired
 //    in order, which is the least-lateral pairing of those two sets and the only
-//    one in which no two coins cross. Measured lateral: 138 px -> 45.
+//    one in which no two coins cross. Measured lateral: 138 px -> 44.
 // 3. THE THROAT. Every path is a cubic whose two control points sit on one
 //    vertical at `THROAT_HALF / COLUMN_HALF` of the coin's own offset from the
 //    axis: the stream pulls in to a 68 px wide band for the middle of its
 //    flight and only spreads to fill the cone in the last quarter. Bezier x
 //    lies in the hull of its control x, and all four are inside the mouth, so
 //    the lateral drift is inside the mouth's width at EVERY frame — asserted
-//    at the foot of this file, and measured at 72.2 against the mouth's 75.
+//    at the foot of this file, and measured at 71.5 against the mouth's 75.
 // 4. THE STAGGER, which is the whole of the density. A pour is coin-limited:
 //    there are only 81 of them and the traverse is ~155 px, so the stream's
 //    density is 81 / (its length x its width) and its length is the source
@@ -433,13 +461,13 @@ export const lobe = (u: number) => {
 //    therefore swept over 6..11 x 0.10..0.30 x 16..38 against two measures —
 //    the worst nearest-neighbour of any airborne coin, and the first frame the
 //    column opens a hole wider than two pitches — and 6 / 0.14 / 34 is the
-//    corner of that surface: the column is unbroken f5 -> f26 (worst step 12.5
+//    corner of that surface: the column is unbroken f5 -> f26 (worst step 13.2
 //    px against the field's own 9.53 row pitch) and no airborne coin is ever
-//    more than 16.1 px from another. The frames were then looked at: 0.10 is
+//    more than 15.8 px from another. The frames were then looked at: 0.10 is
 //    denser but off the coast by f20, 0.18 stays attached to f26 and is visibly
 //    loose. Nothing here is typed from taste except which of three renders.
 // 5. WHEN THE LAUNCH ORDER IS NOT THE SLOT ORDER. See `LAUNCH_RANK` below.
-// 6. THE WINDOW. The pour runs f5 -> f40.7 rather than f5 -> f37.3 — three and
+// 6. THE WINDOW. The pour runs f5 -> f40.8 rather than f5 -> f37.3 — three and
 //    a half frames longer, which the note allows. The first drip at f54 does not
 //    move and the held breath before it is unchanged.
 //

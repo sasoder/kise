@@ -157,7 +157,7 @@ import {
 //                  556, cy 918.61 of 918.93
 //   f100           the front reaches the Pacific; n = N_FIELD, 100%. Solved
 //                  off the field, not asserted: the 40 westernmost coins
-//                  (x 104.8-127.7, MAP.X0 100) are reached f94.70 -> f100.00,
+//                  (x 105.5-127.5, MAP.X0 100) are reached f94.59 -> f100.00,
 //                  and the last coin of the whole field is one of them — the
 //                  wave finishes ON the coast, not on an inland straggler.
 //   f100 -> f110   the amber ring's strain relaxes to zero, under "us"
@@ -169,14 +169,14 @@ import {
 // 0.8 -> 0.35 and then re-keyed the order off DISTANCE from the seed instead of
 // BFS `hop`. Nothing in this file hard-coded the old order, but every value
 // solved off it was swept again and the numbers below are the new render's.
-//   SPEEDS   front as a screen point 33.90 px/f at f54 · front radius 39.84 at
+//   SPEEDS   front as a screen point 33.82 px/f at f54 · front radius 39.01 at
 //            f52 · a lifting coin's rim 1.42 at f50 · the camera's worst
-//            on-screen point 32.46 at f18. House cap 45.
+//            on-screen point 32.41 at f18. House cap 45.
 //            The distance-keyed order also made the front's own statistic
 //            honest: `orderRadius`'s rattle (mean |raw - 5-frame mean|) fell
-//            3.35 -> 0.65 px/f on a mean speed of 19.12, and the speed profile
-//            is now monotone — 39.8 at f52 down through 32.0, 22.5, 26.5,
-//            23.1, 19.2, 18.6, 16.7, 14.0, 11.2, 8.8 to 5.9 at f96 — where the
+//            3.35 -> 0.70 px/f on a mean speed of 19.10, and the speed profile
+//            is now monotone — 39.0 at f52 down through 31.8, 22.0, 26.4,
+//            22.4, 19.2, 18.6, 16.5, 14.3, 11.1, 8.4 to 5.7 at f96 — where the
 //            hop-keyed order had it jumping 20.5 -> 1.6 -> 20.6 on neighbouring
 //            samples.
 //            Steps > 15% between adjacent frames, re-measured at h = 1/4: two
@@ -189,23 +189,26 @@ import {
 //            and simply steep; and a handful of flags under 5 px/f in the long
 //            tail of the run, which are the 20-coin window's remaining rattle.
 //   THE JOIN cut 1 f177 against this f0, as PNG stills at half res so no codec
-//            sits between them, each number beside cut 1's OWN f176 -> f177:
-//              whole frame  mean 0.6718 against 0.6855
-//              the field    mean 3.3942 against 3.4827
-//              the kraft    mean 0.0298 against 0.0289, max 1 count in both
-//              area > 1 ct  4.79% against 5.15%   (> 8 counts 2.56% / 2.60%)
-//            — the join is TIGHTER than cut 1's own frame-to-frame step on
-//            every measure. Max 57 against the control's 50, on one amber rim:
-//            the one frame of `strain` phase the join is allowed. (The same
-//            pair through the h264 preview reads 1.33, which is the codec's
-//            I-frame/P-frame difference, not the picture's.) The kraft numbers
+//            sits between them, each number beside cut 1's OWN f176 -> f177
+//            (re-measured at the V2 lattice pass; the regions are the whole
+//            540 x 960 half-res frame, the map's own bbox on screen, and a
+//            top strip with no ink in it):
+//              whole frame  mean 0.8666 against 0.8002, max 66 against 55
+//                           > 1 ct 5.41% against 5.13% (> 8 ct 3.26% / 2.93%)
+//              the field    mean 4.5118 against 4.1678
+//                           > 1 ct 29.24% against 27.78%
+//              the kraft    mean 0.0356 against 0.0360, MAX 1 COUNT IN BOTH
+//            — the join sits on cut 1's own frame-to-frame step: 8% larger on
+//            the whole frame, which is the one frame of `strain` and `breath`
+//            phase the join is allowed, and its max (66) is one amber rim
+//            against the control's 55. The kraft numbers
 //            are the proof that the imported `C_OPEN_X0` / `C_OPEN_Y0` are the
 //            right reference: the sheet differs from cut 1's by no more than
 //            one count anywhere in the frame.
 //   LEGIBILITY  a passed coin against an untouched one, on the SAME
 //            mid-continent crop at the SAME camera — f0 (all ink) against f110
-//            (all passed), both k 0.958: mean 184.0 -> 205.5 (+11.7%), area
-//            above 150 counts 66.4% -> 80.7% (+14.3 points). The wave band
+//            (all passed), both k 0.958: mean 183.8 -> 205.0 (+11.5%), area
+//            above 150 counts 66.0% -> 81.8% (+15.8 points). The wave band
 //            against the field 90 world px ahead of it, due west of the seed:
 //            +54.6 counts at f60, +53.8 at f64, +51.7 at f72, +47.0 at f80,
 //            +50.0 at f88 — roughly triple the hop-keyed order's margin,
@@ -216,16 +219,34 @@ import {
 //   THE TAIL f120 against f121 still moves 10.6% of the frame by more than a
 //            count. Nothing is parked.
 //
+// V2 — `FIELD_JITTER` 1.2 -> 0 (rampShared; the user, 2026-09-16: the coins
+// wanted "consistent spacing", "some of them are overlapping"). The field is a
+// clean hex lattice now: every nearest neighbour is EXACTLY 11 px, and the
+// 1,771 pairs that overlapped in THIS cut's lifted state (2 x 4.6 x 1.10 =
+// 10.12 px against a jittered minimum of 8.28) are gone. Nothing here was
+// authored differently and nothing broke:
+//   the light-up order   the same permutation; SEED_POS moved 0.88 px, the seed
+//                        INDEX and every hop and stitch in the module did not
+//   REL_WARP             stays 0.80 — the whole speed ladder came down again
+//                        (see the sweep in the deviations below); 39.25 of 45
+//   the Pacific          the last coin of the whole field is still one of the
+//                        40 westernmost (x 105.5, MAP.X0 100) and is still
+//                        reached at exactly f100
+//   the camera           landings unchanged to the frame: k(44) 1.6973
+//                        (-0.16% of K_TIGHT), k(96) 0.9601 (+0.22% of K_FINAL),
+//                        cx 556.92 of 556, cy 918.61 of 918.93
+//   the join             re-measured above, and still at cut 1's own step
+//
 // DEVIATIONS from the cut brief, all forced by the brief's own rules
 //   * REL_WARP IS 0.80, NOT 0.75. Measured on the field's own order statistics
 //     (`orderRadius`, 2,441 coins, seed at New York): at warp 0.75 the front's
 //     radius crosses 49.2 screen px a frame at f53.5, over the house's 45. 0.78
 //     measures 45.1, 0.80 measures 43.1 — the first step with real margin. The
 //     dam still breaks: a quarter of the country is passed twelve frames in.
-//     RE-SWEPT at the harmony pass against the revised order (distance-keyed,
-//     ORDER_JITTER 0.35): 0.70: 48.90 · 0.72: 45.65 · 0.75: 43.07 · 0.78:
-//     40.48 · 0.80: 39.84 · 0.85: 35.64 · 1.00: 30.13. The whole ladder came
-//     DOWN, and the brief's own 0.75 is now under the cap at 43.07 — so this
+//     RE-SWEPT at the V2 lattice pass (FIELD_JITTER 0): 0.70: 48.28 ·
+//     0.72: 45.27 · 0.75: 42.65 · 0.78: 40.04 · 0.80: 39.25 · 0.85: 35.35 ·
+//     1.00: 30.10. The whole ladder came
+//     DOWN, and the brief's own 0.75 is now under the cap at 42.65 — so this
 //     deviation is no longer forced. It is kept at 0.80 anyway: the director
 //     has approved the motion as built, 0.80 carries 12% more margin on the
 //     one head this cut has, and the dam still breaks (a quarter of the
@@ -238,9 +259,9 @@ import {
 //     must return to it, or the join at the next cut is a jump.
 //   * THE "$" KNOCKOUT IS HELD OFF FOR THE WHOLE CUT (`defsK`). See below.
 //   * K_TIGHT IS 1.7 AND THE AMBER FILLS A FIFTH OF THE FRAME, NOT A THIRD. The
-//     brief asks for both; the field decides. The amber patch is 111.8 world px
-//     across (49 coins on an 11 px hex pitch), so a third of a 1080 frame would
-//     need k 3.22 — at which the front measures 86 screen px a frame at its
+//     brief asks for both; the field decides. The amber patch is 102.7 world px
+//     across (49 coins on an 11 px hex lattice), so a third of a 1080 frame would
+//     need k 3.51 — at which the front measures 86 screen px a frame at its
 //     fastest even at warp 0.75, and 58 at warp 1.05. k 1.7 is the briefed
 //     number and the only one the speed cap allows; the patch reads as the
 //     subject at 190 screen px across, with the mark, the thread and the whole
@@ -576,9 +597,9 @@ const NotOnUs: React.FC<Props> = ({
   const gain = strainGain(frame);
 
   // ONE pass in INDEX order, not four passes in order-of-lighting order. The
-  // slices are contiguous in `order` and it is tempting to walk them, but the
-  // field is jittered +/- 1.2 px on an 11 px pitch, so neighbouring coins do
-  // overlap by a pixel or two and WHICH ONE IS ON TOP is decided by the paint
+  // slices are contiguous in `order` and it is tempting to walk them, but a
+  // LIFTED coin overlaps its neighbours (1.45 x 4.6 = a 6.7 px radius on an
+  // 11 px pitch) and WHICH ONE IS ON TOP is decided by the paint
   // order. Cut 1 paints in index order; walking the order slices instead put a
   // 1-4 count difference across the whole field at the join (>1 count: 9.0% of
   // the frame against the 5.4% of cut 1's own f176 -> f177). Indexed, the join

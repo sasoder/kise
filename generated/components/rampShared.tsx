@@ -176,7 +176,12 @@ const inside = (x: number, y: number) => {
 export const FIELD_PITCH = 11;
 export const FIELD_ROW_PITCH = (FIELD_PITCH * Math.sqrt(3)) / 2; // 9.5263
 export const FIELD_COIN_R = 4.6;
-export const FIELD_JITTER = 1.2; // +/- px, so the lattice never reads as a grid
+// V2 (user, 2026-09-16): "some of them are overlapping … more aligned with
+// consistent spacing on all of them". The ±1.2 px jitter on an 11 px pitch let
+// neighbours collide (coin diameter 9.2, so only 1.8 px of gap to spend). Zero:
+// a clean hex lattice, every neighbour exactly one pitch away, the same gap
+// everywhere, in all three cuts.
+export const FIELD_JITTER = 0;
 export const ORDER_JITTER = 0.35; // light-up order = hop + this * hash; was 0.8 in the first preview
 export const ADJ_MAX = 1.15 * FIELD_PITCH; // 12.65 — the six hex neighbours
 

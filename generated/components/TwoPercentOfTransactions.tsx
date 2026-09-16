@@ -73,7 +73,8 @@ import {
 // and then rises to show the country.
 //
 // The United States is a field of 2,441 coins (`rampShared`): one coin per hex
-// cell inside the contiguous-US outline, 11 px pitch, jittered. A coin is a
+// cell inside the contiguous-US outline, 11 px pitch, no jitter (V2 — see the
+// note at the foot of this header). A coin is a
 // card transaction. Amber is what Ramp has touched and nothing else, so the
 // amber count IS the number in the line: N_LIT = round(0.02 * 2441) = 49.
 // There is no numeral, no label, no pie, no bar and no stroke around the map;
@@ -98,16 +99,16 @@ import {
 //     seed goes amber with `coinLitBump`, and from that frame one curve carries
 //     the lit count from 1 to 49 across f46 -> f150. Each coin lights when its
 //     `order` is reached — never on a timer — and its order is
-//     `hop + ORDER_JITTER*hash`, so the front is ragged rather than a drawn
-//     circle. The spread is still running under everything else in the cut, and
+//     `dist/FIELD_PITCH + ORDER_JITTER*hash`, so the front is ragged rather than
+//     a drawn circle. The spread is still running under everything else in the cut, and
 //     its last ring lands on f150.
 //
 //   3 · "more than 2%" f48-f75 — THE DIVE                       f48 -> f80
 //     Two frames after the spread starts, the camera reacts: k K_CREEP ->
-//     K_DIVE (2.38 -> 14.13), content centre -> the lit patch, keys f48-f74 on
+//     K_DIVE (2.37 -> 14.07), content centre -> the lit patch, keys f48-f74 on
 //     warp 0.72, settled by ~f80. "more than 2%" plays over the plunge, and it
 //     lands on a screen full of money — coins r 65 screen px with a legible "$",
-//     a frame 76 world px wide, seven coins across — with the amber front
+//     a frame 77 world px wide, seven coins across — with the amber front
 //     eating outward through it.
 //
 //   4 · "of all corporate and small business card transactions" — THE RISE
@@ -128,31 +129,32 @@ import {
 // ---------------------------------------------------------------------------
 // DEVIATIONS FROM THE CUT BRIEF — five, all forced by the brief's own rules.
 //
-//  A. THE OPENING k IS 2.20, NOT 3.5. The brief asks for the thread to draw
-//     THREAD_FROM -> the seed in 11 frames on "powers". That thread is 185.1
+//  A. THE OPENING k IS 2.19, NOT 3.5. The brief asks for the thread to draw
+//     THREAD_FROM -> the seed in 11 frames on "powers". That thread is 185.37
 //     world px long, and `flow(a = 0.1)` peaks at 1.111x its average, so its
-//     head runs 18.70 world px a frame at its fastest. The house cap is 45
-//     SCREEN px a frame, so the camera cannot be above k 2.41 while it draws —
-//     K_CREEP is solved off exactly that and the head measures 44.8. At k 3.5
+//     head runs 18.72 world px a frame at its fastest. The house cap is 45
+//     SCREEN px a frame, so the camera cannot be above k 2.40 while it draws —
+//     K_CREEP is solved off exactly that and the head measures 44.38. At k 3.5
 //     the same head measures 65 px a frame. The alternatives were both worse:
 //     starting the thread on "Ramp" (f30) to buy 16 frames leaves "powers" with
 //     nothing on it and puts the arrival 11 frames off its word, and stretching
 //     the draw past f46 pushes the spread — and therefore the dive, and
-//     therefore the payoff — out of the line. So the opening frame is 491 x 873
+//     therefore the payoff — out of the line. So the opening frame is 493 x 877
 //     world instead of 309 x 549: still the northeast, still the mark alone at
 //     the top right over white coins, still nothing amber.
 //
-//  B. THE DIVE GOES TO k 14.13, NOT k 8. The brief wants the amber to fill the
+//  B. THE DIVE GOES TO k 14.07, NOT k 8. The brief wants the amber to fill the
 //     frame edge to edge at the bottom of the dive. That cannot happen at k 8,
 //     and it is arithmetic rather than taste: the lit count is fixed at 2% of
 //     the field, so the patch's area is fixed at 0.02 * 255,790 world px^2 and
 //     its radius can never exceed ~46 px whatever the pitch is, while k 8 shows
 //     a frame 135 px wide — the patch tops out at 40% of it and at the landing
-//     it is 28%. k 14.13 shows 76 px: the patch covers 58% of the width when
-//     the rise leaves and is still eating white coins at the edges, which is
+//     it is 28%. k 14.07 shows 77 px: on the frame the rise leaves (f84) the
+//     front's own diameter measures 797 of the 1080 screen px across, and it is
+//     still eating white coins at the edges, which is
 //     the picture the brief is describing, and it keeps the mechanism visible
 //     (a wall of solid amber shows nothing happening). K_DIVE is not typed —
-//     it is the deeper of "fill the width" (K_DIVE_IDEAL 18.6) and what the
+//     it is the deeper of "fill the width" (K_DIVE_IDEAL 19.04) and what the
 //     scenery speed allows, and the second one binds.
 //
 //  C. THE DIVE LANDS ON THE PATCH, NOT ON THE SEED, and the opening centre is
@@ -166,8 +168,8 @@ import {
 //     K_FINAL is solved: 540 is the MAP's centre and the mark hangs 32 px off
 //     its right, so centring there leaves the mark 8 px of air inside the band
 //     instead of the 40 the brief asks for. Measured on the render across all
-//     28 held frames, the resolved ink is x 100-974, y 560-1102: 40 px of air
-//     on the left, 46 on the right, 360 above and 348 below.
+//     28 held frames, the resolved ink is x 100.3-976.1, y 559.7-1105.3: 40 px
+//     of air on the left, 44 on the right, 360 above and 345 below.
 //
 //  E. THE TWO BIG MOVES INTERPOLATE k IN LOG SPACE, not through `camMove`.
 //     Argued at `logMove`. Everything else about them is `camMove`'s.
@@ -187,10 +189,10 @@ import {
 //   >= 1 changes anything at all.
 //
 //   Everything this cut solves off the order is therefore unchanged: PATCH_POS
-//   (the lit set is the same 49 coins, centroid 863.92, 767.43), orderRadius and
-//   so K_DIVE_IDEAL (18.61), the LIT_FRAME table and every camera landing.
+//   (the lit set is the same 49 coins), orderRadius and so K_DIVE_IDEAL, the
+//   LIT_FRAME table and every camera landing.
 //   K_DIVE never depended on the order in the first place — the EDGE_CAP branch
-//   binds at 14.13 and it is made of K_CREEP, the window and the damper.
+//   binds and it is made of K_CREEP, the window and the damper.
 //
 //   WHAT THE WHITE HOLES ACTUALLY ARE, measured (a hole = an unlit coin with >=
 //   4 of its six hex neighbours lit):
@@ -212,21 +214,49 @@ import {
 //       interior to be solid. The only thing that buys one is more coins in it:
 //       N_LIT is pinned at 2%, so it takes a finer FIELD_PITCH (~7.7 gives
 //       N_FIELD ~5,000 and N_LIT ~100, and the rim falls to a quarter of the
-//       patch), or a shallower dive than k 14.13, where the frame is 7 coins
+//       patch), or a shallower dive than K_DIVE, where the frame is 7 coins
 //       wide and the rim is most of what is on screen.
 //
+// ---------------------------------------------------------------------------
+// V2 — `FIELD_JITTER` 1.2 -> 0 (rampShared; the user, 2026-09-16: the coins
+// wanted "consistent spacing", "some of them are overlapping"). The field is
+// now a clean hex lattice: every coin's nearest neighbour is EXACTLY the 11 px
+// pitch and the 390 overlapping pairs at rest (1,771 in cut 2's lifted state)
+// are gone. NOTHING IN THIS FILE WAS AUTHORED DIFFERENTLY. Every value below is
+// solved from the module and simply re-solved itself; they are re-recorded here
+// because the numbers in this header moved with them.
+//
+//   the lit set        the same 49 coins, index for index, as before
+//   SEED_POS           (876.37, 780.12) -> (875.50, 780.00); the seed INDEX and
+//                      every hop, order and stitch in the module are unchanged
+//   PATCH_POS          (864.52, 768.41) -> (864.50, 768.33)
+//   THREAD_LEN         185.15 -> 185.37 world px (the seed moved 0.88 px)
+//   K_CREEP / K_OPEN   2.38 / 2.20 -> 2.37 / 2.19  (the thread-head cap)
+//   thread head peak   44.8 -> 44.38 screen px/f, still under the 45 cap
+//   K_DIVE_IDEAL       18.61 -> 19.04; EDGE_CAP still binds, so
+//   K_DIVE             14.13 -> 14.07
+//   the frame's edge   62.0 -> 62.3 screen px/f at f61 (EDGE_CAP 62)
+//   every tracked head frontN/E/S/W 19.3/18.2/23.1/27.9 -> 20.8/20.6/24.9/26.6,
+//                      the seed 11.0 -> 10.4, the patch 8.5 -> 8.8 — all far
+//                      under 45, and the h = 1/4 refinement still says every
+//                      flagged step is curvature and not a discontinuity
+//   the resolved band  x 100-974 / y 560-1102 -> x 100.3-976.1 / y 559.7-1105.3,
+//                      inside x 60-1020 / y 200-1450 with its 40 px of air
+//   the camera         unchanged to the frame: 0.82% of K_FINAL at f144, 0.30%
+//                      at f146, 0.01% at f150
+//
 // THE FRAME TABLE (as built, verified against the render)
-//   f0           open: k 2.20, content centre (835.1, 728) — the mark's own frame
-//   f0  -> f34   the creep, k 2.20 -> 2.38, centre -> (827.1, 756); spent by ~f40
+//   f0           open: k 2.19, content centre (834.3, 729.1) — the mark's own frame
+//   f0  -> f34   the creep, k 2.19 -> 2.37, centre -> (826.3, 757.1); spent by ~f40
 //   f30 -> f33   the ink click on the mark (tile +6.3% mean, measured)
-//   f35 -> f46   the thread draws, 185.1 world px, head peak 44.8 screen px/f
+//   f35 -> f46   the thread draws, 185.37 world px, head peak 44.38 screen px/f
 //   f46          it arrives; the seed lights; the spread starts (n = 1)
-//   f48 -> f74   the dive's keys, k 2.38 -> 14.13, centre -> PATCH_POS, warp 0.72
-//   f61          the dive's fastest frame: 62.0 screen px/f at the frame's edge
+//   f48 -> f74   the dive's keys, k 2.37 -> 14.07, centre -> PATCH_POS, warp 0.72
+//   f61          the dive's fastest frame: 62.3 screen px/f at the frame's edge
 //   f80 -> f84   the camera's one held breath, 4 frames
-//   f84 -> f139  the rise's keys, k 14.13 -> 0.958, centre by the offset rule,
+//   f84 -> f139  the rise's keys, k 14.07 -> 0.958, centre by the offset rule,
 //                warp 0.85
-//   f144         the camera is within 1% of K_FINAL (0.83%), 8 frames ahead of
+//   f144         the camera is within 1% of K_FINAL (0.82%), 8 frames ahead of
 //                "united states"; 0.30% by f146, 0.01% by f150
 //   f150         the last ring lights; n = 49 = N_LIT
 //   f150 -> f178 held: the outer ring strains, coins breathe, the camera sways
@@ -339,8 +369,8 @@ export const STRAIN_IN = 8; // frames a coin takes to join the straining ring
 // under 45.
 export const HEAD_PEAK_WORLD = THREAD_LEN / (F_TOUCH - F_THREAD0) / (1 - DRAW_A);
 export const SPEED_CAP = 45;
-export const K_CREEP = Math.floor((100 * (SPEED_CAP - 0.5)) / HEAD_PEAK_WORLD) / 100; // 2.38
-export const K_OPEN = Math.round(K_CREEP * 0.925 * 100) / 100; // 2.2 — a 7.5% creep, never parked
+export const K_CREEP = Math.floor((100 * (SPEED_CAP - 0.5)) / HEAD_PEAK_WORLD) / 100; // 2.37
+export const K_OPEN = Math.round(K_CREEP * 0.925 * 100) / 100; // 2.19 — a 7.5% creep, never parked
 
 // THE OPENING FRAME, solved rather than typed. The subject is the mark, so the
 // frame is hung off it: its right edge sits BAND_AIR inside the band's right
