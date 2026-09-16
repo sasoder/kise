@@ -1,21 +1,20 @@
 import {Composition} from 'remotion';
-import TwitterToX, {
+import OpenAIMission, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TwitterToX';
+} from '../generated/components/OpenAIMission';
 
-// Musk buys Twitter: the Twitter tile holds dead still, cracks along its
-// corner-to-corner diagonal, splits in two, and the X tile comes up from inside
-// the gap and shoves the halves out of frame. Transparent overlay asset,
-// 1080x1080 at 24fps.
+// OpenAI mission lockup: the mark starts dead centre, eases right onto the
+// text block's right edge, and the quote wipes in underneath on the same
+// frames. Transparent overlay asset, 1080x1920 at 24fps.
 export const RemotionRoot = () => {
   return (
     <>
       <Composition
-        id="TwitterToX"
-        component={TwitterToX}
+        id="OpenAIMission"
+        component={OpenAIMission}
         schema={schema}
         defaultProps={defaultProps}
         durationInFrames={DURATION}

@@ -3,11 +3,13 @@ import { loadFont } from "@remotion/fonts";
 import { Img, staticFile } from "remotion";
 import {
   CONTACT_SHADOW_OP,
+  CONTACT_SHADOW_RX,
   CONTACT_SHADOW_RY,
   TILE_GRAD_BOTTOM,
   TILE_GRAD_TOP,
   TILE_SHADOW,
 } from "./d1Shared";
+import { OPENAI } from "./brandGlyphs";
 import {
   ACCENT,
   OP_READ,
@@ -516,5 +518,241 @@ export const AgreePoint: React.FC<{ x: number; y: number; scale: number; k: numb
       fill={ACCENT}
       style={{ filter: iconShadow(k) }}
     />
+  );
+};
+
+// ===========================================================================
+// V4 — THE BOARDROOM TABLE, AND WHAT THE POP-UP CUT RESOLVES TO.
+//
+// Director, 2026-09-16 on the V3b preview: "I'm not the biggest fan of how you
+// visualized the board — it's a bit boring and slightly out of place." The
+// bench (one wide tile, three user glyphs in a row) is kept above, because
+// AgreedUponV3 is the trail and still has to render; V4 replaces it with a
+// BOARDROOM TABLE SEEN FROM ABOVE, which is a thing rather than a diagram:
+//
+//   * an OVAL of the house tile material — the same white vertical gradient and
+//     the same TILE_SHADOW as every other tile in the clip, clipped to an
+//     ellipse 360 x 200 world px — with the OPENAI mark KNOCKED OUT of its
+//     centre exactly the way CompanyCard knocks out its sector glyph. It is the
+//     OpenAI board's table, and the kraft shows through the mark.
+//   * SIX SEATS around it at six even angles, each a small 34 x 34 house
+//     squircle sitting TABLE_SEAT_GAP outside the oval's rim along the
+//     ellipse's own outward normal, with a Lucide "user" knocked out of it.
+//   * FIVE of them are occupied. The sixth — the one at the RIGHT END of the
+//     oval, the seat nearest Sam — is NOT DRAWN AT ALL. The gap is the point of
+//     the whole cut: this is the board with Sam's chair empty.
+//   * ONE contact shadow under the lot (the house ellipse, CONTACT_SHADOW_*
+//     scaled to the oval's width), because the table stands.
+//
+// The thread to Bret leaves the oval's BOTTOM-CENTRE RIM, where the bench's
+// left from its bottom edge — so the mirror is untouched: `anchorToTableY` and
+// `TABLE_ANCHOR` are the same offset read both ways, exactly like the bench's.
+// ===========================================================================
+
+export const TABLE_OVAL_RX = 180;
+export const TABLE_OVAL_RY = 100;
+export const TABLE_MARK = 76; // the OPENAI mark, drawn on its 24-unit box
+export const TABLE_SEAT = 34;
+export const TABLE_SEAT_GAP = 14; // kraft between the oval's rim and the seat's near edge
+export const TABLE_SEAT_OFF = TABLE_SEAT_GAP + TABLE_SEAT / 2; // 31, along the normal
+export const TABLE_SEAT_GLYPH = 20;
+// The knocked-out figure in a 34 px seat is a tenth of the area of a
+// CompanyCard's, so CARD_GLYPH_STROKE 2.6 on the 24-unit box comes out at 2.17
+// world px — under a screen px and a half at the resolved k, which reads as a
+// smudge rather than a person. 3.0 puts it at 2.5 world px: the same weight as
+// a thread, which is the thinnest line this clip already draws.
+export const TABLE_GLYPH_STROKE = 3.0;
+// Six even angles, measured the SVG way (y down): 0 is the oval's right end,
+// 60 bottom-right, 120 bottom-left, 180 the left end, 240 top-left, 300
+// top-right. 0 IS MISSING ON PURPOSE — it is the seat nearest Sam.
+export const TABLE_SEAT_ANGLES = [60, 120, 180, 240, 300];
+export const TABLE_EMPTY_ANGLE = 0;
+
+// A seat's centre, relative to the oval's centre: the point on the rim plus
+// TABLE_SEAT_OFF along the ellipse's outward normal there.
+export const tableSeat = (deg: number) => {
+  const t = (deg * Math.PI) / 180;
+  const px = TABLE_OVAL_RX * Math.cos(t);
+  const py = TABLE_OVAL_RY * Math.sin(t);
+  let nx = Math.cos(t) / TABLE_OVAL_RX;
+  let ny = Math.sin(t) / TABLE_OVAL_RY;
+  const l = Math.hypot(nx, ny) || 1;
+  nx /= l;
+  ny /= l;
+  return { x: px + TABLE_SEAT_OFF * nx, y: py + TABLE_SEAT_OFF * ny };
+};
+
+// The footprint, measured off the geometry above rather than typed: the left
+// end's seat reaches furthest (the right end has none), so the table's ink is
+// 228 left / 180 right of the oval's centre and 133.12 either way vertically —
+// 408 x 266 world px, and 48 px wider on the left than on the right.
+const seatExtent = (() => {
+  let l = TABLE_OVAL_RX;
+  let r = TABLE_OVAL_RX;
+  let t = TABLE_OVAL_RY;
+  let b = TABLE_OVAL_RY;
+  for (const a of TABLE_SEAT_ANGLES) {
+    const c = tableSeat(a);
+    l = Math.max(l, -(c.x - TABLE_SEAT / 2));
+    r = Math.max(r, c.x + TABLE_SEAT / 2);
+    t = Math.max(t, -(c.y - TABLE_SEAT / 2));
+    b = Math.max(b, c.y + TABLE_SEAT / 2);
+  }
+  return { l, r, t, b };
+})();
+export const TABLE_INK_L = seatExtent.l; // 228
+export const TABLE_INK_R = seatExtent.r; // 180
+export const TABLE_INK_T = seatExtent.t; // 133.12
+export const TABLE_INK_B = seatExtent.b; // 133.12
+export const TABLE_SHADOW_CY = TABLE_INK_B + 4; // under the lowest seat, not under the rim
+export const TABLE_SHADOW_RX = CONTACT_SHADOW_RX * TABLE_OVAL_RX * 2; // 223.2
+// A 34 px seat with the full TILE_SHADOW reads as floating; the same shadow
+// asked for a tile 1.7x smaller is the "small" one.
+export const TABLE_SEAT_SHADOW_K = 1.7;
+
+// The mirror, read for the table: both sides still hand their thread over at
+// ONE anchor height, so the V stays an exact mirror. For the table that height
+// is the oval's bottom-centre rim.
+export const anchorToTableY = (anchorY: number) => anchorY - TABLE_OVAL_RY;
+export const TABLE_ANCHOR = (x: number, y: number) => ({ x, y: y + TABLE_OVAL_RY });
+
+// -- the V4 resolved picture ------------------------------------------------
+// Re-solved for the table's ink box. V3's D_FINAL / CX_FINAL / K_FINAL above are
+// LEFT ALONE so the trail still renders; these are V4's.
+//
+// The table is 78 px wider than the bench, so the sides come in 42 px to keep
+// Bret's head the size it was on screen (283 px): D 303 -> 261. ANCHOR_Y_FINAL
+// and CY_FINAL do not move — the table's top (anchor - 233) is still above
+// nothing, Sam's hair is still the ink's ceiling, and Bret's descender is still
+// its floor. CX_FINAL does move, and a long way: with the right-hand seat
+// missing the table's ink is 48 px wider on its left than on its right, so the
+// ink's own centre sits 38.5 px LEFT of Bret's axis. The camera centres the
+// INK, which is the house rule, so Bret's head resolves 32 screen px right of
+// the frame's centre and the table's five seats balance him.
+export const D_FINAL_V4 = 261;
+export const TABLE_X_FINAL = BRET_X - D_FINAL_V4; // 279
+export const TABLE_Y_FINAL = anchorToTableY(ANCHOR_Y_FINAL); // 692.4
+export const SAM_X_FINAL_V4 = BRET_X + D_FINAL_V4; // 801
+export const SAM_Y_FINAL_V4 = anchorToSamHeadY(ANCHOR_Y_FINAL); // 653.0
+export const K_FINAL_V4 = 0.8325;
+export const CX_FINAL_V4 = 501.477;
+
+// -- THE MINT ---------------------------------------------------------------
+// The coin recipe from d1Shared, read for a whole object: a POP_MINT-frame
+// scale-in from POP_FROM to 1 with the house's zero-sloped back(0.75) settle
+// (a sin^2 bump, never a kinked max()), and the opacity arriving over the first
+// POP_FADE frames so nothing flashes. Its shadow arrives with it, because the
+// shadow is a filter on the group the scale is applied to.
+export const POP_MINT = 6;
+export const POP_FROM = 0.6;
+export const POP_OVER = 0.18;
+export const POP_FADE = 3;
+export const popScale = (frame: number, at: number) => {
+  if (frame < at) return 0;
+  const u = clamp01((frame - at) / POP_MINT);
+  const s = Math.sin(Math.PI * u);
+  return POP_FROM + (1 - POP_FROM) * smoothstep(u) * (1 + POP_OVER * s * s);
+};
+export const popFade = (frame: number, at: number) =>
+  frame < at ? 0 : clamp01((frame - at) / POP_FADE);
+
+// ---------------------------------------------------------------------------
+// THE BOARDROOM TABLE, TOP-DOWN. SVG, in the same layer as the threads that
+// leave it. `x`, `y` are the OVAL's centre; `pop` is the mint's scale about
+// that centre and `fade` its opacity, so the whole object — table, seats,
+// contact shadow — is struck as one thing.
+//
+// The knock-outs follow CompanyCard exactly: a mask whose white shape is the
+// tile and whose black figure is what the kraft shows through. Each mask lives
+// inside the translated <g> that uses it, so `userSpaceOnUse` resolves in that
+// group's own coordinates — the recipe the rest of this clip already renders.
+// ---------------------------------------------------------------------------
+export const BoardTable: React.FC<{
+  x: number;
+  y: number;
+  k: number;
+  opacity?: number;
+  contact?: boolean;
+  pop?: number;
+  fade?: number;
+}> = ({ x, y, k, opacity = OP_READ, contact = true, pop = 1, fade = 1 }) => {
+  if (pop <= 0 || fade <= 0) return null;
+  const id = `btable-${Math.round(x)}-${Math.round(y)}`;
+  const m = TABLE_MARK / 24;
+  const seatTile = squirclePath(TABLE_SEAT, TABLE_SEAT, SQUIRCLE_RATIO, SQUIRCLE_SMOOTH);
+  const gs = TABLE_SEAT_GLYPH / 24;
+  const go = (TABLE_SEAT - TABLE_SEAT_GLYPH) / 2;
+  return (
+    <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${pop.toFixed(4)})`} opacity={fade}>
+      <linearGradient id={`${id}-g`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={TILE_GRAD_TOP} />
+        <stop offset="100%" stopColor={TILE_GRAD_BOTTOM} />
+      </linearGradient>
+      {contact && (
+        <ellipse
+          cx={0}
+          cy={TABLE_SHADOW_CY}
+          rx={TABLE_SHADOW_RX}
+          ry={CONTACT_SHADOW_RY}
+          fill="#000"
+          opacity={CONTACT_SHADOW_OP}
+          style={{ filter: "blur(3px)" }}
+        />
+      )}
+      <defs>
+        <mask
+          id={`${id}-top`}
+          maskUnits="userSpaceOnUse"
+          x={-TABLE_OVAL_RX}
+          y={-TABLE_OVAL_RY}
+          width={TABLE_OVAL_RX * 2}
+          height={TABLE_OVAL_RY * 2}
+        >
+          <ellipse cx={0} cy={0} rx={TABLE_OVAL_RX} ry={TABLE_OVAL_RY} fill="#fff" />
+          <g transform={`translate(${-TABLE_MARK / 2} ${-TABLE_MARK / 2}) scale(${m})`}>
+            {OPENAI.paths.map((d, i) => (
+              <path key={i} d={d} fill="#000" fillRule="evenodd" />
+            ))}
+          </g>
+        </mask>
+      </defs>
+      <ellipse
+        cx={0}
+        cy={0}
+        rx={TABLE_OVAL_RX}
+        ry={TABLE_OVAL_RY}
+        fill={`url(#${id}-g)`}
+        opacity={opacity}
+        mask={`url(#${id}-top)`}
+        style={{ filter: TILE_SHADOW(k) }}
+      />
+      {TABLE_SEAT_ANGLES.map((a) => {
+        const c = tableSeat(a);
+        const sid = `${id}-s${a}`;
+        return (
+          <g
+            key={a}
+            transform={`translate(${(c.x - TABLE_SEAT / 2).toFixed(2)} ${(c.y - TABLE_SEAT / 2).toFixed(2)})`}
+            style={{ filter: TILE_SHADOW(k * TABLE_SEAT_SHADOW_K) }}
+          >
+            <defs>
+              <mask id={sid} maskUnits="userSpaceOnUse" x={0} y={0} width={TABLE_SEAT} height={TABLE_SEAT}>
+                <rect width={TABLE_SEAT} height={TABLE_SEAT} fill="#fff" />
+                <g
+                  transform={`translate(${go} ${go}) scale(${gs})`}
+                  fill="none"
+                  stroke="#000"
+                  strokeWidth={TABLE_GLYPH_STROKE}
+                  strokeLinecap={GLYPH_CAP}
+                  strokeLinejoin={GLYPH_JOIN}
+                  dangerouslySetInnerHTML={{ __html: USER_GLYPH }}
+                />
+              </mask>
+            </defs>
+            <path d={seatTile} fill={`url(#${id}-g)`} opacity={opacity} mask={`url(#${sid})`} />
+          </g>
+        );
+      })}
+    </g>
   );
 };
