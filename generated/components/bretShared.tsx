@@ -3,6 +3,7 @@ import { loadFont } from "@remotion/fonts";
 import { Img, staticFile } from "remotion";
 import {
   CONTACT_SHADOW_OP,
+  CONTACT_SHADOW_RX,
   CONTACT_SHADOW_RY,
   TILE_GRAD_BOTTOM,
   TILE_GRAD_TOP,
@@ -650,13 +651,16 @@ export const TABLE_ANCHOR = (x: number, y: number) => ({ x, y: y + TABLE_OVAL_RY
 // ink's own centre sits 36 px LEFT of Bret's axis. The camera centres the INK,
 // which is the house rule, so Bret's head resolves 30 screen px right of the
 // frame's centre and the table's five seats balance him.
-export const D_FINAL_V4 = 263;
-export const TABLE_X_FINAL = BRET_X - D_FINAL_V4; // 277
+// SUPERSEDED BY V4b (the huddle) BELOW. The table's distance and ink centre are
+// kept under their own names so this block still describes the delivered V4
+// exactly, while the LIVE D_FINAL_V4 / K_FINAL_V4 / CX_FINAL_V4 are re-solved
+// for the huddle at the end of this file.
+export const D_TABLE_FINAL = 263;
+export const TABLE_X_FINAL = BRET_X - D_TABLE_FINAL; // 277
 export const TABLE_Y_FINAL = anchorToTableY(ANCHOR_Y_FINAL); // 692.4
-export const SAM_X_FINAL_V4 = BRET_X + D_FINAL_V4; // 803
-export const SAM_Y_FINAL_V4 = anchorToSamHeadY(ANCHOR_Y_FINAL); // 653.0
-export const K_FINAL_V4 = 0.8334;
-export const CX_FINAL_V4 = 500.475; // re-solved after the seats grew to 52 (table ink L 230)
+export const SAM_X_TABLE_FINAL = BRET_X + D_TABLE_FINAL; // 803
+export const SAM_Y_FINAL_V4 = anchorToSamHeadY(ANCHOR_Y_FINAL); // 653.0 — independent of d
+export const CX_TABLE_FINAL = 500.475; // the table's ink centre; its left seat made it lopsided
 
 // -- THE MINT ---------------------------------------------------------------
 // The coin recipe from d1Shared, read for a whole object: a POP_MINT-frame
@@ -791,3 +795,263 @@ export const BoardTable: React.FC<{
     </g>
   );
 };
+
+// ===========================================================================
+// V4b — THE BOARD IS A HUDDLE OF PALE PEOPLE.
+//
+// Director, 2026-09-16 on the delivered V4: "I don't think it makes sense that
+// one square is not filled; I don't like mixing an oval shape with square
+// shapes, it doesn't look harmonious, it looks like Microsoft Paint. Maybe
+// instead of boxes with people icons it can just be the people icons in the
+// pale white colour."
+//
+// So the table, the oval, the seat tiles and the blank empty seat are all gone.
+// `BoardTable` is kept above (the trail still has to render); the board is now
+// `BoardHuddle`: FIVE PERSON SILHOUETTES standing in a group photo. No tiles,
+// no oval, no boxes, no empty slot, no label.
+//
+// A silhouette is SVG GEOMETRY, never an <image> (an SVG <image> on a
+// staticFile races frame capture — MEMORY). Its proportions are MEASURED off
+// public/person.png rather than invented, so the five read as the same person
+// glyph the rest of the house uses. Measured on its alpha (> 96), which is a
+// square 430 x 430 ink box:
+//
+//   head    a circle, diameter 0.4744 of the box (widest rows 0.2628..0.7349),
+//           centred at x 0.4989 (call it dead centre) and y 0.2372 — i.e. the
+//           circle is tangent to the box's top edge.
+//   gap     head bottom 0.4744, shoulders top 0.5111 — 0.0367 of kraft between
+//           the chin and the shoulders.
+//   shoulders  a HALF-ELLIPSE slab: rx 0.5 of the box, ry 0.4419, centred at
+//           y 0.953, straight down to the foot at 1.0, with a 2 px radius at
+//           the base. Fitted to the real outline, not guessed: at y 0.605 the
+//           measured half-width is 0.30815 and the ellipse gives 0.3082; at
+//           0.721 measured 0.4221, ellipse 0.4227; at 0.884 measured 0.48955,
+//           ellipse 0.4899. (A true semicircle misses the top by 58 px.)
+//
+// The brief called the head "~40% of the body width"; the file says 47.4%, and
+// the file wins — these are the proportions of the glyph this clip's other
+// people are drawn from.
+// ===========================================================================
+
+export const PERSON_HEAD_F = 0.2372; // head RADIUS, as a fraction of the figure's height
+export const PERSON_HEAD_CY_F = 0.2372; // head centre, below the figure's top
+export const PERSON_SHOULDER_RX_F = 0.5;
+export const PERSON_SHOULDER_RY_F = 0.4419;
+export const PERSON_SHOULDER_CY_F = 0.953;
+export const PERSON_BASE_R = 2; // the slab's base corners
+export const PERSON_ASPECT = 1; // person.png's ink box is square
+
+// The shoulders, as one path: up the left side, over the dome, down the right
+// side, across the flat base with its 2 px corners. `footY` is the figure's
+// lowest pixel and `h` its full height; the width follows from PERSON_ASPECT.
+export const personShoulders = (cx: number, footY: number, h: number) => {
+  const w = h * PERSON_ASPECT;
+  const top = footY - h;
+  const L = cx - w / 2;
+  const R = cx + w / 2;
+  const rx = w * PERSON_SHOULDER_RX_F;
+  const ry = h * PERSON_SHOULDER_RY_F;
+  const ey = top + h * PERSON_SHOULDER_CY_F; // the dome's own centre line
+  const rr = Math.min(PERSON_BASE_R, (footY - ey) / 2);
+  const n = (v: number) => v.toFixed(2);
+  return [
+    `M ${n(L)} ${n(footY - rr)}`,
+    `L ${n(L)} ${n(ey)}`,
+    `A ${n(rx)} ${n(ry)} 0 0 1 ${n(R)} ${n(ey)}`,
+    `L ${n(R)} ${n(footY - rr)}`,
+    `A ${n(rr)} ${n(rr)} 0 0 1 ${n(R - rr)} ${n(footY)}`,
+    `L ${n(L + rr)} ${n(footY)}`,
+    `A ${n(rr)} ${n(rr)} 0 0 1 ${n(L)} ${n(footY - rr)}`,
+    "Z",
+  ].join(" ");
+};
+
+export const personHeadCY = (footY: number, h: number) => footY - h + h * PERSON_HEAD_CY_F;
+export const personHeadR = (h: number) => h * PERSON_HEAD_F;
+
+// -- the group photo --------------------------------------------------------
+// A back row of three and a front row of two standing in the gaps. The back row
+// is SMALLER and LIFTED (further away reads as higher up the sheet), which is
+// what makes the five read as one huddle rather than a line of five.
+export const HUDDLE_BACK_H = 150;
+export const HUDDLE_FRONT_H = 170;
+export const HUDDLE_PITCH = 90; // between neighbours in a row: heads clear (71 wide), shoulders overlap
+export const HUDDLE_BACK_LIFT = 80; // the back row's feet, above the front row's
+
+// Local coordinates, ground line at y = 0, the group's axis at x = 0.
+const HUDDLE_RAW: { x: number; h: number; foot: number }[] = [
+  { x: -HUDDLE_PITCH, h: HUDDLE_BACK_H, foot: -HUDDLE_BACK_LIFT },
+  { x: 0, h: HUDDLE_BACK_H, foot: -HUDDLE_BACK_LIFT },
+  { x: HUDDLE_PITCH, h: HUDDLE_BACK_H, foot: -HUDDLE_BACK_LIFT },
+  { x: -HUDDLE_PITCH / 2, h: HUDDLE_FRONT_H, foot: 0 },
+  { x: HUDDLE_PITCH / 2, h: HUDDLE_FRONT_H, foot: 0 },
+];
+
+// Measured off the five figures rather than typed: 330 x 230 world px, the back
+// row setting the width and the height, the front row setting the ground.
+const huddleExtent = (() => {
+  let l = 0;
+  let r = 0;
+  let t = 0;
+  let b = 0;
+  for (const f of HUDDLE_RAW) {
+    const w = f.h * PERSON_ASPECT;
+    l = Math.max(l, -(f.x - w / 2));
+    r = Math.max(r, f.x + w / 2);
+    t = Math.max(t, -(f.foot - f.h));
+    b = Math.max(b, f.foot);
+  }
+  return { l, r, t, b };
+})();
+
+export const HUDDLE_W = huddleExtent.l + huddleExtent.r; // 330
+export const HUDDLE_H = huddleExtent.t + huddleExtent.b; // 230
+export const HUDDLE_INK_L = HUDDLE_W / 2; // 165 — symmetric, unlike the table
+export const HUDDLE_INK_R = HUDDLE_W / 2; // 165
+export const HUDDLE_INK_T = HUDDLE_H / 2; // 115
+export const HUDDLE_INK_B = HUDDLE_H / 2; // 115
+// The ground line, measured DOWN from the ink box's centre — which is where the
+// component's (x, y) sits, so a huddle is placed by its ink like every other
+// object in the clip.
+export const HUDDLE_GROUND = (huddleExtent.b + huddleExtent.t) / 2; // 115
+export const HUDDLE_FIGURES = HUDDLE_RAW.map((f) => ({ ...f, foot: f.foot + HUDDLE_GROUND }));
+export const HUDDLE_SEATS = HUDDLE_FIGURES.length; // five
+// Back row first (so the front row stands in front of it), and within each row
+// RIGHT TO LEFT — see `huddleDrop`: the per-figure hard drop goes down-right, so
+// a figure only separates from its neighbour if that neighbour is already down.
+export const HUDDLE_DRAW_ORDER = HUDDLE_FIGURES.map((_, i) => i).sort((a, b) => {
+  const A = HUDDLE_FIGURES[a];
+  const B = HUDDLE_FIGURES[b];
+  return A.foot === B.foot ? B.x - A.x : A.foot - B.foot;
+});
+
+// What actually stands on the ground is the FRONT ROW: 260 world px across.
+export const HUDDLE_FOOT_W = HUDDLE_PITCH + HUDDLE_FRONT_H; // 260
+// The house contact ellipse, scaled to that footprint rather than to the
+// huddle's full 330: 0.62 of the width is the house ratio and it is kept, but
+// it belongs to the part of the object that touches the sheet. At 0.62 x 330
+// the ellipse reaches 75 px past the outermost foot on each side with nothing
+// above it, which is the dark rule the table's first pass was rejected for; at
+// 0.62 x 260 it overhangs by 31 px — 12% of the width each side, exactly a
+// CompanyCard's proportion.
+export const HUDDLE_SHADOW_RX = CONTACT_SHADOW_RX * HUDDLE_FOOT_W; // 161.2
+
+// A hard 2 SCREEN px drop per figure, so the five separate where they overlap.
+// It goes DOWN AND RIGHT, and both components earn their place — rendered with
+// a straight-down drop first (au4b, first pass), the two front figures merged
+// into one wide two-headed body, because the boundary between two neighbours
+// standing side by side is near VERTICAL and a straight-down shadow lands on it
+// with no offset at all. Down separates the rows (each head's jaw drops into its
+// own neck gap, where the figure behind shows through) and right separates the
+// neighbours in a row, so each row is drawn RIGHT TO LEFT and every figure casts
+// onto the one beside it. Down-right is also the house's own light: the Coin's
+// highlight in d1Shared sits at 35% / 30%, i.e. top-left.
+//
+// This is a SEPARATOR, not the house shadow — the huddle's house shadow is the
+// group's TILE_SHADOW, which is still straight down. Lengths are screen px, so
+// it divides by k like every other shadow here.
+export const HUDDLE_DROP = 2;
+export const HUDDLE_DROP_OP = 0.34;
+export const huddleDrop = (k: number) =>
+  `drop-shadow(${(HUDDLE_DROP / k).toFixed(2)}px ${(HUDDLE_DROP / k).toFixed(2)}px 0 rgba(0,0,0,${HUDDLE_DROP_OP}))`;
+
+// The mirror, read for the huddle. Both sides still hand their thread over at
+// ONE anchor height, so the V stays an exact mirror; for the huddle that height
+// is the GROUND — the front row's feet, on the contact shadow. A group of
+// people stands, so the thread leaves from between their feet.
+export const anchorToHuddleY = (anchorY: number) => anchorY - HUDDLE_GROUND;
+export const HUDDLE_ANCHOR = (x: number, y: number) => ({ x, y: y + HUDDLE_GROUND });
+
+// ---------------------------------------------------------------------------
+// THE HUDDLE. SVG, in the same layer as the thread that leaves it. `x`, `y` are
+// the INK BOX's centre; `pop` is the mint's scale about that centre and `fade`
+// its opacity, so the whole group — five figures and the one contact shadow —
+// is struck as one object exactly the way the table was.
+//
+// The pale is the house tile gradient, TILE_GRAD_TOP -> TILE_GRAD_BOTTOM, run
+// PER FIGURE from that figure's own top to its own foot (userSpaceOnUse, so the
+// head circle and the shoulder slab share one ramp). The group's ink opacity is
+// on the GROUP, never per figure: at 0.9 each, an overlapping figure would show
+// 10% of its neighbour through itself and the huddle would read as ghosts.
+// ---------------------------------------------------------------------------
+export const BoardHuddle: React.FC<{
+  x: number;
+  y: number;
+  k: number;
+  opacity?: number;
+  contact?: boolean;
+  pop?: number;
+  fade?: number;
+}> = ({ x, y, k, opacity = OP_READ, contact = true, pop = 1, fade = 1 }) => {
+  if (pop <= 0 || fade <= 0) return null;
+  const id = `bhud-${Math.round(x)}-${Math.round(y)}`;
+  return (
+    <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${pop.toFixed(4)})`} opacity={fade}>
+      {contact && (
+        <ellipse
+          cx={0}
+          cy={HUDDLE_GROUND}
+          rx={HUDDLE_SHADOW_RX}
+          ry={CONTACT_SHADOW_RY}
+          fill="#000"
+          opacity={CONTACT_SHADOW_OP}
+          style={{ filter: "blur(3px)" }}
+        />
+      )}
+      <defs>
+        {HUDDLE_FIGURES.map((f, i) => (
+          <linearGradient
+            key={i}
+            id={`${id}-g${i}`}
+            gradientUnits="userSpaceOnUse"
+            x1={0}
+            y1={f.foot - f.h}
+            x2={0}
+            y2={f.foot}
+          >
+            <stop offset="0%" stopColor={TILE_GRAD_TOP} />
+            <stop offset="100%" stopColor={TILE_GRAD_BOTTOM} />
+          </linearGradient>
+        ))}
+      </defs>
+      {/* The back row is drawn first, so the front row stands in front of it;
+          within a row the order is RIGHT TO LEFT, so each figure's down-right
+          hard drop lands on its neighbour rather than inside itself. */}
+      <g style={{ filter: TILE_SHADOW(k) }} opacity={opacity}>
+        {HUDDLE_DRAW_ORDER.map((i) => HUDDLE_FIGURES[i]).map((f, n) => (
+          <g key={n} style={{ filter: huddleDrop(k) }}>
+            <circle
+              cx={f.x}
+              cy={personHeadCY(f.foot, f.h)}
+              r={personHeadR(f.h)}
+              fill={`url(#${id}-g${HUDDLE_DRAW_ORDER[n]})`}
+            />
+            <path d={personShoulders(f.x, f.foot, f.h)} fill={`url(#${id}-g${HUDDLE_DRAW_ORDER[n]})`} />
+          </g>
+        ))}
+      </g>
+    </g>
+  );
+};
+
+// -- the V4b resolved picture ------------------------------------------------
+// Re-solved for the huddle's ink box, which is 330 x 230 and SYMMETRIC — the
+// table's was 460 x 283 and lopsided. Two consequences, both good:
+//
+//   * the sides go back OUT. The huddle is 130 px narrower than the table, so
+//     to keep Bret's head at the 283 screen px it has been at since V3b (i.e.
+//     K_FINAL_V4 unchanged at 0.8334) the mirror distance grows 263 -> 292.
+//   * the camera stops leaning left. The table's ink centre sat 36 px left of
+//     Bret's axis; the huddle's is on it, so the only thing still pulling the
+//     resolved ink centre off 540 is Sam's name, and CX_FINAL_V4 comes back to
+//     532.975 — the same number the bench world resolved to.
+//
+// ANCHOR_Y_FINAL, CY_FINAL, DOT_*, BRET_* and Sam's whole label solve are
+// untouched: the huddle's top (anchor - 230) is still above nothing, Sam's hair
+// is still the ink's ceiling and Bret's descender still its floor.
+export const D_FINAL_V4 = 292;
+export const HUDDLE_X_FINAL = BRET_X - D_FINAL_V4; // 248
+export const HUDDLE_Y_FINAL = anchorToHuddleY(ANCHOR_Y_FINAL); // 677.4
+export const SAM_X_FINAL_V4 = BRET_X + D_FINAL_V4; // 832
+export const K_FINAL_V4 = 0.8334; // unchanged: Bret's head stays 283 screen px
+export const CX_FINAL_V4 = 532.975; // the resolved ink's own centre across

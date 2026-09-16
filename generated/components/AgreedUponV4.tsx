@@ -33,7 +33,7 @@ import {
   BRET_TOP,
   BRET_W,
   BRET_X,
-  BoardTable,
+  BoardHuddle,
   CX_FINAL_V4,
   CY_FINAL,
   DOT_MINT,
@@ -41,11 +41,21 @@ import {
   DOT_X,
   DOT_Y,
   D_FINAL_V4,
+  HUDDLE_ANCHOR,
+  HUDDLE_FIGURES,
+  HUDDLE_GROUND,
+  HUDDLE_INK_B,
+  HUDDLE_INK_L,
+  HUDDLE_INK_R,
+  HUDDLE_INK_T,
   K_FINAL_V4,
   LABEL_HALF,
   LABEL_INK_BOT,
   LABEL_INK_TOP,
   LABEL_OP,
+  PERSON_ASPECT,
+  PERSON_SHOULDER_CY_F,
+  PERSON_SHOULDER_RY_F,
   POP_FADE,
   POP_FROM,
   POP_MINT,
@@ -58,24 +68,16 @@ import {
   SAM_LABEL_HALF,
   SAM_LABEL_NUDGE,
   SAM_W,
-  TABLE_ANCHOR,
-  TABLE_INK_B,
-  TABLE_INK_L,
-  TABLE_INK_R,
-  TABLE_INK_T,
-  TABLE_OVAL_RX,
-  TABLE_OVAL_RY,
-  TABLE_SEAT,
-  TABLE_SEAT_ANGLES,
   Thread,
   WORLD_H,
   WORLD_W,
+  anchorToHuddleY,
   anchorToSamHeadY,
-  anchorToTableY,
   dotScale,
+  personHeadCY,
+  personHeadR,
   popFade,
   popScale,
-  tableSeat,
 } from "./bretShared";
 
 // ---------------------------------------------------------------------------
@@ -111,14 +113,26 @@ import {
 //      already most of the way through its pull-back, so both land inside the
 //      frame it has established and it simply keeps opening around them.
 //
-//   3. THE BOARD IS A BOARDROOM TABLE, SEEN FROM ABOVE. Director: "I'm not the
-//      biggest fan of how you visualized the board — it's a bit boring and
-//      slightly out of place." The bench (one wide tile, three user glyphs in a
-//      row) is gone. `BoardTable` is an OVAL of the house tile material with the
-//      OPENAI mark knocked out of its centre and SIX SEATS around it — five
-//      occupied by a knocked-out "user", and the seat at the oval's RIGHT END,
-//      the one nearest Sam, NOT DRAWN AT ALL. It reads at a glance as a
-//      boardroom with an empty chair, which is the sentence the cut is about.
+//   3. THE BOARD IS A HUDDLE OF FIVE PEOPLE. Two rounds got here. The bench
+//      (one wide tile, three user glyphs in a row) was "a bit boring and
+//      slightly out of place"; the boardroom table that replaced it — an oval of
+//      tile material, the OPENAI mark knocked out of it, six square seats round
+//      the rim with the one nearest Sam left blank — drew the note this revision
+//      is built on (director, 2026-09-16): "I don't think it makes sense that
+//      one square is not filled; I don't like mixing an oval shape with square
+//      shapes, it doesn't look harmonious, it looks like Microsoft Paint. Maybe
+//      instead of boxes with people icons it can just be the people icons in the
+//      pale white colour." So there is no table, no oval, no tile, no empty slot
+//      and no label left: `BoardHuddle` is FIVE PERSON SILHOUETTES in the house
+//      pale, standing in a group photo — a back row of three at 150 world px and
+//      a front row of two at 170 standing in the gaps, the rows overlapping into
+//      one 330 x 230 huddle on ONE contact shadow. Each figure is SVG geometry
+//      at public/person.png's own measured proportions (head circle 0.4744 of
+//      the body width, a half-ellipse shoulder slab with 2 px base corners),
+//      filled with the same TILE_GRAD_TOP -> TILE_GRAD_BOTTOM ramp as every tile
+//      in the clip and separated from its neighbours by a hard 2 px drop. THE
+//      BOARD IS PEOPLE, in the same pale family as the two heads, and nothing in
+//      the frame is a box any more.
 //
 // THE LINE (SRT 11.859 -> 19.539):
 //   "basically my understanding was I was the person that both the existing
@@ -160,15 +174,17 @@ import {
 //      (f78-98) is read while it is still opening.
 //
 //   3. THE BOARD IS MINTED     f72           ahead of "existing" (f78)
-//      The table is STRUCK at its near-apart position, fully in by f78. Its
-//      label — it has none — and its contact shadow arrive with it.
+//      The board is minted — a huddle of five. The WHOLE GROUP is struck as one
+//      object at its near-apart position, fully in by f78: one 6-frame scale-in
+//      from 0.6 about the huddle's own centre with the zero-sloped settle, the
+//      opacity over the first 3 frames, the contact shadow with it. No label.
 //
 //   4. THE DRIFT APART         f72 -> f125   "both the existing board and Sam"
 //      The situation pulling apart. ONE TRACK, READ TWICE: the two sides are
 //      always the same distance `d` from Bret's axis and always at the same
 //      anchor height, so they are exact mirrors on every frame, whether or not
 //      both are drawn yet. 24 world px along the line the draw-in will later
-//      come back down — d 288.2 -> 304, the anchor 763.6 -> 745.5, out AND up —
+//      come back down — d 317.2 -> 333, the anchor 763.6 -> 745.5, out AND up —
 //      one flow-eased travel at 0.45 px a frame. Alive, not a travel.
 //
 //   5. SAM IS MINTED           f104          ahead of "Sam" (f110)
@@ -183,7 +199,8 @@ import {
 //
 //   7. THE THREADS             f112 -> f122  "agreed" (f117) into "upon" (f125)
 //      Both threads launch on the SAME frame, from mirrored sources — the
-//      oval's bottom-centre rim and the point directly under Sam's head — and
+//      huddle's bottom-centre, which is the front row's feet standing on the
+//      contact shadow, and the point directly under Sam's head — and
 //      both run to ONE point: the amber dot under Bret's chin. Same ease, same
 //      10 frames, so they LAND TOGETHER on f122. The simultaneous landing is the
 //      agreement. They are drawn BELOW his head, so each tip slips behind his
@@ -200,7 +217,7 @@ import {
 //      back along the line they will be pulled down.
 //
 //  10. THE PULL IN             f150 -> f180  "help mediate" (f152 / f156)
-//      The drift REVERSES, mirrored: d 302 -> 261 and the anchor 745.5 -> 792.4,
+//      The drift REVERSES, mirrored: d 329.9 -> 292 and the anchor 749 -> 792.4,
 //      visibly moving on "mediate", settled by f168 with a PULL_OVER-px
 //      zero-sloped settle bump to f180. The threads are geometric, so they
 //      simply get shorter: the V closes on its own point.
@@ -224,74 +241,79 @@ import {
 // mirror, the single point, the padding box with 30-60 px of air, and "the pops
 // land inside the frame the pull-back has already established":
 //
-//   * THE PULL-BACK IS AUTHORED f46 -> f82, NOT f46 -> f92. This one is forced
-//     arithmetic, not taste. The table's left seat sits 223 px left of the
-//     oval's centre, so at the pop it is 479 world px left of the camera's cx:
-//     it only clears the frame's left edge for k <= 1.11, and only clears the
-//     house band (x 60) for k <= 0.99. At f72 the brief's f46-f92 move is 56% of
-//     the way through, which at CAM_WARP 0.62 leaves k 1.10 — the leftmost seat
-//     is 6 px OFF the left edge on the frame it is struck, which is exactly what
-//     "they land inside the frame the pull-back has already established" says
-//     must not happen. Getting k to 0.99 at f72 on a move ending at f92 needs
-//     warp 0.39, and warp below 0.5 has a non-zero slope at u=0 — a velocity
-//     step the damper rings on. So the move keeps its shape and loses ten
-//     frames: authored f46-f82 at warp 0.62, the damper carries the scale to
-//     f84, and the table's leftmost seat is at screen x 69 on f72 (further in
-//     still while the mint is running — the strike is at 0.6 of full size),
-//     124 on f78 and 152 by f86. The move still lands well ahead of "board" (f98), and the
-//     frame is never parked after it: (6) runs f82 -> f132.
+//   * THE PULL-BACK IS AUTHORED f46 -> f82, NOT f46 -> f92. Kept from the table
+//     round, where it was forced arithmetic: the board is struck at f72 and the
+//     frame it is struck into has to already hold it, and on a move ending at
+//     f92 the camera is still at k 1.10 there, which put the table's leftmost
+//     seat 6 px OFF the left edge. Getting k low enough by f72 on an f46-f92
+//     move needs warp 0.39, and a warp below 0.5 has a non-zero slope at u = 0 —
+//     a velocity step the damper rings on. So the move keeps its shape and loses
+//     ten frames. The huddle is 130 px narrower than the table and its ink is
+//     symmetric, so it clears far more easily than the table did (its left edge
+//     is at screen x 103 on f72 measured against the full ink, and further in
+//     still while the mint runs), but the window stays where it is: it is what
+//     the camera's whole shape and every velocity number were solved against,
+//     and "everything else stays exactly" includes it. The move still lands well
+//     ahead of "board" (f98), and the frame is never parked after it: (6) runs
+//     f82 -> f132.
 //
 //   * THE SIDES POP 24 PX INSIDE THEIR APART-MOST POSITION, not exactly on it.
-//     Same arithmetic, 14 px of it: at d 304 the leftmost seat is at world x 13
-//     and is 3 px outside the house band at f72 even with the shortened
-//     pull-back. Popping at d 288.2 and drifting the last 24 px out to f125 puts
-//     it at 69 instead — and the drift is V3b's own gesture (4), which the brief
-//     keeps, at V3b's own size (24 px against V3b's 20). It runs along the SAME
-//     LINE the draw-in later comes back down, so the two sides only ever move on
-//     one axis in the whole cut.
+//     V3b's own gesture (4), kept at V4's size: the two sides are struck 24 px
+//     back along the line the draw-in later comes down (d 317.2 instead of 333)
+//     and drift out to it by f125. It is what keeps the mint inside the frame
+//     the pull-back has established, and it runs along the SAME LINE as the
+//     pull-in, so the two sides only ever move on one axis in the whole cut.
 //
-//   * THE RESOLVED CAMERA CENTRES 36 PX LEFT OF BRET'S AXIS. The table's
-//     missing seat is on its RIGHT (it is the seat nearest Sam), so the table's
-//     ink reaches 223 px left of the oval's centre and only 180 right: the whole
-//     picture's ink centre is CX_FINAL_V4 504.0, not Bret's 540. The house rule
-//     is that the camera centres the ink, and it is kept — Bret's head resolves
-//     30 screen px right of the frame's centre with the five seats balancing
-//     him, and the air is 45 / 45 px measured analytically inside x 120-960.
-//     Centring Bret instead would put 15 px of kraft on one side and 75 on the
-//     other.
+//   * THE CAMERA STOPS LEANING LEFT. The table's ink was lopsided — its missing
+//     seat was on the right, so its ink reached 230 px left of the oval's centre
+//     and 180 right — and the house rule that the camera centres the INK pulled
+//     the resolved cx 36 px left of Bret's axis. The huddle's ink is symmetric
+//     about its own axis, so the only thing still pulling the picture's centre
+//     off 540 is Sam's name, and CX_FINAL_V4 comes back to 532.975: the same
+//     number the bench world resolved to. The air is 45 / 45 px measured
+//     analytically inside x 120-960, and measured again on the render.
 //
-//   * THE SIDES COME IN FROM ±303 TO ±263. The table is 403 world px wide
-//     against the bench's 330, so at V3b's distance the resolved ink is 73 px
-//     wider and k has to fall to 0.765 to fit the padding box — Bret's head
-//     would drop from 283 screen px to 260. Nothing about the heads was supposed
-//     to change, so the distance absorbs the table instead: D_FINAL_V4 263 puts
-//     K_FINAL back at 0.8334 and his head back at 283 px, to the pixel. At 263
-//     the oval's right rim is still 54 px clear of the top of Bret's hair and the
-//     nearest seat 24 px clear of his empty head BOX (90-odd from his alpha).
+//   * THE SIDES GO BACK OUT, TO ±292. The huddle is 330 world px wide against
+//     the table's 460, so at the table's distance the resolved ink would be 130
+//     px narrower and k would have to RISE to fit the padding box with real air
+//     — Bret's head would grow past the 283 screen px it has been at since V3b.
+//     Nothing about the heads is supposed to change, so the distance absorbs the
+//     huddle instead: D_FINAL_V4 263 -> 292 puts K_FINAL_V4 back at 0.8334 and
+//     his head back at 283 px, to the pixel, with 45 / 45 px of air. At 292 the
+//     huddle's nearest ink — the front-right figure's shoulder, at its foot — is
+//     41 world px clear of Bret's empty head BOX (and 90-odd from his alpha),
+//     and the huddle's top is 115 px above Sam's crown's own row.
 //
-//   * THE SEAT GLYPH IS STROKED 3.0, NOT THE HOUSE 2.6. A seat is 34 px against
-//     a CompanyCard's 72, so the house weight comes out at 2.17 world px —
-//     1.8 screen px at the resolved k, which reads as a smudge rather than a
-//     person. 3.0 puts it at 2.5 world px: the same weight as a thread, which is
-//     the thinnest line this clip already draws. Everything else about the
-//     knock-out is CompanyCard's exactly.
+//   * THE FIGURE'S HEAD IS 47.4% OF ITS BODY WIDTH, NOT THE BRIEF'S ~40%. The
+//     brief says to take the proportions from public/person.png and to measure
+//     them, and the file says 0.4744: its alpha (> 96) is a square 430 x 430 ink
+//     box whose widest head rows run 0.2628..0.7349. Every other fraction in
+//     `personShoulders` is fitted to that same outline rather than guessed — the
+//     shoulder slab is a half-ellipse rx 0.5 / ry 0.4419 centred at y 0.953,
+//     which reproduces the measured half-width to within 0.001 at y 0.605, 0.721
+//     and 0.884 (a true semicircle misses the slab's top by 58 px). The file
+//     wins over the brief's round number because these are the proportions of
+//     the glyph the rest of the house draws its people from.
 //
-//   * THE TABLE'S CONTACT SHADOW IS ITS OWN FOOTPRINT, NOT THE HOUSE BAR. The
-//     house ellipse is 0.62 of the width by 5 px, which under a 360 px oval is
-//     a 223 x 5 rule — rendered once (au4, first pass) it is a dark straight
-//     line right across the frame with nothing above most of it, which is both
-//     a ground line (the house has none) and V3b's own worst note repeated. A
-//     table seen from above lies on the sheet rather than standing on an edge,
-//     so its one contact shadow is the oval dropped 12 px and blurred 8: a soft
-//     crescent under its foot, hidden by the table everywhere else. Full
-//     reasoning at TABLE_SHADOW_CY in bretShared.
+//   * THE ONE CONTACT SHADOW IS SCALED TO THE FRONT ROW, NOT THE WHOLE HUDDLE.
+//     A group of people stands, so the huddle gets the house ellipse
+//     (CONTACT_SHADOW_RY 5, CONTACT_SHADOW_OP 0.30, blurred 3) and not the
+//     table's lying-down crescent. What it is scaled to is the part that touches
+//     the sheet: the FRONT ROW is 260 px across and the back row's feet are 80
+//     px above the ground, so 0.62 x 330 would reach 75 px past the outermost
+//     foot on each side with nothing above it — the dark rule the table's first
+//     pass was rejected for. 0.62 x 260 overhangs by 31 px, which is 12% of the
+//     width each side: exactly a CompanyCard's proportion.
 //
-//   * THE SEATS SIT 9 PX OFF THE RIM, NOT 14. Rendered at 14 (au4, first pass)
-//     the four corner seats read as icons scattered round an oval rather than
-//     chairs at a table: the ellipse is flat, so at ±60° its normal is almost
-//     vertical and the gap throws them up and away from it. 9 is still plainly
-//     a gap and the seats belong to the table. It also takes 5 px off the
-//     table's left overhang, which is 5 px the pop-framing gets back.
+//   * EACH FIGURE CARRIES A HARD 2 PX DROP, ON TOP OF THE GROUP'S TILE_SHADOW.
+//     Five overlapping silhouettes in one flat pale are one blob without it. The
+//     drop is DOWNWARD because the light in this scene comes from the top
+//     (DEPTH_TOP_LIGHT), and downward is where it does the work: under each
+//     head's jaw it falls into that figure's own neck gap, where the figure
+//     behind shows through, and under each slab's base it falls onto the sheet.
+//     It is a screen-px length like every other shadow in the house, so it
+//     divides by k. No strokes, no rims, no outlines: "no glyph strokes" is the
+//     brief, and a kraft-coloured outline would be one.
 //
 //   * THE MINT LANDS ON 1 RATHER THAN PASSING IT. "back(0.75)" in this house is
 //     written as a zero-sloped sin^2 bump rather than a kinked max() (MEMORY),
@@ -299,10 +321,14 @@ import {
 //     overshoot past 1 on a 34 px seat cluster is a bounce, and the brief says
 //     no bounce. So `popScale` is `dotScale`'s shape read into [0.6, 1].
 //
-//   * V3b'S RESOLVED CONSTANTS ARE LEFT ALONE IN bretShared. D_FINAL, K_FINAL,
-//     CX_FINAL, BOARD_* and `anchorToBoardY` still describe the bench world, so
-//     AgreedUponV3 still renders as delivered; V4's are the _V4 / TABLE_ names
-//     beside them. `BoardBench` is still exported for the same reason.
+//   * THE TRAIL STILL RENDERS. V3b's D_FINAL / K_FINAL / CX_FINAL / BOARD_* and
+//     `anchorToBoardY` still describe the bench world and `BoardBench` is still
+//     exported, so AgreedUponV3 renders as delivered. The TABLE world is kept
+//     the same way — `BoardTable`, every TABLE_* constant and `tableSeat` are
+//     still exported, with the table's own resolved numbers moved to
+//     D_TABLE_FINAL / CX_TABLE_FINAL so the live D_FINAL_V4 / CX_FINAL_V4 can be
+//     the huddle's. Nothing in the repo imports them any more; they are the
+//     trail, not a fallback path.
 //
 //   * SAM'S NAME IS STILL NUDGED 69 WORLD PX OUTWARD, and Bret's is still 30 px
 //     under the dot on his axis — both unchanged from V3b, and both still
@@ -377,7 +403,7 @@ export const F_POP_SAM = 104; // fully in by "Sam" (f110)
 // apart-most position and the resolved position are collinear, so the two sides
 // only ever travel out along that line and then back down it.
 export type Side = { d: number; y: number };
-export const SIDE_APART: Side = { d: 304, y: ANCHOR_Y_FINAL - 46.9 };
+export const SIDE_APART: Side = { d: 333, y: ANCHOR_Y_FINAL - 46.9 };
 export const SIDE_FINAL: Side = { d: D_FINAL_V4, y: ANCHOR_Y_FINAL };
 
 const unit = (a: Side, b: Side) => {
@@ -624,23 +650,23 @@ const AgreedUponV4: React.FC<Props> = ({
   const side = sideAt(frame);
   const d = side.d + sideBreath.dx;
   const anchorY = side.y + sideBreath.dy;
-  const tableX = BRET_X - d;
+  const huddleX = BRET_X - d;
   const samX = BRET_X + d;
-  const tableY = anchorToTableY(anchorY);
+  const huddleY = anchorToHuddleY(anchorY);
   const samY = anchorToSamHeadY(anchorY);
   const bretX = BRET_X + bretSway.dx * 0.5;
   const bretChin = BRET_CHIN + bretSway.dy * 0.5;
 
   // -- the two mints --------------------------------------------------------
-  const tablePop = popScale(frame, F_POP_BOARD);
-  const tableFade = popFade(frame, F_POP_BOARD);
+  const huddlePop = popScale(frame, F_POP_BOARD);
+  const huddleFade = popFade(frame, F_POP_BOARD);
   const samPop = popScale(frame, F_POP_SAM);
   const samFade = popFade(frame, F_POP_SAM);
 
   // -- the threads ----------------------------------------------------------
   // The dot hangs off his chin, so it breathes with him.
   const dot = { x: DOT_X + bretSway.dx * 0.5, y: bretChin + (DOT_Y - BRET_CHIN) };
-  const tableFrom = TABLE_ANCHOR(tableX, tableY);
+  const huddleFrom = HUDDLE_ANCHOR(huddleX, huddleY);
   const samFrom = SAM_ANCHOR(samX, samY);
   const reach = camEase(clamp01((frame - F_THREAD) / THREAD_DRAW), 0.8);
   const sag = threadSag(frame);
@@ -701,7 +727,7 @@ const AgreedUponV4: React.FC<Props> = ({
           </div>
         )}
 
-        {/* the table, the threads and the point: SVG, the same world transform.
+        {/* the huddle, the threads and the point: SVG, the same world transform.
             This layer is UNDER Bret's head, which is the whole gesture: each
             thread runs behind his jaw and the V's apex shows below his chin. */}
         <div style={worldStyle}>
@@ -711,9 +737,9 @@ const AgreedUponV4: React.FC<Props> = ({
             viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            <BoardTable x={tableX} y={tableY} k={k} pop={tablePop} fade={tableFade} />
-            {tableFade > 0 && (
-              <Thread from={tableFrom} to={dot} reach={reach} sag={sag} color={accent} k={k} />
+            <BoardHuddle x={huddleX} y={huddleY} k={k} pop={huddlePop} fade={huddleFade} />
+            {huddleFade > 0 && (
+              <Thread from={huddleFrom} to={dot} reach={reach} sag={sag} color={accent} k={k} />
             )}
             {samFade > 0 && (
               <Thread from={samFrom} to={dot} reach={reach} sag={sag} color={accent} k={k} />
@@ -797,12 +823,12 @@ if (popScale(F_POP_BOARD, F_POP_BOARD) !== POP_FROM || Math.abs(popScale(F_POP_B
   throw new Error("AgreedUponV4: the mint must run 0.6 -> 1 over POP_MINT frames");
 }
 {
-  for (const [f, label] of [[F_POP_BOARD, "the table"], [F_POP_SAM, "Sam"]] as [number, string][]) {
+  for (const [f, label] of [[F_POP_BOARD, "the huddle"], [F_POP_SAM, "Sam"]] as [number, string][]) {
     const s = sideAt(f);
-    const l = f === F_POP_BOARD ? screenX(BRET_X - s.d - TABLE_INK_L, f) : screenX(BRET_X + s.d - SAM_W / 2, f);
+    const l = f === F_POP_BOARD ? screenX(BRET_X - s.d - HUDDLE_INK_L, f) : screenX(BRET_X + s.d - SAM_W / 2, f);
     const r =
       f === F_POP_BOARD
-        ? screenX(BRET_X - s.d + TABLE_INK_R, f)
+        ? screenX(BRET_X - s.d + HUDDLE_INK_R, f)
         : screenX(BRET_X + s.d + SAM_LABEL_NUDGE + SAM_LABEL_HALF, f);
     if (l < BAND_X0 || r > BAND_X1) {
       throw new Error(`AgreedUponV4: ${label} is struck at screen x ${l.toFixed(0)}..${r.toFixed(0)}, outside the band ${BAND_X0}-${BAND_X1}`);
@@ -859,14 +885,12 @@ if (DOT_Y - DOT_R <= BRET_CHIN + 2) {
   throw new Error("AgreedUponV4: the dot must sit clear of his chin, not on it");
 }
 
-// 7. THE TABLE MUST NOT TOUCH BRET. Their BOXES overlap by design — the oval's
-// right rim reaches 44 px into the column of his head box and the lowest seats
-// hang 15 px into the top of it — so the box test is the wrong test and would
-// only be passable by pushing the sides back out and shrinking everyone. What
-// has to be true is that no INK meets: the oval's rim, sampled all the way
-// round, and each of the five seat tiles, against his head box, walked over
-// every frame the table is drawn on. (His head box is itself conservative: at
-// the height where the nearest seat passes, his alpha is another 90 px away.)
+// 7. THE HUDDLE MUST NOT TOUCH BRET. The box test is the wrong test — their
+// boxes can sit close while the actual silhouettes are nowhere near — so what is
+// walked is the INK: every figure's head circle and the outline of its shoulder
+// slab (the dome sampled, plus the two base corners), against his head box, on
+// every frame the huddle is drawn on. His head box is itself conservative: his
+// alpha is another 90-odd px inside it at the height where the huddle passes.
 {
   const bx0 = BRET_X - BRET_W / 2;
   const bx1 = BRET_X + BRET_W / 2;
@@ -876,31 +900,38 @@ if (DOT_Y - DOT_R <= BRET_CHIN + 2) {
   let at = 0;
   for (let f = F_POP_BOARD; f <= DURATION; f++) {
     const s = sideAt(f);
-    const tx = BRET_X - s.d;
-    const ty = anchorToTableY(s.y);
-    for (let i = 0; i < 360; i++) {
-      const t = (i * Math.PI) / 180;
-      const dRim = toBox(tx + TABLE_OVAL_RX * Math.cos(t), ty + TABLE_OVAL_RY * Math.sin(t));
-      if (dRim < gap) {
-        gap = dRim;
-        at = f;
-      }
-    }
-    for (const a of TABLE_SEAT_ANGLES) {
-      const c = tableSeat(a);
-      for (const sx of [-TABLE_SEAT / 2, TABLE_SEAT / 2]) {
-        for (const sy of [-TABLE_SEAT / 2, TABLE_SEAT / 2]) {
-          const dSeat = toBox(tx + c.x + sx, ty + c.y + sy);
-          if (dSeat < gap) {
-            gap = dSeat;
-            at = f;
-          }
+    const hx = BRET_X - s.d;
+    const hy = anchorToHuddleY(s.y);
+    for (const fig of HUDDLE_FIGURES) {
+      const cx = hx + fig.x;
+      const foot = hy + fig.foot;
+      const top = foot - fig.h;
+      const hr = personHeadR(fig.h);
+      const hcy = hy + personHeadCY(fig.foot, fig.h);
+      const rx = (fig.h * PERSON_ASPECT) / 2;
+      const ry = fig.h * PERSON_SHOULDER_RY_F;
+      const ey = top + fig.h * PERSON_SHOULDER_CY_F;
+      const probe = (px: number, py: number) => {
+        const v = toBox(px, py);
+        if (v < gap) {
+          gap = v;
+          at = f;
         }
+      };
+      for (let i = 0; i < 72; i++) {
+        const t = (i * Math.PI) / 36;
+        probe(cx + hr * Math.cos(t), hcy + hr * Math.sin(t));
       }
+      for (let i = 0; i <= 36; i++) {
+        const t = Math.PI + (i * Math.PI) / 36; // the dome, left rim over the top to the right
+        probe(cx + rx * Math.cos(t), ey + ry * Math.sin(t));
+      }
+      probe(cx - rx, foot);
+      probe(cx + rx, foot);
     }
   }
   if (gap < 10) {
-    throw new Error(`AgreedUponV4: the table's ink comes within ${gap.toFixed(1)} world px of Bret's head box at f${at}`);
+    throw new Error(`AgreedUponV4: the huddle's ink comes within ${gap.toFixed(1)} world px of Bret's head box at f${at}`);
   }
 }
 
@@ -934,14 +965,14 @@ if (DOT_Y - DOT_R <= BRET_CHIN + 2) {
 // on both sides, measured off the analytic ink bbox (the render is measured too
 // — see au4/band-robust.py).
 {
-  const x0 = Math.min(BRET_X - SIDE_FINAL.d - TABLE_INK_L, BRET_X - LABEL_HALF);
+  const x0 = Math.min(BRET_X - SIDE_FINAL.d - HUDDLE_INK_L, BRET_X - LABEL_HALF);
   const x1 = Math.max(
     BRET_X + SIDE_FINAL.d + SAM_W / 2,
     BRET_X + SIDE_FINAL.d + SAM_LABEL_NUDGE + SAM_LABEL_HALF,
     BRET_X + LABEL_HALF,
   );
   const y0 = Math.min(
-    anchorToTableY(SIDE_FINAL.y) - TABLE_INK_T,
+    anchorToHuddleY(SIDE_FINAL.y) - HUDDLE_INK_T,
     anchorToSamHeadY(SIDE_FINAL.y) - SAM_H / 2,
   );
   const y1 = Math.max(
@@ -979,17 +1010,17 @@ if (DOT_Y - DOT_R <= BRET_CHIN + 2) {
 {
   const pts = (f: number) => {
     const s = sideAt(f);
-    const tx = BRET_X - s.d;
+    const hx = BRET_X - s.d;
     const sx = BRET_X + s.d;
-    const ty = anchorToTableY(s.y);
+    const hy = anchorToHuddleY(s.y);
     const sy = anchorToSamHeadY(s.y);
     const out: [number, number, number][] = [
       [BRET_X - BRET_W / 2, BRET_TOP, 0],
       [BRET_X + BRET_W / 2, BRET_CHIN, 0],
       [DOT_X, DOT_Y, F_LAND],
-      [tx - TABLE_INK_L, ty - TABLE_INK_T, F_POP_BOARD],
-      [tx + TABLE_INK_R, ty + TABLE_INK_B, F_POP_BOARD],
-      [tx, ty + TABLE_OVAL_RY, F_POP_BOARD],
+      [hx - HUDDLE_INK_L, hy - HUDDLE_INK_T, F_POP_BOARD],
+      [hx + HUDDLE_INK_R, hy + HUDDLE_INK_B, F_POP_BOARD],
+      [hx, hy + HUDDLE_GROUND, F_POP_BOARD],
       [sx - SAM_W / 2, sy - SAM_H / 2, F_POP_SAM],
       [sx + SAM_W / 2, sy + SAM_H / 2, F_POP_SAM],
       [sx + SAM_LABEL_NUDGE + SAM_LABEL_HALF, s.y + SAM_LABEL_GAP + LABEL_INK_BOT, F_POP_SAM],
