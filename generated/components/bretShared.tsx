@@ -548,10 +548,10 @@ export const AgreePoint: React.FC<{ x: number; y: number; scale: number; k: numb
 // `TABLE_ANCHOR` are the same offset read both ways, exactly like the bench's.
 // ===========================================================================
 
-export const TABLE_OVAL_RX = 180;
-export const TABLE_OVAL_RY = 100;
+export const TABLE_OVAL_RX = 168;
+export const TABLE_OVAL_RY = 94;
 export const TABLE_MARK = 76; // the OPENAI mark, drawn on its 24-unit box
-export const TABLE_SEAT = 34;
+export const TABLE_SEAT = 52; // was 34 (director: too small to read as chairs)
 // Kraft between the oval's rim and the seat's near edge, along the ellipse's
 // own outward normal. RENDERED AT 14 AND BROUGHT IN TO 9 (au4/zoom2x_f199_table,
 // first pass): the ellipse is flat, so at +-60 degrees its normal is almost
@@ -559,15 +559,15 @@ export const TABLE_SEAT = 34;
 // table — they stopped reading as chairs pulled up to it and read as icons
 // scattered round an oval. At 9 the gap is still plainly kraft and the seats
 // belong to the table.
-export const TABLE_SEAT_GAP = 9;
+export const TABLE_SEAT_GAP = 10;
 export const TABLE_SEAT_OFF = TABLE_SEAT_GAP + TABLE_SEAT / 2; // 31, along the normal
-export const TABLE_SEAT_GLYPH = 20;
+export const TABLE_SEAT_GLYPH = 30;
 // The knocked-out figure in a 34 px seat is a tenth of the area of a
 // CompanyCard's, so CARD_GLYPH_STROKE 2.6 on the 24-unit box comes out at 2.17
 // world px — under a screen px and a half at the resolved k, which reads as a
 // smudge rather than a person. 3.0 puts it at 2.5 world px: the same weight as
 // a thread, which is the thinnest line this clip already draws.
-export const TABLE_GLYPH_STROKE = 3.0;
+export const TABLE_GLYPH_STROKE = 2.8;
 // Six even angles, measured the SVG way (y down): 0 is the oval's right end,
 // 60 bottom-right, 120 bottom-left, 180 the left end, 240 top-left, 300
 // top-right. 0 IS MISSING ON PURPOSE — it is the seat nearest Sam.
@@ -597,7 +597,7 @@ const seatExtent = (() => {
   let r = TABLE_OVAL_RX;
   let t = TABLE_OVAL_RY;
   let b = TABLE_OVAL_RY;
-  for (const a of TABLE_SEAT_ANGLES) {
+  for (const a of [...TABLE_SEAT_ANGLES, TABLE_EMPTY_ANGLE]) {
     const c = tableSeat(a);
     l = Math.max(l, -(c.x - TABLE_SEAT / 2));
     r = Math.max(r, c.x + TABLE_SEAT / 2);
@@ -656,7 +656,7 @@ export const TABLE_Y_FINAL = anchorToTableY(ANCHOR_Y_FINAL); // 692.4
 export const SAM_X_FINAL_V4 = BRET_X + D_FINAL_V4; // 803
 export const SAM_Y_FINAL_V4 = anchorToSamHeadY(ANCHOR_Y_FINAL); // 653.0
 export const K_FINAL_V4 = 0.8334;
-export const CX_FINAL_V4 = 503.977;
+export const CX_FINAL_V4 = 500.475; // re-solved after the seats grew to 52 (table ink L 230)
 
 // -- THE MINT ---------------------------------------------------------------
 // The coin recipe from d1Shared, read for a whole object: a POP_MINT-frame
@@ -747,6 +747,20 @@ export const BoardTable: React.FC<{
         mask={`url(#${id}-top)`}
         style={{ filter: TILE_SHADOW(k) }}
       />
+      {(() => {
+        // The empty chair: a blank seat tile at TABLE_EMPTY_ANGLE (nearest Sam),
+        // no figure knocked out. Director's note on the first V4 pass: an
+        // absent seat read as nothing at all; a blank one reads as empty.
+        const c = tableSeat(TABLE_EMPTY_ANGLE);
+        return (
+          <g
+            transform={`translate(${(c.x - TABLE_SEAT / 2).toFixed(2)} ${(c.y - TABLE_SEAT / 2).toFixed(2)})`}
+            style={{ filter: TILE_SHADOW(k * TABLE_SEAT_SHADOW_K) }}
+          >
+            <path d={seatTile} fill={`url(#${id}-g)`} opacity={opacity} />
+          </g>
+        );
+      })()}
       {TABLE_SEAT_ANGLES.map((a) => {
         const c = tableSeat(a);
         const sid = `${id}-s${a}`;
