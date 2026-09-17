@@ -14,17 +14,22 @@ import {
   SHADOW_BLUR,
   SHADOW_OPACITY,
   SHADOW_Y,
+  FEATHER_STEPS,
   Vignette,
+  WOBBLE_R,
   breath,
   clamp01,
+  feather,
   hash,
   iconShadow,
   makeTone,
   runCamera,
   smoothstep,
   sway,
+  wobble,
   worldTransform,
 } from "./fieldShared";
+import { CLAUDE } from "./brandGlyphs";
 import { arriveEase } from "./levelUp";
 
 export const FPS = 24;
@@ -49,15 +54,22 @@ export const DURATION = 137;
 
 // ---------------------------------------------------------------------------
 // SOUND-OFF READING TEST — one sentence:
-//   "a stream of data falls through four gates — some is thrown out, the rest is
-//    judged, labelled and fused — and what comes out the bottom builds a model."
+//   "all the deployment data there is funnels into a pipe, falls through four
+//    gates — some thrown out, the rest judged, labelled and fused — and what
+//    comes out the bottom builds Claude."
 //
 // VOCABULARY, the same as cut 1 (`MillionsOfYears`) of this clip:
 //   deployment data = small SOLID orange dots, ACCENT_DEEP at rest, ACCENT once
 //                     judged good. Nothing else in the piece is orange.
-//   the model       = ONE large solid orange dot on the axis at 2 x DOT_R, the
-//                     same core as cut 1. It is not drawn until the first fused
-//                     dot lands in it.
+//   the field       = the same dots, spread wide ABOVE the funnel before their
+//                     turn comes: 251 of them over 760 x 320 world px, feathered
+//                     and wobbled at the boundary, milling. It is not a second
+//                     population — a dot in the field IS a dot in the stream,
+//                     drawn at its seat until the pipe is ready for it.
+//   the model       = the CLAUDE mark (brandGlyphs, the 24-unit em box, inline
+//                     <path>, fill-rule evenodd), filled, 68 screen px, with
+//                     iconShadow(k). It is not drawn until the first fused dot
+//                     lands in it. It is the only mark in the piece.
 //   a gate          = a station RING (the set's R, white) with one Lucide
 //                     OUTLINE icon in it at the set's one stroke:
 //                       filter  -> `filter`  (the funnel)
@@ -74,25 +86,39 @@ export const DURATION = 137;
 //
 // Z-ORDER, one rule for the whole piece and the only order anything is drawn in:
 //   axis line -> data dots (and the fused dots and their annotations)
-//              -> ring strokes -> the Lucide icons -> the core, on top of all.
+//              -> ring strokes -> the Lucide icons -> the CLAUDE mark, on top.
 // The data falls BEHIND the gates. A dot passing a gate goes under the icon, so
-// the glyph is never broken by the stream, and the core is drawn over the dots
+// the glyph is never broken by the stream, and the mark is drawn over the dots
 // it swallows. Nothing else in the tree may be reordered against this.
 //
 // ---------------------------------------------------------------------------
 // GESTURES — one continuous fall; the words are inflections in it. Nothing
 // starts from rest, and nothing in the piece is outside this list.
 //
-//  1. f0    "especially if     THE STREAM. Data has been falling down the axis
-//           you do"            since before frame 0: a feathered stream ~70 world
-//                              px wide, 2.2 dots/frame, each on its own hashed
-//                              lateral wobble, 13.48 world px/frame. The camera opens
-//                              close on the stream at k 3.13 with the filter
-//                              ring's top edge just entering the bottom of the
-//                              frame, and is ALREADY tracking down with the front
-//                              (30 frames of pre-roll are run through the damper
-//                              before f0, so f0 has velocity, not a standing
-//                              start).
+//  1. f0-44 "especially if     THE FUNNEL. Deployment data is everywhere, and it
+//           you do" (f0-11)    funnels in. The cut opens WIDE (k 1.062, the whole
+//                              column in frame) on a feathered, wobbled field of
+//                              251 data dots spread 760 world px across and 320
+//                              deep above the filter ring (world y -140..180),
+//                              milling on two slow sines, all ACCENT_DEEP. From
+//                              f2 the field FUNNELS: every dot drifts inward and
+//                              settles toward the mouth on its own start — the
+//                              centre first, the rim last, keyed on distance from
+//                              the mouth, so the outline closes from the inside
+//                              out — and each one, over its last ~14 frames,
+//                              blends off its seat onto the axis, where it is
+//                              simply the next dot in the fall. The picture
+//                              rhymes with the gate below it: the filter icon IS
+//                              a funnel. The neck below the field is already
+//                              formed at f0 (the 13 dots born before the field's
+//                              first seat), so the stream FRONT still reaches the
+//                              filter ring at f18.0 and every gate keeps its
+//                              schedule. The field's last seat empties at f76;
+//                              from there the pour is the old emission, 2.2
+//                              dots/frame from above the frame, and it never
+//                              stops. The camera is already moving at f0 (30
+//                              frames of pre-roll through the damper) and pushes
+//                              in and down onto the old track by f34.
 //  2. f18-40 "filtering" (f26) THE FILTER. The stream front reaches the filter
 //                              ring at f18.0. Each arriving dot is decided by hash:
 //                              55% pass straight down the axis, 45% are deflected
@@ -128,112 +154,137 @@ export const DURATION = 137;
 //                              flash, no ring pulse — an 8-frame pull-together and
 //                              a 4-frame radius ramp. Ring converts on its 4th
 //                              fused dot, f91.0, ripe by f98.0.
-//  6. f99-137 "of that" + tail THE MODEL FORMS. Each fused dot decelerates into
-//                              y 1440 on arriveEase and is absorbed. The core
-//                              appears with the FIRST landing at 1.2 x DOT_R and
-//                              grows BY AREA with every landing it swallows,
-//                              reaching the set's core size (2 x DOT_R) by the
-//                              third landing, f109.8, and holding there on the set's
-//                              breath(). Absorbed annotations go in with their
-//                              dots. The stream never stops: through the whole
+//  6. f98-137 "of that" + tail THE MARK LIGHTS. Each fused dot decelerates on
+//                              arriveEase into the MARK'S EDGE — not its centre —
+//                              and is taken in, its annotation with it. The
+//                              CLAUDE mark appears with the FIRST landing (f98.4)
+//                              at 0.35 scale in ACCENT_DEEP, and every fused dot
+//                              it swallows ticks it up BY AREA (arriveEase over
+//                              6 f, with a small overshoot so a swallow is felt)
+//                              and a step further toward ACCENT. It is at full
+//                              size and fully ripe at f117.5 and breathes from
+//                              there. The stream never stops: through the whole
 //                              tail data still falls, is filtered, judged,
-//                              labelled, fused and absorbed.
+//                              labelled, fused and absorbed — so the last 18
+//                              frames are a lit Claude mark at the foot of a
+//                              pipeline that is still running.
 //
 // LIVENESS — mechanisms, not gestures, none on a word and none ever stopping:
-// the emission (2.2/frame from f-56.8 to the last frame), every dot's hashed
-// lateral wobble, breath() on every dot and on the core, the grid's parallax and
-// its own -0.3 px/frame drift, and a camera that never parks (three glides plus
-// a decaying drift that is still running at DURATION).
+// the field's milling and its contraction, the pour (2.2/frame from f-56.8 to
+// the last frame, metered through the field for f2..f76), every dot's hashed
+// lateral wobble, breath() on every dot and on the mark, the grid's parallax and
+// its own -0.3 px/frame drift, and a camera that never parks (the push-in, two
+// glides, and a decaying drift that is still running at DURATION).
 //
 // ---------------------------------------------------------------------------
 // CAMERA — ONE C1 curve, not a chain of moves. Seven knots on a monotone cubic
 // Hermite (Fritsch-Carlson tangents), one key per frame, through the shared
 // damper; cy is taken off the eased k so the framing and the zoom settle
-// together. c is the world y put on screen y 835 (CAM_LIFT 125). The three
-// glides the cut is built on are the knots at f 34, f 72 and f 118 — but the
-// camera carries velocity THROUGH them, because chaining three smoothstep
-// `camMove`s made each junction a dead stop and the re-acceleration out of
-// those stops measured 3.06 screen px/f2, over the set's 2.2 ceiling.
+// together. c is the world y put on screen y 835 (CAM_LIFT 125). The cut now
+// opens WIDE, so the first move is a push IN — and the camera carries velocity
+// through the turn onto the old track rather than stopping on it.
 //
-//   knot   f -30   k 3.472  c  -70   PRE-ROLL, run through the damper before
-//                                    frame 0 so f0 has downward velocity
-//   knot   f   0   k 3.055  c  118   open close on the stream; the filter ring's
-//                                    top edge is entering at the bottom (its
-//                                    damped values are k 3.127, c 93)
-//   knot   f  34   k 2.222  c  298   track down with the front
-//   knot   f  72   k 1.736  c  568   keep tracking; ring 3 is in frame from f48
-//   knot   f 118   k solved c  929.9 the resolve: the whole column in the band
+//   knot   f -30   k 0.860  c  244   PRE-ROLL, run through the damper before
+//                                    frame 0 so f0 is already pushing in
+//   knot   f   0   k 1.130  c  278   THE SPREAD: the field (world y -140..180)
+//                                    sits at screen 397..737, the filter ring at
+//                                    1056, the whole column in frame (its damped
+//                                    values are k 1.062, c 272)
+//   knot   f  34   k 2.222  c  345   the push-in lands on the old track
+//   knot   f  72   k 1.736  c  568   keep tracking; unchanged
+//   knot   f 118   k solved c  941.5 the resolve: the whole column in the band
 //   knot   f 136   k -0.0125 c  +5.0 still drifting on the last frame
 //   knot   f 200   k -0.0417 c +14.4 the drift's continuation, off the end
 //
-// Every knot is the pre-compression camera's knot carried through the same
-// screen: the world shrank by 0.720 about the column centre and k grew by
-// 1.389, so the FRAMING of each knot is what it was and only the numbers moved.
+// MEASURED (audit over f1..136, on the four ring centres, the model, the field
+// centre, and on the world point sitting at screen (540, 1300); a point is only
+// measured while it is inside the frame):
+//   max head speed          31.84 screen px/f   (ceiling 45, at f88)
+//   max |dv|                 1.68 screen px/f2  (ceiling 2.2, at f6)
+//   min camera motion        0.377 screen px/f  (floor 0.15, at f136)
+//   k at f0 / f136           1.062 / 0.92469
+//   column at f136           screen y 332.1 .. 1322.1 (band 300..1370)
 //
-// MEASURED (audit over f1..136, on the four ring centres, the model, and on the
-// world point sitting at screen (540, 1300)):
-//   max head speed          31.14 screen px/f   (ceiling 45)
-//   max |dv|                 1.17 screen px/f2  (ceiling 2.2)
-//   min camera motion        0.38 screen px/f   (floor 0.15, at f136)
-//   k at f0 / f136           3.127 / 0.94845
-//   column at f136           screen y 331.9 .. 1321.9 (band 300..1370)
-//
-// STROKE ARITHMETIC, all at K_REST = 0.94845:
-//   ring / icon / axis stroke   6.00 screen px  =  6.326 world px
-//   station ring               65.30 screen px radius = 68.85 world
-//   data dot                   11.20 screen px diameter = 5.90 world radius
-//   core                       22.40 screen px diameter (2 x the dot)
+// STROKE ARITHMETIC, all at K_REST = 0.92469:
+//   ring / icon / axis stroke   6.00 screen px  =  6.489 world px
+//   station ring               65.30 screen px radius = 70.62 world
+//   data dot                   11.20 screen px diameter = 6.06 world radius
+//   the CLAUDE mark            68.00 screen px em box   = 73.54 world
 //   annotation                  5.04 screen px diameter (0.45 x the dot)
-// Every one of those screen numbers is cut 1's, so a dot, a core, a ring and a
-// stroke are the same size on screen in both cuts of this clip.
+// Every one of those screen numbers but the mark's is cut 1's, so a dot, a ring
+// and a stroke are the same size on screen in both cuts of this clip.
 //
 // MEASURED BEATS (the audit's own numbers, off the dots that actually pass):
-//   stream front at the filter  f18.0
-//   filter ring   5th passing dot  f22.8  deep f22.8-26.8  ripe f25.8-29.8
+//   stream front at the filter  f18.0   (unchanged by the funnel)
+//   filter ring   6th passing dot  f22.8  deep f22.8-26.8  ripe f25.8-29.8
 //                                         -> "filtering"      f26  ON IT
-//   judgment ring 4th through      f47.4  ripe done f54.4
+//   judgment ring 7th through      f47.4  ripe done f54.4
 //                                         -> "judgment"       f49  ON IT
-//   annotation ring 1st through    f59.5  ripe done f66.5
+//   annotation ring 2nd through    f58.4  ripe done f65.4
 //                                         -> "annotation"     f61  ON IT
-//   synthesis ring 4th fused       f91.0  ripe done f98.0
+//   synthesis ring 7th fused       f90.5  ripe done f97.5
 //                                         -> "synthesization" f95  ON IT
-//   first merge f81.3 · first landing f99.1 · core at 2 x DOT_R by f110
-//   rings in frame: f0 / f24 / f48 / f72 — every one >= 6 f before its word
-//   the model's empty position enters the frame at f91, eight frames before the
+//   the field: funnel starts f2 · first seat joins the axis f2 · a quarter of
+//   them by f16 · half by f34 · the last at f76
+//   first merge f80.6 · first landing (the mark appears) f98.4 · mark full size
+//   and fully ripe f117.5 · 21 landings in all, the last at f135.6
+//   rings in frame: all four from f0 — the opening is wide enough to hold the
+//   whole column, so every gate is seen long before its word
+//   the model's empty position enters the frame at f91, seven frames before the
 //   first fused dot lands in it
 //
 // ---------------------------------------------------------------------------
 // DEVIATIONS from the brief, with the arithmetic.
-//   * K_REST IS 0.94845, SOLVED, NOT PICKED. The column is 960 world px of
-//     centres (rings at -360/-120/+120/+360 about the column centre, the model
-//     at +600) plus the top ring's half-stroke and the core's radius, and those
-//     two are SCREEN constants divided by k, so in screen px the column is
-//     960k + 65.3 + 3.0 + 11.2. The caption-safe band is screen 300..1370 and
-//     the brief asks 40 px clear at both ends, so the column may be 990 px:
-//     k = (990 - 79.5) / 960 = 0.94845. The tail's decaying drift and the sway
-//     then cost about 8 px at the top, so the measured clearance on the last
-//     frame is 32 px above and 48 below — inside the band throughout.
-//   * THE RINGS ARE R 68.85 WORLD, NOT R 64. A ring is a shared noun with cut 1,
+//   * K_REST IS 0.92469, RE-SOLVED FOR THE TALLER FOOT. Same solve as before,
+//     but the foot of the column is now the CLAUDE mark's half em box (34 screen
+//     px) where it was the core's radius (11.2): the column in screen px is
+//     960k + 65.3 + 3.0 + 34.0, the band allows 990, so k = 887.7 / 960 =
+//     0.92469 — 2.5% down from the 0.94845 the dot-core allowed. Measured
+//     clearance on the last frame is 32 px above and 48 below.
+//   * THE FUNNEL IS A RESERVOIR, NOT A SURGE. The field's 251 dots ARE the pour
+//     for f2..f76: a seat's dot is born so that its own fall puts it on the axis
+//     at Y_JOIN on its scheduled frame, and nothing below that line is touched.
+//     The alternative — adding 251 dots on top of the existing emission — would
+//     have tripled the traffic through the gates for forty frames, closed the
+//     column into a solid rope and moved every conversion. The drain is metered
+//     on (rank/N)^1.2 over f2..f76, which gulps at the mouth (about 6 dots/frame
+//     at the start) and eases to the stream's own 2.2/frame by the last seat, so
+//     the handover to the ordinary emission cannot be seen. It does run ~1.6x
+//     the old density through the middle of the cut, which is why the column
+//     between the annotation and synthesis rings now reads as a stream rather
+//     than as specks on a line.
+//   * THE RINGS CONVERT ON THEIR 6th / 7th / 2nd / 7th. Same rule as before — a
+//     ring converts on the Nth thing through it, measured off the dots that
+//     actually pass — but the funnel's metering changes the traffic, so N was
+//     re-solved to hold the conversion frames the cut already had: 22.8 / 47.4 /
+//     58.4 / 90.5 against the old 22.8 / 47.4 / 59.5 / 91.0. Every word still
+//     lands inside its ring's ramp.
+//   * THE HANDOFF AND THE CONTRACTION ARE SMOOTHSTEPS, NOT arriveEase.
+//     arriveEase enters at 1.3x the nominal speed, which out of a milling field
+//     is a visible pop, and it leaves at zero, which cannot match the fall's
+//     13.48 px/f on the frame a dot joins the axis. Blended as
+//     seat + (stream - seat) * smoothstep(u), the dot leaves its seat from rest
+//     and is at exactly the stream's speed at u = 1: both ends are C1 and the
+//     join cannot be seen. arriveEase is kept where it belongs — the deflection,
+//     the annotation snap, the absorption, and the mark's growth tick.
+//   * THE FIRST LANDING IS f98.4, NOT f99.1, and the first merge f80.6 rather
+//     than f81.3: the denser column puts the fourth survivor at the synthesis
+//     ring half a frame sooner. The mark therefore appears on "of" (f108) minus
+//     ten rather than minus eleven — inside the same beat.
+//   * THE RINGS ARE R 70.62 WORLD, NOT R 64. A ring is a shared noun with cut 1,
 //     where it is R 64 at k 1.02 = 65.3 SCREEN px, and the memory rule is that a
 //     shared noun keeps one size across cuts. The world radius is therefore
-//     solved from the screen one: 65.3 / 0.94845 = 68.85, and so are the dot,
-//     the core and the stroke. That is 7.6% off the set's 64 — where the
+//     solved from the screen one: 65.3 / 0.92469 = 70.62, and so are the dot,
+//     the mark and the stroke. That is 10.3% off the set's 64 — where the
 //     pre-compression build, at k 0.683, was 49% off (R 95.6) — and it is the
 //     half of the brief that is actually visible: at a literal R 64 the ring
-//     would draw at 60.7 screen px, 7% smaller than the same ring one cut
+//     would draw at 59.2 screen px, 9% smaller than the same ring one cut
 //     earlier in the same edit.
-//   * THE STREAM ENTERS FROM ABOVE THE BAND. Every structural thing — the four
-//     rings, the axis, the model — is inside screen 300..1370 at the resolved
-//     camera. The falling stream above the filter ring necessarily occupies the
-//     frame above it, because "it has been falling forever" IS the gesture.
-//   * THE RINGS CONVERT ON THEIR 5th / 4th / 2nd / 4th, NOT 6/6/6/2. The rule is
-//     unchanged — a ring converts on the Nth thing that passes through it, and
-//     the ramp is measured off those crossings so retiming the fall retimes the
-//     rings — but N is what puts the conversion under the word, and the four
-//     gates do not see the same traffic: the filter sees 2.2 dots/frame, the
-//     judgment 1.21 (55% pass the filter), the annotation 0.97 (80% of those are
-//     judged good) and the synthesis 0.28 fused dots/frame. At N = 6 the
-//     annotation ring's conversion would finish eight frames after its word.
+//   * THE FIELD AND THE STREAM ENTER FROM ABOVE THE BAND. Every structural
+//     thing — the four rings, the axis, the mark — is inside screen 300..1370 at
+//     the resolved camera. The field at f0 sits at screen 397..737, inside the
+//     band; the fall above the filter ring necessarily occupies the frame above
+//     it later, because "it never stops" IS the gesture.
 //   * THE EMISSION IS 2.2 DOTS/FRAME, NOT 1.6. At 1.6 only 0.70/frame survive
 //     both gates, and the rendered column between the annotation ring and the
 //     synthesis ring read as specks on a line rather than a stream. 2.2 puts a
@@ -243,15 +294,12 @@ export const DURATION = 137;
 //     gap, so the speed came down with it to hold the landing schedule: 240 /
 //     13.48 = 17.8 frames gate to gate, exactly what 320 / 18 was before, and
 //     the front is started 229 world px above the filter so it still arrives at
-//     f18. The head cap is 44 screen px/f, which at the opening k 3.13 is 14.1
-//     world px/f and so never binds: the stream now reads at ONE speed for the
+//     f18. The head cap is 44 screen px/f, which at the cut's highest k (2.21)
+//     is 19.9 world px/f and so never binds: the stream now reads at ONE speed for the
 //     whole cut instead of being clipped through the opening.
-//   * THE ANNOTATION RING CONVERTS ON ITS 1st, NOT 2nd. Same rule, same
-//     measurement: at N = 2 the ramp started 1.4 f after "annotation" (f62.4),
-//     at N = 1 it starts 1.5 f before it (f59.5) and the word lands mid-ramp.
 //   * A FUSED DOT IS 1.5 x DOT_R FLAT, the brief's number, rather than the area
-//     sum of its 3-4 members (1.73-2.0 x). 2.0 x is exactly the core's size, and
-//     a fused dot the size of the model reads as a second model.
+//     sum of its 3-4 members (1.73-2.0 x). Anything larger starts to read as a
+//     second model rather than as the last thing before one.
 //   * THE FOURTH ICON IS LUCIDE `git-merge`, NOT `merge`. Rendered at ring size,
 //     `merge` (an arrow joining a stem) read as a standing figure, and a
 //     standing figure is a human in this clip's vocabulary. `git-merge` is two
@@ -354,27 +402,34 @@ const R_SPREAD = 0.16;
 const SCREEN_OUTLINE = 6.0;
 const SCREEN_RING_R = 65.3; // cut 1's R 64 at its k 1.02
 const SCREEN_DOT_R = 5.6; // cut 1's DOT_RADIUS 5.5 at its k 1.02
+// THE MODEL IS THE CLAUDE MARK, on the brand set's 24-unit em box, drawn as
+// inline <path>s with fill-rule evenodd — never an <image>, which races frame
+// capture. 68 screen px puts its em box just over a station ring's 65.3 radius,
+// so the thing the pipeline builds is the one object in the frame that is
+// neither a dot, a ring nor a line.
+const SCREEN_MARK = 68;
 
 // ---------------------------------------------------------------------------
 // THE CAMERA'S RESTING ZOOM, solved from the compressed column.
 //
-// The column's ink runs from the top ring's top edge to the bottom of the core:
-//   CENTRES_SPAN + (RING_R + STROKE/2) + CORE_R   in world px
+// The column's ink runs from the top ring's top edge to the bottom of the mark:
+//   CENTRES_SPAN + (RING_R + STROKE/2) + MARK_BOX/2   in world px
 // and every one of those three weights is a SCREEN px constant divided by k, so
 // in SCREEN px the column is just
-//   k * CENTRES_SPAN + SCREEN_RING_R + SCREEN_OUTLINE/2 + 2 * SCREEN_DOT_R.
+//   k * CENTRES_SPAN + SCREEN_RING_R + SCREEN_OUTLINE/2 + SCREEN_MARK/2.
 // The caption-safe band is screen 300..1370 and the brief asks for 40 px clear
 // at both ends, so the column may be 990 px:
-//   k = (990 - 65.3 - 3.0 - 11.2) / 960 = 0.94844
-// — 39% up from the 0.683 this cut was built at, and within 7% of cut 1's own
-// 1.02, so the grid reads at very nearly the same scale in both cuts.
+//   k = (990 - 65.3 - 3.0 - 34.0) / 960 = 0.92469
+// The foot is the mark's half em box now, not a core's 11.2 px radius, so k
+// comes down 2.5% from the 0.94845 the dot-core allowed — still within 10% of
+// cut 1's own 1.02, so the grid reads at very nearly the same scale in both.
 // ---------------------------------------------------------------------------
 const BAND_TOP = 300;
 const BAND_BOTTOM = 1370;
 const BAND_CLEAR = 40;
 const COLUMN_SPAN = BAND_BOTTOM - BAND_TOP - 2 * BAND_CLEAR; // 990
 const K_REST_TARGET =
-  (COLUMN_SPAN - SCREEN_RING_R - SCREEN_OUTLINE / 2 - 2 * SCREEN_DOT_R) / CENTRES_SPAN;
+  (COLUMN_SPAN - SCREEN_RING_R - SCREEN_OUTLINE / 2 - SCREEN_MARK / 2) / CENTRES_SPAN;
 
 const PRE = 30; // frames of pre-roll run through the damper before frame 0
 const LAST = DURATION - 1;
@@ -382,13 +437,13 @@ const LAST = DURATION - 1;
 const STROKE = SCREEN_OUTLINE / K_REST_TARGET;
 const RING_R = SCREEN_RING_R / K_REST_TARGET;
 const DOT_R = SCREEN_DOT_R / K_REST_TARGET;
-const CORE_R = 2 * DOT_R;
+const MARK_BOX = SCREEN_MARK / K_REST_TARGET;
 const RING_OUTER = RING_R + STROKE / 2;
 
 // The content centre: the middle of the column's ink, which is what CAM_LIFT
 // puts on screen y 835.
 const INK_TOP = Y_FILTER - RING_OUTER;
-const INK_BOTTOM = Y_MODEL + CORE_R;
+const INK_BOTTOM = Y_MODEL + MARK_BOX / 2;
 const C_REST = (INK_TOP + INK_BOTTOM) / 2;
 
 // A camera authored as KNOTS on one C1 curve rather than as a chain of
@@ -446,10 +501,10 @@ const hermite = (xs: number[], ys: number[]) => {
 // pre-roll run through the damper before frame 0, so the camera already has
 // downward velocity at f0 instead of a standing start.
 const KNOT_F = [0, PRE, PRE + 34, PRE + 72, PRE + 118, PRE + 136, PRE + 200];
-const KNOT_C = [-69.8, 117.5, 297.5, 568, C_REST, C_REST + 5.0, C_REST + 14.4];
+const KNOT_C = [244.0, 278.0, 345.0, 568, C_REST, C_REST + 5.0, C_REST + 14.4];
 
 const trackFor = (kEnd: number) => {
-  const KNOT_K = [3.4716, 3.055, 2.2219, 1.7358, kEnd, kEnd - 0.0125, kEnd - 0.0417];
+  const KNOT_K = [0.86, 1.13, 2.2219, 1.7358, kEnd, kEnd - 0.0125, kEnd - 0.0417];
   const cOf = hermite(KNOT_F, KNOT_C);
   const kOf = hermite(KNOT_F, KNOT_K);
   const F: number[] = [];
@@ -548,21 +603,89 @@ const crossF = (born: number, Y: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE STREAM. 1.6 dots/frame, emitted from f -64.2 so that at frame 0 the front
-// of the stream sits at y 191 — 289 world px, seventeen frames, above the filter
-// ring — and the column above it is already full to beyond the top of the frame.
+// THE STREAM. 2.2 dots/frame, emitted from f -56.8 so that at frame 0 the front
+// of the fall sits at y 251 — 229 world px, eighteen frames, above the filter
+// ring. Only the 13 dots born before the field's first seat are on the axis at
+// f0: they are the neck the funnel is already pouring into, and it is their
+// front that meets the filter at f18.
 // ---------------------------------------------------------------------------
 const EMIT_RATE = 2.2;
 const FRONT_Y0 = Y_FILTER - 229; // = 251
-const EMIT_F0 = -(FRONT_Y0 - SPAWN_Y) / FALL_SPEED; // = -61.7
+const EMIT_F0 = -(FRONT_Y0 - SPAWN_Y) / FALL_SPEED; // = -56.8
 const WOB_WIDE = 35; // half-width of the stream above the filter (70 world wide)
 const WOB_NARROW = 21.4; // and below it
 const PASS_FILTER = 0.55;
 const PASS_JUDGE = 0.8;
 
+// ---------------------------------------------------------------------------
+// THE FIELD. "Deployment data is everywhere, and it funnels in." The cut opens
+// on a wide feathered spread of data ABOVE the filter, and the spread IS the
+// stream's own first ~260 dots, drawn at a seat in the field instead of on the
+// axis until each one's turn comes. Nothing below the join line changes: a dot
+// reaches Y_JOIN on exactly the frame its own `born` puts it there, so the
+// front still meets the filter ring at f18 and every gate keeps its schedule.
+//
+// The seats are a jittered grid inside a wobbled superellipse, feathered at the
+// boundary (density AND radius fall off over the outer 22% — an edge that reads
+// as a line is the one thing the set forbids of a crowd).
+// ---------------------------------------------------------------------------
+const FIELD_HW = 380; // half-width: the spread is 760 world px across
+const FIELD_HH = 160; // half-height: 320 world px, y -140 .. 180
+const FIELD_CY = Y_FILTER - 460; // = 20
+const FIELD_MOUTH = FIELD_CY + FIELD_HH; // 180, where the funnel necks down
+const Y_JOIN = FIELD_MOUTH + 20; // 200: a dot is on the axis by here
+const FIELD_COLS = 29;
+const FIELD_ROWS = 12;
+const FIELD_SE = 2.6; // superellipse exponent: a blob, never a box
+const FIELD_EDGE = 0.22; // the feathered band, as a fraction of the radius
+const FIELD_T0 = 2; // the funnel starts on frame 2
+const FIELD_T1 = 76; // and the last seat empties here
+const FIELD_DRAIN_P = 1.2; // >1: the mouth gulps, the rate eases to the stream's
+const CONTRACT = 0.62; // how far the outline closes on the axis
+const SETTLE = 0.3; // and how far it settles toward the mouth
+const C_SPREAD = 14; // frames between the centre starting and the rim starting
+const C_DUR = 24; // one dot's contraction
+const HANDOFF = 14; // frames a dot takes to leave its seat for the axis
+const JOIN_LEAD = (Y_JOIN - SPAWN_Y) / FALL_SPEED; // = 52.97
+
+type Seat = { id: number; x: number; y: number; q: number; rf: number };
+
+const SEATS: Seat[] = (() => {
+  const out: Seat[] = [];
+  const cw = (2 * FIELD_HW) / FIELD_COLS;
+  const ch = (2 * FIELD_HH) / FIELD_ROWS;
+  for (let gy = 0; gy < FIELD_ROWS; gy++) {
+    for (let gx = 0; gx < FIELD_COLS; gx++) {
+      const id = gy * FIELD_COLS + gx;
+      const x = AX - FIELD_HW + (gx + 0.5) * cw + (hash(id, 11) - 0.5) * cw * 0.92;
+      const y = FIELD_CY - FIELD_HH + (gy + 0.5) * ch + (hash(id, 12) - 0.5) * ch * 0.92;
+      const u = Math.abs(x - AX) / FIELD_HW;
+      const v = Math.abs(y - FIELD_CY) / FIELD_HH;
+      const rho = Math.pow(Math.pow(u, FIELD_SE) + Math.pow(v, FIELD_SE), 1 / FIELD_SE);
+      const th = Math.atan2(y - FIELD_CY, x - AX);
+      const bound = 1 + 0.055 * wobble(th * WOBBLE_R, 7);
+      if (rho > bound) continue;
+      const fe = feather(clamp01((bound - rho) / FIELD_EDGE) * FEATHER_STEPS, FEATHER_STEPS);
+      if (hash(id, 13) > 0.34 + 0.66 * fe) continue;
+      out.push({ id, x, y, q: 0, rf: 0.55 + 0.45 * fe });
+    }
+  }
+  out.forEach((s) => {
+    s.q =
+      Math.hypot((s.x - AX) / FIELD_HW, (FIELD_MOUTH - s.y) / (2 * FIELD_HH)) +
+      0.07 * (hash(s.id, 15) - 0.5);
+  });
+  out.sort((a, b) => a.q - b.q);
+  return out;
+})();
+
 type Dot = {
   i: number;
   born: number;
+  seat: Seat | null;
+  tJoin: number; // the frame it is on the axis at Y_JOIN
+  cStart: number; // the frame its own contraction begins
+  hand: number; // its handoff length
   amp: number;
   w1: number;
   p1: number;
@@ -581,22 +704,59 @@ type Dot = {
   tAnn: number; // the frame it picks up its annotation
 };
 
-const DOTS: Dot[] = (() => {
-  const out: Dot[] = [];
+// The three phases of the pour, on ONE born-time line:
+//   A  the neck that is already below the field at frame 0, at the set's 2.2/f
+//   B  the field: one dot per seat, born so that it reaches Y_JOIN on its own
+//      scheduled frame — the drain is the emission for f2..f76
+//   C  the pour that never stops: 2.2/f again, from above the frame
+const FIELD_B0 = FIELD_T0 - JOIN_LEAD; // = -50.97
+const FIELD_B1 = FIELD_T1 - JOIN_LEAD; // = 23.03
+const BORN_LINE: { born: number; seat: Seat | null }[] = (() => {
+  const out: { born: number; seat: Seat | null }[] = [];
   let acc = 0;
-  let i = 0;
-  for (let f = Math.floor(EMIT_F0); f <= DURATION + 4; f++) {
+  let j = 0;
+  for (let f = Math.floor(EMIT_F0); f <= FIELD_B0; f++) {
     acc += EMIT_RATE;
     while (acc >= 1) {
       acc -= 1;
-      const born = f + hash(i, 102) * 0.92;
-      if (born < EMIT_F0) {
-        i++;
-        continue;
-      }
+      const born = f + hash(j, 102) * 0.92;
+      j++;
+      if (born >= EMIT_F0 && born < FIELD_B0) out.push({ born, seat: null });
+    }
+  }
+  const n = SEATS.length;
+  SEATS.forEach((s, r) => {
+    const t = FIELD_T0 + (FIELD_T1 - FIELD_T0) * Math.pow(r / Math.max(1, n - 1), FIELD_DRAIN_P);
+    out.push({ born: t - JOIN_LEAD, seat: s });
+  });
+  acc = 0;
+  j = 9000;
+  for (let f = Math.ceil(FIELD_B1); f <= DURATION + 4; f++) {
+    acc += EMIT_RATE;
+    while (acc >= 1) {
+      acc -= 1;
+      const born = f + hash(j, 102) * 0.92;
+      j++;
+      if (born >= FIELD_B1) out.push({ born, seat: null });
+    }
+  }
+  out.sort((a, b) => a.born - b.born);
+  return out;
+})();
+
+const DOTS: Dot[] = (() => {
+  const out: Dot[] = [];
+  {
+    let i = 0;
+    for (const e of BORN_LINE) {
+      const born = e.born;
       const d: Dot = {
         i,
         born,
+        seat: e.seat,
+        tJoin: 0,
+        cStart: e.seat ? FIELD_T0 + e.seat.q * C_SPREAD + hash(i, 61) * 3 : 0,
+        hand: HANDOFF * (0.8 + 0.45 * hash(i, 62)),
         amp: WOB_WIDE * (0.3 + 0.7 * hash(i, 31)),
         w1: 0.085 + 0.05 * hash(i, 32),
         p1: hash(i, 33) * 6.283,
@@ -620,12 +780,35 @@ const DOTS: Dot[] = (() => {
       d.tFuse = crossF(born, Y_FUSE);
       d.tDefl = crossF(born, Y_FILTER - RING_R * 0.82);
       d.tAnn = crossF(born, Y_LABEL - RING_R * 0.55);
+      d.tJoin = e.seat ? crossF(born, Y_JOIN) : -1e9;
       out.push(d);
       i++;
     }
   }
   return out;
 })();
+
+// Where a field dot's seat is at frame `f`: the whole spread contracts on the
+// axis and settles toward the mouth, each dot on its own start (the centre
+// first, the rim last, keyed on distance from the mouth — a mechanism, not a
+// timer), and mills on two slow sines the whole time so the field is never a
+// still picture.
+const seatAt = (d: Dot, f: number) => {
+  const s = d.seat as Seat;
+  const c = smoothstep(clamp01((f - d.cStart) / C_DUR));
+  return {
+    x:
+      AX +
+      (s.x - AX) * (1 - CONTRACT * c) +
+      5.5 * Math.sin(f * 0.055 + d.p1) +
+      3.0 * Math.sin(f * 0.021 + d.p2),
+    y:
+      s.y +
+      (FIELD_MOUTH + 30 - s.y) * SETTLE * c +
+      4.0 * Math.sin(f * 0.047 + d.p2) +
+      2.5 * Math.sin(f * 0.017 + d.p1),
+  };
+};
 
 // The lateral wobble envelope: 90 world px wide above the filter, 55 below it,
 // narrowing over the 60 px under the ring.
@@ -693,7 +876,7 @@ const MERGE_OF = new Map<number, Fused>();
 FUSED.forEach((fu) => fu.members.forEach((m) => MERGE_OF.set(m, fu)));
 
 // --- ring conversion, measured off the dots that actually pass ---------------
-const DEEP_AFTER = [5, 4, 1, 4];
+const DEEP_AFTER = [6, 7, 2, 7];
 const DEEP_DUR = 4;
 const RIPE_LAG = 3;
 const RIPE_DUR = 4;
@@ -713,23 +896,42 @@ const RING_DEEP_AT = (() => {
 })();
 
 // --- the model --------------------------------------------------------------
+// --- the model: the CLAUDE mark ---------------------------------------------
+// Not a dot. The thing the pipeline builds is the model, and the model in this
+// clip's vocabulary is the Claude mark: it appears with the FIRST fused landing
+// at 0.35 of its size in ACCENT_DEEP, grows BY AREA with every fused dot it
+// swallows (one arriveEase tick per landing, easing back to the new rest over
+// 6 f, with a small overshoot so a swallow is felt), tones deep -> ripe on the
+// same ladder, and is at full size and ACCENT by the landing nearest f118 —
+// after which it breathes. That is what happens at the end.
 const LANDINGS = FUSED.map((f) => f.tLand).filter((t) => isFinite(t)).sort((a, b) => a - b);
-const CORE_R0 = 1.2; // x DOT_R at the first landing
-const CORE_R1 = 2.0; // the set's core, reached by the landing nearest f120
-const CORE_GROW = (() => {
-  const n = LANDINGS.filter((t) => t <= 105).length;
-  return (CORE_R1 * CORE_R1 - CORE_R0 * CORE_R0) / Math.max(1, n - 1);
+const MARK_S0 = 0.35;
+const MARK_FULL_BY = 112;
+const MARK_TICK = 6;
+const MARK_GROW = (() => {
+  const n = LANDINGS.filter((t) => t <= MARK_FULL_BY).length;
+  return (1 - MARK_S0 * MARK_S0) / Math.max(1, n - 1);
 })();
-const coreRadius = (f: number) => {
-  if (LANDINGS.length === 0 || f < LANDINGS[0]) return 0;
-  let a2 = CORE_R0 * CORE_R0;
+/** null before the first landing; otherwise { s, tone } for the mark. */
+const markAt = (f: number) => {
+  if (LANDINGS.length === 0 || f < LANDINGS[0]) return null;
+  let a2 = MARK_S0 * MARK_S0;
+  let tick = 0;
   for (let n = 1; n < LANDINGS.length; n++) {
     if (f < LANDINGS[n]) break;
-    a2 += CORE_GROW * smoothstep(clamp01((f - LANDINGS[n]) / 5));
+    a2 += MARK_GROW * arriveEase(clamp01((f - LANDINGS[n]) / MARK_TICK));
   }
-  // the first landing itself ramps in, so the core is never born at full size
-  const birth = smoothstep(clamp01((f - LANDINGS[0]) / 5));
-  return DOT_R * Math.min(CORE_R1, Math.sqrt(a2)) * birth;
+  for (const t of LANDINGS) {
+    const u = (f - t) / MARK_TICK;
+    if (u >= 0 && u < 1) tick += 0.055 * Math.sin(Math.PI * u) * (1 - u);
+  }
+  tick = Math.min(0.075, tick); // landings crowd at the end; one swallow's worth
+  const rest = Math.min(1, Math.sqrt(a2));
+  const birth = arriveEase(clamp01((f - LANDINGS[0]) / 5));
+  return {
+    s: rest * birth * (1 + tick) * breath(f, 0.31),
+    tone: clamp01((rest - MARK_S0) / (1 - MARK_S0)),
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -756,7 +958,9 @@ const AXIS_SEGS: [number, number][] = [
   [Y_FILTER + RING_OUTER, Y_JUDGE - RING_OUTER],
   [Y_JUDGE + RING_OUTER, Y_LABEL - RING_OUTER],
   [Y_LABEL + RING_OUTER, Y_FUSE - RING_OUTER],
-  [Y_FUSE + RING_OUTER, Y_MODEL],
+  // the last segment stops at the mark's top edge: the Claude mark's rays are
+  // thin enough that an axis run under it shows through the gaps between them
+  [Y_FUSE + RING_OUTER, Y_MODEL - MARK_BOX * 0.42],
 ];
 
 type Live = {
@@ -804,9 +1008,13 @@ const FilteringPipeline: React.FC<Props> = ({
 
   const live: Live[] = [];
 
+  const mark = markAt(frame);
+  const markEdge = Y_MODEL - (MARK_BOX / 2) * (mark ? mark.s : MARK_S0) * 0.88;
+
   // -- every data dot --------------------------------------------------------
   DOTS.forEach((d) => {
-    if (frame < d.born) return;
+    const inField = d.seat !== null && frame < d.tJoin;
+    if (!inField && frame < d.born) return;
     const fused = MERGE_OF.get(d.i);
 
     // thrown out at the filter
@@ -842,6 +1050,21 @@ const FilteringPipeline: React.FC<Props> = ({
     let y = yOf(d.born, frame);
     let x = AX + wobOf(d, frame, y);
     let shrink = Math.min(1, (frame - d.born) / 2);
+    let rScale = 1;
+
+    // IN THE FIELD. The dot sits at its seat in the spread, which is itself
+    // contracting on the axis, and over its last `hand` frames it blends onto
+    // the axis. The blend is a smoothstep, so the dot leaves the milling field
+    // from rest and is at the fall's full 13.48 px/f on the frame it joins:
+    // both ends are C1 and the handoff cannot be seen.
+    if (inField) {
+      const e = smoothstep(clamp01((frame - (d.tJoin - d.hand)) / d.hand));
+      const s = seatAt(d, frame);
+      x = s.x + (x - s.x) * e;
+      y = s.y + (y - s.y) * e;
+      shrink = 1;
+      rScale = (d.seat as Seat).rf + (1 - (d.seat as Seat).rf) * e;
+    }
 
     // judged out: keeps falling, drifts sideways, dissolves
     if (d.passFilter && !d.passJudge && frame > d.tJudge) {
@@ -889,7 +1112,7 @@ const FilteringPipeline: React.FC<Props> = ({
       key: `d${d.i}`,
       x,
       y,
-      r: DOT_R * d.rs * (d.back ? BG_R_SCALE : 1) * breath(frame, hash(d.i, 9)) * shrink,
+      r: DOT_R * d.rs * rScale * (d.back ? BG_R_SCALE : 1) * breath(frame, hash(d.i, 9)) * shrink,
       tone,
       back: d.back,
       ann,
@@ -911,7 +1134,8 @@ const FilteringPipeline: React.FC<Props> = ({
     if (tAb < ABSORB_DUR) {
       const u = clamp01(1 - tAb / ABSORB_DUR);
       const yIn = Y_FUSE + (distAt(fu.tLand - ABSORB_DUR) - distAt(fu.tMerge));
-      y = yIn + (Y_MODEL - yIn) * arriveEase(u);
+      // taken in at the mark's EDGE, not its centre
+      y = yIn + (markEdge - yIn) * arriveEase(u);
       r *= 1 - u * u;
     }
     live.push({
@@ -930,7 +1154,6 @@ const FilteringPipeline: React.FC<Props> = ({
   });
 
   const glyphBox = 2 * RING_R * GLYPH_FRACTION;
-  const coreR = coreRadius(frame) * breath(frame, 0.31);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -971,10 +1194,10 @@ const FilteringPipeline: React.FC<Props> = ({
           >
             {/* Z-ORDER, in tree order and nothing may be moved past anything
                 else: (1) the axis, (2) every data dot, fused dot and annotation,
-                (3) the ring strokes, (4) the Lucide icons, (5) the core. The
-                stream therefore passes UNDER the gates: a dot crossing a ring
-                goes behind the glyph and the icon is never broken by it, and the
-                core is drawn over the dots it swallows. */}
+                (3) the ring strokes, (4) the Lucide icons, (5) the CLAUDE mark.
+                The stream therefore passes UNDER the gates: a dot crossing a
+                ring goes behind the glyph and the icon is never broken by it,
+                and the mark is drawn over the dots it swallows. */}
             {/* (1) the column: the axis the fall runs on */}
             <g style={{ filter: icon }}>
               {AXIS_SEGS.map(([a, b], i) => (
@@ -1065,16 +1288,23 @@ const FilteringPipeline: React.FC<Props> = ({
               ))}
             </g>
 
-            {/* (5) THE MODEL: nothing is drawn until the first fused dot lands */}
-            {coreR > 0 ? (
-              <circle
-                cx={AX}
-                cy={Y_MODEL}
-                r={coreR}
-                fill={accent}
-                opacity={dotOpacity * OP_FG}
+            {/* (5) THE MODEL — the CLAUDE mark, filled, on top of everything.
+                Nothing is drawn until the first fused dot lands in it. */}
+            {mark ? (
+              <g
                 style={{ filter: icon }}
-              />
+                transform={`translate(${AX} ${Y_MODEL}) scale(${(
+                  (MARK_BOX * mark.s) /
+                  24
+                ).toFixed(5)}) translate(-12 -12)`}
+                fill={toRipe(mark.tone)}
+                fillRule="evenodd"
+                opacity={dotOpacity * OP_FG}
+              >
+                {CLAUDE.paths.map((p, i) => (
+                  <path key={`m${i}`} d={p} />
+                ))}
+              </g>
             ) : null}
           </svg>
         </div>
@@ -1107,7 +1337,24 @@ export const STATS = {
   ringRWorld: Number(RING_R.toFixed(2)),
   ringRScreen: Number((RING_R * K_REST).toFixed(2)),
   dotScreen: Number((2 * DOT_R * K_REST).toFixed(2)),
-  coreScreen: Number((2 * CORE_R * K_REST).toFixed(2)),
+  markScreen: Number((MARK_BOX * K_REST).toFixed(2)),
+  seats: SEATS.length,
+  fieldB: [Number(FIELD_B0.toFixed(2)), Number(FIELD_B1.toFixed(2))],
+  joinAt: [0, 0.25, 0.5, 0.75, 1].map((u) =>
+    Number(
+      (
+        FIELD_T0 +
+        (FIELD_T1 - FIELD_T0) * Math.pow(u, FIELD_DRAIN_P)
+      ).toFixed(1),
+    ),
+  ),
+  nth: (() => {
+    const t0 = DOTS.filter((d) => d.passFilter).map((d) => d.tFilter).sort((a, b) => a - b);
+    const t1 = DOTS.filter((d) => d.passFilter && d.passJudge).map((d) => d.tJudge).sort((a, b) => a - b);
+    const t2 = DOTS.filter((d) => d.passFilter && d.passJudge).map((d) => d.tLabel).sort((a, b) => a - b);
+    const t3 = FUSED.map((f) => f.tMerge).sort((a, b) => a - b);
+    return [t0, t1, t2, t3].map((a) => a.slice(0, 16).map((v) => Number(v.toFixed(1))));
+  })(),
   inkTopScreen: Number(screenAt(LAST, AX, INK_TOP)[1].toFixed(1)),
   inkBottomScreen: Number(screenAt(LAST, AX, INK_BOTTOM)[1].toFixed(1)),
   dots: DOTS.length,
@@ -1118,8 +1365,11 @@ export const STATS = {
   frontFilter: Number(Math.min(...DOTS.map((d) => d.tFilter)).toFixed(1)),
   firstMerge: Number((FUSED[0]?.tMerge ?? -1).toFixed(1)),
   landings: LANDINGS.filter((t) => t <= DURATION).map((t) => Number(t.toFixed(1))),
-  coreGrow: Number(CORE_GROW.toFixed(3)),
-  coreAt: [100, 110, 120, 136].map((f) => Number((coreRadius(f) / DOT_R).toFixed(2))),
+  markGrow: Number(MARK_GROW.toFixed(4)),
+  markAt: [96, 100, 110, 118, 126, 136].map((f) => {
+    const m = markAt(f);
+    return m ? [f, Number(m.s.toFixed(3)), Number(m.tone.toFixed(2))] : [f, 0, 0];
+  }),
   gateEnterFrame: GATE_Y.map((gy) => {
     for (let f = 0; f <= DURATION; f++) {
       if (screenAt(f, AX, gy - RING_OUTER)[1] < 1920) return f;
