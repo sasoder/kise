@@ -5,6 +5,7 @@ import {
   ACCENT_DEEP,
   BG_BASE,
   BG_DIM,
+  CAM_LIFT,
   GridBackground,
   ICON_SHADOW_BLUR,
   ICON_SHADOW_OPACITY,
@@ -14,8 +15,9 @@ import {
   SHADOW_OPACITY,
   SHADOW_Y,
   Vignette,
+  WOBBLE_R,
   breath,
-  camEase,
+  camMove,
   clamp,
   clamp01,
   feather,
@@ -29,249 +31,245 @@ import {
   wobble,
   worldTransform,
 } from "./fieldShared";
-import {
-  DARK_TRAFFIC_OPACITY,
-  Packet,
-  arriveEase,
-  holdDriftK,
-  packetsOn,
-} from "./levelUp";
+import { DARK_TRAFFIC_OPACITY, Packet, arriveEase, packetsOn } from "./levelUp";
 
 export const FPS = 24;
 
 // ---------------------------------------------------------------------------
-// John Charles Beren, clip `OptimizingTheObjective` — the cut after
-// StillDecideWhatWeWantV2: "...actually, like achieving or optimizing the
-// objective you've defined."
+// John Charles Beren, clip cut 3, `OptimizingTheObjective`:
+// "...actually, like achieving or optimizing the objective you've defined."
 //
-// The composition starts at SRT 35.799 s, so every beat below is
+// DURATION. The composition starts at SRT 35.799 s, so every beat is
 //   frame = round((t - 35.799) * 24)
-//     actually  f0     like       f15    achieving f33    or        f49
-//     optimizing f55   the        f66    objective f72    you've    f80
-//     defined   f85    next word "I"     f98
-// Speech therefore runs f0..98 and a 16 frame tail holds the resolved state:
-//   DURATION = 98 + 16 = 114.
+//     actually f0 · like f15 · achieving f33 · or f49 · optimizing f55 ·
+//     the f66 · objective f72 · you've f80 · defined f85 · next word "I" f98
+// Speech therefore runs f0..98 and the set's 16-frame tail holds the resolved
+// state: DURATION = 98 + 16 = 114.
 export const DURATION = 114;
 
 // ---------------------------------------------------------------------------
-// THE CLIP'S RULE, unchanged across the three cuts: people draw the shape, the
-// orange dots fill it. Cut 2 showed the person SETTING the goal (a Lucide flag
-// in a thought bubble). This cut is the other half of alignment: the dots
-// ACHIEVING the goal the person defined.
+// V2 — A COMPLETE REBUILD. V1 (a person at the left, a trophy planted on a
+// ground line to his right, the crowd racing sideways into a mound at its base)
+// was rejected: "unfinished, half-assed, not harmonious, not thought through".
 //
-// Vocabulary, Orange Dwarkesh on the grid, identical to the approved cuts:
-//   a person      = person.png, ink white, iconShadow, 76 world px (118 screen)
+// This is the briefed picture instead, and it is a VERTICAL one: the person is
+// in the CENTRE of the frame with his crowd of agents behind him, the objective
+// is the same Lucide trophy cut 2 draws in its thought bubble, and it is 500
+// world px straight ABOVE him — out of frame at the opening camera. The crowd
+// leans, launches past his head, and climbs to it; the camera climbs with the
+// stream; the dots seat around the trophy and the trophy lights.
+//
+// SOUND-OFF READING TEST — one sentence:
+//   "the crowd behind the person rises to a trophy and lights it up;
+//    the trophy is the person's."
+//
+// VOCABULARY, fixed for the clip and identical to cuts 1, 2 and 4:
+//   people        = person.png, ink white, filled, iconShadow
 //   the AIs       = orange dots, solid, ACCENT_DEEP at rest, ACCENT lit
-//   the objective = the Lucide `trophy`, outline, planted ON the ground — the
-//                   noun swapped for the flag, and the ONLY thing this pass
-//                   changes. Its base line stands on the ground line, so the
-//                   base is the anchor the pole foot used to be.
-//   ink lines     = the ground under the trophy, and the person's claim on its
-//                   left handle. One stroke weight for every stroke in the piece.
-// No text, no numbers. It has to read with the sound off.
-//
-// SOUND-OFF READING TEST: "the crowd races to the trophy the person set up."
-//
-// ---------------------------------------------------------------------------
-// GESTURES — one per word, and every one of them LEADS its word: a gesture is
-// already moving when the word lands, and the next one starts before the last
-// has settled. Nothing else is in the piece.
-//
-//   1. f0   "actually"    the standing scene: the person at the left, the
-//                         planted trophy with its ground line, the crowd
-//                         milling below-left, off the ground. Alive from frame
-//                         0 — the camera's opening glide, the mill,
-//                         micro-drift, dark traffic, glyph sway, and the
-//                         trophy's own +-1 px idle.
-//   2. f10  "like"        ANTICIPATION, five frames early. Dots drift up to
-//           (f15)         12 px toward the trophy's base over f10-31 (hashed
-//                         starts, weighted by how near the trophy a dot
-//                         already is), so the crowd's boundary bulges to it.
-//   3. f26  "achieving"   LAUNCH, seven frames early, so the word lands with
-//           (f33)         dots already in the air. Wide individual arcs, hashed
-//                         launches on a rate that ramps down from ~4/frame,
-//                         arriveEase, never in unison; each dot seats on the
-//                         MOUND standing on the ground line around the base
-//                         and goes deep -> ripe as it lands. Half the crowd is
-//                         away by f46.
-//   4. f44  "optimizing"  THE STREAM TIGHTENS, continuously, not on a frame.
-//           (f55)         Every flight carries one number, `mix` = smoothstep
-//                         over f44-58 of its own launch time: at 0 it is a wide
-//                         arc at 23 world px/frame, at 1 a near-straight lane
-//                         through one common waist at 26, with a third of the
-//                         bow. So the spray becomes a lane across "or
-//                         optimizing" instead of switching. Airborne by f74;
-//                         93% of the mound is seated by f91 and the last three
-//                         dots land at f101, inside the pull-back (see
-//                         DEVIATIONS), and the mound is ripe and dense.
-//   5. f66  "the          THE TROPHY LIFTS ONCE, six frames early: the whole
-//           objective"    glyph rises 10 world px off the ground over f66-72
-//           (f72)         (ease-out), crests ON the word (f72), and settles
-//                         back onto its base over f72-86 (ease-in). The ground
-//                         line does not move, so the base visibly leaves the
-//                         ground and returns to it. It is the flag ripple's
-//                         one-for-one replacement; nothing else changes.
-//   6. f73  "you've       The person lifts 4 px (wake f73-81) and a thin ink
-//           defined"      line draws head-led from his shoulder to the TROPHY'S
-//           (f80/f85)     LEFT HANDLE — the outer point of the `M6 9H4.5...`
-//                         arc, grid (2, 6.5) — over f78-88, mid-stroke on
-//                         "defined"; screen-space head, midground opacity. The
-//                         target rides the settling lift, so the head lands on
-//                         the handle and not on the air under it. The line
-//                         stays: the trophy is his. The camera's pull-back
-//                         starts WITH the line, at f86, not after it.
-//   7. f92  tail          the cluster milling, dark traffic thinning to 60%,
-//           -> f114       one packet running person -> handle every 12 f, the
-//                         trophy's idle, and the camera still opening.
-//
-// If it is not in that list it is not on a word, and nothing else was added.
+//   the objective = Lucide `trophy`, outline, EXACTLY as cut 2 draws it in its
+//                   bubble — the same six paths, the same ink-box rule (grid
+//                   2..22 in both axes), the same GLYPH_STROKE_WORLD stroke
+//                   convention. White until the AIs reach it. The head-led
+//                   arc-length draw is NOT used here: the trophy is already
+//                   standing when the camera finds it, and its gesture is the
+//                   conversion, not a drawing.
+//   the provenance= one thin ink line, person's head -> the trophy's base
+// No text, no numbers, no ground line, no bubble, no other icon.
 //
 // ---------------------------------------------------------------------------
-// LIVENESS — the V3 mechanisms, all of them, none of them on a word:
+// GESTURES — the word each one lands on, and the frames it runs over. Every
+// gesture LEADS its word and overlaps its neighbours; nothing starts from a
+// dead stop and nothing in the piece is outside this list.
+//
+//   1. f0    "actually"      THE STANDING SCENE. The person centred, the crowd
+//                            a feathered blob behind and around his lower half,
+//                            drawn under the glyph so he occludes its middle.
+//                            Alive from frame 0: the mill, micro-drift, dark
+//                            traffic, glyph sway, and the camera's opening creep
+//                            (k 1.40 -> 1.44) already running.
+//   2. f10   "like" (f15)    ANTICIPATION. The crowd LEANS: every dot drifts up
+//                            to 12 world px up and inward toward the trophy over
+//                            f10-28, hashed starts, weighted so the dots nearest
+//                            the top lean most — the blob's top edge bulges up
+//                            behind the person's shoulders.
+//   3. f26   "achieving"     LAUNCH, seven frames early. Dots leave upward past
+//            (f33)           the person on individual hashed arcs, ~3.2/frame over
+//                            f26-66, each flight speed-authored (18 world px/frame
+//                            wide, 27 in the lane) and then capped against the set's
+//                            45 SCREEN px/frame ceiling WITH the camera moving. The
+//                            stream splits either side of his head: every flight is
+//                            solved against his own head-and-shoulders ink, so no dot
+//                            ever crosses the glyph in the open. arriveEase on every
+//                            one, and no two neighbours in unison.
+//   4. f44   "or" (f49)      THE STREAM TIGHTENS, continuously, not on a frame.
+//            "optimizing"    Every flight carries one number, `mix` = smoothstep of
+//            (f55) -> f66    its own launch time over f44-58: at 0 it is a wide
+//                            individual arc through a waist 100-165 px off the axis,
+//                            at 1 a narrow common lane at 78-92 and 50% faster. The
+//                            two lanes are deliberately NOT mirrored (0.84 left,
+//                            1.14 right, and they cross his head at different
+//                            heights) or the stream closes into a drawn oval. By f66
+//                            the whole crowd is airborne.
+//   5. f55   "the objective" THE ARRIVAL, and the payoff. Dots seat in a feathered
+//            (f66/f72)       annulus around the trophy from f55, bottom and sides
+//                            first and the top last, going deep -> ripe as they seat.
+//                            As the crowd actually REACHES it — the tenth dot down,
+//                            f58.7 — the trophy's stroke converts white ->
+//                            ACCENT_DEEP over 8 f; on "objective" (f72) it goes
+//                            ACCENT_DEEP -> ACCENT over 6 f, so the word lands on the
+//                            objective turning fully orange. All 130 seated by f98.
+//   6. f76   "you've"/"defined" PROVENANCE. The person wakes (lift f72-80) and a
+//            (f80/f85)       thin ink line draws head-led from the top of his head —
+//                            off the bottom of the frame at this camera — straight up
+//                            to the trophy's base, f76-95, screen-space head, 47%
+//                            drawn on "defined". It stays; packets run it every 12 f
+//                            from f97.
+//   7. f92   tail -> f114    The camera's one eased pull-back resolves the whole
+//                            picture: person at the bottom, the line, the orange
+//                            trophy inside its crowd at the top. The annulus mills,
+//                            dark traffic thins to 60%, packets run, the camera
+//                            keeps drifting.
+//
+// ---------------------------------------------------------------------------
+// LIVENESS — mechanisms, not gestures. None of them is on a word and none of
+// them ever stops:
 //   * micro-drift: every dot wanders +-3 world px on two hashed sines, seated,
-//     milling, in flight, at every zoom, through the tail. Back dots ride 1.45x
-//     of it (~1.4 px more).
-//   * the mill: hops to vacant neighbouring seats, in the source crowd from f0
-//     (1.3/frame) and in the foot cluster from the first landing (1.5/frame),
-//     on one shared occupancy map, through every hold and the whole tail.
+//     milling, in flight, at every zoom, through the tail. Back-rung dots ride
+//     1.45x of it.
+//   * the mill: hops to vacant neighbouring seats on one shared occupancy map,
+//     in the source crowd from f0 until it empties and in the annulus from the
+//     first landing to the last frame (2.1 and 1.8 hops/frame; 248 hops in the
+//     piece). The annulus keeps 35 blue-noise vacancies so there is always
+//     somewhere to hop and the crowd still closes over the trophy.
 //   * dark traffic: idleThreads(130) = 20 accent threads between neighbouring
-//     dots at 0.12, no heads; never on a dot that has not landed; thinning to
-//     60% across the tail.
-//   * hold drift: after every camera landing and through the tail the camera
-//     keeps moving ~1 screen px/frame in the direction of its last move
-//     (straight ramps, holdDriftK for the zoom). Exactly ONE dead-still stretch
-//     in the piece: the held breath, f66-73.
-//   * glyph sway: the person sways +-1.5 screen px on hashed sines, and lifts
-//     4 screen px over f80-88 before he claims the trophy.
-//   * the trophy's idle: the glyph wanders +-1 world px on two slow hashed
-//     sines, from frame 0 and through the tail. It is the cloth breathe's
-//     replacement — a trophy is rigid and has no free end — built on the
-//     person's own sway mechanism, on no word, and a tenth of the lift.
-//   * arriveEase on every flight and every mill hop; screen-space head on the
-//     person -> handle line; packets on it once it has landed.
+//     dots at 0.12, no heads, never on a dot that has not landed.
+//   * arriveEase on every flight and every mill hop — nothing stops dead.
+//   * screen-space heads: the provenance line's head is 4.5/k, so it is one
+//     size at every zoom.
+//   * glyph sway: the person sways +-1.5 screen px on hashed sines and lifts
+//     4 screen px over f72-80, before he acts.
+//   * the trophy's idle: +-1 world px on two slow hashed sines, from frame 0.
+//   * packets on the provenance line once it has landed.
+//   * the camera never parks: five segments, two of them decaying drifts that
+//     carry the previous move's direction rather than stopping. Measured motion
+//     energy (scratchpad energy.txt) has a 12-frame-block floor of 0.380 against
+//     the approved first cut of this clip's 0.327.
 //
 // ---------------------------------------------------------------------------
-// THE DEPTH LADDER, by role (three rungs, opacity and size only — TONE still
-// carries state, deep at rest / ripe achieved, and nothing about the story is
-// in these numbers):
-//   FG  1.00  the trophy, the person, the cores of both crowds, every line
-//             head and packet.
-//   MID 0.78  the containers and claims: the ground line under the trophy, the
-//             person -> handle line.
-//   BG  0.55  the outer ~40% of every crowd and cluster, by hashed distance,
-//             at 0.80x radius and 1.45x micro-drift.
-// Every dot also carries a +-18% hashed radius spread. A dot's rung follows it
-// from the crowd to the cluster: it is computed at both ends and crossfaded
-// across its flight.
+// THE DEPTH LADDER, by role — opacity and size only. TONE still carries state
+// (deep at rest, ripe achieved), so nothing about the story is in these numbers.
+//   FG  1.00  the trophy, the person, the cores of both crowds, the line's head
+//             and its packets
+//   MID 0.78  the provenance line — a claim is the container, not the thing
+//   BG  0.55  the outer 40% of every crowd, by hashed distance percentile, at
+//             0.80x radius (BG_R_SCALE) and 1.45x micro-drift
+// Every dot also carries a +-18% hashed radius spread (R_SPREAD), and a dot's
+// rung follows it from the crowd to the annulus, crossfaded across its flight.
 //
 // ---------------------------------------------------------------------------
-// DEVIATIONS from the brief, and why. Every one of them was measured, not
-// guessed; the measurements are in bounds.txt, energy.txt and the audit.
-//   * FLIGHT DURATIONS. The brief asks 14-20 f in phase A and 10-13 f in phase
-//     B. The crowd centre is 340 world px from the trophy's base; at k 1.28 a 12 f
-//     flight puts the head at 66 screen px/frame, 47% over the set's 45 px cap,
-//     and at 24 fps that strobes. Flights are SPEED-authored instead — 23 world
-//     px/frame at mix 0, 26 at mix 1 — and then lengthened one frame at a time
-//     until the head's PEAK screen speed (the Bezier's own, which is not
-//     uniform, times the camera's k on that frame) is under 43. That lands them
-//     at 9-23 f, still the briefed 21% tightening, and the measured fastest
-//     head in the piece is 42.9 screen px/frame.
-//   * THE CROWD'S PLACE, SIZE AND COUNT. Brief: ~110 dots at centre (330,
-//     1180), half-extents 220 x 90. Built as 130 dots at (370, 1115), 118 x 52
-//     on a 12 x 9 lattice. Two reasons. (a) The camera pans right to the trophy's
-//     base and pushes to k 1.28 (1.367 after the drift); at the briefed extents
-//     the crowd's left edge crosses the 40 px side margin from f52 on and its
-//     foot crosses screen y 1290 at the push. (b) At 110 dots over the briefed
-//     extents the blob reads as scattered specks rather than one body. The
-//     picture is the briefed one.
-//   * THE DRAIN ORDER. Launch order is weighted so the FAR side and the FOOT
-//     of the crowd go first (key = 0.55*hash - 0.27*distance to the base -
-//     0.18*lowness): the blob contracts up and toward the trophy as it empties,
-//     which is what keeps its left edge off the frame's side and its foot out
-//     of the caption band while the camera pans right and pushes in. Hashed
-//     hard enough that it reads as a crowd surging, not as a wipe.
-//   * NO UNISON, at this density. 130 dots leave over 48 frames, so the mean
-//     gap between consecutive launches is 0.37 f and a blanket "every pair at
-//     least 2 f apart" is arithmetically impossible. The rule is enforced where
-//     it is visible — between dots that are actually side by side. Launches:
-//     every pair of dots within 18 world px of each other in the crowd is at
-//     least 2.06 f apart (a greedy permutation of WHICH dot holds which slot in
-//     the schedule, so the rate curve is untouched). Landings: every pair of
-//     dots on cluster seats within 14 world px is at least 2.04 f apart (each
-//     colliding landing is pushed LATER in 1.1 f steps, never earlier, so the
-//     speed cap still holds). No two dots share an exact launch or landing
-//     time anywhere in the piece.
-//   * THE TAIL MILL runs at 1.5 hops/frame in the cluster and 1.3 in the crowd,
-//     not the briefed 1 hop / 5 f. At 0.2/frame the tail blocks fall under the
-//     V3 calibration floor and the piece reads parked; see energy.txt.
-//   * THE MID-CUT FRAMING. The centre of mass is inside screen y 960 +- 60 on
-//     the opening frame (933) and the last frame (927), as asked, and it is the
-//     BAND that decides both: at k 1.251 the crowd's foot is 263 screen px
-//     below the camera and a centre of 960 would put it at 1305, so 933 is the
-//     highest the opening can sit. Between f80 and f95 the centre rides up to
-//     757 — the source crowd is gone, the camera is at its tightest on the
-//     base, and the resolved group's own centre is at world y 761. The
-//     pull-back brings it back, and nothing ever leaves the band (measured on
-//     every rendered frame: y 458-1282, x 53-948; tightest margins bottom 8 px
-//     at f55, left 13 px at f57).
-//   * THE SCALE. x1.18 on every zoom key, as asked, and it fits: at x1.18 the
-//     tightest frame (f55) has 8 px of bottom margin left. It is the SOURCE
-//     CROWD that sets that ceiling — it is the lowest thing in the piece and it
-//     is on screen until f74 — so the multiplier could not go higher without
-//     moving a crowd that is approved.
-//   * THE FLIGHTS GOT LONGER AGAIN, and the last landings with them: f101 ->
-//     f107.1. Same two causes as before (the mound stands ON the ground and
-//     every head is capped at 43 screen px/frame) plus the third below: the
-//     mound is now a RING around a wide base rather than a dome around a pole,
-//     so the far seats are further out. 75% of the crowd is seated on
-//     "defined", 90% by the end of speech, all 130 by f110 — and the
-//     stragglers are what keeps the tail from parking. Measured motion energy
-//     (energy4.txt): floor 0.706 against this cut's previous 0.635 and V3's
-//     0.327, so losing the cloth breathe cost the piece nothing.
-//   * THE GROUND LINE is 550 world px wide (x 365..915), not 344. Same rule as
-//     before — the crowd STANDS on it, so it has to be under all of it — and
-//     the drawn mound is now x 469..892 because of the clear band below. It
-//     breaks no bound: at the tightest camera the line's right end is at screen
-//     x 1017 against the 1040 margin (bounds4.txt).
+// THE WEIGHT. Every weight in this cut is written as the SCREEN number from the
+// clip's shared spec (harmony/spec.md §1) divided by the RESTING k, and the
+// resting k is not a guess: the camera's last two keys are SOLVED at module
+// scope so the damped camera resolves to exactly k 1.25 at f113. So the piece
+// reads person box 118.0, outline 6.55, line 4.92, dark traffic 3.28 and a
+// 14.0 px front-rung dot on the last frame by construction, and the crowd
+// pitches are written as multiples of the dot so density rides with it.
 //
-// AND THE FOUR THE TROPHY ITSELF CAUSED:
-//   * THE GLYPH BOX is read as the INK box, 230 world px on grid 2..22 in both
-//     axes, so TR_S is 11.5 world px per grid unit and the base line (grid x
-//     4..20) is 184 world px wide — not the 153 that reading 230 as the full
-//     24-unit box would give. Two reasons, and they are the same reason twice:
-//     it is the flag's own convention (FLAG_BOX was the flag's ink box), and
-//     the trophy is a SHORTER glyph than the flag was (ink 230 tall against
-//     280, and its top is world y 670 against the flag's 620), so at the
-//     smaller reading the resolved picture stops filling the band under a
-//     camera this pass is not allowed to re-solve. BASE_CLEAR follows the base
-//     it is derived from: 92 + 12 = 104 world px either side of centre.
-//   * THE MOUND IS A RING, NOT A DOME, and it had to get wider to stay one
-//     crowd. The clear band is 104 px either side (it was 20 at the pole) and
-//     the crest is capped at world y 809.5, so the seat field that fitted 130
-//     dots around a pole fits 80 around a base. MOUND_RX 185 -> 255, MOUND_RY
-//     104 -> 115, the lattice 11.5x9.8 -> 11.0x9.4 and MOUND_DENSITY 0.2 ->
-//     0.1: 156 seats, of which the 130 innermost are drawn. Nothing about the
-//     dot count, the ladder, the mill or the flights changed.
-//   * IT IS ASYMMETRIC, on purpose. The crowd cannot pile up behind the person
-//     (MOUND_X_MIN 468) and it cannot rise through the claim line, which now
-//     runs shoulder -> handle at a far steeper angle than shoulder -> pole top
-//     did. Both cut the LEFT flank and neither touches the right, so the mound
-//     runs x 469..892 around a base centred on 640. It reads as a crowd
-//     gathered thicker on the open side, and it is what keeps the claim clear
-//     of the dots end to end (checked on f72, f95 and f113).
-//   * THE CAMERA IS UNTOUCHED. Every key, frame, warp and centre is the one the
-//     flag pass resolved: max |dv| 2.486 at f70, no frame under 0.15 px/f,
-//     fastest dot head 42.996 against the 45 cap. The band holds with room to
-//     spare on all four sides — screen y 521..1280 and x 50..1017 over all 114
-//     frames — so the tightest k did NOT have to come down. The one thing to
-//     flag for the director: the shorter glyph means the resolved picture is
-//     369 screen px tall at f113 where the flag's was ~460, and if it now reads
-//     small in the frame the fix is a higher K_REST, not a bigger trophy.
+// The camera's c-track is solved the same way: the last key is solved so the
+// resolved ink centre lands on screen y 835 (the set's CAM_LIFT framing) on the
+// last frame, sway included.
+//
+// ---------------------------------------------------------------------------
+// CAMERA — one continuous C1 path, five segments, no cx axis (everything in
+// this cut is on the column axis). c is the CONTENT centre; cy = c + 125/k.
+//
+//   f0-28    k 1.700 -> 1.820   c 1016 -> 974   warp 0.65  opening creep on the
+//                                                           person and his crowd
+//   f28-74   k 1.820 -> 1.300   c  974 -> 415   warp 1.05  ONE long glide up,
+//                                                          following the stream
+//                                                          onto the trophy
+//   f74-86   k 1.300 -> 1.294   c  415 -> 404   warp 0.45  the glide's own
+//                                                          direction, decaying
+//   f86-110  k       -> solved  c      -> solved warp 1.0  ONE eased pull-back to
+//                                                          the resolved frame
+//   f110-114 k       -> -0.004  c      ->    +4  warp 0.40  decaying drift
+//
+// Measured on four fixed world probes (scratchpad cam.txt): max |dv| 2.201 px/f^2
+// at f38 against the 2.5 budget, no frame under 0.330 px/f against the 0.15 floor,
+// nothing over budget anywhere. Peak |v| is 32.4 px/f inside the glide — that IS
+// the glide: the camera travels 559 world px in 46 frames to stay with the stream,
+// so the crowd it leaves behind crosses the frame at that speed. Every dot head is
+// budgeted separately and the fastest in the piece is 42.98 screen px/f.
+//
+// The trophy is fully out of the top of the frame at f0 (its centre sits at screen
+// y -187, its lowest ink at -128), crosses the top edge at f40, is inside the
+// caption band from f47 and is centred by f74-86.
+//
+// ---------------------------------------------------------------------------
+// DEVIATIONS from the brief, and why. Every one was measured, not guessed; the
+// measurements are in the scratchpad (measure.md, cam.txt, bounds.txt, energy.txt).
+//   * THE TROPHY SITS 500 WORLD PX ABOVE THE PERSON, not the briefed 720, and the
+//     pull-back's content centre is 670 rather than 600. The two are one
+//     constraint: at the resolved k of 1.25 the whole picture — the annulus' top
+//     rim down to the person's feet — has to fit inside the caption band with its
+//     ink centre on screen y 835, which allows 455 screen px below that centre;
+//     at 720 world px of separation the picture's own half-height is 555 screen px.
+//     500 resolves at 412, with 48 px of bottom margin on the last frame, and
+//     is still enough for the trophy to be entirely out of frame at the opening
+//     camera. The briefed picture is unchanged: the objective is out of frame
+//     above, and the camera climbs to it with the stream.
+//   * THE OPENING k IS 1.70, not 1.40. The trophy has to be OUT of the frame at f0
+//     and the person has to be in the caption-safe band, and those two fight: at
+//     k 1.40 the person must sit at screen y 508 or above for the trophy's base to
+//     clear the top edge, which puts the whole opening picture in the top third.
+//     A TIGHTER opening pushes the trophy further out for the same framing, so
+//     k 1.70 puts the person at screen 740 and the crowd's own centre at 824 — the
+//     house framing — with the trophy 128 px clear above the frame. The person is
+//     then 160 screen px at f0 and 118 at rest; the spec's numbers are the RESTING
+//     ones and the measured frame is the last one.
+//   * THE ANNULUS IS WIDER THAN 1.0-1.6x THE TROPHY'S HALF-BOX. 130 dots at the
+//     spec's 14.0 screen px cannot stand in a ring of outer radius 75 world px:
+//     that ring is 12,200 world px^2 and 130 dots need about 22,000 to stand
+//     without overlapping. It is an ellipse rx 168 / ry 122 around the trophy with
+//     the trophy's ink box (inflated 20 px) and the provenance line's lane cut out
+//     of it, thinned continuously outward (ANN_THIN) so the mass is against the
+//     objective and the rim dissolves, with its outer 40% on the back rung.
+//   * LAUNCH RATE. 130 dots leave over f26-66 at a mean 3.25/frame on a nearly flat
+//     curve, not the briefed 2.5 ramping down: at 2.5 ramping down the brief's own
+//     deadline (the whole crowd airborne by f66) is out of reach. Half the crowd is
+//     away by f47 rather than f55, and the first dots seat at f55 rather than f62 —
+//     so the trophy's conversion is keyed to the TENTH dot down (f58.7) rather than
+//     the first, which is also the more honest trigger: one dot touching down is
+//     not the AIs arriving.
+//   * THE PROVENANCE LINE DRAWS OVER 19 FRAMES (f76-95), not 12. It is 458 world px
+//     long and it runs while the camera is at its tightest: at 12 frames its head is
+//     50 screen px/f, over the set's 45 cap. At 19 frames the peak head is 41 and
+//     "defined" (f85) still lands mid-stroke, 47% drawn.
+//   * NO UNISON, at this density. 130 dots leave over 40 frames, so the mean gap
+//     between consecutive launches is 0.31 f and a blanket 2-frame rule between
+//     every pair is arithmetically impossible. It is enforced where it is visible:
+//     every pair of dots within 18 world px of each other in the crowd launches at
+//     least 2 f apart, and every pair of annulus seats within 14 world px lands at
+//     least 2 f apart. STATS reports both achieved minima (2.03 and 2.02).
+//   * THE PERSON LEAVES THE CAPTION BAND over f53-107, dropping to screen y 1501 at
+//     the tightest camera. That is the cut, not an accident: the camera follows the
+//     stream up to an objective 500 world px away and no camera at k 1.30 holds
+//     both ends. He is never cut off by the frame itself (the lowest drawn pixel in
+//     the piece is y 1549 of 1920), nothing ever leaves the SIDES (x 190..884 over
+//     all 114 frames against the 40..1040 band), and the opening and resolved
+//     frames both centre inside the band (823.5 and 833.5). The trophy crosses the
+//     TOP edge over f35-46 as it enters, which is the gesture.
+//   * THE MID-FLIGHT PICTURE was re-cut twice. Symmetric lanes and an outward-
+//     pushed approach turned the stream into a closed oval on the frames where half
+//     the crowd is in the air — a drawn ring, not a surge. The two lanes now run at
+//     0.84 and 1.14 of the waist and cross his head at different heights, and the
+//     approach control converges toward the trophy instead of swinging wide.
+// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
   ink: z.string(),
-  accent: z.string(), // ripe: a dot that has reached the trophy
+  accent: z.string(), // ripe: a dot that has reached the objective
   accentDeep: z.string(), // deep: a dot at rest in the crowd
   backgroundBase: z.string(),
   backgroundSrc: z.string(),
@@ -284,7 +282,6 @@ export const schema = z.object({
   iconShadowY: z.number(),
   iconShadowBlur: z.number(),
   iconShadowOpacity: z.number(),
-  dotRadius: z.number(),
   dotOpacity: z.number(),
   personSrc: z.string(),
   beats: z.object({
@@ -318,7 +315,6 @@ export const defaultProps: Props = schema.parse({
   iconShadowY: ICON_SHADOW_Y,
   iconShadowBlur: ICON_SHADOW_BLUR,
   iconShadowOpacity: ICON_SHADOW_OPACITY,
-  dotRadius: 4.51,
   dotOpacity: OP_UNREAD_DOT,
   personSrc: "person.png",
   beats: {
@@ -339,90 +335,128 @@ const WORLD_W = 1080;
 const WORLD_H = 1920;
 const CX = 540;
 
-// The director's note from cut 2: the focus belongs in the MIDDLE of the frame.
-// The set's CAM_LIFT of 125 puts a content centre at screen y 835; this piece
-// uses 0, so a content centre lands at screen y 960.
-const LIFT = 0;
-
-// ---------------------------------------------------------------------------
-// HARMONY PASS (weight consistency across the four cuts of this clip). Cut 2,
-// `StillDecideWhatWeWantV2`, is the reference; what is imposed here is its
-// SCREEN result, because that is what the viewer compares in an edit where the
-// four cuts play seconds apart. This cut was the set's outlier on every count:
-// its person was 186 screen px against the set's 118, its outline 9.20 against
-// 6.55, its ground line 6.66 against 4.92. At this cut's resting k of 1.5519
-// the world values that land on the set's screen numbers are:
-//
-//   constant                old      new     screen at k 1.5519
-//   GLYPH (the person)      120      76      118.0 box / 99.3 ink
-//   GLYPH_STROKE            6.0      4.2     6.52
-//   STROKE                  4.5      3.2     4.97
-//   DARK_TRAFFIC_STROKE     1.35     2.1     3.26   (was STROKE * 0.3)
-//   dotRadius               5.5      4.51    14.00 front-rung diameter
-//   claim-head r            5.5 / k  4.5 / k cut 2's convention
-//   TROPHY_BOX              230      170     264 — 2.24x the person's box
-//   CROWD_STEP_X / _Y       12 / 9   9.84 / 7.38   } the seat pitches follow
-//   MOUND_STEP_X / _Y       11 / 9.4 9.02 / 7.71   } the dot, x0.82
-//   C0..C5                  +70 each         ink-bbox centre 943 -> 834.5 at f113
-//   X1 / X2                 566/600  562/596 left margin at f70, 35 -> 41 px
-//   GROUND.x1               915      836     re-derived off the new mound
-//
-// Nothing else moved: every word frame, every gesture, DURATION, the mill, the
-// flights, the launch schedule, the depth ladder and every camera key, warp and
-// zoom are the ones the trophy pass resolved. The prose further down was written
-// before this pass and quotes the pre-pass world numbers where it names them;
-// the geometry it describes is unchanged, only its scale.
-//
-// TWO weights, and only two. The trophy is an OUTLINE glyph and carries
-// the glyph weight; the ground and the claim are ink LINES and carry the line
-// weight. Both are set against the filled person glyph rather than against
-// Lucide's nominal 2-at-24 (which at a 280 px box would be 23 world px): at
-// these values the trophy and the person's silhouette edge read as one pen.
-const GLYPH_STROKE = 4.2; // the trophy
-const STROKE = 3.2; // the ground line and the person -> handle line
-// The dark traffic is a LITERAL now, not a fraction of the line: the set's
-// dark-traffic stroke is 0.50 of the outline weight (3.28 screen px), and
-// STROKE is the line weight, not the outline.
-const DARK_TRAFFIC_STROKE = 2.1;
-
 // --- the depth ladder ------------------------------------------------------
 const OP_FG = 1.0;
 const OP_MID = 0.78;
 const OP_BG = 0.55;
-const BG_R_SCALE = 0.8;
-const BG_DRIFT = 1.45;
-const DEPTH_CUT = 0.6; // percentile of the seat's distance at which a dot goes to the back rung
+const BG_R_SCALE = 0.8; // a back dot is smaller as well as dimmer
+const BG_DRIFT = 1.45; // ...and rides ~1.4 px more micro-drift
+const DEPTH_CUT = 0.6; // percentile of a seat's distance at which it goes back
 const DEPTH_JITTER = 0.34; // hashed, so the band is feathered and not a drawn ring
 const R_SPREAD = 0.18; // +-18% hashed per-dot radius
 
 // ---------------------------------------------------------------------------
-// THE OBJECTIVE. Lucide `trophy`, ISC, inlined verbatim as a 24-unit icon, and
-// PLANTED: its base line (grid `M4 22h16`) sits ON the ground line, so the base
-// is the anchor the way the pole foot was. TROPHY_BASE is the centre of that
-// base line in the world, and the glyph is centred on it — grid x 12.
-//
-// Lucide `trophy` (24 grid, stroke 2, round caps and joins, fill none):
-//   <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
-//   <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-//   <path d="M4 22h16"/>
-//   <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
-//   <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
-//   <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
-//
-// Its INK box on the grid is x 2..22 (the two handle arcs bulge a half-circle
-// past the cup) and y 2..22, so it is 20 x 20 units. TROPHY_BOX is that ink box
-// in world px, on the flag's own convention (its FLAG_BOX was the ink box
-// height, grid y 2..22), which is what keeps the objective the same weight in
-// the frame as the flag it replaces. See DEVIATIONS for the one number this
-// moves against the brief.
+// THE LAYOUT, in world px. The person is the origin of the picture; everything
+// else is placed off him.
 // ---------------------------------------------------------------------------
-const TROPHY_BASE = { x: 640, y: 900 };
-const TROPHY_BOX = 170; // world px, ink box (grid 2..22 on both axes = 20 units)
-const TR_S = TROPHY_BOX / 20; // 8.5 world px per grid unit
-const tg2w = (gx: number, gy: number) => ({
-  x: TROPHY_BASE.x + (gx - 12) * TR_S,
-  y: TROPHY_BASE.y + (gy - 22) * TR_S,
-});
+const PERSON = { x: CX, y: 960 };
+const SEPARATION = 500; // person centre -> trophy centre (see DEVIATIONS)
+const TROPHY = { x: CX, y: PERSON.y - SEPARATION }; // (540, 415)
+
+// ---------------------------------------------------------------------------
+// THE CAMERA. fieldShared's `camMove` verbatim — one key per frame on an eased
+// curve, cy taken off the eased k, the set's CAM_LIFT of 125 — then the shared
+// damper. No cx axis: the whole cut is on the column axis.
+//
+// The last segment's two endpoints are SOLVED rather than authored, so the
+// DAMPED camera (which lags its target) lands exactly where the spec needs it:
+// k 1.25 at f113, and the ink centre on screen y 835. Both solves are linear —
+// runCamera is a linear filter of its target track and every key downstream of
+// the unknown is affine in it — so two evaluations and one interpolation are
+// exact, and the residual is asserted below.
+// ---------------------------------------------------------------------------
+const K_REST_TARGET = 1.25;
+const LAST = DURATION - 1; // f113, the measured frame
+
+type Seg = { f0: number; f1: number; k0: number; k1: number; c0: number; c1: number; warp: number };
+
+const segsFor = (kEnd: number, cEnd: number): Seg[] => [
+  // 1. the opening creep on the person and his crowd — a push, not a park
+  { f0: 0, f1: 28, k0: 1.7, k1: 1.82, c0: 1016, c1: 974, warp: 0.65 },
+  // 2. ONE long glide up, following the stream onto the trophy
+  { f0: 28, f1: 74, k0: 1.82, k1: 1.3, c0: 974, c1: TROPHY.y, warp: 1.05 },
+  // 3. the glide's own direction, continued and decaying
+  { f0: 74, f1: 86, k0: 1.3, k1: 1.294, c0: TROPHY.y, c1: TROPHY.y - 11, warp: 0.45 },
+  // 4. ONE eased pull-back to the resolved picture, starting with the claim
+  { f0: 86, f1: 110, k0: 1.294, k1: kEnd, c0: TROPHY.y - 11, c1: cEnd, warp: 1.0 },
+  // 5. the pull-back's own direction, decaying
+  { f0: 110, f1: DURATION, k0: kEnd, k1: kEnd - 0.004, c0: cEnd, c1: cEnd + 4, warp: 0.4 },
+];
+
+const trackOf = (segs: Seg[]) => {
+  const F: number[] = [0];
+  const K: number[] = [segs[0].k0];
+  const CY: number[] = [segs[0].c0 + CAM_LIFT / segs[0].k0];
+  for (const s of segs) {
+    const m = camMove(s);
+    for (let i = 0; i < m.F.length; i++) {
+      if (m.F[i] <= F[F.length - 1]) continue;
+      F.push(m.F[i]);
+      K.push(m.K[i]);
+      CY.push(m.CY[i]);
+    }
+  }
+  return { F, K, CY };
+};
+
+// The zoom track does not depend on c at all, so it is solved first.
+const kAtLast = (kEnd: number) => {
+  const t = trackOf(segsFor(kEnd, 0));
+  return runCamera(LAST, t.F, t.CY, t.K).k;
+};
+const K_END = (() => {
+  const a = 1.2;
+  const b = 1.32;
+  const fa = kAtLast(a);
+  const fb = kAtLast(b);
+  return a + ((K_REST_TARGET - fa) * (b - a)) / (fb - fa);
+})();
+/** The zoom the whole piece's weights are written against. */
+const K_REST = kAtLast(K_END);
+
+// ---------------------------------------------------------------------------
+// THE WEIGHTS. Straight out of the clip's shared spec, in SCREEN px, divided by
+// the resting zoom. Nothing in this piece writes a world weight of its own.
+// ---------------------------------------------------------------------------
+const SCREEN_PERSON = 118.0; // person.png box
+const SCREEN_OUTLINE = 6.55; // any closed outline: here, the trophy
+const SCREEN_LINE = 4.92; // 0.75 x the outline: the provenance line
+const SCREEN_TRAFFIC = 3.28; // 0.50 x the outline
+const SCREEN_DOT = 14.0; // front-rung dot DIAMETER
+
+const GLYPH = SCREEN_PERSON / K_REST;
+const GLYPH_STROKE_WORLD = SCREEN_OUTLINE / K_REST;
+const LINE_STROKE = SCREEN_LINE / K_REST;
+const DARK_TRAFFIC_STROKE = SCREEN_TRAFFIC / K_REST;
+const DOT_R = SCREEN_DOT / 2 / K_REST;
+
+// The person's ink inside its box (measured off person.png once, in cut 2).
+const PERSON_INK_TOP = 40 / 512;
+const PERSON_FOOT = 471 / 512;
+const HEAD_TOP_Y = PERSON.y - GLYPH / 2 + GLYPH * PERSON_INK_TOP;
+const FOOT_Y = PERSON.y - GLYPH / 2 + GLYPH * PERSON_FOOT;
+const PERSON_BOX = {
+  x0: PERSON.x - GLYPH / 2,
+  x1: PERSON.x + GLYPH / 2,
+  y0: PERSON.y - GLYPH / 2,
+  y1: FOOT_Y,
+};
+
+// ---------------------------------------------------------------------------
+// THE OBJECTIVE. Lucide `trophy`, ISC, inlined verbatim as a 24-unit icon —
+// the same six paths, in the same order, that cut 2 draws inside its thought
+// bubble. Its INK box on the grid is x 2..22 (the handle arcs bulge a half
+// circle past the cup) and y 2..22, i.e. 20 x 20 units, and cut 2's rule is
+// that the glyph BOX is that ink box. Here the box is the person's box: the
+// objective is exactly as big as the person, which is as large as it can be
+// without becoming the composition on its own.
+//
+// The stroke follows cut 2's convention exactly: one GLYPH_STROKE_WORLD for the
+// whole family, solved back out of the glyph's scale so the WORLD (and so the
+// screen) weight is the spec's, whatever the box is.
+// ---------------------------------------------------------------------------
+const TROPHY_BOX = GLYPH; // ~1.0x the person on screen
+const TR_S = TROPHY_BOX / 20; // world px per grid unit
 const TROPHY_D = [
   "M6 9H4.5a2.5 2.5 0 0 1 0-5H6",
   "M18 9h1.5a2.5 2.5 0 0 0 0-5H18",
@@ -431,90 +465,53 @@ const TROPHY_D = [
   "M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22",
   "M18 2H6v7a6 6 0 0 0 12 0V2Z",
 ];
-// The glyph is drawn in GRID units under one transform, so the stroke is the
-// grid width that resolves to GLYPH_STROKE world px.
-const TROPHY_TX = `translate(${(TROPHY_BASE.x - 12 * TR_S).toFixed(3)} ${(
-  TROPHY_BASE.y -
-  22 * TR_S
-).toFixed(3)}) scale(${TR_S})`;
-
-// Where the person's claim lands: the OUTER point of the left handle arc, grid
-// (2, 6.5) — the leftmost ink on the glyph, and the part of it that faces him.
-const HANDLE_L = tg2w(2, 6.5); // (555, 768.25)
-// The cup's bottom, grid (12, 15): the lowest point of the `V9` arc. It is what
-// caps the crowd's crest on the open flanks.
-const CUP_BOTTOM = tg2w(12, 15).y; // 840.5
-
-// THE LIFT. The flag's gesture on "the objective" was one ripple across the
-// cloth. A trophy has no cloth, so the equivalent single gesture is the whole
-// glyph LIFTED and set back down: 10 world px up over f66-72 (ease-out) and
-// back down over f72-86 (ease-in), crest ON the word at f72. It translates the
-// glyph only — the ground line does not move, so the base leaves the ground and
-// returns to it. Nothing else changes.
-const LIFT_F0 = 66;
-const LIFT_F1 = 72;
-const LIFT_F2 = 86;
-const LIFT_PX = 10;
-const trophyLift = (frame: number) => {
-  if (frame <= LIFT_F0) return 0;
-  if (frame < LIFT_F1) {
-    const u = (frame - LIFT_F0) / (LIFT_F1 - LIFT_F0);
-    return LIFT_PX * (1 - Math.pow(1 - u, 3)); // ease-out: it leaves the ground fast
-  }
-  if (frame < LIFT_F2) {
-    const v = (frame - LIFT_F1) / (LIFT_F2 - LIFT_F1);
-    return LIFT_PX * (1 - v * v); // ease-in: it comes back down under its own weight
-  }
-  return 0;
+const TROPHY_TX = `translate(${(TROPHY.x - 12 * TR_S).toFixed(3)} ${(
+  TROPHY.y -
+  12 * TR_S
+).toFixed(3)}) scale(${TR_S.toFixed(5)})`;
+const TROPHY_HALF = TROPHY_BOX / 2;
+const TROPHY_BASE_Y = TROPHY.y + TROPHY_HALF; // grid y 22: where the provenance line lands
+const TROPHY_INK = {
+  x0: TROPHY.x - TROPHY_HALF,
+  x1: TROPHY.x + TROPHY_HALF,
+  y0: TROPHY.y - TROPHY_HALF,
+  y1: TROPHY_BASE_Y,
 };
 
-// The objective is ALIVE from frame 0, the way the cloth was: the flag breathed
-// ~1 world px at its free end on a slow sine, and the trophy — which is rigid —
-// takes the same idle as the person's own glyph sway, +-1 world px on two slow
-// hashed sines. It is the cloth breathe's replacement, not a new gesture: it is
-// on no word, it never stops, and it is a tenth of the lift.
-const TROPHY_IDLE = (frame: number) => ({
+// The conversion. White until the AIs reach it; ACCENT_DEEP as the first dots
+// seat; ACCENT on "objective". Nothing else about the trophy moves except its
+// idle, which is the liveness every glyph in the set carries.
+const DEEP_DUR = 8;
+const RIPE_F0 = 72; // "objective"
+const RIPE_DUR = 6;
+const trophyIdle = (frame: number) => ({
   dx: 0.6 * Math.sin(frame * 0.067 + 1.7) + 0.4 * Math.sin(frame * 0.041 + 4.1),
   dy: 0.6 * Math.sin(frame * 0.053 + 0.4) + 0.4 * Math.sin(frame * 0.037 + 2.9),
 });
 
-// The ground the trophy is planted in, so it is STANDING and not floating. It
-// runs the width of the mound plus a margin: the crowd STANDS on this line, so
-// the line has to be under all of it, and so does the person. RE-DERIVED in the
-// harmony pass: the smaller trophy gives a denser seat lattice, so the drawn
-// mound now ends at world x 815.7 instead of 892.3 and a line to 915 left a
-// 150 screen px tail hanging off the right of the picture. x1 is that mound
-// edge plus 20; x0 is the person's own left edge (400 - 76/2) less 3.
-const GROUND = { y: TROPHY_BASE.y, x0: 359, x1: 836 };
+// ---------------------------------------------------------------------------
+// THE PROVENANCE. One line, head-led, from the top of the person's head to the
+// trophy's base. He is off the bottom of the frame when it starts, so it comes
+// up into the picture from below. See DEVIATIONS for the 19-frame draw.
+// ---------------------------------------------------------------------------
+const CLAIM_F0 = 76;
+const CLAIM_F1 = 95;
+const WAKE_F0 = 72;
+const WAKE_F1 = 80;
+const PACKET_F0 = 97;
 
 // ---------------------------------------------------------------------------
-// THE PERSON. One glyph, left of the trophy, feet level with its base.
+// THE CROWD. A feathered, wobbling superellipse blob behind and around the
+// person's lower half — never a box, and drawn UNDER the glyph so he occludes
+// its middle. The lattice is hashed off its cell and the boundary undulates.
+// Both pitches are written as multiples of the DOT, so the crowd's density is
+// tied to the spec's dot size rather than to a number typed here.
 // ---------------------------------------------------------------------------
-const GLYPH = 76;
-const PERSON_X = 400;
-const PERSON_INK_TOP = 40 / 512;
-const PERSON_FOOT = 471 / 512;
-const PERSON_Y = TROPHY_BASE.y - GLYPH * PERSON_FOOT + GLYPH / 2; // feet on the ground line
-const HEAD_TOP_Y = PERSON_Y - GLYPH / 2 + GLYPH * PERSON_INK_TOP;
-// Where his claim on the trophy leaves him: the upper right of the body box.
-const SHOULDER = { x: PERSON_X + 32, y: PERSON_Y + 5 };
-// The claim LEADS too: it starts on "you've" and is mid-stroke on "defined".
-const CLAIM_F0 = 78;
-const CLAIM_F1 = 88;
-const WAKE_F0 = 73; // the person wakes before he acts
-const WAKE_F1 = 81;
-const PACKET_F0 = 92;
-
-// ---------------------------------------------------------------------------
-// THE CROWD. A feathered, wobbling superellipse blob below and left of the
-// trophy — never a box. The lattice is hashed off its cell and the boundary
-// undulates, so the edge dissolves instead of ending on a rule.
-// ---------------------------------------------------------------------------
-const CROWD = { x: 370, y: 1115, rx: 118, ry: 52 };
-const CROWD_STEP_X = 9.84;
-const CROWD_STEP_Y = 7.38;
+const CROWD = { x: CX, y: 1010, rx: 200, ry: 90 };
+const CROWD_STEP_X = 3.3 * DOT_R;
+const CROWD_STEP_Y = 2.48 * DOT_R;
 const CROWD_N = 2.4; // superellipse exponent
-const CROWD_FEATHER = 0.12; // in normalised radius
+const CROWD_FEATHER = 0.14; // in normalised radius
 
 type Seat = { x: number; y: number; r: number; depth: number };
 
@@ -526,19 +523,30 @@ const SRC_SEATS: Seat[] = (() => {
     for (let c = 0; c < cols; c++) {
       const i = r * cols + c;
       const x =
-        CROWD.x - CROWD.rx - CROWD_STEP_X / 2 + c * CROWD_STEP_X + (hash(i, 11) - 0.5) * CROWD_STEP_X * 0.9;
+        CROWD.x -
+        CROWD.rx -
+        CROWD_STEP_X / 2 +
+        c * CROWD_STEP_X +
+        (hash(i, 11) - 0.5) * CROWD_STEP_X * 0.9;
       const y =
-        CROWD.y - CROWD.ry - CROWD_STEP_Y / 2 + r * CROWD_STEP_Y + (hash(i, 12) - 0.5) * CROWD_STEP_Y * 0.9;
+        CROWD.y -
+        CROWD.ry -
+        CROWD_STEP_Y / 2 +
+        r * CROWD_STEP_Y +
+        (hash(i, 12) - 0.5) * CROWD_STEP_Y * 0.9;
       const nx = Math.abs(x - CROWD.x) / CROWD.rx;
       const ny = Math.abs(y - CROWD.y) / CROWD.ry;
       const rho = Math.pow(Math.pow(nx, CROWD_N) + Math.pow(ny, CROWD_N), 1 / CROWD_N);
-      const edge = 1 + wobble(Math.atan2(y - CROWD.y, x - CROWD.x) * 100, 2.3) * 0.045;
+      const edge = 1 + wobble(Math.atan2(y - CROWD.y, x - CROWD.x) * WOBBLE_R, 2.3) * 0.045;
       const f = feather((edge - rho) / CROWD_FEATHER, 1);
       if (hash(i, 71) >= f) continue;
       out.push({
         x,
         y,
-        r: (0.85 + 0.35 * hash(i, 13)) * (0.72 + 0.28 * f) * (1 + (hash(i, 27) - 0.5) * 2 * R_SPREAD),
+        r:
+          (0.85 + 0.35 * hash(i, 13)) *
+          (0.72 + 0.28 * f) *
+          (1 + (hash(i, 27) - 0.5) * 2 * R_SPREAD),
         depth: clamp01(rho / edge + (hash(i, 23) - 0.5) * DEPTH_JITTER),
       });
     }
@@ -547,405 +555,291 @@ const SRC_SEATS: Seat[] = (() => {
 })();
 
 // ---------------------------------------------------------------------------
-// THE MOUND AT THE BASE. The crowd gathers AT the trophy: the seats are a low
-// mound STANDING ON the ground line around the base, not a half-disc hanging
-// below it — that read as roots.
-//
-// A feathered half-ellipse ABOVE the ground line (y <= GROUND.y), denser near
-// the trophy, hashed off its own lattice and with an undulating rim, so it
-// dissolves into the field instead of ending on a curve. Three hard
-// constraints, all of them about the trophy the crowd is gathered at:
-//   * a CLEAR BAND, which is now the BASE's own width and not a pole's: the
-//     base line runs grid x 4..20, so world x 640 +- 92, and BASE_CLEAR is that
-//     plus 12 px. The crowd therefore gathers around and either side of the
-//     base and never sits over the cup, the stem or the two feet — the feet
-//     reach grid x 7 and 17, which is world 582 and 698, well inside the band.
-//   * a CEILING on the open flanks, so the crest stops short of the cup: the
-//     `V9` arc's bottom is world y 819.5 and the crowd may rise to 10 px above
-//     it. That is what caps the crest: see DEVIATIONS.
-//   * the CLAIM LINE, which now runs shoulder -> LEFT HANDLE and is far steeper
-//     than the flag's shoulder -> pole top. Where that line is lower than the
-//     cup ceiling — a wedge about 30 px wide just right of the person — the
-//     ceiling follows the line instead, so the claim never crosses the crowd.
-//   * and the person: no seat comes within 8 px of his glyph box, so the mound
-//     ends at his shoulder rather than piling up behind him.
+// THE ANNULUS AT THE TROPHY. A feathered ellipse of seats around the glyph with
+// two holes cut in it: the trophy's own ink box inflated by TROPHY_CLEAR (so no
+// dot ever sits on a stroke) and a narrow lane under the base for the
+// provenance line to arrive through. Seats are ordered so the crowd fills from
+// the BOTTOM and the SIDES and closes over the top last.
 // ---------------------------------------------------------------------------
-const MOUND_RX = 255; // half-width of the seat field
-const MOUND_RY = 115; // and its nominal crest, before the ceiling trims it
-const MOUND_STEP_X = 9.02;
-const MOUND_STEP_Y = 7.71;
-const MOUND_N = 2.0; // a dome, not a box
-const MOUND_FEATHER = 0.24; // in normalised radius
-const MOUND_DENSITY = 0.1; // how much thinner the rim is than the base
-const MOUND_RIM = 0.18; // the seat field runs this far past the nominal rim, so
-// every seat the mill hops into is OUTSIDE the mound the 130 dots stand on.
-const BASE_HALF = 8 * TR_S; // 68: half the trophy's base line, grid x 4..20
-const BASE_CLEAR = BASE_HALF + 12; // 80 world px either side of the base's centre
-const CEIL_CUP = CUP_BOTTOM - 10; // 830.5: the crest's ceiling on the open flanks
-const CLAIM_CLEAR = 8; // world px of daylight under the person's claim line
-const MOUND_X_MIN = PERSON_X + GLYPH / 2 + 8; // 446: clear of the person's glyph
+const ANN_RX = 168;
+const ANN_RY = 122;
+const ANN_STEP_X = 2.46 * DOT_R;
+const ANN_STEP_Y = 2.05 * DOT_R;
+const ANN_FEATHER = 0.16;
+const ANN_THIN = 0.45; // how much thinner the rim is than the ring at the trophy
+const TROPHY_CLEAR = 20; // world px of daylight around the trophy's ink box
+const LANE_CLEAR = 14; // half-width of the provenance line's lane
 
-// The claim line, as a height: shoulder -> the left handle, held flat left of
-// the shoulder so the ceiling never dives under the ground there.
-const CLAIM_SLOPE = (HANDLE_L.y - SHOULDER.y) / (HANDLE_L.x - SHOULDER.x);
-const claimY = (x: number) =>
-  SHOULDER.y + (Math.max(SHOULDER.x, Math.min(HANDLE_L.x, x)) - SHOULDER.x) * CLAIM_SLOPE;
-
-const moundCeil = (x: number) =>
-  x <= HANDLE_L.x ? Math.max(CEIL_CUP, claimY(x) + CLAIM_CLEAR) : CEIL_CUP;
-
-const DST_SEATS: Seat[] = (() => {
+const ANN_SEATS: Seat[] = (() => {
   const out: Seat[] = [];
-  const spanX = MOUND_RX * (1 + MOUND_RIM);
-  const cols = Math.ceil((2 * spanX) / MOUND_STEP_X) + 2;
-  const rows = Math.ceil((MOUND_RY * (1 + MOUND_RIM)) / MOUND_STEP_Y) + 2;
+  const cols = Math.ceil((2 * ANN_RX) / ANN_STEP_X) + 2;
+  const rows = Math.ceil((2 * ANN_RY) / ANN_STEP_Y) + 2;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const i = 9001 + r * cols + c;
+      const i = r * cols + c + 5171;
       const x =
-        TROPHY_BASE.x - spanX - MOUND_STEP_X / 2 + c * MOUND_STEP_X + (hash(i, 11) - 0.5) * MOUND_STEP_X * 0.9;
-      // r = 0 is the row standing ON the ground line; the mound grows UPWARD.
-      const y = TROPHY_BASE.y - r * MOUND_STEP_Y - (hash(i, 12) - 0.5) * MOUND_STEP_Y * 0.9;
-      const dx = x - TROPHY_BASE.x;
-      if (Math.abs(dx) < BASE_CLEAR) continue; // the base keeps its clear band
-      if (x < MOUND_X_MIN) continue; // clear of the person
-      if (y > TROPHY_BASE.y) continue; // nothing below the ground line
-      if (y < moundCeil(x)) continue; // nothing over the cup, nothing over the claim
-      const nx = Math.abs(dx) / MOUND_RX;
-      const ny = (TROPHY_BASE.y - y) / MOUND_RY;
-      const rho = Math.pow(Math.pow(nx, MOUND_N) + Math.pow(ny, MOUND_N), 1 / MOUND_N);
-      const edge = 1 + MOUND_RIM + wobble(Math.atan2(TROPHY_BASE.y - y, dx) * 100, 4.1) * 0.05;
-      // Feathered rim, and thinner the further from the trophy: a crowd gathered
-      // AT something is densest where the something is.
-      const f = feather((edge - rho) / MOUND_FEATHER, 1);
-      if (hash(i, 71) >= f * (1 - MOUND_DENSITY * clamp01(rho))) continue;
+        TROPHY.x -
+        ANN_RX -
+        ANN_STEP_X / 2 +
+        c * ANN_STEP_X +
+        (hash(i, 11) - 0.5) * ANN_STEP_X * 0.9;
+      const y =
+        TROPHY.y -
+        ANN_RY -
+        ANN_STEP_Y / 2 +
+        r * ANN_STEP_Y +
+        (hash(i, 12) - 0.5) * ANN_STEP_Y * 0.9;
+      // the trophy's own ink, plus clearance: never a dot on a stroke
+      if (
+        x > TROPHY_INK.x0 - TROPHY_CLEAR &&
+        x < TROPHY_INK.x1 + TROPHY_CLEAR &&
+        y > TROPHY_INK.y0 - TROPHY_CLEAR &&
+        y < TROPHY_INK.y1 + TROPHY_CLEAR
+      ) {
+        continue;
+      }
+      // the provenance line's lane, under the base
+      if (Math.abs(x - TROPHY.x) < LANE_CLEAR && y > TROPHY.y) continue;
+      const nx = (x - TROPHY.x) / ANN_RX;
+      const ny = (y - TROPHY.y) / ANN_RY;
+      const rho = Math.hypot(nx, ny);
+      const edge = 1 + wobble(Math.atan2(ny, nx) * WOBBLE_R, 4.1) * 0.05;
+      const f = feather((edge - rho) / ANN_FEATHER, 1);
+      // A crowd that has REACHED something is densest against it and thins
+      // outward. The rim feather alone gives a uniform disc with a soft edge,
+      // which reads as a drawn field; this thins the lattice continuously from
+      // the trophy out, so the mass is on the objective and the halo dissolves.
+      if (hash(i, 71) >= f * (1 - ANN_THIN * clamp01(rho / edge))) continue;
       out.push({
         x,
         y,
-        r: (0.85 + 0.35 * hash(i, 13)) * (0.72 + 0.28 * f) * (1 + (hash(i, 27) - 0.5) * 2 * R_SPREAD),
+        r:
+          (0.85 + 0.35 * hash(i, 13)) *
+          (0.72 + 0.28 * f) *
+          (1 + (hash(i, 27) - 0.5) * 2 * R_SPREAD),
         depth: clamp01(rho / edge + (hash(i, 23) - 0.5) * DEPTH_JITTER),
       });
     }
   }
-  // Inner RING first, shuffled INSIDE each ring: the mound still grows outward
-  // from the base, but two dots that leave the crowd one after the other land
-  // on opposite sides of it rather than side by side — which is what keeps
-  // neighbouring seats from filling in unison. The rule is the half-disc's; the
-  // ring is measured in the MOUND's own normalised radius rather than in raw
-  // px, for the same reason the depth ladder is a percentile: a ring of raw
-  // distance inside a shape three times wider than it is tall fills a disc, and
-  // the 130 occupied seats then come out as a flat-topped slab with the rim
-  // left empty. In rho the occupied set is the mound scaled down, which is a
-  // mound.
-  const band = (p: Seat) =>
-    Math.floor(
-      Math.pow(
-        Math.pow(Math.abs(p.x - TROPHY_BASE.x) / MOUND_RX, MOUND_N) +
-          Math.pow((TROPHY_BASE.y - p.y) / MOUND_RY, MOUND_N),
-        1 / MOUND_N,
-      ) * 10,
-    );
-  return out.sort((a, b) => band(a) - band(b) + (hash(a.x, 5) - hash(b.x, 5)) * 0.9);
+  // Bottom and sides first, top last — hashed hard enough that the boundary
+  // between "filled" and "not yet" is never a drawn line.
+  return out.sort(
+    (a, b) =>
+      -a.y - 0.3 * Math.abs(a.x - TROPHY.x) + 26 * hash(a.x, 5) -
+      (-b.y - 0.3 * Math.abs(b.x - TROPHY.x) + 26 * hash(b.x, 5)),
+  );
 })();
 
-const N = Math.min(130, SRC_SEATS.length - 22, DST_SEATS.length - 24);
+const N = Math.min(130, SRC_SEATS.length - 20, ANN_SEATS.length - 22);
 
-// The depth ladder's split has to be a fraction of the CROWD, not a fraction of
-// a radius: the crowd is a superellipse and the cluster a filled half-disc, so
-// the same raw distance threshold puts 61% of one and 32% of the other on the
-// back rung. Each seat's `depth` is replaced by its percentile among the seats
-// that are actually occupied, so DEPTH_CUT 0.6 means "the outer 40%" in both.
-const rankDepths = (seats: Seat[], upto: number) => {
-  const idx = seats
-    .slice(0, upto)
-    .map((_, i) => i)
-    .sort((a, b) => seats[a].depth - seats[b].depth);
-  idx.forEach((i, r) => {
-    seats[i].depth = r / Math.max(1, upto - 1);
-  });
-};
-rankDepths(SRC_SEATS, SRC_SEATS.length);
-rankDepths(DST_SEATS, N);
-
-// The camera's resolved zoom per frame. The flights below are speed-capped in
-// SCREEN px, and the camera is the only thing that knows how big a world px is.
-// ---------------------------------------------------------------------------
-// THE CAMERA. fieldShared's `camMove`, with CAM_LIFT swapped for this piece's
-// LIFT of 0, and with a third axis (cx) through the same eased key-per-frame
-// track and the same damper — the subject travels sideways here, from the crowd
-// to the trophy's base.
-//
-// FIVE SEGMENTS, and only five. Two long glides, one pull-back, and the two
-// decaying drifts that carry a glide's velocity through its hold — a drift runs
-// at warp 0.4, which puts its speed at the START, so it continues the move it
-// follows and decays instead of setting off again from a stop. There is no
-// dead-still frame in the piece: the held breath before "objective" is the
-// natural bottom of the long glide's own ease, f62-70, where a fixed world
-// point is still moving 0.7-1.2 screen px/frame.
-//
-//   f0-24     k 1.251 -> 1.333  x 540 -> 566  cy 914 -> 940  one glide toward
-//                                                            the base,
-//                                                            under the lean
-//   f24-68    k -> 1.510        x -> 600      cy -> 951      ONE glide: riding
-//                                                            the stream and
-//                                                            pushing in are a
-//                                                            single motion,
-//                                                            bottoming out
-//                                                            f62-70 ahead of
-//                                                            "objective"
-//   f68-86    k -> 1.614        x -> 640      cy -> 918      decaying drift,
-//                                                            onto the trophy base
-//   f86-110   k -> 1.298        x -> 612      cy -> 786      the pull-back, and
-//                                                            the recentre onto
-//                                                            the resolved group;
-//                                                            it starts inside
-//                                                            the claim's draw
-//   f110-114  k -> 1.281        x -> 610      cy -> 784      decaying drift
-//
-// Measured on four fixed world probe points: velocity never falls below 0.31
-// screen px/frame, |dv| never exceeds 2.486 px/frame^2 after the first four
-// frames, and the peak is 15.6 px/frame inside the pull-back.
-// ---------------------------------------------------------------------------
-const camMoveLift = ({
-  f0,
-  f1,
-  k0,
-  k1,
-  c0,
-  c1,
-  x0,
-  x1,
-  warp = 1,
-}: {
-  f0: number;
-  f1: number;
-  k0: number;
-  k1: number;
-  c0: number;
-  c1: number;
-  x0: number;
-  x1: number;
-  warp?: number;
-}) => {
-  const F: number[] = [];
-  const K: number[] = [];
-  const CY: number[] = [];
-  const CXs: number[] = [];
-  const span = f1 - f0;
-  for (let i = 0; i <= span; i++) {
-    const g = camEase(i / span, warp);
-    const k = k0 + (k1 - k0) * g;
-    F.push(f0 + i);
-    K.push(k);
-    CY.push(c0 + (c1 - c0) * g + LIFT / k);
-    CXs.push(x0 + (x1 - x0) * g);
-  }
-  return { F, K, CY, CXs };
-};
-
-const DRIFT_DIST = 300; // screen px: where a fixed point in this piece sits
-
-// SCALE PASS, on the director's note that the picture was small in the frame —
-// the resolved graphic spanned about a third of the frame height. Every camera
-// zoom key is multiplied by this and nothing else about the camera's SHAPE
-// changes: the same five segments, the same frames, the same warps, the same
-// C1 joins. The centres are re-solved underneath it (see CAM_SEGS), because a
-// bigger k needs the picture placed differently inside the band, not because
-// the move changed.
-const SCALE = 1.18;
-
-const K_OPEN = 1.06 * SCALE; // 1.251
-const K_LEAN = 1.13 * SCALE; // 1.333
-const K_PUSH = 1.28 * SCALE; // 1.510
-
-const K_DRIFT = holdDriftK(K_PUSH, 18, DRIFT_DIST, 1); // 1.614
-const K_REST = 1.32 * SCALE; // 1.552 at f113: untouched by the harmony pass
-const K_TAIL = holdDriftK(K_REST, 4, DRIFT_DIST, -1);
-
-// Five segments, and only five: two long glides, the pull-back, and the two
-// decaying drifts that carry the glides' velocity through the holds. A drift
-// runs at warp 0.4, which puts its speed at the start — it CONTINUES the move
-// it follows and decays, instead of starting again from a stop. There is no
-// dead-still stretch anywhere: the held breath before "objective" is the
-// natural bottom of the long glide's own ease, f62-70.
-// The centres, RE-SOLVED for the scaled zoom. Same five segments, same frames,
-// same warps; the numbers are where the picture now has to sit so that every
-// drawn pixel stays inside screen x 40..1040, y 60..1290 at k 1.25..1.61, and
-// so the two ends and the tightest stretch are framed as asked. They were
-// solved against the world-space bounding box of EVERY rendered frame — the
-// content is camera-independent, so the box is measured once and the camera is
-// fitted to it — and then checked back through the damper.
-//   C0 914  the opening. The crowd's foot is at world y 1168 and at k 1.251
-//           that is 263 screen px below the camera's centre, so the lowest cy
-//           that keeps it off the caption band is 907. 914 leaves the sway its
-//           5 px and puts the content's centre at screen y 933.
-//   C1 940  under the lean
-//   C2 951  the bottom of the long glide. The crowd is still on the field and
-//           at k 1.50 its foot is 9.6 px off the band: this is a floor, not a
-//           preference.
-//   C3 918  the tightest stretch. The camera is centred on the FLAG FOOT —
-//           screen (545, 938) at k 1.614 — which is what the crowd has just
-//           gathered at.
-//   C4 786  the pull-back's landing. The resolved picture is world y 617..907
-//           and 786 puts its centre at screen y 928.
-//   C5 784  the tail's decaying drift
-// The split of the recentre between C2->C3 (f68-86, warp 0.4) and C3->C4
-// (f86-110, warp 0.65) is what the 2.5 px/frame^2 acceleration ceiling buys:
-// all of it in the pull-back peaks at 2.82, all of it in the drift at 2.76, and
-// this 33 / 132 split peaks at 2.486. It is what keeps the two ends' centre of
-// mass at screen y 933 and 928 rather than 960: 960 at the tail costs 2.64.
-const C0 = 984;
-const C1 = 1010;
-const C2 = 1021;
-const C3 = 988;
-const C4 = 898;
-const C5 = 896;
-const X0 = CX;
-const X1 = 562;
-const X2 = 596;
-const X3 = 640; // the trophy's base, centred through the tightest stretch
-const X4 = 612;
-const X5 = 610;
-
-const CAM_SEGS = [
-  camMoveLift({ f0: 0, f1: 24, k0: K_OPEN, k1: K_LEAN, c0: C0, c1: C1, x0: X0, x1: X1, warp: 0.6 }),
-  camMoveLift({ f0: 24, f1: 68, k0: K_LEAN, k1: K_PUSH, c0: C1, c1: C2, x0: X1, x1: X2, warp: 0.62 }),
-  camMoveLift({ f0: 68, f1: 86, k0: K_PUSH, k1: K_DRIFT, c0: C2, c1: C3, x0: X2, x1: X3, warp: 0.4 }),
-  camMoveLift({ f0: 86, f1: 110, k0: K_DRIFT, k1: K_REST, c0: C3, c1: C4, x0: X3, x1: X4, warp: 0.65 }),
-  camMoveLift({ f0: 110, f1: DURATION, k0: K_REST, k1: K_TAIL, c0: C4, c1: C5, x0: X4, x1: X5, warp: 0.4 }),
-];
-
-
-const CAM = (() => {
-  const F = [0];
-  const K = [K_OPEN];
-  const CY = [C0 + LIFT / K_OPEN];
-  const CXs = [X0];
-  for (const m of CAM_SEGS) {
-    for (let i = 0; i < m.F.length; i++) {
-      if (m.F[i] <= F[F.length - 1]) continue;
-      F.push(m.F[i]);
-      K.push(m.K[i]);
-      CY.push(m.CY[i]);
-      CXs.push(m.CXs[i]);
+// WHICH ANNULUS SEATS ARE OCCUPIED. Taking the first N in fill order would
+// leave every vacancy at the TOP — the crowd would fill from the bottom and
+// then simply stop, with a bald patch over the trophy's cup for the whole tail.
+// The vacancies are blue noise instead, as in cut 2: the highest-hashed seat
+// that has no empty neighbour yet, over and over, so every gap is a single hole
+// with dots all round it and the mill always has somewhere to hop. What is left
+// is the occupied set, still in fill order — bottom and sides first, top last.
+const ANN_USED: number[] = (() => {
+  const empty = new Uint8Array(ANN_SEATS.length);
+  const want = ANN_SEATS.length - N;
+  const order = ANN_SEATS.map((_, i) => i).sort((a, b) => hash(b, 77) - hash(a, 77));
+  const near = (a: number, b: number) =>
+    Math.hypot(ANN_SEATS[a].x - ANN_SEATS[b].x, ANN_SEATS[a].y - ANN_SEATS[b].y) <
+    ANN_STEP_X * 1.5;
+  let dropped = 0;
+  for (let pass = 0; pass < 2 && dropped < want; pass++) {
+    for (const i of order) {
+      if (dropped >= want) break;
+      if (empty[i]) continue;
+      if (pass === 0 && order.some((j) => empty[j] && near(i, j))) continue;
+      empty[i] = 1;
+      dropped++;
     }
   }
-  return { F, K, CY, CX: CXs };
+  return ANN_SEATS.map((_, i) => i).filter((i) => !empty[i]);
 })();
 
+// The ladder's split has to be a fraction of the CROWD, not of a radius: the
+// two seat fields are different shapes, so the same raw threshold would put a
+// different fraction of each on the back rung. Each seat's `depth` is replaced
+// by its percentile among the seats that are actually occupied, so DEPTH_CUT
+// 0.6 means "the outer 40%" in both.
+const rankDepths = (seats: Seat[], which: number[]) => {
+  const idx = which.slice().sort((a, b) => seats[a].depth - seats[b].depth);
+  idx.forEach((i, r) => {
+    seats[i].depth = r / Math.max(1, which.length - 1);
+  });
+};
+rankDepths(
+  SRC_SEATS,
+  SRC_SEATS.map((_, i) => i),
+);
+rankDepths(ANN_SEATS, ANN_USED);
 
-const K_AT: number[] = (() => {
-  const out: number[] = [];
-  for (let f = 0; f <= DURATION; f++) out.push(runCamera(f, CAM.F, CAM.CY, CAM.K).k);
+// ---------------------------------------------------------------------------
+// THE FRAMING. The ink the resolved frame has to hold: the annulus' top rim
+// down to the person's feet. Measured off the seats, not typed, so a change to
+// the crowd re-solves the camera instead of quietly breaking the band.
+// ---------------------------------------------------------------------------
+const CONTENT_TOP = Math.min(
+  ...ANN_USED.map((i) => ANN_SEATS[i].y - DOT_R * ANN_SEATS[i].r),
+  TROPHY_INK.y0 - GLYPH_STROKE_WORLD / 2,
+);
+const CONTENT_BOTTOM = FOOT_Y;
+const CONTENT_C = (CONTENT_TOP + CONTENT_BOTTOM) / 2;
+
+// The c-track's last key, solved so the DAMPED camera puts CONTENT_C on screen
+// y 835 at f113 — sway included, because the render adds it.
+const cyAtLast = (cEnd: number) => {
+  const t = trackOf(segsFor(K_END, cEnd));
+  return runCamera(LAST, t.F, t.CY, t.K).cy + sway(LAST).dy;
+};
+const C_END = (() => {
+  const want = CONTENT_C + CAM_LIFT / K_REST; // screen 960 - 125 = 835
+  const a = 500;
+  const b = 900;
+  const fa = cyAtLast(a);
+  const fb = cyAtLast(b);
+  return a + ((want - fa) * (b - a)) / (fb - fa);
+})();
+
+const CAM = trackOf(segsFor(K_END, C_END));
+
+// The resolved camera, per frame. The flights below are capped in SCREEN px and
+// the camera is the only thing that knows how big a world px is — and how fast
+// the world itself is moving under them.
+const CAM_AT_F: { cy: number; k: number }[] = (() => {
+  const out: { cy: number; k: number }[] = [];
+  for (let f = 0; f <= DURATION; f++) {
+    const c = runCamera(f, CAM.F, CAM.CY, CAM.K);
+    out.push({ cy: c.cy + sway(f).dy, k: c.k });
+  }
   return out;
 })();
+const screenAt = (f: number, wx: number, wy: number) => {
+  const c = CAM_AT_F[Math.max(0, Math.min(DURATION, Math.round(f)))];
+  return [CX + (wx - (CX + sway(f).dx)) * c.k, 960 + (wy - c.cy) * c.k];
+};
 
 // ---------------------------------------------------------------------------
-// THE LAUNCH SCHEDULE. Two phases on one crowd.
-//   phase A, f33-55  "achieving"  — a wide spray, rate ramping down
-//   phase B, f55-78  "optimizing" — one narrow lane, 21% faster
-// Both are SPEED-authored, so a flight's frame count falls out of its distance
-// and no head ever crosses the set's 45 screen px/frame cap (see SPEED_* and
-// the audit). The order is weighted so the far side of the crowd goes first —
-// the blob contracts toward the trophy as it drains.
+// THE LEAN. Up to 12 world px up and inward over f10-28, hashed starts,
+// weighted so the dots nearest the trophy lean most — the blob's top edge
+// bulges up behind the person's shoulders.
 // ---------------------------------------------------------------------------
-const A_F0 = 26; // launches begin seven frames before "achieving"
-const B_F1 = 74; // the last dot leaves
-const LANE_F0 = 44; // the lane starts closing four frames before "or"
-const LANE_F1 = 58; // and is fully closed three frames after "optimizing"
-const SPEED_A = 23; // world px/frame, nominal
-const SPEED_B = 26; // 21% faster, and a much shorter path
-const BOW_A = [70, 130]; // wide individual arcs
-const BOW_B = 1 / 3; // the arc collapses to a third of its height
-const LANE = { x: 505, y: 1002 }; // the waist every phase-B flight passes through
-const SEAT_DUR = 6; // deep -> ripe as it seats
-const MIN_NEIGHBOUR_GAP = 2.0; // frames, between dots that share a neighbourhood
-const HEAD_CAP_SCREEN = 43; // the set's ceiling is 45; 43 leaves the mill and the drift their share
-// A dot's IMMEDIATE neighbours — 1.5 lattice steps, about nine dots. The
-// no-unison rule is enforced on these: at this density a 2-frame exclusion over
-// a wider radius is arithmetically impossible (a 46 px disc holds ~60 dots and a
-// +-2 frame window holds ~22 of the 130, so every dot would have ten neighbours
-// it could not avoid). STATS reports the achieved minimum at both radii.
-const NEIGHBOUR_R = 18; // world px
+const LEAN_PX = 12;
+const LEAN_DUR = 14;
+const LEAN_F0 = 10;
+
+// ---------------------------------------------------------------------------
+// THE FLIGHTS. One schedule; the lane closes continuously on top of it.
+// ---------------------------------------------------------------------------
+const LAUNCH_F0 = 26; // seven frames before "achieving"
+const LAUNCH_F1 = 66; // the last dot leaves, on "the"
+const LANE_F0 = 44; // the lane starts closing, five frames before "or"
+const LANE_F1 = 58; // and is closed three frames after "optimizing"
+const SPEED_WIDE = 18; // world px/frame at mix 0
+const SPEED_LANE = 27; // world px/frame at mix 1 — 50% faster, on a shorter path
+const SEAT_DUR = 6; // deep -> ripe as a dot seats
+const NEIGHBOUR_R = 18; // world px: who counts as a neighbour for the unison rule
+const MIN_NEIGHBOUR_GAP = 2.0; // frames
+const HEAD_CAP_SCREEN = 43; // the set's ceiling is 45; 43 leaves the mill its share
+const LAND_BY = 97; // every dot is seated before the pull-back is at speed
+const AVOID = 26; // samples per flight, for the two clearance tests
+
+// A flight is a CUBIC, because it has two jobs: get past the person's head on
+// its own side, and come into its seat from outside the trophy. P1 is the waist
+// beside the head — wide and individual at mix 0, a narrow common lane at mix 1
+// — and P2 is the approach, pushed outward and downward the higher the seat is,
+// so a dot bound for the top of the annulus goes AROUND the objective.
+const WAIST_Y = PERSON.y - 30;
+const WAIST_WIDE = [100, 165]; // world px either side of the axis, hashed
+const WAIST_LANE = [78, 92]; // ...and what the closed lane leaves of it
+const APPR_WIDE = 45;
+const APPR_LANE = 22;
+const APPR_TOP = 130; // extra swing for a seat above the trophy's waist
+const APPR_DROP = [120, 90]; // how far below its seat a flight comes in from
 
 type Dot = {
   src: number;
   dst: number;
   launch: number;
   land: number;
-  b: boolean; // phase B: the lane
-  bow: number;
-  cx: number; // the control point of its flight
-  cy: number;
-  lean: number; // 0..1: how much of the 12 px anticipation it takes
-  leanAt: number; // the frame its lean starts
+  sx: number; // the leaned launch point
+  sy: number;
+  p1x: number;
+  p1y: number;
+  p2x: number;
+  p2y: number;
+  lean: number;
+  leanAt: number;
 };
 
+/** The cubic a dot flies, in world px. */
+export const flightPoint = (d: Dot, D: Seat, u: number) => {
+  const v = 1 - u;
+  const a = v * v * v;
+  const b = 3 * v * v * u;
+  const c = 3 * v * u * u;
+  const e = u * u * u;
+  return [
+    a * d.sx + b * d.p1x + c * d.p2x + e * D.x,
+    a * d.sy + b * d.p1y + c * d.p2y + e * D.y,
+  ];
+};
+
+const FLIGHT_STATS = { pushes: 0, headHits: 0, trophyHits: 0, peakHead: 0 };
+
 const DOTS: Dot[] = (() => {
-  // which seats the crowd actually occupies: hashed, so the vacancies the mill
-  // hops into are scattered through the blob rather than ringed around its edge
+  // which seats the crowd occupies: hashed, so the vacancies the mill hops into
+  // are scattered through the blob rather than ringed around its edge
   const order = SRC_SEATS.map((_, i) => i).sort((a, b) => hash(a, 81) - hash(b, 81));
   const taken = order.slice(0, N);
 
-  const dist = (i: number) => Math.hypot(SRC_SEATS[i].x - TROPHY_BASE.x, SRC_SEATS[i].y - TROPHY_BASE.y);
-  const dMin = Math.min(...taken.map(dist));
-  const dMax = Math.max(...taken.map(dist));
-  const norm = (i: number) => (dist(i) - dMin) / Math.max(1, dMax - dMin);
+  const dTrophy = (i: number) =>
+    Math.hypot(SRC_SEATS[i].x - TROPHY.x, SRC_SEATS[i].y - TROPHY.y);
+  const dMin = Math.min(...taken.map(dTrophy));
+  const dMax = Math.max(...taken.map(dTrophy));
+  const norm = (i: number) => (dTrophy(i) - dMin) / Math.max(1, dMax - dMin);
 
-  // The far side and the BOTTOM of the blob go first, hashed hard enough that
-  // it reads as a surge and not a wipe. Both biases exist for framing: the blob
-  // contracts up and toward the trophy as it drains, which keeps its left
-  // edge off the frame's side and its foot out of the caption band while the
-  // camera pans right and pushes in.
-  const yMin = Math.min(...taken.map((i) => SRC_SEATS[i].y));
-  const yMax = Math.max(...taken.map((i) => SRC_SEATS[i].y));
-  const low = (i: number) => (SRC_SEATS[i].y - yMin) / Math.max(1, yMax - yMin);
-  const key = (i: number) => 0.55 * hash(i, 3) - 0.27 * norm(i) - 0.18 * low(i);
+  // The FAR side of the blob goes first, hashed hard enough that it reads as a
+  // crowd surging rather than as a wipe. It is a timing rule as much as a
+  // framing one: the far dots have the longest flights, so sending them first
+  // makes the landings arrive in a steady stream from f62 rather than in a
+  // clump, and the blob contracts up and inward as it empties.
+  const key = (i: number) => 0.44 * hash(i, 3) - 0.56 * norm(i);
   const seq = taken.slice().sort((a, b) => key(a) - key(b));
 
-  // One schedule, not two: the rate ramps down across the whole pour, and the
-  // lane closes continuously on top of it.
-  const half = Math.floor(N / 2);
-  const times: number[] = seq.map((_, i) =>
-    A_F0 + (B_F1 - A_F0) * Math.pow(i / Math.max(1, N - 1), 1.25),
+  // The rate: 130 dots over f26-66, very slightly ramping (exponent 0.95).
+  const times: number[] = seq.map(
+    (_, i) =>
+      LAUNCH_F0 + (LAUNCH_F1 - LAUNCH_F0) * Math.pow(i / Math.max(1, N - 1), 0.95),
   );
 
-  // NO UNISON. Two dots that share a neighbourhood in the crowd must not leave
-  // within MIN_NEIGHBOUR_GAP frames of each other. `times` is fixed to the
-  // schedule index, so the repair permutes WHICH dot holds which index: the
-  // rate curve and the phase counts are untouched. Greedy, deterministic, and
-  // it never moves a dot across the phase boundary. The achieved minimum is
-  // reported by STATS.minNeighbourGap.
-  const half2 = half;
+  // NO UNISON, the launch end. `times` is fixed to the schedule index, so the
+  // repair permutes WHICH dot holds which index — the rate curve is untouched.
   const seatNb: number[][] = taken.map((a) =>
-    taken.filter((b) => b !== a && Math.hypot(SRC_SEATS[a].x - SRC_SEATS[b].x, SRC_SEATS[a].y - SRC_SEATS[b].y) <= NEIGHBOUR_R),
+    taken.filter(
+      (b) =>
+        b !== a &&
+        Math.hypot(SRC_SEATS[a].x - SRC_SEATS[b].x, SRC_SEATS[a].y - SRC_SEATS[b].y) <=
+          NEIGHBOUR_R,
+    ),
   );
   const nbOf = new Map<number, number[]>();
   taken.forEach((a, i) => nbOf.set(a, seatNb[i]));
-  const at = new Map<number, number>(); // seat -> schedule index
-  const reindex = () => {
-    at.clear();
-    seq.forEach((seat, i) => at.set(seat, i));
-  };
-  reindex();
-  const bad = (i: number) =>
-    (nbOf.get(seq[i]) ?? []).some((nbSeat) => {
-      const j = at.get(nbSeat);
-      return j !== undefined && j !== i && Math.abs(times[j] - times[i]) < MIN_NEIGHBOUR_GAP;
-    });
+  const at = new Map<number, number>();
+  seq.forEach((seat, i) => at.set(seat, i));
   const wouldBad = (i: number, seat: number) =>
-    (nbOf.get(seat) ?? []).some((nbSeat) => {
-      const j = at.get(nbSeat);
+    (nbOf.get(seat) ?? []).some((nb) => {
+      const j = at.get(nb);
       return j !== undefined && j !== i && Math.abs(times[j] - times[i]) < MIN_NEIGHBOUR_GAP;
     });
   for (let sweep = 0; sweep < 400; sweep++) {
     let fixed = 0;
     for (let i = 0; i < N; i++) {
-      if (!bad(i)) continue;
-      const lo = i < half2 ? 0 : half2;
-      const hi = i < half2 ? half2 : N;
-      for (let t = 1; t < hi - lo; t++) {
-        const q = lo + ((i - lo + t * 37) % (hi - lo));
+      if (!wouldBad(i, seq[i])) continue;
+      for (let t = 1; t < N; t++) {
+        const q = (i + t * 37) % N;
         if (q === i) continue;
         const a = seq[i];
         const b = seq[q];
@@ -961,86 +855,223 @@ const DOTS: Dot[] = (() => {
     if (fixed === 0) break;
   }
 
+  // The two clearance tests a flight has to pass.
+  //   * the HEAD: the stream splits either side of the person. The test is on
+  //     his head and shoulders — the top 45% of the glyph box — because below
+  //     that a dot is inside the crowd and behind him, and the glyph is drawn
+  //     over the dots, so a dot down there is simply occluded.
+  //   * the OBJECTIVE: no flight crosses the trophy's ink box. A dot never
+  //     passes over a stroke, and it never seats on one either.
+  // Measured off person.png once: the upper 45% of the glyph — the head and
+  // shoulders, which is what the stream has to split around — is only 0.2012 of
+  // the box wide either side of the axis. (The silhouette's full 0.84 width is
+  // its arms and legs, and those are down inside the crowd where a dot is
+  // behind him anyway.)
+  const HEAD_Y1 = PERSON_BOX.y0 + 0.45 * GLYPH;
+  const HEAD_CLEAR = 0.2012 * GLYPH + 10 + DOT_R;
+  const TROPHY_PAD = 6 + DOT_R;
+  const hitsHead = (x: number, y: number) =>
+    y > PERSON_BOX.y0 - 6 && y < HEAD_Y1 && Math.abs(x - CX) < HEAD_CLEAR;
+  const hitsTrophy = (x: number, y: number) =>
+    x > TROPHY_INK.x0 - TROPHY_PAD &&
+    x < TROPHY_INK.x1 + TROPHY_PAD &&
+    y > TROPHY_INK.y0 - TROPHY_PAD &&
+    y < TROPHY_INK.y1 + TROPHY_PAD;
+
+  // WHICH SEAT A DOT IS FOR. The annulus is already in fill order (bottom and
+  // sides first, top last); the dots are in launch order. Pairing them straight
+  // off sends a dot that went up the RIGHT of the person's head to a seat on the
+  // LEFT of the trophy, which is a whipping S across the frame and the fastest
+  // heads in the piece. So the seats are dealt from two queues — left and right
+  // — and a dot takes the next one in fill order on its OWN side, falling back
+  // to the other queue only when its side is exhausted. The fill order is
+  // untouched: each queue is still in it.
+  // The two queues are BALANCED to the seats before anything is dealt: the
+  // left queue is exactly as long as the number of dots that will go left. The
+  // dots nearest the column axis are the ones whose side is decided by the
+  // balance rather than by where they stand, so the only dots that ever cross
+  // the axis are the ones already on it — and a crossing is a few px, not a
+  // sweep across the frame. (Dealing by the dot's own side and falling back
+  // when a queue empties was tried first: the fallbacks all land at the END of
+  // the piece, and a late dot sent to a top seat on the far side has the
+  // fastest head in the cut by 40%.)
+  const qL: number[] = [];
+  const qR: number[] = [];
+  ANN_USED.forEach((j) => (ANN_SEATS[j].x >= TROPHY.x ? qR : qL).push(j));
+  const SIDE_OF = new Map<number, number>();
+  seq
+    .slice()
+    .sort((a, b) => SRC_SEATS[a].x - SRC_SEATS[b].x)
+    .forEach((s, rank) => SIDE_OF.set(s, rank < qL.length ? -1 : 1));
+  const sideOf = (s: number) => SIDE_OF.get(s) ?? 1;
+  const DST_OF: number[] = [];
+  let iL = 0;
+  let iR = 0;
+  seq.forEach((s) => {
+    DST_OF.push(sideOf(s) > 0 ? qR[iR++] : qL[iL++]);
+  });
+
   const list = seq.map((s, i) => {
     // The lane closes CONTINUOUSLY: `mix` is 0 for a dot that leaves before
     // LANE_F0 and 1 for one that leaves after LANE_F1, and everything about the
-    // flight — where its control point sits, how high it bows, how fast it goes
-    // — is that one number. There is no switch on a frame.
+    // flight — its control point, its bow, its speed — is that one number.
     const mix = smoothstep((times[i] - LANE_F0) / (LANE_F1 - LANE_F0));
-    const b = mix > 0.5;
     const S = SRC_SEATS[s];
-    const D = DST_SEATS[i];
-    const dx = D.x - S.x;
-    const dy = D.y - S.y;
-    const L = Math.hypot(dx, dy) || 1;
-    const bow =
-      (hash(s, 35) - 0.5) * 2 * (BOW_A[0] + hash(s, 36) * (BOW_A[1] - BOW_A[0])) * (1 - (1 - BOW_B) * mix);
-    const arcC = { x: (S.x + D.x) / 2 + (-dy / L) * bow, y: (S.y + D.y) / 2 + (dx / L) * bow };
-    const laneC = { x: LANE.x + (hash(s, 37) - 0.5) * 36, y: LANE.y + (hash(s, 38) - 0.5) * 24 };
-    const c = { x: arcC.x + (laneC.x - arcC.x) * mix, y: arcC.y + (laneC.y - arcC.y) * mix };
-    // path length of the quadratic, coarsely, so the flight is speed-authored
-    let len = 0;
-    let px = S.x;
-    let py = S.y;
-    for (let t = 1; t <= 12; t++) {
-      const u = t / 12;
-      const v = 1 - u;
-      const qx = v * v * S.x + 2 * v * u * c.x + u * u * D.x;
-      const qy = v * v * S.y + 2 * v * u * c.y + u * u * D.y;
-      len += Math.hypot(qx - px, qy - py);
-      px = qx;
-      py = qy;
+    const dstIdx = DST_OF[i];
+    const D = ANN_SEATS[dstIdx];
+    // Which side of the person's head this dot goes up: its own side of the
+    // crowd, hashed near the axis so the two lanes are not a hard split.
+    const side = sideOf(s);
+    const lean = clamp01(1 - norm(s) * 0.85);
+    const ang = Math.atan2(TROPHY.y - S.y, TROPHY.x - S.x);
+    const sx = S.x + Math.cos(ang) * LEAN_PX * lean;
+    const sy = S.y + Math.sin(ang) * LEAN_PX * lean;
+
+    // the waist beside his head: wide and individual, closing to a common lane
+    const wWide = WAIST_WIDE[0] + hash(s, 36) * (WAIST_WIDE[1] - WAIST_WIDE[0]);
+    const wLane = WAIST_LANE[0] + hash(s, 37) * (WAIST_LANE[1] - WAIST_LANE[0]);
+    // A dot whose seat is on the OTHER side of the axis from its own place in
+    // the crowd (the hashed side rule puts the dots near the axis on either
+    // lane) crosses LOW, at his knees, where he is in front of them — never
+    // across his head.
+    const crossing = Math.sign(S.x - CX) !== side;
+    // The two lanes are NOT mirror images. Symmetric waists turn the whole
+    // stream into one closed oval on the frames where the crowd is half away —
+    // a drawn ring rather than a surge — so the left lane runs 0.84 of the
+    // waist and the right 1.14, and the two sides cross the head at different
+    // heights. The stream is lopsided, which is what a crowd looks like.
+    const lane = side < 0 ? 0.84 : 1.14;
+    const p1 = {
+      x: CX + side * lane * (wWide + (wLane - wWide) * mix),
+      y: crossing
+        ? PERSON.y + 28 + (hash(s, 38) - 0.5) * 20
+        : WAIST_Y - side * 26 + (hash(s, 38) - 0.5) * 80 * (1 - 0.55 * mix),
+    };
+    // the approach: outward and from below, and further around the higher the
+    // seat is, so a dot bound for the top of the annulus goes around the glyph
+    const topness = clamp01((TROPHY.y + 10 - D.y) / ANN_RY);
+    const p2 = {
+      x:
+        D.x +
+        side * (APPR_WIDE + (APPR_LANE - APPR_WIDE) * mix + APPR_TOP * topness),
+      y: D.y + APPR_DROP[0] + (APPR_DROP[1] - APPR_DROP[0]) * mix + 80 * topness,
+    };
+
+    const sample = (t: number) => {
+      const v = 1 - t;
+      const a = v * v * v;
+      const b = 3 * v * v * t;
+      const c = 3 * v * t * t;
+      const e = t * t * t;
+      return [
+        a * sx + b * p1.x + c * p2.x + e * D.x,
+        a * sy + b * p1.y + c * p2.y + e * D.y,
+      ];
+    };
+    // Enforced, not hoped for: the two controls are pushed outward on the dot's
+    // own side until no sample of the cubic is inside either exclusion.
+    // A dot that STARTS behind him (the crowd is behind his lower half, and the
+    // glyph is drawn over the dots) is allowed to be inside the head region on
+    // its first frames — it is occluded there — as long as it is out by 35% of
+    // its path and never comes back.
+    const clash = () => {
+      let head = false;
+      let troph = false;
+      let exited = !hitsHead(sx, sy);
+      for (let t = 1; t < AVOID; t++) {
+        const u = t / AVOID;
+        const p = sample(u);
+        const inHead = hitsHead(p[0], p[1]);
+        if (!exited) {
+          if (!inHead) exited = true;
+          else if (u > 0.35) head = true;
+        } else if (inHead) {
+          head = true;
+        }
+        if (hitsTrophy(p[0], p[1])) troph = true;
+      }
+      return { head, troph };
+    };
+    for (let g = 0; g < 30; g++) {
+      const c = clash();
+      if (!c.head && !c.troph) break;
+      if (c.head) p1.x += side * 10;
+      if (c.troph) p2.x += side * 12;
+      FLIGHT_STATS.pushes++;
     }
-    // Speed-authored, then SCREEN-speed capped. The nominal duration comes out
-    // of the path length, and is then lengthened one frame at a time until the
-    // head's peak screen speed — the Bezier's own speed, which is not uniform,
-    // times the camera's k on that frame — is inside the set's 45 px/frame
-    // ceiling. A 12-segment average is not enough on its own: a wide arc's
-    // fastest frame runs ~1.6x its mean.
-    const head = (u: number) => {
-      const e = arriveEase(u);
-      const v = 1 - e;
-      return [v * v * S.x + 2 * v * e * c.x + e * e * D.x, v * v * S.y + 2 * v * e * c.y + e * e * D.y];
+    const left = clash();
+    if (left.head) FLIGHT_STATS.headHits++;
+    if (left.troph) FLIGHT_STATS.trophyHits++;
+
+    // path length of the cubic, so the flight is speed-authored
+    let len = 0;
+    let px = sx;
+    let py = sy;
+    for (let t = 1; t <= 20; t++) {
+      const p = sample(t / 20);
+      len += Math.hypot(p[0] - px, p[1] - py);
+      px = p[0];
+      py = p[1];
+    }
+
+    // Speed-authored, then SCREEN-speed capped WITH THE CAMERA MOVING: the head
+    // is measured where it actually is on the frame, so the long glide up — which
+    // carries the whole world down the screen under the stream — is part of the
+    // budget. The duration is lengthened a frame at a time until the peak is
+    // inside the cap.
+    const headAt = (f: number, fl: number) => {
+      const u = arriveEase(clamp01((f - times[i]) / fl));
+      const p = sample(u);
+      return screenAt(f, p[0], p[1]);
     };
     const peak = (fl: number) => {
       let mx = 0;
-      for (let f = Math.ceil(times[i]); f <= times[i] + fl; f++) {
-        const p0 = head((f - 1 - times[i]) / fl);
-        const p1 = head((f - times[i]) / fl);
-        const kk = K_AT[Math.max(0, Math.min(DURATION, Math.round(f)))];
-        mx = Math.max(mx, Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) * kk);
+      for (let f = Math.ceil(times[i]) + 1; f <= times[i] + fl; f++) {
+        const a = headAt(f - 1, fl);
+        const b = headAt(f, fl);
+        mx = Math.max(mx, Math.hypot(b[0] - a[0], b[1] - a[1]));
       }
       return mx;
     };
-    // A hashed +-1.2 frame on the duration, so two dots that leave together do
-    // not land together either: landings scatter independently of launches.
-    let flight = Math.max(9, len / (SPEED_A + (SPEED_B - SPEED_A) * mix) + (hash(s, 39) - 0.5) * 3.2);
-    while (flight < 46 && peak(flight) > HEAD_CAP_SCREEN) flight += 1;
+    // a hashed +-1.6 frames, so two dots that leave together do not land together
+    let flight = Math.max(
+      10,
+      len / (SPEED_WIDE + (SPEED_LANE - SPEED_WIDE) * mix) + (hash(s, 39) - 0.5) * 3.2,
+    );
+    // The lengthening is bounded, and not only by patience: past LAND_BY a
+    // flight is landing inside the pull-back, where the camera itself is moving
+    // 20 screen px/frame and a dot near the top of the frame gains speed from
+    // the zoom as well — so stretching such a flight to slow its head down
+    // makes it faster, not slower. Bounding the landing breaks that runaway.
+    const maxFlight = Math.max(12, Math.min(48, LAND_BY - times[i]));
+    while (flight < maxFlight && peak(flight) > HEAD_CAP_SCREEN) flight += 1;
+    FLIGHT_STATS.peakHead = Math.max(FLIGHT_STATS.peakHead, peak(flight));
+
     return {
       src: s,
-      dst: i,
+      dst: dstIdx,
       launch: times[i],
       land: times[i] + flight,
-      b,
-      bow,
-      cx: c.x,
-      cy: c.y,
-      lean: clamp01(1 - norm(s) * 0.85),
-      leanAt: 10 + hash(s, 44) * 7,
+      sx,
+      sy,
+      p1x: p1.x,
+      p1y: p1.y,
+      p2x: p2.x,
+      p2y: p2.y,
+      lean,
+      leanAt: LEAN_F0 + hash(s, 44) * 6,
     };
   });
 
-  // NO UNISON, the other end. Two dots on neighbouring SEATS must not settle on
-  // the same frame either. Landings are pushed later (never earlier, so the
-  // speed cap above still holds) in 1.1 frame steps until every pair of seats
-  // within 14 world px is at least 2 frames apart. Sixteen passes is more than
-  // it ever needs; STATS.minLandGap14 reports what it achieved.
+  // NO UNISON, the landing end. Two dots on neighbouring SEATS must not settle
+  // on the same frame. Landings are pushed later (never earlier, so the speed
+  // cap above still holds) in 1.1 frame steps.
   for (let pass = 0; pass < 16; pass++) {
     let fixed = 0;
     for (let i = 0; i < list.length; i++) {
       for (let j = i + 1; j < list.length; j++) {
-        const A = DST_SEATS[list[i].dst];
-        const B = DST_SEATS[list[j].dst];
+        const A = ANN_SEATS[list[i].dst];
+        const B = ANN_SEATS[list[j].dst];
         if (Math.hypot(A.x - B.x, A.y - B.y) > 14) continue;
         if (Math.abs(list[i].land - list[j].land) >= 2) continue;
         const later = list[i].land >= list[j].land ? i : j;
@@ -1053,22 +1084,25 @@ const DOTS: Dot[] = (() => {
   return list;
 })();
 
-// The anticipation: up to 12 world px toward the trophy's base over f15-30, hashed
-// starts, weighted by how near the trophy a dot already is.
-const LEAN_PX = 12;
-const LEAN_DUR = 14;
+// The trophy's white -> deep conversion starts when the crowd has actually
+// REACHED it, which is the tenth dot down rather than the single first: one dot
+// touching down is not the AIs arriving, and keying the conversion to a
+// straggler makes the objective start changing before anything has visibly
+// gathered. DEEP_AT is measured off the landings, so retiming the flights
+// retimes the conversion with them.
+const LAND_SORTED = DOTS.map((d) => d.land).sort((a, b) => a - b);
+const DEEP_AT = LAND_SORTED[9];
 
 // ---------------------------------------------------------------------------
-// THE MILL. One simulation over the whole piece, over BOTH seat systems: the
-// source crowd from f0 until the last dot leaves it, and the cluster at the
-// foot from the first landing to the last frame. A dot only hops to a VACANT
-// neighbouring seat, and it never starts a hop it would still be inside when it
-// launches, so a launch always comes off a definite seat.
+// THE MILL. One simulation over both seat systems: the source crowd from f0
+// until it empties, and the annulus from the first landing to the last frame.
+// A dot only hops to a VACANT neighbouring seat and never starts a hop it would
+// still be inside when it launches, so a launch always comes off a real seat.
 // ---------------------------------------------------------------------------
 const MILL_DUR = 11;
-const MILL_RATE_SRC = 1.3;
-const MILL_RATE_DST = 1.5;
-const HOP_REACH_SRC = 34;
+const MILL_RATE_SRC = 2.1;
+const MILL_RATE_DST = 1.8;
+const HOP_REACH_SRC = 30;
 const HOP_REACH_DST = 17;
 
 type Hop = { from: number; to: number; t0: number; dst: boolean };
@@ -1081,13 +1115,13 @@ const neighbours = (seats: Seat[], reach: number) =>
       .map(({ j }) => j),
   );
 const NB_SRC = neighbours(SRC_SEATS, HOP_REACH_SRC);
-const NB_DST = neighbours(DST_SEATS, HOP_REACH_DST);
+const NB_DST = neighbours(ANN_SEATS, HOP_REACH_DST);
 
 const HOPS: Hop[][] = DOTS.map(() => []);
 const LAUNCH_SEAT: number[] = DOTS.map((d) => d.src);
 (() => {
   const srcOcc = new Int32Array(SRC_SEATS.length).fill(-1);
-  const dstOcc = new Int32Array(DST_SEATS.length).fill(-1);
+  const dstOcc = new Int32Array(ANN_SEATS.length).fill(-1);
   const seatSrc = DOTS.map((d) => d.src);
   const seatDst = DOTS.map((d) => d.dst);
   DOTS.forEach((d, i) => {
@@ -1152,12 +1186,11 @@ const LAUNCH_SEAT: number[] = DOTS.map((d) => d.src);
 })();
 
 // ---------------------------------------------------------------------------
-// DARK TRAFFIC. Idle accent threads between neighbouring dots at 0.12, no
-// heads, at the house rate. A dot that has not landed carries none, and the
-// traffic thins to 60% across the tail.
+// DARK TRAFFIC, at the house rate: idle accent threads between neighbouring
+// dots at 0.12, no heads. Thins to 60% across the tail.
 // ---------------------------------------------------------------------------
 const TRAFFIC_N = idleThreads(N);
-const TRAFFIC_REACH = 64;
+const TRAFFIC_REACH = 60;
 
 // THE MICRO-DRIFT. Two hashed sines per axis, +-3 world px, never in unison.
 const micro = (i: number, f: number) => ({
@@ -1186,27 +1219,30 @@ const OptimizingTheObjective: React.FC<Props> = ({
   iconShadowY,
   iconShadowBlur,
   iconShadowOpacity,
-  dotRadius,
   dotOpacity,
   personSrc,
   beats,
 }) => {
   const frame = useCurrentFrame();
-  const toRipe = makeTone(accentDeep, accent); // at rest -> it has reached the trophy
+  const toDeep = makeTone(ink, accentDeep); // white -> the AIs are on it
+  const toRipe = makeTone(accentDeep, accent); // -> and it is achieved
 
   // -- camera ----------------------------------------------------------------
   const cam = runCamera(frame, CAM.F, CAM.CY, CAM.K);
-  const camX = runCamera(frame, CAM.F, CAM.CX, CAM.K).cy;
   const drift = sway(frame);
   const cy = cam.cy + drift.dy;
-  const cx = camX + drift.dx;
+  const cx = CX + drift.dx;
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
 
+  // -- the objective's two conversions ---------------------------------------
+  const deepT = clamp01((frame - DEEP_AT) / DEEP_DUR);
+  const ripeT = clamp01((frame - RIPE_F0) / RIPE_DUR);
+  const trophyColour = ripeT > 0 ? toRipe(smoothstep(ripeT)) : toDeep(smoothstep(deepT));
+
   // -- the dots --------------------------------------------------------------
   const seatPos = (seats: Seat[], i: number, dst: boolean) => {
-    // where this dot's seat is right now — the mill moves it from seat to seat
     const hs = HOPS[i].filter((h) => h.dst === dst);
     let cur = dst ? DOTS[i].dst : DOTS[i].src;
     let live: Hop | null = null;
@@ -1229,19 +1265,15 @@ const OptimizingTheObjective: React.FC<Props> = ({
       return {
         x: A.x + dx * e + (-dy / L) * bow,
         y: A.y + dy * e + (dx / L) * bow,
-        seat: cur,
         moving: clamp01(Math.min(u, 1 - u) / 0.2),
       };
     }
-    return { x: seats[cur].x, y: seats[cur].y, seat: cur, moving: 0 };
+    return { x: seats[cur].x, y: seats[cur].y, moving: 0 };
   };
 
   const dots = DOTS.map((d, i) => {
     const flying = frame >= d.launch && frame < d.land;
     const landed = frame >= d.land;
-
-    const leanU = smoothstep((frame - d.leanAt) / LEAN_DUR);
-    const leanAmt = LEAN_PX * d.lean * leanU;
 
     let x: number;
     let y: number;
@@ -1249,47 +1281,55 @@ const OptimizingTheObjective: React.FC<Props> = ({
     let depthT: number;
 
     if (!flying && !landed) {
+      // waiting, and leaning toward the objective
       const p = seatPos(SRC_SEATS, i, false);
-      const ang = Math.atan2(TROPHY_BASE.y - p.y, TROPHY_BASE.x - p.x);
-      x = p.x + Math.cos(ang) * leanAmt;
-      y = p.y + Math.sin(ang) * leanAmt;
+      const leanU = smoothstep((frame - d.leanAt) / LEAN_DUR);
+      const ang = Math.atan2(TROPHY.y - p.y, TROPHY.x - p.x);
+      const amt = LEAN_PX * d.lean * leanU;
+      x = p.x + Math.cos(ang) * amt;
+      y = p.y + Math.sin(ang) * amt;
       moving = p.moving;
       depthT = 0;
     } else if (landed) {
-      const p = seatPos(DST_SEATS, i, true);
+      const p = seatPos(ANN_SEATS, i, true);
       x = p.x;
       y = p.y;
       moving = p.moving;
       depthT = 1;
     } else {
+      // The mill may have moved the dot off its designed launch seat, so the
+      // cubic is rigidly translated onto the seat it actually left from.
       const S = SRC_SEATS[LAUNCH_SEAT[i]];
-      const ang = Math.atan2(TROPHY_BASE.y - S.y, TROPHY_BASE.x - S.x);
-      const sx = S.x + Math.cos(ang) * LEAN_PX * d.lean;
-      const sy = S.y + Math.sin(ang) * LEAN_PX * d.lean;
-      const D = DST_SEATS[d.dst];
+      const ox = S.x - SRC_SEATS[d.src].x;
+      const oy = S.y - SRC_SEATS[d.src].y;
       const u = arriveEase(clamp01((frame - d.launch) / (d.land - d.launch)));
-      const v = 1 - u;
-      x = v * v * sx + 2 * v * u * d.cx + u * u * D.x;
-      y = v * v * sy + 2 * v * u * d.cy + u * u * D.y;
+      const p = flightPoint(d, ANN_SEATS[d.dst], u);
+      const back = 1 - smoothstep(clamp01(u / 0.45)); // the offset eases out
+      x = p[0] + ox * back;
+      y = p[1] + oy * back;
       moving = clamp01(Math.min(u, 1 - u) / 0.18);
       depthT = smoothstep(u);
     }
 
-    // the depth ladder follows the dot from the crowd to the cluster
+    // the ladder follows the dot from the crowd to the annulus
     const backA = SRC_SEATS[d.src].depth > DEPTH_CUT;
-    const backB = DST_SEATS[d.dst].depth > DEPTH_CUT;
-    const op = (backA ? OP_BG : OP_FG) + ((backB ? OP_BG : OP_FG) - (backA ? OP_BG : OP_FG)) * depthT;
-    const rs =
-      (backA ? BG_R_SCALE : 1) + ((backB ? BG_R_SCALE : 1) - (backA ? BG_R_SCALE : 1)) * depthT;
-    const dm = (backA ? BG_DRIFT : 1) + ((backB ? BG_DRIFT : 1) - (backA ? BG_DRIFT : 1)) * depthT;
-    const seatR = SRC_SEATS[d.src].r + (DST_SEATS[d.dst].r - SRC_SEATS[d.src].r) * depthT;
+    const backB = ANN_SEATS[d.dst].depth > DEPTH_CUT;
+    const a0 = backA ? OP_BG : OP_FG;
+    const a1 = backB ? OP_BG : OP_FG;
+    const r0 = backA ? BG_R_SCALE : 1;
+    const r1 = backB ? BG_R_SCALE : 1;
+    const m0 = backA ? BG_DRIFT : 1;
+    const m1 = backB ? BG_DRIFT : 1;
+    const seatR =
+      SRC_SEATS[d.src].r + (ANN_SEATS[d.dst].r - SRC_SEATS[d.src].r) * depthT;
 
     const md = micro(i, frame);
+    const dm = m0 + (m1 - m0) * depthT;
     return {
       x: x + md.dx * dm,
       y: y + md.dy * dm,
-      r: seatR * rs,
-      op,
+      r: seatR * (r0 + (r1 - r0) * depthT),
+      op: a0 + (a1 - a0) * depthT,
       back: (backA ? 1 : 0) + ((backB ? 1 : 0) - (backA ? 1 : 0)) * depthT > 0.5,
       moving,
       ripe: clamp01((frame - d.land) / SEAT_DUR),
@@ -1336,32 +1376,27 @@ const OptimizingTheObjective: React.FC<Props> = ({
     });
   }
 
-  // -- the trophy: its idle, and the one lift on "objective" -----------------
-  const tIdle = TROPHY_IDLE(frame);
-  const tLift = trophyLift(frame);
-  const trophyDX = tIdle.dx;
-  const trophyDY = tIdle.dy - tLift;
+  // -- the objective's idle --------------------------------------------------
+  const tIdle = trophyIdle(frame);
 
-  // -- the person's claim on the trophy -------------------------------------
-  // It lands on the LEFT HANDLE, and the handle is where the glyph currently
-  // is: the line follows the lift down as the trophy settles, so the claim
-  // touches the handle and not the air under it.
-  const handle = { x: HANDLE_L.x + trophyDX, y: HANDLE_L.y + trophyDY };
+  // -- the provenance line ---------------------------------------------------
+  const claimFrom = { x: CX, y: HEAD_TOP_Y };
+  const claimTo = { x: TROPHY.x + tIdle.dx, y: TROPHY_BASE_Y + tIdle.dy };
   const claim = arriveEase(clamp01((frame - CLAIM_F0) / (CLAIM_F1 - CLAIM_F0)));
   const claimHead = {
-    x: SHOULDER.x + (handle.x - SHOULDER.x) * claim,
-    y: SHOULDER.y + (handle.y - SHOULDER.y) * claim,
+    x: claimFrom.x + (claimTo.x - claimFrom.x) * claim,
+    y: claimFrom.y + (claimTo.y - claimFrom.y) * claim,
   };
   const packetAt = (f: number) => {
     if (f < PACKET_F0) return null;
     const p = packetsOn({
       frame: f,
       k,
-      from: SHOULDER,
-      to: handle,
+      from: claimFrom,
+      to: claimTo,
       period: 12,
       phase: PACKET_F0,
-      speed: 13,
+      speed: 16,
       opacity: 1,
       seed: 3,
     });
@@ -1383,7 +1418,7 @@ const OptimizingTheObjective: React.FC<Props> = ({
         cy={cy}
         cyRest={CAM.CY[0]}
         cx={cx}
-        cxRest={CAM.CX[0]}
+        cxRest={CX}
         k={k}
         parallax={parallax}
       />
@@ -1426,8 +1461,8 @@ const OptimizingTheObjective: React.FC<Props> = ({
             ))}
 
             {/* the AIs, on the depth ladder: the back of the crowd first and
-                dimmer, then its core over the top. Tone still means state —
-                only opacity and size say how far back a dot is. */}
+                dimmer, then its core over the top. Tone means state; only
+                opacity and size say how far back a dot is. */}
             {[true, false].map((backPass) =>
               dots.map((d, i) =>
                 d.back !== backPass ? null : (
@@ -1435,7 +1470,7 @@ const OptimizingTheObjective: React.FC<Props> = ({
                     key={`${backPass ? "b" : "c"}${i}`}
                     cx={d.x}
                     cy={d.y}
-                    r={dotRadius * d.r * breath(frame, hash(i, 9)) * (1 + 0.22 * d.moving)}
+                    r={DOT_R * d.r * breath(frame, hash(i, 9)) * (1 + 0.22 * d.moving)}
                     fill={toRipe(d.ripe)}
                     opacity={dotOpacity * d.op}
                   />
@@ -1443,49 +1478,38 @@ const OptimizingTheObjective: React.FC<Props> = ({
               ),
             )}
 
-            {/* the ground the trophy is planted in, and the person's claim on
-                its handle: the containers, one rung back from the things themselves */}
-            <g style={{ filter: icon }}>
-              <line
-                x1={GROUND.x0}
-                y1={GROUND.y}
-                x2={GROUND.x1}
-                y2={GROUND.y}
-                stroke={ink}
-                strokeWidth={STROKE}
-                strokeLinecap="round"
-                opacity={OP_MID}
-              />
-              {claim > 0 ? (
+            {/* the provenance: his head to the objective's base. A claim is a
+                container, so it sits one rung back from the things it joins. */}
+            {claim > 0 ? (
+              <g style={{ filter: icon }}>
                 <line
-                  x1={SHOULDER.x}
-                  y1={SHOULDER.y}
+                  x1={claimFrom.x}
+                  y1={claimFrom.y}
                   x2={claimHead.x}
                   y2={claimHead.y}
                   stroke={ink}
-                  strokeWidth={STROKE}
+                  strokeWidth={LINE_STROKE}
                   strokeLinecap="round"
                   opacity={OP_MID}
                 />
-              ) : null}
-              {claim > 0 && claim < 1 ? (
-                <circle cx={claimHead.x} cy={claimHead.y} r={4.5 / k} fill={ink} opacity={OP_FG} />
-              ) : null}
-            </g>
+                {claim < 1 ? (
+                  <circle cx={claimHead.x} cy={claimHead.y} r={4.5 / k} fill={ink} opacity={OP_FG} />
+                ) : null}
+              </g>
+            ) : null}
 
-            {/* the objective: Lucide `trophy`, planted on the ground, lifting
-                once on the word and settling back onto its base */}
+            {/* the objective. White until the AIs reach it, deep as they seat,
+                ripe on the word. Same paths, same stroke convention as cut 2. */}
             <g
               style={{ filter: icon }}
               fill="none"
-              stroke={ink}
-              strokeWidth={GLYPH_STROKE}
+              stroke={trophyColour}
               strokeLinecap="round"
               strokeLinejoin="round"
               opacity={OP_FG}
             >
-              <g transform={`translate(${trophyDX.toFixed(3)} ${trophyDY.toFixed(3)})`}>
-                <g transform={TROPHY_TX} strokeWidth={GLYPH_STROKE / TR_S}>
+              <g transform={`translate(${tIdle.dx.toFixed(3)} ${tIdle.dy.toFixed(3)})`}>
+                <g transform={TROPHY_TX} strokeWidth={GLYPH_STROKE_WORLD / TR_S}>
                   {TROPHY_D.map((d) => (
                     <path key={d} d={d} />
                   ))}
@@ -1497,14 +1521,15 @@ const OptimizingTheObjective: React.FC<Props> = ({
             {claim >= 1 ? <Packet frame={frame} k={k} at={packetAt} opacity={0.6} /> : null}
           </svg>
 
-          {/* the person: white, with the small shadow that makes a glyph read
-              as a thing standing on the field. Sways, and lifts before he acts. */}
+          {/* the person: white, over his own crowd, with the small shadow that
+              makes a glyph read as a thing standing on the field. Sways, and
+              lifts before he acts. */}
           <Img
             src={staticFile(personSrc)}
             style={{
               position: "absolute",
-              left: PERSON_X - GLYPH / 2 + swayX,
-              top: PERSON_Y - GLYPH / 2 + swayY - lift / k,
+              left: PERSON.x - GLYPH / 2 + swayX,
+              top: PERSON.y - GLYPH / 2 + swayY - lift / k,
               width: GLYPH,
               height: GLYPH,
               filter: `brightness(0) invert(1) ${icon}`,
@@ -1530,30 +1555,44 @@ export const BEAT_CHECK = {
   defined: defaultProps.beats.defined,
   end: defaultProps.beats.end,
 };
-export const CAM_AT = (f: number) => ({
-  ...runCamera(f, CAM.F, CAM.CY, CAM.K),
-  cx: runCamera(f, CAM.F, CAM.CX, CAM.K).cy,
-});
+export const CAM_AT = (f: number) => runCamera(f, CAM.F, CAM.CY, CAM.K);
 export const STATS = {
+  kRest: Number(K_REST.toFixed(5)),
+  kEnd: Number(K_END.toFixed(5)),
+  cEnd: Number(C_END.toFixed(2)),
+  glyph: Number(GLYPH.toFixed(3)),
+  outlineWorld: Number(GLYPH_STROKE_WORLD.toFixed(3)),
+  lineWorld: Number(LINE_STROKE.toFixed(3)),
+  trafficWorld: Number(DARK_TRAFFIC_STROKE.toFixed(3)),
+  dotR: Number(DOT_R.toFixed(3)),
+  trophyGridStroke: Number((GLYPH_STROKE_WORLD / TR_S).toFixed(3)),
+  contentTop: Number(CONTENT_TOP.toFixed(1)),
+  contentBottom: Number(CONTENT_BOTTOM.toFixed(1)),
+  contentC: Number(CONTENT_C.toFixed(1)),
   dots: N,
   srcSeats: SRC_SEATS.length,
-  dstSeats: DST_SEATS.length,
+  annSeats: ANN_SEATS.length,
   hops: HOPS.reduce((a, h) => a + h.length, 0),
   backSrc: DOTS.filter((d) => SRC_SEATS[d.src].depth > DEPTH_CUT).length,
-  backDst: DOTS.filter((d) => DST_SEATS[d.dst].depth > DEPTH_CUT).length,
-  phaseA: DOTS.filter((d) => !d.b).length,
-  launchedBy55: DOTS.filter((d) => d.launch <= 55).length,
-  airborneBy: Math.max(...DOTS.map((d) => d.launch)),
-  seatedBy: Math.max(...DOTS.map((d) => d.land)),
-  flightA: [
-    Math.min(...DOTS.filter((d) => !d.b).map((d) => d.land - d.launch)),
-    Math.max(...DOTS.filter((d) => !d.b).map((d) => d.land - d.launch)),
+  backAnn: DOTS.filter((d) => ANN_SEATS[d.dst].depth > DEPTH_CUT).length,
+  annVacancies: ANN_SEATS.length - N,
+  launchedBy: [46, 55, 66].map((f) => DOTS.filter((d) => d.launch <= f).length),
+  firstLand: Number(LAND_SORTED[0].toFixed(1)),
+  deepAt: Number(DEEP_AT.toFixed(1)),
+  landQuartiles: [0.25, 0.5, 0.75].map((q) => {
+    const a = DOTS.map((d) => d.land).sort((x, y) => x - y);
+    return Number(a[Math.floor(q * (a.length - 1))].toFixed(1));
+  }),
+  lastLand: Number(Math.max(...DOTS.map((d) => d.land)).toFixed(1)),
+  flight: [
+    Number(Math.min(...DOTS.map((d) => d.land - d.launch)).toFixed(1)),
+    Number(Math.max(...DOTS.map((d) => d.land - d.launch)).toFixed(1)),
   ],
-  flightB: [
-    Math.min(...DOTS.filter((d) => d.b).map((d) => d.land - d.launch)),
-    Math.max(...DOTS.filter((d) => d.b).map((d) => d.land - d.launch)),
-  ],
-  minGap18: (() => {
+  flightPushes: FLIGHT_STATS.pushes,
+  flightHeadHits: FLIGHT_STATS.headHits,
+  flightTrophyHits: FLIGHT_STATS.trophyHits,
+  peakHeadScreen: Number(FLIGHT_STATS.peakHead.toFixed(2)),
+  minLaunchGap18: (() => {
     let m = 1e9;
     for (let i = 0; i < DOTS.length; i++)
       for (let j = i + 1; j < DOTS.length; j++) {
@@ -1568,40 +1607,29 @@ export const STATS = {
     let m = 1e9;
     for (let i = 0; i < DOTS.length; i++)
       for (let j = i + 1; j < DOTS.length; j++) {
-        const A = DST_SEATS[DOTS[i].dst];
-        const B = DST_SEATS[DOTS[j].dst];
+        const A = ANN_SEATS[DOTS[i].dst];
+        const B = ANN_SEATS[DOTS[j].dst];
         if (Math.hypot(A.x - B.x, A.y - B.y) > 14) continue;
         m = Math.min(m, Math.abs(DOTS[i].land - DOTS[j].land));
       }
     return Number(m.toFixed(2));
   })(),
-  stroke: STROKE,
-  glyphStroke: GLYPH_STROKE,
-  trophyBox: TROPHY_BOX,
-  trophyInk: { x0: tg2w(2, 0).x, x1: tg2w(22, 0).x, y0: tg2w(0, 2).y, y1: TROPHY_BASE.y },
-  baseClear: BASE_CLEAR,
-  ceilCup: CEIL_CUP,
-  handleL: HANDLE_L,
-  liftPeak: trophyLift(72),
-  moundTop: Math.min(...DST_SEATS.slice(0, N).map((s2) => s2.y)),
-  moundX: [Math.min(...DST_SEATS.slice(0, N).map((s2) => s2.x)), Math.max(...DST_SEATS.slice(0, N).map((s2) => s2.x))],
-  moundBaseGap: Math.min(...DST_SEATS.slice(0, N).map((s2) => Math.abs(s2.x - TROPHY_BASE.x))),
+};
+export const WORLD_INK = {
+  trophy: TROPHY_INK,
+  person: { ...PERSON_BOX, headTop: HEAD_TOP_Y },
+  crowd: CROWD,
+  annulus: { x: TROPHY.x, y: TROPHY.y, rx: ANN_RX, ry: ANN_RY },
+  claim: { from: { x: CX, y: HEAD_TOP_Y }, to: { x: CX, y: TROPHY_BASE_Y } },
 };
 export const DOTS_DEBUG = DOTS.map((d, i) => ({
   i,
   src: SRC_SEATS[d.src],
-  dst: DST_SEATS[d.dst],
+  dst: ANN_SEATS[d.dst],
   launch: d.launch,
   land: d.land,
-  b: d.b,
-  cx: d.cx,
-  cy: d.cy,
+  p1: [d.p1x, d.p1y],
+  p2: [d.p2x, d.p2y],
   lean: d.lean,
+  leanAt: d.leanAt,
 }));
-export const WORLD_INK = {
-  trophy: { x0: tg2w(2, 0).x, x1: tg2w(22, 0).x, y0: tg2w(0, 2).y, y1: TROPHY_BASE.y },
-  ground: GROUND,
-  person: { x: PERSON_X, y: PERSON_Y, top: HEAD_TOP_Y },
-  crowd: CROWD,
-  mound: { x: TROPHY_BASE.x, y: TROPHY_BASE.y, rx: MOUND_RX, ry: MOUND_RY, baseClear: BASE_CLEAR },
-};
