@@ -32,6 +32,7 @@ import {
   worldTransform,
 } from "./fieldShared";
 import { DARK_TRAFFIC_OPACITY, arriveEase, packetsOn } from "./levelUp";
+import { CLAUDE } from "./brandGlyphs";
 
 export const FPS = 24;
 
@@ -59,8 +60,13 @@ export const DURATION = 220;
 //    them is the economy; the work flows back to the dot."
 //
 // VOCABULARY, fixed:
-//   the model      = ONE solid orange dot on the column axis, radius 2 x
-//                    DOT_RADIUS, ACCENT. It never moves off the axis.
+//   the model      = THE CLAUDE MARK, filled ACCENT, on the column axis: the
+//                    brandGlyphs 24-unit box drawn as inline <path>, 72 world
+//                    px across (73 screen px at the resolved k 1.02, 403 at the
+//                    opening 5.6), with iconShadow and the breath the core dot
+//                    always had. It never moves off the axis, it is in the
+//                    picture from f0, and it is the top of the z-order: no
+//                    lane, dot, packet or thread is ever drawn across it.
 //   its instances  = solid orange dots at DOT_RADIUS, ACCENT_DEEP at rest and
 //                    ACCENT once they have reached work.
 //   work           = six Lucide OUTLINE icons in station rings (R 64 world),
@@ -76,15 +82,16 @@ export const DURATION = 220;
 // gesture leads its word and overlaps its neighbour; nothing starts from a dead
 // stop and nothing in the piece is outside this list.
 //
-//  1. f0    "a model"          THE CORE. One orange dot at world (540, 960),
+//  1. f0    "a model"          THE CORE. The orange Claude mark at world (540, 960),
 //                              screen y 835 at every camera (CAM_LIFT). Alive
 //                              from frame 0: breath, micro-drift, grid parallax
 //                              and the camera's opening creep already running.
 //  2. f10-61 "will get to"      THE SPAWN. 100 instances leave the core on
 //           "all its instances" individual hashed arcs (arriveEase, tangential
 //           (f34/f42/f45)      bow, no two in unison) and seat into a feathered
-//                              blob r 42..148 around it — a clear 31 px ring is
-//                              left around the core so the model stays visible.
+//                              blob r 52..148 around it — a clear ring of the
+//                              mark's half-box + 16 is left around it so the
+//                              model is never buried by its own instances.
 //                              The first dots are out at f10 — on "a model WILL
 //                              GET TO", eighteen frames before "through", and
 //                              early enough that no 12-frame window of the piece
@@ -250,6 +257,25 @@ export const DURATION = 220;
 //     seat branch is written into the rule because it is what the mechanism
 //     means — the work takes the instance in — and the dissolve is that same
 //     take-in when the work is already staffed.
+//   * THE MARK REPLACES THE CORE DOT WITHOUT RE-TIMING ANYTHING. The three
+//     radii the picture needs around a 72 px mark — the blob's clear ring at
+//     half-box + 16 = 52, the lanes' inner end at half-box + 10 = 46, and the
+//     emergence at the half-box itself, 36 — are all applied where they are
+//     DRAWN and not in the flight tables, because every table here is keyed on
+//     a hashed index and any change to one deals a different world:
+//       - the blob's seat grid, its feather knee (BLOB_R0 42) and its selection
+//         hash are untouched; the clear ring is a radial push on the seats that
+//         fell inside 52, so the same hundred dots leave on the same frames
+//         down the same lanes and only those few sit further out.
+//       - CORE_EDGE stays 12, so a dot's path is the path it always had; the
+//         emergence is a gate on its DRAWN RADIUS by distance from the centre,
+//         0 inside 36 and 1 by 58. A dot therefore appears out of the mark's
+//         edge rather than out of its centre, and nothing past 58 px moves.
+//       - the return packets still parametrise on LANE_R0 34 (a shorter run
+//         would re-time every packet along all 231 px of lane) and are gated to
+//         nothing by LANE_IN 46, where they are already at 28% opacity.
+//     Measured against the frames before the change, the whole difference in
+//     this cut and in HiveMind lies inside 76 world px of the centre.
 //   * EVERY FLIGHT'S RADIAL SPEED IS CAPPED AGAINST THE CAMERA, not authored
 //     flat: the free stream moves at min(13, 42 / k) world px/frame off one
 //     shared cumulative-distance table, and a seater's flight is lengthened a
@@ -412,7 +438,43 @@ const SCREEN_TRAFFIC = 3.0; // 0.5x the outline
 export const STROKE = SCREEN_OUTLINE / K_REST;
 const DARK_TRAFFIC_STROKE = SCREEN_TRAFFIC / K_REST;
 export const DOT_R = DOT_RADIUS;
+/** The radius the core dot had before the mark replaced it. Kept because the
+ *  blob, the emergence and the lane inner ends are all written against the
+ *  MARK's half-box now, and this is the number they used to be written against. */
 export const CORE_R = 2 * DOT_RADIUS;
+
+// ---------------------------------------------------------------------------
+// THE MODEL IS THE CLAUDE MARK. The core dot is gone: the thing at the centre
+// of the world is the Claude sunburst, filled ACCENT, on `brandGlyphs`' 24-unit
+// em box drawn as inline <path> (never an <image>, which races frame capture).
+// It breathes on the same `breath(frame, 0.31)` the dot did, as a scale about
+// its own centre, and it is in the picture from frame 0.
+//
+//   MARK_BOX 72 world px  ->  73.4 screen px at the resolved k 1.02
+//                             403   screen px at the opening k 5.6
+// The mark is the top of the z-order, with the icons: nothing — no lane, no
+// thread, no dot, no packet — is ever drawn over it, and the three radii below
+// keep the picture clear of it as well.
+// ---------------------------------------------------------------------------
+export const MARK_BOX = 72;
+export const MARK_EDGE = MARK_BOX / 2; // 36
+/** The blob's clear ring: the mark's half-box + 16 world px of daylight. */
+export const BLOB_CLEAR = MARK_EDGE + 16; // 52
+/** The lane lines' inner end, and where a return packet stops: half-box + 10. */
+export const LANE_IN = MARK_EDGE + 10; // 46
+/** An instance EMERGES FROM THE MARK'S EDGE: its drawn radius is 0 inside the
+ *  mark's half-box and full 22 world px outside it. The flight tables are
+ *  untouched (see DEVIATIONS) — a dot's path still begins at CORE_EDGE — so
+ *  this is the whole of "out of the edge, not out of the centre" and it changes
+ *  nothing beyond 58 world px of the centre. */
+const EMERGE_SPAN = 22;
+const emerge = (rho: number) => smoothstep(clamp01((rho - MARK_EDGE) / EMERGE_SPAN));
+/** A return packet ENDS AT THE LANE'S INNER END: it is gone by LANE_IN and full
+ *  10 world px outside it. The packet run's own parametrisation still targets
+ *  LANE_R0 (see DEVIATIONS) — shortening the run would re-time every packet
+ *  along the whole 231 px of lane — so the ending is drawn, not re-timed. */
+export const laneGate = (x: number, y: number) =>
+  smoothstep(clamp01((Math.hypot(x - CORE.x, y - CORE.y) - LANE_IN) / 10));
 
 // ---------------------------------------------------------------------------
 // THE SIX LANES. The hexagonal directions rotated so none is vertical: a lane
@@ -478,8 +540,14 @@ const ICONS = [
 ];
 
 // ---------------------------------------------------------------------------
-// THE BLOB. A feathered ring of seats around the core with a clear 31 world px
-// of daylight inside it, so the model is never buried by its own instances.
+// THE BLOB. A feathered ring of seats around the core with a clear ring inside
+// it, so the model is never buried by its own instances. The ring is now the
+// MARK's: no seat sits closer to the centre than BLOB_CLEAR = half-box + 16.
+// BLOB_R0 stays 42 because it is the FEATHER's inner knee and the seat grid's
+// identity — the selection hashes on a seat's grid index, so moving the knee
+// would deal a different hundred dots and re-time the whole pour. The clear
+// ring is applied as a radial push on the seat itself: the ~handful of seats
+// that fell inside 52 are pushed out to it and everything else is untouched.
 // ---------------------------------------------------------------------------
 const BLOB_R0 = 42;
 const BLOB_R1 = 148;
@@ -505,9 +573,11 @@ const BLOB_SEATS: Seat[] = (() => {
       const inside = Math.min((BLOB_R1 + wob - rho) / 16, (rho - BLOB_R0) / 10);
       const f = feather(inside, 1);
       if (f <= 0 || hash(i, 71) >= f) continue;
+      // the clear ring around the mark
+      const push = rho > 1e-6 && rho < BLOB_CLEAR ? BLOB_CLEAR / rho : 1;
       out.push({
-        x,
-        y,
+        x: CORE.x + dx * push,
+        y: CORE.y + dy * push,
         r:
           (0.85 + 0.35 * hash(i, 13)) *
           (0.72 + 0.28 * f) *
@@ -1303,6 +1373,17 @@ export const buildWorld = (frame: number, opts: WorldOpts = {}): World => {
     }
   }
 
+  // -- the emergence ----------------------------------------------------------
+  // Every instance comes OUT OF THE MARK'S EDGE. A dot's drawn radius is gated
+  // on its distance from the centre: nothing exists inside the mark's half-box
+  // and a dot is full size 22 world px outside it. It is applied here, once,
+  // after all three populations, so the blob's arcs, the seaters' lane runs and
+  // the free stream all emerge the same way.
+  for (const d of live) {
+    const e = emerge(Math.hypot(d.x - CORE.x, d.y - CORE.y));
+    if (e < 1) d.r *= e;
+  }
+
   return { live, traffic };
 };
 
@@ -1372,14 +1453,20 @@ export const WorldSvg: React.FC<{
             {laneU > 0 ? (
               <g style={{ filter: icon }}>
                 {LANE_D.map((d, s) => {
+                  // The growing tip keeps its ORIGINAL parametrisation (off
+                  // LANE_R0): the group carries iconShadow, and an SVG filter
+                  // re-rasterises on a grid taken from its own bounding box, so
+                  // moving the tip by a fraction of a pixel while the lane draws
+                  // would resample the whole group and show up as a hairline
+                  // difference along every lane. Only the INNER end moves.
                   const r1 = LANE_R0 + (laneR1(s) - LANE_R0) * laneU;
                   return (
                     <line
                       key={`l${s}`}
-                      x1={CORE.x + d.x * LANE_R0}
-                      y1={CORE.y + d.y * LANE_R0}
-                      x2={CORE.x + d.x * r1}
-                      y2={CORE.y + d.y * r1}
+                      x1={CORE.x + d.x * LANE_IN}
+                      y1={CORE.y + d.y * LANE_IN}
+                      x2={CORE.x + d.x * Math.max(r1, LANE_IN)}
+                      y2={CORE.y + d.y * Math.max(r1, LANE_IN)}
                       stroke={ink}
                       strokeWidth={STROKE}
                       strokeLinecap="round"
@@ -1550,22 +1637,34 @@ export const WorldSvg: React.FC<{
                       cy={p.y}
                       r={DOT_R * 0.8}
                       fill={accent}
-                      opacity={OP_FG * (1 - smoothstep(clamp01((p.u - 0.85) / 0.15)))}
+                      opacity={
+                        OP_FG *
+                        laneGate(p.x, p.y) *
+                        (1 - smoothstep(clamp01((p.u - 0.85) / 0.15)))
+                      }
                     />
                   ));
                 })
               : null}
 
-            {/* THE MODEL. One dot, on the axis, from the first frame to the
-                last. Everything else in the piece came out of it. */}
-            <circle
-              cx={CORE.x}
-              cy={CORE.y}
-              r={CORE_R * breath(frame, 0.31)}
-              fill={accent}
-              opacity={dotOpacity * OP_FG}
+            {/* THE MODEL. The Claude mark, orange, on the axis, from the first
+                frame to the last. Everything else in the piece came out of it.
+                Inline <path> on the brandGlyphs 24-unit box, scaled about its
+                own centre by the breath the core dot always had, top of the
+                z-order with the icons. */}
+            <g
+              transform={
+                `translate(${CORE.x} ${CORE.y}) ` +
+                `scale(${((MARK_BOX / 24) * breath(frame, 0.31)).toFixed(5)}) ` +
+                `translate(-12 -12)`
+              }
               style={{ filter: icon }}
-            />
+              opacity={dotOpacity * OP_FG}
+            >
+              {CLAUDE.paths.map((d, i) => (
+                <path key={`m${i}`} d={d} fill={accent} fillRule="evenodd" />
+              ))}
+            </g>
           </svg>
   );
 };
@@ -1673,7 +1772,22 @@ export const STATS = {
   strokeScreen: Number((STROKE * K_REST).toFixed(2)),
   dotR: DOT_R,
   dotScreen: Number((2 * DOT_R * K_REST).toFixed(2)),
-  coreScreen: Number((2 * CORE_R * K_REST).toFixed(2)),
+  // the mark: its em box on screen at the resolved zoom and at the opening one
+  markBox: MARK_BOX,
+  markScreenRest: Number((MARK_BOX * K_REST).toFixed(1)),
+  markScreenOpen: Number((MARK_BOX * CAM.K[0]).toFixed(1)),
+  blobClear: BLOB_CLEAR,
+  laneIn: LANE_IN,
+  // how many blob seats the clear ring actually moved, and by how far
+  blobPushed: (() => {
+    const moved = BLOBS.filter((b) => {
+      const S = BLOB_SEATS[b.seat];
+      return Math.abs(Math.hypot(S.x - CORE.x, S.y - CORE.y) - BLOB_CLEAR) < 1e-6;
+    }).length;
+    return moved;
+  })(),
+  // the last frame any blob dot is alive: past it the blob cannot differ
+  blobLast: Number(Math.max(...BLOBS.map((b) => (isFinite(b.fAbs) ? b.fAbs : 0))).toFixed(1)),
   stationR: R_ST.map((r) => Number(r.toFixed(1))),
   laneRank: LANE_RANK,
   econScreenR: Number((ECON_R * K_REST).toFixed(1)),
@@ -1750,7 +1864,7 @@ export const STATS = {
   })(),
 };
 export const WORLD_INK = {
-  core: { ...CORE, r: CORE_R },
+  core: { ...CORE, r: MARK_EDGE, box: MARK_BOX },
   stations: STATION.map((s, i) => ({ ...s, r: STATION_R, lane: i })),
   econ: { ...CORE, r: ECON_R },
   blob: { r0: BLOB_R0, r1: BLOB_R1 },

@@ -37,6 +37,7 @@ import {
   EMIT_F1,
   K_REST,
   LANE_D,
+  LANE_IN,
   LANE_RANK,
   LANE_R0,
   NL,
@@ -51,6 +52,7 @@ import {
   buildFrees,
   buildMill,
   buildWorld,
+  laneGate,
   laneR1,
 } from "./MillionsOfYears";
 
@@ -79,7 +81,10 @@ export const DURATION = 105;
 //
 // VOCABULARY. Everything here is INHERITED from cut 1 and means exactly what it
 // meant there — this cut adds one word and nothing else:
-//   the core        = the model. One solid orange dot on the column axis.
+//   the core        = the model. The orange CLAUDE MARK on the column axis, 72
+//                     world px across, inherited from cut 1 through the shared
+//                     world; the six core threads land on the lanes' inner ends
+//                     rather than on it, so nothing is drawn across the mark.
 //   small orange dots = its instances, pouring endlessly down six lanes.
 //   white rings + Lucide icons = the six kinds of work.
 //   white lanes / ring = the structure; the ring is the economy.
@@ -240,6 +245,13 @@ export const DURATION = 105;
 //     packet is a ripe disc 5.0 screen px across against the thread's 3.0 px
 //     stroke, i.e. 2 px prouder than the line it runs on. The thread is already
 //     ACCENT, so there is no tone left to be ahead of.
+//   * THE SIX CORE THREADS END AT THE LANES' INNER ENDS (LANE_IN, the mark's
+//     half-box + 10 = 46 world px), because the centre is the Claude mark now.
+//     The bowed curve is unchanged — it is CUT where it crosses that radius,
+//     solved per frame by bisection off the thread's live endpoints — so the
+//     wire still comes down its own lane, its head parks on the lane's inner
+//     end, and its packets stop there too. Nothing outside 46 world px of the
+//     centre moves.
 //   * THE LONG THREADS ARE ARCS, not straight chords: r is interpolated between
 //     the two endpoints with a +34 world px bulge, which tops out at ~450 world
 //     px against the economy ring's 457, so a long thread runs just inside the
@@ -814,6 +826,14 @@ const arcPoint = (
   return { x: CORE.x + Math.cos(a) * r, y: CORE.y + Math.sin(a) * r };
 };
 
+/** A CORE thread ends at its lane's INNER END, not at the centre: the mark is
+ *  there now. The curve itself is untouched — the same bowed run from the
+ *  annulus' innermost dot toward the core — and it is simply cut where it
+ *  crosses LANE_IN, so the wire lands on the lane's inner end and nothing is
+ *  drawn across the mark. Solved per frame off the thread's LIVE endpoints, by
+ *  bisection on a distance that falls monotonically along the bow. */
+const CORE_END_STEPS = 22;
+
 const HiveMind: React.FC<Props> = ({
   ink,
   accent,
@@ -894,11 +914,37 @@ const HiveMind: React.FC<Props> = ({
         ? bowPoint(d.A, d.B, d.t.bulge, u)
         : { x: d.A.x + (d.B.x - d.A.x) * u, y: d.A.y + (d.B.y - d.A.y) * u };
 
+  /** The draw parameter at which a core thread meets LANE_IN. 1 for every
+   *  other kind, so nothing else is clipped. */
+  const endU = (d: Drawn) => {
+    if (d.t.kind !== "core") return 1;
+    const rAt = (u: number) => {
+      const p = pointOn(d, u);
+      return Math.hypot(p.x - CORE.x, p.y - CORE.y);
+    };
+    let lo = 0;
+    let hi = 1;
+    if (rAt(0) <= LANE_IN) return 0;
+    for (let i = 0; i < CORE_END_STEPS; i++) {
+      const m = (lo + hi) / 2;
+      if (rAt(m) > LANE_IN) lo = m;
+      else hi = m;
+    }
+    return lo;
+  };
+
   const pathOf = (d: Drawn) => {
     if (d.t.kind === "intra") {
       const p = pointOn(d, d.u);
       return `M${d.A.x.toFixed(2)} ${d.A.y.toFixed(2)}L${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
     }
+    // The curve itself is the one cut 1's world drew: the same 12 vertices over
+    // the same span. A core thread is CUT at LANE_IN by a clip, not by dropping
+    // vertices — a stroked path is rasterised into a mask aligned to its own
+    // bounding box, so shortening the geometry re-aligns that mask and shows up
+    // as a hairline seam along the WHOLE thread (measured: 4,999 changed pixels
+    // against 401 when the path is left alone). A clip leaves the mask where it
+    // was and removes only what is inside the disc.
     const steps = 12;
     let s = "";
     for (let i = 0; i <= steps; i++) {
@@ -907,10 +953,25 @@ const HiveMind: React.FC<Props> = ({
     }
     return s;
   };
-  const headOf = (d: Drawn) => pointOn(d, d.u);
+  const headOf = (d: Drawn) => pointOn(d, Math.min(d.u, endU(d)));
+
+  /** Everything but a disc of LANE_IN around the centre: where the mark is, no
+   *  thread and no signal is drawn. Applied per element, so paint order is
+   *  exactly the order it was. */
+  const CORE_CLIP = "hm-core-clip";
+  const clipD =
+    `M-2000 -2000H3080V3920H-2000Z ` +
+    `M${(CORE.x - LANE_IN).toFixed(2)} ${CORE.y}` +
+    `A${LANE_IN} ${LANE_IN} 0 1 0 ${(CORE.x + LANE_IN).toFixed(2)} ${CORE.y}` +
+    `A${LANE_IN} ${LANE_IN} 0 1 0 ${(CORE.x - LANE_IN).toFixed(2)} ${CORE.y}Z`;
 
   const web = (
     <g>
+      <defs>
+        <clipPath id={CORE_CLIP} clipRule="evenodd">
+          <path d={clipD} clipRule="evenodd" />
+        </clipPath>
+      </defs>
       {drawn.map((d) => (
         <path
           key={d.t.key}
@@ -920,6 +981,7 @@ const HiveMind: React.FC<Props> = ({
           strokeWidth={THREAD_STROKE}
           strokeLinecap="round"
           opacity={d.op}
+          clipPath={d.t.kind === "core" ? `url(#${CORE_CLIP})` : undefined}
         />
       ))}
       {drawn.map((d) =>
@@ -960,7 +1022,9 @@ const HiveMind: React.FC<Props> = ({
           opacity: 1,
           seed: d.idx + 11,
         });
+        const uMax = endU(d);
         return ps.map((p, n) => {
+          if (p.u > uMax) return null; // a core thread's signal ends at the lane's inner end
           const q = pointOn(d, p.u);
           return (
             <circle
@@ -999,7 +1063,10 @@ const HiveMind: React.FC<Props> = ({
                 r={DOT_R * 0.8}
                 fill={accent}
                 opacity={
-                  OP_FG * tick * (1 - smoothstep(clamp01((p.u - 0.85) / 0.15)))
+                  OP_FG *
+                  tick *
+                  laneGate(p.x, p.y) *
+                  (1 - smoothstep(clamp01((p.u - 0.85) / 0.15)))
                 }
               />
             ));
