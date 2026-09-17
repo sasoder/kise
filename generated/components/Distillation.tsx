@@ -30,7 +30,36 @@ import {
   wobble,
   worldTransform,
 } from "./fieldShared";
+import { CLAUDE, DEEPSEEK, type BrandGlyph } from "./brandGlyphs";
 import { DARK_TRAFFIC_OPACITY, Trail, arriveEase } from "./levelUp";
+
+// ---------------------------------------------------------------------------
+// A brand mark, drawn as its own `<path>` elements inside the world SVG —
+// never an `<image>` or an `<Img>`, which race frame capture and flash for a
+// frame or two. This is `claudeDistilledShared`'s `Glyph` helper copied
+// verbatim (that module is another clip's world and is not imported here):
+// uniform scale about the 24-unit box's centre (12, 12), so `size` IS the em
+// box and CLAUDE and DEEPSEEK read as one family at any zoom.
+// ---------------------------------------------------------------------------
+const fmt = (v: number) => String(Number(v.toFixed(3)));
+
+const Glyph: React.FC<{
+  glyph: BrandGlyph;
+  x: number;
+  y: number;
+  size: number;
+  ink: string;
+  opacity?: number;
+}> = ({ glyph, x, y, size, ink, opacity = 1 }) => (
+  <g
+    transform={`translate(${fmt(x)} ${fmt(y)}) scale(${(size / 24).toFixed(5)}) translate(-12 -12)`}
+    opacity={opacity}
+  >
+    {glyph.paths.map((d, i) => (
+      <path key={i} d={d} fill={ink} fillRule="evenodd" />
+    ))}
+  </g>
+);
 
 export const FPS = 24;
 
@@ -58,33 +87,48 @@ export const DURATION = 206;
 
 // ---------------------------------------------------------------------------
 // SOUND-OFF READING TEST — one sentence:
-//   "a person pings a big model wrapped in its data; a thin fraction of that
-//    data comes down the wire into an empty ring; the ring's contents collapse
-//    into a new model."
+//   "a person pings CLAUDE, wrapped in its data; a thin fraction of that data
+//    comes down the wire into an empty ring; the ring's contents collapse into
+//    the DEEPSEEK mark, and that mark throws off six more of itself."
 //
 // VOCABULARY, fixed, and the same meanings as the clip's other cuts:
-//   the model        = ONE large solid orange dot at 2 x DOT_R, on the column
-//                      axis at the top. ACCENT.
+//   the model        = the CLAUDE mark, drawn as its own paths on the 24-unit
+//                      em box at MARK_EM 72 world px, filled ACCENT, with the
+//                      per-icon shadow, breathing as a scale about its centre.
+//                      It sits on the column axis at the top and is the top of
+//                      the z-order — the blob never covers it.
 //   deployment data  = a feathered blob of 140 solid small orange dots
-//                      (ACCENT_DEEP at rest) milling around the model, with a
-//                      clear ~24 world px ring of daylight around the core, so
-//                      the model is never buried by its own data.
+//                      (ACCENT_DEEP at rest) milling around the mark, with a
+//                      clear MARK_EM/2 + 16 = 52 world px of daylight inside
+//                      it, so the blob SURROUNDS the mark and never buries it.
 //   the person       = person.png, white, filled, iconShadow, a 118 screen px
 //                      box at the resolved camera — the set's human glyph.
 //   the wire         = one thin white VERTICAL line on the column axis, at the
 //                      set's one stroke weight.
 //   a ping           = a WHITE packet (ink, not orange) travelling UP the wire.
-//   the next model   = an empty WHITE ring (R 84 world) at the bottom that
-//                      fills with the fraction and collapses to a new core dot.
-// No text, no arrows, no flags, no icons. Orange means "the model and its data"
-// and nothing else; white means ink, the person, and the ping.
+//   the next model   = an empty WHITE ring (R 84 world) at the bottom. It is
+//                      EMPTY AND WHITE until the fraction lands in it; there is
+//                      no DeepSeek mark anywhere in the frame before f157.
+//                      The fraction seats in it, and the seated dots then BUILD
+//                      the DEEPSEEK mark at its centre — the mark grows by area
+//                      with each dot it swallows and lands full size (the same
+//                      MARK_EM 72 as Claude, ink ~72 x 53) and ACCENT on
+//                      "generation". The ring stays as its halo, ripe.
+//   the next gen.    = six SMALL DeepSeek marks at 0.62 x MARK_EM (44.6 world,
+//                      40.2 screen), thrown off the big mark's edge on
+//                      individual arcs and seated in a LOOSE FAN out to its
+//                      right and upper right, 210-300 world px from the ring's
+//                      centre, no two closer than 60 world px.
+// No text, no arrows, no flags, no rings around the small marks, no lines
+// between them. Orange means "the model and its data" and nothing else; white
+// means ink, the person, and the ping.
 //
 // ---------------------------------------------------------------------------
 // GESTURES — one continuous motion, words are inflections, nothing starts from
 // rest. Every gesture in the piece is on this list and nothing else happens.
 //
 //  1. f0-f19   "this is basically what" THE MODEL AND ITS DATA. Opens at k 1.90
-//              on the big model inside its milling blob. The mill, the
+//              on the CLAUDE mark inside its milling blob. The mill, the
 //              micro-drift, the breath, the crowd's dark traffic and the grid's
 //              parallax all run from frame 0, and the camera is already creeping
 //              down the axis (k 1.90 -> 1.83, c 460 -> 480 over f0-26). The wire
@@ -128,24 +172,51 @@ export const DURATION = 206;
 //              (f126) and -> ACCENT six frames later. Camera: one slow creep in
 //              toward the ring, k 1.19 -> 1.30 over f104-f144 with c easing to
 //              935, so the eye is on the fraction arriving.
-//  5. f148-f185 "and then they train their next generation of models on it"
-//              (train f155 · next f163 · generation f167 · models f178)
-//              THE COLLAPSE. The seated dots pull inward from f148, leading
-//              "train" by seven — each on its own hashed arriveEase over 10
-//              frames, the OUTER ones first on a nine-frame wave — dissolving as
-//              they go and merging at the ring's centre into ONE new core dot
-//              that grows BY AREA with each dot it swallows
-//              (r = CORE_R * sqrt(n / 30)). It reaches 2 x DOT_R — the same size
-//              as the model up top — at f166.5, half a frame before
-//              "generation", and holds. The ring stays as its halo, ripe. The
-//              person's wake lift settles back f168-f186. The camera's release:
-//              one eased pull-back f150-f188 to the resolved k with c on the
-//              content centre, so on "models on it" the whole column reads at
-//              once — the model in its thinner blob, the wire, the person, the
-//              new model in its ring.
-//  6. f185-f206 THE TAIL. The blob mills, the new core breathes, the dark
-//              traffic on the wire and in the crowds thins to 60% on "models"
-//              (f178), and the camera keeps its decaying drift. Nothing else.
+//  5. f148-f167 "and then they train their next generation"
+//              (train f155 · next f163 · generation f167)
+//              THE COLLAPSE BUILDS THE DEEPSEEK MARK. The seated dots pull
+//              inward from f147.2, leading "train" by eight — each on its own
+//              hashed arriveEase over 10 frames, the OUTER ones first on a
+//              nine-frame wave — shrinking as they go and being ABSORBED INTO
+//              THE MARK'S EDGE (each dot's target is the point where its own
+//              radius meets the mark's ink ellipse, not the bare centre). The
+//              mark itself appears at the ring's centre on the FIRST merge
+//              (f157.2) at 0.3 of its em box, ACCENT_DEEP, and grows BY AREA
+//              with every dot it swallows — size = MARK_EM * sqrt(n / 30),
+//              floored at 0.3 — reaching the full MARK_EM 72 (ink 72 x 52.98,
+//              6.5 world px of daylight inside the R 84 ring) and full ACCENT on
+//              the last merge at f166.5, half a frame before "generation".
+//              The ring stays as its halo, ripe. The person's wake lift settles
+//              back f168-f186. The camera's release: one eased pull-back
+//              f150-f188 to the resolved k with c on the content centre, so the
+//              whole column reads at once.
+//  6. f170-f200 "…of models on it" (models f178 · on f181 · it f185)
+//              THE NEXT GENERATION. Six SMALL DeepSeek marks come OUT of the big
+//              one. Each spawns on the big mark's ink edge at 0.1 of the em box,
+//              scales up on its own arriveEase flight out along a bowed arc,
+//              deep -> ripe as it goes, and seats at 0.62 of the em box (44.6
+//              world, 40.2 screen) at a hashed radius 210-300 world from the
+//              ring's centre on hashed angles -25 deg to +80 deg across the
+//              right and upper right — the person has the left. The seats are
+//              walked up the arc until no two are closer than 60 world px, so
+//              the six read as a loose fan the ring has thrown off rather than
+//              specks huddled against it (measured minimum spacing 73.3 world).
+//              Each flight is solved from its OWN arc length (len / 11.5 frames,
+//              19-23 f) and capped so the last mark is seated by f201; measured
+//              peak head speed 20.19 screen px/f, well inside the 45 ceiling.
+//              Launches are unchanged, spread f170-f186 with hashed jitter:
+//              never in unison. They seat and then just sit, breathing on hashed
+//              `breath` with their own micro-drift. No lines, no rings, no
+//              labels on them.
+//  7. f185-f206 THE TAIL. The blob mills, both marks breathe, the dark traffic
+//              on the wire and in the crowds thins to 60% on "models" (f178),
+//              the last small marks arrive, and the camera keeps its decaying
+//              drift. Nothing else.
+//
+// Z-ORDER, bottom to top: the wire · the ring · dark traffic · the blob's back
+// rung · the blob's front rung · the DEEPSEEK mark · the six small DeepSeek
+// marks · the pings · the CLAUDE mark (top: the blob mills over the wire and
+// over itself, but never over either brand mark).
 //
 // ---------------------------------------------------------------------------
 // LIVENESS — mechanisms, not gestures. None is on a word and none ever stops,
@@ -205,7 +276,8 @@ export const DURATION = 206;
 //   wire = ring    = SCREEN_OUTLINE 6.0 / K_REST  = 6.667 world px  (6.00 screen)
 //   person box     = SCREEN_PERSON 118 / K_REST   = 131.11 world px (118.0 screen)
 //   dot DIAMETER   = SCREEN_DOT 14 / K_REST       = 15.55 world px  (14.0 screen)
-//   core radius    = 2 x DOT_R                    = 15.55 world     (28.0 screen)
+//   brand mark em  = MARK_EM 72 world                              (64.8 screen)
+//   small mark em  = 0.62 x MARK_EM = 44.64 world                  (40.2 screen)
 //   dark traffic   = SCREEN_TRAFFIC 3.0 / K_REST  = 3.333 world px  (3.00 screen)
 //   ring R 84 world                                                 (75.6 screen)
 //
@@ -216,6 +288,14 @@ export const DURATION = 206;
 // screen y 389.2 to 1291.0 — 89 px of clearance above the band's 300 and 79
 // below its 1370, with the camera's own +-5 px sway already in the number. The
 // person's head lands at 1116.1 and his feet at 1215.4.
+//
+// THE SMALL MARKS AND THE BAND. The six marks are the only ink added after the
+// band was solved, so they are constrained to it rather than the other way
+// round: no seat is allowed below the ring's own bottom edge (world 1304), and
+// at 0.62 x MARK_EM the deepest a seat can sit is RING.y + 84 - ry, ry = 16.42,
+// so the downward angle is re-solved at each radius (see DEVIATIONS). Their extents at the
+// resolved camera are measured every frame in STATS.small and printed there:
+// screen x, screen y and the peak head speed of every flight.
 //
 // ---------------------------------------------------------------------------
 // DEVIATIONS from the brief, with the arithmetic.
@@ -266,6 +346,22 @@ export const DURATION = 206;
 //     allows; 1-2 per ping would put 9 dots in the ring and the ring would not
 //     read as filled. The five leave on a 0-3.2 frame hashed stagger, so a knock
 //     is a small burst off the underside rather than five dots in a row.
+//   * THE SMALL MARKS' FLOOR IS RE-SOLVED AS AN ANGLE AT EACH RADIUS. The band
+//     is -25 deg to +80 deg, but "none below the ring's bottom edge" is the hard
+//     constraint and the bigger ink makes it bite: the ring's bottom edge is
+//     world 1304 and a seat's own ink half-height is now 0.62 x 26.49 = 16.42,
+//     so a seat centre may sit at most 67.58 world px below the ring's centre.
+//     At radius 210 that is theta >= -18.8 deg, at 300 theta >= -13.0 deg, so
+//     the minimum angle is solved per radius (`smallAngMin`) and SMALL_Y_MAX is
+//     kept as a hard floor underneath it. The lowest seat resolves at -14.6 deg
+//     on radius 268 and its ink bottom lands exactly on world 1304 — on the
+//     edge, never under it (STATS.small.worldBottom == ringBottom).
+//     SEPARATION. Six seats on evenly spread angles with +-4.5 deg of hashed
+//     jitter can still bunch, so each seat is walked UP its own arc in 1.25 deg
+//     steps until it clears every seat already placed by 60 world px. Measured
+//     minimum spacing 73.3 world. The resolved screen box is 576.7..822.8 in x
+//     and 945.1..1291.0 in y — inside the frame's right edge (1040) and inside
+//     the caption band's 300..1370 — so the camera did not have to move.
 //   * THE WIRE'S DARK TRAFFIC STARTS AT f138, NOT AT THE WIRE'S LANDING. Dark
 //     traffic in this set is accent at 0.12, and accent moving down the wire
 //     says "data is coming down it". Before f102 nothing has left the model, so
@@ -464,7 +560,18 @@ const STROKE = SCREEN_OUTLINE / K_REST;
 const DARK_TRAFFIC_STROKE = SCREEN_TRAFFIC / K_REST;
 const GLYPH = SCREEN_PERSON / K_REST;
 const DOT_R = SCREEN_DOT / 2 / K_REST;
-const CORE_R = 2 * DOT_R;
+
+// ---------------------------------------------------------------------------
+// THE BRAND MARKS. Both are drawn on the same 24-unit em box at MARK_EM world
+// px, so Claude at the top and DeepSeek at the bottom are the same family at
+// the same size — the cut's whole argument is that one becomes the other.
+// DeepSeek's ink is 24 x 17.66 inside its box, so its ink measures
+// 72 x 52.98 world and sits inside the R 84 ring with 6.5 px of daylight.
+// ---------------------------------------------------------------------------
+const MARK_EM = 72;
+const MARK_HALF = MARK_EM / 2; // 36
+const DS_INK_RATIO = 17.66 / 24;
+const DS_RY = (MARK_EM * DS_INK_RATIO) / 2; // 26.49
 
 // The person's ink inside its box (measured off person.png once, in cut 2 of
 // this clip). He stands LEFT of the ring with his feet on its centre line.
@@ -498,7 +605,9 @@ const SETTLE_F1 = 186;
 // THE BLOB — the model's deployment data. A feathered ring of seats around the
 // core with a clear 24 world px of daylight inside it.
 // ---------------------------------------------------------------------------
-const BLOB_R0 = CORE_R + 24;
+// The clear ring of daylight is half the mark's em box plus 16 world px, so the
+// blob surrounds the CLAUDE mark instead of crowding its outline.
+const BLOB_R0 = MARK_HALF + 16;
 const BLOB_STEP = 2.45 * DOT_R;
 const N_BLOB = 140;
 
@@ -839,14 +948,173 @@ const COLLAPSE: { start: number; merge: number }[] = (() => {
   });
 })();
 const MERGE_SORTED = COLLAPSE.map((c) => c.merge).sort((a, b) => a - b);
-const newCoreR = (frame: number) => {
+
+/** How many of the ring's dots the new mark has swallowed by `frame`. */
+const mergedBy = (frame: number) => {
   let n = 0;
   for (const m of MERGE_SORTED) {
     if (frame >= m) n++;
     else break;
   }
-  return CORE_R * Math.sqrt(n / N_FRACTION);
+  return n;
 };
+
+// ---------------------------------------------------------------------------
+// THE DEEPSEEK MARK. It is not there at all until the first dot reaches the
+// centre; from that frame it is a mark, and it grows BY AREA with every dot it
+// swallows until it is the same em box as Claude at the top.
+// ---------------------------------------------------------------------------
+const DS_S0 = 0.3; // the size it appears at, as a fraction of the em box
+const DS_BORN = MERGE_SORTED[0];
+const DS_FULL = MERGE_SORTED[MERGE_SORTED.length - 1];
+
+const dsSize = (frame: number) => {
+  const n = mergedBy(frame);
+  if (n <= 0) return 0;
+  return MARK_EM * Math.max(DS_S0, Math.sqrt(n / N_FRACTION));
+};
+/** deep -> ripe across the build, so the mark is ACCENT on the last merge. */
+const dsTone = (frame: number) => smoothstep(clamp01((frame - DS_BORN) / (DS_FULL - DS_BORN)));
+
+/** Where a collapsing dot is absorbed: the point on the mark's ink ellipse in
+ *  the dot's own direction, so dots go INTO the mark's edge, not under it. */
+const ABSORB = 0.82;
+const absorbPoint = (sx: number, sy: number, size: number) => {
+  const dx = sx - RING.x;
+  const dy = sy - RING.y;
+  if (size <= 0) return { x: RING.x, y: RING.y };
+  const rx = (size / 2) * ABSORB;
+  const ry = ((size * DS_INK_RATIO) / 2) * ABSORB;
+  const t = 1 / Math.max(1e-6, Math.hypot(dx / rx, dy / ry));
+  if (t >= 1) return { x: sx, y: sy };
+  return { x: RING.x + dx * t, y: RING.y + dy * t };
+};
+
+// ---------------------------------------------------------------------------
+// THE NEXT GENERATION. Six small DeepSeek marks come out of the big one from
+// f170: each spawns on its ink edge at 0.1 of the em box, flies out on its own
+// bowed arc growing to 0.62, and seats in a LOOSE FAN thrown off to the right
+// and upper right of the ring — radius 210-300 world, no two seats closer than
+// 60 world px. Individual, never in unison, no lines and no rings.
+// ---------------------------------------------------------------------------
+const SMALL_N = 6;
+const SMALL_SCALE = 0.62; // 44.64 world em — 40.2 screen at K_REST
+const SMALL_S0 = 0.1;
+const SMALL_F0 = 170;
+const SMALL_SPAN = 16; // last launch f186 — "models" (f178) plus eight
+const SMALL_ANG0 = -25; // degrees from horizontal; re-solved per radius below
+const SMALL_ANG1 = 80;
+const SMALL_R0 = 210;
+const SMALL_R1 = 300;
+const SMALL_SEP = 60; // minimum centre-to-centre spacing between seats, world
+/** The ring's own bottom edge, less a small mark's ink half-height. */
+const SMALL_Y_MAX = RING.y + RING_R - SMALL_SCALE * DS_RY;
+/** How far below the ring's CENTRE a seat centre may sit: 84 - 16.42 = 67.58. */
+const SMALL_DROP = RING_R - SMALL_SCALE * DS_RY;
+/** The floor, re-solved as an angle at each radius, so a bigger mark on a
+ *  longer arm is lifted rather than clipped by SMALL_Y_MAX. */
+const smallAngMin = (rad: number) =>
+  Math.max(SMALL_ANG0, (Math.asin(Math.max(-1, -SMALL_DROP / rad)) * 180) / Math.PI);
+
+type Small = {
+  born: number;
+  flight: number;
+  deg: number;
+  rad: number;
+  x: number;
+  y: number;
+  bow: number;
+  seed: number;
+};
+
+const SMALLS: Small[] = (() => {
+  const out: Small[] = [];
+  for (let i = 0; i < SMALL_N; i++) {
+    const span = SMALL_N - 1;
+    const rad = SMALL_R0 + (SMALL_R1 - SMALL_R0) * hash(i, 313);
+    const base =
+      SMALL_ANG0 + ((SMALL_ANG1 - SMALL_ANG0) * i) / span + (hash(i, 312) - 0.5) * 9;
+    const lo = smallAngMin(rad);
+    // walk the seat up the arc until it clears every seat already placed
+    let deg = Math.min(SMALL_ANG1, Math.max(lo, base));
+    let x = RING.x + Math.cos((deg * Math.PI) / 180) * rad;
+    let y = Math.min(RING.y - Math.sin((deg * Math.PI) / 180) * rad, SMALL_Y_MAX);
+    for (let t = 0; t < 64; t++) {
+      const d = Math.min(SMALL_ANG1, Math.max(lo, base + t * 1.25));
+      const a = (d * Math.PI) / 180;
+      const px = RING.x + Math.cos(a) * rad;
+      const py = Math.min(RING.y - Math.sin(a) * rad, SMALL_Y_MAX);
+      deg = d;
+      x = px;
+      y = py;
+      if (out.every((s) => Math.hypot(px - s.x, py - s.y) >= SMALL_SEP)) break;
+    }
+    const born = SMALL_F0 + (SMALL_SPAN * i) / span + (hash(i, 311) - 0.5) * 2.2;
+    // the arc is longer now, so the flight is solved from its own length and
+    // then capped so the last mark is still seated by ~f200
+    const A = absorbPoint(x, y, MARK_EM);
+    const len = Math.hypot(x - A.x, y - A.y);
+    out.push({
+      born,
+      flight: Math.max(12, Math.min(201 - born, len / 11.5)),
+      deg,
+      rad,
+      x,
+      y,
+      bow: (hash(i, 315) - 0.5) * 2 * 34,
+      seed: hash(i, 316),
+    });
+  }
+  return out;
+})();
+
+/** A small mark's position and em size at `frame`. */
+const smallAt = (s: Small, frame: number) => {
+  const u = arriveEase(clamp01((frame - s.born) / s.flight), 0.08);
+  const A = absorbPoint(s.x, s.y, MARK_EM); // its birthplace on the big mark's edge
+  const dx = s.x - A.x;
+  const dy = s.y - A.y;
+  const L = Math.hypot(dx, dy) || 1;
+  const bow = Math.sin(Math.PI * u) * s.bow;
+  return {
+    u,
+    x: A.x + dx * u + (-dy / L) * bow,
+    y: A.y + dy * u + (dx / L) * bow,
+    size: MARK_EM * (SMALL_S0 + (SMALL_SCALE - SMALL_S0) * u),
+  };
+};
+
+const SMALL_STATS = (() => {
+  let peak = 0;
+  let peakAt = 0;
+  let minX = 1e9;
+  let maxX = -1e9;
+  let minY = 1e9;
+  let maxY = -1e9;
+  for (const s of SMALLS) {
+    for (let f = Math.ceil(s.born); f <= DURATION; f++) {
+      const a = smallAt(s, f - 1);
+      const b = smallAt(s, f);
+      const pa = screenAt(f - 1, a.x, a.y);
+      const pb = screenAt(f, b.x, b.y);
+      const v = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]);
+      if (f > s.born && v > peak) {
+        peak = v;
+        peakAt = f;
+      }
+    }
+    const e = smallAt(s, DURATION);
+    const rx = e.size / 2;
+    const ry = (e.size * DS_INK_RATIO) / 2;
+    const p0 = screenAt(LAST, e.x - rx, e.y - ry);
+    const p1 = screenAt(LAST, e.x + rx, e.y + ry);
+    minX = Math.min(minX, p0[0]);
+    maxX = Math.max(maxX, p1[0]);
+    minY = Math.min(minY, p0[1]);
+    maxY = Math.max(maxY, p1[1]);
+  }
+  return { peak, peakAt, minX, maxX, minY, maxY };
+})();
 
 // ---------------------------------------------------------------------------
 // THE MILL. In the blob from f0 to the last frame, and in the ring's disc from
@@ -1084,8 +1352,10 @@ const Distillation: React.FC<Props> = ({
     } else {
       const S = DISC[fall.disc];
       const u = arriveEase(clamp01((frame - col.start) / COLLAPSE_DUR));
-      x = S.x + (RING.x - S.x) * u;
-      y = S.y + (RING.y - S.y) * u;
+      // absorbed into the mark's EDGE, not into a bare centre point
+      const T = absorbPoint(S.x, S.y, dsSize(frame));
+      x = S.x + (T.x - S.x) * u;
+      y = S.y + (T.y - S.y) * u;
       tone = 1;
       r = baseR * (1 - 0.8 * u * u); // it dissolves into the core it is feeding
     }
@@ -1179,7 +1449,14 @@ const Distillation: React.FC<Props> = ({
   const ripeT = clamp01((frame - (RING_DEEP_AT + RIPE_LAG)) / RIPE_DUR);
   const ringColour =
     frame >= RING_DEEP_AT + RIPE_LAG ? toRipe(smoothstep(ripeT)) : toDeep(smoothstep(deepT));
-  const newR = newCoreR(frame);
+
+  // -- the DeepSeek mark the dots build, and the six it throws off -----------
+  const dsS = dsSize(frame);
+  const dsInk = toRipe(dsTone(frame));
+  const dsBreath = breath(frame, 0.77);
+  const smallLive = SMALLS.map((s, i) => ({ s, i, p: smallAt(s, frame) })).filter(
+    ({ s }) => frame >= s.born,
+  );
 
   // -- the person ------------------------------------------------------------
   const swayX = (1.5 / k) * Math.sin(frame * 0.083 + 0.9);
@@ -1307,29 +1584,39 @@ const Distillation: React.FC<Props> = ({
               ),
             )}
 
-            {/* THE MODEL. One dot on the axis, from the first frame to the last.
-                Everything the fraction is made of came out of it. */}
-            <circle
-              cx={MODEL.x}
-              cy={MODEL.y}
-              r={CORE_R * breath(frame, 0.31)}
-              fill={accent}
-              opacity={dotOpacity * OP_FG}
-              style={{ filter: icon }}
-            />
-
-            {/* THE NEXT GENERATION. It grows by area as the ring's contents
-                merge into it, and holds at the size of the model above. */}
-            {newR > 0.5 ? (
-              <circle
-                cx={RING.x}
-                cy={RING.y}
-                r={newR * breath(frame, 0.77)}
-                fill={accent}
-                opacity={dotOpacity * OP_FG}
-                style={{ filter: icon }}
-              />
+            {/* THE NEW MODEL. The ring's contents build the DEEPSEEK mark: it
+                appears on the first merge at 0.3 of its box and grows by area,
+                deep -> ripe, to the same em box as Claude on "generation". */}
+            {dsS > 0 ? (
+              <g style={{ filter: icon }} opacity={dotOpacity * OP_FG}>
+                <Glyph
+                  glyph={DEEPSEEK}
+                  x={RING.x}
+                  y={RING.y}
+                  size={dsS * dsBreath}
+                  ink={dsInk}
+                />
+              </g>
             ) : null}
+
+            {/* THE NEXT GENERATION OF MODELS. Six small DeepSeek marks out of
+                the big one, each on its own arc. No lines, no rings. */}
+            <g style={{ filter: icon }} opacity={dotOpacity * OP_FG}>
+              {smallLive.map(({ s, i, p }) => {
+                const md = micro(9000 + i, frame);
+                const settled = clamp01((frame - (s.born + s.flight)) / 6);
+                return (
+                  <Glyph
+                    key={`sm${i}`}
+                    glyph={DEEPSEEK}
+                    x={p.x + md.dx * 0.5 * settled}
+                    y={p.y + md.dy * 0.5 * settled}
+                    size={p.size * breath(frame, s.seed)}
+                    ink={toRipe(smoothstep(p.u))}
+                  />
+                );
+              })}
+            </g>
 
             {/* THE PINGS: white, and they go UP. */}
             <g style={{ filter: icon }}>
@@ -1344,6 +1631,19 @@ const Distillation: React.FC<Props> = ({
                   </g>
                 );
               })}
+            </g>
+
+            {/* THE MODEL. The CLAUDE mark on the axis, from the first frame to
+                the last, breathing as a scale about its own centre. Everything
+                the fraction is made of came out of it. Top of the z-order. */}
+            <g style={{ filter: icon }} opacity={dotOpacity * OP_FG}>
+              <Glyph
+                glyph={CLAUDE}
+                x={MODEL.x}
+                y={MODEL.y}
+                size={MARK_EM * breath(frame, 0.31)}
+                ink={accent}
+              />
             </g>
           </svg>
 
@@ -1399,7 +1699,9 @@ export const STATS = {
   glyphWorld: Number(GLYPH.toFixed(2)),
   glyphScreen: Number((GLYPH * K_REST).toFixed(2)),
   dotScreen: Number((2 * DOT_R * K_REST).toFixed(2)),
-  coreScreen: Number((2 * CORE_R * K_REST).toFixed(2)),
+  markEmScreen: Number((MARK_EM * K_REST).toFixed(2)),
+  smallEmScreen: Number((MARK_EM * SMALL_SCALE * K_REST).toFixed(2)),
+  blobR0: BLOB_R0,
   ringScreenR: Number((RING_R * K_REST).toFixed(1)),
   blobSeats: BLOB_SEATS.length,
   blobUsed: BLOB_USED.length,
@@ -1441,7 +1743,46 @@ export const STATS = {
     Number(Math.min(...COLLAPSE.map((c) => c.start)).toFixed(1)),
     Number(Math.max(...COLLAPSE.map((c) => c.merge)).toFixed(1)),
   ],
-  coreFullAt: Number(MERGE_SORTED[MERGE_SORTED.length - 1].toFixed(1)),
+  dsBornAt: Number(DS_BORN.toFixed(1)),
+  dsFullAt: Number(DS_FULL.toFixed(1)),
+  small: {
+    born: SMALLS.map((s) => Number(s.born.toFixed(1))),
+    seatedBy: Number(Math.max(...SMALLS.map((s) => s.born + s.flight)).toFixed(1)),
+    worldBottom: Number(Math.max(...SMALLS.map((s) => s.y + SMALL_SCALE * DS_RY)).toFixed(1)),
+    ringBottom: RING.y + RING_R,
+    peakHead: Number(SMALL_STATS.peak.toFixed(2)),
+    peakAt: SMALL_STATS.peakAt,
+    emScreen: Number((MARK_EM * SMALL_SCALE * K_REST).toFixed(1)),
+    minSep: Number(
+      Math.min(
+        ...SMALLS.flatMap((a, i) =>
+          SMALLS.slice(i + 1).map((b) => Math.hypot(a.x - b.x, a.y - b.y)),
+        ),
+      ).toFixed(1),
+    ),
+    seats: SMALLS.map((s) => {
+      const c = screenAt(LAST, s.x, s.y);
+      return {
+        deg: Number(s.deg.toFixed(1)),
+        rad: Number(s.rad.toFixed(0)),
+        wx: Number(s.x.toFixed(0)),
+        wy: Number(s.y.toFixed(0)),
+        sx: Number(c[0].toFixed(0)),
+        sy: Number(c[1].toFixed(0)),
+        rightEdge: Number(screenAt(LAST, s.x + (MARK_EM * SMALL_SCALE) / 2, s.y)[0].toFixed(0)),
+        top: Number(screenAt(LAST, s.x, s.y - SMALL_SCALE * DS_RY)[1].toFixed(0)),
+        bottom: Number(screenAt(LAST, s.x, s.y + SMALL_SCALE * DS_RY)[1].toFixed(0)),
+        born: Number(s.born.toFixed(1)),
+        seated: Number((s.born + s.flight).toFixed(1)),
+      };
+    }),
+    screenBox: [
+      Number(SMALL_STATS.minX.toFixed(1)),
+      Number(SMALL_STATS.maxX.toFixed(1)),
+      Number(SMALL_STATS.minY.toFixed(1)),
+      Number(SMALL_STATS.maxY.toFixed(1)),
+    ],
+  },
   fallStretched: FALL_STATS.stretched,
   fallPeakHead: Number(FALL_STATS.peakHead.toFixed(2)),
   band: {
@@ -1456,7 +1797,9 @@ export const STATS = {
 };
 
 export const WORLD_INK = {
-  model: { ...MODEL, r: CORE_R },
+  model: { ...MODEL, em: MARK_EM },
+  deepseek: { x: RING.x, y: RING.y, em: MARK_EM },
+  smalls: SMALLS.map((s) => ({ x: s.x, y: s.y, em: MARK_EM * SMALL_SCALE })),
   blob: { r0: BLOB_R0, r1: BLOB_R1 },
   ring: { ...RING, r: RING_R },
   person: { x: PERSON.x, y: PERSON.y, box: GLYPH, head: HEAD_TOP_Y, foot: FOOT_Y },
