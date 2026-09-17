@@ -120,3 +120,76 @@ export const ANTHROPIC: BrandGlyph = {
     "M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z",
   ],
 };
+
+// ---------------------------------------------------------------------------
+// APPENDED for `DigitalMinds` (John Charles Beren, clip
+// `JohnCharlesBeren_Experience`, cut 0) — the four labs that cut needs on top
+// of CLAUDE, OPENAI and DEEPSEEK above. Same contract as everything else in
+// this file: the `d` is the source file's `d` copied verbatim on its 24-unit
+// box, uniform scale only, sources kept in `public/logos/`, nothing fetched at
+// render time, drawn as inline <path> (never an <image>, which races frame
+// capture and flashes).
+//
+// SOURCES, all fetched from lobehub's monochrome set
+// (`https://unpkg.com/@lobehub/icons-static-svg@latest/icons/<name>.svg`,
+// 2026-09-17) and all single-colour, single-path, `fill="currentColor"`,
+// `fill-rule="evenodd"`, viewBox `0 0 24 24`, no <image>, no gradient, no text:
+//   gemini.svg   Gemini
+//   grok.svg     Grok (xAI). `xai.svg` on the same set is the X-shaped
+//                wordmark, also titled "Grok"; the swirl is the model mark and
+//                the one that reads at 72 px beside the other six, so `grok`
+//                is the one inlined.
+//   mistral.svg  Mistral
+//   meta.svg     Meta
+//
+// INK BOUNDING BOXES inside the 24-unit box, measured off the path data with
+// `scratchpad/dm/mbbox.mjs` (the `lb/bbox.mjs` flattener plus an arc-aware
+// re-spacer: SVG lets the two arc flags be packed with no separator, which
+// Gemini's path does — "0 01-4.45" — and a plain number tokenizer reads that
+// as a single "01" and mis-solves every arc):
+//   GEMINI   x  1.000 .. 22.998  y  1.003 .. 23.001  ink 22.00 x 22.00  centre (11.999, 12.002)
+//   GROK     x  0.000 .. 24.000  y  0.500 .. 23.541  ink 24.00 x 23.04  centre (12.000, 12.021)
+//   MISTRAL  x  0.000 .. 24.000  y  3.400 .. 20.543  ink 24.00 x 17.14  centre (12.000, 11.971)
+//   META     x  0.000 .. 24.000  y  4.000 .. 20.000  ink 24.00 x 16.00  centre (12.000, 12.000)
+// All four are centred on the box, like the seven above, so a mark placed by
+// its box centre is placed by its optical centre too.
+//
+// A mark's INK is what a viewer sees, so a piece that wants every mark to read
+// the same size scales each one by its own ink extent rather than by the box:
+// `em = wanted * 24 / inkLong`. Three of these four fill the box's width, so
+// their em IS the wanted ink; Gemini's star is inset a whole unit on all four
+// sides (ink 22 of 24), so it needs em = wanted * 24/22 = 1.0909 x. See
+// `MARK_EM` in `DigitalMinds.tsx`.
+// ---------------------------------------------------------------------------
+
+// Gemini — public/logos/gemini.svg (lobehub), 1 path, fill-rule evenodd
+export const GEMINI: BrandGlyph = {
+  viewBox: "0 0 24 24",
+  paths: [
+    "M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z",
+  ],
+};
+
+// Grok (xAI) — public/logos/grok.svg (lobehub), 1 path, fill-rule evenodd
+export const GROK: BrandGlyph = {
+  viewBox: "0 0 24 24",
+  paths: [
+    "M9.27 15.29l7.978-5.897c.391-.29.95-.177 1.137.272.98 2.369.542 5.215-1.41 7.169-1.951 1.954-4.667 2.382-7.149 1.406l-2.711 1.257c3.889 2.661 8.611 2.003 11.562-.953 2.341-2.344 3.066-5.539 2.388-8.42l.006.007c-.983-4.232.242-5.924 2.75-9.383.06-.082.12-.164.179-.248l-3.301 3.305v-.01L9.267 15.292M7.623 16.723c-2.792-2.67-2.31-6.801.071-9.184 1.761-1.763 4.647-2.483 7.166-1.425l2.705-1.25a7.808 7.808 0 00-1.829-1A8.975 8.975 0 005.984 5.83c-2.533 2.536-3.33 6.436-1.962 9.764 1.022 2.487-.653 4.246-2.34 6.022-.599.63-1.199 1.259-1.682 1.925l7.62-6.815",
+  ],
+};
+
+// Mistral — public/logos/mistral.svg (lobehub), 1 path, fill-rule evenodd
+export const MISTRAL: BrandGlyph = {
+  viewBox: "0 0 24 24",
+  paths: [
+    "M3.428 3.4h3.429v3.428h3.429v3.429h-.002 3.431V6.828h3.427V3.4h3.43v13.714H24v3.429H13.714v-3.428h-3.428v-3.429h-3.43v3.428h3.43v3.429H0v-3.429h3.428V3.4zm10.286 13.715h3.428v-3.429h-3.427v3.429z",
+  ],
+};
+
+// Meta — public/logos/meta.svg (lobehub), 1 path, fill-rule evenodd
+export const META: BrandGlyph = {
+  viewBox: "0 0 24 24",
+  paths: [
+    "M6.897 4c1.915 0 3.516.932 5.43 3.376l.282-.373c.19-.246.383-.484.58-.71l.313-.35C14.588 4.788 15.792 4 17.225 4c1.273 0 2.469.557 3.491 1.516l.218.213c1.73 1.765 2.917 4.71 3.053 8.026l.011.392.002.25c0 1.501-.28 2.759-.818 3.7l-.14.23-.108.153c-.301.42-.664.758-1.086 1.009l-.265.142-.087.04a3.493 3.493 0 01-.302.118 4.117 4.117 0 01-1.33.208c-.524 0-.996-.067-1.438-.215-.614-.204-1.163-.56-1.726-1.116l-.227-.235c-.753-.812-1.534-1.976-2.493-3.586l-1.43-2.41-.544-.895-1.766 3.13-.343.592C7.597 19.156 6.227 20 4.356 20c-1.21 0-2.205-.42-2.936-1.182l-.168-.184c-.484-.573-.837-1.311-1.043-2.189l-.067-.32a8.69 8.69 0 01-.136-1.288L0 14.468c.002-.745.06-1.49.174-2.23l.1-.573c.298-1.53.828-2.958 1.536-4.157l.209-.34c1.177-1.83 2.789-3.053 4.615-3.16L6.897 4zm-.033 2.615l-.201.01c-.83.083-1.606.673-2.252 1.577l-.138.199-.01.018c-.67 1.017-1.185 2.378-1.456 3.845l-.004.022a12.591 12.591 0 00-.207 2.254l.002.188c.004.18.017.36.04.54l.043.291c.092.503.257.908.486 1.208l.117.137c.303.323.698.492 1.17.492 1.1 0 1.796-.676 3.696-3.641l2.175-3.4.454-.701-.139-.198C9.11 7.3 8.084 6.616 6.864 6.616zm10.196-.552l-.176.007c-.635.048-1.223.359-1.82.933l-.196.198c-.439.462-.887 1.064-1.367 1.807l.266.398c.18.274.362.56.55.858l.293.475 1.396 2.335.695 1.114c.583.926 1.03 1.6 1.408 2.082l.213.262c.282.326.529.54.777.673l.102.05c.227.1.457.138.718.138.176.002.35-.023.518-.073.338-.104.61-.32.813-.637l.095-.163.077-.162c.194-.459.29-1.06.29-1.785l-.006-.449c-.08-2.871-.938-5.372-2.2-6.798l-.176-.189c-.67-.683-1.444-1.074-2.27-1.074z",
+  ],
+};
