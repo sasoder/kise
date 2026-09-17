@@ -437,6 +437,15 @@ const LAST = DURATION - 1;
 const STROKE = SCREEN_OUTLINE / K_REST_TARGET;
 const RING_R = SCREEN_RING_R / K_REST_TARGET;
 const DOT_R = SCREEN_DOT_R / K_REST_TARGET;
+/** The mark's own shadow opacity. The per-icon shadow keeps its shape on the
+ *  mark -- 2 px down, 3 px blur, in SCREEN px at every camera k -- but the mark
+ *  is a big FILLED shape where the rings, the lanes and the Lucide icons are
+ *  6 px strokes, so the identical filter lays down one large block of shadow at
+ *  FULL coverage instead of a thin line of it at about 70%% of it, and reads as
+ *  a harsher, heavier shadow. Measured against a reference ink element's
+ *  darkest shadow pixel and lowered until the two match. */
+const MARK_SHADOW_OPACITY = 0.27;
+
 const MARK_BOX = SCREEN_MARK / K_REST_TARGET;
 const RING_OUTER = RING_R + STROKE / 2;
 
@@ -1005,6 +1014,10 @@ const FilteringPipeline: React.FC<Props> = ({
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+  // The mark's own: the same 2/3 screen-px shape, its own opacity, and applied
+  // on a group OUTSIDE the mark's scale, so the filter is never multiplied by
+  // the em scale (MARK_BOX/24) or by the breath and growth on top of it.
+  const markIcon = iconShadow(k, iconShadowY, iconShadowBlur, MARK_SHADOW_OPACITY);
 
   const live: Live[] = [];
 
@@ -1291,19 +1304,19 @@ const FilteringPipeline: React.FC<Props> = ({
             {/* (5) THE MODEL — the CLAUDE mark, filled, on top of everything.
                 Nothing is drawn until the first fused dot lands in it. */}
             {mark ? (
-              <g
-                style={{ filter: icon }}
-                transform={`translate(${AX} ${Y_MODEL}) scale(${(
-                  (MARK_BOX * mark.s) /
-                  24
-                ).toFixed(5)}) translate(-12 -12)`}
-                fill={toRipe(mark.tone)}
-                fillRule="evenodd"
-                opacity={dotOpacity * OP_FG}
-              >
-                {CLAUDE.paths.map((p, i) => (
-                  <path key={`m${i}`} d={p} />
-                ))}
+              <g style={{ filter: markIcon }} opacity={dotOpacity * OP_FG}>
+                <g
+                  transform={`translate(${AX} ${Y_MODEL}) scale(${(
+                    (MARK_BOX * mark.s) /
+                    24
+                  ).toFixed(5)}) translate(-12 -12)`}
+                  fill={toRipe(mark.tone)}
+                  fillRule="evenodd"
+                >
+                  {CLAUDE.paths.map((p, i) => (
+                    <path key={`m${i}`} d={p} />
+                  ))}
+                </g>
               </g>
             ) : null}
           </svg>

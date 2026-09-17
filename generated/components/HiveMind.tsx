@@ -42,6 +42,7 @@ import {
   LANE_R0,
   NL,
   OP_FG,
+  MARK_SHADOW_OPACITY,
   R_ST,
   SEATERS,
   STATION,
@@ -863,6 +864,11 @@ const HiveMind: React.FC<Props> = ({
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+  // The mark's own shadow: the same 2/3 screen-px shape as every other icon,
+  // its own opacity (the mark is a filled shape, not a 6 px stroke), and drawn
+  // by `WorldSvg` on a group outside the mark's scale. Shared with cut 1 so
+  // this cut's frame 0 is still cut 1's frame 219 to the pixel.
+  const markIcon = iconShadow(k, iconShadowY, iconShadowBlur, MARK_SHADOW_OPACITY);
 
   // -- the standing world, one frame further on ------------------------------
   const world = buildWorld(wf, {
@@ -1115,6 +1121,7 @@ const HiveMind: React.FC<Props> = ({
             accentDeep={accentDeep}
             dotOpacity={dotOpacity}
             icon={icon}
+            markIcon={markIcon}
             afterTraffic={web}
             afterDots={firing}
           />

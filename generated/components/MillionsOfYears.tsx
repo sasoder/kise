@@ -456,6 +456,15 @@ export const CORE_R = 2 * DOT_RADIUS;
 // thread, no dot, no packet — is ever drawn over it, and the three radii below
 // keep the picture clear of it as well.
 // ---------------------------------------------------------------------------
+/** The mark's own shadow opacity. The per-icon shadow keeps its shape on the
+ *  mark -- 2 px down, 3 px blur, in SCREEN px at every camera k -- but the mark
+ *  is a big FILLED shape where the rings, the lanes and the Lucide icons are
+ *  6 px strokes, so the identical filter lays down one large block of shadow at
+ *  FULL coverage instead of a thin line of it at about 70%% of it, and reads as
+ *  a harsher, heavier shadow. Measured against a reference ink element's
+ *  darkest shadow pixel and lowered until the two match. */
+export const MARK_SHADOW_OPACITY = 0.27;
+
 export const MARK_BOX = 72;
 export const MARK_EDGE = MARK_BOX / 2; // 36
 /** The blob's clear ring: the mark's half-box + 16 world px of daylight. */
@@ -1402,6 +1411,7 @@ export const WorldSvg: React.FC<{
   accentDeep: string;
   dotOpacity: number;
   icon: string;
+  markIcon: string;
   afterTraffic?: React.ReactNode;
   afterDots?: React.ReactNode;
 }> = ({
@@ -1413,6 +1423,7 @@ export const WorldSvg: React.FC<{
   accentDeep,
   dotOpacity,
   icon,
+  markIcon,
   afterTraffic,
   afterDots,
 }) => {
@@ -1652,18 +1663,18 @@ export const WorldSvg: React.FC<{
                 Inline <path> on the brandGlyphs 24-unit box, scaled about its
                 own centre by the breath the core dot always had, top of the
                 z-order with the icons. */}
-            <g
-              transform={
-                `translate(${CORE.x} ${CORE.y}) ` +
-                `scale(${((MARK_BOX / 24) * breath(frame, 0.31)).toFixed(5)}) ` +
-                `translate(-12 -12)`
-              }
-              style={{ filter: icon }}
-              opacity={dotOpacity * OP_FG}
-            >
-              {CLAUDE.paths.map((d, i) => (
-                <path key={`m${i}`} d={d} fill={accent} fillRule="evenodd" />
-              ))}
+            <g style={{ filter: markIcon }} opacity={dotOpacity * OP_FG}>
+              <g
+                transform={
+                  `translate(${CORE.x} ${CORE.y}) ` +
+                  `scale(${((MARK_BOX / 24) * breath(frame, 0.31)).toFixed(5)}) ` +
+                  `translate(-12 -12)`
+                }
+              >
+                {CLAUDE.paths.map((d, i) => (
+                  <path key={`m${i}`} d={d} fill={accent} fillRule="evenodd" />
+                ))}
+              </g>
             </g>
           </svg>
   );
@@ -1699,6 +1710,10 @@ const MillionsOfYears: React.FC<Props> = ({
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+  // The mark's own: the same 2/3 screen-px shape, its own opacity, and applied
+  // on a group OUTSIDE the mark's scale, so the filter is never multiplied by
+  // the em scale (MARK_BOX/24) or by the breath and growth on top of it.
+  const markIcon = iconShadow(k, iconShadowY, iconShadowBlur, MARK_SHADOW_OPACITY);
 
   const world = buildWorld(frame, { econBeat: beats.economy });
 
@@ -1742,6 +1757,7 @@ const MillionsOfYears: React.FC<Props> = ({
             accentDeep={accentDeep}
             dotOpacity={dotOpacity}
             icon={icon}
+            markIcon={markIcon}
           />
         </div>
       </AbsoluteFill>

@@ -546,6 +546,15 @@ const kAt = (f: number) => CAM_AT_F[clampF(f)].k;
 const SCREEN_OUTLINE = 6.0;
 const STROKE = SCREEN_OUTLINE / K_REST;
 const DOT_R = DOT_RADIUS;
+/** The mark's own shadow opacity. The per-icon shadow is the same shape on the
+ *  mark as on everything else -- 2 px down, 3 px blur, in SCREEN px at every
+ *  camera k -- but the mark is a big FILLED shape where the rings, the lanes
+ *  and the icons are 6 px strokes, so the identical filter lays down one large
+ *  contiguous block of shadow instead of a thin line of it and reads as a
+ *  harsher, heavier shadow. Measured against a reference ink element's darkest
+ *  shadow pixel and lowered until the two match. */
+const MARK_SHADOW_OPACITY = 0.27;
+
 /** The model's em box, in world px, at the opening rest size (scale 1). The
  *  mark is drawn on brandGlyphs' 24-unit box, so its scale is MARK_EM / 24. */
 const MARK_EM = 72;
@@ -1040,6 +1049,10 @@ const LiveLoop: React.FC<Props> = ({
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+  // The mark's own: the same 2/3 screen-px shape, its own opacity, and applied
+  // on a group OUTSIDE the mark's scale so the filter is never multiplied by
+  // the em scale (MARK_EM/24) or by the breath and growth on top of it.
+  const markIcon = iconShadow(k, iconShadowY, iconShadowBlur, MARK_SHADOW_OPACITY);
 
   // -- the loop --------------------------------------------------------------
   const drawn = drawnAt(frame);
@@ -1179,14 +1192,14 @@ const LiveLoop: React.FC<Props> = ({
                 races frame capture). Breath, drift, the shrug and the growth
                 are one transform about the box's centre (12, 12). It changes
                 only when an experience arrives. */}
-            <g
-              style={{ filter: icon }}
-              opacity={dotOpacity * OP_FG}
-              transform={`translate(${(CORE.x + md.dx).toFixed(3)} ${(CORE.y + md.dy).toFixed(3)}) scale(${(markEm / 24).toFixed(5)}) translate(-12 -12)`}
-            >
-              {CLAUDE.paths.map((d) => (
-                <path key={d.length} d={d} fill={coreCol} fillRule="evenodd" />
-              ))}
+            <g style={{ filter: markIcon }} opacity={dotOpacity * OP_FG}>
+              <g
+                transform={`translate(${(CORE.x + md.dx).toFixed(3)} ${(CORE.y + md.dy).toFixed(3)}) scale(${(markEm / 24).toFixed(5)}) translate(-12 -12)`}
+              >
+                {CLAUDE.paths.map((d) => (
+                  <path key={d.length} d={d} fill={coreCol} fillRule="evenodd" />
+                ))}
+              </g>
             </g>
           </svg>
         </div>
