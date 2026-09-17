@@ -27,6 +27,7 @@ import {
   sway,
   worldTransform,
 } from "./fieldShared";
+import { CLAUDE } from "./brandGlyphs";
 import { arriveEase } from "./levelUp";
 
 export const FPS = 24;
@@ -79,14 +80,52 @@ export const DURATION = 173;
 //      frames. No flash, no ring.
 //
 // ---------------------------------------------------------------------------
+// V3 — THE MODEL IS THE MARK. The individual model is no longer a dot: it is
+// the CLAUDE mark, in orange, drawn as inline paths off `brandGlyphs.CLAUDE`
+// on its 24-unit em box (fill-rule evenodd, `iconShadow(k)`, never an <image>,
+// which races frame capture). Nothing else changed — the draw, the stream, the
+// peel timing, the absorption ticks, the pin on "spot" and the camera are all
+// untouched. Three consequences, and only three:
+//
+//   * SIZE. The em box is MARK_EM = 72 world px at the opening rest size,
+//     i.e. 136.8 screen px at K_REST 1.900 and 244.8 at the opening k 3.400.
+//     72 was kept over the 60 fallback: at 60 the mark opens at 204 px and
+//     rests at 114, and the starburst's thirteen arms — each about a twelfth
+//     of the box across — stop reading as Claude's mark and start reading as a
+//     generic asterisk. At 72 the arms are legible on the opening frame AND on
+//     the resolved one, and 245 px is a quarter of the 1080 frame with the
+//     model alone in it, which is the picture gesture 1 asks for.
+//   * GROWTH. `coreScale` is unchanged — the same area ledger, the same +13%
+//     first, +5% each, cap 1.9x area, the same 14% tick rising over three
+//     frames into the landing and easing back over six — and it now scales the
+//     GLYPH instead of a radius. The em box therefore runs 72 -> 104 world px
+//     (198 screen px at rest on the last frame, tick included). Breath, the
+//     micro-drift and the shrug on the second "very" are the same numbers,
+//     applied as one transform about the box's centre (12, 12).
+//   * THE RIDERS MEET ITS EDGE. A peel's spiral now ends at `markEdge(land)` —
+//     the em box's half-width carried by the same ledger, 36 world px at rest
+//     and up to 52 at the cap — instead of the old 12 px core edge, and the
+//     dot shrinks away THERE, on the arms, not at the centre. The spiral is
+//     174..210 world px long instead of 232, so every peel runs slightly
+//     slower than V2 and stays under the 42 screen px/frame cap.
+//
+// Z-ORDER: the mark is the LAST element in the world SVG, over the loop, the
+// heads and every rider. It is never crossed: at its largest the bounding
+// circle is 52 world px and the loop's own minimum radius over every frame and
+// every angle (the wobble and breath at their worst, minus half the stroke,
+// minus the model's drift) leaves a measured MINIMUM CLEARANCE of 143.5 world
+// px = 273 screen px at the resting zoom (`STATS.markLoopClearance`).
+//
+// ---------------------------------------------------------------------------
 // SOUND-OFF READING TEST — one sentence:
 //   "one model alone; a loop draws around it; experiences pour in and ride it,
 //    and one after another peels in and changes the model on the spot."
 //
 // VOCABULARY, fixed, and the same as the clip's other cut (MillionsOfYears):
-//   the model      = ONE solid orange dot at world (540, 960), radius
-//                    2 x DOT_RADIUS = 11 world px. ACCENT_DEEP at rest,
-//                    ACCENT when lit.
+//   the model      = the CLAUDE mark at world (540, 960), FILLED in the core's
+//                    own tone on a 72 world px em box: ACCENT_DEEP at rest,
+//                    ACCENT when lit, with `iconShadow(k)` under it. It is the
+//                    top of the z-order and the only mark in the piece.
 //   an experience  = ONE solid orange dot at DOT_RADIUS, ACCENT.
 //   the loop       = ONE closed white ink line at the set's one stroke weight,
 //                    at FULL opacity, whose path is ORGANIC: a circle of
@@ -121,7 +160,7 @@ export const DURATION = 173;
 //             f13)               hashed sines — the organic thing before
 //                                anything else exists. It fills the frame at
 //                                f0: the camera opens at k 3.400, where the
-//                                core is 75 screen px across, and is already
+//                                mark is 245 screen px across, and is already
 //                                easing out (k 3.400 -> 2.420). On the SECOND
 //                                "very" (f11) the drift amplitude doubles for
 //                                20 frames, so that "very" is felt rather than
@@ -158,15 +197,17 @@ export const DURATION = 173;
 //                                peels at f79, spirals inward over 18
 //                                frames and is swallowed by the model on
 //                                "experience" (f97): the dot shrinks into the
-//                                core over its last 6 frames, the core's area
-//                                steps up 13% (radius +6.3%) with a 14% tick
+//                                MARK'S EDGE over its last 6 frames — onto the
+//                                arms of the starburst, never into a centre it
+//                                would have to pass through — the mark's area
+//                                steps up 13% (em box +6.3%) with a 14% tick
 //                                on top that eases back over 6 frames, and its
 //                                tone runs ACCENT_DEEP -> ACCENT over 6
 //                                frames. That tone change IS the update.
 //  5. f101-f140 "live-updating   THE UPDATES. A peel lands every ~9 frames
 //             on the spot"       (hashed +-2) from f110. Each is absorbed the
-//             (f114/f121/f135)   same way and each ticks the core: area +5%,
-//                                capped at 1.9x area (1.38x radius), and a
+//             (f114/f121/f135)   same way and each ticks the mark: area +5%,
+//                                capped at 1.9x area (1.38x the em box), and a
 //                                tone flick to full ACCENT decaying back over
 //                                8 frames to a rest level that itself climbs
 //                                (0.55 after the first, +0.04 each, ceiling
@@ -308,7 +349,8 @@ export const DURATION = 173;
 //     reach screen y 344..1326.
 //
 //   * A PEEL SPIRALS IN OVER 18 FRAMES, NOT 8, AND ITS SWEEP IS 0.26 pi.
-//     The spiral runs from the line (r ~ 233) to the core's edge (r 12): 232
+//     The spiral runs from the line (r ~ 233) to the MARK's edge (r 36..52 —
+//     `markEdge(land)`; it was the dot core's r 12 before V3): 174..210
 //     world px of path. On arriveEase the cruise is 1.3x the mean, so 8 frames
 //     would cruise at 232 / 8 * 1.3 = 38 world px/frame = 75 screen px at the
 //     resting zoom — nearly twice the set's 42 px/frame cap, and a 21 px dot
@@ -344,6 +386,11 @@ export const DURATION = 173;
 //     resolved camera that is screen y 398..1272, inside the 300..1370 limit).
 //     They spawn at world x 90..150, off-frame at every zoom the piece ever
 //     uses after the draw, whose loosest left edge is world x 226 at k 1.726.
+//
+//   * THE MARK IS FILLED, NOT STROKED. `brandGlyphs` draws every mark white and
+//     filled, and this one is filled in the core's tone instead: an outlined
+//     or two-tone treatment would be a second ink weight in a piece that has
+//     exactly one, and the mark IS the orange thing the riders feed.
 //
 //   * THE CORE'S REST TONE CLIMBS. Gesture 5 asks for a flick DEEP -> ACCENT ->
 //     DEEP and gesture 6 for a core that "stays ACCENT between flicks"; a
@@ -499,7 +546,12 @@ const kAt = (f: number) => CAM_AT_F[clampF(f)].k;
 const SCREEN_OUTLINE = 6.0;
 const STROKE = SCREEN_OUTLINE / K_REST;
 const DOT_R = DOT_RADIUS;
-const CORE_R0 = 2 * DOT_RADIUS;
+/** The model's em box, in world px, at the opening rest size (scale 1). The
+ *  mark is drawn on brandGlyphs' 24-unit box, so its scale is MARK_EM / 24. */
+const MARK_EM = 72;
+/** The mark's bounding radius: half the em box, i.e. where the arms of the
+ *  starburst reach. A rider's spiral ends HERE, not at the centre. */
+const MARK_R0 = MARK_EM / 2;
 const HEAD_CAP = 42; // screen px/frame; the set's ceiling is 45
 
 // ---------------------------------------------------------------------------
@@ -648,7 +700,9 @@ const JOIN_TH0 = 1.15 * Math.PI; // upper-left arc: the side the stream comes fr
 const JOIN_TH1 = 1.55 * Math.PI;
 const SPIRAL_SWEEP = 0.26 * Math.PI;
 const SPIRAL_DUR = 18; // frames; solved against the 42 screen px/f cap
-const CORE_EDGE = 12;
+// A rider's spiral ends on the MARK'S EDGE, not at its centre: `markEdge(land)`
+// is the em box's half-width carried by the same area ledger that scales the
+// glyph, so the bigger the model has grown the sooner a rider meets it.
 const ABSORB_DUR = 6; // frames the dot takes to shrink into the core
 const V_EXP = 38; // world px/frame nominal; the cap binds throughout
 const LOOP_OPEN = 59; // no dot joins before the line closes (f50), with room for its approach
@@ -674,6 +728,80 @@ const rideFramesOf = (i: number) => {
   return Math.max(12, Math.round(base + jit));
 };
 
+// ---------------------------------------------------------------------------
+// THE CORE'S STATE. Both its size and its tone are read off the landings, never
+// off a timer: the model changes when, and only when, an experience arrives.
+//
+// The size is an AREA ledger — a swallowed dot adds area, not radius — and on
+// top of the new rest radius each absorption puts a TICK: +14% for two frames,
+// eased back to the new rest over six. No flash, no ring; the core simply takes
+// the thing in.
+// ---------------------------------------------------------------------------
+const AREA_FIRST = 1.13;
+const AREA_EACH = 1.05;
+const AREA_CAP = 1.9; // radius x1.378
+const AREA_RISE = 5;
+const AREA_LEAD = 2; // the area starts stepping just before the landing frame
+const BUMP_AMP = 0.14;
+const BUMP_RISE = 3; // the tick rises over the three frames INTO the landing...
+const BUMP_FALL = 6; // ...peaks exactly on it, and eases back to the new rest
+const FLICK_DUR = 8;
+const REST_FIRST = 0.55;
+const REST_STEP = 0.04;
+const REST_CAP = 0.7;
+const TONE_RISE = 6;
+
+const coreScale = (f: number) => {
+  let a = 1;
+  let bump = 0;
+  for (let i = 0; i < N_EXP; i++) {
+    const land = landingOf(i);
+    if (f < land - BUMP_RISE) break;
+    if (f < land) {
+      // only the tick's lead-in; the area ledger still belongs to the landing
+      const dt = f - land;
+      bump = Math.max(bump, smoothstep(clamp01((dt + BUMP_RISE) / BUMP_RISE)));
+      break;
+    }
+    const step = i === 0 ? AREA_FIRST : AREA_EACH;
+    a = Math.min(
+      AREA_CAP,
+      a * (1 + (step - 1) * smoothstep(clamp01((f - land + AREA_LEAD) / AREA_RISE))),
+    );
+    const dt = f - land;
+    if (dt <= BUMP_FALL) {
+      bump = Math.max(
+        bump,
+        smoothstep(clamp01((dt + BUMP_RISE) / BUMP_RISE)) * (1 - smoothstep(clamp01(dt / BUMP_FALL))),
+      );
+    }
+  }
+  return Math.sqrt(a) * (1 + BUMP_AMP * bump);
+};
+
+const coreTone = (f: number) => {
+  let rest = 0;
+  let flick = 0;
+  for (let i = 0; i < N_EXP; i++) {
+    const land = landingOf(i);
+    if (f < land) break;
+    rest = Math.min(REST_CAP, i === 0 ? REST_FIRST : rest + REST_STEP);
+    const dt = f - land;
+    if (dt <= FLICK_DUR) {
+      const rise = i === 0 ? clamp01((dt + 3) / TONE_RISE) : 1;
+      flick = Math.max(flick, rise * (1 - smoothstep(dt / FLICK_DUR)));
+    }
+  }
+  if (f >= LAND_FIRST && f < LAND_FIRST + TONE_RISE) {
+    rest = REST_FIRST * smoothstep(clamp01((f - LAND_FIRST) / TONE_RISE));
+  }
+  return clamp01(rest + (1 - rest) * flick);
+};
+
+/** The mark's bounding radius on frame `f`: the em box's half-width carried by
+ *  the same area ledger that scales the glyph. A rider ends its spiral here. */
+const markEdge = (f: number) => MARK_R0 * coreScale(f);
+
 const vExpAt = (f: number) => Math.min(V_EXP, HEAD_CAP / kAt(f));
 
 type Exp = {
@@ -686,6 +814,8 @@ type Exp = {
   ctrl: { x: number; y: number };
   joinTh: number;
   peelTh: number;
+  /** the mark's bounding radius on this dot's landing frame */
+  edge: number;
   aTab: number[];
   la: number;
   lb: number;
@@ -770,7 +900,8 @@ const EXPS: Exp[] = Array.from({ length: N_EXP }, (_unused, i) => {
   }
   const la = aTab[APPROACH_SAMPLES];
 
-  // the spiral, sampled on the peel frame's path
+  // the spiral, sampled on the peel frame's path, ending on the mark's edge
+  const edge = markEdge(land);
   const pp = loopPt(peelTh, spiralF0);
   let lc = 0;
   prev = pp;
@@ -778,7 +909,7 @@ const EXPS: Exp[] = Array.from({ length: N_EXP }, (_unused, i) => {
   for (let t = 1; t <= 40; t++) {
     const uu = t / 40;
     const th = peelTh + SPIRAL_SWEEP * uu;
-    const r = rPeel + (CORE_EDGE - rPeel) * uu;
+    const r = rPeel + (edge - rPeel) * uu;
     const p = { x: CORE.x + Math.cos(th) * r, y: CORE.y + Math.sin(th) * r };
     lc += Math.hypot(p.x - prev.x, p.y - prev.y);
     prev = p;
@@ -819,6 +950,7 @@ const EXPS: Exp[] = Array.from({ length: N_EXP }, (_unused, i) => {
     ctrl,
     joinTh,
     peelTh,
+    edge,
     aTab,
     la,
     lb,
@@ -847,76 +979,8 @@ const expAt = (e: Exp, f: number) => {
   const u = clamp01((d - e.la - e.lb) / Math.max(1e-6, e.lc));
   const th = e.peelTh + SPIRAL_SWEEP * u;
   const rPeel = loopR(e.peelTh, f);
-  const r = rPeel + (CORE_EDGE - rPeel) * u;
+  const r = rPeel + (e.edge - rPeel) * u;
   return { p: { x: CORE.x + Math.cos(th) * r, y: CORE.y + Math.sin(th) * r }, onLoop: false };
-};
-
-// ---------------------------------------------------------------------------
-// THE CORE'S STATE. Both its size and its tone are read off the landings, never
-// off a timer: the model changes when, and only when, an experience arrives.
-//
-// The size is an AREA ledger — a swallowed dot adds area, not radius — and on
-// top of the new rest radius each absorption puts a TICK: +14% for two frames,
-// eased back to the new rest over six. No flash, no ring; the core simply takes
-// the thing in.
-// ---------------------------------------------------------------------------
-const AREA_FIRST = 1.13;
-const AREA_EACH = 1.05;
-const AREA_CAP = 1.9; // radius x1.378
-const AREA_RISE = 5;
-const AREA_LEAD = 2; // the area starts stepping just before the landing frame
-const BUMP_AMP = 0.14;
-const BUMP_RISE = 3; // the tick rises over the three frames INTO the landing...
-const BUMP_FALL = 6; // ...peaks exactly on it, and eases back to the new rest
-const FLICK_DUR = 8;
-const REST_FIRST = 0.55;
-const REST_STEP = 0.04;
-const REST_CAP = 0.7;
-const TONE_RISE = 6;
-
-const coreScale = (f: number) => {
-  let a = 1;
-  let bump = 0;
-  for (const e of EXPS) {
-    if (f < e.land - BUMP_RISE) break;
-    if (f < e.land) {
-      // only the tick's lead-in; the area ledger still belongs to the landing
-      const dt = f - e.land;
-      bump = Math.max(bump, smoothstep(clamp01((dt + BUMP_RISE) / BUMP_RISE)));
-      break;
-    }
-    const step = e.i === 0 ? AREA_FIRST : AREA_EACH;
-    a = Math.min(
-      AREA_CAP,
-      a * (1 + (step - 1) * smoothstep(clamp01((f - e.land + AREA_LEAD) / AREA_RISE))),
-    );
-    const dt = f - e.land;
-    if (dt <= BUMP_FALL) {
-      bump = Math.max(
-        bump,
-        smoothstep(clamp01((dt + BUMP_RISE) / BUMP_RISE)) * (1 - smoothstep(clamp01(dt / BUMP_FALL))),
-      );
-    }
-  }
-  return Math.sqrt(a) * (1 + BUMP_AMP * bump);
-};
-
-const coreTone = (f: number) => {
-  let rest = 0;
-  let flick = 0;
-  for (const e of EXPS) {
-    if (f < e.land) break;
-    rest = Math.min(REST_CAP, e.i === 0 ? REST_FIRST : rest + REST_STEP);
-    const dt = f - e.land;
-    if (dt <= FLICK_DUR) {
-      const rise = e.i === 0 ? clamp01((dt + 3) / TONE_RISE) : 1;
-      flick = Math.max(flick, rise * (1 - smoothstep(dt / FLICK_DUR)));
-    }
-  }
-  if (f >= EXPS[0].land && f < EXPS[0].land + TONE_RISE) {
-    rest = REST_FIRST * smoothstep(clamp01((f - EXPS[0].land) / TONE_RISE));
-  }
-  return clamp01(rest + (1 - rest) * flick);
 };
 
 // ---------------------------------------------------------------------------
@@ -1028,7 +1092,7 @@ const LiveLoop: React.FC<Props> = ({
     0.55 *
       smoothstep(clamp01((frame - BREATH_DEEP_F0) / 4)) *
       (1 - smoothstep(clamp01((frame - BREATH_DEEP_F1) / 6)));
-  const coreR = CORE_R0 * coreScale(frame) * (1 + (breath(frame, 0.31) - 1) * deepen);
+  const markEm = MARK_EM * coreScale(frame) * (1 + (breath(frame, 0.31) - 1) * deepen);
   const coreCol = toRipe(coreTone(frame));
 
   return (
@@ -1109,16 +1173,21 @@ const LiveLoop: React.FC<Props> = ({
               />
             ))}
 
-            {/* THE MODEL. One dot, at the loop's centre, from the first frame
-                to the last. It changes only when an experience arrives. */}
-            <circle
-              cx={CORE.x + md.dx}
-              cy={CORE.y + md.dy}
-              r={coreR}
-              fill={coreCol}
-              opacity={dotOpacity * OP_FG}
+            {/* THE MODEL. The Claude mark, in orange, at the loop's centre,
+                from the first frame to the last, and on top of everything:
+                inline paths on the 24-unit em box (never an <image>, which
+                races frame capture). Breath, drift, the shrug and the growth
+                are one transform about the box's centre (12, 12). It changes
+                only when an experience arrives. */}
+            <g
               style={{ filter: icon }}
-            />
+              opacity={dotOpacity * OP_FG}
+              transform={`translate(${(CORE.x + md.dx).toFixed(3)} ${(CORE.y + md.dy).toFixed(3)}) scale(${(markEm / 24).toFixed(5)}) translate(-12 -12)`}
+            >
+              {CLAUDE.paths.map((d) => (
+                <path key={d.length} d={d} fill={coreCol} fillRule="evenodd" />
+              ))}
+            </g>
           </svg>
         </div>
       </AbsoluteFill>
@@ -1181,9 +1250,29 @@ export const STATS = {
   strokeWorld: Number(STROKE.toFixed(3)),
   strokeScreen: Number((STROKE * K_REST).toFixed(2)),
   dotScreen: Number((2 * DOT_R * K_REST).toFixed(2)),
-  coreScreen: Number((2 * CORE_R0 * K_REST).toFixed(2)),
-  coreScreenOpen: Number((2 * CORE_R0 * CAM.K[0]).toFixed(2)),
-  coreScreenLast: Number((2 * CORE_R0 * coreScale(DURATION - 1) * K_REST).toFixed(2)),
+  markEmWorld: MARK_EM,
+  markScreen: Number((MARK_EM * K_REST).toFixed(2)),
+  markScreenOpen: Number((MARK_EM * CAM.K[0]).toFixed(2)),
+  markScreenLast: Number((MARK_EM * coreScale(DURATION - 1) * K_REST).toFixed(2)),
+  markScaleLast: Number(coreScale(DURATION - 1).toFixed(4)),
+  markScaleMax: Number(
+    Math.max(...Array.from({ length: DURATION + 1 }, (_u, f) => coreScale(f))).toFixed(4),
+  ),
+  /** The smallest gap, in world px, between the mark's bounding circle and the
+   *  loop's own radius, over every frame and every angle of the closed line. */
+  markLoopClearance: (() => {
+    let min = Infinity;
+    for (let f = 0; f <= DURATION; f++) {
+      if (!drawClosed(f)) continue;
+      const rm = MARK_R0 * coreScale(f) * (1 + 0.05);
+      const d = Math.hypot(coreDrift(f).dx, coreDrift(f).dy);
+      for (let i = 0; i < NS; i++) {
+        const rl = loopR((i * TWO_PI) / NS, f) - STROKE / 2;
+        min = Math.min(min, rl - rm - d);
+      }
+    }
+    return Number(min.toFixed(1));
+  })(),
   loopLen: Number(loopLen(DRAW_F1).toFixed(1)),
   loopScreenNominal: Number((2 * R_LOOP * K_REST).toFixed(1)),
   loopScreenDia: Number((2 * (R_LOOP + WOB_AMP) * K_REST).toFixed(1)),
