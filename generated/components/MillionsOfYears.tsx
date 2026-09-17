@@ -319,14 +319,14 @@ export const defaultProps: Props = schema.parse({
   },
 });
 
-const WORLD_W = 1080;
-const WORLD_H = 1920;
-const CX = 540;
-const CORE = { x: CX, y: 960 };
+export const WORLD_W = 1080;
+export const WORLD_H = 1920;
+export const CX = 540;
+export const CORE = { x: CX, y: 960 };
 
 // --- the depth ladder ------------------------------------------------------
-const OP_FG = 1.0;
-const OP_MID = 0.78;
+export const OP_FG = 1.0;
+export const OP_MID = 0.78;
 // OP_BG (0.55) is gone from the dots: a dot is solid wherever it is, and the
 // only alpha rung left on one is OP_MID on the back of a seated annulus. The
 // ink keeps its ladder.
@@ -345,7 +345,7 @@ const POUR_BACK = 0.35; // and the back 35% of the pour
 // ---------------------------------------------------------------------------
 const K_REST_TARGET = 1.02;
 const LAST = DURATION - 1;
-const C_FIXED = CORE.y;
+export const C_FIXED = CORE.y;
 
 type Seg = { f0: number; f1: number; k0: number; k1: number; warp: number };
 
@@ -377,7 +377,7 @@ const kAtLast = (kEnd: number) => {
   const t = trackOf(segsFor(kEnd));
   return runCamera(LAST, t.F, t.CY, t.K).k;
 };
-const K_END = (() => {
+export const K_END = (() => {
   const a = 0.95;
   const b = 1.1;
   const fa = kAtLast(a);
@@ -385,9 +385,9 @@ const K_END = (() => {
   return a + ((K_REST_TARGET - fa) * (b - a)) / (fb - fa);
 })();
 /** The zoom every weight in the piece is written against. */
-const K_REST = kAtLast(K_END);
+export const K_REST = kAtLast(K_END);
 
-const CAM = trackOf(segsFor(K_END));
+export const CAM = trackOf(segsFor(K_END));
 
 const CAM_AT_F: { cy: number; k: number }[] = (() => {
   const out: { cy: number; k: number }[] = [];
@@ -409,24 +409,24 @@ const screenAt = (f: number, wx: number, wy: number) => {
 // ---------------------------------------------------------------------------
 const SCREEN_OUTLINE = 6.0;
 const SCREEN_TRAFFIC = 3.0; // 0.5x the outline
-const STROKE = SCREEN_OUTLINE / K_REST;
+export const STROKE = SCREEN_OUTLINE / K_REST;
 const DARK_TRAFFIC_STROKE = SCREEN_TRAFFIC / K_REST;
-const DOT_R = DOT_RADIUS;
-const CORE_R = 2 * DOT_RADIUS;
+export const DOT_R = DOT_RADIUS;
+export const CORE_R = 2 * DOT_RADIUS;
 
 // ---------------------------------------------------------------------------
 // THE SIX LANES. The hexagonal directions rotated so none is vertical: a lane
 // straight up or straight down would put its station outside the caption band
 // long before the economy ring fits the frame.
 // ---------------------------------------------------------------------------
-const NL = 6;
-const LANE_ANG = Array.from({ length: NL }, (_, s) => (s * Math.PI) / 3);
-const LANE_D = LANE_ANG.map((a) => ({ x: Math.cos(a), y: Math.sin(a) }));
-const LANE_P = LANE_ANG.map((a) => ({ x: -Math.sin(a), y: Math.cos(a) }));
+export const NL = 6;
+export const LANE_ANG = Array.from({ length: NL }, (_, s) => (s * Math.PI) / 3);
+export const LANE_D = LANE_ANG.map((a) => ({ x: Math.cos(a), y: Math.sin(a) }));
+export const LANE_P = LANE_ANG.map((a) => ({ x: -Math.sin(a), y: Math.cos(a) }));
 
 // Arrival order: hashed, and the station radii are then dealt SHORTEST FIRST so
 // the rings light in genuine arrival order (see DEVIATIONS for the +-10).
-const LANE_RANK: number[] = (() => {
+export const LANE_RANK: number[] = (() => {
   const idx = Array.from({ length: NL }, (_, s) => s);
   idx.sort((a, b) => hash(a, 63) - hash(b, 63));
   const rank = new Array<number>(NL);
@@ -436,20 +436,20 @@ const LANE_RANK: number[] = (() => {
   return rank;
 })();
 const R_ST_BASE = 337;
-const R_ST = LANE_RANK.map((r) => R_ST_BASE + (r - (NL - 1) / 2) * 4);
+export const R_ST = LANE_RANK.map((r) => R_ST_BASE + (r - (NL - 1) / 2) * 4);
 
 const stationAt = (s: number) => ({
   x: CORE.x + LANE_D[s].x * R_ST[s],
   y: CORE.y + LANE_D[s].y * R_ST[s],
 });
-const STATION = Array.from({ length: NL }, (_, s) => stationAt(s));
+export const STATION = Array.from({ length: NL }, (_, s) => stationAt(s));
 
-const STATION_R = 64;
+export const STATION_R = 64;
 const GLYPH_FRACTION = 0.6; // the icon's box inside the ring, cut 2's rule
 const RING_OUTER = STATION_R + STROKE / 2;
 
 // The economy ring: a circle through the outside of the annuli.
-const ECON_R = 457;
+export const ECON_R = 457;
 
 // ---------------------------------------------------------------------------
 // THE NOUNS. lucide-static (ISC), inlined verbatim — the same 24 grid, the same
@@ -528,10 +528,10 @@ const BLOB_USED: number[] = BLOB_SEATS.map((_, i) => i)
 // its centre — clear of the ring's own ink (outer edge 67) at every seat, so no
 // dot ever sits on a stroke.
 // ---------------------------------------------------------------------------
-const ANN_R0 = 76;
-const ANN_R1 = 114;
+export const ANN_R0 = 76;
+export const ANN_R1 = 114;
 const ANN_APPROACH = 124; // the radius a dot wraps around the ring at
-const ANN_STEP = 2.3 * DOT_R;
+export const ANN_STEP = 2.3 * DOT_R;
 const SEATS_PER = 26;
 
 type AnnSeat = Seat & { phi: number; rho: number };
@@ -580,12 +580,12 @@ const makeAnnulus = (s: number): AnnSeat[] => {
   );
 };
 
-const ANN: AnnSeat[][] = Array.from({ length: NL }, (_, s) => makeAnnulus(s));
+export const ANN: AnnSeat[][] = Array.from({ length: NL }, (_, s) => makeAnnulus(s));
 
 // Which annulus seats are occupied: blue-noise vacancies, as in cut 3, so every
 // gap is a single hole with dots all round it and the mill always has somewhere
 // to hop instead of a bald patch on one side.
-const ANN_USED: number[][] = ANN.map((seats, s) => {
+export const ANN_USED: number[][] = ANN.map((seats, s) => {
   const n = Math.min(SEATS_PER, seats.length);
   const want = seats.length - n;
   const empty = new Uint8Array(seats.length);
@@ -632,7 +632,7 @@ const DEEP_AFTER = 8; // dots: the ring starts converting on the 8th landing
 const DEEP_DUR = 8;
 const RIPE_LAG = 6;
 const RIPE_DUR = 6;
-const SEAT_TONE = 6; // frames a dot takes to go deep -> ripe as it seats
+export const SEAT_TONE = 6; // frames a dot takes to go deep -> ripe as it seats
 const HEAD_CAP = 42; // screen px/frame; the set's ceiling is 45
 
 const landingOf = (s: number, j: number) =>
@@ -655,7 +655,7 @@ const RAD: number[] = (() => {
   return out;
 })();
 const radAt = (f: number) => RAD[Math.max(0, Math.min(RAD.length - 1, Math.round(f)))];
-const CORE_EDGE = 12;
+export const CORE_EDGE = 12;
 
 // The lateral fan: a free dot leaves the core on the lane axis and opens out to
 // a hashed offset, so the pour is a stream with width rather than a drawn line.
@@ -696,8 +696,13 @@ const absorbRadius = (s: number, fan: number) => {
 
 /** The frame a dot reaches `rAbs`, solved off the shared cumulative table so it
  *  is exact whatever the camera did to the speed cap on the way out. */
-const absorbFrame = (rOf: (f: number) => number, f0: number, rAbs: number) => {
-  for (let f = Math.floor(f0) + 1; f <= DURATION + 60; f++) {
+const absorbFrame = (
+  rOf: (f: number) => number,
+  f0: number,
+  rAbs: number,
+  upto: number = DURATION + 60,
+) => {
+  for (let f = Math.floor(f0) + 1; f <= upto; f++) {
     if (rOf(f) >= rAbs) {
       const a = rOf(f - 1);
       const b = rOf(f);
@@ -726,7 +731,7 @@ const SPAWN_SPEED = 5.6;
 const OPEN_F0 = 61; // the blob opens into the lanes
 const OPEN_F1 = 126;
 const EMIT_F0 = 45;
-const EMIT_F1 = 218;
+export const EMIT_F1 = 218;
 const EMIT_RAMP = 77; // "millions"
 const EMIT_SLOW = 0.5;
 const EMIT_FAST = 2.4;
@@ -806,7 +811,7 @@ type Seater = {
 
 const SEATER_STATS = { stretched: 0, peakHead: 0 };
 
-const SEATERS: Seater[] = (() => {
+export const SEATERS: Seater[] = (() => {
   const out: Seater[] = [];
   for (let s = 0; s < NL; s++) {
     const st = STATION[s];
@@ -887,11 +892,17 @@ type Free = {
   rIn: number;
 };
 
-const FREES: Free[] = (() => {
+/** The free stream, emitted frame by frame from EMIT_F0 to `emitF1`. Written as
+ *  a function of its END frame only, and the loop only ever APPENDS, so a
+ *  longer call is a strict superset of a shorter one with an identical prefix:
+ *  `buildFrees(218)` is this cut's stream and the next cut of the clip carries
+ *  the same pour on by calling it with a later end. Nothing about this cut
+ *  changes. */
+export const buildFrees = (emitF1: number): Free[] => {
   const out: Free[] = [];
   let acc = 0;
   let i = 0;
-  for (let f = EMIT_F0; f <= EMIT_F1; f++) {
+  for (let f = EMIT_F0; f <= emitF1; f++) {
     acc += f < EMIT_RAMP ? EMIT_SLOW : EMIT_FAST;
     while (acc >= 1) {
       acc -= 1;
@@ -905,7 +916,11 @@ const FREES: Free[] = (() => {
       const sf = 0.84 + 0.16 * hash(i, 105);
       const rOf = (ff: number) => CORE_EDGE + sf * (radAt(ff) - radAt(born));
       const rAbs = absorbRadius(lane, fan);
-      const fAbs = absorbFrame(rOf, born, rAbs);
+      // The search window has to outlast the LAST dot emitted, or a dot born
+      // near the end of a long emission never finds its edge and piles up on
+      // it. Every dot of THIS cut resolves by ~f239, well inside either bound,
+      // so widening it changes nothing here.
+      const fAbs = absorbFrame(rOf, born, rAbs, Math.max(DURATION + 60, emitF1 + 80));
       out.push({
         lane,
         born,
@@ -920,7 +935,9 @@ const FREES: Free[] = (() => {
     }
   }
   return out;
-})();
+};
+
+const FREES: Free[] = buildFrees(EMIT_F1);
 
 // ---------------------------------------------------------------------------
 // THE MILL, per annulus: from that annulus' first landing to the last frame, a
@@ -930,10 +947,13 @@ const FREES: Free[] = (() => {
 const MILL_DUR = 11;
 const MILL_RATE = 0.34; // hops per frame per station
 
-type Hop = { from: number; to: number; t0: number };
+export type Hop = { from: number; to: number; t0: number };
 
-const MILL: Hop[][] = SEATERS.map(() => []);
-(() => {
+/** The mill, simulated frame by frame from 0 to `upto`. Like `buildFrees` it
+ *  only APPENDS — a hop generated on frame f carries t0 = f — so a longer call
+ *  is the same simulation run further and the prefix is identical. */
+export const buildMill = (upto: number): Hop[][] => {
+  const MILL: Hop[][] = SEATERS.map(() => []);
   const bySeat = new Map<string, number>();
   SEATERS.forEach((p, i) => bySeat.set(`${p.lane}:${p.seat}`, i));
   for (let s = 0; s < NL; s++) {
@@ -951,7 +971,7 @@ const MILL: Hop[][] = SEATERS.map(() => []);
     const busy = new Map<number, number>();
     let acc = 0;
     let id = s * 7919;
-    for (let f = 0; f <= DURATION; f++) {
+    for (let f = 0; f <= upto; f++) {
       mine.forEach((i) => {
         if (f >= SEATERS[i].land && f - 1 < SEATERS[i].land) {
           occ[seatOf.get(i) as number] = i;
@@ -985,7 +1005,10 @@ const MILL: Hop[][] = SEATERS.map(() => []);
       }
     }
   }
-})();
+  return MILL;
+};
+
+const MILL: Hop[][] = buildMill(DURATION);
 
 // When each ring converts: the 8th landing in that annulus, measured off the
 // landings so retiming the seating retimes the rings with it.
@@ -1003,8 +1026,8 @@ const RING_DEEP_AT = Array.from({ length: NL }, (_, s) => {
 // ---------------------------------------------------------------------------
 const LANE_F0 = 64;
 const LANE_F1 = 104;
-const LANE_R0 = 34;
-const laneR1 = (s: number) => R_ST[s] - RING_OUTER - 5;
+export const LANE_R0 = 34;
+export const laneR1 = (s: number) => R_ST[s] - RING_OUTER - 5;
 
 // THE ECONOMY RING: six heads, one per station, each sweeping to the next.
 const ECON_F0 = 180;
@@ -1012,8 +1035,8 @@ const ECON_F1 = 197;
 
 // THE RETURN: packets back along every lane from station to core.
 const BACK_F0 = 191;
-const BACK_PERIOD = 10;
-const BACK_SPEED = 16;
+export const BACK_PERIOD = 10;
+export const BACK_SPEED = 16;
 
 // Dark traffic between seated neighbours.
 const TRAFFIC_N = idleThreads(SEATS_PER * NL);
@@ -1029,7 +1052,7 @@ const micro = (i: number, f: number) => ({
     1.3 * Math.sin(f * 0.1396 + hash(i, 20) * 6.283),
 });
 
-type Live = {
+export type Live = {
   key: string;
   x: number;
   y: number;
@@ -1040,48 +1063,46 @@ type Live = {
   seated: boolean;
 };
 
+export type Th = { key: string; x1: number; y1: number; x2: number; y2: number; op: number };
+
+// ---------------------------------------------------------------------------
+// THE WORLD, split out of the component so the NEXT cut of this clip can stand
+// in it rather than rebuild it. `buildWorld(frame)` is the pure state of the
+// pour, the annuli and the traffic at a world frame; `WorldSvg` draws it. This
+// component is then the camera, the grid and those two, and nothing about what
+// it renders has changed: with no options, `frees` is this cut's stream,
+// `mill` this cut's simulation and `damp` absent, which is the arithmetic that
+// was inline here before.
 // ---------------------------------------------------------------------------
 
-const MillionsOfYears: React.FC<Props> = ({
-  ink,
-  accent,
-  accentDeep,
-  backgroundBase,
-  backgroundSrc,
-  backgroundBlur,
-  backgroundDim,
-  parallax,
-  shadowY,
-  shadowBlur,
-  shadowOpacity,
-  iconShadowY,
-  iconShadowBlur,
-  iconShadowOpacity,
-  dotOpacity,
-  beats,
-}) => {
-  const frame = useCurrentFrame();
-  const toDeep = makeTone(ink, accentDeep); // white -> the instances are on it
-  const toRipe = makeTone(accentDeep, accent); // -> and it is theirs
+export type WorldOpts = {
+  /** A longer emission from `buildFrees`; defaults to this cut's. */
+  frees?: Free[];
+  /** A longer simulation from `buildMill`; defaults to this cut's. */
+  mill?: Hop[][];
+  /** The frame the dark traffic thins on; defaults to this cut's "economy". */
+  econBeat?: number;
+  /** A multiplier on a SEATED instance's micro-drift, per seater and frame. A
+   *  later cut uses it to still a dot that something has taken hold of. */
+  damp?: (seater: number, frame: number) => number;
+};
 
-  // -- camera ----------------------------------------------------------------
-  const cam = runCamera(frame, CAM.F, CAM.CY, CAM.K);
-  const drift = sway(frame);
-  const cy = cam.cy + drift.dy;
-  const cx = CX + drift.dx;
-  const k = cam.k;
-  const { tx, ty } = worldTransform(cx, cy, k);
-  const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+export type World = { live: Live[]; traffic: Th[] };
 
-  // -- the pour --------------------------------------------------------------
-  const outboundAt = (lane: number, r: number, fan: number) => {
-    const t = smoothstep(clamp01((r - CORE_EDGE) / FAN_R));
-    const l = fan * t;
-    return {
-      x: CORE.x + LANE_D[lane].x * r + LANE_P[lane].x * l,
-      y: CORE.y + LANE_D[lane].y * r + LANE_P[lane].y * l,
-    };
+const outboundAt = (lane: number, r: number, fan: number) => {
+  const t = smoothstep(clamp01((r - CORE_EDGE) / FAN_R));
+  const l = fan * t;
+  return {
+    x: CORE.x + LANE_D[lane].x * r + LANE_P[lane].x * l,
+    y: CORE.y + LANE_D[lane].y * r + LANE_P[lane].y * l,
   };
+};
+
+export const buildWorld = (frame: number, opts: WorldOpts = {}): World => {
+  const frees = opts.frees ?? FREES;
+  const mill = opts.mill ?? MILL;
+  const econBeat = opts.econBeat ?? defaultProps.beats.economy;
+  const damp = opts.damp;
 
   const live: Live[] = [];
 
@@ -1134,7 +1155,7 @@ const MillionsOfYears: React.FC<Props> = ({
   });
 
   // the free stream: endless, and it never stops leaving the frame
-  FREES.forEach((p, i) => {
+  frees.forEach((p, i) => {
     if (frame < p.born) return;
     if (frame >= p.fAbs) return; // taken in at the annulus edge
     let r = CORE_EDGE + p.sf * (radAt(frame) - radAt(p.born));
@@ -1175,7 +1196,10 @@ const MillionsOfYears: React.FC<Props> = ({
     const st = STATION[p.lane];
     const inAng = Math.atan2(-LANE_D[p.lane].y, -LANE_D[p.lane].x);
     const md = micro(i + 9001, frame);
-    const dm = p.back ? BG_DRIFT : 1;
+    let dm = p.back ? BG_DRIFT : 1;
+    // A later cut stills a seated dot that something has taken hold of. With no
+    // `damp` this multiplies by nothing and the value is the one it always was.
+    if (damp) dm *= damp(i, frame);
     let x: number;
     let y: number;
     let cur = p.seat;
@@ -1201,7 +1225,7 @@ const MillionsOfYears: React.FC<Props> = ({
       }
     } else {
       let liveHop: Hop | null = null;
-      for (const h of MILL[i]) {
+      for (const h of mill[i]) {
         if (frame >= h.t0 + MILL_DUR) cur = h.to;
         else if (frame >= h.t0) {
           liveHop = h;
@@ -1244,11 +1268,10 @@ const MillionsOfYears: React.FC<Props> = ({
 
   // -- dark traffic, between seated neighbours -------------------------------
   const seated = live.filter((d) => d.seated);
-  type Th = { key: string; x1: number; y1: number; x2: number; y2: number; op: number };
   const traffic: Th[] = [];
   if (seated.length > 1) {
     const n = seated.length;
-    const count = Math.round(TRAFFIC_N * (frame < beats.economy ? 1 : 0.6));
+    const count = Math.round(TRAFFIC_N * (frame < econBeat ? 1 : 0.6));
     for (let j = 0; j < count; j++) {
       const period = 40 - 12 * hash(j, 4);
       const local = frame + hash(j, 5) * period;
@@ -1280,6 +1303,42 @@ const MillionsOfYears: React.FC<Props> = ({
     }
   }
 
+  return { live, traffic };
+};
+
+// ---------------------------------------------------------------------------
+// THE WORLD, drawn. Everything inside the camera's transform, in world
+// coordinates, in the order it always had. `afterTraffic` and `afterDots` are
+// two empty slots a later cut hangs its own layer in — with neither passed the
+// tree is exactly what it was.
+// ---------------------------------------------------------------------------
+export const WorldSvg: React.FC<{
+  frame: number;
+  k: number;
+  world: World;
+  ink: string;
+  accent: string;
+  accentDeep: string;
+  dotOpacity: number;
+  icon: string;
+  afterTraffic?: React.ReactNode;
+  afterDots?: React.ReactNode;
+}> = ({
+  frame,
+  k,
+  world,
+  ink,
+  accent,
+  accentDeep,
+  dotOpacity,
+  icon,
+  afterTraffic,
+  afterDots,
+}) => {
+  const { live, traffic } = world;
+  const toDeep = makeTone(ink, accentDeep); // white -> the instances are on it
+  const toRipe = makeTone(accentDeep, accent); // -> and it is theirs
+
   // -- the lane lines --------------------------------------------------------
   const laneU = arriveEase(clamp01((frame - LANE_F0) / (LANE_F1 - LANE_F0)));
 
@@ -1302,36 +1361,6 @@ const MillionsOfYears: React.FC<Props> = ({
   const glyphBox = 2 * STATION_R * GLYPH_FRACTION;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
-      <GridBackground
-        src={backgroundSrc}
-        blur={backgroundBlur}
-        dim={backgroundDim}
-        frame={frame}
-        cy={cy}
-        cyRest={CAM.CY[0]}
-        cx={cx}
-        cxRest={CX}
-        k={k}
-        parallax={parallax}
-      />
-
-      <AbsoluteFill
-        style={{
-          filter: `drop-shadow(0 ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`,
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            width: WORLD_W,
-            height: WORLD_H,
-            transformOrigin: "0 0",
-            transform: `translate(${tx}px, ${ty}px) scale(${k})`,
-          }}
-        >
           <svg
             width={WORLD_W}
             height={WORLD_H}
@@ -1391,6 +1420,8 @@ const MillionsOfYears: React.FC<Props> = ({
               />
             ))}
 
+            {afterTraffic}
+
             {/* the instances, on the depth ladder: the back of the pour and of
                 every annulus first and dimmer, then the front over the top.
                 Tone means state; only opacity and size say how far back a dot
@@ -1410,6 +1441,8 @@ const MillionsOfYears: React.FC<Props> = ({
                 ),
               ),
             )}
+
+            {afterDots}
 
             {/* the six kinds of work. The RING converts white -> deep as its
                 8th instance lands and -> ripe six frames later; the icon inside
@@ -1534,6 +1567,83 @@ const MillionsOfYears: React.FC<Props> = ({
               style={{ filter: icon }}
             />
           </svg>
+  );
+};
+
+// ---------------------------------------------------------------------------
+
+const MillionsOfYears: React.FC<Props> = ({
+  ink,
+  accent,
+  accentDeep,
+  backgroundBase,
+  backgroundSrc,
+  backgroundBlur,
+  backgroundDim,
+  parallax,
+  shadowY,
+  shadowBlur,
+  shadowOpacity,
+  iconShadowY,
+  iconShadowBlur,
+  iconShadowOpacity,
+  dotOpacity,
+  beats,
+}) => {
+  const frame = useCurrentFrame();
+
+  // -- camera ----------------------------------------------------------------
+  const cam = runCamera(frame, CAM.F, CAM.CY, CAM.K);
+  const drift = sway(frame);
+  const cy = cam.cy + drift.dy;
+  const cx = CX + drift.dx;
+  const k = cam.k;
+  const { tx, ty } = worldTransform(cx, cy, k);
+  const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+
+  const world = buildWorld(frame, { econBeat: beats.economy });
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
+      <GridBackground
+        src={backgroundSrc}
+        blur={backgroundBlur}
+        dim={backgroundDim}
+        frame={frame}
+        cy={cy}
+        cyRest={CAM.CY[0]}
+        cx={cx}
+        cxRest={CX}
+        k={k}
+        parallax={parallax}
+      />
+
+      <AbsoluteFill
+        style={{
+          filter: `drop-shadow(0 ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: WORLD_W,
+            height: WORLD_H,
+            transformOrigin: "0 0",
+            transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+          }}
+        >
+          <WorldSvg
+            frame={frame}
+            k={k}
+            world={world}
+            ink={ink}
+            accent={accent}
+            accentDeep={accentDeep}
+            dotOpacity={dotOpacity}
+            icon={icon}
+          />
         </div>
       </AbsoluteFill>
 
