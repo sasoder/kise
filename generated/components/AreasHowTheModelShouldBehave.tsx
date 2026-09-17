@@ -5,7 +5,6 @@ import {
   ACCENT_DEEP,
   BG_BASE,
   BG_DIM,
-  DOT_RADIUS,
   FRAME_H,
   FRAME_W,
   GridBackground,
@@ -68,7 +67,7 @@ export const DURATION = 80;
 //                      banknote. One family (lucide-static v1.46.0, ISC),
 //                      24 grid, fill none, round caps, round joins, and ONE
 //                      stroke weight in WORLD px shared with the rings.
-//   a person         = person.png, ink white, iconShadow, 72 world px
+//   a person         = person.png, ink white, iconShadow, 83 world px
 //   "we don't know
 //    yet"            = the approved thought bubble (SubvertTheInfrastructure)
 //                      with Lucide `circle-help`'s inner strokes in it, the
@@ -111,8 +110,8 @@ export const DURATION = 80;
 //   4. the dots arrive: orange dots drift in from
 //      beyond the frame edges on individual hashed
 //      arcs (arriveEase, flights 10-24 f), 14 to a
-//      ring, and seat inside it on an annulus r 29-50
-//      that leaves the icon its own 29 px of air. Each
+//      ring, and seat inside it on an annulus r 36-56
+//      that leaves the icon its own 36 px of air. Each
 //      ring's stroke converts white -> ACCENT_DEEP over
 //      8 f as its first dots seat; first seats
 //      f45/47/49/51/53/55, full by f54-64. The six
@@ -164,8 +163,9 @@ export const DURATION = 80;
 //
 // DEVIATIONS from the brief, and why:
 //   * Content centre is world y 1003.5 — the drawn picture runs from the top
-//     rings' outer edge (733.5) to the bottom persons' feet (1274.6) — and it
-//     lands at screen y 890, not 960. See LIFT below: at the briefed k 1.34
+//     rings' outer edge (733.7) to the bottom persons' feet (1283.9) — and the
+//     INK bbox it produces lands at screen y 835, the house number (the harmony
+//     pass; it was 890 / measured 870). See LIFT below: at the briefed k 1.34
 //     that picture is 729 screen px tall and the measured band (y 60..1290)
 //     leaves only 330 px under the frame's centre, so a centre at 960 would put
 //     the persons' feet at ~1325. 900 is the lowest the band allows with slack.
@@ -278,7 +278,7 @@ export const defaultProps: Props = schema.parse({
   iconShadowY: ICON_SHADOW_Y,
   iconShadowBlur: ICON_SHADOW_BLUR,
   iconShadowOpacity: ICON_SHADOW_OPACITY,
-  dotRadius: DOT_RADIUS,
+  dotRadius: 4.92, // harmony pass: DOT_RADIUS (5.5) * 0.895, see SEAT_STEP
   dotOpacity: OP_UNREAD_DOT,
   personSrc: "person.png",
   beats: {
@@ -313,24 +313,39 @@ const CX = 540;
 // rings' outer edge to the bottom persons' feet), which at k 1.34 is 729
 // screen px: its centre can sit no lower than 1290 - 365 = 925. So the content
 // centre goes to screen y 890 (LIFT = 70) rather than the 960 V1 could afford
-// at its smaller k. This is the set's own caption-safe framing, half way to
-// CAM_LIFT's 125.
-const LIFT = 70;
+// at its smaller k.
+//
+// HARMONY PASS. The set frames on the INK bbox, not on the geometric content
+// centre, and the house number is screen y 835 (fieldShared's CAM_LIFT). This
+// cut measured 870 on its last frame before the pass and the bigger person
+// (GLYPH 83) adds ~7 px to that, so LIFT goes 70 -> 112. LIFT is the right
+// constant to move it with: screen y = 960 + (wy - c) * k - LIFT, so a change
+// here is a CONSTANT SCREEN shift at every k and the camera's own velocities
+// and |dv| are untouched — nothing about the move changes, only where the
+// whole track sits. Measured after: last-frame ink bbox centre 835, and every
+// frame from the pull-back's landing stays inside the band (y 60..1290).
+const LIFT = 112;
 
 // ---------------------------------------------------------------------------
 // THE WEIGHT. Director's note, learned on StillDecideWhatWeWantV2: the outline
 // weight has to match the FILLED person glyph standing next to it. That cut
-// solved it at 6.0 world px against a 108 px person; this one's person is 72
-// px — two thirds of it — and the brief sets the outlines at 5.0.
+// solved it at 6.0 world px against a 108 px person.
+//
+// HARMONY PASS. The four cuts of this clip play seconds apart in one edit, so
+// what has to match between them is the SCREEN result, not the world number:
+// cut 2's 108 px person at its resting k 1.0925 is 118 screen px and its 6.0
+// outline is 6.55 screen px. This cut rests at k 1.4214, so the same picture
+// is a person of 83 world px (72 before) and an outline of 4.6 (5.0 before).
+// The dark traffic follows the same rule at half the outline: 3.28 screen =
+// 2.3 world, where it was 3.
 //
 // One weight for every foreground outline: the station rings, the six Lucide
 // icons, the question marks and the thought-bubble borders. The icons are
-// drawn on Lucide's 24 grid inside a 74.24 px box, so the local stroke is
-// solved back out — 5.0 * 24 / 74.24 = 1.617 — and the WORLD weight is exactly
-// the ring's. The dark traffic in the crowds stays at 3: it is the field, not
-// an outline.
-const STROKE = 3; // the dark traffic in the crowds — field weight, untouched
-const RING_STROKE = 5.0; // a ring, and with it every foreground outline
+// drawn on Lucide's 24 grid inside a 76.8 px box (GLYPH_FRACTION is cut 2's
+// 0.60 now), so the local stroke is solved back out — 4.6 * 24 / 76.8 = 1.4375
+// — and the WORLD weight is exactly the ring's.
+const STROKE = 2.3; // the dark traffic in the crowds — 0.5x the outline
+const RING_STROKE = 4.6; // a ring, and with it every foreground outline
 const BORDER_STROKE = RING_STROKE; // the bubble reads as one weight with the rest
 const GLYPH_STROKE_WORLD = RING_STROKE; // icon, question mark and ring: one weight
 
@@ -377,7 +392,8 @@ const COL_X = [300, 540, 780];
 const ROW_Y = [800, 1120];
 
 const STATION_R = 64;
-const GLYPH_FRACTION = 0.58; // 74.24 world px: the icon's box inside the ring
+const GLYPH_FRACTION = 0.6; // 76.8 world px: the icon's box inside the ring,
+// cut 2's ring/icon rule (STATION_GLYPH_FRACTION) rather than this cut's own
 
 type Unit = { x: number; y: number; glyph: string };
 // Reading order, but the camera opens on unit 1 (code, top middle).
@@ -393,14 +409,22 @@ const NU = UNITS.length;
 const OPEN_UNIT = 1; // the ring the piece opens on
 
 // -- the person -------------------------------------------------------------
-// 72 px glyph standing under the ring: ring bottom to the top of the head is
-// 30 px of air, measured off person.png's own alpha box (ink 40..472 of 512)
-// rather than off the image box, so the air is real air.
-const GLYPH = 72;
+// 83 px glyph standing under the ring (72 before the harmony pass: 83 world px
+// at this cut's resting k 1.4214 is the set's 118 screen px box, cut 2's
+// person). Ring bottom to the top of the head is 30 px of air, measured off
+// person.png's own alpha box (ink 40..472 of 512) rather than off the image
+// box, so the air is real air — and that air is INDEPENDENT of GLYPH, because
+// PERSON_DY is solved off it: headTop = u.y + STATION_R + RING_TO_HEAD = 94
+// whatever the glyph is, which clears the ring's outer edge (64 + 4.6/2 =
+// 66.3) by 27.7 world px. The bubble's foot (BUB_FOOT_DY 78) is likewise 16 px
+// clear of that head top at any GLYPH. What DOES move is the feet: footY =
+// u.y + 94 + GLYPH * 431/512, so the bottom row's feet go 1274.6 -> 1283.9
+// world, and the framing below is re-solved for it.
+const GLYPH = 83;
 const PERSON_INK_TOP = 40 / 512;
 const PERSON_FOOT = 471 / 512;
 const RING_TO_HEAD = 30;
-const PERSON_DY = STATION_R + RING_TO_HEAD + GLYPH / 2 - GLYPH * PERSON_INK_TOP; // 118.4
+const PERSON_DY = STATION_R + RING_TO_HEAD + GLYPH / 2 - GLYPH * PERSON_INK_TOP; // 129.02
 const headTopY = (u: Unit) => u.y + PERSON_DY - GLYPH / 2 + GLYPH * PERSON_INK_TOP;
 const footY = (u: Unit) => u.y + PERSON_DY - GLYPH / 2 + GLYPH * PERSON_FOOT;
 
@@ -441,7 +465,7 @@ const QM_PATHS = [
   "M12 17h.01", // and its dot
 ];
 // The mark's box: 0.9 of the bubble's height. The approved 0.55 x 1.25 is tuned
-// for a 58 px bubble over a 118 px person; this bubble is 52 px over a 72 px
+// for a 58 px bubble over a 118 px person; this bubble is 52 px over an 83 px
 // person and at that fraction the ink is 15 world px tall and gone at phone
 // width. The stroke is divided back out so the WORLD weight is the ring's.
 const QM_S = (0.9 * BUB_H) / 24;
@@ -535,12 +559,17 @@ const qmHead = (u: number) => {
 // so no dot can sit on an icon stroke and the noun stays legible with fourteen
 // dots in the ring with it.
 // ---------------------------------------------------------------------------
-const SEAT_STEP = 10;
+// HARMONY PASS: the dot came down 5.5 -> 4.92 world px (the set's 12.0 screen
+// px front-rung dot at this k... 14.0 here, the director's number), so the seat
+// pitch and the blue-noise separation come down with it by the same 0.895, and
+// the fourteen-per-ring count and the crowd's density are unchanged. ANN_R0 is
+// NOT scaled: the icon's 36 world px of clear air is the icon's, not the dot's.
+const SEAT_STEP = 8.95;
 const ANN_R0 = 36; // the icon keeps 36 world px of clear air at the centre
 const ANN_R1 = 56; // and the crowd stops inside the ring at 64
 const ANN_FEATHER = 1.4;
 const DOTS_PER_UNIT = 14;
-const SEAT_SEP = 13; // blue noise: how far apart two occupied seats start out
+const SEAT_SEP = 11.635; // blue noise: how far apart two occupied seats start out
 
 type Seat = { x: number; y: number; rr: number; r: number };
 
@@ -1191,27 +1220,6 @@ const AreasHowTheModelShouldBehave: React.FC<Props> = ({
             viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            {/* the rings: the container each area is. One rung back from the
-                icon inside it, and white until the AIs take the area. */}
-            <g style={{ filter: icon }}>
-              {UNITS.map((un, s) => {
-                const br = 1 + 0.012 * Math.sin(frame * 0.09 + hash(s, 44) * 6.283);
-                const bob = 1.4 * Math.sin(frame * 0.072 + hash(s, 45) * 6.283);
-                return (
-                  <circle
-                    key={`r${s}`}
-                    cx={un.x}
-                    cy={un.y + bob}
-                    r={STATION_R * br}
-                    fill="none"
-                    stroke={toDeep(smoothstep(deepT[s]))}
-                    strokeWidth={RING_STROKE}
-                    opacity={OP_MID}
-                  />
-                );
-              })}
-            </g>
-
             {/* dark traffic inside the crowds: unlooked-at, not dead. No heads. */}
             {traffic.map((t) => (
               <line
@@ -1244,6 +1252,30 @@ const AreasHowTheModelShouldBehave: React.FC<Props> = ({
                 ),
               ),
             )}
+
+            {/* the rings: the container each area is. One rung back from the
+                icon inside it, and white until the AIs take the area. Drawn
+                ABOVE the crowds (harmony pass — cut 2 draws both ring and icon
+                over its dots), so a ring reads at the container rung in both
+                cuts instead of one rung further back in this one. */}
+            <g style={{ filter: icon }}>
+              {UNITS.map((un, s) => {
+                const br = 1 + 0.012 * Math.sin(frame * 0.09 + hash(s, 44) * 6.283);
+                const bob = 1.4 * Math.sin(frame * 0.072 + hash(s, 45) * 6.283);
+                return (
+                  <circle
+                    key={`r${s}`}
+                    cx={un.x}
+                    cy={un.y + bob}
+                    r={STATION_R * br}
+                    fill="none"
+                    stroke={toDeep(smoothstep(deepT[s]))}
+                    strokeWidth={RING_STROKE}
+                    opacity={OP_MID}
+                  />
+                );
+              })}
+            </g>
 
             {/* the nouns. Genuine Lucide, identical conventions in all six
                 rings, a local stroke solved so the WORLD weight equals the

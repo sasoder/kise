@@ -73,8 +73,8 @@ export const DURATION = 149;
 //   the AIs            = orange dots, solid, ACCENT_DEEP at rest, ACCENT lit
 //   a human            = person.png, ink white, iconShadow, 108 world px
 //   a human decision   = the approved thought bubble (SubvertTheInfrastructure)
-//                        growing off the head, with a Lucide `flag` in it: the
-//                        mission, not a target to hit
+//                        growing off the head, with a Lucide `trophy` in it:
+//                        the thing wanted, not a target to hit
 //   the AIs taking a   = the ring, its glyph and its crowd going white ->
 //     tool               ACCENT_DEEP; being given direction goes DEEP -> ACCENT
 // No text, no numbers. It has to read with the sound off.
@@ -107,9 +107,10 @@ export const DURATION = 149;
 //      where one thing has stopped and the next has not
 //      begun                                             "we'll have to
 //                                                         still"         f44-76
-//   4. the flag draws inside the bubble head-led while
-//      the bubble is still settling: the pole bottom-to-
-//      top f76-84, then the cloth as ONE stroke f84-96.
+//   4. the trophy draws inside the bubble head-led while
+//      the bubble is still settling, in the order a trophy
+//      is drawn: the cup f76-86, both handles f86-90, the
+//      stem pair f90-94, the base line f94-96.
 //      It is FINISHED at f96, twenty-six frames before
 //      "want", so the word lands on a whole thought
 //      instead of on the drawing of one                  "do a lot of
@@ -151,10 +152,10 @@ export const DURATION = 149;
 //   * glyph sway: the person sways +-1.5 screen px on hashed sines, and lifts
 //     4 screen px over f56-64 (WAKE_LEAD, seventeen frames before "still").
 //   * arriveEase on every arrival and every mill hop; screen-space heads on the
-//     bubble->row line and on both of the flag's strokes; packets on the line.
+//     bubble->row line and on each of the trophy's six strokes; packets on it.
 //
 // DEPTH — the ladder in OP_FG / OP_MID / OP_BG below, on the note that
-// "everything looks a bit too uniform". Icons, flag, person, crowd cores and
+// "everything looks a bit too uniform". Icons, trophy, person, crowd cores and
 // every line head are at 1.0; rings, the bubble's border and its trail, and
 // the two ink lines are at 0.78; the back ~40% of each crowd is at 0.55, 0.8x
 // radius and 1.45x micro-drift, with a hashed threshold so that band is
@@ -302,7 +303,7 @@ const LIFT = 0;
 // ---------------------------------------------------------------------------
 // THE WEIGHT. Director, on the delivered V3: "the weight has to increase to
 // match the person icon." The person is a SOLID filled silhouette; everything
-// beside it — the rings, the four tool glyphs, the bubble's border, the flag —
+// beside it — the rings, the four tool glyphs, the bubble's border, the trophy —
 // is an outline, and at 3.5 world px those outlines read as a thinner family
 // sitting next to a heavy one.
 //
@@ -332,7 +333,7 @@ const BORDER_STROKE = RING_STROKE; // the thought bubble reads as one weight wit
 // the AIs have the tool, ripe = it has a direction), so the tone ladder is
 // untouched and nothing about the story is carried by these numbers.
 //
-//   FG  1.00  the subject: the icon inside each ring, the flag, the person,
+//   FG  1.00  the subject: the icon inside each ring, the trophy, the person,
 //             the core of each crowd, every line head and packet.
 //   MID 0.78  the containers: the station rings, the thought-bubble border and
 //             its trail dots, the row line and the rise line. A border is the
@@ -444,11 +445,11 @@ const BUB_Y1 = 1058; // the bubble's foot
 const BUB_Y0 = BUB_Y1 - BUB_H; // 918: its top, and where the line leaves
 const BUB_RATIO = 0.22;
 const BUB_PATH = squirclePath(BUB_W, BUB_H, BUB_RATIO);
-// LEAD PASS. Director: "the person with the bubble and flag can come in sooner
+// LEAD PASS. Director: "the person with the bubble and its icon can come in sooner
 // — don't fit animations to word timing 1:1; think of the whole animation as
 // one continuous, smooth, intentional, well-directed movement." So the bubble
 // no longer waits for "do" (f79): it starts growing while the camera is still
-// gliding in, and is settling as the flag's pole starts.
+// gliding in, and is settling as the trophy's cup starts.
 const BUB_F0 = 62;
 const BUB_F1 = 76;
 const BUB_TRAIL = [
@@ -458,83 +459,143 @@ const BUB_TRAIL = [
 const BUB_TRAIL_DUR = 3;
 
 // The decision itself. A `target` was tried here and read as an aim, a score,
-// a bullseye — a thing to HIT, which is the opposite of the line: "decide what
-// we actually want" is a mission being set, not a shot being taken. Lucide
-// `flag` says goal with no explanation: a pole planted, a cloth on it.
+// a bullseye — a thing to HIT, which is the opposite of the line. A `flag` was
+// tried after it and read as a mission being set. The line is "decide what we
+// actually WANT", so the thing in the bubble is now Lucide `trophy`: the prize
+// itself, the thing wanted, with no instruction about how to get it.
 //
-// Drawn head-led: the pole first, bottom to top (f76-84, starting while the
-// bubble is still settling), then the cloth as ONE continuous stroke (f84-96).
-// The LEAD PASS moved this a full 24 frames earlier than V3's f100-120: the
-// flag is finished well before "want" at f122, so the word lands on a thought
-// that is already whole and the payoff can be the line going out to the tools
-// rather than the drawing itself. Same white ink, same round caps, and the
-// same GLYPH_STROKE_WORLD as the four tools and the rings.
-const ICON_FLAG_CLOTH = "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z";
-// The flag's INK box on the 24 grid is x 4..20, y 2..22 — the icon is not
-// centred in its own 24 box, so the ink box is what gets centred in the bubble.
-const FLAG_INK = { x0: 4, x1: 20, y0: 2, y1: 22 };
-const FLAG_BOX = 0.55 * BUB_H; // 77 world px tall, as the target was
-const FLAG_S = FLAG_BOX / (FLAG_INK.y1 - FLAG_INK.y0); // 3.85
-const FLAG_CX = (FLAG_INK.x0 + FLAG_INK.x1) / 2;
-const FLAG_CYG = (FLAG_INK.y0 + FLAG_INK.y1) / 2;
+// Drawn head-led, in the order a trophy is drawn, so it reads as being drawn
+// and not as being switched on:
+//   the cup — the closed bowl path              f76-86
+//   the two handles, together                   f86-90
+//   the stem pair, together                     f90-94
+//   the base line                               f94-96
+// It is FINISHED at f96, twenty-six frames before "want" at f122, so the word
+// lands on a thought that is already whole and the payoff can be the line
+// going out to the tools rather than the drawing itself. Same white ink, same
+// round caps and joins, same GLYPH_STROKE_WORLD as the four tools and the
+// rings, and the same glyph box (0.55 of the bubble height) the flag had.
+const ICON_TROPHY_CUP = "M18 2H6v7a6 6 0 0 0 12 0V2Z";
+const ICON_TROPHY_HANDLE_L = "M6 9H4.5a2.5 2.5 0 0 1 0-5H6";
+const ICON_TROPHY_HANDLE_R = "M18 9h1.5a2.5 2.5 0 0 0 0-5H18";
+const ICON_TROPHY_STEM_L = "M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22";
+const ICON_TROPHY_STEM_R = "M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22";
+const ICON_TROPHY_BASE = "M4 22h16";
+// The trophy's INK box on the 24 grid: the two handle arcs bulge out to x 2
+// and x 22, the cup's rim is y 2 and the base line is y 22. Unlike the flag,
+// this one IS centred in its own 24 box — (12, 12) either way — but it is
+// written out as the ink box so the glyph-box maths is the same everywhere.
+const TROPHY_INK = { x0: 2, x1: 22, y0: 2, y1: 22 };
+const TROPHY_BOX = 0.55 * BUB_H; // 77 world px tall, as the flag and the target were
+const TROPHY_S = TROPHY_BOX / (TROPHY_INK.y1 - TROPHY_INK.y0); // 3.85
+const TROPHY_CX = (TROPHY_INK.x0 + TROPHY_INK.x1) / 2;
+const TROPHY_CYG = (TROPHY_INK.y0 + TROPHY_INK.y1) / 2;
 const TARGET_CY = (BUB_Y0 + BUB_Y1) / 2; // the bubble's own centre
-// Grid units -> world, for the two stroke heads.
-const flagWorld = (gx: number, gy: number) => ({
-  x: BUB_CX + (gx - FLAG_CX) * FLAG_S,
-  y: TARGET_CY + (gy - FLAG_CYG) * FLAG_S,
+// Grid units -> world, for the stroke heads.
+const trophyWorld = (gx: number, gy: number) => ({
+  x: BUB_CX + (gx - TROPHY_CX) * TROPHY_S,
+  y: TARGET_CY + (gy - TROPHY_CYG) * TROPHY_S,
 });
-const FLAG_POLE = [76, 84];
-const FLAG_CLOTH = [84, 96];
+const TR_CUP = [76, 86];
+const TR_HANDLES = [86, 90];
+const TR_STEMS = [90, 94];
+const TR_BASE = [94, 96];
 
-// The cloth's stroke head. `strokeDashoffset` reveals the path by ARC LENGTH,
-// so the head has to be placed by arc length too. The path is eight cubic
-// segments (the two `s` runs, the `V` written as a degenerate cubic, and the
-// closing `z`) resolved out of the shorthand above once, at module scope —
-// rather than asking the DOM for `getPointAtLength`, which would make the
-// render depend on a live SVG element.
-const CLOTH_CUBICS: number[][] = [
-  [4, 15, 4, 15, 5, 14, 8, 14],
-  [8, 14, 11, 14, 13, 16, 16, 16],
-  [16, 16, 19, 16, 20, 15, 20, 15],
-  [20, 15, 20, 15, 20, 3, 20, 3], // V3
-  [20, 3, 20, 3, 19, 4, 16, 4],
-  [16, 4, 13, 4, 11, 2, 8, 2],
-  [8, 2, 5, 2, 4, 3, 4, 3],
-  [4, 3, 4, 3, 4, 15, 4, 15], // z
-];
-const CLOTH_WALK = (() => {
+// The stroke heads. `strokeDashoffset` reveals a path by ARC LENGTH, so the
+// head has to be placed by arc length too. Each path is resolved into cubic
+// segments ONCE, at module scope, and walked into a length table — rather than
+// asking the DOM for `getPointAtLength`, which would make the render depend on
+// a live SVG element.
+//
+// The machinery only handles cubics, and the trophy has four quarter-circle
+// arcs in it (one half-circle bowl, one half-circle per handle). Each quarter
+// is converted to a single cubic with its control points 0.5523 * r along the
+// tangents — the standard approximation, well under a tenth of a grid unit of
+// error, which at TROPHY_S = 3.85 is under half a world pixel of head
+// placement. The drawn `d` strings above still carry the real `a` commands, so
+// only the head's position is approximate, never the ink.
+const KAPPA = 0.5523;
+// bowl: centre (12, 9), r 6, from (6,9) down through (12,15) to (18,9)
+const BOWL_K = KAPPA * 6; // 3.3137
+// handles: r 2.5, centres (4.5, 6.5) and (19.5, 6.5)
+const HAND_K = KAPPA * 2.5; // 1.3807
+const TROPHY_CUBICS: Record<string, number[][]> = {
+  cup: [
+    [18, 2, 18, 2, 6, 2, 6, 2], // H6
+    [6, 2, 6, 2, 6, 9, 6, 9], // v7
+    [6, 9, 6, 9 + BOWL_K, 12 - BOWL_K, 15, 12, 15], // a6 6, first quarter
+    [12, 15, 12 + BOWL_K, 15, 18, 9 + BOWL_K, 18, 9], // ...second quarter
+    [18, 9, 18, 9, 18, 2, 18, 2], // V2, then a zero-length z
+  ],
+  handleL: [
+    [6, 9, 6, 9, 4.5, 9, 4.5, 9], // H4.5
+    [4.5, 9, 4.5 - HAND_K, 9, 2, 6.5 + HAND_K, 2, 6.5], // a2.5 2.5, first quarter
+    [2, 6.5, 2, 6.5 - HAND_K, 4.5 - HAND_K, 4, 4.5, 4], // ...second quarter
+    [4.5, 4, 4.5, 4, 6, 4, 6, 4], // H6
+  ],
+  handleR: [
+    [18, 9, 18, 9, 19.5, 9, 19.5, 9],
+    [19.5, 9, 19.5 + HAND_K, 9, 22, 6.5 + HAND_K, 22, 6.5],
+    [22, 6.5, 22, 6.5 - HAND_K, 19.5 + HAND_K, 4, 19.5, 4],
+    [19.5, 4, 19.5, 4, 18, 4, 18, 4],
+  ],
+  stemL: [
+    [10, 14.66, 10, 14.66, 10, 17, 10, 17], // V17
+    [10, 17, 10, 17.55, 9.53, 17.98, 9.03, 18.21], // c0 .55 -.47 .98 -.97 1.21
+    [9.03, 18.21, 7.85, 18.75, 7, 20.24, 7, 22], // C7.85 18.75 7 20.24 7 22
+  ],
+  stemR: [
+    [14, 14.66, 14, 14.66, 14, 17, 14, 17],
+    [14, 17, 14, 17.55, 14.47, 17.98, 14.97, 18.21],
+    [14.97, 18.21, 16.15, 18.75, 17, 20.24, 17, 22],
+  ],
+  base: [[4, 22, 4, 22, 20, 22, 20, 22]], // h16
+};
+
+type Walk = { pts: { x: number; y: number; s: number }[]; total: number };
+const walkCubics = (cubics: number[][]): Walk => {
   const pts: { x: number; y: number; s: number }[] = [];
   let s = 0;
-  let px = CLOTH_CUBICS[0][0];
-  let py = CLOTH_CUBICS[0][1];
+  let px = cubics[0][0];
+  let py = cubics[0][1];
   pts.push({ x: px, y: py, s: 0 });
-  for (const c of CLOTH_CUBICS) {
+  for (const c of cubics) {
     for (let i = 1; i <= 24; i++) {
       const t = i / 24;
       const u = 1 - t;
-      const x =
-        u * u * u * c[0] + 3 * u * u * t * c[2] + 3 * u * t * t * c[4] + t * t * t * c[6];
-      const y =
-        u * u * u * c[1] + 3 * u * u * t * c[3] + 3 * u * t * t * c[5] + t * t * t * c[7];
+      const x = u * u * u * c[0] + 3 * u * u * t * c[2] + 3 * u * t * t * c[4] + t * t * t * c[6];
+      const y = u * u * u * c[1] + 3 * u * u * t * c[3] + 3 * u * t * t * c[5] + t * t * t * c[7];
       s += Math.hypot(x - px, y - py);
       pts.push({ x, y, s });
       px = x;
       py = y;
     }
   }
-  const total = s;
-  return { pts, total };
-})();
-const clothHead = (u: number) => {
-  const want = clamp01(u) * CLOTH_WALK.total;
-  const p = CLOTH_WALK.pts;
+  return { pts, total: s };
+};
+const TROPHY_WALKS: Record<string, Walk> = Object.fromEntries(
+  Object.entries(TROPHY_CUBICS).map(([key, cubics]) => [key, walkCubics(cubics)]),
+);
+const strokeHead = (walk: Walk, u: number) => {
+  const want = clamp01(u) * walk.total;
+  const p = walk.pts;
   let i = 1;
   while (i < p.length - 1 && p[i].s < want) i++;
   const a = p[i - 1];
   const b = p[i];
   const t = b.s === a.s ? 0 : (want - a.s) / (b.s - a.s);
-  return flagWorld(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
+  return trophyWorld(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
 };
+
+// The six strokes, in drawing order, each with the window it is drawn in.
+const TROPHY_STROKES: { key: string; d: string; win: number[] }[] = [
+  { key: "cup", d: ICON_TROPHY_CUP, win: TR_CUP },
+  { key: "handleL", d: ICON_TROPHY_HANDLE_L, win: TR_HANDLES },
+  { key: "handleR", d: ICON_TROPHY_HANDLE_R, win: TR_HANDLES },
+  { key: "stemL", d: ICON_TROPHY_STEM_L, win: TR_STEMS },
+  { key: "stemR", d: ICON_TROPHY_STEM_R, win: TR_STEMS },
+  { key: "base", d: ICON_TROPHY_BASE, win: TR_BASE },
+];
 
 // ---------------------------------------------------------------------------
 // THE CROWDS. One feathered, wobbling annulus of seats around each tool: the
@@ -800,7 +861,7 @@ const micro = (i: number, f: number) => ({
 //
 // CENTRING PASS, on the director's note that the old tilt "lands with the
 // person low and the row still dominant": from the landing through the whole
-// target/flag draw, the SUBJECT GROUP — the person glyph plus the thought
+// trophy draw, the SUBJECT GROUP — the person glyph plus the thought
 // bubble, as one thing — is centred at screen (540, 960).
 //
 //   measured group bounds, once the bubble is up:
@@ -1181,9 +1242,12 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
   // it grows out of the head: the scale origin is the bubble corner nearest it
   const bubOrigin = { x: BUB_CX - BUB_W / 2, y: BUB_Y1 };
 
-  // -- the flag --------------------------------------------------------------
-  const pole = clamp01((frame - FLAG_POLE[0]) / (FLAG_POLE[1] - FLAG_POLE[0]));
-  const cloth = clamp01((frame - FLAG_CLOTH[0]) / (FLAG_CLOTH[1] - FLAG_CLOTH[0]));
+  // -- the trophy ------------------------------------------------------------
+  // Six strokes, drawn head-led in order: cup, handles, stems, base.
+  const trophy = TROPHY_STROKES.map((st) => ({
+    ...st,
+    u: clamp01((frame - st.win[0]) / (st.win[1] - st.win[0])),
+  }));
 
   // -- the decision's line ---------------------------------------------------
   const rise = clamp01((frame - RISE_F0) / (RISE_F1 - RISE_F0));
@@ -1404,45 +1468,34 @@ const StillDecideWhatWeWantV2: React.FC<Props> = ({
                     strokeLinecap="round"
                     opacity={OP_MID}
                   />
-                  {/* the mission. Pole up first, then the cloth as one stroke. */}
+                  {/* the thing wanted. Cup, then handles, then stems, then base. */}
                   <g
-                    transform={`translate(${BUB_CX} ${TARGET_CY}) scale(${FLAG_S}) translate(${-FLAG_CX} ${-FLAG_CYG})`}
+                    transform={`translate(${BUB_CX} ${TARGET_CY}) scale(${TROPHY_S}) translate(${-TROPHY_CX} ${-TROPHY_CYG})`}
                     fill="none"
                     stroke={ink}
-                    strokeWidth={GLYPH_STROKE_WORLD / FLAG_S}
+                    strokeWidth={GLYPH_STROKE_WORLD / TROPHY_S}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     opacity={OP_FG}
                   >
-                    {pole > 0 ? (
-                      <line x1={4} x2={4} y1={22} y2={22 + (15 - 22) * pole} />
-                    ) : null}
-                    {cloth > 0 ? (
-                      <path
-                        d={ICON_FLAG_CLOTH}
-                        pathLength={1}
-                        strokeDasharray="1 1"
-                        strokeDashoffset={1 - cloth}
-                      />
-                    ) : null}
+                    {trophy.map((st) =>
+                      st.u > 0 ? (
+                        <path
+                          key={st.key}
+                          d={st.d}
+                          pathLength={1}
+                          strokeDasharray="1 1"
+                          strokeDashoffset={1 - st.u}
+                        />
+                      ) : null,
+                    )}
                   </g>
-                  {/* the two stroke heads, in screen-space radius */}
-                  {pole > 0 && pole < 1 ? (
-                    <circle
-                      cx={flagWorld(4, 22 + (15 - 22) * pole).x}
-                      cy={flagWorld(4, 22 + (15 - 22) * pole).y}
-                      r={4 / k}
-                      fill={ink}
-                    />
-                  ) : null}
-                  {cloth > 0 && cloth < 1 ? (
-                    <circle
-                      cx={clothHead(cloth).x}
-                      cy={clothHead(cloth).y}
-                      r={4 / k}
-                      fill={ink}
-                    />
-                  ) : null}
+                  {/* the stroke heads, in screen-space radius */}
+                  {trophy.map((st) => {
+                    if (st.u <= 0 || st.u >= 1) return null;
+                    const h = strokeHead(TROPHY_WALKS[st.key], st.u);
+                    return <circle key={st.key} cx={h.x} cy={h.y} r={4 / k} fill={ink} />;
+                  })}
                 </g>
               </g>
             ) : null}

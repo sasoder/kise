@@ -11,7 +11,6 @@ import {
   ICON_SHADOW_BLUR,
   ICON_SHADOW_OPACITY,
   ICON_SHADOW_Y,
-  OP_READ,
   OP_UNREAD_DOT,
   SHADOW_BLUR,
   SHADOW_OPACITY,
@@ -57,7 +56,7 @@ export const DURATION = 221;
 // settle it dot by dot.
 //
 // Vocabulary, fixed for the whole clip and not restated per cut:
-//   people            = person.png glyphs, white, 72 world px, countable
+//   people            = person.png glyphs, white, 83 world px, countable
 //   assistants        = orange dots, solid, ACCENT_DEEP at rest, ACCENT lit
 //   a human decision  = white ink structure that comes from the people
 //   feedback          = accent threads from the people that convert what they hit
@@ -255,7 +254,7 @@ export const defaultProps: Props = schema.parse({
   iconShadowY: ICON_SHADOW_Y,
   iconShadowBlur: ICON_SHADOW_BLUR,
   iconShadowOpacity: ICON_SHADOW_OPACITY,
-  dotRadius: DOT_RADIUS,
+  dotRadius: DOT_RADIUS * 0.895, // 4.92: the clip's 14.0 screen px dot at this cut's k
   dotUnread: OP_UNREAD_DOT,
   beats: {
     something: 0,
@@ -282,15 +281,48 @@ const WORLD_W = 1080;
 const WORLD_H = 1920;
 
 const CX = 540;
-const CONTENT_C = 835; // the camera's content centre at rest; screen y 835 at k 1
+const CONTENT_C = 833; // the camera's content centre at rest; screen y 835 at k 1
+
+// ---------------------------------------------------------------------------
+// THE DEPTH LADDER, imposed by the clip's weight-harmony pass. It is cut 2's
+// (`StillDecideWhatWeWantV2`) verbatim, because the four cuts of this clip play
+// seconds apart in one edit and this one predated the ladder entirely: its ink
+// was all one rung (OP_READ 0.9) and its crowd one flat carpet of dots, where
+// the other three run a subject / container / back-rung ladder.
+//
+//   FG  1.00  the subject: the people, the ink outline they draw, every head.
+//   MID 0.78  the container: the provenance stem that carries the decision
+//             down to the crowd. A line a thing arrives on is not the thing.
+//   BG  0.55  the back of the crowd, at 0.8x radius.
+//
+// The crowd's split is by DISTANCE FROM THE CROWD CENTRE (which is also the
+// shape's centre, so it still reads after the conform) with a hashed jitter on
+// the threshold, so the falloff is a feathered band and not a drawn circle:
+// the outer ~40% of the crowd ends up on the back rung, and which 40% wobbles.
+// Depth here is OPACITY and SIZE only — a dot's COLOUR still means its state,
+// so the tone ladder is untouched and a dot core is still opaque.
+// ---------------------------------------------------------------------------
+const OP_FG = 1.0;
+const OP_MID = 0.78;
+const OP_BG = 0.55;
+const BG_R_SCALE = 0.8; // a back dot is smaller as well as dimmer
+const DEPTH_CUT = 0.7; // normalised distance from the crowd centre at which a dot goes back (~40% do)
+const DEPTH_JITTER = 0.34; // hashed, so the band is feathered and not a ring
+const R_SPREAD = 0.18; // +-18% hashed per-dot radius, as in every other cut
+
+// The stroke family, in world px, solved from the clip's shared SCREEN targets
+// (outline 6.55, line 4.92, dark traffic 3.28) at this cut's resting k 1.4215.
+const OUTLINE_STROKE = 4.6; // the ink shape the people draw
+const LINE_STROKE = 3.45; // the provenance stem, and a feedback thread
+const TRAFFIC_STROKE = 2.3; // the idle dark traffic across the crowd
 
 // ---------------------------------------------------------------------------
 // The people. A countable row of five, on the column axis, above the crowd.
 // ---------------------------------------------------------------------------
 const PEOPLE_N = 5;
-const PEOPLE_STEP = 110;
+const PEOPLE_STEP = 121;
 const PEOPLE_Y = 460;
-const GLYPH = 72;
+const GLYPH = 83;
 const PEOPLE: { x: number; y: number }[] = Array.from({ length: PEOPLE_N }, (_, i) => ({
   x: CX + (i - (PEOPLE_N - 1) / 2) * PEOPLE_STEP,
   y: PEOPLE_Y,
@@ -400,8 +432,8 @@ const insideShape = (x: number, y: number, w: number, h: number, m: number) => {
 // continuous move of every seat rather than a second layout. A seat has to be
 // inside BOTH states, or a dot would be left outside the boundary by the morph.
 // ---------------------------------------------------------------------------
-const SEAT_STEP_X = 33; // world px in state A
-const SEAT_STEP_Y = 31;
+const SEAT_STEP_X = 29.5; // world px in state A (the 33 x 31 lattice x 0.895)
+const SEAT_STEP_Y = 27.7;
 const SEAT_MARGIN = 24; // so a dot never sits on the stroke
 const SEAT_JITTER = 0.45;
 
@@ -440,10 +472,10 @@ const SEATS: Seat[] = (() => {
 const CROWD_CX = 540;
 const CROWD_CY = 854;
 const CROWD_R = 318;
-const BLOB_STEP = 40;
+const BLOB_STEP = 35.8; // the 40 lattice x 0.895, with the dot
 const BLOB_FEATHER = 1.6; // steps; the blob is small, so a 4-step feather would eat it
 
-type Dot = { x0: number; y0: number; r: number; seed: number };
+type Dot = { x0: number; y0: number; r: number; seed: number; back: boolean };
 
 const DOTS: Dot[] = (() => {
   const out: Dot[] = [];
@@ -459,7 +491,17 @@ const DOTS: Dot[] = (() => {
       const rEff = CROWD_R + wobble(Math.atan2(dy, dx) * WOBBLE_R, 2.3) * BLOB_STEP * 0.5;
       const f = feather((rEff - d) / BLOB_STEP, BLOB_FEATHER);
       if (hash(i, 71) >= f) continue;
-      out.push({ x0: x, y0: y, r: (0.75 + 0.5 * hash(i, 13)) * (0.7 + 0.3 * f), seed: i });
+      // the ladder's crowd split: 0 at the crowd's centre, 1 at its own edge,
+      // plus a hashed jitter so the band between core and back is feathered
+      const depth = clamp01(d / rEff + (hash(i, 23) - 0.5) * DEPTH_JITTER);
+      out.push({
+        x0: x,
+        y0: y,
+        // the seat's own feathered size, times the ladder's +-18% per-dot spread
+        r: (1 + (2 * hash(i, 13) - 1) * R_SPREAD) * (0.7 + 0.3 * f),
+        seed: i,
+        back: depth > DEPTH_CUT,
+      });
     }
   }
   return out;
@@ -823,18 +865,31 @@ const GLYPH_LAUNCH: number[][] = PEOPLE.map((_, g) =>
 // the held breath as the outline closes. `cy` comes off the eased k, so the
 // framing and the zoom settle together.
 //
-//   f0-14     centre 830 -> 835    the standing scene, already creeping
-//   f14-60    centre -> 860        the creep down, riding the stroke
-//   f60-66    centre -> 865        hold drift, 1 screen px/frame
+// HARMONY PASS — the c track is re-levelled, and nothing else about the camera
+// moves: every key frame, every warp and every k is the one that was signed
+// off. The cut used to end with its ink bbox centred at screen y 640, 195 px
+// above the clip's house centre of 835 (CAM_LIFT), which put its people in the
+// vignette and its crowd high in the frame while the other three cuts sat in
+// the caption-safe band. The c-values were drifting the wrong way for that:
+// they rose 830 -> 910 across the cut, and a rising c lifts the picture. They
+// now fall 830 -> 793 from the held breath onward, which is the same motion
+// the crowd itself makes — as it conforms into the shape it gives back ~120
+// world px at the bottom, and the camera takes the picture down into the band
+// with it. The travel per segment is under the hold-drift ceiling everywhere.
+//
+//   f0-14     centre 830 -> 833    the standing scene, already creeping
+//   f14-60    centre -> 845        the creep down, riding the stroke
+//   f60-66    centre -> 848        hold drift, 1 screen px/frame
 //   f66-73    DEAD STILL           the held breath; the outline closes at f66
-//   f73-90    k -> 1.23, c -> 868  the settle push with the conform wave
-//   f90-98    k -> 1.250           hold drift (holdDriftK, +1)
-//   f98-116   k -> 1.290, c -> 872 the push in with the morph
-//   f116-130  centre -> 883        hold drift, 1 screen px/frame
-//   f130-141  k -> 1.344, c -> 885 the creep-in, landing 6 f before f147
-//   f141-172  k -> 1.427           hold drift (holdDriftK, +1)
-//   f172-205  centre -> 910        hold drift under the restless crowd
-//   f205-221  k -> 1.387, c -> 906 the tail: a slow pull-back on the settled
+//   f73-90    k -> 1.23, c -> 830  the settle push with the conform wave: the
+//                                  crowd pulls in and the picture comes down
+//   f90-98    k -> 1.250, c -> 826 hold drift (holdDriftK, +1)
+//   f98-116   k -> 1.290, c -> 818 the push in with the morph
+//   f116-130  centre -> 810        hold drift, 1 screen px/frame
+//   f130-141  k -> 1.344, c -> 806 the creep-in, landing 6 f before f147
+//   f141-172  k -> 1.427, c -> 802 hold drift (holdDriftK, +1)
+//   f172-205  centre -> 797        hold drift under the restless crowd
+//   f205-221  k -> 1.387, c -> 793 the tail: a slow pull-back on the settled
 //                                  crowd
 // ---------------------------------------------------------------------------
 const K_REST = 1.2;
@@ -852,16 +907,16 @@ const CAM_SEGS = [
   // the opening is not parked either: the camera is already creeping when the
   // stroke leaves the middle person, in the direction the creep goes
   camMove({ f0: 0, f1: 14, k0: K_REST, k1: K_REST, c0: 830, c1: CONTENT_C, warp: 1 }),
-  camMove({ f0: 14, f1: 60, k0: K_REST, k1: K_REST, c0: CONTENT_C, c1: 860 }),
-  camMove({ f0: 60, f1: 66, k0: K_REST, k1: K_REST, c0: 860, c1: 865, warp: 1 }),
-  camMove({ f0: 73, f1: 90, k0: K_REST, k1: K_C, c0: 865, c1: 868, warp: 0.8 }),
-  camMove({ f0: 90, f1: 98, k0: K_C, k1: K_C2, c0: 868, c1: 868, warp: 1 }),
-  camMove({ f0: 98, f1: 116, k0: K_C2, k1: K_D, c0: 868, c1: 872, warp: 0.75 }),
-  camMove({ f0: 116, f1: 130, k0: K_D, k1: K_D, c0: 872, c1: 883, warp: 1 }),
-  camMove({ f0: 130, f1: 141, k0: K_D, k1: K_ZOOM, c0: 883, c1: 885, warp: 0.75 }),
-  camMove({ f0: 141, f1: 172, k0: K_ZOOM, k1: K_E2, c0: 885, c1: 887, warp: 1 }),
-  camMove({ f0: 172, f1: 205, k0: K_E2, k1: K_E2, c0: 887, c1: 910, warp: 1 }),
-  camMove({ f0: 205, f1: DURATION, k0: K_E2, k1: K_TAIL, c0: 910, c1: 906, warp: 0.8 }),
+  camMove({ f0: 14, f1: 60, k0: K_REST, k1: K_REST, c0: CONTENT_C, c1: 845 }),
+  camMove({ f0: 60, f1: 66, k0: K_REST, k1: K_REST, c0: 845, c1: 848, warp: 1 }),
+  camMove({ f0: 73, f1: 90, k0: K_REST, k1: K_C, c0: 848, c1: 830, warp: 0.8 }),
+  camMove({ f0: 90, f1: 98, k0: K_C, k1: K_C2, c0: 830, c1: 826, warp: 1 }),
+  camMove({ f0: 98, f1: 116, k0: K_C2, k1: K_D, c0: 826, c1: 818, warp: 0.75 }),
+  camMove({ f0: 116, f1: 130, k0: K_D, k1: K_D, c0: 818, c1: 810, warp: 1 }),
+  camMove({ f0: 130, f1: 141, k0: K_D, k1: K_ZOOM, c0: 810, c1: 806, warp: 0.75 }),
+  camMove({ f0: 141, f1: 172, k0: K_ZOOM, k1: K_E2, c0: 806, c1: 802, warp: 1 }),
+  camMove({ f0: 172, f1: 205, k0: K_E2, k1: K_E2, c0: 802, c1: 797, warp: 1 }),
+  camMove({ f0: 205, f1: DURATION, k0: K_E2, k1: K_TAIL, c0: 797, c1: 793, warp: 0.8 }),
 ];
 
 const CAM = (() => {
@@ -894,7 +949,7 @@ const LAP_DUR = 24;
 
 // LIVENESS 2 — dark traffic between neighbouring dots, at the house rate.
 const TRAFFIC_N = idleThreads(N);
-const TRAFFIC_REACH = 82; // world px: a thread only ever joins neighbours
+const TRAFFIC_REACH = 73.4; // world px: a thread only ever joins neighbours (82 x 0.895)
 
 // LIVENESS 1 — the micro-drift. Two hashed sines per axis, periods ~26 and ~41
 // frames, +-3 world px in total and never two dots in phase.
@@ -1081,7 +1136,16 @@ const HowAssistantsShouldBehaveV3: React.FC<Props> = ({
 
     // the micro-drift: the crowd is never dead, at rest, seated, or settled
     const md = micro(i, frame);
-    return { x: x + md.dx, y: y + md.dy, t, moving, r: d.r, seed: d.seed, settled };
+    return {
+      x: x + md.dx,
+      y: y + md.dy,
+      t,
+      moving,
+      r: d.r * (d.back ? BG_R_SCALE : 1),
+      back: d.back,
+      seed: d.seed,
+      settled,
+    };
   });
 
   // -- dark traffic ----------------------------------------------------------
@@ -1215,23 +1279,29 @@ const HowAssistantsShouldBehaveV3: React.FC<Props> = ({
                 x2={t.x2}
                 y2={t.y2}
                 stroke={accent}
-                strokeWidth={3}
+                strokeWidth={TRAFFIC_STROKE}
                 strokeLinecap="round"
                 opacity={t.op}
               />
             ))}
 
-            {/* the assistants */}
-            {dots.map((d, i) => (
-              <circle
-                key={i}
-                cx={d.x}
-                cy={d.y}
-                r={dotRadius * d.r * breath(frame, hash(i, 9)) * (1 + 0.22 * d.moving)}
-                fill={tone(d.t)}
-                opacity={dotUnread}
-              />
-            ))}
+            {/* the assistants, on the depth ladder: the back of the crowd
+                first and dimmer, then its core over the top of it. Tone still
+                means state — only opacity and size say how far back a dot is. */}
+            {[true, false].map((backPass) =>
+              dots.map((d, i) =>
+                d.back !== backPass ? null : (
+                  <circle
+                    key={`${backPass ? "b" : "c"}${i}`}
+                    cx={d.x}
+                    cy={d.y}
+                    r={dotRadius * d.r * breath(frame, hash(i, 9)) * (1 + 0.22 * d.moving)}
+                    fill={tone(d.t)}
+                    opacity={dotUnread * (d.back ? OP_BG : OP_FG)}
+                  />
+                ),
+              ),
+            )}
 
             {/* human feedback: head-led threads from the people */}
             {threadEls.map((t) => (
@@ -1242,11 +1312,13 @@ const HowAssistantsShouldBehaveV3: React.FC<Props> = ({
                   x2={t.x2}
                   y2={t.y2}
                   stroke={accent}
-                  strokeWidth={3}
+                  strokeWidth={LINE_STROKE}
                   strokeLinecap="round"
                   opacity={t.op}
                 />
-                {t.head < 1 ? <circle cx={t.x2} cy={t.y2} r={4} fill={ink} opacity={t.op} /> : null}
+                {t.head < 1 ? (
+                  <circle cx={t.x2} cy={t.y2} r={4.5 / k} fill={ink} opacity={t.op} />
+                ) : null}
               </g>
             ))}
 
@@ -1259,9 +1331,9 @@ const HowAssistantsShouldBehaveV3: React.FC<Props> = ({
                   x2={stemX}
                   y2={stemY0 + (stemY1 - stemY0) * stem}
                   stroke={ink}
-                  strokeWidth={3}
+                  strokeWidth={LINE_STROKE}
                   strokeLinecap="round"
-                  opacity={OP_READ}
+                  opacity={OP_MID}
                 />
               ) : null}
               {ringDraw > 0 ? (
@@ -1269,11 +1341,11 @@ const HowAssistantsShouldBehaveV3: React.FC<Props> = ({
                   d={shapePath(shapeW, shapeH)}
                   fill="none"
                   stroke={ink}
-                  strokeWidth={3.5}
+                  strokeWidth={OUTLINE_STROKE}
                   strokeLinecap="round"
                   strokeDasharray={perim}
                   strokeDashoffset={perim * (1 - ringDraw)}
-                  opacity={OP_READ}
+                  opacity={OP_FG}
                 />
               ) : null}
               {/* the drawing head, in screen px so it is the same size at any k */}
@@ -1310,7 +1382,7 @@ const HowAssistantsShouldBehaveV3: React.FC<Props> = ({
                   width: GLYPH,
                   height: GLYPH,
                   filter: `brightness(0) invert(1) ${icon}`,
-                  opacity: OP_READ,
+                  opacity: OP_FG,
                 }}
               />
             );
@@ -1324,3 +1396,34 @@ const HowAssistantsShouldBehaveV3: React.FC<Props> = ({
 };
 
 export default HowAssistantsShouldBehaveV3;
+
+// ---------------------------------------------------------------------------
+// For the harmony pass's verification only. Nothing in the piece reads these.
+// ---------------------------------------------------------------------------
+export const CAM_AT = (f: number) => runCamera(f, CAM.F, CAM.CY, CAM.K);
+export const DEPTH_STATS = {
+  fg: OP_FG,
+  mid: OP_MID,
+  bg: OP_BG,
+  backDots: DOTS.filter((d) => d.back).length,
+  total: N,
+  seats: SEATS.length,
+  outlineStrokeWorld: OUTLINE_STROKE,
+  lineStrokeWorld: LINE_STROKE,
+  trafficStrokeWorld: TRAFFIC_STROKE,
+  glyphWorld: GLYPH,
+  // the median per-dot radius factor on each rung, so a rendered dot can be
+  // checked against what the constants ask for
+  rFront: (() => {
+    const v = DOTS.filter((d) => !d.back)
+      .map((d) => d.r)
+      .sort((a, b) => a - b);
+    return v[Math.floor(v.length / 2)];
+  })(),
+  rBack: (() => {
+    const v = DOTS.filter((d) => d.back)
+      .map((d) => d.r * BG_R_SCALE)
+      .sort((a, b) => a - b);
+    return v[Math.floor(v.length / 2)];
+  })(),
+};
