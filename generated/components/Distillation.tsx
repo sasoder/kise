@@ -115,10 +115,11 @@ export const DURATION = 206;
 //                      MARK_EM 72 as Claude, ink ~72 x 53) and ACCENT on
 //                      "generation". The ring stays as its halo, ripe.
 //   the next gen.    = six SMALL DeepSeek marks at 0.62 x MARK_EM (44.6 world,
-//                      40.2 screen), thrown off the big mark's edge on
-//                      individual arcs and seated in a LOOSE FAN out to its
-//                      right and upper right, 210-300 world px from the ring's
-//                      centre, no two closer than 60 world px.
+//                      35.7 screen), thrown off the big mark's edge on
+//                      individual arcs and seated in a LOOSE FAN the ring
+//                      SPILLS DOWNWARD: -105 deg (just west of straight down)
+//                      through -90 and round to +12 deg on the right, 190-300
+//                      world px from the ring's centre, no two closer than 60.
 // No text, no arrows, no flags, no rings around the small marks, no lines
 // between them. Orange means "the model and its data" and nothing else; white
 // means ink, the person, and the ping.
@@ -188,22 +189,29 @@ export const DURATION = 206;
 //              the last merge at f166.5, half a frame before "generation".
 //              The ring stays as its halo, ripe. The person's wake lift settles
 //              back f168-f186. The camera's release: one eased pull-back
-//              f150-f188 to the resolved k with c on the content centre, so the
-//              whole column reads at once.
+//              f150-f188 to the resolved k (now 0.800, because the fan hangs
+//              below the ring) with c on the new content centre 914.02, so the
+//              column AND the spill read at once.
 //  6. f170-f200 "…of models on it" (models f178 · on f181 · it f185)
 //              THE NEXT GENERATION. Six SMALL DeepSeek marks come OUT of the big
-//              one. Each spawns on the big mark's ink edge at 0.1 of the em box,
-//              scales up on its own arriveEase flight out along a bowed arc,
-//              deep -> ripe as it goes, and seats at 0.62 of the em box (44.6
-//              world, 40.2 screen) at a hashed radius 210-300 world from the
-//              ring's centre on hashed angles -25 deg to +80 deg across the
-//              right and upper right — the person has the left. The seats are
-//              walked up the arc until no two are closer than 60 world px, so
-//              the six read as a loose fan the ring has thrown off rather than
-//              specks huddled against it (measured minimum spacing 73.3 world).
-//              Each flight is solved from its OWN arc length (len / 11.5 frames,
-//              19-23 f) and capped so the last mark is seated by f201; measured
-//              peak head speed 20.19 screen px/f, well inside the 45 ceiling.
+//              one, and the ring THROWS THEM DOWN: the fan runs from -105 deg
+//              (a little west of straight down, under and left of the ring, the
+//              person standing clear above it) through -90 and round to +12 deg
+//              on the right, so the new generation spills out of the bottom of
+//              the ring rather than being posted off to one side. Each spawns on
+//              the big mark's ink edge at 0.1 of the em box, scales up on its
+//              own arriveEase flight out along its own bowed arc, deep -> ripe
+//              as it goes, and seats at 0.62 of the em box (44.6 world, 35.7
+//              screen) at a hashed radius 190-300 world from the ring's centre.
+//              Seats, in launch order: -105.0/260, -77.6/292, -60.5/249,
+//              -30.9/257, -11.8/284, +12.2/289 (deg/world radius). The seats are
+//              walked up the arc until no two are closer than 60 world px and
+//              none lands on the person, so the six read as a loose fan rather
+//              than specks huddled against the ring (measured minimum spacing
+//              90.9 world). Each flight is solved from its OWN arc length
+//              (len / 11.5 frames, 17-23 f) and capped so the last mark is
+//              seated by f201; measured peak head speed 17.83 screen px/f at
+//              f188, well inside the 45 ceiling.
 //              Launches are unchanged, spread f170-f186 with hashed jitter:
 //              never in unison. They seat and then just sit, breathing on hashed
 //              `breath` with their own micro-drift. No lines, no rings, no
@@ -258,44 +266,72 @@ export const DURATION = 206;
 //   f104-144 k 1.190 -> 1.300  c  808 ->  935  warp 0.85  GLIDE 2: the creep in
 //                                                         on the ring filling
 //   f144-150 k 1.300 -> 1.302  c  935 ->  937  warp 0.50  decaying drift
-//   f150-188 k 1.302 -> solved c  937 -> 804.7 warp 0.85  GLIDE 3: the release
+//   f150-188 k 1.302 -> solved c  937 -> 914.02 warp 0.85 GLIDE 3: the release,
+//                                                         re-solved for the fan
 //   f188-254 k  -> -0.030      c  -> -6        warp 0.50  a drift still running
 //                                                         when the piece ends
 //
 // The resting k is SOLVED so the damped camera reads exactly K_REST_TARGET on
 // the last frame, and every weight in the piece is its screen number over it.
-// MEASURED on the rendered track, as the screen-space velocity of each ink
+// K_REST_TARGET came down from 0.900 to 0.800 when the fan was re-laid: the ink
+// is 1219.6 world px tall now instead of 1005, and 0.800 is the largest k that
+// still holds the band (see THE CAPTION BAND).
+// MEASURED on the re-solved track, as the screen-space velocity of each ink
 // landmark (the metric the set's |dv| ceiling of 2.2 screen px/f^2 is written
-// against): blob top max|v| 14.34 max|dv| 1.437 (f155); the model 12.07 / 1.231;
-// the ring 21.09 / 1.300 (f34); the ring's foot 22.35 / 1.367; the person's head
-// 19.44 / 1.211. Every landmark is inside the ceiling and no glide is shorter
-// than 38 frames.
+// against): blob top max|v| 12.60 max|dv| 1.195 (f156); the model 9.92 / 0.937;
+// the ring 21.09 / 1.300 (f35); the ring's foot 22.35 / 1.367; the person's head
+// 19.42 / 1.209; the deepest fan seat 25.39 / 1.530 (f35). Every landmark is
+// inside the ceiling and no glide is shorter than 38 frames. MOTION FLOOR: on
+// every frame of the piece the fastest of those landmarks is moving at least
+// 0.545 screen px/f — the camera never parks. (The ring's own trace dips to
+// 0.094 over f198-202: at the resolved zoom it sits almost on the frame's fixed
+// point, so it is the one landmark the final decaying drift barely moves.)
 //
 // STROKE ARITHMETIC, all at the resolved k:
-//   K_REST         = 0.900 (solved; K_END 0.91225 feeds the damper)
-//   wire = ring    = SCREEN_OUTLINE 6.0 / K_REST  = 6.667 world px  (6.00 screen)
-//   person box     = SCREEN_PERSON 118 / K_REST   = 131.11 world px (118.0 screen)
-//   dot DIAMETER   = SCREEN_DOT 14 / K_REST       = 15.55 world px  (14.0 screen)
-//   brand mark em  = MARK_EM 72 world                              (64.8 screen)
-//   small mark em  = 0.62 x MARK_EM = 44.64 world                  (40.2 screen)
-//   dark traffic   = SCREEN_TRAFFIC 3.0 / K_REST  = 3.333 world px  (3.00 screen)
-//   ring R 84 world                                                 (75.6 screen)
+//   K_REST         = 0.800 (solved; K_END 0.81226 feeds the damper)
+//   wire = ring    = SCREEN_OUTLINE 6.0 / K_REST  = 7.500 world px  (6.00 screen)
+//   person box     = SCREEN_PERSON 118 / K_REST   = 147.50 world px (118.0 screen)
+//   dot DIAMETER   = SCREEN_DOT 14 / K_REST       = 17.50 world px  (14.0 screen)
+//   brand mark em  = MARK_EM 72 world                              (57.6 screen)
+//   small mark em  = 0.62 x MARK_EM = 44.64 world                  (35.7 screen)
+//   dark traffic   = SCREEN_TRAFFIC 3.0 / K_REST  = 3.750 world px  (3.00 screen)
+//   ring R 84 world                                                 (67.2 screen)
 //
-// THE CAPTION BAND. The ink runs from the blob's top (460 - 158 = 302) to the
-// ring's outer edge (1220 + 84 + 3.33 = 1307.3); its centre, 804.7, is the
-// camera's resting c and lands on screen y 835 (CAM_LIFT). Half the span is
-// 502.7 world = 452.4 screen px at K_REST, so on the last frame the ink measures
-// screen y 389.2 to 1291.0 — 89 px of clearance above the band's 300 and 79
-// below its 1370, with the camera's own +-5 px sway already in the number. The
-// person's head lands at 1116.1 and his feet at 1215.4.
+// THE CAPTION BAND. The lowest ink in the cut is no longer the ring — it is the
+// deepest small mark, hanging 1521.5 world px down. Both ends are MEASURED off
+// the geometry now rather than declared (STATS.band), with each dot's own
+// radius, `breath`'s 5% and the micro-drift's 3 world px folded in: the ink runs
+// from the topmost blob dot's edge at 304.2 to the deepest small mark's ink at
+// 1523.8, a span of 1219.6 world px whose centre, 914.02, is the camera's
+// resting c and lands on screen y 835 (CAM_LIFT). Half the span is 609.8 world =
+// 487.8 screen px at K_REST 0.800, so on the last frame the ink measures screen
+// y 353.0 to 1328.7 — 53 px of clearance above the caption band's 300 and 41
+// below its 1370, with the camera's own +-5 px sway already in the number, and
+// inside the tighter 340/1330 working guides by 13 and 1.3 px. The person's head
+// lands at 986.3 and his feet at 1085.7.
 //
-// THE SMALL MARKS AND THE BAND. The six marks are the only ink added after the
-// band was solved, so they are constrained to it rather than the other way
-// round: no seat is allowed below the ring's own bottom edge (world 1304), and
-// at 0.62 x MARK_EM the deepest a seat can sit is RING.y + 84 - ry, ry = 16.42,
-// so the downward angle is re-solved at each radius (see DEVIATIONS). Their extents at the
-// resolved camera are measured every frame in STATS.small and printed there:
-// screen x, screen y and the peak head speed of every flight.
+// That is what set K_REST. At 0.810 the deepest mark's ink crosses 1330; at
+// 0.800 it sits 1.3 px inside it, and every px of zoom above that is ink through
+// the captions. 0.800 is the number, not a preference.
+//
+// THE SMALL MARKS AND THE BAND. This is now the other way round. The fan is the
+// gesture — the ring spills its next generation downward — so the SEATS are free
+// and the CAMERA carries the constraint: the seats are solved in world space on
+// the -105..+12 deg arc, the deepest one is measured, and K_REST and the content
+// centre are solved against it. Their extents at the resolved camera are still
+// measured every frame in STATS.small and printed there: screen x, screen y,
+// each seat's ink bottom and the peak head speed of every flight. The lowest ink
+// bottom is screen 1327 (seat 2, -77.6 deg at radius 292) and the fan's screen
+// box is x 467.0..782.8, y 1023.7..1326.8 — inside the frame and inside the
+// band.
+//
+// THE MARKS' SHADOW. The three brand marks carry MARK_SHADOW_OPACITY 0.13 in
+// place of the field's ICON_SHADOW_OPACITY 0.38 — same offset, same blur, same
+// live k, one filtered group with no scale between it and the ink. A solid mark
+// full of narrow pockets takes a drop-shadow at full strength inside them, where
+// a convex silhouette like the person only ever shows a partial fringe; at 0.38
+// the Claude burst's darkest pixel measured 65 and the person's 84. At 0.13 they
+// measure 86 and 83, and the big DeepSeek mark 84. See MARK_SHADOW_OPACITY.
 //
 // ---------------------------------------------------------------------------
 // DEVIATIONS from the brief, with the arithmetic.
@@ -308,14 +344,14 @@ export const DURATION = 206;
 //     inside of the stroke, so no dot ever sits on the ring's ink. At K_REST the
 //     ring is 71 screen px in radius — the same read as the station rings in
 //     cut 1, which are R 64 at k 1.02.
-//   * THE COLUMN'S SEPARATION IS 900 WORLD PX, NOT 940, AND THE BLOB'S RADIUS
+//   * THE COLUMN'S SEPARATION IS 760 WORLD PX, NOT 940, AND THE BLOB'S RADIUS
 //     158, NOT 170. The caption band is the constraint: the content centre is
 //     pinned to screen 835, which leaves exactly 535 px above and below inside
-//     300..1370. At the briefed 940 / 170 the ink's half-span is 588.8 world, so
-//     even at k 0.84 it fills 494.6 of those 535 px and the required 40 px of
-//     clearance is gone before the camera's sway is counted. 900 / 158 puts the
-//     half-span at 572.7 and the resolved k at 0.850, inside the briefed
-//     0.85-0.90, with 48 px of clearance top and bottom.
+//     300..1370, and the fan now spends 216 of the lower half on its own. At the
+//     briefed 940 / 170 the column alone is 1280 world px tall before a single
+//     small mark is hung under it, which at the 535 px half-band forces k below
+//     0.72 and shrinks every weight in the cut. 760 / 158 keeps the column at
+//     1005.3, leaves room for the spill, and resolves at k 0.800.
 //   * THE WIRE DRAWS OVER f20-f54, NOT f36-f52. It is 514.7 world px from the
 //     ring's top to the blob's underside, and it is drawn while the camera is
 //     making its biggest move, so the head's SCREEN speed is its own speed plus
@@ -346,22 +382,27 @@ export const DURATION = 206;
 //     allows; 1-2 per ping would put 9 dots in the ring and the ring would not
 //     read as filled. The five leave on a 0-3.2 frame hashed stagger, so a knock
 //     is a small burst off the underside rather than five dots in a row.
-//   * THE SMALL MARKS' FLOOR IS RE-SOLVED AS AN ANGLE AT EACH RADIUS. The band
-//     is -25 deg to +80 deg, but "none below the ring's bottom edge" is the hard
-//     constraint and the bigger ink makes it bite: the ring's bottom edge is
-//     world 1304 and a seat's own ink half-height is now 0.62 x 26.49 = 16.42,
-//     so a seat centre may sit at most 67.58 world px below the ring's centre.
-//     At radius 210 that is theta >= -18.8 deg, at 300 theta >= -13.0 deg, so
-//     the minimum angle is solved per radius (`smallAngMin`) and SMALL_Y_MAX is
-//     kept as a hard floor underneath it. The lowest seat resolves at -14.6 deg
-//     on radius 268 and its ink bottom lands exactly on world 1304 — on the
-//     edge, never under it (STATS.small.worldBottom == ringBottom).
-//     SEPARATION. Six seats on evenly spread angles with +-4.5 deg of hashed
-//     jitter can still bunch, so each seat is walked UP its own arc in 1.25 deg
-//     steps until it clears every seat already placed by 60 world px. Measured
-//     minimum spacing 73.3 world. The resolved screen box is 576.7..822.8 in x
-//     and 945.1..1291.0 in y — inside the frame's right edge (1040) and inside
-//     the caption band's 300..1370 — so the camera did not have to move.
+//   * THE SMALL MARKS' FLOOR IS GONE, AND THE CAMERA PAID FOR IT. The fan used
+//     to be clamped above the ring's bottom edge (world 1304) by a per-radius
+//     minimum angle; the direction now is that the ring throws its next
+//     generation DOWN, so the clamp and `smallAngMin` are deleted and the band
+//     is -105 deg to +12 deg with the radius hashed 190-300. The deepest seat
+//     lands at world y 1505 (-77.6 deg, radius 292), 201 px BELOW the ring's
+//     bottom edge, and the ink bottom of the piece moves from 1307.3 to 1523.8.
+//     The camera absorbs all of it: K_REST 0.900 -> 0.800 and the content centre
+//     804.7 -> 914.02, re-solved so the whole column plus the fan sits inside
+//     the band (see THE CAPTION BAND). Nothing else in world space moved — the
+//     person, the pings, the wire, the ring and the collapse are untouched, and
+//     every screen number in this header that changed, changed only because k
+//     did.
+//     SEPARATION AND THE PERSON. Six seats on evenly spread angles with +-4.5
+//     deg of hashed jitter can still bunch, so each seat is walked UP its own arc
+//     in 1.25 deg steps until it clears every seat already placed by 60 world px
+//     AND clears the person's box by 24 (`clearsPerson`). The person stands left
+//     of the ring with his feet on its centre line, and the fan's westernmost
+//     seat at -105 deg / 260 is 252 world px below his feet, so the clearance
+//     test never has to fire — it is there so a later radius cannot break him
+//     silently. Measured minimum spacing 90.9 world.
 //   * THE WIRE'S DARK TRAFFIC STARTS AT f138, NOT AT THE WIRE'S LANDING. Dark
 //     traffic in this set is accent at 0.12, and accent moving down the wire
 //     says "data is coming down it". Before f102 nothing has left the model, so
@@ -472,7 +513,7 @@ const BLOB_R1 = 158; // the data's outer radius
 // curve, cy taken off the eased k, the set's CAM_LIFT of 125 — then the shared
 // damper. cx is fixed: the column IS the composition.
 // ---------------------------------------------------------------------------
-const K_REST_TARGET = 0.9;
+const K_REST_TARGET = 0.8;
 const LAST = DURATION - 1;
 
 type Seg = { f0: number; f1: number; k0: number; k1: number; c0: number; c1: number; warp: number };
@@ -481,7 +522,7 @@ type Seg = { f0: number; f1: number; k0: number; k1: number; c0: number; c1: num
 // here as a literal because the ink's extent depends on STROKE, which depends
 // on K_REST, which depends on this. The real extent is measured off the solved
 // weights in STATS.band and must agree with it.
-const CONTENT_C = 804.7;
+const CONTENT_C = 914.02;
 
 const segsFor = (kEnd: number): Seg[] => [
   { f0: 0, f1: 26, k0: 1.9, k1: 1.83, c0: 460, c1: 480, warp: 0.7 },
@@ -570,6 +611,29 @@ const DOT_R = SCREEN_DOT / 2 / K_REST;
 // ---------------------------------------------------------------------------
 const MARK_EM = 72;
 const MARK_HALF = MARK_EM / 2; // 36
+
+// THE MARKS' SHADOW. `iconShadow` is applied exactly as it is everywhere else —
+// once, on a group that carries NO transform of its own (the Glyph's scale(em/24)
+// lives INSIDE the filtered group, so the shadow is never multiplied by it), off
+// the LIVE k, so its offset and blur are the same screen px at every zoom. That
+// was already true and measuring it proved it: at f100 the fringe just below a
+// convex edge reads 91 under the Claude mark against a field of 114, and 84
+// under the person against a field of 104 — the same filter, the mark's if
+// anything the lighter of the two.
+//
+// What the director saw is not the offset, it is the GEOMETRY. The Claude mark
+// is a twelve-ray burst, and every pair of neighbouring rays is a pocket ~5-9
+// screen px wide with ink on both sides: the blurred alpha in there saturates,
+// so the pocket takes the shadow at FULL strength (0.38, plus the global 0.12)
+// while the person, a single convex silhouette, only ever shows a 2 px fringe at
+// partial coverage. Measured darkest pixel: mark 65, person 84.
+//
+// A solid mark therefore does read harsher at the same opacity, so the marks —
+// CLAUDE, the big DEEPSEEK and the six small ones, all three the same family —
+// get their own opacity, solved so the darkest pixel in the mark's pockets
+// matches the darkest pixel beside the person as a fraction of its own field.
+// Everything else in the cut keeps ICON_SHADOW_OPACITY untouched.
+const MARK_SHADOW_OPACITY = 0.13;
 const DS_INK_RATIO = 17.66 / 24;
 const DS_RY = (MARK_EM * DS_INK_RATIO) / 2; // 26.49
 
@@ -993,28 +1057,40 @@ const absorbPoint = (sx: number, sy: number, size: number) => {
 // ---------------------------------------------------------------------------
 // THE NEXT GENERATION. Six small DeepSeek marks come out of the big one from
 // f170: each spawns on its ink edge at 0.1 of the em box, flies out on its own
-// bowed arc growing to 0.62, and seats in a LOOSE FAN thrown off to the right
-// and upper right of the ring — radius 210-300 world, no two seats closer than
-// 60 world px. Individual, never in unison, no lines and no rings.
+// bowed arc growing to 0.62, and seats in a LOOSE FAN that the ring THROWS
+// DOWNWARD — the new generation spills out of the bottom of it rather than
+// being posted off to one side. The band is -105 deg (a little west of straight
+// down, and well clear of the person, who stands left of the ring) through -90
+// to +15 deg on the right, radius 190-300 world, no two seats closer than 60
+// world px. Individual, never in unison, no lines and no rings.
+//
+// Nothing here is clamped to the ring's bottom edge any more — going under it is
+// the point — so the CAMERA carries the constraint instead: K_REST and the
+// content centre are re-solved against the deepest seat's ink (see THE CAMERA).
 // ---------------------------------------------------------------------------
 const SMALL_N = 6;
-const SMALL_SCALE = 0.62; // 44.64 world em — 40.2 screen at K_REST
+const SMALL_SCALE = 0.62; // 44.64 world em — 35.7 screen at K_REST
 const SMALL_S0 = 0.1;
 const SMALL_F0 = 170;
 const SMALL_SPAN = 16; // last launch f186 — "models" (f178) plus eight
-const SMALL_ANG0 = -25; // degrees from horizontal; re-solved per radius below
-const SMALL_ANG1 = 80;
-const SMALL_R0 = 210;
+const SMALL_ANG0 = -105; // degrees from horizontal, positive up: down-and-left
+const SMALL_ANG1 = 15; // ... round to a little above the horizontal on the right
+const SMALL_R0 = 190;
 const SMALL_R1 = 300;
 const SMALL_SEP = 60; // minimum centre-to-centre spacing between seats, world
-/** The ring's own bottom edge, less a small mark's ink half-height. */
-const SMALL_Y_MAX = RING.y + RING_R - SMALL_SCALE * DS_RY;
-/** How far below the ring's CENTRE a seat centre may sit: 84 - 16.42 = 67.58. */
-const SMALL_DROP = RING_R - SMALL_SCALE * DS_RY;
-/** The floor, re-solved as an angle at each radius, so a bigger mark on a
- *  longer arm is lifted rather than clipped by SMALL_Y_MAX. */
-const smallAngMin = (rad: number) =>
-  Math.max(SMALL_ANG0, (Math.asin(Math.max(-1, -SMALL_DROP / rad)) * 180) / Math.PI);
+/** A small mark's own ink half-box, for the clearance tests below. */
+const SMALL_RX = (MARK_EM * SMALL_SCALE) / 2; // 22.32
+const SMALL_RY = SMALL_SCALE * DS_RY; // 16.42
+/** The person's box, so a seat swung round to -105 deg never lands on him. He
+ *  is 8 world px of air away at worst; at these radii the fan clears him by
+ *  more than 170, but the test is here so a later radius change cannot break
+ *  him silently. */
+const SMALL_PERSON_CLEAR = 24;
+const clearsPerson = (x: number, y: number) =>
+  x + SMALL_RX + SMALL_PERSON_CLEAR < PERSON.x - GLYPH / 2 ||
+  x - SMALL_RX - SMALL_PERSON_CLEAR > PERSON.x + GLYPH / 2 ||
+  y + SMALL_RY + SMALL_PERSON_CLEAR < PERSON_BOX_TOP ||
+  y - SMALL_RY - SMALL_PERSON_CLEAR > PERSON_BOX_TOP + GLYPH;
 
 type Small = {
   born: number;
@@ -1034,20 +1110,24 @@ const SMALLS: Small[] = (() => {
     const rad = SMALL_R0 + (SMALL_R1 - SMALL_R0) * hash(i, 313);
     const base =
       SMALL_ANG0 + ((SMALL_ANG1 - SMALL_ANG0) * i) / span + (hash(i, 312) - 0.5) * 9;
-    const lo = smallAngMin(rad);
-    // walk the seat up the arc until it clears every seat already placed
-    let deg = Math.min(SMALL_ANG1, Math.max(lo, base));
+    // walk the seat up the arc until it clears every seat already placed by
+    // SMALL_SEP and is clear of the person. No floor: down is where they go.
+    let deg = Math.min(SMALL_ANG1, Math.max(SMALL_ANG0, base));
     let x = RING.x + Math.cos((deg * Math.PI) / 180) * rad;
-    let y = Math.min(RING.y - Math.sin((deg * Math.PI) / 180) * rad, SMALL_Y_MAX);
-    for (let t = 0; t < 64; t++) {
-      const d = Math.min(SMALL_ANG1, Math.max(lo, base + t * 1.25));
+    let y = RING.y - Math.sin((deg * Math.PI) / 180) * rad;
+    for (let t = 0; t < 96; t++) {
+      const d = Math.min(SMALL_ANG1, Math.max(SMALL_ANG0, base + t * 1.25));
       const a = (d * Math.PI) / 180;
       const px = RING.x + Math.cos(a) * rad;
-      const py = Math.min(RING.y - Math.sin(a) * rad, SMALL_Y_MAX);
+      const py = RING.y - Math.sin(a) * rad;
       deg = d;
       x = px;
       y = py;
-      if (out.every((s) => Math.hypot(px - s.x, py - s.y) >= SMALL_SEP)) break;
+      if (
+        clearsPerson(px, py) &&
+        out.every((s) => Math.hypot(px - s.x, py - s.y) >= SMALL_SEP)
+      )
+        break;
     }
     const born = SMALL_F0 + (SMALL_SPAN * i) / span + (hash(i, 311) - 0.5) * 2.2;
     // the arc is longer now, so the flight is solved from its own length and
@@ -1271,6 +1351,10 @@ const Distillation: React.FC<Props> = ({
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+  // the same shadow at a lower opacity, for the three brand marks only — see
+  // MARK_SHADOW_OPACITY. Same offset, same blur, same live k, one group, no
+  // scale between the filter and the ink.
+  const markIcon = iconShadow(k, iconShadowY, iconShadowBlur, MARK_SHADOW_OPACITY);
 
   const leanT = smoothstep(clamp01((frame - LEAN_F0) / (LEAN_F1 - LEAN_F0)));
 
@@ -1588,7 +1672,7 @@ const Distillation: React.FC<Props> = ({
                 appears on the first merge at 0.3 of its box and grows by area,
                 deep -> ripe, to the same em box as Claude on "generation". */}
             {dsS > 0 ? (
-              <g style={{ filter: icon }} opacity={dotOpacity * OP_FG}>
+              <g style={{ filter: markIcon }} opacity={dotOpacity * OP_FG}>
                 <Glyph
                   glyph={DEEPSEEK}
                   x={RING.x}
@@ -1601,7 +1685,7 @@ const Distillation: React.FC<Props> = ({
 
             {/* THE NEXT GENERATION OF MODELS. Six small DeepSeek marks out of
                 the big one, each on its own arc. No lines, no rings. */}
-            <g style={{ filter: icon }} opacity={dotOpacity * OP_FG}>
+            <g style={{ filter: markIcon }} opacity={dotOpacity * OP_FG}>
               {smallLive.map(({ s, i, p }) => {
                 const md = micro(9000 + i, frame);
                 const settled = clamp01((frame - (s.born + s.flight)) / 6);
@@ -1636,7 +1720,7 @@ const Distillation: React.FC<Props> = ({
             {/* THE MODEL. The CLAUDE mark on the axis, from the first frame to
                 the last, breathing as a scale about its own centre. Everything
                 the fraction is made of came out of it. Top of the z-order. */}
-            <g style={{ filter: icon }} opacity={dotOpacity * OP_FG}>
+            <g style={{ filter: markIcon }} opacity={dotOpacity * OP_FG}>
               <Glyph
                 glyph={CLAUDE}
                 x={MODEL.x}
@@ -1687,8 +1771,17 @@ export const BEAT_CHECK = {
 
 export const CAM_AT = (f: number) => runCamera(f, CAM.F, CAM.CY, CAM.K);
 
-const INK_TOP = MODEL.y - BLOB_R1;
-const INK_BOTTOM = RING.y + RING_R + STROKE / 2;
+// THE INK'S REAL EXTENT, measured rather than declared, because the downward
+// fan made the band tight: the topmost blob dot's own edge (radius, breath and
+// micro-drift included) and the lowest ink in the piece, which is now the
+// deepest small mark and no longer the ring.
+const MICRO_A = 3.0; // the micro-drift's peak amplitude in world px
+const BREATH_A = 1.05; // breath's peak
+const INK_TOP = Math.min(
+  ...BLOB_USED.map((i) => BLOB_SEATS[i].y - DOT_R * BLOB_SEATS[i].r * BREATH_A),
+) - MICRO_A;
+const FAN_BOTTOM = Math.max(...SMALLS.map((s) => s.y + SMALL_RY * BREATH_A)) + MICRO_A * 0.5;
+const INK_BOTTOM = Math.max(RING.y + RING_R + STROKE / 2, FAN_BOTTOM);
 
 export const STATS = {
   kStart: Number(CAM.K[0].toFixed(4)),
@@ -1748,7 +1841,8 @@ export const STATS = {
   small: {
     born: SMALLS.map((s) => Number(s.born.toFixed(1))),
     seatedBy: Number(Math.max(...SMALLS.map((s) => s.born + s.flight)).toFixed(1)),
-    worldBottom: Number(Math.max(...SMALLS.map((s) => s.y + SMALL_SCALE * DS_RY)).toFixed(1)),
+    worldBottom: Number(Math.max(...SMALLS.map((s) => s.y + SMALL_RY)).toFixed(1)),
+    worldTop: Number(Math.min(...SMALLS.map((s) => s.y - SMALL_RY)).toFixed(1)),
     ringBottom: RING.y + RING_R,
     peakHead: Number(SMALL_STATS.peak.toFixed(2)),
     peakAt: SMALL_STATS.peakAt,
@@ -1793,6 +1887,11 @@ export const STATS = {
     screenBottom: Number(screenAt(LAST, CX, INK_BOTTOM)[1].toFixed(1)),
     personHeadScreen: Number(screenAt(LAST, PERSON.x, HEAD_TOP_Y)[1].toFixed(1)),
     personFootScreen: Number(screenAt(LAST, PERSON.x, FOOT_Y)[1].toFixed(1)),
+    fanBottomWorld: Number(FAN_BOTTOM.toFixed(1)),
+    ringBottomWorld: Number((RING.y + RING_R + STROKE / 2).toFixed(1)),
+    contentC: CONTENT_C,
+    clearTop: Number((screenAt(LAST, CX, INK_TOP)[1] - 300).toFixed(1)),
+    clearBottom: Number((1370 - screenAt(LAST, CX, INK_BOTTOM)[1]).toFixed(1)),
   },
 };
 
