@@ -357,10 +357,10 @@ const LEAD = 1060;
 const BEND = 1010;
 const CURVE_END = 3200; // how far the table is integrated
 /** The arc window the resolved frame is solved around. */
-const S_VIS_LO = 840;
-const S_VIS_HI = 2340;
+export const S_VIS_LO = 840;
+export const S_VIS_HI = 2340;
 /** The corridor is populated this far; the curve itself runs on past it. */
-const S_POP_HI = 2540;
+export const S_POP_HI = 2540;
 
 const thetaAt = (s: number) =>
   THETA0 + (THETA1 - THETA0) * smoothstep((s - LEAD) / BEND);
@@ -387,7 +387,7 @@ const CURVE: Pt[] = (() => {
 
 /** The curve at arc position `s`, extrapolated along the end tangents outside
  *  the table so the head can keep travelling past the designed end. */
-const curveAt = (s: number): Pt => {
+export const curveAt = (s: number): Pt => {
   if (s <= 0) {
     const a = CURVE[0];
     return { x: a.x + a.tx * s, y: a.y + a.ty * s, tx: a.tx, ty: a.ty };
@@ -410,7 +410,7 @@ const curveAt = (s: number): Pt => {
 };
 
 /** A corridor point: `s` along the curve, `d` across it (the left normal). */
-const corridorAt = (s: number, d: number) => {
+export const corridorAt = (s: number, d: number) => {
   const p = curveAt(s);
   return { x: p.x + -p.ty * d, y: p.y + p.tx * d };
 };
@@ -424,8 +424,8 @@ const SCREEN_DOT_D = 14.0;
 const SCREEN_STROKE = 8.0;
 
 // The corridor's shape, in world px.
-const D_MAX = 160; // the lateral half-width at rest
-const CONTRACT = 0.70; // ...and what it contracts to once aligned
+export const D_MAX = 160; // the lateral half-width at rest
+export const CONTRACT = 0.70; // ...and what it contracts to once aligned
 const N_DOTS = 340;
 /** The half-width the RESOLVED frame is solved against. The contraction is rate
  *  limited (see the lateral budget below), so the corridor has not reached
@@ -441,7 +441,7 @@ const FRAME_LAT = 0.80 * D_MAX;
 // translated so the same box's centre lands on world (540, 960), which the
 // camera then puts on screen (540, 835) through CAM_LIFT.
 // ---------------------------------------------------------------------------
-const BAND = { x0: 110, x1: 970, y0: 200, y1: 1400 };
+export const BAND = { x0: 110, x1: 970, y0: 200, y1: 1400 };
 
 const FRAMING = (() => {
   let minX = Infinity;
@@ -485,7 +485,7 @@ export const K_REST = FRAMING.k;
 export const DOT_R = SCREEN_DOT_D / 2 / K_REST;
 export const STROKE = SCREEN_STROKE / K_REST;
 /** The head: modest, 1.25x the line's half-width — 5.0 screen px at rest. */
-const HEAD_R = 1.25 * (STROKE / 2);
+export const HEAD_R = 1.25 * (STROKE / 2);
 
 // ---------------------------------------------------------------------------
 // SPINE OPACITY. Every other piece in the set draws its ink at OP_READ, and
@@ -503,7 +503,7 @@ const HEAD_R = 1.25 * (STROKE / 2);
 // costs the piece nothing and is the only way it stays one colour. The
 // iconShadow is unchanged: the separation from the grid is the shadow's job,
 // not the alpha's.
-const SPINE_OPACITY = 1.0;
+export const SPINE_OPACITY = 1.0;
 
 // ---------------------------------------------------------------------------
 // THE HEAD'S SCHEDULE. One speed track, integrated: a short ease-in over the
@@ -526,7 +526,11 @@ const headSpeed = (f: number) =>
 /** S_START is solved below so the head crosses into the frame at f4. */
 const headTravel = (() => {
   const out = [0];
-  for (let f = 1; f <= DURATION + 20; f++) out.push(out[f - 1] + headSpeed(f - 0.5));
+  // Long enough to outlast the NEXT cut of this clip as well: that one stands
+  // in this same world at world time 110 + f, and `advanceRoom` asks for the
+  // head's position at every one of those frames. The table is a prefix either
+  // way, so nothing about THIS cut moves.
+  for (let f = 1; f <= DURATION + 220; f++) out.push(out[f - 1] + headSpeed(f - 0.5));
   return out;
 })();
 const travelAt = (f: number) =>
@@ -756,16 +760,16 @@ export const sHead = (f: number) => S_START + travelAt(f);
 // hashed rank weighted by the feather, so the count is a fact and the shape is
 // still the feather's.
 // ---------------------------------------------------------------------------
-const CELL = 2.45 * DOT_R;
+export const CELL = 2.45 * DOT_R;
 const FEATHER_W = 4.5; // cells of falloff at the corridor's edge
 /** No two seats closer than this many mean radii; and how hard one pass of the
  *  relaxation pushes toward that. */
-const SEP_K = 3.0;
+export const SEP_K = 3.0;
 const SEP_RELAX = 0.6;
 /** Candidate drift headings tried per dot for the opening frame. */
 const HD_TRIES = 12;
 
-type Dot = {
+export type Dot = {
   s0: number;
   d0: number;
   rs: number; // radius scale
@@ -777,7 +781,7 @@ type Dot = {
   driftF: number; // frames it then takes to be absorbed
 };
 
-const ALIGN_F = 12; // frames a dot takes to turn, ripen and pick up the stream
+export const ALIGN_F = 12; // frames a dot takes to turn, ripen and pick up the stream
 /** A dot WAKES a little before the line reaches it — the set's `WAKE_LEAD`,
  *  the same reason an agent lights before its thread launches. It is what keeps
  *  the band of half-turned dots behind the head from swallowing the frame: at
@@ -785,17 +789,17 @@ const ALIGN_F = 12; // frames a dot takes to turn, ripen and pick up the stream
  *  has already started turning. Four frames, so the sliver that is mid-turn
  *  AHEAD of the head is 130 world px — a dot and a half at the resolved zoom —
  *  and the behind/ahead contrast on a still is untouched. */
-const WAKE_LEAD = 4;
-const STREAM_V = 7.0; // world px/frame
+export const WAKE_LEAD = 4;
+export const STREAM_V = 7.0; // world px/frame
 const STREAM_SPREAD = 0.1; // +-10%, hashed: never in unison, never a fan
-const DRIFT_SAT = 30; // frames: the drift's saturation time (see DEVIATIONS)
+export const DRIFT_SAT = 30; // frames: the drift's saturation time (see DEVIATIONS)
 /** The drift did not start when the cut did. Without this every dot sits
  *  exactly on its corridor seat on f0 with zero velocity and therefore no tail,
  *  and the opening frame reads as an ordered corridor — the opposite of the
  *  first beat. The clock starts DRIFT_PRE frames before f0, so f0 is already
  *  scattered and already moving. */
-const DRIFT_PRE = 16;
-const HEAD_GAP = 12; // world px: a dot never overtakes the head
+export const DRIFT_PRE = 16;
+export const HEAD_GAP = 12; // world px: a dot never overtakes the head
 
 // ---------------------------------------------------------------------------
 // THE LATERAL BUDGET. Aligning is a ROTATION, not a capture: a dot that swings
@@ -999,13 +1003,13 @@ export const DOTS: Dot[] = (() => {
 // Born FEED_BACK behind the frame's own entry cut (see DEVIATIONS), with the
 // corridor's contracted statistics.
 // ---------------------------------------------------------------------------
-const FEED_RATE = 0.94; // dots/frame — the corridor's flux, see DEVIATIONS
-const FEED_BACK = 110; // world px behind the frame's entry cut
+export const FEED_RATE = 0.94; // dots/frame — the corridor's flux, see DEVIATIONS
+export const FEED_BACK = 110; // world px behind the frame's entry cut
 /** A feed dot is already aligned, so it arrives at the width the corridor has
  *  actually reached by then rather than at the nominal contracted target. */
-const FEED_LAT = 0.85;
+export const FEED_LAT = 0.85;
 
-type Feed = { born: number; s0: number; d0: number; rs: number; vs: number };
+export type Feed = { born: number; s0: number; d0: number; rs: number; vs: number };
 
 /** The corridor gets a relaxation pass; the feed has to get the same treatment
  *  or it undoes it. Feed dots are born at one place, all travel at nearly one
@@ -1017,18 +1021,23 @@ type Feed = { born: number; s0: number; d0: number; rs: number; vs: number };
  *  the one whose closest approach to the last FEED_LOOKBACK dots, evaluated in
  *  world space at its own birth frame, is largest. Deterministic, and it costs
  *  nothing at render time. */
-const FEED_TRIES = 10;
-const FEED_LOOKBACK = 10;
+export const FEED_TRIES = 10;
+export const FEED_LOOKBACK = 10;
 
-export const FEEDS: Feed[] = (() => {
+/** The feed, built from an ENTRY-CUT PROVIDER rather than from this cut's own
+ *  table, so the sister cut can carry the same stream on past f79 against ITS
+ *  camera while the frames this cut renders are untouched. The loop only ever
+ *  APPENDS and each emission only looks at the last FEED_LOOKBACK before it, so
+ *  a longer call is a strict superset with an identical prefix. */
+export const buildFeeds = (entryS: (f: number) => number, fromF: number, toF: number, seed = 0) => {
   const out: Feed[] = [];
   const posAt = (p: Feed, f: number) => {
     const c = curveAt(p.s0 + Math.max(0, p.vs * (f - p.born)));
     return { x: c.x + -c.ty * p.d0, y: c.y + c.tx * p.d0 };
   };
   let acc = 0;
-  let i = 0;
-  for (let f = 0; f <= DURATION; f++) {
+  let i = seed;
+  for (let f = fromF; f <= toF; f++) {
     acc += FEED_RATE;
     while (acc >= 1) {
       acc -= 1;
@@ -1036,10 +1045,7 @@ export const FEEDS: Feed[] = (() => {
       // never born in front of the head: a feed dot is one the line has
       // ALREADY passed, and a dot ahead of the head would sit pinned against
       // the no-overtaking cap instead of streaming
-      const s0 = Math.max(
-        0,
-        Math.min(ENTRY_S[Math.min(DURATION, f)] - FEED_BACK, sHead(f) - HEAD_GAP - 40),
-      );
+      const s0 = Math.max(0, Math.min(entryS(f) - FEED_BACK, sHead(f) - HEAD_GAP - 40));
       const vs = STREAM_V * (1 + (hash(i, 55) - 0.5) * 2 * STREAM_SPREAD);
       let best: Feed | null = null;
       let bestGap = -1;
@@ -1070,7 +1076,10 @@ export const FEEDS: Feed[] = (() => {
     }
   }
   return out;
-})();
+};
+
+export const ENTRY_S_AT = (f: number) => ENTRY_S[Math.max(0, Math.min(DURATION, Math.round(f)))];
+export const FEEDS: Feed[] = buildFeeds(ENTRY_S_AT, 0, DURATION);
 
 // ---------------------------------------------------------------------------
 // THE MOTION. One function, used for the drawn frame AND for the finite
@@ -1079,7 +1088,7 @@ export const FEEDS: Feed[] = (() => {
 
 /** Arc length covered since the trigger: the stream speed ramps in over
  *  ALIGN_F frames on a smoothstep, integrated in closed form. */
-const streamAdvance = (t: number, v: number) => {
+export const streamAdvance = (t: number, v: number) => {
   if (t <= 0) return 0;
   if (t >= ALIGN_F) return v * (ALIGN_F / 2 + (t - ALIGN_F));
   const u = t / ALIGN_F;
@@ -1094,24 +1103,33 @@ const streamAdvance = (t: number, v: number) => {
  *  zero at the trigger, so there is no step there; and the cap never actually
  *  binds (a stream dot runs at ~7 world px/frame against the head's 23-44), which
  *  CLAMP_BINDS proves by counting. */
-const advanceRoom = (s0: number, f: number) => Math.max(0, sHead(f) - HEAD_GAP - s0);
+export const advanceRoom = (s0: number, f: number) => Math.max(0, sHead(f) - HEAD_GAP - s0);
 
 /** `hd` is the DRAWN heading — the direction the comet points along. Before the
  *  trigger it is the drift's own heading exactly; after it, it is the shortest
  *  arc from that heading on to the curve's tangent, eased over the same ALIGN_F
  *  the tone is. Aligning is therefore a rotation the dot performs, not a
  *  direction read off a velocity that is still being dragged sideways. */
-type Live = { x: number; y: number; r: number; tone: number; hd: number };
+export type Live = {
+  x: number;
+  y: number;
+  r: number;
+  tone: number;
+  hd: number;
+  /** The dot's own arc position on the curve. Nothing in THIS cut reads it —
+   *  the sister cut does, to decide which comets have passed its threshold. */
+  s: number;
+};
 
 /** The shortest signed arc from a to b. */
-const arcTo = (a: number, b: number) => {
+export const arcTo = (a: number, b: number) => {
   let d = b - a;
   while (d > Math.PI) d -= 2 * Math.PI;
   while (d < -Math.PI) d += 2 * Math.PI;
   return d;
 };
 
-const dotAt = (d: Dot, f: number): Live => {
+export const dotAt = (d: Dot, f: number): Live => {
   const t = f - d.trig;
   const a = smoothstep(clamp01(t / ALIGN_F));
   // the WAKE is the turn and the colour; the dot only starts MOVING forward
@@ -1137,10 +1155,11 @@ const dotAt = (d: Dot, f: number): Live => {
     r: DOT_R * d.rs,
     tone: a,
     hd: d.hd + arcTo(d.hd, Math.atan2(c.ty, c.tx)) * a,
+    s,
   };
 };
 
-const feedAt = (p: Feed, f: number): Live => {
+export const feedAt = (p: Feed, f: number): Live => {
   const s = p.s0 + Math.min(Math.max(0, p.vs * (f - p.born)), advanceRoom(p.s0, f));
   const c = curveAt(s);
   return {
@@ -1149,6 +1168,7 @@ const feedAt = (p: Feed, f: number): Live => {
     r: DOT_R * p.rs,
     tone: 1,
     hd: Math.atan2(c.ty, c.tx),
+    s,
   };
 };
 
@@ -1193,10 +1213,10 @@ export const buildWorld = (frame: number): Drawn[] => {
 // the velocity, so there are no length spikes and no flicker when a dot's
 // frame-to-frame speed happens to dip.
 // ---------------------------------------------------------------------------
-const TIP_DRIFT = 1.5; // x diameter, a dot still wandering
-const TIP_STREAM = 2.5; // x diameter, a dot in the stream
+export const TIP_DRIFT = 1.5; // x diameter, a dot still wandering
+export const TIP_STREAM = 2.5; // x diameter, a dot in the stream
 
-const cometPath = (d: Drawn) => {
+export const cometPath = (d: Drawn) => {
   const r = d.r;
   if (r < 0.05) return null;
   const L = 2 * r * (TIP_DRIFT + (TIP_STREAM - TIP_DRIFT) * d.tone);
@@ -1218,6 +1238,25 @@ const cometPath = (d: Drawn) => {
     `M${n(p1x)} ${n(p1y)} A${n(r)} ${n(r)} 0 1 1 ${n(p2x)} ${n(p2y)} ` +
     `L${n(d.x + ux * L)} ${n(d.y + uy * L)} Z`
   );
+};
+
+/** The spine, sampled from the curve table between two arc positions, with the
+ *  point its head sits on. Shared with the sister cut, which draws a scaled
+ *  copy of the same curve. */
+export const spinePath = (
+  s0: number,
+  s1: number,
+  at: (s: number) => { x: number; y: number } = curveAt,
+  step = 6,
+) => {
+  let d = "";
+  for (let s = s0; s <= s1; s += step) {
+    const p = at(s);
+    d += `${s === s0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+  }
+  const e = at(s1);
+  d += `L${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+  return { d, head: e };
 };
 
 // ---------------------------------------------------------------------------
@@ -1256,17 +1295,7 @@ const GoodTrajectory: React.FC<Props> = ({
 
   // -- the line: drawn on by arc length behind the head -----------------------
   const sh = sHead(frame);
-  const line = (() => {
-    let d = "";
-    const step = 6;
-    for (let s = 0; s <= sh; s += step) {
-      const p = curveAt(s);
-      d += `${s === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
-    }
-    const e = curveAt(sh);
-    d += `L${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
-    return { d, head: e };
-  })();
+  const line = spinePath(0, sh);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
