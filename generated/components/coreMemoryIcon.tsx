@@ -57,6 +57,8 @@ export const LOOP_FRAMES = 96;
 export const SERVER_IN_FRAMES = 48;
 /** The plume needs a full puff lifetime to build, so: landing + one loop. */
 export const POWER_IN_FRAMES = CORE_LAND + LOOP_FRAMES; // 124
+/** The clock's hands are already spinning on the way in, so: same as the rack. */
+export const CLOCK_IN_FRAMES = 48;
 
 const TAU = Math.PI * 2;
 export {TAU};
@@ -133,7 +135,8 @@ export const coreMemoryTiming = (
 };
 
 export type CoreMemoryIconStackProps = {
-  icon: string;
+  /** The PNG whose alpha masks every layer. Omitted only when `renderLayer` is. */
+  icon?: string;
   iconSize: number;
   frame: number;
   timing: CoreMemoryTiming;
@@ -147,6 +150,14 @@ export type CoreMemoryIconStackProps = {
    * exactly the way the opaque PNG did in the approved loops.
    */
   flair: React.ReactNode;
+  /**
+   * Drawn-from-scratch icons (the clock, whose HANDS move) cannot be a static
+   * PNG alpha mask, so they supply their silhouette AT THE CURRENT FRAME as
+   * inline SVG in one flat colour instead. Every layer calls this with its own
+   * colour on the same frame, so the copies are identical shapes and the chain
+   * still vanishes behind the core exactly as the masked version does.
+   */
+  renderLayer?: (color: string) => React.ReactNode;
 };
 
 /**
@@ -162,10 +173,18 @@ export const CoreMemoryIconStack: React.FC<CoreMemoryIconStackProps> = ({
   transformOrigin,
   transform,
   flair,
+  renderLayer,
 }) => {
   const {coreOffset, coreStarted, mode} = timing;
-  const mask = maskStyle(icon);
+  const mask = icon ? maskStyle(icon) : undefined;
   const showColors = mode === 'in' && frame <= LAST_COLOR_LAND;
+  /**
+   * One layer's ink. The masked path is untouched: a flat colour wearing the
+   * PNG's alpha. The drawn path leaves the node transparent and puts the
+   * silhouette inside it instead.
+   */
+  const ink = (color: string): React.CSSProperties =>
+    renderLayer ? {} : {backgroundColor: color, ...mask};
 
   return (
     <div
@@ -187,10 +206,11 @@ export const CoreMemoryIconStack: React.FC<CoreMemoryIconStackProps> = ({
             inset: 0,
             zIndex: 0,
             translate: `${shadowOffset}px ${coreOffset + shadowOffset}px`,
-            backgroundColor: '#000000',
-            ...mask,
+            ...ink('#000000'),
           }}
-        />
+        >
+          {renderLayer ? renderLayer('#000000') : null}
+        </div>
       ) : null}
 
       {/* The chain, in arrival order and stacked the same way. Nothing fades,
@@ -205,10 +225,11 @@ export const CoreMemoryIconStack: React.FC<CoreMemoryIconStackProps> = ({
                   inset: 0,
                   zIndex: i + 1,
                   translate: `0px ${slideOffset(frame, i * STAGGER_FRAMES)}px`,
-                  backgroundColor: color,
-                  ...mask,
+                  ...ink(color),
                 }}
-              />
+              >
+                {renderLayer ? renderLayer(color) : null}
+              </div>
             ) : null,
           )
         : null}
@@ -235,10 +256,11 @@ export const CoreMemoryIconStack: React.FC<CoreMemoryIconStackProps> = ({
             inset: 0,
             zIndex: CHAIN_COLORS.length + 2,
             translate: `0px ${coreOffset}px`,
-            backgroundColor: CORE_COLOR,
-            ...mask,
+            ...ink(CORE_COLOR),
           }}
-        />
+        >
+          {renderLayer ? renderLayer(CORE_COLOR) : null}
+        </div>
       ) : null}
     </div>
   );
