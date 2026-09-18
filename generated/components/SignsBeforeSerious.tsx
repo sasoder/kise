@@ -34,11 +34,9 @@ import {
   CURVE_AT as curveAt,
   DOT_R,
   DURATION as GT_DURATION,
-  HEAD_R,
   SPINE_OPACITY,
   STREAM_V,
   STROKE,
-  S_VIS_HI,
   arcTo,
   cometPath,
   spinePath,
@@ -66,12 +64,23 @@ export const DURATION = 94;
 // THE EDITORIAL NOTE, which decides the whole shape of this cut. At f78 the
 // editor cuts to the speaker's face for "when children grow up...". So this cut
 // DOES NOT RESOLVE. Nothing lands on the last frame; the last gesture — the
-// twin curve drawing itself in the empty lower right — is 40% done at f78 and
-// 65% done at f94, still travelling, still unfinished. The 16-frame tail is not
-// a hold, it is the same motion continuing in case the editor takes a few more
-// frames. Every other moving thing (the stream sliding up the curve, the signs'
-// drift, the camera's closing drift, which is still opening) is mid-motion at
-// f78 too.
+// camera easing back out of the close view — is still opening at f78 and still
+// opening at f94, never landing. The 16-frame tail is not a hold, it is the
+// same motion continuing in case the editor takes a few more frames. Every
+// other moving thing (the stream sliding up the curve, the signs' drift, the
+// comets swelling as they reach the tick) is mid-motion at f78 too.
+//
+// ---------------------------------------------------------------------------
+// V2, the delivered revision. The first build closed on a TWIN: a 0.55x bare
+// white copy of the curve that started drawing itself in the empty lower right
+// from f58, the analogy in "in the same way that" being set up on screen. The
+// user cut it — "You know how the line starts drawing from the bottom towards
+// the end. Please just remove this. Remove the line, it's not very necessary,
+// but the graphic is good otherwise." So it is gone: geometry, placement solve,
+// draw-on schedule and all. NOTHING ELSE MOVED. The camera track in particular
+// is bit-for-bit what it was — the same segments, the same solved K_END and
+// CENTRE_END, the same unlanded pull-back — because the twin was placed OFF the
+// camera and never fed back into it. Gesture 4 is now that pull-back alone.
 //
 // ---------------------------------------------------------------------------
 // CONTINUITY, AND WHAT IT IS NOT. This is not a new scene, it is the same world
@@ -99,14 +108,13 @@ export const DURATION = 94;
 //
 // ---------------------------------------------------------------------------
 // SOUND-OFF READING TEST — one sentence:
-//   "three of them have broken away from the line and been ringed; further up,
-//    past a mark across the line, they all swell; and a second, smaller line of
-//    the same shape is starting to be drawn beside it."
+//   "three of them have broken away from the line and been ringed; and further
+//    up, past a mark across the line, they all swell."
 //
 // VOCABULARY, unchanged from cut 1: ORANGE is the AI models and nothing else;
-// WHITE INK is everything we build — here the spine, the three rings, the
-// threshold tick and the twin curve, all at the same stroke and all opaque
-// (see SPINE OPACITY in cut 1).
+// WHITE INK is everything we build — here the spine, the three rings and the
+// threshold tick, all at the same stroke and all opaque (see SPINE OPACITY in
+// cut 1).
 //
 // ---------------------------------------------------------------------------
 // GESTURES — the word each lands on and the frames it runs over. Every gesture
@@ -158,16 +166,16 @@ export const DURATION = 94;
 //                               already big and the camera discovers them rather
 //                               than being told. On f51 comets are mid-swell on
 //                               the tick. No colour change, no flash.
-//  4. f52-94 "in the same way   THE TWIN, and the cut's open end. The camera
-//            that" (f58/f64)    eases back out to K_REST2, and in the empty
-//                               lower right a second curve starts drawing: the
-//                               SAME curve shape at 0.55x, a bare white spine
-//                               with the same head and the same screen stroke,
-//                               and NO DOTS on it — children are not orange,
-//                               and this is only the analogy being set up. Its
-//                               head starts at f58, is 40% along at f78 (the
-//                               editor's cut) and 65% at f94, still travelling.
-//                               The rings and the tick are all still in frame.
+//  4. f52-94 "in the same way   THE OPEN END. The camera eases back out toward
+//            that" (f58/f64)    the rest framing and never gets there, so the
+//                               whole annotation — the three ringed signs low
+//                               in frame, the tick and the swollen stream above
+//                               them — comes back into view as one move. The
+//                               picture stays alive under it: the stream still
+//                               sliding up the curve, the signs still drifting,
+//                               every comet reaching the tick still swelling.
+//                               The editor cuts to the speaker's face at f78,
+//                               mid-move.
 //
 // LIVENESS — none of it is on a word and none of it stops:
 //   * the stream, still flowing up the curve at one speed, and each comet's own
@@ -228,16 +236,11 @@ export const DURATION = 94;
 //     355 on the word, 371 at f58, 394 at the cut and 392 at f93 — inside the
 //     band on all four. Its right end is ~30 px outside the frame at f51 and
 //     fully inside from f55; the whole bar is in frame for the rest of the cut.
-//   * THE TWIN'S SHAPE STARTS AT ARC 960, not at cut 1's window start. The
-//     curve's first 220 px are dead straight, so a twin drawn from there is a
-//     plain diagonal stick for its whole visible life and the analogy never
-//     reads. From 960 the bend arrives at about a third along, and the twin is
-//     visibly the same shape by the editor's cut.
-//   * THE TWIN IS PLACED OFF THE f78 CAMERA, not the last frame's. At f93 it
-//     sits x 513..846, y 732..1203 — 28 px above the briefed box's top as the
-//     camera keeps opening — and at f78, the frame that matters, x 501..899,
-//     y 799..1361, inside the box and clear of the caption band. Placing it off
-//     f93 instead put its drawn end at y 1490 on the cut frame.
+//   * THERE IS NO TWIN CURVE — see V2 above. The lower right stays empty grid
+//     for the whole cut, and "in the same way that" is carried by the pull-back
+//     alone. The camera was never solved against the twin (the twin was placed
+//     off the camera, not the other way round), so removing it changed nothing
+//     numeric: K_END, CENTRE_END and every frame of the track are unchanged.
 //   * THIS CUT DOES NOT INHERIT CUT 1'S SEATS — see THE STREAM above. It is the
 //     same world, the same curve, the same comet, the same density and the same
 //     feathered edge, but the individual seats are new, because there is a 1.28 s
@@ -951,87 +954,6 @@ export const SCREEN_AT = (f: number, wx: number, wy: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE TWIN. The same curve shape at 0.55x, drawn as a bare spine with the same
-// head, placed so that at the resting camera it sits wholly inside the empty
-// lower right — screen x 420..980, y 760..1400 — and never reaches the main
-// corridor. No dots: children are not the models, and the analogy is only being
-// set up, not populated.
-// ---------------------------------------------------------------------------
-const TW_SCALE = 0.55;
-const TW_S0 = 960;
-const TW_S1 = S_VIS_HI;
-const TW_BOX = { x0: 420, x1: 980, y0: 760, y1: 1400 };
-const TW_F0 = 58;
-
-/** The twin's own shape, before it is placed: the main curve's visible window,
- *  scaled about its own start. */
-const twShape = (u: number) => {
-  const a = curveAt(TW_S0);
-  const p = curveAt(TW_S0 + (TW_S1 - TW_S0) * u);
-  return { x: (p.x - a.x) * TW_SCALE, y: (p.y - a.y) * TW_SCALE };
-};
-
-/** Placed off the RESTING camera, so the box the brief gives is a screen box. */
-export const TW_ORIGIN = (() => {
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (let i = 0; i <= 200; i++) {
-    const p = twShape(i / 200);
-    minX = Math.min(minX, p.x);
-    maxX = Math.max(maxX, p.x);
-    minY = Math.min(minY, p.y);
-    maxY = Math.max(maxY, p.y);
-  }
-  // placed off the camera at the EDITOR'''S CUT, not at the last frame: f78 is
-  // the frame that has to be right, and it is the tighter of the two, so the
-  // twin clears the caption band there and is comfortably inside the box by f93.
-  const c = CAM_AT(F_CUT);
-  const w = (sx: number, sy: number) => ({
-    x: c.cx + (sx - CX) / c.k,
-    y: c.cy + (sy - FRAME_H / 2) / c.k,
-  });
-  const lo = w(TW_BOX.x0 + STROKE * c.k, TW_BOX.y0 + STROKE * c.k);
-  const hi = w(TW_BOX.x1 - STROKE * c.k, TW_BOX.y1 - STROKE * c.k);
-  // centre the shape's own box inside the target box
-  return {
-    x: (lo.x + hi.x) / 2 - (minX + maxX) / 2,
-    y: (lo.y + hi.y) / 2 - (minY + maxY) / 2,
-    w: maxX - minX,
-    h: maxY - minY,
-    boxW: hi.x - lo.x,
-    boxH: hi.y - lo.y,
-  };
-})();
-
-const twAt = (u: number) => {
-  const p = twShape(u);
-  return { x: TW_ORIGIN.x + p.x, y: TW_ORIGIN.y + p.y };
-};
-
-/** The head's progress: authored so it is 40% along on the editor's cut and 65%
- *  on the last frame, decelerating slightly and never finishing. A short ease-in
- *  over the first 4 frames, so it does not start from a step. */
-export const TW_U = (() => {
-  const raw: number[] = [];
-  let u = 0;
-  for (let f = 0; f <= TRACK_F1; f++) {
-    if (f <= TW_F0) {
-      raw.push(0);
-      continue;
-    }
-    const t = f - TW_F0;
-    u += smoothstep(clamp01(t / 4)) * (1 - 0.30 * clamp01(t / 36));
-    raw.push(u);
-  }
-  // scale so u(f78) = 0.40
-  const scale = 0.4 / raw[78];
-  return raw.map((v) => v * scale);
-})();
-const twU = (f: number) => TW_U[Math.max(0, Math.min(TRACK_F1, Math.round(f)))];
-
-// ---------------------------------------------------------------------------
 // THE WORLD, DRAWN.
 // ---------------------------------------------------------------------------
 const MAIN_SPINE_TO = 3000; // above this the curve is out of the top at every k
@@ -1110,12 +1032,6 @@ const SignsBeforeSerious: React.FC<Props> = ({
       y2: c.y + ny * h,
     };
   })();
-
-  // -- the twin ---------------------------------------------------------------
-  const tu = twU(frame);
-  // the twin is parametrised 0..1, not in arc length, so it needs its own
-  // sampling step — at the spine's own 6 the whole curve would be two points
-  const twin = tu > 0 ? spinePath(0, tu, (u) => twAt(u), 1 / 260) : null;
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -1216,28 +1132,6 @@ const SignsBeforeSerious: React.FC<Props> = ({
                   />
                 );
               })}
-
-              {/* the twin, still being drawn when the editor cuts away */}
-              {twin ? (
-                <>
-                  <path
-                    d={twin.d}
-                    fill="none"
-                    stroke={ink}
-                    strokeWidth={STROKE}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity={SPINE_OPACITY}
-                  />
-                  <circle
-                    cx={twin.head.x}
-                    cy={twin.head.y}
-                    r={HEAD_R * Math.min(1, (frame - TW_F0) / 3)}
-                    fill={ink}
-                    opacity={SPINE_OPACITY}
-                  />
-                </>
-              ) : null}
             </g>
           </svg>
         </div>
@@ -1278,12 +1172,6 @@ export const STATS = {
   widenSpan: [0, 50, 120, 160].map((d) => [d, Math.round(widenSpan(d))]),
   strip: STRIP.length,
   stripDensity: STRIP_DENSITY,
-  twin: {
-    scale: TW_SCALE,
-    origin: [Number(TW_ORIGIN.x.toFixed(0)), Number(TW_ORIGIN.y.toFixed(0))],
-    shape: [Number(TW_ORIGIN.w.toFixed(0)), Number(TW_ORIGIN.h.toFixed(0))],
-    box: [Number(TW_ORIGIN.boxW.toFixed(0)), Number(TW_ORIGIN.boxH.toFixed(0))],
-    u: [58, 68, 78, 88, 93].map((f) => [f, Number(twU(f).toFixed(3))]),
-  },
+  twin: "removed in V2",
   arcTo: typeof arcTo,
 };
