@@ -35,6 +35,8 @@ import {
   SPINE_OPACITY,
   STREAM_V,
   STROKE,
+  TIP_DRIFT,
+  TIP_STREAM,
   cometPath,
   spinePath,
 } from "./GoodTrajectory";
@@ -94,7 +96,7 @@ export const DURATION = 160;
 // SOUND-OFF READING TEST — one sentence:
 //   "the further up the line they get, the bigger, wider and faster they are,
 //    and there are three marks where each step happens; for a moment one of them
-//    is half-drawn as a person, and then it is a comet again."
+//    turns into a little person and then back into a comet."
 //
 // ---------------------------------------------------------------------------
 // THE LADDER, AND THE CONTINUITY EQUATION. Cut 2 established one threshold: a
@@ -144,18 +146,17 @@ export const DURATION = 160;
 //                                  arc path — so it holds at the frame's content
 //                                  centre while the spine, the tick, the grid and
 //                                  every comet in a different tier slide past.
-//                                  Over it a white person outline draws itself,
-//                                  aligned to the comet's heading: Lucide
-//                                  `user-round`, the SHOULDERS first so it can
-//                                  never read as one of cut 2's rings, then the
-//                                  head circle, concentric with the comet's own
-//                                  head at 2.1x its radius, at HALF the spine's
-//                                  stroke, in a pocket cleared of other comets.
-//                                  Starts f50, 84% drawn at f72, never completes.
-//  3. f76-99  "but I think it's    THE RETRACTION. The outline un-draws the way
-//             true that" (f79)     it came, head first and then the shoulders,
-//                                  gone by f94. The comet was never anything but
-//                                  a comet. The camera is already easing out and
+//                                  And it SHIFTS SHAPE: the comet's own body
+//                                  becomes a person — a head over a shoulder
+//                                  dome with a neck gap, in its own orange,
+//                                  still trailing its tail along its heading —
+//                                  over f50-68, in a pocket cleared of other
+//                                  comets. See V2 below.
+//  3. f76-99  "but I think it's    THE RETRACTION. It holds as a person through
+//             true that" (f79)     "anthropomorphize" (f68-78), the wander still
+//                                  alive on it, and then the same one shape eases
+//                                  back to a comet over f78-94. It was never
+//                                  anything but a comet. The camera is easing out
 //                                  up underneath it — there is no pause between
 //                                  the retreat and the pull.
 //  4. f92-144 "as the AI has       THE LADDER. One long pull-back and rise. Tick
@@ -177,21 +178,16 @@ export const DURATION = 160;
 // camera that never parks.
 // ---------------------------------------------------------------------------
 // DEVIATIONS from the brief, with the arithmetic.
-//   * THE OUTLINE IS DRAWN AT HALF THE SPINE'S STROKE, at 2.1x the comet's
-//     radius, and it is 84% drawn on f72 rather than 70%. It is an annotation
-//     over structure, which is what the set draws at half stroke; at the full
-//     stroke the ink is a third of the head circle's own diameter and the comet
-//     inside it is lost. And a head swept symmetrically from the top is a DOME
-//     below about 70% — a dome over the shoulders' dome, which reads as two arcs
-//     and not as a person — so the split between the two elements is 18/82
-//     rather than by path length (44/56), which puts the head at 78% of a circle
-//     on f72: a head with a gap at the chin that the shoulders' peak sits in.
-//   * THE RIDER HAS A POCKET. At 2.1x the outline still reaches about 5.5 comet
-//     radii, and at the corridor's ordinary density that circle holds four or
-//     five other comets — the outline read as an icon pasted on a crowd. The 30
-//     seats that would fall inside it during f44-100 are simply not seated, once,
-//     at strip level; the pocket travels with the rigid strip, so it is an airy
-//     spot in the stream and never an animated hole.
+//   * THE RIDER HAS A POCKET: the 30 seats that would fall within 1.25 x the
+//     figure's reach during f44-100 are simply not seated, once, at strip level,
+//     so the shape has clear grey around it. The pocket travels with the rigid
+//     strip — it is an airy spot in the stream, never an animated hole. It is
+//     still sized off the V1 outline's reach (5.5 comet radii), which is larger
+//     than the person needs (its own reach is 4.3): keeping it means the strip,
+//     and therefore every other comet in the cut, is bit for bit what V1
+//     delivered. Verified by difference blend: f32, f44, f104 and f135 differ
+//     from the delivered V1 only at the ProRes noise floor (max 3, no bbox above
+//     it), and f61, f72, f84 differ only inside the rider's own neighbourhood.
 //   * THE RESOLVED FRAME IS THE LADDER, and the three ringed signs are allowed
 //     to be small and off to one side rather than framed. Solving around them
 //     made the box enormous and the ladder came out at k 0.44, leaning left,
@@ -524,6 +520,10 @@ export const RIDER = (() => {
   return best;
 })();
 
+/** The rider's key in the drawn world, so the render can find it without
+ *  depending on its index in the filtered strip. */
+export const RIDER_KEY = `p${RIDER}`;
+
 export const POCKET: number[] = (() => {
   const r = STRIP_ALL[RIDER];
   const drop: number[] = [];
@@ -803,40 +803,111 @@ export const SCREEN_AT = (f: number, wx: number, wy: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE PERSON, half-drawn. Lucide `user-round`, on its own 24-unit box: the
-// shoulders are one arc and the head is one circle, and they are drawn in that
-// order so the first thing that appears is the shoulders and it can never be
-// mistaken for one of cut 2's rings. It is scaled so the head circle is 1.5x
-// the comet's radius and concentric with the comet's own head, and rotated to
-// the comet's heading, so it is the comet that is being drawn on and not a
-// figure standing beside it. It is 70% drawn on "anthropomorphize" and it never
-// completes; then it un-draws the way it came.
+// V2 — THE COMET SHIFTS INTO A PERSON. On the user's note about the delivered
+// cut, verbatim:
+//
+//   "instead of doing an outline of a person, which doesn't really make any
+//    sense, it can shift into one of those shapes, but still keeping the tail
+//    with the direction it has now."
+//
+// So the white outline is gone — no ink of ours touches a comet any more — and
+// the ridden comet's own body changes shape instead: the dot becomes the house
+// person silhouette (a round head over a shoulder dome with a small neck gap,
+// flat and filled, as `public/person.png`), in the comet's own orange, and it
+// changes back. Nothing else in the cut moves: the camera, the ride, the
+// pocket, the ladder, the flow and every other comet are bit for bit what they
+// were.
+//
+// It is ONE PARAMETRIC SHAPE, not a crossfade between two. Everything is a
+// function of m, and at m = 0 every term collapses to the comet's own circle
+// and tip, so the path string is character for character `cometPath`'s:
+//
+//   the SHOULDER circle IS the comet's dot, grown and eased back
+//       rs = r * g * (1 + 0.55 m),   Cs = C0 - u * r * g * 0.70 m
+//   the HEAD circle is also the dot, slid forward and barely tightened
+//       rh = r * g * (1 - 0.04 m),   Ch = C0 + u * r * g * 2.0 m
+//   with g = 1 + 0.45 m scaling the whole figure, so the head keeps about the
+//   size the dot had while the shoulders grow out behind it. The head is 0.62
+//   of the shoulder circle, which is `person.png`'s own proportion (head r 5,
+//   shoulders r 8); the brief's 0.62 OF THE DOT would make it 0.40 of the
+//   shoulders and the figure reads as a pawn rather than as a person.
+//
+// The tail is the same construction it always was — the two tangent lines from
+// the tip back to the body circle — so it keeps its direction (the comet's
+// heading), its taper and, because the tip is eased back by the same amount the
+// shoulders eat into it, its VISIBLE length. It leaves from under the shoulders
+// along the heading axis, which on the steep leg is a ~12 degree lean into the
+// motion, because the whole figure is built on the heading and not on the
+// screen.
+//
+// The neck gap is arithmetic, not a keyframe: the head's rear edge passes the
+// shoulders' front edge at
+//       2.04 m - 1 > 1 - 0.15 m   =>   m > 0.913
+// so the gap is the LAST thing to open, a few frames before the hold.
+//
+// At f72 the figure is 90 screen px across the shoulders and 152 tall.
 // ---------------------------------------------------------------------------
-const OUT_F0 = 50;
-const OUT_F1 = 78; // 70% at f72 by the schedule below
-const OUT_MAX = 0.95;
-const OUT_BACK: [number, number] = [76, 94];
-const HEAD_MUL = OUTLINE_HEAD_MUL;
-/** Lucide user-round, measured on its own 24 grid: head r 5 at (12, 8), and the
- *  shoulders arc `M20 21a8 8 0 0 0-16 0` — radius 8, from (20,21) to (4,21). */
-const LU_HEAD_R = 5;
-const LU_HEAD = { x: 12, y: 8 };
-const LU_SH_R = 8;
-const LU_SH_LEN = Math.PI * LU_SH_R; // a half-circle
-const LU_HEAD_LEN = Math.PI * LU_HEAD_R; // each half of the head
-/** How the progress splits between the two elements. NOT by path length: the
- *  shoulders are 44% of the ink but only 18% of the time, because the head is
- *  the part that makes the figure legible. Swept symmetrically from the top,
- *  a head under about 70% is a dome, and a dome over the shoulders' dome reads
- *  as two arcs and not as a person — measured on the frame. At f72 this split
- *  puts the head at 78%, which is a circle with a gap at the chin that the
- *  shoulders' own peak sits in. It still never completes. */
-const SH_SHARE = 0.18;
+const M_F0 = 50; // the shift starts
+const M_F1 = 68; // ...is complete
+const M_BACK: [number, number] = [78, 94]; // ...and is taken back
+const G_GROW = 0.45; // the whole figure's scale at m = 1
+const SH_R = 0.55; // the shoulder circle's growth
+const SH_BACK = 0.7; // ...and how far it eases back
+const HD_R = 0.04; // the head circle's tightening
+const HD_FWD = 2.0; // ...and how far it slides forward
+const TIP_BACK = 1.6; // the tip eases back so the visible tail keeps its length
 
-export const outlineU = (f: number) => {
-  const on = OUT_MAX * smoothstep(clamp01((f - OUT_F0) / (OUT_F1 - OUT_F0)));
-  const off = smoothstep(clamp01((f - OUT_BACK[0]) / (OUT_BACK[1] - OUT_BACK[0])));
-  return on * (1 - off);
+export const morphM = (f: number) =>
+  smoothstep(clamp01((f - M_F0) / (M_F1 - M_F0))) *
+  (1 - smoothstep(clamp01((f - M_BACK[0]) / (M_BACK[1] - M_BACK[0]))));
+
+/** `cometPath`'s own construction with the body circle and the tip given
+ *  separately, so the morph can move them. Called with the comet's own circle
+ *  and tip it returns cometPath's string exactly. */
+const bodyPath = (cx: number, cy: number, r: number, hd: number, L: number) => {
+  if (r < 0.05 || L <= r * 1.05) return null;
+  const ux = -Math.cos(hd);
+  const uy = -Math.sin(hd);
+  const nx = -uy;
+  const ny = ux;
+  const cp = r / L;
+  const sp = Math.sqrt(1 - cp * cp);
+  const n = (v: number) => v.toFixed(2);
+  const p1x = cx + r * (cp * ux + sp * nx);
+  const p1y = cy + r * (cp * uy + sp * ny);
+  const p2x = cx + r * (cp * ux - sp * nx);
+  const p2y = cy + r * (cp * uy - sp * ny);
+  return (
+    `M${n(p1x)} ${n(p1y)} A${n(r)} ${n(r)} 0 1 1 ${n(p2x)} ${n(p2y)} ` +
+    `L${n(cx + ux * L)} ${n(cy + uy * L)} Z`
+  );
+};
+
+/** The rider's body at frame f: one path at m = 0, two from the moment the head
+ *  starts to separate. Both are filled with the comet's own colour and nothing
+ *  else, so while they overlap they are one solid silhouette. */
+export const riderShape = (d: Drawn, m: number) => {
+  const L0 = 2 * d.r * (TIP_DRIFT + (TIP_STREAM - TIP_DRIFT) * d.tone);
+  if (m <= 0) return { body: bodyPath(d.x, d.y, d.r, d.hd, L0), head: null as string | null };
+  const g = 1 + G_GROW * m;
+  const ux = Math.cos(d.hd);
+  const uy = Math.sin(d.hd);
+  const rs = d.r * g * (1 + SH_R * m);
+  const csx = d.x - ux * d.r * g * SH_BACK * m;
+  const csy = d.y - uy * d.r * g * SH_BACK * m;
+  // the tip measured from the body circle, eased back by what the shoulders eat
+  const L = L0 + d.r * g * (SH_BACK + TIP_BACK) * m;
+  const rh = d.r * g * (1 - HD_R * m);
+  const chx = d.x + ux * d.r * g * HD_FWD * m;
+  const chy = d.y + uy * d.r * g * HD_FWD * m;
+  return {
+    body: bodyPath(csx, csy, rs, d.hd, L),
+    head: `M${(chx + rh).toFixed(2)} ${chy.toFixed(2)} A${rh.toFixed(2)} ${rh.toFixed(
+      2,
+    )} 0 1 1 ${(chx - rh).toFixed(2)} ${chy.toFixed(2)} A${rh.toFixed(2)} ${rh.toFixed(
+      2,
+    )} 0 1 1 ${(chx + rh).toFixed(2)} ${chy.toFixed(2)} Z`,
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -888,8 +959,7 @@ const IncreasinglyCapable: React.FC<Props> = ({
   const toRipe = makeTone(accentDeep, accent);
   const spine = spinePath(0, 3800);
 
-  const u = outlineU(frame);
-  const rider = riderAt(frame);
+  const m = morphM(frame);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -929,6 +999,16 @@ const IncreasinglyCapable: React.FC<Props> = ({
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
             {world.map((d) => {
+              if (d.key === RIDER_KEY && m > 0) {
+                const sh = riderShape(d, m);
+                const col = toRipe(d.tone);
+                return (
+                  <g key={d.key}>
+                    {sh.body ? <path d={sh.body} fill={col} opacity={dotOpacity} /> : null}
+                    {sh.head ? <path d={sh.head} fill={col} opacity={dotOpacity} /> : null}
+                  </g>
+                );
+              }
               const p = cometPath(d);
               return p ? (
                 <path key={d.key} d={p} fill={toRipe(d.tone)} opacity={dotOpacity} />
@@ -983,58 +1063,6 @@ const IncreasinglyCapable: React.FC<Props> = ({
                   />
                 );
               })}
-
-              {/* the person, half-drawn over the ridden comet */}
-              {u > 0
-                ? (() => {
-                    // the em scale that makes the head circle HEAD_MUL x the
-                    // comet's own radius, and the offset that makes them
-                    // concentric
-                    const em = (HEAD_MUL * rider.r) / LU_HEAD_R;
-                    const rot = ((rider.hd + Math.PI / 2) * 180) / Math.PI;
-                    // shoulders first, then the head
-                    const shU = clamp01(u / SH_SHARE);
-                    const hdU = clamp01((u - SH_SHARE) / (1 - SH_SHARE));
-                    // the head is swept as TWO halves from the top, so what a
-                    // part-drawn head looks like is a head with a gap at the
-                    // chin and not a letter C
-                    const hr = LU_HEAD_R;
-                    const hx = LU_HEAD.x;
-                    const hy = LU_HEAD.y;
-                    return (
-                      <g
-                        transform={
-                          `translate(${rider.x.toFixed(2)} ${rider.y.toFixed(2)}) ` +
-                          `rotate(${rot.toFixed(2)}) scale(${em.toFixed(4)}) ` +
-                          `translate(${-LU_HEAD.x} ${-LU_HEAD.y})`
-                        }
-                        fill="none"
-                        stroke={ink}
-                        strokeWidth={STROKE / 2 / em}
-                        strokeLinecap="round"
-                        opacity={SPINE_OPACITY}
-                      >
-                        {shU > 0 ? (
-                          <path
-                            d="M20 21a8 8 0 0 0-16 0"
-                            strokeDasharray={LU_SH_LEN}
-                            strokeDashoffset={LU_SH_LEN * (1 - shU)}
-                          />
-                        ) : null}
-                        {hdU > 0
-                          ? [1, 0].map((sweep) => (
-                              <path
-                                key={`h${sweep}`}
-                                d={`M${hx} ${hy - hr} A${hr} ${hr} 0 0 ${sweep} ${hx} ${hy + hr}`}
-                                strokeDasharray={LU_HEAD_LEN}
-                                strokeDashoffset={LU_HEAD_LEN * (1 - hdU)}
-                              />
-                            ))
-                          : null}
-                      </g>
-                    );
-                  })()
-                : null}
             </g>
           </svg>
         </div>
@@ -1073,5 +1101,5 @@ export const STATS = {
     Number(CAM_AT(f).k.toFixed(3)),
   ]),
   tickHalf: TIERS.map((_, i) => Math.round(tickHalf(i))),
-  outlineU: [50, 61, 72, 79, 88, 94].map((f) => [f, Number(outlineU(f).toFixed(2))]),
+  morphM: [50, 56, 61, 64, 68, 72, 78, 84, 90, 94].map((f) => [f, Number(morphM(f).toFixed(3))]),
 };
