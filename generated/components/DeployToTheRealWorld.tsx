@@ -28,11 +28,14 @@ import {
   INK_HI,
   INK_LO,
   MARCH_W,
+  MODEL_EDGE,
+  MODEL_MARK,
   MODEL_R,
   ModelDot,
   PERSON_H,
   PersonGlyph,
   STROKE_W,
+  THREAD_GAP,
   Wall,
   camKnots3,
   runCam3,
@@ -58,6 +61,13 @@ export const FPS = 24;
 // DURATION = 97 + 16 = 113.
 export const DURATION = 113;
 
+// ---------------------------------------------------------------------------
+// V2 — TWO CHANGES, AND ONLY TWO. (1) THE MODEL IS THE OPENAI MARK, not a dot:
+// `trapShared.ModelDot` now draws `brandGlyphs.OPENAI` filled, on a 72 screen px
+// em box (MODEL_MARK_PX), in the same two-tone orange on the FILL. This is an
+// interview with someone from OpenAI. (2) THE ANSWER KEY is lucide `key-round`
+// instead of `key`, and the folder glyph is masked behind its silhouette. Every
+// staging, timing, camera, beat and duration in this file is untouched.
 // ---------------------------------------------------------------------------
 // THIS CUT HAS ITS OWN TALL WORLD. It does not use trapShared's TABLEAU — no
 // stations, no folder, no evaluator, no wire, no `Tableau`. It takes the
@@ -106,7 +116,7 @@ export const DURATION = 113;
 //  1. f0-15   "then you can get"   THE MODEL IS BEHAVING. The cut opens close on
 //             (f0/f5/f11/f13)      the test ring — damped k 2.693, the ring 889
 //                                  screen px across in a 1080 frame, 95 px of
-//                                  side margin — with the dot ALREADY at 58% of
+//                                  side margin — with the mark ALREADY at 58% of
 //                                  the lane (t 0.578), clearing the LAST fake
 //                                  prop and decelerating into the gate on
 //                                  arriveEase. The wall's dashes march, the
@@ -178,8 +188,11 @@ export const DURATION = 113;
 // THE WORLD, in world px (the resolved camera's k = 1, so world px = screen px
 // there):
 //   wall        centre (540, 1620), r 165, with a GAP at its top point: the
-//               `draw` 0.95 wipe leaves 51.8 world px of gate and the dot is
-//               32.3 across, so it passes with ~10 px either side.
+//               `draw` 0.927 wipe leaves 75.7 world px of gate — a chord half-
+//               width of 37.5 — and the mark is 55.4 world px across, so it
+//               passes with 10.2 px either side. (It was `draw` 0.95 and a
+//               32.3 px dot; the 55.4 px mark does not fit through that gate at
+//               all, and WALL_DRAW is the one number this cut changed for it.)
 //   small lane  from (540, 1785) — the wall's bottom point — to the gate at
 //               (540, 1455). H_S = 330 = the ring's diameter, A_S = 35.
 //   fake props  on the lobes, at x 540 +- 62, y 1699.2 / 1620 / 1540.8, h 41.26.
@@ -223,13 +236,20 @@ export const DURATION = 113;
 // ---------------------------------------------------------------------------
 // MEASURED (STATS, audited over every frame; screen px at each frame's own
 // camera, so every number below includes the camera's own motion):
-//   forecast head, fastest frame     34.3 px/f   (ceiling 45, at f29)
-//   the model dot, fastest frame     39.4 px/f   (ceiling 45, at f31)
+//   forecast head, fastest frame     33.8 px/f   (ceiling 45, at f27)
+//   the model mark, fastest frame    39.0 px/f   (ceiling 45, at f1)
 //   the camera on world (540,1100)   29.0 px/f peak, |dv| 1.77 px/f^2 peak
 //                                    (the set's |dv| ceiling is 2.2)
 //   slowest frame of the whole cut   0.305 px/f  (the "parked" floor is 0.15)
-//   dot to a fake prop's circle      23.4 world px, closest over every frame
-//   dot to a real person's ink       82.2 world px, closest over every frame
+//   mark to a fake prop's circle     11.8 world px, closest over every frame
+//                                    (23.4 with the old dot: the mark's half-box
+//                                    is 11.5 px bigger than MODEL_R and that is
+//                                    the whole of the difference — 32 screen px
+//                                    of daylight at the opening camera, 12 at
+//                                    rest, and no prop is ever touched)
+//   mark to a real person's ink      70.7 world px, closest over every frame
+//   gate, per side, at the mark      7.5 world px of stroke-to-ink clearance
+//                                    (10.2 px of arc either side of it)
 //   resolved ink                     screen y 292.3 .. 1365.9 (band 300..1400;
 //                                    the top 8 px over is the crowd's topmost
 //                                    head, which is not what the caption rule
@@ -241,7 +261,8 @@ export const DURATION = 113;
 //   the dot at DURATION - 1          63% up the big course, 20.4 px/f
 //   sizes, open -> rest              wall 889 -> 330 px, stroke 12.4 -> 4.6,
 //                                    a fake prop 111.1 px tall at the open, a
-//                                    real person 90.8 at rest, the model 32.3
+//                                    real person 90.8 at rest, the mark's em box
+//                                    149.1 -> 55.4
 //
 // ---------------------------------------------------------------------------
 // DEVIATIONS from the brief, with the arithmetic.
@@ -255,7 +276,7 @@ export const DURATION = 113;
 //         k * (6.4 r + 47.7) ~= 1100.
 //     One of k and r is free. Taking k = 1.000 — CAM_WIDE's own zoom, which the
 //     module states is an accepted framing (x0.77 of the nominal screen sizes:
-//     person 90.8 px, model 32.3 px, stroke 4.6 px) — gives r = 165, and every
+//     person 90.8 px, the mark 55.4 px, stroke 4.6 px) — gives r = 165, and every
 //     noun then keeps the module's world size verbatim, dash pattern included.
 //     Taking the brief's r = 250 instead forces k = 0.631, where a person is 57
 //     screen px and the model 20: at the 270 px reading test that is a 14 px
@@ -397,8 +418,15 @@ const END_TAPER = 0.13;
  *  the gate at one end and out of the start at the other. See DEVIATIONS. */
 const SLALOM_0 = 0.14;
 const SLALOM_1 = 0.86;
-/** The gap left at the top of the wall for the gate, as a fraction of it. */
-const WALL_DRAW = 0.95;
+/** The gap left at the top of the wall for the gate, as a fraction of it.
+ *  SOLVED against the mark, not chosen: the gate's chord half-width is
+ *  R_WALL * sin((1 - WALL_DRAW) * pi), and it has to clear the mark's half-box
+ *  (MODEL_EDGE 27.69) plus half the wall's stroke plus the 7.4 world px of air
+ *  the 42 px DOT used to pass with. 0.95 gave 25.8 world px of half-chord, which
+ *  the 55.4 px mark does not fit through at all; 0.927 gives 37.5, i.e. 10.2
+ *  world px of daylight either side of the mark — the same daylight the dot had.
+ *  V2: the ONLY number this cut changed for the mark. */
+const WALL_DRAW = 0.927;
 
 const FAKE_H = PERSON_H / SCALE_UP; // 41.26
 const FAKE_RING_R = FAKE_H * 0.66; // FakePerson's own geometry
@@ -479,6 +507,12 @@ const tAtS = (tab: Float64Array, s: number) => {
 // PERSON_INK_HW + MODEL_R + 18 of the lane, or within MIN_GAP of an accepted
 // one. Nothing is a row: the lattice is jittered by 90% of its own step and the
 // two lobe people are off it entirely.
+//
+// LANE_CLEAR STILL USES MODEL_R — the old 42 px dot's radius — and not the
+// mark's half-box. It is the seed of a SOLVER, not a clearance: widening it
+// would reject seats and move nine people, which this revision does not do. The
+// clearance itself is MEASURED against the mark and comes out at 70.7 world px
+// (`STATS.minRealClear`), so nothing is tight.
 // ---------------------------------------------------------------------------
 const CROWD_TOP = 740;
 const CROWD_BOT = 1258;
@@ -776,6 +810,14 @@ const pathOf = (pt: (t: number) => { x: number; y: number }, t0: number, t1: num
 };
 const LANE_D = pathOf(smallPt, 0, 1);
 
+/** The disc the mark takes out of its own course, and the mask that does it.
+ *  THREAD_GAP — the module's own "outside the mark" radius, 30.46 world px —
+ *  so the lane stops exactly where an accent thread starts in the other cuts,
+ *  and the mark's 5% breath (up to a 29.08 world px half-box) still never
+ *  reaches it. */
+const MODEL_HOLE = THREAD_GAP;
+const MODEL_MASK_ID = "dtrw-model-hole";
+
 // ---------------------------------------------------------------------------
 
 const DeployToTheRealWorld: React.FC<Props> = ({
@@ -848,30 +890,66 @@ const DeployToTheRealWorld: React.FC<Props> = ({
             viewBox={`0 0 ${WORLD_W} ${WORLD_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            {/* THE FORECAST, still imagined: dashed, INK_LO, marching. Drawn
-                from where the dot has got to up to the head, so the moment the
-                dot reaches a piece of it, it stops being a forecast. */}
-            {tHead > tSolid ? (
-              <g style={{ filter: icon }}>
-                <path
-                  d={pathOf(bigPt, tSolid, tHead)}
-                  fill="none"
-                  stroke={ink}
-                  strokeWidth={STROKE_W}
-                  strokeLinecap="butt"
-                  strokeDasharray={`${DASH_ON} ${DASH_OFF}`}
-                  strokeDashoffset={-frame * MARCH_W}
-                  opacity={INK_LO}
-                />
-              </g>
-            ) : null}
+            {/* THE MARK OCCLUDES ITS OWN COURSE. The model RIDES the lane here,
+                so the lane necessarily passes under it — and the OpenAI mark has
+                counters through its middle, so "under it" means the white line
+                is seen THROUGH the blossom and cuts a bar across the subject of
+                the opening frame. The lane is therefore drawn through a mask
+                that takes a disc out at the model, at exactly THREAD_GAP, the
+                radius every accent line in the other four cuts starts at: the
+                lane ends where a thread would begin, the line visibly goes
+                behind the mark, and nothing fakes an occlusion with a colour. */}
+            <mask
+              id={MODEL_MASK_ID}
+              maskUnits="userSpaceOnUse"
+              x={0}
+              y={0}
+              width={WORLD_W}
+              height={WORLD_H}
+            >
+              <rect x={0} y={0} width={WORLD_W} height={WORLD_H} fill="#fff" />
+              <circle cx={model.x} cy={model.y} r={MODEL_HOLE} fill="#000" />
+            </mask>
 
-            {/* ...and the part of it the dot has already made true: SOLID,
-                INK_HI, behind the dot. */}
-            {tSolid > 0 ? (
+            <g mask={`url(#${MODEL_MASK_ID})`}>
+              {/* THE FORECAST, still imagined: dashed, INK_LO, marching. Drawn
+                  from where the dot has got to up to the head, so the moment the
+                  dot reaches a piece of it, it stops being a forecast. */}
+              {tHead > tSolid ? (
+                <g style={{ filter: icon }}>
+                  <path
+                    d={pathOf(bigPt, tSolid, tHead)}
+                    fill="none"
+                    stroke={ink}
+                    strokeWidth={STROKE_W}
+                    strokeLinecap="butt"
+                    strokeDasharray={`${DASH_ON} ${DASH_OFF}`}
+                    strokeDashoffset={-frame * MARCH_W}
+                    opacity={INK_LO}
+                  />
+                </g>
+              ) : null}
+
+              {/* ...and the part of it the dot has already made true: SOLID,
+                  INK_HI, behind the dot. */}
+              {tSolid > 0 ? (
+                <g style={{ filter: icon }}>
+                  <path
+                    d={pathOf(bigPt, 0, tSolid)}
+                    fill="none"
+                    stroke={ink}
+                    strokeWidth={STROKE_W}
+                    strokeLinecap="round"
+                    opacity={INK_HI}
+                  />
+                </g>
+              ) : null}
+
+              {/* THE LANE inside the test: solid, INK_HI, the course the model
+                  actually runs. */}
               <g style={{ filter: icon }}>
                 <path
-                  d={pathOf(bigPt, 0, tSolid)}
+                  d={LANE_D}
                   fill="none"
                   stroke={ink}
                   strokeWidth={STROKE_W}
@@ -879,19 +957,6 @@ const DeployToTheRealWorld: React.FC<Props> = ({
                   opacity={INK_HI}
                 />
               </g>
-            ) : null}
-
-            {/* THE LANE inside the test: solid, INK_HI, the course the model
-                actually runs. */}
-            <g style={{ filter: icon }}>
-              <path
-                d={LANE_D}
-                fill="none"
-                stroke={ink}
-                strokeWidth={STROKE_W}
-                strokeLinecap="round"
-                opacity={INK_HI}
-              />
             </g>
 
             {/* THE TEST ENVIRONMENT: the dashed ring, with the gate left open
@@ -1004,13 +1069,13 @@ export const STATS = (() => {
     for (const p of FAKE_PROPS) {
       minFake = Math.min(
         minFake,
-        Math.hypot(m.x - p.x, m.y - p.y) - MODEL_R - (FAKE_RING_R + STROKE_W / 2),
+        Math.hypot(m.x - p.x, m.y - p.y) - MODEL_EDGE - (FAKE_RING_R + STROKE_W / 2),
       );
     }
     for (const p of CROWD) {
       const dx = Math.max(0, Math.abs(m.x - p.x) - PERSON_INK_HW);
       const dy = Math.max(0, Math.abs(m.y - p.y) - PERSON_H * 0.42);
-      minReal = Math.min(minReal, Math.hypot(dx, dy) - MODEL_R);
+      minReal = Math.min(minReal, Math.hypot(dx, dy) - MODEL_EDGE);
     }
   }
   // the resolved frame
@@ -1041,9 +1106,15 @@ export const STATS = (() => {
     strokeScreenOpen: Number((STROKE_W * CAM_AT_F[0].k).toFixed(2)),
     personScreenRest: Number((PERSON_H * K_REST).toFixed(1)),
     fakeScreenOpen: Number((FAKE_H * CAM_AT_F[0].k).toFixed(1)),
-    dotScreenRest: Number((2 * MODEL_R * K_REST).toFixed(1)),
+    markScreenRest: Number((MODEL_MARK * K_REST).toFixed(1)),
+    markScreenOpen: Number((MODEL_MARK * CAM_AT_F[0].k).toFixed(1)),
     wallScreenOpen: Number((2 * R_WALL * CAM_AT_F[0].k).toFixed(0)),
     wallScreenRest: Number((2 * R_WALL * K_REST).toFixed(0)),
+    /** the gate's chord half-width against the mark's half-box */
+    gateHalfChord: Number((R_WALL * Math.sin((1 - WALL_DRAW) * Math.PI)).toFixed(1)),
+    gateClearPerSide: Number(
+      (R_WALL * Math.sin((1 - WALL_DRAW) * Math.PI) - MODEL_EDGE - STROKE_W / 2).toFixed(1),
+    ),
     laneLenSmall: Number(L_S.toFixed(1)),
     laneLenBig: Number(L_B.toFixed(1)),
     crowd: CROWD.length,
@@ -1081,7 +1152,7 @@ export const STATS = (() => {
         for (let i = 0; i < FAKE_PROPS.length; i++) {
           const p = FAKE_PROPS[i];
           const d =
-            Math.hypot(m.x - p.x, m.y - p.y) - MODEL_R - (FAKE_RING_R + STROKE_W / 2);
+            Math.hypot(m.x - p.x, m.y - p.y) - MODEL_EDGE - (FAKE_RING_R + STROKE_W / 2);
           if (d < best) {
             best = d;
             where = [f, i, Math.round(m.x), Math.round(m.y)];

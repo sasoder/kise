@@ -30,7 +30,7 @@ import {
   GAZE_LEN,
   INK,
   MODEL_HOME,
-  MODEL_R,
+  MODEL_MARK,
   PACKET_R,
   PERSON_H,
   QUESTION,
@@ -66,6 +66,13 @@ export const FPS = 24;
 // DURATION = 138 + 16 = 154.
 export const DURATION = 154;
 
+// ---------------------------------------------------------------------------
+// V2 — TWO CHANGES, AND ONLY TWO. (1) THE MODEL IS THE OPENAI MARK, not a dot:
+// `trapShared.ModelDot` now draws `brandGlyphs.OPENAI` filled, on a 72 screen px
+// em box (MODEL_MARK_PX), in the same two-tone orange on the FILL. This is an
+// interview with someone from OpenAI. (2) THE ANSWER KEY is lucide `key-round`
+// instead of `key`, and the folder glyph is masked behind its silhouette. Every
+// staging, timing, camera, beat and duration in this file is untouched.
 // ---------------------------------------------------------------------------
 // THIS CUT PICKS UP CUT 3's PICTURE. It does not start over: frame 0 is
 // `STATE_END_CUT3` — the dashed wall marching, the question station with the
@@ -123,9 +130,10 @@ export const DURATION = 154;
 //                                 neighbourhood and holding through "folder").
 //  5. f94-102 "and they're like:  THE RECOIL. The f94 packet stops 38% of the
 //             HUH" (f88/f91/f97)  way out and drains back to the model, home by
-//                                 f101. The model backs off 20 world px (24
-//                                 screen px on "trap", more than half its own
-//                                 diameter) along the needle's own line, on one
+//                                 f101. The model backs off 20 world px (30
+//                                 screen px where it happens, 24 on "trap": a
+//                                 third of the mark's own width) along the
+//                                 needle's own line, on one
 //                                 eased ramp, and holds its breath (the 5%
 //                                 breath is damped to 1% over f94-116). The
 //                                 work thread is anchored to the model, so the
@@ -478,9 +486,14 @@ const wireHead = (f: number) => {
 // THE MODEL'S RECOIL, and the breath it holds while it backs off. Both are one
 // eased ramp on "huh"; nothing bounces.
 // ---------------------------------------------------------------------------
-// 20 world px is 31 screen px at the framing the recoil happens in — three
-// quarters of the dot's own diameter. 14 was tried first and was swallowed by
-// the camera's pull-back, which starts in the middle of it.
+// 20 world px is 30 screen px at the framing the recoil happens in (k 1.49 at
+// f94) and 24 on "trap". Against the old 42 px dot that was three quarters of
+// its diameter; against the OpenAI mark's 72 px box it is 36% of it
+// (`STATS.model.recoilOverMark`), so the flinch is smaller RELATIVE to the
+// subject than it was. It is left at 20 on purpose: it is a gesture, not a
+// clearance, and `CUT4_RECOIL` is also the offset cut 5 opens on and releases.
+// 14 was tried first and was swallowed by the camera's pull-back, which starts
+// in the middle of it.
 const RECOIL = 20; // world px, straight back down the needle's own line
 const RECOIL_F0 = 94;
 const RECOIL_DUR = 8;
@@ -884,8 +897,8 @@ export const STATS = {
   sizes: {
     strokeAtOpen: Number((STROKE_W * kAt(0)).toFixed(2)),
     strokeAtLast: Number((STROKE_W * kAt(LAST)).toFixed(2)),
-    modelAtOpen: Number((2 * MODEL_R * kAt(0)).toFixed(1)),
-    modelAtLast: Number((2 * MODEL_R * kAt(LAST)).toFixed(1)),
+    markAtOpen: Number((MODEL_MARK * kAt(0)).toFixed(1)),
+    markAtLast: Number((MODEL_MARK * kAt(LAST)).toFixed(1)),
     stationAtOpen: Number((STATION_R * kAt(0)).toFixed(1)),
     personAtLast: Number((PERSON_H * 0.84 * kAt(LAST)).toFixed(1)),
   },
@@ -960,13 +973,17 @@ export const STATS = {
     wireAliveAt: [117, 125, 133, 140, 149, LAST].map((f) => [f, wirePackets(f).length]),
   },
 
-  /** The model: the recoil and the held breath, in world px of radius. */
+  /** The model: the recoil and the held breath. `emAt` is the OpenAI mark's em
+   *  box in world px, which is what `breath` and the hold now act on. */
   model: {
     recoilWorld: RECOIL,
     recoilScreenAt117: Number((RECOIL * kAt(117)).toFixed(1)),
-    radiusAt: [90, 100, 106, 112, 130, LAST].map((f) => [
+    /** the recoil as a fraction of the mark's own width, which is what the eye
+     *  reads it against (it was 0.75 of the 42 px dot's diameter) */
+    recoilOverMark: Number((RECOIL / MODEL_MARK).toFixed(3)),
+    emAt: [90, 100, 106, 112, 130, LAST].map((f) => [
       f,
-      Number((MODEL_R * modelScaleAt(f) * breath(f, MODEL_SEED)).toFixed(3)),
+      Number((MODEL_MARK * modelScaleAt(f) * breath(f, MODEL_SEED)).toFixed(3)),
     ]),
   },
 

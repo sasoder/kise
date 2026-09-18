@@ -30,7 +30,7 @@ import {
   GAZE_LEN,
   INK,
   MODEL_HOME,
-  MODEL_R,
+  MODEL_MARK,
   PERSON_H,
   QUESTION,
   STATION_R,
@@ -63,6 +63,13 @@ export const FPS = 24;
 export const DURATION = 168;
 
 // ---------------------------------------------------------------------------
+// V2 — TWO CHANGES, AND ONLY TWO. (1) THE MODEL IS THE OPENAI MARK, not a dot:
+// `trapShared.ModelDot` now draws `brandGlyphs.OPENAI` filled, on a 72 screen px
+// em box (MODEL_MARK_PX), in the same two-tone orange on the FILL. This is an
+// interview with someone from OpenAI. (2) THE ANSWER KEY is lucide `key-round`
+// instead of `key`, and the folder glyph is masked behind its silhouette. Every
+// staging, timing, camera, beat and duration in this file is untouched.
+// ---------------------------------------------------------------------------
 // SOUND-OFF READING TEST — one sentence:
 //   "a model sits alone; a dashed ring closes around it; a person outside hands
 //    a maths question down into the ring and the model starts working it; a
@@ -79,8 +86,8 @@ export const DURATION = 168;
 // motion: the gestures lead and overlap and the words are the landings. Nothing
 // in the piece is outside this list.
 //
-//  1. f0-20   "evaluations"      THE ONE. The cut opens CLOSE on the model dot
-//             (f0)               alone at k 1.755 (57 screen px across), deep,
+//  1. f0-20   "evaluations"      THE ONE. The cut opens CLOSE on the OpenAI mark
+//             (f0)               alone at k 1.755 (97 screen px of em box), deep,
 //                                breathing, near the centre of the frame. Thirty
 //                                frames of pre-roll mean it is already easing
 //                                back on f0 rather than starting from rest.
@@ -127,7 +134,12 @@ export const DURATION = 168;
 //                                f71-81, folder glyph f76-85, landing on "folder"
 //                                (f84). Its ring is 1.35x a station's, because it
 //                                has to hold a folder AND the key.
-//  8. f92-110 "with the answer   THE KEY. It rises out of the folder's mouth
+//  8. f92-110 "with the answer   THE KEY (lucide `key-round`, KEY_FRACTION 0.798,
+//                                84 screen px of box; the folder glyph behind it
+//                                is masked where the key's silhouette plus 3
+//                                screen px covers it, so the folder's lines stop
+//                                at the key instead of running through it). It
+//                                rises out of the folder's mouth
 //             key in it"         (genuinely clipped by the mouth line until it is
 //             (f90/f98/f101/     clear of it, so there is nothing to pop when the
 //              f106/f110)        clip is dropped), comes over the top of the
@@ -208,8 +220,8 @@ export const DURATION = 168;
 //   f58 1.228 · f60 1.257 · f84 1.300 · f110 1.306 · f167 1.3185.
 // Every weight in the piece is written against CAM_CLOSE's k 1.3, and the
 // resolved camera reads 1.3185 — 1.4% over, so the stroke lands at 6.09 screen
-// px against its 6.00 target, a station at 131.9 against 130 and the model at
-// 42.6 against 42.
+// px against its 6.00 target, a station at 131.9 against 130 and the mark's em
+// box at 73.0 against 72.
 //
 // FRAMING, measured. Wall: screen x 97..991 at f110 and 85..988 at f167 (side
 // margin >= 85, the brief asks 70), screen y 324..1218 at f110 and 309..1211 at
@@ -639,8 +651,8 @@ export const STATS = {
     stroke: Number((STROKE_W * kAt(LAST)).toFixed(2)),
     stationDia: Number((2 * STATION_R * kAt(LAST)).toFixed(1)),
     folderDia: Number((2 * FOLDER_R * kAt(LAST)).toFixed(1)),
-    modelDia: Number((2 * MODEL_R * kAt(LAST)).toFixed(1)),
-    modelDiaOpen: Number((2 * MODEL_R * kAt(0)).toFixed(1)),
+    markEm: Number((MODEL_MARK * kAt(LAST)).toFixed(1)),
+    markEmOpen: Number((MODEL_MARK * kAt(0)).toFixed(1)),
     personH: Number((PERSON_H * kAt(36)).toFixed(1)),
   },
   /** the model and the two stations on the last frame */

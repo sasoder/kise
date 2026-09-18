@@ -28,8 +28,8 @@ import {
   INK_HI,
   INK_LO,
   MARCH_W,
-  MODEL_R,
-  MODEL_R_PX,
+  MODEL_MARK,
+  MODEL_MARK_PX,
   PERSON_H_PX,
   PersonGlyph,
   STROKE_PX,
@@ -68,6 +68,13 @@ export const FPS = 24;
 export const DURATION = 149;
 
 // ---------------------------------------------------------------------------
+// V2 — TWO CHANGES, AND ONLY TWO. (1) THE MODEL IS THE OPENAI MARK, not a dot:
+// `trapShared.ModelDot` now draws `brandGlyphs.OPENAI` filled, on a 72 screen px
+// em box (MODEL_MARK_PX), in the same two-tone orange on the FILL. This is an
+// interview with someone from OpenAI. (2) THE ANSWER KEY is lucide `key-round`
+// instead of `key`, and the folder glyph is masked behind its silhouette. Every
+// staging, timing, camera, beat and duration in this file is untouched.
+// ---------------------------------------------------------------------------
 // SOUND-OFF READING TEST — one sentence:
 //   "one model, alone among real people; it lights up, puts out a hand, and the
 //    hand swings wider and wider — and everything it passes turns out to be
@@ -78,13 +85,16 @@ export const DURATION = 149;
 // because the hand reached it.
 //
 // VOCABULARY, all of it from `trapShared`, nothing invented:
-//   the model   = ONE solid orange dot at the WALL'S CENTRE. This cut only: it
+//   the model   = the OPENAI MARK at the WALL'S CENTRE. This cut only: it
 //                 comes before the stations exist, so the model has not yet
 //                 taken up MODEL_HOME (540, 1010) low in the ring — it is the
 //                 thing the ring is drawn around, at (540, 875). ACCENT_DEEP at
-//                 rest, ACCENT once it is thinking. Tone, never alpha. `breath`
-//                 always.
-//   its gaze    = ONE accent needle from the dot (trapShared's `Gaze`). Accent
+//                 rest, ACCENT once it is thinking. Tone on the fill, never
+//                 alpha. `breath` always.
+//   its gaze    = ONE accent needle from the mark (trapShared's `Gaze`), leaving
+//                 its EDGE and not its centre — the blossom has counters through
+//                 the middle, so a hand drawn under it would be seen through it.
+//                 Accent
 //                 is used for NOTHING else in this cut: no work thread, no
 //                 packets, no accent ring. There is nothing yet for the model to
 //                 work ON — only to look around.
@@ -102,8 +112,10 @@ export const DURATION = 149;
 // this list.
 //
 //  1. f0-31   "where the models    THE ONE, AND IT LOOKS REAL. The cut opens
-//             are, like" (f0/f5/   close (k 3.715) on the model dot — 131 screen
-//             f13/f17)             px across, ACCENT_DEEP, breathing. Four of the
+//             are, like" (f0/f5/   close (k 3.715) on the OpenAI mark — an em box
+//             f13/f17)             of 248 screen px, at the swell's 0.84 that is
+//                                  208 across on f0, ACCENT_DEEP, breathing,
+//                                  centred, with nothing over it. Four of the
 //                                  five people are CROPPED by the frame edges at
 //                                  INK_HI — solid, ordinary, the real world. The
 //                                  wall is 1263 screen px in radius here, so it is
@@ -189,8 +201,9 @@ export const DURATION = 149;
 //   * THE NOUNS ARE SOLVED AT THIS CAMERA rather than carried at the ratio.
 //     Every size is `worldPx(<the module's own screen constant>, K_REST)`, the
 //     helper trapShared exports for exactly this: stroke 6.00 screen px, the
-//     model dot 42.0 across, a person 118 tall, the gaze 4.5. So a dot, a stroke
-//     and a person are the same size ON SCREEN here as in the close cuts; only
+//     mark's em box 72.0 across, a person 118 tall, the gaze 4.5. So the mark, a
+//     stroke and a person are the same size ON SCREEN here as in the close cuts;
+//     only
 //     the wall is wider in the frame, which is the whole point of the cut.
 //   * THE DASH PATTERN IS THE MODULE'S. DASH_ON / DASH_OFF / MARCH_W are world
 //     constants inside `Wall`, so at k 1.080 the wall's dashes are 21.6 on /
@@ -243,7 +256,11 @@ export const DURATION = 149;
 //   crowd                centre of mass 13.2 world px off the model (3.9% of the
 //                        wall's radius); radii 0.365 / 0.451 / 0.583 / 0.683 /
 //                        0.707 of it; outermost dashed circle clears the wall by
-//                        27.6 world px, innermost clears the dot by 32.7, and
+//                        24.8 world px, innermost clears the MARK by 18.8 (32.7
+//                        against the old 42 px dot — the mark's half-box is 13.9
+//                        px bigger and that is the whole of the difference: 20
+//                        screen px of daylight, 16 at the person-drift's worst,
+//                        and nothing ever touches), and
 //                        the closest two circles clear each other by 36.3
 //   caption band         max person ink inside screen y > 1380, over every frame
 //                        and the drift's four corners: 27.1 px at f41, and ZERO
@@ -294,7 +311,7 @@ export const DURATION = 149;
 //     so the reveal is the hand's, not a timer's. `PersonGlyph` itself is used
 //     unchanged.
 //   * THE GAZE IS AT WIRE_PX (4.5 screen px), NOT THREAD_PX (3.0). A needle
-//     340 px long at 3 px reads as a hair against a 42 px dot, and this hand is
+//     340 px long at 3 px reads as a hair against a 72 px mark, and this hand is
 //     the subject of the cut, not traffic on a thread. 4.5 is the module's own
 //     middle weight and still sits clearly under the white 6.
 //   * THE MIN CAMERA SPEED IS 0.056 screen px/f, under the 0.15 floor the set
@@ -513,10 +530,13 @@ const screenAt = (f: number, wx: number, wy: number) => {
 // ---------------------------------------------------------------------------
 const STROKE = worldPx(STROKE_PX, K_REST); // 6.00 screen px
 const PERSON_H_L = worldPx(PERSON_H_PX, K_REST); // 118 screen px tall
-const MODEL_R_L = worldPx(MODEL_R_PX, K_REST); // 42 screen px across
-const MODEL_SCALE = MODEL_R_L / MODEL_R; // `ModelDot` takes a scale, not a radius
+/** The OpenAI mark's em box at this cut's own camera: 72 screen px across. */
+const MODEL_MARK_L = worldPx(MODEL_MARK_PX, K_REST);
+const MODEL_EDGE_L = MODEL_MARK_L / 2;
+const MODEL_SCALE = MODEL_MARK_L / MODEL_MARK; // `ModelDot` takes a scale
 const GAZE_W = worldPx(WIRE_PX, K_REST);
-const GAZE_GAP = MODEL_R_L * 1.15;
+/** the hand starts OUTSIDE the mark's box — it has a hole through its middle */
+const GAZE_GAP = MODEL_EDGE_L * 1.1;
 /** The dashed circle around a person, and how far its ink stays off the wall. */
 const RING_R = PERSON_H_L * 0.66;
 
@@ -732,7 +752,7 @@ export const PLACEMENT = (() => {
     comOff: Number(comOff.toFixed(1)),
     comPct: Number(((100 * comOff) / WALL.r).toFixed(1)),
     ringToWall: Number((WALL.r - Math.max(...PEOPLE.map((p) => p.r)) - RING_R).toFixed(1)),
-    ringToDot: Number((Math.min(...PEOPLE.map((p) => p.r)) - RING_R - MODEL_R_L).toFixed(1)),
+    ringToMark: Number((Math.min(...PEOPLE.map((p) => p.r)) - RING_R - MODEL_EDGE_L).toFixed(1)),
     ringToRing: Number((pair - 2 * RING_R).toFixed(1)),
     misses,
     openBox,
@@ -972,7 +992,7 @@ export const HAND_TRACK = {
   K_REST,
   PERSON_H_L,
   RING_R,
-  MODEL_R_L,
+  MODEL_EDGE_L,
   STROKE,
 };
 
@@ -1066,7 +1086,8 @@ export const STATS = (() => {
     kRest: Number(K_REST.toFixed(5)),
     kEnd: Number(K_END.toFixed(5)),
     strokeScreen: Number((STROKE * K_REST).toFixed(2)),
-    modelScreen: Number((2 * MODEL_R_L * K_REST).toFixed(2)),
+    markScreen: Number((MODEL_MARK_L * K_REST).toFixed(2)),
+    markScreenOpen: Number((MODEL_MARK_L * kAt(0)).toFixed(1)),
     personScreen: Number((PERSON_H_L * K_REST).toFixed(2)),
     gazeScreen: Number((GAZE_W * K_REST).toFixed(2)),
     dashScreen: [Number((DASH_ON * K_REST).toFixed(1)), Number((DASH_OFF * K_REST).toFixed(1))],
@@ -1093,7 +1114,7 @@ export const STATS = (() => {
     })),
     comOffset: Number((Math.hypot(com.x, com.y) / 5).toFixed(1)),
     ringClearOfWall: Number((WALL.r - STROKE / 2 - (Math.max(...PEOPLE.map((p) => p.r)) + RING_R)).toFixed(1)),
-    ringClearOfDot: Number((Math.min(...PEOPLE.map((p) => p.r)) - RING_R - MODEL_R_L).toFixed(1)),
+    ringClearOfMark: Number((Math.min(...PEOPLE.map((p) => p.r)) - RING_R - MODEL_EDGE_L).toFixed(1)),
     frames: [0, 20, 31, 45, 47, 55, 62, 72, 86, 96, 105, 113, 120, 129, 133, 148].map(at),
     tipV,
   };

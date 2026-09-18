@@ -31,8 +31,10 @@ import {
   INK_HI,
   INK_LO,
   MARCH_W,
+  MODEL_EDGE,
   MODEL_HOME,
-  MODEL_R,
+  MODEL_MARK,
+  ModelDot,
   PACKET_R,
   PACKET_SPEED,
   QUESTION,
@@ -71,6 +73,13 @@ export const FPS = 24;
 // alive: DURATION = 132 + 16 = 148.
 export const DURATION = 148;
 
+// ---------------------------------------------------------------------------
+// V2 — TWO CHANGES, AND ONLY TWO. (1) THE MODEL IS THE OPENAI MARK, not a dot:
+// `trapShared.ModelDot` now draws `brandGlyphs.OPENAI` filled, on a 72 screen px
+// em box (MODEL_MARK_PX), in the same two-tone orange on the FILL. This is an
+// interview with someone from OpenAI. (2) THE ANSWER KEY is lucide `key-round`
+// instead of `key`, and the folder glyph is masked behind its silhouette. Every
+// staging, timing, camera, beat and duration in this file is untouched.
 // ---------------------------------------------------------------------------
 // WHAT THIS CUT IS. It does not start over: it opens on the picture `SeemsLike
 // ATrap` actually resolves on — CAM_WIDE (k 1.150, world y 830 on screen 835),
@@ -117,8 +126,12 @@ export const DURATION = 148;
 //                                31 world px of clearance, UNDER the tripwire,
 //                                and down onto the folder's far side — the
 //                                3 o'clock edge, 90 degrees round the ring from
-//                                the wire root at 12. A small solid ghost dot
-//                                (0.6 x the model) creeps on its head. DASHED =
+//                                the wire root at 12. A GHOST — the SAME OpenAI
+//                                mark at 0.6x, in ACCENT_DEEP, so the thing
+//                                creeping round the back is unmistakably the
+//                                model imagining itself — creeps on its head, and
+//                                lands straddling the folder's dashed ring, drawn
+//                                UNDER it. DASHED =
 //                                imagined: it is a plot, not a route anything
 //                                has taken. The head arrives at the back of the
 //                                folder on "scheme" (f65), and from there the
@@ -126,7 +139,7 @@ export const DURATION = 148;
 //                                nine-frame held breath before "No".
 //  3. f74-86  "No" (f74)         THE UNDRAW. One wipe: the head retreats all the
 //                                way back into the dot and the whole plot goes
-//                                with it. The ghost dot is snatched off the
+//                                with it. The ghost mark is snatched off the
 //                                folder with it and is out within three frames.
 //                                One wipe, nothing else.
 //  4. f80-130 "they're just      THE REVOLUTION. The stub grows back out to
@@ -213,8 +226,8 @@ export const DURATION = 148;
 //   measured worst frame is 36.4 screen px.
 // * THE UNDRAW is 1269 world px in 12 frames. It is a WIPE — a line end, not an
 //   object — so the 45 px/frame ceiling does not apply to it, but the ghost DOT
-//   is an object and would run at 171, so the dot is snatched out over three
-//   frames and the line finishes the journey alone. Measured: the dot never
+//   is an object and would run at 171, so the ghost is snatched out over three
+//   frames and the line finishes the journey alone. Measured: the ghost never
 //   exceeds 36.4 screen px/frame while it is still 30% of its size or more.
 //
 // ---------------------------------------------------------------------------
@@ -411,7 +424,12 @@ const PLOT_F0 = 12; // "doing it" — the sly draw leaves the dot
 const PLOT_F1 = 65; // ...and lands on the folder on "scheme"
 const UNDRAW_F0 = 74; // "No"
 const UNDRAW_F1 = 86;
-const GHOST_FADE = 3; // frames the ghost dot takes to be snatched out
+const GHOST_FADE = 3; // frames the ghost takes to be snatched out
+/** The ghost is the model's own mark at 0.6x: 33.2 world px of em box, 38 screen
+ *  px at the resolved camera against the model's 64. Unchanged from the ghost
+ *  DOT's 0.6, so the imagined schemer is the same size relative to the model as
+ *  it was before the mark replaced the dot. */
+const GHOST_SCALE = 0.6;
 
 const SWEEP_F0 = 80; // "just" — the hand grows and starts to turn
 const SWEEP_F1 = 130;
@@ -807,30 +825,46 @@ const JustATestEnvironment: React.FC<Props> = ({
             worldH={WORLD_H}
             under={
               plotPath ? (
-                <g style={{ filter: icon }}>
-                  {/* THE GHOST PLOT. Dashed = imagined, in the deep tone: it is
-                      the model's own attention, so it is accent, and accent is
-                      on nothing else. Under everything — it passes behind the
-                      question station, behind the wall and under the tripwire,
-                      which is what "the long way round, out of sight" is. */}
-                  <path
-                    d={plotPath}
-                    fill="none"
-                    stroke={accentDeep}
-                    strokeWidth={THREAD_W}
-                    strokeLinecap="butt"
-                    strokeDasharray={`${DASH_ON * 0.62} ${DASH_OFF * 0.45}`}
-                    strokeDashoffset={-frame * MARCH_W}
-                  />
+                <>
+                  <g style={{ filter: icon }}>
+                    {/* THE GHOST PLOT. Dashed = imagined, in the deep tone: it
+                        is the model's own attention, so it is accent, and accent
+                        is on nothing else. Under everything — it passes behind
+                        the question station, behind the wall and under the
+                        tripwire, which is what "the long way round, out of
+                        sight" is. */}
+                    <path
+                      d={plotPath}
+                      fill="none"
+                      stroke={accentDeep}
+                      strokeWidth={THREAD_W}
+                      strokeLinecap="butt"
+                      strokeDasharray={`${DASH_ON * 0.62} ${DASH_OFF * 0.45}`}
+                      strokeDashoffset={-frame * MARCH_W}
+                    />
+                  </g>
+                  {/* THE GHOST — the imagined schemer. The SAME OpenAI mark as
+                      the model, at 0.6x and in ACCENT_DEEP (tone 0), so the
+                      thing creeping round the back is unmistakably the model
+                      imagining itself. `ModelDot` rather than a mark drawn here,
+                      so it cannot drift from the real one; and it is its own
+                      sibling of the plot's group rather than a child of it,
+                      because `ModelDot` brings its own (lighter, filled-shape)
+                      shadow and nesting it inside the plot's would lay two down.
+                      It is snatched out over GHOST_FADE frames by its SIZE, as
+                      the circle was. */}
                   {ghost ? (
-                    <circle
-                      cx={ghost.x}
-                      cy={ghost.y}
-                      r={MODEL_R * 0.6 * ghostAlive}
-                      fill={accentDeep}
+                    <ModelDot
+                      frame={frame}
+                      k={k}
+                      x={ghost.x}
+                      y={ghost.y}
+                      tone={0}
+                      scale={GHOST_SCALE * ghostAlive}
+                      seed={0.77}
                     />
                   ) : null}
-                </g>
+                </>
               ) : null
             }
             over={
@@ -1079,6 +1113,20 @@ export const STATS = {
       headToFolderRing: Number(
         (Math.hypot(end.x - FOLDER.x, end.y - FOLDER.y) - FOLDER_R - STROKE_W / 2).toFixed(1),
       ),
+      /** the ghost MARK's own half-box against that ring: negative means it
+       *  lands partly behind the folder, which is where it is meant to land —
+       *  it is drawn UNDER the station, so the overlap reads as "round the
+       *  back". */
+      ghostBoxToFolderRing: Number(
+        (
+          Math.hypot(end.x - FOLDER.x, end.y - FOLDER.y) -
+          MODEL_EDGE * GHOST_SCALE -
+          FOLDER_R -
+          STROKE_W / 2
+        ).toFixed(1),
+      ),
+      ghostEmWorld: Number((MODEL_MARK * GHOST_SCALE).toFixed(1)),
+      markEmScreenRest: Number((MODEL_MARK * K_REST).toFixed(1)),
     };
   })(),
   /** the resolved frame, in screen px */

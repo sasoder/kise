@@ -11,6 +11,7 @@ import {
   makeTone,
   smoothstep,
 } from "./fieldShared";
+import { OPENAI } from "./brandGlyphs";
 
 // ---------------------------------------------------------------------------
 // trapShared — the WORLD of the Noam Brown "evals are a test environment" clip.
@@ -26,16 +27,23 @@ import {
 // static.
 //
 // THE VOCABULARY (fixed — the same object means the same thing in every cut):
-//   the model      = ONE solid orange dot, MODEL_R_PX * 2 = 42 screen px across,
-//                    ACCENT_DEEP at rest, ACCENT when it is thinking. `breath`
-//                    on it always. Tone, never alpha (`MODEL_TONE`).
+//   the model      = the OPENAI MARK, filled, MODEL_MARK_PX = 72 screen px
+//                    across its em box (this is an interview with someone from
+//                    OpenAI). ACCENT_DEEP at rest, ACCENT when it is thinking.
+//                    `breath` on it always. Tone, never alpha (`MODEL_TONE`).
+//                    No stroke, no ring, no disc behind it, never rotated, and
+//                    upright in every cut. It was a plain 42 px dot until V2.
 //   its attention  = accent, and accent is used for NOTHING else: a WORK THREAD
-//                    (dot -> the thing it works on, with packets out and back)
-//                    and a GAZE (a straight hand from the dot, like a needle).
+//                    (mark -> the thing it works on, with packets out and back)
+//                    and a GAZE (a straight hand from the mark, like a needle).
+//                    Both start at THREAD_GAP, i.e. OUTSIDE the mark's own box,
+//                    and a packet coming home disappears there: the mark has a
+//                    hole through its middle, so a line run under it would be
+//                    seen through the blossom instead of behind it.
 //   the wall       = the dashed white ring the model is inside: the eval.
 //   a noun         = a white Lucide OUTLINE icon inside a white station ring.
 //                    radical = the math question, folder = the folder,
-//                    key = the answer key.
+//                    key-round = the answer key.
 //   a person       = public/person.png, white, PERSON_H_PX tall. The real world,
 //                    or the evaluator ("you"). A FAKE person is that glyph at
 //                    INK_LO inside a dashed circle.
@@ -45,8 +53,9 @@ import {
 // (context). Nothing else. One stroke weight everywhere.
 //
 // SIZES are SCREEN px targets at CAM_CLOSE (K_REF). Every world size in here is
-// that target divided by K_REF, so a ring, a dot and a stroke are the same size
-// on screen in all five cuts; at CAM_WIDE they are x0.88, which is accepted.
+// that target divided by K_REF, so a ring, the mark and a stroke are the same
+// size on screen in all five cuts; at CAM_WIDE they are x0.88, which is
+// accepted.
 //
 // SHADOWS: `iconShadow(k)` on a wrapper group OUTSIDE any scale() group, bodies
 // pure white. The global drop shadow, `GridBackground` and `Vignette` stay in
@@ -73,7 +82,18 @@ export const MODEL_TONE = makeTone(ACCENT_DEEP, ACCENT);
 // --- sizes, as SCREEN px at K_REF -------------------------------------------
 export const STROKE_PX = 6; // rings, icons, the wall — one weight
 export const STATION_R_PX = 65; // a station ring's radius
-export const MODEL_R_PX = 21; // the model dot: 42 px across
+/** THE MODEL: the OpenAI mark's em box, 72 screen px across at K_REF. A logo
+ *  needs more pixels than a dot — the blossom's arms are about a twelfth of the
+ *  box each, so at the 42 px the dot used to be they close up into a blob. At 72
+ *  an arm is 6 screen px, i.e. the set's own stroke weight, and at the 270-px
+ *  reading test the mark is 18 px across with 1.5 px arms, which still reads as
+ *  the blossom rather than as a disc. */
+export const MODEL_MARK_PX = 72;
+/** The dot the mark replaced. KEPT, not deleted: cut 1's crowd lattice was
+ *  solved against `PERSON_INK_HW + MODEL_R + 18` and re-solving that constant
+ *  would move nine people, which is not what this revision changes. Nothing
+ *  DRAWS at this size any more — use MODEL_EDGE for clearances. */
+export const MODEL_R_PX = 21;
 export const PERSON_H_PX = 118; // person.png's box (its ink is 0.84 of it)
 export const THREAD_PX = STROKE_PX / 2; // a thread and the gaze: half stroke
 export const WIRE_PX = 4.5; // the wire: half-to-full stroke
@@ -89,7 +109,13 @@ export const worldPx = (px: number, k: number = K_REF) => px / k;
 
 export const STROKE_W = worldPx(STROKE_PX);
 export const STATION_R = worldPx(STATION_R_PX);
-export const MODEL_R = worldPx(MODEL_R_PX);
+export const MODEL_MARK = worldPx(MODEL_MARK_PX);
+/** The mark's own half-box, 27.69 world px: what a thread, a packet or another
+ *  object has to stay outside of. The OpenAI blossom fills its box (ink
+ *  x 0.164..23.836, y 0..24, centred on (12, 12)), so the half-box IS its
+ *  radius to within a fifth of a world px. */
+export const MODEL_EDGE = MODEL_MARK / 2;
+export const MODEL_R = worldPx(MODEL_R_PX); // see MODEL_R_PX: cut 1's crowd only
 export const PERSON_H = worldPx(PERSON_H_PX);
 export const THREAD_W = worldPx(THREAD_PX);
 export const WIRE_W = worldPx(WIRE_PX);
@@ -108,16 +134,24 @@ export const FOLDER_R_SCALE = 1.35;
  *  THIS IS SOLVED AGAINST `KEY_FRACTION`, NOT CHOSEN. The rise's apex is the one
  *  frame where the key must be wholly above the folder's mouth line (that is
  *  what lets the clip be dropped there without anything popping), so the apex
- *  sits at `mouth - the key's own ink depth`; and the key's bit — the tip of the
- *  Lucide glyph at (21, 2) on the 24 grid — is then the ink closest to the
- *  ring. Dropping the glyph by 0.26 of its box (21.1 world px) drops the mouth
- *  with it, which is the only thing that buys the bigger key its headroom.
- *  MEASURED at cut 3's own camera through the rise (k 1.30): the key clears the
- *  ring's inner edge by 8.0 screen px at the apex, exactly what the 0.60 key
- *  cleared it by. The folder glyph itself keeps 8.9 screen px at k 1.30 and
- *  7.9 at CAM_WIDE. */
+ *  sits at `mouth - the key's own ink depth`; and the top of key-round's bow is
+ *  then the ink closest to the ring. Dropping the glyph by 0.26 of its box
+ *  (21.1 world px) drops the mouth with it, which is the only thing that buys
+ *  the bigger key its headroom. RE-MEASURED for key-round, RADIALLY (the ring is
+ *  a circle, so the clearance is |ink - ring centre|, not a vertical gap), at
+ *  cut 3's own camera through the rise (k 1.30): the key clears the ring's inner
+ *  edge by 8.1 screen px at the apex — the same 8.0 the old `key` held at
+ *  KEY_FRACTION 0.78, which is why 0.798 is affordable here and 0.78 was not
+ *  before: key-round's ink is centred on its box (12.018, 11.982) where the old
+ *  glyph's topmost ink sat out at x 21 and cost 1.7 screen px of radius. The
+ *  folder glyph itself keeps 8.9 screen px at k 1.30 and 7.9 at CAM_WIDE. */
 export const FOLDER_GLYPH_DY = 0.26;
-/** the glyph's offset once the key has settled (keyRise 1): the pair re-centres. */
+/** the glyph's offset once the key has settled (keyRise 1): the pair re-centres.
+ *  UNCHANGED for key-round. Measured, the resting pair's ink (folder + key,
+ *  half a stroke out) centres 8.4 world px = 11.0 screen px below the ring's own
+ *  centre against the old key's 6.8 / 8.8: 2.2 screen px of difference in a ring
+ *  175 screen px across, which is not worth moving an approved resting frame
+ *  for. */
 export const FOLDER_GLYPH_DY_REST = 0.1;
 
 // ---------------------------------------------------------------------------
@@ -191,8 +225,13 @@ export const ANG_MID = (ANG_QUESTION + ANG_FOLDER) / 2;
 /** The needle's length from the model's centre — short of the stations, so it
  *  reads as a hand pointing rather than as a second thread touching. */
 export const GAZE_LEN = 205;
-/** The work thread's two ends: the model's edge and the question ring's edge. */
-export const THREAD_GAP = MODEL_R * 1.15;
+/** The work thread's two ends: the mark's edge and the question ring's edge.
+ *  The mark has a HOLE through its middle (the blossom's inner hexagon is a
+ *  counter under `fill-rule: evenodd`), so a thread drawn under it would be seen
+ *  through it; every accent line therefore STARTS outside the box. 1.10 of the
+ *  half-box is 30.46 world px = 39.6 screen px at K_REF, i.e. 3.6 screen px of
+ *  air off a mark that is 72 px across. */
+export const THREAD_GAP = MODEL_EDGE * 1.1;
 
 // ---------------------------------------------------------------------------
 // THE ICONS. lucide-static (ISC), inlined verbatim on the 24 grid, with
@@ -201,7 +240,19 @@ export const THREAD_GAP = MODEL_R * 1.15;
 // ---------------------------------------------------------------------------
 export const ICON_RADICAL = `<path pathLength="1" d="M3 12h3.28a1 1 0 0 1 .948.684l2.298 7.934a.5.5 0 0 0 .96-.044L13.82 4.771A1 1 0 0 1 14.792 4H21"/>`;
 export const ICON_FOLDER = `<path pathLength="1" d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>`;
-export const ICON_KEY = `<path pathLength="1" d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path pathLength="1" d="m21 2-9.6 9.6"/><circle pathLength="1" cx="7.5" cy="15.5" r="5.5"/>`;
+/** THE ANSWER KEY is lucide `key-round` (v1.47.0,
+ *  `unpkg.com/lucide-static@latest/icons/key-round.svg`, fetched verbatim): ONE
+ *  closed outline of a classic key — round bow, stepped teeth — where the plain
+ *  `key` was a thin diagonal stick with a ring on the end and read as a spanner.
+ *  The key-hole is the source's `<circle r=".5" fill="currentColor"/>` with its
+ *  radius taken to 1.1 on the 24 grid: at r 0.5 it is 2.6 screen px across at
+ *  K_REF and disappears under the shadow, at 1.1 it is 5.8 and reads as a hole.
+ *  Nothing else about the source is touched, and its stroke is the set's one
+ *  weight like every other glyph. Ink bounds on the 24 box, measured off the
+ *  path data: x 2.000..22.036, y 1.964..22.000, centre (12.018, 11.982) — which
+ *  is what buys the bigger KEY_FRACTION below, the old `key` hung its topmost
+ *  ink out at x 21. */
+export const ICON_KEY = `<path pathLength="1" d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle pathLength="1" cx="16.5" cy="7.5" r="1.1" fill="currentColor"/>`;
 
 /** The folder glyph's own geometry, in its 24-unit em box: the top edge of its
  *  body (the "mouth" the key comes out of) and the centre of that body. */
@@ -213,13 +264,12 @@ const FOLDER_BODY_U = 13.2;
  *  which is allowed: the folder is at INK_LO behind it. 0.78 makes the key's box
  *  63.2 world px, 82 screen px at CAM_CLOSE (21 px at the 270-px reading test)
  *  against the 0.60 key's 63 / 16. See FOLDER_GLYPH_DY for what pays for it. */
-export const KEY_FRACTION = 0.78;
-/** The key glyph's own ink depth below its box centre, as a fraction of its box:
- *  the bottom of its bow, the circle at (7.5, 15.5) r 5.5 on the 24 grid. The
- *  rise's apex is `mouth - this - half a stroke`, so the key is EXACTLY clear of
- *  the mouth there and not a world px higher — the 0.60 key used half its own
- *  box, which wasted 5.6 world px of headroom the 0.78 key cannot spare. */
-const KEY_INK_BELOW_U = 21.0 - 12.0;
+export const KEY_FRACTION = 0.798;
+/** The key glyph's own ink depth below its box centre, in 24-grid units: the
+ *  bottom of key-round's teeth, at y 22.000 (the old `key`'s bow bottomed at
+ *  21). The rise's apex is `mouth - this - half a stroke`, so the key is EXACTLY
+ *  clear of the mouth there and not a world px higher. */
+const KEY_INK_BELOW_U = 22.0 - 12.0;
 
 // ---------------------------------------------------------------------------
 // THE CAMERA. Authored as KNOTS on one monotone cubic Hermite (Fritsch-Carlson
@@ -434,11 +484,26 @@ export const Wall: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// THE MODEL — one solid orange dot. Solid, breathing, no stroke. Its state is
-// TONE (deep -> ripe), never alpha. The per-icon shadow is a touch lighter than
-// the set's: this is a big FILLED shape where everything else is a 6 px stroke,
-// so the identical filter lays down one contiguous block of shadow and reads
-// heavier (LiveLoop measured the same thing on the Claude mark).
+// THE MODEL — the OPENAI MARK, filled, in the clip's two-tone orange. Solid,
+// breathing, no stroke, no ring, no disc behind it, never rotated, upright in
+// every cut. Its state is TONE on the FILL (deep -> ripe), never alpha. Drawn as
+// inline `<path>`s off `brandGlyphs.OPENAI` on its 24-unit em box with
+// `fill-rule: evenodd` — never an `<image>`, which races frame capture.
+//
+// The name is still `ModelDot` and the props are still the dot's: it WAS one
+// solid orange dot until V2, and the five cuts call it by that name.
+//
+// THE SHADOW SITS ON A WRAPPER OUTSIDE THE scale() GROUP. Inside it, the filter
+// is authored in the glyph's own 24-unit space and comes out multiplied by
+// em/24 — three to four times too heavy, which is the exact note the director
+// has given before. And its opacity is LOWER than the set's 0.38: this is a
+// FILLED shape where everything else is a 6 px stroke, so an identical filter
+// lays down contiguous blocks of shadow and reads heavier. 0.27 is LiveLoop's
+// own number for the Claude mark and it is MEASURED here, not assumed: on the
+// resolved frame of cut 3, the darkest pixel in the shadow band under the mark
+// is grey 89 against a local background of 115 (a depth of 26), and under the
+// question ring's bottom stroke it is 87 against 114 (a depth of 27) — one grey
+// level apart. At the set's 0.38 the mark's shadow measured visibly heavier.
 // ---------------------------------------------------------------------------
 export const MODEL_SHADOW_OPACITY = 0.27;
 
@@ -451,11 +516,22 @@ export const ModelDot: React.FC<{
   scale?: number;
   seed?: number;
   opacity?: number;
-}> = ({ frame, k, x = MODEL_HOME.x, y = MODEL_HOME.y, tone = 0, scale = 1, seed = 0.31, opacity = 1 }) => (
-  <g style={{ filter: iconShadow(k, undefined, undefined, MODEL_SHADOW_OPACITY) }} opacity={opacity}>
-    <circle cx={x} cy={y} r={MODEL_R * scale * breath(frame, seed)} fill={MODEL_TONE(clamp01(tone))} />
-  </g>
-);
+}> = ({ frame, k, x = MODEL_HOME.x, y = MODEL_HOME.y, tone = 0, scale = 1, seed = 0.31, opacity = 1 }) => {
+  const em = MODEL_MARK * scale * breath(frame, seed);
+  if (!(em > 0) || opacity <= 0) return null;
+  const fill = MODEL_TONE(clamp01(tone));
+  return (
+    <g style={{ filter: iconShadow(k, undefined, undefined, MODEL_SHADOW_OPACITY) }} opacity={opacity}>
+      <g
+        transform={`translate(${x.toFixed(3)} ${y.toFixed(3)}) scale(${(em / 24).toFixed(6)}) translate(-12 -12)`}
+      >
+        {OPENAI.paths.map((d) => (
+          <path key={d.length} d={d} fill={fill} fillRule="evenodd" />
+        ))}
+      </g>
+    </g>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // A STATION — a white ring with one Lucide outline icon in it. The ring draws
@@ -479,6 +555,9 @@ export const Station: React.FC<{
   iconOpacity?: number;
   /** the glyph's offset inside its ring, in world px (the folder sits low) */
   iconDy?: number;
+  /** a `url(#...)` mask for the GLYPH only: what the folder hands in so its
+   *  lines stop at the key's silhouette instead of running through it */
+  iconMask?: string;
   glyph?: number;
   stroke?: number;
 }> = ({
@@ -494,6 +573,7 @@ export const Station: React.FC<{
   opacity = INK_HI,
   iconOpacity,
   iconDy = 0,
+  iconMask,
   glyph = GLYPH_FRACTION,
   stroke = STROKE_W,
 }) => {
@@ -515,20 +595,26 @@ export const Station: React.FC<{
         strokeDashoffset={dash > 0 ? -march * MARCH_W : undefined}
       />
       {idr > 0 ? (
-        <g
-          transform={`translate(${(x - box / 2).toFixed(3)} ${(y + iconDy - box / 2).toFixed(
-            3,
-          )}) scale(${(box / 24).toFixed(5)})`}
-          fill="none"
-          stroke={INK}
-          color={INK}
-          strokeWidth={(stroke * 24) / box}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray={`${idr.toFixed(4)} 1`}
-          opacity={iconOpacity === undefined ? undefined : iconOpacity / Math.max(opacity, 1e-6)}
-          dangerouslySetInnerHTML={{ __html: icon }}
-        />
+        // The mask goes on a WRAPPER with no transform of its own. A
+        // `userSpaceOnUse` mask on the transformed group would be read in the
+        // glyph's own 24-unit space — the whole glyph then falls outside the
+        // mask's box and vanishes, which is exactly what it did.
+        <g mask={iconMask}>
+          <g
+            transform={`translate(${(x - box / 2).toFixed(3)} ${(y + iconDy - box / 2).toFixed(
+              3,
+            )}) scale(${(box / 24).toFixed(5)})`}
+            fill="none"
+            stroke={INK}
+            color={INK}
+            strokeWidth={(stroke * 24) / box}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray={`${idr.toFixed(4)} 1`}
+            opacity={iconOpacity === undefined ? undefined : iconOpacity / Math.max(opacity, 1e-6)}
+            dangerouslySetInnerHTML={{ __html: icon }}
+          />
+        </g>
       ) : null}
     </g>
   );
@@ -543,7 +629,22 @@ export const Station: React.FC<{
 // mouth line while it is behind it — at u = 0.5 it is exactly clear of it, so
 // dropping the clip there cannot be seen), then settles back down INTO the body
 // in front, at INK_HI, while the folder glyph eases to INK_LO.
+//
+// THE FOLDER IS MASKED BEHIND THE KEY. key-round is a CLOSED shape sitting in
+// front of the folder glyph, so without this the folder's own lines run straight
+// through the bow and the key stops reading as an object in front of a folder
+// and starts reading as two outlines laid over each other. The fix is NOT a fill
+// in the background's grey — that is a fake occlusion with a colour, and it
+// fails the moment the grid drifts under it. It is an SVG mask built from THE
+// SAME `ICON_KEY` PATH: the folder glyph is drawn through a mask that is white
+// everywhere and black where the key's silhouette — the path filled, and stroked
+// at its own weight plus KEY_MASK_PAD_PX * 2 of breathing room — covers it. The
+// mask's key carries the rise's own clip too, so while the key is still inside
+// the folder it takes nothing out of it.
 // ---------------------------------------------------------------------------
+/** Screen px of air the mask leaves around the key's silhouette, per side. */
+export const KEY_MASK_PAD_PX = 3;
+const KEY_MASK_PAD = worldPx(KEY_MASK_PAD_PX);
 export const FolderStation: React.FC<{
   k: number;
   x?: number;
@@ -596,9 +697,51 @@ export const FolderStation: React.FC<{
   const keyY = kyRaw + keyBob;
   const clipped = u > 0 && u <= 0.5;
   const clipId = `fkm${Math.round(x)}-${Math.round(y)}`;
+  const maskId = `fkmask${Math.round(x)}-${Math.round(y)}`;
+  const keyTransform = `translate(${(x - keyBox / 2).toFixed(3)} ${(keyY - keyBox / 2).toFixed(
+    3,
+  )}) scale(${(keyBox / 24).toFixed(5)})`;
+  const clipRef = clipped ? `url(#${clipId})` : undefined;
 
   return (
     <>
+      {u > 0 ? (
+        <g>
+          {clipped ? (
+            <clipPath id={clipId}>
+              <rect x={x - fbox} y={mouthY - 4 * fbox} width={2 * fbox} height={4 * fbox} />
+            </clipPath>
+          ) : null}
+          {/* THE KEY'S SILHOUETTE, as a hole in the folder glyph: white
+              everywhere, black where the key (filled, and stroked at its own
+              weight plus KEY_MASK_PAD_PX a side) covers it. Same path, same
+              transform and the same clip as the key itself, so the mask cannot
+              drift off it by a world px. */}
+          <mask
+            id={maskId}
+            maskUnits="userSpaceOnUse"
+            x={x - 2 * fbox}
+            y={y - 2 * fbox}
+            width={4 * fbox}
+            height={4 * fbox}
+          >
+            <rect x={x - 2 * fbox} y={y - 2 * fbox} width={4 * fbox} height={4 * fbox} fill="#fff" />
+            <g clipPath={clipRef}>
+              <g
+                transform={keyTransform}
+                fill="#000"
+                stroke="#000"
+                color="#000"
+                strokeWidth={((stroke + 2 * KEY_MASK_PAD) * 24) / keyBox}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                dangerouslySetInnerHTML={{ __html: ICON_KEY }}
+              />
+            </g>
+          </mask>
+        </g>
+      ) : null}
+
       <Station
         k={k}
         x={x}
@@ -614,24 +757,13 @@ export const FolderStation: React.FC<{
         // the RING does not: it is a station like any other and stays at INK_HI.
         iconOpacity={opacity * lerp(INK_HI, INK_LO, smoothstep(clamp01((u - 0.3) / 0.55)))}
         iconDy={dy}
+        iconMask={u > 0 ? `url(#${maskId})` : undefined}
       />
       {u > 0 ? (
         <g style={{ filter: iconShadow(k) }} opacity={opacity}>
-          {clipped ? (
-            <clipPath id={clipId}>
-              <rect
-                x={x - fbox}
-                y={mouthY - 4 * fbox}
-                width={2 * fbox}
-                height={4 * fbox}
-              />
-            </clipPath>
-          ) : null}
-          <g clipPath={clipped ? `url(#${clipId})` : undefined}>
+          <g clipPath={clipRef}>
             <g
-              transform={`translate(${(x - keyBox / 2).toFixed(3)} ${(keyY - keyBox / 2).toFixed(
-                3,
-              )}) scale(${(keyBox / 24).toFixed(5)})`}
+              transform={keyTransform}
               fill="none"
               stroke={INK}
               color={INK}
@@ -957,7 +1089,8 @@ export const Tableau: React.FC<{
   const fAt = s.folderAt ?? FOLDER;
   const evAt = s.evaluatorAt ?? EVALUATOR;
 
-  // The work thread runs edge to edge: off the model's rim, into the ring's.
+  // The work thread runs edge to edge: off the MARK's box (THREAD_GAP, which is
+  // outside it — see THREAD_GAP), into the station ring's.
   const aq = angleTo(model, qAt);
   const tFrom = { x: model.x + Math.cos(aq) * THREAD_GAP, y: model.y + Math.sin(aq) * THREAD_GAP };
   const tTo = { x: qAt.x - Math.cos(aq) * STATION_R, y: qAt.y - Math.sin(aq) * STATION_R };
