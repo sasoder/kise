@@ -5,6 +5,7 @@ import {
   ACCENT_DEEP,
   BG_BASE,
   BG_DIM,
+  CAM_LIFT,
   GridBackground,
   ICON_SHADOW_BLUR,
   ICON_SHADOW_OPACITY,
@@ -30,12 +31,12 @@ import {
   MARCH_W,
   MODEL_EDGE,
   MODEL_MARK,
-  MODEL_R,
   ModelDot,
   PERSON_H,
   PersonGlyph,
   STROKE_W,
   THREAD_GAP,
+  TWO_PI,
   Wall,
   camKnots3,
   runCam3,
@@ -62,110 +63,155 @@ export const FPS = 24;
 export const DURATION = 113;
 
 // ---------------------------------------------------------------------------
-// V2 — TWO CHANGES, AND ONLY TWO. (1) THE MODEL IS THE OPENAI MARK, not a dot:
-// `trapShared.ModelDot` now draws `brandGlyphs.OPENAI` filled, on a 72 screen px
-// em box (MODEL_MARK_PX), in the same two-tone orange on the FILL. This is an
-// interview with someone from OpenAI. (2) THE ANSWER KEY is lucide `key-round`
-// instead of `key`, and the folder glyph is masked behind its silhouette. Every
-// staging, timing, camera, beat and duration in this file is untouched.
+// V3 — TWO CHANGES, on the director's two notes. Beats, DURATION and the story
+// are untouched; what changed is the SCALE the cut resolves at and the first
+// sixteen frames.
+//
+//  (1) THE RING WAS TOO SMALL AT REST — 330 screen px against 780-880 in the
+//      other four cuts, with the mark at 55 px against 64-73. The cause was the
+//      resolved frame trying to hold the WHOLE real course inside the caption
+//      band. The real world is OPEN-ENDED, so that is released: at rest the
+//      frame holds the test ring whole, the gate, and the LOWER part of the real
+//      course with its crowd, and the dashed forecast and the top of the crowd
+//      RUN OFF THE TOP of the frame. Re-solved, the cut now rests at K_REF
+//      itself (k 1.300) — the camera every size in trapShared is specified at —
+//      so every noun reads at its nominal screen size: stroke 6.0, a real person
+//      118.0, the mark 72.0. The wall went r 165 -> 200, i.e. 520 screen px at
+//      rest against V2's 330, and the real course came down 2.2x -> 2.0x so that
+//      a whole S of it is still in frame at rest (its first two lobes land on
+//      screen y 542 and 292, the third on 43) while its top is not.
+//
+//  (2) "DASHED = FAKE" WAS NEVER TAUGHT before this cut used it. It is now, in
+//      the first sixteen frames, as the cut's first mechanism: at f0 the ring is
+//      a SOLID INK_HI circle and the three props are SOLID INK_HI people — the
+//      test looks real — and a WIPE starts at the ring's bottom point and runs
+//      up BOTH sides, converting solid -> marching dashes behind its two heads.
+//      Each prop flips to `FakePerson` as the heads pass ITS OWN HEIGHT, not on
+//      a timer: the dimming and the dashed circle are caused by the wipe
+//      reaching it. The last prop is a dashed circle by f17 and the heads meet
+//      the gate on f19 — see DEVIATIONS for why not f13. Everything after that
+//      is as approved.
 // ---------------------------------------------------------------------------
 // THIS CUT HAS ITS OWN TALL WORLD. It does not use trapShared's TABLEAU — no
 // stations, no folder, no evaluator, no wire, no `Tableau`. It takes the
 // module's SIZES, its two ink rungs, `Wall`, `ModelDot`, `PersonGlyph`,
-// `FakePerson` and the camera helpers, and lays its own world out over the
-// 1080 x 1920 field: the dashed test ring low down at world y 1620, and 726
-// world px of REAL WORLD above it. The camera travels UP through that world
-// and the payoff is off-frame at f0.
+// `FakePerson` and the camera helpers, and lays its own world out: the test ring
+// low down at world y 1600, and 800 world px of REAL WORLD above it. The camera
+// travels UP through that world and the payoff is off-frame at f0.
 //
 // SOUND-OFF READING TEST — one sentence:
-//   "a dot weaves a little course past fake people inside a dashed ring; a
-//    dashed line runs up out of the ring on exactly the same course, only
-//    bigger, between real people; then the dot goes out and rides it, and the
-//    line turns solid behind it."
+//   "a ring and the people in it turn from solid to dashed while a mark weaves a
+//    little course past them; a dashed line runs up out of the ring on exactly
+//    the same course, only bigger, between real people; then the mark goes out
+//    and rides it, and the line turns solid behind it."
 //
 // THE IDEA. What the model does inside the (dashed) test is a FORECAST of what
 // it will do outside. The test's little course and the real world's big course
-// are THE SAME CURVE, the second one 2.2x the first, joined at the gate — the
-// forecast is literally the small course continued. The dot then runs it.
+// are THE SAME CURVE, the second one 2.0x the first, joined at the gate — the
+// forecast is literally the small course continued. The mark then runs it.
 //
 // VOCABULARY, the clip's, unchanged:
-//   the model    = ONE solid orange dot (`ModelDot`, MODEL_R), lit (ACCENT) the
-//                  whole cut: it is behaving, i.e. working, throughout. Accent
-//                  appears NOWHERE else — no thread, no gaze and no packet is
-//                  motivated by this line, so the cut has none of them.
-//   the test     = the dashed white ring (`Wall`) with a GAP at its top point:
-//                  the gate. Its dashes march from f0 to the last frame.
-//   fake people  = `FakePerson` (reveal 1: the glyph at INK_LO inside a dashed
-//                  circle) at PERSON_H / 2.2, because the test is a scale model
-//                  of the real thing — see DEVIATIONS.
-//   real people  = `PersonGlyph`, solid, INK_HI, PERSON_H. NINE of them, hashed,
-//                  denser toward the top, never a row.
-//   the lane     = white, INK_HI, SOLID, one stroke: the course the model
-//                  actually runs, inside the test.
-//   the forecast = the same curve x2.2 above the gate, DASHED, INK_LO — it has
-//                  not happened yet — converting to SOLID INK_HI behind the dot
-//                  as the dot reaches each piece of it.
+//   the model    = the OpenAI mark (`ModelDot`), lit (ACCENT) the whole cut: it
+//                  is behaving, i.e. working, throughout. Accent appears NOWHERE
+//                  else — no thread, no gaze and no packet is motivated by this
+//                  line, so the cut has none of them.
+//   the test     = the white ring (`Wall`) with a GAP at its top point: the
+//                  gate. SOLID at f0; dashed from f16 to the last frame, and its
+//                  dashes march the whole time they exist.
+//   the props    = `FakePerson`, reveal 0 -> 1 as the wipe passes them: a solid
+//                  INK_HI person becomes an INK_LO person in a dashed circle.
+//                  At PERSON_H / SCALE_UP, because the test is a scale model of
+//                  the real thing — see DEVIATIONS.
+//   real people  = `PersonGlyph`, solid, INK_HI, PERSON_H. Twelve of them,
+//                  hashed, denser toward the top, never a row; the top of the
+//                  crowd is off-frame at rest.
+//   the lane     = white, INK_HI, SOLID: the course the model actually runs,
+//                  inside the test. It is REAL and it never converts.
+//   the forecast = the same curve x2.0 above the gate, DASHED, INK_LO — it has
+//                  not happened yet — converting to SOLID INK_HI behind the mark
+//                  as the mark reaches each piece of it.
 // Two ink opacities only: INK_HI 1.0 (lane, wall, people, the solid forecast)
-// and INK_LO 0.5 (the dashed forecast, the fake people and their circles). No
-// text, no numerals, no second dot, no question mark, no people reacting.
+// and INK_LO 0.5 (the dashed forecast, the converted props and their circles).
+// No text, no numerals, no second dot, no question mark, no people reacting.
 //
 // ---------------------------------------------------------------------------
 // GESTURES — one continuous motion; the words are landings. Nothing in the cut
 // is outside this list, and every item names the word it serves.
 //
-//  1. f0-15   "then you can get"   THE MODEL IS BEHAVING. The cut opens close on
-//             (f0/f5/f11/f13)      the test ring — damped k 2.693, the ring 889
-//                                  screen px across in a 1080 frame, 95 px of
-//                                  side margin — with the mark ALREADY at 58% of
-//                                  the lane (t 0.578), clearing the LAST fake
-//                                  prop and decelerating into the gate on
-//                                  arriveEase. The wall's dashes march, the
-//                                  three fake circles' dashes march, and the
-//                                  camera is already easing out at f0 (26 frames
-//                                  of pre-roll through the damper).
-//  2. f15-70  "a sense of, like"   THE FORECAST. On the frame the dot reaches
+//  1. f0-19   "then you can get"   THE TEACHING WIPE. The cut opens close on the
+//             (f0/f5/f11/f13)      test — k 1.721, the ring 688 screen px across
+//                                  in a 1080 frame, a prop 78 px tall and the
+//                                  mark 95 — with the ring SOLID and the three
+//                                  props SOLID PEOPLE, and nothing else in frame.
+//                                  A wipe leaves the ring's bottom point on f1
+//                                  and runs up both sides at exactly the set's 45
+//                                  screen px/frame; behind its two heads the ring
+//                                  is marching dashes. Each prop dims to INK_LO
+//                                  and grows its dashed circle as the heads pass
+//                                  its own height — half converted on f8, f11,
+//                                  f13, done by f11, f13, f17. The heads meet the
+//                                  gate on f19: the test is now visibly a
+//                                  SIMULATION, which is what the rest of the cut
+//                                  — and the other four — is built on.
+//  2. f0-15   "then you can get"   THE MODEL IS BEHAVING. The mark is already at
+//                                  45% of its lane when the cut opens, weaving
+//                                  the last of the slalom and decelerating into
+//                                  the gate on arriveEase: it has been doing
+//                                  this before the cut started.
+//  3. f15-64  "a sense of, like"   THE FORECAST. On the frame the mark reaches
 //             (f15/f17/f22/f25)    the gate, a DASHED INK_LO line starts growing
-//                                  out of it — the dot's own curve, continued:
+//                                  out of it — the mark's own curve, continued:
 //                                  both are vertical at the gate, so the join is
-//                                  C1 and there is no kink. Its head runs the
-//                                  big slalom and the CAMERA FOLLOWS IT
-//                                  (k 2.693 -> 1.319, content centre 1622 ->
-//                                  1075) while real people come into frame from
-//                                  above and the line threads between them. The
-//                                  head lands at the top of the crowd on f70,
-//                                  two frames before "well" (f72). That run is
-//                                  "okay is the AI actually going to behave
-//                                  well" (f31/f37/f47/f54/f67/f72).
-//  3. f15-80  "it is not deployed  THE LAP. The dot holds at the gate for two
-//             yet"                 frames (it looks out, f15-16), then runs 60% of
-//                                  the lane back DOWN — re-weaving all three props,
-//                                  which are still in frame — and up again,
-//                                  arriving at the gate at f80 with 9.6 world
-//                                  px/frame still on it, so the deployment is
-//                                  the same motion continuing. It is inside the
-//                                  test the whole time the forecast is drawn.
-//  4. f70-88  "when we deploy"     THE PULL-BACK. One glide out to the resolved
-//             (f76/f80)            framing (k 1.319 -> 1.000, content centre
-//                                  1075 -> 1256.3), landing on f88, one frame
-//                                  before "real" (f89), holding the WHOLE
-//                                  picture: the small dashed ring at the bottom,
-//                                  the lane up through the crowd, content centre
-//                                  on screen y 835.
-//  5. f80-113 "in the real world"  THE DEPLOYMENT. On "deploy" (f80) the dot
-//             (f86/f89/f92)        goes OUT through the gap in the wall and
-//                                  rides the forecast, and behind it the line
-//                                  converts dashed INK_LO -> solid INK_HI,
-//                                  because the dot has reached it. It is 63% of
-//                                  the way up on the last frame and still moving
-//                                  at 20.4 screen px/frame, still weaving, still
-//                                  touching no one.
+//                                  C1 and there is no kink. Its head runs the big
+//                                  slalom at up to 33.2 screen px/frame and the
+//                                  CAMERA FOLLOWS IT (k 1.721 -> 1.299, content
+//                                  centre 1646 -> 1183) while real people come
+//                                  into frame from above and the line threads
+//                                  between them, never touching one (42 world px
+//                                  at its closest). The head lands at the top of
+//                                  the course on f64, on screen y 139 with the
+//                                  topmost person at 94, three frames before
+//                                  "behave" (f67) and eight before "well" (f72).
+//                                  That run is "okay is the AI actually going to
+//                                  behave well" (f31/f37/f47/f54/f67).
+//  4. f15-80  "it is not deployed  THE LAP. The mark holds at the gate for two
+//             yet"                 frames (it looks out, f15-16), then runs 55%
+//                                  of the lane back DOWN — re-weaving the two
+//                                  props the camera still holds — turns on f40
+//                                  and comes up again, arriving at the gate at
+//                                  f80 with its speed still on it, so the
+//                                  deployment is the same motion continuing. It
+//                                  is inside the test the whole time the forecast
+//                                  is drawn, and never sits below screen y 1374
+//                                  while it is down there.
+//  5. f64-90  "when we deploy"     THE SETTLE. One glide back DOWN to the
+//             (f76/f80)            resolved framing (content centre 1183 ->
+//                                  1411.5 at k 1.300) — 34 screen px short of
+//                                  home on f88, 9 on f97, i.e. landed one frame
+//                                  before "real" (f89) and creeping in after it.
+//                                  The camera follows the SUBJECT, which by then
+//                                  is the mark coming out of the gate and not the
+//                                  forecast's head. The resolved frame holds the
+//                                  ring whole with its bottom on screen y 1332
+//                                  and the gate on 812, and the lower two thirds
+//                                  of the real course with eight of its twelve
+//                                  people; the other four and the top of the
+//                                  forecast run off the top.
+//  6. f80-113 "in the real world"  THE DEPLOYMENT. On "deploy" (f80) the mark
+//             (f86/f89/f92)        goes OUT through the gap in the wall and rides
+//                                  the forecast, and behind it the line converts
+//                                  dashed INK_LO -> solid INK_HI, because the
+//                                  mark has reached it — 15.5 world px of
+//                                  daylight either side of it in the gate. It is
+//                                  30% of the way up on the last frame, on screen
+//                                  y 476, still moving at 13.1 screen px/frame,
+//                                  still weaving, still touching no one.
 //
 // LIVENESS — mechanisms, not gestures; none is on a word and none ever stops:
-// the wall's marching dashes (and the three fake circles', and the forecast's),
-// `breath` on the model, the dot moving on every single frame of the cut, the
+// the wall's marching dashes (and the props' circles', and the forecast's),
+// `breath` on the model, the mark moving on every single frame of the cut, the
 // grid's parallax and its own -0.3 px/frame drift, and a camera whose decaying
-// drift is still running at DURATION (0.305 screen px on the slowest frame,
-// against the set's 0.15 "parked" floor).
+// drift is still running at DURATION.
 //
 // ---------------------------------------------------------------------------
 // THE CURVE. One shape, used twice. Over t in [0, 1] from a course's start to
@@ -181,35 +227,25 @@ export const DURATION = 113;
 //     slope, so the curve is VERTICAL where the straight runs meet it.
 // The small course therefore ends vertical and the big one starts vertical: C1
 // at the gate, with no mirroring and no kink, and the big course is the small
-// one scaled 2.2x about the gate point — the same shape in the same handedness,
-// not a reflection. Arc lengths, tabulated over 900 samples: 423.6 world px and
-// 931.9, and everything that travels on either is parametrised BY ARC LENGTH.
+// one scaled 2.0x about the gate point — the same shape in the same handedness,
+// not a reflection. Everything that travels on either is parametrised BY ARC
+// LENGTH.
 //
-// THE WORLD, in world px (the resolved camera's k = 1, so world px = screen px
-// there):
-//   wall        centre (540, 1620), r 165, with a GAP at its top point: the
-//               `draw` 0.927 wipe leaves 75.7 world px of gate — a chord half-
-//               width of 37.5 — and the mark is 55.4 world px across, so it
-//               passes with 10.2 px either side. (It was `draw` 0.95 and a
-//               32.3 px dot; the 55.4 px mark does not fit through that gate at
-//               all, and WALL_DRAW is the one number this cut changed for it.)
-//   small lane  from (540, 1785) — the wall's bottom point — to the gate at
-//               (540, 1455). H_S = 330 = the ring's diameter, A_S = 35.
-//   fake props  on the lobes, at x 540 +- 62, y 1699.2 / 1620 / 1540.8, h 41.26.
-//   big lane    the same curve x2.2 out of the gate: H_B = 726, A_B = 77, its
-//               top at (540, 729).
-//   the crowd   nine people, PERSON_H 90.77, at
-//                 (404,1092) (676,918) (384,759) (627,811) (809,835)
-//                 (365,934)  (766,1037) (288,1123) (798,1251)
-//               The first two are the people standing opposite the big lane's
-//               second and third lobes — the rhyme with the fake props. The rest
-//               come off a 4 x 6 lattice whose columns are staggered half a step
-//               in y and whose seats are jittered by 1.3 of their own step, with
-//               the acceptance rising as (height)^1.4 toward the top, so the
-//               crowd is denser up there and never sits on a rule. Rejected: any
-//               seat whose ink comes within PERSON_INK/2 + MODEL_R + 18 of the
-//               lane, within 104 of an accepted seat, or more than 330 from the
-//               centre column.
+// THE WORLD, in world px (the resolved camera is k 1.300, so a world px is 1.3
+// screen px there):
+//   wall        centre (540, 1600), r 200, with a GAP at its top point: the
+//               `draw` 0.927 wipe leaves a 45.5 world px chord half-width, and
+//               the mark's half-box is 27.69, so it passes the gate with 15.5
+//               world px of daylight either side.
+//   small lane  from (540, 1800) — the wall's bottom point — to the gate at
+//               (540, 1400). H_S = 400 = the ring's diameter, A_S = 42.4 (the
+//               ring's own 0.212 r, as before).
+//   props       on the lobes, at x 540 +- 75.2, y 1696 / 1600 / 1504.
+//   big lane    the same curve x2.0 out of the gate: H_B = 800, A_B = 84.8, its
+//               top at (540, 600).
+//   the crowd   twelve people, PERSON_H 90.77, on a jittered lattice between
+//               world y 600 and 1110, six a side, eight of them in the resting
+//               frame and four off the top of it — see THE CROWD.
 //
 // ---------------------------------------------------------------------------
 // CAMERA — knots on ONE monotone cubic Hermite (`camKnots3`, Fritsch-Carlson,
@@ -218,120 +254,88 @@ export const DURATION = 113;
 // the camera only tilts and zooms. 26 frames of PRE-ROLL run through the damper
 // before frame 0, so f0 is already moving instead of standing still.
 //
-//   knot f -26   k 2.840  c 1652     PRE-ROLL
-//   knot f   0   k 2.630  c 1622     close on the ring, already easing out
-//   knot f  22   k 1.920  c 1505     THE CREEP, under "sense of like": the gate
-//                                    lifts toward the middle of the frame as the
-//                                    forecast leaves it
-//   knot f  48   k 1.520  c 1180     THE FOLLOW, carrying velocity through
-//   knot f  70   k 1.270  c 1075     ...landing with the head on "well"
-//   knot f  88   k solved c 1256.3   THE PULL-BACK to the resolved framing, one
-//                                    frame before "real" (f89)
-//   knot f 112   k -0.014  c   +8    still drifting on the last frame
-//   knot f 180   k -0.045  c  +26    the drift's continuation, off the end
-// K_END is SOLVED (secant) so the damped camera reads exactly K_REST = 1.000 on
-// the last frame. Damped, measured: f0 2.693 · f15 2.290 · f30 1.843 ·
-// f50 1.548 · f70 1.319 · f80 1.173 · f88 1.052 · f112 1.000.
+//   knot f -26   k 1.78   c 1658     PRE-ROLL
+//   knot f   0   k 1.70   c 1640     close on the ring, already easing out
+//   knot f  16   k 1.54   c 1480     THE LIFT, with the wipe: the camera climbs
+//                                    with the two heads, which is also what keeps
+//                                    them under 45 screen px/frame up the sides
+//   knot f  38   k 1.38   c 1300     THE FOLLOW, carrying velocity through
+//   knot f  56   k 1.30   c 1120     ...so the damped apex lands under the
+//                                    forecast's head on f64
+//   knot f  88   k solved c 1411.5   THE SETTLE back down to the resolved framing
+//   knot f 112   k -0.010 c   +8     still drifting on the last frame
+//   knot f 180   k -0.032 c  +26     the drift's continuation, off the end
+// K_END is SOLVED (secant) so the damped camera reads exactly K_REST = 1.300 on
+// the last frame — K_REF itself, which is what puts every noun at its nominal
+// screen size in the resolved frame. Damped, measured (k / content centre):
+// f0 1.721 / 1646 · f16 1.583 / 1531 · f30 1.462 / 1404 · f50 1.336 / 1209 ·
+// f64 1.300 / 1183 · f80 1.303 / 1305 · f97 1.307 / 1410 · f112 1.300 / 1417.
+// The camera's own screen speed peaks at 23.2 px/frame with |dv| 2.06 px/frame^2
+// (the set's ceiling is 2.2) and never falls below 0.17, so no frame is parked.
 //
 // ---------------------------------------------------------------------------
-// MEASURED (STATS, audited over every frame; screen px at each frame's own
-// camera, so every number below includes the camera's own motion):
-//   forecast head, fastest frame     33.8 px/f   (ceiling 45, at f27)
-//   the model mark, fastest frame    39.0 px/f   (ceiling 45, at f1)
-//   the camera on world (540,1100)   29.0 px/f peak, |dv| 1.77 px/f^2 peak
-//                                    (the set's |dv| ceiling is 2.2)
-//   slowest frame of the whole cut   0.305 px/f  (the "parked" floor is 0.15)
-//   mark to a fake prop's circle     11.8 world px, closest over every frame
-//                                    (23.4 with the old dot: the mark's half-box
-//                                    is 11.5 px bigger than MODEL_R and that is
-//                                    the whole of the difference — 32 screen px
-//                                    of daylight at the opening camera, 12 at
-//                                    rest, and no prop is ever touched)
-//   mark to a real person's ink      70.7 world px, closest over every frame
-//   gate, per side, at the mark      7.5 world px of stroke-to-ink clearance
-//                                    (10.2 px of arc either side of it)
-//   resolved ink                     screen y 292.3 .. 1365.9 (band 300..1400;
-//                                    the top 8 px over is the crowd's topmost
-//                                    head, which is not what the caption rule
-//                                    protects)
-//   side margin at rest              229.7 px    (brief asks >= 70)
-//   the crowd at f0                  lowest person's feet at world y 1296.4,
-//                                    the frame's top edge at 1321.8: the payoff
-//                                    is entirely off-frame
-//   the dot at DURATION - 1          63% up the big course, 20.4 px/f
-//   sizes, open -> rest              wall 889 -> 330 px, stroke 12.4 -> 4.6,
-//                                    a fake prop 111.1 px tall at the open, a
-//                                    real person 90.8 at rest, the mark's em box
-//                                    149.1 -> 55.4
+// See `STATS` at the foot of this file: every number claimed above is measured
+// there over every frame, at each frame's own camera.
 //
 // ---------------------------------------------------------------------------
 // DEVIATIONS from the brief, with the arithmetic.
 //
-//   * THE RESOLVED CAMERA IS k 1.000, NOT 0.66, AND THE WALL IS r 165, NOT 250.
-//     These are the same decision. trapShared fixes every noun's WORLD size
-//     against K_REF 1.3, and this cut has to hold the ring, a copy of its course
-//     2.2x bigger and a crowd in ONE frame inside the caption band. The ink
-//     column is 6.4 * r + PERSON_H/2 + STROKE_W/2 world px tall and the band
-//     300..1400 with the content centre at 835 allows about 1100 screen px, so
-//         k * (6.4 r + 47.7) ~= 1100.
-//     One of k and r is free. Taking k = 1.000 — CAM_WIDE's own zoom, which the
-//     module states is an accepted framing (x0.77 of the nominal screen sizes:
-//     person 90.8 px, the mark 55.4 px, stroke 4.6 px) — gives r = 165, and every
-//     noun then keeps the module's world size verbatim, dash pattern included.
-//     Taking the brief's r = 250 instead forces k = 0.631, where a person is 57
-//     screen px and the model 20: at the 270 px reading test that is a 14 px
-//     person and a 5 px dot, and the cut fails it. Scaling the nouns up in world
-//     instead was rejected because `Wall`'s and `FakePerson`'s dash pattern is
-//     not a prop, so the dashes alone would have come out 0.77x against their
-//     own strokes. Consequence, stated plainly: the wall is 330 screen px across
-//     here and 884 in cut 3. It is the same ring — this cut's whole job is to
-//     pull away from it, so what changed is the camera, not the noun.
+//   * THE WIPE'S HEADS REACH THE GATE ON f19, NOT f12-14. They are capped at 45
+//     screen px/frame like every other head in the set, and the two constraints
+//     do not both fit. Each head travels a half-circumference of the ring,
+//     r * pi * WALL_DRAW = 582.5 world px. At the bottom point a head moves
+//     HORIZONTALLY, where the camera's own upward glide cancels none of it, so
+//     its ceiling there is 45 / k; the cancellation only arrives as the head
+//     turns vertical up the sides. Integrating that ceiling against this camera
+//     (k 1.721 at f0, the content centre lifting ~7 world px/frame) the fastest
+//     legal wipe covers the half-circumference in 19 frames, and every one of
+//     those frames measures at the ceiling. What the brief actually wants taught
+//     does land in its window — "by 'get a sense' (f13-17) the whole test is
+//     dashed": the three PROPS, which are what "fake" is really taught on, are
+//     converted on f11, f13 and f17, and all that is left after f17 is the last
+//     26 degrees of the ring either side of the gate. The alternatives were all
+//     worse: a 45-px/f wipe landing on f13 needs k <= 1.05 at f0 (the cut would
+//     open WIDER than it rests, and the crowd, which must be off-frame at f0,
+//     would be visible), and letting the heads run at 60-70 px/f breaks the
+//     set's ceiling on the one gesture whose whole job is to be read.
 //
-//   * A FAKE PERSON IS PERSON_H / 2.2, NOT PERSON_H. The test's course is the
-//     real one at 1/2.2, so its props are too: the test is a scale model, which
-//     is what makes the two slaloms read as the same course. At the opening
-//     camera a fake prop is 111 screen px tall, i.e. rather more than the 90.8
-//     px a real person reads at the resolved camera — each is "a person" at the
-//     moment the camera is on it. Full-size props cannot be done at all: three
-//     of them is 272 world px of glyph stacked inside a ring 330 world px
+//   * THE REAL COURSE IS 2.0x THE TEST'S, NOT 2.2x (the brief allows 1.8-2.2).
+//     At 2.2 the third lobe of the big slalom sits 31 world px above the resting
+//     frame's top edge and the resolved frame holds one and a half lobes; at 2.0
+//     the first two land on screen y 542 and 292 with the third on 43, so a whole
+//     S is in frame and 175 world px of course still runs off the top. The two curves stay the same shape in the same handedness, which
+//     is the point of the pair.
+//
+//   * A PROP IS PERSON_H / SCALE_UP, NOT PERSON_H. The test's course is the real
+//     one at 1/2.0, so its props are too: the test is a scale model, which is
+//     what makes the two slaloms read as the same course. At the opening camera
+//     a prop is 79 screen px tall. Full-size props cannot be done at all: three
+//     of them is 272 world px of glyph stacked inside a ring 400 world px
 //     across, before the lane that has to weave around them.
 //
-//   * THE SLALOM SITS IN THE MIDDLE 72% OF THE COURSE. Run edge to edge, its
-//     third lobe lands 55 world px below the gate, and the lane coming back to
-//     the axis for the gate then passes 12 world px from that prop's circle —
-//     it clips it. Pulling the lobes into the middle puts 85.8 world px of
-//     straight run between the last prop and the gate and takes the closest
-//     approach to 23.4, and it is also what gives the two courses a vertical
-//     tangent to join on.
+//   * THE SLALOM SITS IN THE MIDDLE 72% OF THE COURSE, and the props ALTERNATE
+//     SIDES at x 540 +- P_S while the lane swings +- A_S the other way. Both are
+//     unchanged from V1 and for the same reasons: run edge to edge the third
+//     lobe lands too close to the gate for the lane to come back to the axis
+//     without clipping that prop, and a prop standing ON the axis is overlapped
+//     by the lane at the crossings whatever the amplitude is.
 //
-//   * THE PROPS ALTERNATE SIDES (x 540 +- 62) INSTEAD OF STANDING ON THE AXIS.
-//     A prop on the axis is 31.8 world px of circle either side of it, and the
-//     lane crosses the axis 39.6 px above and below every lobe, so the dot
-//     (MODEL_R 16.2) overlaps it there whatever the amplitude is. Offsetting the
-//     props by 62 and the lane by 35 the other way gives 97 world px of
-//     separation at the lobes and sqrt(62^2 + 39.6^2) = 73.6 at the crossings —
-//     a measured worst case of 23.4 px of daylight — at 3 pi * 35 / 237.6 = 24
-//     degrees off vertical, where props on the axis need 60 degrees and read as
-//     a zigzag rather than a slalom. Everything stays inside the wall: the worst
-//     extent is a prop circle at 132.4 of the 162.7 world px the wall's inner
-//     edge allows.
+//   * THE MARK SHUTTLES THE LANE RATHER THAN CIRCLING IT. The brief asks the
+//     mark to "circle back onto its course"; a return arc would have to run
+//     between the prop circles and the wall, which is 40 world px of room. So it
+//     reaches the gate on f15, holds two frames, runs 55% of the way back down,
+//     turns on f40 and comes up again, arriving at the gate on f80 with its speed
+//     still on it. It turns on f40 and not half way through the cut because the
+//     camera is climbing through those frames: the lower the mark goes while the
+//     camera is high, the deeper into the caption band it sits, and turning on
+//     f40 keeps it above screen y 1374 on every frame of the lap.
 //
-//   * THE DOT SHUTTLES THE LANE RATHER THAN CIRCLING IT. The brief asks the dot
-//     to "circle back onto its course"; a return arc would have to run between
-//     the prop circles (132.4) and the wall (162.7), which is 30 world px of
-//     room. So it reaches the gate on f15, holds three frames, runs 60% of the
-//     way back down — re-weaving all three props, which are still in frame —
-//     and comes up again, arriving at the gate on f80 with its speed still on
-//     it. Both turns are eased; the far turn (f49) is the one gesture the camera
-//     has already left behind. 60% and not 100%: the camera is travelling UP
-//     through those frames and the dot is travelling DOWN, so their screen
-//     speeds ADD, and a full-length descent measured 68 screen px/frame.
-//
-//   * THE HEAD AND THE DOT ARE BOTH CAPPED AGAINST THE CAMERA. Speeds are
-//     integrated per frame at min(V, 42 / k(f)), so nothing is ever over the
-//     set's 45 screen px/frame however tight the camera is, and V is SOLVED
-//     (bisection) so the head still lands exactly on f70 and the dot leaves
-//     exactly on f80.
+//   * THE HEADS AND THE MARK ARE ALL CAPPED AGAINST THE CAMERA. Speeds are
+//     integrated per frame at min(V, 42 / k(f)) (the wipe against its own exact
+//     screen velocity, which is not parallel to the camera's), so nothing is
+//     ever over the set's 45 screen px/frame however tight the camera is, and V
+//     is SOLVED (bisection) so the forecast's head still lands exactly on f64
+//     and the mark still leaves exactly on f80.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
@@ -398,40 +402,61 @@ export const defaultProps: Props = schema.parse({
   },
 });
 
-const WORLD_W = 1080;
-const WORLD_H = 1920;
-const AX = 540;
+export const WORLD_W = 1080;
+export const WORLD_H = 1920;
+export const AX = 540;
 const LAST = DURATION - 1;
+/** The frame the speech ends on. The next cut butts against THIS state, not
+ *  against the last frame: the editor lays it over this cut's 16-frame tail. */
+export const SPEECH_END = 97;
 
 // --- the world --------------------------------------------------------------
-const K_REST_TARGET = 1.0; // = CAM_WIDE's zoom; see DEVIATIONS
-const R_WALL = 165;
-const WALL_C = { x: AX, y: 1620 };
-const GATE = { x: AX, y: WALL_C.y - R_WALL }; // 1455
-const LANE_START_Y = WALL_C.y + R_WALL; // 1785
-const SCALE_UP = 2.2;
-const H_S = 2 * R_WALL; // 330
-const A_S = 35;
-const P_S = 62; // the props' offset, the other way
+/** V3: the cut rests at K_REF itself, the camera trapShared solves every screen
+ *  size at, so a stroke is 6.0 screen px here, a person 118.0 and the mark 72.0
+ *  — the same as in the other four cuts. */
+export const K_REST_TARGET = 1.3;
+export const R_WALL = 200;
+export const WALL_C = { x: AX, y: 1600 };
+export const GATE = { x: AX, y: WALL_C.y - R_WALL }; // 1400
+export const LANE_START_Y = WALL_C.y + R_WALL; // 1800
+export const SCALE_UP = 2.0;
+export const H_S = 2 * R_WALL; // 400
+const A_S = 0.212 * R_WALL; // 42.4 — the ring's own fraction, as in V1
+const P_S = 0.376 * R_WALL; // 75.2 — the props' offset, the other way
 const END_TAPER = 0.13;
 /** The slalom sits in the MIDDLE of the course; the course runs straight into
  *  the gate at one end and out of the start at the other. See DEVIATIONS. */
 const SLALOM_0 = 0.14;
 const SLALOM_1 = 0.86;
-/** The gap left at the top of the wall for the gate, as a fraction of it.
- *  SOLVED against the mark, not chosen: the gate's chord half-width is
- *  R_WALL * sin((1 - WALL_DRAW) * pi), and it has to clear the mark's half-box
- *  (MODEL_EDGE 27.69) plus half the wall's stroke plus the 7.4 world px of air
- *  the 42 px DOT used to pass with. 0.95 gave 25.8 world px of half-chord, which
- *  the 55.4 px mark does not fit through at all; 0.927 gives 37.5, i.e. 10.2
- *  world px of daylight either side of the mark — the same daylight the dot had.
- *  V2: the ONLY number this cut changed for the mark. */
-const WALL_DRAW = 0.927;
+/** The gap left at the top of the wall for the gate, as a fraction of it. The
+ *  gate's chord half-width is R_WALL * sin((1 - WALL_DRAW) * pi) = 45.0 world
+ *  px, against the mark's half-box (MODEL_EDGE 27.69) and half the wall's
+ *  stroke: 15.0 world px of daylight either side of the mark. */
+export const WALL_DRAW = 0.927;
 
-const FAKE_H = PERSON_H / SCALE_UP; // 41.26
+export const FAKE_H = PERSON_H / SCALE_UP; // 45.4
 const FAKE_RING_R = FAKE_H * 0.66; // FakePerson's own geometry
 /** person.png's ink is 0.84 of its box, so this is a glyph's ink half-width. */
 const PERSON_INK_HW = PERSON_H * 0.42;
+
+// ---------------------------------------------------------------------------
+// THE RESOLVED FRAMING, solved here because the crowd is solved against it.
+//
+// The resolved content centre is SOLVED against the ring rather than against the
+// ink's extent: the real world runs off the top of the frame now, so there is no
+// finite ink column to centre. The ring's bottom lands on screen y 1340 — inside
+// the caption band's 1400, with the sway's worst 6.5 screen px still 53 px clear
+// of it — which at k 1.300 puts the gate on screen 819 and the content centre
+// (screen 835) on world 1411.5, i.e. 11 world px above the gate: half the frame
+// is the test, half is the real world, and the seam between them sits where the
+// composition is centred.
+// ---------------------------------------------------------------------------
+export const RING_BOTTOM_SCREEN = 1340;
+export const C_REST =
+  LANE_START_Y - (RING_BOTTOM_SCREEN - 960 + CAM_LIFT) / K_REST_TARGET;
+/** The world y of the resting frame's TOP edge. Anything above this is off the
+ *  top at rest: the upper crowd and the last of the course. */
+export const TOP_WORLD_REST = C_REST + CAM_LIFT / K_REST_TARGET - 960 / K_REST_TARGET;
 
 const envOf = (m: number) =>
   smoothstep(clamp01(m / END_TAPER)) * smoothstep(clamp01((1 - m) / END_TAPER));
@@ -446,8 +471,8 @@ const shapeX = (t: number) => {
 };
 const shapeY = (t: number) => -H_S * t;
 
-const smallPt = (t: number) => ({ x: AX + shapeX(t), y: LANE_START_Y + shapeY(t) });
-const bigPt = (t: number) => ({
+export const smallPt = (t: number) => ({ x: AX + shapeX(t), y: LANE_START_Y + shapeY(t) });
+export const bigPt = (t: number) => ({
   x: AX + SCALE_UP * shapeX(t),
   y: GATE.y + SCALE_UP * shapeY(t),
 });
@@ -465,7 +490,7 @@ const bigProp = (t: number) => ({
 
 /** The three lobe centres, in course parameter. */
 const LOBES = [1 / 6, 1 / 2, 5 / 6].map((m) => SLALOM_0 + (SLALOM_1 - SLALOM_0) * m);
-const FAKE_PROPS = LOBES.map(smallProp);
+export const FAKE_PROPS = LOBES.map(smallProp);
 
 // --- arc-length tables for both courses -------------------------------------
 const CURVE_N = 900;
@@ -480,13 +505,13 @@ const tabulate = (pt: (t: number) => { x: number; y: number }) => {
   }
   return tab;
 };
-const TAB_S = tabulate(smallPt);
-const TAB_B = tabulate(bigPt);
-const L_S = TAB_S[CURVE_N];
-const L_B = TAB_B[CURVE_N];
+export const TAB_S = tabulate(smallPt);
+export const TAB_B = tabulate(bigPt);
+export const L_S = TAB_S[CURVE_N];
+export const L_B = TAB_B[CURVE_N];
 
 /** The curve parameter at arc length `s`, by binary search on the table. */
-const tAtS = (tab: Float64Array, s: number) => {
+export const tAtS = (tab: Float64Array, s: number) => {
   const x = Math.max(0, Math.min(tab[CURVE_N], s));
   let lo = 0;
   let hi = CURVE_N;
@@ -500,25 +525,39 @@ const tAtS = (tab: Float64Array, s: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE CROWD. A 3 x 4 jittered lattice over the upper part of the big course,
-// with the acceptance rising toward the top (denser up there, feathered out at
-// the bottom), plus the two people that stand opposite the big lane's second
-// and third lobes. Every seat is rejected if its ink comes within
-// PERSON_INK_HW + MODEL_R + 18 of the lane, or within MIN_GAP of an accepted
-// one. Nothing is a row: the lattice is jittered by 90% of its own step and the
-// two lobe people are off it entirely.
+// THE CROWD. A jittered lattice over the upper part of the big course, with the
+// acceptance rising toward the top (denser up there, feathered out at the
+// bottom), plus the two people that stand opposite the big lane's second and
+// third lobes — the rhyme with the props inside the test.
 //
-// LANE_CLEAR STILL USES MODEL_R — the old 42 px dot's radius — and not the
-// mark's half-box. It is the seed of a SOLVER, not a clearance: widening it
-// would reject seats and move nine people, which this revision does not do. The
-// clearance itself is MEASURED against the mark and comes out at 70.7 world px
-// (`STATS.minRealClear`), so nothing is tight.
+// Its BOTTOM is solved, not chosen: the payoff has to be entirely off-frame at
+// f0 (the set's rule — open on the subject, destination out of frame). At f0 the
+// camera holds world y 1600 at screen 835 with k 1.83, so the frame's top edge
+// is at world 1600 - (960 - CAM_LIFT) / 1.83 = 1143, and the lowest person's INK
+// (their centre + 0.42 PERSON_H = 38.1) has to clear it: CROWD_BOT 1080 puts
+// that ink bottom at 1118.1, 25 world px inside the edge.
+//
+// Its FILLING ORDER is solved too. The resting frame's top edge is at world
+// TOP_WORLD_REST, so only seats below TOP_WORLD_REST + PERSON_H / 2 are wholly
+// in it, and the brief asks for six of them. So the lower band is seated FIRST,
+// up to CROWD_LOW, and the upper band takes the rest — while the lattice's
+// acceptance still rises toward the top, so the crowd thickens as it leaves the
+// frame rather than thinning out.
+//
+// Every seat is rejected if its ink comes within PERSON_INK_HW + MODEL_EDGE + 18
+// of the big lane, if it is within MIN_GAP of an accepted seat, or if it is
+// outside CROWD_HX of the centre column (which is what keeps the side margin at
+// rest over the brief's 70 px).
 // ---------------------------------------------------------------------------
-const CROWD_TOP = 740;
-const CROWD_BOT = 1258;
-const CROWD_HX = 330; // |x - AX| ceiling for a centre
-const LANE_CLEAR = PERSON_INK_HW + MODEL_R + 18;
-const MIN_GAP = 104;
+const CROWD_TOP = 600;
+const CROWD_BOT = 1110;
+const CROWD_HX = 300; // |x - AX| ceiling for a centre
+const LANE_CLEAR = PERSON_INK_HW + MODEL_EDGE + 18;
+const MIN_GAP = 100;
+const CROWD_N = 12;
+/** how many of them are seated in the band the resting frame holds whole */
+const CROWD_LOW = 7;
+const CROWD_VIS_Y = TOP_WORLD_REST + PERSON_H / 2;
 
 /** The big lane's x at world y (or null above/below it). */
 const laneXAt = (y: number) => {
@@ -542,8 +581,12 @@ const laneDist = (x: number, y: number) => {
 
 type Seat = { x: number; y: number };
 
-const CROWD: Seat[] = (() => {
+export const CROWD: Seat[] = (() => {
   const out: Seat[] = [];
+  /** A crowd that ends up 8-4 across the column reads as a drift to one side
+   *  rather than as people either side of a road, so a seat is also rejected
+   *  when its own side is already two ahead of the other. */
+  const sideCount = (right: boolean) => out.filter((o) => o.x > AX === right).length;
   const push = (s: Seat) => {
     for (const o of out) {
       if (Math.hypot(o.x - s.x, o.y - s.y) < MIN_GAP) return false;
@@ -551,15 +594,16 @@ const CROWD: Seat[] = (() => {
     if (laneDist(s.x, s.y) < LANE_CLEAR) return false;
     if (Math.abs(s.x - AX) > CROWD_HX) return false;
     if (s.y < CROWD_TOP || s.y > CROWD_BOT) return false;
+    if (sideCount(s.x > AX) > sideCount(s.x <= AX) + 1) return false;
     out.push(s);
     return true;
   };
   // the two that stand opposite the lane's lobes: the rhyme with the props
   push(bigProp(LOBES[1]));
   push(bigProp(LOBES[2]));
-  // the lattice, top row first, so the density falls downward
-  const COLS = 4;
-  const ROWS = 6;
+  // the lattice
+  const COLS = 6;
+  const ROWS = 10;
   const stepX = (2 * CROWD_HX) / COLS;
   const stepY = (CROWD_BOT - CROWD_TOP) / (ROWS - 1);
   const seats: { s: Seat; q: number }[] = [];
@@ -576,56 +620,71 @@ const CROWD: Seat[] = (() => {
         (hash(id, 12) - 0.5) * stepY * 1.3;
       // denser toward the top: a seat low down needs a better hash to exist
       const up = 1 - (y - CROWD_TOP) / (CROWD_BOT - CROWD_TOP);
-      if (hash(id, 13) > 0.2 + 0.8 * Math.pow(clamp01(up), 1.4)) continue;
+      if (hash(id, 13) > 0.68 + 0.32 * Math.pow(clamp01(up), 1.2)) continue;
       seats.push({ s: { x, y }, q: y });
     }
   }
-  seats.sort((a, b) => a.q - b.q);
-  for (const s of seats) {
-    if (out.length >= 9) break;
+  // the band the resting frame holds whole, bottom-up...
+  const low = seats.filter((s) => s.s.y >= CROWD_VIS_Y).sort((a, b) => b.q - a.q);
+  for (const s of low) {
+    if (out.filter((o) => o.y >= CROWD_VIS_Y).length >= CROWD_LOW) break;
+    push(s.s);
+  }
+  // ...then everything else, top-down, so the density falls downward
+  const rest = seats.sort((a, b) => a.q - b.q);
+  for (const s of rest) {
+    if (out.length >= CROWD_N) break;
     push(s.s);
   }
   return out;
 })();
 
-// --- the ink's own extent, which is what the resting camera frames -----------
-const INK_BOTTOM = LANE_START_Y + STROKE_W / 2;
-const INK_TOP = Math.min(
-  bigPt(1).y,
-  ...CROWD.map((p) => p.y - PERSON_H / 2),
-);
-const C_REST = (INK_TOP + INK_BOTTOM) / 2;
-
 // ---------------------------------------------------------------------------
-// THE CAMERA.
+// THE CAMERA. One tilt up through the world and one settle back down onto the
+// resolved framing, with the zoom easing out under the first half of it. The
+// apex is SHALLOW on purpose: a deeper follow makes the return steeper than the
+// climb, and an asymmetric reversal is what puts a bump in the damper's jerk.
 // ---------------------------------------------------------------------------
-const PRE = 26;
+export const PRE = 26;
 const KNOTS = (kEnd: number) => [
-  { f: 0, k: 2.84, x: AX, y: 1652 },
-  { f: PRE, k: 2.63, x: AX, y: 1622 },
-  { f: PRE + 22, k: 1.92, x: AX, y: 1505 },
-  { f: PRE + 48, k: 1.52, x: AX, y: 1180 },
-  { f: PRE + 70, k: 1.27, x: AX, y: 1075 },
+  { f: 0, k: 1.78, x: AX, y: 1658 },
+  { f: PRE, k: 1.7, x: AX, y: 1640 },
+  { f: PRE + 16, k: 1.54, x: AX, y: 1480 },
+  { f: PRE + 38, k: 1.38, x: AX, y: 1300 },
+  { f: PRE + 56, k: 1.3, x: AX, y: 1120 },
   { f: PRE + 88, k: kEnd, x: AX, y: C_REST },
-  { f: PRE + 112, k: kEnd - 0.014, x: AX, y: C_REST + 8 },
-  { f: PRE + 180, k: kEnd - 0.045, x: AX, y: C_REST + 26 },
+  { f: PRE + 112, k: kEnd - 0.01, x: AX, y: C_REST + 8 },
+  { f: PRE + 180, k: kEnd - 0.032, x: AX, y: C_REST + 26 },
 ];
+
+/** The camera's TARGET track (before the damper), one key per frame, out to
+ *  `last`. Exported so the next cut can continue this one's camera exactly:
+ *  it runs the same damper over these targets and adds its own on the end. */
+export const camTargets = (last: number) => camKnots3(KNOTS(K_END), last);
 
 const trackFor = (kEnd: number) => camKnots3(KNOTS(kEnd), PRE + DURATION + 70);
 const kAtLast = (kEnd: number) => {
   const t = trackFor(kEnd);
   return runCam3(LAST + PRE, t.CX, t.CY, t.K).k;
 };
-const K_END = (() => {
-  const a = 0.9;
-  const b = 1.1;
+export const K_END = (() => {
+  const a = 1.2;
+  const b = 1.4;
   const fa = kAtLast(a);
   const fb = kAtLast(b);
   return a + ((K_REST_TARGET - fa) * (b - a)) / (fb - fa);
 })();
 /** The zoom the whole cut is written against. */
-const K_REST = kAtLast(K_END);
+export const K_REST = kAtLast(K_END);
+/** The camera's knots, with K_END already solved in. The next cut keeps every
+ *  one of these up to the resting-drift knot and hangs its own moves off the
+ *  end, so its camera IS this one's, continued: same spline, same damper, run
+ *  from the same f = 0. */
+export const CAM_KNOTS = KNOTS(K_END);
 const CAM = trackFor(K_END);
+/** The grid's parallax reference — the camera's own cy at f0. The next cut
+ *  passes this same value so the background cannot jump at the join. */
+export const GRID_CY_REF = CAM.CY[PRE];
 
 const CAM_AT_F: { cx: number; cy: number; k: number }[] = (() => {
   const out: { cx: number; cy: number; k: number }[] = [];
@@ -637,7 +696,7 @@ const CAM_AT_F: { cx: number; cy: number; k: number }[] = (() => {
   return out;
 })();
 const clampF = (f: number) => Math.max(0, Math.min(DURATION + 2, Math.round(f)));
-const camAt = (f: number) => CAM_AT_F[clampF(f)];
+export const camAt = (f: number) => CAM_AT_F[clampF(f)];
 const kAt = (f: number) => camAt(f).k;
 const screenAt = (f: number, wx: number, wy: number) => {
   const c = camAt(f);
@@ -651,16 +710,16 @@ const screenAt = (f: number, wx: number, wy: number) => {
 // ---------------------------------------------------------------------------
 const HEAD_CAP = 42; // screen px/frame; the set's ceiling is 45
 
-const F_GATE = 15; // the dot reaches the gate — "a sense" (f15/f17)
+const F_GATE = 15; // the mark reaches the gate — "a sense" (f15/f17)
 const F_TURN = 17; // ...holds, then runs back
-const F_BOTTOM = 49; // the far turn
-const T_TURN = 0.4; // how far back down the course the dot runs before it turns
+const F_BOTTOM = 40; // the far turn
+const T_TURN = 0.45; // how far back down the course the mark runs before it turns
 const F_DEPLOY = 80; // "deploy"
-const F_HEAD_END = 70; // the forecast head lands — two frames before "well"
-const END_FRACTION = 0.63; // where the dot is on the big course at DURATION - 1
+const F_HEAD_END = 64; // the forecast head lands — two frames before "well"
+const END_FRACTION = 0.3; // where the mark is on the big course at DURATION - 1
 
 /** A normalised speed profile: eased ramp in over `r0`, eased ramp out over
- *  `r1`, flat between. Its integral over [0, 1] is 1 - (r0 + r1) / 2. */
+ *  `r1`, flat between. */
 const profile = (t: number, r0: number, r1: number) =>
   (r0 > 0 ? smoothstep(clamp01(t / r0)) : 1) *
   (r1 > 0 ? smoothstep(clamp01((1 - t) / r1)) : 1);
@@ -682,7 +741,7 @@ const solveV = (f0: number, f1: number, dist: number, shape: (t: number) => numb
   const reach = (V: number) =>
     integrate(f0, f1, (f) => V * shape((f - f0) / (f1 - f0)))[f1 - f0];
   let lo = 1;
-  let hi = 200;
+  let hi = 400;
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
     if (reach(mid) < dist) lo = mid;
@@ -691,10 +750,95 @@ const solveV = (f0: number, f1: number, dist: number, shape: (t: number) => numb
   return (lo + hi) / 2;
 };
 
+// ---------------------------------------------------------------------------
+// THE TEACHING WIPE (V3). Two heads leave the ring's bottom point and run up
+// opposite sides; behind each of them the wall is marching dashes, and a prop
+// converts as they pass its height.
+//
+// THE CAP IS EXACT, not nominal. A head on a ring does not move parallel to the
+// camera: at the bottom point it travels HORIZONTALLY, so the camera's upward
+// glide cancels none of it, and only as the head turns up the side does the
+// cancellation arrive. So the per-frame step is solved (bisection) against the
+// head's own SCREEN displacement under the real camera — position, zoom and all
+// — and never exceeds WIPE_CAP.
+// ---------------------------------------------------------------------------
+const WIPE_CAP = 45; // screen px/frame, the set's ceiling
+const HALF_ARC = R_WALL * Math.PI * WALL_DRAW; // 582.5
+const F_WIPE = 16; // the heads meet the gate — see DEVIATIONS
+/** The wipe head's world position at arc `s` from the bottom point, on `side`. */
+const wipeHeadAt = (s: number, side: number) => {
+  const phi = s / R_WALL;
+  const a = Math.PI / 2 + side * phi;
+  return { x: WALL_C.x + Math.cos(a) * R_WALL, y: WALL_C.y + Math.sin(a) * R_WALL };
+};
+
+const WIPE_S: number[] = (() => {
+  // the profile is in TIME, not in arc: a head that eased in on its own
+  // position would never leave the bottom point at all.
+  const shape = (f: number) => profile(Math.min(1, f / F_WIPE), 0.14, 0);
+  const run = (V: number) => {
+    const out: number[] = new Array(DURATION + 3).fill(HALF_ARC);
+    let s = 0;
+    out[0] = 0;
+    for (let f = 1; f <= DURATION + 2; f++) {
+      if (s >= HALF_ARC) {
+        out[f] = HALF_ARC;
+        continue;
+      }
+      const want = Math.min(HALF_ARC - s, V * shape(f));
+      // the biggest step whose SCREEN displacement is inside the cap
+      const disp = (ds: number) => {
+        let m = 0;
+        for (const side of [-1, 1]) {
+          const a = wipeHeadAt(s, side);
+          const b = wipeHeadAt(s + ds, side);
+          const pa = screenAt(f - 1, a.x, a.y);
+          const pb = screenAt(f, b.x, b.y);
+          m = Math.max(m, Math.hypot(pb[0] - pa[0], pb[1] - pa[1]));
+        }
+        return m;
+      };
+      let step = want;
+      if (disp(want) > WIPE_CAP) {
+        let lo = 0;
+        let hi = want;
+        for (let i = 0; i < 40; i++) {
+          const mid = (lo + hi) / 2;
+          if (disp(mid) > WIPE_CAP) hi = mid;
+          else lo = mid;
+        }
+        step = lo;
+      }
+      s = Math.min(HALF_ARC, s + step);
+      out[f] = s;
+    }
+    return out;
+  };
+  // solve the nominal speed so the heads meet the gate exactly on F_WIPE
+  let lo = 1;
+  let hi = 400;
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    if (run(mid)[F_WIPE] < HALF_ARC - 1e-6) lo = mid;
+    else hi = mid;
+  }
+  return run(hi);
+})();
+
+const wipeAt = (f: number) => WIPE_S[clampF(f)];
+/** The wipe heads' own height in the world: where the conversion has got to. */
+const wipeHeadY = (f: number) => WALL_C.y + R_WALL * Math.cos(wipeAt(f) / R_WALL);
+/** How far a prop has converted, caused by the heads passing ITS height. The
+ *  ramp is 180 world px of head travel — about five frames at the speed the
+ *  heads are doing up the sides — so the circle draws rather than pops. */
+const PROP_RAMP = 180;
+const propReveal = (f: number, y: number) =>
+  smoothstep(clamp01((y + PROP_RAMP / 2 - wipeHeadY(f)) / PROP_RAMP));
+
 // --- the forecast head: out of the gate on f15, landing on f70 --------------
 const HEAD_SHAPE = (t: number) => profile(t, 0.14, 0.22);
 const V_HEAD = solveV(F_GATE, F_HEAD_END, L_B, HEAD_SHAPE);
-const HEAD_S: number[] = (() => {
+export const HEAD_S: number[] = (() => {
   const run = integrate(F_GATE, F_HEAD_END, (f) =>
     V_HEAD * HEAD_SHAPE((f - F_GATE) / (F_HEAD_END - F_GATE)),
   );
@@ -705,22 +849,22 @@ const HEAD_S: number[] = (() => {
   return out;
 })();
 
-// --- the dot ----------------------------------------------------------------
+// --- the mark ---------------------------------------------------------------
 // Leg 1  f0..f15    it is already running: arriveEase into the gate, so the
 //                   deceleration into the hold is the end of a motion that
 //                   started before the cut did.
-// Leg 2  f15..f18   the hold at the gate.
-// Leg 3  f18..f49   back down the lane, eased at both ends.
+// Leg 2  f15..f17   the hold at the gate.
+// Leg 3  f17..f49   back down the lane, eased at both ends.
 // Leg 4  f49..f80   up again, eased out of the bottom turn and NOT decelerating
 //                   at the gate: it carries its speed into the deployment.
-// Leg 5  f80..       the big course.
+// Leg 5  f80..      the big course.
 const DOWN_SHAPE = (t: number) => profile(t, 0.1, 0.22);
 const UP_SHAPE = (t: number) => profile(t, 0.32, 0);
 const LEG_DIST = L_S * (1 - T_TURN);
 const V_DOWN = solveV(F_TURN, F_BOTTOM, LEG_DIST, DOWN_SHAPE);
 const V_UP = solveV(F_BOTTOM, F_DEPLOY, LEG_DIST, UP_SHAPE);
 
-/** How far back the dot starts: the distance arriveEase can cover in F_GATE
+/** How far back the mark starts: the distance arriveEase can cover in F_GATE
  *  frames without the cruise ever breaking the cap at the opening zoom. */
 const LEG1_DIST = (() => {
   // arriveEase cruises at 1.3x the mean, and the opening frames are the
@@ -738,11 +882,11 @@ const DOWN_RUN = integrate(F_TURN, F_BOTTOM, (f) =>
 const UP_RUN = integrate(F_BOTTOM, F_DEPLOY, (f) =>
   V_UP * UP_SHAPE((f - F_BOTTOM) / (F_DEPLOY - F_BOTTOM)),
 );
-/** The speed the dot arrives at the gate with, so leg 5 continues it. */
+/** The speed the mark arrives at the gate with, so leg 5 continues it. */
 const V_GATE = UP_RUN[F_DEPLOY - F_BOTTOM] - UP_RUN[F_DEPLOY - F_BOTTOM - 1];
 
 const BIG_RAMP = 12;
-const V_BIG = (() => {
+export const V_BIG = (() => {
   const reach = (V2: number) => {
     let s = 0;
     for (let f = F_DEPLOY + 1; f <= LAST; f++) {
@@ -751,7 +895,7 @@ const V_BIG = (() => {
     }
     return s;
   };
-  let lo = V_GATE;
+  let lo = 0;
   let hi = 60;
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
@@ -761,7 +905,7 @@ const V_BIG = (() => {
   return (lo + hi) / 2;
 })();
 
-/** The dot's arc on the SMALL course (0..L_S) per frame; -1 once deployed. */
+/** The mark's arc on the SMALL course (0..L_S) per frame; -1 once deployed. */
 const DOT_S: number[] = (() => {
   const out: number[] = new Array(DURATION + 3).fill(-1);
   for (let f = 0; f <= DURATION + 2; f++) {
@@ -778,8 +922,8 @@ const DOT_S: number[] = (() => {
   return out;
 })();
 
-/** The dot's arc on the BIG course from F_DEPLOY; -1 before it. */
-const DOT_B: number[] = (() => {
+/** The mark's arc on the BIG course from F_DEPLOY; -1 before it. */
+export const DOT_B: number[] = (() => {
   const out: number[] = new Array(DURATION + 3).fill(-1);
   let s = 0;
   out[F_DEPLOY] = 0;
@@ -792,14 +936,18 @@ const DOT_B: number[] = (() => {
 })();
 
 /** Where the model is on frame `f`. */
-const modelAt = (f: number) => {
+export const modelAt = (f: number) => {
   const i = clampF(f);
   if (DOT_B[i] >= 0) return bigPt(tAtS(TAB_B, DOT_B[i]));
   return smallPt(tAtS(TAB_S, Math.max(0, DOT_S[i])));
 };
 
 // --- paths ------------------------------------------------------------------
-const pathOf = (pt: (t: number) => { x: number; y: number }, t0: number, t1: number) => {
+export const pathOf = (
+  pt: (t: number) => { x: number; y: number },
+  t0: number,
+  t1: number,
+) => {
   const steps = Math.max(2, Math.ceil(Math.abs(t1 - t0) * 220));
   let d = "";
   for (let i = 0; i <= steps; i++) {
@@ -808,14 +956,13 @@ const pathOf = (pt: (t: number) => { x: number; y: number }, t0: number, t1: num
   }
   return d;
 };
-const LANE_D = pathOf(smallPt, 0, 1);
+export const LANE_D = pathOf(smallPt, 0, 1);
 
 /** The disc the mark takes out of its own course, and the mask that does it.
  *  THREAD_GAP — the module's own "outside the mark" radius, 30.46 world px —
  *  so the lane stops exactly where an accent thread starts in the other cuts,
- *  and the mark's 5% breath (up to a 29.08 world px half-box) still never
- *  reaches it. */
-const MODEL_HOLE = THREAD_GAP;
+ *  and the mark's 5% breath still never reaches it. */
+export const MODEL_HOLE = THREAD_GAP;
 const MODEL_MASK_ID = "dtrw-model-hole";
 
 // ---------------------------------------------------------------------------
@@ -844,6 +991,9 @@ const DeployToTheRealWorld: React.FC<Props> = ({
   const k = cam.k;
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
+
+  // -- the teaching wipe: how much of the ring is dashed yet -----------------
+  const halfSweep = wipeAt(frame) / R_WALL;
 
   // -- the forecast, and how much of it is already fact ----------------------
   const headS = HEAD_S[clampF(frame)];
@@ -913,8 +1063,8 @@ const DeployToTheRealWorld: React.FC<Props> = ({
 
             <g mask={`url(#${MODEL_MASK_ID})`}>
               {/* THE FORECAST, still imagined: dashed, INK_LO, marching. Drawn
-                  from where the dot has got to up to the head, so the moment the
-                  dot reaches a piece of it, it stops being a forecast. */}
+                  from where the mark has got to up to the head, so the moment
+                  the mark reaches a piece of it, it stops being a forecast. */}
               {tHead > tSolid ? (
                 <g style={{ filter: icon }}>
                   <path
@@ -930,8 +1080,8 @@ const DeployToTheRealWorld: React.FC<Props> = ({
                 </g>
               ) : null}
 
-              {/* ...and the part of it the dot has already made true: SOLID,
-                  INK_HI, behind the dot. */}
+              {/* ...and the part of it the mark has already made true: SOLID,
+                  INK_HI, behind it. */}
               {tSolid > 0 ? (
                 <g style={{ filter: icon }}>
                   <path
@@ -946,7 +1096,7 @@ const DeployToTheRealWorld: React.FC<Props> = ({
               ) : null}
 
               {/* THE LANE inside the test: solid, INK_HI, the course the model
-                  actually runs. */}
+                  actually runs. It is real, and it never converts. */}
               <g style={{ filter: icon }}>
                 <path
                   d={LANE_D}
@@ -959,22 +1109,28 @@ const DeployToTheRealWorld: React.FC<Props> = ({
               </g>
             </g>
 
-            {/* THE TEST ENVIRONMENT: the dashed ring, with the gate left open
-                at its top point by the wipe. */}
+            {/* THE TEST ENVIRONMENT. SOLID at f0; the teaching wipe opens a
+                DASHED range centred on the ring's bottom point and grows it to
+                the gate by f16, which is `Wall`'s own dashedFrom/dashedSweep —
+                the same mechanism cut 5 walks around behind its hand. The gate
+                itself is the gap the `draw` wipe leaves at the top point. */}
             <Wall
               k={k}
               cx={WALL_C.x}
               cy={WALL_C.y}
               r={R_WALL}
               draw={WALL_DRAW}
+              dashedFrom={Math.PI / 2 - halfSweep}
+              dashedSweep={halfSweep > 0 ? Math.min(TWO_PI, 2 * halfSweep) : 0}
               march={frame}
               opacity={INK_HI}
             />
           </svg>
 
-          {/* (2) the people. The fake ones are the real ones at 1/2.2 — the
-              test is a scale model — and they are dim, inside dashed circles
-              whose dashes march on the same clock as the wall's. */}
+          {/* (2) the people. The props are the real ones at 1/SCALE_UP — the
+              test is a scale model — and each of them turns from a solid person
+              into a dim one in a dashed circle as the wipe's heads pass its own
+              height. */}
           {FAKE_PROPS.map((p, i) => (
             <FakePerson
               key={`fp${i}`}
@@ -983,7 +1139,7 @@ const DeployToTheRealWorld: React.FC<Props> = ({
               x={p.x}
               y={p.y}
               h={FAKE_H}
-              reveal={1}
+              reveal={propReveal(frame, p.y)}
             />
           ))}
           {CROWD.map((p, i) => (
@@ -1012,12 +1168,32 @@ export default DeployToTheRealWorld;
 
 // Referenced so the accent prop is a real contract and not decoration: the
 // model is the only accent in the cut and it is lit from f0.
-export const ACCENT_USED_BY = "the model dot only";
+export const ACCENT_USED_BY = "the model mark only";
 export const BEAT_CHECK = {
   sense: defaultProps.beats.sense,
   well: defaultProps.beats.well,
   deploy: defaultProps.beats.deploy,
   real: defaultProps.beats.real,
+};
+
+// ---------------------------------------------------------------------------
+// WHAT THE NEXT CUT BUTTS AGAINST. `PerfectMatch` opens on this cut's state at
+// SPEECH_END (f97) — not at its last frame — because the editor lays it over
+// this cut's 16-frame tail. Everything it needs is exported above; this is the
+// state itself, measured off the same functions this file draws from.
+// ---------------------------------------------------------------------------
+export const STATE_AT_SPEECH_END = {
+  frame: SPEECH_END,
+  cam: camAt(SPEECH_END),
+  model: modelAt(SPEECH_END),
+  /** arc along the big course that is already SOLID (behind the mark) */
+  solidArc: Math.max(0, DOT_B[SPEECH_END]),
+  /** ...and how far the dashed forecast reaches (the whole course by f70) */
+  headArc: HEAD_S[SPEECH_END],
+  /** the mark's world speed on that frame, so the next cut can continue it */
+  markSpeed: Math.max(0, DOT_B[SPEECH_END]) - Math.max(0, DOT_B[SPEECH_END - 1]),
+  /** the wipe is long finished: the whole ring is dashed */
+  wipeDone: WIPE_S[SPEECH_END] >= HALF_ARC - 1e-6,
 };
 
 // ---------------------------------------------------------------------------
@@ -1049,6 +1225,37 @@ export const STATS = (() => {
       maxDotF = f;
     }
   }
+  // the wipe's two heads, at their own exact screen speed
+  let maxWipe = 0;
+  let maxWipeF = 0;
+  for (let f = 1; f <= F_WIPE + 2; f++) {
+    for (const side of [-1, 1]) {
+      const a = wipeHeadAt(WIPE_S[f - 1], side);
+      const b = wipeHeadAt(WIPE_S[f], side);
+      const pa = screenAt(f - 1, a.x, a.y);
+      const pb = screenAt(f, b.x, b.y);
+      const v = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]);
+      if (v > maxWipe) {
+        maxWipe = v;
+        maxWipeF = f;
+      }
+    }
+  }
+  const wipeLand = (() => {
+    for (let f = 0; f <= DURATION; f++) if (WIPE_S[f] >= HALF_ARC - 1e-6) return f;
+    return -1;
+  })();
+  // when each prop is half converted, and when it is done
+  const propFlip = FAKE_PROPS.map((p) => {
+    let half = -1;
+    let done = -1;
+    for (let f = 0; f <= DURATION; f++) {
+      const r = propReveal(f, p.y);
+      if (half < 0 && r >= 0.5) half = f;
+      if (done < 0 && r >= 0.999) done = f;
+    }
+    return [half, done];
+  });
   // the camera: screen speed of a fixed world point, and its own jerk
   const probe = { x: AX, y: WALL_C.y };
   const camSpeed: number[] = [];
@@ -1057,11 +1264,7 @@ export const STATS = (() => {
     const b = screenAt(f, probe.x, probe.y);
     camSpeed.push(Math.hypot(b[0] - a[0], b[1] - a[1]));
   }
-  let maxDv = 0;
-  for (let i = 1; i < camSpeed.length; i++) {
-    maxDv = Math.max(maxDv, Math.abs(camSpeed[i] - camSpeed[i - 1]));
-  }
-  // the clearance the dot keeps from every prop and every person
+  // the clearance the mark keeps from every prop and every person
   let minFake = Infinity;
   let minReal = Infinity;
   for (let f = 0; f <= LAST; f++) {
@@ -1080,10 +1283,13 @@ export const STATS = (() => {
   }
   // the resolved frame
   const lastF = LAST;
-  const inkTop = screenAt(lastF, AX, INK_TOP)[1];
-  const inkBot = screenAt(lastF, AX, INK_BOTTOM)[1];
+  const ringBot = screenAt(lastF, AX, LANE_START_Y)[1];
+  const ringTop = screenAt(lastF, AX, GATE.y)[1];
+  const topWorldRest = camAt(lastF).cy - 960 / camAt(lastF).k;
+  const visibleCrowd = CROWD.filter((p) => p.y - PERSON_H / 2 >= topWorldRest).length;
   let minMargin = Infinity;
   for (const p of CROWD) {
+    if (p.y - PERSON_H / 2 < topWorldRest) continue;
     minMargin = Math.min(
       minMargin,
       screenAt(lastF, p.x - PERSON_INK_HW, p.y)[0],
@@ -1096,8 +1302,9 @@ export const STATS = (() => {
   );
   // is any real person visible at f0?
   const topWorldF0 = camAt(0).cy - 960 / camAt(0).k;
-  const lowestPerson = Math.max(...CROWD.map((p) => p.y + PERSON_H / 2));
-  // the wall's extents at the widest and tightest zooms
+  const lowestPerson = Math.max(...CROWD.map((p) => p.y + PERSON_INK_HW));
+  // how much of the big course is in frame at rest, and which lobes
+  const lobeScreenRest = LOBES.map((t) => Number(screenAt(lastF, bigPt(t).x, bigPt(t).y)[1].toFixed(0)));
   return {
     kRest: Number(K_REST.toFixed(5)),
     kEnd: Number(K_END.toFixed(5)),
@@ -1105,11 +1312,16 @@ export const STATS = (() => {
     strokeScreenRest: Number((STROKE_W * K_REST).toFixed(2)),
     strokeScreenOpen: Number((STROKE_W * CAM_AT_F[0].k).toFixed(2)),
     personScreenRest: Number((PERSON_H * K_REST).toFixed(1)),
-    fakeScreenOpen: Number((FAKE_H * CAM_AT_F[0].k).toFixed(1)),
+    propScreenOpen: Number((FAKE_H * CAM_AT_F[0].k).toFixed(1)),
+    propScreenRest: Number((FAKE_H * K_REST).toFixed(1)),
     markScreenRest: Number((MODEL_MARK * K_REST).toFixed(1)),
     markScreenOpen: Number((MODEL_MARK * CAM_AT_F[0].k).toFixed(1)),
     wallScreenOpen: Number((2 * R_WALL * CAM_AT_F[0].k).toFixed(0)),
     wallScreenRest: Number((2 * R_WALL * K_REST).toFixed(0)),
+    ringBottomScreenRest: Number(ringBot.toFixed(1)),
+    ringTopScreenRest: Number(ringTop.toFixed(1)),
+    lobeScreenRest,
+    crowdVisibleAtRest: visibleCrowd,
     /** the gate's chord half-width against the mark's half-box */
     gateHalfChord: Number((R_WALL * Math.sin((1 - WALL_DRAW) * Math.PI)).toFixed(1)),
     gateClearPerSide: Number(
@@ -1119,68 +1331,95 @@ export const STATS = (() => {
     laneLenBig: Number(L_B.toFixed(1)),
     crowd: CROWD.length,
     crowdSeats: CROWD.map((p) => [Math.round(p.x), Math.round(p.y)]),
-    gateGapWorld: Number(((1 - WALL_DRAW) * 2 * Math.PI * R_WALL).toFixed(1)),
+    wipeHalfArc: Number(HALF_ARC.toFixed(1)),
+    wipeLandF: wipeLand,
+    maxWipePx: Number(maxWipe.toFixed(2)),
+    maxWipeF,
+    propFlip,
     sStart: Number(S_START.toFixed(1)),
     tStart: Number(tAtS(TAB_S, S_START).toFixed(3)),
     vHead: Number(V_HEAD.toFixed(2)),
-    vDown: Number(V_DOWN.toFixed(2)),
-    vUp: Number(V_UP.toFixed(2)),
-    vGate: Number(V_GATE.toFixed(2)),
     vBig: Number(V_BIG.toFixed(2)),
     maxHeadPx: Number(maxHead.toFixed(2)),
     maxHeadF,
     maxDotPx: Number(maxDot.toFixed(2)),
     maxDotF,
     minCamPx: Number(Math.min(...camSpeed).toFixed(3)),
-    maxCamDv: Number(maxDv.toFixed(3)),
+    maxCamPx: Number(Math.max(...camSpeed).toFixed(3)),
     minFakeClear: Number(minFake.toFixed(1)),
     minRealClear: Number(minReal.toFixed(1)),
-    inkTopScreen: Number(inkTop.toFixed(1)),
-    inkBottomScreen: Number(inkBot.toFixed(1)),
     sideMarginRest: Number(minMargin.toFixed(1)),
     topWorldF0: Number(topWorldF0.toFixed(1)),
-    lowestPersonBottom: Number(lowestPerson.toFixed(1)),
+    topWorldRest: Number(topWorldRest.toFixed(1)),
+    lowestPersonInk: Number(lowestPerson.toFixed(1)),
     crowdHiddenAtF0: lowestPerson < topWorldF0,
     headLandsAt: F_HEAD_END,
+    headScreenAtLand: [58, 62, 64, 70, 80].map((f) => [
+      f,
+      Number(screenAt(f, bigPt(tAtS(TAB_B, HEAD_S[f])).x, bigPt(tAtS(TAB_B, HEAD_S[f])).y)[1].toFixed(0)),
+    ]),
+    crowdTopScreenAtLand: Number(
+      screenAt(64, AX, Math.min(...CROWD.map((p) => p.y - PERSON_H / 2)))[1].toFixed(0),
+    ),
+    ringBottomScreenAtLand: Number(screenAt(64, AX, LANE_START_Y)[1].toFixed(0)),
     dotFracAtLast: Number((DOT_B[LAST] / L_B).toFixed(3)),
-    dotAtLastSpeedPx: Number(speedOf(modelAt, LAST).toFixed(2)),
-    minFakeAt: (() => {
-      let best = Infinity;
-      let where: number[] = [];
+    markScreenYAtLast: Number(screenAt(LAST, modelAt(LAST).x, modelAt(LAST).y)[1].toFixed(0)),
+    markScreenMax: (() => {
+      let my = 0;
+      let mf = 0;
       for (let f = 0; f <= LAST; f++) {
         const m = modelAt(f);
-        for (let i = 0; i < FAKE_PROPS.length; i++) {
-          const p = FAKE_PROPS[i];
-          const d =
-            Math.hypot(m.x - p.x, m.y - p.y) - MODEL_EDGE - (FAKE_RING_R + STROKE_W / 2);
-          if (d < best) {
-            best = d;
-            where = [f, i, Math.round(m.x), Math.round(m.y)];
-          }
+        const y = screenAt(f, m.x, m.y)[1];
+        if (y > my) {
+          my = y;
+          mf = f;
         }
       }
-      return where;
+      return [Number(my.toFixed(0)), mf];
     })(),
+    ringBottomScreenMax: (() => {
+      let my = 0;
+      let mf = 0;
+      for (let f = 0; f <= LAST; f++) {
+        const y = screenAt(f, AX, LANE_START_Y)[1];
+        if (y > my) {
+          my = y;
+          mf = f;
+        }
+      }
+      return [Number(my.toFixed(0)), mf];
+    })(),
+    dotAtLastSpeedPx: Number(speedOf(modelAt, LAST).toFixed(2)),
+    atSpeechEnd: {
+      k: Number(camAt(SPEECH_END).k.toFixed(4)),
+      cy: Number(camAt(SPEECH_END).cy.toFixed(1)),
+      model: [Number(modelAt(SPEECH_END).x.toFixed(1)), Number(modelAt(SPEECH_END).y.toFixed(1))],
+      frac: Number((DOT_B[SPEECH_END] / L_B).toFixed(3)),
+      speed: Number(STATE_AT_SPEECH_END.markSpeed.toFixed(2)),
+    },
     /** The most the camera itself moves a fixed world point, and the least:
      *  the cut has no parked frame and no whip. Measured on world (540, 1100),
-     *  as a VELOCITY difference, not a speed difference — the pull-back reverses
-     *  that point's direction, and |d|v|| overstates a clean zero crossing. */
+     *  as a VELOCITY difference, not a speed difference. */
     camMaxPx: (() => {
-      const probe = { x: AX, y: 1100 };
+      const pr = { x: AX, y: 1100 };
       let mx = 0;
       let mdv = 0;
+      let mdvF = 0;
       let prev: [number, number] = [0, 0];
       for (let f = 1; f <= LAST; f++) {
-        const a = screenAt(f - 1, probe.x, probe.y);
-        const b = screenAt(f, probe.x, probe.y);
+        const a = screenAt(f - 1, pr.x, pr.y);
+        const b = screenAt(f, pr.x, pr.y);
         const v: [number, number] = [b[0] - a[0], b[1] - a[1]];
         mx = Math.max(mx, Math.hypot(v[0], v[1]));
-        if (f > 1) mdv = Math.max(mdv, Math.hypot(v[0] - prev[0], v[1] - prev[1]));
+        if (f > 1 && Math.hypot(v[0] - prev[0], v[1] - prev[1]) > mdv) {
+          mdv = Math.hypot(v[0] - prev[0], v[1] - prev[1]);
+          mdvF = f;
+        }
         prev = v;
       }
-      return [Number(mx.toFixed(2)), Number(mdv.toFixed(3))];
+      return [Number(mx.toFixed(2)), Number(mdv.toFixed(3)), mdvF];
     })(),
-    camSample: [0, 15, 30, 50, 70, 80, 88, 100, LAST].map((f) => ({
+    camSample: [0, 8, 16, 30, 50, 70, 80, 88, 97, LAST].map((f) => ({
       f,
       k: Number(camAt(f).k.toFixed(3)),
       cy: Number(camAt(f).cy.toFixed(1)),

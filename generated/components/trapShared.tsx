@@ -47,8 +47,15 @@ import { OPENAI } from "./brandGlyphs";
 //   a person       = public/person.png, white, PERSON_H_PX tall. The real world,
 //                    or the evaluator ("you"). A FAKE person is that glyph at
 //                    INK_LO inside a dashed circle.
-//   the wire       = white, INK_HI, SOLID: the tripwire out of the folder to the
-//                    evaluator. It passes through the wall.
+//   the watching   = a station ring with lucide `eye` in it, standing just below
+//     eye (V3)       the evaluator, between them and the wall. It is what the
+//                    tripwire reports TO.
+//   the wire       = white, INK_HI, SOLID: the tripwire out of the folder. It
+//                    passes through the wall and, from cut 4's "trap" onward,
+//                    ENDS ON THE WATCHING EYE's ring (`wireEnds(true)`) — the
+//                    trap is a line to something watching. Before V3 it ran on
+//                    to the evaluator's feet, which is still what `Wire` draws
+//                    with `toEye` off.
 // White ink has exactly two opacities: INK_HI 1.0 (the subject) and INK_LO 0.5
 // (context). Nothing else. One stroke weight everywhere.
 //
@@ -198,6 +205,28 @@ export const EVALUATOR = { x: 540, y: 215 };
 /** The folder station's ring radius (the one ring that is not STATION_R). */
 export const FOLDER_R = STATION_R * FOLDER_R_SCALE;
 
+/** THE WATCHING EYE (V3). An ordinary station ring with lucide `eye` in it,
+ *  standing centred UNDER the evaluator, between them and the wall. From cut 4's
+ *  "trap" onward the wire ENDS HERE rather than at the evaluator's feet: the trap
+ *  is a line to a watching eye, and the person above it is who the eye belongs
+ *  to.
+ *
+ *  THE y IS SOLVED, not chosen. The corridor it has to stand in runs from the
+ *  evaluator's feet (their ink ends at 0.84 of their box, i.e. world y
+ *  215 + 90.77 x 0.42 = 253.12) to the wall's outer edge at the top
+ *  (875 - 340 - STROKE_W/2 = 532.69). With EYE_R = STATION_R = 50.0 and half a
+ *  stroke of 2.31 on the ring:
+ *    feet clearance >= 30  =>  y >= 253.12 + 30 + 52.31 = 335.43
+ *    wall clearance >= 60  =>  y <= 532.69 - 60 - 52.31 = 420.38
+ *  372 sits inside that window with 66.6 world px of air over the ring to the
+ *  feet and 108.4 under it to the wall — deliberately nearer the person than the
+ *  wall, because it is THEIR eye and it should read as standing just below them.
+ *  At CAM_WIDE the ring is 115 screen px across, centred on screen y 308, with
+ *  its top at 248 and the evaluator's feet at 172: all of it well inside the
+ *  frame the person already fixes. */
+export const EYE = { x: 540, y: 372 };
+export const EYE_R = STATION_R;
+
 /** A camera: k, and the world point (x, y) that sits at screen (540, 835). */
 export type Cam = { k: number; x: number; y: number };
 export const CAM_CLOSE: Cam = { k: 1.3, x: 540, y: 922 };
@@ -253,6 +282,12 @@ export const ICON_FOLDER = `<path pathLength="1" d="M20 20a2 2 0 0 0 2-2V8a2 2 0
  *  is what buys the bigger KEY_FRACTION below, the old `key` hung its topmost
  *  ink out at x 21. */
 export const ICON_KEY = `<path pathLength="1" d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle pathLength="1" cx="16.5" cy="7.5" r="1.1" fill="currentColor"/>`;
+/** THE WATCHING EYE is lucide `eye` (v1.47.0,
+ *  `unpkg.com/lucide-static@latest/icons/eye.svg`, fetched verbatim — the two
+ *  elements below are the file's own, untouched but for `pathLength="1"`, which
+ *  is what lets the lid and the pupil stroke on by the same fraction of their
+ *  own lengths). */
+export const ICON_EYE = `<path pathLength="1" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle pathLength="1" cx="12" cy="12" r="3"/>`;
 
 /** The folder glyph's own geometry, in its 24-unit em box: the top edge of its
  *  body (the "mouth" the key comes out of) and the centre of that body. */
@@ -516,14 +551,34 @@ export const ModelDot: React.FC<{
   scale?: number;
   seed?: number;
   opacity?: number;
-}> = ({ frame, k, x = MODEL_HOME.x, y = MODEL_HOME.y, tone = 0, scale = 1, seed = 0.31, opacity = 1 }) => {
+  /** V3: a HEAD TILT, in degrees clockwise about the mark's own centre. The
+   *  comment above still holds for every cut that does not pass this — the mark
+   *  is upright by default and a tilt is a GESTURE with a word behind it, eased
+   *  on and eased off, never a standing pose. The rotation goes INSIDE the
+   *  shadow wrapper's group, so the shadow keeps falling the same way while the
+   *  mark cocks: a head tilts, the light does not. */
+  rotate?: number;
+}> = ({
+  frame,
+  k,
+  x = MODEL_HOME.x,
+  y = MODEL_HOME.y,
+  tone = 0,
+  scale = 1,
+  seed = 0.31,
+  opacity = 1,
+  rotate = 0,
+}) => {
   const em = MODEL_MARK * scale * breath(frame, seed);
   if (!(em > 0) || opacity <= 0) return null;
   const fill = MODEL_TONE(clamp01(tone));
+  // `rotate(0)` is omitted rather than written, so a cut that does not tilt gets
+  // the exact transform string it got before this prop existed.
+  const rot = rotate === 0 ? "" : `rotate(${rotate.toFixed(4)}) `;
   return (
     <g style={{ filter: iconShadow(k, undefined, undefined, MODEL_SHADOW_OPACITY) }} opacity={opacity}>
       <g
-        transform={`translate(${x.toFixed(3)} ${y.toFixed(3)}) scale(${(em / 24).toFixed(6)}) translate(-12 -12)`}
+        transform={`translate(${x.toFixed(3)} ${y.toFixed(3)}) ${rot}scale(${(em / 24).toFixed(6)}) translate(-12 -12)`}
       >
         {OPENAI.paths.map((d) => (
           <path key={d.length} d={d} fill={fill} fillRule="evenodd" />
@@ -560,6 +615,13 @@ export const Station: React.FC<{
   iconMask?: string;
   glyph?: number;
   stroke?: number;
+  /** V3: where the ring's wipe STARTS, in world radians (default: the top, as
+   *  every station drawn before this existed). */
+  drawFrom?: number;
+  /** V3: wipe BOTH WAYS from `drawFrom` instead of clockwise round from it, so a
+   *  ring can form outward from the point a mechanism touches it (the watching
+   *  eye's ring forms from where the wire lands on it). */
+  drawBoth?: boolean;
 }> = ({
   k,
   x,
@@ -576,17 +638,23 @@ export const Station: React.FC<{
   iconMask,
   glyph = GLYPH_FRACTION,
   stroke = STROKE_W,
+  drawFrom,
+  drawBoth = false,
 }) => {
   const d = clamp01(draw);
   if (d <= 0) return null;
   const idr = clamp01(iconDraw ?? clamp01((d - 0.55) / 0.45));
   const dash = clamp01(typeof dashed === "boolean" ? (dashed ? 1 : 0) : dashed);
-  const a0 = -Math.PI / 2;
+  const a0 = drawFrom ?? -Math.PI / 2;
   const box = 2 * r * glyph;
   return (
     <g style={{ filter: iconShadow(k) }} opacity={opacity}>
       <path
-        d={arcPath(x, y, r, a0, a0 + TWO_PI * d)}
+        d={
+          drawBoth
+            ? arcPath(x, y, r, a0 - Math.PI * d, a0 + Math.PI * d)
+            : arcPath(x, y, r, a0, a0 + TWO_PI * d)
+        }
         fill="none"
         stroke={INK}
         strokeWidth={stroke}
@@ -944,6 +1012,32 @@ export const Thread: React.FC<{
   );
 };
 
+/** THE SHUTTER TRAIL (V3). A hand that swings fast enough strobes: at 24 fps a
+ *  crisp line 45 screen px from where it was reads as two lines, not one moving
+ *  one. A camera would not show that — its shutter is open for half the frame,
+ *  so it lays down a smear across the half of the sweep nearest where the hand
+ *  ENDS UP, with the crisp pose on the leading edge. This is that smear, and it
+ *  is an honest 180 degree shutter and nothing else: ONE flat accent wedge from
+ *  the pose half a frame ago to the pose now, under the line, no blur filter, no
+ *  glow, no gradient. With it a hand's TIP may travel up to 70 screen px per
+ *  frame; without it the set's ceiling is 45. */
+export type GazeTrailPose = { prevAngle: number; prevLength?: number };
+/** Opacity of the wedge. High enough to carry the sweep at speed, low enough
+ *  that the crisp line is still the hand. */
+export const TRAIL_OPACITY = 0.22;
+/** Under this much angular travel in a frame there is nothing to smear, and a
+ *  wedge thinner than the line itself only fattens it. A slow hand has no trail. */
+export const TRAIL_MIN_DEG = 1.5;
+
+/** The `trail` prop from a cut's own pose functions, so every cut builds it the
+ *  one way: the hand's pose ONE FRAME AGO. `Gaze` takes the half-frame pose off
+ *  it itself. */
+export const gazeTrail = (
+  angleAt: (f: number) => number,
+  lengthAt: (f: number) => number,
+  frame: number,
+): GazeTrailPose => ({ prevAngle: angleAt(frame - 1), prevLength: lengthAt(frame - 1) });
+
 export const Gaze: React.FC<{
   k: number;
   from: { x: number; y: number };
@@ -952,30 +1046,99 @@ export const Gaze: React.FC<{
   gap?: number;
   opacity?: number;
   width?: number;
-}> = ({ k, from, angle, length = GAZE_LEN, gap = THREAD_GAP, opacity = 1, width = THREAD_W }) => {
+  trail?: GazeTrailPose;
+}> = ({
+  k,
+  from,
+  angle,
+  length = GAZE_LEN,
+  gap = THREAD_GAP,
+  opacity = 1,
+  width = THREAD_W,
+  trail,
+}) => {
   if (length <= gap) return null;
   const c = Math.cos(angle);
   const s = Math.sin(angle);
+
+  // The wedge: the outer edge swept from the half-frame pose to this one, and
+  // the inner edge back along THREAD_GAP, so it starts off the mark's box
+  // exactly where the line does.
+  let wedge: string | null = null;
+  if (trail) {
+    const dA = angle - trail.prevAngle;
+    if (Math.abs(dA) >= TRAIL_MIN_DEG * (Math.PI / 180)) {
+      const prevLen = trail.prevLength ?? length;
+      const aH = trail.prevAngle + dA * 0.5; // the pose half a frame ago
+      const lH = (prevLen + length) / 2;
+      const N = 8;
+      const at = (t: number, r: number) => {
+        const aa = aH + (angle - aH) * t;
+        return { x: from.x + Math.cos(aa) * r, y: from.y + Math.sin(aa) * r };
+      };
+      let d = "";
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        const p = at(t, lH + (length - lH) * t);
+        d += `${i === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+      }
+      for (let i = N; i >= 0; i--) {
+        const p = at(i / N, gap);
+        d += `L${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+      }
+      wedge = `${d}Z`;
+    }
+  }
+
   return (
-    <g style={{ filter: iconShadow(k) }} opacity={opacity}>
-      <line
-        x1={from.x + c * gap}
-        y1={from.y + s * gap}
-        x2={from.x + c * length}
-        y2={from.y + s * length}
-        stroke={ACCENT}
-        strokeWidth={width}
-        strokeLinecap="round"
-      />
-    </g>
+    <>
+      {wedge ? (
+        <g opacity={opacity}>
+          <path d={wedge} fill={ACCENT} stroke="none" opacity={TRAIL_OPACITY} />
+        </g>
+      ) : null}
+      <g style={{ filter: iconShadow(k) }} opacity={opacity}>
+        <line
+          x1={from.x + c * gap}
+          y1={from.y + s * gap}
+          x2={from.x + c * length}
+          y2={from.y + s * length}
+          stroke={ACCENT}
+          strokeWidth={width}
+          strokeLinecap="round"
+        />
+      </g>
+    </>
   );
 };
 
 // ---------------------------------------------------------------------------
-// THE WIRE — cut 4's tripwire, out of the folder's ring edge to the evaluator's
-// feet, straight through the wall. WHITE, INK_HI, SOLID (it is real), half-to-
-// full stroke, with packets flowing TOWARD the evaluator.
+// THE WIRE — cut 4's tripwire, out of the folder's ring edge, straight through
+// the wall, to the WATCHING EYE (V3; it used to run on to the evaluator's own
+// feet). WHITE, INK_HI, SOLID (it is real), half-to-full stroke, with packets
+// flowing TOWARD the eye.
+//
+// `wireEnds` is the one place the two ends are solved, so cut 4 (which owns when
+// the head is where, and where the packets are) and cut 5 (which inherits the
+// landed wire) cannot disagree about them by a world px.
 // ---------------------------------------------------------------------------
+export const wireEnds = (toEye = false) => {
+  const target = toEye ? EYE : EVALUATOR;
+  const a = angleTo(FOLDER, target);
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return {
+    angle: a,
+    /** the root: the folder ring's edge, on the bearing of the target */
+    a: { x: FOLDER.x + c * FOLDER_R, y: FOLDER.y + s * FOLDER_R },
+    /** the end: the eye ring's edge nearest the folder, or (old behaviour) the
+     *  evaluator's feet, i.e. the bottom of their ink */
+    b: toEye
+      ? { x: EYE.x - c * EYE_R, y: EYE.y - s * EYE_R }
+      : { x: EVALUATOR.x, y: EVALUATOR.y + PERSON_H * 0.42 },
+  };
+};
+
 export const Wire: React.FC<{
   frame: number;
   k: number;
@@ -986,6 +1149,9 @@ export const Wire: React.FC<{
   period?: number;
   opacity?: number;
   width?: number;
+  /** V3: end on the watching eye's ring instead of the evaluator's feet.
+   *  Default false = exactly the line this drew before the eye existed. */
+  toEye?: boolean;
 }> = ({
   frame,
   k,
@@ -996,12 +1162,13 @@ export const Wire: React.FC<{
   period = PACKET_PERIOD,
   opacity = INK_HI,
   width = WIRE_W,
+  toEye = false,
 }) => {
   const p = clamp01(progress);
   if (p <= 0) return null;
-  const a = angleTo(FOLDER, EVALUATOR);
-  const A = from ?? { x: FOLDER.x + Math.cos(a) * FOLDER_R, y: FOLDER.y + Math.sin(a) * FOLDER_R };
-  const B = to ?? { x: EVALUATOR.x, y: EVALUATOR.y + PERSON_H * 0.42 };
+  const ends = wireEnds(toEye);
+  const A = from ?? ends.a;
+  const B = to ?? ends.b;
   const tip = { x: lerp(A.x, B.x, p), y: lerp(A.y, B.y, p) };
   const len = Math.hypot(B.x - A.x, B.y - A.y);
   const v = Math.min(PACKET_SPEED, SPEED_CAP_SCREEN / Math.max(k, 1e-4));
@@ -1063,17 +1230,31 @@ export type TableauState = {
   /** the needle: null = no gaze at all */
   gazeAngle: number | null;
   gazeLength: number;
-  /** the tripwire, folder -> evaluator */
+  /** V3: the needle's pose one frame ago, for the shutter trail (`gazeTrail`) */
+  gazeTrail?: GazeTrailPose;
+  /** the tripwire, folder -> the watching eye (or, with `wireToEye` off, the
+   *  evaluator's feet, which is where it ran before V3) */
   wire: number;
   wirePackets?: boolean;
+  wireToEye?: boolean;
+  /** V3: the watching eye's station, 0..1 — the ring wipes on from the point the
+   *  wire touches it, then the eye strokes on inside it. 0 = not drawn. */
+  eye?: number;
   /** the model */
   modelTone: number;
   modelOffset: { x: number; y: number };
   modelScale?: number;
+  /** V3: the model's head tilt, in degrees clockwise about its own centre */
+  modelRotate?: number;
   /** the person outside the wall */
   evaluatorOpacity: number;
   evaluatorAt?: { x: number; y: number };
 };
+
+/** Where the wire lands on the eye's ring, as an angle at the eye's own centre:
+ *  the ring's wipe starts there and opens both ways, so the ring forms outward
+ *  from the touch. */
+export const EYE_TOUCH_ANG = angleTo(EYE, FOLDER);
 
 export const Tableau: React.FC<{
   state: TableauState;
@@ -1117,7 +1298,13 @@ export const Tableau: React.FC<{
           opacity={s.wallOpacity ?? INK_HI}
         />
         {s.wire > 0 ? (
-          <Wire frame={frame} k={k} progress={s.wire} packets={s.wirePackets ?? true} />
+          <Wire
+            frame={frame}
+            k={k}
+            progress={s.wire}
+            packets={s.wirePackets ?? true}
+            toEye={s.wireToEye ?? false}
+          />
         ) : null}
         {s.workThread > 0 ? (
           <Thread
@@ -1130,7 +1317,13 @@ export const Tableau: React.FC<{
           />
         ) : null}
         {s.gazeAngle !== null ? (
-          <Gaze k={k} from={model} angle={s.gazeAngle} length={s.gazeLength} />
+          <Gaze
+            k={k}
+            from={model}
+            angle={s.gazeAngle}
+            length={s.gazeLength}
+            trail={s.gazeTrail}
+          />
         ) : null}
         {s.questionDraw > 0 ? (
           <Station
@@ -1142,6 +1335,18 @@ export const Tableau: React.FC<{
             iconDraw={s.questionIconDraw}
             dashed={s.questionDashed ?? 0}
             march={frame}
+          />
+        ) : null}
+        {(s.eye ?? 0) > 0 ? (
+          <Station
+            k={k}
+            x={EYE.x}
+            y={EYE.y}
+            r={EYE_R}
+            icon={ICON_EYE}
+            draw={s.eye as number}
+            drawFrom={EYE_TOUCH_ANG}
+            drawBoth
           />
         ) : null}
         {s.folderDraw > 0 ? (
@@ -1171,6 +1376,7 @@ export const Tableau: React.FC<{
           y={model.y}
           tone={s.modelTone}
           scale={s.modelScale ?? 1}
+          rotate={s.modelRotate ?? 0}
         />
         {over}
       </svg>
@@ -1206,17 +1412,22 @@ export const STATE_END_CUT3: TableauState = {
 };
 
 /** CUT 4's ACTUAL RESOLVED FRAME, read off `SeemsLikeATrap.STATS` and not a
- *  sketch of it: the tripwire run out to the evaluator with its white beads
- *  climbing, the folder ring converted to dashes (it is bait, made of the same
- *  stuff as the wall), the key home and still, the model still holding the 20
- *  world px it recoiled by on "huh" straight back down the folder bearing, and a
- *  SHORT needle (150 world px) lying back on the wire's root at -69.4 deg rather
- *  than cut 3's ANG_MID at GAZE_LEN. Cut 5 opens on this. */
+ *  sketch of it: the tripwire run out of the folder and landed ON THE WATCHING
+ *  EYE's ring (V3 — it used to run on to the evaluator's feet) with its white
+ *  beads climbing it, the eye drawn, the folder ring converted to dashes (it is
+ *  bait, made of the same stuff as the wall), the key home and still, the model
+ *  upright again (its tilt on "huh" is eased back out by f122) and still holding
+ *  the 20 world px it recoiled by straight back down the folder bearing, and a
+ *  SHORT needle (150 world px) lying back on the wire's root rather than cut 3's
+ *  ANG_MID at GAZE_LEN. The needle's rest angle is the root's OWN bearing, taken
+ *  off `wireEnds(true)` rather than written down, so it cannot drift from the
+ *  wire it lies on: -70.24 deg (it was -69.54 when the wire aimed at the feet).
+ *  Cut 5 opens on this. */
 export const STATE_END_CUT4: TableauState = {
   ...STATE_END_CUT3,
   keyBob: 0,
   folderDashed: 1,
-  gazeAngle: (-69.4 * Math.PI) / 180,
+  gazeAngle: angleTo(MODEL_HOME, wireEnds(true).a),
   gazeLength: 150,
   modelOffset: {
     x: -Math.cos(ANG_FOLDER) * CUT4_RECOIL,
@@ -1224,4 +1435,6 @@ export const STATE_END_CUT4: TableauState = {
   },
   wire: 1,
   wirePackets: true,
+  wireToEye: true,
+  eye: 1,
 };

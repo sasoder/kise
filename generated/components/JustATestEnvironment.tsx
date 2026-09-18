@@ -47,6 +47,7 @@ import {
   Tableau,
   WALL,
   camKnots3,
+  gazeTrail,
   lerp,
   runCam3,
   type CamKnot,
@@ -80,6 +81,48 @@ export const DURATION = 148;
 // interview with someone from OpenAI. (2) THE ANSWER KEY is lucide `key-round`
 // instead of `key`, and the folder glyph is masked behind its silhouette. Every
 // staging, timing, camera, beat and duration in this file is untouched.
+// ---------------------------------------------------------------------------
+// V3 — THREE CHANGES, AND ONLY THREE. Every beat, the DURATION, the camera track
+// and every other gesture are byte-for-byte what V2 shipped.
+//
+//  (1) IT OPENS ON THE WATCHING EYE. `STATE_END_CUT4` now carries `eye: 1` and
+//      `wireToEye: true`: cut 4 lands its tripwire on a station ring with lucide
+//      `eye` in it, standing under the evaluator, and the wire ends THERE rather
+//      than at their feet. This cut spreads that state, so the eye, the wire's
+//      new bearing and its beads arrive here for free — nothing in this file
+//      draws them. Two consequences are handled: the needle's opening angle is
+//      now READ off the module (`STATE_END_CUT4.gazeAngle`, -70.24 deg, the
+//      wire root's own bearing from the model) instead of the -69.4 that was
+//      written down when the wire aimed at the feet; and the ghost plot still
+//      passes UNDER the wire — it crosses the new, slightly more leftward line
+//      at about (620, 585) world, and it is drawn in `under`, so it goes behind
+//      it as before.
+//
+//  (2) THE SWEEP HAS A SHUTTER TRAIL, and the revolution therefore FINISHES
+//      INSIDE ITS OWN WORD. The known flaw of V2 was that the ring only reached
+//      100% bright on f119 — two frames after "environment" ended (f107-117), so
+//      the payoff landed on nothing. The fix is not a retime of the beats: it is
+//      the RATE LOBE. The turn is still 409 deg from f80 to f130, but its speed
+//      profile is now one FRONT-LOADED lobe (ramp in over the first 16%, then a
+//      smoothstep decay from 42% of the turn down to 20% of its peak) instead of
+//      a symmetric trapezoid. 82% of the turn is spent in the first 68% of the
+//      time, so the wall is fully bright on f115 — two frames INSIDE "environ-
+//      ment" — and the remaining 72 deg is a long decelerating settle onto the
+//      question through "okay", which is what that word wants anyway.
+//      THAT COSTS SPEED, AND THE TRAIL IS WHAT PAYS FOR IT. The tip peaks at
+//      52.2 screen px/frame (f91) against V2's 44.2; the set's crisp-line
+//      ceiling is 45, and `Gaze`'s V3 `trail` — an honest 180 deg shutter, one
+//      flat accent wedge from the half-frame-ago pose to this one, under the
+//      line — lifts that to 70. It is fed from this cut's own pose functions
+//      through the module's `gazeTrail`, so the wedge cannot drift from the
+//      hand. Below 1.5 deg of travel in a frame the module draws nothing, which
+//      is why the stub's drift, the settle and the tail have no trail at all.
+//
+//  (3) IT EXPORTS ITS RESOLVED STATE. `IncreasinglyDifficult` (the clip's new
+//      closing cut) opens on this cut's f132 — its speech-end frame, not its
+//      last — so `STATE_AT`, `HAND_AT`, `WORK_PACKETS_AT`, `CAM_AT` and
+//      `STATE_END_CUT5` are exported for it to continue. Nothing about this file
+//      changes to provide them.
 // ---------------------------------------------------------------------------
 // WHAT THIS CUT IS. It does not start over: it opens on the picture `SeemsLike
 // ATrap` actually resolves on — CAM_WIDE (k 1.150, world y 830 on screen 835),
@@ -144,18 +187,21 @@ export const DURATION = 148;
 //                                One wipe, nothing else.
 //  4. f80-130 "they're just      THE REVOLUTION. The stub grows back out to
 //             like: oh, I'm in   GAZE_LEN (f80-90, done before the turn reaches
-//             a test environ-    its cruise) and the gaze makes ONE calm turn
-//             ment" (f83-f117)   about the model like a hand on a dial: 409
-//                                degrees anticlockwise, from where cut 4 left it
-//                                all the way round and on to the question's
-//                                bearing. In the direction it points — the WALL
-//                                ANGLE of its own ray as seen from the model,
-//                                with a 22 degree lead so the ring reads where
-//                                the hand is about to be — the wall's dashes
-//                                step INK_LO -> INK_HI. Measured: 0.28 of the
-//                                ring bright at f90, 0.54 at f100, 0.95 on the
-//                                last frame of "environment" (f117) and the
-//                                whole ring by f119. The model ripens
+//             a test environ-    its cruise) and the gaze makes ONE turn about
+//             ment" (f83-f117)   the model like a hand on a dial: 409 degrees
+//                                anticlockwise, from where cut 4 left it all the
+//                                way round and on to the question's bearing, on
+//                                ONE front-loaded rate lobe (V3). In the
+//                                direction it points — the WALL ANGLE of its own
+//                                ray as seen from the model, with a 22 degree
+//                                lead so the ring reads where the hand is about
+//                                to be — the wall's dashes step INK_LO -> INK_HI.
+//                                Measured: 0.30 of the ring bright at f90, 0.60
+//                                at f100, 0.77 on "environment"'s first frame
+//                                (f107) and THE WHOLE RING BY f115, two frames
+//                                inside the word (V2 finished on f119, two frames
+//                                after it). While it is at speed the hand carries
+//                                the module's shutter trail. The model ripens
 //                                ACCENT_DEEP -> ACCENT over f82-96: it is
 //                                thinking again.
 //  5. f122-130 "Okay" (f117)     BACK TO WORK. The last of the turn settles onto
@@ -193,25 +239,32 @@ export const DURATION = 148;
 // ---------------------------------------------------------------------------
 // ARITHMETIC THAT MATTERS.
 //
-// * THE HAND'S TIP. At 24 fps anything over ~45 screen px/frame strobes, and a
-//   hand is the fastest thing here because its tip speed is R * omega * k. The
-//   three numbers are solved against each other:
+// * THE HAND'S TIP. A crisp line strobes at 24 fps over ~45 screen px/frame; a
+//   line with the module's SHUTTER TRAIL under it does not until ~70. V3 spends
+//   part of that new headroom, and nothing else. The numbers are solved against
+//   each other:
 //     - R is trapShared's GAZE_LEN, 205 world px — 236 screen px at the resolved
 //       camera. It is deliberately NOT wall-length: the wall is 205 world px
 //       below the model and 475 above it, so a hand that reached the ring would
-//       have to be 475 long and its tip would run at 2.3x the ceiling.
-//     - the turn is 409 deg over 50 frames with smoothstep ramps over the first
-//       and last 19% of it (peak = 1/(1-0.19) = 1.235 x the mean, rather than a
-//       plain smoothstep's 1.5x, which would have put the tip over 52 px/f).
+//       have to be 475 long and its tip would run at 2.3x the ceiling. The V3
+//       brief allows up to ~300 screen px of hand; it is NOT taken, because
+//       length buys nothing here (the ring is lit by the ray, not by the tip)
+//       and costs tip speed in direct proportion.
+//     - the turn is 409 deg over f80-130 on ONE lobe: ramp in over the first 16%
+//       of it, full rate to 42%, then a smoothstep decay to 20% of that rate at
+//       the end. Peak 1.55 x the mean, and 82.6% of the turn inside the first
+//       68% of the time — which is what puts the last of the wall alight on
+//       f115 rather than f119.
 //     - the camera is at k 1.25 falling to 1.17 through the cruise, because the
 //       pull-back is keyed to land BEFORE the hand's fastest frames, not after.
 //   MEASURED, over every frame, on the tip's actual screen position with the
-//   growth, the camera and the sway in it: 44.2 screen px/frame at worst (f91),
-//   42-43 through the whole cruise, |dv| 7.8 at worst (f82, where the stub is
-//   growing back as well as turning) — against the tip's own centripetal
-//   7.5 px/f2, which no rotating hand can avoid. STATS.tipSpeedMax. The bigger
-//   CAM_WIDE costs the tip 0.3 of its 1.1 screen px/frame of headroom under the
-//   set's 45, and nothing had to be retimed to pay for it.
+//   growth, the camera and the sway in it: 52.2 screen px/frame at worst (f91),
+//   48-52 f88-f105, then falling away into the settle; |dv| 8.0 at worst over
+//   the frames the hand is DRAWN on (f1-f130) — against the tip's own
+//   centripetal ~11 px/f2 at that speed, which no rotating hand can avoid.
+//   STATS.tipSpeedMax / tipDvMaxDrawn. The trail is live wherever the hand turns
+//   more than 1.5 deg in a frame: f81-f126, i.e. the whole revolution and none
+//   of the settle.
 // * THE WALL'S BRIGHT FRONT is not a timer. `wallPhi(theta)` intersects the
 //   hand's own ray with the wall and returns the angle of the hit point as seen
 //   from the WALL's centre; the bright range runs from where the hand started to
@@ -415,8 +468,14 @@ const NEEDLE_STUB = 72; // world px: a stub, still clear of the model's rim
 // correcting it; they stay named here because they are also what the gestures
 // are keyed off.
 // ---------------------------------------------------------------------------
-const GAZE_START_ANG = (-69.4 * Math.PI) / 180;
-const GAZE_START_LEN = 150;
+/** V3: READ off the module rather than written down. `STATE_END_CUT4.gazeAngle`
+ *  is now `angleTo(MODEL_HOME, wireEnds(true).a)` — the bearing of the wire's
+ *  root on the folder ring, which moved when cut 4's wire was re-aimed at the
+ *  watching eye: -70.24 deg, where this constant used to say -69.4. Taking it
+ *  from the state this cut opens on is the only way the needle cannot drift off
+ *  the wire it is lying on. */
+const GAZE_START_ANG = STATE_END_CUT4.gazeAngle as number;
+const GAZE_START_LEN = STATE_END_CUT4.gazeLength;
 const RECOIL = 20; // world px, SeemsLikeATrap.STATS.model.recoilWorld
 const RECOIL_RELEASE = 14; // frames the model takes to come off it, on "not"
 
@@ -434,7 +493,14 @@ const GHOST_SCALE = 0.6;
 const SWEEP_F0 = 80; // "just" — the hand grows and starts to turn
 const SWEEP_F1 = 130;
 const GROW_F1 = 90; // the stub is back at full length before the turn's cruise
-const SWEEP_RAMP = 0.19; // smoothstep ramps at each end of the angular speed
+// THE RATE LOBE (V3). One hump: the hand winds up over SWEEP_RAMP of the turn,
+// holds its rate to SWEEP_DECAY_AT, and then eases down to SWEEP_DECAY of that
+// rate by the end. Front-loading it is what finishes the ring inside
+// "environment" (f115, was f119) without moving a single beat; the long tail is
+// the settle onto the question that "okay" is standing on anyway.
+const SWEEP_RAMP = 0.16; // the wind-up, as a fraction of the turn
+const SWEEP_DECAY_AT = 0.42; // where the rate starts coming down
+const SWEEP_DECAY = 0.8; // how much of the peak rate is given up by the end
 const BRIGHT_LEAD = (22 * Math.PI) / 180; // the ring reads where the hand is about to be
 const BRIGHT_LEAD_IN = 8; // frames the lead takes to build, so f80 starts at zero
 
@@ -578,11 +644,8 @@ const SWEEP = (() => {
 })();
 
 const speedProfile = (u: number) =>
-  u < SWEEP_RAMP
-    ? smoothstep(u / SWEEP_RAMP)
-    : u > 1 - SWEEP_RAMP
-      ? smoothstep((1 - u) / SWEEP_RAMP)
-      : 1;
+  smoothstep(u / SWEEP_RAMP) *
+  (1 - SWEEP_DECAY * smoothstep((u - SWEEP_DECAY_AT) / (1 - SWEEP_DECAY_AT)));
 const SWEEP_EASE = (() => {
   const N = 3000;
   const tab = new Float64Array(N + 1);
@@ -697,6 +760,60 @@ const workPacketsAt = (
   return out;
 };
 
+/** The work thread's two ends, exactly as `Tableau` solves them for the question
+ *  (off the mark's box at THREAD_GAP, into the station ring's edge). At module
+ *  scope because the packets are drawn against them and the closing cut inherits
+ *  the same clock. */
+export const THREAD_FROM = {
+  x: MODEL_HOME.x + Math.cos(ANG_QUESTION) * THREAD_GAP,
+  y: MODEL_HOME.y + Math.sin(ANG_QUESTION) * THREAD_GAP,
+};
+export const THREAD_TO = {
+  x: QUESTION.x - Math.cos(ANG_QUESTION) * STATION_R,
+  y: QUESTION.y - Math.sin(ANG_QUESTION) * STATION_R,
+};
+
+// ---------------------------------------------------------------------------
+// THE STATE, frame by frame. At module scope (and exported) so the cut that
+// follows this one can open on the picture this one actually resolves on,
+// instead of on a sketch of it — the same contract `STATE_END_CUT4` is to this
+// cut. `Tableau` draws it in the one legal z-order.
+// ---------------------------------------------------------------------------
+const stateAt = (frame: number, folderDashed: number = 1): TableauState => {
+  const bright = brightAt(frame);
+  const ang = handAngle(frame);
+  // Once the needle has run out to the ring it IS the work thread, drawn by the
+  // tableau: one line, not two coincident ones.
+  const gazeAngle = frame >= REACH_F1 ? null : ang;
+  return {
+    ...STATE_END_CUT4,
+    frame,
+    wallOpacity: lerp(INK_HI, INK_LO, smoothstep(clamp01(frame / WALL_DIM_F1))),
+    wallBrightFrom: bright.sweep > 0 ? bright.from : undefined,
+    wallBrightSweep: bright.sweep > 0 ? bright.sweep : undefined,
+    folderDashed,
+    workThread: 1,
+    workPackets: false,
+    gazeAngle,
+    gazeLength: handLength(frame),
+    // V3: the shutter trail, built from this cut's OWN pose functions through
+    // the module's helper, so the wedge is the hand's last frame and not a guess
+    // at it. `Gaze` draws nothing under 1.5 deg of travel, so the stub, the
+    // settle and the tail are unchanged by it.
+    gazeTrail: gazeAngle === null ? undefined : gazeTrail(handAngle, handLength, frame),
+    wire: 1,
+    wirePackets: true,
+    modelTone:
+      1 -
+      smoothstep(clamp01((frame - TONE_DOWN[0]) / (TONE_DOWN[1] - TONE_DOWN[0]))) +
+      smoothstep(clamp01((frame - TONE_UP[0]) / (TONE_UP[1] - TONE_UP[0]))),
+    // The dot never moves in this cut; it only comes OFF cut 4's recoil, which
+    // is the same correction the sentence makes on "not".
+    modelOffset: recoilAt(frame),
+    evaluatorOpacity: 1,
+  };
+};
+
 // ---------------------------------------------------------------------------
 
 const JustATestEnvironment: React.FC<Props> = ({
@@ -743,49 +860,8 @@ const JustATestEnvironment: React.FC<Props> = ({
   const ghost = ghostAlive > 0 ? plotAtS(headS) : null;
 
   // -- the hand and the work thread ----------------------------------------
-  const ang = handAngle(frame);
-  const len = handLength(frame);
-  const bright = brightAt(frame);
-  // Once the needle has run out to the ring it IS the work thread, drawn by the
-  // tableau: one line, not two coincident ones.
-  const gazeAngle = frame >= REACH_F1 ? null : ang;
-
-  const aq = ANG_QUESTION;
-  const tFrom = {
-    x: MODEL_HOME.x + Math.cos(aq) * THREAD_GAP,
-    y: MODEL_HOME.y + Math.sin(aq) * THREAD_GAP,
-  };
-  const tTo = {
-    x: QUESTION.x - Math.cos(aq) * STATION_R,
-    y: QUESTION.y - Math.sin(aq) * STATION_R,
-  };
-  const packets = workPacketsAt(frame, k, tFrom, tTo);
-
-  // -- the wall's rung ------------------------------------------------------
-  const wallOpacity = lerp(INK_HI, INK_LO, smoothstep(clamp01(frame / WALL_DIM_F1)));
-
-  const state: TableauState = {
-    ...STATE_END_CUT4,
-    frame,
-    wallOpacity,
-    wallBrightFrom: bright.sweep > 0 ? bright.from : undefined,
-    wallBrightSweep: bright.sweep > 0 ? bright.sweep : undefined,
-    folderDashed,
-    workThread: 1,
-    workPackets: false,
-    gazeAngle,
-    gazeLength: len,
-    wire: 1,
-    wirePackets: true,
-    modelTone:
-      1 -
-      smoothstep(clamp01((frame - TONE_DOWN[0]) / (TONE_DOWN[1] - TONE_DOWN[0]))) +
-      smoothstep(clamp01((frame - TONE_UP[0]) / (TONE_UP[1] - TONE_UP[0]))),
-    // The dot never moves in this cut; it only comes OFF cut 4's recoil, which
-    // is the same correction the sentence makes on "not".
-    modelOffset: recoilAt(frame),
-    evaluatorOpacity: 1,
-  };
+  const packets = workPacketsAt(frame, k, THREAD_FROM, THREAD_TO);
+  const state = stateAt(frame, folderDashed);
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -901,6 +977,34 @@ export const BEAT_CHECK = {
 
 export const CAM_AT = (f: number) => runCam3(f + PRE, CAM.CX, CAM.CY, CAM.K);
 
+// ---------------------------------------------------------------------------
+// WHAT THE CLOSING CUT INHERITS (V3). `IncreasinglyDifficult` butts against this
+// cut at 0:50.080, which lands on THIS cut's f132 — its speech-end frame, not
+// its last — so its f0 must be this frame in every particular: the picture, the
+// camera, and every clock still running through it (the wall's march, the work
+// thread's packets, the breath, the sway, the grid's drift). These exports are
+// how it gets them; nothing in this file changed to provide them.
+// ---------------------------------------------------------------------------
+/** The frame the speech ends on, which is the frame the next cut opens on. */
+export const SPEECH_END = 132;
+/** The whole standing picture on frame `f`, as `Tableau` draws it. */
+export const STATE_AT = stateAt;
+/** ...and it, resolved, on the frame the next cut takes over. */
+export const STATE_END_CUT5: TableauState = stateAt(SPEECH_END);
+/** The needle's pose on frame `f`. At SPEECH_END it is the work thread: lying on
+ *  the question's bearing at the ring's edge, no longer drawn as a gaze. */
+export const HAND_AT = (f: number) => ({ angle: handAngle(f), length: handLength(f) });
+/** The work thread's packet launches, in THIS cut's frames, and the geometry
+ *  they run on. The next cut continues the same series (its f-2 and f14 are this
+ *  cut's f130 and f146) so no packet pops into or out of existence at the join. */
+export const WORK_THREAD = {
+  launches: WORK_LAUNCHES,
+  from: THREAD_FROM,
+  to: THREAD_TO,
+  period: 16,
+  packetsAt: workPacketsAt,
+};
+
 const probes: [string, number, number][] = [
   ["wall L", WALL.cx - WALL.r - STROKE_W / 2, WALL.cy],
   ["wall R", WALL.cx + WALL.r + STROKE_W / 2, WALL.cy],
@@ -1002,6 +1106,44 @@ export const STATS = {
     const p1 = screenAt(f, b.x, b.y);
     return [f, Number(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]).toFixed(1))];
   }),
+  /** V3: the trail is only drawn where the hand turns more than TRAIL_MIN_DEG
+   *  (1.5) in a frame. These are the first and last frames it exists on, and the
+   *  widest wedge in degrees. */
+  trailSpan: (() => {
+    let first = -1;
+    let last = -1;
+    let widest = 0;
+    for (let f = 1; f <= REACH_F1; f++) {
+      const d = Math.abs(((handAngle(f) - handAngle(f - 1)) * 180) / Math.PI);
+      if (d >= 1.5) {
+        if (first < 0) first = f;
+        last = f;
+        widest = Math.max(widest, d);
+      }
+    }
+    return { first, last, widestDeg: Number(widest.toFixed(2)) };
+  })(),
+  /** |dv| of the tip over the frames the hand is actually DRAWN on (it stops
+   *  being drawn at REACH_F1, where the needle becomes the work thread). */
+  tipDvMaxDrawn: (() => {
+    let w = 0;
+    let at = -1;
+    const s = (g: number) => {
+      const a = handTip(g - 1);
+      const b = handTip(g);
+      const p0 = screenAt(g - 1, a.x, a.y);
+      const p1 = screenAt(g, b.x, b.y);
+      return Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+    };
+    for (let f = 2; f <= REACH_F1; f++) {
+      const d = Math.abs(s(f) - s(f - 1));
+      if (d > w) {
+        w = d;
+        at = f;
+      }
+    }
+    return [Number(w.toFixed(2)), at];
+  })(),
   tipDvMax: (() => {
     let w = 0;
     let at = -1;

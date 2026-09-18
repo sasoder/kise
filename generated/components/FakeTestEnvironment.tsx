@@ -21,6 +21,7 @@ import {
   worldTransform,
 } from "./fieldShared";
 import {
+  CAM_WIDE,
   DASH_OFF,
   DASH_ON,
   Gaze,
@@ -41,6 +42,7 @@ import {
   arcPath,
   camCy,
   camKnots3,
+  gazeTrail,
   lerp,
   runCam3,
   worldPx,
@@ -74,6 +76,33 @@ export const DURATION = 149;
 // interview with someone from OpenAI. (2) THE ANSWER KEY is lucide `key-round`
 // instead of `key`, and the folder glyph is masked behind its silhouette. Every
 // staging, timing, camera, beat and duration in this file is untouched.
+//
+// V3 — THREE CHANGES, AND ONLY THREE. Every beat frame, the DURATION, the
+// staging, the crowd's placement and the shape of the camera track are the
+// delivered cut's.
+//   1. THE LANDING ON "smart" READS AGAIN. The tone ramp lost its punch when the
+//      model became line art — a deep -> ripe ramp reads on a solid disc and
+//      barely reads on six thin arms with the grid showing between them. The
+//      ramp is unchanged; the SWELL now carries the landing: 0.78 -> 1.00 with
+//      an 8% overshoot settled by f50, where it was 0.84 -> 1.00 at 5%. On
+//      screen the mark goes 185 px at f28 -> 230 at f40, a 24% step against
+//      V2's 13%. See THE MODEL'S ONE RAMP.
+//   2. THE CUT RESOLVES AT THE SET'S WIDE. `K_REST_TARGET` is now `CAM_WIDE.k`
+//      (1.15) instead of the pinned 1.080 — the one thing about this cut that
+//      was a compromise rather than a choice. V2's 1.080 was forced by the 45
+//      screen px/frame ceiling on a bare sweeping line: at 1.15 the wall is 6.5%
+//      bigger on screen, a revolution costs 6.5% more frames, and the ring
+//      closed after the speech ended. THE SHUTTER TRAIL PAYS FOR IT (change 3):
+//      the ceiling goes to 70, the tip budget is re-solved 44.2 -> 47.5, and
+//      every frame that matters comes back unmoved — the hand is wall-length on
+//      f69, the ring closes on f130 inside "environment", and the five people
+//      flip on f84 / f93 / f103 / f114 / f122 exactly as delivered.
+//   3. THE HAND HAS A SHUTTER TRAIL. `Gaze.trail`, built by `gazeTrail` off this
+//      cut's own angle and length functions: one flat accent wedge from the pose
+//      half a frame ago to the pose now, under the crisp line, at the module's
+//      TRAIL_OPACITY. No blur, no glow, no gradient — a 180-degree shutter and
+//      nothing else. It is the only new ink in the cut and it is accent, on the
+//      model's own attention, which is the one thing accent is allowed to be.
 // ---------------------------------------------------------------------------
 // SOUND-OFF READING TEST — one sentence:
 //   "one model, alone among real people; it lights up, puts out a hand, and the
@@ -93,11 +122,13 @@ export const DURATION = 149;
 //                 alpha. `breath` always.
 //   its gaze    = ONE accent needle from the mark (trapShared's `Gaze`), leaving
 //                 its EDGE and not its centre — the blossom has counters through
-//                 the middle, so a hand drawn under it would be seen through it.
-//                 Accent
-//                 is used for NOTHING else in this cut: no work thread, no
-//                 packets, no accent ring. There is nothing yet for the model to
-//                 work ON — only to look around.
+//                 the middle, so a hand drawn under it would be seen through it —
+//                 with the module's SHUTTER TRAIL under it (V3): the same needle's
+//                 pose half a frame ago, filled flat at TRAIL_OPACITY, which is
+//                 the hand's own motion and not a second object. Accent is used
+//                 for NOTHING else in this cut: no work thread, no packets, no
+//                 accent ring. There is nothing yet for the model to work ON —
+//                 only to look around.
 //   a person    = person.png white at PERSON_H_PX. Five of them, INK_HI, real.
 //   a fake one  = that glyph at INK_LO inside a dashed circle (see DEVIATIONS
 //                 for why the circle is drawn here rather than by `FakePerson`).
@@ -112,30 +143,36 @@ export const DURATION = 149;
 // this list.
 //
 //  1. f0-31   "where the models    THE ONE, AND IT LOOKS REAL. The cut opens
-//             are, like" (f0/f5/   close (k 3.715) on the OpenAI mark — an em box
-//             f13/f17)             of 248 screen px, at the swell's 0.84 that is
-//                                  208 across on f0, ACCENT_DEEP, breathing,
-//                                  centred, with nothing over it. Four of the
+//             are, like" (f0/f5/   close (k 3.956) on the OpenAI mark — an em box
+//             f13/f17)             of 248 screen px, at the swell's 0.78 that is
+//                                  193 across on f0, ACCENT_DEEP, breathing,
+//                                  centred, with nothing over it. Three of the
 //                                  five people are CROPPED by the frame edges at
-//                                  INK_HI — solid, ordinary, the real world. The
-//                                  wall is 1263 screen px in radius here, so it is
-//                                  off the top (-428) AND off the bottom (2098):
-//                                  through f31 there is no ring, no dash and no
-//                                  hint of one. The camera is already opening (see
-//                                  CAMERA) at 1.2 screen px/frame on the outer
-//                                  figures, so no frame here is still.
-//  2. f31-45  "pretty smart"       IT LIGHTS. The dot ripens ACCENT_DEEP ->
+//                                  INK_HI — solid, ordinary, the real world — and
+//                                  two are outside it. The wall is 1345 screen px
+//                                  in radius here, so it is off the top (-510) AND
+//                                  off the bottom (2180): through f31 there is no
+//                                  ring, no dash and no hint of one. The camera is
+//                                  already opening (see CAMERA) at 1.2 screen
+//                                  px/frame on the outer figures, so no frame here
+//                                  is still.
+//  2. f31-45  "pretty smart"       IT LIGHTS. The mark ripens ACCENT_DEEP ->
 //             (f31/f35-45)         ACCENT over 12 frames (f30-42), fully ripe
 //                                  three frames before "smart" ends rather than on
-//                                  its last frame, and swells 0.84 -> 1.00 of its
-//                                  full size once, eased (f28-42), with a 5.0%
-//                                  overshoot that is gone by f51. ONE ramp; the dot
-//                                  never pulses again for the rest of the cut.
+//                                  its last frame, and swells 0.78 -> 1.00 of its
+//                                  full size once, eased (f28-42), with an 8.0%
+//                                  overshoot that is gone by f50. On screen that
+//                                  is 185 px across at f28 and 230 at f40. ONE
+//                                  ramp; the mark never changes size or tone again
+//                                  for the rest of the cut.
 //  3. f47-57  "pretty clever"      THE HAND IS BORN. A short accent needle leaves
-//             (f47/f50-57)         the dot at f47 ALREADY TURNING — 4.3 deg/frame
+//             (f47/f50-57)         the mark at f47 ALREADY TURNING — 4.3 deg/frame
 //                                  at birth, easing up over 13 frames — and grows
 //                                  a little as it goes. A mind starting to look
-//                                  around. It lands turning on "clever".
+//                                  around. It lands turning on "clever". From its
+//                                  second frame it carries the SHUTTER TRAIL: one
+//                                  flat accent wedge across the half-frame it just
+//                                  swept, under the line (see THE SHUTTER TRAIL).
 //  4. f53-130 "and they're really  THE ONE BIG MOTION. From f53 the hand
 //             good at recognizing  LENGTHENS as it turns — a spiral sweep — and
 //             ... a fake test      the camera's opening runs underneath it at
@@ -143,7 +180,7 @@ export const DURATION = 149;
 //             (f57/f62/f67/f72/    screen radius while the world shrinks onto it:
 //             f78/f83-93/f112/     the hand does not appear to grow, it appears to
 //             f116/f121-133)       reach further and further out. The wall's top
-//                                  arc enters frame at f57, under "and they're";
+//                                  arc enters frame at f59, under "and they're";
 //                                  the hand IS wall-length at f69, three frames
 //                                  before "good", having turned 105 degrees. From
 //                                  there every change of state happens BECAUSE THE
@@ -155,12 +192,13 @@ export const DURATION = 149;
 //                                      hand's own direction. The five crossings
 //                                      are solved off the angle track, not keyed:
 //                                      f84, f93, f103, f114, f122 — the first on
-//                                      "recognizing", the last on "environment".
-//                                      The one at f122 is a person the hand
-//                                      ALREADY swept past once, at f57, when it
-//                                      was 147 world px long and stopped 39 px
-//                                      short of them: it flips on the pass that
-//                                      reaches, not the pass that points.
+//                                      "recognizing", the last on "environment",
+//                                      and all five re-derived under V3's faster
+//                                      hand rather than kept. The one at f122 is a
+//                                      person the hand ALREADY swept past once, at
+//                                      f57, when it was 147 world px long and
+//                                      stopped 42 px short of them: it flips on the
+//                                      pass that reaches, not the pass that points.
 //                                    * behind the hand the WALL converts solid ->
 //                                      dashed: `dashedFrom` is the hand's angle on
 //                                      the frame it first became wall-length and
@@ -170,44 +208,52 @@ export const DURATION = 149;
 //                                      frames before the speech ends, so the word
 //                                      finishes over a fully dashed ring.
 //  5. f131-148 tail                THE RESIDUE. The hand eases to a slow residual
-//                                  turn (1.7 deg/frame — it never stops dead) and
+//                                  turn (1.70 deg/frame — it never stops dead) and
 //                                  shortens to a resting needle at 0.45 of the
-//                                  wall over 15 frames. Its tip decays 43.9 -> 4.9
-//                                  screen px/frame smoothly, with no brake. The
-//                                  dashes march, the five circles march, the dot
-//                                  breathes ripe, the camera is still creeping
-//                                  open on the last frame. Resolved picture: a lit
-//                                  orange dot with a needle, alone in the middle of
-//                                  a world drawn entirely in dashes.
+//                                  wall over 15 frames. Its tip decays 47.1 -> 5.3
+//                                  screen px/frame smoothly, with no brake, and the
+//                                  shutter trail thins out with it: by the last
+//                                  frames the wedge is 2.6 screen px wide at the
+//                                  tip, inside the line's own 4.5, so the hand is a
+//                                  bare needle again. The dashes march, the five
+//                                  circles march, the mark breathes ripe, the
+//                                  camera is still creeping open on the last frame.
+//                                  Resolved picture: a lit orange mark with a
+//                                  needle, alone in the middle of a world drawn
+//                                  entirely in dashes.
 //
 // ---------------------------------------------------------------------------
 // ARITHMETIC THAT MATTERS — the tip speed, and what it forces.
 //
-// A radial line sweeping at 24 fps strobes at its tip, so the brief caps the tip
-// at ~45 screen px/frame. That cap is not a detail here: it SETS THE SIZE OF THE
-// PICTURE, because a full revolution of a hand of screen radius R costs at least
-// 2*pi*R/45 frames, and the wall has to finish converting inside "environment".
+// A radial line sweeping at 24 fps strobes at its tip: the set's ceiling for a
+// BARE line is ~45 screen px/frame, and with the shutter trail under it (V3) the
+// module's own ceiling is 70. That number is not a detail here: it SETS THE SIZE
+// OF THE PICTURE, because a full revolution of a hand of screen radius R costs at
+// least 2*pi*R/(the budget) frames, and the wall has to finish converting inside
+// "environment".
 //
-//   * THE CUT RESOLVES AT k 1.080, not at CAM_CLOSE's 1.3. At k 1.3 the wall is
-//     442 screen px in radius, one revolution costs 2*pi*442/43.7 = 63.5 frames,
-//     and the hand cannot be wall-length before ~f70 (it has to grow out there
-//     through the same cap while the camera is still tight) — so the ring would
-//     not close until f139, six frames after the speech ends. Solved against a
-//     closure inside "environment", the resolved zoom is 1.080: the wall is 367
-//     screen px, a revolution costs 52.8 frames, and it closes at f130. That is
-//     83% of CAM_CLOSE's wall and 8% over CAM_WIDE's, which trapShared names as
-//     this clip's other camera — and the wall keeps its WORLD radius, which is
-//     what the other four cuts' geometry is built on.
+//   * THE CUT RESOLVES AT CAM_WIDE's k 1.15, the set's wide — not at CAM_CLOSE's
+//     1.3, and no longer at V2's compromise 1.080. At 1.15 the wall is 391 screen
+//     px in radius and a revolution costs 2*pi*391/47.0 = 52.3 frames of pure
+//     turning; the hand is wall-length on f69 and the ring closes on f130, three
+//     frames before the speech ends. Under V2's bare-line budget of 43.7 the same
+//     revolution costs 56.2 frames and the ring closed at f134, which is why V2
+//     had to resolve at 1.080 instead. At CAM_CLOSE's 1.3 the wall would be 442
+//     px, a revolution 59.1 frames, and the hand could not be wall-length before
+//     f71 (measured on the same solve) — the ring closes at f139, six frames
+//     after the speech ends. The wall keeps its WORLD radius throughout, which is
+//     what the other four cuts' geometry is built on; only the camera moved.
 //   * THE NOUNS ARE SOLVED AT THIS CAMERA rather than carried at the ratio.
 //     Every size is `worldPx(<the module's own screen constant>, K_REST)`, the
 //     helper trapShared exports for exactly this: stroke 6.00 screen px, the
 //     mark's em box 72.0 across, a person 118 tall, the gaze 4.5. So the mark, a
 //     stroke and a person are the same size ON SCREEN here as in the close cuts;
-//     only
-//     the wall is wider in the frame, which is the whole point of the cut.
+//     only the wall is wider in the frame, which is the whole point of the cut.
+//     At the set's own wide this cut now IS the other four cuts' camera, so the
+//     solve and the ratio agree to a rounding error.
 //   * THE DASH PATTERN IS THE MODULE'S. DASH_ON / DASH_OFF / MARCH_W are world
-//     constants inside `Wall`, so at k 1.080 the wall's dashes are 21.6 on /
-//     15.0 off marching 0.50 screen px/frame, against the reference 26 / 18 /
+//     constants inside `Wall`, so at k 1.15 the wall's dashes are 23.0 on /
+//     15.9 off marching 0.53 screen px/frame, against the reference 26 / 18 /
 //     0.6. Every dashed thing in this cut — the wall and the five circles — uses
 //     those same three numbers, so there is ONE dash pattern and ONE march rate.
 //   * THE HAND'S SPEED IS DERIVED, NOT KEYED. The tip's screen radius is L*k, so
@@ -216,10 +262,40 @@ export const DURATION = 149;
 //     lengthening. The split is therefore taken on the RESULTANT — radial screen
 //     speed 0.55 of the budget, the turn taking what is left — which holds the
 //     tip at one screen speed for the whole gesture. Measured over the whole
-//     piece, camera and sway included, the tip runs 39.6 (f55) · 43.0 (f62) ·
-//     43.8 (f72) · 44.2 (f84, the maximum) · 43.5 (f113) · 43.9 (f129) · 4.9
-//     (f148), and the ANGULAR rate falls from 6.4 deg/frame while the hand is
-//     short to 5.2 at wall length — which is what a widening sweep looks like.
+//     piece, camera and sway included, the tip runs 43.0 (f55) · 47.0 (f62) ·
+//     47.1 (f72) · 47.4 (f87, the maximum) · 46.8 (f113) · 47.1 (f129) · 5.3
+//     (f148) — one lobe, no step anywhere in it, and 68% of the ceiling the
+//     shutter trail buys. The ANGULAR rate is 6.1 deg/frame while the hand is
+//     short at f55, dips to 3.8 as the hand reaches the wall under a camera that
+//     is still wide, and rises to 6.8 as the pull-back finishes: the sweep gets
+//     faster around the ring as the ring gets smaller, which is what a hand
+//     holding one screen speed on a shrinking circle does.
+//
+// ---------------------------------------------------------------------------
+// THE SHUTTER TRAIL (V3) — what the hand is allowed to do, and what it is not.
+//
+// A crisp line that jumps 45 screen px between two frames at 24 fps reads as two
+// lines rather than one moving line. A camera would not show that: its shutter is
+// open for part of the frame, so a fast hand lays down a smear across the sweep it
+// just made and the crisp pose sits on the leading edge. `trapShared.Gaze` takes
+// that as `trail` and draws exactly one thing for it — a FLAT accent wedge (fill,
+// no stroke) from the pose half a frame ago to the pose now, from THREAD_GAP out
+// to the tip, at TRAIL_OPACITY, UNDER the line. No blur filter, no glow, no
+// gradient, no second line, nothing that is not the hand's own half-frame of
+// travel. With it the module's tip ceiling is 70 screen px/frame instead of 45.
+//
+// This cut builds the prop with `gazeTrail(handAngle, lenAt, frame)` — the hand's
+// OWN angle and length tables, the same two functions the line, the wall's
+// conversion and the five crossings are all read off, so the wedge cannot drift
+// from the hand by a frame or a world px, and it retimes with everything else if
+// a beat ever moves.
+//
+// MEASURED: the wedge is the hand's angular travel, so it is 9.3 screen px wide at
+// the tip when the hand is short and turning fast at f50, 22-23.5 px through the
+// whole big sweep (f69-f133), and it thins with the hand's deceleration in the
+// tail — 22.3 (f133) · 6.4 (f140) · 2.6 (f148), the last of those narrower than
+// the line's own 4.5 px, i.e. hidden under it. Nothing else in the cut changed to
+// accommodate it, and it is the only ink V3 adds.
 //
 // ---------------------------------------------------------------------------
 // CAMERA — ONE continuous opening, and only one channel ever moves. The
@@ -231,43 +307,56 @@ export const DURATION = 149;
 // already carries velocity. Monotone (Fritsch-Carlson) tangents make it
 // structurally impossible for the track to overshoot a knot and rebound.
 //
-//   knot  f -34  k 3.845   the pre-roll, so f0 is already opening
-//   knot  f   0  k 3.715   the wall is 1263 screen px in radius: off the top
-//                          (-428) and off the bottom (2098)
-//   knot  f  32  k 3.303   the creep: 5.5% over 32 frames, which is 1.2 screen
-//                          px/frame on the outer figures — the set's hold-drift
-//                          target — and still leaves the wall off the bottom
-//                          (2011 at f31)
-//   knot  f  62  k 1.894   the opening takes hold under the lengthening hand
-//   knot  f  94  k 1.134   the wall is fully in frame; the move goes 5% PAST the
+// The track is written as one shape times K_REST_TARGET (`span`, `K_RATIO_OPEN`),
+// so moving the resolved zoom from V2's 1.080 to CAM_WIDE's 1.15 moves every knot
+// with it and the MOVE — its easing, its landings, its |dv| — is the delivered
+// cut's, 6.5% wider.
+//
+//   knot  f -34  k 4.071   the pre-roll, so f0 is already opening
+//   knot  f   0  k 3.933   the wall is 1345 screen px in radius: off the top
+//                          (-510) and off the bottom (2180)
+//   knot  f  32  k 3.627   the creep: 6.0% over 32 frames, which runs the outer
+//                          figures at 1.7 to 4.2 screen px/frame — never still,
+//                          accelerating into the opening — and still leaves the
+//                          wall off the bottom (2087 at f31)
+//   knot  f  62  k 2.096   the opening takes hold under the lengthening hand
+//   knot  f  94  k 1.231   the wall is fully in frame; the move goes 7% PAST the
 //                          resolved zoom so the creep after it is a real creep
-//   knot  f 148  k solved  still opening on the last frame
+//   knot  f 148  k solved  still opening on the last frame (1.14927)
 //   knot  f 260  k -6.0%   its continuation, off the end
 //
 // MEASURED (audit over f2..f148 on the wall's four cardinal points and a point
 // on its 45-degree diagonal, sway included):
-//   max tip speed        44.07 screen px/f   (ceiling 45)          at f88
-//   max |dv|              0.93 screen px/f2  (ceiling 2.2)         at f39
-//   max point speed      19.52 screen px/f   (nothing races in)
-//   min point speed       0.056 screen px/f  (see DEVIATIONS)      at f148
-//   resolved frame       wall screen x 173..907, y 468..1202
-//                        side margin 173 (brief asks >= 70), lowest ink 1202
-//                        (the band wants it above ~1400)
+//   max tip speed        47.40 screen px/f   (ceiling 70 with the trail) at f87
+//   max |dv|              0.99 screen px/f2  (ceiling 2.2)         at f39
+//   max point speed      20.79 screen px/f   (nothing races in)
+//   min point speed       0.059 screen px/f  (see DEVIATIONS)      at f148
+//   resolved frame       wall screen x 148..931, y 438..1220
+//                        side margin 145 after the stroke (brief asks >= 70),
+//                        lowest ink 1220 (the band wants it above ~1400)
 //   crowd                centre of mass 13.2 world px off the model (3.9% of the
 //                        wall's radius); radii 0.365 / 0.451 / 0.583 / 0.683 /
-//                        0.707 of it; outermost dashed circle clears the wall by
-//                        24.8 world px, innermost clears the MARK by 18.8 (32.7
-//                        against the old 42 px dot — the mark's half-box is 13.9
-//                        px bigger and that is the whole of the difference: 20
-//                        screen px of daylight, 16 at the person-drift's worst,
-//                        and nothing ever touches), and
-//                        the closest two circles clear each other by 36.3
+//                        0.707 of it, all unchanged — the people are frozen as
+//                        angles and world radii, so the whole crowd is the
+//                        delivered picture. Every clearance IMPROVES at the wider
+//                        rest, because a person and its circle are solved in
+//                        screen px and so shrink in world px while the wall does
+//                        not: the outermost dashed circle clears the wall by 32.0
+//                        world px (29.4 after the stroke) against V2's 24.8, the
+//                        innermost clears the MARK by 25.2 against 18.8, and the
+//                        closest two circles clear each other by 45.0 against 36.3
 //   caption band         max person ink inside screen y > 1380, over every frame
-//                        and the drift's four corners: 27.1 px at f41, and ZERO
-//                        on 137 of the 149 frames (ceiling 40)
-//   people at f0         three of them CROPPED by the frame — left (x -64..277),
-//                        top (y -67..274), right (x 889..1230) — two fully out.
-//                        Lowest visible person ink 848, i.e. 532 px clear of the
+//                        and the drift's four corners: 9.1 px at f45, and ZERO on
+//                        146 of the 149 frames (ceiling 40). V2 was 27.1 px at
+//                        f41. Only two people ever touch the band at all and both
+//                        do it off the SIDE of the frame while the camera is tight
+//                        — p0 at screen x -137 (9.1 px, f45) and p4 at 1243 (2.6
+//                        px, f39) — so the 6.5% wider opening, which pushes them
+//                        further out of frame sideways, is what takes two thirds
+//                        off the number. Nobody stands under the captions
+//   people at f0         three of them CROPPED by the frame — left (x -92..249),
+//                        top (y -115..227), right (x 923..1263) — two fully out.
+//                        Lowest visible person ink 837, i.e. 543 px clear of the
 //                        caption line and above the model's own centre
 //
 // ---------------------------------------------------------------------------
@@ -277,33 +366,42 @@ export const DURATION = 149;
 //     camera to pull back with the tip "as ONE glide ... landing ~f108" and, in
 //     the same paragraph, for "one continuous spiral sweep, one continuous
 //     pull-back". Those two cannot both hold. The hand can only grow as fast as
-//     the tip cap allows; the cap in world px is (45 - what the camera is doing)
-//     / k, and while k is 3.7 that is 11.9 world px a frame. Starting the opening
-//     at f67 leaves the hand still growing at f89 and closes the ring at f141,
-//     eight frames after the speech ends. The opening therefore begins at f0 as a
+//     the tip budget allows; the budget in world px is (47.5 - what the camera is
+//     doing) / k, and while k is 3.9 that is 12.1 world px a frame. Starting the
+//     opening at f67 leaves the hand still growing at f89 and the ring closing
+//     eight frames after the speech ends (f141, measured on V2's solve, and the
+//     V3 budget does not buy back eight frames). The opening therefore begins at f0 as a
 //     creep and BECOMES the pull-back — one monotone curve, no second move
 //     anywhere, which is the "one continuous pull-back" reading — and it lands at
 //     f94 rather than f108. Landing early is not a loss: the wall is fully in
 //     frame for the whole of "fake test environment" with a third of it still
 //     solid, so the word lands on the ring FINISHING rather than on it arriving.
-//   * THE WALL IS OFF-FRAME THROUGH f31 AND ENTERS AT f57. To hide a 340 world px
+//   * THE WALL IS OFF-FRAME THROUGH f31 AND ENTERS AT f59. To hide a 340 world px
 //     ring behind a frame whose ink centre sits at screen 835, the opening k must
-//     be at least (1085 + the sway)/340 = 3.27; it is 3.715, which clears the
-//     bottom edge by 178 px at f0 and still by 91 at f31 — the end of the brief's
-//     stage 1. The ring's top edge crosses screen y 0 when k falls to 2.456,
-//     which the opening reaches at f57, inside "and they're really": the edge of
-//     the world appears as the hand starts reaching for it, which is the picture
-//     the line describes.
+//     be at least (1085 + the sway)/340 = 3.27; it is 3.956, which clears the
+//     bottom edge by 260 px at f0 and still by 167 at f31 — the end of the brief's
+//     stage 1. The ring's top edge crosses screen y 0 when k falls to 2.456 (the
+//     same k as in V2 — the constraint is on the wall's world radius, not on the
+//     camera's ratio), which the opening now reaches at f59 rather than f57,
+//     inside "and they're really": the edge of the world appears as the hand
+//     starts reaching for it, which is the picture the line describes. The wall's
+//     FIRST ink of any kind is the arc clipping a bottom corner of the frame, and
+//     the wider opening pushes that from f22 to f36 — so "through f31 there is no
+//     ring and no hint of one", which the gesture list has claimed since V1, is
+//     true for the first time in V3.
 //   * THE HAND IS WALL-LENGTH AT f69 AND THE CONVERSION RUNS f69 -> f130 —
 //     against the brief's f72 and f130, and both are DERIVED rather than keyed:
-//     f69 is the frame the solved growth reaches WALL.r under the cap, and f130
-//     the frame the accumulated angle since f69 passes 2*pi. 1.48 turns from birth
-//     to rest against the brief's 1.6, which is the same integral read at the cap.
-//   * THE FIVE PEOPLE ARE PLACED FROM THE HAND'S ANGLE TRACK: see THE
-//     PLACEMENT, below, which is its own section because the placement is the
-//     most constrained thing in the cut.
+//     f69 is the frame the solved growth reaches WALL.r under the budget, and f130
+//     the frame the accumulated angle since f69 passes 2*pi. Both come back on the
+//     delivered cut's frames after the re-solve; they are what TIP_CAP is solved
+//     against. 1.50 turns from birth to rest against the brief's 1.6, which is the
+//     same integral read at the budget.
+//   * THE FIVE PEOPLE ARE PLACED FROM THE HAND'S ANGLE TRACK, and in V3 that
+//     placement is FROZEN while the crossings re-derive: see THE PLACEMENT,
+//     below, which is its own section because the placement is the most
+//     constrained thing in the cut.
 //   * THE DASHED CIRCLES ARE DRAWN HERE, NOT BY `FakePerson`. `FakePerson` is
-//     the right noun but its ring is locked to STROKE_W (4.6 screen px at this
+//     the right noun but its ring is locked to STROKE_W (5.3 screen px at this
 //     camera) while everything else in this cut is at 6.0, and two stroke
 //     weights is the one thing the set forbids. The circle below is the same
 //     shape with the same DASH_ON / DASH_OFF / MARCH_W, at this cut's stroke,
@@ -314,12 +412,22 @@ export const DURATION = 149;
 //     340 px long at 3 px reads as a hair against a 72 px mark, and this hand is
 //     the subject of the cut, not traffic on a thread. 4.5 is the module's own
 //     middle weight and still sits clearly under the white 6.
-//   * THE MIN CAMERA SPEED IS 0.056 screen px/f, under the 0.15 floor the set
+//   * THE MIN CAMERA SPEED IS 0.059 screen px/f, under the 0.15 floor the set
 //     usually holds. It is one frame, f148, where the sway's own sine happens to
 //     cancel the last of the creep on one of the five audited points. The frame
-//     is not still: the hand is still turning at 1.7 deg/frame (its tip runs 4.9
+//     is not still: the hand is still turning at 1.70 deg/frame (its tip runs 5.3
 //     screen px/frame), every dash in the piece is marching, the five circles
-//     with them, the dot is breathing and the people are drifting.
+//     with them, the mark is breathing and the people are drifting.
+//   * THE TRAIL DOES NOT QUITE SWITCH ITSELF OFF IN THE TAIL. The module draws no
+//     wedge under TRAIL_MIN_DEG (1.5 deg of travel in a frame) and the brief
+//     expected the residual turn to fall under it; the residual is 1.70 deg/frame,
+//     because that number is the delivered cut's tail and moving it to silence the
+//     trail would change an approved motion to satisfy a threshold. What the
+//     residual actually draws is a wedge 0.85 deg wide, i.e. 2.6 screen px at the
+//     tip against the line's own 4.5 px width — geometrically inside the line, at
+//     22% opacity, and invisible. The wedge is 23.5 px wide at the sweep's fastest
+//     (f100-f130) and thins through f133-f148 with the hand's own deceleration:
+//     22.3 (f133) · 6.4 (f140) · 2.6 (f148).
 //   * `PLACEMENT` IS EXPORTED, and it is not decoration: every number in THE
 //     PLACEMENT below is read off it, not asserted. It is never called during a
 //     render.
@@ -329,10 +437,20 @@ export const DURATION = 149;
 // anywhere else. Four hard constraints meet here and they do not all fit; this
 // is the arithmetic, and the one thing that had to give.
 //
+// IT IS THE RECORD OF A SOLVE AT V2's CAMERA, and it stands: V3 freezes the
+// answer (`PERSON_A` + `R_OF`) instead of re-running it, because the crowd is
+// approved as a picture and the brief keeps it as screen positions relative to
+// the wall. Every constraint below was re-measured at the new camera and all of
+// them got LOOSER — A (the caption band) 27.1 px -> 9.1, D (the clearances)
+// 24.8 / 18.8 / 36.3 world px -> 32.0 / 25.2 / 45.0 — while B (the hand has to
+// reach them) re-derives to the same five frames, f84 / f93 / f103 / f114 / f122.
+//
 //   A. THE CAPTION BAND. Captions sit below screen y 1380. No person's white ink
 //      may be more than ~40 px wide inside that band on ANY frame. The cut opens
-//      at k 3.715, where a person is 406 screen px tall and the frame is only
-//      329 world px wide, so a person only 122 world px below the model already
+//      at k 3.715 (V2's opening, which this solve was run at; V3's is 3.956 and a
+//      person is 406 screen px tall at either, the glyph being solved in screen
+//      px), and the frame is only 291 world px wide there, so a person only 122
+//      world px below the model already
 //      hangs 400 px into the band. Measured over every frame, every person and
 //      the drift's four corners, this forbids a SECTOR of the ring, and the
 //      sector is wide: at r 122 it is screen-down 53..127 deg, at r 200 it is
@@ -384,7 +502,7 @@ export const DURATION = 149;
 //
 //   AND THE ONE THAT FLIPS LAST IS THE ONE THE HAND ALREADY MISSED. The person
 //   at 29.2 deg is swept at f57, when the hand is 147 world px long and they are
-//   232 out: the tip stops 39 px short of their nearest ink, in plain sight, and
+//   232 out: the tip stops 42 px short of their nearest ink, in plain sight, and
 //   nothing happens. The hand comes round again 360 degrees later, now the whole
 //   wall long, and flips them on f122 — inside "environment". That is the cut's
 //   idea stated twice: the hand only turns things out to be fake once it can
@@ -464,18 +582,29 @@ const C = { x: WALL.cx, y: WALL.cy };
 // ---------------------------------------------------------------------------
 // THE CAMERA. One monotone opening; see the CAMERA block above.
 // ---------------------------------------------------------------------------
-/** The zoom this cut resolves at. It was written as `CAM_WIDE.k * 1.08` and is
- *  PINNED to the number that produced: CAM_WIDE.k was 1.0 when this cut was
- *  approved and the module has since moved it to 1.15, which is not a free
- *  parameter here — the tip cap turns the resolved zoom into a BEAT. At 1.2425
- *  the wall is 422 screen px in radius, one revolution of the hand costs 60.7
- *  frames under the 44.2 px/frame cap, and the ring's last solid arc closes at
- *  f144: eleven frames AFTER the speech ends, instead of inside "environment".
- *  See ARITHMETIC THAT MATTERS. If the set wants this cut at the module's new
- *  CAM_WIDE, the hand's rate profile has to be re-solved with it. */
-const K_REST_TARGET = 1.08;
-/** Solved, not chosen: the smallest opening that puts the wall's BOTTOM edge
- *  off a 1920-tall frame whose ink centre is at screen 835, plus the sway. */
+/** The zoom this cut resolves at: THE SET'S WIDE, imported, not a number of this
+ *  cut's own. V2 had to pin it at 1.08 — the 45 screen px/frame tip ceiling made
+ *  the resolved zoom a BEAT rather than a framing choice, because at CAM_WIDE's
+ *  1.15 the wall is 391 screen px in radius, one revolution of the hand costs
+ *  2*pi*391/43.7 = 56 frames of pure turning, and the ring's last solid arc
+ *  closed at f134: after the speech ended, instead of inside "environment".
+ *  THE SHUTTER TRAIL BUYS IT BACK. `Gaze.trail` lifts the tip ceiling from 45 to
+ *  70, so the budget is re-solved (see TIP_CAP) and the cut now resolves at the
+ *  same wide as the rest of the set with the conversion still closing on f130,
+ *  the hand still wall-length on f69, and the five crossings still on their own
+ *  frames. Nothing else in the cut moved to pay for it. */
+const K_REST_TARGET = CAM_WIDE.k;
+/** The opening, as a MULTIPLE of the resolved zoom rather than an absolute — and
+ *  that is what carries the approved opening picture through the re-solve. Every
+ *  size in this cut is `worldPx(<a screen px constant>, K_REST)`, so k / K_REST
+ *  is what decides how big the mark, a stroke and a person are ON SCREEN: hold
+ *  the ratio and all three are exactly as delivered on every frame (the mark's
+ *  em box is 248 screen px at f0, 237 at f28, 218 at f40). What does change is
+ *  the WALL and the five people, whose positions are world px and therefore open
+ *  6.5% wider on screen with the camera. Both ways that is a gain: the wall only
+ *  goes further off the edges at the top of the cut (it needs k >= (1085 + the
+ *  sway)/340 = 3.27 to be off the bottom at all, and the opening is 3.956), and
+ *  the caption band's worst person falls from 27.1 px of ink to 9.1. */
 const K_RATIO_OPEN = 3.42;
 const K_OPEN = K_REST_TARGET * K_RATIO_OPEN;
 const span = (t: number) => K_REST_TARGET + (K_OPEN - K_REST_TARGET) * t;
@@ -544,7 +673,17 @@ const RING_R = PERSON_H_L * 0.66;
 // THE HAND. Its length and its angle are INTEGRATED under the tip cap, frame by
 // frame, rather than keyed — see ARITHMETIC THAT MATTERS.
 // ---------------------------------------------------------------------------
-const TIP_CAP = 44.2; // screen px/frame, under the set's 45 ceiling
+/** The tip's screen budget, per frame. V2 spent 44.2 under the set's bare-line
+ *  ceiling of 45; the shutter trail lifts that ceiling to 70, and 47.5 is what
+ *  the move to CAM_WIDE COSTS rather than the most the hand could now spend. It
+ *  is solved against the two frames that may not move: at 47.5 the hand is
+ *  wall-length on f69 and the ring's last solid arc closes on f130, and the five
+ *  crossings come back on f84 / f93 / f103 / f114 / f122 — the delivered cut's
+ *  own frames, to the frame. 46.5 closes at f131, 48.0 at f129. Measured over
+ *  the whole piece, camera and sway included, the tip peaks at 47.40 screen
+ *  px/frame at f89: 68% of the trail's ceiling, 6.5% over V2's speed, which is
+ *  exactly the 6.5% the picture grew by. */
+const TIP_CAP = 47.5; // screen px/frame; the trail's ceiling is 70
 /** The budget the hand's TIP is allowed on screen, per frame: the cap, less the
  *  most the camera's own sway can add to it on its own. */
 const SWAY_ALLOW = 0.5;
@@ -658,9 +797,27 @@ const F_CLOSE = (() => {
 // five things at once — the caption band, the opening frame, the crowd's hole,
 // its centre of mass, and the hand's own reach. See THE PLACEMENT, below.
 // ---------------------------------------------------------------------------
-/** The frames the hand crosses them, in order. */
+/** The frames the hand crossed them on the delivered cut, kept as the TARGET the
+ *  re-derived crossings below are checked against. */
 const CROSS_AT = [84, 93, 103, 114, 122];
-/** ...and how far out each one stands, in world px. */
+/** THE APPROVED PLACEMENT, FROZEN. Each of these was `HAND_A0 + thAt(CROSS_AT[i])`
+ *  on the delivered cut's angle track — the hand's own bearing on the frame it
+ *  crossed that person — and the whole crowd was solved that way. V3 re-solves
+ *  the track (a bigger tip budget at a wider camera), so recomputing the angles
+ *  would MOVE five approved people; the placement is approved as a picture and
+ *  is kept as screen positions relative to the wall (same angles, same r/wall),
+ *  which is what a frozen angle and an unchanged world radius are. Only the
+ *  CROSSINGS re-derive, from the new geometry, in `crossingOf` — and they come
+ *  back on the delivered frames. Absolute, in the SVG frame (y down). */
+const PERSON_A = [
+  8.882147316834, // 148.91 deg on screen, 90 = straight down
+  9.775626100204, // 200.10
+  10.878925614011, // 263.32
+  12.140749757906, // 335.61
+  13.075291248535, // 29.16
+];
+/** ...and how far out each one stands, in world px. The wall keeps its world
+ *  radius, so these are unchanged r/wall: 0.707 / 0.365 / 0.583 / 0.451 / 0.683. */
 const R_OF = [240.3, 124.2, 198.3, 153.5, 232.2];
 const REVEAL_F = 8; // frames a person takes to turn out to be a prop
 
@@ -683,12 +840,13 @@ const crossingOf = (a0: number, a: number, r: number) => {
 };
 
 /** THE PLACEMENT. Each person's angle IS the hand's angle on the frame it
- *  crosses them, so the whole crowd is a picture of the sweep; their radii are
- *  the five free numbers, and `R_OF` is what the solver returned. The crossing
- *  below is then re-derived from the geometry, not asserted: it is where the
- *  hand's line passes that angle while it is already long enough to reach. */
-const PEOPLE: Person[] = CROSS_AT.map((t, i) => {
-  const a = HAND_A0 + thAt(t);
+ *  crossed them when the crowd was solved, so the whole crowd is a picture of
+ *  the sweep; their radii are the five free numbers, and `R_OF` is what the
+ *  solver returned. The crossing is then re-derived from the geometry, not
+ *  asserted: it is where the hand's line passes that angle while it is already
+ *  long enough to reach — which is why this survives the V3 re-solve without the
+ *  people moving. */
+const PEOPLE: Person[] = PERSON_A.map((a, i) => {
   const r = R_OF[i];
   return {
     i,
@@ -778,13 +936,31 @@ const TONE_F0 = 30;
 const TONE_F1 = 42;
 const SWELL_F0 = 28;
 const SWELL_F1 = 42;
-const SWELL_FROM = 0.84;
-const OVERSHOOT = 0.05;
+/** V3: 0.84 -> 0.78, and the overshoot 5% -> 8%. THE LIGHT-UP GOT WEAKER WHEN
+ *  THE MODEL BECAME A LINE-ART LOGO: a deep -> ripe tone ramp on a solid disc
+ *  changes the colour of a 42 px-wide area, and the same ramp on the OpenAI
+ *  blossom changes the colour of six arms about a twelfth of the box each, with
+ *  the grid showing through the counters between them. The tone ramp is right
+ *  and stays exactly as it was (f30 -> f42, ripe three frames before "smart"
+ *  ends); what carries the landing instead is SIZE, which a line-art mark reads
+ *  as well as a disc does. The mark's em box now goes 185 screen px at f28 ->
+ *  230 at f40 (V2: 199 -> 225) — a 24% step on screen where it was 13%, and
+ *  against a camera that takes 8% off the mark across those same twelve frames.
+ *  At the 270-px reading test it is 46 px -> 57 (V2: 50 -> 56).
+ *  It is still ONE eased swell: the base ramp lands at f42 and the overshoot's
+ *  half-sine is 8.0% at its peak (f42-43) and back to zero at f50, after which
+ *  the mark never changes size again for the rest of the cut. */
+const SWELL_FROM = 0.78;
+const OVERSHOOT = 0.08;
+/** The overshoot's window: f35 ("smart") to f50, so it is settled on the frame
+ *  "clever" starts and the two landings do not overlap. */
+const OVER_F0 = 35;
+const OVER_SPAN = 15;
 
 const modelTone = (f: number) => smoothstep(clamp01((f - TONE_F0) / (TONE_F1 - TONE_F0)));
 const modelScale = (f: number) => {
   const base = lerp(SWELL_FROM, 1, smoothstep(clamp01((f - SWELL_F0) / (SWELL_F1 - SWELL_F0))));
-  const over = OVERSHOOT * Math.sin(Math.PI * clamp01((f - 35) / 16));
+  const over = OVERSHOOT * Math.sin(Math.PI * clamp01((f - OVER_F0) / OVER_SPAN));
   return MODEL_SCALE * (base + over);
 };
 
@@ -918,6 +1094,14 @@ const FakeTestEnvironment: React.FC<Props> = ({
                 length={handLen}
                 gap={GAZE_GAP}
                 width={GAZE_W}
+                // THE SHUTTER TRAIL, off the hand's OWN pose functions, so the
+                // wedge cannot drift from the line it belongs to: one flat accent
+                // sector from the pose half a frame ago to this one, under the
+                // line. It is what lets the tip run at 47.4 screen px/frame
+                // instead of 44.2 without the line strobing into two lines. Below
+                // `TRAIL_MIN_DEG` of travel the module draws nothing at all, so
+                // the wedge thins out through the tail on its own.
+                trail={gazeTrail(handAngle, lenAt, frame)}
               />
             ) : null}
           </svg>

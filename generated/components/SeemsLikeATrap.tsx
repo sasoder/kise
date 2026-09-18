@@ -25,6 +25,8 @@ import {
   ANG_MID,
   CAM_WIDE,
   EVALUATOR,
+  EYE,
+  EYE_R,
   FOLDER,
   FOLDER_R,
   GAZE_LEN,
@@ -45,6 +47,7 @@ import {
   camKnots3,
   lerp,
   runCam3,
+  wireEnds,
 } from "./trapShared";
 
 export const FPS = 24;
@@ -67,6 +70,24 @@ export const FPS = 24;
 export const DURATION = 154;
 
 // ---------------------------------------------------------------------------
+// V3 — TWO CHANGES, AND ONLY TWO, ON THE DIRECTOR'S NOTES.
+//  (1) "HUH" GETS A HEAD TILT. The 20 world px recoil was sized against the 42 px
+//      dot; on the 72 px mark it is a third of its own width and the clip's one
+//      character beat underplayed. The recoil is UNCHANGED (cut 5 opens on it and
+//      releases it) and the mark now cocks its head with it: 0 -> +13 deg
+//      clockwise, toward the folder, eased over f94-102, held through "this seems
+//      like a" while the needle lifts and the wire runs, eased back upright over
+//      f112-122 as the wire lands on "trap". One ramp on, one ramp off.
+//  (2) THE WIRE ENDS AT A WATCHING EYE. It used to run to the evaluator's feet;
+//      it now ends on the ring of `trapShared.EYE` — a station with lucide `eye`
+//      in it, standing between the evaluator and the wall — and that ring is
+//      DRAWN BY THE WIRE'S OWN HEAD when it arrives on "trap" (f117), wiping
+//      outward from the point of contact, the eye stroking on inside it by f128.
+//      The path is 457 -> 293.3 world px, so the reveal STARTS LATER rather than
+//      running slower: the solver puts its f0 at 106 instead of 100 and the head
+//      still lands on "trap" (worst frame 34.6 screen px, cap 42). The evaluator,
+//      the camera, every beat and the DURATION are untouched.
+//
 // V2 — TWO CHANGES, AND ONLY TWO. (1) THE MODEL IS THE OPENAI MARK, not a dot:
 // `trapShared.ModelDot` now draws `brandGlyphs.OPENAI` filled, on a 72 screen px
 // em box (MODEL_MARK_PX), in the same two-tone orange on the FILL. This is an
@@ -83,9 +104,10 @@ export const DURATION = 154;
 //
 // SOUND-OFF READING TEST — one sentence:
 //   "the model's needle swings off the middle and lands on the folder; it reads
-//    the key and pulls back; a wire is hanging off that folder, and when it runs
-//    up and out through the wall the camera goes with it and finds a person
-//    standing outside, watching — and the folder turns dashed, like the wall."
+//    the key, pulls back and cocks its head at it; a wire is hanging off that
+//    folder, and when it runs up and out through the wall the camera goes with
+//    it and finds an EYE at the end of it, with a person standing over it,
+//    watching — and the folder turns dashed, like the wall."
 //
 // VOCABULARY — `trapShared`'s, unchanged. DASHED = fake, SOLID = real. Accent
 // is the model and its attention and NOTHING else; the wire and its packets are
@@ -128,30 +150,39 @@ export const DURATION = 154;
 //                                 favour the dot-folder pair (k 1.49 by f51,
 //                                 1.556 by f77, landing on "answer" f51's
 //                                 neighbourhood and holding through "folder").
-//  5. f94-102 "and they're like:  THE RECOIL. The f94 packet stops 38% of the
-//             HUH" (f88/f91/f97)  way out and drains back to the model, home by
-//                                 f101. The model backs off 20 world px (30
-//                                 screen px where it happens, 24 on "trap": a
-//                                 third of the mark's own width) along the
-//                                 needle's own line, on one
+//  5. f94-102 "and they're like:  THE RECOIL, AND THE HEAD TILT. The f94 packet
+//             HUH" (f88/f91/f97)  stops 38% of the way out and drains back to the
+//                                 model, home by f101. The model backs off 20
+//                                 world px (30 screen px where it happens, 24 on
+//                                 "trap") along the needle's own line, on one
 //                                 eased ramp, and holds its breath (the 5%
-//                                 breath is damped to 1% over f94-116). The
+//                                 breath is damped to 1% over f94-116). WITH IT
+//                                 (V3) the mark tilts 13 deg clockwise, toward
+//                                 the folder: a head cocked at the thing. The
 //                                 work thread is anchored to the model, so the
 //                                 whole attention structure flinches with it.
-//                                 No bounce, no flash.
+//                                 No bounce, no flash, no wobble.
 //  6. f96-108 (continues 5)       THE NEEDLE LIFTS. Its tip comes off the ring
 //                                 and tilts UP to the ring's upper-left, onto
 //                                 the point the wire is attached at — it has
 //                                 noticed something hanging off the folder.
-//  7. f100-117 "this seems like   THE ONE BIG MOVE. A white SOLID wire reveals
-//             a TRAP" (f103/      out of that point, its head running up and out
-//              f107/f111/f117)    THROUGH the dashed wall (it crosses the wall
-//                                 at f106) and on to the evaluator's feet,
-//                                 landing on "trap" (f117). Speed-capped against
-//                                 the camera at 42 screen px/frame (worst frame
-//                                 measured 37.0), tapered so the head
-//                                 decelerates into the feet.
-//  8. f102-112 (caused by 7)      THE FOLDER IS BAIT. Keyed on the wire's own
+//  7. f106-117 "seems like a      THE ONE BIG MOVE. A white SOLID wire reveals
+//             TRAP" (f107/f111/   out of that point, its head running up and out
+//              f115/f117)         THROUGH the dashed wall (it crosses the wall
+//                                 at f112) and on to the WATCHING EYE, landing
+//                                 on "trap" (f117). Speed-capped against the
+//                                 camera at 42 screen px/frame (worst frame
+//                                 measured 34.6), tapered so the head
+//                                 decelerates into the ring.
+//  7b. f117-128 (caused by 7)     THE EYE. The ring wipes outward from the exact
+//             "trap"              point the head touched, both ways at once, and
+//                                 the eye strokes on inside it over the ring's
+//                                 last 45% — the module's own ring-then-glyph
+//                                 relationship, so it is built like every other
+//                                 station in the clip. The wire was a line to
+//                                 nothing until its head arrived; the thing at
+//                                 the end of it is what makes it a trap.
+//  8. f107-112 (caused by 7)      THE FOLDER IS BAIT. Keyed on the wire's own
 //                                 progress, the folder ring's stroke opens into
 //                                 dashes and starts marching — it is made of the
 //                                 same stuff as the wall. Completed before
@@ -164,21 +195,22 @@ export const DURATION = 154;
 //                                 feet cross the top edge at f105 and they stand
 //                                 fully in frame from f113, four frames before
 //                                 the head reaches them. The whole staged
-//                                 enclosure and the watcher above it are in one
-//                                 frame: that is the trap.
+//                                 enclosure, the eye and the watcher above it
+//                                 are in one frame: that is the trap.
 // 10. f106-128 (with 7 and 9)     THE NEEDLE FOLLOWS THE HEAD. The gaze angle
 //                                 blends off the wire's root onto the head
 //                                 itself and goes three quarters of the way to
-//                                 it (-69.4 -> -84.0 deg), shortening 205 ->
+//                                 it (-70.2 -> -83.2 deg), shortening 205 ->
 //                                 150 world px as it does: it becomes a hand
 //                                 leaning into the wire, not a second wire
 //                                 beside it, and the payoff is left to the
-//                                 wire, the pull-back and the person.
+//                                 wire, the pull-back, the eye and the person.
 // 11. f117-153 "trap" + tail      THE REPORT LINE. White packets leave the
 //                                 wire's root every 16 frames from the frame the
-//                                 head lands, and climb to the evaluator: the
-//                                 folder reports. The needle settles slowly back
-//                                 onto the wire's root (-84.0 -> -69.4 deg)
+//                                 head lands, and climb to the EYE, where they
+//                                 stop: the folder reports, and the eye reads it.
+//                                 The needle settles slowly back
+//                                 onto the wire's root (-83.2 -> -70.2 deg)
 //                                 across f128-152, the wall and folder dashes
 //                                 march, the work thread still shuttles, the
 //                                 model breathes again and the camera keeps
@@ -186,12 +218,17 @@ export const DURATION = 154;
 //                                 still moving.
 //
 // LIVENESS — mechanisms, not gestures, so no window of the piece is still: the
-// wall's 680 dashes and (from f102) the folder's march 0.6 screen px/frame; the
+// wall's 680 dashes and (from f107) the folder's march 0.6 screen px/frame; the
 // work thread's packet, out and back, every 16 frames, from f0 to the last
 // frame; the gaze packet f46-100 and the wire packets f117-153; the model's
 // breath; the needle's own 0.8 deg hover sine while it rests on the ring and its
 // 24-frame settle in the tail; the grid's parallax and -0.3 px/frame drift; and
-// a camera that is moving on f0 and still moving on f153.
+// a camera that is moving on f0 and still moving on f153. The wire is 36%
+// shorter than it was, so a bead crosses it in 11.3 frames against the 16-frame
+// launch period and the line is empty for four frames twice in the tail (f129-32
+// and f145-48) where V2 always had one bead on it; the eye is still drawing on
+// through the first of those, the needle is settling through both, and the
+// period is left at the piece's one rhythm rather than re-cut for occupancy.
 //
 // ---------------------------------------------------------------------------
 // CAMERA — knots on ONE monotone cubic Hermite (`camKnots3`, Fritsch-Carlson,
@@ -259,10 +296,12 @@ export const DURATION = 154;
 //    time the head is 48% of the way out (f108, two frames after it leaves the
 //    wall).
 //
-//  * THE WIRE LEAVES ON f100, NOT f103. It is what the needle noticed at f97,
-//    so the reveal leads the words by three frames, and it has to: 457 world px
-//    under the 42 screen px/frame cap needs 17 frames to land on "trap" (f117),
-//    and from f103 the head would have to run at 56 screen px/frame.
+//  * THE WIRE LEAVES ON f106 (V3; it was f100 when it ran 457 world px to the
+//    feet). Its f0 is SOLVED, not chosen: the integrator walks the start frame
+//    back from f115 until the head can still reach the eye by "trap" under the
+//    42 screen px/frame cap, so a shorter path starts LATER rather than running
+//    slower. 293.3 world px needs 11 frames; the worst head frame is 34.6 screen
+//    px (f107, the camera is pulling back under it) against V2's 37.0.
 //
 //  * THE WIRE'S PACKETS ARE DRAWN HERE. `Wire`'s own are phased on frame 0 with
 //    a fixed 16-frame period, and its travel time (17.6 frames) is longer than
@@ -276,9 +315,15 @@ export const DURATION = 154;
 //
 //  * THE RESOLVED FRAME IS `STATE_END_CUT4`, and that constant now says so: it
 //    carries this cut's folderDashed 1, the model's 20 world px recoil down the
-//    folder bearing (offset -9.50, +17.60), the short needle (150 world px) lying
-//    on the wire's root at -69.4 deg and the key's bob stopped — not cut 3's
-//    ANG_MID at GAZE_LEN. Cut 5 opens on it.
+//    folder bearing (offset -9.50, +17.60) with the tilt eased back out, the
+//    short needle (150 world px) lying on the wire's root, the wire landed on the
+//    EYE (`wireToEye: true`) and the eye drawn (`eye: 1`), and the key's bob
+//    stopped — not cut 3's ANG_MID at GAZE_LEN. The needle's rest angle is
+//    -70.24 deg, which is the root's own bearing taken off `wireEnds(true)`
+//    rather than a written-down number (V2's was -69.4, aimed at the old root
+//    5.0 world px round the folder ring). Cut 5 opens on it, and its own
+//    `GAZE_START_ANG` still says -69.4: 0.84 deg of needle, which is cut 5's to
+//    re-read, not this cut's to reach into.
 //
 // Everything measured is in STATS at the bottom and quoted in the report.
 // ---------------------------------------------------------------------------
@@ -427,14 +472,16 @@ const screenAt = (f: number, wx: number, wy: number) => {
 // decelerates into the feet instead of stopping dead. The START frame is SOLVED:
 // the latest frame from which that integral still lands on "trap" (f117).
 // ---------------------------------------------------------------------------
-const ANG_WIRE = angleTo(FOLDER, EVALUATOR);
+/** V3: the wire's two ends come from the module (`wireEnds(true)`), so this cut
+ *  and cut 5, which inherits the landed wire, cannot disagree about them. The
+ *  root is still the folder ring's edge — on the EYE's bearing now, 5.3 deg off
+ *  the evaluator's, which moves it 5.0 world px round the ring — and the end is
+ *  the eye ring's edge nearest the folder. */
+const WIRE_ENDS = wireEnds(true);
 /** Where the wire is attached to the folder ring — the point the needle lifts
  *  onto, and the root every white packet leaves from. */
-const WIRE_A = {
-  x: FOLDER.x + Math.cos(ANG_WIRE) * FOLDER_R,
-  y: FOLDER.y + Math.sin(ANG_WIRE) * FOLDER_R,
-};
-const WIRE_B = { x: EVALUATOR.x, y: EVALUATOR.y + PERSON_H * 0.42 };
+const WIRE_A = WIRE_ENDS.a;
+const WIRE_B = WIRE_ENDS.b;
 const WIRE_LEN = Math.hypot(WIRE_B.x - WIRE_A.x, WIRE_B.y - WIRE_A.y);
 
 const WIRE_LAND = 117; // "trap"
@@ -510,13 +557,44 @@ const modelAt = (f: number) => {
   const o = modelOffset(f);
   return { x: MODEL_HOME.x + o.x, y: MODEL_HOME.y + o.y };
 };
+// ---------------------------------------------------------------------------
+// THE HEAD TILT (V3). The recoil was sized against a 42 px dot; on the 72 px
+// OpenAI mark 20 world px is barely a third of its own width, and "huh" is the
+// one character beat in the clip. The recoil STAYS (cut 5 opens on it and
+// releases it) and the mark now COCKS ITS HEAD with it: one eased tilt toward
+// the folder — the thing it is suspicious of — held through "this seems like a"
+// while the needle lifts and the wire runs, and one eased return that lands it
+// upright as the wire lands on "trap".
+//
+// Clockwise is toward the folder (the folder is up and to the RIGHT of the
+// model, so tipping the mark's top edge that way is a head cocked at it).
+// 13 deg moves the mark's own rim 6.3 world px, i.e. 9.4 screen px at the
+// framing it happens in, at 1.6 deg (1.2 screen px) a frame: nowhere near a
+// strobe, and it reads because the blossom is a shape with arms and not a disc.
+// One ramp on, one ramp off. No wobble, no bounce, no overshoot.
+// ---------------------------------------------------------------------------
+// Director's pass: 13 deg was invisible on a near-6-fold-symmetric blossom (a
+// small turn is not a pose). 26 deg reads as a TURN while it happens, and a
+// 10 % flinch in scale on the same ramps carries the beat once it is held.
+const TILT_DEG = 26;
+const FLINCH = 0.1;
+const TILT_F0 = 94; // with the recoil
+const TILT_F1 = 102;
+const TILT_BACK_F0 = 112; // as the wire's head runs out
+const TILT_BACK_F1 = 122; // upright, so cut 5's open is unchanged
+const tiltAt = (f: number) =>
+  TILT_DEG *
+  (smoothstep(clamp01((f - TILT_F0) / (TILT_F1 - TILT_F0))) -
+    smoothstep(clamp01((f - TILT_BACK_F0) / (TILT_BACK_F1 - TILT_BACK_F0))));
+
 /** 1 normally; against the breath while the model holds it. */
 const modelScaleAt = (f: number) => {
   const hold =
     HOLD_AMT *
     smoothstep(clamp01((f - HOLD_F0) / 5)) *
     (1 - smoothstep(clamp01((f - HOLD_F1) / 10)));
-  return lerp(1, 1 / breath(f, MODEL_SEED), hold);
+  const flinch = 1 - (FLINCH * tiltAt(f)) / TILT_DEG;
+  return lerp(1, 1 / breath(f, MODEL_SEED), hold) * flinch;
 };
 
 // ---------------------------------------------------------------------------
@@ -635,7 +713,7 @@ const gazePackets = (f: number) => {
 // shared `Wire`, whose packet phase is tied to frame 0: switching that on at
 // f117 pops a packet into existence in the middle of the line.)
 // ---------------------------------------------------------------------------
-const WP_PERIOD = 16;
+const WP_PERIOD = 11; // the wire to the eye is short: 16 left it empty for 4 f twice in the tail
 const WP_SPEED = 26;
 const WP_TRAVEL = WIRE_LEN / WP_SPEED;
 /** Every other packet in the clip is PACKET_R_PX of SCREEN at CAM_CLOSE, which
@@ -644,6 +722,21 @@ const WP_TRAVEL = WIRE_LEN / WP_SPEED;
  *  module's `WIRE_PACKET_R`, which `Wire` itself now uses, so a bead on the wire
  *  is the same size here as it is in cut 5. */
 const WP_R = WIRE_PACKET_R;
+
+// ---------------------------------------------------------------------------
+// THE WATCHING EYE (V3). The wire no longer runs to the evaluator's feet: it
+// ends on a station ring with lucide `eye` in it, standing between them and the
+// wall (`trapShared.EYE`). The trap is a line to something watching, and the
+// person above it is who the eye belongs to.
+//
+// It is DRAWN BY THE WIRE, not by a timer: the ring wipes outward from the exact
+// point the head touches it, starting on the frame the head lands (WIRE_LAND,
+// "trap"), and the eye strokes on inside it over the ring's last 45% — the
+// module's own ring-then-glyph relationship, so this station is built like every
+// other one in the clip. Finished at f128, inside "trap".
+// ---------------------------------------------------------------------------
+const EYE_DUR = 11; // f117 -> f128
+const eyeDraw = (f: number) => smoothstep(clamp01((f - WIRE_LAND) / EYE_DUR));
 
 const wirePackets = (f: number) => {
   const out: number[] = [];
@@ -685,9 +778,13 @@ const stateAt = (frame: number): TableauState => {
     gazeLength: g.length,
     wire: wireProgress(frame),
     wirePackets: false, // this cut draws them, see wirePackets()
+    wireToEye: true, // V3: it ends on the watching eye's ring
+    // ...which the wire's own head draws on when it gets there
+    eye: eyeDraw(frame),
     modelTone: 1, // cut 3 left it lit, and it never stops thinking
     modelOffset: modelOffset(frame),
     modelScale: modelScaleAt(frame),
+    modelRotate: tiltAt(frame), // the head cocked at the folder on "huh"
     evaluatorOpacity: 1, // never faded in: the pull-back finds them
   };
 };
@@ -882,6 +979,10 @@ export const STATS = {
         Number(screenAt(f, EVALUATOR.x, EV_INK_TOP).y.toFixed(0)),
         Number(screenAt(f, EVALUATOR.x, EV_INK_BOTTOM).y.toFixed(0)),
       ],
+      eyeY: [
+        Number(screenAt(f, EYE.x, EYE.y - EYE_R - STROKE_W / 2).y.toFixed(0)),
+        Number(screenAt(f, EYE.x, EYE.y + EYE_R + STROKE_W / 2).y.toFixed(0)),
+      ],
       model: [
         Number(screenAt(f, modelAt(f).x, modelAt(f).y).x.toFixed(0)),
         Number(screenAt(f, modelAt(f).x, modelAt(f).y).y.toFixed(0)),
@@ -933,6 +1034,46 @@ export const STATS = {
       progressAt: [100, 105, 110, 114, 117].map((f) => [f, Number(wireProgress(f).toFixed(3))]),
     };
   })(),
+
+  /** THE HEAD TILT, in degrees clockwise about the mark's own centre, and the
+   *  worst screen speed of a point on the mark's rim while it turns. */
+  tilt: {
+    deg: [90, 94, 98, 102, 110, 112, 117, 122, 130, LAST].map((f) => [
+      f,
+      Number(tiltAt(f).toFixed(2)),
+    ]),
+    maxRimScreenSpeed: (() => {
+      let worst = { f: -1, v: 0 };
+      for (let f = TILT_F0; f <= TILT_BACK_F1; f++) {
+        const d = Math.abs(tiltAt(f) - tiltAt(f - 1)) * DEG;
+        const v = d * (MODEL_MARK / 2) * kAt(f);
+        if (v > worst.v) worst = { f, v };
+      }
+      return [worst.f, Number(worst.v.toFixed(2))];
+    })(),
+  },
+
+  /** THE WATCHING EYE: where it stands, what it clears, and when it draws. */
+  eye: {
+    at: [EYE.x, EYE.y],
+    rWorld: Number(EYE_R.toFixed(2)),
+    /** world px of air between the evaluator's ink and the ring's top, and
+     *  between the ring's bottom and the wall's outer edge (the brief asks for
+     *  >= 30 and >= 60) */
+    feetToRing: Number((EYE.y - EYE_R - STROKE_W / 2 - EV_INK_BOTTOM).toFixed(1)),
+    ringToWall: Number((WALL.cy - WALL.r - STROKE_W / 2 - (EYE.y + EYE_R + STROKE_W / 2)).toFixed(1)),
+    drawAt: [117, 120, 123, 126, 128, 130].map((f) => [f, Number(eyeDraw(f).toFixed(3))]),
+    /** the ring on screen at the resolved frame: centre, radius, and its top */
+    onScreenAtLast: (() => {
+      const c = screenAt(LAST, EYE.x, EYE.y);
+      return {
+        centre: [Number(c.x.toFixed(0)), Number(c.y.toFixed(0))],
+        rPx: Number((EYE_R * kAt(LAST)).toFixed(1)),
+        top: Number((c.y - (EYE_R + STROKE_W / 2) * kAt(LAST)).toFixed(0)),
+        bottom: Number((c.y + (EYE_R + STROKE_W / 2) * kAt(LAST)).toFixed(0)),
+      };
+    })(),
+  },
 
   /** The folder ring's conversion, keyed on the wire and not on a timer. */
   folderDashedAt: [100, 104, 108, 112, 117].map((f) => [
