@@ -82,7 +82,8 @@ export const DURATION = 140;
 //   MIDDLE COURSE  4 panels             -> 772 wide, x 154.. 926, y 1080.90.. 1168.90
 //   BOTTOM COURSE  5 panels             -> 968 wide, x  56..1024, y 1180.90.. 1268.90
 //   Running bond: each course sits on the joints of the one below it.
-//   RULE      x 40..1040, 6 px, top edge 8 px under the bottom course: 1276.90
+//   RULE      x 56..1024 (the footing's own width), 6 px, top edge 8 px under
+//             the bottom course: 1276.90
 //   "SOLAR"   900 / 56 / 0.06em, cap-top 1306.90, baseline (ink bottom) 1346.10
 //   TOWER     7 slabs 360 x 56 with 10 px gaps = 452 tall, x 360..720,
 //             foot on the top course's top, core top 528.90
@@ -154,60 +155,82 @@ export const DURATION = 140;
 // CAM_STIFF / CAM_DAMP), keyed k AND keyed content centre through `camMove`,
 // so a re-centring and a zoom are one move and never two. cx stays 540: this
 // cut is symmetric, so it only ever tilts and zooms.
-//   OPEN  f0      k 1.35, centre C_FOOT. The rule already runs edge to edge
-//                 and the silhouette is 400 px wide inside it.
-//   PULL  f1-18   k 1.35 -> 1.00, centre held, warp 0.8. The silhouette's
+//   OPEN  f0      k 1.35, centre C_FOOT. The rule runs off both edges and the
+//                 silhouette is 600 px wide inside it.
+//   PULL  f1-18   k 1.35 -> 0.89, centre held, warp 0.8. The silhouette's
 //                 front is running for the frame edge and the camera has to
-//                 pull back to hold it. The gate binds at f22, where the
-//                 outline is at its full width and the margin is 43.7 px.
+//                 pull back past it. It lands wide: from f22 there is over
+//                 96 px of paper outside every piece of ink.
 //                                                — "a lot of opportunity"
-//   CREEP f60-88  k 1.00 -> 1.02, centre held, warp 1.0. The held breath
-//                 under "be the foundation".
-//   RISE  f88-102 k 1.02 -> 1.00, centre C_FOOT -> 835, warp 0.7. The camera
+//   CREEP f60-88  k 0.89 -> 0.904, centre held, warp 1.0. The held breath
+//                 under "be the foundation", and the tightest the frame gets
+//                 after the pull: 97.4 px of margin at f90.
+//   RISE  f88-102 k 0.904 -> 0.89, centre C_FOOT -> 835, warp 0.7. The camera
 //                 goes up WITH the tower and lands on the whole block.
-//   TAIL  f112-140 k 1.00 -> 1.025, centre held. Never parked.
+//   TAIL  f112-140 k 0.89 -> 0.904, centre held. Never parked.
 //
 //   THE DAMPED NUMBERS, what `runCamera2` actually produces:
 //     f    k        cy         centre     vk        vcy
 //     0    1.3500   1256.09    1163.50     0.0000     0.00
-//     14   1.1331   1274.37    1164.06    -0.0246     2.37
-//     30   0.9999   1288.50    1163.49    -0.0002     0.03
-//     40   0.9999   1288.51    1163.50     0.0000    -0.00
-//     48   1.0000   1288.50    1163.50     0.0000    -0.00   "solar" lands still
-//     60   1.0000   1288.50    1163.50    -0.0000     0.00
-//     80   1.0119   1287.04    1163.50     0.0010    -0.12
-//     88   1.0183   1286.26    1163.50     0.0005    -0.07
-//     96   1.0122   1160.53    1037.04    -0.0016   -26.45   the fast middle
-//     108  1.0004    966.90     841.96    -0.0002    -3.65
-//     112  1.0000    960.67     835.68    -0.0000    -0.75   "AI" lands still
-//     124  1.0052    959.29     834.94     0.0010    -0.10
-//     139  1.0222    957.29     835.00     0.0008    -0.10
-//   max |dv| per channel: k 0.00363, cy 4.628 (max |v| k 0.0256, cy 27.00).
+//     14   1.0650   1282.02    1164.65    -0.0324     3.53
+//     30   0.8899   1303.94    1163.48    -0.0003     0.05
+//     40   0.8899   1303.96    1163.50     0.0000    -0.00
+//     48   0.8900   1303.95    1163.50     0.0000    -0.00   "solar" lands still
+//     60   0.8900   1303.95    1163.50    -0.0000     0.00
+//     80   0.8983   1302.65    1163.50     0.0007    -0.11
+//     88   0.9028   1301.96    1163.50     0.0004    -0.06
+//     96   0.8986   1176.16    1037.04    -0.0011   -26.48   the fast middle
+//     108  0.8903    982.36     841.96    -0.0002    -3.65
+//     112  0.8900    976.12     835.68    -0.0000    -0.75   "AI" lands still
+//     124  0.8929    974.93     834.94     0.0005    -0.06
+//     139  0.9024    973.52     835.00     0.0004    -0.07
+//   max |dv| per channel: k 0.00477, cy 4.633 (max |v| k 0.0336, cy 27.02).
 //   One acceleration lobe and one settle lobe per move: the pull's whole k
-//   reversal is 3.1e-5 and the rise's cy reversal is 0. At f112 the camera is
+//   reversal is 4.1e-5 and the rise's cy reversal is 0. At f112 the camera is
 //   moving 0.75 world px — 0.23% of the rise — so "AI" lands in a still frame.
 //
 //   THE ASSERTIONS, every frame 0..139, with the sway and the drift in:
-//     * the wipe/fill front to the frame edge: worst 41.2 px at f21, where the
-//       silhouette has just reached its full width and the camera has just
-//       finished opening. Gate 40.
-//     * the lowest white ink on screen: worst 1353.0 px at f139. Gate 1400 —
-//       the captions live below that line.
-//     * the highest white ink on screen: worst 308.2 px at f139. Nothing is
+//     * SIDE PADDING, f26 to the end, measured on EVERY piece of ink — the
+//       cells, the silhouette's stroke, the rule, and all four hard shadows:
+//       worst 97.4 px at f90 (right), and 102.7 px at f26. Gate 96. The
+//       binding item is the bottom course's right-hand cell shadow at x 1028
+//       against the creep's own peak k.
+//     * SIDE PADDING, f0-25, on the moving front: worst 79.8 px at f17. Gate
+//       60. The rule is the one exception and it is a sweep, not a park: it is
+//       968 px wide, so at the opening k 1.35 it runs off BOTH edges, crosses
+//       back into frame at f13 and passes 60 px at f17 and 96 px at f22. No
+//       camera that opens at 1.35 can do otherwise.
+//     * the lowest white ink on screen: worst 1292.4 px at f139 (v2: 1353.0).
+//       Gate 1400 — the captions live below that line.
+//     * the highest white ink on screen: worst 369.9 px at f139. Nothing is
 //       ever cut by the top edge.
-//     * the paper: max 0.8824 of source, margins 323.5 / 551.8 px.
+//     * the paper: max 0.8824 of source at the opening k, 0.7722 at rest —
+//       never upscaled — and its margins never fall below 295.0 px sideways
+//       or 499.1 px vertically, so no edge of the photograph can show.
+//
+// V2b — THE SIDE PADDING PASS, camera only, geometry untouched. On the user's
+// note that the footing and the rule were almost touching the frame edge:
+// every resting k comes down from 1.00-1.025 to 0.89-0.904 and the rule is
+// shortened to the footing's own 56..1024. Nothing else moved: the same
+// content centres, the same key frames, the same gestures, the same block
+// centred on 835. The picture is 11% smaller on screen and carries 97-112 px
+// of paper on both sides for the whole second half.
 //
 // DEVIATIONS from the brief, and why.
-//   * THE PULL IS f1-18, NOT f10-40, and it goes to k 1.00, not 1.08. The
-//     brief's own 40 px gate decides it: a 968 px footing on a 1080 px frame
-//     needs k <= 500/487 = 1.0267 the moment the outline is open, and the
-//     inOut-cubic wipe is at 98% of its width by f22. A damped tracker has to
-//     lead that by about eight frames, so the keys end at f18 and the camera
-//     is at k 1.014 when the gate binds. It costs smoothness — max |dv| on k
-//     is 0.00363 against v1's 0.00145 — and it buys the whole first act.
-//   * THE CREEP IS 1.00 -> 1.02 AND THE TAIL 1.00 -> 1.025, not 1.10. Same
-//     gate: at k 1.08 the outer panels sit 14 px off the frame edge, at 1.10
-//     they sit 4 px off.
+//   * THE RESTING k IS 0.89 AND THE CREEPS LAND ON 0.904, not 0.90 / 0.915 /
+//     0.92. 96 px outside the cell shadow at x 1028 needs k <= 0.9043, so
+//     0.915 and 0.92 would sit 5 and 8 px inside the gate. Holding the creep
+//     peaks at 0.904 and dropping the rest to 0.89 keeps the creep's
+//     amplitude at 0.014 of k — a creep the eye can find — where keeping the
+//     rest at 0.90 would have left 0.004, which is a parked camera.
+//   * THE PULL IS f1-18, NOT f10-40, and it goes to k 0.89, not 1.08. The
+//     side gate decides it: the inOut-cubic wipe is at 98% of its width by
+//     f22, and a damped tracker has to lead that by about eight frames, so
+//     the keys end at f18. It costs smoothness — max |dv| on k is 0.00477
+//     against v1's 0.00145 — and it buys the whole first act.
+//   * THE CREEPS ARE 0.014 OF k, not the brief's 0.10. At k 1.08 the outer
+//     panels would sit 14 px off the frame edge and at 1.10 4 px off; the
+//     whole point of this pass is the opposite.
 //   * THE RISE'S KEYS END AT f102, NOT f108. The centre travels 328.5 px in
 //     this move; with keys to f108 the damper is still moving 3.6 px/frame at
 //     f112 and "AI" lands in a travelling frame. At f102 it is moving 0.75.
@@ -298,8 +321,11 @@ export const COURSE_W = COURSE_PANELS.map((n) => n * PANEL_W + (n - 1) * PANEL_G
 export const COURSE_X0 = COURSE_W.map((w) => CENTRE_X - w / 2); // 252 154 56
 export const COURSE_X1 = COURSE_W.map((w) => CENTRE_X + w / 2); // 828 926 1024
 
-export const RULE_X0 = 40;
-export const RULE_X1 = 1040;
+// V2b: the rule spans the footing's OWN width rather than running past it, so
+// it reads as the ground the footing stands on instead of a line heading for
+// the frame edge — and its ends are what the new side gate is measured on.
+export const RULE_X0 = 56;
+export const RULE_X1 = 1024;
 export const RULE_W = 6;
 export const RULE_GAP = 8; // the rule stands clear of the bottom course
 export const LABEL_DROP = 24; // "SOLAR" cap-top below the rule's bottom
@@ -373,11 +399,19 @@ export const AI_RISE = 60;
 const EASE_LAND = Easing.bezier(0.16, 1, 0.3, 1);
 
 // -- the camera --------------------------------------------------------------
+// V2b, on the user's note that the footing and the rule were almost touching
+// the frame edge: every k that was 1.00-1.025 comes down to 0.89-0.904. The
+// gate is now 96 screen px of paper outside EVERY piece of ink, the rule and
+// every hard shadow included, from the frame the wipe is open (f26) to the
+// end. The binding item is the bottom course's right-hand cell shadow at
+// x 1028: 540 - 491k >= 96 needs k <= 0.9043, so the creeps land on 0.904 and
+// the rest sits at 0.89 — which keeps a creep you can see (0.014 of k) rather
+// than the 0.004 that a 0.90 rest would have allowed.
 export const K_OPEN = 1.35;
-export const K_WIDE = 1.0;
-export const K_CREEP = 1.02; // the gate: 40 screen px on a front at x 1024 needs k <= 1.0267
-export const K_REST = 1.0;
-export const K_TAIL = 1.025;
+export const K_WIDE = 0.89;
+export const K_CREEP = 0.904;
+export const K_REST = 0.89;
+export const K_TAIL = 0.904;
 export const PULL_F0 = 1;
 export const PULL_F1 = 18; // the damper has to lead the wipe by about eight frames
 export const PULL_WARP = 0.8;
