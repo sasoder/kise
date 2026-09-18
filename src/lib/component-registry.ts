@@ -51,4 +51,20 @@ export const registry: ComponentEntry[] = [
       "caption",
     ],
   },
+  {
+    name: "NameTagCoreMemory",
+    path: "generated/components/NameTagCoreMemory.tsx",
+    description:
+      "Name-tag lower third with the CURRENT core memory podcast entrance. Same layout as NameTag (transparent 1080x1920, bottom-left, black bar capped at 50% sliding up and fading in, Barlow 800/88 name over Barlow 700/42 job), but the type enters with the chain stack: flat #FFB765 orange, #BC37FF purple, #0046FF blue and a white core cutting in 2 frames apart and sliding up 130px over 22 frames on bezier(0.16,1,0.3,1), with a zero-blur black shadow at the back on the core's timing. No blend mode, bloom, filter or text fade; the colour layers are dropped once the core lands so the rest state has no fringe. 24fps, 96 frames. Props: name, job.",
+    tags: [
+      "name-tag",
+      "lower-third",
+      "core-memory-podcast-style",
+      "chain-stack",
+      "overlay",
+      "transparent",
+      "barlow",
+      "24fps",
+    ],
+  },
 ];
