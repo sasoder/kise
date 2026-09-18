@@ -304,7 +304,7 @@ const TIER_GROW = 260;
  *  ladder gets faster. */
 const LAT_FRAC = 0.2;
 const LAT_SPAN_MIN = 220;
-const D_BASE = 150; // the corridor's half-width at the bottom, cut 2's
+export const D_BASE = 150; // the corridor's half-width at the bottom, cut 2's
 
 /** How far through tier `i` an arc position is, for radius and speed. */
 const growAt = (s: number, i: number) =>
