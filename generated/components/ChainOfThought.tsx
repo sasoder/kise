@@ -1367,7 +1367,7 @@ export const beadR = (j: number, n: number, f: number) => {
  *  bead that caused it — is simply a negative dash offset, and the stroke opens
  *  from there and wraps. The wrapper carries the icon shadow so the scale group
  *  does not scale the blur. */
-const SkullGlyph: React.FC<{
+export const SkullGlyph: React.FC<{
   m: SkullMark;
   u: number;
   accent: string;
