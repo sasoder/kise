@@ -24,6 +24,29 @@ export const RemotionRoot = () => {
         width={1080}
         height={1920}
       />
+      {/* Two alternates, both with the skull. Same component, same world, same
+          118 frames; only `variant` differs, so the delivered cut above is not
+          touched by either of them. */}
+      <Composition
+        id="ChainOfThoughtSkull"
+        component={ChainOfThought}
+        schema={schema}
+        defaultProps={{...defaultProps, variant: 'skull' as const}}
+        durationInFrames={DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="ChainOfThoughtFollow"
+        component={ChainOfThought}
+        schema={schema}
+        defaultProps={{...defaultProps, variant: 'follow' as const}}
+        durationInFrames={DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
     </>
   );
 };

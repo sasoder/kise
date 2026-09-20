@@ -19,6 +19,7 @@ import {
   Vignette,
   camEase,
   clamp01,
+  hash,
   iconShadow,
   makeTone,
   runCamera,
@@ -183,9 +184,47 @@ export const DURATION = 118;
 // meant compressing the pull-back (`F_OUT` 94), which took |dv| to 5.03, and
 // the camera budget wins. Subjects 1 and 2 therefore cross the frame edge over
 // a frame or two as they enter (first partly in frame f78 and f90).
+//
+// ---------------------------------------------------------------------------
+// THE VARIANTS (`variant`, default `plural` = everything above, untouched).
+//
+// `skull`   The same cut, and every chain of thought ends in a skull: what the
+//           thought is FOR. Subject 0's is drawn by its own ninth bead and
+//           completes on "they"; the other two were finished long before the
+//           camera found them. The pull-back is re-solved on a box that now
+//           holds three skulls as well, and has to start 12 frames earlier
+//           (SK_F_CHAIN) or the same travel is crammed into the same frames.
+//           The skulls are 150 world px, which lands them at 88 screen px at
+//           the resolution against a ring's 94 — deliberately the same order of
+//           presence, and as large as they can be before the wider box they
+//           force pushes the resolved k back down again.
+//           MEASURED: |dv| 2.239 at f63, peak |v| 35.3. Everything inside
+//           50..1030 / 50..1400 from f98; f101+ bbox x 92..990, y 315..1235.
+//           Closest the crowd, a tick or a ring comes to a skull outline:
+//           229 world px, against the 40 asked for.
+//
+// `follow`  The second idea: no plural and no pull-back. The chain keeps
+//           growing — 26 beads at the delivered size and pitch — and the CAMERA
+//           GOES WITH IT, out of the corridor into open grey, PUSHING IN rather
+//           than pulling back: k 1.70 -> 1.90, so a bead is 35 screen px and
+//           sixteen of them span the frame. The stream, the spine and the
+//           ringed comet are gone by f66. The last bead is born at f88 and IT
+//           calls the skull, which is 170 world px — 324 on screen, a third of
+//           the frame's width — and completes at f98 on "deceptive stuff",
+//           landing centred on (541, 820).
+//           MEASURED: |dv| 2.493 at f59, peak |v| 42.9, the tip never crosses
+//           the frame faster than 17 px. Nothing of chain or skull is below
+//           y 1400 from f60 (lowest on-screen point y 1230 at f89).
+//           The bead rate is 2.08 f, slower than the 1.81 the first pass used,
+//           because at k 1.9 the tip already travels 31 screen px a frame and
+//           the camera has to keep up inside the 45 px cap.
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({
+  /** Which cut this is. `plural` is the delivered cut and is untouched by the
+   *  other two: every number it reads is computed by the same expressions in
+   *  the same order as before the variants existed. */
+  variant: z.enum(["plural", "skull", "follow"]),
   ink: z.string(),
   accent: z.string(),
   accentDeep: z.string(),
@@ -217,6 +256,7 @@ export const schema = z.object({
 export type Props = z.infer<typeof schema>;
 
 export const defaultProps: Props = schema.parse({
+  variant: "plural",
   ink: "#FFFFFF",
   accent: ACCENT,
   accentDeep: ACCENT_DEEP,
@@ -545,6 +585,321 @@ export const POCKET: number[] = (() => {
 const DROPPED = new Set(POCKET);
 
 // ---------------------------------------------------------------------------
+// THE SKULL (variants `skull` and `follow` only).
+//
+// Lucide's `skull`, outline, drawn in ACCENT because it is the AI's intent and
+// orange is the AI throughout this clip — white ink stays OURS (the spine, the
+// ticks, the rings). No package ships lucide here, so the geometry is the
+// published path, checked by rasterising it large and looking at it: cranium,
+// jaw, two socket circles and the nose triangle.
+//
+// It is CAUSED BY THE CHAIN, not timed: it starts drawing when the chain's last
+// bead is 60% grown, it begins at the point of its own outline nearest that
+// bead, and the thread stops at the outline rather than running under it. The
+// sockets and the nose come last, so the face arrives after the shape does.
+// ---------------------------------------------------------------------------
+export const SKULL_OUTLINE =
+  "M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z";
+export const SKULL_NOSE = "m12.5 17-.5-1-.5 1h1z";
+export const SKULL_EYES = [
+  { cx: 9, cy: 12, r: 1 },
+  { cx: 15, cy: 12, r: 1 },
+];
+/** The icon's box in world px. At the resolved k of either variant this lands
+ *  between 70 and 100 screen px across — the set's glyph size. */
+/** The icon's box in world px. The plural cut's three sit beside rings, so they
+ *  are sized to hold their own against one; `follow` has a single skull as the
+ *  whole resolved frame and carries a bigger one. */
+export const SKULL_BOX = 150;
+export const SKULL_BOX_FOL = 170;
+const sOf = (box: number) => box / 24;
+/** Daylight between the last bead and the skull's outline. */
+const SKULL_GAP = 26;
+/** How long the outline takes to draw, and where the face falls inside that. */
+const SKULL_DRAW = 14;
+/** `follow` draws faster: its skull is called by the last bead at f86 and has to
+ *  be complete on "deceptive stuff". */
+const SKULL_DRAW_FOL = 10;
+const SK_FACE = 0.76; // the outline owns 0..0.76 of the draw, the face the rest
+
+type P2 = { x: number; y: number };
+
+/** SVG endpoint-parametrised circular arc -> points. Only what the two paths
+ *  above need: equal radii, no x-rotation. */
+const arcPts = (p0: P2, p1: P2, r: number, fA: number, fS: number, n: number): P2[] => {
+  const x1 = (p0.x - p1.x) / 2;
+  const y1 = (p0.y - p1.y) / 2;
+  let R = r;
+  const lam = (x1 * x1 + y1 * y1) / (R * R);
+  if (lam > 1) R *= Math.sqrt(lam);
+  const den = R * R * y1 * y1 + R * R * x1 * x1;
+  const num = Math.max(0, R * R * R * R - den);
+  const co = (fA !== fS ? 1 : -1) * Math.sqrt(num / den);
+  const cx1 = (co * R * y1) / R;
+  const cy1 = (-co * R * x1) / R;
+  const cx = cx1 + (p0.x + p1.x) / 2;
+  const cy = cy1 + (p0.y + p1.y) / 2;
+  const ang = (ux: number, uy: number, vx: number, vy: number) => {
+    const d = (ux * vx + uy * vy) / (Math.hypot(ux, uy) * Math.hypot(vx, vy));
+    const a = Math.acos(Math.max(-1, Math.min(1, d)));
+    return ux * vy - uy * vx < 0 ? -a : a;
+  };
+  const th0 = ang(1, 0, (x1 - cx1) / R, (y1 - cy1) / R);
+  let dth = ang((x1 - cx1) / R, (y1 - cy1) / R, (-x1 - cx1) / R, (-y1 - cy1) / R);
+  if (!fS && dth > 0) dth -= 2 * Math.PI;
+  if (fS && dth < 0) dth += 2 * Math.PI;
+  const out: P2[] = [];
+  for (let i = 1; i <= n; i++) {
+    const t = th0 + dth * (i / n);
+    out.push({ x: cx + R * Math.cos(t), y: cy + R * Math.sin(t) });
+  }
+  return out;
+};
+
+/** The outline as a polyline in icon units, with the cumulative fraction of
+ *  total length at each vertex — which is what `pathLength={1}` means in the
+ *  dash, so a fraction here IS a dash offset there. */
+const SKULL_POLY: { p: P2; u: number }[] = (() => {
+  const o: P2[] = [{ x: 15, y: 22 }];
+  o.push(...arcPts({ x: 15, y: 22 }, { x: 16, y: 21 }, 1, 0, 0, 8));
+  o.push({ x: 16, y: 20 });
+  o.push(...arcPts({ x: 16, y: 20 }, { x: 17.56, y: 16.75 }, 2, 0, 0, 14));
+  o.push(...arcPts({ x: 17.56, y: 16.75 }, { x: 6.44, y: 16.75 }, 8, 1, 0, 140));
+  o.push(...arcPts({ x: 6.44, y: 16.75 }, { x: 8, y: 20 }, 2, 0, 0, 14));
+  o.push({ x: 8, y: 21 });
+  o.push(...arcPts({ x: 8, y: 21 }, { x: 9, y: 22 }, 1, 0, 0, 8));
+  o.push({ x: 15, y: 22 });
+  let L = 0;
+  const cum = [0];
+  for (let i = 1; i < o.length; i++) {
+    L += Math.hypot(o[i].x - o[i - 1].x, o[i].y - o[i - 1].y);
+    cum.push(L);
+  }
+  return o.map((p, i) => ({ p, u: cum[i] / L }));
+})();
+
+const SK_C = (() => {
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const q of SKULL_POLY) {
+    x0 = Math.min(x0, q.p.x);
+    x1 = Math.max(x1, q.p.x);
+    y0 = Math.min(y0, q.p.y);
+    y1 = Math.max(y1, q.p.y);
+  }
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, hw: (x1 - x0) / 2, hh: (y1 - y0) / 2 };
+})();
+/** The outline's world half-extent — used for framing and for clearance. */
+export const skullR = (box: number) => Math.hypot(SK_C.hw, SK_C.hh) * sOf(box) + STROKE / 2;
+export const SKULL_R = skullR(SKULL_BOX);
+
+/** Distance from the icon's centre out to the outline along `th`, icon units. */
+const skullReach = (th: number) => {
+  let best = 0;
+  let score = Infinity;
+  for (const q of SKULL_POLY) {
+    const a = Math.atan2(q.p.y - SK_C.y, q.p.x - SK_C.x);
+    let d = Math.abs(a - th);
+    if (d > Math.PI) d = 2 * Math.PI - d;
+    if (d < score) {
+      score = d;
+      best = Math.hypot(q.p.x - SK_C.x, q.p.y - SK_C.y);
+    }
+  }
+  return best;
+};
+
+export type SkullMark = {
+  x: number; // world centre
+  y: number;
+  u0: number; // the frame the draw starts
+  phase: number; // where on the outline it starts, as a fraction of its length
+  tx: number; // where the thread must stop: the outline point nearest the bead
+  ty: number;
+  box: number; // this skull's own size in world px
+  r: number; // ...and its half-extent, stroke included
+};
+
+/** Put a skull ahead of a chain's last bead, along the chain's end tangent, so
+ *  that the outline — not the centre — sits SKULL_GAP past the bead. */
+const placeSkull = (tip: P2, dir: number, u0: number, box: number): SkullMark => {
+  const S = sOf(box);
+  const back = dir + Math.PI;
+  const d = SKULL_GAP + skullReach(back) * S;
+  const x = tip.x + Math.cos(dir) * d;
+  const y = tip.y + Math.sin(dir) * d;
+  let phase = 0;
+  let tx = x;
+  let ty = y;
+  let score = Infinity;
+  for (const q of SKULL_POLY) {
+    const wx = x + (q.p.x - SK_C.x) * S;
+    const wy = y + (q.p.y - SK_C.y) * S;
+    const s = Math.hypot(wx - tip.x, wy - tip.y);
+    if (s < score) {
+      score = s;
+      phase = q.u;
+      tx = wx;
+      ty = wy;
+    }
+  }
+  return { x, y, u0, phase, tx, ty, box, r: skullR(box) };
+};
+
+/** The draw, 0..1, and the three stages inside it. */
+export const skullU = (m: SkullMark, f: number) =>
+  clamp01((f - m.u0) / (m.box === SKULL_BOX_FOL ? SKULL_DRAW_FOL : SKULL_DRAW));
+const skullStage = (u: number) => ({
+  line: clamp01(u / SK_FACE),
+  nose: clamp01((u - SK_FACE) / ((1 - SK_FACE) * 0.55)),
+  eyes: clamp01((u - SK_FACE - (1 - SK_FACE) * 0.35) / ((1 - SK_FACE) * 0.65)),
+});
+
+// ---------------------------------------------------------------------------
+// VARIANT `skull`: the delivered cut, and each of the three chains ends in one.
+// Subject 0's is caused by its ninth bead (born f58, 60% grown f61), so it
+// draws f61-75 and completes on "they". The other two were finished long before
+// the camera found them, so they are simply there when it does.
+// ---------------------------------------------------------------------------
+export const SK_MARKS: SkullMark[] = CHAINS.map((c, j) => {
+  const a = c.pts[N_BEADS - 1];
+  const b = c.pts[N_BEADS - 2];
+  const dir = Math.atan2(a.y - b.y, a.x - b.x);
+  const u0 = beadBorn(c, N_BEADS - 1) + BEAD_POP * 0.6;
+  return placeSkull(a, dir, u0, SKULL_BOX);
+});
+
+// ---------------------------------------------------------------------------
+// VARIANT `follow`: no plural and no pull-back. One comet, one chain, and the
+// camera leaves the flow line with it.
+//
+// The chain is the delivered one continued: the same bead size, the same pitch,
+// the same birth rule, and — because 110 degrees spread as sigma^1 gives 4.1
+// degrees over the first bead where the delivered chain's 80 degrees as
+// sigma^1.4 gave 4.0 — the same opening curl. Past that it is one constant-
+// curvature sweep: monotone, no inflection, no loop, 100 degrees over its whole
+// length, ending 810 world px from where the comet started thinking and a long
+// way clear of the corridor.
+// ---------------------------------------------------------------------------
+export const FOL_N = 26;
+/** 2.08 f per bead. Slower than the delivered chain's 3 because this one is
+ *  five times as long, and no faster than that because at k 1.9 the tip already
+ *  crosses 31 screen px a frame and the camera has to keep up inside the 45 px
+ *  cap. The last bead is born at f86 and IT is what calls the skull. */
+export const FOL_GAP = (88 - 34) / (FOL_N - 1);
+const FOL_TURN = (110 * Math.PI) / 180;
+/** ...distributed so the last third descends harder: the chain then enters from
+ *  the upper left and comes DOWN into the skull instead of running flat. */
+const FOL_TURN_P = 1;
+export const FOL_CHAIN: Chain = (() => {
+  const c = CHAINS[0];
+  const pitch = PITCH_MUL * c.r;
+  const L = FOL_N * pitch;
+  const pts: P2[] = [];
+  let x = c.ax;
+  let y = c.ay;
+  let next = pitch;
+  for (let s = 0; s <= L + 1; s += 1) {
+    if (s >= next - 1e-9 && pts.length < FOL_N) {
+      pts.push({ x, y });
+      next += pitch;
+    }
+    const th = c.hd + SUBJECTS[0].side * FOL_TURN * Math.pow(s / L, FOL_TURN_P);
+    x += Math.cos(th);
+    y += Math.sin(th);
+  }
+  while (pts.length < FOL_N) pts.push({ x, y });
+  return { ...c, pts };
+})();
+export const folBorn = (n: number) => FOL_CHAIN.born + n * FOL_GAP;
+export const FOL_MARK: SkullMark = (() => {
+  const a = FOL_CHAIN.pts[FOL_N - 1];
+  const b = FOL_CHAIN.pts[FOL_N - 2];
+  return placeSkull(
+    a,
+    Math.atan2(a.y - b.y, a.x - b.x),
+    folBorn(FOL_N - 1),
+    SKULL_BOX_FOL,
+  );
+})();
+
+/** The chain stays alive after it lands: every bead on its own small hashed
+ *  wander, the thread following it. Nothing pulses and nothing glows. */
+const FOL_WANDER = 2.5;
+export const folBead = (n: number, f: number): P2 => {
+  const b = FOL_CHAIN.pts[n];
+  const a = FOL_WANDER * clamp01((f - folBorn(n) - BEAD_POP) / 20);
+  const p1 = 41 + 23 * hash(n, 7);
+  const p2 = 57 + 31 * hash(n, 13);
+  return {
+    x: b.x + a * Math.sin(((f + 60 * hash(n, 3)) / p1) * 2 * Math.PI),
+    y: b.y + a * Math.sin(((f + 60 * hash(n, 5)) / p2) * 2 * Math.PI),
+  };
+};
+
+export const folBeadR = (n: number, f: number) => {
+  const grow = smoothstep(clamp01((f - folBorn(n)) / BEAD_POP));
+  if (grow <= 0) return 0;
+  const pitch = PITCH_MUL * FOL_CHAIN.r;
+  const eaten = clamp01((creepAt(0, f) - n * pitch) / (pitch * 0.5) + 1);
+  return Math.max(BEAD_MUL * FOL_CHAIN.r, BEAD_MIN) * grow * (1 - smoothstep(eaten));
+};
+
+// ---------------------------------------------------------------------------
+// THE VARIANTS' POCKETS. Same rule as the delivered one, plus: nothing of the
+// crowd, and no tick, may come within SKULL_CLEAR of a skull. In `follow` the
+// chain walks out of the corridor almost at once, so its pocket is small.
+// ---------------------------------------------------------------------------
+const SKULL_CLEAR = 40;
+const pocketWith = (marks: { x: number; y: number; r: number }[], subs: Set<number>) => {
+  const drop = new Set<number>();
+  STRIP_EXT.forEach((p, i) => {
+    if (i >= STRIP.length && subs.has(i - STRIP.length)) return;
+    for (let f = 0; f <= DURATION; f += 4) {
+      const q = seatState(p, f);
+      for (const m of marks) {
+        if (Math.hypot(q.x - m.x, q.y - m.y) < m.r + q.r) {
+          drop.add(i);
+          return;
+        }
+      }
+    }
+  });
+  return drop;
+};
+
+const SKULL_MARKS_AS_DISCS = (ms: SkullMark[]) =>
+  ms.map((m) => ({ x: m.x, y: m.y, r: m.r + SKULL_CLEAR }));
+
+const POCKET_SKULL = (() => {
+  const subs = new Set(SUBJECTS.map((s) => s.seat));
+  const marks: { x: number; y: number; r: number }[] = [];
+  CHAINS.forEach((c, j) => {
+    for (const b of c.pts) marks.push({ x: b.x, y: b.y, r: CHAIN_CLEAR * c.r });
+    for (let f = 0; f <= DURATION; f += 6) {
+      const a = subAt(j, f);
+      marks.push({ x: a.x, y: a.y, r: CHAIN_CLEAR * a.r });
+    }
+  });
+  marks.push(...SKULL_MARKS_AS_DISCS(SK_MARKS));
+  return pocketWith(marks, subs);
+})();
+
+const POCKET_FOLLOW = (() => {
+  const subs = new Set([SUBJECTS[0].seat]);
+  const marks: { x: number; y: number; r: number }[] = [];
+  for (const b of FOL_CHAIN.pts) marks.push({ x: b.x, y: b.y, r: CHAIN_CLEAR * FOL_CHAIN.r });
+  for (let f = 0; f <= DURATION; f += 6) {
+    const a = subAt(0, f);
+    marks.push({ x: a.x, y: a.y, r: CHAIN_CLEAR * a.r });
+  }
+  marks.push(...SKULL_MARKS_AS_DISCS([FOL_MARK]));
+  return pocketWith(marks, subs);
+})();
+
+// ---------------------------------------------------------------------------
 // THE CAMERA — cut 3's construction: keyed per frame off `camEase`, cy from the
 // eased k, both axes through the shared damper, and the pan's target blended on
 // to the ridden subject over the middle with the damper's own lead added.
@@ -580,17 +935,17 @@ const kTrack = (segs: KSeg[]) => {
   });
   return K;
 };
-const K_SEGS = (kEnd: number): KSeg[] => [
+const K_SEGS = (kEnd: number, fChain = F_CHAIN, fOut = F_OUT): KSeg[] => [
   { f0: 0, f1: F_RIDE_TOP, k0: K_OPEN, k1: K_RIDE, warp: 0.95 },
-  { f0: F_RIDE_TOP, f1: F_CHAIN, k0: K_RIDE, k1: K_CHAIN, warp: 1.0 },
-  { f0: F_CHAIN, f1: F_OUT, k0: K_CHAIN, k1: kEnd, warp: 0.9 },
-  { f0: F_OUT, f1: TRACK_F1, k0: kEnd, k1: kEnd - 0.01, warp: 0.5 },
+  { f0: F_RIDE_TOP, f1: fChain, k0: K_RIDE, k1: K_CHAIN, warp: 1.0 },
+  { f0: fChain, f1: fOut, k0: K_CHAIN, k1: kEnd, warp: 0.9 },
+  { f0: fOut, f1: TRACK_F1, k0: kEnd, k1: kEnd - 0.01, warp: 0.5 },
 ];
 
 const dampX = (upto: number, F: number[], CXT: number[], K: number[]) =>
   runCamera(upto, F, CXT, K).cy;
 
-const panTrack = (fx: number, fy: number, K: number[]) => {
+const panTrack = (fx: number, fy: number, K: number[], fChain = F_CHAIN, fOut = F_OUT) => {
   const F: number[] = [];
   const CXT: number[] = [];
   const CC: number[] = [];
@@ -601,20 +956,20 @@ const panTrack = (fx: number, fy: number, K: number[]) => {
     // to the resting centre
     let ax: number;
     let ay: number;
-    if (f <= F_CHAIN) {
-      const g = camEase(f / F_CHAIN, 0.95);
-      const mid = subAt(0, F_CHAIN);
+    if (f <= fChain) {
+      const g = camEase(f / fChain, 0.95);
+      const mid = subAt(0, fChain);
       ax = start.x + (mid.x + (lead.x - mid.x) * 0.45 - start.x) * g;
       ay = start.y + (mid.y + (lead.y - mid.y) * 0.45 - start.y) * g;
-    } else if (f <= F_OUT) {
-      const g = camEase((f - F_CHAIN) / (F_OUT - F_CHAIN), 0.95);
-      const mid = subAt(0, F_CHAIN);
+    } else if (f <= fOut) {
+      const g = camEase((f - fChain) / (fOut - fChain), 0.95);
+      const mid = subAt(0, fChain);
       const m0x = mid.x + (lead.x - mid.x) * 0.45;
       const m0y = mid.y + (lead.y - mid.y) * 0.45;
       ax = m0x + (fx - m0x) * g;
       ay = m0y + (fy - m0y) * g;
     } else {
-      const g = camEase((f - F_OUT) / (TRACK_F1 - F_OUT), 0.5);
+      const g = camEase((f - fOut) / (TRACK_F1 - fOut), 0.5);
       ax = fx + 7 * g;
       ay = fy - 9 * g;
     }
@@ -638,9 +993,9 @@ const panTrack = (fx: number, fy: number, K: number[]) => {
   return { F, CX: CXT, CY: CC.map((c, f) => c + CAM_LIFT / K[f]) };
 };
 
-const trackOf = (kEnd: number, fx: number, fy: number) => {
-  const K = kTrack(K_SEGS(kEnd));
-  const c = panTrack(fx, fy, K);
+const trackOf = (kEnd: number, fx: number, fy: number, fChain = F_CHAIN, fOut = F_OUT) => {
+  const K = kTrack(K_SEGS(kEnd, fChain, fOut));
+  const c = panTrack(fx, fy, K, fChain, fOut);
   return { F: c.F, K, CX: c.CX, CY: c.CY };
 };
 
@@ -652,7 +1007,7 @@ const BAND = { x0: 90, x1: 990, y0: 220, y1: 1400 };
 const S_SHOW_LO = 1950;
 const S_SHOW_HI = 3250;
 
-const FRAMING = (() => {
+const framingOf = (extra: { x: number; y: number; m: number }[]) => {
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
@@ -673,57 +1028,262 @@ const FRAMING = (() => {
     const a = subAt(j, DURATION - 1);
     add(a.x, a.y, RING_MUL * a.r + STROKE / 2);
   });
+  for (const e of extra) add(e.x, e.y, e.m);
   const k = Math.min((BAND.x1 - BAND.x0) / (maxX - minX), (BAND.y1 - BAND.y0) / (maxY - minY));
   return { k, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
-})();
+};
 
-export const K_REST = FRAMING.k;
+/** The delivered framing: no extra points, so every expression below runs on
+ *  exactly the values it ran on before the variants existed. */
+const FRAMING = framingOf([]);
 const F_SOLVE = 102;
 
-export const K_END = (() => {
-  const at = (kEnd: number) => {
-    const t = trackOf(kEnd, FRAMING.cx, FRAMING.cy);
-    return runCamera(F_SOLVE, t.F, t.CY, t.K).k;
-  };
-  const a = K_REST * 0.7;
-  const b = K_REST * 1.1;
-  return a + ((K_REST - at(a)) * (b - a)) / (at(b) - at(a));
-})();
+/** The two-secant solve, lifted out of the delivered cut unchanged so that the
+ *  skull variant — which only hands it a wider box — gets the same treatment. */
+const solveCam = (fr: { k: number; cx: number; cy: number }, fChain = F_CHAIN, fOut = F_OUT) => {
+  const kRest = fr.k;
+  const kEnd = (() => {
+    const at = (ke: number) => {
+      const t = trackOf(ke, fr.cx, fr.cy, fChain, fOut);
+      return runCamera(F_SOLVE, t.F, t.CY, t.K).k;
+    };
+    const a = kRest * 0.7;
+    const b = kRest * 1.1;
+    return a + ((kRest - at(a)) * (b - a)) / (at(b) - at(a));
+  })();
+  const centre = (() => {
+    const cyAt = (fy: number) => {
+      const t = trackOf(kEnd, fr.cx, fy, fChain, fOut);
+      const c = runCamera(F_SOLVE, t.F, t.CY, t.K);
+      return c.cy - CAM_LIFT / c.k;
+    };
+    const a = fr.cy - 400;
+    const b = fr.cy + 400;
+    const fy = a + ((fr.cy - cyAt(a)) * (b - a)) / (cyAt(b) - cyAt(a));
+    const cxAt = (fx: number) =>
+      dampX(F_SOLVE, ...(() => {
+        const t = trackOf(kEnd, fx, fy, fChain, fOut);
+        return [t.F, t.CX, t.K] as [number[], number[], number[]];
+      })());
+    const p = fr.cx - 400;
+    const q = fr.cx + 400;
+    const fx = p + ((fr.cx - cxAt(p)) * (q - p)) / (cxAt(q) - cxAt(p));
+    return { fx, fy };
+  })();
+  return { kRest, kEnd, CAM: trackOf(kEnd, centre.fx, centre.fy, fChain, fOut) };
+};
 
-const CENTRE_END = (() => {
-  const cyAt = (fy: number) => {
-    const t = trackOf(K_END, FRAMING.cx, fy);
-    const c = runCamera(F_SOLVE, t.F, t.CY, t.K);
-    return c.cy - CAM_LIFT / c.k;
-  };
-  const a = FRAMING.cy - 400;
-  const b = FRAMING.cy + 400;
-  const fy = a + ((FRAMING.cy - cyAt(a)) * (b - a)) / (cyAt(b) - cyAt(a));
-  const cxAt = (fx: number) => dampX(F_SOLVE, ...(() => {
-    const t = trackOf(K_END, fx, fy);
-    return [t.F, t.CX, t.K] as [number[], number[], number[]];
-  })());
-  const p = FRAMING.cx - 400;
-  const q = FRAMING.cx + 400;
-  const fx = p + ((FRAMING.cx - cxAt(p)) * (q - p)) / (cxAt(q) - cxAt(p));
-  return { fx, fy };
-})();
+const SOLVED = solveCam(FRAMING);
+export const K_REST = SOLVED.kRest;
+export const K_END = SOLVED.kEnd;
+export const CAM = SOLVED.CAM;
 
-export const CAM = trackOf(K_END, CENTRE_END.fx, CENTRE_END.fy);
-
-const CAM_AT_F: { cx: number; cy: number; k: number }[] = (() => {
+type Track = { F: number[]; K: number[]; CX: number[]; CY: number[] };
+const camAtOf = (t: Track) => {
   const out: { cx: number; cy: number; k: number }[] = [];
   for (let f = 0; f <= DURATION + 2; f++) {
-    const c = runCamera(f, CAM.F, CAM.CY, CAM.K);
-    const x = dampX(f, CAM.F, CAM.CX, CAM.K);
+    const c = runCamera(f, t.F, t.CY, t.K);
+    const x = dampX(f, t.F, t.CX, t.K);
     const d = sway(f);
     out.push({ cx: x + d.dx, cy: c.cy + d.dy, k: c.k });
   }
   return out;
-})();
+};
+
+const CAM_AT_F = camAtOf(CAM);
 export const CAM_AT = (f: number) => CAM_AT_F[Math.max(0, Math.min(DURATION + 2, Math.round(f)))];
 export const SCREEN_AT = (f: number, wx: number, wy: number) => {
   const c = CAM_AT(f);
+  return [CX + (wx - c.cx) * c.k, FRAME_H / 2 + (wy - c.cy) * c.k];
+};
+
+// ---------------------------------------------------------------------------
+// VARIANT `skull` — the same pull-back, re-solved on a box that now has to hold
+// three skulls as well as three rings and three chains. Nothing else about the
+// camera changes: same segments, same warps, same ride.
+// ---------------------------------------------------------------------------
+/** The skulls put half again as much in the box, so the pull-back has to start
+ *  earlier or the same travel is crammed into the same frames and the settle
+ *  breaks the |dv| budget. */
+const SK_F_CHAIN = 56;
+const FRAMING_SK = framingOf(SK_MARKS.map((m) => ({ x: m.x, y: m.y, m: m.r + 15 })));
+const SOLVED_SK = solveCam(FRAMING_SK, SK_F_CHAIN, F_OUT);
+export const K_END_SK = SOLVED_SK.kEnd;
+export const CAM_SK = SOLVED_SK.CAM;
+const CAM_SK_F = camAtOf(CAM_SK);
+export const CAM_SK_AT = (f: number) => CAM_SK_F[Math.max(0, Math.min(DURATION + 2, Math.round(f)))];
+
+// ---------------------------------------------------------------------------
+// VARIANT `follow` — the camera leaves WITH the chain. One long C1 glide out of
+// the ride: k eases 1.70 -> 1.25 over f30-96 in a single segment, and the pan
+// hands over from the ridden comet to the chain's growing TIP over f34-52, so
+// the stream, the spine and the ringed comet slide out behind us. The tip is
+// led by the damper's own lead plus a fixed reach along the chain, so the chain
+// always grows into open frame rather than into the edge; as the last bead
+// lands the look point becomes the skull's own centre, which is where the glide
+// settles — screen (540, 800).
+// ---------------------------------------------------------------------------
+const FOL_K_END = 1.9;
+const FOL_F_SET = 96;
+const FOL_HAND: [number, number] = [34, 50];
+/** How long the join vector takes to decay. */
+const FOL_CORR = 30;
+const FOL_LOOK_Y = 771;
+/** ...and the x that lands it on the frame axis once the damper has caught up. */
+const FOL_LOOK_X = 467;
+/** How far along the chain, past the newest bead, the camera looks. */
+const FOL_TIP_LEAD = 2; // x the bead pitch
+
+/** Smootherstep. `smoothstep` has a non-zero SECOND derivative at its ends, so
+ *  blending two far-apart camera targets with it puts a kink at each end of the
+ *  blend — |dv| 3.4 at f72, right where the handover finished. This one is zero
+ *  in the first AND second derivative at both ends, so the joins vanish. */
+const ease5 = (u: number) => {
+  const t = clamp01(u);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+};
+
+const FOL_K = (() => {
+  const segs: KSeg[] = [
+    { f0: 0, f1: F_RIDE_TOP, k0: K_OPEN, k1: K_RIDE, warp: 0.95 },
+    { f0: F_RIDE_TOP, f1: FOL_F_SET, k0: K_RIDE, k1: FOL_K_END, warp: 1.2 },
+    // the creep-in: 2.4%, still moving on the last frame
+    { f0: FOL_F_SET, f1: TRACK_F1, k0: FOL_K_END, k1: FOL_K_END * 1.024, warp: 0.5 },
+  ];
+  return kTrack(segs);
+})();
+
+/** Where the chain has reached at f. It samples the chain's own SMOOTH curve by
+ *  arc length, not the bead polyline: the polyline has a corner at every bead,
+ *  and a camera that looks at a corner accelerates through it — the first build
+ *  did exactly that and rang up |dv| 4.6 in the middle of the glide. */
+const FOL_CURVE: P2[] = (() => {
+  const c = CHAINS[0];
+  const pitch = PITCH_MUL * c.r;
+  const L = FOL_N * pitch;
+  const out: P2[] = [];
+  let x = c.ax;
+  let y = c.ay;
+  for (let s = 0; s <= L + 2; s += 1) {
+    out.push({ x, y });
+    const th = c.hd + SUBJECTS[0].side * FOL_TURN * Math.pow(s / L, FOL_TURN_P);
+    x += Math.cos(th);
+    y += Math.sin(th);
+  }
+  return out;
+})();
+/** HOW FAR ALONG THE CHAIN THE CAMERA IS LOOKING, in world px, per frame.
+ *
+ *  The obvious version — blend from the ride's target to the tip's — cannot be
+ *  made to work: the two targets separate at 19 world px a frame, so the blend's
+ *  own second derivative times a separation that reaches 700 px puts |dv| at
+ *  3.4 whatever easing is used, and lengthening the blend only trades that
+ *  against the stream staying in frame. So there is NO blend of positions. The
+ *  camera looks along the chain from the first frame it leaves, and what eases
+ *  is the RATE: it starts at zero (matching the ride, where the comet has all
+ *  but stopped), rises to the chain's own growth rate over FOL_EASE frames, and
+ *  the integral deficit that costs is added back on the same curve — so the
+ *  look point is C1 at the join AND exactly on the tip once the ease is done.
+ *  At the far end the same trick runs in reverse: the rate eases back to zero
+ *  as the chain finishes, instead of hitting the end and stopping dead. */
+const FOL_EASE = 34;
+/** ...and the window the resulting deficit is handed back over, which is longer
+ *  than the ramp because its cost goes as 1/W^2 while the deficit only goes as
+ *  E: separating the two is what brought |dv| from 3.57 to inside the bar. */
+const FOL_BACK = 88;
+const FOL_S: number[] = (() => {
+  const pitch = PITCH_MUL * FOL_CHAIN.r;
+  const g = pitch / FOL_GAP; // world px of chain per frame
+  const sMax = (FOL_N - 1) * pitch;
+  const out: number[] = [];
+  let acc = 0;
+  for (let f = 0; f <= TRACK_F1; f++) {
+    if (f > FOL_CHAIN.born) acc += g * ease5((f - 1 - FOL_CHAIN.born) / FOL_EASE);
+    // the deficit the rate-ramp cost, AND the reach past the newest bead, both
+    // handed in on the same curve — so at the join the camera is looking at the
+    // comet itself and the correction vector it has to carry is only the
+    // difference between the two framings, not a chain's length of travel.
+    const back = (g * FOL_EASE) / 2 + pitch * FOL_TIP_LEAD;
+    const raw = acc + back * ease5((f - FOL_CHAIN.born) / FOL_BACK);
+    const u = Math.max(0, raw) / sMax;
+    out.push(sMax * (u < 0.66 ? u : 0.66 + 0.34 * (1 - Math.exp(-(u - 0.66) / 0.34))));
+  }
+  return out;
+})();
+export const folTipAt = (f: number) => {
+  const s = FOL_S[Math.max(0, Math.min(TRACK_F1, Math.round(f)))];
+  const i = Math.max(0, Math.min(FOL_CURVE.length - 2, s));
+  const i0 = Math.floor(i);
+  const t = i - i0;
+  const a = FOL_CURVE[i0];
+  const b = FOL_CURVE[i0 + 1];
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+};
+
+const FOL_TRACK: Track = (() => {
+  const F: number[] = [];
+  const CXT: number[] = [];
+  const CYT: number[] = [];
+  const RX: number[] = [];
+  const RY: number[] = [];
+  const FX: number[] = [];
+  const FY: number[] = [];
+  const start = subAt(0, 0);
+  const lead = CHAINS[0].pts[N_BEADS - 1];
+  for (let f = 0; f <= TRACK_F1; f++) {
+    const k = FOL_K[f];
+    // the ride, exactly as delivered
+    const g = camEase(Math.min(1, f / F_CHAIN), 0.95);
+    const mid = subAt(0, F_CHAIN);
+    const ax = start.x + (mid.x + (lead.x - mid.x) * 0.45 - start.x) * g;
+    const ay = start.y + (mid.y + (lead.y - mid.y) * 0.45 - start.y) * g;
+    const w = smoothstep(clamp01((f - RIDE_IN[0]) / (RIDE_IN[1] - RIDE_IN[0])));
+    const r = subAt(0, f);
+    const rn = subAt(0, f + 1);
+    const sgn = SUBJECTS[0].side;
+    const rx = r.x + (rn.x - r.x) * RIDE_LEAD + (sgn * (CX - HOLD_X)) / k;
+    const ry = r.y + (rn.y - r.y) * RIDE_LEAD + (960 - HOLD_Y) / k;
+    const ridex = ax + (rx - ax) * w;
+    const ridey = ay + (ry - ay) * w;
+    // ...and the chain, which we leave with
+    const land = ease5((f - (FOL_F_SET - 26)) / 54);
+    const tip = folTipAt(f);
+    const lx = tip.x + (FOL_MARK.x - tip.x) * land;
+    const ly = tip.y + (FOL_MARK.y - tip.y) * land;
+    F.push(f);
+    RX.push(ridex);
+    RY.push(ridey);
+    FX.push(lx + (CX - FOL_LOOK_X) / k);
+    FY.push(ly + (960 - FOL_LOOK_Y) / k);
+  }
+  // THE JOIN. Up to FOL_HAND the ride, exactly as delivered; after it the chain,
+  // plus the one constant vector that made the two agree at the join, decaying
+  // on a curve that is flat in the first and second derivative at both ends. So
+  // the camera changes what it is following without changing where it is or how
+  // fast it is going, and the only |dv| the change costs is that 42 px vector
+  // spread over FOL_CORR frames.
+  const j = FOL_HAND[0];
+  const cx0 = RX[j] - FX[j];
+  const cy0 = RY[j] - FY[j];
+  for (let f = 0; f <= TRACK_F1; f++) {
+    const d = 1 - ease5((f - j) / FOL_CORR);
+    const x = f <= j ? RX[f] : FX[f] + cx0 * d;
+    const y = f <= j ? RY[f] : FY[f] + cy0 * d;
+    CXT.push(x);
+    CYT.push(y + CAM_LIFT / FOL_K[f]);
+  }
+  return { F, K: FOL_K, CX: CXT, CY: CYT };
+})();
+
+const FOL_F = camAtOf(FOL_TRACK);
+export const FOL_AT = (f: number) => FOL_F[Math.max(0, Math.min(DURATION + 2, Math.round(f)))];
+
+export const CAM_OF = (v: Props["variant"]) =>
+  v === "skull" ? CAM_SK : v === "follow" ? FOL_TRACK : CAM;
+export const AT_OF = (v: Props["variant"]) =>
+  v === "skull" ? CAM_SK_AT : v === "follow" ? FOL_AT : CAM_AT;
+export const SCREEN_OF = (v: Props["variant"], f: number, wx: number, wy: number) => {
+  const c = AT_OF(v)(f);
   return [CX + (wx - c.cx) * c.k, FRAME_H / 2 + (wy - c.cy) * c.k];
 };
 
@@ -757,6 +1317,39 @@ export const worldAt = (f: number): Drawn[] => {
   return out;
 };
 
+/** The same crowd for a variant: its own pocket, and in `follow` only the one
+ *  subject exists at all. */
+export const worldOf = (v: Props["variant"], f: number): Drawn[] => {
+  if (v === "plural") return worldAt(f);
+  const dropped = v === "skull" ? POCKET_SKULL : POCKET_FOLLOW;
+  const keep = v === "skull" ? SUBJECTS.length : 1;
+  const subs = new Set(SUBJECTS.slice(0, keep).map((s) => s.seat));
+  const out: Drawn[] = [];
+  STRIP_EXT.forEach((p, i) => {
+    if (dropped.has(i)) return;
+    if (i >= STRIP.length && subs.has(i - STRIP.length)) return;
+    const now = seatState(p, f);
+    const was = seatState(p, f - 1);
+    out.push({ ...now, key: p.key, vx: now.x - was.x, vy: now.y - was.y });
+  });
+  for (let j = 0; j < keep; j++) {
+    const now = subAt(j, f);
+    const was = subAt(j, f - 1);
+    out.push({
+      key: `s${j}`,
+      x: now.x,
+      y: now.y,
+      r: now.r,
+      tone: now.tone,
+      hd: now.hd,
+      s: 0,
+      vx: now.x - was.x,
+      vy: now.y - was.y,
+    });
+  }
+  return out;
+};
+
 /** A bead's drawn radius at frame f: it pops in, and shrinks away again if the
  *  comet creeping up the chain reaches it. */
 export const beadR = (j: number, n: number, f: number) => {
@@ -769,7 +1362,62 @@ export const beadR = (j: number, n: number, f: number) => {
   return Math.max(BEAD_MUL * c.r, BEAD_MIN) * grow * (1 - smoothstep(eaten));
 };
 
+/** One skull, upright on screen, drawing on. `pathLength={1}` puts the dash in
+ *  fractions of the outline's own length, so `phase` — the fraction nearest the
+ *  bead that caused it — is simply a negative dash offset, and the stroke opens
+ *  from there and wraps. The wrapper carries the icon shadow so the scale group
+ *  does not scale the blur. */
+const SkullGlyph: React.FC<{
+  m: SkullMark;
+  u: number;
+  accent: string;
+  opacity: number;
+  icon: string;
+}> = ({ m, u, accent, opacity, icon }) => {
+  if (u <= 0) return null;
+  const st = skullStage(u);
+  const dash = (v: number) => ({
+    pathLength: 1,
+    strokeDasharray: `${v} ${Math.max(1e-4, 1 - v)}`,
+    strokeDashoffset: -m.phase,
+  });
+  return (
+    <g style={{ filter: icon }}>
+      <g
+        transform={`translate(${m.x.toFixed(2)} ${m.y.toFixed(2)}) scale(${sOf(
+          m.box,
+        )}) translate(${(-SK_C.x).toFixed(3)} ${(-SK_C.y).toFixed(3)})`}
+        fill="none"
+        stroke={accent}
+        strokeWidth={STROKE / sOf(m.box)}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={opacity}
+      >
+        <path d={SKULL_OUTLINE} {...dash(st.line)} />
+        {st.nose > 0 ? (
+          <path d={SKULL_NOSE} pathLength={1} strokeDasharray={`${st.nose} ${1 - st.nose}`} />
+        ) : null}
+        {st.eyes > 0
+          ? SKULL_EYES.map((e, i) => (
+              <circle
+                key={`e${i}`}
+                cx={e.cx}
+                cy={e.cy}
+                r={e.r}
+                pathLength={1}
+                strokeDasharray={`${st.eyes} ${1 - st.eyes}`}
+                strokeDashoffset={-0.25}
+              />
+            ))
+          : null}
+      </g>
+    </g>
+  );
+};
+
 const ChainOfThought: React.FC<Props> = ({
+  variant,
   ink,
   accent,
   accentDeep,
@@ -788,8 +1436,9 @@ const ChainOfThought: React.FC<Props> = ({
 }) => {
   const frame = useCurrentFrame();
 
-  const cam = runCamera(frame, CAM.F, CAM.CY, CAM.K);
-  const camX = dampX(frame, CAM.F, CAM.CX, CAM.K);
+  const T = CAM_OF(variant);
+  const cam = runCamera(frame, T.F, T.CY, T.K);
+  const camX = dampX(frame, T.F, T.CX, T.K);
   const drift = sway(frame);
   const cy = cam.cy + drift.dy;
   const cx = camX + drift.dx;
@@ -797,9 +1446,10 @@ const ChainOfThought: React.FC<Props> = ({
   const { tx, ty } = worldTransform(cx, cy, k);
   const icon = iconShadow(k, iconShadowY, iconShadowBlur, iconShadowOpacity);
 
-  const world = worldAt(frame);
+  const world = worldOf(variant, frame);
   const toRipe = makeTone(accentDeep, accent);
   const spine = spinePath(0, 3900);
+  const nSubs = variant === "follow" ? 1 : SUBJECTS.length;
 
   return (
     <AbsoluteFill style={{ backgroundColor: backgroundBase }}>
@@ -809,9 +1459,9 @@ const ChainOfThought: React.FC<Props> = ({
         dim={backgroundDim}
         frame={W0 + frame}
         cy={cy}
-        cyRest={CAM.CY[0]}
+        cyRest={T.CY[0]}
         cx={cx}
-        cxRest={CAM.CX[0]}
+        cxRest={T.CX[0]}
         k={k}
         parallax={parallax}
       />
@@ -845,8 +1495,73 @@ const ChainOfThought: React.FC<Props> = ({
               ) : null;
             })}
 
+            {/* `follow`: one comet, one long chain, every bead on its own
+                small wander once it has settled, the thread following it, and
+                the last link running out to the skull's outline. */}
+            {variant === "follow"
+              ? (() => {
+                  const sub = subAt(0, frame);
+                  const at = (n: number) => folBead(n, frame);
+                  const segs: React.ReactNode[] = [];
+                  for (let n = 0; n < FOL_N; n++) {
+                    const u = clamp01((frame - folBorn(n)) / BEAD_POP);
+                    if (u <= 0) continue;
+                    const a = n === 0 ? { x: sub.x, y: sub.y } : at(n - 1);
+                    const b = at(n);
+                    segs.push(
+                      <line
+                        key={`ft${n}`}
+                        x1={a.x}
+                        y1={a.y}
+                        x2={a.x + (b.x - a.x) * u}
+                        y2={a.y + (b.y - a.y) * u}
+                        stroke={accent}
+                        strokeWidth={STROKE / 2}
+                        strokeLinecap="round"
+                        opacity={dotOpacity}
+                      />,
+                    );
+                  }
+                  const sk = skullU(FOL_MARK, frame);
+                  const tipB = at(FOL_N - 1);
+                  return (
+                    <g>
+                      {segs}
+                      {sk > 0 ? (
+                        <line
+                          x1={tipB.x}
+                          y1={tipB.y}
+                          x2={tipB.x + (FOL_MARK.tx - tipB.x) * clamp01(sk / 0.25)}
+                          y2={tipB.y + (FOL_MARK.ty - tipB.y) * clamp01(sk / 0.25)}
+                          stroke={accent}
+                          strokeWidth={STROKE / 2}
+                          strokeLinecap="round"
+                          opacity={dotOpacity}
+                        />
+                      ) : null}
+                      {FOL_CHAIN.pts.map((_b, n) => {
+                        const r = folBeadR(n, frame);
+                        const q = at(n);
+                        return r > 0.05 ? (
+                          <circle
+                            key={`fb${n}`}
+                            cx={q.x}
+                            cy={q.y}
+                            r={r}
+                            fill={accent}
+                            opacity={dotOpacity}
+                          />
+                        ) : null;
+                      })}
+                    </g>
+                  );
+                })()
+              : null}
+
             {/* the chains of thought: thread first, then the beads on it */}
-            {CHAINS.map((c, j) => {
+            {variant === "follow"
+              ? null
+              : CHAINS.map((c, j) => {
               const sub = subAt(j, frame);
               const segs: React.ReactNode[] = [];
               for (let n = 0; n < N_BEADS; n++) {
@@ -868,9 +1583,23 @@ const ChainOfThought: React.FC<Props> = ({
                   />,
                 );
               }
+              const sk = variant === "skull" ? skullU(SK_MARKS[j], frame) : 0;
+              const tipB = c.pts[N_BEADS - 1];
               return (
                 <g key={`c${j}`}>
                   {segs}
+                  {sk > 0 ? (
+                    <line
+                      x1={tipB.x}
+                      y1={tipB.y}
+                      x2={tipB.x + (SK_MARKS[j].tx - tipB.x) * clamp01(sk / 0.25)}
+                      y2={tipB.y + (SK_MARKS[j].ty - tipB.y) * clamp01(sk / 0.25)}
+                      stroke={accent}
+                      strokeWidth={STROKE / 2}
+                      strokeLinecap="round"
+                      opacity={dotOpacity}
+                    />
+                  ) : null}
                   {c.pts.map((b, n) => {
                     const r = beadR(j, n, frame);
                     return r > 0.05 ? (
@@ -887,6 +1616,29 @@ const ChainOfThought: React.FC<Props> = ({
                 </g>
               );
             })}
+
+            {/* the skulls, drawn by the chain that caused them */}
+            {variant === "skull"
+              ? SK_MARKS.map((m, j) => (
+                  <SkullGlyph
+                    key={`sk${j}`}
+                    m={m}
+                    u={skullU(m, frame)}
+                    accent={accent}
+                    opacity={dotOpacity}
+                    icon={icon}
+                  />
+                ))
+              : null}
+            {variant === "follow" ? (
+              <SkullGlyph
+                m={FOL_MARK}
+                u={skullU(FOL_MARK, frame)}
+                accent={accent}
+                opacity={dotOpacity}
+                icon={icon}
+              />
+            ) : null}
 
             <g style={{ filter: icon }}>
               <path
@@ -918,7 +1670,7 @@ const ChainOfThought: React.FC<Props> = ({
               })}
 
               {/* we see it: one ring per subject, drawn on by its own veer */}
-              {SUBJECTS.map((_s, j) => {
+              {SUBJECTS.slice(0, nSubs).map((_s, j) => {
                 const u = ringU(j, frame);
                 if (u <= 0) return null;
                 const p = subAt(j, frame);
