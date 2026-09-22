@@ -845,3 +845,217 @@ export const CLIMBERS: ClimberPath[] = [
   // into the widening frame from underneath as the camera comes back down.
   { id: "c3", fRef: 104, x: 1069, y: 1450, angle: 78, lean: -1, speed: 8.8, born: 90, seed: 0.39 },
 ];
+
+
+// ===========================================================================
+// THE OPPONENT — added by cut 3 (`EquallyStrong`), APPEND ONLY. Nothing above
+// this line is changed; cut 1 and cut 2 render exactly as they did.
+//
+// Cut 2 said a climber lays its own rungs. Cut 3's line — "you're always
+// playing against an AI that's equally strong" — says HOW: it plays against a
+// twin exactly as strong, and each rung is MADE BETWEEN THEM.
+//
+// THE PAIR. The climber's dot splits: a second dot slides out from behind it
+// until the two sit symmetric either side of the path, the path staying the
+// midline. A CONNECTOR is drawn between them — white, INK_LO, half stroke, the
+// same weight and ink as a trail — and the rungs still arrive on the path
+// ahead, now passing BETWEEN the pair rather than under a single dot.
+//
+// THE SPLIT IS HORIZONTAL, NOT PERPENDICULAR TO THE PATH (director-approved
+// departure from the cut brief). HEIGHT IS LEVEL is the clip's one idea, so
+// "equally strong" has to be literally true in the clip's own grammar: the two
+// dots must stand at THE SAME HEIGHT, which a perpendicular split does not give
+// on a path 78 degrees off horizontal — it leaves 29 world px between them, 55
+// screen px in the close-up, plainly one above the other, which is the opposite
+// of what the line says. Offsetting HORIZONTALLY by PAIR_DX instead puts both
+// dots on the same y AND keeps the brief's PAIR_HALF of perpendicular clearance
+// from the path, because
+//   PAIR_DX = PAIR_HALF / sin(angle)
+// and the twin simply climbs its own parallel copy of the path. The connector
+// is then HORIZONTAL — the same kind of line as the model's own level line,
+// white instead of accent — and the pair's rung flip is not a new mechanism at
+// all but `solvedAt`, the column's own rule, applied to the connector's y.
+// ===========================================================================
+
+/** Perpendicular clearance between each dot and the path it straddles. */
+export const PAIR_HALF = 70;
+/** ...as a HORIZONTAL offset, so the two dots share a height. */
+export const pairDx = (c: ClimberPath) => PAIR_HALF / Math.sin((c.angle * Math.PI) / 180);
+/** Which side the ORIGINAL dot takes (-1 = left); the twin takes the other, so
+ *  the connector draws left -> right, from the original toward the twin. */
+export const PAIR_ORIGIN_SIDE = -1;
+
+/** The two dots at frame `f`, `split` 0..1 apart. Both sit on the path's own y:
+ *  the midpoint between them is exactly the climber's position, so the path
+ *  stays the midline and every rung still arrives on it. */
+export const pairDots = (c: ClimberPath, f: number, split: number) => {
+  const p = climberAt(c, f);
+  const dx = pairDx(c) * clamp01(split);
+  return {
+    mid: p,
+    a: { x: p.x + PAIR_ORIGIN_SIDE * dx, y: p.y },
+    b: { x: p.x - PAIR_ORIGIN_SIDE * dx, y: p.y },
+  };
+};
+
+/** THE PAIR'S REACH LINE, as a world y — the one statement that covers the cut
+ *  either side of the split, so there is no frame on which the rule changes.
+ *
+ *  Before the split the leading ink is a DOT of radius CLIMBER_R sitting on the
+ *  path, and cut 2's rule is that a rung flips when that dot's leading edge
+ *  touches the ring's RIM (a flip keyed on the centre happens underneath the
+ *  dot and is never seen). After it, the leading ink is the CONNECTOR, a line
+ *  with no extent along the path, and the rule is the column's own: it reaches
+ *  the ring's CENTRE. Sliding the lead off as the pair opens gives both:
+ *
+ *    reachY(f) = pathY(f) - (r + CLIMBER_R) * sin(angle) * (1 - split(f))
+ *
+ *  which is cut 2's `Rung.cross` exactly at split 0 and `solvedAt` exactly at
+ *  split 1 — VERIFIED against cut 2's own rule: every rung flipping before the
+ *  split matches its `Rung.cross` to the digit, and every rung after it
+ *  diverges to the later centre-keyed instant. It is monotone decreasing for
+ *  any split that only opens (the path climbs ~8.6 world py/f and the lead
+ *  retracts at most ~3.4), so a rung's crossing is a single well-defined
+ *  instant, solved from the DOT'S OWN POSITION every frame, never a frame
+ *  number. */
+export const pairReachY = (c: ClimberPath, f: number, split: number, ringR: number) =>
+  climberAt(c, f).y -
+  (ringR + CLIMBER_R) * Math.sin((c.angle * Math.PI) / 180) * (1 - clamp01(split));
+
+/** Each rung's crossing frame, solved off `pairReachY` by walking it — the same
+ *  construction `makeSolver` uses on the level line, and for the same reason. */
+export const makePairSolver = (
+  c: ClimberPath,
+  rungs: Rung[],
+  split: (f: number) => number,
+  first: number,
+  last: number,
+) => {
+  const cross = rungs.map((g) => {
+    let prev = pairReachY(c, first, split(first), g.r);
+    if (prev <= g.y) return first;
+    for (let f = first + 1; f <= last; f++) {
+      const cur = pairReachY(c, f, split(f), g.r);
+      if (cur <= g.y) {
+        const span = prev - cur;
+        return span > 1e-9 ? f - 1 + (prev - g.y) / span : f;
+      }
+      prev = cur;
+    }
+    return Infinity;
+  });
+  return { cross, solved: (f: number, j: number) => clamp01((f - cross[j]) / SOLVE_F) };
+};
+
+/** A RAIL: where one of the pair has actually been, sampled per frame from the
+ *  frame the split began. It is not a straight line from the split point — the
+ *  dot slides outward while it climbs, so its track is a bend that straightens
+ *  into a line parallel to the path, and drawing the bend is what makes the two
+ *  rails read as ONE ladder rather than two separate climbers. */
+export const pairRailPath = (
+  c: ClimberPath,
+  fFrom: number,
+  fTo: number,
+  split: (f: number) => number,
+  which: "a" | "b",
+) => {
+  const pts: string[] = [];
+  const n = Math.max(1, Math.ceil(fTo - fFrom));
+  for (let i = 0; i <= n; i++) {
+    const f = fFrom + ((fTo - fFrom) * i) / n;
+    const d = pairDots(c, f, split(f))[which];
+    pts.push(`${i === 0 ? "M" : "L"}${d.x.toFixed(2)} ${d.y.toFixed(2)}`);
+  }
+  return pts.join(" ");
+};
+
+/** THE PAIR, drawn: the shared trail up to the split, the two rails out of it,
+ *  the connector between the dots, the rungs on the path, and the dots on top.
+ *  The connector goes UNDER the rungs, exactly as the level line goes under the
+ *  column, so it is SEEN to pass through the question it is answering. */
+export const RungPair: React.FC<{
+  c: ClimberPath;
+  rungs: Rung[];
+  /** the climber's own clock */
+  frame: number;
+  split: number;
+  splitFrom: number;
+  splitOf: (f: number) => number;
+  /** 0..1, the connector's draw from the original dot toward the twin */
+  connector: number;
+  solved: (j: number) => number;
+  k: number;
+}> = ({ c, rungs, frame, split, splitFrom, splitOf, connector, solved, k }) => {
+  const d = pairDots(c, frame, split);
+  const born = climberAt(c, c.born);
+  const sharedTo = climberAt(c, Math.min(frame, splitFrom));
+  const conn = clamp01(connector);
+  const sw = levelW(k);
+  return (
+    <g>
+      {frame > c.born ? (
+        <Trail
+          id={`trail-${c.id}`}
+          ax={born.x}
+          ay={born.y}
+          bx={sharedTo.x}
+          by={sharedTo.y}
+          k={k}
+          fade={0.28}
+        />
+      ) : null}
+      {frame > splitFrom ? (
+        <g style={{ filter: iconShadow(k) }} opacity={INK_LO}>
+          <path
+            d={pairRailPath(c, splitFrom, frame, splitOf, "a")}
+            fill="none"
+            stroke={INK}
+            strokeWidth={sw}
+            strokeLinecap="butt"
+          />
+          <path
+            d={pairRailPath(c, splitFrom, frame, splitOf, "b")}
+            fill="none"
+            stroke={INK}
+            strokeWidth={sw}
+            strokeLinecap="butt"
+          />
+        </g>
+      ) : null}
+      {conn > 0 ? (
+        <g style={{ filter: iconShadow(k) }} opacity={INK_LO}>
+          <line
+            x1={d.a.x}
+            y1={d.a.y}
+            x2={d.b.x}
+            y2={d.b.y}
+            pathLength={1}
+            stroke={INK}
+            strokeWidth={sw}
+            strokeLinecap="butt"
+            strokeDasharray={`${conn.toFixed(4)} 1`}
+          />
+        </g>
+      ) : null}
+      {rungs.map((g, j) => {
+        const lit = smoothstep(clamp01((frame - (g.lit - RUNG_FADE_F)) / RUNG_FADE_F));
+        if (lit <= 0) return null;
+        return (
+          <QuestionRing
+            key={`${c.id}p${j}`}
+            x={g.x}
+            y={g.y}
+            r={g.r}
+            solved={solved(j)}
+            k={k}
+            opacity={lit}
+          />
+        );
+      })}
+      <g style={{ filter: iconShadow(k) }}>
+        <circle cx={d.a.x} cy={d.a.y} r={CLIMBER_R} fill={INK} />
+        <circle cx={d.b.x} cy={d.b.y} r={CLIMBER_R} fill={INK} />
+      </g>
+    </g>
+  );
+};
