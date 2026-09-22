@@ -40,6 +40,7 @@ import {
   LABEL_SIZE,
   Link,
   PACKET_PERIOD,
+  PARALLAX,
   PERSON_H,
   SEAT_GAP,
   SEAT_R,
@@ -310,7 +311,7 @@ export const defaultProps: Props = schema.parse({
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
   backgroundDim: BG_DIM,
-  parallax: 0.32,
+  parallax: PARALLAX,
   shadowY: SHADOW_Y,
   shadowBlur: SHADOW_BLUR,
   shadowOpacity: SHADOW_OPACITY,
@@ -1183,7 +1184,7 @@ const UserIsAgentA: React.FC<Props> = ({
           <Label
             k={k}
             x={SEAT.x - SEAT_R - 26 - LABEL_SIZE * 1.1}
-            y={SEAT.y - LABEL_SIZE * 0.52}
+            y={SEAT.y - LABEL_SIZE * 0.5}
             text="user"
             f0={98}
             frame={frame}

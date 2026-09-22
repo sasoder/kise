@@ -37,6 +37,8 @@ import {
   LINK_IDLE,
   LINK_LIVE,
   LABEL_SIZE,
+  LABEL_TRACKING,
+  LABEL_WEIGHT,
   Label,
   Link,
   PACKET_PERIOD,
@@ -77,10 +79,10 @@ export const FPS = ALIGN_FPS;
 // WHAT IS LEFT IS ONE AXIS. The user's own white arrow is extended straight up
 // into a long vertical axis (`SeatArrow` at a longer `len`, so it IS that
 // arrow, full stroke, INK_HI, its head always AXIS_LEAD beyond the highest
-// tick). Two LEVELS ride on it: a short white tick with one Söhne line to its
-// right — `honesty`, and below it `instruction following`. Where each tick
-// started, a GHOST tick stays at INK_LO: that is the score before. Beads leave
-// the snapped agents, pass through the ring and climb the axis in one lane, and
+// tick). Two LEVELS ride on it: a short white tick with one line of the set's
+// type to its right — `HONESTY`, and below it `INSTRUCTION FOLLOWING`. Where
+// each tick started, a GHOST tick stays at INK_LO: that is the score before.
+// Beads leave the snapped agents, pass through the ring and climb in one lane,
 // a bead that REACHES a tick is absorbed and the tick rises ONE NOTCH. The
 // level goes up only because a bead reached it — nothing in the cut is on a
 // timer.
@@ -164,24 +166,16 @@ export const FPS = ALIGN_FPS;
 // (Fritsch-Carlson), one key per frame, through the shared damper, pre-rolled
 // from -CAM_PRE so f0 opens mid-creep. Four framings are SOLVED (secant; the
 // damper is affine in its keys so each solve is exact):
-//   f0    y 460  k 1.28   ring 891, honesty tick 515, flock below
-//   f24   y 456  k 1.00   four notches on, the instruction level joining
-//   f95   y 581  k 0.90   flock -> ring -> axis -> both ticks in one frame: the
+//   f0    y 372  k 1.550  ring 1040, honesty tick 429, axis head 314, flock below
+//   f24   y 253  k 1.500  four notches on, the instruction level joining at 1041
+//   f95   y 230  k 1.150  flock -> ring -> axis -> both ticks in one frame: the
 //                         camera takes the whole crowd in while the level climbs
-//   f172  y 279  k 0.98   the tick still climbing at screen 250, the ring at 1056
+//   f172  y -422 k 1.300  the tick still climbing at screen 393, the ring at 2039
 //
-// THE LABEL SOLVE IS WHAT SETS THE ZOOM'S TWO ENDS. A label has to be >= 56
-// screen px everywhere and its longest line has to stay left of screen 1000
-// everywhere, and both are measured off Sohne-Kraftig's own advance widths:
-//   size    56 / 1.15 (the widest frame) = 48.7 -> LABEL_W 50, so a label is
-//           56.3 screen px at k 1.15 and 77.5 at k 1.55
-//   width   "instruction following" on ONE line is 454 world px at that size
-//           and runs off the right edge at any k over 1.0, which is why the
-//           second label is set as TWO LINES: "instruction" alone is 221, so
-//           the right edge lands at 540 + (55 + 14 + 221) * 1.55 = 990
-// Measured over the whole cut: the widest right edge is 975 px (f24), the
-// smallest label 56.3 px, the closest a label comes to another label 418 px and
-// to the ring's own labels 76 px.
+// THE LABEL SOLVE, REDONE for Roboto Condensed Bold CAPS by the harmony pass —
+// the type is the set's now, at the set's one size, and caps are WIDER than the
+// lowercase this replaced. See LABEL_W for the arithmetic and `STATS.label` for
+// what it measures out at.
 //
 // ---------------------------------------------------------------------------
 // DEVIATIONS from the revamp brief, with the arithmetic.
@@ -246,6 +240,14 @@ export const defaultProps: Props = schema.parse({
   backgroundSrc: "grid-background.jpg",
   backgroundBlur: 13,
   backgroundDim: BG_DIM,
+  // THE ONE PARALLAX IN THE SET THAT IS NOT `PARALLAX` (0.32), and the harmony
+  // pass measured why rather than harmonising it away: this cut's camera climbs
+  // 794 world px with the world travelling another 1384 under it, which is far
+  // more ground than the other three cover, and `GridBackground` is BG_OVERSIZE
+  // 1.8 of the frame. Measured over all 173 frames, the worst background offset
+  // is 685 px at 0.26 against 833 px of slack — and 855 px at 0.32, which pulls
+  // the image's own edge into the frame. So 0.26 is forced, and it still slides
+  // the grid at 0.26 * SLIDE_V = 2.1 screen px/frame at k 1.
   parallax: 0.26,
   shadowY: SHADOW_Y,
   shadowBlur: SHADOW_BLUR,
@@ -311,15 +313,33 @@ export const TICK_HALF = 55; // a tick reaches this far either side of the axis
 /** A ghost is the same mark at 60% of the length, so the pair never reads as a
  *  ruler with two rungs on it. */
 const GHOST_F = 0.6;
-const LABEL_GAP = 14; // ...and its label sits this far past the tick's end
-/** THE LABEL SIZE IS SOLVED off the two ends of the zoom. It has to be >= 56
- *  screen px at the widest (k 1.15) and its longest LINE has to stay left of
- *  screen 1000 at the closest (k 1.55): 56 / 1.15 = 48.7 -> 49 world px, and
- *  "instruction" — the wider of the two lines, which is why the second label is
- *  set over two lines rather than one — is then 217 world px (measured off
- *  Sohne-Kraftig's advance widths), so its right edge lands at
- *  540 + (55 + 14 + 217) * 1.55 = 983. */
-const LABEL_W = 50;
+/** ...and its label sits this far past the tick's end. 10, not the 14 this cut
+ *  was built with: see LABEL_W. */
+const LABEL_GAP = 10;
+/** THE LABEL SIZE IS THE SET'S, which is what the harmony pass changed here.
+ *  This cut had solved a private 50 world px against a floor of 56 SCREEN px at
+ *  its widest zoom — but the set's other labels (`user`, `A` on the ring here
+ *  and in cut 2, `A` in cut 4) are all LABEL_PX 40, so 50 was the outlier and
+ *  56 px was a floor only this cut believed in: measured across the set a label
+ *  lands 38-62 screen px, and 40 here is 46 px at k 1.15 and 62 at k 1.55.
+ *
+ *  The right-edge solve is REDONE for Roboto Condensed Bold CAPS, and caps are
+ *  WIDER than the lowercase Söhne this replaced, not narrower — measured off a
+ *  rendered ruler at this size: HONESTY 168 world px of ink, INSTRUCTION 241,
+ *  FOLLOWING 205, and INSTRUCTION FOLLOWING on ONE line 460, which is why the
+ *  second label stays set over two. "INSTRUCTION" is the wider line, so the
+ *  right edge is 540 + (TICK_HALF + LABEL_GAP + 241) * k, and at the closest
+ *  zoom the label is ever live (k 1.50, f24) that is 999 against this cut's
+ *  1000 — which is what took LABEL_GAP from 14 to 10. At the first frame the
+ *  label is fully opaque (f34, k 1.48) it is 986. */
+const LABEL_W = LABEL_SIZE;
+/** Where a line of CAPS sits inside its own line box, measured off the same
+ *  ruler: with `lineHeight` LABEL_LH the ink's vertical centre lands
+ *  0.05 * size ABOVE the box's centre, so a label is centred on its tick by
+ *  pushing the box down by that much. The old number was -0.09 * size, which
+ *  was an x-height fudge for lowercase and now reads as 5.6 px of lift. */
+const CAP_TRIM = LABEL_W * 0.05;
+const LABEL_LH = 0.95;
 /** How far the arrow's head stays beyond the highest tick. */
 const AXIS_LEAD = 74;
 /** The frame the second level draws on, with its label: "instruction" (f24). */
@@ -850,8 +870,8 @@ const HonestyGoesUpV2: React.FC<Props> = ({
 
           {/* 3. THE AXIS — the user's own arrow at a longer `len`, with its head
               always ahead of the highest tick. 4. THE LEVELS: a ghost tick where
-              each one started, the tick itself, and one Söhne line to its
-              right. */}
+              each one started, the tick itself, and one line of the set's own
+              type to its right. */}
           <svg
             width={FRAME_W}
             height={FRAME_H}
@@ -928,7 +948,7 @@ const HonestyGoesUpV2: React.FC<Props> = ({
           <Label
             k={k}
             x={SEAT.x - SEAT_R - 26 - LABEL_SIZE * 1.1}
-            y={SEAT.y - LABEL_SIZE * 0.52}
+            y={SEAT.y - LABEL_SIZE * 0.5}
             text="user"
             inT={1}
             opacity={INK_HI}
@@ -976,7 +996,7 @@ const HonestyGoesUpV2: React.FC<Props> = ({
             // centred on its tick, which is what keeps its longest line inside
             // screen 1000 at the closest zoom.
             const lines = n === 0 ? 1 : 2;
-            const lh = LABEL_W * 0.95;
+            const lh = LABEL_W * LABEL_LH;
             const blockH = lines * lh;
             return (
               <div
@@ -984,10 +1004,13 @@ const HonestyGoesUpV2: React.FC<Props> = ({
                 style={{
                   position: "absolute",
                   left: CX + TICK_HALF + LABEL_GAP,
-                  top: lv[n] - blockH / 2 - LABEL_W * 0.09 + worldPx(24) * (1 - t),
+                  top: lv[n] - blockH / 2 + CAP_TRIM + worldPx(24) * (1 - t),
                   fontFamily: FONT_LABEL,
+                  fontWeight: LABEL_WEIGHT,
                   fontSize: LABEL_W,
-                  lineHeight: 0.95,
+                  lineHeight: LABEL_LH,
+                  textTransform: "uppercase",
+                  letterSpacing: LABEL_TRACKING,
                   color: ink,
                   opacity: INK_HI * t,
                   whiteSpace: "nowrap",
@@ -1107,11 +1130,12 @@ const sepStats = (() => {
 
 /** THE LABEL BOXES, in SCREEN px, against the frame's right edge and against
  *  everything they could cross: each other, the axis, the ticks and the ring's
- *  own two labels. Measured off Sohne-Kraftig's advance widths at LABEL_PX. */
-const W_HON = (142.9 * LABEL_W) / 40; // "honesty"
-const W_INS = (177.0 * LABEL_W) / 40; // "instruction", the wider of the two lines
-const W_USER = 79.1; // the ring's own labels are still at LABEL_SIZE
-const W_A = 28.4;
+ *  own two labels. Measured off a rendered ruler of Roboto Condensed Bold caps
+ *  at 0.04 em, which is the type every label in the set is set in. */
+const W_HON = (168 * LABEL_W) / 40; // "HONESTY"
+const W_INS = (241 * LABEL_W) / 40; // "INSTRUCTION", the wider of the two lines
+const W_USER = (91 * LABEL_SIZE) / 40; // the ring's own labels
+const W_A = (24 * LABEL_SIZE) / 40;
 const labelStats = (() => {
   let right = 0;
   let rightAt = 0;
@@ -1127,22 +1151,12 @@ const labelStats = (() => {
       return { x0: p.x, x1: p.x + ww * c.k, y0: p.y, y1: p.y + hw * c.k };
     };
     const lvl = [levelAt(0, f), levelAt(1, f)];
-    const lh = LABEL_W * 0.95;
-    const hon = box(
-      lvl[0] - lh / 2 - LABEL_W * 0.09,
-      CX + TICK_HALF + LABEL_GAP,
-      W_HON,
-      lh,
-    );
-    const ins = box(
-      lvl[1] - lh - LABEL_W * 0.09,
-      CX + TICK_HALF + LABEL_GAP,
-      W_INS,
-      2 * lh,
-    );
+    const lh = LABEL_W * LABEL_LH;
+    const hon = box(lvl[0] - lh / 2 + CAP_TRIM, CX + TICK_HALF + LABEL_GAP, W_HON, lh);
+    const ins = box(lvl[1] - lh + CAP_TRIM, CX + TICK_HALF + LABEL_GAP, W_INS, 2 * lh);
     const insLive = f >= INS_IN;
     const user = box(
-      SEAT.y - LABEL_SIZE * 0.52,
+      SEAT.y - LABEL_SIZE * 0.5,
       SEAT.x - SEAT_R - 26 - LABEL_SIZE * 1.1 - W_USER / 2,
       W_USER,
       LABEL_SIZE,
@@ -1190,6 +1204,21 @@ const labelStats = (() => {
   };
 })();
 
+// THE TYPE'S OWN ASSERTIONS, added by the harmony pass so a future change of
+// face or size cannot quietly walk a label off the frame or onto another one.
+// Roboto Condensed Bold CAPS are 34% wider than the lowercase this cut was
+// solved for, so these are the numbers that actually hold it together.
+if (labelStats.maxRightEdge > 1000) {
+  throw new Error(
+    `HonestyGoesUpV2: a label's right edge reaches screen x ${labelStats.maxRightEdge} at f${labelStats.maxRightEdgeAt} (ceiling 1000)`,
+  );
+}
+if (labelStats.minGapBetweenLevelLabels <= 0 || labelStats.minGapToRingLabels <= 0) {
+  throw new Error(
+    `HonestyGoesUpV2: label boxes overlap — levels ${labelStats.minGapBetweenLevelLabels} px at f${labelStats.minGapBetweenLevelLabelsAt}, ring ${labelStats.minGapToRingLabels} px at f${labelStats.minGapToRingLabelsAt}`,
+  );
+}
+
 /** THE CAPTION BAND, every frame: the highest ink of a tick or a label box and
  *  the lowest, against 200 and 1400. The ring, its own labels and the flock are
  *  not in this — the flock is context and bleeds under 1300 by agreement — but
@@ -1202,16 +1231,16 @@ const bandStats = (() => {
   for (let f = 0; f < DURATION; f++) {
     const c = camAt(f);
     const yOf = (w: number) => FRAME_H / 2 + (w - c.cy) * c.k;
-    const lh = LABEL_W * 0.95;
+    const lh = LABEL_W * LABEL_LH;
     const items: number[][] = [
       [levelAt(0, f), levelAt(0, f)],
       [HON_START, HON_START],
-      [levelAt(0, f) - lh / 2 - LABEL_W * 0.09, levelAt(0, f) + lh / 2 - LABEL_W * 0.09],
+      [levelAt(0, f) - lh / 2 + CAP_TRIM, levelAt(0, f) + lh / 2 + CAP_TRIM],
     ];
     if (f >= INS_IN) {
       items.push([levelAt(1, f), levelAt(1, f)]);
       items.push([INS_START, INS_START]);
-      items.push([levelAt(1, f) - lh - LABEL_W * 0.09, levelAt(1, f) + lh - LABEL_W * 0.09]);
+      items.push([levelAt(1, f) - lh + CAP_TRIM, levelAt(1, f) + lh + CAP_TRIM]);
     }
     for (const [a, b] of items) {
       const ya = yOf(a);

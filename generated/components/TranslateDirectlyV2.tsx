@@ -42,14 +42,16 @@ import {
   MARCH_W,
   PARALLAX,
   SEAT_R,
+  SEP_FLOOR,
   STROKE_W,
   TIP_LOOSE,
   TWO_PI,
   UserSeat,
   buildFormation,
+  flockWander,
+  flockWanderCaps,
   formationAt,
   travel,
-  wanderOf,
 } from "./alignShared";
 import { hermite } from "./trapShared";
 
@@ -128,7 +130,9 @@ export const FPS = ALIGN_FPS;
 //   * FOUR BARS, NOT SIX, with longer gaps (130 / 177 / 213 / 270) and wider
 //     swerves: the widest apex is 135 world px = 129.6 screen px at the final k
 //     against V1's 118.5, so the detour is bigger and there is less of it.
-//   * THE LINKS DROP TO LINK_OP 0.2 (V1: 0.3), still through a local multiplier.
+//   * THE LINKS DROP TO LINK_OP 0.22 (V1: 0.3), still through a local
+//     multiplier — and 0.22 is cut 3's own context rung, so the set has one
+//     two-rung ladder rather than four numbers (see LINK_OP).
 //
 // ---------------------------------------------------------------------------
 // GESTURES — TWO, and nothing in the piece is outside this list.
@@ -257,16 +261,27 @@ export const LOOSE_DEG = 28;
 /** WHERE THE LINKS SIT — V1's local multiplier, one rung quieter. `Link`
  *  multiplies its idle rung by `opacity`, so the multiplier that lands an idle
  *  link on LINK_OP is LINK_OP / LINK_IDLE. No exported value is touched, and
- *  the comets stay the brightest orange thing in the frame. */
-export const LINK_OP = 0.2;
+ *  the comets stay the brightest orange thing in the frame.
+ *
+ *  The harmony pass took it from 0.20 to 0.22, which is cut 3's number: the set
+ *  now has ONE two-rung ladder for a link's idle instead of four values —
+ *  0.30 where the flock is the subject (cuts 1 and 2) and 0.22 where it is
+ *  context in a de-cluttered frame (cuts 3 and 4). */
+export const LINK_OP = 0.22;
 export const LINK_MUL = LINK_OP / LINK_IDLE;
 /** THE HUNTING: the full +-LOOSE_DEG on each seat's own hashed period and
  *  phase, so the destination is visibly casting about for a heading it has not
  *  found rather than holding a static fan. */
 export const HUNT_P0 = 40;
 export const HUNT_P1 = 70;
-/** How far LEFT of A's ring the "A" sits, to the text's centre. */
-export const LABEL_SIDE = SEAT_R + 40;
+/** How far past A's ring the "A" sits. It is the SET's offset, which is what
+ *  the harmony pass changed here: cuts 2 and 3 park the same label on the
+ *  ring's RIGHT SHOULDER at SEAT_R + 26 from the ring's centre, left-aligned
+ *  and levelled on it, and this cut had it on the left at SEAT_R + 40 and
+ *  centred. The right shoulder is clear here too — the route leaves the ring's
+ *  top edge and bar 1 stands 130 world px above it — so the same noun now sits
+ *  in the same place beside the same ring in all three cuts that label it. */
+export const LABEL_SIDE = SEAT_R + 26;
 
 /** A's SEAT: a ring with Agent A in it, and NOTHING UNDER IT. It is the start
  *  point of the line and of the bead train, and that is all it is now. */
@@ -726,12 +741,24 @@ export const GRID_REST = (() => {
 // THE DESTINATION FLOCK. The only crowd in the cut.
 // ---------------------------------------------------------------------------
 const FORM_P = buildFormation({ n: N_AGENTS, seed: 9, rx: BLOB_RX_CUT, ry: BLOB_RY_CUT });
+/** THE FLOCK WANDERS THE SET'S WAY — the harmony pass's one motion fix. This
+ *  cut drove its destination flock off `wanderOf`, the module's independent
+ *  per-agent drift, and measured over every frame and every pair that put two
+ *  comets 2.145 mean radii apart at f93 against the set's SEP_FLOOR of 2.62:
+ *  the fused-pair failure `alignShared`'s FLOCK WANDER block exists to stop,
+ *  and the one thing in the set that reads as a defect rather than as a
+ *  difference. `flockWander` + `flockWanderCaps` is what cuts 1, 2 and 3 all
+ *  use — a coherent field so the crowd breathes as a body, plus a small
+ *  independent drift capped per agent against its own worst neighbour — and it
+ *  takes this flock's worst pair to 2.75 (STATS.separation), which is where the
+ *  other three cuts sit. */
+const WANDER_CAPS: number[] = flockWanderCaps(FORM_P);
 
 export type Agent = { x: number; y: number; r: number; heading: number };
 
 export const agentsOf = (frame: number): Agent[] =>
-  FORM_P.seats.map((s) => {
-    const w = wanderOf(s, frame);
+  FORM_P.seats.map((s, i) => {
+    const w = flockWander(s, frame, WANDER_CAPS[i]);
     const p = formationAt({ x: s.x + w.dx, y: s.y + w.dy }, P_CENTRE, H_USER);
     const period = HUNT_P0 + (HUNT_P1 - HUNT_P0) * hash(s.i, 82);
     const hunt =
@@ -909,11 +936,12 @@ const TranslateDirectlyV2: React.FC<Props> = ({
           <UserSeat k={k} x={A_SEAT.x} y={A_SEAT.y} frame={frame} occupant="agent" arrow={0} />
           <Label
             k={k}
-            x={A_SEAT.x - LABEL_SIDE}
-            y={A_SEAT.y - LABEL_SIZE / 2}
+            x={A_SEAT.x + LABEL_SIDE}
+            y={A_SEAT.y - LABEL_SIZE * 0.5}
             text="A"
             f0={0}
             frame={frame}
+            align="left"
             opacity={INK_HI}
           />
 
@@ -965,7 +993,7 @@ const probeSpeeds = () => {
     [AXIS, ARROW_TIP_Y],
     [AXIS, P_CENTRE.y + BLOB_RY_CUT],
     [AXIS, ROUTE_Y0],
-    [AXIS - LABEL_SIDE, A_SEAT.y],
+    [AXIS + LABEL_SIDE, A_SEAT.y],
     [AXIS, A_SEAT.y + SEAT_R],
     [BARRIERS[0].x0, BARRIERS[0].y],
     [BARRIERS[N_BARS - 1].x0, BARRIERS[N_BARS - 1].y],
@@ -1053,8 +1081,37 @@ const beadTally = (f: number) => {
   return { emitted, stuck, travelling, perBar, lead: Number(lead.toFixed(0)) };
 };
 
+/** NO FUSED COMETS, which this cut did not measure before the harmony pass and
+ *  did not pass: on `wanderOf` its worst pair closed to 2.145 mean radii at f93
+ *  against the set's SEP_FLOOR. Every pair, every frame, in mean radii. */
+const sepStats = (() => {
+  let worst = Infinity;
+  let at = 0;
+  let pair: [number, number] = [0, 0];
+  for (let f = 0; f <= DURATION; f++) {
+    const a = agentsOf(f);
+    for (let i = 0; i < a.length; i++) {
+      for (let j = i + 1; j < a.length; j++) {
+        const d = Math.hypot(a[i].x - a[j].x, a[i].y - a[j].y) / (0.5 * (a[i].r + a[j].r));
+        if (d < worst) {
+          worst = d;
+          at = f;
+          pair = [i, j];
+        }
+      }
+    }
+  }
+  return { minMeanRadii: Number(worst.toFixed(3)), atFrame: at, pair, floor: SEP_FLOOR };
+})();
+if (sepStats.minMeanRadii < 2.6) {
+  throw new Error(
+    `TranslateDirectlyV2: two comets ${sepStats.minMeanRadii} mean radii apart at f${sepStats.atFrame} (floor 2.6)`,
+  );
+}
+
 export const STATS = {
   duration: DURATION,
+  separation: sepStats,
   world: {
     aSeat: A_SEAT.y,
     routeY0: ROUTE_Y0,
@@ -1190,7 +1247,7 @@ export const STATS = {
       Number(screenAt(0, AXIS, A_SEAT.y - SEAT_R)[1].toFixed(0)),
       Number(screenAt(0, AXIS, A_SEAT.y + SEAT_R)[1].toFixed(0)),
     ],
-    aLabelX: Number(screenAt(0, AXIS - LABEL_SIDE, A_SEAT.y)[0].toFixed(0)),
+    aLabelX: Number(screenAt(0, AXIS + LABEL_SIDE, A_SEAT.y)[0].toFixed(0)),
     bar1: [
       Number(screenAt(0, BARRIERS[0].x0, BARRIERS[0].y)[0].toFixed(0)),
       Number(screenAt(0, BARRIERS[0].x1, BARRIERS[0].y)[0].toFixed(0)),

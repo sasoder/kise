@@ -1,5 +1,5 @@
 import { Img, staticFile } from "remotion";
-import { loadFont } from "@remotion/fonts";
+import { loadFont } from "@remotion/google-fonts/RobotoCondensed";
 import {
   ACCENT,
   ACCENT_DEEP,
@@ -95,7 +95,12 @@ export const worldPx = (px: number, k: number = K_WIDE) => px / k;
 export const DOT_D_PX = 16; // an agent comet's body diameter
 export const STROKE_PX = 6.5; // rings, arrows, paths — ONE weight
 export const THREAD_PX = 3.25; // a link: half stroke, both kinds
-export const PACKET_R_PX = 4.5; // a packet on a link
+/** A packet on a link. 3.6 is 0.45 of a comet's head radius: at the 4.5 this
+ *  started at — 0.56 of a head — a packet reads as a small extra agent, which
+ *  is what cuts 2 and 3 found and then fixed with a local constant of their
+ *  own. The harmony pass (2026-09-22) moved that number here instead, so every
+ *  packet in the set is one size on both kinds of link. */
+export const PACKET_R_PX = 3.6;
 export const PERSON_H_PX = 118; // person.png's box (its ink is 0.84 of it)
 export const SEAT_R_PX = 78; // the user seat's ring radius
 /** The arrow rising from the seat, measured from the RING CENTRE to the TIP —
@@ -104,7 +109,10 @@ export const SEAT_R_PX = 78; // the user seat's ring radius
  *  instead would put its tip 78 px higher and there is no framing of the seat
  *  and the blob together that then keeps the tip inside the caption-safe band. */
 export const ARROW_LEN_PX = 230;
-export const LABEL_PX = 40; // a Söhne label's size
+/** A label's size, and the set has exactly one: every label in all four cuts is
+ *  this size in world px, so the only thing that changes a label's SCREEN size
+ *  is the cut's own zoom. */
+export const LABEL_PX = 40;
 export const BEAD_R_PX = 9; // an eval bead
 /** Agent A — the one the others are told is the user — is drawn this much
  *  bigger than its neighbours, so it is the same object one size up rather than
@@ -606,16 +614,24 @@ export const travel = (f: number, headingAt: (f: number) => number) => {
 };
 
 // ---------------------------------------------------------------------------
-// TYPE. Söhne Kraftig, vendored, loaded at module scope so a font failure
-// surfaces before a frame is drawn. White, lowercase except "A" — the label is
-// a caption on a thing, not a title.
+// TYPE. Roboto Condensed Bold, loaded from `@remotion/google-fonts` at module
+// scope so a font failure surfaces before a frame is drawn. White, and ALL
+// CAPS, tracked out 0.04 em — the final harmony pass (2026-09-22) replaced the
+// vendored Söhne Kraftig on the user's note, and caps at this tracking are what
+// make a condensed face read as a label on a thing rather than as body text.
+// Every label in the set goes through `FONT_LABEL` — nothing writes a family of
+// its own — so the four cuts cannot drift apart in type.
 //
 // TEXT NEVER POPS: a label slides up LABEL_RISE px while fading in over
 // LABEL_IN frames. `Label` is a DOM element, so it goes in the world <div>
 // beside the <svg>, never inside it.
 // ---------------------------------------------------------------------------
-export const FONT_LABEL = "SohneKraftigAL";
-loadFont({ family: FONT_LABEL, url: staticFile("Sohne-Kraftig.otf"), weight: "600" });
+const LABEL_FONT = loadFont("normal", { weights: ["700"], subsets: ["latin"] });
+export const FONT_LABEL = LABEL_FONT.fontFamily;
+/** The label's weight and its tracking, so a cut that has to set type itself
+ *  (cut 3's two level labels) matches `Label` exactly. */
+export const LABEL_WEIGHT = 700;
+export const LABEL_TRACKING = "0.04em";
 
 export const LABEL_SIZE = worldPx(LABEL_PX);
 export const LABEL_RISE_PX = 24;
@@ -661,8 +677,11 @@ export const Label: React.FC<{
         width: align === "center" ? 1200 : undefined,
         textAlign: align === "center" ? "center" : "left",
         fontFamily: FONT_LABEL,
+        fontWeight: LABEL_WEIGHT,
         fontSize: size,
         lineHeight: 1,
+        textTransform: "uppercase",
+        letterSpacing: LABEL_TRACKING,
         color: INK,
         opacity: opacity * t,
         whiteSpace: "nowrap",
@@ -856,7 +875,8 @@ export const UserSeat: React.FC<{
 // made those). A row lands one bead at a time on its own hashed frame, each one
 // sliding up EVAL_RISE px while it fades in — beads never pop either.
 //
-// The label sits centred under the baseline tick, lowercase, INK_LO.
+// The label sits centred under the baseline tick, in the set's own type at
+// INK_LO.
 // ---------------------------------------------------------------------------
 export const EVAL_COLS = 3;
 export const EVAL_ROW_H = worldPx(30);
@@ -982,10 +1002,15 @@ export const EvalColumn: React.FC<{
           textAnchor="middle"
           fill={INK}
           opacity={opacity * INK_LO * labelIn(frame, labelF0)}
-          style={{ fontFamily: FONT_LABEL, fontSize: LABEL_SIZE * 0.8 }}
+          style={{
+            fontFamily: FONT_LABEL,
+            fontWeight: LABEL_WEIGHT,
+            fontSize: LABEL_SIZE * 0.8,
+            letterSpacing: LABEL_TRACKING,
+          }}
           transform={`translate(0 ${(EVAL_RISE * (1 - labelIn(frame, labelF0))).toFixed(2)})`}
         >
-          {label}
+          {label.toUpperCase()}
         </text>
       ) : null}
     </>
