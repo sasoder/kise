@@ -115,47 +115,55 @@ export { FPS } from "./punishShared";
 //                under "but like we're seeing that": 0.562 screen px/frame of
 //                travel of a fixed world point, so the frame is never parked
 //                while the first press runs. The person's ink reaches screen
-//                x 1067.4 of 1080 — whole, with 12.6 px to spare.
-//     B  f20-39  k 1.272 -> 1.780, centre 812 -> 869, warp 0.65.  THE ONE
-//                PUSH, +42% on "the model is BECOMING (36) BETTER (41) ABLE
+//                x 1066.9 of 1080 — whole, with 13.1 px to spare.
+//     B  f20-39  k 1.272 -> 1.750, centre 812 -> 855, warp 0.65.  THE ONE
+//                PUSH, +40% on "the model is BECOMING (36) BETTER (41) ABLE
 //                (52)". Authored to f39 because the damper lags: the damped
-//                zoom is 91.0% of the move at f39, 97.8% at f43 and 99.9% at
+//                zoom is 91.1% of the move at f39, 97.7% at f43 and 99.7% at
 //                f47, so it LANDS on f47 — five frames before "able" — and
 //                settles under the word rather than arriving after it. The
-//                person straddles the right edge for exactly ten frames,
-//                f26-35, k 1.364 -> 1.652, with the zoom running at 0.025 to
-//                0.031 k/frame throughout: it leaves while the camera moves.
-//     C  f39-105 k 1.780 -> 1.855, centre 869 -> 897.  CLOSE, held under "at
-//                controlling its chain of thought", carrying 0.543 screen
-//                px/frame of creep into the tail. k is capped here by the
-//                column, not by taste: the widest visible line's ink is 547.8
-//                world px and its left edge sits 288 px from the text axis, so
-//                at k 1.86 the first bar of every unindented line starts
-//                touching the frame edge. Measured, the drawn ink lives
-//                between screen x 11.8 and 1026.8 on the worst frame.
+//                person straddles the right edge for ten frames inside this
+//                move and is fully out from the landing.
+//     C  f39-105 k HELD at 1.750, centre 855 -> 878.  CLOSE. V2: THE HOLD
+//                CREEPS IN POSITION, NOT IN ZOOM. V1 crept the zoom to 1.855
+//                and that put the first bar of every unindented line 11.8
+//                screen px from the left edge — the column was parked against
+//                the frame. The zoom is now pinned at its landing (measured
+//                max over the whole cut 1.7502, an 0.0002 damper settle) and
+//                the creep is 23 world px of content centre, 0.578 screen
+//                px/frame of travel, which walks the writing line from screen
+//                1120 up to 1080 as the caret keeps writing.
+//                THE ARITHMETIC OF THE CAP: the widest visible line's ink is
+//                547.8 world px and its left edge sits 288 px from the text
+//                axis, so the left margin is 540 - 291k screen px with the
+//                sway at its worst — 30.8 px at k 1.75, 24.9 px at 1.77 and
+//                11.8 px at 1.855. Measured over the delivered frames the
+//                drawn ink lives between screen x 31.6 and 999.8.
 //
 // ---------------------------------------------------------------------------
 // MEASURED (`$S/ControllingItsChain/measure.ts`, printed from the exports
 // below — every number in this block is that script's output).
 //
-//   Camera        max |dv| of a fixed world point 1.575 screen px/f^2 (cap
-//                 2.5), peak |v| 10.06 px/f. k 1.2500 at f0, 1.2687 at f20,
-//                 1.7325 at f39, 1.7794 at f47, 1.8527 at f103 — no overshoot.
+//   Camera        max |dv| of a fixed world point 1.480 screen px/f^2 (cap
+//                 2.5), peak |v| 9.47 px/f. k 1.2500 at f0, 1.2687 at f20,
+//                 1.7053 at f39, 1.7483 at f47, 1.7500 from f70 on; max over
+//                 the whole cut 1.7502, so the zoom never passes 1.77.
 //   Framing       the writing line — the TOP of the line the caret is on, which
 //                 saws by one pitch per line because the scroll holds the
-//                 FRACTIONAL head at HOLD_Y — runs screen y 1015.1 .. 1147.1,
-//                 midpoint 1081.1 (asked: ~1080-1120). 6.99 to 8.38 pitches of
-//                 column stand above it at the close. Reader line 845.4 ..
-//                 946.6 (floor 200). Lowest ink, the caret's foot, 1208.7, so
+//                 FRACTIONAL head at HOLD_Y — runs screen y 1038.1 .. 1164.6,
+//                 midpoint 1101.3 (asked: ~1080-1120). 7.59 to 8.72 pitches of
+//                 column stand above it at the close. Reader line 846.7 ..
+//                 973.4 (floor 200). Lowest ink, the caret's foot, 1224.1, so
 //                 the 500 px caption band is clear on every frame. Drawn
-//                 word-bar ink 11.8 .. 1026.8 screen x — nothing clipped.
-//                 Person ink: 1067.4 at its rightmost while WIDE (in frame),
-//                 1109.8 at its leftmost from f47 (fully out), straddling on
-//                 10 frames, all of them inside the push.
-//   Legibility    at K_REST 1.78 the four rungs of the one variable are 39.2 /
-//                 19.6 / 10.7 / 5.3 screen px — full, half, six, hairline.
-//                 That is the point of this framing; at the previous k 1.25
-//                 they were 27.5 / 13.8 / 7.5 / 3.8.
+//                 word-bar ink 31.6 .. 999.8 screen x — over 30 px clear of
+//                 both edges on every frame. The reader line's end dots sit at
+//                 screen x 3.7 and 1077.1 at their innermost against a radius
+//                 of 12.25, so the LINE runs off both edges rather than
+//                 stopping in frame. Person ink: 1066.9 at its rightmost while
+//                 WIDE (in frame), 1099.7 at its leftmost from f47 (fully
+//                 out), straddling on 10 frames, all inside the push.
+//   Legibility    at K_REST 1.75 the four rungs of the one variable are 38.5 /
+//                 19.3 / 10.5 / 5.3 screen px — full, half, six, hairline.
 //   Presses       starts 17.20 / 23.60 / 32.00 / 44.60 (table 18 / 24 / 33 /
 //                 43, all within +-2); end heights exactly 11 / 6 / 3 / 3
 //                 world px; each word is at full height on the frame before
@@ -166,14 +174,15 @@ export { FPS } from "./punishShared";
 //   Reader        gap to the writing head 3.500 -> 1.522 lines, never capped
 //                 on any frame (the soft minimum's own corner starts biting at
 //                 1.4). It crosses line 40's centre at f61.2.
-//   Text          no drawn word shrinks on any of the 103 frames except the
-//                 four pressed words inside their own presses and lines
-//                 thinning out through the top: 0 violations.
-//   Energy        min per-frame energy 179.9 screen px, at f50 (sum of |delta|
+//   Text          no drawn word shrinks in WORLD height or width on any of the
+//                 103 frames except the four pressed words inside their own
+//                 presses and lines thinning out through the top: 0
+//                 violations.
+//   Energy        min per-frame energy 158.3 screen px, at f50 (sum of |delta|
 //                 over every drawn bar's width, height and y, the caret, the
 //                 reader and the camera). Zero frames parked.
 //   Heads         the person glyph, the only head in the cut, peaks at 3.47
-//                 screen px/f. The caret peaks at 74.8 px/f between wraps —
+//                 screen px/f. The caret peaks at 73.4 px/f between wraps —
 //                 see the deviations.
 //
 // KNOWN DEVIATIONS FROM THE CUT BRIEF — five, each with its arithmetic. The
@@ -184,14 +193,12 @@ export { FPS } from "./punishShared";
 //     px from the block axis, so with the person in frame k cannot pass 1.33.
 //     Under the clip-wide rule the cut opens WIDE at 1.25 with the person
 //     whole and pushes to CLOSE, where the person is out and the axis moves to
-//     the TEXT axis 532.15. The CLOSE zoom lands at 1.78 and creeps to 1.855
-//     rather than the 1.90/1.95 the revision names, because the widest visible
-//     line is 547.8 world px of ink whose left edge is 288 px from that axis:
-//     540 / 288 = 1.875 is where an unindented line's first bar touches the
-//     frame edge, and a 62-frame hold needs real margin under that. At 1.855
-//     the worst drawn frame leaves 11.8 px on the left and 53.2 px on the
-//     right. 1.855 against 1.95 is 5% of zoom; the clipped column would have
-//     cost the cut its left margin for two thirds of its length.
+//     the TEXT axis 532.15. The CLOSE zoom LANDS AT 1.75 AND IS HELD there
+//     rather than reaching the 1.90/1.95 the revision names, because the
+//     widest visible line is 547.8 world px of ink whose left edge is 288 px
+//     from that axis: the left margin is 540 - 291k with the sway at its
+//     worst, which is 30.8 px at 1.75 and 11.8 px at 1.855. The hold's creep
+//     is therefore 23 world px of content centre instead of any zoom.
 //   * FRAMING HEIGHT. The brief's content centre (HOLD_Y - 90 -> HOLD_Y - 30)
 //     was solved at k 1.6. Re-solved for the revision's ask instead: the
 //     writing line's saw is centred on screen 1081, which puts 7.0 to 8.4
@@ -224,10 +231,10 @@ export { FPS } from "./punishShared";
 //     in the cut, the reader's person glyph, peaks at 3.47. The CARET peaks at
 //     74.8 px/f between line wraps, because it crosses a word and the 18 px
 //     inter-word gap in one frame at this word rate: 138 / 5.2 + 18 = 44.5
-//     world px, now at k 1.85. It is text being typed rather than a subject
+//     world px at k 1.75. It is text being typed rather than a subject
 //     moving, the reference cut V5 wrote 3.7x faster than this, and the only
 //     way down is a slower clock, which the brief's own press table and its
-//     50-54 window for line 42 fix. The four line WRAPS are one-frame jumps of
+//     50-54 window for line 42 fix. (73.4 px/f at V2's k.) The four line WRAPS are one-frame jumps of
 //     a line's width, which is what a caret does and what V5 shipped.
 // ---------------------------------------------------------------------------
 
@@ -380,22 +387,22 @@ export const readerRaw = (f: number) => READER_LINE0 + f * READER_LPF;
 export const K_TRACK = kTrack(
   [
     { f0: 0, f1: 20, k0: 1.25, k1: 1.272, warp: 1 },
-    { f0: 20, f1: 39, k0: 1.272, k1: 1.78, warp: 0.65 },
-    { f0: 39, f1: DURATION + 2, k0: 1.78, k1: 1.855, warp: 1 },
+    { f0: 20, f1: 39, k0: 1.272, k1: 1.75, warp: 0.65 },
+    { f0: 39, f1: DURATION + 2, k0: 1.75, k1: 1.75, warp: 1 },
   ],
   DURATION + 2,
 );
 export const C_TRACK = kTrack(
   [
     { f0: 0, f1: 20, k0: 806, k1: 812, warp: 1 },
-    { f0: 20, f1: 39, k0: 812, k1: 869, warp: 0.65 },
-    { f0: 39, f1: DURATION + 2, k0: 869, k1: 897, warp: 1 },
+    { f0: 20, f1: 39, k0: 812, k1: 855, warp: 0.65 },
+    { f0: 39, f1: DURATION + 2, k0: 855, k1: 878, warp: 1 },
   ],
   DURATION + 2,
 );
 /** The resolved zoom: where the cut sits for two thirds of its length. One
  *  stroke weight for the whole clip is fixed off it. */
-export const K_REST = 1.78;
+export const K_REST = 1.75;
 export const STROKE = strokeFor(K_REST);
 
 /** THE CLOSE FRAMING'S AXIS. Wide, the camera sits on the clip's block axis
