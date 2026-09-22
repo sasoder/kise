@@ -18,7 +18,6 @@ import {
 } from "./fieldShared";
 import {
   BLOCK_CX,
-  BLOCK_L,
   Bracket,
   COL_W,
   COL_X0,
@@ -53,6 +52,18 @@ export { FPS };
 
 // ---------------------------------------------------------------------------
 // Noam, clip `Noam_Punishing_AIs`, CUT 5 — `LightTouch`, in at 0:33.000.
+//
+// VERSION 2. V1 was approved at preview and delivered; the note on it was the
+// close framing: "the widest word ends 15.8 px inside the right frame edge —
+// too tight; the style forbids anything parked at the edge." V1 pinned the
+// close by its LEFT edge (world x 100) and let the right take whatever was
+// left, so the top of the zoom creep squeezed the longest line against the
+// frame. V2 pins it by the RIGHT edge instead — the side with no slack — and
+// caps the creep at the k where the sway still leaves 30 px on both sides.
+// Nothing else changed: same text, same clock, same reader, same five
+// presses, same ceiling, same shot list. Measured, on every one of the 225
+// frames: 36.1 px of air outside the skull's ink on the left and 36.4 px
+// outside the widest word on the right, against V1's 41.2 and 15.8.
 //
 //   "You can do that with a very light touch, but every time you intervene
 //    based on your observations of the chain of thought, you are implicitly
@@ -151,12 +162,12 @@ export { FPS };
 // warps, so framing and zoom always settle together. `blockU` does the same
 // for the sideways framing, 0 = close, 1 = block-centred.
 //
-//   S1  f0-44    k 1.50 -> 1.53, writing line 1240 -> 1262, CLOSE. 11 lines
+//   S1  f0-44    k 1.50 -> 1.515, writing line 1240 -> 1262, CLOSE. 11 lines
 //                of page filling the frame; the skull is in the left margin,
 //                the person and the reader's right-hand dot are off the right
 //                edge. A creep in, 0.5 screen px/f of travel, so PRESS 1 is
 //                the only new motion in the shot.
-//   S2  f44-88   k 1.53 -> 1.10, warp 0.75, writing line -> 1285, close ->
+//   S2  f44-88   k 1.515 -> 1.10, warp 0.75, writing line -> 1285, close ->
 //                block-centred. ONE long pull-back; the person re-enters on
 //                the right INSIDE the move. THE DAMPED SHOT LANDS AT f100 —
 //                99.7% of the move, four frames before "chain" (104). Presses
@@ -169,7 +180,7 @@ export { FPS };
 //   S4  f150-178 k 1.13 -> 1.50, warp 0.65, writing line -> 1258, back to the
 //                close framing; the person leaves inside the move. THE DAMPED
 //                SHOT LANDS AT f186 — 100.1%, four frames before "hide" (190).
-//   S5  f178-227 k 1.50 -> 1.53, writing line 1258 -> 1284. Close on the caret
+//   S5  f178-227 k 1.50 -> 1.515, writing line 1258 -> 1284. Close on the caret
 //                writing hairlines; 0.53 px/f of creep. Nothing lands on f209.
 //
 // The camera's own cy barely moves in world coordinates, because the page
@@ -180,21 +191,24 @@ export { FPS };
 // MEASURED (`$S/LightTouch/measure.ts`, off the tables this file exports).
 //   ALL ASSERTIONS PASS.
 //
-//   camera        max |dv| of a fixed world point 1.166 screen px/f^2 (cap
-//                 2.5); max |v| 8.154 px/f. k 1.500 · 1.529 (f44) · 1.101
-//                 (f100) · 1.129 (f150) · 1.500 (f186) · 1.528 (f225).
+//   camera        max |dv| of a fixed world point 1.340 screen px/f^2 (cap
+//                 2.5); max |v| 8.154 px/f. k 1.500 · 1.514 (f44) · 1.101
+//                 (f100) · 1.129 (f150) · 1.500 (f186) · 1.514 (f225).
 //                 Pull-back 99.7% done at f100, push-in 100.1% at f186.
-//   framing       at rest CLOSE the person's ink starts at screen x 1159.9 at
-//                 worst (rule: >= 1080), the skull's ink keeps 41.2 px of air
-//                 inside the left edge, the widest word of the page keeps
-//                 15.8 px inside the right edge, and the reader line's right
-//                 dot is 13.7 px past it. At rest WIDE the whole block keeps
+//   the edges     ON EVERY FRAME OF THE CUT, sway and damper included, the
+//                 skull's outer ink keeps 36.1 px of air inside the left edge
+//                 (worst at f44) and the widest word of the page keeps 36.4
+//                 px inside the right edge (worst at f225). Both >= 30. This
+//                 is the V2 fix.
+//   framing       at rest CLOSE the person's ink starts at screen x 1138.4 at
+//                 worst (rule: >= 1080) and the reader line's right dot is
+//                 23.0 px past the edge. At rest WIDE the whole block keeps
 //                 80.5 px of air. Zero frames park a half-visible glyph.
 //   the reader    6.665 screen px/f at most (cap 45). Line 26.815 -> 40.315;
 //                 3.185 to 5.479 lines behind the writing head on every frame
 //                 (brief: [3, 6.5]) and the soft cap NEVER binds — the reader
 //                 equals its raw constant rate on all 225 frames.
-//   the caret     43.2 screen px/f mean while writing, 90.0 peak, plus 15
+//   the caret     43.0 screen px/f mean while writing, 88.9 peak, plus 15
 //                 line-wraps. NOT a capped quantity: the 45 px/f cap is for a
 //                 head gliding across the frame, and the caret's speed IS the
 //                 word clock (1/3.4 words a frame — 2.4x SLOWER than the
@@ -202,7 +216,7 @@ export { FPS };
 //                 Its peaks are the widest words plus the 18 px inter-word
 //                 gap. The wrap itself is one frame, as V5 documented; it is
 //                 why the camera holds the column rather than the head.
-//   energy        min per-frame energy 601.7 screen px, at f88. Nothing in
+//   energy        min per-frame energy 644.2 screen px, at f49. Nothing in
 //                 this cut is ever still.
 //   finds         line 28 f22.6 (table 22) · 30 f55.9 (56) · 32 f89.3 (89) ·
 //                 34 f122.6 (122) · 36 f155.4 (156) — max error 0.62 f, and
@@ -214,7 +228,7 @@ export { FPS };
 //                 HAIR_H. Pressed phrases end at 18 / 14 / 10.5 / 7.5 / 5.
 //   the text      drawn width non-decreasing on every frame; ZERO word-height
 //                 changes anywhere outside a flagged phrase's own press.
-//   writing line  screen y 1162.3 .. 1318.0 over the cut, 1185.8 .. 1318.0
+//   writing line  screen y 1162.4 .. 1318.0 over the cut, 1185.8 .. 1318.0
 //                 from f100 (brief: [1000, 1330]); lowest drawn ink 1331.6,
 //                 clear of the 1420 caption line by 88 px.
 //   skulls        at f150, screen y 342 / 505 / 649 / 794 / 939 — all five
@@ -227,8 +241,8 @@ export { FPS };
 //    against the reader's 0.06 and the gap opens 3.30 -> 9.14 lines by f225 —
 //    the brief's own [3, 6.5] assertion fails. 1/3.4 gives 3.19 -> 5.48.
 //    (1/2.8 would need ~5.95 words a line, which `makeColumn` never gives.)
-//  * CLOSE k 1.50-1.53, not the rule's 1.75, and the close is centred on
-//    world x 100 + 540/k rather than on the text axis 532. THIS CUT'S FIRST
+//  * CLOSE k 1.50-1.515, not the rule's 1.75, and the close is solved from
+//    its right edge rather than centred on the text axis 532. THIS CUT'S FIRST
 //    GESTURE IS A SKULL IN THE LEFT MARGIN. On the text axis at k 1.75 the
 //    frame's left edge falls at world 223.4 and 11 px of the skull's right
 //    rim hang on the edge — the same fault the rule forbids for the person.
@@ -236,9 +250,10 @@ export { FPS };
 //    then four constraints bound k: the person's ink is only clear above k
 //    1.44; the reader's right DOT is only clear (inner edge and all) below
 //    the frame-right of world 829.15; the widest word this cut shows (world
-//    791.98) caps k at 1.56; the skull needs air. 1.50-1.53 is the middle of
-//    that window, and it satisfies the RULE'S OWN TEST with room to spare —
-//    the person's ink starts at screen 1160, not 1080.
+//    795.23) caps k at 1.542, and 30 px on both edges with the sway in caps
+//    it at 1.518. 1.50-1.515 is inside every one of those, and it satisfies
+//    the RULE'S OWN TEST with room to spare — the person's ink starts at
+//    screen 1138, not 1080.
 //    The wide lands at 1.10 and the push-in at 1.50, as instructed.
 //  * CONTENT CENTRE is solved from the writing line's screen y, not eased
 //    between the reader and the midpoint of reader-and-writing-line. See THE
@@ -250,7 +265,7 @@ export { FPS };
 //    so the wide shot does hold the whole accumulation; it completes five
 //    frames into the shot, still wide.
 //  * STROKE is `strokeFor(k)` evaluated LIVE, not frozen at one resting k.
-//    This cut's k swings 1.10-1.53, so a frozen weight would vary +-16% on
+//    This cut's k swings 1.10-1.515, so a frozen weight would vary +-16% on
 //    screen; live it is exactly `STROKE_PX` 6.5 screen px on every frame,
 //    which is what the module's "ONE STROKE WEIGHT, in SCREEN px" is for.
 //  * A PRESSED BRACKET is drawn through the module's own `Bracket`, with the
@@ -477,39 +492,48 @@ const bracketOp = (j: number, f: number) => {
 // 99.6% done at f100; S4's stops at f178 and the shot is 100.2% done at f186.
 // ---------------------------------------------------------------------------
 const K_OPEN = 1.5;
-const K_OPEN1 = 1.53;
+const K_OPEN1 = 1.515;
 const K_WIDE = 1.1;
 const K_WIDE1 = 1.13;
 const K_IN = 1.5;
-const K_IN1 = 1.53;
+const K_IN1 = 1.515;
 const S2_END = 88;
 const S4_END = 178;
 
+/** THE WIDEST WORD ON THE PAGE, as a world x. The close framing is solved
+ *  against it, so no word is ever parked on the right edge. */
+export const WORD_MAX_X = COLUMN.WORDS.reduce((m, w) => Math.max(m, w.x + w.w), 0) + COL_X0;
+/** The air the close framing keeps outside the widest word, in SCREEN px. */
+const CLOSE_AIR = 38;
+
 /** THE CLOSE FRAMING, solved not chosen. The block is `BLOCK_R - BLOCK_L`
- *  812.3 world px wide, so a camera on `BLOCK_CX` cannot go past k 1.33 before
- *  the person's ink leaves the frame half-shown. The clip's rule is that a
- *  close shot therefore takes the person FULLY out on the right and sits on
- *  the text — but THIS cut cannot simply centre on the text axis, because its
- *  first gesture is a SKULL in the left margin: at k 1.75 on x 532 the frame's
- *  left edge falls at world 223.4 and 11 px of the skull's right rim hang on
- *  the edge, which is the same fault the rule forbids for the person.
+ *  812.3 world px wide, so a camera on `BLOCK_CX` cannot go past k 1.33
+ *  before the person's ink leaves the frame half-shown. The clip's rule is
+ *  that a close shot therefore takes the person FULLY out on the right and
+ *  sits on the text — but THIS cut cannot simply centre on the text axis,
+ *  because its first gesture is a SKULL in the left margin: at k 1.75 on x
+ *  532 the frame's left edge falls at world 223.4 and 11 px of the skull's
+ *  right rim hang on the edge, which is the same fault the rule forbids for
+ *  the person.
  *
- *  So the close is solved from its LEFT edge instead: pin world x 100 at
- *  screen 0, i.e. `cx = 100 + 540/k`, which keeps 33.85 world px of air
- *  outside the skull's ink at every k. Four things then bound k from both
- *  sides, and they leave a window 1.47-1.55 wide:
- *    - the person's ink (world 857.84) must be clear of the right edge;
- *    - the reader line's right-hand DOT must be clear of it too, INNER edge
- *      and all (world 829.15) — at `BLOCK_L - 24` it was 0.7 world px inside
- *      and the frame parked a half-dot on the edge for 35 frames;
- *    - the widest word on any line this cut shows (world 791.98) must stay
- *      in, which caps k at 1.56;
- *    - the person's ink is only clear at all above k 1.44.
- *  This cut sits at 1.50-1.53: the person's ink starts at screen 1152 (the
- *  rule asks for >= 1080), the reader line runs off the right edge with its
- *  dot 9-24 world px past it, and the widest word keeps 14-35 px to spare. */
-const CLOSE_LEFT = BLOCK_L - 33.85;
-const cxClose = (k: number) => CLOSE_LEFT + FRAME_W / 2 / k;
+ *  So the close is solved from its RIGHT edge instead: hold `CLOSE_AIR`
+ *  screen px outside the widest word, i.e. the frame's right edge at world
+ *  `WORD_MAX_X + CLOSE_AIR / k`, which makes
+ *  `cx = WORD_MAX_X + (CLOSE_AIR - FRAME_W/2) / k`. The LEFT air then follows
+ *  from the same arithmetic: it is `FRAME_W - CLOSE_AIR - (WORD_MAX_X -
+ *  BLOCK_L) * k` screen px, 51.9 at k 1.50 and 39.9 at k 1.53, and the two
+ *  margins are equal at k 1.542 — which is the hard ceiling on this cut's
+ *  close, since 30 px on both edges needs `k <= 1.5423`.
+ *
+ *  Three more bounds, all satisfied at 1.50-1.53: the person's ink (world
+ *  857.84) is only clear of the right edge above k 1.44 and here starts at
+ *  screen 1138-1144 (the rule asks for >= 1080); the reader line's right-hand
+ *  DOT must be clear INNER EDGE AND ALL (world 829.15) and runs 10-15 screen
+ *  px past the edge; and the skull's ink must never straddle, which the
+ *  left-air number is. V1 pinned the LEFT edge at world 100 instead and the
+ *  widest word came within 15.8 px of the right edge at the top of the creep;
+ *  V2 pins the right edge, which is the side with no slack. */
+const cxClose = (k: number) => WORD_MAX_X + (CLOSE_AIR - FRAME_W / 2) / k;
 
 const SEGS = [
   { f0: 0, f1: 44, k0: K_OPEN, k1: K_OPEN1, w0: 1240, w1: 1262, b0: 0, b1: 0, warp: 1 },
