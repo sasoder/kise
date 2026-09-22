@@ -1,6 +1,7 @@
 import {
   ACCENT,
   ACCENT_DEEP,
+  BG_BASE,
   CAM_LIFT,
   clamp01,
   hash,
@@ -8,7 +9,7 @@ import {
   smoothstep,
 } from "./fieldShared";
 import { INK, INK_HI, INK_LO, MODEL_SHADOW_OPACITY, TWO_PI, lerp } from "./trapShared";
-import { OPENAI } from "./brandGlyphs";
+import { DEEPMIND, OPENAI } from "./brandGlyphs";
 
 // ---------------------------------------------------------------------------
 // challengeShared — the WORLD of the Noam Brown "challenge the model" clip.
@@ -1059,3 +1060,580 @@ export const RungPair: React.FC<{
     </g>
   );
 };
+
+// ===========================================================================
+// THE GAME — added by cut 2 V2 (`SamePathV2`), APPEND ONLY. Nothing above this
+// line is changed; cuts 1, 2, 3, 4 and 5 render exactly as they did.
+//
+// The director's note on cut 2 V1: "I don't like how AlphaGo is visualized.
+// Utilize logos here, and the camera should pan completely to the right so that
+// the OpenAI logo together with the questions/answers are not visible. Make the
+// part with AlphaGo look more like an actual Go game."
+//
+// So the other kind of path is not an abstract climber any more. It is A GO
+// BOARD WITH A REAL GAME RUNNING ON IT, under the mark of the lab that built
+// the player. The board is not a new material either: the clip's background IS
+// a grid, and a Go board is that grid MADE PRECISE — same white line at the
+// level line's own half stroke, same two opacities.
+//
+// THE TWO STONES, inside the clip's white-at-two-opacities system:
+//   white stone = a disc FILLED at INK_HI. It is the only filled white disc in
+//                 the clip besides cut 2 V1's climber dot, which this cut does
+//                 not use.
+//   black stone = a disc FILLED WITH THE SCENE'S OWN DARK: `BG_BASE` composited
+//                 at GO_BLACK_ALPHA over the dimmed field and drawn FLAT (a
+//                 part-transparent fill let the board's lines ghost through the
+//                 last tenth of the stone, which a real stone does not do; a
+//                 white stone's INK is flat for the same reason), with a
+//                 HAIRLINE INK_LO outline
+//                 at a third of the stone stroke so the edge stays crisp where a
+//                 stone sits on a board line. Director's note on the first
+//                 build: filled with the field's own tone and outlined at
+//                 INK_HI, the black stone read as a hollow marker rather than as
+//                 the other player. It is not a new colour — BG_BASE is the
+//                 base the dimmed grid is composited over in every cut of this
+//                 style — and it is the only dark shape in the clip, which is
+//                 exactly what a black stone should be. Both stones are the same
+//                 disc of radius r, carry the same `iconShadow`, and meet on the
+//                 cell the way real stones do.
+// A stone LANDS (GO_LAND_F frames, scale 1.12 -> 1 and opacity 0 -> 1). It is a
+// placement, not a pop, and nothing bounces.
+//
+// ONE STROKE FAMILY, AT DEPTH. A crowd board is drawn at `scale` < 1, which is
+// what "further away" means, so its line weight is the set's own weight at the
+// camera zoom it is effectively seen at — `strokeScreen(k * scale)` — rather
+// than the near board's weight shrunk or held. That is the same partial zoom
+// compensation `strokeScreen` already does for the camera, applied to depth.
+// ===========================================================================
+
+/** Lines a side. 19, the board AlphaGo and Lee Sedol played on. */
+export const GO_N = 19;
+/** World px between two lines at scale 1: 18 * 46 = 828 px of board, which is
+ *  the ~830 px square the cut is composed around. */
+export const GO_CELL = 46;
+/** A stone's radius: 0.9 of a cell across, the real ratio. */
+export const GO_STONE_R = GO_CELL * 0.45;
+/** A star point's radius. */
+export const GO_STAR_R = GO_CELL * 0.085;
+/** Frames a stone takes to land, and frames a captured stone takes to go. */
+export const GO_LAND_F = 4;
+export const GO_CAPTURE_F = 6;
+/** The dimmed field's own flat tone — `grid-background.jpg` at BG_DIM over
+ *  BG_BASE — sampled off a rendered frame (#707070 by the boards, #686868 down
+ *  in the vignette). */
+export const GO_FIELD_TONE = "#707070";
+/** A BLACK STONE'S fill: the scene's own dark base, BG_BASE, at this alpha over
+ *  that field. 0.9 rather than 1 so the stone sits IN the field's light instead
+ *  of punching a hole in it. */
+export const GO_BLACK_ALPHA = 0.9;
+/** ...composited to a FLAT colour, exactly as a white stone's INK is flat, so
+ *  the board's lines VANISH under a stone instead of ghosting through the last
+ *  tenth of it. Derived from BG_BASE and the field, never picked. */
+export const GO_BLACK = (() => {
+  const hex = (h: string) => {
+    const n = parseInt(h.replace("#", ""), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255] as const;
+  };
+  const a = hex(GO_FIELD_TONE);
+  const b = hex(BG_BASE);
+  const m = (i: number) => Math.round(a[i] + (b[i] - a[i]) * GO_BLACK_ALPHA);
+  return `rgb(${m(0)},${m(1)},${m(2)})`;
+})();
+/** ...and its outline: a hairline at INK_LO, a third of the stone stroke, which
+ *  is what keeps the rim crisp where the stone crosses a board line. */
+export const GO_BLACK_EDGE = 1 / 3;
+
+/** The board's line weight and a stone's outline weight, in WORLD px, for a
+ *  board at `scale` seen at camera zoom `k`. Both come off the set's own
+ *  `strokeScreen`, evaluated at the zoom the board is effectively seen at. */
+export const goLineW = (k: number, scale = 1) =>
+  strokeScreen(Math.max(k * scale, 1e-4)) / 2 / Math.max(k, 1e-4);
+export const goStoneW = (k: number, scale = 1) =>
+  strokeScreen(Math.max(k * scale, 1e-4)) / Math.max(k, 1e-4);
+
+// ---------------------------------------------------------------------------
+// THE RECORD. AlphaGo (black) vs Lee Sedol (white), game 2 of the Google
+// DeepMind Challenge Match, Seoul, 2016-03-10, B+R in 211 moves — the game
+// whose 37th move (B[oj], the fifth-line shoulder hit, `GO_MOVES[36]` =
+// [14, 9]) is the one everybody means when they say AlphaGo played a move no
+// human would.
+//
+// SOURCE: `https://homepages.cwi.nl/~aeb/go/games/games/AlphaGo/LeeSedol/2.sgf`
+// (Andries Brouwer's AlphaGo archive), fetched 2026-09-22 and converted with
+// `scratchpad/samepath2/sgf.mjs`: SGF letters a..s -> 0..18, column first, row
+// from the top. The first 120 moves are kept — more than any board here shows —
+// and they are the record's own, in order, with no move re-ordered or invented.
+// The conversion is checked three ways: strict B/W alternation (0 breaks), no
+// move onto an occupied point, and no suicide.
+// ---------------------------------------------------------------------------
+export const GO_MOVES: readonly (readonly [number, number])[] = [
+  [15, 3], [3, 15], [2, 3], [16, 15], [14, 15], [14, 16], [13, 16], [15, 16],
+  [2, 13], [5, 16], [12, 15], [16, 13], [8, 2], [3, 9], [15, 14], [16, 14],
+  [2, 15], [2, 16], [1, 16], [2, 14], [1, 15], [1, 14], [3, 14], [1, 13],
+  [3, 16], [4, 15], [3, 17], [2, 12], [9, 15], [2, 6], [4, 3], [16, 5],
+  [16, 4], [15, 5], [13, 3], [15, 8], [14, 9], [14, 8], [13, 9], [12, 7],
+  [6, 15], [6, 16], [3, 13], [3, 12], [5, 14], [7, 15], [7, 14], [4, 14],
+  [4, 13], [5, 13], [4, 12], [4, 11], [5, 12], [6, 13], [5, 11], [6, 14],
+  [4, 10], [3, 10], [3, 11], [2, 11], [4, 7], [3, 8], [15, 9], [16, 8],
+  [17, 5], [17, 6], [10, 3], [7, 13], [14, 12], [17, 4], [17, 3], [18, 5],
+  [5, 8], [6, 10], [7, 12], [8, 13], [7, 11], [10, 14], [10, 15], [6, 2],
+  [3, 5], [8, 3], [9, 2], [6, 4], [3, 6], [2, 5], [2, 7], [1, 7], [3, 7],
+  [1, 8], [7, 3], [7, 4], [6, 3], [5, 3], [7, 2], [5, 4], [4, 2], [6, 7],
+  [5, 2], [6, 8], [8, 8], [7, 10], [8, 10], [8, 11], [8, 12], [8, 9],
+  [9, 11], [9, 9], [8, 5], [10, 12], [10, 11], [11, 9], [11, 10], [11, 14],
+  [11, 8], [10, 9], [2, 8], [2, 9], [12, 9], [13, 17],
+] as const;
+
+/** Black plays the odd-numbered moves, so `moves[i]` is black iff i is even —
+ *  the record's own order, never an invented alternation. */
+export const goIsBlack = (i: number) => i % 2 === 0;
+
+// ---------------------------------------------------------------------------
+// THE SECOND RECORD. Board 1 is ALPHAGO, so it plays AlphaGo's own game. Board 2
+// is ALPHAZERO, and giving it the same record would have been the same game
+// twice on screen at two different stages — which a viewer who knows Go would
+// read as one board copying the other, and which is not what "AlphaZero" means
+// anyway. It gets a real AlphaGo Zero SELF-PLAY game instead: the 40-block
+// version playing itself, which is literally the thing the line is about.
+//
+// SOURCE: `https://homepages.cwi.nl/~aeb/go/games/games/AlphaGo/Nature2017/
+// AlphaGo_Zero_40_block_self-play_games/02.sgf` (the 83 SGFs published with
+// Silver et al., "Mastering the game of Go without human knowledge", Nature 550
+// (2017) 354-359), fetched 2026-09-22 and converted by the same script, checked
+// the same three ways. 298 moves in the record; the first 120 are kept.
+// ---------------------------------------------------------------------------
+export const GO_MOVES_ZERO: readonly (readonly [number, number])[] = [
+  [15, 15], [15, 3], [3, 16], [2, 3], [16, 2], [16, 3], [15, 2], [13, 2],
+  [14, 2], [14, 3], [13, 1], [2, 14], [4, 2], [3, 2], [4, 3], [2, 5],
+  [12, 2], [13, 3], [17, 3], [17, 4], [17, 2], [16, 16], [16, 15], [15, 16],
+  [14, 16], [14, 17], [13, 17], [13, 16], [14, 15], [12, 17], [15, 17], [13, 18],
+  [16, 17], [6, 16], [5, 15], [6, 15], [5, 14], [3, 15], [4, 16], [2, 16],
+  [2, 17], [1, 16], [4, 11], [7, 13], [2, 12], [1, 17], [12, 3], [16, 8],
+  [6, 12], [7, 12], [6, 11], [16, 5], [12, 14], [10, 15], [2, 7], [8, 3],
+  [4, 1], [3, 1], [8, 5], [10, 4], [3, 4], [2, 4], [11, 4], [3, 6],
+  [3, 7], [6, 4], [5, 4], [7, 5], [4, 6], [8, 6], [16, 10], [5, 6],
+  [4, 7], [5, 5], [4, 5], [15, 10], [15, 11], [15, 9], [9, 5], [7, 7],
+  [10, 5], [6, 2], [17, 9], [17, 13], [16, 13], [16, 14], [17, 15], [16, 11],
+  [17, 11], [16, 12], [17, 12], [15, 13], [15, 12], [16, 13], [14, 13], [17, 8],
+  [1, 13], [11, 1], [12, 1], [1, 14], [13, 11], [1, 6], [1, 7], [12, 5],
+  [11, 5], [9, 1], [15, 14], [10, 13], [13, 9], [5, 3], [3, 3], [0, 7],
+  [0, 8], [0, 6], [1, 9], [3, 12], [3, 11], [12, 7], [6, 17], [7, 17],
+] as const;
+
+/** A record, with the rules already run over it. `capturedAt[i]` is the move at
+ *  which the stone played by move `i` was taken off the board (Infinity if it is
+ *  still there), so a board can render "which stones are on it at frame f"
+ *  without replaying anything per frame. */
+export type GoRecord = {
+  id: string;
+  source: string;
+  moves: readonly (readonly [number, number])[];
+  capturedAt: number[];
+  captures: number[];
+};
+
+/** THE RULES: place, remove any enemy group left without a liberty, and refuse a
+ *  suicide. Run once per record at module scope, which is also what proves the
+ *  conversion — a mis-parsed SGF plays onto an occupied point within a dozen
+ *  moves. */
+const playOut = (id: string, source: string, moves: GoRecord["moves"]): GoRecord => {
+  const idx = (c: number, r: number) => r * GO_N + c;
+  const board = new Int8Array(GO_N * GO_N); // 0 empty, 1 black, 2 white
+  const owner = new Int32Array(GO_N * GO_N).fill(-1); // which move put it there
+  const capturedAt: number[] = moves.map(() => Infinity);
+  const captures: number[] = [];
+  const NB = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ] as const;
+  const group = (sc: number, sr: number) => {
+    const colour = board[idx(sc, sr)];
+    const seen = new Set<number>();
+    const stack: [number, number][] = [[sc, sr]];
+    const stones: number[] = [];
+    let libs = 0;
+    while (stack.length) {
+      const [x, y] = stack.pop() as [number, number];
+      const k = idx(x, y);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      stones.push(k);
+      for (const [dx, dy] of NB) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= GO_N || ny >= GO_N) continue;
+        const v = board[idx(nx, ny)];
+        if (v === 0) libs += 1;
+        else if (v === colour) stack.push([nx, ny]);
+      }
+    }
+    return { stones, libs };
+  };
+  for (let i = 0; i < moves.length; i++) {
+    const [c, r] = moves[i];
+    const me = goIsBlack(i) ? 1 : 2;
+    const op = 3 - me;
+    if (board[idx(c, r)] !== 0) {
+      throw new Error(`challengeShared: ${id} move ${i + 1} plays onto an occupied point.`);
+    }
+    board[idx(c, r)] = me;
+    owner[idx(c, r)] = i;
+    let taken = 0;
+    for (const [dx, dy] of NB) {
+      const nx = c + dx;
+      const ny = r + dy;
+      if (nx < 0 || ny < 0 || nx >= GO_N || ny >= GO_N) continue;
+      if (board[idx(nx, ny)] !== op) continue;
+      const g = group(nx, ny);
+      if (g.libs > 0) continue;
+      for (const k of g.stones) {
+        capturedAt[owner[k]] = i;
+        owner[k] = -1;
+        board[k] = 0;
+        taken += 1;
+      }
+    }
+    if (group(c, r).libs === 0) {
+      throw new Error(`challengeShared: ${id} move ${i + 1} is a suicide.`);
+    }
+    captures.push(taken);
+  }
+  return { id, source, moves, capturedAt, captures };
+};
+
+export const GO_RECORDS: GoRecord[] = [
+  playOut(
+    "sedol2",
+    "https://homepages.cwi.nl/~aeb/go/games/games/AlphaGo/LeeSedol/2.sgf",
+    GO_MOVES,
+  ),
+  playOut(
+    "zero-selfplay",
+    "https://homepages.cwi.nl/~aeb/go/games/games/AlphaGo/Nature2017/" +
+      "AlphaGo_Zero_40_block_self-play_games/02.sgf",
+    GO_MOVES_ZERO,
+  ),
+];
+
+// ---------------------------------------------------------------------------
+// THE BOARDS. World coordinates, so a later cut can stand in the same place and
+// mean the same thing.
+//
+//   board 1  AlphaGo    full size, the one the pan lands on, playing AlphaGo's
+//                       own game against Lee Sedol from move 1
+//   board 2  AlphaZero  1,220 px directly below it in the same column, playing
+//                       an AlphaGo Zero SELF-PLAY game already 41 moves in when
+//                       it is found — it was there, out of frame
+//   boards 3-6          "all these kinds of game-playing AIs": the two records
+//                       again at smaller scales and other phases, in a ragged
+//                       file to the right, never a grid and never in unison
+//
+// THE 1,220 px BETWEEN BOARDS 1 AND 2 IS SOLVED, not chosen. At the landing the
+// camera is at k ~0.84 and the frame reaches 1,146 world px below its centre,
+// so board 2 cannot be hidden at any zoom this cut can afford; what it CAN do is
+// keep board 2's own nameplate — the thing that would give the "AlphaZero" beat
+// away sixteen frames early — below screen y 1350, where the captions live.
+// 1,220 puts that plate at screen 1451 on the landing frame and board 2's top
+// line at 1510, so the landing reads as one board with something beginning
+// under it, and the pull-back is what delivers the second game.
+//
+// `start` is the frame the board's FIRST move lands (it may be negative: a
+// board whose game was already running before the cut opened), and `pace` is
+// the frames between moves. NO TWO BOARDS SHARE A (pace, start mod pace) PAIR,
+// which is what keeps them off each other's beat: two boards on the same pace
+// and the same phase would place every stone in unison for the whole cut. Six
+// boards cannot all be on pace 3 for that reason — there are only three phases
+// — so the two NAMED boards keep the brief's 3 and the four in the crowd run at
+// 4, 5 and 6, which is also what makes them read as other games rather than as
+// copies of this one. Their move counts are spread too (42 / 25 / 54 / 18 on the
+// last frame against board 1's 32 and board 2's 65), so no two boards in the
+// wide shot are showing the same position.
+// ---------------------------------------------------------------------------
+export type GoBoardSpec = {
+  id: string;
+  /** the board's centre, world px */
+  x: number;
+  y: number;
+  /** 1 = the full 828 px board; below 1 is the same board further away */
+  scale: number;
+  /** the frame its first stone lands (may be negative) */
+  start: number;
+  /** frames between stones */
+  pace: number;
+  /** does it carry the DeepMind nameplate? boards 1 and 2 only */
+  mark: boolean;
+  /** which of `GO_RECORDS` this board is playing */
+  record: number;
+};
+
+export const BOARDS: GoBoardSpec[] = [
+  { id: "b1", x: 1720, y: 640, scale: 1.0, start: 60, pace: 3, mark: true, record: 0 },
+  { id: "b2", x: 1720, y: 1860, scale: 1.0, start: -38, pace: 3, mark: true, record: 1 },
+  { id: "b3", x: 2565, y: 405, scale: 0.6, start: -6, pace: 4, mark: false, record: 1 },
+  { id: "b4", x: 2470, y: 955, scale: 0.5, start: 30, pace: 5, mark: false, record: 0 },
+  { id: "b5", x: 2560, y: 1480, scale: 0.58, start: -60, pace: 4, mark: false, record: 0 },
+  { id: "b6", x: 2455, y: 2010, scale: 0.46, start: 52, pace: 6, mark: false, record: 1 },
+];
+
+/** The record a board is playing. */
+export const goRecordOf = (b: GoBoardSpec) => GO_RECORDS[b.record];
+
+
+(() => {
+  const seen = new Map<string, string>();
+  for (const b of BOARDS) {
+    const key = `${b.pace}:${((b.start % b.pace) + b.pace) % b.pace}`;
+    const other = seen.get(key);
+    if (other) {
+      throw new Error(
+        `challengeShared: boards ${other} and ${b.id} are in lockstep (pace ${b.pace}, phase ${key}).`,
+      );
+    }
+    seen.set(key, b.id);
+  }
+})();
+
+/** Half the board's line span, world px — its own edge, since the outer lines
+ *  ARE the edge and there is no frame drawn around it. */
+export const goHalf = (b: { scale: number }) => ((GO_N - 1) / 2) * GO_CELL * b.scale;
+
+/** Where line (col, row) sits in the world. Row 0 is the TOP line, which is how
+ *  the SGF reads its own coordinates. */
+export const goStoneAt = (
+  b: { x: number; y: number; scale: number },
+  col: number,
+  row: number,
+) => ({
+  x: b.x + (col - (GO_N - 1) / 2) * GO_CELL * b.scale,
+  y: b.y + (row - (GO_N - 1) / 2) * GO_CELL * b.scale,
+});
+
+/** The frame move `i` lands on this board. */
+export const goMoveFrame = (b: GoBoardSpec, i: number) => b.start + i * b.pace;
+
+/** HOW MANY MOVES ARE ON THE BOARD AT FRAME `f` — the one statement the cut
+ *  reads its stone counts off, capped at the record's length. */
+export const boardMovesAt = (b: GoBoardSpec, f: number) => {
+  if (f < b.start) return 0;
+  return Math.min(goRecordOf(b).moves.length, Math.floor((f - b.start) / b.pace) + 1);
+};
+
+/** THE STAR POINTS, the nine marked intersections of a 19x19 board. */
+export const GO_STARS: readonly (readonly [number, number])[] = (() => {
+  const p = [3, 9, 15];
+  const out: [number, number][] = [];
+  for (const r of p) for (const c of p) out.push([c, r]);
+  return out;
+})();
+
+// ---------------------------------------------------------------------------
+// ONE STONE. `land` 0..1 is its placement ease, `gone` 0..1 is its capture.
+// ---------------------------------------------------------------------------
+export const Stone: React.FC<{
+  x: number;
+  y: number;
+  r: number;
+  black: boolean;
+  land: number;
+  gone?: number;
+  k: number;
+  scale?: number;
+}> = ({ x, y, r, black, land, gone = 0, k, scale = 1 }) => {
+  const a = clamp01(land);
+  const g = clamp01(gone);
+  const op = a * (1 - g);
+  if (op <= 0.002) return null;
+  // The placement: it arrives a little large and settles. Never below 1, so
+  // nothing bounces.
+  const s = lerp(1.12, 1, smoothstep(a));
+  const sw = goStoneW(k, scale);
+  return (
+    <g style={{ filter: iconShadow(k) }} opacity={op.toFixed(4)}>
+      {black ? (
+        <circle
+          cx={x}
+          cy={y}
+          r={r * s}
+          fill={GO_BLACK}
+          stroke={INK}
+          strokeOpacity={INK_LO}
+          strokeWidth={sw * GO_BLACK_EDGE}
+        />
+      ) : (
+        <circle cx={x} cy={y} r={r * s} fill={INK} />
+      )}
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// ONE BOARD — its lines, its star points, its nameplate and the stones that are
+// on it at `frame`. Nothing else: no frame box, no label, no coordinates.
+//
+// `draw` 0..1 rules the board IN, from its top-left: every line is drawn from
+// its own start, verticals downward and horizontals rightward, each one
+// starting a little later than the last. A board that was already in the world
+// when the cut opened simply passes draw = 1.
+// ---------------------------------------------------------------------------
+export const GO_DRAW_STAGGER = 0.55;
+
+export const GoBoard: React.FC<{
+  b: GoBoardSpec;
+  frame: number;
+  k: number;
+  draw?: number;
+  opacity?: number;
+}> = ({ b, frame, k, draw = 1, opacity = 1 }) => {
+  if (opacity <= 0) return null;
+  const d = clamp01(draw);
+  const half = goHalf(b);
+  const cell = GO_CELL * b.scale;
+  const lw = goLineW(k, b.scale);
+  const sr = GO_STONE_R * b.scale;
+  const lines: React.ReactNode[] = [];
+  const S = GO_DRAW_STAGGER;
+  for (let i = 0; i < GO_N; i++) {
+    const t = i / (GO_N - 1);
+    const u = clamp01((d - t * S) / (1 - S));
+    if (u <= 0) continue;
+    const g = smoothstep(u);
+    const off = -half + i * cell;
+    lines.push(
+      <line
+        key={`v${i}`}
+        x1={b.x + off}
+        y1={b.y - half}
+        x2={b.x + off}
+        y2={b.y + half}
+        pathLength={1}
+        stroke={INK}
+        strokeWidth={lw}
+        strokeLinecap="butt"
+        strokeDasharray={`${g.toFixed(4)} 1`}
+      />,
+      <line
+        key={`h${i}`}
+        x1={b.x - half}
+        y1={b.y + off}
+        x2={b.x + half}
+        y2={b.y + off}
+        pathLength={1}
+        stroke={INK}
+        strokeWidth={lw}
+        strokeLinecap="butt"
+        strokeDasharray={`${g.toFixed(4)} 1`}
+      />,
+    );
+  }
+  const rec = goRecordOf(b);
+  const placed = boardMovesAt(b, frame);
+  const stones: React.ReactNode[] = [];
+  for (let i = 0; i < placed; i++) {
+    const cap = rec.capturedAt[i];
+    const gone =
+      cap === Infinity ? 0 : clamp01((frame - goMoveFrame(b, cap)) / GO_CAPTURE_F);
+    if (gone >= 1) continue;
+    const [c, r] = rec.moves[i];
+    const p = goStoneAt(b, c, r);
+    stones.push(
+      <Stone
+        key={`${b.id}s${i}`}
+        x={p.x}
+        y={p.y}
+        r={sr}
+        black={goIsBlack(i)}
+        land={clamp01((frame - goMoveFrame(b, i)) / GO_LAND_F)}
+        gone={gone}
+        k={k}
+        scale={b.scale}
+      />,
+    );
+  }
+  return (
+    <g opacity={opacity}>
+      <g style={{ filter: iconShadow(k) }} opacity={INK_LO}>
+        {lines}
+        {d >= 1
+          ? GO_STARS.map(([c, r]) => {
+              const p = goStoneAt(b, c, r);
+              return (
+                <circle
+                  key={`st${c}_${r}`}
+                  cx={p.x}
+                  cy={p.y}
+                  r={GO_STAR_R * b.scale}
+                  fill={INK}
+                />
+              );
+            })
+          : null}
+      </g>
+      {b.mark ? <DeepMindMark k={k} x={b.x} y={b.y - half - GO_MARK_GAP} /> : null}
+      {stones}
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// THE NAMEPLATE — the Google DeepMind mark, WHITE and filled, on the same terms
+// as `ModelMark`: the shadow sits on a wrapper OUTSIDE the scale group, because
+// inside it the filter would be authored in the glyph's own 24-unit space.
+// ORANGE IS NEVER USED ON THIS SIDE OF THE WORLD: accent is our model and its
+// level, in every cut of this clip.
+// ---------------------------------------------------------------------------
+/** The mark's em box, world px, and how far above the board's top line it sits. */
+export const GO_MARK_PX = 90;
+export const GO_MARK_GAP = 70;
+
+export const DeepMindMark: React.FC<{
+  k: number;
+  x: number;
+  y: number;
+  em?: number;
+  opacity?: number;
+}> = ({ k, x, y, em = GO_MARK_PX, opacity = 1 }) => {
+  if (!(em > 0) || opacity <= 0) return null;
+  return (
+    <g style={{ filter: iconShadow(k, undefined, undefined, MODEL_SHADOW_OPACITY) }} opacity={opacity}>
+      <g
+        transform={`translate(${x.toFixed(3)} ${y.toFixed(3)}) scale(${(em / 24).toFixed(
+          6,
+        )}) translate(-12 -12)`}
+      >
+        {DEEPMIND.paths.map((d) => (
+          <path key={d.length} d={d} fill={INK} fillRule="evenodd" />
+        ))}
+      </g>
+    </g>
+  );
+};
+
+/** THE BOARDS DO NOT TOUCH, and a nameplate stands CLEAR of the board above it.
+ *  The 1,020 world px between the two full boards is not decoration: the plate
+ *  sits GO_MARK_GAP under board 2's top line and its own box is GO_MARK_PX, so
+ *  anything under ~980 px of separation puts the AlphaZero mark through the
+ *  AlphaGo board's foot. Run last, so every value it reads is initialised. */
+export const GO_BOARD_BOXES = (() => {
+  const boxes = BOARDS.map((b) => {
+    const h = goHalf(b);
+    return {
+      id: b.id,
+      x0: b.x - h,
+      x1: b.x + h,
+      y0: b.y - h - (b.mark ? GO_MARK_GAP + GO_MARK_PX / 2 : 0),
+      y1: b.y + h,
+    };
+  });
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i];
+      const b = boxes[j];
+      if (a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1) {
+        throw new Error(`challengeShared: boards ${a.id} and ${b.id} overlap.`);
+      }
+    }
+  }
+  return boxes;
+})();
