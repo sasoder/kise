@@ -588,3 +588,260 @@ export const CAM_WIDE: Cam = { k: 1.0, x: COLUMN.x, y: 835 };
 
 /** `runCamera`'s cy for a camera: CAM_LIFT puts (x, y) on screen y 835. */
 export const camCy = (c: Cam) => c.y + CAM_LIFT / c.k;
+
+// ===========================================================================
+// THE OTHER KIND OF PATH — added by cut 2 (`SamePath`), untouched above.
+//
+// Cut 2's line is "why you might not see LLMs go the same path as AlphaGo and
+// AlphaZero and all these kinds of, like, game-playing AIs", and the word is
+// PATH. The clip already owns one path: the column, which the model climbs and
+// which RUNS OUT — what is above the line is thinning to nothing. A game-playing
+// AI's path is the other kind: it LAYS ITS OWN RUNGS and never ends.
+//
+// So a CLIMBER is built out of exactly the pieces this clip already has, and
+// nothing is invented for it:
+//   * the climber itself = a solid WHITE dot, CLIMBER_R * 2 across (0.55 of the
+//     model's mark). WHITE, NOT ORANGE: orange is our model and its level, and
+//     nothing else, in every cut of this clip.
+//   * its rungs           = the SAME `QuestionRing`. A `?` fades in ahead of the
+//     dot on its own path, the dot reaches it, it flips `?` -> tick on the same
+//     `SOLVE_F` mechanics and falls to INK_LO, and the climber goes on. The flip
+//     is keyed on the DOT'S POSITION reaching the ring — distance along the path
+//     — exactly as the column's is keyed on the level line's y, and never on a
+//     frame number.
+//   * a TRAIL             = a white line at INK_LO and the level line's half
+//     stroke, drawn behind a mover through what it has passed. The model has one
+//     too (straight down its own shaft, ending at the bottom of the gathered
+//     mass: that is what FINITE looks like); a climber's runs from where it came
+//     into the world up to the dot, and has no end at the top because the dot is
+//     still going.
+// ===========================================================================
+
+/** The climber dot's radius, world px. 20 -> 40 across, 0.55 of MODEL_MARK: a
+ *  peer of the model, plainly not the model. */
+export const CLIMBER_R = 20;
+/** World px per frame. Twenty-odd times the model's creep in this cut, which is
+ *  the whole comparison. */
+export const CLIMBER_SPEED = 8.6;
+/** Centre-to-centre along the path between two rungs, jittered per rung. */
+export const RUNG_GAP: readonly [number, number] = [95, 115];
+/** How far ahead of the dot a rung is fully lit, and over how many frames it
+ *  got there. With the gap above, the last rung flips at about the moment the
+ *  next one finishes arriving: the ladder is always exactly one ahead. */
+export const RUNG_LEAD = 100;
+export const RUNG_FADE_F = 10;
+/** How much of the path behind a climber's birth already carries rungs, so a
+ *  climber is discovered mid-climb rather than starting from nothing. */
+export const RUNG_BEHIND = 210;
+
+export type ClimberPath = {
+  id: string;
+  /** the frame at which the dot is exactly at (x, y) */
+  fRef: number;
+  x: number;
+  y: number;
+  /** degrees from horizontal (69-78 in this clip: steep, never vertical) */
+  angle: number;
+  /** which way the path leans as it RISES: +1 right, -1 toward frame centre */
+  lean: 1 | -1;
+  speed: number;
+  /** the frame the climber comes into the world: its trail starts here, and it
+   *  must be off screen on this frame (each cut asserts that). */
+  born: number;
+  seed: number;
+};
+
+/** The unit vector of a path: up, and leaning `lean`. */
+export const climberDir = (c: ClimberPath) => {
+  const a = (c.angle * Math.PI) / 180;
+  return { dx: c.lean * Math.cos(a), dy: -Math.sin(a) };
+};
+
+/** Arc length travelled since `fRef` — signed, so it is negative before it. */
+export const climberArc = (c: ClimberPath, f: number) => c.speed * (f - c.fRef);
+
+/** Where the dot is at frame `f`. Linear: a climb that lays its own rungs has
+ *  no reason to speed up or slow down, and a steady rise beside a creep is the
+ *  comparison the line is making. */
+export const climberAt = (c: ClimberPath, f: number) => {
+  const d = climberDir(c);
+  const s = climberArc(c, f);
+  return { x: c.x + d.dx * s, y: c.y + d.dy * s };
+};
+
+export type Rung = {
+  /** arc position along the path, measured from the path's (x, y) */
+  s: number;
+  x: number;
+  y: number;
+  r: number;
+  /** the frame the dot REACHES this rung — when its leading edge touches the
+   *  rim, not when it arrives at the centre. It matters: a 40 px dot crosses a
+   *  72 px ring in eight frames, which is the whole flip, so a flip keyed on
+   *  the CENTRE happens entirely underneath the dot and is never seen. Keyed on
+   *  the rim, the `?` starts going as the dot arrives and the tick is finished
+   *  and uncovered as it leaves. Solved from the dot's own position either way. */
+  cross: number;
+  /** the frame this rung has finished fading in */
+  lit: number;
+};
+
+/** THE RUNGS OF ONE PATH, over the frames a cut needs. Spacing is seeded, so no
+ *  two climbers lay their rungs on the same beat and nothing flips in unison.
+ *  `cross` is solved from the DOT'S POSITION (s / speed), which is the same
+ *  statement as "the dot reached it" — a cut asserts the two agree. */
+export const climberRungs = (c: ClimberPath, fFirst: number, fLast: number): Rung[] => {
+  const d = climberDir(c);
+  const sStart = climberArc(c, c.born) - RUNG_BEHIND;
+  const sEnd = climberArc(c, fLast) + RUNG_LEAD + RUNG_GAP[1] * 2;
+  const out: Rung[] = [];
+  // walk the path on the seeded gaps from a stable origin, so the ladder does
+  // not shift when a cut asks for a different window of it
+  let s = Math.floor(sStart / RUNG_GAP[1]) * RUNG_GAP[1];
+  for (let j = 0; j < 400 && s < sEnd; j++) {
+    const n = Math.round(s / 10) + Math.round(c.seed * 1000);
+    s += lerp(RUNG_GAP[0], RUNG_GAP[1], hash(n, 13));
+    if (s < sStart) continue;
+    const r = RING_R * (0.95 + 0.05 * hash(n, 29));
+    const cross = c.fRef + (s - (r + CLIMBER_R)) / c.speed;
+    if (cross < fFirst - SOLVE_F * 4) continue;
+    out.push({
+      s,
+      x: c.x + d.dx * s,
+      y: c.y + d.dy * s,
+      r,
+      cross,
+      lit: c.fRef + (s - RUNG_LEAD) / c.speed,
+    });
+  }
+  return out;
+};
+
+/** A TRAIL: `a` -> `b` at INK_LO on the level line's half stroke. `draw` grows
+ *  the line from `a`; `fade` dissolves it over that fraction at the `a` end (a
+ *  climber came from somewhere off frame and its trail should not start on a
+ *  drawn full stop; the model's own trail sets fade 0 on purpose, because its
+ *  path HAVING a bottom end is the point). */
+export const Trail: React.FC<{
+  id: string;
+  ax: number;
+  ay: number;
+  bx: number;
+  by: number;
+  k: number;
+  draw?: number;
+  fade?: number;
+  opacity?: number;
+}> = ({ id, ax, ay, bx, by, k, draw = 1, fade = 0, opacity = INK_LO }) => {
+  const dr = clamp01(draw);
+  if (dr <= 0 || opacity <= 0) return null;
+  if (Math.hypot(bx - ax, by - ay) < 0.5) return null;
+  const f = clamp01(fade);
+  return (
+    <g style={{ filter: iconShadow(k) }} opacity={opacity}>
+      {f > 0 ? (
+        <defs>
+          <linearGradient id={id} gradientUnits="userSpaceOnUse" x1={ax} y1={ay} x2={bx} y2={by}>
+            <stop offset="0" stopColor={INK} stopOpacity="0" />
+            <stop offset={f.toFixed(4)} stopColor={INK} stopOpacity="1" />
+            <stop offset="1" stopColor={INK} stopOpacity="1" />
+          </linearGradient>
+        </defs>
+      ) : null}
+      <line
+        x1={ax}
+        y1={ay}
+        x2={bx}
+        y2={by}
+        pathLength={1}
+        stroke={f > 0 ? `url(#${id})` : INK}
+        strokeWidth={levelW(k)}
+        strokeLinecap="butt"
+        strokeDasharray={`${dr.toFixed(4)} 1`}
+      />
+    </g>
+  );
+};
+
+/** ONE CLIMBER: its trail, its rungs, its dot. Nothing else — no label, no logo,
+ *  no glow. The dot goes on top, so a rung it is passing reads as being passed
+ *  THROUGH, the same way the model's mark sits over the level line. */
+export const Climber: React.FC<{
+  c: ClimberPath;
+  rungs: Rung[];
+  frame: number;
+  k: number;
+  /** the whole climber, for a cut that wants it absent before its birth */
+  opacity?: number;
+}> = ({ c, rungs, frame, k, opacity = 1 }) => {
+  if (opacity <= 0) return null;
+  const p = climberAt(c, frame);
+  const b = climberAt(c, c.born);
+  return (
+    <g opacity={opacity}>
+      {frame > c.born ? (
+        <Trail id={`trail-${c.id}`} ax={b.x} ay={b.y} bx={p.x} by={p.y} k={k} fade={0.28} />
+      ) : null}
+      {rungs.map((g, j) => {
+        const lit = smoothstep(clamp01((frame - (g.lit - RUNG_FADE_F)) / RUNG_FADE_F));
+        if (lit <= 0) return null;
+        return (
+          <QuestionRing
+            key={`${c.id}r${j}`}
+            x={g.x}
+            y={g.y}
+            r={g.r}
+            solved={clamp01((frame - g.cross) / SOLVE_F)}
+            k={k}
+            opacity={lit}
+          />
+        );
+      })}
+      <g style={{ filter: iconShadow(k) }}>
+        <circle cx={p.x} cy={p.y} r={CLIMBER_R} fill={INK} />
+      </g>
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// THE THREE PATHS OF CUT 2 — A FAN THAT NEVER CROSSES.
+//
+// World coordinates, so a later cut can stand in the same place and mean the
+// same thing. Three, not four: the resolved frame is 1,271 world px wide at
+// k 0.85, the gathered mass takes 742 of them, and three paths at the set's
+// 170 px minimum separation plus their own 72 px rings plus the air either side
+// is the most that fits beside it. Four tangled — their rung chains crossed and
+// the outermost ran off the right edge — and three that read cleanly beat four
+// that do not.
+//
+// THE FAN. Every path LEANS TOWARD FRAME CENTRE as it rises (`lean: -1`), which
+// is what lets a climber hide: further back down its own line is further RIGHT,
+// and the opening frame ends at world x 1,067. The STEEPER a path is the INNER
+// it sits — 78 degrees at x 735, 76 at 930, 74 at 1,125, all measured at world
+// y = -119, the top of the resolved frame — so the three of them OPEN DOWNWARD
+// from a 195 px separation at that top edge to 278 px at the bottom of the same
+// frame. They therefore never meet anywhere on screen at any frame, and the
+// horizontal gap between two neighbours is never under 195 world px, which is
+// 123 px rim to rim at the largest ring this clip draws.
+//
+// The climber on the OUTERMOST path is the one that climbs highest (it leaves
+// the top of the frame), and the innermost is the last and lowest. That is what
+// keeps every rung inside the frame's right margin: with this lean a path runs
+// further right the lower you look, so the path that is used low is the one
+// that sits furthest left.
+//
+// `fRef`/`x`/`y` are where the dot is on that frame, which is how the cut aligns
+// each entrance with a word; `born` is the frame the climber comes into the
+// world, always while it is still off screen.
+// ---------------------------------------------------------------------------
+export const CLIMBERS: ClimberPath[] = [
+  // AlphaGo: the outermost and shallowest path, found out to the right by the
+  // glide and gone off the top while the pull-back is still running.
+  { id: "c1", fRef: 84, x: 1146, y: -45, angle: 74, lean: -1, speed: 8.6, born: 54, seed: 0.17 },
+  // AlphaZero: the middle path, rising past the lower edge of the held shot.
+  { id: "c2", fRef: 84, x: 1281, y: 1372, angle: 76, lean: -1, speed: 8.4, born: 68, seed: 0.61 },
+  // ...and all these kinds of game-playing AIs: the steepest and innermost, up
+  // into the widening frame from underneath as the camera comes back down.
+  { id: "c3", fRef: 104, x: 1069, y: 1450, angle: 78, lean: -1, speed: 8.8, born: 90, seed: 0.39 },
+];
