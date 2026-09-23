@@ -729,7 +729,7 @@ export const DashedPath: React.FC<{
 };
 
 /** Deterministic hash re-export, so cuts need not import fieldShared for it. */
-export { hash, clamp01, smoothstep };
+export { hash, clamp01, smoothstep, iconShadow };
 
 // ---------------------------------------------------------------------------
 // THE FEED — the law, run forward one frame at a time. Every question is
