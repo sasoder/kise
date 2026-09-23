@@ -74,8 +74,9 @@ const CH_LOCK_Y = 2075;
 // AlphaGo's board: move 37 (index 36) lands on "AlphaGo" (f75), one stone every
 // 3 frames; the moves before it are already on the board when it rules in.
 const goMovesF = (f: number) => Math.max(0, 36 + (f - 75) / 3 + 1);
-// AlphaZero's board: ply 12 when it is found, one ply every 5 frames.
-const chPlyF = (f: number) => Math.max(0, 12 + (f - 92) / 5);
+// AlphaZero's board: ply 12 when it is found, one ply every 7 frames.
+const CH_PACE = 7;
+const chPlyF = (f: number) => Math.max(0, 12 + (f - 92) / CH_PACE);
 
 // The hall: "all these kinds of game-playing AIs". Real records again (AlphaGo
 // v Lee Sedol, AlphaGo Zero self-play, AlphaZero v Stockfish) at other moments
@@ -227,6 +228,7 @@ export const SamePathV3: React.FC<z.infer<typeof schema>> = () => {
             k={k}
             record={h.rec}
             movesF={h.at + frame / h.pace}
+            pace={h.pace}
             draw={smoothstep((frame - HALL_IN[i]) / 18)}
             opacity={Math.min(1, 1.6 * smoothstep((frame - HALL_IN[i]) / 18))}
           />
@@ -238,18 +240,19 @@ export const SamePathV3: React.FC<z.infer<typeof schema>> = () => {
             cell={h.cell}
             k={k}
             plyF={(h.at + frame / h.pace) % 80}
+            pace={h.pace}
             opacity={smoothstep((frame - HALL_IN[i]) / 18)}
           />
         ),
       )}
       <DashedPath x0={M.x} y0={PATH_Y0} x1={M.x} y1={PATH_Y1} draw={pathDraw} frame={frame} k={k} />
       <Lockup k={k} x={GO.x} y={GO_LOCK_Y} text="ALPHAGO" appear={goLock} />
-      <GoBoard x={GO.x} y={GO.y} cell={GO.cell} k={k} record={0} movesF={goMovesF(frame)} draw={goDraw} opacity={Math.min(1, goDraw * 1.6)} />
+      <GoBoard x={GO.x} y={GO.y} cell={GO.cell} k={k} record={0} movesF={goMovesF(frame)} pace={3} draw={goDraw} opacity={Math.min(1, goDraw * 1.6)} />
       <Lockup k={k} x={CH.x} y={CH_LOCK_Y} text="ALPHAZERO" appear={chLock} />
-      <ChessBoard x={CH.x} y={CH.y} cell={CH.cell} k={k} plyF={chPlyF(frame)} opacity={chDraw} />
+      <ChessBoard x={CH.x} y={CH.y} cell={CH.cell} k={k} plyF={chPlyF(frame)} pace={CH_PACE} opacity={chDraw} />
       <ModelMark k={k} x={M.x} y={M.y} em={EM} />
       {st.map((s, i) => (
-        <QRing key={i} x={s.x} y={s.y} r={s.r} k={k} work={s.work} done={s.done} tone={s.tone} opacity={s.op} />
+        <QRing key={i} x={s.x} y={s.y} r={s.r} k={k} work={s.work} done={s.done} tone={s.tone} opacity={s.op} tilt={s.tilt ?? 0} />
       ))}
     </Stage>
   );

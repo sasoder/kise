@@ -309,24 +309,30 @@ export const DeepMindMark: React.FC<{
 // ---------------------------------------------------------------------------
 const PERSON_BODY =
   "M41 458 C41 352 126 266 232 266 L279 266 C385 266 470 352 470 458 L470 462 Q470 470 462 470 L49 470 Q41 470 41 462 Z";
-export const Person: React.FC<{ k: number; x: number; y: number; h?: number; opacity?: number }> = ({
+export const Person: React.FC<{ k: number; x: number; y: number; h?: number; opacity?: number; lift?: number }> = ({
   k,
   x,
   y,
   h = PERSON_H,
   opacity = 1,
+  lift = 0,
 }) => {
   if (opacity <= 0) return null;
   const s = h / 512;
   return (
     <g style={{ filter: iconShadow(k) }} opacity={opacity}>
-      <g transform={`translate(${(x - h / 2).toFixed(3)} ${(y - h / 2).toFixed(3)}) scale(${s.toFixed(6)})`}>
+      <g transform={`translate(${(x - h / 2).toFixed(3)} ${(y - h / 2 - lift).toFixed(3)}) scale(${s.toFixed(6)})`}>
         <circle cx={255.5} cy={143} r={102} fill={INK} />
         <path d={PERSON_BODY} fill={INK} />
       </g>
     </g>
   );
 };
+/** The small lift a person gives as they let a question go: up ~7 world px
+ *  and back down over SEND_F frames, eased both ways (no overshoot). `t` is
+ *  frames since the send. */
+export const SEND_F = 16;
+export const sendLift = (t: number) => (t < 0 || t > SEND_F ? 0 : 7 * Math.sin(Math.PI * (t / SEND_F)) ** 2);
 /** A person's head top and hands height, relative to the box centre. */
 export const PERSON_TOP = (h: number = PERSON_H) => -h / 2 + (41 / 512) * h;
 
@@ -351,52 +357,92 @@ export const QRing: React.FC<{
   done?: number;
   tone?: number;
   opacity?: number;
-}> = ({ x, y, r, k, work = 0, done = 0, tone = 0, opacity = 1 }) => {
+  /** glyph tilt, degrees — a floating question sways, and settles to 0 */
+  tilt?: number;
+}> = ({ x, y, r, k, work = 0, done = 0, tone = 0, opacity = 1, tilt = 0 }) => {
   if (opacity <= 0.002 || r <= 0.5) return null;
   const sw = ringStroke(r, k);
   const d = clamp01(done);
-  const qDraw = 1 - smoothstep(clamp01(d / 0.55));
-  const ck = smoothstep(clamp01((d - 0.24) / 0.76));
-  const col = inkTone(tone);
+  // `?` -> tick as ONE eased crossfade (see SOLVE below): the `?` shrinks a
+  // little and fades while the tick grows in from 80 % and draws from its
+  // short arm. Nothing un-draws or pops; the two overlap for ~40 % of it.
+  const qOut = smoothstep(d / 0.6);
+  const ckIn = smoothstep((d - 0.25) / 0.75);
+  const ckOp = smoothstep((d - 0.2) / 0.35);
+  const held = inkTone(tone);
   const box = 2.4 * r;
   const gs = box / 24;
   const gsw = sw / gs;
   const w = clamp01(work);
+  const glyph = (scale: number) =>
+    `translate(${x.toFixed(3)} ${y.toFixed(3)}) rotate(${tilt.toFixed(3)}) scale(${(gs * scale).toFixed(5)}) translate(-12 -12)`;
   return (
     <g style={{ filter: iconShadow(k) }} opacity={opacity.toFixed(4)}>
-      <circle cx={x} cy={y} r={r} fill="none" stroke={col} strokeWidth={sw} />
-      {w > 0 && w < 1 ? (
+      <circle cx={x} cy={y} r={r} fill="none" stroke={INK} strokeWidth={sw} />
+      {w > 0 ? (
         <circle
           cx={x}
           cy={y}
           r={r}
           fill="none"
-          stroke={ACCENT}
+          stroke={held}
           strokeWidth={sw * 1.04}
           pathLength={1}
-          strokeDasharray={`${w.toFixed(4)} 1`}
-          strokeLinecap="butt"
+          strokeDasharray={w >= 1 ? undefined : `${w.toFixed(4)} 1`}
+          strokeLinecap={w >= 1 ? "butt" : "round"}
           transform={`rotate(-90 ${x.toFixed(2)} ${y.toFixed(2)})`}
         />
       ) : null}
-      <g
-        transform={`translate(${(x - box / 2).toFixed(3)} ${(y - box / 2).toFixed(3)}) scale(${gs.toFixed(5)})`}
-        fill="none"
-        stroke={col}
-        strokeWidth={gsw}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {qDraw > 0.004 ? (
-          <>
-            <path d={Q_PATH} pathLength={1} strokeDasharray={`${qDraw.toFixed(4)} 1`} />
-            <path d={Q_DOT} opacity={qDraw > 0.5 ? 1 : qDraw * 2} />
-          </>
+      <g fill="none" strokeWidth={gsw} strokeLinecap="round" strokeLinejoin="round">
+        {qOut < 0.998 ? (
+          <g transform={glyph(1 - 0.3 * qOut)} stroke={INK} opacity={(1 - qOut).toFixed(4)}>
+            <path d={Q_PATH} />
+            <path d={Q_DOT} />
+          </g>
         ) : null}
-        {ck > 0.004 ? <path d={TICK} pathLength={1} strokeDasharray={`${ck.toFixed(4)} 1`} /> : null}
+        {ckOp > 0.002 ? (
+          <g transform={glyph(0.8 + 0.2 * ckIn)} stroke={held} opacity={ckOp.toFixed(4)}>
+            <path d={TICK} pathLength={1} strokeDasharray={`${Math.max(0.001, ckIn).toFixed(4)} 1`} />
+          </g>
+        ) : null}
       </g>
     </g>
   );
+};
+
+// ---------------------------------------------------------------------------
+// SOLVE — one timeline every question in the film goes through once it
+// touches the model, so cut 1's patter, cut 4's single problem and cut 5's
+// pooled question move identically:
+//   tw in [0, W]          the arc sweeps round, eased in and out (sine)
+//   done from 0.72 W      the `?` -> tick crossfade, SOLVE_F frames
+//   held (tone) = 1       from the touch; the arc, the ring and the tick are
+//                         the model's colour for as long as it holds it
+// solveEnd(W) is the frame (after the touch) the tick has finished.
+// Too easy -> `letGo(ta)`: after LETGO_HOLD frames it fades back to white
+// (LETGO_TONE_F), peels off sideways and falls, INK_HI -> INK_LO -> out.
+// ---------------------------------------------------------------------------
+export const SOLVE_F = 14;
+export const solveAt = (tw: number, W: number) => ({
+  work: tw <= 0 ? 0 : 0.5 - 0.5 * Math.cos(Math.PI * clamp01(tw / W)),
+  done: clamp01((tw - 0.72 * W) / SOLVE_F),
+  tone: tw < 0 ? 0 : 1,
+});
+export const solveEnd = (W: number) => Math.round(0.72 * W + SOLVE_F);
+export const LETGO_HOLD = 3;
+export const LETGO_TONE_F = 12;
+export const letGo = (ta: number, side: number, dir: { x: number; y: number }) => {
+  const t = Math.max(0, ta - LETGO_HOLD);
+  const s = t / (RELEASE_F - LETGO_HOLD);
+  const out = 1 - Math.pow(1 - clamp01(s), 3);
+  const fall = clamp01(s) * clamp01(s);
+  return {
+    dx: side * 150 * out + dir.x * 30 * out,
+    dy: dir.y * 40 * out + 170 * fall,
+    tone: 1 - smoothstep(t / LETGO_TONE_F),
+    op: lerp(1, INK_LO, smoothstep(t / 14)) * (1 - smoothstep((ta - RELEASE_F + 16) / 16)),
+    gone: ta >= RELEASE_F,
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -443,6 +489,8 @@ export const Label: React.FC<{
 // threads at INK_LO; white stones INK, black stones GO_BLACK with a hairline.
 // ---------------------------------------------------------------------------
 export const GO_CELL = 46;
+/** Frames a stone takes to land (fade in, settle from 1.14x), on every board. */
+export const GO_LAND_F = 5;
 export const goHalf = (cell: number) => ((GO_N - 1) / 2) * cell;
 export const goPoint = (x: number, y: number, cell: number, c: number, r: number) => ({
   x: x + (c - (GO_N - 1) / 2) * cell,
@@ -458,8 +506,10 @@ export const GoBoard: React.FC<{
   movesF: number;
   draw?: number;
   opacity?: number;
-  /** a stone's ownership tint: the move index whose stone is "just played" */
-}> = ({ x, y, cell, k, record, movesF, draw = 1, opacity = 1 }) => {
+  /** frames between moves on this board, so a stone always takes GO_LAND_F
+   *  frames to land whatever the pace */
+  pace?: number;
+}> = ({ x, y, cell, k, record, movesF, draw = 1, opacity = 1, pace = 5 }) => {
   if (opacity <= 0) return null;
   const half = goHalf(cell);
   const lw = threadW(k) * Math.min(1, Math.max(0.55, cell / GO_CELL));
@@ -479,14 +529,14 @@ export const GoBoard: React.FC<{
   const sr = cell * 0.46;
   const stones: React.ReactNode[] = [];
   for (let i = 0; i < n; i++) {
-    const land = clamp01((movesF - i) / 0.75);
+    const land = clamp01(((movesF - i) * pace) / GO_LAND_F);
     const cap = rec.capturedAt[i];
-    const gone = cap === Infinity ? 0 : clamp01((movesF - cap) / 1.2);
+    const gone = cap === Infinity ? 0 : clamp01(((movesF - cap) * pace) / (GO_LAND_F * 1.6));
     const op = smoothstep(land) * (1 - smoothstep(gone));
     if (op <= 0.003) continue;
     const [c, r] = rec.moves[i];
     const p = goPoint(x, y, cell, c, r);
-    const s = lerp(1.1, 1, smoothstep(land));
+    const s = lerp(1.14, 1, easeOut(land));
     stones.push(
       goIsBlack(i) ? (
         <circle
@@ -615,6 +665,7 @@ const CHESS_STATES = (() => {
   return { states, capturedAt };
 })();
 export const CHESS_PLY_COUNT = CHESS_PLIES.length;
+export const CHESS_SLIDE_F = 7;
 
 export const ChessBoard: React.FC<{
   x: number;
@@ -623,7 +674,9 @@ export const ChessBoard: React.FC<{
   k: number;
   plyF: number;
   opacity?: number;
-}> = ({ x, y, cell, k, plyF, opacity = 1 }) => {
+  /** frames between plies, so a piece always slides over CHESS_SLIDE_F frames */
+  pace?: number;
+}> = ({ x, y, cell, k, plyF, opacity = 1, pace = 7 }) => {
   if (opacity <= 0) return null;
   const half = cell * 4;
   const lw = threadW(k) * Math.min(1, Math.max(0.55, cell / 100));
@@ -632,7 +685,7 @@ export const ChessBoard: React.FC<{
   const frac = pf - whole;
   const A = CHESS_STATES.states[whole];
   const B = CHESS_STATES.states[Math.min(CHESS_PLY_COUNT, whole + 1)];
-  const slide = smoothstep(clamp01(frac / 0.7));
+  const slide = smoothstep(clamp01(frac / Math.min(0.95, CHESS_SLIDE_F / pace)));
   const squares: React.ReactNode[] = [];
   for (let r = 0; r < 8; r++)
     for (let c = 0; c < 8; c++)
@@ -769,7 +822,12 @@ export type RingState = {
   op: number;
   /** 0 flying, 1 working, 2 pouring, 3 released, -1 not yet / gone */
   phase: number;
+  tilt?: number;
 };
+/** A floating question sways its glyph a few degrees and settles upright by
+ *  the time it arrives (u = flight progress 0..1). */
+export const floatTilt = (u: number, seed: number) =>
+  7 * Math.sin(u * Math.PI * 2.2 + seed * 1.7) * (1 - smoothstep(u / 0.9));
 export const RELEASE_F = 40;
 
 export const runFeed = (
@@ -793,7 +851,7 @@ export const runFeed = (
     let R2 = R0 * R0;
     rings.forEach((g, i) => {
       if (!decided[i] || verdict[i].easy) return;
-      const pourStart = g.touchF + verdict[i].W + TICK_F;
+      const pourStart = g.touchF + solveEnd(verdict[i].W);
       R2 += GAIN * g.r * g.r * smoothstep((f - pourStart) / POUR_F);
     });
     const R = Math.sqrt(R2);
@@ -823,7 +881,7 @@ export const runFeed = (
         const cy = end.y - g.by;
         const L = Math.hypot(cx, cy) || 1;
         const b = (g.bow ?? 0) * Math.sin(Math.PI * clamp01(u));
-        const born = smoothstep((f - g.bornF) / 8);
+        const born = easeOut((f - g.bornF) / 10);
         return {
           x: px + (-cy / L) * b,
           y: py + (cx / L) * b,
@@ -833,23 +891,18 @@ export const runFeed = (
           tone: 0,
           op: born,
           phase: 0,
+          tilt: floatTilt(u, i),
         };
       }
       const v = verdict[i];
       const tw = f - g.touchF;
       const p = rim(R);
-      if (tw < v.W + TICK_F) {
-        return {
-          ...p,
-          r: g.r,
-          work: clamp01(tw / v.W),
-          done: clamp01((tw - v.W) / TICK_F),
-          tone: smoothstep((tw - v.W * 0.85) / (v.W * 0.15 + 3)),
-          op: 1,
-          phase: 1,
-        };
+      const end = solveEnd(v.W);
+      if (tw < end) {
+        const so = solveAt(tw, v.W);
+        return { ...p, r: g.r, ...so, op: 1, phase: 1 };
       }
-      const ta = tw - v.W - TICK_F;
+      const ta = tw - end;
       if (!v.easy) {
         if (ta >= POUR_F) return { ...p, r: g.r, work: 1, done: 1, tone: 1, op: 0, phase: -1 };
         const e = Math.pow(clamp01(ta / POUR_F), 1.6);
@@ -864,23 +917,13 @@ export const runFeed = (
           phase: 2,
         };
       }
-      if (ta >= RELEASE_F) return { ...p, r: g.r, work: 0, done: 1, tone: 0, op: 0, phase: -1 };
-      // released: peel off sideways, then fall; the rim point is frozen at release
+      // released: the rim point is frozen at the touch; peel off and fall
       const Rr = v.Rtouch;
       const q = { x: M.x + dir.x * contactDist(Rr, g.r), y: M.y + dir.y * contactDist(Rr, g.r) };
       const side = Math.abs(dir.x) < 0.12 ? (hash(i, 41) < 0.5 ? -1 : 1) : Math.sign(dir.x);
-      const s = ta / RELEASE_F;
-      const out = easeOut(s);
-      return {
-        x: q.x + side * 150 * out + dir.x * 30 * out,
-        y: q.y + dir.y * 40 * out + 170 * s * s,
-        r: g.r,
-        work: 0,
-        done: 1,
-        tone: 1 - smoothstep(ta / 8),
-        op: lerp(1, INK_LO, smoothstep(ta / 10)) * (1 - smoothstep((ta - RELEASE_F + 16) / 16)),
-        phase: 3,
-      };
+      const lg = letGo(ta, side, dir);
+      if (lg.gone) return { ...q, r: g.r, work: 1, done: 1, tone: 0, op: 0, phase: -1 };
+      return { x: q.x + lg.dx, y: q.y + lg.dy, r: g.r, work: 1, done: 1, tone: lg.tone, op: lg.op, phase: 3 };
     });
     states.push(row);
   }

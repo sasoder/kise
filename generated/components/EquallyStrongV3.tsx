@@ -136,12 +136,7 @@ export const EquallyStrongV3: React.FC<z.infer<typeof schema>> = () => {
   const emB = emOf(false, frame);
   // the board shows every move that has landed (the ones before the rally were
   // already played)
-  let movesF = I0;
-  for (let i = I0; i < MOVES.length; i++) {
-    const t = landF(i);
-    if (t > frame) break;
-    movesF = i + Math.min(1, (frame - t) / (PACE * 0.75) + 0.001);
-  }
+  const movesF = Math.max(I0, I0 + (frame - F0) / PACE);
   const threads: React.ReactNode[] = [];
   for (let i = I0; i < MOVES.length; i++) {
     const t = threadOf(i, frame);
@@ -162,7 +157,7 @@ export const EquallyStrongV3: React.FC<z.infer<typeof schema>> = () => {
   }
   return (
     <Stage frame={frame} cam={cam} rest={CAM[0]}>
-      <GoBoard x={B.x} y={B.y} cell={B.cell} k={k} record={REC} movesF={movesF} />
+      <GoBoard x={B.x} y={B.y} cell={B.cell} k={k} record={REC} movesF={movesF} pace={PACE} />
       <DeepMindMark k={k} x={540} y={topY(emT)} em={emT} />
       <DeepMindMark k={k} x={540} y={botY(emB)} em={emB} rot={180} />
       <g style={{ filter: iconShadow(k) }}>{threads}</g>

@@ -16,6 +16,7 @@ import {
   hash,
   markR,
   runFeed,
+  sendLift,
   toScreen,
 } from "./outgrowShared";
 
@@ -83,33 +84,32 @@ export const PEOPLE = [
 // as it grows they go faster, and from ~f100 they are all too easy.
 export const BASE: [number, number][] = [
   [-34, 56], [-12, 52], [6, 60], [22, 48], [32, 58], [42, 54], [52, 60], [61, 50], [70, 56], [80, 52], [89, 56],
-  [99, 48], [104, 56], [109, 44], [114, 52], [119, 60], [124, 46], [129, 54], [134, 50], [139, 58], [144, 44],
-  [149, 52], [154, 56],
+  [99, 48], [104, 56], [109, 44], [114, 52], [119, 60], [124, 46], [129, 54], [134, 50], [141, 52], [145, 44],
+  [150, 50],
 ];
 const SCHEDULE: [number, number, number, number, number][] = [
   [-34, 56, 90, 1, -90],
   [-12, 52, -36, 4, -90],
   [6, 60, 207, 0, -90],
-  [22, 48, 27, 5, 90],
+  [22, 48, 27, 7, 90],
   [32, 58, 117, 1, 0],
   [42, 54, 72, 3, 45],
   [52, 60, 162, 0, -90],
-  [61, 50, -27, 8, 90],
-  [70, 56, 45, 5, 90],
-  [80, 52, 90, 5, -90],
-  [89, 56, 126, 0, 0],
-  [99, 48, 9, 8, 90],
-  [104, 56, 63, 8, -45],
-  [109, 44, 99, 2, -90],
-  [114, 52, 81, 4, 45],
-  [119, 60, 144, 0, -90],
-  [124, 46, 36, 8, 0],
-  [129, 54, 126, 0, 0],
+  [61, 50, -18, 8, 90],
+  [70, 56, 36, 8, 0],
+  [80, 52, 99, 5, -45],
+  [89, 56, 135, 0, 0],
+  [99, 48, 63, 7, -45],
+  [104, 56, 81, 2, 45],
+  [109, 44, 117, 0, 0],
+  [114, 52, 36, 8, 0],
+  [119, 60, 18, 8, 90],
+  [124, 46, 99, 5, -90],
+  [129, 54, 135, 0, -45],
   [134, 50, 207, 0, -90],
-  [139, 58, 90, 5, -90],
-  [144, 44, 63, 6, 0],
-  [149, 52, -9, 5, -90],
-  [154, 56, 45, 8, 90],
+  [141, 52, 81, 6, -90],
+  [145, 44, 117, 0, 90],
+  [150, 50, 45, 8, 90],
 ];
 
 // Flight time from distance, so no question outruns the speed cap even in the
@@ -129,6 +129,9 @@ export const mkRing = (t: number, r: number, a: number, pi: number, bow: number)
 export const RINGS: FeedRing[] = SCHEDULE.map(([t, r, a, pi, bow]) => mkRing(t, r, a, pi, bow));
 
 const FEED = runFeed(M, R0, RINGS, -120, DURATION + 2);
+// each sender gives a small lift as their question leaves their hands
+const liftOf = (pi: number, f: number) =>
+  RINGS.reduce((s, g, i) => (SCHEDULE[i][3] === pi ? s + sendLift(f - g.bornF - 2) : s), 0);
 
 // ---------------------------------------------------------------------------
 // Camera: open tight, one long pull-back made of two overlapping glides, then
@@ -216,12 +219,12 @@ export const TooEasyV3: React.FC<z.infer<typeof schema>> = () => {
   const under = idx.filter(({ s }) => s.phase === 0 || s.phase === 2);
   const over = idx.filter(({ s }) => s.phase === 1 || s.phase === 3);
   const ring = ({ s, i }: { s: (typeof st)[number]; i: number }) => (
-    <QRing key={i} x={s.x} y={s.y} r={s.r} k={k} work={s.work} done={s.done} tone={s.tone} opacity={s.op} />
+    <QRing key={i} x={s.x} y={s.y} r={s.r} k={k} work={s.work} done={s.done} tone={s.tone} opacity={s.op} tilt={s.tilt ?? 0} />
   );
   return (
     <Stage frame={frame} cam={cam} rest={CAM[0]}>
       {PEOPLE.map((p, i) => (
-        <Person key={i} k={k} x={p.x} y={p.y} />
+        <Person key={i} k={k} x={p.x} y={p.y} lift={liftOf(i, frame)} />
       ))}
       {under.map(ring)}
       <ModelMark k={k} x={M.x} y={M.y} em={em} />

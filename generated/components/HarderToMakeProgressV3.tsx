@@ -9,7 +9,11 @@ import {
   PERSON_TOP,
   QRing,
   Stage,
-  TICK_F,
+  easeOut,
+  floatTilt,
+  solveAt,
+  solveEnd,
+  sendLift,
   cameraTrack,
   camJerk,
   clamp01,
@@ -119,7 +123,7 @@ const RISE0 = 60;
 const TOUCH = 90;
 const RIM_Y = M.y + 0.485 * EM + R_POOL + 4;
 const W = workFrames(R_POOL, R);
-const pourStart = TOUCH + W + TICK_F;
+const pourStart = TOUCH + solveEnd(W);
 const modelR = (f: number) => {
   const e = smoothstep((f - pourStart) / POUR_F);
   return Math.sqrt(R * R + (grow(R, R_POOL) ** 2 - R * R) * e);
@@ -191,9 +195,7 @@ export const HarderToMakeProgressV3: React.FC<z.infer<typeof schema>> = () => {
   const pr = poolR(frame);
   const pp = poolAt(frame);
   const tw = frame - TOUCH;
-  const work = tw < 0 ? 0 : Math.min(1, tw / W);
-  const done = tw < W ? 0 : Math.min(1, (tw - W) / TICK_F);
-  const tone = tw < 0 ? 0 : smoothstep((tw - W * 0.85) / (W * 0.15 + 3));
+  const { work, done, tone } = solveAt(tw, W);
   const ta = frame - pourStart;
   const pourE = Math.pow(clamp01(ta / POUR_F), 1.6);
   const Rm = modelR(frame);
@@ -207,14 +209,15 @@ export const HarderToMakeProgressV3: React.FC<z.infer<typeof schema>> = () => {
   return (
     <Stage frame={frame} cam={cam} rest={CAM[0]}>
       {CROWD.map((p, i) => (
-        <Person key={i} k={k} x={p.x} y={p.y} />
+        <Person key={i} k={k} x={p.x} y={p.y} lift={sendLift(frame - QS[i].born - 2)} />
       ))}
       {QS.map((q, i) => {
         if (frame < q.born) return null;
         const p = qAt(q, frame);
         const into = smoothstep((frame - q.arrive) / 5);
         if (into >= 1) return null;
-        const bornA = smoothstep((frame - q.born) / 8);
+        const bornA = easeOut((frame - q.born) / 10);
+        const u = clamp01((frame - q.born) / (q.arrive - q.born));
         return (
           <QRing
             key={i}
@@ -223,10 +226,13 @@ export const HarderToMakeProgressV3: React.FC<z.infer<typeof schema>> = () => {
             r={q.r * (0.7 + 0.3 * bornA) * (1 - 0.5 * into)}
             k={k}
             opacity={bornA * (1 - into)}
+            tilt={floatTilt(u, i)}
           />
         );
       })}
-      {!touching && pr > 0 ? <QRing x={pp.x} y={pp.y} r={pr} k={k} /> : null}
+      {!touching && pr > 0 ? (
+        <QRing x={pp.x} y={pp.y} r={pr} k={k} tilt={frame < RISE0 ? 0 : floatTilt((frame - RISE0) / (TOUCH - RISE0), 2)} />
+      ) : null}
       <ModelMark k={k} x={M.x} y={M.y} em={emOfR(Rm)} />
       {touching && poolDraw.op > 0 ? (
         <QRing x={poolDraw.x} y={poolDraw.y} r={poolDraw.r} k={k} work={work} done={done} tone={tone} opacity={poolDraw.op} />

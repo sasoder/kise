@@ -7,19 +7,20 @@ import {
   Person,
   PERSON_TOP,
   QRing,
-  RELEASE_F,
   Stage,
-  TICK_F,
   cameraTrack,
   camJerk,
-  easeOut,
+  floatTilt,
+  letGo,
+  solveAt,
+  solveEnd,
+  sendLift,
   isEasy,
   lerp,
   markR,
   smoothstep,
   toScreen,
   workFrames,
-  INK_LO,
 } from "./outgrowShared";
 
 // ---------------------------------------------------------------------------
@@ -49,11 +50,13 @@ import {
 //
 // GESTURES (each with the word it serves):
 //   f0-17    close on the person holding the problem up ........... "out there right now, you"
-//   f18-136  the problem floats up out of their hands .............. "give the model a problem"
+//   f18-132  the problem floats up out of their hands, its `?` swaying
+//            and settling upright as it arrives ................... "give the model a problem"
 //   f14-84   ONE pull-back rising with it finds the giant model .... "the model … ask it to solve it"
-//   f88-138  push in on the meeting point; the question is a speck
+//   f88-134  push in on the meeting point; the question is a speck
 //            against a wall of orange ............................. "if the problem is so easy"
-//   f136-151 touch; arc snaps round (7 f); tick lands ............. "solve it in a second"
+//   f132-151 touch; arc snaps round (7 f, eased); `?` crossfades to the
+//            tick, which lands on ............................... "solve it in a second"
 //   f151-191 let go: white, dim, peels off and falls; the mark does
 //            not change; camera eases back out with the fall ...... "not really learning anything"
 //   f160-204 the next problem appears in the person's hands and starts up
@@ -72,7 +75,7 @@ const P = { x: 540, y: 1900 };
 const r = 44;
 const HELD_Y = P.y + PERSON_TOP() - r - 10;
 const RISE0 = 18;
-const TOUCH = 136;
+const TOUCH = 132;
 // The touch sits just OUTSIDE the knot's lowest lobe (its ink reaches 0.48 em
 // below centre), so the accent arc is always seen against the grid, never lost
 // on the orange.
@@ -80,40 +83,31 @@ const RIM_Y = M.y + 0.485 * EM + r + 4;
 const W = workFrames(r, R);
 const SIDE = 1;
 
-// The first problem, frame by frame: held, rising, worked, ticked, let go.
+// The first problem, frame by frame: held, rising, worked, ticked, let go —
+// the shared SOLVE timeline and let-go, the same as every question in the film.
 const first = (f: number) => {
   if (f < RISE0) {
     const bob = 3 * Math.sin(f / 7);
-    return { x: P.x, y: HELD_Y + bob, work: 0, done: 0, tone: 0, op: 1 };
+    return { x: P.x, y: HELD_Y + bob, work: 0, done: 0, tone: 0, op: 1, tilt: 0 };
   }
   if (f < TOUCH) {
     const u = (f - RISE0) / (TOUCH - RISE0);
     const e = 0.5 - 0.5 * Math.cos(Math.PI * u);
     const sx = 26 * Math.sin(Math.PI * 2 * u) * (1 - u);
-    return { x: P.x + sx, y: lerp(HELD_Y + 3 * Math.sin(RISE0 / 7), RIM_Y, e), work: 0, done: 0, tone: 0, op: 1 };
-  }
-  const tw = f - TOUCH;
-  if (tw < W + TICK_F) {
     return {
-      x: P.x,
-      y: RIM_Y,
-      work: Math.min(1, tw / W),
-      done: Math.max(0, Math.min(1, (tw - W) / TICK_F)),
-      tone: smoothstep((tw - W * 0.85) / (W * 0.15 + 3)),
+      x: P.x + sx,
+      y: lerp(HELD_Y + 3 * Math.sin(RISE0 / 7), RIM_Y, e),
+      work: 0,
+      done: 0,
+      tone: 0,
       op: 1,
+      tilt: floatTilt(u, 3),
     };
   }
-  const ta = tw - W - TICK_F;
-  const s = ta / RELEASE_F;
-  const out = easeOut(s);
-  return {
-    x: P.x + SIDE * 150 * out,
-    y: RIM_Y + 40 * out + 170 * s * s,
-    work: 0,
-    done: 1,
-    tone: 1 - smoothstep(ta / 8),
-    op: lerp(1, INK_LO, smoothstep(ta / 10)) * (1 - smoothstep((ta - RELEASE_F + 16) / 16)),
-  };
+  const tw = f - TOUCH;
+  if (tw < solveEnd(W)) return { x: P.x, y: RIM_Y, ...solveAt(tw, W), op: 1, tilt: 0 };
+  const lg = letGo(tw - solveEnd(W), SIDE, { x: 0, y: 1 });
+  return { x: P.x + lg.dx, y: RIM_Y + lg.dy, work: 1, done: 1, tone: lg.tone, op: lg.gone ? 0 : lg.op, tilt: 0 };
 };
 // The next one: grows into the person's hands, then starts up.
 const NEXT_IN = 160;
@@ -140,7 +134,7 @@ export const PROBLEMS: string[] = [];
 const fail = (m: string) => PROBLEMS.push(m);
 (() => {
   if (!isEasy(r, R)) fail(`SolveInASecondV3: a ${r} question is not too easy for R ${R.toFixed(0)}`);
-  const tickEnd = TOUCH + W + TICK_F;
+  const tickEnd = TOUCH + solveEnd(W);
   if (Math.abs(tickEnd - 151) > 2) fail(`SolveInASecondV3: tick ends f${tickEnd}, want ~f151 ("second")`);
   const j = camJerk(CAM, DURATION);
   if (j.maxA > 2.5) fail(`SolveInASecondV3: camera |dv| ${j.maxA.toFixed(2)} px/f^2 at f${j.at}`);
@@ -172,12 +166,12 @@ export const SolveInASecondV3: React.FC<z.infer<typeof schema>> = () => {
   const touching = frame >= TOUCH;
   return (
     <Stage frame={frame} cam={cam} rest={CAM[0]}>
-      <Person k={k} x={P.x} y={P.y} />
-      {n.op > 0 ? <QRing x={n.x} y={n.y} r={n.r} k={k} opacity={n.op} /> : null}
-      {!touching ? <QRing x={q.x} y={q.y} r={r} k={k} opacity={q.op} /> : null}
+      <Person k={k} x={P.x} y={P.y} lift={sendLift(frame - RISE0 + 2) + sendLift(frame - NEXT_UP + 2)} />
+      {n.op > 0 ? <QRing x={n.x} y={n.y} r={n.r} k={k} opacity={n.op} tilt={floatTilt(Math.max(0, (frame - NEXT_UP) / (TOUCH - RISE0)), 5)} /> : null}
+      {!touching ? <QRing x={q.x} y={q.y} r={r} k={k} opacity={q.op} tilt={q.tilt} /> : null}
       <ModelMark k={k} x={M.x} y={M.y} em={EM} />
       {touching ? (
-        <QRing x={q.x} y={q.y} r={r} k={k} work={q.work} done={q.done} tone={q.tone} opacity={q.op} />
+        <QRing x={q.x} y={q.y} r={r} k={k} work={q.work} done={q.done} tone={q.tone} opacity={q.op} tilt={q.tilt} />
       ) : null}
     </Stage>
   );
