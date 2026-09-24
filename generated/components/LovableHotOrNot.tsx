@@ -10,7 +10,9 @@ import {
 import {z} from 'zod';
 
 // ---------------------------------------------------------------------------
-// Lovable — "Hot or not: startup & dating edition". Client social video.
+// Lovable — "Hot or not: startup & dating edition". Client social video. V2:
+// Q1 reads "on or before"; the missed "Uses Lovable?" question added at f558
+// (seven questions, renumbered).
 //
 // A TRANSPARENT overlay: design 3 · TEMPERATURE SLIDER from the approved still
 // (scratchpad cards.html #d3 / card3.png), on screen for the whole cut. The
@@ -18,8 +20,8 @@ import {z} from 'zod';
 // people say. 1080x1920, 24 fps, cut = 57.989 s -> round(57.989*24) = 1392.
 //
 // Headline size: 72 px for every question (76 overflowed the 836 px text
-// width on Q3 line 1 and Q6 line 1). Q3's first line still overflows at 72
-// (≈917 px), so Q3 is re-broken into three lines:
+// width on the first lines of Q3 and Q7). Q3's first line still overflows at
+// 72 (≈917 px), so Q3 is re-broken into three lines:
 // "They have “CEO” / or “founder” in bio / but no revenue?".
 //
 // GESTURES — every gesture, the word it serves, and its frame
@@ -32,6 +34,7 @@ import {z} from 'zod';
 //   f75     "hot"   v -> +1
 //   f86     "not"   v -> -1
 //   f96     Q1 swap: headline swap, eyebrow · 01, height 2->3, return to 0 (12 f)
+//           "If somebody built you a / custom app on or before / your first date?"
 //   f189    "not"   v -> -1
 //   f201    "hot"   v -> +1
 //   f218    "not"   v -> -1
@@ -41,20 +44,23 @@ import {z} from 'zod';
 //   f367    "hot"   v -> +1
 //   f393    "not"   v -> -1 ("sorry, not" holds)
 //   f459    Q3 swap: · 03, height 2->3, return to 0
-//   f549    "not"   v -> -1
-//   f566    "Lovable" v -> +1 AND the wordmark pulses 1 -> 1.08 -> 1 (12 f)
-//   f607    "hot"   already +1, hold
-//   f648    Q4 swap: · 04, height 3->1, return to 0
+//   f549    "not"   v -> -1 (lands f551)
+//   f558    Q4 swap "Uses Lovable?": · 04, height 3->1 (Q3 clears by f558);
+//           knob holds NOT
+//   f560    Q4 return to 0 (12 f inOut cubic, lands f572)
+//   f566    "Lovable?" the wordmark pulses 1 -> 1.08 -> 1 (12 f) — the brand moment
+//   f607    "hot"   v -> +1 ("thank you" f583, "yeah" f618, "sure" f627 hold)
+//   f648    Q5 swap: · 05 "Flirts with AI?", height 1->1, return to 0
 //   f681    "not"   v -> -1
 //   f720    "hot"   v -> +1 (lands f722)
 //   f730    "nope"  v -> -1 (starts f722 from the landed value)
 //   f752    "that's hot" v -> +1
-//   f759    Q5 swap (text on time): · 05, height 1->2; knob holds HOT
-//   f762    Q5 return to 0 (12 f inOut cubic, lands f774)
+//   f759    Q6 swap (text on time): · 06, height 1->2; knob holds HOT
+//   f762    Q6 return to 0 (12 f inOut cubic, lands f774)
 //   f837    "not"   v -> -1
 //   f852    "what is NDA?" return to 0 (12 f) + HESITANT wobble
 //   f959    "fine"  v -> +0.45
-//   f991    Q6 swap: · 06, height 2->3, return to 0
+//   f991    Q7 swap: · 07, height 2->3, return to 0
 //   f1068   "not"   v -> -1
 //   f1113   "know"  v -> 0 + HESITANT wobble
 //   f1206   "good"  v -> +0.4
@@ -155,8 +161,8 @@ const QUESTIONS: Question[] = [
 		swap: 96,
 		lines: [
 			L(['If', 96], ['somebody', 97], ['built', 108], ['you', 118], ['a', 121]),
-			L(['custom', 127], ['app', 136], ['before', 158], ['your', 164]),
-			L(['first', 169], ['date?', 176]),
+			L(['custom', 127], ['app', 136], ['on', 146], ['or', 154], ['before', 158]),
+			L(['your', 164], ['first', 169], ['date?', 176]),
 		],
 	},
 	{
@@ -178,11 +184,16 @@ const QUESTIONS: Question[] = [
 	},
 	{
 		n: 4,
+		swap: 558,
+		lines: [L(['Uses', 558], ['Lovable?', 566])],
+	},
+	{
+		n: 5,
 		swap: 648,
 		lines: [L(['Flirts', 648], ['with', 659], ['AI?', 666])],
 	},
 	{
-		n: 5,
+		n: 6,
 		swap: 759,
 		lines: [
 			L(['Makes', 759], ['you', 764], ['sign', 768], ['an', 776], ['NDA', 780]),
@@ -190,7 +201,7 @@ const QUESTIONS: Question[] = [
 		],
 	},
 	{
-		n: 6,
+		n: 7,
 		swap: 991,
 		lines: [
 			L(['Asks', 991], ['you', 997], ['to', 1002], ['work', 1006], ['together', 1010]),
@@ -260,13 +271,14 @@ const MOVES: Move[] = [
 	ans(393, -1),
 	ret(459),
 	ans(549, -1),
-	ans(566, 1), // "…unless it's Lovable"
+	ret(560), // Q4 "Uses Lovable?": hold NOT past the f558 swap, then return
+	ans(607, 1), // "hot" ("thank you" f583 and "yeah"/"sure" f618/f627 hold)
 	ret(648),
 	ans(681, -1),
 	ans(720, 1),
 	ans(730, -1),
 	ans(752, 1),
-	ret(762), // Q5: hold HOT past the f759 swap, then return
+	ret(762), // Q6: hold HOT past the f759 swap, then return
 	ans(837, -1),
 	ret(852), // "what is NDA?"
 	ans(959, 0.45),
