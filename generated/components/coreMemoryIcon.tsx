@@ -59,6 +59,7 @@ export const SERVER_IN_FRAMES = 48;
 export const POWER_IN_FRAMES = CORE_LAND + LOOP_FRAMES; // 124
 /** The clock's hands are already spinning on the way in, so: same as the rack. */
 export const CLOCK_IN_FRAMES = 48;
+export const COMMUNISM_IN_FRAMES = 48;
 
 const TAU = Math.PI * 2;
 export {TAU};
