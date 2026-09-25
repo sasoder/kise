@@ -7,18 +7,15 @@ import {
   battleShadow,
   BattleRow,
   cameraStyle,
-  CLOTH_DUR,
   CX,
   CY,
   easeOut,
   FLAG_TOP,
-  FlagGlyph,
   kAt,
   K_END,
   labelStyle,
   LABEL_TOP,
   LABEL_SIZE,
-  POLE_DUR,
   previewFill,
   schema as cut1Schema,
   SW_WORLD,
@@ -55,17 +52,20 @@ import {
 //                                   comes down into frame from above.
 //   3. f30–46  "the objective"      a white ring draws on as ONE stroke from
 //                                   its bottom (the point the line aims at),
-//                                   clockwise all the way round, f30–42; a big white Lucide
-//                                   flag inside plants — pole f34–39, cloth
-//                                   unfurls f38–44 (same scaleX unfurl as the
-//                                   battle flags); THE OBJECTIVE slides up +
-//                                   fades in above the ring, f36–46.
+//                                   clockwise all the way round, f30–42; a big
+//                                   white Lucide TROPHY inside draws on, f34–44
+//                                   (stroke draw-on, cup first, then handles,
+//                                   stems, base; under a 12 px slide-up + fade,
+//                                   the house glyph entrance); THE OBJECTIVE
+//                                   slides up + fades in above the ring, f36–46.
+//                                   V2 (user revision): the objective was a
+//                                   white flag in V1 (commit b116f04); the five
+//                                   battle flags stay flags.
 //   4. f36–44  (stop short)         the line's head decelerates into its stop
 //                                   40 screen px under the ring. Gap open.
 //   5. f46–71  "for which you're fighting the war" — hold, never static:
-//                                   the camera creeps ~1.6% in (f40 on), the
-//                                   objective's cloth keeps a hashed ≤2 px
-//                                   wave, the line's head reaches ≤8 px toward
+//                                   the camera creeps ~1.6% in (f40 on) and
+//                                   the line's head reaches ≤8 px toward
 //                                   the gap and eases back (f48–70). It never
 //                                   touches.
 //
@@ -114,7 +114,24 @@ const CLOTH_Y_AT_AXIS = 3.0;
 const lineBaseAt = (cut1Frame: number) =>
   FLAG_TOP + (CLOTH_Y_AT_AXIS + clothWave(cut1Frame, FLAG2, 1)(CLOTH_X_AT_AXIS)) * U_FLAG;
 const LINE_Y0 = lineBaseAt(CUT1_DURATION - 1); // nominal base, for the head's travel
-const BIG_FLAG = 1.25 * RING_R; // 24-grid box; ink 16 x 20 of it
+// THE TROPHY. Lucide `trophy` (lucide-static v1.46.0, ISC), inlined verbatim,
+// in draw order: cup, handles, stems, base.
+const TROPHY = [
+  "M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z", // cup
+  "M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3", // handle L
+  "M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3", // handle R
+  "M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2", // stem L
+  "M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2", // stem R
+  "M4 22h16", // base
+];
+// Size: ink 20 x 20 units against the V1 flag's 16 x 20 in a 1.25 R box, so
+// a 1.2 R box gives about the same visual mass inside the ring (1.1 R read small).
+const TROPHY_BOX = 1.2 * RING_R;
+const U_TROPHY = TROPHY_BOX / 24;
+// Optical centre: the cup's mass (cup body y 2–15, handles y 4–10), not the
+// 2–22 bounding box, sits on the ring centre.
+const TROPHY_OPTICAL_Y = 10;
+const TROPHY_RISE_PX = 12;
 const OBJ_LABEL_SIZE = 68; // ≈ 50 screen px at K1
 const OBJ_LABEL_TOP = RING_CY - RING_R - 34 / K1 - 0.845 * OBJ_LABEL_SIZE;
 
@@ -124,8 +141,10 @@ const RECEDE_F1 = 14;
 const RECEDE_TO = 0.65; // survives bright footage
 const RING_F0 = 30;
 const RING_DUR = 12;
-const POLE_F0 = 34;
-const CLOTH_F0 = 38;
+const TROPHY_F0 = 34;
+const TROPHY_F1 = 44;
+const TROPHY_STAGGER = 1; // cup first, each later path a frame behind
+const TROPHY_FADE = 6;
 const OBJ_LABEL_F0 = 36;
 const REACH_F0 = 48;
 const REACH_DUR = 22;
@@ -163,9 +182,10 @@ const AchieveTheObjective: React.FC<z.infer<typeof schema>> = ({ previewBg }) =>
 
   // 3. the objective
   const tRing = easeOut((frame - RING_F0) / RING_DUR);
-  const tPole = easeOut((frame - POLE_F0) / POLE_DUR);
-  const tCloth = easeOut((frame - CLOTH_F0) / CLOTH_DUR);
-  const w = clothWave(frame, 11, tCloth, 0.24);
+  const tTrophyIn = easeOut((frame - TROPHY_F0) / TROPHY_FADE);
+  const trophyDur = TROPHY_F1 - TROPHY_F0 - (TROPHY.length - 1) * TROPHY_STAGGER;
+  const drawT = (i: number) =>
+    easeOut((frame - TROPHY_F0 - i * TROPHY_STAGGER) / trophyDur);
   const tLabel = easeOut((frame - OBJ_LABEL_F0) / LABEL_IN);
   const circ = 2 * Math.PI * RING_R;
 
@@ -205,17 +225,42 @@ const AchieveTheObjective: React.FC<z.infer<typeof schema>> = ({ previewBg }) =>
           </svg>
         ) : null}
 
-        <FlagGlyph
-          left={CX - BIG_FLAG / 2}
-          top={RING_CY - BIG_FLAG / 2}
-          size={BIG_FLAG}
-          color={INK}
-          sw={sw}
-          tPole={tPole}
-          tCloth={tCloth}
-          w={w}
-          filter={shadow}
-        />
+        {tTrophyIn > 0 ? (
+          <svg
+            viewBox="0 0 24 24"
+            width={TROPHY_BOX}
+            height={TROPHY_BOX}
+            style={{
+              position: "absolute",
+              overflow: "visible",
+              left: CX - TROPHY_BOX / 2,
+              top:
+                RING_CY -
+                TROPHY_OPTICAL_Y * U_TROPHY +
+                (TROPHY_RISE_PX / k) * (1 - tTrophyIn),
+              opacity: tTrophyIn,
+              filter: shadow,
+            }}
+            fill="none"
+            stroke={INK}
+            strokeWidth={sw / U_TROPHY}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {TROPHY.map((d, i) => {
+              const t = drawT(i);
+              return t > 0 ? (
+                <path
+                  key={d}
+                  d={d}
+                  pathLength={1}
+                  // drawn: no dash at all, so the closed cup has no seam
+                  strokeDasharray={t < 1 ? `${t.toFixed(4)} 2` : undefined}
+                />
+              ) : null;
+            })}
+          </svg>
+        ) : null}
 
         {tLabel > 0 ? <ObjectiveLabel k={k} t={tLabel} /> : null}
       </AbsoluteFill>
