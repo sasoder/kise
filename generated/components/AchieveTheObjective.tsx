@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { ACCENT, camEase, clamp01, smoothstep } from "./fieldShared";
-import { INK, LABEL_IN, LABEL_RISE_PX, LABEL_TRACKING, STROKE_PX } from "./alignShared";
+import { INK, LABEL_RISE_PX, LABEL_TRACKING, STROKE_PX } from "./alignShared";
 import {
   battleShadow,
   BattleRow,
@@ -27,7 +27,7 @@ import {
 // ---------------------------------------------------------------------------
 // AchieveTheObjective — cut 2 of the war essay, spoken straight after
 // WinAllTheBattles: "…it has to do with whether you achieve the objective for
-// which you're fighting the war." Transparent 1080x1920, 24 fps, 72 frames.
+// which you're fighting the war." Transparent 1080x1920, 24 fps, 96 frames.
 //
 // JOIN: f0 is cut 1's f47 pixel for pixel — the same BattleRow code at cut-1
 // frame 47 + f, the same cameraStyle at k = K_END centred on (540, 835).
@@ -36,38 +36,40 @@ import {
 // bigger, above the battles, and NOT orange. The orange line of wins reaches
 // up toward it and stops short — "whether you achieve" is the open gap.
 //
-// GESTURES — each with the word it serves (onsets are even-pacing estimates):
-//   1. f2–14   "it has to do with"  the row (swords, flags, label) recedes to
+// GESTURES — each with the word it serves (onsets are even-pacing estimates).
+// V3 (user revision): 96 frames, ONE continuous eased motion start to end, no
+// hold — "it can ease in and ease out, because now it holds a bit and this is
+// not necessary". V2 made the objective a trophy (V1, b116f04, had a flag).
+//
+//   0. f0–95   (camera)             ONE move across the whole piece: tilt up +
+//                                   pull back, k 1.07 → 0.74. It leaves cut 1's
+//                                   creep carrying cut 1's velocity at the join
+//                                   and decelerates into the final framing ON
+//                                   f95 — one acceleration lobe, one
+//                                   deceleration lobe, no plateau.
+//   1. f2–24   "it has to do with"  the row (swords, flags, label) recedes to
 //                                   the context rung 0.65 — one eased fade, a
 //                                   recede not an exit; the flags keep waving.
-//   2. f12–44  "whether you achieve" ONE orange line grows straight out of
-//                                   the middle flag — its round cap sits on
-//                                   the top of flag 2's cloth on x = 540 and
-//                                   rides that cloth's wave. The wins are what
-//                                   reach. The camera
-//                                   follows its head: one eased move that
-//                                   tilts up and pulls back, k 1.08 → 0.74,
-//                                   landing f44. Head stays ~y 640–660 on
-//                                   screen the whole way, so the objective
-//                                   comes down into frame from above.
-//   3. f30–46  "the objective"      a white ring draws on as ONE stroke from
+//   2. f1–95   "whether you achieve" ONE orange line grows straight out of the
+//                                   middle flag (its round cap on the top of
+//                                   flag 2's cloth at x 540, riding its wave)
+//                                   on the camera's own ease, so its head keeps
+//                                   its place on screen (~y 640–660) while the
+//                                   camera rises; the objective comes down into
+//                                   frame from above.
+//   3. f40–72  "the objective"      a white ring draws on as ONE stroke from
 //                                   its bottom (the point the line aims at),
-//                                   clockwise all the way round, f30–42; a big
-//                                   white Lucide TROPHY inside draws on, f34–44
-//                                   (stroke draw-on, cup first, then handles,
-//                                   stems, base; under a 12 px slide-up + fade,
-//                                   the house glyph entrance); THE OBJECTIVE
-//                                   slides up + fades in above the ring, f36–46.
-//                                   V2 (user revision): the objective was a
-//                                   white flag in V1 (commit b116f04); the five
-//                                   battle flags stay flags.
-//   4. f36–44  (stop short)         the line's head decelerates into its stop
-//                                   40 screen px under the ring. Gap open.
-//   5. f46–71  "for which you're fighting the war" — hold, never static:
-//                                   the camera creeps ~1.6% in (f40 on) and
-//                                   the line's head reaches ≤8 px toward
-//                                   the gap and eases back (f48–70). It never
-//                                   touches.
+//                                   clockwise all the way round, f40–62; a big
+//                                   white Lucide TROPHY inside draws on, f50–70
+//                                   (cup first, then handles, stems, base,
+//                                   under a 12 px slide-up + fade); THE
+//                                   OBJECTIVE slides up + fades in above the
+//                                   ring, f56–72. All landed well before the
+//                                   end, while camera and line still glide.
+//   4. f95     (stop short)         the line's arrival IS the ending: its head
+//                                   decelerates into its stop 40 px (ink to
+//                                   ink) under the ring on the last frames.
+//                                   The gap stays open. No hold, no reach.
 //
 // Nothing else: no ?, no strike-through, no sparks, no dashes, no ring pulse.
 //
@@ -77,22 +79,23 @@ import {
 // ---------------------------------------------------------------------------
 
 export const FPS = 24;
-export const DURATION = 72;
+export const DURATION = 96;
 
 export const schema = cut1Schema;
 export const defaultProps = schema.parse({ previewBg: "none" });
 
 // --- Camera -----------------------------------------------------------------
-const MOVE_F0 = 12;
-const MOVE_F1 = 44;
-const MOVE_WARP = 0.85;
+// One move over the whole piece: a plain smoothstep (warp 1) from f0 to the
+// last frame — zero speed of its own at both ends, so it eases out of cut 1's
+// creep (whose velocity kBase still carries at f0) and decelerates into f95.
+const MOVE_F0 = 0;
+const MOVE_F1 = DURATION - 1;
+const MOVE_WARP = 1;
 const K1 = 0.74;
-const CREEP = 0.02; // ~1.6% reached by f71, still moving
-const CREEP_F0 = 40;
-const CREEP_SPAN = 44;
 const moveG = (f: number) => camEase((f - MOVE_F0) / (MOVE_F1 - MOVE_F0), MOVE_WARP);
+const LINE_F0 = 1; // f0 stays cut 1's f47 exactly: no line cap on the join frame
 
-// Final framing, screen px at K1 (before the creep):
+// Final framing, screen px at K1 (reached on the last frame):
 const LABEL_INK_BOT_WORLD = LABEL_TOP + 0.845 * LABEL_SIZE; // Roboto caps baseline
 const LABEL_BOT_SCREEN = 1135; // captions live below 1150
 const C1 = LABEL_INK_BOT_WORLD - (LABEL_BOT_SCREEN - CY) / K1; // camera world y at rest
@@ -137,26 +140,23 @@ const OBJ_LABEL_TOP = RING_CY - RING_R - 34 / K1 - 0.845 * OBJ_LABEL_SIZE;
 
 // --- Timing -----------------------------------------------------------------
 const RECEDE_F0 = 2;
-const RECEDE_F1 = 14;
+const RECEDE_F1 = 24;
 const RECEDE_TO = 0.65; // survives bright footage
-const RING_F0 = 30;
-const RING_DUR = 12;
-const TROPHY_F0 = 34;
-const TROPHY_F1 = 44;
-const TROPHY_STAGGER = 1; // cup first, each later path a frame behind
-const TROPHY_FADE = 6;
-const OBJ_LABEL_F0 = 36;
-const REACH_F0 = 48;
-const REACH_DUR = 22;
-const REACH_PX = 8;
+const RING_F0 = 40;
+const RING_DUR = 22;
+const TROPHY_F0 = 50;
+const TROPHY_F1 = 70;
+const TROPHY_STAGGER = 2; // cup first, each later path two frames behind
+const TROPHY_FADE = 8;
+const OBJ_LABEL_F0 = 56;
+const OBJ_LABEL_DUR = 16;
 
 const camAt = (f: number) => {
-  // Camera: cut 1's creep carries on until the move takes over, so the join
-  // has no velocity step; the creep-in of the hold rides on top.
+  // Cut 1's creep carries on under the move, so the join has no velocity step;
+  // by f15 that creep has finished and only the move is left.
   const g = moveG(f);
   const kBase = kAt(CUT1_DURATION - 1 + f);
-  const creep = 1 + CREEP * camEase((f - CREEP_F0) / CREEP_SPAN, 1);
-  const k = (kBase + (K1 - kBase) * g) * creep;
+  const k = kBase + (K1 - kBase) * g;
   const cy = CY + (C1 - CY) * g;
   return { g, k, cy };
 };
@@ -172,12 +172,10 @@ const AchieveTheObjective: React.FC<z.infer<typeof schema>> = ({ previewBg }) =>
   const rowScreenSW = SW_WORLD * K_END + (STROKE_PX - SW_WORLD * K_END) * g;
   const strokeScale = rowScreenSW / (SW_WORLD * k);
 
-  // 2 + 4 + 5. the line
+  // 2 + 4. the line, on the camera's ease
   const sw = STROKE_PX / k; // world px that read as STROKE_PX on screen
-  const u = (frame - REACH_F0) / REACH_DUR;
-  const reach = u > 0 && u < 1 ? REACH_PX * Math.pow(Math.sin(Math.PI * u), 2) : 0;
-  const headY = LINE_Y0 + (HEAD_Y - LINE_Y0) * g - reach / k;
-  const lineOn = clamp01((frame - MOVE_F0) / 2);
+  const headY = LINE_Y0 + (HEAD_Y - LINE_Y0) * g;
+  const lineOn = clamp01((frame - LINE_F0 + 1) / 3);
   const lineBase = lineBaseAt(CUT1_DURATION - 1 + frame);
 
   // 3. the objective
@@ -186,7 +184,7 @@ const AchieveTheObjective: React.FC<z.infer<typeof schema>> = ({ previewBg }) =>
   const trophyDur = TROPHY_F1 - TROPHY_F0 - (TROPHY.length - 1) * TROPHY_STAGGER;
   const drawT = (i: number) =>
     easeOut((frame - TROPHY_F0 - i * TROPHY_STAGGER) / trophyDur);
-  const tLabel = easeOut((frame - OBJ_LABEL_F0) / LABEL_IN);
+  const tLabel = easeOut((frame - OBJ_LABEL_F0) / OBJ_LABEL_DUR);
   const circ = 2 * Math.PI * RING_R;
 
   return (
@@ -202,7 +200,7 @@ const AchieveTheObjective: React.FC<z.infer<typeof schema>> = ({ previewBg }) =>
           <BattleRow frame={CUT1_DURATION - 1 + frame} k={k} strokeScale={strokeScale} />
         </div>
 
-        {frame >= MOVE_F0 ? (
+        {frame >= LINE_F0 ? (
           <svg
             viewBox="0 -600 1080 1800"
             width={1080}

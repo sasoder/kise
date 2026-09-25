@@ -10,7 +10,7 @@ import AchieveTheObjective, {
 // another builder owns src/Root.tsx. War essay cut 2, "…whether you achieve the
 // objective for which you're fighting the war": joins on WinAllTheBattles f47;
 // the row recedes, an orange line reaches up toward a white objective ring and
-// stops short. Transparent 1080x1920 overlay, 24 fps, 3 s.
+// stops short. Transparent 1080x1920 overlay, 24 fps, 4 s, one continuous move.
 export const RemotionRoot = () => {
   return (
     <>
