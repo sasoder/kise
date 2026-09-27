@@ -511,6 +511,9 @@ style", build to this without re-asking. Reference: `generated/components/SouthM
   vignette. No compass roses, cartouches, sea monsters.
 - **Borders of the period, not modern ones** (merge countries that were one, drop lines
   that did not exist), fine dashed cream at ~0.5.
+- **Labels only for spoken words (2026-09-27, EverybodyWants V3):** a name appears only when the
+  speaker says it, landing on the word (slide-up starts ~8 f before). No capital names, sea names,
+  unspoken regions or dates for context; capital dots only while a tie/arrow is anchored to them.
 - **Type:** IM Fell English SC for regions (widely spaced caps, may follow a parallel),
   IM Fell English roman for cities (>= 30 px on screen, small cream dot), italic for
   seas. Every label slides up 24 px while fading in; nothing pops.
