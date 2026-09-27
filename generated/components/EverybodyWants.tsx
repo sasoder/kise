@@ -657,18 +657,30 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
     return ramp(frame, f0, f0 + 10);
   };
   // visibility of each layer, and which mask draws it on
+  // Every reveal has ONE progress value p. The rule, for every front: p <= 0
+  // renders nothing; 0 < p < 1 renders through its mask, and the mask's <defs>
+  // entry is emitted under exactly the same condition (`revealing`); p >= 1
+  // renders unmasked. (The f200 flash: the Alsace layer referenced url(#mAL)
+  // at p = 0 while the mask was only defined for p > 0, and a reference to a
+  // missing mask renders the element UNMASKED for that frame.)
+  const REVEAL = {
+    mAL: alT,
+    mIT:
+      ramp(frame, T.itFront1[0], T.itFront1[1]) <= 0 ? 0 : ramp(frame, T.itFront2[0], T.itFront2[1]) >= 1 ? 1 : 0.5,
+    mRU1: ramp(frame, T.ruFront1[0], T.ruFront1[1]),
+    mRU2: ramp(frame, T.ruFront2[0], T.ruFront2[1]),
+  };
+  type RevealId = keyof typeof REVEAL;
+  const revealing = (id: RevealId) => REVEAL[id] > 0 && REVEAL[id] < 1;
+  const byReveal = (id: RevealId) => ({ vis: REVEAL[id] > 0 ? 1 : 0, mask: revealing(id) ? `url(#${id})` : null });
   const layerState = (l: Layer): { vis: number; mask: string | null } => {
     switch (l.power) {
       case "france":
-        return { vis: frame >= T.alFront[0] ? 1 : 0, mask: alT < 1 ? "url(#mAL)" : null };
+        return byReveal("mAL");
       case "italy":
-        return {
-          vis: frame >= T.itFront1[0] ? 1 : 0,
-          mask: frame < T.itFront2[1] + 1 ? "url(#mIT)" : null,
-        };
+        return byReveal("mIT");
       case "russia":
-        if (l.key === "balkans") return { vis: frame >= T.ruFront1[0] ? 1 : 0, mask: frame <= T.ruFront1[1] ? "url(#mRU1)" : null };
-        return { vis: frame >= T.ruFront2[0] ? 1 : 0, mask: frame <= T.ruFront2[1] ? "url(#mRU2)" : null };
+        return byReveal(l.key === "balkans" ? "mRU1" : "mRU2");
       case "germany":
         return { vis: colonyT(l.key), mask: null };
     }
@@ -678,7 +690,8 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
   const holdT = ramp(frame, T.hold[0], T.hold[0] + 20) * (1 - ramp(frame, T.hold[1], T.hold[1] + 12));
   const march = frame > T.hold[0] ? (frame - T.hold[0]) * 0.45 * ramp(frame, T.hold[0], T.hold[0] + 24) : 0;
   const bandT = clamp01((frame - T.bands[0]) / (T.bands[1] - T.bands[0]));
-  const bandOn = frame >= T.bands[0] && frame <= T.bands[1] + 2;
+  // the band is off-shape at bandT 0 and 1, so it renders only strictly between
+  const bandOn = bandT > 0 && bandT < 1;
 
   // -- ties -------------------------------------------------------------------------
   const tieOp =
@@ -902,7 +915,7 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
           ) : null}
           <path id="italyArc" d={ITALY_ARC_D} />
           {hatchDefs}
-          {alT > 0 && alT < 1 ? (
+          {revealing("mAL") ? (
             <mask id="mAL" maskUnits="userSpaceOnUse" x={-1500} y={-800} width={4200} height={5800}>
               <linearGradient id="mALg" gradientUnits="userSpaceOnUse" x1={alX - FEATHER} y1={0} x2={alX} y2={0}>
                 <stop offset={0} stopColor="#fff" />
@@ -911,11 +924,11 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
               <rect x={alB.x0 - 40} y={alB.y0 - 40} width={alB.x1 - alB.x0 + 80} height={alB.y1 - alB.y0 + 80} fill="url(#mALg)" />
             </mask>
           ) : null}
-          {frame >= T.itFront1[0] && frame <= T.itFront2[1] ? radialMask("mIT", PLACES.ancona, itR) : null}
-          {frame >= T.ruFront1[0] && frame <= T.ruFront1[1] ? radialMask("mRU1", PLACES.odessa, ruR1) : null}
-          {frame >= T.ruFront2[0] && frame <= T.ruFront2[1] ? radialMask("mRU2", PLACES.odessa, ruR2) : null}
+          {revealing("mIT") ? radialMask("mIT", PLACES.ancona, itR) : null}
+          {revealing("mRU1") ? radialMask("mRU1", PLACES.odessa, ruR1) : null}
+          {revealing("mRU2") ? radialMask("mRU2", PLACES.odessa, ruR2) : null}
           {bandOn ? LAYERS.map((l, i) => bandMask(i, l)) : null}
-          {frame >= T.line1870[0] && l1870 < 1 ? (
+          {l1870 > 0 && l1870 < 1 ? (
             <mask id="m1870" maskUnits="userSpaceOnUse" x={-1500} y={-800} width={4200} height={5800}>
               <path d={dOf(FRANCE_1870_PTS)} fill="none" stroke="#fff" strokeWidth={px(30)} pathLength={1} strokeDasharray={`${l1870} 2`} />
             </mask>
@@ -993,7 +1006,7 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
           ) : null}
 
           {/* the pre-1871 French border */}
-          {frame >= T.line1870[0] ? (
+          {l1870 > 0 ? (
             <g mask={l1870 < 1 ? "url(#m1870)" : undefined}>
               <path d={dOf(FRANCE_1870_PTS)} fill="none" stroke={CASING} strokeOpacity={0.6 * l1870Op} strokeWidth={px(6.5)} strokeLinejoin="round" />
               <path
