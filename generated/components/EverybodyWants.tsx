@@ -74,42 +74,43 @@ export const DURATION = 936;
 //          starts; one arrow stroke; labels full cream for the claimant, 0.45
 //          for the rest
 //   paper  world-space mottle + screen-space grain (public/ww1/), vignette
-//   type   IM Fell English SC for regions (spaced caps), roman for capitals
-//          (>= 30 px, small cream dot), italic for seas; every label slides up
-//          24 px while it fades in, nothing pops
+//   type   IM Fell English SC for names (spaced caps), italic for the one sea
+//          name; a name appears ONLY on its spoken word (see CUE), sliding up
+//          24 px while it fades in; no capital names; a capital's small cream
+//          dot exists only while a tie or an arrow is attached to it
 //
 // THE GESTURES, each with its frames and word. Nothing else.
-//   1. f0-60   WIDE EUROPE 1914, k 1, borders drawn, Africa's north coast at the
-//      bottom; the seven power labels slide up in a hashed order f20-58
-//                                            — "everybody wants different things"
-//   2. f64-100 the capitals slide up (f64-76), then the alliance ties draw on as
-//      fine dotted cream arcs, one at a time: London-Paris-St Petersburg and
-//      Berlin-Vienna-Rome                                — "alliance system" f82/91
-//   3. f88-175 the camera glides to Britain and the Channel (lands ~f112). No
+//   1. f0-60   WIDE EUROPE 1914, k 1.1, borders drawn, Africa's north coast at
+//      the bottom; no text                  — "everybody wants different things"
+//   2. f76-100 the alliance ties draw on as fine dotted cream arcs, one at a
+//      time, each capital's dot rising as its first tie starts: London-Paris-
+//      St Petersburg and Berlin-Vienna-Rome            — "alliance system" f82/91
+//   3. f88-175 the camera glides to Britain and the Channel (lands ~f112); BRITAIN on "britain" f106. No
 //      orange. f124-150 the 1914 borders firm from dashed 0.5 to solid 0.8 in
 //      ONE wave out of London; f150-175 they relax back to dashed while the
 //      camera is already easing toward France     — "status quo" f128 / "no one else" f152
 //   4. f152-317 the camera lands on the Franco-German border (k 4, ~f188).
 //      f200-222 Alsace-Lorraine fills with orange hatch in ONE front running east
-//      from the French side; ALSACE-LORRAINE slides up f214. f240-306 the
+//      from the French side; ALSACE-LORRAINE on "alsace" f202. f240-306 the
 //      pre-1871 French border (the Rhine, the Lauter, the Saar line) draws on
-//      along its length; "1871" slides up on today's border f250; slow creep
+//      along its length; slow creep. FRANCE on "france" f180
 //                                  — "wants Alsace-Lorraine back … Franco-Prussian war"
 //   5. f298-392 the camera glides southeast to Italy and the Adriatic (~f326).
 //      f326-345 one orange front out of Italy's Adriatic shore crosses into
-//      Dalmatia and Vlore; DALMATIA f334. f358-378 the same front reaches Adalia
-//      on the Anatolian coast while the camera follows it south; ADALIA f366.
+//      Dalmatia and Vlore. f358-378 the same front reaches Adalia
+//      on the Anatolian coast while the camera follows it south; ITALY on "italy"
+//      f318, "Eastern Mediterranean" (italic) on "eastern" f362, out at f393.
 //      France's want settles to 0.45 f318-332 — "Italy wants more territories … eastern Mediterranean"
 //   6. f380-518 the camera pulls up and east over the Black Sea and the whole
 //      Balkans (~f406). f415-440 one front out of Odessa sweeps southwest over
-//      Serbia, Montenegro and Bulgaria; THE BALKANS f424. f450-462 the
-//      AUSTRIA-HUNGARY label brightens and f456-478 Bosnia-Herzegovina is traced
-//      in cream; BOSNIA f462. f490-512 the same front runs on over Bosnia and
+//      Serbia, Montenegro and Bulgaria; RUSSIA on f393, THE BALKANS on f423. The
+//      AUSTRIA-HUNGARY name comes up on "austro" f472 and f456-478 Bosnia-Herzegovina is traced
+//      in cream. f490-512 the same front runs on over Bosnia and
 //      Dalmatia (Sazonov's 13 points) and Austria-Hungary's border round Bosnia
 //      retracts north to the Sava line. Its hatch crosses Italy's in Dalmatia.
 //      Italy's want settles f393-407       — "Russia wants the Balkans … out of the Balkans"
 //   7. f503-554 the camera falls south off Europe before the word (target f503-530,
-//      lands ~f536); GERMANY brightens f519; f536-556 Togo, Kamerun, South-West
+//      lands ~f536); GERMANY on "germany" f519 (never earlier); f536-556 Togo, Kamerun, South-West
 //      Africa and East Africa fill orange in one hashed wave, then the
 //      Mittelafrika dream, the Belgian Congo and Angola, joins it
 //                                            — "Germany just wants lots of colonies"
@@ -172,37 +173,43 @@ export const defaultProps: Props = schema.parse({
 // Timing (frames at 24 fps from the 18.10 s in-point).
 // ---------------------------------------------------------------------------
 export const T = {
-  powersIn: [20, 58] as const,
-  capitalsIn: [64, 76] as const,
   ties: [76, 92] as const, // start of the first .. start of the last tie
   tieDraw: 12,
   wave: [124, 150] as const, // "status quo"
   relax: [150, 175] as const, // "no one else does"
   alFront: [200, 222] as const, // "wants Alsace-Lorraine back"
-  alLabel: 214,
   line1870: [240, 306] as const, // "Prussia had taken … Franco-Prussian war"
-  label1871: 250,
   itFront1: [326, 345] as const, // Dalmatia, Vlore
-  dalLabel: 334,
   itFront2: [358, 378] as const, // Adalia
-  adaLabel: 366,
   ruFront1: [415, 440] as const, // Serbia, Montenegro, Bulgaria
-  balLabel: 424,
   ahBright: [450, 462] as const, // "Catholic Austria-Hungary"
   bosTrace: [456, 478] as const,
-  bosLabel: 462,
   ruFront2: [490, 512] as const, // "out of the Balkans"
   retract: [492, 512] as const,
   sava: [496, 512] as const,
   geBright: [519, 531] as const, // "Germany"
   colonies: [536, 556] as const, // "lots of colonies"
   wantLabelsOut: 556,
-  capLabelsOut: 560,
   tieBack: [605, 625] as const, // "within alliance systems"
   relight: [636, 660] as const, // "objectives"
   arrows: [638, 668] as const, // "don't align"
   hold: [700, 860] as const,
   bands: [866, 904] as const, // "parallel wars for different places"
+};
+// THE LABEL RULE (V3): a name appears only when she says its word, on that
+// word: the slide starts 8 f before the word's onset (opaque 1 f after it,
+// settled 6 f after), or on the first word of a two-word name so it is in by
+// the second. Nothing else carries a name. Word frames from the SRT.
+export const CUE = {
+  britain: 106 - 8, // "britain" f106
+  france: 180 - 8, // "france" f180
+  alsaceLorraine: 202, // "alsace" f202, in by "lorraine" f216
+  italy: 318 - 8, // "italy" f318
+  easternMed: 362, // "eastern" f362, in by "mediterranean" f368
+  russia: 393 - 8, // "russia" f393
+  balkans: 423 - 8, // "balkans" f423
+  austriaHungary: 472, // "austro" f472, in by "hungary" f483
+  germany: 519 - 8, // "germany" f519
 };
 const LABEL_TRAVEL = 24; // screen px
 const LABEL_FRAMES = 14;
@@ -431,15 +438,26 @@ const toward = (a: { x: number; y: number }, b: { x: number; y: number }, d: num
 };
 
 // The alliance ties, capital to capital (world px).
-const TIES = [
-  { a: CITIES.london, b: CITIES.paris, bow: -0.18 },
-  { a: CITIES.paris, b: CITIES.stPetersburg, bow: 0.1 },
-  { a: CITIES.london, b: CITIES.stPetersburg, bow: -0.08 },
-  { a: CITIES.berlin, b: CITIES.vienna, bow: -0.18 },
-  { a: CITIES.vienna, b: CITIES.rome, bow: -0.14 },
-  { a: CITIES.rome, b: CITIES.berlin, bow: -0.16 },
-].map((t) => ({ pts: arcPts(toward(t.a, t.b, 5), toward(t.b, t.a, 5), t.bow) }));
+type Capital = keyof typeof CITIES;
+const TIES = (
+  [
+    ["london", "paris", -0.18],
+    ["paris", "stPetersburg", 0.1],
+    ["london", "stPetersburg", -0.08],
+    ["berlin", "vienna", -0.18],
+    ["vienna", "rome", -0.14],
+    ["rome", "berlin", -0.16],
+  ] as [Capital, Capital, number][]
+).map(([a, b, bow]) => ({ ends: [a, b], pts: arcPts(toward(CITIES[a], CITIES[b], 5), toward(CITIES[b], CITIES[a], 5), bow) }));
 const TIE_ORDER = TIES.map((_, i) => i).sort((p, q) => hash(p, 3) - hash(q, 3));
+const tieStart = (i: number) => T.ties[0] + ((T.ties[1] - T.ties[0]) * TIE_ORDER.indexOf(i)) / (TIES.length - 1);
+// A capital's dot exists only while a tie (or, later, an arrow) is attached to
+// it: it comes up as its first tie starts to draw. The ties stay on to the end,
+// so the six tied capitals keep their dots; Constantinople never gets one.
+const DOT_IN: Partial<Record<Capital, number>> = {};
+TIES.forEach((t, i) => {
+  for (const c of t.ends) DOT_IN[c] = Math.min(DOT_IN[c] ?? Infinity, tieStart(i));
+});
 
 /** A centripetal Catmull-Rom through `ps`, densely sampled. */
 const catmull = (ps: { x: number; y: number }[], per = 40): P2[] => {
@@ -567,26 +585,19 @@ const slide = (frame: number, f0: number) => ({
   op: interpolate(frame, [f0, f0 + LABEL_FADE], [0, 1], clamp),
 });
 
-const POWERS = ["britain", "france", "germany", "austriaHungary", "russia", "italy", "ottoman"] as const;
-type Power = (typeof POWERS)[number];
-const POWER_ORDER = [...POWERS].sort((p, q) => hash(p.length * 3 + p.charCodeAt(0), 5) - hash(q.length * 3 + q.charCodeAt(0), 5));
-const POWER_IN = (p: Power) =>
-  T.powersIn[0] + ((T.powersIn[1] - T.powersIn[0]) * POWER_ORDER.indexOf(p)) / (POWERS.length - 1);
-// who is being talked about, when
-const SPEAKING: Partial<Record<Power, [number, number]>> = {
-  britain: [98, 176],
-  france: [176, 318],
-  italy: [318, 393],
-  russia: [393, 519],
-  austriaHungary: [450, 519],
-  germany: [519, 557],
+type Power = "britain" | "france" | "germany" | "austriaHungary" | "russia" | "italy";
+// full cream from its word while that power is the subject, then the low rung
+const SPEAKING: Record<Power, [number, number]> = {
+  britain: [CUE.britain, 176],
+  france: [CUE.france, 318],
+  italy: [CUE.italy, 393],
+  russia: [CUE.russia, 519],
+  austriaHungary: [CUE.austriaHungary, 519],
+  germany: [CUE.germany, 557],
 };
 const CLAIMANTS: Power[] = ["france", "italy", "russia", "germany"];
 const powerRung = (p: Power, f: number) => {
-  // all seven at full for the opening, then the ladder
-  let op = 1 - (1 - RUNG_LOW) * ramp(f, 96, 108);
-  const s = SPEAKING[p];
-  if (s) op += (1 - op) * ramp(f, s[0], s[0] + 12) * (1 - ramp(f, s[1], s[1] + 14));
+  let op = RUNG_LOW + (1 - RUNG_LOW) * (1 - ramp(f, SPEAKING[p][1], SPEAKING[p][1] + 14));
   if (CLAIMANTS.includes(p)) {
     // handed over to the payoff instance (below) while Europe is off-frame
     op *= 1 - ramp(f, 546, 554);
@@ -861,18 +872,6 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
     );
   };
 
-  // capitals
-  const CAPS: { key: keyof typeof CITIES; text: string; dx: number; dy: number; anchor: "start" | "middle" | "end" }[] = [
-    { key: "london", text: "London", dx: -14, dy: 18, anchor: "end" },
-    { key: "paris", text: "Paris", dx: -14, dy: 16, anchor: "end" },
-    { key: "berlin", text: "Berlin", dx: 14, dy: -16, anchor: "start" },
-    { key: "vienna", text: "Vienna", dx: 14, dy: -14, anchor: "start" },
-    { key: "rome", text: "Rome", dx: -14, dy: 16, anchor: "end" },
-    { key: "stPetersburg", text: "St Petersburg", dx: 14, dy: -14, anchor: "start" },
-    { key: "constantinople", text: "Constantinople", dx: -10, dy: 28, anchor: "end" },
-  ];
-  const capIn = (i: number) => T.capitalsIn[0] + ((T.capitalsIn[1] - T.capitalsIn[0]) * TIE_ORDER.indexOf(i % 6)) / 5;
-
   return (
     <AbsoluteFill style={{ backgroundColor: sea }}>
       {/* ---------------- THE MAP: the baked static layers ---------------- */}
@@ -1023,7 +1022,7 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
 
           {/* the alliance ties, dotted, one at a time */}
           {TIES.map((t, i) => {
-            const f0 = T.ties[0] + ((T.ties[1] - T.ties[0]) * TIE_ORDER.indexOf(i)) / (TIES.length - 1);
+            const f0 = tieStart(i);
             const u = interpolate(frame, [f0, f0 + T.tieDraw], [0, 1], { easing: Easing.inOut(Easing.quad), ...clamp });
             if (u <= 0) return null;
             return (
@@ -1075,48 +1074,22 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
             );
           })}
 
-          {/* capitals */}
-          {CAPS.map((c, i) => {
-            const sl = slide(frame, capIn(i));
-            if (sl.op <= 0) return null;
-            const p = CITIES[c.key];
-            return (
-              <circle key={`cd${c.key}`} cx={p.x} cy={p.y} r={grow(6)} fill={ink} stroke={CASING} strokeWidth={grow(2)} opacity={sl.op} />
-            );
-          })}
-          {CAPS.map((c, i) => {
-            const p = CITIES[c.key];
-            return label({
-              key: `cl${c.key}`,
-              text: c.text,
-              x: p.x + grow(c.dx),
-              y: p.y + grow(c.dy),
-              size: 32,
-              e: 0.18,
-              spacing: 0.02,
-              family: fell,
-              f0: capIn(i),
-              fOut: T.capLabelsOut,
-              halo: true,
-              anchor: c.anchor,
-            });
+          {/* capital dots: only where a tie or an arrow is attached */}
+          {(Object.keys(DOT_IN) as Capital[]).map((c) => {
+            const op = smoothstep((frame - (DOT_IN[c] as number)) / 6);
+            if (op <= 0) return null;
+            const p = CITIES[c];
+            return <circle key={`cd${c}`} cx={p.x} cy={p.y} r={grow(6)} fill={ink} stroke={CASING} strokeWidth={grow(2)} opacity={op} />;
           })}
 
-          {/* seas */}
-          {label({ key: "sNorth", text: "North Sea", x: PLACES.northSea.x, y: PLACES.northSea.y, size: 30, f0: -20, fOut: T.capLabelsOut, op: 0.62, family: fell, italic: true, spacing: 0.06 })}
-          {label({ key: "sMed", text: "Mediterranean Sea", x: PLACES.mediterranean.x, y: PLACES.mediterranean.y, size: 30, f0: -20, fOut: T.capLabelsOut, op: 0.62, family: fell, italic: true, spacing: 0.06 })}
-          {label({ key: "sAdr", text: "Adriatic", x: PLACES.adriatic.x, y: PLACES.adriatic.y, size: 28, f0: -20, fOut: T.capLabelsOut, op: 0.62, family: fell, italic: true, spacing: 0.06 })}
-          {label({ key: "sBlack", text: "Black Sea", x: PLACES.blackSea.x, y: PLACES.blackSea.y, size: 30, f0: -20, fOut: T.capLabelsOut, op: 0.62, family: fell, italic: true, spacing: 0.06 })}
-
-          {/* the seven powers */}
-          {label({ key: "pBr", text: "BRITAIN", x: PLACES.britain.x, y: PLACES.britain.y, size: 40, f0: POWER_IN("britain"), op: powerRung("britain", frame) })}
-          {label({ key: "pFr", text: "FRANCE", x: PLACES.france.x, y: PLACES.france.y, size: 40, f0: POWER_IN("france"), op: powerRung("france", frame) })}
-          {label({ key: "pGe", text: "GERMANY", x: PLACES.germany.x, y: PLACES.germany.y, size: 40, spacing: 0.22, f0: POWER_IN("germany"), op: powerRung("germany", frame) })}
-          {label({ key: "pAH", text: "AUSTRIA-HUNGARY", x: PLACES.austriaHungary.x, y: PLACES.austriaHungary.y, size: 34, spacing: 0.08, f0: POWER_IN("austriaHungary"), op: powerRung("austriaHungary", frame) })}
-          {label({ key: "pRu", text: "RUSSIA", x: PLACES.russia.x, y: PLACES.russia.y, size: 44, spacing: 0.4, f0: POWER_IN("russia"), op: powerRung("russia", frame) })}
-          {label({ key: "pOt", text: ["OTTOMAN", "EMPIRE"], x: PLACES.ottoman.x, y: PLACES.ottoman.y, size: 36, spacing: 0.22, f0: POWER_IN("ottoman"), op: powerRung("ottoman", frame) })}
+          {/* the powers, each on its word */}
+          {label({ key: "pBr", text: "BRITAIN", x: PLACES.britain.x, y: PLACES.britain.y, size: 40, f0: CUE.britain, op: powerRung("britain", frame) })}
+          {label({ key: "pFr", text: "FRANCE", x: PLACES.france.x, y: PLACES.france.y, size: 40, f0: CUE.france, op: powerRung("france", frame) })}
+          {label({ key: "pGe", text: "GERMANY", x: PLACES.germany.x, y: PLACES.germany.y, size: 40, spacing: 0.22, f0: CUE.germany, op: powerRung("germany", frame) })}
+          {label({ key: "pAH", text: "AUSTRIA-HUNGARY", x: PLACES.austriaHungary.x, y: PLACES.austriaHungary.y, size: 34, spacing: 0.08, f0: CUE.austriaHungary, op: powerRung("austriaHungary", frame) })}
+          {label({ key: "pRu", text: "RUSSIA", x: PLACES.russia.x, y: PLACES.russia.y, size: 44, spacing: 0.4, f0: CUE.russia, op: powerRung("russia", frame) })}
           {(() => {
-            const sl = slide(frame, POWER_IN("italy"));
+            const sl = slide(frame, CUE.italy);
             const sz = grow(34, 0.35);
             const op = sl.op * powerRung("italy", frame);
             if (op <= 0.002) return null;
@@ -1130,6 +1103,8 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
               </g>
             );
           })()}
+          {/* "eastern Mediterranean": the one sea name, on its words, gone when Russia starts */}
+          {label({ key: "sEM", text: ["Eastern", "Mediterranean"], x: PLACES.easternMed.x, y: PLACES.easternMed.y, size: 30, f0: CUE.easternMed, fOut: 393, op: 0.8, family: fell, italic: true, spacing: 0.06, halo: true })}
 
           {/* the claimants at the payoff wide */}
           {label({ key: "wFr", text: "FRANCE", x: PLACES.wFrance.x, y: PLACES.wFrance.y, size: 40, spacing: 0.2, f0: W_LABEL_IN, op: payoffRung(frame) })}
@@ -1137,28 +1112,9 @@ const EverybodyWants: React.FC<Props> = ({ sea, ink, accent, accentDeep, grainSr
           {label({ key: "wIt", text: "ITALY", x: PLACES.wItaly.x, y: PLACES.wItaly.y, size: 40, spacing: 0.1, f0: W_LABEL_IN + 6, op: payoffRung(frame) })}
           {label({ key: "wRu", text: "RUSSIA", x: PLACES.wRussia.x, y: PLACES.wRussia.y, size: 42, spacing: 0.22, f0: W_LABEL_IN + 9, op: payoffRung(frame) })}
 
-          {/* the wants' names */}
-          {label({ key: "wAL", text: "ALSACE-LORRAINE", x: PLACES.alsaceLorraine.x, y: PLACES.alsaceLorraine.y, size: 26, spacing: 0.18, f0: T.alLabel, fOut: T.wantLabelsOut, halo: true })}
-          {label({ key: "w1871", text: "1871", x: PLACES.label1871.x, y: PLACES.label1871.y, size: 24, e: 0.35, spacing: 0.04, family: fell, italic: true, f0: T.label1871, fOut: T.wantLabelsOut, op: 0.8, halo: true })}
-          {label({ key: "wDal", text: "DALMATIA", x: PLACES.dalmatia.x, y: PLACES.dalmatia.y, size: 26, spacing: 0.22, f0: T.dalLabel, fOut: T.wantLabelsOut, halo: true })}
-          {label({ key: "wAda", text: "ADALIA", x: PLACES.adalia.x, y: PLACES.adalia.y, size: 26, spacing: 0.22, f0: T.adaLabel, fOut: T.wantLabelsOut, halo: true })}
-          {label({ key: "wBal", text: "THE BALKANS", x: PLACES.balkans.x, y: PLACES.balkans.y, size: 26, spacing: 0.22, f0: T.balLabel, fOut: T.wantLabelsOut, halo: true })}
-          {label({ key: "wBos", text: "BOSNIA", x: PLACES.bosnia.x, y: PLACES.bosnia.y, size: 26, spacing: 0.22, f0: T.bosLabel, fOut: T.wantLabelsOut, halo: true })}
-          {(
-            [
-              ["togo", "TOGO"],
-              ["kamerun", "KAMERUN"],
-              ["swAfrica", ["SOUTH-WEST", "AFRICA"]],
-              ["eastAfrica", ["EAST", "AFRICA"]],
-              ["congo", ["BELGIAN", "CONGO"]],
-              ["angola", "ANGOLA"],
-            ] as [WantKey, string | string[]][]
-          ).map(([key, text]) => {
-            const i = COLONY_ORDER.indexOf(key);
-            const f0 = T.colonies[0] + 4 + (i < 4 ? i * 2.5 : 10 + (i - 4) * 3);
-            const p = PLACES[key as keyof typeof PLACES];
-            return label({ key: `c${key}`, text, x: p.x, y: p.y, size: 32, spacing: 0.2, f0, fOut: T.capLabelsOut + 4, halo: true });
-          })}
+          {/* the wants named in the line */}
+          {label({ key: "wAL", text: "ALSACE-LORRAINE", x: PLACES.alsaceLorraine.x, y: PLACES.alsaceLorraine.y, size: 26, spacing: 0.18, f0: CUE.alsaceLorraine, fOut: T.wantLabelsOut, halo: true })}
+          {label({ key: "wBal", text: "THE BALKANS", x: PLACES.balkans.x, y: PLACES.balkans.y, size: 26, spacing: 0.22, f0: CUE.balkans, fOut: T.wantLabelsOut, halo: true })}
         </g>
       </svg>
 

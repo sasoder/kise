@@ -933,6 +933,8 @@ const PLACES = {
   // seas
   northSea: P([3.2, 56.2]),
   mediterranean: P([18.6, 34.6]),
+  // "eastern Mediterranean" (Italy's act): south-east of Crete, clear of the Adalia hatch
+  easternMed: P([28.6, 34.5]),
   adriatic: P([16.7, 42.25]),
   blackSea: P([34.3, 43.35]),
   // wants
