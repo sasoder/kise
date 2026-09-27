@@ -489,3 +489,39 @@ Reference: `generated/components/SporttouchenTimer.tsx` (v2).
 - **Delivery:** two renders every time, opaque and `transparent: true` overlay, both to
   `~/Downloads/`, versions as `_V2` beside the original. Judge the overlay over
   mid-grey, not the dark background.
+
+## Dwarkesh map style (approved 2026-09-27)
+
+The user's named house style for maps ("I really like this map style, save it as
+dwarkesh map style"), born on the Russo-Japanese War map. When they say "dwarkesh map
+style", build to this without re-asking. Reference: `generated/components/SouthManchuriaRailway.tsx`
++ `scripts/build-manchuria-map.mjs` (bakes geometry + textures; copy the pattern per map).
+
+- **A real map, never on the grid background.** Opaque, 1080x1920, 24 fps, full frame.
+  Natural Earth 10m from the installed `world-atlas` (+ `topojson-client`, `d3-geo`),
+  baked by a `scripts/build-<name>-map.mjs` into a `<name>MapData.ts` of flat SVG paths.
+  North-up Lambert conformal conic fitted to the region (rotated/globe views rejected).
+- **Palette:** sea `#1B2226`; land `#3F3428` with a lighter hand-coloured rim `#6A5838`
+  just inside the coast; cream ink `#E9DDBF` for coast, borders, type; the house orange
+  `#FFB000` / `#D98A0C` is the ONLY accent and means one thing per piece (the side that
+  gains). Nothing else is coloured.
+- **Vintage, with restraint:** 4 engraved water-lines following the coast offshore,
+  fading outward; a cream graticule every 5 deg at ~0.12; baked paper textures
+  (world-space mottle + screen-space grain PNGs, never per-frame turbulence); soft
+  vignette. No compass roses, cartouches, sea monsters.
+- **Borders of the period, not modern ones** (merge countries that were one, drop lines
+  that did not exist), fine dashed cream at ~0.5.
+- **Type:** IM Fell English SC for regions (widely spaced caps, may follow a parallel),
+  IM Fell English roman for cities (>= 30 px on screen, small cream dot), italic for
+  seas. Every label slides up 24 px while fading in; nothing pops.
+- **Symbols:** railway = chequered symbol (cream casing, dark core, cream dashes),
+  the gained section the same symbol in orange, slightly heavier; gained territory =
+  orange hatch clipped to land with a dashed edge over land only; a point of interest =
+  Lucide outline glyph (e.g. anchor) in a thin orange ring + spaced-caps label.
+- **Motion:** open wide on the whole context, colour the gaining side first so orange is
+  defined before anything moves, then one travelling front converts the gained thing
+  while the camera follows it; land the close-up 4-10 frames before its word at a zoom
+  that keeps context (k ~5, not ~8 of open sea); the hold creeps ~3% with a faint
+  highlight travelling the orange line. Subject of every framing near y835, nothing
+  important below ~y1150 (captions).
+- **Delivery:** `--muted` ProRes, ~/Downloads (or the clip folder), commit by pathspec.

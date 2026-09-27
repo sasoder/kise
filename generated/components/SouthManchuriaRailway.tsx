@@ -48,7 +48,7 @@ export const DURATION = 132; // 5.5 s
 // in Manchuria, and the naval base." Russo-Japanese War, the 1905 Treaty of
 // Portsmouth. "They" is Japan.
 //
-// A ONE-OFF LOOK: a realistic, slightly vintage map, dark with the house orange
+// THE DWARKESH MAP STYLE (reference piece, see MEMORY.md): a realistic, slightly vintage map, dark with the house orange
 // as the only accent. Not the Dwarkesh grid, no grid background. Opaque,
 // 1080x1920, 24 fps.
 //   sea    #1B2226 with 4 engraved water-lines following the coast, fading out
