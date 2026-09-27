@@ -18,10 +18,12 @@
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.441",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
     "d3-geo": "^3.1.1",
     "eslint": "9.19.0",
+    "polygon-clipping": "^0.15.7",
     "prettier": "3.8.1",
     "topojson-client": "^3.1.0",
     "typescript": "5.9.3",
