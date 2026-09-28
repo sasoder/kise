@@ -11,6 +11,8 @@
 // Writes
 //   generated/components/ww1MapData.ts   land, 1914 borders, graticule (for the raster bake)
 //   generated/components/ww1Overlay.ts   wants, special lines, places (drawn as vectors)
+//   generated/components/lrwMapData.ts   LittleRegionalWar's static borders (raster bake)
+//   generated/components/lrwOverlay.ts   LittleRegionalWar's pushed borders
 //   public/ww1/grain.png                 1080x1920 screen-space paper grain
 //   public/ww1/mottle.png                512x512 world-space paper mottling
 //
@@ -642,10 +644,41 @@ const near = (m, radKm, pred) => {
   return false;
 };
 const runs = [];
+// LittleRegionalWar: the borders that get pushed. Each is one polity's line
+// with a neighbour inside a window (lon/lat centre, km radius); the attacker
+// pushes it `depthKm` into the victim. Segments inside a push's window go to
+// that push (drawn as a moving vector line); all others to the static raster.
+// Each push moves along ONE direction (toward `to`, into the victim), by
+// depth * sin^2 of the vertex's position across that direction: a shear, so
+// the moved line can never cross itself, whatever the border's shape.
+const PUSHES = [
+  // the July war: the whole Sava / Danube / Drina line, into Serbia towards Kragujevac
+  { id: "serbia", pair: ["AustriaHungary", "Serbia"], victim: "Serbia", kinds: ["europe", "bosniaEast"], c: [20.0, 44.4], r: 175, to: [20.9, 43.6], depthKm: 115 },
+  { id: "alsace", pair: ["France", "Germany"], victim: "Germany", kinds: ["europe"], c: [6.7, 48.6], r: 150, to: [8.6, 48.6], depthKm: 110 },
+  // Italy's whole Alpine line with Austria, Stelvio -> round the Trentino -> Cadore -> the Isonzo,
+  // north into the Trentino and the Tyrol (the Brenner line Italy got in 1919)
+  { id: "italy", pair: ["Italy", "AustriaHungary"], victim: "AustriaHungary", kinds: ["europe"], c: [12.0, 46.3], r: 150, to: [12.0, 47.5], depthKm: 115 },
+  { id: "galicia", pair: ["Russia", "AustriaHungary"], victim: "AustriaHungary", kinds: ["europe"], c: [23.6, 50.4], r: 170, to: [23.6, 49.2], depthKm: 120 },
+  // East Prussia's southern border, south into Russian Poland towards Warsaw
+  { id: "poland", pair: ["Germany", "Russia"], victim: "Russia", kinds: ["europe"], c: [20.6, 53.1], r: 175, to: [20.6, 52.1], depthKm: 115 },
+  // the Transylvanian Alps, north into Transylvania
+  { id: "transylvania", pair: ["Romania", "AustriaHungary"], victim: "AustriaHungary", kinds: ["europe"], c: [24.0, 45.45], r: 160, to: [24.0, 46.6], depthKm: 120 },
+  // the whole Bulgarian-Serbian line, west into Macedonia towards Skopje
+  { id: "macedonia", pair: ["Bulgaria", "Serbia"], victim: "Serbia", kinds: ["europe"], c: [22.65, 42.75], r: 175, to: [21.4, 42.2], depthKm: 105 },
+];
+const pushOf = (A, B, kind, m) =>
+  PUSHES.findIndex(
+    (P) =>
+      P.kinds.includes(kind) &&
+      ((P.pair[0] === A && P.pair[1] === B) || (P.pair[0] === B && P.pair[1] === A)) &&
+      KM(m[0] - P.c[0], m[1] - P.c[1], m[1]) < P.r,
+  );
+const lrwRuns = [];
 candidates.forEach((c, i) => (c.cid = i));
 for (const prio of [3, 2, 1]) {
   for (const cand of candidates.filter((c) => c.prio === prio)) {
     let run = null;
+    let lrun = null;
     for (let i = 1; i < cand.pts.length; i++) {
       const p = cand.pts[i - 1];
       const q = cand.pts[i];
@@ -660,6 +693,7 @@ for (const prio of [3, 2, 1]) {
       }
       if (!ok) {
         run = null;
+        lrun = null;
         continue;
       }
       let special = null;
@@ -679,6 +713,12 @@ for (const prio of [3, 2, 1]) {
         runs.push(run);
       }
       run.pts.push(q);
+      const push = kind === "colonial" ? -1 : pushOf(A, B, kind, m);
+      if (!lrun || lrun.kind !== kind || lrun.push !== push) {
+        lrun = { kind, prio, push, pts: [p] };
+        lrwRuns.push(lrun);
+      }
+      lrun.pts.push(q);
     }
   }
 }
@@ -1020,6 +1060,149 @@ const probe = {
 };
 console.log(Object.entries(probe).map(([k, v]) => `${k}:${polityAt(...v)}`).join("  "));
 for (const [k, v] of Object.entries(WANT_D)) console.log(`want ${k}: ${v.length} chars, edge ${WANT_EDGE_D[k].length}`);
+
+// -- LittleRegionalWar ---------------------------------------------------------------
+// Its static borders (every 1914 European border, Bosnia's eastern one
+// included, minus the stretches that get pushed) and, per push, the stretch as
+// one world-px polyline with a smoothed unit normal at every vertex pointing
+// into the victim, so the component can bulge it as a moving line.
+const lrwSnap = (arr) => {
+  const pts = [];
+  arr.forEach((r, ri) => r.pts.forEach((p) => pts.push({ p, ri })));
+  arr.forEach((r, ri) => {
+    if (r.prio !== 1) return;
+    for (const end of [false, true]) {
+      const e = end ? r.pts[r.pts.length - 1] : r.pts[0];
+      let best = null;
+      let bd = 12;
+      for (const { p, ri: rj } of pts) {
+        if (rj === ri) continue;
+        const d = KM(p[0] - e[0], p[1] - e[1], e[1]);
+        if (d > 0.3 && d < bd) [bd, best] = [d, p];
+      }
+      if (best) end ? r.pts.push(best) : r.pts.unshift(best);
+    }
+  });
+};
+lrwSnap(lrwRuns);
+const lrwFinal = lrwRuns.filter((r) => runLenKm(r.pts) > 2).map((r) => ({ ...r, pts: r.prio === 2 ? r.pts : chaikin(r.pts) }));
+const lrwStrays = []; // pushed-window pieces left out of a push's line: they stay static
+const LRW_PUSHES = PUSHES.map((P, pi) => {
+  const chains = lrwFinal.filter((r) => r.push === pi).map((r) => r.pts);
+  if (!chains.length) throw new Error(`push ${P.id}: no border found`);
+  // join into one line; drop stray bits far from the main chain
+  chains.sort((a, b) => runLenKm(b) - runLenKm(a));
+  if (process.env.LRW_DEBUG)
+    console.log(P.id, chains.map((c) => `${Math.round(runLenKm(c))}km ${c[0].map((v) => v.toFixed(2))}->${c[c.length - 1].map((v) => v.toFixed(2))}`).join(" | "));
+  // grow ONE line from the longest piece: repeatedly attach the piece whose
+  // end lies closest (<= 7 km) to either end of the line; strays are dropped
+  const dKm = (p, q) => KM(p[0] - q[0], p[1] - q[1], p[1]);
+  // a closed loop (the Ampezzo enclave) is not part of a line: it stays static
+  const isLoop = (c) => dKm(c[0], c[c.length - 1]) < 8;
+  const pool = chains.slice(1).filter((c) => !isLoop(c)).map((c) => c.slice());
+  lrwStrays.push(...chains.slice(1).filter(isLoop));
+  let chain = chains[0].slice();
+  for (;;) {
+    let best = null;
+    for (let ci = 0; ci < pool.length; ci++) {
+      const c = pool[ci];
+      for (const [atEnd, rev] of [[true, false], [true, true], [false, false], [false, true]]) {
+        const e = atEnd ? chain[chain.length - 1] : chain[0];
+        const q = rev ? c[c.length - 1] : c[0];
+        const d = dKm(e, q);
+        if (d <= 14 && (!best || d < best.d)) best = { ci, atEnd, rev, d };
+      }
+    }
+    if (!best) break;
+    const c = pool.splice(best.ci, 1)[0];
+    if (best.atEnd) chain = chain.concat(best.rev ? c.slice().reverse() : c);
+    else chain = (best.rev ? c : c.slice().reverse()).concat(chain);
+  }
+  lrwStrays.push(...pool);
+  const line = chain.map((ll) => projection(ll));
+  // world-px arclength resample at ~0.6 px
+  const out = [line[0]];
+  for (let i = 1; i < line.length; i++) {
+    const [x0, y0] = out[out.length - 1];
+    const [x1, y1] = line[i];
+    const d = Math.hypot(x1 - x0, y1 - y0);
+    if (d < 0.6) continue;
+    const n = Math.ceil(d / 1.2);
+    for (let k = 1; k <= n; k++) out.push([x0 + ((x1 - x0) * k) / n, y0 + ((y1 - y0) * k) / n]);
+  }
+  // the push direction (world px, unit) and each vertex's bump
+  const a0 = projection(P.c);
+  const a1 = projection(P.to);
+  const dl = Math.hypot(a1[0] - a0[0], a1[1] - a0[1]);
+  const dir = [(a1[0] - a0[0]) / dl, (a1[1] - a0[1]) / dl];
+  const across = out.map(([x, y]) => -x * dir[1] + y * dir[0]);
+  const s0 = Math.min(...across);
+  const s1 = Math.max(...across);
+  const bump = across.map((a) => Math.pow(Math.sin((Math.PI * (a - s0)) / (s1 - s0 || 1)), 2));
+  // sanity: the direction must point into the victim
+  let vote = 0;
+  for (let i = 0; i < out.length; i += 5) {
+    const ll = projection.invert([out[i][0] + dir[0] * 8 * kmPx, out[i][1] + dir[1] * 8 * kmPx]);
+    if (ll && polityAt(ll[0], ll[1]) === P.victim) vote++;
+    else vote--;
+  }
+  return {
+    id: P.id,
+    depth: r2(P.depthKm * kmPx),
+    pts: out.map(([x, y]) => [r2(x), r2(y)]),
+    dir: dir.map((v) => Math.round(v * 10000) / 10000),
+    bump: bump.map((v) => Math.round(v * 1000) / 1000),
+    acrossKm: Math.round((s1 - s0) / kmPx),
+    vote,
+  };
+});
+const LRW_BORDERS_D = lineD(lrwFinal.filter((r) => r.push < 0 && r.kind !== "colonial").map((r) => r.pts).concat(lrwStrays));
+for (const p of LRW_PUSHES) console.log(`push ${p.id}: ${p.pts.length} pts, across ${p.acrossKm} km, depth ${p.depth} px, victim vote ${p.vote}`);
+const LRW_PLACES = {
+  // the wide: Europe centred, its lowest land (the Peloponnese, 36.4 N) above y 1150
+  shotWide: P([14.5, 43.9]),
+  // the close-up: the settled Serbian bite at y 835
+  shotSerbia: P([19.95, 44.35]),
+  regionCentre: P([20.0, 44.4]),
+};
+// The island of Europe: one world-space feather polygon (~130 km outside the
+// land that must stay whole: Britain and Ireland, France, the Low Countries,
+// Germany, Austria-Hungary, Italy to Sicily, the Balkans, the Russian border
+// region). The raster bake blurs it (sigma ~70 km) into the land's alpha, so
+// North Africa is a faint hint at most and Russia / Anatolia / Iberia dissolve.
+const LRW_FEATHER_D = lineOf([
+  [-3, 60.8], [5, 61.5], [12, 60.8], [19, 59.8], [24.5, 57], [26.5, 54], [28, 51], [30.5, 49],
+  [31.8, 46.5], [30.8, 43.5], [29.8, 41.4], [27.5, 39.5], [25.5, 37.3], [22.5, 35.9], [15.8, 35.8],
+  [12.8, 36.9], [10.5, 38.2], [8.4, 38.6], [7.8, 41.5], [3.8, 41.3], [-2.5, 42.1], [-6, 46.5],
+  [-11.5, 50.5], [-11.8, 55], [-8.5, 59.8], [-3, 60.8],
+].flatMap(([lon, lat], i, a) => {
+  // densify so the projected edge follows the curvature
+  if (i === a.length - 1) return [[lon, lat]];
+  const [l2, t2] = a[i + 1];
+  return Array.from({ length: 8 }, (_, k) => [lon + ((l2 - lon) * k) / 8, lat + ((t2 - lat) * k) / 8]);
+})) + "Z";
+writeFileSync(
+  "generated/components/lrwMapData.ts",
+  `// Generated by scripts/build-ww1-map.mjs — do not edit by hand. Read only by
+// scripts/bake-lrw-rasters.mjs: LittleRegionalWar's static 1914 borders (the
+// pushed stretches removed; they are drawn as moving vector lines).
+export const LRW_BORDERS_D = ${JSON.stringify(LRW_BORDERS_D)};
+/** The Europe island's feather polygon (world px); the bake blurs it into alpha. */
+export const LRW_FEATHER_D = ${JSON.stringify(LRW_FEATHER_D)};
+/** px per km at 48 N. */
+export const LRW_PX_PER_KM = ${kmPx.toFixed(5)};
+`,
+);
+writeFileSync(
+  "generated/components/lrwOverlay.ts",
+  `// Generated by scripts/build-ww1-map.mjs — do not edit by hand.
+// LittleRegionalWar's pushed borders: each the 1914 line as world-px points, the
+// push direction (unit, into the victim), each vertex's bump 0..1, and the depth.
+export type Push = { id: string; depth: number; pts: [number, number][]; dir: [number, number]; bump: number[] };
+export const PUSHES: Push[] = ${JSON.stringify(LRW_PUSHES.map(({ vote, acrossKm, ...p }) => p))};
+export const LRW_PLACES = ${JSON.stringify(LRW_PLACES)};
+`,
+);
 
 const HEAD = `// Generated by scripts/build-ww1-map.mjs — do not edit by hand.
 // Natural Earth (public domain, 10m) + 1914 polities (aourednik/historical-basemaps,
