@@ -61,6 +61,8 @@ export const POWER_IN_FRAMES = CORE_LAND + LOOP_FRAMES; // 124
 export const CLOCK_IN_FRAMES = 48;
 export const COMMUNISM_IN_FRAMES = 48;
 export const SPEAKING_IN_FRAMES = 48;
+/** The palm is already swaying and the water lapping on the way in. */
+export const BEACH_IN_FRAMES = 48;
 
 const TAU = Math.PI * 2;
 export {TAU};
