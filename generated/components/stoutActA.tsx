@@ -140,21 +140,90 @@ export const C1 = {
 } as const;
 export const ENTER_F = 12;
 export const SWEEP_F = 10;
+
+// --- cut 1's arrival at "$1B": two versions, chosen by BillionInRevenueStout's `billion` prop ---------
+//   "quick"  — the delivered cut (Oct 2 2026), bit for bit: C1.RISE smoothstep + the 2.5 px settle;
+//              the readout's last step "$900M" -> "$1B" passes in ~3.4 f (f23.7-27).
+//   "gentle" — Tom's note ("too fast ... it should be more gentle when it reaches 1 billion"): ONE
+//              decelerating arrival. The bar rises from rest at f10 on one curve and lands with zero
+//              velocity at f35 (no settle); the odometer slows with it; "$900M" holds sharp f24-27;
+//              then a slow drum turn f27-41 (the director's V2 of the swap): "$900M" rolls up and
+//              out, "$1B" rolls up and in, never overlapping, full opacity inside a feathered line.
+// Cut 2 (S >= 124) is identical under both (the light pool's damped difference is < 1e-9 px by
+// then), so ActAStout defaults to "quick" and BackInTheDayStout never passes it.
+export type Billion = "gentle" | "quick";
+export const C1G = {
+  RISE: [10, 35], // same start; zero velocity at f35 ("billion" f29, "dollars" f34)
+  // p(t) = 1 - (1 - t)^b (1 + b t): velocity ∝ t (1 - t)^(b - 1), ONE smooth curve from rest to rest
+  // (no piecewise join). b = 4.25: 90 % ("$900M") at f24.1, the last 10 % over 10.9 f, top speed
+  // 43.5 screen px/f (the delivered rise: 42).
+  SHAPE: 4.25,
+  // THE DRUM TURN. It is triggered when the bar reaches the top of its rise (96.9 % of its height,
+  // f26.98 -> the turn starts on whole frame f27; on screen the bar is still from ~f28), then runs on
+  // time, not on the bar's last sub-pixels: TURN_F frames of smootherstep, "$1B" landing at f41.
+  TURN_V: 9.69,
+  TURN_F: 14,
+  // The line: a window fully opaque over the glyphs' rest extents (the "$" reaches 0.818 em up and
+  // 0.102 em down, + 0.02 em) with FEATHER-deep alpha ramps above and below. A string fades only while
+  // it crosses an edge. TRAVEL is the least drum pitch that puts each string wholly beyond the ramps
+  // at the ends (>= 1.19 em) + 0.03 em, so the two strings never overlap (gap >= 0.3 em) and neither
+  // is visible outside the line.
+  CORE: [0.838, 0.122], // em above / below the baseline
+  FEATHER: 0.25, // em
+  TRAVEL: 1.22, // em
+  ROLL_BLUR: 2, // SCREEN px of vertical blur at the turn's top speed (in proportion to it, 0 at both ends)
+  REVENUE_IN: 39, // REVENUE blurs in under the landing "$1B", lands f51 ("revenue" f46)
+} as const;
+
 const settleBump = (t: number, dur: number, amp: number) => (t <= 0 || t >= dur ? 0 : amp * Math.pow(Math.sin((Math.PI * t) / dur), 2));
-export const barRise = (S: number) => {
+const riseGentle = (S: number) => {
+  const [a, b] = C1G.RISE;
+  const t = clamp01((S - a) / (b - a));
+  return 1 - Math.pow(1 - t, C1G.SHAPE) * (1 + C1G.SHAPE * t);
+};
+export const barRise = (S: number, billion: Billion = "quick") => {
+  if (billion === "gentle") return NOW_BAR * riseGentle(S);
   const [a, b] = C1.RISE;
   const [s0, dur, amp] = C1.SETTLE;
   return NOW_BAR * smoothstep((S - a) / (b - a)) + settleBump(S - s0, dur, amp);
 };
 export const pourH = (S: number) => NOW_SLICE * smoothstep((S - C1.POUR[0]) / (C1.POUR[1] - C1.POUR[0]));
 /** The readout's odometer value: tenths of a billion, "$100M" ... "$900M" -> "$1B". */
-export const readoutValue = (S: number) => Math.min(10, (barRise(S) / NOW_BAR) * 10);
+export const readoutValue = (S: number, billion: Billion = "quick") => Math.min(10, (barRise(S, billion) / NOW_BAR) * 10);
 export const readoutFormat = (n: number) => (n >= 10 ? "$1B" : n <= 0 ? "$0" : `$${n}00M`);
 /** It appears as the bar passes its first $100M (the mechanism, not a timer). */
-export const READOUT_IN = (() => {
-  for (let s = 0; s < 60; s += 0.01) if (readoutValue(s) >= 1) return Number(s.toFixed(2));
+const readoutInOf = (billion: Billion) => {
+  for (let s = 0; s < 60; s += 0.01) if (readoutValue(s, billion) >= 1) return Number(s.toFixed(2));
   return 13;
-})();
+};
+export const READOUT_IN = readoutInOf("quick");
+export const READOUT_IN_GENTLE = readoutInOf("gentle"); // 12.67
+/** Gentle: where the odometer's digits stand (Numeral's roll eases in and out of every step, so its
+ *  digits rest on each value); "$900M" holds from 90 %. Its slope over one frame is the count's blur. */
+const shownGentle = (S: number) => {
+  const v = readoutValue(S, "gentle");
+  if (v >= 9) return 9;
+  const n = Math.floor(v);
+  return n + smoothstep(v - n);
+};
+/** Gentle: the turn is triggered on the first whole frame the bar has reached C1G.TURN_V (the top
+ *  of its rise), then runs on time. */
+export const TURN_AT = (() => {
+  for (let s = C1G.RISE[0]; s <= C1G.RISE[1]; s += 0.01) if (readoutValue(s, "gentle") >= C1G.TURN_V) return Math.ceil(s - 1e-9);
+  return C1G.RISE[1];
+})(); // 27
+export const TURN_END = TURN_AT + C1G.TURN_F; // 41: "$1B" lands
+const smootherstep = (v: number) => {
+  const x = clamp01(v);
+  return x * x * x * (x * (6 * x - 15) + 10);
+};
+/** Gentle: the drum turn's progress 0 ("$900M") .. 1 ("$1B"), smootherstep over TURN_F frames. */
+export const turnGentle = (S: number) => smootherstep((S - TURN_AT) / C1G.TURN_F);
+/** Its roll blur (SCREEN px): in proportion to the turn's speed (30 x^2 (1-x)^2), peak ROLL_BLUR, 0 at both ends. */
+export const turnBlur = (S: number) => {
+  const x = clamp01((S - TURN_AT) / C1G.TURN_F);
+  return C1G.ROLL_BLUR * 16 * x * x * (1 - x) * (1 - x);
+};
 
 // cut 1's lockup, laid out exactly as StoutFrames' c1_end: SCREEN px offsets from the
 // pillar at camera k, returned in WORLD px (the type stays on its token at any k).
@@ -249,9 +318,9 @@ export const AXIS_HEAD: number[] = (() => {
 // ===========================================================================
 const POOL_STIFF = 0.09;
 const POOL_DAMP = 0.468;
-const poolTarget = (S: number) => {
+const poolTarget = (S: number, billion: Billion) => {
   const f = S - S_JOIN;
-  if (f <= 0) return { x: X_NOW, y: TILE_TOP - barRise(S) / 2 }; // the pillar, its bar's middle (c1_end)
+  if (f <= 0) return { x: X_NOW, y: TILE_TOP - barRise(S, billion) / 2 }; // the pillar, its bar's middle (c1_end)
   // cut 2: the newest year the look has reached, then back to the whole climb's middle
   let line = Infinity;
   for (let g = 0; g <= Math.min(f, C2.RETURN[0]); g++) {
@@ -263,20 +332,23 @@ const poolTarget = (S: number) => {
   const p = smoothstep(returnProgress(f));
   return { x: lerp(hold.x, end.x, p), y: lerp(hold.y, end.y, p) };
 };
-export const POOL_TRACK: { x: number; y: number }[] = (() => {
+const poolTrackOf = (billion: Billion) => {
   const out: { x: number; y: number }[] = [];
-  let p = poolTarget(0);
+  let p = poolTarget(0, billion);
   let v = { x: 0, y: 0 };
   for (let S = 0; S <= S_END + 1; S++) {
     if (S > 0) {
-      const t = poolTarget(S);
+      const t = poolTarget(S, billion);
       v = { x: v.x + (t.x - p.x) * POOL_STIFF - v.x * POOL_DAMP, y: v.y + (t.y - p.y) * POOL_STIFF - v.y * POOL_DAMP };
       p = { x: p.x + v.x, y: p.y + v.y };
     }
     out.push({ ...p });
   }
   return out;
-})();
+};
+export const POOL_TRACK: { x: number; y: number }[] = poolTrackOf("quick");
+/** The pool follows the gentle bar's middle the same way (it converges on the quick track: < 1e-9 px by S 124). */
+export const POOL_TRACK_GENTLE: { x: number; y: number }[] = poolTrackOf("gentle");
 
 // ===========================================================================
 // PIECES stoutShared lacks, from its tokens
@@ -397,10 +469,119 @@ const RollSwap: React.FC<{ x: number; y: number; k: number; px: number; from: st
   );
 };
 
+/** Gentle: the odometer's last step as a slow drum turn. The same two strings, laid out as RollSwap's
+ *  ("$900M" tabular as Numeral's odometer, "$1B" exactly as its landed static text), one drum pitch
+ *  apart (C1G.TRAVEL): "$900M" rolls up and out while "$1B" rolls up and in. No opacity animation:
+ *  the strings are seen through a FEATHERED line (a mask fully opaque over the glyphs' rest extents,
+ *  with C1G.FEATHER-deep ramps above and below), so a string fades only while it crosses an edge.
+ *  The pitch keeps them apart on every frame. At roll 0 it is the plain "$900M" (the hold): no mask,
+ *  no filter. */
+const DrumTurn: React.FC<{ x: number; y: number; k: number; px: number; from: string; to: string; roll: number; rollBlur: number; enter: number }> = ({
+  x,
+  y,
+  k,
+  px,
+  from,
+  to,
+  roll,
+  rollBlur,
+  enter,
+}) => {
+  const uid = `dt${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
+  const en = entranceOf(enter);
+  if (en.opacity <= 0.002) return null;
+  const fs = px / k;
+  const yy = y + en.lift / k;
+  const pitch = fs * C1G.TRAVEL;
+  const u = clamp01(roll);
+  const adv = (c: string) => (/\d/.test(c) ? TNUM_ADV * fs : numeralWidth(c, fs)) + TRACK.numeral * fs;
+  const widths = [...from].map(adv);
+  const total = widths.reduce((a, w) => a + w, 0) - TRACK.numeral * fs;
+  let cx = x - total / 2;
+  const comp = (TRACK.numeral * fs) / 2;
+  const moving = u > 0;
+  const blurOn = moving && rollBlur > 0.05;
+  // the line: transparent at y0, opaque y1..y2, transparent at y3 (world px)
+  const [coreUp, coreDown] = C1G.CORE;
+  const y0 = yy - (coreUp + C1G.FEATHER) * fs;
+  const y1 = yy - coreUp * fs;
+  const y2 = yy + coreDown * fs;
+  const y3 = yy + (coreDown + C1G.FEATHER) * fs;
+  const mx = x - total / 2 - fs;
+  const mw = total + 2 * fs;
+  const outgoing = (dy: number) => (
+    <g style={{ fontFeatureSettings: '"tnum" 1, "lnum" 1' }}>
+      {[...from].map((c, i) => {
+        const w = widths[i];
+        const xc = cx + w / 2 - comp;
+        cx += w;
+        return (
+          <text key={i} x={r3(xc)} y={r3(yy - dy)} textAnchor="middle">
+            {c}
+          </text>
+        );
+      })}
+    </g>
+  );
+  return (
+    <g opacity={r3(en.opacity)} style={{ filter: en.blur > 0.05 ? `blur(${r3(en.blur / k)}px)` : undefined }}>
+      {moving ? (
+        <defs>
+          <linearGradient id={`${uid}g`} gradientUnits="userSpaceOnUse" x1="0" y1={r3(y0)} x2="0" y2={r3(y3)}>
+            <stop offset="0" stopColor="#000" />
+            <stop offset={r3((y1 - y0) / (y3 - y0))} stopColor="#fff" />
+            <stop offset={r3((y2 - y0) / (y3 - y0))} stopColor="#fff" />
+            <stop offset="1" stopColor="#000" />
+          </linearGradient>
+          <mask id={`${uid}m`} maskUnits="userSpaceOnUse" x={r3(mx)} y={r3(y0)} width={r3(mw)} height={r3(y3 - y0)}>
+            <rect x={r3(mx)} y={r3(y0)} width={r3(mw)} height={r3(y3 - y0)} fill={`url(#${uid}g)`} />
+          </mask>
+          {blurOn ? (
+            <filter id={`${uid}b`} x="-5%" y="-30%" width="110%" height="160%">
+              <feGaussianBlur stdDeviation={`0 ${r3(rollBlur / k)}`} />
+            </filter>
+          ) : null}
+        </defs>
+      ) : null}
+      <g fontFamily={FONT_NUM} fontWeight={700} fontSize={r3(fs)} fill={COLOR.inkCream} mask={moving ? `url(#${uid}m)` : undefined}>
+        <g filter={blurOn ? `url(#${uid}b)` : undefined}>
+          {outgoing(pitch * u)}
+          {moving ? (
+            <text x={r3(x + comp)} y={r3(yy + pitch * (1 - u))} textAnchor="middle" letterSpacing={`${TRACK.numeral}em`} style={{ fontFeatureSettings: '"lnum" 1' }}>
+              {to}
+            </text>
+          ) : null}
+        </g>
+      </g>
+    </g>
+  );
+};
+
 /** Cut 1's readout riding the bar's top, all its phases: the odometer "$100M" ... "$900M"
  *  (stoutShared Numeral), the last step's RollSwap to "$1B", then the landed "$1B" (ToneNumeral,
- *  which also dims it by tone in cut 2). */
-const HeroReadout: React.FC<{ x: number; y: number; k: number; S: number; enter: number; dim: number }> = ({ x, y, k, S, enter, dim }) => {
+ *  which also dims it by tone in cut 2). `billion` "gentle": the count's blur follows its digits'
+ *  own speed (sharp as they rest on a value), "$900M" holds, then the DrumTurn f27-41. */
+const HeroReadout: React.FC<{ x: number; y: number; k: number; S: number; enter: number; dim: number; billion: Billion }> = ({
+  x,
+  y,
+  k,
+  S,
+  enter,
+  dim,
+  billion,
+}) => {
+  if (billion === "gentle") {
+    const vg = readoutValue(S, "gentle");
+    const u = turnGentle(S);
+    if (u >= 1) return <ToneNumeral x={x} y={y} k={k} px={TYPE.HERO} text="$1B" dim={dim} />;
+    if (vg >= 9 || u > 0) {
+      return (
+        <DrumTurn x={x} y={y} k={k} px={TYPE.HERO} from={readoutFormat(9)} to={readoutFormat(10)} roll={u} rollBlur={turnBlur(S)} enter={enter} />
+      );
+    }
+    const blurG = Math.min(10, 9 * Math.abs(shownGentle(S + 0.5) - shownGentle(S - 0.5)));
+    return <Numeral x={x} y={y} k={k} px={TYPE.HERO} value={vg} format={readoutFormat} rollBlur={blurG} tone="cream" enter={enter} />;
+  }
   const v = readoutValue(S);
   const dv = Math.abs(readoutValue(S + 0.5) - readoutValue(S - 0.5));
   const blur = Math.min(10, dv * 9);
@@ -419,23 +600,24 @@ const HeroReadout: React.FC<{ x: number; y: number; k: number; S: number; enter:
 // ===========================================================================
 const enterAt = (t: number, t0: number) => clamp01((t - t0) / ENTER_F);
 
-export const ActAStout: React.FC<{ S: number }> = ({ S }) => {
+export const ActAStout: React.FC<{ S: number; billion?: Billion }> = ({ S, billion = "quick" }) => {
   const cam = camAt(S);
   const k = cam.k;
   const band = amberBandFor(cam);
   const f = S - S_JOIN; // cut-2 frame (<= 0 in cut 1)
   const inCut1 = f <= 0;
+  const gentle = billion === "gentle";
 
   // --- the now pillar: cut 1 builds it, cut 2 keeps it ---------------------------------------------
   const tileIn = clamp01((S - C1.TILE_IN[0]) / (C1.TILE_IN[1] - C1.TILE_IN[0]));
-  const barH = inCut1 ? barRise(S) : NOW_BAR;
+  const barH = inCut1 ? barRise(S, billion) : NOW_BAR;
   const sliceH = inCut1 ? Math.min(pourH(S), barH) : NOW_SLICE;
   const edgeOn = inCut1 ? smoothstep((S - (C1.POUR[0] - 3)) / 5) * (1 - smoothstep((S - C1.EDGE_FADE) / ENTER_F)) : 0;
   const L = nowLockup(k, barH);
 
   // --- cut 1's lockup (exits at the top of cut 2) ----------------------------------------------------
   const out2 = inCut1 ? 0 : enterAt(f, C2.LABELS_OUT);
-  const billionEnter = enterAt(S, READOUT_IN);
+  const billionEnter = enterAt(S, gentle ? READOUT_IN_GENTLE : READOUT_IN);
   const billionDim = inCut1 ? 0 : smoothstep((f - C2.LABELS_OUT) / ENTER_F);
   const showHero = inCut1 || f < BILLION_GONE_F;
 
@@ -469,7 +651,7 @@ export const ActAStout: React.FC<{ S: number }> = ({ S }) => {
   const nowIn2 = inCut1 ? 0 : enterAt(f, NOW_LABELS_F + 3);
 
   return (
-    <StoutStage S={S} cam={cam} rest={CAM_REST} pool={POOL_TRACK[Math.max(0, Math.min(POOL_TRACK.length - 1, Math.round(S)))]}>
+    <StoutStage S={S} cam={cam} rest={CAM_REST} pool={(gentle ? POOL_TRACK_GENTLE : POOL_TRACK)[Math.max(0, Math.min(POOL_TRACK.length - 1, Math.round(S)))]}>
       {/* cut 2: the time axis, drawn leftward from the now tile's top-left corner */}
       {!inCut1 && AXIS_X1 - head > 0.5 ? <Rule x0={head} x1={AXIS_X1} y={TILE_TOP} k={k} /> : null}
       {bars}
@@ -508,8 +690,8 @@ export const ActAStout: React.FC<{ S: number }> = ({ S }) => {
       ) : null}
 
       {/* cut 1's lockup: "$1B" (the odometer while the bar rises), REVENUE, "30%", PROFIT */}
-      {showHero ? <HeroReadout x={X_NOW} y={L.billionY} k={k} S={S} enter={billionEnter} dim={billionDim} /> : null}
-      <Label x={X_NOW} y={L.revenueY} k={k} text="revenue" tone="creamLo" enter={enterAt(S, C1.REVENUE_IN)} exit={out2} />
+      {showHero ? <HeroReadout x={X_NOW} y={L.billionY} k={k} S={S} enter={billionEnter} dim={billionDim} billion={billion} /> : null}
+      <Label x={X_NOW} y={L.revenueY} k={k} text="revenue" tone="creamLo" enter={enterAt(S, gentle ? C1G.REVENUE_IN : C1.REVENUE_IN)} exit={out2} />
       <Numeral x={L.sideX} y={L.pctY} k={k} px={TYPE.SECONDARY} text="30%" tone="amber" anchor="start" glow enter={enterAt(S, C1.THIRTY_IN)} exit={out2} />
       <Label x={L.sideX} y={L.profitY} k={k} text="profit" tone="creamLo" anchor="start" enter={enterAt(S, C1.PROFIT_IN)} exit={out2} />
     </StoutStage>
