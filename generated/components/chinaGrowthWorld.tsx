@@ -5,6 +5,8 @@ import { BaseWorld, JOIN_23, Stage, camA } from "./chinaGrowthShared";
 import { Seg3Layer, camSeg3 } from "./chinaGrowthSeg3";
 import { Seg4Layer, camSeg4 } from "./chinaGrowthSeg4";
 import { THEMES, ThemeContext } from "./chinaGrowthTheme";
+import { ChinaFlagTitle } from "./chinaGrowthFlag";
+import { AbsoluteFill } from "remotion";
 import type { ThemeName } from "./chinaGrowthTheme";
 
 // ---------------------------------------------------------------------------
@@ -32,6 +34,10 @@ import type { ThemeName } from "./chinaGrowthTheme";
 // V2) is provided to the Stage, the base world and both layers through
 // ThemeContext; they read it with useTheme() (chinaGrowthTheme.ts). The V1
 // wrappers pass nothing, so V1 renders exactly as delivered.
+//
+// FLAG (V3): the optional `flag` prop (default false) adds the PRC flag as the
+// chart's title, in screen space above the whole Stage (chinaGrowthFlag.tsx).
+// Without it the tree is exactly V1's / V2's, so their output is unchanged.
 // ---------------------------------------------------------------------------
 
 /** The camera at story frame S (camera centre + zoom). */
@@ -44,17 +50,31 @@ if (!camEq(camSeg4(829), JOIN_34)) {
   throw new Error(`chinaGrowthWorld: camSeg4(829) ${JSON.stringify(camSeg4(829))} != JOIN_34 ${JSON.stringify(JOIN_34)}`);
 }
 
-export const ChinaGrowthWorld: React.FC<{ S: number; theme?: ThemeName }> = ({ S, theme = "orange" }) => {
+export const ChinaGrowthWorld: React.FC<{ S: number; theme?: ThemeName; flag?: boolean }> = ({
+  S,
+  theme = "orange",
+  flag = false,
+}) => {
   const cam = cameraAt(S);
+  const stage = (
+    <Stage S={S} cam={cam}>
+      <BaseWorld S={S} cam={cam} pass="under" />
+      <BaseWorld S={S} cam={cam} pass="line" />
+      <Seg3Layer S={S} cam={cam} />
+      <Seg4Layer S={S} cam={cam} />
+      <BaseWorld S={S} cam={cam} pass="labels" />
+    </Stage>
+  );
   return (
     <ThemeContext.Provider value={THEMES[theme]}>
-      <Stage S={S} cam={cam}>
-        <BaseWorld S={S} cam={cam} pass="under" />
-        <BaseWorld S={S} cam={cam} pass="line" />
-        <Seg3Layer S={S} cam={cam} />
-        <Seg4Layer S={S} cam={cam} />
-        <BaseWorld S={S} cam={cam} pass="labels" />
-      </Stage>
+      {flag ? (
+        <AbsoluteFill>
+          {stage}
+          <ChinaFlagTitle S={S} />
+        </AbsoluteFill>
+      ) : (
+        stage
+      )}
     </ThemeContext.Provider>
   );
 };
