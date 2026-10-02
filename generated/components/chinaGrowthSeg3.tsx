@@ -3,15 +3,16 @@ import {
   COVID_PT,
   FALL_X,
   HEAD_R,
-  INK,
   INK_HI,
   INK_LO,
   INK_W,
   JOIN_34,
+  TICK_HALF,
   Y0,
   cameraTrack,
   camEq,
   clamp01,
+  easeOutCubic,
   enterU,
   evenEase,
   exitU,
@@ -23,6 +24,8 @@ import {
 import type { Cam, Glide, Pt } from "./chinaGrowthGeom";
 import { CAM_A_START, DashedPath, Dot, GLIDES_A, JOIN_23, Label, Ring, Tick, labelCapH } from "./chinaGrowthShared";
 import type { DashMod } from "./chinaGrowthShared";
+import { useTheme } from "./chinaGrowthTheme";
+import type { Theme } from "./chinaGrowthTheme";
 import { arriveEase } from "./levelUp";
 
 // ---------------------------------------------------------------------------
@@ -33,6 +36,21 @@ import { arriveEase } from "./levelUp";
 // Everything is a function of the story clock S. The layer draws nothing for
 // S <= 601 (cuts 1-2), and from S 827 on only the FALL 2026 tick + label, which
 // stay on the axis to the end of the clip (INK_HI -> INK_LO at S 840-852).
+//
+// THEMES (V2, briefs/V2_CHINA.md). Every colour, face and flair choice comes from
+// useTheme(); motion, timing, geometry and the camera are the same in every
+// theme. Orange (V1) renders exactly as delivered. China ("vermilion ink"):
+//  * the ring, drop-line, ticks, the promise and both labels are ink at the
+//    theme's rungs (the materials map INK_HI / INK_LO);
+//  * flair.bead: the promise's head is an INK BEAD (the tip's bead recipe in
+//    ink: the dot, a soft ink bloom, a tiny paper-white specular);
+//  * flair.inkDiffusion (6h), on "they haven't": instead of sinking, every dash
+//    of the promise diffuses like ink on wet paper — it blurs 0 -> 8 screen px,
+//    spreads 20 % about its centre and fades over DASH_FADE_F — with V1's wave
+//    timing (head -> ring, S 794-808). The excuse leaves at its V1 frames in
+//    the same material: the ring and the COVID tick blur, spread and fade in
+//    place, the drop-line's dashes diffuse top to bottom, and "COVID" takes the
+//    theme's text exit (slide down + fade + blur out).
 // ---------------------------------------------------------------------------
 
 // --- the schedule (S frames) ---------------------------------------------------
@@ -242,57 +260,123 @@ const fallRung = (S: number) => INK_HI - (INK_HI - INK_LO) * rungEase(S, FALL_RE
 /** The excuse's rung: INK_HI while it is the subject, INK_LO once the promise has come back. */
 const covidRung = (S: number) => INK_HI - (INK_HI - INK_LO) * rungEase(S, COVID_RECEDE);
 
+/** 6h, china: ink on wet paper. A dissolving stroke blurs to INK_BLUR screen px
+ *  and spreads INK_SPREAD about its centre (both fast at first, as ink bleeds)
+ *  while it fades (late), in place. */
+const INK_BLUR = 8;
+const INK_SPREAD = 0.2;
+/** How a dissolving stroke looks at progress u (0..1) in this theme: V1 sinks
+ *  DIS_SINK world px and fades; china (flair.inkDiffusion) diffuses in place. */
+const dissolveAt = (u: number, s: number, th: Theme): { dy: number; opacity: number; blur: number; spread: number } => {
+  const e = smoothstep(u);
+  if (!th.flair.inkDiffusion) return { dy: DIS_SINK * s * e, opacity: 1 - e, blur: 0, spread: 0 };
+  const b = easeOutCubic(u);
+  return { dy: 0, opacity: 1 - e, blur: INK_BLUR * b, spread: INK_SPREAD * b };
+};
+/** The same as a per-dash hook result (V1 returns exactly its old { dy, opacity }). */
+const dashDissolve = (u: number, s: number, th: Theme): DashMod => {
+  const d = dissolveAt(u, s, th);
+  return th.flair.inkDiffusion ? { opacity: d.opacity, blur: d.blur, spread: d.spread } : { dy: d.dy, opacity: d.opacity };
+};
+/** A CSS blur for a stroke inside the world group (screen px -> world px). */
+const blurFilter = (px: number, k: number) => (px > 0.01 ? `blur(${(px / k).toFixed(3)}px)` : undefined);
+
+/** flair.bead: the promise's head as an INK BEAD — the tip's bead recipe (A's
+ *  BeadBloom / BeadSpecular) in ink: a soft ink bloom 2.6 x its radius (0.22 at
+ *  the centre), the ink dot, and a paper-white specular up-left (r 0.28 x, 0.5).
+ *  Its radius keeps the red tip's bead-to-stroke ratio on the ink stroke. */
+const INK_BEAD_R = (11.5 / 4.5) * (INK_W / 2); // 4.47 world px at K_REF (the V1 head is 3.85)
+const InkBead: React.FC<{ x: number; y: number; k: number; th: Theme; opacity: number }> = ({ x, y, k, th, opacity }) => {
+  const R = INK_BEAD_R * sz(k);
+  return (
+    <g opacity={opacity.toFixed(4)}>
+      <defs>
+        <radialGradient id="cg3-bead-bloom">
+          <stop offset={0} stopColor={th.ink} stopOpacity={0.22} />
+          <stop offset={0.45} stopColor={th.ink} stopOpacity={0.11} />
+          <stop offset={1} stopColor={th.ink} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      <circle cx={x.toFixed(3)} cy={y.toFixed(3)} r={(2.6 * R).toFixed(3)} fill="url(#cg3-bead-bloom)" />
+      <circle cx={x.toFixed(3)} cy={y.toFixed(3)} r={R.toFixed(3)} fill={th.ink} />
+      <circle cx={(x - 0.36 * R).toFixed(3)} cy={(y - 0.36 * R).toFixed(3)} r={(0.28 * R).toFixed(3)} fill={th.paper} opacity={0.5} />
+    </g>
+  );
+};
+
 export const Seg3Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
+  const th = useTheme();
   if (S <= S_IN) return null;
   const k = cam.k;
   const s = sz(k);
+  const diffuse = th.flair.inkDiffusion;
   const out: React.ReactNode[] = [];
 
-  // -- the excuse: ring, drop-line, COVID tick + label (all gone by S 826) --
+  // -- the excuse: ring, drop-line, COVID tick + label (all gone by S 820) --
   if (S < EXCUSE_END) {
     const cr = covidRung(S);
-    // ring: arc sweep from 12 o'clock; sinks + fades as the wave reaches it
+    // ring: arc sweep from 12 o'clock; leaves as the wave reaches it (V1 sinks, china diffuses)
     const ringU = clamp01((S - RING_OUT) / EXCUSE_FADE_F);
     const ringDraw = arriveEase(clamp01((S - RING_S0) / RING_F), RING_TAIL);
     if (ringDraw > 0 && ringU < 1) {
-      const e = smoothstep(ringU);
+      const d = dissolveAt(ringU, s, th);
       out.push(
-        <g key="ring" transform={`translate(0 ${(DIS_SINK * s * e).toFixed(3)})`}>
-          <Ring x={COVID_PT.x} y={COVID_PT.y} k={k} r={RING_R} draw={ringDraw} rung={cr * (1 - e)} />
-        </g>,
+        diffuse ? (
+          <g key="ring" style={{ filter: blurFilter(d.blur, k) }}>
+            <Ring
+              x={COVID_PT.x}
+              y={COVID_PT.y}
+              k={k}
+              r={RING_R}
+              draw={ringDraw}
+              rung={cr * d.opacity}
+              width={INK_W * (1 + d.spread)}
+            />
+          </g>
+        ) : (
+          <g key="ring" transform={`translate(0 ${d.dy.toFixed(3)})`}>
+            <Ring x={COVID_PT.x} y={COVID_PT.y} k={k} r={RING_R} draw={ringDraw} rung={cr * d.opacity} />
+          </g>
+        ),
       );
     }
-    // drop-line: dashed, head-led down to the axis; dissolves top to bottom
+    // drop-line: dashed, head-led down to the axis; leaves top to bottom
     const dd = dropDraw(S);
     if (dd > 0) {
       const mod = (_i: number, sMid: number, total: number): DashMod => {
         const t0 = DROP_OUT0 + DROP_OUT_F * clamp01(sMid / total);
         const u = clamp01((S - t0) / EXCUSE_FADE_F);
         if (u <= 0) return null;
-        const e = smoothstep(u);
-        return { dy: DIS_SINK * s * e, opacity: 1 - e };
+        return dashDissolve(u, s, th);
       };
       out.push(<DashedPath key="drop" points={DROP_PTS} k={k} S={S} draw={dd} rung={cr} dashMod={mod} />);
     }
-    // the COVID tick: scales in where the drop-line lands; sinks + fades out
+    // the COVID tick: scales in where the drop-line lands; leaves like the ring
     if (S >= DROP_S1) {
       const u = clamp01((S - CTICK_OUT) / EXCUSE_FADE_F);
-      const e = smoothstep(u);
-      if (e < 1) {
+      const d = dissolveAt(u, s, th);
+      if (d.opacity > 0) {
+        const grow = clamp01((S - DROP_S1) / 8);
         out.push(
-          <g key="ctick" transform={`translate(0 ${(DIS_SINK * s * e).toFixed(3)})`}>
-            <Tick x={COVID_PT.x} y={Y0} k={k} grow={clamp01((S - DROP_S1) / 8)} rung={cr * (1 - e)} />
-          </g>,
+          diffuse ? (
+            <g key="ctick" style={{ filter: blurFilter(d.blur, k) }}>
+              <Tick x={COVID_PT.x} y={Y0} k={k} grow={grow} rung={cr * d.opacity} half={TICK_HALF * (1 + d.spread)} />
+            </g>
+          ) : (
+            <g key="ctick" transform={`translate(0 ${d.dy.toFixed(3)})`}>
+              <Tick x={COVID_PT.x} y={Y0} k={k} grow={grow} rung={cr * d.opacity} />
+            </g>
+          ),
         );
       }
     }
-    // "COVID": just below the axis, lands on its word, standard exit
+    // "COVID": just below the axis, lands on its word, the theme's text exit
     out.push(
       <Label
         key="clabel"
         text="COVID"
         x={COVID_PT.x}
-        y={Y0 + AXIS_LABEL_GAP * s + labelCapH("word", k) / 2}
+        y={Y0 + AXIS_LABEL_GAP * s + labelCapH("word", k, th) / 2}
         k={k}
         size="word"
         rung={cr}
@@ -305,12 +389,12 @@ export const Seg3Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
   // -- the promise: dashed, out of the ring, up to 7.9 %, flat to FALL_X --
   if (S > PROM_S0 && S < DIS_S0 + DIS_F + DASH_FADE_F) {
     const hl = promiseHeadLen(S);
+    // "they haven't": the wave runs head -> ring; each dash sinks (V1) or diffuses (china)
     const mod = (_i: number, sMid: number, total: number): DashMod => {
       const t0 = DIS_S0 + DIS_F * (1 - clamp01(sMid / total));
       const u = clamp01((S - t0) / DASH_FADE_F);
       if (u <= 0) return null;
-      const e = smoothstep(u);
-      return { dy: DIS_SINK * s * e, opacity: 1 - e };
+      return dashDissolve(u, s, th);
     };
     out.push(
       <DashedPath
@@ -324,11 +408,18 @@ export const Seg3Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
         dashMod={mod}
       />,
     );
-    // its white head: in over 6 f at the ring, out over 8 f once it has landed
+    // its head (V1 a white dot; china an ink bead): in over 6 f at the ring, out over
+    // 8 f once it has landed
     const ho = smoothstep((S - PROM_S0) / 6) * (1 - smoothstep((S - PROM_S2) / 8));
     if (ho > 0.002) {
       const hp = promisePoint(hl);
-      out.push(<Dot key="phead" x={hp.x} y={hp.y} k={k} r={HEAD_R * INK_W} color={INK} opacity={ho} />);
+      out.push(
+        th.flair.bead ? (
+          <InkBead key="phead" x={hp.x} y={hp.y} k={k} th={th} opacity={ho} />
+        ) : (
+          <Dot key="phead" x={hp.x} y={hp.y} k={k} r={HEAD_R * INK_W} color={th.ink} opacity={ho} />
+        ),
+      );
     }
   }
 
@@ -343,7 +434,7 @@ export const Seg3Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
         key="flabel"
         text="FALL 2026"
         x={FALL_X}
-        y={Y0 - AXIS_LABEL_GAP * s - labelCapH("word", k) / 2}
+        y={Y0 - AXIS_LABEL_GAP * s - labelCapH("word", k, th) / 2}
         k={k}
         size="word"
         rung={rung}

@@ -4,6 +4,8 @@ import type { Cam } from "./chinaGrowthGeom";
 import { BaseWorld, JOIN_23, Stage, camA } from "./chinaGrowthShared";
 import { Seg3Layer, camSeg3 } from "./chinaGrowthSeg3";
 import { Seg4Layer, camSeg4 } from "./chinaGrowthSeg4";
+import { THEMES, ThemeContext } from "./chinaGrowthTheme";
+import type { ThemeName } from "./chinaGrowthTheme";
 
 // ---------------------------------------------------------------------------
 // chinaGrowthWorld — the composer (builder A). ONE picture for the whole clip:
@@ -24,7 +26,12 @@ import { Seg4Layer, camSeg4 } from "./chinaGrowthSeg4";
 //                          labels, the travelling highlight
 //   5. BaseWorld "labels": A's labels on top of everything
 // A layer reads the current camera from its `cam` prop (cam.k drives sz(k) and
-// iconShadow(k)); it must never import this file (cycle).
+// the theme's shadows); it must never import this file (cycle).
+//
+// THEME (V2): the optional `theme` prop ("orange" = V1, the default; "china" =
+// V2) is provided to the Stage, the base world and both layers through
+// ThemeContext; they read it with useTheme() (chinaGrowthTheme.ts). The V1
+// wrappers pass nothing, so V1 renders exactly as delivered.
 // ---------------------------------------------------------------------------
 
 /** The camera at story frame S (camera centre + zoom). */
@@ -37,15 +44,17 @@ if (!camEq(camSeg4(829), JOIN_34)) {
   throw new Error(`chinaGrowthWorld: camSeg4(829) ${JSON.stringify(camSeg4(829))} != JOIN_34 ${JSON.stringify(JOIN_34)}`);
 }
 
-export const ChinaGrowthWorld: React.FC<{ S: number }> = ({ S }) => {
+export const ChinaGrowthWorld: React.FC<{ S: number; theme?: ThemeName }> = ({ S, theme = "orange" }) => {
   const cam = cameraAt(S);
   return (
-    <Stage S={S} cam={cam}>
-      <BaseWorld S={S} cam={cam} pass="under" />
-      <BaseWorld S={S} cam={cam} pass="line" />
-      <Seg3Layer S={S} cam={cam} />
-      <Seg4Layer S={S} cam={cam} />
-      <BaseWorld S={S} cam={cam} pass="labels" />
-    </Stage>
+    <ThemeContext.Provider value={THEMES[theme]}>
+      <Stage S={S} cam={cam}>
+        <BaseWorld S={S} cam={cam} pass="under" />
+        <BaseWorld S={S} cam={cam} pass="line" />
+        <Seg3Layer S={S} cam={cam} />
+        <Seg4Layer S={S} cam={cam} />
+        <BaseWorld S={S} cam={cam} pass="labels" />
+      </Stage>
+    </ThemeContext.Provider>
   );
 };

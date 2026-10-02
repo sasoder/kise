@@ -1,8 +1,9 @@
 import React from "react";
-import { iconShadow, makeTone } from "./fieldShared";
-import { HIGHLIGHT, arriveEase } from "./levelUp";
+import { makeTone } from "./fieldShared";
+import { arriveEase } from "./levelUp";
+import { THEMES, mapRung, useTheme } from "./chinaGrowthTheme";
+import type { Theme } from "./chinaGrowthTheme";
 import {
-  ACCENT,
   AXIS_END,
   AXIS_X0,
   BRACKET_X,
@@ -10,7 +11,6 @@ import {
   DOT_R,
   FRAME_H,
   FRAME_W,
-  INK,
   INK_HI,
   INK_LO,
   INK_W,
@@ -59,6 +59,17 @@ import { DashedPath, HatchFill, HeadLedPath, Label, Ring, labelCapH } from "./ch
 //
 // Everything is a function of the story clock S. The layer draws nothing
 // before its first gesture (S 865); camSeg4(829) === JOIN_34 exactly.
+//
+// THEMES (chinaGrowthTheme): every colour, font and shadow comes from
+// useTheme(). Under the default "orange" theme each element draws exactly what
+// V1 drew (the orange paths below are the V1 JSX, unchanged). In "china" (V2):
+// ink rings, level line, connector, bracket and caps (one ink group, so the
+// caps and the bracket do not double up where they cross); serif numerals; the
+// highlight eases accent -> highlight (#F2604A) -> accent and lights the seal
+// markers and the bead in their own shapes; and (flair 6i) the wedge is an ink
+// wash (0.10) under the fine ink hatch (0.35), revealed by the same top-down
+// wipe with a feathered front, so it reads as ink soaking down.
+// Motion, timing and the camera do not depend on the theme.
 // ---------------------------------------------------------------------------
 
 const W = (w: string) => wordOn("TrulyDramatic", w);
@@ -117,6 +128,10 @@ export const Y15 = yOf(1.5);
  *  screen px near HIGHLIGHT on a 6 px line and did not read at half size. */
 export const HL_HALF = 70;
 const HL_CORE = 0.45;
+/** 6i (china): the ink wash's absolute opacities, and its wipe's feathered front. */
+export const WASH_FILL = 0.1;
+export const WASH_HATCH = 0.35;
+export const WASH_FEATHER = 24; // world px
 
 // --- eases -----------------------------------------------------------------------
 /** A head that leaves from rest, cruises and lands: its speed ramps in on a
@@ -337,7 +352,13 @@ export const highlightAt = (S: number): { h: number; I: number } => {
   const u = t - i;
   return { h: HL_TABLE[i] + (HL_TABLE[i + 1] - HL_TABLE[i]) * u, I };
 };
-const TONE = makeTone(ACCENT, HIGHLIGHT);
+/** accent -> highlight, per theme (64 steps, built once). Orange = V1's ACCENT -> HIGHLIGHT. */
+const TONES: Partial<Record<string, (t: number) => string>> = {};
+const toneOf = (th: Theme) => {
+  const t = TONES[th.name] ?? makeTone(th.accent, th.highlight);
+  TONES[th.name] = t;
+  return t;
+};
 /** The soft profile along the segment (d in -1..1): 1 over the core, easing to 0
  *  at +-HL_HALF. */
 const bell = (d: number) => smoothstep((1 - Math.abs(d)) / (1 - HL_CORE));
@@ -355,9 +376,9 @@ export const seg4State = (S: number) => {
 };
 
 /** Where the two numbers sit at camera k (anchor "start", y = caps centre). */
-export const label7At = (k: number) => {
+export const label7At = (k: number, th: Theme = THEMES.orange) => {
   const s = sz(k);
-  return { x: P7S.x + (RING_R + LABEL_GAP) * s, y: Y7 - (INK_W / 2 + LEVEL_LABEL_GAP) * s - labelCapH("value", k) / 2 };
+  return { x: P7S.x + (RING_R + LABEL_GAP) * s, y: Y7 - (INK_W / 2 + LEVEL_LABEL_GAP) * s - labelCapH("value", k, th) / 2 };
 };
 export const label15At = (k: number) => {
   const s = sz(k);
@@ -443,7 +464,7 @@ const clipAbove = (poly: Pt[], yMax: number): Pt[] => {
   return out;
 };
 
-const Cap: React.FC<{ x: number; y: number; k: number; grow: number }> = ({ x, y, k, grow }) => {
+const Cap: React.FC<{ x: number; y: number; k: number; grow: number; color: string }> = ({ x, y, k, grow, color }) => {
   const g = clamp01(grow);
   if (g <= 0.001) return null;
   const h = CAP_HALF * sz(k) * (1 - Math.pow(1 - g, 3));
@@ -453,7 +474,7 @@ const Cap: React.FC<{ x: number; y: number; k: number; grow: number }> = ({ x, y
       y1={y.toFixed(3)}
       x2={(x + h).toFixed(3)}
       y2={y.toFixed(3)}
-      stroke={INK}
+      stroke={color}
       strokeWidth={(INK_W * sz(k)).toFixed(3)}
       strokeLinecap="round"
     />
@@ -461,15 +482,17 @@ const Cap: React.FC<{ x: number; y: number; k: number; grow: number }> = ({ x, y
 };
 
 export const Seg4Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
+  const th = useTheme();
   if (S < RING7_S0) return null;
   const k = cam.k;
   const s = sz(k);
   const st = seg4State(S);
   const out: React.ReactNode[] = [];
 
-  // -- the highlight: under every white mark, over the orange line --
+  // -- the highlight: under every ink mark, over the line --
   const hl = highlightAt(S);
   if (hl.I > 0.002) {
+    const tone = toneOf(th);
     const L = tipLen(S);
     const a = Math.max(0, hl.h - HL_HALF);
     const b = Math.min(L, hl.h + HL_HALF);
@@ -480,7 +503,7 @@ export const Seg4Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
     const stops: React.ReactNode[] = [];
     for (let i = 0; i <= 12; i++) {
       const off = i / 12;
-      stops.push(<stop key={i} offset={off.toFixed(4)} stopColor={TONE(hl.I * bell(2 * off - 1))} />);
+      stops.push(<stop key={i} offset={off.toFixed(4)} stopColor={tone(hl.I * bell(2 * off - 1))} />);
     }
     const dots: React.ReactNode[] = [];
     const vtx: [number, Pt][] = [
@@ -493,7 +516,38 @@ export const Seg4Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
     for (const [len, p] of vtx) {
       const t = hl.I * bell((len - hl.h) / HL_HALF);
       if (t > 0.01 && len <= L + 0.5) {
-        dots.push(<circle key={len} cx={p.x.toFixed(3)} cy={p.y.toFixed(3)} r={(DOT_R * s).toFixed(3)} fill={TONE(t)} />);
+        const isTip = len === tip.len;
+        if (!isTip && th.flair.sealMarkers) {
+          // a seal marker lights in its own shape (Seal's geometry at full size)
+          const side = 2 * DOT_R * s;
+          dots.push(
+            <rect
+              key={len}
+              x={(p.x - side / 2).toFixed(3)}
+              y={(p.y - side / 2).toFixed(3)}
+              width={side.toFixed(3)}
+              height={side.toFixed(3)}
+              rx={Math.min(side / 2, 2 * s).toFixed(3)}
+              fill={tone(t)}
+            />,
+          );
+        } else {
+          dots.push(<circle key={len} cx={p.x.toFixed(3)} cy={p.y.toFixed(3)} r={(DOT_R * s).toFixed(3)} fill={tone(t)} />);
+          if (isTip && th.flair.bead) {
+            // the bead keeps its specular on top while it is lit
+            const R = DOT_R * s;
+            dots.push(
+              <circle
+                key="spec"
+                cx={(p.x - 0.36 * R).toFixed(3)}
+                cy={(p.y - 0.36 * R).toFixed(3)}
+                r={(0.28 * R).toFixed(3)}
+                fill={th.paper}
+                opacity={0.5}
+              />,
+            );
+          }
+        }
       }
     }
     out.push(
@@ -527,19 +581,66 @@ export const Seg4Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
 
   // -- the gap: the wedge the line fell through, ONE top-down wipe --
   if (st.fill > 0.0005) {
-    const region = clipAbove(wedgeAt(k), Y7 + (Y15 - Y7) * st.fill);
-    if (region.length >= 3) {
+    if (th.flair.inkWash) {
+      // 6i: an ink wash under the fine ink hatch, revealed by a feathered front
+      // (opaque above yF - WASH_FEATHER, clear below yF) descending 7 % -> 1.5 %
+      const region = wedgeAt(k);
+      const yF = Y7 + (Y15 + WASH_FEATHER - Y7) * st.fill;
+      let x0 = Infinity;
+      let x1 = -Infinity;
+      for (const q of region) {
+        x0 = Math.min(x0, q.x);
+        x1 = Math.max(x1, q.x);
+      }
+      const bx = x0 - 4;
+      const bw = x1 - x0 + 8;
+      const by = Y7 - 4;
+      const bh = Y15 - Y7 + 8;
+      const g = mapRung(INK_HI, th);
+      const feather: React.ReactNode[] = [];
+      for (let i = 0; i <= 6; i++) {
+        const o = i / 6;
+        feather.push(<stop key={i} offset={o.toFixed(4)} stopColor="#FFFFFF" stopOpacity={(1 - smoothstep(o)).toFixed(4)} />);
+      }
       out.push(
-        <HatchFill
-          key="gap"
-          id="cg4-gap"
-          region={region}
-          k={k}
-          color={INK}
-          rung={INK_LO}
-          anchor={{ x: BRACKET_X, y: Y7 }}
-        />,
+        <g key="gap">
+          <defs>
+            <linearGradient id="cg4-wash-front" gradientUnits="userSpaceOnUse" x1={0} y1={(yF - WASH_FEATHER).toFixed(3)} x2={0} y2={yF.toFixed(3)}>
+              {feather}
+            </linearGradient>
+            <mask id="cg4-wash-mask" maskUnits="userSpaceOnUse" x={bx.toFixed(2)} y={by.toFixed(2)} width={bw.toFixed(2)} height={bh.toFixed(2)}>
+              <rect x={bx.toFixed(2)} y={by.toFixed(2)} width={bw.toFixed(2)} height={bh.toFixed(2)} fill="url(#cg4-wash-front)" />
+            </mask>
+          </defs>
+          <g mask="url(#cg4-wash-mask)">
+            <HatchFill
+              id="cg4-gap"
+              region={region}
+              k={k}
+              color={th.ink}
+              rung={INK_HI}
+              fill={WASH_FILL / g}
+              lineOpacity={WASH_HATCH / g}
+              anchor={{ x: BRACKET_X, y: Y7 }}
+            />
+          </g>
+        </g>,
       );
+    } else {
+      const region = clipAbove(wedgeAt(k), Y7 + (Y15 - Y7) * st.fill);
+      if (region.length >= 3) {
+        out.push(
+          <HatchFill
+            key="gap"
+            id="cg4-gap"
+            region={region}
+            k={k}
+            color={th.ink}
+            rung={INK_LO}
+            anchor={{ x: BRACKET_X, y: Y7 }}
+          />,
+        );
+      }
     }
   }
 
@@ -587,24 +688,30 @@ export const Seg4Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
   if (st.br > 0.0005) {
     const capTop = prog(S, BR_S0, BR_S0 + 6);
     const capBot = clamp01((st.br - 0.955) / 0.045);
+    const bracketPts = [
+      { x: BRACKET_X, y: Y7 },
+      { x: BRACKET_X, y: Y15 },
+    ];
+    const caps = (
+      <g style={{ filter: th.inkShadow(k) }}>
+        <Cap x={BRACKET_X} y={Y7} k={k} grow={capTop} color={th.ink} />
+        <Cap x={BRACKET_X} y={Y15} k={k} grow={capBot} color={th.ink} />
+      </g>
+    );
     out.push(
-      <g key="bracket">
-        <HeadLedPath
-          points={[
-            { x: BRACKET_X, y: Y7 },
-            { x: BRACKET_X, y: Y15 },
-          ]}
-          k={k}
-          draw={st.br}
-          rung={INK_HI}
-          headIn={0.06}
-          headOut={0.1}
-        />
-        <g style={{ filter: iconShadow(k) }}>
-          <Cap x={BRACKET_X} y={Y7} k={k} grow={capTop} />
-          <Cap x={BRACKET_X} y={Y15} k={k} grow={capBot} />
+      th.name === "orange" ? (
+        <g key="bracket">
+          <HeadLedPath points={bracketPts} k={k} draw={st.br} rung={INK_HI} headIn={0.06} headOut={0.1} />
+          {caps}
         </g>
-      </g>,
+      ) : (
+        // one ink group at INK_HI, so the caps and the bracket line (and its
+        // head) composite before the rung: no darker knots where they cross
+        <g key="bracket" opacity={mapRung(INK_HI, th).toFixed(4)}>
+          <HeadLedPath points={bracketPts} k={k} draw={st.br} opacity={1} headIn={0.06} headOut={0.1} />
+          {caps}
+        </g>
+      ),
     );
   }
 
@@ -613,7 +720,7 @@ export const Seg4Layer: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
   if (st.ring15 > 0) out.push(<Ring key="r15" x={P15.x} y={P15.y} k={k} r={RING_R} draw={st.ring15} rung={INK_HI} />);
 
   // -- the two numbers: the two ends of the measured fall --
-  const l7 = label7At(k);
+  const l7 = label7At(k, th);
   const l15 = label15At(k);
   out.push(
     <Label key="l7" text="7%" x={l7.x} y={l7.y} k={k} size="value" anchor="start" appear={enterU(S, LAND7)} />,
