@@ -149,7 +149,12 @@ export const AXIS_HEAD: number[] = (() => {
 // ===========================================================================
 // THE WORLD — cut 2 V2 at cut-2 frame f (S_A = 124 + f).
 // ===========================================================================
-export const ActA2: React.FC<{ f: number }> = ({ f }) => {
+/** A chart's numbers: per year 2015 ... 2025, the bar px, the profit slice px and
+ *  the label. V2's table is the default; cut 2 V3 passes its own (filed figures). */
+export type ChartData = { bar: number[]; slice: number[]; value: string[] };
+export const V2_DATA: ChartData = { bar: V2_BAR, slice: V2_SLICE, value: V2_VALUE };
+
+export const ActA2: React.FC<{ f: number; data?: ChartData }> = ({ f, data = V2_DATA }) => {
   const S = S_JOIN + f;
   const cam = cam2At(S);
   const k = cam.k;
@@ -165,15 +170,15 @@ export const ActA2: React.FC<{ f: number }> = ({ f }) => {
     if (Number.isNaN(rf) || f <= rf) return;
     const rise = smoothstep((f - rf) / RISE_F);
     const x = v2x(year);
-    const h = V2_BAR[i] * rise;
+    const h = data.bar[i] * rise;
     bars.push(
       <g key={year}>
         <MoneyBar x={x} baseY={TILE_TOP} h={h} k={k} w={V2_BAR_W} />
-        <ProfitSlice x={x} topY={TILE_TOP - h} h={V2_SLICE[i] * rise} w={V2_BAR_W} />
+        <ProfitSlice x={x} topY={TILE_TOP - h} h={data.slice[i] * rise} w={V2_BAR_W} />
       </g>,
     );
     const enter = clamp01((f - rf - LABEL_LAG_F) / ENTER_F);
-    const valueY = TILE_TOP - V2_BAR[i] - sz(V2_VALUE_GAP_PX, k);
+    const valueY = TILE_TOP - data.bar[i] - sz(V2_VALUE_GAP_PX, k);
     if (i === 0) {
       const land = CALLOUT_LAND_F;
       labels.push(
@@ -181,7 +186,7 @@ export const ActA2: React.FC<{ f: number }> = ({ f }) => {
           key={`v${year}`}
           x={V2_CALLOUT_RIGHT}
           y={valueY}
-          text={V2_VALUE[i]}
+          text={data.value[i]}
           kind="word"
           k={k}
           enter={enter}
@@ -192,7 +197,7 @@ export const ActA2: React.FC<{ f: number }> = ({ f }) => {
       );
     } else {
       labels.push(
-        <Readout key={`v${year}`} x={x} y={valueY} text={V2_VALUE[i]} kind="word" k={k} enter={enter} opacity={INK_LO} />,
+        <Readout key={`v${year}`} x={x} y={valueY} text={data.value[i]} kind="word" k={k} enter={enter} opacity={INK_LO} />,
       );
     }
     if (V2_YEAR_LABELS.includes(year)) {
