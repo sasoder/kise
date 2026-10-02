@@ -1,19 +1,25 @@
 // STOUT_READY
 // STOUT_FIX_1: camera transform at full precision
 import React, { useId } from "react";
-import { AbsoluteFill, Img, staticFile } from "remotion";
+import { AbsoluteFill, Img, getInputProps, staticFile } from "remotion";
 import { loadFont } from "@remotion/fonts";
 import { MB_RING_IN, MB_RING_OUT, MB_STAR_INNER, SPORT_GLYPHS, type SportName } from "./wolffShared";
 import { CRESTS, type Crest, type CrestId } from "./wolffLogos";
 import type { Cam } from "./outgrowShared";
 
 // ===========================================================================
-// stoutShared — THE STOUT SYSTEM (Cheeky Pint 2.0, chosen Oct 2 2026).
+// stoutShared — THE STOUT SYSTEM (Cheeky Pint 2.0, chosen Oct 2 2026; BROWN pass the same day).
 //
-// "The pub after dark": a stout-black warm ground with the kraft's fibres in
-// it, a warm pool of light that follows the subject, cream card for what is
-// lit, dark board for what is context, and ONE glowing thing: amber, which
+// "The pub after dark", on BROWN: an espresso-brown kraft board for the ground
+// (#432C1C, L* ~23 where the subject stands, the kraft's fibres showing; nothing
+// in any frame is black — corners >= L* 14, shadows and ink a deep brown), a
+// warm cream pool of light that follows the subject, cream card for what is lit,
+// a kraft-board tone for what is context, and ONE glowing thing: amber, which
 // means profit (and, in cut 5, Mercedes' tower).
+// Why brown: the first ground (stout-black #17110C + amber + cream type) read
+// like a black / orange / white adult-site brand (Tom's note, BROWN.md). The
+// delivered stout-black set stays reproducible: --props '{"palette":"stout"}'.
+// The default palette is "B1" (espresso); see PALETTES below.
 //
 // The user's note that started this system: the shadows of the logo block and
 // the chart block overlapped and "don't look very harmonious"; "make everything
@@ -58,35 +64,236 @@ import type { Cam } from "./outgrowShared";
 // (tone), never by opacity; snapLen() data heights at rest.
 // ===========================================================================
 
+// --- PALETTES (the BROWN pass, out/wolff/briefs/BROWN.md) ---------------------------------------
+// Every colour and light recipe of the system is ONE palette object, chosen at module load from the
+// render's input props: `--props '{"palette":"B2"}'` (any cut, the name tag, the CTA, StoutFrames).
+// The cut components read the same token names as before (COLOR, ALPHA, ELEVATION, POOL, VIGNETTE,
+// GRAIN, BLOOM_LAYERS, GROUND) and never see the palette. "stout" is the delivered set, value for
+// value (it renders 0 px from the stout reference stills in out/wolff/brown/ref/). An unknown name
+// throws. `--props '{"groundOnly":true}'` draws the stage without its world (measurement only).
+export type ShadowLayer = { dx: number; dy: number; blur: number; a: number };
+export type Elevation = "rest" | "lifted" | "float";
+type ColorTokens = {
+  ground: string; // the baked sheet's mean (the stage's backing fill)
+  cream: string; // cream card, lit (hi): top of a pillar
+  creamFoot: string; // cream card at a pillar's foot (one gradient per pillar)
+  board: string; // board (lo / dimmed): top of a pillar
+  boardFoot: string; // board at the foot
+  inkDark: string; // ink on cream and on amber
+  inkCream: string; // type on the ground, hi
+  inkCreamLo: string; // type on the ground, lo (a tone, never a transparency)
+  amberTop: string; // amber at the top of the band (the clip's ACCENT)
+  amberFoot: string; // amber at the foot of the band
+  amberHot: string; // the hot top edge of every amber body
+  rung: string; // a rung on an amber fill (opaque: ink over amber)
+  glass: string; // glass tint and hairline (glass is the one transparent material)
+  shadow: string; // every shadow
+  edge: string; // the lit top edge of every cream card
+  rule: string; // any rule (cut 2's time axis) = inkCreamLo
+};
+type AlphaTokens = {
+  glassTint: number; // glass body
+  glassHi: number; // glass hairline, backed (hi)
+  glassLo: number; // glass hairline, air (lo)
+  edge: number; // a cream card's lit top edge
+  edgeBoard: number; // a board card's lit top edge (the same edge, in shadow)
+  slot: number; // the slot line at a bar's joint
+  footAO: number; // a bar's foot occlusion above the slot
+  hotFall: number; // the hot edge's soft falloff under it
+};
+type ElevationTokens = Record<Elevation, { key: ShadowLayer; amb: ShadowLayer; contact: ShadowLayer | null }>;
+export type StoutPalette = {
+  label: string;
+  COLOR: ColorTokens;
+  ALPHA: AlphaTokens;
+  ELEVATION: ElevationTokens;
+  /** the pool of light that follows the subject (SCREEN px): screen-blended `color` */
+  POOL: { rx: number; ry: number; a0: number; a1: number; color: string };
+  VIGNETTE: string;
+  GRAIN_OPACITY: number;
+  BLOOM_LAYERS: readonly { blur: number; color: string }[];
+  /** the baked ground sheet (public/) */
+  GROUND_SRC: string;
+};
+
+// STOUT — the delivered set (Oct 2 2026), unchanged.
+const STOUT: StoutPalette = {
+  label: "stout",
+  COLOR: {
+    ground: "#17110C", // stout-black warm brown (the baked sheet's mean)
+    cream: "#F5EEE1",
+    creamFoot: "#E7DCC8",
+    board: "#7A6A58", // dark board (its knock-outs 3.7:1 against the dark)
+    boardFoot: "#685A4A",
+    inkDark: "#17110C", // = the ground: a knock-out
+    inkCream: "#F3EBDD",
+    inkCreamLo: "#9B8F80",
+    amberTop: "#FFB000",
+    amberFoot: "#E38E00",
+    amberHot: "#FFE7A8",
+    rung: "#9A6406",
+    glass: "#F3EBDD",
+    shadow: "#050302",
+    edge: "#FFFFFF",
+    rule: "#9B8F80",
+  },
+  ALPHA: { glassTint: 0.06, glassHi: 0.88, glassLo: 0.42, edge: 0.85, edgeBoard: 0.32, slot: 0.62, footAO: 0.16, hotFall: 0.6 },
+  ELEVATION: {
+    rest: {
+      key: { dx: 1.5, dy: 2.5, blur: 2.5, a: 0.55 },
+      amb: { dx: 2.5, dy: 8, blur: 12, a: 0.42 },
+      contact: { dx: 1, dy: 0, blur: 2.5, a: 0.85 }, // an ellipse under the foot: rx 0.58 x width, ry 3
+    },
+    lifted: {
+      key: { dx: 3, dy: 6, blur: 5, a: 0.5 },
+      amb: { dx: 4.5, dy: 15, blur: 20, a: 0.4 },
+      contact: null,
+    },
+    float: {
+      key: { dx: 5, dy: 11, blur: 9, a: 0.45 },
+      amb: { dx: 7, dy: 26, blur: 30, a: 0.36 },
+      contact: null,
+    },
+  },
+  POOL: { rx: 600, ry: 780, a0: 0.17, a1: 0.075, color: "255,166,60" },
+  VIGNETTE: "radial-gradient(ellipse 104% 100% at 50% 46%, rgba(0,0,0,0) 42%, rgba(0,0,0,0.17) 70%, rgba(0,0,0,0.45) 100%)",
+  GRAIN_OPACITY: 0.42,
+  BLOOM_LAYERS: [
+    { blur: 7, color: "rgba(255,178,40,0.42)" },
+    { blur: 24, color: "rgba(255,150,0,0.30)" },
+    { blur: 60, color: "rgba(255,140,0,0.12)" },
+  ],
+  GROUND_SRC: "cheekypint2/stout.jpg",
+};
+
+// THE BROWN FAMILY — a board, not a void. One recipe, three depths of ground (+ a golden foot):
+//   ground   dark kraft / walnut, hue ~57-62, the kraft's fibres showing (scripts/build-brown-textures.py)
+//   board    a lit KRAFT-BOARD tone for lo / dimmed cards: lighter and yellower than the ground,
+//            >= 3:1 against it (so a crest knocked out of a dimmed tile reads), well under the cream
+//   ink      a deep brown of the same hue (never near-black): >= 10:1 on cream, >= 7:1 on amber
+//   shadow   a deeper brown again; every elevation's alphas eased down (a lighter ground SHOWS shadows)
+//   vignette the shadow brown, gentler; the corners darken, never to black
+//   pool     a warm cream light (screen), not orange; gentler the lighter the ground
+//   bloom    the same three layers, quieter (on brown a strong bloom becomes an orange fog)
+//   grain    a touch lighter (overlay grain shows more on a lighter ground)
+const rgbOf = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(",");
+const vignetteOf = (hex: string, a70: number, a100: number) =>
+  `radial-gradient(ellipse 104% 100% at 50% 46%, rgba(${rgbOf(hex)},0) 42%, rgba(${rgbOf(hex)},${a70}) 70%, rgba(${rgbOf(hex)},${a100}) 100%)`;
+/** The stout elevations (same offsets and blurs: same light) with their alphas scaled. */
+const elevationAt = (s: number, contact: number): ElevationTokens => ({
+  rest: {
+    key: { ...STOUT.ELEVATION.rest.key, a: +(STOUT.ELEVATION.rest.key.a * s).toFixed(3) },
+    amb: { ...STOUT.ELEVATION.rest.amb, a: +(STOUT.ELEVATION.rest.amb.a * s).toFixed(3) },
+    contact: { dx: 1, dy: 0, blur: 2.5, a: contact },
+  },
+  lifted: {
+    key: { ...STOUT.ELEVATION.lifted.key, a: +(STOUT.ELEVATION.lifted.key.a * s).toFixed(3) },
+    amb: { ...STOUT.ELEVATION.lifted.amb, a: +(STOUT.ELEVATION.lifted.amb.a * s).toFixed(3) },
+    contact: null,
+  },
+  float: {
+    key: { ...STOUT.ELEVATION.float.key, a: +(STOUT.ELEVATION.float.key.a * s).toFixed(3) },
+    amb: { ...STOUT.ELEVATION.float.amb, a: +(STOUT.ELEVATION.float.amb.a * s).toFixed(3) },
+    contact: null,
+  },
+});
+const bloomAt = (a: [number, number, number], rgb: [string, string, string] = ["255,178,40", "255,150,0", "255,140,0"]) =>
+  [
+    { blur: 7, color: `rgba(${rgb[0]},${a[0]})` },
+    { blur: 24, color: `rgba(${rgb[1]},${a[1]})` },
+    { blur: 60, color: `rgba(${rgb[2]},${a[2]})` },
+  ] as const;
+const BROWN_INK = "#2E1E14"; // L* 13, h 58: the family's ink
+const BROWN_SHADOW = "#22150B"; // L* 8, h 57: the family's shadow
+const brownColor = (o: Pick<ColorTokens, "ground" | "board" | "boardFoot" | "inkCreamLo"> & Partial<ColorTokens>): ColorTokens => ({
+  cream: STOUT.COLOR.cream,
+  creamFoot: STOUT.COLOR.creamFoot,
+  inkDark: BROWN_INK,
+  inkCream: STOUT.COLOR.inkCream,
+  amberTop: STOUT.COLOR.amberTop,
+  amberFoot: STOUT.COLOR.amberFoot,
+  amberHot: STOUT.COLOR.amberHot,
+  rung: STOUT.COLOR.rung,
+  glass: STOUT.COLOR.glass,
+  shadow: BROWN_SHADOW,
+  edge: STOUT.COLOR.edge,
+  rule: o.inkCreamLo,
+  ...o,
+});
+const BROWN_ALPHA: AlphaTokens = { ...STOUT.ALPHA };
+
+// B1 ESPRESSO — ground #432C1C (L* 20, C 17) — THE PICK (the default). Its sheet keeps only 55 % of the
+// fibres' dark side and its vignette is the softest, so no corner falls below L* 14.
+const B1: StoutPalette = {
+  label: "B1 espresso",
+  COLOR: brownColor({ ground: "#432C1C", board: "#AD8E6F", boardFoot: "#A28365", inkCreamLo: "#B1A494" }),
+  ALPHA: BROWN_ALPHA,
+  ELEVATION: elevationAt(0.72, 0.6),
+  POOL: { rx: 600, ry: 780, a0: 0.07, a1: 0.03, color: "255,214,170" },
+  VIGNETTE: vignetteOf(BROWN_SHADOW, 0.08, 0.12), // the corners sit at ~72 % of this ellipse: ~0.08 there
+  GRAIN_OPACITY: 0.28,
+  BLOOM_LAYERS: bloomAt([0.36, 0.2, 0.06]),
+  GROUND_SRC: "cheekypint2/brown-b1.jpg",
+};
+// B2 WALNUT — ground ~#533726 (L* 26)
+const B2: StoutPalette = {
+  label: "B2 walnut",
+  COLOR: brownColor({ ground: "#533726", board: "#BB9B7C", boardFoot: "#B09072", inkCreamLo: "#C1B4A4" }),
+  ALPHA: BROWN_ALPHA,
+  ELEVATION: elevationAt(0.7, 0.58),
+  POOL: { rx: 600, ry: 780, a0: 0.06, a1: 0.026, color: "255,214,170" },
+  VIGNETTE: vignetteOf(BROWN_SHADOW, 0.16, 0.36),
+  GRAIN_OPACITY: 0.34,
+  BLOOM_LAYERS: bloomAt([0.34, 0.18, 0.05]),
+  GROUND_SRC: "cheekypint2/brown-b2.jpg",
+};
+// B3 DARK KRAFT — ground #5B3E28 (L* 29; the pool brings the subject area to ~32, the band's top)
+const B3: StoutPalette = {
+  label: "B3 dark kraft",
+  COLOR: brownColor({ ground: "#5B3E28", board: "#C6A98C", boardFoot: "#BB9E81", inkCreamLo: "#CCBFAF", inkCream: "#F7F1E6", cream: "#F7F1E5", creamFoot: "#EFE7D7" }),
+  ALPHA: BROWN_ALPHA,
+  ELEVATION: elevationAt(0.68, 0.55),
+  POOL: { rx: 600, ry: 780, a0: 0.025, a1: 0.011, color: "255,214,170" },
+  VIGNETTE: vignetteOf(BROWN_SHADOW, 0.16, 0.38),
+  GRAIN_OPACITY: 0.32,
+  BLOOM_LAYERS: bloomAt([0.32, 0.16, 0.04]),
+  GROUND_SRC: "cheekypint2/brown-b3.jpg",
+};
+// B2g — B2 with the amber's foot moved toward gold (away from the site's #FF9000, h 65): the old foot
+// #E38E00 leaned orange (h 71); the new one keeps the top's hue. The top unchanged; the bloom's outer
+// layers follow the foot to gold.
+const B2G: StoutPalette = {
+  ...B2,
+  label: "B2g gold foot",
+  COLOR: { ...B2.COLOR, amberFoot: "#DD9800" }, // the foot at the top's hue (h 77, L* 68): it shades, never turns orange
+  BLOOM_LAYERS: bloomAt([0.34, 0.18, 0.05], ["255,184,40", "255,170,20", "255,164,10"]),
+};
+
+export const PALETTES = { stout: STOUT, B1, B2, B3, B2g: B2G } as const;
+export type PaletteName = keyof typeof PALETTES;
+/** The director's pick (Oct 2 2026): B1 espresso. "stout" stays reproducible by prop. */
+export const DEFAULT_PALETTE: PaletteName = "B1";
+const inputProps = (() => {
+  try {
+    return (typeof window === "undefined" ? {} : getInputProps()) as { palette?: unknown; groundOnly?: unknown };
+  } catch {
+    return {};
+  }
+})();
+const readPalette = (): PaletteName => {
+  const raw = inputProps.palette;
+  if (raw === undefined || raw === null) return DEFAULT_PALETTE;
+  if (typeof raw === "string" && Object.prototype.hasOwnProperty.call(PALETTES, raw)) return raw as PaletteName;
+  throw new Error(`stoutShared: unknown palette ${JSON.stringify(raw)} (one of ${Object.keys(PALETTES).join(", ")})`);
+};
+export const PALETTE_NAME: PaletteName = readPalette();
+export const PALETTE: StoutPalette = PALETTES[PALETTE_NAME];
+/** Measurement only: the stage draws its ground, pool, vignette and grain, and no world. */
+export const GROUND_ONLY = inputProps.groundOnly === true;
+
 // --- tokens: colour ----------------------------------------------------------------------------
-export const COLOR = {
-  ground: "#17110C", // stout-black warm brown (the baked sheet's mean)
-  cream: "#F5EEE1", // cream card, lit (hi): top of a pillar
-  creamFoot: "#E7DCC8", // cream card at a pillar's foot (one gradient per pillar)
-  board: "#7A6A58", // dark board (lo / dimmed): top of a pillar (its knock-outs 3.7:1 against the dark)
-  boardFoot: "#685A4A", // dark board at the foot
-  inkDark: "#17110C", // ink on cream and on amber (= the ground: a knock-out)
-  inkCream: "#F3EBDD", // type on the ground, hi
-  inkCreamLo: "#9B8F80", // type on the ground, lo (a tone, never a transparency)
-  amberTop: "#FFB000", // amber at the top of the band (the clip's ACCENT)
-  amberFoot: "#E38E00", // amber at the foot of the band
-  amberHot: "#FFE7A8", // the hot top edge of every amber body
-  rung: "#9A6406", // a rung on an amber fill (opaque: ink over amber)
-  glass: "#F3EBDD", // glass tint and hairline (glass is the one transparent material)
-  shadow: "#050302", // every shadow
-  edge: "#FFFFFF", // the lit top edge of every cream card
-  rule: "#9B8F80", // any rule (cut 2's time axis) = inkCreamLo
-} as const;
-export const ALPHA = {
-  glassTint: 0.06, // glass body
-  glassHi: 0.88, // glass hairline, backed (hi)
-  glassLo: 0.42, // glass hairline, air (lo)
-  edge: 0.85, // a cream card's lit top edge
-  edgeBoard: 0.32, // a board card's lit top edge (the same edge, in shadow)
-  slot: 0.62, // the slot line at a bar's joint
-  footAO: 0.16, // a bar's foot occlusion above the slot
-  hotFall: 0.6, // the hot edge's soft falloff under it
-} as const;
+export const COLOR: ColorTokens = PALETTE.COLOR;
+export const ALPHA: AlphaTokens = PALETTE.ALPHA;
 
 // --- tokens: geometry (WORLD px) ---------------------------------------------------------------
 export const GEO = {
@@ -146,41 +353,19 @@ export const EDGE = { CREAM: 1.5, HOT: 2, HOT_FALL: 12, SLOT: 2, SLOT_LIP: 2, FO
 // ONE key light from above, slightly left: shadows fall down and a little right.
 // Three elevations, each an ambient + a key layer (WORLD px, for TILE-scale objects);
 // `rest` adds the contact shadow where a pillar meets the floor.
-export type ShadowLayer = { dx: number; dy: number; blur: number; a: number };
-export type Elevation = "rest" | "lifted" | "float";
-export const ELEVATION: Record<Elevation, { key: ShadowLayer; amb: ShadowLayer; contact: ShadowLayer | null }> = {
-  rest: {
-    key: { dx: 1.5, dy: 2.5, blur: 2.5, a: 0.55 },
-    amb: { dx: 2.5, dy: 8, blur: 12, a: 0.42 },
-    contact: { dx: 1, dy: 0, blur: 2.5, a: 0.85 }, // an ellipse under the foot: rx 0.58 x width, ry 3
-  },
-  lifted: {
-    key: { dx: 3, dy: 6, blur: 5, a: 0.5 },
-    amb: { dx: 4.5, dy: 15, blur: 20, a: 0.4 },
-    contact: null,
-  },
-  float: {
-    key: { dx: 5, dy: 11, blur: 9, a: 0.45 },
-    amb: { dx: 7, dy: 26, blur: 30, a: 0.36 },
-    contact: null,
-  },
-};
-/** The pool of light that follows the subject (SCREEN px): screen-blended amber light. */
-export const POOL = { rx: 600, ry: 780, a0: 0.17, a1: 0.075, color: "255,166,60" } as const;
-export const VIGNETTE =
-  "radial-gradient(ellipse 104% 100% at 50% 46%, rgba(0,0,0,0) 42%, rgba(0,0,0,0.17) 70%, rgba(0,0,0,0.45) 100%)";
+// (ShadowLayer / Elevation: see PALETTES above; each palette carries its own alphas, one light.)
+export const ELEVATION: ElevationTokens = PALETTE.ELEVATION;
+/** The pool of light that follows the subject (SCREEN px): screen-blended light (the palette's). */
+export const POOL = PALETTE.POOL;
+export const VIGNETTE = PALETTE.VIGNETTE;
 /** Film grain: one texture, overlay, one strength, a new offset every 2 frames. */
-export const GRAIN = { opacity: 0.42, blend: "overlay" as const, onTwos: true, travel: 96 };
+export const GRAIN = { opacity: PALETTE.GRAIN_OPACITY, blend: "overlay" as const, onTwos: true, travel: 96 };
 /** Bloom: amber only, one recipe, a fixed property (SCREEN px). */
-export const BLOOM_LAYERS = [
-  { blur: 7, color: "rgba(255,178,40,0.42)" },
-  { blur: 24, color: "rgba(255,150,0,0.30)" },
-  { blur: 60, color: "rgba(255,140,0,0.12)" },
-] as const;
+export const BLOOM_LAYERS = PALETTE.BLOOM_LAYERS;
 /** The light sweep (the one click of a cut): SCREEN px. */
 export const SWEEP = { band: 84, angle: 22, soft: 10, alpha: 0.5 } as const;
 /** The parallax of the ground under the camera, and its slow drift (px per frame). */
-export const GROUND = { src: "cheekypint2/stout.jpg", grain: "cheekypint2/grain.png", parallax: 0.15, drift: 0.3, W: 1296, H: 2304, zoom: 0.15 } as const;
+export const GROUND = { src: PALETTE.GROUND_SRC, grain: "cheekypint2/grain.png", parallax: 0.15, drift: 0.3, W: 1296, H: 2304, zoom: 0.15 } as const;
 
 // ===========================================================================
 // FONTS + METRICS
@@ -331,9 +516,9 @@ export const StoutStage: React.FC<{
         />
       ) : null}
       <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-        <g transform={`translate(${fx(tx)} ${fx(ty)}) scale(${fx(k)})`}>{children}</g>
+        <g transform={`translate(${fx(tx)} ${fx(ty)}) scale(${fx(k)})`}>{GROUND_ONLY ? null : children}</g>
       </svg>
-      {overlay}
+      {GROUND_ONLY ? null : overlay}
       <AbsoluteFill style={{ background: VIGNETTE }} />
       <AbsoluteFill style={{ mixBlendMode: GRAIN.blend, opacity: GRAIN.opacity }}>
         <Img
