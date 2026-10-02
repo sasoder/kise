@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useId } from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { CAM_DAMP, CAM_LIFT, CAM_STIFF, camEase, hash } from "./fieldShared";
+import { COIN_GRAD_LO, TILE_SHADOW } from "./d1Shared";
+import { CAM_DAMP, CAM_LIFT, CAM_STIFF, SQUIRCLE_RATIO, SQUIRCLE_SMOOTH, camEase, hash, squirclePath } from "./fieldShared";
 import {
+  ACCENT,
   BAR_W,
   type Cam,
   GROUND_Y,
@@ -10,7 +12,6 @@ import {
   INK_HI,
   INK_LO,
   KraftStage,
-  LOGO_FRACTION,
   LogoTile,
   MercedesTile,
   MoneyBar,
@@ -30,7 +31,7 @@ import {
   smoothstep,
   toScreen,
 } from "./wolffShared";
-import { CRESTS, type Crest, type CrestId } from "./wolffLogos";
+import { CRESTS, type CrestId, crestFigure } from "./wolffLogos";
 
 // ---------------------------------------------------------------------------
 // MostSponsorship — Toto Wolff, "Mercedes F1 financials" (Cheeky Pint S4E01),
@@ -60,6 +61,13 @@ import { CRESTS, type Crest, type CrestId } from "./wolffLogos";
 // with short bars on the same ground line, all at INK_LO: the resolved frame is
 // a skyline of low bars with Mercedes' single tower in the middle. NOTHING is
 // amber in this cut (amber = profit). No numbers and no labels on screen.
+//
+// VERSIONS. V1 (this composition, delivered) is the above. V2 is
+// MostSponsorshipV2.tsx, the same component with `mercedesBar: "amber"`: the
+// user's note on V1 ("a missing element of the orange touch") answered by the
+// director — Mercedes' bar rises in AMBER, the clip's accent on its subject,
+// the one orange tower among white bars. Nothing else differs; the Mercedes
+// tile stays white.
 //
 // GESTURES (gesture -> the word it serves -> frames). Every frame below is the
 // built track's, measured; the camera numbers are the damped follower's.
@@ -371,20 +379,31 @@ export const worldState = (t: WorldTile, f: number) => {
   return { presence: e, op: INK_LO * e, dy: lift, bar };
 };
 
-// -- a crest -------------------------------------------------------------------
-// A named rival's crest as LogoTile's `figure`: the 1-bit markup from
-// wolffLogos.ts, fitted and centred in `fraction` of the tile exactly the way
-// LogoTile fits its own paths.
-const crestFigure = (crest: Crest, size: number) => {
-  const [vx, vy, vw, vh] = crest.viewBox.trim().split(/[\s,]+/).map(Number);
-  const sc = (size * (crest.fraction ?? LOGO_FRACTION)) / Math.max(vw, vh);
-  const ox = (size - vw * sc) / 2 - vx * sc;
-  const oy = (size - vh * sc) / 2 - vy * sc;
+// -- the amber tower (V2) ------------------------------------------------------
+// V2 only (`mercedesBar: "amber"`; V1's default leaves it white). Mercedes' bar
+// as the clip's accent on its subject: MoneyBar's exact form — the same
+// squircle at the same size, the same TILE_SHADOW — filled with a subtle
+// vertical gradient from ACCENT at the top to the coin highlight's lower tone
+// (COIN_GRAD_LO) at the foot. No glow, no outline.
+const AmberBar: React.FC<{ x: number; baseY: number; h: number; k: number; w?: number }> = ({
+  x,
+  baseY,
+  h,
+  k,
+  w = BAR_W,
+}) => {
+  const uid = `amber${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
+  if (h <= 0.05) return null;
   return (
-    <g
-      transform={`translate(${ox.toFixed(3)} ${oy.toFixed(3)}) scale(${sc.toFixed(5)})`}
-      dangerouslySetInnerHTML={{ __html: crest.markup }}
-    />
+    <g transform={`translate(${(x - w / 2).toFixed(3)} ${(baseY - h).toFixed(3)})`} style={{ filter: TILE_SHADOW(k) }}>
+      <defs>
+        <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={ACCENT} />
+          <stop offset="100%" stopColor={COIN_GRAD_LO} />
+        </linearGradient>
+      </defs>
+      <path d={squirclePath(w, h, SQUIRCLE_RATIO, SQUIRCLE_SMOOTH)} fill={`url(#${uid})`} />
+    </g>
   );
 };
 
@@ -402,13 +421,19 @@ const Team: React.FC<{
   op: number;
   dy?: number;
   tile: TileDraw;
-}> = ({ x, base, s, k, bar, op, dy = 0, tile }) => {
+  /** V2: this team's bar is the amber tower (only Mercedes', only in V2) */
+  amber?: boolean;
+}> = ({ x, base, s, k, bar, op, dy = 0, tile, amber = false }) => {
   if (op <= 0.002) return null;
   const size = TILE * s;
   return (
     <g>
       {tile({ x, y: base + dy, size, op })}
-      <MoneyBar x={x} baseY={base + dy - size} h={bar} k={k} opacity={op} w={BAR_W * s} />
+      {amber ? (
+        <AmberBar x={x} baseY={base + dy - size} h={bar} k={k} w={BAR_W * s} />
+      ) : (
+        <MoneyBar x={x} baseY={base + dy - size} h={bar} k={k} opacity={op} w={BAR_W * s} />
+      )}
     </g>
   );
 };
@@ -416,11 +441,13 @@ const Team: React.FC<{
 export const schema = z.object({
   /** "auto" draws a crest wherever wolffLogos has one; "placeholder" forces the sport tiles */
   crests: z.enum(["auto", "placeholder"]),
+  /** Mercedes' sponsorship bar: "white" (V1, delivered) or "amber" (V2, MostSponsorshipV2) */
+  mercedesBar: z.enum(["white", "amber"]),
 });
 export type Props = z.infer<typeof schema>;
-export const defaultProps: Props = schema.parse({ crests: "auto" });
+export const defaultProps: Props = schema.parse({ crests: "auto", mercedesBar: "white" });
 
-const MostSponsorship: React.FC<Props> = ({ crests }) => {
+const MostSponsorship: React.FC<Props> = ({ crests, mercedesBar }) => {
   const S = useCurrentFrame();
   const cam = camAt(S);
   const k = cam.k;
@@ -472,6 +499,7 @@ const MostSponsorship: React.FC<Props> = ({ crests }) => {
         k={k}
         bar={mercH(S)}
         op={INK_HI}
+        amber={mercedesBar === "amber"}
         tile={({ x, y, size }) => <MercedesTile x={x} y={y} k={k} size={size} opacity={INK_HI} />}
       />
     </KraftStage>
