@@ -1,4 +1,5 @@
 // STOUT_READY
+// STOUT_FIX_1: camera transform at full precision
 import React, { useId } from "react";
 import { AbsoluteFill, Img, staticFile } from "remotion";
 import { loadFont } from "@remotion/fonts";
@@ -227,6 +228,10 @@ export const smoothstep = (v: number) => {
 export const easeOutCubic = (v: number) => 1 - Math.pow(1 - clamp01(v), 3);
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const f2 = (v: number) => (Math.round(v * 1000) / 1000).toString();
+/** Full precision for transforms (6 decimals, never exponent notation): a camera scale written at 3
+ *  decimals moves the world by up to 0.0005 x its coordinates (0.65 px at the floor) and steps in
+ *  slow zooms (STOUT_FIX_1). Every translate / scale below goes through this. */
+const fx = (v: number) => (Math.round(v * 1e6) / 1e6).toString();
 const uidOf = (raw: string) => `st${raw.replace(/[^A-Za-z0-9_-]/g, "_")}`;
 /** World length that lands on a whole number of screen px at camera k (pixel care at rest). */
 export const snapLen = (world: number, k: number) => Math.round(world * k) / k;
@@ -312,21 +317,21 @@ export const StoutStage: React.FC<{
           top: (1920 - GROUND.H) / 2,
           width: GROUND.W,
           height: GROUND.H,
-          transform: `translate(${f2(gx)}px, ${f2(gy)}px) scale(${f2(gScale)})`,
+          transform: `translate(${fx(gx)}px, ${fx(gy)}px) scale(${fx(gScale)})`,
         }}
       />
       {p ? (
         <AbsoluteFill
           style={{
             mixBlendMode: "screen",
-            background: `radial-gradient(ellipse ${POOL.rx}px ${POOL.ry}px at ${f2(p.x)}px ${f2(p.y)}px, rgba(${POOL.color},${f2(
+            background: `radial-gradient(ellipse ${POOL.rx}px ${POOL.ry}px at ${fx(p.x)}px ${fx(p.y)}px, rgba(${POOL.color},${f2(
               POOL.a0 * p.s,
             )}) 0%, rgba(${POOL.color},${f2(POOL.a1 * p.s)}) 45%, rgba(${POOL.color},0) 100%)`,
           }}
         />
       ) : null}
       <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-        <g transform={`translate(${f2(tx)} ${f2(ty)}) scale(${f2(k)})`}>{children}</g>
+        <g transform={`translate(${fx(tx)} ${fx(ty)}) scale(${fx(k)})`}>{children}</g>
       </svg>
       {overlay}
       <AbsoluteFill style={{ background: VIGNETTE }} />
@@ -384,7 +389,7 @@ export const ElevationShadow: React.FC<{
         />
       ) : null}
       {layers.map((l, i) => (
-        <g key={i} opacity={f2(l.a * strength)} transform={`translate(${f2(l.dx)} ${f2(l.dy)})`} style={{ filter: `blur(${f2(l.blur)}px)` }}>
+        <g key={i} opacity={f2(l.a * strength)} transform={`translate(${fx(l.dx)} ${fx(l.dy)})`} style={{ filter: `blur(${f2(l.blur)}px)` }}>
           {paths}
         </g>
       ))}
@@ -456,7 +461,7 @@ const CrestMark: React.FC<{ crest: Crest; id: CrestId; size: number }> = ({ cres
   const oy = fit.cy - (by + bh / 2) * fit.sc;
   return (
     <g
-      transform={`translate(${f2(ox)} ${f2(oy)}) scale(${(Math.round(fit.sc * 1e6) / 1e6).toString()})`}
+      transform={`translate(${fx(ox)} ${fx(oy)}) scale(${fx(fit.sc)})`}
       fill="#000"
       dangerouslySetInnerHTML={{ __html: crest.markup }}
     />
@@ -485,7 +490,7 @@ export const FigureMark: React.FC<{ figure: Figure; size: number }> = ({ figure,
     const o = (size - g) / 2;
     return (
       <g
-        transform={`translate(${f2(o)} ${f2(o)}) scale(${f2(s)})`}
+        transform={`translate(${fx(o)} ${fx(o)}) scale(${fx(s)})`}
         fill="none"
         stroke="#000"
         strokeWidth={2.6}
@@ -646,13 +651,13 @@ export const Pillar: React.FC<PillarProps & { amberBand?: [number, number] }> = 
   const fillFull = !!(g.fill && g.glass && g.fill.h >= g.glass.h - 0.5);
   if (en <= 0.001) return null;
   return (
-    <g opacity={en < 1 ? f2(en) : undefined} transform={en < 1 ? `translate(0 ${f2(((1 - en) * 24) / k)})` : undefined}>
+    <g opacity={en < 1 ? f2(en) : undefined} transform={en < 1 ? `translate(0 ${fx(((1 - en) * 24) / k)})` : undefined}>
       <defs>
         <PillarGradient id={`${uid}c`} dim={dim} y0={creamTop} y1={g.floor} />
         <AmberGradient id={`${uid}a`} y0={band[0]} y1={band[1]} />
         <mask id={`${uid}k`} maskUnits="userSpaceOnUse" x={g.tile.x} y={g.tile.y} width={g.tile.w} height={g.tile.h}>
           <rect x={g.tile.x} y={g.tile.y} width={g.tile.w} height={g.tile.h} fill="#fff" />
-          <g transform={`translate(${f2(g.tile.x)} ${f2(g.tile.y)})`}>
+          <g transform={`translate(${fx(g.tile.x)} ${fx(g.tile.y)})`}>
             <FigureMark figure={figure} size={g.T} />
           </g>
         </mask>
@@ -1251,7 +1256,7 @@ export const StoutWatchHere: React.FC<{ text?: string; frame?: number; loop?: bo
                   const dy = lerp(l.dy, m.dy, c.lift) * OVERLAY_K;
                   const bl = lerp(l.blur, m.blur, c.lift) * OVERLAY_K;
                   return (
-                    <g key={`${j}-${i}`} opacity={lerp(l.a, m.a, c.lift) * c.o} transform={`translate(${f2(dx)} ${f2(dy)})`} style={{ filter: `blur(${f2(bl)}px)` }}>
+                    <g key={`${j}-${i}`} opacity={lerp(l.a, m.a, c.lift) * c.o} transform={`translate(${fx(dx)} ${fx(dy)})`} style={{ filter: `blur(${f2(bl)}px)` }}>
                       <path d={chevronPath(c.cx, c.cy, CTA.chevW, CTA.chevH)} />
                     </g>
                   );
