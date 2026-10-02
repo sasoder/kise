@@ -566,3 +566,76 @@ References: `generated/components/BrushingMistakes.tsx` (three-point tube timeli
 - **Don't** take style from the Humble Premiere projects, the brand book or `~/.colleague`
   notes; the green/white cards there are not the Humble colour.
 - **Delivery:** `~/Downloads/`, versions as `_V2` beside the original; commit by pathspec.
+
+## ChinaTalk style (approved 2026-10-02)
+
+The user's named house style for ChinaTalk podcast clips. It was born as V2 of the Logan Wright "China's growth is going
+negative" set and approved with "these look freaking awesome … save this as a new chinatalk style". It is a separate
+style: `## Orange Dwarkesh style` stays exactly as it is. When the user says "ChinaTalk style", build to this without
+re-asking.
+
+It keeps the LANGUAGE of Orange Dwarkesh:
+- 24 fps, 1080x1920, opaque.
+- One accent with one meaning; ink at two rungs; nouns built as the scene's own structure.
+- State changes when the mechanism reaches the thing; one continuous motion per cut.
+- The damped tracking camera (`cameraTrack` superposed glides + the CAM_STIFF/CAM_DAMP follower).
+- The text slide-up standard; the caption band (subject ink ≤ y 1400, content centre ≈ 835).
+- Adjacent cuts joined pixel-for-pixel.
+It replaces the LOOK:
+
+**Ground: rice paper, not the grid.**
+- `PAPER #F8F5EF`: a clean white at a glance (#F4EFE6 read as cream).
+- A baked fibre grain (`public/china/paper.png`, seeded, made by `scripts/build-china-paper.py`), drawn oversized at
+  parallax 0.15 with the slow drift, under a light warm vignette (~5 %).
+- No grid photo. A chart gets horizontal ink hairlines (INK 0.07, 1.5 world px) at its own scale steps, feathered at the
+  ends and drawn in with its axis.
+
+**Ink and one red.**
+- `INK #1C1917` (warm black) for everything that is not the subject, at exactly two rungs: 0.90 (the subject now) and
+  0.42 (context). Area tints ≤ 0.10 ink.
+- `RED #D0281C` (vermilion) = the one thing the clip is about, and only that.
+- `RED_DEEP #8E1A12` = its negative / at-rest state.
+- `RED_WET #E8452F` only for the wet stretch of a line being drawn; `#F2604A` for a single travelling highlight.
+
+**Type.**
+- Numbers: Source Serif 4 Bold, lining figures, no tracking (`@remotion/google-fonts/SourceSerif4`).
+- Words: Source Sans 3 SemiBold, caps, tracked 0.12 em with a compensating margin (`SourceSans3`).
+- These are the Latin companions of Source Han / Noto CJK, so Chinese characters can join in Noto Sans SC.
+- Sizes: 50 px numbers / 36 px words at K_REF 1.2. Screen size ∝ k^0.75 with an 80 % floor.
+- Labels fade out within 48 px of the frame edge instead of being clipped.
+
+**Materials and flair (what made it sleeker than the old recipe):**
+- **Ink-written lines.** The freshest ~70 world px behind a drawing tip is wet (RED_WET, ~15 % thicker) and dries back
+  to RED over ~18 f. The tip is a bead: dot + soft bloom 2.6x at 0.22 + a small paper-white specular up-left.
+- **Seal markers.** Data points are chop-seal squares (side 2x the dot radius, corner 2 px) in RED. Annotation rings
+  stay round, in ink.
+- **Washes.** A growth line gets a soft RED glow-wash hugging it (0.15 at the line → 0.04 within ~160 px → 0 at the
+  axis), never a flat pink fog. Below zero: a heavy RED_DEEP wash 0.30 + fine hatch 0.55, the most saturated thing in
+  the piece.
+- **Dashed = expected / projected / reference, solid = what happened.** Dashed edges march.
+- **Areas** are ink washes (INK 0.10) under a fine ink hatch (0.35), revealed by a feathered wipe ("ink soaking down").
+- **Removal.** Things that stop existing diffuse like ink on wet paper (blur 0 → 8 px, spread 20 %, fade). They never
+  pop or sink.
+- **Text** slides up 24 px + fades + blurs in (6 px → 0) over 12 f. A number that changes rolls like an odometer.
+- **Shadows.** A warm paper shadow `drop-shadow(0 4px 8px rgba(70,35,15,0.16))` under red elements only; ink sits flat,
+  as printed. No global shadow, and no glow except the bead's bloom.
+- **Bars** are slim rounded pills, never heavy black slabs.
+
+**Output.** ProRes 4444, opaque, `--muted`, private entries. Delivered to the clip folder as `<inSeconds>_<Name>.mov`
+plus `placements.txt`.
+
+**Implementation reference.**
+- The tokens are `THEMES.china` in `generated/components/chinaGrowthTheme.ts` (`ThemeContext` / `useTheme`, `mapRung`,
+  `resolveColor`).
+- The paper Stage, `Label` (blur-in, odometer, edge-fade, floor), wet line, bead, seal markers, washes and hatches are
+  in `chinaGrowthShared.tsx`. Ink diffusion is in `chinaGrowthSeg3.tsx`; the ink-wash wedge in `chinaGrowthSeg4.tsx`.
+- On the next ChinaTalk clip, first lift the tokens, the paper Stage and `Label` into a clip-agnostic
+  `chinatalkShared.tsx` and import that. Do not fork the Logan chart world.
+- Reference set: `ChinaGrowingV2`, `NegativeGrowthV2`, `CovidExcuseV2`, `TrulyDramaticV2`, delivered to
+  `chinatalk/oct/China's Economy is Broken | Logan Wright/logan - china's growth is going negative/V2/`.
+
+**The user's opener** ("ChinaTalk-style motion graphics for this clip …") runs the same loop as the Orange Dwarkesh one:
+1. Send the transcript first as flowing text with timestamps; the user picks the segments.
+2. Fable directs with staged options and a recommendation.
+3. An Opus sub-agent builds and stops at a preview.
+4. Fable reviews before anything is final.
