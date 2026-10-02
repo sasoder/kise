@@ -133,6 +133,103 @@ Reference implementations, all approved: `DomainExpertiseSweep.tsx`,
 `CodebaseComprehensionFold.tsx`, `UnderstandingDepthPlateau.tsx`,
 `HourVersusWeeks.tsx`.
 
+## Cheeky Pint S4 style (approved 2026-10-03)
+
+The user's named house style for Cheeky Pint season 4. It was saved after the Toto Wolff "Mercedes F1 financials" set
+(S4E01) with "we have some great graphics, please save them as cheeky pint s4 style graphics". When they say "Cheeky Pint
+S4 style", build to this without re-asking. It supersedes the kraft `## Cheeky Pint style` below for season-4 clips: the
+user had that one redone because it was "missing some of that flair". If a request only says "Cheeky Pint style", use S4
+and say so in one line.
+
+How it was reached: a look test of three directions (freshKraft / stout / print), then the user picked **stout**. A
+craft pass followed: "the shadows of the logo block and the chart block overlap … show that we really care about the
+small details". Then came a **brown** palette, because the near-black ground with amber and cream read like an adult
+site's black/orange/white brand.
+
+**Source of truth.** Every value is an export of `generated/components/stoutShared.tsx` (palette `B1`, the default); import
+it, never restate it. The reference set:
+- `BillionInRevenueStout`: a bar rises out of the tile and pours into profit; a gentle odometer.
+- `BackInTheDayStout`: a real-figures chart, with the camera travelling into the past and back.
+- `ConservativeMultiplesStout`: the profit slice stretches ×20 into a glass valuation column, with the one LightSweep.
+- `SomeHaveFundamentalsStout`: five crest pillars; the cast is one table, `CAST_B`.
+- `MostSponsorshipStout`: an amber tower; rivals dim by tone; then the skyline of the world's teams.
+- `NameTagStout` and `CtaWatchHere`.
+
+The act worlds are `stoutActA.tsx` and `stoutActB.tsx`, and the style frames are `StoutFrames.tsx`. The local briefs in
+`out/wolff/briefs/` (STOUT.md, STOUT_MOTION.md, BROWN.md, C1_GENTLE.md, GROUND_EDGE.md) record the reasoning.
+
+**Output.**
+- 1080x1920 at 24 fps. Cuts are OPAQUE ProRes 4444; the name tag and CTA are TRANSPARENT. Always render `--muted`.
+- Duration = `round(span × 24)` + a 16-frame tail. Use private entries `src/entry.<Name>.ts` + `src/Root.<Name>.tsx`.
+- Delivery: `<inSeconds>_<Name>.mov`, versions `_V2` beside the original, `final/` (zero-padded, latest of each) and a
+  placements.txt.
+
+**Ground.** `StoutStage`:
+- A baked espresso-brown kraft sheet, `public/cheekypint2/brown-b1.jpg`: ground `#432C1C`, about L* 23 at the subject.
+- No corner below L* 14, and nothing black anywhere: not the corners, shadows, knock-outs or ink.
+- Parallax 0.15 with a slow drift. The sheet is mirror-padded so a long pan never shows its edge.
+- A cream light pool follows the subject with a lag. A gentle brown vignette.
+- Film grain: overlay 0.28, a new offset every 2 frames.
+
+**Materials: one key light (above, slightly left) and one shadow per object.**
+- **Cream card** (`#F5EEE1`, shading to `#E7DCC8` at the foot) is what is lit: the subject.
+- **Kraft board** (`#AD8E6F` → `#A28365`) is context. Dimming is BY TONE, eased over 12 f, never by opacity.
+- **One shadow per object.** A touching group (tile + bar + slice + glass + fill = a `Pillar`) is ONE object with ONE
+  shadow, drawn from its union silhouette. No part ever casts its own shadow.
+  - Three elevations (rest / lifted / float), plus a contact shadow at rest.
+  - Anything that travels lifts one level and settles on landing.
+  - Shadows are deep brown, `#22150B`.
+- **The slot joint.** A bar rises out of a slot in its tile's top edge, never sitting on it like a second sticker.
+- **Amber** is the only glow. A band gradient `#FFB000` → `#E38E00`, a fixed bloom (never a pulse) and a 2 px hot top
+  edge.
+- **Glass valuation columns** (cream hairline, faint tint) are the one transparent material. Amber fills inside them
+  carry rungs.
+- **Crests and logos** are knocked out of cream tiles to the ground colour and normalised as one family (CREST_FILL 0.64
+  with optical corrections). Anonymous teams use Lucide-grammar sport glyphs.
+- **Ink** is `#2E1E14` on cream and amber. Type on the ground is cream `#F3EBDD`, with a lo tone `#B1A494`.
+
+**Type.**
+- Numerals are Söhne Dreiviertelfett, tabular when they count. Words are Söhne Kräftig caps, tracked +0.06 em.
+- Graphics use three sizes, in screen px at rest: HERO 184, SECONDARY 136, LABEL 30. Overlays use TAG 96 and TAG_SUB 36.
+- Spacing is on an 8 px grid: a lockup gap of 24, clearances of 24 and 16.
+- Text enters by blur-in plus a 24 px slide-up; its exit reverses the entrance.
+- A value that changes rolls as an odometer, with vertical blur in proportion to its speed. A UNIT change ($900M →
+  $1B) must decelerate: the old value holds sharp for a few frames, then a 14-frame feathered drum turn. The strings
+  never overlap and never dip (see cut 1).
+
+**Meaning and contrast.**
+- One accent with one meaning per clip. For Toto, amber = profit, plus Mercedes' own sponsorship tower in cut 5.
+- Cream at two tones carries everything else.
+- Contrast is measured on rendered pixels:
+
+  | Pair | Minimum | B1 measures |
+  |---|---|---|
+  | Cream on ground | ≥ 7:1 | ≈ 10 |
+  | Amber on ground | ≥ 4.5 | ≈ 6 |
+  | Lo type on ground | ≥ 4.5 | — |
+  | Dimmed tile vs ground | ≥ 3 | — |
+  | Ink on cream | ≥ 10 | — |
+
+- Numbers on screen are real and sourced (filed accounts, Forbes, the deal announcement). Estimates never go on screen;
+  the user decides how to show anything that isn't public.
+
+**Motion.**
+- One continuous motion per cut, with the words as inflections.
+- The damped `cameraTrack` (superposed glides plus the follower), re-solved per cut: |Δv| ≤ 2.5 and ≤ 45 screen px/f.
+- The light pool follows the subject; sway is on.
+- Exactly ONE `LightSweep` per cut, on its single click. Group arrivals never click.
+- No flashes, pulses, bounces or springs.
+- Adjacent cuts share a story clock and join pixel for pixel.
+- Caption band: subject ink above y 1400, content centre ≈ 835. Check every frame at 270 px wide.
+
+**Overlays.**
+- `StoutNameTag`: a cream name strip (TAG, ink) over a narrower amber job strip (TAG_SUB), 8 px apart. Transparent, 96 f.
+- `StoutWatchHere`: a cream "Watch here" card with three amber chevrons SIDE BY SIDE under it, and a left-to-right
+  brightness wave every 36 f. 168 f long, and the last frame equals the loop start.
+
+**Palettes.** Set with the `palette` input prop: `B1` (the default), `B2` walnut, `B3` dark kraft, `B2g`, and `stout`.
+`stout` is the original near-black, kept only to reproduce old renders; never use it for new work.
+
 ## Cheeky Pint style (rewritten 2026-09-15 — the D1 "year off shorting" set is the standard)
 
 The user's named house style for the Cheeky Pint podcast cuts. On 2026-09-15 they
