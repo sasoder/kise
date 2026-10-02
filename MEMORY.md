@@ -528,3 +528,41 @@ style", build to this without re-asking. Reference: `generated/components/SouthM
   highlight travelling the orange line. Subject of every framing near y835, nothing
   important below ~y1150 (captions).
 - **Delivery:** `--muted` ProRes, ~/Downloads (or the clip folder), commit by pathspec.
+
+## Humble Co. style (approved 2026-10-02)
+
+The user's named house style for the client The Humble Co. (Swedish oral-care brand). When they
+ask for a Humble / Humble Co / Humble Company graphic, build to this without re-asking.
+References: `generated/components/BrushingMistakes.tsx` (three-point tube timeline) and
+`generated/components/NameTagHumble.tsx` (name tag).
+
+- **Two colours only:** Humble purple `#7970b4` and white `#FFFFFF`. No black, grey, tints or
+  opacity steps of the purple, gradients, glows or drop shadows. Purple is the fill (the state
+  that has happened); white is outline, type and icon ink.
+- **Type:** Neulis Cursive Bold only, from `public/NeulisCursive-Bold.otf` via `@remotion/fonts`
+  `loadFont` + `staticFile` + delayRender (copy the block in `NameTagHumble.tsx`). Proper
+  capitalisation, letter-spacing 0. Copy is Swedish, sentence case ("För hårt", "Tandläkare").
+- **Shapes:** rounded and friendly. White 8 px outlines that purple fills flush (the tube), or
+  solid purple panels with white type (name tag: radius 10, padding 34/52/38/52). Where shapes
+  meet, round the join with a fillet; no sharp corners.
+- **Icons:** one family on Lucide's grammar (24 grid, stroke 2, round caps/joins, no fill) at
+  x4 in a 96 px box, so strokes are 8 px and match the outlines; white on purple. Lucide has no
+  toothbrush: reuse the glyph in `BrushingMistakes.tsx` (plain head, tight four-bristle tuft at a
+  2.5 pitch, handle rising 10 degrees) and change one modifier per icon. A slotted head with spaced
+  bristles reads as a table, and a tooth crown is a jumble at phone size.
+- **Format:** transparent overlays, 1080x1920, 30 fps (the Humble edits are 30 fps), ProRes
+  4444, `--muted`. No camera, no idle motion, no outro: a long static hold that the editor trims
+  (15 s per step). Centre the graphic; a lower third goes bottom-left at left 84 / bottom 300.
+- **Motion:** entrances slide up (24 px for a graphic or text line, 16 px for an icon) while
+  fading in on `bezier(0.16, 1, 0.3, 1)`; nothing pops. Fills are one continuous flow on
+  `bezier(0.65, 0, 0.35, 1)` with a plain vertical front. Purple fills first, then the icon
+  rises in, overlapping the end of the fill.
+- **Multi-point graphics:** the start state is all white and hollow (the footage shows through).
+  Make one clip per spoken point, `<Name>_<n>_<Point>.mov`, and check on the decoded .movs that
+  each clip's f0 is pixel-identical to the previous clip's last frame.
+- **Options rounds:** render real stills of the final state in this font and these colours
+  (one component, a variant prop), over a warm mid-tone stand-in and a light backdrop, plus a
+  270 px phone check. Strip the unchosen variants afterwards.
+- **Don't** take style from the Humble Premiere projects, the brand book or `~/.colleague`
+  notes; the green/white cards there are not the Humble colour.
+- **Delivery:** `~/Downloads/`, versions as `_V2` beside the original; commit by pathspec.

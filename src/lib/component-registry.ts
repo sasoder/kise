@@ -67,4 +67,20 @@ export const registry: ComponentEntry[] = [
       "24fps",
     ],
   },
+  {
+    name: "BrushingMistakes",
+    path: "generated/components/BrushingMistakes.tsx",
+    description:
+      "Humble Co. style three-point tube timeline, a transparent overlay. Three stations at x 200/540/880 on y 960 are joined by a 40 px tube, all traced as one white 8 px outline with filleted joins. Humble purple #7970b4 fills it flush from the left like liquid, then each station's white icon slides up 16 px and fades in. Prop step (1|2|3) renders one clip per spoken point, and each clip's f0 is identical to the previous clip's last frame. Step 1: the outline enters f0–16 and station 1 fills f20–40. Steps 2/3: the liquid flows on to the next station f0–30 and the icon enters f24–38. The icons show the three brushing mistakes (too hard / wrong angle / too fast) and share one toothbrush glyph drawn on Lucide's grammar; swap the icon paths for another three-point list. 1080x1920, 30fps, 450 frames (a long hold the editor trims).",
+    tags: [
+      "humble-co-style",
+      "timeline",
+      "stepper",
+      "three-points",
+      "icons",
+      "overlay",
+      "transparent",
+      "30fps",
+    ],
+  },
 ];
