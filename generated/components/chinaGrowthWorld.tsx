@@ -5,7 +5,7 @@ import { BaseWorld, JOIN_23, Stage, camA } from "./chinaGrowthShared";
 import { Seg3Layer, camSeg3 } from "./chinaGrowthSeg3";
 import { Seg4Layer, camSeg4 } from "./chinaGrowthSeg4";
 import { THEMES, ThemeContext } from "./chinaGrowthTheme";
-import { ChinaFlagTitle } from "./chinaGrowthFlag";
+import { ChinaFlagTitle, ChinaFlagWorld } from "./chinaGrowthFlag";
 import { AbsoluteFill } from "remotion";
 import type { ThemeName } from "./chinaGrowthTheme";
 
@@ -35,10 +35,17 @@ import type { ThemeName } from "./chinaGrowthTheme";
 // ThemeContext; they read it with useTheme() (chinaGrowthTheme.ts). The V1
 // wrappers pass nothing, so V1 renders exactly as delivered.
 //
-// FLAG (V3): the optional `flag` prop (default false) adds the PRC flag as the
-// chart's title, in screen space above the whole Stage (chinaGrowthFlag.tsx).
+// FLAG: the optional `flag` mode (default false) adds the PRC flag as the
+// chart's title (chinaGrowthFlag.tsx):
+//   "screen" (V3)  in screen space above the whole Stage, as delivered;
+//   "world"  (V4)  a world object, the top layer of the Stage's world group
+//                  (over A's labels, under the vignette), so it pans, zooms and
+//                  sways with the camera like the gridlines and the line.
 // Without it the tree is exactly V1's / V2's, so their output is unchanged.
 // ---------------------------------------------------------------------------
+
+/** Where the title flag lives: none (V1, V2), screen (V3), world (V4). */
+export type FlagMode = false | "screen" | "world";
 
 /** The camera at story frame S (camera centre + zoom). */
 export const cameraAt = (S: number): Cam => (S <= 601 ? camA(S) : S < 829 ? camSeg3(S) : camSeg4(S));
@@ -50,7 +57,7 @@ if (!camEq(camSeg4(829), JOIN_34)) {
   throw new Error(`chinaGrowthWorld: camSeg4(829) ${JSON.stringify(camSeg4(829))} != JOIN_34 ${JSON.stringify(JOIN_34)}`);
 }
 
-export const ChinaGrowthWorld: React.FC<{ S: number; theme?: ThemeName; flag?: boolean }> = ({
+export const ChinaGrowthWorld: React.FC<{ S: number; theme?: ThemeName; flag?: FlagMode }> = ({
   S,
   theme = "orange",
   flag = false,
@@ -63,11 +70,12 @@ export const ChinaGrowthWorld: React.FC<{ S: number; theme?: ThemeName; flag?: b
       <Seg3Layer S={S} cam={cam} />
       <Seg4Layer S={S} cam={cam} />
       <BaseWorld S={S} cam={cam} pass="labels" />
+      {flag === "world" ? <ChinaFlagWorld S={S} cam={cam} /> : null}
     </Stage>
   );
   return (
     <ThemeContext.Provider value={THEMES[theme]}>
-      {flag ? (
+      {flag === "screen" ? (
         <AbsoluteFill>
           {stage}
           <ChinaFlagTitle S={S} />

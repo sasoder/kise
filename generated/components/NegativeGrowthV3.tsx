@@ -26,7 +26,7 @@ export const defaultProps: Props = schema.parse({});
 /** A window on the story clock (S = S0 + frame): the china theme with the title flag. */
 const NegativeGrowthV3: React.FC<Props> = () => {
   const frame = useCurrentFrame();
-  return <ChinaGrowthWorld S={S0 + frame} theme="china" flag />;
+  return <ChinaGrowthWorld S={S0 + frame} theme="china" flag="screen" />;
 };
 
 export default NegativeGrowthV3;

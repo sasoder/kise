@@ -109,6 +109,9 @@ export type LabelSize = "value" | "word";
  *  Stage; null outside one. */
 export type StageView = { cam: Cam; dx: number; dy: number };
 const StageViewContext = React.createContext<StageView | null>(null);
+/** The Stage's current view (null outside a Stage), for a world material that
+ *  fades at the frame edges the way Label does (V4: the title flag). */
+export const useStageView = (): StageView | null => React.useContext(StageViewContext);
 /** The label edge-fade margin, screen px. */
 export const EDGE_SAFE = 48;
 /** 1 when the world box [x0, x1] x [y0, y1] sits >= EDGE_SAFE screen px inside
