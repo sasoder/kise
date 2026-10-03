@@ -1,5 +1,6 @@
 // STOUT_READY
 // STOUT_FIX_1: camera transform at full precision
+// GROUND_EDGE: the ground sheet continues past its edges as mirrored copies (StoutStage)
 import React, { useId } from "react";
 import { AbsoluteFill, Img, getInputProps, staticFile } from "remotion";
 import { loadFont } from "@remotion/fonts";
@@ -464,6 +465,43 @@ export const bloomFilter = (k: number) => BLOOM_LAYERS.map((l) => `drop-shadow(0
 // ===========================================================================
 export type Pool = { x: number; y: number; strength?: number } | null; // world point the light follows
 /**
+ * GROUND_EDGE (Oct 3 2026): the ground sheet continues past its own edges. The baked sheet is
+ * GROUND.W x GROUND.H, centred with 108 / 192 px to spare, and a camera that travels far enough (cut 2's
+ * look back into the past: parallax + drift + the gentle zoom-out) brings its edge into the frame, where
+ * only the flat backing fill showed — a line. Beyond each edge the sheet is drawn again, MIRRORED (left /
+ * right copies flipped in x, above / below flipped in y, corners in both, and so on outward for any
+ * camera): a mirror is continuous at the seam, and no new texture. Only the copies the frame (+1 px)
+ * needs are drawn, UNDER the sheet, so a frame the sheet already covered draws exactly what it did and
+ * no px the sheet covers changes. Returns each copy's index (i, j) != (0, 0) and its CSS matrix, which
+ * maps the copy's own px u to screen as the sheet's matrix maps the mirrored point q (origin 0 0):
+ *   screen = (540, 960) + (gx, gy) + gScale * (q - (W/2, H/2)),  q = i W + (i odd ? W - u : u)  (and y).
+ * The grain needs none: it is screen-fixed, travels at most GRAIN.travel (96) < the 108 / 192 px spare.
+ */
+const groundCopies = (gx: number, gy: number, s: number) => {
+  const { W, H } = GROUND;
+  const odd = (n: number) => Math.abs(n) % 2 === 1;
+  // the sheet px under screen px p (x or y), and the tiles that meet the frame + 1 px
+  const q = (p: number, c: number, g: number, half: number) => (p - c - g) / s + half;
+  const i0 = Math.floor(q(-1, 540, gx, W / 2) / W);
+  const i1 = Math.floor(q(1081, 540, gx, W / 2) / W);
+  const j0 = Math.floor(q(-1, 960, gy, H / 2) / H);
+  const j1 = Math.floor(q(1921, 960, gy, H / 2) / H);
+  const out: { key: string; matrix: string }[] = [];
+  for (let j = j0; j <= j1; j++) {
+    for (let i = i0; i <= i1; i++) {
+      if (i === 0 && j === 0) continue;
+      const ax = odd(i) ? -1 : 1;
+      const ay = odd(j) ? -1 : 1;
+      const bx = i * W + (odd(i) ? W : 0);
+      const by = j * H + (odd(j) ? H : 0);
+      const e = W / 2 + gx + s * (bx - W / 2);
+      const f = H / 2 + gy + s * (by - H / 2);
+      out.push({ key: `${i},${j}`, matrix: `matrix(${fx(ax * s)}, 0, 0, ${fx(ay * s)}, ${fx(e)}, ${fx(f)})` });
+    }
+  }
+  return out;
+};
+/**
  * StoutStage: the ground (baked sheet, parallax + drift on the story clock S, a slow zoom with
  * the camera), the light pool following `pool`, the world under `cam` (its CENTRE, as
  * cameraTrack returns it), the vignette, then grain on twos. `rest` is the act's opening camera
@@ -494,6 +532,22 @@ export const StoutStage: React.FC<{
   const p = pool ? { x: 540 + (pool.x - cam.x) * k + sw.dx, y: 960 + (pool.y - cam.y) * k + sw.dy, s: pool.strength ?? 1 } : null;
   return (
     <AbsoluteFill style={{ backgroundColor: COLOR.ground, overflow: "hidden" }}>
+      {/* GROUND_EDGE: mirrored copies past the sheet's edges, only when the frame needs them, under it */}
+      {groundCopies(gx, gy, gScale).map((c) => (
+        <Img
+          key={c.key}
+          src={staticFile(GROUND.src)}
+          style={{
+            position: "absolute",
+            left: (1080 - GROUND.W) / 2,
+            top: (1920 - GROUND.H) / 2,
+            width: GROUND.W,
+            height: GROUND.H,
+            transformOrigin: "0 0",
+            transform: c.matrix,
+          }}
+        />
+      ))}
       <Img
         src={staticFile(GROUND.src)}
         style={{
