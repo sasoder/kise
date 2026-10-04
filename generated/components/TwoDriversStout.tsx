@@ -19,8 +19,8 @@ import { DUR, FPS, IcebergWorld, S_1 } from "./icebergShared";
 //   PASS 4: the HEADLINE is the real Mercedes-AMG Petronas F1 Team lockup (4 inlined paths, all cream,
 //     no card, no shadow), standing in the WORLD over the drivers, counter-scaled by camera k so it reads
 //     at every distance (here ~278 px tall, ring ~151 px, its foot 48 px above the cars' top). It enters
-//     once: fade + 24 px slide-up + blur 6 -> 0, moving on f8, landed f26 ("Formula 1 from"); after
-//     that it is part of the world and moves only with the camera
+//     once: fade + 24 px slide-up + blur 6 -> 0 over 14 f (V4: already moving, faint and low, on f0;
+//     landed f13, "Formula 1"); after that it is part of the world and moves only with the camera
 //   the floor (the tip's glass top edge) is a hairline across the frame; the light pool sits on the
 //     boxes; the tip crowd is in the DARK (one tone below board) and stays under y 1400 (asserted);
 //     nothing of the mechanics is on screen -> f0-76
