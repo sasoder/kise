@@ -16,6 +16,7 @@ import { DUR, FPS, IcebergWorld, S_2 } from "./icebergShared";
 // ONE MOTION: the crew converges on the stopped cars, then the camera eases back and down as the pit
 // wall rises beneath them.
 // GESTURES (gesture -> word -> frames)
+//   (the Mercedes headline holds, static, at the top: PASS 3)
 //   the 8 mechanics (cream, lit by the pool) glide in along the plateau from just outside the frame,
 //     starting on f0 ("and then you see"; PASS 2: none of them before this cut): two queues, car A's
 //     from the left and car B's from the right (the one going farthest in leads and lands first, 13.5 px

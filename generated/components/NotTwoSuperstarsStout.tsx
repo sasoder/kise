@@ -27,13 +27,14 @@ import { DUR, FPS, IcebergWorld, S_6 } from "./icebergShared";
 //     person, and never ahead of the frame: a person is reached no earlier than the frame shows them);
 //     each person warms to amber as it arrives (cream -> amber in the tip, board -> amber below; 14 f,
 //     hashed offsets): first f66, last f118 -> "there's two and a half thousand ... them"
-//   the camera pulls back with the front to the wide, k 3.85 -> 0.885 (PASS 2: the zoom f56 -> f130, the
-//     look f60 -> f136; peak on-screen person 39 px/f at k >= 2), the front always inside the frame
+//   the camera pulls back with the front to the wide, k 3.85 -> 0.78 (PASS 2: the zoom f56 -> f130, the
+//     look f60 -> f136; PASS 3: the cut 5 wide re-solved under the headline; peak on-screen person
+//     41 px/f at k >= 2), the front always inside the frame and the readout >= 48 px under the headline
 //   the readout rolls 2 -> 2,500 with the honest count of amber people (whole centred strings as the
 //     digits grow), decelerating continuously (no value sits) and landing "2,500" on f118 -> "them"
 //   THE ONE CLICK: one LightSweep crosses every amber person and the numeral, f121 -> f143 -> "equally"
 //   the cars, pit wall and hub tiles stay cream; every PERSON is the same amber
-//   the tail: the wide holds with a creep, k -> 0.87 -> f143-157
+//   the tail: the wide holds with a creep, k -> 0.77 -> f143-157 (under the Mercedes headline)
 // Nothing else.
 // ---------------------------------------------------------------------------
 

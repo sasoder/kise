@@ -16,21 +16,23 @@ import { DUR, FPS, IcebergWorld, S_5 } from "./icebergShared";
 // ONE MOTION: pull right back until the whole iceberg is one held, vast picture; then back to the two
 // cars on its top.
 // GESTURES (gesture -> word -> frames)
-//   one strong pull-back and rise, k 2.05 -> 1.15 (f-4 -> f32): the readout ("150 / AT THE TRACK", at its
-//     place above the peak) is on screen and legible from f16, before it rolls; ENGINE / CHASSIS exit
-//     (the entrance reversed) as the camera passes k 1.6 (f11 -> f23); the tiles stay -> "and we are"
+//   one strong pull-back and rise, k 2.05 -> 0.95 (f-8 -> f36; PASS 3 / 3B: the look rises 370 px from
+//     the deeper hubs so the readout comes down under the Mercedes headline early): the readout ("150 /
+//     AT THE TRACK", at its place above the peak) re-enters once clear of it (blur-in + slide-up, f22 -> f34)
+//     and is legible before it rolls -> "and we are 2,500"
 //   the body's glass outline draws from the waterline down both flanks and closes on its broad bottom
-//     facet (f18 -> f46), its tint with it. Its head is the counter's front: the readout = 150 + the
+//     facet (f34 -> f50), its tint with it. Its head is the counter's front: the readout = 150 + the
 //     body people it has passed (a person counts once the head is BODY_REACH below their centre, so the
 //     count closes as the outline closes). PASS 2: the head is rank-timed, so the count runs and
-//     decelerates continuously into "2,500", landing on f46 (no value sits); the label rolls AT THE
-//     TRACK -> PEOPLE through its own lane as it lands (f37-51) -> "2,500 people ... in an"
-//   the pull-back keeps decelerating to the WIDE, k 0.885 (f24 -> f76): the whole closed glass iceberg
-//     in y 200-1400, the readout above it; the held creep, k -> 0.86 (f70-100). The body people stay
+//     decelerates continuously into "2,500", landing on f50 (no value sits); the label rolls AT THE
+//     TRACK -> PEOPLE through its own lane as it lands (f41-55) -> "2,500 people ... in an"
+//   the pull-back keeps decelerating to the WIDE, k 0.78 (f24 -> f76; PASS 3: the largest k that fits
+//     the headline, the readout 48 px under it, and the berg's bottom on y 1395); the held creep,
+//     k -> 0.76 (f70-100). The body people stay
 //     board; the pool sits on the whole berg -> "in an organisation that is quite vast"
 //   PASS 2: the readout exits first (its entrance reversed, f82 -> f94); then ONE long eased glide UP and
-//     IN to the two cars on the plateau, k 0.86 -> 3.5 (the look f84 -> f134, the zoom f88 -> f154,
-//     landing ~f150; peak on-screen person 43 px/f at k >= 2); the pool returns to the cars (f97-135);
+//     IN to the two cars on the plateau, k 0.76 -> 3.5 (the look f84 -> f134, the zoom f88 -> f158,
+//     landing ~f150; peak on-screen person 40 px/f at k >= 2); the pool returns to the cars (f97-135);
 //     the amber helmets are the subject -> "if you look at the two cars"
 //   the tail: a creep, k -> 3.6 -> f150-160
 // Nothing else.

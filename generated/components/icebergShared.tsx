@@ -19,6 +19,7 @@ import {
   ElevationShadow,
   Label,
   LightSweep,
+  MercedesTile,
   StoutStage,
   amberBandFor,
   bloomFilter,
@@ -54,6 +55,11 @@ import { cameraTrack, camJerk, type Cam, type Glide } from "./outgrowShared";
 // lifts the body DARK -> board in cut 3; the light front lifts the tip DARK ->
 // cream. A person changes tone only when a FRONT reaches them (a ~12-14 f eased
 // crossfade, hashed offsets inside the front), never on a timer.
+//
+// PASS 3: a Mercedes star headline (stoutShared's MercedesTile) in screen space at the top of every cut;
+// the ENGINE / CHASSIS labels and their crowd gap are gone.
+// PASS 3B: the world (not the ground, not the readout) fades out under the headline (screen y 248 -> 336),
+// and the hubs sit 96 px deeper so cut 4 happens wholly below the waterline.
 //
 // HONEST COUNTS (asserted below at module load): exactly 2,500 people = 2
 // drivers (the amber helmets) + 8 mechanics + 6 engineers + 134 tip crowd (the
@@ -260,21 +266,24 @@ const BUST_RIM: P[] = (() => {
  *  13 keeps every pair apart (>= 0.36 px at that angle, 2 px side by side or stacked). */
 export const POISSON_R = 13;
 const SEED_TIP = 3;
-const SEED_BODY = 16;
+const SEED_BODY = 41;
 const EDGE_MARGIN = 7; // a glyph centre to the glass outline
 const WATER_GAP = 7.5; // a glyph centre to the waterline (no glyph straddles the rule)
 const CROWD_TOP = 86; // the tip crowd's first row (rel. PY): below y 1400 at cut 1's close framing
 /** The pit wall's slot terrace and the hub tiles (+ their labels) are kept clear of the crowd. */
 export const PIT = { x0: AX - 50, x1: AX + 50, top: PY + 50, bot: PY + 58 } as const;
 /** PASS 2: the hubs are places, not badges: 126 px tiles (~11.5 person widths, 2.1x pass 1). */
-export const HUB = { size: 126, dx: 88, y: WY + 242 } as const;
+/** PASS 3B: 96 px deeper (WY + 338), so cut 4 happens wholly below the waterline. */
+export const HUB_DEPTH = 338;
+export const HUB = { size: 126, dx: 88, y: WY + HUB_DEPTH } as const;
 const HUB_HALF = HUB.size / 2;
+/** PASS 3: no label spots. Each hub tile keeps the SAME clearance on all four sides, the gap the crowd keeps
+ *  from the pit wall (its zone stands 6 px out from the bar, + the edge margin). */
+const HUB_PAD = 6;
 const ZONES_REL = [
   { x0: -56, x1: 56, y0: 40, y1: 72 },
-  { x0: -HUB.dx - HUB_HALF, x1: -HUB.dx + HUB_HALF, y0: H_T + 242 - HUB_HALF, y1: H_T + 242 + HUB_HALF },
-  { x0: HUB.dx - HUB_HALF, x1: HUB.dx + HUB_HALF, y0: H_T + 242 - HUB_HALF, y1: H_T + 242 + HUB_HALF },
-  { x0: -HUB.dx - HUB_HALF, x1: -HUB.dx + HUB_HALF, y0: H_T + 242 + HUB_HALF, y1: H_T + 242 + HUB_HALF + 32 },
-  { x0: HUB.dx - HUB_HALF, x1: HUB.dx + HUB_HALF, y0: H_T + 242 + HUB_HALF, y1: H_T + 242 + HUB_HALF + 32 },
+  { x0: -HUB.dx - HUB_HALF - HUB_PAD, x1: -HUB.dx + HUB_HALF + HUB_PAD, y0: H_T + HUB_DEPTH - HUB_HALF - HUB_PAD, y1: H_T + HUB_DEPTH + HUB_HALF + HUB_PAD },
+  { x0: HUB.dx - HUB_HALF - HUB_PAD, x1: HUB.dx + HUB_HALF + HUB_PAD, y0: H_T + HUB_DEPTH - HUB_HALF - HUB_PAD, y1: H_T + HUB_DEPTH + HUB_HALF + HUB_PAD },
 ];
 const segDist2 = (px: number, py: number, a: P, b: P) => {
   const dx = b[0] - a[0];
@@ -662,7 +671,10 @@ export const lightTone = (i: number, S: number) => smoothstep((S - LIGHT_T[i]) /
 // clearance; = the lowest person's distance to the bottom, so the count closes as the outline closes).
 // PASS 2: the head is rank-timed: it passes the people at designed times (first f19, the 2,350th on f46),
 // moving between them in a straight line, so it decelerates into the bottom and "2,500" lands on f46.
-export const BODY_DRAW = { S0: S_5 + 18, S1: S_5 + 46, p: 3 } as const;
+/** PASS 3: the readout re-enters in cut 5 once it is clear below the headline (3B: f22 -> f34); the outline
+ *  starts as it lands, so it is legible before it rolls, and "2,500" lands on f50. */
+const READOUT_IN5 = S_5 + 22;
+export const BODY_DRAW = { S0: READOUT_IN5 + 12, S1: S_5 + 50, p: 3 } as const;
 export const BODY_REACH = BOTTOM_Y - Math.max(...BODY_CROWD.map((p) => p.y));
 const BODY_RANK = rankTimes(
   BODY_CROWD.map((p) => p.y),
@@ -705,23 +717,43 @@ export const AMBER_FRONT = { S0: S_6 + 66, S1: S_6 + 118, p: 3 } as const;
 // THE CAMERA — one track for the whole clock (look = the content centre; the
 // camera centre is look + CAM_LIFT / k, so the look lands at screen y 835).
 // ===========================================================================
-export const K = { c1: 6.8, c2: 4.0, c3: 2.2, c4: 2.05, wide: 0.885, cars: 3.5 } as const;
-/** Cut 3's rest: the readout (Y_TOP - 203.6 / k) to the waterline, centred on y 835. */
-const READOUT_H = TYPE.HERO * METRIC.fig + SPACE.LOCKUP + TYPE.LABEL * METRIC.cap + SPACE.CLEAR; // screen px above the cars' top
+/** The readout's cap top above the cars' top (screen px), and the headline's band it must clear. */
+const READOUT_H = TYPE.HERO * METRIC.fig + SPACE.LOCKUP + TYPE.LABEL * METRIC.cap + SPACE.CLEAR;
+const READOUT_BASE_H = SPACE.LOCKUP + TYPE.LABEL * METRIC.cap + SPACE.CLEAR; // its baseline above the cars' top
+/** The headline (PASS 3, see HEADLINE): top 128, 112 tall; everything in the world keeps 48 px below it. */
+export const HEADLINE_BAND = 128 + 112 + 48;
+/** PASS 3B: the world fades out under the headline (screen y): gone above 248 (its bottom + its shadow),
+ *  whole from 336. */
+export const WORLD_FADE = [248, 336] as const;
+const SWAY_MAX = 5; // the world's sway (StoutStage), screen px
+/** PASS 3: the wide is re-solved under the headline: the largest k that puts the berg's bottom on y 1395
+ *  (+ sway <= 1400) and the readout's cap top on the band (+ sway). */
+const WIDE_K = (1395 - (HEADLINE_BAND + SWAY_MAX) - READOUT_H) / (BOTTOM_Y - Y_TOP);
+export const K = { c1: 6.8, c2: 4.0, c3: 2.2, c4: 2.05, wide: WIDE_K, cars: 3.5 } as const;
 export const LOOK = {
   cars: CARS_CY,
   pit: (Y_TOP + PIT.bot) / 2,
+  /** cut 3's rest: the readout to the waterline, centred on y 835 */
   tip: (Y_TOP - READOUT_H / K.c3 + WY) / 2,
-  hubs: HUB.y + 11,
-  /** the wide: the berg's bottom on y 1395, the readout's top ~y 205 */
+  /** cut 4's rest: the pair of tiles on y 835 (PASS 3: no labels under them) */
+  hubs: HUB.y,
+  /** the wide: the berg's bottom on y 1395, the readout's cap top just under the headline's band */
   wide: BOTTOM_Y - (1395 - 835) / K.wide,
 } as const;
 const CAM_PRE = 40;
+// PASS 3 / 3B: cut 5's pull-back rises further (370 px from the deeper hubs, to k 0.95 by f36) so the
+// readout comes down under the headline early (re-entering f22, rolling from f34) before the camera sinks
+// onto the wide; searched for the earliest clear re-entrance with |dv| <= 2.4.
+const CUT5_RISE = 370; // PASS 3B: the hubs sit 96 px deeper, so the rise is longer
+const CUT5_K = 0.95;
+const CUT5_A = -8;
+const CUT5_B = 36;
+const CUT5_W = 0.85;
 const CAM_START = { x: AX - 14, y: LOOK.cars, k: 6.5 };
-const RISE_LOOK = LOOK.hubs - 80; // cut 5: the pull-back rises so the readout is on screen early
+const RISE_LOOK = LOOK.hubs - CUT5_RISE; // cut 5: the pull-back rises so the readout comes down under the headline early
 export const CAM_GLIDES: Glide[] = [
   // Glides are keyed in S (cut n's frame f = S - S_n). Rest k (measured on the damped track): cut 1 end 7.01,
-  // cut 2 end 3.94, cut 3 end 2.35, cut 4 end 2.02, cut 5 wide 0.88 / end 3.49, cut 6 end 0.87.
+  // cut 2 end 3.94, cut 3 end 2.35, cut 4 end 1.99, cut 5 wide 0.78 / end 3.46, cut 6 end 0.77 (PASS 3).
   // cut 1 (S 0-76): eases right with the cars and creeps in; the tail creep
   { f0: -40, f1: 40, dx: 14, k: K.c1 },
   { f0: 34, f1: 112, k: 7.25 },
@@ -731,27 +763,27 @@ export const CAM_GLIDES: Glide[] = [
   // cut 3 (S 177-295): one long pull-back that drops the waterline into the lower half (f12 -> f49); creep
   { f0: S_3 + 12, f1: S_3 + 49, dy: LOOK.tip - LOOK.pit, k: K.c3 },
   { f0: S_3 + 47, f1: S_3 + 125, k: 2.36 },
-  // cut 4 (S 295-445): down through the waterline onto the hubs (f-2 -> f41); the creep to the left tile
+  // cut 4 (S 295-445): the dive down through the waterline onto the deeper hubs (f-6 -> f44); the creep to the left tile
   // through the pause (f44 -> f80); right to the second tile (f94 -> f121); ease to the pair (f119 -> f151)
-  { f0: S_4 - 2, f1: S_4 + 41, dy: LOOK.hubs - LOOK.tip, k: K.c4 },
+  { f0: S_4 - 6, f1: S_4 + 44, dy: LOOK.hubs - LOOK.tip, k: K.c4 },
   { f0: S_4 + 44, f1: S_4 + 80, dx: -50, dy: -3, k: 2.32 },
   { f0: S_4 + 94, f1: S_4 + 121, dx: 100 },
   { f0: S_4 + 119, f1: S_4 + 151, dx: -50, dy: 3, k: K.c4 },
-  // cut 5 (S 445-605): the strong pull-back and rise (f-4 -> f32: the readout on screen by f16), on to the
+  // cut 5 (S 445-605): the strong pull-back and rise (f-6 -> f36, PASS 3: the readout under the headline by f21), on to the
   // wide (f24 -> f76), the held creep (f70 -> f100), then (PASS 2) one long glide up and in to the two cars
-  // (the look f84 -> f134, the zoom f88 -> f154, so the cars' screen path stays smooth); the tail creep
-  { f0: S_5 - 4, f1: S_5 + 32, dy: RISE_LOOK - LOOK.hubs, k: 1.15, warp: 0.6 },
+  // (the look f84 -> f134, the zoom f88 -> f158, so the cars' screen path stays smooth); the tail creep
+  { f0: S_5 + CUT5_A, f1: S_5 + CUT5_B, dy: RISE_LOOK - LOOK.hubs, k: CUT5_K, warp: CUT5_W },
   { f0: S_5 + 24, f1: S_5 + 76, dx: 2, dy: LOOK.wide - RISE_LOOK, k: K.wide },
-  { f0: S_5 + 70, f1: S_5 + 100, k: 0.86 },
-  { f0: S_5 + 88, f1: S_5 + 154, k: K.cars, warp: 1.2 },
-  { f0: S_5 + 84, f1: S_5 + 134, dx: -2, dy: LOOK.cars - LOOK.wide, warp: 0.65 },
+  { f0: S_5 + 70, f1: S_5 + 100, k: K.wide * 0.975 },
+  { f0: S_5 + 88, f1: S_5 + 158, k: K.cars, warp: 1.1 },
+  { f0: S_5 + 84, f1: S_5 + 134, dx: -2, dy: LOOK.cars - LOOK.wide, warp: 0.6 },
   { f0: S_5 + 150, f1: S_5 + 200, k: 3.62 },
   // cut 6 (S 605-762): the held creep on the drivers (f15 -> f64); (PASS 2) the long pull-back with the
   // wave (the zoom f56 -> f130, the look f60 -> f136); the last image's creep
   { f0: S_6 + 15, f1: S_6 + 64, k: 3.9 },
   { f0: S_6 + 56, f1: S_6 + 130, k: K.wide, warp: 0.7 },
   { f0: S_6 + 60, f1: S_6 + 136, dx: 2, dy: LOOK.wide - LOOK.cars, warp: 1.8 },
-  { f0: S_6 + 128, f1: S_6 + 190, k: 0.855 },
+  { f0: S_6 + 128, f1: S_6 + 190, k: K.wide * 0.97 },
 ];
 export const CAM_TRACK: Cam[] = cameraTrack(
   CAM_START,
@@ -886,17 +918,52 @@ export const fmt = (n: number) => {
 export const RD = {
   in3: S_3 + 44, // the numeral rises above the peak at its honest 16 (cut 3 "it's about", f44 -> f56, lands on "150")
   label3: S_3 + 78, // AT THE TRACK blurs in, lands f90 ("go to the tracks")
+  out4: S_4 + 0, // PASS 3: exits as the glide down begins (f0 -> f12), before it could rise behind the headline
+  in5: READOUT_IN5, // PASS 3: re-enters once it is clear below the headline, before it rolls
   out5: S_5 + 82, // exits (the entrance reversed) f82 -> f94, before the glide to the cars arrives (PASS 2)
   in6: S_6 + 23, // "2" re-enters (amber), lands f35 ("superstars")
   label6: S_6 + 28, // SUPERSTARS lands f40
 } as const;
 const ENTER_F = 12;
 const enterAt = (S: number, S0: number) => clamp01((S - S0) / ENTER_F);
+/** The rolling line (CountNumeral): its opaque core above / below the baseline, its soft top, the drum pitch (em). */
+// PASS 3: the line's soft top sits just above the figures' cap height (0.729 em), so a rolling figure
+// dissolves within 0.14 em above its own cap line and never rises toward the headline.
+const ROLL = { CORE_UP: 0.76, CORE_DOWN: 0.11, FEATHER: 0.14, PITCH: 1.22 } as const;
 /** The house entrance (stoutShared's): slide up 24 SCREEN px, fade, blur 6 -> 0; exit reverses. */
 const entrance = (enter: number, exit: number) => {
   const a = easeOutCubic(enter);
   const e = 1 - Math.pow(1 - clamp01(exit), 3);
   return { lift: (1 - a) * 24 + e * 24, opacity: a * (1 - e), blur: 6 * (1 - a) + 6 * e };
+};
+/** PASS 3: the highest visible ink of the readout's numeral at S (screen px, the world's sway included):
+ *  its cap top at rest; while it rolls, the rising figure seen through the line's soft top (where the line
+ *  still passes >= 10 %); the entrance / exit lift and blur. null = not on screen. */
+export const readoutTopAt = (S: number): number | null => {
+  if (S < RD.in3) return null;
+  let enter: number;
+  let exit: number;
+  let d: Display;
+  if (S < S_5) {
+    enter = enterAt(S, RD.in3);
+    exit = enterAt(S, RD.out4);
+    d = displayOf(COUNT_TIP, S);
+  } else if (S < S_6) {
+    enter = enterAt(S, RD.in5);
+    exit = enterAt(S, RD.out5);
+    d = S >= COUNT_BODY.S0 ? displayOf(COUNT_BODY, S) : displayOf(COUNT_TIP, S);
+  } else {
+    enter = enterAt(S, RD.in6);
+    exit = 0;
+    d = displayOf(COUNT_AMBER, S);
+  }
+  const en = entrance(enter, exit);
+  if (en.opacity <= 0.002) return null;
+  const c = camAt(S);
+  const baseline = 960 + (Y_TOP - c.y) * c.k - READOUT_BASE_H;
+  const rolling = d.v - Math.floor(d.v) > 1e-6;
+  const inkEm = rolling ? ROLL.CORE_UP + 0.9 * ROLL.FEATHER : METRIC.fig;
+  return baseline + en.lift - inkEm * TYPE.HERO - en.blur - SWAY_MAX;
 };
 
 // ===========================================================================
@@ -908,12 +975,13 @@ const TILE_C: P[] = [
   [AX - HUB.dx, HUB.y],
   [AX + HUB.dx, HUB.y],
 ];
-const POOL_LEAN = 40; // cut 4's descent leans toward the left tile (world px)
+const POOL_LEAN = 50; // cut 4's descent leans toward the left tile (world px)
+const POOL_DIVE = 176; // how deep below the waterline the pool follows the dive before the tiles
 const poolTarget = (S: number): P => {
   const way: { S0: number; S1: number; p: P }[] = [
     { S0: S_2 + 40, S1: S_2 + 80, p: [AX, PY + 30] }, // cut 2: drifts down to take in the pit wall
     { S0: S_3 + 44, S1: S_3 + 80, p: [AX, PY + 110] }, // cut 3: widens from the cars down through the tip
-    { S0: S_4 + 2, S1: S_4 + 40, p: [AX - POOL_LEAN, WY + 80] }, // cut 4: follows down, held off the tiles (leaning left)
+    { S0: S_4 + 2, S1: S_4 + 40, p: [AX - POOL_LEAN, WY + POOL_DIVE] }, // cut 4: follows the dive, held off the tiles (leaning left)
     { S0: S_4 + 44, S1: S_4 + 66, p: TILE_C[0] }, // onto the left tile through the pause
     { S0: S_4 + 95, S1: S_4 + 110, p: TILE_C[1] }, // onto the right tile
     { S0: S_4 + 124, S1: S_4 + 150, p: [AX, HUB.y + 8] }, // the pair
@@ -945,7 +1013,7 @@ const poolAt = (S: number): P => POOL_TRACK[Math.max(0, Math.min(POOL_TRACK.leng
  *  OUTER EDGE (its screen ellipse POOL.rx x POOL.ry scaled by POOL_EDGE) reaches each tile as the look
  *  descends onto them, and it rises DARK -> board over 13 f; the pool leans a little left on its way
  *  down, so the left tile is reached first and the right ~4 f later. */
-const POOL_EDGE = 0.7; // the pool's outer edge: 0.7 of its screen ellipse (its gradient's visible rim)
+const POOL_EDGE = 0.8; // the pool's outer edge: 0.8 of its screen ellipse (its gradient's visible rim)
 const tileInPool = (i: number, S: number) => {
   const p = poolAt(S);
   const c = camAt(S);
@@ -970,12 +1038,6 @@ export const TILE_LIT: number[] = TILE_C.map((c, i) => {
   }
   return fail(`the pool never reaches tile ${i}`);
 });
-export const HUB_LABEL_IN = TILE_LIT.map((S) => S + 2);
-/** Cut 5: ENGINE / CHASSIS exit as the camera passes k 1.6 on the pull-back. */
-export const HUB_LABEL_OUT = (() => {
-  for (let S = S_5; S < S_6; S++) if (camAt(S).k <= 1.6) return S;
-  return fail("the pull-back never passes k 1.6");
-})();
 
 // ===========================================================================
 // LOAD-TIME CHECKS: the camera (|dv|), heads under 45 px/f at k >= 2, the
@@ -991,6 +1053,17 @@ export const HUB_LABEL_OUT = (() => {
     }
     const gap = carTail(1, S) - (carTail(0, S) + CAR_L);
     rule(gap >= 4.5, `the cars' gap ${gap.toFixed(2)} on S ${S}`);
+  }
+  // PASS 3: the readout's numeral (rolls and entrances included) never comes within 48 px of the headline
+  for (let S = S_3; S <= S_END; S++) {
+    const t = readoutTopAt(S);
+    if (t !== null) rule(t >= HEADLINE_BAND, `the readout reaches y ${t.toFixed(1)} on S ${S} (the headline's band ends at ${HEADLINE_BAND})`);
+  }
+  // PASS 3B: cut 4 happens wholly below the waterline: from the dive's landing on, the waterline (+ sway) sits
+  // inside the headline's masked band (screen y <= 248)
+  for (let S = S_4 + 48; S <= S_5; S++) {
+    const y = toScreen(camAt(S), AX, WY).y + SWAY_MAX;
+    rule(y <= WORLD_FADE[0], `cut 4 f${S - S_4}: the waterline shows at y ${y.toFixed(0)}`);
   }
   // cut 2: every mechanic under 45 screen px/f, and no two ever touch on the way in
   for (let S = S_2 - 16; S <= S_2 + 34; S++) {
@@ -1265,7 +1338,6 @@ const layout = (s: string, x: number, fs: number) => {
  *  extents, feathered above, its floor just under the comma's tail, so an incoming figure rises out
  *  of the floor and never enters the label's lane below. Old and new figures sit one pitch (1.22 em) apart: never both whole.
  *  Tabular throughout. */
-const ROLL = { CORE_UP: 0.838, CORE_DOWN: 0.11, FEATHER: 0.25, PITCH: 1.22 } as const;
 const CountNumeral: React.FC<{ x: number; y: number; k: number; d: Display; tone: "cream" | "amber"; enter: number; exit: number }> = ({
   x,
   y,
@@ -1356,10 +1428,19 @@ const CountNumeral: React.FC<{ x: number; y: number; k: number; d: Display; tone
 };
 /** A caps label that rolls from one word to another through a feathered line (cut 5's AT THE TRACK ->
  *  PEOPLE), the drum turn's grammar at LABEL size; at u 0 / 1 it is the plain Label. */
-const LabelRoll: React.FC<{ x: number; y: number; k: number; from: string; to: string; u: number; exit: number }> = ({ x, y, k, from, to, u, exit }) => {
+const LabelRoll: React.FC<{ x: number; y: number; k: number; from: string; to: string; u: number; enter: number; exit: number }> = ({
+  x,
+  y,
+  k,
+  from,
+  to,
+  u,
+  enter,
+  exit,
+}) => {
   const uid = `lr${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
-  if (u <= 0) return <Label x={x} y={y} k={k} text={from} tone="creamLo" exit={exit} />;
-  if (u >= 1) return <Label x={x} y={y} k={k} text={to} tone="creamLo" exit={exit} />;
+  if (u <= 0) return <Label x={x} y={y} k={k} text={from} tone="creamLo" enter={enter} exit={exit} />;
+  if (u >= 1) return <Label x={x} y={y} k={k} text={to} tone="creamLo" enter={enter} exit={exit} />;
   const fs = TYPE.LABEL / k;
   const pitch = fs * 1.5;
   // the label's own lane: its top is the cap line (a word rolls up into it and is gone), soft below
@@ -1459,6 +1540,45 @@ const Engineer: React.FC<{ id: string; x: number; y: number; fill: string; opaci
 };
 
 // ===========================================================================
+// THE HEADLINE (PASS 3) — the user: "add the f1 logo over the drivers kinda like a headline ... use the
+// mercedes f1 logo". The Mercedes star tile of the approved financials set: stoutShared's MercedesTile (its
+// OPTICAL fit, the cream card, its lit edge, its single rest shadow), in SCREEN space: centred on x 540,
+// top edge on y 128, 112 px (the house TILE drawn at 7/6, so its radius, edge and shadow keep the tile's own
+// proportions). It enters once, cut 1 f0-14 (already moving on f0: blur-in, a 24 px slide-up, its shadow
+// settling from lifted onto rest), then holds, identical in every frame after. It does not sway: StoutStage
+// sways the world only, never its screen-space overlay. No text.
+// ===========================================================================
+export const HEADLINE = { size: 112, top: 128, x: 540, enter: [S_1 - 1, S_1 + 14] } as const;
+/** PASS 3B: luminance stops for the world's fade under the headline (WORLD_FADE, smoothstep between). */
+const WORLD_FADE_STOPS: [number, string][] = Array.from({ length: 9 }, (_, i) => {
+  const t = i / 8;
+  const v = Math.round(smoothstep(t) * 255).toString(16).padStart(2, "0");
+  return [t, `#${v}${v}${v}`];
+});
+const HEADLINE_S = HEADLINE.size / GEO.TILE;
+{
+  if (HEADLINE.top + HEADLINE.size + 48 !== HEADLINE_BAND) fail("the headline's band is out of step with HEADLINE");
+}
+const Headline: React.FC<{ S: number }> = ({ S }) => {
+  const u = clamp01((S - HEADLINE.enter[0]) / (HEADLINE.enter[1] - HEADLINE.enter[0]));
+  const a = easeOutCubic(u);
+  const blur = 6 * (1 - a);
+  const s = HEADLINE_S;
+  return (
+    <svg
+      width={1080}
+      height={1920}
+      viewBox="0 0 1080 1920"
+      style={{ position: "absolute", left: 0, top: 0, overflow: "visible", opacity: a < 1 ? a : undefined, filter: blur > 0.05 ? `blur(${f3(blur)}px)` : undefined }}
+    >
+      <g transform={`scale(${fx(s)})`}>
+        <MercedesTile x={HEADLINE.x / s} floor={(HEADLINE.top + HEADLINE.size) / s} k={s} lift={1 - a} dy={((1 - a) * 24) / s} />
+      </g>
+    </svg>
+  );
+};
+
+// ===========================================================================
 // THE WORLD AT STORY TIME S
 // ===========================================================================
 export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
@@ -1468,6 +1588,9 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
   const band = amberBandFor(cam);
   const pool = poolAt(S);
   const sw = { dx: 3 * Math.sin(S / 23), dy: 5 * Math.sin(S / 19) };
+  // screen px -> this frame's world (StoutStage: translate(540 - cam.x k + sway.dx, 960 - cam.y k + sway.dy) scale(k))
+  const scrX = (xs: number) => (xs - (540 - cam.x * k + sw.dx)) / k;
+  const scrY = (ys: number) => (ys - (960 - cam.y * k + sw.dy)) / k;
   const onScreen = (x: number, y: number, m = 16) => {
     const p = toScreen(cam, x, y);
     return p.x + sw.dx > -m && p.x + sw.dx < 1080 + m && p.y + sw.dy > -m && p.y + sw.dy < 1920 + m;
@@ -1510,8 +1633,6 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
   // --- the hubs ---
   const tileDim = (i: number) => 1 - smoothstep((S - TILE_LIT[i]) / RUNG_F);
   const tileDark = (i: number) => 1 - smoothstep((S - TILE_REVEAL_T[i]) / 13);
-  const hubLabelY = HUB.y + HUB.size / 2 + (SPACE.CLEAR + TYPE.LABEL * METRIC.cap) / k;
-  const hubOut = enterAt(S, HUB_LABEL_OUT);
 
   // --- the pit wall ---
   const dy = engDy(S);
@@ -1529,9 +1650,10 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
   const readout = (() => {
     if (S < RD.in3) return null;
     if (S < S_6) {
-      const enter = enterAt(S, RD.in3);
-      const exit = enterAt(S, RD.out5);
-      if (exit >= 1) return null;
+      const inCut5 = S >= S_5;
+      const enter = inCut5 ? enterAt(S, RD.in5) : enterAt(S, RD.in3);
+      const exit = inCut5 ? enterAt(S, RD.out5) : enterAt(S, RD.out4);
+      if (exit >= 1 || enter <= 0) return null;
       const inBody = S >= COUNT_BODY.S0;
       const d = inBody ? displayOf(COUNT_BODY, S) : displayOf(COUNT_TIP, S);
       // the label rolls AT THE TRACK -> PEOPLE through its own lane as "2,500" lands (14 f)
@@ -1540,9 +1662,9 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
         <g>
           <CountNumeral x={AX} y={numY} k={k} d={d} tone="cream" enter={enter} exit={exit} />
           {inBody ? (
-            <LabelRoll x={AX} y={labelY} k={k} from="at the track" to="people" u={labelU} exit={exit} />
+            <LabelRoll x={AX} y={labelY} k={k} from="at the track" to="people" u={labelU} enter={enter} exit={exit} />
           ) : (
-            <Label x={AX} y={labelY} k={k} text="at the track" tone="creamLo" enter={enterAt(S, RD.label3)} />
+            <Label x={AX} y={labelY} k={k} text="at the track" tone="creamLo" enter={inCut5 ? enter : enterAt(S, RD.label3)} exit={exit} />
           )}
         </g>
       );
@@ -1562,7 +1684,7 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
   const sweepBox = { x: AX - 580, y: numY - (TYPE.HERO * METRIC.fig) / k - 10, w: 1160, h: BOTTOM_Y + 10 - (numY - (TYPE.HERO * METRIC.fig) / k - 10) };
 
   return (
-    <StoutStage S={S} cam={cam} rest={CAM_REST} pool={{ x: pool[0], y: pool[1] }}>
+    <StoutStage S={S} cam={cam} rest={CAM_REST} pool={{ x: pool[0], y: pool[1] }} overlay={<Headline S={S} />}>
       <defs>
         <path id={`${uid}b`} d={BUST_D} />
         <GlyphShadowFilter id={`${uid}gs`} />
@@ -1575,8 +1697,20 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
         <clipPath id={`${uid}pit`}>
           <rect x={AX - 200} y={PY} width={400} height={PIT.bot - PY} />
         </clipPath>
+        {/* PASS 3B: the headline's clear ground. A SCREEN-space mask on the world (people, cars, pit wall,
+            glass, waterline, tiles; not the ground, grain or vignette, not the readout): transparent above
+            y 248, opaque from y 336, smoothstep between, expressed in world units under this frame's camera */}
+        <linearGradient id={`${uid}hg`} gradientUnits="userSpaceOnUse" x1="0" y1={f3(scrY(WORLD_FADE[0]))} x2="0" y2={f3(scrY(WORLD_FADE[1]))}>
+          {WORLD_FADE_STOPS.map(([o, c]) => (
+            <stop key={o} offset={f3(o)} stopColor={c} />
+          ))}
+        </linearGradient>
+        <mask id={`${uid}hm`} maskUnits="userSpaceOnUse" x={f3(scrX(-60))} y={f3(scrY(-60))} width={f3(1200 / k)} height={f3(2040 / k)}>
+          <rect x={f3(scrX(-60))} y={f3(scrY(-60))} width={f3(1200 / k)} height={f3(2040 / k)} fill={`url(#${uid}hg)`} />
+        </mask>
       </defs>
 
+      <g mask={`url(#${uid}hm)`}>
       {/* the glass tint, revealed with its outline */}
       <path d={polyD([...TIP_RIGHT, ...[...TIP_LEFT].reverse()], true)} fill={COLOR.glass} fillOpacity={ALPHA.glassTint} clipPath={`url(#${uid}tipc)`} />
       <path d={polyD([...BODY_RIGHT, ...[...BODY_LEFT].reverse().slice(1)], true)} fill={COLOR.glass} fillOpacity={ALPHA.glassTint} clipPath={`url(#${uid}bodyc)`} />
@@ -1590,12 +1724,10 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
       <g filter={`url(#${uid}gs)`}>{baseUses}</g>
       {amberUses.length ? <g style={{ filter: bloomFilter(k) }}>{amberUses}</g> : null}
 
-      {/* the two hubs (cut 4): board tiles that lift to cream when the pool reaches them */}
+      {/* the two hubs (cut 4): tiles that rise out of the dark and lift to cream when the pool reaches them
+          (PASS 3: no labels; the icons carry it) */}
       {[0, 1].map((i) => (
         <HubTile key={i} cx={TILE_C[i][0]} cy={TILE_C[i][1]} k={k} dim={tileDim(i)} dark={tileDark(i)} figure={i === 0 ? "engine" : "chassis"} />
-      ))}
-      {[0, 1].map((i) => (
-        <Label key={i} x={TILE_C[i][0]} y={hubLabelY} k={k} text={i === 0 ? "engine" : "chassis"} tone="cream" enter={enterAt(S, HUB_LABEL_IN[i])} exit={hubOut} />
       ))}
 
       {/* the pit wall: rises out of its slot with its six engineers (cut 2) */}
@@ -1702,9 +1834,7 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
         <Car key={car} tailX={carTail(car, S)} k={k} amber={helmetAmber(car, S)} band={band} />
       ))}
 
-      {readout}
-
-      {/* THE ONE CLICK: one light sweep across every amber person and the numeral (cut 6, "equally") */}
+      {/* THE ONE CLICK: one light sweep across every amber person (masked with the world)... */}
       {sweepT > 0 && sweepT < 1 ? (
         <g>
           <defs>
@@ -1713,6 +1843,22 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
               {[...MECHANICS, ...ENGINEERS].map((m, i) => (
                 <use key={`m${i}`} href={`#${uid}b`} x={f3(m.x)} y={f3(m.y)} />
               ))}
+            </clipPath>
+          </defs>
+          <g clipPath={`url(#${uid}sw)`}>
+            <LightSweep x={sweepBox.x} y={sweepBox.y} w={sweepBox.w} h={sweepBox.h} k={k} t={sweepT} on="amber" r={0} />
+          </g>
+        </g>
+      ) : null}
+      </g>
+
+      {readout}
+
+      {/* ...and the same band across the numeral, above the mask with the readout (cut 6, "equally") */}
+      {sweepT > 0 && sweepT < 1 ? (
+        <g>
+          <defs>
+            <clipPath id={`${uid}swn`}>
               {layout(fmt(COUNT_AMBER.final), AX, TYPE.HERO / k).map((g, i) => (
                 <text
                   key={`n${i}`}
@@ -1729,7 +1875,7 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
               ))}
             </clipPath>
           </defs>
-          <g clipPath={`url(#${uid}sw)`}>
+          <g clipPath={`url(#${uid}swn)`}>
             <LightSweep x={sweepBox.x} y={sweepBox.y} w={sweepBox.w} h={sweepBox.h} k={k} t={sweepT} on="amber" r={0} />
           </g>
         </g>

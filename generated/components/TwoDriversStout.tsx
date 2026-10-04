@@ -16,6 +16,9 @@ import { DUR, FPS, IcebergWorld, S_1 } from "./icebergShared";
 // ONE MOTION: the two cars glide in along the plateau's floor and come to rest in the light pool; outside
 // eyes make their drivers the stars.
 // GESTURES (gesture -> word -> frames)
+//   PASS 3: the HEADLINE, the Mercedes star tile (stoutShared's MercedesTile, 112 px, screen space, top
+//     on y 128), enters once: blur-in + 24 px slide-up, its shadow settling onto rest, already moving on
+//     f0 -> f0-14 ("Formula 1"); it then holds, static, through all six cuts
 //   the floor (the tip's glass top edge) is a hairline across the frame; the light pool sits on the
 //     boxes; the tip crowd is in the DARK (one tone below board, PASS 2) and stays under y 1400
 //     (asserted); nothing of the mechanics is on screen -> f0-76

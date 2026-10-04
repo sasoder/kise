@@ -16,6 +16,9 @@ import { DUR, FPS, IcebergWorld, S_3 } from "./icebergShared";
 // ONE MOTION: the pull-back reveals the floor as the top of an iceberg; the light spreads down through
 // its tip and counts the 150.
 // GESTURES (gesture -> word -> frames)
+//   (the Mercedes headline holds at the top; the readout's numeral keeps >= 48 px below it: PASS 3; the
+//     world fades out under the headline, transparent above y 248, whole from y 336: PASS 3B; the two
+//     DARK hub tiles now sit 96 px deeper, at the frame's bottom edge)
 //   one long pull-back, k 3.9 -> 2.2, dropping the waterline into the lower half (f12 -> f49) ->
 //     "tip of the iceberg"
 //   the WATERLINE (one cream rule) draws out from the axis past both frame edges (f20-44) and on past
