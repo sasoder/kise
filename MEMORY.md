@@ -133,6 +133,25 @@ Reference implementations, all approved: `DomainExpertiseSweep.tsx`,
 `CodebaseComprehensionFold.tsx`, `UnderstandingDepthPlateau.tsx`,
 `HourVersusWeeks.tsx`.
 
+## Delivering revisions: the newest version keeps the original name (approved 2026-10-04)
+
+The user cuts graphics into Premiere Pro straight from the clip folder. Premiere links by path, so a `_V2` file
+delivered beside the original never reaches the timeline. They asked: "keep a copy of all the old ones but make it so
+that the newest version is the same name as the first version so it gets linked properly in Premiere Pro." This
+overrides every older "versions `_V2` beside the original" line in this file, for every style.
+
+For each revised cut:
+1. Check what the project links: `gunzip -c <clip>.prproj | grep -o '<FilePath>[^<]*'`.
+2. Keep the current file as `old/<inSeconds>_<Name>_V<n>.mov`. Use a hard link (`ln`) or `cp -n`, and never overwrite
+   an existing file in `old/`.
+3. Put the new render under the ORIGINAL name: copy it to a temp name, then `mv -f` it onto `<inSeconds>_<Name>.mov`.
+   No `_V<n>` name is left in the root.
+4. Re-link `final/` (`ln -f`), so it holds the same file under its zero-padded name.
+5. Keep the frame count identical to the previous version, so the clip's in/out points on the timeline survive. If a
+   revision must change length, say so.
+6. `placements.txt` lists the current files under their original names, plus a Versions history pointing into `old/`.
+7. Tell the user: if Premiere had the project open, close and reopen it to drop cached frames.
+
 ## Cheeky Pint S4 style (approved 2026-10-03)
 
 The user's named house style for Cheeky Pint season 4. It was saved after the Toto Wolff "Mercedes F1 financials" set
@@ -161,8 +180,8 @@ The act worlds are `stoutActA.tsx` and `stoutActB.tsx`, and the style frames are
 **Output.**
 - 1080x1920 at 24 fps. Cuts are OPAQUE ProRes 4444; the name tag and CTA are TRANSPARENT. Always render `--muted`.
 - Duration = `round(span × 24)` + a 16-frame tail. Use private entries `src/entry.<Name>.ts` + `src/Root.<Name>.tsx`.
-- Delivery: `<inSeconds>_<Name>.mov`, versions `_V2` beside the original, `final/` (zero-padded, latest of each) and a
-  placements.txt.
+- Delivery: `<inSeconds>_<Name>.mov`, `final/` (zero-padded, latest of each) and a placements.txt. A revision takes
+  the ORIGINAL name; older versions go to `old/` (see `## Delivering revisions` above).
 
 **Ground.** `StoutStage`:
 - A baked espresso-brown kraft sheet, `public/cheekypint2/brown-b1.jpg`: ground `#432C1C`, about L* 23 at the subject.
