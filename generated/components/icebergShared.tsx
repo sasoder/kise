@@ -19,7 +19,6 @@ import {
   ElevationShadow,
   Label,
   LightSweep,
-  MercedesTile,
   StoutStage,
   amberBandFor,
   bloomFilter,
@@ -266,15 +265,16 @@ const BUST_RIM: P[] = (() => {
  *  13 keeps every pair apart (>= 0.36 px at that angle, 2 px side by side or stacked). */
 export const POISSON_R = 13;
 const SEED_TIP = 3;
-const SEED_BODY = 41;
+const SEED_BODY = 24;
 const EDGE_MARGIN = 7; // a glyph centre to the glass outline
 const WATER_GAP = 7.5; // a glyph centre to the waterline (no glyph straddles the rule)
 const CROWD_TOP = 86; // the tip crowd's first row (rel. PY): below y 1400 at cut 1's close framing
 /** The pit wall's slot terrace and the hub tiles (+ their labels) are kept clear of the crowd. */
 export const PIT = { x0: AX - 50, x1: AX + 50, top: PY + 50, bot: PY + 58 } as const;
 /** PASS 2: the hubs are places, not badges: 126 px tiles (~11.5 person widths, 2.1x pass 1). */
-/** PASS 3B: 96 px deeper (WY + 338), so cut 4 happens wholly below the waterline. */
-export const HUB_DEPTH = 338;
+/** PASS 3B: deeper, so cut 4 happens wholly below the waterline; PASS 4 (no world mask any more): 430, so at
+ *  cut 4's rests (k 2.0-2.3, the pair on y 835) the waterline is above the frame's top edge. */
+export const HUB_DEPTH = 430;
 export const HUB = { size: 126, dx: 88, y: WY + HUB_DEPTH } as const;
 const HUB_HALF = HUB.size / 2;
 /** PASS 3: no label spots. Each hub tile keeps the SAME clearance on all four sides, the gap the crowd keeps
@@ -671,10 +671,10 @@ export const lightTone = (i: number, S: number) => smoothstep((S - LIGHT_T[i]) /
 // clearance; = the lowest person's distance to the bottom, so the count closes as the outline closes).
 // PASS 2: the head is rank-timed: it passes the people at designed times (first f19, the 2,350th on f46),
 // moving between them in a straight line, so it decelerates into the bottom and "2,500" lands on f46.
-/** PASS 3: the readout re-enters in cut 5 once it is clear below the headline (3B: f22 -> f34); the outline
- *  starts as it lands, so it is legible before it rolls, and "2,500" lands on f50. */
-const READOUT_IN5 = S_5 + 22;
-export const BODY_DRAW = { S0: READOUT_IN5 + 12, S1: S_5 + 50, p: 3 } as const;
+/** PASS 4: the readout stays in the world through cuts 4-5 (it scrolls out with the dive and back in with
+ *  cut 5's rise); the outline starts once it is legible on screen, and "2,500" lands on f50. */
+const BODY_S0 = S_5 + 30;
+export const BODY_DRAW = { S0: BODY_S0, S1: S_5 + 50, p: 3 } as const;
 export const BODY_REACH = BOTTOM_Y - Math.max(...BODY_CROWD.map((p) => p.y));
 const BODY_RANK = rankTimes(
   BODY_CROWD.map((p) => p.y),
@@ -717,40 +717,95 @@ export const AMBER_FRONT = { S0: S_6 + 66, S1: S_6 + 118, p: 3 } as const;
 // THE CAMERA — one track for the whole clock (look = the content centre; the
 // camera centre is look + CAM_LIFT / k, so the look lands at screen y 835).
 // ===========================================================================
-/** The readout's cap top above the cars' top (screen px), and the headline's band it must clear. */
-const READOUT_H = TYPE.HERO * METRIC.fig + SPACE.LOCKUP + TYPE.LABEL * METRIC.cap + SPACE.CLEAR;
-const READOUT_BASE_H = SPACE.LOCKUP + TYPE.LABEL * METRIC.cap + SPACE.CLEAR; // its baseline above the cars' top
-/** The headline (PASS 3, see HEADLINE): top 128, 112 tall; everything in the world keeps 48 px below it. */
-export const HEADLINE_BAND = 128 + 112 + 48;
-/** PASS 3B: the world fades out under the headline (screen y): gone above 248 (its bottom + its shadow),
- *  whole from 336. */
-export const WORLD_FADE = [248, 336] as const;
+// --- THE LOGO STACK (PASS 4): the column over the cars, bottom to top: the cars' top, a gap, the team logo,
+// SPACE.CLEAR, the readout's label, SPACE.LOCKUP, its HERO numeral. The logo is counter-scaled: its height
+// and gap are size tokens at the camera rests, eased between them by the camera's own k (monotone cubic in
+// ln k), so it never steps, is always legible, and its star ring never falls under 80 px.
 const SWAY_MAX = 5; // the world's sway (StoutStage), screen px
-/** PASS 3: the wide is re-solved under the headline: the largest k that puts the berg's bottom on y 1395
- *  (+ sway <= 1400) and the readout's cap top on the band (+ sway). */
-const WIDE_K = (1395 - (HEADLINE_BAND + SWAY_MAX) - READOUT_H) / (BOTTOM_Y - Y_TOP);
+const READOUT_LABEL_H = TYPE.HERO * METRIC.fig + SPACE.LOCKUP + TYPE.LABEL * METRIC.cap; // the numeral's cap top above the label's baseline
+const LOGO_VB = { w: 500, h: 552, ring: 300 } as const; // the SVG's viewBox; the star's ring is 300 across
+/** The wide's tokens; the wide k is the largest that fits the whole column (readout top >= y 150, the berg's
+ *  bottom on y 1395, + sway <= 1400). */
+const LOGO_WIDE = { h: 150, gap: 24 } as const;
+const WIDE_K = (1395 - (150 + SWAY_MAX) - (READOUT_LABEL_H + SPACE.CLEAR + LOGO_WIDE.h + LOGO_WIDE.gap)) / (BOTTOM_Y - Y_TOP);
+/** [k at the rest, lockup height px, gap above the cars px]: the wides, cut 3, cut 2, cut 1. */
+const LOGO_TOKENS: [number, number, number][] = [
+  [WIDE_K, LOGO_WIDE.h, LOGO_WIDE.gap],
+  [2.35, 190, 32],
+  [3.94, 230, 40],
+  [7.0, 280, 48],
+];
+const pchip = (xs: number[], ys: number[]) => {
+  const n = xs.length;
+  const h = xs.slice(1).map((x, i) => x - xs[i]);
+  const dl = ys.slice(1).map((y, i) => (y - ys[i]) / h[i]);
+  const m = xs.map((_, i) => {
+    if (i === 0) return dl[0];
+    if (i === n - 1) return dl[n - 2];
+    if (dl[i - 1] * dl[i] <= 0) return 0;
+    const w1 = 2 * h[i] + h[i - 1];
+    const w2 = h[i] + 2 * h[i - 1];
+    return (w1 + w2) / (w1 / dl[i - 1] + w2 / dl[i]);
+  });
+  return (x: number) => {
+    if (x <= xs[0]) return ys[0];
+    if (x >= xs[n - 1]) return ys[n - 1];
+    let i = 0;
+    while (x > xs[i + 1]) i++;
+    const t = (x - xs[i]) / h[i];
+    const t2 = t * t;
+    const t3 = t2 * t;
+    return (2 * t3 - 3 * t2 + 1) * ys[i] + (t3 - 2 * t2 + t) * h[i] * m[i] + (-2 * t3 + 3 * t2) * ys[i + 1] + (t3 - t2) * h[i] * m[i + 1];
+  };
+};
+const LOGO_LNK = LOGO_TOKENS.map(([kk]) => Math.log(kk));
+const logoHOf = pchip(LOGO_LNK, LOGO_TOKENS.map(([, hh]) => hh));
+const logoGapOf = pchip(LOGO_LNK, LOGO_TOKENS.map(([, , g]) => g));
+/** The column at camera k (world y): the logo's box and the readout's label / numeral baselines. */
+export const stackAt = (k: number) => {
+  const h = logoHOf(Math.log(k)) / k;
+  const logoBottom = Y_TOP - logoGapOf(Math.log(k)) / k;
+  const logoTop = logoBottom - h;
+  const labelY = logoTop - SPACE.CLEAR / k;
+  const numY = labelY - (TYPE.LABEL * METRIC.cap + SPACE.LOCKUP) / k;
+  return { logoTop, logoBottom, logoH: h, logoW: (h * LOGO_VB.w) / LOGO_VB.h, labelY, numY };
+};
+{
+  for (let lk = Math.log(0.5); lk <= Math.log(9); lk += 0.01) {
+    const ring = (logoHOf(lk) * LOGO_VB.ring) / LOGO_VB.h;
+    if (ring < 80) fail(`the logo's ring is ${ring.toFixed(1)} px at k ${Math.exp(lk).toFixed(2)}`);
+  }
+}
 export const K = { c1: 6.8, c2: 4.0, c3: 2.2, c4: 2.05, wide: WIDE_K, cars: 3.5 } as const;
+/** A look (the world y on screen y 835) that centres a column [top, bottom] (world, under k) on y 835. */
+const centreLook = (top: number, bottom: number) => (top + bottom) / 2;
+const at = (k: number) => stackAt(k);
 export const LOOK = {
-  cars: CARS_CY,
-  pit: (Y_TOP + PIT.bot) / 2,
-  /** cut 3's rest: the readout to the waterline, centred on y 835 */
-  tip: (Y_TOP - READOUT_H / K.c3 + WY) / 2,
-  /** cut 4's rest: the pair of tiles on y 835 (PASS 3: no labels under them) */
+  /** cut 1's rest: the logo over the cars, the pair centred on y 835 */
+  c1: centreLook(at(K.c1).logoTop, PY),
+  /** cut 2's rest: the logo, the cars, the mechanics and the pit wall */
+  pit: centreLook(at(3.94).logoTop, PIT.bot),
+  /** cut 3's rest: the readout, the logo, the tip to the waterline */
+  tip: centreLook(at(K.c3).numY - (TYPE.HERO * METRIC.fig) / K.c3, WY),
+  /** cut 4's rest: the pair of tiles on y 835 */
   hubs: HUB.y,
-  /** the wide: the berg's bottom on y 1395, the readout's cap top just under the headline's band */
+  /** the wide: the berg's bottom on y 1395 (the readout's top then sits on y 155) */
   wide: BOTTOM_Y - (1395 - 835) / K.wide,
+  /** cut 5's end / cut 6's opening (k 3.5): "2 SUPERSTARS" over the logo over the cars, centred */
+  cars: centreLook(at(K.cars).numY - (TYPE.HERO * METRIC.fig) / K.cars, PY),
 } as const;
 const CAM_PRE = 40;
-// PASS 3 / 3B: cut 5's pull-back rises further (370 px from the deeper hubs, to k 0.95 by f36) so the
-// readout comes down under the headline early (re-entering f22, rolling from f34) before the camera sinks
-// onto the wide; searched for the earliest clear re-entrance with |dv| <= 2.4.
-const CUT5_RISE = 370; // PASS 3B: the hubs sit 96 px deeper, so the rise is longer
-const CUT5_K = 0.95;
+// PASS 4: cut 5's pull-back still has to rise before it settles: the readout now stands over the logo over the
+// cars, ~390 px above them at k 1.3, so a monotone move to the wide would bring it into the frame only at the
+// wide (~f70), too late to count by f50. Searched (|dv| <= 2.4, the readout legible from f26): the smallest
+// working rise is 400 px (to k 0.9 by f32), then the camera sinks onto the wide.
+const CUT5_RISE = 400;
+const CUT5_K = 0.9;
 const CUT5_A = -8;
-const CUT5_B = 36;
-const CUT5_W = 0.85;
-const CAM_START = { x: AX - 14, y: LOOK.cars, k: 6.5 };
-const RISE_LOOK = LOOK.hubs - CUT5_RISE; // cut 5: the pull-back rises so the readout comes down under the headline early
+const CUT5_B = 32;
+const CUT5_W = 1;
+const CAM_START = { x: AX - 14, y: LOOK.c1, k: 6.5 };
+const RISE_LOOK = LOOK.hubs - CUT5_RISE; // cut 5: the pull-back rises so the readout comes down into the frame early
 export const CAM_GLIDES: Glide[] = [
   // Glides are keyed in S (cut n's frame f = S - S_n). Rest k (measured on the damped track): cut 1 end 7.01,
   // cut 2 end 3.94, cut 3 end 2.35, cut 4 end 1.99, cut 5 wide 0.78 / end 3.46, cut 6 end 0.77 (PASS 3).
@@ -758,14 +813,14 @@ export const CAM_GLIDES: Glide[] = [
   { f0: -40, f1: 40, dx: 14, k: K.c1 },
   { f0: 34, f1: 112, k: 7.25 },
   // cut 2 (S 76-177): eases back and a little down as the pit wall rises (f22 -> f66); the creep
-  { f0: S_2 + 22, f1: S_2 + 66, dy: LOOK.pit - LOOK.cars, k: K.c2, warp: 0.95 },
+  { f0: S_2 + 22, f1: S_2 + 66, dy: LOOK.pit - LOOK.c1, k: K.c2, warp: 0.95 },
   { f0: S_2 + 64, f1: S_2 + 120, k: 3.9 },
   // cut 3 (S 177-295): one long pull-back that drops the waterline into the lower half (f12 -> f49); creep
   { f0: S_3 + 12, f1: S_3 + 49, dy: LOOK.tip - LOOK.pit, k: K.c3 },
   { f0: S_3 + 47, f1: S_3 + 125, k: 2.36 },
   // cut 4 (S 295-445): the dive down through the waterline onto the deeper hubs (f-6 -> f44); the creep to the left tile
   // through the pause (f44 -> f80); right to the second tile (f94 -> f121); ease to the pair (f119 -> f151)
-  { f0: S_4 - 6, f1: S_4 + 44, dy: LOOK.hubs - LOOK.tip, k: K.c4 },
+  { f0: S_4 - 8, f1: S_4 + 48, dy: LOOK.hubs - LOOK.tip, k: K.c4 },
   { f0: S_4 + 44, f1: S_4 + 80, dx: -50, dy: -3, k: 2.32 },
   { f0: S_4 + 94, f1: S_4 + 121, dx: 100 },
   { f0: S_4 + 119, f1: S_4 + 151, dx: -50, dy: 3, k: K.c4 },
@@ -918,8 +973,6 @@ export const fmt = (n: number) => {
 export const RD = {
   in3: S_3 + 44, // the numeral rises above the peak at its honest 16 (cut 3 "it's about", f44 -> f56, lands on "150")
   label3: S_3 + 78, // AT THE TRACK blurs in, lands f90 ("go to the tracks")
-  out4: S_4 + 0, // PASS 3: exits as the glide down begins (f0 -> f12), before it could rise behind the headline
-  in5: READOUT_IN5, // PASS 3: re-enters once it is clear below the headline, before it rolls
   out5: S_5 + 82, // exits (the entrance reversed) f82 -> f94, before the glide to the cars arrives (PASS 2)
   in6: S_6 + 23, // "2" re-enters (amber), lands f35 ("superstars")
   label6: S_6 + 28, // SUPERSTARS lands f40
@@ -927,16 +980,14 @@ export const RD = {
 const ENTER_F = 12;
 const enterAt = (S: number, S0: number) => clamp01((S - S0) / ENTER_F);
 /** The rolling line (CountNumeral): its opaque core above / below the baseline, its soft top, the drum pitch (em). */
-// PASS 3: the line's soft top sits just above the figures' cap height (0.729 em), so a rolling figure
-// dissolves within 0.14 em above its own cap line and never rises toward the headline.
-const ROLL = { CORE_UP: 0.76, CORE_DOWN: 0.11, FEATHER: 0.14, PITCH: 1.22 } as const;
+const ROLL = { CORE_UP: 0.838, CORE_DOWN: 0.11, FEATHER: 0.25, PITCH: 1.22 } as const;
 /** The house entrance (stoutShared's): slide up 24 SCREEN px, fade, blur 6 -> 0; exit reverses. */
 const entrance = (enter: number, exit: number) => {
   const a = easeOutCubic(enter);
   const e = 1 - Math.pow(1 - clamp01(exit), 3);
   return { lift: (1 - a) * 24 + e * 24, opacity: a * (1 - e), blur: 6 * (1 - a) + 6 * e };
 };
-/** PASS 3: the highest visible ink of the readout's numeral at S (screen px, the world's sway included):
+/** The highest visible ink of the readout's numeral at S (screen px, the world's sway included):
  *  its cap top at rest; while it rolls, the rising figure seen through the line's soft top (where the line
  *  still passes >= 10 %); the entrance / exit lift and blur. null = not on screen. */
 export const readoutTopAt = (S: number): number | null => {
@@ -944,12 +995,8 @@ export const readoutTopAt = (S: number): number | null => {
   let enter: number;
   let exit: number;
   let d: Display;
-  if (S < S_5) {
+  if (S < S_6) {
     enter = enterAt(S, RD.in3);
-    exit = enterAt(S, RD.out4);
-    d = displayOf(COUNT_TIP, S);
-  } else if (S < S_6) {
-    enter = enterAt(S, RD.in5);
     exit = enterAt(S, RD.out5);
     d = S >= COUNT_BODY.S0 ? displayOf(COUNT_BODY, S) : displayOf(COUNT_TIP, S);
   } else {
@@ -960,7 +1007,7 @@ export const readoutTopAt = (S: number): number | null => {
   const en = entrance(enter, exit);
   if (en.opacity <= 0.002) return null;
   const c = camAt(S);
-  const baseline = 960 + (Y_TOP - c.y) * c.k - READOUT_BASE_H;
+  const baseline = 960 + (stackAt(c.k).numY - c.y) * c.k;
   const rolling = d.v - Math.floor(d.v) > 1e-6;
   const inkEm = rolling ? ROLL.CORE_UP + 0.9 * ROLL.FEATHER : METRIC.fig;
   return baseline + en.lift - inkEm * TYPE.HERO - en.blur - SWAY_MAX;
@@ -975,8 +1022,8 @@ const TILE_C: P[] = [
   [AX - HUB.dx, HUB.y],
   [AX + HUB.dx, HUB.y],
 ];
-const POOL_LEAN = 50; // cut 4's descent leans toward the left tile (world px)
-const POOL_DIVE = 176; // how deep below the waterline the pool follows the dive before the tiles
+const POOL_LEAN = 70; // cut 4's descent leans toward the left tile (world px)
+const POOL_DIVE = HUB_DEPTH - 162; // how deep below the waterline the pool follows the dive before the tiles
 const poolTarget = (S: number): P => {
   const way: { S0: number; S1: number; p: P }[] = [
     { S0: S_2 + 40, S1: S_2 + 80, p: [AX, PY + 30] }, // cut 2: drifts down to take in the pit wall
@@ -1013,7 +1060,7 @@ const poolAt = (S: number): P => POOL_TRACK[Math.max(0, Math.min(POOL_TRACK.leng
  *  OUTER EDGE (its screen ellipse POOL.rx x POOL.ry scaled by POOL_EDGE) reaches each tile as the look
  *  descends onto them, and it rises DARK -> board over 13 f; the pool leans a little left on its way
  *  down, so the left tile is reached first and the right ~4 f later. */
-const POOL_EDGE = 0.8; // the pool's outer edge: 0.8 of its screen ellipse (its gradient's visible rim)
+const POOL_EDGE = 0.9; // the pool's outer edge: 0.9 of its screen ellipse (its gradient's visible rim)
 const tileInPool = (i: number, S: number) => {
   const p = poolAt(S);
   const c = camAt(S);
@@ -1054,16 +1101,22 @@ export const TILE_LIT: number[] = TILE_C.map((c, i) => {
     const gap = carTail(1, S) - (carTail(0, S) + CAR_L);
     rule(gap >= 4.5, `the cars' gap ${gap.toFixed(2)} on S ${S}`);
   }
-  // PASS 3: the readout's numeral (rolls and entrances included) never comes within 48 px of the headline
-  for (let S = S_3; S <= S_END; S++) {
+  // PASS 4: at the wides the readout's top stays at or under y 150 (rolls included)
+  for (const [a, b] of [[S_5 + 60, S_5 + 82], [S_6 + 120, S_END]] as const)
+    for (let S = a; S <= b; S++) {
+      const t = readoutTopAt(S);
+      if (t !== null) rule(t >= 150, `the readout's top at y ${t.toFixed(1)} on S ${S} (a wide wants >= 150)`);
+    }
+  // cut 5: the readout is on screen and legible before the outline (its count) starts, and through the roll
+  for (let S = BODY_DRAW.S0 - 4; S <= BODY_DRAW.S1; S++) {
     const t = readoutTopAt(S);
-    if (t !== null) rule(t >= HEADLINE_BAND, `the readout reaches y ${t.toFixed(1)} on S ${S} (the headline's band ends at ${HEADLINE_BAND})`);
+    rule(t !== null && t >= 60, `cut 5 f${S - S_5}: the readout is not legible on screen (top ${t === null ? "-" : t.toFixed(0)})`);
   }
-  // PASS 3B: cut 4 happens wholly below the waterline: from the dive's landing on, the waterline (+ sway) sits
-  // inside the headline's masked band (screen y <= 248)
-  for (let S = S_4 + 48; S <= S_5; S++) {
+  // PASS 3B / 4: cut 4 happens wholly below the waterline: from the dive's landing on, the waterline (+ sway)
+  // is above the frame's top edge
+  for (let S = S_4 + 48; S <= S_5 - 9; S++) {
     const y = toScreen(camAt(S), AX, WY).y + SWAY_MAX;
-    rule(y <= WORLD_FADE[0], `cut 4 f${S - S_4}: the waterline shows at y ${y.toFixed(0)}`);
+    rule(y <= 0, `cut 4 f${S - S_4}: the waterline shows at y ${y.toFixed(0)}`);
   }
   // cut 2: every mechanic under 45 screen px/f, and no two ever touch on the way in
   for (let S = S_2 - 16; S <= S_2 + 34; S++) {
@@ -1540,41 +1593,44 @@ const Engineer: React.FC<{ id: string; x: number; y: number; fill: string; opaci
 };
 
 // ===========================================================================
-// THE HEADLINE (PASS 3) — the user: "add the f1 logo over the drivers kinda like a headline ... use the
-// mercedes f1 logo". The Mercedes star tile of the approved financials set: stoutShared's MercedesTile (its
-// OPTICAL fit, the cream card, its lit edge, its single rest shadow), in SCREEN space: centred on x 540,
-// top edge on y 128, 112 px (the house TILE drawn at 7/6, so its radius, edge and shadow keep the tile's own
-// proportions). It enters once, cut 1 f0-14 (already moving on f0: blur-in, a 24 px slide-up, its shadow
-// settling from lifted onto rest), then holds, identical in every frame after. It does not sway: StoutStage
-// sways the world only, never its screen-space overlay. No text.
+// THE TEAM'S LOGO (PASS 4) — the user: "add the f1 logo over the drivers kinda like a headline ... use the
+// mercedes f1 logo", then on V2: "this is the logo i mean and it should be anchored there".
+// SOURCE: Wikipedia, en.wikipedia.org/wiki/Mercedes-Benz_in_Formula_One, the infobox logo
+// File:Mercedes-AMG Petronas F1 Team logo (2026).svg (the team shop's artwork; public domain on Wikipedia, a
+// trademark of its owner). A local copy: out/dickheads/briefs/Mercedes-AMG_Petronas_F1_Team_logo_2026.svg
+// (viewBox 0 0 500 552). Its 4 paths are inlined here verbatim (never an <image> / staticFile: it races frame
+// capture). ONE colour, cream COLOR.inkCream (type on the ground), PETRONAS included: amber stays the clip's
+// only colour. It stands on the ground with no card and, like the house type, no shadow.
+// It belongs to the WORLD: centred on the axis over the two cars, its bottom a clean gap over their tops;
+// it moves, zooms and sways with them, counter-scaled by stackAt (size tokens at the rests). It enters once,
+// cut 1 f8 -> f26 (blur-in + a 24 px slide-up, "from outside"), before "you see two drivers"; it never exits.
 // ===========================================================================
-export const HEADLINE = { size: 112, top: 128, x: 540, enter: [S_1 - 1, S_1 + 14] } as const;
-/** PASS 3B: luminance stops for the world's fade under the headline (WORLD_FADE, smoothstep between). */
-const WORLD_FADE_STOPS: [number, string][] = Array.from({ length: 9 }, (_, i) => {
-  const t = i / 8;
-  const v = Math.round(smoothstep(t) * 255).toString(16).padStart(2, "0");
-  return [t, `#${v}${v}${v}`];
-});
-const HEADLINE_S = HEADLINE.size / GEO.TILE;
-{
-  if (HEADLINE.top + HEADLINE.size + 48 !== HEADLINE_BAND) fail("the headline's band is out of step with HEADLINE");
-}
-const Headline: React.FC<{ S: number }> = ({ S }) => {
-  const u = clamp01((S - HEADLINE.enter[0]) / (HEADLINE.enter[1] - HEADLINE.enter[0]));
+const LOGO_PATHS = [
+  /** the striped AMG wordmark */
+  "m401.34 408.19h95.805c1.5692 0 2.8495-1.2737 2.8495-2.8429v-23.84c0-1.5626-1.2803-2.8429-2.8495-2.8429h-47.088c-1.5692 0-2.8495 1.2737-2.8495 2.8429v4.3005c0 1.5626 1.2803 2.8429 2.8495 2.8429h30.924c0.52524 0 0.95201 0.42676 0.95201 0.94545v4.6156c0 0.51869-0.42677 0.94545-0.95201 0.94545h-61.572c-1.5692 0-2.8495-1.2737-2.8495-2.8429v-17.688c0-1.5626 1.2803-2.8429 2.8495-2.8429h77.743c1.5692 0 2.8495-1.2737 2.8495-2.8429v-6.4737c0-1.5626-1.2803-2.8429-2.8495-2.8429h-95.805c-1.5692 0-2.8495 1.2737-2.8495 2.8429v42.873c0 1.5626 1.2803 2.8429 2.8495 2.8429zm-26.82 0h12.37c1.5692 0 2.8495-1.2737 2.8495-2.8429v-42.873c0-1.5626-1.2803-2.8429-2.8495-2.8429h-13.886c-0.57777 0-1.0702 0.14444-1.556 0.45959l-33.898 22.047c-0.96514 0.63029-2.147 0.63029-3.1121 0l-33.898-22.047c-0.48585-0.31515-0.97827-0.45959-1.556-0.45959h-13.886c-1.5692 0-2.8495 1.2737-2.8495 2.8429v42.873c0 1.5626 1.2803 2.8429 2.8495 2.8429h12.37c1.5692 0 2.8495-1.2737 2.8495-2.8429v-25.842c0-0.49242 0.2495-0.91918 0.68283-1.1621s0.92575-0.2298 1.3525 0.0394l26.243 16.401c0.47273 0.29545 0.95201 0.43333 1.5101 0.43333h11.779c0.55807 0 1.0374-0.13788 1.5101-0.43333l26.243-16.401c0.4202-0.26262 0.91262-0.27575 1.3525-0.0394 0.43333 0.24293 0.68282 0.66312 0.68282 1.1621v25.842c0 1.5626 1.2803 2.8429 2.8495 2.8429zm-103.85 0h-12.37c-1.5692 0-2.8495-1.2737-2.8495-2.8429v-7.5504c0-0.51868-0.42676-0.94544-0.95201-0.94544h-65.006c-0.91262 0-1.6939 0.38737-2.252 1.103l-6.7954 8.7651c-0.74191 0.95858-1.7924 1.4707-3.007 1.4707h-16.979c-0.51868 0-0.96514-0.27576-1.1949-0.74192-0.22979-0.46615-0.17727-0.98484 0.14445-1.3985l35.119-45.316c0.55808-0.72222 1.3394-1.103 2.252-1.103h73.883c1.5692 0 2.8495 1.2737 2.8495 2.8429v42.873c0 1.5626-1.2803 2.8429-2.8495 2.8429zm-15.219-24.798v-10.656c0-0.51869-0.42676-0.94545-0.95201-0.94545h-46.058c-0.6106 0-1.1293 0.25606-1.5035 0.73535l-8.207 10.59c-0.18384 0.23636-0.2101 0.53181-0.0788 0.79444 0.13131 0.26262 0.38737 0.4202 0.68282 0.4202h55.164c0.52525 0 0.95201-0.42677 0.95201-0.94545zm-213.34 24.798h-40.766c-0.51868 0-0.96514-0.27576-1.1949-0.74192-0.2298-0.46615-0.17727-0.98484 0.14444-1.3985l35.119-45.316c0.55808-0.72222 1.3394-1.103 2.252-1.103h40.378c0.5909 0 1.103 0.31515 1.3656 0.84696 0.26262 0.53182 0.20353 1.1293-0.16414 1.5954l-34.883 45.007c-0.55808 0.72222-1.3394 1.103-2.252 1.103zm29.631 0h-19.303c-0.51868 0-0.96514-0.27576-1.1949-0.74192-0.2298-0.46615-0.17727-0.98484 0.13788-1.3985l35.119-45.316c0.55808-0.72222 1.3394-1.103 2.252-1.103h18.915c0.59091 0 1.103 0.31515 1.3656 0.84696 0.26262 0.53182 0.20353 1.1293-0.16414 1.5954l-34.883 45.007c-0.55808 0.72222-1.3394 1.103-2.252 1.103zm26.571 0h-14.91c-0.51869 0-0.96515-0.27576-1.1949-0.74192-0.2298-0.46615-0.17727-0.98484 0.14444-1.3985l35.119-45.316c0.55807-0.72222 1.3394-1.103 2.252-1.103h14.523c0.59091 0 1.103 0.31515 1.3656 0.84696 0.26262 0.53182 0.20353 1.1293-0.16414 1.5954l-34.883 45.007c-0.55808 0.72222-1.3394 1.103-2.252 1.103zm24.01 0h-10.413c-0.51868 0-0.96514-0.27576-1.1949-0.74192-0.22979-0.46615-0.17727-0.98484 0.14445-1.3985l35.119-45.316c0.55808-0.72222 1.3394-1.103 2.252-1.103h10.026c0.59091 0 1.103 0.31515 1.3656 0.84696 0.26262 0.53182 0.20353 1.1293-0.16414 1.5954l-34.883 45.007c-0.55807 0.72222-1.3459 1.103-2.252 1.103zm22.993 0h-7.6555c-0.51868 0-0.96514-0.27576-1.1949-0.74192-0.2298-0.46615-0.17728-0.98484 0.14444-1.3985l35.119-45.316c0.55808-0.72222 1.3394-1.103 2.252-1.103h7.2681c0.59091 0 1.103 0.31515 1.3656 0.84696 0.26262 0.53182 0.20353 1.1293-0.16414 1.5954l-34.883 45.007c-0.55808 0.72222-1.3394 1.103-2.252 1.103z",
+  /** PETRONAS (teal in the original) */
+  "m16.778 493.6c0-4.4974-0.02626-14.661 0-15.245 0.03283-0.8207 0.6106-1.6545 1.4182-1.9368 0.36111-0.12475 0.76818-0.0919 1.149-0.0919h6.4671c4.4974 0 8.962-0.37424 13.236-1.8975 4.4909-1.5954 8.5287-4.3464 11.083-8.4368 2.5081-4.0182 3.3288-8.8964 2.9611-13.571-0.27576-3.4929-1.3197-6.9201-3.2959-9.8353-4.202-6.1914-11.693-8.8307-18.896-9.3297-0.96514-0.0657-1.9697-0.11818-2.902-0.0985-2.8692 7e-3 -5.7383 0-8.6075 0h-11.903c-2.8429 0-7.4782-0.13131-7.4782 3.9525v5.8303 50.654h16.775zm19.618-38.225c0 4.7535-3.6242 7.8393-9.5989 7.8393h-10.019v-13.328c0-1.4379 1.1752-2.6197 2.6065-2.6197h7.3141c6.0732 0 9.6974 2.7444 9.6974 7.9378zm358.2 38.218 3.053-7.6358c0.47273-1.2081 1.4904-2.4752 2.7838-2.705h21.66l4.2479 10.334h17.99l-25.626-60.43h-13.755c-2.0353 0.2298-2.8429 1.3066-3.5717 2.7707l-24.457 57.659h17.675zm15.908-40.575 6.7626 17.182h-13.63zm66.936 2.9348c-8.4368-1.8843-10.485-3.0924-10.485-5.8171v-0.20353c0-2.1666 1.9697-3.8868 6.0338-3.8868 3.7293 0 7.708 0.99797 11.667 2.8757 0 0 0.87323 0.42676 1.254 0.63686 1.149 0.51212 2.4687 0.94545 4.1232 0.59747 1.1687-0.24949 2.0222-1.3066 3.0661-2.5672l5.2525-7.406c-6.559-5.2722-14.576-8.0363-24.923-8.0363-14.517 0-23.452 8.1216-23.452 19.355v0.16414c0 12.429 9.9863 16.04 22.855 19.007 8.2136 1.8712 10.183 3.2631 10.183 5.7777v0.15101c0 2.6262-2.403 4.1363-6.8939 4.1363-5.2919 0-10.406-1.4182-15.147-4.1692-1.3722-0.68282-3.0464-1.5954-5.2131-1.1227-0.89292 0.19697-1.5758 0.80101-2.3045 1.6611l-6.3292 7.557c7.4323 6.5919 17.675 9.9732 28.396 9.9732 14.707 0 24.47-7.3338 24.47-19.671v-0.16414c0-11.299-8.6666-15.823-22.553-18.843m-417.12-18.613v56.254h48.717v-14.267h-32.106v-7.2681c0-1.1358 1.0111-2.2914 2.0879-2.2914h26.236v-13.197h-28.331v-6.8676c0-1.0768 0.91918-2.2848 1.9631-2.2848h30.143v-14.26h-44.403c-2.3111 0-4.3202 1.9106-4.3136 4.1823m56.136-0.0328v10.557h18.16v45.723h16.801v-43.812c0-1.0374 0.86666-1.9106 2.101-1.9106h16.073v-14.707h-48.841c-2.3308 0-4.2939 2.0156-4.3005 4.1495m236.35-0.26263v28.088l-24.916-31.974h-11.365c-2.3899 0-4.3136 1.9566-4.3136 4.3267v56.11h16.624v-33.117l25.888 33.117h14.674v-60.436h-12.324c-2.2454 0-4.2742 1.7136-4.2742 3.8868m-82.142-5.0752c-18.679 0-32.677 14.07-32.677 31.443v0.13131c0 17.405 13.821 31.305 32.526 31.305 18.705 0 32.736-14.116 32.736-31.436v-0.1904c0-17.333-13.899-31.246-32.585-31.246m15.416 31.561c0 8.7126-6.106 16.151-15.416 16.151s-15.482-7.5898-15.482-16.283v-0.19041c0-8.7191 6.1717-16.151 15.324-16.151 9.1524 0 15.574 7.6161 15.574 16.342zm-54.882-8.9292v-0.15101c0-13.427-9.8681-21.299-25.173-21.299h-23.702c-2.2717 0-4.2873 1.8252-4.2873 3.9459v56.49h16.775v-15.258c0-0.97827 0.97171-2.0156 1.9106-2.0156h5.9484l11.687 17.274h19.414l-13.965-20.268c7.0252-3.4601 11.391-9.763 11.391-18.725zm-16.762 0.76161c0 4.7535-3.6242 7.8393-9.5989 7.8393h-10.019v-13.328c0-1.4379 1.1752-2.6197 2.6065-2.6197h7.3141c6.0732 0 9.6974 2.7444 9.6974 7.9378z",
+  /** the three-pointed star in its ring */
+  "m379.7 74.881c-13.144-22.763-32.047-41.672-54.816-54.816-22.763-13.144-48.592-20.064-74.881-20.064-26.289 0-52.111 6.9201-74.881 20.064-22.763 13.144-41.672 32.047-54.816 54.816-13.144 22.763-20.064 48.592-20.064 74.881 0 26.289 6.9202 52.111 20.064 74.881 13.144 22.763 32.047 41.672 54.816 54.816 22.763 13.144 48.592 20.064 74.881 20.064 26.289 0 52.111-6.9201 74.881-20.064 22.763-13.144 41.672-32.047 54.816-54.816 13.144-22.763 20.064-48.592 20.064-74.881 0-26.289-6.9201-52.111-20.064-74.881zm-264.48 74.881c0-23.662 6.2308-46.905 18.055-67.389 11.831-20.491 28.843-37.503 49.334-49.334 19.27-11.129 40.976-17.294 63.174-17.99l-17.195 122.35-97.361 76.069c-10.498-19.572-16.007-41.455-16.007-63.706zm202.17 116.72c-20.491 11.831-43.733 18.055-67.389 18.055s-46.898-6.2242-67.389-18.055c-19.27-11.129-35.467-26.84-47.167-45.716l114.56-46.281 114.56 46.281c-11.7 18.876-27.897 34.588-47.167 45.716zm51.382-53.024-97.361-76.069-17.195-122.35c22.198 0.69595 43.904 6.8676 63.174 17.99 20.491 11.831 37.503 28.843 49.334 49.334 11.831 20.491 18.055 43.733 18.055 67.389 0 22.251-5.5085 44.134-16.007 63.706z",
+  /** FORMULA 1 TEAM */
+  "m319.17 521.59c0-1.7268 1.3919-3.1187 3.1909-3.1187 1.799 0 3.1909 1.3919 3.1909 3.1187 0 1.7268-1.3985 3.1187-3.204 3.1187s-3.1843-1.3919-3.1843-3.1187zm3.1909 2.6197c1.497 0 2.6722-1.1556 2.6722-2.6262 0-1.4707-1.1752-2.6131-2.6722-2.6131-1.497 0-2.6722 1.149-2.6722 2.6131s1.1621 2.6262 2.6722 2.6262zm-1.0177-4.4712h1.3919c0.74191 0 1.2672 0.42677 1.2672 1.1818 0 0.51868-0.28889 0.89949-0.72878 1.0636l0.77474 1.4838h-1.0439l-0.66969-1.3919h-0.4596v1.3919h-0.96514v-3.3025c0-0.24949 0.18384-0.42677 0.4399-0.42677zm1.6808 1.1752c0-0.26919-0.15101-0.43333-0.45302-0.43333h-0.70252v0.88635h0.74848c0.28888 0 0.40706-0.17727 0.40706-0.45302zm138.3 30.569v-29.342c0-2.0419 1.5364-3.5717 3.6242-3.5717h9.0146l4.8782 20.445 1.0702 6.1651h1.4904l1.0702-6.1651 4.8323-20.445h12.691v32.913h-6.4606v-26.61h-1.4904l-1.4904 6.8151-4.7404 19.795h-10.321l-4.7863-19.795-1.4904-6.8151h-1.4904l0.046 6.8151v19.795h-6.4606zm-34.016-32.913h12.501l10.269 32.913h-7.1565l-2.7444-9.4545h-9.6186l-2.2323-2.2257h-0.88636l-3.3944 11.68h-7.0186l10.269-32.913zm11.247 17.845-1.8581-6.4409-1.6283-5.8893h-3.1121l-1.6283 5.8893-1.8581 6.4409zm-51.264-17.845h18.456v5.8893h-15.016v7.6949h13.433v5.6989h-10.269l-2.2323-2.2257h-0.93232v9.9666h15.153v5.8893h-22.218v-29.342c0-2.0419 1.5364-3.5717 3.6242-3.5717zm-32.02 5.9747h-9.6646v-5.9813h26.354v5.9813h-9.6646v26.932h-7.0186v-26.932zm-46.038 0.93232h-1.2081l-5.9025 4.6353h-1.2081v-6.4408l6.0863-5.1015h5.6727c2.0944 0 3.5782 1.5298 3.5782 3.5717v29.342h-7.0186zm-56.444-6.907h12.501l10.269 32.913h-7.1565l-2.7444-9.4545h-9.6186l-2.2323-2.2257h-0.88635l-3.3944 11.68h-7.0186l10.269-32.913zm11.247 17.845-1.8581-6.4409-1.6283-5.8893h-3.1121l-1.6283 5.8893-1.8581 6.4409zm-52.932-17.845h7.0646v26.932h14.549v5.9813h-21.614zm-40.529 20.629v-20.629h7.0186v20.347c0 4.6353 2.8363 7.1368 6.5984 7.1368s6.5984-2.5015 6.5984-7.1368v-20.347h7.0646v20.629c0 6.0272-3.8606 12.796-13.663 12.796s-13.617-6.8151-13.617-12.796zm-51.914 12.284v-29.342c0-2.0419 1.5364-3.5717 3.6242-3.5717h9.0146l4.8782 20.445 1.0702 6.1651h1.4904l1.0702-6.1651 4.8323-20.445h12.691v32.913h-6.4606v-26.61h-1.4904l-1.4904 6.8151-4.7404 19.795h-10.321l-4.7863-19.795-1.4904-6.8151h-1.4904l0.046 6.8151v19.795h-6.4606zm-35.645-32.913h10.971c6.8348 0 11.431 3.7096 11.431 10.196 0 4.1692-2.0419 7.2747-5.4823 8.903v0.92575l2.8823 1.4838 3.7621 11.404h-7.3469l-4.2282-12.704c-0.27576 0.046-0.55808 0.046-0.88636 0.046h-7.6686v12.652h-7.0646v-29.342c0-2.0419 1.5364-3.5717 3.6242-3.5717zm15.245 10.104c0-2.9217-1.6283-4.4974-4.7863-4.4974h-7.0186v9.2247h7.4388c3.0202 0 4.3661-1.7596 4.3661-4.7272zm-65.393 6.303c0-10.571 7.6227-16.92 17.057-16.92s17.011 6.3489 17.011 16.92c0 10.571-7.6227 17.011-17.011 17.011s-17.057-6.3489-17.057-17.011zm17.011 11.221c5.8106 0 9.855-4.0313 9.855-11.221s-4.0904-11.122-9.855-11.122c-5.7646 0-9.855 4.0313-9.855 11.122s4.0904 11.221 9.855 11.221zm-46.248-27.628h18.22v5.9813h-14.779v7.9706h13.387v5.653h-10.223l-2.2323-2.2257h-0.93232v15.528h-7.0646v-29.342c0-2.0419 1.5364-3.5717 3.6242-3.5717z",
+] as const;
+export const LOGO_IN = [S_1 + 8, S_1 + 26] as const;
+const TeamLogo: React.FC<{ S: number; k: number; stack: ReturnType<typeof stackAt> }> = ({ S, k, stack }) => {
+  const u = clamp01((S - LOGO_IN[0]) / (LOGO_IN[1] - LOGO_IN[0]));
+  if (u <= 0) return null;
   const a = easeOutCubic(u);
-  const blur = 6 * (1 - a);
-  const s = HEADLINE_S;
+  const lift = ((1 - a) * 24) / k;
+  const blur = (6 * (1 - a)) / k;
+  const sc = stack.logoH / LOGO_VB.h;
   return (
-    <svg
-      width={1080}
-      height={1920}
-      viewBox="0 0 1080 1920"
-      style={{ position: "absolute", left: 0, top: 0, overflow: "visible", opacity: a < 1 ? a : undefined, filter: blur > 0.05 ? `blur(${f3(blur)}px)` : undefined }}
-    >
-      <g transform={`scale(${fx(s)})`}>
-        <MercedesTile x={HEADLINE.x / s} floor={(HEADLINE.top + HEADLINE.size) / s} k={s} lift={1 - a} dy={((1 - a) * 24) / s} />
+    <g opacity={a < 1 ? f3(a) : undefined} style={{ filter: blur > 0.01 ? `blur(${f3(blur)}px)` : undefined }}>
+      <g transform={`translate(${fx(AX - stack.logoW / 2)} ${fx(stack.logoTop + lift)}) scale(${fx(sc)})`} fill={COLOR.inkCream}>
+        {LOGO_PATHS.map((d, i) => (
+          <path key={i} d={d} />
+        ))}
       </g>
-    </svg>
+    </g>
   );
 };
 
@@ -1588,9 +1644,6 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
   const band = amberBandFor(cam);
   const pool = poolAt(S);
   const sw = { dx: 3 * Math.sin(S / 23), dy: 5 * Math.sin(S / 19) };
-  // screen px -> this frame's world (StoutStage: translate(540 - cam.x k + sway.dx, 960 - cam.y k + sway.dy) scale(k))
-  const scrX = (xs: number) => (xs - (540 - cam.x * k + sw.dx)) / k;
-  const scrY = (ys: number) => (ys - (960 - cam.y * k + sw.dy)) / k;
   const onScreen = (x: number, y: number, m = 16) => {
     const p = toScreen(cam, x, y);
     return p.x + sw.dx > -m && p.x + sw.dx < 1080 + m && p.y + sw.dy > -m && p.y + sw.dy < 1920 + m;
@@ -1645,14 +1698,14 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
   const pitR = GEO.RADIUS * shadowScale(Math.sqrt((PIT.x1 - PIT.x0) * (PIT.bot - PIT.top)));
 
   // --- the readout ---
-  const labelY = Y_TOP - SPACE.CLEAR / k;
-  const numY = labelY - (TYPE.LABEL * METRIC.cap + SPACE.LOCKUP) / k;
+  const stack = stackAt(k);
+  const labelY = stack.labelY;
+  const numY = stack.numY;
   const readout = (() => {
     if (S < RD.in3) return null;
     if (S < S_6) {
-      const inCut5 = S >= S_5;
-      const enter = inCut5 ? enterAt(S, RD.in5) : enterAt(S, RD.in3);
-      const exit = inCut5 ? enterAt(S, RD.out5) : enterAt(S, RD.out4);
+      const enter = enterAt(S, RD.in3);
+      const exit = enterAt(S, RD.out5);
       if (exit >= 1 || enter <= 0) return null;
       const inBody = S >= COUNT_BODY.S0;
       const d = inBody ? displayOf(COUNT_BODY, S) : displayOf(COUNT_TIP, S);
@@ -1664,7 +1717,7 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
           {inBody ? (
             <LabelRoll x={AX} y={labelY} k={k} from="at the track" to="people" u={labelU} enter={enter} exit={exit} />
           ) : (
-            <Label x={AX} y={labelY} k={k} text="at the track" tone="creamLo" enter={inCut5 ? enter : enterAt(S, RD.label3)} exit={exit} />
+            <Label x={AX} y={labelY} k={k} text="at the track" tone="creamLo" enter={enterAt(S, RD.label3)} exit={exit} />
           )}
         </g>
       );
@@ -1684,7 +1737,7 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
   const sweepBox = { x: AX - 580, y: numY - (TYPE.HERO * METRIC.fig) / k - 10, w: 1160, h: BOTTOM_Y + 10 - (numY - (TYPE.HERO * METRIC.fig) / k - 10) };
 
   return (
-    <StoutStage S={S} cam={cam} rest={CAM_REST} pool={{ x: pool[0], y: pool[1] }} overlay={<Headline S={S} />}>
+    <StoutStage S={S} cam={cam} rest={CAM_REST} pool={{ x: pool[0], y: pool[1] }}>
       <defs>
         <path id={`${uid}b`} d={BUST_D} />
         <GlyphShadowFilter id={`${uid}gs`} />
@@ -1697,20 +1750,8 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
         <clipPath id={`${uid}pit`}>
           <rect x={AX - 200} y={PY} width={400} height={PIT.bot - PY} />
         </clipPath>
-        {/* PASS 3B: the headline's clear ground. A SCREEN-space mask on the world (people, cars, pit wall,
-            glass, waterline, tiles; not the ground, grain or vignette, not the readout): transparent above
-            y 248, opaque from y 336, smoothstep between, expressed in world units under this frame's camera */}
-        <linearGradient id={`${uid}hg`} gradientUnits="userSpaceOnUse" x1="0" y1={f3(scrY(WORLD_FADE[0]))} x2="0" y2={f3(scrY(WORLD_FADE[1]))}>
-          {WORLD_FADE_STOPS.map(([o, c]) => (
-            <stop key={o} offset={f3(o)} stopColor={c} />
-          ))}
-        </linearGradient>
-        <mask id={`${uid}hm`} maskUnits="userSpaceOnUse" x={f3(scrX(-60))} y={f3(scrY(-60))} width={f3(1200 / k)} height={f3(2040 / k)}>
-          <rect x={f3(scrX(-60))} y={f3(scrY(-60))} width={f3(1200 / k)} height={f3(2040 / k)} fill={`url(#${uid}hg)`} />
-        </mask>
       </defs>
 
-      <g mask={`url(#${uid}hm)`}>
       {/* the glass tint, revealed with its outline */}
       <path d={polyD([...TIP_RIGHT, ...[...TIP_LEFT].reverse()], true)} fill={COLOR.glass} fillOpacity={ALPHA.glassTint} clipPath={`url(#${uid}tipc)`} />
       <path d={polyD([...BODY_RIGHT, ...[...BODY_LEFT].reverse().slice(1)], true)} fill={COLOR.glass} fillOpacity={ALPHA.glassTint} clipPath={`url(#${uid}bodyc)`} />
@@ -1834,7 +1875,7 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
         <Car key={car} tailX={carTail(car, S)} k={k} amber={helmetAmber(car, S)} band={band} />
       ))}
 
-      {/* THE ONE CLICK: one light sweep across every amber person (masked with the world)... */}
+      {/* THE ONE CLICK: one light sweep across every amber person... */}
       {sweepT > 0 && sweepT < 1 ? (
         <g>
           <defs>
@@ -1850,11 +1891,13 @@ export const IcebergWorld: React.FC<{ S: number }> = ({ S }) => {
           </g>
         </g>
       ) : null}
-      </g>
+
+      {/* the team's logo: the drivers' headline, in the world over the two cars */}
+      <TeamLogo S={S} k={k} stack={stack} />
 
       {readout}
 
-      {/* ...and the same band across the numeral, above the mask with the readout (cut 6, "equally") */}
+      {/* ...and the same band across the numeral (cut 6, "equally") */}
       {sweepT > 0 && sweepT < 1 ? (
         <g>
           <defs>

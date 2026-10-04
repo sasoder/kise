@@ -5,8 +5,8 @@ import { DUR, FPS, IcebergWorld, S_6 } from "./icebergShared";
 
 // ---------------------------------------------------------------------------
 // NotTwoSuperstarsStout — cut 6 of Toto Wolff's "no dickheads rule" (Cheeky Pint S4E01), on the iceberg
-// world (icebergShared.tsx; brief out/dickheads/briefs/BRIEF.md). 1080x1920, 24 fps, opaque. The clip's
-// last image.
+// world (icebergShared.tsx; brief out/dickheads/briefs/BRIEF.md, PASS4.md). 1080x1920, 24 fps, opaque.
+// The clip's last image.
 //
 // THE LINE: "and I always say there's not two superstars in the team. There's two and a half thousand.
 // And I treat all of them equally."
@@ -18,23 +18,24 @@ import { DUR, FPS, IcebergWorld, S_6 } from "./icebergShared";
 //
 // ONE MOTION: the amber that marked the two drivers spreads to every one of the 2,500.
 // GESTURES (gesture -> word -> frames)
-//   a slow creep-in on the two drivers, the held breath, k 3.53 -> 3.73 (f15 -> f64) -> "there's not two
-//     superstars in the team"
-//   the READOUT re-enters above the peak as "2" (AMBER numeral, bloom; blur-in + slide-up f23 -> f35) with
+//   a slow creep-in on the two drivers under their Mercedes-AMG Petronas lockup, the held breath,
+//     k 3.45 -> 3.85 (f15 -> f64; PASS 4: framed "2 SUPERSTARS" over the logo over the cars, centred) ->
+//     "there's not two superstars in the team"
+//   the READOUT re-enters above the logo as "2" (AMBER numeral, bloom; blur-in + slide-up f23 -> f35) with
 //     SUPERSTARS (creamLo, f28 -> f40) -> "superstars" (f33)
 //   the AMBER WAVE leaves the two helmets: a front out and down through the tip, then the body (in its own
-//     order, distance + a hashed offset; PASS 2: rank-timed f66 -> f118, decelerating into its last
+//     order, distance + a hashed offset; rank-timed f66 -> f118, decelerating into its last
 //     person, and never ahead of the frame: a person is reached no earlier than the frame shows them);
 //     each person warms to amber as it arrives (cream -> amber in the tip, board -> amber below; 14 f,
 //     hashed offsets): first f66, last f118 -> "there's two and a half thousand ... them"
-//   the camera pulls back with the front to the wide, k 3.85 -> 0.78 (PASS 2: the zoom f56 -> f130, the
-//     look f60 -> f136; PASS 3: the cut 5 wide re-solved under the headline; peak on-screen person
-//     41 px/f at k >= 2), the front always inside the frame and the readout >= 48 px under the headline
+//   the camera pulls back with the front to the wide, k 3.85 -> 0.75 (the zoom f56 -> f130, the look
+//     f60 -> f136; peak on-screen person 43 px/f at k >= 2), the front always inside the frame; PASS 4:
+//     the cut 5 wide (readout top >= y 150, berg bottom on y ~1390), the lockup ~150 px, ring >= 80 px
 //   the readout rolls 2 -> 2,500 with the honest count of amber people (whole centred strings as the
 //     digits grow), decelerating continuously (no value sits) and landing "2,500" on f118 -> "them"
 //   THE ONE CLICK: one LightSweep crosses every amber person and the numeral, f121 -> f143 -> "equally"
-//   the cars, pit wall and hub tiles stay cream; every PERSON is the same amber
-//   the tail: the wide holds with a creep, k -> 0.77 -> f143-157 (under the Mercedes headline)
+//   the cars, pit wall, hub tiles and the lockup stay cream; every PERSON is the same amber
+//   the tail: the wide holds with a creep, k -> 0.74 -> f143-157
 // Nothing else.
 // ---------------------------------------------------------------------------
 

@@ -5,7 +5,7 @@ import { DUR, FPS, IcebergWorld, S_1 } from "./icebergShared";
 
 // ---------------------------------------------------------------------------
 // TwoDriversStout — cut 1 of Toto Wolff's "no dickheads rule" (Cheeky Pint S4E01), on the iceberg world
-// (icebergShared.tsx; brief out/dickheads/briefs/BRIEF.md). Cheeky Pint S4 stout system, B1.
+// (icebergShared.tsx; brief out/dickheads/briefs/BRIEF.md, PASS4.md). Cheeky Pint S4 stout system, B1.
 // 1080x1920, 24 fps, opaque.
 //
 // THE LINE: "Formula 1 from outside. You see two drivers."
@@ -13,15 +13,17 @@ import { DUR, FPS, IcebergWorld, S_1 } from "./icebergShared";
 // STORY CLOCK: S = S_1 + f = 0 .. 76; cut 2 opens on S 76 (this cut's last frame), pixel for pixel.
 // ONSETS (f): formula 0 · one 6 · from 12 · outside 17 · you 30 · see 33 · two 36 · drivers 40 · ends 61.
 //
-// ONE MOTION: the two cars glide in along the plateau's floor and come to rest in the light pool; outside
-// eyes make their drivers the stars.
+// ONE MOTION: the two cars glide in along the plateau's floor and come to rest in the light pool under
+// their team's name; outside eyes make their drivers the stars.
 // GESTURES (gesture -> word -> frames)
-//   PASS 3: the HEADLINE, the Mercedes star tile (stoutShared's MercedesTile, 112 px, screen space, top
-//     on y 128), enters once: blur-in + 24 px slide-up, its shadow settling onto rest, already moving on
-//     f0 -> f0-14 ("Formula 1"); it then holds, static, through all six cuts
+//   PASS 4: the HEADLINE is the real Mercedes-AMG Petronas F1 Team lockup (4 inlined paths, all cream,
+//     no card, no shadow), standing in the WORLD over the drivers, counter-scaled by camera k so it reads
+//     at every distance (here ~278 px tall, ring ~151 px, its foot 48 px above the cars' top). It enters
+//     once: fade + 24 px slide-up + blur 6 -> 0, moving on f8, landed f26 ("Formula 1 from"); after
+//     that it is part of the world and moves only with the camera
 //   the floor (the tip's glass top edge) is a hairline across the frame; the light pool sits on the
-//     boxes; the tip crowd is in the DARK (one tone below board, PASS 2) and stays under y 1400
-//     (asserted); nothing of the mechanics is on screen -> f0-76
+//     boxes; the tip crowd is in the DARK (one tone below board) and stays under y 1400 (asserted);
+//     nothing of the mechanics is on screen -> f0-76
 //   the two cars are already gliding in on f0 (the front car B half in frame, the rear car A entering
 //     from off frame left), each on ONE decelerating curve from speed to rest, no bounce
 //     (x = box - D (1 - t/T)^n: A D 100 T 32 n 2.2, B D 92 T 36 n 2.6): A closes up from further back and
