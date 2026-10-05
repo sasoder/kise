@@ -16,11 +16,12 @@ import {
   PaperGround,
   Person,
   SHADOW_OFF,
+  CAM_LIFT_169,
+  FRAME_H,
   World,
   camEase,
   camMove169,
   clamp,
-  fontFamily,
   runCamera2,
   sway,
   textRise,
@@ -40,6 +41,14 @@ export const DURATION = 115;
 // Ashlee Vance x Brent Underwood). 1920 x 1080, 24 fps, opaque, on the
 // trailer's shared paper / ink / crown / camera from `cerroShared.tsx`.
 //
+// v4, on the user's request: the "80 KEYS" type is GONE — the trailer's
+// burned-in captions already say it, so nothing replaces it. The rest framing
+// takes the space it left: the bunch alone (crown top to lowest bit) is ~70%
+// of the frame height, centred on screen y ~500, the bottom ~200 px clear for
+// the captions. Applied as a change to the camera's keys from f60 on (the
+// fan's camera move now lands on the new framing); everything else — timings,
+// keys, hoop, crown, sway, caretaker, 115 frames — is v3 exactly.
+//
 // v2, on the director's review: the v1 radial burst read as a sunburst / spiky
 // gear, the echo crossed inside the ring, and the caretaker ballooned at the
 // frame edge. Now: a JAILER'S HOOP whose keys hang under gravity, the crown is
@@ -49,8 +58,8 @@ export const DURATION = 115;
 // carry 80 keys. The caretaker (Robert Desmarais — no name on screen) stands
 // left with five keys on the hoop in his hand; the hoop leaves him in one arc
 // to the frame centre (to Brent — to us), swings to rest, and on "80" the keys
-// slide out along the hoop until 80 hang off it. The text names the number;
-// the bunch IS the count. Then the weight: a dip and one slow swing, and the
+// slide out along the hoop until 80 hang off it. The bunch IS the count; the
+// captions name it. Then the weight: a dip and one slow swing, and the
 // editor cuts to his face.
 //
 // WORD -> FRAME (chunk onsets from the SRT, words inside refined off the
@@ -122,8 +131,6 @@ export const DURATION = 115;
 //           as it settles. The five bunch keys open from 12 deg apart to their
 //           slots on the same rule.                    — "with like 80 keys"
 //   f64-84  THE LOAD: the hoop's top dips 10 px as the keys arrive.
-//   f66-78  "80 KEYS" (Barlow 900, 190 / 118 px) slides up below the bunch
-//           (textRise, 24 screen px, 12 f)                 — lands on "keys"
 //   f81-115 THE WEIGHT: one slow damped swing of the whole hoop about its top:
 //           +2.8 deg at f88-89, back through 0 at f99, -0.8 at f102-105,
 //           -0.2 by f114. The crown stays vertical.  — "on it / and he's just like"
@@ -136,9 +143,10 @@ export const DURATION = 115;
 //   PUSH   f21-59  k 0.775 -> 1.04 (1.35x the open), x -> 960: the pan lets him
 //                  slide out of frame left at his own size, peak 42.7 screen
 //                  px/frame (f48); he is gone by f59.
-//   EASE   f60-78  k 1.04 -> 1.0 (warp 0.75), centre -> the hoop + text block:
-//                  the room for the bunch, as it fills.
-//   CREEP  f82-115 k 1.0 -> 1.018, the held breath before "good luck".
+//   SETTLE f60-78  k 1.04 -> K_FRAME 1.260 (warp 0.75), centre -> the bunch
+//                  on screen y 500 (v4; was an ease-back to k 1.0 to make room
+//                  for the text): it moves in as the bunch fills.
+//   CREEP  f82-115 k 1.260 -> 1.279 (+1.5%), the held breath before "good luck".
 //   DAMPED NUMBERS, printed off the real tracker by out/cerro/c-entry/probe.ts
 //   (alpha = the hoop's swing, deg clockwise; vL = his right edge's screen
 //   speed, px/frame, while he is in frame):
@@ -149,15 +157,16 @@ export const DURATION = 115;
 //     45   0.9158    466.66    504.86  -11.60   41.6
 //     54   0.9983    794.22    495.91   -2.04   36.4
 //     59   1.0269    907.98    492.86    0.38   (out)
-//     63   1.0353    946.65    494.32    0.26
-//     70   1.0238    959.92    522.14   -0.04
-//     78   1.0051    960.12    557.72    0.00
-//     88   1.0005    960.00    567.15    2.82
-//     107  1.0123    960.00    567.01   -0.76
-//     114  1.0165    960.00    566.93   -0.23
+//     63   1.0438    946.65    492.14    0.26
+//     70   1.1290    959.92    495.41   -0.04
+//     78   1.2323    960.12    500.19    0.00
+//     88   1.2601    960.00    501.48    2.82
+//     107  1.2728    960.00    501.34   -0.76
+//     114  1.2772    960.00    501.28   -0.23
 //   (cy includes CAM_LIFT_169 / k; the hand-held `sway` rides on top.)
-//   At rest the crown's top is at screen ~147 and "80 KEYS"'s baseline ~889
-//   (v3's longer keys moved the derived centres ~22 px; the keys are unchanged).
+//   AT REST (v4): the bunch spans screen y ~127 -> ~873 at f88 (69%) and
+//   ~122 -> ~877 at f114 (70%), centred on 500; measured on the f114 render the
+//   lowest ink is at ~875, so the bottom 205 px are clear for the captions.
 //
 // LOCAL VARIATIONS of the shared module (cerroShared untouched):
 //   * HoopEcho: `ChainEcho` travels all three colours from ONE shared offset
@@ -169,8 +178,6 @@ export const DURATION = 115;
 
 export const schema = z.object({
   keyCount: z.number().int(),
-  label: z.string(),
-  labelSub: z.string(),
   beats: z.object({
     rise: z.number(), // "The old caretaker"   — he rises with the hoop
     toss: z.number(), // "handed me"           — the arc starts
@@ -178,7 +185,6 @@ export const schema = z.object({
     echo: z.number(), // "80" lead             — the hoop's crown (orange)
     fan: z.number(), // the fan starts out of the bunch
     fanEnd: z.number(), // the last keys reach the top sides
-    text: z.number(), // "80 KEYS" starts, landing on "keys"
     sway: z.number(), // the weight: the hoop swings once, peak on "on it"
   }),
 });
@@ -187,8 +193,6 @@ export type Props = z.infer<typeof schema>;
 
 export const defaultProps: Props = schema.parse({
   keyCount: 80,
-  label: "80",
-  labelSub: "KEYS",
   beats: {
     rise: -2, // already 2 f into its rise at the cut, so f0 is never a blank sheet
     toss: 30,
@@ -196,16 +200,14 @@ export const defaultProps: Props = schema.parse({
     echo: 59,
     fan: 60,
     fanEnd: 78,
-    text: 66,
     sway: 81,
   },
 });
 
 // ---------------------------------------------------------------------------
-// GEOMETRY (world px). The world is laid out so the rest camera is k 1.0: a
-// world px IS a screen px on the payoff frame.
+// GEOMETRY (world px). The world was laid out (v2/v3) so the rest camera was
+// k 1.0; v4 frames the rest at K_FRAME (~1.27) now the text is gone.
 // ---------------------------------------------------------------------------
-const K_REST = 1.0;
 const HOOP_R = 155; // hoop centre-line radius
 const HOOP_W = 14; // the hoop's stroke (the director's 14 screen px at rest)
 const HOOP_OUT = HOOP_R + HOOP_W / 2;
@@ -261,17 +263,23 @@ const PIVOT_CTRL = {
   y: Math.min(PIVOT_START.y, PIVOT_END.y) - 180,
 };
 
-// THE TEXT, sized in SCREEN px at the rest k, laid out in world px.
-const NUM_PX = 190; // "80"
-const SUB_PX = 118; // "KEYS"
-const NUM_SIZE = NUM_PX / K_REST;
-const SUB_SIZE = SUB_PX / K_REST;
-const CAP = 0.7; // Barlow cap height per em
-const TEXT_GAP = 34; // world px between the bunch's lowest ink and the cap top
-const BUNCH_BOTTOM = RC.y + HOOP_R + LEN_BACK + 4; // the straight-down back keys' tips
-const TEXT_BASELINE = BUNCH_BOTTOM + TEXT_GAP + CAP * NUM_SIZE;
+// THE REST FRAMING (v4: no text). The bunch alone — the crown's top to the
+// lowest bit — is centred a little above frame centre (screen y 500) and
+// scaled to ~70% of the frame height, so the bottom ~200 px stay clear for the
+// trailer's burned-in captions.
+const DIP = 10; // world px the hoop dips under the load (see THE WEIGHT)
 const CROWN_TOP = RC.y - HOOP_OUT - 3 * CROWN_STEP;
-const C_REST = (CROWN_TOP + TEXT_BASELINE + SHADOW_OFF) / 2;
+// the straight-down keys' tips: hoop + bow hang + the longest key (+6 jitter),
+// dipped, plus the hard shadow
+const BUNCH_BOTTOM = RC.y + HOOP_R + LEN_BACK + 6 + DIP + SHADOW_OFF;
+const BUNCH_C = (CROWN_TOP + BUNCH_BOTTOM) / 2;
+const BUNCH_FILL = 0.69; // of the frame height (0.70 by the end of the creep)
+const REST_SCREEN_Y = 500; // the bunch's centre on screen
+const K_FRAME = (BUNCH_FILL * FRAME_H) / (BUNCH_BOTTOM - CROWN_TOP);
+// camMove169 lands content centre c on screen y FRAME_H/2 - CAM_LIFT_169 (520);
+// asking it for c = BUNCH_C + (520 - 500) / k lands BUNCH_C on 500 instead,
+// with the house lift untouched, so the move's target has no step in it.
+const C_REST = BUNCH_C + (FRAME_H / 2 - CAM_LIFT_169 - REST_SCREEN_Y) / K_FRAME;
 
 // The opening group: the glyph's ink to the bunch's tips.
 const OPEN_TOP = PERSON_BOX.y + 0.078 * PERSON_S;
@@ -288,7 +296,7 @@ const C_ARRIVE = (PIVOT_END.y + PIVOT_END.y + 2 * HOOP_R + LEN_FRONT) / 2;
 const K_OPEN = 0.77;
 const K_OPEN2 = 0.775;
 const K_PUSH = 1.04; // 1.342x the open
-const K_REST2 = 1.018;
+const K_REST2 = K_FRAME * 1.015; // the held creep: +1.5%
 
 const M0 = camMove169({
   f0: 0,
@@ -314,7 +322,7 @@ const M2 = camMove169({
   f0: 60,
   f1: 78,
   k0: K_PUSH,
-  k1: K_REST,
+  k1: K_FRAME,
   c0: C_ARRIVE,
   c1: C_REST,
   x0: RC.x,
@@ -324,7 +332,7 @@ const M2 = camMove169({
 const M3 = camMove169({
   f0: 82,
   f1: 115,
-  k0: K_REST,
+  k0: K_FRAME,
   k1: K_REST2,
   c0: C_REST,
   c1: C_REST,
@@ -413,7 +421,6 @@ const PEND = simulatePendulum(
 );
 
 // THE WEIGHT: the hoop dips as the keys load it, then swings once.
-const DIP = 10; // world px
 const dipAt = (f: number, fan: number, fanEnd: number) =>
   DIP * camEase((f - (fan + 4)) / (fanEnd + 6 - (fan + 4)), 1);
 const SWAY_A = 3.0; // deg
@@ -764,7 +771,7 @@ const HoopEcho: React.FC<{
   );
 };
 
-const EightyKeys: React.FC<Props> = ({ label, labelSub, beats }) => {
+const EightyKeys: React.FC<Props> = ({ beats }) => {
   const frame = useCurrentFrame();
 
   // -- the camera ------------------------------------------------------------
@@ -787,7 +794,6 @@ const EightyKeys: React.FC<Props> = ({ label, labelSub, beats }) => {
 
   // -- the opening rise: the caretaker and his hoop, as one group ------------
   const rise = textRise(frame, beats.rise, k);
-  const textR = textRise(frame, beats.text, k);
 
   const keyTransform = (key: KeySpec) => {
     const phi = keyPhiAt(key, frame, beats.fan, beats.fanEnd) + alpha;
@@ -909,31 +915,6 @@ const EightyKeys: React.FC<Props> = ({ label, labelSub, beats }) => {
             {hoop}
           </g>
         ) : null}
-
-        {/* "80 KEYS" — names the count the bunch shows */}
-        {textR.opacity > 0 ? (
-          <Inked
-            opacity={textR.opacity}
-            render={(fill) => (
-              <text
-                x={RC.x}
-                y={TEXT_BASELINE + textR.dy}
-                textAnchor="middle"
-                fill={fill}
-                style={{
-                  fontFamily,
-                  fontWeight: 900,
-                  textTransform: "uppercase",
-                }}
-              >
-                <tspan fontSize={NUM_SIZE}>{label}</tspan>
-                <tspan fontSize={SUB_SIZE} dx={SUB_SIZE * 0.3}>
-                  {labelSub}
-                </tspan>
-              </text>
-            )}
-          />
-        ) : null}
       </World>
     </AbsoluteFill>
   );
@@ -945,7 +926,6 @@ export default EightyKeys;
 export const GEOM = {
   RC,
   HOOP_R,
-  TEXT_BASELINE,
   C_REST,
   C_OPEN,
   C_ARRIVE,
