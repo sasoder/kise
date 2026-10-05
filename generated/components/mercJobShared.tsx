@@ -672,7 +672,24 @@ export const ChassisMark: React.FC<{ size: number }> = ({ size }) => {
 // THE PILLAR (stoutShared's Pillar, cut down: tile + bar, ONE object, ONE union shadow) with any
 // knock-out mark. dim 0 = cream (lit, the subject), 1 = board (context); eased by TONE only.
 // ===========================================================================
-export type Mark = "mercedes" | "williams" | "engine" | "chassis" | "none";
+/**
+ * BUILDING (CorporateModel, additive): Lucide "building-2" (ISC; 24-unit box, ink x 2..22, y 2..22) knocked
+ * out of a tile, its box GEO.SPORT_FILL of the tile (the sport glyphs' rule), stroked at GLYPH_STROKE world
+ * px (the set's one glyph weight), round caps and joins (Lucide grammar, as the trophy).
+ */
+const BUILDING_D = ["M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z", "M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2", "M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2", "M10 6h4", "M10 10h4", "M10 14h4", "M10 18h4"];
+export const BuildingMark: React.FC<{ size: number }> = ({ size }) => {
+  const box = size * GEO.SPORT_FILL;
+  const sc = box / 20;
+  return (
+    <g transform={`translate(${fx(size / 2 - 12 * sc)} ${fx(size / 2 - 12 * sc)}) scale(${fx(sc)})`} fill="none" stroke="#000" strokeWidth={f3(GLYPH_STROKE / sc)} strokeLinecap="round" strokeLinejoin="round">
+      {BUILDING_D.map((d, i) => (
+        <path key={i} d={d} />
+      ))}
+    </g>
+  );
+};
+export type Mark = "mercedes" | "williams" | "engine" | "chassis" | "building" | "none";
 const MarkOf: React.FC<{ mark: Mark; size: number }> = ({ mark, size }) =>
   mark === "mercedes" ? (
     <MercedesMark size={size} />
@@ -682,6 +699,8 @@ const MarkOf: React.FC<{ mark: Mark; size: number }> = ({ mark, size }) =>
     <EngineMark size={size} />
   ) : mark === "chassis" ? (
     <ChassisMark size={size} />
+  ) : mark === "building" ? (
+    <BuildingMark size={size} />
   ) : null;
 export const MJPillar: React.FC<{
   x: number;
