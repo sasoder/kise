@@ -135,7 +135,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 // ---------------------------------------------------------------------------
 export const HEART: P2 = project(44.15, 34.2);
 /** the C7 creep-in target: the Sunni Arab patch's southern lobe, between both strikes */
-const PICK_FOCUS: P2 = [560, 735];
+export const PICK_FOCUS: P2 = [560, 735];
 const REST = B_END.camRest;
 const mine = makeCamTrack(
   [
@@ -152,7 +152,7 @@ const mine = makeCamTrack(
     { from: 1000, to: 1062 },
   ],
 );
-const camC = (g: number): Cam => {
+export const camC = (g: number): Cam => {
   const a = camAB(g);
   const m = mine(g);
   return {
@@ -248,7 +248,7 @@ const PEN = Math.max(
 ); // world px / f
 const SEAM_BY_ID = Object.fromEntries(SEAMS.map((s) => [s.id, s]));
 /** the Sunni Arab patches' edges against the desert (drawn in C7, completing the outline) */
-const SUNNI_EDGE = new Set(
+export const SUNNI_EDGE = new Set(
   MOSAIC_SEAMS.filter(
     (s) => s.kind === "desert" && (s.a === "sunni" || s.b === "sunni"),
   ).map((s) => s.id),
@@ -371,8 +371,8 @@ const parallelBack = (pts: P2[], off: number): P2[] => {
   return pts.map((p) => [p[0] + n[0] * off, p[1] + n[1] * off] as P2).reverse();
 };
 const OFF = 20; // world px (~30 screen px at k 1.5)
-const OUT1 = arcCurve(STRIKE_S1, STRIKE_SHIA, 0.14);
-const OUT2 = arcCurve(STRIKE_S2, STRIKE_KURD, -0.14);
+export const OUT1 = arcCurve(STRIKE_S1, STRIKE_SHIA, 0.14);
+export const OUT2 = arcCurve(STRIKE_S2, STRIKE_KURD, -0.14);
 const ARCS: { pts: P2[]; t: [number, number] }[] = [
   { pts: OUT1, t: TC.arc1 },
   { pts: OUT2, t: TC.arc2 },
@@ -382,12 +382,16 @@ const ARCS: { pts: P2[]; t: [number, number] }[] = [
 
 /** a bold engraved strike drawn on along pts to fraction u: the shaft swells from ~2 px at
  *  the tail to ~9 px at the head end, then a tapered barbed arrowhead (screen px) */
-const StrikeArc: React.FC<{
+export const StrikeArc: React.FC<{
   pts: P2[];
   u: number;
   k: number;
   opacity?: number;
-}> = ({ pts, u, k, opacity = 1 }) => {
+  /** additions for PickAColor (defaults = this cut's cream over a dark casing) */
+  color?: string;
+  casing?: string;
+  casingOpacity?: number;
+}> = ({ pts, u, k, opacity = 1, color = INK, casing = DARK, casingOpacity = 0.55 }) => {
   if (u <= 0.001) return null;
   const cum = [0];
   for (let i = 1; i < pts.length; i++)
@@ -444,14 +448,14 @@ const StrikeArc: React.FC<{
     <g strokeLinejoin="round">
       <path
         d={shaft + headD}
-        fill={DARK}
-        fillOpacity={0.55 * opacity}
-        stroke={DARK}
-        strokeOpacity={0.55 * opacity}
+        fill={casing}
+        fillOpacity={casingOpacity * opacity}
+        stroke={casing}
+        strokeOpacity={casingOpacity * opacity}
         strokeWidth={px(2.6)}
       />
-      <path d={shaft} fill={INK} fillOpacity={opacity} />
-      <path d={headD} fill={INK} fillOpacity={opacity} />
+      <path d={shaft} fill={color} fillOpacity={opacity} />
+      <path d={headD} fill={color} fillOpacity={opacity} />
     </g>
   );
 };
