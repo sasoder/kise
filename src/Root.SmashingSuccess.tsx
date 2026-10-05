@@ -11,7 +11,7 @@ import SmashingSuccess, {
 // Survive worked", cut A: "Drive to Survive has been a smashing success for
 // Netflix and a big success for F1 ... brought lots of new people into the
 // sport". The screen's light turns passers-by into fans who fill the F1 stand.
-// Opaque Cheeky Pint S4 (stout, B1), 1920x1080, 24fps, 169 frames.
+// Opaque Cheeky Pint S4 (stout, B1), pass 3: 9:16 1080x1920, 24fps, 169 frames.
 export const RemotionRoot = () => {
   return (
     <>
@@ -22,8 +22,8 @@ export const RemotionRoot = () => {
         defaultProps={defaultProps}
         durationInFrames={DURATION}
         fps={FPS}
-        width={1920}
-        height={1080}
+        width={1080}
+        height={1920}
       />
     </>
   );

@@ -111,8 +111,9 @@ const camEase = (u: number, warp = 1) => smoothstep(Math.pow(clamp01(u), warp));
  * on screen y 480), k }; each glide is an eased delta of (x, look, ln k) over [f0, f1]; glides superpose;
  * then the house damped follower (CAM_STIFF / CAM_DAMP). Returns the camera CENTRE per frame 0..frames+2.
  * `pre` runs the follower from f = -pre so glides that start before f0 are already moving on f0.
+ * `lift` = the framing lift (DTS_LIFT for 16:9; pass DTS_LIFT_P, or use dtsCameraTrackP, for 9:16).
  */
-export const dtsCameraTrack = (start: { x: number; y: number; k: number }, glides: Glide[], frames: number, pre = 0): Cam[] => {
+export const dtsCameraTrack = (start: { x: number; y: number; k: number }, glides: Glide[], frames: number, pre = 0, lift: number = DTS_LIFT): Cam[] => {
   const T: Cam[] = [];
   for (let f = -pre; f <= frames + 2; f++) {
     let x = start.x;
@@ -129,7 +130,7 @@ export const dtsCameraTrack = (start: { x: number; y: number; k: number }, glide
       }
     }
     const k = Math.exp(lk);
-    T.push({ x, y: y + DTS_LIFT / k, k });
+    T.push({ x, y: y + lift / k, k });
   }
   const out: Cam[] = [];
   let c = { ...T[0] };
@@ -235,7 +236,9 @@ export const DtsStage: React.FC<{
   sway?: boolean;
   children?: React.ReactNode;
   overlay?: React.ReactNode;
-}> = ({ S, cam, rest = cam, pool = null, lights = [], sway = true, children, overlay }) => {
+  orientation?: Orientation;
+}> = ({ S, cam, rest = cam, pool = null, lights = [], sway = true, children, overlay, orientation = "landscape" }) => {
+  if (orientation === "portrait") return <DtsStagePortrait S={S} cam={cam} rest={rest} pool={pool} lights={lights} sway={sway} overlay={overlay}>{children}</DtsStagePortrait>;
   const k = cam.k;
   const sw = swayAt(S, sway);
   const tx = FRAME.CX - cam.x * k + sw.dx;
@@ -289,6 +292,140 @@ export const DtsStage: React.FC<{
       <AbsoluteFill style={{ background: VIGNETTE }} />
       <AbsoluteFill style={{ mixBlendMode: GRAIN.blend, opacity: GRAIN.opacity }}>
         <TurnedSheet src={GROUND.grain} style={{ transform: `translate(${fx(grx)}px, ${fx(gry)}px)` }} />
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+// ===========================================================================
+// 9:16 — THE PORTRAIT FRAME (pass 3: the whole set is vertical shorts, 1080x1920)
+// ===========================================================================
+// The S4 spec's native shape: captions sit low, subject ink inside y 200-1400, content centre y 835, side
+// margins >= 72 px, check every layout at 270 px wide. DtsStage({ orientation: "portrait" }) draws StoutStage's
+// own set (the B1 sheet unrotated, mirror-padded, parallax + drift, the cream pool, vignette, grain on twos,
+// sway) plus the show's amber `lights`. The landscape stage above is untouched (16:9 renders byte-identical).
+export type Orientation = "landscape" | "portrait";
+export const FRAME_P = { W: 1080, H: 1920, CX: 540, CY: 960 } as const;
+export const SAFE_P = { top: 200, bottom: 1400, side: 72 } as const;
+export const CONTENT_Y_P = 835;
+/** portrait camera centre = look + DTS_LIFT_P / k (the look lands on screen y 835) */
+export const DTS_LIFT_P = FRAME_P.CY - CONTENT_Y_P;
+/** A portrait camera (its CENTRE) that puts world (wx, wy) at screen (sx, sy) at zoom k. */
+export const camForP = (wx: number, wy: number, sx: number, sy: number, k: number): Cam => ({
+  x: wx - (sx - FRAME_P.CX) / k,
+  y: wy - (sy - FRAME_P.CY) / k,
+  k,
+});
+/** Where a world point lands on a portrait screen under camera c (no sway). */
+export const toScreenP = (c: Cam, x: number, y: number) => ({ x: FRAME_P.CX + (x - c.x) * c.k, y: FRAME_P.CY + (y - c.y) * c.k });
+/** The portrait `look` (world y on screen y 835) of a camera centre. */
+export const lookOfP = (c: Cam) => c.y - DTS_LIFT_P / c.k;
+export const onScreenP = (c: Cam, x: number, y: number, m = 0) => {
+  const p = toScreenP(c, x, y);
+  return p.x > -m && p.x < FRAME_P.W + m && p.y > -m && p.y < FRAME_P.H + m;
+};
+/** dtsCameraTrack with the portrait lift: start.y = LOOK (the world y on screen y 835). */
+export const dtsCameraTrackP = (start: { x: number; y: number; k: number }, glides: Glide[], frames: number, pre = 0): Cam[] =>
+  dtsCameraTrack(start, glides, frames, pre, DTS_LIFT_P);
+/** The portrait amber band: one gradient locked to the screen, y 200 -> 1400 (light from above). */
+export const dtsAmberBandP = (c: Cam, y0: number = SAFE_P.top, y1: number = SAFE_P.bottom): [number, number] => [
+  c.y + (y0 - FRAME_P.CY) / c.k,
+  c.y + (y1 - FRAME_P.CY) / c.k,
+];
+const groundCopiesP = (gx: number, gy: number, s: number) => {
+  const W = GROUND.W;
+  const H = GROUND.H;
+  const odd = (n: number) => Math.abs(n) % 2 === 1;
+  const q = (p: number, c: number, g: number, half: number) => (p - c - g) / s + half;
+  const i0 = Math.floor(q(-1, FRAME_P.CX, gx, W / 2) / W);
+  const i1 = Math.floor(q(FRAME_P.W + 1, FRAME_P.CX, gx, W / 2) / W);
+  const j0 = Math.floor(q(-1, FRAME_P.CY, gy, H / 2) / H);
+  const j1 = Math.floor(q(FRAME_P.H + 1, FRAME_P.CY, gy, H / 2) / H);
+  const out: { key: string; matrix: string }[] = [];
+  for (let j = j0; j <= j1; j++) {
+    for (let i = i0; i <= i1; i++) {
+      if (i === 0 && j === 0) continue;
+      const ax = odd(i) ? -1 : 1;
+      const ay = odd(j) ? -1 : 1;
+      const bx = i * W + (odd(i) ? W : 0);
+      const by = j * H + (odd(j) ? H : 0);
+      const e = W / 2 + gx + s * (bx - W / 2);
+      const f = H / 2 + gy + s * (by - H / 2);
+      out.push({ key: `${i},${j}`, matrix: `matrix(${fx(ax * s)}, 0, 0, ${fx(ay * s)}, ${fx(e)}, ${fx(f)})` });
+    }
+  }
+  return out;
+};
+const SheetP: React.FC<{ src: string; style: React.CSSProperties }> = ({ src, style }) => (
+  <Img
+    src={staticFile(src)}
+    style={{ position: "absolute", left: (FRAME_P.W - GROUND.W) / 2, top: (FRAME_P.H - GROUND.H) / 2, width: GROUND.W, height: GROUND.H, ...style }}
+  />
+);
+/** The portrait stage (use DtsStage({ orientation: "portrait" })): StoutStage's set + the show's amber lights. */
+const DtsStagePortrait: React.FC<{
+  S: number;
+  cam: Cam;
+  rest: Cam;
+  pool: Pool;
+  lights: LightPool[];
+  sway: boolean;
+  children?: React.ReactNode;
+  overlay?: React.ReactNode;
+}> = ({ S, cam, rest, pool, lights, sway, children, overlay }) => {
+  const k = cam.k;
+  const sw = swayAt(S, sway);
+  const tx = FRAME_P.CX - cam.x * k + sw.dx;
+  const ty = FRAME_P.CY - cam.y * k + sw.dy;
+  const gScale = Math.pow(k / rest.k, GROUND.zoom);
+  const gx = -(cam.x - rest.x) * k * GROUND.parallax;
+  const gy = -(cam.y - rest.y) * k * GROUND.parallax - S * GROUND.drift;
+  const g2 = GRAIN.onTwos ? Math.floor(S / 2) : S;
+  const grx = (hashG(g2 + 1) * 2 - 1) * GRAIN.travel;
+  const gry = (hashG(g2 + 7) * 2 - 1) * GRAIN.travel;
+  const scr = (x: number, y: number) => ({ x: FRAME_P.CX + (x - cam.x) * k + sw.dx, y: FRAME_P.CY + (y - cam.y) * k + sw.dy });
+  const p = pool ? { ...scr(pool.x, pool.y), s: pool.strength ?? 1 } : null;
+  const lit = lights.filter((l) => (l.strength ?? 1) > 0.002 && l.rx > 0.5 && l.ry > 0.5);
+  return (
+    <AbsoluteFill style={{ backgroundColor: COLOR.ground, overflow: "hidden" }}>
+      {groundCopiesP(gx, gy, gScale).map((c) => (
+        <SheetP key={c.key} src={GROUND.src} style={{ transformOrigin: "0 0", transform: c.matrix }} />
+      ))}
+      <SheetP src={GROUND.src} style={{ transform: `translate(${fx(gx)}px, ${fx(gy)}px) scale(${fx(gScale)})` }} />
+      {p ? (
+        <AbsoluteFill
+          style={{
+            mixBlendMode: "screen",
+            background: `radial-gradient(ellipse ${POOL.rx}px ${POOL.ry}px at ${fx(p.x)}px ${fx(p.y)}px, rgba(${POOL.color},${f3(
+              POOL.a0 * p.s,
+            )}) 0%, rgba(${POOL.color},${f3(POOL.a1 * p.s)}) 45%, rgba(${POOL.color},0) 100%)`,
+          }}
+        />
+      ) : null}
+      {GROUND_ONLY
+        ? null
+        : lit.map((l, i) => {
+            const c = scr(l.cx, l.cy);
+            const s = l.strength ?? 1;
+            return (
+              <AbsoluteFill
+                key={`l${i}`}
+                style={{
+                  mixBlendMode: "screen",
+                  background: `radial-gradient(ellipse ${fx(l.rx * k)}px ${fx(l.ry * k)}px at ${fx(c.x)}px ${fx(c.y)}px, rgba(${DTS_LIGHT.color},${f3(
+                    DTS_LIGHT.a0 * s,
+                  )}) 0%, rgba(${DTS_LIGHT.color},${f3(DTS_LIGHT.a1 * s)}) 48%, rgba(${DTS_LIGHT.color},0) 100%)`,
+                }}
+              />
+            );
+          })}
+      <svg width={FRAME_P.W} height={FRAME_P.H} viewBox={`0 0 ${FRAME_P.W} ${FRAME_P.H}`} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+        <g transform={`translate(${fx(tx)} ${fx(ty)}) scale(${fx(k)})`}>{GROUND_ONLY ? null : children}</g>
+      </svg>
+      {GROUND_ONLY ? null : overlay}
+      <AbsoluteFill style={{ background: VIGNETTE }} />
+      <AbsoluteFill style={{ mixBlendMode: GRAIN.blend, opacity: GRAIN.opacity }}>
+        <SheetP src={GROUND.grain} style={{ left: (FRAME_P.W - GROUND.W) / 2 + grx, top: (FRAME_P.H - GROUND.H) / 2 + gry }} />
       </AbsoluteFill>
     </AbsoluteFill>
   );

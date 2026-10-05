@@ -10,7 +10,7 @@ import AreWeDoingThis, {
 // builders own src/Root.tsx. Toto Wolff / Cheeky Pint S4E01, "...against
 // Ferrari, so I sat down with my colleague of Ferrari and said, are we doing
 // this?": Mercedes and Ferrari race, rest short of the trophy, and the show's
-// light slides up and waits. Opaque, 1920x1080, 24fps, 128 frames.
+// light slides up and waits. Opaque, 1080x1920 (9:16), 24fps, 128 frames.
 export const RemotionRoot = () => {
   return (
     <>
@@ -21,8 +21,8 @@ export const RemotionRoot = () => {
         defaultProps={defaultProps}
         durationInFrames={DURATION}
         fps={FPS}
-        width={1920}
-        height={1080}
+        width={1080}
+        height={1920}
       />
     </>
   );

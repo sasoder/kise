@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useId } from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { ALPHA, COLOR, EDGE, clamp01, lerp, smoothstep } from "./stoutShared";
+import { ALPHA, COLOR, EDGE, clamp01, lerp, rectPath, smoothstep } from "./stoutShared";
 import {
-  DTS,
+  DTS_LIGHT,
   DtsStage,
   F1Logo,
   FPS,
@@ -12,20 +12,21 @@ import {
   Person,
   Screen,
   camJerk,
-  dtsAmberBand,
-  dtsCameraTrack,
+  dtsAmberBandP,
+  dtsCameraTrackP,
   hash01,
   reachFrame,
   screenBox,
-  screenLight,
-  toScreenL,
+  toScreenP,
   toneAt,
+  type LightPool,
 } from "./dtsShared";
 
 // ---------------------------------------------------------------------------
 // SmashingSuccess — cut A of Toto Wolff's "why Drive to Survive worked" (Cheeky Pint S4E01), on the DTS
-// world (dtsShared.tsx; brief out/dts/briefs/BRIEF.md). Cheeky Pint S4 stout system, palette B1.
-// 1920x1080, 24 fps, opaque. Replaces the picture while the HOST speaks.
+// world (dtsShared.tsx; briefs out/dts/briefs/BRIEF.md + BRIEF_9x16.md + the director's 9:16 pass-2 notes).
+// Cheeky Pint S4 stout system, B1. 9:16, 1080x1920, 24 fps, opaque. Replaces the picture while the HOST speaks.
+// (The approved 16:9 pass-2 source: out/dts/W/SmashingSuccess_16x9_pass2.tsx.txt.)
 //
 // THE LINE: "Drive to Survive has been a smashing success for Netflix and a big success for F1, where
 // it's brought lots of new people into the sport."
@@ -34,272 +35,291 @@ import {
 // netflix 48 · and 57 · a 68 · big 71 · success 73 · for 82 · f1 86 · where 98 · it's 102 · brought 108 ·
 // lots 116 · of 123 · new 127 · people 132 · into 142 · the 153 · sport 157 · speech ends 164.
 //
-// ACCENT RULE: AMBER = Drive to Survive's light — the screen's face and whatever its light reaches. Every
-// walker is DARK until it walks into the light's front (the pool's left edge + a hashed 0-22 px offset);
-// then it crossfades DARK -> amber over 13 f and stays a fan. Logos are cream; the stand is board (context).
+// ACCENT RULE: AMBER = Drive to Survive's light — the screen's face and whatever its light reaches. The light
+// falls from the screen in one soft cone onto the ground; every walker is DARK until it walks into the pool's
+// front there (+ a hashed 0-22 px), then crossfades DARK -> amber over 13 f and stays a fan. Logos are cream;
+// the stand is board (context).
 //
-// ONE MOTION: a stream of passers-by walks through the show's light, turns amber, and flows on into the
-// F1 grandstand; the camera follows the stream from the screen to the stand.
+// ONE MOTION: people walk in from both sides into the show's light and gather in it; the F1 grandstand rises
+// out of the ground in the light between them, and they climb into it.
+//
+// THE COLUMN (world = screen px at rest, centred on x 540): NETFLIX (y 305-363) over THE SCREEN (760 wide =
+// 70 %, y 391-839); its light falls in a soft cone onto ONE ground line (y 1320, the bust bottoms) and pools
+// there; the F1 mark (y 867-931) between the screen and the stand; the stand (three terraced board tiers of
+// 96, 436 wide at the foot, base on the ground line) rises out of a slot at x 540. People 88 px. Everyone moves
+// horizontally on the ground line or straight up. No ramps, no diagonals.
 //
 // GESTURES (gesture -> word -> frames)
-//   1. THE SCREEN already on, left of centre (bezel 914 px = 48 % of the frame, k 1.27): the DTS title card on its
-//      amber face; its light pool on the ground in front of it -> "Drive to Survive" -> f0-169
-//   2. the stream: a loose single file of DARK people walking in from off-frame left, ~one every 7 f,
-//      gliding on one path (hashed speed, no bob). Each crossfades to amber as it enters the light's front
-//      (the first at f2.4, "drive") and, lit, quickens (9 -> 19 world px/f over 24 f: the show draws them
-//      on to the sport; without it no fan could reach a stand that is off frame at f0 before the cut
-//      ends) -> "Drive to Survive has been a smashing success" -> f0-169
+//   1. THE SCREEN already on, its light falling in a soft cone to the ground and pooling there; the camera
+//      holds (a slow creep, k 1.0 -> 1.012) -> "Drive to Survive" -> f0-169
+//   2. DARK people already walking in from BOTH frame edges along the ground toward the centre, three depth
+//      lanes (each fan keeps its own; no two visible busts share > 21 %); each crossfades to amber as it
+//      enters the light's front (the first on f9, "survive"); they gather in the light in a queue on each
+//      side of the centre (five each), the stream thickening through "smashing success" -> f0-60
 //   3. NETFLIX rises into place over the screen (blur-in + 24 px slide-up, f30-44), lands f44 -> "netflix" f48
-//   4. ONE camera glide right and out (k 1.29 -> 0.95, target f50-84; k 0.958 by f86) reveals the EMPTY
-//      grandstand right of the screen: four terraced board tiers, slot joints, one union shadow; the
-//      path leads to its foot -> "a big success for F1" -> f50-86
-//   5. the F1 mark rises as the stand's headline (f67-81), lands f81 -> "f1" f86
-//   6. the stand fills, 12 seats (3 rows of 4, the rows a third of a pitch apart): each of the earliest-lit
-//      fans walks the ground path to beneath its seat, stops on one deceleration, and rises STRAIGHT up
-//      into it in ONE eased lift (11 f, soft start, long deceleration, no bounce), lifting one elevation
-//      and settling as it lands. Front row first: row 1 lands f102-107 ("where it's brought"), row 2
-//      f133-135 ("new people"), row 3 f154-161 ("into the sport"); within a row the far seat first, so no
-//      fan ever walks beneath one mid-lift; a 5 f breath in the stream before the back row's first fan.
-//      FULL from f161 (the last 8 f) -> "brought lots of new people into the sport" -> f91-161
-//   7. the stream THICKENS: from ~f30 the incoming people come three abreast (three depth lanes 18 px apart,
-//      used in turn; no two busts share more than 23 % of a bust anywhere); the fans who cannot be seated
-//      flow on and gather on the ground at the stand's foot, packed back along the path (f142-169)
-//      -> "lots of new people" -> f30-169
-//   8. the tail: a slow creep-in on screen + stand (k 0.958 -> 0.969) -> f86-169
-//   The cream subject pool follows the stream from the screen to the stand (lagged).
-//   CLICK: none. The stand filling is a group arrival (group arrivals never click).
-// Resolved frame: NETFLIX over the glowing screen on the left, F1 over a FULL amber stand on the right, the
-// stream still flowing between them and gathering at the stand's foot. Nothing else.
+//   4. a 2 px slot opens in the ground at the centre (f54-62) and the F1 GRANDSTAND RISES out of it inside the
+//      light (one eased rise, decelerating, f62-84): three terraced board tiers, slot joints, one union shadow
+//      -> "a big success" -> f54-84
+//   5. the F1 mark rises as the stand's headline, centred between screen and stand (f67-81), lands f81, the
+//      light passing behind it -> "f1" f86
+//   6. from f78 each queue's front fan in turn (every 8 f, a 3 f breath between rows, the sides 2 f apart)
+//      walks in behind the stand to beneath its seat and rises STRAIGHT up into it in ONE eased lift (12 f,
+//      soft start, long deceleration, no bounce, one elevation up, settling); it sits IN its tier, its
+//      shoulders on the tier's top lip; each queue steps up as its front leaves. Front row first, from the
+//      outside in: row 1 lands f104-122 ("brought lots of"), row 2 f124-141 ("new people"), row 3 f144-161
+//      ("into the sport"). FULL for the last 8 f -> "brought lots of new people into the sport" -> f78-161
+//   7. more fans keep arriving (briskly now, each as a place opens) and gather at the back of the queues,
+//      beside the stand; the stream is still walking in at the end -> f69-169
+// Resolved frame: NETFLIX over the lit screen, F1 between, the full amber stand in the light on the ground
+// line, the gathered fans on both sides of it. Nothing else. CLICK: none (a group arrival).
 // ---------------------------------------------------------------------------
 
 export { FPS };
 export const DURATION = 169;
-const P = DTS.PERSON_H;
-const SCR = DTS.SCREEN;
-const SB = screenBox(SCR.x, SCR.y, SCR.w);
-const PATH_Y = DTS.PATH_Y;
+const P = 88; // the person size (k ~1.0: 88 px >= 72)
+const CX = 540;
+/** the screen's bottom (y): NETFLIX + THE SCREEN above, the F1 mark and the stand below */
+const SCREEN_BOTTOM = 839;
 
-// -- the light ---------------------------------------------------------------------------------------------
-const LIGHT = screenLight(SCR.x, SCR.y, SCR.w);
-/** the light's front for walkers: the face's left edge (each walker is reached a hashed 0-44 px inside it) */
-export const FRONT_X = SB.face.x + 8;
+// -- the column ----------------------------------------------------------------------------------------------
+const SCR_W = 760;
+const SB0 = screenBox(0, 0, SCR_W);
+const SCR_Y = SCREEN_BOTTOM - SB0.outer.h / 2;
+const SCR = { x: CX, y: SCR_Y, w: SCR_W } as const;
+const SB = screenBox(SCR.x, SCR.y, SCR.w);
+/** THE GROUND LINE: lane-0 bust bottoms (the front lane); the back lanes stand 23 / 46 px behind (higher) */
+export const GROUND_Y = 1320;
+const LANES = [0, -27, -54];
+
+// -- the light: one soft cone from the screen's bottom to the ground, and its pool there ------------------
+const POOL: LightPool = { cx: CX, cy: GROUND_Y - 28, rx: 480, ry: 90 };
+/** the pool's fronts (where a walker is reached): each walker a hashed 0-22 px inside */
+export const FRONT_L = 110;
 const FRONT_SPAN = 22;
 
-// -- the grandstand (world px) -----------------------------------------------------------------------------
-export const STAND = { SL: 870, SR: 1314, STEP: 16, T: 72, base: PATH_Y + 10, tiers: 4 } as const;
-/** pass 1's right edge: the camera's end framing and the F1 headline stay where pass 1 put them */
-const SR_PASS1 = 1290;
-const tierTop = (r: number) => STAND.base - STAND.T * (r + 1);
-const tierX0 = (r: number) => STAND.SL + r * STAND.STEP;
-/** 12 seats: 3 rows of 4 on tiers 0-2, each row backed by the next tier's face. The rows are staggered half a
- *  pitch, so a fan lifting into a back row rises between two seated fans of the row in front. FILL ORDER:
- *  the front row first, then the back rows; within a row from the end nearest the path (left). */
-const SEAT_PITCH = 100;
-const SEAT_X0 = [916, 916 + 100 / 3, 916 + 200 / 3]; // three rows a third of a pitch apart: a rising fan clears every seated one by >= 33 px
-export const SEATS: { row: number; x: number }[] = [0, 1, 2].flatMap((r) => {
-  const row = [0, 1, 2, 3].map((j) => ({ row: r, x: SEAT_X0[r] + j * SEAT_PITCH }));
-  return row.reverse(); // the far seat first: a fan never walks beneath one that is lifting
-});
-/** in front of the stand the ground path comes toward us (DROP px lower), so the crowd on the ground clears
- *  the seated front row; it bends just beyond the f0 frame's right edge */
-const DROP = 40;
-const DROP_X = [812, 940] as const;
-const dropAt = (x: number) => DROP * smoothstep((x - DROP_X[0]) / (DROP_X[1] - DROP_X[0]));
-/** the fans who cannot be seated gather on the ground at the stand's foot, packed from its left end back along
- *  the path: spot n at GATHER_X0 - 24 n in lane LANES[n % 3] (lanes 18 px apart, so neighbours share <= 20 %);
- *  each later spot lies left of every earlier one, so nobody walks through the crowd */
-const GATHER_X0 = 905;
-const GATHER_STEP = 24;
+// -- the stand: three terraced board tiers (front = tier 0, lowest) rising out of a slot at x 540 ------------
+const T = 96; // tier height
+const TIERS = 3;
+const tierTop = (r: number) => GROUND_Y - T * (r + 1);
+const TIER_HW = [218, 206, 194]; // half widths (each tier holds its row with 24 px to spare)
+const STAND_H = T * TIERS;
+/** the stand's rise out of its slot: below the ground until f62, eased up to rest on f84 (decelerating) */
+const SLOT_IN = [54, 62] as const;
+const RISE = [62, 84] as const;
+const riseDy = (f: number) => STAND_H * Math.pow(1 - clamp01((f - RISE[0]) / (RISE[1] - RISE[0])), 2.4);
+/** 12 seats: row r on tier r, its fans' SHOULDERS on the tier's top (they sit IN the tier); fill order: the
+ *  front row first, from the outside in, the two sides alternating */
+const SEAT_DX = [
+  [150, 50],
+  [138, 46],
+  [126, 42],
+];
+/** a seated fan: its whole shoulder dome above the tier's top (it sits behind the tier's lip), the lowest 12 %
+ *  of the bust hidden by the tier */
+const SEAT_SINK = 0.12;
+const seatBottom = (r: number) => tierTop(r) + SEAT_SINK * P;
+type Seat = { row: number; x: number; side: 0 | 1 };
+export const SEATS: Seat[] = [0, 1, 2].flatMap((r) =>
+  [0, 1].flatMap((j) => [0, 1].map((side) => ({ row: r, side: side as 0 | 1, x: side === 0 ? CX - SEAT_DX[r][j] : CX + SEAT_DX[r][j] }))),
+);
+const LIFT_F = 12;
+/** the departures from each queue's front: from f78 (the stand up), every 8 f, +3 f between rows, the right side
+ *  2 f behind the left; the walk in averages 12 px/f */
+const DEP0 = 78;
+const DEP_STEP = 8;
+const DEP_ROW = 3;
+const DEP_SIDE = 2;
+const WALK_V = 12;
 
 // -- the walkers ---------------------------------------------------------------------------------------------
-// Each walker i: crosses FRONT_X at t0 in the dark (speed vd), is lit at tLit (when it passes FRONT_X + off)
-// and quickens to vl over RAMP f; a lane (a depth offset in y: 0 = front, single file before the thickening);
-// a destination: a seat (walk to under it, stop, ONE eased lift into it) or a gathering spot (walk, stop).
-type Pt = [number, number];
-const RAMP = 24;
-const VD = 9;
-const VL = 19;
-/** three lanes, 18 px apart in depth, used in turn once the stream thickens; with the dark gap >= 3.2 f a
- *  bust and its neighbour one lane over are >= 28 px apart (<= 13 % overlap), and in one lane >= 86 px */
-const LANES = [0, -18, -36];
-const gapAt = (t: number) => lerp(6.8, 3.3, smoothstep((t - 24) / 40)); // ~one every 7 f, thickening to ~3.3 f by f64
-const LIFT_F = 11;
-const BACK_ROW_BREATH = 5;
-const STOP_D = 40; // the stop: a constant deceleration over the last 40 px
-type Dest = { kind: "seat"; row: number; x: number } | { kind: "gather"; x: number };
-type Walker = { i: number; t0: number; tLit: number; off: number; lane: number; vd: number; vl: number; reach: number; dest: Dest | null; stopF: number };
-/** distance walked since being lit (tau = f - tLit; negative before): vd, then eased up to vl over RAMP */
-const walked = (tau: number, vd: number, vl: number) => {
-  if (tau <= 0) return vd * tau;
-  const u = Math.min(tau / RAMP, 1);
-  const I = RAMP * (u * u * u - (u * u * u * u) / 2) + Math.max(0, tau - RAMP);
-  return vd * tau + (vl - vd) * I;
+// Two mirrored streams (side 0 from the left, side 1 from the right). A walker walks in at V0 along the lane of
+// its queue spot and stops there on one deceleration (STOP_D); the queue's spots run outward from beside the
+// stand (spot n at x 300 - 30 n on the left; each fan in its own lane, the lanes in turn by arrival); when the front fan leaves, the queue steps up one
+// spot (SHUF_F). The front fan walks in behind the stand to beneath its seat (one eased walk) and lifts.
+const V0 = 6; // the opening stream strolls in
+const V_LATE = 8; // the fans who come once the stand has appeared walk briskly
+const LATE_Q = 5; // from this queue place on
+const STOP_D = 60;
+const SPOT_X0 = CX - TIER_HW[0] - P / 2 - 4; // beside the stand (274)
+const SPOT_DX = 35;
+/** the queue's last spot (x 134 on the left: inside the light and the side margin) */
+const SPOT_MAX = 4;
+const SHUF_F = 7;
+const sideX = (side: 0 | 1, x: number) => (side === 0 ? x : 2 * CX - x);
+/** each fan keeps its own depth lane (by its order in the queue), so a queue step moves x only and neighbours
+ *  never cross */
+const laneY = (q: number) => GROUND_Y + LANES[q % 3];
+/** entry times per side (when the walker is at x -40, just off frame): the first three are already in frame at
+ *  f0 and the stream thickens through "smashing success" (five per side fill the queue); each later fan enters
+ *  only as the queue's front leaves (so it never walks up to a spot past the queue's last), and the stream is
+ *  still walking in at the end */
+const ENTRIES: number[][] = [
+  [-17, -9, -2, 5, 11, 71, 79, 90, 98, 109, 117, 160],
+  [-15, -7, 0, 7, 13, 74, 82, 93, 101, 112, 120, 163],
+];
+type Walker = {
+  i: number;
+  side: 0 | 1;
+  q: number; // its order in its side's queue
+  tEntry: number;
+  off: number;
+  reach: number;
+  seat: Seat | null;
+  depart: number; // when it leaves the queue's front for its seat (Infinity: it stays)
+  stopF: number; // when it stops beneath its seat
 };
-/** a walker's free ground x at frame f: dark speed up to FRONT_X + off (crossing FRONT_X at t0), then lit and quickening */
-const groundX = (w: Pick<Walker, "t0" | "tLit" | "off" | "vd" | "vl">, f: number) =>
-  f < w.tLit ? FRONT_X + w.vd * (f - w.t0) : FRONT_X + w.off + walked(f - w.tLit, w.vd, w.vl);
-/** the ground x with its stop at xs: a constant deceleration over the last STOP_D (C1, no overshoot) */
-const stopped = (xg: number, xs: number) => {
-  if (xg <= xs - STOP_D) return xg;
-  const q = Math.min(1, (xg - (xs - STOP_D)) / (2 * STOP_D));
-  return xs - STOP_D + STOP_D * (1 - (1 - q) * (1 - q));
-};
-const firstF = (fn: (f: number) => boolean, f0: number) => {
-  let f = f0;
-  while (!fn(f) && f < f0 + 600) f += 0.5;
-  let lo = f - 0.5;
-  let hi = f;
-  for (let it = 0; it < 24; it++) {
-    const m = (lo + hi) / 2;
-    if (fn(m)) hi = m;
-    else lo = m;
-  }
-  return hi;
-};
-/** the lift into a seat: eased (soft start, long deceleration), no overshoot */
-const liftEase = (u: number) => smoothstep(Math.pow(clamp01(u), 0.72));
+/** the departure times of the fans ahead of each walker (filled with WALKERS) */
+const DEPS_AHEAD: number[][] = [];
+/** the walker's queue index at frame f (continuous: it steps up as the fans ahead leave) */
+const idxAt = (w: { i: number; q: number }, f: number) => w.q - departCount(DEPS_AHEAD[w.i] ?? [], f);
+/** the departures of a side's queue front (seat fans only), and its smooth count up to frame f */
+const departCount = (deps: number[], f: number) => deps.reduce((a, d) => a + smoothstep((f - d) / SHUF_F), 0);
 export const WALKERS: Walker[] = (() => {
   const out: Walker[] = [];
-  let t = 1;
-  let i = 0;
-  let nThick = 0;
-  while (t < DURATION + 80) {
-    const thick = gapAt(t) < 6.6; // single file while one gap keeps a bust clear; abreast after
-    const lane = thick ? LANES[(nThick++ + 1) % 3] : 0; // abreast: the three lanes in turn
-    const vd = VD * (1 + (hash01(i, 3) - 0.5) * 0.006); // near-equal in the dark (the queue keeps its spacing)
-    const vl = VL * (1 + (hash01(i, 4) - 0.5) * 0.03);
-    const off = FRONT_SPAN * hash01(i, 1);
-    out.push({ i, t0: t, tLit: t + off / vd, off, vd, vl, lane, reach: 0, dest: null, stopF: Infinity });
-    t += gapAt(t) * (0.94 + 0.12 * hash01(i, 6));
-    // a breath in the stream before the back row's first fan, so it passes under the middle row's last fan
-    // only once that one has risen clear
-    if (i === 7) t += BACK_ROW_BREATH;
-    i++;
-  }
-  // the light's front reaches each walker where its ground x crosses FRONT_X + off (the dtsShared helper)
-  for (const w of out) w.reach = reachFrame((f) => groundX(w, f) - (FRONT_X + w.off), -300, 400, 1);
-  // the earliest-lit walkers take the seats in fill order; the next ones gather; each stop is solved
-  let g = 0;
-  out.forEach((w, n) => {
-    if (n < SEATS.length) w.dest = { kind: "seat", ...SEATS[n] };
-    else {
-      // the next free spot in this walker's lane (spots cycle through the lanes as the walkers do)
-      while (LANES[g % 3] !== w.lane) g++;
-      w.dest = { kind: "gather", x: GATHER_X0 - g * GATHER_STEP };
-      g++;
-    }
-    const xs = (w.dest as Dest).x;
-    w.stopF = firstF((f) => groundX(w, f) >= xs + STOP_D, w.t0);
+  // the seat fans, in fill order: seat k goes to its side's next fan (FIFO)
+  const perSide: Seat[][] = [[], []];
+  SEATS.forEach((s) => perSide[s.side].push(s));
+  let n = 0;
+  ([0, 1] as const).forEach((side) => {
+    ENTRIES[side].forEach((tEntry, q) => {
+      const seat = q < perSide[side].length ? perSide[side][q] : null;
+      // the queue's front leaves every DEP_STEP f (a breath between rows; the right side a beat behind), once the
+      // stand is up; the walk in to beneath the seat is one smooth ease, its length by distance
+      const depart = seat ? DEP0 + side * DEP_SIDE + DEP_STEP * q + DEP_ROW * Math.floor(q / 2) : Infinity;
+      const dist = seat ? Math.abs(seat.x - sideX(side, SPOT_X0)) : 0;
+      const stopF = seat ? depart + 4 + dist / WALK_V : Infinity;
+      out.push({ i: n++, side, q, tEntry, off: FRONT_SPAN * hash01(n, 1), reach: 0, seat, depart, stopF });
+    });
   });
+  // each walker's queue steps up when a fan ahead of it (same side, FIFO) leaves for its seat
+  out.forEach((w) => {
+    DEPS_AHEAD[w.i] = out.filter((v) => v.side === w.side && v.q < w.q && Number.isFinite(v.depart)).map((v) => v.depart);
+  });
+  for (const w of out) w.reach = reachFrame((f) => sideX(w.side, walkerAt(w, f).x) - (FRONT_L + w.off), -120, DURATION + 40, 1);
   return out;
 })();
-/** where walker w is at frame f: bottom-centre, its lift (0..1 toward the next elevation) and whether it is seated */
-export const walkerAt = (w: Walker, f: number): { x: number; y: number; lift: number; seated: boolean } => {
-  const xg = groundX(w, f);
-  const x = w.dest ? stopped(xg, w.dest.x) : xg;
-  const yg = PATH_Y + w.lane + dropAt(x);
-  if (!w.dest || w.dest.kind === "gather" || f <= w.stopF) return { x, y: yg, lift: 0, seated: false };
-  const u = (f - w.stopF) / LIFT_F;
-  const e = liftEase(u);
-  // one elevation level while it rises, settling as it lands
-  const lift = u >= 1 ? 0 : smoothstep(u / 0.3) * (1 - smoothstep((u - 0.55) / 0.45));
-  return { x, y: lerp(yg, tierTop(w.dest.row), e), lift, seated: u >= 1 };
-};
-/** draw order (back to front): a fan lifting into row r is already at row r's depth (it rises BEHIND the rows
- *  in front of it); everyone on the ground by their lane's depth */
-export const depthOf = (w: Walker, f: number) => (w.dest?.kind === "seat" && f > w.stopF ? tierTop(w.dest.row) : PATH_Y + w.lane + dropAt(walkerAt(w, f).x));
-/** the frame each seat's fan lands */
-export const landF = (w: Walker) => (w.dest?.kind === "seat" ? w.stopF + LIFT_F : Infinity);
-
-// -- the camera ----------------------------------------------------------------------------------------------
-const K0 = 1.27;
-const LOOK0 = 18;
-const X0 = SCR.x + (960 - 860) / K0; // the screen's centre on screen x 860 (left of centre)
-const X_END = (SB.outer.x + SR_PASS1) / 2;
-export const CAM = dtsCameraTrack(
-  { x: X0, y: LOOK0, k: K0 },
-  [
-    { f0: 0, f1: 56, k: 1.29, dx: 6 }, // the hold creeps
-    { f0: 50, f1: 84, dx: X_END - X0 - 6, dy: -2, k: 0.95, warp: 0.92 }, // ONE glide right and out
-    { f0: 84, f1: DURATION + 8, k: 0.97, dx: 4 }, // the tail creeps in
-  ],
-  DURATION,
-);
-const camAt = (f: number) => CAM[Math.max(0, Math.min(CAM.length - 1, Math.round(f)))];
-/** the cream subject pool: from the screen to the stand, lagged (the camera's own damper) */
-const POOL_TRACK: Pt[] = (() => {
-  const tgt = (f: number): Pt => [lerp(SCR.x + 60, (SCR.x + STAND.SL) / 2 + 150, smoothstep((f - 52) / 40)), 120];
-  const out: Pt[] = [];
-  let p = tgt(-20);
-  let v: Pt = [0, 0];
-  for (let f = -20; f <= DURATION + 2; f++) {
-    const t = tgt(f);
-    v = [v[0] + (t[0] - p[0]) * 0.09 - v[0] * 0.468, v[1] + (t[1] - p[1]) * 0.09 - v[1] * 0.468];
-    p = [p[0] + v[0], p[1] + v[1]];
-    if (f >= 0) out.push(p);
+/** the constant deceleration into a stop at xs (C1) */
+function stopped(x: number, xs: number) {
+  if (x <= xs - STOP_D) return x;
+  const q = Math.min(1, (x - (xs - STOP_D)) / (2 * STOP_D));
+  return xs - STOP_D + STOP_D * (1 - (1 - q) * (1 - q));
+}
+function liftEase(u: number) {
+  return smoothstep(Math.pow(clamp01(u), 0.72));
+}
+/** where walker w is at frame f (left-side coordinates mirrored for side 1): bottom-centre, its lift (0..1),
+ *  its depth class (-1 = on the ground, behind the stand; r = in row r) and whether it is seated */
+export function walkerAt(w: Walker, f: number): { x: number; y: number; lift: number; row: number; seated: boolean } {
+  const xLin = -40 + (w.q >= LATE_Q ? V_LATE : V0) * (f - w.tEntry);
+  if (!w.seat || f < w.depart) {
+    const idx = Math.max(0, idxAt(w, f));
+    const xs = SPOT_X0 - SPOT_DX * idx;
+    return { x: sideX(w.side, stopped(xLin, xs)), y: laneY(w.q), lift: 0, row: -1, seated: false };
   }
-  return out;
-})();
+  // the walk in: from spot 0 (where it stood at its departure) to beneath its seat
+  const x0 = SPOT_X0;
+  const x1 = w.side === 0 ? w.seat.x : 2 * CX - w.seat.x;
+  const y0 = laneY(w.q);
+  if (f <= w.stopF) {
+    const u = smoothstep((f - w.depart) / (w.stopF - w.depart));
+    return { x: sideX(w.side, lerp(x0, x1, u)), y: y0, lift: 0, row: -1, seated: false };
+  }
+  const u = (f - w.stopF) / LIFT_F;
+  const lift = u >= 1 ? 0 : smoothstep(u / 0.3) * (1 - smoothstep((u - 0.55) / 0.45));
+  return { x: w.seat.x, y: lerp(y0, seatBottom(w.seat.row), liftEase(u)), lift, row: w.seat.row, seated: u >= 1 };
+}
+export const landF = (w: Walker) => (w.seat ? w.stopF + LIFT_F : Infinity);
+
+// -- the camera: a hold with a slow creep ----------------------------------------------------------------------
+const LOOK = 835;
+export const CAM = dtsCameraTrackP({ x: CX, y: LOOK, k: 1.0 }, [{ f0: 0, f1: DURATION + 10, k: 1.012 }], DURATION);
+const camAt = (f: number) => CAM[Math.max(0, Math.min(CAM.length - 1, Math.round(f)))];
 
 // -- the logos -----------------------------------------------------------------------------------------------
 const NETFLIX_PX = 58;
 const NETFLIX_GAP = 28;
 const NETFLIX_IN = [30, 44] as const;
 const F1_IN = [67, 81] as const;
-const F1_X = (STAND.SL + 3 * 40 + SR_PASS1) / 2; // pass 1's top tier centre (the headline stays put)
-const F1_GAP = 24; // SPACE.CLEAR over the top row's heads
-const enterOf = (f: number, w: readonly [number, number]) => clamp01((f - w[0]) / (w[1] - w[0]));
+const F1_PX = 64;
+const F1_BOTTOM = tierTop(TIERS - 1) - (1 - SEAT_SINK) * P - 24; // over the top row's heads
 
-// -- the grandstand ------------------------------------------------------------------------------------------
-const Grandstand: React.FC<{ k: number }> = ({ k }) => {
-  const { SL, SR, base, tiers } = STAND;
-  // the outline: each tier's left end goes up from the tread below
-  const outline = (() => {
-    const p: Pt[] = [[SL, base], [SL, tierTop(0)]];
-    for (let r = 1; r < tiers; r++) {
-      p.push([tierX0(r), tierTop(r - 1)]);
-      p.push([tierX0(r), tierTop(r)]);
-    }
-    p.push([SR, tierTop(tiers - 1)], [SR, base]);
-    return `M${p.map(([x, y]) => `${x} ${y}`).join("L")}Z`;
-  })();
-  const lip = EDGE.SLOT_LIP / k;
-  const slotH = EDGE.SLOT / k;
-  const ao = EDGE.FOOT_AO / k;
+// -- the light cone (cut-local: P's FallingLight language, widening as it falls) -------------------------------
+const LightCone: React.FC<{ k: number }> = ({ k }) => {
+  const uid = `lc${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
+  const yt = SB.face.y + SB.face.h * 0.5;
+  const yb = SB.bottom;
+  const y1 = GROUND_Y + 30;
+  const top = SB.face.w / 2 - 20;
+  const bot = 500;
+  const c = `rgb(${DTS_LIGHT.color})`;
+  const at = (y: number) => clamp01((y - yt) / (y1 - yt)).toFixed(3);
+  const blur = 26 / k;
   return (
-    <g>
+    <g style={{ mixBlendMode: "screen" }}>
       <defs>
-        <linearGradient id="dtsStandFace" gradientUnits="userSpaceOnUse" x1="0" y1={tierTop(tiers - 1)} x2="0" y2={base}>
-          <stop offset="0" stopColor={COLOR.board} />
-          <stop offset="1" stopColor={COLOR.boardFoot} />
-        </linearGradient>
-        <linearGradient id="dtsStandAO" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={COLOR.shadow} stopOpacity="0" />
-          <stop offset="1" stopColor={COLOR.shadow} stopOpacity={ALPHA.footAO} />
+        <linearGradient id={`${uid}v`} gradientUnits="userSpaceOnUse" x1="0" y1={yt} x2="0" y2={y1}>
+          <stop offset="0" stopColor={c} stopOpacity="0" />
+          <stop offset={at(yb)} stopColor={c} stopOpacity={0.3} />
+          <stop offset={at(lerp(yb, y1, 0.6))} stopColor={c} stopOpacity={0.16} />
+          <stop offset="1" stopColor={c} stopOpacity={0.06} />
         </linearGradient>
       </defs>
-      {/* one union shadow, its contact on the ground */}
-      <ObjectShadow paths={[outline]} size={260} contact={{ x: (SL + SR) / 2, y: base, w: SR - SL }} />
-      <path d={outline} fill="url(#dtsStandFace)" />
-      {/* the joints: each tier rises out of a slot in the one below (foot occlusion + the 2 px slot line) */}
-      {Array.from({ length: tiers - 1 }, (_, r) => {
-        const y = tierTop(r);
-        const x0 = tierX0(r + 1);
-        return (
-          <g key={r}>
-            <rect x={x0} y={y - ao} width={SR - x0} height={ao} fill="url(#dtsStandAO)" />
-            <rect x={x0 - lip} y={y - slotH / 2} width={SR - x0 + lip} height={slotH} fill={COLOR.inkDark} fillOpacity={ALPHA.slot} />
-          </g>
-        );
-      })}
-      {/* the lit top edges: each tread of the stair, and the top tier */}
-      <g stroke={COLOR.edge} strokeOpacity={ALPHA.edgeBoard} strokeWidth={EDGE.CREAM / k}>
-        {Array.from({ length: tiers }, (_, r) => {
-          const x0 = tierX0(r);
-          const x1 = r < tiers - 1 ? tierX0(r + 1) - lip : SR;
-          return <path key={r} d={`M${x0} ${tierTop(r) + EDGE.CREAM / k / 2}H${x1}`} />;
-        })}
-      </g>
+      <path
+        d={`M${CX - top} ${yt}L${CX + top} ${yt}L${CX + bot} ${y1}L${CX - bot} ${y1}Z`}
+        fill={`url(#${uid}v)`}
+        style={{ filter: `blur(${blur.toFixed(2)}px)` }}
+      />
+    </g>
+  );
+};
+
+// -- the grandstand: tiers as bands, drawn back to front with the rows between them ---------------------------
+const bandPath = (r: number, dy: number) => rectPath(CX - TIER_HW[r], tierTop(r) + dy, 2 * TIER_HW[r], T + (r === 0 ? 0 : 0.5), r === TIERS - 1 ? 4 : 0, r === TIERS - 1, false);
+const standOutline = (dy: number) => {
+  const p: [number, number][] = [[CX - TIER_HW[0], GROUND_Y + dy]];
+  for (let r = 0; r < TIERS; r++) {
+    p.push([CX - TIER_HW[r], tierTop(r) + T + dy], [CX - TIER_HW[r], tierTop(r) + dy]);
+  }
+  for (let r = TIERS - 1; r >= 0; r--) {
+    p.push([CX + TIER_HW[r], tierTop(r) + dy], [CX + TIER_HW[r], tierTop(r) + T + dy]);
+  }
+  p.push([CX + TIER_HW[0], GROUND_Y + dy]);
+  return `M${p.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join("L")}Z`;
+};
+const StandShadow: React.FC<{ f: number; clip: string }> = ({ f, clip }) => {
+  const dy = riseDy(f);
+  if (dy >= STAND_H - 0.5) return null;
+  return (
+    <g clipPath={`url(#${clip})`}>
+      <ObjectShadow paths={[standOutline(dy)]} size={260} contact={dy < 1 ? { x: CX, y: GROUND_Y, w: 2 * TIER_HW[0] } : null} />
+    </g>
+  );
+};
+const Band: React.FC<{ r: number; f: number; k: number; grad: string; clip: string }> = ({ r, f, k, grad, clip }) => {
+  const dy = riseDy(f);
+  if (dy >= STAND_H - 0.5) return null;
+  const y = tierTop(r) + dy;
+  const x0 = CX - TIER_HW[r];
+  const w = 2 * TIER_HW[r];
+  const lip = EDGE.SLOT_LIP / k;
+  return (
+    <g clipPath={`url(#${clip})`}>
+      <path d={bandPath(r, dy)} fill={`url(#${grad})`} />
+      {/* the joint with the tier above: it rises out of a slot in this tier's top (foot occlusion + slot line) */}
+      {r < TIERS - 1 ? (
+        <>
+          <rect x={CX - TIER_HW[r + 1] - lip} y={y - EDGE.SLOT / k / 2} width={2 * TIER_HW[r + 1] + 2 * lip} height={EDGE.SLOT / k} fill={COLOR.inkDark} fillOpacity={ALPHA.slot} />
+        </>
+      ) : null}
+      {/* the lit top edge: the exposed treads at the ends (and the top tier's whole top) */}
+      {r < TIERS - 1 ? (
+        <g stroke={COLOR.edge} strokeOpacity={ALPHA.edgeBoard} strokeWidth={EDGE.CREAM / k}>
+          <path d={`M${x0} ${y + EDGE.CREAM / k / 2}H${CX - TIER_HW[r + 1] - lip}`} />
+          <path d={`M${CX + TIER_HW[r + 1] + lip} ${y + EDGE.CREAM / k / 2}H${x0 + w}`} />
+        </g>
+      ) : (
+        <path d={`M${x0 + 4} ${y + EDGE.CREAM / k / 2}H${x0 + w - 4}`} stroke={COLOR.edge} strokeOpacity={ALPHA.edgeBoard} strokeWidth={EDGE.CREAM / k} />
+      )}
     </g>
   );
 };
@@ -310,24 +330,49 @@ export const defaultProps: Props = schema.parse({});
 
 const SmashingSuccess: React.FC<Props> = () => {
   const f = useCurrentFrame();
+  const uid = `ss${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
   const cam = camAt(f);
   const k = cam.k;
-  const band = dtsAmberBand(cam);
-  const pool = POOL_TRACK[Math.max(0, Math.min(POOL_TRACK.length - 1, f))];
-  const half = 960 / k + P;
-  const people = WALKERS.map((w) => ({ w, ...walkerAt(w, f), depth: depthOf(w, f) }))
-    .filter((p) => Math.abs(p.x - cam.x) < half)
-    .sort((a, b) => a.depth - b.depth || a.w.i - b.w.i);
+  const band = dtsAmberBandP(cam);
+  const ps = WALKERS.map((w) => ({ w, ...walkerAt(w, f) })).filter((p) => p.x > -60 && p.x < 1140);
+  const byRow = (row: number) => ps.filter((p) => p.row === row).sort((a, b) => a.y - b.y || a.w.i - b.w.i);
+  const person = (p: (typeof ps)[number]) => <Person key={p.w.i} x={p.x} y={p.y} h={P} k={k} amber={toneAt(p.w.reach, f)} lift={p.lift} />;
+  const slot = smoothstep((f - SLOT_IN[0]) / (SLOT_IN[1] - SLOT_IN[0]));
+  const lip = EDGE.SLOT_LIP / k;
   return (
     <AbsoluteFill>
-      <DtsStage S={f} cam={cam} rest={CAM[0]} pool={{ x: pool[0], y: pool[1] }} lights={[LIGHT]}>
+      <DtsStage orientation="portrait" S={f} cam={cam} rest={CAM[0]} pool={{ x: CX, y: lerp(GROUND_Y - 120, tierTop(1), smoothstep((f - 60) / 40)) }} lights={[POOL]}>
+        <defs>
+          <linearGradient id={`${uid}g`} gradientUnits="userSpaceOnUse" x1="0" y1={tierTop(TIERS - 1)} x2="0" y2={GROUND_Y}>
+            <stop offset="0" stopColor={COLOR.board} />
+            <stop offset="1" stopColor={COLOR.boardFoot} />
+          </linearGradient>
+          {/* the slot: the stand exists only above the ground line */}
+          <clipPath id={`${uid}c`}>
+            <rect x={CX - 400} y={GROUND_Y - 600} width={800} height={600} />
+          </clipPath>
+          <clipPath id={`${uid}s`}>
+            <rect x={CX - 420} y={GROUND_Y - 600} width={840} height={640} />
+          </clipPath>
+        </defs>
+        <LightCone k={k} />
         <Screen x={SCR.x} y={SCR.y} w={SCR.w} k={k} band={band} on={1} />
-        <NetflixLogo x={SCR.x} y={SB.top - NETFLIX_GAP / k} k={k} px={NETFLIX_PX} enter={enterOf(f, NETFLIX_IN)} />
-        <Grandstand k={k} />
-        <F1Logo x={F1_X} y={tierTop(STAND.tiers - 1) - P - F1_GAP / k} k={k} enter={enterOf(f, F1_IN)} />
-        {people.map((p) => (
-          <Person key={p.w.i} x={p.x} y={p.y} h={P} k={k} amber={toneAt(p.w.reach, f)} lift={p.lift} />
-        ))}
+        <NetflixLogo x={SCR.x} y={SB.top - NETFLIX_GAP / k} k={k} px={NETFLIX_PX} enter={clamp01((f - NETFLIX_IN[0]) / (NETFLIX_IN[1] - NETFLIX_IN[0]))} />
+        <F1Logo x={CX} y={F1_BOTTOM} k={k} px={F1_PX} enter={clamp01((f - F1_IN[0]) / (F1_IN[1] - F1_IN[0]))} />
+        {/* the ground: everyone walking, queued or walking in (behind the stand) */}
+        {byRow(-1).map(person)}
+        {/* the slot in the ground (the stand's joint with the ground) */}
+        {slot > 0.002 ? (
+          <rect x={CX - TIER_HW[0] - lip} y={GROUND_Y - EDGE.SLOT / k / 2} width={2 * TIER_HW[0] + 2 * lip} height={EDGE.SLOT / k} fill={COLOR.inkDark} fillOpacity={ALPHA.slot * slot} />
+        ) : null}
+        <StandShadow f={f} clip={`${uid}s`} />
+        {/* back to front: row 2, tier 2, row 1, tier 1, row 0, tier 0 (each tier hides its row's body) */}
+        {byRow(2).map(person)}
+        <Band r={2} f={f} k={k} grad={`${uid}g`} clip={`${uid}c`} />
+        {byRow(1).map(person)}
+        <Band r={1} f={f} k={k} grad={`${uid}g`} clip={`${uid}c`} />
+        {byRow(0).map(person)}
+        <Band r={0} f={f} k={k} grad={`${uid}g`} clip={`${uid}c`} />
       </DtsStage>
     </AbsoluteFill>
   );
@@ -346,56 +391,51 @@ export default SmashingSuccess;
   };
   const j = camJerk(CAM, DURATION);
   if (j.maxA > 2.5) fail(`camera |dv| ${j.maxA.toFixed(2)} px/f^2 at f${j.at}`);
-  if (NETFLIX_IN[1] > 48 - 4 || F1_IN[1] > 86 - 4) fail("a logo does not land ahead of its word");
-  // nothing of the stand on screen before the glide
-  for (let f = 0; f < 50; f++) {
-    const s = toScreenL(camAt(f), STAND.SL - 4, tierTop(0));
-    if (s.x < 1920 + 4) fail(`the stand shows on f${f}`);
-  }
-  // the seats: the stand is empty at the reveal, fills front row first, and is FULL for the last >= 8 f
-  const lands = WALKERS.filter((w) => w.dest?.kind === "seat").map(landF);
+  if (NETFLIX_IN[1] !== 44 || F1_IN[1] !== 81) fail("the logo timings moved (NETFLIX f44, F1 f81)");
+  // the seats: empty until the stand is up, front row first, FULL for the last >= 8 f
+  const seatW = WALKERS.filter((w) => w.seat);
+  const lands = seatW.map(landF);
   if (lands.length !== SEATS.length) fail(`${lands.length} fans for ${SEATS.length} seats`);
-  if (Math.min(...lands) < 88) fail(`the first fan lands on f${Math.min(...lands).toFixed(1)} (the stand must be empty at the reveal)`);
-  const last = Math.max(...lands);
-  if (last < 156 || last > DURATION - 8) fail(`the last seat lands on f${last.toFixed(1)} (want f156-${DURATION - 8})`);
-  for (let r = 1; r < 3; r++) {
-    const prev = WALKERS.filter((w) => w.dest?.kind === "seat" && w.dest.row === r - 1).map(landF);
-    const cur = WALKERS.filter((w) => w.dest?.kind === "seat" && w.dest.row === r).map(landF);
-    if (Math.min(...cur) < Math.min(...prev)) fail(`row ${r} starts filling before row ${r - 1}`);
+  if (Math.max(...lands) > DURATION - 8) fail(`the last seat lands on f${Math.max(...lands).toFixed(1)}`);
+  for (const w of seatW) {
+    if (w.depart < RISE[1] - 6) fail(`walker ${w.i} leaves the queue on f${w.depart.toFixed(1)}, before the stand is up`);
+    // it must be standing at the queue's front when it leaves
+    const p = walkerAt(w, w.depart - 0.01);
+    if (Math.abs(p.x - sideX(w.side, SPOT_X0)) > 2) fail(`walker ${w.i} is not at the queue's front when it leaves (x ${p.x.toFixed(0)})`);
+    if (w.reach > w.depart) fail(`walker ${w.i} reaches its seat unlit`);
   }
-  WALKERS.forEach((w) => {
-    if (Math.abs(w.reach - w.tLit) > 0.05) fail(`walker ${w.i}: the front reaches it at ${w.reach} not ${w.tLit}`);
-    if (!w.dest && groundX(w, DURATION) > STAND.SL - 40) fail(`walker ${w.i} reaches the stand with nowhere to go`);
-  });
-  // every walker under 45 screen px/f
+  const firstLit = Math.min(...WALKERS.map((w) => w.reach));
+  if (firstLit > 12 || firstLit < 4) fail(`the first fan is lit on f${firstLit.toFixed(1)} (want f8-12)`);
+  if (DIAG) console.log(`first lit f${firstLit.toFixed(1)}; departures ${seatW.map((w) => w.depart.toFixed(0)).join(" ")}; landings ${lands.map((v) => v.toFixed(0)).join(" ")}`);
+  // every walker under 45 screen px/f; no fan arrives at a spot past the queue's last (SPOT_MAX: inside the light)
   for (let f = 1; f < DURATION; f++) {
     const c0 = camAt(f - 1);
     const c1 = camAt(f);
     for (const w of WALKERS) {
       const a = walkerAt(w, f - 1);
       const b = walkerAt(w, f);
-      const sa = toScreenL(c0, a.x, a.y);
-      const sb = toScreenL(c1, b.x, b.y);
-      if (sb.x < -60 || sb.x > 1980) continue;
+      const sa = toScreenP(c0, a.x, a.y);
+      const sb = toScreenP(c1, b.x, b.y);
+      if (sb.x < -60 || sb.x > 1140) continue;
       const v = Math.hypot(sb.x - sa.x, sb.y - sa.y);
       if (v > 45) fail(`walker ${w.i} moves ${v.toFixed(1)} px on f${f}`);
+      const idx = idxAt(w, f);
+      if (b.row === -1 && idx > SPOT_MAX + 0.01 && sideX(w.side, b.x) > SPOT_X0 - SPOT_DX * idx - STOP_D) fail(`walker ${w.i} queues at spot ${idxAt(w, f).toFixed(1)} on f${f}`);
     }
   }
-  // NO OVERLAPS: any two busts on screen share at most 25 % of a bust's area (measured on the bust's own
-  // silhouette, 1 px grid at h 60), on every frame
-  const M = 60;
-  const inBust = (x: number, y: number) => {
-    // unit space (height 1, bottom-centre origin) -> person.png units
-    const u = (x / M) * 429 + 255.5;
-    const v = (y / M) * 429 + 470;
+  // NO OVERLAPS (what is SEEN): two busts may share at most 25 % of a bust's area where both are visible, the
+  // stand's tiers hiding whatever they are drawn in front of (ground walkers: the whole stand; a fan in row r:
+  // tiers 0..r)
+  const inBustUnit = (u0: number, v0: number) => {
+    const u = u0 * 429 + 255.5;
+    const v = v0 * 429 + 470;
     if ((u - 255.5) ** 2 + (v - 143) ** 2 <= 102 * 102) return true;
     if (v < 266 || v > 470) return false;
     let lb = 41;
     if (v <= 458) {
-      // the dome's left edge: the cubic (41,458) (41,352) (126,266) (232,266), solved for v
       let lo = 0;
       let hi = 1;
-      for (let it = 0; it < 20; it++) {
+      for (let it = 0; it < 16; it++) {
         const t = (lo + hi) / 2;
         const vy = (1 - t) ** 3 * 458 + 3 * (1 - t) ** 2 * t * 352 + 3 * (1 - t) * t * t * 266 + t ** 3 * 266;
         if (vy > v) lo = t;
@@ -406,48 +446,64 @@ export default SmashingSuccess;
     }
     return u >= lb && u <= 511 - lb;
   };
+  const STEP = 3;
   const cells: [number, number][] = [];
-  for (let y = -M + 0.5; y < 0; y++) for (let x = -M / 2 + 0.5; x < M / 2; x++) if (inBust(x, y)) cells.push([x, y]);
-  const grid = new Set(cells.map(([x, y]) => `${x},${y}`));
-  const ovMemo = new Map<string, number>();
-  const overlap = (dx: number, dy: number) => {
-    const ix = Math.round(Math.abs(dx));
-    const iy = Math.round(dy);
-    if (ix >= M || Math.abs(iy) >= M) return 0;
-    const key = `${ix},${iy}`;
-    const hit = ovMemo.get(key);
-    if (hit !== undefined) return hit;
-    let n = 0;
-    for (const [x, y] of cells) if (grid.has(`${x - ix},${y - iy}`)) n++;
-    const v = n / cells.length;
-    ovMemo.set(key, v);
-    return v;
+  for (let y = -P + STEP / 2; y < 0; y += STEP) for (let x = -P / 2 + STEP / 2; x < P / 2; x += STEP) if (inBustUnit(x / P, y / P)) cells.push([x, y]);
+  const occluded = (x: number, y: number, row: number, f: number) => {
+    const dy = riseDy(f);
+    for (let r = 0; r < TIERS; r++) {
+      if (row >= 0 && r > row) continue;
+      const y0 = tierTop(r) + dy;
+      if (y >= Math.max(y0, -Infinity) && y <= Math.min(y0 + T, GROUND_Y) && Math.abs(x - CX) <= TIER_HW[r]) return true;
+    }
+    return false;
   };
+  const inside = (px: number, py: number, x: number, y: number) => inBustUnit((x - px) / P, (y - py) / P);
   let worst = 0;
   let worstAt = "";
-  for (let f = 0; f < DURATION; f++) {
-    const c = camAt(f);
-    const ps = WALKERS.map((w) => ({ w, ...walkerAt(w, f) })).filter((p) => Math.abs(toScreenL(c, p.x, p.y).x - 960) < 1000);
+  for (let f = 0; f < DURATION; f += 1) {
+    const ps = WALKERS.map((w) => ({ w, ...walkerAt(w, f) })).filter((p) => p.x > -40 && p.x < 1120);
     for (let a = 0; a < ps.length; a++)
       for (let b = a + 1; b < ps.length; b++) {
-        const o = overlap(ps[b].x - ps[a].x, ps[b].y - ps[a].y);
+        const A = ps[a];
+        const B = ps[b];
+        if (Math.abs(A.x - B.x) >= P || Math.abs(A.y - B.y) >= P) continue;
+        let n = 0;
+        for (const [cx, cy] of cells) {
+          const x = A.x + cx;
+          const y = A.y + cy;
+          if (!inside(B.x, B.y, x, y)) continue;
+          if (occluded(x, y, A.row, f) || occluded(x, y, B.row, f)) continue;
+          n++;
+        }
+        const o = n / cells.length;
         if (o > worst) {
           worst = o;
-          worstAt = `walkers ${ps[a].w.i} / ${ps[b].w.i} on f${f}`;
+          worstAt = `walkers ${A.w.i} / ${B.w.i} on f${f}`;
         }
       }
   }
-  if (worst > 0.25) fail(`busts overlap ${(worst * 100).toFixed(0)} % (${worstAt})`);
-  if (DIAG) console.log(`worst overlap ${(worst * 100).toFixed(1)} % (${worstAt})`);
-  // subject ink inside y 90-880: NETFLIX on top, every bust on screen at the bottom
+  if (worst > 0.25) fail(`visible busts overlap ${(worst * 100).toFixed(0)} % (${worstAt})`);
+  if (DIAG) console.log(`worst visible overlap ${(worst * 100).toFixed(1)} % (${worstAt})`);
+  // the seated sit IN their tier: shoulders on the tier top, the body hidden by it (tier height >= the body)
+  if (T < (1 - SEAT_SINK) * P + 8) fail("a row's heads would rise above the tier behind it");
+  // subject ink inside y 200-1400 (NETFLIX on top, the ground line at the bottom) and x 72-1008
   for (let f = 0; f < DURATION; f++) {
     const c = camAt(f);
-    const top = toScreenL(c, 0, SB.top).y - (f >= NETFLIX_IN[0] ? NETFLIX_GAP + NETFLIX_PX : 0);
-    if (top < 90 - 0.5) fail(`ink reaches y ${top.toFixed(0)} on f${f}`);
-    for (const w of WALKERS) {
-      const p = walkerAt(w, f);
-      const sp = toScreenL(c, p.x, p.y);
-      if (sp.x > -40 && sp.x < 1960 && sp.y > 880.5) fail(`walker ${w.i} reaches y ${sp.y.toFixed(0)} on f${f}`);
-    }
+    const top = toScreenP(c, CX, SB.top).y - NETFLIX_GAP - NETFLIX_PX;
+    const bot = toScreenP(c, CX, GROUND_Y).y;
+    if (top < 200 || bot > 1400) fail(`ink spans y ${top.toFixed(0)}-${bot.toFixed(0)} on f${f}`);
+  }
+  {
+    const c = camAt(DURATION - 1);
+    if (P * c.k < 72) fail(`people are ${(P * c.k).toFixed(1)} px at the end`);
+    if ((SCR_W * c.k) / 1080 < 0.6) fail("the screen is under 60 % of the width at the end");
+    // the gathered and the seated (not the stream still walking in from the edges)
+    const xs = WALKERS.filter((w) => w.seat || walkerAt(w, DURATION - 1).x === walkerAt(w, DURATION - 2).x)
+      .map((w) => walkerAt(w, DURATION - 1))
+      .map((p) => toScreenP(c, p.x, 0).x);
+    const l = Math.min(...xs) - (P / 2) * c.k;
+    const r = Math.max(...xs) + (P / 2) * c.k;
+    if (l < 72 || r > 1008) fail(`the end frame's people span x ${l.toFixed(0)}-${r.toFixed(0)}`);
   }
 }

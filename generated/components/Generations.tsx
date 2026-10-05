@@ -1,32 +1,31 @@
-import React from "react";
+import React, { useId } from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { BLOOM_LAYERS, COLOR, ELEVATION, GEO, clamp01, smoothstep } from "./stoutShared";
+import { BLOOM_LAYERS, COLOR, ELEVATION, GEO, clamp01, lerp, rectPath, smoothstep } from "./stoutShared";
 import {
   DARK,
-  DTS,
+  DTS_LIGHT,
   DtsStage,
   FPS,
-  SAFE,
+  SAFE_P,
   Screen,
+  camForP,
   camJerk,
-  dtsAmberBand,
-  dtsCameraTrack,
-  lightSpan,
+  dtsAmberBandP,
+  dtsCameraTrackP,
+  lookOfP,
   reachFrame,
   screenBox,
-  screenLight,
-  toScreenL,
+  toScreenP,
   toneAt,
   type Front,
-  type LightPool,
 } from "./dtsShared";
 import type { Glide } from "./outgrowShared";
 
 // ---------------------------------------------------------------------------
 // Generations — cut E of Toto Wolff, "why Drive to Survive worked" (Cheeky Pint S4E01), on the DTS world
-// (dtsShared.tsx, Builder W; brief out/dts/briefs/BRIEF.md). Cheeky Pint S4 stout system, palette B1.
-// 1920x1080, 24 fps, opaque.
+// (dtsShared.tsx, Builder W; briefs out/dts/briefs/BRIEF.md + BRIEF_9x16.md). Cheeky Pint S4 stout system,
+// palette B1. PASS 3: 9:16, 1080x1920, 24 fps, opaque (the 16:9 pass-1 source is kept in out/dts/Q/landscape/).
 //
 // THE LINE: "…generations watched Drive to Survive, from the granddaughter to the grandparent."
 // WINDOW: seq 57.800-63.240 = 5.440 s. DURATION = ceil(5.440 x 24) = ceil(130.56) = 131, no tail.
@@ -37,33 +36,30 @@ import type { Glide } from "./outgrowShared";
 // starts in the DARK; each member turns amber only when the light's front reaches them (toneAt, 13 f eased
 // crossfade). Nothing else is amber; no type.
 //
-// THE FAMILY (cut-local glyphs, FamilyPerson below: dtsShared's Person draws only the plain bust, so the
-// age cues that change the base silhouette — a child's narrow shoulders, a stooped back, a head carried
-// forward — are drawn here in the same recipe: one fill, one shadow (the rest elevation scaled to the glyph),
-// the amber crossfade with the fixed bloom). In profile facing the screen (left), one cue each:
-//   granddaughter  small (0.64), a child's narrow shoulders, a high ponytail
-//   mother         hair falling behind to the shoulder
-//   father         the plain bust, a touch broader
-//   grandparent    a flat cap, a rounded upper back, the head carried forward and lower
-// They stand at increasing distances from the screen, placed BY THE FRONT: each member's leading edge sits
-// where the decelerating front is at that member's reach frame (so the light arrives on the words).
+// THE ROOM, seen from BEHIND the family: THE SCREEN at the top (centred, 70 % of the frame), the family below
+// it as BACK-VIEW busts at increasing distance from the screen, so nearer us = lower and larger:
+//   granddaughter  nearest the screen (highest, smallest): a high ponytail swinging out, its tie on the crown
+//   mother, father side by side in the middle: her long hair falling past the shoulders, his plain bust
+//   grandparent    nearest us (lowest, largest): a flat cap, the head sunk between rounded shoulders
+// (cut-local FamilyPerson: dtsShared Person's recipe — one fill, one shadow scaled to the glyph, the amber
+// crossfade with the fixed bloom — on back-view silhouettes Person cannot draw.) Each member stands where the
+// falling front is on its reach frame (its head's top = the front then), so the light arrives on the words.
 //
-// ONE MOTION: the screen comes on and its light spreads right along the floor through the family, nearest
-// to furthest; the camera follows the front in, ending on the whole lit family.
+// ONE MOTION: the screen comes on and its light falls down the room through the family, nearest the screen
+// to nearest us; the camera pulls back and tilts down with it, ending on the whole lit family.
 // GESTURES (gesture -> word -> frames)
-//   1. the family in the DARK facing an OFF screen (board face), the camera creeping in -> "generations"
-//      -> f0-36 (creep k 0.95 -> 1.0)
-//   2. the screen comes on: ONE eased left->right wipe of its face, board -> amber + the DTS card
-//      -> "watched Drive to Survive" -> f30-44 (lands ahead of "drive" f38 … "survive" f53)
-//   3. its light spreads right along the floor (one front, smoothstep f32 -> f118, slowing as it goes)
+//   1. the family in the DARK under an OFF screen (board face), a slow creep -> "generations" -> f0-30
+//   2. the screen comes on: ONE eased left->right wipe, board -> amber + the DTS card -> "watched Drive to
+//      Survive" -> f30-44 (lands ahead of "drive" f38)
+//   3. its light falls from the screen's foot down the room (cut C's GroundLight language re-aimed as a
+//      falling band: A's amber, a soft rounded front; one smoothstep f32 -> f118, slowing as it goes)
 //      -> "watched … from the granddaughter to the grandparent" -> f32-118
 //   4. the front reaches each member; each crossfades DARK -> amber over 13 f:
-//      granddaughter f71 (amber f71-84) -> "granddaughter" f75
-//      mother f81, father f91 (amber to f94 / f104) -> "to the"
+//      granddaughter f71 (amber f71-84) -> "granddaughter" f75; mother f81, father f91 -> "to the";
 //      grandparent f105 (amber f105-118) -> "grandparent" f110
-//   5. ONE camera glide follows the front right and in (k 1.0 -> 1.55), landing f108, ahead of
-//      "grandparent"; then the tail creep (k 1.55 -> 1.6) to f131 on the whole lit family
-// CLICK: none (no single click deserves the LightSweep: the payoff is the front reaching the grandparent).
+//   5. ONE camera move: a slow pull-back and tilt down (k 1.1 -> 1.0) following the light, landing f108
+//      ahead of "grandparent"; a last breath of creep to f131 on the whole lit family
+// CLICK: none (the payoff is the light reaching the grandparent).
 // Nothing else.
 // ---------------------------------------------------------------------------
 
@@ -71,71 +67,76 @@ export { FPS };
 export const DURATION = 131; // ceil((63.240 - 57.800) x 24)
 export const BEATS = { generations: 0, watched: 19, drive: 38, survive: 53, from: 62, granddaughter: 75, to: 95, grandparent: 110, ends: 127 } as const;
 
+const f3 = (v: number) => (Math.round(v * 1000) / 1000).toString();
+const f4 = (v: number) => (Math.round(v * 1e4) / 1e4).toString();
+
 // ===========================================================================
-// THE FAMILY GLYPHS (512-unit box, the bust's ink 41..470; -x is the face)
+// THE FAMILY FROM BEHIND (512-unit box like person.png, ink to y 470, symmetric about x 255.5)
 // ===========================================================================
 export type Member = "granddaughter" | "mother" | "father" | "grandparent";
-const U = 429; // the bust's ink height in box units
-const HEAD = { cx: 255.5, cy: 143, r: 102 };
 const KAPPA = 0.5522847498;
 const circle = (cx: number, cy: number, r: number) => {
   const c = r * KAPPA;
-  return (
-    `M${cx + r} ${cy}C${cx + r} ${cy + c} ${cx + c} ${cy + r} ${cx} ${cy + r}` +
-    `C${cx - c} ${cy + r} ${cx - r} ${cy + c} ${cx - r} ${cy}` +
-    `C${cx - r} ${cy - c} ${cx - c} ${cy - r} ${cx} ${cy - r}` +
-    `C${cx + c} ${cy - r} ${cx + r} ${cy - c} ${cx + r} ${cy}Z`
-  );
+  return `M${cx + r} ${cy}C${cx + r} ${cy + c} ${cx + c} ${cy + r} ${cx} ${cy + r}C${cx - c} ${cy + r} ${cx - r} ${cy + c} ${cx - r} ${cy}C${cx - r} ${cy - c} ${cx - c} ${cy - r} ${cx} ${cy - r}C${cx + c} ${cy - r} ${cx + r} ${cy - c} ${cx + r} ${cy}Z`;
 };
-/** The shoulder dome (person.png's), its width scaled by `w` about the axis. */
+/** person.png's shoulder dome, its width scaled by `w` about the axis. */
 const dome = (w: number) => {
   const X = (x: number) => +(255.5 + (x - 255.5) * w).toFixed(2);
-  return `M${X(41)} 458C${X(41)} 352 ${X(126)} 266 ${X(232)} 266L${X(279)} 266C${X(385)} 266 ${X(470)} 352 ${X(470)} 458L${X(470)} 462Q${X(470)} 470 ${X(462)} 470L${X(49)} 470Q${X(41)} 470 ${X(41)} 462Z`;
+  return `M${X(41)} 470L${X(41)} 458C${X(41)} 352 ${X(126)} 266 ${X(232)} 266L${X(279)} 266C${X(385)} 266 ${X(470)} 352 ${X(470)} 458L${X(470)} 470Z`;
 };
-/** A small nose on the head's front: the profile cue every member shares. */
-const nose = (dx: number, dy: number) =>
-  `M${162 + dx} ${104 + dy}C${150 + dx} ${122 + dy} ${138 + dx} ${140 + dy} ${136 + dx} ${152 + dy}C${136 + dx} ${160 + dy} ${146 + dx} ${166 + dy} ${158 + dx} ${168 + dy}Z`;
-const PONYTAIL = "M318 70C350 50 388 52 404 72C452 96 470 168 452 232C442 266 420 290 396 304C412 252 410 196 384 160C370 140 352 132 340 128Z";
-const LONG_HAIR = "M204.5 54.7C250 28 384 64 386 160C388 216 398 262 424 312C404 322 352 322 318 310C322 284 316 252 300 232Z";
-const GP_HEAD = { cx: HEAD.cx - 34, cy: HEAD.cy + 26 };
-const FLAT_CAP = "M321 150C334 112 334 74 304 60C268 44 198 54 158 86L102 108C93 112 95 121 106 121L160 122L318 160Z";
-const STOOPED_BODY = "M50 470L50 444C50 362 118 302 212 298L268 292C384 262 470 330 470 444L470 470Z";
+/** Each member: its silhouette parts, its ink top and half-width (box units; for layout and checks). */
+export const MEMBER: Record<Member, { parts: string[]; top: number; half: number }> = {
+  granddaughter: {
+    parts: [
+      circle(255.5, 143, 102),
+      dome(0.78),
+      "M286 46C340 20 410 40 430 100C446 150 438 210 414 252C404 214 392 172 360 140C336 116 310 96 286 84Z",
+      circle(298, 50, 26),
+    ],
+    top: 22,
+    half: 182,
+  },
+  mother: {
+    parts: [
+      circle(255.5, 143, 102),
+      dome(0.96),
+      "M153.5 150C150 60 200 38 255.5 38C311 38 361 60 357.5 150C360 220 374 280 392 318L119 318C137 280 151 220 153.5 150Z",
+    ],
+    top: 38,
+    half: 207,
+  },
+  father: { parts: [circle(255.5, 143, 102), dome(1.08)], top: 41, half: 232 },
+  grandparent: {
+    parts: [
+      circle(255.5, 176, 100),
+      "M46 470L46 440C46 330 120 252 208 246C236 270 275 270 303 246C391 252 465 330 465 440L465 470Z",
+      "M142 140C142 92 190 66 255.5 66C321 66 369 92 369 140L374 150Q374 158 366 158L145 158Q137 158 137 150Z",
+    ],
+    top: 66,
+    half: 210,
+  },
+};
+/** box units -> world px for a member drawn `h` world px tall (its ink top to its foot) */
+const unitOf = (m: Member, h: number) => h / (470 - MEMBER[m].top);
 
-/** Each member: its scale (of an adult's height), its silhouette parts, its ink extents (box units). */
-export const MEMBER: Record<Member, { scale: number; parts: string[]; l: number; r: number; top: number }> = {
-  granddaughter: { scale: 0.64, parts: [circle(HEAD.cx, HEAD.cy, HEAD.r), dome(0.78), nose(0, 0), PONYTAIL], l: 88, r: 458, top: 41 },
-  mother: { scale: 0.94, parts: [circle(HEAD.cx, HEAD.cy, HEAD.r), dome(0.96), nose(0, 0), LONG_HAIR], l: 50, r: 461, top: 38 },
-  father: { scale: 1.0, parts: [circle(HEAD.cx, HEAD.cy, HEAD.r), dome(1.06), nose(0, 0)], l: 28, r: 483, top: 41 },
-  grandparent: { scale: 0.95, parts: [circle(GP_HEAD.cx, GP_HEAD.cy, HEAD.r), STOOPED_BODY, nose(-34, 26), FLAT_CAP], l: 50, r: 470, top: 50 },
-};
-/** A member's world extents for an adult height H: left / right of the axis, height. */
-export const extentOf = (m: Member, H: number) => {
-  const M = MEMBER[m];
-  const s = (H * M.scale) / U;
-  return { left: (255.5 - M.l) * s, right: (M.r - 255.5) * s, height: (470 - M.top) * s, s };
-};
-
-const f3 = (v: number) => (Math.round(v * 1000) / 1000).toString();
-const f4 = (v: number) => (Math.round(v * 1e4) / 1e4).toString();
 /**
- * FamilyPerson — one member, standing on (x, y) (the axis, the body's foot), adult height H world px; dtsShared
- * Person's recipe: `base` fill (DARK = not reached), one shadow (the rest elevation scaled to the glyph), the
- * amber crossfade 0..1 with the fixed bloom.
+ * FamilyPerson — one member from behind, its foot centred on (x, y), `h` world px tall; dtsShared Person's
+ * recipe: `base` fill (DARK = not reached), one shadow (the rest elevation scaled to the glyph), the amber
+ * crossfade 0..1 with the fixed bloom.
  */
-export const FamilyPerson: React.FC<{ member: Member; x: number; y: number; H: number; k: number; amber: number; base?: string }> = ({
+export const FamilyPerson: React.FC<{ member: Member; x: number; y: number; h: number; k: number; amber: number; base?: string }> = ({
   member,
   x,
   y,
-  H,
+  h,
   k,
   amber,
   base = DARK,
 }) => {
   const M = MEMBER[member];
-  const h = H * M.scale; // world px per U box units
-  const unit = h / U; // world px per box unit
+  const unit = unitOf(member, h);
   const E = ELEVATION.rest;
-  const sh = U / GEO.TILE; // the recipe is per TILE of glyph height
+  const sh = (h / GEO.TILE) / unit; // the recipe is per TILE of glyph height, in box units
   const a = clamp01(amber);
   const shapes = (fill?: string) => M.parts.map((d, i) => <path key={i} d={d} fill={fill} />);
   return (
@@ -156,75 +157,106 @@ export const FamilyPerson: React.FC<{ member: Member; x: number; y: number; H: n
 };
 
 // ===========================================================================
-// THE LAYOUT (world px)
+// THE LAYOUT (world px; at the end camera, k 1, world ≈ screen px with x 0 on the frame's axis)
 // ===========================================================================
-/** The screen at the left (the A/B screen's size), centre (0, 60), facing right; OFF until f30. */
-export const SCREEN = { x: 0, y: 60, w: DTS.SCREEN.w } as const;
+/** THE SCREEN at the top, centred, 70 % of the frame. OFF until f30. */
+export const SCREEN = { x: 0, y: 442, w: 756 } as const;
 const SB = screenBox(SCREEN.x, SCREEN.y, SCREEN.w);
-/** The family's floor (the A walkers' ground) and an adult's height. */
-export const FLOOR = DTS.PATH_Y;
-export const H_ADULT = 150;
-/** The wipe: board -> amber over 14 f, landing f44. */
 export const WIPE = { f0: 30, f1: 44 } as const;
 export const screenOn = (f: number) => smoothstep((f - WIPE.f0) / (WIPE.f1 - WIPE.f0));
 
-// THE FRONT: the x the show's light has reached along the floor. It leaves the screen's face (x 200) as the
-// wipe passes there, and spreads right on ONE smoothstep, f32 -> f118, slowing through the family.
-export const FRONT = { f0: 32, f1: 118, x0: 200, D: 1100 } as const;
-export const front: Front = (f) => FRONT.x0 + FRONT.D * smoothstep((f - FRONT.f0) / (FRONT.f1 - FRONT.f0));
+// THE FRONT: the y the show's light has reached, falling from the screen's foot down the room on ONE
+// smoothstep, f32 -> f118 (slowing through the family).
+export const FRONT = { f0: 32, f1: 118, y0: SB.bottom, D: 490 } as const;
+export const front: Front = (f) => FRONT.y0 + FRONT.D * smoothstep((f - FRONT.f0) / (FRONT.f1 - FRONT.f0));
 /** The designed reach frames (granddaughter ≈ f71-84 amber, grandparent ≈ f105-118). */
 export const REACH_PLAN: Record<Member, number> = { granddaughter: 71, mother: 81, father: 91, grandparent: 105 };
 export const ORDER: Member[] = ["granddaughter", "mother", "father", "grandparent"];
-/** Each member stands with its LEADING edge where the front is on its reach frame. */
+/** nearer us = lower and larger: each member's height and place across the room */
+const PLACE: Record<Member, { x: number; h: number }> = {
+  granddaughter: { x: 0, h: 120 },
+  mother: { x: -205, h: 190 },
+  father: { x: 207, h: 200 },
+  grandparent: { x: 0, h: 240 },
+};
+/** Each member's head top sits where the falling front is on its reach frame; its foot h below. */
 export const FAMILY = ORDER.map((m) => {
-  const e = extentOf(m, H_ADULT);
-  const lead = front(REACH_PLAN[m]);
-  return { m, x: lead + e.left, e };
+  const top = front(REACH_PLAN[m]);
+  const { x, h } = PLACE[m];
+  return { m, x, h, top, foot: top + h, half: MEMBER[m].half * unitOf(m, h) };
 });
-/** The reach frames, measured back off the front (= the plan, to bisection precision). */
-export const REACH: number[] = FAMILY.map((p) => reachFrame((f) => front(f) - (p.x - p.e.left), 0, DURATION));
+export const REACH: number[] = FAMILY.map((p) => reachFrame((f) => front(f) - p.top, 0, DURATION));
 
-// THE LIGHT on the floor: the screen's own pool (strength = the wipe), and the spreading pool whose right end
-// runs LEAD ahead of the front (so the glow is visibly there when a member turns) and whose left end trails.
-const LEAD = 220;
-const TRAIL = 900;
-const RY = 78;
-export const lightsAt = (f: number): LightPool[] => {
-  const on = screenOn(f);
-  const x1 = front(f) + LEAD;
-  const x0 = Math.max(SB.outer.x + 120, x1 - TRAIL);
-  const spread = smoothstep((f - FRONT.f0) / 10);
-  return [screenLight(SCREEN.x, SCREEN.y, SCREEN.w, on), lightSpan(x0, x1, FLOOR + 6, RY, spread)];
+// THE LIGHT (cut C's GroundLight, AreWeDoingThis.tsx, re-aimed as a FALLING band): A's DTS_LIGHT amber
+// screen-blended on the floor under the world, from under the screen (fading in from its centre to its foot)
+// down to a crisp, softly rounded front (edge blur EDGE_SOFT screen px), A's falloff a0 -> toward a1 along it.
+const BAND_X = { x0: -410, x1: 410, fade: 110 } as const;
+const EDGE_SOFT = 9;
+const FallingLight: React.FC<{ y1: number; k: number; strength: number }> = ({ y1, k, strength }) => {
+  const uid = `fl${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
+  const yl = SCREEN.y;
+  const yr = SB.bottom;
+  if (y1 - yr < 2 || strength <= 0.002) return null;
+  const pad = (4 * EDGE_SOFT) / k;
+  const w = BAND_X.x1 - BAND_X.x0;
+  const fx = BAND_X.fade / w;
+  const rr = Math.min(150, (y1 - yl) / 2);
+  const at = (y: number) => f3(clamp01((y - yl) / (y1 - yl)));
+  const c = `rgb(${DTS_LIGHT.color})`;
+  const s = strength;
+  return (
+    <g style={{ mixBlendMode: "screen" }}>
+      <defs>
+        <linearGradient id={`${uid}v`} gradientUnits="userSpaceOnUse" x1="0" y1={f3(yl)} x2="0" y2={f3(y1)}>
+          <stop offset="0" stopColor={c} stopOpacity="0" />
+          <stop offset={at(yr)} stopColor={c} stopOpacity={f3(DTS_LIGHT.a0 * s)} />
+          <stop offset={at(lerp(yr, y1, 0.65))} stopColor={c} stopOpacity={f3(lerp(DTS_LIGHT.a0, DTS_LIGHT.a1, 0.3) * s)} />
+          <stop offset="1" stopColor={c} stopOpacity={f3(((DTS_LIGHT.a0 + DTS_LIGHT.a1) / 2) * s)} />
+        </linearGradient>
+        <linearGradient id={`${uid}h`} gradientUnits="userSpaceOnUse" x1={f3(BAND_X.x0)} y1="0" x2={f3(BAND_X.x1)} y2="0">
+          <stop offset="0" stopColor="#000" />
+          <stop offset={f3(fx)} stopColor="#fff" />
+          <stop offset={f3(1 - fx)} stopColor="#fff" />
+          <stop offset="1" stopColor="#000" />
+        </linearGradient>
+        <mask id={`${uid}m`} maskUnits="userSpaceOnUse" x={f3(BAND_X.x0 - pad)} y={f3(yl - pad)} width={f3(w + 2 * pad)} height={f3(y1 - yl + 2 * pad)}>
+          <path d={rectPath(BAND_X.x0, yl - 200, w, y1 - yl + 200, rr)} fill={`url(#${uid}h)`} style={{ filter: `blur(${f3(EDGE_SOFT / k)}px)` }} />
+        </mask>
+      </defs>
+      <rect x={f3(BAND_X.x0 - pad)} y={f3(yl)} width={f3(w + 2 * pad)} height={f3(y1 - yl + pad)} fill={`url(#${uid}v)`} mask={`url(#${uid}m)`} />
+    </g>
+  );
 };
 
 // ===========================================================================
-// THE CAMERA (the house rig, re-solved: dtsShared dtsCameraTrack; look lands on screen y 480)
+// THE CAMERA (dtsShared dtsCameraTrackP: look lands on screen y 835)
 // ===========================================================================
-const FAM_X0 = FAMILY[0].x - FAMILY[0].e.left;
-const FAM_X1 = FAMILY[3].x + FAMILY[3].e.right;
-export const CAM_START = { x: (SB.outer.x + FAM_X1) / 2, y: (SB.top + FLOOR) / 2, k: 0.95 };
-export const CAM_END = { x: (FAM_X0 + FAM_X1) / 2 + 10, y: FLOOR - 82, k: 1.55 };
+/** The end: k 1, the room as laid out (screen top ≈ y 220, the grandparent's foot ≈ y 1380). */
+const CAM_END = camForP(0, 960, 540, 960, 1.0);
+/** f0: in a little closer and higher, on the screen and the family in the dark. */
+const K0 = 1.1;
+const CAM_0 = camForP(0, SB.top - 18, 540, 220, K0);
+export const CAM_START = { x: 0, y: lookOfP(CAM_0), k: K0 };
 export const GLIDES: Glide[] = [
   // 1. the creep in the dark
-  { f0: -10, f1: 44, k: 1.0 },
-  // 5. follow the front right and in, landing ahead of "grandparent"
-  { f0: 34, f1: 108, dx: CAM_END.x - CAM_START.x, dy: CAM_END.y - CAM_START.y, k: CAM_END.k, warp: 1.1 },
-  // the tail creep on the lit family
-  { f0: 100, f1: 140, k: 1.6 },
+  { f0: -10, f1: 40, k: K0 * 1.02 },
+  // 5. the pull-back and tilt down with the falling light, landing ahead of "grandparent"
+  { f0: 34, f1: 108, dy: lookOfP(CAM_END) - CAM_START.y, k: 0.985, warp: 1.1 },
+  // the tail: a last breath of creep on the lit family
+  { f0: 100, f1: 140, k: 1.0 },
 ];
-export const CAM = dtsCameraTrack(CAM_START, GLIDES, DURATION, 12);
+export const CAM = dtsCameraTrackP(CAM_START, GLIDES, DURATION, 12);
 export const camAt = (f: number) => CAM[Math.max(0, Math.min(CAM.length - 1, Math.round(f)))];
 
-// THE SUBJECT POOL (cream): follows the front's light over the floor, lagged by the house damper.
-const POOL_Y: { x: number; y: number }[] = (() => {
+// THE SUBJECT POOL (cream): follows the falling light down the room, lagged by the house damper.
+const POOL: { x: number; y: number }[] = (() => {
   const out: { x: number; y: number }[] = [];
-  let x = 260;
+  let y = SB.bottom;
   let v = 0;
   for (let f = 0; f < DURATION + 2; f++) {
-    const target = Math.max(260, Math.min(FAM_X1 - 200, front(f) - 120));
-    v = v + (target - x) * 0.09 - v * 0.468;
-    x += v;
-    out.push({ x, y: FLOOR - 120 });
+    v = v + (Math.max(SB.bottom, front(f) - 60) - y) * 0.09 - v * 0.468;
+    y += v;
+    out.push({ x: 0, y });
   }
   return out;
 })();
@@ -237,12 +269,13 @@ const Generations: React.FC<Props> = () => {
   const f = useCurrentFrame();
   const cam = camAt(f);
   const k = cam.k;
-  const band = dtsAmberBand(cam);
+  const band = dtsAmberBandP(cam);
   return (
-    <DtsStage S={f} cam={cam} rest={CAM[0]} pool={POOL_Y[Math.min(POOL_Y.length - 1, f)]} lights={lightsAt(f)}>
+    <DtsStage orientation="portrait" S={f} cam={cam} rest={CAM[0]} pool={POOL[Math.min(POOL.length - 1, f)]}>
+      <FallingLight y1={front(f)} k={k} strength={screenOn(f)} />
       <Screen x={SCREEN.x} y={SCREEN.y} w={SCREEN.w} k={k} band={band} on={screenOn(f)} />
       {FAMILY.map((p, i) => (
-        <FamilyPerson key={p.m} member={p.m} x={p.x} y={FLOOR} H={H_ADULT} k={k} amber={toneAt(REACH[i], f)} />
+        <FamilyPerson key={p.m} member={p.m} x={p.x} y={p.foot} h={p.h} k={k} amber={toneAt(REACH[i], f)} />
       ))}
     </DtsStage>
   );
@@ -257,42 +290,31 @@ export default Generations;
   const fail = (m: string) => {
     throw new Error(`Generations: ${m}`);
   };
-  // the light arrives on the words
   FAMILY.forEach((p, i) => {
     if (Math.abs(REACH[i] - REACH_PLAN[p.m]) > 0.05) fail(`${p.m} reached f${REACH[i].toFixed(2)}, planned f${REACH_PLAN[p.m]}`);
   });
-  if (REACH[0] < 70 || REACH[0] > 74) fail("the granddaughter is not reached f70-74");
-  if (REACH[3] < 103 || REACH[3] > 106) fail("the grandparent is not reached f103-106");
-  // nearest to furthest, never touching (>= 24 world px apart)
-  for (let i = 1; i < FAMILY.length; i++) {
-    const a = FAMILY[i - 1];
-    const b = FAMILY[i];
-    const gap = b.x - b.e.left - (a.x + a.e.right);
-    if (gap < 24) fail(`${a.m} and ${b.m} are ${gap.toFixed(1)} px apart`);
-  }
-  if (FAM_X0 - SB.outer.x - SB.outer.w < 120) fail("the granddaughter stands against the screen");
-  // the camera: |dv| <= 2.5, <= 45 px/f
+  // nearer us = lower and larger
+  for (let i = 1; i < FAMILY.length; i++) if (FAMILY[i].top <= FAMILY[i - 1].top) fail("the family is not ordered by distance");
+  if (!(FAMILY[0].h < FAMILY[1].h && FAMILY[2].h < FAMILY[3].h)) fail("the nearer members are not larger");
+  // the light stays inside the band the family stands in
+  for (const p of FAMILY) if (p.x - p.half < BAND_X.x0 + BAND_X.fade * 0.5 || p.x + p.half > BAND_X.x1 - BAND_X.fade * 0.5) fail(`${p.m} stands outside the light's band`);
+  // the camera
   const j = camJerk(CAM, DURATION);
   if (j.maxA > 2.5) fail(`camera |dv| ${j.maxA.toFixed(2)} at f${j.at}`);
   if (j.maxV > 45) fail(`camera speed ${j.maxV.toFixed(1)} px/f`);
-  // framing: the family's ink inside y 90-880 and the side margins on every frame from f0 (the whole family
-  // is in the frame from the start); the screen's ink inside the band while it is in frame
+  // framing: the screen inside the band from f0; the whole family inside y 200-1400 and the side margins
+  // from the grandparent's light on (f100); the centre of mass on the axis
   for (let f = 0; f < DURATION; f++) {
     const c = camAt(f);
+    if (toScreenP(c, 0, SB.top).y < SAFE_P.top - 1) fail(`the screen's top leaves the band at f${f}`);
+    if (toScreenP(c, SB.outer.x, 0).x < SAFE_P.side) fail(`the screen crosses the side margin at f${f}`);
+    if (f < 100) continue;
     for (const p of FAMILY) {
-      const top = toScreenL(c, p.x, FLOOR - p.e.height).y;
-      const bot = toScreenL(c, p.x, FLOOR).y;
-      const l = toScreenL(c, p.x - p.e.left, 0).x;
-      const r = toScreenL(c, p.x + p.e.right, 0).x;
-      if (top < SAFE.top || bot > SAFE.bottom) fail(`${p.m} leaves the band at f${f} (${top.toFixed(0)}..${bot.toFixed(0)})`);
-      if (l < SAFE.side || r > 1920 - SAFE.side) fail(`${p.m} crosses the side margin at f${f} (${l.toFixed(0)}..${r.toFixed(0)})`);
-    }
-    // the screen (the source, not the subject) keeps inside the band while it is wholly in frame; once its
-    // left edge leaves the frame it is on its way out (the camera has turned to the family)
-    if (toScreenL(c, SB.outer.x, 0).x >= 0) {
-      const st = toScreenL(c, 0, SB.top).y;
-      const sb = toScreenL(c, 0, SB.bottom).y;
-      if (st < SAFE.top - 1 || sb > SAFE.bottom) fail(`the screen leaves the band at f${f}`);
+      const bot = toScreenP(c, p.x, p.foot).y;
+      const l = toScreenP(c, p.x - p.half, 0).x;
+      const r = toScreenP(c, p.x + p.half, 0).x;
+      if (bot > SAFE_P.bottom) fail(`${p.m} below y 1400 at f${f} (${bot.toFixed(0)})`);
+      if (l < SAFE_P.side || r > 1080 - SAFE_P.side) fail(`${p.m} crosses the side margin at f${f}`);
     }
   }
 }
