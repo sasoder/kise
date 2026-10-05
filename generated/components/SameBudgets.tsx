@@ -6,7 +6,7 @@ import { ActAWorld, DUR_A, FPS, S_A } from "./mercJobShared";
 // ---------------------------------------------------------------------------
 // SameBudgets — cut 2 of Toto Wolff, "how he got the Mercedes job" (Cheeky Pint S4E01), Cheeky Pint
 // S4 style on the clip's one world (mercJobShared.tsx; brief out/mercjob/briefs/BRIEF.md).
-// 1920x1080, 24 fps, opaque.
+// 1080x1920 (9:16; content centre y 835, captions under y 1400), 24 fps, opaque.
 //
 // THE LINE: "one of us is wrong, because I'm working on the same budgets"
 // (just heard: "what is your aspiration? ... winning world championships ... And I said OK, then")
@@ -25,7 +25,8 @@ import { ActAWorld, DUR_A, FPS, S_A } from "./mercJobShared";
 //   it decelerates (rest to rest, p 3.25) to EXACTLY Mercedes' height and lands f54; one hairline
 //     level rule draws from Mercedes' bar top toward Williams' (f44-57) and the bar meets it; THE ONE
 //     CLICK: a LightSweep crosses Williams' bar f50-62 -> "the same budgets" (f47-58)
-//   the camera: a slow creep on the pair throughout; tail: hold, drift.
+//   the camera: rises (leading, from cut 1 f142) to take in the trophy by f10, then a slow pair creep
+//     (k 2.30 -> 2.34) through the tail.
 // No numbers (neither 2012 budget is a public filed figure; equal heights are HIS claim). Nothing else.
 // ---------------------------------------------------------------------------
 

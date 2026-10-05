@@ -17,6 +17,9 @@ import {
   FigureMark,
   GROUND_ONLY,
   Label,
+  Numeral,
+  labelWidth,
+  numeralWidth,
   LightSweep,
   bloomFilter,
   clamp01,
@@ -35,25 +38,31 @@ import { CAM_DAMP, CAM_STIFF } from "./fieldShared";
 // ===========================================================================
 // mercJobShared — Toto Wolff, "how he got the Mercedes job" (Cheeky Pint S4E01).
 // ONE world for five cuts (brief: out/mercjob/briefs/BRIEF.md), in the Cheeky Pint
-// S4 system (stoutShared, palette B1), adapted to a LANDSCAPE 1920x1080 frame.
+// S4 system (stoutShared, palette B1), in the house 9:16 frame (1080x1920, content centre y 835,
+// subject ink above the captions at y 1400, read at 270 px wide). (Pass 1-2 were 16:9; converted Oct 5.)
 //
 // THE WORLD (world px; the floor is FLOOR):
 //   * two team tiles on one floor: WILLIAMS (left, x WX) and MERCEDES (right, x MX), PAIR_PITCH apart;
 //   * TOTO, the person bust in AMBER (the clip's only amber: amber = Toto), 0.55 of a tile tall,
 //     standing on the floor at HOME (on Williams' inner side) or VISITING (left of Mercedes), both
 //     BETWEEN the tiles, so no path of his ever crosses a tile; or ON TOP of the Mercedes tile (Act B);
-//   * money is a cream BAR rising out of the slot in a tile's top edge (no numbers);
-//   * Mercedes' setup: two HUB tiles (engine, F1 car) living behind the Mercedes tile;
-//   * the TROPHY (cream Lucide-grammar outline) over Mercedes' bar, "TOP 6" over Williams';
-//   * THE INDUSTRY: 9 more tiles on the pair's own pitch, one even row of 11 centred on Mercedes; they
-//     exist from S 0 in DARK (barely there) and tone up to board (the F1-car glyph) when revealed;
-//   * the F1 mark (cream) anchored above the row's centre (Act B).
+//   * money is a cream BAR (3 tiles tall: the portrait frame's vertical room) rising out of the slot in
+//     a tile's top edge (no numbers);
+//   * Mercedes' setup: two HUB tiles (engine, F1 car) living behind the Mercedes tile, sliding out to
+//     its right (see HUBS below);
+//   * the TROPHY (cream Lucide-grammar outline) over Mercedes' bar, the TOP 6 lockup over Williams';
+//   * THE INDUSTRY (Act B): the 2013 grid as a STARTING-GRID FORMATION (GRID below): two columns (x WX
+//     and MX) running down the frame, 6 rows x 2 = 12 slots, rows level pairs staggered sideways
+//     (odd rows shifted right), Williams + Mercedes the level pair of the MIDDLE row (row 2), the 9
+//     others in the remaining slots and the back-right slot empty;
+//   * the F1 mark (cream) anchored above the formation's front.
 //
-// PAIR SPACING (deviation from the brief's "about one tile apart", measured): cut 1 opens CENTRED on
-// Toto + Mercedes at k 3.5 (tile 336 px) with Williams OFF-frame left; that needs Williams' right edge
-// (+ its shadow) outside a frame centred on the pair, i.e. a pitch >= 373 -> 384 (4 tiles). The pair then
-// frames comfortably at 16:9 (k 2.3-2.4: tiles ~220-230 px, ~1100 px wide). HOME moved to Williams' inner
-// side (director's note: no path or pose of Toto's may meet a tile).
+// PAIR PITCH 300: the pair framings (Williams' left edge to Mercedes' right edge, 396 world) fit 1080 at
+// k 2.3-2.34 with >= 64 px side margins and tiles >= 220 px, and leave Toto 111 world between HOME and
+// VISITING. HUBS: they slide out to Mercedes' RIGHT (engine, then car), smaller than the team tiles (64),
+// the camera re-centring the column on Toto + tile + hubs at k 2.66 (tiles 255, hubs 170 px). The
+// suggested split (engine left, Toto left of it) needs VISITING ~85 world further left, i.e. a pitch
+// >= 338, which forces the pair framings to k <= 2.19 (tiles ~210 px) at 64 px margins.
 //
 // UNITS: world px under the camera for geometry and shadows; SCREEN px for type, hairlines,
 // edges, slot lines and bloom (`px / k`), exactly as stoutShared.
@@ -74,21 +83,19 @@ type P = [number, number];
 // FRAME, TYPE, CAMERA CONSTANTS (landscape)
 // ===========================================================================
 export const FPS = 24;
-export const FRAME_W = 1920;
-export const FRAME_H = 1080;
-/** The content centre's screen y (captions sit at the bottom; subject ink above y 860). */
-export const LOOK_Y = 480;
+export const FRAME_W = 1080;
+export const FRAME_H = 1920;
+/** The content centre's screen y (the house 9:16 framing: captions sit below y 1400). */
+export const LOOK_Y = 835;
 /** The camera centre is look + CAM_LIFT / k, so the look lands at screen y LOOK_Y. */
 export const CAM_LIFT = FRAME_H / 2 - LOOK_Y;
 /** The caption line: subject ink stays above it. */
-export const CAPTION_Y = 860;
-/** ONE type factor for the set (S4 sizes are tuned for a 1920-tall frame): x0.7, LABEL floored at 28. */
-export const TYPE_FACTOR = 0.7;
-export const TYPE_L = {
-  HERO: Math.round((TYPE.HERO * TYPE_FACTOR) / 8) * 8, // 128
-  SECONDARY: Math.round((TYPE.SECONDARY * TYPE_FACTOR) / 8) * 8, // 96
-  LABEL: Math.max(28, Math.round(TYPE.LABEL * TYPE_FACTOR)), // 28
-} as const;
+export const CAPTION_Y = 1400;
+/** Nothing that enters (the trophy, TOP 6) stands above this screen y. */
+export const TOP_CLEAR = 180;
+/** The S4 type sizes as they are (the frame they were tuned for). */
+export const TYPE_FACTOR = 1;
+export const TYPE_L = { HERO: TYPE.HERO, SECONDARY: TYPE.SECONDARY, LABEL: TYPE.LABEL } as const;
 /** Every stroked glyph of the set (the trophy) draws at the stoutShared sport-glyph weight:
  *  2.6 units of a 24-unit box filling GEO.SPORT_FILL of a tile, in WORLD px. */
 export const GLYPH_STROKE = (2.6 * GEO.TILE * GEO.SPORT_FILL) / 24;
@@ -99,49 +106,77 @@ export const GLYPH_STROKE = (2.6 * GEO.TILE * GEO.SPORT_FILL) / 24;
 export const FLOOR = 600;
 export const TILE = GEO.TILE; // 96
 export const TILE_TOP = FLOOR - TILE; // 504
-/** The pair's pitch (centre to centre): two tiles of gap. */
-export const PAIR_PITCH = 384;
+/** The pair's pitch (centre to centre). */
+export const PAIR_PITCH = 300;
 export const MX = 2016; // Mercedes
-export const WX = MX - PAIR_PITCH; // 1632, Williams
-/** The budget bar (both teams, "the same budgets"): world px above the tile's top edge. */
-export const BAR_H = 128;
-export const BAR_TOP = TILE_TOP - BAR_H; // 376
+export const WX = MX - PAIR_PITCH; // 1716, Williams
+/** The budget bar (both teams, "the same budgets"): world px above the tile's top edge (3 tiles). */
+export const BAR_H = 288;
+export const BAR_TOP = TILE_TOP - BAR_H; // 216
 /** Toto: the bust is TOTO_H tall (and as wide), 0.55 of a tile. */
 export const TOTO_H = 0.55 * TILE;
 /** Toto's gap to the tile he stands beside. */
-export const TOTO_GAP = 24;
+export const TOTO_GAP = 20;
 export type Pose = { x: number; feetY: number };
-/** HOME stands on Williams' INNER side (right of it), so no path of his ever crosses a tile (director's note 4). */
+/** HOME stands on Williams' INNER side (right of it), so no path of his ever crosses a tile. */
 export const TOTO_HOME: Pose = { x: WX + TILE / 2 + TOTO_GAP + TOTO_H / 2, feetY: FLOOR };
 export const TOTO_VISITING: Pose = { x: MX - TILE / 2 - TOTO_GAP - TOTO_H / 2, feetY: FLOOR };
 export const TOTO_ON_MERC: Pose = { x: MX, feetY: TILE_TOP };
 /** Mercedes' setup: two hub tiles (engine, F1 car), HUB world px, behind the Mercedes tile at rest
- *  (fully hidden: HUB < TILE), sliding out to the right at floor level to HUB_OUT. */
-export const HUB = 72;
-export const HUB_OUT: [number, number] = [MX + TILE / 2 + 24 + HUB / 2, MX + TILE / 2 + 24 + HUB / 2 + HUB + 24]; // 2124, 2220
+ *  (fully hidden: HUB < TILE), sliding out to its right at floor level to HUB_OUT (16 px gaps). */
+export const HUB = 64;
+export const HUB_GAP = 16;
+export const HUB_OUT: [number, number] = [MX + TILE / 2 + HUB_GAP + HUB / 2, MX + TILE / 2 + 2 * HUB_GAP + 1.5 * HUB]; // 2096, 2176
 /** The trophy (Lucide grammar): its path box TROPHY_BOX world px, standing TROPHY_GAP over the bar. */
 export const TROPHY_BOX = 56;
 export const TROPHY_GAP = 24;
-export const TROPHY_BOTTOM = BAR_TOP - TROPHY_GAP; // 352 (the path box's bottom)
-export const TROPHY_CY = TROPHY_BOTTOM - TROPHY_BOX / 2; // 324 (TOP 6's cap centre stands here too)
-/** THE INDUSTRY: the 2013 grid's other 9 teams on the pair's pitch, slots i (x = MX + i * PAIR_PITCH),
- *  ONE EVEN ROW: Williams is slot -1, Mercedes slot 0, the others -5..-2 and +1..+5 (11 teams, every slot
- *  filled), so the row's centre is Mercedes. They exist from S 0 in DARK (barely there, no glyph) and
- *  tone up DARK -> board when revealed (`row.reveal`). */
-export const ROW_SLOTS = [-5, -4, -3, -2, 1, 2, 3, 4, 5] as const;
-/** Any slot's x (Williams -1, Mercedes 0). */
-export const rowSlotX = (i: number) => MX + i * PAIR_PITCH;
+export const TROPHY_BOTTOM = BAR_TOP - TROPHY_GAP; // 192 (the path box's bottom)
+export const TROPHY_CY = TROPHY_BOTTOM - TROPHY_BOX / 2; // 164 (the TOP 6 lockup's centre stands here too)
 /** DARK: one tone below board, a barely-there texture (icebergShared's DARK). */
 export const DARK = mixHex(COLOR.ground, COLOR.board, 0.15);
-export const ROW_X: number[] = ROW_SLOTS.map((i) => MX + i * PAIR_PITCH);
-export const ROW_CENTRE_X = (Math.min(...ROW_X, WX, MX) + Math.max(...ROW_X, WX, MX)) / 2;
-/** The F1 mark's anchor (Act B): bottom-centre of its box, above the row's centre (= over Toto on
- *  the Mercedes tile, his head at TILE_TOP - TOTO_H, with room). */
-export const F1_ANCHOR = { x: ROW_CENTRE_X, bottom: TILE_TOP - TOTO_H - 56 } as const;
+
+// --- THE INDUSTRY (Act B): a starting-grid formation -------------------------------------------------
+/**
+ * GRID: 6 rows x 2 columns = 12 slots, front (row 0) at the top, running down the frame. Columns at WX
+ * (left, "L") and MX (right, "R"); rows GRID.rowPitch apart; every row a level pair; odd rows shifted
+ * right by GRID.shift (the stagger), so the columns zig-zag. Williams + Mercedes are row GRID.pairRow
+ * (2: the middle, unshifted, on FLOOR, exactly where Act A has them); the back-right slot (11) is empty.
+ * Each slot: { slot, row, col, x, floor (its tile's bottom edge), team }.
+ */
+export const GRID = { rows: 6, rowPitch: 192, shift: 64, pairRow: 2, emptySlot: 11 } as const;
+export type GridSlot = { slot: number; row: number; col: "L" | "R"; x: number; floor: number; team: "williams" | "mercedes" | "other" | "empty" };
+export const GRID_SLOTS: GridSlot[] = Array.from({ length: GRID.rows * 2 }, (_, slot) => {
+  const row = Math.floor(slot / 2);
+  const col = slot % 2 === 0 ? "L" : "R";
+  const x = (col === "L" ? WX : MX) + (row % 2 === 1 ? GRID.shift : 0);
+  const floor = FLOOR + (row - GRID.pairRow) * GRID.rowPitch;
+  const team = row === GRID.pairRow ? (col === "L" ? "williams" : "mercedes") : slot === GRID.emptySlot ? "empty" : "other";
+  return { slot, row, col, x, floor, team };
+});
+/** The 9 other teams' slots, in slot order: `WorldState.row.reveal[i]` addresses GRID_OTHERS[i]. */
+export const GRID_OTHERS: GridSlot[] = GRID_SLOTS.filter((g) => g.team === "other");
+/** The formation's box (tile edges, world px) and its centre. */
+export const GRID_BOX = {
+  x0: Math.min(...GRID_SLOTS.map((g) => g.x)) - TILE / 2,
+  x1: Math.max(...GRID_SLOTS.map((g) => g.x)) + TILE / 2,
+  y0: Math.min(...GRID_SLOTS.map((g) => g.floor)) - TILE,
+  y1: Math.max(...GRID_SLOTS.map((g) => g.floor)),
+};
+export const GRID_CENTRE = { x: (GRID_BOX.x0 + GRID_BOX.x1) / 2, y: (GRID_BOX.y0 + GRID_BOX.y1) / 2 };
+/** Compatibility (the 16:9 row's names): the 9 others' x and slot list (now the formation's). */
+export const ROW_X: number[] = GRID_OTHERS.map((g) => g.x);
+export const ROW_SLOTS = GRID_OTHERS.map((g) => g.slot);
+export const rowSlotX = (i: number) => GRID_SLOTS[i].x;
+export const ROW_CENTRE_X = GRID_CENTRE.x;
+/** The F1 mark's anchor (Act B): bottom-centre of its box, centred over the formation's front row,
+ *  64 world px above its tiles. */
+export const F1_ANCHOR = { x: GRID_CENTRE.x, bottom: GRID_BOX.y0 - 64 } as const;
 {
-  if (ROW_X.length !== 9) fail("9 industry tiles");
-  if (Math.abs(ROW_CENTRE_X - MX) > 1e-9) fail("the row's centre is Mercedes");
-  if (HUB_OUT[1] + HUB / 2 + 48 >= MX + PAIR_PITCH - TILE / 2) fail("the hubs crowd the row");
+  if (GRID_OTHERS.length !== 9) fail("9 other teams");
+  if (GRID_SLOTS.filter((g) => g.team !== "empty").length !== 11) fail("11 teams");
+  if (GRID_SLOTS[GRID.pairRow * 2].x !== WX || GRID_SLOTS[GRID.pairRow * 2 + 1].x !== MX) fail("the pair row is Williams + Mercedes, unshifted");
+  // Toto on the Mercedes tile clears the row in front of it
+  if (TILE_TOP - TOTO_H - (FLOOR - GRID.rowPitch) < 24) fail("Toto on Mercedes crowds the row in front");
 }
 
 // ===========================================================================
@@ -219,7 +254,7 @@ export const makeClockCam = (startLook: { x: number; y: number; k: number }, gli
 /**
  * camCheckL: the brief's two camera numbers over S in [S0, S1] (integer frames): the largest screen
  * speed (px/f) and the largest change of screen velocity (|dv|, px/f^2) of fixed world points at the
- * frame's centre and at (±480, ±240) from it (a quarter of the frame in from each edge).
+ * frame's centre and at (±200, ±300) from it (the house camJerk's points; on the 9:16 frame).
  */
 export const camCheckL = (at: (S: number) => Cam, S0: number, S1: number) => {
   let maxA = 0;
@@ -228,10 +263,10 @@ export const camCheckL = (at: (S: number) => Cam, S0: number, S1: number) => {
   let atV = S0;
   const pts: P[] = [
     [0, 0],
-    [-480, -240],
-    [480, 240],
-    [-480, 240],
-    [480, -240],
+    [-200, -300],
+    [200, 300],
+    [-200, 300],
+    [200, -300],
   ];
   for (let S = S0 + 1; S < S1; S++) {
     const c0 = at(S - 1);
@@ -257,8 +292,8 @@ export const camCheckL = (at: (S: number) => Cam, S0: number, S1: number) => {
   }
   return { maxA, atA, maxV, atV };
 };
-/** The amber band for a frame (screen y 120 -> 900): every amber body of a frame samples it. */
-export const amberBandForL = (c: Cam, y0 = 120, y1 = 900): [number, number] => [c.y + (y0 - FRAME_H / 2) / c.k, c.y + (y1 - FRAME_H / 2) / c.k];
+/** The amber band for a frame (screen y 300 -> 1368, the house band): every amber body of a frame samples it. */
+export const amberBandForL = (c: Cam, y0 = 300, y1 = 1368): [number, number] => [c.y + (y0 - FRAME_H / 2) / c.k, c.y + (y1 - FRAME_H / 2) / c.k];
 
 // ===========================================================================
 // MOTION HELPERS
@@ -328,15 +363,16 @@ export const makePoolTrack = (start: { x: number; y: number; spread?: number }, 
 };
 
 // ===========================================================================
-// THE STAGE (landscape StoutStage): the baked ground sheet rotated 90° to cover 1920x1080 (2304 x
-// 1296, the same 192 / 108 px to spare), mirror-padded past its edges, parallax 0.15 + drift on S,
-// a gentle zoom with k; the light pool (screen-blended, landscape ellipse, `spread` widens it); the
-// world under the camera; the vignette; film grain on twos (the grain sheet rotated the same way).
+// THE STAGE (stoutShared's StoutStage + a pool `spread`, for this module's frame): the baked ground
+// sheet (rotated 90° only if the frame were landscape), mirror-padded past its edges, parallax 0.15 +
+// drift on S, a gentle zoom with k; the light pool (screen-blended; `spread` widens it); the world under
+// the camera; the vignette; film grain on twos.
 // ===========================================================================
-const SHEET_W = GROUND.H; // 2304 (the portrait sheet, rotated)
-const SHEET_H = GROUND.W; // 1296
-/** The landscape pool: the portrait POOL's ellipse turned on its side. */
-export const POOL_L = { rx: POOL.ry, ry: POOL.rx } as const;
+const ROTATE = FRAME_W > FRAME_H;
+const SHEET_W = ROTATE ? GROUND.H : GROUND.W; // 1296 on 9:16
+const SHEET_H = ROTATE ? GROUND.W : GROUND.H; // 2304
+/** The pool's ellipse for this frame (the house POOL on 9:16). */
+export const POOL_L = ROTATE ? ({ rx: POOL.ry, ry: POOL.rx } as const) : ({ rx: POOL.rx, ry: POOL.ry } as const);
 const Sheet: React.FC<{ src: string; style: React.CSSProperties }> = ({ src, style }) => (
   <div style={{ position: "absolute", left: (FRAME_W - SHEET_W) / 2, top: (FRAME_H - SHEET_H) / 2, width: SHEET_W, height: SHEET_H, ...style }}>
     <Img
@@ -347,7 +383,7 @@ const Sheet: React.FC<{ src: string; style: React.CSSProperties }> = ({ src, sty
         top: (SHEET_H - GROUND.H) / 2,
         width: GROUND.W,
         height: GROUND.H,
-        transform: "rotate(90deg)",
+        transform: ROTATE ? "rotate(90deg)" : undefined,
       }}
     />
   </div>
@@ -897,11 +933,29 @@ export const Trophy: React.FC<{ cx: number; cy: number; k: number; enter?: numbe
     </g>
   );
 };
-/** "TOP 6": Söhne Kräftig caps, tracked, cream, TYPE_L.SECONDARY screen px (at LABEL 28 it would be
- *  7 px tall on a 480-wide phone), its cap centre on (x, cy). */
-export const Top6: React.FC<{ x: number; cy: number; k: number; enter?: number; px?: number }> = ({ x, cy, k, enter = 1, px = TYPE_L.SECONDARY }) => (
-  <Label x={x} y={cy + ((px / k) * METRIC.cap) / 2} k={k} text="top 6" px={px} tone="cream" enter={enter} />
-);
+/**
+ * TOP 6 — a numeral lockup centred on (x, cy): "TOP" (Söhne Kräftig caps, tracked +0.06 em, 64 px, about as
+ * wide as the 6 or a little wider: it must read at 270 px wide) over a "6" (Söhne Dreiviertelfett,
+ * SECONDARY), both cream, 16 px apart, counter-scaled (screen px). Its box (~161 px) is about the trophy's
+ * (~145 px at the pair framings), centred on the same line, so the two share their clearances.
+ * (A one-line "TOP 6" at SECONDARY is ~410 px wide and would cross the frame's left edge over Williams.)
+ * `px` (deprecated, ignored) is kept for compatibility.
+ */
+export const TOP6_LOCKUP = { label: 64, numeral: TYPE.SECONDARY, gap: 16 } as const;
+export const top6Height = () => TOP6_LOCKUP.label * METRIC.cap + TOP6_LOCKUP.gap + TOP6_LOCKUP.numeral * METRIC.fig; // screen px
+/** The lockup's widest line ("TOP"), screen px. */
+export const top6Width = () => Math.max(labelWidth("TOP", TOP6_LOCKUP.label), numeralWidth("6", TOP6_LOCKUP.numeral));
+export const Top6: React.FC<{ x: number; cy: number; k: number; enter?: number; px?: number }> = ({ x, cy, k, enter = 1 }) => {
+  const top = cy - top6Height() / 2 / k;
+  const labelY = top + (TOP6_LOCKUP.label * METRIC.cap) / k;
+  const numY = labelY + (TOP6_LOCKUP.gap + TOP6_LOCKUP.numeral * METRIC.fig) / k;
+  return (
+    <g>
+      <Label x={x} y={labelY} k={k} text="top" px={TOP6_LOCKUP.label} tone="cream" enter={enter} />
+      <Numeral x={x} y={numY} k={k} px={TOP6_LOCKUP.numeral} text="6" tone="cream" enter={enter} />
+    </g>
+  );
+};
 
 // ===========================================================================
 // THE F1 MARK — public/cheekypint2/mercjob/f1.svg (the F1 logo, Wikimedia Commons, public domain),
@@ -947,9 +1001,12 @@ export type WorldState = {
   level: number;
   /** the one LightSweep of a cut: progress t over a bar ("merc" / "will") or a tile */
   sweep: { t: number; on: "mercBar" | "willBar" | "mercTile" } | null;
-  /** the industry row: shown, and its tone (board by default). `reveal` (additive), one per ROW_X entry:
+  /** the industry (the GRID formation's 9 others): shown, and its tone (board by default). `reveal`, one per
+   *  GRID_OTHERS entry (= ROW_X):
    *  0 = DARK (barely there, no glyph) .. 1 = its tone `dim`; absent = all revealed (the old behaviour). */
-  row: { dim: number; reveal?: number[] } | null;
+  row: { dim: number; reveal?: number[]; appear?: number[] } | null;
+  /** (9:16, additive) per GRID_OTHERS entry: 0 = not drawn at all .. 1 = drawn (an opacity: the tile comes up
+   *  out of the ground before / while `reveal` tones it DARK -> board); absent = all drawn. */
   /** the F1 mark's entrance 0..1 (Act B), and its box width (world px) */
   f1: number;
   f1Width?: number;
@@ -968,7 +1025,7 @@ export const REST_STATE_B: WorldState = {
   top6: 0,
   level: 0,
   sweep: null,
-  row: { dim: 1, reveal: ROW_X.map(() => 0) }, // the even row in the DARK (cut 5 reveals it)
+  row: { dim: 1, reveal: GRID_OTHERS.map(() => 0), appear: GRID_OTHERS.map(() => 0) }, // the formation's 9 others: not drawn until revealed (cut 5)
   f1: 0,
 };
 /** A hub's share out from behind the Mercedes tile (0 hidden .. 1 its full width clear). */
@@ -1014,11 +1071,14 @@ export const MercJobWorld: React.FC<{
   return (
     <MJStage S={S} cam={cam} rest={rest} pool={pool} sway={sway}>
       {st.row
-        ? ROW_X.map((x, i) =>
-            inView(x, TILE) ? (
-              <MJPillar key={`r${x}`} x={x} k={k} mark="chassis" dim={st.row ? st.row.dim : 1} dark={st.row && st.row.reveal ? 1 - clamp01(st.row.reveal[i] ?? 1) : 0} />
-            ) : null,
-          )
+        ? GRID_OTHERS.map((g, i) => {
+            const ap = st.row && st.row.appear ? clamp01(st.row.appear[i] ?? 1) : 1;
+            return inView(g.x, TILE) && ap > 0.0005 ? (
+              <g key={`r${g.slot}`} opacity={ap < 1 ? f3(ap) : undefined}>
+                <MJPillar x={g.x} floor={g.floor} k={k} mark="chassis" dim={st.row ? st.row.dim : 1} dark={st.row && st.row.reveal ? 1 - clamp01(st.row.reveal[i] ?? 1) : 0} />
+              </g>
+            ) : null;
+          })
         : null}
       {hubs}
       <MJPillar x={WX} k={k} mark="williams" bar={st.willBar} dim={st.willDim} />
@@ -1103,38 +1163,39 @@ export const actAState = (S: number): WorldState => {
   };
 };
 
-// --- Act A's camera (look = the world point on screen (960, 480)); every phase centred on its subject ----
+// --- Act A's camera (look = the world point on screen (540, 835)); every phase a centred column ----------
 const xMid = (a: number, b: number) => (a + b) / 2;
-/** Toto + the Mercedes tile (cut 1's opening). */
-const LOOK_VISIT = { x: xMid(TOTO_VISITING.x - TOTO_H / 2, MX + TILE / 2), y: (TILE_TOP + FLOOR) / 2, k: 3.4 };
-/** Toto + tile + both hubs out. */
-const LOOK_SETUP = { x: xMid(TOTO_VISITING.x - TOTO_H / 2, HUB_OUT[1] + HUB / 2), y: (TILE_TOP + FLOOR) / 2, k: 3.3 };
-/** ... + the bar. */
-const LOOK_BAR = { x: LOOK_SETUP.x, y: (BAR_TOP + FLOOR) / 2, k: 3.15 };
-/** The pair with Mercedes' bar (cut 1's end): Williams' left edge to Mercedes' right edge. */
-const LOOK_HOME = { x: xMid(WX - TILE / 2, MX + TILE / 2), y: (BAR_TOP + FLOOR) / 2, k: 2.4 };
+/** Toto + the Mercedes tile (cut 1's opening): tile ~340 px, creeping in to ~375. */
+const LOOK_VISIT = { x: xMid(TOTO_VISITING.x - TOTO_H / 2, MX + TILE / 2), y: (TILE_TOP + FLOOR) / 2, k: 3.36 };
+/** Toto + tile + both hubs out (tile ~255 px, hubs ~170). */
+const LOOK_SETUP = { x: xMid(TOTO_VISITING.x - TOTO_H / 2, HUB_OUT[1] + HUB / 2), y: (TILE_TOP + FLOOR) / 2, k: 2.66 };
+/** ... + the bar (the column from the bar's top to the floor). */
+const LOOK_BAR = { x: LOOK_SETUP.x, y: (BAR_TOP + FLOOR) / 2, k: 2.62 };
+/** The pair with Mercedes' bar (cut 1's end): Williams' left edge to Mercedes' right edge (tiles ~222 px). */
+const LOOK_HOME = { x: xMid(WX - TILE / 2, MX + TILE / 2), y: (BAR_TOP + FLOOR) / 2, k: 2.31 };
 /** The pair framing with the trophy's headroom (cuts 2-3). */
-export const PAIR_LOOK = { x: LOOK_HOME.x, y: (TROPHY_BOTTOM - TROPHY_BOX + FLOOR) / 2, k: 2.3 } as const;
+export const PAIR_LOOK = { x: LOOK_HOME.x, y: 372, k: 2.3 } as const;
+const OPEN_DX = 10;
 export const ACT_A_GLIDES: Glide[] = [
-  // cut 1 f-30 -> f56: framed on Toto + the closed tile, a visible creep-in (k 3.55 on f0 -> 3.93 on f48, +11 %) already
-  // moving on f0 ("They gave me the opportunity to look"), flowing into the drift right without a stop
-  { f0: -30, f1: 56, dx: 14, k: 3.95 },
-  // cut 1 f28-80: drifts right and eases back as the hubs slide out, centring the setup ("look at their setup")
-  { f0: 28, f1: 80, dx: LOOK_SETUP.x - LOOK_VISIT.x - 14 },
-  { f0: 46, f1: 84, k: LOOK_SETUP.k },
+  // cut 1 f-34 -> f44: framed on Toto + the closed tile, a visible creep-in (~+10 % by f40) already moving on
+  // f0 ("They gave me the opportunity to look"), flowing into the drift right without a stop
+  { f0: -34, f1: 44, dx: OPEN_DX, k: 3.84 },
+  // cut 1 f24-70 / f34-64: drifts right and eases back as the hubs slide out, centring the setup ("look at their setup")
+  { f0: 24, f1: 70, dx: LOOK_SETUP.x - LOOK_VISIT.x - OPEN_DX },
+  { f0: 34, f1: 64, k: LOOK_SETUP.k },
   // cut 1 f74-114: up and back as the bar rises (f84-112), to take in tile, hubs and bar ("their numbers ... and everything")
   { f0: 74, f1: 114, dy: LOOK_BAR.y - LOOK_SETUP.y, k: LOOK_BAR.k },
   // cut 1 f104-144: follows Toto home, revealing Williams (leads him; lands ahead of his f150 landing)
-  { f0: 104, f1: 144, dx: LOOK_HOME.x - LOOK_BAR.x, dy: LOOK_HOME.y - LOOK_BAR.y, k: LOOK_HOME.k },
+  { f0: 104, f1: 144, dx: LOOK_HOME.x - LOOK_BAR.x, k: LOOK_HOME.k },
   // the tail: a slow creep on the pair
-  { f0: 150, f1: 206, k: 2.44 },
-  // cut 1 f142 -> cut 2 f10: up and back (leading) to take in the trophy as it rises ("one of us"); then the creep
+  { f0: 146, f1: 200, k: 2.34 },
+  // cut 1 f142 -> cut 2 f10: up (leading) to take in the trophy as it rises ("one of us"); then the creep
   { f0: C2 - 26, f1: C2 + 10, dy: PAIR_LOOK.y - LOOK_HOME.y, k: PAIR_LOOK.k },
-  { f0: C2 + 12, f1: C2 + 92, k: 2.39 },
-  // cut 3 (S 237.12 + f): one slow glide toward Williams, already moving on f0, f-4 -> f34; the tail creep
-  { f0: C3 - 4, f1: C3 + 34, dx: -32, dy: 1, k: 2.4 },
-  // cut 3's tail (pass 2): the pair creep keeps pushing in, drifting on toward Williams
-  { f0: C3 + 22, f1: C3 + 110, dx: -28, dy: 1, k: 2.43 },
+  { f0: C2 + 12, f1: C2 + 92, k: 2.34 },
+  // cut 3 (S 237.12 + f): one slow push toward Williams, already moving on f0, f-4 -> f34; the tail creep
+  // (9:16: the pair fills the width, so "toward Williams" is a few px; the push is mostly in)
+  { f0: C3 - 4, f1: C3 + 34, dx: -3, dy: 3, k: 2.355 },
+  { f0: C3 + 22, f1: C3 + 110, dy: 4, k: 2.37 },
 ];
 const ACT_A_CAM = makeClockCam(LOOK_VISIT, ACT_A_GLIDES, Math.ceil(S_A_END) + 2);
 export const actACam = ACT_A_CAM.at;
@@ -1147,10 +1208,10 @@ export const actAPool = makePoolTrack(
   [
     { S0: 2, S1: 34, x: MX, y: TILE_TOP + TILE / 2 }, // c1 "They gave me": onto the opening tile
     { S0: 48, S1: 70, x: (MX + HUB_OUT[1]) / 2, y: TILE_TOP + TILE / 2 }, // the setup
-    { S0: 90, S1: 114, x: MX + 40, y: BAR_TOP + 40 }, // up with the bar
+    { S0: 90, S1: 114, x: MX + 30, y: (BAR_TOP + TILE_TOP) / 2 }, // up with the bar
     { S0: 124, S1: 150, x: (TOTO_HOME.x + WX) / 2, y: FLOOR - 50 }, // follows Toto home
-    { S0: C2 + 2, S1: C2 + 18, x: (WX + MX) / 2, y: (BAR_TOP + FLOOR) / 2, spread: 1.45 }, // c2 "one of us": both tiles
-    { S0: C3 + 0, S1: C3 + 40, x: (WX + MX) / 2 - 32, y: (BAR_TOP + FLOOR) / 2 }, // c3: drifts toward Williams
+    { S0: C2 + 2, S1: C2 + 18, x: (WX + MX) / 2, y: (BAR_TOP + FLOOR) / 2, spread: 1.3 }, // c2 "one of us": both tiles
+    { S0: C3 + 0, S1: C3 + 40, x: (WX + MX) / 2 - 40, y: (BAR_TOP + FLOOR) / 2 }, // c3: drifts toward Williams
   ],
   Math.ceil(S_A_END) + 2,
 );
@@ -1199,7 +1260,57 @@ export const ActAWorld: React.FC<{ S: number }> = ({ S }) => {
     const c = actACam(S);
     const st = actAState(S);
     const top = toScreenL(c, MX, TROPHY_CY - TROPHY_BOX / 2 - GLYPH_STROKE / 2).y;
-    if (st.trophy > 0) rule(top >= 90, `the trophy's top at y ${top.toFixed(0)} on S ${S}`);
+    if (st.trophy > 0) rule(top >= TOP_CLEAR, `the trophy's top at y ${top.toFixed(0)} on S ${S}`);
+  }
+  // nothing hovers at a frame edge: each object (the two tiles, the hubs, Toto) is partly in frame
+  // (0 < visible share < 1) while crossing the edge slower than 6 px/f for at most 3 frames in a row
+  // (an object a move carries across the edge is entering, not hovering)
+  {
+    const objs: [string, (S: number) => [number, number] | null][] = [
+      ["Williams", () => [WX - TILE / 2, WX + TILE / 2]],
+      ["Mercedes", () => [MX - TILE / 2, MX + TILE / 2]],
+      ["hub 1", (S) => { const x = actAState(S).hubX[0]; return x - MX > 1 ? [x - HUB / 2, x + HUB / 2] : null; }],
+      ["hub 2", (S) => { const x = actAState(S).hubX[1]; return x - MX > 1 ? [x - HUB / 2, x + HUB / 2] : null; }],
+      ["Toto", (S) => { const t = actAState(S).toto; return [t.x - TOTO_H / 2, t.x + TOTO_H / 2]; }],
+    ];
+    for (const [name, box] of objs) {
+      let run = 0;
+      for (let S = 0; S <= S_A_END; S++) {
+        const b = box(S);
+        const c = actACam(S);
+        if (!b) { run = 0; continue; }
+        const a0 = toScreenL(c, b[0], 0).x;
+        const a1 = toScreenL(c, b[1], 0).x;
+        const share = Math.max(0, Math.min(FRAME_W, a1) - Math.max(0, a0)) / (a1 - a0);
+        const bp = box(S - 1);
+        const cp = actACam(S - 1);
+        const speed = bp ? Math.abs((a0 + a1) / 2 - (toScreenL(cp, bp[0], 0).x + toScreenL(cp, bp[1], 0).x) / 2) : 99;
+        run = share > 0.001 && share < 0.999 && speed < 6 ? run + 1 : 0;
+        rule(run <= 3, `${name} hovers at the frame edge (${run} f) on S ${S}`);
+      }
+    }
+  }
+  // the setup framing (hubs out) keeps >= 60 px side margins: Toto's left edge, the far hub's right edge
+  for (let S = 66; S <= 104; S++) {
+    const c = actACam(S);
+    const st = actAState(S);
+    const l = toScreenL(c, st.toto.x - TOTO_H / 2, 0).x;
+    const r = FRAME_W - toScreenL(c, st.hubX[1] + HUB / 2, 0).x;
+    rule(Math.min(l, r) >= 60, `the setup's side margin ${Math.min(l, r).toFixed(0)} px on S ${S}`);
+  }
+  // the pair framings keep >= 64 px side margins (cut 1 from f150, cuts 2-3)
+  for (let S = 150; S <= S_A_END; S++) {
+    const c = actACam(S);
+    const l = toScreenL(c, WX - TILE / 2, 0).x;
+    const r = FRAME_W - toScreenL(c, MX + TILE / 2, 0).x;
+    rule(Math.min(l, r) >= 60, `the pair's side margin ${Math.min(l, r).toFixed(0)} px on S ${S}`);
+  }
+  // the TOP 6 lockup stays >= 64 px inside the frame's sides whenever it shows (cuts 2-3)
+  for (let S = C2; S <= S_A_END; S++) {
+    if (actAState(S).top6 <= 0) continue;
+    const c = actACam(S);
+    const cx = toScreenL(c, WX, 0).x;
+    rule(cx - top6Width() / 2 >= 64 && cx + top6Width() / 2 <= FRAME_W - 64, `TOP 6 within ${(cx - top6Width() / 2).toFixed(0)} px of the frame's side on S ${S}`);
   }
   rule(Math.abs(actAState(C2 + 70).willBar - actAState(C2 + 70).mercBar) < 1e-9, "the bars are not equal");
 }

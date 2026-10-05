@@ -8,7 +8,7 @@ import HeadOfMercedes, {
 
 // Private render entry for HeadOfMercedes (Toto Wolff, "how he got the Mercedes job", Cheeky Pint S4E01), so
 // this cut renders while other builders own src/Root.tsx. One world: mercJobShared.tsx (Act B: mercJobActB.tsx).
-// Opaque, 1920x1080 (the Premiere sequence), 24fps.
+// Opaque, 1080x1920 (9:16, vertical shorts), 24fps.
 export const RemotionRoot = () => {
   return (
     <>
@@ -19,8 +19,8 @@ export const RemotionRoot = () => {
         defaultProps={defaultProps}
         durationInFrames={DURATION}
         fps={FPS}
-        width={1920}
-        height={1080}
+        width={1080}
+        height={1920}
       />
     </>
   );

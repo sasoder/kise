@@ -6,7 +6,7 @@ import { ActAWorld, DUR_A, FPS, S_A } from "./mercJobShared";
 // ---------------------------------------------------------------------------
 // TheirNumbers — cut 1 of Toto Wolff, "how he got the Mercedes job" (Cheeky Pint S4E01), Cheeky Pint
 // S4 style on the clip's one world (mercJobShared.tsx; brief out/mercjob/briefs/BRIEF.md).
-// 1920x1080 (the Premiere sequence), 24 fps, opaque.
+// 1080x1920 (9:16; the house frame: content centre y 835, captions under y 1400), 24 fps, opaque.
 //
 // THE LINE: "they ... They gave me the opportunity to look at their setup, their numbers and
 // everything. And I came back and said"
@@ -19,22 +19,24 @@ import { ActAWorld, DUR_A, FPS, S_A } from "./mercJobShared";
 // ONE MOTION: the visit — Mercedes opens its books to him, and he takes it home.
 // GESTURES (gesture -> word -> frames)
 //   f0: Toto (amber, the only amber) already VISITING, left of the closed Mercedes tile (BOARD); the
-//     frame holds the two at k 3.1, Williams off-frame left, the room on the right for the setup; a
-//     slow creep-in already running (k 3.1 -> 3.26 by f100) -> "they"
+//     column centred on the two (tile ~340 px), Williams off-frame left; a visible creep-in already
+//     running (k 3.51 -> 3.80 by f36, +8 %) that flows into the drift right -> "they"
 //   the Mercedes tile tones board -> cream (12 f) and the light pool slides from Toto onto it ->
 //     "They gave me" -> f16-28
-//   the two hub tiles (engine, F1 car; no labels) slide out sideways from behind the Mercedes tile,
+//   the two hub tiles (engine, F1 car; no labels) slide out to the Mercedes tile's right from behind it,
 //     decelerating, and land on f65; each glyph lights (board -> cream) as it lands (f57-69); the
-//     pool follows onto the setup -> "look at their setup" -> f45-65
-//   the cream budget bar rises out of the Mercedes slot, decelerating (rest to rest, p 3), landing
-//     f112; THE ONE CLICK: a LightSweep crosses it f106-118 -> "their numbers" (f94-98)
-//   the camera eases back and up to take in tile, hubs and bar (k 2.98), landing ahead of
-//     "everything" (f121) -> "and everything" -> f90-124
+//     camera drifts right and eases back (f24-70, k -> 2.66) to centre Toto + tile + hubs; the pool
+//     follows onto the setup -> "look at their setup" -> f45-65
+//   the tall cream budget bar (3 tiles) rises out of the Mercedes slot on a long gentle ease (rest to
+//     rest, p 2.5), f84 -> landing f112 ("numbers" f98 mid-rise); THE ONE CLICK: a LightSweep crosses it
+//     f106-118 -> "their numbers" (f94-98)
+//   the camera rises with it and eases back to take in tile, hubs and bar (f74-114, k 2.62), landing
+//     ahead of "everything" (f121) -> "and everything"
 //   the hubs dim and slide back behind the tile (the books close) -> "And I came back" -> f124-146
 //   Toto lifts one elevation and glides left to HOME at Williams, settling on f150 ("said" f145 sits in
-//     the settle); the camera leads him (f114-146), revealing the Williams tile in cream; the pool
-//     follows him -> "And I came back and said" -> f128-150
-//   tail: the creep on the pair -> f150-168. End picture: both tiles, Mercedes with its bar, Toto at
+//     the settle); the camera leads him (f104-144, k -> 2.31), revealing the Williams tile in cream;
+//     the pool follows him -> "And I came back and said" -> f128-150
+//   tail: the creep on the pair, then (f142 on) the rise that leads cut 2's trophy -> f150-168. End picture: both tiles, Mercedes with its bar, Toto at
 //     Williams.
 // Nothing else.
 // ---------------------------------------------------------------------------

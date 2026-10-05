@@ -7,7 +7,7 @@ import { ActBWorld, DUR_B, S_B } from "./mercJobActB";
 // ---------------------------------------------------------------------------
 // HeadOfMercedes — cut 4 of Toto Wolff, "how he got the Mercedes job" (Cheeky Pint S4E01), Cheeky Pint
 // S4 style on the clip's one world (mercJobShared.tsx; Act B in mercJobActB.tsx; brief
-// out/mercjob/briefs/BRIEF.md). 1920x1080 (the Premiere sequence), 24 fps, opaque.
+// out/mercjob/briefs/BRIEF.md; out/mercjob/WORLD_9x16_READY.md). 1080x1920 (9:16), 24 fps, opaque.
 //
 // THE LINE: "need to pinch myself because you know, being the head of Mercedes Motorsport is probably"
 // WINDOW: seq 58.76 -> 62.56, span 3.80 s. DURATION = round(3.80 x 24) = 91, + 16-frame tail = 107.
@@ -17,19 +17,22 @@ import { ActBWorld, DUR_B, S_B } from "./mercJobActB";
 //
 // ONE MOTION: Toto goes from his own team to the head of Mercedes, and the world opens out.
 // GESTURES (gesture -> word -> frames)
-//   f0: a fresh rest of the same world: Williams and Mercedes cream, no bars, Toto (amber, the only
-//     amber) at HOME; the pair centred, tiles ~220 px; a slow creep already running, drifting toward
-//     Mercedes -> "need to pinch myself because you know" -> f0-38
+//   f0: a fresh rest of the same world: Williams | Toto (amber, the only amber) | Mercedes, both tiles
+//     cream, no bars; the pair centred in the column, tiles ~221 px; a slow creep already running,
+//     drifting toward Mercedes -> "need to pinch myself because you know" -> f0-38
 //   the light pool slides from Toto onto the Mercedes tile ("we want you to run this" was just said)
 //     -> f0-38
-//   Toto wakes (lifts one elevation in place) -> ahead of "being" (f39) -> f31-38
+//   Toto wakes (lifts one elevation in place) before the camera starts to lead (f26): his first visible
+//     motion is the lift -> ahead of "being" (f39) -> f24-31
 //   Toto rises up and over onto the Mercedes tile's top, its head: the vertical leads so he is at the
 //     tile top's height before he reaches its corner; he lands f58-60 and settles by f62; the camera
-//     leads him in (f31-61), centring Mercedes + Toto with the tile ~300 px -> "being the head of
-//     Mercedes" (f39-60)
+//     leads him (pan f26-62, push f32-54) into ONE centred subject, the tile ~345 px; Williams leaves the
+//     frame edge decisively (3 frames under 40 % visible) -> "being the head of Mercedes" (f39-60)
 //   THE ONE CLICK: a LightSweep crosses the Mercedes tile under his landing -> "Mercedes" -> f55-67
-//   one long C1 pull-out begins and carries across the join -> "is probably" (f74) -> f71 on
-// Nothing else. (The industry row is in the world from f0, in the DARK: barely there.)
+//   a held breath creeping in -> f54-74
+//   one long C1 pull-out begins (out and down, toward the formation) and carries across the join ->
+//     "is probably" (f74) -> f74 on
+// Nothing else. (The formation's other teams are not drawn in this cut.)
 // ---------------------------------------------------------------------------
 
 export { FPS };

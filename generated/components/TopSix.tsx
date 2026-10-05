@@ -6,7 +6,7 @@ import { ActAWorld, DUR_A, FPS, S_A } from "./mercJobShared";
 // ---------------------------------------------------------------------------
 // TopSix — cut 3 of Toto Wolff, "how he got the Mercedes job" (Cheeky Pint S4E01), Cheeky Pint S4
 // style on the clip's one world (mercJobShared.tsx; brief out/mercjob/briefs/BRIEF.md).
-// 1920x1080, 24 fps, opaque.
+// 1080x1920 (9:16; content centre y 835, captions under y 1400), 24 fps, opaque.
 //
 // THE LINE: "and I'm thinking about finishing in the top six"
 // WINDOW: seq 26.08 -> 28.16, span 2.08 s. DURATION = round(2.08 x 24) = 50, + 16-frame tail = 66.
@@ -16,11 +16,13 @@ import { ActAWorld, DUR_A, FPS, S_A } from "./mercJobShared";
 //
 // ONE MOTION: the camera drifts to Williams, and his aspiration stands against Mercedes'.
 // GESTURES (gesture -> word -> frames)
-//   one slow continuous glide toward Williams (dx -44 world, k 2.36 -> 2.40), already moving on f0,
-//     landing f34 -> "thinking about finishing" -> f-4 -> f34
-//   "TOP 6" (Söhne Kräftig caps, tracked, cream) slides up 24 px + fades + blurs in over Williams'
-//     bar, its cap centre at the trophy's centre height, f26 -> landed f38 -> "top six" (f31-35)
-//   tail: a hold-creep (k -> 2.42). End picture: equal bars, trophy vs TOP 6, Toto amber at Williams.
+//   one slow continuous push toward Williams (9:16: the pair fills the width, so a few px left and mostly
+//     in, k -> 2.355), already moving on f0, landing f34 -> "thinking about finishing" -> f-4 -> f34
+//   the TOP 6 lockup ("TOP" Söhne Kräftig caps LABEL over a "6" Dreiviertelfett SECONDARY, cream) slides
+//     up 24 px + fades + blurs in over Williams' bar, centred at the trophy's centre height, f26 ->
+//     landed f38 -> "top six" (f31-35)
+//   tail: the pair creep keeps pushing (k -> 2.37). End picture: equal bars, trophy vs TOP 6, Toto amber
+//     at Williams.
 // No LightSweep in this cut. Nothing else.
 // ---------------------------------------------------------------------------
 
