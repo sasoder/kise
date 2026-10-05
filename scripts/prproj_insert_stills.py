@@ -106,22 +106,9 @@ def media_graph(p, ti):
     return path, keys
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("project"); ap.add_argument("placements"); ap.add_argument("out")
-    ap.add_argument("--image-dir", required=True)
-    ap.add_argument("--sequence"); ap.add_argument("--track", type=int, default=2)
-    a = ap.parse_args()
-
-    src_path, out_path = os.path.abspath(a.project), os.path.abspath(a.out)
-    if src_path == out_path:
-        sys.exit("OUT must be a new file; SOURCE is never written")
-    raw = open(src_path, "rb").read()
-    text = gzip.decompress(raw).decode("utf-8") if raw[:2] == b"\x1f\x8b" else raw.decode("utf-8")
-    p = Project(text)
-    proj_dir = os.path.dirname(out_path)
-
-    # --- blobs we may point at: only ones stored with content in SOURCE ---
+def reusable_blobs(p):
+    """(media ModificationState (hash, state text), Motion PremiereFilterPrivateData hash): blobs stored with content
+    in the project that new objects may point at. Stops if either is missing (never invent a BinaryHash)."""
     blobs = {}
     for x in p.root.iter():
         h = x.attrib.get("BinaryHash")
@@ -138,75 +125,46 @@ def main():
     motion_hash = next((h for (tag, h) in blobs if tag == "PremiereFilterPrivateData" and h in motion_blobs), None)
     if not motion_hash:
         sys.exit("SOURCE has no stored Motion PremiereFilterPrivateData blob to re-use; refusing to invent one")
+    return mod_state, motion_hash
 
-    # --- sequence / track ---
-    seqs = [e for e in p.root if e.tag == "Sequence"]
-    seq = next(s for s in seqs if a.sequence in (None, s.findtext("Name")))
-    groups = {p.ref(tg.find("Second")).tag: p.ref(tg.find("Second")) for tg in seq.find("TrackGroups")}
-    vg = groups["VideoTrackGroup"]
-    frame = int(vg.findtext("TrackGroup/FrameRate"))
-    if frame not in TIMECODE_FORMAT:
-        sys.exit(f"sequence frame rate {TPS / frame:g} fps has no known still template")
-    _, _, W, H = (int(v) for v in vg.findtext("FrameRect").split(","))
-    tracks = vg.find("TrackGroup/Tracks")
-    if a.track >= len(tracks):
-        sys.exit(f"sequence has only {len(tracks)} video tracks")
-    track_key = tracks[a.track].attrib["ObjectURef"]
-    track = p.el[track_key]
 
-    placements = json.load(open(a.placements))
-    for pl in placements:
-        pl["path"] = os.path.abspath(os.path.join(a.image_dir, pl["file"]))
-        if not pl["path"].lower().endswith((".jpg", ".jpeg")):
-            sys.exit(f"{pl['path']}: only .jpg stills are templated")
-        if not os.path.isfile(pl["path"]):
-            sys.exit(f"{pl['path']}: missing")
-    paths = {pl["path"] for pl in placements}
+def check_still(path):
+    """(w, h) of a placeable JPEG; stops on anything without a Premiere template."""
+    if not path.lower().endswith((".jpg", ".jpeg")):
+        sys.exit(f"{path}: only .jpg stills are templated")
+    if not os.path.isfile(path):
+        sys.exit(f"{path}: missing")
+    w, h, orient = jpeg_info(path)
+    orient = None if orient == 0 else orient  # Premiere writes no orientation field for a 0 tag
+    if orient not in (None, 1):  # Premiere writes OriginalImageOrientationType 1 for a tagged upright JPEG; no template for rotated
+        sys.exit(f"{path}: EXIF orientation {orient} (rotated); no Premiere template for that")
+    return w, h, orient
 
-    # --- 1. idempotence: drop our earlier items on the target track ---
-    items = track.find("ClipTrack/ClipItems/TrackItems")
-    kept, removed = [], 0
-    for ref in (items if items is not None else []):
-        ti = p.el[ref.attrib["ObjectRef"]]
-        path, keys = media_graph(p, ti)
-        if path and os.path.abspath(path) in paths:
-            for k in keys:
-                p.drop(k)
-            removed += 1
-        else:
-            kept.append(ti)
 
-    # --- 2. media: re-use by FilePath, else create the Premiere still graph ---
-    existing = {e.findtext("FilePath"): e for e in p.root if e.tag == "Media" and e.findtext("FilePath")}
-    new_blocks, bin_items = [], []
-    grid = max([int(x.text) for x in p.root.iter("project.icon.view.grid.order")] + [-1])
-    media = {}
-    for path in sorted(paths):
-        w, h, orient = jpeg_info(path)
-        orient = None if orient == 0 else orient  # Premiere writes no orientation field for a 0 tag
-        if orient not in (None, 1):  # Premiere writes OriginalImageOrientationType 1 for a tagged upright JPEG; no template for rotated
-            sys.exit(f"{path}: EXIF orientation {orient} (rotated); no Premiere template for that")
-        if path in existing:
-            m = existing[path]
-            srcobj = next(e for e in p.root if e.tag == "VideoMediaSource" and e.find("MediaSource/Media") is not None
-                          and e.find("MediaSource/Media").attrib["ObjectURef"] == m.attrib["ObjectUID"])
-            vclip = next(e for e in p.root if e.tag == "VideoClip" and e.find("Clip/Source").attrib["ObjectRef"] == srcobj.attrib["ObjectID"]
-                         and any(c.attrib["ObjectRef"] == e.attrib["ObjectID"] for mc in p.root if mc.tag == "MasterClip" for c in mc.find("Clips")))
-            master = next(mc for mc in p.root if mc.tag == "MasterClip" and any(c.attrib["ObjectRef"] == vclip.attrib["ObjectID"] for c in mc.find("Clips")))
-            fr = int(p.ref(m.find("VideoStream")).findtext("FrameRate"))
-            media[path] = dict(mc=master.attrib["ObjectUID"], src=srcobj.attrib["ObjectID"], w=w, h=h, fr=fr,
-                               mk=vclip.find("Clip/MarkerOwner/Markers").attrib["ObjectRef"], reused=True)
-            continue
-        name = escape(os.path.basename(path))
-        rel = os.path.relpath(path, proj_dir)
-        rel = escape(rel if rel.startswith(".") else "./" + rel)
-        vsid, srcid, mkid, logid, vcid, grpid = (p.oid() for _ in range(6))
-        muid, mcuid, cpiuid = (str(uuid.uuid4()) for _ in range(3))
-        grid += 1
-        state = mod_state[1]
-        mod = int(os.path.getmtime(path)) * 1000000
-        orient_xml = "\n    <OriginalImageOrientationType>1</OriginalImageOrientationType>" if orient == 1 else ""
-        new_blocks += [tabs(f"""
+def still_media(p, path, frame, proj_dir, existing, mod_state, grid):
+    """Re-use a still's media graph by FilePath, or build Premiere's still graph.
+    Returns (new blocks, new ClipProjectItem uid or None, media dict, grid order counter)."""
+    w, h, orient = check_still(path)
+    if path in existing:
+        m = existing[path]
+        srcobj = next(e for e in p.root if e.tag == "VideoMediaSource" and e.find("MediaSource/Media") is not None
+                      and e.find("MediaSource/Media").attrib["ObjectURef"] == m.attrib["ObjectUID"])
+        vclip = next(e for e in p.root if e.tag == "VideoClip" and e.find("Clip/Source").attrib["ObjectRef"] == srcobj.attrib["ObjectID"]
+                     and any(c.attrib["ObjectRef"] == e.attrib["ObjectID"] for mc in p.root if mc.tag == "MasterClip" for c in mc.find("Clips")))
+        master = next(mc for mc in p.root if mc.tag == "MasterClip" and any(c.attrib["ObjectRef"] == vclip.attrib["ObjectID"] for c in mc.find("Clips")))
+        fr = int(p.ref(m.find("VideoStream")).findtext("FrameRate"))
+        return [], None, dict(mc=master.attrib["ObjectUID"], src=srcobj.attrib["ObjectID"], w=w, h=h, fr=fr,
+                              mk=vclip.find("Clip/MarkerOwner/Markers").attrib["ObjectRef"], reused=True), grid
+    name = escape(os.path.basename(path))
+    rel = os.path.relpath(path, proj_dir)
+    rel = escape(rel if rel.startswith(".") else "./" + rel)
+    vsid, srcid, mkid, logid, vcid, grpid = (p.oid() for _ in range(6))
+    muid, mcuid, cpiuid = (str(uuid.uuid4()) for _ in range(3))
+    grid += 1
+    state = mod_state[1]
+    mod = int(os.path.getmtime(path)) * 1000000
+    orient_xml = "\n    <OriginalImageOrientationType>1</OriginalImageOrientationType>" if orient == 1 else ""
+    blocks = [tabs(f"""
 <ClipProjectItem ObjectUID="{cpiuid}" ClassID="cb4e0ed7-aca1-4171-8525-e3658dec06dd" Version="1">
     <ProjectItem Version="1">
         <Node Version="1">
@@ -292,26 +250,48 @@ def main():
 </VideoStream>"""), tabs(f"""
 <ClipChannelGroupVectorSerializer ObjectID="{grpid}" ClassID="a3127a8c-95d4-456e-a7f5-171b3f922426" Version="1">
 </ClipChannelGroupVectorSerializer>""")]
-        bin_items.append(cpiuid)
-        media[path] = dict(mc=mcuid, src=srcid, mk=mkid, w=w, h=h, fr=frame, reused=False)
+    return blocks, cpiuid, dict(mc=mcuid, src=srcid, mk=mkid, w=w, h=h, fr=frame, reused=False), grid
 
-    # --- 3. placements ---
-    spans = [(int(t.findtext("ClipTrackItem/TrackItem/Start") or 0), int(t.findtext("ClipTrackItem/TrackItem/End")),
-              t.attrib["ObjectID"]) for t in kept]
-    report = []
-    for pl in placements:
-        md = media[pl["path"]]
-        s, e = round(pl["in"] * TPS / frame) * frame, round(pl["out"] * TPS / frame) * frame
-        if e <= s:
-            sys.exit(f"{pl['file']}: empty slot")
-        in0 = (3600 * TPS // md["fr"]) * md["fr"]  # Premiere places a still one hour into its infinite media
-        scale = min(W / md["w"], H / md["h"]) * 100
-        sv = f32(scale)
-        name = escape(os.path.basename(pl["path"]))
-        tiid, ccid, cid = p.oid(), p.oid(), p.oid()
-        pids = [p.oid() for _ in range(11)]
-        subid, clipid = p.oid(), p.oid()
-        new_blocks.append(tabs(f"""
+
+def motion_param_defs(sv, position=None, scale=None):
+    """The 11 Motion params as (tag, classid, version, inner lines). Default: static, centred, Scale = sv.
+    position / scale: replacement inner lines for the Position / Scale params (e.g. keyframed);
+    Scale Width keeps the static sv either way (uniform scale is on)."""
+    pt = f"{K0},0.5:0.5,0,0,0,0,0,0,5,4,0,0,0,0"
+    return [
+        ("PointComponentParam", POINT, 4, position or ["<Name>Position</Name>", "<ParameterID>1</ParameterID>", f"<StartKeyframe>{pt}</StartKeyframe>"]),
+        ("VideoComponentParam", FLOAT, 10, scale or ["<Name>Scale</Name>", "<ParameterID>2</ParameterID>", "<UpperUIBound>200</UpperUIBound>",
+                                                     f"<StartKeyframe>{K0},{sv},0,0,0,0,0,0</StartKeyframe>", "<LowerBound>0</LowerBound>", "<UpperBound>10000</UpperBound>"]),
+        ("VideoComponentParam", FLOAT, 10, ["<Name>Scale Width</Name>", "<ParameterID>3</ParameterID>", "<UpperUIBound>200</UpperUIBound>",
+                                            f"<StartKeyframe>{K0},{sv},0,0,0,0,0,0</StartKeyframe>", "<LowerBound>0</LowerBound>", "<UpperBound>10000</UpperBound>"]),
+        ("VideoComponentParam", "cc12343e-f113-4d3b-ae05-b287db77d461", 10, ["<Name> </Name>", "<ParameterID>4</ParameterID>",
+                                                                             f"<StartKeyframe>{K0},true,0,0,0,0,0,0</StartKeyframe>"]),
+        ("VideoComponentParam", FLOAT, 10, ["<Name>Rotation</Name>", "<ParameterControlType>3</ParameterControlType>", "<ParameterID>5</ParameterID>",
+                                            f"<StartKeyframe>{K0},0.,0,0,0,0,0,0</StartKeyframe>", "<LowerBound>-32768</LowerBound>", "<UpperBound>32767</UpperBound>"]),
+        ("PointComponentParam", POINT, 4, ["<Name>Anchor Point</Name>", "<ParameterID>6</ParameterID>", f"<StartKeyframe>{pt}</StartKeyframe>"]),
+        ("VideoComponentParam", "a4ff2d6e-7ac2-44f8-9d52-17d9ca50e542", 10, ["<Name>Anti-flicker Filter</Name>", "<ParameterID>7</ParameterID>",
+                                                                             f"<StartKeyframe>{K0},0.,0,0,0,0,0,0</StartKeyframe>", "<LowerBound>0</LowerBound>", "<UpperBound>1</UpperBound>"]),
+    ] + [("VideoComponentParam", FLOAT, 10, [f"<Name>Crop {n}</Name>", f"<ParameterID>{i}</ParameterID>", f"<StartKeyframe>{K0},0.,0,0,0,0,0,0</StartKeyframe>",
+                                             "<LowerBound>0</LowerBound>", "<UpperBound>100</UpperBound>"])
+         for i, n in ((8, "Left"), (9, "Top"), (10, "Right"), (11, "Bottom"))]
+
+
+def still_item(p, md, s, e, W, H, path, motion_hash, sv=None, position=None, scale=None, head=None, tail=None,
+               omit_zero_start=False):
+    """Blocks for one still on the timeline from s to e (ticks): VideoClipTrackItem -> chain -> Motion (11 params),
+    SubClip -> VideoClip one hour into the infinite still. sv: static scale text (default: fit whole, f32 format);
+    position/scale: keyframed param lines (see motion_param_defs); head/tail: transition ObjectIDs to reference;
+    omit_zero_start: leave out <Start> for an item at 0, as Premiere writes it. Returns (blocks, track item ObjectID, sv)."""
+    in0 = (3600 * TPS // md["fr"]) * md["fr"]  # Premiere places a still one hour into its infinite media
+    if sv is None:
+        sv = f32(min(W / md["w"], H / md["h"]) * 100)
+    name = escape(os.path.basename(path))
+    tiid, ccid, cid = p.oid(), p.oid(), p.oid()
+    pids = [p.oid() for _ in range(11)]
+    subid, clipid = p.oid(), p.oid()
+    trans = "".join(f'\n        <{t} ObjectRef="{k}"/>' for t, k in (("HeadTransition", head), ("TailTransition", tail)) if k)
+    start = "" if (omit_zero_start and s == 0) else f"\n            <Start>{s}</Start>"  # Premiere omits a zero Start
+    blocks = [tabs(f"""
 <VideoClipTrackItem ObjectID="{tiid}" ClassID="368b0406-29e3-4923-9fcd-094fbf9a1089" Version="8">
     <ClipTrackItem Version="8">
         <ComponentOwner Version="1">
@@ -320,17 +300,16 @@ def main():
         <TrackItem Version="4">
             <Node Version="1">
                 <ID>{p.nid()}</ID>
-            </Node>
-            <Start>{s}</Start>
+            </Node>{start}
             <End>{e}</End>
         </TrackItem>
-        <SubClip ObjectRef="{subid}"/>
+        <SubClip ObjectRef="{subid}"/>{trans}
     </ClipTrackItem>
     <ToneMapSettings>{{"peak":-1,"version":3}}</ToneMapSettings>
     <FrameRect>0,0,{W},{H}</FrameRect>
     <PixelAspectRatio>1,1</PixelAspectRatio>
-</VideoClipTrackItem>"""))
-        new_blocks.append(tabs(f"""
+</VideoClipTrackItem>""")]
+    blocks.append(tabs(f"""
 <VideoComponentChain ObjectID="{ccid}" ClassID="0970e08a-f58f-4108-b29a-1a717b8e12e2" Version="3">
     <DefaultOpacity>true</DefaultOpacity>
     <DefaultOpacityComponentID>2</DefaultOpacityComponentID>
@@ -346,8 +325,8 @@ def main():
         </Components>
     </ComponentChain>
 </VideoComponentChain>"""))
-        params = "\n".join(f'            <Param Index="{k}" ObjectRef="{pid}"/>' for k, pid in enumerate(pids))
-        new_blocks.append(tabs(f"""
+    params = "\n".join(f'            <Param Index="{k}" ObjectRef="{pid}"/>' for k, pid in enumerate(pids))
+    blocks.append(tabs(f"""
 <VideoFilterComponent ObjectID="{cid}" ClassID="{MOTION_CLASS}" Version="9">
     <Component Version="7">
         <Params Version="1">
@@ -361,34 +340,17 @@ def main():
     <VideoFilterType>2</VideoFilterType>
     <MatchName>{UPPER}</MatchName>
 </VideoFilterComponent>"""))
-        pt = f"{K0},0.5:0.5,0,0,0,0,0,0,5,4,0,0,0,0"
-        defs = [
-            ("PointComponentParam", POINT, 4, ["<Name>Position</Name>", "<ParameterID>1</ParameterID>", f"<StartKeyframe>{pt}</StartKeyframe>"]),
-            ("VideoComponentParam", FLOAT, 10, ["<Name>Scale</Name>", "<ParameterID>2</ParameterID>", "<UpperUIBound>200</UpperUIBound>",
-                                                f"<StartKeyframe>{K0},{sv},0,0,0,0,0,0</StartKeyframe>", "<LowerBound>0</LowerBound>", "<UpperBound>10000</UpperBound>"]),
-            ("VideoComponentParam", FLOAT, 10, ["<Name>Scale Width</Name>", "<ParameterID>3</ParameterID>", "<UpperUIBound>200</UpperUIBound>",
-                                                f"<StartKeyframe>{K0},{sv},0,0,0,0,0,0</StartKeyframe>", "<LowerBound>0</LowerBound>", "<UpperBound>10000</UpperBound>"]),
-            ("VideoComponentParam", "cc12343e-f113-4d3b-ae05-b287db77d461", 10, ["<Name> </Name>", "<ParameterID>4</ParameterID>",
-                                                                                 f"<StartKeyframe>{K0},true,0,0,0,0,0,0</StartKeyframe>"]),
-            ("VideoComponentParam", FLOAT, 10, ["<Name>Rotation</Name>", "<ParameterControlType>3</ParameterControlType>", "<ParameterID>5</ParameterID>",
-                                                f"<StartKeyframe>{K0},0.,0,0,0,0,0,0</StartKeyframe>", "<LowerBound>-32768</LowerBound>", "<UpperBound>32767</UpperBound>"]),
-            ("PointComponentParam", POINT, 4, ["<Name>Anchor Point</Name>", "<ParameterID>6</ParameterID>", f"<StartKeyframe>{pt}</StartKeyframe>"]),
-            ("VideoComponentParam", "a4ff2d6e-7ac2-44f8-9d52-17d9ca50e542", 10, ["<Name>Anti-flicker Filter</Name>", "<ParameterID>7</ParameterID>",
-                                                                                 f"<StartKeyframe>{K0},0.,0,0,0,0,0,0</StartKeyframe>", "<LowerBound>0</LowerBound>", "<UpperBound>1</UpperBound>"]),
-        ] + [("VideoComponentParam", FLOAT, 10, [f"<Name>Crop {n}</Name>", f"<ParameterID>{i}</ParameterID>", f"<StartKeyframe>{K0},0.,0,0,0,0,0,0</StartKeyframe>",
-                                                 "<LowerBound>0</LowerBound>", "<UpperBound>100</UpperBound>"])
-             for i, n in ((8, "Left"), (9, "Top"), (10, "Right"), (11, "Bottom"))]
-        for pid, (tag, cls, ver, inner) in zip(pids, defs):
-            new_blocks.append(f'\t<{tag} ObjectID="{pid}" ClassID="{cls}" Version="{ver}">\n'
-                              + "\n".join("\t\t" + x for x in inner) + f"\n\t</{tag}>")
-        new_blocks.append(tabs(f"""
+    for pid, (tag, cls, ver, inner) in zip(pids, motion_param_defs(sv, position, scale)):
+        blocks.append(f'\t<{tag} ObjectID="{pid}" ClassID="{cls}" Version="{ver}">\n'
+                      + "\n".join("\t\t" + x for x in inner) + f"\n\t</{tag}>")
+    blocks.append(tabs(f"""
 <SubClip ObjectID="{subid}" ClassID="e0c58dc9-dbdd-4166-aef7-5db7e3f22e84" Version="6">
     <Clip ObjectRef="{clipid}"/>
     <MasterClip ObjectURef="{md['mc']}"/>
     <Name>{name}</Name>
     <OrigChGrp>0</OrigChGrp>
 </SubClip>"""))
-        new_blocks.append(tabs(f"""
+    blocks.append(tabs(f"""
 <VideoClip ObjectID="{clipid}" ClassID="9308dbef-2440-4acb-9ab2-953b9a4e82ec" Version="11">
     <Clip Version="18">
         <Node Version="1">
@@ -405,6 +367,128 @@ def main():
         <OutPoint>{in0 + e - s}</OutPoint>
     </Clip>
 </VideoClip>"""))
+    return blocks, tiid, sv
+
+
+TRACK_ITEMS_RE = r"\t\t\t\t<TrackItems Version=\"1\">\n.*?\t\t\t\t</TrackItems>\n"
+
+
+def set_track_items(p, track_key, keys, section="ClipItems"):
+    """Text edit of a track block: its <section> (ClipItems or TransitionItems) lists exactly `keys`, in order."""
+    lines = "".join(f'\t\t\t\t\t<TrackItem Index="{i}" ObjectRef="{k}"/>\n' for i, k in enumerate(keys))
+    xml = f'\t\t\t\t<TrackItems Version="1">\n{lines}\t\t\t\t</TrackItems>\n' if keys else ""
+    bi = p.by_key[track_key]
+    blk = p.blocks[bi]
+    m = re.search(rf"\t\t\t<{section} Version=\"3\">\n(.*?)\t\t\t</{section}>\n", blk, re.S)
+    if not m:
+        sys.exit(f"unexpected track layout (no {section})")
+    body = m.group(1)
+    if re.search(TRACK_ITEMS_RE, body, re.S):
+        body = re.sub(TRACK_ITEMS_RE, lambda _: xml, body, count=1, flags=re.S)
+    else:
+        body = xml + body
+    p.blocks[bi] = blk[:m.start(1)] + body + blk[m.end(1):]
+
+
+def append_bin_items(p, uids):
+    """Text edit of the Root Bin: append ClipProjectItems."""
+    if not uids:
+        return
+    rb = next(e for e in p.root if e.tag == "RootProjectItem")
+    ri = p.by_key[rb.attrib["ObjectUID"]]
+    n0 = len(rb.find("ProjectItemContainer/Items"))
+    add = "".join(f'\t\t\t\t<Item Index="{n0 + i}" ObjectURef="{u}"/>\n' for i, u in enumerate(uids))
+    blk, n = re.subn(r"(\t\t\t</Items>\n\t\t</ProjectItemContainer>)", lambda m: add + m.group(1), p.blocks[ri], count=1)
+    if n != 1:
+        sys.exit("unexpected Root Bin layout")
+    p.blocks[ri] = blk
+
+
+def bump_next_id(p):
+    """Text edit of the Project block: NextID past every Node ID we handed out."""
+    pr = next(e for e in p.root if e.tag == "Project" and "ObjectID" in e.attrib)
+    pi = p.by_key[pr.attrib["ObjectID"]]
+    cur = int(re.search(r"<NextID>(\d+)</NextID>", p.blocks[pi]).group(1))
+    p.blocks[pi] = re.sub(r"<NextID>\d+</NextID>", f"<NextID>{max(cur, p.next_node)}</NextID>", p.blocks[pi], count=1)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("project"); ap.add_argument("placements"); ap.add_argument("out")
+    ap.add_argument("--image-dir", required=True)
+    ap.add_argument("--sequence"); ap.add_argument("--track", type=int, default=2)
+    a = ap.parse_args()
+
+    src_path, out_path = os.path.abspath(a.project), os.path.abspath(a.out)
+    if src_path == out_path:
+        sys.exit("OUT must be a new file; SOURCE is never written")
+    raw = open(src_path, "rb").read()
+    text = gzip.decompress(raw).decode("utf-8") if raw[:2] == b"\x1f\x8b" else raw.decode("utf-8")
+    p = Project(text)
+    proj_dir = os.path.dirname(out_path)
+
+    # --- blobs we may point at: only ones stored with content in SOURCE ---
+    mod_state, motion_hash = reusable_blobs(p)
+
+    # --- sequence / track ---
+    seqs = [e for e in p.root if e.tag == "Sequence"]
+    seq = next(s for s in seqs if a.sequence in (None, s.findtext("Name")))
+    groups = {p.ref(tg.find("Second")).tag: p.ref(tg.find("Second")) for tg in seq.find("TrackGroups")}
+    vg = groups["VideoTrackGroup"]
+    frame = int(vg.findtext("TrackGroup/FrameRate"))
+    if frame not in TIMECODE_FORMAT:
+        sys.exit(f"sequence frame rate {TPS / frame:g} fps has no known still template")
+    _, _, W, H = (int(v) for v in vg.findtext("FrameRect").split(","))
+    tracks = vg.find("TrackGroup/Tracks")
+    if a.track >= len(tracks):
+        sys.exit(f"sequence has only {len(tracks)} video tracks")
+    track_key = tracks[a.track].attrib["ObjectURef"]
+    track = p.el[track_key]
+
+    placements = json.load(open(a.placements))
+    for pl in placements:
+        pl["path"] = os.path.abspath(os.path.join(a.image_dir, pl["file"]))
+        if not pl["path"].lower().endswith((".jpg", ".jpeg")):
+            sys.exit(f"{pl['path']}: only .jpg stills are templated")
+        if not os.path.isfile(pl["path"]):
+            sys.exit(f"{pl['path']}: missing")
+    paths = {pl["path"] for pl in placements}
+
+    # --- 1. idempotence: drop our earlier items on the target track ---
+    items = track.find("ClipTrack/ClipItems/TrackItems")
+    kept, removed = [], 0
+    for ref in (items if items is not None else []):
+        ti = p.el[ref.attrib["ObjectRef"]]
+        path, keys = media_graph(p, ti)
+        if path and os.path.abspath(path) in paths:
+            for k in keys:
+                p.drop(k)
+            removed += 1
+        else:
+            kept.append(ti)
+
+    # --- 2. media: re-use by FilePath, else create the Premiere still graph ---
+    existing = {e.findtext("FilePath"): e for e in p.root if e.tag == "Media" and e.findtext("FilePath")}
+    new_blocks, bin_items = [], []
+    grid = max([int(x.text) for x in p.root.iter("project.icon.view.grid.order")] + [-1])
+    media = {}
+    for path in sorted(paths):
+        blocks, cpiuid, media[path], grid = still_media(p, path, frame, proj_dir, existing, mod_state, grid)
+        new_blocks += blocks
+        if cpiuid:
+            bin_items.append(cpiuid)
+
+    # --- 3. placements ---
+    spans = [(int(t.findtext("ClipTrackItem/TrackItem/Start") or 0), int(t.findtext("ClipTrackItem/TrackItem/End")),
+              t.attrib["ObjectID"]) for t in kept]
+    report = []
+    for pl in placements:
+        md = media[pl["path"]]
+        s, e = round(pl["in"] * TPS / frame) * frame, round(pl["out"] * TPS / frame) * frame
+        if e <= s:
+            sys.exit(f"{pl['file']}: empty slot")
+        blocks, tiid, sv = still_item(p, md, s, e, W, H, pl["path"], motion_hash)
+        new_blocks += blocks
         spans.append((s, e, tiid))
         report.append(f"  {s / TPS:7.2f} – {e / TPS:7.2f}  scale {sv:<18} {md['w']}x{md['h']}  {os.path.basename(pl['path'])}")
 
@@ -414,32 +498,9 @@ def main():
             sys.exit("placements overlap on the target track")
 
     # --- 4. text edits of the three touched existing blocks ---
-    ti_lines = "".join(f'\t\t\t\t\t<TrackItem Index="{i}" ObjectRef="{k}"/>\n' for i, (_, _, k) in enumerate(spans))
-    ti_xml = f'\t\t\t\t<TrackItems Version="1">\n{ti_lines}\t\t\t\t</TrackItems>\n' if spans else ""
-    bi = p.by_key[track_key]
-    blk = p.blocks[bi]
-    if re.search(r"\t\t\t\t<TrackItems Version=\"1\">\n.*?\t\t\t\t</TrackItems>\n", blk, re.S):
-        blk = re.sub(r"\t\t\t\t<TrackItems Version=\"1\">\n.*?\t\t\t\t</TrackItems>\n", lambda _: ti_xml, blk, count=1, flags=re.S)
-    else:
-        blk, n = re.subn(r'(\t\t\t<ClipItems Version="3">\n)', lambda m: m.group(1) + ti_xml, blk, count=1)
-        if n != 1:
-            sys.exit("unexpected track layout")
-    p.blocks[bi] = blk
-
-    if bin_items:
-        rb = next(e for e in p.root if e.tag == "RootProjectItem")
-        ri = p.by_key[rb.attrib["ObjectUID"]]
-        n0 = len(rb.find("ProjectItemContainer/Items"))
-        add = "".join(f'\t\t\t\t<Item Index="{n0 + i}" ObjectURef="{u}"/>\n' for i, u in enumerate(bin_items))
-        blk, n = re.subn(r"(\t\t\t</Items>\n\t\t</ProjectItemContainer>)", lambda m: add + m.group(1), p.blocks[ri], count=1)
-        if n != 1:
-            sys.exit("unexpected Root Bin layout")
-        p.blocks[ri] = blk
-
-    pr = next(e for e in p.root if e.tag == "Project" and "ObjectID" in e.attrib)
-    pi = p.by_key[pr.attrib["ObjectID"]]
-    cur = int(re.search(r"<NextID>(\d+)</NextID>", p.blocks[pi]).group(1))
-    p.blocks[pi] = re.sub(r"<NextID>\d+</NextID>", f"<NextID>{max(cur, p.next_node)}</NextID>", p.blocks[pi], count=1)
+    set_track_items(p, track_key, [k for _, _, k in spans])
+    append_bin_items(p, bin_items)
+    bump_next_id(p)
 
     p.blocks += new_blocks
     out = p.text()

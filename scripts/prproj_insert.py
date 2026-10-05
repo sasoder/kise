@@ -156,6 +156,115 @@ def media_path(p, ti):
     return p.ref(m).findtext("FilePath") if m is not None else None
 
 
+def stored_blobs(p):
+    """BinaryHash -> decoded bytes, for every blob stored with content in this project."""
+    blobs = {}
+    for x in p.root.iter():
+        h = x.attrib.get("BinaryHash")
+        if h and x.text and x.text.strip():
+            blobs[h] = base64.b64decode(x.text.strip())
+    return blobs
+
+
+def media_mod_state(blobs):
+    """(hash, decoded state uuid) of a stored media ModificationState blob to re-use (StopIteration if none)."""
+    h = next(h for h, b in blobs.items() if len(b) == 72 and int(h[-8:], 16) == 84
+             and re.fullmatch(r"[0-9a-f-]{36}", b.decode("utf-16-le", "ignore")))
+    return h, blobs[h].decode("utf-16-le")
+
+
+def ensure_mov_media(p, path, proj_path, existing, root_bin, proto_impl, mod_state_hash, mod_state_cms,
+                     bin_items=None, refresh_always=True):
+    """Re-use the .mov's media graph by FilePath (refreshing its stream info) or create it.
+    Returns (master uid, video media source id, markers id, ffprobe info, duration ticks).
+    bin_items: if a list, the new ClipProjectItem uid is appended to it (the caller edits the Root Bin) instead of
+    editing the Root Bin here. refresh_always=False leaves an existing media graph untouched when its stream info
+    already matches the file."""
+    info = ffprobe(path)
+    fr_ticks = round(TPS / info["fps"])
+    dur = fr_ticks * info["frames"]
+    state = str(uuid.uuid4())
+    mod = int(os.path.getmtime(path) * 1e6)
+    name = os.path.basename(path)
+    rel = os.path.relpath(path, os.path.dirname(proj_path))
+    rel = rel if rel.startswith(".") else "./" + rel
+    if path in existing:
+        m0 = existing[path]
+        vs0 = p.el[m0.find("VideoStream").attrib["ObjectRef"]]
+        src = next(e for e in p.root if e.tag == "VideoMediaSource" and e.find("MediaSource/Media").attrib["ObjectURef"] == m0.attrib["ObjectUID"])
+        vclip = next(e for e in p.root if e.tag == "VideoClip" and e.find("Clip/Source").attrib["ObjectRef"] == src.attrib["ObjectID"])
+        master = next(e for e in p.root if e.tag == "MasterClip" and any(c.attrib["ObjectRef"] == vclip.attrib["ObjectID"] for c in e.find("Clips")))
+        same = (vs0.findtext("Duration") == str(dur) and vs0.findtext("FrameRate") == str(fr_ticks)
+                and vs0.findtext("FrameRect") == f"0,0,{info['w']},{info['h']}")
+        if refresh_always or not same:
+            m = p.get(m0.attrib["ObjectUID"])
+            if m.find("CCFileModTime") is not None:  # states/hashes stay as Premiere wrote them
+                m.find("CCFileModTime").text = str(mod)
+            vs = p.get(m.find("VideoStream").attrib["ObjectRef"])
+            vs.find("Duration").text = str(dur); vs.find("FrameRate").text = str(fr_ticks)
+            vs.find("FrameRect").text = f"0,0,{info['w']},{info['h']}"
+            p.get(src.attrib["ObjectID"]).find("OriginalDuration").text = str(dur)
+            log = p.get(master.find("LoggingInfo").attrib["ObjectRef"])
+            log.find("MediaOutPoint").text = str(dur); log.find("MediaFrameRate").text = str(fr_ticks)
+        return (master.attrib["ObjectUID"], src.attrib["ObjectID"], vclip.find("Clip/MarkerOwner/Markers").attrib["ObjectRef"], info, dur)
+    mid, vsid, srcid, mkid, logid, vcid, grpid = (p.oid() for _ in range(7))
+    muid, mcuid, cpiuid = (str(uuid.uuid4()) for _ in range(3))
+    p.add(f'<VideoStream ObjectID="{vsid}" ClassID="a36e4719-3ec6-4a0c-ab11-8b4aab377aa5" Version="23"><Duration>{dur}</Duration>'
+          f'<CodecType>1634743400</CodecType><OriginalColorSpace>{{"baseColorProfile":{{"colorProfileName":"BT.709 RGB Full"}},"baseProfileType":1}}</OriginalColorSpace>'
+          f'<AlphaInfoIsUncertain>true</AlphaInfoIsUncertain><OriginalImageOrientationType>1</OriginalImageOrientationType>'
+          f'<FrameRate>{fr_ticks}</FrameRate><FrameRect>0,0,{info["w"]},{info["h"]}</FrameRect><AlphaType>1</AlphaType></VideoStream>')
+    state = mod_state_cms  # BinaryHash is content-addressed (unknown hash, suffix = len + 12): never invent one
+    esc = lambda s: s.replace("&", "&amp;").replace("<", "&lt;")
+    p.add(f'<Media ObjectUID="{muid}" ClassID="7a5c103e-f3ac-4391-b6b4-7cc3d2f9a7ff" Version="30"><VideoStream ObjectRef="{vsid}"/>'
+          f'<ModificationState Encoding="base64" BinaryHash="{mod_state_hash}"/>'
+          f'<RelativePath>{esc(rel)}</RelativePath><ImplementationID>{proto_impl}</ImplementationID><FileKey>{uuid.uuid4()}</FileKey>'
+          f'<ContentAndMetadataState>{state}</ContentAndMetadataState><RelativePath>{esc(rel)}</RelativePath><CCFileModTime>{mod}</CCFileModTime>'
+          f'<ActualMediaFilePath>{esc(path)}</ActualMediaFilePath><FilePath>{esc(path)}</FilePath><Title>{esc(name)}</Title></Media>')
+    p.add(f'<VideoMediaSource ObjectID="{srcid}" ClassID="e64ddf74-8fac-4682-8aa8-0e0ca2248949" Version="2"><MediaSource Version="4">'
+          f'<Content Version="10"></Content><Media ObjectURef="{muid}"/></MediaSource><OriginalDuration>{dur}</OriginalDuration></VideoMediaSource>')
+    p.add(f'<Markers ObjectID="{mkid}" ClassID="bee50706-b524-416c-9f03-b596ce5f6866" Version="4"><ByGUID>byGUID</ByGUID>'
+          f'<LastMetadataState>00000000-0000-0000-0000-000000000000</LastMetadataState><LastContentState>{state}</LastContentState></Markers>')
+    p.add(f'<ClipLoggingInfo ObjectID="{logid}" ClassID="77ab7fdd-dcdf-465d-9906-7a330ca1e738" Version="10"><CaptureMode>2</CaptureMode>'
+          f'<ClipName>{esc(name)}</ClipName><MediaInPoint>0</MediaInPoint><MediaOutPoint>{dur}</MediaOutPoint>'
+          f'<MediaFrameRate>{fr_ticks}</MediaFrameRate><TimecodeFormat>100</TimecodeFormat></ClipLoggingInfo>')
+    p.add(f'<VideoClip ObjectID="{vcid}" ClassID="9308dbef-2440-4acb-9ab2-953b9a4e82ec" Version="11"><Clip Version="18">'
+          f'<MarkerOwner Version="1"><Markers ObjectRef="{mkid}"/></MarkerOwner><Source ObjectRef="{srcid}"/>'
+          f'<ClipID>{uuid.uuid4()}</ClipID><InUse>false</InUse></Clip></VideoClip>')
+    p.add(f'<ClipChannelGroupVectorSerializer ObjectID="{grpid}" ClassID="a3127a8c-95d4-456e-a7f5-171b3f922426" Version="1"></ClipChannelGroupVectorSerializer>')
+    p.add(f'<MasterClip ObjectUID="{mcuid}" ClassID="fb11c33a-b0a9-4465-aa94-b6d5db2628cf" Version="12"><LoggingInfo ObjectRef="{logid}"/>'
+          f'<Clips Version="1"><Clip Index="0" ObjectRef="{vcid}"/></Clips><AudioClipChannelGroups ObjectRef="{grpid}"/>'
+          f'<Name>{esc(name)}</Name><MasterClipChangeVersion>1</MasterClipChangeVersion></MasterClip>')
+    p.add(f'<ClipProjectItem ObjectUID="{cpiuid}" ClassID="cb4e0ed7-aca1-4171-8525-e3658dec06dd" Version="1"><ProjectItem Version="1">'
+          f'<Node Version="1"><ID>{p.nid()}</ID></Node><Name>{esc(name)}</Name></ProjectItem><MasterClip ObjectURef="{mcuid}"/></ClipProjectItem>')
+    if bin_items is None:
+        rb = p.get(root_bin.attrib["ObjectUID"]).find("ProjectItemContainer/Items")
+        ET.SubElement(rb, "Item", {"Index": str(len(rb)), "ObjectURef": cpiuid})
+    else:
+        bin_items.append(cpiuid)
+    return (mcuid, srcid, mkid, info, dur)
+
+
+def add_mov_item(p, media_entry, s, e, path):
+    """One VideoClipTrackItem (+ VideoClip, SubClip, default-Motion chain) for a .mov from s to e (ticks), media from 0.
+    Returns the track item element (its block is new; callers may still add HeadTransition/TailTransition)."""
+    mcuid, srcid, mkid, info, dur = media_entry
+    clipid, subid, ccid, tiid = (p.oid() for _ in range(4))
+    name = os.path.basename(path).replace("&", "&amp;").replace("<", "&lt;")
+    p.add(f'<VideoClip ObjectID="{clipid}" ClassID="9308dbef-2440-4acb-9ab2-953b9a4e82ec" Version="11"><Clip Version="18">'
+          f'<MarkerOwner Version="1"><Markers ObjectRef="{mkid}"/></MarkerOwner><Source ObjectRef="{srcid}"/>'
+          f'<ClipID>{uuid.uuid4()}</ClipID><InPoint>0</InPoint><OutPoint>{e - s}</OutPoint></Clip></VideoClip>')
+    p.add(f'<SubClip ObjectID="{subid}" ClassID="e0c58dc9-dbdd-4166-aef7-5db7e3f22e84" Version="6"><Clip ObjectRef="{clipid}"/>'
+          f'<MasterClip ObjectURef="{mcuid}"/><Name>{name}</Name><OrigChGrp>0</OrigChGrp></SubClip>')
+    p.add(f'<VideoComponentChain ObjectID="{ccid}" ClassID="0970e08a-f58f-4108-b29a-1a717b8e12e2" Version="3"><DefaultMotion>true</DefaultMotion>'
+          f'<DefaultOpacity>true</DefaultOpacity><DefaultMotionComponentID>1</DefaultMotionComponentID><DefaultOpacityComponentID>2</DefaultOpacityComponentID>'
+          f'<ComponentChain Version="3"><Node Version="1"><Properties Version="1"><MZ.ComponentChain.ActiveComponentID>2</MZ.ComponentChain.ActiveComponentID>'
+          f'<MZ.ComponentChain.ActiveComponentParamIndex>4294967295</MZ.ComponentChain.ActiveComponentParamIndex></Properties></Node></ComponentChain></VideoComponentChain>')
+    return p.add(f'<VideoClipTrackItem ObjectID="{tiid}" ClassID="368b0406-29e3-4923-9fcd-094fbf9a1089" Version="8"><ClipTrackItem Version="8">'
+                 f'<ComponentOwner Version="1"><Components ObjectRef="{ccid}"/></ComponentOwner><TrackItem Version="4"><Node Version="1"><ID>{p.nid()}</ID></Node>'
+                 f'<Start>{s}</Start><End>{e}</End></TrackItem><SubClip ObjectRef="{subid}"/></ClipTrackItem>'
+                 f'<ToneMapSettings>{{"peak":-1,"version":3}}</ToneMapSettings><FrameRect>0,0,{info["w"]},{info["h"]}</FrameRect><PixelAspectRatio>1,1</PixelAspectRatio></VideoClipTrackItem>')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("project"); ap.add_argument("placements")
@@ -208,97 +317,21 @@ def main():
     existing = {e.findtext("FilePath"): e for e in p.root if e.tag == "Media" and e.findtext("FilePath")}
     root_bin = next(e for e in p.root if e.tag == "RootProjectItem")
     proto_impl = next((e.findtext("ImplementationID") for e in existing.values()), "1fa18bfa-255c-44b1-ad73-56bcd99fceaf")
-    blobs = {}  # BinaryHash -> decoded bytes, for every blob stored with content in this project
-    for x in p.root.iter():
-        h = x.attrib.get("BinaryHash")
-        if h and x.text and x.text.strip():
-            blobs[h] = base64.b64decode(x.text.strip())
-    mod_state_hash = next(h for h, b in blobs.items() if len(b) == 72 and int(h[-8:], 16) == 84
-                          and re.fullmatch(r"[0-9a-f-]{36}", b.decode("utf-16-le", "ignore")))
-    mod_state_cms = blobs[mod_state_hash].decode("utf-16-le")
+    blobs = stored_blobs(p)
+    mod_state_hash, mod_state_cms = media_mod_state(blobs)
     media = {}  # path -> (master uid, video media source id, markers id, info)
     for path in sorted(paths):
-        info = ffprobe(path)
-        fr_ticks = round(TPS / info["fps"])
-        dur = fr_ticks * info["frames"]
-        state = str(uuid.uuid4())
-        mod = int(os.path.getmtime(path) * 1e6)
-        name = os.path.basename(path)
-        rel = os.path.relpath(path, os.path.dirname(proj_path))
-        rel = rel if rel.startswith(".") else "./" + rel
-        if path in existing:
-            m = p.get(existing[path].attrib["ObjectUID"])
-            if m.find("CCFileModTime") is not None:  # states/hashes stay as Premiere wrote them
-                m.find("CCFileModTime").text = str(mod)
-            vs = p.get(m.find("VideoStream").attrib["ObjectRef"])
-            vs.find("Duration").text = str(dur); vs.find("FrameRate").text = str(fr_ticks)
-            vs.find("FrameRect").text = f"0,0,{info['w']},{info['h']}"
-            # find its master clip / source
-            src = next(e for e in p.root if e.tag == "VideoMediaSource" and e.find("MediaSource/Media").attrib["ObjectURef"] == m.attrib["ObjectUID"])
-            p.get(src.attrib["ObjectID"]).find("OriginalDuration").text = str(dur)
-            vclip = next(e for e in p.root if e.tag == "VideoClip" and e.find("Clip/Source").attrib["ObjectRef"] == src.attrib["ObjectID"])
-            master = next(e for e in p.root if e.tag == "MasterClip" and any(c.attrib["ObjectRef"] == vclip.attrib["ObjectID"] for c in e.find("Clips")))
-            log = p.get(master.find("LoggingInfo").attrib["ObjectRef"])
-            log.find("MediaOutPoint").text = str(dur); log.find("MediaFrameRate").text = str(fr_ticks)
-            media[path] = (master.attrib["ObjectUID"], src.attrib["ObjectID"], vclip.find("Clip/MarkerOwner/Markers").attrib["ObjectRef"], info, dur)
-            continue
-        mid, vsid, srcid, mkid, logid, vcid, grpid = (p.oid() for _ in range(7))
-        muid, mcuid, cpiuid = (str(uuid.uuid4()) for _ in range(3))
-        p.add(f'<VideoStream ObjectID="{vsid}" ClassID="a36e4719-3ec6-4a0c-ab11-8b4aab377aa5" Version="23"><Duration>{dur}</Duration>'
-              f'<CodecType>1634743400</CodecType><OriginalColorSpace>{{"baseColorProfile":{{"colorProfileName":"BT.709 RGB Full"}},"baseProfileType":1}}</OriginalColorSpace>'
-              f'<AlphaInfoIsUncertain>true</AlphaInfoIsUncertain><OriginalImageOrientationType>1</OriginalImageOrientationType>'
-              f'<FrameRate>{fr_ticks}</FrameRate><FrameRect>0,0,{info["w"]},{info["h"]}</FrameRect><AlphaType>1</AlphaType></VideoStream>')
-        state = mod_state_cms  # BinaryHash is content-addressed (unknown hash, suffix = len + 12): never invent one
-        esc = lambda s: s.replace("&", "&amp;").replace("<", "&lt;")
-        p.add(f'<Media ObjectUID="{muid}" ClassID="7a5c103e-f3ac-4391-b6b4-7cc3d2f9a7ff" Version="30"><VideoStream ObjectRef="{vsid}"/>'
-              f'<ModificationState Encoding="base64" BinaryHash="{mod_state_hash}"/>'
-              f'<RelativePath>{esc(rel)}</RelativePath><ImplementationID>{proto_impl}</ImplementationID><FileKey>{uuid.uuid4()}</FileKey>'
-              f'<ContentAndMetadataState>{state}</ContentAndMetadataState><RelativePath>{esc(rel)}</RelativePath><CCFileModTime>{mod}</CCFileModTime>'
-              f'<ActualMediaFilePath>{esc(path)}</ActualMediaFilePath><FilePath>{esc(path)}</FilePath><Title>{esc(name)}</Title></Media>')
-        p.add(f'<VideoMediaSource ObjectID="{srcid}" ClassID="e64ddf74-8fac-4682-8aa8-0e0ca2248949" Version="2"><MediaSource Version="4">'
-              f'<Content Version="10"></Content><Media ObjectURef="{muid}"/></MediaSource><OriginalDuration>{dur}</OriginalDuration></VideoMediaSource>')
-        p.add(f'<Markers ObjectID="{mkid}" ClassID="bee50706-b524-416c-9f03-b596ce5f6866" Version="4"><ByGUID>byGUID</ByGUID>'
-              f'<LastMetadataState>00000000-0000-0000-0000-000000000000</LastMetadataState><LastContentState>{state}</LastContentState></Markers>')
-        p.add(f'<ClipLoggingInfo ObjectID="{logid}" ClassID="77ab7fdd-dcdf-465d-9906-7a330ca1e738" Version="10"><CaptureMode>2</CaptureMode>'
-              f'<ClipName>{esc(name)}</ClipName><MediaInPoint>0</MediaInPoint><MediaOutPoint>{dur}</MediaOutPoint>'
-              f'<MediaFrameRate>{fr_ticks}</MediaFrameRate><TimecodeFormat>100</TimecodeFormat></ClipLoggingInfo>')
-        p.add(f'<VideoClip ObjectID="{vcid}" ClassID="9308dbef-2440-4acb-9ab2-953b9a4e82ec" Version="11"><Clip Version="18">'
-              f'<MarkerOwner Version="1"><Markers ObjectRef="{mkid}"/></MarkerOwner><Source ObjectRef="{srcid}"/>'
-              f'<ClipID>{uuid.uuid4()}</ClipID><InUse>false</InUse></Clip></VideoClip>')
-        p.add(f'<ClipChannelGroupVectorSerializer ObjectID="{grpid}" ClassID="a3127a8c-95d4-456e-a7f5-171b3f922426" Version="1"></ClipChannelGroupVectorSerializer>')
-        p.add(f'<MasterClip ObjectUID="{mcuid}" ClassID="fb11c33a-b0a9-4465-aa94-b6d5db2628cf" Version="12"><LoggingInfo ObjectRef="{logid}"/>'
-              f'<Clips Version="1"><Clip Index="0" ObjectRef="{vcid}"/></Clips><AudioClipChannelGroups ObjectRef="{grpid}"/>'
-              f'<Name>{esc(name)}</Name><MasterClipChangeVersion>1</MasterClipChangeVersion></MasterClip>')
-        p.add(f'<ClipProjectItem ObjectUID="{cpiuid}" ClassID="cb4e0ed7-aca1-4171-8525-e3658dec06dd" Version="1"><ProjectItem Version="1">'
-              f'<Node Version="1"><ID>{p.nid()}</ID></Node><Name>{esc(name)}</Name></ProjectItem><MasterClip ObjectURef="{mcuid}"/></ClipProjectItem>')
-        rb = p.get(root_bin.attrib["ObjectUID"]).find("ProjectItemContainer/Items")
-        ET.SubElement(rb, "Item", {"Index": str(len(rb)), "ObjectURef": cpiuid})
-        media[path] = (mcuid, srcid, mkid, info, dur)
+        media[path] = ensure_mov_media(p, path, proj_path, existing, root_bin, proto_impl, mod_state_hash, mod_state_cms)
 
     # 3. placements
     new_items = []
     for pl in placements:
         path = os.path.abspath(pl["path"])
-        mcuid, srcid, mkid, info, dur = media[path]
+        dur = media[path][4]
         s, e = round(pl["in"] * TPS), round(pl["out"] * TPS)
         if e - s > dur:
             sys.exit(f"{path}: media {dur / TPS:.3f}s is shorter than the slot {(e - s) / TPS:.3f}s")
-        clipid, subid, ccid, tiid = (p.oid() for _ in range(4))
-        name = os.path.basename(path).replace("&", "&amp;").replace("<", "&lt;")
-        p.add(f'<VideoClip ObjectID="{clipid}" ClassID="9308dbef-2440-4acb-9ab2-953b9a4e82ec" Version="11"><Clip Version="18">'
-              f'<MarkerOwner Version="1"><Markers ObjectRef="{mkid}"/></MarkerOwner><Source ObjectRef="{srcid}"/>'
-              f'<ClipID>{uuid.uuid4()}</ClipID><InPoint>0</InPoint><OutPoint>{e - s}</OutPoint></Clip></VideoClip>')
-        p.add(f'<SubClip ObjectID="{subid}" ClassID="e0c58dc9-dbdd-4166-aef7-5db7e3f22e84" Version="6"><Clip ObjectRef="{clipid}"/>'
-              f'<MasterClip ObjectURef="{mcuid}"/><Name>{name}</Name><OrigChGrp>0</OrigChGrp></SubClip>')
-        p.add(f'<VideoComponentChain ObjectID="{ccid}" ClassID="0970e08a-f58f-4108-b29a-1a717b8e12e2" Version="3"><DefaultMotion>true</DefaultMotion>'
-              f'<DefaultOpacity>true</DefaultOpacity><DefaultMotionComponentID>1</DefaultMotionComponentID><DefaultOpacityComponentID>2</DefaultOpacityComponentID>'
-              f'<ComponentChain Version="3"><Node Version="1"><Properties Version="1"><MZ.ComponentChain.ActiveComponentID>2</MZ.ComponentChain.ActiveComponentID>'
-              f'<MZ.ComponentChain.ActiveComponentParamIndex>4294967295</MZ.ComponentChain.ActiveComponentParamIndex></Properties></Node></ComponentChain></VideoComponentChain>')
-        ti = p.add(f'<VideoClipTrackItem ObjectID="{tiid}" ClassID="368b0406-29e3-4923-9fcd-094fbf9a1089" Version="8"><ClipTrackItem Version="8">'
-                   f'<ComponentOwner Version="1"><Components ObjectRef="{ccid}"/></ComponentOwner><TrackItem Version="4"><Node Version="1"><ID>{p.nid()}</ID></Node>'
-                   f'<Start>{s}</Start><End>{e}</End></TrackItem><SubClip ObjectRef="{subid}"/></ClipTrackItem>'
-                   f'<ToneMapSettings>{{"peak":-1,"version":3}}</ToneMapSettings><FrameRect>0,0,{info["w"]},{info["h"]}</FrameRect><PixelAspectRatio>1,1</PixelAspectRatio></VideoClipTrackItem>')
-        new_items.append(ti)
+        new_items.append(add_mov_item(p, media[path], s, e, path))
     allitems = kept + new_items
     spans = sorted((int(t.findtext("ClipTrackItem/TrackItem/Start") or 0), int(t.findtext("ClipTrackItem/TrackItem/End")), t) for t in allitems)
     for (s0, e0, _), (s1, _, _) in zip(spans, spans[1:]):
