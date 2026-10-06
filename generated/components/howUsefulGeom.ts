@@ -262,6 +262,14 @@ export const linkDraw = (l: Link, S: number) => {
   return 1 - Math.pow(1 - smoothstep(Math.pow(u, 0.8)), 1.6);
 };
 
+// --- the context: the Department of War seal in the ring's lower half ----------
+export const SEAL_SRC = "bharat/dow_seal.png";
+export const SEAL_Y = D + 216;
+/** world diameter (~250 screen px at the final framing) */
+export const SEAL_D = 204;
+/** enters like text from here, fully in by "context" (163) */
+export const SEAL_S = 150;
+
 // --- labels ---------------------------------------------------------------------
 export const SYNTH_LABEL_Y = -BLOCK_HALF_H - 30;
 export const SYNTH_LABEL_S = 28;

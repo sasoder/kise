@@ -271,6 +271,7 @@ def main():
     ap.add_argument("--sequence"); ap.add_argument("--track", type=int, default=1)
     ap.add_argument("--size"); ap.add_argument("--source-scale", type=float)
     ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--allow-running", action="store_true")
+    ap.add_argument("--remove", action="append", default=[])  # also drop the target track's items that use these files
     a = ap.parse_args()
 
     if not a.dry_run and not a.allow_running and subprocess.run(["pgrep", "-x", "Adobe Premiere Pro 2026"], capture_output=True).returncode == 0:
@@ -282,6 +283,7 @@ def main():
     p = Project(text)
     placements = json.load(open(a.placements))
     paths = {os.path.abspath(x["path"]) for x in placements}
+    drop_paths = paths | {os.path.abspath(x) for x in a.remove}
 
     seqs = [e for e in p.root if e.tag == "Sequence"]
     seq = next(s for s in seqs if a.sequence in (None, s.findtext("Name")))
@@ -301,7 +303,7 @@ def main():
     if items is not None:
         for ti_ref in list(items):
             ti = p.el[ti_ref.attrib["ObjectRef"]]
-            if os.path.abspath(media_path(p, ti) or "") in paths:
+            if os.path.abspath(media_path(p, ti) or "") in drop_paths:
                 sc = p.ref(ti.find("ClipTrackItem/SubClip"))
                 for k in (ti.find("ClipTrackItem/ComponentOwner/Components").attrib["ObjectRef"],
                           sc.find("Clip").attrib["ObjectRef"], sc.attrib["ObjectID"], ti.attrib["ObjectID"]):

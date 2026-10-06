@@ -4,7 +4,6 @@ import { z } from "zod";
 import {
   INK,
   INK_HI,
-  Label,
   RED,
   RED_DEEP,
   RED_HI,
@@ -14,7 +13,6 @@ import {
   WetLine,
   clamp01,
   cumLen,
-  enterU,
   paperShadow,
   smoothstep,
   subPathD,
@@ -26,10 +24,6 @@ import {
   DASH_N,
   DORMANT_OP,
   DURATION,
-  ENOUGH_F,
-  ENOUGH_GONE_F0,
-  ENOUGH_GONE_F1,
-  ENOUGH_Y,
   FPS,
   HL_BAND,
   HL_F0,
@@ -40,19 +34,14 @@ import {
   OUT_LOOP,
   OUT_PERIM,
   OUT_RIGHT,
-  REAL_F,
-  REAL_Y,
   REST_CAM,
   SIDE,
   SOLID_F0,
   SOLID_F1,
-  SYN_F,
-  SYN_MIN,
   TILES,
   TILE_S,
   WAVE_F0,
   WAVE_F1,
-  WORD_MIN,
   camAt,
   frameFade,
   hlR,
@@ -60,7 +49,6 @@ import {
   solidLen,
   solidTimeAt,
   strokeW,
-  synY,
   tileAskew,
   waveR,
 } from "./enoughGeom";
@@ -85,32 +73,29 @@ export { DURATION, FPS };
 // synthetic tiles (RED_DEEP 0.35, askew, a third of their squares, some
 // misplaced). The block fills to the outline, the outline is written solid, and
 // a wet red front runs outward: every tile becomes a complete vermilion replica.
-// RED = synthetic data only; all text is ink. Geometry, clocks and the camera
-// live in enoughGeom.ts. Five element types: ink squares, red squares, the
-// outline, labels, the wet front / highlight.
+// RED = synthetic data only; NO TEXT anywhere (client: labels removed). Geometry, clocks and the camera
+// live in enoughGeom.ts. Four element types: ink squares, red squares, the
+// outline, the wet front / highlight.
 //
 // GESTURES (gesture -> word -> local frames)
 // 1. "So we need to have" (0-23): close on the block (k 2.3 -> 2.5 creep from a
 //    24 f pre-roll). 16 of 41 ink squares are in on f0 with two more in flight;
 //    squares drop in a short way and settle, bottom-up with noise, one every
 //    ~3 f. The dashed ENOUGH outline marches round the full extent.
-// 2. "enough" (23-31): ENOUGH lands above the outline on 24 (12-24); squares arrive
+// 2. "enough" (23-31): squares arrive
 //    faster (one every 1.4 f, 26-41).
-// 3. "representative data" (31-68): REPRESENTATIVE DATA lands under the block
-//    on 38 (26-38); the last squares land 44-57 and the core of the diamond on "data"
+// 3. "representative data" (31-68): the last squares land 44-57 and the core of the diamond on "data"
 //    (60.5). Two wet ink tips write the outline SOLID from the top centre down
 //    both sides and meet at the bottom centre (54-88): expected -> happened.
-//    As the pass completes ENOUGH diffuses like ink (80-92): it has happened.
 // 4. "in order for" (68-84): one long pull-back (glide 55-93, k 2.5 -> 0.955);
 //    the eight dormant tiles enter round the block (3 x 3, the block in the
-//    middle, label bands between the rows), coming up out of the paper as
+//    middle, one even lattice 335 x 335, centred on the block), coming up out of the paper as
 //    the frame opens (they are faded out of the close-up and the caption band).
 // 5. "synthetic data" (84-107): the tips meet (88) and the copy front leaves the
-//    outline (87-124, 14.3 world px/f): as it crosses a tile the missing squares
+//    outline (87-124, 13.3 world px/f): as it crosses a tile the missing squares
 //    are written by the wet front (RED_WET drying to RED over 18 f), dormant
 //    ones turn vermilion, misplaced ones slide home and the tile squares up on
-//    the grid. Side tiles first, then top / bottom, corners last. SYNTHETIC
-//    DATA lands above the grid on 89 (77-89).
+//    the grid. Side tiles first, then top / bottom, corners last.
 // 6. "to actually work" (112-130): the corner tiles complete on "work"
 //    (last square reached 123.6). One ink block, eight identical vermilion replicas.
 // 7. Hold (130-183): one travelling highlight (#F2604A) sweeps the replicas in
@@ -295,11 +280,6 @@ const EnoughRepresentativeData: React.FC<Props> = () => {
             />
           ))
         : null}
-
-      {/* labels (all ink) */}
-      <Label text="enough" x={0} y={ENOUGH_Y} k={k} size="word" minPx={WORD_MIN} appear={enterU(f, ENOUGH_F)} diffuse={clamp01((f - ENOUGH_GONE_F0) / (ENOUGH_GONE_F1 - ENOUGH_GONE_F0))} />
-      <Label text="representative data" x={0} y={REAL_Y} k={k} size="word" minPx={WORD_MIN} appear={enterU(f, REAL_F)} />
-      <Label text="synthetic data" x={0} y={synY(k)} k={k} size="word" minPx={SYN_MIN} appear={enterU(f, SYN_F)} />
     </Stage>
   );
 };

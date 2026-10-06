@@ -7,8 +7,8 @@ import TitanPreTrain, {
 } from '../generated/components/TitanPreTrain';
 
 // Private render entry for the Bharat "synthetic data needs real data" clip,
-// cut B (TitanPreTrain master: 15_TitanProgram = f 0-19, 16_PreTrainModels =
-// f 20-197), so it renders while other builders own src/Root.tsx.
+// cut B V2 (TitanPreTrain, one file 14_TitanPreTrain.mov, 245 f), so it
+// renders while other builders own src/Root.tsx.
 export const RemotionRoot = () => {
   return (
     <Composition

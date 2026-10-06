@@ -1,5 +1,6 @@
 import React from "react";
-import { useCurrentFrame } from "remotion";
+import { AbsoluteFill, Img, staticFile, useCurrentFrame } from "remotion";
+import { sway } from "./fieldShared";
 import { z } from "zod";
 import {
   Bead,
@@ -14,12 +15,18 @@ import {
   Stage,
   WET_DRY_F,
   WetLine,
+  FRAME_H,
+  FRAME_W,
+  RISE_PX,
   clamp01,
+  easeOutCubic,
+  enterFrom,
   enterU,
   mixHex,
   paperShadow,
   smoothstep,
   sz,
+  textBlurPx,
 } from "./chinatalkShared";
 import {
   CELLS,
@@ -46,6 +53,10 @@ import {
   RING_PHI0,
   RING_PTS,
   RING_S1,
+  SEAL_D,
+  SEAL_S,
+  SEAL_SRC,
+  SEAL_Y,
   SIDE,
   SYNTH_LABEL_S,
   SYNTH_LABEL_Y,
@@ -121,6 +132,9 @@ export { DURATION, FPS };
 //    (134-156, 139-167, 144-166), open ends, dashes marching; the squares
 //    gently ride the rim; a slow creep (k 1.2 -> 1.23) decays into the last
 //    frame. An open question, still moving.
+// 6. "in this context" (150-163): the Department of War seal (official art,
+//    full colour, a world object ~250 screen px across) slides up 24 px +
+//    fades + blur clears in the ring's empty lower half, in by "context".
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({});
@@ -177,7 +191,16 @@ const HowUsefulRealWorld: React.FC<Props> = () => {
   const ringBead = S < RING_S1 ? 1 : 1 - smoothstep((S - RING_S1) / 8);
   const ringTip = ringPoint(RING_PHI0 - (360 * rLen) / RING_LEN);
 
+  // the context: the Department of War seal, a world object in an HTML layer
+  const sa = enterFrom(S, SEAL_S);
+  const hand = sway(S);
+  const sealPx = SEAL_D * k;
+  const sealX = FRAME_W / 2 + (0 - cam.x) * k + hand.dx;
+  const sealY = FRAME_H / 2 + (SEAL_Y - cam.y) * k + hand.dy + (1 - easeOutCubic(sa)) * RISE_PX;
+  const sealBlur = textBlurPx(sa, 0);
+
   return (
+    <AbsoluteFill>
     <Stage S={S} cam={cam} rest={REST_CAM}>
       {/* the three domains: concentric ink rings at 0.42, re-written at 0.90 as the bead passes */}
       {DOMAINS.map((d) => {
@@ -269,6 +292,23 @@ const HowUsefulRealWorld: React.FC<Props> = () => {
 
       <Label text="SYNTHETIC DATA" x={0} y={SYNTH_LABEL_Y} k={k} size="word" rung={INK_HI} appear={enterU(S, SYNTH_LABEL_S)} />
     </Stage>
+      {sa > 0.001 ? (
+        <AbsoluteFill style={{ pointerEvents: "none" }}>
+          <Img
+            src={staticFile(SEAL_SRC)}
+            style={{
+              position: "absolute",
+              left: sealX - sealPx / 2,
+              top: sealY - sealPx / 2,
+              width: sealPx,
+              height: sealPx,
+              opacity: smoothstep(sa),
+              filter: `${sealBlur > 0.01 ? `blur(${sealBlur.toFixed(2)}px) ` : ""}drop-shadow(0 4px 8px rgba(70,35,15,0.16))`,
+            }}
+          />
+        </AbsoluteFill>
+      ) : null}
+    </AbsoluteFill>
   );
 };
 

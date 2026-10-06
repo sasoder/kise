@@ -6,7 +6,6 @@ import {
   easeOutCubic,
   glideTargetAt,
   hash01,
-  labelPx,
   runFollower,
   smoothstep,
 } from "./chinatalkShared";
@@ -109,7 +108,7 @@ export const inkSqAt = (s: InkSq, f: number) => {
 // --- the synthetic tiles ---------------------------------------------------------------
 export const TILE_S = 0.92;
 export const DX = 335;
-export const DY = 385;
+export const DY = 335; // no labels: one even lattice
 export const TILE_HALF = BLOCK_HALF * TILE_S; // 129.7
 export const DORMANT_OP = 0.35;
 export type RedSq = {
@@ -127,7 +126,7 @@ export type Tile = { gx: number; gy: number; cx: number; cy: number; rot: number
 export const WAVE_F0 = 87;
 export const WAVE_R0 = 150;
 export const WAVE_F1 = 124;
-export const WAVE_R1 = 680;
+export const WAVE_R1 = 643; // the farthest corner square (637.7) is reached on 123.6
 export const WAVE_V = (WAVE_R1 - WAVE_R0) / (WAVE_F1 - WAVE_F0);
 export const waveR = (f: number) => WAVE_R0 + WAVE_V * (f - WAVE_F0);
 const arriveAt = (d: number) => WAVE_F0 + (d - WAVE_R0) / WAVE_V;
@@ -191,33 +190,16 @@ export const HL_F1 = 178;
 export const HL_BAND = 58;
 export const hlR = (f: number) => WAVE_R0 - HL_BAND + (WAVE_R1 + 2 * HL_BAND - WAVE_R0) * clamp01((f - HL_F0) / (HL_F1 - HL_F0));
 
-// --- labels ------------------------------------------------------------------------------
-export const WORD_MIN = 46;
-export const SYN_MIN = 50;
-export const fsOf = (k: number, minPx: number) => Math.max(labelPx("word", k), minPx / k);
-export const capOf = (k: number, minPx: number) => 0.669 * fsOf(k, minPx);
-const GAP_MID = (OUT_HALF + (DY - TILE_HALF)) / 2; // the middle of the band between rows
-export const ENOUGH_Y = -GAP_MID;
-export const REAL_Y = GAP_MID;
-export const synY = (k: number) => -(DY + TILE_HALF) - 38 - capOf(k, SYN_MIN) / 2;
-export const ENOUGH_F = 20; // enterU finishes 4 f after its key: done on 24
-/** ENOUGH has happened: the label diffuses like ink as the solid pass completes. */
-export const ENOUGH_GONE_F0 = 80;
-export const ENOUGH_GONE_F1 = 92;
-export const REAL_F = 34; // done on 38
-export const SYN_F = 85; // done on 89
-
 // --- the camera: a creep, one long pull-back, a creep ------------------------------------------
 const K_OPEN0 = 2.3;
 const K_OPEN1 = 2.5;
 const K_WIDE = 0.955;
 const K_END = 1.0;
 const PRE = 24;
-const WIDE_LOOK = (synY(1) - capOf(1, SYN_MIN) / 2 + (DY + TILE_HALF)) / 2;
 const START: Cam = { x: 0, y: 0, k: K_OPEN0 };
 export const GLIDES: Glide[] = [
   { f0: -PRE, f1: 60, k: K_OPEN1 },
-  { f0: 55, f1: 93, dy: WIDE_LOOK, k: K_WIDE },
+  { f0: 55, f1: 93, k: K_WIDE },
   { f0: 96, f1: 200, k: K_END },
 ];
 const TRACK = runFollower((f) => glideTargetAt(START, GLIDES, f), -PRE, DURATION + 2).cams;
