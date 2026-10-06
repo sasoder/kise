@@ -11,6 +11,7 @@ import MosaicSocieties, {
 // Private render entry for MosaicSocieties (builder M): cut C of Si Sheppard,
 // "Regime change in Iraq was the easy part" — "Iraq and neighbors are mosaic
 // societies ... kill one or two more colors on that map ... and vice versa."
+// V2: the mosaic hand-tinted with PickAColor's washes (iraqMosaicWash).
 // Opaque Dwarkesh map style, 1080x1920, 24 fps, 561 frames (global g599-1159).
 const JoinRef: React.FC = () => {
   const f = useCurrentFrame();

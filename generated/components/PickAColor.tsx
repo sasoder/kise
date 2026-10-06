@@ -57,15 +57,24 @@ import {
   hash,
   makeCamTrack,
   makeRoute,
-  mixColor,
   swayCam,
   viewRect,
   type Cam,
   type P2,
 } from "./iraqShared";
 import { ABUnder, type ABFade } from "./iraqAB";
-import { MOSAIC_CLASS_D, MOSAIC_REGIONS, type MosaicClass } from "./iraqMosaic";
+import { MOSAIC_REGIONS, type MosaicClass } from "./iraqMosaic";
 import { MosaicLayer } from "./iraqMosaicLayer";
+import {
+  HATCH_OP,
+  MOSAIC_CLASS_LIST,
+  MUTE,
+  MosaicWash,
+  PEOPLED,
+  WASH,
+  WASH_FULL,
+  WASH_OP,
+} from "./iraqMosaicWash";
 import {
   OUT1,
   OUT2,
@@ -86,33 +95,10 @@ const ramp = (f: number, a: number, b: number) =>
   easeInOutSine((f - a) / (b - a));
 
 // ---------------------------------------------------------------------------
-// THE WASHES: muted, CIA-inspired, tuned for the dark page (old watercolour, never neon;
-// the sand is cream-leaning, never the house orange)
+// THE WASHES: iraqMosaicWash (shared with MosaicSocieties, so cuts 24 and 29 are one map)
 // ---------------------------------------------------------------------------
-export const WASH: Record<MosaicClass, string | null> = {
-  kurd: "#9A7E9C", // dusty mauve
-  sunni: "#C8B17E", // warm sand
-  sunniKurd: "#7E6A66", // smoky brown-mauve
-  shia: "#7C949A", // slate blue-grey
-  shiaSunni: "#5E7176", // deeper slate
-  turkoman: "#76628C", // muted violet
-  sparse: null, // bare land
-};
-const WASH_OP = 0.6; // a wash's body
-const WASH_FULL = 0.82; // the picked wash
-const POOL = 0.32; // the pooled rim's extra opacity
-const MUTE = 0.45; // P1: the others recede to this fraction
-const HATCH_OP = 0.42; // C's hatch printed over the washes
-const CLASSES: MosaicClass[] = [
-  "kurd",
-  "sunni",
-  "sunniKurd",
-  "shia",
-  "shiaSunni",
-  "turkoman",
-  "sparse",
-];
-const PEOPLED = CLASSES.filter((c) => WASH[c]);
+export { WASH };
+const CLASSES = MOSAIC_CLASS_LIST;
 
 // ---------------------------------------------------------------------------
 // TIMING (local frames)
@@ -240,42 +226,6 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const SEAM_TOUCH = (sm: { a: MosaicClass; b: MosaicClass }, c: MosaicClass) =>
   sm.a === c || sm.b === c;
 
-/** one class's watercolour wash: the body + a darker pooled rim just inside its edges */
-const Wash: React.FC<{ cls: MosaicClass; op: number; k: number }> = ({
-  cls,
-  op,
-  k,
-}) => {
-  const col = WASH[cls];
-  if (!col || op <= 0.002) return null;
-  const d = MOSAIC_CLASS_D[cls];
-  const pool = mixColor(col, "#1A120C", 0.3);
-  return (
-    <g>
-      <defs>
-        <clipPath id={`pkClip-${cls}`}>
-          <path d={d} clipRule="evenodd" />
-        </clipPath>
-      </defs>
-      <path d={d} fillRule="evenodd" fill={col} fillOpacity={op} />
-      <g clipPath={`url(#pkClip-${cls})`} fill="none" strokeLinejoin="round">
-        <path
-          d={d}
-          stroke={pool}
-          strokeOpacity={(POOL * 0.5 * op) / WASH_OP}
-          strokeWidth={22 / k}
-        />
-        <path
-          d={d}
-          stroke={pool}
-          strokeOpacity={(POOL * op) / WASH_OP}
-          strokeWidth={7 / k}
-        />
-      </g>
-    </g>
-  );
-};
-
 export const PickScene: React.FC<{ f: number }> = ({ f }) => {
   const c = camPick(f);
   const k = c.k;
@@ -388,7 +338,7 @@ export const PickScene: React.FC<{ f: number }> = ({ f }) => {
         </defs>
         {/* the washes (a struck one only where its front has not reached) */}
         {PEOPLED.map((cls) => {
-          const w = <Wash key={cls} cls={cls} op={washOp(cls)} k={k} />;
+          const w = <MosaicWash key={cls} cls={cls} op={washOp(cls)} k={k} />;
           return struck.some((d) => d.cls === cls) ? (
             <g key={cls} mask={`url(#pkKeep-${cls})`}>
               {w}

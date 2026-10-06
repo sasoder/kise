@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// MosaicSocieties: cut C of "Sheppard_Regime_change_in_Iraq_was_the_easy_part"
+// MosaicSocieties (V2): cut C of "Sheppard_Regime_change_in_Iraq_was_the_easy_part"
 // (Dwarkesh with Si Sheppard; Dwarkesh map style) on THE IRAQ WORLD (iraqShared,
 // builder W) + THE MOSAIC (iraqMosaic / iraqMosaicLayer, builder M). Builder M,
 // Oct 5 2026.
@@ -19,7 +19,14 @@
 // cut's moves added as deltas from B_END.camRest, all starting at g >= 600.
 //
 // ORANGE = WHAT AMERICA TAKES ON (Iraq is still "yours": the orange border stays).
-// The peoples are cream: each class of the CIA 2003 map its own engraved hatch.
+//
+// THE MATERIAL (V2, Oct 6 2026; the user: "change the 24 graphic so it's similar to
+// [29_PickAColor]"): the mosaic is HAND-TINTED exactly as in PickAColor, from the shared
+// module iraqMosaicWash: one translucent watercolour wash per class of the CIA 2003 map
+// (dusty mauve Kurd, warm sand Sunni Arab, smoky brown-mauve mix, slate Shia, deeper
+// slate mix, muted violet Turkoman; body 0.6 with a darker pooled rim inside each edge;
+// no wash on the desert), each class's engraved cream hatch printed over at 0.42 (the
+// desert's stipple 0.2), cream seams on top. Camera, timings and gestures are V1's.
 //
 // GESTURES (global frames; onsets in SPD/iraq/cut_frames.md):
 //  C1 "And here's what really is going on" g599-700: the orange hatch (Iraq's and
@@ -33,8 +40,8 @@
 //     cream rim at the 0.2 rung on their side of Iraq's border (g664-688).
 //  C3 "mosaic societies" g690-726: the mosaic inks in, region by region from the
 //     heart outward (each region a soft ink front from its point nearest the
-//     heart; starts by distance g690-702, all drawn by g726), each people at the
-//     full rung in its own hatch AND value (kurd densest, sunni medium, shia
+//     heart; starts by distance g690-702, all drawn by g726): each people's wash
+//     blooms in behind the front with its hatch (kurd densest, sunni medium, shia
 //     lighter, mixes crossed, turkoman dense small), the desert a stipple at 0.2.
 //     IRAQ recedes to 0.45 (g690-720).
 //  C4 "all these different peoples there" g722-758: the camera glides in
@@ -46,18 +53,19 @@
 //     g785-830, all drawn by "more" g901 (ink always travelling).
 //  C6 "more than national identities" g911-950: the orange national border thins
 //     (W_OBJ 4.2 -> 2.0 px) and dims to 0.35; the IRAQ label leaves with it.
-//  C7 "if you could pick a color on that map" g968-1004: every class but the
-//     Sunni Arab drops to 0.15 (the desert to 0.1) with its seams; the Sunni Arab
-//     patches stay full and their outline completes at 1.0 (their desert edges
-//     draw in from the middle, g972-1004). No names. Then one slow creep-in
+//  C7 "if you could pick a color on that map" g968-1004: the Sunni Arab sand wash
+//     deepens (0.6 -> 0.82) and its outline completes at 1.0 (its desert edges
+//     draw in from the middle, g972-1004); every other wash, hatch and seam
+//     recedes to ~45 % (still identifiable). No names. Then one slow creep-in
 //     (x1.06, g1000-1062) toward the picked patch's southern lobe.
 //  C8 "kill one or two" (kill g1054, one g1059, two g1068 per the word table):
 //     two short bold engraved strikes (2 -> 14 px shaft, tapered barbed head),
 //     drawn on, each launched inside the Sunni Arab patch near its edge and
 //     landing just inside the target: south across the Shia/Sunni belt west of
 //     Baghdad into the Shia Arab patch on "one" (g1050-1059), across the Kurd
-//     seam between Tikrit and Kirkuk on "two" (g1057-1068); each target and its
-//     seams lift to full as it is struck (12 f) and stay lit.
+//     seam between Tikrit and Kirkuk on "two" (g1057-1068); each target LIGHTS as
+//     it is struck (12 f): its wash to full (0.82), its hatch and seams back to
+//     full, and it stays lit (this cut keeps "and vice versa": nothing drains).
 //  C9 "And vice versa" (vice g1126, versa g1132): the return strikes, parallel
 //     counterparts 20 world px (~30 screen px) beside the outgoing ones, run back
 //     into the Sunni Arab patch (8 f, g1124-1132): two two-way exchanges.
@@ -117,6 +125,15 @@ import {
   regionFront,
   type MosaicClass,
 } from "./iraqMosaicLayer";
+import {
+  HATCH_OP,
+  MOSAIC_CLASS_LIST,
+  MUTE,
+  MosaicWashes,
+  SPARSE_HATCH_OP,
+  WASH_FULL,
+  WASH_OP,
+} from "./iraqMosaicWash";
 
 export const FPS = 24;
 export const IN = 599;
@@ -547,15 +564,7 @@ const NeighbourLift: React.FC<{ k: number; opacity: number }> = ({
 // ---------------------------------------------------------------------------
 // THE STATE at global frame g
 // ---------------------------------------------------------------------------
-const PEOPLES: MosaicClass[] = [
-  "kurd",
-  "sunni",
-  "sunniKurd",
-  "shia",
-  "shiaSunni",
-  "turkoman",
-  "sparse",
-];
+const PEOPLES = MOSAIC_CLASS_LIST;
 const IRAQ_LABEL_AT: P2 = [600, 870]; // cut A's spot (iraqAB)
 
 export const MosaicScene: React.FC<{ g: number }> = ({ g }) => {
@@ -565,7 +574,9 @@ export const MosaicScene: React.FC<{ g: number }> = ({ g }) => {
   const bOut = 1 - ramp(g, ...TC.baghdadOut);
   // C2
   const rim = ramp(g, ...TC.rim);
-  // C3 / C7 / C8: the classes' rungs (peoples at full from C3; the desert at 0.2)
+  // C3 / C7 / C8: the hand-tinted classes (PickAColor's material: wash 0.6, hatch 0.42,
+  // the desert's stipple 0.2); C7 the pick's wash deepens, the others recede to MUTE;
+  // C8 a struck class lights (wash to full, hatch back to full) and stays lit
   const pick = ramp(g, ...TC.pick);
   const hit1 = ramp(g, TC.arc1[1] - 2, TC.arc1[1] - 2 + TC.lift);
   const hit2 = ramp(g, TC.arc2[1] - 2, TC.arc2[1] - 2 + TC.lift);
@@ -573,16 +584,17 @@ export const MosaicScene: React.FC<{ g: number }> = ({ g }) => {
     c === "sunni" ? 1 : c === "shia" ? hit1 : c === "kurd" ? hit2 : 0;
   const classOpacity = Object.fromEntries(
     PEOPLES.map((c) => {
-      const rest = c === "sparse" ? RUNG.low : RUNG.full;
-      const low = c === "sparse" ? 0.1 : 0.15;
-      return [c, lerp(rest, lerp(low, rest, lit(c)), pick)];
+      const rest = c === "sparse" ? SPARSE_HATCH_OP : HATCH_OP;
+      return [c, lerp(rest, lerp(rest * MUTE, rest, lit(c)), pick)];
     }),
   ) as Record<MosaicClass, number>;
+  const washOp = (c: MosaicClass) =>
+    lerp(WASH_OP, lerp(WASH_OP * MUTE, WASH_FULL, lit(c)), pick);
   const reveal = g >= TC.mosaic[0] ? revealAt(g) : null;
-  // C5 (+ C7: the seams not touching a lit class recede to 0.15; the Sunni Arab patches'
+  // C5 (+ C7: the seams not touching a lit class recede to MUTE; the Sunni Arab patches'
   // desert edges draw in, so the pick has its whole outline at full)
   const seamState = (sm: { id: number; a: MosaicClass; b: MosaicClass }) => {
-    const on = lerp(1, lerp(0.15, 1, Math.max(lit(sm.a), lit(sm.b))), pick);
+    const on = lerp(1, lerp(MUTE, 1, Math.max(lit(sm.a), lit(sm.b))), pick);
     const q = SEAM_BY_ID[sm.id];
     if (q) {
       const p = clamp01(((g - SEAM_T0[q.id]) * PEN) / q.len);
@@ -621,7 +633,16 @@ export const MosaicScene: React.FC<{ g: number }> = ({ g }) => {
         {/* B's under-layers (land lift, rivers, neighbours' borders, the orange hatches fading: C1) */}
         <ABUnder g={g} cam={cam} fade={fade} />
         <NeighbourLift k={k} opacity={rim} />
-        {/* the mosaic (C3-C9) */}
+        {/* the mosaic (C3-C9): the washes, then the hatch and the seams printed over */}
+        {reveal ? (
+          <MosaicWashes
+            k={k}
+            idPrefix="msW"
+            op={washOp}
+            reveal={reveal}
+            revealOrigin={HEART}
+          />
+        ) : null}
         {reveal ? (
           <MosaicLayer
             k={k}
