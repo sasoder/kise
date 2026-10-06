@@ -61,7 +61,7 @@ export const schema = z.object({
 export type NameTagCheekyPintProps = z.infer<typeof schema>;
 export const defaultProps: NameTagCheekyPintProps = schema.parse({
   name: "Toto Wolff",
-  job: "CEO of Mercedes F1 team",
+  job: "Mercedes-AMG PETRONAS F1\nTeam Principal and CEO",
   variant: "strips",
 });
 
@@ -227,7 +227,8 @@ loadFont({ family: FONT_NAME_HEAVY, url: staticFile("Sohne-Dreiviertelfett.otf")
 // 492 px), so it is 38 (482 px): the narrower card under the name.
 const STRIP_JOB_PX = 38;
 const stripNameStyle: React.CSSProperties = { ...nameStyle, fontFamily: FONT_NAME_HEAVY, fontWeight: 700 };
-const stripJobStyle: React.CSSProperties = { ...jobStyle, fontFamily: FONT_NUM, fontWeight: 600, fontSize: STRIP_JOB_PX };
+// A long job breaks where the prop has a "\n" (v3, the client's full title on two lines).
+const stripJobStyle: React.CSSProperties = { ...jobStyle, fontFamily: FONT_NUM, fontWeight: 600, fontSize: STRIP_JOB_PX, whiteSpace: "pre" };
 
 // The entrance (the house name tag's, at 24 fps).
 const EASE = Easing.bezier(0.16, 1, 0.3, 1);
