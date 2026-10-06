@@ -47,7 +47,7 @@
 //     swoopShapeOf(from, c1, c2, to) -> the cubic's shape in its chord's frame;
 //     makeSwoop(from, to, shape) -> { pts, cum, len, pointAt } that shape laid
 //     on another chord by a similarity (so two swoops are the same gesture);
-//     <Swoop path cam head tail opacity /> the tapering engraved stroke between
+//     <Swoop path cam head tail opacity width? /> the tapering engraved stroke between
 //     arclengths tail..head (22 px at its head) with 3 fine trailing hatch lines
 // ---------------------------------------------------------------------------
 import React from "react";
@@ -461,9 +461,17 @@ export const makeSwoop = (from: P2, to: P2, shape: SwoopShape, n = 140): SwoopPa
  *  (SWOOP_W screen px at its head, a point at its tail) and three fine hatch
  *  lines trailing on its outer side */
 export const SWOOP_W = 22;
-export const Swoop: React.FC<{ path: SwoopPath; cam: Cam; head: number; tail: number; opacity?: number }> = ({ path, cam, head, tail, opacity = 1 }) => {
+export const Swoop: React.FC<{ path: SwoopPath; cam: Cam; head: number; tail: number; opacity?: number; width?: number }> = ({
+  path,
+  cam,
+  head,
+  tail,
+  opacity = 1,
+  width = SWOOP_W,
+}) => {
   if (opacity <= 0.004 || head - tail < 0.5) return null;
   const k = cam.k;
+  const sc = width / SWOOP_W; // (added for V2) a lighter stroke scales its blade, hatch offsets and lags
   const M = 44;
   const left: P2[] = [];
   const right: P2[] = [];
@@ -472,7 +480,7 @@ export const Swoop: React.FC<{ path: SwoopPath; cam: Cam; head: number; tail: nu
     const s = tail + (head - tail) * u;
     const p = path.pointAt(s);
     const nrm = path.normalAt(s);
-    const hw = ((SWOOP_W / 2) * Math.pow(u, 1.25)) / k;
+    const hw = ((width / 2) * Math.pow(u, 1.25)) / k;
     left.push([p[0] + nrm[0] * hw, p[1] + nrm[1] * hw]);
     right.push([p[0] - nrm[0] * hw, p[1] - nrm[1] * hw]);
   }
@@ -483,7 +491,7 @@ export const Swoop: React.FC<{ path: SwoopPath; cam: Cam; head: number; tail: nu
   const a = path.pointAt(head - 0.5);
   const fwd = (hp[0] - a[0]) * tng[0] + (hp[1] - a[1]) * tng[1] >= 0 ? 1 : -1;
   const nose: P2[] = [];
-  const R = SWOOP_W / 2 / k;
+  const R = width / 2 / k;
   for (let i = 1; i < 8; i++) {
     const th = (i / 8) * Math.PI;
     nose.push([hp[0] + hn[0] * R * Math.cos(th) + fwd * tng[0] * R * Math.sin(th), hp[1] + hn[1] * R * Math.cos(th) + fwd * tng[1] * R * Math.sin(th)]);
@@ -496,14 +504,14 @@ export const Swoop: React.FC<{ path: SwoopPath; cam: Cam; head: number; tail: nu
     { off: 40, lag: 70, from: 0.3 },
   ].map(({ off, lag, from }) => {
     const s0 = tail + (head - tail) * from;
-    const s1 = head - lag / k;
+    const s1 = head - (lag * sc) / k;
     if (s1 - s0 < 4 / k) return "";
     const pts: P2[] = [];
     for (let i = 0; i <= 28; i++) {
       const s = s0 + ((s1 - s0) * i) / 28;
       const p = path.pointAt(s);
       const nrm = path.normalAt(s);
-      pts.push([p[0] + (nrm[0] * off) / k, p[1] + (nrm[1] * off) / k]);
+      pts.push([p[0] + (nrm[0] * off * sc) / k, p[1] + (nrm[1] * off * sc) / k]);
     }
     return `M${pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join("L")}`;
   });
