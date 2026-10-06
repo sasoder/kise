@@ -618,6 +618,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("project"); ap.add_argument("assembly"); ap.add_argument("out")
     ap.add_argument("--sequence"); ap.add_argument("--allow-running", action="store_true")
+    ap.add_argument("--motion-donor", help="a Premiere-saved .prproj whose stored Motion blob is copied verbatim when SOURCE "
+                                           "has none (a project whose clips all use default Motion stores no Motion component)")
     a = ap.parse_args()
     if not a.allow_running and premiere_running():
         sys.exit("Premiere Pro is running. Close it first (a later save from an open copy would overwrite edits), or pass --allow-running.")
@@ -631,7 +633,16 @@ def main():
     p = Project(text)
     asm = json.load(open(a.assembly))
 
-    mod_state, motion_hash = reusable_blobs(p)            # stills: ModificationState + Motion blobs stored in SOURCE
+    donor_motion = None
+    if a.motion_donor and '<MatchName>AE.ADBE Motion</MatchName>' not in text:
+        # SOURCE stores no Motion component: take Premiere's own Motion blob element (hash + content) from the donor, verbatim
+        draw = open(a.motion_donor, "rb").read()
+        dtext = gzip.decompress(draw).decode("utf-8") if draw[:2] == b"\x1f\x8b" else draw.decode("utf-8")
+        m = next(m for m in re.finditer(r'<PremiereFilterPrivateData Encoding="base64" BinaryHash="([0-9a-f-]+)">([^<]+)</PremiereFilterPrivateData>(?=\s*<VideoFilterType>2</VideoFilterType>\s*<MatchName>AE\.ADBE Motion</MatchName>)', dtext))
+        donor_motion = (m.group(1), m.group(0))
+        mod_state, motion_hash = media_mod_state(stored_blobs(p)), donor_motion[0]
+    else:
+        mod_state, motion_hash = reusable_blobs(p)        # stills: ModificationState + Motion blobs stored in SOURCE
     mov_state = media_mod_state(stored_blobs(p))          # .mov: the same kind of ModificationState blob
 
     seq = next(s for s in p.root if s.tag == "Sequence" and a.sequence in (None, s.findtext("Name")))
@@ -824,6 +835,11 @@ def main():
     bump_next_id(p)
     p.blocks += new_blocks
     out = p.text()
+    if donor_motion:  # the first new Motion component stores the blob's content, exactly as Premiere writes it once per project
+        ref = f'<PremiereFilterPrivateData Encoding="base64" BinaryHash="{donor_motion[0]}"/>'
+        if ref not in out:
+            sys.exit("internal: no Motion blob reference to give the donor content to")
+        out = out.replace(ref, donor_motion[1], 1)
     ET.fromstring(out.encode("utf-8"))  # must still parse
     if " />" in "\n".join(new_blocks):
         sys.exit("internal: ' />' in a new block")
