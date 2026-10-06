@@ -25,6 +25,7 @@ import {
   smoothstep,
   sz,
 } from "./chinatalkShared";
+import { TITAN_PHOTO } from "./titanPhotoData";
 import {
   CARD_BOT,
   CARD_CY,
@@ -61,6 +62,7 @@ import {
   NODE_R,
   N_SQUARES,
   PATH_LEN,
+  PHOTO_PX_H,
   PITCH,
   REST_CAM,
   ROWS,
@@ -90,37 +92,39 @@ export { DURATION, FPS };
 // if we could 168-174 · pre-train 174-186 · models 186-194 · let's see if we
 // could 197-217 · do 219 · some 227 · things 231-238.
 //
-// IDEA: one vertical column on x 540, three things. The newspaper card (the
-// TITAN capability) at the top; it is not here yet, so its paper diffuses away
-// and only a dashed outline is left. Below it a model is trained by a file of
-// red synthetic squares rising up the centre axis; the trained model then
-// reaches up to the dashed card with a dashed line: ready and waiting.
-// RED = synthetic data only. Element types: card, dashed outline / link,
-// lattice, red squares, labels. One stroke weight. Geometry, clocks and the
-// camera live in titanPreTrainGeom.ts.
+// IDEA: one vertical column on x 540, three things. The news card (the TITAN
+// capability: the Axios story of Aug 7 2024 with its lead photo of the
+// prototype truck) at the top; it is not here yet, so its paper diffuses away,
+// the photo fades to a grey ghost and only a dashed outline is left. Below it a
+// model is trained by a file of red synthetic squares rising up the centre
+// axis; the trained model then reaches up to the dashed card with a dashed
+// line: ready and waiting. RED = synthetic data only. Element types: card,
+// dashed outline / link, lattice, red squares, labels. One stroke weight.
+// Geometry, clocks and the camera live in titanPreTrainGeom.ts; the photo is
+// inlined as a data URL in titanPhotoData.ts.
 //
 // GESTURES (gesture -> word -> local frames)
 // 1. "around 2022 when I was supporting the TITAN program" (0-65): the card
-//    (ink rule + BREAKING DEFENSE + date, a 3-line headline, nothing else)
-//    slides up 40 px, fades and clears its blur over f 0-12 (already under way
-//    on f 0), headline lines 2 f apart; on "2022" the date June 2022 comes up
-//    from ink 0.42 to 0.90 (6-18, one crossfade); the card holds with a slow
-//    creep (k x1.04, to f 71); the wet ink underline is written under TITAN on
-//    "TITAN" (46-55).
+//    (ink rule + AXIOS + date, the verbatim 2-line headline "Palantir sends
+//    AI-fueled TITAN prototype to Army", the photo edge to edge below) slides up
+//    40 px, fades and clears its blur over f 0-12 (already under way on f 0),
+//    headline lines 2 f apart; it holds with a slow creep (k x1.04, to f 71);
+//    the wet ink underline is written under TITAN on "TITAN" (46-55).
 // 2. "So before we even" (59-93): ONE glide: the card eases up to the top of
-//    the composition and shrinks (880 -> ~630 px wide, top edge y 300). Scale
+//    the composition and shrinks (880 -> ~560 px wide, top edge y 300). Scale
 //    only, no content swap.
-// 3. "fielded" (85-116): the card's paper face and shadow diffuse away like ink
-//    (89-109) while a dashed outline writes itself round the same rectangle from
-//    the top centre down both sides (85-116, marching); the headline and date
-//    drop to ink 0.42 (91-103). NOT YET FIELDED lands on 89, centred under the card.
+// 3. "fielded" (84-117): the card's paper face and shadow diffuse away like ink
+//    and the photo desaturates to a faint grey ghost (89-109) while a dashed
+//    outline writes itself round the same rectangle from the top centre down
+//    both sides (84-117, marching); the headline drops to ink 0.42 (91-103).
+//    NOT YET FIELDED lands on 89, centred under the card.
 // 4. "some of these capabilities, I'm like, hey" (115-153): ONE tilt down
-//    (glide 115-153); the model lattice (3-4-3 rows, ink 0.42, 520 px wide)
+//    (glide 115-153); the model lattice (3-4-3 rows, ink 0.42, 460 px wide)
 //    writes in from the bottom up in one soft wave (129-153); the red file
 //    starts rising from below (f 130 on).
 // 5. "let's see if we could pre-train models" (154-194): the red squares rise
-//    straight up the centre axis into the input row (first arrives ~f 159); with
-//    each arrival the ink 0.90 front climbs one step bottom -> top (full ~f 185).
+//    straight up the centre axis into the input row (first arrives ~f 156); with
+//    each arrival the ink 0.90 front climbs one step bottom -> top (full ~f 183).
 //    PRE-TRAIN lands on 174 at the lattice's left shoulder.
 // 6. "let's see if we could do some things" (193-245): a dashed line writes
 //    itself from the model's top node straight up to the card's foot (197-217,
@@ -136,21 +140,22 @@ export const defaultProps: Props = schema.parse({});
 const SANS = loadSourceSans3("normal", { weights: ["400", "700"], subsets: ["latin"] }).fontFamily;
 
 const WORD_MIN = 46;
+/** the photo's ghost inside the dashed outline (grayscale) */
+const PHOTO_GHOST = 0.16;
 /** dashes march faster than the house default so a hold visibly moves */
 const MARCH = 2.6;
 const lineD = (a: Pt, b: Pt) => `M${a.x.toFixed(2)} ${a.y.toFixed(2)}L${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
 
 // --- the news card -----------------------------------------------------------------
-const PAD = 58;
+const PAD = 48;
 const HEAD_PX = 64;
-const HEAD_Y0 = 218;
+const HEAD_Y0 = 198;
 const HEAD_LEAD = 78;
-const HEAD_LINES = ["Army moves ahead with", "Palantir and Raytheon"];
-// line 3 is set in two runs so TITAN's box is known (for its underline)
-const LINE3_A = "for next phase of";
-const LINE3_A_W = 513;
-const TITAN_X = PAD + LINE3_A_W + 16;
-const TITAN_W = 197;
+const HEAD_LINE1 = "Palantir sends AI-fueled";
+const HEAD_LINE2_REST = " prototype to Army";
+// TITAN opens line 2, so its box is known (for its underline)
+const TITAN_W = 200;
+const PHOTO_Y = CARD_PX_H - PHOTO_PX_H;
 const DEBUG_MEASURE = false;
 
 const NewsCard: React.FC<{ f: number; k: number; rung: number }> = ({ f, k, rung }) => {
@@ -160,23 +165,24 @@ const NewsCard: React.FC<{ f: number; k: number; rung: number }> = ({ f, k, rung
   const slide = (40 / k) * (1 - e);
   const blur = 5 * (1 - e);
   const op = 0.3 + 0.7 * smoothstep(u);
-  // "fielded": the paper face and its shadow diffuse away like ink
+  // "fielded": the paper face and its shadow diffuse away like ink, and the photo goes
+  // with them: it desaturates and fades to a faint ghost inside the dashed outline
   const gone = clamp01((f - FACE_F0) / (FACE_F1 - FACE_F0));
   const faceOp = 1 - smoothstep(gone);
   const faceBlur = 14 * easeOutCubic(gone);
+  const photoOp = 1 - (1 - PHOTO_GHOST) * smoothstep(gone);
+  const gray = smoothstep(gone / 0.7);
   const ink = rung / INK_HI;
-  // "2022": the date comes up from context to full ink (one eased 12 f crossfade)
-  const dateRung = INK_LO + (INK_HI - INK_LO) * smoothstep((f - 6) / 12);
   const lineY = (i: number) => HEAD_Y0 + i * HEAD_LEAD;
-  const lineU = (i: number) => clamp01((f + 3 - 2 * i) / 13);
+  const lineU = (i: number) => clamp01((f + 4 - 2 * i) / 14);
   const lineProps = (i: number) => ({
     y: lineY(i) + 18 * (1 - easeOutCubic(lineU(i))),
     fillOpacity: (INK_HI * (0.6 + 0.4 * smoothstep(lineU(i)))).toFixed(4),
   });
   // the wet underline under TITAN, written on the word
   const ul = smoothstep((f - 46) / 9);
-  const ulY = lineY(2) + 15;
-  const ulX = TITAN_X + TITAN_W * ul;
+  const ulY = lineY(1) + 15;
+  const ulX = PAD + 2 + (TITAN_W - 4) * ul;
   const ulBead = smoothstep((f - 45) / 2) * (1 - smoothstep((f - 54) / 5));
   return (
     <g
@@ -184,42 +190,64 @@ const NewsCard: React.FC<{ f: number; k: number; rung: number }> = ({ f, k, rung
       opacity={op < 1 ? op.toFixed(4) : undefined}
       style={blur > 0.02 ? { filter: `blur(${blur.toFixed(2)}px)` } : undefined}
     >
+      <defs>
+        <clipPath id="tpt-card">
+          <rect x={0} y={0} width={CARD_PX_W} height={CARD_PX_H} rx={4} />
+        </clipPath>
+      </defs>
       {faceOp > 0.002 ? (
         <g opacity={faceOp.toFixed(4)} style={{ filter: `${faceBlur > 0.05 ? `blur(${faceBlur.toFixed(2)}px) ` : ""}drop-shadow(0 10px 24px rgba(70,35,15,0.20))` }}>
           <rect x={0} y={0} width={CARD_PX_W} height={CARD_PX_H} rx={4} fill="#FFFFFF" />
         </g>
       ) : null}
+      {/* the article's lead photo, edge to edge under the headline */}
+      <g clipPath="url(#tpt-card)" opacity={photoOp.toFixed(4)} style={gray > 0.002 ? { filter: `grayscale(${gray.toFixed(3)})` } : undefined}>
+        <image href={TITAN_PHOTO} x={0} y={PHOTO_Y} width={CARD_PX_W} height={PHOTO_PX_H} preserveAspectRatio="xMidYMid slice" />
+        {gone < 1 ? (
+          <text
+            x={18}
+            y={CARD_PX_H - 16}
+            fontFamily={SANS}
+            fontWeight={400}
+            fontSize={22}
+            fill="#FFFFFF"
+            fillOpacity={(0.85 * (1 - smoothstep(gone / 0.5))).toFixed(4)}
+            style={{ textShadow: "0 1px 3px rgba(0,0,0,0.55)" }}
+          >
+            Photo: U.S. Army
+          </text>
+        ) : null}
+      </g>
       <g opacity={ink.toFixed(4)}>
-        <rect x={PAD} y={92} width={48} height={8} fill={INK} opacity={INK_HI} />
-        <text x={PAD + 66} y={106} fontFamily={SANS} fontWeight={700} fontSize={27} letterSpacing="0.1em" fill={INK} fillOpacity={INK_HI}>
-          BREAKING DEFENSE
+        <rect x={PAD} y={86} width={48} height={8} fill={INK} opacity={INK_HI} />
+        <text x={PAD + 66} y={100} fontFamily={SANS} fontWeight={700} fontSize={27} letterSpacing="0.1em" fill={INK} fillOpacity={INK_HI}>
+          AXIOS
         </text>
-        <text x={CARD_PX_W - PAD} y={106} fontFamily={SANS} fontWeight={400} fontSize={27} textAnchor="end" fill={INK} fillOpacity={dateRung.toFixed(4)}>
-          June 2022
+        <text x={CARD_PX_W - PAD} y={100} fontFamily={SANS} fontWeight={400} fontSize={27} textAnchor="end" fill={INK} fillOpacity={INK_LO / ink}>
+          Aug 7, 2024
         </text>
         <g fontFamily={FONT_SERIF} fontWeight={700} fontSize={HEAD_PX} letterSpacing="-0.01em" fill={INK}>
-          {HEAD_LINES.map((line, i) => (
-            <text key={i} x={PAD} {...lineProps(i)}>
-              {line}
-            </text>
-          ))}
+          <text x={PAD} {...lineProps(0)}>
+            {HEAD_LINE1}
+          </text>
           {DEBUG_MEASURE ? (
-            <text x={PAD} y={lineY(2)}>
-              {LINE3_A} <tspan fill="#FF0000">TITAN</tspan>
+            <text x={PAD} y={lineY(1)}>
+              <tspan fill="#FF0000">TITAN</tspan>
+              {HEAD_LINE2_REST}
             </text>
           ) : (
             <>
-              <text x={PAD} {...lineProps(2)} textLength={LINE3_A_W} lengthAdjust="spacing">
-                {LINE3_A}
-              </text>
-              <text x={TITAN_X} {...lineProps(2)} textLength={TITAN_W} lengthAdjust="spacing">
+              <text x={PAD} {...lineProps(1)} textLength={TITAN_W} lengthAdjust="spacing">
                 TITAN
+              </text>
+              <text x={PAD + TITAN_W} {...lineProps(1)} style={{ whiteSpace: "pre" }}>
+                {HEAD_LINE2_REST}
               </text>
             </>
           )}
         </g>
         {ul > 0.001 ? (
-          <path d={`M${TITAN_X + 2} ${ulY}L${ulX.toFixed(2)} ${ulY}`} stroke={INK} strokeOpacity={INK_HI} strokeWidth={6} strokeLinecap="round" fill="none" />
+          <path d={`M${PAD + 2} ${ulY}L${ulX.toFixed(2)} ${ulY}`} stroke={INK} strokeOpacity={INK_HI} strokeWidth={6} strokeLinecap="round" fill="none" />
         ) : null}
         {ulBead > 0.01 ? <circle cx={ulX.toFixed(2)} cy={ulY} r={6.5} fill={INK} opacity={ulBead.toFixed(4)} /> : null}
       </g>

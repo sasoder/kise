@@ -45,9 +45,6 @@ import {
   N_FILE,
   PATH_LEN,
   PATH_PTS,
-  REAL_LABEL_S,
-  REAL_LABEL_Y,
-  REAL_MIN_PX,
   REST_CAM,
   RING_LEN,
   RING_PHI0,
@@ -122,19 +119,19 @@ export { DURATION, FPS };
 //    are re-written at ink 0.90 from the side facing the bead (two tips, 16 f,
 //    outer -> inner 3 f apart) and its label lands (62 / 76 / 95). The ring
 //    closes at f 94.6.
-// 4. "real-world stuff" (99-125): REAL WORLD lands under the closed ring on
-//    "real" (f 99-111). A file of seven red squares travels down the dashed
-//    line and fans out along the rim, outside it, outermost first, to seven
-//    evenly spread slots; the outer two sit straight above the outer domains.
+// 4. "real-world stuff" (99-125): the Department of War seal (official art,
+//    full colour, a world object ~280 screen px across) slides up 24 px +
+//    fades + blur clears in the ring's lower half, landing on "real" (f 99-111):
+//    it names the real world / the context. A file of seven red squares
+//    travels down the dashed line and fans out along the rim, outside it,
+//    outermost first, to seven evenly spread slots; the outer two sit straight
+//    above the outer domains.
 // 5. "that we're talking about in this context" (134-175): from the rim squares
 //    above each domain three parallel dashed red links drop straight down and
 //    stop 24 screen px above the domain's outer ring, left -> right 5 f apart
 //    (134-156, 139-167, 144-166), open ends, dashes marching; the squares
 //    gently ride the rim; a slow creep (k 1.2 -> 1.23) decays into the last
 //    frame. An open question, still moving.
-// 6. "in this context" (150-163): the Department of War seal (official art,
-//    full colour, a world object ~250 screen px across) slides up 24 px +
-//    fades + blur clears in the ring's empty lower half, in by "context".
 // ---------------------------------------------------------------------------
 
 export const schema = z.object({});
@@ -247,7 +244,6 @@ const HowUsefulRealWorld: React.FC<Props> = () => {
           minPx={LABEL_MIN_PX}
         />
       ))}
-      <Label text="REAL WORLD" x={0} y={REAL_LABEL_Y} k={k} size="word" rung={INK_HI} appear={enterU(S, REAL_LABEL_S)} minPx={REAL_MIN_PX} />
 
       {/* everything red: synthetic data */}
       <g style={{ filter: paperShadow(k) }}>

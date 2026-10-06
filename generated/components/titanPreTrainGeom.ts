@@ -17,22 +17,24 @@ export const DURATION = 245;
 export const W = 5.6;
 export const CX = 540;
 
-// --- the card: 880 x 470 screen px at the open, 560 wide in the final column ----
+// --- the card: 880 x 820 screen px at the open (header + headline over a 16:9 photo),
+// 500 wide in the final column
 export const CARD_PX_W = 880;
-export const CARD_PX_H = 470;
-export const CARD_W = 560;
+export const PHOTO_PX_H = 495;
+export const CARD_PX_H = 820;
+export const CARD_W = 500;
 export const K0 = CARD_PX_W / CARD_W;
 export const CARD_H = CARD_PX_H / K0;
-export const CARD_TOP = 290;
+export const CARD_TOP = 275;
 export const CARD_BOT = CARD_TOP + CARD_H;
 export const CARD_CY = CARD_TOP + CARD_H / 2;
 
 // --- the column: card -> label -> model, equal gaps ------------------------------
 /** card foot -> the model's top edge; the label sits exactly half way */
-export const GAP = 290;
+export const GAP = 224;
 export const NODE_R = 20;
-export const NODE_DX = 160;
-export const ROW_DY = 125;
+export const NODE_DX = 140;
+export const ROW_DY = 95;
 export const LABEL_Y = CARD_BOT + GAP / 2;
 /** rows top -> bottom: output (3), hidden (4), input (3) */
 export const ROW_Y = [0, 1, 2].map((r) => CARD_BOT + GAP + NODE_R + r * ROW_DY);
@@ -45,9 +47,9 @@ export const MODEL_X1 = CX + 1.5 * NODE_DX + NODE_R;
 export const MODEL_Y0 = ROW_Y[0] - NODE_R;
 export const MODEL_Y1 = ROW_Y[2] + NODE_R;
 /** the dashed link: from the model's top node up to the card's foot (broken round the label) */
-export const LINK_Y0 = MODEL_Y0 - 10;
-export const LINK_Y1 = CARD_BOT + 10;
-export const LABEL_CLEAR = 34;
+export const LINK_Y0 = MODEL_Y0 - 6;
+export const LINK_Y1 = CARD_BOT + 6;
+export const LABEL_CLEAR = 27;
 
 // --- the red file (synthetic data): straight up the centre axis --------------------
 export const SQ = 30;
@@ -109,8 +111,8 @@ export const TRAIN_DONE_F = TRAIN_ARRIVALS[N_TRAIN - 1] + TRAIN_STEP_F;
 export const FACE_F0 = 89;
 export const FACE_F1 = 109;
 /** ... while the dashed outline writes itself round the same rectangle */
-export const FRAME_F0 = 85;
-export const FRAME_F1 = 116;
+export const FRAME_F0 = 84;
+export const FRAME_F1 = 117;
 /** the headline drops to context */
 export const CONTEXT_F = 91;
 /** the model writes in from the bottom up */
@@ -122,8 +124,8 @@ export const LINK_F1 = 217;
 
 // --- the camera: creep, pull-back, tilt down, final column ---------------------------
 const lookFor = (wy: number, sy: number, k: number): Cam => ({ x: CX, y: wy - (sy - 835) / k, k });
-/** the open: the card 880 px wide, centred (540, 800) */
-export const CAM_START: Cam = lookFor(CARD_CY, 800, K0);
+/** the open: the card 880 px wide, centred (540, 820) */
+export const CAM_START: Cam = lookFor(CARD_CY, 820, K0);
 const K_CREEP = K0 * 1.04;
 const K_UP = 1.12;
 const K_TILT = 1.04;

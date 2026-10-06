@@ -64,7 +64,8 @@ export const D = 880;
 export const R = 350;
 // --- the camera: creep, one long travel (zoom-out leading), a decaying creep ----
 export const CAM_START: Cam = { x: 0, y: -14, k: 2.58 };
-export const LOOK_END_Y = D + 14;
+/** the ring + rim squares, centred (content centre lands at screen y 835) */
+export const LOOK_END_Y = D - 20;
 export const GLIDES: Glide[] = [
   // "How useful is this": slow creep in on the block being written
   { f0: -14, f1: 18, k: 2.64 },
@@ -87,7 +88,7 @@ export type Domain = { name: string; x: number; y: number; phi: number };
 /** one row on the ring's centre line, in spoken order; phi = clockwise angle
  *  from the top of the big ring (deg) of the rim point where the bead lights it */
 export const DOMAIN_X = 225;
-export const DOMAIN_Y = D - 35;
+export const DOMAIN_Y = D - 60;
 export const DOMAINS: Domain[] = [
   { name: "TARGETING", x: -DOMAIN_X, y: DOMAIN_Y, phi: -90 },
   { name: "AUTONOMY", x: 0, y: DOMAIN_Y, phi: 180 },
@@ -264,18 +265,15 @@ export const linkDraw = (l: Link, S: number) => {
 
 // --- the context: the Department of War seal in the ring's lower half ----------
 export const SEAL_SRC = "bharat/dow_seal.png";
-export const SEAL_Y = D + 216;
-/** world diameter (~250 screen px at the final framing) */
-export const SEAL_D = 204;
-/** enters like text from here, fully in by "context" (163) */
-export const SEAL_S = 150;
+export const SEAL_Y = D + 203;
+/** world diameter (~280 screen px at the final framing) */
+export const SEAL_D = 228;
+/** enters like text from here, fully in by f 111, on "real-world" (107) */
+export const SEAL_S = 99;
 
 // --- labels ---------------------------------------------------------------------
 export const SYNTH_LABEL_Y = -BLOCK_HALF_H - 30;
 export const SYNTH_LABEL_S = 28;
-export const REAL_LABEL_Y = D + R + 48;
-export const REAL_LABEL_S = 107;
 export const DOMAIN_LABEL_LAND = [62, 76, 95];
 export const LABEL_MIN_PX = 40;
-export const REAL_MIN_PX = 50;
 
