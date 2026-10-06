@@ -713,14 +713,28 @@ export const RansomTableau: React.FC<{ state: RansomState; cam: Cam; frame?: num
         <Heap fill={s.fill} uid={`${uid}-heap`} />
         {s.dim > 0.003 && s.fill > 0.01 ? (
           <g>
-            <filter id={`${uid}-soft`} x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation={13} />
+            {/* his silhouette in the page colour, between heap and figure: a 7 px casing + the heap down to 0.72 in a soft ~45 px margin */}
+            <filter id={`${uid}-soft`} filterUnits="userSpaceOnUse" x={EMPEROR_AT[0] - 240} y={EMPEROR_AT[1] - 460} width={480} height={520}>
+              <feMorphology in="SourceAlpha" operator="dilate" radius={30} result="wide" />
+              <feGaussianBlur in="wide" stdDeviation={9} result="margin" />
+              <feFlood floodColor={LAND} floodOpacity={0.28} />
+              <feComposite in2="margin" operator="in" result="dimmed" />
+              <feMorphology in="SourceAlpha" operator="dilate" radius={6.5} result="near" />
+              <feGaussianBlur in="near" stdDeviation={0.7} result="edge" />
+              <feFlood floodColor={mixColor(LAND, DARK, 0.25)} floodOpacity={1} />
+              <feComposite in2="edge" operator="in" result="casing" />
+              <feMerge>
+                <feMergeNode in="dimmed" />
+                <feMergeNode in="casing" />
+              </feMerge>
             </filter>
             <clipPath id={`${uid}-lvl`}>
-              <rect x={ROOM.x0} y={levelY} width={ROOM.x1 - ROOM.x0} height={ROOM.floorY - levelY} />
+              <rect x={ROOM.x0} y={levelY} width={ROOM.x1 - ROOM.x0} height={ROOM.floorY - levelY + 12} />
             </clipPath>
-            <g clipPath={`url(#${uid}-lvl)`}>
-              <ellipse cx={EMPEROR_AT[0]} cy={EMPEROR_AT[1] - 178} rx={104} ry={196} fill={LAND} opacity={s.dim} filter={`url(#${uid}-soft)`} />
+            <g clipPath={`url(#${uid}-lvl)`} opacity={Math.min(1, s.dim / 0.5)}>
+              <g filter={`url(#${uid}-soft)`}>
+                <Emperor pose={s.pose} variant="inca" tone={1} uid={`${uid}-ec`} />
+              </g>
             </g>
           </g>
         ) : null}
