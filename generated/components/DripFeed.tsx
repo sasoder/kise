@@ -5,6 +5,8 @@ import {
   ACCENT,
   BRATTAHLID,
   DARK,
+  INK,
+  INK_CONTEXT,
   LAND,
   LANSE,
   Longhouse,
@@ -200,7 +202,7 @@ const dropQ = (d: Drop, f: number) => {
   return { q: -BRAKE_AT + p, settle: u };
 };
 // tiny plain beads between the three: the frame each one reaches the hall
-const BEAD_HALL = [9, 44, 80, 118, 131, 144, 157, 170, 183, 196, 209, 222, 235, 248, 261, 274, 287];
+export const BEAD_HALL = [9, 44, 80, 118, 131, 144, 157, 170, 183, 196, 209, 222, 235, 248, 261, 274, 287];
 const BEAD = { vEnd: 19, acc: 0.34 };
 const BEAD_R = 5.6; // screen px
 
@@ -397,9 +399,32 @@ export const cameraAt = makeCamera([
   { f: 200, k: 1.075, wx: LANSE[0], wy: LANSE[1], sx: 856, sy: 748 },
 ]);
 
-const DripFeed: React.FC<Props> = ({ vignette, glyphInk }) => {
-  const frame = useCurrentFrame();
+/**
+ * What DripFeedLong (47_DripFeed.mov) adds BEFORE this cut's f0; absent (undefined) the scene is this cut's own.
+ *   headS   how far the orange line has been redrawn from Greenland (world px along the route); ahead of it
+ *           the route is cut D's faint cream dashed trace, and nothing rides the line there
+ *   nib     0..1 the pen's nib at the head of the line
+ *   hallLit 0 cut D's cream ghost .. 1 the hall alight in orange
+ */
+export type Prelude = { headS: number; nib: number; hallLit: number };
+/** cut D leaves the hall a cream ghost at this ink opacity */
+const GHOST_OP = 0.42;
+
+/**
+ * THE SCENE on its own clock: `frame` is this cut's local frame (it may be negative: the camera's first key
+ * extends back linearly, the drops and beads are further up the line). DripFeed plays it from f0; DripFeedLong
+ * plays it from f-100 with a `prelude` and earlier beads.
+ */
+export const DripFeedScene: React.FC<Props & { frame: number; beadHall?: number[]; prelude?: Prelude }> = ({
+  vignette,
+  glyphInk,
+  frame,
+  beadHall = BEAD_HALL,
+  prelude,
+}) => {
   const cam = swayCam(cameraAt(frame), frame);
+  // nothing rides the line ahead of the pen that is redrawing it
+  const live = (dist: number) => (prelude ? smoothstep((prelude.headS - (R.len - dist)) / 24) : 1);
   const k = cam.k;
   const px = (v: number) => v / k;
 
@@ -410,12 +435,12 @@ const DripFeed: React.FC<Props> = ({ vignette, glyphInk }) => {
 
   // the tiny beads
   const beads: { x: number; y: number; r: number }[] = [];
-  for (const fh of BEAD_HALL) {
+  for (const fh of beadHall) {
     const dist = fallDist(fh - frame, BEAD.vEnd, BEAD.acc);
     if (dist <= 0 || dist >= R.len) continue;
     const [x, y] = R.pointAt(R.len - dist);
     // born at the Greenland settlement, gone into the hall
-    const s = smoothstep(dist / 16) * smoothstep((R.len - dist) / 20);
+    const s = smoothstep(dist / 16) * smoothstep((R.len - dist) / 20) * live(dist);
     beads.push({ x, y, r: BEAD_R * s });
   }
 
@@ -430,7 +455,7 @@ const DripFeed: React.FC<Props> = ({ vignette, glyphInk }) => {
     // (full 470 world px out, above the frame's top edge in the opening framing), so two rings never share the frame
     const swell = 1 - smoothstep((-q - 470) / 110);
     const full = d.dia + (MARK_DIA - d.dia) * shrink;
-    const dia = 2 * BEAD_R + (full - 2 * BEAD_R) * swell;
+    const dia = (2 * BEAD_R + (full - 2 * BEAD_R) * swell) * (q < 0 ? live(-q) : 1);
     return { d, x, y, dia, plain: swell < 0.02, core: 0.95 - 0.12 * shrink, visible: -q < R.len - 20, settle };
   });
 
@@ -448,7 +473,13 @@ const DripFeed: React.FC<Props> = ({ vignette, glyphInk }) => {
           </g>
         ) : null}
         {/* the live line, Greenland -> the foothold */}
-        <NorseRoute cam={cam} width={5.2} />
+        {prelude && prelude.headS < R.len ? (
+          <NorseRoute cam={cam} from={prelude.headS / R.len} color={INK} dashed opacity={INK_CONTEXT} width={3.4} />
+        ) : null}
+        <NorseRoute cam={cam} width={5.2} progress={prelude ? prelude.headS / R.len : 1} />
+        {prelude && prelude.nib > 0.002 && prelude.headS > 0.5 ? (
+          <NorseRoute cam={cam} progress={prelude.headS / R.len} from={Math.max(0, prelude.headS - 0.5) / R.len} head opacity={prelude.nib} width={5.2} />
+        ) : null}
         <SettlementMark x={BRATTAHLID[0]} y={BRATTAHLID[1]} cam={cam} />
         {beads.map((b, i) =>
           b.r > 0.3 ? (
@@ -466,11 +497,28 @@ const DripFeed: React.FC<Props> = ({ vignette, glyphInk }) => {
           transform={`translate(${HALL_AT[0]} ${HALL_AT[1]}) scale(${(hallSize / 100 / k).toFixed(6)})`}
           fill={HALL_GROUND}
         />
-        <Longhouse x={HALL_AT[0]} y={HALL_AT[1]} cam={cam} size={hallSize} ground={0} />
+        {prelude && prelude.hallLit < 1 ? (
+          <Longhouse
+            x={HALL_AT[0]}
+            y={HALL_AT[1]}
+            cam={cam}
+            size={hallSize}
+            ground={0}
+            ink={mixColor(INK, ACCENT, prelude.hallLit)}
+            opacity={GHOST_OP + (1 - GHOST_OP) * prelude.hallLit}
+          />
+        ) : (
+          <Longhouse x={HALL_AT[0]} y={HALL_AT[1]} cam={cam} size={hallSize} ground={0} />
+        )}
       </WorldSvg>
       <PaperTop vignette={vignette} />
     </AbsoluteFill>
   );
+};
+
+const DripFeed: React.FC<Props> = (props) => {
+  const frame = useCurrentFrame();
+  return <DripFeedScene {...props} frame={frame} />;
 };
 
 export default DripFeed;
