@@ -20,36 +20,34 @@
 // wrists), but the emperor is the Inca variant, upright and composed, and under
 // him there are no nobles.
 //
-// GESTURES (each with the words it serves)
-//   1. f0-f40 "At the same time, though, I think he was also": Atahualpa held
-//      under the three orange strings (their highlights travelling down), close
-//      (k 1.40 -> 1.44, a slow creep). "ATAHUALPA" under his feet from f0, to
-//      the 0.55 rung f26-f40. In each fist the ends of three cream cords hang
-//      short, coiled, dormant (0.28).
-//   2. f40-f80 "REACHING OUT": his hands open a little outward (f38-f50) and
-//      the six cords run out head-led from them (launch f41 .. f57.5, 3.3 f
-//      apart), fanning out and down in catenaries, tying a knot every ~60 px
-//      just behind the head (quipu), 0.55 at the head -> 1.0 behind it. The
-//      camera pulls back in ONE glide (f36-f88) to the wide (k 1.0, his chest at screen y ~620).
-//   3. f66-f80 "to his own PEOPLE": each cord lands on a host of Inca warriors
-//      (six hosts of 19, three ranks in depth, on a broad arc round and below him, the column
-//      under him clear). The hosts are dormant (0.28, low, spears sloped); from
-//      the cord's landing point a front runs through the host: it brightens to
-//      0.8 and its men rise to their feet.
-//   4. f84-f108 "and he was WAITING, perhaps": the hold. The cords hang slack
-//      and sway a little, the hosts stand, the captor's strings stay taut with
-//      their highlights; the camera creeps in.
-//   5. f110-end "for his OPPORTUNITY to fully MOBILIZE them": orange seeps out
-//      from his hands along the six cords (crisp fronts, 2.6 f apart, slow),
-//      the cord tightening behind each front; when the tension reaches a host
-//      (f132 .., "mobilize" f139) its spears come upright from the side nearest
-//      him, the first ranks only. On the last frame the fronts are 60 % .. 40 %
-//      of the way and still moving, no host is risen: UNRESOLVED (asserted below).
+// GESTURES (each with the words it serves). V2 (ROUND 3: action early, the
+// payoff COMPLETE by f140, then a living hold; the frame filled):
+//   1. f0-f16 the close opening: Atahualpa (>= 480 px on screen) held under the
+//      three orange strings, "ATAHUALPA" under his feet (gone by f32); in each
+//      fist three cord ends hang coiled, dormant.
+//   2. f20-f54 "REACHING OUT" (f45, f52): the six knotted cords run out head-led
+//      (launch f20 .. f33) and LAND f40 .. f54; the pull-back glide is f16-f56.
+//      Each host wakes from its cord's landing point (0.28 -> 0.8, the men rise
+//      to their feet); all lit by ~f61.
+//   3. f58-f82 "to his own PEOPLE": the camera, wide, pushes 5 % toward the
+//      lower half: the hosts are the subject (front ranks >= 96 px on screen).
+//   4. f82-f104 "and he was WAITING": the spears come up, a ripple through each
+//      host from the cord's landing point, host after host; then they STAND,
+//      armed; the cords slack, swaying.
+//   5. f108-f139 "for his OPPORTUNITY to FULLY MOBILIZE them": orange leaves his
+//      hands and runs the WHOLE length of every cord (crisp fronts, 2.4 f apart,
+//      slow then fast), each cord pulling taut behind its front; fronts arrive
+//      f124 .. f130; as each arrives its host answers as one body: one step
+//      toward him, leaning into the cord, spears tilting forward (9 f). Complete
+//      by f139 (asserted below).
+//   6. f140-f153 the living hold: six taut orange cords with highlights running
+//      out along them, six hosts leaning in; the captor's three strings still
+//      hold him from above; slow creep.
 //   The captor's side strings tie on his FOREARMS (drawn here), so >= 30 px of
 //   cream hand separates Pizarro's orange from the orange of his own cords.
 //
 // ACCENT: orange = the live hold only. Pizarro's three strings are orange
-// throughout; Atahualpa's cords are cream until gesture 5.
+// throughout; Atahualpa's cords are cream until he pulls on them (gesture 5).
 //
 // HISTORY (nothing of it on screen): from captivity Atahualpa went on sending
 // orders by runner; Inca records and messages were quipus, knotted cords; his
@@ -90,11 +88,10 @@ import {
 
 export const FPS = 24;
 export const DURATION = 154;
-const LAST = DURATION - 1;
 
 export const schema = z.object({
   vignette: z.number(),
-  /** true = the dormant hosts are on the page from f0 (default: they come up with the pull-back, f36-f56) */
+  /** true = the dormant hosts are on the page from f0 (default: they come up as the pull-back starts, f12-f28) */
   hostsFromStart: z.boolean(),
 });
 export type Props = z.infer<typeof schema>;
@@ -104,37 +101,45 @@ export const defaultProps: Props = schema.parse({ vignette: 0.55, hostsFromStart
 // TIMELINE
 // ---------------------------------------------------------------------------
 const T = {
-  labelDim: [26, 40] as [number, number],
-  labelOut: [46, 60] as [number, number],
-  reach: [38, 50] as [number, number],
+  labelDim: [8, 16] as [number, number],
+  labelOut: [20, 32] as [number, number],
+  reach: [17, 29] as [number, number],
   /** the six cords: L upper, R upper, L mid, R mid, L lower, R lower */
-  launch: [41, 44.3, 47.6, 51, 54.3, 57.5],
-  land: [66, 69, 72, 75, 77.5, 80],
-  hostsIn: [36, 56] as [number, number],
-  orange: [110, 112.6, 115.2, 117.8, 120.4, 123],
-  /** frames from a cord's orange start to its tension reaching the host */
-  tension: 22,
+  launch: [20, 22.6, 25.2, 27.8, 30.4, 33],
+  land: [40, 43, 46, 49, 51.5, 54],
+  hostsIn: [12, 28] as [number, number],
+  /** the spears come up: each host's ripple starts here */
+  spears: [82, 83.6, 85.2, 86.8, 88.4, 90],
+  /** the orange leaves his hands (the long lower cords first) and arrives at the host */
+  orange: [117.6, 120, 112.8, 115.2, 108, 110.4],
+  arrive: [128.8, 130, 126.4, 127.6, 124, 125.2],
+  /** a host's answer (step, lean, spears forward), frames */
+  answer: 9,
 };
-/** the orange front's progress along a cord, t frames after its start: a soft start, then steady (still moving at the end) */
-const ORANGE_RATE = 0.0154;
-const orangeAt = (t: number) => (t <= 0 ? 0 : ORANGE_RATE * (t < 8 ? (t * t) / 16 : t - 4));
-/** a host's brightening front (world px / f) and its spears' front */
-const WAKE_V = 16;
-const SPEAR_V = 6;
+/** the orange front's progress 0..1 along cord c: slow at first, faster toward the end */
+const orangeAt = (c: number, f: number) => Math.pow(clamp01((f - T.orange[c]) / (T.arrive[c] - T.orange[c])), 1.8);
+/** host c's answer 0..1 */
+const answerAt = (c: number, f: number) => smootherstep((f - T.arrive[c] + 1) / T.answer);
+/** a host's brightening front (world px / f) and its spears' ripple */
+const WAKE_V = 40;
+const SPEAR_V = 30;
+const STEP = 16; // the host's one step toward him, world px
+const LEAN = 7; // and its lean into the cord, deg
 
 // ---------------------------------------------------------------------------
 // THE CAMERA: one keyed C1 track. Close creep -> ONE pull-back glide -> creep.
 // focus = the world point held at screen (540, 835).
 // ---------------------------------------------------------------------------
-const K_OPEN = 1.4;
+const K_OPEN = 1.5;
 const K_WIDE = 1.0;
 const LNK = (() => {
-  const creep1: [number, number, number, number] = [-30, 48, Math.log(1.045), 0.25];
-  const creep2: [number, number, number, number] = [78, 230, Math.log(1.07), 0.2];
-  const base = makeTrack([creep1, creep2], Math.log(K_OPEN));
-  return makeTrack([creep1, [36, 88, Math.log(K_WIDE) - base(88), 0.9], creep2], Math.log(K_OPEN));
+  const creep1: [number, number, number, number] = [-30, 24, Math.log(1.03), 0.25];
+  const push: [number, number, number, number] = [58, 82, Math.log(1.05), 0.85];
+  const creep2: [number, number, number, number] = [80, 230, Math.log(1.04), 0.2];
+  const base = makeTrack([creep1, push, creep2], Math.log(K_OPEN));
+  return makeTrack([creep1, [16, 56, Math.log(K_WIDE) - base(56), 0.9], push, creep2], Math.log(K_OPEN));
 })();
-const FOCUS_Y = makeTrack([[38, 88, 156, 0.9]], 600);
+const FOCUS_Y = makeTrack([[16, 56, 190, 0.9]], 600);
 const camAt = (f: number): Cam => camFor([540, FOCUS_Y(f)], Math.exp(LNK(f)));
 
 // ---------------------------------------------------------------------------
@@ -190,16 +195,16 @@ const ForearmStrings: React.FC<{ cam: Cam; frame: number; pose: EmperorPose }> =
 // two quiet variants: mace held low / sling hanging), three ranks in depth (each
 // rank behind 20 px higher and 4 % smaller), a spear (1.4 x the man) in the free hand.
 // ---------------------------------------------------------------------------
-const MAN_H = 88; // front rank, world px (>= 72 px on screen at the wide's k 1.0 for every rank)
+const MAN_H = 94; // front rank, world px (>= 72 px on screen at the wide's k 1.0 for every rank)
 const RANKS = [7, 6, 6];
-const DX = 28;
-const RANK_DY = 20;
+const DX = 29;
+const RANK_DY = 21;
 const RANK_DS = 0.04;
 type HostDef = { cx: number; fy: number; side: -1 | 1; landRank: number; landCol: number };
 const HALF: Omit<HostDef, "side">[] = [
-  { cx: 185, fy: 700, landRank: 2, landCol: 5 }, // far out, at his waist's height
-  { cx: 215, fy: 885, landRank: 2, landCol: 5 }, // lower
-  { cx: 335, fy: 1068, landRank: 2, landCol: 3 }, // lowest, flanking the column under him
+  { cx: 190, fy: 715, landRank: 2, landCol: 5 }, // far out, at his waist's height
+  { cx: 225, fy: 905, landRank: 2, landCol: 5 }, // lower
+  { cx: 340, fy: 1093, landRank: 2, landCol: 3 }, // lowest, flanking the column under him
 ];
 /** host order = cord order: L upper, R upper, L mid, R mid, L lower, R lower */
 const HOSTS: HostDef[] = HALF.flatMap((h) => [
@@ -247,11 +252,16 @@ const MEN: Man[] = (() => {
   // painter's order: the further (higher) first
   return out.sort((a, b) => a.y - b.y);
 })();
+/** where cord c is tied at frame f: its man's head, carried by the host's step and lean */
+const landAt = (c: number, f: number): P2 => {
+  const ans = answerAt(c, f);
+  return [LANDS[c][0] - HOSTS[c].side * (STEP + 10) * ans, LANDS[c][1] + 1.5 * ans];
+};
 const HOST_REACH = HOSTS.map((_, hi) => Math.max(...MEN.filter((m) => m.host === hi).map((m) => m.d)));
 /** how far a man has risen to his feet (0 low .. 1 standing): the wake front passing him */
 const riseOf = (m: Man, f: number) => smootherstep((f - T.land[m.host] - m.d / WAKE_V) / 7);
 /** how far his spear has come upright */
-const spearOf = (m: Man, f: number) => smootherstep((f - T.orange[m.host] - T.tension - m.d / SPEAR_V) / 8);
+const spearOf = (m: Man, f: number) => smootherstep((f - T.spears[m.host] - m.d / SPEAR_V) / 7);
 const LOW = 0.8; // a dormant man's height (he sits low)
 const WAKE_GAIN = 1 - (1 - 0.8) / (1 - TONE.dead); // a second pass over the dormant 0.28 that lands on 0.8
 
@@ -267,7 +277,11 @@ const Hosts: React.FC<{ cam: Cam; frame: number; vis: number }> = ({ cam, frame,
       c0.clearRect(0, 0, FRAME_W, FRAME_H);
       c0.lineCap = "round";
       for (const m of MEN) {
-        const [sx, sy] = screenOf([m.x, m.y], cam);
+        // the answer: the whole host takes one step toward him and leans into the cord
+        const ans = answerAt(m.host, frame);
+        const toward = -HOSTS[m.host].side;
+        const [sx, sy] = screenOf([m.x + toward * STEP * ans, m.y - 3 * Math.sin(Math.PI * ans)], cam);
+        const leanRad = (toward * LEAN * ans * Math.PI) / 180;
         const hPx = m.h * cam.k;
         if (sx < -2 * hPx || sx > FRAME_W + 2 * hPx || sy < -hPx || sy > FRAME_H + 2 * hPx) continue;
         const u = hPx / 100; // px per glyph unit
@@ -276,8 +290,11 @@ const Hosts: React.FC<{ cam: Cam; frame: number; vis: number }> = ({ cam, frame,
         const [hx, hy] = SPEAR_HAND[m.vi];
         // the spear (behind the man): about his hand, sloped at rest, upright when the tension reaches him
         c0.save();
-        c0.translate(sx + hx * u, sy + hy * u * sY);
-        c0.rotate((mix(m.tiltLow, m.tiltUp, up) * Math.PI) / 180);
+        c0.translate(sx, sy);
+        c0.rotate(leanRad);
+        c0.save();
+        c0.translate(hx * u, hy * u * sY);
+        c0.rotate(((mix(m.tiltLow, m.tiltUp, up) + toward * 16 * ans) * Math.PI) / 180);
         const y0 = -hy * u * sY * 0.98; // the butt, on the ground when upright
         const y1 = -(132 + hy) * u;
         c0.globalAlpha = 0.78;
@@ -304,8 +321,6 @@ const Hosts: React.FC<{ cam: Cam; frame: number; vis: number }> = ({ cam, frame,
         c0.fill();
         c0.restore();
         // the man
-        c0.save();
-        c0.translate(sx, sy);
         c0.scale(1, sY);
         blit(c0, KEYS[m.vi][m.lean], 0, 0, hPx, 1);
         c0.restore();
@@ -321,9 +336,9 @@ const Hosts: React.FC<{ cam: Cam; frame: number; vis: number }> = ({ cam, frame,
       c1.setTransform(1, 0, 0, 1, 0, 0);
       c1.clearRect(0, 0, FRAME_W, FRAME_H);
       HOSTS.forEach((_, hi) => {
-        const R = Math.min((frame - T.land[hi]) * WAKE_V, HOST_REACH[hi] + 80) * cam.k;
+        const R = Math.min((frame - T.land[hi]) * WAKE_V, HOST_REACH[hi] + 120) * cam.k;
         if (R <= 0) return;
-        const [lx, ly] = screenOf(LANDS[hi], cam);
+        const [lx, ly] = screenOf(landAt(hi, frame), cam);
         const g = c1.createRadialGradient(lx, ly, Math.max(0, R - 14), lx, ly, R);
         g.addColorStop(0, "rgba(0,0,0,1)");
         g.addColorStop(1, "rgba(0,0,0,0)");
@@ -355,13 +370,13 @@ const STUB: P2[] = [
   [-6, 40],
 ];
 const KNOT_GAP = 60;
-type CordState = { g: StringGeom; p: number; base: number; headTone: number; q: number; e: number; knots: number[]; hang: P2 };
+type CordState = { g: StringGeom; taut: boolean; p: number; base: number; headTone: number; q: number; e: number; knots: number[]; hang: P2 };
 const cordAt = (c: number, f: number, fists: { L: P2; R: P2 }): CordState => {
   const left = c % 2 === 0;
   const j = Math.floor(c / 2) - 1; // -1, 0, 1 across the fist
   const fist = left ? fists.L : fists.R;
   const from: P2 = [fist[0] + j * 2.6 * (left ? -1 : 1), fist[1] + 8];
-  const land = LANDS[c];
+  const land = landAt(c, f);
   const hang: P2 = [from[0] + STUB[c][0] + 1.6 * Math.sin(f / 13 + c * 1.9), from[1] + STUB[c][1]];
   const t0 = T.launch[c];
   const t1 = T.land[c];
@@ -371,10 +386,10 @@ const cordAt = (c: number, f: number, fists: { L: P2; R: P2 }): CordState => {
   const run = 1 - Math.pow(1 - u, 1.7) * (1 - 0.35 * u);
   const p = mix(1, run, e);
   const to = mix2(hang, land, e);
-  // tension (gesture 5): the hand's end tightens first, the host's end follows
-  const tO = f - T.orange[c];
-  const tight0 = 1 - 0.65 * smoothstep(tO / 28);
-  const tight1 = 1 - 0.32 * smoothstep((tO - 12) / 34);
+  // tension (gesture 5): the cord pulls taut behind its orange front, the hand's end first
+  const q = orangeAt(c, f);
+  const tight0 = 1 - 0.94 * smoothstep(q / 0.7);
+  const tight1 = 1 - 0.94 * smoothstep((q - 0.3) / 0.7);
   const loose = mix(0.3, 0.8, e) + 0.2 * smoothstep((f - t1) / 10);
   const sway = e * (tight0 + tight1) * 0.5;
   const g: StringGeom = {
@@ -389,10 +404,11 @@ const cordAt = (c: number, f: number, fists: { L: P2; R: P2 }): CordState => {
   for (let d = KNOT_GAP; d < L * 0.93; d += KNOT_GAP) knots.push(d / L);
   return {
     g,
+    taut: q >= 1,
     p,
     base: mix(TONE.dead, 1, smoothstep((f - t0) / 5)),
     headTone: mix(TONE.second, 1, smoothstep((f - t1) / 6)),
-    q: orangeAt(tO),
+    q,
     e,
     knots,
     hang,
@@ -420,7 +436,7 @@ const Cords: React.FC<{ cam: Cam; frame: number; fists: { L: P2; R: P2 } }> = ({
         return (
           <g key={c}>
             {segs.map(([a, b, tone], i) => (
-              <PuppetString key={i} {...s.g} drawn={[a, b]} base={tone} live={live} highlight={null} k={k} />
+              <PuppetString key={i} {...s.g} drawn={[a, b]} base={tone} live={live} highlight={s.taut ? glintAt(frame, c * 3, 34) : null} k={k} />
             ))}
             {coil > 0.02 ? (
               // the dormant end: a small coil of cord, unwinding as it leaves
@@ -454,26 +470,22 @@ const Cords: React.FC<{ cam: Cam; frame: number; fists: { L: P2; R: P2 } }> = ({
 // CHECKS (module scope: a broken timeline fails before a frame is rendered)
 // ---------------------------------------------------------------------------
 (() => {
-  // the end is unresolved: no cord more than 60 % orange, every front still moving, no host risen
-  T.orange.forEach((t0, c) => {
-    const q = orangeAt(LAST - t0);
-    if (q > 0.62 || q <= orangeAt(LAST - 1 - t0)) throw new Error(`ReachingOutToHisPeople: cord ${c} is ${(q * 100).toFixed(0)} % orange on the last frame`);
+  // the payoff is COMPLETE by f140: every cord orange end to end, every spear up, every host leaning in
+  HOSTS.forEach((_, c) => {
+    if (orangeAt(c, 131) < 1 || answerAt(c, 140) < 1) throw new Error(`ReachingOutToHisPeople: cord / host ${c} is not finished by f140`);
+    if (orangeAt(c, 107) > 0) throw new Error(`ReachingOutToHisPeople: cord ${c} is orange before f108`);
   });
-  HOSTS.forEach((_, hi) => {
-    const mine = MEN.filter((m) => m.host === hi);
-    const up = mine.filter((m) => spearOf(m, LAST) > 0.5).length;
-    if (up > mine.length * 0.72) throw new Error(`ReachingOutToHisPeople: host ${hi} has ${up} of ${mine.length} spears up on the last frame`);
-  });
+  for (const m of MEN) if (spearOf(m, 104) < 0.999 || riseOf(m, 66) < 0.99) throw new Error("ReachingOutToHisPeople: a man is late (risen by f66, spear up by f104)");
   for (let f = 0; f < DURATION; f++) {
     const cam = camAt(f);
     // the label, while it is there, and (from the wide on) the hosts' feet stay above the caption band
     if (f < T.labelOut[1] && screenOf([540, 760], cam)[1] + 64 >= CAPTION_TOP) throw new Error(`ReachingOutToHisPeople: the label in the caption band at f${f}`);
-    if (f >= 88) {
+    if (f >= 56) {
       for (const H of HOSTS) {
         const [sx, sy] = screenOf([H.cx, H.fy + 2], cam);
         if (sy >= CAPTION_TOP + 15) throw new Error(`ReachingOutToHisPeople: a host in the caption band at f${f} (y ${sy.toFixed(0)})`);
         const half = (((RANKS[0] - 1) / 2) * DX + 0.2 * MAN_H) * cam.k;
-        if (sx - half < 40 || sx + half > FRAME_W - 40) throw new Error(`ReachingOutToHisPeople: a host within 60 px of the edge at f${f}`);
+        if (sx - half < 40 || sx + half > FRAME_W - 40) throw new Error(`ReachingOutToHisPeople: a host within 40 px of the edge at f${f}`);
       }
     }
     // a running cord's head always has page ahead of it
