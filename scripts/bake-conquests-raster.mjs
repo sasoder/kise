@@ -2,24 +2,23 @@
 // of "Sheppard: why captured emperors cooperated"): the same static stack as
 // scripts/bake-americas-rasters.mjs (sea, 4 engraved water-lines, 10 deg
 // graticule, land + hand-coloured rim, cream coast; no borders), drawn for
-// k ~0.58, over a rect far larger than the americas base level (that level
+// k ~0.82, over a rect wider than the americas base level (that level
 // only fills a 1080 px frame down to k 0.885). ONE png; it does not touch
 // public/americas or americasLevels.ts.
 //
 //   bun scripts/bake-conquests-raster.mjs
 //
 // Needs generated/components/americasStatic.ts. Writes public/conquests/wide.png.
-// World rect x -480 ... 1570, y -505 ... 2960 (the land is clipped by the build
-// at lon -139.4 / -29.6 and lat +57.4: x -495 / 1591, y -521), 0.85 texels per
-// world px (1.45 texels per screen px at k 0.585).
+// World rect x -210 ... 1250, y -360 ... 2160, 1.3 texels per world px (1.59
+// texels per screen px at k 0.82).
 import { mkdirSync, writeFileSync } from "node:fs";
 import { Resvg } from "@resvg/resvg-js";
 import { LAND_D, LAND_WL_D } from "../generated/components/americasStatic.ts";
 import { PROJ } from "../generated/components/americasMapData.ts";
 
-const RECT = { x0: -480, x1: 1570, y0: -505, y1: 2960 };
-const S = 0.85;
-const KB = 0.58;
+const RECT = { x0: -210, x1: 1250, y0: -360, y1: 2160 };
+const S = 1.3;
+const KB = 0.82;
 const SEA = "#1B2226";
 const LAND = "#3F3428";
 const LAND_RIM = "#6A5838";
