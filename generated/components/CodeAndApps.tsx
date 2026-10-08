@@ -67,7 +67,7 @@ export const schema = z.object({
   dropStart: z.number(),
   // px per frame squared
   gravity: z.number(),
-  // the city seal: a round alpha PNG in public/, drawn at its native size
+  // the city seal: a round alpha PNG in public/ (433 px source; the user's size is 507)
   sealSrc: z.string(),
   sealCx: z.number(),
   sealCy: z.number(),
@@ -95,9 +95,9 @@ export const defaultProps: Props = schema.parse({
   dropStart: 93,
   gravity: 30,
   sealSrc: "hadrian05/el_segundo_seal.png",
-  sealCx: 540,
-  sealCy: 330,
-  sealD: 433,
+  sealCx: 541,
+  sealCy: 572,
+  sealD: 507,
   sealIn: 1,
   sealStagger: 0.5,
   sealOut: 45,
