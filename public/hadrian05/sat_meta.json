@@ -1,0 +1,43 @@
+{
+ "sat_z11.jpg": {
+  "z": 11,
+  "west": -119.00390625,
+  "east": -117.94921875,
+  "north": 34.59704151614416,
+  "south": 33.137551192346145,
+  "width": 1536,
+  "height": 2560,
+  "tiles": 60
+ },
+ "sat_z12.jpg": {
+  "z": 12,
+  "west": -118.65234375,
+  "east": -118.125,
+  "north": 34.23451236236985,
+  "south": 33.504759069226075,
+  "width": 1536,
+  "height": 2560,
+  "tiles": 60
+ },
+ "sat_z13.jpg": {
+  "z": 13,
+  "west": -118.564453125,
+  "east": -118.2568359375,
+  "north": 34.089061315849946,
+  "south": 33.68778175843937,
+  "width": 1792,
+  "height": 2816,
+  "tiles": 77
+ },
+ "sat_z14.jpg": {
+  "z": 14,
+  "west": -118.4765625,
+  "east": -118.32275390625,
+  "north": 34.016241889667015,
+  "south": 33.779147331286474,
+  "width": 1792,
+  "height": 3328,
+  "tiles": 91
+ },
+ "note": "Web Mercator (EPSG:3857) tile mosaics; bounds are exact tile edges in lon/lat. Linear in lon; use Mercator y for latitude. Source: USGS The National Map, USGSImageryOnly (public domain)."
+}

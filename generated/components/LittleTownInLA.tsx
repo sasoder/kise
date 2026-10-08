@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { loadFont } from "@remotion/google-fonts/Barlow";
 import { z } from "zod";
 import laMapJson from "../../public/hadrian05/la_map.json";
-import { FRAME_H, FRAME_W, clamp, smoothstep } from "./fieldShared";
+import { FRAME_H, FRAME_W, Vignette, clamp, smoothstep } from "./fieldShared";
 
 const { fontFamily } = loadFont("normal", {
   weights: ["700", "800", "900"],
@@ -38,13 +38,24 @@ const { fontFamily } = loadFont("normal", {
 // ~0.17% per frame that runs the whole cut. The focal point's SCREEN position
 // rides the same curve, so the pan and the zoom are one move.
 //
-// THE MAP is real OSM geometry in a local equirectangular projection (km,
-// cos 33.95 deg on longitude), north up. The only core-memory things in the
-// frame are the pin, the town outline and the EL SEGUNDO label: white ink on
-// a hard black +4/+4 screen-px shadow drawn as a translated copy, raw hex, no
-// glow, no blend mode, no opacity fade on anything.
+// THE MAP (v3, on the user's note "a bit more realistic, not hyper realistic").
+// The LAND is real aerial imagery: four nested USGS mosaics (z11..z14) stacked
+// as levels of detail, each placed by its exact lon/lat bounds, the inset ones
+// feathered at their edges and only drawn once they are no longer heavily
+// minified. It is graded down (less saturated, darker) so the white ink stays
+// the brightest thing. The OCEAN is drawn: one flat deep blue polygon laid OVER
+// the imagery (everything that is not inside the OSM coastline), which is what
+// hides the imagery's black / striped offshore tiles, with a soft lighter band
+// hugging the coast. Everything is in Web Mercator, scaled to km at El
+// Segundo's latitude, so the OSM vectors and the imagery register. Freeways
+// stay as thin pale lines at part opacity; local roads and runway bars are
+// gone because the imagery shows the real ones. The only core-memory things in
+// the frame are the pin, the town outline and the EL SEGUNDO label: white ink
+// on a hard black +4/+4 screen-px shadow drawn as a translated copy, raw hex,
+// no glow, no blend mode.
 //
 // Map data (c) OpenStreetMap contributors.
+// Imagery: USGS The National Map (public domain).
 // ---------------------------------------------------------------------------
 
 export const FPS = 24;
@@ -61,13 +72,17 @@ type LaMap = {
 };
 const laMap = laMapJson as unknown as LaMap;
 
-// -- projection: lon/lat -> km, origin at El Segundo's land centroid ---------
+// -- projection: Web Mercator, in km at El Segundo's latitude, origin at the
+// town's land centroid. x is linear in lon, y in ln(tan(pi/4 + lat/2)), which
+// is exactly how the imagery mosaics are laid out.
 const LON0 = -118.402;
 const LAT0 = 33.9165;
-const KM_LON = 111.32 * Math.cos((33.95 * Math.PI) / 180);
-const KM_LAT = 110.92;
+const RAD = Math.PI / 180;
+const KM_PER_RAD = (111.32 / RAD) * Math.cos(LAT0 * RAD);
+const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * RAD) / 2));
+const MERC0 = mercY(LAT0);
 type P = { x: number; y: number };
-const proj = ([lon, lat]: LonLat): P => ({ x: (lon - LON0) * KM_LON, y: -(lat - LAT0) * KM_LAT });
+const proj = ([lon, lat]: LonLat): P => ({ x: (lon - LON0) * RAD * KM_PER_RAD, y: -(mercY(lat) - MERC0) * KM_PER_RAD });
 const n3 = (v: number) => v.toFixed(3);
 const line = (pts: P[]) => pts.map((p, i) => `${i ? "L" : "M"}${n3(p.x)} ${n3(p.y)}`).join("");
 
@@ -83,8 +98,22 @@ const MOTORWAY_PATH = Object.values(laMap.motorways)
   .flat()
   .map((pl) => line(pl.map(proj)))
   .join("");
-const LOCAL_PATH = laMap.localRoads.map((r) => line(r.pts.map(proj))).join("");
-const RUNWAY_PATH = laMap.laxRunways.map((r) => line(r.map(proj))).join("");
+// The ocean is everything that is not land: a big box with the land punched out
+// of it (evenodd), so the harbour islands punch back in as land.
+const OCEAN_PATH = `${line(
+  ([[-119.8, 35.6], [-117.0, 35.6], [-117.0, 32.4], [-119.8, 32.4]] as LonLat[]).map(proj),
+)}Z${LAND_PATH}`;
+
+// The aerial mosaics, bottom to top. Bounds are exact tile edges (sat_meta.json).
+const SAT = [
+  { src: "hadrian05/sat_z11.jpg", west: -119.00390625, east: -117.94921875, north: 34.59704151614416, south: 33.137551192346145, w: 1536, h: 2560 },
+  { src: "hadrian05/sat_z12.jpg", west: -118.65234375, east: -118.125, north: 34.23451236236985, south: 33.504759069226075, w: 1536, h: 2560 },
+  { src: "hadrian05/sat_z13.jpg", west: -118.564453125, east: -118.2568359375, north: 34.089061315849946, south: 33.68778175843937, w: 1792, h: 2816 },
+  { src: "hadrian05/sat_z14.jpg", west: -118.4765625, east: -118.32275390625, north: 34.016241889667015, south: 33.779147331286474, w: 1792, h: 3328 },
+].map((m) => ({ ...m, a: proj([m.west, m.north]), b: proj([m.east, m.south]) }));
+const FEATHER = 6; // % of an inset level's edge that fades out
+const MASK_X = `linear-gradient(to right, transparent, #000 ${FEATHER}%, #000 ${100 - FEATHER}%, transparent)`;
+const MASK_Y = `linear-gradient(to bottom, transparent, #000 ${FEATHER}%, #000 ${100 - FEATHER}%, transparent)`;
 
 // El Segundo's boundary runs out to sea. Cut it at the coastline so the town is
 // its LAND: the two points where the ring crosses the coast, the ring between
@@ -128,13 +157,14 @@ const BLUE = "#0046FF";
 
 export const schema = z.object({
   ocean: z.string(),
-  land: z.string(),
+  oceanShallow: z.string(),
+  landBase: z.string(), // behind the imagery, never meant to show
+  imageryFilter: z.string(),
+  vignette: z.number(),
   freeway: z.string(),
-  freewayCasing: z.string(),
-  localRoad: z.string(),
-  runway: z.string(),
-  landLabel: z.string(),
-  oceanLabel: z.string(),
+  freewayOpacity: z.number(),
+  mapLabel: z.string(),
+  mapLabelOpacity: z.number(),
   ink: z.string(),
   shadow: z.string(),
   orange: z.string(),
@@ -164,21 +194,22 @@ export const schema = z.object({
 export type Props = z.infer<typeof schema>;
 
 export const defaultProps: Props = schema.parse({
-  ocean: "#6A91A8",
-  land: "#B3AD9E",
-  freeway: "#E6E0CF",
-  freewayCasing: "#948E7F",
-  localRoad: "#C6C0B1",
-  runway: "#878275",
-  landLabel: "#7B7667",
-  oceanLabel: "#4B7087",
+  ocean: "#35627C",
+  oceanShallow: "#6C9DB3",
+  landBase: "#5B5E52",
+  imageryFilter: "saturate(0.8) brightness(0.85) contrast(1.05)",
+  vignette: 0.22,
+  freeway: "#F1EAD6",
+  freewayOpacity: 0.65,
+  mapLabel: "#F2EEE4",
+  mapLabelOpacity: 0.85,
   ink: WHITE,
   shadow: BLACK,
   orange: ORANGE,
   purple: PURPLE,
   blue: BLUE,
   shadowOffset: 4,
-  townTint: 0.24,
+  townTint: 0.27,
   label: "EL SEGUNDO",
   labelSize: 74,
   pinHeight: 100,
@@ -242,6 +273,9 @@ const LittleTownInLA: React.FC<Props> = (p) => {
     return { x: tx + w.x * s, y: ty + w.y * s };
   };
   const px = (screenPx: number) => screenPx / s; // a screen length in world units
+  const mapT = `translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${s.toFixed(5)})`;
+  // the shallow band's width in SCREEN px: ~1.6 km of sea, between 40 and 220 px
+  const shallowW = Math.min(220, Math.max(40, 2 * 1.6 * s));
 
   const pinD = useMemo(() => pinPath(p.pinHeight), [p.pinHeight]);
   const foot = toScreen(p.pinLonLat as LonLat);
@@ -252,10 +286,7 @@ const LittleTownInLA: React.FC<Props> = (p) => {
 
   // -- road weights, in SCREEN px, growing with the zoom ----------------------
   const zoom = interpolate(Math.log(s), [Math.log(15), Math.log(90)], [0, 1], clamp);
-  const fwW = 5.5 + 7.5 * zoom;
-  const fwCase = fwW + 2.5 + 2 * zoom;
-  const localW = interpolate(s, [30, 75], [0, 4.5], clamp);
-  const runwayW = Math.max(1.5, 0.075 * s);
+  const fwW = 3.2 + 3.8 * zoom;
 
   // -- the town ---------------------------------------------------------------
   const outlineT = interpolate(frame, [p.beats.outline, p.beats.outline + 16], [0, 1], {
@@ -287,28 +318,20 @@ const LittleTownInLA: React.FC<Props> = (p) => {
   });
 
   // -- type -------------------------------------------------------------------
-  const mapLabel = (
-    key: string,
-    text: string,
-    ll: LonLat,
-    size: number,
-    fill: string,
-    tracking = 0.14,
-    weight: 700 | 800 = 700,
-  ) => {
+  const mapLabel = (key: string, text: string, ll: LonLat, size: number, tracking = 0.14, weight: 700 | 800 = 700, opacity = p.mapLabelOpacity) => {
     const q = toScreen(ll);
     if (q.x < -400 || q.x > FRAME_W + 400 || q.y < -100 || q.y > FRAME_H + 100) return null;
+    const style = { fontFamily, fontWeight: weight, fontSize: size, letterSpacing: `${tracking}em` };
+    const x = q.x + (tracking * size) / 2;
     return (
-      <text
-        key={key}
-        x={q.x + (tracking * size) / 2}
-        y={q.y}
-        textAnchor="middle"
-        fill={fill}
-        style={{ fontFamily, fontWeight: weight, fontSize: size, letterSpacing: `${tracking}em` }}
-      >
-        {text}
-      </text>
+      <g key={key} opacity={opacity}>
+        <text x={x + 2} y={q.y + 2} textAnchor="middle" fill={p.shadow} style={style}>
+          {text}
+        </text>
+        <text x={x} y={q.y} textAnchor="middle" fill={p.mapLabel} style={style}>
+          {text}
+        </text>
+      </g>
     );
   };
 
@@ -316,7 +339,84 @@ const LittleTownInLA: React.FC<Props> = (p) => {
   const labelDy = slide(p.beats.label, 16, 48);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: p.ocean }}>
+    <AbsoluteFill style={{ backgroundColor: p.landBase }}>
+      {/* THE LAND: aerial imagery, levels of detail, graded as one. */}
+      <AbsoluteFill style={{ filter: p.imageryFilter, overflow: "hidden" }}>
+        {SAT.map((m, i) => {
+          const sx = ((m.b.x - m.a.x) * s) / m.w;
+          const sy = ((m.b.y - m.a.y) * s) / m.h;
+          // an inset level comes in only once it is no longer heavily minified
+          const opacity = i < 2 ? 1 : interpolate(sx, [0.4, 0.55], [0, 1], clamp);
+          if (opacity <= 0) return null;
+          const inset = i > 0;
+          return (
+            <div
+              key={m.src}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: m.w,
+                height: m.h,
+                transformOrigin: "0 0",
+                transform: `translate(${(tx + m.a.x * s).toFixed(3)}px, ${(ty + m.a.y * s).toFixed(3)}px) scale(${sx.toFixed(6)}, ${sy.toFixed(6)})`,
+                opacity,
+                maskImage: inset ? MASK_X : undefined,
+                WebkitMaskImage: inset ? MASK_X : undefined,
+              }}
+            >
+              <Img
+                src={staticFile(m.src)}
+                style={{
+                  display: "block",
+                  width: m.w,
+                  height: m.h,
+                  maskImage: inset ? MASK_Y : undefined,
+                  WebkitMaskImage: inset ? MASK_Y : undefined,
+                }}
+              />
+            </div>
+          );
+        })}
+      </AbsoluteFill>
+
+      {/* THE OCEAN, drawn over the imagery, and the freeways. */}
+      <svg width={FRAME_W} height={FRAME_H} viewBox={`0 0 ${FRAME_W} ${FRAME_H}`} style={{ position: "absolute", left: 0, top: 0 }}>
+        <defs>
+          <clipPath id="ltla-ocean">
+            <path d={OCEAN_PATH} clipRule="evenodd" transform={mapT} />
+          </clipPath>
+          <filter id="ltla-soft-a" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation={(shallowW * 0.3).toFixed(2)} />
+          </filter>
+          <filter id="ltla-soft-b" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation={(shallowW * 0.09).toFixed(2)} />
+          </filter>
+        </defs>
+        <path d={OCEAN_PATH} fillRule="evenodd" fill={p.ocean} transform={mapT} />
+        {/* shallow water: the coast stroked wide and blurred, kept to the sea */}
+        <g clipPath="url(#ltla-ocean)">
+          <g filter="url(#ltla-soft-a)" opacity={0.5}>
+            <path d={LAND_PATH} fill="none" stroke={p.oceanShallow} strokeWidth={px(shallowW)} strokeLinejoin="round" transform={mapT} />
+          </g>
+          <g filter="url(#ltla-soft-b)" opacity={0.55}>
+            <path d={LAND_PATH} fill="none" stroke={p.oceanShallow} strokeWidth={px(shallowW * 0.28)} strokeLinejoin="round" transform={mapT} />
+          </g>
+        </g>
+        <path
+          d={MOTORWAY_PATH}
+          fill="none"
+          stroke={p.freeway}
+          strokeOpacity={p.freewayOpacity}
+          strokeWidth={px(fwW)}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          transform={mapT}
+        />
+      </svg>
+
+      {p.vignette > 0 ? <Vignette strength={p.vignette} /> : null}
+
       <svg width={FRAME_W} height={FRAME_H} viewBox={`0 0 ${FRAME_W} ${FRAME_H}`} style={{ position: "absolute", left: 0, top: 0 }}>
         <defs>
           <clipPath id="ltla-town">
@@ -324,16 +424,7 @@ const LittleTownInLA: React.FC<Props> = (p) => {
           </clipPath>
         </defs>
 
-        {/* THE MAP, in km, under the camera. */}
-        <g transform={`translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${s.toFixed(5)})`}>
-          <path d={LAND_PATH} fill={p.land} />
-          {localW > 0.3 ? (
-            <path d={LOCAL_PATH} fill="none" stroke={p.localRoad} strokeWidth={px(localW)} strokeLinecap="round" strokeLinejoin="round" />
-          ) : null}
-          <path d={RUNWAY_PATH} fill="none" stroke={p.runway} strokeWidth={px(runwayW)} strokeLinecap="butt" />
-          <path d={MOTORWAY_PATH} fill="none" stroke={p.freewayCasing} strokeWidth={px(fwCase)} strokeLinecap="round" strokeLinejoin="round" />
-          <path d={MOTORWAY_PATH} fill="none" stroke={p.freeway} strokeWidth={px(fwW)} strokeLinecap="round" strokeLinejoin="round" />
-
+        <g transform={mapT}>
           {/* THE TOWN: a light tint spreading from the pin, then its outline. */}
           {tintR > 0 ? (
             <g clipPath="url(#ltla-town)">
@@ -367,12 +458,12 @@ const LittleTownInLA: React.FC<Props> = (p) => {
           ) : null}
         </g>
 
-        {/* THE MAP'S OWN LABELS: quiet, a darker tone of the ground, screen-sized. */}
-        {mapLabel("la", "LOS ANGELES", [-118.2437, 34.062], 46, p.landLabel, 0.2)}
-        {mapLabel("po", "PACIFIC OCEAN", [-118.62, 33.8], 40, p.oceanLabel, 0.24)}
-        {mapLabel("sm", "SANTA MONICA", [-118.5, 34.05], 26, p.landLabel)}
-        {mapLabel("lb", "LONG BEACH", [-118.13, 33.826], 26, p.landLabel)}
-        {s > 48 ? mapLabel("lax", "LAX", [-118.4075, 33.9418], 44, p.landLabel, 0.1, 800) : null}
+        {/* THE MAP'S OWN LABELS: light, quiet, screen-sized. */}
+        {mapLabel("la", "LOS ANGELES", [-118.2437, 34.062], 44, 0.2)}
+        {mapLabel("po", "PACIFIC OCEAN", [-118.62, 33.8], 38, 0.24, 700, 0.6)}
+        {mapLabel("sm", "SANTA MONICA", [-118.5, 34.05], 26)}
+        {mapLabel("lb", "LONG BEACH", [-118.13, 33.826], 26)}
+        {s > 48 ? mapLabel("lax", "LAX", [-118.4075, 33.9418], 42, 0.1, 800) : null}
 
         {/* THE RING off the pin's foot, once. */}
         {ringT > 0 && ringT < 1 ? (
