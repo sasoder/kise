@@ -24,10 +24,14 @@ const { fontFamily } = loadFont("normal", {
 // the 32, US 34, does 40, just 53, faster 56, and 67, better 74, and 80,
 // cheaper 88.
 //
-// THE MOTION, in three sentences. A two-lane track seen from above runs up the
-// frame, already streaming at f0: the United States in the left lane and China
-// in the right run level, each leaving the same goods in the same order on its
-// lane (car, phone, chip, solar panel, ship). From f39 China accelerates (its
+// THE MOTION. A two-lane track seen from above runs up the frame, already
+// streaming at f0. The cut OPENS CLOSE ON CHINA ("China's producing..."): its
+// silhouette centred on the true middle of the frame, about 865 px wide, goods
+// being left behind it; one pull-back and re-centre, already under way at f0
+// and landing at f44, reveals the United States running level in the left lane
+// all along ("...everything the US does"), each leaving the same goods in the
+// same order (car, phone, chip, solar panel, ship). That pull-back overlaps the
+// start of the break's own ease-back, so the camera never stops between them. From f39 China accelerates (its
 // burst peaks at f48) so that it is clearly ahead on "faster" (f56), leaving its own shape behind it in
 // orange, purple and blue and dropping its goods closer together, while the
 // camera eases back so China rides high and the US drops lower. From f67 the
@@ -48,13 +52,22 @@ const { fontFamily } = loadFont("normal", {
 // open, 31-40 through the pull-back): 0.11-0.13 of a period per frame, nowhere
 // near a half or whole period, so the dashes always read as travelling down.
 //
+// THE FLAGS (user request). Each country's real flag is clipped inside its
+// white silhouette and laid over it at opacity 0.18, the ONE sanctioned use of
+// opacity in the cut: white ink first, the flag showing through second. China:
+// #EE1C25 with the #FFFF00 stars over the west and centre. US: 13 #B22234 /
+// white stripes, the #3C3B6E canton with 50 stars over the north-west states.
+// Shadow and colour trail stay flat and untinted.
+//
 // THE CAMERA is analytic (frame 0 has to be moving, and a damper starts from
-// rest): the US's SCREEN y and the zoom k each ride one smoothstep f39-f77, and
-// cy is derived from them, so the pull-back and the tilt are one move. China's
-// screen y is then the US's minus k * G.
+// rest). The two-shot: the US's SCREEN y and the zoom k each ride one smoothstep
+// f39-f77, and China's screen y is the US's minus k * G. The open multiplies
+// that zoom by 2.0 at f0 and carries China's SCREEN position from the frame's
+// centre to its two-shot place, both on one smoothstep that began 10 frames
+// before the cut and lands at f44; cx and cy are derived from those.
 //
 // THE COLOURS, raw hex, no filter on the ink, no blend mode, no glow, no
-// opacity fade: white #FFFFFF on black #000000, and orange #FFB765 / purple
+// opacity fade (the flag tint above is a constant, not a fade): white #FFFFFF on black #000000, and orange #FFB765 / purple
 // #BC37FF / blue #0046FF, which have ONE job: they are China's own shape left
 // behind it as it pulls away. Stack, back to front: shadow, orange, purple,
 // blue, white.
@@ -119,6 +132,12 @@ export const schema = z.object({
   pullFrames: z.number(),
   usScreenLevel: z.number(),
   usScreenRest: z.number(),
+  // the open: how much tighter than the two-shot the cut starts, how many
+  // frames before the cut the pull-back began, and the frame it lands
+  openZoom: z.number(),
+  openLead: z.number(),
+  openLand: z.number(),
+  flagOpacity: z.number(),
 });
 export type Props = z.infer<typeof schema>;
 
@@ -159,6 +178,10 @@ export const defaultProps: Props = schema.parse({
   pullFrames: 38,
   usScreenLevel: 850,
   usScreenRest: 925,
+  openZoom: 2.0,
+  openLead: 10,
+  openLand: 44,
+  flagOpacity: 0.18,
 });
 
 // -- the race ----------------------------------------------------------------
@@ -177,12 +200,27 @@ export const usDistance = (frame: number, p: Props) => p.speed * (frame + LEAD_I
 
 // -- the camera --------------------------------------------------------------
 export const cameraAt = (frame: number, p: Props) => {
+  // the two-shot camera: the US's screen y and the zoom ride one smoothstep
   const g = smoothstep((frame - p.breakFrame) / p.pullFrames);
-  const k = p.kOpen - p.kDrift * frame - p.kPull * g;
-  const usScreen = p.usScreenLevel + (p.usScreenRest - p.usScreenLevel) * g;
-  // screen y = 960 + (worldY - cy) * k, and the US is at world y = -distance
-  const cy = -usDistance(frame, p) - (usScreen - FRAME_H / 2) / k;
-  return { k, cy, usScreen, chinaScreen: usScreen - k * leadAt(frame, p) };
+  const kTwo = p.kOpen - p.kDrift * frame - p.kPull * g;
+  const usTwo = p.usScreenLevel + (p.usScreenRest - p.usScreenLevel) * g;
+  const lead = leadAt(frame, p);
+  const chinaTwo = usTwo - kTwo * lead;
+  // THE OPEN: a close shot on China that is already pulling back at f0 (the
+  // move began openLead frames before the cut) and lands on the two-shot at
+  // openLand. ln(k) and China's SCREEN position ride the same curve, so the
+  // pull-back and the re-centre are one move.
+  const span = p.openLand + p.openLead;
+  const e0 = smoothstep(p.openLead / span);
+  const e = (smoothstep((frame + p.openLead) / span) - e0) / (1 - e0); // 0 at f0, 1 at openLand
+  const k = kTwo * Math.exp(Math.log(p.openZoom) * (1 - e));
+  const cnX = p.laneX[1];
+  const chinaScreen = FRAME_H / 2 + (chinaTwo - FRAME_H / 2) * e;
+  const chinaScreenX = FRAME_W / 2 + (cnX - FRAME_W / 2) * kTwo * e;
+  // screen = centre + (world - c) * k, and China is at world (cnX, -distance)
+  const cy = -(usDistance(frame, p) + lead) - (chinaScreen - FRAME_H / 2) / k;
+  const cx = cnX - (chinaScreenX - FRAME_W / 2) / k;
+  return { k, cx, cy, chinaScreen, chinaScreenX, usScreen: chinaScreen + lead * k };
 };
 
 // -- the goods: chunky flat glyphs in a 100-unit box centred on (0, 0) --------
@@ -245,6 +283,62 @@ const SHIP = [
   rr(33, -38, 14, 45, 1),
 ].join("");
 
+// ---------------------------------------------------------------------------
+// THE FLAGS, as vectors in each silhouette's own units (1000 wide, centre
+// 0,0), scaled to COVER the silhouette's box and placed so the identifying
+// part lands on land. They are clipped to the white shape and laid over it at
+// `flagOpacity`: white ink first, the flag showing through second.
+// ---------------------------------------------------------------------------
+const star = (cx: number, cy: number, r: number, rot = -Math.PI / 2) => {
+  let d = "";
+  for (let i = 0; i < 10; i++) {
+    const rad = i % 2 ? r * 0.382 : r;
+    const a = rot + (i * Math.PI) / 5;
+    d += `${i ? "L" : "M"}${n1(cx + rad * Math.cos(a))} ${n1(cy + rad * Math.sin(a))}`;
+  }
+  return `${d}Z`;
+};
+// China: 30 x 20 units of 66, so the big star sits over west-central China and
+// three of the four small stars are on land (searched against the outline).
+const CN_U = 66;
+const CN_FLAG = { x: -540, y: -404, w: 30 * CN_U, h: 20 * CN_U };
+const CN_BIG = { x: CN_FLAG.x + 5 * CN_U, y: CN_FLAG.y + 5 * CN_U };
+const CN_STARS = [
+  star(CN_BIG.x, CN_BIG.y, 3 * CN_U),
+  ...[
+    [10, 2],
+    [12, 4],
+    [12, 7],
+    [10, 9],
+  ].map(([ux, uy]) => {
+    const x = CN_FLAG.x + ux * CN_U;
+    const y = CN_FLAG.y + uy * CN_U;
+    // each small star points one arm at the big star's centre
+    return star(x, y, CN_U, Math.atan2(CN_BIG.y - y, CN_BIG.x - x));
+  }),
+].join("");
+// United States: 13 stripes of 48, 1.9 : 1, hoist on the west coast, so the
+// canton (0.76 H wide, 7 stripes tall) covers the north-west states.
+const US_STRIPE = 48;
+const US_FLAG = { x: -500, y: -312, w: 1.9 * 13 * US_STRIPE, h: 13 * US_STRIPE };
+const US_CANTON = { w: 0.76 * US_FLAG.h, h: 7 * US_STRIPE };
+const US_STARS = (() => {
+  let d = "";
+  for (let row = 0; row < 9; row++) {
+    const y = US_FLAG.y + ((row + 1) * US_CANTON.h) / 10;
+    const n = row % 2 ? 5 : 6;
+    for (let c = 0; c < n; c++) {
+      const x = US_FLAG.x + ((2 * c + (row % 2 ? 2 : 1)) * US_CANTON.w) / 12;
+      d += star(x, y, 0.0308 * US_FLAG.h);
+    }
+  }
+  return d;
+})();
+const CN_RED = "#EE1C25";
+const CN_YELLOW = "#FFFF00";
+const US_RED = "#B22234";
+const US_BLUE = "#3C3B6E";
+
 const GOODS = [CAR, PHONE, CHIP, SOLAR, SHIP];
 const goodAt = (i: number) => GOODS[((i % GOODS.length) + GOODS.length) % GOODS.length];
 
@@ -300,7 +394,7 @@ const FasterBetterCheaper: React.FC<Props> = (p) => {
   const drift = sway(frame);
   const k = cam.k;
   const cy = cam.cy + drift.dy * 0.6;
-  const cx = FRAME_W / 2 + drift.dx;
+  const cx = cam.cx + drift.dx;
   const { tx, ty } = worldTransform(cx, cy, k);
   const worldTop = cy - FRAME_H / 2 / k;
   const worldBottom = cy + FRAME_H / 2 / k;
@@ -420,7 +514,7 @@ const FasterBetterCheaper: React.FC<Props> = (p) => {
   // the paper drifts down with the track
   const travelled = cam0.cy - cam.cy;
   const bgY = BG_Y0 + travelled * p.parallax - drift.dy * k * p.parallax;
-  const bgX = -drift.dx * k * p.parallax;
+  const bgX = -(cx - FRAME_W / 2) * k * p.parallax;
 
   return (
     <AbsoluteFill style={{ backgroundColor: PAPER_BASE }}>
@@ -444,6 +538,16 @@ const FasterBetterCheaper: React.FC<Props> = (p) => {
             viewBox={`0 0 ${FRAME_W} ${FRAME_H}`}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
+            <defs>
+              {/* each flag is clipped to its own white silhouette */}
+              <clipPath id="fbc-us">
+                <path d={countries.us.d} />
+              </clipPath>
+              <clipPath id="fbc-cn">
+                <path d={countries.china.d} />
+              </clipPath>
+            </defs>
+
             {/* THE TRACK: two edges and a dashed divider streaming down. */}
             {trackRects(so, p.shadow)}
             {trackRects(0, p.ink)}
@@ -500,10 +604,21 @@ const FasterBetterCheaper: React.FC<Props> = (p) => {
             {/* THE UNITED STATES. */}
             <path d={countries.us.d} transform={`translate(${usX + so} ${n1(usY + so)}) scale(${usS})`} fill={p.shadow} />
             <path d={countries.us.d} transform={`translate(${usX} ${n1(usY)}) scale(${usS})`} fill={p.ink} />
+            <g transform={`translate(${usX} ${n1(usY)}) scale(${usS})`} clipPath="url(#fbc-us)" opacity={p.flagOpacity}>
+              {Array.from({ length: 7 }, (_, i) => (
+                <rect key={i} x={US_FLAG.x} y={US_FLAG.y + 2 * i * US_STRIPE} width={US_FLAG.w} height={US_STRIPE} fill={US_RED} />
+              ))}
+              <rect x={US_FLAG.x} y={US_FLAG.y} width={US_CANTON.w} height={US_CANTON.h} fill={US_BLUE} />
+              <path d={US_STARS} fill="#FFFFFF" />
+            </g>
             {label(p.labels.us, usX, usY - (countries.us.h * usS) / 2 - LABEL_GAP)}
 
             {/* CHINA, the white core, in front of its trail. */}
             <path d={countries.china.d} transform={`translate(${cnX} ${n1(cnY)}) scale(${cnS})`} fill={p.ink} />
+            <g transform={`translate(${cnX} ${n1(cnY)}) scale(${cnS})`} clipPath="url(#fbc-cn)" opacity={p.flagOpacity}>
+              <rect x={CN_FLAG.x} y={CN_FLAG.y} width={CN_FLAG.w} height={CN_FLAG.h} fill={CN_RED} />
+              <path d={CN_STARS} fill={CN_YELLOW} />
+            </g>
             {label(p.labels.china, cnX, cnY - (countries.china.h * cnS) / 2 - LABEL_GAP)}
           </svg>
         </div>
