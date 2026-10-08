@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +19,14 @@ import { z } from "zod";
 // orange, two frames apart on the same path, never ahead of or larger than the
 // white, tucking behind the tile as it lands); on "but" the tiles let go and
 // fall out of frame under gravity, so f108-109 are empty.
+//
+// v3, the user's revision: THE EL SEGUNDO SEAL opens the cut. It pops up over
+// the code on "El Segundo" (f1, chain discs orange / purple / blue leading it
+// from the same centre at the same size, so they show as rings and end hidden),
+// holds with a slow one-degree sway while the code types DIMMED behind it (the
+// whole code layer at 55 % opacity — the user asked for this, so "nothing
+// fades" yields here), and scales away just after "startup" (f45-52) while the
+// code comes up to 100 %. From f52 the cut is exactly the approved v2.
 //
 // INK RULES (from PeakForSolar): white #FFFFFF shapes, each on a hard black
 // #000000 shadow, zero blur, +4 / +4 px, drawn as a translated SVG copy of the
@@ -59,6 +67,17 @@ export const schema = z.object({
   dropStart: z.number(),
   // px per frame squared
   gravity: z.number(),
+  // the city seal: a round alpha PNG in public/, drawn at its native size
+  sealSrc: z.string(),
+  sealCx: z.number(),
+  sealCy: z.number(),
+  sealD: z.number(),
+  sealIn: z.number(), // the first chain disc starts here ("El")
+  sealStagger: z.number(), // frames between orange, purple, blue and the seal
+  sealOut: z.number(), // it starts to leave here (just after "startup")
+  sealOutDur: z.number(),
+  // the code layer's opacity while the seal is up
+  codeDim: z.number(),
 });
 
 export type Props = z.infer<typeof schema>;
@@ -75,6 +94,15 @@ export const defaultProps: Props = schema.parse({
   morphStart: 72,
   dropStart: 93,
   gravity: 30,
+  sealSrc: "hadrian05/el_segundo_seal.png",
+  sealCx: 540,
+  sealCy: 330,
+  sealD: 433,
+  sealIn: 1,
+  sealStagger: 0.5,
+  sealOut: 45,
+  sealOutDur: 7,
+  codeDim: 0.55,
 });
 
 // ---------------------------------------------------------------------------
@@ -270,6 +298,10 @@ export const BLINK_OFF = [2, 4]; // frames after typeEnd, inclusive
 export const GLYPH_AT_SIZE = 0.7;
 export const GLYPH_DUR = 6;
 export const DROP_MAX_DEG = 5;
+// the seal's pop: up to SEAL_OVER in SEAL_POP frames, back to 1 in SEAL_SETTLE
+export const SEAL_POP = 5;
+export const SEAL_SETTLE = 5;
+export const SEAL_OVER = 1.05;
 // a syntax-coloured bar keeps its bar shape and slips under its tile
 const SLIP_W = 120;
 const EASE_LAND = Easing.bezier(0.16, 1, 0.3, 1);
@@ -483,6 +515,15 @@ const CodeAndApps: React.FC<Props> = ({
   morphStart,
   dropStart,
   gravity,
+  sealSrc,
+  sealCx,
+  sealCy,
+  sealD,
+  sealIn,
+  sealStagger,
+  sealOut,
+  sealOutDur,
+  codeDim,
 }) => {
   const frame = useCurrentFrame();
   const hueFill = (h: Hue) => (h === "o" ? orange : h === "p" ? purple : h === "b" ? blue : ink);
@@ -493,7 +534,7 @@ const CodeAndApps: React.FC<Props> = ({
   const trailDelay = 3 * CHAIN_STAGGER;
   const landEnd = Math.ceil(morphStart + MAX_STAGGER + trailDelay + MORPH_DUR);
 
-  const svg = (children: React.ReactNode) => (
+  const svg = (children: React.ReactNode, over: React.ReactNode = null) => (
     // No backgroundColor: the root is transparent.
     <AbsoluteFill>
       <svg
@@ -504,6 +545,7 @@ const CodeAndApps: React.FC<Props> = ({
       >
         {children}
       </svg>
+      {over}
     </AbsoluteFill>
   );
 
@@ -528,8 +570,77 @@ const CodeAndApps: React.FC<Props> = ({
       );
     });
     const blinkOff = frame >= typeEnd + BLINK_OFF[0] && frame <= typeEnd + BLINK_OFF[1];
+    // ---- THE SEAL, over the dimmed code ------------------------------------
+    // Pop: 0 -> 1.06 on the house ease, then a short settle to 1. Exit: one
+    // quick ease-in to 0, everything together, so nothing lingers.
+    const exit = interpolate(frame, [sealOut, sealOut + sealOutDur], [1, 0], {
+      easing: Easing.in(Easing.cubic),
+      ...clamp,
+    });
+    const pop = (start: number) => {
+      const up = interpolate(frame, [start, start + SEAL_POP], [0, SEAL_OVER], {
+        easing: EASE_LAND,
+        ...clamp,
+      });
+      const back = interpolate(frame, [start + SEAL_POP, start + SEAL_POP + SEAL_SETTLE], [0, SEAL_OVER - 1], {
+        easing: Easing.inOut(Easing.quad),
+        ...clamp,
+      });
+      return (up - back) * exit;
+    };
+    const sealStart = sealIn + 3 * sealStagger;
+    const sealScale = pop(sealStart);
+    const sway = 1.2 * Math.sin(((frame - sealStart) * Math.PI * 2) / 64);
+    const float = 2.5 * Math.sin(((frame - sealStart) * Math.PI * 2) / 47);
+    const disc = (scale: number, fill: string, d: number, off = 0): React.CSSProperties => ({
+      position: "absolute",
+      left: -d / 2 + off,
+      top: -d / 2 + off,
+      width: d,
+      height: d,
+      borderRadius: "50%",
+      backgroundColor: fill,
+      transform: `scale(${scale.toFixed(5)})`,
+    });
+    const ringD = sealD - 2; // a hair inside the seal, so no colour fringes it at rest
+    const seal =
+      frame >= sealIn && frame < sealOut + sealOutDur ? (
+        <div
+          style={{
+            position: "absolute",
+            left: sealCx,
+            top: sealCy,
+            width: 0,
+            height: 0,
+            transform: `translateY(${float.toFixed(3)}px)`,
+          }}
+        >
+          {sealScale > 0 ? <div style={disc(sealScale, shadow, ringD, shadowOffset)} /> : null}
+          {frame < sealStart + SEAL_POP + SEAL_SETTLE ? (
+            <>
+              <div style={disc(pop(sealIn), orange, ringD)} />
+              <div style={disc(pop(sealIn + sealStagger), purple, ringD)} />
+              <div style={disc(pop(sealIn + 2 * sealStagger), blue, ringD)} />
+            </>
+          ) : null}
+          {sealScale > 0 ? (
+            <Img
+              src={staticFile(sealSrc)}
+              style={{
+                position: "absolute",
+                left: -sealD / 2,
+                top: -sealD / 2,
+                width: sealD,
+                height: sealD,
+                transform: `scale(${sealScale.toFixed(5)}) rotate(${sway.toFixed(3)}deg)`,
+              }}
+            />
+          ) : null}
+        </div>
+      ) : null;
+    const dim = interpolate(frame, [sealOut, sealOut + sealOutDur], [codeDim, 1], clamp);
     return svg(
-      <>
+      <g opacity={dim < 1 ? dim : undefined}>
         {bars}
         {blinkOff ? null : (
           <>
@@ -544,7 +655,8 @@ const CodeAndApps: React.FC<Props> = ({
             <rect x={cur.x} y={cur.y} width={CURSOR_W} height={BAR_H} rx={4} fill={ink} />
           </>
         )}
-      </>,
+      </g>,
+      seal,
     );
   }
 
