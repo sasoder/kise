@@ -14,9 +14,11 @@
 // API (palette, camera, fonts, paper, labels are incaShared's, re-exported)
 //   project(lon, lat); <MapStack cam />; <MapPage cam vignette?>
 //   APACHERIA (the schematic ring, world px), APACHERIA_C (its centroid)
-//   <OrangeCountry ring cam highlight? /> the orange country: deep wash, orange
+//   <OrangeCountry ring cam highlight? edge? /> the orange country: deep wash, orange
 //     45 deg hatch, dashed orange edge; ring = the (possibly flexed) outline;
 //     highlight = 0..1 phase of a faint brighter band travelling the hatch
+//   <FortifiedEdge ring cam press? /> (V2) the reinforced border: a solid
+//     orange line with outward teeth, thickening where press(p) > 0
 //   <YearOdometer frame yearAt x top size? columnsAt? maxBlur? /> IM Fell English numerals, cream
 //     with a dark halo, four wheels of a TRUE odometer (the units wheel turns
 //     with the year, each higher wheel only while the one below runs 9 -> 0),
@@ -105,7 +107,7 @@ export const MapPage: React.FC<{ cam: Cam; vignette?: number; children?: React.R
 // THE ORANGE COUNTRY
 // ---------------------------------------------------------------------------
 const HATCH_P = 10; // world px between hatch lines
-export const OrangeCountry: React.FC<{ ring: P2[]; cam: Cam; highlight?: number }> = ({ ring, cam, highlight }) => {
+export const OrangeCountry: React.FC<{ ring: P2[]; cam: Cam; highlight?: number; edge?: boolean }> = ({ ring, cam, highlight, edge = true }) => {
   const k = cam.k;
   const d = `M${ring.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join("L")}Z`;
   // the highlight: a soft band crossing the country from the south-west to the north-east
@@ -129,8 +131,85 @@ export const OrangeCountry: React.FC<{ ring: P2[]; cam: Cam; highlight?: number 
       <path d={d} fill={ACCENT_DEEP} fillOpacity={0.2} />
       <path d={d} fill="url(#apHatch)" opacity={0.78} />
       {highlight !== undefined ? <path d={d} fill="url(#apHatch)" opacity={0.5} mask="url(#apBandMask)" /> : null}
-      <path d={d} fill="none" stroke="#0B0907" strokeOpacity={0.5} strokeWidth={5.4 / k} strokeLinejoin="round" />
-      <path d={d} fill="none" stroke={ACCENT} strokeWidth={3 / k} strokeLinejoin="round" strokeDasharray={`${9 / k} ${6 / k}`} />
+      {edge ? (
+        <>
+          <path d={d} fill="none" stroke="#0B0907" strokeOpacity={0.5} strokeWidth={5.4 / k} strokeLinejoin="round" />
+          <path d={d} fill="none" stroke={ACCENT} strokeWidth={3 / k} strokeLinejoin="round" strokeDasharray={`${9 / k} ${6 / k}`} />
+        </>
+      ) : null}
+    </g>
+  );
+};
+
+/** (added for V2) THE REINFORCED BORDER: a solid orange line round the ring with
+ *  short outward teeth (a palisade tick every ~16 px); press(p) (0..1) = how
+ *  hard an army leans on the edge at world point p: there the line thickens
+ *  (4 -> 6 px) and the teeth lengthen (9 -> 16 px). It never moves. */
+export const FortifiedEdge: React.FC<{ ring: P2[]; cam: Cam; press?: (p: P2) => number; lineMax?: number; toothMax?: number }> = ({
+  ring,
+  cam,
+  press,
+  lineMax = 6,
+  toothMax = 16,
+}) => {
+  const k = cam.k;
+  const n = ring.length;
+  const cx = ring.reduce((a, p) => a + p[0], 0) / n;
+  const cy = ring.reduce((a, p) => a + p[1], 0) / n;
+  const w = ring.map((p) => (press ? clamp01(press(p)) : 0));
+  // the outward normal at each vertex
+  const nrm = ring.map((p, i) => {
+    const a = ring[(i - 1 + n) % n];
+    const b = ring[(i + 1) % n];
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    let nx = (b[1] - a[1]) / l;
+    let ny = -(b[0] - a[0]) / l;
+    if (nx * (p[0] - cx) + ny * (p[1] - cy) < 0) [nx, ny] = [-nx, -ny];
+    return [nx, ny] as P2;
+  });
+  // teeth every ~16 px of arclength
+  const teeth: { p: P2; q: P2; w: number }[] = [];
+  let acc = 8;
+  for (let i = 0; i < n; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % n];
+    const seg = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    while (acc <= seg) {
+      const t = acc / seg;
+      const wi = w[i] + (w[(i + 1) % n] - w[i]) * t;
+      const p: P2 = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+      const len = (9 + (toothMax - 9) * wi) / k;
+      teeth.push({ p, q: [p[0] + nrm[i][0] * len, p[1] + nrm[i][1] * len], w: wi });
+      acc += 16 / k;
+    }
+    acc -= seg;
+  }
+  const d = `M${ring.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join("L")}Z`;
+  // the pressed stretches: runs of vertices with w > 0, drawn heavier on top
+  const heavy: { d: string; w: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const wa = (w[i] + w[(i + 1) % n]) / 2;
+    if (wa < 0.02) continue;
+    const a = ring[i];
+    const b = ring[(i + 1) % n];
+    heavy.push({ d: `M${a[0].toFixed(2)},${a[1].toFixed(2)}L${b[0].toFixed(2)},${b[1].toFixed(2)}`, w: wa });
+  }
+  return (
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {teeth.map((t, i) => (
+        <path key={`tc${i}`} d={`M${t.p[0].toFixed(2)},${t.p[1].toFixed(2)}L${t.q[0].toFixed(2)},${t.q[1].toFixed(2)}`} stroke="#0B0907" strokeOpacity={0.55} strokeWidth={(5.4 + 1.2 * t.w) / k} />
+      ))}
+      <path d={d} stroke="#0B0907" strokeOpacity={0.55} strokeWidth={6.6 / k} />
+      {heavy.map((h, i) => (
+        <path key={`hc${i}`} d={h.d} stroke="#0B0907" strokeOpacity={0.55} strokeWidth={(6.6 + (lineMax - 4) * 1.1 * h.w) / k} />
+      ))}
+      {teeth.map((t, i) => (
+        <path key={`t${i}`} d={`M${t.p[0].toFixed(2)},${t.p[1].toFixed(2)}L${t.q[0].toFixed(2)},${t.q[1].toFixed(2)}`} stroke={ACCENT} strokeWidth={(3 + 1.2 * t.w) / k} />
+      ))}
+      <path d={d} stroke={ACCENT} strokeWidth={4 / k} />
+      {heavy.map((h, i) => (
+        <path key={`h${i}`} d={h.d} stroke={ACCENT} strokeWidth={(4 + (lineMax - 4) * h.w) / k} />
+      ))}
     </g>
   );
 };
@@ -159,7 +238,9 @@ export const YearOdometer: React.FC<{
   maxBlur?: number;
   /** sub-frame samples per wheel (default 3; 1 = no ghosting, for wheels that never run fast) */
   samples?: number;
-}> = ({ frame, yearAt, x, top, size = 120, opacity = 1, columnsAt, maxBlur, samples: nSamples = BLUR_N }) => {
+  /** the soft fade at the window's top and bottom (px; default 13 % of the cell) */
+  fadePx?: number;
+}> = ({ frame, yearAt, x, top, size = 120, opacity = 1, columnsAt, maxBlur, samples: nSamples = BLUR_N, fadePx }) => {
   if (opacity <= 0.002) return null;
   const CELL_W = 0.5 * size;
   const CELL_H = 1.2 * size;
@@ -208,7 +289,8 @@ export const YearOdometer: React.FC<{
       });
     return els;
   };
-  const fade = "linear-gradient(to bottom, transparent 0%, #000 13%, #000 87%, transparent 100%)";
+  const fp = fadePx === undefined ? 13 : (100 * fadePx) / CELL_H;
+  const fade = `linear-gradient(to bottom, transparent 0%, #000 ${fp.toFixed(2)}%, #000 ${(100 - fp).toFixed(2)}%, transparent 100%)`;
   return (
     <div style={{ position: "absolute", left: x - 2 * CELL_W, top, width: 4 * CELL_W, height: CELL_H, opacity }}>
       <svg width={0} height={0} style={{ position: "absolute" }}>
