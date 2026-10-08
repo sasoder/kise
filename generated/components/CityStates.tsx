@@ -74,12 +74,12 @@ export const T = {
 };
 const K_A = 3.15;
 const K_B = 3.63;
-const LEAN = 6 / K0;
+export const LEAN = 6 / K0;
 
 // ---------------------------------------------------------------------------
 // Camera: the land's middle at the frame's true centre, one exponential push
 // ---------------------------------------------------------------------------
-const FOCUS: P2 = [(REGION_BOX.x0 + REGION_BOX.x1) / 2 - 2, (REGION_BOX.y0 + REGION_BOX.y1) / 2 - 4];
+export const FOCUS: P2 = [(REGION_BOX.x0 + REGION_BOX.x1) / 2 - 2, (REGION_BOX.y0 + REGION_BOX.y1) / 2 - 4];
 export const cameraAt = (f: number): Cam => camFor(FOCUS, K_A * Math.pow(K_B / K_A, f / (DURATION - 1)), 540, 960);
 
 // ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ const SPLIT_END = T.split[1] + T.seamF;
 const TEETH_BY = FINAL.map((_, i) => SEAMS.map((__, q) => TEETH.filter((t) => t.cell === i && t.seam === q)));
 
 // THE SHOVES: seams in sweep order, no cell twice; cell a leans at b, b answers
-const EXCHANGES = (() => {
+export const EXCHANGES = (() => {
   const used = new Set<number>();
   const out: { a: number; b: number; n: P2; t0: number }[] = [];
   const order = SEAMS.map((s, q) => ({ s, q })).sort((x, y) => x.s.s - y.s.s);
@@ -110,8 +110,8 @@ const EXCHANGES = (() => {
   }
   return out;
 })();
-const bump = (t: number) => (t <= 0 || t >= 1 ? 0 : Math.sin(Math.PI * t) ** 2);
-const leanAt = (f: number): P2[] => {
+export const bump = (t: number) => (t <= 0 || t >= 1 ? 0 : Math.sin(Math.PI * t) ** 2);
+export const leanAt = (f: number): P2[] => {
   const v: P2[] = FINAL.map(() => [0, 0]);
   for (const e of EXCHANGES) {
     const wa = LEAN * bump((f - e.t0) / T.shoveF);
@@ -122,12 +122,12 @@ const leanAt = (f: number): P2[] => {
   return v;
 };
 
-const HATCH_P = 11 / K0;
-const HATCH_W = 2.5 / K0;
-const WALL = 4.6 / K0;
-const CASE = 2.2 / K0;
+export const HATCH_P = 11 / K0;
+export const HATCH_W = 2.5 / K0;
+export const WALL = 4.6 / K0;
+export const CASE = 2.2 / K0;
 // the label: over the open Gulf, north-west of the north coast
-const LABEL_AT: P2 = [FOCUS[0] + (350 - 540) / K0, FOCUS[1] + (340 - 960) / K0];
+export const LABEL_AT: P2 = [FOCUS[0] + (350 - 540) / K0, FOCUS[1] + (340 - 960) / K0];
 
 const CityStates: React.FC<Props> = ({ vignette }) => {
   const frame = useCurrentFrame();

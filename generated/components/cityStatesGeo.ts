@@ -35,9 +35,9 @@ import { project, type P2 } from "./mayaShared";
 export const K0 = 3.42; // the cut's opening zoom: every screen-px size below is at K0
 export const GAP = 34 / K0; // a seam's full width
 export const ROUND = 12 / K0; // the cells' corner radius
-const TOOTH_PITCH = 36 / K0;
+export const TOOTH_PITCH = 36 / K0;
 export const TOOTH_LEN = 14 / K0;
-const TOOTH_HALF = 11 / K0;
+export const TOOTH_HALF = 11 / K0;
 
 // ------------------------------- helpers ----------------------------------
 const area2 = (r: P2[]) => {
@@ -105,7 +105,7 @@ const clipToConvex = (subj: P2[], conv: P2[]): P2[] => {
   }
   return out;
 };
-const simplify = (pts: P2[], eps: number): P2[] => {
+export const simplify = (pts: P2[], eps: number): P2[] => {
   const keep = new Uint8Array(pts.length);
   keep[0] = keep[pts.length - 1] = 1;
   const stack: [number, number][] = [[0, pts.length - 1]];
@@ -147,7 +147,7 @@ const LIMIT: P2[] = (
     [-91.2, 19.4],
   ] as P2[]
 ).map(([lon, lat]) => project(lon, lat));
-const MAINLAND: P2[] = (() => {
+export const MAINLAND: P2[] = (() => {
   const first = LAND_D.slice(1, LAND_D.indexOf("Z"));
   return first.split("L").map((q) => q.split(",").map(Number) as P2);
 })();
