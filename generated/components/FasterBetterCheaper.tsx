@@ -26,12 +26,14 @@ const { fontFamily } = loadFont("normal", {
 //
 // THE MOTION. A two-lane track seen from above runs up the frame, already
 // streaming at f0. The cut OPENS CLOSE ON CHINA ("China's producing..."): its
-// silhouette centred on the true middle of the frame, about 865 px wide, goods
-// being left behind it; one pull-back and re-centre, already under way at f0
-// and landing at f44, reveals the United States running level in the left lane
-// all along ("...everything the US does"), each leaving the same goods in the
-// same order (car, phone, chip, solar panel, ship). That pull-back overlaps the
-// start of the break's own ease-back, so the camera never stops between them. From f39 China accelerates (its
+// silhouette centred on the middle of the frame, about 865 px wide, goods
+// being left behind it, and the camera HOLDS there for a beat (f0-f13, alive on
+// a barely perceptible creep while the dashes, paper and goods stream past).
+// Then one quick pull-back and re-centre, f13 to f34, eased in and out, reveals
+// the United States running level in the left lane all along ("...everything
+// the US does", US at f34), each leaving the same goods in the same order (car,
+// phone, chip, solar panel, ship). The two-shot settles for five frames before
+// the break's own ease-back starts from rest. From f39 China accelerates (its
 // burst peaks at f48) so that it is clearly ahead on "faster" (f56), leaving its own shape behind it in
 // orange, purple and blue and dropping its goods closer together, while the
 // camera eases back so China rides high and the US drops lower. From f67 the
@@ -48,9 +50,10 @@ const { fontFamily } = loadFont("normal", {
 // frames. China's spacing eases from 290 to 195 track px across the break.
 //
 // STROBING. The dashed divider has a 300 px period (150 dash / 150 gap) and the
-// track passes the camera at 34 world px per frame (about 36 screen px at the
-// open, 31-40 through the pull-back): 0.11-0.13 of a period per frame, nowhere
-// near a half or whole period, so the dashes always read as travelling down.
+// track passes the camera at 34 world px per frame through the hold and the
+// two-shot, 26-34 while the pull-back re-centres, 34-36 through the break:
+// 0.09-0.12 of a period per frame, nowhere near a half or whole period, so the
+// dashes always read as travelling down.
 //
 // THE FLAGS (user request). Each country's real flag is clipped inside its
 // white silhouette and laid over it at opacity 0.18, the ONE sanctioned use of
@@ -63,8 +66,9 @@ const { fontFamily } = loadFont("normal", {
 // rest). The two-shot: the US's SCREEN y and the zoom k each ride one smoothstep
 // f39-f77, and China's screen y is the US's minus k * G. The open multiplies
 // that zoom by 2.0 at f0 and carries China's SCREEN position from the frame's
-// centre to its two-shot place, both on one smoothstep that began 10 frames
-// before the cut and lands at f44; cx and cy are derived from those.
+// centre to its two-shot place, both on one curve: a creep worth 5% of the move
+// that is moving at f0 and dies away by f34, plus a smoothstep f13-f34 for the
+// other 95%; cx and cy are derived from those.
 //
 // THE COLOURS, raw hex, no filter on the ink, no blend mode, no glow, no
 // opacity fade (the flag tint above is a constant, not a fade): white #FFFFFF on black #000000, and orange #FFB765 / purple
@@ -133,7 +137,8 @@ export const schema = z.object({
   usScreenLevel: z.number(),
   usScreenRest: z.number(),
   // the open: how much tighter than the two-shot the cut starts, how many
-  // frames before the cut the pull-back began, and the frame it lands
+  // frames the close shot holds on China before the pull-back begins, and the
+  // frame the pull-back lands
   openZoom: z.number(),
   openLead: z.number(),
   openLand: z.number(),
@@ -179,8 +184,8 @@ export const defaultProps: Props = schema.parse({
   usScreenLevel: 850,
   usScreenRest: 925,
   openZoom: 2.0,
-  openLead: 10,
-  openLand: 44,
+  openLead: 13,
+  openLand: 34,
   flagOpacity: 0.18,
 });
 
@@ -199,6 +204,8 @@ export const leadAt = (frame: number, p: Props) => {
 export const usDistance = (frame: number, p: Props) => p.speed * (frame + LEAD_IN);
 
 // -- the camera --------------------------------------------------------------
+// the share of the open's move spent as a creep under the hold
+const OPEN_CREEP = 0.05;
 export const cameraAt = (frame: number, p: Props) => {
   // the two-shot camera: the US's screen y and the zoom ride one smoothstep
   const g = smoothstep((frame - p.breakFrame) / p.pullFrames);
@@ -206,13 +213,15 @@ export const cameraAt = (frame: number, p: Props) => {
   const usTwo = p.usScreenLevel + (p.usScreenRest - p.usScreenLevel) * g;
   const lead = leadAt(frame, p);
   const chinaTwo = usTwo - kTwo * lead;
-  // THE OPEN: a close shot on China that is already pulling back at f0 (the
-  // move began openLead frames before the cut) and lands on the two-shot at
-  // openLand. ln(k) and China's SCREEN position ride the same curve, so the
-  // pull-back and the re-centre are one move.
-  const span = p.openLand + p.openLead;
-  const e0 = smoothstep(p.openLead / span);
-  const e = (smoothstep((frame + p.openLead) / span) - e0) / (1 - e0); // 0 at f0, 1 at openLand
+  // THE OPEN: a close shot on China that HOLDS, centred, for openLead frames
+  // (alive on a creep that spends OPEN_CREEP of the move and dies away by
+  // openLand), then one smoothstep pull-back from openLead to openLand, where
+  // it lands on the two-shot. ln(k) and China's SCREEN position ride the same
+  // curve, so the pull-back and the re-centre are one move.
+  const u = clamp01(frame / p.openLand);
+  const creep = OPEN_CREEP * (1 - (1 - u) * (1 - u));
+  const e =
+    creep + (1 - OPEN_CREEP) * smoothstep((frame - p.openLead) / (p.openLand - p.openLead)); // 0 at f0, 1 at openLand
   const k = kTwo * Math.exp(Math.log(p.openZoom) * (1 - e));
   const cnX = p.laneX[1];
   const chinaScreen = FRAME_H / 2 + (chinaTwo - FRAME_H / 2) * e;
