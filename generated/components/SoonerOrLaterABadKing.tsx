@@ -24,14 +24,16 @@
 // relay round the map (old one lifts away, a new sound one drops and settles)
 // while the camera pushes toward Bengal; on "bad king" the succession at
 // Murshidabad lands a cracked, crooked crown. ORANGE = the British (the East
-// India Company) and nothing else: the fort mark at Calcutta from the first
-// frame, then a force of orange dots that surfaces out at sea and streams north
-// through the fort and past Plassey; its head knocks the cracked crown off its seat (it lies fallen beside it); a Union Flag (orange and
+// India Company) and nothing else: an orange East Indiaman, far down the bay
+// from the start, sails up to the Hooghly mouth and anchors; a column of orange
+// dots, four abreast, leaves it rank by rank and marches inland; as its head
+// reaches the seat the cracked
+// crown off its seat (it lies fallen beside it); a Union Flag (orange and
 // cream) is planted on the seat and a soft disc of orange hatch spreads round it and keeps
-// creeping outward while the dots spread and settle on that ground, the tail of
-// the column still coming up from the coast in the last frame.
+// creeping outward while the column wheels round the seat into concentric
+// arcs, still marching, slower, in the last frame.
 //
-// ELEMENT TYPES: the map, the seat + its crown, the orange (fort, dots,
+// ELEMENT TYPES: the map, the seat + its crown, the orange (ship, dots,
 // flag, hatch), one label (INDIA, on the word). No place names, no dates.
 // ---------------------------------------------------------------------------
 import React from "react";
@@ -61,7 +63,7 @@ import {
   viewRect,
   type Cam,
 } from "./incaShared";
-import { ADVANCE, BENGAL_LAND_D, CALCUTTA, INDIA_AT, MURSHIDABAD, SEATS, type P2 } from "./SoonerOrLaterABadKingMapData";
+import { BENGAL_LAND_D, INDIA_AT, MURSHIDABAD, SEATS, SHIP_FROM, SHIP_STOP, type P2 } from "./SoonerOrLaterABadKingMapData";
 import { LEVELS } from "./SoonerOrLaterABadKingLevels";
 
 export const FPS = 24000 / 1001;
@@ -80,7 +82,9 @@ export const T = {
   label: 83, // INDIA slides up, landing on the word (f91)
   labelDim: [108, 122] as [number, number],
   badStart: 134, // the old crown at Murshidabad lifts; the bad one lands at ~f148
-  advance: [150, 208] as [number, number], // the orange force: first dots surface / its head is at the seat
+  ship: [92, 156] as [number, number], // the ship sails up the bay and anchors
+  march: 158, // the first rank leaves the ship
+  slow: 214, // the head of the column begins to slow as it wheels round the seat
   knock: 205, // the cracked crown is struck off
   seatTurn: [206, 213] as [number, number],
   hatch: [207, 224] as [number, number], // then it keeps creeping outward
@@ -96,10 +100,10 @@ const D_KNOCK = 12; // struck at f205, lying beside the seat by f217, still by ~
 // by the house damper, so nothing pops and no key is a corner. Keys are the
 // world point at the frame's true centre and the zoom.
 // ---------------------------------------------------------------------------
-const K_CLOSE = 4.2;
+const K_CLOSE = 4.3;
 const CAM_STIFF = 0.09;
 const CAM_DAMP = 0.468;
-const SEAT_Y = 716; // Murshidabad's seat on screen in the close frame
+const SEAT_Y = 800; // Murshidabad's seat on screen in the close frame
 const KEYS: { f: number; k: number; cx: number; cy: number }[] = [
   { f: -80, k: 1.3, cx: 452, cy: 650 },
   { f: -4, k: 1.2, cx: 468, cy: 742 }, // the north, the Gujarat coast and the Arabian Sea in frame
@@ -339,89 +343,164 @@ const ringR = (k: number) => 8.5 * Math.pow(k, 0.5);
 const easeOut = (u: number) => 1 - Math.pow(1 - clamp01(u), 3);
 
 // ---------------------------------------------------------------------------
-// THE ORANGE: the fort mark, the advance, the hatch
+// THE ORANGE: the ship, the column, the hatch
 // ---------------------------------------------------------------------------
-const FORT_D = (() => {
-  // a four-bastion star fort, unit radius
-  const pts: string[] = [];
-  for (let i = 0; i < 8; i++) {
-    const a = (Math.PI / 4) * i - Math.PI / 4;
-    const r = i % 2 === 0 ? 1 : 0.52;
-    pts.push(`${(Math.cos(a) * r).toFixed(3)},${(Math.sin(a) * r).toFixed(3)}`);
-  }
-  return `M${pts.join("L")}Z`;
-})();
-const ADV_CUM = (() => {
-  const c = [0];
-  for (let i = 1; i < ADVANCE.length; i++) c.push(c[i - 1] + Math.hypot(ADVANCE[i][0] - ADVANCE[i - 1][0], ADVANCE[i][1] - ADVANCE[i - 1][1]));
-  return c;
-})();
-const ADV_LEN = ADV_CUM[ADV_CUM.length - 1];
-const advAt = (s: number): { p: P2; n: P2; t: P2 } => {
-  const q = Math.max(0, Math.min(ADV_LEN, s));
-  let i = 1;
-  while (i < ADV_CUM.length - 1 && ADV_CUM[i] < q) i++;
-  const a = ADVANCE[i - 1];
-  const b = ADVANCE[i];
-  const l = ADV_CUM[i] - ADV_CUM[i - 1] || 1;
-  const u = (q - ADV_CUM[i - 1]) / l;
-  const t: P2 = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
-  return { p: [a[0] + (b[0] - a[0]) * u + t[0] * (s - q), a[1] + (b[1] - a[1]) * u + t[1] * (s - q)], n: [t[1], -t[0]], t };
-};
-// THE FORCE: solid orange dots (the house crowd language: a dot = people) that
-// surface out at sea at the head of the bay and stream, as a loose column four
-// lanes wide, up the advance's route through the fort mark to the seat, where
-// they spread and settle as a crowd on the hatched ground. Everything per dot
-// is seeded: its lane, its own pace, the moment it surfaces, where it settles.
 const hash = (i: number, q: number) => {
   const v = Math.sin(i * 12.9898 + q * 78.233) * 43758.5453;
   return v - Math.floor(v);
 };
-const N_DOTS = 72;
-const DOT_D = 22; // screen px across in the close frame
-const LANE = 8.4; // world px between lanes
-const TRAVEL = 54;
-const MIN_SEP = 6.6; // world px (~1.3 dot diameters in the close frame) between settled dots // frames from the sea to the seat for the leading dots
-type ForceDot = { t0: number; dur: number; lane: number; ph: number; target: P2 };
-const FORCE: ForceDot[] = (() => {
-  // where they settle: a loose crowd round the seat (golden-angle spiral, 13 ... 50 world px
-  // out), leaving clear the ground where the fallen crown lies (right of the seat)
-  const spots: P2[] = [];
-  for (let j = 0; spots.length < N_DOTS && j < 900; j++) {
-    const r = 14 + 42 * Math.sqrt(((j % 150) + 0.5) / 150) + 1.6 * (hash(j, 5) - 0.5);
-    const a = j * 2.39996 + 0.4;
-    const p: P2 = [Math.cos(a) * r, Math.sin(a) * r * 0.94];
-    if (p[0] > 17 && p[1] > -19) continue; // the fallen crown
-    if (p[0] > -3 && p[0] < 60 && p[1] < -16 && p[1] > -58) continue; // the flag
-    if (spots.some((q) => Math.hypot(q[0] - MURSHIDABAD[0] - p[0], q[1] - MURSHIDABAD[1] - p[1]) < MIN_SEP)) continue;
-    spots.push([MURSHIDABAD[0] + p[0], MURSHIDABAD[1] + p[1]]);
-  }
-  const order = [2, 0, 3, 1];
-  return Array.from({ length: N_DOTS }, (_, i) => {
-    // the head of the column surfaces thick and fast; the tail keeps coming to the last frame
-    const t0 = i < 44 ? T.advance[0] + 0.62 * i + 0.5 * (hash(i, 1) - 0.5) : T.advance[0] + 27.3 + (i - 44) * 1.95 + 0.6 * (hash(i, 1) - 0.5);
-    return {
-      t0,
-      dur: TRAVEL * (0.96 + 0.2 * hash(i, 2)) + (i < 4 ? 0 : 2),
-      lane: (order[i % 4] - 1.5) * LANE + 0.8 * (hash(i, 3) - 0.5),
-      ph: 6.283 * hash(i, 4),
-      target: spots[i % spots.length],
-    };
-  });
-})();
-const forceAt = (frame: number): { p: P2; g: number }[] => {
-  const out: { p: P2; g: number }[] = [];
-  for (const d of FORCE) {
-    const tau = frame - d.t0;
-    if (tau <= 0) continue;
-    const u = tau / d.dur;
-    const s = ADV_LEN * (1 - Math.pow(1 - Math.min(1, u), 1.75));
-    const { p, n } = advAt(s);
-    const off = d.lane * (1 + 0.12 * Math.sin(frame / 15 + d.ph)) * smoothstep(tau / 9); // they fan out of one point
-    const b = smoothstep((u - 0.74) / 0.5); // they leave the column and spread to their ground
-    out.push({ p: [p[0] + n[0] * off + (d.target[0] - p[0] - n[0] * off) * b, p[1] + n[1] * off + (d.target[1] - p[1] - n[1] * off) * b], g: clamp01(tau / 5) });
+// THE COLUMN'S ROUTE (world px): it forms up just off the ship's bow (clear of her
+// bowsprit), marches north up the river line, bears north-west and wheels clockwise round
+// the seat (radius WHEEL_R) from the south-west to just short of the flag pole. A uniform
+// Catmull-Rom through these points, by arclength.
+const WHEEL_R = 50;
+const ROUTE: P2[] = (() => {
+  const M = MURSHIDABAD;
+  const R0: P2 = [SHIP_STOP[0] - 29, SHIP_STOP[1] - 3]; // off the bow
+  const ctl: P2[] = [R0, [M[0] + 7, M[1] + 116], [M[0] + 1, M[1] + 88], [M[0] - 14, M[1] + 58]];
+  for (let th = 140; th <= 250.5; th += 13.75) ctl.push([M[0] + WHEEL_R * Math.cos((th * Math.PI) / 180), M[1] + WHEEL_R * Math.sin((th * Math.PI) / 180)]);
+  const ext: P2[] = [[2 * ctl[0][0] - ctl[1][0], 2 * ctl[0][1] - ctl[1][1]], ...ctl, [2 * ctl[ctl.length - 1][0] - ctl[ctl.length - 2][0], 2 * ctl[ctl.length - 1][1] - ctl[ctl.length - 2][1]]];
+  const out: P2[] = [ctl[0]];
+  for (let i = 1; i < ext.length - 2; i++) {
+    const [p0, p1, p2, p3] = [ext[i - 1], ext[i], ext[i + 1], ext[i + 2]];
+    for (let q = 1; q <= 20; q++) {
+      const t = q / 20;
+      const c = (a: number) => 0.5 * (2 * p1[a] + (-p0[a] + p2[a]) * t + (2 * p0[a] - 5 * p1[a] + 4 * p2[a] - p3[a]) * t * t + (-p0[a] + 3 * p1[a] - 3 * p2[a] + p3[a]) * t * t * t);
+      out.push([c(0), c(1)]);
+    }
   }
   return out;
+})();
+const ROUTE_CUM = (() => {
+  const c = [0];
+  for (let i = 1; i < ROUTE.length; i++) c.push(c[i - 1] + Math.hypot(ROUTE[i][0] - ROUTE[i - 1][0], ROUTE[i][1] - ROUTE[i - 1][1]));
+  return c;
+})();
+export const ROUTE_LEN = ROUTE_CUM[ROUTE_CUM.length - 1];
+const routeAt = (s: number): { p: P2; n: P2 } => {
+  const q = Math.max(0, Math.min(ROUTE_LEN, s));
+  let i = 1;
+  while (i < ROUTE_CUM.length - 1 && ROUTE_CUM[i] < q) i++;
+  const l = ROUTE_CUM[i] - ROUTE_CUM[i - 1] || 1;
+  const u = (q - ROUTE_CUM[i - 1]) / l;
+  // the tangent, smoothed over a short span so the ranks turn as a body
+  const a = ROUTE[Math.max(0, i - 3)];
+  const b = ROUTE[Math.min(ROUTE.length - 1, i + 2)];
+  const tl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  return { p: [ROUTE[i - 1][0] + (ROUTE[i][0] - ROUTE[i - 1][0]) * u, ROUTE[i - 1][1] + (ROUTE[i][1] - ROUTE[i - 1][1]) * u], n: [(b[1] - a[1]) / tl, -(b[0] - a[0]) / tl] };
+};
+// THE COLUMN: ranks of four abreast, RANK_GAP apart both ways, marching in step: one body
+// whose head is at arclength headS(frame); it slows as it wheels round the seat and is still
+// moving, slowly, in the last frame
+const RANKS = 18;
+const FILES = 4;
+const DOT_D = 22; // screen px across in the close frame
+const RANK_GAP = 8; // world px (~1.6 dot diameters in the close frame)
+const SLOW_F = 26;
+const MARCH_V = (ROUTE_LEN - 1.5) / (T.slow - T.march + (DURATION - 1 - T.slow) - ((DURATION - 1 - T.slow) * (DURATION - 1 - T.slow)) / (2 * SLOW_F));
+const headS = (f: number) => {
+  if (f <= T.march) return 0;
+  if (f <= T.slow) return MARCH_V * (f - T.march);
+  const d = Math.min(f - T.slow, SLOW_F);
+  return MARCH_V * (T.slow - T.march + d - (d * d) / (2 * SLOW_F));
+};
+export const columnAt = (frame: number): { p: P2; g: number }[] => {
+  const out: { p: P2; g: number }[] = [];
+  const hs = headS(frame);
+  for (let r = 0; r < RANKS; r++)
+    for (let j = 0; j < FILES; j++) {
+      const id = r * FILES + j;
+      const s = hs - r * RANK_GAP + 0.3 * Math.sin(frame / 7 + 6.283 * hash(id, 1)); // a very slight lag of its own
+      if (s <= 0.2) continue;
+      const { p, n } = routeAt(s);
+      const off = (j - (FILES - 1) / 2) * RANK_GAP + 0.25 * Math.sin(frame / 9 + 6.283 * hash(id, 2));
+      out.push({ p: [p[0] + n[0] * off, p[1] + n[1] * off], g: clamp01(s / 6) });
+    }
+  return out;
+};
+
+// THE SHIP: a mid-18th-century East Indiaman, side-on, drawn bow to the right and mirrored (she heads west of north, bow to the left); a box whose
+// origin is the bow at the waterline, the hull 300 long (x negative = aft, y negative = up)
+const SHIP_LEN = 300; // screen px in the close frame
+const sailD = (cx: number, yT: number, yB: number, hT: number, hB: number) =>
+  `M${cx - hT},${yT}L${cx + hT},${yT}Q${cx + hB + 6},${(yT + yB) / 2} ${cx + hB},${yB}Q${cx},${yB - 10} ${cx - hB},${yB}Q${cx - hB - 3},${(yT + yB) / 2} ${cx - hT},${yT}Z`;
+const SAILS: { d: string; cx: number; yT: number; yB: number; h: number }[] = [
+  [-62, -104, -52, 31, 35],
+  [-62, -152, -110, 22, 29],
+  [-62, -186, -158, 14, 19],
+  [-150, -112, -54, 35, 40],
+  [-150, -166, -118, 24, 32],
+  [-150, -206, -172, 15, 21],
+  [-232, -152, -120, 15, 22],
+].map(([cx, yT, yB, hT, hB]) => ({ d: sailD(cx, yT, yB, hT, hB), cx, yT, yB, h: hT }));
+const SPANKER_D = "M-234,-64L-234,-114L-290,-132L-300,-74Z";
+const JIB_D = "M52,-71L-58,-150L-56,-66Z";
+const HULL_D = "M-2,-41C0,-18 -8,-1 -28,2L-270,2C-284,0 -292,-12 -294,-30L-301,-68L-250,-63L-244,-48L-192,-46L-186,-38L-72,-38L-66,-47L-10,-47Z";
+const MASTS: [number, number, number][] = [
+  [-62, -44, -200],
+  [-150, -40, -222],
+  [-232, -60, -172],
+];
+const Ship: React.FC<{ x: number; y: number; len: number; rot: number; wake: number }> = ({ x, y, len, rot, wake }) => {
+  const s = len / 300;
+  const cw = 5 / Math.pow(s, 0.6); // the dark casing, in ship units
+  return (
+    <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${(-s).toFixed(4)} ${s.toFixed(4)}) rotate(${rot.toFixed(2)} -150 0)`} strokeLinejoin="round" strokeLinecap="round">
+      {/* the wake: short engraved strokes astern, only while she is under way */}
+      {wake > 0.02 ? (
+        <g fill="none" stroke={INK} strokeOpacity={0.7 * wake} strokeWidth={3.2 / Math.pow(s, 0.6)}>
+          <path d="M-306,4q-22,-7 -44,1" />
+          <path d="M-318,16q-26,-7 -52,2" />
+          <path d="M-362,6q-18,-5 -36,1" />
+        </g>
+      ) : null}
+      {/* dark casing under everything */}
+      <g fill={DARK} fillOpacity={0.7} stroke={DARK} strokeOpacity={0.7} strokeWidth={cw}>
+        <path d={HULL_D} />
+        {SAILS.map((q, i) => (
+          <path key={i} d={q.d} />
+        ))}
+        <path d={SPANKER_D} />
+        <path d={JIB_D} />
+      </g>
+      <g fill="none" stroke={DARK} strokeOpacity={0.7} strokeWidth={cw + 4}>
+        {MASTS.map(([mx, y0, y1], i) => (
+          <line key={i} x1={mx} y1={y0} x2={mx} y2={y1} />
+        ))}
+        <line x1={-8} y1={-45} x2={60} y2={-75} />
+      </g>
+      {/* spars */}
+      <g fill="none" stroke={ACCENT_DEEP} strokeWidth={5}>
+        {MASTS.map(([mx, y0, y1], i) => (
+          <line key={i} x1={mx} y1={y0} x2={mx} y2={y1} />
+        ))}
+        <line x1={-8} y1={-45} x2={60} y2={-75} />
+      </g>
+      {/* sails: orange, with their cloth seams */}
+      <path d={JIB_D} fill={ACCENT} stroke={ACCENT_DEEP} strokeWidth={2.5} />
+      <path d={SPANKER_D} fill={ACCENT} stroke={ACCENT_DEEP} strokeWidth={2.5} />
+      {SAILS.map((q, i) => (
+        <g key={i}>
+          <path d={q.d} fill={ACCENT} stroke={ACCENT_DEEP} strokeWidth={2.5} />
+          <path d={`M${q.cx - q.h * 0.4},${q.yT + 3}L${q.cx - q.h * 0.46},${q.yB - 8}M${q.cx + q.h * 0.4},${q.yT + 3}L${q.cx + q.h * 0.46},${q.yB - 8}`} fill="none" stroke={ACCENT_DEEP} strokeWidth={2.2} />
+          <line x1={q.cx - q.h - 4} y1={q.yT} x2={q.cx + q.h + 4} y2={q.yT} stroke={DARK} strokeOpacity={0.85} strokeWidth={4} />
+        </g>
+      ))}
+      <path d="M-150,-222l-26,5l26,5" fill={ACCENT} stroke={DARK} strokeOpacity={0.7} strokeWidth={2} />
+      {/* the hull: deep orange, a cream wale, dark gun ports, the stern gallery */}
+      <path d={HULL_D} fill={ACCENT_DEEP} />
+      <path d="M-4,-36C-3,-28 -6,-22 -10,-18L-292,-22L-296,-40L-250,-40L-244,-34L-72,-30L-66,-36Z" fill={ACCENT} />
+      <path d="M-10,-18L-292,-22" fill="none" stroke={INK} strokeWidth={3.4} />
+      {[-34, -62, -90, -118, -146, -174, -202, -230].map((gx) => (
+        <rect key={gx} x={gx - 4.5} y={-33} width={9} height={8} fill={DARK} fillOpacity={0.85} />
+      ))}
+      <rect x={-290} y={-58} width={9} height={10} fill={INK} />
+      <rect x={-275} y={-57} width={9} height={10} fill={INK} />
+      <rect x={-260} y={-56} width={9} height={10} fill={INK} />
+      <path d="M-40,-8l-12,8M-90,-8l-12,8M-140,-8l-12,8M-190,-8l-12,8M-240,-8l-12,8" fill="none" stroke={DARK} strokeOpacity={0.5} strokeWidth={2.4} />
+      <path d={HULL_D} fill="none" stroke={DARK} strokeOpacity={0.55} strokeWidth={1.6} />
+    </g>
+  );
 };
 const HATCH_R = 64; // world px (~150 km): how far the hatch has spread when it slows to a creep
 const HATCH_CREEP = 0.2; // world px per frame, to the last frame
@@ -441,8 +520,14 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
   const rr = ringR(k);
 
   // --- the advance
-  const force = frame > T.advance[0] ? forceAt(frame) : [];
-  const dotR = (DOT_D / 2) * Math.pow(k / 4.3, 0.6);
+  const force = frame > T.march ? columnAt(frame) : [];
+  const dotR = (DOT_D / 2) * Math.pow(k / 4.4, 0.6);
+  // the ship: creeping north from the first frame, then up the bay; she eases to her anchorage
+  const shipU = 0.06 * clamp01((frame + 20) / (T.ship[0] + 20)) + 0.94 * smoothstep((frame - T.ship[0]) / (T.ship[1] - T.ship[0]));
+  const shipV = smoothstep((frame - T.ship[0]) / 10) * (1 - smoothstep((frame - (T.ship[1] - 14)) / 14));
+  const [shx, shy] = screenOf([SHIP_FROM[0] + (SHIP_STOP[0] - SHIP_FROM[0]) * shipU, SHIP_FROM[1] + (SHIP_STOP[1] - SHIP_FROM[1]) * shipU], cam);
+  const shipLen = SHIP_LEN * Math.pow(k / 4.4, 0.6);
+  const shipRot = -2.5 * shipV + 1.1 * Math.sin(frame / 10);
   const seatTurn = smoothstep((frame - T.seatTurn[0]) / (T.seatTurn[1] - T.seatTurn[0]));
   const hatchU = clamp01((frame - T.hatch[0]) / (T.hatch[1] - T.hatch[0]));
   const hatchR = HATCH_R * easeOut(hatchU) + HATCH_CREEP * Math.max(0, frame - T.hatch[0]);
@@ -488,8 +573,6 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
 
   // --- seats, back to front
   const order = SEATS.map((s, i) => ({ s, i })).sort((a, b) => a.s.y - b.s.y);
-  const [fx, fy] = screenOf(CALCUTTA, cam);
-  const fortR = 24 * Math.pow(k, 0.5);
 
   return (
     <AbsoluteFill style={{ backgroundColor: SEA }}>
@@ -524,7 +607,7 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
         ) : null}
       </WorldSvg>
 
-      {/* screen-sized symbols: the label, the seats, the fort, the crowns */}
+      {/* screen-sized symbols: the label, the seats, the column, the ship, the crowns */}
       <svg width={FRAME_W} height={FRAME_H} viewBox={`0 0 ${FRAME_W} ${FRAME_H}`} style={{ position: "absolute", left: 0, top: 0 }}>
         <CrownDefs />
         {labelOp > 0.002 ? (
@@ -575,24 +658,18 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
           );
         })}
 
-        {/* THE FORCE: the dots, out of the sea */}
+        {/* THE COLUMN: ranks of four, off the ship */}
         {force.map((d, i) => {
           const [x, y] = screenOf(d.p, cam);
-          const e = 1 - (1 - d.g) * (1 - d.g);
-          return <circle key={`fd${i}`} cx={x} cy={y} r={dotR * (0.4 + 0.6 * e) + 2.2} fill={DARK} fillOpacity={0.7 * d.g} />;
+          return <circle key={`fd${i}`} cx={x} cy={y} r={dotR * (0.35 + 0.65 * d.g) + 2.2} fill={DARK} fillOpacity={0.7 * d.g} />;
         })}
         {force.map((d, i) => {
           const [x, y] = screenOf(d.p, cam);
-          const e = 1 - (1 - d.g) * (1 - d.g);
-          return <circle key={`fo${i}`} cx={x} cy={y} r={dotR * (0.4 + 0.6 * e)} fill={ACCENT} fillOpacity={d.g} />;
+          return <circle key={`fo${i}`} cx={x} cy={y} r={dotR * (0.35 + 0.65 * d.g)} fill={ACCENT} fillOpacity={d.g} />;
         })}
 
-        {/* the fort at Calcutta: orange from the first frame */}
-        <g transform={`translate(${fx.toFixed(2)} ${fy.toFixed(2)}) scale(${fortR.toFixed(3)})`}>
-          <path d={FORT_D} fill={DARK} fillOpacity={0.62} stroke={DARK} strokeOpacity={0.62} strokeWidth={5 / fortR} strokeLinejoin="round" />
-          <path d={FORT_D} fill={ACCENT} stroke={ACCENT_DEEP} strokeWidth={1.4 / fortR} strokeLinejoin="round" />
-          <rect x={-0.2} y={-0.2} width={0.4} height={0.4} fill={DARK} fillOpacity={0.75} />
-        </g>
+        {/* THE SHIP: orange from the first frame she is in view */}
+        {shx > -100 && shx < FRAME_W + 100 && shy > -100 && shy < FRAME_H + 400 ? <Ship x={shx} y={shy} len={shipLen} rot={shipRot} wake={shipV} /> : null}
 
         {/* the crowns */}
         {order.map(({ s, i }) => {
