@@ -13,12 +13,22 @@ import { z } from "zod";
 //
 // THE MOTION, one job, one continuous move: WRITE -> GATHER -> DROP. Lines of
 // abstract code (rounded bars) type themselves top to bottom behind a cursor
-// block and finish on "code" (f66), then hold through the word; on "and apps"
-// (f72) the WHITE bars themselves travel and swell into a 4 x 4 home-screen
-// grid of app tiles, and the core-memory chain TRAILS each one (blue, purple,
-// orange, two frames apart on the same path, never ahead of or larger than the
-// white, tucking behind the tile as it lands); on "but" the tiles let go and
-// fall out of frame under gravity, so f108-109 are empty.
+// block and finish on "code" (f66); on "and apps" the code is PACKED into a
+// 4 x 4 home-screen grid of app tiles (see v5 below); on "but" the tiles let go
+// and fall out of frame under gravity, so f108-109 are empty.
+//
+// v5, the user's revision ("a messy AI morph with no real structure"): the
+// gather is a mechanical, axis-aligned, two-beat assembly, band by band. The
+// 12 code lines are 4 bands of 3 lines; band r becomes grid row r.
+//   BEAT 1, the horizontal snap: every bar slides only in x and resizes only in
+//   width until each line is exactly 4 equal segments, one per tile column.
+//   Long tokens split at the gutters, neighbours join, short lines stretch.
+//   Syntax colours swap to white on the band's first frame.
+//   BEAT 2, the vertical close: in each cell the three stripes move only in y
+//   and grow only in height until they are one rounded-square tile, and its
+//   glyph scales up from the centre.
+// Bands start two frames apart from f70, top to bottom; the grid is whole at
+// f86. No chain colours in the transition at all.
 //
 // v3, the user's revision: THE EL SEGUNDO SEAL opens the cut. It pops up over
 // the code on "El Segundo" (f1, chain discs orange / purple / blue leading it
@@ -61,7 +71,7 @@ export const schema = z.object({
   // typing runs from typeStart to typeEnd (the last bar completes on "code")
   typeStart: z.number(),
   typeEnd: z.number(),
-  // the first bars leave for their tile here ("and")
+  // band 0 starts its horizontal snap here; each band below starts 2 frames later
   morphStart: z.number(),
   // the first tile lets go here ("but")
   dropStart: z.number(),
@@ -91,7 +101,7 @@ export const defaultProps: Props = schema.parse({
   shadowOffset: 4,
   typeStart: -2,
   typeEnd: 66,
-  morphStart: 72,
+  morphStart: 70,
   dropStart: 93,
   gravity: 30,
   sealSrc: "hadrian05/el_segundo_seal.png",
@@ -207,32 +217,18 @@ for (let row = 0; row < ROWS; row++) {
 }
 
 // ---------------------------------------------------------------------------
-// TOKENS: geometry, typing window (in px of "typed length"), and the tile each
-// one gathers into (the nearest tile centre).
+// TOKENS: geometry and typing window (in px of "typed length").
 // ---------------------------------------------------------------------------
 type Tok = {
   key: string;
+  line: number;
   x: number;
   y: number;
   w: number;
   hue: Hue;
   s0: number; // typed length at which this token starts
   s1: number; // ... and completes
-  tile: number;
   cursor: boolean;
-};
-
-const nearestTile = (cx: number, cy: number) => {
-  let best = 0;
-  let bestD = Infinity;
-  for (const t of TILES) {
-    const d = Math.hypot(t.x + TILE / 2 - cx, t.y + TILE / 2 - cy);
-    if (d < bestD) {
-      bestD = d;
-      best = t.i;
-    }
-  }
-  return best;
 };
 
 const TOKENS: Tok[] = [];
@@ -244,13 +240,13 @@ LINES.forEach((line, li) => {
     line.toks.forEach(([w, hue], ti) => {
       TOKENS.push({
         key: `t${li}-${ti}`,
+        line: li,
         x,
         y,
         w,
         hue,
         s0: typed,
         s1: typed + w,
-        tile: nearestTile(x + w / 2, y + BAR_H / 2),
         cursor: false,
       });
       typed += w + TOK_GAP;
@@ -262,68 +258,147 @@ LINES.forEach((line, li) => {
 const LAST = TOKENS[TOKENS.length - 1];
 export const TYPED_TOTAL = LAST.s1;
 
-// The cursor's resting place once typing is done; it gathers like a token.
+// The cursor's resting place once typing is done; it is packed like a token.
 const CURSOR_REST: Tok = {
   key: "cursor",
+  line: LAST.line,
   x: LAST.x + LAST.w + 6,
   y: LAST.y,
   w: CURSOR_W,
   hue: "w",
   s0: 0,
   s1: 0,
-  tile: nearestTile(LAST.x + LAST.w + 6 + CURSOR_W / 2, LAST.y + BAR_H / 2),
   cursor: true,
 };
 
-const TILE_TOKENS: Tok[][] = TILES.map((t) =>
-  TOKENS.concat([CURSOR_REST]).filter((k) => k.tile === t.i),
-);
-// the white token each tile's glyph rides in on
-const PRIMARY: Tok[] = TILE_TOKENS.map((toks, i) => {
-  const whites = toks.filter((k) => k.hue === "w" && !k.cursor);
-  if (whites.length === 0) {
-    throw new Error(`CodeAndApps: tile ${i} has no white token to become its core`);
+// ---------------------------------------------------------------------------
+// THE PACKING. Bands of three code lines; band r becomes grid row r.
+// ---------------------------------------------------------------------------
+const CODE_LINES: number[] = [];
+LINES.forEach((l, li) => {
+  if (l) {
+    CODE_LINES.push(li);
   }
-  return whites.reduce((a, b) => (b.w > a.w ? b : a));
 });
+if (CODE_LINES.length !== ROWS * 3) {
+  throw new Error("CodeAndApps: the packing needs exactly three code lines per grid row");
+}
+const BANDS: number[][] = [0, 1, 2, 3].map((r) => CODE_LINES.slice(r * 3, r * 3 + 3));
+const lineY = (li: number) => LINE_Y0 + li * LINE_PITCH;
+const colX = (c: number) => GRID_X0 + c * COL_PITCH;
+// the middle of each gutter: where a long token is cut
+const CUTS = [0, 1, 2].map((c) => colX(c) + TILE + (COL_PITCH - TILE) / 2);
+const colOf = (x: number) => CUTS.filter((b) => x > b).length;
+const MIN_PIECE = 30; // never cut a sliver off a token
+
+// One horizontally-moving piece of a line: [a0, b0] before the snap, [a1, b1]
+// after it. Pieces cut from one token overlap by a bar radius at the cut, and
+// pieces that join in one cell overlap by a bar radius at the join, so the
+// union is seamless at both ends of the move.
+type Piece = { key: string; a0: number; b0: number; a1: number; b1: number; r0: number };
+type Raw = { key: string; a: number; b: number; cutL: boolean; cutR: boolean; col: number; r0: number };
+
+const buildLine = (li: number): Piece[] => {
+  const toks = TOKENS.concat([CURSOR_REST])
+    .filter((t) => t.line === li)
+    .sort((p, q) => p.x - q.x);
+  const raws: Raw[] = [];
+  toks.forEach((t) => {
+    const cuts = CUTS.filter((b) => b - t.x >= MIN_PIECE && t.x + t.w - b >= MIN_PIECE);
+    const edges = [t.x, ...cuts, t.x + t.w];
+    for (let i = 0; i < edges.length - 1; i++) {
+      const a = edges[i];
+      const b = edges[i + 1];
+      raws.push({
+        key: `${t.key}-${i}`,
+        a,
+        b,
+        cutL: i > 0,
+        cutR: i < edges.length - 2,
+        col: colOf((a + b) / 2),
+        r0: t.cursor ? 4 : BAR_R,
+      });
+    }
+  });
+  const out: Piece[] = [];
+  for (let c = 0; c < COLS; c++) {
+    const X = colX(c);
+    const mine = raws.filter((r) => r.col === c);
+    if (mine.length === 0) {
+      // nothing of this line lies in this column: the segment is drawn out of
+      // the near end of the nearest bar (it starts hidden inside that bar)
+      const centre = X + TILE / 2;
+      let donor = raws[0];
+      let best = Infinity;
+      raws.forEach((r) => {
+        const d = centre > r.b ? centre - r.b : r.a > centre ? r.a - centre : 0;
+        if (d < best) {
+          best = d;
+          donor = r;
+        }
+      });
+      const right = centre > donor.b;
+      out.push({
+        key: `fill-${li}-${c}`,
+        a0: right ? Math.max(donor.a, donor.b - BAR_H) : donor.a,
+        b0: right ? donor.b : Math.min(donor.b, donor.a + BAR_H),
+        a1: X,
+        b1: X + TILE,
+        r0: donor.r0,
+      });
+    } else {
+      const total = mine.reduce((sum, r) => sum + (r.b - r.a), 0);
+      let acc = X;
+      mine.forEach((r, i) => {
+        const w = ((r.b - r.a) / total) * TILE;
+        out.push({
+          key: r.key,
+          a0: r.a - (r.cutL ? BAR_R : 0),
+          b0: r.b + (r.cutR ? BAR_R : 0),
+          a1: Math.max(X, acc - (i > 0 ? BAR_R : 0)),
+          b1: Math.min(X + TILE, acc + w + (i < mine.length - 1 ? BAR_R : 0)),
+          r0: r.r0,
+        });
+        acc += w;
+      });
+    }
+  }
+  return out;
+};
+const BAND_PIECES: Piece[][][] = BANDS.map((lines) => lines.map(buildLine));
+
+// A rounded rect with its own radius per corner (tl, tr, br, bl).
+const rr = (x: number, y: number, w: number, h: number, tl: number, tr: number, br: number, bl: number) =>
+  [
+    `M${(x + tl).toFixed(3)} ${y.toFixed(3)}`,
+    `H${(x + w - tr).toFixed(3)}`,
+    `A${tr.toFixed(3)} ${tr.toFixed(3)} 0 0 1 ${(x + w).toFixed(3)} ${(y + tr).toFixed(3)}`,
+    `V${(y + h - br).toFixed(3)}`,
+    `A${br.toFixed(3)} ${br.toFixed(3)} 0 0 1 ${(x + w - br).toFixed(3)} ${(y + h).toFixed(3)}`,
+    `H${(x + bl).toFixed(3)}`,
+    `A${bl.toFixed(3)} ${bl.toFixed(3)} 0 0 1 ${x.toFixed(3)} ${(y + h - bl).toFixed(3)}`,
+    `V${(y + tl).toFixed(3)}`,
+    `A${tl.toFixed(3)} ${tl.toFixed(3)} 0 0 1 ${(x + tl).toFixed(3)} ${y.toFixed(3)}Z`,
+  ].join("");
 
 // ---------------------------------------------------------------------------
 // TIMING
 // ---------------------------------------------------------------------------
-export const CHAIN_STAGGER = 2;
-export const MORPH_DUR = 11;
+export const BAND_STAGGER = 2; // each band starts this long after the one above
+export const STEP = 5; // frames per beat: the snap, then the close
+export const GLYPH_DELAY = 2; // into the close, when the gaps are all but shut
+export const GLYPH_DUR = 4;
+export const CLOSE_OVERRUN = 9; // px a stripe grows past its third of the tile
+export const SETTLE_PX = 3; // ~1.5 % of a tile
 // the cursor blinks once in the hold between the last keystroke and the morph
 export const BLINK_OFF = [2, 4]; // frames after typeEnd, inclusive
-// a glyph scales up from the tile's centre once the tile is ~70 % of its size
-export const GLYPH_AT_SIZE = 0.7;
-export const GLYPH_DUR = 6;
 export const DROP_MAX_DEG = 5;
 // the seal's pop: up to SEAL_OVER in SEAL_POP frames, back to 1 in SEAL_SETTLE
 export const SEAL_POP = 5;
 export const SEAL_SETTLE = 5;
 export const SEAL_OVER = 1.05;
-// a syntax-coloured bar keeps its bar shape and slips under its tile
-const SLIP_W = 120;
 const EASE_LAND = Easing.bezier(0.16, 1, 0.3, 1);
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-// a diagonal sweep, 0..2 frames
-const tileStagger = (t: Tile) => (t.col + t.row) / 3;
-const MAX_STAGGER = (COLS - 1 + ROWS - 1) / 3;
-// the fraction of MORPH_DUR at which the eased tile reaches GLYPH_AT_SIZE
-const GLYPH_T = (() => {
-  const target = (GLYPH_AT_SIZE * TILE - BAR_H) / (TILE - BAR_H);
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 30; i++) {
-    const mid = (lo + hi) / 2;
-    if (EASE_LAND(mid) < target) {
-      lo = mid;
-    } else {
-      hi = mid;
-    }
-  }
-  return hi;
-})();
 // drop: sweeps across the columns, lower rows a touch earlier so nothing
 // overtakes
 const dropDelay = (t: Tile) => t.col * 0.8 + (ROWS - 1 - t.row) * 0.4;
@@ -530,9 +605,16 @@ const CodeAndApps: React.FC<Props> = ({
   const glyphFill = (h: GlyphHue) =>
     h === "o" ? orange : h === "p" ? purple : h === "b" ? blue : shadow;
 
-  // the last trail copy (orange, 3 staggers behind its core) has landed here
-  const trailDelay = 3 * CHAIN_STAGGER;
-  const landEnd = Math.ceil(morphStart + MAX_STAGGER + trailDelay + MORPH_DUR);
+  const bandStart = (row: number) => morphStart + row * BAND_STAGGER;
+  // the last band has closed here: from now on a tile is one rect
+  const landEnd = bandStart(ROWS - 1) + 2 * STEP;
+  const glyphScale = (row: number) => {
+    const g0 = bandStart(row) + STEP + GLYPH_DELAY;
+    return interpolate(frame, [g0, g0 + GLYPH_DUR], [0, 1], {
+      easing: Easing.out(Easing.cubic),
+      ...clamp,
+    });
+  };
 
   const svg = (children: React.ReactNode, over: React.ReactNode = null) => (
     // No backgroundColor: the root is transparent.
@@ -660,86 +742,130 @@ const CodeAndApps: React.FC<Props> = ({
     );
   }
 
-  // The settle: a small damped dip as each tile lands, so the hold is alive.
-  const settle = (t: Tile) => {
-    const land = morphStart + tileStagger(t) + 5;
-    const u = frame - land;
+  // The settle: a small damped dip once a band has closed, so the hold is alive.
+  const settle = (row: number) => {
+    const u = frame - (bandStart(row) + 2 * STEP);
     if (u <= 0) {
       return 0;
     }
-    return 5 * Math.sin((u * Math.PI * 2) / 13) * Math.exp(-u / 7);
+    return SETTLE_PX * Math.sin((u * Math.PI * 2) / 13) * Math.exp(-u / 7);
   };
 
-  // ---- 2. GATHER ----------------------------------------------------------
+  // ---- 2. PACK: snap into columns, then close into tiles, band by band -----
   if (frame < landEnd) {
     return svg(
       <>
-        {TILES.map((tile) => {
-          const m0 = morphStart + tileStagger(tile);
-          const prog = (delay: number) =>
-            interpolate(frame, [m0 + delay, m0 + delay + MORPH_DUR], [0, 1], {
-              easing: EASE_LAND,
-              ...clamp,
-            });
-          const pCore = prog(0);
-          // the trail: the same path, later. Blue nearest the core, orange last.
-          const pBlue = prog(CHAIN_STAGGER);
-          const pPurple = prog(2 * CHAIN_STAGGER);
-          const pOrange = prog(3 * CHAIN_STAGGER);
-          const dy = settle(tile);
-          const toks = TILE_TOKENS[tile.i];
-          const prim = PRIMARY[tile.i];
-          const box = (t: Tok, p: number, fill: string, key: string, off = 0) => (
-            <rect
-              key={key}
-              x={lerp(t.x, tile.x, p) + off}
-              y={lerp(t.y, tile.y, p) + off}
-              width={lerp(t.w, TILE, p)}
-              height={lerp(BAR_H, TILE, p)}
-              rx={lerp(t.cursor ? 4 : BAR_R, TILE_R, p)}
-              fill={fill}
-            />
-          );
-          // a syntax-coloured bar stays a bar: it rides to the tile's centre
-          // and is covered as the white closes over it
-          const slip = (t: Tok, p: number, fill: string, key: string, off = 0) => {
-            const w = lerp(t.w, Math.min(t.w, SLIP_W), p);
+        {BANDS.map((lines, row) => {
+          const u = frame - bandStart(row);
+          if (u < 0) {
+            // not yet: the typed code, exactly as it was left
+            const toks = TOKENS.concat([CURSOR_REST]).filter((t) => lines.indexOf(t.line) >= 0);
             return (
-              <rect
-                key={key}
-                x={lerp(t.x, tile.x + TILE / 2 - w / 2, p) + off}
-                y={lerp(t.y, tile.y + TILE / 2 - BAR_H / 2, p) + off}
-                width={w}
-                height={BAR_H}
-                rx={BAR_R}
-                fill={fill}
-              />
+              <g key={row}>
+                {toks.map((t) => (
+                  <g key={t.key}>
+                    <rect
+                      x={t.x + shadowOffset}
+                      y={t.y + shadowOffset}
+                      width={t.w}
+                      height={BAR_H}
+                      rx={t.cursor ? 4 : BAR_R}
+                      fill={shadow}
+                    />
+                    <rect
+                      x={t.x}
+                      y={t.y}
+                      width={t.w}
+                      height={BAR_H}
+                      rx={t.cursor ? 4 : BAR_R}
+                      fill={hueFill(t.hue)}
+                    />
+                  </g>
+                ))}
+              </g>
             );
-          };
-          const whites = toks.filter((t) => t.hue === "w");
-          const hued = toks.filter((t) => t.hue !== "w");
-          const gx = lerp(prim.x + prim.w / 2, tile.x + TILE / 2, pCore);
-          const gy = lerp(prim.y + BAR_H / 2, tile.y + TILE / 2, pCore);
-          const g0 = m0 + GLYPH_T * MORPH_DUR;
-          const gs = interpolate(frame, [g0, g0 + GLYPH_DUR], [0, 1], {
-            easing: Easing.out(Easing.cubic),
-            ...clamp,
-          });
-          const [kind, gh] = GLYPHS[tile.i];
+          }
+          if (u < STEP) {
+            // BEAT 1: x and width only
+            const p = EASE_LAND(u / STEP);
+            return (
+              <g key={row}>
+                {lines.map((li, k) => {
+                  const bar = (pc: Piece, fill: string, off: number) => {
+                    const a = lerp(pc.a0, pc.a1, p);
+                    const w = lerp(pc.b0, pc.b1, p) - a;
+                    return (
+                      <rect
+                        key={`${pc.key}-${off}`}
+                        x={a + off}
+                        y={lineY(li) + off}
+                        width={w}
+                        height={BAR_H}
+                        rx={Math.min(lerp(pc.r0, BAR_R, p), w / 2)}
+                        fill={fill}
+                      />
+                    );
+                  };
+                  return (
+                    <g key={li}>
+                      {BAND_PIECES[row][k].map((pc) => bar(pc, shadow, shadowOffset))}
+                      {BAND_PIECES[row][k].map((pc) => bar(pc, ink, 0))}
+                    </g>
+                  );
+                })}
+              </g>
+            );
+          }
+          // BEAT 2: y and height only. Outer corners grow to the tile's radius,
+          // inner corners square off as the gaps shut.
+          const q = EASE_LAND(Math.min(1, (u - STEP) / STEP));
+          const outer = lerp(BAR_R, TILE_R, q);
+          const inner = BAR_R * Math.max(0, 1 - q / 0.75);
+          const third = TILE / 3;
+          const gs = glyphScale(row);
+          const yRow = GRID_Y0 + row * ROW_PITCH + settle(row);
+          const stripes = lines.map((li, k) => ({
+            y: lerp(lineY(li), yRow + k * third, q),
+            // the upper stripes over-run into the one below, so the gaps are shut
+            // by q ~ 0.8 and no hairline of shadow lingers through the ease's tail
+            h: lerp(BAR_H, third + (k < 2 ? CLOSE_OVERRUN : 0), q),
+            top: k === 0 ? outer : inner,
+            bottom: k === 2 ? outer : inner,
+          }));
+          const cyCell = (stripes[0].y + stripes[2].y + stripes[2].h) / 2;
           return (
-            <g key={tile.i} transform={`translate(0 ${dy.toFixed(3)})`}>
-              {hued.map((t) => slip(t, pCore, shadow, `hs-${t.key}`, shadowOffset))}
-              {hued.map((t) => slip(t, pCore, hueFill(t.hue), `h-${t.key}`))}
-              {whites.map((t) => box(t, pCore, shadow, `s-${t.key}`, shadowOffset))}
-              {box(prim, pOrange, orange, "o")}
-              {box(prim, pPurple, purple, "p")}
-              {box(prim, pBlue, blue, "b")}
-              {whites.map((t) => box(t, pCore, ink, `w-${t.key}`))}
-              {gs > 0 ? (
-                <g transform={`translate(${gx.toFixed(3)} ${gy.toFixed(3)}) scale(${gs.toFixed(4)})`}>
-                  <Glyph kind={kind} fill={glyphFill(gh)} paper={ink} chain={[orange, purple, blue]} />
-                </g>
-              ) : null}
+            <g key={row}>
+              {[0, 1, 2, 3].map((c) => {
+                const x = colX(c);
+                const [kind, gh] = GLYPHS[row * COLS + c];
+                return (
+                  <g key={c}>
+                    <g transform={`translate(${shadowOffset} ${shadowOffset})`}>
+                      {stripes.map((st, k) => (
+                        <path
+                          key={k}
+                          d={rr(x, st.y, TILE, st.h, st.top, st.top, st.bottom, st.bottom)}
+                          fill={shadow}
+                        />
+                      ))}
+                    </g>
+                    {stripes.map((st, k) => (
+                      <path
+                        key={k}
+                        d={rr(x, st.y, TILE, st.h, st.top, st.top, st.bottom, st.bottom)}
+                        fill={ink}
+                      />
+                    ))}
+                    {gs > 0 ? (
+                      <g
+                        transform={`translate(${(x + TILE / 2).toFixed(3)} ${cyCell.toFixed(3)}) scale(${gs.toFixed(4)})`}
+                      >
+                        <Glyph kind={kind} fill={glyphFill(gh)} paper={ink} chain={[orange, purple, blue]} />
+                      </g>
+                    ) : null}
+                  </g>
+                );
+              })}
             </g>
           );
         })}
@@ -753,7 +879,7 @@ const CodeAndApps: React.FC<Props> = ({
       {TILES.map((tile) => {
         const u = Math.max(0, frame - dropStart - dropDelay(tile));
         const fall = 0.5 * gravity * u * u;
-        const y = tile.y + settle(tile) + fall;
+        const y = tile.y + settle(tile.row) + fall;
         if (y > FRAME_H + TILE) {
           return null;
         }
@@ -777,7 +903,9 @@ const CodeAndApps: React.FC<Props> = ({
             </g>
             <g transform={spin}>
               <rect x={tile.x} y={y} width={TILE} height={TILE} rx={TILE_R} fill={ink} />
-              <g transform={`translate(${cx.toFixed(3)} ${cy.toFixed(3)})`}>
+              <g
+                transform={`translate(${cx.toFixed(3)} ${cy.toFixed(3)}) scale(${Math.max(0.0001, glyphScale(tile.row)).toFixed(4)})`}
+              >
                 <Glyph kind={kind} fill={glyphFill(gh)} paper={ink} chain={[orange, purple, blue]} />
               </g>
             </g>
