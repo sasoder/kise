@@ -1,7 +1,12 @@
 import React from "react";
 import { AbsoluteFill, Easing, Img, staticFile, useCurrentFrame } from "remotion";
+import { loadFont as loadSourceSans3 } from "@remotion/google-fonts/SourceSans3";
+import { loadFont as loadSourceSerif4 } from "@remotion/google-fonts/SourceSerif4";
 import { z } from "zod";
 import { DURATION as PAN_DURATION, whipSigma, windowX } from "./HuCrowdPan";
+
+const SERIF = loadSourceSerif4("normal", { weights: ["700"], subsets: ["latin"] }).fontFamily;
+const SANS = loadSourceSans3("normal", { weights: ["600"], subsets: ["latin"] }).fontFamily;
 
 /**
  * HuLiveToPrint — the real footage of Hu Jintao freezes, is "printed" into
@@ -35,6 +40,18 @@ import { DURATION as PAN_DURATION, whipSigma, windowX } from "./HuCrowdPan";
  *           f37-38 ("million"), is sharp again from f66 and still slides
  *           2.4 px/frame at the cut
  *
+ *   figure  a printed headline in the paper above the crowd, part of the
+ *           picture (same plane, same whip blur), centred on the END window at
+ *           picture x endX + 540, so it rides in over the right edge (whole in
+ *           frame from f54) and glides to the middle of the frame at the cut.
+ *           Source Serif 4 Bold 316 px, ink, baseline y 640: 25M, then a hard
+ *           swap to 50M on f62, 75M on f70, 100M on f78 ("every" f71, "year"
+ *           f80), four years of jobs. It grows a little each step (0.85, 0.90,
+ *           0.95, 1) and each swap lands 8 % big with a 6 px / 0.7 deg shake
+ *           that is gone in seven frames. Above it, optional (showCaption):
+ *           NEW JOBS · YEAR 1..4, Source Sans 3 SemiBold 44 px caps, baseline
+ *           y 345; only its digit changes
+ *
  * The frozen footage and the front live INSIDE the panned plane, at the
  * print's own x 740, so while the drift starts under the end of the print pass
  * (f20-23) footage, front and print move as one sheet.
@@ -56,6 +73,7 @@ export const schema = z.object({
     .min(PRINT_X)
     .max(PANO_W - FRAME_W)
     .default(3259),
+  showCaption: z.boolean().default(true),
 });
 export type HuLiveToPrintProps = z.infer<typeof schema>;
 export const defaultProps = schema.parse({});
@@ -108,6 +126,73 @@ const frontY = (frame: number, x: number) => {
     0.3 * Math.sin((2 * Math.PI * x) / 470 + 4.1 - 0.17 * t) +
     0.15 * Math.sin((2 * Math.PI * x) / 260 + 0.4 + 0.29 * t);
   return FRONT_FROM + (FRONT_TO - FRONT_FROM) * FRONT_EASE(Math.min(1, Math.max(0, u))) + WOBBLE * wobble;
+};
+
+// ---- the headline figure, printed in the paper above the crowd (picture px) ----
+const FIGURE_INK = "#1C1917";
+// 316 px, cap height 212: the largest size that keeps 60 px to the right frame edge on f78,
+// where "100M" lands 8 % big while the picture still has 40 px to drift
+const FIGURE_SIZE = 316;
+const FIGURE_BASELINE = 640; // between the lower red rule (234) and the crowd (795)
+const CAPTION_SIZE = 44;
+const CAPTION_TRACK = 0.12; // em
+const CAPTION_BASELINE = 345;
+// One more year of 25 million jobs per step; the figure grows a little each time. nudge (em)
+// centres the INK on the figure's x: tabular figures carry their side bearings, the "1" most.
+const STEPS = [
+  { from: 0, label: "25M", year: 1, scale: 0.85, nudge: -0.011 },
+  { from: 62, label: "50M", year: 2, scale: 0.9, nudge: -0.005 },
+  { from: 70, label: "75M", year: 3, scale: 0.95, nudge: -0.014 },
+  { from: 78, label: "100M", year: 4, scale: 1, nudge: -0.024 },
+];
+const PUNCH = 0.08; // the swap lands 8 % big ...
+const PUNCH_FRAMES = 5; // ... and settles in five frames
+const PUNCH_EASE = Easing.out(Easing.cubic);
+const SHAKE_PX = 6;
+const SHAKE_DEG = 0.7;
+const SHAKE_FRAMES = 7;
+const FIGURE_BOX = 1400; // the layer's width: the widest figure plus room for the whip blur
+
+/** The figure and its caption at picture x cx. They are part of the print: same plane, same blur. */
+const Figure: React.FC<{ frame: number; cx: number; blurred: boolean; showCaption: boolean }> = ({ frame, cx, blurred, showCaption }) => {
+  let step = STEPS[0];
+  for (const s of STEPS) if (frame >= s.from) step = s;
+  // the first figure is simply printed there; each later one is a hard swap with a small punch and shake
+  const t = frame - step.from;
+  const swapped = step.from > 0;
+  const punch = swapped && t < PUNCH_FRAMES ? 1 + PUNCH * (1 - PUNCH_EASE(t / PUNCH_FRAMES)) : 1;
+  const shake = swapped && t <= SHAKE_FRAMES ? Math.exp(-t / 2) : 0;
+  const dx = SHAKE_PX * shake * Math.cos(2.2 * t);
+  const deg = SHAKE_DEG * shake * Math.sin(2.2 * t);
+  const left = cx - FIGURE_BOX / 2;
+  return (
+    <div style={{ position: "absolute", left, top: 0, width: FIGURE_BOX, height: FRAME_H, filter: blurred ? "url(#hlp-whip)" : undefined }}>
+      <svg width={FIGURE_BOX} height={FRAME_H} viewBox={`${left} 0 ${FIGURE_BOX} ${FRAME_H}`} style={{ position: "absolute", left: 0, top: 0 }}>
+        {showCaption ? (
+          <text
+            x={cx + (CAPTION_TRACK * CAPTION_SIZE) / 2}
+            y={CAPTION_BASELINE}
+            textAnchor="middle"
+            fill={FIGURE_INK}
+            style={{ fontFamily: SANS, fontWeight: 600, fontSize: CAPTION_SIZE, letterSpacing: `${CAPTION_TRACK}em`, fontVariantNumeric: "lining-nums tabular-nums" }}
+          >
+            {`NEW JOBS \u00B7 YEAR ${step.year}`}
+          </text>
+        ) : null}
+        {/* scaled and shaken about the centre of its baseline, so the baseline never moves */}
+        <text
+          x={step.nudge * FIGURE_SIZE}
+          y={0}
+          textAnchor="middle"
+          fill={FIGURE_INK}
+          transform={`translate(${(cx + dx).toFixed(3)} ${FIGURE_BASELINE}) rotate(${deg.toFixed(4)}) scale(${(step.scale * punch).toFixed(5)})`}
+          style={{ fontFamily: SERIF, fontWeight: 700, fontSize: FIGURE_SIZE, fontVariantNumeric: "lining-nums tabular-nums" }}
+        >
+          {step.label}
+        </text>
+      </svg>
+    </div>
+  );
 };
 
 const liveSrc = (n: number) => staticFile(`jordanhu/hu_live/f${String(n).padStart(2, "0")}.jpg`);
@@ -171,7 +256,7 @@ const FrozenUnderFront: React.FC<{ frame: number }> = ({ frame }) => {
   );
 };
 
-const HuLiveToPrint: React.FC<HuLiveToPrintProps> = ({ endX }) => {
+const HuLiveToPrint: React.FC<HuLiveToPrintProps> = ({ endX, showCaption }) => {
   const frame = useCurrentFrame();
 
   // the video, then its freeze frame: nothing but the picture
@@ -186,6 +271,9 @@ const HuLiveToPrint: React.FC<HuLiveToPrintProps> = ({ endX }) => {
   const panFrame = frame - PAN_START; // before f20 the pan's own curve holds on PRINT_X
   const x = windowX(panFrame, PRINT_X, endX);
   const sigma = whipSigma(panFrame, PRINT_X, endX, PANO_W);
+  // the figure sits centred on the END window, so it glides to the middle of the frame at the cut
+  const figureX = endX + FRAME_W / 2;
+  const figureInReach = x + FRAME_W + 3 * sigma > figureX - FIGURE_BOX / 2;
 
   return (
     <AbsoluteFill style={{ backgroundColor: PAPER, overflow: "hidden" }}>
@@ -210,6 +298,7 @@ const HuLiveToPrint: React.FC<HuLiveToPrintProps> = ({ endX }) => {
             filter: sigma > 0 ? "url(#hlp-whip)" : undefined,
           }}
         />
+        {figureInReach ? <Figure frame={frame} cx={figureX} blurred={sigma > 0} showCaption={showCaption} /> : null}
         {frame < PRINT_DONE ? <FrozenUnderFront frame={frame} /> : null}
       </div>
     </AbsoluteFill>

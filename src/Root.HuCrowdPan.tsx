@@ -11,7 +11,8 @@ import HuLiveToPrint, {
 // whip pan, baked), so it renders while other sessions own src/Root.tsx.
 // HuCrowdPan is panorama A; HuCrowdPanB is the alternate panorama, same move.
 // HuLiveToPrint opens on the real footage, prints it into newsprint and then
-// does the same pan on its own panorama.
+// does the same pan on its own panorama, onto a printed 25M -> 100M figure;
+// HuLiveToPrintNumberOnly is the same clip without the figure's caption.
 export const RemotionRoot = () => {
   return (
     <>
@@ -40,6 +41,16 @@ export const RemotionRoot = () => {
         component={HuLiveToPrint}
         schema={liveSchema}
         defaultProps={liveDefaultProps}
+        durationInFrames={LIVE_DURATION}
+        fps={LIVE_FPS}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="HuLiveToPrintNumberOnly"
+        component={HuLiveToPrint}
+        schema={liveSchema}
+        defaultProps={liveSchema.parse({showCaption: false})}
         durationInFrames={LIVE_DURATION}
         fps={LIVE_FPS}
         width={1080}
