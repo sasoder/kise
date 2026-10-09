@@ -91,14 +91,15 @@ const MOTION_BLUR_MIN = 1.27;
 /** x of the window's left edge in the panorama's pixels. */
 export const windowX = (frame: number, startX: number, endX: number) => startX + (endX - startX) * progress(frame);
 
-/** Horizontal blur sigma for a frame: the px travelled during it (centred), 0 while it creeps. */
-export const whipSigma = (frame: number, startX: number, endX: number) => {
+/** Horizontal blur sigma for a frame: the px travelled during it (centred), 0 while it creeps.
+ *  planeW is the width of the picture being panned (HuLiveToPrint pans a different one). */
+export const whipSigma = (frame: number, startX: number, endX: number, planeW: number = PLANE_W) => {
   const travelled = Math.abs(windowX(frame + 0.5, startX, endX) - windowX(frame - 0.5, startX, endX));
   const sigma = MOTION_BLUR * travelled;
   if (sigma < MOTION_BLUR_MIN) return 0;
   // the blur reaches 3 sigma to each side: it must find picture there, never the plane's end
   const x = windowX(frame, startX, endX);
-  const room = Math.max(0, Math.min(x, PLANE_W - FRAME_W - x));
+  const room = Math.max(0, Math.min(x, planeW - FRAME_W - x));
   return Math.min(sigma, room / 3);
 };
 
