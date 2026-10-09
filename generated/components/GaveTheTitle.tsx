@@ -19,7 +19,8 @@
 // his chest; the other's arm falls, his head drops and turns away, his fist
 // closes (f60-f84). Moctezuma's hand rests on the crowned shoulder. The camera
 // pushes in and left onto the crowning, then eases back to hold all three.
-// Orange = Texcoco's own: the diadem (the title) and nothing else.
+// Orange = Texcoco's own: the diadem (the title) and the band on the passed-over
+// brother's topknot (bothSidesFigures' TopknotBand, worn from f0; BothSides opens on it).
 //
 // END STATE: GAVE_END = gaveState(94) (every pose, place, the diadem, the
 // camera); <GaveTableau s={GAVE_END} /> under GAVE_END.cam is frame 94 exactly.
@@ -32,6 +33,7 @@ import { smootherstep, smoothstep } from "./incaShared";
 import { Brother, Diadem, Moctezuma, SPECS, STAND, figureAnchors, toLocal, type FigPose } from "./texcocoFigures";
 import { FPS, Label, TexcocoPage, WorldSvg, idle, makeCamera, poseTrack, shadeInk, track, type Cam, type P2 } from "./texcocoShared";
 import { add, mix, mix2, mul, rot } from "./stringsMotion";
+import { TopknotBand } from "./bothSidesFigures";
 
 export { FPS };
 export const DURATION = 95;
@@ -199,11 +201,18 @@ export const GaveTableau: React.FC<{ s: GaveState }> = ({ s }) => {
 const GaveTheTitle: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const s = gaveState(frame);
+  // the passed-over brother's ORANGE topknot band (BothSides' overlay, mounted as there: over the tableau,
+  // on his head's `crown` anchor). Its ribbon ends trail his head's turn a little and hang still (sway 0)
+  // on the last frame, which is where BothSides picks them up.
+  const b1Crown = figureAnchors(SPECS.brother1, s.b1.pose, s.b1.at, s.b1.scale).crown;
+  const turning = (b1Track(frame).headYaw - b1Track(frame - 3).headYaw) / 0.6;
+  const bandSway = (-5 * Math.max(-1, Math.min(1, turning)) * Math.cos(s.b1.pose.headYaw) + 1.1 * Math.sin((frame - (DURATION - 1)) / 9.5)) * (1 - smoothstep((frame - 84) / 10)) + 1.1 * Math.sin((frame - (DURATION - 1)) / 9.5) * smoothstep((frame - 84) / 10);
   return (
     <AbsoluteFill>
       <TexcocoPage cam={s.cam}>
         <WorldSvg cam={s.cam}>
           <GaveTableau s={s} />
+          <TopknotBand crown={b1Crown} sway={bandSway} uid="gt-band" />
         </WorldSvg>
         <Label text="MOCTEZUMA" x={s.label[0]} y={s.label[1]} cam={s.cam} frame={frame} f0={-4} size={84} />
       </TexcocoPage>
