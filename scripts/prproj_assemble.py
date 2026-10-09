@@ -16,6 +16,14 @@ assembly.json (times in sequence seconds, snapped to frames; transitions in fram
   "track" is the video track index (0 = V1, which is refused: the footage stays untouched).
   Either section may carry "remove": ["file.jpg", ...] (relative to "dir"): items on that track using those files are
   removed and not placed again.
+   "broll": {"track": 1, "items": [{"path": "/abs/B01_X.mov", "in": 1.71, "out": 3.80,
+       "src_in": 0.167,               # seconds into the file where the clip starts (snapped to media frames; default 0)
+       "scale": 177.78,               # percent of native pixels, static (default: fill the sequence frame)
+       "pos": [0.42, 0.5]}]}          # clip centre in normalised frame coords, static (default centred)
+  b-roll is a video-only .mov (same media graph as a graphic) placed with a media in-point and an explicit, static
+  Motion (the chain / Motion / param layout Premiere writes for a reframed V1 clip). No dissolves. It may share a
+  track with stills only across two runs (first images, then broll with the first OUT as SOURCE): the earlier
+  items on that track are kept and overlap-checked.
 
 Transitions (Premiere's Cross Dissolve = AE.AE_Impact_Dissolve in Premiere 26):
   - two of our items butting on a track (a.out == b.in) with a.xfade_out or b.xfade_in > 0 get ONE dissolve centred on the
@@ -45,14 +53,15 @@ Rules (same as prproj_insert.py / prproj_insert_stills.py, whose object graphs t
     the Root Bin (Items), Project NextID (and, on re-runs only, a kept item's reference to a removed transition);
   - SOURCE is only read; OUT must be a different path. OUT.xml (same name, .xml) is the xmeml fallback.
 """
-import argparse, gzip, json, math, os, re, struct, subprocess, sys, urllib.parse
+import argparse, gzip, json, math, os, re, struct, subprocess, sys, urllib.parse, uuid
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from prproj_insert import Project, TPS, stored_blobs, media_mod_state, ensure_mov_media, add_mov_item  # noqa: E402
 from prproj_insert_stills import (reusable_blobs, still_media, still_item, media_graph, set_track_items,  # noqa: E402
-                                  append_bin_items, bump_next_id, f32, K0, TIMECODE_FORMAT)
+                                  append_bin_items, bump_next_id, f32, K0, TIMECODE_FORMAT, tabs, motion_param_defs,
+                                  MOTION_CLASS, UPPER)
 
 PREMIERE_PROCS = ("Adobe Premiere Pro 2026", "Adobe Premiere Pro 2025", "Adobe Premiere Pro")
 MOTION = "AE.ADBE Motion"
@@ -349,6 +358,92 @@ def point_param(name, pid, p0, keys, ease):
     k1 += f",5,4,{g(-tx)},{g(-ty)},0,0"
     return [f"<Name>{name}</Name>", "<IsTimeVarying>true</IsTimeVarying>", f"<ParameterID>{pid}</ParameterID>",
             f"<StartKeyframe>{K0},{pt(a)},0,0,0,0,0,0,5,4,0,0,0,0</StartKeyframe>", f"<Keyframes>{k0};{k1};</Keyframes>"]
+
+
+def footage_item(p, media_entry, s, e, W, H, path, motion_hash, src_in, scale, pos):
+    """Blocks for one video clip from s to e (ticks) whose media starts at src_in (ticks), with an explicit static
+    Motion (Scale, Position): VideoClipTrackItem -> chain -> Motion (11 params), SubClip -> VideoClip. The layout is
+    the one Premiere 26 writes for a reframed footage clip (chain without DefaultMotion, track item FrameRect = the
+    sequence frame). Returns (blocks, track item ObjectID)."""
+    mcuid, srcid, mkid, info, dur = media_entry
+    name = escape(os.path.basename(path))
+    tiid, ccid, cid = p.oid(), p.oid(), p.oid()
+    pids = [p.oid() for _ in range(11)]
+    subid, clipid = p.oid(), p.oid()
+    start = "" if s == 0 else f"\n            <Start>{s}</Start>"  # Premiere omits a zero Start
+    blocks = [tabs(f"""
+<VideoClipTrackItem ObjectID="{tiid}" ClassID="368b0406-29e3-4923-9fcd-094fbf9a1089" Version="8">
+    <ClipTrackItem Version="8">
+        <ComponentOwner Version="1">
+            <Components ObjectRef="{ccid}"/>
+        </ComponentOwner>
+        <TrackItem Version="4">
+            <Node Version="1">
+                <ID>{p.nid()}</ID>
+            </Node>{start}
+            <End>{e}</End>
+        </TrackItem>
+        <SubClip ObjectRef="{subid}"/>
+    </ClipTrackItem>
+    <ToneMapSettings>{{"peak":-1,"version":3}}</ToneMapSettings>
+    <FrameRect>0,0,{W},{H}</FrameRect>
+    <PixelAspectRatio>1,1</PixelAspectRatio>
+</VideoClipTrackItem>""")]
+    blocks.append(tabs(f"""
+<VideoComponentChain ObjectID="{ccid}" ClassID="0970e08a-f58f-4108-b29a-1a717b8e12e2" Version="3">
+    <DefaultOpacity>true</DefaultOpacity>
+    <DefaultOpacityComponentID>2</DefaultOpacityComponentID>
+    <ComponentChain Version="3">
+        <Node Version="1">
+            <Properties Version="1">
+                <MZ.ComponentChain.ActiveComponentID>2</MZ.ComponentChain.ActiveComponentID>
+                <MZ.ComponentChain.ActiveComponentParamIndex>4294967295</MZ.ComponentChain.ActiveComponentParamIndex>
+            </Properties>
+        </Node>
+        <Components Version="1">
+            <Component Index="0" ObjectRef="{cid}"/>
+        </Components>
+    </ComponentChain>
+</VideoComponentChain>"""))
+    params = "\n".join(f'            <Param Index="{k}" ObjectRef="{pid}"/>' for k, pid in enumerate(pids))
+    blocks.append(tabs(f"""
+<VideoFilterComponent ObjectID="{cid}" ClassID="{MOTION_CLASS}" Version="9">
+    <Component Version="7">
+        <Params Version="1">
+{params}
+        </Params>
+        <ID>1</ID>
+        <Intrinsic>true</Intrinsic>
+        <DisplayName>Motion</DisplayName>
+    </Component>
+    <PremiereFilterPrivateData Encoding="base64" BinaryHash="{motion_hash}"/>
+    <VideoFilterType>2</VideoFilterType>
+    <MatchName>{UPPER}</MatchName>
+</VideoFilterComponent>"""))
+    sv = f32(scale)
+    for pid, (tag, cls, ver, inner) in zip(pids, motion_param_defs(sv, position=point_param("Position", 1, pos, None, True))):
+        blocks.append(f'\t<{tag} ObjectID="{pid}" ClassID="{cls}" Version="{ver}">\n'
+                      + "\n".join("\t\t" + x for x in inner) + f"\n\t</{tag}>")
+    blocks.append(tabs(f"""
+<SubClip ObjectID="{subid}" ClassID="e0c58dc9-dbdd-4166-aef7-5db7e3f22e84" Version="6">
+    <Clip ObjectRef="{clipid}"/>
+    <MasterClip ObjectURef="{mcuid}"/>
+    <Name>{name}</Name>
+    <OrigChGrp>0</OrigChGrp>
+</SubClip>"""))
+    blocks.append(tabs(f"""
+<VideoClip ObjectID="{clipid}" ClassID="9308dbef-2440-4acb-9ab2-953b9a4e82ec" Version="11">
+    <Clip Version="18">
+        <MarkerOwner Version="1">
+            <Markers ObjectRef="{mkid}"/>
+        </MarkerOwner>
+        <Source ObjectRef="{srcid}"/>
+        <ClipID>{uuid.uuid4()}</ClipID>
+        <InPoint>{src_in}</InPoint>
+        <OutPoint>{src_in + e - s}</OutPoint>
+    </Clip>
+</VideoClip>"""))
+    return blocks, tiid
 
 
 def transition_blocks(tid, cid, pids, start, end, outgoing, incoming, alignment):
@@ -660,7 +755,7 @@ def main():
     # --- 1. the request, per track ---
     sections = []  # (kind, track index, [item dicts])
     extra_remove = {}  # track index -> files whose items are removed without being placed again ("remove": [...])
-    for kind in ("images", "graphics"):
+    for kind in ("images", "graphics", "broll"):
         sec = asm.get(kind)
         if not sec or not sec.get("items"):
             continue
@@ -679,7 +774,7 @@ def main():
         sections.append((kind, tix, its))
         extra_remove[tix] = {os.path.abspath(os.path.join(sec.get("dir", ""), f)) for f in sec.get("remove", [])}
     if len({t for _, t, _ in sections}) != len(sections):
-        sys.exit("images and graphics must go on different tracks")
+        sys.exit("images, graphics and broll must go on different tracks in one run (run again for a shared track)")
 
     # --- 2. idempotence: remove our earlier items (and their transitions) from the target tracks ---
     removed, keep = {}, {}
@@ -735,9 +830,14 @@ def main():
                     sys.exit(f"{path}: missing")
                 media[path] = ensure_mov_media(p, path, out_path, existing, root_bin, proto_impl, mov_state[0], mov_state[1],
                                                bin_items=bin_items, refresh_always=False)
+                mfr = round(TPS / media[path][3]["fps"])  # media frame, ticks
                 for i in its:
-                    if i["path"] == path and i["e"] - i["s"] > media[path][4]:
-                        sys.exit(f"{path}: media {media[path][4] / TPS:.3f}s is shorter than the slot {(i['e'] - i['s']) / TPS:.3f}s")
+                    if i["path"] != path:
+                        continue
+                    i["src_in"] = round(float(i["src"].get("src_in", 0)) * TPS / mfr) * mfr if kind == "broll" else 0
+                    if i["src_in"] + i["e"] - i["s"] > media[path][4]:
+                        sys.exit(f"{path}: media {media[path][4] / TPS:.3f}s is shorter than in-point {i['src_in'] / TPS:.3f}s "
+                                 f"+ the slot {(i['e'] - i['s']) / TPS:.3f}s")
 
     # --- 4. plan: overlaps, cuts, transitions, handles ---
     rep = []
@@ -760,7 +860,7 @@ def main():
                 sys.exit(f"V{tix + 1} {s1 / TPS:.3f}s: a dissolve against an item this script does not manage; leave that cut hard")
             before, after = L // 2, L - L // 2
             for clip, need, side in ((A, after, "tail"), (B, before, "head")):  # media handles beyond the visible clip
-                if kind == "graphics":
+                if kind in ("graphics", "broll"):
                     dur = media[clip["path"]][4]
                     ok = (clip["e"] - clip["s"]) + need * frame <= dur if side == "tail" else need == 0
                     if not ok:
@@ -813,6 +913,18 @@ def main():
                 item_keys[id(i)] = tiid
                 rep.append(f"  V{tix + 1} {i['s'] / TPS:8.3f} – {i['e'] / TPS:8.3f}  scale {sc[0]:.2f}->{sc[1]:.2f}  pos {ps[0]}->{ps[1]}"
                            f"  {'ease' if ease else 'linear'}  {md['w']}x{md['h']}  {name}")
+            elif kind == "broll":
+                if head or tail:
+                    sys.exit(f"{name}: dissolves on b-roll are not supported; leave its cuts hard")
+                info = media[i["path"]][3]
+                x = i["src"]
+                sc = float(x.get("scale") or max(W / info["w"], H / info["h"]) * 100)
+                ps = x.get("pos") or [0.5, 0.5]
+                blocks, tiid = footage_item(p, media[i["path"]], i["s"], i["e"], W, H, i["path"], motion_hash, i["src_in"], sc, ps)
+                new_blocks += blocks
+                item_keys[id(i)] = tiid
+                rep.append(f"  V{tix + 1} {i['s'] / TPS:8.3f} – {i['e'] / TPS:8.3f}  scale {sc:.2f}  pos {ps}  media in {i['src_in'] / TPS:.3f}s"
+                           f"  {info['w']}x{info['h']}  {name}")
             else:
                 ti = add_mov_item(p, media[i["path"]], i["s"], i["e"], i["path"])
                 cti = ti.find("ClipTrackItem")
