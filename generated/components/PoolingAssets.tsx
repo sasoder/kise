@@ -3,7 +3,6 @@ import { AbsoluteFill, Img, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { clamp01, smoothstep, sway } from "./fieldShared";
 import {
-  ACCENT,
   Arms,
   BAR_RISE,
   BAR_W,
@@ -18,6 +17,7 @@ import {
   barOutline,
   manParts,
   stackBars,
+  type Bar,
   type ManOpts,
 } from "./PoolingAssetsGlyphs";
 
@@ -29,35 +29,35 @@ import {
 // 1080x1920, opaque, 24000/1001 fps.
 //
 // SPOKEN LINE (Si Sheppard), word onsets in frames from f0:
-//   not f0 · soldados f5 · So f22 · this f23 · whole f31 · operation f40 ·
-//   was f53 · if you like f68-72 · the f81 · most f84 · raw f90 ·
-//   unbridled f107 · capitalism f118 · at f130 · its f135 · finest f137 ·
-//   pooling f147 · assets f152 · to f161 · derive f173 · enormous f184 ·
-//   profits f194 · (cut to the speaker f206: "from very risky ventures")
+//   not f0 · soldados f5 · So this whole operation was f22-53 ·
+//   if you like f68-72 · the most raw f81-90 · unbridled f107 ·
+//   capitalism f118 · at its finest f130-137 · pooling f147 · assets f152 ·
+//   to derive f161-173 · enormous f184 · profits f194 ·
+//   (cut to the speaker f206: "from very risky ventures")
 // DURATION = sequence frames 2271 -> 2477 = 206 frames at 24000/1001 fps
 //   (8.59 s); the edit fixes it.
-// CHECK LINE: "A conquest ran like a company: partners pooled horses, arms and
-//   ships into one venture and split the gold by what each had put in."
+// CHECK LINE: "Many men's stakes went into one ship, and the ship came home
+//   heavy with gold."
 //
-// THE MOTION (one, continuous). Four companeros stand at the corners of the
-// page, each with his stake beside him: a ship, a horse, sword and crossbow, a
-// purse. From f0 the stakes leave their owners along drawn cream lines and
-// merge in the middle into ONE ship, which is fitted out as each arrives
-// (a sail set per stake); the lines stay as each partner's share, their
-// thickness the size of his stake. The ship sails away up the page, small and
-// far by f122, comes about and returns heaped with gold (orange); the gold
-// lands as one big stack in the middle (whole f162) and is paid straight back
-// out along the same lines (f164-186), which run orange, to four stacks sized
-// by the thickness of each line (15 / 12 / 8 / 6 bars of 41), done as he says
-// "enormous" (f184). Then a settled frame: slow creep, a glint over the gold.
+// THE MOTION, two unhurried beats under one slow push-in.
+//  1. POOLING (f0 -> ~f118). Four companeros stand in the four corners, each
+//     beside his stake: a hull, a horse, sword and crossbow, a purse. One by
+//     one, overlapping gently (ship f6-34, horse f30-62, arms f58-88, purse
+//     f84-112), the stakes travel to the middle along cream share lines and go
+//     aboard the ONE ship, which is fitted out from them: a sail is set for
+//     each arrival. Under full sail by f118, riding a few engraved waves.
+//  2. PROFIT (~f128 -> f206). The ship stays; the share lines fade (f122-150),
+//     the camera keeps pushing in and the partners slide out of frame. From f150 gold rises out of the hold,
+//     bar on bar, the hull settling lower in the water, until by ~f188
+//     ("enormous" f184) it carries a mountain of gold wider than its hull.
+//     Then a settled, living hold: the waves, a slow roll, a glint on the gold.
 //
-// ORANGE = the profit (the gold) and nothing else. No text, no numbers.
+// ORANGE = the gold and nothing else. No text, no numbers.
 //
 // SCHEMATIC, not a record: the four partners and their stakes stand for the
-// way the companies of the conquest were financed (men were paid in shares of
-// the booty by what they brought: a horseman's share was larger than a
-// footman's, and backers who fitted out the ships took theirs). The stack
-// sizes show proportion to stake only; no real division is depicted.
+// way the companies of the conquest were financed (men put in horses, arms,
+// ships and money and were paid in shares of the booty). No real expedition,
+// cargo or sum is depicted.
 // PERIOD: morions / flat caps, slashed doublets and paned trunk hose of the
 // 1520s-30s, a merchant's long gown for the backer; a nao with square fore and
 // main sails and a lateen mizzen; a war saddle with high cantle and pommel; a
@@ -118,23 +118,21 @@ const dOf = (pts: P2[]) => pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)}
 // ---------------------------------------------------------------------------
 const HUB: P2 = [535, 1005]; // the venture: the ship's waterline amidships
 const SHIP_FULL = 3.5; // px per ship unit when fitted out (hull + bowsprit ~420 px)
+const WATER = 5.2; // the water's level on the hull, ship units below its origin
 const GROUND_UP = 600;
 const GROUND_LOW = 1650;
 const MAN_PX = 2.75; // a man ~280 px tall
-const HEAP_K = 1.28; // a partner's bars, and the returning stack's: ~64 px each
+const LINE_W = 10; // every share line the same weight
 
 type Share = {
   id: "ship" | "horse" | "arms" | "purse";
   hand: P2; // where the share line starts: at the partner
   c1: P2;
   c2: P2;
-  homeT: number; // where along the line his stake stands (and his gold is stacked)
+  homeT: number; // where along the line his stake stands
   lift: number; // the standing stake's centre above the line (px)
-  w: number; // the share line's thickness = the size of the stake
   go: readonly [number, number]; // the stake's journey, frames
   man: { x: number; y: number; flip: boolean; opts: ManOpts };
-  ground: number; // the base of the partner's gold
-  rows: number[]; // his gold, bars per row
 };
 export const SHARES: Share[] = [
   {
@@ -144,11 +142,8 @@ export const SHARES: Share[] = [
     c2: [190, 1010],
     homeT: 0.33,
     lift: 0,
-    w: 20,
-    go: [-6, 32],
+    go: [6, 34],
     man: { x: 100, y: GROUND_UP, flip: false, opts: { hat: "cap", gown: true } },
-    ground: GROUND_UP,
-    rows: [5, 4, 3, 2, 1],
   },
   {
     id: "horse",
@@ -157,11 +152,8 @@ export const SHARES: Share[] = [
     c2: [890, 1010],
     homeT: 0.33,
     lift: 81,
-    w: 16,
-    go: [10, 52],
+    go: [30, 62],
     man: { x: 980, y: GROUND_UP, flip: true, opts: { hat: "morion", cape: true, sword: true } },
-    ground: GROUND_UP,
-    rows: [5, 4, 3],
   },
   {
     id: "arms",
@@ -170,11 +162,8 @@ export const SHARES: Share[] = [
     c2: [500, 1260],
     homeT: 0.2,
     lift: 14,
-    w: 11,
-    go: [30, 70],
+    go: [58, 88],
     man: { x: 100, y: GROUND_LOW, flip: false, opts: { hat: "morion", cuirass: true, sword: true } },
-    ground: GROUND_LOW,
-    rows: [4, 3, 1],
   },
   {
     id: "purse",
@@ -183,11 +172,8 @@ export const SHARES: Share[] = [
     c2: [570, 1260],
     homeT: 0.2,
     lift: -33,
-    w: 8,
-    go: [50, 88],
+    go: [84, 112],
     man: { x: 980, y: GROUND_LOW, flip: true, opts: { hat: "cap", cape: true } },
-    ground: GROUND_LOW,
-    rows: [3, 2, 1],
   },
 ];
 // a share line runs from the partner's hand, past where his stake stands, to
@@ -195,9 +181,6 @@ export const SHARES: Share[] = [
 const FULL = SHARES.map((s) => cubic(s.hand, s.c1, s.c2, HUB, 140));
 const HOME_N = SHARES.map((s) => Math.round(s.homeT * 140));
 const STUB_U = SHARES.map((_, i) => FULL[i].s[HOME_N[i]] / FULL[i].len);
-const HEAP_AT: P2[] = SHARES.map((s, i) => [FULL[i].pts[HOME_N[i]][0], s.ground]);
-const lineU = (i: number, f: number) => STUB_U[i] + (1 - STUB_U[i]) * stakeU(i, f);
-const LINES_BACK = FULL.map((c) => measure(c.pts.slice().reverse()));
 const HORSE_PX = 320 / HORSE_UNITS;
 const ARMS_PX = 2.4;
 const PURSE_PX = 2.9;
@@ -207,94 +190,73 @@ const SHIP_HOME = 2.1;
 // TIMING
 // ---------------------------------------------------------------------------
 export const T = {
-  arrive: [32, 52, 70, 88] as const, // ship, horse, arms, purse reach the hub
-  out: [90, 124] as const, // the voyage out
-  turn: [122, 134] as const, // coming about, far off
-  back: [130, 156] as const, // the voyage home
-  land: [150, 162] as const, // the gold lands in the middle
-  pay: [164, 186] as const, // paid out along the share lines
-  glint: [184, 214] as const,
+  gold: [150, 187] as const, // the heap rises out of the hold
+  spill: [176, 189] as const, // bars slide over the gunwale
+  glint: [186, 222] as const,
 };
 /** each stake's progress along its line, 0..1 */
 export const stakeU = (i: number, f: number) => ease(f, SHARES[i].go[0], SHARES[i].go[1]);
-const FAR: P2 = [690, 205];
-const SHIP_FAR = 2.1; // still ~250 px wide at its farthest
-const VOY_OUT = cubic(HUB, [610, 820], [712, 500], FAR);
-const VOY_BACK = cubic(FAR, [598, 380], [528, 700], HUB);
+const lineU = (i: number, f: number) => STUB_U[i] + (1 - STUB_U[i]) * stakeU(i, f);
+const ARRIVE = SHARES.map((s) => s.go[1]);
+/** how deep the laden hull has settled, ship units */
+const SINK = 5;
+export const goldU = (f: number) => clamp01((f - T.gold[0]) / (T.gold[1] - T.gold[0]));
 
 export const shipState = (f: number) => {
   // to the hub, growing as each stake comes aboard
-  const u0 = stakeU(0, f);
-  let pos = at(FULL[0], lineU(0, f));
-  let px = lerp(SHIP_HOME, 2.84, u0) + 0.22 * (ease(f, T.arrive[1] - 7, T.arrive[1] + 7) + ease(f, T.arrive[2] - 7, T.arrive[2] + 7) + ease(f, T.arrive[3] - 7, T.arrive[3] + 7));
-  let flip = 1;
-  if (f > T.out[0]) {
-    const uo = ease(f, T.out[0], T.out[1]);
-    const ub = ease(f, T.back[0], T.back[1]);
-    pos = ub > 0 ? at(VOY_BACK, ub) : at(VOY_OUT, uo);
-    // it shrinks with distance (by height gained), and grows home again
-    const far = ub > 0 ? 1 - ub : uo;
-    px = lerp(SHIP_FULL, SHIP_FAR, Math.pow(far, 0.85));
-    flip = Math.cos(Math.PI * ease(f, T.turn[0], T.turn[1]));
-  }
+  const pos = at(FULL[0], lineU(0, f));
+  const px =
+    lerp(SHIP_HOME, SHIP_FULL - 0.6, stakeU(0, f)) +
+    0.2 * (ease(f, ARRIVE[1] - 10, ARRIVE[1] + 6) + ease(f, ARRIVE[2] - 10, ARRIVE[2] + 6) + ease(f, ARRIVE[3] - 10, ARRIVE[3] + 6));
   const sails: [number, number, number] = [
-    ease(f, T.arrive[1] - 8, T.arrive[1] + 8),
-    ease(f, T.arrive[2] - 8, T.arrive[2] + 8),
-    ease(f, T.arrive[3] - 8, T.arrive[3] + 6),
+    ease(f, ARRIVE[1] - 5, ARRIVE[1] + 12),
+    ease(f, ARRIVE[2] - 5, ARRIVE[2] + 12),
+    ease(f, ARRIVE[3] - 6, ARRIVE[3] + 6),
   ];
   const aboard = {
-    horse: ease(f, T.arrive[1] - 10, T.arrive[1] - 3),
-    arms: ease(f, T.arrive[2] - 10, T.arrive[2] - 3),
-    coin: ease(f, T.arrive[3] - 10, T.arrive[3] - 3),
+    horse: ease(f, ARRIVE[1] - 7, ARRIVE[1]),
+    arms: ease(f, ARRIVE[2] - 7, ARRIVE[2]),
+    coin: ease(f, ARRIVE[3] - 7, ARRIVE[3]),
   };
-  const under = ease(f, T.out[0] - 6, T.out[0] + 10); // under way: it rides the swell
-  const roll = (0.5 + 1.3 * under) * Math.sin(f * 0.2);
-  const heave = (0.4 + 1.6 * under) * Math.sin(f * 0.17 + 1);
-  return { pos, px, flip, sails, aboard, roll, heave };
+  const afloat = ease(f, 20, 60);
+  const roll = (0.5 + 1.0 * afloat) * Math.sin(f * 0.15);
+  const heave = (0.3 + 0.5 * afloat) * Math.sin(f * 0.13 + 1);
+  const sink = SINK * smoothstep(goldU(f) * 1.04);
+  return { pos, px, sails, aboard, roll, heave, sink };
 };
 
 // ---------------------------------------------------------------------------
-// THE GOLD
+// THE GOLD: a stack heaped on the deck from stem to stern, wider than the hull
+// (world px, drawn in the ship's frame so it rolls and settles with it)
 // ---------------------------------------------------------------------------
-const BIG_ROWS = [9, 8, 7, 6, 5, 4, 2]; // 41 bars
-const BIG = stackBars(BIG_ROWS);
-const BIG_K = HEAP_K;
-const BIG_BASE: P2 = [540, 1068];
-const HEAPS = SHARES.map((s) => stackBars(s.rows));
-export const TOTAL_BARS = BIG.length;
-/** the order the big stack is paid out: from the top down, the outside of a row first */
-const BIG_LEAVE = BIG.map((b, i) => ({ i, key: -b.row * 100 - Math.abs(b.x) / BAR_W }))
-  .sort((p, q) => p.key - q.key)
-  .map((e) => e.i);
-const BIG_RANK: number[] = [];
-BIG_LEAVE.forEach((i, rank) => {
-  BIG_RANK[i] = rank;
-});
-export const bigPresent = (i: number, f: number) =>
-  1 - smoothstep((f - (T.pay[0] + 1 + ((T.pay[1] - T.pay[0] - 3.5) * BIG_RANK[i]) / TOTAL_BARS)) / 2.5);
-export const heapPresent = (h: number, j: number, f: number) =>
-  smoothstep((f - (T.pay[0] + 7 + ((T.pay[1] - T.pay[0] - 10.5) * j) / HEAPS[h].length)) / 3);
-/** the orange running out along share line h, 0..1 from the hub */
-export const flowU = (h: number, f: number) => {
-  const u = clamp01((f - T.pay[0]) / 11);
-  return 1 - (1 - u) * (1 - u);
-};
+const HEAP_ROWS = [8, 7, 6, 5, 4, 3];
+const HEAP: Bar[] = stackBars(HEAP_ROWS);
+export const TOTAL_BARS = HEAP.length;
+const HEAP_AT: P2 = [4, -13.6]; // ship units: on the waist's gunwale
+export const barPresent = (i: number, f: number) => smoothstep((f - (T.gold[0] + ((T.gold[1] - T.gold[0] - 5) * i) / TOTAL_BARS)) / 5);
+// the last bars, slipping off the flanks of the heap out over the rail: [x, y, tilt]
+const SPILL: [number, number, number][] = [
+  [-199, -29, -24],
+  [199, -29, 24],
+  [-150, -79, -15],
+  [150, -79, 15],
+];
+const ONE_BAR: Bar[] = [{ x: 0, y: 0, row: 0 }];
 
 // ---------------------------------------------------------------------------
-// THE CAMERA: a coarse keyed track [f, cx, cy, k] through a damped follow
+// THE CAMERA: a coarse keyed track [f, cx, cy, k] through a damped follow.
+// One push-in toward the ship, slow while the stakes come in, then on in.
 // ---------------------------------------------------------------------------
 const CAM_KEYS: [number, number, number, number][] = [
-  [-60, 540, 1005, 0.94],
-  [-8, 540, 1000, 0.955],
-  [36, 540, 978, 1.0],
-  [84, 546, 928, 1.04],
-  [102, 572, 850, 1.01],
-  [118, 590, 790, 0.97],
-  [132, 584, 800, 0.97],
-  [152, 540, 962, 0.99],
-  [164, 540, 986, 0.95],
-  [180, 540, 986, 0.955],
-  [240, 540, 986, 1.03],
+  [-60, 540, 1003, 0.945],
+  [0, 540, 1000, 0.955],
+  [60, 541, 990, 0.99],
+  [112, 543, 978, 1.03],
+  [132, 548, 968, 1.12],
+  [156, 557, 952, 1.5],
+  [178, 562, 945, 2.0],
+  [190, 564, 944, 2.07],
+  [260, 564, 944, 2.2],
 ];
 const camTarget = (f: number): [number, number, number] => {
   let i = 1;
@@ -305,7 +267,7 @@ const camTarget = (f: number): [number, number, number] => {
   return [lerp(a[1], b[1], t), lerp(a[2], b[2], t), lerp(a[3], b[3], t)];
 };
 const CAM_TABLE: [number, number, number][] = (() => {
-  const OMEGA = 0.26; // per frame: the follow lags ~8 frames and never pops
+  const OMEGA = 0.2; // per frame: the follow lags ~10 frames and never pops
   const SUB = 4;
   const F0 = -60;
   const out: [number, number, number][] = [];
@@ -316,7 +278,7 @@ const CAM_TABLE: [number, number, number][] = (() => {
     if (f >= 0 && n % SUB === 0) out.push([x[0], x[1], x[2]]);
     const tg = camTarget(f);
     for (let d = 0; d < 3; d++) {
-      v[d] += ((OMEGA * OMEGA * (tg[d] - x[d]) - 2 * OMEGA * v[d]) * 1) / SUB;
+      v[d] += (OMEGA * OMEGA * (tg[d] - x[d]) - 2 * OMEGA * v[d]) / SUB;
       x[d] += v[d] / SUB;
     }
   }
@@ -327,35 +289,11 @@ export const cameraAt = (f: number) => {
   return { cx: c[0], cy: c[1], k: c[2] };
 };
 
-// ---------------------------------------------------------------------------
-// The wake: a few engraved wave strokes left on the page where the ship passed
-// ---------------------------------------------------------------------------
-type Wake = { p: P2; f: number; size: number };
-const WAKES: Wake[] = (() => {
-  const out: Wake[] = [];
-  let lastP: P2 | null = null;
-  for (let f = T.out[0] + 4; f < T.back[1] - 8; f += 0.5) {
-    const st = shipState(f);
-    if (f > T.turn[0] - 2 && f < T.turn[1] + 2) continue;
-    const gap = 30 + 26 * (st.px / SHIP_FULL);
-    if (lastP && Math.hypot(st.pos[0] - lastP[0], st.pos[1] - lastP[1]) < gap) continue;
-    lastP = st.pos;
-    const side = out.length % 2 === 0 ? -1 : 1;
-    out.push({ p: [st.pos[0] + side * 16 * st.px, st.pos[1] + 9 * st.px], f: f + 2.5, size: st.px / SHIP_FULL });
-  }
-  return out;
-})();
-
-const Line: React.FC<{ c: Curve; u: number; w: number; color: string; casing?: number }> = ({ c, u, w, color, casing = 0.5 }) => {
-  if (u <= 0.002) return null;
-  const d = dOf(c.pts);
-  const dash = `${(c.len * u).toFixed(1)} ${(c.len + 40).toFixed(1)}`;
-  return (
-    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <path d={d} stroke={DARK} strokeOpacity={casing} strokeWidth={w + 6} strokeDasharray={dash} />
-      <path d={d} stroke={color} strokeWidth={w} strokeDasharray={dash} />
-    </g>
-  );
+/** a run of engraved wave crests, n of them, w wide and a tall, starting at x */
+const crests = (x: number, y: number, n: number, w: number, a: number) => {
+  let d = `M${x.toFixed(2)},${y.toFixed(2)}`;
+  for (let i = 0; i < n; i++) d += ` q${(w / 2).toFixed(2)},${(-a).toFixed(2)} ${w.toFixed(2)},0`;
+  return d;
 };
 
 const PoolingAssets: React.FC<Props> = ({ backdropSrc, vignette }) => {
@@ -366,19 +304,29 @@ const PoolingAssets: React.FC<Props> = ({ backdropSrc, vignette }) => {
   const tx = W / 2 - cam.cx * k + drift.dx * 0.6;
   const ty = H / 2 - cam.cy * k + drift.dy * 0.5;
   const camT = `translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${k.toFixed(5)})`;
+  // the engraved line keeps its screen weight while the page is wide, then
+  // grows with the push-in so the close ship is not drawn in hairlines
+  const weight = Math.pow(Math.max(1, k / 1.05), 0.85);
+  const pxOf = (px: number) => (px * k) / weight;
 
   const ship = shipState(frame);
   const [shx, shy] = ship.pos;
+  const waterY = shy + WATER * ship.px; // the sea does not sink with the hull
+  const deck: P2 = [shx + 6 * ship.px, shy - 15 * ship.px];
 
-  // the gold: aboard from the turn, landing as one stack in the middle
-  const goldIn = ease(frame, T.turn[0] + 6, T.turn[0] + 13);
-  const land = ease(frame, T.land[0], T.land[1]);
-  const deckK = (0.4 * ship.px) / SHIP_FULL;
-  const bigK = lerp(deckK, BIG_K, land) * (0.5 + 0.5 * goldIn);
-  const bigX = lerp(shx, BIG_BASE[0], land);
-  const bigY = lerp(shy - 13 * ship.px + ship.heave, BIG_BASE[1], land);
-
+  const gU = goldU(frame);
   const glintU = (frame - T.glint[0]) / (T.glint[1] - T.glint[0]);
+  const heapW = HEAP_ROWS[0] * BAR_W;
+  const heapH = HEAP_ROWS.length * BAR_RISE;
+
+  // the sea round the hull: four rows of crests, each drifting at its own pace
+  const u = ship.px; // one ship unit in world px
+  const waveRows: { x0: number; y: number; n: number; w: number; a: number; v: number }[] = [
+    { x0: -66, y: 0, n: 13, w: 10, a: 3.4, v: 0.11 },
+    { x0: -56, y: 5.6, n: 7, w: 8, a: 3, v: -0.08 },
+    { x0: 12, y: 6.4, n: 6, w: 8, a: 3, v: 0.07 },
+    { x0: -30, y: 11.4, n: 7, w: 8, a: 2.8, v: -0.06 },
+  ];
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#3A3025" }}>
@@ -389,110 +337,146 @@ const PoolingAssets: React.FC<Props> = ({ backdropSrc, vignette }) => {
 
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute" }}>
         <defs>
-          {HEAPS.map((bars, h) => (
-            <clipPath key={h} id={`paGlint${h}`}>
-              <path d={bars.map(barOutline).join(" ")} />
-            </clipPath>
-          ))}
+          <clipPath id="paAfloat">
+            <rect x={-400} y={-600} width={1900} height={waterY + 600} />
+          </clipPath>
+          <clipPath id="paGlint">
+            <path d={HEAP.map(barOutline).join(" ")} />
+          </clipPath>
           <linearGradient id="paGlintGrad" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stopColor="#FFF1C8" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#FFF1C8" stopOpacity="0.55" />
+            <stop offset="0.5" stopColor="#FFF1C8" stopOpacity="0.5" />
             <stop offset="1" stopColor="#FFF1C8" stopOpacity="0" />
           </linearGradient>
         </defs>
         <g transform={camT}>
-          {/* the wake */}
-          {WAKES.map((wk, i) => {
-            const o = ease(frame, wk.f, wk.f + 4) * (1 - ease(frame, wk.f + 8, wk.f + 30));
-            if (o <= 0.01) return null;
-            const a = 5 * wk.size + 2.4;
-            const w = 9 * wk.size + 4;
-            let d = `M${(wk.p[0] - 2 * w).toFixed(1)},${wk.p[1].toFixed(1)}`;
-            for (let n = 0; n < 4; n++) d += ` q${(w / 2).toFixed(1)},${(-a).toFixed(1)} ${w.toFixed(1)},0`;
+          {/* the share lines, drawn by the stakes; they fade away as beat 2 begins */}
+          {SHARES.map((s, i) => {
+            const lineOp = 1 - ease(frame, 122, 150);
+            if (lineOp <= 0.004) return null;
+            const lw = LINE_W / Math.max(1, k / 1.05);
+            const c = FULL[i];
+            const d = dOf(c.pts);
+            const dash = `${(c.len * lineU(i, frame)).toFixed(1)} ${(c.len + 40).toFixed(1)}`;
             return (
-              <g key={i} opacity={o * 0.8} fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <path d={d} stroke={DARK} strokeOpacity={0.5} strokeWidth={2.4 * wk.size + 5} />
-                <path d={d} stroke={INK} strokeWidth={2.4 * wk.size + 1.6} />
+              <g key={s.id} opacity={lineOp} fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d={d} stroke={DARK} strokeOpacity={0.5} strokeWidth={lw + 6 / Math.max(1, k / 1.05)} strokeDasharray={dash} />
+                <path d={d} stroke={INK} strokeWidth={lw} strokeDasharray={dash} />
               </g>
             );
           })}
 
-          {/* the share lines: drawn by the stakes, then run orange from the hub */}
-          {SHARES.map((s, i) => (
-            <Line key={s.id} c={FULL[i]} u={lineU(i, frame)} w={s.w} color={INK} />
-          ))}
-          {SHARES.map((s, i) => (
-            <Line key={s.id} c={LINES_BACK[i]} u={flowU(i, frame)} w={s.w} color={ACCENT} casing={0.35} />
-          ))}
-
           {/* the partners */}
           {SHARES.map((s) => (
             <g key={s.id} transform={`translate(${s.man.x} ${s.man.y}) scale(${s.man.flip ? -MAN_PX : MAN_PX} ${MAN_PX})`}>
-              <Engraved parts={manParts(s.man.opts)} px={MAN_PX * k} />
+              <Engraved parts={manParts(s.man.opts)} px={pxOf(MAN_PX)} />
             </g>
           ))}
 
-          {/* the venture */}
-          <g transform={`translate(${shx.toFixed(2)} ${(shy + ship.heave).toFixed(2)}) rotate(${ship.roll.toFixed(3)}) scale(${(ship.px * ship.flip).toFixed(4)} ${ship.px.toFixed(4)})`}>
-            <Ship px={ship.px * k} sails={ship.sails} aboard={ship.aboard} frame={frame} />
+          {/* the venture: one ship, afloat (the hull is cut at the water) */}
+          <g clipPath="url(#paAfloat)">
+            <g
+              transform={`translate(${shx.toFixed(2)} ${(shy + (ship.heave + ship.sink) * u).toFixed(2)}) rotate(${ship.roll.toFixed(3)} 0 ${(WATER * u).toFixed(1)}) scale(${u.toFixed(4)})`}
+            >
+              <Ship px={pxOf(u)} sails={ship.sails} aboard={ship.aboard} frame={frame} waves={0} />
+              {gU > 0 ? (
+                <g>
+                  {/* the heap's shadow on the hull, engraved */}
+                  <path
+                    d={Array.from({ length: 30 }, (_, n) => {
+                      const x = -45 + n * 3.2;
+                      const top = x < -33 ? -30 : x < -16 ? -23 : x < 28.4 ? -12.4 : -22.4;
+                      return `M${x.toFixed(1)},${top} l2.6,${(4.2 + 1.6 * (n % 2)).toFixed(1)}`;
+                    }).join(" ")}
+                    fill="none"
+                    stroke={DARK}
+                    strokeOpacity={0.6 * smoothstep(gU * 2.2)}
+                    strokeWidth={1.7 / pxOf(u)}
+                    strokeLinecap="round"
+                  />
+                  <g transform={`translate(${HEAP_AT[0]} ${HEAP_AT[1]}) scale(${(1 / u).toFixed(5)})`}>
+                    {SPILL.map(([x, y, tilt], n) => {
+                      const pr = ease(frame, T.spill[0] + n * 2.5, T.spill[0] + n * 2.5 + 6);
+                      if (pr <= 0.01) return null;
+                      const dir = x < 0 ? 1 : -1;
+                      return (
+                        <g key={n} transform={`translate(${x + dir * 20 * (1 - pr)} ${y - 6 * (1 - pr)}) rotate(${(tilt * pr).toFixed(2)})`}>
+                          <GoldBars bars={ONE_BAR} present={() => Math.min(1, pr * 2)} px={pxOf(1)} from={0} />
+                        </g>
+                      );
+                    })}
+                    <GoldBars bars={HEAP} present={(i) => barPresent(i, frame)} px={pxOf(1)} from={18} solid />
+                    {glintU > 0 && glintU < 1 ? (
+                      <g clipPath="url(#paGlint)">
+                        <rect
+                          x={-heapW / 2 - 120 + (heapW + 240) * glintU - 45}
+                          y={-heapH - 40}
+                          width={90}
+                          height={heapH + 60}
+                          fill="url(#paGlintGrad)"
+                          transform="skewX(-18)"
+                        />
+                      </g>
+                    ) : null}
+                  </g>
+                </g>
+              ) : null}
+            </g>
           </g>
 
-          {/* the stakes on their way in (the ship is the venture itself); they go aboard over it */}
+          {/* the stakes on their way in; each shrinks into the hull as it goes aboard */}
           {SHARES.map((s, i) => {
             if (s.id === "ship") return null;
-            const u = stakeU(i, frame);
-            const fade = 1 - smoothstep((u - 0.76) / 0.16);
+            const fa = ARRIVE[i];
+            const fade = 1 - ease(frame, fa - 3, fa + 0.5);
             if (fade <= 0.01) return null;
-            const sc = 1 - 0.55 * smoothstep((u - 0.62) / 0.38);
-            const [x, y0] = at(FULL[i], lineU(i, frame));
-            // it leaves the line for the deck as it comes aboard
-            const y = y0 - s.lift * (1 - smoothstep(u / 0.8)) - (s.id === "horse" ? 70 : 0) * smoothstep((u - 0.55) / 0.4);
-            const moving = smoothstep(u / 0.12) * (1 - smoothstep((u - 0.9) / 0.1));
+            const su = stakeU(i, frame);
+            const [lx, ly] = at(FULL[i], lineU(i, frame));
+            const board = ease(frame, fa - 15, fa - 2);
+            const x = lerp(lx, deck[0], board);
+            const y = lerp(ly - s.lift * (1 - smoothstep(su / 0.7)), deck[1], board);
+            const sc = 1 - 0.8 * ease(frame, fa - 13, fa - 1);
+            const moving = smoothstep(su / 0.12) * (1 - smoothstep((su - 0.86) / 0.14));
             if (s.id === "horse") {
               const px = HORSE_PX * sc;
               return (
-                <g key={s.id} opacity={fade} transform={`translate(${x} ${y}) scale(${-px} ${px}) rotate(${(9 * moving).toFixed(2)})`}>
-                  <Horse px={px * k} phase={(frame - s.go[0]) / 3.2} gait={moving} />
+                <g key={s.id} opacity={fade} transform={`translate(${x} ${y}) scale(${-px} ${px}) rotate(${(8 * moving).toFixed(2)})`}>
+                  <Horse px={pxOf(px)} phase={(frame - s.go[0]) / 3.4} gait={moving} />
                 </g>
               );
             }
             if (s.id === "arms") {
               const px = ARMS_PX * sc;
               return (
-                <g key={s.id} opacity={fade} transform={`translate(${x} ${y}) scale(${px}) rotate(${(16 * smoothstep(u)).toFixed(2)})`}>
-                  <Arms px={px * k} />
+                <g key={s.id} opacity={fade} transform={`translate(${x} ${y}) scale(${px}) rotate(${(16 * smoothstep(su)).toFixed(2)})`}>
+                  <Arms px={pxOf(px)} />
                 </g>
               );
             }
             const px = PURSE_PX * sc;
             return (
-              <g key={s.id} opacity={fade} transform={`translate(${x} ${y}) scale(${px}) rotate(${(-7 * Math.sin(Math.PI * u)).toFixed(2)})`}>
-                <Engraved parts={PURSE_PARTS} px={px * k} />
+              <g key={s.id} opacity={fade} transform={`translate(${x} ${y}) scale(${px}) rotate(${(-7 * Math.sin(Math.PI * su)).toFixed(2)})`}>
+                <Engraved parts={PURSE_PARTS} px={pxOf(px)} />
               </g>
             );
           })}
 
-          {/* the gold it brings home, then pays out */}
-          {goldIn > 0.01 ? (
-            <g transform={`translate(${bigX.toFixed(2)} ${bigY.toFixed(2)}) scale(${bigK.toFixed(4)})`} opacity={Math.min(1, goldIn * 1.5)}>
-              <GoldBars bars={BIG} present={(i) => bigPresent(i, frame)} px={bigK * k} />
-            </g>
-          ) : null}
-          {SHARES.map((s, h) => {
-            const bars = HEAPS[h];
-            const wHeap = s.rows[0] * BAR_W;
-            const gx = -wHeap / 2 - 70 + (wHeap + 140) * glintU + (h % 2) * 30;
-            return (
-              <g key={s.id} transform={`translate(${HEAP_AT[h][0].toFixed(1)} ${HEAP_AT[h][1]}) scale(${HEAP_K})`}>
-                <GoldBars bars={bars} present={(j) => heapPresent(h, j, frame)} px={HEAP_K * k} />
-                {glintU > 0 && glintU < 1 ? (
-                  <g clipPath={`url(#paGlint${h})`}>
-                    <rect x={gx - 34} y={-s.rows.length * BAR_RISE - 40} width={68} height={s.rows.length * BAR_RISE + 60} fill="url(#paGlintGrad)" transform={`skewX(-18)`} />
-                  </g>
-                ) : null}
-              </g>
-            );
-          })}
+          {/* the water: the waterline across the hull, and the crests below it */}
+          <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+            {waveRows.map((r, n) => {
+              const span = r.w * u;
+              const shift = (((frame * r.v) % 1) + 1) % 1; // the crests travel one wavelength and repeat
+              const lift = (n === 0 ? 0.5 : 0.9) * u * Math.sin(frame * 0.14 + n * 1.7);
+              const d = crests(shx + (r.x0 + (shift - 0.5) * r.w) * u, waterY + r.y * u + lift, r.n, span, r.a * u);
+              const w = (n === 0 ? 1.25 : 1.05) * u;
+              return (
+                <g key={n}>
+                  <path d={d} stroke={DARK} strokeOpacity={0.6} strokeWidth={w + 5 / k} />
+                  <path d={d} stroke={INK} strokeWidth={w} />
+                </g>
+              );
+            })}
+          </g>
         </g>
       </svg>
 

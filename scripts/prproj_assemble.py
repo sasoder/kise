@@ -14,6 +14,8 @@ assembly.json (times in sequence seconds, snapped to frames; transitions in fram
    ]},
    "graphics": {"track": 2, "items": [{"path": "/abs/00_X.mov", "in": 0.5, "out": 11.542, "xfade_in": 0, "xfade_out": 0}]}}
   "track" is the video track index (0 = V1, which is refused: the footage stays untouched).
+  Either section may carry "remove": ["file.jpg", ...] (relative to "dir"): items on that track using those files are
+  removed and not placed again.
 
 Transitions (Premiere's Cross Dissolve = AE.AE_Impact_Dissolve in Premiere 26):
   - two of our items butting on a track (a.out == b.in) with a.xfade_out or b.xfade_in > 0 get ONE dissolve centred on the
@@ -657,6 +659,7 @@ def main():
 
     # --- 1. the request, per track ---
     sections = []  # (kind, track index, [item dicts])
+    extra_remove = {}  # track index -> files whose items are removed without being placed again ("remove": [...])
     for kind in ("images", "graphics"):
         sec = asm.get(kind)
         if not sec or not sec.get("items"):
@@ -674,6 +677,7 @@ def main():
                 sys.exit(f"{path}: empty slot after snapping to frames")
             its.append(dict(kind=kind, path=path, s=s, e=e, src=x, xin=int(x.get("xfade_in", 0)), xout=int(x.get("xfade_out", 0))))
         sections.append((kind, tix, its))
+        extra_remove[tix] = {os.path.abspath(os.path.join(sec.get("dir", ""), f)) for f in sec.get("remove", [])}
     if len({t for _, t, _ in sections}) != len(sections):
         sys.exit("images and graphics must go on different tracks")
 
@@ -682,7 +686,7 @@ def main():
     for kind, tix, its in sections:
         track_key = tracks[tix].attrib["ObjectURef"]
         track = p.el[track_key]
-        paths = {i["path"] for i in its}
+        paths = {i["path"] for i in its} | extra_remove.get(tix, set())
         lst = track.find("ClipTrack/ClipItems/TrackItems")
         kept, dropped_tr, n = [], set(), 0
         for x in (lst if lst is not None else []):

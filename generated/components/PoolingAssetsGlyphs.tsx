@@ -85,7 +85,11 @@ export const manParts = (o: ManOpts): Part[] => {
     p.push({ k: "stroke", d: "M-6,-52 L-27,-21", w: 2.6 }, { k: "stroke", d: "M-9.6,-56.6 L-2.6,-51", w: 2 }, { k: "stroke", d: "M-6,-52 L-3,-57", w: 2 });
   }
   // the far arm, hand on the hip
-  p.push({ k: "stroke", d: "M-11,-75 L-20,-62", w: 8.4 }, { k: "stroke", d: "M-20,-62 L-10,-54", w: 5 });
+  p.push(
+    { k: "fill", d: "M-22,-61.4 L-18.4,-65.6 L-8,-56.4 L-10.4,-51.8 Z" },
+    { k: "fill", d: "M-8,-79 C-14,-81.6 -21,-75 -23.4,-64.6 C-23,-60.6 -19,-59 -16,-60.6 C-14.4,-66 -11.4,-72.6 -8,-79 Z" },
+    { k: "dark", d: "M-13,-76 l-3.4,5 M-16,-73.6 l-3.2,5.2 M-18.6,-70 l-2.4,4.6 M-18,-62.6 l5,4.4" },
+  );
   if (o.gown) {
     // shoes under a long gown
     p.push(
@@ -127,7 +131,11 @@ export const manParts = (o: ManOpts): Part[] => {
     }
   }
   // the near arm, reaching a little toward what he brings
-  p.push({ k: "stroke", d: "M11,-76 L17,-64", w: 8.4 }, { k: "stroke", d: "M17,-64 L24,-57", w: 5 });
+  p.push(
+    { k: "fill", d: "M14.6,-64.4 L19.8,-66.6 L27,-58.4 L24,-54.6 Z" },
+    { k: "fill", d: "M7.6,-79 C13,-82 19.6,-76.6 21.6,-67 C21.4,-63 17.6,-61 14.4,-62.4 C12.4,-67 10,-73 7.6,-79 Z" },
+    { k: "dark", d: "M11.6,-76.4 l3.2,5.2 M14.6,-74.6 l3,5.4 M17.4,-71.4 l2.2,4.8 M18.4,-63 l4.6,5" },
+  );
   p.push({ k: "fill", d: circ(25.4, -56, 2.7) }, { k: "fill", d: circ(-9.6, -54, 2.5) });
   // the head, a pointed beard
   p.push({ k: "fill", d: circ(1, -87.4, 6.2) }, { k: "shade", d: "M1.6,-83.6 C4,-83 6.4,-84 7.4,-86 C8,-82 6.4,-78.6 4.6,-77.4 C3,-79 2,-81 1.6,-83.6 Z", o: 0.72 });
@@ -344,6 +352,12 @@ const HULL =
   "M-47,-31 L-48.6,-12 C-47.6,0 -41,8 -31,9 L27,9 C39,8 47,-2 53.6,-16.6 L50.6,-23 L30,-23 L28.4,-13 L-14,-13 L-16,-24 L-32,-24 L-33,-31 Z";
 const HULL_LINES =
   "M-48.2,-8.4 C-30,-1.4 22,-1.4 50,-10.6 M-46,-1 C-30,5 24,5 46.4,-3.4 M-33,-27.4 L-47.4,-27.4 M-16.6,-20 L-32.4,-20 M30,-19.4 L52,-19.4";
+// planking between the wales, and the turn of the bilge in shade
+const HULL_PLANKS =
+  "M-48,-4.6 C-30,2 23,2 48.4,-7 M-47.6,-11 C-30,-4.6 21,-4.6 51,-13.4 M-44,2.6 C-30,7.6 25,7.6 43,0.4 " +
+  "M-30,-3.2 l0,3.4 M-12,-1.8 l0,3.4 M8,-1.6 l0,3.4 M28,-3.6 l0,3.4 M-21,1.2 l0,3.2 M-2,2.2 l0,3.2 M18,1.8 l0,3.2 M36,-0.6 l0,3.2 " +
+  "M-38,-9.4 l0,3 M-20,-6.4 l0,3 M0,-5.2 l0,3 M20,-6 l0,3 M40,-10.4 l0,3 " +
+  "M24,3 l4,3.6 M29,2.4 l4,3.6 M34,1.2 l4,3.4 M39,-0.6 l3.4,3 M43.6,-3.6 l2.6,2.6 M47,-8 l2,2.2";
 const HULL_TICKS =
   "M-43.6,-31 L-43.6,-27.4 M-39.6,-31 L-39.6,-27.4 M-35.6,-31 L-35.6,-27.4 M-28,-24 L-28,-20 M-24,-24 L-24,-20 M-20,-24 L-20,-20 " +
   "M34,-23 L34,-19.4 M38,-23 L38,-19.4 M42,-23 L42,-19.4 M46,-23 L46,-19.4 " +
@@ -357,6 +371,16 @@ const squareSail = (x0: number, x1: number, yTop: number, depth: number, s: numb
     `C${x1 - 12},${yb - b} ${x0 + 14},${yb - b} ${x0 + 3},${yb} C${x0 + 3 + b},${yTop + D * 0.7} ${x0 + 3 + b},${yTop + D * 0.35} ${x0},${yTop} Z`
   );
 };
+/** the seams of a square sail: one bellied line per cloth */
+const seams = (xs: number[], yTop: number, D: number) =>
+  xs.map((x) => `M${x},${yTop + 1} C${x + 2.6},${yTop + D * 0.4} ${x + 2.6},${yTop + D * 0.75} ${x + 0.8},${yTop + D - 2.6}`).join(" ");
+/** short engraved shade strokes down the lee edge of a sail */
+const shadeTicks = (x: number, yTop: number, D: number, n: number) =>
+  Array.from({ length: n }, (_, i) => {
+    const y = yTop + 3 + ((D - 8) * i) / Math.max(1, n - 1);
+    const bulge = 4.2 * Math.sin((Math.PI * (i + 0.5)) / n);
+    return `M${(x + bulge - 4).toFixed(2)},${y.toFixed(2)} l4.6,2.4`;
+  }).join(" ");
 const waveD = (x: number, y: number, n: number, a = 3.2, w = 5) => {
   let d = `M${x},${y}`;
   for (let i = 0; i < n; i++) d += ` q${w / 2},${-a} ${w},0`;
@@ -392,20 +416,23 @@ export const Ship: React.FC<{
     sailsP.push(
       { k: "fill", d: `M${A[0]},${A[1]} L${B[0]},${B[1]} Q${clew[0] + 5 * sl},${(B[1] + clew[1]) / 2} ${clew[0]},${clew[1]} Q${(A[0] + clew[0]) / 2},${clew[1] - 4 * sl} ${A[0]},${A[1]} Z` },
       { k: "dark", d: `M${mid[0] + 4},${mid[1] + 4} L${mid[0] + (clew[0] - mid[0]) * 0.8 + 2},${mid[1] + (clew[1] - mid[1]) * 0.8} M${A[0] + 12},${A[1] - 5} L${A[0] + 12 + (clew[0] - mid[0]) * 0.7},${A[1] - 5 + (clew[1] - mid[1]) * 0.55}`, o: 0.4 * sl },
+      { k: "dark", d: `M${A[0] + 6},${A[1] - 1} L${A[0] + 6 + (clew[0] - mid[0]) * 0.34},${A[1] - 1 + (clew[1] - mid[1]) * 0.3} M${B[0] - 7},${B[1] + 9} L${B[0] - 7 + (clew[0] - mid[0]) * 0.5},${B[1] + 9 + (clew[1] - mid[1]) * 0.5}`, o: 0.4 * sl },
     );
   sailsP.push({ k: "stroke", d: `M${A[0]},${A[1]} L${B[0]},${B[1]}`, w: 1.5 + 2.2 * (1 - sl) });
   // fore and main square sails, their yards (a furled sail is a bundle on its yard)
   if (sf > 0.03)
     sailsP.push(
       { k: "fill", d: squareSail(19, 49, -62, 33, sf) },
-      { k: "dark", d: `M27,-61 C29,${-62 + 33 * sf * 0.5} 29,${-62 + 33 * sf * 0.8} 27.6,${-62 + 33 * sf - 2} M41,-61 C43.6,${-62 + 33 * sf * 0.5} 43.6,${-62 + 33 * sf * 0.8} 41.6,${-62 + 33 * sf - 2}`, o: 0.4 * sf },
+      { k: "dark", d: seams([25, 31, 37, 43], -62, 33 * sf), o: 0.42 * sf },
+      { k: "dark", d: shadeTicks(46.4, -62, 33 * sf, 6), o: 0.5 * sf },
     );
   sailsP.push({ k: "stroke", d: "M17.6,-62 L50.4,-62", w: 1.5 + 2.4 * (1 - sf) });
   if (sm > 0.03) {
     const D = 50 * sm;
     sailsP.push(
       { k: "fill", d: squareSail(-24, 28, -80, 50, sm) },
-      { k: "dark", d: `M-12,-79 C-9.6,${-80 + D * 0.5} -9.6,${-80 + D * 0.8} -11,${-80 + D - 2.4} M16,-79 C19,${-80 + D * 0.5} 19,${-80 + D * 0.8} 16.6,${-80 + D - 2.4}`, o: 0.4 * sm },
+      { k: "dark", d: seams([-16, -9, -2, 10, 17, 23], -80, D), o: 0.42 * sm },
+      { k: "dark", d: shadeTicks(24.6, -80, D, 9), o: 0.5 * sm },
       // the cross on the mainsail
       { k: "dark", d: `M3.6,${-80 + D * 0.24} L3.6,${-80 + D * 0.78} M-6,${-80 + D * 0.5} L13.4,${-80 + D * 0.5}`, w: 4.2, o: 0.62 * sm },
     );
@@ -421,6 +448,7 @@ export const Ship: React.FC<{
     { k: "fill", d: HULL },
     { k: "dark", d: HULL_LINES, w: 1.9 },
     { k: "dark", d: HULL_TICKS },
+    { k: "dark", d: HULL_PLANKS, o: 0.45, w: 1.4 },
     // the rudder
     { k: "dark", d: "M-48,-10 C-50.6,-2 -47,6 -42,8.4", w: 1.8, o: 0.5 },
   ];
@@ -523,8 +551,14 @@ const barTop = (b: Bar) => `M${b.x - 18.6},${b.y - 20} L${b.x + 18.6},${b.y - 20
 export const barOutline = (b: Bar) =>
   `M${b.x - 23},${b.y} L${b.x + 23},${b.y} L${b.x + 18.6},${b.y - 20} L${b.x + 14.6},${b.y - 27.4} L${b.x - 14.6},${b.y - 27.4} L${b.x - 18.6},${b.y - 20} Z`;
 
-/** present(i) 0..1 per bar (in stackBars order): a bar drops the last 16 px into place */
-export const GoldBars: React.FC<{ bars: Bar[]; present: (i: number) => number; px?: number }> = ({ bars, present, px = 1 }) => {
+/** present(i) 0..1 per bar (in stackBars order): a bar travels its last `from` px into place (negative = from above) */
+export const GoldBars: React.FC<{ bars: Bar[]; present: (i: number) => number; px?: number; from?: number; solid?: boolean }> = ({
+  bars,
+  present,
+  px = 1,
+  from = -16,
+  solid = false,
+}) => {
   const sw = 1 / px;
   // back rows first, so each row overlaps the top faces of the one beneath
   const order = bars.map((b, i) => ({ b, i })).sort((p, q) => p.b.row - q.b.row);
@@ -534,7 +568,9 @@ export const GoldBars: React.FC<{ bars: Bar[]; present: (i: number) => number; p
         const pr = present(i);
         if (pr <= 0.01) return null;
         return (
-          <g key={i} opacity={Math.min(1, pr * 1.6)} transform={`translate(0 ${(-16 * (1 - pr)).toFixed(2)})`}>
+          <g key={i} opacity={Math.min(1, pr * 1.6)} transform={`translate(0 ${(from * (1 - pr)).toFixed(2)})`}>
+            {/* solid: the shadowed gaps between neighbours are filled, so nothing shows through the stack */}
+            {solid ? <rect x={b.x - BAR_W / 2 - 0.5} y={b.y - 21} width={BAR_W + 1} height={21} fill="#1A130C" /> : null}
             <path d={barOutline(b)} fill={DARK} stroke={DARK} strokeOpacity={0.75} strokeWidth={5 * sw} />
             <path d={barFront(b)} fill={ACCENT_DEEP} stroke={DARK} strokeOpacity={0.7} strokeWidth={1.6 * sw} />
             <path d={barTop(b)} fill={ACCENT} stroke={DARK} strokeOpacity={0.7} strokeWidth={1.6 * sw} />

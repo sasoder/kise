@@ -492,3 +492,108 @@ export const Crown: React.FC<{ x: number; y: number; tilt?: number; scale?: numb
     ))}
   </g>
 );
+
+// ---------------------------------------------------------------------------
+// SEATED: the same figure sat down, front view. The upper body (hands and all)
+// drops by `sit` units over the lower legs, and one lap line marks the knees.
+// (x, y) = the feet; h = the STANDING height in px. Use specs without a
+// hanging sword.
+// ---------------------------------------------------------------------------
+export const SeatedPerson: React.FC<{ x: number; y: number; h: number; spec: PersonSpec; uid: string; sit: number }> = ({ x, y, h, spec, uid, sit }) => {
+  if (sit <= 0.01) return <Person x={x} y={y} h={h} spec={spec} uid={uid} />;
+  const s = h / personUnits(spec);
+  const cut = y + (-86 + sit) * s;
+  const lapW = (spec.dress === "robe" ? 41 : 35) * (spec.build ?? 1) * s;
+  return (
+    <g>
+      <clipPath id={`${uid}-lo`}>
+        <rect x={x - 500} y={cut - 1} width={1000} height={700} />
+      </clipPath>
+      <clipPath id={`${uid}-up`}>
+        <rect x={x - 500} y={cut - 2000} width={1000} height={2000} />
+      </clipPath>
+      <g clipPath={`url(#${uid}-lo)`}>
+        <Person x={x} y={y} h={h} spec={spec} uid={`${uid}l`} />
+      </g>
+      <g clipPath={`url(#${uid}-up)`}>
+        <Person x={x} y={y + sit * s} h={h} spec={spec} uid={`${uid}u`} />
+      </g>
+      <path d={`M${(x - lapW).toFixed(1)},${(cut - 2).toFixed(1)}Q${x.toFixed(1)},${(cut + 9 * s).toFixed(1)} ${(x + lapW).toFixed(1)},${(cut - 2).toFixed(1)}`} fill="none" stroke={DARK} strokeWidth={2.8} strokeLinecap="round" />
+      <path d={hatchD(x - lapW * 0.8, cut + 4 * s, x + lapW * 0.8, cut + 15 * s, 96, 4.2, 61, 0.2)} fill="none" stroke={DARK} strokeOpacity={0.5} strokeWidth={1.3} strokeLinecap="round" />
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// THE TWO SEATS. (0, 0) = the ground under the seat's middle, up negative, in
+// px. The throne is 330 x 480; the Company's chair is plain and square, with a
+// small writing desk beside it. Both backs carry a darker panel so a cream
+// sitter, a crown or an orange ring reads against them. Seat plane y = -75.
+// ---------------------------------------------------------------------------
+const SO = { stroke: DARK, strokeWidth: 3.2, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
+const sl = (w = 1.4, a = 0.6) => ({ fill: "none", stroke: DARK, strokeWidth: w, strokeOpacity: a, strokeLinecap: "round" as const });
+const C_PANEL = "#7D7054";
+
+const THRONE_BACK = "M-122,-98V-398Q-122,-438 -82,-446Q0,-492 82,-446Q122,-438 122,-398V-98Z";
+const THRONE_PANEL = "M-96,-98V-392Q-96,-416 -68,-422Q0,-458 68,-422Q96,-416 96,-392V-98Z";
+export const Throne: React.FC<{ x: number; y: number }> = ({ x, y }) => (
+  <g transform={`translate(${x} ${y})`}>
+    <path d={THRONE_BACK} fill={INK} {...SO} />
+    <path d={THRONE_PANEL} fill={C_PANEL} {...SO} strokeWidth={2.4} />
+    <path d={hatchD(-96, -456, 96, -98, 62, 9, 71, 0.08) + hatchD(-96, -456, 96, -98, -62, 9, 72, 0.08)} {...sl(1.3, 0.38)} clipPath="url(#nlbThroneClip)" />
+    <clipPath id="nlbThroneClip">
+      <path d={THRONE_PANEL} />
+    </clipPath>
+    <path d={hatchD(100, -440, 122, -100, 98, 4.4, 73, 0.2)} {...sl(1.3, 0.55)} />
+    {[-1, 1].map((sg) => (
+      <g key={sg}>
+        <circle cx={sg * 106} cy={-446} r={17} fill={INK} {...SO} />
+        <path d={`M${sg * 106 + 4},-456a11,11 0 0 1 8,14`} {...sl(1.4, 0.6)} />
+        {/* the arm: a post and its ball */}
+        <path d={`M${sg * 150 - 15},-76V-196h30V-76Z`} fill={INK} {...SO} />
+        <path d={hatchD(sg * 150 + 3, -196, sg * 150 + 15, -76, 96, 4, 74 + sg, 0.2)} {...sl(1.3, 0.55)} />
+        <circle cx={sg * 150} cy={-206} r={19} fill={sg < 0 ? INK : C_DEEP} {...SO} />
+      </g>
+    ))}
+    <path d="M0,-470l7,9l-7,9l-7,-9Z" fill={INK} {...SO} strokeWidth={2.4} />
+    {/* the seat, the front, the dais */}
+    <path d="M-136,-74H136V-20H-136Z" fill={INK} {...SO} />
+    <path d="M-112,-62H112V-32H-112Z" {...sl(1.8, 0.7)} />
+    <path d={hatchD(40, -74, 136, -20, 100, 4.6, 76, 0.2)} {...sl(1.3, 0.5)} />
+    <path d="M-154,-102H154Q160,-102 160,-96V-80Q160,-74 154,-74H-154Q-160,-74 -160,-80V-96Q-160,-102 -154,-102Z" fill={C_DEEP} {...SO} />
+    <path d={hatchD(-150, -100, 156, -76, 12, 5, 77, 0.25)} {...sl(1.2, 0.45)} />
+    <path d="M-165,-22H165V0H-165Z" fill={C_DEEP} {...SO} />
+    <path d={hatchD(60, -22, 165, 0, 100, 4.6, 78, 0.2)} {...sl(1.3, 0.5)} />
+  </g>
+);
+
+export const CompanyChair: React.FC<{ x: number; y: number }> = ({ x, y }) => (
+  <g transform={`translate(${x} ${y})`}>
+    {[-1, 1].map((sg) => (
+      <path key={sg} d={`M${sg * 96 - 10},-78V0h20V-78Z`} fill={INK} {...SO} />
+    ))}
+    <path d="M-86,-34H86" stroke={DARK} strokeWidth={13} strokeLinecap="round" />
+    <path d="M-86,-34H86" stroke={INK} strokeWidth={7.5} strokeLinecap="round" />
+    <path d="M-104,-98V-428Q-104,-440 -92,-440H92Q104,-440 104,-428V-98Z" fill={INK} {...SO} />
+    <path d="M-82,-98V-418H82V-98Z" fill={C_PANEL} {...SO} strokeWidth={2.4} />
+    <path d={hatchD(-82, -418, 82, -98, 90, 10, 81, 0.05)} {...sl(1.3, 0.34)} />
+    <path d={hatchD(86, -436, 104, -100, 98, 4.4, 82, 0.2)} {...sl(1.3, 0.55)} />
+    <path d="M-116,-102H116V-76H-116Z" fill={C_DEEP} {...SO} />
+    <path d={hatchD(20, -102, 116, -76, 100, 4.6, 83, 0.2)} {...sl(1.3, 0.5)} />
+  </g>
+);
+
+/** the small writing desk beside the chair: 120 wide, 118 tall, quill in its inkwell */
+export const WritingDesk: React.FC<{ x: number; y: number }> = ({ x, y }) => (
+  <g transform={`translate(${x} ${y})`}>
+    {[-1, 1].map((sg) => (
+      <path key={sg} d={`M${sg * 46 - 7},-92V0h14V-92Z`} fill={INK} {...SO} strokeWidth={2.8} />
+    ))}
+    <path d="M-54,-106H54V-84H-54Z" fill={INK} {...SO} strokeWidth={2.8} />
+    <path d="M-8,-95h16" {...sl(2.2, 0.8)} />
+    <path d="M-62,-118H62V-104H-62Z" fill={C_DEEP} {...SO} strokeWidth={2.8} />
+    <path d="M-30,-118l3,-20h18l3,20Z" fill={C_HAIR} {...SO} strokeWidth={2.6} />
+    <path d="M-18,-136Q2,-170 30,-200Q8,-186 -14,-150Z" fill={INK} {...SO} strokeWidth={2.4} />
+    <path d="M-17,-138L26,-196" {...sl(1.3, 0.7)} />
+  </g>
+);
