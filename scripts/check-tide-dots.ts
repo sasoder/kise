@@ -2,7 +2,7 @@
 // honest numbers), that no newcomer stands in Oceania before the stream arrives, and
 // how fast the camera and the dots move ON SCREEN.
 //   bun scripts/check-tide-dots.ts
-import { DOTS, DURATION, FRAME_H, FRAME_W, PORT_COUNTS, cameraAt, countAt, headAt, placeDot, toScreen } from "../generated/components/tideMotion";
+import { DOTS, DURATION, FRAME_H, FRAME_W, PORT_COUNTS, SHIPS, cameraAt, countAt, edgeScale, placeDot, placeShip, shipSize, toScreen } from "../generated/components/tideMotion";
 
 console.log("ports", JSON.stringify(PORT_COUNTS));
 const inFrame = (s: number[], m = 9) => s[0] > -m && s[0] < FRAME_W + m && s[1] > -m && s[1] < FRAME_H + m;
@@ -21,10 +21,13 @@ for (const f of [0, 60, 76, 90, 101, 110, 115, 122, 130, 141, 151, 158, 163, 170
     if (st === 0 && vis) sea++;
     if (st === 1) walk++;
   });
-  const h = [0, 0, 1];
-  const hs = headAt(f, h) >= 0 ? toScreen(h, cam).map((v) => v.toFixed(0)).join(",") : "-";
+  const hs = SHIPS.map((sh) => {
+    const h = [0, 0];
+    const st = placeShip(sh, f, h);
+    return st.rise < 0.01 ? "-" : `${toScreen(h, cam).map((v) => v.toFixed(0)).join(",")} (${shipSize(sh, cam.k).toFixed(0)} px)`;
+  }).join(" | ");
   console.log(
-    `f${f}: MEX cream ${c.mex.cream} | AUS orange ${c.aus.orange} cream ${c.aus.cream} | NZ orange ${c.nz.orange} cream ${c.nz.cream} | in frame: cream ${creamInFrame}, at sea ${sea} | walking ${walk} | k ${cam.k.toFixed(3)} | ribbon head at screen ${hs}`,
+    `f${f}: MEX cream ${c.mex.cream} | AUS orange ${c.aus.orange} cream ${c.aus.cream} | NZ orange ${c.nz.orange} cream ${c.nz.cream} | in frame: cream ${creamInFrame}, at sea ${sea} | walking ${walk} | k ${cam.k.toFixed(3)} | ships at screen ${hs}`,
   );
 }
 // on-screen speeds
@@ -51,7 +54,7 @@ for (let f = 1; f < DURATION; f++) {
     if (s0s < 0 || s1s < 0) continue;
     const s0 = toScreen(a, c0);
     const s1 = toScreen(b, c1);
-    if (!inFrame(s0, 0) || !inFrame(s1, 0)) continue;
+    if (!inFrame(s0, 0) || !inFrame(s1, 0) || edgeScale(DOTS[i], s1[0], f) < 0.5) continue;
     const d = Math.hypot(s1[0] - s0[0], s1[1] - s0[1]);
     if (d > m) m = d;
     worst.push({ v: d, f, g: DOTS[i].group, st: s1s });
@@ -61,7 +64,33 @@ for (let f = 1; f < DURATION; f++) {
 worst.sort((p, q) => q.v - p.v);
 console.log(`max on-screen step: frame centre ${vCam.toFixed(1)} px/frame (f${fCam}); zoom ${(100 * vZoom).toFixed(1)} %/frame (frame edge ${(540 * vZoom).toFixed(1)}, corner ${(1101 * vZoom).toFixed(1)} px/frame)`);
 console.log(`fastest dot in frame: ${worst[0].v.toFixed(1)} px/frame (f${worst[0].f}, ${worst[0].g}, state ${worst[0].st}); 99.9th pct ${worst[Math.floor(worst.length * 0.001)].v.toFixed(1)}, 99th ${worst[Math.floor(worst.length * 0.01)].v.toFixed(1)}`);
+console.log("fastest after f160:", worst.filter((q) => q.f > 160).slice(0, 6).map((q) => `${q.v.toFixed(0)} f${q.f} ${q.g} st${q.st}`).join(", "));
 console.log("fastest dot per frame (every 6th):", perFrame.map((v, i) => (i % 6 === 5 ? `f${i + 1}:${v.toFixed(0)}` : "")).filter(Boolean).join(" "));
+// the ships
+{
+  const q0 = [0, 0];
+  const q1 = [0, 0];
+  for (const sh of SHIPS) {
+    let m = 0;
+    let fm = 0;
+    let mw = 0;
+    for (let f = 1; f < DURATION; f++) {
+      const st = placeShip(sh, f, q1);
+      placeShip(sh, f - 1, q0);
+      if (st.rise < 0.05) continue;
+      const s0 = toScreen(q0, cameraAt(f - 1));
+      const s1 = toScreen(q1, cameraAt(f));
+      mw = Math.max(mw, Math.hypot(q1[0] - q0[0], q1[1] - q0[1]) * cameraAt(f).k);
+      if (!inFrame(s0, 60) || !inFrame(s1, 60)) continue;
+      const d = Math.hypot(s1[0] - s0[0], s1[1] - s0[1]);
+      if (d > m) {
+        m = d;
+        fm = f;
+      }
+    }
+    console.log(`ship ${sh.key}: fastest on screen ${m.toFixed(1)} px/frame (f${fm}); over the map ${mw.toFixed(1)} px/frame; anchors f${sh.anchorAt}`);
+  }
+}
 const cream = DOTS.filter((d) => !d.orange && d.group !== "mex");
 console.log(`Oceania: first landing f${Math.min(...cream.map((d) => d.tLand)).toFixed(1)}; last regular dot stands f${Math.max(...cream.filter((d) => d.tLand < 214).map((d) => d.tSettle)).toFixed(1)}; last of all f${Math.max(...cream.map((d) => d.tSettle)).toFixed(1)}`);
 const mex = DOTS.filter((d) => d.group === "mex");

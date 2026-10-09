@@ -5,7 +5,7 @@ import { ACCENT, ACCENT_DEEP, Carrack, CityDot, DARK, FRAME_H, FRAME_W, INK, Mot
 import { LEVELS, ROUTE, SPLIT } from "./texcocoTideMapData";
 import { DURATION as CAM_DURATION, cameraAt } from "./tideCamera";
 import { K0, P, RING_C, RING_R } from "./tideGeo";
-import { DOTS, LEAD, carreraAt, drawRadius, leadS, placeDot } from "./tideMotion";
+import { DOTS, FOLLOW, LEAD, SHIPS, TRUNK_LEN, carreraAt, drawRadius, edgeScale, followS, leadS, placeDot, placeShip, routePathD, shipSize } from "./tideMotion";
 
 // ---------------------------------------------------------------------------
 // ClosedWorldsTide (Si Sheppard, "Texcoco"; delivered as 38_ClosedWorlds.mov).
@@ -19,16 +19,19 @@ import { DOTS, LEAD, carreraAt, drawRadius, leadS, placeDot } from "./tideMotion
 // minority in their own land."
 //
 // THE MOTION (one camera journey, one language: the map, ORANGE = the native
-// world and its peoples, CREAM = the newcomers). It opens tight on central
-// Mexico inside the orange ring, everything outside it unknown; the long
-// pull-back lifts the fog across the Atlantic and a cream ship rides a dashed
-// track from Spain to the ring. The track fills: cream dots follow in a file
-// that thickens to a flood, land and crowd the ring. The camera never stops:
-// it keeps easing out, and as a second ribbon of dots leaves the Channel and
-// runs down the African coast it goes with it, round the Cape and east across
-// the Indian Ocean, and comes down on Australia (19 orange dots), where the
-// ribbon splits to the ports and fills the land; it glides on across the
-// Tasman as New Zealand (18 orange dots) fills, and holds.
+// world and its peoples, CREAM = the newcomers; ships bring them, dots are the
+// people). It opens tight on central Mexico inside the orange ring, everything
+// outside it unknown; the long pull-back lifts the fog across the Atlantic and
+// a cream ship rides a dashed track from Spain to the ring, two more behind
+// it. The track fills: cream dots follow in a file that thickens to a flood,
+// land and crowd the ring. The camera never stops: it keeps easing out, and as
+// a convoy of carracks leaves the Channel in line astern and runs down the
+// African coast it goes with it, round the Cape and east across the Indian
+// Ocean, and comes down on Australia (19 orange dots). The lead ship anchors
+// off Sydney, the second off the south coast (a small one off Perth), and the
+// dots come off the ships in short files to the ports and fill the land; the
+// third sails on across the Tasman with the camera, anchors off New Zealand
+// (18 orange dots) and fills it the same way. Hold.
 //
 // THE LINE (frames from the cut's first frame):
 //   closed 4 · worlds 12 · didn't 18 · allow 25 · them 29 · to 32 · think 35 ·
@@ -52,7 +55,9 @@ import { DOTS, LEAD, carreraAt, drawRadius, leadS, placeDot } from "./tideMotion
 // picture of real settlement, not a census map). The routes are real in kind:
 // the Carrera de Indias from Seville, and the emigrant route out of the
 // Channel, round the Cape of Good Hope and along 40 S, drawn down the African
-// coast. The ports are real.
+// coast. The convoy is four ships for a century of sailings. The ports are
+// real; Auckland is reached from its Tasman side and the South Island through
+// Nelson (its Tasman port), so no file crosses open ocean.
 //
 // THE MAP: scripts/build-texcoco-tide-map.mjs (north-up Mercator, Natural
 // Earth 10m, no borders, the Valley of Mexico lakes of 1519), baked to raster
@@ -204,13 +209,15 @@ const slide = (frame: number, land: number) => {
   return { dy: 24 * Math.pow(1 - u, 3), op: clamp01((frame - (land - LABEL_FRAMES)) / 9) };
 };
 const LAND_AUSTRALIA = 163;
-const LAND_NEW_ZEALAND = 178;
+const LAND_NEW_ZEALAND = 180;
+/** it waits for the Tasman to open: a shorter rise than AUSTRALIA's */
+const NZ_FRAMES = 9;
 /** AUSTRALIA: the Southern Ocean under the continent, clear of the stream and below the caption strip when the word lands */
 const AU_AT: P2 = P(134.2, -56);
 /** it leaves with the west of the continent: faded before the frame edge would cut it */
 const AU_OUT: [number, number] = [178, 189];
 /** NEW ZEALAND: the Tasman, north-west of the North Island (the middle of the line) */
-const NZ_AT: P2 = P(164.4, -31.4);
+const NZ_AT: P2 = P(166.0, -30.6);
 /** type sizes in world px (the labels grow with the map as the camera comes down) */
 const S_AU = 29;
 const S_NZ = 15.6;
@@ -249,6 +256,8 @@ const ClosedWorldsTide: React.FC<Props> = ({ vignette, labels }) => {
     if (st < 0 || Math.abs(p[0] - cam.cx) > mx || Math.abs(p[1] - cam.cy) > my) continue;
     const x = p[0].toFixed(2);
     const y = p[1].toFixed(2);
+    const edge = edgeScale(dot, FRAME_W / 2 + (p[0] - cam.cx) * k, frame);
+    if (edge <= 0.01) continue;
     const R = drawRadius(dot, k);
     const g = R / dot.r; // how much the far-off size lifts it
     if (dot.orange) {
@@ -261,10 +270,10 @@ const ClosedWorldsTide: React.FC<Props> = ({ vignette, labels }) => {
       );
       continue;
     }
-    const r = R * p[2];
+    const r = R * p[2] * edge;
     const node = (
       <g key={i}>
-        <circle cx={x} cy={y} r={(r + dot.casing * g).toFixed(3)} fill={DARK} />
+        <circle cx={x} cy={y} r={(r + dot.casing * g * Math.min(1, p[2] * edge * 1.5)).toFixed(3)} fill={DARK} />
         <circle cx={x} cy={y} r={r.toFixed(3)} fill={CREAM_DIM} />
       </g>
     );
@@ -272,8 +281,38 @@ const ClosedWorldsTide: React.FC<Props> = ({ vignette, labels }) => {
     else moving.push(node);
   }
 
+  // the convoy: its dashed wake (the trunk once, then each ship's own course) and the ships
+  const convoy: React.ReactNode[] = [];
+  const wakes: string[] = [];
+  const q = [0, 0];
+  let sHead = 0;
+  SHIPS.forEach((sh) => {
+    const st = placeShip(sh, frame, q);
+    sHead = Math.max(sHead, Math.min(st.s, TRUNK_LEN));
+    if (st.s > TRUNK_LEN) wakes.push(routePathD(sh.route, TRUNK_LEN, st.s));
+    if (st.rise <= 0.002 || Math.abs(q[0] - cam.cx) > mx + 120 / k || Math.abs(q[1] - cam.cy) > my + 120 / k) return;
+    convoy.push(
+      <Carrack
+        key={sh.key}
+        x={q[0]}
+        y={q[1] + (20 * (1 - st.rise)) / k}
+        cam={cam}
+        frame={frame}
+        size={shipSize(sh, k)}
+        seed={sh.seed}
+        facing="east"
+        opacity={st.rise}
+        rock={0.45 + 0.6 * st.way}
+        wake={st.rise * st.way}
+      />,
+    );
+  });
+  if (sHead > 1 && frame < 200) wakes.unshift(routePathD(SHIPS[0].route, 0, sHead));
+  const wakeD = wakes.join("");
+
   const au = slide(frame, LAND_AUSTRALIA);
-  const nz = slide(frame, LAND_NEW_ZEALAND);
+  const nzU = clamp01((frame - (LAND_NEW_ZEALAND - NZ_FRAMES)) / NZ_FRAMES);
+  const nz = { dy: 24 * Math.pow(1 - nzU, 3), op: clamp01((frame - (LAND_NEW_ZEALAND - NZ_FRAMES)) / 6) };
   const haloOf = (size: number) => ({ stroke: SEA, strokeOpacity: 0.6, strokeWidth: size * 0.14, paintOrder: "stroke" as const });
 
   return (
@@ -289,9 +328,24 @@ const ClosedWorldsTide: React.FC<Props> = ({ vignette, labels }) => {
               <CityDot x={SEVILLE[0]} y={SEVILLE[1]} cam={cam} r={6.5} />
             </>
           ) : null}
+          {wakeD ? (
+            <>
+              <path d={wakeD} fill="none" stroke={DARK} strokeOpacity={0.45} strokeWidth={w(6.4)} strokeLinejoin="round" />
+              <path d={wakeD} fill="none" stroke={INK} strokeOpacity={0.9} strokeWidth={w(3.2)} strokeDasharray="7.5 5.5" strokeLinejoin="round" />
+            </>
+          ) : null}
           {moving}
           {standing}
           {orange}
+          {atlantic
+            ? FOLLOW.map((fq, i) => {
+                const fs = followS(frame, fq);
+                if (fs <= 0) return null;
+                const fp = carreraAt(fs);
+                return <Carrack key={i} x={fp[0]} y={fp[1]} cam={cam} frame={frame} size={60} seed={fq.seed} opacity={smoothstep(fs / 26)} rock={1.1} wake={0.8} />;
+              })
+            : null}
+          {convoy}
           {atlantic && rise > 0.002 ? (
             <Carrack x={lead[0]} y={lead[1] + (24 * (1 - rise)) / k} cam={cam} frame={frame} size={SHIP_LEAD} seed={3} opacity={rise} rock={1.2} wake={rise * (1 - 0.6 * smoothstep((frame - LEAD.f1 + 6) / 8))} />
           ) : null}

@@ -7,15 +7,18 @@
 // THE ATLANTIC STREAM (illustrative, no ratio claimed): cream dots follow the ship
 // down the same track in a slim file, a trickle that thickens to a flood, land at
 // Veracruz and stand on the land inside and round the ring.
-// THE OCEANIA STREAM: the 481 + 83 cream dots of MinorityInOwnCountry. They leave
-// the Channel as one ribbon, run down the African coast, round the Cape and east
-// along 40 S on ONE shared clock (so the ribbon keeps its shape while the camera
-// travels with it), split off Cape Leeuwin into a file per port, land and slip
-// inland to their slots, nearest the port first. The ORANGE dots (19 + 18, the
-// original peoples) stand on their slots for the whole cut.
+// THE CONVOY: four carracks leave the Channel in line astern, run down the African
+// coast, round the Cape and east along 40 S on one shared clock (so the line keeps
+// its shape while the camera travels with it). Off Cape Leeuwin the small last ship
+// turns north for Perth; the lead anchors off Sydney, the second off the south
+// coast, the third sails on across the Tasman and anchors off the North Island.
+// THE LANDINGS: the 481 + 83 cream dots of MinorityInOwnCountry come OFF the
+// anchored ships in short files to the ports and slip inland to their slots,
+// nearest the port first. The ORANGE dots (19 + 18, the original peoples) stand on
+// their slots for the whole cut.
 import { AUS_CREAM, AUS_ORANGE, MEX_SLOTS, NZ_CREAM, NZ_CREAM_NORTH, NZ_ORANGE, ROUTE, ROUTE_LEN, type P3 } from "./texcocoTideMapData";
 import { DURATION, FRAME_H, FRAME_W, cameraAt, toScreen, type Cam } from "./tideCamera";
-import { PORTS, PORT_ROUTE, TRUNK, VERACRUZ, routeAt, routeOf, type P2, type PortKey, type Route } from "./tideGeo";
+import { HOP_ROUTE, LANDING, TRUNK, SHIP_ROUTE, VERACRUZ, routeAt, routeOf, type LandingKey, type P2, type Route, type ShipKey } from "./tideGeo";
 
 export { DURATION, FRAME_H, FRAME_W, cameraAt, toScreen };
 export type { Cam };
@@ -109,12 +112,14 @@ const A_CUM: [number, number][] = [
 const A_LANE = 9.6;
 export const A_R = 4.3;
 
-// ---- the Oceania stream ----------------------------------------------------------------
+// ---- the landings ---------------------------------------------------------------------
 type PortDef = {
-  key: PortKey;
+  key: LandingKey;
   country: "aus" | "nz";
   /** the frame its first dot lands */
   first: number;
+  /** world px per frame on the hop from the ship */
+  v: number;
   /** abreast behind the head */
   lanes: number;
   /** its share of Australia's cream dots (Hobart takes Tasmania; New Zealand: one port per island) */
@@ -126,33 +131,36 @@ type PortDef = {
   lateAt: number;
 };
 /** the last regular dot stands by here ("minority" is f205-214); stragglers land after */
-const FILL_END = 211;
+const FILL_END = 206;
 const PORT_DEFS: PortDef[] = [
-  { key: "sydney", country: "aus", first: 161, lanes: 3, share: 0.28, pow: 1, late: 4, lateAt: 219 },
-  { key: "brisbane", country: "aus", first: 163.5, lanes: 3, share: 0.23, pow: 1, late: 3, lateAt: 224 },
-  { key: "perth", country: "aus", first: 162, lanes: 2, share: 0.2, pow: 1.1, late: 0, lateAt: 0 },
-  { key: "adelaide", country: "aus", first: 168, lanes: 3, share: 0.14, pow: 1.2, late: 0, lateAt: 0 },
-  { key: "melbourne", country: "aus", first: 171, lanes: 3, share: 0.15, pow: 1.1, late: 0, lateAt: 0 },
-  { key: "hobart", country: "aus", first: 183, lanes: 1, share: 0, pow: 1, late: 0, lateAt: 0 },
-  { key: "auckland", country: "nz", first: 181, lanes: 2, share: 0, pow: 1.2, late: 2, lateAt: 221 },
-  { key: "christchurch", country: "nz", first: 179, lanes: 2, share: 0, pow: 1.2, late: 2, lateAt: 227 },
+  { key: "sydney", country: "aus", first: 167, v: 8.5, lanes: 3, share: 0.28, pow: 1, late: 4, lateAt: 217 },
+  { key: "brisbane", country: "aus", first: 172, v: 9.5, lanes: 3, share: 0.23, pow: 1, late: 3, lateAt: 220 },
+  { key: "perth", country: "aus", first: 172, v: 8, lanes: 2, share: 0.2, pow: 1, late: 0, lateAt: 0 },
+  { key: "adelaide", country: "aus", first: 182, v: 8.5, lanes: 3, share: 0.14, pow: 1, late: 0, lateAt: 0 },
+  { key: "melbourne", country: "aus", first: 178, v: 8.5, lanes: 3, share: 0.15, pow: 1, late: 0, lateAt: 0 },
+  { key: "hobart", country: "aus", first: 178, v: 8, lanes: 1, share: 0, pow: 1, late: 0, lateAt: 0 },
+  { key: "auckland", country: "nz", first: 187, v: 7, lanes: 2, share: 0, pow: 1.1, late: 2, lateAt: 218 },
+  { key: "nelson", country: "nz", first: 188, v: 6.5, lanes: 2, share: 0, pow: 1.1, late: 2, lateAt: 222 },
 ];
-const ROUTES: Route[] = PORT_DEFS.map((p) => PORT_ROUTE[p.key]);
+const ROUTES: Route[] = PORT_DEFS.map((p) => HOP_ROUTE[p.key]);
+const PORTS = LANDING;
 
-// THE CLOCK: world px a dot at sea covers per frame, the same for every dot at any
-// moment. Fast while the camera crosses the oceans with the ribbon (it holds near
-// the middle of the frame), braking as the camera comes down on Australia, so on
-// screen nothing runs away.
+// ---- the convoy -----------------------------------------------------------------------
+// THE CLOCK: world px a ship covers per frame, the same for every ship at any moment.
+// Fast while the camera crosses the oceans with the line (it holds near the middle of
+// the frame), braking as the camera comes down on Australia, so on screen nothing runs
+// away. The ship for New Zealand keeps more way on (its own tail of the clock).
 const S_RATE: [number, number][] = [
-  [80, 22],
-  [100, 26],
-  [112, 31],
-  [122, 38],
-  [140, 42],
-  [150, 44],
-  [156, 40],
-  [161, 26],
-  [166, 13],
+  [80, 20],
+  [100, 22],
+  [112, 26],
+  [122, 32],
+  [132, 38],
+  [140, 44],
+  [150, 50],
+  [157, 48],
+  [162, 32],
+  [167, 14],
   [172, 8],
   [180, 6.4],
   [240, 6],
@@ -164,22 +172,43 @@ const S_TAB: number[] = (() => {
   for (let i = 1; i <= (DURATION + 8 - S_F0) * S_SUB; i++) out.push(out[i - 1] + lerpKeys(S_RATE, S_F0 + (i - 0.5) / S_SUB) / S_SUB);
   return out;
 })();
-export const clockAt = (f: number) => {
+export const clockAt = (f: number): number => {
   const x = (f - S_F0) * S_SUB;
   if (x <= 0) return x * (S_RATE[0][1] / S_SUB);
   const i = Math.min(S_TAB.length - 2, Math.floor(x));
   return S_TAB[i] + (S_TAB[i + 1] - S_TAB[i]) * (x - i);
 };
-const clockInv = (sig: number) => {
-  if (sig <= 0) return S_F0 + sig / S_RATE[0][1];
-  let lo = 0;
-  let hi = S_TAB.length - 1;
-  while (hi - lo > 1) {
-    const mid = (lo + hi) >> 1;
-    if (S_TAB[mid] <= sig) lo = mid;
-    else hi = mid;
-  }
-  return S_F0 + (lo + (sig - S_TAB[lo]) / (S_TAB[hi] - S_TAB[lo] || 1)) / S_SUB;
+const rateTab = (keys: [number, number][]) => {
+  const out = [0];
+  for (let i = 1; i <= (DURATION + 8 - S_F0) * S_SUB; i++) out.push(out[i - 1] + lerpKeys(keys, S_F0 + (i - 0.5) / S_SUB) / S_SUB);
+  return (f: number) => {
+    const x = (f - S_F0) * S_SUB;
+    if (x <= 0) return x * (keys[0][1] / S_SUB);
+    const i = Math.min(out.length - 2, Math.floor(x));
+    return out[i] + (out[i + 1] - out[i]) * (x - i);
+  };
+};
+const TASMAN_RATE: [number, number][] = [...S_RATE.filter((q) => q[0] <= 157), [163, 34], [169, 25], [176, 17], [183, 12], [240, 9]];
+const clockTasman = rateTab(TASMAN_RATE);
+export type Ship = { key: ShipKey; route: Route; anchorAt: number; clock: (f: number) => number; size: number; seed: number };
+/** screen px across at the wide crossing (k 0.8); a ship grows only mildly as the camera comes down */
+export const SHIPS: Ship[] = [
+  { key: "sydney", route: SHIP_ROUTE.sydney, anchorAt: 165, clock: clockAt, size: 120, seed: 3 },
+  { key: "south", route: SHIP_ROUTE.south, anchorAt: 165.5, clock: clockAt, size: 97, seed: 7 },
+  { key: "tasman", route: SHIP_ROUTE.tasman, anchorAt: 184, clock: clockTasman, size: 97, seed: 12 },
+  { key: "west", route: SHIP_ROUTE.west, anchorAt: 166, clock: clockAt, size: 80, seed: 17 },
+];
+/** a ship runs up to its anchorage and loses its way over the last stretch (no dead stop) */
+const BRAKE = 55;
+const brake = (x: number) => (x <= 0 ? 0 : (x * x) / (x + BRAKE));
+/** arclength of a ship along its route on frame f */
+export const shipS = (sh: Ship, f: number) => sh.route.len - brake(sh.clock(sh.anchorAt) - sh.clock(f));
+export const shipSize = (sh: Ship, k: number) => sh.size * Math.pow(k / 0.8, 0.12);
+/** a ship on frame f: world px into out[0..1]; returns how far out of port it is (0..1, it rises as it leaves) and how much way it has on (0 at anchor) */
+export const placeShip = (sh: Ship, f: number, out: number[]) => {
+  const s = shipS(sh, f);
+  routeAt(sh.route, Math.max(0, s), 0, out);
+  return { s, rise: smoothstep((s - 4) / 70), way: smoothstep((sh.clock(sh.anchorAt) - sh.clock(f)) / 70) };
 };
 
 // ---- sizes: world px there (MinorityInOwnCountry's), carried by each dot's local scale ----
@@ -187,9 +216,6 @@ const SIZE = {
   aus: { cream: 5.1, orange: 6.3, casing: 1.25, halo: 2.2, lane: 11.4 },
   nz: { cream: 3.55, orange: 4.3, casing: 0.9, halo: 1.6, lane: 8.3 },
 };
-/** the ribbon at sea: lanes across, world px apart */
-const RIBBON = [0, 2, -2, 1, -1, 3, -3];
-const RIBBON_GAP = 6.4;
 /** a dot slipping inland is drawn a little smaller until it reaches its place */
 const WALK_SIZE = 0.6;
 const WALK_EASE = 1.2;
@@ -207,9 +233,8 @@ export type Dot = {
   port: number;
   tLand: number;
   tSettle: number;
-  /** its place across the file near the port, and across the ribbon at sea */
+  /** its place across the file */
   lat: number;
-  rib: number;
   shore: P2;
 };
 
@@ -227,11 +252,12 @@ const build = (): { dots: Dot[]; perPort: number[] } => {
       let tLand = lerpKeys(A_CUM, i + 0.5, 1);
       tLand = Math.max(tLand, t + A_LANE / (A_V * abreast(i)));
       t = tLand;
-      const open = (Math.floor(abreast(i) + 1e-6) - 1) / 2;
+      // a point at the head, three abreast behind, drawn back to a point at the tail
+      const open = ((Math.floor(abreast(i) + 1e-6) - 1) / 2) * smoothstep((order.length - 1 - i) / 9);
       const lat = [0, -1, 1][i % 3] * A_LANE * open + (hash(si, 9) - 0.5) * 1.8;
       const shore = [0, 0];
       routeAt(A_ROUTE, A_ROUTE.len, lat * 0.5, shore);
-      dots.push({ group: "mex", orange: false, slot: MEX_SLOTS[si], r: A_R, casing: 1.2, halo: 0, port: -1, tLand, tSettle: tLand + Math.max(3, Math.min(12, dist(si) / 11)), lat, rib: 0, shore: [shore[0], shore[1]] });
+      dots.push({ group: "mex", orange: false, slot: MEX_SLOTS[si], r: A_R, casing: 1.2, halo: 0, port: -1, tLand, tSettle: tLand + Math.max(3, Math.min(12, dist(si) / 11)), lat, shore: [shore[0], shore[1]] });
     });
   }
 
@@ -287,34 +313,32 @@ const build = (): { dots: Dot[]; perPort: number[] } => {
       for (let j = 0; j < def.late && order.length > 12; j++) lateSet.add(order[Math.floor(order.length * (0.06 + 0.24 * ((j + 0.5) / def.late)))]);
       const regular = order.filter((si) => !lateSet.has(si));
       const n = regular.length;
-      type Rec = { si: number; tLand: number; tSettle: number; sig: number };
+      type Rec = { si: number; tLand: number; tSettle: number };
       const recs: Rec[] = [];
       const walkFrames = (d: number) => Math.max(3, Math.min(44, d / (nz ? 8.5 : 14)));
       regular.forEach((si, r) => {
         const T = walkFrames(dist(si));
         const tS = def.first + 3 + (FILL_END - def.first - 3) * Math.pow((r + 0.5) / n, 1 / def.pow);
-        if (n < 12) recs.push({ si, tLand: def.first + r * 0.01, tSettle: def.first + r * 0.01 + T, sig: 0 });
-        else recs.push({ si, tLand: tS - T, tSettle: tS, sig: 0 });
+        if (n < 12) recs.push({ si, tLand: def.first + r * 0.01, tSettle: def.first + r * 0.01 + T });
+        else recs.push({ si, tLand: tS - T, tSettle: tS });
       });
-      // the file: landings in order on the shared clock, never more at once than it can carry
-      // abreast, a single file at its head widening to `lanes`
+      // the file off the ship: landings in order, never more at once than it can carry abreast,
+      // a single file at its head widening to `lanes`
       recs.sort((a, b) => a.tLand - b.tLand);
-      const along = z.lane * sc * 1.12;
+      const along = z.lane * sc * 0.92;
       const abreast = (i: number) => Math.min(def.lanes, 1 + i / 8);
-      recs.forEach((q) => (q.sig = clockAt(q.tLand)));
-      for (let i = recs.length - 2; i >= 0; i--) recs[i].sig = Math.min(recs[i].sig, recs[i + 1].sig - along / def.lanes);
-      let sg = clockAt(def.first);
+      for (let i = recs.length - 2; i >= 0; i--) recs[i].tLand = Math.min(recs[i].tLand, recs[i + 1].tLand - along / (def.v * def.lanes));
+      let t = def.first;
       recs.forEach((q, i) => {
-        if (i > 0) sg += along / abreast(i);
-        q.sig = Math.max(q.sig, sg);
-        sg = q.sig;
-        q.tLand = clockInv(q.sig);
+        if (i > 0) t += along / (def.v * abreast(i));
+        q.tLand = Math.max(q.tLand, t);
+        t = q.tLand;
         q.tSettle = Math.max(q.tSettle, q.tLand + Math.max(3, dist(q.si) / (nz ? 9.5 : 15)));
       });
       const nReg = recs.length;
       [...lateSet].forEach((si, j) => {
-        const tLand = def.lateAt + (along / 6.3) * j;
-        recs.push({ si, tLand, tSettle: tLand + Math.max(3, Math.min(6, dist(si) / 9)), sig: clockAt(tLand) });
+        const tLand = def.lateAt + (along / def.v) * j;
+        recs.push({ si, tLand, tSettle: tLand + Math.max(3, Math.min(6, dist(si) / 9)) });
       });
       recs.forEach((rec, i) => {
         const head = i < nReg ? i : i - nReg;
@@ -324,24 +348,15 @@ const build = (): { dots: Dot[]; perPort: number[] } => {
         const shore = [0, 0];
         routeAt(route, route.len, lat * 0.55, shore);
         const s = slots[rec.si];
-        dots.push({ group: country, orange: false, slot: [s[0], s[1]], r: z.cream * s[2], casing: z.casing * s[2], halo: 0, port: pi, tLand: rec.tLand, tSettle: rec.tSettle, lat, rib: 0, shore: [shore[0], shore[1]] });
+        dots.push({ group: country, orange: false, slot: [s[0], s[1]], r: z.cream * s[2], casing: z.casing * s[2], halo: 0, port: pi, tLand: rec.tLand, tSettle: rec.tSettle, lat, shore: [shore[0], shore[1]] });
         perPort[pi]++;
       });
     });
   };
   creamOf("aus", AUS_CREAM);
   creamOf("nz", NZ_CREAM);
-  // the ribbon: every dot's lane across it, dealt out from the head back, the head tapered to a point
-  {
-    const sea = dots.map((d, i) => ({ d, i })).filter((q) => q.d.port >= 0);
-    const ahead = (d: Dot) => ROUTES[d.port].len - clockAt(d.tLand);
-    sea.sort((a, b) => ahead(b.d) - ahead(a.d));
-    sea.forEach((q, rank) => {
-      q.d.rib = RIBBON[rank % RIBBON.length] * RIBBON_GAP * (0.12 + 0.88 * smoothstep(rank / 46)) + (hash(q.i, 41) - 0.5) * 1.6;
-    });
-  }
   const orangeOf = (country: "aus" | "nz", slots: P3[]) =>
-    slots.forEach((s) => dots.push({ group: country, orange: true, slot: [s[0], s[1]], r: SIZE[country].orange * s[2], casing: 0, halo: SIZE[country].halo * s[2], port: -1, tLand: -1e9, tSettle: -1e9, lat: 0, rib: 0, shore: [s[0], s[1]] }));
+    slots.forEach((s) => dots.push({ group: country, orange: true, slot: [s[0], s[1]], r: SIZE[country].orange * s[2], casing: 0, halo: SIZE[country].halo * s[2], port: -1, tLand: -1e9, tSettle: -1e9, lat: 0, shore: [s[0], s[1]] }));
   orangeOf("aus", AUS_ORANGE);
   orangeOf("nz", NZ_ORANGE);
   return { dots, perPort };
@@ -349,10 +364,6 @@ const build = (): { dots: Dot[]; perPort: number[] } => {
 const BUILT = build();
 export const DOTS: Dot[] = BUILT.dots;
 export const PORT_COUNTS = PORT_DEFS.map((p, i) => ({ port: p.key, dots: BUILT.perPort[i], route: Math.round(ROUTES[i].len) }));
-
-/** where the ribbon gives way to the files, as arclength on any port's route */
-const SPLIT_S0 = TRUNK.len - 260;
-const SPLIT_LEN = 420;
 
 /** 0 at sea, 1 slipping inland, 2 standing on its slot, -1 not yet out of port */
 export type DotState = -1 | 0 | 1 | 2;
@@ -381,15 +392,15 @@ export const placeDot = (i: number, f: number, out: number[]): DotState => {
       if (out[2] <= 0.01) return -1;
       return 0;
     }
+    // off the ship: a short file to the port
     const r = ROUTES[d.port];
-    const s0 = r.len - (clockAt(d.tLand) - clockAt(f));
+    const s0 = r.len - PORT_DEFS[d.port].v * (d.tLand - f);
     if (s0 <= 0) return -1;
-    // an uneven step along the file (so a column of like dots does not strobe), closing to its place at the shore
-    const s = s0 + (hash(i, 31) - 0.5) * 7 * (1 - smoothstep((s0 - (r.len - 60)) / 50));
-    const c = smoothstep((s - SPLIT_S0) / SPLIT_LEN);
-    const near = smoothstep((s - (r.len - 40)) / 40);
-    routeAt(r, s, d.rib * (1 - c) + d.lat * c * (1 - 0.45 * near), out);
-    out[2] = smoothstep(s0 / 34);
+    const s = s0 + (hash(i, 31) - 0.5) * 3 * smoothstep(s0 / 14) * (1 - smoothstep((s0 - (r.len - 20)) / 16));
+    const near = smoothstep((s - (r.len - 24)) / 24);
+    // it opens from the ship's side and closes again at the quay
+    routeAt(r, s, d.lat * smoothstep(s0 / 22) * (1 - 0.45 * near), out);
+    out[2] = smoothstep(s0 / 9);
     return 0;
   }
   const T = d.tSettle - d.tLand;
@@ -414,15 +425,30 @@ export const countAt = (f: number) => {
   });
   return c;
 };
-/** the head of the Oceania ribbon (the first dot to land), world px, for the camera diagnostics */
-export const headAt = (f: number, out: number[]) => {
-  let best = -1;
-  let t = Infinity;
-  DOTS.forEach((d, i) => {
-    if (d.port >= 0 && d.tLand < t) {
-      t = d.tLand;
-      best = i;
-    }
-  });
-  return placeDot(best, f, out);
+/** Mexico's dots leave with the left edge of the frame: each shrinks away over its last 40 px (nothing is cut by the edge or whips out) */
+export const edgeScale = (d: Dot, sx: number, f: number) => (d.group === "mex" && f > 96 ? smoothstep((sx - 6) / 40) : 1);
+/** the two that follow the lead ship down the Carrera (ClosedWorlds'): arclength on frame f */
+export const FOLLOW = [
+  { f0: 66.5, v: 7.5, seed: 7 },
+  { f0: 75, v: 7.5, seed: 12 },
+];
+export const followS = (f: number, q: (typeof FOLLOW)[number]) => {
+  const t = f - q.f0;
+  if (t <= 0) return 0;
+  return q.v * (t < 5 ? (t * t) / 10 : t - 2.5);
 };
+/** a route from arclength s0 to s1 as an SVG path (world px) */
+export const routePathD = (r: Route, s0: number, s1: number) => {
+  if (s1 - s0 < 0.5) return "";
+  const q = [0, 0];
+  routeAt(r, s0, 0, q);
+  let d = `M${q[0].toFixed(2)},${q[1].toFixed(2)}`;
+  for (let i = 0; i < r.cum.length; i++) {
+    if (r.cum[i] <= s0) continue;
+    if (r.cum[i] >= s1) break;
+    d += `L${r.pts[i][0].toFixed(2)},${r.pts[i][1].toFixed(2)}`;
+  }
+  routeAt(r, s1, 0, q);
+  return `${d}L${q[0].toFixed(2)},${q[1].toFixed(2)}`;
+};
+export const TRUNK_LEN = TRUNK.len;

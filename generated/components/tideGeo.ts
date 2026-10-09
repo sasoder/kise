@@ -109,19 +109,48 @@ const TRUNK_LL: P2[] = [
   [98.0, -39.6],
   [110.5, -38.2], // south-west of Cape Leeuwin
 ];
-/** each port's own approach from the end of the trunk (the port itself is appended) */
-const BRANCH_LL: Record<PortKey, P2[]> = {
-  perth: [[113.6, -35.2], [114.6, -33.2]],
-  adelaide: [[120, -37.0], [130, -36.4], [135.6, -36.3], [137.7, -35.6]],
-  melbourne: [[120, -38.0], [133, -38.4], [141, -39.2], [144.2, -39.2]],
-  hobart: [[120, -39.6], [135, -42.4], [144, -44.4], [147.7, -44.2]],
-  sydney: [[120, -38.7], [134, -40.2], [143.6, -39.85], [148.6, -39.3], [150.7, -37.0], [151.75, -35.0]],
-  brisbane: [[120, -39.1], [134, -40.7], [143.6, -40.2], [149.2, -39.6], [151.5, -37.0], [153.0, -33.6], [154.1, -29.6]],
-  auckland: [[120, -40.4], [135, -43.4], [147, -45.2], [158, -42.0], [168, -36.6], [172.2, -33.9], [174.1, -34.5], [175.45, -35.8]],
-  christchurch: [[120, -41.0], [135, -44.2], [147, -46.0], [160, -47.4], [167, -48.0], [169.8, -47.6], [172.0, -46.0], [173.5, -44.3]],
-};
 export const TRUNK_WAY: P2[] = TRUNK_LL.map(([a, b]) => P(a, b));
 export const TRUNK = routeOf(TRUNK_WAY);
-export const PORT_ROUTE = Object.fromEntries(
-  (Object.keys(BRANCH_LL) as PortKey[]).map((k) => [k, routeOf([...TRUNK_WAY, ...BRANCH_LL[k].map(([a, b]) => P(a, b)), PORTS[k]])]),
-) as Record<PortKey, Route>;
+
+// ---- the convoy: each ship's own course on from the end of the trunk to where it anchors ----
+export type ShipKey = "sydney" | "south" | "tasman" | "west";
+const SHIP_LL: Record<ShipKey, P2[]> = {
+  // the lead: south of Tasmania and up to lie off Sydney
+  sydney: [[120, -40.6], [134, -44], [146, -46.2], [152.5, -44], [156.2, -40], [155.6, -36.3]],
+  // the second: off the south coast, in the Southern Ocean below Victoria
+  south: [[120, -41.6], [132, -46.2], [138.5, -48.6], [141.5, -48.6]],
+  // the third sails on across the Tasman and lies off the North Island's west coast
+  tasman: [[120, -40.6], [134, -44], [146, -46.2], [156, -45], [163.5, -41], [168, -38.3], [169.3, -37.6]],
+  // a small fourth turns north for the Swan River
+  west: [[110.6, -36.2], [109.8, -34.2], [109.6, -32.9]],
+};
+export const SHIP_ROUTE = Object.fromEntries((Object.keys(SHIP_LL) as ShipKey[]).map((k) => [k, routeOf([...TRUNK_WAY, ...SHIP_LL[k].map(([a, b]) => P(a, b))])])) as Record<ShipKey, Route>;
+export const ANCHOR = Object.fromEntries((Object.keys(SHIP_LL) as ShipKey[]).map((k) => [k, P(...(SHIP_LL[k][SHIP_LL[k].length - 1] as [number, number]))])) as Record<ShipKey, P2>;
+
+// ---- the landings: a short hop from an anchored ship to each port (lon, lat between) -----
+// Auckland is reached from the Tasman side (the Manukau); the South Island through Nelson,
+// its port on the Tasman (Christchurch faces the other ocean).
+export const LANDING_LL = {
+  sydney: PORTS_LL.sydney,
+  brisbane: PORTS_LL.brisbane,
+  melbourne: PORTS_LL.melbourne,
+  adelaide: PORTS_LL.adelaide,
+  hobart: PORTS_LL.hobart,
+  perth: PORTS_LL.perth,
+  auckland: [174.6, -37.05],
+  nelson: [173.2, -41.2],
+} as const;
+export type LandingKey = keyof typeof LANDING_LL;
+export const LANDING = Object.fromEntries(Object.entries(LANDING_LL).map(([k, ll]) => [k, P(ll[0], ll[1])])) as Record<LandingKey, P2>;
+export const HOP_SHIP: Record<LandingKey, ShipKey> = { sydney: "sydney", brisbane: "sydney", melbourne: "south", adelaide: "south", hobart: "south", perth: "west", auckland: "tasman", nelson: "tasman" };
+const HOP_LL: Record<LandingKey, P2[]> = {
+  sydney: [[153.6, -35.3]],
+  brisbane: [[155.6, -32.5], [154.5, -29.2]],
+  melbourne: [[143.2, -43.6], [144.6, -40.2]],
+  adelaide: [[139.4, -43.4], [137.9, -39], [137.85, -36.3]],
+  hobart: [[144.6, -46.6], [147.3, -44.7]],
+  perth: [[112.8, -32.4]],
+  auckland: [[172.2, -37.4]],
+  nelson: [[170.9, -39.6], [172.4, -40.7]],
+};
+export const HOP_ROUTE = Object.fromEntries((Object.keys(HOP_LL) as LandingKey[]).map((k) => [k, routeOf([ANCHOR[HOP_SHIP[k]], ...HOP_LL[k].map(([a, b]) => P(a, b)), LANDING[k]], 2)])) as Record<LandingKey, Route>;
