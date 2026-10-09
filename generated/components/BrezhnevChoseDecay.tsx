@@ -3,20 +3,22 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   DashedPath,
-  FONT_SANS,
   FeatherWipe,
   HatchFill,
   INK_HI,
+  INK_LO,
+  Label,
   RED_DEEP,
   RED_HI,
   RedBar,
+  Rule,
+  SIDE_SAFE,
   V_INK,
   V_PAPER,
   VStage,
   VintagePhoto,
   WetLine,
   clamp01,
-  constPx,
   cumLen,
   inkDiffuse,
   lineW,
@@ -26,7 +28,6 @@ import {
   runVCamera,
   smoothstep,
   subPathD,
-  worldBlur,
   wpx,
 } from "./chinatalkVintage";
 import type { DashMod, Pt, VCamKey } from "./chinatalkVintage";
@@ -43,8 +44,13 @@ import type { DashMod, Pt, VCamKey } from "./chinatalkVintage";
 // RED = the road taken (the Soviet economy's actual course). Dashed ink = the
 // roads on offer.
 //
+// DRESSING (pass 4, newsprint): the portrait is a halftone clipping with the
+// cutline "Leonid Brezhnev, 1972"; REFORM is the kit's "head" label; one hair
+// rule divides the clipping from the diagram. Picture, geometry, motion and
+// frame marks are as approved.
+//
 // MOTION (one gesture): the whole picture is there on frame 0: the 1972
-// portrait as a print above the caption strip, and under it a track that forks
+// portrait as a clipping above the caption strip, and under it a track that forks
 // at a switch, both roads dashed, the blade lying toward the upper road
 // (REFORM), a red wet line already coming along the track from the left edge
 // at 12 px / f. On "chose" the blade swings to the lower road (f17-25, settled
@@ -68,11 +74,16 @@ export const defaultProps = schema.parse({});
 // --- the photograph ---------------------------------------------------------------
 // Leonid Brezhnev, official portrait, 9 June 1972. Nationaal Archief (Anefo, 925-6564), CC0.
 const PHOTO_SRC = "brezhnev/brezhnev_1972.jpg";
-/** the picture window (the 14 px print border lies outside it): ends above the caption strip */
-const PHOTO = { x: 200, y: 100, w: 680, h: 930 };
-/** the whole plate (its shape is the window's): the head whole, the eyes at y ~ 400, both medals in */
-const PHOTO_FOCUS = { x: 0.5, y: 0 };
-const PHOTO_ZOOM = 1;
+/** the picture window of the clipping (kit tone "news": a halftone). Its 14 px margin lies outside it and the
+ *  cutline adds 44 px under it: the clipping ends at world y 1060, above screen y 1070 on every frame. 28 px
+ *  shorter than the plate's own shape, so the face keeps its size and place. */
+const PHOTO = { x: 200, y: 100, w: 680, h: 902 };
+/** the 28 px come off the plain background above his hair (11) and the dark jacket under the medals (17) */
+const PHOTO_FOCUS = { x: 0.5, y: 0.4 };
+/** the cutline names him */
+const PHOTO_CUTLINE = "Leonid Brezhnev, 1972";
+/** page furniture: one hair rule between the clipping and the diagram, just under the caption strip */
+const RULE_Y = 1260;
 
 // --- the switch: a track, a junction, two roads -----------------------------------
 /** the junction: the pivot of the blade, right under him */
@@ -198,14 +209,10 @@ const BLEED_RUN = 6;
 const BLEED_F = 11;
 const LABEL_BLEED_AFTER = 4;
 const LABEL_BLEED_F = 12;
-/** REFORM names the road not taken and must read at phone width: the kit's word label (Source Sans 3 SemiBold
- *  caps, tracked 0.12 em, cap height 0.669 em) at a hand-set NAME_PX on screen instead of WORD_PX */
-const NAME_PX = 62;
-const NAME_TRACK = 0.12;
-const NAME_CAP = 0.669;
-/** the centre of its capitals: inside the V, 22 px under the upper road at its left end, 16 px above the level
- *  the wash will hang from, its right end 60 px inside the frame */
-const REFORM_AT: Pt = { x: 886, y: 1413 };
+/** REFORM names the road not taken (kit "head" label): the centre of its capitals, inside the V, about 19 px
+ *  under the upper road at its left end, 15 px above the level the wash will hang from, and far enough from
+ *  the right frame edge (>= 48 px through the push) that the kit's edge fade never touches it before it bleeds */
+const REFORM_AT: Pt = { x: 876, y: 1414 };
 
 // --- the travelling highlight (the settled frame's life) ---------------------------------------
 /** it follows the tip's course this many frames behind; half its length along the line, world px */
@@ -245,32 +252,6 @@ const Glint: React.FC<{ at: number; len: number; k: number }> = ({ at, len, k })
   );
 };
 
-/** The road's name: drawn as the kit Label draws a word (same face, weight, tracking, size law), at NAME_PX. It is
- *  part of the scene from frame 0; `diffuse` (0..1) retires it like ink on wet paper, in place. */
-const RoadName: React.FC<{ text: string; x: number; y: number; k: number; diffuse: number }> = ({ text, x, y, k, diffuse }) => {
-  const d = inkDiffuse(diffuse);
-  if (d.opacity <= 0.002) return null;
-  const fs = Math.max(wpx(NAME_PX, k), constPx(NAME_PX, k));
-  const s = 1 + (diffuse > 0 ? d.spread : 0);
-  return (
-    <g opacity={(INK_HI * d.opacity).toFixed(4)} style={{ filter: diffuse > 0 ? worldBlur(d.blur, k) : undefined }}>
-      <text
-        x={(x + (NAME_TRACK / 2) * fs).toFixed(3)}
-        y={(y + (NAME_CAP / 2) * fs).toFixed(3)}
-        fontFamily={FONT_SANS}
-        fontWeight={600}
-        fontSize={fs.toFixed(3)}
-        letterSpacing={`${NAME_TRACK}em`}
-        textAnchor="middle"
-        fill={V_INK}
-        transform={s !== 1 ? `translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${s.toFixed(4)}) translate(${(-x).toFixed(2)} ${(-y).toFixed(2)})` : undefined}
-      >
-        {text.toUpperCase()}
-      </text>
-    </g>
-  );
-};
-
 const BrezhnevChoseDecay: React.FC<z.infer<typeof schema>> = () => {
   const S = useCurrentFrame();
   const cam = camAt(S);
@@ -297,7 +278,10 @@ const BrezhnevChoseDecay: React.FC<z.infer<typeof schema>> = () => {
   const soakU = (soakX - X0) / (RED_END.x - X0 + SOAK_FEATHER);
 
   return (
-    <VStage S={S} cam={cam} rest={REST} photos={<VintagePhoto src={PHOTO_SRC} box={PHOTO} focus={PHOTO_FOCUS} zoom={PHOTO_ZOOM} />}>
+    <VStage S={S} cam={cam} rest={REST} photos={<VintagePhoto src={PHOTO_SRC} box={PHOTO} focus={PHOTO_FOCUS} cutline={PHOTO_CUTLINE} />}>
+      {/* page furniture: the rule between the picture and the diagram */}
+      <Rule from={{ x: SIDE_SAFE, y: RULE_Y }} to={{ x: 1080 - SIDE_SAFE, y: RULE_Y }} k={k} kind="hair" rung={INK_LO} />
+
       {/* the wash under the falling line: RED_DEEP wash + hatch, soaking in behind the tip */}
       <FeatherWipe id="bcd-soak" box={{ x0: X0, y0: J.y - 10, x1: RED_END.x, y1: RED_END.y + 10 }} u={soakU} feather={SOAK_FEATHER} dir="right">
         <HatchFill
@@ -318,7 +302,7 @@ const BrezhnevChoseDecay: React.FC<z.infer<typeof schema>> = () => {
       <DashedPath points={INCOMING} k={k} S={S} />
       {upperGone ? null : <DashedPath points={UPPER} k={k} S={S} dashMod={upperMod} />}
       <DashedPath points={LOWER} k={k} S={S} />
-      <RoadName text="Reform" x={REFORM_AT.x} y={REFORM_AT.y} k={k} diffuse={clamp01((S - T_J - LABEL_BLEED_AFTER) / LABEL_BLEED_F)} />
+      <Label text="Reform" x={REFORM_AT.x} y={REFORM_AT.y} k={k} size="head" diffuse={clamp01((S - T_J - LABEL_BLEED_AFTER) / LABEL_BLEED_F)} />
 
       {/* the switch: the blade on its pivot ring */}
       <RedBar

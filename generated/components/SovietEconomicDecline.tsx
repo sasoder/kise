@@ -1,5 +1,5 @@
 import React from "react";
-import { Easing, useCurrentFrame } from "remotion";
+import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   BEAD_RATIO,
@@ -8,25 +8,26 @@ import {
   FONT_SANS,
   FRAME_H,
   FRAME_W,
-  HAIR,
   INK_HI,
   INK_LO,
-  InkPath,
+  KICKER_PAD,
   Label,
   PHOTO_BORDER,
   RED,
-  RISE_PX,
+  RULE_BOLD,
   RedGroup,
+  Rule,
   Seal,
+  SourceLine,
   VStage,
   V_INK,
   VintagePhoto,
   WetLine,
   clamp01,
   cumLen,
-  easeOutCubic,
   enterFrom,
   enterU,
+  labelCapH,
   labelPx,
   labelWidth,
   pointAtLen,
@@ -34,9 +35,9 @@ import {
   smoothstep,
   useVStageView,
   vCam,
-  worldBlur,
+  vz,
 } from "./chinatalkVintage";
-import type { Cam, PhotoBox, Pt, StageView } from "./chinatalkVintage";
+import type { Cam, PhotoBox, Pt } from "./chinatalkVintage";
 
 /**
  * SovietEconomicDecline — cut A of Logan Wright, "Brezhnev chose decay"
@@ -53,20 +54,20 @@ import type { Cam, PhotoBox, Pt, StageView } from "./chinatalkVintage";
  * 1080x1920, opaque. Local word frames: the Soviets 51-59 · internalize 59-75
  * · their 75-79 · economic 79-88 · decline 88-97 · slot ends 104.
  *
- * MOTION (local frames): ONE camera move, f0 -> f115, to the right and pulling
- * back (k 1.45 -> 1) on one time curve, cubic-bezier(0.87, 0, 0.17, 1) between
- * keys at f-7 and f119 (outside the clip, so both ends still creep). It starts
- * inside the full-bleed photograph of the shop queue and creeps right along it
- * (1 -> 20 px/frame, f0-40), bursts across on "the Soviets internalize" (peak
- * 128 px/frame at f58; horizontal-only motion blur, sigma = 0.22 x the px per
- * frame, none while it creeps) and creeps to rest on the chart. The print's
- * right edge comes into frame at f59-60 with the red line already out from
- * BEHIND it: a wet bead tip writes it at one steady pace (33.4 world px/frame)
- * through the six real points (5.2 % f61, 4.8 % f67, 4.9 % f71, 3.0 % f82,
- * 1.9 % f89, 1.8 % f93 on "decline"), a seal left at each as the bead clears
- * it, the wash soaking down behind it, the zero baseline written beneath it.
- * f93 -> f115: settled and living (the wash finishes soaking, the wet stretch
- * dries, the bead rests on the last point, the camera still creeps).
+ * MOTION (local frames): ONE slow, even camera move for the whole cut, to the
+ * right and pulling back (k 1.30 -> 1) on one sine ease-in-out between keys at
+ * f-16 (before the clip, so frame 0 is already moving at 7 px/frame) and f106
+ * (where it comes to rest); peak 16.5 px/frame at f40, about 1.45x the
+ * average; no burst, no motion blur. It starts inside the full-bleed halftone
+ * of the crowd pressing at the stall, where the queue ends; the clipping's
+ * right edge slides into frame at about f22 and the page is revealed beside
+ * it. The zero baseline comes out from behind the clipping at f29, then the
+ * red line at f38: a wet bead tip writes it at one steady pace (21.3 world
+ * px/frame) through the six real points (5.2 % f42, 4.8 % f52, 4.9 % f58,
+ * 3.0 % f76, 1.9 % f87, 1.8 % f93 on "decline"), always well inside the frame,
+ * a seal left at each as the bead clears it, the wash soaking down behind it.
+ * f93 -> f115: settled and living (the camera comes to rest by f106, the wash
+ * finishes soaking, the wet stretch dries, the bead rests on the last point).
  *
  * RED = Soviet growth (the line). Nothing else is red.
  *
@@ -88,12 +89,17 @@ import type { Cam, PhotoBox, Pt, StageView } from "./chinatalkVintage";
  * a street stall of the department store («Универмаг»), Irkutsk, summer 1981.
  * Wikimedia Commons, "Irkutsk-1981-0045.JPG", by CTHOE, CC BY-SA 3.0.
  *
- * LAYERING. The whole world (chart, then the print over it) lives in VStage's
- * HTML world layer as ONE plane: the chart is an <svg> drawn UNDER the
- * VintagePhoto, so the print (and its contact shadow) really covers the
- * line's origin, and one horizontal Gaussian on that plane blurs photograph
- * and drawing together during the burst. World px = screen px at the final
- * framing (camera 540, 960, k = 1).
+ * NEWSPRINT. The photograph is the kit's halftone clipping (cutline "Irkutsk,
+ * summer 1981", at the clipping's far left: it stays out of frame). The chart
+ * is a newspaper figure: the title set as the kit's Kicker (bold rule above,
+ * hair rule below, the figure's measure), the baseline a kit Rule, one
+ * SourceLine under the years. Nothing else is added.
+ *
+ * LAYERING. The whole world (chart, then the clipping over it) lives in
+ * VStage's HTML world layer: the chart is an <svg> drawn UNDER the
+ * VintagePhoto, so the clipping (and its contact shadow) really covers the
+ * origins of the red line and of the baseline. World px = screen px at the
+ * final framing (camera 540, 960, k = 1).
  */
 
 export const FPS = 24;
@@ -128,11 +134,15 @@ export const xOfYear = (year: number) => X_FIRST + (year - MID(DATA[0])) * PX_PE
 export const yOfPct = (pct: number) => BASE_Y - pct * PX_PER_PCT;
 /** the six plotted points, world px */
 export const POINTS: Pt[] = DATA.map((d) => ({ x: xOfYear(MID(d)), y: yOfPct(d.pct) }));
+/** the figure's measure, two flush columns: everything on the left starts at LEFT_X, everything on the right ends at RIGHT_X */
+const LEFT_X = POINTS[0].x - 14;
+const RIGHT_X = POINTS[5].x + 36;
 
 // ---------------------------------------------------------------------------
 // THE PRINT
 // ---------------------------------------------------------------------------
 const PHOTO_SRC = "brezhnev/irkutsk_queue_1981.jpg";
+const CUTLINE = "Irkutsk, summer 1981";
 const PHOTO_NATURAL = { w: 3128, h: 2088 };
 const PRINT_H = 1500;
 const PRINT_W = (PRINT_H * PHOTO_NATURAL.w) / PHOTO_NATURAL.h;
@@ -140,23 +150,27 @@ const PRINT_W = (PRINT_H * PHOTO_NATURAL.w) / PHOTO_NATURAL.h;
 const PRINT_RIGHT = 100;
 /** the picture window (the whole photograph, uncropped), world px */
 export const PRINT: PhotoBox = { x: PRINT_RIGHT - PRINT_W, y: FRAME_H / 2 - PRINT_H / 2, w: PRINT_W, h: PRINT_H };
-/** the print's outer right edge (picture + border): what occludes the line's origin */
+/** the clipping's outer right edge (picture + margin): what occludes the line's origin */
 export const PRINT_EDGE = PRINT_RIGHT + PHOTO_BORDER;
 
 // ---------------------------------------------------------------------------
-// THE CAMERA: one authored move (a known curve, not the damped follower).
+// THE CAMERA: ONE slow, even move for the whole cut (a known curve, authored
+// directly, not the damped follower): a sine ease-in-out whose first key lies
+// before the clip, so frame 0 is already moving, and which comes to rest at
+// KEY_B. Position and zoom ride the same ease. No burst, no motion blur.
 // ---------------------------------------------------------------------------
-/** opening: inside the picture, on the left-middle of the queue (fraction of the photo's width) */
-const START_U = 0.3;
-const START_K = 1.45;
+/** opening: inside the picture on the crowd at the stall, where the queue ends (the frame's centre as a fraction of
+ *  the photo's width); the clipping's right edge is then about 280 px outside the frame */
+const START_U = 0.724;
+/** the smallest zoom that keeps the opening full-bleed (the print is 1500 px tall) */
+const START_K = 1.3;
 export const CAM_START: Cam = vCam(PRINT.x + START_U * PRINT.w, FRAME_H / 2, START_K);
 export const CAM_END: Cam = vCam(FRAME_W / 2, FRAME_H / 2, 1);
-/** the time curve's keys lie OUTSIDE the clip, so the first and last frames are still creeping */
-const KEY_A = -7;
-const KEY_B = 119;
-const PAN_EASE = Easing.bezier(0.87, 0, 0.17, 1);
-/** progress 0..1 of the one move at (fractional) frame S */
-export const panProgress = (S: number) => PAN_EASE(clamp01((S - KEY_A) / (KEY_B - KEY_A)));
+const KEY_A = -16;
+const KEY_B = 106;
+const sineEase = (S: number) => (1 - Math.cos(Math.PI * clamp01((S - KEY_A) / (KEY_B - KEY_A)))) / 2;
+/** progress of the one move at (fractional) frame S: 0 on frame 0, 1 from KEY_B on */
+export const panProgress = (S: number) => (sineEase(S) - sineEase(0)) / (1 - sineEase(0));
 export const camAt = (S: number): Cam => {
   const p = panProgress(S);
   return {
@@ -167,17 +181,6 @@ export const camAt = (S: number): Cam => {
 };
 /** screen px the world travels during frame S (at the frame centre) */
 export const panSpeed = (S: number) => Math.abs(camAt(S + 0.5).x - camAt(S - 0.5).x) * camAt(S).k;
-/** horizontal motion blur: sigma = MOTION_BLUR x speed on the burst, none while it creeps */
-const MOTION_BLUR = 0.22;
-const BLUR_V0 = 5; // px / frame: below this the picture is left sharp
-const BLUR_V1 = 16; // px / frame: from here the full sigma
-const BLUR_MIN = 0.3;
-/** the blur's sigma at frame S, SCREEN px */
-export const blurSigma = (S: number) => {
-  const v = panSpeed(S);
-  const s = MOTION_BLUR * v * smoothstep((v - BLUR_V0) / (BLUR_V1 - BLUR_V0));
-  return s >= BLUR_MIN ? s : 0;
-};
 
 // ---------------------------------------------------------------------------
 // THE LINE: written at one steady pace from behind the print to the last point.
@@ -192,7 +195,7 @@ const ARC_EDGE = PRINT_EDGE - LINE_X0;
 /** arc length of point i */
 export const arcOfPoint = (i: number) => LINE_CUM[i + 1];
 /** the tip's centre crosses the print's edge on this frame, and lands on the last point on that one */
-export const TIP_EDGE_F = 58;
+export const TIP_EDGE_F = 38;
 export const TIP_END_F = 93;
 /** world px of line per frame */
 export const TIP_SPEED = (LINE_TOTAL - ARC_EDGE) / (TIP_END_F - TIP_EDGE_F);
@@ -205,60 +208,37 @@ export const pointFrame = (i: number) => drawnAt(arcOfPoint(i));
 export const tipAt = (S: number): Pt => pointAtLen(LINE, LINE_CUM, tipLen(S));
 
 // ---------------------------------------------------------------------------
-// THE AXIS: the zero baseline, written from behind the print: its head runs
-// under the red tip across the 1960s, then on ahead while the line falls.
+// THE AXIS: the zero baseline, written from behind the print at its own steady
+// pace: it sets out once the print's edge is well inside the frame, before the
+// red tip, and is complete just before the tip lands.
 // ---------------------------------------------------------------------------
 const AXIS_X0 = PRINT_EDGE - 60;
-const AXIS_X1 = X_LAST + 75;
-const AXIS_EDGE_F = TIP_EDGE_F;
-const AXIS_END_F = 86;
+const AXIS_X1 = RIGHT_X;
+const AXIS_EDGE_F = 29;
+const AXIS_END_F = 90;
 const AXIS_SPEED = (AXIS_X1 - PRINT_EDGE) / (AXIS_END_F - AXIS_EDGE_F);
 const axisHead = (S: number) => Math.max(AXIS_X0, Math.min(AXIS_X1, PRINT_EDGE + AXIS_SPEED * (S - AXIS_EDGE_F)));
 /** the frame on which the baseline's head passes world x */
 const axisFrame = (x: number) => AXIS_EDGE_F + (x - PRINT_EDGE) / AXIS_SPEED;
 
 // ---------------------------------------------------------------------------
-// LABELS (they only identify)
+// LABELS AND FURNITURE (they only identify)
 // ---------------------------------------------------------------------------
-/** two flush columns: everything on the left starts at LEFT_X, everything on the right ends at RIGHT_X */
-const LEFT_X = POINTS[0].x - 14;
-const RIGHT_X = POINTS[5].x + 36;
 const FIRST_VALUE_Y = POINTS[0].y - 72;
-const TITLE_Y = FIRST_VALUE_Y - 80;
 const LAST_VALUE_Y = POINTS[5].y - 88;
 const YEAR_Y = BASE_Y + 55;
+const SOURCE_Y = YEAR_Y + 58;
 /** approximate width of a year label, world px (only to time its entrance off the baseline's head) */
 const YEAR_W = 124;
+/** the kicker's caps centre: at the final framing its bold rule's top edge is level with the clipping's top edge */
+const KICKER_Y = PRINT.y - PHOTO_BORDER + RULE_BOLD / 2 + labelCapH("word", 1) / 2 + KICKER_PAD;
 
-// ---------------------------------------------------------------------------
-// YEAR LABELS. The kit's Label upper-cases its text ("1950S"); a decade reads
-// "1950s". This is the kit's WORD label copied without the upper-casing: the
-// same face (Source Sans 3 SemiBold), size (labelPx "word"), tracking, ink and
-// rung, the same entrance (it slides up RISE_PX while it fades and un-blurs
-// over 12 f) and the same fade within EDGE_SAFE of a frame edge.
-// ---------------------------------------------------------------------------
 const WORD_TRACK = 0.12;
 const WORD_CAP = 0.669;
-/** advance width, world px: lining figures 0.51 em, a lower-case s 0.43 em, tracked */
-const yearWidth = (text: string, fs: number) => {
-  let em = 0;
-  for (const ch of text) em += (ch === "s" ? 0.43 : 0.51) + WORD_TRACK;
-  return (em - WORD_TRACK) * fs;
-};
-/** 1 when the world box sits >= EDGE_SAFE screen px inside every frame edge, 0 when it touches one (the kit's edgeFactor) */
-const edgeFade = (view: StageView | null, x0: number, y0: number, x1: number, y1: number) => {
-  if (!view) return 1;
-  const { cam, dx, dy } = view;
-  const sx0 = FRAME_W / 2 + (x0 - cam.x) * cam.k + dx;
-  const sx1 = FRAME_W / 2 + (x1 - cam.x) * cam.k + dx;
-  const sy0 = FRAME_H / 2 + (y0 - cam.y) * cam.k + dy;
-  const sy1 = FRAME_H / 2 + (y1 - cam.y) * cam.k + dy;
-  return smoothstep(Math.min(sx0, FRAME_W - sx1, sy0, FRAME_H - sy1) / EDGE_SAFE);
-};
-/** The chart's title: the kit's WORD label (caps, tracked) at the HIGH rung, simply there on the paper where the
- *  camera arrives. The kit fades a WHOLE label by its distance from the frame edge; this title is long enough to
- *  stand half in frame while the camera is still arriving (it would then come on all at once), so the same
- *  EDGE_SAFE fade is applied ACROSS it: a soft frame edge the title slides in under, with everything else. */
+/** The kicker's title: the kit's WORD label (caps, tracked, HIGH rung), simply there on the page where the camera
+ *  arrives. The kit fades a WHOLE label by its distance from the frame edge; this title is long enough to stand half
+ *  in frame while the camera is still arriving (it would then come on all at once, late), so the same EDGE_SAFE fade
+ *  is applied ACROSS it: a soft frame edge the title slides in under, with the rest of the page. */
 const TitleLabel: React.FC<{ text: string; x: number; y: number; k: number }> = ({ text, x, y, k }) => {
   const view = useVStageView();
   const fs = labelPx("word", k);
@@ -297,40 +277,17 @@ const TitleLabel: React.FC<{ text: string; x: number; y: number; k: number }> = 
     </g>
   );
 };
-/** A year ("1950s"): (x, y) anchors the figures' box as the kit's Label does (y = their vertical centre). */
-const YearLabel: React.FC<{ text: string; x: number; y: number; k: number; anchor: "start" | "end"; appear: number }> = ({
-  text,
-  x,
-  y,
-  k,
-  anchor,
-  appear,
-}) => {
-  const view = useVStageView();
-  const a = clamp01(appear);
-  const fs = labelPx("word", k);
-  const w = yearWidth(text, fs);
-  const x0 = anchor === "end" ? x - w : x;
-  const op = INK_HI * smoothstep(a) * edgeFade(view, x0, y - 0.45 * fs, x0 + w, y + 0.5 * fs);
-  if (op <= 0.002) return null;
-  const lift = (1 - easeOutCubic(a)) * (RISE_PX / k);
-  const blur = 6 * (1 - easeOutCubic(a));
-  // letter-spacing also trails the last glyph: an end-anchored label is pushed back by one tracking step
-  const comp = anchor === "end" ? WORD_TRACK : 0;
+/** The chart's title set as the kit's Kicker: a "word" label between a bold rule above and a hair rule below, both
+ *  `width` wide, KICKER_PAD clear of the caps (the kit Kicker's own geometry and Rules). It is printed furniture:
+ *  simply there, revealed by the pan. Built here rather than with the kit's Kicker only for the title's edge fade
+ *  (see TitleLabel). */
+const FigureKicker: React.FC<{ text: string; x: number; y: number; k: number; width: number }> = ({ text, x, y, k, width }) => {
+  const half = labelCapH("word", k) / 2 + KICKER_PAD * vz(k);
   return (
-    <g style={{ filter: worldBlur(blur, k) }} opacity={op.toFixed(4)}>
-      <text
-        x={(x + comp * fs).toFixed(3)}
-        y={(y + lift + (WORD_CAP / 2) * fs).toFixed(3)}
-        fontFamily={FONT_SANS}
-        fontWeight={600}
-        fontSize={fs.toFixed(3)}
-        letterSpacing={`${WORD_TRACK}em`}
-        textAnchor={anchor}
-        fill={V_INK}
-      >
-        {text}
-      </text>
+    <g>
+      <Rule from={{ x, y: y - half }} to={{ x: x + width, y: y - half }} k={k} kind="bold" />
+      <TitleLabel text={text} x={x} y={y} k={k} />
+      <Rule from={{ x, y: y + half }} to={{ x: x + width, y: y + half }} k={k} kind="hair" />
     </g>
   );
 };
@@ -439,11 +396,10 @@ const GrowthWash: React.FC<{ S: number }> = ({ S }) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE WORLD PLANE (chart under the print), with the burst's motion blur.
+// THE WORLD (the chart, then the clipping over it), in VStage's HTML world layer.
 // ---------------------------------------------------------------------------
 /** the chart's SVG canvas, world px (overflow is visible; this only places it) */
 const CHART_BOX = { x: -200, y: 0, w: 1600, h: FRAME_H };
-const BLUR_ID = "sed-pan-blur";
 
 const Chart: React.FC<{ S: number; k: number }> = ({ S, k }) => {
   const L = tipLen(S);
@@ -457,13 +413,11 @@ const Chart: React.FC<{ S: number; k: number }> = ({ S, k }) => {
       style={{ position: "absolute", left: CHART_BOX.x, top: CHART_BOX.y, overflow: "visible" }}
     >
       <GrowthWash S={S} />
-      <InkPath
-        points={[
-          { x: AXIS_X0, y: BASE_Y },
-          { x: AXIS_X1, y: BASE_Y },
-        ]}
+      <Rule
+        from={{ x: AXIS_X0, y: BASE_Y }}
+        to={{ x: AXIS_X1, y: BASE_Y }}
         k={k}
-        width={HAIR}
+        kind="hair"
         rung={INK_LO}
         draw={(axisHead(S) - AXIS_X0) / (AXIS_X1 - AXIS_X0)}
       />
@@ -475,59 +429,40 @@ const Chart: React.FC<{ S: number; k: number }> = ({ S, k }) => {
         ))}
         <Bead id="sed-tip" x={tip.x} y={tip.y} k={k} r={beadR} />
       </RedGroup>
-      <TitleLabel text="Soviet growth per year" x={LEFT_X} y={TITLE_Y} k={k} />
+      <FigureKicker text="Soviet growth per year" x={LEFT_X} y={KICKER_Y} k={k} width={RIGHT_X - LEFT_X} />
       <Label text="5.2%" x={LEFT_X} y={FIRST_VALUE_Y} k={k} size="value" anchor="start" appear={enterU(S, pointFrame(0))} />
       <Label text="1.8%" x={RIGHT_X} y={LAST_VALUE_Y} k={k} size="value" anchor="end" appear={enterU(S, TIP_END_F)} />
-      <YearLabel text="1950s" x={LEFT_X} y={YEAR_Y} k={k} anchor="start" appear={enterFrom(S, axisFrame(LEFT_X))} />
-      <YearLabel text="1980s" x={RIGHT_X} y={YEAR_Y} k={k} anchor="end" appear={enterFrom(S, axisFrame(RIGHT_X - YEAR_W))} />
+      <Label text="1950s" x={LEFT_X} y={YEAR_Y} k={k} size="word" anchor="start" transformCase="none" appear={enterFrom(S, axisFrame(LEFT_X))} />
+      <Label
+        text="1980s"
+        x={RIGHT_X}
+        y={YEAR_Y}
+        k={k}
+        size="word"
+        anchor="end"
+        transformCase="none"
+        appear={enterFrom(S, axisFrame(RIGHT_X - YEAR_W))}
+      />
+      <SourceLine text="Source: CIA estimates of Soviet GNP" x={LEFT_X} y={SOURCE_Y} k={k} />
     </svg>
-  );
-};
-
-const WorldPlane: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
-  const k = cam.k;
-  const sigma = blurSigma(S);
-  // the plane's window: the visible world plus what the blur reaches for beyond the frame's sides
-  const padX = (3 * sigma + 30) / k;
-  const padY = 30 / k;
-  const win = {
-    x: cam.x - FRAME_W / 2 / k - padX,
-    y: cam.y - FRAME_H / 2 / k - padY,
-    w: FRAME_W / k + 2 * padX,
-    h: FRAME_H / k + 2 * padY,
-  };
-  return (
-    <>
-      <svg width={0} height={0} style={{ position: "absolute" }} aria-hidden>
-        <defs>
-          <filter id={BLUR_ID} x="0" y="0" width="1" height="1" colorInterpolationFilters="sRGB">
-            <feGaussianBlur stdDeviation={`${(sigma / k).toFixed(4)} 0`} />
-          </filter>
-        </defs>
-      </svg>
-      <div
-        style={{
-          position: "absolute",
-          left: win.x,
-          top: win.y,
-          width: win.w,
-          height: win.h,
-          filter: sigma > 0 ? `url(#${BLUR_ID})` : undefined,
-        }}
-      >
-        <div style={{ position: "absolute", left: -win.x, top: -win.y, width: 0, height: 0 }}>
-          <Chart S={S} k={k} />
-          <VintagePhoto src={PHOTO_SRC} box={PRINT} />
-        </div>
-      </div>
-    </>
   );
 };
 
 const SovietEconomicDecline: React.FC<z.infer<typeof schema>> = () => {
   const S = useCurrentFrame();
   const cam = camAt(S);
-  return <VStage S={S} cam={cam} rest={CAM_END} photos={<WorldPlane S={S} cam={cam} />} />;
+  return (
+    <VStage
+      S={S}
+      cam={cam}
+      photos={
+        <>
+          <Chart S={S} k={cam.k} />
+          <VintagePhoto src={PHOTO_SRC} box={PRINT} cutline={CUTLINE} />
+        </>
+      }
+    />
+  );
 };
 
 export default SovietEconomicDecline;

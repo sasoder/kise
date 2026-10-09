@@ -2,421 +2,495 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
-  CORNER,
-  DASH_LINE,
-  DashedPath,
-  ICONS,
-  INK_HI,
-  INK_LO,
-  Icon,
-  InkPath,
-  LINE,
+  BEAD_RATIO,
+  Bead,
+  CUTLINE_BAND,
+  FRAME_H,
+  FRAME_W,
+  PHOTO_BORDER,
+  PICTOS,
+  Pictogram,
+  RED,
   RED_HI,
-  RedBar,
-  SEAL_R,
-  Slot,
+  RED_WET,
+  RedGroup,
+  Rule,
   VStage,
-  V_INK,
-  V_PAPER,
-  barCross,
+  VintagePhoto,
+  WET_DRY_F,
+  WET_LEN,
+  WetLine,
   clamp01,
-  lineW,
+  lerp,
+  mixHex,
+  paperShadow,
+  redW,
   runVCamera,
+  shootEase,
   smoothstep,
-  wpx,
 } from "./chinatalkVintage";
-import type { Pt } from "./chinatalkVintage";
+import type { Cam, Pt, VCamKey } from "./chinatalkVintage";
 
 // ---------------------------------------------------------------------------
-// TechnologyAllocates — cut C of Logan Wright, "Brezhnev chose decay"
-// (ChinaTalk, slightly vintage). Delivered as 24_TechnologyAllocates.mov.
+// TechnologyAllocates (take 2, rebuilt from scratch) — cut C of Logan Wright,
+// "Brezhnev chose decay" (ChinaTalk, newsprint kit chinatalkVintage).
 //
-// CHECK LINE: the Soviet bet was that one central computer could deal the whole
-// economy's resources out to every sector, each filled exactly to its planned
-// mark.
+// CHECK LINE: the Soviet planners' bet: one big computer in the middle hands
+// the economy's resources to every sector, and every sector is supplied.
 //
 // LINE: "So we're going to be able to use technology to allocate resources
-// effectively." (the Soviet planners speaking, 1960s)
-// IN = edit frame 597 (24.875 s). Slot 84 f + 12 f living tail = 96 f at 24 fps.
-// Local words: technology 26-38 · allocate 43-51 · resources 51-66 ·
-// effectively 66-79.
+// effectively." (the Soviet planners, 1960s)
+// IN = edit frame 597 (24.875 s). Slot 84 f + 12 f living tail = 96 f, 24 fps,
+// 1080x1920, opaque. Local words: technology 26-38 · allocate 43-51 ·
+// resources 51-66 · effectively 66-79.
 //
-// RED = resources (the economy's stock being handed out). Nothing else is red.
+// RED = resources. Nothing else is red.
 //
-// MOTION (one continuous deal): a 1960s mainframe stands in the middle, a
-// three-bay console (a tape unit with two turning reels, a tall stock tank full
-// of red, a lamp panel); six slots radiate from behind it to six sectors. On
-// frame 0 all six rays are already pressing out from behind the cabinet; each
-// travels at its own constant speed while the tank drains by exactly what has
-// been dealt, and the camera pulls back from the machine to the whole sunburst
-// (k 1.35 -> 1.0 by ~f48). The plan gives each sector a different share: the
-// fronts land clockwise on their dashed plan marks at f64, 66, 68, 70, 72, 74,
-// at 92 / 74 / 86 / 68 / 80 / 62 % of their slots, each stops dead, its mark is
-// written solid and its sector icon steps to the high rung (done by f84). The
-// tank does not run dry: it reaches its reserve (two units of nine) as the last
-// ray lands; then reels and lamps idle, one soft highlight runs out along the
-// rays and the camera drifts in (k -> 1.02).
+// THE PICTURE: a newspaper figure. A halftone clipping of the real machine (a
+// BESM-6, the flagship Soviet mainframe of the 1960s; photo Victor R. Ruiz,
+// CC BY 2.0, Science Museum London) lies across the middle of the page; six
+// solid pictograms of the economy's sectors stand around it (industry, energy,
+// space above; farming, housing, transport below the caption strip).
 //
-// The six shares are illustrative (no figures are shown).
+// THE MOTION (one continuous flood): six red ink feeds come out from UNDER the
+// clipping, each written by its bead (shootEase: out fast, slowing toward its
+// pictogram), while the camera pulls back from the clipping (k 1.14 at f0,
+// the whole clipping and all six sectors in frame) to the wide framing
+// (k 0.975 at f44). On the frame a bead touches a silhouette (clockwise:
+// industry f26, energy f32, space f38, transport f44, housing f50, farming
+// f56) the bead drains into it and the red soaks through the shape from the
+// point of contact (16 f, a clean ink front, wet just behind it), then one
+// soft highlight crosses the printed shape. One highlight leaves the machine
+// along all six feeds at f38 and is taken up by the last sector at f84. The
+// last sector is full at f72, inside "effectively"; the tail is only the slow
+// drift in (k 1.02 at f95) and drying ink.
 // ---------------------------------------------------------------------------
 
 export const FPS = 24;
-export const SLOT_F = 84;
-export const TAIL_F = 12;
-export const DURATION = SLOT_F + TAIL_F;
+export const SLOT = 84;
+export const TAIL = 12;
+export const DURATION = SLOT + TAIL;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
-// --- the machine: a three-bay console (world px = screen px at the wide framing, k = 1)
-const CX = 540;
-const BODY = { x0: 330, x1: 750, y0: 640, y1: 1064 };
-/** the lowest ink of the machine (the outline's underside) */
-export const MACHINE_BOTTOM = BODY.y1 + 3;
-/** the low plinth is the band under this seam */
-const PLINTH_Y = 1034;
-/** the two seams between the bays */
-const SEAM_L = 466;
-const SEAM_R = 634;
-/** LEFT BAY, the tape unit: two reels stacked, the tape running between them through the read head */
-const REEL_X = 394;
-const REEL_R = 46;
-const REEL_UP_Y = 710;
-const REEL_DN_Y = 964;
-/** the wound tape: a thin pack on the upper reel, a thick one on the lower */
-const PACK_IN = 15;
-const PACK_UP = 27;
-const PACK_DN = 39;
-const HUB_R = 5;
-const TICK_R = 13;
-const HEAD = { w: 30, h: 24 };
-/** the reels turn at one tape speed: degrees per frame at this pack radius */
-const TAPE_REF_R = 33;
-/** CENTRE BAY, the stock: a tall tank with a gauge down its right wall */
-const WIN = { x0: 482, x1: 598, y0: 664, y1: 1010 };
-const STOCK_LAYERS = 9;
-const STOCK_SEAM = (WIN.y1 - WIN.y0) / STOCK_LAYERS;
-/** the tank never runs dry: this much is left when the last ray has landed (two seamed units) */
-const RESERVE = 2 / STOCK_LAYERS;
-/** the glass of an empty tank or slot: an ink tint, so it is not bare paper */
-const GLASS = 0.07;
-const GAUGE_TICKS = 5;
-const GAUGE_LEN = 16;
-/** RIGHT BAY, the console: a lamp grid and three toggle switches */
-const LAMP_COLS = 4;
-const LAMP_ROWS = 7;
-const LAMP_X0 = 659;
-const LAMP_DX = 22;
-const LAMP_Y0 = 676;
-const LAMP_DY = 34;
-const LAMP_R = 7;
-const TOGGLES = [
-  { x: 664, lean: -7 },
-  { x: 692, lean: 7 },
-  { x: 720, lean: -7 },
+// --- the page (world px; the wide framing shows the world about 1:1) ----------
+/** the PICTURE window of the clipping */
+const PHOTO = { x: 90, y: 580, w: 900, h: 420 };
+const PHOTO_SRC = "brezhnev/besm6.jpg";
+const PHOTO_FOCUS = { x: 0.5, y: 0.585 };
+const PHOTO_ZOOM = 1.05;
+const CUTLINE = "BESM-6, the Soviet mainframe of the 1960s";
+/** the clipping's outer edges (its paper margin and the cutline band included) */
+export const CLIP = {
+  x0: PHOTO.x - PHOTO_BORDER,
+  y0: PHOTO.y - PHOTO_BORDER,
+  x1: PHOTO.x + PHOTO.w + PHOTO_BORDER,
+  y1: PHOTO.y + PHOTO.h + PHOTO_BORDER + CUTLINE_BAND,
+};
+/** every feed starts at the machine, under the clipping */
+const SOURCE_Y = PHOTO.y + PHOTO.h / 2;
+/** a pictogram's 256 box, world px */
+const PICTO = 246;
+const SC = PICTO / 256;
+const COLS = [190, 540, 890];
+const ROW_UP = 290;
+const ROW_DOWN = 1550;
+/** an unsupplied sector: a solid shape in a light ink tint */
+const WAITING = 0.14;
+/** page furniture: one double rule over the figure, one hair rule under it */
+const RULE_TOP_Y = 94;
+const RULE_BOTTOM_Y = 1820;
+
+// --- the camera: in close on the whole clipping (cutline and all six sectors in
+// frame), one eased pull-back to the wide framing, then a slow drift in
+const CAM_KEYS: VCamKey[] = [
+  { f: -24, x: 540, y: 969, k: 1.19 },
+  { f: 41, x: 540, y: 962, k: 0.972 },
+  { f: DURATION - 1, x: 540, y: 960, k: 1.022, ease: "linear" },
 ];
-const TOGGLE_Y = 980;
-const TOGGLE_LEN = 24;
-/** the vent slats in the plinth */
-const VENTS = [664, 678, 692, 706, 720];
+export const camAt = runVCamera(CAM_KEYS, DURATION);
 
-// --- the sunburst ----------------------------------------------------------------
-/** every slot's centreline passes through this point, hidden behind the cabinet */
-const O: Pt = { x: CX, y: 858 };
-/** the four diagonals stand this far off the vertical */
-const FAN_DEG = 32;
-const SLOT_W = 64;
-/** a plan mark overhangs its slot this far on each side, and is this much heavier than the kit's line */
-const MARK_OVER = 36;
-const MARK_BOLD = 1.5;
-const ICON = 100;
-const ICON_GAP = 18;
-/** the units a ray is counted into travel with its front */
-const RAY_SEAM = 40;
-/** where a ray's bar starts, world px from O (hidden behind the cabinet) */
-const HIDE = 70;
-/** every ray is already this far out of the cabinet on frame 0 */
-const OUT_0 = 30;
-/** the wet front dries over this many frames once a ray has landed */
-const DRY_F = 18;
-/** a plan mark is written solid over this many frames, starting on the landing frame */
-const SOLID_F = 3;
-/** a sector icon steps to the high rung over this many frames from the landing frame */
-const ICON_F = 10;
-
-/** lucide `truck` (ISC), its two circles converted to paths */
-const TRUCK = [
-  "M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2",
-  "M15 18H9",
-  "M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14",
-  "M15 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0z",
-  "M5 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0z",
-] as const;
-
-type RaySpec = { key: string; deg: number; endR: number; fill: number; land: number; icon: readonly string[] };
-/** deg = clockwise from straight up; endR = the slot's far end, world px from O;
- *  fill = the planned share, as the fraction of the slot's visible length the
- *  red stops at; land = the frame the front stops on the mark (clockwise). */
-const RAY_SPECS: RaySpec[] = [
-  { key: "up", deg: 0, endR: 655, fill: 0.92, land: 64, icon: ICONS.factory },
-  { key: "ur", deg: FAN_DEG, endR: 669.1, fill: 0.74, land: 66, icon: ICONS.rocket },
-  { key: "dr", deg: 180 - FAN_DEG, endR: 603.7, fill: 0.86, land: 68, icon: ICONS.building2 },
-  { key: "dn", deg: 180, endR: 740, fill: 0.68, land: 70, icon: TRUCK },
-  { key: "dl", deg: 180 + FAN_DEG, endR: 673.7, fill: 0.8, land: 72, icon: ICONS.wheat },
-  { key: "ul", deg: 360 - FAN_DEG, endR: 609.1, fill: 0.62, land: 74, icon: ICONS.zap },
+// --- the six sectors, clockwise from the upper left ---------------------------
+/** the lightning bolt is stood on its tip: both of its tips on the feed's axis */
+const BOLT_TILT = -(Math.atan2(64, 224) * 180) / Math.PI;
+/** centre of the bolt's box -> the centre of a tip's rounding, box units */
+const BOLT_HALF = Math.hypot(32, 112);
+type SectorDef = {
+  id: string;
+  d: string;
+  x: number;
+  y: number;
+  rotate: number;
+  /** box y where the feed's axis meets the silhouette's edge */
+  touch: number;
+  /** box y where the feed's round end comes to rest, inside the silhouette */
+  seat: number;
+  /** the silhouette's farthest point from the touch point, box units */
+  far: number;
+  /** the frame the bead touches the silhouette */
+  contact: number;
+  /** how far the feed's tip is already out from under the clipping on frame 0, world px */
+  out0: number;
+  /** phases of the soaking front's irregular edge */
+  ph: [number, number, number];
+};
+const DEFS: SectorDef[] = [
+  { id: "industry", d: PICTOS.factory, x: COLS[0], y: ROW_UP, rotate: 0, touch: 224, seat: 216, far: 218, contact: 26, out0: 26, ph: [0.4, 2.1, 4.4] },
+  {
+    id: "energy",
+    d: PICTOS.lightning,
+    x: COLS[1],
+    y: ROW_UP,
+    rotate: BOLT_TILT,
+    touch: 128 + BOLT_HALF + 8,
+    seat: 128 + BOLT_HALF,
+    far: 249,
+    contact: 32,
+    out0: 14,
+    ph: [1.7, 0.3, 2.9],
+  },
+  { id: "space", d: PICTOS.rocket, x: COLS[2], y: ROW_UP, rotate: 0, touch: 232, seat: 224, far: 224, contact: 38, out0: 6, ph: [3.1, 5.2, 0.8] },
+  { id: "transport", d: PICTOS.train, x: COLS[2], y: ROW_DOWN, rotate: 0, touch: 24, seat: 33, far: 233, contact: 44, out0: 66, ph: [5.0, 1.2, 3.6] },
+  { id: "housing", d: PICTOS.buildings, x: COLS[1], y: ROW_DOWN, rotate: 0, touch: 16, seat: 25, far: 241, contact: 50, out0: 46, ph: [2.4, 4.0, 1.5] },
+  { id: "farming", d: PICTOS.tractor, x: COLS[0], y: ROW_DOWN, rotate: 0, touch: 40, seat: 48, far: 207, contact: 56, out0: 28, ph: [0.9, 3.3, 5.6] },
 ];
-const along = (u: Pt, r: number): Pt => ({ x: O.x + u.x * r, y: O.y + u.y * r });
-export const RAYS = RAY_SPECS.map((s) => {
-  const a = (s.deg * Math.PI) / 180;
-  const u: Pt = { x: Math.sin(a), y: -Math.cos(a) };
-  // where the centreline leaves the cabinet: its top edge or its bottom edge
-  const exitR = u.y < 0 ? (O.y - BODY.y0) / -u.y : (BODY.y1 - O.y) / u.y;
-  /** the planned visible length: cabinet edge -> plan mark */
-  const reach = s.fill * (s.endR - exitR);
-  const markR = exitR + reach;
+
+// --- the flood ------------------------------------------------------------------
+/** frames for the red to soak through one silhouette */
+const FLOOD_F = 16;
+/** the first seep shows on the touch frame itself */
+const FLOOD_LEAD = 0.5;
+/** the soaking front is a clean ink edge with a narrow feather: a gaussian sigma (world px), an edge about 8 px wide */
+const FEATHER = 2.2;
+/** the front's slightly irregular edge: harmonics of the angle and their amplitudes as fractions of the radius */
+const WOBBLE_N = [2, 3, 5, 9];
+const WOBBLE = [0.02, 0.02, 0.012, 0.006];
+const WOBBLE_MAX = WOBBLE.reduce((a, b) => a + b, 0);
+/** ink soaking into paper: fastest at the touch, slowing as it spreads */
+const SOAK_P = 1.6;
+const soak = (u: number) => 1 - Math.pow(1 - clamp01(u), SOAK_P);
+const soakInv = (e: number) => 1 - Math.pow(1 - clamp01(e), 1 / SOAK_P);
+/** the printed highlight that crosses a sector once it is full */
+const SWEEP_F = 10;
+const SWEEP_BAND = 64;
+const SWEEP_TILT = (-22 * Math.PI) / 180;
+/** one highlight leaves the machine along all six feeds at constant speed and is taken up by the last sector on PULSE_END */
+const PULSE_START = 38;
+const PULSE_END = 84;
+const PULSE_LEN = 80;
+
+/** frames from the touch until the feed's tip is seated inside its silhouette */
+const SEAT_F = 10;
+/** the feeds' ease is laid over this multiple of their length: the short upper
+ *  feeds use all of it (out fast from frame 0, easing into the landing), the
+ *  long lower feeds settle a little past their seat (they touch at about 4 px per frame) */
+const RUN_ON_UP = 1;
+const RUN_ON_DOWN = 1.06;
+
+const invOf = (ease: (u: number) => number) => (e: number) => {
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 34; i++) {
+    const mid = (lo + hi) / 2;
+    if (ease(mid) < e) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+};
+const shootInv = invOf(shootEase);
+
+export type Sector = SectorDef & {
+  dir: -1 | 1;
+  touchY: number;
+  seatY: number;
+  /** the feed's whole run, source -> seat, world px */
+  L: number;
+  /** the feed's run under the clipping */
+  hidden: number;
+  /** the bead's radius on the contact frame */
+  beadC: number;
+  /** the tip's run when the bead's front edge reaches the silhouette */
+  sTouch: number;
+  t0: number;
+  T: number;
+  /** the run the launch-then-settle ease is laid over (it would settle a little past the seat) */
+  run: number;
+  /** the tip's speed on the contact frame, world px per frame */
+  vTouch: number;
+  /** the soaking front's final radius */
+  rEnd: number;
+  transform: string;
+};
+const buildSector = (def: SectorDef): Sector => {
+  const dir: -1 | 1 = def.y < SOURCE_Y ? -1 : 1;
+  const touchY = def.y + (def.touch - 128) * SC;
+  const seatY = def.y + (def.seat - 128) * SC;
+  const edgeY = dir < 0 ? CLIP.y0 : CLIP.y1;
+  const L = Math.abs(seatY - SOURCE_Y);
+  const hidden = Math.abs(edgeY - SOURCE_Y);
+  const beadC = BEAD_RATIO * redW(camAt(def.contact).k);
+  const sTouch = Math.abs(touchY - SOURCE_Y) - beadC;
+  // shootEase over the feed's run (times RUN_ON): the launch happens under the
+  // clipping, so what shows is a tip that comes out fast and slows toward its
+  // pictogram, still moving when it touches
+  const run = L * (dir < 0 ? RUN_ON_UP : RUN_ON_DOWN);
+  const u0 = shootInv((hidden + def.out0) / run);
+  const uc = shootInv(sTouch / run);
+  const T = def.contact / (uc - u0);
   return {
-    ...s,
-    u,
-    exitR,
-    markR,
-    reach,
-    /** its own constant speed, world px per frame: OUT_0 out on frame 0, on the mark on `land` */
-    speed: (reach - OUT_0) / s.land,
-    slotFrom: along(u, HIDE),
-    slotTo: along(u, s.endR),
-    mark: barCross(along(u, HIDE), along(u, s.endR), SLOT_W, markR - HIDE, MARK_OVER),
-    iconAt: along(u, s.endR + ICON_GAP + ICON / 2),
-  };
-});
-export type Ray = (typeof RAYS)[number];
-/** the front's distance from O at frame f */
-const frontR = (r: Ray, f: number) => Math.min(r.markR, r.exitR + OUT_0 + f * r.speed);
-/** how much of a ray is out of the machine at frame f */
-export const visLen = (r: Ray, f: number) => Math.max(0, frontR(r, f) - r.exitR);
-const TOTAL = RAYS.reduce((s, r) => s + r.reach, 0);
-export const dealtAt = (f: number) => RAYS.reduce((s, r) => s + visLen(r, f), 0);
-const DEALT_0 = dealtAt(0);
-/** the stock left in the tank: 1 (full, frame 0) -> RESERVE (the last ray has landed), following the total dealt */
-export const stockAt = (f: number) => RESERVE + (1 - RESERVE) * clamp01(1 - (dealtAt(f) - DEALT_0) / (TOTAL - DEALT_0));
-export const LAST_LAND = Math.max(...RAYS.map((r) => r.land));
-
-// --- the machine's own life: reels and lamps on smooth speed curves ---------------
-const bump = (f: number, a: number, p: number, b: number) => smoothstep((f - a) / (p - a)) * (1 - smoothstep((f - p) / (b - p)));
-/** busiest on "technology" (26-38), idling once the deal is done */
-const busy = (f: number) => bump(f, 14, 32, 52);
-const idle = (f: number) => smoothstep((f - 56) / 24);
-const tapeSpeed = (f: number) => 6 + 7 * busy(f) - 3.4 * idle(f); // degrees per frame at TAPE_REF_R
-const lampSpeed = (f: number) => 0.2 + 0.26 * busy(f) - 0.1 * idle(f); // lamp rows per frame
-const integrate = (speed: (f: number) => number) => {
-  const acc: number[] = [0];
-  for (let f = 0; f <= DURATION + 1; f++) acc.push(acc[f] + speed(f));
-  return (S: number) => {
-    const t = Math.max(0, Math.min(DURATION, S));
-    const i = Math.floor(t);
-    return acc[i] + (acc[i + 1] - acc[i]) * (t - i);
+    ...def,
+    dir,
+    touchY,
+    seatY,
+    L,
+    hidden,
+    beadC,
+    sTouch,
+    t0: -u0 * T,
+    T,
+    run,
+    vTouch: (run / T) * 12 * uc * Math.pow(1 - uc, 2),
+    rEnd: (def.far * SC + 3 * FEATHER + 2) / (1 - WOBBLE_MAX),
+    transform: `translate(${def.x} ${def.y})${def.rotate ? ` rotate(${def.rotate.toFixed(4)})` : ""} scale(${SC.toFixed(5)}) translate(-128 -128)`,
   };
 };
-const tapeAngleAt = integrate(tapeSpeed);
-const lampPhaseAt = integrate(lampSpeed);
-/** the chase is a soft slanted band running down the grid, one band per LAMP_PERIOD rows */
-const LAMP_PERIOD = 9.5;
-const LAMP_SLANT = 0.6;
-const LAMP_SOFT = 0.95;
+export const SECTORS: Sector[] = DEFS.map(buildSector);
+/** a feed's run from the clipping's edge to its silhouette */
+const openRun = (s: Sector) => s.sTouch + s.beadC - s.hidden;
+/** the highlight's constant speed, world px per frame: its tail enters the farthest silhouette on PULSE_END */
+export const PULSE_SPEED = (Math.max(...SECTORS.map(openRun)) + PULSE_LEN) / (PULSE_END - PULSE_START);
 
-// --- the highlight of the settled frame ---------------------------------------------
-/** one soft band that leaves the machine as the last ray lands and runs out along all six */
-const HL_START = LAST_LAND;
-const HL_SPEED = 18;
-const HL_HALF = 110;
-/** it starts wholly behind the cabinet: its leading edge on the nearest cabinet edge */
-const HL_R0 = Math.min(...RAYS.map((r) => r.exitR)) - HL_HALF;
+/** After the touch the paper draws the ink in: the tip runs on from its touch
+ *  speed into its seat inside the silhouette and stops there (a cubic that
+ *  leaves at the touch speed and arrives at rest), SEAT_F frames. */
+const seatRun = (s: Sector, tau: number) => {
+  const x = clamp01(tau);
+  const m0 = s.vTouch * SEAT_F;
+  return (2 * x * x * x - 3 * x * x + 1) * s.sTouch + (x * x * x - 2 * x * x + x) * m0 + (-2 * x * x * x + 3 * x * x) * s.L;
+};
+/** the feed's drawn length at S, world px of its run from the source */
+export const feedLen = (s: Sector, S: number) => (S <= s.contact ? s.run * shootEase((S - s.t0) / s.T) : seatRun(s, (S - s.contact) / SEAT_F));
+/** the frame at which the feed's tip passed run length `at` (what was drawn
+ *  after the touch counts as drawn at the touch: the whole feed dries together) */
+const feedTimeAt = (s: Sector, at: number) => Math.min(s.contact, s.t0 + s.T * shootInv(at / s.run));
 
-// --- the camera: one slow pull-back from the machine to the sunburst, then a drift in
-/** the look that keeps the machine's foot just above the caption strip at zoom k */
-const lookY = (k: number) => MACHINE_BOTTOM - 105 / k;
-export const camAt = runVCamera(
-  [
-    { f: -30, x: CX, y: lookY(1.5), k: 1.5 },
-    { f: 46, x: CX, y: lookY(1.0), k: 1.0 },
-    { f: 112, x: CX, y: lookY(1.034), k: 1.034, ease: "linear" },
-  ],
-  DURATION + 1,
-);
-const REST = camAt(0);
-
-// ---------------------------------------------------------------------------
-/** The glass of an empty slot: the same ink tint as the stock tank, under the red. */
-const SlotGlass: React.FC<{ r: Ray }> = ({ r }) => {
-  const len = Math.hypot(r.slotTo.x - r.slotFrom.x, r.slotTo.y - r.slotFrom.y);
-  const deg = (Math.atan2(r.slotTo.y - r.slotFrom.y, r.slotTo.x - r.slotFrom.x) * 180) / Math.PI;
-  return (
-    <rect
-      transform={`translate(${r.slotFrom.x.toFixed(3)} ${r.slotFrom.y.toFixed(3)}) rotate(${deg.toFixed(4)})`}
-      x={0}
-      y={-SLOT_W / 2}
-      width={len.toFixed(3)}
-      height={SLOT_W}
-      rx={SLOT_W / 2}
-      fill={V_INK}
-      opacity={GLASS}
-    />
-  );
+const blobD = (cx: number, cy: number, r: number, ph: [number, number, number]) => {
+  const n = 160;
+  const phase = [ph[0], ph[1], ph[2], ph[0] + ph[1]];
+  const parts: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    let w = 1;
+    for (let j = 0; j < WOBBLE.length; j++) w += WOBBLE[j] * Math.sin(WOBBLE_N[j] * a + phase[j]);
+    parts.push(`${i ? "L" : "M"}${(cx + r * w * Math.cos(a)).toFixed(2)} ${(cy + r * w * Math.sin(a)).toFixed(2)}`);
+  }
+  return parts.join("") + "Z";
 };
 
-/** The plan mark: the kit's PlanMark (dashed = planned; `solid` writes a solid
- *  line over it from its start), drawn MARK_BOLD heavier so the line the red
- *  stops on is the thing one sees. */
-const BoldMark: React.FC<{ from: Pt; to: Pt; k: number; solid: number }> = ({ from, to, k, solid }) => {
-  const pts = [from, to];
-  const sd = clamp01(solid);
+const ID = "ta";
+const WET_STOPS = 18;
+
+/** One feed: the wet line from the machine, and the highlight that later travels out along it. */
+const Feed: React.FC<{ s: Sector; S: number; k: number }> = ({ s, S, k }) => {
+  const len = feedLen(s, S);
+  const pts: Pt[] = [
+    { x: s.x, y: SOURCE_Y },
+    { x: s.x, y: s.seatY },
+  ];
+  const pulseHead = s.hidden + (S - PULSE_START) * PULSE_SPEED;
+  const p0 = Math.max(s.hidden - 4, pulseHead - PULSE_LEN);
+  const p1 = Math.min(len, pulseHead);
+  const y = (run: number) => SOURCE_Y + s.dir * run;
   return (
     <g>
-      {sd < 0.999 ? <DashedPath points={pts} k={k} march={false} width={DASH_LINE * MARK_BOLD} /> : null}
-      {sd > 0.0005 ? <InkPath points={pts} k={k} draw={sd} width={LINE * MARK_BOLD} /> : null}
-    </g>
-  );
-};
-
-const RayBar: React.FC<{ r: Ray; S: number; k: number }> = ({ r, S, k }) => {
-  const front = frontR(r, S);
-  if (front <= HIDE + 1) return null;
-  // the seams are counted back from the front, so the units travel with it
-  const slip = (front - HIDE) % RAY_SEAM;
-  const from = along(r.u, HIDE + slip);
-  const len = front - HIDE - slip;
-  const wet = 1 - smoothstep((S - r.land) / DRY_F);
-  const hlR = HL_R0 + (S - HL_START) * HL_SPEED;
-  const lit = S >= HL_START && hlR + HL_HALF > r.exitR - 40 && hlR - HL_HALF < r.markR;
-  const g0 = along(r.u, hlR - HL_HALF);
-  const g1 = along(r.u, hlR + HL_HALF);
-  const pad = SLOT_W;
-  const bx0 = Math.min(r.slotFrom.x, r.slotTo.x) - pad;
-  const by0 = Math.min(r.slotFrom.y, r.slotTo.y) - pad;
-  const bw = Math.abs(r.slotTo.x - r.slotFrom.x) + 2 * pad;
-  const bh = Math.abs(r.slotTo.y - r.slotFrom.y) + 2 * pad;
-  return (
-    <>
-      <RedBar id={`ta-ray-${r.key}`} from={from} to={r.slotTo} width={SLOT_W} k={k} slot radius={SLOT_W / 2} len={len} seam={RAY_SEAM} wet={wet} />
-      {lit ? (
+      <WetLine id={`${ID}-${s.id}-feed`} points={pts} len={len} k={k} ageAt={(at) => S - feedTimeAt(s, at)} shadow={false} />
+      {p1 - p0 > 0.5 ? (
         <>
           <defs>
-            <linearGradient id={`ta-hlg-${r.key}`} gradientUnits="userSpaceOnUse" x1={g0.x.toFixed(2)} y1={g0.y.toFixed(2)} x2={g1.x.toFixed(2)} y2={g1.y.toFixed(2)}>
-              <stop offset={0} stopColor="#FFFFFF" stopOpacity={0} />
-              <stop offset={0.2} stopColor="#FFFFFF" stopOpacity={0.35} />
-              <stop offset={0.4} stopColor="#FFFFFF" stopOpacity={1} />
-              <stop offset={0.6} stopColor="#FFFFFF" stopOpacity={1} />
-              <stop offset={0.8} stopColor="#FFFFFF" stopOpacity={0.35} />
-              <stop offset={1} stopColor="#FFFFFF" stopOpacity={0} />
+            <linearGradient
+              id={`${ID}-${s.id}-pulse`}
+              gradientUnits="userSpaceOnUse"
+              x1={s.x}
+              y1={y(pulseHead - PULSE_LEN).toFixed(2)}
+              x2={s.x}
+              y2={y(pulseHead).toFixed(2)}
+            >
+              <stop offset={0} stopColor={RED_HI} stopOpacity={0} />
+              <stop offset={0.3} stopColor={RED_HI} stopOpacity={0.36} />
+              <stop offset={0.58} stopColor={RED_HI} stopOpacity={0.72} />
+              <stop offset={0.84} stopColor={RED_HI} stopOpacity={0.36} />
+              <stop offset={1} stopColor={RED_HI} stopOpacity={0} />
             </linearGradient>
-            <mask id={`ta-hlm-${r.key}`} maskUnits="userSpaceOnUse" x={bx0.toFixed(1)} y={by0.toFixed(1)} width={bw.toFixed(1)} height={bh.toFixed(1)}>
-              <rect x={bx0.toFixed(1)} y={by0.toFixed(1)} width={bw.toFixed(1)} height={bh.toFixed(1)} fill={`url(#ta-hlg-${r.key})`} />
-            </mask>
           </defs>
-          <g mask={`url(#ta-hlm-${r.key})`}>
-            <RedBar id={`ta-hl-${r.key}`} from={from} to={r.slotTo} width={SLOT_W} k={k} slot radius={SLOT_W / 2} len={len} seam={RAY_SEAM} color={RED_HI} shadow={false} />
-          </g>
+          <rect
+            x={(s.x - redW(k) / 2).toFixed(3)}
+            y={Math.min(y(p0), y(p1)).toFixed(2)}
+            width={redW(k).toFixed(3)}
+            height={(p1 - p0).toFixed(2)}
+            fill={`url(#${ID}-${s.id}-pulse)`}
+          />
         </>
       ) : null}
-    </>
-  );
-};
-
-/** A tape reel: the flange ring, the wound tape (an ink annulus at the low
- *  rung, out to `pack`), the hub and one radial tick that shows it turning. */
-const Reel: React.FC<{ y: number; pack: number; angle: number; k: number }> = ({ y, pack, angle, k }) => {
-  const lw = lineW(k).toFixed(3);
-  const a = (angle * Math.PI) / 180;
-  return (
-    <g fill="none" stroke={V_INK}>
-      <circle cx={REEL_X} cy={y} r={(PACK_IN + pack) / 2} strokeWidth={pack - PACK_IN} strokeOpacity={INK_LO / INK_HI} />
-      <circle cx={REEL_X} cy={y} r={REEL_R} strokeWidth={lw} />
-      <path d={`M${REEL_X} ${y}L${(REEL_X + Math.cos(a) * TICK_R).toFixed(2)} ${(y + Math.sin(a) * TICK_R).toFixed(2)}`} strokeWidth={lw} strokeLinecap="round" />
-      <circle cx={REEL_X} cy={y} r={HUB_R} fill={V_INK} stroke="none" />
     </g>
   );
 };
 
-// the tape: the outer tangent of the two packs on their right side, through the read head
-const TAPE_NY = (PACK_UP - PACK_DN) / (REEL_DN_Y - REEL_UP_Y);
-const TAPE_NX = Math.sqrt(1 - TAPE_NY * TAPE_NY);
-const TAPE_A: Pt = { x: REEL_X + PACK_UP * TAPE_NX, y: REEL_UP_Y + PACK_UP * TAPE_NY };
-const TAPE_B: Pt = { x: REEL_X + PACK_DN * TAPE_NX, y: REEL_DN_Y + PACK_DN * TAPE_NY };
-const tapeXAt = (y: number) => TAPE_A.x + ((y - TAPE_A.y) / (TAPE_B.y - TAPE_A.y)) * (TAPE_B.x - TAPE_A.x);
-const HEAD_Y = (REEL_UP_Y + REEL_DN_Y) / 2;
-const HEAD_X = tapeXAt(HEAD_Y);
-
-const Machine: React.FC<{ S: number; k: number }> = ({ S, k }) => {
-  const lw = lineW(k);
-  const corner = wpx(CORNER, k);
-  const small = wpx(SEAL_R, k);
-  const winW = WIN.x1 - WIN.x0;
-  const winH = WIN.y1 - WIN.y0;
-  const winR = Math.max(0, corner - lw / 2);
-  const level = WIN.y1 - stockAt(S) * winH;
-  const tape = tapeAngleAt(S);
-  const phase = lampPhaseAt(S);
-  const second = busy(S);
-  const lamps: React.ReactNode[] = [];
-  for (let row = 0; row < LAMP_ROWS; row++) {
-    for (let col = 0; col < LAMP_COLS; col++) {
-      const s = row + LAMP_SLANT * col;
-      const wave = (p: number) => {
-        const d0 = (((s - p) % LAMP_PERIOD) + LAMP_PERIOD) % LAMP_PERIOD;
-        const d = Math.min(d0, LAMP_PERIOD - d0);
-        return Math.exp(-(d * d) / (2 * LAMP_SOFT * LAMP_SOFT));
-      };
-      const b = Math.max(wave(phase), second * wave(phase + LAMP_PERIOD / 2));
-      lamps.push(
-        <circle key={`${row}-${col}`} cx={LAMP_X0 + col * LAMP_DX} cy={LAMP_Y0 + row * LAMP_DY} r={LAMP_R} fill={V_INK} opacity={(INK_LO + (INK_HI - INK_LO) * b).toFixed(4)} />,
-      );
-    }
-  }
-  const headTop = HEAD_Y - HEAD.h / 2;
-  const headBot = HEAD_Y + HEAD.h / 2;
-  const strand =
-    `M${TAPE_A.x.toFixed(2)} ${TAPE_A.y.toFixed(2)}L${tapeXAt(headTop).toFixed(2)} ${headTop.toFixed(2)}` +
-    `M${tapeXAt(headBot).toFixed(2)} ${headBot.toFixed(2)}L${TAPE_B.x.toFixed(2)} ${TAPE_B.y.toFixed(2)}`;
-  const seams = `M${BODY.x0} ${PLINTH_Y}H${BODY.x1}M${SEAM_L} ${BODY.y0}V${PLINTH_Y}M${SEAM_R} ${BODY.y0}V${PLINTH_Y}`;
-  const vents = VENTS.map((x) => `M${x} ${PLINTH_Y + 11}V${BODY.y1 - 11}`).join("");
-  const gauge = Array.from({ length: GAUGE_TICKS }, (_, i) => {
-    const y = WIN.y0 + (winH * (i + 1)) / (GAUGE_TICKS + 1);
-    return `M${WIN.x1 + lw / 2} ${y.toFixed(2)}h${GAUGE_LEN}`;
-  }).join("");
-  const toggles = TOGGLES.map((t) => `M${t.x} ${TOGGLE_Y}L${t.x + t.lean} ${TOGGLE_Y - TOGGLE_LEN}`).join("");
+/** The bead that writes a feed. On the touch frame its front edge meets the
+ *  silhouette; from there it drains into the shape as the tip runs on to its seat. */
+const FeedBead: React.FC<{ s: Sector; S: number; k: number }> = ({ s, S, k }) => {
+  const len = feedLen(s, S);
+  const w = redW(k);
+  const full = BEAD_RATIO * w;
+  const drain = S < s.contact ? 0 : clamp01((len - s.sTouch) / s.beadC);
+  if (drain >= 1) return null;
+  const r = lerp(full, w / 2, drain);
+  const y = SOURCE_Y + s.dir * len;
   return (
     <g>
-      {/* the cabinet's face hides where the slots begin */}
-      <rect x={BODY.x0} y={BODY.y0} width={BODY.x1 - BODY.x0} height={BODY.y1 - BODY.y0} rx={corner.toFixed(3)} fill={V_PAPER} />
-      {/* the stock: a counted stack that sinks out of the tank as it is dealt */}
+      {drain > 0 ? <circle cx={s.x} cy={y.toFixed(3)} r={r.toFixed(3)} fill={RED} /> : null}
+      <Bead id={`${ID}-${s.id}-bead`} x={s.x} y={y} k={k} r={r} opacity={1 - smoothstep(drain)} />
+    </g>
+  );
+};
+
+/** the square that holds a pictogram with room for its shadow */
+const HALF = PICTO * 0.7;
+/** Per sector, always there: the silhouette as a clip, and a mask of everything OUTSIDE it. */
+const SectorDefs: React.FC<{ s: Sector }> = ({ s }) => (
+  <defs>
+    <clipPath id={`${ID}-${s.id}-shape`}>
+      <path d={s.d} transform={s.transform} />
+    </clipPath>
+    <mask id={`${ID}-${s.id}-outside`} maskUnits="userSpaceOnUse" x={s.x - HALF} y={s.y - HALF} width={2 * HALF} height={2 * HALF}>
+      <rect x={s.x - HALF} y={s.y - HALF} width={2 * HALF} height={2 * HALF} fill="#FFFFFF" />
+      <path d={s.d} transform={s.transform} fill="#000000" />
+    </mask>
+  </defs>
+);
+
+/** The soaked part of a silhouette at S: a clean, slightly irregular ink front
+ *  with a narrow feather that grows from the point of contact, clipped to the
+ *  shape (so its knocked-out details stay paper and nothing spills outside). */
+const Soaked: React.FC<{ s: Sector; S: number; fill: string }> = ({ s, S, fill }) => {
+  const u = (S - s.contact + FLOOD_LEAD) / FLOOD_F;
+  if (u <= 0) return null;
+  return (
+    <g clipPath={`url(#${ID}-${s.id}-shape)`}>
+      {u < 1 ? (
+        <path d={blobD(s.x, s.touchY, s.rEnd * soak(u), s.ph)} fill={fill} style={{ filter: `blur(${FEATHER}px)` }} />
+      ) : (
+        <rect x={s.x - HALF} y={s.y - HALF} width={2 * HALF} height={2 * HALF} fill={fill} />
+      )}
+    </g>
+  );
+};
+
+/** The paper shadow of the red in one sector. It is the shadow of the soaked
+ *  part only where it falls OUTSIDE the silhouette: ink soaking through paper
+ *  casts no shadow at its own front. */
+const FloodShadow: React.FC<{ s: Sector; S: number; k: number }> = ({ s, S, k }) => {
+  if (S - s.contact + FLOOD_LEAD <= 0) return null;
+  return (
+    <g mask={`url(#${ID}-${s.id}-outside)`}>
+      <g style={{ filter: paperShadow(k) }}>
+        <Soaked s={s} S={S} fill={RED} />
+      </g>
+    </g>
+  );
+};
+
+/** The red in one sector: it soaks through the silhouette from the point of
+ *  contact; the band just behind the front is wet (RED_WET) and dries to RED;
+ *  then one soft highlight crosses the printed shape. */
+const Flood: React.FC<{ s: Sector; S: number }> = ({ s, S }) => {
+  const t = S - s.contact + FLOOD_LEAD;
+  if (t <= 0) return null;
+  const r = s.rEnd * soak(t / FLOOD_F);
+  const wetOn = t < FLOOD_F + WET_DRY_F;
+  const stops: React.ReactNode[] = [];
+  if (wetOn) {
+    for (let i = 0; i <= WET_STOPS; i++) {
+      const frac = i / WET_STOPS;
+      // wet where the front has just passed: by age (it dries over WET_DRY_F) and by distance behind the front (WET_LEN)
+      const age = Math.max(0, t - FLOOD_F * soakInv(frac));
+      const behind = Math.max(0, r - frac * s.rEnd);
+      const wet = (1 - smoothstep(age / WET_DRY_F)) * (1 - smoothstep(behind / WET_LEN));
+      stops.push(<stop key={i} offset={frac.toFixed(4)} stopColor={mixHex(RED, RED_WET, wet)} />);
+    }
+  }
+  const sw = (t - FLOOD_F + 2) / SWEEP_F;
+  const sweepOn = sw > 0 && sw < 1;
+  const span = PICTO * 0.62 + SWEEP_BAND;
+  const sx = s.x - span + 2 * span * sw;
+  const ux = Math.cos(SWEEP_TILT);
+  const uy = Math.sin(SWEEP_TILT);
+  return (
+    <g>
       <defs>
-        <clipPath id="ta-window">
-          <rect x={WIN.x0} y={WIN.y0} width={winW} height={winH} rx={winR.toFixed(3)} />
-        </clipPath>
+        {wetOn ? (
+          <radialGradient id={`${ID}-${s.id}-wet`} gradientUnits="userSpaceOnUse" cx={s.x} cy={s.touchY.toFixed(2)} r={s.rEnd.toFixed(2)}>
+            {stops}
+          </radialGradient>
+        ) : null}
+        {sweepOn ? (
+          <linearGradient
+            id={`${ID}-${s.id}-sweep`}
+            gradientUnits="userSpaceOnUse"
+            x1={(sx - SWEEP_BAND * ux).toFixed(2)}
+            y1={(s.y - SWEEP_BAND * uy).toFixed(2)}
+            x2={(sx + SWEEP_BAND * ux).toFixed(2)}
+            y2={(s.y + SWEEP_BAND * uy).toFixed(2)}
+          >
+            <stop offset={0} stopColor={RED_HI} stopOpacity={0} />
+            <stop offset={0.5} stopColor={RED_HI} stopOpacity={0.8} />
+            <stop offset={1} stopColor={RED_HI} stopOpacity={0} />
+          </linearGradient>
+        ) : null}
       </defs>
-      <rect x={WIN.x0} y={WIN.y0} width={winW} height={winH} rx={winR.toFixed(3)} fill={V_INK} opacity={GLASS} />
-      {level < WIN.y1 - 0.2 ? (
-        <g clipPath="url(#ta-window)">
-          <RedBar id="ta-stock" from={{ x: CX, y: level }} to={{ x: CX, y: WIN.y1 + 80 }} width={winW} k={k} slot radius={0} seam={STOCK_SEAM} />
+      <Soaked s={s} S={S} fill={wetOn ? `url(#${ID}-${s.id}-wet)` : RED} />
+      {sweepOn ? (
+        <g clipPath={`url(#${ID}-${s.id}-shape)`}>
+          <rect x={s.x - HALF} y={s.y - HALF} width={2 * HALF} height={2 * HALF} fill={`url(#${ID}-${s.id}-sweep)`} />
         </g>
       ) : null}
-      <g opacity={INK_HI} fill="none" stroke={V_INK} strokeWidth={lw.toFixed(3)} strokeLinecap="round" strokeLinejoin="round">
-        <rect x={BODY.x0} y={BODY.y0} width={BODY.x1 - BODY.x0} height={BODY.y1 - BODY.y0} rx={corner.toFixed(3)} />
-        <path d={seams} strokeLinecap="butt" />
-        <path d={vents} />
-        <path d={gauge} strokeLinecap="butt" />
-        {/* the tape unit */}
-        <Reel y={REEL_UP_Y} pack={PACK_UP} angle={20 + (tape * TAPE_REF_R) / PACK_UP} k={k} />
-        <Reel y={REEL_DN_Y} pack={PACK_DN} angle={200 + (tape * TAPE_REF_R) / PACK_DN} k={k} />
-        <path d={strand} strokeLinecap="butt" strokeOpacity={INK_LO / INK_HI} />
-        <rect x={HEAD_X - HEAD.w / 2} y={headTop} width={HEAD.w} height={HEAD.h} rx={small.toFixed(3)} />
-        {/* the console's switches */}
-        <path d={toggles} />
-        {TOGGLES.map((t) => (
-          <circle key={t.x} cx={t.x} cy={TOGGLE_Y} r={6} fill={V_INK} stroke="none" />
-        ))}
-      </g>
-      <Slot from={{ x: CX, y: WIN.y1 }} to={{ x: CX, y: WIN.y0 }} width={winW} k={k} />
-      {lamps}
     </g>
+  );
+};
+
+/** Everything that lies UNDER the clipping: the waiting silhouettes, the feeds
+ *  (with their beads) and, over them, the red soaking into each sector. It is drawn in the stage's photo layer, before the photograph,
+ *  so the clipping really covers where the feeds come from (and its contact
+ *  shadow falls on them). World px, same camera as the drawing. */
+const UnderClipping: React.FC<{ S: number; cam: Cam }> = ({ S, cam }) => {
+  const k = cam.k;
+  return (
+    <svg
+      width={FRAME_W}
+      height={FRAME_H}
+      viewBox={`0 0 ${FRAME_W} ${FRAME_H}`}
+      style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
+    >
+      {SECTORS.map((s) => (
+        <SectorDefs key={s.id} s={s} />
+      ))}
+      {SECTORS.map((s) => (
+        <Pictogram key={s.id} d={s.d} x={s.x} y={s.y} size={PICTO} rotate={s.rotate} rung={WAITING} />
+      ))}
+      {SECTORS.map((s) => (
+        <FloodShadow key={s.id} s={s} S={S} k={k} />
+      ))}
+      <RedGroup k={k}>
+        {SECTORS.map((s) => (
+          <Feed key={s.id} s={s} S={S} k={k} />
+        ))}
+        {SECTORS.map((s) => (
+          <FeedBead key={s.id} s={s} S={S} k={k} />
+        ))}
+      </RedGroup>
+      {SECTORS.map((s) => (
+        <Flood key={s.id} s={s} S={S} />
+      ))}
+    </svg>
   );
 };
 
@@ -425,23 +499,18 @@ const TechnologyAllocates: React.FC<z.infer<typeof schema>> = () => {
   const cam = camAt(S);
   const k = cam.k;
   return (
-    <VStage S={S} cam={cam} rest={REST}>
-      {RAYS.map((r) => (
-        <SlotGlass key={r.key} r={r} />
-      ))}
-      {RAYS.map((r) => (
-        <RayBar key={r.key} r={r} S={S} k={k} />
-      ))}
-      {RAYS.map((r) => (
-        <Slot key={r.key} from={r.slotFrom} to={r.slotTo} width={SLOT_W} k={k} radius={SLOT_W / 2} rung={INK_LO} />
-      ))}
-      {RAYS.map((r) => (
-        <BoldMark key={r.key} from={r.mark.from} to={r.mark.to} k={k} solid={clamp01((S - r.land + 1) / SOLID_F)} />
-      ))}
-      {RAYS.map((r) => (
-        <Icon key={r.key} d={r.icon} x={r.iconAt.x} y={r.iconAt.y} size={ICON} k={k} rung={INK_LO + (INK_HI - INK_LO) * smoothstep((S - r.land) / ICON_F)} />
-      ))}
-      <Machine S={S} k={k} />
+    <VStage
+      S={S}
+      cam={cam}
+      photos={
+        <>
+          <UnderClipping S={S} cam={cam} />
+          <VintagePhoto src={PHOTO_SRC} box={PHOTO} focus={PHOTO_FOCUS} zoom={PHOTO_ZOOM} cutline={CUTLINE} />
+        </>
+      }
+    >
+      <Rule from={{ x: CLIP.x0, y: RULE_TOP_Y }} to={{ x: CLIP.x1, y: RULE_TOP_Y }} k={k} kind="double" />
+      <Rule from={{ x: CLIP.x0, y: RULE_BOTTOM_Y }} to={{ x: CLIP.x1, y: RULE_BOTTOM_Y }} k={k} kind="hair" />
     </VStage>
   );
 };

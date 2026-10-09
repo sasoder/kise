@@ -14,11 +14,13 @@ import {
   INK_HI,
   INK_LO,
   InkPath,
+  KICKER_PAD,
   MARCH,
   RED,
   RED_HI,
   RISE_PX,
   RedGroup,
+  Rule,
   SEAM,
   UNIT_PX,
   Unit,
@@ -84,7 +86,7 @@ import type { Link } from "./aiReplacesMarketsGeom";
 
 // ---------------------------------------------------------------------------
 // AIReplacesMarkets — Logan Wright, "Brezhnev chose decay" (ChinaTalk), cut D.
-// ChinaTalk slightly-vintage kit (chinatalkVintage), 1080x1920, 24 fps, opaque.
+// ChinaTalk slightly-vintage kit, newsprint pass (chinatalkVintage), 1080x1920, 24 fps, opaque.
 //
 // CHECK LINE: China's bet is the Soviet bet again: take the market's tangled
 // web of trades away and put one AI in the middle that hands every player
@@ -109,7 +111,7 @@ import type { Link } from "./aiReplacesMarketsGeom";
 // from the place the tip crosses it. The chip's pins keep going as spokes at one
 // constant speed and touch the players one after another round the ring
 // (f40-68); each rim link bleeds from the player a spoke has just touched, and
-// MARKETS goes with the last (f68-82). The camera then pushes in while a wash
+// MARKETS (a kicker between two rules) goes with the last (f68-82). The camera then pushes in while a wash
 // rises in the chip (f80-111), one highlight runs out along every spoke (f114),
 // and trains of units run in from the discs that are too big, under the chip,
 // and out to the ones that are too small, until every disc sits on its ring and
@@ -139,6 +141,12 @@ const WORD_CAP = 0.669;
 const WORD_TRACK = 0.12;
 const MARKETS_PX = 64 / WORD_CAP;
 const MARKETS_Y = 122;
+/** MARKETS is set as a newspaper kicker: a bold rule above and a hair rule below it, as wide as the web */
+const WEB_X0 = Math.min(...PLAYERS.map((p) => p.x)) - RING_DRAW_R - 3;
+const WEB_X1 = Math.max(...PLAYERS.map((p) => p.x)) + RING_DRAW_R + 3;
+const KICK_TOP_Y = MARKETS_Y - 32 - KICKER_PAD;
+const KICK_BOT_Y = MARKETS_Y + 32 + KICKER_PAD;
+// (No rule at the foot of the page: tried at y 1770, it read as a floor under the bottom player once the kicker had gone.)
 
 // --- a web link: ink at the low rung; soaks away along its length from where red ink touched it:
 // the line itself goes first, a short soft wet end follows, so on any frame it is a line that is half gone ----
@@ -280,6 +288,7 @@ const AIReplacesMarkets: React.FC<Props> = () => {
   const washU = smoothstep((S - WASH_T0) / (WASH_T1 - WASH_T0));
   // MARKETS goes like ink on wet paper with the last web link
   const marketsDif = inkDiffuse(clamp01((S - LABEL_DIE_T) / LABEL_DIFF_F));
+  const kickOut = smoothstep((S - LABEL_DIE_T) / LABEL_DIFF_F);
   const box = { x0: CHIP.x - CHIP.half, y0: CHIP.y - CHIP.half, x1: CHIP.x + CHIP.half, y1: CHIP.y + CHIP.half };
 
   return (
@@ -288,6 +297,20 @@ const AIReplacesMarkets: React.FC<Props> = () => {
       {LINKS.map((l, i) => (
         <WebLink key={i} l={l} i={i} S={S} k={k} />
       ))}
+      {/* MARKETS as a kicker; its rules are written out from the middle on the frames the word bleeds away */}
+      {[
+        { y: KICK_TOP_Y, kind: "bold" as const },
+        { y: KICK_BOT_Y, kind: "hair" as const },
+      ].map(({ y, kind }) =>
+        kickOut <= 0 ? (
+          <Rule key={kind} from={{ x: WEB_X0, y }} to={{ x: WEB_X1, y }} k={k} kind={kind} />
+        ) : (
+          <g key={kind}>
+            <Rule from={{ x: WEB_X0, y }} to={{ x: 540, y }} k={k} kind={kind} draw={1 - kickOut} />
+            <Rule from={{ x: WEB_X1, y }} to={{ x: 540, y }} k={k} kind={kind} draw={1 - kickOut} />
+          </g>
+        ),
+      )}
       {marketsDif.opacity > 0.002 ? (
         <g opacity={(INK_HI * marketsDif.opacity).toFixed(4)} style={{ filter: worldBlur(marketsDif.blur, k) }}>
           <text
