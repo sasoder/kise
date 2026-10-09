@@ -184,6 +184,32 @@ const ADVANCE = (() => {
   return out;
 })();
 
+// SCAN=1: list anchorages where a west-bound hull (68 x 10.7 world px, bow at the point) lies
+// in water while the ground just west / north-west of the bow is land
+if (process.env.SCAN) {
+  const frac = (x0, x1, y0, y1) => {
+    let n = 0;
+    let l = 0;
+    for (let x = x0; x <= x1; x += 1.5) for (let y = y0; y <= y1; y += 1.5) {
+      n++;
+      if (isLand(x, y)) l++;
+    }
+    return l / n;
+  };
+  const rows = [];
+  for (let lon = 88.3; lon <= 90.0; lon += 0.02)
+    for (let lat = 21.3; lat <= 22.1; lat += 0.02) {
+      const [bx, by] = P([lon, lat]);
+      const hull = frac(bx + 2, bx + 68, by - 10.7, by + 1);
+      if (hull > 0.04) continue;
+      const exit = frac(bx - 16, bx - 1, by - 30.5, by - 1.5);
+      const tip = isLand(bx - 1, by - 3) ? 1 : 0;
+      rows.push({ lon: lon.toFixed(2), lat: lat.toFixed(2), hull: hull.toFixed(2), exit: exit.toFixed(2), tip, dx: (bx - MURSHIDABAD[0]).toFixed(0), dy: (by - MURSHIDABAD[1]).toFixed(0) });
+    }
+  rows.sort((a, b) => b.exit - a.exit);
+  console.log(rows.slice(0, 25).map((r) => JSON.stringify(r)).join("\n"));
+}
+
 // the land round Murshidabad (the hatch disc's clip)
 const HATCH_R = 92; // world px: the clip window's half-size
 const BENGAL_LAND = polygonClipping.intersection(LANDW, rectPoly(MURSHIDABAD[0] - HATCH_R, MURSHIDABAD[1] - HATCH_R, MURSHIDABAD[0] + HATCH_R, MURSHIDABAD[1] + HATCH_R));
@@ -195,7 +221,20 @@ const INDIA_AT = P([79.4, 22.35]);
 
 // THE SHIP (an East Indiaman): its bow sails from far down the bay to just off the Hooghly mouth
 const SHIP_FROM = P([87.5, 11.3]);
-const SHIP_STOP = P([89.14, 21.1]);
+const SHIP_STOP = P([88.87, 21.48]); // her bow under the delta shore, south-south-east of the seat
+{
+  const fr = (x0, x1, y0, y1) => {
+    let n = 0;
+    let l = 0;
+    for (let x = x0; x <= x1; x += 1.5) for (let y = y0; y <= y1; y += 1.5) {
+      n++;
+      if (isLand(x, y)) l++;
+    }
+    return (l / n).toFixed(2);
+  };
+  const [bx, by] = SHIP_STOP;
+  console.log(`  ship: land under her hull ${fr(bx + 2, bx + 68, by - 10.7, by + 1)}; land where the column comes ashore (north-west of her bow) ${fr(bx - 30, bx + 4, by - 62, by - 26)}`);
+}
 console.log(`  ship from (${SHIP_FROM.map((v) => v.toFixed(1))}) ${isLand(...SHIP_FROM) ? "LAND (!)" : "sea"} to (${SHIP_STOP.map((v) => v.toFixed(1))}) ${isLand(...SHIP_STOP) ? "LAND (!)" : "sea"}`);
 
 writeFileSync(

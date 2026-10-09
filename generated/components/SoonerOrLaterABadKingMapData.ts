@@ -19,4 +19,4 @@ export const BENGAL_LAND_D = "M810.87,644.44L994.87,644.44L994.87,767.23L993.29,
 export const INDIA_AT: P2 = [513.346,833.351];
 /** the ship's bow: where it starts (far down the bay) and where it anchors (off the Hooghly mouth) */
 export const SHIP_FROM: P2 = [896.948,1357.362];
-export const SHIP_STOP: P2 = [949.108,882.216];
+export const SHIP_STOP: P2 = [936.066,864.652];

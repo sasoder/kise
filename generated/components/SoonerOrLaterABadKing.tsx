@@ -24,14 +24,15 @@
 // relay round the map (old one lifts away, a new sound one drops and settles)
 // while the camera pushes toward Bengal; on "bad king" the succession at
 // Murshidabad lands a cracked, crooked crown. ORANGE = the British (the East
-// India Company) and nothing else: an orange East Indiaman, far down the bay
-// from the start, sails up to the Hooghly mouth and anchors; a column of orange
-// dots, four abreast, leaves it rank by rank and marches inland; as its head
-// reaches the seat the cracked
+// India Company) and nothing else: an orange East Indiaman (a world object at
+// map scale) sails in from the right, due west across the head of the bay, and
+// eases to an anchorage under the delta shore; a column of orange dots, four
+// abreast, comes out from behind her bow rank by rank and marches inland; as
+// its inner file's leading dot touches the cracked crown (f205) the
 // crown off its seat (it lies fallen beside it); a Union Flag (orange and
 // cream) is planted on the seat and a soft disc of orange hatch spreads round it and keeps
-// creeping outward while the column wheels round the seat into concentric
-// arcs, still marching, slower, in the last frame.
+// creeping outward while the four files wheel round the seat, each onto its own
+// ring, and close up; the outer files are still marching in the last frame.
 //
 // ELEMENT TYPES: the map, the seat + its crown, the orange (ship, dots,
 // flag, hatch), one label (INDIA, on the word). No place names, no dates.
@@ -63,7 +64,7 @@ import {
   viewRect,
   type Cam,
 } from "./incaShared";
-import { BENGAL_LAND_D, INDIA_AT, MURSHIDABAD, SEATS, SHIP_FROM, SHIP_STOP, type P2 } from "./SoonerOrLaterABadKingMapData";
+import { BENGAL_LAND_D, INDIA_AT, MURSHIDABAD, SEATS, SHIP_STOP, type P2 } from "./SoonerOrLaterABadKingMapData";
 import { LEVELS } from "./SoonerOrLaterABadKingLevels";
 
 export const FPS = 24000 / 1001;
@@ -82,13 +83,13 @@ export const T = {
   label: 83, // INDIA slides up, landing on the word (f91)
   labelDim: [108, 122] as [number, number],
   badStart: 134, // the old crown at Murshidabad lifts; the bad one lands at ~f148
-  ship: [92, 156] as [number, number], // the ship sails up the bay and anchors
+  anchor: 156, // the ship is at her anchorage (she enters the frame's right edge at ~f126)
   march: 158, // the first rank leaves the ship
-  slow: 214, // the head of the column begins to slow as it wheels round the seat
-  knock: 205, // the cracked crown is struck off
+  knock: 205, // the frame the leading dot touches the cracked crown: it is struck off (MARCH_V is solved for this)
   seatTurn: [206, 213] as [number, number],
   hatch: [207, 224] as [number, number], // then it keeps creeping outward
-  flag: [206, 214] as [number, number], // the Union Flag is planted on the seat
+  pole: [207, 213] as [number, number], // the flag pole rises out of the seat
+  unfurl: [211, 219] as [number, number], // the Union Flag unfurls from the pole outward
 };
 const D_IN = 11; // a crown drops and settles
 const D_OUT = 9; // a crown lifts away
@@ -349,140 +350,153 @@ const hash = (i: number, q: number) => {
   const v = Math.sin(i * 12.9898 + q * 78.233) * 43758.5453;
   return v - Math.floor(v);
 };
-// THE COLUMN'S ROUTE (world px): it forms up just off the ship's bow (clear of her
-// bowsprit), marches north up the river line, bears north-west and wheels clockwise round
-// the seat (radius WHEEL_R) from the south-west to just short of the flag pole. A uniform
-// Catmull-Rom through these points, by arclength.
-const WHEEL_R = 50;
-const ROUTE: P2[] = (() => {
+// THE SHIP is a WORLD object at true map scale: SHIP_S world px per ship unit (her hull is
+// 300 units long = 68 world px = ~300 screen px in the close frame). She is drawn side-on,
+// bow to the LEFT, and sails the way she points: due west on a level course across the head
+// of the bay, in from beyond the right edge, to an anchorage where her bow is under the delta
+// shore (SHIP_STOP, the bow at the waterline). Steady speed, then one long ease-out.
+const SHIP_S = 68 / 300;
+const SHIP_V = 6.5; // world px per frame under way
+const SHIP_EASE = 20; // frames of the ease-out to her anchorage
+/** how far she still has to run (world px) and her speed as a fraction of SHIP_V */
+const shipRun = (f: number) => {
+  const left = T.anchor - f;
+  if (left <= 0) return { d: 0, sp: 0 };
+  if (left >= SHIP_EASE) return { d: SHIP_V * (SHIP_EASE / 2 + left - SHIP_EASE), sp: 1 };
+  return { d: (SHIP_V * left * left) / (2 * SHIP_EASE), sp: left / SHIP_EASE };
+};
+
+// THE COLUMN'S ROUTE (world px). Every rank is born hidden behind her head-sails (BIRTH, a
+// fixed spot in her fore part), marches in ONE straight line north-west across the jib's
+// luff onto the shore and on inland, and meets the seat's rings on their tangent: there the
+// four files wheel clockwise round the seat, each on its own ring (radius 28, 36, 44, 52
+// world px), and run on until each dot reaches its place; the files close up from the far
+// (north) end, just short of the flag pole.
+const WHEEL_R = 40; // the column's centre line round the seat
+const BIRTH: P2 = [SHIP_STOP[0] + 9, SHIP_STOP[1] - 23];
+const LANES = [-12, -4, 4, 12]; // world px to the left of the centre line (left = the outer ring)
+const RING_END_DEG = [256, 259, 261, 262]; // where each file's leading dot stands (inner ring first)
+const CONTACT_DEG = 229; // where the inner file's leading dot touches the crown's band
+const PLACE_GAP = 7.3; // world px between dots standing on a ring (1.46 diameters)
+const ROUTE = (() => {
   const M = MURSHIDABAD;
-  const R0: P2 = [SHIP_STOP[0] - 29, SHIP_STOP[1] - 3]; // off the bow
-  const ctl: P2[] = [R0, [M[0] + 7, M[1] + 116], [M[0] + 1, M[1] + 88], [M[0] - 14, M[1] + 58]];
-  for (let th = 140; th <= 250.5; th += 13.75) ctl.push([M[0] + WHEEL_R * Math.cos((th * Math.PI) / 180), M[1] + WHEEL_R * Math.sin((th * Math.PI) / 180)]);
-  const ext: P2[] = [[2 * ctl[0][0] - ctl[1][0], 2 * ctl[0][1] - ctl[1][1]], ...ctl, [2 * ctl[ctl.length - 1][0] - ctl[ctl.length - 2][0], 2 * ctl[ctl.length - 1][1] - ctl[ctl.length - 2][1]]];
-  const out: P2[] = [ctl[0]];
-  for (let i = 1; i < ext.length - 2; i++) {
-    const [p0, p1, p2, p3] = [ext[i - 1], ext[i], ext[i + 1], ext[i + 2]];
-    for (let q = 1; q <= 20; q++) {
-      const t = q / 20;
-      const c = (a: number) => 0.5 * (2 * p1[a] + (-p0[a] + p2[a]) * t + (2 * p0[a] - 5 * p1[a] + 4 * p2[a] - p3[a]) * t * t + (-p0[a] + 3 * p1[a] - 3 * p2[a] + p3[a]) * t * t * t);
-      out.push([c(0), c(1)]);
+  const d = Math.hypot(BIRTH[0] - M[0], BIRTH[1] - M[1]);
+  const a0 = Math.atan2(BIRTH[1] - M[1], BIRTH[0] - M[0]);
+  const te = a0 + Math.acos(WHEEL_R / d); // the tangent point's position angle (clockwise travel)
+  const E: P2 = [M[0] + WHEEL_R * Math.cos(te), M[1] + WHEEL_R * Math.sin(te)];
+  const Ls = Math.hypot(E[0] - BIRTH[0], E[1] - BIRTH[1]);
+  const u: P2 = [(E[0] - BIRTH[0]) / Ls, (E[1] - BIRTH[1]) / Ls];
+  return { te, Ls, u, n: [u[1], -u[0]] as P2 };
+})();
+/** a dot's place, `l` world px along the file whose lane is `o` */
+const lanePoint = (l: number, o: number): P2 => {
+  if (l <= ROUTE.Ls) return [BIRTH[0] + ROUTE.u[0] * l + ROUTE.n[0] * o, BIRTH[1] + ROUTE.u[1] * l + ROUTE.n[1] * o];
+  const r = WHEEL_R + o;
+  const a = ROUTE.te + (l - ROUTE.Ls) / r;
+  return [MURSHIDABAD[0] + r * Math.cos(a), MURSHIDABAD[1] + r * Math.sin(a)];
+};
+const LANE_END = LANES.map((o, j) => ROUTE.Ls + (WHEEL_R + o) * ((RING_END_DEG[j] * Math.PI) / 180 - ROUTE.te));
+export const CONTACT_L = ROUTE.Ls + (WHEEL_R + LANES[0]) * ((CONTACT_DEG * Math.PI) / 180 - ROUTE.te);
+// THE COLUMN: ranks of four abreast, RANK_GAP apart both ways, at ONE constant marching speed
+// from the frame a rank is born until each dot nears its own place, where it eases to a stand
+// (a file closes up from 1.6 to 1.46 diameters; it can never close further). Dots are world
+// objects: DOT_D across (22 screen px in the close frame), never scaled or faded.
+const RANKS = 18;
+export const DOT_D = 5; // world px
+const RANK_GAP = 8; // world px = 1.6 dot diameters
+const HALT = 10; // world px over which a dot eases into its place
+export const MARCH_V = CONTACT_L / (T.knock - T.march);
+export const columnAt = (frame: number): P2[] => {
+  const out: P2[] = [];
+  const hs = MARCH_V * (frame - T.march);
+  for (let r = 0; r < RANKS; r++) {
+    const a = hs - r * RANK_GAP;
+    if (a <= 0) break;
+    for (let j = 0; j < LANES.length; j++) {
+      const stop = LANE_END[j] - PLACE_GAP * r;
+      const x = stop - a;
+      const l = stop - (x >= HALT ? x : HALT * Math.exp((x - HALT) / HALT));
+      const sway = 0.15 * smoothstep((l - 30) / 30) * Math.sin(frame / 10 + 6.283 * hash(r * 4 + j, 2));
+      out.push(lanePoint(l, LANES[j] + sway));
     }
   }
   return out;
-})();
-const ROUTE_CUM = (() => {
-  const c = [0];
-  for (let i = 1; i < ROUTE.length; i++) c.push(c[i - 1] + Math.hypot(ROUTE[i][0] - ROUTE[i - 1][0], ROUTE[i][1] - ROUTE[i - 1][1]));
-  return c;
-})();
-export const ROUTE_LEN = ROUTE_CUM[ROUTE_CUM.length - 1];
-const routeAt = (s: number): { p: P2; n: P2 } => {
-  const q = Math.max(0, Math.min(ROUTE_LEN, s));
-  let i = 1;
-  while (i < ROUTE_CUM.length - 1 && ROUTE_CUM[i] < q) i++;
-  const l = ROUTE_CUM[i] - ROUTE_CUM[i - 1] || 1;
-  const u = (q - ROUTE_CUM[i - 1]) / l;
-  // the tangent, smoothed over a short span so the ranks turn as a body
-  const a = ROUTE[Math.max(0, i - 3)];
-  const b = ROUTE[Math.min(ROUTE.length - 1, i + 2)];
-  const tl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-  return { p: [ROUTE[i - 1][0] + (ROUTE[i][0] - ROUTE[i - 1][0]) * u, ROUTE[i - 1][1] + (ROUTE[i][1] - ROUTE[i - 1][1]) * u], n: [(b[1] - a[1]) / tl, -(b[0] - a[0]) / tl] };
-};
-// THE COLUMN: ranks of four abreast, RANK_GAP apart both ways, marching in step: one body
-// whose head is at arclength headS(frame); it slows as it wheels round the seat and is still
-// moving, slowly, in the last frame
-const RANKS = 18;
-const FILES = 4;
-const DOT_D = 22; // screen px across in the close frame
-const RANK_GAP = 8; // world px (~1.6 dot diameters in the close frame)
-const SLOW_F = 26;
-const MARCH_V = (ROUTE_LEN - 1.5) / (T.slow - T.march + (DURATION - 1 - T.slow) - ((DURATION - 1 - T.slow) * (DURATION - 1 - T.slow)) / (2 * SLOW_F));
-const headS = (f: number) => {
-  if (f <= T.march) return 0;
-  if (f <= T.slow) return MARCH_V * (f - T.march);
-  const d = Math.min(f - T.slow, SLOW_F);
-  return MARCH_V * (T.slow - T.march + d - (d * d) / (2 * SLOW_F));
-};
-export const columnAt = (frame: number): { p: P2; g: number }[] => {
-  const out: { p: P2; g: number }[] = [];
-  const hs = headS(frame);
-  for (let r = 0; r < RANKS; r++)
-    for (let j = 0; j < FILES; j++) {
-      const id = r * FILES + j;
-      const s = hs - r * RANK_GAP + 0.3 * Math.sin(frame / 7 + 6.283 * hash(id, 1)); // a very slight lag of its own
-      if (s <= 0.2) continue;
-      const { p, n } = routeAt(s);
-      const off = (j - (FILES - 1) / 2) * RANK_GAP + 0.25 * Math.sin(frame / 9 + 6.283 * hash(id, 2));
-      out.push({ p: [p[0] + n[0] * off, p[1] + n[1] * off], g: clamp01(s / 6) });
-    }
-  return out;
 };
 
-// THE SHIP: a mid-18th-century East Indiaman, side-on, drawn bow to the right and mirrored (she heads west of north, bow to the left); a box whose
-// origin is the bow at the waterline, the hull 300 long (x negative = aft, y negative = up)
-const SHIP_LEN = 300; // screen px in the close frame
-const sailD = (cx: number, yT: number, yB: number, hT: number, hB: number) =>
-  `M${cx - hT},${yT}L${cx + hT},${yT}Q${cx + hB + 6},${(yT + yB) / 2} ${cx + hB},${yB}Q${cx},${yB - 10} ${cx - hB},${yB}Q${cx - hB - 3},${(yT + yB) / 2} ${cx - hT},${yT}Z`;
-const SAILS: { d: string; cx: number; yT: number; yB: number; h: number }[] = [
-  [-62, -104, -52, 31, 35],
-  [-62, -152, -110, 22, 29],
-  [-62, -186, -158, 14, 19],
-  [-150, -112, -54, 35, 40],
-  [-150, -166, -118, 24, 32],
-  [-150, -206, -172, 15, 21],
-  [-232, -152, -120, 15, 22],
-].map(([cx, yT, yB, hT, hB]) => ({ d: sailD(cx, yT, yB, hT, hB), cx, yT, yB, h: hT }));
-const SPANKER_D = "M-234,-64L-234,-114L-290,-132L-300,-74Z";
-const JIB_D = "M52,-71L-58,-150L-56,-66Z";
+// THE SHIP'S DRAWING: a mid-18th-century East Indiaman. Authored bow to the right in a box
+// whose origin is the bow at the waterline (x negative = aft, y negative = up), then mirrored.
+// `full` 1 = sails drawing, 0 = slack at anchor.
+const sailD = (cx: number, yT: number, yB: number, hT: number, hB: number, full: number) => {
+  const b = 2 + 5 * full; // the leeches' belly
+  const roach = 3 + 4 * (1 - full); // the foot's rise
+  const w = hB - 2 * (1 - full); // a slack sail hangs a little narrower
+  return `M${cx - hT},${yT}L${cx + hT},${yT}Q${cx + w + b},${(yT + yB) / 2} ${cx + w},${yB}Q${cx},${yB - roach} ${cx - w},${yB}Q${cx - w - b * 0.5},${(yT + yB) / 2} ${cx - hT},${yT}Z`;
+};
+const SAIL_DEF: [number, number, number, number, number][] = [
+  [-62, -106, -47, 31, 35],
+  [-62, -154, -110, 22, 29],
+  [-62, -188, -158, 14, 19],
+  [-150, -112, -44, 35, 40],
+  [-150, -166, -116, 24, 32],
+  [-150, -206, -170, 15, 21],
+  [-232, -152, -118, 15, 22],
+];
+const JIB_D = "M56,-72L-62,-202L-58,-58Z";
+// everything of her that hides what is behind (hull + sail plan, the jib's luff its fore edge)
+const SHIP_ENVELOPE_D = "M56,-72L-62,-202L-150,-222L-232,-172L-301,-68L-294,2L-28,2L-2,-41Z";
+const shipTransform = (bowX: number, bowY: number, rot: number) =>
+  `translate(${bowX.toFixed(3)} ${bowY.toFixed(3)}) scale(${(-SHIP_S).toFixed(5)} ${SHIP_S.toFixed(5)}) rotate(${rot.toFixed(3)} -150 0)`;
 const HULL_D = "M-2,-41C0,-18 -8,-1 -28,2L-270,2C-284,0 -292,-12 -294,-30L-301,-68L-250,-63L-244,-48L-192,-46L-186,-38L-72,-38L-66,-47L-10,-47Z";
 const MASTS: [number, number, number][] = [
-  [-62, -44, -200],
+  [-62, -44, -202],
   [-150, -40, -222],
   [-232, -60, -172],
 ];
-const Ship: React.FC<{ x: number; y: number; len: number; rot: number; wake: number }> = ({ x, y, len, rot, wake }) => {
-  const s = len / 300;
-  const cw = 5 / Math.pow(s, 0.6); // the dark casing, in ship units
+/** bowX, bowY: her bow at the waterline (world px). rot: degrees about midships. */
+const Ship: React.FC<{ bowX: number; bowY: number; rot: number; wake: number; full: number }> = ({ bowX, bowY, rot, wake, full }) => {
+  const cw = 5; // the dark casing, ship units
+  const sails = SAIL_DEF.map(([cx, yT, yB, hT, hB]) => ({ d: sailD(cx, yT, yB, hT, hB, full), cx, yT, yB, h: hT }));
+  const spanker = `M-234,-64L-234,-114L-290,-132L${-300 + 4 * (1 - full)},-74Z`;
   return (
-    <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${(-s).toFixed(4)} ${s.toFixed(4)}) rotate(${rot.toFixed(2)} -150 0)`} strokeLinejoin="round" strokeLinecap="round">
-      {/* the wake: short engraved strokes astern, only while she is under way */}
-      {wake > 0.02 ? (
-        <g fill="none" stroke={INK} strokeOpacity={0.7 * wake} strokeWidth={3.2 / Math.pow(s, 0.6)}>
-          <path d="M-306,4q-22,-7 -44,1" />
-          <path d="M-318,16q-26,-7 -52,2" />
-          <path d="M-362,6q-18,-5 -36,1" />
+    <g transform={shipTransform(bowX, bowY, rot)} strokeLinejoin="round" strokeLinecap="round">
+      {/* the wake: engraved strokes trailing astern; they shorten and go as she loses way */}
+      {wake > 0.01 ? (
+        <g fill="none" stroke={INK} strokeOpacity={0.75 * Math.min(1, wake * 1.6)} strokeWidth={3.4}>
+          <path d={`M-304,3q${-13 * wake},-7 ${-50 * wake},2`} />
+          <path d={`M-312,14q${-16 * wake},-7 ${-66 * wake},3`} />
+          <path d={`M${-304 - 62 * wake},5q${-10 * wake},-5 ${-40 * wake},1`} />
         </g>
       ) : null}
       {/* dark casing under everything */}
-      <g fill={DARK} fillOpacity={0.7} stroke={DARK} strokeOpacity={0.7} strokeWidth={cw}>
+      <g fill={DARK} fillOpacity={0.72} stroke={DARK} strokeOpacity={0.72} strokeWidth={cw}>
         <path d={HULL_D} />
-        {SAILS.map((q, i) => (
+        {sails.map((q, i) => (
           <path key={i} d={q.d} />
         ))}
-        <path d={SPANKER_D} />
+        <path d={spanker} />
         <path d={JIB_D} />
       </g>
-      <g fill="none" stroke={DARK} strokeOpacity={0.7} strokeWidth={cw + 4}>
+      <g fill="none" stroke={DARK} strokeOpacity={0.72} strokeWidth={cw + 4}>
         {MASTS.map(([mx, y0, y1], i) => (
           <line key={i} x1={mx} y1={y0} x2={mx} y2={y1} />
         ))}
-        <line x1={-8} y1={-45} x2={60} y2={-75} />
+        <line x1={-8} y1={-45} x2={56} y2={-72} />
       </g>
       {/* spars */}
       <g fill="none" stroke={ACCENT_DEEP} strokeWidth={5}>
         {MASTS.map(([mx, y0, y1], i) => (
           <line key={i} x1={mx} y1={y0} x2={mx} y2={y1} />
         ))}
-        <line x1={-8} y1={-45} x2={60} y2={-75} />
+        <line x1={-8} y1={-45} x2={56} y2={-72} />
       </g>
-      {/* sails: orange, with their cloth seams */}
       <path d={JIB_D} fill={ACCENT} stroke={ACCENT_DEEP} strokeWidth={2.5} />
-      <path d={SPANKER_D} fill={ACCENT} stroke={ACCENT_DEEP} strokeWidth={2.5} />
-      {SAILS.map((q, i) => (
+      <path d="M30,-76L-48,-92M8,-100L-52,-126" fill="none" stroke={ACCENT_DEEP} strokeWidth={2.2} />
+      {/* sails: orange, with their cloth seams and dark yards */}
+      <path d={spanker} fill={ACCENT} stroke={ACCENT_DEEP} strokeWidth={2.5} />
+      {sails.map((q, i) => (
         <g key={i}>
           <path d={q.d} fill={ACCENT} stroke={ACCENT_DEEP} strokeWidth={2.5} />
-          <path d={`M${q.cx - q.h * 0.4},${q.yT + 3}L${q.cx - q.h * 0.46},${q.yB - 8}M${q.cx + q.h * 0.4},${q.yT + 3}L${q.cx + q.h * 0.46},${q.yB - 8}`} fill="none" stroke={ACCENT_DEEP} strokeWidth={2.2} />
+          <path d={`M${q.cx - q.h * 0.4},${q.yT + 3}L${q.cx - q.h * 0.46},${q.yB - 9}M${q.cx + q.h * 0.4},${q.yT + 3}L${q.cx + q.h * 0.46},${q.yB - 9}`} fill="none" stroke={ACCENT_DEEP} strokeWidth={2.2} />
           <line x1={q.cx - q.h - 4} y1={q.yT} x2={q.cx + q.h + 4} y2={q.yT} stroke={DARK} strokeOpacity={0.85} strokeWidth={4} />
         </g>
       ))}
@@ -502,7 +516,7 @@ const Ship: React.FC<{ x: number; y: number; len: number; rot: number; wake: num
     </g>
   );
 };
-const HATCH_R = 64; // world px (~150 km): how far the hatch has spread when it slows to a creep
+const HATCH_R = 58; // world px (~135 km): how far the hatch has spread when it slows to a creep
 const HATCH_CREEP = 0.2; // world px per frame, to the last frame
 const FLAG_H = 236; // screen px: the pole in the close frame
 const FLAG_W = 250; // the Union Flag, 5:3
@@ -521,44 +535,44 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
 
   // --- the advance
   const force = frame > T.march ? columnAt(frame) : [];
-  const dotR = (DOT_D / 2) * Math.pow(k / 4.4, 0.6);
-  // the ship: creeping north from the first frame, then up the bay; she eases to her anchorage
-  const shipU = 0.06 * clamp01((frame + 20) / (T.ship[0] + 20)) + 0.94 * smoothstep((frame - T.ship[0]) / (T.ship[1] - T.ship[0]));
-  const shipV = smoothstep((frame - T.ship[0]) / 10) * (1 - smoothstep((frame - (T.ship[1] - 14)) / 14));
-  const [shx, shy] = screenOf([SHIP_FROM[0] + (SHIP_STOP[0] - SHIP_FROM[0]) * shipU, SHIP_FROM[1] + (SHIP_STOP[1] - SHIP_FROM[1]) * shipU], cam);
-  const shipLen = SHIP_LEN * Math.pow(k / 4.4, 0.6);
-  const shipRot = -2.5 * shipV + 1.1 * Math.sin(frame / 10);
+  const dotR = (DOT_D / 2) * k;
+  // the ship: under way, then one ease-out to her anchorage; at anchor a slow roll
+  const run = shipRun(frame);
+  const anch = smoothstep((frame - (T.anchor - 8)) / 16);
+  const shipRot = 1.2 * run.sp * (1 - anch) + 0.8 * anch * Math.sin((2 * Math.PI * (frame - T.anchor)) / 72);
   const seatTurn = smoothstep((frame - T.seatTurn[0]) / (T.seatTurn[1] - T.seatTurn[0]));
   const hatchU = clamp01((frame - T.hatch[0]) / (T.hatch[1] - T.hatch[0]));
   const hatchR = HATCH_R * easeOut(hatchU) + HATCH_CREEP * Math.max(0, frame - T.hatch[0]);
   // --- the flag: a pre-1801 Union Flag in the house two tones (orange field, the saltire and
-  // the cross in cream with dark casing); it rises out of the seat in one eased move, then
-  // one slow wave runs along it
-  const flagG = easeOut((frame - T.flag[0]) / (T.flag[1] - T.flag[0]));
+  // the cross in cream with dark casing). The pole rises out of the seat ring; then the cloth,
+  // full size, unfurls from the pole outward, catching the wind, and settles into one slow wave
+  const poleG = easeOut((frame - T.pole[0]) / (T.pole[1] - T.pole[0]));
   const [mx, my] = screenOf(MURSHIDABAD, cam);
-  const poleH = FLAG_H * flagG;
+  const poleH = FLAG_H * poleG;
+  const unf = clamp01((frame - T.unfurl[0]) / (T.unfurl[1] - T.unfurl[0]));
+  const flagRx = FLAG_W * (1 - (1 - unf) * (1 - unf));
   const flag = (() => {
     const y0 = -poleH + 6;
-    const sy = 0.5 + 0.5 * flagG;
-    const wave = (x: number) => 11 * (x / FLAG_W) * Math.sin((2 * Math.PI * x) / 270 - (2 * Math.PI * (frame - T.flag[0])) / 46) + 8 * (x / FLAG_W) * (x / FLAG_W);
-    const M = (x: number, y: number) => `${(x * flagG).toFixed(2)},${(y0 + y * sy + wave(x)).toFixed(2)}`;
+    const gust = 1 + 1.3 * (1 - smoothstep((frame - T.unfurl[0]) / 16));
+    const wave = (x: number) => gust * 11 * (x / FLAG_W) * Math.sin((2 * Math.PI * x) / 270 - (2 * Math.PI * (frame - T.unfurl[0])) / 46) + 8 * (x / FLAG_W) * (x / FLAG_W);
+    const Mp = (x: number, y: number) => `${x.toFixed(2)},${(y0 + y + wave(x)).toFixed(2)}`;
     // a straight band a -> b of width w (flag units), bent by the wave
     const band = (a: P2, b: P2, w: number) => {
-      const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
       const n: P2 = [(-(b[1] - a[1]) / l) * (w / 2), ((b[0] - a[0]) / l) * (w / 2)];
       const one: string[] = [];
       const two: string[] = [];
       for (let i = 0; i <= 12; i++) {
         const x = a[0] + ((b[0] - a[0]) * i) / 12;
         const y = a[1] + ((b[1] - a[1]) * i) / 12;
-        one.push(M(x + n[0], y + n[1]));
-        two.push(M(x - n[0], y - n[1]));
+        one.push(Mp(x + n[0], y + n[1]));
+        two.push(Mp(x - n[0], y - n[1]));
       }
       return `M${one.join("L")}L${two.reverse().join("L")}Z`;
     };
     const W_ = FLAG_W;
     const H_ = FLAG_HT;
-    const field = band([0, H_ / 2], [W_, H_ / 2], H_);
+    const field = band([0, H_ / 2], [Math.max(0.01, flagRx), H_ / 2], H_); // the cloth that is out so far
     const saltire = (w: number) => band([-10, -6], [W_ + 10, H_ + 6], w) + band([-10, H_ + 6], [W_ + 10, -6], w);
     const cross = (w: number) => band([-4, H_ / 2], [W_ + 4, H_ / 2], w) + band([W_ / 2, -4], [W_ / 2, H_ + 4], w);
     return { field, saltire, cross };
@@ -590,7 +604,7 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
           </pattern>
           <radialGradient id="bkDisc" gradientUnits="userSpaceOnUse" cx={MURSHIDABAD[0]} cy={MURSHIDABAD[1]} r={Math.max(0.01, hatchR)}>
             <stop offset={0} stopColor="#fff" />
-            <stop offset={0.62} stopColor="#fff" />
+            <stop offset={0.8} stopColor="#fff" />
             <stop offset={1} stopColor="#000" />
           </radialGradient>
           <mask id="bkDiscMask" maskUnits="userSpaceOnUse" x={MURSHIDABAD[0] - 90} y={MURSHIDABAD[1] - 90} width={180} height={180}>
@@ -607,7 +621,7 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
         ) : null}
       </WorldSvg>
 
-      {/* screen-sized symbols: the label, the seats, the column, the ship, the crowns */}
+      {/* the label, the seats, the column, the ship (above the column: the ranks come out from behind her), the crowns, the flag */}
       <svg width={FRAME_W} height={FRAME_H} viewBox={`0 0 ${FRAME_W} ${FRAME_H}`} style={{ position: "absolute", left: 0, top: 0 }}>
         <CrownDefs />
         {labelOp > 0.002 ? (
@@ -658,18 +672,32 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
           );
         })}
 
-        {/* THE COLUMN: ranks of four, off the ship */}
-        {force.map((d, i) => {
-          const [x, y] = screenOf(d.p, cam);
-          return <circle key={`fd${i}`} cx={x} cy={y} r={dotR * (0.35 + 0.65 * d.g) + 2.2} fill={DARK} fillOpacity={0.7 * d.g} />;
-        })}
-        {force.map((d, i) => {
-          const [x, y] = screenOf(d.p, cam);
-          return <circle key={`fo${i}`} cx={x} cy={y} r={dotR * (0.35 + 0.65 * d.g)} fill={ACCENT} fillOpacity={d.g} />;
-        })}
+        {/* THE COLUMN: ranks of four; hidden while behind the ship, full size and solid from the first pixel past her jib */}
+        <defs>
+          <mask id="bkShipMask" maskUnits="userSpaceOnUse" x={0} y={0} width={FRAME_W} height={FRAME_H}>
+            <rect x={0} y={0} width={FRAME_W} height={FRAME_H} fill="#fff" />
+            <g transform={camTransform(cam).svg}>
+              <path transform={shipTransform(SHIP_STOP[0] + run.d, SHIP_STOP[1], shipRot)} d={SHIP_ENVELOPE_D} fill="#000" />
+            </g>
+          </mask>
+        </defs>
+        <g mask="url(#bkShipMask)">
+          {force.map((d, i) => {
+            const [x, y] = screenOf(d, cam);
+            return <circle key={`fd${i}`} cx={x} cy={y} r={dotR + 2.2} fill={DARK} fillOpacity={0.7} />;
+          })}
+          {force.map((d, i) => {
+            const [x, y] = screenOf(d, cam);
+            return <circle key={`fo${i}`} cx={x} cy={y} r={dotR} fill={ACCENT} />;
+          })}
+        </g>
 
-        {/* THE SHIP: orange from the first frame she is in view */}
-        {shx > -100 && shx < FRAME_W + 100 && shy > -100 && shy < FRAME_H + 400 ? <Ship x={shx} y={shy} len={shipLen} rot={shipRot} wake={shipV} /> : null}
+        {/* THE SHIP: a world object under the same camera transform as the land */}
+        {frame >= T.anchor - 60 ? (
+          <g transform={camTransform(cam).svg}>
+            <Ship bowX={SHIP_STOP[0] + run.d} bowY={SHIP_STOP[1]} rot={shipRot} wake={run.sp} full={1 - 0.6 * anch} />
+          </g>
+        ) : null}
 
         {/* the crowns */}
         {order.map(({ s, i }) => {
@@ -727,8 +755,8 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
           });
         })}
 
-        {/* THE FLAG: the Union Flag of 1707 (no St Patrick's saltire), orange and cream, planted on the taken seat */}
-        {flagG > 0.001 ? (
+        {/* THE FLAG: the Union Flag of 1707 (no St Patrick's saltire), orange and cream, raised on the taken seat */}
+        {poleG > 0.001 ? (
           <g transform={`translate(${mx.toFixed(2)} ${my.toFixed(2)})`} strokeLinejoin="round" strokeLinecap="round">
             <defs>
               <clipPath id="bkFlag">
@@ -736,15 +764,19 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
               </clipPath>
             </defs>
             <line x1={0} y1={0} x2={0} y2={-poleH} stroke={DARK} strokeOpacity={0.62} strokeWidth={15} />
-            <path d={flag.field} fill={DARK} fillOpacity={0.62} stroke={DARK} strokeOpacity={0.62} strokeWidth={7} />
-            <path d={flag.field} fill={ACCENT} />
-            <g clipPath="url(#bkFlag)">
-              <path d={flag.saltire(FLAG_SALTIRE + 9)} fill={DARK} fillOpacity={0.8} />
-              <path d={flag.saltire(FLAG_SALTIRE)} fill={INK} />
-              <path d={flag.cross(FLAG_CROSS + 12)} fill={DARK} fillOpacity={0.88} />
-              <path d={flag.cross(FLAG_CROSS)} fill={INK} />
-            </g>
-            <path d={flag.field} fill="none" stroke={ACCENT_DEEP} strokeWidth={2.5} />
+            {unf > 0 ? (
+              <>
+                <path d={flag.field} fill={DARK} fillOpacity={0.62} stroke={DARK} strokeOpacity={0.62} strokeWidth={7} />
+                <path d={flag.field} fill={ACCENT} />
+                <g clipPath="url(#bkFlag)">
+                  <path d={flag.saltire(FLAG_SALTIRE + 9)} fill={DARK} fillOpacity={0.8} />
+                  <path d={flag.saltire(FLAG_SALTIRE)} fill={INK} />
+                  <path d={flag.cross(FLAG_CROSS + 12)} fill={DARK} fillOpacity={0.88} />
+                  <path d={flag.cross(FLAG_CROSS)} fill={INK} />
+                </g>
+                <path d={flag.field} fill="none" stroke={ACCENT_DEEP} strokeWidth={2.5} />
+              </>
+            ) : null}
             <line x1={0} y1={0} x2={0} y2={-poleH} stroke={ACCENT} strokeWidth={9} />
             <circle cx={0} cy={-poleH - 4} r={8} fill={ACCENT} stroke={DARK} strokeOpacity={0.62} strokeWidth={2.5} />
           </g>
