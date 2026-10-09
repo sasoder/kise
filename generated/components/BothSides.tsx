@@ -17,13 +17,14 @@
 // and walks off to the right (f0-f43), the camera travelling with him, to two
 // Spaniards standing a short walk away; he turns back to face his brother,
 // fist to his chest, and the captain's hand comes down on his shoulder (the
-// gesture Moctezuma made to the other one). The camera pulls back to hold both
-// groups facing each other across a gap; an ORANGE kin bracket draws itself
-// from the crowned brother's head over the top to the other's (f76-f101), and a
-// fine dashed line drops down the gap from its bar to the ground (f100-f114),
-// the bar giving a few px under it. Then it holds, alive.
-// Orange = Texcoco's own: the diadem and the kin bracket, nothing else. No text
-// (the MOCTEZUMA label of the previous cut fades out over the first 8 frames).
+// gesture Moctezuma made to the other one). As he takes his place the band of
+// his topknot warms from cream to ORANGE (f48-f64): the same orange as the
+// diadem across the gap. The camera pulls back to hold both groups facing each
+// other (settled ~f100); on "both sides" the brothers lock eyes, chins up, the
+// banner stirs; then it holds, alive.
+// Orange = Texcoco's own: the diadem and the other brother's band, nothing
+// else. No lines, no text (the MOCTEZUMA label of the previous cut fades out
+// over the first 8 frames).
 //
 // Everything is derived from GaveTheTitle's exported end state (GAVE_END), so
 // the join stays exact whatever that cut's end framing is.
@@ -31,12 +32,12 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { ACCENT, ACCENT_DEEP, DARK, INK, smoothstep } from "./incaShared";
+import { smoothstep } from "./incaShared";
 import { DURATION as GAVE_DURATION, GAVE_END, GaveTableau, gaveState } from "./GaveTheTitle";
 import { SPECS, figureAnchors, toLocal, type FigPose } from "./texcocoFigures";
 import { FPS, Label, TexcocoPage, WALK, WorldSvg, makeCamera, poseTrack, shadeInk, track, walkPose, type P2 } from "./texcocoShared";
-import { BEARER_STAND, CAPTAIN_STAND, Conquistador, conqRig, type ConqPose } from "./bothSidesFigures";
-import { add, mix, mix2, mul, rot } from "./stringsMotion";
+import { BEARER_STAND, CAPTAIN_STAND, Conquistador, TopknotBand, conqRig, type ConqPose } from "./bothSidesFigures";
+import { add, mix, mix2 } from "./stringsMotion";
 
 export { FPS };
 export const DURATION = 126;
@@ -57,7 +58,7 @@ const [X0, Y0] = GAVE_END.b1.at;
 // ---- the walk: a brisk step, the planted foot never sliding
 const CYCLE = 20;
 const STRIDE = 45;
-const T = { go: 8, stop: 36, on: 45, tie: 76, tied: 101, cut: 100, cutDone: 114 };
+const T = { go: 8, stop: 36, on: 45, warm: 48, warmed: 64, lock: 99, locked: 114 };
 const walkAmount = (f: number) => smoothstep((f - T.go) / 6) * (1 - smoothstep((f - T.stop) / 7));
 /** frames' worth of full-speed walking done by frame f */
 const WALKED = (() => {
@@ -111,7 +112,9 @@ const b1Track = poseTrack([
   [46, { ...WALK_BASE, yaw: 0.1, headYaw: -0.5, pitch: -2, lean: 0.5, crouch: 2.2, brow: 0.6, lids: 0, mouth: -0.4, armL: { w: [-14, -152], elbow: [-0.6, 1], fist: 0.7, hand: 0 }, armR: { w: [14, -158], elbow: [0.6, 1], fist: 0.8, hand: 0 } }],
   [54, { ...STOOD, pitch: -5, armR: { w: [10, -180], elbow: [1, 0.7], fist: 0.85, hand: -16 } }],
   [63, STOOD],
-  [125, { ...STOOD, pitch: -9.5, lean: -1.5 }],
+  [T.lock, { ...STOOD, pitch: -8.5, lean: -1.3 }],
+  [T.locked, { ...STOOD, pitch: -13, lean: -2.4, brow: 0.6, mouth: -0.35, armR: { ...STOOD.armR, w: [0, -196] } }],
+  [125, { ...STOOD, pitch: -13.4, lean: -2.5, brow: 0.6, mouth: -0.35, armR: { ...STOOD.armR, w: [0, -196] } }],
 ]);
 /** the previous cut's idle carried on, measured from its last frame (so f0 is that frame exactly) */
 const idleOn = (q: FigPose, f: number, seed: number): FigPose => {
@@ -133,20 +136,17 @@ const WORLD_L = GAVE_END.b0.at[0] - 67 * GAVE_END.b0.scale;
 const WORLD_R = BEAR_AT[0] + 60 * BEAR_S;
 const K_END = (1048 - 32) / (WORLD_R - WORLD_L);
 const CX_END = (WORLD_L + WORLD_R) / 2;
-/** the feet's screen y in the final wide, and the bracket bar's */
-const FEET_SY = 1356;
-const BAR_SY = 462;
+/** the feet's screen y in the final wide */
+const FEET_SY = 1282;
 const CY_END = Y0 - (FEET_SY - 960) / K_END;
 const K_MID = Math.min(C0.k * 0.86, 0.94);
 const camAt = makeCamera([
   { f: 0, k: C0.k, wx: C0.cx, wy: C0.cy, sx: 540, sy: 960 },
   { f: 5, k: C0.k * 0.997, wx: C0.cx + 12 * U, wy: C0.cy, sx: 540, sy: 960 },
   { f: 42, k: K_MID, wx: X1 + 44 * U, wy: mix(C0.cy, CY_END, 0.25), sx: 540, sy: 960 },
-  { f: 94, k: K_END / 1.032, wx: CX_END, wy: CY_END, sx: 540, sy: 960 },
+  { f: 100, k: K_END / 1.03, wx: CX_END, wy: CY_END, sx: 540, sy: 960 },
   { f: 125, k: K_END, wx: CX_END, wy: CY_END, sx: 540, sy: 960 },
 ]);
-const BAR_Y = CY_END + (BAR_SY - 960) / K_END;
-const GROUND_Y = Y0 + 30 * U;
 
 // ---------------------------------------------------------------------------
 // THE STATE AT A FRAME
@@ -163,12 +163,12 @@ const bothState = (f: number) => {
   const mocPose: FigPose = { ...g.moc.pose, headYaw: mix(g.moc.pose.headYaw, 0.5, mh), pitch: mix(g.moc.pose.pitch, -2, mh), brow: mix(g.moc.pose.brow, 0.5, mh), mouth: mix(g.moc.pose.mouth, -0.3, mh) };
   // the captain and the bearer
   const on = capOn(f);
-  const rest = toLocal(add(b1.shoulderR, [15 * U, 3 * U]), CAP_AT, CAP_S);
+  const rest = toLocal(add(b1.shoulderR, [13 * U, 7 * U]), CAP_AT, CAP_S);
   const farW = add(mix2(CAPTAIN_STAND.far.w, rest, on), [-10 * Math.sin(Math.PI * on), -8 * Math.sin(Math.PI * on)]);
   const farElbow: P2 = [mix(-0.3, 0.5, on), 1];
   // the hand lies along the shoulder, whatever the forearm's angle
   const fore = conqRig("captain", { ...CAPTAIN_STAND, lean: -1.6 * on, far: { w: farW, elbow: farElbow, fist: 0, hand: 0 } }).far.dir;
-  let turn = 168 - (Math.atan2(fore[1], fore[0]) * 180) / Math.PI;
+  let turn = 156 - (Math.atan2(fore[1], fore[0]) * 180) / Math.PI;
   turn -= 360 * Math.round(turn / 360);
   const capPose: ConqPose = {
     ...CAPTAIN_STAND,
@@ -183,58 +183,19 @@ const bothState = (f: number) => {
       hand: turn * smoothstep(on),
     },
   };
-  const bearPose: ConqPose = { ...BEARER_STAND, headYaw: -0.68 + 0.03 * Math.sin(f / 21 + 2), roll: 0.5 * Math.sin(f / 15), lean: 0.3 * Math.sin(f / 25 + 1), wave: f / 5.2 };
-  // the kin bracket: from the point of the diadem on one head to the topknot of the other
-  const b0 = figureAnchors(SPECS.brother0, g.b0.pose, g.b0.at, g.b0.scale);
-  const dy = Math.sin(g.diadem.yaw);
-  const tip0 = add(g.diadem.at, rot(mul([17.5 * dy * Math.abs(dy), -61 - 2 * Math.abs(dy)], g.diadem.scale), g.diadem.rot));
-  const tip1 = add(b1.crown.at, rot(mul([-5 * Math.sin(b1Pose.headYaw), -58], b1.crown.scale), b1.crown.rot));
-  const gapX = mix(g.moc.at[0] + 58 * g.moc.scale, b1At[0] - 44 * U, 0.5);
+  const bearPose: ConqPose = { ...BEARER_STAND, headYaw: -0.68 + 0.03 * Math.sin(f / 21 + 2), roll: 0.5 * Math.sin(f / 15), lean: 0.3 * Math.sin(f / 25 + 1), wave: f / 5.2 + 2.2 * smoothstep((f - 97) / 18) };
+  // "both sides": the crowned brother lifts his chin to meet his brother's eye (the diadem rides his head)
+  const lock = smoothstep((f - T.lock) / (T.locked - T.lock));
+  const b0Pose: FigPose = lock > 0 ? { ...g.b0.pose, pitch: g.b0.pose.pitch - 4.5 * lock, brow: mix(g.b0.pose.brow, 0.35, lock) } : g.b0.pose;
+  const b0 = figureAnchors(SPECS.brother0, b0Pose, g.b0.at, g.b0.scale);
+  const diadem = lock > 0 ? { ...g.diadem, at: b0.crown.at, rot: b0.crown.rot, yaw: b0.crown.yaw } : g.diadem;
   return {
-    g: { ...g, cam: camAt(f), b1: { pose: b1Pose, at: b1At, scale: U }, moc: { ...g.moc, pose: mocPose } },
+    g: { ...g, cam: camAt(f), b0: { ...g.b0, pose: b0Pose }, diadem, b1: { pose: b1Pose, at: b1At, scale: U }, moc: { ...g.moc, pose: mocPose } },
     cam: f <= 0 ? C0 : camAt(f),
     capPose,
     bearPose,
-    b0Head: b0.headC,
-    from: add(tip0, [0, -11 * U]) as P2,
-    to: add(tip1, [0, -10 * U]) as P2,
-    gapX,
+    b1Crown: b1.crown,
   };
-};
-
-// ---------------------------------------------------------------------------
-// THE KIN BRACKET AND THE CUT DOWN THE MIDDLE
-// ---------------------------------------------------------------------------
-const Bracket: React.FC<{ from: P2; to: P2; gapX: number; p: number; sag: number }> = ({ from, to, gapX, p, sag }) => {
-  if (p <= 0.0005) return null;
-  const r = 10 * U;
-  const d =
-    `M${from[0].toFixed(1)},${from[1].toFixed(1)}L${from[0].toFixed(1)},${(BAR_Y + r).toFixed(1)}Q${from[0].toFixed(1)},${BAR_Y.toFixed(1)} ${(from[0] + r).toFixed(1)},${BAR_Y.toFixed(1)}` +
-    `Q${gapX.toFixed(1)},${(BAR_Y + 2 * sag).toFixed(1)} ${(to[0] - r).toFixed(1)},${BAR_Y.toFixed(1)}Q${to[0].toFixed(1)},${BAR_Y.toFixed(1)} ${to[0].toFixed(1)},${(BAR_Y + r).toFixed(1)}L${to[0].toFixed(1)},${to[1].toFixed(1)}`;
-  const dash = `${p.toFixed(5)} 2`;
-  const W = 4.9 * U;
-  return (
-    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <path d={d} pathLength={1} strokeDasharray={dash} stroke={DARK} strokeOpacity={0.7} strokeWidth={W + 3.4 * U} />
-      <path d={d} pathLength={1} strokeDasharray={dash} stroke={ACCENT_DEEP} strokeWidth={W} />
-      <path d={d} pathLength={1} strokeDasharray={dash} stroke={ACCENT} strokeWidth={W * 0.62} />
-    </g>
-  );
-};
-const Divide: React.FC<{ x: number; y0: number; p: number }> = ({ x, y0, p }) => {
-  if (p <= 0.0005) return null;
-  const y1 = mix(y0, GROUND_Y, p);
-  const on = 9.5 * U;
-  const off = 7 * U;
-  const segs: [number, number][] = [];
-  for (let y = y0; y < y1; y += on + off) segs.push([y, Math.min(y + on, y1)]);
-  const d = segs.map(([a, b]) => `M${x.toFixed(1)},${a.toFixed(1)}L${x.toFixed(1)},${b.toFixed(1)}`).join("");
-  return (
-    <g fill="none" strokeLinecap="round">
-      <path d={d} stroke={DARK} strokeOpacity={0.55} strokeWidth={5.2 * U} />
-      <path d={d} stroke={INK} strokeOpacity={0.95} strokeWidth={2.7 * U} />
-    </g>
-  );
 };
 
 const BothSides: React.FC<z.infer<typeof schema>> = () => {
@@ -242,9 +203,7 @@ const BothSides: React.FC<z.infer<typeof schema>> = () => {
   const s = bothState(frame);
   const cam = s.cam;
   const fade = smoothstep(frame / 8);
-  const pTie = smoothstep((frame - T.tie) / (T.tied - T.tie));
-  const pCut = smoothstep((frame - T.cut) / (T.cutDone - T.cut));
-  const sag = 4.2 * U * pCut;
+  const warm = smoothstep((frame - T.warm) / (T.warmed - T.warm));
   return (
     <AbsoluteFill>
       <TexcocoPage cam={cam}>
@@ -252,9 +211,8 @@ const BothSides: React.FC<z.infer<typeof schema>> = () => {
           <Conquistador kind="bearer" pose={s.bearPose} at={BEAR_AT} scale={BEAR_S} ink={BEAR_INK} uid="bs-be" />
           <Conquistador kind="captain" pose={s.capPose} at={CAP_AT} scale={CAP_S} arms="near" uid="bs-ca" />
           <GaveTableau s={s.g} />
+          <TopknotBand crown={s.b1Crown} tone={warm} uid="bs-band" />
           <Conquistador kind="captain" pose={s.capPose} at={CAP_AT} scale={CAP_S} body={false} arms="far" uid="bs-cf" />
-          <Divide x={s.gapX} y0={BAR_Y + sag * 0.9 + 9 * U} p={pCut} />
-          <Bracket from={s.from} to={s.to} gapX={s.gapX} p={pTie} sag={sag} />
         </WorldSvg>
         <Label text="MOCTEZUMA" x={GAVE_END.label[0]} y={GAVE_END.label[1]} cam={cam} frame={99} f0={0} size={GAVE_LABEL_SIZE} opacity={1 - fade} dy={18 * fade} />
       </TexcocoPage>

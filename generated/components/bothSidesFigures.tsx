@@ -15,12 +15,13 @@
 // and a boat brim swept up to a peak at the front and the back.
 //
 // Draw inside a WorldSvg. EXPORTS: Conquistador, conqRig, conqAnchors,
-// CAPTAIN_STAND, BEARER_STAND, type ConqPose.
+// CAPTAIN_STAND, BEARER_STAND, type ConqPose, and TopknotBand (the ORANGE band
+// laid over the passed-over brother's topknot band).
 // ---------------------------------------------------------------------------
 import React from "react";
 import { DARK, hash, type P2 } from "./incaShared";
 import { add, mix, mix2, mul, norm, rot, sub, vlen } from "./stringsMotion";
-import { CREAM, type ArmPose, type Ink } from "./texcocoFigures";
+import { CREAM, ORANGE, type ArmPose, type Ink } from "./texcocoFigures";
 
 // ---------------------------------------------------------------------------
 // the engraver's helpers (as texcocoFigures')
@@ -683,3 +684,38 @@ export const Conquistador: React.FC<ConquistadorProps> = ({ kind, pose: q, at, s
 };
 /** the pommel (captain) and the staff (bearer), figure-local, for wrist targets */
 export const CONQ = { POMMEL, STAFF_X };
+
+// ---------------------------------------------------------------------------
+// THE ORANGE TOPKNOT BAND: laid over brother 1's own cream band (texcocoFigures'
+// Head, topknot at head-local (-5 sin yaw, -38)), a little broader, with two
+// short ribbon ends falling behind the knot like the diadem's. Pass the
+// figure's `crown` anchor; `tone` 0..1 warms it up from the cream band below.
+// ---------------------------------------------------------------------------
+export const TopknotBand: React.FC<{ crown: { at: P2; rot: number; yaw: number; scale: number }; tone: number; uid: string; ink?: Ink }> = ({ crown, tone, uid, ink = ORANGE }) => {
+  if (tone <= 0.003) return null;
+  const s = Math.sin(crown.yaw);
+  const t = Math.abs(s);
+  const sg = s < 0 ? -1 : 1;
+  const tk = -5 * s;
+  // the ribbon ends hang on the side away from his face
+  const bx = tk - sg * 10.5;
+  const dk = -sg;
+  const ends = c01((t - 0.3) * 4);
+  return (
+    <g transform={`translate(${crown.at[0].toFixed(2)} ${crown.at[1].toFixed(2)}) rotate(${crown.rot.toFixed(2)}) scale(${crown.scale.toFixed(4)})`} opacity={tone}>
+      <Cased id={`${uid}-case`} r={1.3}>
+        {ends > 0.02 ? (
+          <g opacity={ends}>
+            <path d={limbD([[[bx, -38], 7], [[bx + dk * 6, -24], 8], [[bx + dk * 11.5, -8], 7], [[bx + dk * 12, 6], 3.4]])} fill={ink.main} {...OUT} strokeWidth={1.9} />
+            <path d={limbD([[[bx, -38], 7], [[bx + dk * 1.4, -24], 7.6], [[bx + dk * 3.4, -10], 6.4], [[bx + dk * 3, 1], 3.4]])} fill={ink.deep} {...OUT} strokeWidth={1.9} />
+            <path d={`M${bx + dk * 6.4},-22l${dk * 4},16`} {...ln(0.9, 0.5)} />
+          </g>
+        ) : null}
+        <path d={limbD([[[tk - 11, -38.2], 11.4], [[tk, -39.8], 11.8], [[tk + 11, -38.2], 11.4]])} fill={ink.main} {...OUT} strokeWidth={2} />
+        <path d={`M${tk - 10},-34.8Q${tk},-36.4 ${tk + 10},-34.8`} {...ln(1, 0.6)} />
+        <path d={[-6.4, -2.2, 2.2, 6.4].map((x) => `M${(tk + x).toFixed(1)},-43l0,5.4`).join("")} {...ln(1, 0.55)} />
+        {ends > 0.02 ? <circle cx={bx} cy={-38.6} r={5.4} fill={ink.deep} {...OUT} strokeWidth={1.9} opacity={ends} /> : null}
+      </Cased>
+    </g>
+  );
+};
