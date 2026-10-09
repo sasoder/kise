@@ -17,9 +17,9 @@
 // and walks off to the right (f0-f43), the camera travelling with him, to two
 // Spaniards standing a short walk away; he turns back to face his brother,
 // fist to his chest, and the captain's hand comes down on his shoulder (the
-// gesture Moctezuma made to the other one). As he takes his place the band of
-// his topknot warms from cream to ORANGE (f48-f64): the same orange as the
-// diadem across the gap. The camera pulls back to hold both groups facing each
+// gesture Moctezuma made to the other one). The band of his topknot is ORANGE
+// from the first frame (the same orange as the diadem; the one thing at f0 that
+// is not the previous cut's last frame, by the user's wish). The camera pulls back to hold both groups facing each
 // other (settled ~f100); on "both sides" the brothers lock eyes, chins up, the
 // banner stirs; then it holds, alive.
 // Orange = Texcoco's own: the diadem and the other brother's band, nothing
@@ -58,7 +58,7 @@ const [X0, Y0] = GAVE_END.b1.at;
 // ---- the walk: a brisk step, the planted foot never sliding
 const CYCLE = 20;
 const STRIDE = 45;
-const T = { go: 8, stop: 36, on: 45, warm: 48, warmed: 64, lock: 99, locked: 114 };
+const T = { go: 8, stop: 36, on: 45, lock: 99, locked: 114 };
 const walkAmount = (f: number) => smoothstep((f - T.go) / 6) * (1 - smoothstep((f - T.stop) / 7));
 /** frames' worth of full-speed walking done by frame f */
 const WALKED = (() => {
@@ -195,6 +195,8 @@ const bothState = (f: number) => {
     capPose,
     bearPose,
     b1Crown: b1.crown,
+    /** the ribbon ends trail the walk and the head's turn a little, and never hang dead still */
+    bandSway: -4.5 * walkAmount(f) * (1 + 0.35 * Math.sin((4 * Math.PI * Math.max(0, f - T.go)) / CYCLE)) - 5 * Math.max(-1, Math.min(1, (b1Track(f).headYaw - b1Track(f - 3).headYaw) / 0.6)) * Math.cos(b1Pose.headYaw) + 1.1 * Math.sin(f / 9.5),
   };
 };
 
@@ -203,7 +205,6 @@ const BothSides: React.FC<z.infer<typeof schema>> = () => {
   const s = bothState(frame);
   const cam = s.cam;
   const fade = smoothstep(frame / 8);
-  const warm = smoothstep((frame - T.warm) / (T.warmed - T.warm));
   return (
     <AbsoluteFill>
       <TexcocoPage cam={cam}>
@@ -211,7 +212,7 @@ const BothSides: React.FC<z.infer<typeof schema>> = () => {
           <Conquistador kind="bearer" pose={s.bearPose} at={BEAR_AT} scale={BEAR_S} ink={BEAR_INK} uid="bs-be" />
           <Conquistador kind="captain" pose={s.capPose} at={CAP_AT} scale={CAP_S} arms="near" uid="bs-ca" />
           <GaveTableau s={s.g} />
-          <TopknotBand crown={s.b1Crown} tone={warm} uid="bs-band" />
+          <TopknotBand crown={s.b1Crown} sway={s.bandSway} uid="bs-band" />
           <Conquistador kind="captain" pose={s.capPose} at={CAP_AT} scale={CAP_S} body={false} arms="far" uid="bs-cf" />
         </WorldSvg>
         <Label text="MOCTEZUMA" x={GAVE_END.label[0]} y={GAVE_END.label[1]} cam={cam} frame={99} f0={0} size={GAVE_LABEL_SIZE} opacity={1 - fade} dy={18 * fade} />

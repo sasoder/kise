@@ -689,26 +689,29 @@ export const CONQ = { POMMEL, STAFF_X };
 // THE ORANGE TOPKNOT BAND: laid over brother 1's own cream band (texcocoFigures'
 // Head, topknot at head-local (-5 sin yaw, -38)), a little broader, with two
 // short ribbon ends falling behind the knot like the diadem's. Pass the
-// figure's `crown` anchor; `tone` 0..1 warms it up from the cream band below.
+// figure's `crown` anchor; it follows the head's yaw.
 // ---------------------------------------------------------------------------
-export const TopknotBand: React.FC<{ crown: { at: P2; rot: number; yaw: number; scale: number }; tone: number; uid: string; ink?: Ink }> = ({ crown, tone, uid, ink = ORANGE }) => {
+export const TopknotBand: React.FC<{ crown: { at: P2; rot: number; yaw: number; scale: number }; tone?: number; sway?: number; uid: string; ink?: Ink }> = ({ crown, tone = 1, sway = 0, uid, ink = ORANGE }) => {
   if (tone <= 0.003) return null;
   const s = Math.sin(crown.yaw);
   const t = Math.abs(s);
-  const sg = s < 0 ? -1 : 1;
   const tk = -5 * s;
   // the ribbon ends hang on the side away from his face
-  const bx = tk - sg * 10.5;
-  const dk = -sg;
-  const ends = c01((t - 0.3) * 4);
+  // (they go round with the head: their place and their fall follow its yaw without a jump,
+  // and they are behind the head while he faces us); `sway` swings their free ends, head units
+  const back = -clamp1(s / 0.45);
+  const bx = tk + back * 10.5;
+  const dk = back;
+  const ends = c01((t - 0.1) * 7);
+  const sw = (v: number): number => sway * v;
   return (
     <g transform={`translate(${crown.at[0].toFixed(2)} ${crown.at[1].toFixed(2)}) rotate(${crown.rot.toFixed(2)}) scale(${crown.scale.toFixed(4)})`} opacity={tone}>
       <Cased id={`${uid}-case`} r={1.3}>
         {ends > 0.02 ? (
           <g opacity={ends}>
-            <path d={limbD([[[bx, -38], 7], [[bx + dk * 6, -24], 8], [[bx + dk * 11.5, -8], 7], [[bx + dk * 12, 6], 3.4]])} fill={ink.main} {...OUT} strokeWidth={1.9} />
-            <path d={limbD([[[bx, -38], 7], [[bx + dk * 1.4, -24], 7.6], [[bx + dk * 3.4, -10], 6.4], [[bx + dk * 3, 1], 3.4]])} fill={ink.deep} {...OUT} strokeWidth={1.9} />
-            <path d={`M${bx + dk * 6.4},-22l${dk * 4},16`} {...ln(0.9, 0.5)} />
+            <path d={limbD([[[bx, -38], 7], [[bx + dk * 6 + sw(0.25), -24], 8], [[bx + dk * 11.5 + sw(0.65), -8], 7], [[bx + dk * 12 + sw(1), 6], 3.4]])} fill={ink.main} {...OUT} strokeWidth={1.9} />
+            <path d={limbD([[[bx, -38], 7], [[bx + dk * 1.4 + sw(0.2), -24], 7.6], [[bx + dk * 3.4 + sw(0.55), -10], 6.4], [[bx + dk * 3 + sw(0.85), 1], 3.4]])} fill={ink.deep} {...OUT} strokeWidth={1.9} />
+            <path d={`M${(bx + dk * 6.4 + sw(0.3)).toFixed(1)},-22l${(dk * 4 + sw(0.4)).toFixed(1)},16`} {...ln(0.9, 0.5)} />
           </g>
         ) : null}
         <path d={limbD([[[tk - 11, -38.2], 11.4], [[tk, -39.8], 11.8], [[tk + 11, -38.2], 11.4]])} fill={ink.main} {...OUT} strokeWidth={2} />
