@@ -12,14 +12,20 @@ import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } f
  * its 1920x1354 pixels (2722.6 x 1920.0, the frame's height), centre y = 960;
  * centre x = 1263 at the START, 599 at the END (664 px to the left).
  *
- *   f0-14   START framing with a 5 px drift to the left; the painting is
- *           DIMMED (a #1B1510 wash at 0.3, about 0.74 brightness) and BLURRED
- *           (5 px) from the first frame
+ *   f0-51   ONE move from the START (f0) to the END (f51) on the time curve
+ *           cubic-bezier(0.8, 0, 0.2, 1): the keyframes are dragged fully apart
+ *           and the speed graph is one tall peak. The picture creeps a few px
+ *           over the first 12 frames, whips across at about 65 px/frame around
+ *           f25-26 (5x the average) and creeps the last px onto the END
+ *   f0-14   the painting is DIMMED (a #1B1510 wash at 0.3, about 0.74
+ *           brightness) and softly BLURRED (5 px) from the first frame
  *   f0-7    the mark pops in: scale 0.6 -> 1.04 (f5) -> 1.0 (f7), opacity 0.35 -> 1 (f0-4)
- *   f14-51  the pan to the END framing, one cubic ease-in-out that takes over
- *           the drift's speed (no hitch at f14) and stops exactly on the END
- *   f14-26  the mark leaves, riding with the picture: scale -> 0.88, opacity -> 0
- *   f14-30  dim and blur clear; from f30 the frame is the untouched painting
+ *   f14-23  the mark leaves as the speed rises, riding with the picture:
+ *           scale -> 0.88, opacity -> 0; gone before the fast part
+ *   f14-25  dim and soft blur clear
+ *   whip    a horizontal-only motion blur on the painting, sigma 0.22 x the
+ *           px travelled per frame, none while it creeps: the burst reads as a
+ *           smooth whip, not a strobe. The last frame is the untouched painting
  *
  * The mark is ANCHORED TO THE PAINTING: the painting, the wash and the seal are
  * children of one translated plane, so the seal drifts and pans exactly with
@@ -28,7 +34,8 @@ import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } f
  *
  * Blur without a fringe: the painting's top and bottom edges are the frame's
  * edges, so the blurred layer carries a mirrored copy above and below it; the
- * blur then samples picture, never transparency.
+ * blur then samples picture, never transparency. One SVG Gaussian carries both
+ * blurs (sigma x = hypot(soft, whip), sigma y = soft).
  */
 
 export const FPS = 24000 / 1001;
@@ -47,13 +54,15 @@ const END_CX = 599;
 const IMG_TOP = FRAME_H / 2 - IMG_H / 2;
 
 // ---- timing ----
-const PAN_START = 14;
-const PAN_END = DURATION - 1;
-const DRIFT_PX = 5;
+const LAST = DURATION - 1;
+const PAN_EASE = Easing.bezier(0.8, 0, 0.2, 1);
 const POP_PEAK = 5;
 const POP_END = 7;
-const MARK_GONE = 26;
-const CLEAR_END = 30;
+const LEAVE_START = 14;
+const MARK_GONE = 23;
+const CLEAR_END = 25;
+const MOTION_BLUR = 0.22; // sigma per px travelled in a frame
+const MOTION_BLUR_MIN = 0.3; // below this sigma the picture is left sharp
 
 // ---- dim + blur ----
 const WASH = "#1B1510";
@@ -80,31 +89,30 @@ const CREAM_MATRIX = `0 0 0 0 ${233 / 255}  0 0 0 0 ${221 / 255}  0 0 0 0 ${191 
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-/** The painting's centre x. A linear drift to f14, then a cubic Hermite to the
- *  END that starts at the drift's speed and arrives with none. */
+/** The painting's centre x: one bezier-eased move over the whole clip. */
 const centreX = (frame: number) => {
-  if (frame <= PAN_START) return START_CX - (DRIFT_PX * frame) / PAN_START;
-  const from = START_CX - DRIFT_PX;
-  const span = PAN_END - PAN_START;
-  const dist = END_CX - from;
-  const u = Math.min(1, (frame - PAN_START) / span);
-  const m0 = ((-DRIFT_PX / PAN_START) * span) / dist; // the drift's speed in curve units
-  const p = m0 * (u * u * u - 2 * u * u + u) + (-2 * u * u * u + 3 * u * u);
-  return from + dist * p;
+  const u = Math.min(1, Math.max(0, frame / LAST));
+  return START_CX + (END_CX - START_CX) * PAN_EASE(u);
 };
 
 const EastIndiaHousePan: React.FC = () => {
   const frame = useCurrentFrame();
 
   const left = centreX(frame) - IMG_W / 2;
-  const soft = 1 - interpolate(frame, [PAN_START, CLEAR_END], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
-  const blur = BLUR_PX * soft;
+  const soft = 1 - interpolate(frame, [LEAVE_START, CLEAR_END], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  const softBlur = BLUR_PX * soft;
+  // px travelled during this frame (centred), as a horizontal blur
+  const speed = Math.abs(centreX(frame + 0.5) - centreX(frame - 0.5));
+  const whip = MOTION_BLUR * speed >= MOTION_BLUR_MIN ? MOTION_BLUR * speed : 0;
+  const blurX = Math.hypot(softBlur, whip);
+  const blurY = softBlur;
+  const blurred = blurX > 0;
 
   const pop =
     frame <= POP_PEAK
       ? interpolate(frame, [0, POP_PEAK], [0.6, 1.04], { ...clamp, easing: Easing.out(Easing.cubic) })
       : interpolate(frame, [POP_PEAK, POP_END], [1.04, 1], { ...clamp, easing: Easing.inOut(Easing.quad) });
-  const leave = interpolate(frame, [PAN_START, MARK_GONE], [0, 1], { ...clamp, easing: Easing.in(Easing.quad) });
+  const leave = interpolate(frame, [LEAVE_START, MARK_GONE], [0, 1], { ...clamp, easing: Easing.in(Easing.quad) });
   const sealScale = pop * (1 - 0.12 * leave);
   const sealOpacity = interpolate(frame, [0, 4], [0.35, 1], clamp) * (1 - leave);
 
@@ -118,12 +126,15 @@ const EastIndiaHousePan: React.FC = () => {
           <filter id="eihp-cream" colorInterpolationFilters="sRGB">
             <feColorMatrix type="matrix" values={CREAM_MATRIX} />
           </filter>
+          <filter id="eihp-blur" colorInterpolationFilters="sRGB" x="-2%" y="0%" width="104%" height="100%">
+            <feGaussianBlur stdDeviation={`${blurX} ${blurY}`} />
+          </filter>
         </defs>
       </svg>
       {/* the image plane: everything in it rides with the painting */}
       <div style={{ position: "absolute", left: 0, top: IMG_TOP, width: IMG_W, height: IMG_H, transform: `translateX(${left}px)` }}>
-        {blur > 0 ? (
-          <div style={{ position: "absolute", left: 0, top: -IMG_H, width: IMG_W, height: IMG_H * 3, filter: `blur(${blur}px)` }}>
+        {blurred ? (
+          <div style={{ position: "absolute", left: 0, top: -IMG_H, width: IMG_W, height: IMG_H * 3, filter: "url(#eihp-blur)" }}>
             <Img src={painting} style={{ ...imgStyle, top: 0, transform: "scaleY(-1)" }} />
             <Img src={painting} style={{ ...imgStyle, top: IMG_H }} />
             <Img src={painting} style={{ ...imgStyle, top: IMG_H * 2, transform: "scaleY(-1)" }} />
