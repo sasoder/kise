@@ -25,12 +25,13 @@
 // while the camera pushes toward Bengal; on "bad king" the succession at
 // Murshidabad lands a cracked, crooked crown. ORANGE = the British (the East
 // India Company) and nothing else: the fort mark at Calcutta from the first
-// frame, then one bold advance in from the sea, north past Plassey that knocks the cracked
-// crown off its seat (it lies fallen beside it); a Union Flag (orange and
+// frame, then a force of orange dots that surfaces out at sea and streams north
+// through the fort and past Plassey; its head knocks the cracked crown off its seat (it lies fallen beside it); a Union Flag (orange and
 // cream) is planted on the seat and a soft disc of orange hatch spreads round it and keeps
-// creeping outward. The close frame creeps on, the flag in one slow wave.
+// creeping outward while the dots spread and settle on that ground, the tail of
+// the column still coming up from the coast in the last frame.
 //
-// ELEMENT TYPES: the map, the seat + its crown, the orange (fort, advance,
+// ELEMENT TYPES: the map, the seat + its crown, the orange (fort, dots,
 // flag, hatch), one label (INDIA, on the word). No place names, no dates.
 // ---------------------------------------------------------------------------
 import React from "react";
@@ -79,7 +80,7 @@ export const T = {
   label: 83, // INDIA slides up, landing on the word (f91)
   labelDim: [108, 122] as [number, number],
   badStart: 134, // the old crown at Murshidabad lifts; the bad one lands at ~f148
-  advance: [156, 208] as [number, number], // the orange advance: the sea -> Calcutta -> Murshidabad
+  advance: [150, 208] as [number, number], // the orange force: first dots surface / its head is at the seat
   knock: 205, // the cracked crown is struck off
   seatTurn: [206, 213] as [number, number],
   hatch: [207, 224] as [number, number], // then it keeps creeping outward
@@ -367,32 +368,60 @@ const advAt = (s: number): { p: P2; n: P2; t: P2 } => {
   const t: P2 = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
   return { p: [a[0] + (b[0] - a[0]) * u + t[0] * (s - q), a[1] + (b[1] - a[1]) * u + t[1] * (s - q)], n: [t[1], -t[0]], t };
 };
-const SHAFT_W = 26; // screen px
-const HEAD_L = 70;
-const HEAD_W = 78;
-/** the advance as one barbed arrow from Calcutta to arclength `tip` (world px) */
-const arrowD = (tip: number, k: number) => {
-  const g = clamp01(tip / ((HEAD_L * 1.15) / k)); // the head grows out of the sea
-  const hl = (HEAD_L * g) / k;
-  const hw = (HEAD_W * g) / 2 / k;
-  const sw = (SHAFT_W * (0.55 + 0.45 * g)) / 2 / k;
-  const neck = tip - hl * 0.74;
-  const left: P2[] = [];
-  const right: P2[] = [];
-  const N = 18;
-  for (let i = 0; i <= N; i++) {
-    const { p, n } = advAt((Math.max(0, neck) * i) / N);
-    left.push([p[0] + n[0] * sw, p[1] + n[1] * sw]);
-    right.push([p[0] - n[0] * sw, p[1] - n[1] * sw]);
+// THE FORCE: solid orange dots (the house crowd language: a dot = people) that
+// surface out at sea at the head of the bay and stream, as a loose column four
+// lanes wide, up the advance's route through the fort mark to the seat, where
+// they spread and settle as a crowd on the hatched ground. Everything per dot
+// is seeded: its lane, its own pace, the moment it surfaces, where it settles.
+const hash = (i: number, q: number) => {
+  const v = Math.sin(i * 12.9898 + q * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+};
+const N_DOTS = 72;
+const DOT_D = 22; // screen px across in the close frame
+const LANE = 8.4; // world px between lanes
+const TRAVEL = 54;
+const MIN_SEP = 6.6; // world px (~1.3 dot diameters in the close frame) between settled dots // frames from the sea to the seat for the leading dots
+type ForceDot = { t0: number; dur: number; lane: number; ph: number; target: P2 };
+const FORCE: ForceDot[] = (() => {
+  // where they settle: a loose crowd round the seat (golden-angle spiral, 13 ... 50 world px
+  // out), leaving clear the ground where the fallen crown lies (right of the seat)
+  const spots: P2[] = [];
+  for (let j = 0; spots.length < N_DOTS && j < 900; j++) {
+    const r = 14 + 42 * Math.sqrt(((j % 150) + 0.5) / 150) + 1.6 * (hash(j, 5) - 0.5);
+    const a = j * 2.39996 + 0.4;
+    const p: P2 = [Math.cos(a) * r, Math.sin(a) * r * 0.94];
+    if (p[0] > 17 && p[1] > -19) continue; // the fallen crown
+    if (p[0] > -3 && p[0] < 60 && p[1] < -16 && p[1] > -58) continue; // the flag
+    if (spots.some((q) => Math.hypot(q[0] - MURSHIDABAD[0] - p[0], q[1] - MURSHIDABAD[1] - p[1]) < MIN_SEP)) continue;
+    spots.push([MURSHIDABAD[0] + p[0], MURSHIDABAD[1] + p[1]]);
   }
-  const base = advAt(tip - hl);
-  const top = advAt(tip);
-  const head: P2[] = [
-    [base.p[0] + base.n[0] * hw, base.p[1] + base.n[1] * hw],
-    top.p,
-    [base.p[0] - base.n[0] * hw, base.p[1] - base.n[1] * hw],
-  ];
-  return `M${[...left, ...head, ...right.reverse()].map(([x, y]) => `${x.toFixed(3)},${y.toFixed(3)}`).join("L")}Z`;
+  const order = [2, 0, 3, 1];
+  return Array.from({ length: N_DOTS }, (_, i) => {
+    // the head of the column surfaces thick and fast; the tail keeps coming to the last frame
+    const t0 = i < 44 ? T.advance[0] + 0.62 * i + 0.5 * (hash(i, 1) - 0.5) : T.advance[0] + 27.3 + (i - 44) * 1.95 + 0.6 * (hash(i, 1) - 0.5);
+    return {
+      t0,
+      dur: TRAVEL * (0.96 + 0.2 * hash(i, 2)) + (i < 4 ? 0 : 2),
+      lane: (order[i % 4] - 1.5) * LANE + 0.8 * (hash(i, 3) - 0.5),
+      ph: 6.283 * hash(i, 4),
+      target: spots[i % spots.length],
+    };
+  });
+})();
+const forceAt = (frame: number): { p: P2; g: number }[] => {
+  const out: { p: P2; g: number }[] = [];
+  for (const d of FORCE) {
+    const tau = frame - d.t0;
+    if (tau <= 0) continue;
+    const u = tau / d.dur;
+    const s = ADV_LEN * (1 - Math.pow(1 - Math.min(1, u), 1.75));
+    const { p, n } = advAt(s);
+    const off = d.lane * (1 + 0.12 * Math.sin(frame / 15 + d.ph)) * smoothstep(tau / 9); // they fan out of one point
+    const b = smoothstep((u - 0.74) / 0.5); // they leave the column and spread to their ground
+    out.push({ p: [p[0] + n[0] * off + (d.target[0] - p[0] - n[0] * off) * b, p[1] + n[1] * off + (d.target[1] - p[1] - n[1] * off) * b], g: clamp01(tau / 5) });
+  }
+  return out;
 };
 const HATCH_R = 64; // world px (~150 km): how far the hatch has spread when it slows to a creep
 const HATCH_CREEP = 0.2; // world px per frame, to the last frame
@@ -412,11 +441,8 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
   const rr = ringR(k);
 
   // --- the advance
-  const tipGap = (rr + 7) / k;
-  const advU = clamp01((frame - T.advance[0]) / (T.advance[1] - T.advance[0]));
-  const advP = 1 - Math.pow(1 - advU, 2); // under way at once, easing into the seat
-  const tip = advP * (ADV_LEN - tipGap);
-  const arrow = advU > 0 ? arrowD(tip, k) : "";
+  const force = frame > T.advance[0] ? forceAt(frame) : [];
+  const dotR = (DOT_D / 2) * Math.pow(k / 4.3, 0.6);
   const seatTurn = smoothstep((frame - T.seatTurn[0]) / (T.seatTurn[1] - T.seatTurn[0]));
   const hatchU = clamp01((frame - T.hatch[0]) / (T.hatch[1] - T.hatch[0]));
   const hatchR = HATCH_R * easeOut(hatchU) + HATCH_CREEP * Math.max(0, frame - T.hatch[0]);
@@ -491,16 +517,10 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
         {hatchU > 0 ? (
           <g clipPath="url(#bkLand)">
             <g mask="url(#bkDiscMask)">
-              <circle cx={MURSHIDABAD[0]} cy={MURSHIDABAD[1]} r={88} fill={ACCENT_DEEP} fillOpacity={0.3} />
-              <circle cx={MURSHIDABAD[0]} cy={MURSHIDABAD[1]} r={88} fill="url(#bkHatch)" opacity={0.9} />
+              <circle cx={MURSHIDABAD[0]} cy={MURSHIDABAD[1]} r={88} fill={ACCENT_DEEP} fillOpacity={0.2} />
+              <circle cx={MURSHIDABAD[0]} cy={MURSHIDABAD[1]} r={88} fill="url(#bkHatch)" opacity={0.6} />
             </g>
           </g>
-        ) : null}
-        {arrow ? (
-          <>
-            <path d={arrow} fill={DARK} fillOpacity={0.6} stroke={DARK} strokeOpacity={0.6} strokeWidth={6 / k} strokeLinejoin="round" />
-            <path d={arrow} fill={ACCENT} stroke={ACCENT_DEEP} strokeWidth={1.6 / k} strokeLinejoin="round" />
-          </>
         ) : null}
       </WorldSvg>
 
@@ -553,6 +573,18 @@ const SoonerOrLaterABadKing: React.FC<Props> = ({ vignette }) => {
               <circle cx={x} cy={y} r={rr * 0.36} fill={col} />
             </g>
           );
+        })}
+
+        {/* THE FORCE: the dots, out of the sea */}
+        {force.map((d, i) => {
+          const [x, y] = screenOf(d.p, cam);
+          const e = 1 - (1 - d.g) * (1 - d.g);
+          return <circle key={`fd${i}`} cx={x} cy={y} r={dotR * (0.4 + 0.6 * e) + 2.2} fill={DARK} fillOpacity={0.7 * d.g} />;
+        })}
+        {force.map((d, i) => {
+          const [x, y] = screenOf(d.p, cam);
+          const e = 1 - (1 - d.g) * (1 - d.g);
+          return <circle key={`fo${i}`} cx={x} cy={y} r={dotR * (0.4 + 0.6 * e)} fill={ACCENT} fillOpacity={d.g} />;
         })}
 
         {/* the fort at Calcutta: orange from the first frame */}

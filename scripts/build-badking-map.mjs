@@ -167,7 +167,7 @@ console.log(`  Calcutta (${CALCUTTA.map((v) => v.toFixed(1))}) ${isLand(...CALCU
 // THE ADVANCE: from the sea at the head of the Bay of Bengal, through Calcutta
 // and Plassey to Murshidabad: a centripetal-free uniform Catmull-Rom through
 // the four points (they lie almost on one meridian), sampled
-const SEA_START_LL = [88.2, 21.3];
+const SEA_START_LL = [88.3, 20.2]; // open water, well out in the bay
 const SEA_START = P(SEA_START_LL);
 console.log(`  advance starts at sea (${SEA_START.map((v) => v.toFixed(1))}) ${isLand(...SEA_START) ? "LAND (!)" : "sea"}`);
 const ADVANCE = (() => {
