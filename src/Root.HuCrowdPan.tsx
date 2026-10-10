@@ -11,8 +11,10 @@ import HuLiveToPrint, {
 // whip pan, baked), so it renders while other sessions own src/Root.tsx.
 // HuCrowdPan is panorama A; HuCrowdPanB is the alternate panorama, same move.
 // HuLiveToPrint opens on the real footage, prints it into newsprint and then
-// does the same pan on its own panorama, onto a printed 25M -> 100M figure;
-// HuLiveToPrintNumberOnly is the same clip without the figure's caption.
+// does the same pan on its own panorama, along a printed "25 MILLION" that runs
+// across the whole white band. HuLiveToPrintLockup prints the phrase as a
+// two-line block in the end frame instead; HuLiveToPrintCounter is the earlier
+// 25M -> 100M counter with its caption, HuLiveToPrintNumberOnly without it.
 export const RemotionRoot = () => {
   return (
     <>
@@ -47,10 +49,30 @@ export const RemotionRoot = () => {
         height={1920}
       />
       <Composition
+        id="HuLiveToPrintLockup"
+        component={HuLiveToPrint}
+        schema={liveSchema}
+        defaultProps={liveSchema.parse({headline: 'lockup'})}
+        durationInFrames={LIVE_DURATION}
+        fps={LIVE_FPS}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="HuLiveToPrintCounter"
+        component={HuLiveToPrint}
+        schema={liveSchema}
+        defaultProps={liveSchema.parse({headline: 'counter', showCaption: true})}
+        durationInFrames={LIVE_DURATION}
+        fps={LIVE_FPS}
+        width={1080}
+        height={1920}
+      />
+      <Composition
         id="HuLiveToPrintNumberOnly"
         component={HuLiveToPrint}
         schema={liveSchema}
-        defaultProps={liveSchema.parse({showCaption: false})}
+        defaultProps={liveSchema.parse({headline: 'counter', showCaption: false})}
         durationInFrames={LIVE_DURATION}
         fps={LIVE_FPS}
         width={1080}

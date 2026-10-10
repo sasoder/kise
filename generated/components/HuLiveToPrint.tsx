@@ -5,7 +5,7 @@ import { loadFont as loadSourceSerif4 } from "@remotion/google-fonts/SourceSerif
 import { z } from "zod";
 import { DURATION as PAN_DURATION, whipSigma, windowX } from "./HuCrowdPan";
 
-const SERIF = loadSourceSerif4("normal", { weights: ["700"], subsets: ["latin"] }).fontFamily;
+const SERIF = loadSourceSerif4("normal", { weights: ["700", "900"], subsets: ["latin"] }).fontFamily;
 const SANS = loadSourceSans3("normal", { weights: ["600"], subsets: ["latin"] }).fontFamily;
 
 /**
@@ -40,17 +40,20 @@ const SANS = loadSourceSans3("normal", { weights: ["600"], subsets: ["latin"] })
  *           f37-38 ("million"), is sharp again from f66 and still slides
  *           2.4 px/frame at the cut
  *
- *   figure  a printed headline in the paper above the crowd, part of the
- *           picture (same plane, same whip blur), centred on the END window at
- *           picture x endX + 540, so it rides in over the right edge (whole in
- *           frame from f54) and glides to the middle of the frame at the cut.
- *           Source Serif 4 Bold 316 px, ink, baseline y 640: 25M, then a hard
- *           swap to 50M on f62, 75M on f70, 100M on f78 ("every" f71, "year"
- *           f80), four years of jobs. It grows a little each step (0.85, 0.90,
- *           0.95, 1) and each swap lands 8 % big with a 6 px / 0.7 deg shake
- *           that is gone in seven frames. Above it, optional (showCaption):
- *           NEW JOBS · YEAR 1..4, Source Sans 3 SemiBold 44 px caps, baseline
- *           y 345; only its digit changes
+ *   headline  what is printed in the white band above the crowd (prop headline).
+ *           It is part of the picture: same plane, same whip blur, never moving
+ *           on its own. Source Serif 4 Black, flat ink.
+ *           "band" (default): ONE line, 25 MILLION, 364 px (cap height 238),
+ *             ink from picture x 2213 to 4299, baseline y 590. The camera whips
+ *             along it (first pixels on f34, "25" passes on f36-41 in the blur)
+ *             and ends on its tail: LLION whole on f66, the first L cut through
+ *             its stem by the left frame edge at the cut.
+ *           "lockup": 25 (448 px) over MILLION (177 px, 778 wide), centred on
+ *             the END window at picture x endX + 540, ink y 288..722; whole in
+ *             frame from f60, 63 px to the right edge on f66, centred at the cut.
+ *           "counter": the earlier 25M -> 50M -> 75M -> 100M figure (Bold 316 px,
+ *             swaps on f62 / f70 / f78 with a small punch and shake) and its
+ *             optional NEW JOBS · YEAR n caption (showCaption).
  *
  * The frozen footage and the front live INSIDE the panned plane, at the
  * print's own x 740, so while the drift starts under the end of the print pass
@@ -73,7 +76,10 @@ export const schema = z.object({
     .min(PRINT_X)
     .max(PANO_W - FRAME_W)
     .default(3259),
-  showCaption: z.boolean().default(true),
+  // what is printed in the paper above the crowd: one line across the whole band, a
+  // two-line block in the end frame, or the earlier 25M -> 100M counter
+  headline: z.enum(["band", "lockup", "counter"]).default("band"),
+  showCaption: z.boolean().default(true), // the counter's NEW JOBS / YEAR line
 });
 export type HuLiveToPrintProps = z.infer<typeof schema>;
 export const defaultProps = schema.parse({});
@@ -128,8 +134,72 @@ const frontY = (frame: number, x: number) => {
   return FRONT_FROM + (FRONT_TO - FRONT_FROM) * FRONT_EASE(Math.min(1, Math.max(0, u))) + WOBBLE * wobble;
 };
 
-// ---- the headline figure, printed in the paper above the crowd (picture px) ----
+// ---- the headline, printed in the white band above the crowd (picture px) ----
+// The band runs from the red block's right edge (x 1719) to the picture's end, between the
+// lower red rule (y 234) and the first crowd flags (y 709). Whatever is printed there is part
+// of the picture: it sits in the panned plane, gets the pan's blur and never moves on its own.
 const FIGURE_INK = "#1C1917";
+const HEAD_FONT: React.CSSProperties = { fontFamily: SERIF, fontWeight: 900, fontVariantNumeric: "lining-nums proportional-nums" };
+
+// "band": ONE line along the band; the camera whips along it and ends on its tail.
+// Size and start are set by the END frame (window x 3259..4339): the line stops 40 px short of
+// its right edge and its left edge cuts the first L of MILLION through the stem, so the tail
+// reads LLION, a fragment. Spanning the band from the red block (429 px) the same edge lands
+// on the second L's left serif and the frame reads LION, a word of its own.
+const BAND_TEXT = "25 MILLION";
+const BAND_SIZE = 364; // cap height 238
+const BAND_FROM = 2213.3; // where its ink starts ...
+const BAND_X = BAND_FROM - 0.05 * BAND_SIZE; // ... which is the "2"'s side bearing after the text's x
+const BAND_BASELINE = 590; // caps centred between the rule and the flags
+const BAND_LAYER = { left: 2040, top: 240, width: 2400, height: 480 }; // the ink plus room for the whip blur
+
+/** The band headline. */
+const BandHeadline: React.FC<{ blurred: boolean }> = ({ blurred }) => (
+  <div style={{ position: "absolute", left: BAND_LAYER.left, top: BAND_LAYER.top, width: BAND_LAYER.width, height: BAND_LAYER.height, filter: blurred ? "url(#hlp-whip)" : undefined }}>
+    <svg width={BAND_LAYER.width} height={BAND_LAYER.height} viewBox={`${BAND_LAYER.left} ${BAND_LAYER.top} ${BAND_LAYER.width} ${BAND_LAYER.height}`} style={{ position: "absolute", left: 0, top: 0 }}>
+      <text x={BAND_X} y={BAND_BASELINE} fill={FIGURE_INK} style={{ ...HEAD_FONT, fontSize: BAND_SIZE }}>
+        {BAND_TEXT}
+      </text>
+    </svg>
+  </div>
+);
+
+// "lockup": the whole phrase in the END frame, 25 over MILLION, centred on the end window
+const LOCK_25_SIZE = 448; // figures 288 px tall, 482 wide
+const LOCK_25_BASELINE = 576; // figures y 288..582
+const LOCK_25_NUDGE = -2.5; // px, centres the ink
+const LOCK_M_SIZE = 177; // cap height 116, 778 px wide: 60 px to the right frame edge from f66
+const LOCK_M_TRACK = 0; // em
+const LOCK_M_BASELINE = 720; // ink y 600..722, 75 px above the first solid crowd shapes
+const LOCK_M_NUDGE = 0.5;
+const LOCK_BOX = 1400; // the layer's width: the block plus room for the whip blur
+const LOCK_TOP = 240; // the layer's rows: from under the rule to below MILLION's ink
+const LOCK_HEIGHT = 540;
+
+/** The lockup headline at picture x cx. */
+const LockupHeadline: React.FC<{ cx: number; blurred: boolean }> = ({ cx, blurred }) => {
+  const left = cx - LOCK_BOX / 2;
+  return (
+    <div style={{ position: "absolute", left, top: LOCK_TOP, width: LOCK_BOX, height: LOCK_HEIGHT, filter: blurred ? "url(#hlp-whip)" : undefined }}>
+      <svg width={LOCK_BOX} height={LOCK_HEIGHT} viewBox={`${left} ${LOCK_TOP} ${LOCK_BOX} ${LOCK_HEIGHT}`} style={{ position: "absolute", left: 0, top: 0 }}>
+        <text x={cx + LOCK_25_NUDGE} y={LOCK_25_BASELINE} textAnchor="middle" fill={FIGURE_INK} style={{ ...HEAD_FONT, fontSize: LOCK_25_SIZE }}>
+          25
+        </text>
+        <text
+          x={cx + LOCK_M_NUDGE + (LOCK_M_TRACK * LOCK_M_SIZE) / 2}
+          y={LOCK_M_BASELINE}
+          textAnchor="middle"
+          fill={FIGURE_INK}
+          style={{ ...HEAD_FONT, fontSize: LOCK_M_SIZE, letterSpacing: `${LOCK_M_TRACK}em` }}
+        >
+          MILLION
+        </text>
+      </svg>
+    </div>
+  );
+};
+
+// "counter": 25M -> 50M -> 75M -> 100M in the end frame
 // 316 px, cap height 212: the largest size that keeps 60 px to the right frame edge on f78,
 // where "100M" lands 8 % big while the picture still has 40 px to drift
 const FIGURE_SIZE = 316;
@@ -256,7 +326,7 @@ const FrozenUnderFront: React.FC<{ frame: number }> = ({ frame }) => {
   );
 };
 
-const HuLiveToPrint: React.FC<HuLiveToPrintProps> = ({ endX, showCaption }) => {
+const HuLiveToPrint: React.FC<HuLiveToPrintProps> = ({ endX, headline, showCaption }) => {
   const frame = useCurrentFrame();
 
   // the video, then its freeze frame: nothing but the picture
@@ -271,9 +341,16 @@ const HuLiveToPrint: React.FC<HuLiveToPrintProps> = ({ endX, showCaption }) => {
   const panFrame = frame - PAN_START; // before f20 the pan's own curve holds on PRINT_X
   const x = windowX(panFrame, PRINT_X, endX);
   const sigma = whipSigma(panFrame, PRINT_X, endX, PANO_W);
-  // the figure sits centred on the END window, so it glides to the middle of the frame at the cut
-  const figureX = endX + FRAME_W / 2;
-  const figureInReach = x + FRAME_W + 3 * sigma > figureX - FIGURE_BOX / 2;
+  // the lockup and the counter sit centred on the END window, so they glide to the middle of
+  // the frame at the cut; the band is fixed in the picture. None is drawn before the window
+  // (and its blur) can reach it, so the frames before that are the bare print.
+  const endCentre = endX + FRAME_W / 2;
+  const reach = x + FRAME_W + 3 * sigma;
+  const blurred = sigma > 0;
+  let printed: React.ReactNode = null;
+  if (headline === "band" && reach > BAND_FROM) printed = <BandHeadline blurred={blurred} />;
+  else if (headline === "lockup" && reach > endCentre - LOCK_BOX / 2) printed = <LockupHeadline cx={endCentre} blurred={blurred} />;
+  else if (headline === "counter" && reach > endCentre - FIGURE_BOX / 2) printed = <Figure frame={frame} cx={endCentre} blurred={blurred} showCaption={showCaption} />;
 
   return (
     <AbsoluteFill style={{ backgroundColor: PAPER, overflow: "hidden" }}>
@@ -298,7 +375,7 @@ const HuLiveToPrint: React.FC<HuLiveToPrintProps> = ({ endX, showCaption }) => {
             filter: sigma > 0 ? "url(#hlp-whip)" : undefined,
           }}
         />
-        {figureInReach ? <Figure frame={frame} cx={figureX} blurred={sigma > 0} showCaption={showCaption} /> : null}
+        {printed}
         {frame < PRINT_DONE ? <FrozenUnderFront frame={frame} /> : null}
       </div>
     </AbsoluteFill>
