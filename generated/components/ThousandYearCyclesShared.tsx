@@ -20,17 +20,19 @@
 //
 // GEOMETRY. World x is linear in years: in the WIDE framing (cam x 540, kx 1)
 // year 1 sits at screen x 70 and year 2100 at x 1010. The baseline is fixed at
-// screen y 1040 in every framing; a peak is 640 px tall at ky 1. Each burst has
+// screen y 1030 in every framing; a peak is 730 px tall at ky 1. Each burst has
 // body: the area between trace and baseline carries a fine orange hatch.
 // The camera is a CHART camera { x, kx, ky }: the time axis and the height
 // zoom separately (a uniform zoom close enough to read one burst would throw
-// its 640 px peak out of the frame). Everything is projected to SCREEN px here
+// its 730 px peak out of the frame). Everything is projected to SCREEN px here
 // and drawn in a plain svg, so every stroke and numeral keeps its weight at
-// every zoom. The camera itself still runs through the kit's damped key track
+// every zoom. MATERIAL: an engraving, not a plot: kit InkStroke lines (dark
+// casing), a slight hand on the flat stretches, hatch for every tone, the ruler
+// drawn as an old map's scale bar. The camera itself still runs through the kit's damped key track
 // (chartCam: the kit's k channel carries kx, its y channel carries ky).
 // ---------------------------------------------------------------------------
 import React from "react";
-import { ACCENT, type CamKey, DARK, FRAME_H, FRAME_W, INK, Label, clamp01, fell, runCamera, smoothstep } from "./plagueShared";
+import { ACCENT, type CamKey, DARK, FRAME_H, FRAME_W, INK, InkStroke, Label, clamp01, fell, runCamera, smoothstep } from "./plagueShared";
 
 export const YEAR_A = 1;
 export const YEAR_B = 2100;
@@ -40,8 +42,11 @@ export const X_B = 1010;
 export const PX_PER_YEAR = (X_B - X_A) / (YEAR_B - YEAR_A);
 /** world x of a year (== screen x in the wide framing) */
 export const wx = (yr: number) => X_A + (yr - YEAR_A) * PX_PER_YEAR;
-export const BASE_Y = 1040;
-export const PEAK_H = 640;
+export const BASE_Y = 1030;
+export const PEAK_H = 730;
+/** the scale bar hangs under the baseline: its depth, and the numerals' baseline */
+export const BAR_H = 12;
+export const NUM_Y = BASE_Y + BAR_H + 33;
 /** years the sharp rise takes */
 export const RISE = 6;
 
@@ -89,19 +94,36 @@ export const chartCam = (keys: CamKey[], frame: number): ChartCam => {
   return { x: c.x, kx: c.k, ky: c.y };
 };
 export const sx = (cam: ChartCam, yr: number) => FRAME_W / 2 + (wx(yr) - cam.x) * cam.kx;
-export const sy = (cam: ChartCam, h: number) => BASE_Y - h * PEAK_H * cam.ky;
+/** the trace's zero line rides a few px above the scale bar's top rule, so the bar's century blocks show under it */
+export const TRACE_LIFT = 4;
+export const sy = (cam: ChartCam, h: number) => BASE_Y - TRACE_LIFT - h * PEAK_H * cam.ky;
 
 // ---------------------------------------------------------------------------
 // Paths (screen px).
 // ---------------------------------------------------------------------------
 const STEP = 0.5;
 /** the curve h(yr) from yrA to yrB as path data, sampled every half year */
-export const pathBetween = (cam: ChartCam, h: (yr: number) => number, yrA: number, yrB: number) => {
+export const pathBetween = (cam: ChartCam, h: (yr: number) => number, yrA: number, yrB: number, wobble?: (yr: number) => number) => {
   if (yrB <= yrA) return "";
-  let d = `M${sx(cam, yrA).toFixed(2)},${sy(cam, h(yrA)).toFixed(2)}`;
-  for (let yr = Math.floor(yrA / STEP + 1) * STEP; yr < yrB; yr += STEP) d += `L${sx(cam, yr).toFixed(2)},${sy(cam, h(yr)).toFixed(2)}`;
-  d += `L${sx(cam, yrB).toFixed(2)},${sy(cam, h(yrB)).toFixed(2)}`;
+  const y = (yr: number) => (sy(cam, h(yr)) + (wobble ? wobble(yr) : 0)).toFixed(2);
+  let d = `M${sx(cam, yrA).toFixed(2)},${y(yrA)}`;
+  for (let yr = Math.floor(yrA / STEP + 1) * STEP; yr < yrB; yr += STEP) d += `L${sx(cam, yr).toFixed(2)},${y(yr)}`;
+  d += `L${sx(cam, yrB).toFixed(2)},${y(yrB)}`;
   return d;
+};
+
+/**
+ * The graver's hand: a slow wobble (screen px) on the FLAT stretches only, zero inside every burst and eased out
+ * 15 years either side of one, so the data shape is untouched. It is a function of the YEAR (the kit's `roughen`
+ * works along screen arc length, which would shimmer under a moving chart camera), same two-sine recipe.
+ */
+export const handWobble = (yr: number, amp = 1.6) => {
+  let gap = Infinity;
+  for (const p of PANDEMICS) {
+    if (yr >= p.pre && yr <= p.end) return 0;
+    gap = Math.min(gap, yr < p.pre ? p.pre - yr : yr - p.end);
+  }
+  return (amp * Math.min(1, gap / 15) * (Math.sin(yr / 27 + 1.3) + 0.6 * Math.sin(yr / 11 + 4.1))) / 1.6;
 };
 
 /**
@@ -157,37 +179,50 @@ export const arcTable = (kx: number, ky: number) => {
 // ---------------------------------------------------------------------------
 // The pieces.
 // ---------------------------------------------------------------------------
-export const TRACE_W = 7;
+export const TRACE_W = 8;
 const NUMERALS = [1, 500, 1000, 1500, 2000];
-const CENTURIES = [1, ...Array.from({ length: 21 }, (_, i) => (i + 1) * 100)];
+const BLOCKS = Array.from({ length: 21 }, (_, i) => [Math.max(YEAR_A, i * 100), (i + 1) * 100]);
 
-/** the ruler: a fine cream baseline 1-2100, century ticks, five numerals, an unlabelled tick at today */
+/**
+ * the ruler, as the scale bar of an old map: a double cream rule 1-2100 with alternately hatched and blank century
+ * blocks between the rules, ticks and five numerals under it, and an unlabelled tick at today
+ */
 export const Ruler: React.FC<{ cam: ChartCam }> = ({ cam }) => {
   const xa = sx(cam, YEAR_A);
   const xb = sx(cam, YEAR_B);
-  const ticks = CENTURIES.map((yr) => {
-    const x = sx(cam, yr).toFixed(2);
-    return `M${x},${BASE_Y}V${BASE_Y + (yr % 500 === 0 || yr === 1 ? 9 : 6)}`;
-  }).join("");
+  const y1 = BASE_Y + BAR_H;
+  const rules = `M${xa},${BASE_Y}H${xb}M${xa},${y1}H${xb}`;
+  const walls = [YEAR_A, ...BLOCKS.map((b) => b[1])].map((yr) => `M${sx(cam, yr).toFixed(2)},${BASE_Y}V${y1}`).join("");
+  const ticks = NUMERALS.map((yr) => `M${sx(cam, yr).toFixed(2)},${y1}V${y1 + 8}`).join("");
   const xt = sx(cam, TODAY);
   return (
     <g>
-      <line x1={xa} y1={BASE_Y} x2={xb} y2={BASE_Y} stroke={DARK} strokeOpacity={0.45} strokeWidth={6.5} />
-      <line x1={xa} y1={BASE_Y} x2={xb} y2={BASE_Y} stroke={INK} strokeOpacity={0.9} strokeWidth={3} />
-      <path d={ticks} fill="none" stroke={INK} strokeOpacity={0.9} strokeWidth={3} />
-      <line x1={xt} y1={BASE_Y - 28} x2={xt} y2={BASE_Y + 12} stroke={DARK} strokeOpacity={0.5} strokeWidth={7.5} />
-      <line x1={xt} y1={BASE_Y - 28} x2={xt} y2={BASE_Y + 12} stroke={INK} strokeWidth={4} />
+      <defs>
+        <pattern id="tycBarHatch" patternUnits="userSpaceOnUse" width={5} height={5} patternTransform={`translate(${xa.toFixed(2)} ${BASE_Y}) rotate(45)`}>
+          <line x1={0} y1={0} x2={0} y2={5} stroke={INK} strokeWidth={2.4} />
+        </pattern>
+      </defs>
+      <rect x={xa} y={BASE_Y} width={xb - xa} height={BAR_H} fill={DARK} fillOpacity={0.45} />
+      {BLOCKS.filter((_, i) => i % 2 === 0).map(([a, b]) => {
+        const x0 = sx(cam, a);
+        const x1 = sx(cam, b);
+        if (x1 < -4 || x0 > FRAME_W + 4) return null;
+        return <rect key={a} x={x0} y={BASE_Y} width={x1 - x0} height={BAR_H} fill="url(#tycBarHatch)" opacity={0.6} />;
+      })}
+      <InkStroke d={rules} width={3} />
+      <path d={walls} fill="none" stroke={INK} strokeWidth={2} />
+      <path d={ticks} fill="none" stroke={INK} strokeWidth={3} strokeLinecap="round" />
+      <InkStroke d={`M${xt.toFixed(2)},${BASE_Y - 28}V${y1}`} width={4} />
       {NUMERALS.map((yr) => (
         <text
           key={yr}
           x={sx(cam, yr)}
-          y={BASE_Y + 30}
+          y={NUM_Y}
           textAnchor="middle"
           fontFamily={fell}
           fontSize={30}
           letterSpacing="0.04em"
           fill={INK}
-          fillOpacity={0.95}
           stroke={DARK}
           strokeOpacity={0.5}
           strokeWidth={4}
@@ -201,10 +236,10 @@ export const Ruler: React.FC<{ cam: ChartCam }> = ({ cam }) => {
   );
 };
 
-/** the orange trace from year 1 up to `toYear` (solid, with its dark casing), each burst hatched down to the baseline */
+/** the orange trace from year 1 up to `toYear`: an inked line (dark casing, a slight hand on the flats), each burst hatched down to the baseline */
 export const Trace: React.FC<{ cam: ChartCam; toYear: number }> = ({ cam, toYear }) => {
   const to = Math.min(TODAY, toYear);
-  const d = pathBetween(cam, traceH, YEAR_A, to);
+  const d = pathBetween(cam, traceH, YEAR_A, to, handWobble);
   if (!d) return null;
   const top = sy(cam, 1) - 10;
   return (
@@ -219,24 +254,21 @@ export const Trace: React.FC<{ cam: ChartCam; toYear: number }> = ({ cam, toYear
           <g key={p.onset}>
             <defs>
               {/* the hatch is pinned to its own burst's onset, so it rides with the burst through every zoom */}
-              <pattern id={`tycHatch${p.onset}`} patternUnits="userSpaceOnUse" width={10} height={10} patternTransform={`translate(${sx(cam, p.onset).toFixed(2)} ${BASE_Y}) rotate(45)`}>
-                <line x1={0} y1={0} x2={0} y2={10} stroke={ACCENT} strokeWidth={5} />
+              <pattern id={`tycHatch${p.onset}`} patternUnits="userSpaceOnUse" width={8} height={8} patternTransform={`translate(${sx(cam, p.onset).toFixed(2)} ${BASE_Y}) rotate(45)`}>
+                <line x1={0} y1={0} x2={0} y2={8} stroke={ACCENT} strokeWidth={3} />
               </pattern>
               <clipPath id={`tycArea${p.onset}`}>
                 <path d={area} />
               </clipPath>
             </defs>
             <g clipPath={`url(#tycArea${p.onset})`}>
-              <rect x={xa - 2} y={top} width={xb - xa + 4} height={BASE_Y - top} fill={ACCENT} fillOpacity={0.12} />
-              <rect x={xa - 2} y={top} width={xb - xa + 4} height={BASE_Y - top} fill={`url(#tycHatch${p.onset})`} opacity={0.45} />
+              <rect x={xa - 2} y={top} width={xb - xa + 4} height={BASE_Y - top} fill={ACCENT} fillOpacity={0.1} />
+              <rect x={xa - 2} y={top} width={xb - xa + 4} height={BASE_Y - top} fill={`url(#tycHatch${p.onset})`} opacity={0.55} />
             </g>
           </g>
         );
       })}
-      <g fill="none" strokeLinejoin="round" strokeLinecap="round">
-        <path d={d} stroke={DARK} strokeOpacity={0.55} strokeWidth={TRACE_W + 4.5} />
-        <path d={d} stroke={ACCENT} strokeWidth={TRACE_W} />
-      </g>
+      <InkStroke d={d} width={TRACE_W} tone={1} />
     </g>
   );
 };
@@ -253,9 +285,9 @@ export const Highlight: React.FC<{
 }> = ({ cam, h, yearOfS, s, len = 120, maxYear = TODAY, minYear = YEAR_A }) => (
   <g fill="none" strokeLinejoin="round" strokeLinecap="round">
     {[
-      [1, 0.45, TRACE_W + 1.5],
-      [0.6, 0.6, TRACE_W + 2.5],
-      [0.25, 0.9, TRACE_W + 3],
+      [1, 0.45, TRACE_W + 1],
+      [0.6, 0.6, TRACE_W + 2],
+      [0.25, 0.9, TRACE_W + 2.5],
     ].map(([frac, o, w]) => {
       const a = Math.max(minYear, yearOfS(s - (len * frac) / 2));
       const b = Math.min(maxYear, yearOfS(s + (len * frac) / 2));
@@ -265,14 +297,26 @@ export const Highlight: React.FC<{
   </g>
 );
 
-/** the three onset years, at the peaks (the only labels on the chart) */
+/** 1 in the frame, 0 before a centred label of this x would clip at a frame edge */
+export const edgeFade = (x: number) => clamp01((x - 50) / 70) * clamp01((FRAME_W - 50 - x) / 70);
+
+/** the three onset years (the only labels on the chart), each on a short inked leader tick above its peak */
 export const PeakLabels: React.FC<{ cam: ChartCam; frame: number; appear: number[] }> = ({ cam, frame, appear }) => (
   <g>
-    {PANDEMICS.map((p, i) => (
-      <Label key={p.onset} x={sx(cam, p.onset + RISE)} y={sy(cam, 1) - 28} size={60} appear={appear[i]} frame={frame}>
-        {p.onset}
-      </Label>
-    ))}
+    {PANDEMICS.map((p, i) => {
+      const x = sx(cam, p.onset + RISE);
+      const y = sy(cam, 1);
+      const grow = smoothstep(clamp01((frame - appear[i]) / 8));
+      if (grow <= 0) return null;
+      return (
+        <g key={p.onset} opacity={edgeFade(x)}>
+          <InkStroke d={`M${x.toFixed(2)},${y - 12}V${(y - 12 - 22 * grow).toFixed(2)}`} width={3} />
+          <Label x={x} y={y - 46} size={60} appear={appear[i]} frame={frame}>
+            {p.onset}
+          </Label>
+        </g>
+      );
+    })}
   </g>
 );
 

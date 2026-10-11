@@ -29,7 +29,7 @@ import { AbsoluteFill, Img, staticFile } from "remotion";
 import { loadFont as loadFellSC } from "@remotion/google-fonts/IMFellEnglishSC";
 import { loadFont as loadFell } from "@remotion/google-fonts/IMFellEnglish";
 import { CAM_DAMP, CAM_STIFF, clamp01, hash, smoothstep } from "./fieldShared";
-import { FLEA_ROUNDEL, MARMOT_ROUNDEL } from "./plagueSharedData";
+import { FIGURES, FLEA_CUT, FLEA_CUT_ASPECT, MARMOT_ROUNDEL, MARMOT_VIGNETTE, MARMOT_VIGNETTE_ASPECT } from "./plagueSharedData";
 
 export const { fontFamily: fellSC } = loadFellSC("normal", { weights: ["400"], subsets: ["latin"] });
 export const { fontFamily: fell } = loadFell("normal", { weights: ["400"], subsets: ["latin"] });
@@ -64,14 +64,6 @@ export const mixColor = (a: string, b: string, t: number) => {
   const pb = hexRgb(b);
   const u = clamp01(t);
   return `rgb(${pa.map((v, i) => Math.round(v + (pb[i] - v) * u)).join(",")})`;
-};
-const mix3 = (a: string, b: string, t: number, c: string, u: number) => {
-  const pa = hexRgb(a);
-  const pb = hexRgb(b);
-  const pc = hexRgb(c);
-  const t1 = clamp01(t);
-  const u1 = clamp01(u);
-  return `rgb(${pa.map((v, i) => Math.round((v + (pb[i] - v) * t1) * (1 - u1) + pc[i] * u1)).join(",")})`;
 };
 
 // ---------------------------------------------------------------------------
@@ -187,92 +179,146 @@ export const Page: React.FC<{ vignette?: number; children?: React.ReactNode }> =
 );
 
 // ---------------------------------------------------------------------------
-// PERSON: one engraved standing figure (front view, long belted tunic to the
-// knee, bare legs). Figure units: feet at (0, 0), 100 units tall, up = -y.
-// Cream form, firm dark outline, the shaded (right) side a tone down with a few
-// hatch strokes; light from the upper left. Pure paths, no filters.
+// INK (kit v2): what a builder draws by hand should look cut by the same
+// graver as the woodcuts: lines with a little life, shade by hatching.
 // ---------------------------------------------------------------------------
-const TUNIC =
-  "M-4,-83C-8,-82.5 -11.5,-81.5 -13,-79C-13.6,-71 -11.6,-63 -10.4,-58C-12.5,-50 -14.8,-40 -16,-30.5Q-10,-27.6 -5,-29.4Q0,-27.2 6,-29.2Q11,-27.4 16,-30.5C14.8,-40 12.5,-50 10.4,-58C11.6,-63 13.6,-71 13,-79C11.5,-81.5 8,-82.5 4,-83Q0,-79.5 -4,-83Z";
-const TUNIC_SHADE = "M6,-82.6C9,-82 11.8,-81.2 13,-79C13.6,-71 11.6,-63 10.4,-58C12.5,-50 14.8,-40 16,-30.5Q11,-27.4 7.4,-28.8C7.6,-40 6.4,-50 5.4,-58C6.6,-66 7,-75 6,-82.6Z";
-const LEG_L = "M-9.6,-31C-10,-22 -8.8,-12 -8.2,-5.2L-12.6,-1.8Q-13.4,0 -11.6,0L-3.4,0L-3.8,-5.4C-3.4,-13 -2.2,-22 -2.4,-31Z";
-const LEG_R = "M9.6,-31C10,-22 8.8,-12 8.2,-5.2L12.6,-1.8Q13.4,0 11.6,0L3.4,0L3.8,-5.4C3.4,-13 2.2,-22 2.4,-31Z";
-const ARM_L =
-  "M-12.6,-80C-17,-78.4 -18.6,-70 -18.8,-60C-19.4,-54 -19.6,-49 -19.2,-45.5C-19.6,-42.6 -18.6,-40.2 -17.2,-40.2C-15.6,-40.2 -15,-42.8 -15.2,-45.6C-14.8,-50 -14.4,-55 -14.2,-60C-13.6,-66 -12.8,-71 -11.4,-74Z";
-const ARM_R =
-  "M12.6,-80C17,-78.4 18.6,-70 18.8,-60C19.4,-54 19.6,-49 19.2,-45.5C19.6,-42.6 18.6,-40.2 17.2,-40.2C15.6,-40.2 15,-42.8 15.2,-45.6C14.8,-50 14.4,-55 14.2,-60C13.6,-66 12.8,-71 11.4,-74Z";
-const NECK = "M-3,-87L-3.6,-81.6Q0,-78.8 3.6,-81.6L3,-87Z";
-const HEAD = "M-5.8,-92.5C-5.8,-100 5.8,-100 5.8,-92.5C5.8,-88 3,-84.2 0,-84.2C-3,-84.2 -5.8,-88 -5.8,-92.5Z";
-const HEAD_SHADE = "M2.8,-97.4C5.6,-96 5.8,-93 5.8,-92.5C5.8,-88.6 3.6,-85.2 1.6,-84.5C3.4,-88 3.8,-93 2.8,-97.4Z";
-const HAIR = "M-6.3,-91C-7.6,-102.4 7.6,-102.4 6.3,-91C5.2,-95.6 -2.6,-97 -6.3,-91Z";
-const FOLDS =
-  "M-10.4,-58Q0,-55.4 10.4,-58M-10.9,-60.6Q0,-58 10.9,-60.6M-18.8,-60L-14.2,-60M18.8,-60L14.2,-60M-6,-55L-8.5,-30.4M2.2,-55.4L3.4,-29.2M-1.6,-50L-2.2,-38M-12.4,-79.4C-12.6,-76 -12,-72 -11.4,-70";
-const FACE = "M-3.6,-92.6L-1.3,-92.8M1.2,-92.8L3.5,-92.6M0.2,-92.2L0.8,-89.2L-0.3,-89M-1.5,-86.9L1.6,-86.9";
-const HATCH =
-  "M12.2,-76.5L7.8,-72M12.6,-72.4L7.6,-67.2M12,-67.6L7.6,-63.2M11.4,-63.2L8,-59.8M12.2,-53L8,-48.4M13.2,-48.4L8.4,-43.2M14.2,-43.6L9,-38M15,-38.6L9.6,-32.8M15.2,-33.4L12,-30M9,-26L5.4,-22.2M9,-21L5,-16.8M8.6,-16L5,-12.2M8.2,-11L5,-7.6M18.2,-71L15,-67.6M18.6,-66L15,-62.2M18.8,-56L15,-52M18.8,-51L15.4,-47.4M-13,-74L-15.6,-71.2M-13,-69.4L-15.8,-66.4";
+export type Pt = [number, number];
+/** points with a slow seeded wobble (long segments are subdivided; the two ends stay put). amp ~1-2.5 px */
+export const roughen = (points: Pt[], seed = 0, amp = 1.6): Pt[] => {
+  if (points.length < 2) return points;
+  const pts: Pt[] = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    const [ax, ay] = points[i - 1];
+    const [bx, by] = points[i];
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 36));
+    for (let j = 1; j <= n; j++) pts.push([ax + ((bx - ax) * j) / n, ay + ((by - ay) * j) / n]);
+  }
+  const s = [0];
+  for (let i = 1; i < pts.length; i++) s.push(s[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = s[s.length - 1];
+  const p1 = hash(seed, 11) * 6.283;
+  const p2 = hash(seed, 12) * 6.283;
+  return pts.map(([x, y], i): Pt => {
+    const a = pts[Math.max(0, i - 1)];
+    const b = pts[Math.min(pts.length - 1, i + 1)];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const w = (amp * Math.min(1, s[i] / 30, (total - s[i]) / 30) * (Math.sin(s[i] / 55 + p1) + 0.6 * Math.sin(s[i] / 23 + p2))) / 1.6;
+    return [x - ((b[1] - a[1]) / len) * w, y + ((b[0] - a[0]) / len) * w];
+  });
+};
+/** a smooth path d through the points (Catmull-Rom) */
+export const inkPath = (points: Pt[], closed = false) => {
+  const n = points.length;
+  if (n < 2) return "";
+  const at = (i: number) => (closed ? points[((i % n) + n) % n] : points[Math.max(0, Math.min(n - 1, i))]);
+  let d = `M${points[0][0].toFixed(2)},${points[0][1].toFixed(2)}`;
+  for (let i = 0; i < (closed ? n : n - 1); i++) {
+    const p0 = at(i - 1);
+    const p1 = at(i);
+    const p2 = at(i + 1);
+    const p3 = at(i + 2);
+    d += `C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(2)},${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(2)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(2)},${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(2)} ${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
+  }
+  return closed ? `${d}Z` : d;
+};
+/** an engraved hatching pattern: put it in <defs> (WorldSvg `defs`), fill with `url(#id)`. World-space by default
+ *  (the hatch zooms with the camera); pass `cam` for a screen-space hatch (constant spacing on screen). */
+export const Hatch: React.FC<{ id: string; spacing?: number; angle?: number; stroke?: string; width?: number; opacity?: number; cam?: Cam }> = ({ id, spacing = 7, angle = 45, stroke = INK, width = 1.2, opacity = 1, cam }) => (
+  <pattern
+    id={id}
+    patternUnits="userSpaceOnUse"
+    width={spacing * 8}
+    height={spacing}
+    patternTransform={`${cam ? `translate(${cam.x - FRAME_W / 2 / cam.k} ${cam.y - FRAME_H / 2 / cam.k}) scale(${1 / cam.k}) ` : ""}rotate(${angle})`}
+  >
+    <line x1={-1} y1={spacing / 2} x2={spacing * 8 + 1} y2={spacing / 2} stroke={stroke} strokeWidth={width} strokeOpacity={opacity} />
+  </pattern>
+);
+/** a line as an engraved stroke: dark casing under a cream (tone 0) or orange (tone 1) core, round caps */
+export const InkStroke: React.FC<{ d: string; width?: number; tone?: number; casing?: boolean; opacity?: number; dash?: string; color?: string }> = ({ d, width = 3, tone = 0, casing = true, opacity = 1, dash, color }) => (
+  <g opacity={opacity} fill="none" strokeLinecap="round" strokeLinejoin="round">
+    {casing ? <path d={d} stroke={DARK} strokeWidth={width + Math.max(1.5, width * 0.6)} strokeOpacity={0.75} strokeDasharray={dash} /> : null}
+    <path d={d} stroke={color ?? mixColor(INK, ACCENT, tone)} strokeWidth={width} strokeDasharray={dash} />
+  </g>
+);
+/** short diagonal hatch strokes in a flat ellipse: the ground shadow under a figure (path d; stroke it cream at ~0.35) */
+export const groundHatch = (cx: number, cy: number, halfW: number, n = 9) => {
+  let d = "";
+  for (let i = 0; i < n; i++) {
+    const u = n === 1 ? 0 : (i / (n - 1)) * 2 - 1;
+    const l = halfW * 0.2 * Math.sqrt(Math.max(0.08, 1 - u * u));
+    const px = cx + u * halfW;
+    d += `M${(px - l).toFixed(2)},${(cy + l * 0.45).toFixed(2)}L${(px + l).toFixed(2)},${(cy - l * 0.45).toFixed(2)}`;
+  }
+  return d;
+};
 
+// ---------------------------------------------------------------------------
+// PERSON (kit v2): a REAL engraving: six standing figures cut out of Cesare
+// Vecellio's woodcuts (Habiti antichi et moderni, Venice 1598; Rijksmuseum
+// BI-1938-0066, CC0), toned like Hooke's flea (paper INK, lines DARK), each
+// also baked orange and dead (same pixels, so the versions cross-fade in
+// place). Inlined bitmaps (plagueSharedData.ts; PNGs in public/plague/figures).
+// Variants: 0 Bohemian man, 1 Bohemian woman, 2 English merchant, 3 country
+// girl, 4 Netherlandish merchant, 5 Bavarian matron. Width ~0.50-0.56 x height.
+// ---------------------------------------------------------------------------
+export const PERSON_VARIANTS = FIGURES.length;
+/** width / height of a variant's image */
+export const personAspect = (variant: number) => FIGURES[((variant % FIGURES.length) + FIGURES.length) % FIGURES.length].w / FIGURES[((variant % FIGURES.length) + FIGURES.length) % FIGURES.length].h;
 export type PersonProps = {
   /** world px of the FEET (the point it stands on, and topples about) */
   x: number;
   y: number;
-  /** standing height in world px (60-200 reads best) */
+  /** standing height in world px, hat to sole (seed varies it +-5 %) */
   h: number;
-  /** 0 = cream, 1 = orange (infected) */
+  /** 0 = cream, 1 = orange (infected); cross-fades */
   tone?: number;
   /** 0 = standing, 1 = lying on the ground, dead (pass LINEAR progress; the fall accelerates by itself) */
   fallen?: number;
   /** 1 = falls to screen right, -1 = to screen left */
   facing?: 1 | -1;
-  /** small variation in build / height / tilt / hair */
+  /** picks the variant, a +-5 % height and a mirror flip */
   seed?: number;
+  /** force a variant 0..5 (otherwise by seed) */
+  variant?: number;
+  /** false: no ground-shadow hatch */
+  shadow?: boolean;
   opacity?: number;
 };
-export const Person: React.FC<PersonProps> = ({ x, y, h, tone = 0, fallen = 0, facing = 1, seed = 0, opacity = 1 }) => {
-  const build = 0.9 + 0.24 * hash(seed, 1);
-  const tall = 0.94 + 0.12 * hash(seed, 2);
-  const tilt = (hash(seed, 3) - 0.5) * 5;
-  const hairK = hash(seed, 4);
-  const headX = (hash(seed, 5) - 0.5) * 1.6;
+export const Person: React.FC<PersonProps> = ({ x, y, h, tone = 0, fallen = 0, facing = 1, seed = 0, variant, shadow = true, opacity = 1 }) => {
+  const n = FIGURES.length;
+  const fig = FIGURES[(((variant ?? Math.floor(hash(seed, 1) * n)) % n) + n) % n];
+  const H = h * (0.95 + 0.1 * hash(seed, 2));
+  const W = (H * fig.w) / fig.h;
+  const flip = hash(seed, 3) > 0.5 ? -1 : 1;
   const fl = clamp01(fallen);
   const fall = Math.pow(fl, 2.2); // gravity: slow to tip, fast to land
   const dead = smoothstep((fl - 0.7) / 0.3);
-  const s = (h / 100) * tall;
-  const ang = tilt * (1 - fall) + facing * 90 * fall;
-  const lift = -7.5 * s * build * fall; // lying, the body rests ON the ground line
-  const main = mix3(INK, ACCENT, tone, DEAD, dead);
-  const deep = mix3(INK_DEEP, ACCENT_DEEP, tone, "#6E624E", dead);
-  const hair = mix3(hairK > 0.5 ? "#8C7F60" : "#6F6249", "#A66A0A", tone, "#5C5241", dead);
-  const out = { stroke: DARK, strokeWidth: 1.7, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
+  const t = clamp01(tone);
+  const img = (href: string, op: number) => <image href={href} x={-W * fig.footX} y={-H} width={W} height={H} opacity={op} preserveAspectRatio="none" />;
   return (
-    <g transform={`translate(${x} ${y + lift}) rotate(${ang}) scale(${s * build} ${s})`} opacity={opacity}>
-      <path d={LEG_L} fill={main} {...out} />
-      <path d={LEG_R} fill={deep} {...out} />
-      <path d={TUNIC} fill={main} {...out} />
-      <path d={TUNIC_SHADE} fill={deep} />
-      <path d={ARM_L} fill={main} {...out} />
-      <path d={ARM_R} fill={deep} {...out} />
-      <path d={NECK} fill={deep} {...out} strokeWidth={1.3} />
-      <g transform={`translate(${headX} 0)`}>
-        <path d={HEAD} fill={main} {...out} />
-        <path d={HEAD_SHADE} fill={deep} />
-        <path d={HAIR} fill={hair} {...out} strokeWidth={1.3} />
-        <path d={FACE} fill="none" stroke={DARK} strokeWidth={0.85} strokeOpacity={0.75} strokeLinecap="round" />
+    <g opacity={opacity}>
+      {shadow && fall < 1 ? <path d={groundHatch(x, y + H * 0.012, W * 0.42)} fill="none" stroke={INK} strokeWidth={Math.max(0.8, H * 0.008)} strokeOpacity={0.35 * (1 - fall)} strokeLinecap="round" /> : null}
+      <g transform={`translate(${x} ${y - W * 0.2 * fall}) rotate(${facing * 90 * fall}) scale(${flip} 1)`}>
+        {dead < 1 ? img(t >= 1 ? fig.orange : fig.cream, 1) : null}
+        {dead < 1 && t > 0 && t < 1 ? img(fig.orange, t) : null}
+        {dead > 0 ? img(fig.dead, dead) : null}
       </g>
-      <path d={FOLDS} fill="none" stroke={DARK} strokeWidth={1.05} strokeOpacity={0.85} strokeLinecap="round" />
-      <path d={HATCH} fill="none" stroke={DARK} strokeWidth={0.8} strokeOpacity={0.72} strokeLinecap="round" />
     </g>
   );
 };
 
 // ---------------------------------------------------------------------------
-// MEDALLION: an engraved roundel (thin cream ring; the marmot's head and
-// shoulders, or Hooke's flea on a LAND disc). Bitmaps are inlined (data URLs).
+// MEDALLION: an engraved roundel, thin CREAM ring (never orange: orange is the
+// plague only). "marmot": the standing marmot's head and shoulders. "flea":
+// Hooke's flea as a cut-out on the page tone, a hatch shadow under it.
 // ---------------------------------------------------------------------------
 let medallionUid = 0;
-export const Medallion: React.FC<{ kind: "marmot" | "flea"; cx: number; cy: number; r: number; accent?: boolean; opacity?: number }> = ({ kind, cx, cy, r, accent = false, opacity = 1 }) => {
+export const Medallion: React.FC<{ kind: "marmot" | "flea"; cx: number; cy: number; r: number; accent?: boolean; opacity?: number }> = ({ kind, cx, cy, r, opacity = 1 }) => {
   const id = React.useMemo(() => `plagueMed${medallionUid++}`, []);
-  const ring = accent ? ACCENT : INK;
   const w = Math.max(2.5, r * 0.035);
+  const fw = r * 1.74;
+  const fh = fw / FLEA_CUT_ASPECT;
   return (
     <g opacity={opacity}>
       <clipPath id={id}>
@@ -280,13 +326,59 @@ export const Medallion: React.FC<{ kind: "marmot" | "flea"; cx: number; cy: numb
       </clipPath>
       <circle cx={cx} cy={cy} r={r + w * 2.6} fill={DARK} fillOpacity={0.55} />
       <circle cx={cx} cy={cy} r={r} fill={LAND} />
-      <image href={kind === "marmot" ? MARMOT_ROUNDEL : FLEA_ROUNDEL} x={cx - r} y={cy - r} width={2 * r} height={2 * r} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${id})`} />
+      {kind === "marmot" ? (
+        <image href={MARMOT_ROUNDEL} x={cx - r} y={cy - r} width={2 * r} height={2 * r} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${id})`} />
+      ) : (
+        <>
+          <path d={groundHatch(cx - r * 0.06, cy + r * 0.6, r * 0.5, 11)} fill="none" stroke={INK} strokeWidth={Math.max(1, r * 0.014)} strokeOpacity={0.4} strokeLinecap="round" />
+          <image href={FLEA_CUT} x={cx - fw / 2 + r * 0.02} y={cy - fh / 2 - r * 0.04} width={fw} height={fh} preserveAspectRatio="none" />
+        </>
+      )}
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={DARK} strokeWidth={w * 0.6} />
-      <circle cx={cx} cy={cy} r={r + w * 0.8} fill="none" stroke={ring} strokeWidth={w} />
-      <circle cx={cx} cy={cy} r={r + w * 2.6} fill="none" stroke={ring} strokeWidth={w * 0.4} strokeOpacity={0.8} />
+      <circle cx={cx} cy={cy} r={r + w * 0.8} fill="none" stroke={INK} strokeWidth={w} />
+      <circle cx={cx} cy={cy} r={r + w * 2.6} fill="none" stroke={INK} strokeWidth={w * 0.4} strokeOpacity={0.8} />
     </g>
   );
 };
+
+// ---------------------------------------------------------------------------
+// MARMOT VIGNETTE (kit v2): Muetzel's three bobak marmots and the ground they
+// sit on, as a book-illustration vignette: no rectangle, no sky; the engraving
+// trails off raggedly into the page. (x, y) = TOP-LEFT in world px, w = width;
+// height = w / MARMOT.aspect. MARMOT gives where things are, as FRACTIONS of
+// the vignette's own box (fx of w, fy of h); marmotPoint() turns one into
+// world px. The standing marmot faces LEFT; the two others sit in front of it.
+// ---------------------------------------------------------------------------
+export const MARMOT = {
+  aspect: MARMOT_VIGNETTE_ASPECT, // w / h (1366 x 1335)
+  nose: [0.415, 0.145] as Pt,
+  eye: [0.48, 0.13] as Pt,
+  head: [0.5, 0.13] as Pt, // middle of the standing marmot's head
+  headTop: [0.52, 0.085] as Pt,
+  /** back contour, nape -> rump (the right-hand outline) */
+  back: [[0.63, 0.15], [0.7, 0.22], [0.8, 0.33], [0.88, 0.45], [0.94, 0.56], [0.97, 0.66]] as Pt[],
+  /** front contour, throat -> belly (the left-hand outline) */
+  chest: [[0.44, 0.2], [0.5, 0.3], [0.53, 0.42], [0.56, 0.55]] as Pt[],
+  shoulder: [0.68, 0.24] as Pt,
+  paw: [0.66, 0.49] as Pt,
+  /** where its body meets the ground / goes behind the two in front */
+  feet: [0.72, 0.6] as Pt,
+  /** coarse silhouette of the standing marmot, clockwise from the nose */
+  silhouette: [[0.415, 0.15], [0.44, 0.105], [0.52, 0.085], [0.6, 0.11], [0.66, 0.17], [0.76, 0.27], [0.86, 0.42], [0.94, 0.56], [0.97, 0.68], [0.86, 0.62], [0.72, 0.56], [0.56, 0.55], [0.53, 0.42], [0.5, 0.3], [0.45, 0.21], [0.42, 0.175]] as Pt[],
+  /** the two marmots in front (rough centres) and the ground line */
+  frontLeft: [0.3, 0.63] as Pt,
+  frontRight: [0.68, 0.74] as Pt,
+  groundY: 0.93,
+};
+export const marmotPoint = (x: number, y: number, w: number, f: Pt): Pt => [x + f[0] * w, y + (f[1] * w) / MARMOT.aspect];
+/** SVG flavour (inside WorldSvg; inlined 820 px bitmap: fine up to ~800 px on screen) */
+export const MarmotVignette: React.FC<{ x: number; y: number; w: number; opacity?: number }> = ({ x, y, w, opacity = 1 }) => (
+  <image href={MARMOT_VIGNETTE} x={x} y={y} width={w} height={w / MARMOT.aspect} opacity={opacity} preserveAspectRatio="none" />
+);
+/** HTML flavour (inside WorldDiv; the full 1366 px PNG via staticFile: use when it is drawn large) */
+export const MarmotVignetteImg: React.FC<{ x: number; y: number; w: number; opacity?: number }> = ({ x, y, w, opacity = 1 }) => (
+  <Img src={staticFile("plague/marmot_vignette.png")} style={{ position: "absolute", left: x, top: y, width: w, height: w / MARMOT.aspect, maxWidth: "none", opacity }} />
+);
 
 // ---------------------------------------------------------------------------
 // LABEL: cream IM Fell, slides up 24 px while fading in over ~10 frames.

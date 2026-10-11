@@ -15,7 +15,8 @@
 //
 // MOTION (one continuous move). Opens on cut 1's held wide framing without the
 // ghosts and the comb, the camera already gliding right and stretching the time
-// axis toward the present (landed ~f48, then a creep). A brighter stretch of
+// axis toward the present (one long ease, landed ~f68) and then still easing
+// forward into the future to the last frame. A brighter stretch of
 // the orange trace travels with it at constant speed: up and down the 1894
 // burst, out along the flat line to the unlabelled TODAY tick (f72), and on as
 // the tip that draws the line's continuation: DASHED orange, into the future.
@@ -31,7 +32,7 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { ACCENT, type CamKey, DARK, FPS as KIT_FPS, Page, runCamera } from "./plagueShared";
+import { type CamKey, FPS as KIT_FPS, InkStroke, Page, runCamera } from "./plagueShared";
 import {
   type ChartCam,
   ChartSvg,
@@ -68,8 +69,10 @@ const KX_END = 6.5;
 const KY_END = 1.1;
 const KEYS: CamKey[] = [
   { f: 0, x: 0, k: WIDE_HELD.kx, y: WIDE_HELD.ky },
-  { f: 44, x: 1, k: KX_END, y: KY_END },
-  { f: 111, x: 1.05, k: KX_END * 1.06, y: KY_END * 1.015 },
+  { f: 38, x: 0.45, k: WIDE_HELD.kx * Math.pow(KX_END / WIDE_HELD.kx, 0.45), y: WIDE_HELD.ky + 0.45 * (KY_END - WIDE_HELD.ky) },
+  { f: 64, x: 1, k: KX_END, y: KY_END },
+  // no stop: the camera keeps easing forward into the future while the swell wanders
+  { f: 111, x: 1.22, k: KX_END * 1.08, y: KY_END * 1.02 },
 ];
 const camAt = (frame: number): ChartCam => {
   // renormalised so frame 0 is EXACTLY cut 1's held wide framing (the damper is already moving there)
@@ -112,10 +115,7 @@ const ComesAndGoes: React.FC<Props> = ({ swell }) => {
         <Ruler cam={cam} />
         <Trace cam={cam} toYear={TODAY} />
         {dFuture ? (
-          <g fill="none" strokeLinejoin="round" strokeDasharray="17 12">
-            <path d={dFuture} stroke={DARK} strokeOpacity={0.5} strokeWidth={8.5} />
-            <path d={dFuture} stroke={ACCENT} strokeWidth={5} />
-          </g>
+          <InkStroke d={dFuture} width={5} tone={1} dash="17 14" />
         ) : null}
         <Highlight cam={cam} h={h} yearOfS={ARC.yearOfS} s={s} len={130} maxYear={Math.max(TODAY, futureTip)} />
         <PeakLabels cam={cam} frame={frame} appear={[-30, -30, -30]} />

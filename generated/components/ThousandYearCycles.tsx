@@ -20,10 +20,11 @@
 // waves, the flat and the 1894 burst (f57-60) to today (f66) while the camera,
 // pulling back from the first frame, opens to the whole 1-2100 ruler (~f56). Then, in the wide framing, dashed cream
 // ghost bursts (outline + a very light hatch) are drawn where a 500-year clock
-// from 541 would put them (1041, 1541, 2041; f72-92). On the second "Why" (f99)
+// from 541 would put them (1041, 1541, 2041; f71-93) while the camera, having
+// reached its widest at ~f56, drifts slowly right and in. From ~f86
 // the time axis opens on 1000-1400 (the height stays): the 1041 ghost at the
 // left, the solid 1347 burst at the right, and between them one dashed cream
-// tick every ten years stands up, one after another, left to right (f104-124).
+// tick every ten years stands up, one after another, left to right (f108-128).
 // Hold: slow creep, a highlight climbing the 1347 burst. The cut therefore ends
 // CLOSE; ComesAndGoes opens on the same chart in its own wide framing.
 //
@@ -36,11 +37,12 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { type CamKey, DARK, FPS as KIT_FPS, INK, Label, Page } from "./plagueShared";
+import { type CamKey, FPS as KIT_FPS, INK, InkStroke, Label, Page } from "./plagueShared";
 import {
   BASE_Y,
   ChartSvg,
   Highlight,
+  NUM_Y,
   PeakLabels,
   RISE,
   Ruler,
@@ -78,39 +80,43 @@ const RISE_EQ = 3 * TIP_V;
 const tipYear = (f: number) => Math.min(TODAY, drawYear(750 + RISE_EQ + TIP_V * f, RISE_EQ));
 
 const CLOSE_YEAR = 1195;
-const CLOSE_KX = 5.6;
+const CLOSE_KX = 5.2;
 // the camera (x = world x on the frame centre, k = time-axis zoom, y = height zoom): it glides right and
 // pulls back from the first frame, slower than the tip, so the 541 burst stays in at the left while the
 // empty stretch between it and the tip grows (keys sit ~4 f early: the damper trails)
 const CAM: CamKey[] = [
-  { f: -4, x: 398.7, k: 4.5, y: 1.2 },
-  { f: 4, x: 432, k: 3.5, y: 1.2 },
-  { f: 12, x: 480, k: 2.45, y: 1.17 },
-  { f: 20, x: 520, k: 1.9, y: 1.12 },
-  { f: 30, x: 538, k: 1.45, y: 1.06 },
-  { f: 50, x: 540, k: 1, y: 1 },
-  { f: 96, x: 540, k: 1.012, y: 1.01 },
-  // "Why is it not 10 years?": the time axis opens on 1000-1400 (the height stays)
-  { f: 111, x: wx(CLOSE_YEAR), k: CLOSE_KX, y: 1.012 },
-  { f: 134, x: wx(CLOSE_YEAR + 4), k: CLOSE_KX * 1.03, y: 1.02 },
+  { f: -4, x: 398.7, k: 4.5, y: 1.12 },
+  { f: 4, x: 432, k: 3.5, y: 1.12 },
+  { f: 12, x: 474, k: 2.45, y: 1.1 },
+  { f: 20, x: 498, k: 1.9, y: 1.07 },
+  { f: 30, x: 510, k: 1.4, y: 1.03 },
+  // the widest point: the whole ruler with margins; the drift right never stops, and turns into a slow push
+  { f: 54, x: 527, k: 0.93, y: 0.97 },
+  { f: 82, x: 563, k: 1.05, y: 1.02 },
+  // "Why is it not 10 years?": a long ease as the time axis opens on 1000-1400 (the height almost stays)
+  { f: 92, x: 571, k: 1.2, y: 1.027 },
+  { f: 102, x: 582, k: 1.75, y: 1.034 },
+  { f: 110, x: 593, k: 2.9, y: 1.04 },
+  { f: 118, x: wx(CLOSE_YEAR), k: CLOSE_KX, y: 1.045 },
+  { f: 134, x: wx(CLOSE_YEAR + 7), k: CLOSE_KX * 1.04, y: 1.06 },
 ];
 
 // "why is it not 500 years?": 541 + 500n, drawn from the baseline up
 const GHOSTS = [
-  { onset: 1041, from: 72 },
-  { onset: 1541, from: 78 },
-  { onset: 2041, from: 84 },
+  { onset: 1041, from: 71 },
+  { onset: 1541, from: 76 },
+  { onset: 2041, from: 81 },
 ];
 const GHOST_SPAN = 150;
-const GHOST_FRAMES = 8;
+const GHOST_FRAMES = 12;
 // "why is it not 10 years?": one dashed tick every 10 years, standing up one after another, left to right at a
 // steady rate, in the close framing only (at the wide scale ten years is 4 px: it could only be a band)
-const COMB = { from: 104, to: 124, yearA: 990, yearB: 1410 };
-const COMB_GROW = 4; // frames each tick takes to stand up
+const COMB = { from: 108, to: 128, yearA: 990, yearB: 1420 };
+const COMB_GROW = 5; // frames each tick takes to stand up
 const COMB_H = 170;
 // hold: a highlight climbs the 1347 burst
 const CLOSE_ARC = arcTable(CLOSE_KX, 1);
-const SHIMMER = { from: 120, s0: CLOSE_ARC.sOfYear(1338), v: 52 };
+const SHIMMER = { from: 123, s0: CLOSE_ARC.sOfYear(1338), v: 60 };
 // the century numerals the opened axis needs
 const CLOSE_NUMERALS = [1100, 1200, 1300];
 
@@ -137,13 +143,13 @@ const ThousandYearCycles: React.FC<Props> = ({ ghostOpacity, combOpacity }) => {
       <ChartSvg>
         <Ruler cam={cam} />
         {CLOSE_NUMERALS.map((yr) => (
-          <Label key={yr} x={sx(cam, yr)} y={BASE_Y + 30} size={30} spacing={0.04} appear={104} frame={frame}>
+          <Label key={yr} x={sx(cam, yr)} y={NUM_Y} size={30} spacing={0.04} appear={102} frame={frame}>
             {yr}
           </Label>
         ))}
-        {comb ? <path d={comb} fill="none" stroke={INK} strokeOpacity={combOpacity} strokeWidth={3} strokeDasharray="11 7" /> : null}
+        {comb ? <InkStroke d={comb} width={3} dash="11 9" opacity={combOpacity} casing={false} /> : null}
         {GHOSTS.map((g) => {
-          const q = clamp01((frame - g.from) / GHOST_FRAMES);
+          const q = smoothstep(clamp01((frame - g.from) / GHOST_FRAMES)); // an eased stroke
           if (q <= 0) return null;
           const to = q < 0.35 ? g.onset + (RISE * q) / 0.35 : g.onset + RISE + ((GHOST_SPAN - RISE) * (q - 0.35)) / 0.65;
           const h = (yr: number) => burstH(yr, g.onset, g.onset + GHOST_SPAN, 3);
@@ -162,8 +168,7 @@ const ThousandYearCycles: React.FC<Props> = ({ ghostOpacity, combOpacity }) => {
                 </clipPath>
               </defs>
               <rect x={x0 - 2} y={top} width={x1 - x0 + 4} height={BASE_Y - top} fill={`url(#tycGhostHatch${g.onset})`} opacity={0.15} clipPath={`url(#tycGhostArea${g.onset})`} />
-              <path d={d} fill="none" stroke={DARK} strokeOpacity={0.4} strokeWidth={8} strokeDasharray="14 10" strokeLinejoin="round" />
-              <path d={d} fill="none" stroke={INK} strokeOpacity={ghostOpacity} strokeWidth={5} strokeDasharray="14 10" strokeLinejoin="round" />
+              <InkStroke d={d} width={5} dash="14 12" opacity={ghostOpacity} />
             </g>
           );
         })}

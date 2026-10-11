@@ -34,14 +34,17 @@ import React from "react";
 import { z } from "zod";
 import { useCurrentFrame } from "remotion";
 import {
-  ACCENT,
   ACCENT_DEEP,
   type CamKey,
   DARK,
   DEAD,
   FPS as KIT_FPS,
   INK,
+  InkStroke,
+  type Pt as KitPt,
   Medallion,
+  inkPath,
+  roughen,
   Page,
   Person,
   WorldSvg,
@@ -60,8 +63,10 @@ export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({ vignette: 0.32 });
 
 // ---------------------------------------------------------------------------
-// WORLD. The final framing is cam (540, 839) k 1.45: the crowd's centre lands
-// on screen y 760, the trunk on y ~1400 (20 px bold), a person stands 95 px tall.
+// WORLD. The settled framing is cam (~545, 841) k 1.45: the crowd (Vecellio's
+// 1598 woodcut figures, kit v2) fills screen y ~370-1080, the trunk crosses on
+// y ~1390 (20 px bold), a figure stands ~95 px tall. Every line is roughened
+// (kit `roughen`) and drawn as an inked stroke (kit `InkStroke` / `inkPath`).
 // ---------------------------------------------------------------------------
 type Pt = { x: number; y: number };
 type Line = { pts: Pt[]; s: number[]; len: number };
@@ -78,15 +83,15 @@ for (let r = 0; r < ROWS; r++) {
       id,
       seed: id + 11,
       x: 285 + 68 * c + (r % 2 ? 34 : 0) + (hash(id, 21) - 0.5) * 24,
-      y: 500 + 78 * r + (hash(id, 22) - 0.5) * 20,
+      y: 496 + 70 * r + (hash(id, 22) - 0.5) * 14,
     });
   }
 }
 const P = (r: number, c: number): Pt => PEOPLE[pid(r, c)];
 
 /** Catmull-Rom through the nodes, sampled to a polyline with arc length */
-const smoothLine = (nodes: Pt[], per = 14): Line => {
-  const pts: Pt[] = [];
+const smoothLine = (nodes: Pt[], per = 14, seed = 0, amp = 0): Line => {
+  let pts: Pt[] = [];
   const n = nodes.length;
   for (let i = 0; i < n - 1; i++) {
     const p0 = nodes[Math.max(0, i - 1)];
@@ -104,6 +109,8 @@ const smoothLine = (nodes: Pt[], per = 14): Line => {
     }
   }
   pts.push(nodes[n - 1]);
+  // the graver's hand: a slow seeded wobble (sample count is unchanged, ends stay put)
+  if (amp > 0) pts = roughen(pts.map((q): KitPt => [q.x, q.y]), seed, amp).map(([x, y]) => ({ x, y }));
   const s = [0];
   for (let i = 1; i < pts.length; i++) s.push(s[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
   return { pts, s, len: s[s.length - 1] };
@@ -123,12 +130,24 @@ const sub = (l: Line, s0: number, s1: number) => {
   const out: Pt[] = [pointAt(l, a)];
   for (let i = 0; i < l.pts.length; i++) if (l.s[i] > a && l.s[i] < b) out.push(l.pts[i]);
   out.push(pointAt(l, b));
-  return out.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join("");
+  return inkPath(out.map((q): KitPt => [q.x, q.y]));
+};
+/** the stretch s0..s1 cut at fixed stations every CHUNK px, so the stroke can taper (and dashes stay registered) */
+const CHUNK = 80;
+const pieces = (l: Line, s0: number, s1: number) => {
+  const a = Math.max(0, s0);
+  const b = Math.min(l.len, s1);
+  const out: { d: string; mid: number }[] = [];
+  for (let c = Math.floor(a / CHUNK) * CHUNK; c < b; c += CHUNK) {
+    const d = sub(l, Math.max(a, c), Math.min(b, c + CHUNK));
+    if (d) out.push({ d, mid: c + CHUNK / 2 });
+  }
+  return out;
 };
 
 // THE TRUNK: the living lineage, left to right, gently curved like a root.
 const FORK: Pt = { x: 281, y: 1142 };
-const MED = { x: 722, y: 1141, r: 86 };
+const MED = { x: 770, y: 1139, r: 86 };
 const TRUNK = smoothLine(
   [
     { x: -700, y: 1192 },
@@ -141,21 +160,23 @@ const TRUNK = smoothLine(
     { x: 1900, y: 1110 },
   ],
   24,
+  7,
+  2.6,
 );
 const trunkSAtX = (x: number) => {
   let i = 0;
   while (i < TRUNK.pts.length - 1 && TRUNK.pts[i].x < x) i++;
   return TRUNK.s[i];
 };
-const TRUNK_V = 6.5; // world px per frame, constant
-const TRUNK_S_EXIT = trunkSAtX(930); // the tip leaves the final framing on f130
+const TRUNK_V = 4.4; // world px per frame, constant
+const TRUNK_S_EXIT = trunkSAtX(940); // the tip leaves the final framing on f130
 const trunkTip = (f: number) => TRUNK_S_EXIT + TRUNK_V * (f - 130);
 
 // THE TWIG: one side-branch off the trunk, forking through the crowd. Each
 // branch is a list of people (row, col) it passes; `from` = [parent, node].
 type BranchDef = { nodes: [number, number][]; from?: [number, number]; lead?: Pt[] };
 const DEFS: BranchDef[] = [
-  { nodes: [[6, 1], [5, 1], [4, 1], [3, 1], [2, 1], [1, 1]], lead: [FORK, { x: 305, y: 1074 }] },
+  { nodes: [[6, 1], [5, 1], [4, 1], [3, 1], [2, 1], [1, 1]], lead: [FORK, { x: 302, y: 1046 }] },
   { nodes: [[5, 1], [5, 2], [4, 3], [3, 3], [2, 4], [1, 4], [0, 5]], from: [0, 1] },
   { nodes: [[5, 2], [5, 3], [5, 4], [4, 5], [3, 5]], from: [1, 1] },
   { nodes: [[3, 1], [2, 2], [1, 2]], from: [0, 3] },
@@ -174,7 +195,7 @@ DEFS.forEach((def) => {
   const tip = { x: (last.x + next.x) / 2 + 2, y: (last.y + next.y) / 2 - 5 };
   const lead = def.lead ?? [];
   const nodes = [...lead, ...feet, tip];
-  const line = smoothLine(nodes);
+  const line = smoothLine(nodes, 14, 31 + BRANCHES.length, 1.5);
   // arc length at every node: nodes sit at sample index i * per
   const nodeS = nodes.map((_, i) => line.s[i * 14]);
   const d0 = def.from ? BRANCHES[def.from[0]].nodeD[def.from[1]] : 0;
@@ -192,30 +213,35 @@ const D_MAX = Math.max(...BRANCHES.map((b) => b.end));
 
 // TIMING. The tip: constant speed, already past the first person on f0, the
 // last tip stops on f57. The drain front: constant speed from the fork, at the
-// first person on f58, the last tip dead on f94.
+// first person on f56, the last tip dead on f89 (its people cream by ~f100).
 const GROW_END = 57;
-const LEAD_F = 4.5; // frames the tip is already past the first person on f0 (that person is fully orange)
+const LEAD_F = 10; // frames the tip is already past the first person on f0 (that person is fully orange)
 const D0 = (D_FIRST + (LEAD_F / GROW_END) * D_MAX) / (1 + LEAD_F / GROW_END);
 const GROW_V = (D_MAX - D0) / GROW_END;
 const growD = (f: number) => Math.min(D_MAX, D0 + GROW_V * f);
-const DRAIN = [58, 94] as const;
+const DRAIN = [56, 89] as const;
 const DRAIN_V = (D_MAX - D_FIRST) / (DRAIN[1] - DRAIN[0]);
 const drainD = (f: number) => D_FIRST + DRAIN_V * (f - DRAIN[0]);
 
+// ONE breath: a drift along the growth, one eased pull-back from ~f70 (the
+// medallion and then the trunk rise into frame with it), then a slow glide
+// right along the trunk's direction of travel through the hold.
 const CAM: CamKey[] = [
-  { f: 0, x: 478, y: 731, k: 2.62 },
-  { f: 30, x: 508, y: 722, k: 2.56 },
-  { f: 58, x: 534, y: 712, k: 2.5 },
-  { f: 77, x: 544, y: 714, k: 2.4 },
-  { f: 92, x: 542, y: 719, k: 2.2 },
-  { f: 108, x: 540, y: 790, k: 1.72 },
-  { f: 122, x: 540, y: 835, k: 1.475 },
-  { f: 130, x: 540, y: 839, k: 1.45 },
-  { f: 159, x: 540, y: 841, k: 1.43 },
+  { f: 0, x: 478, y: 690, k: 2.62 },
+  { f: 30, x: 508, y: 674, k: 2.56 },
+  { f: 58, x: 532, y: 660, k: 2.5 },
+  { f: 70, x: 540, y: 656, k: 2.41 },
+  { f: 86, x: 543, y: 688, k: 2.1 },
+  { f: 104, x: 545, y: 778, k: 1.7 },
+  { f: 120, x: 547, y: 832, k: 1.48 },
+  { f: 132, x: 550, y: 841, k: 1.445 },
+  { f: 159, x: 564, y: 843, k: 1.42 },
 ];
 
 const DEAD_LINE = mixColor(DEAD, INK, 0.8);
-const DASH = "9 6";
+const DASH = "8 8"; // period 16: CHUNK is a multiple, so the dashes stay registered
+const liveW = (d: number) => 4.5 - 1.9 * clamp01(d / D_MAX); // the twig tapers toward its tips
+const deadW = (d: number) => 3.3 - 0.8 * clamp01(d / D_MAX);
 // the crowd is a loose body of people, not a block: a few corner places stay empty
 const EMPTY = new Set([pid(0, 0), pid(0, 7), pid(6, 7), pid(1, 7), pid(6, 0)]);
 const SORTED = PEOPLE.filter((p) => !EMPTY.has(p.id)).sort((a, b) => a.y - b.y);
@@ -230,7 +256,7 @@ const DiesOutLineage: React.FC<Props> = ({ vignette }) => {
   const tS = trunkTip(frame);
   const trunkD = sub(TRUNK, 0, tS);
   const hlU = clamp01((frame - 122) / (DURATION - 122));
-  const hlS = trunkSAtX(150) + (trunkSAtX(960) - trunkSAtX(150)) * hlU;
+  const hlS = trunkSAtX(170) + (trunkSAtX(960) - trunkSAtX(170)) * hlU;
   const hlOp = Math.sin(Math.PI * hlU) * 0.7;
 
   return (
@@ -238,33 +264,28 @@ const DiesOutLineage: React.FC<Props> = ({ vignette }) => {
       <WorldSvg cam={cam}>
         {/* the twig, under the people: dead dashed behind the drain front, orange ahead of it */}
         {BRANCHES.map((b, i) => {
-          const dead = sub(b.line, 0, Math.min(e, g) - b.d0);
+          const deadTo = Math.min(e, g) - b.d0;
+          const dead = sub(b.line, 0, deadTo);
           const live = sub(b.line, e - b.d0, g - b.d0);
           return (
-            <g key={`b${i}`} fill="none" strokeLinecap="round" strokeLinejoin="round">
-              {dead ? (
-                <>
-                  <path d={dead} stroke={DARK} strokeOpacity={0.4} strokeWidth={5} strokeDasharray={DASH} strokeLinecap="butt" />
-                  <path d={dead} stroke={DEAD_LINE} strokeWidth={2.9} strokeDasharray={DASH} strokeLinecap="butt" />
-                </>
-              ) : null}
-              {live ? (
-                <>
-                  <path d={live} stroke={DARK} strokeOpacity={0.55} strokeWidth={6.4} />
-                  <path d={live} stroke={ACCENT_DEEP} strokeWidth={4.2} />
-                  <path d={live} stroke={ACCENT} strokeWidth={2.6} />
-                </>
-              ) : null}
+            <g key={`b${i}`}>
+              {dead ? <path d={dead} fill="none" stroke={DARK} strokeOpacity={0.6} strokeWidth={5.4} strokeDasharray={DASH} strokeLinecap="round" /> : null}
+              {pieces(b.line, 0, deadTo).map((q) => (
+                <InkStroke key={`d${q.mid}`} d={q.d} width={deadW(b.d0 + q.mid)} color={DEAD_LINE} dash={DASH} casing={false} />
+              ))}
+              {live ? <path d={live} fill="none" stroke={DARK} strokeOpacity={0.75} strokeWidth={liveW(b.d0) * 1.6} strokeLinecap="round" strokeLinejoin="round" /> : null}
+              {pieces(b.line, e - b.d0, g - b.d0).map((q) => (
+                <InkStroke key={`l${q.mid}`} d={q.d} width={liveW(b.d0 + q.mid)} tone={1} casing={false} />
+              ))}
             </g>
           );
         })}
 
-        {/* the trunk: the living lineage */}
+        {/* the trunk: the living lineage, a bold inked branch with a darker orange edge */}
         {trunkD ? (
-          <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-            <path d={trunkD} stroke={DARK} strokeOpacity={0.6} strokeWidth={17} />
-            <path d={trunkD} stroke={ACCENT_DEEP} strokeWidth={13.8} />
-            <path d={trunkD} stroke={ACCENT} strokeWidth={8.6} />
+          <>
+            <InkStroke d={trunkD} width={13.8} color={ACCENT_DEEP} />
+            <InkStroke d={trunkD} width={8.8} tone={1} casing={false} />
             {hlOp > 0.01
               ? [
                   [130, 0.3],
@@ -272,10 +293,10 @@ const DiesOutLineage: React.FC<Props> = ({ vignette }) => {
                   [26, 0.7],
                 ].map(([len, o]) => {
                   const d = sub(TRUNK, hlS - len / 2, Math.min(tS, hlS + len / 2));
-                  return d ? <path key={`h${len}`} d={d} stroke="#FFE3A6" strokeOpacity={o * hlOp} strokeWidth={8.6} /> : null;
+                  return d ? <InkStroke key={`h${len}`} d={d} width={8.8} color="#FFE3A6" opacity={o * hlOp} casing={false} /> : null;
                 })
               : null}
-          </g>
+          </>
         ) : null}
         {/* the fork: a small dead knot where the twig left the trunk */}
         <circle cx={FORK.x + 3} cy={FORK.y - 9} r={6.2} fill={DEAD_LINE} stroke={DARK} strokeWidth={2} />
@@ -284,7 +305,8 @@ const DiesOutLineage: React.FC<Props> = ({ vignette }) => {
         {/* the crowd */}
         {SORTED.map((p) => {
           const d = INFECT_D.get(p.id);
-          const tone = d === undefined ? 0 : clamp01((g - d) / (GROW_V * 4)) * (1 - clamp01((e - d + DRAIN_V) / (DRAIN_V * 6)));
+          // orange cross-fades in over 10 frames as the tip reaches the feet, back out over 12 behind the drain front
+          const tone = d === undefined ? 0 : smoothstep((g - d) / (GROW_V * 10)) * (1 - smoothstep((e - d) / (DRAIN_V * 12)));
           return <Person key={p.id} x={p.x} y={p.y} h={PERSON_H} seed={p.seed} tone={tone} />;
         })}
 
@@ -294,12 +316,7 @@ const DiesOutLineage: React.FC<Props> = ({ vignette }) => {
           if (hb < 0.2) return null;
           const end = b.tip;
           const q = { x1: end.x + b.dir.y * hb, y1: end.y - b.dir.x * hb, x2: end.x - b.dir.y * hb, y2: end.y + b.dir.x * hb };
-          return (
-            <g key={`bar${i}`} strokeLinecap="round">
-              <line {...q} stroke={DARK} strokeOpacity={0.45} strokeWidth={5.6} />
-              <line {...q} stroke={DEAD_LINE} strokeWidth={3.2} />
-            </g>
-          );
+          return <InkStroke key={`bar${i}`} d={`M${q.x1.toFixed(2)},${q.y1.toFixed(2)}L${q.x2.toFixed(2)},${q.y2.toFixed(2)}`} width={3.2} color={DEAD_LINE} />;
         })}
       </WorldSvg>
     </Page>

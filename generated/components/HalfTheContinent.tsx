@@ -15,12 +15,17 @@
 //   going to f168 · wipe f174 · out f184 · half f190 · of f197 · the f202 ·
 //   continent f205 · speech ends f229.   DURATION = 229 + 6 = 235.
 //
-// THE MOTION: one unbroken zoom OUT on a single log-scale track (S_KEYS), four
-// orders of magnitude. It opens inside Muetzel's engraving of bobak marmots on
-// the steppe, already pulling back; orange germs crawl out from behind the
-// standing marmot's back on "rodent"; the plate then shrinks, lying on the map
-// at the place it depicts, into ONE orange dot (the germs converge into it) as
-// the map of Central Asia arrives around it. The zoom runs on to the whole
+// THE MOTION: ONE zoom out, one eased move in the log of the scale (lnS: a
+// slow drift plus a single raised-cosine swell, f90-208, fastest ~f149), four
+// orders of magnitude. It opens on the umber page with Muetzel's three bobak
+// marmots printed on it as a book vignette, the camera drifting toward the
+// standing one; orange germs crawl out from behind its back on "rodent", walk
+// off over its head and gather into ONE orange dot on the page beside it. The
+// page the marmots are printed on IS the land of the map: as the camera pulls
+// out the vignette simply gets smaller, a map illustration in the region where
+// the animal lives, and the map's own engraving comes into view around it by
+// level of detail (the hachured Tian Shan and the lakes, then coasts,
+// water-lines, the ruled sea, the graticule). The zoom runs on to the whole
 // Earth while an orange front leaves the dot, runs west along the steppe to
 // Crimea and crosses Europe, turning exactly every other one of Europe's dots
 // orange. Hold: the globe keeps turning a little, a shimmer crosses the orange.
@@ -28,31 +33,34 @@
 // THE MAP: Natural Earth 50m land (world-atlas) on ONE orthographic projection
 // whose scale is the camera (no projection switch between the regional map and
 // the globe); the sphere's centre turns from the dot to about 40 E 38.5 N as it
-// becomes a globe. Dwarkesh map style: sea, umber land with the lighter rim,
-// engraved water-lines, graticule (its step is a level of detail), no borders,
-// no names except the one the speaker says.
+// becomes a globe. Dwarkesh map style, as an engraving on the kit page: the
+// land is the page itself, the sea is cut dark and ruled, coast an inked cream
+// line with the lighter rim and water-lines, ranges as hachures, the limb an
+// inked line with a band of hatch shading. No borders, no names except the one
+// the speaker says.
 //
 // FACTS SHOWN, AND THEIR SOURCES
-//   - The plate: Gustav Muetzel, bobak marmots on the Central Asian steppe,
-//     Brehms Tierleben. The reservoir of Yersinia pestis in Central Asia is
-//     marmots and other burrowing rodents.
+//   - The vignette: Gustav Muetzel, bobak marmots on the Central Asian steppe,
+//     Brehms Tierleben (kit MarmotVignette). The reservoir of Yersinia pestis
+//     in Central Asia is marmots and other burrowing rodents.
 //   - The dot: the Chuy valley / Tian Shan near Lake Issyk-Kul (42.8 N, 75 E),
 //     where the earliest Black Death burials are dated 1338-39 (Spyrou et al.
 //     2022, "The source of the Black Death in fourteenth-century central
 //     Eurasia", Nature 606).
 //   - The route west: the steppe north of the Aral and the Caspian to Caffa in
 //     Crimea (1346-47), then across Europe (1347-53). Drawn as one schematic
-//     front at a steady speed; it is not a dated spread map (no sea routes).
+//     front; it is not a dated spread map (no sea routes).
 //   - HALF: the Black Death (1346-53) is estimated to have killed 30-60% of
 //     Europe's population, often cited as about half (e.g. Benedictow 2004,
 //     "The Black Death 1346-1353: The Complete History"). The checkerboard
 //     (exactly every other dot of an even lattice turns orange) is the
 //     speaker's "half of the continent", NOT a regional mortality map.
-//   Lattice and route: scripts/build-HalfTheContinent-data.mjs.
+//   - Lakes, ranges and rivers are placed by hand (see LAKES, RANGES, RIVER_PTS): schematic, to
+//     ~0.2-0.5 deg. Lattice and route: scripts/build-HalfTheContinent-data.mjs.
 // ---------------------------------------------------------------------------
 import React from "react";
-import { AbsoluteFill, Img, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
+import { useCurrentFrame } from "remotion";
 // d3-geo / topojson-client ship no type declarations in this repo
 // @ts-expect-error untyped module
 import { geoArea, geoContains, geoGraticule, geoOrthographic, geoPath } from "d3-geo";
@@ -65,102 +73,113 @@ import {
   FRAME_H,
   FRAME_W,
   Germs,
-  Grain,
   INK,
-  LAND,
+  InkStroke,
   Label,
+  MARMOT,
+  MarmotVignetteImg,
+  Page,
   SEA,
-  Vignette,
   clamp01,
+  hash,
   mixColor,
-  ramp,
-  runCamera,
   smoothstep,
-  type CamKey,
 } from "./plagueShared";
 import { LATTICE, MAX_KM, ORIGIN, ROUTE, ROUTE_KM } from "./HalfTheContinentData";
 
 export const FPS = 30000 / 1001;
 export const DURATION = 235;
 
-const SPACE = "#2B241C"; // the ground round the globe: warm dark umber, never black
 const LAND_RIM = "#6A5838";
 const SHIMMER = "#FFE3A6";
 
 export const schema = z.object({
-  plateSrc: z.string(),
-  mottleSrc: z.string(),
   label: z.string(),
   vignette: z.number(),
 });
 export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({
-  plateSrc: "plague/bobak_plate.jpg",
-  mottleSrc: "manchuria/mottle.png",
   label: "CENTRAL ASIA",
   vignette: 0.34,
 });
 
 // ---------------------------------------------------------------------------
-// THE CAMERA: one key track, read through the kit's damped follower (it trails
-// the keys by ~5 frames; the keys below are written 5 frames early).
-//   k = the orthographic scale s (the sphere's radius in screen px), in log
-//   x, y = where the dot (42.8 N, 75 E) sits on screen
-// The plate is 1306 px wide (cover) at s = S_COVER, so its width is
-// 1306 * s / S_COVER: plate, map and globe share the one scale.
+// THE CAMERA: one analytic track.
+//   s   the orthographic scale (the sphere's radius in screen px). ln s is a
+//       slow steady drift plus ONE raised-cosine swell: no keys, no corners.
+//   q   where the dot (42.8 N, 75 E) sits on screen.
+// The vignette is W0 px wide at s = S0 and hangs off the dot (the dot is at
+// DOT_F of its box), so vignette, map and globe share the one scale.
 // ---------------------------------------------------------------------------
-const S_COVER = 100000;
-const CAM: CamKey[] = [
-  { f: 0, x: 540, y: 960, k: 126000 }, // inside the plate, k 1.26 over cover
-  { f: 100, x: 540, y: 960, k: 100000 }, // full cover ~f105
-  { f: 107, x: 540, y: 960, k: 96500 },
-  { f: 113, x: 540, y: 960, k: 87000 }, // the pull-back gathers speed ("rodent" f116)
-  { f: 119, x: 540, y: 960, k: 42000 },
-  { f: 125, x: 540, y: 960, k: 14000 },
-  { f: 131, x: 542, y: 959, k: 5600 },
-  { f: 138, x: 553, y: 955, k: 2300 }, // the dot, and "Central" f143
-  { f: 145, x: 576, y: 947, k: 1700 }, // the front leaves
-  { f: 155, x: 621, y: 930, k: 1260 },
-  { f: 171, x: 702, y: 899, k: 900 }, // Crimea ("wipe" f174)
-  { f: 185, x: 749, y: 882, k: 700 },
-  { f: 195, x: 769, y: 874, k: 605 }, // the Earth ("continent" f205)
-  { f: 207, x: 775.7, y: 871.8, k: 572 }, // the final framing of the lattice: centre 40 E 38.5 N, disc ~1120 px
-  { f: 245, x: 787, y: 870.5, k: 556 }, // hold: still turning, still receding a little
-];
-
-// The plate image (px) and the standing marmot in it.
-const IMG_W = 1510;
-const IMG_H = 2220;
-const COVER_W = (FRAME_H * IMG_W) / IMG_H; // 1306
-// The standing marmot's back, traced on the plate (image px), closed through
-// its body: the germs are clipped to it, so they come out from BEHIND its back.
-const MARMOT_SIL =
-  "M690,1075L700,1040L760,990L830,975L900,990L960,1015L1010,1050L1055,1100L1100,1160L1160,1215L1215,1280L1270,1350L1320,1420L1360,1490L1395,1570L1420,1660L1425,1740L1300,1760L1100,1660L880,1640L860,1560L850,1450L835,1330L800,1220L760,1150L720,1110Z";
-// Each germ: the point E on the back contour it comes over, its inward heading,
-// its speed (image px a frame, constant) and the frame it sets off, from
-// GERM_BACK px behind the contour.
-const GERM_BACK = 36;
-const GERM_R = 13;
-const GERMS: { ex: number; ey: number; dx: number; dy: number; v: number; f0: number }[] = [
-  { ex: 1035, ey: 1078, dx: -0.75, dy: 0.66, v: 5.0, f0: 92 },
-  { ex: 1120, ey: 1178, dx: -0.88, dy: 0.47, v: 5.4, f0: 94 },
-  { ex: 930, ey: 1002, dx: -0.1, dy: 1.0, v: 4.2, f0: 96 },
-  { ex: 985, ey: 1032, dx: -0.35, dy: 0.94, v: 5.6, f0: 99 },
-  { ex: 1075, ey: 1127, dx: -0.6, dy: 0.8, v: 4.6, f0: 102 },
-  { ex: 1165, ey: 1220, dx: -0.95, dy: 0.3, v: 5.2, f0: 105 },
-  { ex: 1100, ey: 1160, dx: -0.8, dy: 0.6, v: 4.4, f0: 109 },
-];
-const T = {
-  germClipOff: 126, // every germ is well inside the silhouette by now
-  converge: [121, 139] as const, // the germs draw together into the dot
-  label: 133, // CENTRAL ASIA slides up, landed on "Central" f143
-  labelPinned: 143,
-  front: 146, // the front leaves the dot
-  frontEnd: 203, // ... and has reached the farthest dot of Europe
-  shimmer: [205, 236] as const,
+const S0 = 130000;
+const S_END = 556;
+const DRIFT = 0.0011; // ln s per frame, all the way through
+const SWELL = [90, 208] as const;
+const SWELL_L = Math.log(S0 / S_END) - DRIFT * (DURATION - 1);
+export const lnS = (f: number) => {
+  const u = clamp01((f - SWELL[0]) / (SWELL[1] - SWELL[0]));
+  const c = u - Math.sin(2 * Math.PI * u) / (2 * Math.PI);
+  return Math.log(S_END) + DRIFT * (DURATION - 1 - f) + SWELL_L * (1 - c);
 };
-const KM_PER_FRAME = MAX_KM / (T.frontEnd - T.front);
-export const F_CAFFA = T.front + ROUTE_KM / KM_PER_FRAME;
+const W0 = 1720;
+const H0 = W0 / MARMOT.aspect;
+/** the dot, as a fraction of the vignette box: on the bare page left of the standing marmot's nose */
+const DOT_F: [number, number] = [0.2, 0.1];
+// what the frame centre looks at inside the vignette (box fractions): from the
+// standing marmot's chest, drifting to its shoulder and back
+const FOCUS_0: [number, number] = [0.5, 0.22];
+const FOCUS_1: [number, number] = [0.6, 0.26];
+const Q_END: [number, number] = [775.7, 871.8]; // the dot in the lattice's final framing
+const dotScreen = (f: number) => {
+  const k = Math.exp(lnS(f)) / S0;
+  const t = clamp01(f / 128);
+  const e = 1 - (1 - t) * (1 - t);
+  const fx = FOCUS_0[0] + (FOCUS_1[0] - FOCUS_0[0]) * e - DOT_F[0];
+  const fy = FOCUS_0[1] + (FOCUS_1[1] - FOCUS_0[1]) * e - DOT_F[1];
+  const g = smoothstep((f - 148) / (207 - 148));
+  const h = clamp01((f - 196) / 40);
+  const creep = h * h * (1.5 - 0.5 * h);
+  return {
+    x: FRAME_W / 2 - fx * W0 * k + (Q_END[0] - FRAME_W / 2) * g + 10 * creep,
+    y: FRAME_H / 2 - fy * H0 * k + (Q_END[1] - FRAME_H / 2) * g - 1.2 * creep,
+  };
+};
+
+// The germs, in vignette units (box width = 1000): the point E on the standing
+// marmot's back they come over, their inward heading, the frame they set off
+// (from GERM_BACK behind the contour, GERM_V units a frame), and the frame
+// they leave the fur for the dot.
+const VU = 1000;
+const VH = VU / MARMOT.aspect;
+const GERM_V = 3.7;
+const GERM_BACK = 30;
+const GERM_R = 9.5;
+const GERM_FLY = 15;
+const GERMS: { ex: number; ey: number; dx: number; dy: number; f0: number }[] = [
+  { ex: 682, ey: 160, dx: -0.8, dy: 0.6, f0: 92 },
+  { ex: 744, ey: 222, dx: -0.9, dy: 0.44, f0: 94 },
+  { ex: 712, ey: 189, dx: -0.62, dy: 0.78, f0: 96 },
+  { ex: 784, ey: 265, dx: -0.92, dy: 0.39, f0: 98 },
+  { ex: 664, ey: 142, dx: -0.5, dy: 0.87, f0: 100 },
+  { ex: 814, ey: 298, dx: -0.85, dy: 0.53, f0: 102 },
+  { ex: 760, ey: 239, dx: -0.75, dy: 0.66, f0: 104 },
+];
+const flyAt = (i: number) => 118 + 1.5 * i;
+// the kit's coarse silhouette, its back edge (points 3-7) eased out onto the engraved contour
+const SIL = MARMOT.silhouette.map(([x, y], i): [number, number] => (i >= 3 && i <= 7 ? [x + 0.022, y - 0.016] : [x, y]));
+const SIL_D = `M${SIL.map(([x, y]) => `${(x * VU).toFixed(1)},${(y * VH).toFixed(1)}`).join("L")}Z`;
+
+const T = {
+  label: 133, // CENTRAL ASIA slides up, landed on "Central" f143
+  front: 144, // the front leaves the dot
+  frontEnd: 206, // ... and has reached the farthest dot of Europe
+  shimmer: [207, 238] as const,
+};
+// The front: steady on screen. The zoom is still running out under it, so on
+// the ground it covers km as t^1.6 (a constant km/frame would outrun the frame).
+const FRONT_P = 1.6;
+const frontKm = (f: number) => MAX_KM * Math.pow(clamp01((f - T.front) / (T.frontEnd - T.front)), FRONT_P);
+const arriveAt = (km: number) => T.front + (T.frontEnd - T.front) * Math.pow(km / MAX_KM, 1 / FRONT_P);
 
 // ---------------------------------------------------------------------------
 // GEOMETRY (module scope: decoded once per tab)
@@ -233,7 +252,102 @@ const localGrat = (half: number, step: number) => {
   return { type: "MultiLineString", coordinates: lines };
 };
 const GRAT_1 = localGrat(24, 1);
-const GRAT_01 = localGrat(2.4, 0.1);
+
+
+// THE RANGES, as an engraver draws them: short hachure strokes falling away on
+// both sides of a blank crest. Crest lines placed by hand (schematic). `near`
+// ranges (the Tian Shan round the dot) also get a fine set for the close stage.
+const RANGES: { pts: LL[]; near?: boolean }[] = [
+  { pts: [[72.6, 42.45], [74.0, 42.5], [75.3, 42.42], [76.2, 42.05]], near: true }, // Kyrgyz Ala-Too
+  { pts: [[75.6, 43.05], [77.0, 43.05], [78.4, 42.95], [79.6, 42.75]], near: true }, // Trans-Ili / Kungey Alatau
+  { pts: [[76.3, 41.95], [77.6, 41.85], [79.0, 42.05], [80.3, 42.1]], near: true }, // Terskey Alatau
+  { pts: [[70.6, 42.3], [72.0, 42.25], [73.0, 41.5], [74.1, 40.7]], near: true }, // Talas / Fergana ranges
+  { pts: [[80.3, 42.1], [82.0, 42.5], [84.0, 43.0], [86.2, 43.3], [88.5, 43.5], [91, 43.2]] }, // eastern Tian Shan
+  { pts: [[69.8, 39.6], [72.0, 39.6], [74.2, 39.4], [76, 39.0]] }, // Alay
+  { pts: [[71.5, 38.3], [73.5, 37.6], [75.2, 37.2]] }, // Pamir
+  { pts: [[65.5, 34.9], [68.5, 35.4], [71.5, 36.2], [74, 36.4]] }, // Hindu Kush
+  { pts: [[74.5, 35.6], [77, 33.6], [80, 30.9], [84, 28.6], [88, 27.8], [92, 27.8], [95.5, 28.6]] }, // Himalaya
+  { pts: [[76.5, 36.4], [80, 36.0], [85, 36.1], [90, 36.0], [95, 35.7]] }, // Kunlun
+  { pts: [[84, 50.2], [87, 49.4], [90, 48], [93, 46.4], [96, 45]] }, // Altai
+  { pts: [[58.8, 51.5], [59.3, 55], [59.6, 59], [60.2, 62.5], [63, 66], [66, 67.8]] }, // Urals
+  { pts: [[37.5, 44.4], [41, 43.4], [44.5, 42.6], [48.3, 41.1]] }, // Caucasus
+  { pts: [[45.5, 36.5], [48.5, 34], [51.5, 31.5], [54.5, 29]] }, // Zagros
+  { pts: [[6.6, 44.6], [7.6, 46.0], [10, 46.7], [12.5, 47.1], [15, 47.4]] }, // Alps
+  { pts: [[18, 49.3], [21.5, 49.2], [24.5, 47.9], [26.2, 46], [25, 45.4], [22.8, 45.4]] }, // Carpathians
+  { pts: [[-1.6, 43.0], [0.5, 42.7], [2.6, 42.45]] }, // Pyrenees
+  { pts: [[6.8, 60.2], [9.5, 62], [13.5, 64.5], [16.5, 67], [19.5, 68.8]] }, // Scandes
+];
+const hachures = (pts: LL[], step: number, len: number, seed: number) => {
+  const lines: LL[][] = [];
+  let n = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [ax, ay] = pts[i];
+    const [bx, by] = pts[i + 1];
+    const kx = Math.cos(((ay + by) / 2) * (Math.PI / 180)); // a degree of longitude is shorter
+    const dx = (bx - ax) * kx;
+    const dy = by - ay;
+    const segLen = Math.hypot(dx, dy);
+    const count = Math.max(1, Math.round(segLen / step));
+    const nx = -dy / segLen;
+    const ny = dx / segLen;
+    for (let j = 0; j < count; j++, n++) {
+      const u = (j + 0.5 + (hash(seed + n, 1) - 0.5) * 0.5) / count;
+      const px = ax + (bx - ax) * u;
+      const py = ay + (by - ay) * u;
+      for (const side of [-1, 1]) {
+        const l = len * (0.55 + 0.6 * hash(seed + n, side + 3));
+        const lean = (hash(seed + n, side + 6) - 0.5) * 0.5;
+        const ox = (nx + (dx / segLen) * lean) * side;
+        const oy = (ny + (dy / segLen) * lean) * side;
+        const g0 = len * 0.16;
+        lines.push([
+          [px + (ox * g0) / kx, py + oy * g0],
+          [px + (ox * (g0 + l)) / kx, py + oy * (g0 + l)],
+        ]);
+      }
+    }
+  }
+  return lines;
+};
+// THE RIVERS of the region, as inked lines (courses placed by hand, schematic).
+const RIVER_PTS: LL[][] = [
+  [[73.5, 40.9], [71.5, 40.6], [69.3, 40.2], [68.3, 41.5], [67.5, 43], [65.5, 44.8], [63, 45.6], [61.4, 46.0]], // Syr Darya
+  [[71.5, 37.2], [68.5, 37.2], [66, 37.4], [64, 39], [62, 40.8], [60.5, 42], [59.4, 43.5]], // Amu Darya
+  [[75.9, 42.75], [75.2, 43.0], [73.5, 43.8], [71.5, 44.8], [69.6, 45.2]], // Chu
+  [[82, 43.6], [80, 43.8], [77.5, 43.9], [76, 44.8], [74.4, 45.3]], // Ili
+  [[86, 47.8], [83.5, 49.5], [80, 50.5], [76.5, 52.5], [74.5, 54.5], [73, 57], [69, 59.5], [68.8, 61]], // Irtysh
+  [[77, 39.5], [80, 40.6], [84, 41.1], [87, 40.6], [88.5, 40.2]], // Tarim
+  [[59, 52], [55, 51.5], [51.6, 51.2], [51.5, 48.5], [51.9, 47.2]], // Ural
+  [[33, 57], [38, 57.5], [44, 56.3], [49, 55.8], [48, 53], [45.5, 50.5], [44.5, 48.7], [47.6, 46.3]], // Volga
+  [[38.5, 53.5], [39.5, 51], [42.5, 49], [43.8, 48.3], [39.6, 47.2]], // Don
+  [[33, 55], [31, 52], [31.5, 50], [35, 48.3], [32.7, 46.7]], // Dnieper
+  [[9, 48], [13, 48.6], [17, 48], [19, 47.6], [19, 45.5], [22.5, 44.5], [26, 43.9], [28, 45.3], [29.5, 45.2]], // Danube
+  [[79, 32], [75, 35.5], [72.5, 34], [71, 31], [69, 27.5], [67.7, 24.2]], // Indus
+  [[78, 30], [80, 27], [84, 25.6], [88, 24.8], [90, 23.2]], // Ganges
+];
+// densified, with a slow seeded meander so no course is ruler-straight
+const RIVERS = {
+  type: "MultiLineString",
+  coordinates: RIVER_PTS.map((pts, r) => {
+    const out: LL[] = [];
+    let n = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, ay] = pts[i];
+      const [bx, by] = pts[i + 1];
+      const len = Math.hypot(bx - ax, by - ay);
+      const steps = Math.max(2, Math.ceil(len / 0.25));
+      for (let j = i === 0 ? 0 : 1; j <= steps; j++, n++) {
+        const u = j / steps;
+        const edge = i === 0 && j === 0 ? 0 : i === pts.length - 2 && j === steps ? 0 : 1;
+        const w = edge * 0.11 * (Math.sin(n * 0.9 + r * 2.1) + 0.6 * Math.sin(n * 2.3 + r));
+        out.push([ax + (bx - ax) * u - ((by - ay) / len) * w, ay + (by - ay) * u + ((bx - ax) / len) * w]);
+      }
+    }
+    return out;
+  }),
+};
+const HACH_WIDE = { type: "MultiLineString", coordinates: RANGES.flatMap((r, i) => hachures(r.pts, 0.24, 0.5, i * 97)) };
+const HACH_NEAR = { type: "MultiLineString", coordinates: RANGES.filter((r) => r.near).flatMap((r, i) => hachures(r.pts, 0.045, 0.15, 5000 + i * 131)) };
 
 const RAD = Math.PI / 180;
 const PAD = 90;
@@ -265,47 +379,58 @@ const projectionFor = (s: number, qx: number, qy: number) => {
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-// ---------------------------------------------------------------------------
-const HalfTheContinent: React.FC<Props> = ({ plateSrc, mottleSrc, label, vignette }) => {
-  const frame = useCurrentFrame();
-  const cam = runCamera(CAM, frame);
-  const s = cam.k;
-  const qx = cam.x;
-  const qy = cam.y;
 
-  // -- the plate ---------------------------------------------------------------
-  const kp = s / S_COVER;
-  const plateW = COVER_W * kp;
-  const plateH = FRAME_H * kp;
-  // while it is larger than the frame it is framed toward the standing marmot,
-  // using 65% of the slack it has over the frame edges
-  const offX = -0.65 * Math.max(0, (plateW - FRAME_W) / 2);
-  const offY = -0.65 * Math.max(0, (plateH - FRAME_H) / 2);
-  const pcx = qx + offX;
-  const pcy = qy + offY;
-  const imgK = plateW / IMG_W;
-  const plateLeft = pcx - plateW / 2;
-  const plateTop = pcy - plateH / 2;
-  const plateCovers = plateLeft <= 0 && plateTop <= 0 && plateLeft + plateW >= FRAME_W && plateTop + plateH >= FRAME_H;
-  const plateOn = plateW > 5;
-  const toScr = (ix: number, iy: number) => ({ x: pcx + (ix - IMG_W / 2) * imgK, y: pcy + (iy - IMG_H / 2) * imgK });
+/** 0 below a, 1 above b, eased, on the log of the scale */
+const lodUp = (s: number, a: number, b: number) => smoothstep(Math.log(s / a) / Math.log(b / a));
+
+// ---------------------------------------------------------------------------
+const HalfTheContinent: React.FC<Props> = ({ label, vignette }) => {
+  const frame = useCurrentFrame();
+  const s = Math.exp(lnS(frame));
+  const { x: qx, y: qy } = dotScreen(frame);
+
+  // -- the vignette (printed on the page; the dot is at DOT_F of its box) --------------
+  const vw = (W0 * s) / S0;
+  const vh = vw / MARMOT.aspect;
+  const vx = qx - DOT_F[0] * vw;
+  const vy = qy - DOT_F[1] * vh;
+  const vk = vw / VU;
+  const vigOp = smoothstep((vw - 20) / (42 - 20));
 
   // -- the germs, then the dot ----------------------------------------------------
-  const conv = ramp(frame, T.converge[0], T.converge[1]);
-  const dotR = 10 * smoothstep((96 - plateW) / (96 - 40));
-  const germsOn = frame >= GERMS[0].f0 && !(dotR >= 10 && conv >= 1);
-  const germR = Math.max(GERM_R * imgK, 4.6);
-  const germPts = GERMS.filter((g) => frame >= g.f0).map((g, i) => {
-    const t = Math.min(frame, T.converge[1]) - g.f0;
-    const wig = 5 * Math.sin(frame * 0.33 + i * 1.7);
-    const ix = g.ex + g.dx * (t * g.v - GERM_BACK) - g.dy * wig;
-    const iy = g.ey + g.dy * (t * g.v - GERM_BACK) + g.dx * wig;
-    const p = toScr(ix, iy);
-    return { x: lerp(p.x, pcx, conv), y: lerp(p.y, pcy, conv), seed: i + 3 };
+  const germR = Math.max(GERM_R * vk, 5.5);
+  const DOT_R = 11;
+  let arrived = 0;
+  const crawling: { x: number; y: number; seed: number }[] = [];
+  const flying: { x: number; y: number; seed: number }[] = [];
+  GERMS.forEach((g, i) => {
+    if (frame < g.f0) return;
+    const tFly = flyAt(i);
+    const t = Math.min(frame, tFly) - g.f0;
+    const wig = 3.5 * Math.sin(Math.min(frame, tFly) * 0.33 + i * 1.7);
+    const ux = g.ex + g.dx * (t * GERM_V - GERM_BACK) - g.dy * wig;
+    const uy = g.ey + g.dy * (t * GERM_V - GERM_BACK) + g.dx * wig;
+    const px = vx + ux * vk;
+    const py = vy + uy * vk;
+    if (frame <= tFly) {
+      crawling.push({ x: px, y: py, seed: i + 3 });
+      return;
+    }
+    const u = smoothstep((frame - tFly) / GERM_FLY);
+    if (u >= 1) {
+      arrived++;
+      return;
+    }
+    // a shallow arc over the marmot's head to the dot
+    const arc = Math.sin(Math.PI * u) * 46 * vk;
+    flying.push({ x: lerp(px, qx, u), y: lerp(py, qy, u) - arc, seed: i + 3 });
   });
+  const lastIn = flyAt(GERMS.length - 1) + GERM_FLY;
+  const firstIn = flyAt(0) + GERM_FLY;
+  const dotR = DOT_R * Math.sqrt(clamp01((frame - firstIn + 1.5) / (lastIn - firstIn + 1.5))) * (arrived > 0 || frame > firstIn - 1.5 ? 1 : 0);
 
   // -- the map --------------------------------------------------------------------
-  const mapOn = !plateCovers;
+  const mapOn = s < 100000;
   const map = React.useMemo(() => {
     if (!mapOn) return null;
     const proj = projectionFor(s, qx, qy);
@@ -313,18 +438,26 @@ const HalfTheContinent: React.FC<Props> = ({ plateSrc, mottleSrc, label, vignett
     const land: string = path(LAND_GEO) ?? "";
     const stepPx = (deg: number) => deg * RAD * s;
     const lod = (deg: number) => smoothstep((stepPx(deg) - 34) / (90 - 34));
+    const gAll = 1 - lodUp(s, 9000, 30000); // the graticule comes in last
     const g10 = lod(10);
     const g5 = lod(5);
     const g1 = lod(1) * (s > 900 ? 1 : 0);
-    const g01 = lod(0.1) * (s > 9000 ? 1 : 0);
     const grats: { d: string; op: number }[] = [];
-    if (g10 > 0.01) grats.push({ d: path(GRAT_10) ?? "", op: g10 });
-    if (g5 > 0.01) grats.push({ d: path(GRAT_5) ?? "", op: g5 * (1 - 0.5 * g10) });
-    if (g1 > 0.01) grats.push({ d: path(GRAT_1) ?? "", op: g1 * (1 - 0.5 * g5) });
-    if (g01 > 0.01) grats.push({ d: path(GRAT_01) ?? "", op: g01 * (1 - 0.5 * g1) });
+    if (gAll > 0.01) {
+      if (g10 > 0.01) grats.push({ d: path(GRAT_10) ?? "", op: gAll * g10 });
+      if (g5 > 0.01) grats.push({ d: path(GRAT_5) ?? "", op: gAll * g5 * (1 - 0.5 * g10) });
+      if (g1 > 0.01) grats.push({ d: path(GRAT_1) ?? "", op: gAll * g1 * (1 - 0.5 * g5) });
+    }
+    // hachures: the fine set near the dot first, then the wide set
+    const nearOp = (1 - lodUp(s, 45000, 85000)) * lodUp(s, 2600, 6500);
+    const wideOp = (1 - lodUp(s, 5000, 13000)) * lerp(0.32, 1, lodUp(s, 650, 1800));
+    const hNear: string = nearOp > 0.01 ? (path(HACH_NEAR) ?? "") : "";
+    const hWide: string = wideOp > 0.01 ? (path(HACH_WIDE) ?? "") : "";
+    const riverOp = (1 - lodUp(s, 14000, 40000)) * lerp(0.5, 1, lodUp(s, 650, 1800));
+    const rivers: string = riverOp > 0.01 ? (path(RIVERS) ?? "") : "";
 
-    // the front: how many km it has travelled
-    const km = (frame - T.front) * KM_PER_FRAME;
+    // the front
+    const km = frontKm(frame);
     let trail = "";
     let head: LL | null = null;
     if (km > 0) {
@@ -346,165 +479,158 @@ const HalfTheContinent: React.FC<Props> = ({ plateSrc, mottleSrc, label, vignett
     }
     const dots = LATTICE.map((d) => {
       const p = proj([d[0], d[1]]) as LL;
-      return { x: p[0], y: p[1], on: d[2] === 1, km: d[3] };
+      return { x: p[0], y: p[1], on: d[2] === 1, km: d[3], at: arriveAt(d[3]) };
     }).filter((p) => p.x > -10 && p.x < FRAME_W + 10 && p.y > -10 && p.y < FRAME_H + 10);
-    return { land, grats, trail, head, dots, km };
+    return { land, grats, trail, head, dots, km, hNear, hWide, nearOp, wideOp, rivers, riverOp };
   }, [mapOn, s, qx, qy, frame]);
 
   // levels of detail, all tied to the scale
   const lz = clamp01(Math.log(s / 560) / Math.log(2800 / 560)); // 0 = the globe, 1 = the regional map
   const wlGap = lerp(3.3, 6.5, lz);
-  const wlOp = [0.3, 0.2, 0.12 * lerp(0.75, 1, lz), 0.065 * lz];
+  const wlOp = [0.32, 0.22, 0.13 * lerp(0.75, 1, lz), 0.07 * lz];
   const rimK = lerp(0.45, 1, lz);
-  const coastW = lerp(1.15, 1.5, lz);
+  const coastW = lerp(1.3, 1.9, lz);
   const sphereOn = s < 1400; // the limb can be inside the frame
+  const shadeOp = 1 - lodUp(s, 700, 1150);
   const latticeOp = 1 - smoothstep((s - 1700) / (2600 - 1700));
   const latticeR = 4.2 * Math.pow(s / 560, 0.3);
   const shimmerKm = lerp(ROUTE_KM - 600, MAX_KM + 600, clamp01((frame - T.shimmer[0]) / (T.shimmer[1] - T.shimmer[0])));
   const shimmerOn = frame >= T.shimmer[0];
+  const caffaAt = arriveAt(ROUTE_KM);
 
-  // the mottle: a world-space texture kept alive across the whole zoom as two
-  // octaves that cross-fade (tile size 400..1600 px and its 4x parent)
-  const base = (640 * s) / 500;
-  const oct = Math.floor(Math.log(base / 400) / Math.log(4));
-  const tileA = base / Math.pow(4, oct);
-  const mixA = Math.log(tileA / 400) / Math.log(4);
-  const mottleLayer = (size: number, op: number, key: string) => {
-    if (op <= 0.01) return null;
-    const tiles: React.ReactNode[] = [];
-    const x0 = qx - Math.ceil(qx / size) * size;
-    const y0 = qy - Math.ceil(qy / size) * size;
-    for (let y = y0; y < FRAME_H; y += size)
-      for (let x = x0; x < FRAME_W; x += size)
-        tiles.push(<Img key={`${x.toFixed(0)}_${y.toFixed(0)}`} src={staticFile(mottleSrc)} style={{ position: "absolute", left: x, top: y, width: size + 0.6, height: size + 0.6 }} />);
-    return (
-      <div key={key} style={{ position: "absolute", inset: 0, opacity: op * 0.9 }}>
-        {tiles}
-      </div>
-    );
-  };
-
-  // -- the label ------------------------------------------------------------------
-  const sPin = runCamera(CAM, T.labelPinned).k;
-  const rho = Math.min(1, s / sPin);
-  const labelOp = smoothstep((s - 1000) / (1300 - 1000));
-  const labelSize = 62 * Math.pow(rho, 0.45);
-  const labelY = qy - 222 * Math.pow(rho, 0.8); // clear of Lake Balkhash
+  // -- the label: rides above the dot, clear of the vignette (which hangs right and below) --
+  const labelOp = lodUp(s, 2000, 2700);
 
   const svgStyle: React.CSSProperties = { position: "absolute", left: 0, top: 0 };
   const cx = FRAME_W / 2;
   const cy = FRAME_H / 2;
+  const sphere = sphereOn ? <circle cx={cx} cy={cy} r={s} /> : <rect x={0} y={0} width={FRAME_W} height={FRAME_H} />;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: SPACE }}>
+    <Page vignette={vignette}>
       {map ? (
         <>
-          {/* ---------------- THE MAP: sea, water-lines, graticule, land ---------------- */}
+          {/* ---------------- THE MAP, engraved on the page: the land is the page ---------------- */}
           <svg width={FRAME_W} height={FRAME_H} viewBox={`0 0 ${FRAME_W} ${FRAME_H}`} style={svgStyle}>
             <defs>
               <path id="hcLand" d={map.land} />
               <clipPath id="hcLandClip">
                 <use href="#hcLand" />
               </clipPath>
-              <clipPath id="hcSphere">{sphereOn ? <circle cx={cx} cy={cy} r={s} /> : <rect x={0} y={0} width={FRAME_W} height={FRAME_H} />}</clipPath>
+              <clipPath id="hcSphere">{sphere}</clipPath>
+              {/* the sea: the sphere less the land */}
+              <mask id="hcSea" maskUnits="userSpaceOnUse" x={0} y={0} width={FRAME_W} height={FRAME_H}>
+                <g fill="#fff">{sphere}</g>
+                <use href="#hcLand" fill="#000" />
+              </mask>
+              <pattern id="hcRule" patternUnits="userSpaceOnUse" width={64} height={6}>
+                <line x1={-1} y1={3} x2={65} y2={3} stroke={INK} strokeWidth={1.1} strokeOpacity={0.085} />
+              </pattern>
+              <pattern id="hcShadeA" patternUnits="userSpaceOnUse" width={64} height={7} patternTransform="rotate(-45)">
+                <line x1={-1} y1={3.5} x2={65} y2={3.5} stroke={INK} strokeWidth={1.2} strokeOpacity={0.2} />
+              </pattern>
+              <pattern id="hcShadeB" patternUnits="userSpaceOnUse" width={64} height={7} patternTransform="rotate(-45) translate(0 3.5)">
+                <line x1={-1} y1={3.5} x2={65} y2={3.5} stroke={INK} strokeWidth={1.2} strokeOpacity={0.2} />
+              </pattern>
+              <clipPath id="hcCrescentA">
+                <path clipRule="evenodd" d={`M${cx - s},${cy}a${s},${s} 0 1 0 ${2 * s},0a${s},${s} 0 1 0 ${-2 * s},0ZM${cx - 46 - s},${cy - 46}a${s},${s} 0 1 0 ${2 * s},0a${s},${s} 0 1 0 ${-2 * s},0Z`} />
+              </clipPath>
+              <clipPath id="hcCrescentB">
+                <path clipRule="evenodd" d={`M${cx - s},${cy}a${s},${s} 0 1 0 ${2 * s},0a${s},${s} 0 1 0 ${-2 * s},0ZM${cx - 20 - s},${cy - 20}a${s},${s} 0 1 0 ${2 * s},0a${s},${s} 0 1 0 ${-2 * s},0Z`} />
+              </clipPath>
             </defs>
-            <g clipPath="url(#hcSphere)">
+            {/* the page round the globe, a shade down (never black) */}
+            {sphereOn ? <path fillRule="evenodd" d={`M0,0H${FRAME_W}V${FRAME_H}H0ZM${cx - s},${cy}a${s},${s} 0 1 0 ${2 * s},0a${s},${s} 0 1 0 ${-2 * s},0Z`} fill={DARK} fillOpacity={0.42} /> : null}
+            <g mask="url(#hcSea)">
               <rect x={0} y={0} width={FRAME_W} height={FRAME_H} fill={SEA} />
+              <rect x={0} y={0} width={FRAME_W} height={FRAME_H} fill="url(#hcRule)" />
               {[3, 2, 1, 0].map((i) =>
                 wlOp[i] > 0.004 ? (
                   <React.Fragment key={`wl${i}`}>
-                    <use href="#hcLand" fill="none" stroke={mixColor(SEA, INK, wlOp[i])} strokeWidth={2 * wlGap * (i + 1) + 1.1} strokeLinejoin="round" />
-                    <use href="#hcLand" fill="none" stroke={SEA} strokeWidth={2 * wlGap * (i + 1) - 1.1} strokeLinejoin="round" />
+                    <use href="#hcLand" fill="none" stroke={mixColor(SEA, INK, wlOp[i])} strokeWidth={2 * wlGap * (i + 1) + 1.2} strokeLinejoin="round" />
+                    <use href="#hcLand" fill="none" stroke={SEA} strokeWidth={2 * wlGap * (i + 1) - 1.2} strokeLinejoin="round" />
                   </React.Fragment>
                 ) : null,
               )}
               {map.grats.map((g, i) => (
-                <path key={`gs${i}`} d={g.d} fill="none" stroke={INK} strokeOpacity={0.12 * g.op} strokeWidth={1.2} />
+                <path key={`gs${i}`} d={g.d} fill="none" stroke={INK} strokeOpacity={0.13 * g.op} strokeWidth={1.2} />
               ))}
-              <use href="#hcLand" fill={LAND} />
-              <g clipPath="url(#hcLandClip)">
-                <use href="#hcLand" fill="none" stroke={LAND_RIM} strokeOpacity={0.2} strokeWidth={28 * rimK} strokeLinejoin="round" />
-                <use href="#hcLand" fill="none" stroke={LAND_RIM} strokeOpacity={0.28} strokeWidth={10 * rimK} strokeLinejoin="round" />
-                {map.grats.map((g, i) => (
-                  <path key={`gl${i}`} d={g.d} fill="none" stroke={INK} strokeOpacity={0.075 * g.op} strokeWidth={1.2} />
-                ))}
-              </g>
-              <use href="#hcLand" fill="none" stroke={INK} strokeOpacity={0.8} strokeWidth={coastW} strokeLinejoin="round" />
             </g>
+            <g clipPath="url(#hcSphere)">
+              <g clipPath="url(#hcLandClip)">
+                <use href="#hcLand" fill="none" stroke={LAND_RIM} strokeOpacity={0.22} strokeWidth={28 * rimK} strokeLinejoin="round" />
+                <use href="#hcLand" fill="none" stroke={LAND_RIM} strokeOpacity={0.3} strokeWidth={10 * rimK} strokeLinejoin="round" />
+                {map.grats.map((g, i) => (
+                  <path key={`gl${i}`} d={g.d} fill="none" stroke={INK} strokeOpacity={0.08 * g.op} strokeWidth={1.2} />
+                ))}
+                {map.rivers ? <path d={map.rivers} fill="none" stroke={INK} strokeOpacity={0.5 * map.riverOp} strokeWidth={lerp(1.2, 2, lz)} strokeLinecap="round" strokeLinejoin="round" /> : null}
+                {map.hNear ? <path d={map.hNear} fill="none" stroke={INK} strokeOpacity={0.5 * map.nearOp} strokeWidth={1.3} strokeLinecap="round" /> : null}
+                {map.hWide ? <path d={map.hWide} fill="none" stroke={INK} strokeOpacity={0.46 * map.wideOp} strokeWidth={1.2} strokeLinecap="round" /> : null}
+              </g>
+              <use href="#hcLand" fill="none" stroke={DARK} strokeOpacity={0.55} strokeWidth={coastW + 1.8} strokeLinejoin="round" />
+              <use href="#hcLand" fill="none" stroke={INK} strokeOpacity={0.86} strokeWidth={coastW} strokeLinejoin="round" />
+              {/* engraved sphere shading: a band of hatch inside the limb, lower right */}
+              {sphereOn && shadeOp > 0.01 ? (
+                <g opacity={shadeOp}>
+                  <rect x={0} y={0} width={FRAME_W} height={FRAME_H} fill="url(#hcShadeA)" clipPath="url(#hcCrescentA)" />
+                  <rect x={0} y={0} width={FRAME_W} height={FRAME_H} fill="url(#hcShadeB)" clipPath="url(#hcCrescentB)" />
+                </g>
+              ) : null}
+            </g>
+            {sphereOn ? (
+              <>
+                <circle cx={cx} cy={cy} r={s} fill="none" stroke={DARK} strokeOpacity={0.6} strokeWidth={4.4} />
+                <circle cx={cx} cy={cy} r={s} fill="none" stroke={INK} strokeOpacity={0.72} strokeWidth={2.2} />
+              </>
+            ) : null}
           </svg>
 
-          {/* ---------------- PAPER MOTTLING, world space, on the sphere only ---------------- */}
-          <div style={{ position: "absolute", inset: 0, clipPath: sphereOn ? `circle(${s.toFixed(2)}px at ${cx}px ${cy}px)` : undefined }}>
-            {mottleLayer(tileA, mixA, "ma")}
-            {mottleLayer(tileA * 4, 1 - mixA, "mb")}
-          </div>
-
-          {/* ---------------- THE LIMB, THE FRONT'S TRAIL, EUROPE'S PEOPLE ---------------- */}
+          {/* ---------------- EUROPE'S PEOPLE, THE FRONT'S TRAIL ---------------- */}
           <svg width={FRAME_W} height={FRAME_H} viewBox={`0 0 ${FRAME_W} ${FRAME_H}`} style={svgStyle}>
-            {sphereOn ? <circle cx={cx} cy={cy} r={s} fill="none" stroke={INK} strokeOpacity={0.6} strokeWidth={2} /> : null}
             {latticeOp > 0.01 ? (
               <g opacity={latticeOp} stroke={DARK} strokeOpacity={0.75} strokeWidth={1}>
                 {map.dots.map((d, i) => {
                   if (!d.on) return <circle key={i} cx={d.x.toFixed(1)} cy={d.y.toFixed(1)} r={latticeR} fill={INK} />;
-                  const t = clamp01((map.km - d.km) / (KM_PER_FRAME * 3));
-                  const pulse = Math.sin(Math.PI * clamp01((map.km - d.km) / (KM_PER_FRAME * 7)));
+                  const t = clamp01((frame - d.at) / 3);
+                  const pulse = Math.sin(Math.PI * clamp01((frame - d.at) / 7));
                   const sh = shimmerOn ? Math.exp(-Math.pow((d.km - shimmerKm) / 420, 2)) * 0.6 : 0;
                   const fill = t <= 0 ? INK : sh > 0.02 ? mixColor(ACCENT, SHIMMER, sh) : mixColor(INK, ACCENT, t);
-                  return <circle key={i} cx={d.x.toFixed(1)} cy={d.y.toFixed(1)} r={latticeR * (1 + 0.28 * pulse)} fill={fill} />;
+                  return <circle key={i} cx={d.x.toFixed(1)} cy={d.y.toFixed(1)} r={latticeR * (1 + 0.25 * pulse)} fill={fill} />;
                 })}
               </g>
             ) : null}
-            {map.trail ? (
-              <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <path d={map.trail} stroke={DARK} strokeOpacity={0.6} strokeWidth={7} />
-                <path d={map.trail} stroke={ACCENT} strokeWidth={3.6} />
-              </g>
-            ) : null}
-            {map.head && frame < F_CAFFA + 1 ? <circle cx={map.head[0]} cy={map.head[1]} r={5.2} fill={ACCENT} stroke={DARK} strokeOpacity={0.6} strokeWidth={1.6} /> : null}
+            {map.trail ? <InkStroke d={map.trail} width={6.5} tone={1} /> : null}
+            {map.head && frame < caffaAt + 1 ? <circle cx={map.head[0]} cy={map.head[1]} r={6} fill={ACCENT} stroke={DARK} strokeOpacity={0.6} strokeWidth={1.6} /> : null}
           </svg>
         </>
       ) : null}
 
-      {/* ---------------- THE PLATE (lies on the map at the place it depicts) ---------------- */}
-      {plateOn ? (
-        <Img
-          src={staticFile(plateSrc)}
-          style={{
-            position: "absolute",
-            left: plateLeft,
-            top: plateTop,
-            width: plateW,
-            height: plateH,
-            boxShadow: plateCovers ? undefined : `0 0 0 ${Math.max(1, Math.min(3, plateW * 0.004)).toFixed(2)}px rgba(23,18,13,0.75)`,
-          }}
-        />
-      ) : null}
+      {/* ---------------- THE MARMOTS, printed on the page that is the land ---------------- */}
+      {vigOp > 0.01 ? <MarmotVignetteImg x={vx} y={vy} w={vw} opacity={vigOp} /> : null}
 
       {/* ---------------- THE GERMS, THE DOT, THE ONE NAME ---------------- */}
       <svg width={FRAME_W} height={FRAME_H} viewBox={`0 0 ${FRAME_W} ${FRAME_H}`} style={svgStyle}>
         <defs>
           <clipPath id="hcMarmot">
-            <path d={MARMOT_SIL} transform={`translate(${(pcx - (IMG_W / 2) * imgK).toFixed(2)} ${(pcy - (IMG_H / 2) * imgK).toFixed(2)}) scale(${imgK.toFixed(5)})`} />
+            <path d={SIL_D} transform={`translate(${vx.toFixed(2)} ${vy.toFixed(2)}) scale(${vk.toFixed(5)})`} />
           </clipPath>
         </defs>
-        {dotR > 0.05 ? <circle cx={pcx} cy={pcy} r={dotR} fill={ACCENT} stroke={DARK} strokeOpacity={0.7} strokeWidth={Math.min(2, dotR * 0.3)} /> : null}
-        {germsOn ? (
-          <g clipPath={frame < T.germClipOff ? "url(#hcMarmot)" : undefined}>
-            <Germs points={germPts} r={germR} casing={dotR < 6} />
+        {dotR > 0.05 ? <circle cx={qx} cy={qy} r={dotR} fill={ACCENT} stroke={DARK} strokeOpacity={0.7} strokeWidth={Math.min(2, dotR * 0.3)} /> : null}
+        {crawling.length ? (
+          <g clipPath="url(#hcMarmot)">
+            <Germs points={crawling} r={germR} />
           </g>
         ) : null}
+        {flying.length ? <Germs points={flying} r={germR} /> : null}
         {frame >= T.label && labelOp > 0.01 ? (
           <g opacity={labelOp}>
-            <Label x={qx} y={labelY} size={labelSize} sc appear={T.label} frame={frame} spacing={0.3}>
+            <Label x={FRAME_W / 2 + (qx - FRAME_W / 2) * 0.5} y={qy - 215} size={62} sc appear={T.label} frame={frame} spacing={0.3}>
               {label}
             </Label>
           </g>
         ) : null}
       </svg>
-
-      <Grain />
-      <Vignette amount={vignette} />
-    </AbsoluteFill>
+    </Page>
   );
 };
 
