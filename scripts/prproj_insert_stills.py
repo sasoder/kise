@@ -34,7 +34,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from prproj_insert import Project, TPS  # noqa: E402  (block splitter shared with the .mov inserter)
 
 STILL_DURATION = 10973491200000000          # VideoStream Duration / OriginalDuration of an infinite still (12 h)
-TIMECODE_FORMAT = {10160640000: 101, 10594584000: 110, 10584000000: 100}  # frame ticks -> Premiere timebase code
+TIMECODE_FORMAT = {10160640000: 101, 10594584000: 110, 10584000000: 100,  # frame ticks -> Premiere timebase code
+                   8475667200: 102}  # 29.97 drop-frame (the code Premiere stores on a 29.97 DF sequence and its clips)
 JPEG_CODEC = 1785750887                      # 'jpeg'
 LABEL_COLOR, LABEL_NAME = 11369724, "BE.Prefs.LabelColors.3"  # Premiere's default label for stills
 COLOR_SPACE = '{"baseColorProfile":{"colorProfileName":"BT.709 RGB Full"},"baseProfileType":1}'
