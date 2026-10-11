@@ -1,5 +1,39 @@
 # Memory
 
+## Current status of the named styles (2026-10-07) — read this first
+
+Confirmed by the user on 2026-10-07. Where a section below disagrees with this block, this block wins.
+
+- **"Dwarkesh style" = `## Orange Dwarkesh style`**, on the dimmed grid with the recent `fieldShared.tsx` settings.
+  The cyan accent and the transparent-overlay default in `## Dwarkesh style` are retired; the Orange section still
+  builds on that section's mechanics, with its own replacements.
+- **"ChinaTalk style" = `## ChinaTalk style: newsprint (approved 2026-10-11)`**, kit
+  `generated/components/chinatalkVintage.tsx`. The user on 2026-10-11: "really great job with the style, forward lets
+  use this as chinatalk style". The rice-paper look in `## ChinaTalk style (approved 2026-10-02)` is superseded for
+  the LOOK; its language (one red with one meaning, dashed = planned, wet-ink lines, ink diffusion) carries over.
+- **"Cheeky Pint style" = `## Cheeky Pint S4 style`** (the Toto Wolff look, `stoutShared.tsx`). The kraft / D1 look in
+  `## Cheeky Pint style (rewritten 2026-09-15 …)` is retired for new work.
+- **Camera, every style:** no fixed number of moves. The camera guides the eye: it keeps the focus near the centre of
+  the frame without rigidly tracking it, and it moves or zooms to fill stretches where the graphic itself is quiet, so
+  movement is balanced across the whole cut. Any "one move per cut" or "N moves" line below is superseded.
+- **Text, every style:** the picture carries the idea; text only identifies (a place on a map, a name, a real figure).
+  Never typeset the spoken line or let a label do the explaining. This is a discipline, not a ban on text.
+- **Words and motion, every style:** one continuous motion per cut, guided by the words. Never one gesture per word;
+  "on its beat" lines below are superseded. Something is always happening, but each graphic has ONE job.
+- **Framing:** the main focus sits at the true middle of the frame (not limited to it). The user adds captions just
+  below the middle, so keep important detail out of that strip. "Content centre y 835 / captions at the bottom" below
+  is superseded.
+- **Icons and props** are allowed when abstraction cannot show the thing; any drawing style, as long as its weight
+  matches everything else in the graphic.
+- **Concepts:** a new concept per segment; reuse the same graphic only when the line returns to the same thing.
+- **Numbers below (px per frame, frame counts, sizes, "six never eight") are hints from one build, not rules.**
+- **Frame rate:** match the Premiere sequence (often 23.976). Fixed "24 fps" / "30 fps" lines below are superseded.
+- **Logos:** use the real logo, redrawn to fit the style (as in the Cheeky Pint S4 set). No "one accent colour per
+  clip" rule: colour follows the style's own palette.
+- **Versions:** a new version takes the original file name (Premiere relinks); the old file moves to `old/`.
+- **Dots:** the default for AI agents and fine for crowds of people; use a recognisable shape when a dot would not tell
+  the viewer what the thing is.
+
 ## Creative direction (North Star)
 
 For transcript graphics, use somewhat abstract, visually meaningful metaphors that
@@ -53,7 +87,7 @@ counts for the flair elements, so intensity is dialable without editing the comp
 Reference implementations: `generated/components/WormholeIconLoop.tsx` and
 `generated/components/BlackholeIconLoop.tsx` (both approved by the user).
 
-## Dwarkesh style
+## Dwarkesh style (base mechanics; its cyan accent and transparent-overlay default were RETIRED 2026-10-07 — "Dwarkesh style" now means Orange Dwarkesh)
 
 The user's named house style for explainer graphics cut to a podcast transcript.
 When they say "dwarkesh style", build to this without re-asking.
@@ -249,7 +283,7 @@ The act worlds are `stoutActA.tsx` and `stoutActB.tsx`, and the style frames are
 **Palettes.** Set with the `palette` input prop: `B1` (the default), `B2` walnut, `B3` dark kraft, `B2g`, and `stout`.
 `stout` is the original near-black, kept only to reproduce old renders; never use it for new work.
 
-## Cheeky Pint style (rewritten 2026-09-15 — the D1 "year off shorting" set is the standard)
+## Cheeky Pint style (RETIRED 2026-10-07, see Cheeky Pint S4; rewritten 2026-09-15 — the D1 "year off shorting" set is the standard)
 
 The user's named house style for the Cheeky Pint podcast cuts. On 2026-09-15 they
 said "overwrite the old cheeky pint style and make this one the new one": the
@@ -683,7 +717,37 @@ References: `generated/components/BrushingMistakes.tsx` (three-point tube timeli
   notes; the green/white cards there are not the Humble colour.
 - **Delivery:** `~/Downloads/`, versions as `_V2` beside the original; commit by pathspec.
 
-## ChinaTalk style (approved 2026-10-02)
+## ChinaTalk style: newsprint (approved 2026-10-11)
+
+THE ChinaTalk look from now on. It came out of the Logan Wright "Brezhnev chose decay" set: the user asked for "a
+slightly more vintage look", then "lean in on that kinda paper design, kinda like a newspaper but not in a distracting
+way", and approved the result with "really great job with the style, forward lets use this as chinatalk style".
+
+Build ONLY from the kit `generated/components/chinatalkVintage.tsx` (contract: `generated/components/chinatalkVintage.md`,
+whose second half, the newsprint pass, wins where the two halves differ; specimen `VintageKitSheet.tsx`). Import everything from it, never from `chinatalkShared` (old
+colours, weights and the y-835 camera).
+
+- **Page:** newsprint `V_PAPER #EDE7D9` (greyish, visible fibre and specks, one faint fold crease), LOCKED to the world
+  (`paperLock` 1): the page pans and zooms with the drawing. Grey-brown edge toning, fine print grain. 1080x1920,
+  opaque, fps of the sequence.
+- **Ink:** `V_INK #211D1A` at two rungs (0.90 / 0.42). **Spot colour:** `RED #C9281C` (deep `#89190F`, wet `#E2432D`),
+  one meaning per cut, as real shapes (thick lines, solid pictograms, hatched wedges), with the warm paper shadow.
+- **Photographs** are real, verified pictures set as newspaper clippings (`VintagePhoto`, tone "news"): sharp black
+  and white with a light dot texture (`HALFTONE_MIX` 0.38; a pure halftone cost the faces and shimmered at half res),
+  thin paper margin, keyline, light shadow, and a one-line italic `cutline` naming the subject.
+- **Type:** Source Serif 4 Bold numbers; Source Sans 3 SemiBold tracked caps for words; `"head"` (64 px) for the one
+  word that names the thing; Source Serif 4 Italic for cutlines and `SourceLine`. Titles as a `Kicker` (between a bold
+  and a hair rule); newspaper `Rule`s (hair / bold / double) organise the page. A chart carries a source line.
+- **Pictograms:** solid silhouettes (`Pictogram`, Phosphor fill), big, ink-tint waiting and red when active. No
+  outline icons, no drawn machinery.
+- **Motion:** eased and ink-like: lines written by a bead tip, shapes flooding from the point of contact, things that
+  stop existing bleeding away. One slow, even camera move per cut; no whip pans, no motion blur.
+- **Not wanted:** columns of fake body text, mastheads, headlines to read, torn edges, stains, show-through, flicker.
+- **Name tag:** `generated/components/NameTagNewsprint.tsx` (a caption slip of newsprint; props name / job).
+- Reference set: `SovietEconomicDecline`, `BrezhnevChoseDecay`, `TechnologyAllocates`, `AIReplacesMarkets`, delivered
+  to `chinatalk/oct/China's Economy is Broken | Logan Wright/logan - brezhnev chose decay/graphics/`.
+
+## ChinaTalk style (approved 2026-10-02; its LOOK is superseded by the newsprint section above)
 
 The user's named house style for ChinaTalk podcast clips. It was born as V2 of the Logan Wright "China's growth is going
 negative" set and approved with "these look freaking awesome … save this as a new chinatalk style". It is a separate
