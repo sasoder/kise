@@ -56,6 +56,8 @@ export { DURATION, FPS, defaultProps, schema };
 export type { Props };
 export const W = 1080;
 export const H = 1920;
+/** screen y below which only the paper ground is ever drawn (the caption zone) */
+export const CLIP_Y = 1280;
 
 // -- the sheet, world px (unrotated; it is then turned about SHEET_C) -----------
 export const SHEET = { x: 0, y: 0, w: 940, h: 1110 } as const;
@@ -385,6 +387,10 @@ const HarvardNumberOneTall: React.FC<Props> = ({ masthead, headline, dateLine, r
   return (
     <AbsoluteFill style={{ backgroundColor: PAPER_BASE }}>
       <TallPaper frame={frame} cx={cx} cy={cy} k={k} cxRest={CX_REST} cyRest={CY_REST} />
+      {/* the foreground is clipped in SCREEN space to y < CLIP_Y, so the page's
+          entrance from below never passes through the captions; the layer
+          inside is still laid out for the full frame, so nothing shifts */}
+      <div style={{ position: "absolute", left: 0, top: 0, width: W, height: CLIP_Y, overflow: "hidden" }}>
       <WorldTall cx={cx} cy={cy} k={k} id="hnot-world">
         <defs>
           <clipPath id="hnot-window" clipPathUnits="userSpaceOnUse">
@@ -549,6 +555,7 @@ const HarvardNumberOneTall: React.FC<Props> = ({ masthead, headline, dateLine, r
           </g>
         </g>
       </WorldTall>
+      </div>
     </AbsoluteFill>
   );
 };
