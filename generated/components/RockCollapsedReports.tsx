@@ -57,7 +57,7 @@ import {
 //   f0      deep in a mine: sky, the ground line, a headframe over the collar,
 //           the shaft, the level's room with its thin cracked slab under a low
 //           worked-out gap, four men swinging picks (the fourth half cut by
-//           the left edge: the picture never says how many), "200 FT"
+//           the left edge: the picture never says how many). No label.
 //   f0-18   the cracks run through; three chips drop off the underside
 //   f18-24  the slab lets go in ten blocks, the middle first
 //   f27-31  the blocks over the men reach them (each man goes over, and drops
@@ -123,14 +123,12 @@ export const FPS = SHARED_FPS;
 export const DURATION = 220;
 
 export const schema = z.object({
-  levelTag: z.string(),
   countLow: z.string(),
   countHigh: z.string(),
   debugCaptions: z.boolean(),
 });
 export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = {
-  levelTag: "200 FT",
   countLow: "8",
   countHigh: "30",
   debugCaptions: false,
@@ -774,7 +772,6 @@ const pick = (fill: string, pk: { x: number; y: number; phi: number; len: number
 
 // "they died": each man is traced in black from one point, then the black
 // fills him from the ground up. Start frames per man (the middle one first).
-const TAG_BASE = 428; // the level tag's baseline: on the rock between the surface and the slab
 const TRACE_F0 = [92, 86, 83, 89];
 const TRACE_F = 8;
 const FILL_F = 6;
@@ -900,7 +897,7 @@ export const panSpeed = (frame: number) => {
 const CX_REST = (540 / K_PUSH + X2) / 2;
 
 // ===========================================================================
-const RockCollapsedReports: React.FC<Props> = ({ levelTag, countLow, countHigh, debugCaptions }) => {
+const RockCollapsedReports: React.FC<Props> = ({ countLow, countHigh, debugCaptions }) => {
   const frame = useCurrentFrame();
 
   const cam = cameraAt(frame);
@@ -1063,11 +1060,6 @@ const RockCollapsedReports: React.FC<Props> = ({ levelTag, countLow, countHigh, 
             {PIECES.map((p, n) =>
               p.kind === "slab" && frame <= p.release ? p.marks.map((m, j) => markLine(m, `sm${n}-${j}`)) : null,
             )}
-
-            {/* the level tag: it only identifies */}
-            <text x={44} y={TAG_BASE} fill={BLACK} style={type(100, 900)}>
-              {levelTag}
-            </text>
 
             {/* the headframe on the bench, its rope down the shaft */}
             <g transform={`translate(${SHADOW_OFF} ${SHADOW_OFF})`}>{headframe(SHADOW)}</g>

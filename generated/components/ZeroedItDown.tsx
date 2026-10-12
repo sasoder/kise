@@ -98,7 +98,8 @@ import {
 //   f60-67   slot 3 drains to hollow · f66-73 slot 4 drains to hollow
 //   f74-92   the camera steps back to k 1.26 (keys; settled by ~f99)
 //   f92-99   the strike is drawn through the "30", left to right, rising:
-//            a 14 px white line on a 28 px black one
+//            a plain 14 px white line on the house hard shadow (one black
+//            copy at +4/+4, drawn with it), above the white "30"
 //   f114-141 the chain: copy n steps out from behind copy n-1 at
 //            f114 + 4(n-1), ONE 14 px step up-left over 22 frames on
 //            EASE_LAND; blue, purple, orange, blue, purple, orange, blue from
@@ -322,7 +323,6 @@ export const N30_X1 = 756; // right edge (textAnchor end)
 export const N30_BASE = 1515;
 const N30_W = 1.09 * N30_SIZE; // the two digits' ink, measured off a still
 const STRIKE_W = 14;
-const STRIKE_CASE = 28; // the black line under it: it cuts through the white glyphs
 const STRIKE_OVER = 30;
 const STRIKE_RISE = 15; // the right end sits this far above the middle, the left below
 const STRIKE_FRAMES = 8;
@@ -489,18 +489,15 @@ const ZeroedItDown: React.FC<Props> = ({ debugCaptions, thirty, two, toFour, bea
     easing: Easing.inOut(Easing.quad),
     ...clamp,
   });
-  // the white line on a black one twice its weight: `grow` px longer at each
-  // end, so the casing closes round the line's ends and leads its tip
-  const strikeLen = Math.hypot(STRIKE.x1 - STRIKE.x0, STRIKE.y1 - STRIKE.y0);
-  const strikeU = { x: (STRIKE.x1 - STRIKE.x0) / strikeLen, y: (STRIKE.y1 - STRIKE.y0) / strikeLen };
-  const strikeLine = (stroke: string, width: number, grow = 0) => (
+  // a plain white line; `d` offsets the copy that is its hard shadow
+  const strikeLine = (stroke: string, d = 0) => (
     <line
-      x1={STRIKE.x0 - strikeU.x * grow}
-      y1={STRIKE.y0 - strikeU.y * grow}
-      x2={STRIKE.x0 + strikeU.x * (strikeLen * strikeP + grow)}
-      y2={STRIKE.y0 + strikeU.y * (strikeLen * strikeP + grow)}
+      x1={STRIKE.x0 + d}
+      y1={STRIKE.y0 + d}
+      x2={STRIKE.x0 + (STRIKE.x1 - STRIKE.x0) * strikeP + d}
+      y2={STRIKE.y0 + (STRIKE.y1 - STRIKE.y0) * strikeP + d}
       stroke={stroke}
-      strokeWidth={width}
+      strokeWidth={STRIKE_W}
       strokeLinecap="butt"
     />
   );
@@ -610,15 +607,15 @@ const ZeroedItDown: React.FC<Props> = ({ debugCaptions, thirty, two, toFour, bea
         ))}
 
         {/* the "30": chain copies (furthest first), then the white core on its
-            shadow, then the strike (white on its black casing), which belongs
-            to the white one only */}
+            shadow, then the strike on its own hard shadow, which belongs to
+            the white one only */}
         {copies}
         {thirtyText(SHADOW, SHADOW_OFF)}
         {thirtyText(INK)}
         {strikeP > 0 ? (
           <>
-            {strikeLine(SHADOW, STRIKE_CASE, (STRIKE_CASE - STRIKE_W) / 2)}
-            {strikeLine(INK, STRIKE_W)}
+            {strikeLine(SHADOW, SHADOW_OFF)}
+            {strikeLine(INK)}
           </>
         ) : null}
 
