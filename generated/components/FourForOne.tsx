@@ -22,10 +22,11 @@
 // right pan, three Totonacs on the left and the fourth walks onto it. The haul
 // rope takes the beam up its post, the hang-ropes go taut and both pans leave
 // the ground together and hang LEVEL (by f40): four against one. Then the
-// camera creeps toward the right pan while the Chichimec heaves against his
+// camera pushes in on the Chichimec (close from f68) while he heaves against his
 // bonds (a deep crouch, then a wrench up and back; peaks on "wilder" f75 and
 // "fiercely" f116): his pan dips and swings, the beam rocks and comes level
-// again, and the four Totonacs ride it. Text: TOTONACS, CHICHIMEC.
+// again, and the four Totonacs ride it. On "than the Totonacs did" the camera
+// pulls back to the whole level balance (easing into the settle by f142). Text: TOTONACS, CHICHIMEC.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
@@ -278,12 +279,12 @@ const CAUGHT: FigPose = { ...TENSE, yaw: 0.86, headYaw: 0.95, roll: 5, pitch: 5,
 /** one track per heave (TENSE before and after it); where two overlap their departures from TENSE add */
 const heaveTracks = HEAVES.map(([c, a]) =>
   poseTrack([
-    [c - 18, TENSE],
-    [c - 8, lerpFig(TENSE, COIL, a)],
+    [c - 21, TENSE],
+    [c - 11, lerpFig(TENSE, COIL, a)],
     [c, lerpFig(TENSE, WRENCH, a)],
     [c + 2, lerpFig(TENSE, { ...WRENCH, crouch: 2, footR: [34, -4], liftR: -5 }, a * 0.92)],
-    [c + 8, lerpFig(TENSE, CAUGHT, a)],
-    [c + 19, TENSE],
+    [c + 9, lerpFig(TENSE, CAUGHT, a)],
+    [c + 21, TENSE],
   ]),
 );
 const chichimecTrack = (f: number): FigPose => heaveTracks.map((t) => t(f)).reduce((sum, q) => lerpFig(lerpFig(TENSE, sum, 2), lerpFig(TENSE, q, 2), 0.5), TENSE);
@@ -296,13 +297,21 @@ const chichimecPose = (f: number): FigPose => {
 // ---------------------------------------------------------------------------
 // THE CAMERA: it rises a little with the hoist, then drifts toward the right pan
 // ---------------------------------------------------------------------------
+/** the close-up on the Chichimec: he stands ~850 px tall, feet near y 1410, his face above the caption strip */
+const CLOSE = { k: 2.03, wx: PX + ARM + 8, wy: 951 };
 const camAt = makeCamera([
   { f: 0, k: 1.07, wx: 514, wy: 843, sx: 540, sy: 960 },
   { f: 20, k: 1.072, wx: 527, wy: 840, sx: 540, sy: 960 },
   { f: 42, k: 1.075, wx: 540, wy: 804, sx: 540, sy: 960 },
-  { f: 60, k: 1.078, wx: 543, wy: 803, sx: 540, sy: 960 },
-  { f: 120, k: 1.086, wx: 549, wy: 805, sx: 540, sy: 960 },
-  { f: 145, k: 1.09, wx: 551, wy: 806, sx: 540, sy: 960 },
+  { f: 47, k: 1.077, wx: 541, wy: 804, sx: 540, sy: 960 },
+  // "because the Chichimec": one push in on him
+  { f: 68, k: CLOSE.k, wx: CLOSE.wx, wy: CLOSE.wy, sx: 540, sy: 960 },
+  { f: 96, k: CLOSE.k * 1.022, wx: CLOSE.wx + 2, wy: CLOSE.wy + 1, sx: 540, sy: 960 },
+  { f: 123, k: CLOSE.k * 1.04, wx: CLOSE.wx + 3, wy: CLOSE.wy + 2, sx: 540, sy: 960 },
+  // "than the Totonacs did": back to the whole balance
+  { f: 137, k: 1.13, wx: 559, wy: 812, sx: 540, sy: 960 },
+  { f: 142, k: 1.086, wx: 547.5, wy: 805.5, sx: 540, sy: 960 },
+  { f: 145, k: 1.09, wx: 549, wy: 806, sx: 540, sy: 960 },
 ]);
 
 // ---------------------------------------------------------------------------

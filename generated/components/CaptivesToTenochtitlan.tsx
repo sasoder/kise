@@ -17,7 +17,7 @@
 // rope toward the right at a constant walk, a furled feather back-standard on
 // his back, the camera travelling with them while the stair of the great
 // temple slides in; he stops at its foot (~f70), the captive comes up behind
-// him, TENOCHTITLAN lands on the base tier (f87) and the bound feathers open
+// him, and the bound feathers open
 // out of the sheaf into a tall orange fan above his head (open by f108).
 // Then it holds, alive: the feathers stir, the rope hangs, the camera creeps.
 // Orange = the Aztec side (the warriors and what they wear). No sacrifice shown.
@@ -27,7 +27,7 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { DARK, hash, smootherstep, smoothstep } from "./incaShared";
 import { POSES, Rope, Totonac, Warrior, captureAnchors, walkLegs, type FigPose, type Ink, CREAM, ORANGE } from "./captureFigures";
-import { FPS, Label, TexcocoPage, WALK, WorldSvg, idle, makeCamera, poseTrack, shadeInk, track, type P2 } from "./texcocoShared";
+import { FPS, TexcocoPage, WALK, WorldSvg, idle, makeCamera, poseTrack, shadeInk, track, type P2 } from "./texcocoShared";
 import { add, mix, mul, norm, rot, sub, vlen } from "./stringsMotion";
 
 export { FPS };
@@ -107,7 +107,7 @@ const X1 = -72;
 const GAP_END = 226;
 
 // ---- the walk: constant speed, then he stops at the foot of the stair
-const T = { stop: 61, capStop: 73, label: 79, ties: 85, open: 89, opened: 108 };
+const T = { stop: 61, capStop: 73, ties: 85, open: 89, opened: 108 };
 const warAmount = (f: number) => 1 - smoothstep((f - T.stop) / 9);
 const capAmount = (f: number) => 1 - smoothstep((f - T.capStop) / 9);
 const integral = (fn: (f: number) => number) => {
@@ -151,9 +151,9 @@ const camAt = makeCamera([
   { f: 0, k: 1.0, wx: warX(0), wy: GY, sx: 482, sy: 1500 },
   { f: 34, k: 0.996, wx: warX(34), wy: GY, sx: 490, sy: 1500 },
   { f: 66, k: 0.988, wx: warX(66), wy: GY, sx: 474, sy: 1500 },
-  { f: 86, k: 0.98, wx: X1, wy: GY, sx: 458, sy: 1500 },
-  { f: 108, k: 0.972, wx: X1, wy: GY, sx: 451, sy: 1500 },
-  { f: 125, k: 0.967, wx: X1, wy: GY, sx: 449, sy: 1500 },
+  { f: 86, k: 0.98, wx: X1, wy: GY, sx: 482, sy: 1500 },
+  { f: 108, k: 0.972, wx: X1, wy: GY, sx: 489, sy: 1500 },
+  { f: 125, k: 0.967, wx: X1, wy: GY, sx: 491, sy: 1500 },
 ]);
 
 // ---------------------------------------------------------------------------
@@ -336,14 +336,13 @@ const Temple: React.FC<{ at: P2 }> = ({ at: o }) => {
     const wall = `M${P([tierX(j, 0), y0])}L${P([tierX(j, TIER_H), y1])}L${P([RIGHT, y1])}L${P([RIGHT, y0])}Z`;
     const cy = y1 + 38;
     const cornice = `M${P([tierX(j, TIER_H - 38) - 9, cy])}L${P([tierX(j, TIER_H) - 9, y1])}L${P([RIGHT, y1])}L${P([RIGHT, cy])}Z`;
-    // the stone courses (the band where the name sits on the base tier is left clean)
+    // the stone courses
     let courses = "";
     let joints = "";
     [62, 124, 186, 248].forEach((h, r) => {
       const xa = tierX(j, h) + 3;
       courses += `M${xa.toFixed(1)},${(y0 - h).toFixed(1)}L${RIGHT},${(y0 - h).toFixed(1)}`;
       for (let q = 0; q < 26; q++) {
-        if (j === 0 && (h === 124 || h === 186)) continue;
         const x = xa + 40 + q * 96 + ((r % 2) * 48 + 30 * hash(q + j * 31, 910 + r));
         joints += `M${x.toFixed(1)},${(y0 - h).toFixed(1)}l0,${(h === 62 ? 62 : 62).toFixed(0)}`;
       }
@@ -455,7 +454,6 @@ const stateAt = (f: number) => {
   return { cam: camAt(f), wAt, cAt, wPose, cPose, wa, ca, banner, slack: ropeSlack(f) };
 };
 
-const LABEL_AT: P2 = [349, GY - 98];
 
 const CaptivesToTenochtitlan: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
@@ -475,7 +473,6 @@ const CaptivesToTenochtitlan: React.FC<z.infer<typeof schema>> = () => {
           <Warrior pose={s.wPose} at={s.wAt} scale={U} club={false} uid="ct-w" />
           <Strap rig={s.wa.rig} at={s.wAt} scale={U} />
         </WorldSvg>
-        <Label text="TENOCHTITLAN" x={LABEL_AT[0]} y={LABEL_AT[1]} cam={cam} frame={frame} f0={T.label} size={44} spacing={0.06} />
       </TexcocoPage>
     </AbsoluteFill>
   );

@@ -1,22 +1,22 @@
 // ---------------------------------------------------------------------------
 // SeizedNotKilled (file 3_SeizedNotKilled; Dwarkesh Patel with Si Sheppard,
 // "Capture, not kill"). Dwarkesh map style, the umber "page" (no map): engraved
-// figures. Opaque 1080x1920, 23.976 fps.
+// figures. Opaque 1080x1920, 23.976 fps. No text.
 //
 // CHECK LINE: "The Aztec warriors had Cortes flat on the ground under their
 // raised clubs, and instead of striking they lowered them and grabbed him to
 // haul him off alive."
 //
-// THE MOTION (one move): Cortes (cream) is down on the ground from the first
-// frame, propped on an elbow, one arm up to ward, his sword out of reach and
-// his riderless horse bolting off behind him; four ORANGE warriors walk in from
-// both frame edges and close a ring over him, their macuahuitls go up (highest
-// f125-f146) and then come slowly down with no blow; two of them reach in, take
-// him by the wrists (contact f236) and haul him up off the ground between them,
-// and the whole party starts off to the right with him, alive. A slow camera
-// push runs through it and drifts with the procession at the end.
+// THE MOTION (one move, round 2): it opens CLOSE on Cortes (cream) down on the
+// ground, scrabbling back on his elbow and stretching for his sword; the camera
+// eases back as four ORANGE warriors come in from both sides (the first plants
+// his feet on the blade, the last two arrive at a jog) while his riderless horse
+// bolts across behind. The clubs go up in a quick ripple and the camera pushes
+// in and tilts up along them (tightest f125-f146); they come down with no blow,
+// the two who will take him drop theirs, everybody crowds in, and the camera
+// sinks back to the two hands that close on his wrists (contact f236) and then
+// travels with the party as he is hauled up, kicking, and carried off alive.
 // Orange = the Aztec side (the warriors); cream = Cortes, his horse, his sword.
-// The only text is the name CORTES, on the word (f18).
 //
 // DURATION: sequence 3.670-14.723 s = 11.053 s x 23.976 = 265 frames (f0..f264).
 // WORD -> FRAME: Cortes 18 · laying 49 · ground 63 · knocked 92 · horse 104 ·
@@ -27,11 +27,11 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { pchip, smoothstep } from "./incaShared";
-import { CAST_SPECS, ORANGE, POSES, Warrior } from "./captureFigures";
+import { CAST_SPECS, Macuahuitl, ORANGE, POSES, Warrior, captureAnchors } from "./captureFigures";
 import { CortesDown, FallenSword, GroundHatch, LooseHorse, cortesAnchors, type CortesPose } from "./seizedFigures";
 import { mix, mix2, mul, norm, sub } from "./stringsMotion";
 import { Figure, figureRig, toLocal, type ArmPose, type FigPose } from "./texcocoFigures";
-import { FPS, Label, TexcocoPage, WALK, WorldSvg, idle, makeCamera, poseTrack, shadeInk, track, walkPose, type P2 } from "./texcocoShared";
+import { FPS, TexcocoPage, WALK, WorldSvg, idle, makeCamera, poseTrack, shadeInk, track, walkPose, type P2 } from "./texcocoShared";
 
 export { FPS };
 export const DURATION = 265;
@@ -42,8 +42,9 @@ export const defaultProps = schema.parse({});
 // TIMING
 // ---------------------------------------------------------------------------
 const T = {
-  /** the name lands on its word */
-  name: 18,
+  /** his fingers are at their furthest for the sword; the foot comes down on its blade */
+  stretch: 50,
+  stomp: 55,
   /** the clubs are at their highest */
   up: 124,
   hold: 147,
@@ -163,7 +164,7 @@ const BOTH_UP: CortesPose = {
   torso: 42,
   head: 18,
   headYaw: -0.74,
-  far: { w: [-14, -204], elbow: [-1, 0.5], fist: 0, hand: 0 },
+  far: { w: [-34, -198], elbow: [-1, 0.5], fist: 0, hand: 0 },
   near: { w: [124, -168], elbow: [1, 0.6], fist: 0, hand: 0 },
   brow: 0.8,
   mouth: -0.7,
@@ -174,60 +175,100 @@ const HAULED: CortesPose = {
   torso: 26,
   head: 14,
   headYaw: -0.66,
-  far: { w: [-48, -214], elbow: [-1, 0.3], fist: 0.25, hand: 0 },
-  near: { w: [150, -215], elbow: [1, 0.5], fist: 0.25, hand: 0 },
+  far: { w: [-78, -215], elbow: [-1, 0.3], fist: 0.25, hand: 0 },
+  near: { w: [130, -215], elbow: [1, 0.5], fist: 0.25, hand: 0 },
   legFar: { a: [-120, -12], knee: [0, -1], flex: -12 },
   legNear: { a: [-94, -12], knee: [0.1, -1], flex: -8 },
   brow: 0.9,
   lids: 0,
   mouth: -0.8,
 };
+/** rolled toward us, his left hand stretched along the ground for the sword (the IK stops it at arm's length: just short) */
+const REACH: CortesPose = {
+  ...PROP,
+  hip: [10, -22],
+  torso: 66,
+  head: 50,
+  headYaw: -0.98,
+  far: { w: [58, -150], elbow: [-1, 0.6], fist: 0.2, hand: 0 },
+  near: { w: [-60, 30], elbow: [1, 1], fist: 0, hand: 0 },
+  legFar: { a: [-118, -13], knee: [0, -1], flex: -4 },
+  legNear: { a: [-78, -13], knee: [0.2, -1], flex: 0 },
+  brow: 1,
+  mouth: -0.8,
+};
 const cortesKeys = cortesTrack([
   [0, PROP],
-  [40, { ...PROP, hip: [3, -22], torso: 58, head: 24, headYaw: -0.86, far: { ...PROP.far, w: [10, -188] }, legNear: { ...PROP.legNear, a: [-90, -13] } }],
-  [84, { ...PROP, hip: [5, -22], torso: 59, head: 32, headYaw: -0.6, far: { ...PROP.far, w: [34, -200] }, legNear: { ...PROP.legNear, a: [-86, -13] }, legFar: { ...PROP.legFar, a: [-126, -13] } }],
-  [T.up, COWER],
-  [T.hold, { ...COWER, torso: 64, far: { ...COWER.far, w: [60, -206] } }],
-  [T.down - 6, PEER],
+  [22, { ...PROP, hip: [9, -22], torso: 60, head: 30, headYaw: -0.8, far: { ...PROP.far, w: [30, -176] } }],
+  [T.stretch - 10, { ...REACH, torso: 63, near: { w: [-20, 4], elbow: [1, 1], fist: 0, hand: 0 } }],
+  [T.stretch, REACH],
+  [T.stomp, { ...REACH, torso: 65, head: 46 }],
+  [T.stomp + 12, { ...PROP, hip: [12, -22], torso: 55, head: 24, headYaw: -0.9, far: { ...PROP.far, w: [-4, -186] }, near: { w: [60, -13], elbow: [1, 1], fist: 0.2, hand: 0 }, brow: 1, mouth: -0.8 }],
+  [90, { ...PROP, hip: [13, -22], torso: 58, head: 32, headYaw: -0.6, far: { ...PROP.far, w: [34, -200] }, near: { w: [62, -13], elbow: [1, 1], fist: 0.2, hand: 0 } }],
+  [T.up, { ...COWER, hip: [14, -22] }],
+  [T.hold, { ...COWER, hip: [15, -22], torso: 64, far: { ...COWER.far, w: [60, -206] } }],
+  [T.down - 30, { ...PEER, hip: [12, -22] }],
   [T.touch - 4, BOTH_UP],
-  [T.touch, { ...BOTH_UP, torso: 41, far: { ...BOTH_UP.far, w: [-14, -206], fist: 0.1 }, near: { ...BOTH_UP.near, w: [124, -170], fist: 0.1 } }],
+  [T.touch, { ...BOTH_UP, torso: 41, far: { ...BOTH_UP.far, w: [-34, -200], fist: 0.1 }, near: { ...BOTH_UP.near, w: [124, -170], fist: 0.1 } }],
   [T.lifted, HAULED],
-  [264, { ...HAULED, hip: [11, -71], torso: 24, far: { ...HAULED.far, w: [-47, -217] }, near: { ...HAULED.near, w: [151, -218] } }],
+  [264, { ...HAULED, hip: [11, -72], torso: 23, far: { ...HAULED.far, w: [-77, -218] }, near: { ...HAULED.near, w: [131, -218] } }],
 ]);
 const cortesAt = (f: number): P2 => [C_AT[0] + gone(f) * ADV, C_AT[1]];
 const cortesPose = (f: number): CortesPose => {
   const q = cortesKeys(f);
-  // alive: his chest and his head never quite still
-  return { ...q, torso: q.torso + 0.5 * Math.sin(f / 9 + 1), head: q.head + 0.8 * Math.sin(f / 13) };
+  // he scrabbles back on his heels at the start, and kicks as he is hauled off
+  const scr = 1 - smoothstep((f - 16) / 14);
+  const kick = smoothstep((f - T.touch - 2) / 10);
+  const a = scr + kick;
+  const w = scr > 0 ? f / 2.6 : f / 1.9;
+  const push = (ph: number): P2 => [9 * a * Math.cos(w + ph), -(4 * scr + 22 * kick) * Math.max(0, Math.sin(w + ph))];
+  const pF = push(0);
+  const pN = push(Math.PI);
+  return {
+    ...q,
+    torso: q.torso + 0.5 * Math.sin(f / 9 + 1) + 2.6 * kick * Math.sin(f / 2.7),
+    head: q.head + 0.8 * Math.sin(f / 13) + 5 * kick * Math.sin(f / 2.7 + 1),
+    legFar: { ...q.legFar, a: [q.legFar.a[0] + pF[0], q.legFar.a[1] + pF[1]] },
+    legNear: { ...q.legNear, a: [q.legNear.a[0] + pN[0], q.legNear.a[1] + pN[1]] },
+  };
 };
 
 // ---------------------------------------------------------------------------
 // THE WARRIORS
 // ---------------------------------------------------------------------------
+type Gait = { cycle: number; stride: number };
+const WALKING: Gait = { cycle: CYCLE, stride: STRIDE };
+const JOG: Gait = { cycle: 17, stride: 54 };
 type Man = {
   id: string;
   dir: 1 | -1;
   /** where he stands in the ring, and the frame he gets there */
   at: P2;
   arrive: number;
+  gait: Gait;
   shield: boolean;
-  /** which of Cortes' wrists he takes */
+  /** which of Cortes' wrists he takes (those two drop their clubs first) */
   takes?: "far" | "near";
-  /** the frames his club starts up and starts down */
+  /** the frames his club starts up and starts down: a ripple round the ring */
   rise: number;
   fall: number;
+  /** how far he crowds in once the clubs are down, px */
+  crowd: number;
   seed: number;
   /** his own way of holding the club up: the fist this far forward (units), the club this much further back (deg) */
   fwd: number;
   tilt: number;
 };
 const MEN: Man[] = [
-  { id: "w2", dir: -1, at: [524, 1138], arrive: 82, shield: false, takes: "far", rise: 100, fall: 150, seed: 2, fwd: 22, tilt: 14 },
-  { id: "w3", dir: 1, at: [304, 1142], arrive: 76, shield: true, rise: 98, fall: 153, seed: 3, fwd: 30, tilt: 2 },
-  { id: "w1", dir: -1, at: [888, 1150], arrive: 96, shield: false, takes: "near", rise: 103, fall: 156, seed: 1, fwd: 58, tilt: 10 },
-  { id: "w4", dir: 1, at: [100, 1176], arrive: 99, shield: true, rise: 105, fall: 151, seed: 4, fwd: 54, tilt: 16 },
+  // the first one in, on the near side: he stops with his feet on the blade of the sword
+  { id: "w4", dir: 1, at: [214, 1232], arrive: T.stomp, gait: WALKING, shield: true, rise: 113, fall: 154, crowd: 0, seed: 4, fwd: 54, tilt: 16 },
+  { id: "w2", dir: -1, at: [1036, 1128], arrive: 72, gait: WALKING, shield: true, rise: 100, fall: 148, crowd: 26, seed: 2, fwd: 40, tilt: 14 },
+  // the last two come at a jog; they are the two who take him
+  { id: "w3", dir: 1, at: [398, 1140], arrive: 88, gait: JOG, shield: false, takes: "far", rise: 109, fall: 152, crowd: 26, seed: 3, fwd: 34, tilt: 2 },
+  { id: "w1", dir: -1, at: [872, 1150], arrive: 97, gait: JOG, shield: false, takes: "near", rise: 104, fall: 150, crowd: 24, seed: 1, fwd: 58, tilt: 10 },
 ];
-const stopAmount = (m: Man, f: number) => 1 - smoothstep((f - (m.arrive - 9)) / 9);
+const adv = (m: Man) => WALK.advance(SW, m.gait.cycle, m.gait.stride);
+const stopAmount = (m: Man, f: number) => 1 - smoothstep((f - (m.arrive - 8)) / 8);
 const WALKED = Object.fromEntries(
   MEN.map((m) => {
     const out = [0];
@@ -240,41 +281,47 @@ const walked = (m: Man, f: number) => {
   const i = Math.floor(x);
   return mix(WALKED[m.id][i], WALKED[m.id][i + 1], x - i);
 };
+const crowdT = (m: Man, f: number) => smoothstep((f - (m.fall + 16)) / 24);
 const manAt = (m: Man, f: number): P2 => {
   const left = WALKED[m.id][DURATION] - walked(m, f);
-  return [m.at[0] - m.dir * left * ADV + gone(f) * ADV, m.at[1]];
+  return [m.at[0] - m.dir * left * adv(m) + m.dir * m.crowd * crowdT(m, f) + gone(f) * ADV, m.at[1]];
 };
+/** the frame the two who take him let their clubs go */
+const dropAt = (m: Man) => m.fall + 11;
 /** the near arm hanging free (the two who will take him carry no shield) */
 const freeArm = (dir: 1 | -1): ArmPose => POSES.stand(dir)[dir === 1 ? "armL" : "armR"];
 const manTrack = (m: Man) => {
   const d = m.dir;
   const nearKey = d === 1 ? "armL" : "armR";
-  const base = (q: FigPose): FigPose => (m.shield ? q : { ...q, [nearKey]: freeArm(d) });
   const farKey = d === 1 ? "armR" : "armL";
-  const arm = (w: P2, elbow: P2, hand: number): ArmPose => ({ w: [d * w[0], w[1]], elbow: [d * elbow[0], elbow[1]], fist: 1, hand: d * hand });
+  // feet stay where they stand (a planted foot never slides between poses)
+  const base = (q: FigPose): FigPose => ({ ...(m.shield ? q : { ...q, [nearKey]: freeArm(d) }), footL: [0, 0], footR: [0, 0] });
+  const arm = (w: P2, elbow: P2, hand: number, fist = 1): ArmPose => ({ w: [d * w[0], w[1]], elbow: [d * elbow[0], elbow[1]], fist, hand: d * hand });
   // carried on the way in: the club at his side, its blade ahead and down
   const low: FigPose = { ...base(POSES.clubLow(d)), [farKey]: arm([30, -152], [-0.6, 1], 92) };
+  // the wind-up: the club swung back and down behind him
+  const wind: FigPose = { ...low, lean: d * 7, crouch: 5, pitch: 10, brow: 0.8, [farKey]: arm([2, -146], [-0.6, 1], 128) };
   // the club up over him: the arm out in front of his face, so the fist does not hide behind his head
-  const up: FigPose = { ...base(POSES.clubRaised(d)), [farKey]: arm([m.fwd, -322], [1, -0.3], 82 - 0.4 * m.tilt) };
-  const over: FigPose = { ...low, lean: d * 5, pitch: 12, brow: 0.6 };
-  const upLate: FigPose = { ...up, lean: up.lean - d * 2.5, pitch: 8, brow: 1, [farKey]: arm([m.fwd - 4, -328], [1, -0.3], 78 - 0.4 * m.tilt) };
-  // ... and down at his side, the blade to the ground
-  const down: FigPose = { ...low, lean: d * 9, crouch: 5, pitch: 14, brow: 0.3, mouth: 0, [farKey]: arm([26, -150], [-0.6, 1], 112) };
+  const up: FigPose = { ...base(POSES.clubRaised(d)), pitch: 8, [farKey]: arm([m.fwd, -322], [1, -0.3], 82 - 0.4 * m.tilt) };
+  const upLate: FigPose = { ...up, lean: up.lean - d * 3.5, crouch: 3, brow: 1, [farKey]: arm([m.fwd - 6, -330], [1, -0.3], 76 - 0.4 * m.tilt) };
+  // ... and down at his side, the blade to the ground (the two who take him open that hand: the club is gone)
+  const down: FigPose = { ...low, lean: d * 6, crouch: 4, pitch: 14, brow: 0.3, mouth: 0, [farKey]: arm([26, -150], [-0.6, 1], 112, m.takes ? 0.3 : 1) };
+  const inClose: FigPose = { ...down, lean: d * 11, crouch: 8, pitch: 16 };
   const keys: [number, FigPose][] = [
     [0, low],
-    [m.arrive - 6, low],
-    [m.rise, over],
-    [T.up, { ...up, pitch: 8 }],
-    [T.hold, upLate],
+    [m.rise - 5, { ...low, lean: d * 4, pitch: 10, brow: 0.6 }],
+    [m.rise, wind],
+    [m.rise + 10, up],
     [m.fall, upLate],
-    [T.down, down],
+    [m.fall + 14, down],
+    [T.reach - 4, inClose],
   ];
   if (m.takes) {
-    keys.push([T.touch, { ...down, lean: d * (m.takes === "far" ? 2 : 16), crouch: m.takes === "far" ? 4 : 14, pitch: 16, brow: 0.5 }]);
+    keys.push([T.touch, { ...inClose, lean: d * 16, crouch: 13, brow: 0.5 }]);
     keys.push([T.lifted, { ...down, lean: -d * 7, crouch: 9, pitch: 9, brow: 0.6 }]);
     keys.push([264, { ...down, lean: -d * 8, crouch: 8, pitch: 9, brow: 0.6 }]);
   } else {
-    keys.push([T.touch, { ...down, lean: d * 2, crouch: 3, pitch: 15 }]);
+    keys.push([T.touch, { ...inClose, lean: d * 12 }]);
     keys.push([T.lifted + 4, { ...down, lean: d * 3, crouch: 0, pitch: 6 }]);
     keys.push([264, { ...down, lean: d * 3, crouch: 0, pitch: 5 }]);
   }
@@ -287,20 +334,29 @@ const reachT = (f: number) => {
   return x * x * x * (x * (6 * x - 15) + 10);
 };
 const fistT = track([[T.touch - 6, 0.05], [T.touch + 2, 0.8]]);
+/** the first man's last step: the near foot comes up and down onto the blade */
+const stompUp = track([[T.stomp - 9, 0], [T.stomp - 4, 1], [T.stomp, 0]]);
 
-/** the walk's legs and bob only (captureFigures' walkLegs, with this cut's stride) */
-const walkLegs = (q: FigPose, phase: number, amount: number): FigPose => ({ ...walkPose(q, phase, amount, STRIDE), armL: q.armL, armR: q.armR });
+/** the walk's legs and bob only (captureFigures' walkLegs, with a stride of its own) */
+const walkLegs = (q: FigPose, phase: number, amount: number, stride: number): FigPose => ({ ...walkPose(q, phase, amount, stride), armL: q.armL, armR: q.armR });
 const manPose = (m: Man, f: number, grab: P2 | null): FigPose => {
   const at = manAt(m, f);
   let q = TRACKS[m.id](f);
-  // the walk in (forward) and the walk off: the two who hold him back away, facing him
+  // in (a walk or a jog), the half step that crowds him in, and off with the party: the one who backs away faces him
   const wIn = stopAmount(m, f);
   const wOut = goAmount(f);
-  const phIn = walked(m, f) / CYCLE + m.seed * 0.37;
-  const phEnd = WALKED[m.id][DURATION] / CYCLE + m.seed * 0.37;
-  const phOut = phEnd + (m.dir === 1 ? 1 : -1) * (gone(f) / CYCLE);
-  if (wIn > 0.001) q = walkLegs(q, phIn, wIn);
-  else if (wOut > 0.001) q = walkLegs(q, phOut, wOut);
+  const ph0 = m.seed * 0.37;
+  const phEnd = WALKED[m.id][DURATION] / m.gait.cycle + ph0;
+  const cr = crowdT(m, f);
+  if (wIn > 0.001) {
+    const jog = m.gait === JOG ? wIn : 0;
+    q = walkLegs({ ...q, lean: q.lean + m.dir * 7 * jog, crouch: q.crouch + 5 * jog }, walked(m, f) / m.gait.cycle + ph0, wIn, m.gait.stride);
+  } else if (wOut > 0.001) q = walkLegs(q, phEnd + 0.5 + m.dir * (gone(f) / CYCLE), wOut, STRIDE);
+  else if (m.crowd > 0 && cr > 0 && cr < 1) q = walkLegs(q, phEnd + 0.5 * cr, 0.75 * Math.sin(Math.PI * cr), 30);
+  if (m.id === "w4") {
+    const u = stompUp(f);
+    q = { ...q, footL: [q.footL[0] + 8 * u, q.footL[1] - 34 * u], liftL: q.liftL - 16 * u };
+  }
   q = idle(q, f, m.seed, 0.6);
   if (grab && m.takes) {
     const e = reachT(f);
@@ -321,31 +377,51 @@ const manPose = (m: Man, f: number, grab: P2 | null): FigPose => {
   }
   return q;
 };
+/** the dropped clubs: where each left the hand, and where it comes to lie */
+const DROPS = Object.fromEntries(
+  MEN.filter((m) => m.takes).map((m) => {
+    const f0 = dropAt(m);
+    const a = captureAnchors("warrior", manPose(m, f0, null), manAt(m, f0), SW);
+    let turn = m.dir * 97 - a.clubAngle;
+    turn -= 360 * Math.round(turn / 360);
+    return [m.id, { f0, grip: a.clubGrip, angle: a.clubAngle, turn, to: [a.clubGrip[0] + m.dir * 34, m.at[1] + 14] as P2 }];
+  }),
+) as Record<string, { f0: number; grip: P2; angle: number; turn: number; to: P2 }>;
+const DROP_FRAMES = 8;
 
 // ---------------------------------------------------------------------------
-// THE HORSE: bolting off to the left behind him, constant speed, gone by ~f125
+// THE HORSE: bolting across behind them to the left at a constant speed; it
+// comes in over the right edge as the camera pulls back and crosses on "horse"
 // ---------------------------------------------------------------------------
-const HORSE = { x0: 690, y: 640, v: 6.6, size: 270, stride: 11 };
-const HORSE_INK = shadeInk(0.74);
+const HORSE = { xAt98: 330, y: 646, v: 17, size: 330, stride: 11 };
+const HORSE_INK = shadeInk(0.86);
 
 // ---------------------------------------------------------------------------
-// THE CAMERA: a slow push through the whole of it; it drifts off with the party
+// THE CAMERA: one track, never parked. Close on him; back and up as the ring
+// closes and the horse crosses; in and up along the raised clubs; down again
+// with them to the hands; in on the grab; off with the party.
 // ---------------------------------------------------------------------------
 const END_DX = gone(264) * ADV;
 const camAt = makeCamera([
-  { f: 0, k: 0.97, wx: 562, wy: 938, sx: 540, sy: 960 },
-  { f: 60, k: 0.985, wx: 556, wy: 928, sx: 540, sy: 960 },
-  { f: 104, k: 1.0, wx: 548, wy: 906, sx: 540, sy: 960 },
-  { f: T.up, k: 1.01, wx: 544, wy: 888, sx: 540, sy: 960 },
-  { f: T.hold, k: 1.04, wx: 546, wy: 892, sx: 540, sy: 960 },
-  { f: T.down, k: 1.065, wx: 538, wy: 922, sx: 540, sy: 960 },
-  { f: T.touch, k: 1.075, wx: 536, wy: 928, sx: 540, sy: 960 },
-  { f: 264, k: 1.08, wx: 530 + END_DX, wy: 922, sx: 540, sy: 960 },
+  { f: 0, k: 1.62, wx: 592, wy: 1000, sx: 540, sy: 960 },
+  { f: 30, k: 1.44, wx: 560, wy: 1012, sx: 540, sy: 960 },
+  { f: 60, k: 1.2, wx: 548, wy: 960, sx: 540, sy: 960 },
+  { f: 98, k: 1.08, wx: 562, wy: 850, sx: 540, sy: 960 },
+  { f: 112, k: 1.16, wx: 580, wy: 900, sx: 540, sy: 960 },
+  { f: T.up + 1, k: 1.26, wx: 596, wy: 960, sx: 540, sy: 960 },
+  { f: T.hold - 1, k: 1.32, wx: 604, wy: 972, sx: 540, sy: 960 },
+  { f: 160, k: 1.3, wx: 610, wy: 986, sx: 540, sy: 960 },
+  { f: 176, k: 1.26, wx: 616, wy: 978, sx: 540, sy: 960 },
+  { f: T.reach, k: 1.36, wx: 640, wy: 940, sx: 540, sy: 960 },
+  { f: T.touch, k: 1.52, wx: 668, wy: 886, sx: 540, sy: 960 },
+  { f: T.lifted, k: 1.44, wx: 650 + gone(T.lifted) * ADV, wy: 880, sx: 540, sy: 960 },
+  { f: 264, k: 1.4, wx: 636 + END_DX, wy: 878, sx: 540, sy: 960 },
 ]);
 
 // ---------------------------------------------------------------------------
 // THE CUT
 // ---------------------------------------------------------------------------
+const SWORD_AT: P2 = [414, 1232];
 const SeizedNotKilled: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
   const cam = camAt(f);
@@ -356,15 +432,18 @@ const SeizedNotKilled: React.FC<z.infer<typeof schema>> = () => {
   const grabs = { far: mix2(ca.elbowFar, ca.wristFar, 0.84), near: mix2(ca.elbowNear, ca.wristNear, 0.84) };
   const men = MEN.map((m) => ({ m, at: manAt(m, f), pose: manPose(m, f, m.takes ? grabs[m.takes] : null) }));
   const lift = smoothstep((f - T.touch) / (T.lifted - T.touch));
-  const horseX = HORSE.x0 - HORSE.v * f;
-  const nameOut = smoothstep((f - 38) / 12);
+  const horseX = HORSE.xAt98 + HORSE.v * (98 - f);
   const draw = (id: string) => {
     const w = men.find((x) => x.m.id === id);
     if (!w) return null;
+    const dr = DROPS[id];
+    // the dropped club falls from the hand (faster and faster, no bounce) and lies where it lands
+    const t = dr ? Math.max(0, Math.min(1, (f - dr.f0) / DROP_FRAMES)) : 0;
     return (
       <g key={id}>
         <GroundHatch x0={w.at[0] - 84} x1={w.at[0] + 84} y={w.at[1] + 16} depth={16} rows={3} seed={40 + w.m.seed} dark opacity={0.42} />
-        <Warrior pose={w.pose} at={w.at} scale={SW} uid={`sz-${id}`} shield={w.m.shield} />
+        {dr && f >= dr.f0 ? <Macuahuitl at={[mix(dr.grip[0], dr.to[0], t), mix(dr.grip[1], dr.to[1], t * t)]} angle={dr.angle + dr.turn * t * t} scale={SW} uid={`sz-${id}-drop`} /> : null}
+        <Warrior pose={w.pose} at={w.at} scale={SW} uid={`sz-${id}`} shield={w.m.shield} club={!dr || f < dr.f0} />
       </g>
     );
   };
@@ -372,21 +451,21 @@ const SeizedNotKilled: React.FC<z.infer<typeof schema>> = () => {
     <AbsoluteFill>
       <TexcocoPage cam={cam}>
         <WorldSvg cam={cam}>
-          {/* the ground: a little hatching under the horse's run and under the fight */}
-          <GroundHatch x0={-340} x1={1720} y={1176} depth={104} rows={7} seed={12} opacity={0.2} />
-          {horseX > -320 ? (
+          {/* the ground: a little hatching under the fight */}
+          <GroundHatch x0={-340} x1={1720} y={1186} depth={124} rows={8} seed={12} opacity={0.2} />
+          {horseX > -340 && horseX < 1700 ? (
             <>
-              <GroundHatch x0={horseX - 130} x1={horseX + 130} y={HORSE.y + 8} depth={10} rows={2} seed={13} dark opacity={0.3} />
+              <GroundHatch x0={horseX - 150} x1={horseX + 150} y={HORSE.y + 8} depth={12} rows={2} seed={13} dark opacity={0.34} />
               <LooseHorse at={[horseX, HORSE.y]} size={HORSE.size} phase={f / HORSE.stride} uid="sz-horse" ink={HORSE_INK} />
             </>
           ) : null}
           {draw("w2")}
           {draw("w3")}
           {draw("w1")}
-          {draw("w4")}
-          <FallenSword at={[368, 1268]} scale={SC} turn={172} uid="sz-sword" />
+          <FallenSword at={SWORD_AT} scale={SC} turn={177} uid="sz-sword" />
           <GroundHatch x0={cAt[0] - 290 + 60 * lift} x1={cAt[0] + 250 - 80 * lift} y={cAt[1] + 12} depth={22} rows={4} seed={14} dark opacity={0.5 - 0.14 * lift} />
           <CortesDown pose={cPose} at={cAt} scale={SC} uid="sz-cortes" />
+          {draw("w4")}
           {/* the hands that take him lie over him */}
           {f >= T.reach
             ? men
@@ -394,7 +473,6 @@ const SeizedNotKilled: React.FC<z.infer<typeof schema>> = () => {
                 .map((w) => <Figure key={w.m.id} spec={CAST_SPECS.warrior} pose={w.pose} at={w.at} scale={SW} uid={`sz-${w.m.id}-hand`} body={false} arms={w.m.dir === 1 ? "L" : "R"} ink={ORANGE} />)
             : null}
         </WorldSvg>
-        <Label text="CORTÉS" x={C_AT[0] - 190} y={C_AT[1] - 176} cam={cam} frame={f} f0={T.name - 8} size={56} opacity={1 - nameOut} />
       </TexcocoPage>
     </AbsoluteFill>
   );
@@ -412,7 +490,7 @@ export const SeizedSheet: React.FC = () => {
           <LooseHorse at={[300, 420]} size={330} phase={0.05} uid="sh-h0" />
           <LooseHorse at={[800, 420]} size={330} phase={0.5} uid="sh-h1" />
           <CortesDown pose={PROP} at={[560, 900]} scale={2.6} uid="sh-c0" />
-          <CortesDown pose={COWER} at={[300, 1300]} scale={1.5} uid="sh-c1" />
+          <CortesDown pose={REACH} at={[300, 1300]} scale={1.5} uid="sh-c1" />
           <CortesDown pose={BOTH_UP} at={[800, 1300]} scale={1.5} uid="sh-c2" />
           <CortesDown pose={HAULED} at={[300, 1750]} scale={1.5} uid="sh-c3" />
           <FallenSword at={[900, 1700]} scale={1.8} turn={172} uid="sh-s" />

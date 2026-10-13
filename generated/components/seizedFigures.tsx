@@ -702,7 +702,7 @@ export const LooseHorse: React.FC<{ at: P2; size: number; phase: number; uid: st
   const pitch = cycle3(POSE_PITCH, phase);
   const lift = cycle3(POSE_LIFT, phase);
   const sw = 1 / u;
-  const o = { stroke: DARK, strokeWidth: 1.9 * sw, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
+  const o = { stroke: DARK, strokeWidth: 2.4 * sw, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
   const l2 = (w: number, a: number) => ({ fill: "none", stroke: DARK, strokeWidth: w * sw, strokeOpacity: a, strokeLinecap: "round" as const, strokeLinejoin: "round" as const });
   const fl = Math.sin(2 * Math.PI * phase);
   const fl2 = Math.sin(2 * Math.PI * phase + 1.3);
@@ -737,6 +737,10 @@ export const LooseHorse: React.FC<{ at: P2; size: number; phase: number; uid: st
           <path d={hatchD(-20, 0, 16, 9, 12, 1.15, 61, 0.2)} {...l2(0.9, 0.5)} />
           <path d={hatchD(-21, -8, -11, 6, 70, 1.2, 62, 0.25)} {...l2(0.85, 0.42)} />
           <path d={hatchD(15, -20, 27, -2, 64, 1.25, 63, 0.3)} {...l2(0.85, 0.4)} />
+          <path d={hatchD(-20, 2, 16, 9, -14, 1.5, 64, 0.2)} {...l2(0.9, 0.42)} />
+          <path d={hatchD(6, -12, 22, 6, 118, 1.3, 65, 0.3)} {...l2(0.9, 0.46)} />
+          <path d={hatchD(-21, -11, -8, -2, 30, 1.3, 66, 0.3)} {...l2(0.85, 0.36)} />
+          <path d="M9.6,-11.4C10.6,-5.6 12.6,-1.2 16.4,3.6M-10.6,-10.6C-12.6,-5 -12,1 -8.4,5.6M20,-19C21.6,-15.6 24,-13.4 27,-13" {...l2(1.3, 0.72)} />
         </g>
         <path d={MANE} fill={ink.hair} {...o} strokeWidth={1.5 * sw} />
         {[0, 2].map((i) => (
