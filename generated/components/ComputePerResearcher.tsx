@@ -10,18 +10,15 @@ import {
   ElevationShadow,
   GEO,
   LightSweep,
-  STROKE,
   StoutStage,
   amberBandFor,
   bloomFilter,
   clamp01,
   lerp,
-  mixHex,
-  rectPath,
   smoothstep,
   type Silhouette,
 } from "./stoutShared";
-import { Label, PEG, PegSlot, PersonPeg, pegPath } from "./talentShared";
+import { Label, PersonPeg } from "./talentShared";
 
 // ===========================================================================
 // ComputePerResearcher — cut 4 of the Cheeky Pint S4E03 (Meta / MSL) clip "Talent density beat team
@@ -31,23 +28,23 @@ import { Label, PEG, PegSlot, PersonPeg, pegPath } from "./talentShared";
 // CHECK LINE: Meta doesn't smear its compute thinly over lots of teams; it piles the same compute onto
 // a few key researchers, so each one gets a huge amount.
 //
-// THE MOTION (one journey of ONE fixed amount of amber, its area conserved on every frame): the amber
-// stands in a wide glass tank over the middle of a row of fifteen tiles; it runs out sideways along a
-// shallow trough and the camera travels down the row with it, tile after tile under a thin layer; it
-// draws back (the trough's arms retract behind it), three measuring glasses rise out of the slots of
-// the three cream tiles, and the tank's lid presses the same amber up them into three towers far above
-// the three amber people at their feet (the one LightSweep on the top-out); the spent tank sinks
-// behind the row into the ground.
+// THE MOTION (two things only: a row of people, and ONE amber mass in the stout bar material): the mass
+// stands as a chunky block behind the middle of the row; it goes down and spreads into a long thin
+// slab under the feet of the whole row (everyone lifted by a sliver) while the camera travels along
+// the row with its edge; it draws back to under the three amber people, splits cleanly into three
+// sections and rises as three columns that lift those three high above everyone else (the one
+// LightSweep on the top-out).
+// The block and the three columns have exactly the same area; the slab is drawn thinner than that area
+// would make it (15 people cannot stand on "almost nothing" and three of them on full-height columns
+// of the same amber: see the note at SLAB).
 //
 // DURATION: slot = round(10.844 s x 23.976) = 260 frames, + a 12-frame living tail = 272.
 //
-// FRAMES: 0-56 the full tank over the middle five tiles, a steady push · 55-60 the gates lift · 58-114 the
-// spread (the camera travels right with the layer's leading edge to the row's end, 60-108) · 116-144 the
-// draw-back, the trough's arms retracting behind it (the camera returns 114-154; the kraft tiles lose
-// the light 121-152) · 152-190 the three glasses rise from their slots (the camera already holds their
-// full height) · 158-168 the amber runs down them to the tiles and the lid comes down onto it ·
-// 168-243 the lid presses the amber up the glasses (slow, then the main climb from ~200) · 243-255 the
-// LightSweep · 244-258 the flat, empty tank sinks behind the row into the ground · tail: slow drift.
+// FRAMES: 0-56 the block, a steady push · 58-80 it flattens, 78-88 it comes forward under the feet ·
+// 58-112 it spreads to the row's ends (the camera travels right with the edge, 64-110) · 116-150 it
+// draws back to the three (the camera returns 114-156; each kraft person settles and loses the light as
+// the edge leaves) · 154-170 it splits into three sections · 156-243 the three rise (slow, then the
+// main climb from ~198) · 243-255 the LightSweep · tail: slow drift.
 // ===========================================================================
 
 export const FPS = 24000 / 1001;
@@ -58,49 +55,39 @@ export const schema = z.object({});
 export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({});
 
-// --- the world (WORLD px) ---------------------------------------------------------------------------
-const FLOOR = GEO.FLOOR; // 1296
+// --- the world (WORLD px, the 8-px grid) --------------------------------------------------------------
+const G = GEO.FLOOR; // the ground line the row stands on
 const N = 15;
-const MID = 7; // tiles 6, 7, 8 are the cream three
-const TILE = { w: 148, h: 64, pitch: 172 } as const;
-const TILE_TOP = FLOOR - TILE.h;
-const PEG_DX = -30; // every peg stands left of its tile's middle …
-const COL_DX = 40; // … beside the socket for a glass
-const COL = { w: 52, fill: 1026, glass: 1038, rung: 1026 / 5 } as const;
-const tileX = (i: number) => (i - MID) * TILE.pitch;
+const MID = 7; // people 6, 7, 8 are the amber three
+const PEG = 96;
+const PITCH = 176;
+const pegX = (i: number) => (i - MID) * PITCH;
 const isKey = (i: number) => Math.abs(i - MID) <= 1;
-
-// the plumbing: a shallow trough over all fifteen, a chunky tank standing in its middle
-const YB = TILE_TOP - 96; // the trough's floor (24 px over the pegs' heads)
-const ROW_END = MID * TILE.pitch + TILE.w / 2 + 4;
-const TROUGH = { h: 84, x0: -ROW_END, x1: ROW_END } as const;
-const XL = -280;
-const XR = 280;
-const TANK_W = XR - XL;
-/** THE AMOUNT (world px²): the full tank = the layer over fifteen tiles = three towers. */
-const COLS_W = 3 * COL.w;
-const AMOUNT = COLS_W * COL.fill;
-const TANK_FILL = AMOUNT / TANK_W; // 286
-const TANK_TOP = YB - TANK_FILL - 24;
-const WALL = YB - TANK_TOP;
-const DROP = TILE_TOP - YB; // 96: from the tank's floor down to a tile's top
-const D_START = 76; // the layer's thickness as it leaves the tank (it thins to AMOUNT / trough length)
-const LT = 120; // the length of the layer's leading wedge
-const ARM_LEAD = 40; // a retracting arm's end cap runs this far ahead of the amber
+/** The three columns: a peg's shoulders plus 16 px each side (a clear step under the feet), 48 px apart. */
+const COL = { w: 128, h: 1040 } as const;
+const AREA = 3 * COL.w * COL.h; // the amount: block = three columns
+/** The block: 5:3, the same area. It stands BEHIND the row: its foot is higher up the board. */
+const BLOCK_H = Math.sqrt((AREA * 3) / 5);
+const BLOCK_A = AREA / BLOCK_H / 2; // its half width
+const BEHIND = PEG + 16;
+/** The slab: a sliver under every foot. (At the true area it would be ~135 px thick, taller than a
+ *  person; it is drawn at 28 so that "this much for each one" is what the picture says.) */
+const SLAB = { h: 28, gathered: 56 } as const;
+const ROW_A = MID * PITCH + PEG / 2 + 16; // the slab's half length under the whole row
+const TRIO_A = PITCH + COL.w / 2; // its half width under the three
+const THIRD = (2 * TRIO_A) / 6; // half of one third of the gathered slab
 
 // --- the clock --------------------------------------------------------------------------------------
 const T = {
-  gateUp: [55, 60],
-  spread: [58, 114],
-  back: [116, 144],
-  gateDown: [144, 149],
-  dim: [121, 152],
-  glass: [152, 190],
-  drop: [158, 168],
-  creep: [168, 206],
-  climb: [198, 243],
+  flatten: [58, 80],
+  forward: [78, 88],
+  spread: [58, 112],
+  back: [116, 150],
+  gather: [132, 152],
+  split: [154, 170],
+  creep: [156, 200],
+  climb: [196, 243],
   sweep: [243, 255],
-  sink: [244, 258],
 } as const;
 const span = (t: number, [a, b]: readonly [number, number]) => (t - a) / (b - a);
 /** Rest to rest with a long soft landing. */
@@ -109,319 +96,133 @@ const restToRest = (v: number, p = 3) => {
   return 1 - Math.pow(1 - u, p) * (1 + p * u);
 };
 
-// --- the liquid -------------------------------------------------------------------------------------
-/** The layer's thickness (0..1 of d) at a distance w behind its leading edge. */
-const prof = (w: number) => {
-  const v = clamp01(w / LT);
-  return 1 - (1 - v) * (1 - v);
+// --- the mass ---------------------------------------------------------------------------------------
+type Mass = {
+  /** half width, height, foot line (world) */
+  a: number;
+  h: number;
+  foot: number;
+  /** 0 = one body .. 1 = three columns */
+  split: number;
+  /** how far the three have risen, 0..1 */
+  rise: number;
 };
-/** ∫ prof from 0 to w. */
-const profInt = (w: number) => {
-  if (w <= 0) return 0;
-  if (w >= LT) return w - LT / 3;
-  const v = w / LT;
-  return LT * (v - (1 - Math.pow(1 - v, 3)) / 3);
+const massAt = (t: number): Mass => {
+  const a =
+    t < T.back[0]
+      ? lerp(BLOCK_A, ROW_A, Math.pow(smoothstep(span(t, T.spread)), 1.3))
+      : lerp(ROW_A, TRIO_A, smoothstep(span(t, T.back)));
+  const rise = 0.14 * smoothstep(span(t, T.creep)) + 0.86 * restToRest(span(t, T.climb), 3);
+  const low = t < T.back[0] ? lerp(BLOCK_H, SLAB.h, smoothstep(span(t, T.flatten))) : lerp(SLAB.h, SLAB.gathered, smoothstep(span(t, T.gather)));
+  const h = lerp(low, COL.h, rise);
+  const foot = lerp(G - BEHIND, G, smoothstep(span(t, T.forward)));
+  return { a, h, foot, split: smoothstep(span(t, T.split)), rise };
 };
-type Liquid = {
-  /** the layer's thickness */
-  d: number;
-  /** the level in the tank above the trough's floor */
-  ht: number;
-  /** each side's virtual leading edge (distance from the tank wall) and how far the amber reaches */
-  DR: number;
-  ER: number;
-  DL: number;
-  EL: number;
-  /** each trough arm's length (it retracts behind the amber on the way back) */
-  armR: number;
-  armL: number;
-  /** the tank's lid (world y) and how far the spent tank has sunk */
-  lid: number;
-  sink: number;
-  /** the three glasses: how much of each has risen, the amber's lower end and its top (world y) */
-  glass: number;
-  colLow: number | null;
-  colTop: number;
+/** How far person i is lifted by the mass under their feet. */
+const liftAt = (i: number, m: Mass) => {
+  const landed = smoothstep((m.foot - (G - SLAB.h)) / SLAB.h);
+  const cover = clamp01((m.a - (Math.abs(pegX(i)) - PEG * 0.46)) / (PEG * 0.92));
+  return m.h * cover * landed;
 };
-const liquidAt = (t: number): Liquid => {
-  const p = t < T.back[0] ? smoothstep(span(t, T.spread)) : 1 - smoothstep(span(t, T.back));
-  const lenR = TROUGH.x1 - XR;
-  const lenL = XL - TROUGH.x0;
-  const DR = p * (lenR + LT);
-  const DL = p * (lenL + LT);
-  const ER = Math.min(DR, lenR);
-  const EL = Math.min(DL, lenL);
-  const eff = profInt(DR) - profInt(DR - ER) + profInt(DL) - profInt(DL - EL);
-  const d = Math.min(lerp(D_START, AMOUNT / (TROUGH.x1 - TROUGH.x0), smoothstep(p)), AMOUNT / (TANK_W + eff));
-  let ht = (AMOUNT - d * eff) / TANK_W;
-  const lead = ARM_LEAD * (1 - smoothstep(span(t, T.gateDown)));
-  const armR = t < T.back[0] ? lenR : Math.min(lenR, DR + lead);
-  const armL = t < T.back[0] ? lenL : Math.min(lenL, DL + lead);
-  // the three glasses
-  const glass = COL.glass * restToRest(span(t, T.glass), 3);
-  let colLow: number | null = null;
-  let colTop = YB - ht;
-  let lid = TANK_TOP;
-  if (t >= T.drop[0]) {
-    colLow = lerp(YB, TILE_TOP, smoothstep(span(t, T.drop)));
-    if (t < T.creep[0]) {
-      ht = (AMOUNT - COLS_W * (colLow - YB)) / TANK_W;
-      colTop = YB - ht;
-      lid = lerp(TANK_TOP, YB - ht, smoothstep(span(t, T.drop)));
-    } else {
-      const c0 = DROP + (AMOUNT - COLS_W * DROP) / TANK_W;
-      const e = 0.16 * smoothstep(span(t, T.creep)) + 0.84 * restToRest(span(t, T.climb), 3);
-      const c = lerp(c0, COL.fill, e);
-      ht = Math.max(0, (AMOUNT - COLS_W * c) / (TANK_W - COLS_W));
-      colTop = TILE_TOP - c;
-      lid = YB - ht;
-    }
-  }
-  const sink = (FLOOR - YB + 6) * smoothstep(span(t, T.sink));
-  return { d, ht, DR, ER, DL, EL, armR, armL, lid: lid + sink, sink, glass, colLow, colTop };
-};
+/** The frame the retreating edge leaves person i (kraft people lose the light from then). */
+const LEAVE: number[] = Array.from({ length: N }, (_, i) => {
+  if (isKey(i)) return Infinity;
+  for (let f = T.back[0]; f <= T.back[1]; f++) if (massAt(f).a < Math.abs(pegX(i))) return f;
+  return T.back[1];
+});
 
 // --- the camera -------------------------------------------------------------------------------------
-const K = { open: 1.2, pushed: 1.3, travel: 1.3, end: 1.22 } as const;
-const END_Y = 717; // the towers, their people and the label, centred
-const FEET_Y = 1076; // where the pegs' feet stand on screen until the towers: just above the caption strip
-const TRAVEL_X = 920;
+const K = { open: 0.86, pushed: 0.96, travel: 1.3, end: 1.28 } as const;
+const TRAVEL_X = 940;
+const HEADS_Y = 1252; // the open: the people stand just under the caption strip, the block across the middle
+const GROUND_TRAVEL = 1078; // the travel: slab and feet just above the strip
+const GROUND_END = 1723; // the end: columns, people and label centred
 const camAt = (f: number): Cam => {
   const g = (a: number, b: number) => smoothstep((f - a) / (b - a));
-  const push = 1 - Math.pow(1 - clamp01(f / 56), 1.6); // moving on frame 0, at rest as the gates lift
+  const push = 1 - Math.pow(1 - clamp01(f / 56), 1.6); // moving on frame 0, at rest as the block lets go
   const k = Math.exp(
     Math.log(K.open) +
       Math.log(K.pushed / K.open) * push +
-      Math.log(K.travel / K.pushed) * g(54, 74) +
-      Math.log(K.end / K.travel) * g(142, 178) +
-      Math.log(1.24 / K.end) * g(236, 320),
+      Math.log(K.travel / K.pushed) * g(56, 84) +
+      Math.log(K.end / K.travel) * g(150, 200) +
+      Math.log(1.3 / K.end) * g(238, 320),
   );
-  const x = TRAVEL_X * g(60, 108) - TRAVEL_X * g(114, 154);
-  const y = lerp(TILE_TOP - (FEET_Y - 960) / k, END_Y, g(142, 178));
-  return { x, y, k };
+  const x = TRAVEL_X * g(64, 110) - TRAVEL_X * g(114, 156);
+  // where the ground line stands on screen: it follows the action down, then drops away under the rise
+  const groundY = lerp(lerp(HEADS_Y + PEG * k, GROUND_TRAVEL, g(56, 84)), GROUND_END, massAt(f).rise);
+  return { x, y: G - (groundY - 960) / k, k };
 };
 const REST = camAt(0);
 
 const f2 = (v: number) => (Math.round(v * 1000) / 1000).toString();
 const uidOf = (raw: string) => `cr${raw.replace(/[^A-Za-z0-9_-]/g, "_")}`;
 
-// ===========================================================================
-// THE PLUMBING: the trough's two arms, the tank, the amber in them
-// ===========================================================================
-const Plumbing: React.FC<{ t: number; k: number; L: Liquid; band: [number, number] }> = ({ t, k, L, band }) => {
-  const uid = uidOf(useId());
-  const r = GEO.RADIUS;
-  const hair = STROKE.HAIRLINE / k;
-  const h2 = hair / 2;
-  const gate = smoothstep(span(t, T.gateUp)) * (1 - smoothstep(span(t, T.gateDown)));
-  const troughTop = YB - TROUGH.h;
-  // the layer each side of the tank: its surface from the wall out to its leading edge
-  const side = (dir: 1 | -1, D: number, E: number) => {
-    if (E <= 0.2) return null;
-    const wall = dir === 1 ? XR : XL;
-    const pts: [number, number][] = [];
-    const n = Math.max(2, Math.ceil(E / 10));
-    for (let i = 0; i <= n; i++) {
-      const s = (E * i) / n;
-      pts.push([wall + dir * s, YB - L.d * prof(D - s)]);
-    }
-    const surface = pts.map(([px, py], i) => `${i ? "L" : "M"}${f2(px)} ${f2(py)}`).join("");
-    return { surface, body: `${surface}L${f2(wall + dir * E)} ${f2(YB)}L${f2(wall)} ${f2(YB)}Z` };
-  };
-  const right = side(1, L.DR, L.ER);
-  const left = side(-1, L.DL, L.EL);
-  const tankD = L.ht > 0.3 ? rectPath(XL, YB - L.ht, TANK_W, L.ht, 0) : null;
-  const tankSurface = tankD ? `M${f2(XL)} ${f2(YB - L.ht)}H${f2(XR)}` : null;
-  const bodies = [tankD, right?.body, left?.body].filter((d): d is string => !!d);
-  const surfaces = [tankSurface, right?.surface, left?.surface].filter((d): d is string => !!d);
-  // the tank: a lid and two walls (one rigid box once the gates are shut), standing on its floor plate
-  const floorY = YB + L.sink;
-  const lidY = L.lid;
-  const pressed = t >= T.drop[0];
-  const wallEnd = pressed ? lidY + WALL : lerp(YB, troughTop, gate);
-  const tankGlass = floorY - lidY > 0.5 ? rectPath(XL, lidY, TANK_W, floorY - lidY, r, true, false) : null;
-  const arm = (dir: 1 | -1, len: number) => {
-    if (len <= 0.5) return null;
-    const a = dir === 1 ? XR : XL;
-    const b = a + dir * len;
-    const sw = dir === 1 ? 1 : 0;
-    return {
-      body: rectPath(Math.min(a, b), troughTop, len, TROUGH.h, 0),
-      line:
-        `M${f2(a)} ${f2(troughTop + h2)}H${f2(b - dir * r)}A${r} ${r} 0 0 ${sw} ${f2(b - dir * h2)} ${f2(troughTop + r)}V${f2(YB - r)}` +
-        `A${r} ${r} 0 0 ${sw} ${f2(b - dir * r)} ${f2(YB - h2)}H${f2(a)}`,
-    };
-  };
-  const arms = [arm(1, L.armR), arm(-1, L.armL)].filter((a): a is { body: string; line: string } => !!a);
-  const sil: Silhouette = [...(tankGlass ? [{ d: tankGlass, a: 0.3 }] : []), ...arms.map((a) => ({ d: a.body, a: 0.3 })), ...bodies.map((d) => ({ d }))];
+/** A bar standing on its foot: the two top corners rounded (each its own radius), the foot square. */
+const barPath = (x0: number, x1: number, top: number, foot: number, rl: number, rr: number) => {
+  const m = Math.min((x1 - x0) / 2, foot - top);
+  const a = Math.max(0, Math.min(rl, m));
+  const b = Math.max(0, Math.min(rr, m));
   return (
-    <g>
-      <defs>
-        <AmberGradient id={`${uid}a`} y0={band[0]} y1={band[1]} />
-        <clipPath id={`${uid}c`}>
-          {bodies.map((d, i) => (
-            <path key={i} d={d} />
-          ))}
-        </clipPath>
-        {/* the spent tank sinks into the ground behind the row: nothing of it shows below the floor line */}
-        <clipPath id={`${uid}g`}>
-          <rect x={TROUGH.x0 - 400} y={TANK_TOP - 400} width={TROUGH.x1 - TROUGH.x0 + 800} height={FLOOR - TANK_TOP + 400} />
-        </clipPath>
-      </defs>
-      {wallEnd > FLOOR - 1 ? (
-        <rect x={f2(XL - EDGE.SLOT_LIP / k)} y={f2(FLOOR - EDGE.SLOT / k / 2)} width={f2(TANK_W + (2 * EDGE.SLOT_LIP) / k)} height={f2(EDGE.SLOT / k)} fill={COLOR.shadow} fillOpacity={0.9} />
-      ) : null}
-      <g clipPath={`url(#${uid}g)`}>
-        <ElevationShadow silhouette={sil} elevation="lifted" />
-        {/* glass bodies */}
-        {tankGlass ? <path d={tankGlass} fill={COLOR.glass} fillOpacity={ALPHA.glassTint} /> : null}
-        {arms.map((a, i) => (
-          <path key={i} d={a.body} fill={COLOR.glass} fillOpacity={ALPHA.glassTint} />
-        ))}
-        {/* the amber: one glow pass */}
-        {bodies.length ? (
-          <>
-            <g style={{ filter: bloomFilter(k) }}>
-              {bodies.map((d, i) => (
-                <path key={i} d={d} fill={`url(#${uid}a)`} />
-              ))}
-            </g>
-            <g clipPath={`url(#${uid}c)`} fill="none" strokeLinejoin="round">
-              {surfaces.map((d, i) => (
-                <path key={i} d={d} stroke={COLOR.amberHot} strokeOpacity={0.2} strokeWidth={f2((2 * EDGE.HOT_FALL) / k)} />
-              ))}
-              {surfaces.map((d, i) => (
-                <path key={`h${i}`} d={d} stroke={COLOR.amberHot} strokeWidth={f2((2 * EDGE.HOT) / k)} />
-              ))}
-            </g>
-          </>
-        ) : null}
-        {/* hairlines: the arms, the tank's floor plate, its lid and walls, the two gates */}
-        <g fill="none" stroke={COLOR.glass} strokeWidth={f2(hair)}>
-          {arms.map((a, i) => (
-            <path key={i} d={a.line} strokeOpacity={ALPHA.glassLo} />
-          ))}
-          <path d={`M${f2(XL)} ${f2(Math.max(floorY, lidY) - h2)}H${f2(XR)}`} strokeOpacity={ALPHA.glassLo} />
-          <path
-            d={`M${f2(XL + h2)} ${f2(pressed ? wallEnd : troughTop)}V${f2(lidY + r)}A${r} ${r} 0 0 1 ${f2(XL + r)} ${f2(lidY + h2)}H${f2(XR - r)}A${r} ${r} 0 0 1 ${f2(XR - h2)} ${f2(lidY + r)}V${f2(pressed ? wallEnd : troughTop)}`}
-            strokeOpacity={ALPHA.glassHi}
-          />
-          {!pressed && gate < 0.995 ? (
-            <path d={`M${f2(XL + h2)} ${f2(troughTop)}V${f2(wallEnd)}M${f2(XR - h2)} ${f2(troughTop)}V${f2(wallEnd)}`} strokeOpacity={ALPHA.glassHi} />
-          ) : null}
-        </g>
-      </g>
-    </g>
+    `M${f2(x0)} ${f2(foot)}V${f2(top + a)}` +
+    (a ? `A${f2(a)} ${f2(a)} 0 0 1 ${f2(x0 + a)} ${f2(top)}` : "") +
+    `H${f2(x1 - b)}` +
+    (b ? `A${f2(b)} ${f2(b)} 0 0 1 ${f2(x1)} ${f2(top + b)}` : "") +
+    `V${f2(foot)}Z`
   );
+};
+type Bar = { x0: number; x1: number; rl: number; rr: number };
+/** The mass as bars: one body, or (while and after the split) three sections with their outer edges fixed. */
+const barsOf = (m: Mass): Bar[] => {
+  const r = GEO.RADIUS;
+  if (m.split <= 0) return [{ x0: -m.a, x1: m.a, rl: r, rr: r }];
+  const inner = lerp(THIRD, PITCH - COL.w / 2, m.split); // the outer sections' inner edge
+  const mid = lerp(THIRD, COL.w / 2, m.split); // the middle section's half width
+  const ri = Math.min(r, (inner - mid) / 2); // the corners of a gap grow with the gap
+  return [
+    { x0: -TRIO_A, x1: -inner, rl: r, rr: ri },
+    { x0: -mid, x1: mid, rl: ri, rr: ri },
+    { x0: inner, x1: TRIO_A, rl: ri, rr: r },
+  ];
 };
 
 // ===========================================================================
-// A TILE: the card, its person, its socket — and, for the three, the glass and the amber in it
+// THE AMBER MASS: the stout bar material — the band gradient, the fixed bloom, the hot top edge, ONE shadow
 // ===========================================================================
-const RowTile: React.FC<{ i: number; t: number; k: number; L: Liquid; band: [number, number] }> = ({ i, t, k, L, band }) => {
+const AmberMass: React.FC<{ m: Mass; k: number; band: [number, number] }> = ({ m, k, band }) => {
   const uid = uidOf(useId());
-  const r = GEO.RADIUS;
-  const key = isKey(i);
-  const x = tileX(i);
-  const x0 = x - TILE.w / 2;
-  const px = x + PEG_DX;
-  const cx = x + COL_DX;
-  const dim = key ? 0 : smoothstep(span(t, T.dim));
-  const tileD = rectPath(x0, TILE_TOP, TILE.w, TILE.h, r);
-  const top = key ? COLOR.cream : mixHex(COLOR.board, COLOR.ground, 0.25 * dim);
-  const foot = key ? COLOR.creamFoot : mixHex(COLOR.boardFoot, COLOR.ground, 0.25 * dim);
-  const g = key ? L.glass : 0;
-  const gx = cx - COL.w / 2;
-  const gy = TILE_TOP - g;
-  const amber = key && L.colLow !== null && L.colLow - L.colTop > 0.3 ? { y: L.colTop, h: L.colLow - L.colTop } : null;
-  const full = !!amber && L.colTop <= TILE_TOP - COL.fill + 0.5;
-  const sil: Silhouette = [{ d: tileD }, { d: pegPath(px, TILE_TOP, PEG.S) }];
-  if (g > 0.3) sil.push({ d: rectPath(gx, gy, COL.w, g, r, true, false), a: 0.3 });
-  if (amber) sil.push({ d: rectPath(gx, amber.y, COL.w, amber.h, 0) });
-  const hair = STROKE.HAIRLINE / k;
-  const fall = EDGE.HOT_FALL / k;
-  // the graduations: etched on the glass, they rise with it
-  const marks: { y: number; on: boolean }[] = [];
-  if (g > 0.3) {
-    for (let m = 1; m <= 4; m++) {
-      const up = m * COL.rung - (COL.glass - g);
-      if (up <= 2 / k) continue;
-      const y = TILE_TOP - up;
-      const inCol = !!amber && y > amber.y + (EDGE.HOT + 2) / k && y < amber.y + amber.h;
-      const inTank = y < YB && y > YB - L.ht + (EDGE.HOT + 2) / k;
-      marks.push({ y, on: inCol || inTank });
-    }
-  }
+  const top = m.foot - m.h;
+  const bars = barsOf(m);
+  const paths = bars.map((b) => barPath(b.x0, b.x1, top, m.foot, b.rl, b.rr));
+  const sil: Silhouette = paths.map((d) => ({ d }));
+  const fall = Math.min(EDGE.HOT_FALL / k, m.h);
+  const x0 = bars[0].x0;
+  const x1 = bars[bars.length - 1].x1;
   return (
     <g>
       <defs>
-        <linearGradient id={`${uid}c`} gradientUnits="userSpaceOnUse" x1="0" y1={f2(TILE_TOP)} x2="0" y2={f2(FLOOR)}>
-          <stop offset="0" stopColor={top} />
-          <stop offset="1" stopColor={foot} />
-        </linearGradient>
         <AmberGradient id={`${uid}a`} y0={band[0]} y1={band[1]} />
-        <linearGradient id={`${uid}ao`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={COLOR.shadow} stopOpacity="0" />
-          <stop offset="1" stopColor={COLOR.shadow} stopOpacity={ALPHA.footAO} />
-        </linearGradient>
-        <linearGradient id={`${uid}hf`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${uid}hf`} gradientUnits="userSpaceOnUse" x1="0" y1={f2(top)} x2="0" y2={f2(top + fall)}>
           <stop offset="0" stopColor={COLOR.amberHot} stopOpacity={ALPHA.hotFall} />
           <stop offset="1" stopColor={COLOR.amberHot} stopOpacity="0" />
         </linearGradient>
+        <linearGradient id={`${uid}ao`} gradientUnits="userSpaceOnUse" x1="0" y1={f2(m.foot - Math.min(m.h, EDGE.FOOT_AO / k))} x2="0" y2={f2(m.foot)}>
+          <stop offset="0" stopColor={COLOR.shadow} stopOpacity="0" />
+          <stop offset="1" stopColor={COLOR.shadow} stopOpacity={ALPHA.footAO} />
+        </linearGradient>
       </defs>
-      <ElevationShadow silhouette={sil} elevation="rest" contact={{ x, y: FLOOR, w: TILE.w * 0.86 }} />
-      {/* the glass body, the amber in it, the graduations */}
-      {g > 0.3 ? <path d={rectPath(gx, gy, COL.w, g, r, true, false)} fill={COLOR.glass} fillOpacity={ALPHA.glassTint} /> : null}
-      {amber ? (
-        <>
-          <g style={{ filter: bloomFilter(k) }}>
-            <path d={rectPath(gx, amber.y, COL.w, amber.h, r, full, false)} fill={`url(#${uid}a)`} />
-          </g>
-          <path d={rectPath(gx, amber.y, COL.w, Math.min(fall, amber.h), r, full, false)} fill={`url(#${uid}hf)`} />
-          <path d={`M${f2(gx + (full ? r : 0))} ${f2(amber.y + EDGE.HOT / k / 2)}H${f2(gx + COL.w - (full ? r : 0))}`} stroke={COLOR.amberHot} strokeWidth={f2(EDGE.HOT / k)} />
-        </>
-      ) : null}
-      {marks.map((m, j) => (
-        <line
-          key={j}
-          x1={f2(gx)}
-          x2={f2(gx + COL.w)}
-          y1={f2(m.y)}
-          y2={f2(m.y)}
-          stroke={m.on ? COLOR.rung : COLOR.glass}
-          strokeOpacity={m.on ? 1 : ALPHA.glassLo}
-          strokeWidth={f2(hair)}
-        />
+      <ElevationShadow silhouette={sil} elevation="rest" contact={{ x: (x0 + x1) / 2, y: m.foot, w: (x1 - x0) * 0.86 }} />
+      <g style={{ filter: bloomFilter(k) }}>
+        {paths.map((d, i) => (
+          <path key={i} d={d} fill={`url(#${uid}a)`} />
+        ))}
+      </g>
+      {bars.map((b, i) => (
+        <g key={i}>
+          <path d={barPath(b.x0, b.x1, top, top + fall, b.rl, b.rr)} fill={`url(#${uid}hf)`} />
+          <path d={`M${f2(b.x0 + b.rl)} ${f2(top + EDGE.HOT / k / 2)}H${f2(b.x1 - b.rr)}`} stroke={COLOR.amberHot} strokeWidth={f2(EDGE.HOT / k)} />
+          <rect x={f2(b.x0)} y={f2(m.foot - Math.min(m.h, EDGE.FOOT_AO / k))} width={f2(b.x1 - b.x0)} height={f2(Math.min(m.h, EDGE.FOOT_AO / k))} fill={`url(#${uid}ao)`} />
+        </g>
       ))}
-      {/* the card and its lit edge */}
-      <path d={tileD} fill={`url(#${uid}c)`} />
-      <path
-        d={`M${f2(x0 + r)} ${f2(TILE_TOP + EDGE.CREAM / k / 2)}H${f2(x0 + TILE.w - r)}`}
-        stroke={COLOR.edge}
-        strokeOpacity={key ? ALPHA.edge : lerp(ALPHA.edgeBoard, ALPHA.edgeBoard * 0.5, dim)}
-        strokeWidth={f2(EDGE.CREAM / k)}
-      />
-      {/* the person, standing in the card's slot */}
-      <PersonPeg x={px} y={TILE_TOP} k={k} tone={key ? "amber" : "kraft"} shade={0.36 * dim} shadow={false} slot="cream" amberBand={band} />
-      {/* the socket; once a glass stands in it: the stout joint (foot occlusion + slot line) */}
-      {g > 0.3 ? (
-        <rect x={f2(gx)} y={f2(TILE_TOP - Math.min(g, EDGE.FOOT_AO / k))} width={COL.w} height={f2(Math.min(g, EDGE.FOOT_AO / k))} fill={`url(#${uid}ao)`} />
-      ) : null}
-      <PegSlot x={cx} y={TILE_TOP} size={COL.w / (1 - 16 / 429)} k={k} on="cream" open={g <= 0.3} />
-      {/* the glass hairline: sides and top, open at the joint */}
-      {g > 0.3 ? (
-        <path
-          d={
-            g > 2 * r
-              ? `M${f2(gx + hair / 2)} ${f2(TILE_TOP)}V${f2(gy + r)}A${r} ${r} 0 0 1 ${f2(gx + r)} ${f2(gy + hair / 2)}H${f2(gx + COL.w - r)}A${r} ${r} 0 0 1 ${f2(gx + COL.w - hair / 2)} ${f2(gy + r)}V${f2(TILE_TOP)}`
-              : `M${f2(gx + hair / 2)} ${f2(TILE_TOP)}V${f2(gy + hair / 2)}H${f2(gx + COL.w - hair / 2)}V${f2(TILE_TOP)}`
-          }
-          fill="none"
-          stroke={COLOR.glass}
-          strokeOpacity={ALPHA.glassHi}
-          strokeWidth={f2(hair)}
-        />
-      ) : null}
     </g>
   );
 };
@@ -436,34 +237,43 @@ const ComputePerResearcher: React.FC<Props> = () => {
   const cam = camAt(t);
   const k = cam.k;
   const band = amberBandFor(cam);
-  const L = liquidAt(t);
+  const m = massAt(t);
   const lag = camAt(Math.max(0, t - 6));
   const sweep = span(t, T.sweep);
-  const sx0 = tileX(MID - 1) + COL_DX - COL.w / 2;
-  const sx1 = tileX(MID + 1) + COL_DX + COL.w / 2;
-  const order = Array.from({ length: N }, (_, i) => i);
-  // the label rides on whatever holds the amber: the tank's lid, then the tops of the three glasses
-  const labelY = Math.min(TANK_TOP, TILE_TOP - L.glass) - 24 / k;
-  const labelX = COL_DX * smoothstep(span(t, T.glass));
+  const top = m.foot - m.h;
+  const people = Array.from({ length: N }, (_, i) => i);
+  // the label rides on the mass, and clears the heads of the three once they stand on it
+  const labelY = Math.min(top, G - liftAt(MID, m) - PEG) - 24 / k;
+  const bars = barsOf(m);
   return (
     <AbsoluteFill>
       <StoutStage S={t} cam={cam} rest={REST} pool={{ x: lag.x, y: lag.y - 20 }}>
-        <Plumbing t={t} k={k} L={L} band={band} />
-        {order.map((i) => (
-          <RowTile key={i} i={i} t={t} k={k} L={L} band={band} />
+        <AmberMass m={m} k={k} band={band} />
+        {people.map((i) => (
+          <PersonPeg
+            key={i}
+            x={pegX(i)}
+            y={G - liftAt(i, m)}
+            size={PEG}
+            k={k}
+            tone={isKey(i) ? "amber" : "kraft"}
+            shade={isKey(i) ? 0 : 0.36 * smoothstep((t - LEAVE[i]) / 12)}
+            slot="cream"
+            amberBand={band}
+          />
         ))}
-        <Label x={labelX} y={labelY} k={k} text="Compute" px={LABEL_PX} tone="cream" />
+        <Label x={0} y={labelY} k={k} text="Compute" px={LABEL_PX} tone="cream" />
         {sweep > 0 && sweep < 1 ? (
           <g>
             <defs>
               <clipPath id={`${uid}s`}>
-                {[MID - 1, MID, MID + 1].map((i) => (
-                  <path key={i} d={rectPath(tileX(i) + COL_DX - COL.w / 2, L.colTop, COL.w, TILE_TOP - L.colTop, GEO.RADIUS, true, false)} />
+                {bars.map((b, i) => (
+                  <path key={i} d={barPath(b.x0, b.x1, top, m.foot, b.rl, b.rr)} />
                 ))}
               </clipPath>
             </defs>
             <g clipPath={`url(#${uid}s)`}>
-              <LightSweep x={sx0} y={L.colTop} w={sx1 - sx0} h={TILE_TOP - L.colTop} k={k} t={sweep} on="amber" r={0} />
+              <LightSweep x={-TRIO_A} y={top} w={2 * TRIO_A} h={m.h} k={k} t={sweep} on="amber" r={0} />
             </g>
           </g>
         ) : null}
