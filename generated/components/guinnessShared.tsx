@@ -212,7 +212,9 @@ export const HOP_ASPECT = (2 * HALF_W) / HOP_UNIT;
 export const HOP_BODY_CY = (BODY_TOP + BODY_BOT) / 2 / HOP_UNIT;
 
 // --- tones ------------------------------------------------------------------------------------------
-export type HopTone = "amber" | "kraft" | "cream";
+/** amber = product, kraft = context, cream = card; spent = a LIGHTER kraft for a used-up pile on the dark
+ *  ground (added for HundredsOfHops; the three original tones are unchanged). */
+export type HopTone = "amber" | "kraft" | "cream" | "spent";
 type ToneSet = { top: string; foot: string; shade: string; lit: string; line: string; stem: string };
 /** The three materials' tone steps (all from stoutShared COLOR). */
 export const HOP_TONES: Record<HopTone, ToneSet> = {
@@ -231,6 +233,14 @@ export const HOP_TONES: Record<HopTone, ToneSet> = {
     lit: mixHex(COLOR.board, COLOR.cream, 0.16),
     line: mixHex(COLOR.boardFoot, COLOR.inkDark, 0.5),
     stem: mixHex(COLOR.boardFoot, COLOR.inkDark, 0.3),
+  },
+  spent: {
+    top: mixHex(COLOR.board, COLOR.cream, 0.34),
+    foot: mixHex(COLOR.boardFoot, COLOR.cream, 0.22),
+    shade: mixHex(COLOR.boardFoot, COLOR.shadow, 0.12),
+    lit: mixHex(COLOR.board, COLOR.cream, 0.55),
+    line: mixHex(COLOR.boardFoot, COLOR.inkDark, 0.45),
+    stem: mixHex(COLOR.boardFoot, COLOR.inkDark, 0.25),
   },
   cream: {
     top: COLOR.cream,
