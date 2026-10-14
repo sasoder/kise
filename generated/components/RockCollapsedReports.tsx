@@ -42,8 +42,8 @@ import {
 // in to a close-up of the men at the foot of the pile and they turn black.
 // Then ONE peaked pan to the right (bezier 0.8, 0, 0.2, 1) lands on a
 // newspaper, under which the count rises into rows of ten: eight solid
-// figures, then twenty-two hollow ones, and the numerals "8 - 30" under the
-// caption strip.
+// figures, then twenty-two hollow ones, and the numerals "8 - 30" just under
+// the grid (cap 168 px, screen y ~1107-1275), clear of the user's captions.
 //
 // THE WORDS (local frames, f0 = sequence frame 208):
 //   the f7 · rock f15 · collapsed f20-33 · on a number of f33-47 ·
@@ -816,8 +816,11 @@ const figStart = (i: number) => (i < 8 ? SOLID_F0 + i * SOLID_STAGGER : HOLLOW_F
 export const FIG_REST_F = PAPERS_NUMBER.map((_, i) => figStart(i) + FIG_TRAVEL);
 const PRINT_F = [124, 160];
 const CROWN_F0 = 132;
-const NUM_SIZE = 300; // cap height 210
-const NUM_BASE = 1512;
+// the numerals sit under the grid, clear of the user's captions (screen y
+// 1365-1460): cap height 168, cap top ~1107 / baseline 1275 at k 1; at the
+// end of the creep (k 1.03) the baseline + shadow stays above screen y ~1295
+const NUM_SIZE = 240; // cap height 168
+const NUM_BASE = 1275;
 const NUM_F = { low: 169, dash: 187, high: 189 };
 
 // ===========================================================================
