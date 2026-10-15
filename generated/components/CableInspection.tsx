@@ -78,15 +78,15 @@ export const defaultProps: Props = schema.parse({});
 
 // ---- the snag (cut B: GhostLines.tsx, see scratchpad B/SNAG.md) -------------------------------
 // The same gear on the same spot: SnaggedGhostLine without `to` (the net trails free downstream).
-const SNAG = CABLE.at(SNAG_S);
+export const SNAG = CABLE.at(SNAG_S);
 /** the tangle's box (cable-plane world px, relative to the snag point): the coils, the strands and
  *  the torn net hanging ~22 px downstream (measured from ghostStrand(SNAG_GHOST)) */
-const TIME0 = 300; // the world clock (snow, current, ghost line) at f0
+export const TIME0 = 300; // the world clock (snow, current, ghost line) at f0
 /** The tangle's box (cable-plane world px), DERIVED from cut B's exported gear (SNAG_GHOST,
  *  SNAG_GHOST_2, SNAG_GHOST_3, the same ghostStrand / net layout GhostLine draws): the coils round the cable, every
  *  strand, and the torn net hanging at netAt. Unioned over the lock + hold frames so the bracket is
  *  steady while the gear drifts. Re-derived whenever B's constants change. */
-const TANGLE = (() => {
+export const TANGLE = (() => {
   const cw = SIZE_M.cable * SCENE_BC.pxPerM; // drawn width at these zooms (above the 9 px minimum)
   const A = { x: SNAG.x, y: SNAG.y };
   const tan = { x: SNAG.tx, y: SNAG.ty };
@@ -130,17 +130,17 @@ const TANGLE = (() => {
   const pad = 1.6;
   return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 };
 })();
-const TANGLE_C = { x: TANGLE.x, y: TANGLE.y };
+export const TANGLE_C = { x: TANGLE.x, y: TANGLE.y };
 
 
 // ---- the world ---------------------------------------------------------------------------------
 const SC = SCENE_BC;
-const HOR = 1250;
+export const HOR = 1250;
 const P = SC.focusM * SC.pxPerM; // 750
-const S_C = P / (P - CABLE.z); // the cable plane's depth scale (1.3636)
+export const S_C = P / (P - CABLE.z); // the cable plane's depth scale (1.3636)
 const LEN = CABLE.length;
 const VEH_L = 20; // the Mako: 2 m
-const SNAG_ARC = SNAG_S * LEN;
+export const SNAG_ARC = SNAG_S * LEN;
 
 // ---- the story (frames) ---------------------------------------------------------------------------
 // The vehicle flies its own path (cable-plane world coords, built below): the closest line that keeps a
@@ -170,7 +170,7 @@ const E_END = (0.49 * 1080) / TANGLE.w;
 const Y_TANGLE = Math.max(830, Math.min(880, 1078 - (TANGLE.h * E_END * 1.03) / 2));
 
 /** the cable point + its UP normal at arc length a (world px) */
-const cableAtArc = (a: number) => CABLE.at(clamp01(a / LEN));
+export const cableAtArc = (a: number) => CABLE.at(clamp01(a / LEN));
 type VState = { x: number; y: number; p: number; a: number };
 /** the path: y(x) on a grid from X_START down to HOVER.x. B(x) = the highest allowed point (the
  *  stand-off above the cable, measured perpendicular); the path = the closest PITCH_MAX-Lipschitz curve
@@ -402,7 +402,7 @@ export const solve = (f: number): Solved => {
 // ---- the mapped trace + the scan ring (cable plane) --------------------------------------------
 const TICK = 9; // chainage tick pitch (world px along the cable: 0.9 m)
 const HOT_F = 6; // the fresh, amber stretch: what the scan wrote in the last HOT_F frames (cools to cream)
-const MappedTrace: React.FC<{ from: number; to: number; hotFrom: number }> = ({ from, to, hotFrom }) => {
+export const MappedTrace: React.FC<{ from: number; to: number; hotFrom: number }> = ({ from, to, hotFrom }) => {
   const o = useOcean();
   if (to - from < 0.01) return null;
   const px = 1 / o.a;
@@ -446,7 +446,7 @@ const MappedTrace: React.FC<{ from: number; to: number; hotFrom: number }> = ({ 
   );
 };
 /** the scan ring: a thin amber ring round the cable where the fan meets it */
-const ScanRing: React.FC<{ arc: number; on: number }> = ({ arc, on }) => {
+export const ScanRing: React.FC<{ arc: number; on: number }> = ({ arc, on }) => {
   const o = useOcean();
   if (on <= 0.001) return null;
   const px = 1 / o.a;
@@ -473,7 +473,7 @@ const F_HIT = (() => {
   return F_FAN1;
 })();
 /** the scan point's arc at the first contact: the mapped trace is written from here */
-const ARC_HIT = (() => {
+export const ARC_HIT = (() => {
   const c = camAt(F_HIT);
   return scanArc(F_HIT, c.E, vehLenPx(F_HIT));
 })();
