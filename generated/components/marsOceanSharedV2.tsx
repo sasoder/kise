@@ -210,7 +210,8 @@ void main() {
       float rel = mod(lonD0 - uKnownA.y + 60.0, 360.0) - 60.0;
       float tS = uKnownA.x + uKnownA.z * clamp(rel, -60.0, 184.0) + uKnownA.w * (90.0 - lat * 57.29578);
       known = smoothstep(tS, tS + uKnownB.y, uKnownB.x);
-      float bl = exp2(uKnownB.z);
+      // (no extra blur at the poles: the longitude gradient pinches there and a blurred sample turns into a dark blot)
+      float bl = exp2(uKnownB.z * (1.0 - smoothstep(66.0, 82.0, abs(lat * 57.29578))));
       vec3 albSoft = toLin(textureGrad(uTex, uv, gx * bl, gy * bl).rgb);
       alb = mix(albSoft, alb, known);
     }
@@ -276,6 +277,8 @@ void main() {
       }
       // land that carries no grid (small islands) goes under with the water
       float waterM = uHasLand > 0.5 ? max(water, 1.0 - textureGrad(uGridMask, uv, gx, gy).r) : water;
+      // the poles are ice: the masks' top/bottom rows pinch to a point there, so never let water show at the pole
+      waterM *= 1.0 - smoothstep(84.0, 87.5, abs(lat * 57.29578));
       if (uDeep.x > 0.5) {
         // DEEP WATER (uniform across the disc: no key-light shading, no terminator)
         float dep = clamp(uDeep.y, 0.0, 1.0);

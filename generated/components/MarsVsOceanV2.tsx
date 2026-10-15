@@ -121,7 +121,22 @@ const EARTH_LAT = 10;
 // murk 2 f behind them (cause before effect), full dark by ~58; the last fragments still drift down at the end.
 // The front is a LATITUDE sweeping north -> south (a curve on the sphere, constant speed): meridians draw down
 // with it, and each parallel draws out both ways from the view's centre longitude once the front reaches it.
-const FRONT = { f0: 29, f1: 41, from: 100, to: -100, parSpeed: 24 /* deg of lon per frame */, head: 6 /* deg */ };
+// THE LAND SWEEP (as on Mars: meridians draw north -> south, parallels west -> east, staggered west -> east): a place
+// (lon, lat) is drawn at tDraw = SWEEP.t0 + dtLon * rel(lon - lon0) + dtLat * (90 - lat) (rel in -60..184 deg from
+// the western limb); the land grid lands by ~f41, and the land's texture sharpens + takes its colour behind the
+// same front over SWEEP.soft frames (the shader's KNOWN uses the identical formula).
+const SWEEP = (() => {
+  const A = 5.5; // frames across the visible land's longitude span (~130 deg from rel 20)
+  const B = 5; // frames down its latitude span (~115 deg from 75 N)
+  const dtLon = A / 130;
+  const dtLat = B / 115;
+  const T0 = 30.5; // the first land (Kamchatka / the Arctic coast) on "we have"
+  return { lon0: -155 - 0.05 * 30 - 90, dtLon, dtLat, t0: T0 - dtLon * 20 - dtLat * 15, soft: 7, head: 1.1 };
+})();
+const sweepRel = (lon: number) => ((((lon - SWEEP.lon0 + 60) % 360) + 360) % 360) - 60;
+const tDraw = (lon: number, lat: number) => SWEEP.t0 + SWEEP.dtLon * Math.max(-60, Math.min(184, sweepRel(lon))) + SWEEP.dtLat * (90 - lat);
+// Earth's meridians fade out well before the pole: no starburst on the polar cap
+const EARTH_POLE = { full: 56, gone: 74 };
 // Over water the net never draws: every line stops dead at the shore, capped by a tiny bright tick ("stopped here").
 // "depths" (44): the camera falls toward the water (a dolly, damped; Mars is further away so it moves less);
 // the seafloor recedes in two steps, the second landing on "ocean" (53-59).
@@ -195,9 +210,7 @@ const SHORE: number[][] = NET.map((ln) => {
 const earthNet = (v: GlobeView, f: number): NetFrame => {
   const M = globeBasis(v);
   const out: NetFrame = { surf: Array(LIMB_BINS).fill(""), heads: "" };
-  if (f < FRONT.f0) return out;
-  const front = lerp(FRONT.from, FRONT.to, clamp01((f - FRONT.f0) / (FRONT.f1 - FRONT.f0)));
-  const tLat = (la: number) => FRONT.f0 + ((FRONT.from - la) / (FRONT.from - FRONT.to)) * (FRONT.f1 - FRONT.f0);
+  if (f < SWEEP.t0 - 1) return out;
   const q = (x: number) => (Math.round(x * 100) / 100).toString();
   const lf = GRID.limbFade;
   const X = (n: number[]) => v.cx + v.r * n[0];
@@ -211,11 +224,9 @@ const earthNet = (v: GlobeView, f: number): NetFrame => {
     ]);
     const drawn = (i: number) => {
       const latS = (ln.lat[i] + ln.lat[i + 1]) / 2;
-      if (ln.mer) return { ok: latS >= front, head: latS - front < FRONT.head };
-      const lonS = -180 + (i + 0.5) * NET_SAMPLE;
-      const dLon = Math.abs((((lonS - v.lon) % 360) + 540) % 360 - 180);
-      const reach = (f - tLat(latS)) * FRONT.parSpeed;
-      return { ok: dLon <= reach, head: reach - dLon < FRONT.head && reach < 200 };
+      const lonS = ln.mer ? -180 + NET_STEP * ln.id : -180 + (i + 0.5) * NET_SAMPLE;
+      const t = tDraw(lonS, latS);
+      return { ok: f >= t, head: f - t < SWEEP.head };
     };
     for (let i = 0; i < N.length - 1; i++) {
       const land = ln.cls[i] < 0 && ln.cls[i + 1] < 0;
@@ -233,12 +244,12 @@ const earthNet = (v: GlobeView, f: number): NetFrame => {
       if (!d.ok) continue;
       const z = (a[2] + b[2]) / 2;
       const latM = Math.abs((ln.lat[i] + ln.lat[i + 1]) / 2);
-      const poleW = ln.mer ? Math.max(0, Math.min(1, (90 - latM) / GRID.poleFade)) : 1;
+      const poleW = ln.mer ? smoothstep((EARTH_POLE.gone - latM) / (EARTH_POLE.gone - EARTH_POLE.full)) : 1;
       const shore = Math.min(1, (Math.min(SHORE[li][i], SHORE[li][i + 1]) - 0.5) / COAST_FADE + 0.15);
       const w = (1 - lf + lf * Math.pow(Math.max(0, z), 0.4)) * poleW * shore * smoothstep((z - 0.17) / 0.17); // muted within ~12 deg of the limb: no amber crescents on the edge
       if (w <= 0.02) continue;
       const seg = `M${q(X(a))} ${q(Y(a))}L${q(X(b))} ${q(Y(b))}`;
-      if (d.head && poleW >= 0.6) out.heads += seg;
+      if (d.head && poleW >= 0.6 && w > 0.5) out.heads += seg;
       else out.surf[Math.min(LIMB_BINS - 1, Math.floor(w * LIMB_BINS))] += seg;
     }
   });
@@ -247,10 +258,13 @@ const earthNet = (v: GlobeView, f: number): NetFrame => {
 
 const EarthNet: React.FC<{ view: GlobeView; frame: number; width: number }> = ({ view, frame, width }) => {
   const net = earthNet(view, frame);
-  const all = net.surf.join("") + net.heads;
   return (
     <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0, overflow: "visible", filter: GRID_BLOOM }}>
-      {all ? <path d={all} fill="none" stroke={GRID_OUTLINE.color} strokeOpacity={GRID_OUTLINE.opacity} strokeWidth={width + GRID_OUTLINE.extra} strokeLinecap="round" /> : null}
+      {/* the dark outline follows each line's own weight (a faded line carries a faded outline) */}
+      {net.surf.map((d, i) =>
+        d ? <path key={`o${i}`} d={d} fill="none" stroke={GRID_OUTLINE.color} strokeOpacity={GRID_OUTLINE.opacity * ((i + 0.5) / LIMB_BINS)} strokeWidth={width + GRID_OUTLINE.extra} strokeLinecap="round" /> : null,
+      )}
+      {net.heads ? <path d={net.heads} fill="none" stroke={GRID_OUTLINE.color} strokeOpacity={GRID_OUTLINE.opacity} strokeWidth={width + GRID_OUTLINE.extra} strokeLinecap="round" /> : null}
       <g fill="none" stroke={AMBER.top} strokeWidth={width} strokeLinecap="round">
         {net.surf.map((d, i) => (d ? <path key={i} d={d} strokeOpacity={GRID.opacity * ((i + 0.5) / LIMB_BINS)} /> : null))}
       </g>
@@ -313,7 +327,7 @@ const MarsVsOceanV2: React.FC<Props> = () => {
                     trackStrength: 0.07,
                   },
                 }}
-                known={{ t0: FRONT.f0 + SHARP.lag, lon0: 0, dtLon: 0, dtLat: (FRONT.f1 - FRONT.f0) / (FRONT.from - FRONT.to), frame, soft: SHARP.soft, blur: SHARP.blur }}
+                known={{ t0: SWEEP.t0 - 1, lon0: SWEEP.lon0, dtLon: SWEEP.dtLon, dtLat: SWEEP.dtLat, frame, soft: SWEEP.soft, blur: SHARP.blur }}
                 atmosphere={{ ...ATMO.earth, strength: 0.28 }}
                 grade={{ exposure: 1.05, sat: 0.85, warm: 0.05, ambient: 0.05, limb: 0.12, highlight: 1.6, wrap: 0.3 }}
               />
