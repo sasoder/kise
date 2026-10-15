@@ -46,7 +46,7 @@ import { UnionShadow, makeClockCam, makePoolTrack, type Glide } from "./museShar
 //   f84-106   the surge front runs down from the rim to the floor (leading at the walls); behind it cream-tan
 //             particles cascade down, the haze thins, the amber sinks by tone to embers (14 f per segment)
 //   f98-126   the head settles out of the haze at the top, its lower edge rising and sharpening
-//   f88-142   the pull-back to the whole pint (k -> 1.0): rim ~y 285, coaster ~y 1190, harp ~y 380-530
+//   f88-142   the pull-back to the whole pint (k -> 1.0): rim ~y 285, beer mat ~y 1150-1220, harp ~y 370-555
 //   f129-139  THE ONE CLICK: a light sweep across the glass on "Guinness"
 //   f140-156  living tail: particles still drifting down out of the head, slow drift, grain, light pool
 // ---------------------------------------------------------------------------
@@ -64,17 +64,22 @@ const f3 = (v: number) => (Math.round(v * 1000) / 1000).toString();
 // --- the glass (world px; at the end camera k ~ 1 world ~ screen) -----------------------------------------
 const CX = 540;
 const RIM = 296; // the glass's top edge
-const BOT = 1180; // its outer bottom (stands on the coaster)
+const BOT = 1180; // its outer bottom (stands on the beer mat)
 const FLOOR = 1124; // the inner floor: the top of the heavy glass base, where the slot is
 const HG = BOT - RIM;
 const WALL = 7;
-/** The Guinness tulip: narrow base, flaring to a bulge ~3/4 up, a gentle turn-in to the rim (half width). */
+/** The Guinness tulip: a narrow heavy foot, flaring to a gentle bulge ~30 % down from the rim, then a clear
+ *  turn-in to the lip (half width; rim ~480, bulge ~564, foot ~340). */
 const hwO = (y: number) => {
   const t = clamp01((BOT - y) / HG);
-  return 168 + 96 * t + 52 * Math.sin(Math.PI * Math.pow(t, 1.6));
+  return 170 + 70 * t + 62 * Math.sin(Math.PI * Math.pow(t, 1.9));
 };
 const hwI = (y: number) => hwO(y) - WALL;
-const COASTER = { w: 640, h: 24, y: BOT } as const;
+/** The lip and the foot as thin ellipses (a slight look down onto the glass). */
+const RIM_RY = 9;
+const FOOT_RY = 10;
+/** The beer mat the pint stands on: a round kraft mat seen in slight perspective (context, so board tone). */
+const MAT = { cx: CX, cy: BOT - 2, rx: 300, ry: 34, thick: 6, ring: 0.8 } as const;
 
 const sideYs = (y0: number, y1: number, n = 48) => Array.from({ length: n + 1 }, (_, i) => lerp(y0, y1, i / n));
 /** A region between y0 and y1 bounded by a half-width profile. */
@@ -84,20 +89,39 @@ const bandPath = (y0: number, y1: number, hw: (y: number) => number) => {
   const left = [...ys].reverse().map((y) => `${f3(CX - hw(y))} ${f3(y)}`);
   return `M${right.join("L")}L${left.join("L")}Z`;
 };
+const HB = hwO(BOT);
 const OUTLINE_D = (() => {
-  // the outer glass: sides from the rim down, a small round into the flat foot
-  const r = 6;
-  const ys = sideYs(RIM, BOT - r);
+  // the outer glass: sides from the rim down to the foot, closed by the foot ellipse's front arc
+  const ys = sideYs(RIM, BOT - FOOT_RY);
   const right = ys.map((y) => `${f3(CX + hwO(y))} ${f3(y)}`).join("L");
   const left = [...ys]
     .reverse()
     .map((y) => `${f3(CX - hwO(y))} ${f3(y)}`)
     .join("L");
-  const hb = hwO(BOT);
-  return `M${right}Q${f3(CX + hb)} ${BOT} ${f3(CX + hb - r)} ${BOT}H${f3(CX - hb + r)}Q${f3(CX - hb)} ${BOT} ${f3(CX - hb)} ${f3(BOT - r)}L${left}Z`;
+  return `M${right}A${f3(HB)} ${FOOT_RY} 0 0 1 ${f3(CX - HB)} ${f3(BOT - FOOT_RY)}L${left}Z`;
+})();
+/** The heavy glass base: from the inner floor down to the foot's front arc. */
+const BASE_SOLID_D = (() => {
+  const ys = sideYs(FLOOR, BOT - FOOT_RY, 12);
+  const right = ys.map((y) => `${f3(CX + hwO(y))} ${f3(y)}`).join("L");
+  const left = [...ys]
+    .reverse()
+    .map((y) => `${f3(CX - hwO(y))} ${f3(y)}`)
+    .join("L");
+  return `M${f3(CX - hwO(FLOOR))} ${FLOOR}L${right}A${f3(HB)} ${FOOT_RY} 0 0 1 ${f3(CX - HB)} ${f3(BOT - FOOT_RY)}L${left}Z`;
+})();
+/** The one specular streak down the lit (left) side: a narrow band hugging the outer wall. */
+const STREAK_D = (() => {
+  const y0 = RIM + 34;
+  const y1 = FLOOR - 70;
+  const ys = sideYs(y0, y1, 40);
+  const w = (y: number) => 4 + 7 * Math.sin(Math.PI * clamp01((y - y0) / (y1 - y0)));
+  const inset = 16;
+  const outer = ys.map((y) => `${f3(CX - hwO(y) + inset)} ${f3(y)}`);
+  const inner = [...ys].reverse().map((y) => `${f3(CX - hwO(y) + inset + w(y))} ${f3(y)}`);
+  return `M${outer.join("L")}L${inner.join("L")}Z`;
 })();
 const INTERIOR_D = bandPath(RIM, FLOOR, hwI);
-const BASE_D = bandPath(FLOOR, BOT - 2, hwI);
 const sidePath = (side: -1 | 1, y0: number, y1: number, inset = 0) =>
   `M${sideYs(y0, y1)
     .map((y) => `${f3(CX + side * (hwI(y) - inset))} ${f3(y)}`)
@@ -438,7 +462,7 @@ const InsideThePint: React.FC<Props> = () => {
   const sBottom = Math.min(sHead, RIM + 26);
   const streamOn = sHead > STREAM.from && sTail < RIM + 26;
 
-  // the shadow: glass (faint), its contents (heavier as it fills), the coaster
+  // the shadow: glass (faint) and its contents (heavier as it fills): one object
   const contentA = lerp(0.42, 0.7, smoothstep((frame - FRONT.f0) / (FRONT.f1 - FRONT.f0)));
   const sil = [
     { d: OUTLINE_D, a: 0.3 },
@@ -446,10 +470,22 @@ const InsideThePint: React.FC<Props> = () => {
     // (counted once the front has reached the column: above empty glass its offset shadow would smudge through)
     ...(poured && F > top ? [{ d: bandPath(RIM, Math.min(top, FLOOR), hwI), a: 0.7 * smoothstep((F - top) / 60) }] : []),
     ...(H > 0.5 ? [{ d: bandPath(top, FLOOR, hwI), a: contentA }] : []),
-    { d: `M${CX - COASTER.w / 2 + 4} ${COASTER.y}H${CX + COASTER.w / 2 - 4}V${COASTER.y + COASTER.h}H${CX - COASTER.w / 2 + 4}Z` },
   ];
 
   const hair = STROKE.HAIRLINE / k;
+  // the base refracts what is above it: amber while the column stands lit, a ruby glow once the stout is down
+  const sunkFloor = smoothstep((frame - frontAt(FLOOR - 20)) / SINK_F);
+  const baseTint = mixHex(COLOR.amberTop, RUBY_GLOW, sunkFloor);
+  const baseA = (H > 0.3 ? smoothstep(H / 40) : 0) * lerp(0.32, 0.5, sunkFloor);
+  // the hot highlight on the lip's front arc, on its lit (left) quarter
+  const lipHotD = (() => {
+    const rx = hwO(RIM);
+    const pts = Array.from({ length: 21 }, (_, i) => {
+      const a = Math.PI * (0.8 + 0.17 * (i / 20)); // angle along the front arc: its lit left end
+      return `${f3(CX + rx * Math.cos(a))} ${f3(RIM + RIM_RY * Math.sin(a))}`;
+    });
+    return `M${pts.join("L")}`;
+  })();
   const sweepT = (frame - SWEEP_F[0]) / (SWEEP_F[1] - SWEEP_F[0]);
 
   const specks = (list: Speck[], head: boolean) => (
@@ -518,9 +554,20 @@ const InsideThePint: React.FC<Props> = () => {
             <stop offset={f3(clamp01(1 - feather / (hb - HEAD.apex)))} stopColor={mixHex(HAZE, COLOR.creamFoot, ha)} />
             <stop offset="1" stopColor={mixHex(HAZE, COLOR.creamFoot, ha)} stopOpacity="0" />
           </linearGradient>
-          <linearGradient id={id("coast")} gradientUnits="userSpaceOnUse" x1="0" y1={COASTER.y} x2="0" y2={COASTER.y + COASTER.h}>
-            <stop offset="0" stopColor={COLOR.cream} />
-            <stop offset="1" stopColor={COLOR.creamFoot} />
+          <linearGradient id={id("mat")} gradientUnits="userSpaceOnUse" x1="0" y1={MAT.cy - MAT.ry} x2="0" y2={MAT.cy + MAT.ry}>
+            <stop offset="0" stopColor={COLOR.boardFoot} />
+            <stop offset="1" stopColor={COLOR.board} />
+          </linearGradient>
+          <linearGradient id={id("base")} gradientUnits="userSpaceOnUse" x1="0" y1={FLOOR} x2="0" y2={BOT}>
+            <stop offset="0" stopColor={COLOR.glass} stopOpacity="0.26" />
+            <stop offset="0.35" stopColor={COLOR.glass} stopOpacity="0.1" />
+            <stop offset="1" stopColor={COLOR.glass} stopOpacity="0.18" />
+          </linearGradient>
+          <linearGradient id={id("streak")} gradientUnits="userSpaceOnUse" x1="0" y1={RIM + 34} x2="0" y2={FLOOR - 70}>
+            <stop offset="0" stopColor={COLOR.edge} stopOpacity="0" />
+            <stop offset="0.2" stopColor={COLOR.edge} stopOpacity="0.42" />
+            <stop offset="0.6" stopColor={COLOR.edge} stopOpacity="0.3" />
+            <stop offset="1" stopColor={COLOR.edge} stopOpacity="0" />
           </linearGradient>
           <linearGradient id={id("ruby")} gradientUnits="userSpaceOnUse" x1={CX - 300} y1="0" x2={CX + 300} y2="0">
             <stop offset="0" stopColor={RUBY_GLOW} stopOpacity="0.62" />
@@ -533,21 +580,28 @@ const InsideThePint: React.FC<Props> = () => {
           </linearGradient>
         </defs>
 
-        {/* 1. the one shadow: glass + contents + coaster, one object on the ground */}
-        <UnionShadow sil={sil} s={2.4} elevation="rest" contact={{ x: CX, y: COASTER.y + COASTER.h, w: COASTER.w }} />
+        {/* 1. the beer mat on the ground: its one shadow, its thickness, its face, a printed inner ring */}
+        <ellipse cx={MAT.cx + 3} cy={MAT.cy + MAT.thick + 4} rx={MAT.rx} ry={MAT.ry} fill={COLOR.shadow} opacity={0.42} style={{ filter: "blur(5px)" }} />
+        <ellipse cx={MAT.cx} cy={MAT.cy + MAT.thick} rx={MAT.rx} ry={MAT.ry} fill={mixHex(COLOR.boardFoot, COLOR.shadow, 0.35)} />
+        <rect x={MAT.cx - MAT.rx} y={MAT.cy} width={MAT.rx * 2} height={MAT.thick} fill={mixHex(COLOR.boardFoot, COLOR.shadow, 0.35)} />
+        <ellipse cx={MAT.cx} cy={MAT.cy} rx={MAT.rx} ry={MAT.ry} fill={`url(#${id("mat")})`} />
+        <ellipse cx={MAT.cx} cy={MAT.cy} rx={MAT.rx * MAT.ring} ry={MAT.ry * MAT.ring} fill="none" stroke={COLOR.cream} strokeOpacity={0.55} strokeWidth={f3(2 / k)} />
+        <path d={`M${MAT.cx - MAT.rx} ${MAT.cy}A${MAT.rx} ${MAT.ry} 0 0 0 ${MAT.cx + MAT.rx} ${MAT.cy}`} fill="none" stroke={COLOR.edge} strokeOpacity={0.35} strokeWidth={f3(EDGE.CREAM / k)} />
 
-        {/* 2. the coaster (cream card, lit top edge stopping under the glass's foot) */}
-        <path d={`M${CX - COASTER.w / 2} ${COASTER.y}H${CX + COASTER.w / 2}V${COASTER.y + COASTER.h - 4}Q${CX + COASTER.w / 2} ${COASTER.y + COASTER.h} ${CX + COASTER.w / 2 - 4} ${COASTER.y + COASTER.h}H${CX - COASTER.w / 2 + 4}Q${CX - COASTER.w / 2} ${COASTER.y + COASTER.h} ${CX - COASTER.w / 2} ${COASTER.y + COASTER.h - 4}Z`} fill={`url(#${id("coast")})`} />
-        <path
-          d={`M${CX - COASTER.w / 2 + 2} ${f3(COASTER.y + EDGE.CREAM / k / 2)}H${f3(CX - hwO(BOT) - 2)}M${f3(CX + hwO(BOT) + 2)} ${f3(COASTER.y + EDGE.CREAM / k / 2)}H${CX + COASTER.w / 2 - 2}`}
-          stroke={COLOR.edge}
-          strokeOpacity={ALPHA.edge}
-          strokeWidth={f3(EDGE.CREAM / k)}
-        />
+        {/* 2. the pint's one shadow (glass + contents), and its contact shadow on the mat under the foot */}
+        <UnionShadow sil={sil} s={2.4} elevation="rest" contact={null} />
+        <ellipse cx={CX + 14} cy={BOT - 1} rx={HB * 1.06} ry={FOOT_RY * 1.4} fill={COLOR.shadow} opacity={0.62} style={{ filter: "blur(5px)" }} />
 
         {/* 3. the glass body: a faint tint, the heavy base a little more */}
         <path d={OUTLINE_D} fill={COLOR.glass} fillOpacity={ALPHA.glassTint} />
-        <path d={BASE_D} fill={COLOR.glass} fillOpacity={ALPHA.glassTint * 1.6} />
+        {/* the lip's back arc, seen through the glass */}
+        <path d={`M${f3(CX - hwO(RIM))} ${RIM}A${f3(hwO(RIM))} ${RIM_RY} 0 0 1 ${f3(CX + hwO(RIM))} ${RIM}`} fill="none" stroke={COLOR.glass} strokeOpacity={ALPHA.glassLo} strokeWidth={f3(hair)} />
+        {/* the heavy base: solid glass, lighter than the body; the liquid above it refracts down into it */}
+        <path d={BASE_SOLID_D} fill={`url(#${id("base")})`} />
+        {H > 0.3 || poured ? (
+          <path d={BASE_SOLID_D} fill={baseTint} fillOpacity={f3(baseA)} style={{ mixBlendMode: "screen" }} />
+        ) : null}
+        <path d={`M${f3(CX - HB)} ${f3(BOT - FOOT_RY)}A${f3(HB)} ${FOOT_RY} 0 0 1 ${f3(CX + HB)} ${f3(BOT - FOOT_RY)}`} fill="none" stroke={COLOR.glass} strokeOpacity={ALPHA.glassLo} strokeWidth={f3(hair)} />
 
         {/* 4. the amber column, lit (below the front): one glow pass */}
         {H > 0.3 ? (
@@ -657,13 +711,17 @@ const InsideThePint: React.FC<Props> = () => {
           </g>
         ) : null}
 
-        {/* 9. the glass: a soft highlight down the lit side, the cream hairline, the harp printed on it */}
-        <g clipPath={`url(#${id("out")})`}>
-          <path d={sidePath(-1, RIM + 40, FLOOR - 30, 34)} fill="none" stroke={COLOR.glass} strokeOpacity={0.13} strokeWidth={12} strokeLinecap="round" style={{ filter: "blur(3px)" }} />
-          <path d={sidePath(1, RIM + 90, FLOOR - 120, 22)} fill="none" stroke={COLOR.glass} strokeOpacity={0.06} strokeWidth={6} strokeLinecap="round" style={{ filter: "blur(2px)" }} />
+        {/* 9. the glass: the wall's inner face, the one specular streak, the hairline, the lip, the harp printed on it */}
+        <g fill="none" stroke={COLOR.glass} strokeOpacity={0.22} strokeWidth={f3(hair)}>
+          <path d={sidePath(-1, RIM + RIM_RY, FLOOR)} />
+          <path d={sidePath(1, RIM + RIM_RY, FLOOR)} />
         </g>
+        <path d={STREAK_D} fill={`url(#${id("streak")})`} style={{ filter: "blur(1.2px)" }} />
         <path d={OUTLINE_D} fill="none" stroke={COLOR.glass} strokeOpacity={ALPHA.glassHi} strokeWidth={f3(hair)} strokeLinejoin="round" />
-        <path d={`M${f3(CX - hwI(FLOOR))} ${FLOOR}H${f3(CX + hwI(FLOOR))}`} stroke={COLOR.glass} strokeOpacity={ALPHA.glassLo} strokeWidth={f3(hair)} />
+        <path d={`M${f3(CX - hwI(FLOOR))} ${FLOOR}H${f3(CX + hwI(FLOOR))}`} stroke={COLOR.glass} strokeOpacity={ALPHA.glassHi} strokeWidth={f3(hair)} />
+        {/* the lip: its front arc, with the hot highlight where the key light catches it (upper left) */}
+        <path d={`M${f3(CX + hwO(RIM))} ${RIM}A${f3(hwO(RIM))} ${RIM_RY} 0 0 1 ${f3(CX - hwO(RIM))} ${RIM}`} fill="none" stroke={COLOR.glass} strokeOpacity={ALPHA.glassHi} strokeWidth={f3(hair * 1.4)} />
+        <path d={lipHotD} fill="none" stroke={COLOR.edge} strokeOpacity={0.9} strokeWidth={f3((EDGE.HOT * 1.2) / k)} strokeLinecap="round" />
         <HarpPrint color={COLOR.inkCream} opacity={0.92} />
 
         {/* 10. THE ONE CLICK: a light sweep across the glass on "Guinness" */}

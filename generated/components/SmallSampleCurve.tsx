@@ -50,16 +50,21 @@ import { HOP_ASPECT, HopCone, hopSilhouette } from "./guinnessShared";
 // small 162 · sample 169-178 · less 181 · than 184 · 30 188-196. Out at f200.
 // DURATION: sequence 19.520 -> 27.861 s = 8.341 s = 200 f at 23.976, + a 16-frame living tail = 216.
 //
-//   f0-30    the drops: nine hops drop out of the hopper's mouth (frame top) at constant speed, land (contact frame =
-//            the odometer's first roll frame) and settle (their shadow tightens, no bounce) into stacks
-//            -2:1  -1:2  0:2  +1:3  +2:1; "n = 1" blurs in on the first contact and rolls to "n = 9"
-//   f34-66   "derive": the glass bell rises out of the ruler's slot around the stacks (one long soft landing)
-//   f62-82   "standard deviation": the spread bracket grows out from the mean to mean ± s; STD DEV blurs in
-//   f88-106  "if you know the mean": the cream mean post rises out of the slot to the bell's peak; MEAN in
+//   f0-30    the drops: from a close shot on the hopper's mouth, nine hops leave it one by one (f0-19) at
+//            constant speed; the camera tilts down after them (damped) and widens onto the dot plot by ~f38.
+//            Each lands (contact frame = the odometer's roll) with a one-frame squash about its tip that
+//            recovers over 3 f, its shadow tightening to rest over 4 f; stacks -2:1 -1:2 0:2 +1:3 +2:1;
+//            "n = 1" blurs in on the first contact (f10) and rolls to "n = 9" (f30)
+//   f34-60   "derive": the glass bell is driven up out of the ruler's slot (a long ease-out); the camera
+//            pushes in about the ruler (k 1.1 -> 1.3)
+//   f62-82   "standard deviation": the spread bracket grows out from the mean to mean ± s; STD DEV blurs in;
+//            the camera slides along the arm toward it
+//   f88-106  "if you know the mean": the cream mean post rises out of the slot behind the stacks to the
+//            bell's peak; the camera tilts up with it and MEAN arrives as it gets there
 //   f104-118 THE ONE CLICK: a light sweep crosses the glass bell as the post meets its peak
-//   f92-136  "or the mean if you know …": nothing new; the camera pushes slowly in
-//   f128-202 "… the standard deviation, from a small sample, less than 30": the camera pulls back (k 1.10 ->
-//            0.75) and the heap in the hopper comes into view above the chart; the ruler stays at y ~1000
+//   f100-158 "or the mean if you know …": nothing new; a slow slide back across the finished chart
+//   f128-204 "… the standard deviation, from a small sample, less than 30": the long pull-back (k ~1.33 ->
+//            0.75) up to the heap in the hopper above the chart; the ruler ends at screen y ~1000
 //   f200-215 tail: the pull-back's creep, the pool, sway and grain
 //
 // DATA (computed below from the nine positions, in bins): mean = 1/9 = 0.111, s = sqrt((13 - 1/9) / 8) =
@@ -105,17 +110,20 @@ const BRACKET_Y = -(P * tRel(XBAR + S) - 10);
 const SERIF = 16;
 
 // --- timing --------------------------------------------------------------------------------------------
-const FALL_V = 60; // world px per frame, constant until contact
-const FIRST_CONTACT = 3;
-const CONTACT_STEP = 3.3;
-const SETTLE_F = 5;
-const ROLL_F = 3;
+const FALL_V = 70; // world px per frame, constant until contact
+const FIRST_CONTACT = 10; // the first hop leaves the mouth on f0 (its fall takes ~10.6 f)
+const CONTACT_STEP = 2.5; // the ninth lands on f30
+const SETTLE_F = 4;
+const ROLL_F = 2.2;
+/** The weight of a landing: on the contact frame the hop squashes a touch about its tip and recovers over
+ *  SQUASH_F frames (no overshoot, no rebound). */
+const SQUASH = { x: 0.06, y: 0.08, f: 3 } as const;
 const HOPS = DROPS.map((bin, i) => {
   const level = DROPS.slice(0, i).filter((b) => b === bin).length;
   const restY = -level * STACK - HOP / 2; // the glyph box's centre at rest
   return { i, bin, level, x: bin * BIN, restY, contact: FIRST_CONTACT + i * CONTACT_STEP };
 });
-const RISE: [number, number] = [34, 66]; // the bell rises out of the slot, once n reads 9 (last roll ends f32.4)
+const RISE: [number, number] = [34, 60]; // the bell rises out of the slot, once n reads 9 (last roll ends f32.2)
 const ARMS: [number, number] = [62, 82]; // the spread bracket grows out from the mean
 const SD_LABEL = 74;
 const POST: [number, number] = [88, 106]; // the mean post rises to the peak
@@ -131,7 +139,8 @@ const hopAt = (h: (typeof HOPS)[number], f: number) => {
   const dt = h.contact - f;
   const y = dt > 0 ? h.restY - FALL_V * dt : h.restY;
   const settle = smoothstep((f - h.contact) / SETTLE_F);
-  return { y, out: y >= START_Y, falling: dt > 0, lift: dt > 0 ? 1 : 1 - settle, settled: f >= h.contact + SETTLE_F };
+  const squash = dt <= 0 && f - h.contact < SQUASH.f ? 1 - smoothstep((f - h.contact) / SQUASH.f) : 0;
+  return { y, out: y >= START_Y, falling: dt > 0, lift: dt > 0 ? 1 : 1 - settle, settled: f >= h.contact + SETTLE_F, squash };
 };
 /** The odometer: n = 1 at the first contact, then one roll per contact (starting on the contact frame). */
 const nAt = (f: number) => {
@@ -146,22 +155,29 @@ const nAt = (f: number) => {
 };
 
 // --- the camera (LOOK = the world point on the frame's middle) and the light pool ------------------------
-// The ruler's top stays at screen y ~1000 throughout (look y = -40 / k), so every zoom happens above it.
+// The camera is in it: close on the hopper's mouth as the first hop leaves, a damped tilt down after the
+// falling hops that widens onto the dot plot by f32; a push in with the rising bell (zooming about the ruler,
+// which stays at screen y ~1000); a slide along the bracket; a tilt up with the post to MEAN; a slow slide
+// back across the finished chart; then the long pull-back up to the heap. Checked: max screen speed 36 px/f
+// (f16, the tilt down), max |dv| 2.45 px/f^2 (f1) (house hints: <= 45 and <= 2.5).
 const CAM = makeClockCam(
-  { x: 0, y: -36.4, k: 1.1 },
+  { x: 0, y: -585, k: 2.2 },
   [
-    { f0: -30, f1: 40, k: 1.09 }, // already creeping on f0
-    { f0: 26, f1: 78, dy: -1.3, k: 1.06 }, // a touch out with the rising bell
-    { f0: 92, f1: 136, dx: 20, dy: 1.3, k: 1.1 }, // a slow push in as the post rises
-    { f0: 128, f1: 202, dx: -14, dy: -16.9, k: 0.75 }, // from "standard deviation" on: back, the heap comes into view
+    { f0: -8, f1: 38, dy: 548.6, k: 1.1 }, // down after the hops, out onto the dot plot
+    { f0: 30, f1: 68, dy: 5.6, k: 1.3 }, // in with the rising bell
+    { f0: 58, f1: 88, dx: 45 }, // along the bracket's arm toward STD DEV
+    { f0: 84, f1: 110, dy: -30, k: 1.36 }, // up with the post to the peak and MEAN
+    { f0: 100, f1: 158, dx: -60, dy: 25, k: 1.3 }, // a slow slide back across the finished chart
+    { f0: 128, f1: 204, dx: 21, dy: -24.3, k: 0.75 }, // the pull-back: the heap comes into view
     { f0: 196, f1: 290, dy: -1.5, k: 0.73 }, // the tail's creep
   ],
   DURATION,
 );
 const POOL = makePoolTrack(
-  { x: 0, y: -110, strength: 1.0 },
+  { x: 0, y: -640, strength: 1.0 },
   [
-    { f0: 26, f1: 72, x: XBAR, y: -210, strength: 1.35 },
+    { f0: -10, f1: 30, x: 0, y: -110, strength: 1.0 },
+    { f0: 30, f1: 72, x: XBAR, y: -210, strength: 1.35 },
     { f0: 128, f1: 202, x: XBAR, y: -300, strength: 1.6 },
   ],
   DURATION,
@@ -260,7 +276,7 @@ const SmallSampleCurve: React.FC<Props> = () => {
   const k = cam.k;
   const pool = POOL(frame);
 
-  const grow = restToRest((frame - RISE[0]) / (RISE[1] - RISE[0]), 2.5);
+  const grow = 1 - Math.pow(1 - clamp01((frame - RISE[0]) / (RISE[1] - RISE[0])), 2.6); // driven out of the slot, a long ease-out
   const arms = restToRest((frame - ARMS[0]) / (ARMS[1] - ARMS[0]), 2.5);
   const post = restToRest((frame - POST[0]) / (POST[1] - POST[0]), 2.5);
   const hops = HOPS.map((h) => ({ ...h, ...hopAt(h, frame) }));
@@ -384,7 +400,15 @@ const SmallSampleCurve: React.FC<Props> = () => {
           {hops.map((h) =>
             h.out ? (
               <g key={h.i} filter={h.falling ? `url(#${uid}fall)` : undefined}>
-                <HopCone x={h.x} y={h.y} size={HOP} tone="amber" k={k} />
+                <g
+                  transform={
+                    h.squash > 0
+                      ? `translate(${f2(h.x)} ${f2(h.y + HOP / 2)}) scale(${f2(1 + SQUASH.x * h.squash)} ${f2(1 - SQUASH.y * h.squash)}) translate(${f2(-h.x)} ${f2(-h.y - HOP / 2)})`
+                      : undefined
+                  }
+                >
+                  <HopCone x={h.x} y={h.y} size={HOP} tone="amber" k={k} />
+                </g>
               </g>
             ) : null,
           )}
@@ -416,7 +440,7 @@ const SmallSampleCurve: React.FC<Props> = () => {
         {/* labels: STD DEV beside the bracket (outside the bell), MEAN over the peak, n = 9 by the sample */}
         <Label x={XBAR + S + (SPACE.CLEAR + SPACE.VALUE) / k} y={BRACKET_Y + (LABEL_PX * METRIC.cap) / 2 / k} k={k} px={LABEL_PX} text="STD DEV" anchor="start" enter={(frame - SD_LABEL) / 12} />
         <Label x={XBAR} y={-P - SPACE.CLEAR / k} k={k} px={LABEL_PX} text="MEAN" enter={(frame - MEAN_LABEL) / 12} />
-        <NCount x={-428} y={-262} k={k} value={n.v} rollBlur={n.blur} enter={(frame - HOPS[0].contact) / 12} />
+        <NCount x={-300} y={-330} k={k} value={n.v} rollBlur={n.blur} enter={(frame - HOPS[0].contact) / 12} />
       </StoutStage>
     </AbsoluteFill>
   );
