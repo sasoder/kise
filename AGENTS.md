@@ -2,6 +2,18 @@
 
 Build polished Remotion videos from natural-language creative briefs.
 
+## Clip jobs: the kickoff prompt wins (2026-10-07)
+
+When the user starts a clip job with their kickoff prompt ("Create motion graphics in: … / Working folder: …"), or you
+are a builder briefed by the directing agent on such a job, that prompt, the brief and the status block at the top of
+`MEMORY.md` take precedence over this file. In particular:
+
+- Do not stop to ask the user what to change after a render, and do not ask before saving preferences; the director
+  works autonomously and reports at the end.
+- Frame rate matches the Premiere sequence (often 23.976), not the 30 fps default below.
+- Each graphic has its own `src/Root.<Name>.tsx` and `src/entry.<Name>.ts` so builders can run in parallel. Keep and
+  commit them; they are what re-renders a single cut for a revision. Do not replace `src/Root.tsx`.
+
 ## Tooling
 
 - Use `bun` and `bunx`, never npm or npx.

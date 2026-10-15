@@ -8,7 +8,7 @@ import OptimizingTheObjective, {
 
 // Private render entry for OptimizingTheObjective, so this cut renders while
 // another builder owns src/Root.tsx. Orange Dwarkesh on the grid background:
-// a person, a planted Lucide flag, and a crowd of orange dots that races to it.
+// a person, a planted Lucide trophy, and a crowd of orange dots that races to it.
 // Opaque 1080x1920 at 24fps.
 export const RemotionRoot = () => {
   return (

@@ -10,5 +10,11 @@ out
 .agents/skills/remotion-best-practices
 skills-lock.json
 
-# Agent scratch: worktrees (multi-GB node_modules) and the symlinked skills dir.
+# Agent scratch and installed skills (reinstalled by `bun run install:skills`).
 .claude/
+
+# Python bytecode.
+__pycache__/
+
+# MaxIntro's 151 MB of source frames stay on disk only.
+public/lovable/fika1/src/
