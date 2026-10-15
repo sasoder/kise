@@ -1,27 +1,30 @@
 import React, { useId } from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { CAM_DAMP, CAM_STIFF } from "./fieldShared";
 import type { Cam } from "./outgrowShared";
+import { COLOR, FONT_LABEL, TRACK, clamp01, lerp, rectPath, smoothstep } from "./stoutShared";
 import {
-  ALPHA,
-  COLOR,
-  EDGE,
-  ElevationShadow,
-  FONT_LABEL,
-  StoutStage,
-  TRACK,
-  clamp01,
-  lerp,
-  rectPath,
-  smoothstep,
-} from "./stoutShared";
-import { AFRAME, CUT1_CAM, CUT1_DURATION, SHIP, SHIP_STATION, Sea, SurveyShip, Wake, cut1CamAt, shipToWorld } from "./droneShipShared";
+  BubbleTrail,
+  CUT1_SEA_CAM,
+  CUT1_SEA_DURATION,
+  ResearchShip,
+  SEA_STATION,
+  SHIP_PTS,
+  SeaStage,
+  SurfaceWake,
+  cut1SeaCamAt,
+  shipToWorld,
+} from "./droneSeaShared";
 
 // ===========================================================================
 // SameBigShip — cut 1 of the Cheeky Pint S4E02 clip "will - $50k drone vs $5m navy drone" (Will O'Brien,
-// Ulysses), in the stout system (stoutShared.tsx) with the clip's ship (droneShipShared.tsx). 1080x1920,
-// 23.976 fps, opaque, palette B1. Delivered as 1_SameBigShip.mov.
+// Ulysses). 1080x1920, 23.976 fps, opaque. Delivered as 1_SameBigShip.mov.
+// RESTYLE (2026-10-15, the user: "pretty good job, however i really like the look we did on the 'hunting
+// mines' & 'we've mapped more of mars' videos"): the same idea and timing in the REALISTIC ocean look of the
+// sibling Ulysses clips — an over/under split at the waterline (droneSeaShared.tsx on oceanShared.tsx): a
+// warm hazy sky and a realistic survey ship above the water, the realistic underwater below it (the hull and
+// keel seen through the water, god rays, marine snow, the warm split-tone water grade). The delivered stout
+// version is in git (and droneShipShared.tsx, untouched).
 //
 // CHECK LINE: "The Navy, ocean-conservation groups and offshore energy companies all do their ocean work the
 // same way: from one big crewed surface ship."
@@ -34,34 +37,31 @@ import { AFRAME, CUT1_CAM, CUT1_DURATION, SHIP, SHIP_STATION, Sea, SurveyShip, W
 // the 58 · ocean 65 · conservation 68 · for the 86 · energy 92 · folks 98 · is 107 · all 111 · pretty 114 ·
 // much 122 · the same 127-130 · (Big 137, after the cut).
 //
-// ONE MOTION: a big survey ship cruises in from the right, bow first, and comes to station at the middle of
-// the frame while the camera eases out from close and low. Three customers arrive on their words (the NAVY
-// anchor from the left edge, the CONSERVATION whale tail from the top, the ENERGY offshore turbine from the
-// right), each a cream card carrying its glyph and its name, lifted while it travels and settling on landing;
-// once each has landed a cream line runs from it down onto the ship's body (Navy -> the bridge roof,
-// Conservation -> the funnel top, Energy -> the stern A-frame), so all three end on the one ship: each of
-// them uses this ship. On "all" the ship gets the cut's one light sweep; the camera creeps in toward the
-// ship through the tail.
+// ONE MOTION: a big survey ship cruises in from the right, bow first (bow wave, foam astern, the propeller's
+// bubbles under water), and comes to station at the middle of the frame, floating on a slow heave and pitch,
+// while the camera eases out from close and low. Three customers arrive on their words — cream cards lit by
+// the same sun (upper left), with a soft real shadow and a little thickness: the NAVY anchor from the left
+// edge, the CONSERVATION whale tail from the top, the ENERGY offshore turbine from the right — each lifted
+// while it travels, settling on landing; once each has landed a cream line runs from it down onto the ship
+// (Navy -> the bridge roof, Conservation -> the funnel top, Energy -> the stern A-frame): each of them uses
+// this ship. On "all" the ship gets the cut's one light sweep; the camera creeps in through the tail.
 //
-//   f 0-42    the ship cruises in at a constant speed and slows to a stop (bow wave, wake streaks)
-//   f -6-75   the camera eases out from close/low (k 1.3) onto the settled framing (k 1)
-//   f 36-51   NAVY from the left edge (lands on "Navy" 49 + 2); its line from f 55 (once landed)
-//   f 55-76   CONSERVATION from the top edge (lands by 78); its line from f 80
-//   f 82-97   ENERGY from the right edge; its line from f 101 (it reaches the A-frame ~f 112)
+//   f 0-42    the ship cruises in at a constant speed and slows to a stop
+//   f -6-75   the camera eases out from close/low (k 1.55) onto the settled framing (k 1, waterline y 1015)
+//   f 33-51   NAVY from the left edge; its line from f 55 (once landed)
+//   f 52-76   CONSERVATION from the top edge; its line from f 80
+//   f 79-97   ENERGY from the right edge; its line from f 101 (it reaches the A-frame ~f 112)
 //   f 111-125 THE ONE CLICK: the light sweep across the ship on "all"
-//   f 104-    the creep in toward the ship (still moving on f 155); bob, pool drift, grain
-// No amber (amber = money in this clip), no numbers.
-// LOCAL TOKEN: the connector lines are LINE_W = 3.25 screen px (the kit's STROKE tops out at RULE 2, which
-// almost disappeared at phone size; director's note, round 1).
-// ROUND 2 (blind phone-width review): the names live INSIDE the cards (ink Kräftig caps at CARD.labelPx, world
-// px, so each name arrives whole with its card); the settled composition sits 65 px higher (droneShipShared
-// CUT1_* framings: waterline at screen y ~1015 settled, ~1018 at the end of the creep).
+//   f 104-    the creep in toward the ship (still moving on f 155); bob, snow, rays, glints, grain
+// The underwater half (the caption band) carries nothing readable. No amber (amber = money in this clip).
+// LOCAL TOKEN: the connector lines are LINE_W = 3.25 screen px (the kit's STROKE tops out at RULE 2), cream on
+// a thin dark warm casing (LINE_CASE) so they read on the dusk sky and on the bright haze alike.
 // ===========================================================================
 
 export const FPS = 24000 / 1001;
 export const SLOT_FRAMES = 140;
 export const TAIL = 16;
-export const DURATION = CUT1_DURATION; // 156 = 140 + 16
+export const DURATION = CUT1_SEA_DURATION; // 156 = 140 + 16
 if (DURATION !== SLOT_FRAMES + TAIL) throw new Error("SameBigShip: DURATION != slot + tail");
 
 export const schema = z.object({});
@@ -72,14 +72,13 @@ const f2 = (v: number) => (Math.round(v * 1000) / 1000).toString();
 const fx = (v: number) => (Math.round(v * 1e6) / 1e6).toString();
 const uidOf = (raw: string) => `sb${raw.replace(/[^A-Za-z0-9_-]/g, "_")}`;
 
-// --- the ship's arrival ----------------------------------------------------------------------------------
-const WL = SHIP_STATION.wl;
-const STATION = SHIP_STATION.x;
-/** It cruises at a constant speed to CRUISE_END, then slows evenly to a stop on STOP (rest to rest at the
- *  end only: a ship comes to station, it does not start from one). On f0 the bow is ~180 px inside the frame. */
+// --- the ship's arrival (world: the waterline is y 0) -------------------------------------------------------
+const STATION = SEA_STATION.x;
+/** It cruises at a constant speed to CRUISE_END, then slows evenly to a stop on STOP. On f0 the bow is at
+ *  screen x 700. */
 const ARRIVE = { cruiseEnd: 16, stop: 42, bow0Screen: 700 } as const;
 const BOW0 = (() => {
-  const c = cut1CamAt(0);
+  const c = cut1SeaCamAt(0);
   return c.x + (ARRIVE.bow0Screen - 540) / c.k;
 })();
 const V_CRUISE = (BOW0 - STATION) / (ARRIVE.cruiseEnd + (ARRIVE.stop - ARRIVE.cruiseEnd) / 2);
@@ -89,35 +88,30 @@ export const bowAt = (f: number) => {
   if (f >= ARRIVE.cruiseEnd) return STATION + (V_CRUISE * Math.pow(ARRIVE.stop - f, 2)) / (2 * decel);
   return STATION + (V_CRUISE * decel) / 2 + V_CRUISE * (ARRIVE.cruiseEnd - f);
 };
-/** The bob grows in as the ship stops (under way it rides steady; at station it bobs). */
-const bobAmount = (f: number) => lerp(0.35, 1, smoothstep((f - 30) / 30));
+/** The float grows in as the ship comes off its way (under way it rides steadier). */
+const bobAmount = (f: number) => lerp(0.4, 1, smoothstep((f - 28) / 34));
 
-// --- the customers -----------------------------------------------------------------------------------------
-/** A customer card (WORLD px; = screen px + (0, 65) at the settled framing): the glyph in its upper part, its
- *  name in ink caps at the foot. 304 wide so CONSERVATION (276 px at 33 px, the kit's +0.06 em) keeps a
- *  14 px margin; three cards + two 32 px gaps leave 52 px each side of the frame. */
-const CARD = { w: 304, h: 230, gap: 32, glyph: 150, glyphTop: 20, labelPx: 33, labelFoot: 28 } as const;
-const ROW_Y = 445; // the cards' centre line (bottom edge at 560)
+// --- the customers (world px; the settled framing puts screen = world + (0, 1015)) --------------------------
+const CARD = { w: 304, h: 230, gap: 32, glyph: 150, glyphTop: 20, labelPx: 33, labelFoot: 28, thick: 5 } as const;
+const ROW_Y = -635; // the cards' centre line (bottom edge at -520: screen y 495 settled)
 const CARD_BOTTOM = ROW_Y + CARD.h / 2;
-const GLYPH_STROKE = 2.4; // in the glyph's 24 units (Lucide 2, the kit's sport glyphs 2.6)
+const GLYPH_STROKE = 2.4;
 type Kind = "navy" | "ocean" | "energy";
 type Customer = { kind: Kind; label: string; x: number; from: "left" | "top" | "right"; t0: number; land: number };
 const PITCH = CARD.w + CARD.gap;
 const CUSTOMERS: Customer[] = [
-  { kind: "navy", label: "Navy", x: 540 - PITCH, from: "left", t0: 36, land: 51 },
-  { kind: "ocean", label: "Conservation", x: 540, from: "top", t0: 55, land: 76 },
-  { kind: "energy", label: "Energy", x: 540 + PITCH, from: "right", t0: 82, land: 97 },
+  { kind: "navy", label: "Navy", x: 540 - PITCH, from: "left", t0: 33, land: 51 },
+  { kind: "ocean", label: "Conservation", x: 540, from: "top", t0: 52, land: 76 },
+  { kind: "energy", label: "Energy", x: 540 + PITCH, from: "right", t0: 79, land: 97 },
 ];
-/** Where a card enters: just outside the frame edge it comes from, with the camera of its first frame. */
 const startOf = (c: Customer) => {
-  const cam = cut1CamAt(c.t0);
-  if (c.from === "left") return { x: cam.x - 540 / cam.k - CARD.w / 2 - 12 / cam.k, y: ROW_Y };
-  if (c.from === "right") return { x: cam.x + 540 / cam.k + CARD.w / 2 + 12 / cam.k, y: ROW_Y };
-  return { x: c.x, y: cam.y - 960 / cam.k - CARD.h / 2 - 12 / cam.k };
+  const cam = cut1SeaCamAt(c.t0);
+  if (c.from === "left") return { x: cam.x - 540 / cam.k - CARD.w / 2 - 30 / cam.k, y: ROW_Y };
+  if (c.from === "right") return { x: cam.x + 540 / cam.k + CARD.w / 2 + 30 / cam.k, y: ROW_Y };
+  return { x: c.x, y: cam.y - 960 / cam.k - CARD.h / 2 - 30 / cam.k };
 };
-/** A card at frame f: it enters already moving (from off the frame) and slows to land (an even
- *  deceleration: velocity falls linearly to zero); lifted while it travels, settling over its last frames
- *  (settled on land + 3). */
+/** A card at frame f: it enters already moving (from off the frame) and slows to land (velocity falling
+ *  linearly to zero); lifted while it travels, settled on land + 3. */
 const tileAt = (c: Customer, f: number) => {
   const s = startOf(c);
   const u = clamp01((f - c.t0) / (c.land - c.t0));
@@ -126,28 +120,23 @@ const tileAt = (c: Customer, f: number) => {
   return { x: lerp(s.x, c.x, e), y: lerp(s.y, ROW_Y, e), lift: 1 - settle, on: f >= c.t0 };
 };
 
-// --- the lines: card -> a point on the ship's body, at one steady speed ------------------------------------------
+// --- the lines: card -> a point on the ship, at one steady speed --------------------------------------------
 const LINE_V = 28; // world px per frame
-/** The connector lines' weight (SCREEN px). The kit has no token this heavy (STROKE.HAIRLINE 1.5, RULE 2):
- *  at RULE the lines all but vanished at 270 px wide (director's note, round 1), so a local constant. */
-const LINE_W = 3.25;
-/** Where each line lands on the ship (SHIP-LOCAL px), spread bow to stern along its top: Navy on the bridge
- *  roof's fore end, Conservation on the funnel's top, Energy on the stern A-frame's head beam. Each point is
- *  2 px inside the surface: the lines are drawn under the ship, so each one meets its surface cleanly. */
+const LINE_W = 3.25; // SCREEN px (local token: the kit has no stroke this heavy)
+/** a thin dark warm casing under each cream line, so it reads on the dusk above and the bright haze below */
+const LINE_CASE = { w: 1.4, color: "#2E1E14", a: 0.7 } as const;
 const TARGET: Record<Kind, { x: number; y: number }> = {
-  navy: { x: SHIP.BRIDGE.x0t + 10, y: SHIP.BRIDGE.top - 6 + 2 },
-  ocean: { x: (SHIP.STACK.x0t + SHIP.STACK.x1t) / 2, y: SHIP.STACK.top + 2 },
-  energy: { x: (AFRAME.beam.x0 + AFRAME.beam.x1) / 2, y: AFRAME.beam.y0 + 1 + 2 },
+  navy: SHIP_PTS.bridgeRoofFront,
+  ocean: SHIP_PTS.funnelTop,
+  energy: SHIP_PTS.aframeTop,
 };
-/** A line starts under its card's bottom edge (hidden by the card) at its centre. */
 const lineStart = (c: Customer) => ({ x: c.x, y: CARD_BOTTOM - 2 });
-/** The line's end: its point on the ship (riding the bob). */
 const lineEnd = (c: Customer, f: number) => {
-  const m = shipToWorld(STATION, WL, f, TARGET[c.kind].x, TARGET[c.kind].y, bobAmount(f));
+  const m = shipToWorld(STATION, f, TARGET[c.kind].x, TARGET[c.kind].y, bobAmount(f));
   const s = lineStart(c);
   return { x: m.x, y: m.y, len: Math.hypot(m.x - s.x, m.y - s.y) };
 };
-/** A line starts once its card has landed and settled (land + 3) — never a stub under a card in flight. */
+/** A line starts once its card has landed and settled (land + 3): never a stub under a card in flight. */
 const LINE_T0 = (c: Customer) => c.land + 4;
 /** For the build's checks (scripts only). */
 export const TILE_TRACK = (i: number, f: number) => tileAt(CUSTOMERS[i], f);
@@ -156,29 +145,9 @@ export const LINE_DONE = CUSTOMERS.map((c) => LINE_T0(c) + lineEnd(c, 0).len / L
 // --- the click ----------------------------------------------------------------------------------------------
 const SWEEP_F: [number, number] = [111, 125];
 
-// --- the light pool: follows the subject (the ship, then the group's heart) with the camera's damper -----------
-const poolTarget = (f: number) => {
-  const shipMid = { x: bowAt(f) + SHIP.L / 2, y: WL - 170 };
-  const g = smoothstep((f - 46) / 60); // as the customers come, the pool widens its look up toward them
-  return { x: lerp(shipMid.x, 540, g), y: lerp(shipMid.y, WL - 300, g) };
-};
-const POOL: { x: number; y: number }[] = (() => {
-  const out: { x: number; y: number }[] = [];
-  let p = poolTarget(-30);
-  let v = { x: 0, y: 0 };
-  for (let f = -30; f < DURATION + 2; f++) {
-    const t = poolTarget(f);
-    v = { x: v.x + (t.x - p.x) * CAM_STIFF - v.x * CAM_DAMP, y: v.y + (t.y - p.y) * CAM_STIFF - v.y * CAM_DAMP };
-    p = { x: p.x + v.x, y: p.y + v.y };
-    if (f >= 0) out.push({ ...p });
-  }
-  return out;
-})();
-
 // ===========================================================================
 // THE GLYPHS (24-unit Lucide grammar, ink on cream)
 // ===========================================================================
-/** Lucide "anchor". */
 const Anchor: React.FC = () => (
   <g fill="none">
     <path d="M12 22V8" />
@@ -186,7 +155,6 @@ const Anchor: React.FC = () => (
     <circle cx="12" cy="5" r="3" />
   </g>
 );
-/** A whale's tail (flukes) rising out of the water, in Lucide grammar: the flukes a solid ink silhouette. */
 const WhaleTail: React.FC = () => (
   <g fill="none">
     <path
@@ -197,10 +165,8 @@ const WhaleTail: React.FC = () => (
     <path d="M13.6 20.5c.8 0 1.3.9 2.4.9s1.7-.9 3-.9 1.9.9 3 .9" />
   </g>
 );
-/** An offshore wind turbine on a monopile: THE canonical icon, static (round 3: any turn kept landing on
- *  angles that read as an aeroplane or a cross). The hub on top of the tower; three equal, long, thick,
- *  round-capped blades exactly 120 deg apart, one straight UP (the others down-left and down-right); the
- *  tower tapering down into the wave line as its monopile. At the anchor's weight. */
+/** The canonical wind-turbine icon, static: the hub on top of a tapered tower that runs down into the wave
+ *  line as its monopile; three equal, long, thick, round-capped blades 120 deg apart, one straight up. */
 const Turbine: React.FC = () => {
   const H = { x: 12, y: 7.4 };
   const R = 7.1;
@@ -219,36 +185,42 @@ const Turbine: React.FC = () => {
   );
 };
 
-/** A customer: a cream card (the stout card: one gradient, the lit top edge, one shadow at its elevation)
- *  carrying its ink glyph and, at its foot, its name in ink Kräftig caps (world px: the name is printed on
- *  the card and arrives with it). (x, y) is the centre, world px. */
+/** The cards' light: the scene's sun (upper left). A soft real shadow cast down-right onto the sky (it lifts
+ *  while the card travels), a little thickness on the shaded edges, the lit top-left. */
+const CARD_SHADOW = { rest: { dx: 9, dy: 15, blur: 11, a: 0.34 }, lifted: { dx: 16, dy: 28, blur: 20, a: 0.26 } } as const;
 const CustomerCard: React.FC<{ c: Customer; x: number; y: number; k: number; lift: number }> = ({ c, x, y, k, lift }) => {
   const uid = uidOf(useId());
   const x0 = x - CARD.w / 2;
   const y0 = y - CARD.h / 2;
-  const d = rectPath(x0, y0, CARD.w, CARD.h);
+  const d = rectPath(x0, y0, CARD.w, CARD.h, 6);
   const g = CARD.glyph;
   const sc = g / 24;
   const fs = CARD.labelPx;
+  const L = clamp01(lift);
+  const sh = {
+    dx: lerp(CARD_SHADOW.rest.dx, CARD_SHADOW.lifted.dx, L),
+    dy: lerp(CARD_SHADOW.rest.dy, CARD_SHADOW.lifted.dy, L),
+    blur: lerp(CARD_SHADOW.rest.blur, CARD_SHADOW.lifted.blur, L),
+    a: lerp(CARD_SHADOW.rest.a, CARD_SHADOW.lifted.a, L),
+  };
+  const t = CARD.thick;
   return (
     <g>
       <defs>
-        <linearGradient id={`${uid}c`} gradientUnits="userSpaceOnUse" x1="0" y1={f2(y0)} x2="0" y2={f2(y0 + CARD.h)}>
-          <stop offset="0" stopColor={COLOR.cream} />
+        <linearGradient id={`${uid}c`} gradientUnits="userSpaceOnUse" x1={f2(x0)} y1={f2(y0)} x2={f2(x0 + CARD.w * 0.35)} y2={f2(y0 + CARD.h)}>
+          <stop offset="0" stopColor="#FBF6EC" />
+          <stop offset="0.55" stopColor={COLOR.cream} />
           <stop offset="1" stopColor={COLOR.creamFoot} />
         </linearGradient>
       </defs>
-      <ElevationShadow silhouette={[{ d }]} elevation="rest" lift={lift} contact={{ x, y: y0 + CARD.h, w: CARD.w * 0.86 }} />
+      {/* the soft shadow on the sky (the sun is upper left) */}
+      <path d={d} fill="#3B2A1C" opacity={f2(sh.a)} transform={`translate(${fx(sh.dx)} ${fx(sh.dy)})`} style={{ filter: `blur(${f2(sh.blur)}px)` }} />
+      {/* the card's thickness: its shaded bottom and right edges */}
+      <path d={rectPath(x0 + t * 0.6, y0 + t, CARD.w, CARD.h, 6)} fill="#B8A98F" />
       <path d={d} fill={`url(#${uid}c)`} />
-      <path d={`M${f2(x0 + 4)} ${f2(y0 + EDGE.CREAM / k / 2)}H${f2(x0 + CARD.w - 4)}`} stroke={COLOR.edge} strokeOpacity={ALPHA.edge} strokeWidth={f2(EDGE.CREAM / k)} />
-      <g
-        transform={`translate(${fx(x - g / 2)} ${fx(y0 + CARD.glyphTop)}) scale(${fx(sc)})`}
-        stroke={COLOR.inkDark}
-        color={COLOR.inkDark}
-        strokeWidth={GLYPH_STROKE}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
+      {/* the lit top edge */}
+      <path d={`M${f2(x0 + 6)} ${f2(y0 + 0.9 / k)}H${f2(x0 + CARD.w - 6)}`} stroke="#FFFFFF" strokeOpacity={0.85} strokeWidth={f2(1.6 / k)} />
+      <g transform={`translate(${fx(x - g / 2)} ${fx(y0 + CARD.glyphTop)}) scale(${fx(sc)})`} stroke={COLOR.inkDark} color={COLOR.inkDark} strokeWidth={GLYPH_STROKE} strokeLinecap="round" strokeLinejoin="round">
         {c.kind === "navy" ? <Anchor /> : c.kind === "ocean" ? <WhaleTail /> : <Turbine />}
       </g>
       <text
@@ -270,37 +242,53 @@ const CustomerCard: React.FC<{ c: Customer; x: number; y: number; k: number; lif
 
 const SameBigShip: React.FC<Props> = () => {
   const f = useCurrentFrame();
-  const cam: Cam = cut1CamAt(f);
+  const cam: Cam = cut1SeaCamAt(f);
   const k = cam.k;
   const bow = bowAt(f);
-  const pool = POOL[Math.max(0, Math.min(POOL.length - 1, f))];
+  const bob = bobAmount(f);
+  const segs = CUSTOMERS.map((c) => {
+    const s = lineStart(c);
+    const e = lineEnd(c, f);
+    const drawn = Math.min(e.len, Math.max(0, (f - LINE_T0(c)) * LINE_V));
+    if (drawn <= 0.01) return null;
+    const t = drawn / e.len;
+    return { id: c.kind, x1: f2(s.x), y1: f2(s.y), x2: f2(lerp(s.x, e.x, t)), y2: f2(lerp(s.y, e.y, t)) };
+  });
+  const lines = (
+    <g strokeLinecap="butt" fill="none">
+      <g stroke={LINE_CASE.color} strokeOpacity={LINE_CASE.a} strokeWidth={f2((LINE_W + 2 * LINE_CASE.w) / k)}>
+        {segs.map((g) => (g ? <line key={g.id} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} /> : null))}
+      </g>
+      <g stroke={COLOR.inkCream} strokeWidth={f2(LINE_W / k)}>
+        {segs.map((g) => (g ? <line key={g.id} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} /> : null))}
+      </g>
+    </g>
+  );
   return (
     <AbsoluteFill>
-      <StoutStage S={f} cam={cam} rest={CUT1_CAM[0]} pool={{ ...pool, strength: lerp(1, 1.5, smoothstep((f - 40) / 70)) }}>
-        <Sea wl={WL} k={k} S={f} />
-        <Wake f={f} wl={WL} k={k} bowAt={bowAt} vMax={V_CRUISE} />
-
-        {/* the three lines, card -> the ship's body, drawn at one steady speed (under the ship and the cards) */}
-        <g stroke={COLOR.inkCream} strokeWidth={f2(LINE_W / k)} strokeLinecap="butt" fill="none">
-          {CUSTOMERS.map((c) => {
-            const s = lineStart(c);
-            const e = lineEnd(c, f);
-            const drawn = Math.min(e.len, Math.max(0, (f - LINE_T0(c)) * LINE_V));
-            if (drawn <= 0.01) return null;
-            const t = drawn / e.len;
-            return <line key={c.kind} x1={f2(s.x)} y1={f2(s.y)} x2={f2(lerp(s.x, e.x, t))} y2={f2(lerp(s.y, e.y, t))} />;
-          })}
-        </g>
-
-        <SurveyShip x={bow} wl={WL} k={k} S={f} bob={bobAmount(f)} sweep={(f - SWEEP_F[0]) / (SWEEP_F[1] - SWEEP_F[0])} />
-
-        {/* the customers: each card carries its glyph and its name */}
-        {CUSTOMERS.map((c) => {
+      <SeaStage
+        S={f}
+        cam={cam}
+        rest={CUT1_SEA_CAM[0]}
+        below={
+          <>
+            <BubbleTrail f={f} bowAt={bowAt} vMax={V_CRUISE} />
+            <ResearchShip x={bow} S={f} bob={bob} part="below" k={k} />
+          </>
+        }
+        above={
+          <>
+            {lines}
+            <ResearchShip x={bow} S={f} bob={bob} part="above" k={k} sweep={(f - SWEEP_F[0]) / (SWEEP_F[1] - SWEEP_F[0])} />
+            <SurfaceWake f={f} bowAt={bowAt} vMax={V_CRUISE} k={k} />
+          </>
+        }
+        top={CUSTOMERS.map((c) => {
           const t = tileAt(c, f);
           if (!t.on) return null;
           return <CustomerCard key={c.kind} c={c} x={t.x} y={t.y} k={k} lift={t.lift} />;
         })}
-      </StoutStage>
+      />
     </AbsoluteFill>
   );
 };
