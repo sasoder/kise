@@ -1,4 +1,3 @@
-import React from 'react';
 import {Composition} from 'remotion';
 import CodeLines, {DURATION, FPS, defaultProps, schema} from '../generated/components/CodeLines';
 

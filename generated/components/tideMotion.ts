@@ -1,5 +1,5 @@
 // ClosedWorldsTide: where every ship and dot is on every frame. Pure maths (no
-// React), so scripts/check-tide-dots.ts can count and measure it. World px of the
+// React), so it can be counted and measured outside a render. World px of the
 // Mercator chart (tideGeo.ts); the camera is tideCamera.ts.
 //
 // THE LEAD SHIP rides the dashed Carrera track to the ring (ClosedWorlds' own

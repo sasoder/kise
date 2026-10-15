@@ -48,7 +48,6 @@ import { DOTS, FOLLOW, LEAD, SHIPS, TRUNK_LEN, carreraAt, drawRadius, edgeScale,
 //                2021: 983,700 Aboriginal and Torres Strait Islander people)
 //   New Zealand  18 orange among 101 dots = 17.8 % (Stats NZ, 2023 Census:
 //                887,493 Maori)
-//   scripts/check-tide-dots.ts counts them.
 // WHAT IS SCHEMATIC: the ring (a 5.1 deg circle round Tenochtitlan: "their
 // world"); the dots in Mexico (ILLUSTRATIVE, no ratio is claimed: no orange
 // dots are drawn there); where the cream dots stand in Australia (a softened
