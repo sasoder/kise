@@ -1,9 +1,10 @@
-"""Split the four track items of a one-clip-per-track sequence into KEEP segments (same media, so handles stay).
-usage: cut_prproj.py in.xml out.xml '[[f0,f1],...]'   frames at 23.976 in sequence time."""
+"""Split the linked track items of a one-clip-per-track sequence into KEEP segments (same media, so handles stay).
+usage: prproj_cut.py in.xml out.xml '[[f0,f1],...]'   frames in sequence time at the sequence's own frame rate
+(read from the VideoTrackGroup: 23.976, 24, 25, 29.97 ...). Any number of V/A link pairs (one or two cameras)."""
 import re, sys, json, uuid
-TPF = 10594584000  # ticks per 23.976 frame
 src = open(sys.argv[1], encoding='utf-8').read()
 keeps = json.loads(sys.argv[3])
+assert all(b > a for a, b in keeps) and all(keeps[i][1] <= keeps[i + 1][0] for i in range(len(keeps) - 1)), keeps
 
 def block(oid):
     m = re.search(r'\t<(\w+) ObjectID="%d" .*?\n\t</\1>\n' % oid, src, re.S)
@@ -12,23 +13,39 @@ def block(oid):
 def ref(txt, tag):
     return int(re.search(r'<%s ObjectRef="(\d+)"/>' % tag, txt).group(1))
 
+vtg = re.search(r'<VideoTrackGroup ObjectID="\d+".*?</VideoTrackGroup>', src, re.S).group(0)
+TPF = int(re.search(r'<FrameRate>(\d+)</FrameRate>', vtg).group(1))  # ticks per sequence frame
+print('sequence fps %.3f' % (254016000000 / TPF))
+
 next_id = [max(int(x) for x in re.findall(r'ObjectID="(\d+)"', src)) + 1]
 def nid():
     next_id[0] += 1; return next_id[0] - 1
 def reid(txt, new):
     return re.sub(r'ObjectID="\d+"', 'ObjectID="%d"' % new, txt, count=1)
+# project-wide counter for the numeric Node <ID>s Premiere gives track items
+node_next = [int(re.search(r'<NextID>(\d+)</NextID>', src).group(1))]
+def fresh_ids(txt):
+    def sub(m):
+        if m.group(1).isdigit():
+            node_next[0] += 1; return '<ID>%d</ID>' % (node_next[0] - 1)
+        return '<ID>%s</ID>' % uuid.uuid4()
+    return re.sub(r'<ID>([^<]*)</ID>', sub, txt)
 
 links = [(int(a), int(b)) for a, b in re.findall(
     r'<Link ObjectID="\d+".*?<TrackItem Index="0" ObjectRef="(\d+)"/>\s*<TrackItem Index="1" ObjectRef="(\d+)"/>', src, re.S)]
 link_ids = [int(x) for x in re.findall(r'<Link Index="\d+" ObjectRef="(\d+)"/>', src)]
 link_tpl = block(link_ids[0])
-assert len(links) == 2 and len(link_ids) == 2
+assert links and len(links) == len(link_ids), (links, link_ids)
 
-new_objs, remove, track_lists, new_links = [], [], {}, []
+new_objs, remove, track_lists, new_links, old_end = [], [], {}, [], None
 for pair in links:
     made = {}
     for item in pair:
         ti = block(item); chain_id = ref(ti, 'Components'); sub_id = ref(ti, 'SubClip')
+        assert '<Start>' not in ti, 'track item does not start at 0'
+        end = int(re.search(r'<End>(\d+)</End>', ti).group(1))
+        assert old_end in (None, end), 'track items differ in length'; old_end = end
+        assert keeps[-1][1] * TPF <= end, 'keep runs past the clip end'
         chain = block(chain_id); sub = block(sub_id); clip_id = ref(sub, 'Clip'); clip = block(clip_id)
         assert 'ObjectRef' not in chain, 'component chain is not default'
         sec_ids = [int(x) for x in re.findall(r'<SecondaryContentItem Index="\d+" ObjectRef="(\d+)"/>', clip)]
@@ -55,8 +72,7 @@ for pair in links:
             i = next(n for n, o in enumerate(new_objs) if 'ObjectID="%d"' % t_id in o.split('\n', 1)[0])
             start = ('<Start>%d</Start>\n\t\t\t\t' % (pos * TPF)) if pos else ''
             new_objs[i] = re.sub(r'<End>\d+</End>', '%s<End>%d</End>' % (start, (pos + f1 - f0) * TPF), new_objs[i])
-            if '<ID>' in new_objs[i]:
-                new_objs[i] = re.sub(r'<ID>[^<]*</ID>', '<ID>%s</ID>' % uuid.uuid4(), new_objs[i])
+            new_objs[i] = fresh_ids(new_objs[i])
             pos += f1 - f0
         made[item] = ids
         track_lists[item] = ids
@@ -68,7 +84,6 @@ for pair in links:
         new_objs.append(t); new_links.append(l)
 total = sum(b - a for a, b in keeps) * TPF
 out = src
-old_dur = re.search(r'<MZ.OutPoint>(\d+)</MZ.OutPoint>', src).group(1)
 for l in link_ids: remove.append(block(l))
 for r in remove:
     assert out.count(r) == 1; out = out.replace(r, '')
@@ -81,8 +96,11 @@ for item, ids in track_lists.items():
     pat = re.compile(r'([ \t]*)<TrackItem Index="0" ObjectRef="%d"/>\n' % item)
     assert len(pat.findall(out)) == 1
     out = pat.sub(lambda m: ''.join('%s<TrackItem Index="%d" ObjectRef="%d"/>\n' % (m.group(1), i, t) for i, t in enumerate(ids)), out)
-out = out.replace(old_dur, str(total))
+# sequence in/out and view range only (media durations stay as they are)
+for tag in ('MZ.OutPoint', 'MZ.WorkOutPoint', 'Monitor.ProgramZoomOut'):
+    out = out.replace('<%s>%d</%s>' % (tag, old_end, tag), '<%s>%d</%s>' % (tag, total, tag))
 out = re.sub(r'<MZ.EditLine>\d+</MZ.EditLine>', '<MZ.EditLine>0</MZ.EditLine>', out)
+out = re.sub(r'<NextID>\d+</NextID>', '<NextID>%d</NextID>' % node_next[0], out, count=1)
 i = out.rindex('</PremiereData>')
 out = out[:i] + ''.join(new_objs) + out[i:]
 open(sys.argv[2], 'w', encoding='utf-8').write(out)
