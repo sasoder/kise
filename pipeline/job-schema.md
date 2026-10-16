@@ -1,7 +1,7 @@
-# job.json — the shared contract (v1, 2026-10-10)
+# job.json — the shared contract (v1)
 
-Owner: the "Map the motion graphics pipeline" thread. Other threads read and write job.json but propose schema
-changes to the owner instead of adding fields on their own. Unknown fields must be kept when a tool rewrites the file.
+Tools read and write job.json but never add fields of their own. Unknown fields must be kept when a tool rewrites
+the file.
 
 ## Where it lives
 

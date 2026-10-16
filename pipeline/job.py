@@ -436,8 +436,8 @@ def assembly(job, clipdir, statuses=("drafting", "ready for review", "approved",
 def kickoff_prompt(job, clipdir):
     return (f"Create motion graphics in: {job.get('source', {}).get('file') or job['clip']}\n"
             f"Working folder: {os.path.abspath(clipdir)}\n\n"
-            "Run this as a clip job (AGENTS.md, 'Clip jobs'). Style: "
-            f"{job.get('style') or 'pick from the client and MEMORY.md'}. Render every cut into graphics/ "
+            "Run this as a clip job (AGENTS.md). Style: "
+            f"{job.get('style') or 'pick from the client (AGENTS.md, Styles)'}. Render every cut into graphics/ "
             "under the usual <in>_<Name>.mov names. Before rendering, write the planned cuts into job.json "
             "in the working folder (format: pipeline/job-schema.md) with status 'drafting'; set each to "
             "'ready for review' once its render passes review. Do not ask questions: decide and report.")
@@ -449,7 +449,7 @@ def revision_prompt(job, clipdir, todo):
     return (f"Revise motion graphics in: {job['clip']}\nWorking folder: {os.path.abspath(clipdir)}\n\n"
             f"These graphics were marked 'needs fix' in job.json, with the reviewer's note:\n{items}\n\n"
             "For each: rebuild from its src/Root.<Name>.tsx, render the new version under the SAME file name, "
-            "move the previous file to old/<file>_V<n>.mov (MEMORY.md 'Delivering revisions'), and set its "
+            "move the previous file to old/<file>_V<n>.mov (AGENTS.md, 'Deliver'), and set its "
             "status in job.json to 'ready for review'. Touch nothing else. Do not ask questions.")
 
 
