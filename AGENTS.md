@@ -80,8 +80,9 @@ bun run lint                                                                    
 
 - Run the checks in CRAFT.md on the preview and iterate. Then stop and report the preview path, the key frames and
   anything that did not work, unless the brief says to finalise (final render, delivery, git).
-- Add only the flags CRAFT.md or the style file call for (`--concurrency=4`, `--color-space=bt709`, `--scale 2`,
-  `--gl=angle`). For an overlay, confirm the alpha with `KISE_TRANSPARENT=1 bun run review <file>.mov`.
+- Add only the flags CRAFT.md, the style file or the brief call for (`--concurrency=4`, `--color-space=bt709`,
+  `--scale 2`, `--gl=angle`). Several builders share one 36 GB Mac, so renders use `--concurrency=4` and never run
+  in parallel within one builder. For an overlay, confirm the alpha with `KISE_TRANSPARENT=1 bun run review <file>.mov`.
 
 ## Deliver
 
