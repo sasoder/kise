@@ -90,8 +90,8 @@ from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 PUB = os.path.join(ROOT, "public", "minedeath")
-PHOTO = os.path.join(PUB, "cerro_gordo_town_2005.jpg")
-SCAN = os.path.join(PUB, "inyo_1897_fatal_accident_item.jpg")
+PHOTO = os.path.join(ROOT, "assets-src", "minedeath", "cerro_gordo_town_2005.jpg")
+SCAN = os.path.join(ROOT, "assets-src", "minedeath", "inyo_1897_fatal_accident_item.jpg")
 
 SEED = 1897
 

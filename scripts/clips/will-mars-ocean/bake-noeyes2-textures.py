@@ -28,7 +28,7 @@ UP = 3
 
 
 def main():
-    t = Image.open(os.path.join(D, "spacific_relief_4k.jpg"))
+    t = Image.open(os.path.join(ROOT, "assets-src", "marsocean", "spacific_relief_4k.jpg"))
     x0, y0, n = CLOSE
     box = (x0, y0, x0 + n, y0 + n)
     raw = t.crop(box).filter(ImageFilter.GaussianBlur(0.55)).resize((n * UP, n * UP), Image.BICUBIC)

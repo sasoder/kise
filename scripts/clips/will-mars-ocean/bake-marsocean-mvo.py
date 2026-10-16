@@ -1,8 +1,8 @@
 """Bake the MarsVsOcean (Cheeky Pint S4E02) Earth textures into public/marsocean/ (mvo_ prefix; originals untouched).
 
 Run from the repo root:  python3 scripts/clips/will-mars-ocean/bake-marsocean-mvo.py
-Inputs : public/marsocean/earth_daymap_8k.jpg (Solar System Scope, CC BY 4.0),
-         public/marsocean/earth_topobathy_5400.jpg (NASA Blue Marble NG topo + bathy, public domain)
+Inputs : assets-src/marsocean/earth_daymap_8k.jpg (Solar System Scope, CC BY 4.0),
+         assets-src/marsocean/earth_topobathy_5400.jpg (NASA Blue Marble NG topo + bathy, public domain)
 Outputs: mvo_earth_color_4k.jpg   the daymap at 4096x2048
          mvo_earth_ocean_4k.png   R = water (soft coast, from the daymap's flat navy)
                                   G = shelf (Blue Marble ocean luminance, blurred: 1 = shallow)
@@ -25,12 +25,12 @@ def wrapx(a, pad):
 
 
 # --- colour + water mask + shelf ---------------------------------------------------------------
-day = Image.open(D + "earth_daymap_8k.jpg").convert("RGB")
+day = Image.open("assets-src/marsocean/earth_daymap_8k.jpg").convert("RGB")
 a = np.asarray(day).astype(np.float32)
 dist = np.sqrt(((a - np.array([30, 59, 117])) ** 2).sum(-1))
 ocean = np.clip((40 - dist) / 25, 0, 1)
 ocean_img = Image.fromarray((ocean * 255).astype(np.uint8)).resize((4096, 2048), Image.BOX)
-tb = Image.open(D + "earth_topobathy_5400.jpg").convert("RGB").resize((4096, 2048), Image.LANCZOS)
+tb = Image.open("assets-src/marsocean/earth_topobathy_5400.jpg").convert("RGB").resize((4096, 2048), Image.LANCZOS)
 t = np.asarray(tb).astype(np.float32)
 lum = 0.2126 * t[..., 0] + 0.7152 * t[..., 1] + 0.0722 * t[..., 2]
 om = np.asarray(ocean_img).astype(np.float32) / 255

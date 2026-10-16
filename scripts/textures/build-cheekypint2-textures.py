@@ -1,7 +1,7 @@
 """Bake the Cheeky Pint 2.0 look-development textures (deterministic; no downloads).
 
 Run once:  python3 scripts/textures/build-cheekypint2-textures.py
-Reads:     public/brown-paper.png (the house kraft photo, 6196 x 3478)
+Reads:     assets-src/brown-paper.png (the house kraft photo, 6196 x 3478)
 Writes:    public/cheekypint2/ (every texture 1296 x 2304 = 1.2 x the 1080 x 1920 frame, so a
            moving camera has parallax headroom; a still draws the centre at 1:1)
   kraft-fresh.jpg  the kraft photo CRISP and LIGHT: the large cloudy mottle flattened to ~35 %,
@@ -28,7 +28,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SRC = os.path.join(ROOT, "public", "brown-paper.png")
+SRC = os.path.join(ROOT, "assets-src", "brown-paper.png")
 OUT = os.path.join(ROOT, "public", "cheekypint2")
 W, H = 1296, 2304
 SEED = 20261002

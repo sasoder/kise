@@ -9,7 +9,7 @@ from PIL import Image, ImageFilter
 
 Image.MAX_IMAGE_PIXELS = None
 D = "public/marsocean/"
-g = np.asarray(Image.open(D + "gebco2026_relief_8k.jpg").convert("L").resize((4096, 2048), Image.LANCZOS)).astype(np.float32)
+g = np.asarray(Image.open("assets-src/marsocean/gebco2026_relief_8k.jpg").convert("L").resize((4096, 2048), Image.LANCZOS)).astype(np.float32)
 water = np.asarray(Image.open(D + "mvo_earth_ocean_4k.png").convert("RGB"))[..., 0].astype(np.float32) / 255
 land = np.asarray(Image.open(D + "mvo_earth_gridland_4k.png").convert("L")).astype(np.float32) / 255
 sea = (water > 0.5) & (land < 0.5)

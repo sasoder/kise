@@ -89,7 +89,7 @@ def surface(w, rows, ref):
     """The dusk surface above the lip at 1/3 res: the clip's FULL 16:9 frame (the timeline shows only its centre 9:16),
     at the clip's place and scale, so the hoist house stands in its own real surroundings. Left and right it feathers
     into a soft, out-of-focus continuation of its own edge colours, row by row (sky above, hill and ground below)."""
-    wide = np.asarray(Image.open(os.path.join(SRC, "nh_frame0_wide.png")).convert("RGB")).astype(np.float32) / 255.0
+    wide = np.asarray(Image.open(os.path.join(ROOT, "assets-src", "cerro", "shaft", "nh_frame0_wide.png")).convert("RGB")).astype(np.float32) / 255.0
     fh, fw = wide.shape[:2]  # 640 x 1138
     c0 = (REF_X - WX0) // K - int(round((fw - 360) / 2.0))  # the 9:16 crop is the frame's centre 360 columns
     r0 = (REF_Y - WY0) // K

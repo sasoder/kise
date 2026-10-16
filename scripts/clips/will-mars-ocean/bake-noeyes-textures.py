@@ -68,13 +68,13 @@ def save_jpg(im: Image.Image, name: str):
 
 
 def main():
-    g = Image.open(os.path.join(D, "gebco2026_relief_8k.jpg")).convert("RGB")
+    g = Image.open(os.path.join(ROOT, "assets-src", "marsocean", "gebco2026_relief_8k.jpg")).convert("RGB")
     ga = np.asarray(g).copy()
     ga[:, 0] = ga[:, 1]  # the WMS render's first column is a bright seam line at lon -180
     g = Image.fromarray(ga)
     save_jpg(channels(g, DEG_PER_PX["global"], wrap=True), "noeyes_global_relief_8k.jpg")
 
-    t = Image.open(os.path.join(D, "spacific_relief_4k.jpg"))
+    t = Image.open(os.path.join(ROOT, "assets-src", "marsocean", "spacific_relief_4k.jpg"))
     tc = channels(t, DEG_PER_PX["tile"])
     save_jpg(tc, "noeyes_tile_relief_4k.jpg")
 

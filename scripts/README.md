@@ -54,7 +54,7 @@ own photo cover-cropped at `crop_y` 0..1). Needs the Inter variable font in `~/L
 Deterministic and offline; run once, and commit what they write to `public/`.
 
 - `build-brown-textures.py`: the stout grounds `public/cheekypint2/brown-b1.jpg` (B1, the default), `brown-b2.jpg`,
-  `brown-b3.jpg`, from `public/brown-paper.png`. Touches nothing else.
+  `brown-b3.jpg`, from `assets-src/brown-paper.png`. Touches nothing else.
 - `build-cheekypint2-textures.py`: `public/cheekypint2/grain.png` (the stout kit's grain), `card.png` and
   `speckle.png`. The `kraft-*.jpg` and `stout.jpg` it also writes belong to other looks; see `styles/cheeky-pint.md`.
 - `build-china-paper-vintage.py`: the ChinaTalk newsprint, `public/china/paper_vintage.png`, `fibre_vintage.png` and

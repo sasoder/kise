@@ -78,6 +78,7 @@ Image.MAX_IMAGE_PIXELS = None
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 SRC = os.path.join(ROOT, "public", "cerro", "shaft")
+RAW = os.path.join(ROOT, "assets-src", "cerro", "shaft")  # source frames; not rendered, so not in public/
 
 # ---------------------------------------------------------------- geometry
 W = 1400
@@ -238,7 +239,8 @@ def rnoise(h, w, s_across, s_along, phi_deg, r, ds=4, y0=0):
 
 
 def load(name):
-    return np.asarray(Image.open(os.path.join(SRC, name)).convert("RGB")).astype(np.float32) / 255.0
+    path = os.path.join(RAW, name) if os.path.exists(os.path.join(RAW, name)) else os.path.join(SRC, name)
+    return np.asarray(Image.open(path).convert("RGB")).astype(np.float32) / 255.0
 
 
 def flatten(img, sigma=70.0, std_target=0.17, chroma_keep=0.45):

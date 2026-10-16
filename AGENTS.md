@@ -47,6 +47,8 @@ Nothing else. Do not browse old cuts, other kits or other styles unless the styl
 - Fonts come from the style file: Google fonts via `loadFont()` from `@remotion/google-fonts/<Font>` at module scope
   (use the `fontFamily` it returns); local OTF/TTF via `@remotion/fonts` `loadFont({family, url: staticFile('<file>')})`
   at module scope. Assets live in `public/<clip>/`, load through `staticFile()` and are committed with the cut.
+  Raw sources that only a bake script reads go in `assets-src/<clip>/`, not `public/`: every render copies all of
+  `public/`.
 - Each cut gets its own render entry, on the pattern of `src/Root.StillAroundLater.tsx` + `src/entry.StillAroundLater.ts`:
 
 ```tsx

@@ -1,7 +1,7 @@
 """Bake the BROWN grounds for the stout system's palette pass (deterministic; no downloads).
 
 Run:    python3 scripts/textures/build-brown-textures.py
-Reads:  public/brown-paper.png (the house kraft photo, 6196 x 3478)
+Reads:  assets-src/brown-paper.png (the house kraft photo, 6196 x 3478)
 Writes: public/cheekypint2/brown-b1.jpg, brown-b2.jpg, brown-b3.jpg ONLY (1296 x 2304, like stout.jpg).
         It never touches stout.jpg or any other texture: build-cheekypint2-textures.py owns those.
 
@@ -23,7 +23,7 @@ import numpy as np
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SRC = os.path.join(ROOT, "public", "brown-paper.png")
+SRC = os.path.join(ROOT, "assets-src", "brown-paper.png")
 OUT = os.path.join(ROOT, "public", "cheekypint2")
 W, H = 1296, 2304
 LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
