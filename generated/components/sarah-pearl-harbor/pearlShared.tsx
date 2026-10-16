@@ -165,7 +165,7 @@ export const WorldDiv: React.FC<{ cam: Cam; children?: React.ReactNode; style?: 
 
 // ---------------------------------------------------------------------------
 // THE STATIC MAP: <MapBase world cam> draws the raster LOD tiles for this camera
-// (scripts/maps/sets/pearl/bake-pearl-rasters.mjs) and the world-space paper mottle over them.
+// (scripts/maps/bake.mjs scripts/maps/configs/pearl.mjs) and the world-space paper mottle over them.
 // <MapPage world cam> = SEA ground + MapBase + children + grain + vignette.
 // ---------------------------------------------------------------------------
 export type World = "asia" | "pacific";

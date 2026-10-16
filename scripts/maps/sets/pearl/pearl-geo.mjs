@@ -1,8 +1,7 @@
 // pearl-geo: the shared geometry of the Pearl Harbor clip's two map worlds
 // (Sarah Paine, "How the Depression pushed Japan to Pearl Harbor", Dwarkesh map
-// style). Imported by scripts/maps/sets/pearl/build-pearl-maps.mjs (vector data for the cuts)
-// and scripts/maps/sets/pearl/bake-pearl-rasters.mjs (the static raster LOD tiles), so both read
-// one projection and one set of rings. Natural Earth 10m from world-atlas.
+// style). Imported by scripts/maps/sets/pearl/build-pearl-allofchina.mjs (the AllOfChina cut data);
+// the maps themselves come from scripts/maps/configs/pearl.mjs on the shared tool. Natural Earth 10m from world-atlas.
 //
 // ASIA     north-up Lambert conformal conic, parallels 25/45, centre meridian
 //          112 E. World px == screen px at the k 1 "all of China" framing: 65 deg

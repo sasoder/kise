@@ -26,9 +26,9 @@ umber page without a map, in cream engraved line with house orange as the accent
 
 ## The map
 
-- Natural Earth 10m from the installed `world-atlas` + `d3-geo`, `topojson-client`, `polygon-clipping`. Always
-  north-up: Lambert conformal conic fitted to the region by default; Albers equal-area when areas are compared
-  (`scripts/maps/sets/multiple/build-multiple-map.mjs`); Mercator or Equal Earth for ocean or world spans (`scripts/maps/sets/world/build-world-map.mjs`).
+- Natural Earth 10m from the installed `world-atlas`, through the map tool (`scripts/maps/`). Always north-up:
+  Lambert conformal conic fitted to the region by default (`lcc`); Albers equal-area when areas are compared
+  (`albers`); Mercator or Equal Earth for ocean or world spans (`mercator`, `equalEarth`).
   Rotated or globe views that turn a route vertical do not read.
 - Period borders only (merge what was one country, drop lines that did not exist), fine dashed cream at ~0.5. Add
   period water (Lake Texcoco 1519); leave out modern lakes.
@@ -39,21 +39,22 @@ umber page without a map, in cream engraved line with house orange as the accent
   empire fits whole in frame; a world map uses the largest k that keeps every lit country in; no plate edge shows.
 - Events at "the same moment" share one frame: open wide enough for all of them, land them together, then move in.
 
-## Build pattern (copy per clip)
+## Build pattern (the map tool, `scripts/maps/README.md`)
 
-1. `scripts/<x>-geo.json` or `scripts/<x>-geo.mjs`: projection, sites, routes, georeferenced polygons, sourced facts.
-2. `scripts/build-<x>-map.mjs` → `generated/components/<x>Static.ts` (heavy static layers, read only by the bake) +
-   `<x>MapData.ts` (light overlays: `project`, places, routes, regions clipped to land). It throws on failed checks.
-3. `scripts/bake-<x>-rasters.mjs` (`@resvg/resvg-js`) → tiled LOD pyramid `public/<x>/<level>-<i>-<j>.png` +
-   `<x>Levels.ts`: a whole-extent level for the wides, finer levels only where the camera goes close, crossfaded by k
-   (*hint* ~1–1.25 texels per screen px at max k; draw the level with `<Img>` under the camera transform).
-4. `generated/components/<x>Shared.tsx`: the clip's kit. Read-only once the READY file the brief names (usually
-   `WORLD_READY.md`) exists; additions only.
+1. Sourced inputs in `scripts/maps/data/<set>-geo.json` (sites, routes, georeferenced polygons, facts).
+2. One config `scripts/maps/configs/<set>.mjs`, copied from `configs/pearl.mjs`: projection, clip box, period borders
+   and water, regions, the exports the cuts need, the LOD levels. A failed check throws.
+3. `bun scripts/maps/build.mjs <config>` → `generated/components/<clip>/<set><World>MapData.ts` (light overlays:
+   `project`, places, routes, regions clipped to land with their inland edges, framings). Then, alone,
+   `bun scripts/maps/bake.mjs <config>` → `public/<set>/<world>-<level>-<col>-<row>.png` + `<set>Levels*.ts`: a
+   whole-extent level for the wides, finer levels only where the camera goes close, crossfaded by k (*hint* ~1–1.25
+   texels per screen px at max k).
+4. `generated/components/<clip>/<clip>Shared.tsx`: the clip's kit, its map half copied from
+   `sarah-pearl-harbor/pearlShared.tsx` (`MapPage`, `MapBase`, `runCamera`, `WorldSvg`, `Label`, `InkStroke`, `Hatch`,
+   `Route`, `Packets`, `StrikeArc`, `poissonDots`, `relaxDots`, `Dots`). Read-only once the READY file the brief names
+   (usually `WORLD_READY.md`) exists; additions only.
 
-- **Copy Pearl**: `scripts/maps/sets/pearl/pearl-geo.mjs` → `scripts/maps/sets/pearl/build-pearl-maps.mjs` → `scripts/maps/sets/pearl/bake-pearl-rasters.mjs`
-  → `generated/components/sarah-pearl-harbor/pearlShared.tsx` (`MapPage`, `MapBase`, `runCamera`, `WorldSvg`, `Label`, `InkStroke`,
-  `Hatch`, `Route`, `Packets`, `StrikeArc`, `poissonDots`, `relaxDots`, `Dots`). Single-world variant: Cortes
-  (`scripts/maps/data/cortes-geo.json`, `build-cortes-map.mjs`, `bake-cortes-rasters.mjs`, `generated/components/kits/maps/cortesShared.tsx`).
+- `scripts/maps/sets/<set>/` holds the delivered sets' own scripts, only for re-baking those maps; never copy one.
 - Kits export their clip's `FPS`; use the sequence's. Ignore `cortesShared` / `incaShared` framing constants
   (`CONTENT_Y`, `CAM_LIFT`, `CAPTION_TOP`, `camFor`'s default point); frame per CRAFT.md. Take `DARK` from
   pearlShared (`#17120D`), not cortesShared (`#0B0907`).
