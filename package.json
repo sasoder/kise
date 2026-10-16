@@ -35,6 +35,7 @@
     "render": "remotion render src/index.ts",
     "review": "bun scripts/review.mjs",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "check": "bun scripts/check.mjs"
   }
 }
