@@ -4,7 +4,7 @@ import DeliberateAttempt, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/DeliberateAttempt';
+} from '../generated/components/logan-credit-boom/DeliberateAttempt';
 
 // Private render entry for Logan Wright "the biggest credit boom in history"
 // V2 cut 3 (DeliberateAttempt), so it renders while other builders own

@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import SameMoment, {DURATION, FPS, defaultProps, schema} from '../generated/components/SameMoment';
+import SameMoment, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-pearl-harbor/SameMoment';
 
 // Private render entry for SameMoment (Sarah Paine, Pearl Harbor clip, cut F):
 // close on Oahu as the carrier strike lands on Pearl Harbor, then one pull-back

@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Composition} from 'remotion';
-import {Emperor} from '../generated/components/stringsShared';
+import {Emperor} from '../generated/components/kits/maps/stringsShared';
 import {
   Bank,
   CAM_RANSOM_END,
@@ -18,9 +18,9 @@ import {
   RansomTableau,
   RansomWall,
   type RansomScene,
-} from '../generated/components/ransomV2Shared';
-import type {Cam} from '../generated/components/incaShared';
-import FillThatRoomV2, {DURATION, FPS, defaultProps, schema} from '../generated/components/FillThatRoomV2';
+} from '../generated/components/sheppard-captured-emperors/ransomV2Shared';
+import type {Cam} from '../generated/components/kits/maps/incaShared';
+import FillThatRoomV2, {DURATION, FPS, defaultProps, schema} from '../generated/components/sheppard-captured-emperors/FillThatRoomV2';
 
 // Private render entry for FillThatRoomV2 (60_FillThatRoom, the rebuild) and
 // the stills of its world (ransomV2Shared): the art sheet, the MAIN framing

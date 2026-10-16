@@ -4,7 +4,7 @@ import OnlyDivergenceV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OnlyDivergenceV2';
+} from '../generated/components/sheppard-vikings/OnlyDivergenceV2';
 
 // Private render entry for OnlyDivergenceV2 (cut C, second take, of the clip
 // Sheppard_Vikings), so this cut renders while other builders own

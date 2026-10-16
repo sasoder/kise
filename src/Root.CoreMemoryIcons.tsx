@@ -2,16 +2,16 @@ import {Composition} from 'remotion';
 import ServerIconCoreMemory, {
   defaultProps as serverProps,
   schema as serverSchema,
-} from '../generated/components/ServerIconCoreMemory';
+} from '../generated/components/joel-hyperscalers-solar/ServerIconCoreMemory';
 import PowerIconCoreMemory, {
   defaultProps as powerProps,
   schema as powerSchema,
-} from '../generated/components/PowerIconCoreMemory';
+} from '../generated/components/joel-hyperscalers-solar/PowerIconCoreMemory';
 import {
   POWER_IN_FRAMES,
   LOOP_FRAMES,
   SERVER_IN_FRAMES,
-} from '../generated/components/coreMemoryIcon';
+} from '../generated/components/kits/core-memory/coreMemoryIcon';
 
 // Private render entry for the core memory versions of the two approved icon
 // loops, so they render while another builder owns src/Root.tsx.

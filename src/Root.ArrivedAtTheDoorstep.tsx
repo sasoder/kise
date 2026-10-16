@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import ArrivedAtTheDoorstep, {DURATION, FPS, defaultProps, schema} from '../generated/components/ArrivedAtTheDoorstep';
+import ArrivedAtTheDoorstep, {DURATION, FPS, defaultProps, schema} from '../generated/components/sheppard-capture-not-kill/ArrivedAtTheDoorstep';
 
 // Private render entry for ArrivedAtTheDoorstep (Si Sheppard, "Capture, not
 // kill"): three cream carracks reach the anchorage off San Juan de Ulua while

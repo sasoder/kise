@@ -5,14 +5,14 @@ red, and real photographs set as clippings. It should feel like a newspaper with
 
 ## Kit
 
-- Import everything from `generated/components/chinatalkVintage.tsx`; the one exception is the crowd field mechanics
-  (`hash`, `feather`, `wobble`, `makeTone`) from `generated/components/fieldShared.tsx` (Visual language). Its API,
-  every token and the traps are in `generated/components/chinatalkVintage.md`. Read that file before you write a line.
-- Never import `chinatalkShared.tsx`. The kit builds on it internally, but it holds other colours, weights and a
+- Import everything from `generated/components/kits/chinatalk/chinatalkVintage.tsx`; the one exception is the crowd field mechanics
+  (`hash`, `feather`, `wobble`, `makeTone`) from `generated/components/kits/dwarkesh/fieldShared.tsx` (Visual language). Its API,
+  every token and the traps are in `generated/components/kits/chinatalk/chinatalkVintage.md`. Read that file before you write a line.
+- Never import `generated/components/kits/chinatalk/chinatalkShared.tsx`. The kit builds on it internally, but it holds other colours, weights and a
   lifted camera under the same names. Never copy the imports of a cut that uses it.
 - Do not hand-set a colour, stroke width or font size that the kit defines. If a cut needs a new part, ask the
   director to add it to the kit.
-- `generated/components/VintageKitSheet.tsx` shows every part in use.
+- `generated/components/kits/chinatalk/VintageKitSheet.tsx` shows every part in use.
 
 ## Look
 
@@ -47,7 +47,7 @@ red, and real photographs set as clippings. It should feel like a newspaper with
 - Everything you make on a ChinaTalk clip is ChinaTalk material, even when it sits on a photo or on footage.
 - **Footage into print:** freeze the frame as the editor framed it and print it into halftone in code from those same
   pixels, so the print lines up exactly. Reveal it with an ink-soak wipe from top to bottom. The reference is the
-  transition in frames 0–24 of `generated/components/HuLiveToPrint.tsx`. The halftone script is
+  transition in frames 0–24 of `generated/components/jordan-25-million-jobs/HuLiveToPrint.tsx`. The halftone script is
   `/Users/tom/Documents/tom fant/chinatalk/oct/China's Economy is Broken | Logan Wright/jordan - hu jintao's 25 million jobs/animation_source/newsprint.py`.
   Never let AI redraw a real face.
 
@@ -68,7 +68,7 @@ red, and real photographs set as clippings. It should feel like a newspaper with
   `FeatherWipe` like ink soaking down. For a fall or anything below zero, a `RED_DEEP` wash and hatch fills the
   whole wedge the line fell through.
 - **A growth wash hugs the red line** and fades toward the baseline (`GrowthWash` in
-  `generated/components/SovietEconomicDecline.tsx`). Never use a flat pink fog or an uneven wash, which looks like
+  `generated/components/logan-brezhnev/SovietEconomicDecline.tsx`). Never use a flat pink fog or an uneven wash, which looks like
   a stain.
 - **Bars** are `RedBar` pills, or a `RedBar slot` filling an ink `Slot` to show a level. `seam` divides a bar into
   countable units. Never use heavy black slabs.
@@ -80,7 +80,7 @@ red, and real photographs set as clippings. It should feel like a newspaper with
   Never use a lattice or a grid of icons. Draw it in ChinaTalk materials: dots on `makeTone(RED_DEEP, RED)` with no
   stroke, spaced so they don't merge (about 40 % cover on paper), structure and labels in ink, red threads with an
   ink head. Import the field mechanics (`hash`, `feather`, `wobble`, `makeTone`) from
-  `generated/components/fieldShared.tsx` and everything else from this kit. `generated/components/FiniteJobs.tsx`
+  `generated/components/kits/dwarkesh/fieldShared.tsx` and everything else from this kit. `generated/components/jordan-25-million-jobs/FiniteJobs.tsx`
   shows the field, clearing, block and threads, but copy its geometry, not its `chinatalkShared` imports.
 - **A country:** when a chart's red line is one country, the chart can carry that country's flag as its title. The
   flag is a world object above the chart: it moves with the camera, is sized through the size law like a label
@@ -104,19 +104,19 @@ red, and real photographs set as clippings. It should feel like a newspaper with
 
 ## Exemplars
 
-- `generated/components/SovietEconomicDecline.tsx`: a full-bleed photo clipping and a smooth pan to a chart with a
+- `generated/components/logan-brezhnev/SovietEconomicDecline.tsx`: a full-bleed photo clipping and a smooth pan to a chart with a
   kicker title. A red line is written through real data with seals and the growth wash, and the chart has a source
   line.
-- `generated/components/TechnologyAllocates.tsx`: a newspaper figure. A photo clipping with its cutline sits in the
+- `generated/components/logan-brezhnev/TechnologyAllocates.tsx`: a newspaper figure. A photo clipping with its cutline sits in the
   middle, and six solid pictograms around it flood red where the feeds touch them.
-- `generated/components/BrezhnevChoseDecay.tsx`: a portrait clipping over a fork. Both roads are dashed and red takes
+- `generated/components/logan-brezhnev/BrezhnevChoseDecay.tsx`: a portrait clipping over a fork. Both roads are dashed and red takes
   one. A `RED_DEEP` hatch wash soaks into the wedge, and the other road bleeds away with its `"head"` label.
 - Reference renders of these cuts, plus `AIReplacesMarkets`, are in
   `/Users/tom/Documents/tom fant/chinatalk/oct/China's Economy is Broken | Logan Wright/logan - brezhnev chose decay/graphics/`.
 
 ## Name tag
 
-`generated/components/NameTagNewsprint.tsx` (props `name`, `job`). Its size and position are in `styles/name-tags.md`.
+`generated/components/kits/name-tags/NameTagNewsprint.tsx` (props `name`, `job`). Its size and position are in `styles/name-tags.md`.
 
 ## News cards
 

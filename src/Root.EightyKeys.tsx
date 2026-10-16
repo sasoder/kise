@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import EightyKeys, {DURATION, FPS, defaultProps, schema} from '../generated/components/EightyKeys';
+import EightyKeys, {DURATION, FPS, defaultProps, schema} from '../generated/components/brent-cerro-gordo-trailer/EightyKeys';
 
 // Private render entry for EightyKeys (Brent / Cerro Gordo trailer), 16:9 (1920x1080).
 export const RemotionRoot = () => (

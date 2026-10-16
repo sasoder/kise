@@ -1,11 +1,11 @@
 import {Composition} from 'remotion';
-import HuCrowdPan, {DURATION, FPS, defaultProps, schema} from '../generated/components/HuCrowdPan';
+import HuCrowdPan, {DURATION, FPS, defaultProps, schema} from '../generated/components/jordan-25-million-jobs/HuCrowdPan';
 import HuLiveToPrint, {
   DURATION as LIVE_DURATION,
   FPS as LIVE_FPS,
   defaultProps as liveDefaultProps,
   schema as liveSchema,
-} from '../generated/components/HuLiveToPrint';
+} from '../generated/components/jordan-25-million-jobs/HuLiveToPrint';
 
 // Private render entry for the Hu Jintao crowd pan (opaque: one panorama, one
 // whip pan, baked), so it renders while other sessions own src/Root.tsx.

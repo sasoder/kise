@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import SoCentralized, {DURATION, FPS, defaultProps, schema} from '../generated/components/SoCentralized';
+import SoCentralized, {DURATION, FPS, defaultProps, schema} from '../generated/components/sheppard-centralized-empires/SoCentralized';
 
 // Private render entry for SoCentralized (the first graphic of the Sheppard
 // "Centralized empires fell fast" set): the tree builds, one stroke takes the

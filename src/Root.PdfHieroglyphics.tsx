@@ -4,7 +4,7 @@ import PdfHieroglyphics, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/PdfHieroglyphics';
+} from '../generated/components/hadrian-machina-06/PdfHieroglyphics';
 
 // Private render entry for PdfHieroglyphics, so this cut renders while other
 // builders own src/Root.tsx. Hadrian 05: "The industry operates basically on

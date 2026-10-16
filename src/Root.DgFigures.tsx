@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import {DgFiguresCrowdSheet, DgFiguresSheet} from '../generated/components/dgFigures';
+import {DgFiguresCrowdSheet, DgFiguresSheet} from '../generated/components/sarah-death-ground/dgFigures';
 
 // Private render entry for the review sheets of dgFigures (Sarah Paine,
 // "Death ground"): the Warring States cast in both inks, its poses and props,

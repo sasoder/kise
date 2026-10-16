@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import StudentTestCircle, {DURATION, FPS, defaultProps, schema} from '../generated/components/StudentTestCircle';
+import StudentTestCircle, {DURATION, FPS, defaultProps, schema} from '../generated/components/will-guinness-ttest/StudentTestCircle';
 
 // Private render entry for the pen circle round "Student 't' test" on the Gosset plaque (Will Guinness t-test clip).
 export const RemotionRoot = () => {

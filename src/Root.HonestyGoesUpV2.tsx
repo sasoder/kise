@@ -4,7 +4,7 @@ import HonestyGoesUpV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HonestyGoesUpV2';
+} from '../generated/components/noam-alignment/HonestyGoesUpV2';
 
 // Private render entry for HonestyGoesUpV2 (Noam_Alignment cut 3, in at
 // 0:27.820) — the revamp of HonestyGoesUp on the note that V1 was crowded and

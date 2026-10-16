@@ -4,7 +4,7 @@ import ConservativeMultiplesStout, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ConservativeMultiplesStout';
+} from '../generated/components/toto-mercedes-financials/ConservativeMultiplesStout';
 
 // Private render entry for the Toto Wolff clip in the stout system (ConservativeMultiplesStout),
 // so it renders while other sessions own src/Root.tsx.

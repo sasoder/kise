@@ -4,7 +4,7 @@ import ResearchersTraded, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ResearchersTraded';
+} from '../generated/components/tbpn-03/ResearchersTraded';
 
 // Private render entry for ResearchersTraded, so this cut renders while other
 // builders own src/Root.tsx. TBPN 03 narrated: "TBPN covers tech like a soap

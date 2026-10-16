@@ -4,7 +4,7 @@ import OneDoor, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OneDoor';
+} from '../generated/components/jordan-25-million-jobs/OneDoor';
 
 // Private render entry for Jordan Schneider "Hu Jintao's 25 million jobs",
 // graphic B take 2 (OneDoor, delivered as 48_BigSwathsNoJob.mov), so it renders

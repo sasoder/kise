@@ -4,7 +4,7 @@ import FindingGreatProducts, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/FindingGreatProducts';
+} from '../generated/components/alex-agentic-commerce/FindingGreatProducts';
 
 // Private render entry for FindingGreatProducts (cut 2 of Alexandr Wang, "Alex on agentic commerce", Cheeky Pint
 // S4E03), so this cut renders while other builders work beside it. World: museShared.tsx.

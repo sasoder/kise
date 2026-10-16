@@ -12,7 +12,7 @@ director's call.
 | BLACK | `#1B1B1B` | cards, dark grades |
 | CREME | `#F7F4ED` | type, the wordmark letters |
 | PAPER | `#FCFBF8` | light fills (the slider knob) |
-| GRADIENT | 90°, `FULL_STOPS` in `generated/components/LovableHotOrNot.tsx`: `#4F88FF` 0, `#CEAFFB` 0.33, `#FD49A8` 0.52, `#FA2733` 0.71, `#FF8F1B` 1 | the accent: bars, tracks, highlights |
+| GRADIENT | 90°, `FULL_STOPS` in `generated/components/kits/clients/LovableHotOrNot.tsx`: `#4F88FF` 0, `#CEAFFB` 0.33, `#FD49A8` 0.52, `#FA2733` 0.71, `#FF8F1B` 1 | the accent: bars, tracks, highlights |
 
 - The gradient is the only colour. Everything else is BLACK, CREME, PAPER and black-and-white footage.
 - Copy `FULL_STOPS` (all eleven stops) and the `FULL` string from LovableHotOrNot.tsx. Don't retype a shorter
@@ -47,14 +47,14 @@ editor's caption band clear instead.
 
 ## Exemplars
 
-- `generated/components/MaxIntro.tsx`: a freeze-frame guest intro (opaque, 1:1), built as follows.
+- `generated/components/kits/clients/MaxIntro.tsx`: a freeze-frame guest intro (opaque, 1:1), built as follows.
   - The footage starts at the editor's placement, then punches in on the guest on his name and freezes.
   - The colour drains to black and white.
   - The big first name, the gradient bar and the title slide up from behind masks, left-lower. The wordmark sits
     top-left.
   - A slow continuous push-in holds until the hard cut.
   - Source frames live in `public/lovable/fika1/src/` (local only, gitignored).
-- `generated/components/LovableHotOrNot.tsx`: a transparent quiz overlay that runs for the whole cut, built as
+- `generated/components/kits/clients/LovableHotOrNot.tsx`: a transparent quiz overlay that runs for the whole cut, built as
   follows.
   - A BLACK card holds the eyebrow ("HOT OR NOT · 01") and the wordmark.
   - A CREME headline swaps per question.

@@ -4,7 +4,7 @@ import BillionInRevenue, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BillionInRevenue';
+} from '../generated/components/toto-mercedes-financials/BillionInRevenue';
 
 // Private render entry for the Toto Wolff "Mercedes F1 financials" clip (BillionInRevenue, Act A),
 // so it renders while other sessions own src/Root.tsx.

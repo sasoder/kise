@@ -19,21 +19,24 @@ Nothing else. Do not browse old cuts, other kits or other styles unless the styl
 
 | The user says | Style file | Kit to import (`generated/components/`) | Reference cuts (`generated/components/`) |
 |---|---|---|---|
-| "Dwarkesh style", "orange Dwarkesh" | `styles/dwarkesh.md` | `fieldShared.tsx`, `brandGlyphs.tsx` | `MoreThanAllOfHistory.tsx`, `MillionsOfYears.tsx`, `HonestyGoesUpV2.tsx` |
-| "map style", any history clip | `styles/dwarkesh-map.md` | the clip's own `<clip>Shared.tsx` on the `pearlShared.tsx` pattern; figures on `texcocoFigures.tsx` | `SouthManchuriaRailway.tsx`, `AllAdultMales.tsx`, `SteelAndHorses.tsx` |
-| "ChinaTalk style" | `styles/chinatalk.md` | `chinatalkVintage.tsx` (API: `chinatalkVintage.md`) | `SovietEconomicDecline.tsx`, `TechnologyAllocates.tsx`, `BrezhnevChoseDecay.tsx` |
-| "Cheeky Pint style" | `styles/cheeky-pint.md` | `stoutShared.tsx`; at sea `oceanShared.tsx` | `BillionInRevenueStout.tsx`, `TalentDensity.tsx`, `InsideThePint.tsx`; at sea `HuntingMines.tsx` |
-| "core memory podcast style" | `styles/core-memory.md` | `deathCountShared.tsx` (9:16), `cerroShared.tsx` (16:9) | `PeakForSolar.tsx`, `RockCollapsedReports.tsx`, `ZeroedItDown.tsx`; sting `VastLogoChannelSplit.tsx` |
-| icons to animate | `styles/icon-loops.md` | `coreMemoryIcon.tsx` (core memory look only) | `WormholeIconLoop.tsx`, `ServerIconCoreMemory.tsx` |
-| name tag, lower third | `styles/name-tags.md` | the style's tag component | `NameTagStout.tsx`, `NameTagNewsprint.tsx`, `NameTagMapStyle.tsx` |
-| Humble, Humble Co. | `styles/humble.md` | none; font block from `NameTagHumble.tsx` | `BrushingMistakes.tsx` |
-| Sporttouchen | `styles/sporttouchen.md` | none; font block from `SporttouchenTimer.tsx` | `SporttouchenTimer.tsx`, `SporttouchenQuiz.tsx` |
-| Lovable | `styles/lovable.md` | none; `FULL_STOPS`, `Wordmark` from `LovableHotOrNot.tsx` | `MaxIntro.tsx`, `LovableHotOrNot.tsx` |
+| "Dwarkesh style", "orange Dwarkesh" | `styles/dwarkesh.md` | `kits/dwarkesh/fieldShared.tsx`, `kits/dwarkesh/brandGlyphs.tsx` | `ajeya-superhuman-hackers/MoreThanAllOfHistory.tsx`, `jcb-experience/MillionsOfYears.tsx`, `noam-alignment/HonestyGoesUpV2.tsx` |
+| "map style", any history clip | `styles/dwarkesh-map.md` | the clip's own `<clip>/<clip>Shared.tsx` on the `sarah-pearl-harbor/pearlShared.tsx` pattern; figures on `kits/maps/texcocoFigures.tsx` | `sarah-winning-battle-vs-war/SouthManchuriaRailway.tsx`, `sheppard-capture-not-kill/AllAdultMales.tsx`, `sheppard-conquistador-advantages/SteelAndHorses.tsx` |
+| "ChinaTalk style" | `styles/chinatalk.md` | `kits/chinatalk/chinatalkVintage.tsx` (API: `kits/chinatalk/chinatalkVintage.md`) | `logan-brezhnev/SovietEconomicDecline.tsx`, `logan-brezhnev/TechnologyAllocates.tsx`, `logan-brezhnev/BrezhnevChoseDecay.tsx` |
+| "Cheeky Pint style" | `styles/cheeky-pint.md` | `kits/cheeky-pint/stoutShared.tsx`; at sea `kits/cheeky-pint/oceanShared.tsx` | `toto-mercedes-financials/BillionInRevenueStout.tsx`, `meta-talent-density/TalentDensity.tsx`, `will-guinness-ttest/InsideThePint.tsx`; at sea `will-hunting-mines/HuntingMines.tsx` |
+| "core memory podcast style" | `styles/core-memory.md` | `kits/core-memory/deathCountShared.tsx` (9:16), `kits/core-memory/cerroShared.tsx` (16:9) | `joel-oil-companies-solar/PeakForSolar.tsx`, `brent-death-count/RockCollapsedReports.tsx`, `brent-death-count/ZeroedItDown.tsx`; sting `kits/core-memory/VastLogoChannelSplit.tsx` |
+| icons to animate | `styles/icon-loops.md` | `kits/core-memory/coreMemoryIcon.tsx` (core memory look only) | `kits/core-memory/WormholeIconLoop.tsx`, `joel-hyperscalers-solar/ServerIconCoreMemory.tsx` |
+| name tag, lower third | `styles/name-tags.md` | the style's tag component | `kits/name-tags/NameTagStout.tsx`, `kits/name-tags/NameTagNewsprint.tsx`, `kits/name-tags/NameTagMapStyle.tsx` |
+| Humble, Humble Co. | `styles/humble.md` | none; font block from `kits/name-tags/NameTagHumble.tsx` | `kits/clients/BrushingMistakes.tsx` |
+| Sporttouchen | `styles/sporttouchen.md` | none; font block from `kits/clients/SporttouchenTimer.tsx` | `kits/clients/SporttouchenTimer.tsx`, `kits/clients/SporttouchenQuiz.tsx` |
+| Lovable | `styles/lovable.md` | none; `FULL_STOPS`, `Wordmark` from `kits/clients/LovableHotOrNot.tsx` | `kits/clients/MaxIntro.tsx`, `kits/clients/LovableHotOrNot.tsx` |
 
 ## Build contract
 
 - Use `bun` and `bunx`, never npm or npx. Dependencies are installed; never install or upgrade a package.
-- One component per cut: `generated/components/<Name>.tsx`, PascalCase, named for the idea. It renders an
+- Folders: shared kits live in `generated/components/kits/<style>/`; each clip has its own folder
+  `generated/components/<clip>/` (lowercase slug such as `sarah-death-ground`) for its cuts and its own world files.
+  Import kits from the clip folder as `../kits/<style>/<kit>`.
+- One component per cut: `generated/components/<clip>/<Name>.tsx`, PascalCase, named for the idea. It renders an
   `AbsoluteFill` root driven only by `useCurrentFrame()`, `interpolate()`, `spring()` and `Easing` (no CSS animation,
   timers or `Math.random()`; use Remotion's `random(seed)`). It exports `FPS`, `DURATION`, a Zod `schema`,
   `defaultProps = schema.parse({...})` and the component as default. Its header comment holds the Check line, the
@@ -49,7 +52,7 @@ Nothing else. Do not browse old cuts, other kits or other styles unless the styl
 ```tsx
 // src/Root.<Name>.tsx
 import {Composition} from 'remotion';
-import <Name>, {DURATION, FPS, defaultProps, schema} from '../generated/components/<Name>';
+import <Name>, {DURATION, FPS, defaultProps, schema} from '../generated/components/<clip>/<Name>';
 // Private render entry for <Name> (<clip>): <one line on the picture>.
 export const RemotionRoot = () => (
   <Composition id="<Name>" component={<Name>} schema={schema} defaultProps={defaultProps}

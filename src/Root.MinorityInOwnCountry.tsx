@@ -4,7 +4,7 @@ import MinorityInOwnCountry, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/MinorityInOwnCountry';
+} from '../generated/components/sheppard-texcoco/MinorityInOwnCountry';
 
 // Private render entry for MinorityInOwnCountry (Sheppard "Texcoco", cut E,
 // delivered as 43_MinorityInOwnCountry.mov): cream dots arrive by sea and fill

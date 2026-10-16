@@ -4,7 +4,7 @@ import OpenAIBoughtTheShow, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OpenAIBoughtTheShow';
+} from '../generated/components/tbpn-03/OpenAIBoughtTheShow';
 
 // Private render entry for OpenAIBoughtTheShow (TBPN 03 narrated, 21.375 s ->
 // 25.750 s): money runs down from the OpenAI mark, the show docks into it.

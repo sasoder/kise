@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import StoutFrames, {defaultProps, schema} from '../generated/components/StoutFrames';
+import StoutFrames, {defaultProps, schema} from '../generated/components/toto-mercedes-financials/StoutFrames';
 
 // Private render entry for the stout style frames (stills only: prop `frame`),
 // so it renders while other sessions own src/Root.tsx.

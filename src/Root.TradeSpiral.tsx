@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import TradeSpiral, {DURATION, FPS, defaultProps, schema} from '../generated/components/TradeSpiral';
+import TradeSpiral, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-pearl-harbor/TradeSpiral';
 
 // Private render entry for TradeSpiral (Sarah Paine, "How the Depression
 // pushed Japan to Pearl Harbor"): Kindleberger's contracting spiral of world

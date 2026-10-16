@@ -4,7 +4,7 @@ import OneInFourLonelyWide, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OneInFourLonelyWide';
+} from '../generated/components/cm-early-js-trailer/OneInFourLonelyWide';
 
 // Private render entry for cut 5 of the CM_EARLY_JS trailer, 16:9 round
 // (OneInFourLonelyWide, 2048x1080, 24000/1001 fps; the final renders with

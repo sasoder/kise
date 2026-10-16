@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import SixYearsLater, {DURATION, FPS, defaultProps, schema} from '../generated/components/SixYearsLater';
+import SixYearsLater, {DURATION, FPS, defaultProps, schema} from '../generated/components/brent-cerro-gordo-trailer/SixYearsLater';
 
 // Private render entry for SixYearsLater (Brent / Cerro Gordo trailer), 16:9 (1920x1080).
 export const RemotionRoot = () => (

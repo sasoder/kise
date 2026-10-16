@@ -4,7 +4,7 @@ import IterateToFit, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/IterateToFit';
+} from '../generated/components/meta-muse-success/IterateToFit';
 
 // Private render entry for IterateToFit (Cheeky Pint S4, stout system), so it renders while other
 // sessions own src/Root.tsx.

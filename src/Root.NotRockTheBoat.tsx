@@ -4,7 +4,7 @@ import NotRockTheBoat, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NotRockTheBoat';
+} from '../generated/components/sheppard-captured-emperors/NotRockTheBoat';
 
 // Private render entry for NotRockTheBoat (cut D of the strings set), so this
 // cut renders while other builders own src/Root.tsx. Si Sheppard on Moctezuma:

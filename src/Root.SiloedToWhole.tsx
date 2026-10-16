@@ -4,7 +4,7 @@ import SiloedToWhole, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SiloedToWhole';
+} from '../generated/components/alex-agentic-commerce/SiloedToWhole';
 
 // Private render entry for SiloedToWhole (Alexandr Wang, "Alex on agentic commerce", Cheeky Pint S4E03, cut 7),
 // so this cut renders while other builders own their own entries. World: museShared.tsx.

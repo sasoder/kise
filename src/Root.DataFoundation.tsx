@@ -4,7 +4,7 @@ import DataFoundation, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/DataFoundation';
+} from '../generated/components/bharat-maven/DataFoundation';
 
 // Private render entry for Bharat "Project Maven's data problem" V3 cut A
 // (DataFoundation), so it renders while other builders own src/Root.tsx.

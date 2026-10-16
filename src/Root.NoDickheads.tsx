@@ -1,10 +1,10 @@
 import {Composition} from 'remotion';
-import TwoDriversStout, * as C1 from '../generated/components/TwoDriversStout';
-import PitWallStout, * as C2 from '../generated/components/PitWallStout';
-import TipOfTheIcebergStout, * as C3 from '../generated/components/TipOfTheIcebergStout';
-import TwoHubsStout, * as C4 from '../generated/components/TwoHubsStout';
-import QuiteVastStout, * as C5 from '../generated/components/QuiteVastStout';
-import NotTwoSuperstarsStout, * as C6 from '../generated/components/NotTwoSuperstarsStout';
+import TwoDriversStout, * as C1 from '../generated/components/toto-no-dickheads/TwoDriversStout';
+import PitWallStout, * as C2 from '../generated/components/toto-no-dickheads/PitWallStout';
+import TipOfTheIcebergStout, * as C3 from '../generated/components/toto-no-dickheads/TipOfTheIcebergStout';
+import TwoHubsStout, * as C4 from '../generated/components/toto-no-dickheads/TwoHubsStout';
+import QuiteVastStout, * as C5 from '../generated/components/toto-no-dickheads/QuiteVastStout';
+import NotTwoSuperstarsStout, * as C6 from '../generated/components/toto-no-dickheads/NotTwoSuperstarsStout';
 
 // Private render entry for Toto Wolff's "no dickheads rule" (Cheeky Pint S4E01, stout system): six cuts on
 // one iceberg world and one story clock (icebergShared.tsx), so it renders while other sessions own

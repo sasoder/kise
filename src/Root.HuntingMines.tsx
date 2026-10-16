@@ -4,7 +4,7 @@ import HuntingMines, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HuntingMines';
+} from '../generated/components/will-hunting-mines/HuntingMines';
 
 // Private render entry for HuntingMines, so this cut renders while other
 // builders own src/Root.tsx. Cheeky Pint S4E02 (Will O'Brien, Ulysses): "mine

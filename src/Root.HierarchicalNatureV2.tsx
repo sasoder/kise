@@ -4,7 +4,7 @@ import HierarchicalNatureV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HierarchicalNatureV2';
+} from '../generated/components/sheppard-centralized-empires/HierarchicalNatureV2';
 
 // Private render entry for HierarchicalNatureV2 (G1 of the Sheppard "Centralized
 // empires fell fast" set), so this cut renders while other builders own

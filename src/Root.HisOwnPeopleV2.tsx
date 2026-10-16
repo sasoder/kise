@@ -4,7 +4,7 @@ import HisOwnPeopleV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HisOwnPeopleV2';
+} from '../generated/components/sheppard-captured-emperors/HisOwnPeopleV2';
 
 // Private render entry for HisOwnPeopleV2 (38_HisOwnPeople, round 3 of the
 // strings set; the trimmed slot 38.497-42.417 s). Si Sheppard on Moctezuma:

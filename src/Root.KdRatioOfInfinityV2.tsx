@@ -4,7 +4,7 @@ import KdRatioOfInfinityV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/KdRatioOfInfinityV2';
+} from '../generated/components/sheppard-cajamarca-kd/KdRatioOfInfinityV2';
 
 // Private render entry for KdRatioOfInfinityV2, so this cut renders while other builders own
 // src/Root.tsx. Si Sheppard on Cajamarca: "...literally a K/D ratio of

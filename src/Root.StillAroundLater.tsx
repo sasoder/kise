@@ -4,7 +4,7 @@ import StillAroundLater, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/StillAroundLater';
+} from '../generated/components/sarah-death-ground/StillAroundLater';
 
 // Private render entry for StillAroundLater (Sarah Paine, "Death ground: why
 // regime change is brutal"): a peace table in side elevation, the cream general

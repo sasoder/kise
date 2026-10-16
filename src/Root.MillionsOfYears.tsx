@@ -4,7 +4,7 @@ import MillionsOfYears, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/MillionsOfYears';
+} from '../generated/components/jcb-experience/MillionsOfYears';
 
 // Private render entry for MillionsOfYears, so this cut renders while another
 // builder owns src/Root.tsx. Orange Dwarkesh on the grid background: one orange

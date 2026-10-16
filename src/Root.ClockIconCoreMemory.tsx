@@ -2,11 +2,11 @@ import {Composition} from 'remotion';
 import ClockIconCoreMemory, {
   defaultProps as clockProps,
   schema as clockSchema,
-} from '../generated/components/ClockIconCoreMemory';
+} from '../generated/components/joel-hyperscalers-solar/ClockIconCoreMemory';
 import {
   CLOCK_IN_FRAMES,
   LOOP_FRAMES,
-} from '../generated/components/coreMemoryIcon';
+} from '../generated/components/kits/core-memory/coreMemoryIcon';
 
 // Private render entry for the clock icon, so it renders while other builders
 // own src/Root.tsx.

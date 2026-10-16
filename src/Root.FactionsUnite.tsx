@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import FactionsUnite, {DURATION, FPS, defaultProps, schema} from '../generated/components/FactionsUnite';
+import FactionsUnite, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-pearl-harbor/FactionsUnite';
 
 // Private render entry for FactionsUnite (Sarah Paine, Pearl Harbor clip, cut D):
 // seven bickering cream faction crowds in free China draw apart, then stream

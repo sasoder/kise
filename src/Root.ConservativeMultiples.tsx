@@ -4,7 +4,7 @@ import ConservativeMultiples, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ConservativeMultiples';
+} from '../generated/components/toto-mercedes-financials/ConservativeMultiples';
 
 // Private render entry for the Toto Wolff clip, cut 3 (ConservativeMultiples, S_B 0-96),
 // so it renders while other sessions own src/Root.tsx.

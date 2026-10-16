@@ -4,7 +4,7 @@ import LaidOutToRead, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/LaidOutToRead';
+} from '../generated/components/noam-punishing-ais/LaidOutToRead';
 
 // Private render entry for `Noam_Punishing_AIs` cut 1, LaidOutToRead (in at
 // 0:03.020). Eight builders share this checkout, so this cut renders through

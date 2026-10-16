@@ -4,7 +4,7 @@ import SouthManchuriaRailway, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SouthManchuriaRailway';
+} from '../generated/components/sarah-winning-battle-vs-war/SouthManchuriaRailway';
 
 // Private render entry for SouthManchuriaRailway, so this cut renders while
 // other builders own src/Root.tsx. Russo-Japanese War: the South Manchuria

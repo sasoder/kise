@@ -4,7 +4,7 @@ import CarvedOutOfTheAztecs, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CarvedOutOfTheAztecs';
+} from '../generated/components/sheppard-tlaxcalans/CarvedOutOfTheAztecs';
 
 // Private render entry for CarvedOutOfTheAztecs (cut A of the Tlaxcala clip,
 // Dwarkesh with Si Sheppard), so it renders while other builders own

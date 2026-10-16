@@ -26,7 +26,7 @@ When a job says "sporttouchen style", build to this without re-asking. Any copy 
 - The font is MADE Tommy Soft: `public/MADETommySoft-ExtraBold.otf` (800, display) and
   `public/MADETommySoft-Medium.otf` (500, labels).
 - Load it with `@remotion/fonts` `loadFont` + `staticFile` at module scope, with no fallback stack. Copy the block at
-  the top of `generated/components/SporttouchenTimer.tsx`.
+  the top of `generated/components/kits/clients/SporttouchenTimer.tsx`.
 - Not Montserrat, which is only the website's fallback.
 - Display type: ExtraBold, tracking -0.02em with a compensating `marginRight`. The timer's hero numeral is 400 px. The
   quiz question is 66 px, line-height 1.1, centred.
@@ -67,10 +67,10 @@ When a job says "sporttouchen style", build to this without re-asking. Any copy 
 
 ## Exemplars
 
-- `generated/components/SporttouchenTimer.tsx`: a 15 s countdown. A gradient ring (outer diameter 720, stroke 36,
+- `generated/components/kits/clients/SporttouchenTimer.tsx`: a 15 s countdown. A gradient ring (outer diameter 720, stroke 36,
   INK track at 0.12) drains while the stroked numeral swaps each second, and the payoff ring closes it. Props:
   `seconds`, `transparent`, `label` (keep it empty), stroke colours.
-- `generated/components/SporttouchenQuiz.tsx`: the "Quizkortet" question card, 920 px wide at x 80–1000. It has a
+- `generated/components/kits/clients/SporttouchenQuiz.tsx`: the "Quizkortet" question card, 920 px wide at x 80–1000. It has a
   112 px gradient header band ("FRÅGA n / 3", unstroked), a BG body with the stroked question, and a progress track.
   The round logo sits 45 px above the card and talks into a 13-bar white waveform on each side. Props: `questions`,
   `index`, `total`, `transparent`, `backdrop`, `logoSrc`.

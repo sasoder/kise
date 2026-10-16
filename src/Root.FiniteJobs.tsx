@@ -4,7 +4,7 @@ import FiniteJobs, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/FiniteJobs';
+} from '../generated/components/jordan-25-million-jobs/FiniteJobs';
 
 // Private render entry for Jordan Schneider "Hu Jintao's 25 million jobs",
 // graphic 48 take 3 (FiniteJobs), so it renders while other builders own

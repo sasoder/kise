@@ -4,7 +4,7 @@ import SomeHaveFundamentalsV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SomeHaveFundamentalsV2';
+} from '../generated/components/toto-mercedes-financials/SomeHaveFundamentalsV2';
 
 // Private render entry for the Toto Wolff clip, cut 4 V2 (SomeHaveFundamentalsV2,
 // S_B 94-233, real US teams with their crests), so it renders while other

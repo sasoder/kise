@@ -4,7 +4,7 @@ import CortessPuppet, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CortessPuppet';
+} from '../generated/components/sheppard-captured-emperors/CortessPuppet';
 
 // Private render entry for CortessPuppet (cut C of the "strings" set), so this
 // cut renders while other builders own src/Root.tsx. Si Sheppard on Moctezuma:

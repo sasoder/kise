@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import UkraineNotGivingUp, {DURATION, FPS, defaultProps, schema} from '../generated/components/UkraineNotGivingUp';
+import UkraineNotGivingUp, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-death-ground/UkraineNotGivingUp';
 
 // Private render entry for UkraineNotGivingUp (Sarah Paine, "Death ground: why
 // regime change is brutal"; Dwarkesh map style): Russia's thrusts of 24 Feb 2022

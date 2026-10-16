@@ -4,7 +4,7 @@ import ChinaGrowingV4, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ChinaGrowingV4';
+} from '../generated/components/logan-china-growth/ChinaGrowingV4';
 
 // Private render entry for the Logan Wright growth clip, V4 (china theme + the
 // title flag in world space; ChinaGrowingV4, S 0-368), so it renders while other sessions own src/Root.tsx.

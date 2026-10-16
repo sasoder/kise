@@ -47,7 +47,7 @@ Numbers marked *hint* are starting points that worked once, not thresholds (prin
   or opinion line) and drawn in the style's vocabulary. A metaphor that has to be decoded loses the viewer.
 - One thought is one graphic, even when it spans two disabled clips.
 - Few element types, one motion; answer "too abstract" with a clearer picture, not more kinds of things. Reference:
-  `generated/components/CityStates.tsx` (map, orange land, walls; one push-in).
+  `generated/components/sheppard-centralized-empires/CityStates.tsx` (map, orange land, walls; one push-in).
 - One material that changes shape beats several overlapping containers; spent containers leave the frame physically.
   The start state must not resemble the end state: the change is the payoff.
 - A comparison's payoff frame keeps the other side in shot, dimmed: "few from many" needs the many still there.
@@ -59,7 +59,7 @@ Numbers marked *hint* are starting points that worked once, not thresholds (prin
   by the style's own dim, before a new layer arrives on top of it.
 - Orange or amber never sits on a black or near-black ground: a dark ground is visibly brown (about L* 20 at the
   subject, 12+ in the darkest corner), its shadows and casings deep brown. No dark type in an orange box by a light word.
-- Pacing reference: `generated/components/AllAdultMales.tsx`, "something is always happening while still being simple
+- Pacing reference: `generated/components/sheppard-capture-not-kill/AllAdultMales.tsx`, "something is always happening while still being simple
   and it looks satisfying": one transformation sweeping through many figures under a continuous pull-back.
 
 ## Framing
@@ -122,7 +122,7 @@ Numbers marked *hint* are starting points that worked once, not thresholds (prin
   gets the style's crowd unit (dots by default; pegs or busts in Cheeky Pint, engraved figures in map style). Crowds
   arrive from a source, hold the style's formation or field and keep a minimum spacing; no free random scatter.
 - Logos: the real mark, redrawn into the style's colours and materials, sized and anchored to its subject in world space.
-  Vector marks are inline `<path>` geometry (`generated/components/brandGlyphs.tsx`); team crests come from the
+  Vector marks are inline `<path>` geometry (`generated/components/kits/dwarkesh/brandGlyphs.tsx`); team crests come from the
   Wikipedia infobox logo. Whiten a mark through its fill; `brightness(0) invert(1)` turns anything with interior detail
   or a face into a blob.
 
@@ -168,7 +168,7 @@ Numbers marked *hint* are starting points that worked once, not thresholds (prin
 ## Build technique
 
 - **Camera.** A coarse keyed track of its own through the kit's damped follow (`runCamera`, `CAM_STIFF` 0.09 /
-  `CAM_DAMP` 0.468 in `generated/components/fieldShared.tsx`; other kits have their own), never derived from the
+  `CAM_DAMP` 0.468 in `generated/components/kits/dwarkesh/fieldShared.tsx`; other kits have their own), never derived from the
   subject's position (it bobs). A pull-back is another key on the same track. Diagnose with a k / dk / d²k plot: one
   deceleration lobe, one settle lobe. Keys too close read as a stall; a push too small to read, as a hesitation.
 - **Full precision.** Never round scale or position under a moving camera: slow zooms step.
@@ -177,7 +177,7 @@ Numbers marked *hint* are starting points that worked once, not thresholds (prin
   space, only grain in screen space (once: pans under ~26 px per frame).
 - **Bitmaps inside an SVG.** `<image href={staticFile(...)}>` races frame capture and drops on scattered frames. Inline
   the bitmap as a `data:image/png;base64,...` string exported from `generated/components/<name>Data.ts` (pattern:
-  `generated/components/bronzeData.ts`) and verify with a per-frame pixel count of its region. Bitmaps outside the SVG
+  `generated/components/atelier-missor/bronzeData.ts`) and verify with a per-frame pixel count of its region. Bitmaps outside the SVG
   use Remotion `<Img>`.
 - **Heavy static geometry** (maps, thousands of paths, big textures): bake it to rasters once, animate only the
   overlays, measure ms per frame, and run final renders with `--concurrency=4`.

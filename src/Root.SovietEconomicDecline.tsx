@@ -4,7 +4,7 @@ import SovietEconomicDecline, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SovietEconomicDecline';
+} from '../generated/components/logan-brezhnev/SovietEconomicDecline';
 
 // Private render entry for SovietEconomicDecline (cut A of Logan Wright,
 // "Brezhnev chose decay", ChinaTalk slightly vintage), so this cut renders

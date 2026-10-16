@@ -4,7 +4,7 @@ import SeemedImpressive, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SeemedImpressive';
+} from '../generated/components/sheppard-tlaxcalans/SeemedImpressive';
 
 // Private render entry for SeemedImpressive (cut B of the Tlaxcala clip,
 // Dwarkesh with Si Sheppard), so it renders while other builders own

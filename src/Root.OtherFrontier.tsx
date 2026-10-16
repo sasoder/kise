@@ -4,7 +4,7 @@ import OtherFrontier, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OtherFrontier';
+} from '../generated/components/will-mars-ocean/OtherFrontier';
 
 // Private render entry for OtherFrontier (Cheeky Pint S4E02, Will O'Brien / Ulysses), so this cut
 // renders while other builders own src/Root.tsx. Opaque 1080x1920 at 23.976 fps, 157 frames

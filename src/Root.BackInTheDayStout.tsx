@@ -4,7 +4,7 @@ import BackInTheDayStout, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BackInTheDayStout';
+} from '../generated/components/toto-mercedes-financials/BackInTheDayStout';
 
 // Private render entry for the Toto Wolff "Mercedes F1 financials" clip (BackInTheDayStout, stout system),
 // so it renders while other sessions own src/Root.tsx.

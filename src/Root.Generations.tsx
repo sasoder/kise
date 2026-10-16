@@ -4,7 +4,7 @@ import Generations, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/Generations';
+} from '../generated/components/toto-dts/Generations';
 
 // Private render entry for Generations (cut E of Toto Wolff's "why Drive to Survive worked", Cheeky Pint
 // S4E01), so this cut renders while other builders own src/Root.tsx. "From the granddaughter to the

@@ -4,7 +4,7 @@ import TooDifficultToShutDown, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TooDifficultToShutDown';
+} from '../generated/components/logan-credit-boom/TooDifficultToShutDown';
 
 // Private render entry for Logan Wright credit-boom V2, cut 4
 // (33_TooDifficultToShutDown), so it renders while other builders own src/Root.tsx.

@@ -4,7 +4,7 @@ import SoonerOrLaterABadKing, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SoonerOrLaterABadKing';
+} from '../generated/components/sheppard-east-india-kings/SoonerOrLaterABadKing';
 
 // Private render entry for SoonerOrLaterABadKing, so this cut renders while
 // other builders own src/Root.tsx. Dwarkesh: "there's this monarchical

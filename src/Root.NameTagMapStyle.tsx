@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import NameTagMapStyle, {FPS, schema} from '../generated/components/NameTagMapStyle';
+import NameTagMapStyle, {FPS, schema} from '../generated/components/kits/name-tags/NameTagMapStyle';
 
 // Private render entry for the Dwarkesh-map-style name tags of the East India
 // Company clip: one composition per person (id NameTag-<Key>; Remotion ids take no underscore), each at its own

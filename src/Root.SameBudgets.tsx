@@ -4,7 +4,7 @@ import SameBudgets, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SameBudgets';
+} from '../generated/components/toto-mercedes-job/SameBudgets';
 
 // Private render entry for SameBudgets (Toto Wolff, "how he got the Mercedes job", Cheeky Pint S4E01), so
 // this cut renders while other builders own src/Root.tsx. One world: mercJobShared.tsx.

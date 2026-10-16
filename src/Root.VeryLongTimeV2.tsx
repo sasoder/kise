@@ -4,8 +4,8 @@ import VeryLongTimeV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/VeryLongTimeV2';
-import {ARMY_SHEET, ArmySheet} from '../generated/components/apacheFigures';
+} from '../generated/components/sheppard-centralized-empires/VeryLongTimeV2';
+import {ARMY_SHEET, ArmySheet} from '../generated/components/sheppard-centralized-empires/apacheFigures';
 
 // Private render entry for VeryLongTimeV2, so this cut renders while other
 // builders own src/Root.tsx. Si Sheppard: "...resist European powers for a very

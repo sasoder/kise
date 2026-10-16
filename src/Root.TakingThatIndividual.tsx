@@ -4,7 +4,7 @@ import TakingThatIndividual, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TakingThatIndividual';
+} from '../generated/components/sheppard-centralized-empires/TakingThatIndividual';
 
 // Private render entry for TakingThatIndividual (G2 of the Sheppard
 // "Centralized empires fell fast" set), so this cut renders while other

@@ -5,7 +5,7 @@ import SeizedNotKilled, {
   SeizedSheet,
   defaultProps,
   schema,
-} from '../generated/components/SeizedNotKilled';
+} from '../generated/components/sheppard-capture-not-kill/SeizedNotKilled';
 
 // Private render entry for SeizedNotKilled (Si Sheppard, "Capture, not kill"):
 // Cortes down on the ground under the raised clubs of four orange warriors, who

@@ -5,7 +5,7 @@ import SteelAndHorses, {
   SteelAndHorsesSheet,
   defaultProps,
   schema,
-} from '../generated/components/SteelAndHorses';
+} from '../generated/components/sheppard-conquistador-advantages/SteelAndHorses';
 
 // Private render entry for SteelAndHorses (Si Sheppard, "Conquistador
 // advantages", cut B): one pull-back from a steel blade breaking obsidian, to

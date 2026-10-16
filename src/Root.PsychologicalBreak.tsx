@@ -4,7 +4,7 @@ import PsychologicalBreak, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/PsychologicalBreak';
+} from '../generated/components/sheppard-captured-emperors/PsychologicalBreak';
 
 // Private render entry for PsychologicalBreak (cut 2 of the Sheppard "Why
 // captured emperors cooperated" strings set), so this cut renders while other

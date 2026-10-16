@@ -4,7 +4,7 @@ import LearnedFromHispaniola, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/LearnedFromHispaniola';
+} from '../generated/components/sheppard-vikings/LearnedFromHispaniola';
 
 // Private render entry for LearnedFromHispaniola (the quick Hispaniola cut of Sheppard_Vikings), so
 // this cut renders while other builders own src/Root.tsx. Opaque Dwarkesh map

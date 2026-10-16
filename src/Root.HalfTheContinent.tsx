@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import HalfTheContinent, {DURATION, FPS, defaultProps, schema} from '../generated/components/HalfTheContinent';
+import HalfTheContinent, {DURATION, FPS, defaultProps, schema} from '../generated/components/kyle-plague/HalfTheContinent';
 
 // Private render entry for HalfTheContinent (plague clip, the map cut): one
 // zoom out from Muetzel's marmot plate to the Earth, Europe half orange.

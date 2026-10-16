@@ -4,7 +4,7 @@ import CovidExcuseV4, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CovidExcuseV4';
+} from '../generated/components/logan-china-growth/CovidExcuseV4';
 
 // Private render entry for the Logan Wright growth clip, V4 (china theme + the
 // title flag in world space; CovidExcuseV4, S 601-829), so it renders while other sessions own src/Root.tsx.

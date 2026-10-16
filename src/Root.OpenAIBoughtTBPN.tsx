@@ -4,7 +4,7 @@ import OpenAIBoughtTBPN, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OpenAIBoughtTBPN';
+} from '../generated/components/tbpn-05/OpenAIBoughtTBPN';
 
 // Private render entry for OpenAIBoughtTBPN, so this cut renders while other
 // builders own src/Root.tsx. "OpenAI bought this podcast for over 100 million

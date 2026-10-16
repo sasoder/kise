@@ -4,8 +4,8 @@ import BigSwathsNoJob, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BigSwathsNoJob';
-import BigSwathsGlyphSheet from '../generated/components/bigSwathsSheet';
+} from '../generated/components/jordan-25-million-jobs/BigSwathsNoJob';
+import BigSwathsGlyphSheet from '../generated/components/jordan-25-million-jobs/bigSwathsSheet';
 
 // Private render entry for Jordan Schneider "Hu Jintao's 25 million jobs",
 // graphic B (48_BigSwathsNoJob), so it renders while other builders own

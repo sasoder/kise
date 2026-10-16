@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import SmallSampleCurveV2, {DURATION, FPS, defaultProps, schema} from '../generated/components/SmallSampleCurveV2';
+import SmallSampleCurveV2, {DURATION, FPS, defaultProps, schema} from '../generated/components/will-guinness-ttest/SmallSampleCurveV2';
 
 // Private render entry for SmallSampleCurveV2 (cold-review copy; Cheeky Pint S4E02 "will - guinness invented the t-test", cut 2,
 // stout B1): opaque 1080x1920 at 23.976 fps.

@@ -4,7 +4,7 @@ import HidingTranscriptsV5, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HidingTranscriptsV5';
+} from '../generated/components/noam-children/HidingTranscriptsV5';
 
 // Private render entry for HidingTranscripts V5: V4 held closer — a narrower
 // column, a much bigger margin skull, and one more push-in as the box shuts

@@ -4,7 +4,7 @@ import AIReplacesMarkets, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/AIReplacesMarkets';
+} from '../generated/components/logan-brezhnev/AIReplacesMarkets';
 
 // Private render entry for AIReplacesMarkets, so this cut renders while other
 // builders own src/Root.tsx. Logan Wright, "Brezhnev chose decay" (ChinaTalk),

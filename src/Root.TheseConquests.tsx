@@ -4,7 +4,7 @@ import TheseConquests, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TheseConquests';
+} from '../generated/components/sheppard-captured-emperors/TheseConquests';
 
 // Private render entry for TheseConquests (cut J, the opening of the Sheppard
 // "strings" set), so this cut renders while other builders own src/Root.tsx.

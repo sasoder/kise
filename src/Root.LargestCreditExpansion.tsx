@@ -4,7 +4,7 @@ import LargestCreditExpansion, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/LargestCreditExpansion';
+} from '../generated/components/logan-credit-boom/LargestCreditExpansion';
 
 // Private render entry for Logan Wright credit-boom V2 cut 1
 // (1_LargestCreditExpansion), so it renders while other builders own src/Root.tsx.

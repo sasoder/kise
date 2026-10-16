@@ -4,7 +4,7 @@ import ClosedWorlds, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ClosedWorlds';
+} from '../generated/components/sheppard-texcoco/ClosedWorlds';
 
 // Private render entry for ClosedWorlds (Si Sheppard, "Texcoco", cut D:
 // "(Their) closed worlds didn't allow them to think about people from such

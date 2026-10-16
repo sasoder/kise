@@ -4,7 +4,7 @@ import ContinuouslyCollectTall, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ContinuouslyCollectTall';
+} from '../generated/components/bharat-maven/ContinuouslyCollectTall';
 
 // Private render entry for Bharat "Project Maven's data problem" cut C
 // (ContinuouslyCollectTall, 9:16), so it renders while other builders own src/Root.tsx.

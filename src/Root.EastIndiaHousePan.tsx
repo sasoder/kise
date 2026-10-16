@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import EastIndiaHousePan, {DURATION, FPS} from '../generated/components/EastIndiaHousePan';
+import EastIndiaHousePan, {DURATION, FPS} from '../generated/components/sheppard-east-india-kings/EastIndiaHousePan';
 
 // Private render entry for the East India House pan (opaque: the painting, the
 // dim/blur, the anchored Company mark and the editor's pan in one graphic), so

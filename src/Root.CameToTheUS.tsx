@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import CameToTheUS, {DURATION, FPS, defaultProps, schema} from '../generated/components/CameToTheUS';
+import CameToTheUS, {DURATION, FPS, defaultProps, schema} from '../generated/components/hadrian-machina-06/CameToTheUS';
 
 // Private render entry for CameToTheUS. Hadrian Machina 06: "...this young
 // Australian entrepreneur came to the US." One eased pan from Chris Power to

@@ -6,7 +6,7 @@ import OceanFrames, {
   OceanMotion,
   defaultProps,
   schema,
-} from '../generated/components/OceanFrames';
+} from '../generated/components/will-hunting-mines/OceanFrames';
 
 // Private render entry for the Ulysses underwater world's style frames (oceanShared.tsx), so it
 // renders while other builders own src/Root.tsx. Cheeky Pint S4E02 (Will O'Brien, Ulysses).

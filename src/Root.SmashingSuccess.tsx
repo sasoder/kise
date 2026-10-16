@@ -4,7 +4,7 @@ import SmashingSuccess, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SmashingSuccess';
+} from '../generated/components/toto-dts/SmashingSuccess';
 
 // Private render entry for SmashingSuccess, so this cut renders while other
 // builders own src/Root.tsx. Toto Wolff / Cheeky Pint S4E01, "why Drive to

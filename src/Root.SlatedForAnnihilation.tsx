@@ -5,7 +5,7 @@ import SlatedForAnnihilation, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SlatedForAnnihilation';
+} from '../generated/components/sarah-death-ground/SlatedForAnnihilation';
 
 // Private render entry for SlatedForAnnihilation (Sarah Paine, "Death ground:
 // why regime change is brutal"): the orange king on his palace terrace, cream

@@ -4,7 +4,7 @@ import LearningFromEachOther, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/LearningFromEachOther';
+} from '../generated/components/sheppard-vikings/LearningFromEachOther';
 
 // Private render entry for LearningFromEachOther (cut A of Sheppard_Vikings), so
 // this cut renders while other builders own src/Root.tsx. Opaque Dwarkesh map

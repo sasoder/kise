@@ -4,7 +4,7 @@ import NameTagChinaTalk, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NameTagChinaTalk';
+} from '../generated/components/kits/name-tags/NameTagChinaTalk';
 
 // Private render entry for Logan Wright's ChinaTalk name tag (five options via the
 // `variant` prop), so it renders while other sessions own src/Root.tsx.

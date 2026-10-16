@@ -4,7 +4,7 @@ import LovableHotOrNot, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/LovableHotOrNot';
+} from '../generated/components/kits/clients/LovableHotOrNot';
 
 // Private render entry for LovableHotOrNot, so this cut renders while
 // another builder owns src/Root.tsx. Lovable "Hot or not" temperature-slider

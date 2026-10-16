@@ -4,7 +4,7 @@ import LonelyMessageTall, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/LonelyMessageTall';
+} from '../generated/components/cm-early-js-trailer/LonelyMessageTall';
 
 // Private render entry for "LonelyMessageTall" (CM_EARLY_JS trailer, the
 // 1080x1920 version of LonelyMessage, 24000/1001 fps), so it renders without

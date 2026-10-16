@@ -2,11 +2,11 @@ import {Composition} from 'remotion';
 import CommunismIconCoreMemory, {
   defaultProps as communismProps,
   schema as communismSchema,
-} from '../generated/components/CommunismIconCoreMemory';
+} from '../generated/components/anna-anything-can-go-away/CommunismIconCoreMemory';
 import {
   COMMUNISM_IN_FRAMES,
   LOOP_FRAMES,
-} from '../generated/components/coreMemoryIcon';
+} from '../generated/components/kits/core-memory/coreMemoryIcon';
 
 // Private render entry for the hammer and sickle icon, so it renders while
 // other builders own src/Root.tsx.

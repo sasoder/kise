@@ -4,7 +4,7 @@ import NameTagCheekyPint, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NameTagCheekyPint';
+} from '../generated/components/kits/name-tags/NameTagCheekyPint';
 
 // Private render entry for Toto Wolff's Cheeky Pint name tag (five options via the
 // `variant` prop), so it renders while other sessions own src/Root.tsx.

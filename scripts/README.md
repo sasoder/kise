@@ -58,7 +58,7 @@ Deterministic and offline; run once, and commit what they write to `public/`.
 - `build-cheekypint2-textures.py`: `public/cheekypint2/grain.png` (the stout kit's grain), `card.png` and
   `speckle.png`. The `kraft-*.jpg` and `stout.jpg` it also writes belong to other looks; see `styles/cheeky-pint.md`.
 - `build-china-paper-vintage.py`: the ChinaTalk newsprint, `public/china/paper_vintage.png`, `fibre_vintage.png` and
-  `grain_0..3.png`, all read by `generated/components/chinatalkVintage.tsx`.
+  `grain_0..3.png`, all read by `generated/components/kits/chinatalk/chinatalkVintage.tsx`.
 
 ## Maps
 

@@ -4,7 +4,7 @@ import ToTheCoast, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ToTheCoast';
+} from '../generated/components/sheppard-atahualpa-ambush/ToTheCoast';
 
 // Private render entry for ToTheCoast, so this cut renders while other
 // builders own src/Root.tsx. Si Sheppard on Cortes: "... takes as many men as

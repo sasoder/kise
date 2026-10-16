@@ -4,7 +4,7 @@ import GhostLines, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/GhostLines';
+} from '../generated/components/will-hunting-mines/GhostLines';
 
 // Private render entry for GhostLines, so this cut renders while other builders
 // own src/Root.tsx. Cheeky Pint S4E02 (Will O'Brien, Ulysses): "put these power

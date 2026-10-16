@@ -4,7 +4,7 @@ import SolveMyLoneliness, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SolveMyLoneliness';
+} from '../generated/components/cm-early-js-trailer/SolveMyLoneliness';
 
 // Private render entry for cut 4 of the CM_EARLY_JS trailer
 // (SolveMyLoneliness, 1080x1920, 24000/1001 fps), so it renders without

@@ -4,7 +4,7 @@ import NameTagMap, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NameTagMap';
+} from '../generated/components/kits/name-tags/NameTagMap';
 
 // Private render entry for the map-style name tag, so it renders while
 // another builder owns src/Root.tsx.

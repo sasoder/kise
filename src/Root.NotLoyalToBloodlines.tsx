@@ -4,7 +4,7 @@ import NotLoyalToBloodlines, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NotLoyalToBloodlines';
+} from '../generated/components/sheppard-east-india-kings/NotLoyalToBloodlines';
 
 // Private render entry for NotLoyalToBloodlines, so this cut renders while
 // other builders own src/Root.tsx. Si Sheppard: "the corporations ... profit-

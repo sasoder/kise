@@ -5,7 +5,7 @@ import BothSides, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BothSides';
+} from '../generated/components/sheppard-texcoco/BothSides';
 
 // Private render entry for BothSides (Si Sheppard, "Texcoco"): the passed-over
 // brother walks to the Spaniards, and an orange kin bracket ties the two

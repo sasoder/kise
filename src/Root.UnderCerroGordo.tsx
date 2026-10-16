@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import UnderCerroGordo, {DURATION, FPS, defaultProps, schema} from '../generated/components/UnderCerroGordo';
+import UnderCerroGordo, {DURATION, FPS, defaultProps, schema} from '../generated/components/brent-death-count/UnderCerroGordo';
 
 // Private render entry for UnderCerroGordo (cut X of the Brent mine-death-count
 // clip: the photo, the pan into the ground, the workings, the 1897 clipping and

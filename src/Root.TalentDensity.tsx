@@ -1,6 +1,6 @@
 import {Composition} from 'remotion';
-import TalentDensity, {DURATION, FPS, defaultProps, schema} from '../generated/components/TalentDensity';
-import {TalentStyleFrame} from '../generated/components/talentShared';
+import TalentDensity, {DURATION, FPS, defaultProps, schema} from '../generated/components/meta-talent-density/TalentDensity';
+import {TalentStyleFrame} from '../generated/components/kits/cheeky-pint/talentShared';
 
 // Private render entry for TalentDensity (Cheeky Pint S4E03 "Talent density beat team size", stout):
 // opaque 1080x1920 at 23.976 fps. Also registers the clip's style frame (talentShared.tsx).

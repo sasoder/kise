@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import FourForOne, {DURATION, FPS, defaultProps, schema} from '../generated/components/FourForOne';
+import FourForOne, {DURATION, FPS, defaultProps, schema} from '../generated/components/sheppard-capture-not-kill/FourForOne';
 
 // Private render entry for FourForOne (Si Sheppard, "Capture, not kill"): four
 // Totonac captives on one pan of an orange beam balance, one Chichimec on the

@@ -4,7 +4,7 @@ import VastExpanseOfHisArmy, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/VastExpanseOfHisArmy';
+} from '../generated/components/sheppard-atahualpa-ambush/VastExpanseOfHisArmy';
 
 // Private render entry for VastExpanseOfHisArmy, so this cut renders while
 // other builders own src/Root.tsx. Si Sheppard on Atahualpa: "And then he

@@ -4,7 +4,7 @@ import AreWeDoingThis, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/AreWeDoingThis';
+} from '../generated/components/toto-dts/AreWeDoingThis';
 
 // Private render entry for AreWeDoingThis, so this cut renders while other
 // builders own src/Root.tsx. Toto Wolff / Cheeky Pint S4E01, "...against

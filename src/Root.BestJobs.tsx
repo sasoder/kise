@@ -4,7 +4,7 @@ import BestJobs, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BestJobs';
+} from '../generated/components/toto-mercedes-job/BestJobs';
 
 // Private render entry for BestJobs (Toto Wolff, "how he got the Mercedes job", Cheeky Pint S4E01), so
 // this cut renders while other builders own src/Root.tsx. One world: mercJobShared.tsx (Act B: mercJobActB.tsx).

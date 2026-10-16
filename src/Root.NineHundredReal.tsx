@@ -4,7 +4,7 @@ import NineHundredReal, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NineHundredReal';
+} from '../generated/components/brent-five-days/NineHundredReal';
 
 // Private render entry for "NineHundredReal" (Brent Underwood, Core Memory short
 // "five days in the mine", 1080x1920), so it renders without src/Root.tsx.

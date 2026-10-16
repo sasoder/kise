@@ -4,7 +4,7 @@ import FasterBetterCheaper, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/FasterBetterCheaper';
+} from '../generated/components/hadrian-machina-06/FasterBetterCheaper';
 
 // Private render entry for FasterBetterCheaper, so this cut renders while other
 // builders own src/Root.tsx. Hadrian Machina 06: "China's producing everything

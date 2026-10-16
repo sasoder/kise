@@ -4,7 +4,7 @@ import ThreeLogosHeart, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ThreeLogosHeart';
+} from '../generated/components/tbpn-05/ThreeLogosHeart';
 
 // Private render entry for ThreeLogosHeart, so this cut renders while other
 // builders own src/Root.tsx. "SportsCenter, CNBC and X had a threesome": the

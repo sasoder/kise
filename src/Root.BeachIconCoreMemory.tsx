@@ -2,11 +2,11 @@ import {Composition} from 'remotion';
 import BeachIconCoreMemory, {
   defaultProps as beachProps,
   schema as beachSchema,
-} from '../generated/components/BeachIconCoreMemory';
+} from '../generated/components/kendziorra-trailer/BeachIconCoreMemory';
 import {
   BEACH_IN_FRAMES,
   LOOP_FRAMES,
-} from '../generated/components/coreMemoryIcon';
+} from '../generated/components/kits/core-memory/coreMemoryIcon';
 
 // Private render entry for the beach icon, so it renders while other builders
 // own src/Root.tsx.

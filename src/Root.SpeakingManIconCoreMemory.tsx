@@ -2,11 +2,11 @@ import {Composition} from 'remotion';
 import SpeakingManIconCoreMemory, {
   defaultProps as speakingProps,
   schema as speakingSchema,
-} from '../generated/components/SpeakingManIconCoreMemory';
+} from '../generated/components/anna-elon-syntax/SpeakingManIconCoreMemory';
 import {
   LOOP_FRAMES,
   SPEAKING_IN_FRAMES,
-} from '../generated/components/coreMemoryIcon';
+} from '../generated/components/kits/core-memory/coreMemoryIcon';
 
 // Private render entry for the speaking man icon, so it renders while other
 // builders own src/Root.tsx.

@@ -4,7 +4,7 @@ import BackInTheDayV3, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BackInTheDayV3';
+} from '../generated/components/toto-mercedes-financials/BackInTheDayV3';
 
 // Private render entry for the Toto Wolff "Mercedes F1 financials" clip (BackInTheDayV3, cut 2 V3:
 // V2 with every figure the filed number), so it renders while other sessions own src/Root.tsx.

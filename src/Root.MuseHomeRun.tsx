@@ -4,7 +4,7 @@ import MuseHomeRun, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/MuseHomeRun';
+} from '../generated/components/meta-muse-success/MuseHomeRun';
 
 // Private render entry for the Cheeky Pint S4 "Muse home run" cut (MuseHomeRun, stout system),
 // so it renders while other sessions own src/Root.tsx.

@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import BiofilmCircle, {DURATION, FPS, defaultProps, schema} from '../generated/components/BiofilmCircle';
+import BiofilmCircle, {DURATION, FPS, defaultProps, schema} from '../generated/components/kyle-plague/BiofilmCircle';
 
 // Private render entry for the pen circle over the blocked-flea photo (plague clip).
 export const RemotionRoot = () => {

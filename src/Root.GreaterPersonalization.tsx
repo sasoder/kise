@@ -4,7 +4,7 @@ import GreaterPersonalization, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/GreaterPersonalization';
+} from '../generated/components/alex-agentic-commerce/GreaterPersonalization';
 
 // Private render entry for GreaterPersonalization (cut 5 of Alexandr Wang, "Alex on agentic commerce",
 // Cheeky Pint S4E03), so this cut renders while other builders own their own entries. One family:

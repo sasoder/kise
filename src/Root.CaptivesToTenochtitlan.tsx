@@ -4,7 +4,7 @@ import CaptivesToTenochtitlan, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CaptivesToTenochtitlan';
+} from '../generated/components/sheppard-capture-not-kill/CaptivesToTenochtitlan';
 
 // Private render entry for CaptivesToTenochtitlan (Si Sheppard, "Capture, not
 // kill", file 53): an orange warrior leads a bound captive to the foot of the

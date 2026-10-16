@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import CutTheLifelines, {DURATION, FPS, defaultProps, schema} from '../generated/components/CutTheLifelines';
+import CutTheLifelines, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-pearl-harbor/CutTheLifelines';
 
 // Private render entry for CutTheLifelines (Sarah Paine, Pearl Harbor clip,
 // Dwarkesh map style): the aid routes into Nationalist China are cut — Japan's

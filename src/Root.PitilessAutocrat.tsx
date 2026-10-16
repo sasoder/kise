@@ -4,7 +4,7 @@ import PitilessAutocrat, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/PitilessAutocrat';
+} from '../generated/components/sheppard-captured-emperors/PitilessAutocrat';
 
 // Private render entry for PitilessAutocrat (cut A of the "strings" set), so
 // this cut renders while other builders own src/Root.tsx. Si Sheppard on

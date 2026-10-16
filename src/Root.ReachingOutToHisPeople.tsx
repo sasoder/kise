@@ -4,7 +4,7 @@ import ReachingOutToHisPeople, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ReachingOutToHisPeople';
+} from '../generated/components/sheppard-captured-emperors/ReachingOutToHisPeople';
 
 // Private render entry for ReachingOutToHisPeople (cut E of the Sheppard
 // "strings" set), so this cut renders while other builders own src/Root.tsx.

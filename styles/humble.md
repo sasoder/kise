@@ -22,7 +22,7 @@ overlays that the editor drops onto the footage.
 ## Type
 
 - Neulis Cursive Bold only: `public/NeulisCursive-Bold.otf`. Load it with `@remotion/fonts` `loadFont` + `staticFile`
-  + `delayRender`, copying the block at the top of `generated/components/NameTagHumble.tsx`.
+  + `delayRender`, copying the block at the top of `generated/components/kits/name-tags/NameTagHumble.tsx`.
 - Use proper capitalisation and letter-spacing 0.
 - Copy is Swedish, in sentence case ("För hårt", "Fel vinkel", "Tandläkare").
 
@@ -30,7 +30,7 @@ overlays that the editor drops onto the footage.
 
 - One family on Lucide's grammar: a 24 grid, stroke 2, round caps and joins, no fill. Draw it x4 in a 96 px box, so
   strokes are 8 px and match the outlines. White, on or inside the purple.
-- Lucide has no toothbrush. Reuse the glyph in `generated/components/BrushingMistakes.tsx`: a plain closed head, a
+- Lucide has no toothbrush. Reuse the glyph in `generated/components/kits/clients/BrushingMistakes.tsx`: a plain closed head, a
   tight four-bristle tuft at a 2.5 pitch, and a handle that rises 10°. Change one modifier per icon: a splayed tuft
   for "too hard", an angle arc for "wrong angle", speed lines for "too fast".
 - A slotted head with spaced bristles reads as a table, and a tooth crown is a jumble at phone size. Avoid both.
@@ -65,14 +65,14 @@ Once the user picks one, remove the other variants from the component and build 
 
 ## Exemplars
 
-- `generated/components/BrushingMistakes.tsx`: the three-point tube timeline. The outline enters, purple flows through
+- `generated/components/kits/clients/BrushingMistakes.tsx`: the three-point tube timeline. The outline enters, purple flows through
   the tube station by station, and a toothbrush icon rises in each station (`step` 1–3).
-- `generated/components/NameTagHumble.tsx`: the name tag. See `styles/name-tags.md` for its size and position.
+- `generated/components/kits/name-tags/NameTagHumble.tsx`: the name tag. See `styles/name-tags.md` for its size and position.
 
 ## Don't
 
 - Don't take style from the Humble Premiere projects, the Humble brand book or `~/.colleague` notes. The green and
   white cards there are not the Humble look.
-- Don't copy `generated/components/ToothPieChart.tsx`. It is not this style (a dark background and a second purple).
+- Don't copy `generated/components/kits/clients/ToothPieChart.tsx`. It is not this style (a dark background and a second purple).
 - Don't use the core-memory chain colours, Barlow or the house amber `#FFB000`.
 - To find Humble pieces in the source, search for `Neulis` or `7970b4`.

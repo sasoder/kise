@@ -4,7 +4,7 @@ import RockCollapsedReports, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/RockCollapsedReports';
+} from '../generated/components/brent-death-count/RockCollapsedReports';
 
 // Private render entry for "brent - the mine death count", cut A
 // (RockCollapsedReports, 1080x1920, 24000/1001 fps), so it renders without

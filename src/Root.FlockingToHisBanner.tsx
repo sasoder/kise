@@ -4,7 +4,7 @@ import FlockingToHisBanner, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/FlockingToHisBanner';
+} from '../generated/components/sheppard-tlaxcalans/FlockingToHisBanner';
 
 // Private render entry for FlockingToHisBanner (cut D of the Tlaxcalans clip),
 // so this cut renders while other builders own src/Root.tsx. Si Sheppard: "So

@@ -4,7 +4,7 @@ import DiesOutLineage, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/DiesOutLineage';
+} from '../generated/components/kyle-plague/DiesOutLineage';
 
 // Private render entry for DiesOutLineage (plague clip), so this cut renders
 // while other builders own src/Root.tsx. Opaque, 1080x1920, 29.97 fps, 159 f.

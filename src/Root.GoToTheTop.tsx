@@ -4,7 +4,7 @@ import GoToTheTop, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/GoToTheTop';
+} from '../generated/components/sheppard-atahualpa-ambush/GoToTheTop';
 
 // Private render entry for GoToTheTop, so this cut renders while other
 // builders own src/Root.tsx. Si Sheppard on Pizarro: "Go to the top, seize

@@ -4,7 +4,7 @@ import GhostTownForSaleTall, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/GhostTownForSaleTall';
+} from '../generated/components/brent-cerro-gordo-trailer/GhostTownForSaleTall';
 
 // Private render entry for GhostTownForSaleTall (the 9:16 sibling of cut 3 of the Cerro Gordo set, Core
 // Memory x Brent Underwood): a phone feed of listings stops on the one with a real photograph — GHOST TOWN

@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import GlobalWar, {DURATION, FPS, defaultProps, schema} from '../generated/components/GlobalWar';
+import GlobalWar, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-sugar-islands/GlobalWar';
 
 // Private render entry for GlobalWar (cut D of the SarahWar sugar-islands clip), so it
 // renders while other builders own src/Root.tsx. Opaque Dwarkesh map style,

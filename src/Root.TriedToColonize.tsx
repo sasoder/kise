@@ -4,7 +4,7 @@ import TriedToColonize, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TriedToColonize';
+} from '../generated/components/sheppard-vikings/TriedToColonize';
 
 // Private render entry for TriedToColonize (cut D of Sheppard_Vikings), so this
 // cut renders while other builders own src/Root.tsx. Si Sheppard: "they knew of

@@ -4,7 +4,7 @@ import SomeHaveFundamentalsStout, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SomeHaveFundamentalsStout';
+} from '../generated/components/toto-mercedes-financials/SomeHaveFundamentalsStout';
 
 // Private render entry for the Toto Wolff clip in the stout system (SomeHaveFundamentalsStout),
 // so it renders while other sessions own src/Root.tsx.

@@ -4,7 +4,7 @@ import NumberInflated, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NumberInflated';
+} from '../generated/components/brent-death-count/NumberInflated';
 
 // Private render entry for cut B of "brent - the mine death count"
 // (NumberInflated, 1080x1920, 24000/1001 fps), so it renders without

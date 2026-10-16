@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import NameTagNewsprint, {FPS, defaultProps, schema} from '../generated/components/NameTagNewsprint';
+import NameTagNewsprint, {FPS, defaultProps, schema} from '../generated/components/kits/name-tags/NameTagNewsprint';
 
 // Private render entry for the ChinaTalk newsprint name tag (a caption slip cut
 // from the newspaper; props name / job / durationInFrames, optional variant), so

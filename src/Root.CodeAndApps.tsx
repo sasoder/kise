@@ -5,7 +5,7 @@ import CodeAndApps, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CodeAndApps';
+} from '../generated/components/hadrian-machina-05/CodeAndApps';
 
 // Private render entry for CodeAndApps, so this cut renders while other
 // builders own src/Root.tsx. "...a kind of startup that doesn't deal with code

@@ -4,7 +4,7 @@ import HeadOfMercedes, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HeadOfMercedes';
+} from '../generated/components/toto-mercedes-job/HeadOfMercedes';
 
 // Private render entry for HeadOfMercedes (Toto Wolff, "how he got the Mercedes job", Cheeky Pint S4E01), so
 // this cut renders while other builders own src/Root.tsx. One world: mercJobShared.tsx (Act B: mercJobActB.tsx).

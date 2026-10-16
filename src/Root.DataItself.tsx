@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import DataItself, {DURATION, FPS, defaultProps, schema} from '../generated/components/DataItself';
+import DataItself, {DURATION, FPS, defaultProps, schema} from '../generated/components/bharat-maven/DataItself';
 
 // Private render entry for Bharat "Project Maven's data problem" cut A
 // (DataItself, 1920x1080), so it renders while other builders own src/Root.tsx.

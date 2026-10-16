@@ -4,7 +4,7 @@ import SubordinatedPeoples, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SubordinatedPeoples';
+} from '../generated/components/sheppard-tlaxcalans/SubordinatedPeoples';
 
 // Private render entry for SubordinatedPeoples (cut C of
 // Sheppard_Tlaxcalans_thought_they_used_Cortes), so this cut renders while other

@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import KeepTheCaribbean, {DURATION, FPS, defaultProps, schema} from '../generated/components/KeepTheCaribbean';
+import KeepTheCaribbean, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-sugar-islands/KeepTheCaribbean';
 
 // Private render entry for KeepTheCaribbean (cut E of the SarahWar sugar-islands clip), so it
 // renders while other builders own src/Root.tsx. Opaque Dwarkesh map style,

@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import {CaptureFiguresSheet} from '../generated/components/captureFigures';
+import {CaptureFiguresSheet} from '../generated/components/sheppard-capture-not-kill/captureFigures';
 
 // Private render entry for the review sheet of captureFigures (Si Sheppard,
 // "Capture, not kill"): the cast, poses, props and a 110 px silhouette row.

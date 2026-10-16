@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import DripFeedLong, {DURATION, FPS, defaultProps, schema} from '../generated/components/DripFeedLong';
+import DripFeedLong, {DURATION, FPS, defaultProps, schema} from '../generated/components/sheppard-vikings/DripFeedLong';
 
 // Private render entry for DripFeedLong (cut E of Sheppard_Vikings extended
 // backwards by 100 frames: 47_DripFeed.mov), so this cut renders while other

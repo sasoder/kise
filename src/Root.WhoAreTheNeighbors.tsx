@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import WhoAreTheNeighbors, {DURATION, FPS, defaultProps, schema} from '../generated/components/WhoAreTheNeighbors';
+import WhoAreTheNeighbors, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-iraq-regime-change/WhoAreTheNeighbors';
 
 // Private render entry for WhoAreTheNeighbors (cut F of the Sheppard Iraq clip, builder N), so it
 // renders while other builders own src/Root.tsx. Opaque Dwarkesh map style, 1080x1920, 24fps.

@@ -2,7 +2,7 @@ import {Composition} from 'remotion';
 import OutNowCoreMemory, {
   defaultProps,
   schema,
-} from '../generated/components/OutNowCoreMemory';
+} from '../generated/components/cm-early-js-trailer/OutNowCoreMemory';
 
 // Private render entry: the approved OUT NOW! sting (OutNowCoreMemory) with the
 // text OUT SOON!, for the end of the CM_EARLY_JS 9:16 trailer. Transparent

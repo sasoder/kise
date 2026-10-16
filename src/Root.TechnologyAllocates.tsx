@@ -4,7 +4,7 @@ import TechnologyAllocates, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TechnologyAllocates';
+} from '../generated/components/logan-brezhnev/TechnologyAllocates';
 
 // Private render entry for TechnologyAllocates (cut C of Logan Wright,
 // "Brezhnev chose decay", ChinaTalk slightly vintage), so this cut renders

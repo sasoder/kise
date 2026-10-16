@@ -4,7 +4,7 @@ import MaxIntro, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/MaxIntro';
+} from '../generated/components/kits/clients/MaxIntro';
 
 // Private render entry for MaxIntro, so this cut renders while another
 // builder owns src/Root.tsx. Lovable "Full Stack Fika" freeze-frame intro of

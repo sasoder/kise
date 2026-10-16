@@ -4,7 +4,7 @@ import CableInspection, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CableInspection';
+} from '../generated/components/will-hunting-mines/CableInspection';
 
 // Private render entry for CableInspection (Cheeky Pint S4E02, Will O'Brien / Ulysses, cut C):
 // "a surface underwater vehicle that will map these cables on a daily basis … and also if they're

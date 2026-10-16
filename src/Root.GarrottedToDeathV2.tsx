@@ -4,7 +4,7 @@ import GarrottedToDeathV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/GarrottedToDeathV2';
+} from '../generated/components/sheppard-captured-emperors/GarrottedToDeathV2';
 
 // Private render entry for GarrottedToDeathV2 (71_GarrottedToDeath, the
 // rebuild): the gauntlet closes, the bar twists the three strings into one

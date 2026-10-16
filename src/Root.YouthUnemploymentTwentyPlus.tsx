@@ -4,7 +4,7 @@ import YouthUnemploymentTwentyPlus, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/YouthUnemploymentTwentyPlus';
+} from '../generated/components/jordan-25-million-jobs/YouthUnemploymentTwentyPlus';
 
 // Private render entry for Jordan Schneider "Hu Jintao's 25 million jobs",
 // graphic A (17_YouthUnemploymentTwentyPlus), so it renders while other

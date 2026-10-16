@@ -4,7 +4,7 @@ import FormatWorks, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/FormatWorks';
+} from '../generated/components/toto-dts/FormatWorks';
 
 // Private render entry for FormatWorks, so this cut renders while other
 // builders own src/Root.tsx. Toto Wolff / Cheeky Pint S4E01, "why does the

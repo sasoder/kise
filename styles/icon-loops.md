@@ -43,9 +43,9 @@ There are two looks:
   so the artwork occludes it.
 - Flair is pure black `#000000` at low opacity, with stroke weights matched to the icon's.
 - Exemplars:
-  - `generated/components/WormholeIconLoop.tsx`: motes spiral down the funnel and speed up as the radius collapses,
+  - `generated/components/kits/core-memory/WormholeIconLoop.tsx`: motes spiral down the funnel and speed up as the radius collapses,
     with pulse rings.
-  - `generated/components/BlackholeIconLoop.tsx`: infalling matter is swallowed inside the sphere, with glints.
+  - `generated/components/kits/core-memory/BlackholeIconLoop.tsx`: infalling matter is swallowed inside the sphere, with glints.
 
 ## Core memory look
 
@@ -56,7 +56,7 @@ Each icon ships as two files:
 
 The In clip's last frame is loop frame `LOOP_FRAMES − 1`, so the cut from In to Loop is an ordinary one-frame step.
 
-- **Kit:** build on `generated/components/coreMemoryIcon.tsx`. Use `CoreMemoryIconStack`,
+- **Kit:** build on `generated/components/kits/core-memory/coreMemoryIcon.tsx`. Use `CoreMemoryIconStack`,
   `coreMemoryTiming(mode, frame, inFrames)`, `maskStyle`, `slideOffset`, `bootRamp`, and the constants `CHAIN_COLORS`,
   `CORE_COLOR`, `SHADOW_OFFSET` (6), `LOOP_FRAMES`, `CORE_LAND` and `LAST_COLOR_LAND`. Add a `<NAME>_IN_FRAMES`
   constant for the new icon: 48 frames is typical, longer when a living part needs time to build up (the power
@@ -74,7 +74,7 @@ The In clip's last frame is loop frame `LOOP_FRAMES − 1`, so the cut from In t
   Living parts start only after the core lands: a rack's LEDs boot one by one.
 - **Size:** `iconSize` 760 on the 1080 canvas, optically centred.
 - Exemplars:
-  - `generated/components/ServerIconCoreMemory.tsx`: a PNG mask, with LEDs that are chain-colour discs behind the
+  - `generated/components/joel-hyperscalers-solar/ServerIconCoreMemory.tsx`: a PNG mask, with LEDs that are chain-colour discs behind the
     artwork's holes.
-  - `generated/components/ClockIconCoreMemory.tsx`: a drawn icon with moving hands, through `renderLayer`.
+  - `generated/components/joel-hyperscalers-solar/ClockIconCoreMemory.tsx`: a drawn icon with moving hands, through `renderLayer`.
   - Compositions: `src/Root.CoreMemoryIcons.tsx` (server, power) and `src/Root.ClockIconCoreMemory.tsx`.

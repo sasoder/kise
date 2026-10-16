@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import LimitedObjectives, {DURATION, FPS, defaultProps, schema} from '../generated/components/LimitedObjectives';
+import LimitedObjectives, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-iraq-regime-change/LimitedObjectives';
 
 // Private render entry for LimitedObjectives (cut A of the Sheppard Iraq clip), so it
 // renders while other builders own src/Root.tsx. Opaque Dwarkesh map style,

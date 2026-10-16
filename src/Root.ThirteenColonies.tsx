@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import ThirteenColonies, {DURATION, FPS, defaultProps, schema} from '../generated/components/ThirteenColonies';
+import ThirteenColonies, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-sugar-islands/ThirteenColonies';
 
 // Private render entry for ThirteenColonies (cut A of the SarahWar sugar-islands clip), so it
 // renders while other builders own src/Root.tsx. Opaque Dwarkesh map style,

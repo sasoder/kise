@@ -4,8 +4,8 @@ import BreakTurnPuppet, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BreakTurnPuppet';
-import BreakTurnSheet from '../generated/components/BreakTurnSheet';
+} from '../generated/components/sheppard-captured-emperors/BreakTurnPuppet';
+import BreakTurnSheet from '../generated/components/sheppard-captured-emperors/BreakTurnSheet';
 
 // Private render entry for BreakTurnPuppet (replaces cuts 17 / 20 / 23 of the
 // Sheppard "Why captured emperors cooperated" strings set): the break, a real

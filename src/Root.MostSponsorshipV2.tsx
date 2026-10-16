@@ -4,7 +4,7 @@ import MostSponsorshipV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/MostSponsorshipV2';
+} from '../generated/components/toto-mercedes-financials/MostSponsorshipV2';
 
 // Private render entry for the Toto Wolff "Mercedes F1 financials" clip, cut 5
 // V2 (MostSponsorshipV2: Mercedes' bar in amber; 0:40.280, 214 f), so it

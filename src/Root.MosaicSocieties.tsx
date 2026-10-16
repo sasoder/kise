@@ -1,12 +1,12 @@
 import React from "react";
 import { Composition, useCurrentFrame } from "remotion";
-import { IraqABScene } from "../generated/components/iraqAB";
+import { IraqABScene } from "../generated/components/sarah-iraq-regime-change/iraqAB";
 import MosaicSocieties, {
   DURATION,
   FPS,
   defaultProps,
   schema,
-} from "../generated/components/MosaicSocieties";
+} from "../generated/components/sarah-iraq-regime-change/MosaicSocieties";
 
 // Private render entry for MosaicSocieties (builder M): cut C of Si Sheppard,
 // "Regime change in Iraq was the easy part" — "Iraq and neighbors are mosaic

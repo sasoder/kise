@@ -4,7 +4,7 @@ import NameTagCoreMemory, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NameTagCoreMemory';
+} from '../generated/components/kits/name-tags/NameTagCoreMemory';
 
 // Private render entry for the core memory name tag, so it renders while
 // another builder owns src/Root.tsx.

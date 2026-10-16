@@ -89,7 +89,7 @@ Every request carries a descriptive User-Agent (e.g. `-A "kise-stills/1.0 (perso
 - `https://cdn.simpleicons.org/<slug>/ffffff` covers many brands (f1, Target, Uber, eBay), not Equifax, Yahoo,
   LinkedIn, Adobe, T-Mobile, Capital One, AT&T, Home Depot or sports clubs.
 - Club crests: Commons (Lakers, Cowboys) or the en.wikipedia infobox file (Real Madrid, Man United).
-- AI-lab marks not yet in `generated/components/brandGlyphs.tsx`: lobehub's monochrome set,
+- AI-lab marks not yet in `generated/components/kits/dwarkesh/brandGlyphs.tsx`: lobehub's monochrome set,
   `https://unpkg.com/@lobehub/icons-static-svg@latest/icons/<name>.svg` (single colour, evenodd), copied in as
   `{viewBox, paths}`.
 - `qlmanage -t -s 400 -o "$S" *.svg` rasterises for a look (no rsvg or magick on this Mac). How a logo enters a graphic:

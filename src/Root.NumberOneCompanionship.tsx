@@ -4,7 +4,7 @@ import NumberOneCompanionship, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NumberOneCompanionship';
+} from '../generated/components/cm-early-js-trailer/NumberOneCompanionship';
 
 // Private render entry for cut 3 of the CM_EARLY_JS trailer
 // (NumberOneCompanionship, 1080x1920, 24000/1001 fps), so it renders without

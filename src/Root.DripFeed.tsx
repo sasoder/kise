@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import DripFeed, {DURATION, FPS, defaultProps, schema} from '../generated/components/DripFeed';
+import DripFeed, {DURATION, FPS, defaultProps, schema} from '../generated/components/sheppard-vikings/DripFeed';
 
 // Private render entry for DripFeed (cut E of Sheppard_Vikings), so this cut
 // renders while other builders own src/Root.tsx. Si Sheppard: "drip feed

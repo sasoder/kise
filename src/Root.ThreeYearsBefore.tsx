@@ -4,7 +4,7 @@ import ThreeYearsBefore, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ThreeYearsBefore';
+} from '../generated/components/sheppard-texcoco/ThreeYearsBefore';
 
 // Private render entry for ThreeYearsBefore (cut 1 of Si Sheppard "Texcoco"):
 // "three years before Cortés arrived in Mesoamerica". Dwarkesh map style on the

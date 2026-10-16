@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import SporttouchenQuiz, {DURATION, FPS, defaultProps, schema} from '../generated/components/SporttouchenQuiz';
+import SporttouchenQuiz, {DURATION, FPS, defaultProps, schema} from '../generated/components/kits/clients/SporttouchenQuiz';
 
 // Private render entry for SporttouchenQuiz (Sporttouchen): the "Quizkortet" question plate + talking logo.
 export const RemotionRoot = () => (

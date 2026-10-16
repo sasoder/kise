@@ -4,7 +4,7 @@ import HarvardReport, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HarvardReport';
+} from '../generated/components/cm-early-js-trailer/HarvardReport';
 
 // Private render entry for cut 2 of the CM_EARLY_JS trailer
 // (HarvardReport, 1080x1920, 24000/1001 fps), so it renders without

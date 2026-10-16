@@ -4,7 +4,7 @@ import DepartmentOfWarOpen, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/DepartmentOfWarOpen';
+} from '../generated/components/bharat-maven/DepartmentOfWarOpen';
 
 // Private render entry for the Bharat / Project Maven V3 opening shot
 // (DepartmentOfWarOpen), so it renders while other builders own src/Root.tsx.

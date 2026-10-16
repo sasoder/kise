@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import TiedToTheData, {DURATION, FPS, defaultProps, schema} from '../generated/components/TiedToTheData';
+import TiedToTheData, {DURATION, FPS, defaultProps, schema} from '../generated/components/bharat-maven/TiedToTheData';
 
 // Private render entry for the Bharat "Project Maven's data problem" clip,
 // cut D (TiedToTheData), so it renders while other builders own src/Root.tsx.

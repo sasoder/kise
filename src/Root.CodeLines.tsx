@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import CodeLines, {DURATION, FPS, defaultProps, schema} from '../generated/components/CodeLines';
+import CodeLines, {DURATION, FPS, defaultProps, schema} from '../generated/components/hadrian-machina-06/CodeLines';
 
 // Private render entry for CodeLines, so this cut renders while other builders
 // own src/Root.tsx. "...we will need more than just fancy lines of code." Core

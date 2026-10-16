@@ -4,7 +4,7 @@ import PoolingAssets, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/PoolingAssets';
+} from '../generated/components/sheppard-east-india-kings/PoolingAssets';
 
 // Private render entry for PoolingAssets, so this cut renders while other
 // builders own src/Root.tsx. Si Sheppard: "...the most raw, unbridled

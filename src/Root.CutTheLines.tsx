@@ -4,7 +4,7 @@ import CutTheLines, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CutTheLines';
+} from '../generated/components/will-hunting-mines/CutTheLines';
 
 // Private render entry for CutTheLines (Cheeky Pint S4E02, Will O'Brien / Ulysses): the continuation
 // of CableInspection. "we're building an implement that will cut the fishing lines off of the floating

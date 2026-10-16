@@ -4,7 +4,7 @@ import TopSix, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TopSix';
+} from '../generated/components/toto-mercedes-job/TopSix';
 
 // Private render entry for TopSix (Toto Wolff, "how he got the Mercedes job", Cheeky Pint S4E01), so
 // this cut renders while other builders own src/Root.tsx. One world: mercJobShared.tsx.

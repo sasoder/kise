@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import AllOfChina, {DURATION, FPS, defaultProps, schema} from '../generated/components/AllOfChina';
+import AllOfChina, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-pearl-harbor/AllOfChina';
 
 // Private render entry for AllOfChina (Sarah Paine, Pearl Harbor clip, cut C):
 // a dashed orange pen draws Japan's plan round all of China while the real

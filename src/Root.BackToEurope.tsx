@@ -5,7 +5,7 @@ import BackToEurope, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BackToEurope';
+} from '../generated/components/sheppard-conquistador-advantages/BackToEurope';
 
 // Private render entry for BackToEurope (Si Sheppard, "Conquistador
 // advantages", cut D): the conquistador in his quilted cotton armour meets a

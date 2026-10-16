@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import EnoughRelevantData, {DURATION, FPS, defaultProps, schema} from '../generated/components/EnoughRelevantData';
+import EnoughRelevantData, {DURATION, FPS, defaultProps, schema} from '../generated/components/bharat-maven/EnoughRelevantData';
 
 // Private render entry for Bharat Maven V3 (EnoughRelevantData), so it renders while other builders own src/Root.tsx.
 export const RemotionRoot = () => {

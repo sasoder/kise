@@ -4,7 +4,7 @@ import HardToKeepUp, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HardToKeepUp';
+} from '../generated/components/tbpn-03/HardToKeepUp';
 
 // Private render entry for HardToKeepUp, so this cut renders while other
 // builders own src/Root.tsx. TBPN 03 narrated: "with the breakneck pace of

@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import CreditBoom, {DURATION, FPS, defaultProps, schema} from '../generated/components/CreditBoom';
+import CreditBoom, {DURATION, FPS, defaultProps, schema} from '../generated/components/logan-credit-boom/CreditBoom';
 
 // Private render entry for the Logan Wright "biggest credit boom in history"
 // master (ChinaTalk style): one 1347-frame composition, cut into eleven files

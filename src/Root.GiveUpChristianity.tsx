@@ -4,7 +4,7 @@ import GiveUpChristianity, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/GiveUpChristianity';
+} from '../generated/components/sheppard-capture-not-kill/GiveUpChristianity';
 
 // Private render entry for GiveUpChristianity (Si Sheppard, "Capture, not
 // kill", file 83): an engraved cross-section plate; the villagers cannot haul

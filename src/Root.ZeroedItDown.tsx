@@ -4,7 +4,7 @@ import ZeroedItDown, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ZeroedItDown';
+} from '../generated/components/brent-death-count/ZeroedItDown';
 
 // Private render entry for cut C of "brent - the mine death count"
 // (ZeroedItDown, 1080x1920, 24000/1001 fps), so it renders without

@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import LethalAdversary, {DURATION, FPS, defaultProps, schema} from '../generated/components/LethalAdversary';
+import LethalAdversary, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-death-ground/LethalAdversary';
 
 // Private render entry for LethalAdversary (Sarah Paine, "Death ground: why
 // regime change is brutal", 44_LethalAdversary): a ruined town, scattered dim

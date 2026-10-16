@@ -5,7 +5,7 @@ import SaturdayEmpty, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SaturdayEmpty';
+} from '../generated/components/hadrian-machina-05/SaturdayEmpty';
 
 // Private render entry for SaturdayEmpty, so this cut renders while other
 // builders own src/Root.tsx. "Durin... empty. Oh, this is Radiant... Empty."

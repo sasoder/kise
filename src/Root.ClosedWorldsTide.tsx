@@ -4,7 +4,7 @@ import ClosedWorldsTide, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ClosedWorldsTide';
+} from '../generated/components/sheppard-texcoco/ClosedWorldsTide';
 
 // Private render entry for ClosedWorldsTide (Si Sheppard, "Texcoco"; delivered
 // as 38_ClosedWorlds.mov): ONE continuous graphic through "Their closed worlds

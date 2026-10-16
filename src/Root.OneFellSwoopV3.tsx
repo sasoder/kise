@@ -4,7 +4,7 @@ import OneFellSwoopV3, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OneFellSwoopV3';
+} from '../generated/components/sheppard-centralized-empires/OneFellSwoopV3';
 
 // Private render entry for OneFellSwoopV3 (walled-states rebuild of V2), so this cut renders while other
 // builders own src/Root.tsx. Si Sheppard: "...the Spanish couldn't take out the

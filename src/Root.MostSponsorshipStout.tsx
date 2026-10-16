@@ -4,7 +4,7 @@ import MostSponsorshipStout, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/MostSponsorshipStout';
+} from '../generated/components/toto-mercedes-financials/MostSponsorshipStout';
 
 // Private render entry for the Toto Wolff "Mercedes F1 financials" clip, cut 5
 // in the stout system (MostSponsorshipStout; 0:40.280, 214 f), so it renders

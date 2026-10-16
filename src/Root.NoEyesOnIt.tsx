@@ -4,7 +4,7 @@ import NoEyesOnIt, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NoEyesOnIt';
+} from '../generated/components/will-mars-ocean/NoEyesOnIt';
 
 // Private render entry for NoEyesOnIt (Cheeky Pint S4E02, "no eyes on it"): opaque 1080x1920 at
 // 23.976 fps, 147 frames (135 + a 12-frame hold handle). Render with --gl=angle (WebGL2 globe).

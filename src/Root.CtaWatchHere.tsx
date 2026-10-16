@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import CtaWatchHere, {DURATION, FPS, defaultProps, schema} from '../generated/components/CtaWatchHere';
+import CtaWatchHere, {DURATION, FPS, defaultProps, schema} from '../generated/components/kits/cheeky-pint/CtaWatchHere';
 
 // Private render entry for the stout "Watch here" end card (transparent overlay),
 // so it renders while other sessions own src/Root.tsx.

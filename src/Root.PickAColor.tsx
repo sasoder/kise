@@ -4,7 +4,7 @@ import PickAColor, {
   FPS,
   defaultProps,
   schema,
-} from "../generated/components/PickAColor";
+} from "../generated/components/sarah-iraq-regime-change/PickAColor";
 
 // Private render entry for PickAColor (builder M): Si Sheppard, "if you could pick a
 // color on that map, the chances are it might want to kill one or two more colors on

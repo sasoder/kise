@@ -4,7 +4,7 @@ import SmallerTeams, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/SmallerTeams';
+} from '../generated/components/toto-dts/SmallerTeams';
 
 // Private render entry for SmallerTeams (cut D of Toto Wolff's "why Drive to Survive worked", Cheeky Pint
 // S4E01), so this cut renders while other builders own src/Root.tsx. "It allowed Drive to Survive to look

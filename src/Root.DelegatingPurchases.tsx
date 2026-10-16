@@ -4,7 +4,7 @@ import DelegatingPurchases, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/DelegatingPurchases';
+} from '../generated/components/alex-agentic-commerce/DelegatingPurchases';
 
 // Private render entry for DelegatingPurchases (Alexandr Wang, "Alex on agentic commerce", Cheeky Pint S4E03,
 // cut 1), so this cut renders while other builders own their own entries. World: museShared.tsx.

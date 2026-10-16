@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import KeepCollecting, {DURATION, FPS, defaultProps, schema} from '../generated/components/KeepCollecting';
+import KeepCollecting, {DURATION, FPS, defaultProps, schema} from '../generated/components/bharat-maven/KeepCollecting';
 
 // Private render entry for Bharat "Project Maven's data problem" V3 cut C (KeepCollecting).
 export const RemotionRoot = () => {

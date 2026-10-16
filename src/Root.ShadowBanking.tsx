@@ -4,7 +4,7 @@ import ShadowBanking, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ShadowBanking';
+} from '../generated/components/logan-credit-boom/ShadowBanking';
 
 // Private render entry for the Logan Wright credit-boom clip, V2 cut 5
 // ("... facilitated the growth of the shadow banking system"), so it renders

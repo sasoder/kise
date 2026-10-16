@@ -4,7 +4,7 @@ import LetsOffTheAmbush, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/LetsOffTheAmbush';
+} from '../generated/components/sheppard-atahualpa-ambush/LetsOffTheAmbush';
 
 // Private render entry for LetsOffTheAmbush, so this cut renders while other
 // builders own src/Root.tsx. Si Sheppard on Pizarro at Cajamarca: "That's when

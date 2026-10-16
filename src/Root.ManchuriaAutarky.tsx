@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import ManchuriaAutarky, {DURATION, FPS, defaultProps, schema} from '../generated/components/ManchuriaAutarky';
+import ManchuriaAutarky, {DURATION, FPS, defaultProps, schema} from '../generated/components/sarah-pearl-harbor/ManchuriaAutarky';
 
 // Private render entry for ManchuriaAutarky (Sarah Paine, "How the Depression
 // pushed Japan to Pearl Harbor", Dwarkesh map style): Japan's 1931 empire lives

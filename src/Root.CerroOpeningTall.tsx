@@ -5,7 +5,7 @@ import CerroOpeningTall, {
   FPS,
   MASTER_DURATION,
   schema,
-} from '../generated/components/CerroOpeningTall';
+} from '../generated/components/brent-cerro-gordo-trailer/CerroOpeningTall';
 
 // Private render entry for the Brent / Cerro Gordo opening, 9:16 (1080x1920):
 // cut 1 CerroGordoTall, cut 2 EightHundredMillionTall, and the master for join checks.

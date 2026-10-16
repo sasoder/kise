@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import NameTagStout, {DURATION, FPS, defaultProps, schema} from '../generated/components/NameTagStout';
+import NameTagStout, {DURATION, FPS, defaultProps, schema} from '../generated/components/kits/name-tags/NameTagStout';
 
 // Private render entry for the stout name tag (transparent overlay), so it
 // renders while other sessions own src/Root.tsx.

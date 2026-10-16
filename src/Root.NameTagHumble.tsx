@@ -4,7 +4,7 @@ import NameTagHumble, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NameTagHumble';
+} from '../generated/components/kits/name-tags/NameTagHumble';
 
 // Private render entry for the Humble name tag, so it renders while another
 // builder owns src/Root.tsx.

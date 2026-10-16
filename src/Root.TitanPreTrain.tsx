@@ -4,7 +4,7 @@ import TitanPreTrain, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TitanPreTrain';
+} from '../generated/components/bharat-synthetic-data/TitanPreTrain';
 
 // Private render entry for the Bharat "synthetic data needs real data" clip,
 // cut B V2 (TitanPreTrain, one file 14_TitanPreTrain.mov, 245 f), so it

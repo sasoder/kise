@@ -1,7 +1,7 @@
 import {Composition} from 'remotion';
-import OverwhelmingNumbers, {DURATION, FPS, defaultProps, schema} from '../generated/components/OverwhelmingNumbers';
-import OverwhelmingNumbersDots from '../generated/components/OverwhelmingNumbersDots';
-import {OverwhelmingCastSheet} from '../generated/components/overwhelmingFigures';
+import OverwhelmingNumbers, {DURATION, FPS, defaultProps, schema} from '../generated/components/sheppard-conquistador-advantages/OverwhelmingNumbers';
+import OverwhelmingNumbersDots from '../generated/components/sheppard-conquistador-advantages/OverwhelmingNumbersDots';
+import {OverwhelmingCastSheet} from '../generated/components/sheppard-conquistador-advantages/overwhelmingFigures';
 
 // Private render entry for OverwhelmingNumbers (Si Sheppard, "Conquistador
 // Advantages", cut C): one pull-back off the Spanish knot (the orange horse,

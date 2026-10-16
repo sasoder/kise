@@ -5,7 +5,7 @@ import CerroOpening, {
   FPS,
   MASTER_DURATION,
   schema,
-} from '../generated/components/CerroOpening';
+} from '../generated/components/brent-cerro-gordo-trailer/CerroOpening';
 
 // Private render entry for the Brent / Cerro Gordo trailer opening, 16:9 (1920x1080):
 // cut 1 CerroGordo, cut 2 EightHundredMillion, and the master for join checks.

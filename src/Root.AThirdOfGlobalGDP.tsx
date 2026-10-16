@@ -4,7 +4,7 @@ import AThirdOfGlobalGDP, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/AThirdOfGlobalGDP';
+} from '../generated/components/logan-credit-boom/AThirdOfGlobalGDP';
 
 // Private render entry for Logan Wright "the biggest credit boom in history",
 // V2 cut 2 (10_AThirdOfGlobalGDP), so it renders while other builders own

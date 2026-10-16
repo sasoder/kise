@@ -6,7 +6,7 @@ import TechnologicalAdvantages, {
   defaultProps,
   schema,
   sheetSchema,
-} from '../generated/components/TechnologicalAdvantages';
+} from '../generated/components/sheppard-conquistador-advantages/TechnologicalAdvantages';
 
 // Private render entry for TechnologicalAdvantages (Si Sheppard, "Conquistador
 // advantages", cut A): orange ink travels down a conquistador's steel, he draws

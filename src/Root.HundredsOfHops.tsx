@@ -1,6 +1,6 @@
 import {Composition} from 'remotion';
-import HundredsOfHops, {DURATION, FPS, defaultProps, schema} from '../generated/components/HundredsOfHops';
-import {HopStyleFrame} from '../generated/components/guinnessShared';
+import HundredsOfHops, {DURATION, FPS, defaultProps, schema} from '../generated/components/will-guinness-ttest/HundredsOfHops';
+import {HopStyleFrame} from '../generated/components/will-guinness-ttest/guinnessShared';
 
 // Private render entry for HundredsOfHops (Cheeky Pint S4E02 "will - guinness invented the t-test", stout):
 // opaque 1080x1920 at 23.976 fps. Also registers the clip's hop style frame (guinnessShared.tsx).

@@ -4,7 +4,7 @@ import DownTheShaft, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/DownTheShaft';
+} from '../generated/components/brent-five-days/DownTheShaft';
 
 // Private render entry for "DownTheShaft" (Brent Underwood, Core Memory short
 // "five days in the mine", 1080x1920), so it renders without src/Root.tsx.

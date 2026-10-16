@@ -4,7 +4,7 @@ import HowUsefulRealWorld, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HowUsefulRealWorld';
+} from '../generated/components/bharat-synthetic-data/HowUsefulRealWorld';
 
 // Private render entry for the Bharat synthetic-data clip, cut A
 // (3_HowUsefulRealWorld), so it renders while other builders own src/Root.tsx.

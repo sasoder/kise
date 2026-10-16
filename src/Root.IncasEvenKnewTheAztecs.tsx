@@ -4,7 +4,7 @@ import IncasEvenKnewTheAztecs, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/IncasEvenKnewTheAztecs';
+} from '../generated/components/sheppard-vikings/IncasEvenKnewTheAztecs';
 
 // Private render entry for IncasEvenKnewTheAztecs (cut B of Sheppard_Vikings),
 // so this cut renders while other builders own src/Root.tsx. Si Sheppard: "It's

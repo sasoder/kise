@@ -4,7 +4,7 @@ import ProjectMavenCard, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ProjectMavenCard';
+} from '../generated/components/bharat-maven/ProjectMavenCard';
 
 // Private render entry for the Bharat "Project Maven's data problem" news card
 // (cut N, ProjectMavenCard, 16:9), so it renders while other builders own

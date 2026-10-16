@@ -9,7 +9,7 @@ Follow CRAFT.md. "Core memory podcast style" names more than one product. Pick b
 | Icons to animate in this style | Icon In clip + Loop clip | styles/icon-loops.md, core memory look |
 | On a Core Memory clip: "blend in with the footage", "more realistic", "not core memory style" | Photoreal, footage-matched cut | Footage-matched variant |
 
-Name tag: `generated/components/NameTagCoreMemory.tsx` (see styles/name-tags.md).
+Name tag: `generated/components/kits/name-tags/NameTagCoreMemory.tsx` (see styles/name-tags.md).
 
 ## The graphic standard
 
@@ -42,17 +42,17 @@ Name tag: `generated/components/NameTagCoreMemory.tsx` (see styles/name-tags.md)
 There is no single core-memory kit. The Brent modules are the base. Import from them and never copy-paste the paper or
 chain code. A new clip's own shared module imports its base from here.
 
-- **9:16:** `generated/components/deathCountShared.tsx` re-exports the base and adds `TallPaper` (portrait ground),
+- **9:16:** `generated/components/kits/core-memory/deathCountShared.tsx` re-exports the base and adds `TallPaper` (portrait ground),
   `WorldTall` / `worldTransformTall` (world layer; `blurX` = horizontal-only blur for a fast pan), `Figure`, `gridPos`,
   `Newspaper` and `CaptionStripDebug` (preview aid). `PAPERS_NUMBER` is that clip's data.
-- **16:9:** `generated/components/cerroShared.tsx` provides `PaperGround`, `World`, `worldTransform169` and
+- **16:9:** `generated/components/kits/core-memory/cerroShared.tsx` provides `PaperGround`, `World`, `worldTransform169` and
   `camMove169`. Everything from `SECTION_PROFILE` down is that clip's mine section, not the style. Recompose for the
   width (a grid or a wider layout): a centred phone column leaves two-thirds of a 16:9 frame empty.
 - **Base (both):** the tokens above, `CHAIN`, `SHADOW_OFF`, `STROKE`, `OP_*`; `EASE_LAND`
   (`Easing.bezier(0.16, 1, 0.3, 1)`), `CHAIN_TRAVEL` 22, `CHAIN_STAGGER` 2, `CROWN_STEP` 12; `Inked`, `ShadowText`,
   `RiseText` / `textRise` (24 screen px up while fading in, 12 frames), `ChainEcho`, `Person`; `runCamera2` (damped
   x/y/k tracker). deathCountShared re-exports all of these except `Inked` and `Person`: import those two from
-  `generated/components/cerroShared.tsx`.
+  `generated/components/kits/core-memory/cerroShared.tsx`.
 - Both kits export an `FPS` from their own clip. Ignore it and set each cut's FPS from its own sequence.
 
 ### Visual language
@@ -94,13 +94,13 @@ The chain is a gesture, not the entrance. Most elements sit flat, with only the 
 
 ### Exemplars
 
-- `generated/components/RockCollapsedReports.tsx` (9:16, deathCountShared): a mine section, figures turning solid under
+- `generated/components/brent-death-count/RockCollapsedReports.tsx` (9:16, deathCountShared): a mine section, figures turning solid under
   rubble, a peaked pan with blur to a newspaper, a solid/hollow count.
-- `generated/components/ZeroedItDown.tsx`: the count shrinks; a plain white strike on the hard shadow; chain copies
+- `generated/components/brent-death-count/ZeroedItDown.tsx`: the count shrinks; a plain white strike on the hard shadow; chain copies
   step out of the struck number.
-- `generated/components/PeakForSolar.tsx`: a bar chart with the crown on the peak bar, and the reference for paper,
+- `generated/components/joel-oil-companies-solar/PeakForSolar.tsx`: a bar chart with the crown on the peak bar, and the reference for paper,
   shadow and crown geometry. Take framing, frame rate and camera from CRAFT.md, not from its header.
-- At 16:9: `generated/components/GhostTownForSale.tsx` on cerroShared.
+- At 16:9: `generated/components/brent-cerro-gordo-trailer/GhostTownForSale.tsx` on cerroShared.
 
 ## The text-only sting
 
@@ -119,22 +119,22 @@ shows. It is a transparent overlay over footage.
   node per layer.
 - **Type:** Barlow 900, uppercase, with the same text node rendered once per layer.
 - **Long rest** (a loop or long hold): stop rendering the colour layers once blue lands, or the antialiased edges leave
-  a coloured fringe (see `LAST_COLOR_LAND` in `coreMemoryIcon.tsx`).
+  a coloured fringe (see `LAST_COLOR_LAND` in `generated/components/kits/core-memory/coreMemoryIcon.tsx`).
 
-Exemplars: `generated/components/VastLogoChannelSplit.tsx` (PNG logo, the canonical sting),
-`generated/components/OutNowCoreMemory.tsx` (a word), `generated/components/DesertSunlightCoreMemory.tsx` (a two-line
+Exemplars: `generated/components/kits/core-memory/VastLogoChannelSplit.tsx` (PNG logo, the canonical sting),
+`generated/components/cm-early-js-trailer/OutNowCoreMemory.tsx` (a word), `generated/components/joel-coal-mining-land/DesertSunlightCoreMemory.tsx` (a two-line
 place title with a pin drawn on every layer).
 
-Never copy `NameTag.tsx`, `AngryIconChannelSplit.tsx`, `CoreLogoChannelSplit.tsx`, `MicrobeIconChannelSplit.tsx` or
-`IngredientJarCoreMemory.tsx`. They use a different, converging effect with bloom, screen blend and `saturate()`.
+Never copy `generated/components/kits/name-tags/NameTag.tsx`, `generated/components/kits/core-memory/AngryIconChannelSplit.tsx`, `generated/components/kits/core-memory/CoreLogoChannelSplit.tsx`, `generated/components/kits/core-memory/MicrobeIconChannelSplit.tsx` or
+`generated/components/kits/core-memory/IngredientJarCoreMemory.tsx`. They use a different, converging effect with bloom, screen blend and `saturate()`.
 
 ## Footage-matched variant
 
 Use this only when asked. It is for a graphic on a Core Memory clip that has to blend in with a b-roll shot or a
 picture, and it is photographic, not paper.
 
-- **Reference:** `generated/components/DownTheShaft.tsx`. The editor's real clip plays untouched, then the camera
-  moves into a photoreal plate baked from the footage's own frames (`scripts/bake-down-the-shaft.py`, assets in
+- **Reference:** `generated/components/brent-five-days/DownTheShaft.tsx`. The editor's real clip plays untouched, then the camera
+  moves into a photoreal plate baked from the footage's own frames (`scripts/clips/brent-five-days/bake-down-the-shaft.py`, assets in
   `public/cerro/shaft/`), with a clean white readout in Barlow Condensed.
 - Lock the plate to the footage's measured motion. Keep it photographic: real footage on top, sliced real rock below.
   A stylised dark field with glowing passages does not blend. Colour match: CRAFT.md, Graphics built from real footage.

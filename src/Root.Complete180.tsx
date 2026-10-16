@@ -4,17 +4,17 @@ import Complete180, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/Complete180';
+} from '../generated/components/sheppard-captured-emperors/Complete180';
 import CortessPuppet, {
   DURATION as CP_DURATION,
   defaultProps as cpProps,
   schema as cpSchema,
-} from '../generated/components/CortessPuppet';
+} from '../generated/components/sheppard-captured-emperors/CortessPuppet';
 import PsychologicalBreak, {
   DURATION as PB_DURATION,
   defaultProps as pbProps,
   schema as pbSchema,
-} from '../generated/components/PsychologicalBreak';
+} from '../generated/components/sheppard-captured-emperors/PsychologicalBreak';
 
 // Private render entry for Complete180 (round 2 of the Sheppard "Why captured
 // emperors cooperated" strings set): hanging from Cortés's one string,

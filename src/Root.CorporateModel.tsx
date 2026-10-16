@@ -4,7 +4,7 @@ import CorporateModel, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CorporateModel';
+} from '../generated/components/toto-mercedes-job/CorporateModel';
 
 // Private render entry for CorporateModel (Toto Wolff, "how he got the Mercedes job", Cheeky Pint
 // S4E01): "the corporate running a Formula One team doesn't function". One world: mercJobShared.tsx.

@@ -4,7 +4,7 @@ import OptimizingTheObjective, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OptimizingTheObjective';
+} from '../generated/components/jcb-last-job/OptimizingTheObjective';
 
 // Private render entry for OptimizingTheObjective, so this cut renders while
 // another builder owns src/Root.tsx. Orange Dwarkesh on the grid background:

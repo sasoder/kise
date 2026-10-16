@@ -4,7 +4,7 @@ import MarsVsOceanV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/MarsVsOceanV2';
+} from '../generated/components/will-mars-ocean/MarsVsOceanV2';
 
 // Private render entry for MarsVsOceanV2 (Cheeky Pint S4E02, "surface of Mars than
 // the depths of our ocean"): opaque 1080x1920 at 23.976 fps, 79 frames

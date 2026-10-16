@@ -4,8 +4,8 @@ import GaveTheTitle, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/GaveTheTitle';
-import TexcocoSheet from '../generated/components/TexcocoSheet';
+} from '../generated/components/sheppard-texcoco/GaveTheTitle';
+import TexcocoSheet from '../generated/components/sheppard-texcoco/TexcocoSheet';
 
 // Private render entry for GaveTheTitle (Si Sheppard, "Texcoco"): Moctezuma
 // steps in between the two brothers and sets the diadem of Texcoco on one of

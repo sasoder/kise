@@ -4,7 +4,7 @@ import HarvardNumberOne, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HarvardNumberOne';
+} from '../generated/components/cm-early-js-trailer/HarvardNumberOne';
 
 // Private render entry for "HarvardNumberOne" of the CM_EARLY_JS trailer
 // (2048x1080, 24000/1001 fps; final at --scale 2 = 4096x2160), so it renders

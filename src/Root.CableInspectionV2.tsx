@@ -4,7 +4,7 @@ import CableInspectionV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CableInspectionV2';
+} from '../generated/components/will-hunting-mines/CableInspectionV2';
 
 // Private render entry for CableInspectionV2 (Cheeky Pint S4E02, Will O'Brien / Ulysses): cut C after the
 // round-1 cold review (rolled camera, level Mako, dark snag lit by the beam, lock on "lines", bigger payoff).

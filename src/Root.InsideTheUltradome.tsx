@@ -4,7 +4,7 @@ import InsideTheUltradome, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/InsideTheUltradome';
+} from '../generated/components/tbpn-05/InsideTheUltradome';
 
 // Private render entry for InsideTheUltradome, so this cut renders while other
 // builders own src/Root.tsx. "What happens inside the Ultradome is kind of hard

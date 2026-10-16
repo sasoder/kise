@@ -4,7 +4,7 @@ import AnotherPandemic, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/AnotherPandemic';
+} from '../generated/components/kyle-plague/AnotherPandemic';
 
 // Private render entry for AnotherPandemic (plague clip): a row of pandemic
 // marker posts on a ruler of years, and an orange one rising. 1080x1920, 29.97 fps.

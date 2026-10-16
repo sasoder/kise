@@ -4,7 +4,7 @@ import FiveDaysUndergroundTall, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/FiveDaysUndergroundTall';
+} from '../generated/components/brent-cerro-gordo-trailer/FiveDaysUndergroundTall';
 
 // Private render entry for the Cerro Gordo set's cut 6, 9:16
 // (FiveDaysUndergroundTall, 1080x1920), so it renders without src/Root.tsx.

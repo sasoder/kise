@@ -5,22 +5,22 @@ cream card objects under one key light, and amber as the only glowing material. 
 the **realistic ocean variant** (last section). Every other line uses the stout board.
 
 ## Kit
-- Import everything from `generated/components/stoutShared.tsx` and never restate a value. Palette: `B1`, the default
+- Import everything from `generated/components/kits/cheeky-pint/stoutShared.tsx` and never restate a value. Palette: `B1`, the default
   (no `palette` prop). Never render with `palette: "stout"`: it is near-black.
 - Objects: `StoutStage`, `Pillar` (tile + bar + slice + glass + fill as one object), `MercedesTile`, `CrestTile`,
   `SportTile`, `TeamTile`, `ChartBar` + `Rule`, `ElevationShadow`, `LightSweep`, `Numeral`, `Label`. Overlays:
   `StoutNameTag`, `StoutWatchHere`.
 - Tokens: `COLOR`, `GEO`, `TYPE`, `TRACK`, `SPACE`, `ELEVATION`, `EDGE`, `STROKE`, `FONT_NUM`, `FONT_LABEL`. Helpers:
   `bloomFilter`, `amberBandFor`, `camFor`, `toScreen`, `snapLen`, `mixHex`, `opticalFit`, `rectPath`, `numeralWidth`.
-- Map world to camera the way `generated/components/StoutFrames.tsx` does. Pass `amberBandFor(cam)` to every
+- Map world to camera the way `generated/components/toto-mercedes-financials/StoutFrames.tsx` does. Pass `amberBandFor(cam)` to every
   `Pillar` and `ChartBar` in a frame, and run data heights at rest through `snapLen()`.
 - `StoutStage`'s `S` is the story clock. Pass the shared clock so ground drift, sway and grain carry across joined
-  cuts. Camera: `cameraTrack` (`generated/components/outgrowShared.tsx`), or `makeClockCam` + `makePoolTrack`
-  (`generated/components/museShared.tsx`).
-- Pieces built on the kit: `museShared.tsx` has `UnionShadow`, `toneTop`/`toneFoot`, `liftAt`, `travel`, `PersonTile`,
-  `BigBust`, `bustPaths`, `GlyphMark` and `GlassColumn`. `talentShared.tsx` has `PersonPeg`, `PegShadows` and
+  cuts. Camera: `cameraTrack` (`generated/components/kits/dwarkesh/outgrowShared.tsx`), or `makeClockCam` + `makePoolTrack`
+  (`generated/components/kits/cheeky-pint/museShared.tsx`).
+- Pieces built on the kit: `generated/components/kits/cheeky-pint/museShared.tsx` has `UnionShadow`, `toneTop`/`toneFoot`, `liftAt`, `travel`, `PersonTile`,
+  `BigBust`, `bustPaths`, `GlyphMark` and `GlassColumn`. `generated/components/kits/cheeky-pint/talentShared.tsx` has `PersonPeg`, `PegShadows` and
   `MetaMark`. Alias its `TeamTile`, which clashes with stoutShared's.
-- Never import `d1Shared.tsx`, `cheekyPintSystem.ts`, `cheekyPint2.tsx` or `NameTagCheekyPint.tsx`. Never load
+- Never import `generated/components/kits/cheeky-pint/d1Shared.tsx`, `generated/components/kits/cheeky-pint/cheekyPintSystem.ts`, `generated/components/kits/cheeky-pint/cheekyPint2.tsx` or `generated/components/kits/name-tags/NameTagCheekyPint.tsx`. Never load
   `public/brown-paper-backdrop.jpg` or `public/cheekypint2/{stout,kraft-fresh,kraft-frost}.jpg`. They are other looks.
 
 ## Palette (B1)
@@ -73,13 +73,13 @@ the **realistic ocean variant** (last section). Every other line uses the stout 
 - People are head-and-shoulder busts or pegs cut from card (`PersonPeg`, `PersonTile`, `bustPaths`). Board is anyone;
   cream or amber is whoever the line is about. A crowd shares one shadow layer (`PegShadows`). Discs read as pebbles.
 - Icons are one heavy Lucide-grammar glyph in ink on a tile (`SportTile`, `GlyphMark`), at `GLYPH_STROKE` weight
-  (`generated/components/museShared.tsx`).
+  (`generated/components/kits/cheeky-pint/museShared.tsx`).
 - Real objects (a pint glass, a hop cone, a ship) get the same card material and light (`HopCone` in
-  `generated/components/guinnessShared.tsx`).
+  `generated/components/will-guinness-ttest/guinnessShared.tsx`).
 - Logos are the real mark, redrawn as a one-colour stamp in `COLOR.inkDark` on a cream tile. Dark parts become ink,
   light parts stay tile, and the background is dropped. Keep the silhouette and the feature a fan knows it by, and
   inline the path data. Normalise a set as one family (`opticalFit`, `GEO.CREST_FILL`). Existing marks:
-  `MercedesTile`, `CrestTile` (`generated/components/wolffLogos.ts`), `MetaMark`, `MuseMark`. A logo over its subject
+  `MercedesTile`, `CrestTile` (`generated/components/kits/cheeky-pint/wolffLogos.ts`), `MetaMark`, `MuseMark`. A logo over its subject
   is counter-scaled to stay readable.
 
 ## Scale in 9:16
@@ -91,28 +91,28 @@ the **realistic ocean variant** (last section). Every other line uses the stout 
   placeholder.
 
 ## Overlays
-- Name tag: `StoutNameTag` (`generated/components/NameTagStout.tsx`). Size and position are in `styles/name-tags.md`.
-- Call to action: `StoutWatchHere` (`generated/components/CtaWatchHere.tsx`). A cream "Watch here" card sits above
+- Name tag: `StoutNameTag` (`generated/components/kits/name-tags/NameTagStout.tsx`). Size and position are in `styles/name-tags.md`.
+- Call to action: `StoutWatchHere` (`generated/components/kits/cheeky-pint/CtaWatchHere.tsx`). A cream "Watch here" card sits above
   three amber chevrons side by side, with a brightness wave every 36 f. The last frame equals the loop start.
 - Both render transparent. For review only, `backdrop: true` adds `public/cheekypint2/toto_backdrop_9x16.jpg`.
 
 ## Exemplars
-- `generated/components/BillionInRevenueStout.tsx` (world `stoutActA.tsx`): a bar rises out of the Mercedes tile, and
-  amber pours into profit as an odometer counts. Siblings: `ConservativeMultiplesStout.tsx`, `MostSponsorshipStout.tsx`.
-- `generated/components/TalentDensity.tsx`: the crowd sinks to dim heads, and the amber few pack onto a team tile.
-- `generated/components/InsideThePint.tsx`: a real object (pint, harp) in stout material.
+- `generated/components/toto-mercedes-financials/BillionInRevenueStout.tsx` (world `generated/components/toto-mercedes-financials/stoutActA.tsx`): a bar rises out of the Mercedes tile, and
+  amber pours into profit as an odometer counts. Siblings: `generated/components/toto-mercedes-financials/ConservativeMultiplesStout.tsx`, `generated/components/toto-mercedes-financials/MostSponsorshipStout.tsx`.
+- `generated/components/meta-talent-density/TalentDensity.tsx`: the crowd sinks to dim heads, and the amber few pack onto a team tile.
+- `generated/components/will-guinness-ttest/InsideThePint.tsx`: a real object (pint, harp) in stout material.
 
 ## Realistic ocean variant
 Use it for lines set underwater, at sea, or about mapping the ocean. Keep stout cream, amber bloom, Söhne, grain, a
 brown vignette, a warm grade; nothing black. Amber still marks one thing (the vehicle's sensing, what is mapped, money).
-- **Underwater**, `generated/components/oceanShared.tsx`: `OceanStage` grades the water by depth and adds god rays,
+- **Underwater**, `generated/components/kits/cheeky-pint/oceanShared.tsx`: `OceanStage` grades the water by depth and adds god rays,
   marine snow and a cream/brown soft-light grade. Depth model: `Scene`, `makeView`, `DepthGroup`, `InFog`/`fogAt`.
-  `SeabedPlane`/`SurfacePlane` read `public/ulysses/` (baked by `scripts/bake-ulysses-ocean.py`). Objects:
+  `SeabedPlane`/`SurfacePlane` read `public/ulysses/` (baked by `scripts/textures/bake-ulysses-ocean.py`). Objects:
   `UlyssesVehicle`, `NavalMine`, `FloatingPlatform`, `DynamicCable`, `GhostLine`, `Dolphin`, `Whale`, `SonarFan`,
   `LockBracket`, `RimLit`.
-- **At the surface**, `generated/components/droneSeaShared.tsx`: `SeaStage` splits over/under at the waterline, with
+- **At the surface**, `generated/components/kits/cheeky-pint/droneSeaShared.tsx`: `SeaStage` splits over/under at the waterline, with
   sky above and `OceanStage` below. Also `ResearchShip` (`part="above"|"below"`), `SurfaceWake`, `BubbleTrail`.
-- **Globes**, `generated/components/marsOceanShared.tsx` on `StoutStage`: `LitGlobe` (WebGL sphere, stout key light),
+- **Globes**, `generated/components/kits/cheeky-pint/marsOceanShared.tsx` on `StoutStage`: `LitGlobe` (WebGL sphere, stout key light),
   `GlobeGrid`/`GlobeLines` (amber graticules, tracks), textures in `public/marsocean/`. Render with `--gl=angle`.
 - Water warms toward espresso, never blue-black. By depth (oceanShared `WATER`): `#A9C7B4`, `#5F877D` (10 m),
   `#375957` (28 m), `#313E3A` (55 m), `#3F3226` (deep). Globe ocean `#2F7377` → `#10262F`, night side `NIGHT`
@@ -125,5 +125,5 @@ brown vignette, a warm grade; nothing black. Amber still marks one thing (the ve
   lines, never a dome, which reads as a creature.
 - Earth needs blue seafloor relief and natural land colours, or it reads as the Moon. Keep the water lit, because
   dark water reads as night.
-- Exemplars: `generated/components/HuntingMines.tsx`, `generated/components/MarsVsOcean.tsx`,
-  `generated/components/SameBigShip.tsx`.
+- Exemplars: `generated/components/will-hunting-mines/HuntingMines.tsx`, `generated/components/will-mars-ocean/MarsVsOcean.tsx`,
+  `generated/components/will-drone-cost/SameBigShip.tsx`.

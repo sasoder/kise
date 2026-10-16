@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import BrezhnevChoseDecay, {DURATION, FPS, defaultProps, schema} from '../generated/components/BrezhnevChoseDecay';
+import BrezhnevChoseDecay, {DURATION, FPS, defaultProps, schema} from '../generated/components/logan-brezhnev/BrezhnevChoseDecay';
 
 // Private render entry for BrezhnevChoseDecay (cut B of Logan Wright,
 // "Brezhnev chose decay", ChinaTalk slightly vintage): "Brezhnev basically

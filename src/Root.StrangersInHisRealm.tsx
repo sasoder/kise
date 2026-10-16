@@ -4,7 +4,7 @@ import StrangersInHisRealm, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/StrangersInHisRealm';
+} from '../generated/components/sheppard-atahualpa-ambush/StrangersInHisRealm';
 
 // Private render entry for StrangersInHisRealm, so this cut renders while other
 // builders own src/Root.tsx. Si Sheppard on Pizarro and Atahualpa: "that

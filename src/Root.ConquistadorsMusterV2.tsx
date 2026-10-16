@@ -4,7 +4,7 @@ import ConquistadorsMusterV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ConquistadorsMusterV2';
+} from '../generated/components/sheppard-cajamarca-kd/ConquistadorsMusterV2';
 
 // Private render entry for ConquistadorsMusterV2, so this cut renders while other builders own
 // src/Root.tsx. Si Sheppard on Cajamarca: "...he has some 160, 190 conquistadors." V2: the 168 march in as engraved figures (no ground rules). Opaque engraved page, 1080x1920, 24fps, 91 frames.

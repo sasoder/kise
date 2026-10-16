@@ -4,7 +4,7 @@ import CourageOfDesperation, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CourageOfDesperation';
+} from '../generated/components/sarah-death-ground/CourageOfDesperation';
 
 // Private render entry for CourageOfDesperation (Sarah Paine, "Death ground:
 // why regime change is brutal"): an orange army trapped on a narrow bank -

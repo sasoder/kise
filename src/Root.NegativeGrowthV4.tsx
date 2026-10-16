@@ -4,7 +4,7 @@ import NegativeGrowthV4, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/NegativeGrowthV4';
+} from '../generated/components/logan-china-growth/NegativeGrowthV4';
 
 // Private render entry for the Logan Wright growth clip, V4 (china theme + the
 // title flag in world space; NegativeGrowthV4, S 353-601), so it renders while other sessions own src/Root.tsx.

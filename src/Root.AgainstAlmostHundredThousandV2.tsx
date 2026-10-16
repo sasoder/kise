@@ -4,7 +4,7 @@ import AgainstAlmostHundredThousandV2, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/AgainstAlmostHundredThousandV2';
+} from '../generated/components/sheppard-cajamarca-kd/AgainstAlmostHundredThousandV2';
 
 // Private render entry for AgainstAlmostHundredThousandV2, so this cut renders while other builders own
 // src/Root.tsx. Si Sheppard on Cajamarca: "100 something against almost 100,000 ... first encounter." V2: every man an engraved figure, no ground rules. Opaque engraved page, 1080x1920, 24fps, 232 frames.

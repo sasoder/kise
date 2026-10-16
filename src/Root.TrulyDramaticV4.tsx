@@ -4,7 +4,7 @@ import TrulyDramaticV4, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TrulyDramaticV4';
+} from '../generated/components/logan-china-growth/TrulyDramaticV4';
 
 // Private render entry for the Logan Wright growth clip, V4 (china theme + the
 // title flag in world space; TrulyDramaticV4, S 829-1087), so it renders while other sessions own src/Root.tsx.

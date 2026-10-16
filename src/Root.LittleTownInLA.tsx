@@ -4,7 +4,7 @@ import LittleTownInLA, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/LittleTownInLA';
+} from '../generated/components/hadrian-machina-05/LittleTownInLA';
 
 // Private render entry for LittleTownInLA, so this cut renders while other
 // builders own src/Root.tsx. Hadrian 05: "This little town in L.A. might be

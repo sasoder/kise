@@ -4,7 +4,7 @@ import BrushingMistakes, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BrushingMistakes';
+} from '../generated/components/kits/clients/BrushingMistakes';
 
 // Private render entry for The Humble Co. brushing-mistakes timeline (option A,
 // Tube): three clips selected with the `step` prop (1, 2, 3), so it renders

@@ -5,7 +5,7 @@ import AllAdultMales, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/AllAdultMales';
+} from '../generated/components/sheppard-capture-not-kill/AllAdultMales';
 
 // Private render entry for AllAdultMales (Si Sheppard, "Capture, not kill"):
 // ranks of cream commoners take up shield and club and stand as orange

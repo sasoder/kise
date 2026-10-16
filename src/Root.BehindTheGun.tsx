@@ -4,7 +4,7 @@ import BehindTheGun, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/BehindTheGun';
+} from '../generated/components/sheppard-east-india-kings/BehindTheGun';
 
 // Private render entry for BehindTheGun, so this cut renders while other
 // builders own src/Root.tsx. Dwarkesh (with Si Sheppard): "we often talk about

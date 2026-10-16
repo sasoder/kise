@@ -4,7 +4,7 @@ import ByWednesday, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/ByWednesday';
+} from '../generated/components/alex-agentic-commerce/ByWednesday';
 
 // Private render entry for ByWednesday (Alexandr Wang, "Alex on agentic commerce", Cheeky Pint S4E03, cut 4),
 // so this cut renders while other builders own their own entries. World: museShared.tsx.

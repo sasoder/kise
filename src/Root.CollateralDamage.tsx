@@ -4,7 +4,7 @@ import CollateralDamage, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CollateralDamage';
+} from '../generated/components/kyle-plague/CollateralDamage';
 
 // Private render entry for CollateralDamage (plague clip), so this cut renders
 // while other builders own src/Root.tsx. Opaque, 1080x1920, 29.97 fps, 220 f.

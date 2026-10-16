@@ -4,7 +4,7 @@ import KoreansAllAgree, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/KoreansAllAgree';
+} from '../generated/components/sarah-iraq-regime-change/KoreansAllAgree';
 
 // Private render entry for KoreansAllAgree (Sheppard, "Regime change in Iraq
 // was the easy part", cut D: one people, the fight is over the state; the MDL).

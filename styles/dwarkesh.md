@@ -6,12 +6,12 @@ Follow CRAFT.md. This file holds only what is specific to Dwarkesh style.
 and what they build are white, and the cutaway is opaque full-frame. History clips use `styles/dwarkesh-map.md`.
 
 ## Kit
-- Import `generated/components/fieldShared.tsx` and never copy or restate a value. Main exports:
+- Import `generated/components/kits/dwarkesh/fieldShared.tsx` and never copy or restate a value. Main exports:
   - Colour: `ACCENT`, `ACCENT_DEEP`, `makeTone`, `OP_UNREAD`, `OP_READ`, `OP_RECEDE`, `OP_DARK`, `OP_UNREAD_DOT`, `OP_READ_DOT`
   - Ground: `GridBackground`, `BG_BASE`, `BG_DIM`, `BG_OVERSIZE`, `Vignette`, `SHADOW_Y/BLUR/OPACITY`, `iconShadow`
   - Crowd: `DOT_RADIUS`, `breath`, `hash`, `idleThreads`, `feather`, `FEATHER_STEPS`, `wobble`, `WOBBLE_R`
   - Camera and shapes: `runCamera`, `camEase`, `camMove`, `CAM_LIFT`, `sway`, `worldTransform`, `squirclePath`
-- Brand marks: `generated/components/brandGlyphs.tsx` (`OPENAI`, `ANTHROPIC`, `CLAUDE`, `DEEPMIND`, `GEMINI`,
+- Brand marks: `generated/components/kits/dwarkesh/brandGlyphs.tsx` (`OPENAI`, `ANTHROPIC`, `CLAUDE`, `DEEPMIND`, `GEMINI`,
   `GOOGLE`, `DEEPSEEK`, `META`, `MISTRAL`, `GROK`, `HUGGINGFACE`, `MOONSHOT`, `MINIMAX`). Each is an inline path on a
   24-unit box, scaled with `scale(size / 24)`.
 - Put a new clip's world in its own `<name>Shared.tsx` that imports fieldShared. If one cut needs a different
@@ -24,11 +24,11 @@ Clip worlds worth borrowing from (import the named exports, never their cut stat
 
 | File | Status | Reuse |
 |---|---|---|
-| `generated/components/punishShared.tsx` | **reusable** | the generated-text kit (section below) |
-| `generated/components/alignShared.tsx` | clip world | `Label`, `labelIn`, `FONT_LABEL`; `Comet`, `cometPath`, `turn`; `Link`, `linkPackets`; `buildFormation`, `waveArrival`, `flockWander`; `camKnots3` + `runCam3` (camera with x) |
-| `generated/components/trapShared.tsx` | clip world | `Station` (ring + Lucide glyph), `Thread` + `threadPackets`, `Gaze`, `Wire`, `PersonGlyph`, `ICON_*` paths |
-| `generated/components/outgrowShared.tsx` | clip world | `GoBoard`, `ChessBoard` (real game records), `ModelMark`, `DeepMindMark`, `cameraTrack` + `camJerk` |
-| `generated/components/levelUp.tsx` | optional experiments | `Trail`/`Streak` (speed smear), `softFront`, `HIGHLIGHT`, `packetsOn`/`Packet`, `marchDash` |
+| `generated/components/kits/dwarkesh/punishShared.tsx` | **reusable** | the generated-text kit (section below) |
+| `generated/components/kits/dwarkesh/alignShared.tsx` | clip world | `Label`, `labelIn`, `FONT_LABEL`; `Comet`, `cometPath`, `turn`; `Link`, `linkPackets`; `buildFormation`, `waveArrival`, `flockWander`; `camKnots3` + `runCam3` (camera with x) |
+| `generated/components/kits/dwarkesh/trapShared.tsx` | clip world | `Station` (ring + Lucide glyph), `Thread` + `threadPackets`, `Gaze`, `Wire`, `PersonGlyph`, `ICON_*` paths |
+| `generated/components/kits/dwarkesh/outgrowShared.tsx` | clip world | `GoBoard`, `ChessBoard` (real game records), `ModelMark`, `DeepMindMark`, `cameraTrack` + `camJerk` |
+| `generated/components/kits/dwarkesh/levelUp.tsx` | optional experiments | `Trail`/`Streak` (speed smear), `softFront`, `HIGHLIGHT`, `packetsOn`/`Packet`, `marchDash` |
 
 ## Look
 | Token | Value | Use |
@@ -45,10 +45,10 @@ Clip worlds worth borrowing from (import the named exports, never their cut stat
   any transparency washes the yellow into the grid. Flat fills only, no glow, gradients or blend modes. `Vignette`
   (0.45) goes last in the tree.
 - White ink has two rungs: `INK_HI` 1.0 for the subject, `INK_LO` 0.55 for context (both from
-  `generated/components/alignShared.tsx`). A wiped field drops to `OP_DARK`.
+  `generated/components/kits/dwarkesh/alignShared.tsx`). A wiped field drops to `OP_DARK`.
 - One stroke weight, about 6–6.5 screen px at rest, covers rings, outlines, arrows, icons and brackets. Threads and
   links are half that. Get the world width from the resting k: `strokeFor(kRest)`
-  (`generated/components/punishShared.tsx`) or `worldPx(px, k)` (alignShared).
+  (`generated/components/kits/dwarkesh/punishShared.tsx`) or `worldPx(px, k)` (alignShared).
 - Every rounded shape is `squirclePath(w, h)` (ratio 0.012, floor 2, smoothing 0.6). Never set an `rx` by hand.
 - Labels are Roboto Condensed 700, uppercase, tracking 0.04em, white, drawn with alignShared's `Label`. It is a DOM
   element, so it goes in the world div. Measure widths in that face (caps run wide). Size labels to read on a phone:
@@ -59,7 +59,7 @@ Clip worlds worth borrowing from (import the named exports, never their cut stat
 - Draw `public/grid-background.jpg` through `GridBackground` with blur 13, `dim={BG_DIM}` and parallax 0.15, over a
   `BG_BASE` fill. Never invert it: its lines are darker than its field. Keep it opaque and keep `BG_DIM` as it is.
 - When the camera pans, pass `cx`/`cxRest`. On a long travel, check the worst offset against the 1.8x oversize. If
-  the edge would show, lower parallax for that cut (`generated/components/HonestyGoesUpV2.tsx` uses 0.26).
+  the edge would show, lower parallax for that cut (`generated/components/noam-alignment/HonestyGoesUpV2.tsx` uses 0.26).
 - Joined cuts pass one continuous clock (`frame={W0 + frame}`), so the drift never restarts at an edit point.
 
 ## Visual language
@@ -74,7 +74,7 @@ Clip worlds worth borrowing from (import the named exports, never their cut stat
   `<Img>`. A named organisation is its mark in white (brandGlyphs, or a white PNG such as `public/metr-logo.png`).
 - **A named thing gets a shape** when a dot would not say what it is: a white Lucide outline icon in a station ring
   (about 65 screen px radius), a squircle card, or a flag. Prefer closed outlines to thin stick glyphs. A country is
-  its flag, drawn in SVG, at one screen size across the clip (`generated/components/DidTheyJustHockeyStick.tsx`).
+  its flag, drawn in SVG, at one screen size across the clip (`generated/components/dylan-hockey-stick/DidTheyJustHockeyStick.tsx`).
 - **Thought bubble** over a person: a check means "they think it's fine", a "?" means "we don't know". **An agent seen
   as something else** morphs its own body into that shape; never lay an icon over it.
 - **Dashed = not real (yet):** an empty slot, a forecast, a simulation. One meaning per clip, and the dashes march.
@@ -83,8 +83,8 @@ Clip worlds worth borrowing from (import the named exports, never their cut stat
 ### The crowd
 - Organic, never a lattice: a hashed grid (for example 40×30, step 940/39 × 440/29), seats jittered up to 0.9 of a
   step. No edge is ever a ruled line: `feather` + `wobble` on every visible boundary, and an edge that stays in frame
-  dissolves over about 12 rows (`EDGE_FEATHER` in `generated/components/MoreThanAllOfHistory.tsx`). A group is a
-  superellipse blob, n ≈ 2.4 (`generated/components/RogueInstancesInterfere.tsx`). A block of humans stays countable.
+  dissolves over about 12 rows (`EDGE_FEATHER` in `generated/components/ajeya-superhuman-hackers/MoreThanAllOfHistory.tsx`). A group is a
+  superellipse blob, n ≈ 2.4 (`generated/components/ajeya-superhuman-hackers/RogueInstancesInterfere.tsx`). A block of humans stays countable.
 - To stop dots fusing, relax the seats, not the drifted positions. A long stream rides as one rigid blue-noise strip
   sliding along its curve; hashed per-dot speeds clump.
 - An icon among the dots sits in a cleared pocket fitted to it, never pasted over the field.
@@ -107,7 +107,7 @@ Clip worlds worth borrowing from (import the named exports, never their cut stat
   solid box.
 - **Escalation:** tempo, reach and count of threads ride one curve. **Time dilation:** a tree folds onto its spine and a
   playhead rises from below. **Organized project:** bursts snap into a staircase tree. The mechanic, not the palette, of
-  `generated/components/MessageBoardV2.tsx`, `SubjectiveLongTimeV2.tsx` and `SprawlingProjectV2.tsx`.
+  `generated/components/kits/dwarkesh/MessageBoardV2.tsx`, `generated/components/kits/dwarkesh/SubjectiveLongTimeV2.tsx` and `generated/components/kits/dwarkesh/SprawlingProjectV2.tsx`.
 - **Society:** a band lifts out on individual arcs; a wipe falls to a flat `OP_DARK` line and the next rises from it.
 - **Culmination:** the crowd pours into one point, each dot on its own curve, absorbed on arrival. **Station:** a ring
   with a Lucide icon converts white → orange when the AI takes it.
@@ -115,7 +115,7 @@ Clip worlds worth borrowing from (import the named exports, never their cut stat
   land with `Easing.out(Easing.back(1.6))`.
 
 ## Generated text: chain of thought, transcripts, code, monitoring
-Use this language unprompted whenever a line is about an AI's text or reasoning. Kit: `generated/components/punishShared.tsx`.
+Use this language unprompted whenever a line is about an AI's text or reasoning. Kit: `generated/components/kits/dwarkesh/punishShared.tsx`.
 - Draw one centred column of solid `ACCENT` word-bars (`makeColumn`, `WordBars`), ragged right with paragraph gaps,
   never letters. The non-blinking `Caret` is the AI. One `makeClock` drives words, caret and a smoothed scroll. Words
   grow from their left edge up to the caret, never past it.
@@ -130,11 +130,11 @@ Use this language unprompted whenever a line is about an AI's text or reasoning.
 - With a reader in the margin there are two framings: wide with the person in, or close on the text with the person
   and reader line off the edge. Straddle the two only during a move.
 - To scan an existing block (code review), sweep the line and bracket what it finds: the mechanic of
-  `generated/components/DualUseMirrorScan.tsx` (not its palette).
+  `generated/components/kits/dwarkesh/DualUseMirrorScan.tsx` (not its palette).
 - Measure the per-frame velocity of scroll, scan and caret: no steps. Keep caret glides short (redact the nearest
   flags, not the oldest). A word in progress finishes when the clock freezes. Margin marks read big
   (*hint* ~130 screen px).
-- Exemplars: `generated/components/HidingTranscriptsV5.tsx`, `generated/components/LaidOutToRead.tsx`.
+- Exemplars: `generated/components/noam-children/HidingTranscriptsV5.tsx`, `generated/components/noam-punishing-ais/LaidOutToRead.tsx`.
 
 ## Build mechanics
 - People and raster logos use `<Img>` in the world div. Marks and icons are inline `<path>`, never SVG `<image>`.
@@ -146,6 +146,6 @@ Use this language unprompted whenever a line is about an AI's text or reasoning.
   grid drift.
 
 ## Exemplars
-- `generated/components/MoreThanAllOfHistory.tsx`: crowd field, feathered edges, two-tone dots, damped camera.
-- `generated/components/MillionsOfYears.tsx`: the model at the core, station rings, an endless pour, rings converting.
-- `generated/components/HonestyGoesUpV2.tsx`: comets, the person seat and arrow, labels, a sparse frame.
+- `generated/components/ajeya-superhuman-hackers/MoreThanAllOfHistory.tsx`: crowd field, feathered edges, two-tone dots, damped camera.
+- `generated/components/jcb-experience/MillionsOfYears.tsx`: the model at the core, station rings, an endless pour, rings converting.
+- `generated/components/noam-alignment/HonestyGoesUpV2.tsx`: comets, the person seat and arrow, labels, a sparse frame.

@@ -4,7 +4,7 @@ import CityStates, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/CityStates';
+} from '../generated/components/sheppard-centralized-empires/CityStates';
 
 // Private render entry for CityStates, so this cut renders while other
 // builders own src/Root.tsx. Si Sheppard: "...even the Maya in Mesoamerica,

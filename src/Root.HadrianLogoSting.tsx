@@ -4,7 +4,7 @@ import HadrianLogoSting, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HadrianLogoSting';
+} from '../generated/components/hadrian-machina-06/HadrianLogoSting';
 
 // Private render entry for HadrianLogoSting: the Hadrian wordmark as a core
 // memory logo sting with one glint, TRANSPARENT overlay on factory b-roll,

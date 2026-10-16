@@ -4,7 +4,7 @@ import HalfOfOnePercent, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/HalfOfOnePercent';
+} from '../generated/components/sheppard-tlaxcalans/HalfOfOnePercent';
 
 // Private render entry for HalfOfOnePercent (cut E of the Tlaxcalans clip),
 // so this cut renders while other builders own src/Root.tsx. Si Sheppard: "The

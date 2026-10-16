@@ -4,7 +4,7 @@ import TitleCardCheekyPint, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/TitleCardCheekyPint';
+} from '../generated/components/toto-mercedes-job/TitleCardCheekyPint';
 
 // Private render entry for the Cheeky Pint opening title card (transparent overlay),
 // so it renders while other sessions own src/Root.tsx.

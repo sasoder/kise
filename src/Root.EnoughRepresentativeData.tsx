@@ -4,7 +4,7 @@ import EnoughRepresentativeData, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/EnoughRepresentativeData';
+} from '../generated/components/bharat-synthetic-data/EnoughRepresentativeData';
 
 // Private render entry for Bharat "Synthetic data needs real data" cut C
 // (39_EnoughRepresentativeData), so it renders while other builders own src/Root.tsx.

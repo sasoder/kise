@@ -4,7 +4,7 @@ import OneInFourLonely, {
   FPS,
   defaultProps,
   schema,
-} from '../generated/components/OneInFourLonely';
+} from '../generated/components/cm-early-js-trailer/OneInFourLonely';
 
 // Private render entry for cut 1 of the CM_EARLY_JS trailer
 // (OneInFourLonely, 1080x1920, 24000/1001 fps), so it renders without
