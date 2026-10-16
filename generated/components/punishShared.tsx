@@ -22,8 +22,7 @@ import { INK, INK_HI, INK_LO } from "./alignShared";
 // natural language for us to read; the moment we intervene on what we read
 // there, we are applying pressure on it to hide.
 //
-// Orange Dwarkesh, WITH the grid background (`## Dwarkesh style — grid
-// background` + `## Orange Dwarkesh style` in MEMORY.md). 24 fps, 1080x1920,
+// Dwarkesh style on the grid background (styles/dwarkesh.md). 24 fps, 1080x1920,
 // opaque. Everything that decides how the clip LOOKS lives here; a cut decides
 // what happens in it. Nothing in this file is restated from `fieldShared` or
 // `alignShared` — it is imported.

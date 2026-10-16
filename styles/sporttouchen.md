@@ -54,15 +54,16 @@ When a job says "sporttouchen style", build to this without re-asking. Any copy 
 - The payoff is one thin ring (stroke 6) that expands and fades (ink 0.6 → 0). It stops before it reaches the frame
   edge. A dead hold follows.
 - Where something talks, keep the hold alive: the quiz waveform keeps speaking to the last frame, so any trim lands
-  on a live frame. Never fade out at the end.
+  on a live frame.
 - Enter by sliding up while fading in, or from behind a mask. Do not copy the exemplars' 0.92 → 1 scale-in.
 
 ## Renders
 
 - Render twice every time from the same component: opaque (BG + GLOW) and a transparent overlay (`transparent: true`).
 - Judge the overlay's stroke over mid-grey (SporttouchenQuiz `backdrop: 'grey'`), not over the dark background.
-- Both exemplars run at 30 fps. If a job comes with a sequence, use its rate.
-- The layout is a phone-first centred column on x 540. Both exemplars put the hero at y 880.
+- FPS = the sequence's rate; with no sequence, 30 (the exemplars' rate).
+- The layout is a phone-first centred column on x 540. Centre the hero per CRAFT.md (y ≈ 960), not at the exemplars'
+  y 880.
 
 ## Exemplars
 
@@ -73,5 +74,3 @@ When a job says "sporttouchen style", build to this without re-asking. Any copy 
   112 px gradient header band ("FRÅGA n / 3", unstroked), a BG body with the stroked question, and a progress track.
   The round logo sits 45 px above the card and talks into a 13-bar white waveform on each side. Props: `questions`,
   `index`, `total`, `transparent`, `backdrop`, `logoSrc`.
-- `generated/components/SporttouchenPlateA.tsx` to `SporttouchenPlateE.tsx` are the unchosen plate options. The chosen plate is the one
-  inside SporttouchenQuiz.

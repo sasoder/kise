@@ -9,7 +9,7 @@ edit.
 style), `styles/` (one file per house or client style) and [scripts/README.md](./scripts/README.md) (the reusable tools).
 
 ```bash
-bun install                                                         # dependencies + the Remotion skill
+bun install                                                         # first setup, by the user only; agents never run it
 bun run lint                                                        # eslint src && tsc
 bunx remotion render src/entry.<Name>.ts <Name> <file>.mov --muted  # render one cut
 ```

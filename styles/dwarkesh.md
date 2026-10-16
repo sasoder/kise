@@ -44,13 +44,16 @@ Clip worlds worth borrowing from (import the named exports, never their cut stat
 - Dots are fully opaque, with no stroke. Carry state by tone (`makeTone(ACCENT_DEEP, ACCENT)`), never by alpha:
   any transparency washes the yellow into the grid. Flat fills only, no glow, gradients or blend modes. `Vignette`
   (0.45) goes last in the tree.
-- White ink has two rungs: `INK_HI` 1.0 for the subject, `INK_LO` ~0.5 for context. A wiped field drops to `OP_DARK`.
+- White ink has two rungs: `INK_HI` 1.0 for the subject, `INK_LO` 0.55 for context (both from
+  `generated/components/alignShared.tsx`). A wiped field drops to `OP_DARK`.
 - One stroke weight, about 6–6.5 screen px at rest, covers rings, outlines, arrows, icons and brackets. Threads and
-  links are half that. Get the world width from the resting k: `strokeFor(kRest)` or `worldPx(px, k)`.
+  links are half that. Get the world width from the resting k: `strokeFor(kRest)`
+  (`generated/components/punishShared.tsx`) or `worldPx(px, k)` (alignShared).
 - Every rounded shape is `squirclePath(w, h)` (ratio 0.012, floor 2, smoothing 0.6). Never set an `rx` by hand.
 - Labels are Roboto Condensed 700, uppercase, tracking 0.04em, white, drawn with alignShared's `Label`. It is a DOM
-  element, so it goes in the world div. Measure widths in that face (caps run wide). Size labels to read on a phone
-  (about 48 screen px). Labels side by side share one baseline.
+  element, so it goes in the world div. Measure widths in that face (caps run wide). Size labels to read on a phone:
+  `size={worldPx(48, kRest)}` for about 48 screen px (the default is 40 world px). Labels side by side share one
+  baseline.
 
 ## Grid background
 - Draw `public/grid-background.jpg` through `GridBackground` with blur 13, `dim={BG_DIM}` and parallax 0.15, over a
@@ -82,23 +85,34 @@ Clip worlds worth borrowing from (import the named exports, never their cut stat
   step. No edge is ever a ruled line: `feather` + `wobble` on every visible boundary, and an edge that stays in frame
   dissolves over about 12 rows (`EDGE_FEATHER` in `generated/components/MoreThanAllOfHistory.tsx`). A group is a
   superellipse blob, n ≈ 2.4 (`generated/components/RogueInstancesInterfere.tsx`). A block of humans stays countable.
+- To stop dots fusing, relax the seats, not the drifted positions. A long stream rides as one rigid blue-noise strip
+  sliding along its curve; hashed per-dot speeds clump.
+- An icon among the dots sits in a cleared pocket fitted to it, never pasted over the field.
 - A crowd that is only context is a band feathered on both edges, never a sea. A body that has to read as one
   thing needs a couple of hundred seats. "Bigger" means wider and larger dots, never denser. "Many" needs a count
   that fills the frame.
 - Idle traffic always runs (`idleThreads(n)`). Agents stay the brightest orange in frame. Idle links sit at about
   0.3–0.4 and light only as a travelling band. Packets are small and sparse, sized against their line.
-- Nothing vanishes: a departing dot leaves itself behind at `OP_UNREAD`, a merge shrinks into the dot that landed.
+- A crowd piece opens inside the crowd (bleeding off both edges; *hint* k ≈ 1.25), and its first move is the pull-back
+  that reveals the edges.
+- Nothing vanishes: a departing dot stays in the field, solid in the deep tone (`ACCENT_DEEP`); a merge shrinks into
+  the dot that landed.
 
 ### Mechanisms to reuse before inventing one
 - **Thread:** an accent line draws with a small white head, holds, then fades; its endpoints light when it arrives.
 - **Wave:** tone spreads deep → ripe, ordered by distance from the source plus a small hash jitter, never by graph hops.
 - **One of N:** ring one agent close, then pull back. **Search:** a white scan bar sweeps the crowd row by row.
 - **Counts (many / few / none):** each group moves into its own tier (band, short row, empty dashed slot); never
-  decorate dots in place.
+  decorate dots in place. A count reads up front as equal dashed slots drawn one after another, never mixed with the
+  solid box.
+- **Escalation:** tempo, reach and count of threads ride one curve. **Time dilation:** a tree folds onto its spine and a
+  playhead rises from below. **Organized project:** bursts snap into a staircase tree. The mechanic, not the palette, of
+  `generated/components/MessageBoardV2.tsx`, `SubjectiveLongTimeV2.tsx` and `SprawlingProjectV2.tsx`.
 - **Society:** a band lifts out on individual arcs; a wipe falls to a flat `OP_DARK` line and the next rises from it.
 - **Culmination:** the crowd pours into one point, each dot on its own curve, absorbed on arrival. **Station:** a ring
   with a Lucide icon converts white → orange when the AI takes it.
-- **Finish:** groups travel on individual shallow arcs, never in unison. Rings land with `Easing.out(Easing.back(1.6))`.
+- **Finish:** groups travel on individual shallow arcs, never in unison; a fold or drop sags slightly mid-travel. Rings
+  land with `Easing.out(Easing.back(1.6))`.
 
 ## Generated text: chain of thought, transcripts, code, monitoring
 Use this language unprompted whenever a line is about an AI's text or reasoning. Kit: `generated/components/punishShared.tsx`.
@@ -113,19 +127,23 @@ Use this language unprompted whenever a line is about an AI's text or reasoning.
 - Lines leaving the top thin to zero height (`makeExit`). Never clip a growing column's bottom (`assertNonDecreasing`).
 - The camera is a magnifier: the column fills the frame width, and a push-in crops the sides when a flag is noticed.
   Centre on the block including its margin marks, and keep at least 30 screen px of air at both edges.
+- With a reader in the margin there are two framings: wide with the person in, or close on the text with the person
+  and reader line off the edge. Straddle the two only during a move.
 - To scan an existing block (code review), sweep the line and bracket what it finds: the mechanic of
   `generated/components/DualUseMirrorScan.tsx` (not its palette).
+- Measure the per-frame velocity of scroll, scan and caret: no steps. Keep caret glides short (redact the nearest
+  flags, not the oldest). A word in progress finishes when the clock freezes. Margin marks read big
+  (*hint* ~130 screen px).
 - Exemplars: `generated/components/HidingTranscriptsV5.tsx`, `generated/components/LaidOutToRead.tsx`.
 
 ## Build mechanics
 - People and raster logos use `<Img>` in the world div. Marks and icons are inline `<path>`, never SVG `<image>`.
 - Put `iconShadow(k)` on a wrapper outside any glyph's `scale()`; filled marks take about 0.27 opacity to match strokes.
 - Put a `clip-path` on an untransformed wrapper. Snap horizontal rules to `Math.round(y) + 0.5` with an odd stroke width.
-- Derive state from the visible thing (a dot lights because the front reached it), never from a parallel timer.
-  Recede the context before annotating over a busy field.
+  An SVG mask on a straight vertical line has a zero-width bbox and hides it: draw head-led lines directly.
 - Tone alone does not read on thin strokes or small marks, so add shape, size or count. A speed-up shows by colour
-  (`ACCENT` → `HIGHLIGHT` → white), size and count. Once resolved, the picture stays alive through `sway`, idle
-  traffic and the grid drift; it never fades out.
+  (`ACCENT` → `HIGHLIGHT` → white), size and count. The resolved picture lives on through `sway`, idle traffic and the
+  grid drift.
 
 ## Exemplars
 - `generated/components/MoreThanAllOfHistory.tsx`: crowd field, feathered edges, two-tone dots, damped camera.

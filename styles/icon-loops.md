@@ -14,8 +14,9 @@ There are two looks:
 
 - Each icon is a transparent overlay asset: ProRes 4444 with alpha on a square 1080×1080 canvas.
 - Give each icon its own composition and its own file, so the icons stay separate assets.
-- One loop lasts 4 s (`LOOP_FRAMES` = 96 in the existing kit). The frame rate follows CRAFT.md.
-- Check the alpha channel with `KISE_TRANSPARENT=1 bun run review out/<name>.mov`.
+- One loop lasts about 4 s: the kit's `LOOP_FRAMES` is 96 (4 s at 24 fps). Render at the sequence's rate (CRAFT.md),
+  or at 24 when the icons come without one; at 30 fps or more, ask the director for a matching `LOOP_FRAMES`.
+- Check the alpha channel with `KISE_TRANSPARENT=1 bun run review <scratch>/<Name>.mov`.
 
 ## Motion (both looks)
 
@@ -53,7 +54,7 @@ Each icon ships as two files:
 - `<Name>_In.mov`: the entrance plus enough of the loop to hand over;
 - `<Name>_Loop.mov`: one loop.
 
-The In clip's last frame is loop frame 95, so the cut from In to Loop is an ordinary one-frame step.
+The In clip's last frame is loop frame `LOOP_FRAMES − 1`, so the cut from In to Loop is an ordinary one-frame step.
 
 - **Kit:** build on `generated/components/coreMemoryIcon.tsx`. Use `CoreMemoryIconStack`,
   `coreMemoryTiming(mode, frame, inFrames)`, `maskStyle`, `slideOffset`, `bootRamp`, and the constants `CHAIN_COLORS`,

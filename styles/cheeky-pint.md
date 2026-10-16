@@ -5,7 +5,8 @@ cream card objects under one key light, and amber as the only glowing material. 
 the **realistic ocean variant** (last section). Every other line uses the stout board.
 
 ## Kit
-- Import everything from `generated/components/stoutShared.tsx` and never restate a value. Palette: `B1`, the default.
+- Import everything from `generated/components/stoutShared.tsx` and never restate a value. Palette: `B1`, the default
+  (no `palette` prop). Never render with `palette: "stout"`: it is near-black.
 - Objects: `StoutStage`, `Pillar` (tile + bar + slice + glass + fill as one object), `MercedesTile`, `CrestTile`,
   `SportTile`, `TeamTile`, `ChartBar` + `Rule`, `ElevationShadow`, `LightSweep`, `Numeral`, `Label`. Overlays:
   `StoutNameTag`, `StoutWatchHere`.
@@ -33,11 +34,9 @@ the **realistic ocean variant** (last section). Every other line uses the stout 
 | `amberTop` → `amberFoot`, `amberHot` | `#FFB000` → `#E38E00`, `#FFE7A8` | the one glow, its hot top edge |
 | `shadow` | `#22150B` | every shadow |
 
-- Nothing is black: not the ground, corners, shadows, vignette, marks or ink. Aim for about L* 20 at the subject and
-  L* 12 or more in the darkest corner. A black ground with orange and white type reads as an adult-site brand. So
-  does dark type in an orange box next to a light word.
-- Contrast, measured on rendered pixels: cream on ground ≥ 7:1, amber and lo type on ground ≥ 4.5:1, dimmed tile
-  against ground ≥ 3:1, ink on cream ≥ 10:1.
+- Nothing is black (CRAFT.md, The picture): not the ground, corners, shadows, vignette, marks or ink.
+- Contrast minimums: cream on ground ≥ 7:1, amber and lo type on ground ≥ 4.5:1, dimmed tile against ground ≥ 3:1,
+  ink on cream ≥ 10:1.
 - `StoutStage` draws the ground: `brown-b1.jpg` with its fibres showing, parallax, drift and mirror-padded edges. On
   top it adds a cream light pool that follows `pool`, a gentle brown vignette and `public/cheekypint2/grain.png` on twos.
 
@@ -48,9 +47,8 @@ the **realistic ocean variant** (last section). Every other line uses the stout 
   Between rests, ease token to token with the camera. Spacing follows the 8 px `SPACE` grid.
 - LABEL is tiny on a phone. A label that must be read goes inside its card, in ink, at a larger size.
 - `Label` and `Numeral` already do the stout entrance (blur in plus a 24 px slide up), and the exit reverses it.
-- A changing value rolls as an odometer, with `rollBlur` proportional to its speed. A unit change ($900M → $1B) slows
-  down: the old value holds sharp, then a feathered drum turns between whole, centred strings that never overlap or
-  dip. A counter slows at the end, so the last step is short and N−1 never visibly holds.
+- A changing value rolls as an odometer, with `rollBlur` proportional to its speed. A unit change turns a feathered
+  drum between whole, centred strings that never overlap or dip. At the end of a count, N−1 never visibly holds.
 
 ## Materials and light
 - One key light, from above and slightly left. Each object casts **one** shadow from its union silhouette
@@ -58,7 +56,7 @@ the **realistic ocean variant** (last section). Every other line uses the stout 
 - Elevations: rest (with a contact shadow), lifted, float. Whatever travels lifts one level and settles on landing.
 - Cream card is lit (the subject); board is context. Dim by tone (`dim`, `toneTop`/`toneFoot`, ~12 f), never opacity.
 - Tone ladder: dark (ground mixed toward board) → board → cream → amber. Whatever would give a reveal away stays
-  dark until its line. A visible front causes each change: the light pool, a waterline, an outline drawing, an amber wave.
+  dark until its line. The fronts that cause a change: the light pool, a waterline, an outline drawing, an amber wave.
 - Hidden context stays fully hidden until revealed: no shadow, no edge, no sliver at the frame edge.
 - **Slot joint:** a bar or piece rises out of a slot in its tile's top edge. It never sits on top like a sticker.
   Keep a rising piece's face blank, and bring its label in whole afterwards.
@@ -66,8 +64,6 @@ the **realistic ocean variant** (last section). Every other line uses the stout 
   it stands for in the clip (profit, the person, the picked few, the agent), keep it, and give every cut its amber touch.
 - **Glass** is the one transparent material: a cream hairline and a faint tint, for columns, jars, tubes and silos.
   Amber fills inside it carry rungs. Use glass whenever a level has to be seen changing.
-- One material changing shape reads as made with care. Several containers overlapping mid-change read as sloppy.
-  Spent containers leave physically: empty glass left behind reads as a render ghost.
 - `LightSweep` is the click of the payoff; save it for that. Group arrivals never click. A sweep on cream is
   invisible, so put it on amber or drop it. Motion is weighty and damped: no flashes, pulses, bounces or springs.
 
@@ -76,20 +72,23 @@ the **realistic ocean variant** (last section). Every other line uses the stout 
   slice. A multiple is a glass column stretched from that slice.
 - People are head-and-shoulder busts or pegs cut from card (`PersonPeg`, `PersonTile`, `bustPaths`). Board is anyone;
   cream or amber is whoever the line is about. A crowd shares one shadow layer (`PegShadows`). Discs read as pebbles.
-- Icons are one heavy Lucide-grammar glyph in ink on a tile (`SportTile`, `GlyphMark`), at `GLYPH_STROKE` weight.
+- Icons are one heavy Lucide-grammar glyph in ink on a tile (`SportTile`, `GlyphMark`), at `GLYPH_STROKE` weight
+  (`generated/components/museShared.tsx`).
 - Real objects (a pint glass, a hop cone, a ship) get the same card material and light (`HopCone` in
   `generated/components/guinnessShared.tsx`).
 - Logos are the real mark, redrawn as a one-colour stamp in `COLOR.inkDark` on a cream tile. Dark parts become ink,
   light parts stay tile, and the background is dropped. Keep the silhouette and the feature a fan knows it by, and
   inline the path data. Normalise a set as one family (`opticalFit`, `GEO.CREST_FILL`). Existing marks:
-  `MercedesTile`, `CrestTile` (`generated/components/wolffLogos.ts`), `MetaMark`, `MuseMark`.
-- Anchor a logo in the world over its subject, counter-scaled to stay readable. Pinned to the screen it looks pasted on.
+  `MercedesTile`, `CrestTile` (`generated/components/wolffLogos.ts`), `MetaMark`, `MuseMark`. A logo over its subject
+  is counter-scaled to stay readable.
 
 ## Scale in 9:16
-- World units are small (`GEO.TILE` 96). Size the subject first: it spans most of the width and uses the height.
+- World units are small (`GEO.TILE` 96): the subject spans most of the width and uses the height.
 - Many tiles: one long row running off both edges, a skyline with one tower. Never stack rows behind rows, and never
   pull back until tiles are crumbs. Travel along the row at a readable size, or push in on one tile.
 - Show a count as a stack or grid of chunky units, not one thin column. Sorted, labelled stacks read as a bar chart.
+- A recap of earlier points mounts miniatures of their real scenes; a row of small icons in an empty frame reads as a
+  placeholder.
 
 ## Overlays
 - Name tag: `StoutNameTag` (`generated/components/NameTagStout.tsx`). Size and position are in `styles/name-tags.md`.

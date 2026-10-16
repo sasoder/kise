@@ -44,7 +44,7 @@ overlays that the editor drops onto the footage.
 - The purple fills first. The icon rises in, overlapping the end of the fill.
 - No camera move and no idle motion. End on a long static hold that the editor trims (BrushingMistakes holds for
   15 s per step).
-- The Humble sequences are 30 fps.
+- FPS = the sequence's rate (CRAFT.md); Humble sequences are usually 30 fps.
 
 ## Multi-point graphics
 

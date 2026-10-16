@@ -10,7 +10,8 @@ stills, Premiere assembly) lives in the director's memory; builders follow their
 1. This file, then `CRAFT.md`: the craft rules for every style. It wins on anything cross-style.
 2. The one `styles/<style>.md` the brief names, the kit file it names, and any file the brief names.
 3. Only the `.agents/skills/remotion-best-practices/` files the job needs: its `SKILL.md`, then e.g.
-   `remotion-markup/timing.md`, `google-fonts.md` or `local-fonts.md`, `remotion-render/transparent-videos.md`.
+   `remotion-markup/timing.md`, `remotion-markup/google-fonts.md` or `remotion-markup/local-fonts.md`,
+   `remotion-render/transparent-videos.md`.
 
 Nothing else. Do not browse old cuts, other kits or other styles unless the style file or the brief names them.
 
@@ -61,6 +62,7 @@ import {RemotionRoot} from './Root.<Name>';
 registerRoot(RemotionRoot);
 ```
 
+- A 16:9 trailer composes at `width={2048} height={1080}` (CRAFT.md Format).
 - Never edit another cut's files, `src/Root.tsx`, or a kit a style file names. Ask the director for a kit addition.
 
 ## Render

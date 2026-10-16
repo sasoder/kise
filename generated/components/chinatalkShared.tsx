@@ -7,8 +7,8 @@ import { BG_OVERSIZE, CAM_DAMP, CAM_LIFT, CAM_STIFF, FRAME_H, FRAME_W, clamp01, 
 export { CAM_DAMP, CAM_LIFT, CAM_STIFF, FRAME_H, FRAME_W, clamp01, smoothstep, squirclePath };
 
 // ---------------------------------------------------------------------------
-// chinatalkShared — the ChinaTalk house kit, clip-agnostic (MEMORY.md
-// "ChinaTalk style"). Lifted by COPYING from chinaGrowthTheme.ts /
+// chinatalkShared — the older ChinaTalk stage that chinatalkVintage.tsx builds on; new
+// cuts import chinatalkVintage (styles/chinatalk.md). Lifted by COPYING from chinaGrowthTheme.ts /
 // chinaGrowthGeom.ts / chinaGrowthShared.tsx / chinaGrowthSeg3.tsx (those files
 // are untouched, so the Logan growth set renders exactly as delivered). No clip
 // geometry lives here: tokens, the size law, the camera rig (with an exportable

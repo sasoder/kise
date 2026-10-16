@@ -17,9 +17,9 @@ for new work. The Edit Board job pipeline lives in `pipeline/` (see `pipeline/RE
 
 All of them edit the saved project as text, with the project closed in Premiere. `prproj_assemble.py` and
 `prproj_insert.py` refuse while Premiere runs unless `--allow-running` (use it only when a different project is open).
-None invents a `BinaryHash`: every blob a new object needs is reused from the project (or a `--motion-donor`). Times are sequence seconds unless stated. Keep temp
-copies in the scratchpad, never beside the real project. Stills must be real JPEGs: check with `file` (a CDN `.jpg`
-can be WebP) and convert PNGs.
+None invents a `BinaryHash`: every blob a new object needs is reused from the project (or a `--motion-donor`).
+Times are sequence seconds unless stated. Keep temp copies in the scratchpad, never beside the real project. Stills
+must be real JPEGs: check with `file` (a CDN `.jpg` can be WebP) and convert PNGs.
 
 Order:
 
@@ -59,11 +59,9 @@ Deterministic and offline; run once, and commit what they write to `public/`.
   `speckle.png`. The `kraft-*.jpg` and `stout.jpg` it also writes belong to other looks; see `styles/cheeky-pint.md`.
 - `build-china-paper-vintage.py`: the ChinaTalk newsprint, `public/china/paper_vintage.png`, `fibre_vintage.png` and
   `grain_0..3.png`, all read by `generated/components/chinatalkVintage.tsx`.
-- `build-china-paper.py`: `public/china/paper.png`, read only by the stage in `generated/components/chinatalkShared.tsx`.
-  Not part of the ChinaTalk look.
 
 ## Maps
 
 Each history clip gets its own map pipeline: `<x>-geo.json|mjs` → `build-<x>-map.mjs` → `bake-<x>-rasters.mjs` →
-`generated/components/<x>Shared.tsx`. Copy the newest set (`pearl-geo.mjs`, `build-pearl-maps.mjs`,
+`generated/components/<x>Shared.tsx`. Copy the Pearl set (`pearl-geo.mjs`, `build-pearl-maps.mjs`,
 `bake-pearl-rasters.mjs`). Projection, borders, rasters and performance rules are in `styles/dwarkesh-map.md`.

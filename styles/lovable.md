@@ -2,8 +2,8 @@
 
 Follow CRAFT.md. This file holds only what is specific to the client Lovable.
 
-There is no user-approved Lovable style profile yet. What follows is what the delivered pieces share. Build from it
-and match the exemplars. When a choice is not covered here, it is the director's call, not a rule.
+What follows is what the Lovable pieces share. Build from it and match the exemplars; a choice not covered here is the
+director's call.
 
 ## Look
 
@@ -36,6 +36,9 @@ and match the exemplars. When a choice is not covered here, it is the director's
 
 ## Format
 
+Lovable is the exception to CRAFT.md Format and caption bands: build at the sequence's own frame and keep the
+editor's caption band clear instead.
+
 - Lovable clip folders are `tom fant/lovable/<month>/<name>/`.
 - The format changes from project to project. Before building, read the sequence's FrameRect and the V1 clip's Motion
   (Scale, Position, Rotation), and match them exactly.
@@ -59,12 +62,7 @@ and match the exemplars. When a choice is not covered here, it is the director's
     under the knob.
   - The NOT and HOT labels take the gradient's two end colours.
 
-## Rules from delivered work
+## Footage and names
 
-- Freeze frames and punch-ins built from the user's footage only match it when the frames and the render are set up
-  this way:
-  - extract untagged PNGs (ffmpeg
-    `-vf "...,format=rgb24,setparams=color_primaries=unknown:color_trc=unknown:colorspace=unknown"`);
-  - render with `--color-space=bt709`.
-- A guest's surname and title are often not in the audio. Ask; never guess.
-- For a guest name card, see `styles/name-tags.md`. Lovable has no lower-third tag yet.
+- Freeze frames and punch-ins follow CRAFT.md, Graphics built from real footage.
+- Name cards: `styles/name-tags.md`. Lovable has no tag; build one on its "A style without a tag" pattern.

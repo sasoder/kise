@@ -6,7 +6,8 @@ a working example of every part.
 
 ## Import
 
-- Import everything from `./chinatalkVintage`, which re-exports the shared helpers you need.
+- Import everything from `./chinatalkVintage`, which re-exports the shared helpers you need. The one exception is the
+  crowd field mechanics (`hash`, `feather`, `wobble`, `makeTone`) from `./fieldShared` (`styles/chinatalk.md`).
 - Never import `./chinatalkShared`. The kit builds on it internally, but there `RED`, `WORD_PX`, `VALUE_PX`, `DASH`,
   `Label`, `WetLine`, `DashedPath`, `InkPath`, `Bead`, `Seal`, `HatchFill`, `Stage`, `PAPER`, `INK` and the camera have
   other values. The kit has its own versions under the same names.
@@ -209,7 +210,8 @@ export const Cut: React.FC = () => {
   label's baseline exactly on it.
 - Labels are floors (40 / 64 / 60 px on screen) and grow with zoom above k = 1. Check fit with `labelWidth`. There is
   no odometer: a number that changes becomes a new `Label`.
-- Nothing readable goes in the caption strip: `toWorld(cam, 540, CAPTION_Y0).y` is its world y.
+- Nothing readable goes in either caption band (CRAFT.md: y 1080–1250 and y 1360–1460): `toWorld(cam, 540, CAPTION_Y0).y`
+  is the first band's world y. Check both on every camera state.
 - Judge the halftone dots on a full-res still. A half-res preview halves their pitch.
 - Do not add edge roughness (SVG turbulence). It more than doubles render time and makes edges wobble. Vector edges
   stay clean.

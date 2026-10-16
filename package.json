@@ -2,7 +2,6 @@
   "name": "kise",
   "version": "0.1.0",
   "description": "Agent-driven motion graphics harness built on Remotion",
-  "repository": {},
   "license": "MIT",
   "dependencies": {
     "@remotion/cli": "4.0.441",
@@ -32,7 +31,6 @@
   "scripts": {
     "postinstall": "bun run install:skills",
     "install:skills": "bunx skills@1.5.15 add remotion-dev/skills --skill remotion-best-practices --agent codex --agent claude-code --agent cursor --agent opencode --agent gemini-cli --yes",
-    "build:map": "bun scripts/build-europe-map.mjs",
     "studio": "remotion studio",
     "render": "remotion render src/index.ts",
     "review": "bun scripts/review.mjs",

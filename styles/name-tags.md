@@ -14,7 +14,7 @@ Reuse the current tag for the clip's style with new props. Never rebuild one fro
 | ChinaTalk | `generated/components/NameTagNewsprint.tsx` | `name`, `job`, `durationInFrames`; leave `variant` at its default `"slip"` | one slip of newsprint: red rule, name in Source Serif 4 Bold 86, hair rule, job in Source Serif 4 Medium Italic 42, square corners, one frozen grain frame |
 | Dwarkesh map (history clips) | `generated/components/NameTagMapStyle.tsx` | `name`, `job`, `durationInFrames` | IM Fell English 84 name over IM Fell English SC 40 descriptor, both cream `#E9DDBF`, on a `#2A221A` plate at 0.97, hard corners, a 6 px `#FFB000` rule down the left edge |
 | Humble Co. | `generated/components/NameTagHumble.tsx` | `name`, `job` | Neulis Cursive Bold 88 over 42, white on a solid `#7970b4` bar, radius 10, padding 34/52/38/52, no shadow |
-| Dwarkesh, Sporttouchen, Lovable | none yet | | see "A style without a tag" |
+| Dwarkesh, Sporttouchen, Lovable | none | | see "A style without a tag" |
 
 `generated/components/MaxIntro.tsx` (Lovable) is a freeze-frame guest intro, not a lower third.
 
@@ -29,7 +29,7 @@ new tag goes out smaller and higher than that:
 - about **0.72x** the component's size (the stout tag: name strip ~715 x 90 px, job strip ~43 px tall);
 - tag top at about **y 1140**, tag bottom at about **y 1280**, left edge at about **x 180**.
 
-This overlaps the first caption band. The user picked this spot, so use it unless the user asks for something else.
+This overlaps the first caption band on purpose; use it unless the user asks otherwise.
 
 Bake the size and position into the render. Graphics go into the project at default Motion
 (`scripts/prproj_assemble.py`), so the .mov must already be correct. Wrap the tag:

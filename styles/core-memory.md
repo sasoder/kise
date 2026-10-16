@@ -46,19 +46,19 @@ chain code. A new clip's own shared module imports its base from here.
   `WorldTall` / `worldTransformTall` (world layer; `blurX` = horizontal-only blur for a fast pan), `Figure`, `gridPos`,
   `Newspaper` and `CaptionStripDebug` (preview aid). `PAPERS_NUMBER` is that clip's data.
 - **16:9:** `generated/components/cerroShared.tsx` provides `PaperGround`, `World`, `worldTransform169` and
-  `camMove169`. Everything from `SECTION_PROFILE` down is that clip's mine section, not the style.
+  `camMove169`. Everything from `SECTION_PROFILE` down is that clip's mine section, not the style. Recompose for the
+  width (a grid or a wider layout): a centred phone column leaves two-thirds of a 16:9 frame empty.
 - **Base (both):** the tokens above, `CHAIN`, `SHADOW_OFF`, `STROKE`, `OP_*`; `EASE_LAND`
   (`Easing.bezier(0.16, 1, 0.3, 1)`), `CHAIN_TRAVEL` 22, `CHAIN_STAGGER` 2, `CROWN_STEP` 12; `Inked`, `ShadowText`,
   `RiseText` / `textRise` (24 screen px up while fading in, 12 frames), `ChainEcho`, `Person`; `runCamera2` (damped
-  x/y/k tracker).
+  x/y/k tracker). deathCountShared re-exports all of these except `Inked` and `Person`: import those two from
+  `generated/components/cerroShared.tsx`.
 - Both kits export an `FPS` from their own clip. Ignore it and set each cut's FPS from its own sequence.
 
 ### Visual language
 
 - Build each picture as one mechanism made of a few flat white glyphs: people, bars, sheets, word-bars (for
-  language), dots.
-- When the line names a concrete artefact (a message, a report, a newspaper, a listing, a chart), draw that artefact
-  recognisably and animate it doing what it does.
+  language), dots. Word-bars stay white: black bars read as redaction.
 - **People:** `Person` (`public/person.png` tinted white) or `Figure` (vector bust). Solid = counted; hollow outline =
   the "up to" part of a range. Counts sit in rows of ten (`gridPos`). Each figure rises from behind its own row rule
   and sinks back the same way. Never file figures along the rows, or they cross.
@@ -66,8 +66,10 @@ chain code. A new clip's own shared module imports its base from here.
   (`Figure shadow={false}`). Make black marks solid, because hollow outlines get lost among the shadow edges.
 - **Glyphs:** chunky, never spindly (thin sticks read as combs or sunbursts). Hanging things hang under gravity.
 - **Newspaper:** the masthead is a black bar. Name the paper only when it is verified.
-- **Labels:** Core Memory edits carry burned-in captions. Never add a depth, count or name label that only repeats what
-  the speaker says.
+- **Chat UI:** frame it like a phone. The input capsule (with its send button) is the floor of the picture, clear of the
+  caption bands; messages stack up from it, and the camera pulls back from there. User messages are white pills with
+  black Barlow text; replies are word-bars written behind a caret.
+- **Labels:** Core Memory edits carry burned-in captions, so never add a depth, count or name label the speaker says.
 
 ### The chain echo
 
@@ -87,6 +89,8 @@ The chain is a gesture, not the entrance. Most elements sit flat, with only the 
   stripes that read as a flag.
 - Copy the shape only, because text riding on a colour band reads as another object. For a ring, clip the echo copies
   to the area outside the ring.
+- On multi-line text, crown only the top line: stacked crowns stripe. A thin arch takes the crown as three touching
+  thin stripes.
 
 ### Exemplars
 
@@ -133,5 +137,4 @@ picture, and it is photographic, not paper.
   moves into a photoreal plate baked from the footage's own frames (`scripts/bake-down-the-shaft.py`, assets in
   `public/cerro/shaft/`), with a clean white readout in Barlow Condensed.
 - Lock the plate to the footage's measured motion. Keep it photographic: real footage on top, sliced real rock below.
-  A stylised dark field with glowing passages does not blend.
-- Extract the frame PNGs untagged and render with `--color-space=bt709`, so the cut matches the footage in Premiere.
+  A stylised dark field with glowing passages does not blend. Colour match: CRAFT.md, Graphics built from real footage.

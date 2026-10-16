@@ -5,8 +5,9 @@ red, and real photographs set as clippings. It should feel like a newspaper with
 
 ## Kit
 
-- Import everything from `generated/components/chinatalkVintage.tsx`. Its API, every token and the traps are in
-  `generated/components/chinatalkVintage.md`. Read that file before you write a line.
+- Import everything from `generated/components/chinatalkVintage.tsx`; the one exception is the crowd field mechanics
+  (`hash`, `feather`, `wobble`, `makeTone`) from `generated/components/fieldShared.tsx` (Visual language). Its API,
+  every token and the traps are in `generated/components/chinatalkVintage.md`. Read that file before you write a line.
 - Never import `chinatalkShared.tsx`. The kit builds on it internally, but it holds other colours, weights and a
   lifted camera under the same names. Never copy the imports of a cut that uses it.
 - Do not hand-set a colour, stroke width or font size that the kit defines. If a cut needs a new part, ask the
@@ -82,7 +83,8 @@ red, and real photographs set as clippings. It should feel like a newspaper with
   `generated/components/fieldShared.tsx` and everything else from this kit. `generated/components/FiniteJobs.tsx`
   shows the field, clearing, block and threads, but copy its geometry, not its `chinatalkShared` imports.
 - **A country:** when a chart's red line is one country, the chart can carry that country's flag as its title. The
-  flag is a world object above the chart: it moves with the camera and enters on the country's name.
+  flag is a world object above the chart: it moves with the camera, is sized through the size law like a label
+  (`wpx(px, k)`), enters on the country's name, and nothing in the chart passes under it.
 
 ## Weight
 
@@ -93,13 +95,12 @@ red, and real photographs set as clippings. It should feel like a newspaper with
 - Keep few kinds of element and few labels on screen at once. Every frame should read in half a second at phone size.
 - Open on a substantial first frame. Never start with thin hairlines on empty paper. `HAIR` is only for axes and
   rules.
-- Before you direct a cut, pull frames from the approved renders (below) and hold the idea up against them.
+- Before you build, pull frames from the reference renders (Exemplars) and hold your first frame up against them.
 
 ## Motion feel
 
 - Motion is eased and ink-like. A bead writes each line, launching fast and settling (`shootEase`), shapes flood,
   and anything removed bleeds away.
-- Pans are smooth and controlled: no whip pans and no motion blur.
 
 ## Exemplars
 
@@ -110,7 +111,7 @@ red, and real photographs set as clippings. It should feel like a newspaper with
   middle, and six solid pictograms around it flood red where the feeds touch them.
 - `generated/components/BrezhnevChoseDecay.tsx`: a portrait clipping over a fork. Both roads are dashed and red takes
   one. A `RED_DEEP` hatch wash soaks into the wedge, and the other road bleeds away with its `"head"` label.
-- Approved renders of these cuts, plus `AIReplacesMarkets`, are in
+- Reference renders of these cuts, plus `AIReplacesMarkets`, are in
   `/Users/tom/Documents/tom fant/chinatalk/oct/China's Economy is Broken | Logan Wright/logan - brezhnev chose decay/graphics/`.
 
 ## Name tag
