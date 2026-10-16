@@ -36,12 +36,24 @@ Nothing else. Do not browse old cuts, other kits or other styles unless the styl
 - Folders: shared kits live in `generated/components/kits/<style>/`; each clip has its own folder
   `generated/components/<clip>/` (lowercase slug such as `sarah-death-ground`) for its cuts and its own world files.
   Import kits from the clip folder as `../kits/<style>/<kit>`.
-- One component per cut: `generated/components/<clip>/<Name>.tsx`, PascalCase, named for the idea. It renders an
-  `AbsoluteFill` root driven only by `useCurrentFrame()`, `interpolate()`, `spring()` and `Easing` (no CSS animation,
-  timers or `Math.random()`; use Remotion's `random(seed)`). It exports `FPS`, `DURATION`, a Zod `schema`,
-  `defaultProps = schema.parse({...})` and the component as default. Its header comment holds the Check line, the
-  spoken line, the word → frame table, the `DURATION` derivation, the motion in two or three sentences, and the source
-  of every real figure.
+- Start every cut with `bun run cut`. It writes `generated/components/<clip>/<Name>.tsx` from the style's template
+  (kit imports, ground, fonts, camera, exports, header skeleton, one centred marker to delete) plus its render entry
+  `src/Root.<Name>.tsx` + `src/entry.<Name>.ts`, never overwrites, and prints the preview and final commands:
+
+  ```bash
+  bun run cut KingStillThere --clip sarah-death-ground --style map --fps 24 --seconds 9.792
+  ```
+
+  Styles: `dwarkesh`, `map`, `chinatalk`, `cheeky-pint`, `core-memory`, `humble`, `sporttouchen`, `lovable`,
+  `name-tag --tag <style>`. `--frames N` instead of `--seconds`; `--wide` composes a 16:9 trailer at 2048x1080
+  (CRAFT.md Format); `--size WxH` another frame (Lovable); `--overlay` a transparent overlay. Only when no template
+  fits (several compositions in one Root), write the entry by hand on the pattern of `src/Root.StillAroundLater.tsx`
+  + `src/entry.StillAroundLater.ts`.
+- One component per cut, PascalCase, named for the idea. It renders an `AbsoluteFill` root driven only by
+  `useCurrentFrame()`, `interpolate()`, `spring()` and `Easing` (no CSS animation, timers or `Math.random()`; use
+  Remotion's `random(seed)`). It exports `FPS`, `DURATION`, a Zod `schema`, `defaultProps = schema.parse({...})` and
+  the component as default. Its header comment holds the Check line, the spoken line, the word → frame table, the
+  `DURATION` derivation, the motion in two or three sentences, and the source of every real figure.
 - `FPS` = the Premiere sequence's rate (23.976 is `24000 / 1001`); `DURATION` = the slot's in → out × `FPS`. 1080x1920
   unless the brief asks for 16:9. Opaque full frame unless the brief asks for an overlay.
 - Fonts come from the style file: Google fonts via `loadFont()` from `@remotion/google-fonts/<Font>` at module scope
@@ -49,38 +61,20 @@ Nothing else. Do not browse old cuts, other kits or other styles unless the styl
   at module scope. Assets live in `public/<clip>/`, load through `staticFile()` and are committed with the cut.
   Raw sources that only a bake script reads go in `assets-src/<clip>/`, not `public/`: every render copies all of
   `public/`.
-- Each cut gets its own render entry, on the pattern of `src/Root.StillAroundLater.tsx` + `src/entry.StillAroundLater.ts`:
-
-```tsx
-// src/Root.<Name>.tsx
-import {Composition} from 'remotion';
-import <Name>, {DURATION, FPS, defaultProps, schema} from '../generated/components/<clip>/<Name>';
-// Private render entry for <Name> (<clip>): <one line on the picture>.
-export const RemotionRoot = () => (
-  <Composition id="<Name>" component={<Name>} schema={schema} defaultProps={defaultProps}
-    durationInFrames={DURATION} fps={FPS} width={1080} height={1920} />
-);
-
-// src/entry.<Name>.ts
-import {registerRoot} from 'remotion';
-import {RemotionRoot} from './Root.<Name>';
-registerRoot(RemotionRoot);
-```
-
-- A 16:9 trailer composes at `width={2048} height={1080}` (CRAFT.md Format).
 - Never edit another cut's files, `src/Root.tsx`, or a kit a style file names. Ask the director for a kit addition.
 
 ## Render
 
 `remotion.config.ts` sets ProRes 4444, PNG frames and `yuva444p10le` for finals; never override them. Previews are
-half-res H.264 in your session scratchpad (never `out/` or a clip folder) through `<scratch>/preview.config.ts`: import
-`Config` from `@remotion/cli/config`, then `setCodec('h264')`, `setVideoImageFormat('jpeg')`, `setPixelFormat('yuv420p')`.
+half-res H.264 in your session scratchpad (never `out/` or a clip folder) through the committed
+`scripts/preview.config.ts` (h264, JPEG frames, yuv420p).
 
 ```bash
-bunx remotion render src/entry.<Name>.ts <Name> <scratch>/<Name>.mp4 --config=<scratch>/preview.config.ts --scale=0.5
+bunx remotion render src/entry.<Name>.ts <Name> <scratch>/<Name>.mp4 --config=scripts/preview.config.ts --scale=0.5
 bunx remotion render src/entry.<Name>.ts <Name> <scratch>/<Name>.mov --muted          # final
 ffprobe -v error -show_entries stream=codec_type -of csv=p=0 <scratch>/<Name>.mov     # prints only: video
 bun run lint                                                                           # must pass
+bun run check --errors                                                                 # must report 0 errors
 ```
 
 - Run the checks in CRAFT.md on the preview and iterate. Then stop and report the preview path, the key frames and

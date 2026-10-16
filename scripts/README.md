@@ -1,9 +1,34 @@
 # scripts
 
-The reusable tools. Run them from the repo root. Every script not listed here is a one-off named after its clip or cut
-(`build-<x>-map.mjs`, `bake-<x>-rasters.mjs`, `build-<x>-sfx.mjs`, `bake-<x>.py`, `check-<x>.ts`, `render-<x>-*.sh`,
-`_*_<Cut>.tsx`, and their `*.json` / `*.geojson` inputs): copy a pattern from one, but never run or edit another clip's
-for new work. The Edit Board job pipeline lives in `pipeline/` (see `pipeline/README.md`).
+Run everything from the repo root.
+
+| Where | What |
+|---|---|
+| `scripts/` | the tools below: `new-cut.mjs`, `check.mjs`, `review.mjs`, `preview-over-grey.sh`, `preview.config.ts`, `prproj_*.py`, `make_news_card.py` |
+| `scripts/templates/` | one starting component per style, used by `bun run cut` |
+| `scripts/textures/` | the house texture makers (below) |
+| `scripts/maps/` | the shared map tool (`build.mjs`, `bake.mjs`, `lib/`, `configs/`); see `scripts/maps/README.md` |
+| `scripts/maps/data/` | geo inputs several maps share |
+| `scripts/maps/sets/<set>/` | an older map set's own scripts and bake-only data: only for re-baking that delivered map |
+| `scripts/clips/<clip>/` | one-off bakes for one clip's cut: copy a pattern, never run another clip's for new work |
+| `assets-src/` (repo root) | raw sources only bake scripts read; renders never copy it |
+
+The Edit Board job pipeline lives in `pipeline/` (see `pipeline/README.md`). The director's Premiere, news-card and
+stills procedures are skills in `.agents/skills/` (`premiere-project`, `news-card`, `stills-sourcing`).
+
+## New cut
+
+`bun run cut <Name> --clip <clip-slug> --style <dwarkesh|map|chinatalk|cheeky-pint|core-memory|humble|sporttouchen|lovable|name-tag>
+[--fps 24000/1001] [--seconds S | --frames N] [--wide] [--size WxH] [--overlay] [--tag <style>]` writes
+`generated/components/<clip>/<Name>.tsx` from `scripts/templates/<style>.tsx` plus `src/Root.<Name>.tsx` and
+`src/entry.<Name>.ts`, never overwrites, and prints the preview and final render commands. `--tag` is required for
+`name-tag`; `--wide` and `--overlay` are refused where the style has no such product.
+
+## Check
+
+`bun run check` (or `--errors` for errors only): missing or uncommitted `staticFile()` assets, script imports and paths
+that point nowhere, doc paths that do not exist, Root/entry mismatches (errors, exit 1); components nothing uses and
+older takes a newer V<n> replaces (notes). Run it before committing and at the end of every clip.
 
 ## Review
 
@@ -49,7 +74,7 @@ a 1080x1080 RGBA PNG of a real modern article (orange dash, source, date, headli
 own photo cover-cropped at `crop_y` 0..1). Needs the Inter variable font in `~/Library/Fonts`. Name it
 `newscard_<outlet>_<topic>.png`. A historical event gets the plain newspaper scan instead of a card.
 
-## House texture bakers
+## House texture makers (`scripts/textures/`)
 
 Deterministic and offline; run once, and commit what they write to `public/`.
 
@@ -59,9 +84,15 @@ Deterministic and offline; run once, and commit what they write to `public/`.
   `speckle.png`. The `kraft-*.jpg` and `stout.jpg` it also writes belong to other looks; see `styles/cheeky-pint.md`.
 - `build-china-paper-vintage.py`: the ChinaTalk newsprint, `public/china/paper_vintage.png`, `fibre_vintage.png` and
   `grain_0..3.png`, all read by `generated/components/kits/chinatalk/chinatalkVintage.tsx`.
+- `build-china-paper.py`: `public/china/paper.png`, read only by the older stage in
+  `generated/components/kits/chinatalk/chinatalkShared.tsx`.
+- `bake-ulysses-ocean.py`: the realistic ocean textures in `public/ulysses/` for `kits/cheeky-pint/oceanShared.tsx`.
+- `bake-playbook-paper.py`: the old-paper playbook leaf (`styles/dwarkesh-map.md`).
 
 ## Maps
 
-Each history clip gets its own map pipeline: `<x>-geo.json|mjs` → `build-<x>-map.mjs` → `bake-<x>-rasters.mjs` →
-`generated/components/<x>Shared.tsx`. Copy the Pearl set (`pearl-geo.mjs`, `build-pearl-maps.mjs`,
-`bake-pearl-rasters.mjs`). Projection, borders, rasters and performance rules are in `styles/dwarkesh-map.md`.
+A new history-clip map is one config: copy `scripts/maps/configs/example.mjs`, then
+`bun scripts/maps/build.mjs scripts/maps/configs/<set>.mjs` and `bun scripts/maps/bake.mjs scripts/maps/configs/<set>.mjs`
+(the bake alone, nothing else heavy running; it peaks near 1 GB). Details in `scripts/maps/README.md`; style rules in
+`styles/dwarkesh-map.md`. The older sets in `scripts/maps/sets/<set>/` bake without memory pauses and can reach ~10 GB:
+run one only when nothing else is rendering.

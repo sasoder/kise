@@ -36,6 +36,7 @@
     "review": "bun scripts/review.mjs",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
-    "check": "bun scripts/check.mjs"
+    "check": "bun scripts/check.mjs",
+    "cut": "bun scripts/new-cut.mjs"
   }
 }
