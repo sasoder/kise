@@ -1,8 +1,9 @@
 // bun run check — finds leftovers and broken references before you commit or finish a clip.
 //
 // Errors (exit 1): a staticFile() path that does not exist, a referenced asset that git does not track,
-// a script import or output folder that points nowhere, a path cited in the docs that does not exist,
-// a Root without its entry (or the reverse).
+// a script import or output folder that points nowhere, a path cited in the docs that does not exist
+// (repo paths, and kits/... or <clip>/... paths under generated/components/), a Root without its entry
+// (or the reverse).
 // Notes (exit 0): components nothing uses, older takes that a newer V<n> replaces.
 //
 // Usage: bun run check            (everything)
@@ -53,7 +54,17 @@ const srcFiles = readdirSync("src").filter((f) => /\.tsx?$/.test(f)).map((f) => 
 const seeds = new Set();
 for (const f of srcFiles) for (const t of importsOf(f, read(f))) if (t.startsWith("generated/")) seeds.add(t);
 
-const docs = ["AGENTS.md", "CRAFT.md", "scripts/README.md", ...readdirSync("styles").map((f) => `styles/${f}`)].filter(existsSync);
+const docs = [
+  "README.md",
+  "AGENTS.md",
+  "CRAFT.md",
+  "scripts/README.md",
+  "scripts/maps/README.md",
+  "pipeline/README.md",
+  "generated/components/kits/chinatalk/chinatalkVintage.md",
+  ...["premiere-project", "news-card", "stills-sourcing"].map((s) => `.agents/skills/${s}/SKILL.md`),
+  ...readdirSync("styles").map((f) => `styles/${f}`),
+].filter(existsSync);
 const docText = docs.map(read).join("\n");
 for (const [name, p] of byName) if (new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(docText)) seeds.add(p);
 
@@ -128,11 +139,27 @@ for (const [p, src] of scriptText) {
 }
 
 // ---- docs: backticked repo paths must exist
+// Repo paths (with an extension) from the root; kits/... and <clip>/... (as the Styles table and the style files
+// write them, or ../kits/... as a cut imports a kit) from generated/components/. A <clip>/... path counts when its
+// first folder is a clip folder, or looks like a clip slug and the path ends in .ts/.tsx.
 const prefixes = ["generated/", "src/", "scripts/", "public/", "styles/", "assets-src/", ".agents/", "pipeline/"];
+const COMP = "generated/components";
+const compDirs = new Set(readdirSync(COMP, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name));
 for (const d of docs)
-  for (const m of read(d).matchAll(/`([A-Za-z0-9_./-]+\.[a-z0-9]+)`/g)) {
+  for (const m of read(d).matchAll(/`([A-Za-z0-9_./-]+)`/g)) {
     const q = m[1];
-    if (prefixes.some((x) => q.startsWith(x)) && !q.includes("<") && !existsSync(q)) errors.push(`${d}: cites ${q}, which does not exist`);
+    if (!q.includes("/") || q.includes("...")) continue; // `kits/...` is a placeholder
+    const hasExt = /\.[a-z0-9]+$/.test(q);
+    if (prefixes.some((x) => q.startsWith(x))) {
+      if (hasExt && !existsSync(q)) errors.push(`${d}: cites ${q}, which does not exist`);
+      continue;
+    }
+    const r = q.replace(/^\.\.\//, "");
+    const first = r.split("/")[0];
+    const underComp =
+      first === "kits" || (compDirs.has(first) ? hasExt : /^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(first) && /\.tsx?$/.test(r));
+    if (underComp && !existsSync(`${COMP}/${r}`) && !resolveModule(`${COMP}/${r}`))
+      errors.push(`${d}: cites ${q}, which is not in ${COMP}/`);
   }
 
 // ---- Root / entry pairs

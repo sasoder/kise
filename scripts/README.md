@@ -28,13 +28,16 @@ stills procedures are skills in `.agents/skills/` (`premiere-project`, `news-car
 
 `bun run check` (or `--errors` for errors only): missing or uncommitted `staticFile()` assets, script imports and paths
 that point nowhere, doc paths that do not exist, Root/entry mismatches (errors, exit 1); components nothing uses and
-older takes a newer V<n> replaces (notes). Run it before committing and at the end of every clip.
+older takes a newer V<n> replaces (notes). The docs it reads: `README.md`, `AGENTS.md`, `CRAFT.md`, `styles/`, this
+file, `scripts/maps/README.md`, `pipeline/README.md`, `kits/chinatalk/chinatalkVintage.md` and the three director
+skills; backticked `kits/...` and `<clip>/...` paths resolve against `generated/components/`. It reads
+`git ls-files`, so stage your paths first: run it after staging, before committing, and at the end of every clip.
 
 ## Review
 
 - `review.mjs`: a contact sheet sampled evenly from a render, first and last frame included, over a checkerboard.
-  `bun run review <file>.mov [--frames 9]` writes `out/review/<name>/<name>-contact-sheet.jpg`. Prefix
-  `KISE_TRANSPARENT=1` to require an alpha channel (overlays).
+  `bun run review <scratch>/<name>.mov [--frames 9]` writes `<scratch>/review/<name>-contact-sheet.jpg`, next to its
+  input. Prefix `KISE_TRANSPARENT=1` to require an alpha channel (overlays).
 - `preview-over-grey.sh <file>.mov`: flattens a transparent render over `#141414` into `<file>-preview.mp4`. The
   checkerboard overstates faint elements; judge an overlay here.
 

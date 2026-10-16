@@ -28,17 +28,18 @@ One real article per card, picked by me; no list for the user to choose from. Ru
   the wording), the date, and the photo from `og:image`. Note the photo credit shown on the page.
 - latimes.com blocks WebFetch: open the article in the built-in browser and read `og:image`; the original is the S3 URL
   inside its `?url=`.
-- Download the photo into its own new folder, e.g. `$S/dl/`. Then re-encode it with ffmpeg (the card script needs PIL,
-  which `python3 -I` hides, so it never reads the raw download):
+- Download the photo into its own new folder, e.g. `$S/dl/`. Then re-encode it with ffmpeg into the clip's source
+  folder `<src>`: `<clip>/animation_source/` (an older clip that already has `graphics/source/`: that folder). The
+  card script needs PIL, which `python3 -I` hides, so it never reads the raw download:
   ```bash
-  mkdir -p "<clip>/graphics/source"
-  ffmpeg -v error -i "$S/dl/<file>" -q:v 2 "<clip>/graphics/source/newscard_<outlet>_<topic>_photo.jpg"
+  mkdir -p "<src>"
+  ffmpeg -v error -i "$S/dl/<file>" -q:v 2 "<src>/newscard_<outlet>_<topic>_photo.jpg"
   ```
 
 ## 3. Make the card
 ```bash
 python3 scripts/make_news_card.py "<clip>/graphics/newscard_<outlet>_<topic>.png" "<OUTLET>" "Month D, YYYY" \
-  "<Headline as published>" "<clip>/graphics/source/newscard_<outlet>_<topic>_photo.jpg" "Photo: <credit>" [crop_y]
+  "<Headline as published>" "<src>/newscard_<outlet>_<topic>_photo.jpg" "Photo: <credit>" [crop_y]
 ```
 - All arguments are positional. `crop_y` (0 top .. 1 bottom, default 0.5) picks the vertical crop of the photo; to set
   it without a credit, pass `""` as the credit.

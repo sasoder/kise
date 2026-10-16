@@ -9,9 +9,9 @@ edit.
 style), `styles/` (one file per house or client style) and [scripts/README.md](./scripts/README.md) (the reusable tools).
 
 ```bash
-bun install                                                         # first setup, by the user only; agents never run it
-bun run lint                                                        # eslint src && tsc
-bunx remotion render src/entry.<Name>.ts <Name> <file>.mov --muted  # render one cut
+bun install                                                                           # first setup, by the user only; agents never run it
+bun run lint                                                                          # eslint src && tsc
+bunx remotion render src/entry.<Name>.ts <Name> <file>.mov --muted --concurrency=4    # render one cut
 ```
 
 Forked from [kise](https://github.com/sasoder/kise) by sasoder, an agent-driven Remotion template. MIT; see

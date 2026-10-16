@@ -5,7 +5,7 @@ where each one lands, which version is current, and its status (planned, draftin
 needs fix, dropped). Format: `job-schema.md`. The project board and the FilmCraft timeline export read the same file.
 
 ```bash
-cd "~/Documents/tom fant/CAPTIONSTOOL/kise"
+cd "$HOME/Documents/tom fant/CAPTIONSTOOL/kise"
 CLIP="$HOME/Documents/tom fant/dwarkesh podcast/sep/Noam_Alignment"
 
 python3 pipeline/job.py import "$CLIP"            # job.json from what is already there (.movs, placements.txt, assembly JSON)

@@ -7,7 +7,8 @@ description: Everything the director does with the user's saved Premiere project
 
 No Premiere API or MCP exists. Never open, drive or quit Premiere: read and write the saved `.prproj` (gzipped XML) as
 text. Run everything from the kise repo root, `/Users/tom/Documents/tom fant/CAPTIONSTOOL/kise`. Below, `P` is the
-project, `S` a scratchpad folder, `H=.agents/skills/premiere-project` (this folder's helpers).
+project, `S` a scratchpad folder, `H=.agents/skills/premiere-project` (this folder's helpers), and `<notes>` the
+clip's notes folder: `<clip>/animation_source/notes/` (an older clip that already has `graphics/source/`: that folder).
 
 ## 0. Ground rules
 - Time: 254016000000 ticks per second; fps = 254016000000 / the VideoTrackGroup `FrameRate`; frame size = its
@@ -60,8 +61,7 @@ One line per item (track, in - out, `on`/`OFF`, `RED`, clip name), plus fps and 
 ## 3. Word timings in sequence time
 The edit is the clock. The edit exports in `CAPTIONSTOOL/media-to-srt-main - new/input/` and their SRTs in `output/`
 follow the Premiere edit; the `.mov`/`.mp4` in the clip folder is often the raw cut, seconds longer. Never time against
-the raw file. Save the result early as `words.json` (`{"w", "s", "e"}` per word) in the clip's notes folder
-(`animation_source/notes/`). Best source first:
+the raw file. Save the result early as `<notes>/words.json` (`{"w", "s", "e"}` per word). Best source first:
 1. **The episode's radio folder** (`radio_<episode>/`): `<Episode>_word_transcript.json` and the clip's `actual_in`
    (third column of `<Episode>_clip_timing_report.csv`):
    ```bash
@@ -146,11 +146,11 @@ Into the REAL project (the user's default). Edit Board jobs: §6.
    diff <(python3 "$H/list_timeline.py" "$P" | grep -E '^  (V1|A)') \
         <(python3 "$H/list_timeline.py" "$S/out.prproj" | grep -E '^  (V1|A)')      # must print nothing
    python3 "$H/list_timeline.py" "$S/out.prproj"            # the new items: right tracks, right times
-   python3 "$S/verify.py" "$P" "$S/out.prproj"              # §7: changed objects, missing media, new BinaryHash values
+   python3 "$S/tools/verify.py" "$P" "$S/out.prproj"        # §7: changed objects, missing media, new BinaryHash values
    ```
    Every placed path exists; earlier edits (V1 positions, the user's still Motion) are intact.
 7. `md5 -q "$P"` still matches step 1 (the user re-saved: rebuild from the newest file). Then
-   `cp "$S/out.prproj" "$P"`, and keep `out.xml` in the clip's notes folder.
+   `cp "$S/out.prproj" "$P"`, and keep `out.xml` in `<notes>`.
 
 **Known combinations**
 - 16:9 footage into 1080x1920: on the scratch copy (it writes IN PLACE, with its own backup to
@@ -208,17 +208,20 @@ A message that starts with `EDIT BOARD JOB`. Read `/Users/tom/Documents/tom fant
   job.json to an empty track.
 
 ## 7. Check the assembled edit
-Copy `composite.py`, `verify.py` and `sheet.py` from
-`/Users/tom/Documents/tom fant/core memory podcast/oct/POD_BRENT_EARLY_EDIT_1/brent - the mine death count/animation_source/tools/`
-into the scratchpad:
-- `python3 verify.py ORIGINAL.prproj NEW.prproj`: changed, added and removed objects; media paths that are missing;
-  BinaryHash values not in the original (must be empty, except the donor's Motion hash after `--motion-donor`); items
-  per track; the closing tag.
-- `python3 composite.py NEW.prproj BASE.mp4 OUT.mp4`: rebuilds the sequence from the written project (V1 picture with
-  disabled clips black, stills at their stored Scale/Position, graphics) over BASE, a 540x960 video of the edit with its
-  audio. 540x960 and 23.976 fps are hard-coded: edit them for other formats.
-- `python3 sheet.py preview.mp4 <start_s> out.jpg [--every N] [--from A] [--to B] [--cols C] [--tile W] [--crop x,y,w,h] [--strip]`:
-  frames with the spoken word under each. It reads `../edit/words.json` beside its own folder (`w`/`s`/`e`) at 23.976.
+Copy `composite.py`, `verify.py` and `sheet.py` into `$S/tools/`, and the clip's words to `$S/edit/words.json`, where
+`sheet.py` looks for them (`../edit/words.json` beside its own folder):
+```bash
+T="/Users/tom/Documents/tom fant/core memory podcast/oct/POD_BRENT_EARLY_EDIT_1/brent - the mine death count/animation_source/tools"
+mkdir -p "$S/tools" "$S/edit" && cp "$T"/{composite,verify,sheet}.py "$S/tools/" && cp "<notes>/words.json" "$S/edit/"
+```
+- `python3 "$S/tools/verify.py" ORIGINAL.prproj NEW.prproj`: changed, added and removed objects; media paths that are
+  missing; BinaryHash values not in the original (must be empty, except the donor's Motion hash after
+  `--motion-donor`); items per track; the closing tag.
+- `python3 "$S/tools/composite.py" NEW.prproj BASE.mp4 OUT.mp4`: rebuilds the sequence from the written project (V1
+  picture with disabled clips black, stills at their stored Scale/Position, graphics) over BASE, a 540x960 video of
+  the edit with its audio. 540x960 and 23.976 fps are hard-coded: edit them for other formats.
+- `python3 "$S/tools/sheet.py" preview.mp4 <start_s> out.jpg [--every N] [--from A] [--to B] [--cols C] [--tile W] [--crop x,y,w,h] [--strip]`:
+  frames with the spoken word under each, from `$S/edit/words.json` (`w`/`s`/`e`) at 23.976.
 
 ## 8. Report
 - What was written where, the backup in `old/`, and the `.xml` fallback.

@@ -47,8 +47,9 @@ Nothing else. Do not browse old cuts, other kits or other styles unless the styl
   Styles: `dwarkesh`, `map`, `chinatalk`, `cheeky-pint`, `core-memory`, `humble`, `sporttouchen`, `lovable`,
   `name-tag --tag <style>`. `--frames N` instead of `--seconds`; `--wide` composes a 16:9 trailer at 2048x1080
   (CRAFT.md Format); `--size WxH` another frame (Lovable); `--overlay` a transparent overlay. Only when no template
-  fits (several compositions in one Root), write the entry by hand on the pattern of `src/Root.StillAroundLater.tsx`
-  + `src/entry.StillAroundLater.ts`.
+  fits, write the Root and entry by hand: several people's tags in one Root on `src/Root.NameTagMapStyle.tsx` (one
+  composition per person); icon loops (no `bun run cut` style; In + Loop per icon, `styles/icon-loops.md`) on
+  `src/Root.CoreMemoryIcons.tsx` + `src/entry.CoreMemoryIcons.ts`.
 - One component per cut, PascalCase, named for the idea. It renders an `AbsoluteFill` root driven only by
   `useCurrentFrame()`, `interpolate()`, `spring()` and `Easing` (no CSS animation, timers or `Math.random()`; use
   Remotion's `random(seed)`). It exports `FPS`, `DURATION`, a Zod `schema`, `defaultProps = schema.parse({...})` and
@@ -58,9 +59,9 @@ Nothing else. Do not browse old cuts, other kits or other styles unless the styl
   unless the brief asks for 16:9. Opaque full frame unless the brief asks for an overlay.
 - Fonts come from the style file: Google fonts via `loadFont()` from `@remotion/google-fonts/<Font>` at module scope
   (use the `fontFamily` it returns); local OTF/TTF via `@remotion/fonts` `loadFont({family, url: staticFile('<file>')})`
-  at module scope. Assets live in `public/<clip>/`, load through `staticFile()` and are committed with the cut.
-  Raw sources that only a bake script reads go in `assets-src/<clip>/`, not `public/`: every render copies all of
-  `public/`.
+  at module scope. Assets live in `public/<clip>/` (map tiles: the config's `tileDir`), load through `staticFile()`
+  and are committed with the cut. Raw sources that only a bake script reads go in `assets-src/<clip>/`, not
+  `public/`: every render copies all of `public/`.
 - Never edit another cut's files, `src/Root.tsx`, or a kit a style file names. Ask the director for a kit addition.
 
 ## Render
@@ -70,18 +71,20 @@ half-res H.264 in your session scratchpad (never `out/` or a clip folder) throug
 `scripts/preview.config.ts` (h264, JPEG frames, yuv420p).
 
 ```bash
-bunx remotion render src/entry.<Name>.ts <Name> <scratch>/<Name>.mp4 --config=scripts/preview.config.ts --scale=0.5
-bunx remotion render src/entry.<Name>.ts <Name> <scratch>/<Name>.mov --muted          # final
-ffprobe -v error -show_entries stream=codec_type -of csv=p=0 <scratch>/<Name>.mov     # prints only: video
-bun run lint                                                                           # must pass
-bun run check --errors                                                                 # must report 0 errors
+bunx remotion render src/entry.<Name>.ts <Name> <scratch>/<Name>.mp4 --config=scripts/preview.config.ts --scale=0.5 --concurrency=4
+bunx remotion render src/entry.<Name>.ts <Name> <scratch>/<Name>.mov --muted --concurrency=4   # final
+ffprobe -v error -show_entries stream=codec_type -of csv=p=0 <scratch>/<Name>.mov              # prints only: video
+bun run lint                                                                                    # must pass
+git add <your paths> && bun run check --errors   # 0 errors in your own files (check reads git ls-files, so staged files count)
 ```
 
 - Run the checks in CRAFT.md on the preview and iterate. Then stop and report the preview path, the key frames and
   anything that did not work, unless the brief says to finalise (final render, delivery, git).
-- Add only the flags CRAFT.md, the style file or the brief call for (`--concurrency=4`, `--color-space=bt709`,
-  `--scale 2`, `--gl=angle`). Several builders share one 36 GB Mac, so renders use `--concurrency=4` and never run
-  in parallel within one builder. For an overlay, confirm the alpha with `KISE_TRANSPARENT=1 bun run review <file>.mov`.
+- `bun run check` errors in other sessions' files are not yours to fix; report them.
+- Add only the flags CRAFT.md, the style file or the brief call for (`--color-space=bt709`, `--scale 2`,
+  `--gl=angle`). Several builders share one 36 GB Mac, so every render uses `--concurrency=4` and renders never run
+  in parallel within one builder. For an overlay, confirm the alpha with
+  `KISE_TRANSPARENT=1 bun run review <scratch>/<Name>.mov` (the sheet lands in `<scratch>/review/`).
 
 ## Deliver
 

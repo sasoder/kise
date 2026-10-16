@@ -32,9 +32,12 @@ umber page without a map, in cream engraved line with house orange as the accent
   Rotated or globe views that turn a route vertical do not read.
 - Period borders only (merge what was one country, drop lines that did not exist), fine dashed cream at ~0.5. Add
   period water (Lake Texcoco 1519); leave out modern lakes.
-- Historical polygons: aourednik/historical-basemaps (`scripts/maps/sets/sugar/build-sugar-map.mjs`, `scripts/maps/sets/sugar/sugar-1783-subset.geojson`); check early-period ones, they can
-  be crude. Then georeference the scholarly Commons SVG map (affine fit to its towns + coastline ICP). Clip territories
-  to land, and look at them over Natural Earth with key cities before building.
+- Historical polygons: aourednik/historical-basemaps. Subset the period file into
+  `scripts/maps/data/<set>-<year>.geojson` and load it in the config with
+  `union(...loadFeatures("scripts/maps/data/<set>-<year>.geojson").map((f) => featureMP(W, f, W.regionStep)))`
+  (`scripts/maps/README.md` step 2); `sets/sugar/` holds the 1783 subset only to re-bake that map. Check early-period
+  ones, they can be crude. Then georeference the scholarly Commons SVG map (affine fit to its towns + coastline ICP).
+  Clip territories to land, and look at them over Natural Earth with key cities before building.
 - Framing: a close-up keeps its geography (a peninsula and its strait), never an anonymous blob or open sea; a named
   empire fits whole in frame; a world map uses the largest k that keeps every lit country in; no plate edge shows.
 - Events at "the same moment" share one frame: open wide enough for all of them, land them together, then move in.
@@ -42,8 +45,9 @@ umber page without a map, in cream engraved line with house orange as the accent
 ## Build pattern (the map tool, `scripts/maps/README.md`)
 
 1. Sourced inputs in `scripts/maps/data/<set>-geo.json` (sites, routes, georeferenced polygons, facts).
-2. One config `scripts/maps/configs/<set>.mjs`, copied from `configs/pearl.mjs`: projection, clip box, period borders
-   and water, regions, the exports the cuts need, the LOD levels. A failed check throws.
+2. One config `scripts/maps/configs/<set>.mjs`, copied from `configs/example.mjs` (`configs/pearl.mjs` is the full
+   two-world case): projection, clip box, period borders and water, regions, the exports the cuts need, the LOD
+   levels. A failed check throws.
 3. `bun scripts/maps/build.mjs <config>` → `generated/components/<clip>/<set><World>MapData.ts` (light overlays:
    `project`, places, routes, regions clipped to land with their inland edges, framings). Then, alone,
    `bun scripts/maps/bake.mjs <config>` → `public/<set>/<world>-<level>-<col>-<row>.png` + `<set>Levels*.ts`: a
@@ -59,8 +63,8 @@ umber page without a map, in cream engraved line with house orange as the accent
   (`CONTENT_Y`, `CAM_LIFT`, `CAPTION_TOP`, `camFor`'s default point); frame per CRAFT.md. Take `DARK` from
   pearlShared (`#17120D`), not cortesShared (`#0B0907`).
 - Performance: only dynamic overlays stay vector, simplified to the current k; border-state changes are masked raster
-  layers. Hold the camera outside level crossfade bands (`mapSharpness` in cortesShared). Render heavy raster pieces
-  with `--concurrency=4`. Thousands of figures: rasterise each distinct pose state once to sprites and blit far to near
+  layers. Hold the camera outside level crossfade bands (`mapSharpness` in cortesShared). Thousands of figures:
+  rasterise each distinct pose state once to sprites and blit far to near
   (`generated/components/kits/maps/pageFigures.tsx` `sprite` / `blit`, as in `generated/components/sheppard-capture-not-kill/AllAdultMales.tsx`).
 
 ## Visual language

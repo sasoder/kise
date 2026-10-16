@@ -176,11 +176,11 @@ Numbers marked *hint* are starting points that worked once, not thresholds (prin
   (once: under ~45 screen px per frame at 2x). A fast pan over a static page: backdrop and added elements in world
   space, only grain in screen space (once: pans under ~26 px per frame).
 - **Bitmaps inside an SVG.** `<image href={staticFile(...)}>` races frame capture and drops on scattered frames. Inline
-  the bitmap as a `data:image/png;base64,...` string exported from `generated/components/<name>Data.ts` (pattern:
+  the bitmap as a `data:image/png;base64,...` string exported from `generated/components/<clip>/<name>Data.ts` (pattern:
   `generated/components/atelier-missor/bronzeData.ts`) and verify with a per-frame pixel count of its region. Bitmaps outside the SVG
   use Remotion `<Img>`.
 - **Heavy static geometry** (maps, thousands of paths, big textures): bake it to rasters once, animate only the
-  overlays, measure ms per frame, and run final renders with `--concurrency=4`.
+  overlays, and measure ms per frame.
 - **Graphics built from real footage** (freeze frames, punch-ins): render with `--color-space=bt709`, extract the
   frame PNGs untagged, and check a 1x1 average of render and source:
   ```

@@ -8,15 +8,18 @@
 //   frame, with the frame number burned into each tile.
 //
 // Usage:
-//   bun scripts/review.mjs out/<name>.mov [--frames 9]
-//   bun scripts/review.mjs --video out/<name>.mov [--frames 9]
-//   KISE_TRANSPARENT=1 bun scripts/review.mjs out/<name>.mov
+//   bun scripts/review.mjs <scratch>/<name>.mov [--frames 9]
+//   bun scripts/review.mjs --video <scratch>/<name>.mov [--frames 9]
+//   KISE_TRANSPARENT=1 bun scripts/review.mjs <scratch>/<name>.mov
+//   [--out-dir DIR] puts the sheet in DIR; [--sheet FILE] names it outright.
 //
-// Output: out/review/<name>/<name>-contact-sheet.jpg  (Read this image)
+// Output: <dir of the input>/review/<name>-contact-sheet.jpg  (Read this image)
+// The tiles are built in a temporary folder that is removed afterwards.
 
-import { mkdir, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { basename, extname, join } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, dirname, extname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const argv = new Map();
@@ -33,7 +36,7 @@ for (let i = 0; i < raw.length; i += 1) {
 
 const video = argv.get("--video") ?? positional[0];
 if (!video) {
-  console.error("Missing video. Usage: bun scripts/review.mjs out/<name>.mov [--frames 9]");
+  console.error("Missing video. Usage: bun scripts/review.mjs <scratch>/<name>.mov [--frames 9]");
   process.exit(1);
 }
 if (!existsSync(video)) {
@@ -43,7 +46,7 @@ if (!existsSync(video)) {
 
 const count = Math.max(2, Number.parseInt(argv.get("--frames") ?? "9", 10) || 9);
 const name = basename(video, extname(video));
-const outDir = argv.get("--out-dir") ?? join("out", "review", name);
+const outDir = argv.get("--out-dir") ?? join(dirname(video), "review");
 const sheetPath = argv.get("--sheet") ?? join(outDir, `${name}-contact-sheet.jpg`);
 
 const run = (cmd, args) => {
@@ -101,44 +104,44 @@ const indices = [
   ),
 ].sort((a, b) => a - b);
 
-// --- Extract + label each frame, flattened on a checkerboard ----------------
-await rm(outDir, { recursive: true, force: true });
-await mkdir(outDir, { recursive: true });
-
-const tilePaths = [];
-indices.forEach((frame, i) => {
-  const out = join(outDir, `tile-${String(i).padStart(3, "0")}.png`);
-  // Checkerboard background so transparency reads as a pattern, not black.
-  const checker =
-    `color=c=0x9a9a9a:s=${width}x${height},` +
-    `geq=lum='if(mod(floor(X/48)+floor(Y/48)\\,2)\\,200\\,150)':cb=128:cr=128`;
-  const label = canLabel
-    ? `,drawtext=fontfile=${FONT}:text='f${frame}':x=24:y=24:` +
-      `fontsize=${Math.round(height / 22)}:fontcolor=white:` +
-      `box=1:boxcolor=black@0.55:boxborderw=12`
-    : "";
-  run("ffmpeg", [
-    "-y", "-loglevel", "error", "-i", video,
-    "-filter_complex",
-    `[0:v]select='eq(n\\,${frame})',setpts=PTS-STARTPTS[fg];` +
-      `${checker}[bg];` +
-      `[bg][fg]overlay=shortest=1${label}[out]`,
-    "-map", "[out]", "-frames:v", "1", out,
-  ]);
-  tilePaths.push(out);
-});
-
-// --- Tile into one sheet ----------------------------------------------------
-const cols = Math.ceil(Math.sqrt(tilePaths.length));
-const rows = Math.ceil(tilePaths.length / cols);
+// --- Extract + label each frame, flattened on a checkerboard, then tile ----
+// One tile per sampled frame, so the grid is known up front.
+const cols = Math.ceil(Math.sqrt(indices.length));
+const rows = Math.ceil(indices.length / cols);
 const cell = 360;
-run("ffmpeg", [
-  "-y", "-loglevel", "error",
-  "-framerate", "1", "-i", join(outDir, "tile-%03d.png"),
-  "-frames:v", "1",
-  "-vf", `scale=${cell}:-1,tile=${cols}x${rows}:padding=8:margin=8:color=0x1a1a1a`,
-  "-q:v", "3", sheetPath,
-]);
+// Checkerboard background so transparency reads as a pattern, not black.
+const checker =
+  `color=c=0x9a9a9a:s=${width}x${height},` +
+  `geq=lum='if(mod(floor(X/48)+floor(Y/48)\\,2)\\,200\\,150)':cb=128:cr=128`;
+
+await mkdir(dirname(sheetPath), { recursive: true });
+const tileDir = await mkdtemp(join(tmpdir(), `kise-review-${name}-`));
+try {
+  indices.forEach((frame, i) => {
+    const label = canLabel
+      ? `,drawtext=fontfile=${FONT}:text='f${frame}':x=24:y=24:` +
+        `fontsize=${Math.round(height / 22)}:fontcolor=white:` +
+        `box=1:boxcolor=black@0.55:boxborderw=12`
+      : "";
+    run("ffmpeg", [
+      "-y", "-loglevel", "error", "-i", video,
+      "-filter_complex",
+      `[0:v]select='eq(n\\,${frame})',setpts=PTS-STARTPTS[fg];` +
+        `${checker}[bg];` +
+        `[bg][fg]overlay=shortest=1${label}[out]`,
+      "-map", "[out]", "-frames:v", "1", join(tileDir, `tile-${String(i).padStart(3, "0")}.png`),
+    ]);
+  });
+  run("ffmpeg", [
+    "-y", "-loglevel", "error",
+    "-framerate", "1", "-i", join(tileDir, "tile-%03d.png"),
+    "-frames:v", "1",
+    "-vf", `scale=${cell}:-1,tile=${cols}x${rows}:padding=8:margin=8:color=0x1a1a1a`,
+    "-q:v", "3", sheetPath,
+  ]);
+} finally {
+  await rm(tileDir, { recursive: true, force: true });
+}
 
 // --- Report -----------------------------------------------------------------
 const bytes = (await stat(sheetPath)).size;

@@ -24,6 +24,8 @@ Do not use these for new tags. They carry other looks: `generated/components/kit
 
 ## Size and position (every style)
 
+Start with `bun run cut <Name> --clip <clip> --style name-tag --tag <style>`; it bakes the wrap below.
+
 The components draw at full size at their own spot (left 84 / bottom 300; `NameTagMapStyle` at y 1330–1500). Every
 new tag goes out smaller and higher than that:
 - about **0.72x** the component's size (the stout tag: name strip ~715 x 90 px, job strip ~43 px tall);
@@ -32,7 +34,8 @@ new tag goes out smaller and higher than that:
 This overlaps the first caption band on purpose; use it unless the user asks otherwise.
 
 Bake the size and position into the render. Graphics go into the project at default Motion
-(`scripts/prproj_assemble.py`), so the .mov must already be correct. Wrap the tag:
+(`scripts/prproj_assemble.py`), so the .mov must already be correct. The wrap `bun run cut` writes (by hand only for
+several people in one Root):
 
 ```tsx
 // (x0, y0) = the panel's top-left at full size, read off a full-size still
@@ -66,8 +69,9 @@ Check a still of the settled tag against the numbers above.
 - **Placement:** start the tag on the first frame of the clip that shows the person, and cut it with that clip.
 - **Also a lower third:** the same tag labels a person or a place in b-roll or a still (name = who or where,
   job = one descriptor). In map-style history clips, every portrait still of a person gets a tag.
-- **Rendering:** one private Root per tag, or one per clip with a composition per person. Ref
-  `src/Root.NameTagMapStyle.tsx`: compositions `NameTag-<Key>`, each with its own name, job and frame count.
+- **Rendering:** one tag = `bun run cut`, which writes its own Root/entry pair. Several people in one Root is the
+  only hand-written case. Ref `src/Root.NameTagMapStyle.tsx`: compositions `NameTag-<Key>`, each with its own name,
+  job and frame count.
 
 ## Stout tag: long names
 

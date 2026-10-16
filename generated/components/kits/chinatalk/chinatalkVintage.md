@@ -6,11 +6,12 @@ a working example of every part.
 
 ## Import
 
-- Import everything from `./chinatalkVintage`, which re-exports the shared helpers you need. The one exception is the
-  crowd field mechanics (`hash`, `feather`, `wobble`, `makeTone`) from `./fieldShared` (`styles/chinatalk.md`).
-- Never import `./chinatalkShared`. The kit builds on it internally, but there `RED`, `WORD_PX`, `VALUE_PX`, `DASH`,
-  `Label`, `WetLine`, `DashedPath`, `InkPath`, `Bead`, `Seal`, `HatchFill`, `Stage`, `PAPER`, `INK` and the camera have
-  other values. The kit has its own versions under the same names.
+- Import everything from `../kits/chinatalk/chinatalkVintage`, which re-exports the shared helpers you need. The one
+  exception is the crowd field mechanics (`hash`, `feather`, `wobble`, `makeTone`) from `../kits/dwarkesh/fieldShared`
+  (`styles/chinatalk.md`).
+- Never import `../kits/chinatalk/chinatalkShared`. The kit builds on it internally, but there `RED`, `WORD_PX`,
+  `VALUE_PX`, `DASH`, `Label`, `WetLine`, `DashedPath`, `InkPath`, `Bead`, `Seal`, `HatchFill`, `Stage`, `PAPER`, `INK`
+  and the camera have other values. The kit has its own versions under the same names.
 - Do not hand-set a colour, stroke width or font size that is defined here.
 - Everything time-dependent takes the master clock `S`, never `useCurrentFrame()` inside a part.
 
@@ -175,7 +176,7 @@ A plain centre camera `Cam = {x, y, k}`: world (cam.x, cam.y) is the true centre
 ```tsx
 import React from "react";
 import { useCurrentFrame } from "remotion";
-import { INK_LO, Kicker, Label, PICTOS, Pictogram, RED, RedBar, RedGroup, Slot, VStage, VintagePhoto, enterFrom, enterU, runVCamera } from "./chinatalkVintage";
+import { INK_LO, Kicker, Label, PICTOS, Pictogram, RED, RedBar, RedGroup, Slot, VStage, VintagePhoto, enterFrom, enterU, runVCamera } from "../kits/chinatalk/chinatalkVintage";
 
 const camAt = runVCamera([{ f: -24, x: 540, y: 990, k: 1 }, { f: 60, x: 540, y: 960, k: 1.12 }, { f: 116, x: 544, y: 956, k: 1.15, ease: "linear" }], 116);
 const A = { x: 160, y: 1420 }, B = { x: 920, y: 1420 };

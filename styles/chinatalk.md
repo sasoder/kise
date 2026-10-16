@@ -120,11 +120,5 @@ red, and real photographs set as clippings. It should feel like a newspaper with
 
 ## News cards
 
-- A news card is never drawn on the newsprint page or in kit material.
-- For a modern digital article, build the house card PNG with
-  `python3 scripts/make_news_card.py OUT.png "SOURCE" "Month D, YYYY" "Headline" photo.jpg "Photo: credit" [crop_y]`.
-  Pick one real article yourself: a credible mainstream outlet, a short concrete headline that matches the speaker's
-  point, and a strong lead photo of people or action. Keep the original wording and the real date. Name the file
-  `newscard_<outlet>_<topic>.png`.
-- For a historical event, deliver the plain scan of the period newspaper: the clipping crop, the full page and the
-  source link. Do not add a card header or retype the headline.
+A news card is never drawn on the newsprint page or in kit material; cards and period-newspaper scans are the
+director's (news-card skill).
