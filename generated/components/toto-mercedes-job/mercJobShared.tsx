@@ -505,7 +505,7 @@ export const WilliamsMark: React.FC<{ size: number }> = ({ size }) => {
     </g>
   );
 };
-export const MercedesMark: React.FC<{ size: number }> = ({ size }) => <FigureMark figure={{ kind: "mercedes" }} size={size} />;
+export const MercedesMark: React.FC<{ size: number }> = ({ size }) => <FigureMark figure={{ kind: "mercedesF1" }} size={size} />;
 
 // --- the hub glyphs (icebergShared's, copied): ENGINE block and the F1 CAR silhouette ---------------
 type Cmd = ["M" | "L", number, number] | ["Q", number, number, number, number] | ["C", number, number, number, number, number, number] | ["Z"];

@@ -6,6 +6,7 @@ import { AbsoluteFill, Img, getInputProps, staticFile } from "remotion";
 import { loadFont } from "@remotion/fonts";
 import { MB_RING_IN, MB_RING_OUT, MB_STAR_INNER, SPORT_GLYPHS, type SportName } from "./wolffShared";
 import { CRESTS, type Crest, type CrestId } from "./wolffLogos";
+import { MERC_F1_D, MERC_F1_OPTICAL } from "./mercedesF1Logo";
 import type { Cam } from "../dwarkesh/outgrowShared";
 
 // ===========================================================================
@@ -707,7 +708,23 @@ const CrestMark: React.FC<{ crest: Crest; id: CrestId; size: number }> = ({ cres
   );
 };
 
-export type Figure = { kind: "mercedes" } | { kind: "crest"; id: CrestId } | { kind: "sport"; sport: SportName } | { kind: "none" };
+/** The Mercedes-AMG PETRONAS F1 Team lockup (mercedesF1Logo.ts): a tall mark, so not the optical rule —
+ *  its ink box is MERC_F1_FILL of the tile's height, centred. */
+export const MERC_F1_FILL = 0.8;
+const MercedesF1Mark: React.FC<{ size: number }> = ({ size }) => {
+  const [bx, by, bw, bh] = MERC_F1_OPTICAL.box;
+  const sc = (MERC_F1_FILL * size) / bh;
+  const ox = size / 2 - (bx + bw / 2) * sc;
+  const oy = size / 2 - (by + bh / 2) * sc;
+  return <path transform={`translate(${fx(ox)} ${fx(oy)}) scale(${fx(sc)})`} d={MERC_F1_D} fill="#000" fillRule="evenodd" />;
+};
+
+export type Figure =
+  | { kind: "mercedes" }
+  | { kind: "mercedesF1" }
+  | { kind: "crest"; id: CrestId }
+  | { kind: "sport"; sport: SportName }
+  | { kind: "none" };
 /** A figure in a tile's local box, black (to knock out) on nothing. */
 export const FigureMark: React.FC<{ figure: Figure; size: number }> = ({ figure, size }) => {
   if (figure.kind === "mercedes") {
@@ -719,6 +736,7 @@ export const FigureMark: React.FC<{ figure: Figure; size: number }> = ({ figure,
       </g>
     );
   }
+  if (figure.kind === "mercedesF1") return <MercedesF1Mark size={size} />;
   if (figure.kind === "crest") {
     const c = CRESTS[figure.id];
     return c ? <CrestMark crest={c} id={figure.id} size={size} /> : null;

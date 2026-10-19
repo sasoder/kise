@@ -971,7 +971,7 @@ export const F1Car: React.FC<{ x: number; y: number; len: number; k: number; dim
 };
 
 // ===========================================================================
-// TILES — the house knock-out tile family: Mercedes star, Ferrari shield, the anonymous car, a sport
+// TILES — the house knock-out tile family: Mercedes F1 team lockup, Ferrari shield, the anonymous car, a sport
 // ===========================================================================
 export type DtsFigure = "mercedes" | "ferrari" | "car" | "none" | { sport: SportName };
 /** The car silhouette (one figure) knocked out of a tile: body etc. black, the wheels ringed in white. */
@@ -1026,7 +1026,7 @@ const FerrariFigure: React.FC<{ size: number }> = ({ size }) => {
 };
 const FigureIn: React.FC<{ figure: DtsFigure; size: number }> = ({ figure, size }) => {
   if (figure === "none") return null;
-  if (figure === "mercedes") return <FigureMark figure={{ kind: "mercedes" }} size={size} />;
+  if (figure === "mercedes") return <FigureMark figure={{ kind: "mercedesF1" }} size={size} />;
   if (figure === "ferrari") return <FerrariFigure size={size} />;
   if (figure === "car") return <CarFigure size={size} />;
   return <FigureMark figure={{ kind: "sport", sport: figure.sport }} size={size} />;
