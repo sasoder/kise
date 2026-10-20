@@ -4,7 +4,7 @@
 //
 // THE PICTURE AT B f160..f180 (the figures are resolved by f160: only idle life after it; the camera creeps in):
 //   one ground line at y = SR_GROUND_Y; left, the Neolithic pair: a few orange wheat stalks behind the orange
-//   FARMER (sickle, sheaf, facing right), the cream FORAGER (spear upright) stepped back in front of his hide
+//   FARMER (sickle held blade-up at his chest, sheaf on the far shoulder, facing right), the cream FORAGER (spear upright) stepped back in front of his hide
 //   hut, turned partly away (body near frontal, head turned off to the right, chin down); right, the 1520 pair
 //   staged the same: the orange SPANIARD (morion, sword in its sheath, the near hand resting on its hilt, facing right) and the
 //   cream Aztec COMMONER (farmersFigures TilmaCommoner: fret-bordered tilmatli, tied hair, arms loose) turned
@@ -62,8 +62,10 @@ export const SR_COMMONER = { at: SR_COMMONER_AT, scale: SR_SCALE, uid: "sr-commo
 export const SR_SCENE_ORDER = ["wheat", "hut", "ground", "farmer", "forager", "spaniard", "commoner"] as const;
 
 // ---- the poses
-/** the farmer's sickle, lowered at his side (deg from straight up; the module's carry is 70) */
-export const SR_SICKLE_DEG = 125;
+/** the farmer's sickle, held blade-up in his near fist at chest height, the crescent curving forward (deg from
+ *  straight up). V1 carried it low at his front side (125 deg), which at phone size read as the wrong thing. */
+export const SR_SICKLE_DEG = 0;
+export const SR_SICKLE_ARM: FigPose["armL"] = { w: [52, -214], elbow: [-0.5, 1], fist: 1, hand: 0 };
 /** the forager's spear angle (deg, 0 = straight up; mirrored for a left-facing man): upright, a hair back */
 export const SR_SPEAR_DEG = 3;
 /** turned partly away (built facing right, then mirrored): the body swung round toward us, the head turned off
@@ -76,7 +78,8 @@ export const SR_FORAGER_FACING: FigPose = aimTool(POSES.spear(-1), SR_SPEAR_DEG,
 export const SR_COMMONER_FACING: FigPose = mirrorPose({ ...COMMONER_POSES.stand(1), armL: { w: [-16, -147], elbow: [-0.6, 1], fist: 0.3, hand: 0 }, armR: { w: [30, -147], elbow: [-0.5, 1], fist: 0.3, hand: 0 } });
 /** the resolved poses (before idle) */
 export const SR_POSE: Record<"farmer" | "forager" | "spaniard" | "commoner", FigPose> = {
-  farmer: aimTool(POSES.sheaf(1), SR_SICKLE_DEG, "near", "farmer"),
+  // the sheaf in the crook of the far arm (the module's sheaf pose), the sickle up before his chest in the near fist
+  farmer: aimTool({ ...POSES.sheaf(1), armL: SR_SICKLE_ARM }, SR_SICKLE_DEG, "near", "farmer"),
   // the spear drawn in before him, upright; the far arm hangs
   forager: aimTool(turnAway(POSES.spear(1), { w: [8, -168], elbow: [-0.6, 1], fist: 1, hand: 0 }, { w: [50, -143], elbow: [0.4, 1], fist: 0.3, hand: 0 }), SR_SPEAR_DEG, "near", "forager"),
   // texcoco's captain turned three-quarter right, the near hand resting on the hilt of the sheathed sword

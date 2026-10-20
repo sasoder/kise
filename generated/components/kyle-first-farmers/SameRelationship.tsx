@@ -13,7 +13,7 @@
 //   Native 136 · Americans 143 · where 158 · inadvertently 173.
 // DURATION: the slot 17.4508 -> 23.4901 s = 6.0393 s x 29.97 = 181 frames (f0..f180).
 //
-// THE MOTION: one camera move along one ground line. Close on the Neolithic pair: the orange farmer (sickle,
+// THE MOTION: one camera move along one ground line. Close on the Neolithic pair: the orange farmer (sickle held up at his chest,
 // sheaf, his wheat behind him) walks in from the left; the cream forager in front of his hide hut gives ground,
 // stepping back two paces (f4-f40) and turning partly away (f18-f44), so by "taking over" (f36-f46) the farmer
 // stands on the ground he gave up. On "similar" the camera glides right along the same ground (f76-f112,
