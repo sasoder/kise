@@ -1,16 +1,15 @@
 // ---------------------------------------------------------------------------
-// machinesAndOutputPlan: the geometry, timeline and camera of kyle-london cut 42
-// (MachinesAndOutput), kept free of React so a script can check the framing.
-// World px are orbitWorld's: the machine's shaft (the sun gear's axle) sits at
-// SUN = (540, 960) and its bearing pedestal's flat foot at y = PEDESTAL_FOOT_Y;
-// the chart is laid out so that England's 1781 point sits exactly under the
-// centre of the engine bed the foot stands on (the machine STANDS on the line at 1781).
+// machinesAndOutputPlan: the geometry, timeline and camera of kyle-london cut 42 V2
+// (MachinesAndOutput, "people working"), kept free of React so a script can check
+// the framing. The chart world is V1's (option A): England's output line is the
+// GROUND the people stand on. MACHINE UNITS are orbitWorld's (the shaft at SUN =
+// (540, 960), the pedestal foot at PEDESTAL_FOOT_Y); the engine is drawn in them and
+// scaled by ENGINE_S about the 1781 point, so the crew stand large beside it.
 // ---------------------------------------------------------------------------
-import { PEDESTAL_FOOT_Y, camBaseAt, machinePhaseAt, SUN, type Cam, type P2 } from "./orbitWorld";
+import { PEDESTAL_FOOT_Y, machinePhaseAt, SUN, type Cam, type P2 } from "./orbitWorld";
 import { ENGLAND_GDP_DECADE_MEANS, ENGLAND_GDP_PER_HEAD, GDP_FIRST_YEAR, GDP_LAST_YEAR } from "./englandGdpData";
-import { makeCamera, smootherstep, smoothstep, swayCam } from "../kits/maps/incaShared";
+import { makeCamera, smoothstep, swayCam } from "../kits/maps/incaShared";
 
-export const WORLD_OFFSET = 203; // cut 42's g = 0 is cut 10's f203
 export const MACHINE_YEAR = 1781; // Watt's sun-and-planet (rotative engine) patent
 export const ORBIT_YEAR = 1687; // Newton's Principia
 
@@ -42,9 +41,9 @@ export const SERIES: readonly (readonly [number, number])[] = [...DEC_PLUS_END, 
 export const LINE_START_YEAR = SERIES[0][0]; // 1654.5 (the 1650s mean)
 export const LINE_END_YEAR = SERIES[SERIES.length - 1][0]; // 1900
 
-// THE ENGINE BED: one flat dark-umber slab under the whole engine; its underside sits on
-// the line's 1781 point, the pedestal's foot (PEDESTAL_FOOT_Y) and the beam's column stand on its top.
-export const BED_T = 110; // world px thick
+// THE ENGINE BED (machine units; the engine is scaled about the 1781 point, where machine units and world
+// coincide): its underside sits on the line's 1781 point, the pedestal's foot and the column stand on its top.
+export const BED_T = 110; // machine units thick
 export const BED_TOP = PEDESTAL_FOOT_Y;
 export const chartX = (year: number) => SUN[0] + (year - MACHINE_YEAR) * SX;
 /** the line's 1781 point sits this far above the bed's underside, so the line's own width tucks under the slab */
@@ -67,23 +66,14 @@ export const polyline = (a: number, b: number): P2[] => {
 };
 
 // ---------------------------------------------------------------------------
-// THE TIMELINE (frames of this cut, 29.97 fps)
+// THE TIMELINE (frames of this cut, 29.97 fps). Word beats: making 54 · discoveries 104 ·
+// universe 165 · inventing 192 · machines 217 · productivity 257 · ultimately 286 · output 313.
 // ---------------------------------------------------------------------------
-/** the cream line's last stretch: its end runs in from off frame (left) into the engine bed */
-export const CREAM_FROM = 1700; // already drawn up to here (off frame left until its end runs in)
-export const CREAM_RUN: readonly [number, number] = [54, 88];
-/** the orange line: out of the engine at ORANGE_RUN[0], to 1900 at ORANGE_RUN[1] */
-export const ORANGE_RUN: readonly [number, number] = [196, 309];
-const ACCEL = 10; // frames to reach full speed out of the engine
-const DECEL = 8; // frames to settle on 1900
-/** the cream line's drawn end (fractional year) */
-export const creamEndYear = (g: number) => {
-  const u = Math.max(0, Math.min(1, (g - CREAM_RUN[0]) / (CREAM_RUN[1] - CREAM_RUN[0])));
-  // eased only at the end: it slows into the bed
-  const e = u < 0.7 ? u / 0.7 * 0.8 : 0.8 + 0.2 * (1 - Math.pow(1 - (u - 0.7) / 0.3, 2));
-  return CREAM_FROM + (MACHINE_YEAR - CREAM_FROM) * e;
-};
-/** the orange tip's year: accelerates out of the engine, constant speed, settles on 1900 */
+/** the orange line: out of the engine's 1781 point (under the bed) at ORANGE_RUN[0]; it comes out of the
+ *  bed's right end on "machines" (~f217) and reaches 1900 at ORANGE_RUN[1] */
+export const ORANGE_RUN: readonly [number, number] = [199, 309];
+const ACCEL = 10;
+const DECEL = 8;
 const orangeProfile = (() => {
   const [a, b] = ORANGE_RUN;
   const n = b - a;
@@ -103,85 +93,101 @@ const orangeProfile = (() => {
 export const orangeTipYear = (g: number) => MACHINE_YEAR + (LINE_END_YEAR - MACHINE_YEAR) * orangeProfile(g);
 
 /** label entrances (frame the slide-up starts; it lands ~14 frames later) */
-export const LABEL_F0 = { y1781: 84, y1687: 132, y1650: 146, y1900: 296 };
+export const LABEL_F0 = { y1687: 116, y1781: 196, y1650: 308, y1900: 296 };
+/** the 1687 label leaves (slides down as it fades) before the travel carries it to the frame edge, and comes back
+ *  (slides up) once the final pull-back has it fully in frame */
+export const LABEL_1687_OUT = 150;
+export const LABEL_1687_BACK = 286;
 
 // ---------------------------------------------------------------------------
-// THE ORBIT GLYPH at 1687: cut 10's Sun-and-ellipse, small, its Sun on the line
+// THE ASTRONOMER'S FLOOR at 1687: a short slab (the engine bed's material) whose underside sits on the line's
+// 1687 point at its RIGHT end; the line runs up to it from below-left and climbs on from that corner, so it
+// does not cut behind the astronomer and his table.
 // ---------------------------------------------------------------------------
-export const GLYPH_A = 400; // ~160 px wide at the end framing
-export const GLYPH_E = 0.55; // more eccentric than cut 10's 0.35 so it reads as an ellipse when small
-export const GLYPH_W = (40 * Math.PI) / 180; // perihelion down-right: the wide side of the orbit sits up-left, over empty page
-export const GLYPH_PERIOD = 120; // frames per orbit
-export const GLYPH_SUN: P2 = pointAtYear(ORBIT_YEAR);
-/** the planet on the glyph's ellipse at frame g (Kepler's equation, equal areas in equal times) */
-export const glyphPlanetAt = (g: number): P2 => {
-  const M = (2 * Math.PI * (g + 30)) / GLYPH_PERIOD;
-  let E = M;
-  for (let i = 0; i < 8; i++) E -= (E - GLYPH_E * Math.sin(E) - M) / (1 - GLYPH_E * Math.cos(E));
-  const th = 2 * Math.atan2(Math.sqrt(1 + GLYPH_E) * Math.sin(E / 2), Math.sqrt(1 - GLYPH_E) * Math.cos(E / 2));
-  const r = (GLYPH_A * (1 - GLYPH_E * GLYPH_E)) / (1 + GLYPH_E * Math.cos(th));
-  return [GLYPH_SUN[0] + r * Math.cos(th + GLYPH_W), GLYPH_SUN[1] + r * Math.sin(th + GLYPH_W)];
-};
+export const P1687 = pointAtYear(ORBIT_YEAR);
+export const SLAB_T = 70;
+export const SLAB_TUCK = 22;
+export const SLAB_TOP = P1687[1] + SLAB_TUCK - SLAB_T;
+export const SLAB_X0 = P1687[0] - 470;
+export const SLAB_X1 = P1687[0] + 14;
 
 // ---------------------------------------------------------------------------
-// THE BEAM ENGINE above the bed (Watt's rotative beam-engine silhouette): the
-// rocking beam pivots in its MIDDLE on a tall cast column standing on the bed;
-// its right end carries the connecting rod's top (orbitWorld: it rides the
-// vertical x = 540), its left end the piston rod, which slides in and out of
-// the CYLINDER standing on the bed under it. The two ends move opposite ways:
-// when the flywheel end is up, the cylinder end is down.
+// THE ENGINE (machine units, scaled by ENGINE_S about the 1781 point). The beam pivots in its middle on a
+// tall column; its near end carries the connecting rod (orbitWorld's rod top rides x = 540), its far end the
+// piston rod in the cylinder. The engine is still until the crew start it: the stoker's coal makes the fire
+// flare, the lever-man opens the steam (ENGINE_START), the flywheel and beam run up to speed.
 // ---------------------------------------------------------------------------
-export const BEAM_L = 560; // pivot -> each end pin
+export const A1781 = pointAtYear(MACHINE_YEAR);
+export const ENGINE_S = 0.6;
+/** a machine-unit point -> world */
+export const engineToWorld = (m: P2): P2 => [A1781[0] + ENGINE_S * (m[0] - A1781[0]), A1781[1] + ENGINE_S * (m[1] - A1781[1])];
+/** the camera that draws machine units under the world camera */
+export const engineCam = (cam: Cam): Cam => ({ k: cam.k * ENGINE_S, cx: A1781[0] + (cam.cx - A1781[0]) / ENGINE_S, cy: A1781[1] + (cam.cy - A1781[1]) / ENGINE_S });
+export const BEAM_L = 560; // machine units, pivot -> each end pin
 export const BEAM_PIVOT: P2 = [SUN[0] - BEAM_L, -540];
-export const CYL_X = SUN[0] - 2 * BEAM_L; // the cylinder's (and piston rod's) axis
-export const CYL_HW = 170; // the cylinder's half width
-export const CYL_TOP = 260; // the top of the cylinder's body (under its cover)
-export const COLUMN_W = 150; // the column's width scale (capital ~1.05x, plinth ~1.25x)
-/** the bed's extent: from just left of the cylinder to just right of the pedestal's foot (+-460) */
-export const BED_X0 = CYL_X - CYL_HW - 70;
-export const BED_X1 = SUN[0] + 460 + 50;
-export const rodPinAt = (g: number): P2 => machinePhaseAt(WORLD_OFFSET + g).rodTop;
-/** the piston rod's top pin: the beam's other end, mirrored through the pivot */
+export const CYL_X = SUN[0] - 2 * BEAM_L;
+export const CYL_HW = 170;
+export const CYL_TOP = 260;
+export const COLUMN_W = 150;
+/** the world y the crew stand on (the bed top: BED_TOP is machine units) */
+export const CREW_FEET_Y = engineToWorld([0, BED_TOP])[1];
+/** the bed in WORLD x (it carries the coal heap, the stoker and the boiler on the left, the engineer on the right) */
+export const BED_WX0 = -850;
+export const BED_WX1 = 975;
+/** world props of the engine house */
+export const BOILER = { x0: -515, x1: -250, setTop: CREW_FEET_Y - 240, drumTop: CREW_FEET_Y - 420, door: { x0: -488, x1: -396, y0: CREW_FEET_Y - 150, y1: CREW_FEET_Y - 66 } };
+export const COAL_HEAP = { cx: -770, hw: 70, h: 64 };
+/** crew feet (world) and facing */
+export const STOKER = { x: -600, dir: 1 as const };
+export const LEVERMAN = { x: 175, dir: -1 as const }; // in front of the column, facing the cylinder
+export const ENGINEER = { x: 700, dir: -1 as const }; // in front of the flywheel pedestal's right leg
+export const CREW_PX = 330; // a man soles -> skull, world px
+
+/** the shovel: one cycle per SHOVEL_PERIOD frames; the throw (coal leaves the blade) at phase SHOVEL_THROW */
+export const SHOVEL_PERIOD = 42;
+export const SHOVEL_PHASE0 = 0.15;
+export const SHOVEL_THROW = 0.62;
+export const shovelPhase = (g: number) => (((g / SHOVEL_PERIOD + SHOVEL_PHASE0) % 1) + 1) % 1;
+/** the fire: banked low, then each throw feeds it; it is roaring from FIRE_UP */
+export const FIRE_UP: readonly [number, number] = [176, 200];
+/** the lever: pulled from high to low over LEVER_PULL (it opens the steam), then held */
+export const LEVER_PULL: readonly [number, number] = [198, 210];
+/** the engine starts on ENGINE_START (one frame after the lever bottoms out) and runs up over ENGINE_RAMP frames */
+export const ENGINE_START = 211;
+export const ENGINE_RAMP = 26;
+const W_REST = 200; // a settled orbitWorld frame (the machine is still before ENGINE_START)
+/** the orbitWorld frame the engine shows at frame g (time-warped: still, then running up to orbitWorld's speed) */
+export const engineFrameAt = (g: number) => {
+  if (g <= ENGINE_START) return W_REST;
+  // integral of smoothstep((t - START) / RAMP) dt
+  const u = (g - ENGINE_START) / ENGINE_RAMP;
+  if (u <= 1) return W_REST + ENGINE_RAMP * (u * u * u - 0.5 * u * u * u * u);
+  return W_REST + ENGINE_RAMP * 0.5 + (g - ENGINE_START - ENGINE_RAMP);
+};
+export const rodPinAt = (g: number): P2 => machinePhaseAt(engineFrameAt(g)).rodTop;
 export const pistonPinAt = (g: number): P2 => {
   const e = rodPinAt(g);
   return [2 * BEAM_PIVOT[0] - e[0], 2 * BEAM_PIVOT[1] - e[1]];
 };
 
 // ---------------------------------------------------------------------------
-// THE CAMERA. g = 0 is cut 10's f203 exactly (cut 10's unswayed camera, its creep
-// carried for the first frames by a blend whose weight starts flat), then ONE
-// log-space pull-back drifting left that reveals the past (1650s -> 1781) by f165,
-// a slight push in toward the machine while the orange line leaves it (the 1650 and
-// 1687 labels stay in frame), a second pull-back with the climb so the tip stays in
-// frame and the whole line is in view by ~f312, then a creep in.
-// The house sway continues from cut 10 (swayCam at world frame 203 + g).
+// THE CAMERA (world): close on the astronomer at 1687 -> one log-space pull-back that shows him standing on a
+// long line from the left (f0-150) -> a travel right and up along the line to the engine crew at 1781 (f165-205),
+// settled on the crew while they start the engine -> a pull-back up and right with the orange climb to the
+// whole line (option A's end framing by f312) -> a creep in. The house sway on top.
 // ---------------------------------------------------------------------------
-const base0 = camBaseAt(WORLD_OFFSET);
-export const P_START = pointAtYear(LINE_START_YEAR); // the line's left end (the 1650s)
-const P1650 = P_START;
-export const A1781 = pointAtYear(MACHINE_YEAR); // under the engine bed's centre
+export const P_START = pointAtYear(LINE_START_YEAR);
+export const ASTRO_X = P1687[0] - 330; // about where the astronomer stands (he faces right, to the telescope)
 const myCam = makeCamera([
-  { f: 0, k: base0.k, wx: base0.cx, wy: base0.cy, sx: 540, sy: 960 },
-  { f: 30, k: 0.78, wx: SUN[0], wy: SUN[1], sx: 570, sy: 690 },
-  { f: 66, k: 0.45, wx: A1781[0], wy: A1781[1], sx: 610, sy: 700 },
-  { f: 110, k: 0.31, wx: A1781[0], wy: A1781[1], sx: 790, sy: 585 },
-  { f: 165, k: 0.23, wx: P1650[0], wy: P1650[1], sx: 150, sy: 1028 },
-  { f: 215, k: 0.248, wx: P1650[0], wy: P1650[1], sx: 128, sy: 1032 },
-  { f: 250, k: 0.236, wx: P1650[0], wy: P1650[1], sx: 128, sy: 1034 },
-  { f: 290, k: 0.212, wx: P1650[0], wy: P1650[1], sx: 126, sy: 1036 },
-  { f: 312, k: 0.202, wx: P1650[0], wy: P1650[1], sx: 125, sy: 1040 },
-  { f: 360, k: 0.206, wx: P1650[0], wy: P1650[1], sx: 122, sy: 1040 },
+  { f: 0, k: 2.0, wx: ASTRO_X + 120, wy: SLAB_TOP, sx: 520, sy: 930 },
+  { f: 60, k: 1.45, wx: ASTRO_X + 120, wy: SLAB_TOP, sx: 590, sy: 880 },
+  { f: 140, k: 0.84, wx: ASTRO_X + 120, wy: SLAB_TOP, sx: 680, sy: 600 },
+  { f: 205, k: 0.6, wx: 40, wy: CREW_FEET_Y, sx: 520, sy: 990 },
+  { f: 220, k: 0.585, wx: 40, wy: CREW_FEET_Y, sx: 505, sy: 990 },
+  { f: 252, k: 0.38, wx: A1781[0], wy: CREW_FEET_Y, sx: 580, sy: 850 },
+  { f: 274, k: 0.275, wx: ASTRO_X, wy: SLAB_TOP, sx: 20, sy: 1010 },
+  { f: 312, k: 0.202, wx: P_START[0], wy: P_START[1], sx: 125, sy: 1040 },
+  { f: 360, k: 0.206, wx: P_START[0], wy: P_START[1], sx: 122, sy: 1040 },
 ]);
-const BLEND = 44;
-export const camBaseG = (g: number): Cam => {
-  const a = camBaseAt(WORLD_OFFSET + g);
-  const b = myCam(g);
-  const w = smootherstep(Math.max(0, Math.min(1, g / BLEND)));
-  if (w <= 0) return a;
-  return {
-    k: Math.exp(Math.log(a.k) * (1 - w) + Math.log(b.k) * w),
-    cx: a.cx * (1 - w) + b.cx * w,
-    cy: a.cy * (1 - w) + b.cy * w,
-  };
-};
-export const camAtG = (g: number): Cam => swayCam(camBaseG(g), WORLD_OFFSET + g);
+export const camBaseG = (g: number): Cam => myCam(g);
+export const camAtG = (g: number): Cam => swayCam(camBaseG(g), g);
