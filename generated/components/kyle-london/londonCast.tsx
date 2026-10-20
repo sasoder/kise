@@ -483,6 +483,12 @@ export type LondonFigureProps = {
   tool?: Tool;
   /** the shovel's ink (default the figure's ink) */
   toolInk?: Ink;
+  /** (addition) a book or a quill in his near hand (a Fellow; pose the near hand at the chest for the book) */
+  held?: "none" | "book" | "quill" | "paper";
+  /** (addition) draw ONLY this arm (with its sleeve and hand): for an arm that goes behind another figure */
+  onlyArm?: "L" | "R";
+  /** (addition) leave this arm out (draw it separately with onlyArm) */
+  hideArm?: "L" | "R";
 };
 export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
   const { kind, pose: q, at, scale, uid, tone = 1 } = props;
@@ -865,6 +871,46 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
     return <ShovelArt top={add(gN, mul(u, -14))} dir={u} ink={tInk} tf={tf} uid={`${uid}-shv`} />;
   })();
 
+  // ---- (addition) a book or a quill in the near hand -------------------------------------------
+  const heldEl = (() => {
+    const held = props.held ?? "none";
+    if (held === "none") return null;
+    const near = G > 0 ? r.armL : r.armR;
+    const gp = near.grip;
+    const ang = (Math.atan2(near.dir[1], near.dir[0]) * 180) / Math.PI;
+    if (held === "paper") {
+      return (
+        <g transform={`${tf} translate(${P(gp)}) rotate(${(ang - 90 + 12 * G).toFixed(2)})`}>
+          <Cased id={`${uid}-pp`} r={1.2}>
+            <path d="M-15,-30L17,-28L15,22Q0,19 -16,23Z" fill={ink.main} {...OUT} strokeWidth={1.6} />
+            <path d={[-20, -12, -4, 4, 12].map((y) => `M-10,${y}L11,${y + 1}`).join("")} fill="none" stroke={DARK} strokeWidth={0.9} strokeOpacity={0.5} />
+          </Cased>
+        </g>
+      );
+    }
+    if (held === "book") {
+      return (
+        <g transform={`${tf} translate(${P(gp)}) rotate(${(ang - 90).toFixed(2)})`}>
+          <Cased id={`${uid}-bk`}>
+            <rect x={-17} y={-25} width={34} height={46} rx={2} fill={mixHex(ink.hair, DARK, 0.45)} {...OUT} />
+            <rect x={-17} y={-25} width={6} height={46} fill={mixHex(ink.hair, DARK, 0.25)} stroke={DARK} strokeWidth={1.2} />
+            <path d="M-9,-21L13,-21M-9,17L13,17" fill="none" stroke={ink.main} strokeWidth={1.3} strokeOpacity={0.55} />
+            <path d="M14,-22L14,18" fill="none" stroke={ink.main} strokeWidth={2.4} strokeOpacity={0.8} />
+          </Cased>
+        </g>
+      );
+    }
+    return (
+      <g transform={`${tf} translate(${P(gp)}) rotate(${(ang - 60 * G).toFixed(2)})`}>
+        <Cased id={`${uid}-qu`} r={1.2}>
+          <path d="M0,6L0,-62" fill="none" stroke={DARK} strokeWidth={2.6} strokeLinecap="round" />
+          <path d="M0,-8Q-9,-34 -3,-66Q5,-40 0,-8Z" fill={ink.main} {...OUT} strokeWidth={1.4} />
+          <path d={[-16, -26, -36, -46, -56].map((y) => `M0,${y}l-5,4`).join("")} fill="none" stroke={DARK} strokeWidth={0.8} strokeOpacity={0.55} />
+        </Cased>
+      </g>
+    );
+  })();
+
   // ---- the head: the rig's face, its hair erased; the periwig, his own hair or the cap over it --
   const headSpec: Spec = { ...sp, hem: 0 };
   const nod = Math.max(0, r.nodF);
@@ -1064,12 +1110,14 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
 
   // ---- assembly --------------------------------------------------------------------------
   const NECK = limbD([[add(r.neck, [0, 5]), 21 * k * (0.8 + 0.2 * sfT.wf)], [mix2(r.neck, add(r.headC, [-7 * r.hs * sp.headScale, 0]), 0.78), 16.5 * k]]);
+  if (props.onlyArm) return <g opacity={tone}>{armEl(props.onlyArm)}</g>;
+  const armOn = (w: "L" | "R") => (props.hideArm === w ? null : armEl(w));
   const nearKey: "L" | "R" = G > 0 ? "L" : "R";
   const farKey: "L" | "R" = G > 0 ? "R" : "L";
   return (
     <g opacity={tone}>
       {wigBackEl}
-      {profile ? armEl(farKey) : null}
+      {profile ? armOn(farKey) : null}
       <g transform={tf}>
         <Cased id={`${uid}-bd`}>
           {legs.map(legEl)}
@@ -1088,8 +1136,9 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
       {apronEl}
       {headEl}
       {hatEl}
-      {profile ? armEl(nearKey) : [r.armL, r.armR].sort((p, q2) => p.z - q2.z).map((ar) => armEl(ar.sgn < 0 ? "L" : "R"))}
+      {profile ? armOn(nearKey) : [r.armL, r.armR].sort((p, q2) => p.z - q2.z).map((ar) => armOn(ar.sgn < 0 ? "L" : "R"))}
       {shovelEl}
+      {heldEl}
     </g>
   );
 };
