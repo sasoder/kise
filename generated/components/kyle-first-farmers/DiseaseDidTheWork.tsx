@@ -1,7 +1,8 @@
 // ---------------------------------------------------------------------------
 // DiseaseDidTheWork (kyle-first-farmers, cut 24; file 24_DiseaseDidTheWork.mov). Dwarkesh map style
 // (styles/dwarkesh-map.md), the umber page with no map. Opaque 1080x1920, 29.97 fps, 130 frames.
-// Kit: firstFarmersShared (page, camera, ground, Germs) and farmersFigures (the cast, the fall), read-only; the
+// Kit: firstFarmersShared (page, camera, ground, Germs) and farmersFigures (the cast, the fall; the forager and the
+// Aztec on its turn-safe cast, TurnForager / TurnTilmaCommoner, as B draws them), read-only; the
 // picture it opens on is cut B's last frame (sameRelationshipState.ts).
 //
 // CHECK LINE: "in both pairs it was the germs, not a weapon, that brought the other side down: the same thing
@@ -34,14 +35,16 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { FPS as CLIP_FPS, Germs, GroundLine, Page, WorldSvg, type Cam, type GermSource, type P2 } from "./firstFarmersShared";
-import { Farmer, Forager, HideTent, Spaniard, TILMA_COMMONER_SPEC, TilmaCommoner, WheatField, fallInfo, farmAnchors, specOf, type FigPose } from "./farmersFigures";
-import { SPANIARDS, figureAnchors, type Spec } from "../kits/maps/texcocoFigures";
+import { CREAM, DEAD_INK, drainOf, fallInfo, fallPose, farmAnchors, Farmer, HideTent, mixInk, Spaniard, Spear, specOf, TILMA_COMMONER_SPEC, TurnForager, TurnTilmaCommoner, WheatField, type FigPose } from "./farmersFigures";
+import { SPANIARDS, figureAnchors, figureRig, type Spec } from "../kits/maps/texcocoFigures";
+import { add, mul, rot } from "../kits/maps/stringsMotion";
 import {
   SR_CAM_END,
   SR_COMMONER,
   SR_END_FRAME,
   SR_FARMER,
   SR_FORAGER,
+  SR_FORAGER_FRONT_ARMS,
   SR_GROUND,
   SR_GROUND_Y,
   SR_HUT,
@@ -171,6 +174,43 @@ const fallingPoints = (sp: Spec, base: FigPose, p: number, at: P2, scale: number
 };
 
 // ---------------------------------------------------------------------------
+// THE FORAGER'S SPEAR, LET GO: the cast drops a released tool (at fall p 0.42) BEHIND the body, but the turn-safe
+// forager holds his spear in FRONT of him (frontArms), so at the release the shaft would jump from over his face to
+// behind his head. Here the cast's own drop (farmersFigures' DroppedTool: the same grip, angle and fall, re-derived
+// from the rig) is drawn in front of him instead, so the spear leaves his hand on the layer it was held on. The cut
+// passes hold="none" from the release on, so the cast draws neither the held nor its own dropped spear then.
+// ---------------------------------------------------------------------------
+const RELEASE_P = 0.42;
+const SPEAR_GRIP = 150;
+const smoothIn = (u: number) => u * u;
+type Drop = { grip: P2; angle: number; dir: 1 | -1 };
+const spearDrop = (base: FigPose, p: number): Drop => {
+  const sp = FORAGER_SPEC;
+  const scale = SR_FORAGER.scale;
+  const at = SR_FORAGER.at;
+  const fr = fallInfo(sp, base, RELEASE_P, FALL_DIR);
+  const qr = fallPose(base, RELEASE_P, FALL_DIR);
+  const arm = Math.sin(qr.yaw) >= 0 ? "L" : "R";
+  const r = figureRig(sp, fr.pose);
+  const ar = arm === "L" ? r.armL : r.armR;
+  const G: 1 | -1 = r.s >= 0 ? 1 : -1;
+  const v = rot(ar.dir, -90 * G);
+  const gripL = add(ar.W, mul(ar.dir, 9 * sp.limb));
+  const angL = (Math.atan2(v[0], -v[1]) * 180) / Math.PI;
+  const g0 = rot(mul(gripL, scale), fr.angle);
+  const grip0: P2 = [at[0] + g0[0], at[1] + g0[1] - fr.lift * scale];
+  const a0 = angL + fr.angle;
+  const rad0 = (a0 * Math.PI) / 180;
+  const TG = SPEAR_GRIP * scale;
+  const butt0: P2 = [grip0[0] - Math.sin(rad0) * TG, grip0[1] + Math.cos(rad0) * TG];
+  const e = smoothIn(clamp01((p - RELEASE_P) / 0.3));
+  const a = a0 + (90 * G - a0) * e;
+  const rad = (a * Math.PI) / 180;
+  const butt: P2 = [butt0[0], butt0[1] + (at[1] - 5 * scale - butt0[1]) * e];
+  return { grip: [butt[0] + Math.sin(rad) * TG, butt[1] - Math.cos(rad) * TG], angle: a, dir: G };
+};
+
+// ---------------------------------------------------------------------------
 // THE GERMS: out of the orange figures' bodies and breath, from f0 (none on f0 itself: a mote is born at alpha 0)
 // ---------------------------------------------------------------------------
 const mix2 = (a: P2, b: P2, t: number): P2 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
@@ -197,17 +237,18 @@ const GERMS_A = sourcesOf(farmerA.chest, farmerA.headC, 1, SR_FARMER.scale);
 const GERMS_B = sourcesOf(spaniardA.chest, spaniardA.headC, 1, SR_SPANIARD.scale);
 const FORAGER_SPEC = specOf("forager");
 
-const DiseaseDidTheWork: React.FC<z.infer<typeof schema>> = () => {
-  const frame = useCurrentFrame();
-  const f = Math.max(0, Math.min(DURATION - 1, frame));
+/** the picture at frame f under any camera (the cut passes its own; a review probe may pass another) */
+export const DiseaseScene: React.FC<{ f: number; cam?: Cam }> = ({ f, cam: camIn }) => {
   const g = SR_END_FRAME + f;
-  const cam = camAt(f);
+  const cam = camIn ?? camAt(f);
   const p = fallP(f);
   // the Aztec runs the same track AZTEC_LEAD frames ahead: he is off frame while we are close, and this way he
   // is already lying still when the pull-back brings him into the frame (no fall seen at the frame edge)
   const pB = fallP(f + AZTEC_LEAD);
   const foragerBase = srPose("forager", g);
   const commonerBase = srPose("commoner", g);
+  const dropped = p >= RELEASE_P;
+  const drop = spearDrop(foragerBase, p);
   const tA = fallingPoints(FORAGER_SPEC, foragerBase, p, SR_FORAGER.at, SR_FORAGER.scale);
   const tB = fallingPoints(TILMA_COMMONER_SPEC, commonerBase, pB, SR_COMMONER.at, SR_COMMONER.scale);
   // sizes are screen px: a touch larger in the close so the microbes read there at 270 px
@@ -224,16 +265,22 @@ const DiseaseDidTheWork: React.FC<z.infer<typeof schema>> = () => {
               pixel there): the fallen lie at and behind the standing men's feet, whose legs stay whole. Each
               pair's germs lie between them: a veil over the cream man, under the orange one (so never over an
               orange face or coat: orange on orange is mush) */}
-          <Forager {...SR_FORAGER} pose={foragerBase} fall={p} fallDir={FALL_DIR} />
+          <TurnForager {...SR_FORAGER} frontArms={SR_FORAGER_FRONT_ARMS} pose={foragerBase} fall={p} fallDir={FALL_DIR} hold={dropped ? "none" : "spear"} />
+          {dropped ? <Spear at={drop.grip} angle={drop.angle} dir={drop.dir} scale={SR_FORAGER.scale} ink={mixInk(CREAM, DEAD_INK, drainOf(p) * 0.5)} uid="dd-spear" /> : null}
           <Germs {...germ} sources={GERMS_A} targets={tA} seed={1} density={1.6} />
           <Farmer {...SR_FARMER} pose={srPose("farmer", g)} />
-          <TilmaCommoner {...SR_COMMONER} pose={commonerBase} fall={pB} fallDir={FALL_DIR} />
+          <TurnTilmaCommoner {...SR_COMMONER} pose={commonerBase} fall={pB} fallDir={FALL_DIR} />
           <Germs {...germ} sources={GERMS_B} targets={tB} seed={2} density={1.3} />
           <Spaniard {...SR_SPANIARD} pose={srPose("spaniard", g)} />
         </WorldSvg>
       </Page>
     </AbsoluteFill>
   );
+};
+
+const DiseaseDidTheWork: React.FC<z.infer<typeof schema>> = () => {
+  const frame = useCurrentFrame();
+  return <DiseaseScene f={Math.max(0, Math.min(DURATION - 1, frame))} />;
 };
 
 export default DiseaseDidTheWork;
