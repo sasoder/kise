@@ -488,6 +488,21 @@ const PEOPLE: Person[] = [
   { id: "R5", x: 850, dir: -1, base: POSES.stand(-1), woman: true, hold: "none", stop: 160, freeArms: true, seed: 15 },
   { id: "R6", x: 965, dir: -1, base: POSES.hoeShoulder(-1), hold: "hoe", stop: 166, seed: 16 },
 ];
+/** the hoer's timing: the shared hoeLoop's strike (loop phase 0.75-0.87) lasts under 5 frames of a 40-frame stroke
+ *  and ends in one big jump of the blade. Re-time the loop (same 40-frame period, phase 0 = the blade in the ground):
+ *  pull back 11 f, raise 16 f, strike 9 f, dig in 4 f. Inside the strike the loop's own u = s^2 acceleration is
+ *  re-timed to u = s^1.5 (s = time through the strike), so the blade sweeps one even arc that quickens smoothly from
+ *  the top: its tip moves at most ~100 units a frame (the raw loop: 216 in one frame). */
+const hoeWarp = (p: number) => {
+  const k = Math.floor(p);
+  const t = p - k;
+  let ph: number;
+  if (t < 0.275) ph = (t / 0.275) * 0.3;
+  else if (t < 0.675) ph = 0.3 + ((t - 0.275) / 0.4) * 0.45;
+  else if (t < 0.9) ph = 0.75 + 0.12 * Math.pow((t - 0.675) / 0.225, 0.75);
+  else ph = 0.87 + ((t - 0.9) / 0.1) * 0.13;
+  return k + ph;
+};
 /** amount of walk on frame f for a walker resting from `stop` */
 const walkAmt = (p: Person, f: number) => (p.stop === undefined ? 0 : smoothstep(c01((p.stop - f) / DEC)));
 type Track = { x: number[]; ph: number[] };
@@ -507,7 +522,7 @@ PEOPLE.forEach((p) => {
 });
 const personAt = (p: Person, f: number): { at: P2; pose: FigPose } => {
   const y = p.y ?? 0;
-  if (p.id === "hoer") return { at: [p.x, y], pose: hoeLoop(1, (f + 8) / 40) };
+  if (p.id === "hoer") return { at: [p.x, y], pose: hoeLoop(1, hoeWarp((f + 8) / 40)) };
   const tr = TRACKS.get(p.id);
   if (!tr) return { at: [p.x, y], pose: idle(p.base, f, p.seed) };
   const fi = Math.max(0, Math.min(DURATION, Math.round(f)));
