@@ -1243,7 +1243,12 @@ export type LondonFigureProps = {
   /** the shovel's ink (default the figure's ink) */
   toolInk?: Ink;
   /** (addition) a book or a quill in his near hand (a Fellow; pose the near hand at the chest for the book) */
-  held?: "none" | "book" | "quill" | "paper";
+  held?: "none" | "book" | "quill" | "paper" | "candle";
+  /** (addition) which hand holds `held`: "near" (default) or "far" */
+  heldIn?: "near" | "far";
+  /** (addition) the candle's flame: a flicker phase (pass the frame) and a wobble 0..1 (default 0.15) */
+  flicker?: number;
+  flameWobble?: number;
   /** (addition) draw ONLY this arm (with its sleeve and hand): for an arm that goes behind another figure */
   onlyArm?: "L" | "R";
   /** (addition) leave this arm out (draw it separately with onlyArm) */
@@ -1677,9 +1682,44 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
   const heldEl = (() => {
     const held = props.held ?? "none";
     if (held === "none") return null;
-    const near = G > 0 ? r.armL : r.armR;
+    const near = (props.heldIn === "far" ? G < 0 : G > 0) ? r.armL : r.armR;
     const gp = near.grip;
     const ang = (Math.atan2(near.dir[1], near.dir[0]) * 180) / Math.PI;
+    if (held === "candle") {
+      // a chamberstick held upright in the fist: the dish, the finger ring, the candle and its flame; a pale cream
+      // flame with a warm umber halo (never the clip's orange)
+      const ph = props.flicker ?? 0;
+      const wob = props.flameWobble ?? 0.15;
+      const sway = wob * (5 * Math.sin(ph * 0.9) + 3 * Math.sin(ph * 2.3 + 1)) + 1.2 * Math.sin(ph * 0.37);
+      const tall = 1 + 0.08 * Math.sin(ph * 1.7) * (0.4 + wob);
+      const base: P2 = add(gp, [0, -4]);
+      const tipX = sway;
+      const fh = 22 * tall;
+      const FLAME = `M-4.6,-34C-5.6,-40 ${(tipX * 0.4 - 3).toFixed(2)},${(-34 - fh * 0.6).toFixed(2)} ${tipX.toFixed(2)},${(-34 - fh).toFixed(2)}C${(tipX * 0.4 + 3).toFixed(2)},${(-34 - fh * 0.6).toFixed(2)} 5.6,-40 4.6,-34Q0,-29 -4.6,-34Z`;
+      return (
+        <g transform={`${tf} translate(${P(base)})`}>
+          <defs>
+            <radialGradient id={`${uid}-halo`}>
+              <stop offset="0" stopColor="#E9D6A8" stopOpacity={0.5} />
+              <stop offset="0.35" stopColor="#A8885C" stopOpacity={0.22} />
+              <stop offset="1" stopColor="#A8885C" stopOpacity={0} />
+            </radialGradient>
+          </defs>
+          <circle cx={tipX * 0.5} cy={-44} r={95 * (1 + 0.03 * Math.sin(ph * 1.3))} fill={`url(#${uid}-halo)`} />
+          <Cased id={`${uid}-cnd`} r={1.2}>
+            <ellipse cx={0} cy={2} rx={17} ry={5.5} fill={mixHex(ink.hair, DARK, 0.25)} {...OUT} strokeWidth={1.7} />
+            <path d="M-17,2Q0,9 17,2" fill="none" stroke={ink.main} strokeWidth={1.1} strokeOpacity={0.5} />
+            <ellipse cx={-G * 19} cy={1} rx={4.5} ry={4} fill="none" stroke={DARK} strokeWidth={4} />
+            <ellipse cx={-G * 19} cy={1} rx={4.5} ry={4} fill="none" stroke={mixHex(ink.hair, DARK, 0.1)} strokeWidth={1.8} />
+            <rect x={-5} y={-30} width={10} height={31} rx={1.5} fill={ink.main} {...OUT} strokeWidth={1.7} />
+            <path d="M2.5,-28L2.5,-1" fill="none" stroke={DARK} strokeWidth={0.9} strokeOpacity={0.4} />
+            <path d="M0,-30L0,-35" fill="none" stroke={DARK} strokeWidth={1.4} />
+          </Cased>
+          <path d={FLAME} fill="#F6EFDA" stroke="#C9AE7C" strokeWidth={1} />
+          <path d={`M-1.6,-36Q${(tipX * 0.2).toFixed(2)},${(-34 - fh * 0.45).toFixed(2)} 1.6,-36Z`} fill="#FFFFFF" opacity={0.8} />
+        </g>
+      );
+    }
     if (held === "paper") {
       return (
         <g transform={`${tf} translate(${P(gp)}) rotate(${(ang - 90 + 12 * G).toFixed(2)})`}>
@@ -1818,6 +1858,7 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
     <g opacity={tone}>
       {hairBackEl}
       {profile ? armOn(farKey) : null}
+      {profile && props.heldIn === "far" ? heldEl : null}
       <g transform={tf}>
         <Cased id={`${uid}-bd`}>
           {legs.map(legEl)}
@@ -1838,7 +1879,7 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
       {hatEl}
       {profile ? armOn(nearKey) : [r.armL, r.armR].sort((p, q2) => p.z - q2.z).map((ar) => armOn(ar.sgn < 0 ? "L" : "R"))}
       {shovelEl}
-      {heldEl}
+      {profile && props.heldIn === "far" ? null : heldEl}
     </g>
   );
 };

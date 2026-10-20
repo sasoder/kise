@@ -184,12 +184,13 @@ export const GroundPlane: React.FC<{ P: Persp; kind?: Floor; x0?: number; x1?: n
 // CONTACT SHADOW
 // ---------------------------------------------------------------------------
 /** a soft dark ellipse on the floor at (X, Z), half-width w and half-depth d (world units), offset to the lower right */
-export const ContactShadow: React.FC<{ P: Persp; X: number; Z: number; w?: number; d?: number; uid: string; amt?: number }> = ({ P: pp, X, Z, w = 74, d = 40, uid, amt = 1 }) => {
+export const ContactShadow: React.FC<{ P: Persp; X: number; Z: number; w?: number; d?: number; uid: string; amt?: number; Y?: number }> = ({ P: pp, X, Z, w = 74, d = 40, uid, amt = 1, Y = 0 }) => {
+  // (addition) Y: the height of the surface it falls on (a stair tread); default the floor
   const Xc = X + 0.18 * w;
   const Zc = Z - 0.25 * d;
-  const c = pp.p(Xc, 0, Zc);
+  const c = pp.p(Xc, Y, Zc);
   const rx = w * pp.r(Zc);
-  const ry = Math.max(1, (pp.p(Xc, 0, Zc - d)[1] - pp.p(Xc, 0, Zc + d)[1]) / 2);
+  const ry = Math.max(1, (pp.p(Xc, Y, Zc - d)[1] - pp.p(Xc, Y, Zc + d)[1]) / 2);
   return (
     <g>
       <defs>
