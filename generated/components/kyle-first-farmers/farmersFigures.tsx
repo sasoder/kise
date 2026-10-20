@@ -1538,6 +1538,48 @@ export const Goat: React.FC<AnimalProps> = ({ uid = "goat", ...p }) => <Animal b
 /** a small Neolithic cow (cream; short forward horns, a dewlap): withers ~220 units, ~0.7 of a man */
 export const Cow: React.FC<AnimalProps> = ({ uid = "cow", ...p }) => <Animal b={COW} cow uid={uid} {...p} />;
 
+// (added for cut E HugeLandscapes, logged in SHARED_CHANGES.md) a red deer on the same Animal builder: a slim
+// deep-chested body, long thin legs, an upright neck, big ears; a stag carries branched antlers (beam, brow,
+// trez and crown tines), a hind none. Withers ~200 units (~0.65 of a man). Walks on the goat's stride.
+const deerAntlers = (): AnimalBuild["horns"] => [
+  { st: [[[8, -6], 6.4], [[8, -42], 5.4], [[2, -82], 4.4], [[-4, -116], 3.4], [[2, -138], 1.8]], far: true },
+  { st: [[[4, -34], 3.6], [[20, -44], 2.8], [[30, -46], 1.4]], far: true },
+  { st: [[[2, -6], 7], [[-6, -40], 6], [[-20, -80], 5], [[-30, -115], 4], [[-26, -142], 2]], far: false },
+  { st: [[[-4, -30], 4.2], [[14, -40], 3.2], [[27, -42], 1.6]], far: false },
+  { st: [[[-17, -74], 3.8], [[0, -88], 2.8], [[12, -92], 1.4]], far: false },
+  { st: [[[-29, -112], 3.4], [[-44, -128], 2.4], [[-52, -138], 1.2]], far: false },
+];
+const deerBuild = (stag: boolean): AnimalBuild => ({
+  body: [[88, -196], [55, -206], [10, -200], [-40, -198], [-82, -206], [-104, -198], [-112, -182], [-110, -160], [-100, -140], [-76, -128], [-30, -124], [20, -124], [58, -130], [86, -144], [100, -162], [98, -182]],
+  legs: [
+    { st: [[[70, -150], 22], [[70, -112], 12], [[68, -60], 8], [[70, -18], 6.5], [[71, -5], 7.5]], far: true },
+    { st: [[[-80, -160], 30], [[-70, -112], 16], [[-86, -60], 8.5], [[-82, -18], 6.5], [[-81, -5], 7.5]], far: true },
+    { st: [[[82, -150], 23], [[82, -112], 12.5], [[80, -60], 8.5], [[82, -18], 7], [[83, -5], 8]], far: false },
+    { st: [[[-92, -162], 32], [[-82, -112], 17], [[-98, -60], 9], [[-94, -18], 7], [[-93, -5], 8]], far: false },
+  ],
+  pivot: [84, -176],
+  poll: [136, -292],
+  neckW: [56, 30],
+  grazeNeck: 100,
+  grazeHead: 25,
+  head: [[-10, -4], [6, -8], [24, 2], [44, 14], [62, 28], [68, 38], [60, 46], [44, 44], [26, 36], [8, 24], [-8, 12]],
+  eye: [14, 10],
+  nostril: [62, 36],
+  mouth: [[50, 44], [62, 42]],
+  horns: stag ? deerAntlers() : [],
+  ear: [[[-6, 6], 6], [[-22, -6], 15], [[-36, -16], 5]],
+  tail: (sw) => [[[-108, -196], 7], [[-114 - sw * 0.2, -182], 6], [[-116 - sw * 0.3, -170], 2.6]],
+  contours: "M80,-186Q62,-168 70,-140M-80,-196Q-108,-172 -92,-140",
+  hatchBox: [-112, -170, 100, -124],
+});
+const DEER_STAG = deerBuild(true);
+const DEER_HIND = deerBuild(false);
+/** a red deer (cream), facing right (dir -1 mirrors): stag (antlers, default) or hind (stag={false}); withers ~200
+ *  units. Same props as Goat / Cow (graze lowers the head to the grass or the water; walk on ANIMAL_WALK's goat
+ *  stride: advance 2 x 30 x scale / 30 px per frame). Its own contact shadow is the goat's: pass shadow={false} and
+ *  draw a ContactShadow with halfW ~120 x scale for a deer. */
+export const Deer: React.FC<AnimalProps & { stag?: boolean }> = ({ uid = "deer", stag = true, ...p }) => <Animal b={stag ? DEER_STAG : DEER_HIND} cow={false} uid={uid} {...p} />;
+
 // ---------------------------------------------------------------------------
 // ARCHITECTURE (style: dark umber planes in cream line, never pale masses)
 // ---------------------------------------------------------------------------
