@@ -38,7 +38,7 @@ import { add, mix, mix2, mul, rot } from "../kits/maps/stringsMotion";
 import { figureRig } from "../kits/maps/texcocoFigures";
 import { hash } from "../kits/maps/incaShared";
 import { ACCENT, DARK, INK, LAND, LAND_RIM, Page, SEA, WorldSvg, inkPath, mixColor, roughen, type Cam, type P2 } from "./firstFarmersShared";
-import { Cow, Farmer, Goat, GrainHeapFed, Longhouse, ORANGE, POSES, Sheaf, WheatField, aimTool, idle, lerpFig, mirrorPose, mixInk, specOf, walkPose, type FigPose, type Ink } from "./farmersFigures";
+import { Cow, Farmer, Goat, GrainHeapFed, Longhouse, ORANGE, POSES, Sheaf, TurnFarmer, WheatField, aimTool, aimToolWorld, turnPose, idle, lerpFig, mirrorPose, mixInk, specOf, walkPose, type FigPose, type Ink } from "./farmersFigures";
 import {
   ANIMALS,
   CARRY_STRIDE,
@@ -342,6 +342,11 @@ const raisedR = (u: number): FigPose => {
   return aimTool(q, 122 + 16 * sh, "far");
 };
 const RAISED_0 = raisedR(0);
+/** how far (units) the sheaf hand and the free hand swing out beside the body at the middle of the pickup turn */
+const TURN_OUT_R = 78;
+const TURN_OUT_L = 44;
+/** the same for the empty-handed about-turn after the shake (both hands) */
+const TURN_OUT_FREE = 46;
 /** the binders' loop at the stook before their first trip (facing left, stooped over a sheaf at their feet) */
 const bindL = (g: number, seed: number): FigPose => {
   const u = Math.sin(g / 9 + seed);
@@ -351,7 +356,14 @@ const BIND_SHEAF: P2 = [-92, -12]; // the bound sheaf's band, lying at his feet 
 
 /** dir: the mirror, continuous through a turn (Sheaf multiplies its x scale by it: edge-on at 0) */
 type SheafDraw = { at: P2; angle: number; dir: number; ink: Ink; uid: string };
-type CarrierDraw = { c: number; at: P2; pose: FigPose; woman: boolean; sheaf: SheafDraw | null; shakeN: number | null };
+/** held: the orange sheaf is in his R fist and the figure draws it there (TurnFarmer holdSide "R": it never changes
+ *  hands or layer, whatever the yaw); sheaf: a free Sheaf (lying, being taken, draining to straw, let go); sheafFront:
+ *  draw the free one over him (it is coming into his near hand) */
+type CarrierDraw = { c: number; at: P2; pose: FigPose; woman: boolean; sheaf: SheafDraw | null; shakeN: number | null; held?: boolean; sheafFront?: boolean };
+const smoother = (v: number) => {
+  const x = c01(v);
+  return x * x * x * (x * (x * 6 - 15) + 10);
+};
 /** a stook's sheaf k (front first): where its band is when it stands in the stook */
 const stookSheaf = (s: number, k: number) => {
   const st = STOOKS[s];
@@ -400,18 +412,24 @@ const carrierAt = (c: number, f: number): CarrierDraw => {
         return { c, at, pose: q, woman, sheaf: sh, shakeN: null };
       }
       // in the hand: blend from where it was into the hand's frame over 7 frames
-      const h = sheafOn(q, at);
       const e = sstep((t - PICK_GRAB) / 7);
+      if (e >= 1) return { c, at, pose: q, woman, sheaf: null, shakeN: null, held: true };
+      const h = sheafOn(q, at);
       const a0 = unwrap(src.angle, h.angle);
-      return { c, at, pose: q, woman, sheaf: { ...h, at: mix2(src.band, h.at, e), angle: mix(a0, h.angle, e) }, shakeN: null };
+      return { c, at, pose: q, woman, sheaf: { ...h, at: mix2(src.band, h.at, e), angle: mix(a0, h.angle, e) }, shakeN: null, sheafFront: true };
     }
     case "turnR": {
-      const t = sstep((f - leg.t0) / TURN);
-      const q = lerpFig(HOLD_L, CARRY_R, t);
-      const h0 = rHand(HOLD_L, [leg.x, leg.y], sc, woman);
-      const h1 = rHand(CARRY_R, [leg.x, leg.y], sc, woman);
-      const h = rHand(q, [leg.x, leg.y], sc, woman);
-      return { c, at: [leg.x, leg.y], pose: q, woman, sheaf: { at: h.at, angle: mix(unwrap(h0.angle, h1.angle), h1.angle, t), dir: mix(h0.G, h1.G, t), ink: ORANGE, uid: `${uid}s` }, shakeN: null };
+      // the turn through the front (farmersFigures turnPose: one eased yaw, hands round the body axis, a step), the
+      // sheaf kept in the R fist and aimed in screen degrees from its angle at his chest to its angle in the crook
+      const w0 = rHand(HOLD_L, [leg.x, leg.y], sc, woman).angle;
+      const w1 = rHand(CARRY_R, [leg.x, leg.y], sc, woman).angle;
+      const tq0 = turnPose(HOLD_L, CARRY_R, f, leg.t0, leg.t1, { headLead: 0 });
+      // the rig can only change an arm's layer at yaw 0 (mid-turn): carry both hands out beside the body there, so
+      // the sheaf (R) and the free hand (L) are clear of the torso at the moment they pass behind / come in front
+      const b = Math.sin(Math.PI * c01((f - leg.t0) / TURN)) ** 2;
+      const tq: FigPose = { ...tq0, armR: { ...tq0.armR, w: [tq0.armR.w[0] + TURN_OUT_R * b, tq0.armR.w[1] - 14 * b] }, armL: { ...tq0.armL, w: [tq0.armL.w[0] - TURN_OUT_L * b, tq0.armL.w[1]] } };
+      const q = f >= leg.t1 ? CARRY_R : aimToolWorld(tq, mix(unwrap(w0, w1), w1, smoother((f - leg.t0) / TURN)), "R", "farmer", woman);
+      return { c, at: [leg.x, leg.y], pose: q, woman, sheaf: null, shakeN: null, held: true };
     }
     case "walkR": {
       const u = c01((f - leg.t0) / (leg.t1 - leg.t0));
@@ -419,16 +437,16 @@ const carrierAt = (c: number, f: number): CarrierDraw => {
       const y = mix(leg.y0, leg.y1, u);
       const ph = (x - leg.x0) / (2 * CARRY_STRIDE * sc);
       const q = { ...walkPose(CARRY_R, ph, 1, CARRY_STRIDE), armL: CARRY_R.armL, armR: CARRY_R.armR };
-      return { c, at: [x, y], pose: q, woman, sheaf: sheafOn(q, [x, y]), shakeN: null };
+      return { c, at: [x, y], pose: q, woman, sheaf: null, shakeN: null, held: true };
     }
     case "shake": {
       const S = shakeOf(leg.n);
       const at: P2 = [leg.x, leg.y];
       const tr = f - (S.t0 - RAISE); // into the raise
-      if (tr < 0) return { c, at, pose: idle(CARRY_R, g, c), woman, sheaf: sheafOn(idle(CARRY_R, g, c), at), shakeN: null };
+      if (tr < 0) return { c, at, pose: idle(CARRY_R, g, c), woman, sheaf: null, shakeN: null, held: true };
       if (tr < RAISE) {
         const q = lerpFig(CARRY_R, RAISED_0, sstep(tr / RAISE));
-        return { c, at, pose: q, woman, sheaf: sheafOn(q, at), shakeN: null };
+        return { c, at, pose: q, woman, sheaf: null, shakeN: null, held: true };
       }
       const ts = f - S.t0;
       if (ts < SHAKE) {
@@ -442,8 +460,11 @@ const carrierAt = (c: number, f: number): CarrierDraw => {
       return { c, at, pose: q, woman, sheaf: ts - SHAKE < DROP_AT ? sheafOn(q, at, STRAW) : null, shakeN: null };
     }
     case "turnL": {
-      const t = sstep((f - leg.t0) / TURN);
-      return { c, at: [leg.x, leg.y], pose: lerpFig(STAND_R, STAND_L, t), woman, sheaf: null, shakeN: null };
+      // the hands swing out to his sides mid-turn, clear of the body where the rig changes the arms' layer (yaw 0)
+      const tq = turnPose(STAND_R, STAND_L, f, leg.t0, leg.t1, { headLead: 0 });
+      const b = Math.sin(Math.PI * c01((f - leg.t0) / TURN)) ** 2;
+      const q: FigPose = f >= leg.t1 ? tq : { ...tq, armL: { ...tq.armL, w: [tq.armL.w[0] - TURN_OUT_FREE * b, tq.armL.w[1]] }, armR: { ...tq.armR, w: [tq.armR.w[0] + TURN_OUT_FREE * b, tq.armR.w[1]] } };
+      return { c, at: [leg.x, leg.y], pose: q, woman, sheaf: null, shakeN: null };
     }
     case "walkL": {
       const u = c01((f - leg.t0) / (leg.t1 - leg.t0));
@@ -562,8 +583,9 @@ export const EnergyWorld: React.FC<{ frame: number; cam: Cam; children?: React.R
     push(
       d.at[1],
       <g key={`c${c}`}>
-        {d.sheaf ? <Sheaf at={d.sheaf.at} scale={PEOPLE} angle={d.sheaf.angle} dir={d.sheaf.dir as 1} ink={d.sheaf.ink} uid={d.sheaf.uid} /> : null}
-        <Farmer pose={d.pose} at={d.at} scale={PEOPLE} uid={`cf${c}`} woman={d.woman} hold="none" seed={c + 5} />
+        {d.sheaf && !d.sheafFront ? <Sheaf at={d.sheaf.at} scale={PEOPLE} angle={d.sheaf.angle} dir={d.sheaf.dir as 1} ink={d.sheaf.ink} uid={d.sheaf.uid} /> : null}
+        <TurnFarmer pose={d.pose} at={d.at} scale={PEOPLE} uid={`cf${c}`} woman={d.woman} hold={d.held ? "sheaf" : "none"} holdSide="R" seed={c + 5} />
+        {d.sheaf && d.sheafFront ? <Sheaf at={d.sheaf.at} scale={PEOPLE} angle={d.sheaf.angle} dir={d.sheaf.dir as 1} ink={d.sheaf.ink} uid={d.sheaf.uid} /> : null}
       </g>,
       2,
     );
@@ -646,6 +668,35 @@ export const AllAboutEnergyPoses: React.FC = () => {
             <TreeArt key={i} t={{ x: 60 + i * 230, y: 1900, s: 1, seed: i * 31, kind: kind as 0 | 1 | 2 }} k={0.9} />
           ))}
         </WorldSvg>
+      </Page>
+    </AbsoluteFill>
+  );
+};
+
+/** review: the cut's own world at frames f0.. seen by a fixed close camera (x, y, k): to look at a carrier's turn */
+export const AllAboutEnergyTurnProbe: React.FC<{ x: number; y: number; k: number; f0: number; only?: number }> = ({ x, y, k, f0, only }) => {
+  const frame = useCurrentFrame();
+  const f = f0 + frame;
+  const cam = { x, y, k };
+  if (only !== undefined) {
+    // one carrier alone on the bare page (the same carrierAt and drawing as the world)
+    const d = carrierAt(only, f);
+    return (
+      <AbsoluteFill>
+        <Page>
+          <WorldSvg cam={cam}>
+            {d.sheaf && !d.sheafFront ? <Sheaf at={d.sheaf.at} scale={PEOPLE} angle={d.sheaf.angle} dir={d.sheaf.dir as 1} ink={d.sheaf.ink} uid={d.sheaf.uid} /> : null}
+            <TurnFarmer pose={d.pose} at={d.at} scale={PEOPLE} uid={`cf${only}`} woman={d.woman} hold={d.held ? "sheaf" : "none"} holdSide="R" seed={only + 5} />
+            {d.sheaf && d.sheafFront ? <Sheaf at={d.sheaf.at} scale={PEOPLE} angle={d.sheaf.angle} dir={d.sheaf.dir as 1} ink={d.sheaf.ink} uid={d.sheaf.uid} /> : null}
+          </WorldSvg>
+        </Page>
+      </AbsoluteFill>
+    );
+  }
+  return (
+    <AbsoluteFill>
+      <Page>
+        <EnergyWorld frame={f} cam={cam} />
       </Page>
     </AbsoluteFill>
   );
