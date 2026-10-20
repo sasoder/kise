@@ -440,9 +440,27 @@ const LAND_HEX = "#3F3428";
 const inkLevel = (ink: Ink) => c01((lum(ink.main) - lum(LAND_HEX)) / (lum(CREAM.main) - lum(LAND_HEX)));
 const dimTone = (t: HairTone, lv: number): HairTone => ({ light: mixHex(LAND_HEX, t.light, lv), base: mixHex(LAND_HEX, t.base, lv), deep: mixHex(LAND_HEX, t.deep, lv) });
 
+/** (addition, DEPTH) the form shadow of one part, light from the upper left: the part minus a copy of itself shifted
+ *  toward the light leaves the crescent on its right / lower side; it gets a flat darker tone and hatching. Works at
+ *  every yaw because it follows the drawn outline. */
+const RimShade: React.FC<{ id: string; d: string; off: [number, number]; box: [number, number, number, number]; col: string; amt: number; seed: number }> = ({ id, d, off, box, col, amt, seed }) =>
+  amt <= 0 ? null : (
+    <>
+      <mask id={id} maskUnits="userSpaceOnUse" x={box[0] - 60} y={box[1] - 60} width={box[2] - box[0] + 120} height={box[3] - box[1] + 120}>
+        <path d={d} fill="white" />
+        <path d={d} fill="black" transform={`translate(${(-off[0]).toFixed(2)} ${(-off[1]).toFixed(2)})`} />
+      </mask>
+      <g mask={`url(#${id})`}>
+        <path d={d} fill={col} opacity={Math.min(1, 0.92 * amt)} />
+        <path d={hatchD(box[0], box[1], box[2], box[3], 112, 2.7, seed, 0.12)} {...ln(0.85, 0.42 * amt)} />
+      </g>
+    </>
+  );
+const bboxOf = (pts: P2[], pad: number): [number, number, number, number] => [Math.min(...pts.map((p) => p[0])) - pad, Math.min(...pts.map((p) => p[1])) - pad, Math.max(...pts.map((p) => p[0])) + pad, Math.max(...pts.map((p) => p[1])) + pad];
+
 type FaceState = { brow: number; lids: number; mouth: number };
 /** the face: outline, shading, brows, eyes, nose, mouth, the build's lines; the near ear when no hair covers it */
-const FaceArt: React.FC<{ yaw: number; nod: number; face: FaceState; build: FaceBuild; cut: FaceCut; aged: boolean; ears: boolean; ink: Ink; uid: string }> = ({ yaw, nod, face, build, cut, aged, ears, ink, uid }) => {
+const FaceArt: React.FC<{ yaw: number; nod: number; face: FaceState; build: FaceBuild; cut: FaceCut; aged: boolean; ears: boolean; ink: Ink; uid: string; shade?: number }> = ({ yaw, nod, face, build, cut, aged, ears, ink, uid, shade = 0 }) => {
   const c = Math.cos(yaw);
   const s = Math.sin(yaw);
   const t = Math.abs(s);
@@ -558,6 +576,7 @@ const FaceArt: React.FC<{ yaw: number; nod: number; face: FaceState; build: Face
         <path d={HEAD} />
       </clipPath>
       <path d={HEAD} fill={ink.main} {...OUT} strokeWidth={2.5} />
+      <RimShade id={`${uid}-rsf`} d={HEAD} off={[11, 4]} box={[-30, -40, 30, 36]} col={ink.deep} amt={shade * 0.9} seed={951} />
       <g clipPath={`url(#${uid}-face)`}>
         {/* the shadow side (screen right, away from the upper-left light): a crescent of hatching, under the jaw */}
         <path d={hatchD(xR - 6.5 + 2 * t, -24, xR + 2, 30, 112, 2.4, 24, 0.18)} {...ln(0.9, 0.5 * (1 - 0.5 * t))} />
@@ -1229,9 +1248,13 @@ export type LondonFigureProps = {
   onlyArm?: "L" | "R";
   /** (addition) leave this arm out (draw it separately with onlyArm) */
   hideArm?: "L" | "R";
+  /** (addition, DEPTH) the form shadow, 0 (default, off) .. 1: the right side of the coat, sleeves, legs and face one
+   *  step darker (a flat tone plus hatching), light from the upper left, at every yaw */
+  shade?: number;
 };
 export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
   const { kind, pose: q, at, scale, uid, tone = 1 } = props;
+  const shadeAmt = props.shade ?? 0;
   const look = lookOf(kind, props.variant ?? 0);
   const sp = look.spec;
   const ink = props.ink ?? CREAM;
@@ -1273,10 +1296,12 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
       <g key={l.sgn}>
         {/* the stocking */}
         <path d={limbD([[mix2(l.K, l.A, 0.02), 16 * k], [mix2(l.K, l.A, 0.34), 17.6 * k], [mix2(l.K, l.A, 0.8), 11.6 * k], [l.A, 10.6 * k]])} fill={ink.main} {...OUT} />
+        <RimShade id={`${uid}-rss${l.sgn}`} d={limbD([[mix2(l.K, l.A, 0.02), 16 * k], [mix2(l.K, l.A, 0.34), 17.6 * k], [mix2(l.K, l.A, 0.8), 11.6 * k], [l.A, 10.6 * k]])} off={[7, 2]} box={bboxOf([l.K, l.A], 14)} col={ink.deep} amt={shadeAmt} seed={961 + l.sgn} />
         <path d={knit} {...ln(0.7, 0.32)} />
         <path d={braceletD(l.K, l.A, 17 * k, 11.5 * k, 83 + l.sgn, 3.2, 0.65)} {...ln(0.9, 0.5)} />
         {/* the breeches, full to the knee, buckled under it */}
         <path d={limbD([[add(l.H, [0, -4]), 30 * k], [mix2(l.H, l.K, 0.5), 28.5 * k], [l.K, 23 * k], [gt, 19.5 * k]])} fill={breeches} {...OUT} />
+        <RimShade id={`${uid}-rsb${l.sgn}`} d={limbD([[add(l.H, [0, -4]), 30 * k], [mix2(l.H, l.K, 0.5), 28.5 * k], [l.K, 23 * k], [gt, 19.5 * k]])} off={[10, 3]} box={bboxOf([l.H, gt], 20)} col={mixHex(breeches, DARK, 0.28)} amt={shadeAmt} seed={963 + l.sgn} />
         <path d={braceletD(l.H, l.K, 29 * k, 23 * k, 81 + l.sgn, 3)} {...ln(1, 0.6)} />
         <path d={`M${P(add(mix2(l.H, l.K, 0.25), mul(n, 4)))}Q${P(add(mix2(l.H, l.K, 0.6), mul(n, -2)))} ${P(add(l.K, mul(n, 3)))}`} {...ln(1, 0.45)} />
         <path d={limbD([[add(gt, mul(n, -10.5 * k)), 5.4], [add(gt, mul(n, 10.5 * k)), 5.4]])} fill={coat.hair} {...OUT} strokeWidth={1.7} />
@@ -1376,6 +1401,7 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
       </clipPath>
       <g clipPath={`url(#${uid}-skc)`}>
         <path d={SK} fill={coat.main} {...OUT} />
+        <RimShade id={`${uid}-rssk`} d={SK} off={[24, 6]} box={[skX0, skY0, skX1, skY1 + 30]} col={coat.deep} amt={shadeAmt} seed={965} />
       </g>
       <g clipPath={`url(#${uid}-sk)`}>
        <g clipPath={`url(#${uid}-skc)`}>
@@ -1424,6 +1450,7 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
       ) : null}
       <g clipPath={worker ? undefined : `url(#${uid}-torc)`}>
       <path d={worker ? `M${P(side([-hw + 6, shY + 4]))}Q${P(mT([0, shY + 30]))} ${P(side([hw - 6, shY + 4]))}L${P(side([wst + 3, 8]))}L${P(side([-wst - 3, 8]))}Z` : TORSO} fill={body} {...OUT} />
+      <RimShade id={`${uid}-rst`} d={worker ? `M${P(side([-hw + 6, shY + 4]))}Q${P(mT([0, shY + 30]))} ${P(side([hw - 6, shY + 4]))}L${P(side([wst + 3, 8]))}L${P(side([-wst - 3, 8]))}Z` : TORSO} off={[22, 5]} box={[-hw - 12, shY - 12, hw + 12, 14]} col={worker ? mixHex(body, DARK, 0.2) : coat.deep} amt={shadeAmt} seed={967} />
       <g clipPath={`url(#${uid}-tor)`}>
         <path d={segD(hatchSegs(hw * 0.34, shY + 4, hw + 8, 10, 113, 2.8, 831), side)} {...ln(1, 0.62)} />
         <path d={segD(hatchSegs(hw * 0.55, shY + 34, hw + 8, 10, 60, 3.4, 832), side)} {...ln(0.9, 0.45)} />
@@ -1557,8 +1584,10 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
       return (
         <>
           <path d={limbD([[add(ar.E, mul(fu, -2)), 19 * k], [mix2(ar.E, ar.W, 0.45), 17.5 * k], [add(ar.W, mul(fu, -1)), 13.5 * k]])} fill={ink.main} {...OUT} />
+          <RimShade id={`${uid}-rsfa${ar.sgn}`} d={limbD([[add(ar.E, mul(fu, -2)), 19 * k], [mix2(ar.E, ar.W, 0.45), 17.5 * k], [add(ar.W, mul(fu, -1)), 13.5 * k]])} off={[7, 2]} box={bboxOf([ar.E, ar.W], 16)} col={ink.deep} amt={shadeAmt} seed={969 + ar.sgn} />
           <path d={braceletD(ar.E, ar.W, 18 * k, 13 * k, 853 + ar.sgn, 3.2, 0.6)} {...ln(0.9, 0.5)} />
           <path d={limbD([[ar.S, 29 * k], [mix2(ar.S, roll, 0.5), 29.5 * k], [roll, 27 * k]])} fill={ink.main} {...OUT} />
+          <RimShade id={`${uid}-rsua${ar.sgn}`} d={limbD([[ar.S, 29 * k], [mix2(ar.S, roll, 0.5), 29.5 * k], [roll, 27 * k]])} off={[10, 3]} box={bboxOf([ar.S, roll], 20)} col={ink.deep} amt={shadeAmt} seed={971 + ar.sgn} />
           <path d={braceletD(ar.S, roll, 28 * k, 26 * k, 851 + ar.sgn, 3)} {...ln(0.95, 0.55)} />
           <path d={[0.3, 0.62].map((t) => `M${P(add(mix2(ar.S, roll, t), mul(rn, 9 * k)))}q${P(mul(norm(sub(roll, ar.S)), 4))} ${P(mul(rn, -12 * k))}`).join("")} {...ln(1, 0.5)} />
           {/* the roll: a thick band of folded linen */}
@@ -1583,6 +1612,7 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
     return (
       <>
         <path d={limbD(st)} fill={coat.main} {...OUT} />
+        <RimShade id={`${uid}-rssl${ar.sgn}`} d={limbD(st)} off={[10, 3]} box={bboxOf([ar.S, ar.E, cuffA], 20)} col={coat.deep} amt={shadeAmt} seed={973 + ar.sgn} />
         <path d={braceletD(ar.S, ar.E, 29 * k, 25 * k, 851 + ar.sgn, 3.1)} {...ln(1, 0.58)} />
         <path d={braceletD(ar.E, cuffA, 25 * k, 22 * k, 855 + ar.sgn, 3.1, 0.8)} {...ln(0.95, 0.5)} />
         {folds ? <path d={folds} {...ln(1.15, 0.6)} /> : null}
@@ -1771,7 +1801,7 @@ export const LondonFigure: React.FC<LondonFigureProps> = (props) => {
       <Cased id={`${uid}-hdc`} r={1.3}>
         {hair.midEl}
         <g transform={faceScale}>
-          <FaceArt yaw={hy} nod={nod} face={{ brow: q.brow, lids: q.lids, mouth: q.mouth }} build={look.build} cut={look.cut} aged={sp.aged} ears={look.hair === "short"} ink={ink} uid={`${uid}-fc`} />
+          <FaceArt yaw={hy} nod={nod} face={{ brow: q.brow, lids: q.lids, mouth: q.mouth }} build={look.build} cut={look.cut} aged={sp.aged} ears={look.hair === "short"} ink={ink} uid={`${uid}-fc`} shade={shadeAmt} />
         </g>
         {worker && cap ? capEl : hair.frontEl}
       </Cased>
