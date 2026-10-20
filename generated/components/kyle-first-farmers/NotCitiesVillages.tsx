@@ -43,7 +43,7 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { ACCENT, DARK, INK, INK_DEEP, INK_HI, LAND, GroundLine, Page, WorldSvg, hash, mixColor, runCamera, smoothstep, type Cam, type CamKey, type P2 } from "./firstFarmersShared";
-import { CHILD_F, Farmer, Forager, Goat, HideTent, Longhouse, POSES, WheatField, idle, walkPose, type FigPose } from "./farmersFigures";
+import { CHILD_F, Farmer, Forager, Goat, HideTent, Longhouse, POSES, WheatField, hoeLoop, idle, walkPose, type FigPose } from "./farmersFigures";
 
 export const FPS = 30000 / 1001;
 export const DURATION = 308;
@@ -507,7 +507,7 @@ PEOPLE.forEach((p) => {
 });
 const personAt = (p: Person, f: number): { at: P2; pose: FigPose } => {
   const y = p.y ?? 0;
-  if (p.id === "hoer") return { at: [p.x, y], pose: POSES.hoe(1, (f + 8) / 40) };
+  if (p.id === "hoer") return { at: [p.x, y], pose: hoeLoop(1, (f + 8) / 40) };
   const tr = TRACKS.get(p.id);
   if (!tr) return { at: [p.x, y], pose: idle(p.base, f, p.seed) };
   const fi = Math.max(0, Math.min(DURATION, Math.round(f)));
