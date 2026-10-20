@@ -665,7 +665,7 @@ const DroppedTool: React.FC<{ kind: ToolKind; arm: ArmSide; sp: Spec; base: FigP
     </g>
   );
 };
-const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & { ink: Ink; prescaled?: boolean } & TurnSafeOpts> = ({ kind, pose: q0, at, scale, uid, woman = false, child = false, ink, tone = 1, hold: holdIn, holdFar = "none", quiver: quiverIn, seed = 0, prescaled = false, turnSafe = false, frontArms, holdSide, holdFarSide }) => {
+const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & { ink: Ink; prescaled?: boolean } & TurnSafeOpts> = ({ kind, pose: q0, at, scale, uid, woman = false, child = false, ink, tone = 1, hold: holdIn, holdFar = "none", quiver: quiverIn, seed = 0, prescaled = false, turnSafe = false, frontArms, holdSide, holdFarSide, bunSafe = false }) => {
   const sp = specOf(kind, woman, child);
   const q = child && !prescaled ? childPose(q0) : q0;
   const farmer = kind === "farmer";
@@ -1045,14 +1045,17 @@ const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & 
       })()
     : null;
   // the farmer woman's hair: gathered into a bun at the nape, a fillet across the brow
+  // (BUN addition, bunSafe: the bun sits at the nape, so it is hidden behind the head unless she is near profile; the
+  // legacy fade lets it slide onto the jaw as the head turns toward us. Default off = the legacy expression.)
+  const bunA = bunSafe ? c01((Math.abs(hsn) - 0.55) * 4) : c01((Math.abs(hsn) - 0.15) * 4);
   const bunEl =
     farmer && (woman || child) ? (
       <g transform={`${tf} ${headTf}`}>
         <Cased id={`${uid}-bun`} r={1.1}>
           {woman ? (
             <>
-              <ellipse cx={-25 * hsn} cy={20} rx={10 - 2 * hcs} ry={8.5} fill={ink.hair} {...OUT} opacity={c01((Math.abs(hsn) - 0.15) * 4)} />
-              <path d={`M${(-25 * hsn - 5).toFixed(1)},${17}q5,-4 10,0M${(-25 * hsn - 6).toFixed(1)},${22}q6,-4 12,0`} {...ln(1.1, 0.7 * c01((Math.abs(hsn) - 0.15) * 4))} />
+              <ellipse cx={-25 * hsn} cy={20} rx={10 - 2 * hcs} ry={8.5} fill={ink.hair} {...OUT} opacity={bunA} />
+              <path d={`M${(-25 * hsn - 5).toFixed(1)},${17}q5,-4 10,0M${(-25 * hsn - 6).toFixed(1)},${22}q6,-4 12,0`} {...ln(1.1, 0.7 * bunA)} />
               <path d={`M${(-23 * hcs + 6 * hsn).toFixed(1)},-15Q${(4 * hsn).toFixed(1)},-23 ${(23 * hcs + 6 * hsn).toFixed(1)},-15`} fill="none" stroke={DARK} strokeWidth={5.2} strokeLinecap="round" />
               <path d={`M${(-23 * hcs + 6 * hsn).toFixed(1)},-15Q${(4 * hsn).toFixed(1)},-23 ${(23 * hcs + 6 * hsn).toFixed(1)},-15`} fill="none" stroke={ink.deep} strokeWidth={2.8} strokeLinecap="round" />
             </>
@@ -2205,6 +2208,8 @@ export type TurnSafeOpts = {
   holdSide?: "L" | "R";
   /** the rig arm that holds `holdFar` (default: the other one) */
   holdFarSide?: "L" | "R";
+  /** (BUN addition) the farmer woman's bun stays hidden behind her head unless she is near profile (default off) */
+  bunSafe?: boolean;
 };
 /** aimTool for a fixed rig arm (L / R), so a tool keeps its angle in the same fist through a full turn */
 export const aimToolSide = (q: FigPose, deg: number, side: "L" | "R", kind: FarmKind = "farmer", woman = false, child = false): FigPose => {
@@ -2330,6 +2335,8 @@ export const TurnRigFigure: React.FC<{ spec: Spec; pose: FigPose; at: P2; scale:
 type TurnCastProps = Omit<FarmFigureProps, "kind" | "uid"> & { uid?: string; frontArms?: ("L" | "R")[]; holdSide?: "L" | "R"; holdFarSide?: "L" | "R" };
 /** the Farmer, turn-safe (same props as Farmer, plus frontArms) */
 export const TurnFarmer: React.FC<TurnCastProps> = ({ uid = "tfrm", ...p }) => <FarmFigureCore kind="farmer" uid={uid} turnSafe {...p} />;
+/** (BUN addition) the TurnFarmer whose woman's bun never slides onto her jaw when her head turns toward us */
+export const TurnFarmerBunSafe: React.FC<TurnCastProps> = ({ uid = "tfrmb", ...p }) => <FarmFigureCore kind="farmer" uid={uid} turnSafe bunSafe {...p} />;
 /** the Forager, turn-safe (same props as Forager, plus frontArms) */
 export const TurnForager: React.FC<TurnCastProps> = ({ uid = "tfrg", ...p }) => <FarmFigureCore kind="forager" uid={uid} turnSafe {...p} />;
 /** the TilmaCommoner, turn-safe (same props, plus frontArms) */
