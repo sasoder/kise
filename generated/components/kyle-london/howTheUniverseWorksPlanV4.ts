@@ -39,7 +39,7 @@ const CRANK_AZ = (55 * Math.PI) / 180;
 const CRANK_AT = 150;
 export const CRANK_C: P2 = [540 + CRANK_AT * Math.sin(CRANK_AZ), DRUM_TOP_Y + 0.3 * CRANK_AT * Math.cos(CRANK_AZ)];
 export const CRANK_R = 46;
-export const KNOB_L = 84;
+export const KNOB_L = 104;
 /** the crank's handle root at crank angle phi (0 = towards the viewer) */
 export const crankPin = (phi: number): P2 => [CRANK_C[0] + CRANK_R * Math.sin(phi), CRANK_C[1] + 0.3 * CRANK_R * Math.cos(phi)];
 

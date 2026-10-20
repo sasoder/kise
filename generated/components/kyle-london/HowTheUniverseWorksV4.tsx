@@ -157,12 +157,12 @@ const FloorPlane: React.FC<{ cam: Cam }> = ({ cam }) => {
 const knobAt = (f: number) => {
   const p = crankPin(crankPhi(f));
   const q: P2 = [p[0], p[1] - KNOB_L];
-  return { p, q, grip: orrToWorld([p[0], p[1] - KNOB_L * 0.62]) };
+  return { p, q, grip: orrToWorld([p[0], p[1] - KNOB_L * 0.8]) };
 };
 const SCI_AT: P2 = [SCI_X, FLOOR];
 const toFig = (w: P2): P2 => [(w[0] - SCI_AT[0]) / SCALE, (w[1] - SCI_AT[1]) / SCALE];
 /** the base pose (facing left, three-quarter, into the orrery): knees given a little, leaning in over it */
-const SCI_BASE: FigPose = { ...POSES.stand(-1), crouch: 6, lean: -7, armL: { w: [-36, -150], elbow: [-0.2, 1], fist: 0.4, hand: 0 } };
+const SCI_BASE: FigPose = { ...POSES.stand(-1), crouch: 9, lean: -8, armL: { w: [-36, -150], elbow: [-0.2, 1], fist: 0.4, hand: 0 } };
 /** the head: across at first, turning down into the orrery f8-36, then following the Earth; a small nod on "universe" */
 const sciHead = (f: number) => {
   const turn = ease((f - 8) / 28);
@@ -182,7 +182,7 @@ const sciPose = (f: number): FigPose => {
   q = { ...q, crouch: q.crouch + 1.1 * Math.sin(f / 13) };
   // the near (right, facing left) hand on the crank's knob: aim the wrist so the grip lands on the knob
   const want = knobAt(f).grip;
-  const tryArm = (w: P2): FigPose => ({ ...q, armR: { w, elbow: [0.3, 1], fist: 0.85, hand: -10 } });
+  const tryArm = (w: P2): FigPose => ({ ...q, armR: { w, elbow: [0.3, 1], fist: 1, hand: 0 } });
   let w = toFig(want);
   for (let i = 0; i < 3; i++) {
     const a = castAnchors("fellow", tryArm(w), SCI_AT, SCALE, 0);
