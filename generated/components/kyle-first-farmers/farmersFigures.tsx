@@ -665,7 +665,7 @@ const DroppedTool: React.FC<{ kind: ToolKind; arm: ArmSide; sp: Spec; base: FigP
     </g>
   );
 };
-const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & { ink: Ink; prescaled?: boolean }> = ({ kind, pose: q0, at, scale, uid, woman = false, child = false, ink, tone = 1, hold: holdIn, holdFar = "none", quiver: quiverIn, seed = 0, prescaled = false }) => {
+const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & { ink: Ink; prescaled?: boolean } & TurnSafeOpts> = ({ kind, pose: q0, at, scale, uid, woman = false, child = false, ink, tone = 1, hold: holdIn, holdFar = "none", quiver: quiverIn, seed = 0, prescaled = false, turnSafe = false, frontArms, holdSide, holdFarSide }) => {
   const sp = specOf(kind, woman, child);
   const q = child && !prescaled ? childPose(q0) : q0;
   const farmer = kind === "farmer";
@@ -689,6 +689,9 @@ const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & 
   const neck: P2 = [0, shY];
   const G = s >= 0 ? 1 : -1;
   const profile = Math.abs(s) > 0.5;
+  // turn-safe (TURN addition): the far arm stays behind the body for ANY turned yaw, so its draw order only changes
+  // at yaw 0, where both arms hang beside the torso (the legacy cast switches at |sin yaw| = 0.5: the arm pops)
+  const farBack = turnSafe ? Math.abs(s) > 1e-3 : profile;
   const farArm: ArmSide = s >= 0 ? "R" : "L";
   const nearArm: ArmSide = farArm === "L" ? "R" : "L";
   const sway = q.hem * 0.6;
@@ -735,7 +738,18 @@ const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & 
       </g>
     );
   };
-  const withGear = (w: ArmSide, far: boolean) => (
+  // turn-safe with a fixed tool hand (holdSide / holdFarSide): each tool rides in its own arm's layer, just under its hand
+  const nearToolArm: ArmSide = holdSide ?? nearArm;
+  const farToolArm: ArmSide = holdFarSide ?? (holdSide ? (holdSide === "L" ? "R" : "L") : farArm);
+  const withGearFixed = (w: ArmSide) => (
+    <React.Fragment key={w}>
+      {w === nearToolArm ? toolEl(w, nearTool) : null}
+      {w === farToolArm ? toolEl(w, farTool) : null}
+      {armEl(w)}
+      {sleeveEl(w)}
+    </React.Fragment>
+  );
+  const withGearLegacy = (w: ArmSide, far: boolean) => (
     <React.Fragment key={w}>
       {w === nearArm ? toolEl(w, nearTool) : null}
       {w === farArm && far ? toolEl(w, farTool) : null}
@@ -744,6 +758,7 @@ const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & 
       {w === farArm && !far ? toolEl(w, farTool) : null}
     </React.Fragment>
   );
+  const withGear = (w: ArmSide, far: boolean) => (turnSafe && (holdSide || holdFarSide) ? withGearFixed(w) : withGearLegacy(w, far));
 
   // ---- the bare torso (forager) / the tunic's bodice (farmer); torso frame ------------
   const wst = woman ? 25 : 27;
@@ -837,7 +852,7 @@ const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & 
       {/* the belt and its knot */}
       <path d={`M${P(side([-31.5, -12]))}Q${P([fx * 0.4, -7])} ${P(side([31.5, -12]))}L${P(side([32, -2]))}Q${P([fx * 0.4, 3])} ${P(side([-32, -2]))}Z`} fill={ink.deep} {...OUT} strokeWidth={2} />
       <path d={`M${P(side([-31, -7]))}Q${P([fx * 0.4, -2])} ${P(side([31, -7]))}`} {...ln(0.9, 0.55)} />
-      {sfH.seen(10) || !profile ? (
+      {turnSafe || sfH.seen(10) || !profile ? (
         <>
           <path d={limbD([[[fx + 4 * c, -6], 4.2], [[fx + 6 * c + sway * 0.2, 8], 3.8], [[fx + 5 * c + sway * 0.4, 20], 2.6]])} fill={ink.deep} {...OUT} strokeWidth={1.6} />
           <circle cx={fx + 3 * c} cy={-7} r={3.6} fill={ink.main} {...OUT} strokeWidth={1.6} />
@@ -1049,11 +1064,12 @@ const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & 
   // ---- assemble -------------------------------------------------------------------------
   return (
     <g opacity={tone}>
-      {profile ? withGear(farArm, true) : null}
+      {farBack ? withGear(farArm, true) : null}
       <g transform={tf}>
         <Cased id={`${uid}-bk`}>
           {backGear}
-          {!farmer && !hairBehind ? lock(Math.PI, woman ? 26 : 30, woman ? 70 : 50, 193 + seed) : null}
+          {!farmer && turnSafe ? lock(Math.PI, woman ? 28 : 26, woman ? 46 : 50, 193 + seed) : null}
+          {!farmer && !turnSafe && !hairBehind ? lock(Math.PI, woman ? 26 : 30, woman ? 70 : 50, 193 + seed) : null}
         </Cased>
       </g>
       {/* the legs: the rig's, cut below the hips */}
@@ -1082,7 +1098,7 @@ const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & 
           <path d={NECK} fill={ink.main} {...OUT} />
           {!farmer ? (
             <>
-              {hairBehind ? lock(Math.PI, woman ? 28 : 26, woman ? 46 : 50, 193 + seed) : null}
+              {turnSafe ? <g opacity={sstep((Math.abs(hsn) - 0.35) / 0.3)}>{lock(Math.PI, woman ? 28 : 26, woman ? 46 : 50, 193 + seed)}</g> : hairBehind ? lock(Math.PI, woman ? 28 : 26, woman ? 46 : 50, 193 + seed) : null}
               {woman ? (
                 <>
                   {lock(-1.6, 11, 88, 191 + seed, true)}
@@ -1098,10 +1114,20 @@ const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & 
           ) : null}
         </Cased>
       </g>
-      {profile ? withGear(nearArm, false) : [r.armL, r.armR].sort((p1, p2) => p1.z - p2.z).map((ar) => withGear(ar.sgn < 0 ? "L" : "R", false))}
+      {farBack ? withGear(nearArm, false) : [r.armL, r.armR].sort((p1, p2) => p1.z - p2.z).map((ar) => withGear(ar.sgn < 0 ? "L" : "R", false))}
+      {turnSafe && farBack && frontArms?.includes(farArm) ? (
+        <>
+          <clipPath id={`${uid}-fa`}>
+            <path d={forearmClip(farArm === "L" ? r.armL : r.armR, at, scale)} />
+          </clipPath>
+          <g clipPath={`url(#${uid}-fa)`}>{withGear(farArm, true)}</g>
+        </>
+      ) : null}
+      {turnSafe ? <RigEarFade spec={sp} pose={q} at={at} scale={scale} ink={ink} uid={`${uid}-ef`} /> : null}
       {/* the head: the rig's, cut out at the shoulders */}
       <clipPath id={`${uid}-hc`}>
-        <rect transform={`${tf} ${torsoTf}`} x={-62} y={shY - 119} width={124} height={112} />
+        {/* turn-safe: the rect stops above the shoulders (near profile the cut-out's giant cloak edge showed in it as a sliver) */}
+        <rect transform={`${tf} ${torsoTf}`} x={-62} y={shY - 119} width={124} height={turnSafe ? 92 : 112} />
         <path transform={`${tf} ${headTf}`} d={faceClip} />
         <path transform={`${tf} ${headTf}`} d={hairClip} />
       </clipPath>
@@ -1114,7 +1140,8 @@ const FarmBody: React.FC<Omit<FarmFigureProps, "fall" | "fallDir" | "shadow"> & 
   );
 };
 
-export const FarmFigure: React.FC<FarmFigureProps> = ({ fall = 0, fallDir, shadow = true, ink: inkIn, ...p }) => {
+export const FarmFigure: React.FC<FarmFigureProps> = (props) => <FarmFigureCore {...props} />;
+const FarmFigureCore: React.FC<FarmFigureProps & TurnSafeOpts> = ({ fall = 0, fallDir, shadow = true, ink: inkIn, ...p }) => {
   const ink = inkIn ?? (p.kind === "farmer" ? ORANGE : CREAM);
   const sp = specOf(p.kind, p.woman, p.child);
   if (fall <= 0)
@@ -1130,6 +1157,8 @@ export const FarmFigure: React.FC<FarmFigureProps> = ({ fall = 0, fallDir, shado
   const holdFar = p.holdFar ?? "none";
   const released = fall >= RELEASE;
   const dropArm = (far: boolean): ArmSide => {
+    const fixed = p.turnSafe ? (far ? (p.holdFarSide ?? (p.holdSide ? (p.holdSide === "L" ? "R" : "L") : undefined)) : p.holdSide) : undefined;
+    if (fixed) return fixed;
     const n = nearOf(fallPose(p.pose, RELEASE, fallDir));
     return far ? (n === "L" ? "R" : "L") : n;
   };
@@ -2139,4 +2168,343 @@ export const FarmersProbe: React.FC<{ which: "fall" | "walk" | "germs" | "wide" 
       </Page>
     </AbsoluteFill>
   );
+};
+
+// ---------------------------------------------------------------------------
+// TURNS (addition, brief T, 2026-10-20; logged in SHARED_CHANGES.md; API in
+// animation_source/notes/TURN_READY.md). Every export above draws exactly as
+// before; these are new names.
+//
+// Why the legacy cast pops when it turns: texcocoFigures' Figure, and this
+// file's FarmBody, decide the far arm's layer with a threshold on the body's
+// yaw (|sin yaw| > 0.5: far arm BEHIND the body, else every arm in FRONT of it,
+// sorted). Crossing it (yaw ~0.52 rad, ~30 deg off frontal) the far arm jumps
+// from behind the torso to on top of it in one frame. The forager's back hair
+// switches layer the same way on the head's yaw, and the rig's near ear appears
+// at once at |sin headYaw| = 0.2. Cuts also turned the head and body with one
+// linear lerp, in 2D, so the hands slid on straight lines.
+//
+// The turn-safe cast fixes the layers: the far arm stays behind the body for any
+// turned yaw (its order can change only at yaw 0, where both arms hang beside
+// the torso), an arm listed in frontArms keeps its forearm in front of the body
+// (a cut along the elbow that moves with the arm), the back hair cross-fades
+// between its two layers over a band of head yaw, and the near ear fades in
+// before the rig's own ear takes over at exactly the same place. turnPose()
+// turns a pose in the body's own 3D frame: one eased yaw drives everything, the
+// hands and feet travel round the body axis, the head leads by a few frames,
+// the knees give a little and the cloth lags.
+// ---------------------------------------------------------------------------
+export type TurnSafeOpts = {
+  /** the turn-safe layering (the Turn* components set it) */
+  turnSafe?: boolean;
+  /** arms held IN FRONT of the body (a spear before him, a sickle at the chest): when such an arm is the far one, its
+   *  forearm and tool are drawn over the body (rig names: armL = screen left when he faces us; facing right it is the near arm) */
+  frontArms?: ("L" | "R")[];
+  /** the rig arm that holds `hold` whatever the yaw (default: the near arm, which changes hands at yaw 0: a full turn
+   *  through the front then swaps the tool to the other fist). Set it for any turn that passes through the front. */
+  holdSide?: "L" | "R";
+  /** the rig arm that holds `holdFar` (default: the other one) */
+  holdFarSide?: "L" | "R";
+};
+/** aimTool for a fixed rig arm (L / R), so a tool keeps its angle in the same fist through a full turn */
+export const aimToolSide = (q: FigPose, deg: number, side: "L" | "R", kind: FarmKind = "farmer", woman = false, child = false): FigPose => {
+  const near = Math.sin(q.yaw) >= 0 ? "L" : "R";
+  return aimTool(q, deg, side === near ? "near" : "far", kind, woman, child);
+};
+/** aimToolSide in WORLD degrees (0 = up, + clockwise on screen, never mirrored): through a full turn, interpolate the
+ *  world angle (e.g. -2 facing left -> +84 facing right) and the tool never flips at yaw 0 */
+export const aimToolWorld = (q: FigPose, worldDeg: number, side: "L" | "R", kind: FarmKind = "farmer", woman = false, child = false): FigPose =>
+  aimToolSide(q, worldDeg * (Math.sin(q.yaw) >= 0 ? 1 : -1), side, kind, woman, child);
+type RigArm = ReturnType<typeof figureRig>["armL"];
+/** world-px half-plane beyond (a little before) the elbow, along the forearm: the part of a far arm drawn in front */
+const forearmClip = (ar: RigArm, at: P2, scale: number) => {
+  const u = norm(sub(ar.W, ar.E));
+  const n: P2 = [-u[1], u[0]];
+  const p0 = add(ar.E, mul(u, -7));
+  const pts: P2[] = [add(p0, mul(n, 700)), add(add(p0, mul(n, 700)), mul(u, 900)), add(add(p0, mul(n, -700)), mul(u, 900)), add(p0, mul(n, -700))].map((v) => add(at, mul(v, scale)));
+  return `M${pts.map(P).join("L")}Z`;
+};
+/** the rig's near ear (no ear plug) appears at once at |sin headYaw| = 0.2: this draws the same ear fading in over
+ *  0.06 - 0.2, under the head, so the rig's own takes over without a jump */
+const RigEarFade: React.FC<{ spec: Spec; pose: FigPose; at: P2; scale: number; ink: Ink; uid: string }> = ({ spec, pose, at, scale, ink, uid }) => {
+  const hy = pose.headYaw;
+  const sn = Math.sin(hy);
+  const t = Math.abs(sn);
+  if (spec.plug > 0 || t <= 0.06 || t >= 0.2) return null;
+  const r = figureRig(spec, pose);
+  const c = Math.cos(hy);
+  const sg = sn < 0 ? -1 : 1;
+  const w = mix(0.55, 1, t);
+  const e: P2 = [sg * 20.6 * c - 5 * sn, 4];
+  return (
+    <g transform={`translate(${at[0].toFixed(2)} ${at[1].toFixed(2)}) scale(${scale.toFixed(4)}) translate(${r.headC[0].toFixed(2)} ${r.headC[1].toFixed(2)}) rotate(${r.headAngle.toFixed(2)}) scale(${spec.headScale})`} opacity={sstep((t - 0.06) / 0.14)}>
+      <Cased id={`${uid}-c`} r={1.4}>
+        <ellipse cx={e[0]} cy={e[1]} rx={4.2 * w} ry={6.4} fill={ink.main} {...OUT} strokeWidth={1.9} />
+        <path d={`M${(e[0] + sg * 1.6 * w).toFixed(1)},${e[1] - 3}q${(-sg * 3.4 * w).toFixed(1)},2.6 ${(-sg * 0.6 * w).toFixed(1)},6`} {...ln(1, 0.6)} />
+      </Cased>
+    </g>
+  );
+};
+
+/** the rig's cloak knot (on the shoulder) appears at once when its surface angle clears the silhouette by 0.3 rad:
+ *  this draws the same knot fading in over the last 0.25 rad before that, so the rig's own takes over without a jump */
+const RigKnotFade: React.FC<{ spec: Spec; pose: FigPose; at: P2; scale: number; ink: Ink; uid: string }> = ({ spec, pose: q, at, scale, ink, uid }) => {
+  if (spec.spaniard) return null;
+  const A = spec.a;
+  const c = Math.cos(q.yaw);
+  const sn = Math.sin(q.yaw);
+  if (Math.abs(sn) < 1e-6) return null;
+  const term = Math.atan2(A * c, A * 0.58 * sn);
+  const r = figureRig(spec, q);
+  const knot: P2 = [-spec.hw + 9, r.shY - 6];
+  const ph = Math.asin(clamp1(knot[0] / A));
+  const margin = Math.min(term - 0.3 - ph, ph - (term - Math.PI + 0.3));
+  if (margin >= 0 || margin <= -0.25) return null;
+  const sf = surface(q.yaw, A, A * 0.58);
+  const knotAt = sf.mF(knot);
+  const kd = Math.max(0.25, Math.abs(sf.mF([knot[0] + 2, knot[1]])[0] - sf.mF([knot[0] - 2, knot[1]])[0]) / 4);
+  return (
+    <g transform={`translate(${at[0].toFixed(2)} ${at[1].toFixed(2)}) scale(${scale.toFixed(4)}) translate(${r.hip[0].toFixed(2)} ${r.hip[1].toFixed(2)}) rotate(${q.lean.toFixed(2)})`} opacity={sstep((margin + 0.25) / 0.25)}>
+      <Cased id={`${uid}-c`}>
+        <g transform={`translate(${knotAt[0].toFixed(2)} ${knotAt[1].toFixed(2)}) scale(${kd.toFixed(3)} 1)`}>
+          <path d={limbD([[[0, 0], 5.6], [[-4, 12], 5.2], [[-2.4, 23], 3.6]])} fill={ink.main} {...OUT} strokeWidth={1.9} />
+          <path d={limbD([[[0, 0], 5.6], [[6, 10], 5.2], [[10.6, 19], 3.6]])} fill={ink.main} {...OUT} strokeWidth={1.9} />
+          <path d="M0,0l-12.6,-9q-5.8,3.6 -1.6,9.8ZM0,0l12.2,-8.4q5.6,4.6 1,10Z" fill={ink.main} {...OUT} strokeWidth={1.9} />
+          <circle cx={0} cy={0} r={4.9} fill={ink.deep} {...OUT} strokeWidth={1.9} />
+        </g>
+      </Cased>
+    </g>
+  );
+};
+/** texcocoFigures' Figure drawn turn-safe: the body with no arms, the far arm behind it for any turned yaw, the near
+ *  arm over it, the head drawn again on top (as the rig does: arms under the head), the near ear faded in */
+export const TurnRigFigure: React.FC<{ spec: Spec; pose: FigPose; at: P2; scale: number; uid: string; ink?: Ink; tone?: number; frontArms?: ("L" | "R")[] }> = ({ spec, pose: q, at, scale, uid, ink = CREAM, tone = 1, frontArms }) => {
+  const r = figureRig(spec, q);
+  const farBack = Math.abs(r.s) > 1e-3;
+  const far: ArmSide = r.s >= 0 ? "R" : "L";
+  const near: ArmSide = far === "L" ? "R" : "L";
+  const arm = (w: ArmSide, id: string) => <Figure spec={spec} pose={q} at={at} scale={scale} uid={`${uid}-${id}${w}`} body={false} arms={w} ink={ink} />;
+  const tf = `translate(${at[0].toFixed(2)} ${at[1].toFixed(2)}) scale(${scale.toFixed(4)})`;
+  const torsoTf = `translate(${r.hip[0].toFixed(2)} ${r.hip[1].toFixed(2)}) rotate(${q.lean.toFixed(2)})`;
+  const headTf = `translate(${r.headC[0].toFixed(2)} ${r.headC[1].toFixed(2)}) rotate(${r.headAngle.toFixed(2)}) scale(${spec.headScale})`;
+  const nod = Math.max(0, r.nodF);
+  const faceClip = smoothClosed(blendYaw(FACE_F, FACE_P, q.headYaw).map((p): P2 => [p[0] * 1.08, p[1] * 1.07 + 5 * nod]));
+  const headSpec: Spec = { ...spec, hw: 900, a: 900, hem: 0, cloak: "fret" };
+  // figure-local: a hand above the shoulder, or an elbow up at it
+  const raised = [r.armL, r.armR].some((ar) => ar.W[1] < ar.S[1] + 10 || ar.E[1] < ar.S[1] - 4);
+  return (
+    <g opacity={tone}>
+      {farBack ? arm(far, "b") : null}
+      <RigEarFade spec={spec} pose={q} at={at} scale={scale} ink={ink} uid={`${uid}-ef`} />
+      <Figure spec={spec} pose={q} at={at} scale={scale} uid={uid} arms="none" ink={ink} />
+      <RigKnotFade spec={spec} pose={q} at={at} scale={scale} ink={ink} uid={`${uid}-kf`} />
+      {farBack
+        ? arm(near, "n")
+        : [r.armL, r.armR]
+            .sort((p1, p2) => p1.z - p2.z)
+            .map((ar) => <React.Fragment key={ar.sgn}>{arm(ar.sgn < 0 ? "L" : "R", "s")}</React.Fragment>)}
+      {farBack && frontArms?.includes(far) ? (
+        <>
+          <clipPath id={`${uid}-fa`}>
+            <path d={forearmClip(far === "L" ? r.armL : r.armR, at, scale)} />
+          </clipPath>
+          <g clipPath={`url(#${uid}-fa)`}>{arm(far, "f")}</g>
+        </>
+      ) : null}
+      {raised ? (
+        // an arm raised to the head: the head goes back on top, as in the rig
+        <>
+          <clipPath id={`${uid}-hc`}>
+            <rect transform={`${tf} ${torsoTf}`} x={-70} y={r.shY - 130} width={140} height={100} />
+            <path transform={`${tf} ${headTf}`} d={faceClip} />
+          </clipPath>
+          <g clipPath={`url(#${uid}-hc)`}>
+            <Figure spec={headSpec} pose={q} at={at} scale={scale} uid={`${uid}-hd`} arms="none" ink={ink} />
+          </g>
+        </>
+      ) : null}
+    </g>
+  );
+};
+
+type TurnCastProps = Omit<FarmFigureProps, "kind" | "uid"> & { uid?: string; frontArms?: ("L" | "R")[]; holdSide?: "L" | "R"; holdFarSide?: "L" | "R" };
+/** the Farmer, turn-safe (same props as Farmer, plus frontArms) */
+export const TurnFarmer: React.FC<TurnCastProps> = ({ uid = "tfrm", ...p }) => <FarmFigureCore kind="farmer" uid={uid} turnSafe {...p} />;
+/** the Forager, turn-safe (same props as Forager, plus frontArms) */
+export const TurnForager: React.FC<TurnCastProps> = ({ uid = "tfrg", ...p }) => <FarmFigureCore kind="forager" uid={uid} turnSafe {...p} />;
+/** the TilmaCommoner, turn-safe (same props, plus frontArms) */
+export const TurnTilmaCommoner: React.FC<{ pose: FigPose; at: P2; scale: number; uid?: string; ink?: Ink; tone?: number; fall?: number; fallDir?: 1 | -1; shadow?: boolean; frontArms?: ("L" | "R")[] }> = ({ pose, at, scale, uid = "ttcom", ink = CREAM, tone = 1, fall = 0, fallDir, shadow = true, frontArms }) => (
+  <g opacity={tone}>
+    <Sickening spec={TILMA_COMMONER_SPEC} pose={pose} p={fall} at={at} scale={scale} ink={ink} dir={fallDir} shadow={shadow}>
+      {(q, inkNow) => <TurnRigFigure spec={TILMA_COMMONER_SPEC} pose={q} at={at} scale={scale} uid={uid} ink={inkNow} frontArms={frontArms} />}
+    </Sickening>
+  </g>
+);
+/** the Spaniard, turn-safe (same props, plus frontArms; variant 0 keeps his hand on the hilt: pass frontArms for it) */
+export const TurnSpaniard: React.FC<{ variant?: 0 | 1; pose?: FigPose; at: P2; scale: number; uid?: string; ink?: Ink; tone?: number; fall?: number; fallDir?: 1 | -1; shadow?: boolean; frontArms?: ("L" | "R")[] }> = ({ variant = 0, pose, at, scale, uid = "tspa", ink = ORANGE, tone = 1, fall = 0, fallDir, shadow = true, frontArms }) => (
+  <g opacity={tone}>
+    <Sickening spec={SPANIARDS[variant]} pose={pose ?? SPANIARD_STAND[variant]} p={fall} at={at} scale={scale} ink={ink} dir={fallDir} shadow={shadow}>
+      {(q, inkNow) => <TurnRigFigure spec={SPANIARDS[variant]} pose={q} at={at} scale={scale} uid={uid} ink={inkNow} frontArms={frontArms} />}
+    </Sickening>
+  </g>
+);
+
+// ---- the pose in the body's own frame ------------------------------------------------
+/** an arm in the body's frame: w = the wrist [lat, y, fwd] (lat + = the body's screen-right side when he faces us,
+ *  y = figure-local up (- y), fwd + = where he faces); elbow = the elbow's hint direction, the same axes */
+export type Arm3 = { w: [number, number, number]; elbow: [number, number, number]; fist: number; hand: number };
+/** a FigPose held in the body's frame: one yaw drives it; head = the head's yaw relative to the body (rad);
+ *  feet = [lat, y, fwd] offsets from the rig's own leg roots */
+export type Pose3 = Omit<FigPose, "yaw" | "headYaw" | "armL" | "armR" | "footL" | "footR"> & { yaw: number; head: number; armL: Arm3; armR: Arm3; footL: [number, number, number]; footR: [number, number, number] };
+/** a screen x seen at yaw back into the body's frame [lat, fwd]: frontal views keep it lateral, profiles forward,
+ *  blended by sin^2 (exact: projecting it again gives x back) */
+const unproject = (x: number, c: number, s: number, lat0: number): [number, number] => {
+  const w = s * s;
+  const lat = Math.abs(c) > 1e-3 ? (1 - w) * (x / c) + w * lat0 : lat0;
+  const fwd = Math.abs(s) > 1e-3 ? (x - lat * c) / s : 0;
+  return [lat, fwd];
+};
+const proj = (lat: number, fwd: number, c: number, s: number) => lat * c + fwd * s;
+/** read a 2D pose into the body's frame at its own yaw (hands assumed near the shoulders' width; exact when projected back) */
+export const lift3 = (q: FigPose): Pose3 => {
+  const c = Math.cos(q.yaw);
+  const s = Math.sin(q.yaw);
+  const arm = (a: ArmPose, sgn: number): Arm3 => {
+    const [lat, fwd] = unproject(a.w[0], c, s, sgn * 38);
+    const [el, ef] = unproject(a.elbow[0], c, s, sgn * 0.4);
+    return { w: [lat, a.w[1], fwd], elbow: [el, a.elbow[1], ef], fist: a.fist, hand: a.hand };
+  };
+  const foot = (o: P2): [number, number, number] => {
+    const [lat, fwd] = unproject(o[0], c, s, 0);
+    return [lat, o[1], fwd];
+  };
+  return { ...q, yaw: q.yaw, head: q.headYaw - q.yaw, armL: arm(q.armL, -1), armR: arm(q.armR, 1), footL: foot(q.footL), footR: foot(q.footR) };
+};
+/** the 2D pose of a Pose3 seen at `yaw` (default its own), the head at `headYaw` (default yaw + head) */
+export const flat3 = (p: Pose3, yaw = p.yaw, headYaw = yaw + p.head): FigPose => {
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  const arm = (a: Arm3): ArmPose => ({ w: [proj(a.w[0], a.w[2], c, s), a.w[1]], elbow: [proj(a.elbow[0], a.elbow[2], c, s), a.elbow[1]], fist: a.fist, hand: a.hand });
+  const { head: _h, armL, armR, footL, footR, ...rest } = p;
+  return { ...rest, yaw, headYaw, armL: arm(armL), armR: arm(armR), footL: [proj(footL[0], footL[2], c, s), footL[1]], footR: [proj(footR[0], footR[2], c, s), footR[1]] };
+};
+const mixA3 = (a: Arm3, b: Arm3, t: number): Arm3 => ({
+  w: [mix(a.w[0], b.w[0], t), mix(a.w[1], b.w[1], t), mix(a.w[2], b.w[2], t)],
+  elbow: [mix(a.elbow[0], b.elbow[0], t), mix(a.elbow[1], b.elbow[1], t), mix(a.elbow[2], b.elbow[2], t)],
+  fist: mix(a.fist, b.fist, t),
+  hand: mix(a.hand, b.hand, t),
+});
+const mixV3 = (a: [number, number, number], b: [number, number, number], t: number): [number, number, number] => [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
+/** two body-frame poses blended (every channel linear) */
+export const mix3 = (a: Pose3, b: Pose3, t: number): Pose3 => ({
+  yaw: mix(a.yaw, b.yaw, t),
+  head: mix(a.head, b.head, t),
+  roll: mix(a.roll, b.roll, t),
+  pitch: mix(a.pitch, b.pitch, t),
+  lean: mix(a.lean, b.lean, t),
+  crouch: mix(a.crouch, b.crouch, t),
+  armL: mixA3(a.armL, b.armL, t),
+  armR: mixA3(a.armR, b.armR, t),
+  footL: mixV3(a.footL, b.footL, t),
+  footR: mixV3(a.footR, b.footR, t),
+  liftL: mix(a.liftL, b.liftL, t),
+  liftR: mix(a.liftR, b.liftR, t),
+  brow: mix(a.brow, b.brow, t),
+  lids: mix(a.lids, b.lids, t),
+  mouth: mix(a.mouth, b.mouth, t),
+  hem: mix(a.hem, b.hem, t),
+});
+const smoother = (v: number) => {
+  const x = c01(v);
+  return x * x * x * (x * (x * 6 - 15) + 10);
+};
+export type TurnOpts = {
+  /** frames the head leads the body (default 5) */
+  headLead?: number;
+  /** units the knees give at mid-turn (default 6) */
+  dip?: number;
+  /** units the stepping foot lifts (default 9; 0 = no step) */
+  step?: number;
+  /** units the hem lags the turn (default 5) */
+  sway?: number;
+};
+/** a person turning from `from` to `to` (any two FigPoses, any yaws) over frames f0..f1: the pose at frame f.
+ *  One eased yaw (smootherstep) drives the body; hands, elbows and feet move in the body's frame and are projected
+ *  at that yaw (so they travel round the body axis, no straight 2D slides); the head leads by headLead frames; the
+ *  knees give a little mid-turn, the hem lags, and the foot that ends up behind lifts once and replants. Before f0
+ *  and after f1 it returns from / to exactly. Re-aim a held tool after it (aimTool) as before. */
+export const turnPose = (from: FigPose, to: FigPose, f: number, f0: number, f1: number, o: TurnOpts = {}): FigPose => {
+  const { headLead = 5, dip = 6, step = 9, sway = 5 } = o;
+  if (f <= f0 - headLead) return from;
+  if (f >= f1) return to;
+  const span = Math.max(1, f1 - f0);
+  const e = smoother((f - f0) / span);
+  const eh = smoother((f - f0 + headLead) / span);
+  const m = mix3(lift3(from), lift3(to), e);
+  const yaw = mix(from.yaw, to.yaw, e);
+  const headYaw = mix(from.headYaw, to.headYaw, eh);
+  const q = flat3(m, yaw, headYaw);
+  const bump = Math.sin(Math.PI * e);
+  const turnDir = Math.sign(to.yaw - from.yaw) || 1;
+  // the foot on the far side at the end lifts and replants (sgn: L = -1)
+  const endFarIsR = Math.sin(to.yaw) >= 0;
+  const u = c01((e - 0.15) / 0.6);
+  const lift = step * Math.sin(Math.PI * u) ** 1.5;
+  return {
+    ...q,
+    crouch: q.crouch + dip * bump,
+    hem: q.hem - sway * turnDir * bump,
+    footL: endFarIsR ? q.footL : [q.footL[0], q.footL[1] - lift],
+    footR: endFarIsR ? [q.footR[0], q.footR[1] - lift] : q.footR,
+    liftL: endFarIsR ? q.liftL : q.liftL + Math.sign(Math.sin(yaw) || 1) * 18 * Math.sin(Math.PI * u),
+    liftR: endFarIsR ? q.liftR + Math.sign(Math.sin(yaw) || 1) * 18 * Math.sin(Math.PI * u) : q.liftR,
+  };
+};
+
+/** ADDITION (brief T): POSES.hoe jumps once per stroke (at the cycle's wrap the hands snap from the pulled-back
+ *  position to the strike, the blade 18 deg): this loop is continuous all the way round. phase 0 = the blade in the
+ *  ground; 0-0.3 pull back, 0.3-0.75 raise over the shoulder, 0.75-0.87 strike, 0.87-1 dig in (back to phase 0).
+ *  ~40 frames per stroke; hold "hoe". */
+export const hoeLoop = (dir: 1 | -1 = 1, phase = 0): FigPose => {
+  const ph = phase - Math.floor(phase);
+  const down: P2 = [96, -108];
+  const back: P2 = [64, -138];
+  const up: P2 = [30, -270];
+  let w: P2;
+  let ang: number;
+  let lift: number; // 0 = stooped over the blade, 1 = upright with it raised
+  if (ph < 0.3) {
+    const u = sstep(ph / 0.3);
+    w = mix2(down, back, u);
+    ang = mix(178, 160, u);
+    lift = 0.15 * u;
+  } else if (ph < 0.75) {
+    const u = sstep((ph - 0.3) / 0.45);
+    w = [mix(back[0], up[0], u), mix(back[1], up[1], u) - 30 * Math.sin(Math.PI * u)];
+    ang = mix(160, -40, u);
+    lift = mix(0.15, 1, u);
+  } else if (ph < 0.87) {
+    const u = ((ph - 0.75) / 0.12) ** 2; // the strike accelerates into the ground
+    w = mix2(up, down, u);
+    ang = mix(-40, 178, u);
+    lift = 1 - u;
+  } else {
+    const u = sstep((ph - 0.87) / 0.13);
+    w = [down[0] + 3 * Math.sin(Math.PI * u), down[1] + 4 * Math.sin(Math.PI * u)];
+    ang = 178;
+    lift = 0;
+  }
+  const base: FigPose = {
+    ...SIDE,
+    lean: 14 + 12 * (1 - lift),
+    crouch: 18 + 10 * (1 - lift),
+    pitch: 10,
+    footL: [-26, 0],
+    footR: [30, 0],
+    armL: { w, elbow: [-0.6, 0.8], fist: 1, hand: 0 },
+    armR: { w: [w[0] - 26, w[1] + 34], elbow: [-0.5, 1], fist: 1, hand: 0 },
+    brow: 0.5,
+  };
+  const q = aimTool(base, ang);
+  return dir === 1 ? q : mirrorPose(q);
 };

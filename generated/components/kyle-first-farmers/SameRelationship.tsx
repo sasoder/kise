@@ -15,7 +15,7 @@
 //
 // THE MOTION: one camera move along one ground line. Close on the Neolithic pair: the orange farmer (sickle held up at his chest,
 // sheaf, his wheat behind him) walks in from the left; the cream forager in front of his hide hut gives ground,
-// stepping back two paces (f4-f40) and turning partly away (f18-f44), so by "taking over" (f36-f46) the farmer
+// stepping back two paces (f4-f40) and turning partly away (f18-f44, farmersFigures turnPose on the turn-safe cast), so by "taking over" (f36-f46) the farmer
 // stands on the ground he gave up. On "similar" the camera glides right along the same ground (f76-f112,
 // a slight lift in the middle) to the second pair, staged the same: the orange Spaniard (morion, sword in
 // its sheath) where the farmer stands, the cream Aztec commoner (a fret-bordered tilmatli, tied hair) where the forager stands; as the camera lands
@@ -35,17 +35,15 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { FPS as CLIP_FPS, GroundLine, Page, WorldSvg, runCamera, smoothstep } from "./firstFarmersShared";
-import { Farmer, Forager, HideTent, Spaniard, TilmaCommoner, WALK_CYCLE, WheatField, idle, walkPose, type FigPose } from "./farmersFigures";
+import { Farmer, HideTent, Spaniard, TurnForager, TurnTilmaCommoner, WALK_CYCLE, WheatField, idle, walkPose, type FigPose } from "./farmersFigures";
 import {
   SR_CAM_END,
   SR_CAM_KEYS,
   SR_COMMONER,
-  SR_COMMONER_FACING,
   SR_CREEP,
   SR_END_FRAME,
   SR_FARMER,
   SR_FORAGER,
-  SR_FORAGER_FACING,
   SR_GROUND,
   SR_HUT,
   SR_IDLE_SEED,
@@ -55,7 +53,10 @@ import {
   SR_SPANIARD,
   SR_WHEAT,
   srPose,
-  srTurn,
+  SR_COMMONER_TURN,
+  SR_FORAGER_FRONT_ARMS,
+  SR_FORAGER_TURN,
+  srTurnAt,
 } from "./sameRelationshipState";
 
 export const FPS = CLIP_FPS;
@@ -93,10 +94,8 @@ const farmerWalk = makeWalk((f) => 1 - ss((f - 33) / 14), SR_FARMER.at[0], 1, FA
 /** the forager: two short paces backward, f4 - f40 */
 const BACK_STRIDE = 36;
 const foragerWalk = makeWalk((f) => ss((f - 4) / 8) * (1 - ss((f - 27) / 13)), SR_FORAGER.at[0], 1, BACK_STRIDE, -1);
-const foragerTurn = (f: number) => ss((f - 18) / 26);
 /** the commoner: half a pace back as the camera lands, f98 - f118, and the same turn f100 - f124 */
 const commonerWalk = makeWalk((f) => ss((f - 98) / 6) * (1 - ss((f - 104) / 12)), SR_COMMONER.at[0], 1, BACK_STRIDE, -1);
-const commonerTurn = (f: number) => ss((f - 100) / 24);
 
 // ---------------------------------------------------------------------------
 // THE JOIN: everything is resolved by SR_SETTLED; only idle life after it
@@ -115,8 +114,10 @@ const commonerTurn = (f: number) => ss((f - 100) / 24);
     near(w.x[SR_SETTLED], at, 0.05, `${n} x at f${SR_SETTLED}`);
     near(w.amt[SR_SETTLED], 0, 1e-6, `${n} walk at f${SR_SETTLED}`);
   }
-  near(foragerTurn(SR_SETTLED), 1, 1e-9, "forager turn");
-  near(commonerTurn(SR_SETTLED), 1, 1e-9, "commoner turn");
+  // the turns are over before the settle: srTurnAt returns the resolved pose itself
+  if (SR_FORAGER_TURN[1] > SR_SETTLED || SR_COMMONER_TURN[1] > SR_SETTLED) throw new Error("SameRelationship: a turn runs past the settle");
+  if (JSON.stringify(srTurnAt("forager", SR_SETTLED)) !== JSON.stringify(SR_POSE.forager)) throw new Error("SameRelationship: forager turn not resolved");
+  if (JSON.stringify(srTurnAt("commoner", SR_SETTLED)) !== JSON.stringify(SR_POSE.commoner)) throw new Error("SameRelationship: commoner turn not resolved");
   // the camera does not stop: the zoom turns from the pull-back at ~f158 and pushes in from f162 at 0.4 - 1.6x the
   // creep rate (the pchip eases it in, the damper settles it onto SR_CREEP by ~f190); C continues it from SR_CAM_END
   const c1 = runCamera(SR_CAM_KEYS, SR_END_FRAME);
@@ -134,11 +135,9 @@ const SameRelationship: React.FC<z.infer<typeof schema>> = () => {
   const g = f;
   // the farmer: the walk's legs under the carry pose, idle on top
   const farmerPose = idle(farmerWalk.amt[f] > 0 ? legsOver(SR_POSE.farmer, farmerWalk, f, FARMER_STRIDE) : SR_POSE.farmer, g, SR_IDLE_SEED.farmer);
-  const fTurn = foragerTurn(f);
-  const foragerBase = fTurn >= 1 ? SR_POSE.forager : fTurn <= 0 ? SR_FORAGER_FACING : srTurn("forager", fTurn);
+  const foragerBase = srTurnAt("forager", f);
   const foragerPose = idle(foragerWalk.amt[f] > 0 ? legsOver(foragerBase, foragerWalk, f, BACK_STRIDE) : foragerBase, g, SR_IDLE_SEED.forager);
-  const cTurn = commonerTurn(f);
-  const commonerBase = cTurn >= 1 ? SR_POSE.commoner : cTurn <= 0 ? SR_COMMONER_FACING : srTurn("commoner", cTurn);
+  const commonerBase = srTurnAt("commoner", f);
   const commonerPose = idle(commonerWalk.amt[f] > 0 ? legsOver(commonerBase, commonerWalk, f, BACK_STRIDE) : commonerBase, g, SR_IDLE_SEED.commoner);
   return (
     <AbsoluteFill>
@@ -148,9 +147,9 @@ const SameRelationship: React.FC<z.infer<typeof schema>> = () => {
           <HideTent {...SR_HUT} />
           <GroundLine {...SR_GROUND} />
           <Farmer {...SR_FARMER} at={[farmerWalk.x[f], SR_FARMER.at[1]]} pose={farmerPose} />
-          <Forager {...SR_FORAGER} at={[foragerWalk.x[f], SR_FORAGER.at[1]]} pose={foragerPose} />
+          <TurnForager {...SR_FORAGER} frontArms={SR_FORAGER_FRONT_ARMS} at={[foragerWalk.x[f], SR_FORAGER.at[1]]} pose={foragerPose} />
           <Spaniard {...SR_SPANIARD} pose={srPose("spaniard", g)} />
-          <TilmaCommoner {...SR_COMMONER} at={[commonerWalk.x[f], SR_COMMONER.at[1]]} pose={commonerPose} />
+          <TurnTilmaCommoner {...SR_COMMONER} at={[commonerWalk.x[f], SR_COMMONER.at[1]]} pose={commonerPose} />
         </WorldSvg>
       </Page>
     </AbsoluteFill>

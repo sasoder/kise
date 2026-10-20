@@ -14,10 +14,12 @@
 // HOW C CONTINUES IT: draw the same things in the same order (SR_SCENE_ORDER) with the same props, and run the
 // idle life on g = SR_END_FRAME + (C's frame) so C f0 = B f180 pixel for pixel:
 //   const g = SR_END_FRAME + frame;  <Farmer {...SR_FARMER} pose={srPose("farmer", g)} />  etc.; the commoner is
-//   <TilmaCommoner {...SR_COMMONER} pose={srPose("commoner", g)} /> (NOT captureFigures' Commoner).
+//   <TurnTilmaCommoner {...SR_COMMONER} pose={srPose("commoner", g)} /> (NOT captureFigures' Commoner), and the
+//   forager <TurnForager {...SR_FORAGER} frontArms={SR_FORAGER_FRONT_ARMS} pose={srPose("forager", g)} />: B draws
+//   both with the turn-safe cast (TURN_READY.md), so C must too for the pixel join.
 //   WheatField g = g as well; the camera is srCam(SR_END_FRAME + frame) (C f0 = SR_CAM_END, moving at
 //   SR_CAM_END_RATE), so the push-in carries on with no stop; C's own push-in can grow out of that rate.
-// The figures' fall: Forager / TilmaCommoner take fall={p} on SR_POSE.forager / .commoner (+ idle). Their bodies face
+// The figures' fall: TurnForager / TurnTilmaCommoner take fall={p} on SR_POSE.forager / .commoner (+ idle). Their bodies face
 // nearly front (yaw -0.32), so by default they fall to the LEFT, toward the orange figure. A lying man covers
 // ~310 units = 620 world px (~385 screen px in the wide) from his feet: falling left, the forager's head lies
 // ~240 px past the farmer's feet (he falls at the farmer's feet); falling right (fallDir 1) he would reach
@@ -25,7 +27,7 @@
 // The forager's spear is ~430 units (860 world px) upright; it is let go at p 0.42 and falls on its own.
 // ---------------------------------------------------------------------------
 import { runCamera, type Cam, type CamKey, type P2 } from "./firstFarmersShared";
-import { COMMONER_POSES, POSES, aimTool, idle, lerpFig, mirrorPose, type FigPose } from "./farmersFigures";
+import { COMMONER_POSES, POSES, aimTool, idle, lerpFig, mirrorPose, turnPose, type FigPose } from "./farmersFigures";
 import { SPANIARD_STAND } from "../kits/maps/texcocoFigures";
 
 /** B's last frame (B runs f0..f180); C's frame f is B's g = SR_END_FRAME + f */
@@ -88,8 +90,21 @@ export const SR_POSE: Record<"farmer" | "forager" | "spaniard" | "commoner", Fig
   commoner: turnAway(COMMONER_POSES.stand(1), { w: [-38, -136], elbow: [-0.25, 1], fist: 0.25, hand: 0 }, { w: [40, -136], elbow: [0.25, 1], fist: 0.25, hand: 0 }),
 };
 /** the turn from facing to turned-away, t 0..1 (B's turn track; the forager's spear re-aimed every frame) */
+/** LEGACY (B V1-V3, a 2D lerp; kept so nothing importing it breaks): use srTurnAt */
 export const srTurn = (who: "forager" | "commoner", t: number): FigPose =>
   who === "forager" ? aimTool(lerpFig(SR_FORAGER_FACING, SR_POSE.forager, t), SR_SPEAR_DEG, "near", "forager") : lerpFig(SR_COMMONER_FACING, SR_POSE.commoner, t);
+/** B's turn-aways (frames of B): the forager's on "foragers ... taking over", the commoner's as the camera lands */
+export const SR_FORAGER_TURN: [number, number] = [18, 44];
+export const SR_COMMONER_TURN: [number, number] = [100, 124];
+/** the turn at B frame f (farmersFigures turnPose: the body turns round its own axis, the head leads; the forager's
+ *  spear re-aimed upright every frame). It returns the facing pose before the turn and SR_POSE exactly after it.
+ *  Draw these two with the turn-safe cast: <TurnForager frontArms={SR_FORAGER_FRONT_ARMS}> (the spear is held before
+ *  him) and <TurnTilmaCommoner>; C draws them the same way (TurnForager / TurnTilmaCommoner, with its fall). */
+export const srTurnAt = (who: "forager" | "commoner", f: number): FigPose =>
+  who === "forager"
+    ? aimTool(turnPose(SR_FORAGER_FACING, SR_POSE.forager, f, SR_FORAGER_TURN[0], SR_FORAGER_TURN[1]), SR_SPEAR_DEG, "near", "forager")
+    : turnPose(SR_COMMONER_FACING, SR_POSE.commoner, f, SR_COMMONER_TURN[0], SR_COMMONER_TURN[1]);
+export const SR_FORAGER_FRONT_ARMS: ("L" | "R")[] = ["L", "R"];
 /** idle seeds (texcocoShared idle: hem, roll, lean on slow sines of g) */
 export const SR_IDLE_SEED = { farmer: 1, forager: 2, spaniard: 3, commoner: 4 };
 /** a figure's resolved pose with its idle life at global frame g (B: g = frame; C: g = SR_END_FRAME + frame) */
