@@ -47,7 +47,7 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { ContactShadow, DARK, INK, LAND, LAND_RIM, Page, WorldSvg, inkPath, mixColor, type Cam, type P2 } from "./firstFarmersShared";
-import { CREAM, Deer, Farmer, Forager, GrainHeapFed, HideTent, POSES, farmAnchors, idle, lerpFig, mirrorPose, walkPose, type FigPose, type Ink } from "./farmersFigures";
+import { CREAM, Deer, Farmer, Forager, GrainHeapFed, HideTent, POSES, TurnForager, aimToolWorld, farmAnchors, idle, lerpFig, mirrorPose, turnPose, walkPose, type FigPose, type Ink } from "./farmersFigures";
 import { EnergyWorld } from "./AllAboutEnergy";
 import { DURATION as D_DURATION, END_FRAME, FPS as D_FPS, HEAP, PEOPLE, clearingOutline, heapAmount, heapH, heapHalfW, scrubIn, treesIn, type Tree } from "./allAboutEnergyState";
 import { Basket, River, TreeArt } from "./hugeLandscapesArt";
@@ -159,6 +159,8 @@ const WildLayer: React.FC<{ f: number; cam: Cam }> = ({ f, cam }) => {
 const SPEAR_WALK_L = POSES.spearTrail(-1);
 const SPEAR_L = POSES.spear(-1);
 const SPEAR_WALK_R = POSES.spearTrail(1);
+/** the walk-on pose: the spear level in the R fist (the far one now he faces right), as at the end of the turn */
+const SPEAR_END_R = aimToolWorld(SPEAR_WALK_R, 84, "R", "forager");
 /** W: the basket on the near hip (facing right before the mirror: L = the near arm); pouring: leaning in, both hands forward */
 const BASKET_R: FigPose = { ...POSES.stand(1), armL: { w: [42, -152], elbow: [-0.4, 1], fist: 0.9, hand: 0 }, armR: { w: [14, -150], elbow: [-0.5, 1], fist: 0.3, hand: 0 } };
 const POUR_R: FigPose = { ...POSES.stand(1), lean: 30, crouch: 30, pitch: 18, armL: { w: [104, -150], elbow: [-0.3, 1], fist: 0.9, hand: 0 }, armR: { w: [92, -164], elbow: [-0.3, 1], fist: 0.9, hand: 0 } };
@@ -182,15 +184,21 @@ const memberPose = (m: Member, f: number): { pose: FigPose; at: P2 } => {
   if (m.id === "A" || m.id === "B") {
     if (amt > 0) return { pose: walkOn(SPEAR_WALK_L, true), at };
     const f1 = WALKON[m.id];
-    if (f < f1) {
+    if (f <= f1 - 5) {
       const r = sstep((f - STOP_F) / 14);
       return { pose: idle(lerpFig(SPEAR_WALK_L, SPEAR_L, r), g, m.seed), at };
     }
-    // they turn round and walk on, back out into the range
-    if (f < f1 + WALKON.turn) return { pose: lerpFig(SPEAR_L, SPEAR_WALK_R, sstep((f - f1) / WALKON.turn)), at };
+    // they turn round through the front and walk on, back out into the range (TURN_READY: turnPose, the spear kept
+    // in the R fist, aimed in screen degrees from upright to level so it never flips at yaw 0)
+    const idleEnd = idle(SPEAR_L, END_FRAME + f1 - 5 + m.seed * 29, m.seed);
+    if (f < f1 + WALKON.turn) {
+      const u = (f - f1) / WALKON.turn;
+      const sm = u <= 0 ? 0 : u >= 1 ? 1 : u * u * u * (u * (u * 6 - 15) + 10);
+      return { pose: aimToolWorld(turnPose(idleEnd, SPEAR_WALK_R, f, f1, f1 + WALKON.turn), mix(-2, 84, sm), "R", "forager"), at };
+    }
     const d = walkOnDist(m, f);
-    const w = walkPose(SPEAR_WALK_R, d / (2 * BAND_STRIDE * PEOPLE) + PHASE0[m.id], Math.min(1, d / 20), BAND_STRIDE);
-    return { pose: { ...w, armL: SPEAR_WALK_R.armL, armR: SPEAR_WALK_R.armR }, at };
+    const w = walkPose(SPEAR_END_R, d / (2 * BAND_STRIDE * PEOPLE) + PHASE0[m.id], Math.min(1, d / 20), BAND_STRIDE);
+    return { pose: { ...w, armL: SPEAR_END_R.armL, armR: SPEAR_END_R.armR }, at };
   }
   if (m.id === "W") {
     if (f < POUR_F0 - 6) return { pose: amt > 0 ? walkOn(BASKET_L, true) : idle(BASKET_L, g, m.seed), at };
@@ -263,8 +271,8 @@ const Band: React.FC<{ f: number }> = ({ f }) => {
         </g>
       ),
     });
-  items.push({ y: B.at[1], el: <Forager key="B" pose={B.pose} at={B.at} scale={PEOPLE} uid="eB" hold="spear" seed={2} /> });
-  items.push({ y: A.at[1], el: <Forager key="A" pose={A.pose} at={A.at} scale={PEOPLE} uid="eA" hold="spear" seed={1} /> });
+  items.push({ y: B.at[1], el: <TurnForager key="B" pose={B.pose} at={B.at} scale={PEOPLE} uid="eB" hold="spear" holdSide="R" frontArms={["R"]} seed={2} /> });
+  items.push({ y: A.at[1], el: <TurnForager key="A" pose={A.pose} at={A.at} scale={PEOPLE} uid="eA" hold="spear" holdSide="R" frontArms={["R"]} seed={1} /> });
   items.push({
     y: W.at[1],
     el: (
