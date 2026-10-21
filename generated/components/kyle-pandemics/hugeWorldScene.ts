@@ -20,7 +20,8 @@ export type P3 = [number, number, number]; // X, Y (height), Z
 // ---------------------------------------------------------------------------
 // THE TB ROD (the subject): slender, slightly curved, lying on the ground at the origin
 // ---------------------------------------------------------------------------
-export const ROD = { L: 3.2, R: 0.21, ang: (17 * Math.PI) / 180, bow: 0.13 };
+// M. tuberculosis (the clip's SEM, 23.8_..SEM.jpg: ~2-3 um x ~0.4 um): slender, slimmer than the plump cream rods
+export const ROD = { L: 2.8, R: 0.18, ang: (17 * Math.PI) / 180, bow: 0.1 };
 const rodDir: [number, number] = [Math.cos(ROD.ang), Math.sin(ROD.ang)];
 const rodNrm: [number, number] = [-rodDir[1], rodDir[0]];
 /** the rod's axis as ground points (u from -L/2 to L/2), resting on the ground (Y = R) */
@@ -43,38 +44,47 @@ export const fromRodFrame = (u: number, v: number): [number, number] => [rodDir[
 // PATHOGEN"; f85-205 a crane up and back (h 1 -> 11, back 21 units) so the field runs to the horizon; then a creep.
 // The horizon (lens shift) is derived so the rod's screen y follows yRod (CRAFT: framing from the zoom).
 // ---------------------------------------------------------------------------
+// V2: the reveal on "in the HUGE WORLD of BACTERIA" is one measured crane up and back (f146-192, eye 8.5 -> 29,
+// back to 58 units from the rod: the rod shrinks to a small orange mark, the field runs to the horizon all round),
+// a clean settle (f192-199), then the ease back in onto the macrophage (f199-226) and a creep
 const CX = pchip([
   [0, -3.6],
   [84, 0],
-  [150, 0.7],
-  [212, 3.75],
+  [150, 0.8],
+  [195, 2.6],
+  [226, 3.85],
   [235, 3.95],
 ]);
 const CZ = pchip([
   [0, -17.5],
   [84, -9],
-  [163, -33],
-  [212, -31.8],
+  [146, -17],
+  [192, -58],
+  [199, -57.6],
+  [226, -31.8],
   [235, -31.4],
 ]);
 const CH = pchip([
   [0, 3.0],
   [78, 3.0],
-  [160, 16.4],
-  [212, 13.0],
+  [146, 8.5],
+  [192, 29],
+  [199, 28.7],
+  [226, 13.0],
   [235, 12.8],
 ]);
 // the point the framing follows: the rod, then (as the camera eases back in) the macrophage's resting place
 const FOCUS_END: [number, number] = [4.0, 0.3];
 const focusAt = (f: number): [number, number] => {
-  const w = sstep0((f - 150) / 62);
+  const w = sstep0((f - 160) / 64);
   return [FOCUS_END[0] * w, FOCUS_END[1] * w];
 };
 const YFOC = pchip([
   [0, 800],
   [84, 880],
-  [165, 850],
-  [212, 870],
+  [146, 860],
+  [192, 850],
+  [226, 870],
   [235, 868],
 ]);
 function sstep0(v: number) {
@@ -102,8 +112,8 @@ export const project = (c: Cam3, X: number, Y: number, Z: number): [number, numb
 // ---------------------------------------------------------------------------
 const MX = pchip([
   [130, 27.5],
-  [173, 9.7],
-  [197, 9.1],
+  [173, 9.6],
+  [197, 8.9],
   [214, 4.3],
   [235, 4.0],
 ]);
@@ -112,7 +122,7 @@ const MZ = pchip([
   [212, 0.35],
   [235, 0.3],
 ]);
-export const CONTACT_F = 177; // the first frame the leading edge touches the rod (field >= skirt iso on the rod's axis)
+export const CONTACT_F = 178; // the first frame the leading edge touches the rod (field >= skirt iso on the rod's axis)
 export const cellCentre = (f: number): [number, number] => [MX(f), MZ(f)];
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const sstep = (v: number) => {
@@ -532,10 +542,10 @@ const buildPopulation = () => {
   const bugs: Bug[] = [];
   const hash = new Map<number, Bug[]>();
   let id = 0;
-  let Z = -34;
-  while (Z < 430) {
+  let Z = -50;
+  while (Z < 800) {
     const s = spacingAt(Z);
-    const half = 0.42 * (Z + 36) + 10;
+    const half = 0.42 * (Z + 52) + 10;
     const row = Math.round(Z / s);
     for (let X = -half + (row % 2) * s * 0.5; X < half; X += s) {
       const jx = (rng() - 0.5) * s * 0.8;

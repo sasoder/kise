@@ -12,34 +12,40 @@
 //   THIS 212 · ONE 219 · is 224 · (very 237, after the cut).
 // DURATION: the slot 23.023 -> 30.864 s = 7.841 s x 29.97 = 235 frames (f0..f234).
 //
-// THE MOTION: one camera (hugeWorldScene.ts): f0-84 a low dolly (eye 3 units over 1-unit bacteria) forward and to
-// the right over a living surface: cream bacteria lying spread out on the moist ground with gaps (never stacked;
-// sparse and small under the lens, the crowd thickening with distance to countless at the horizon), engraved, not
-// glossy (fine outline, flat lit side, hatching across the shade side): cocci, pairs, flat grape clusters, chains,
-// rods (some bent, some dividing with a waist, some with pili), chained rods, commas, corkscrews, flagellated rods,
-// swimmers above. It brings one slender, slightly curved ORANGE rod with a waxy sheen into the centre on "BACTERIAL
-// PATHOGEN" (centred ~f78). f84-163 the camera cranes up (eye 3 -> 16.4) and back on "HUGE WORLD" so the field runs
-// to the horizon; from ~f165 it eases back IN and drifts right onto the macrophage (rod 140 px at f195), the field
-// receding a step (f110-170). The macrophage (a low soft cushion, wider than tall, lit upper left, darker at the rim
-// where the membrane curves away, a frilly lamellipodium along its leading edge, three pseudopods reaching along the
-// ground, a soft darker kidney-shaped nucleus seen through the body low and toward the back left, fine granules) crawls in off the right edge (~f150), parting the crowd like a hull; its leading edge
-// meets the rod's right end: CONTACT f177 (first reaction f177: two pseudopod arms start round the rod's near and far
-// sides, f177-199, curling in past its left end), then the membrane closes between them and the body flows over
-// (f197-211): swallowed on "THIS ONE". f212-234 the cell fills ~65 % of the frame width (y ~780-1009), its edge
-// rippling, the rod intact and orange inside a faint phagosome bubble, the field to the horizon round it.
+// THE MOTION (V2): one camera (hugeWorldScene.ts): f0-84 a low dolly (eye 3 units over 1-unit bacteria) forward
+// and to the right over a living surface: cream bacteria lying spread out on the moist ground with gaps (never
+// stacked; sparse and small under the lens, the crowd thickening with distance to countless at the horizon),
+// engraved, not glossy: cocci, pairs, flat grape clusters, chains, plump rods (some bent, some dividing, some with
+// pili), chained rods, commas, corkscrews, flagellated rods, swimmers above. It brings one ORANGE TB rod into the
+// centre on "BACTERIAL PATHOGEN" (centred ~f78): slender (2.8 x 0.36 units, aspect ~8: slimmer than the plump
+// cream rods, 2.3 x 0.9), blunt rounded ends, slightly curved, a rough wrinkled waxy surface with faint beading.
+// f84-146 a gentle rise; on "in the HUGE WORLD of BACTERIA" one measured crane up and back (f146-192: eye 8.5 -> 29,
+// 17 -> 58 units from the rod): the rod shrinks to a small orange mark (~66 px) and the field runs to the horizon in
+// every direction; a clean settle (f192-199); then the ease back in onto the macrophage (f199-226) and a creep.
+// The macrophage (a low soft cushion, wider than tall, lit upper left, darker at the rim, a frilly lamellipodium,
+// three pseudopods, a soft darker kidney-shaped nucleus seen through the body, fine granules) crawls in off the right
+// edge (~f150), parting the crowd like a hull; its leading edge meets the rod's right end: CONTACT f178 (first
+// reaction f178: two pseudopod arms start round the rod's near and far sides, f178-200, curling in past its left
+// end), then the membrane closes between them and the body flows over (f197-211): swallowed on "THIS ONE".
+// f212-234 the cell fills ~65 % of the frame width (y ~780-1009), its edge rippling, the rod intact and orange
+// inside a faint phagosome bubble, the field to the horizon round it.
 // Orange = the disease (the TB bacillus) only; every other microbe and the macrophage are cream, sunk toward the
 // page with distance (in play near, context far; the nearest, under the lens, a step quieter).
+// Continuity: fine details (hatching, sphere arcs, flagella, pili) fade in and out with screen size instead of
+// switching on at a threshold; the lamellipodium's frills fade out by a mask, not cut line ends.
 //
 // DEPTH: one pinhole camera, horizontal axis, VP on x 540 at the horizon (a lens shift derived so the focus, the rod
 // then the macrophage's resting place, rides y 800 -> 880 -> 850 -> 870); F 1400 px; a moist ground plane (tone
 // bands compressing, fibres to the VP, flecks, hazing to the page); light from the upper left on every volume,
 // contact shadows, swimmers' shadows below them, painter's order by depth, parallax from the camera's real travel.
 // The macrophage is the heightfield of a metaball field, toned by its (smoothed) slope under the light, darker at the rim.
-// Caption bands: the rod stays in y 777-939 and the macrophage above y 1010 on every frame (checked); only the
+// Caption bands: the rod stays in y 780-930 and the macrophage above y 1015 on every frame (checked); only the
 // ground and context bacteria run through the bands, sunk in the bottom shade.
 //
-// SOURCES: Mycobacterium tuberculosis: a slender, slightly curved rod, ~2-4 x 0.3 um, with a thick waxy (mycolic
-// acid) coat; engulfed by alveolar macrophages, it survives and multiplies inside them by blocking phagosome
+// SOURCES: Mycobacterium tuberculosis: a slender, slightly curved rod, ~2-4 x 0.3-0.5 um, with a thick waxy (mycolic
+// acid) coat (checked against the clip's own SEM, images/23.8_WeirdDisease_MycobacteriumTuberculosisSEM.jpg, rods
+// ~2-3 um x ~0.4 um, rough surfaces, blunt ends; and the acid-fast stain, 31.6_..ZiehlNeelsen.jpg, slender, faintly
+// beaded); E. coli-like rods ~2 x 1 um, cocci ~1 um; engulfed by alveolar macrophages, it survives and multiplies inside them by blocking phagosome
 // maturation (Pieters 2008, Cell Host & Microbe 3:399). The other forms are the textbook bacterial morphologies.
 // No figures on screen.
 // ---------------------------------------------------------------------------
@@ -120,7 +126,6 @@ for (let i = 0; i <= 100; i++) {
   });
 }
 const inkAt = (t: number) => INKS[Math.round(c01(t) * 100)];
-const ORANGE: InkSet = { out: DARK, shade: "#A5620A", deep: ACCENT_DEEP, main: ACCENT, spec: "#FFF4D6", specA: 0.85 };
 
 /** atmospheric depth: the cream level at distance D (in play near, context mid, toward the page far) */
 const toneAt = (D: number) => (0.12 + 0.72 / (1 + Math.pow(D / 55, 1.3))) * (1 - 0.3 * (1 - c01((D - 2) / 4.5)));
@@ -169,6 +174,86 @@ const waxTube = (ctx: CanvasRenderingContext2D, pts: Pt[], w: number, ink: InkSe
     const hw = Math.max(0.7, w * 0.035);
     strokePoly(ctx, pts, hw, ink.out, -LX * w * 0.28, -LY * w * 0.28, 0.5);
     strokePoly(ctx, pts, hw, ink.out, -LX * w * 0.38, -LY * w * 0.38, 0.6);
+  }
+};
+/** the TB bacillus (after the clip's SEM and acid-fast stain): a slender rod with blunt rounded ends, a fine outline,
+ *  the shade side hatched like the others, a soft waxy sheen (no hard highlight), a slightly rough, wrinkled surface
+ *  and faint beading across it */
+const tbRod = (ctx: CanvasRenderingContext2D, pts: Pt[], w: number) => {
+  if (pts.length < 2) return;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const ow = Math.max(0.8, Math.min(2.2, 0.06 * w + 0.5));
+  strokePoly(ctx, pts, w + 2 * ow, DARK);
+  strokePoly(ctx, pts, w, "#A8640B");
+  strokePoly(ctx, pts, w * 0.72, ACCENT_DEEP, LX * w * 0.13, LY * w * 0.13);
+  strokePoly(ctx, pts, w * 0.42, ACCENT, LX * w * 0.2, LY * w * 0.2);
+  if (w < 5) return;
+  // the waxy sheen: broad and soft
+  strokePoly(ctx, pts, w * 0.22, "#FFE7B0", LX * w * 0.23, LY * w * 0.23, 0.32);
+  // walk the axis: normals for the wrinkles, the beading and the hatching
+  const n = pts.length;
+  const nrm: Pt[] = pts.map((_, i) => {
+    const a = pts[Math.max(0, i - 1)];
+    const b = pts[Math.min(n - 1, i + 1)];
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    let nx = -(b[1] - a[1]) / L;
+    let ny = (b[0] - a[0]) / L;
+    if (nx * -LX + ny * -LY < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    return [nx, ny];
+  });
+  const at = (u: number): { p: Pt; nn: Pt; t: Pt } => {
+    const x = u * (n - 1);
+    const i = Math.min(n - 2, Math.floor(x));
+    const f = x - i;
+    const p: Pt = [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f];
+    const L = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) || 1;
+    return { p, nn: nrm[i], t: [(pts[i + 1][0] - pts[i][0]) / L, (pts[i + 1][1] - pts[i][1]) / L] };
+  };
+  if (w > 9) {
+    // faint beading: darker bands across the body
+    ctx.beginPath();
+    [0.2, 0.36, 0.53, 0.68, 0.83].forEach((u) => {
+      const { p, nn } = at(u);
+      ctx.moveTo(p[0] - nn[0] * w * 0.4, p[1] - nn[1] * w * 0.4);
+      ctx.lineTo(p[0] + nn[0] * w * 0.4, p[1] + nn[1] * w * 0.4);
+    });
+    ctx.lineWidth = w * 0.13;
+    ctx.strokeStyle = "#B36A0A";
+    ctx.globalAlpha = 0.18 * c01((w - 9) / 6);
+    ctx.stroke();
+    // the rough, wrinkled surface: two fine wavering lines along it
+    ctx.beginPath();
+    [-0.12, 0.16].forEach((o, j) => {
+      for (let k = 0; k <= 40; k++) {
+        const u = 0.08 + (0.84 * k) / 40;
+        const { p, nn } = at(u);
+        const off = w * (o + 0.025 * Math.sin(k * 0.55 + j * 2.3) + 0.012 * Math.sin(k * 1.3 + j));
+        if (k === 0) ctx.moveTo(p[0] + nn[0] * off, p[1] + nn[1] * off);
+        else ctx.lineTo(p[0] + nn[0] * off, p[1] + nn[1] * off);
+      }
+    });
+    ctx.lineWidth = Math.max(0.6, w * 0.025);
+    ctx.strokeStyle = "#8A4F08";
+    ctx.globalAlpha = 0.3 * c01((w - 9) / 6);
+    ctx.stroke();
+    // hatching across the shade side
+    ctx.beginPath();
+    for (let k = 0; k <= 30; k++) {
+      const u = 0.1 + (0.8 * k) / 30;
+      const { p, nn, t } = at(u);
+      const a0 = w * (k % 2 === 0 ? 0.12 : 0.24);
+      ctx.moveTo(p[0] + nn[0] * a0 - t[0] * w * 0.04, p[1] + nn[1] * a0 - t[1] * w * 0.04);
+      ctx.lineTo(p[0] + nn[0] * w * 0.46 + t[0] * w * 0.04, p[1] + nn[1] * w * 0.46 + t[1] * w * 0.04);
+    }
+    ctx.lineWidth = Math.max(0.6, w * 0.022);
+    ctx.strokeStyle = DARK;
+    ctx.globalAlpha = 0.4 * c01((w - 9) / 6);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 };
 /** an engraved body along a screen polyline, width w px: a fine outline, a flat lit side and shade side, and short
@@ -224,7 +309,7 @@ const tube = (ctx: CanvasRenderingContext2D, pts: Pt[], w: number, ink: InkSet) 
   }
   ctx.lineWidth = Math.max(0.6, Math.min(2.2, w * 0.018));
   ctx.strokeStyle = ink.out;
-  ctx.globalAlpha = 0.42;
+  ctx.globalAlpha = 0.42 * c01((w - 6) / 5); // fades in as the body grows (no pop)
   ctx.stroke();
   ctx.globalAlpha = 1;
 };
@@ -250,10 +335,12 @@ const sphere = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, 
     const a0 = Math.atan2(-LY, -LX);
     ctx.lineWidth = Math.max(0.6, r * 0.04);
     ctx.strokeStyle = ink.out;
-    const rings = r > 9 ? [0.58, 0.68, 0.78, 0.88] : [0.65, 0.85];
+    const rings = [0.58, 0.68, 0.78, 0.88];
+    const inner = c01((r - 9) / 4);
+    const outer = c01((r - 3.5) / 3);
     rings.forEach((kk, i) => {
       const span = 0.75 + 0.18 * i;
-      ctx.globalAlpha = 0.35 + 0.1 * i;
+      ctx.globalAlpha = (0.35 + 0.1 * i) * (i % 2 === 0 ? inner : outer);
       ctx.beginPath();
       ctx.arc(x, y, r * kk, a0 - span, a0 + span);
       ctx.stroke();
@@ -262,12 +349,12 @@ const sphere = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, 
   }
 };
 /** a thin flagellum along a screen polyline */
-const flag = (ctx: CanvasRenderingContext2D, pts: Pt[], w: number, ink: InkSet) => {
-  if (pts.length < 2) return;
+const flag = (ctx: CanvasRenderingContext2D, pts: Pt[], w: number, ink: InkSet, a = 1) => {
+  if (pts.length < 2 || a < 0.01) return;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  strokePoly(ctx, pts, w + 1.2, ink.out, 0, 0, 0.8);
-  strokePoly(ctx, pts, w, ink.deep);
+  strokePoly(ctx, pts, w + 1.2, ink.out, 0, 0, 0.8 * a);
+  strokePoly(ctx, pts, w, ink.deep, 0, 0, a);
 };
 
 // ---------------------------------------------------------------------------
@@ -377,6 +464,7 @@ const addBug = (b: Bug, c: Cam3, f: number, items: Item[], shadows: Sh[], tone: 
   type Body = { axis: [number, number, number][]; R: number };
   const bodies: Body[] = [];
   const flags: [number, number, number][][] = [];
+  let piliA = 0;
   if (b.kind === "bacillus") {
     if (b.divide) {
       // dividing: two daughter cells end to end, pinched at the waist
@@ -384,7 +472,9 @@ const addBug = (b: Bug, c: Cam3, f: number, items: Item[], shadows: Sh[], tone: 
       bodies.push({ axis: rod3(X - dx, Z - dz, 0.45 * S, a + b.bend * 0.3, 1.18 * S, 0.02, 4), R: 0.45 * S });
       bodies.push({ axis: rod3(X + dx, Z + dz, 0.45 * S, a - b.bend * 0.3, 1.18 * S, 0.02, 4), R: 0.45 * S });
     } else bodies.push({ axis: rod3(X, Z, 0.45 * S, a, 2.3 * S, b.bend * 0.5, 6), R: 0.45 * S });
-    if (b.pili && b.seed % 2 < 1 && s > 22 && D > 2) {
+    if (b.pili && b.seed % 2 < 1 && s > 22 && s < 170) {
+      // (a fine fringe at mid scale; under the lens the hairs would read as legs, so they fade out there)
+      piliA = c01((s - 22) / 10) * c01((170 - s) / 50);
       // pili: a fringe of fine short hairs round the body
       for (let k = 0; k < 22; k++) {
         const u = (-1 + (2 * (k >> 1)) / 10) * 1.05 * S;
@@ -408,7 +498,7 @@ const addBug = (b: Bug, c: Cam3, f: number, items: Item[], shadows: Sh[], tone: 
     }
   } else if (b.kind === "flagrod") {
     bodies.push({ axis: rod3(X, Z, 0.4 * S, a, 2.0 * S, 0.0, 5), R: 0.4 * S });
-    if (s > 5) {
+    if (s > 4) {
       for (let k = 0; k < b.n; k++) {
         // peritrichous: from points along the body, trailing back with a wave
         const u0 = (-0.8 + (1.6 * k) / (b.n - 1)) * S;
@@ -426,7 +516,7 @@ const addBug = (b: Bug, c: Cam3, f: number, items: Item[], shadows: Sh[], tone: 
     }
   } else if (b.kind === "vibrio") {
     bodies.push({ axis: rod3(X, Z, 0.3 * S, a, 1.8 * S, 0.32 * S, 7), R: 0.3 * S });
-    if (s > 5) {
+    if (s > 4) {
       const pts: [number, number, number][] = [];
       for (let i = 0; i <= 14; i++) {
         const t = i / 14;
@@ -469,7 +559,7 @@ const addBug = (b: Bug, c: Cam3, f: number, items: Item[], shadows: Sh[], tone: 
   items.push({
     D,
     draw: (ctx) => {
-      flags.forEach((fl) => flag(ctx, prLine(fl, -1), Math.max(0.6, (F * 0.045) / D), ink));
+      flags.forEach((fl) => flag(ctx, prLine(fl, -1), b.kind === "bacillus" ? Math.min(1.2, Math.max(0.6, (F * 0.02) / D)) : Math.max(0.6, (F * 0.045) / D), ink, b.kind === "bacillus" ? piliA : c01((s - 4) / 4)));
       bodies.forEach((bd) =>
         tube(
           ctx,
@@ -547,7 +637,7 @@ const addSwimmer = (sw: Swimmer, c: Cam3, f: number, items: Item[], shadows: Sh[
   items.push({
     D,
     draw: (ctx) => {
-      flags.forEach((fl) => flag(ctx, fl, Math.max(0.6, (F * 0.045) / D), ink));
+      flags.forEach((fl) => flag(ctx, fl, Math.max(0.6, (F * 0.045) / D), ink, c01((s - 4) / 4)));
       tube(ctx, axis, (F * R * 2) / D, ink);
     },
   });
@@ -659,7 +749,7 @@ const rodItems = (c: Cam3, f: number, items: Item[], shadows: Sh[]) => {
     D,
     draw: (ctx) => {
       const pts = ax.map((q) => project(c, q[0], q[1], q[2])).map((q) => [q[0], q[1]] as Pt);
-      waxTube(ctx, pts, (F * ROD.R * 2) / D, ORANGE, true);
+      tbRod(ctx, pts, (F * ROD.R * 2) / D);
     },
   });
 };
@@ -884,32 +974,40 @@ const cellItems = (c: Cam3, f: number, items: Item[], shadows: Sh[], rodD: numbe
         ctx.stroke();
       });
       ctx.globalAlpha = 1;
-      // the frills of the lamellipodium: fold lines along the leading (left) edge, rippling with it
-      [2, 3].forEach((li) => {
-        ctx.beginPath();
-        loops[li].forEach((lp, k) => {
-          const pts = sl[li][k];
-          let pen = false;
-          for (let m = 0; m <= lp.length; m++) {
-            const mm = m % lp.length;
-            const on = lp[mm][0] < cf.cx - 2.2 && lp[mm][1] < cf.cz + 2.5;
-            if (on) {
-              if (!pen) ctx.moveTo(pts[mm][0], pts[mm][1]);
-              else ctx.lineTo(pts[mm][0], pts[mm][1]);
-            }
-            pen = on;
-          }
+      // the frills of the lamellipodium: fold lines along the leading (left) edge, rippling with it; laid down whole
+      // on a layer and faded out toward the sides and back by a mask (no line ends popping as the ruffle moves)
+      {
+        const fl = layer(7);
+        [2, 3].forEach((li) => {
+          path(fl.lc, sl[li]);
+          fl.lc.lineJoin = "round";
+          fl.lc.strokeStyle = DARK;
+          fl.lc.globalAlpha = 0.25;
+          fl.lc.lineWidth = Math.max(1.4, px * 0.07);
+          fl.lc.stroke();
+          fl.lc.strokeStyle = MEMB;
+          fl.lc.globalAlpha = 0.55;
+          fl.lc.lineWidth = Math.max(0.8, px * 0.032);
+          fl.lc.stroke();
         });
-        ctx.strokeStyle = DARK;
-        ctx.globalAlpha = 0.25;
-        ctx.lineWidth = Math.max(1.4, px * 0.07);
-        ctx.stroke();
-        ctx.strokeStyle = MEMB;
-        ctx.globalAlpha = 0.55;
-        ctx.lineWidth = Math.max(0.8, px * 0.032);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      });
+        fl.lc.globalAlpha = 1;
+        fl.lc.globalCompositeOperation = "destination-in";
+        const xa = project(c, cf.cx - 4.6, 0, cf.cz)[0];
+        const xb = project(c, cf.cx - 1.6, 0, cf.cz)[0];
+        const gx = fl.lc.createLinearGradient(xa, 0, xb, 0);
+        gx.addColorStop(0, "rgba(0,0,0,1)");
+        gx.addColorStop(1, "rgba(0,0,0,0)");
+        fl.lc.fillStyle = gx;
+        fl.lc.fillRect(0, 0, 1080, 1920);
+        const ya = project(c, cf.cx, 0, cf.cz + 1.2)[1];
+        const yb = project(c, cf.cx, 0, cf.cz + 3.6)[1];
+        const gy = fl.lc.createLinearGradient(0, ya, 0, yb);
+        gy.addColorStop(0, "rgba(0,0,0,1)");
+        gy.addColorStop(1, "rgba(0,0,0,0)");
+        fl.lc.fillStyle = gy;
+        fl.lc.fillRect(0, 0, 1080, 1920);
+        ctx.drawImage(fl.cv, 0, 0);
+      }
       // the pseudopods reaching out along the ground (membrane fingers, tapering), their roots under the body
       pseudopods(f).forEach((pp3) => {
         const pts = pp3.map(([x, z]) => {
@@ -1100,7 +1198,7 @@ export const drawFrame = (ctx: CanvasRenderingContext2D, f: number) => {
     const pts = rodAxis(14)
       .map((q) => project(c, q[0], q[1], q[2]))
       .map((q) => [q[0], q[1]] as Pt);
-    waxTube(rc, pts, (F * ROD.R * 2) / rodD, ORANGE, true);
+    tbRod(rc, pts, (F * ROD.R * 2) / rodD);
     ctx.save();
     ctx.globalAlpha = 0.62;
     ctx.drawImage(R, 0, 0);
