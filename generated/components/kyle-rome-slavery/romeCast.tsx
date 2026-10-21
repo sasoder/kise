@@ -101,21 +101,27 @@ const segD = (segs: Seg[], m: Map = ID) =>
     })
     .join("");
 const polyD = (pts: P2[], close = true) => (pts.length ? `M${pts.map(P).join("L")}${close ? "Z" : ""}` : "");
-const hatchSegs = (x0: number, y0: number, x1: number, y1: number, ang: number, gap: number, seed: number, rag = 0.28): Seg[] => {
+/** (Revision 1) hand-cut hatching ANCHORED: line k lies at offset k * gap from the anchor (default the box's top-left
+ *  corner) along the hatch normal, its jitter and ragged ends seeded by k. A moving or resizing box slides its lines
+ *  continuously instead of re-indexing them every frame (the old centred version re-seeded and flickered). */
+const hatchSegs = (x0: number, y0: number, x1: number, y1: number, ang: number, gap: number, seed: number, rag = 0.28, ax = x0, ay = y0): Seg[] => {
   const r = (ang * Math.PI) / 180;
   const dx = Math.cos(r);
   const dy = Math.sin(r);
-  const cx = (x0 + x1) / 2;
-  const cy = (y0 + y1) / 2;
-  const R = Math.hypot(x1 - x0, y1 - y0) / 2;
+  const nx = -dy;
+  const ny = dx;
+  const R = Math.hypot(x1 - x0, y1 - y0) + 2;
+  const offs = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map(([x, y]) => (x - ax) * nx + (y - ay) * ny);
+  const k0 = Math.ceil(Math.min(...offs) / gap) - 1;
+  const k1 = Math.floor(Math.max(...offs) / gap) + 1;
   const out: Seg[] = [];
-  let i = 0;
-  for (let o = -R; o <= R; o += gap, i++) {
-    const oo = o + (hash(i, seed) - 0.5) * gap * 0.5;
-    const px = cx - dy * oo;
-    const py = cy + dx * oo;
-    let t0 = -R;
-    let t1 = R;
+  for (let i = k0; i <= k1; i++) {
+    const hi = i + 4096;
+    const oo = i * gap + (hash(hi, seed) - 0.5) * gap * 0.5;
+    const px = ax + nx * oo;
+    const py = ay + ny * oo;
+    let t0 = -1e9;
+    let t1 = 1e9;
     if (Math.abs(dx) > 1e-6) {
       const a = (x0 - px) / dx;
       const b = (x1 - px) / dx;
@@ -129,9 +135,9 @@ const hatchSegs = (x0: number, y0: number, x1: number, y1: number, ang: number, 
       t1 = Math.min(t1, Math.max(a, b));
     } else if (py < y0 || py > y1) continue;
     const span = t1 - t0;
-    if (span < 3) continue;
-    t0 += hash(i, seed + 7) * rag * span;
-    t1 -= hash(i, seed + 13) * rag * span;
+    if (!(span > 0.5) || span > 4 * R) continue;
+    t0 += hash(hi, seed + 7) * rag * span;
+    t1 -= hash(hi, seed + 13) * rag * span;
     out.push([
       [px + dx * t0, py + dy * t0],
       [px + dx * t1, py + dy * t1],
@@ -139,7 +145,7 @@ const hatchSegs = (x0: number, y0: number, x1: number, y1: number, ang: number, 
   }
   return out;
 };
-const hatchD = (x0: number, y0: number, x1: number, y1: number, ang: number, gap: number, seed: number, rag = 0.28) => segD(hatchSegs(x0, y0, x1, y1, ang, gap, seed, rag));
+const hatchD = (x0: number, y0: number, x1: number, y1: number, ang: number, gap: number, seed: number, rag = 0.28, ax = x0, ay = y0) => segD(hatchSegs(x0, y0, x1, y1, ang, gap, seed, rag, ax, ay));
 const smoothClosed = (pts: P2[]) => {
   const n = pts.length;
   let d = `M${P(pts[0])}`;
@@ -275,45 +281,12 @@ const hull = (pts: P2[]): P2[] => {
   }
   return [...lo.slice(0, -1), ...up.slice(0, -1)];
 };
-const centroid = (pts: P2[]): P2 => mul(pts.reduce((a, p) => add(a, p), [0, 0] as P2), 1 / Math.max(1, pts.length));
 const closestOnSeg = (p: P2, a: P2, b: P2): P2 => {
   const d = sub(b, a);
   const L2 = dot(d, d) || 1e-9;
   return add(a, mul(d, c01(dot(sub(p, a), d) / L2)));
 };
 type Bone = { a: P2; b: P2; r: number };
-/** cloth lies ON what holds it up (dgFigures' drape) */
-const drape = (poly: P2[], bns: Bone[], up = -0.25, step = 7): P2[] => {
-  const cen = centroid(poly);
-  const out: P2[] = [];
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i];
-    const b = poly[(i + 1) % poly.length];
-    out.push(a);
-    const d = sub(b, a);
-    const L = vlen(d);
-    if (L < step * 1.5) continue;
-    let n: P2 = norm([-d[1], d[0]]);
-    if (dot(n, sub(mix2(a, b, 0.5), cen)) < 0) n = [-n[0], -n[1]];
-    if (n[1] > up) continue;
-    const m = Math.ceil(L / step);
-    for (let j = 1; j < m; j++) {
-      const p = mix2(a, b, j / m);
-      let best: P2 = p;
-      let bd = Infinity;
-      for (const bn of bns) {
-        const q = closestOnSeg(p, bn.a, bn.b);
-        const dd = vlen(sub(p, q)) - bn.r;
-        if (dd < bd) {
-          bd = dd;
-          best = add(q, mul(norm(sub(p, q)), bn.r));
-        }
-      }
-      out.push(bd > 0 ? best : p);
-    }
-  }
-  return out;
-};
 const bottomAt = (poly: P2[], x: number) => {
   let y = -Infinity;
   for (let i = 0; i < poly.length; i++) {
@@ -565,7 +538,14 @@ const scallopD = (poly: P2[], bump: (i: number) => number) => {
 // the thumb across them. Figure-local units at the rig's wrist W, along the rig's hand direction.
 // ---------------------------------------------------------------------------
 type ArmRigV2 = ReturnType<typeof figureRig>["armL"];
-const HandV2: React.FC<{ a: ArmRigV2; k: number; ink: Ink; ring?: boolean }> = ({ a, k: k0, ink, ring = false }) => {
+/** (Revision 1) the thumb's side from the arm itself: fixed by the side of the shoulder->wrist line the IK put the
+ *  elbow on (the pose's hint picks that side, as in the rig's ik2), so the thumb turns with the forearm and changes
+ *  side only when the elbow does. Returns +1 / -1 like the rig's rule. */
+const thumbSide = (a: ArmRigV2, hint: P2) => {
+  const c = sub(a.W, a.S);
+  return -c[1] * hint[0] + c[0] * hint[1] >= 0 ? -1 : 1;
+};
+const HandV2: React.FC<{ a: ArmRigV2; k: number; ink: Ink; ring?: boolean; hint?: P2 }> = ({ a, k: k0, ink, ring = false, hint }) => {
   // a little larger than V1's hand (x1.1), a slim palm; the relaxed hand curls, its four fingertips separate
   const k = k0 * 1.1;
   const { W, dir: d, fist: f, sgn } = a;
@@ -574,7 +554,9 @@ const HandV2: React.FC<{ a: ArmRigV2; k: number; ink: Ink; ring?: boolean }> = (
   const open = 1 - fc;
   const at = (along: number, across: number): P2 => add(W, add(mul(d, along * k), mul(n, across * k)));
   // the thumb's side (the body's side of the hand; up when the hand lies level) - the rig's rule
-  const ts = Math.abs(n[0]) > 0.25 ? (n[0] * -sgn >= 0 ? 1 : -1) : n[1] < 0 ? 1 : -1;
+  // (Revision 1) with the pose's elbow hint: the thumb on the side away from the elbow (stable through a motion; the
+  // rig's angle rule flipped the hand when a level forearm tipped past ~15 deg)
+  const ts = hint ? thumbSide(a, hint) : Math.abs(n[0]) > 0.25 ? (n[0] * -sgn >= 0 ? 1 : -1) : n[1] < 0 ? 1 : -1;
   // the fingers curl toward the palm (away from the thumb's back): a relaxed hand already bends at the knuckles
   const curl = mix(30, 82, fc) * -ts;
   const kn = 13; // the knuckles along the hand
@@ -633,6 +615,96 @@ const HandV2: React.FC<{ a: ArmRigV2; k: number; ink: Ink; ring?: boolean }> = (
       <path d={`M${P(add(tb, mul(tdir, tl * 0.6 * k)))}l${P(mul(rot(tdir, 90 * ts), 2 * k))}`} {...ln(0.9, 0.45)} />
     </g>
   );
+};
+
+// ---------------------------------------------------------------------------
+// (Revision 1) CONTINUOUS CLOTH: the drape and the resample are continuous functions of the pose
+// ---------------------------------------------------------------------------
+const sstep01 = (v: number) => {
+  const x = c01(v);
+  return x * x * (3 - 2 * x);
+};
+/** cloth lies ON what holds it up, continuously: every upward-facing edge is subdivided and pulled onto the nearest
+ *  bone surface with a weight that fades in with how much the edge faces up and how long it is (no toggles), the
+ *  bones blended by a soft minimum (no jump when two bones are equally near) */
+const drapeC = (poly: P2[], bns: Bone[], up = -0.25, step = 5): P2[] => {
+  let area = 0;
+  for (let i = 0; i < poly.length; i++) area += poly[i][0] * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * poly[i][1];
+  const sgn = area > 0 ? 1 : -1;
+  const out: P2[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    out.push(a);
+    const d = sub(b, a);
+    const L = vlen(d);
+    if (L < 0.5) continue;
+    // the outward normal from the polygon's orientation
+    const n: P2 = [(sgn * d[1]) / L, (-sgn * d[0]) / L];
+    const w = sstep01((up - n[1]) / 0.3) * sstep01((L - 3) / 8);
+    if (w <= 0) continue;
+    const m = Math.max(2, Math.ceil(L / step));
+    for (let j = 1; j < m; j++) {
+      const p = mix2(a, b, j / m);
+      let dmin = Infinity;
+      const cand = bns.map((bn) => {
+        const qq = closestOnSeg(p, bn.a, bn.b);
+        const v = sub(p, qq);
+        const dd = vlen(v) - bn.r;
+        dmin = Math.min(dmin, dd);
+        return { dd, t: add(qq, mul(vlen(v) > 1e-6 ? norm(v) : [0, -1], bn.r)) };
+      });
+      let ws = 0;
+      let acc: P2 = [0, 0];
+      let dsum = 0;
+      for (const c of cand) {
+        const e = Math.exp(-(c.dd - dmin) / 3);
+        ws += e;
+        acc = add(acc, mul(c.t, e));
+        dsum += c.dd * e;
+      }
+      const tgt = mul(acc, 1 / ws);
+      out.push(mix2(p, tgt, w * c01(dsum / ws / 3)));
+    }
+  }
+  return out;
+};
+/** a closed polygon resampled to n points evenly along its perimeter, starting at the point of it nearest to `start`
+ *  (continuous), then lightly smoothed */
+const resampleClosed = (poly: P2[], n: number, start: P2): P2[] => {
+  const m = poly.length;
+  let bi = 0;
+  let bt = 0;
+  let bd = Infinity;
+  for (let i = 0; i < m; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % m];
+    const qq = closestOnSeg(start, a, b);
+    const dd = vlen(sub(start, qq));
+    if (dd < bd) {
+      bd = dd;
+      bi = i;
+      const L = vlen(sub(b, a));
+      bt = L > 1e-9 ? vlen(sub(qq, a)) / L : 0;
+    }
+  }
+  const ring: P2[] = [mix2(poly[bi], poly[(bi + 1) % m], bt)];
+  for (let i = 1; i <= m; i++) ring.push(poly[(bi + i) % m]);
+  ring.push(ring[0]);
+  const cum: number[] = [0];
+  for (let i = 1; i < ring.length; i++) cum.push(cum[i - 1] + vlen(sub(ring[i], ring[i - 1])));
+  const tot = cum[cum.length - 1] || 1;
+  const out: P2[] = [];
+  let j = 1;
+  for (let i = 0; i < n; i++) {
+    const sv = (i / n) * tot;
+    while (j < ring.length - 1 && cum[j] < sv) j++;
+    const f = (sv - cum[j - 1]) / Math.max(1e-9, cum[j] - cum[j - 1]);
+    out.push(mix2(ring[j - 1], ring[j], c01(f)));
+  }
+  let sm = out;
+  for (let pass = 0; pass < 2; pass++) sm = sm.map((p, i) => mix2(mix2(sm[(i - 1 + n) % n], sm[(i + 1) % n], 0.5), p, 0.5));
+  return sm;
 };
 
 // ---------------------------------------------------------------------------
@@ -1025,7 +1097,7 @@ const chainPts = (a: P2, b: P2, len: number, ground: number): P2[] => {
   }
   return out;
 };
-const ChainArt: React.FC<{ pts: P2[]; link: number; ink: Ink; seed?: number }> = ({ pts, link, ink, seed = 0 }) => {
+const ChainArt: React.FC<{ pts: P2[]; link: number; ink: Ink; seed?: number; count?: number }> = ({ pts, link, ink, seed = 0, count }) => {
   // walk the curve placing links every `link` units: face-on ovals and edge-on bars, alternating
   const cum: number[] = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + vlen(sub(pts[i], pts[i - 1])));
@@ -1038,7 +1110,8 @@ const ChainArt: React.FC<{ pts: P2[]; link: number; ink: Ink; seed?: number }> =
   };
   const iron = ironOf(ink);
   const links: React.ReactNode[] = [];
-  const nL = Math.max(2, Math.round(total / link));
+  // (Revision 1) a fixed number of links (from the chain's nominal length): links never appear / vanish as it sags
+  const nL = count ?? Math.max(2, Math.round(total / link));
   for (let j = 0; j <= nL; j++) {
     const { p, u } = at((j / nL) * total);
     const ang = (Math.atan2(u[1], u[0]) * 180) / Math.PI;
@@ -1099,12 +1172,14 @@ const RodArt: React.FC<{ ink: Ink; len?: number }> = ({ ink, len = TOOL_LEN.rod 
     <path d={`M-10,-1.6L${(len - 4).toFixed(1)},-1.2`} fill="none" stroke={ink.main} strokeWidth={1} strokeOpacity={0.5} />
   </g>
 );
-const WhipArt: React.FC<{ ink: Ink; sway?: number }> = ({ ink, sway = 0 }) => {
+const WhipArt: React.FC<{ ink: Ink; sway?: number; ang?: number }> = ({ ink, sway = 0, ang = 0 }) => {
   const h = TOOL_LEN.whip;
-  // the lash hangs from the handle's end and swings a little
-  const p1: P2 = [h + 26, 30 + 8 * Math.sin(sway)];
-  const p2: P2 = [h + 18 + 12 * Math.sin(sway * 1.3 + 1), 82];
-  const p3: P2 = [h + 34 + 16 * Math.sin(sway + 2), 128];
+  // the lash hangs from the handle's end and swings a little; (Revision 1) it hangs DOWN in the figure's space
+  // whatever the handle's angle (its points are counter-rotated by the handle's angle `ang`, deg)
+  const g = (p: P2): P2 => add([h, 0], rot(sub(p, [h, 0]), -ang));
+  const p1: P2 = g([h + 26, 30 + 8 * Math.sin(sway)]);
+  const p2: P2 = g([h + 18 + 12 * Math.sin(sway * 1.3 + 1), 82]);
+  const p3: P2 = g([h + 34 + 16 * Math.sin(sway + 2), 128]);
   return (
     <g>
       <path d={`M${h},0C${P(p1)} ${P(p2)} ${P(p3)}`} fill="none" stroke={DARK} strokeWidth={4.6} strokeLinecap="round" />
@@ -1314,14 +1389,15 @@ const frac = (v: number) => v - Math.floor(v);
 const ease = (v: number) => v * v * (3 - 2 * v);
 
 /** the drawn tool's geometry (figure-local): the lower grip, the shaft's direction, the far end / head */
-const toolGeom = (r: RigT, tool: RomeTool, G: number, toolIn: "near" | "far", limb: number) => {
+const toolGeom = (r: RigT, tool: RomeTool, G: number, toolIn: "near" | "far", limb: number, q?: FigPose) => {
   if (tool === "none") return null;
   const near = G > 0 ? r.armL : r.armR;
   const far = G > 0 ? r.armR : r.armL;
   const thumbDir = (a: ArmRig): P2 => {
     const d = a.dir;
     const n: P2 = [-d[1], d[0]];
-    const ts = Math.abs(n[0]) > 0.25 ? (n[0] * -a.sgn >= 0 ? 1 : -1) : n[1] < 0 ? 1 : -1;
+    const hint = q ? (a.sgn < 0 ? q.armL.elbow : q.armR.elbow) : null;
+    const ts = hint ? thumbSide(a, hint) : Math.abs(n[0]) > 0.25 ? (n[0] * -a.sgn >= 0 ? 1 : -1) : n[1] < 0 ? 1 : -1;
     return mul(n, ts);
   };
   if (tool === "rod" || tool === "whip") {
@@ -1342,6 +1418,67 @@ const loadGeom = (r: RigT, G: number) => {
   const near = G > 0 ? r.armL : r.armR;
   const c = add(near.S, [-G * 30, -26]);
   return { c, ang: G * 22 };
+};
+
+// ---------------------------------------------------------------------------
+// THE LOWER GARMENT (Revision 1: one pure function of the pose, used by the figure and by the pop probes): a hull
+// round the legs from the belt to the hem (leg fraction: 0 hip, 1 knee, 2 ankle), continuously draped and resampled
+// ---------------------------------------------------------------------------
+const legPtOf = (l: LegRig, f: number): P2 => (f <= 1 ? mix2(l.H, l.K, f) : mix2(l.K, l.A, Math.min(1, f - 1)));
+const legRadOf = (f: number) => (f <= 1 ? mix(25, 19.5, f) : mix(19.5, 14, Math.min(1, f - 1)));
+/** the tunic / toga / loincloth outline in figure-local units (exported for the pop probes) */
+export const skirtOutlineOf = (kind: RomeKind, variant: number, q: FigPose, garbProp?: Garb): P2[] => {
+  const look = lookOf(kind, variant);
+  const sp = look.spec;
+  const female = look.female;
+  const slave = kind === "slave";
+  const toga = kind === "dominus";
+  const overseer = kind === "overseer";
+  const freeman = kind === "freeman";
+  const garb: Garb = slave && !female ? (garbProp ?? "tunic") : "tunic";
+  const r = figureRig(sp, q);
+  const k = sp.limb;
+  const { side } = surface(q.yaw, sp.hw * 0.94, sp.hw * 0.94 * 0.58);
+  const wst = female ? 25 : sp.a * 0.56;
+  const hdx = q.hem - Math.tan((q.lean * Math.PI) / 180) * 20;
+  const skirtHull = (len: number, flare: number, waistW: number) => {
+    const waist = [-waistW, waistW].map((x) => r.toFig(side([x, -14])));
+    const pts: P2[] = [...waist];
+    for (const l of [r.legL, r.legR]) {
+      const n = Math.max(2, Math.ceil(len / 0.25));
+      for (let i = 0; i <= n; i++) {
+        const f = (i / n) * len;
+        pts.push(...circ(add(legPtOf(l, f), [hdx * 0.3 * (f / len), 0]), (legRadOf(f) + flare * (f / len)) * k, 16));
+      }
+      const hm = legPtOf(l, len);
+      const rr = (legRadOf(len) + flare) * k;
+      pts.push(add(hm, [-rr - 3 + hdx, 6]), add(hm, [rr + 3 + hdx, 6]), add(hm, [hdx, 8]));
+    }
+    const bns = [r.legL, r.legR].flatMap((l): Bone[] => [
+      { a: l.H, b: l.K, r: 24 * k },
+      { a: l.K, b: l.A, r: 17 * k },
+    ]);
+    // (Revision 1) a continuous drape, then a fixed-count resample from the waist: the outline is a continuous
+    // function of the pose (no vertex re-indexing, no draped / not-draped toggles)
+    return resampleClosed(drapeC(hull(pts.map((p): P2 => [p[0], Math.min(p[1], -1.5)])), bns), 260, waist[0]);
+  };
+  const skLen = toga ? 1.8 : female ? 1.86 : garb === "loincloth" ? 0.3 : overseer ? 0.92 : freeman ? 1.0 : 0.74;
+  const skFlare = toga ? 9 : female ? 5 : garb === "loincloth" ? 0 : 3;
+  const skHull0 = skirtHull(skLen, skFlare, toga ? wst + 9 : wst + 3);
+  // the slave's ragged hem: torn teeth along the lower edge, fixed in the figure's own space (a function of x from
+  // the hip, never of a vertex index), fading in over the last 16 units of the hem
+  const skHull = slave
+    ? (() => {
+        const yMax = Math.max(...skHull0.map((p) => p[1]));
+        return skHull0.map((p): P2 => {
+          const u = (p[0] - r.hip[0]) / 11 + variant * 0.37;
+          const cell = Math.floor(u);
+          const tooth = 1 - Math.abs(2 * (u - cell) - 1);
+          return [p[0], p[1] + tooth * (3.4 + 3.4 * hash(cell + 999, 811)) * c01((p[1] - yMax + 16) / 9)];
+        });
+      })()
+    : skHull0;
+  return skHull;
 };
 
 export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
@@ -1381,7 +1518,9 @@ export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
   const shR: P2 = [hw, shY];
   const neck: P2 = [0, shY];
   const wst = female ? 25 : sp.a * 0.56;
-  const profile = Math.abs(s) > 0.5;
+  // (Revision 1) the far arm goes behind the body from |sin yaw| 0.3 (it hangs beside the body there, so the layer
+  // change is invisible; at 0.5 it crossed the chest in three-quarter work poses and popped)
+  const profile = Math.abs(s) > 0.3;
   const G = s >= 0 ? 1 : -1;
   const leather = mixHex(ink.hair, ink.deep, 0.22);
   const skin = ink.main;
@@ -1394,45 +1533,9 @@ export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
   const hdx = q.hem - Math.tan((q.lean * Math.PI) / 180) * 20;
 
   // ---- the lower garment: a hull round the legs from the belt to the hem (leg fraction: 0 hip, 1 knee, 2 ankle) ----
-  const legPt = (l: LegRig, f: number): P2 => (f <= 1 ? mix2(l.H, l.K, f) : mix2(l.K, l.A, Math.min(1, f - 1)));
-  const legRad = (f: number) => (f <= 1 ? mix(25, 19.5, f) : mix(19.5, 14, Math.min(1, f - 1)));
-  const skirtHull = (len: number, flare: number, waistW: number) => {
-    const waist = [-waistW, waistW].map((x) => r.toFig(side([x, -14])));
-    const pts: P2[] = [...waist];
-    for (const l of [r.legL, r.legR]) {
-      const n = Math.max(2, Math.ceil(len / 0.25));
-      for (let i = 0; i <= n; i++) {
-        const f = (i / n) * len;
-        pts.push(...circ(add(legPt(l, f), [hdx * 0.3 * (f / len), 0]), (legRad(f) + flare * (f / len)) * k, 10));
-      }
-      const hm = legPt(l, len);
-      const rr = (legRad(len) + flare) * k;
-      pts.push(add(hm, [-rr - 3 + hdx, 6]), add(hm, [rr + 3 + hdx, 6]), add(hm, [hdx, 8]));
-    }
-    const bns = [r.legL, r.legR].flatMap((l): Bone[] => [
-      { a: l.H, b: l.K, r: 24 * k },
-      { a: l.K, b: l.A, r: 17 * k },
-    ]);
-    return drape(hull(pts.map((p): P2 => [p[0], Math.min(p[1], -1.5)])), bns);
-  };
-  const skLen = toga ? 1.8 : female ? 1.86 : garb === "loincloth" ? 0.3 : overseer ? 0.92 : freeman ? 1.0 : 0.74;
-  const skFlare = toga ? 9 : female ? 5 : garb === "loincloth" ? 0 : 3;
-  const skHull0 = skirtHull(skLen, skFlare, toga ? wst + 9 : wst + 3);
-  // the slave's ragged hem: the lower edge broken into torn points
-  const skHull = slave
-    ? (() => {
-        const yMax = Math.max(...skHull0.map((p) => p[1]));
-        const dense: P2[] = [];
-        for (let i = 0; i < skHull0.length; i++) {
-          const a = skHull0[i];
-          const b = skHull0[(i + 1) % skHull0.length];
-          const m = Math.max(1, Math.round(vlen(sub(b, a)) / 5));
-          for (let j = 0; j < m; j++) dense.push(mix2(a, b, j / m));
-        }
-        return dense.map((p, i): P2 => (p[1] > yMax - 16 ? [p[0], p[1] + (i % 2 ? -2.2 : 1.6) * (0.6 + hash(i, 811)) * c01((p[1] - yMax + 16) / 8)] : p));
-      })()
-    : skHull0;
-  const SK = slave ? polyD(skHull) : smoothClosed(skHull);
+  const legPt = legPtOf;
+  const skHull = skirtOutlineOf(kind, variant, q, props.garb);
+  const SK = polyD(skHull);
   const skX0 = Math.min(...skHull.map((p) => p[0]));
   const skX1 = Math.max(...skHull.map((p) => p[0]));
   const skY0 = Math.min(...skHull.map((p) => p[1]));
@@ -1457,9 +1560,9 @@ export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
       <path d={SK} fill={skFill} {...OUT} />
       <RimShade id={`${uid}-rssk`} d={SK} off={[24, 6]} box={[skX0, skY0, skX1, skY1 + 10]} col={skDeep} amt={shadeAmt} seed={965} />
       <g clipPath={`url(#${uid}-sk)`}>
-        <path d={hatchD(mix(skX0, skX1, 0.62), skY0, skX1 + 4, skY1 + 4, 111, slave ? 2.6 : 3, 811)} {...ln(0.95, slave ? 0.62 : 0.55)} />
-        <path d={hatchD(mix(skX0, skX1, 0.78), skY0 + 14, skX1 + 4, skY1 + 4, 62, 3.6, 812)} {...ln(0.9, 0.42)} />
-        {slave ? <path d={hatchD(skX0, skY0, skX1, skY1, 20, 5.5, 813, 0.6)} {...ln(0.8, 0.28)} /> : null}
+        <path d={hatchD(mix(skX0, skX1, 0.62), skY0, skX1 + 4, skY1 + 4, 111, slave ? 2.6 : 3, 811, 0.28, r.hip[0], r.hip[1])} {...ln(0.95, slave ? 0.62 : 0.55)} />
+        <path d={hatchD(mix(skX0, skX1, 0.78), skY0 + 14, skX1 + 4, skY1 + 4, 62, 3.6, 812, 0.28, r.hip[0], r.hip[1])} {...ln(0.9, 0.42)} />
+        {slave ? <path d={hatchD(skX0, skY0, skX1, skY1, 20, 5.5, 813, 0.6, r.hip[0], r.hip[1])} {...ln(0.8, 0.28)} /> : null}
         {toga
           ? folds.map((f) => <path key={`v${f.i}`} d={limbD([[add(f.a, [2.5, 6]), 2], [add(f.c, [3, 0]), 6], [add(f.b, [3, -2]), 7]])} fill={cloth.deep} opacity={0.8} />)
           : null}
@@ -1523,8 +1626,9 @@ export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
         })()
       : null;
   // the toga's sinus: the swag of cloth hanging in a curve across the front of the thighs, from the right hip
-  const lying = Math.abs(q.lean) >= 40;
-  const sinusEl = toga && !lying
+  // (Revision 1) lying down is a continuous blend (0 upright .. 1 reclined), never a switch
+  const lie = sstep01((Math.abs(q.lean) - 30) / 14);
+  const sinusStand = toga && lie < 0.999
     ? (() => {
         const L0 = r.toFig(mT([-wst - 8, -6]));
         const R0 = r.toFig(mT([wst * 0.75, -16]));
@@ -1552,7 +1656,8 @@ export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
           </g>
         );
       })()
-    : toga
+    : null;
+  const sinusLie = toga && lie > 0.001
       ? (() => {
           // (addition) lying down: a simplified swag from the waist sagging along the thighs (the toga still reads)
           const W0 = r.toFig(mT([-wst - 6, -4]));
@@ -1580,6 +1685,12 @@ export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
           );
         })()
       : null;
+  const sinusEl = (
+    <>
+      {sinusStand ? <g opacity={1 - lie}>{sinusStand}</g> : null}
+      {sinusLie ? <g opacity={lie}>{sinusLie}</g> : null}
+    </>
+  );
 
   // ---- the legs: bare, with their feet; the fetters' rings ----------------------------------------------------
   const legSt = (l: LegRig): St[] => {
@@ -1619,7 +1730,7 @@ export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
     ? (() => {
         const a = add(r.legL.A, mul(norm(sub(r.legL.A, r.legL.K)), -5 * k));
         const b = add(r.legR.A, mul(norm(sub(r.legR.A, r.legR.K)), -5 * k));
-        return <ChainArt pts={chainPts(a, b, props.chainLen ?? 74, 4)} link={5.4} ink={ink} />;
+        return <ChainArt pts={chainPts(a, b, props.chainLen ?? 74, 4)} link={5.4} ink={ink} count={Math.round((props.chainLen ?? 74) / 5.4)} />;
       })()
     : null;
 
@@ -1850,13 +1961,13 @@ export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
     const sleeveEnd = sk === "elbow" ? mix2(ar.S, ar.E, 0.96) : mix2(ar.S, ar.E, 0.5);
     const SLV = sk === "short" || sk === "elbow" ? limbD([[add(ar.S, mul(uu, 6)), 27 * k], [mix2(ar.S, sleeveEnd, 0.6), 25.5 * k], [sleeveEnd, 25 * k]]) : "";
     const tEnd = mix2(ar.E, ar.W, 0.55);
-    const tw = lying ? [23, 21.5, 19.5, 18] : [31, 29, 27, 25];
+    const tw = [31, 29, 27, 25].map((v, i) => mix(v, [23, 21.5, 19.5, 18][i], lie));
     const TSLV = sk === "toga" ? limbD([[add(ar.S, mul(uu, 5)), tw[0] * k], [mix2(ar.S, ar.E, 0.5), tw[1] * k], [ar.E, tw[2] * k], [tEnd, tw[3] * k]]) : "";
     // the toga's end hanging from the wrapped forearm (straight down: gravity, in figure space)
     const hangA = mix2(ar.E, ar.W, 0.08);
     const hangB = mix2(ar.E, ar.W, 0.5);
-    const hDrop = 74;
-    const HANG = sk === "toga" && !lying ? `M${P(hangA)}L${P(hangB)}Q${P(add(hangB, [3, hDrop * 0.5]))} ${P(add(hangB, [6, hDrop]))}L${P(add(mix2(hangA, hangB, 0.5), [0, hDrop + 8]))}L${P(add(hangA, [-6, hDrop - 2]))}Q${P(add(hangA, [-4, hDrop * 0.5]))} ${P(hangA)}Z` : "";
+    const hDrop = 74 * (1 - lie);
+    const HANG = sk === "toga" && lie < 0.98 ? `M${P(hangA)}L${P(hangB)}Q${P(add(hangB, [3, hDrop * 0.5]))} ${P(add(hangB, [6, hDrop]))}L${P(add(mix2(hangA, hangB, 0.5), [0, hDrop + 8]))}L${P(add(hangA, [-6, hDrop - 2]))}Q${P(add(hangA, [-4, hDrop * 0.5]))} ${P(hangA)}Z` : "";
     return (
       <>
         {HANG ? (
@@ -1886,16 +1997,16 @@ export const RomeFigure: React.FC<RomeFigureProps> = (props) => {
             <path d={`M${P(add(tEnd, mul(fn, -tw[3] * 0.54 * k)))}Q${P(add(tEnd, mul(fu, 2.6)))} ${P(add(tEnd, mul(fn, tw[3] * 0.54 * k)))}`} {...ln(1.2, 0.6)} />
           </>
         ) : null}
-        <HandV2 a={ar} k={k} ink={ink} ring={dominus && (props.ring ?? true) && ar.sgn > 0} />
+        <HandV2 a={ar} k={k} ink={ink} ring={dominus && (props.ring ?? true) && ar.sgn > 0} hint={ar.sgn < 0 ? q.armL.elbow : q.armR.elbow} />
       </>
     );
   };
   // ---- the tool and the load --------------------------------------------------------------------------------------
-  const tg = toolGeom(r, tool, G, props.toolIn ?? "near", k);
+  const tg = toolGeom(r, tool, G, props.toolIn ?? "near", k, q);
   const toolEl = tg ? (
     <g transform={`${tf} translate(${P(tg.base)}) rotate(${((Math.atan2(tg.u[1], tg.u[0]) * 180) / Math.PI).toFixed(2)})`}>
       <Cased id={`${uid}-tl`} r={1.2}>
-        {tool === "rod" ? <RodArt ink={ink} /> : tool === "whip" ? <WhipArt ink={ink} sway={props.toolSway ?? 0} /> : <HeadedTool ink={ink} kind={tool as "hammer" | "pick"} uid={`${uid}-ht`} />}
+        {tool === "rod" ? <RodArt ink={ink} /> : tool === "whip" ? <WhipArt ink={ink} sway={props.toolSway ?? 0} ang={(Math.atan2(tg.u[1], tg.u[0]) * 180) / Math.PI} /> : <HeadedTool ink={ink} kind={tool as "hammer" | "pick"} uid={`${uid}-ht`} />}
       </Cased>
     </g>
   ) : null;
@@ -2055,7 +2166,7 @@ export const romeAnchors = (
   const w = (v: P2): P2 => add(at, mul(v, scale));
   const G = r.s >= 0 ? 1 : -1;
   const tool = opts.tool ?? (kind === "overseer" ? "rod" : "none");
-  const tg = toolGeom(r, tool, G, opts.toolIn ?? "near", sp.limb);
+  const tg = toolGeom(r, tool, G, opts.toolIn ?? "near", sp.limb, q);
   const pil = kind === "freeman" && !lookOf(kind, variant).female;
   return {
     ...a,
@@ -2118,7 +2229,7 @@ export const Chain: React.FC<{ a: P2; b: P2; len?: number; slack?: number; groun
   return (
     <g opacity={tone}>
       <Cased id={`${uid}-c`} r={1.1}>
-        <ChainArt pts={chainPts(a, b, L0, groundY)} link={link} ink={ink} />
+        <ChainArt pts={chainPts(a, b, L0, groundY)} link={link} ink={ink} count={len !== undefined ? Math.max(2, Math.round(len / link)) : undefined} />
       </Cased>
     </g>
   );
@@ -2438,16 +2549,18 @@ const R_GRIND: FigPose = {
   lids: 0.25,
   mouth: -0.15,
 };
-/** the strike: the lower grip's path and the shaft's angle through one cycle (phase 0 = the head strikes) */
+/** the strike: the lower (far) fist circles round the far shoulder in front of him (angle deg, 90 = straight below,
+ *  0 = forward, -90 = above; radius units), never passing through it (Revision 1: the old path ran through the
+ *  shoulder and flipped the elbow); the shaft's screen angle (0 = forward, 90 = down). Phase 0 = the head strikes. */
 const STRIKE_KEYS: [number, number, number, number][] = [
-  // phase, lower grip x, y, shaft angle (deg, screen; 0 = forward, 90 = down)
-  [0, 70, -150, 55],
-  [0.14, 64, -158, 44],
-  [0.36, 30, -228, -36],
-  [0.58, -4, -322, -150],
-  [0.72, -10, -328, -172],
-  [0.86, 34, -268, -64],
-  [1, 70, -150, 55],
+  // phase, fist angle round the far shoulder, radius, shaft angle
+  [0, 85, 48, 55],
+  [0.14, 74, 52, 44],
+  [0.36, 0, 70, -36],
+  [0.58, -100, 85, -150],
+  [0.72, -110, 88, -172],
+  [0.86, -10, 75, -64],
+  [1, 85, 48, 55],
 ];
 const sTrack = [1, 2, 3].map((j) => track(STRIKE_KEYS.map((kk) => [kk[0], kk[j]] as [number, number])));
 const strikeRaise = track([
@@ -2460,18 +2573,27 @@ const strikeRaise = track([
 ]);
 const R_STRIKE_LO: FigPose = { ...STAND, yaw: 0.92, headYaw: 0.94, lean: 28, crouch: 30, pitch: 14, footL: [-30, 0], footR: [32, 0], brow: 0.8, mouth: -0.4 };
 const R_STRIKE_HI: FigPose = { ...R_STRIKE_LO, lean: -6, crouch: 6, pitch: -8, brow: 0.9, mouth: -0.5 };
+/** (Revision 1) an elbow hint that turns with the arm: perpendicular to the (approximate) shoulder -> wrist line, always
+ *  on the same side (back / down when the hand is low in front, forward when it is overhead), so the IK never flips */
+const perpHint = (w: P2, S: P2 = [6, -232]): P2 => {
+  const u = norm(sub(w, S));
+  return [-u[1], u[0]];
+};
 const strikePose = (phase: number): FigPose => {
   const u = frac(phase);
-  const g: P2 = [sTrack[0](u), sTrack[1](u)];
+  const body = lerpFig(R_STRIKE_LO, R_STRIKE_HI, strikeRaise(u));
+  // the shoulders of this body (a standard man's build), for the fist's path and the elbow hints
+  const rb = figureRig(MAN, body);
+  const al = (sTrack[0](u) * Math.PI) / 180;
+  const g: P2 = add(rb.armR.S, mul([Math.cos(al), Math.sin(al)], sTrack[1](u)));
   const th = (sTrack[2](u) * Math.PI) / 180;
   const sd: P2 = [Math.cos(th), Math.sin(th)];
   const up = add(g, mul(sd, 22));
-  const body = lerpFig(R_STRIKE_LO, R_STRIKE_HI, strikeRaise(u));
   return {
     ...body,
     // the far fist at the end of the handle, the near fist up the shaft
-    armL: { w: sub(up, mul(sd, 0)), elbow: [-0.3, 1], fist: 1, hand: 0 },
-    armR: { w: g, elbow: [-0.2, 1], fist: 1, hand: 0 },
+    armL: { w: up, elbow: perpHint(up, rb.armL.S), fist: 1, hand: 0 },
+    armR: { w: g, elbow: perpHint(g, rb.armR.S), fist: 1, hand: 0 },
   };
 };
 const R_POTTER: FigPose = {
@@ -2511,9 +2633,13 @@ export const HAUL = { ropeX: 44, hi: -364, lo: -214 };
 const haulPose = (phase: number): FigPose => {
   const hand = (u0: number): ArmPose => {
     const u = frac(u0);
-    if (u < 0.5) return { w: [HAUL.ropeX - 2, mix(HAUL.hi, HAUL.lo, u / 0.5) + 11], elbow: [0.6, 0.6], fist: 1, hand: -8 };
+    if (u < 0.5) {
+      const w: P2 = [HAUL.ropeX - 2, mix(HAUL.hi, HAUL.lo, u / 0.5) + 11];
+      return { w, elbow: perpHint(w, [0, -240]), fist: 1, hand: -8 };
+    }
     const v = (u - 0.5) / 0.5;
-    return { w: [HAUL.ropeX - 2 - 16 * Math.sin(Math.PI * v), mix(HAUL.lo, HAUL.hi, ease(v)) + 11], elbow: [0.6, 0.6], fist: mix(1, 0.2, Math.sin(Math.PI * v)), hand: -8 };
+    const w: P2 = [HAUL.ropeX - 2 - 16 * Math.sin(Math.PI * v), mix(HAUL.lo, HAUL.hi, ease(v)) + 11];
+    return { w, elbow: perpHint(w, [0, -240]), fist: mix(1, 0.2, Math.sin(Math.PI * v)), hand: -8 };
   };
   const pull = Math.abs(Math.sin(2 * Math.PI * phase));
   return { ...STAND, yaw: 0.92, headYaw: 0.9, lean: -4, crouch: 10 + 8 * pull, pitch: -10, footL: [-20, 0], footR: [20, 0], armL: hand(phase), armR: hand(phase + 0.5), brow: 0.8, mouth: -0.4 };
