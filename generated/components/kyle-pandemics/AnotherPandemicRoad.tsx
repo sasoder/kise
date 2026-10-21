@@ -86,8 +86,8 @@ const ID = { k: 1, cx: 540, cy: 960 };
 // ---------------------------------------------------------------------------
 const Z_FAR = 15000;
 const fadeFar = (d: number) => 1 - c01((d - 1500) / 9000);
-/** near the eye the floor sinks into shadow (and its fast joints stay quiet) */
-const fadeNear = (d: number) => c01((d - 170) / 380);
+/** V4: no near fade: the floor runs at one tone, joints and path edges and all, to the frame's bottom edge */
+const fadeNear = (_d: number) => 1;
 const LANES = [-PATH_HALF, -47, 47, PATH_HALF];
 const CROSS: number[][] = LANES.slice(0, 3).map((_, l) => {
   const out: number[] = [];
@@ -103,18 +103,35 @@ const CROSS: number[][] = LANES.slice(0, 3).map((_, l) => {
 const Ground: React.FC<{ c: Cam3 }> = ({ c }) => {
   const zA = c.Z + 60;
   const els: React.ReactNode[] = [];
-  const NB = 18;
-  for (let i = 0; i < NB; i++) {
-    const za = mix(zA, c.Z + Z_FAR, Math.pow(i / NB, 1.8));
-    const zb = mix(zA, c.Z + Z_FAR, Math.pow((i + 1) / NB, 1.8));
-    const dm = (za + zb) / 2 - c.Z;
-    const q = [proj(c, -9000, 0, za), proj(c, 9000, 0, za), proj(c, 9000, 0, zb), proj(c, -9000, 0, zb)];
-    els.push(<path key={`b${i}`} d={`M${q.map(P).join("L")}Z`} fill={PLAIN} opacity={0.3 * fadeFar(dm) * mix(0.55, 1, fadeNear(dm))} />);
-    const pq = [proj(c, -PATH_HALF, 0, za), proj(c, PATH_HALF, 0, za), proj(c, PATH_HALF, 0, zb), proj(c, -PATH_HALF, 0, zb)];
-    els.push(<path key={`p${i}`} d={`M${pq.map(P).join("L")}Z`} fill={FLAG} opacity={0.42 * fadeFar(dm) * mix(0.5, 1, fadeNear(dm))} />);
-  }
+  // V4: the floor's tone is one continuous vertical gradient (no bands, no edge anywhere): a floor point's distance is
+  // a function of its screen height (d = -eye F / (y - HZ)), so its tone is sampled down the screen from the horizon
+  const dAt = (y: number) => (-c.eye * F) / Math.max(0.5, y - c.HZ);
+  const stops = (k: number, nearLo: number) => {
+    const out: React.ReactNode[] = [];
+    const N = 40;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const y = c.HZ + 1 + Math.pow(t, 1.6) * (1960 - c.HZ);
+      const d = dAt(y);
+      out.push(<stop key={i} offset={(y - c.HZ) / (1960 - c.HZ)} stopOpacity={k * fadeFar(d) * mix(nearLo, 1, fadeNear(d))} />);
+    }
+    return out;
+  };
+  els.push(
+    <defs key="gd">
+      <linearGradient id="ap-plain" gradientUnits="userSpaceOnUse" x1={0} y1={c.HZ} x2={0} y2={1960}>
+        {React.Children.map(stops(0.3, 0.55), (st) => React.cloneElement(st as React.ReactElement<{ stopColor?: string }>, { stopColor: PLAIN }))}
+      </linearGradient>
+      <linearGradient id="ap-flag" gradientUnits="userSpaceOnUse" x1={0} y1={c.HZ} x2={0} y2={1960}>
+        {React.Children.map(stops(0.42, 0.5), (st) => React.cloneElement(st as React.ReactElement<{ stopColor?: string }>, { stopColor: FLAG }))}
+      </linearGradient>
+    </defs>,
+  );
+  els.push(<rect key="plain" x={-20} y={c.HZ} width={1120} height={1960 - c.HZ} fill="url(#ap-plain)" />);
+  const pq = [proj(c, -PATH_HALF, 0, zA), proj(c, PATH_HALF, 0, zA), proj(c, PATH_HALF, 0, c.Z + Z_FAR), proj(c, -PATH_HALF, 0, c.Z + Z_FAR)];
+  els.push(<path key="path" d={`M${pq.map(P).join("L")}Z`} fill="url(#ap-flag)" />);
   // the long joints and the path's edges, in depth pieces that fade and thin
-  const pieces = 22;
+  const pieces = 90;
   for (let i = 0; i < pieces; i++) {
     const za = mix(zA, c.Z + 9000, Math.pow(i / pieces, 1.7));
     const zb = mix(zA, c.Z + 9000, Math.pow((i + 1) / pieces, 1.7));
@@ -138,13 +155,13 @@ const Ground: React.FC<{ c: Cam3 }> = ({ c }) => {
       const a = fadeFar(dm) * fadeNear(dm);
       if (a < 0.03) return;
       const w = Math.max(0.5, Math.min(3, (2.2 * F) / dm));
-      const key = `${Math.round(a * 10)}|${Math.round(w * 4)}`;
+      const key = `${Math.round(a * 40)}|${Math.round(w * 8)}`;
       groups[key] = (groups[key] ?? "") + `M${P(proj(c, LANES[l], 0, Z))}L${P(proj(c, LANES[l + 1], 0, Z))}`;
     });
   });
   Object.entries(groups).forEach(([key, d]) => {
-    const [a10, w4] = key.split("|").map(Number);
-    els.push(<path key={`x${key}`} d={d} fill="none" stroke={DARK} strokeWidth={w4 / 4} strokeOpacity={0.55 * (a10 / 10)} />);
+    const [a40, w8] = key.split("|").map(Number);
+    els.push(<path key={`x${key}`} d={d} fill="none" stroke={DARK} strokeWidth={w8 / 8} strokeOpacity={0.55 * (a40 / 40)} />);
   });
   return <g>{els}</g>;
 };
