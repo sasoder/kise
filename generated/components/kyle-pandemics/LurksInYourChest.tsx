@@ -20,8 +20,9 @@
 // Worker: knitted cap, shirt sleeves, waistcoat) stands slack in the middle, breathing; the camera is already
 // pushing in (a dolly, parallax on the room) and lands on his chest by "CHEST" (f22-30), then keeps creeping in.
 // f18-44 his body goes to ~50 % (one eased change): his engraved hatching fades under one flat translucent body tone
-// with a clean contour (the face keeps its lines), and inside him there are only the two lungs (V2: no ribcage),
-// calm lit organs with a firm contour, the cardiac notch, light fissures and bronchi, the windpipe. Three orange
+// with a clean contour (the face keeps its lines), and inside him there are only the two lungs (V2: no ribcage), as
+// glass (V3: a thin light contour, a faint fill, the cardiac notch, fine fissures and bronchi, the windpipe), so his
+// back and the room show through them; the disease is the only opaque thing inside him. Three orange
 // specks come down the windpipe (f26-48) and lodge in the upper lobes, where they settle as three tubercles by
 // "LURKS" (f50); they sit still while the lungs breathe slowly round them (f50-80). From f80 ("then it'll just WASTE
 // you AWAY") the orange spreads out of them through the upper and middle lobes (a crisp, ragged, monotonic front:

@@ -9,8 +9,9 @@
 // V2 (the user: "are the ribs necessary? ... dial down the style a bit and just make everything a bit more
 // harmonious"): no ribcage, sternum, clavicles or spine any more. Only the two lungs (real proportions on the cast's
 // torso: apex Y -102 just above the shoulder line, base Y -37; the right with three lobes, the left with two and the
-// cardiac notch), the windpipe and main bronchi, a light bronchial tree. One clear shape per lung: a firm dark
-// contour, a lit fill (light from the upper left), one flat shadow tone at the lower right, no hatching.
+// cardiac notch), the windpipe and main bronchi, a light bronchial tree.
+// V3: the lungs are glass (a thin light contour, a ~17 % fill, a faint shade crescent), so his back, the far arm and
+// the room show through them; the disease is the only opaque thing inside him.
 //
 // The disease (orange, the clip's rule: orange = the TB bacillus and what it touches): `nodules` (three tubercles in
 // the upper lobes, at the apices), `specks` (the inhaled bacilli coming down the airways to them), `spread` 0..1 (the
@@ -33,10 +34,9 @@ const PP = (v: P2) => `${v[0].toFixed(2)},${v[1].toFixed(2)}`;
 export const DARK = "#17120D";
 const ACCENT = "#FFB000";
 const ACCENT_DEEP = "#D98A0C";
-// the lung volume: dark umber planes in cream line (the style's architecture manner), lit upper left
-// the lungs are lit organs (rev 1): a mid cream-umber, ink deep at ~0.5 over the page, lighter than the room
-// (rev 2) a touch lighter than the see-through body round them, with a firm dark contour: two clear lungs
-const LUNG = { lit: "#C2B597", mid: "#A89A7D", dark: "#857761", line: "#4A3E31" };
+// V3 (the user: "the lungs should also be transparent and the only thing that's not is the orange thing"): the lungs
+// are glass: a very light fill, a faint shade crescent, a thin light contour; fissures and bronchi as fine light lines
+const GLASS = { fill: "#E9DDBF", fillA: 0.17, shade: "#2A2119", shadeA: 0.16, line: "#EFE5CB" };
 
 /** the view of the torso: the rig, the figure's at / scale, the body yaw, and a world mapper */
 export type ChestView = { rig: FigRig; at: P2; scale: number; yaw: number };
@@ -289,11 +289,11 @@ export const ChestAnatomy: React.FC<{ view: ChestView; st: ChestState; uid: stri
     const id = `${uid}-lg${li}`;
     const fis = [...FISSURES.oblique, ...FISSURES.horizontal]
       .filter((q) => q.L === li)
-      .map((q, j) => <path key={`f${j}`} d={lineD(q.pts.map(([u, t]) => lungPt(pr, L, st, u, t)))} fill="none" stroke={LUNG.line} strokeWidth={0.9 * k} strokeOpacity={0.55} strokeLinecap="round" />);
+      .map((q, j) => <path key={`f${j}`} d={lineD(q.pts.map(([u, t]) => lungPt(pr, L, st, u, t)))} fill="none" stroke={GLASS.line} strokeWidth={0.6 * k} strokeOpacity={0.45} strokeLinecap="round" />);
     const tree = BRANCHES.filter((b) => b.lung === li).map((b, j) => {
       const a = onLung(pr, b.a[0], b.a[1] + 1.2 * st.breath * ((b.a[1] + 80) / 40), 2);
       const e = onLung(pr, b.b[0], b.b[1] + 1.2 * st.breath * ((b.b[1] + 80) / 40), 2);
-      return <path key={`b${j}`} d={`M${PP(a)}L${PP(e)}`} stroke={LUNG.line} strokeOpacity={0.32} strokeWidth={Math.max(0.5, b.w * 0.36) * k} strokeLinecap="round" />;
+      return <path key={`b${j}`} d={`M${PP(a)}L${PP(e)}`} stroke={GLASS.line} strokeOpacity={0.3} strokeWidth={Math.max(0.4, b.w * 0.26) * k} strokeLinecap="round" />;
     });
     return (
       <g key={li}>
@@ -306,15 +306,15 @@ export const ChestAnatomy: React.FC<{ view: ChestView; st: ChestState; uid: stri
             <path d={d} transform={`translate(${(-5.5 * k).toFixed(2)} ${(-4.5 * k).toFixed(2)})`} fill="#000" />
           </mask>
         </defs>
-        <path d={d} fill={LUNG.mid} />
+        <path d={d} fill={GLASS.fill} opacity={GLASS.fillA} />
         <g clipPath={`url(#${id})`}>
-          <path d={d} transform={`translate(${(-3 * k).toFixed(2)} ${(-3.5 * k).toFixed(2)}) `} fill={LUNG.lit} opacity={0.85} />
-          <path d={d} mask={`url(#${id}-sh)`} fill={LUNG.dark} opacity={0.8} />
+          <path d={d} mask={`url(#${id}-sh)`} fill={GLASS.shade} opacity={GLASS.shadeA} />
           {tree}
           {fis}
           <Disease pr={pr} L={L} li={li} st={st} uid={`${id}-ds`} />
         </g>
-        <path d={d} fill="none" stroke={DARK} strokeWidth={2.2 * k} strokeLinejoin="round" />
+        <path d={d} fill="none" stroke={DARK} strokeWidth={1.6 * k} strokeOpacity={0.3} strokeLinejoin="round" />
+        <path d={d} fill="none" stroke={GLASS.line} strokeWidth={0.8 * k} strokeOpacity={0.85} strokeLinejoin="round" />
       </g>
     );
   });
@@ -324,8 +324,7 @@ export const ChestAnatomy: React.FC<{ view: ChestView; st: ChestState; uid: stri
   const trBot = pr.w(CARINA[0], CARINA[1], -2);
   const airway = (a: P2, b: P2, w: number, key: string) => (
     <g key={key}>
-      <path d={`M${PP(a)}L${PP(b)}`} stroke={LUNG.line} strokeOpacity={0.55} strokeWidth={(w + 1.2) * k} strokeLinecap="round" />
-      <path d={`M${PP(a)}L${PP(b)}`} stroke={LUNG.lit} strokeWidth={w * k} strokeLinecap="round" />
+      <path d={`M${PP(a)}L${PP(b)}`} stroke={GLASS.fill} strokeOpacity={0.14} strokeWidth={w * k} strokeLinecap="butt" />
     </g>
   );
   return (
@@ -395,12 +394,12 @@ const Disease: React.FC<{ pr: Proj; L: LungDef; li: 0 | 1; st: ChestState; uid: 
       <g key="cons" clipPath={`url(#${uid}-up)`}>
         {blobs.map((d, j) => (
           <g key={j}>
-            <path d={d} fill={ACCENT_DEEP} opacity={0.42} />
+            <path d={d} fill={ACCENT_DEEP} />
             <clipPath id={`${uid}-b${j}`}>
               <path d={d} />
             </clipPath>
             <path d={contourD} clipPath={`url(#${uid}-b${j})`} fill="none" stroke={ACCENT} strokeWidth={0.6 * k} strokeOpacity={0.9} />
-            <path d={d} fill="none" stroke={ACCENT} strokeWidth={0.8 * k} strokeOpacity={0.95} strokeLinejoin="miter" />
+            <path d={d} fill="none" stroke={DARK} strokeWidth={0.8 * k} strokeLinejoin="miter" />
           </g>
         ))}
         {/* the patches: solid, ragged, of different sizes, each taken by the front as it passes */}
