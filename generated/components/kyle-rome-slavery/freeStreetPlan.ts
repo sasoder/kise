@@ -22,15 +22,15 @@ export const EYE_Y = -200;
 export const HORIZON = 1010;
 
 /** the street (a narrow Pompeii street: a basalt road between high raised pavements, shop fronts on both sides) */
-export const ROAD_HW = 190; // the road's half width (kerb faces at X = +-ROAD_HW)
+export const ROAD_HW = 130; // the road's half width (kerb faces at X = +-ROAD_HW)
 export const PAVE_Y = -80; // the pavements' top (raised ~0.45 m, as Pompeii's high pavements)
-export const FACADE_X = 330; // the shop fronts' plane (|X|)
+export const FACADE_X = 230; // the shop fronts' plane (|X|)
 export const WALL_T = 60; // the front wall's thickness (the jambs and the lintel's underside)
 export const BACK_X = 1000; // the shops' back walls (|X|)
 export const LINTEL_Y = -660; // the timber lintel's underside over each opening
 export const LINTEL_H = 46;
 export const UPPER_TOP = -1240; // the upper storey's top (the eaves)
-export const EAVE_OUT = 120; // the tiled eaves project over the pavement
+export const EAVE_OUT = 90; // the tiled eaves project over the pavement
 /** the street's far end: the rows stop here and the ground opens out toward the horizon */
 export const STREET_END = 5600;
 /** the steam engine that was never built: cut A's engine, far off at the end, a dashed orange outline */
@@ -39,7 +39,7 @@ export const ENGINE_X = 0;
 
 /** stepping stones across the road (three blocks, gaps for the wheels), at these Z */
 export const CROSSINGS = [3500, 4400];
-export const STONE = { hx: 44, hz: 70, top: PAVE_Y + 4, xs: [-124, 0, 124] };
+export const STONE = { hx: 30, hz: 64, top: PAVE_Y + 4, xs: [-86, 0, 86] };
 
 // ---- THE CAMERA ----------------------------------------------------------------------------------
 const c01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -49,8 +49,8 @@ const smooth = (u: number) => {
 };
 /** the dolly's speed (units per frame): a slow creep on the slave shop, then up to a steady walk past the free shops */
 export const V0 = 1.5;
-export const V1 = 11;
-export const speedAt = (f: number) => V0 + (V1 - V0) * smooth((f - 48) / 70);
+export const V1 = 10.5;
+export const speedAt = (f: number) => V0 + (V1 - V0) * smooth((f - 46) / 90);
 const Z_TABLE: number[] = (() => {
   const out = [0];
   for (let f = 1; f <= DURATION + 4; f++) out.push(out[f - 1] + (speedAt(f - 1) + speedAt(f)) / 2);
@@ -64,12 +64,12 @@ export const camZAt = (f: number) => {
 
 /** the shops: side -1 = left, 1 = right; the opening from z0 to z1 (front plane). After the slave shop, each free
  *  shop is placed so its worker stands ~620 units ahead of the camera (~500 px tall) on its FEATURED frame: they pass
- *  one at a time, alternating sides, ~25 frames apart, the camera trucking toward each. */
+ *  one at a time, alternating sides, 28 frames apart, as the straight dolly carries us by. */
 export type ShopKind = "slave" | "potter" | "seller" | "sellerM" | "fuller" | "baker" | "smith" | "cobbler" | "quern" | "closed";
 export type Shop = { id: string; side: -1 | 1; z0: number; z1: number; kind: ShopKind; peak?: number };
-const OPEN = 440;
+const OPEN = 400;
 /** where each kind's worker stands, from the opening's near edge */
-export const FIG_DZ: Record<ShopKind, number> = { slave: 270, potter: 260, seller: 170, sellerM: 170, fuller: 280, baker: 340, smith: 270, cobbler: 250, quern: 270, closed: 270 };
+export const FIG_DZ: Record<ShopKind, number> = { slave: 270, potter: 260, seller: 170, sellerM: 170, fuller: 280, baker: 300, smith: 270, cobbler: 250, quern: 270, closed: 270 };
 export const SHOW_DZ = 620;
 const FEATURED: [number, -1 | 1, ShopKind][] = [
   [120, -1, "seller"],
@@ -88,7 +88,7 @@ const FEATURED: [number, -1 | 1, ShopKind][] = [
   [456, -1, "seller"],
 ];
 export const SHOPS: Shop[] = (() => {
-  const out: Shop[] = [{ id: "L0", side: -1, z0: 450, z1: 450 + OPEN, kind: "slave" }];
+  const out: Shop[] = [{ id: "L0", side: -1, z0: 300, z1: 860, kind: "slave" }];
   FEATURED.forEach(([pk, side, kind], i) => {
     const z0 = Math.round(camZAt(pk) + SHOW_DZ - FIG_DZ[kind]);
     out.push({ id: `F${i}`, side, z0, z1: z0 + OPEN, kind, peak: pk });
@@ -109,19 +109,11 @@ const lobe = (f: number, [a, b]: readonly [number, number]) => {
   return (x - (L / (2 * Math.PI)) * Math.sin((2 * Math.PI * x) / L)) / L;
 };
 export const shiftAt = (f: number) => SHIFT0 * (1 - 0.04 * (Math.min(f, SHIFT_LOBE[0]) / SHIFT_LOBE[0])) * (1 - lobe(f, SHIFT_LOBE));
-/** the truck: toward each featured shop as it passes (alternating sides), from the slave shop's framing */
-export const TRUCK = 115;
-const X_KEYS: [number, number][] = [[0, 120], [50, 112], ...FEATURED.filter(([pk]) => pk < DURATION + 30).map(([pk, side]): [number, number] => [pk + 8, side * TRUCK])];
-export const camXAt = (f: number) => {
-  // cosine interpolation between keys (zero slope at each key)
-  if (f <= X_KEYS[0][0]) return X_KEYS[0][1];
-  for (let i = 0; i < X_KEYS.length - 1; i++) {
-    const [fa, xa] = X_KEYS[i];
-    const [fb, xb] = X_KEYS[i + 1];
-    if (f <= fb) return xa + (xb - xa) * (0.5 - 0.5 * Math.cos((Math.PI * (f - fa)) / (fb - fa)));
-  }
-  return X_KEYS[X_KEYS.length - 1][1];
-};
+/** the camera's track: one straight line down the street. The only lateral change is the opening's: the eye starts
+ *  120 units right of the axis (framing the slave shop) and eases onto the axis in the SAME single lobe as the lens
+ *  shift (f58-156); after that it is dead straight on the axis (no truck, no weave) */
+export const X0 = 120;
+export const camXAt = (f: number) => X0 * (1 - lobe(f, SHIFT_LOBE));
 export type StreetCam = { X: number; Z: number; shift: number; f: number };
 export const camAt = (f: number): StreetCam => ({ X: camXAt(f), Z: camZAt(f), shift: shiftAt(f), f });
 /** the depth ratio (screen px per unit) of depth Z */

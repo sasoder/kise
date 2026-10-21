@@ -27,8 +27,9 @@
 // sides, run by FREE people (pilleus caps, aprons, a woman at her counter), every one working by hand: a free man at
 // the same rotary quern, a potter at his wheel, a baker sliding a loaf into his oven on a long peel, a smith
 // hammering at his anvil, a cobbler stitching a shoe, a man at his counter. Pass 2: one at a time, alternating sides,
-// ~28 frames apart, each ~450-650 px for ~18 frames as the camera trucks toward it (TRUCK, FEATURED in the plan). The
-// camera trucks a little toward the shop being passed (near shops slide, the far engine barely moves). No text.
+// 28 frames apart (FEATURED in the plan), on a narrow street so each grows to ~450-650 px as the straight dolly
+// carries us past. Revision 1: the camera runs on ONE straight track down the street's axis (its only lateral move is
+// the opening's ease onto the axis, in the same lobe as the lens shift), at a steady walk after an eased start. No text.
 // CAUSE BEFORE EFFECT: the grinders' fists are on the quern handles on every frame (romeCast grip); the smith's hammer
 // head meets the anvil's top at phase 0 of each blow; the baker's fists stay on his peel.
 // Orange = only the dashed engine (the clip rule: dashed orange = the machine that could have been but was never
@@ -61,6 +62,7 @@ import {
   Overseer,
   POSES,
   POTTER,
+  PUSH,
   PotterWheel,
   RotaryQuern,
   Sack,
@@ -69,6 +71,7 @@ import {
   headTurn,
   idle,
   quernHandle,
+  romeAnchors,
   type FigPose,
   type Ink,
 } from "./romeCast";
@@ -174,7 +177,7 @@ const STONE_V = ["#5C4D3C", "#4A3D30", "#2A2119"] as const;
 const WOOD_V = ["#5A4632", "#46372A", "#2A2016"] as const;
 const IRON_V = ["#4E4740", "#3A3430", "#1E1A17"] as const;
 
-type Item = { Z: number; key: string; el: React.ReactNode };
+type Item = { Z: number; key: string; el: React.ReactNode; mask?: string };
 const inkAt = (h: number): Ink => tintInk(CREAM, h);
 
 // ---------------------------------------------------------------------------
@@ -249,7 +252,7 @@ const Ground: React.FC<{ C: StreetCam }> = ({ C }) => {
   for (let Z = Math.ceil(zA / 140) * 140; Z < STREET_END; Z += 140) {
     const za = Z;
     const zb = Math.min(Z + 140, STREET_END);
-    for (const x of [-62, 62]) ruts += poly([p(x - 7, 0, za), p(x + 7, 0, za), p(x + 7, 0, zb), p(x - 7, 0, zb)]);
+    for (const x of [-43, 43]) ruts += poly([p(x - 7, 0, za), p(x + 7, 0, za), p(x + 7, 0, zb), p(x - 7, 0, zb)]);
     for (const s of [-1, 1]) {
       joints += `M${pt(p(s * ROAD_HW, 0, Z))}L${pt(p(s * ROAD_HW, PAVE_Y, Z))}`;
       if (Math.round(Z / 140) % 2 === 0) joints += `M${pt(p(s * ROAD_HW, PAVE_Y, Z))}L${pt(p(s * (ROAD_HW + 60), PAVE_Y, Z))}`;
@@ -452,6 +455,24 @@ const Bay: React.FC<{ C: StreetCam; side: -1 | 1; b0: number; b1: number; o0?: n
   );
 };
 
+/** a shop's front wall as a mask (white = visible): the wall from the bay's start to the opening's end, less the
+ *  opening, is black, so what the shop puts out shows only through its opening or in front of the wall's plane */
+const BayMask: React.FC<{ id: string; C: StreetCam; side: -1 | 1; b0: number; o0: number; o1: number }> = ({ id, C, side, b0, o0, o1 }) => {
+  const p = (X: number, Y: number, Z: number) => project(C, X, Y, Z);
+  const za = Math.max(b0, C.Z + NEAR);
+  const F = side * FACADE_X;
+  if (o1 <= za) return null;
+  const outer = poly([p(F, PAVE_Y, za), p(F, PAVE_Y, o1), p(F, UPPER_TOP, o1), p(F, UPPER_TOP, za)]);
+  const ha = Math.max(o0, za);
+  const hole = o1 > ha ? poly([p(F, PAVE_Y + 400, ha), p(F, PAVE_Y + 400, o1), p(F, LINTEL_Y, o1), p(F, LINTEL_Y, ha)]) : "";
+  return (
+    <mask id={id} maskUnits="userSpaceOnUse" x={-4000} y={-4000} width={9000} height={10000}>
+      <rect x={-4000} y={-4000} width={9000} height={10000} fill="#fff" />
+      <path d={outer + hole} fillRule="evenodd" fill="#000" />
+    </mask>
+  );
+};
+
 /** the tiled eaves along a row (projecting over the pavement), in haze segments */
 const Eaves: React.FC<{ C: StreetCam; P: Persp; side: -1 | 1 }> = ({ C, P, side }) => {
   const out: React.ReactNode[] = [];
@@ -487,8 +508,9 @@ const shadow = (c: Ctx, X: number, Z: number, w: number, d: number, uid: string,
 const QuernGroup = (c: Ctx, sh: Shop, Zq: number, who: "slave" | "free", key: string): Item => {
   const sg = sh.side;
   const dir = (-sg) as 1 | -1;
-  const Xq = sg * 250;
-  const Xg = sg * (250 + 62);
+  // the slave mill stands back in its doorway; a free grinder kneels at the front edge of his platform
+  const Xq = sg * (who === "slave" ? 250 : 188);
+  const Xg = Xq + sg * 50;
   const h = hazeAt(c.C, Zq);
   // the mill stands on a low stone platform at the threshold (keeps the grinding hands up out of the caption band)
   const LIFT = 80;
@@ -506,7 +528,7 @@ const QuernGroup = (c: Ctx, sh: Shop, Zq: number, who: "slave" | "free", key: st
     el: (
       <g key={key}>
         {shadow(c, (Xg + Xq) / 2, Zq, 130, 80, `${key}-ps`, 0.6)}
-        <Box P={c.P} X0={Math.min(sg * 200, sg * 395)} X1={Math.max(sg * 200, sg * 395)} Y0={top} Y1={PAVE_Y} Z0={Zq - 75} Z1={Zq + 75} ink={volOf(...STONE_V, h)} uid={`${key}-pl`} />
+        <Box P={c.P} X0={Math.min(Xq - sg * 50, Xg + sg * 84)} X1={Math.max(Xq - sg * 50, Xg + sg * 84)} Y0={top} Y1={PAVE_Y} Z0={Zq - 75} Z1={Zq + 75} ink={volOf(...STONE_V, h)} uid={`${key}-pl`} />
         {shadow(c, Xg, Zq, 90, 40, `${key}-gs`, 0.75, top)}
         {shadow(c, Xq, Zq, 46, 34, `${key}-qs`, 0.6, top)}
         <RotaryQuern at={q.at} scale={q.scale} turn={phase} dir={dir} uid={`${key}-q`} ink={ink} />
@@ -528,8 +550,8 @@ const SlaveShop = (c: Ctx, sh: Shop): Item[] => {
   items.push(QuernGroup(c, sh, 620, "slave", "sq"));
   // grain sacks stacked against the far jamb
   for (const [i, X, Z] of [
-    [0, 352, 830],
-    [1, 344, 858],
+    [0, 352, 796],
+    [1, 344, 822],
   ] as const) {
     const a = at3(c, sg * X, PAVE_Y, Z);
     items.push({ Z, key: `sk${i}`, el: <g key={`sk${i}`}>{shadow(c, sg * X, Z, 40, 30, `sk${i}s`, 0.6)}<Sack at={a.at} scale={a.scale} uid={`sk${i}`} ink={inkAt(hazeAt(c.C, Z))} /></g> });
@@ -548,7 +570,7 @@ const SlaveShop = (c: Ctx, sh: Shop): Item[] => {
         <Slave pose={POSES.carry(sg as 1 | -1, ph)} at={a.at} scale={a.scale} uid="car" variant={0} fetters load="sack" shade={1} ink={inkAt(h)} cloth={inkAt(h)} />
       </g>
     );
-    items.push({ Z, key: Xa > 360 ? "car-in" : "car", el });
+    items.push({ Z, key: "car", el });
   }
   // the overseer at the door with his rod, on the pavement by the far pier, watching them (lifts it a little on "labor")
   {
@@ -600,7 +622,7 @@ const SellerShop = (c: Ctx, sh: Shop, woman: boolean): { front: Item[]; inner: R
   const sg = sh.side;
   const dir = (-sg) as 1 | -1;
   const Z = sh.z0 + 170;
-  const X = sg * 350;
+  const X = sg * 245;
   const a = at3(c, X, PAVE_Y, Z);
   const h = hazeAt(c.C, Z);
   const t = 0.55 + 0.45 * Math.sin(c.f / 21 + sh.z0 * 0.01);
@@ -615,7 +637,7 @@ const SellerShop = (c: Ctx, sh: Shop, woman: boolean): { front: Item[]; inner: R
     return { Z: Za, key: `${key}a${i}`, el: <g key={`${key}a${i}`}>{shadow(c, Xa, Za, 30, 22, `${key}a${i}s`, 0.6)}<Amphora at={aa.at} scale={aa.scale} uid={`${key}a${i}`} angle={-sg * 6} ink={inkAt(hazeAt(c.C, Za))} /></g> };
   });
   return {
-    inner: <Counter key={`${key}c`} c={c} sh={sh} za={sh.z0 + 250} zb={sh.z0 + 425} uid={`${key}c`} />,
+    inner: <Counter key={`${key}c`} c={c} sh={sh} za={sh.z0 + 230} zb={sh.z0 + 385} uid={`${key}c`} />,
     front: [
       ...am,
       {
@@ -634,9 +656,10 @@ const SellerShop = (c: Ctx, sh: Shop, woman: boolean): { front: Item[]; inner: R
 
 const PotterShop = (c: Ctx, sh: Shop): Item[] => {
   const sg = sh.side;
-  const dir = (-sg) as 1 | -1;
+  // he sits at the pavement's edge facing into his shop, the wheel on its threshold
+  const dir = sg as 1 | -1;
   const Z = sh.z0 + 260;
-  const Xp = sg * 355;
+  const Xp = sg * 190;
   const ph = c.f / 48 + sh.z0 * 0.001;
   const pp = at3(c, Xp, PAVE_Y, Z);
   const wheel = at3(c, Xp + dir * POTTER.wheelDX, PAVE_Y, Z);
@@ -645,7 +668,7 @@ const PotterShop = (c: Ctx, sh: Shop): Item[] => {
   const key = `pot${sh.id}`;
   // finished jars drying on the pavement against the wall
   const jars = [0, 1, 2].map((i) => {
-    const Zj = sh.z0 + 340 + i * 34;
+    const Zj = sh.z0 + 305 + i * 30;
     const Xj = sg * (FACADE_X - 26);
     const aj = at3(c, Xj, PAVE_Y, Zj);
     return { Z: Zj, key: `${key}j${i}`, el: <g key={`${key}j${i}`}>{shadow(c, Xj, Zj, 22, 18, `${key}j${i}s`, 0.5)}<Amphora at={aj.at} scale={aj.scale * 0.55} uid={`${key}j${i}`} ink={inkAt(hazeAt(c.C, Zj))} /></g> };
@@ -671,7 +694,7 @@ const CobblerShop = (c: Ctx, sh: Shop): Item[] => {
   const sg = sh.side;
   const dir = (-sg) as 1 | -1;
   const Z = sh.z0 + 250;
-  const Xp = sg * 355;
+  const Xp = sg * 262;
   const ph = c.f / 26 + 0.3;
   const pp = at3(c, Xp, PAVE_Y, Z);
   const stool = at3(c, Xp + dir * POTTER.stoolDX, PAVE_Y, Z);
@@ -682,9 +705,10 @@ const CobblerShop = (c: Ctx, sh: Shop): Item[] => {
   const hand = project(c.C, bx - dir * 8, PAVE_Y - 96 - 6 * Math.sin(2 * Math.PI * ph), Z);
   const sc = rAt(c.C, Z);
   const shoe = (
-    <g transform={`translate(${pt(hand)}) scale(${(sc * dir).toFixed(4)} ${sc.toFixed(4)})`}>
-      <path d="M-34,6C-30,-4 -6,-8 10,-10C22,-12 30,-6 34,0C34,6 24,10 -30,10Z" fill={inkAt(h).deep} stroke={DARK} strokeWidth={2.2} />
-      <path d="M-28,4C-14,-2 8,-4 26,-2" fill="none" stroke={DARK} strokeWidth={1.2} strokeDasharray="3 3" />
+    <g transform={`translate(${pt(hand)}) scale(${(sc * dir * 0.72).toFixed(4)} ${(sc * 0.72).toFixed(4)})`}>
+      <path d="M-34,8L32,8C36,8 36,2 32,0L-30,0C-36,0 -38,8 -34,8Z" fill={inkAt(h).main} stroke={DARK} strokeWidth={2.4} />
+      <path d="M-30,0C-30,-14 -18,-22 -4,-22C6,-22 10,-14 20,-8C28,-4 32,-2 32,0Z" fill={mixHex(HAZE, "#6A5238", h)} stroke={DARK} strokeWidth={2.4} />
+      <path d="M-24,-2C-14,-10 4,-12 26,-3" fill="none" stroke={inkAt(h).deep} strokeWidth={1.4} strokeDasharray="3 3" />
     </g>
   );
   // sandals hanging from pegs on the pier beyond the opening
@@ -702,7 +726,7 @@ const CobblerShop = (c: Ctx, sh: Shop): Item[] => {
       el: (
         <g key={key}>
           {shadow(c, Xp, Z, 80, 38, `${key}s`)}
-          <Box P={c.P} X0={Math.min(bx - sg * 26, bx + sg * 26)} X1={Math.max(bx - sg * 26, bx + sg * 26)} Y0={PAVE_Y - 74} Y1={PAVE_Y} Z0={Z - 46} Z1={Z + 46} ink={volOf(...WOOD_V, h)} uid={`${key}b`} />
+          <Box P={c.P} X0={Math.min(bx - sg * 18, bx + sg * 18)} X1={Math.max(bx - sg * 18, bx + sg * 18)} Y0={PAVE_Y - 74} Y1={PAVE_Y} Z0={Z - 46} Z1={Z + 46} ink={volOf(...WOOD_V, h)} uid={`${key}b`} />
           <Stool at={stool.at} scale={stool.scale} uid={`${key}st`} ink={inkAt(h)} />
           <Freeman pose={POSES.potter(dir, ph)} at={pp.at} scale={pp.scale} uid={key} variant={2} shade={1} ink={inkAt(h)} cloth={inkAt(h)} />
           {shoe}
@@ -712,12 +736,37 @@ const CobblerShop = (c: Ctx, sh: Shop): Item[] => {
   ];
 };
 
+const SG_LO = -4;
+const SG_UP = 18;
+/** the smith's two fists on the hammer's shaft, 26 units apart along it (Revision 1 audit: with the cast's own fist
+ *  targets the two grips can meet on the lift, and a shaft between coincident fists turns over in one frame) */
+const smithGrips = (q: FigPose, at: P2, scale: number, dir: 1 | -1): { L: P2; R: P2 } => {
+  const up = dir === 1 ? q.armL.w : q.armR.w;
+  const g = dir === 1 ? q.armR.w : q.armL.w;
+  const L0 = Math.hypot(up[0] - g[0], up[1] - g[1]) || 1;
+  const sd: P2 = [(up[0] - g[0]) / L0, (up[1] - g[1]) / L0];
+  const w = (k: number): P2 => [at[0] + (g[0] + sd[0] * k) * scale, at[1] + (g[1] + sd[1] * k) * scale];
+  return dir === 1 ? { L: w(SG_UP), R: w(SG_LO) } : { R: w(SG_UP), L: w(SG_LO) };
+};
+/** the hammer head at the blow (phase 0), in the smith's own units: where the anvil's face must be */
+const SMITH_HEAD: Record<string, P2> = {};
+const smithHead = (dir: 1 | -1): P2 => {
+  const k = `${dir}`;
+  if (!SMITH_HEAD[k]) {
+    const q0 = POSES.strike(dir, 0);
+    const a = romeAnchors("freeman", q0, [0, 0], 1, { variant: 0, grip: smithGrips(q0, [0, 0], 1, dir), tool: "hammer" });
+    SMITH_HEAD[k] = a.toolHead ?? [dir * 141, -43];
+  }
+  return SMITH_HEAD[k];
+};
 const SmithShop = (c: Ctx, sh: Shop): Item[] => {
   const sg = sh.side;
-  const dir = (-sg) as 1 | -1;
+  // he stands at the front edge of his raised floor facing in, the anvil on the threshold
+  const dir = sg as 1 | -1;
   const Z = sh.z0 + 270;
-  const Xs = sg * 355;
-  const Xa = Xs + dir * 141;
+  const Xs = sg * 205;
+  const head0 = smithHead(dir);
+  const Xa = Xs + head0[0];
   const ph = c.f / 30 + sh.z0 * 0.0007;
   // the smithy's raised stone floor runs out over the pavement (keeps the blow up out of the caption band)
   const LIFT = 62;
@@ -725,7 +774,7 @@ const SmithShop = (c: Ctx, sh: Shop): Item[] => {
   const pp = at3(c, Xs, fl, Z);
   const h = hazeAt(c.C, Z);
   const key = `smi${sh.id}`;
-  const aTop = fl - 43;
+  const aTop = fl + head0[1] + 4;
   const r = rAt(c.C, Z);
   const bar = poly([project(c.C, Xa - 30, aTop - 2, Z - 6), project(c.C, Xa + 30, aTop - 2, Z - 6), project(c.C, Xa + 30, aTop - 9, Z - 6), project(c.C, Xa - 30, aTop - 9, Z - 6)]);
   return [
@@ -735,13 +784,13 @@ const SmithShop = (c: Ctx, sh: Shop): Item[] => {
       el: (
         <g key={key}>
           {shadow(c, (Xs + Xa) / 2, Z, 150, 90, `${key}ps`, 0.6)}
-          <Box P={c.P} X0={Math.min(Xa - sg * 50, sg * (FACADE_X + 40))} X1={Math.max(Xa - sg * 50, sg * (FACADE_X + 40))} Y0={fl} Y1={PAVE_Y} Z0={Z - 90} Z1={Z + 90} ink={volOf(...STONE_V, h)} uid={`${key}pl`} />
+          <Box P={c.P} X0={Math.min(Xs - sg * 40, Xa + sg * 50)} X1={Math.max(Xs - sg * 40, Xa + sg * 50)} Y0={fl} Y1={PAVE_Y} Z0={Z - 90} Z1={Z + 90} ink={volOf(...STONE_V, h)} uid={`${key}pl`} />
           {shadow(c, Xs, Z, 80, 38, `${key}s`, 0.75, fl)}
           {shadow(c, Xa, Z, 40, 30, `${key}as`, 0.6, fl)}
           <Box P={c.P} X0={Xa - 30} X1={Xa + 30} Y0={fl - 30} Y1={fl} Z0={Z - 34} Z1={Z + 34} ink={volOf(...WOOD_V, h)} uid={`${key}blk`} />
           <Box P={c.P} X0={Xa - 26} X1={Xa + 26} Y0={aTop} Y1={fl - 30} Z0={Z - 16} Z1={Z + 16} ink={volOf(...IRON_V, h)} uid={`${key}anv`} hatch={false} />
           <path d={bar} fill={inkAt(h).main} stroke={DARK} strokeWidth={lw(r, 1.2)} />
-          <Freeman pose={POSES.strike(dir, ph)} at={pp.at} scale={pp.scale} uid={key} variant={0} tool="hammer" shade={1} ink={inkAt(h)} cloth={inkAt(h)} />
+          <Freeman pose={POSES.strike(dir, ph)} at={pp.at} scale={pp.scale} uid={key} variant={0} tool="hammer" grip={smithGrips(POSES.strike(dir, ph), pp.at, pp.scale, dir)} shade={1} ink={inkAt(h)} cloth={inkAt(h)} />
         </g>
       ),
     },
@@ -753,18 +802,18 @@ const SmithShop = (c: Ctx, sh: Shop): Item[] => {
 const BakerShop = (c: Ctx, sh: Shop): { front: Item[]; inner: React.ReactNode } => {
   const sg = sh.side;
   const u = sg; // toward the shop
-  const Zo = sh.z0 + 340;
+  const Zo = sh.z0 + 300;
   const h = hazeAt(c.C, Zo);
   const p = (X: number, Y: number, Z: number) => project(c.C, X, Y, Z);
   const key = `bak${sh.id}`;
-  const oz0 = sh.z0 + 210;
-  const oz1 = sh.z0 + 430;
-  const ox0 = sg * (FACADE_X + 20);
-  const oxF = sg * (FACADE_X + 40);
+  const oz0 = sh.z0 + 180;
+  const oz1 = sh.z0 + 390;
+  const ox0 = sg * (FACADE_X + 100);
+  const oxF = sg * (FACADE_X + 120);
   const mouthY0 = PAVE_Y - 150;
   const mouthY1 = PAVE_Y - 250;
   // the dome: the silhouette of a hemisphere (sampled, convex hull)
-  const dc: [number, number, number] = [sg * 510, PAVE_Y - 240, Zo];
+  const dc: [number, number, number] = [sg * 490, PAVE_Y - 240, Zo];
   const pts: P2[] = [];
   for (let i = 0; i <= 12; i++)
     for (let j = 0; j < 24; j++) {
@@ -777,11 +826,11 @@ const BakerShop = (c: Ctx, sh: Shop): { front: Item[]; inner: React.ReactNode } 
   const stroke = DARK;
   const r = rAt(c.C, Zo);
   // the peel: butt near the baker's hands, blade inside the oven; it slides in and out
-  const slide = 22 * Math.sin((2 * Math.PI * c.f) / 46);
-  const Xb = sg * 205;
-  const yP = PAVE_Y - 208;
-  const butt = Xb + u * (20 + slide);
-  const bladeC = Xb + u * (300 + slide);
+  const slide = 8 * Math.sin((2 * Math.PI * c.f) / 46);
+  const Xb = sg * 175;
+  const yP = PAVE_Y - 216;
+  const butt = Xb + u * (40 + slide);
+  const bladeC = Xb + u * (290 + slide);
   const peelIn = (X0: number, X1: number) => `M${pt(p(X0, yP, Zo))}L${pt(p(X1, yP, Zo))}`;
   const blade = poly([p(bladeC - 34, yP + 2, Zo - 30), p(bladeC + 34, yP + 2, Zo - 30), p(bladeC + 34, yP + 2, Zo + 30), p(bladeC - 34, yP + 2, Zo + 30)]);
   const loafC = p(bladeC, yP - 6, Zo);
@@ -814,7 +863,7 @@ const BakerShop = (c: Ctx, sh: Shop): { front: Item[]; inner: React.ReactNode } 
         <clipPath id={`${key}mc`}>
           <path d={mouth} />
         </clipPath>
-        <path d={peelIn(sg * (FACADE_X + 20), bladeC)} stroke={hz("#8C7F60", h)} strokeWidth={6 * r} strokeLinecap="round" />
+        <path d={peelIn(ox0, bladeC)} stroke={hz("#B49E74", h)} strokeWidth={8 * r} strokeLinecap="round" />
         <path d={blade} fill={hz("#8C7F60", h)} stroke={DARK} strokeWidth={lw(r, 1)} />
         {loaf}
       </g>
@@ -823,16 +872,17 @@ const BakerShop = (c: Ctx, sh: Shop): { front: Item[]; inner: React.ReactNode } 
     </g>
   );
   // the baker: both fists on the shaft
-  const nearHand = project(c.C, Xb + u * (100 + slide), yP, Zo);
-  const farHand = project(c.C, Xb + u * (48 + slide), yP - 6, Zo);
+  const nearHand = project(c.C, Xb + u * (PUSH.grip[0] - 4 + slide), PAVE_Y + PUSH.grip[1], Zo);
+  const farHand = project(c.C, Xb + u * (PUSH.gripFar[0] - 4 + slide), PAVE_Y + PUSH.gripFar[1], Zo);
   const dir = (sg as 1 | -1);
   const grip = dir === 1 ? { L: nearHand, R: farHand } : { R: nearHand, L: farHand };
   const bp = at3(c, Xb, PAVE_Y, Zo);
-  const lean = 6 * Math.sin((2 * Math.PI * c.f) / 46);
-  const pose: FigPose = { ...POSES.stand(dir), lean: 10 + lean, crouch: 8, pitch: 4 };
+  const lean = 0; // (audit: an animated lean popped the mirrored hem by 2.5 units twice a stroke; the arms carry the stroke)
+  // both fists on the shaft at chest height, leaning into the stroke (the cast's push stance, feet planted)
+  const pose: FigPose = { ...POSES.push(dir, 0, 0), lean: dir * (20 + lean) };
   // loaves in a basket on the pavement behind him
   const bkZ = Zo - 150;
-  const bkX = sg * 250;
+  const bkX = sg * 195;
   const bk = at3(c, bkX, PAVE_Y, bkZ);
   return {
     inner,
@@ -845,7 +895,8 @@ const BakerShop = (c: Ctx, sh: Shop): { front: Item[]; inner: React.ReactNode } 
           <g key={key}>
             {shadow(c, Xb, Zo, 70, 36, `${key}s`)}
             {/* the shaft outside the oven */}
-            <path d={peelIn(butt, sg * (FACADE_X + 20))} stroke={hz("#8C7F60", h)} strokeWidth={6 * r} strokeLinecap="round" />
+            <path d={peelIn(butt - u * 60, ox0)} stroke={DARK} strokeWidth={8 * r + 2.4} strokeLinecap="round" />
+            <path d={peelIn(butt - u * 60, ox0)} stroke={hz("#B49E74", h)} strokeWidth={8 * r} strokeLinecap="round" />
             <Freeman pose={pose} at={bp.at} scale={bp.scale} uid={key} variant={0} shade={1} grip={grip} ink={inkAt(h)} cloth={inkAt(h)} />
           </g>
         ),
@@ -900,34 +951,36 @@ function convexHull(points: P2[]): P2[] {
 // ---------------------------------------------------------------------------
 // THE CUT
 // ---------------------------------------------------------------------------
-const FreeStreetNoEngine: React.FC<z.infer<typeof schema>> = () => {
-  const f = useCurrentFrame();
+/** the whole scene at frame f (pure; the audit script walks it to read every figure's props) */
+export const sceneAt = (f: number) => {
   const C = camAt(f);
   const P = makePersp(C);
   const ctx: Ctx = { C, P, f };
-  const cam = swayCam({ k: 1, cx: 540, cy: 960 }, f);
 
   const inner: { Z: number; el: React.ReactNode }[] = [];
+  const masks: React.ReactNode[] = [];
   const front: Item[] = [];
   const bays: React.ReactNode[] = [];
   for (const side of [-1, 1] as const) {
     const row = SHOPS.filter((s) => s.side === side).sort((a, b) => a.z0 - b.z0);
     // the wall before the first opening, each bay (pier + opening), and the wall to the street's end
     let prev = -2000;
+    const bayStart = new Map<string, number>();
     row.forEach((s, i) => {
       bays.push(<Bay key={`b${side}${i}`} C={C} side={side} b0={prev} b1={s.z1} o0={s.z0} o1={s.z1} idx={i} closed={s.kind === "closed"} />);
+      bayStart.set(s.id, prev);
       prev = s.z1;
     });
     bays.push(<Bay key={`b${side}end`} C={C} side={side} b0={prev} b1={STREET_END} idx={99} />);
     for (const s of row) {
       if (s.z1 < C.Z + NEAR) continue;
       if (s.kind !== "closed") inner.push({ Z: s.z1, el: <Interior key={`in${s.id}`} C={C} s={s} /> });
-      if (s.kind === "slave") {
-        for (const it of SlaveShop(ctx, s)) {
-          if (it.key.endsWith("-in")) inner.push({ Z: it.Z, el: it.el });
-          else front.push(it);
-        }
-      }
+      // DEPTH ORDER: everything a shop puts out is masked by its own front wall (the near pier and the wall over the
+      // opening), so whatever stands or reaches behind the front plane is hidden by the jamb exactly where it should be
+      const mId = `fm-${s.id}`;
+      masks.push(<BayMask key={mId} id={mId} C={C} side={side} b0={bayStart.get(s.id) ?? -2000} o0={s.z0} o1={s.z1} />);
+      const n0 = front.length;
+      if (s.kind === "slave") front.push(...SlaveShop(ctx, s));
       else if (s.kind === "quern") {
         front.push(QuernGroup(ctx, s, s.z0 + 270, "free", `fq${s.id}`));
         for (const [i, X, Z] of [
@@ -949,6 +1002,7 @@ const FreeStreetNoEngine: React.FC<z.infer<typeof schema>> = () => {
         inner.push({ Z: s.z0 + 300, el: r.inner });
         front.push(...r.front);
       }
+      for (let k = n0; k < front.length; k++) front[k].mask = mId;
     }
   }
   // the stepping stones across the road (low: drawn with the ground)
@@ -968,7 +1022,14 @@ const FreeStreetNoEngine: React.FC<z.infer<typeof schema>> = () => {
   inner.sort((a, b) => b.Z - a.Z);
   front.sort((a, b) => b.Z - a.Z);
   // cull what is far off frame (a margin for the bodies)
-  const frontEls = front.map((it) => it.el);
+  return { C, P, inner, front, masks, bays, stones };
+};
+
+const FreeStreetNoEngine: React.FC<z.infer<typeof schema>> = () => {
+  const f = useCurrentFrame();
+  const { C, P, inner, front, masks, bays, stones } = sceneAt(f);
+  const cam = swayCam({ k: 1, cx: 540, cy: 960 }, f);
+  const frontEls = front.map((it) => (it.mask ? <g key={`m${it.key}`} mask={`url(#${it.mask})`}>{it.el}</g> : it.el));
 
   return (
     <TexcocoPage cam={cam} vignette={0.3}>
@@ -996,6 +1057,7 @@ const FreeStreetNoEngine: React.FC<z.infer<typeof schema>> = () => {
         {bays}
         <Eaves C={C} P={P} side={-1} />
         <Eaves C={C} P={P} side={1} />
+        <defs>{masks}</defs>
         {frontEls}
       </WorldSvg>
     </TexcocoPage>
