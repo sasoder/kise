@@ -11,6 +11,8 @@
 // stone in the middle distance, then, after the goose lands, pushes in on it at a standing eye.
 // ---------------------------------------------------------------------------
 
+import { hash } from "../kits/maps/incaShared";
+
 export const FPS = 30000 / 1001;
 export const DURATION = 159;
 export const F = 1150;
@@ -55,7 +57,9 @@ export const V0 = 46;
 export const CREEP = 0.8;
 export const DECEL: [number, number] = [40, 92];
 export const PUSH: [number, number] = [94, 170];
-export const PUSH_END_D = 210;
+export const PUSH_END_D = 325;
+/** the camera slows to STOP_D in front of the next stone at STOP_F (f92), then pushes in on the goose */
+export const STOP_D = 560;
 const velBase = (f: number) => {
   const u = c01((f - DECEL[0]) / (DECEL[1] - DECEL[0]));
   // a cosine ease: no jolt where it starts, settles softly into the creep
@@ -83,7 +87,7 @@ const at = (t: number[], f: number) => {
 const BASE = integrate(velBase);
 const SHAPE = integrate(pushShape);
 /** the push's size: the blank stone's front face at PUSH_END_D from the eye at f158 */
-const PUSH_A = (at(BASE, 92) + 400 - PUSH_END_D - at(BASE, 158)) / at(SHAPE, 158);
+const PUSH_A = (at(BASE, 92) + STOP_D - PUSH_END_D - at(BASE, 158)) / at(SHAPE, 158);
 const Z_TABLE = BASE.map((z, i) => z + PUSH_A * SHAPE[i]);
 export const camZAt = (f: number) => at(Z_TABLE, f);
 /** the eye: a standing eye a little raised (2.45 m); in the push it comes down a little toward the goose's level */
@@ -93,12 +97,12 @@ const EYE = pchip([
   [96, -245],
   [158, -232],
 ]);
-/** the horizon (a lens shift, verticals stay vertical): y 615 to the landing; in the push it lowers to y 720 so the
- *  goose stays centred (about y 400-860 at the cut), the stone's top just under it and its carved row above the bands */
+/** the horizon (a lens shift, verticals stay vertical): y 615 to the landing; in the push it lowers to y 678 so the
+ *  goose and the stone's carved upper face fill the frame at the cut, the year's foot just above the caption band */
 const HZ_AT = pchip([
   [0, 615],
   [94, 615],
-  [158, 720],
+  [158, 678],
 ]);
 export type Cam3 = { X: number; Z: number; eye: number; HZ: number };
 export const camAt = (f: number): Cam3 => ({ X: 0, Z: camZAt(f), eye: EYE(f), HZ: f < 94 ? 615 : HZ_AT(f) });
@@ -134,11 +138,10 @@ export const YEARS = ["1918", "1957", "1968", "2009", "2020"];
 export type Stone = { X: number; Z: number; W: number; H: number; year: string | null; seed: number; blank: "path" | "beyond" | null };
 /** the blank stone in the middle of the path: the camera slows to STOP_D in front of it at STOP_F, then pushes in on the goose */
 export const STOP_F = 92;
-export const STOP_D = 400; // (PUSH_A assumes 400)
-/** the same kind of rough stone, younger and lower than the year stones (we look a little down on its top), with a
- *  broken but level top (the goose stands on it) */
-export const PATH_STONE_W = 190;
-export const PATH_STONE_H = 200;
+/** the next stone is the same kind as the year stones (the menhir outline, proportions, lean, carving layout), at the
+ *  low end of their heights (0.9 x STONE.H, like 1918's) */
+export const PATH_STONE_W = 210;
+export const PATH_STONE_H = 315;
 export const BLANK_Z = camZAt(STOP_F) + STOP_D;
 /** the blank stones further along, beside the path again (both sides), receding into the haze */
 export const BEYOND = [700, 1500, 2400, 3500, 4800, 6300, 8000];
@@ -162,7 +165,34 @@ export const lightOf = (n: [number, number, number]) => Math.max(0, -(n[0] * LIG
 // ---------------------------------------------------------------------------
 /** it stands on the blank stone's level top, mid-depth of the slab, turned three-quarters toward us (yaw, deg: its
  *  heading in the ground plane from + X toward + Z; negative = toward the camera) */
-export const GOOSE_REST: [number, number, number] = [-4, -PATH_STONE_H, BLANK_Z + STONE.T / 2];
+export type V2 = [number, number];
+/** a rough standing stone (a menhir): a tall, thick pillar, a little lumpy down its sides, its top a broken slant (one
+ *  shoulder high, the other well down, a chip between); it leans a little; slant and lean alternate stone to stone.
+ *  Front outline, local to the stone's foot (x across, y up negative). The same for every stone, the next one too. */
+export const stoneOutline = (st: Stone): V2[] => {
+  const H = st.H;
+  const W = st.W;
+  const h = (k: number) => hash(st.seed * 17 + k, 23) - 0.5;
+  const m = st.seed % 2 === 0 ? 1 : -1;
+  const lean = (4 + 4 * h(11)) / H; // x shift per unit of height
+  const pts: V2[] = [
+    [-W / 2, 0],
+    [-W / 2 - 4 + 8 * h(1), -H * 0.35],
+    [-W / 2 + 2 + 8 * h(2), -H * 0.74],
+    [-W * 0.38 + 8 * h(3), -H * (0.97 + 0.03 * h(4))],
+    [-W * 0.14 + 10 * h(5), -H],
+    [W * 0.12 + 10 * h(6), -H * (0.9 + 0.04 * h(7))],
+    [W * 0.42 + 6 * h(8), -H * (0.7 + 0.05 * h(9))],
+    [W / 2 + 3 * h(10), -H * 0.4],
+    [W / 2, 0],
+  ];
+  const leant = pts.map(([x, y]) => [x - y * lean, y] as V2);
+  return m === 1 ? leant : leant.map(([x, y]) => [-x, y] as V2).reverse();
+};
+/** the goose stands on the next stone's crown (its highest point), toward the front of the top */
+const PATH_STONE = STONES.find((s) => s.blank === "path")!;
+const CROWN = stoneOutline(PATH_STONE).reduce((a, p) => (p[1] < a[1] ? p : a));
+export const GOOSE_REST: [number, number, number] = [CROWN[0], CROWN[1], BLANK_Z + STONE.T * 0.4];
 export const GOOSE_YAW = -38;
 /** where the glide starts: just off the frame's upper left, further back (it comes toward us along its heading) */
 export const GOOSE_START: [number, number, number] = [-700, -900, BLANK_Z + 900];

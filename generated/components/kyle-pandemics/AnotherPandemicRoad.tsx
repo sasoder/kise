@@ -19,14 +19,15 @@
 // frame it is seen; the haze veils the whole stone) with its pandemic's agent above its year, centred on the face:
 // an influenza A virion (round envelope, a dense fringe of HA and NA spikes) over 1918, 1957, 1968 and 2009, SARS-CoV-2
 // (fewer club-shaped spikes) over 2020. Each year reads whole for 13+ frames as its stone comes near (2020 f28-40, on
-// "PANDEMIC"), then crosses the frame's edge as we pass it. Ahead, in the middle of the path, stands the next stone,
-// lower, carved with an H5N1 influenza virion beside "20??". The camera slows (one cosine deceleration f40-92) to it
-// in the middle distance at a standing eye a little raised (2.45 m). On "BIRD FLU" a wild greylag comes in from far
+// "PANDEMIC"), then crosses the frame's edge as we pass it. Ahead, in the middle of the path, stands the next stone
+// (V3: the same kind as the others, the same menhir outline, height and carving layout): the H5N1 influenza virion
+// above "20??". The camera slows (one cosine deceleration f40-92) to it in the middle distance (5.6 m) at a standing
+// eye a little raised (2.45 m); the goose lands on its crown, a little above the eye. On "BIRD FLU" a wild greylag comes in from far
 // back on the upper left along its heading, beating its wings (a 10-frame stroke) to ~f80, glides, flares nose-up with
 // its wings raised high and feet forward (f84), CONTACT on the stone's top at f91 (first reaction f91: its weight dips
 // the body, the wings start to fold), wings folded by f100. The camera then pushes in on it (f94-158, the eye coming
-// down a little to its level: d 400 -> 210; the goose ~38% of the frame wide at the cut, centred ~y 630, the carved
-// row just above the caption band); the road and the dim blank stones run on beyond it into the haze on both sides.
+// down a little: d 560 -> 325; at the cut the goose ~32% of the frame wide on the stone's crown (head ~y 115), the
+// virion and "20??" below it on the face, the year's foot at y ~1050, just above the caption band); the road and the dim blank stones run on beyond it into the haze on both sides.
 // f140-158: the goose shifts its weight, lifts and turns its head toward us.
 // The goose is real 3D geometry (anotherPandemicGoose3d.tsx, three.js through @remotion/three, rendered with
 // --gl=angle) drawn through the same camera in the engraved manner. Orange = the disease: the stain and orange
@@ -36,7 +37,8 @@
 // in the push). Year stones ~2.1 x 3.2-3.9 x 1.0 m at X +-3.8 m; the blank stone 1.5 x 2.0 m on the centre line; the goose is a 3D model drawn through
 // the same camera (anotherPandemicGoose.tsx). Light: rays (0.5, 1, 0.8) (from the upper left, a little in front):
 // lit left faces, dark right faces with hatching, cast shadows to the right and away, contact shadows. Haze: haze(d).
-// CAPTION BANDS: the years sit at y ~700-800, the goose at y ~380-950 on every frame (its feet ~y 920 at the cut).
+// CAPTION BANDS: the years and the 20?? carving stay above y ~1055 and the goose above y ~500 on every frame; only
+// plain stone faces, floor and path run through the bands.
 // SOURCES: the years are the five pandemics since 1900 on CDC's "Past Pandemics" page (1918 influenza A/H1N1,
 //   1957-58 H2N2, 1968 H3N2, 2009 H1N1pdm09) and COVID-19, declared a pandemic by the WHO Director-General on
 //   11 March 2020 (WHO). Bird flu = highly pathogenic avian influenza A(H5N1), carried by wild waterfowl (CDC, "Avian
@@ -48,7 +50,7 @@ import { loadFont as loadCaslon } from "@remotion/google-fonts/LibreCaslonText";
 import { z } from "zod";
 import { TexcocoPage, WorldSvg } from "../kits/maps/texcocoShared";
 import { hash, mixColor } from "../kits/maps/incaShared";
-import { BLANK_Z, DURATION as SLOT, F, PATH_HALF, STONE, STONES, YEAR_SIZE, YEAR_Y, LIGHT, camAt, haze, lightOf, proj, type Cam3, type Stone } from "./anotherPandemicWorld";
+import { BLANK_Z, DURATION as SLOT, F, PATH_HALF, STONE, STONES, YEAR_SIZE, YEAR_Y, stoneOutline, LIGHT, camAt, haze, lightOf, proj, type Cam3, type Stone } from "./anotherPandemicWorld";
 import { goosePoseAt } from "./anotherPandemicGoose";
 import { Goose3D } from "./anotherPandemicGoose3d";
 
@@ -230,8 +232,9 @@ const carvingOf = (st: Stone): Carving | null => {
     return { kind: st.year === "2020" ? "covid" : "flu", vx: 0, vy: YEAR_Y - YEAR_SIZE * 0.42 - 16 - vr, vr, text: st.year, tx: 0, ty: YEAR_Y, size: YEAR_SIZE };
   }
   if (st.blank === "path") {
-    const vr = 13.5;
-    return { kind: "flu", vx: -st.W * 0.28, vy: -st.H + 19, vr, text: "20??", tx: st.W * 0.1, ty: -st.H + 19, size: 28 };
+    // the next stone: the same layout and sizes as the year stones; the H5N1 virion above "20??"
+    const vr = st.W * 0.15;
+    return { kind: "flu", vx: 0, vy: YEAR_Y - YEAR_SIZE * 0.42 - 16 - vr, vr, text: "20??", tx: 0, ty: YEAR_Y, size: YEAR_SIZE };
   }
   return null;
 };
@@ -300,42 +303,7 @@ const virionD = (kind: "flu" | "covid", cx: number, cy: number, r: number) => {
   return d;
 };
 
-const outline = (st: Stone): V[] => {
-  const H = st.H;
-  const W = st.W;
-  const h = (k: number) => hash(st.seed * 17 + k, 23) - 0.5;
-  // the blank stone in the path: the same rough pillar, its top broken but level (the goose stands on it)
-  if (st.blank === "path")
-    return [
-      [-W / 2, 0],
-      [-W / 2 - 3, -H * 0.4],
-      [-W / 2 + 6, -H * 0.78],
-      [-W * 0.32, -H * 0.96],
-      [-W * 0.1, -H],
-      [W * 0.22, -H + 2],
-      [W * 0.36, -H * 0.9],
-      [W / 2 + 2, -H * 0.45],
-      [W / 2, 0],
-    ];
-  // a rough standing stone (a menhir): a tall, thick pillar, a little lumpy down its sides, its top a broken slant
-  // (one shoulder high, the other well down, a chip between); it leans a little; the slant and lean alternate stone
-  // to stone. Never a slab with a rounded headstone top.
-  const m = st.seed % 2 === 0 ? 1 : -1;
-  const lean = (4 + 4 * h(11)) / H; // x shift per unit of height
-  const pts: V[] = [
-    [-W / 2, 0],
-    [-W / 2 - 4 + 8 * h(1), -H * 0.35],
-    [-W / 2 + 2 + 8 * h(2), -H * 0.74],
-    [-W * 0.38 + 8 * h(3), -H * (0.97 + 0.03 * h(4))],
-    [-W * 0.14 + 10 * h(5), -H],
-    [W * 0.12 + 10 * h(6), -H * (0.9 + 0.04 * h(7))],
-    [W * 0.42 + 6 * h(8), -H * (0.7 + 0.05 * h(9))],
-    [W / 2 + 3 * h(10), -H * 0.4],
-    [W / 2, 0],
-  ];
-  const leant = pts.map(([x, y]) => [x - y * lean, y] as V);
-  return m === 1 ? leant : leant.map(([x, y]) => [-x, y] as V).reverse();
-};
+const outline = stoneOutline;
 const hatchD = (q: { x: number; y: number }[], gap: number, ang: number) => {
   const xs = q.map((v) => v.x);
   const ys = q.map((v) => v.y);
@@ -434,8 +402,7 @@ const StandingStone: React.FC<{ c: Cam3; st: Stone }> = ({ c, st }) => {
     const v = hash(st.seed * 9 + k, 37);
     const X = st.X + (u - 0.5) * st.W * 0.78;
     const Y = -st.H * (0.08 + 0.84 * v);
-    if (st.year && Y < YEAR_Y + 46) continue;
-    if (st.blank === "path" && Y < -st.H + 50) continue;
+    if ((st.year || st.blank === "path") && Y < YEAR_Y + 46) continue;
     const a = proj(c, X, Y, st.Z);
     const len = (8 + 14 * hash(k, st.seed)) * a.s;
     marks += `M${r1(a.x)},${r1(a.y)}l${r1(len)},${r1(len * 0.18)}`;
@@ -514,8 +481,8 @@ const AnotherPandemicRoad: React.FC<z.infer<typeof schema>> = () => {
   // the goose's contact shadow on the stone's top (it firms up as the feet come down)
   const hAbove = -blank.H - gp[1];
   const shAmt = c01(1 - Math.abs(hAbove) / 90) * c01((frame - 80) / 6);
-  const sc = proj(c, gp[0] + 8, -blank.H, blank.Z + STONE.T * 0.42);
-  const scy = (proj(c, 0, -blank.H, blank.Z + STONE.T * 0.15).y - proj(c, 0, -blank.H, blank.Z + STONE.T * 0.95).y) / 2;
+  const sc = proj(c, gp[0] + 8, gp[1], gp[2] - 4);
+  const scy = (proj(c, 0, gp[1], gp[2] - 26).y - proj(c, 0, gp[1], gp[2] + 18).y) / 2;
   const els: React.ReactNode[] = [];
   let zPrev = c.Z + Z_FAR;
   order.forEach((st) => {
