@@ -12,6 +12,15 @@
 //   THIS 212 · ONE 219 · is 224 · (very 237, after the cut).
 // DURATION: the slot 23.023 -> 30.864 s = 7.841 s x 29.97 = 235 frames (f0..f234).
 //
+// V3 (the clip's medium, pandemicAir.tsx, palette A, mood "micro"; prop `look`, default "A"; "old" = the delivered
+// V2, pixel for pixel; "B" kept for reference): the same camera, timing, rod (unchanged) and caption bands inside the
+// fluid: AirStage (teal fluid, irregular diagonal shafts from the upper left, particles at three depths); the ground one
+// continuous tone fogging by distance with a soft horizon zone; the organisms in the Will rendering (tubeAir /
+// sphereAir: soft gradient forms lit from the upper left, a cream highlight, a soft core shadow and reflected light,
+// thin local outlines, slightly translucent, hatching only as a faint texture) in ivory near, fogged by distance toward
+// the air of that distance (fog: near 12, visibility 70 units); their shadows fade with the fog; the macrophage
+// translucent with a dome light (lit crown, darker membrane where it turns away), its nucleus and granules visible.
+//
 // THE MOTION (V2): one camera (hugeWorldScene.ts): f0-84 a low dolly (eye 3 units over 1-unit bacteria) forward
 // and to the right over a living surface: cream bacteria lying spread out on the moist ground with gaps (never
 // stacked; sparse and small under the lens, the crowd thickening with distance to countless at the horizon),
@@ -54,6 +63,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { TexcocoPage } from "../kits/maps/texcocoShared";
 import { SpriteCanvas } from "../kits/maps/pageFigures";
+import { AirStage, paintHorizonHaze, fogHex, makeAirView, mixHex, rgbHex, type AirLook, type AirScene, type AirView } from "./pandemicAir";
 import {
   DURATION,
   F,
@@ -85,7 +95,8 @@ import {
 } from "./hugeWorldScene";
 
 export { DURATION, FPS };
-export const schema = z.object({});
+/** V3 look test (pandemicAir.tsx): "old" = the delivered V2 picture, pixel for pixel; "A" / "B" = the clip's medium */
+export const schema = z.object({ look: z.enum(["old", "A", "B"]).default("A") });
 export const defaultProps = schema.parse({});
 
 // ---------------------------------------------------------------------------
@@ -112,7 +123,7 @@ const sstep = (v: number) => {
   return u * u * (3 - 2 * u);
 };
 
-type InkSet = { out: string; shade: string; deep: string; main: string; spec: string; specA: number };
+type InkSet = { out: string; shade: string; deep: string; main: string; spec: string; specA: number; refl?: string };
 const INKS: InkSet[] = [];
 for (let i = 0; i <= 100; i++) {
   const t = i / 100;
@@ -126,6 +137,98 @@ for (let i = 0; i <= 100; i++) {
   });
 }
 const inkAt = (t: number) => INKS[Math.round(c01(t) * 100)];
+/** the ink of a body at distance D (tone: the context recede): the delivered tone curve, or in the air the fog of D */
+const inkFor = (D: number, tone: number) => {
+  if (!AP) return inkAt(tone * toneAt(D));
+  const fg = 1 - (1 - AP.v.fogAt(D)) * (0.8 + 0.2 * tone);
+  return AP.inks[Math.round(c01(fg) * 100)];
+};
+
+// ---------------------------------------------------------------------------
+// V3 LOOK TEST: the air paint (pandemicAir.tsx, mood "micro": particles in a fluid under a microscope's light). Set by
+// drawFrame only for look "A" / "B"; while it is null every function below draws exactly the delivered picture.
+// The organisms fog toward the fluid instead of the page, their outlines are a thin darker local tone (no dark
+// casing), hatching is a faint texture in the shade, a cream rim catches their upper-left edges, shadows take the
+// medium's shadow colour, the ground is one continuous tone fogging into the fluid, the cell is cream in the medium.
+// ---------------------------------------------------------------------------
+type AirPaint = {
+  v: AirView;
+  inks: InkSet[];
+  shadow: string;
+  shadowRgb: [number, number, number];
+  rim: string;
+  ground: string;
+  groundDark: string;
+  fibre: string;
+  rodLine: string;
+  cellTones: string[];
+  cellLine: string;
+  membrane: string;
+  armInk: InkSet;
+  /** the organisms' opacity (slightly translucent in the fluid) */
+  body: number;
+};
+let AP: AirPaint | null = null;
+/** the cell's tones in the medium, fogged by its distance (cached by fog level) */
+const CELL_AIR = new Map<string, string[]>();
+const cellTonesAir = (ap: AirPaint, fog: number) => {
+  const k = `${ap.v.scene.look}|${Math.round(c01(fog) * 40)}`;
+  let t = CELL_AIR.get(k);
+  if (!t) {
+    const sc = ap.v.scene;
+    const q = Math.round(c01(fog) * 40) / 40;
+    const far = rgbHex(ap.v.airAt(sc.fogNear - sc.fogVis * Math.log(Math.max(1e-4, 1 - Math.min(0.999, q / sc.fogMax))), 0));
+    t = ap.cellTones.map((c) => mixHex(c, far, Math.round(c01(fog) * 40) / 40));
+    CELL_AIR.set(k, t);
+  }
+  return t;
+};
+const AIR_SCENE = (look: AirLook): AirScene => ({ look, mood: "micro", F, fogNear: 12, fogVis: 70, fogMax: 0.97, hLow: 0, hHigh: 24, moteUnit: 3 });
+const airPaintFor = (v: AirView): AirPaint => {
+  const pal = v.pal;
+  const shade = mixHex(pal.body.dark, pal.shadow, 0.15);
+  const line = mixHex(pal.body.dark, pal.shadow, 0.5);
+  // inks[i]: the organisms' local colours (ivory near) fogged toward the fluid by i / 100 (the fog of their distance)
+  // the fog target is the air at the distance that gives that fog (denser, darker teal in the middle distance, the
+  // light far air only near the horizon), the same air the ground fogs into
+  const sc = v.scene;
+  const distOf = (fg: number) => sc.fogNear - sc.fogVis * Math.log(Math.max(1e-4, 1 - Math.min(0.999, fg / sc.fogMax)));
+  const inks: InkSet[] = [];
+  for (let i = 0; i <= 100; i++) {
+    const fg = i / 100;
+    const air = rgbHex(v.airAt(distOf(fg), 0));
+    inks.push({
+      out: mixC(line, air, fg),
+      shade: mixC(shade, air, fg),
+      deep: mixC(pal.body.mid, air, fg),
+      main: mixC(pal.body.lit, air, fg),
+      spec: mixC(pal.cream, air, fg * 0.9),
+      specA: 0.4 * (1 - fg),
+      refl: mixC(mixHex(shade, air, 0.45), air, fg),
+    });
+  }
+  const cellTones: string[] = [];
+  for (let i = 0; i < 26; i++) {
+    const t = i / 25;
+    cellTones.push(t < 0.45 ? mixHex(mixHex(pal.body.dark, pal.shadow, 0.25), pal.body.mid, t / 0.45) : mixHex(pal.body.mid, pal.cream, (t - 0.45) / 0.55));
+  }
+  return {
+    v,
+    inks,
+    shadow: pal.shadow,
+    shadowRgb: hexRgb(pal.shadow),
+    rim: pal.cream,
+    ground: pal.ground.mid,
+    groundDark: pal.ground.dark,
+    fibre: mixHex(pal.ground.dark, pal.shadow, 0.4),
+    rodLine: "#7A4508",
+    cellTones,
+    cellLine: mixHex(pal.body.dark, pal.shadow, 0.3),
+    membrane: pal.cream,
+    armInk: { out: pal.cream, shade: pal.body.dark, deep: pal.body.mid, main: pal.body.lit, spec: pal.cream, specA: 0 },
+    body: 0.9,
+  };
+};
 
 /** atmospheric depth: the cream level at distance D (in play near, context mid, toward the page far) */
 const toneAt = (D: number) => (0.12 + 0.72 / (1 + Math.pow(D / 55, 1.3))) * (1 - 0.3 * (1 - c01((D - 2) / 4.5)));
@@ -183,8 +286,8 @@ const tbRod = (ctx: CanvasRenderingContext2D, pts: Pt[], w: number) => {
   if (pts.length < 2) return;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  const ow = Math.max(0.8, Math.min(2.2, 0.06 * w + 0.5));
-  strokePoly(ctx, pts, w + 2 * ow, DARK);
+  const ow = Math.max(0.8, Math.min(2.2, 0.06 * w + 0.5)) * (AP ? 0.65 : 1);
+  strokePoly(ctx, pts, w + 2 * ow, AP ? AP.rodLine : DARK);
   strokePoly(ctx, pts, w, "#A8640B");
   strokePoly(ctx, pts, w * 0.72, ACCENT_DEEP, LX * w * 0.13, LY * w * 0.13);
   strokePoly(ctx, pts, w * 0.42, ACCENT, LX * w * 0.2, LY * w * 0.2);
@@ -250,11 +353,118 @@ const tbRod = (ctx: CanvasRenderingContext2D, pts: Pt[], w: number) => {
       ctx.lineTo(p[0] + nn[0] * w * 0.46 + t[0] * w * 0.04, p[1] + nn[1] * w * 0.46 + t[1] * w * 0.04);
     }
     ctx.lineWidth = Math.max(0.6, w * 0.022);
-    ctx.strokeStyle = DARK;
-    ctx.globalAlpha = 0.4 * c01((w - 9) / 6);
+    ctx.strokeStyle = AP ? AP.rodLine : DARK;
+    ctx.globalAlpha = (AP ? 0.22 : 0.4) * c01((w - 9) / 6);
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
+};
+/** V3 air (the Will rendering): a soft rod-like body along a screen polyline, width w px: a thin darker-local outline,
+ *  then one gradient across the body (cream rim on the lit edge, the lit side, the mid tone, a soft core shadow, a
+ *  little reflected light from the medium at the shade edge), slightly translucent; hatching only as a faint texture */
+const tubeAir = (ctx: CanvasRenderingContext2D, pts: Pt[], w: number, ink: InkSet, ap: AirPaint) => {
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  if (w < 1.6) {
+    strokePoly(ctx, pts, Math.max(0.7, w), ink.deep, 0, 0, Math.min(1, w + 0.2));
+    return;
+  }
+  const ow = Math.max(0.5, Math.min(1.3, 0.035 * w + 0.35));
+  strokePoly(ctx, pts, w + 2 * ow, ink.out, 0, 0, 0.85);
+  // the body's mean direction; the normal toward the light
+  const a = pts[0];
+  const b = pts[pts.length - 1];
+  let tx = b[0] - a[0];
+  let ty = b[1] - a[1];
+  const tl = Math.hypot(tx, ty) || 1;
+  tx /= tl;
+  ty /= tl;
+  let nx = -ty;
+  let ny = tx;
+  if (nx * LX + ny * LY < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  // a body seen end-on (short on screen) is lit as a sphere: the light's own direction
+  const endOn = c01(1 - tl / (w * 1.2));
+  nx = nx * (1 - endOn) + LX * endOn;
+  ny = ny * (1 - endOn) + LY * endOn;
+  const nl = Math.hypot(nx, ny) || 1;
+  nx /= nl;
+  ny /= nl;
+  const mx = (a[0] + b[0]) / 2;
+  const my = (a[1] + b[1]) / 2;
+  const h = w / 2;
+  const g = ctx.createLinearGradient(mx + nx * h, my + ny * h, mx - nx * h, my - ny * h);
+  g.addColorStop(0, ink.spec);
+  g.addColorStop(0.1, ink.main);
+  g.addColorStop(0.42, ink.deep);
+  g.addColorStop(0.78, ink.shade);
+  g.addColorStop(1, ink.refl ?? ink.shade);
+  poly(ctx, pts);
+  ctx.lineWidth = w;
+  ctx.strokeStyle = g;
+  ctx.globalAlpha = ap.body;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  if (w > 7) {
+    // a faint texture of hatching inside the core shadow
+    ctx.beginPath();
+    let total = 0;
+    const segL: number[] = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const l = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+      segL.push(l);
+      total += l;
+    }
+    const sp = Math.max(2.6, Math.min(7, w * 0.07));
+    let k = 0;
+    let acc = 0;
+    for (let dd = w * 0.3; dd < total - w * 0.3; dd += sp) {
+      while (k < segL.length - 1 && dd > acc + segL[k]) acc += segL[k++];
+      const t = segL[k] > 0 ? (dd - acc) / segL[k] : 0;
+      const px = pts[k][0] + (pts[k + 1][0] - pts[k][0]) * t;
+      const py = pts[k][1] + (pts[k + 1][1] - pts[k][1]) * t;
+      ctx.moveTo(px - nx * w * 0.18, py - ny * w * 0.18);
+      ctx.lineTo(px - nx * w * 0.42, py - ny * w * 0.42);
+    }
+    ctx.lineWidth = Math.max(0.5, Math.min(1.6, w * 0.014));
+    ctx.strokeStyle = ink.out;
+    ctx.globalAlpha = 0.13 * c01((w - 7) / 6);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+};
+/** V3 air: a soft sphere: thin outline, a radial gradient lit from the upper left (cream highlight, lit, mid, core
+ *  shadow, reflected light at the shade edge), slightly translucent */
+const sphereAir = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, ink: InkSet, ap: AirPaint) => {
+  if (r < 0.9) {
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(0.5, r), 0, Math.PI * 2);
+    ctx.fillStyle = ink.deep;
+    ctx.globalAlpha = Math.min(1, r + 0.3);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    return;
+  }
+  const ow = Math.max(0.5, Math.min(1.3, 0.07 * r + 0.35));
+  ctx.beginPath();
+  ctx.arc(x, y, r + ow, 0, Math.PI * 2);
+  ctx.fillStyle = ink.out;
+  ctx.globalAlpha = 0.85;
+  ctx.fill();
+  const g = ctx.createRadialGradient(x + LX * r * 0.42, y + LY * r * 0.42, 0, x + LX * r * 0.12, y + LY * r * 0.12, r * 1.12);
+  g.addColorStop(0, ink.spec);
+  g.addColorStop(0.16, ink.main);
+  g.addColorStop(0.5, ink.deep);
+  g.addColorStop(0.84, ink.shade);
+  g.addColorStop(1, ink.refl ?? ink.shade);
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.globalAlpha = ap.body;
+  ctx.fill();
+  ctx.globalAlpha = 1;
 };
 /** an engraved body along a screen polyline, width w px: a fine outline, a flat lit side and shade side, and short
  *  hatch strokes across the body on its shade side (no gloss) */
@@ -264,6 +474,10 @@ const tube = (ctx: CanvasRenderingContext2D, pts: Pt[], w: number, ink: InkSet) 
   ctx.lineJoin = "round";
   if (w < 1.6) {
     strokePoly(ctx, pts, Math.max(0.7, w), ink.deep, 0, 0, Math.min(1, w + 0.2));
+    return;
+  }
+  if (AP) {
+    tubeAir(ctx, pts, w, ink, AP);
     return;
   }
   const ow = Math.max(0.7, Math.min(2.0, 0.05 * w + 0.5));
@@ -327,6 +541,10 @@ const sphere = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, 
     circ(x, y, Math.max(0.5, r), ink.deep, Math.min(1, r + 0.3));
     return;
   }
+  if (AP) {
+    sphereAir(ctx, x, y, r, ink, AP);
+    return;
+  }
   const ow = Math.max(0.7, Math.min(2, 0.05 * r * 2 + 0.5));
   circ(x, y, r + ow, ink.out);
   circ(x, y, r, ink.shade);
@@ -387,7 +605,7 @@ const addBug = (b: Bug, c: Cam3, f: number, items: Item[], shadows: Sh[], tone: 
   const p = project(c, X, 0.4, Z);
   const s = F / D; // px per unit at this depth
   if (p[0] < -reach * s || p[0] > 1080 + reach * s || p[1] < -reach * s || p[1] > 1920 + reach * s) return;
-  const ink = inkAt(tone * toneAt(D));
+  const ink = inkFor(D, tone);
   const pr = (x: number, y: number, z: number): Pt => {
     const q = project(c, x, y, z);
     return [q[0], q[1]];
@@ -580,7 +798,7 @@ const addSwimmer = (sw: Swimmer, c: Cam3, f: number, items: Item[], shadows: Sh[
   const p = project(c, X, sw.y, Z);
   if (p[0] < -6 * s || p[0] > 1080 + 6 * s || p[1] < -6 * s || p[1] > 1920 + 6 * s) return;
   const g = f / FPS;
-  const ink = inkAt(tone * toneAt(D));
+  const ink = inkFor(D, tone);
   const S = sw.size;
   const a = sw.ang;
   const pitch = 0.12 * Math.sin(g * 0.8 + sw.seed);
@@ -725,6 +943,69 @@ const drawGround = (ctx: CanvasRenderingContext2D, c: Cam3) => {
     ctx.fill();
   });
   ctx.globalAlpha = 1;
+};
+
+/** the ground in the medium (look A / B): one continuous tone by distance (darker near, fogging into the fluid at the
+ *  horizon), the fibres as a thin darker local tone, the moist flecks as faint cream glints */
+const drawGroundAir = (ctx: CanvasRenderingContext2D, c: Cam3, ap: AirPaint) => {
+  const v = ap.v;
+  const zNear = c.z + 0.35;
+  const hs = c.hs;
+  const y0 = Math.max(0, hs);
+  const g = ctx.createLinearGradient(0, y0, 0, 1920);
+  const N = 40;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const y = y0 + Math.pow(t, 1.8) * (1920 - y0);
+    const D = (F * c.h) / Math.max(0.5, y - hs);
+    const near = c01((14 - D) / 12);
+    g.addColorStop(c01((y - y0) / (1920 - y0)), fogHex(v, mixHex(ap.ground, ap.groundDark, 0.45 * near), D, 0));
+  }
+  ctx.fillStyle = g;
+  ctx.fillRect(0, y0, 1080, 1920 - y0);
+  const fade = (D: number) => 1 - v.fogAt(D);
+  const chunks = [0, 4, 10, 22, 45, 90, 180, 400];
+  ctx.lineCap = "round";
+  ctx.strokeStyle = ap.fibre;
+  for (let k = 0; k < chunks.length - 1; k++) {
+    const za = Math.max(zNear, c.z + chunks[k] + 0.35);
+    const zb = c.z + chunks[k + 1] + 0.35;
+    if (zb <= za) continue;
+    const Dm = (za + zb) / 2 - c.z;
+    const half = 0.4 * (zb - c.z) + 4;
+    ctx.globalAlpha = 0.16 * fade(Dm);
+    ctx.lineWidth = Math.max(0.5, Math.min(1.8, (F * 0.04) / Dm));
+    ctx.beginPath();
+    const step = 1.9;
+    for (let X = Math.floor((c.x - half) / step) * step; X <= c.x + half; X += step) {
+      const n = Math.round(X / step);
+      for (let i = 0; i <= 6; i++) {
+        const Z = za + ((zb - za) * i) / 6;
+        const x = X + 0.32 * Math.sin(Z * 0.33 + n * 1.7) + 0.18 * Math.sin(Z * 0.9 + n * 0.6);
+        const q = project(c, x, 0, Z);
+        if (i === 0) ctx.moveTo(q[0], q[1]);
+        else ctx.lineTo(q[0], q[1]);
+      }
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = ap.rim;
+  FLECKS.forEach(([X, Z, w]) => {
+    const D = Z - c.z;
+    if (D < 0.6) return;
+    const q = project(c, X, 0, Z);
+    if (q[0] < -40 || q[0] > 1120 || q[1] > 1940 || q[1] < hs) return;
+    const rx = (F * 0.16 * w) / D;
+    const ry = Math.max(0.3, ((F * c.h) / (D - 0.05) - (F * c.h) / (D + 0.05)) * w);
+    ctx.globalAlpha = 0.12 * fade(D);
+    ctx.beginPath();
+    ctx.ellipse(q[0], q[1], Math.max(0.5, rx), ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  // the horizon is a soft zone: the far ground melts into the fluid
+  paintHorizonHaze(ctx, v, 230, 1);
 };
 
 // ---------------------------------------------------------------------------
@@ -886,7 +1167,8 @@ const cellItems = (c: Cam3, f: number, items: Item[], shadows: Sh[], rodD: numbe
         // the rim: where the membrane curves away from the eye it darkens
         const ndv = Math.max(0, (-dHdx * VV[0] + VV[1] - dHdz * VV[2]) / nl);
         const t = Math.pow(lam, 1.4) * (1 - 0.62 * Math.pow(1 - ndv, 1.6));
-        return CELL_TONES[Math.max(0, Math.min(CELL_TONES.length - 1, Math.floor(t * CELL_TONES.length)))];
+        const CT = AP ? cellTonesAir(AP, AP.v.fogAt(D)) : CELL_TONES;
+        return CT[Math.max(0, Math.min(CT.length - 1, Math.floor(t * CT.length)))];
       };
       const paint = (lc: CanvasRenderingContext2D, iso: number) => {
         lc.lineJoin = "round";
@@ -940,7 +1222,7 @@ const cellItems = (c: Cam3, f: number, items: Item[], shadows: Sh[], rodD: numbe
       // 1. the whole cell, faint (the skirt reads as a thin sheet)
       const sk = layer(1);
       paint(sk.lc, 0.45);
-      ctx.globalAlpha = 0.38;
+      ctx.globalAlpha = AP ? 0.3 : 0.38;
       ctx.drawImage(sk.cv, 0, 0);
       // the skirt's membrane line (dark casing, cream line), under the body; its far side, seen through the body,
       // only faintly (it would read as a crease across the cell)
@@ -964,7 +1246,7 @@ const cellItems = (c: Cam3, f: number, items: Item[], shadows: Sh[], rodD: numbe
       };
       [false, true].forEach((far) => {
         runs(far);
-        ctx.strokeStyle = DARK;
+        ctx.strokeStyle = AP ? AP.cellLine : DARK;
         ctx.globalAlpha = far ? 0.15 : 0.5;
         ctx.lineWidth = Math.max(1.6, px * 0.1);
         ctx.stroke();
@@ -981,7 +1263,7 @@ const cellItems = (c: Cam3, f: number, items: Item[], shadows: Sh[], rodD: numbe
         [2, 3].forEach((li) => {
           path(fl.lc, sl[li]);
           fl.lc.lineJoin = "round";
-          fl.lc.strokeStyle = DARK;
+          fl.lc.strokeStyle = AP ? AP.cellLine : DARK;
           fl.lc.globalAlpha = 0.25;
           fl.lc.lineWidth = Math.max(1.4, px * 0.07);
           fl.lc.stroke();
@@ -1019,9 +1301,9 @@ const cellItems = (c: Cam3, f: number, items: Item[], shadows: Sh[], rodD: numbe
         const n = pts.length;
         const k1 = Math.floor(n * 0.5);
         const k2 = Math.floor(n * 0.78);
-        waxTube(pl.lc, pts.slice(0, k1 + 1), w0, ARM_INK);
-        waxTube(pl.lc, pts.slice(k1, k2 + 1), w0 * 0.72, ARM_INK);
-        waxTube(pl.lc, pts.slice(k2), w0 * 0.45, ARM_INK);
+        waxTube(pl.lc, pts.slice(0, k1 + 1), w0, AP ? AP.armInk : ARM_INK);
+        waxTube(pl.lc, pts.slice(k1, k2 + 1), w0 * 0.72, AP ? AP.armInk : ARM_INK);
+        waxTube(pl.lc, pts.slice(k2), w0 * 0.45, AP ? AP.armInk : ARM_INK);
         ctx.globalAlpha = 0.55;
         ctx.drawImage(pl.cv, 0, 0);
         ctx.globalAlpha = 1;
@@ -1064,9 +1346,48 @@ const cellItems = (c: Cam3, f: number, items: Item[], shadows: Sh[], rodD: numbe
       // 2. the body, denser
       const body = layer(2);
       paint(body.lc, 0.8);
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = AP ? 0.58 : 0.6;
       ctx.drawImage(body.cv, 0, 0);
       ctx.globalAlpha = 1;
+      if (AP) {
+        // V3 air: the dome's light: a lit crown toward the upper left, sinking to a darker membrane where it curves
+        // away (an elliptical gradient squashed to the cell's footprint), masked to the body
+        const src = sl[1].length ? sl[1] : sl[0];
+        let x0 = Infinity;
+        let x1 = -Infinity;
+        let y0 = Infinity;
+        let y1 = -Infinity;
+        src.forEach((pts) =>
+          pts.forEach((q) => {
+            x0 = Math.min(x0, q[0]);
+            x1 = Math.max(x1, q[0]);
+            y0 = Math.min(y0, q[1]);
+            y1 = Math.max(y1, q[1]);
+          }),
+        );
+        if (x1 > x0 && y1 > y0) {
+          const dl = layer(8);
+          const cxm = (x0 + x1) / 2;
+          const cym = (y0 + y1) / 2;
+          const sq = Math.max(0.15, (y1 - y0) / (x1 - x0));
+          const cr = hexRgb(AP.membrane).join(",");
+          const sh = AP.shadowRgb.join(",");
+          dl.lc.setTransform(1, 0, 0, sq, 0, cym * (1 - sq));
+          const R = (x1 - x0) * 0.56;
+          const gd = dl.lc.createRadialGradient(cxm - R * 0.28, cym - R * 0.3, 0, cxm, cym, R);
+          gd.addColorStop(0, `rgba(${cr},0.6)`);
+          gd.addColorStop(0.35, `rgba(${cr},0.22)`);
+          gd.addColorStop(0.68, `rgba(${cr},0)`);
+          gd.addColorStop(0.88, `rgba(${sh},0.18)`);
+          gd.addColorStop(1, `rgba(${sh},0.42)`);
+          dl.lc.fillStyle = gd;
+          dl.lc.fillRect(-4000, -40000, 9000, 90000);
+          dl.lc.setTransform(1, 0, 0, 1, 0, 0);
+          dl.lc.globalCompositeOperation = "destination-in";
+          dl.lc.drawImage(body.cv, 0, 0);
+          ctx.drawImage(dl.cv, 0, 0);
+        }
+      }
       // the nucleus through the body: veiled, its edge soft (no rim line)
       if (nuc) {
         ctx.save();
@@ -1110,9 +1431,9 @@ const cellItems = (c: Cam3, f: number, items: Item[], shadows: Sh[], rodD: numbe
         const n = pts.length;
         const k1 = Math.floor(n * 0.62);
         const k2 = Math.floor(n * 0.84);
-        waxTube(al.lc, pts.slice(0, k1 + 1), w, ARM_INK);
-        waxTube(al.lc, pts.slice(k1, k2 + 1), w * 0.8, ARM_INK);
-        waxTube(al.lc, pts.slice(k2), w * 0.58, ARM_INK);
+        waxTube(al.lc, pts.slice(0, k1 + 1), w, AP ? AP.armInk : ARM_INK);
+        waxTube(al.lc, pts.slice(k1, k2 + 1), w * 0.8, AP ? AP.armInk : ARM_INK);
+        waxTube(al.lc, pts.slice(k2), w * 0.58, AP ? AP.armInk : ARM_INK);
         ctx.globalAlpha = 0.6 * solid;
         ctx.drawImage(al.cv, 0, 0);
         ctx.globalAlpha = 1;
@@ -1146,7 +1467,7 @@ const cellItems = (c: Cam3, f: number, items: Item[], shadows: Sh[], rodD: numbe
         const r = Math.max(1.6, px * 0.09);
         for (let k = 0; k < 8; k++) ol.lc.drawImage(body.cv, Math.cos((k * Math.PI) / 4) * r, Math.sin((k * Math.PI) / 4) * r);
         ol.lc.globalCompositeOperation = "source-in";
-        ol.lc.fillStyle = DARK;
+        ol.lc.fillStyle = AP ? AP.cellLine : DARK;
         ol.lc.fillRect(0, 0, 1080, 1920);
         ol.lc.globalCompositeOperation = "destination-out";
         ol.lc.drawImage(body.cv, 0, 0);
@@ -1179,9 +1500,18 @@ const shadowLayer = () => {
   }
   return SHADOW;
 };
-export const drawFrame = (ctx: CanvasRenderingContext2D, f: number) => {
+export const drawFrame = (ctx: CanvasRenderingContext2D, f: number, air?: AirPaint) => {
+  AP = air ?? null;
+  try {
+    drawFrameInner(ctx, f);
+  } finally {
+    AP = null;
+  }
+};
+const drawFrameInner = (ctx: CanvasRenderingContext2D, f: number) => {
   const c = camAt(f);
-  drawGround(ctx, c);
+  if (AP) drawGroundAir(ctx, c, AP);
+  else drawGround(ctx, c);
   const items: Item[] = [];
   const shadows: Sh[] = [];
   const tone = recedeAt(f);
@@ -1210,10 +1540,10 @@ export const drawFrame = (ctx: CanvasRenderingContext2D, f: number) => {
   const lc = L.getContext("2d") as CanvasRenderingContext2D;
   lc.setTransform(1, 0, 0, 1, 0, 0);
   lc.clearRect(0, 0, 1080, 1920);
-  lc.fillStyle = DARK;
-  lc.strokeStyle = DARK;
+  lc.fillStyle = AP ? AP.shadow : DARK;
+  lc.strokeStyle = AP ? AP.shadow : DARK;
   shadows.forEach((s) => {
-    lc.globalAlpha = Math.min(1, 0.75 * (0.35 + 0.65 / (1 + s.D / 60)));
+    lc.globalAlpha = Math.min(1, 0.75 * (0.35 + 0.65 / (1 + s.D / 60))) * (AP ? 1 - AP.v.fogAt(s.D) : 1);
     s.draw(lc);
   });
   lc.globalAlpha = 1;
@@ -1227,16 +1557,30 @@ export const drawFrame = (ctx: CanvasRenderingContext2D, f: number) => {
   items.forEach((it) => it.draw(ctx));
   // the near ground sinks into shade toward the frame's bottom (quiet under the captions)
   const bs = ctx.createLinearGradient(0, 990, 0, 1920);
-  bs.addColorStop(0, "rgba(14,11,8,0)");
-  bs.addColorStop(0.45, "rgba(14,11,8,0.36)");
-  bs.addColorStop(1, "rgba(14,11,8,0.62)");
+  const sr = AP ? AP.shadowRgb.join(",") : "14,11,8";
+  bs.addColorStop(0, `rgba(${sr},0)`);
+  bs.addColorStop(0.45, `rgba(${sr},${AP ? 0.22 : 0.36})`);
+  bs.addColorStop(1, `rgba(${sr},${AP ? 0.42 : 0.62})`);
   ctx.fillStyle = bs;
   ctx.fillRect(0, 990, 1080, 930);
 };
 
 const STILL_CAM = { k: 1, cx: 540, cy: 960 };
-const HugeWorldOfBacteria: React.FC<z.infer<typeof schema>> = () => {
+/** the cut inside the clip's medium (V3 look test) */
+const AirWorld: React.FC<{ frame: number; look: AirLook }> = ({ frame, look }) => {
+  const c = camAt(frame);
+  const c0 = camAt(0);
+  const v = makeAirView({ scene: AIR_SCENE(look), frame, horizon: c.hs, cam: { x: c.x, y: c.h, z: c.z }, rest: { x: c0.x, y: c0.h, z: c0.z } });
+  const ap = airPaintFor(v);
+  return (
+    <AirStage v={v} bloom={0.6}>
+      <SpriteCanvas draw={(ctx) => drawFrame(ctx, frame, ap)} />
+    </AirStage>
+  );
+};
+const HugeWorldOfBacteria: React.FC<z.infer<typeof schema>> = ({ look }) => {
   const frame = useCurrentFrame();
+  if (look === "A" || look === "B") return <AirWorld frame={frame} look={look} />;
   return (
     <TexcocoPage cam={STILL_CAM}>
       <SpriteCanvas draw={(ctx) => drawFrame(ctx, frame)} />

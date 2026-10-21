@@ -178,6 +178,159 @@ const makeOutline = (thick: number) =>
   new THREE.ShaderMaterial({ vertexShader: OUTLINE_VERT, fragmentShader: OUTLINE_FRAG, side: THREE.BackSide, uniforms: { uThick: { value: thick }, uDark: { value: new THREE.Vector3(...DARK) } } });
 
 // ---------------------------------------------------------------------------
+// THE AIR MATERIAL (V3 look test, pandemicAir.tsx; only when Goose3D gets `air`, the delivered default is untouched):
+// the goose re-lit for the medium: soft wrapped form light from above (no stepped tones), the shade side sinking toward
+// the medium's shadow colour, a cream rim on the edges turned up and away from the eye, hatching only as a faint
+// texture in the shade, feather rims and the casing a darker version of the local colour (no black casing), and the
+// whole bird fogged toward the air behind it by its distance.
+// ---------------------------------------------------------------------------
+export type GooseAir = {
+  /** the air behind the goose (0..1 rgb) and the fog amount at its distance */
+  fog: V3;
+  fogAmt: number;
+  /** rim light (cream), the medium's shadow colour, the casing colour */
+  rim: V3;
+  shade: V3;
+  line: V3;
+  /** hatching strength in the shade (0..1; the default engraved look is 1) */
+  hatch: number;
+  /** casing thickness multiplier (1 = the delivered casing) */
+  lineScale: number;
+};
+const AIR_VERT = /* glsl */ `
+attribute vec3 acol;
+attribute vec2 auv;
+varying vec3 vCol;
+varying vec2 vUv;
+varying vec3 vN;
+varying vec3 vObj;
+varying vec3 vWorld;
+void main() {
+  vCol = acol;
+  vUv = auv;
+  vObj = position;
+  vN = normalize(mat3(modelMatrix) * normal);
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vWorld = wp.xyz;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}`;
+const AIR_FRAG = /* glsl */ `
+uniform vec3 uLight;
+uniform vec3 uUnder;
+uniform vec3 uOrange;
+uniform float uMode;
+uniform float uHatch;
+uniform vec4 uStain[4];
+uniform vec3 uFog;
+uniform float uFogAmt;
+uniform vec3 uRim;
+uniform vec3 uShade;
+uniform vec3 uLine;
+uniform float uHatchAmt;
+varying vec3 vCol;
+varying vec2 vUv;
+varying vec3 vN;
+varying vec3 vObj;
+varying vec3 vWorld;
+void main() {
+  vec3 n = normalize(vN);
+  vec3 base = vCol;
+  if (!gl_FrontFacing) { n = -n; if (uMode > 2.5) base = mix(base, uUnder, 0.55); }
+  float ndl = dot(n, uLight);
+  // soft form light: a wrapped, smooth terminator; the shade sinks toward the medium's shadow colour
+  float lit = smoothstep(-0.55, 0.85, ndl);
+  vec3 shadeCol = mix(base * 0.58, uShade, 0.3);
+  vec3 col = mix(shadeCol, base * 1.06, lit);
+  float stain = 0.0;
+  if (uMode > 0.5 && uMode < 1.5) {
+    float side = smoothstep(9.0, 12.5, abs(vObj.z)) * (1.0 - smoothstep(29.0, 33.0, vObj.y)) * smoothstep(17.0, 22.0, vObj.y) * (1.0 - smoothstep(14.0, 22.0, vObj.x));
+    float b = sin(vObj.x * 0.78 + vObj.y * 0.35);
+    col = mix(col, col * 0.86, side * smoothstep(0.65, 0.92, b));
+    col = mix(col, mix(col, vec3(0.83, 0.77, 0.64), 0.22), side * smoothstep(-0.2, -0.05, b) * (1.0 - smoothstep(-0.05, 0.1, b)));
+    for (int i = 0; i < 4; i++) {
+      float d = length(vObj - uStain[i].xyz) / uStain[i].w;
+      stain += exp(-d * d * 1.6);
+    }
+    stain = clamp(stain, 0.0, 1.0);
+  }
+  if (uMode > 1.5 && uMode < 2.5) {
+    float f = fract(vUv.y * 9.0);
+    col = mix(col, col * 0.78, smoothstep(0.78, 0.92, f) * (1.0 - smoothstep(0.92, 1.0, f)));
+    float th = (1.0 - smoothstep(0.25, 0.55, vUv.x)) * smoothstep(0.86, 0.97, fract(vUv.y * 3.0 + vUv.x * 1.4));
+    stain = th * 0.9;
+  }
+  if (stain > 0.01) {
+    // the infection inside the plumage: a soft stain that takes the bird's own light, fine orange threads across it
+    vec3 o = mix(uOrange * 0.9, uOrange * 0.66, 1.0 - lit);
+    col = mix(col, o, stain * 0.5);
+    float hh = fract((gl_FragCoord.x - gl_FragCoord.y) / (uHatch * 0.9));
+    if (hh < 0.28) col = mix(col, uOrange * mix(0.7, 0.95, lit), stain * 0.3);
+  }
+  // hatching: only a light texture inside the shade
+  float hx = fract((gl_FragCoord.x + gl_FragCoord.y) / uHatch);
+  if (hx < 0.3) col *= 1.0 - 0.22 * uHatchAmt * (1.0 - smoothstep(0.0, 0.45, lit));
+  if (uMode > 2.5) {
+    float a = abs(vUv.x);
+    if (a > 0.86) col = mix(col * 0.62, uLine, 0.35);   // the feather's edge: a darker version of its own colour
+    else if (a < 0.06 && vUv.y < 0.92) col *= 0.8;      // its shaft
+  }
+  // the rim: cream on the edges turned up and away from the eye
+  vec3 V = normalize(cameraPosition - vWorld);
+  float fres = pow(1.0 - clamp(abs(dot(n, V)), 0.0, 1.0), 2.2);
+  float up = smoothstep(-0.1, 0.7, n.y);
+  col = mix(col, uRim, 0.55 * fres * up);
+  // the medium
+  col = mix(col, uFog, uFogAmt);
+  gl_FragColor = vec4(col, 1.0);
+}`;
+const AIR_OUTLINE_FRAG = /* glsl */ `
+uniform vec3 uDark;
+uniform vec3 uFog;
+uniform float uFogAmt;
+void main() { gl_FragColor = vec4(mix(uDark, uFog, uFogAmt), 1.0); }`;
+const makeAirMat = (mode: number, side: number = THREE.FrontSide) =>
+  new THREE.ShaderMaterial({
+    vertexShader: AIR_VERT,
+    fragmentShader: AIR_FRAG,
+    side,
+    uniforms: {
+      uLight: { value: LIGHT3 },
+      uUnder: { value: new THREE.Vector3(...UNDERWING) },
+      uOrange: { value: new THREE.Vector3(...ORANGE) },
+      uMode: { value: mode },
+      uHatch: { value: 5.0 },
+      uStain: { value: [new THREE.Vector4(0, 0, 0, 1), new THREE.Vector4(0, 0, 0, 1), new THREE.Vector4(0, 0, 0, 1), new THREE.Vector4(0, 0, 0, 1)] },
+      uFog: { value: new THREE.Vector3(0, 0, 0) },
+      uFogAmt: { value: 0 },
+      uRim: { value: new THREE.Vector3(1, 1, 1) },
+      uShade: { value: new THREE.Vector3(0, 0, 0) },
+      uLine: { value: new THREE.Vector3(...DARK) },
+      uHatchAmt: { value: 0.3 },
+    },
+  });
+const makeAirOutline = (thick: number) =>
+  new THREE.ShaderMaterial({
+    vertexShader: OUTLINE_VERT,
+    fragmentShader: AIR_OUTLINE_FRAG,
+    side: THREE.BackSide,
+    uniforms: { uThick: { value: thick }, uDark: { value: new THREE.Vector3(...DARK) }, uFog: { value: new THREE.Vector3(0, 0, 0) }, uFogAmt: { value: 0 } },
+  });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const setAirUniforms = (m: any, air: GooseAir, outline = false, base = 0.42) => {
+  m.uniforms.uFog.value.set(...air.fog);
+  m.uniforms.uFogAmt.value = air.fogAmt;
+  if (outline) {
+    m.uniforms.uDark.value.set(...air.line);
+    m.uniforms.uThick.value = base * air.lineScale;
+    return;
+  }
+  m.uniforms.uRim.value.set(...air.rim);
+  m.uniforms.uShade.value.set(...air.shade);
+  m.uniforms.uLine.value.set(...air.line);
+  m.uniforms.uHatchAmt.value = air.hatch;
+};
+
+// ---------------------------------------------------------------------------
 // GEOMETRY BUILDERS
 // ---------------------------------------------------------------------------
 type Geo = { pos: number[]; col: number[]; uv: number[]; idx: number[] };
@@ -421,11 +574,20 @@ const bodyColour = (u: V3): V3 => {
   return c;
 };
 
-const Bird: React.FC<{ pose: GoosePose }> = ({ pose }) => {
+const Bird: React.FC<{ pose: GoosePose; air?: GooseAir }> = ({ pose, air }) => {
+  const isAir = air !== undefined;
   const mats = useMemo(
-    () => ({ body: makeMat(1), neck: makeMat(2), plain: makeMat(0), feathers: makeMat(3, THREE.DoubleSide), line: makeOutline(0.42), lineThin: makeOutline(0.3) }),
-    [],
+    () =>
+      isAir
+        ? { body: makeAirMat(1), neck: makeAirMat(2), plain: makeAirMat(0), feathers: makeAirMat(3, THREE.DoubleSide), line: makeAirOutline(0.42), lineThin: makeAirOutline(0.3) }
+        : { body: makeMat(1), neck: makeMat(2), plain: makeMat(0), feathers: makeMat(3, THREE.DoubleSide), line: makeOutline(0.42), lineThin: makeOutline(0.3) },
+    [isAir],
   );
+  if (air) {
+    [mats.body, mats.neck, mats.plain, mats.feathers].forEach((m) => setAirUniforms(m, air));
+    setAirUniforms(mats.line, air, true, 0.42);
+    setAirUniforms(mats.lineThin, air, true, 0.3);
+  }
   // the stain's blobs (body space): through the breast and belly, one creeping back along the flank
   mats.body.uniforms.uStain.value = [new THREE.Vector4(18, 22, 3, 9), new THREE.Vector4(8, 18, -5, 8), new THREE.Vector4(22, 30, -4, 6), new THREE.Vector4(-6, 20, 8, 6)];
   const geos = useMemo(() => {
@@ -534,7 +696,9 @@ const Bird: React.FC<{ pose: GoosePose }> = ({ pose }) => {
   }, []);
   const eyeGeo = useMemo(() => new THREE.SphereGeometry(0.95, 10, 8), []);
   const eyeMat = useMemo(() => new THREE.MeshBasicMaterial({ color: new THREE.Color(...DARK) }), []);
-  const legMat = useMemo(() => makeMat(0), []);
+  if (air) eyeMat.color.setRGB(...mixc(DARK, air.fog, air.fogAmt));
+  const legMat = useMemo(() => (isAir ? makeAirMat(0) : makeMat(0)), [isAir]);
+  if (air) setAirUniforms(legMat, air);
   const legGeoCol = useMemo(() => {
     const g = legGeo.clone();
     const n = g.attributes.position.count;
@@ -600,13 +764,13 @@ const Bird: React.FC<{ pose: GoosePose }> = ({ pose }) => {
 };
 
 /** the goose in the scene: a full-frame transparent canvas over the cut's SVG world, the same camera */
-export const Goose3D: React.FC<{ cam: Cam3; pose: GoosePose }> = ({ cam, pose }) => {
+export const Goose3D: React.FC<{ cam: Cam3; pose: GoosePose; air?: GooseAir }> = ({ cam, pose, air }) => {
   const yaw = (pose.yaw * Math.PI) / 180;
   return (
     <ThreeCanvas width={1080} height={1920} flat linear style={{ position: "absolute", left: 0, top: 0 }} gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}>
       <CameraRig cam={cam} />
       <group position={[pose.pos[0], -pose.pos[1], -pose.pos[2]]} rotation={[0, yaw, 0]} scale={GS}>
-        <Bird pose={pose} />
+        <Bird pose={pose} air={air} />
       </group>
     </ThreeCanvas>
   );
