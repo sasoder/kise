@@ -42,8 +42,9 @@ export const MILL = {
   catTopY: -346,
   catTopR: 90,
 };
-/** the push-bar: through the catillus' waist lugs, its tips at BAR_R from the axis; the slaves' hands on it */
-export const BAR_R = 300;
+/** the push-bar: through the catillus' waist lugs, its tips at BAR_R from the axis, just past each pusher's outer fist
+ *  (REVISION 1b: the bar ends in his hands, it never runs on across his chest) */
+export const BAR_R = 270;
 /** the bar at a pusher's chest height (the push pose's grip, 214 units) */
 export const BAR_Y = -228;
 export type Mill = { X: number; Z: number; th0: number; tone: number };
@@ -51,7 +52,8 @@ export type Mill = { X: number; Z: number; th0: number; tone: number };
  *  th grows: the near tip moves screen right (the slaves walk round counter-clockwise seen from above) */
 export const MILLS: Mill[] = [
   { X: 0, Z: 200, th0: (-50 * Math.PI) / 180, tone: 1 },
-  { X: 100, Z: 1320, th0: (64 * Math.PI) / 180, tone: 0.6 },
+  // REVISION 1: phased so neither of its pushers' bar tangents crosses the line of sight in the cut (no turn-round)
+  { X: 100, Z: 1320, th0: (-40 * Math.PI) / 180, tone: 0.6 },
 ];
 /** the mills turn slowly (a slave's push walk: ~2.8 world units a frame at his place, ~0.4 m/s) */
 export const MILL_OMEGA = (0.6 * Math.PI) / 180;
@@ -115,7 +117,7 @@ export const pinAngle = (f: number) => Math.PI / N_PIN - 4 * PIN_ANGLE - (N_FLY 
 export const stoneAngle = (f: number, i: number) => (2 / 3) * pinAngle(f) + i * 0.9;
 
 /** worker 1 (londonCastV2 Worker, cream) at stone 1: near hand on the meal spout, far hand on the sack's neck */
-export const WORKER = { X: C1 - 110, Z: -63 };
+export const WORKER = { X: C1 - 82, Z: -63 };
 /** the sack hangs by its gathered neck on the spout's hook (its foot on the floor), filling */
 export const SACK = { X: SHAFT_X - 225, Z: -40, h: 196 };
 /** the sack fills over the cut (0.4 -> 0.9 full) */

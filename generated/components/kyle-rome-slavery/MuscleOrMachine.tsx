@@ -526,34 +526,64 @@ const BarHalf: React.FC<{ P: Persp; m: Mill; a: number; uid: string; tone: numbe
 /** where the pusher stands on the bar's circle, and how far behind the bar (along his walk) */
 const BODY_R = 268;
 const TAN_OFF = 96;
-type Pusher = { at: P2; scale: number; pose: FigPose; Z: number; X: number; dir: 1 | -1; grip: { L: P2; R: P2 } };
-const pusherAt = (P: Persp, m: Mill, th: number, end: 0 | 1, f: number, seed: number): Pusher => {
+/** how far in front of him (units, on screen) the nearer of his two grips sits: a pushing reach (cf. PUSH.grip 104) */
+const GRIP_FWD = 74;
+/** the fists' places on the bar (radius): the outer fist just inside the bar's tip, the inner a shoulder-width in */
+const GRIP_RO = BAR_R - 10;
+const GRIP_RI = BAR_R - 52;
+type Pusher = { at: P2; scale: number; pose: FigPose; Z: number; X: number; dir: 1 | -1; grip: { L: P2; R: P2 }; hands3: V3[] };
+/** a pusher's facing side for the whole cut (1 = screen right), from the bar's tangent; throws if it would flip */
+const pusherDir = (m: Mill, end: 0 | 1): 1 | -1 => (Math.cos(m.th0 + end * Math.PI + MILL_OMEGA * 73) >= 0 ? 1 : -1);
+MILLS.forEach((m) =>
+  ([0, 1] as const).forEach((end) => {
+    for (let f = 0; f < DURATION; f++) {
+      const c = Math.cos(millAngle(m, f) + end * Math.PI);
+      if (Math.sign(c) !== pusherDir(m, end) || Math.abs(c) < 0.02) throw new Error(`MuscleOrMachine: a pusher's facing would flip at f${f}`);
+    }
+  }),
+);
+export const pusherAt = (P: Persp, m: Mill, th: number, end: 0 | 1, f: number, seed: number): Pusher => {
   const a = th + end * Math.PI;
-  // the walking direction (the bar's tangent) and where he stands: on the bar's circle, behind the bar
+  // the walking direction (the bar's tangent)
   const t: [number, number] = [Math.cos(a), Math.sin(a)];
-  const X = m.X + BODY_R * Math.sin(a) - TAN_OFF * t[0];
-  const Z = m.Z - BODY_R * Math.cos(a) - TAN_OFF * t[1];
-  const dir: 1 | -1 = t[0] >= 0 ? 1 : -1;
+  // REVISION 1: his facing side is fixed for the whole cut (asserted at module load: the bar's tangent never crosses
+  // the line of sight while he is on screen), so he never mirrors; his yaw follows the facing continuously
+  const dir = pusherDir(m, end);
   // the rig's yaw from the facing (0 = toward us, 1.57 = across), kept in the three-quarter range it draws
-  const facing = Math.atan2(t[0], -t[1]);
+  const facing = Math.atan2(dir * t[0], -t[1]);
   const yaw = Math.max(0.5, Math.min(1.12, Math.abs(facing) * 0.82));
-  const pl = P.at(X, Z);
-  const scale = SCALE * pl.scale;
+  // the grips on the bar: each hand keeps ITS end of the bar through the whole cycle (never re-assigned by depth
+  // order): armL (the near arm when he faces right) on the outer grip, armR on the inner grip, for every pusher
+  const barAt = (R: number) => P.p(m.X + R * Math.sin(a), BAR_Y, m.Z - R * Math.cos(a));
+  const bar3 = (R: number): V3 => [m.X + R * Math.sin(a), BAR_Y, m.Z - R * Math.cos(a)];
+  const grip = { L: barAt(GRIP_RO), R: barAt(GRIP_RI) };
+  // where he stands: on the bar's circle, behind the bar along his walk, as far back as puts both grips a reach in
+  // front of him on screen (bisection; smooth in time, so his feet glide continuously)
+  const placeAt = (off: number) => {
+    const X = m.X + BODY_R * Math.sin(a) - off * t[0];
+    const Z = m.Z - BODY_R * Math.cos(a) - off * t[1];
+    const pl = P.at(X, Z);
+    const sc = SCALE * pl.scale;
+    const fwd = Math.min(dir * (grip.L[0] - pl.at[0]), dir * (grip.R[0] - pl.at[0])) / sc;
+    return { X, Z, pl, sc, fwd };
+  };
+  let lo = TAN_OFF * 0.6;
+  let hi = TAN_OFF * 2.6;
+  for (let i = 0; i < 22; i++) {
+    const mid = (lo + hi) / 2;
+    if (placeAt(mid).fwd < GRIP_FWD) lo = mid;
+    else hi = mid;
+  }
+  const { X, Z, pl, sc: scale } = placeAt((lo + hi) / 2);
+  const hands3 = [bar3(GRIP_RO), bar3(GRIP_RI)];
   // the walk: the feet advance with the bar (body radius x angle), the push's own stride
   const dist = BODY_R * MILL_OMEGA * f;
   const phase = dist / (2 * PUSH.stride * SCALE) + seed;
   let q = RPOSES.push(1, phase);
   q = { ...q, yaw, headYaw: yaw * 0.95 };
-  if (dir < 0) q = mirrorPose(q);
+  if (dir < 0) q = mirrorPose(q); // constant per pusher for the whole cut: never a flip
   q = idle(q, f, 7 + seed * 10, 0.3);
-  // the grips: the bar runs at his chest height, TAN_OFF ahead of him; his two fists a shoulder-width apart on it
-  const barAt = (R: number) => P.p(m.X + R * Math.sin(a), BAR_Y, m.Z - R * Math.cos(a));
-  const hp = [BODY_R + 22, BODY_R - 22].map((R) => ({ p: barAt(R), z: m.Z - R * Math.cos(a) }));
-  // the near arm (L when he faces right) takes the grip nearer the camera
-  const nearGrip = hp[0].z <= hp[1].z ? hp[0].p : hp[1].p;
-  const farGrip = hp[0].z <= hp[1].z ? hp[1].p : hp[0].p;
-  const grip = dir > 0 ? { L: nearGrip, R: farGrip } : { L: farGrip, R: nearGrip };
-  return { at: pl.at, scale, pose: q, Z, X, dir, grip };
+  return { at: pl.at, scale, pose: q, Z, X, dir, grip, hands3 };
 };
 const SlaveFig: React.FC<{ p: Pusher; uid: string; tone: number; k: number; variant: number; fetters: boolean }> = ({ p, uid, tone, k, variant, fetters }) => {
   const dim = tone < 0.999 ? tintInk(CREAM, tone) : undefined;
@@ -837,7 +867,7 @@ const HangingSack: React.FC<{ P: Persp; fill: number; jig: number }> = ({ P, fil
 };
 /** worker 1: facing right at the nearest pair, his near hand on the meal spout, his far hand on the sack's neck (he
  *  gives it a shake at f112) */
-const workerAt = (P: Persp, f: number) => {
+export const workerAt = (P: Persp, f: number) => {
   const pl = P.at(WORKER.X, WORKER.Z);
   const scale = SCALE * pl.scale;
   const base: FigPose = { ...POSES.stand(1), lean: 10, crouch: 6, footL: [-26, 0], footR: [18, 0] };
@@ -854,12 +884,12 @@ const workerAt = (P: Persp, f: number) => {
   let wL: P2 = [(want.L[0] - pl.at[0]) / scale, (want.L[1] - pl.at[1]) / scale];
   let wR: P2 = [(want.R[0] - pl.at[0]) / scale, (want.R[1] - pl.at[1]) / scale];
   const tryArms = (l: P2, r: P2): FigPose => ({ ...q, armL: { w: l, elbow: [0.2, 1], fist: 0.7, hand: 0 }, armR: { w: r, elbow: [0.3, 1], fist: 0.9, hand: 10 } });
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 8; i++) {
     const an = castAnchors("worker", tryArms(wL, wR), pl.at, scale);
-    wL = [wL[0] + (want.L[0] - an.handL[0]) / scale, wL[1] + (want.L[1] - an.handL[1]) / scale];
-    wR = [wR[0] + (want.R[0] - an.handR[0]) / scale, wR[1] + (want.R[1] - an.handR[1]) / scale];
+    wL = [wL[0] + (0.8 * (want.L[0] - an.handL[0])) / scale, wL[1] + (0.8 * (want.L[1] - an.handL[1])) / scale];
+    wR = [wR[0] + (0.8 * (want.R[0] - an.handR[0])) / scale, wR[1] + (0.8 * (want.R[1] - an.handR[1])) / scale];
   }
-  return { at: pl.at, scale, pose: tryArms(wL, wR) };
+  return { at: pl.at, scale, pose: tryArms(wL, wR), want };
 };
 
 /** a filled sack lying on its side (world units at its depth, centred on c) */
@@ -911,7 +941,7 @@ const liftSackAt = (f: number): { c: V3; held: boolean } => {
   }
   return { c: STACK_TOP, held: false };
 };
-const worker2At = (P: Persp, f: number) => {
+export const worker2At = (P: Persp, f: number) => {
   const pl = P.at(WORKER2.X, WORKER2.Z);
   const scale = SCALE * pl.scale;
   const ls = liftSackAt(f);
@@ -925,10 +955,10 @@ const worker2At = (P: Persp, f: number) => {
   let wL: P2 = [(grips.L[0] - pl.at[0]) / scale, (grips.L[1] - pl.at[1]) / scale];
   let wR: P2 = [(grips.R[0] - pl.at[0]) / scale, (grips.R[1] - pl.at[1]) / scale];
   const tryArms = (l: P2, r: P2): FigPose => ({ ...q, armL: { w: l, elbow: [0.2, 1], fist: 0.9, hand: 0 }, armR: { w: r, elbow: [0.2, 1], fist: 0.9, hand: 0 } });
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 8; i++) {
     const an = castAnchors("worker", tryArms(wL, wR), pl.at, scale);
-    wL = [wL[0] + (grips.L[0] - an.handL[0]) / scale, wL[1] + (grips.L[1] - an.handL[1]) / scale];
-    wR = [wR[0] + (grips.R[0] - an.handR[0]) / scale, wR[1] + (grips.R[1] - an.handR[1]) / scale];
+    wL = [wL[0] + (0.8 * (grips.L[0] - an.handL[0])) / scale, wL[1] + (0.8 * (grips.L[1] - an.handL[1])) / scale];
+    wR = [wR[0] + (0.8 * (grips.R[0] - an.handR[0])) / scale, wR[1] + (0.8 * (grips.R[1] - an.handR[1])) / scale];
   }
   const holding = tryArms(wL, wR);
   // after the release the hands come off the sack and down
@@ -981,12 +1011,41 @@ const MILL_PROPS: { key: string; kind: "sack" | "basket"; a: number; R: number; 
   { key: "sk2", kind: "sack", a: (70 * Math.PI) / 180, R: 178, tilt: -11 },
   { key: "bk", kind: "basket", a: (10 * Math.PI) / 180, R: 200, tilt: 0 },
 ];
+/** the wall's box (with its plinth) and a segment-box test: does the line of sight from the eye to q pass through it */
+const WALL_BOX = { x0: PIER.X0 - 7, x1: PIER.X1 + 7, y0: PIER.Ytop, y1: 0, z0: PIER.Z0 - 7, z1: PIER.Z1 };
+export const rayHitsWall = (E: V3, q: V3) => {
+  let t0 = 0;
+  let t1 = 0.999;
+  const lo = [WALL_BOX.x0, WALL_BOX.y0, WALL_BOX.z0];
+  const hi = [WALL_BOX.x1, WALL_BOX.y1, WALL_BOX.z1];
+  for (let i = 0; i < 3; i++) {
+    const d = q[i] - E[i];
+    if (Math.abs(d) < 1e-9) {
+      if (E[i] < lo[i] || E[i] > hi[i]) return false;
+      continue;
+    }
+    let ta = (lo[i] - E[i]) / d;
+    let tb = (hi[i] - E[i]) / d;
+    if (ta > tb) [ta, tb] = [tb, ta];
+    t0 = Math.max(t0, ta);
+    t1 = Math.min(t1, tb);
+    if (t0 > t1) return false;
+  }
+  return true;
+};
+/** sample points over a standing figure (feet at X, Z): three heights x three widths */
+export const figureSamples = (X: number, Z: number): V3[] => {
+  const out: V3[] = [];
+  for (const Y of [-5, -80, -160, -240, -320]) for (const dx of [-66, -44, -22, 0, 22, 44, 66]) out.push([X + dx, Y, Z]);
+  return out;
+};
+const ringSamples = (X: number, Z: number, R: number, Y: number): V3[] => [0, 1, 2, 3, 4, 5].map((i): V3 => [X + R * Math.sin((i * Math.PI) / 3), Y, Z - R * Math.cos((i * Math.PI) / 3)]);
 /** the pushers' faces: the near mill's pair (fettered), the far mill's pair */
 const SLAVE_VARIANTS = [
   [1, 0],
   [2, 4],
 ];
-type Item = { Z: number; key: string; g?: React.ReactNode; cam?: Cam; el?: React.ReactNode; X?: number };
+type Item = { Z: number; key: string; g?: React.ReactNode; cam?: Cam; el?: React.ReactNode; X?: number; samples?: V3[] };
 const RimSide: React.FC = () => (
   <g fill="none">
     <circle cx={SUN[0]} cy={SUN[1]} r={RIM_R} stroke={IRON.dark} strokeWidth={62} />
@@ -1000,24 +1059,26 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
   const P = perspective(cam, DEPTH);
   const items: Item[] = [];
   // X: which side of the wall the thing stands (default: the steam side)
-  const add = (Z: number, key: string, g: React.ReactNode, c?: Cam, X = EX) => items.push({ Z, key, g, cam: c, X });
+  // samples: 3D points spread over the thing, ray-tested against the wall every frame
+  const add = (Z: number, key: string, g: React.ReactNode, c?: Cam, X = EX, samples?: V3[]) => items.push({ Z, key, g, cam: c, X, samples });
 
   // ---- ROME: two mills, their bars, their pushers ----
   MILLS.forEach((m, mi) => {
     const th = millAngle(m, f);
     const tone = m.tone;
-    add(m.Z + 1, `mb${mi}`, <MillBase P={P} m={m} f={f} uid={`m${mi}`} tone={tone} />, undefined, m.X);
-    add(m.Z, `mc${mi}`, <Catillus P={P} m={m} th={th} f={f} uid={`m${mi}`} tone={tone} />, undefined, m.X);
+    add(m.Z + 1, `mb${mi}`, <MillBase P={P} m={m} f={f} uid={`m${mi}`} tone={tone} />, undefined, m.X, ringSamples(m.X, m.Z, MILL.baseR, -30));
+    add(m.Z, `mc${mi}`, <Catillus P={P} m={m} th={th} f={f} uid={`m${mi}`} tone={tone} />, undefined, m.X, [...ringSamples(m.X, m.Z, MILL.catTopR, MILL.catTopY - 40), ...ringSamples(m.X, m.Z, MILL.catBotR, MILL.catBotY)]);
     ([0, 1] as const).forEach((e) => {
       const a = th + e * Math.PI;
-      add(m.Z - (BAR_R / 2) * Math.cos(a), `bar${mi}${e}`, <BarHalf P={P} m={m} a={a} uid={`m${mi}b${e}`} tone={tone} />, undefined, m.X);
       const p = pusherAt(P, m, th, e, f, mi * 0.37 + e * 0.5);
-      add(p.Z, `sl${mi}${e}`, <SlaveFig p={p} uid={`m${mi}s${e}`} tone={tone} k={cam.k} variant={SLAVE_VARIANTS[mi][e]} fetters={mi === 0} />, undefined, p.X);
+      // his half of the bar is drawn just behind him: his fists close on it in front of his chest
+      add(p.Z + 0.5, `bar${mi}${e}`, <BarHalf P={P} m={m} a={a} uid={`m${mi}b${e}`} tone={tone} />, undefined, m.X, [0.3, 0.6, 1].map((u): V3 => [m.X + BAR_R * u * Math.sin(a), BAR_Y, m.Z - BAR_R * u * Math.cos(a)]));
+      add(p.Z, `sl${mi}${e}`, <SlaveFig p={p} uid={`m${mi}s${e}`} tone={tone} k={cam.k} variant={SLAVE_VARIANTS[mi][e]} fetters={mi === 0} />, undefined, p.X, [...figureSamples(p.X, p.Z), ...p.hands3]);
     });
     // the square timber collar at the waist, its beams sorted by depth
     for (let side = 0; side < 4; side++) {
       const cb = collarBeam(m, th, side);
-      add(cb.mid[2], `cb${mi}${side}`, <CollarBeam P={P} m={m} a={th} side={side} uid={`m${mi}cb${side}`} tone={tone} />, undefined, m.X);
+      add(cb.mid[2], `cb${mi}${side}`, <CollarBeam P={P} m={m} a={th} side={side} uid={`m${mi}cb${side}`} tone={tone} />, undefined, m.X, [cb.ends[0], cb.ends[1], cb.mid]);
     }
   });
   // the near mill's grain sacks leaning on its base and a basket of flour by the tray
@@ -1043,7 +1104,7 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
           </g>
         )}
       </g>
-    ), undefined, X);
+    ), undefined, X, [[X, -40, Z]]);
   });
   // ---- the pier ----
   const wall: Item = { Z: PIER.Z0, key: "pier", g: <Pier P={P} /> };
@@ -1107,13 +1168,17 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
   ));
   add(w2.sack.held ? WORKER2.Z - 12 : STACK_TOP[2] - 20, "liftsack", <LyingSack P={P} c={w2.sack.c} tone={t2} uid="lift" tilt={w2.sack.held ? -4 : -1} />);
 
-  // the wall: whatever stands behind its front end on the far side from the camera is drawn before it, the rest after
+  // the wall (REVISION 1): a thing is drawn before the wall when it stands behind the wall's front on the far side
+  // from the camera (or anywhere behind its front while the camera faces its end), or when the line of sight to any
+  // of its sample points passes through the wall this frame; everything else after it
+  const eye = eyeOf(P);
   const beyond = (it: Item) => {
     const X = it.X ?? EX;
+    if (it.samples && it.samples.some((q) => rayHitsWall(eye, q))) return true;
     if (it.Z <= PIER.Z0 + 4) return false;
     if (cam.cx < PIER.X0) return X > PIER.X1;
     if (cam.cx > PIER.X1) return X < PIER.X0;
-    return X >= PIER.X0 && X <= PIER.X1;
+    return true;
   };
   const byZ = (p: Item, q: Item) => q.Z - p.Z;
   const ordered = [...items.filter(beyond).sort(byZ), wall, ...items.filter((it) => !beyond(it)).sort(byZ)];
@@ -1149,10 +1214,8 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
     shadows.push(<ContactShadow key={`ms${mi}`} P={P} X={m.X} Z={m.Z} w={170} d={160} uid={`mcs${mi}`} amt={0.7 * m.tone} />);
     const th = millAngle(m, f);
     ([0, 1] as const).forEach((e) => {
-      const a = th + e * Math.PI;
-      const X = m.X + BODY_R * Math.sin(a) - TAN_OFF * Math.cos(a);
-      const Z = m.Z - BODY_R * Math.cos(a) - TAN_OFF * Math.sin(a);
-      shadows.push(<ContactShadow key={`ss${mi}${e}`} P={P} X={X} Z={Z} w={62} d={30} uid={`scs${mi}${e}`} amt={m.tone} />);
+      const p = pusherAt(P, m, th, e, f, mi * 0.37 + e * 0.5);
+      shadows.push(<ContactShadow key={`ss${mi}${e}`} P={P} X={p.X} Z={p.Z} w={62} d={30} uid={`scs${mi}${e}`} amt={m.tone} />);
     });
   });
   MILL_PROPS.forEach((pr) => shadows.push(<ContactShadow key={pr.key} P={P} X={MILLS[0].X + pr.R * Math.sin(pr.a)} Z={MILLS[0].Z - pr.R * Math.cos(pr.a)} w={34} d={20} uid={`pcs${pr.key}`} />));
