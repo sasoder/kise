@@ -210,18 +210,28 @@ export const Part: React.FC<{ V: View; S: Surf; o: PartOpts; children?: React.Re
   const hg = (2.6 / (o.hatch ?? 1)) * r;
   let hd = "";
   if (darkD && !o.flat) {
-    // hatching at ~112 deg (the cast's), across the part's box
+    // hatching at ~112 deg (the cast's), across the part's box. (V2) The lines are anchored to the part itself (the
+    // projected centre of its first ring), each line keeping its index and jitter from frame to frame, so the hatch
+    // travels with the part and never swims or reshuffles as the part's box changes.
     const a = (112 * Math.PI) / 180;
     const dx = Math.cos(a);
     const dy = Math.sin(a);
+    const anc = sm.q[0].reduce((acc, q) => [acc[0] + q[0] / sm.q[0].length, acc[1] + q[1] / sm.q[0].length] as P2, [0, 0] as P2);
+    const nx = -dy;
+    const ny = dx;
+    const proj0 = anc[0] * nx + anc[1] * ny;
+    const corners: P2[] = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]];
+    const ps = corners.map((c) => c[0] * nx + c[1] * ny);
+    const k0 = Math.floor((Math.min(...ps) - proj0) / hg) - 1;
+    const k1 = Math.ceil((Math.max(...ps) - proj0) / hg) + 1;
     const cx = (x0 + x1) / 2;
     const cy = (y0 + y1) / 2;
     const R = Math.hypot(x1 - x0, y1 - y0) / 2 + 2;
-    let i = 0;
-    for (let s = -R; s <= R; s += hg, i++) {
-      const ss = s + (hsh(i, 7) - 0.5) * hg * 0.4;
-      const px = cx - dy * ss;
-      const py = cy + dx * ss;
+    const along = cx * dx + cy * dy;
+    for (let k = k0; k <= k1; k++) {
+      const off = proj0 + (k + (hsh(k + 1000, 7) - 0.5) * 0.4) * hg;
+      const px = nx * off + dx * along;
+      const py = ny * off + dy * along;
       hd += `M${f2(px - dx * R)},${f2(py - dy * R)}L${f2(px + dx * R)},${f2(py + dy * R)}`;
     }
   }
@@ -808,11 +818,13 @@ const handParts = (R: Rig, side: "L" | "R") => {
   const fore = v3.norm(v3.sub(ar.w, ar.e));
   const orth = (v: V3) => v3.norm(v3.sub(v, v3.mul(fore, v3.dot(v, fore))));
   // relaxed: the palm toward his thigh, the thumb forward; claw: the palm down, the thumb inward
-  const pN = orth(v3.add(v3.mul(C.ax, -sgn * (1 - A.claw)), v3.mul(C.ay, A.claw)));
+  const pN0 = orth(v3.add(v3.mul(C.ax, -sgn * (1 - A.claw)), v3.mul(C.ay, A.claw)));
   const across = orth(v3.add(v3.mul(C.az, 1 - A.claw), v3.mul(C.ax, -sgn * A.claw)));
-  // the wrist bends (+ = toward the back of the hand: the hand lifts when reaching)
+  // the wrist bends (+ = toward the back of the hand: the hand lifts; - = it droops toward the palm); (V2) the palm's
+  // normal turns with it, so the fingers curl toward the palm at every bend
   const bd = (A.bend * Math.PI) / 180;
-  const hdir = v3.norm(v3.add(v3.mul(fore, Math.cos(bd)), v3.mul(pN, -Math.sin(bd))));
+  const hdir = v3.norm(v3.add(v3.mul(fore, Math.cos(bd)), v3.mul(pN0, -Math.sin(bd))));
+  const pN = v3.norm(v3.add(v3.mul(pN0, Math.cos(bd)), v3.mul(fore, Math.sin(bd))));
   const W = v3.add(ar.w, v3.mul(fore, 1.5));
   const knuck = v3.add(W, v3.mul(hdir, 15));
   const fingers: { pts: V3[]; rad: number[] }[] = [];
@@ -830,13 +842,13 @@ const handParts = (R: Rig, side: "L" | "R") => {
     const p2 = v3.add(p1, v3.mul(d1, len * 0.45));
     const d2 = v3.norm(v3.add(v3.mul(d1, Math.cos(curl * (1 + 0.8 * A.claw))), v3.mul(pN, Math.sin(curl * (1 + 0.8 * A.claw)))));
     const p3 = v3.add(p2, v3.mul(d2, len * 0.35));
-    fingers.push({ pts: [v3.add(base, v3.mul(d0, -3)), p1, p2, p3], rad: [2.4, 2.15, 1.9, 1.6] });
+    fingers.push({ pts: [v3.add(base, v3.mul(d0, -3)), p1, p2, p3], rad: [2.05, 1.8, 1.55, 1.25] });
   }
   const tb = v3.add(W, v3.add(v3.mul(hdir, 4.5), v3.mul(across, 5.5)));
   const td = v3.norm(v3.add(v3.add(hdir, v3.mul(across, 0.7)), v3.mul(pN, 0.45)));
   const t1 = v3.add(tb, v3.mul(td, 6.5));
   const t2 = v3.add(t1, v3.mul(v3.norm(v3.add(hdir, v3.mul(pN, 0.7))), 5.5));
-  return { palm: { pts: [W, v3.add(W, v3.mul(hdir, 8)), knuck], rad: [4.6, 6.6, 6.4] }, fingers, thumb: { pts: [tb, t1, t2], rad: [3, 2.4, 2] }, ref: pN };
+  return { palm: { pts: [W, v3.add(W, v3.mul(hdir, 8)), knuck], rad: [4.4, 6.0, 5.7] }, fingers, thumb: { pts: [tb, t1, t2], rad: [3, 2.4, 2] }, ref: pN, across, hdir, knuck };
 };
 const handEls = (V: View, R: Rig, side: "L" | "R", uid: string) => {
   const h = handParts(R, side);
@@ -1188,34 +1200,69 @@ const sinkInk = (i: Inks, d: number): Inks => {
 export const FreeArm: React.FC<{ V: View; C: Frame; sgn: 1 | -1; s: V3; e: V3; w: V3; claw: number; bend: number; uid: string; dim?: number; linen?: Inks; skin?: Inks }> = ({ V, C, sgn, s, e, w, claw, bend, uid, dim = 0, linen = INK.linen, skin = INK.skin }) => {
   const R = { armL: { s, e, w, A: { elbow: [0, 0, 0] as V3, wrist: [0, 0, 0] as V3, claw, bend } }, armR: { s, e, w, A: { elbow: [0, 0, 0] as V3, wrist: [0, 0, 0] as V3, claw, bend } }, chestF: C } as unknown as Rig;
   const side: "L" | "R" = sgn === 1 ? "L" : "R";
-  const ref = C.az;
-  const li = sinkInk(linen, dim);
-  const sk = sinkInk(skin, dim);
-  const sleeve = tubeSurf([v3.add(s, dirW(C, [0, 2, 0])), v3.mix(s, e, 0.45), v3.mix(s, e, 0.92)], [9.8, 9.4, 8.8], ref);
-  const roll = tubeSurf([v3.mix(s, e, 0.9), v3.mix(e, w, 0.12)], [9.2, 8.7], ref, 1, 16, 0.3);
+  // (V2) the tubes' section frame is taken from his lateral axis: the arm hangs (down) or reaches (forward), both
+  // square to it, so the frame (and every line on the sleeve) never spins or flips as the arm comes up
+  const ref = C.ax;
+  const li = dim > 0 ? sinkInk(linen, dim) : linen;
+  const sk = dim > 0 ? sinkInk(skin, dim) : skin;
+  const sleeve = tubeSurf([v3.add(s, dirW(C, [0, 1, 0])), v3.mix(s, e, 0.45), v3.mix(s, e, 0.92)], [9.6, 9.2, 8.7], ref);
+  const roll = tubeSurf([v3.mix(s, e, 0.9), v3.mix(e, w, 0.12)], [9.1, 8.6], ref, 1, 16, 0.3);
   const fore = tubeSurf([v3.mix(e, w, 0.05), v3.mix(e, w, 0.4), w], [7, 6.6, 4.8], ref);
   const h = handParts(R, side);
   const palm = tubeSurf(h.palm.pts, h.palm.rad, h.ref, 0.5, 16);
   const camD = (p: V3) => v3.len(v3.sub(V.cam, p));
-  const fingers = [
-    ...h.fingers.map((f, i) => ({ d: camD(f.pts[2]), el: <Part key={`f${i}`} V={V} S={tubeSurf(f.pts, f.rad, h.ref, 1, 10)} o={{ uid: `${uid}-f${i}`, ink: sk, casing: 1.05 }} /> })),
-    { d: camD(h.thumb.pts[1]), el: <Part key="th" V={V} S={tubeSurf(h.thumb.pts, h.thumb.rad, h.ref, 1, 12)} o={{ uid: `${uid}-th`, ink: sk, casing: 1.1 }} /> },
+  const rh = V.P.r(w[2]);
+  // the hand's parts in depth order (the palm among them): fingers curled under the palm go behind it
+  const palmC = v3.mix(h.palm.pts[0], h.palm.pts[2], 0.55);
+  const backSeen = v3.dot(v3.mul(h.ref, -1), v3.sub(V.cam, palmC)) > 0;
+  const crease = (pts: V3[], k: number) => {
+    // a short line across a finger at a joint (the cast's line manner)
+    const c = pts[k];
+    const d = v3.norm(v3.sub(pts[k + 1], pts[k - 1]));
+    const x = v3.norm(v3.cross(d, h.ref));
+    const a2 = V.P.p(...(v3.add(c, v3.mul(x, 1.5)) as [number, number, number]));
+    const b2 = V.P.p(...(v3.add(c, v3.mul(x, -1.5)) as [number, number, number]));
+    return `M${pt(a2)}L${pt(b2)}`;
+  };
+  const items = [
+    { d: camD(palmC) + 0.01, el: <Part key="pm" V={V} S={palm} o={{ uid: `${uid}-pm`, ink: sk, casing: 1.15 }} /> },
+    ...h.fingers.map((f, i) => ({
+      d: camD(f.pts[1]),
+      el: (
+        <g key={`f${i}`}>
+          <Part V={V} S={tubeSurf(f.pts, f.rad, h.ref, 1, 10)} o={{ uid: `${uid}-f${i}`, ink: sk, casing: 1.0 }} />
+          <path d={crease(f.pts, 1) + crease(f.pts, 2)} fill="none" stroke={DARK} strokeWidth={0.55 * rh} strokeOpacity={0.55} strokeLinecap="round" />
+        </g>
+      ),
+    })),
+    { d: camD(h.thumb.pts[1]), el: <Part key="th" V={V} S={tubeSurf(h.thumb.pts, h.thumb.rad, h.ref, 1, 12)} o={{ uid: `${uid}-th`, ink: sk, casing: 1.05 }} /> },
   ].sort((a, b) => b.d - a.d);
-  // the hand nearer than the elbow (reaching at us) draws over the forearm and sleeve; else under them
+  // the knuckles: a row of small arcs over the finger roots on the back of the hand, when it faces us
+  const knD = backSeen
+    ? h.fingers
+        .map((f) => {
+          const c = v3.add(f.pts[0], v3.mul(h.ref, -1.6));
+          const q0 = V.P.p(...(v3.add(c, v3.mul(h.across, 1.5)) as [number, number, number]));
+          const q1 = V.P.p(...(v3.add(c, v3.mul(h.hdir, 1.0)) as [number, number, number]));
+          const q2 = V.P.p(...(v3.add(c, v3.mul(h.across, -1.5)) as [number, number, number]));
+          return `M${pt(q0)}Q${pt(q1)} ${pt(q2)}`;
+        })
+        .join("")
+    : "";
   const handNear = camD(w) < camD(e);
   const handEl = (
     <g>
-      <Part V={V} S={palm} o={{ uid: `${uid}-pm`, ink: sk, casing: 1.2 }} />
-      {fingers.map((f) => f.el)}
+      {items.map((it) => it.el)}
+      {knD ? <path d={knD} fill="none" stroke={DARK} strokeWidth={0.6 * rh} strokeOpacity={0.6} strokeLinecap="round" /> : null}
     </g>
   );
-  const foreEl = <Part V={V} S={fore} o={{ uid: `${uid}-fa`, ink: sk, casing: 1.25 }} />;
+  const foreEl = <Part V={V} S={fore} o={{ uid: `${uid}-fa`, ink: sk, casing: 1.2 }} />;
   const upperEl = (
     <g>
-      <Part V={V} S={sleeve} o={{ uid: `${uid}-sl`, ink: li, casing: 1.3 }}>
-        <path d={[0.9, 2.4].map((ph) => curveD(V, sleeve, Array.from({ length: 7 }, (_, j) => [0.3 + (j / 6) * 0.45, ph + 0.25 * Math.sin(j * 0.9)] as [number, number]), 0.1)).join("")} fill="none" stroke={DARK} strokeWidth={0.7 * V.P.r(e[2])} strokeOpacity={0.35} />
+      <Part V={V} S={sleeve} o={{ uid: `${uid}-sl`, ink: li, casing: 1.25 }}>
+        <path d={[0.9, 2.4].map((ph) => curveD(V, sleeve, Array.from({ length: 7 }, (_, j) => [0.3 + (j / 6) * 0.45, ph + 0.18 * Math.sin(j * 0.9)] as [number, number]), 0.1)).join("")} fill="none" stroke={DARK} strokeWidth={0.7 * V.P.r(e[2])} strokeOpacity={0.3} />
       </Part>
-      <Part V={V} S={roll} o={{ uid: `${uid}-ro`, ink: li, casing: 1.2 }} />
+      <Part V={V} S={roll} o={{ uid: `${uid}-ro`, ink: li, casing: 1.15 }} />
     </g>
   );
   // reaching at us: the upper arm is farthest, then the forearm, then the hand; hanging: the hand, forearm, sleeve
