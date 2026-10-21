@@ -13,24 +13,25 @@
 // BIRD 83 · FLU 92 · maybe 102 · SOMETHING 108 · ELSE 135 · but 150 (the slot ends at 159).
 // DURATION: the slot 47.014 -> 52.319 s = 5.305 s x 29.97 = 159 frames (f0..f158).
 //
-// THE MOTION: a road of pandemic years. From f0 the camera is already travelling at a steady pace down a broad
+// THE MOTION (V2): a road of pandemic years. From f0 the camera is already travelling at a steady pace down a broad
 // stone-flagged way across a dim umber plain (a real dolly: the near stones sweep out of frame, the far ones hardly
-// move). Rough standing stones (menhirs) stand back from the path, alternating left and right, the years cut into
-// their faces: 1918, 1957, 1968, 2009 and 2020. Each year reads whole and unhidden for 13 frames (36-61 px tall:
-// 1918 f0-12, 1957 f7-19, 1968 f14-26, 2009 f21-33, 2020 f28-40, on "PANDEMIC"); the years further down the road are
-// lost in the haze until they are next (YEAR_FADE), so only one or two read at once and none is ever half-hidden
-// behind a nearer stone. (Each still crosses the frame's edge as we pass it: ~8 frames, up to ~100 px.) Ahead, in the
-// middle of the path, stands the next stone: the same kind, younger and lower, blank. The camera slows (one cosine
-// deceleration f40-92) and comes to it in the middle distance (top ~y 745), at a standing eye a little raised
-// (2.45 m), so we look slightly down on its top. On "BIRD FLU" a wild greylag glides in from the upper left along
-// its heading and toward us (f67), flares nose-up with its wings high and feet forward (f84), CONTACT on the stone's
-// top at f91 (first reaction f91: its weight dips the body, the wings start to fold), wings folded by f100. The
-// camera pushes in on the goose (f94-158, at the same standing eye coming down a little to its level: d 400 -> 210,
-// the goose ~40% of the frame wide at the cut, centred ~y 700, the stone's top just under it); the road and the dim
-// blank stones run on beyond it into the haze on both sides. f140-158: the goose shifts its weight, lifts and turns
-// its head. No text but the years.
-// Orange = the disease: the stain and orange hatching through the goose's breast and body, threads up its neck, its
-// bill and feet. Everything else is umber, cream and DEAD.
+// move). Rough standing stones stand back from the path, alternating left and right, each carved (from the first
+// frame it is seen; the haze veils the whole stone) with its pandemic's agent above its year, centred on the face:
+// an influenza A virion (round envelope, a dense fringe of HA and NA spikes) over 1918, 1957, 1968 and 2009, SARS-CoV-2
+// (fewer club-shaped spikes) over 2020. Each year reads whole for 13+ frames as its stone comes near (2020 f28-40, on
+// "PANDEMIC"), then crosses the frame's edge as we pass it. Ahead, in the middle of the path, stands the next stone,
+// lower, carved with an H5N1 influenza virion beside "20??". The camera slows (one cosine deceleration f40-92) to it
+// in the middle distance at a standing eye a little raised (2.45 m). On "BIRD FLU" a wild greylag comes in from far
+// back on the upper left along its heading, beating its wings (a 10-frame stroke) to ~f80, glides, flares nose-up with
+// its wings raised high and feet forward (f84), CONTACT on the stone's top at f91 (first reaction f91: its weight dips
+// the body, the wings start to fold), wings folded by f100. The camera then pushes in on it (f94-158, the eye coming
+// down a little to its level: d 400 -> 210; the goose ~38% of the frame wide at the cut, centred ~y 630, the carved
+// row just above the caption band); the road and the dim blank stones run on beyond it into the haze on both sides.
+// f140-158: the goose shifts its weight, lifts and turns its head toward us.
+// The goose is real 3D geometry (anotherPandemicGoose3d.tsx, three.js through @remotion/three, rendered with
+// --gl=angle) drawn through the same camera in the engraved manner. Orange = the disease: the stain and orange
+// hatching through the goose's breast and belly, threads up its neck, its bill and feet. Everything else is umber,
+// cream and DEAD.
 // DEPTH: F 1150 px; one VP on the frame's centre line (no pitch, no yaw; lens shift: horizon y 615, lowering to 780
 // in the push). Year stones ~2.1 x 3.2-3.9 x 1.0 m at X +-3.8 m; the blank stone 1.5 x 2.0 m on the centre line; the goose is a 3D model drawn through
 // the same camera (anotherPandemicGoose.tsx). Light: rays (0.5, 1, 0.8) (from the upper left, a little in front):
@@ -47,8 +48,9 @@ import { loadFont as loadCaslon } from "@remotion/google-fonts/LibreCaslonText";
 import { z } from "zod";
 import { TexcocoPage, WorldSvg } from "../kits/maps/texcocoShared";
 import { hash, mixColor } from "../kits/maps/incaShared";
-import { BLANK_Z, DURATION as SLOT, F, PATH_HALF, STONE, STONES, YEAR_FADE, YEAR_IN, YEAR_SIZE, YEAR_Y, LIGHT, camAt, haze, lightOf, proj, type Cam3, type Stone } from "./anotherPandemicWorld";
-import { Goose, goosePoseAt } from "./anotherPandemicGoose";
+import { BLANK_Z, DURATION as SLOT, F, PATH_HALF, STONE, STONES, YEAR_SIZE, YEAR_Y, LIGHT, camAt, haze, lightOf, proj, type Cam3, type Stone } from "./anotherPandemicWorld";
+import { goosePoseAt } from "./anotherPandemicGoose";
+import { Goose3D } from "./anotherPandemicGoose3d";
 
 export const FPS = 30000 / 1001;
 export const DURATION = SLOT;
@@ -215,6 +217,89 @@ const tuftsD = (c: Cam3, z0: number, z1: number) => {
 // A STANDING STONE: a slab (front outline extruded by T), the faces the eye sees, each lit by the one light, hatching
 // on the faces turned away, a contact shadow and a cast shadow on the ground, the year cut into its face
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// THE CARVINGS: each year stone carries its pandemic's agent, engraved in cream line (no colour), above its year:
+// 1918, 1957, 1968, 2009 an influenza A virion (a round envelope with a dense fringe of HA "lollipop" and NA "box"
+// spikes, the coiled RNP segments inside); 2020 SARS-CoV-2 (a round envelope with fewer, longer club-shaped spike
+// proteins). The blank stone in the path: the H5N1 influenza virion beside "20??" in one row under its top.
+// ---------------------------------------------------------------------------
+type Carving = { kind: "flu" | "covid"; vx: number; vy: number; vr: number; text: string; tx: number; ty: number; size: number };
+const carvingOf = (st: Stone): Carving | null => {
+  if (st.year) {
+    const vr = st.W * 0.15; // the portrait ~30% of the face's width
+    return { kind: st.year === "2020" ? "covid" : "flu", vx: 0, vy: YEAR_Y - YEAR_SIZE * 0.42 - 16 - vr, vr, text: st.year, tx: 0, ty: YEAR_Y, size: YEAR_SIZE };
+  }
+  if (st.blank === "path") {
+    const vr = 13.5;
+    return { kind: "flu", vx: -st.W * 0.28, vy: -st.H + 19, vr, text: "20??", tx: st.W * 0.1, ty: -st.H + 19, size: 28 };
+  }
+  return null;
+};
+/** a virion as one path (screen px; centre cx, cy; radius r) */
+const virionD = (kind: "flu" | "covid", cx: number, cy: number, r: number) => {
+  const P2 = (a: number, rr: number) => `${r1(cx + Math.cos(a) * rr)},${r1(cy + Math.sin(a) * rr)}`;
+  let d = "";
+  const env = kind === "flu" ? 0.68 : 0.62;
+  // the envelope: a circle drawn as a polygon of short arcs
+  const ring = (rr: number) => {
+    let q = "";
+    for (let i = 0; i <= 36; i++) q += `${i ? "L" : "M"}${P2((i / 36) * 2 * Math.PI, rr)}`;
+    return q;
+  };
+  d += ring(env * r);
+  if (kind === "flu") {
+    // a dense fringe: HA spikes (a stalk with a small round head) alternating with NA spikes (a stalk with a cross bar)
+    const n = 30;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * 2 * Math.PI + 0.05;
+      const tip = (i % 2 ? 0.93 : 0.97) * r;
+      d += `M${P2(a, env * r)}L${P2(a, tip)}`;
+      if (i % 2 === 0) {
+        const hc = (tip + 0.035 * r) / r;
+        d += `M${P2(a - 0.045, hc * r)}L${P2(a + 0.045, hc * r)}`;
+      } else {
+        const tx = Math.cos(a + Math.PI / 2) * 0.05 * r;
+        const ty = Math.sin(a + Math.PI / 2) * 0.05 * r;
+        const ex = cx + Math.cos(a) * tip;
+        const ey = cy + Math.sin(a) * tip;
+        d += `M${r1(ex - tx)},${r1(ey - ty)}L${r1(ex + tx)},${r1(ey + ty)}`;
+      }
+    }
+    // the eight RNP segments inside: short coiled strokes
+    for (let k = 0; k < 7; k++) {
+      const a = (k / 7) * 2 * Math.PI + 0.4;
+      const rr = (k === 6 ? 0 : 0.34) * r;
+      const x0 = cx + Math.cos(a) * rr;
+      const y0 = cy + Math.sin(a) * rr;
+      const L = 0.2 * r;
+      const ang = a + Math.PI / 2;
+      const ux = Math.cos(ang) * L;
+      const uy = Math.sin(ang) * L;
+      d += `M${r1(x0 - ux)},${r1(y0 - uy)}Q${r1(x0 + uy * 0.5)},${r1(y0 - ux * 0.5)} ${r1(x0)},${r1(y0)}T${r1(x0 + ux)},${r1(y0 + uy)}`;
+    }
+  } else {
+    // SARS-CoV-2: fewer, longer spike proteins, each a stalk ending in a club
+    const n = 14;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * 2 * Math.PI + 0.12;
+      d += `M${P2(a, env * r)}L${P2(a, 0.84 * r)}`;
+      const ccx = cx + Math.cos(a) * 0.91 * r;
+      const ccy = cy + Math.sin(a) * 0.91 * r;
+      const cr = 0.085 * r;
+      d += `M${r1(ccx - cr)},${r1(ccy)}A${r1(cr)},${r1(cr)} 0 1 0 ${r1(ccx + cr)},${r1(ccy)}A${r1(cr)},${r1(cr)} 0 1 0 ${r1(ccx - cr)},${r1(ccy)}`;
+    }
+    // the RNA inside: a few small loops
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * 2 * Math.PI + 0.9;
+      const x0 = cx + Math.cos(a) * 0.3 * r;
+      const y0 = cy + Math.sin(a) * 0.3 * r;
+      const cr = 0.07 * r;
+      d += `M${r1(x0 - cr)},${r1(y0)}A${r1(cr)},${r1(cr)} 0 1 0 ${r1(x0 + cr)},${r1(y0)}A${r1(cr)},${r1(cr)} 0 1 0 ${r1(x0 - cr)},${r1(y0)}`;
+    }
+  }
+  return d;
+};
+
 const outline = (st: Stone): V[] => {
   const H = st.H;
   const W = st.W;
@@ -349,28 +434,40 @@ const StandingStone: React.FC<{ c: Cam3; st: Stone }> = ({ c, st }) => {
     const v = hash(st.seed * 9 + k, 37);
     const X = st.X + (u - 0.5) * st.W * 0.78;
     const Y = -st.H * (0.08 + 0.84 * v);
-    if (st.year && Math.abs(Y - YEAR_Y) < 46) continue;
+    if (st.year && Y < YEAR_Y + 46) continue;
+    if (st.blank === "path" && Y < -st.H + 50) continue;
     const a = proj(c, X, Y, st.Z);
     const len = (8 + 14 * hash(k, st.seed)) * a.s;
     marks += `M${r1(a.x)},${r1(a.y)}l${r1(len)},${r1(len * 0.18)}`;
   }
   els.push(<path key="m" d={marks} stroke={INK_DEEP} strokeWidth={Math.max(0.5, 0.8 * s)} strokeOpacity={0.16} fill="none" />);
-  // the year cut into the face: a dark wall on the upper left of each groove, a lit wall on the lower right
-  if (st.year) {
-    const t = proj(c, st.X - Math.sign(st.X) * YEAR_IN, YEAR_Y, st.Z);
-    const fs = YEAR_SIZE * t.s;
+  // the carving: the agent's portrait above and the year below, cut into the face from the first frame the stone is
+  // seen (the haze veils the whole stone, carving and all); the blank stone in the path carries one row, H5N1 + "20??"
+  const cv = carvingOf(st);
+  if (cv) {
+    const incise = (d: string, w: number, key: string) => (
+      <g key={key}>
+        <path d={d} transform={`translate(${r1(-1.3 * s)} ${r1(-1.3 * s)})`} stroke={DARK} strokeWidth={w} strokeOpacity={0.8} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={d} transform={`translate(${r1(0.8 * s)} ${r1(0.8 * s)})`} stroke={INK} strokeWidth={w * 0.8} strokeOpacity={0.55} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={d} stroke={INK_DEEP} strokeWidth={w} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    );
+    const vc = proj(c, st.X + cv.vx, cv.vy, st.Z);
+    els.push(incise(virionD(cv.kind, vc.x, vc.y, cv.vr * vc.s), Math.max(0.6, Math.min(3.4, 1.6 * vc.s)), "v"));
+    const t = proj(c, st.X + cv.tx, cv.ty, st.Z);
+    const fs = cv.size * t.s;
     const ty = t.y + fs * 0.34;
     const common = { x: t.x, textAnchor: "middle" as const, fontSize: fs, fontFamily: caslon, style: { fontVariantNumeric: "lining-nums" as const, letterSpacing: `${0.04 * fs}px` } };
     els.push(
-      <g key="y" opacity={1 - c01((d - YEAR_FADE[0]) / (YEAR_FADE[1] - YEAR_FADE[0]))}>
+      <g key="y">
         <text {...common} y={ty - 1.4 * t.s} dx={-1.4 * t.s} fill={DARK} opacity={0.85}>
-          {st.year}
+          {cv.text}
         </text>
         <text {...common} y={ty + 1.0 * t.s} dx={1.0 * t.s} fill={INK} opacity={0.9}>
-          {st.year}
+          {cv.text}
         </text>
         <text {...common} y={ty} fill={INK_DEEP}>
-          {st.year}
+          {cv.text}
         </text>
       </g>,
     );
@@ -430,7 +527,6 @@ const AnotherPandemicRoad: React.FC<z.infer<typeof schema>> = () => {
       els.push(
         <g key="goose">
           {shAmt > 0.01 ? <ellipse cx={sc.x} cy={sc.y} rx={30 * sc.s} ry={Math.max(1, scy * 0.75)} fill={DARK} opacity={0.5 * shAmt} /> : null}
-          {pose ? <Goose c={c} pose={pose} uid="ap-g" /> : null}
         </g>,
       );
     }
@@ -446,6 +542,7 @@ const AnotherPandemicRoad: React.FC<z.infer<typeof schema>> = () => {
         ))}
         {els}
       </WorldSvg>
+      {pose ? <Goose3D cam={c} pose={pose} /> : null}
     </TexcocoPage>
   );
 };

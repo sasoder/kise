@@ -537,7 +537,9 @@ export const goosePoseAt = (f: number): GoosePose | null => {
   const landed = ss((f - G.touch) / 6);
   const dir = f < G.touch ? flightDir(Math.min(f, G.touch - 1)) : GLIDE_DIR;
   // it travels along its heading; on the stone it settles to its rest yaw
-  const yaw = mix(mix(GLIDE_DIR.yaw, dir.yaw, 0.5), GOOSE_YAW, landed);
+  // it glides in along its heading (from far back on the upper left, coming toward us: its spread wings span the
+  // frame), and settles to its rest yaw as it flares and lands
+  const yaw = mix(dir.yaw, GOOSE_YAW, Math.max(landed, 0.65 * flare));
   const glidePitch = -Math.min(24, dir.slope) * 0.7;
   const pitch = mix(mix(glidePitch, 30, flare), 0, landed);
   const dip = f >= G.touch ? 3 * Math.sin(Math.PI * c01((f - G.touch) / 7)) : 0;
@@ -545,7 +547,11 @@ export const goosePoseAt = (f: number): GoosePose | null => {
   const shift = ss((f - G.shift) / 9) - 0.6 * ss((f - G.shift - 11) / 7);
   const turn = ss((f - G.turn) / 6) - 0.6 * ss((f - G.turn - 8) / 6);
   const glance = 0.5 * (1 - Math.cos(2 * Math.PI * c01((f - 112) / 18)));
-  const raise = f < G.touch + 1 ? mix(20 + 4 * Math.sin((f - G.enter) / 2.6), 72, flare) : 72;
+  // wingbeats on the way in (a goose beats ~3 times a second: a 10-frame stroke), easing into a glide by ~f81, then
+  // the flare raises the wings high and cupped
+  const flapAmt = 1 - ss((f - 76) / 6);
+  const flap = 14 + 46 * Math.sin((2 * Math.PI * (f - G.enter)) / 10 + 0.6);
+  const raise = f < G.touch + 1 ? mix(mix(30, flap, flapAmt), 74, flare) : 74;
   return {
     pos: f >= G.touch ? [A3[0], A3[1], A3[2]] : bez(progAt(f)),
     yaw,

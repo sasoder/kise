@@ -93,12 +93,12 @@ const EYE = pchip([
   [96, -245],
   [158, -232],
 ]);
-/** the horizon (a lens shift, verticals stay vertical): y 615 to the landing; in the push it lowers to y 780 so the
- *  goose stays centred (about y 420-950 at the cut) with the stone's top just under it */
+/** the horizon (a lens shift, verticals stay vertical): y 615 to the landing; in the push it lowers to y 720 so the
+ *  goose stays centred (about y 400-860 at the cut), the stone's top just under it and its carved row above the bands */
 const HZ_AT = pchip([
   [0, 615],
   [94, 615],
-  [158, 780],
+  [158, 720],
 ]);
 export type Cam3 = { X: number; Z: number; eye: number; HZ: number };
 export const camAt = (f: number): Cam3 => ({ X: 0, Z: camZAt(f), eye: EYE(f), HZ: f < 94 ? 615 : HZ_AT(f) });
@@ -119,7 +119,7 @@ export const STONE = { W: 210, H: 350, T: 100 };
 /** the year stones stand back from the path (a broad avenue), alternating left and right */
 export const STONE_X = 380;
 /** the year sits toward the path on its face */
-export const YEAR_IN = 50;
+export const YEAR_IN = 0; // centred on the face
 /** the year's centre on the face (height) and its size (font px in world units) */
 export const YEAR_Y = -150;
 export const YEAR_SIZE = 68;
@@ -137,7 +137,7 @@ export const STOP_F = 92;
 export const STOP_D = 400; // (PUSH_A assumes 400)
 /** the same kind of rough stone, younger and lower than the year stones (we look a little down on its top), with a
  *  broken but level top (the goose stands on it) */
-export const PATH_STONE_W = 150;
+export const PATH_STONE_W = 190;
 export const PATH_STONE_H = 200;
 export const BLANK_Z = camZAt(STOP_F) + STOP_D;
 /** the blank stones further along, beside the path again (both sides), receding into the haze */
@@ -165,7 +165,7 @@ export const lightOf = (n: [number, number, number]) => Math.max(0, -(n[0] * LIG
 export const GOOSE_REST: [number, number, number] = [-4, -PATH_STONE_H, BLANK_Z + STONE.T / 2];
 export const GOOSE_YAW = -38;
 /** where the glide starts: just off the frame's upper left, further back (it comes toward us along its heading) */
-export const GOOSE_START: [number, number, number] = [-520, -700, BLANK_Z + 300];
+export const GOOSE_START: [number, number, number] = [-700, -900, BLANK_Z + 900];
 export const G = {
   enter: 67, // the glide starts just off the frame's upper left
   flare: 84, // nose up, wings high, feet forward
