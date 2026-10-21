@@ -1,6 +1,11 @@
 // ---------------------------------------------------------------------------
 // ZombieAnt (kyle-pandemics, cut 58). Dwarkesh map style (styles/dwarkesh-map.md) in the 3D depth manner of the Kyle
-// London clip (DEPTH.md). Opaque 1080x1920, 29.97 fps, 145 frames. The umber page with no map (TexcocoPage).
+// London clip (DEPTH.md). Opaque 1080x1920, 29.97 fps, 145 frames.
+// V3: inside the clip's medium (pandemicAir.tsx AirStage, palette A, mood day; notes/AIR_READY.md): a forest-floor
+// understory re-lit soft (the floor one continuous ground tone by distance, litter and twigs fogged by depth, the far
+// grass stems dissolving into the teal with distance and height, the stem a softly lit cylinder with a cream rim, leaves
+// with darker-local margins), shafts, motes, the grade; the ant a real Camponotus (zombieAntFigure.tsx V3); the
+// mycelium after death fine threads at the joints and plate edges (the stalk the orange hero).
 // World, camera, timeline and the ant's motion: zombieAntWorld.ts; the ant: zombieAntFigure.tsx; the fungus (shared
 // with cut 74): cordyceps.tsx.
 //
@@ -14,7 +19,7 @@
 //   ARM 116 · too 120 · HARD 125 · but 131 · like 137 · (prion 142) · slot ends 145.
 // DURATION: the slot 58.692 -> 63.530 s = 4.838 s x 29.97 = 145 frames (f0..f144).
 //
-// THE MOTION: one continuous climb, then the stalk. f0 a carpenter ant (engraved cream, orange threads of mycelium
+// THE MOTION: one continuous climb, then the stalk. f0 a carpenter ant (dark glossy chestnut, orange threads of mycelium
 // already showing through its joints) walks over the leaf litter of a forest floor to a plant stem and turns up onto
 // it (head up ~f8, the gaster leaves the floor ~f30); it climbs at constant speed in an alternating-tripod gait, a
 // little mechanical, while the camera cranes up with it (one pinhole, the eye rising: the floor drops away below and
@@ -48,11 +53,12 @@
 import React from "react";
 import { random, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { TexcocoPage, WorldSvg } from "../kits/maps/texcocoShared";
+import { WorldSvg } from "../kits/maps/texcocoShared";
 import { swayCam } from "../kits/maps/incaShared";
-import { ContactShadow, perspective } from "../kyle-london/londonDepth";
+import { AIR, AirHorizonHaze, AirStage, fogHex, makeAirView, type AirScene, type AirView } from "./pandemicAir";
 import { CordycepsStalk, MyceliumThreads } from "./cordyceps";
-import { ANT_INK, AntBody, AntLeg, Antenna, DARK, Jaw, JointTufts, headOutline, jawOutline, legGeometry, mixHex, sinkInk, type LegGeo } from "./zombieAntFigure";
+import { AntBody, AntLeg, Antenna, DARK, Jaw, JointTufts, antLook, headOutline, jawOutline, legGeometry, mixHex, type AntLook, type LegGeo } from "./zombieAntFigure";
+import { AIRS } from "./creatureAir";
 import {
   ANT_S,
   BITE,
@@ -97,22 +103,25 @@ import {
 } from "./zombieAntWorld";
 
 export { DURATION, FPS };
-export const schema = z.object({});
+export const schema = z.object({
+  /** V3: the air the ant is lit in (creatureAir.ts): "A" the chosen sage-teal air, "B" the old umber page */
+  air: z.enum(["A", "B"]).default("A"),
+});
 export const defaultProps = schema.parse({});
 
 // ---------------------------------------------------------------------------
-// PALETTE (styles/dwarkesh-map.md): LAND page, cream INK, DARK casing; the forest in umbers
+// PALETTE: V3, the clip's medium (pandemicAir.tsx, palette A; notes/AIR_READY.md). Local colours of a forest
+// understory (warm sand-umber floor, brown litter, an olive-umber stem and leaves), which survive near; the air takes
+// them only with distance (fx.c). Shadows in the medium's shadow colour, outlines a darker local colour.
 // ---------------------------------------------------------------------------
-const PAGE = "#3F3428";
-const SOIL = "#514230";
-const LITTER = ["#6A5838", "#5E4D36", "#735F43", "#56462F", "#66553C"];
-const STEM_LIT = "#76634A";
-const STEM_MID = "#5A4A34";
-const STEM_SHADE = "#2E2419";
-const LEAF_LIT = "#6E5C42";
-const LEAF_DARK = "#352A1F";
-const VEIN = "#8C7B5C";
-const GRASS = "#5C4C35";
+const PAL = AIR.A;
+const LITTER = ["#7A6446", "#6B5639", "#836C4C", "#5F4C33", "#735E41"];
+const STEM_C = { rim: "#C9BC97", lit: "#8E7C58", mid: "#685A3F", core: "#3A3123", back: "#4F4635", line: "#2E271C" };
+const LEAF_LIT = "#7E6E4C";
+const LEAF_DARK = "#43392A";
+const VEIN = "#9A8A66";
+const GRASS = "#66583D";
+const GRASS_DARK = "#433A29";
 /** toward the light (3D, normalised): from the upper left and a little in front, as London's LIGHT (0.5, 1, 0.8) */
 const TO_LIGHT = (() => {
   const v = [-0.5, -1, -0.8];
@@ -124,16 +133,24 @@ const f2 = (v: number) => v.toFixed(2);
 const pt = (p: P2) => `${f2(p[0])},${f2(p[1])}`;
 const poly = (pts: P2[]) => `M${pts.map(pt).join("L")}Z`;
 const open = (pts: P2[]) => `M${pts.map(pt).join("L")}`;
-/** atmospheric depth: 0 on the front plane, toward ~0.85 far away (mix toward the page) */
-const haze = (Z: number) => 0.86 * (1 - Math.exp(-Math.max(0, Z) / 2000));
-const tint = (c: string, Z: number) => mixHex(c, PAGE, haze(Z));
 const rnd = (i: number, k: number) => random(`za-${i}-${k}`);
-/** the floor hazes more slowly (it stays legible as it drops away below the rising eye) */
-const hazeF = (Z: number) => 0.78 * (1 - Math.exp(-Math.max(0, Z) / 3600));
-const tintF = (c: string, Z: number) => mixHex(c, PAGE, hazeF(Z));
+const c01 = (v: number) => Math.max(0, Math.min(1, v));
+
+/** the medium for this frame: colours by depth Z behind the front plane (distance = D + Z) and height (-Y) */
+type Fx = { v: AirView; D: number; c: (hex: string, Z: number, Y?: number) => string; a: (Z: number) => number };
+/** the scene in the cut's world px (the ant ~430 long): the subject plane (D 730..980) stays clear, the grass behind
+ *  (Z 600..3200) cools into the teal, the far litter dissolves */
+const AIR_SCENE: AirScene = { look: "A", mood: "day", F: FOCAL, fogNear: 1050, fogVis: 2400, fogMax: 0.95, hLow: 0, hHigh: 2200, moteUnit: 2600 };
+const camOf = (e: Eye) => ({ x: e.X, y: -e.Y, z: -e.D });
+const makeFx = (v: AirView, e: Eye): Fx => ({
+  v,
+  D: e.D,
+  c: (hex, Z, Y = 0) => fogHex(v, hex, e.D + Z, -Y),
+  a: (Z) => v.fogAt(e.D + Z),
+});
 
 // ---------------------------------------------------------------------------
-// THE FOREST FLOOR: a ground plane of soil and leaf litter, hazing to the page
+// THE FOREST FLOOR: one continuous ground tone by distance (darker near), soft mottle, leaf litter, twigs
 // ---------------------------------------------------------------------------
 type LitterLeaf = { X: number; Z: number; h: number; L: number; W: number; curl: number; tone: string; broken: number };
 const LITTER_LEAVES: LitterLeaf[] = (() => {
@@ -167,7 +184,7 @@ const SPECKS = Array.from({ length: 420 }, (_, i) => ({
   light: rnd(i, 24) > 0.6,
 }));
 
-const LitterLeafShape: React.FC<{ e: Eye; q: LitterLeaf; idx: number }> = ({ e, q, idx }) => {
+const LitterLeafShape: React.FC<{ e: Eye; q: LitterLeaf; idx: number; fx: Fx }> = ({ e, q, idx, fx }) => {
   const ch = Math.cos(q.h);
   const sh = Math.sin(q.h);
   const at = (a: number, b: number, lift: number): P2 => proj(e, q.X + ch * a - sh * b, -lift, q.Z + sh * a + ch * b);
@@ -183,10 +200,10 @@ const LitterLeafShape: React.FC<{ e: Eye; q: LitterLeaf; idx: number }> = ({ e, 
     edgeB.push(at(a, -w, q.curl * 0.6 + 2));
     mid.push(at(a, 0, 2));
   }
-  const tone = tintF(q.tone, q.Z);
-  const shade = tintF(mixHex(q.tone, "#241B12", 0.45), q.Z);
+  const tone = fx.c(q.tone, q.Z);
+  const shade = fx.c(mixHex(q.tone, PAL.shadow, 0.4), q.Z);
+  const line = fx.c(mixHex(q.tone, PAL.shadow, 0.7), q.Z);
   const r = rOf(e, q.Z);
-  // which half lies to the lower right on screen (turned from the light)
   const ca = edgeA[N / 2];
   const cb = edgeB[N / 2];
   const aDark = ca[0] + ca[1] > cb[0] + cb[1];
@@ -200,19 +217,19 @@ const LitterLeafShape: React.FC<{ e: Eye; q: LitterLeaf; idx: number }> = ({ e, 
     veins += `M${pt(at(a, 0, 2))}L${pt(at(a + w * 0.7, w, q.curl * 0.7 + 2))}M${pt(at(a, 0, 2))}L${pt(at(a + w * 0.7, -w, q.curl * 0.4 + 2))}`;
   }
   const stalk = [at(-q.L / 2, 0, 2), at(-q.L / 2 - 40, 6, 3)];
-  const fade = 1 - hazeF(q.Z) * 0.6;
+  const keep = 1 - fx.a(q.Z) * 0.8;
   return (
     <g key={idx} strokeLinejoin="round">
       <path d={aDark ? halfB : halfA} fill={tone} />
       <path d={aDark ? halfA : halfB} fill={shade} />
-      <path d={veins} stroke={DARK} strokeWidth={0.9 * r} strokeOpacity={0.3 * fade} fill="none" />
-      <path d={open(mid) + open(stalk)} stroke={DARK} strokeWidth={1.5 * r} strokeOpacity={0.5 * fade} fill="none" />
-      <path d={poly([...edgeA, ...edgeB.slice().reverse()])} fill="none" stroke={DARK} strokeWidth={1.6 * r} strokeOpacity={0.75 * fade} />
+      <path d={veins} stroke={line} strokeWidth={0.9 * r} strokeOpacity={0.3 * keep} fill="none" />
+      <path d={open(mid) + open(stalk)} stroke={line} strokeWidth={1.4 * r} strokeOpacity={0.5 * keep} fill="none" />
+      <path d={poly([...edgeA, ...edgeB.slice().reverse()])} fill="none" stroke={line} strokeWidth={1.1 * r} strokeOpacity={0.6 * keep} />
     </g>
   );
 };
 
-const TwigShape: React.FC<{ e: Eye; t: Twig; idx: number }> = ({ e, t, idx }) => {
+const TwigShape: React.FC<{ e: Eye; t: Twig; idx: number; fx: Fx }> = ({ e, t, idx, fx }) => {
   const Zm = (t.a[1] + t.b[1]) / 2;
   const A = proj(e, t.a[0], -t.R, t.a[1]);
   const B = proj(e, t.b[0], -t.R, t.b[1]);
@@ -224,28 +241,32 @@ const TwigShape: React.FC<{ e: Eye; t: Twig; idx: number }> = ({ e, t, idx }) =>
   if (n[1] > 0) n = mul2(n, -1); // n points up (to the lit side)
   const q = [add2(A, mul2(n, t.R * ra)), add2(B, mul2(n, t.R * rb)), sub2(B, mul2(n, t.R * rb)), sub2(A, mul2(n, t.R * ra))];
   const lit = [add2(A, mul2(n, t.R * ra * 0.45)), add2(B, mul2(n, t.R * rb * 0.45))];
-  const fade = 1 - hazeF(Zm) * 0.6;
   return (
     <g key={idx}>
-      <path d={poly(q)} fill={tintF("#4A3B2A", Zm)} stroke={DARK} strokeWidth={1.4 * (ra + rb) * 0.5} strokeOpacity={0.8 * fade} strokeLinejoin="round" />
-      <path d={open(lit)} stroke={tintF("#7A6849", Zm)} strokeWidth={t.R * (ra + rb) * 0.3} strokeLinecap="round" />
+      <path d={poly(q)} fill={fx.c("#54432F", Zm)} stroke={fx.c("#2E2519", Zm)} strokeWidth={1.1 * (ra + rb) * 0.5} strokeOpacity={0.7} strokeLinejoin="round" />
+      <path d={open(lit)} stroke={fx.c("#9A8761", Zm)} strokeWidth={t.R * (ra + rb) * 0.28} strokeLinecap="round" />
     </g>
   );
 };
 
-const Floor: React.FC<{ e: Eye; cam: Cam }> = ({ e, cam }) => {
-  const xL = cam.cx - 3000;
-  const xR = cam.cx + 3000;
+/** soft mottle on the floor: darker and lighter patches lying on it, fading into the air with distance */
+const MOTTLE = Array.from({ length: 140 }, (_, i) => ({ X: -2400 + rnd(i, 71) * 6400, Z: -700 + Math.pow(rnd(i, 72), 1.3) * 8000, s: 160 + 360 * rnd(i, 73), t: rnd(i, 74) * 2 - 1 }));
+
+const Floor: React.FC<{ e: Eye; cam: Cam; fx: Fx }> = ({ e, cam, fx }) => {
+  const xL = cam.cx - 9000;
+  const xR = cam.cx + 9000;
   const zNear = -0.85 * e.D;
-  const bands: React.ReactNode[] = [];
-  const NB = 18;
-  const zFar = 9000;
-  for (let i = 0; i < NB; i++) {
-    const za = zNear + (zFar - zNear) * Math.pow(i / NB, 1.9);
-    const zb = zNear + (zFar - zNear) * Math.pow((i + 1) / NB, 1.9);
-    const q = [proj(e, xL * 3, 0, za), proj(e, xR * 3, 0, za), proj(e, xR * 3, 0, zb), proj(e, xL * 3, 0, zb)];
-    bands.push(<path key={i} d={poly(q)} fill={tintF(SOIL, (za + zb) / 2)} />);
-  }
+  const zFar = 30000;
+  const yOf = (Z: number) => proj(e, 0, 0, Z)[1];
+  const yTop = yOf(zFar);
+  const yBot = yOf(zNear);
+  const NS = 40;
+  const stops = Array.from({ length: NS + 1 }, (_, i) => {
+    const Z = zFar - (zFar - zNear) * Math.pow(i / NS, 0.35);
+    const near = c01((fx.D * 0.9 - (fx.D + Z)) / (fx.D * 0.9));
+    const col = fx.c(mixHex(PAL.ground.mid, PAL.ground.dark, 0.15 + 0.5 * near), Z);
+    return { off: c01((yOf(Z) - yTop) / Math.max(1e-6, yBot - yTop)), col };
+  });
   let dk = "";
   let lt = "";
   for (const s of SPECKS) {
@@ -260,21 +281,51 @@ const Floor: React.FC<{ e: Eye; cam: Cam }> = ({ e, cam }) => {
   }
   return (
     <g>
-      {bands}
-      <path d={dk} fill={DARK} opacity={0.32} />
-      <path d={lt} fill="#7A6849" opacity={0.28} />
+      <defs>
+        <linearGradient id="za-floor" gradientUnits="userSpaceOnUse" x1={0} y1={yTop} x2={0} y2={yBot}>
+          {stops.map((s, i) => (
+            <stop key={i} offset={s.off} stopColor={s.col} />
+          ))}
+        </linearGradient>
+        <radialGradient id="za-md">
+          <stop offset="0" stopColor={PAL.shadow} stopOpacity={0.4} />
+          <stop offset="1" stopColor={PAL.shadow} stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id="za-ml">
+          <stop offset="0" stopColor={PAL.cream} stopOpacity={0.3} />
+          <stop offset="1" stopColor={PAL.cream} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      <rect x={xL} y={yTop} width={xR - xL} height={Math.max(1, yBot - yTop)} fill="url(#za-floor)" />
+      {MOTTLE.map((m, i) => {
+        if (m.Z < zNear + 80) return null;
+        const c = proj(e, m.X, 0, m.Z);
+        const r = rOf(e, m.Z);
+        const ry = Math.max(0.5, (yOf(m.Z - m.s * 0.5) - yOf(m.Z + m.s * 0.5)) / 2);
+        const k = (1 - fx.a(m.Z)) * Math.abs(m.t);
+        return <ellipse key={i} cx={c[0]} cy={c[1]} rx={m.s * r} ry={ry} fill={m.t < 0 ? "url(#za-md)" : "url(#za-ml)"} opacity={k} />;
+      })}
+      <path d={dk} fill={PAL.shadow} opacity={0.22} />
+      <path d={lt} fill={PAL.creamLo} opacity={0.16} />
+    </g>
+  );
+};
+const FloorLitter: React.FC<{ e: Eye; fx: Fx }> = ({ e, fx }) => {
+  const zNear = -0.85 * e.D;
+  return (
+    <g>
       {LITTER_LEAVES.filter((q) => q.Z > zNear + 60).map((q, i) => (
-        <LitterLeafShape key={i} e={e} q={q} idx={i} />
+        <LitterLeafShape key={i} e={e} q={q} idx={i} fx={fx} />
       ))}
       {TWIGS.map((t, i) => (
-        <TwigShape key={i} e={e} t={t} idx={i} />
+        <TwigShape key={i} e={e} t={t} idx={i} fx={fx} />
       ))}
     </g>
   );
 };
 
 // ---------------------------------------------------------------------------
-// GRASS BEHIND: blades and two far herbs at depth (parallax on the crane, sinking toward the page)
+// GRASS BEHIND: blades and herbs at depth (parallax on the crane), cooling into the air with distance and height
 // ---------------------------------------------------------------------------
 type Blade = { X: number; Z: number; W: number; H: number; bend: number };
 const BLADES: Blade[] = [
@@ -286,7 +337,7 @@ const BLADES: Blade[] = [
   { X: 1750, Z: 2700, W: 38, H: 3400, bend: -420 },
   { X: 120, Z: 1300, W: 22, H: 2300, bend: -380 },
 ];
-const GrassBlade: React.FC<{ e: Eye; b: Blade; idx: number }> = ({ e, b, idx }) => {
+const GrassBlade: React.FC<{ e: Eye; b: Blade; idx: number; fx: Fx }> = ({ e, b, idx, fx }) => {
   const N = 16;
   const L: P2[] = [];
   const R: P2[] = [];
@@ -302,17 +353,34 @@ const GrassBlade: React.FC<{ e: Eye; b: Blade; idx: number }> = ({ e, b, idx }) 
   }
   const r = rOf(e, b.Z);
   const half = poly([...mid, ...R.slice().reverse()]);
+  const y0 = mid[0][1];
+  const y1 = mid[N][1];
+  const id = `za-gb${idx}`;
+  const grad = (hex: string) =>
+    [0, 0.25, 0.5, 0.75, 1].map((t) => <stop key={t} offset={t} stopColor={fx.c(hex, b.Z, -b.H * t)} />);
   return (
     <g key={idx} strokeLinejoin="round">
-      <path d={poly([...L, ...R.slice().reverse()])} fill={tint(GRASS, b.Z)} stroke={tint(DARK, b.Z * 0.5)} strokeWidth={1.6 * r} />
-      <path d={half} fill={tint("#3A2E21", b.Z)} />
-      <path d={open(mid)} stroke={tint("#7A6849", b.Z)} strokeWidth={1.1 * r} strokeOpacity={0.6} fill="none" />
+      <defs>
+        <linearGradient id={`${id}l`} gradientUnits="userSpaceOnUse" x1={0} y1={y0} x2={0} y2={y1}>
+          {grad(GRASS)}
+        </linearGradient>
+        <linearGradient id={`${id}d`} gradientUnits="userSpaceOnUse" x1={0} y1={y0} x2={0} y2={y1}>
+          {grad(GRASS_DARK)}
+        </linearGradient>
+        <linearGradient id={`${id}r`} gradientUnits="userSpaceOnUse" x1={0} y1={y0} x2={0} y2={y1}>
+          {grad(PAL.creamLo)}
+        </linearGradient>
+      </defs>
+      <path d={poly([...L, ...R.slice().reverse()])} fill={`url(#${id}l)`} />
+      <path d={half} fill={`url(#${id}d)`} />
+      <path d={open(L)} stroke={`url(#${id}r)`} strokeWidth={1.4 * r} strokeOpacity={0.45 * (1 - fx.a(b.Z))} fill="none" />
     </g>
   );
 };
 
 // ---------------------------------------------------------------------------
-// A LEAF (3D surface) drawn in perspective: the face we see toned by the light, veins, casing
+// A LEAF (3D surface) drawn in perspective: the face we see toned by the light, veins, a fine darker margin and a
+// cream rim on the edge that faces the light, fogged by its distance
 // ---------------------------------------------------------------------------
 const norm3 = (v: number[]) => {
   const l = Math.hypot(v[0], v[1], v[2]) || 1;
@@ -322,10 +390,13 @@ const sub3 = (a: number[], b: number[]) => [a[0] - b[0], a[1] - b[1], a[2] - b[2
 const cross3 = (a: number[], b: number[]) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const dot3 = (a: number[], b: number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 type LeafTones = { lit: string; dark: string; vein: string; edge: string };
-const DEFAULT_TONES: LeafTones = { lit: LEAF_LIT, dark: LEAF_DARK, vein: VEIN, edge: "#C9B78F" };
+const DEFAULT_TONES: LeafTones = { lit: LEAF_LIT, dark: LEAF_DARK, vein: VEIN, edge: "#D9CDB4" };
 /** r2: the leaf it bites, lifted: a lit cream-umber blade, a bright margin, a clear midrib */
-const BITE_TONES: LeafTones = { lit: "#B39F76", dark: "#7C6949", vein: "#D8C9A2", edge: "#F0E5C6" };
-const faceTone = (e: Eye, leaf: Leaf3, u: number, v: number, Zt: number, tones: LeafTones = DEFAULT_TONES) => {
+export const BITE_TONES: LeafTones = { lit: "#B8A57B", dark: "#7C6949", vein: "#DDCFA8", edge: "#F3EBDD" };
+type ColFn = (hex: string, Z: number, Y?: number) => string;
+const PAGE_OLD = "#3F3428";
+const tintOld: ColFn = (c, Z) => mixHex(c, PAGE_OLD, 0.86 * (1 - Math.exp(-Math.max(0, Z) / 2000)));
+const faceTone = (e: Eye, leaf: Leaf3, u: number, v: number, Zt: number, tones: LeafTones, col: ColFn) => {
   const p = leaf.point(u, v);
   const pu = leaf.point(Math.min(leaf.spec.len, u + 8), v);
   const pv = leaf.point(u, v + (v < 0 ? -0.05 : 0.05));
@@ -333,9 +404,10 @@ const faceTone = (e: Eye, leaf: Leaf3, u: number, v: number, Zt: number, tones: 
   const toEye = norm3([e.X - p[0], e.Y - p[1], -e.D - p[2]]);
   if (dot3(n, toEye) < 0) n = n.map((x) => -x);
   const b = dot3(n, TO_LIGHT);
-  return tint(mixHex(tones.dark, tones.lit, 0.5 + 0.5 * b), Zt);
+  return col(mixHex(tones.dark, tones.lit, 0.5 + 0.5 * b), Zt, p[1]);
 };
-const LeafShape: React.FC<{ e: Eye; leaf: Leaf3; uid: string; detail?: number; Zt?: number; litEdge?: boolean; tones?: LeafTones }> = ({ e, leaf, uid, detail = 1, Zt = 0, litEdge = false, tones = DEFAULT_TONES }) => {
+export const LeafShape: React.FC<{ e: Eye; leaf: Leaf3; uid: string; detail?: number; Zt?: number; litEdge?: boolean; tones?: LeafTones; fx?: Fx }> = ({ e, leaf, uid, detail = 1, Zt = 0, litEdge = false, tones = DEFAULT_TONES, fx }) => {
+  const col: ColFn = fx ? fx.c : tintOld;
   const sp = leaf.spec;
   const N = Math.round(40 * detail);
   const near: P2[] = [];
@@ -356,12 +428,10 @@ const LeafShape: React.FC<{ e: Eye; leaf: Leaf3; uid: string; detail?: number; Z
     pet.push(proj(e, m[0], m[1], m[2]));
   }
   const uMid = sp.pet + (sp.len - sp.pet) * 0.4;
-  // the margin higher on screen catches the light from above (a lit edge on a blade seen near edge-on)
   const meanY = (pts: P2[]) => pts.reduce((a, p) => a + p[1], 0) / pts.length;
   const upper = meanY(near) < meanY(far) ? near : far;
-  const nearTone = faceTone(e, leaf, uMid, -0.5, Zt, tones);
-  const farTone = faceTone(e, leaf, uMid, 0.5, Zt, tones);
-  // veins: lateral pairs running out and forward from the midrib
+  const nearTone = faceTone(e, leaf, uMid, -0.5, Zt, tones, col);
+  const farTone = faceTone(e, leaf, uMid, 0.5, Zt, tones, col);
   let veins = "";
   const NV = Math.round(9 * detail);
   for (let k = 1; k <= NV; k++) {
@@ -393,16 +463,18 @@ const LeafShape: React.FC<{ e: Eye; leaf: Leaf3; uid: string; detail?: number; Z
     });
     return poly([...L, ...R.reverse()]);
   };
-  const fade = 1 - haze(Zt) * 0.6;
+  const Y0 = sp.node[1];
+  const line = fx ? col(mixHex(tones.dark, PAL.shadow, 0.55), Zt, Y0) : DARK;
+  const keep = fx ? 1 - fx.a(Zt) * 0.7 : 1 - 0.6 * 0.86 * (1 - Math.exp(-Math.max(0, Zt) / 2000));
   return (
     <g strokeLinejoin="round">
       <path d={poly([...far, ...mid.slice().reverse()])} fill={farTone} />
       <path d={poly([...near, ...mid.slice().reverse()])} fill={nearTone} />
-      <path d={veins} fill="none" stroke={tint(tones.vein, Zt)} strokeWidth={1.3 * r} strokeOpacity={0.6} />
-      <path d={poly([...near, ...far.slice().reverse()])} fill="none" stroke={DARK} strokeWidth={2.2 * r} strokeOpacity={fade} />
-      {litEdge ? <path d={open(upper)} fill="none" stroke={tint(tones.edge, Zt)} strokeWidth={3 * r} strokeOpacity={0.9} strokeLinecap="round" /> : null}
-      <path d={rib([...pet, ...mid], ribW, ribW * 0.25)} fill={tint(tones.vein, Zt)} stroke={DARK} strokeWidth={1.4 * r} strokeOpacity={0.8 * fade} />
-      <path d={open([...pet, ...mid].map((p) => add2(p, [-0.35 * ribW, -0.35 * ribW])))} stroke={tint("#B3A27E", Zt)} strokeWidth={ribW * 0.35} strokeOpacity={0.7} fill="none" />
+      <path d={veins} fill="none" stroke={col(tones.vein, Zt, Y0)} strokeWidth={1.2 * r} strokeOpacity={0.55} />
+      <path d={poly([...near, ...far.slice().reverse()])} fill="none" stroke={line} strokeWidth={(fx ? 1.3 : 2.2) * r} strokeOpacity={keep} />
+      {litEdge || fx ? <path d={open(upper)} fill="none" stroke={col(fx ? (litEdge ? tones.edge : PAL.creamLo) : tones.edge, Zt, Y0)} strokeWidth={(litEdge ? 3 : 1.6) * r} strokeOpacity={litEdge ? 0.9 : 0.5 * keep} strokeLinecap="round" /> : null}
+      <path d={rib([...pet, ...mid], ribW, ribW * 0.25)} fill={col(tones.vein, Zt, Y0)} stroke={line} strokeWidth={(fx ? 0.9 : 1.4) * r} strokeOpacity={0.8 * keep} />
+      <path d={open([...pet, ...mid].map((p) => add2(p, [-0.35 * ribW, -0.35 * ribW])))} stroke={col(fx ? PAL.creamLo : "#B3A27E", Zt, Y0)} strokeWidth={ribW * 0.35} strokeOpacity={0.7} fill="none" />
       <g id={uid} />
     </g>
   );
@@ -415,73 +487,96 @@ const LEAF_TOP = makeLeaf({ ...LEAF, node: [STEM.X + 10, STEM.top + 40], side: 1
 const LEAF_TOP2 = makeLeaf({ ...LEAF, node: [STEM.X - 10, STEM.top + 70], side: -1, len: 170, pet: 20, W: 40, rise: 1.2, droop: 0.5, yaw: 0.3, roll: 0.2 });
 
 // ---------------------------------------------------------------------------
-// THE STEM: a lit cylinder on the front plane, nodes, a taper to the young top; the ant's shadow on it
+// THE STEM: a softly lit cylinder on the front plane (a cream rim on its lit edge, the lit side, a core shadow, light
+// reflected from the air on its far edge), nodes, fine hairs, a taper to the young top; the ant's shadow on it
 // ---------------------------------------------------------------------------
 const stemR = (Y: number) => (Y > NODE[1] ? STEM.R : lerp(STEM.R, 22, Math.min(1, (NODE[1] - Y) / (NODE[1] - STEM.top))));
-const Stem: React.FC<{ e: Eye; antShadow: { y0: number; y1: number; amt: number } }> = ({ e, antShadow }) => {
+const stemX = (Y: number) => STEM.X + (Y < NODE[1] ? -6 * Math.pow((NODE[1] - Y) / (NODE[1] - STEM.top), 2) : 0);
+const Stem: React.FC<{ e: Eye; antShadow: { y0: number; y1: number; amt: number }; fx: Fx }> = ({ e, antShadow, fx }) => {
   const N = 40;
   const Ls: P2[] = [];
   const Rs: P2[] = [];
-  const lit: P2[] = [];
-  const shadeIn: P2[] = [];
   for (let i = 0; i <= N; i++) {
     const Y = (STEM.top * i) / N + 2;
     const R = stemR(Y);
-    const xc = STEM.X + (Y < NODE[1] ? -6 * Math.pow((NODE[1] - Y) / (NODE[1] - STEM.top), 2) : 0);
+    const xc = stemX(Y);
     Ls.push([xc - R, Y]);
     Rs.push([xc + R, Y]);
-    lit.push([xc - R * 0.55, Y]);
-    shadeIn.push([xc + R * 0.25, Y]);
   }
   const body = poly([...Ls, ...Rs.slice().reverse()]);
-  const shade = poly([...shadeIn, ...Rs.slice().reverse()]);
-  let hatch = "";
-  for (let Y = 0; Y > STEM.top + 30; Y -= 7) {
+  // a faint fibrous texture in the shade only
+  let tex = "";
+  for (let Y = 0; Y > STEM.top + 30; Y -= 9) {
     const R = stemR(Y);
-    hatch += `M${f2(STEM.X + R * 0.3)},${f2(Y)}Q${f2(STEM.X + R * 0.7)},${f2(Y + 3)} ${f2(STEM.X + R)},${f2(Y + 7)}`;
+    const xc = stemX(Y);
+    tex += `M${f2(xc + R * 0.35)},${f2(Y)}Q${f2(xc + R * 0.7)},${f2(Y + 3)} ${f2(xc + R * 0.95)},${f2(Y + 7)}`;
   }
-  // fine hairs (trichomes) along both edges, leaning up and out: a herb's stem, not a post
   let hairs = "";
   for (let i = 0; i < 90; i++) {
     const Y = -8 - i * 20 - 9 * rnd(i, 61);
     if (Y < STEM.top + 40) break;
     const R = stemR(Y);
-    const xc = STEM.X + (Y < NODE[1] ? -6 * Math.pow((NODE[1] - Y) / (NODE[1] - STEM.top), 2) : 0);
+    const xc = stemX(Y);
     const l = 7 + 6 * rnd(i, 62);
     const side = i % 2 === 0 ? -1 : 1;
     const x0 = xc + side * (R - 1);
     hairs += `M${f2(x0)},${f2(Y)}q${f2(side * l * 0.7)},${f2(-l * 0.3)} ${f2(side * l * 0.9)},${f2(-l)}`;
   }
-  let ridges = "";
-  for (const k of [-0.2, 0.05, 0.55]) ridges += open(Ls.map((p, i) => [lerp(p[0], Rs[i][0], 0.5 + k * 0.5), p[1]] as P2));
-  // the nodes: a swollen ring where each leaf leaves
   const nodes = [-560, -1000, NODE[1]].map((Y, i) => {
     const R = stemR(Y) + 6;
-    return <path key={i} d={`M${f2(STEM.X - R)},${f2(Y + 10)}Q${f2(STEM.X)},${f2(Y + 22)} ${f2(STEM.X + R)},${f2(Y + 10)}`} fill="none" stroke={DARK} strokeWidth={2} strokeOpacity={0.7} />;
+    return <path key={i} d={`M${f2(STEM.X - R)},${f2(Y + 10)}Q${f2(STEM.X)},${f2(Y + 22)} ${f2(STEM.X + R)},${f2(Y + 10)}`} fill="none" stroke={STEM_C.line} strokeWidth={1.4} strokeOpacity={0.6} />;
   });
-  // where the stem enters the floor
   const foot = proj(e, STEM.X, 0, 0);
   const footL = proj(e, STEM.X - STEM.R - 10, 0, -STEM.R * 0.6);
   const footR = proj(e, STEM.X + STEM.R + 10, 0, STEM.R * 0.6);
+  const c = (h: string) => fx.c(h, 0);
   return (
     <g strokeLinejoin="round">
-      <clipPath id="za-stem">
-        <path d={body} />
-      </clipPath>
-      <path d={body} fill={STEM_MID} />
+      <defs>
+        <linearGradient id="za-stemg" gradientUnits="userSpaceOnUse" x1={STEM.X - STEM.R} y1={0} x2={STEM.X + STEM.R} y2={0}>
+          <stop offset="0" stopColor={c(STEM_C.rim)} />
+          <stop offset="0.1" stopColor={c(STEM_C.lit)} />
+          <stop offset="0.38" stopColor={c(STEM_C.lit)} />
+          <stop offset="0.62" stopColor={c(STEM_C.mid)} />
+          <stop offset="0.86" stopColor={c(STEM_C.core)} />
+          <stop offset="1" stopColor={c(STEM_C.back)} />
+        </linearGradient>
+        <clipPath id="za-stem">
+          <path d={body} />
+        </clipPath>
+      </defs>
+      <path d={body} fill="url(#za-stemg)" />
       <g clipPath="url(#za-stem)">
-        <path d={shade} fill={STEM_SHADE} opacity={0.85} />
-        <path d={hatch} stroke={DARK} strokeWidth={1.1} strokeOpacity={0.5} fill="none" />
-        <path d={ridges} stroke={DARK} strokeWidth={1} strokeOpacity={0.25} fill="none" />
-        <path d={open(lit)} stroke={STEM_LIT} strokeWidth={STEM.R * 0.4} strokeOpacity={0.75} fill="none" />
+        <path d={tex} stroke={STEM_C.core} strokeWidth={1} strokeOpacity={0.35} fill="none" />
         {antShadow.amt > 0 ? (
           <ellipse cx={XS + 8} cy={(antShadow.y0 + antShadow.y1) / 2 + 46} rx={30} ry={Math.abs(antShadow.y1 - antShadow.y0) / 2 + 20} fill="url(#za-antsh)" opacity={antShadow.amt} />
         ) : null}
       </g>
-      <path d={hairs} fill="none" stroke={STEM_LIT} strokeWidth={1.3} strokeOpacity={0.8} strokeLinecap="round" />
-      <path d={body} fill="none" stroke={DARK} strokeWidth={2.4} />
+      <path d={hairs} fill="none" stroke={c(STEM_C.rim)} strokeWidth={1.1} strokeOpacity={0.6} strokeLinecap="round" />
+      <path d={body} fill="none" stroke={STEM_C.line} strokeWidth={1.3} strokeOpacity={0.85} />
       {nodes}
-      <path d={`M${pt(footL)}Q${pt([foot[0], foot[1] + 14])} ${pt(footR)}`} fill="none" stroke={DARK} strokeWidth={2} strokeOpacity={0.6} />
+      <path d={`M${pt(footL)}Q${pt([foot[0], foot[1] + 14])} ${pt(footR)}`} fill="none" stroke={STEM_C.line} strokeWidth={1.4} strokeOpacity={0.5} />
+    </g>
+  );
+};
+/** a soft contact shadow on the floor in the medium's shadow colour (londonDepth's ContactShadow, re-coloured) */
+const AirCS: React.FC<{ e: Eye; X: number; Z: number; w?: number; d?: number; uid: string; amt?: number; fx: Fx }> = ({ e, X, Z, w = 74, d = 40, uid, amt = 1, fx }) => {
+  const Xc = X + 0.18 * w;
+  const Zc = Z - 0.25 * d;
+  const c = proj(e, Xc, 0, Zc);
+  const rx = w * rOf(e, Zc);
+  const ry = Math.max(1, (proj(e, Xc, 0, Zc - d)[1] - proj(e, Xc, 0, Zc + d)[1]) / 2);
+  const a = amt * (1 - fx.a(Z));
+  return (
+    <g>
+      <defs>
+        <radialGradient id={`${uid}-cs`}>
+          <stop offset="0" stopColor={PAL.shadow} stopOpacity={0.75 * a} />
+          <stop offset="0.6" stopColor={PAL.shadow} stopOpacity={0.45 * a} />
+          <stop offset="1" stopColor={PAL.shadow} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      <ellipse cx={c[0]} cy={c[1]} rx={rx} ry={ry} fill={`url(#${uid}-cs)`} />
     </g>
   );
 };
@@ -489,7 +584,7 @@ const Stem: React.FC<{ e: Eye; antShadow: { y0: number; y1: number; amt: number 
 // ---------------------------------------------------------------------------
 // THE ANT: legs, antennae and body for a frame
 // ---------------------------------------------------------------------------
-type AntState = { b: BodyPose; legs: LegGeo[]; mandOpen: number; antN: [number, number]; antF: [number, number]; myc: number; mycOp: number; mycW: number };
+export type AntState = { b: BodyPose; legs: LegGeo[]; mandOpen: number; antN: [number, number]; antF: [number, number]; myc: number; mycOp: number; mycW: number };
 const tarsusDir = (pair: number, tan: P2, nrm: P2): P2 => {
   const into: P2 = [-nrm[0], -nrm[1]];
   // V2: the tarsi lie ALONG the surface (fore forward, mid and hind back), only slightly into it, so the ankle stays out by
@@ -498,7 +593,7 @@ const tarsusDir = (pair: number, tan: P2, nrm: P2): P2 => {
   const l = Math.hypot(v[0], v[1]);
   return [v[0] / l, v[1] / l];
 };
-const antAt = (e: Eye, f: number): AntState => {
+export const antAt = (e: Eye, f: number): AntState => {
   const b = bodyPoseAt(f);
   const s = sAt(f);
   const legs = LEGS.map((leg) => {
@@ -559,7 +654,7 @@ const antAt = (e: Eye, f: number): AntState => {
 // ---------------------------------------------------------------------------
 // THE STALK: placed on the dorsal neck of the dead ant
 // ---------------------------------------------------------------------------
-const stalkSpecAt = (b: BodyPose, f: number) => {
+export const stalkSpecAt = (b: BodyPose, f: number) => {
   // V2 (after the photos): one long, thin, slightly wavy stroma from the dorsal pronotum just behind the head, a
   // little longer than the ant, the round knobby fruiting cushion low on it (~quarter of the way along)
   const base = segPoint(b.meso, [56, -42]);
@@ -588,7 +683,7 @@ const stalkSpecAt = (b: BodyPose, f: number) => {
   };
 };
 /** the growth: a slow push out of the neck, a steady drive, easing as it reaches its length (the tip draws it) */
-const stalkGrow = (f: number) => {
+export const stalkGrow = (f: number) => {
   const u = lin(f, T.stalk[0], T.stalk[1]);
   if (u <= 0) return 0;
   // a soft start (the push), then near-linear, then a long ease to rest
@@ -600,11 +695,15 @@ const stalkGrow = (f: number) => {
 // ---------------------------------------------------------------------------
 // THE CUT
 // ---------------------------------------------------------------------------
-const ZombieAnt: React.FC<z.infer<typeof schema>> = () => {
+const ZombieAnt: React.FC<z.infer<typeof schema>> = ({ air = "A" }) => {
   const frame = useCurrentFrame();
   const cam = swayCam(camAt(frame), frame);
   const e = eyeOf(cam, frame);
-  const P = perspective(cam, { eyeY: e.Y, dRef: FOCAL, kRef: 1, dolly: 1 });
+  // V3: the medium (AIR_READY.md): the horizon row of this pinhole (the eye's height above the frame's centre) and the
+  // eye in the air's axes (x, y up, z forward), so the motes fly past on the crane and the push-in
+  const e0 = eyeOf(swayCam(camAt(0), 0), 0);
+  const v = makeAirView({ scene: AIR_SCENE, frame, horizon: 960 + (e.Y - cam.cy) * cam.k, cam: camOf(e), rest: camOf(e0) });
+  const fx = makeFx(v, e);
   const ant = antAt(e, frame);
   const b = ant.b;
   // the leaf: a twitch on the clamp (cause: the jaws shut f91), then a hair of sway with the hanging ant
@@ -634,57 +733,67 @@ const ZombieAnt: React.FC<z.infer<typeof schema>> = () => {
   };
   const veinT = sstep(lin(frame, 104, 144));
   const antGroupRot = frame >= T.clamp[1] ? leafRot : undefined;
+  // V3: the ant in the air: the near side a hair of fog, the far side (legs, antenna ~60 behind) sunk further
+  const look: AntLook = antLook(AIRS[air], 0.06);
+  const farLook: AntLook = antLook(AIRS[air], 0.24);
   return (
-    <TexcocoPage cam={cam} vignette={0.32}>
+    <AirStage v={v} bloom={0.22}>
+      <WorldSvg cam={cam}>
+        <Floor e={e} cam={cam} fx={fx} />
+      </WorldSvg>
+      <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0 }}>
+        <AirHorizonHaze v={v} below={220} id="za-hz" />
+      </svg>
       <WorldSvg cam={cam}>
         <defs>
           <radialGradient id="za-antsh">
-            <stop offset="0" stopColor={DARK} stopOpacity={0.6} />
-            <stop offset="0.6" stopColor={DARK} stopOpacity={0.35} />
-            <stop offset="1" stopColor={DARK} stopOpacity={0} />
+            <stop offset="0" stopColor={PAL.shadow} stopOpacity={0.55} />
+            <stop offset="0.6" stopColor={PAL.shadow} stopOpacity={0.3} />
+            <stop offset="1" stopColor={PAL.shadow} stopOpacity={0} />
           </radialGradient>
         </defs>
-        <Floor e={e} cam={cam} />
+        <FloorLitter e={e} fx={fx} />
         {/* the stem's shadow across the litter (to the right and back) and its contact shadow */}
         <path
           d={poly([proj(e, STEM.X - 30, 0, 10), proj(e, STEM.X + 40, 0, -10), proj(e, STEM.X + 40 + 500, 0, 800), proj(e, STEM.X - 30 + 500, 0, 820)])}
-          fill={DARK}
-          opacity={0.18}
+          fill={PAL.shadow}
+          opacity={0.16}
+          style={{ filter: "blur(3px)" }}
         />
-        <ContactShadow P={P} X={STEM.X} Z={0} w={86} d={60} uid="za-stem-cs" amt={0.9} />
+        <AirCS e={e} X={STEM.X} Z={0} w={86} d={60} uid="za-stem-cs" amt={0.9} fx={fx} />
         {(["gaster", "meso", "head"] as const).map((k) => {
           const a = onFloor(b[k].p);
-          return a > 0 ? <ContactShadow key={k} P={P} X={b[k].p[0]} Z={0} w={k === "gaster" ? 86 : k === "meso" ? 70 : 52} d={36} uid={`za-cs-${k}`} amt={0.7 * a} /> : null;
+          return a > 0 ? <AirCS key={k} e={e} X={b[k].p[0]} Z={0} w={k === "gaster" ? 86 : k === "meso" ? 70 : 52} d={36} uid={`za-cs-${k}`} amt={0.7 * a} fx={fx} /> : null;
         })}
         {BLADES.slice()
           .sort((a, c) => c.Z - a.Z)
           .map((bl, i) => (
-            <GrassBlade key={i} e={e} b={bl} idx={i} />
+            <GrassBlade key={i} e={e} b={bl} idx={i} fx={fx} />
           ))}
         {/* the stem's leaf behind it */}
-        <LeafShape e={e} leaf={LEAF_A} uid="za-leafA" detail={0.6} Zt={140} />
+        <LeafShape e={e} leaf={LEAF_A} uid="za-leafA" detail={0.6} Zt={140} fx={fx} />
         {/* the far side of the ant: its legs and antenna stand behind the stem */}
         <g transform={antGroupRot}>
           {farLegs.map((g) => (
-            <AntLeg key={g.id} g={g} ink={sinkInk(ANT_INK, 0.42)} />
+            <AntLeg key={g.id} g={g} look={farLook} />
           ))}
-          <Antenna head={b.head} scapeA={ant.antF[0]} funA={ant.antF[1]} ink={sinkInk(ANT_INK, 0.4)} />
+          <Antenna head={b.head} scapeA={ant.antF[0]} funA={ant.antF[1]} look={farLook} />
         </g>
-        <Stem e={e} antShadow={{ y0: Math.min(...ys), y1: Math.max(...ys), amt: climbing * 0.75 }} />
-        <LeafShape e={e} leaf={LEAF_TOP2} uid="za-leafT2" detail={0.4} />
-        <LeafShape e={e} leaf={LEAF_TOP} uid="za-leafT" detail={0.4} />
+        <Stem e={e} antShadow={{ y0: Math.min(...ys), y1: Math.max(...ys), amt: climbing * 0.75 }} fx={fx} />
+        <LeafShape e={e} leaf={LEAF_TOP2} uid="za-leafT2" detail={0.4} fx={fx} />
+        <LeafShape e={e} leaf={LEAF_TOP} uid="za-leafT" detail={0.4} fx={fx} />
         {/* the leaf it bites */}
         <g transform={leafRot}>
-          <LeafShape e={e} leaf={BITE_LEAF} uid="za-leaf" detail={1} litEdge tones={BITE_TONES} />
+          <LeafShape e={e} leaf={BITE_LEAF} uid="za-leaf" detail={1} litEdge tones={BITE_TONES} fx={fx} />
         </g>
         {/* the ant */}
         <g transform={antGroupRot}>
-          <AntBody uid="za-ant" b={b} ink={ANT_INK} mandOpen={ant.mandOpen} myc={ant.myc} mycOpacity={ant.mycOp} mycWidth={ant.mycW} nearJaw={false} />
-          <Antenna head={b.head} scapeA={ant.antN[0]} funA={ant.antN[1]} ink={ANT_INK} />
+          <AntBody uid="za-ant" b={b} look={look} mandOpen={ant.mandOpen} myc={ant.myc} mycOpacity={ant.mycOp} mycWidth={ant.mycW} nearJaw={false} />
+          <Antenna head={b.head} scapeA={ant.antN[0]} funA={ant.antN[1]} look={look} />
           {nearLegs.map((g) => (
-            <AntLeg key={g.id} g={g} ink={ANT_INK} />
+            <AntLeg key={g.id} g={g} look={look} />
           ))}
-          {/* V2: the mycelium tufts sprouting from the dead ant's joints */}
+          {/* V3: fine mycelium threads emerging at the dead ant's joints and plate edges (few; the stalk is the hero) */}
           <JointTufts b={b} t={sstep(lin(frame, 100, 140))} legs={nearLegs} />
           {/* r2: the fungus showing at the near legs' joints (hip and knee) from f0 */}
           {nearLegs.map((g, i) => (
@@ -698,14 +807,14 @@ const ZombieAnt: React.FC<z.infer<typeof schema>> = () => {
         {frame >= T.clamp[1] - 0.5 ? (
           <g transform={leafRot}>
             <path d={open(veinPath(BITE_U - 34, BITE_U + 34, 0))} stroke={BITE_TONES.vein} strokeWidth={LEAF.rib * 2 * rOf(e, 0)} strokeLinecap="round" fill="none" />
-            <path d={open(veinPath(BITE_U - 34, BITE_U + 34, 1))} stroke={DARK} strokeWidth={1.6} strokeOpacity={0.8} fill="none" />
+            <path d={open(veinPath(BITE_U - 34, BITE_U + 34, 1))} stroke={mixHex(BITE_TONES.dark, PAL.shadow, 0.5)} strokeWidth={1.3} strokeOpacity={0.8} fill="none" />
           </g>
         ) : null}
         {/* the near jaw blade in front of the vein (the far one behind it): a pincer */}
         <g transform={antGroupRot}>
-          <Jaw head={b.head} which="near" open={ant.mandOpen} ink={ANT_INK} />
+          <Jaw head={b.head} which="near" open={ant.mandOpen} look={look} />
         </g>
-        <LeafShape e={e} leaf={LEAF_B} uid="za-leafB" detail={0.6} Zt={-60} />
+        <LeafShape e={e} leaf={LEAF_B} uid="za-leafB" detail={0.6} Zt={-60} fx={fx} />
         {/* the fungus */}
         <g transform={antGroupRot}>
           <MyceliumThreads path={veinPath(BITE_U, BITE_U + 120)} t={veinT} seed={11} width={1.5} spread={3} every={16} branchLen={14} />
@@ -721,12 +830,12 @@ const ZombieAnt: React.FC<z.infer<typeof schema>> = () => {
               <path d={jawOutline(b.head, ant.mandOpen)} fill="black" />
             </mask>
             <g mask="url(#za-stalk-mask)">
-              <CordycepsStalk uid="za-stalk" {...spec} grow={grow} ripen={ripen} shadow={1} />
+              <CordycepsStalk uid="za-stalk" {...spec} grow={grow} ripen={ripen} shadow={1} casing={0.6} />
             </g>
           </g>
         ) : null}
       </WorldSvg>
-    </TexcocoPage>
+    </AirStage>
   );
 };
 
