@@ -18,6 +18,8 @@ export const CordycepsProbe: React.FC = () => {
         ))}
         <CordycepsStalk uid="pb" base={[260, 1700]} angle={-70} bend={95} length={520} width={17} bodySide={1} bodyAt={0.5} grow={1} scale={1.2} />
         <CordycepsStalk uid="pc" base={[760, 1750]} angle={10} bend={-30} length={420} width={14} grow={1} scale={0.8} frame={30} sway={6} />
+        {/* V2: the cushion fruiting body and the wiggle (as on O. unilateralis) */}
+        <CordycepsStalk uid="pd" base={[620, 1880]} angle={-30} bend={20} wave={8} wiggle={4} length={520} width={9} tipWidth={0.72} bodyShape="cushion" bodyAt={0.25} bodyWidth={30} grow={1} scale={1} />
         {[0.3, 0.7, 1].map((t, i) => (
           <MyceliumThreads key={i} path={wave(560, 1000 + i * 90)} t={t} seed={i + 1} />
         ))}

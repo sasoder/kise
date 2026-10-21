@@ -27,6 +27,9 @@
 // swinging out from the stem to rest. On "twist" the orange stalk pushes out of the back of its neck
 // (first orange ~f102 from behind the head: the dark split opens with the tip, no fade) and grows long and thin, drawn by its moving tip, curving
 // up past the leaf's edge (ARM 116: ~half; HARD 125: ~90 %), the fruiting body swelling partway up (f113-134).
+// V2 (after the real photos): the stalk is one long, thin, slightly wavy stroma from the dorsal pronotum with a round
+// knobby fruiting cushion a quarter of the way along; orange mycelium tufts sprout from the joints (f100-140); the dead
+// ant hangs angled down from its jaws, its fore legs hooked onto the leaf, the others splayed wide.
 // f131-144: settled and alive: the leaf sways a hair with the hanging ant, the threads keep creeping over its joints
 // and onto the vein, the camera creeps in.
 // Orange = the disease (the clip rule): only the fungus (the threads and the stalk). Everything else cream / umber.
@@ -49,7 +52,7 @@ import { TexcocoPage, WorldSvg } from "../kits/maps/texcocoShared";
 import { swayCam } from "../kits/maps/incaShared";
 import { ContactShadow, perspective } from "../kyle-london/londonDepth";
 import { CordycepsStalk, MyceliumThreads } from "./cordyceps";
-import { ANT_INK, AntBody, AntLeg, Antenna, DARK, Jaw, headOutline, jawOutline, legGeometry, mixHex, sinkInk, type LegGeo } from "./zombieAntFigure";
+import { ANT_INK, AntBody, AntLeg, Antenna, DARK, Jaw, JointTufts, headOutline, jawOutline, legGeometry, mixHex, sinkInk, type LegGeo } from "./zombieAntFigure";
 import {
   ANT_S,
   BITE,
@@ -489,7 +492,9 @@ const Stem: React.FC<{ e: Eye; antShadow: { y0: number; y1: number; amt: number 
 type AntState = { b: BodyPose; legs: LegGeo[]; mandOpen: number; antN: [number, number]; antF: [number, number]; myc: number; mycOp: number; mycW: number };
 const tarsusDir = (pair: number, tan: P2, nrm: P2): P2 => {
   const into: P2 = [-nrm[0], -nrm[1]];
-  const v = pair === 0 ? add2(mul2(tan, 0.84), mul2(into, 0.54)) : pair === 1 ? add2(mul2(tan, -0.4), mul2(into, 0.92)) : add2(mul2(tan, -0.86), mul2(into, 0.5));
+  // V2: the tarsi lie ALONG the surface (fore forward, mid and hind back), only slightly into it, so the ankle stays out by
+  // the surface and never folds back next to the hip
+  const v = pair === 0 ? add2(mul2(tan, 0.92), mul2(into, 0.38)) : pair === 1 ? add2(mul2(tan, -0.8), mul2(into, 0.6)) : add2(mul2(tan, -0.93), mul2(into, 0.36));
   const l = Math.hypot(v[0], v[1]);
   return [v[0] / l, v[1] / l];
 };
@@ -501,19 +506,27 @@ const antAt = (e: Eye, f: number): AntState => {
     const tdW = tarsusDir(leg.pair, walk.tan, walk.nrm);
     const rel = lin(f, T.release + RELEASE[leg.id], T.release + RELEASE[leg.id] + RELEASE_LEN);
     if (rel <= 0) return legGeometry(e, b.meso, leg.pair, leg.side, walk.p, tdW, leg.id);
-    // released: toward the splayed, still pose (in meso-local), the tarsus in line with the tibia, curled a little
+    // V2 released: the fore legs reach up and HOOK onto the leaf's underside either side of the jaws; the mid and
+    // hind legs splay wide and stiff (as in the photos), their tarsi carrying on outward
     const sp = SPLAY[leg.id];
-    const toe2 = segPoint(b.meso, sp);
-    const splayToe: [number, number, number] = [toe2[0], toe2[1], leg.side * 46];
+    let splayToe: [number, number, number];
+    let tdS: P2;
+    if (leg.pair === 0) {
+      const lp = BITE_LEAF.point(BITE_U + (leg.side < 0 ? 44 : -34), leg.side < 0 ? -0.12 : 0.16);
+      splayToe = [lp[0], lp[1] + LEAF.rib * 0.6, lp[2]];
+      tdS = leg.side < 0 ? [-0.96, -0.28] : [0.96, -0.28];
+    } else {
+      const toe2 = segPoint(b.meso, sp);
+      splayToe = [toe2[0], toe2[1], leg.side * 46];
+      const out = rot2(sp, b.meso.a);
+      const ol = Math.hypot(out[0], out[1]) || 1;
+      const tg = add2([out[0] / ol, out[1] / ol], [0, 0.25]);
+      tdS = mul2(tg, 1 / Math.hypot(tg[0], tg[1]));
+    }
     const u = sstep(rel);
     const lifted = Math.sin(Math.PI * u) * 26;
     const dorsal = segDorsal(b.meso);
     const p: [number, number, number] = [lerp(walk.p[0], splayToe[0], u) + dorsal[0] * lifted, lerp(walk.p[1], splayToe[1], u) + dorsal[1] * lifted, lerp(walk.p[2], splayToe[2], u)];
-    const out = rot2(sp, b.meso.a);
-    const ol = Math.hypot(out[0], out[1]) || 1;
-    // limp: the tarsus hangs with gravity, a little outward
-    const tg = add2(mul2([out[0] / ol, out[1] / ol], 0.35), [0, 1]);
-    const tdS: P2 = mul2(tg, 1 / Math.hypot(tg[0], tg[1]));
     const td = lerp2(tdW, tdS, u);
     const tl = Math.hypot(td[0], td[1]) || 1;
     return legGeometry(e, b.meso, leg.pair, leg.side, p, [td[0] / tl, td[1] / tl], leg.id);
@@ -547,20 +560,24 @@ const antAt = (e: Eye, f: number): AntState => {
 // THE STALK: placed on the dorsal neck of the dead ant
 // ---------------------------------------------------------------------------
 const stalkSpecAt = (b: BodyPose, f: number) => {
-  const base = segPoint(b.meso, [70, -30]);
+  // V2 (after the photos): one long, thin, slightly wavy stroma from the dorsal pronotum just behind the head, a
+  // little longer than the ant, the round knobby fruiting cushion low on it (~quarter of the way along)
+  const base = segPoint(b.meso, [56, -42]);
   const d = segDorsal(b.meso);
   const dorsalDeg = (Math.atan2(d[0], -d[1]) * 180) / Math.PI;
   return {
     base,
-    angle: dorsalDeg + 44,
-    bend: 26,
-    wave: 7,
-    length: 340,
-    width: 12.5,
-    tipWidth: 0.45,
-    bodyAt: 0.62,
-    bodyLen: 0.24,
-    bodyWidth: 17,
+    angle: dorsalDeg + 7,
+    bend: 12,
+    wave: 8,
+    wiggle: 4,
+    length: 425,
+    width: 9,
+    tipWidth: 0.72,
+    bodyShape: "cushion" as const,
+    bodyAt: 0.25,
+    bodyLen: 0.1,
+    bodyWidth: 30,
     bodySide: -1 as const,
     scale: 1,
     frame: f,
@@ -602,7 +619,7 @@ const ZombieAnt: React.FC<z.infer<typeof schema>> = () => {
   const ys = [b.head.p[1], b.gaster.p[1]];
   const grow = stalkGrow(frame);
   const spec = stalkSpecAt(b, frame);
-  const ripen = sstep(lin(frame, T.ripen[0], T.ripen[1]));
+  const ripen = sstep(lin(frame, 106, 128)); // V2: the cushion low on the stalk swells once the tip has passed it
   const nearLegs = ant.legs.filter((g) => g.side < 0);
   const farLegs = ant.legs.filter((g) => g.side > 0);
   // the threads reaching from the jaws along the vein (the fungus anchoring the dead ant)
@@ -667,6 +684,8 @@ const ZombieAnt: React.FC<z.infer<typeof schema>> = () => {
           {nearLegs.map((g) => (
             <AntLeg key={g.id} g={g} ink={ANT_INK} />
           ))}
+          {/* V2: the mycelium tufts sprouting from the dead ant's joints */}
+          <JointTufts b={b} t={sstep(lin(frame, 100, 140))} legs={nearLegs} />
           {/* r2: the fungus showing at the near legs' joints (hip and knee) from f0 */}
           {nearLegs.map((g, i) => (
             <g key={`lt${g.id}`}>
@@ -718,5 +737,5 @@ export const debugAt = (f: number) => {
   const cam = camAt(f);
   const e = eyeOf(cam, f);
   const b = bodyPoseAt(f);
-  return { cam, e, b, bite: BITE, node: NODE, stalk: stalkSpecAt(b, f), grow: stalkGrow(f), antS: ANT_S, rot: rot2 };
+  return { cam, e, b, bite: BITE, node: NODE, stalk: stalkSpecAt(b, f), grow: stalkGrow(f), antS: ANT_S, rot: rot2, legs: antAt(e, f).legs };
 };

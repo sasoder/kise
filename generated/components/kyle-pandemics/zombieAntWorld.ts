@@ -54,9 +54,9 @@ export const CAM_KEYS: CamTarget[] = [
   { f: 46, cx: 540, cy: -389, k: 1.18 },
   { f: 62, cx: 548, cy: -665, k: 1.3 },
   { f: 78, cx: 535, cy: -940, k: 1.44 },
-  { f: 92, cx: 470, cy: -1052, k: 1.5 },
-  { f: 118, cx: 458, cy: -1050, k: 1.52 },
-  { f: 144, cx: 452, cy: -1046, k: 1.53 },
+  { f: 92, cx: 430, cy: -1052, k: 1.5 },
+  { f: 118, cx: 410, cy: -1050, k: 1.52 },
+  { f: 144, cx: 404, cy: -1046, k: 1.53 },
 ];
 /** monotone cubic through [x, y] keys, one-sided end slopes (a track never starts at rest) */
 const pchip = (keys: [number, number][]) => {
@@ -147,7 +147,7 @@ export type SegKey = keyof typeof SEG;
 /** the neck (the head pitches about it) and the mandible tips, in head-local units */
 export const NECK_AXIS: P2 = [80, -2];
 /** r1: the two blades' tips meet across the vein around here (head-local, closed) */
-export const MAND_TIP_HEAD: P2 = [106, 11];
+export const MAND_TIP_HEAD: P2 = [106 * 1.1, 11 * 1.1]; // V2: the head (and its jaws) drawn 1.1x (HEAD_K)
 /** the legs splay out toward / away from us, so in profile the femur and tibia show foreshortened by FORESHORTEN */
 export const FORESHORTEN = 0.8;
 /** the leg sockets on the mesosoma (meso-local, unscaled) and the leg bones (unscaled) */
@@ -159,12 +159,12 @@ export const LEG_BONES = [
 /** the six legs: pair 0 fore, 1 mid, 2 hind; side -1 near (toward us), 1 far. Tripods: (L1 L3 R2) and (R1 R3 L2).
  *  home = where the toe sits, mid-stance, relative to the meso centre along the path (world units) */
 export const LEGS = [
-  { id: "L1", pair: 0, side: -1, home: 178, ph: 0.0 },
+  { id: "L1", pair: 0, side: -1, home: 160, ph: 0.0 },
   { id: "L2", pair: 1, side: -1, home: 44, ph: 0.5 },
-  { id: "L3", pair: 2, side: -1, home: -246, ph: 0.0 },
-  { id: "R1", pair: 0, side: 1, home: 166, ph: 0.5 },
+  { id: "L3", pair: 2, side: -1, home: -196, ph: 0.0 },
+  { id: "R1", pair: 0, side: 1, home: 150, ph: 0.5 },
   { id: "R2", pair: 1, side: 1, home: 34, ph: 0.0 },
-  { id: "R3", pair: 2, side: 1, home: -262, ph: 0.5 },
+  { id: "R3", pair: 2, side: 1, home: -208, ph: 0.5 },
 ] as const;
 export type LegId = (typeof LEGS)[number]["id"];
 
@@ -341,7 +341,7 @@ const mandTipAxis = (hp: number): P2 => {
 export const A_BITE = (-108 * Math.PI) / 180;
 export const HP_BITE = -0.32;
 /** where the hanging body comes to rest: its centre of mass under the bite, held a little off by its stiffness */
-export const A_HANG = (-76 * Math.PI) / 180; // r1: hung from its locked jaws, the body swung away from the stem (rigor holds it ~14 deg off plumb)
+export const A_HANG = (-57 * Math.PI) / 180; // V2: from its locked jaws and hooked fore legs the body angles down and away from the stem (~33 deg off plumb), as in the photos
 export const rigidAt = (a: number) => {
   const O = sub2(BITE, rot2(mandTipAxis(HP_BITE), a));
   return rigidPose(O, a, HP_BITE);
@@ -349,8 +349,10 @@ export const rigidAt = (a: number) => {
 /** the hanging angle after the release: a damped swing from the bite's lean to the hang */
 export const hangAngle = (f: number) => {
   if (f <= T.release) return A_BITE;
+  // V2: the swing starts from rest (no jolt at the release): (1 + t/tau) e^(-t/tau) cos(w t) has zero slope at t = 0
   const t = f - T.release;
-  const sw = Math.exp(-t / 9) * Math.cos(t * 0.24);
+  const tau = 7;
+  const sw = (1 + t / tau) * Math.exp(-t / tau) * Math.cos(t * 0.2);
   return A_HANG + (A_BITE - A_HANG) * sw;
 };
 const blendSeg = (a: Seg, b: Seg, t: number): Seg => ({ p: lerp2(a.p, b.p, t), a: a.a + (b.a - a.a) * t });
@@ -371,7 +373,7 @@ export const segDorsal = (s: Seg): P2 => rot2([0, -1], s.a);
 
 // ---- the legs ------------------------------------------------------------------------------------------------------------
 /** the gait: stride A (relative travel in stance), cycle LAMBDA = 2A of body travel, duty 0.5, alternating tripods */
-export const STRIDE = 104;
+export const STRIDE = 92;
 export const LAMBDA = 2 * STRIDE;
 export const LIFT = 34;
 export type Toe = { p: [number, number, number]; tan: P2; nrm: P2; lift: number };
@@ -381,32 +383,67 @@ const toeOnSub = (sigma: number, side: number): Toe => {
   const X = sb.stem ? XS + (STEM.R - Math.sqrt(Math.max(0, STEM.R * STEM.R - z * z))) : sb.p[0];
   return { p: [X, sb.p[1], z], tan: sb.tan, nrm: sb.nrm, lift: 0 };
 };
+/** V2: a foothold chosen from where the leg's HIP will be at mid-stance: offset along the body to the toe's home,
+ *  down onto the substrate, then the nearest point of the floor or the stem (so in the inside corner the feet move
+ *  over to the stem in step with the body instead of being left far behind on the floor) */
+const HIP_U = [52 * 0.88, 4 * 0.88, -40 * 0.88];
+const footholdAt = (pair: number, home: number, sStart: number, side: number): Toe => {
+  const sm = sStart + STRIDE / 2;
+  const hp = pathAt(sm + HIP_U[pair]);
+  const ven: P2 = [-hp.t[1], hp.t[0]];
+  const tgt: P2 = add2(add2(hp.p, mul2(hp.t, home - HIP_U[pair])), mul2(ven, HB));
+  const dFloor = Math.abs(tgt[1]);
+  const dStem = Math.abs(XS - tgt[0]);
+  const onStem = tgt[1] < -1 && (tgt[0] > XS - 1 || dStem < dFloor);
+  const z = side * (onStem ? 30 : 50);
+  if (onStem) {
+    const X = XS + (STEM.R - Math.sqrt(Math.max(0, STEM.R * STEM.R - z * z)));
+    return { p: [X, Math.min(tgt[1], -6), z], tan: [0, -1], nrm: [-1, 0], lift: 0 };
+  }
+  return { p: [Math.min(tgt[0], XS - 6), 0, z], tan: [1, 0], nrm: [0, -1], lift: 0 };
+};
+void toeOnSub;
 /** the toe of a leg while walking / climbing at body arc s (stance: planted; swing: lifted along an arc) */
 export const gaitToe = (leg: (typeof LEGS)[number], s: number): Toe => {
   const x = s / LAMBDA + leg.ph;
   const c = Math.floor(x);
   const ph = x - c;
   const sc = (c - leg.ph) * LAMBDA; // the s at this cycle's stance start
-  const plant = (sStart: number) => toeOnSub(sStart + leg.home + STRIDE / 2, leg.side);
+  const plant = (sStart: number) => footholdAt(leg.pair, leg.home, sStart, leg.side);
   if (ph < 0.5) return plant(sc);
   const u = sstep((ph - 0.5) / 0.5);
   const a = plant(sc);
   const b = plant(sc + LAMBDA);
+  // V2: a step from the floor onto the stem goes round the outside of the corner (a curve through the floor-stem
+  // joint), not through the air under the body
+  const cross = a.nrm[1] < -0.5 && b.nrm[0] < -0.5;
+  if (cross) {
+    const C: [number, number] = [XS - 8, -8];
+    const q0 = (1 - u) * (1 - u);
+    const q1 = 2 * u * (1 - u);
+    const q2 = u * u;
+    const nrm: P2 = [lerp(a.nrm[0], b.nrm[0], u), lerp(a.nrm[1], b.nrm[1], u)];
+    const tan: P2 = [lerp(a.tan[0], b.tan[0], u), lerp(a.tan[1], b.tan[1], u)];
+    const lift = 14 * Math.pow(Math.sin(Math.PI * u), 2);
+    return { p: [q0 * a.p[0] + q1 * C[0] + q2 * b.p[0] + nrm[0] * lift, q0 * a.p[1] + q1 * C[1] + q2 * b.p[1] + nrm[1] * lift, lerp(a.p[2], b.p[2], u)], tan, nrm, lift };
+  }
   const p: [number, number, number] = [lerp(a.p[0], b.p[0], u), lerp(a.p[1], b.p[1], u), lerp(a.p[2], b.p[2], u)];
   const nrm: P2 = [lerp(a.nrm[0], b.nrm[0], u), lerp(a.nrm[1], b.nrm[1], u)];
   const tan: P2 = [lerp(a.tan[0], b.tan[0], u), lerp(a.tan[1], b.tan[1], u)];
-  const lift = LIFT * Math.sin(Math.PI * u);
+  const lift = LIFT * Math.pow(Math.sin(Math.PI * u), 2); // V2: sin^2, so the foot leaves and lands with no jerk
   return { p: [p[0] + nrm[0] * lift, p[1] + nrm[1] * lift, p[2]], tan, nrm, lift };
 };
 /** the splayed, still legs of the dead ant: the toe in meso-local (unscaled) coordinates */
 // r1: limp: every leg hangs down (- x along a hanging body) and fans outward, none near the stem
+// V2: the dead legs (meso-local toes). The fore legs are hooked onto the leaf (their toes are placed on the leaf in
+// ZombieAnt.tsx, these values only seed them); the mid and hind legs splay wide and stiff, as in the photos.
 export const SPLAY: Record<LegId, P2> = {
-  L1: [-30, 124],
-  R1: [-6, -96],
-  L2: [-126, 142],
-  R2: [-104, -124],
-  L3: [-256, 96],
-  R3: [-276, -64],
+  L1: [150, -40],
+  R1: [140, 60],
+  L2: [40, 196],
+  R2: [96, 168],
+  L3: [-150, 200],
+  R3: [-236, 120],
 };
 export const RELEASE: Record<LegId, number> = { L1: 0, R1: 1, L2: 2, R2: 3, L3: 4, R3: 5 };
 export const RELEASE_LEN = 7;

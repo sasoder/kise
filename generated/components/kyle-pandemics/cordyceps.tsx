@@ -36,6 +36,9 @@
 //             it opens with the tip (full once the stalk is ~2.5 base widths long), never fades in
 //   casing    multiplier on the DARK casing width (default 1 = 1.5 * scale px)                 (r1 addition)
 //   lit       [lx, ly] direction TOWARD the light (screen)                             default the upper left
+//   bodyShape "spindle" (default) | "cushion": a round knobby ascoma on the bodySide of the stalk at bodyAt, radius
+//             bodyWidth x ripen, as on O. unilateralis (cushion low on the stalk, ~0.2-0.35)            (V2 addition)
+//   wiggle    a finer wobble along the stalk (deg, ~2.6 waves; the real stroma is slightly wavy), default 0 (V2 addition)
 //
 // stalkFrame(spec, u)  -> { p, t, n, w } the centre point, unit tangent, left normal and half-width at u (0..1 of
 //                      the FULL length; for hanging things on it or framing a camera on the tip)
@@ -93,6 +96,10 @@ export type StalkSpec = {
   swayRate?: number;
   swayPhase?: number;
   seed?: number;
+  /** V2 addition: "spindle" (default, the swelling along the stalk) or "cushion" (a round knobby ascoma on one side) */
+  bodyShape?: "spindle" | "cushion";
+  /** V2 addition: a finer wobble along the stalk (deg amplitude, ~2.6 waves), default 0 */
+  wiggle?: number;
 };
 type Full = Required<StalkSpec>;
 const withDefaults = (s: StalkSpec): Full => ({
@@ -113,6 +120,8 @@ const withDefaults = (s: StalkSpec): Full => ({
   swayRate: s.swayRate ?? 0.07,
   swayPhase: s.swayPhase ?? 0,
   seed: s.seed ?? 1,
+  bodyShape: s.bodyShape ?? "spindle",
+  wiggle: s.wiggle ?? 0,
 });
 
 const N = 120;
@@ -125,7 +134,7 @@ const centreline = (q: Full): Sample[] => {
   let p: P2 = [q.base[0], q.base[1]];
   for (let i = 0; i <= N; i++) {
     const u = i / N;
-    const deg = q.angle + q.bend * u + q.wave * Math.sin(Math.PI * 2 * (0.85 * u) + q.seed * 1.7) * Math.min(1, u * 4) + sw * Math.pow(u, 1.5);
+    const deg = q.angle + q.bend * u + q.wave * Math.sin(Math.PI * 2 * (0.85 * u) + q.seed * 1.7) * Math.min(1, u * 4) + q.wiggle * Math.sin(Math.PI * 2 * 2.6 * u + q.seed * 3.1) * Math.min(1, u * 6) + sw * Math.pow(u, 1.5);
     const a = (deg * Math.PI) / 180;
     const t: P2 = [Math.sin(a), -Math.cos(a)];
     const n: P2 = [t[1], -t[0]]; // the left normal (left of the growth direction)
@@ -138,6 +147,7 @@ const centreline = (q: Full): Sample[] => {
 const stalkW = (q: Full, u: number) => q.width * (1 - (1 - q.tipWidth) * Math.pow(u, 0.9) + 0.22 * Math.exp(-u / 0.02));
 /** the fruiting body's bump profile 0..1 at u */
 const bump = (q: Full, u: number) => {
+  if (q.bodyShape === "cushion") return 0;
   const h = q.bodyLen / 2;
   const d = (u - q.bodyAt) / h;
   if (Math.abs(d) >= 1) return 0;
@@ -250,7 +260,7 @@ export const CordycepsStalk: React.FC<StalkSpec & { uid: string; grow?: number; 
   const line = (pts: P2[]) => `M${pts.map(pt).join("L")}`;
   // the perithecia: pits over the swelling on its bulging side (under the tip only)
   const pores: React.ReactNode[] = [];
-  if (ripen > 0.05) {
+  if (ripen > 0.05 && q.bodyShape !== "cushion") {
     const h = q.bodyLen / 2;
     let k = 0;
     for (let i = 0; i < 9; i++) {
@@ -274,6 +284,50 @@ export const CordycepsStalk: React.FC<StalkSpec & { uid: string; grow?: number; 
         );
       }
     }
+  }
+  // V2: the cushion: a round knobby ascoma on one side of the stalk at bodyAt, swelling out of the stalk once the tip
+  // has passed it (radius bodyWidth x ripen), shaded from the upper left, pitted with perithecia
+  let cushion: React.ReactNode = null;
+  if (q.bodyShape === "cushion" && grow > q.bodyAt && ripen > 0.01) {
+    const fr = stalkFrame(q, q.bodyAt);
+    const R = q.bodyWidth * sc * ripen;
+    const sg = q.bodySide === -1 ? 1 : -1;
+    const off = fr.w * 0.35 + R * 0.55;
+    const c: P2 = [fr.p[0] + fr.n[0] * off * sg, fr.p[1] + fr.n[1] * off * sg];
+    const NB = 30;
+    const rim: P2[] = [];
+    for (let i = 0; i < NB; i++) {
+      const a = (i / NB) * Math.PI * 2;
+      const rr = R * (1 + 0.06 * Math.sin(a * 9 + q.seed) + 0.04 * (hsh(i, q.seed + 5) - 0.5));
+      rim.push([c[0] + Math.cos(a) * rr, c[1] + Math.sin(a) * rr * 0.92]);
+    }
+    const rimD = `M${rim.map(pt).join("L")}Z`;
+    const litC: P2 = [c[0] + lit[0] * R * 0.22, c[1] + lit[1] * R * 0.22];
+    const pits: React.ReactNode[] = [];
+    let k = 0;
+    for (let i = 0; i < 22; i++) {
+      const a = hsh(i, q.seed + 9) * Math.PI * 2;
+      const rr = Math.sqrt(hsh(i, q.seed + 13)) * R * 0.82;
+      const pc: P2 = [c[0] + Math.cos(a) * rr, c[1] + Math.sin(a) * rr];
+      const pr = R * (0.085 + 0.03 * hsh(i, q.seed + 17));
+      pits.push(<circle key={k++} cx={pc[0]} cy={pc[1]} r={pr} fill={FUNGUS.pore} opacity={0.85} />);
+      pits.push(<circle key={k++} cx={pc[0] + lit[0] * pr * 0.5} cy={pc[1] + lit[1] * pr * 0.5} r={pr * 0.45} fill={FUNGUS.hi} opacity={0.75} />);
+    }
+    cushion = (
+      <g>
+        <clipPath id={`${props.uid}-cu`}>
+          <path d={rimD} />
+        </clipPath>
+        <path d={rimD} fill={FUNGUS.core} />
+        <g clipPath={`url(#${props.uid}-cu)`}>
+          <circle cx={litC[0]} cy={litC[1]} r={R * 0.92} fill={FUNGUS.deep} />
+          <circle cx={c[0] + lit[0] * R * 0.38} cy={c[1] + lit[1] * R * 0.38} r={R * 0.62} fill={FUNGUS.main} />
+          <circle cx={c[0] + lit[0] * R * 0.5} cy={c[1] + lit[1] * R * 0.5} r={R * 0.3} fill={FUNGUS.lit} />
+          {pits}
+        </g>
+        <path d={rimD} fill="none" stroke={FUNGUS.line} strokeWidth={Math.max(1, 1.5 * sc) * (props.casing ?? 1)} strokeLinejoin="round" />
+      </g>
+    );
   }
   // the growing tip, a hair paler (only while it is growing)
   const tipGlow = grow < 0.999 ? (() => {
@@ -311,6 +365,7 @@ export const CordycepsStalk: React.FC<StalkSpec & { uid: string; grow?: number; 
       {tipGlow ? <path d={tipGlow} fill={FUNGUS.tip} opacity={0.55} /> : null}
       {pores}
       <path d={outline} fill="none" stroke={FUNGUS.line} strokeWidth={ow} strokeLinejoin="round" />
+      {cushion}
     </g>
   );
 };
