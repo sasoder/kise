@@ -17,11 +17,21 @@ export const DURATION = 186;
 // ---------------------------------------------------------------------------
 export const DX = 130;
 export const DZ = 150;
-/** TB: 25 files x 40 ranks = 1,000, running back toward the horizon */
-export const TB_W = 25;
-export const TB_D = 40;
+/** the framing alternatives tried for V2 (stills shown to the director); LAYOUT picks the one built */
+export const VARIANTS = {
+  /** A: TB 20 x 50, the cream groups 7 wide; a ~41 deg view, the field rising to y ~330 (a tall trapezoid) */
+  A: { tbW: 20, tbD: 50, creamCols: 7, gapFiles: 1.35, margin: 100, F: 1400, ty: 905, top: 330 },
+  /** B: TB 25 x 40, a shallower view (the field rising only to y ~430): a wider, squatter block */
+  B: { tbW: 25, tbD: 40, creamCols: 7, gapFiles: 1.35, margin: 100, F: 1400, ty: 905, top: 430 },
+  /** C: the cream groups in rows of five (narrower, deeper), so every man draws larger; TB 20 x 50, ~41 deg */
+  C: { tbW: 20, tbD: 50, creamCols: 5, gapFiles: 2.1, margin: 95, F: 1400, ty: 905, top: 330 },
+};
+export const LAYOUT = VARIANTS.A;
+/** TB: files x ranks = 1,000, running back toward the horizon */
+export const TB_W = LAYOUT.tbW;
+export const TB_D = LAYOUT.tbD;
 /** the hero: the front-rank man the cut opens on (the block's middle file: the reveal stays centred on the block) */
-export const HERO_FILE = 12;
+export const HERO_FILE = Math.floor(TB_W / 2);
 const tbX = (i: number, j: number) => (i - (TB_W - 1) / 2) * DX + (j % 2 ? DX / 2 : 0);
 export const HERO_X = tbX(HERO_FILE, 0);
 /** the block's middle, world X (its label sits there) */
@@ -29,24 +39,26 @@ export const TB_MID_X = (tbX(0, 0) + tbX(TB_W - 1, 1)) / 2;
 
 export type Group = { name: string; count: string; rows: number[]; cx: number };
 /** ONE FRONT LINE: the cream groups stand on the TB block's front line (Z = 0), to its left, side by side, at the same
- *  spacing, in rows of seven running back (a short row last, at the back); rows listed from the front rank back. So
- *  all four groups draw at one scale and the only difference is how far each runs back. Left to right: COVID-19,
- *  HIV/AIDS, the 1918 flu, then TB. */
-const GAP = 2 * DX; // the clear floor between neighbouring groups (room for each label)
+ *  spacing, in full rows running back (a short row last, at the back); rows listed from the front rank back. So all
+ *  four groups draw at one scale and the only difference is how far each runs back. Left to right: COVID-19,
+ *  HIV/AIDS, the 1918 flu, then TB; the gaps just wide enough for each group's label. */
+const C = LAYOUT.creamCols;
+const GAP = LAYOUT.gapFiles * DX;
+const rowsOf = (n: number) => [...Array(Math.floor(n / C)).fill(C), ...(n % C ? [n % C] : [])] as number[];
 const half = (n: number) => ((n - 1) / 2) * DX + DX / 2;
 const TB_LEFT = tbX(0, 0) - DX / 2;
-const FLU_CX = TB_LEFT - GAP - half(7);
-const AIDS_CX = FLU_CX - 2 * half(7) - GAP;
-const COVID_CX = AIDS_CX - 2 * half(7) - GAP;
+const FLU_CX = TB_LEFT - GAP - half(C);
+const AIDS_CX = FLU_CX - 2 * half(C) - GAP;
+const COVID_CX = AIDS_CX - 2 * half(C) - GAP;
 export const GROUPS: Group[] = [
-  { name: "COVID-19", count: "7 million", rows: [7], cx: COVID_CX },
-  { name: "HIV/AIDS", count: "44 million", rows: [7, 7, 7, 7, 7, 7, 2], cx: AIDS_CX },
-  { name: "1918 FLU", count: "50 million", rows: [7, 7, 7, 7, 7, 7, 7, 1], cx: FLU_CX },
+  { name: "COVID-19", count: "7 million", rows: rowsOf(7), cx: COVID_CX },
+  { name: "HIV/AIDS", count: "44 million", rows: rowsOf(44), cx: AIDS_CX },
+  { name: "1918 FLU", count: "50 million", rows: rowsOf(50), cx: FLU_CX },
 ];
 /** every group's front rank stands on the one front line */
 export const groupFrontZ = (_g: Group) => 0;
 /** the whole front line, world X (for framing) */
-export const LINE_X0 = COVID_CX - half(7);
+export const LINE_X0 = COVID_CX - half(C);
 export const LINE_X1 = tbX(TB_W - 1, 1) + DX / 2;
 
 /** the cast: the plainest build for everyone (londonCastV2's Newton look: his own hair, a plain coat, the white band),
@@ -101,7 +113,7 @@ export const COUNTS = { tb: MEN.filter((m) => m.orange).length, cream: GROUPS.ma
 //           from the left after "than")
 // and a slow creep (dolly back, drift left) that fades in from f118 and runs to the cut, so the hold stays alive.
 // ---------------------------------------------------------------------------
-export const F = 1100;
+export const F = LAYOUT.F;
 /** a bell-shaped progress 0..1 over f0..f1: the integral of t^a (1-t)^b, normalised */
 const bell = (f0: number, f1: number, a: number, b: number) => {
   const N = 400;
@@ -117,21 +129,28 @@ const bell = (f0: number, f1: number, a: number, b: number) => {
     return (cum[i] + (cum[i + 1] - cum[i]) * (t - i)) / tot;
   };
 };
-/** the end: the front line centred, its feet at y ~880, the eye ~38 deg down (h / d0 = 0.78), the horizon at the top */
-const D_END = (F * (LINE_X1 - LINE_X0)) / 1040;
-export const CAM = {
-  d0: [(F * 310) / 900, D_END],
-  h: [300, 0.78 * D_END],
-  ty: [1392, 880],
-  cx: [HERO_X, (LINE_X0 + LINE_X1) / 2],
-  pD: bell(-12, 150, 2.4, 1.8),
-  pH: bell(-10, 146, 1.5, 2.2),
-  pT: bell(6, 148, 1.9, 1.9),
-  pX: bell(84, 150, 1.7, 2.0),
-};
 const creep = (f: number) => {
   const u = Math.max(0, Math.min(1, (f - 118) / 50));
   return u < 1 ? u * u * u * (1 - u / 2) * (50 / 185) : (0.5 * 50) / 185 + (f - 168) / 185;
+};
+/** THE SETTLED FRAME, solved from the layout: the front line centred with even margins (its width sets the scale s0
+ *  and so the distance), its feet at y = ty, and the eye's height chosen so the TB block's back rank's heads sit at
+ *  y = top (a deliberate, well-proportioned trapezoid). Solved for f185, the creep divided out. */
+const CR_END = creep(DURATION - 1);
+const S0 = (1080 - 2 * LAYOUT.margin) / (LINE_X1 - LINE_X0);
+const D_END = F / S0;
+const R_BACK = D_END / (D_END + (TB_D - 1) * DZ);
+const HY_END = (LAYOUT.top - LAYOUT.ty * R_BACK + 310 * S0 * R_BACK) / (1 - R_BACK);
+export const END_SLOPE = (LAYOUT.ty - HY_END) / F;
+export const CAM = {
+  d0: [(F * 310) / 900, D_END / (1 + 0.1 * CR_END)],
+  h: [0.8 * ((F * 310) / 900), END_SLOPE * (D_END / (1 + 0.1 * CR_END))],
+  ty: [1392, LAYOUT.ty + 10 * CR_END],
+  cx: [HERO_X, (LINE_X0 + LINE_X1) / 2 + 40 * CR_END],
+  pD: bell(-12, 150, 2.4, 1.8),
+  pH: bell(-10, 146, 1.5, 2.2),
+  pT: bell(6, 148, 1.9, 1.9),
+  pX: bell(87, 150, 1.7, 2.0),
 };
 const mixv = (a: number, b: number, t: number) => a + (b - a) * t;
 export type Cam3 = { cx: number; h: number; cz: number; hy: number };

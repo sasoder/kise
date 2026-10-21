@@ -13,21 +13,23 @@
 // this 143 · HORRIBLE 147 · disease 155 · and 170 · it's 173 · just 176 · this 176 (the slot ends at 186).
 // DURATION: the slot 13.080 -> 19.286 s = 6.206 s x 29.97 = 186 frames (f0..f185).
 //
-// THE MOTION: an isotype in depth, ONE FIGURE = ONE MILLION DEATHS. f0 is close on one orange-coated engraved man, the
-// middle file of the front rank (~900 px tall, head at y ~450-600), his neighbours at the frame edges; the camera is
-// already pulling back. One crane move (the eye rides one straight line back and up, h ~0.8 x its distance, so it
-// climbs from his brow to ~17 men up; real parallax: the near ranks shrink fast, the far ones hardly) reveals that he
-// is the front of an orange formation of 1,000 (25 files x 40 ranks) running back into the haze; through the reveal the
-// camera holds on the block's middle, the block filling and overflowing the frame (f60-f90). From f84 it slides left as
-// it keeps pulling back, and three small cream groups standing on the SAME FRONT LINE as the block, to its left, come
-// into shot after "than" (f88): the 1918 flu's 50 from f95, HIV/AIDS's 44 from ~f108, COVID-19's 7 all in by f135. One
-// front line, one spacing, one scale: the only difference is how far each group runs back. Left to right: COVID-19 (one
-// rank of 7), HIV/AIDS (6 ranks of 7 + 2), the 1918 flu (7 ranks of 7 + 1), then TB (40 ranks of 25). The view ends
-// ~38 deg down, the horizon at the top of the frame (the floor hazing into the page); the front line is centred across
-// the frame (x ~33-1050, feet y ~878) and the TB block's area plainly dwarfs the cream groups. Labels slide up while
-// fading in, in world space: on the floor in front of each cream group (the flu f124, AIDS f129, COVID f136), then
-// TUBERCULOSIS · 1 billion+ · past 200 years in the field's middle distance (f140), all settled by ~f150; the camera then
-// creeps back to the cut while every man breathes and rocks a hair. No key; no other numbers.
+// THE MOTION (V2): an isotype in depth, ONE FIGURE = ONE MILLION DEATHS. f0 is close on one orange-coated engraved man,
+// the middle file of the front rank (~900 px tall, head at y ~450-600), his neighbours at the frame edges; the camera is
+// already pulling back. One crane move (the eye rides one straight line back and up, from his brow to ~19 men up; real
+// parallax: the near ranks shrink fast, the far ones hardly) reveals that he is the front of an orange formation of
+// 1,000 (20 files x 50 ranks) running back into the haze; through the reveal the camera holds on the block's middle,
+// the block filling and overflowing the frame (f60-f88). From f87 it slides left as it keeps pulling back, and three
+// small cream groups standing on the SAME FRONT LINE as the block, to its left, come into shot from "than" (f88): the
+// 1918 flu's 50 first, then HIV/AIDS's 44 (~f100), COVID-19's 7 all in by f130. One front line, one spacing, one
+// scale: the only difference is how far each group runs back. Left to right: COVID-19 (one rank of 7), HIV/AIDS
+// (6 ranks of 7 + 2), the 1918 flu (7 ranks of 7 + 1), then TB (50 ranks of 20).
+// THE SETTLED FRAME (V2, chosen from three framings tried as stills): even 100 px margins (the front line x 100-980,
+// feet y ~905), the groups close enough to read as one row; the view ~42 deg down, the horizon just above the frame, the
+// TB field a tall trapezoid rising to its back rank's heads at y ~330 with its mass on the right third. EVERY label in
+// the same place: on the floor just under its group's front rank, one baseline for all four (cream 28/27 px, TB a step
+// larger: TUBERCULOSIS 33 / 1 billion+ 32 / past 200 years 24), all ending by y ~1016. Labels slide up while fading in
+// (the flu f124, AIDS f129, COVID f136, TB f140), all settled by ~f150; the camera then creeps back to the cut while
+// every man breathes and rocks a hair. No key; no other numbers.
 // Orange = the disease's toll: only the TB figures are orange; everything else is cream on the umber page.
 // THE CAST: the plainest build for everyone (londonCastV2's Newton look: his own hair, a plain coat, the white band),
 // ~12% with a hat under the arm, ~7% of the cream men bare-headed workers (none in the TB block: their orange is only a
@@ -35,8 +37,7 @@
 // a crowd shows little more than heads, so each TB man is multiplied toward the orange by his rank (4 steps from rank 2
 // back; the dark lines stay dark): the far field reads as a dense orange band.
 // CAMERA (tollWorld.ts): every channel on one bell-shaped speed profile (one acceleration lobe, one deceleration lobe),
-// no keys to stall on. Settled frame: horizon y ~20; the front line's feet y ~878; TB's back rank heads y ~473; the
-// cream groups' back ranks y ~730-830; the labels end at y ~950 (clear of the caption bands); front-line men ~46 px.
+// no keys to stall on; the settled frame is solved from the layout (margins, front-line y, the field's top).
 //
 // HOW: every man is one of 3 builds x 6 hair tones x 3 head turns x 2 inks (x 4 depth washes for TB), drawn ONCE by
 // londonCastV2 (front pose, the form shadow on), rasterised to sprites at power-of-two sizes on demand and blitted far
@@ -61,7 +62,7 @@ import { loadFont as loadCaslon } from "@remotion/google-fonts/LibreCaslonText";
 import { z } from "zod";
 import { TexcocoPage, WorldSvg, type Cam } from "../kits/maps/texcocoShared";
 import { INK, LAND } from "../kits/maps/incaShared";
-import { BOX, DURATION as SLOT, DZ, END_CAM, F, TB_MID_X, GROUPS, HAIRS, MEN, YAWS, cam3At, groupFrontZ, project, type Cam3, type Group, type Man } from "./tollWorld";
+import { BOX, DURATION as SLOT, DZ, END_CAM, F, TB_MID_X, GROUPS, HAIRS, MEN, YAWS, cam3At, project, type Cam3, type Group, type Man } from "./tollWorld";
 import { CREAM, DARK, Newton, ORANGE, POSES, Worker, headTurn, type FigPose } from "../kyle-london/londonCastV2";
 
 export const FPS = 30000 / 1001;
@@ -435,6 +436,9 @@ const WorldLabel: React.FC<{ c: Cam3; X: number; Z: number; Y?: number; lines: L
   );
 };
 
+/** the labels' floor line: just in front of the one front line */
+const LABEL_Z = -90;
+
 const TuberculosisToll: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const plan = useMemo(() => planAt(frame), [frame]);
@@ -467,15 +471,16 @@ const TuberculosisToll: React.FC<z.infer<typeof schema>> = () => {
   const c = cam3At(frame);
   const id: Cam = { k: 1, cx: 540, cy: 960 };
   // the labels: the cream groups' on the floor in front of their front rows; TUBERCULOSIS on the field
+  // every label in the same place: on the floor just in front of its group's front rank, one baseline for all four
   const groupLabel = (g: Group, i: number) => (
     <WorldLabel
       key={g.name}
       c={c}
       X={g.cx}
-      Z={groupFrontZ(g) - 90}
+      Z={LABEL_Z}
       lines={[
-        { text: g.name, font: fellSC, size: 29, spacing: 0.08, gap: 0 },
-        { text: g.count, font: caslon, size: 27, gap: 32 },
+        { text: g.name, font: fellSC, size: 28, spacing: 0.03, gap: 0 },
+        { text: g.count, font: caslon, size: 27, gap: 31 },
       ]}
       frame={frame}
       f0={[136, 129, 124][i]}
@@ -500,13 +505,11 @@ const TuberculosisToll: React.FC<z.infer<typeof schema>> = () => {
           <WorldLabel
             c={c}
             X={TB_MID_X}
-            Z={2300}
-            Y={-330}
-            halo={270}
+            Z={LABEL_Z}
             lines={[
-              { text: "TUBERCULOSIS", font: fellSC, size: 34, spacing: 0.1, gap: 0 },
-              { text: "1 billion+", font: caslon, size: 46, gap: 47 },
-              { text: "past 200 years", font: fell, size: 26, gap: 33 },
+              { text: "TUBERCULOSIS", font: fellSC, size: 33, spacing: 0.06, gap: 0 },
+              { text: "1 billion+", font: caslon, size: 32, gap: 36 },
+              { text: "past 200 years", font: fell, size: 24, gap: 29 },
             ]}
             frame={frame}
             f0={140}
