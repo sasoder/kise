@@ -26,8 +26,11 @@
 // cream heap and its master at the left, the larger dashed shared wealth at the right, the line between.
 // CAUSE BEFORE EFFECT: every coin leaves a sack's mouth and lands on the heap 6 frames later; the heap's size is the
 // coins that have landed. The village's houses are drawn by their own moving tips (nothing fades in).
-// Orange = productive machinery and the wealth it would have created; DASHED orange = never built. The people, the
-// master's heap (extracted wealth) and the estate are cream; the driven slaves sink toward DEAD #8A7B62.
+// Orange = wealth. SOLID orange = the master's money (the coins in his heap, in flight, in the pour: real, short
+// term); DASHED orange = the productive estate and the wealth it would have created (never built). Revision 1: the
+// money turned orange on the user's note ("the money can be orange here"). The people, their sacks and the villa are
+// cream / umber; the driven slaves sink toward DEAD #8A7B62. The pen tips of the sketch are drawn in the sketch's own
+// layer, so the villa hides a tip behind it exactly as it hides the lines.
 //
 // SOURCES: the argument as Harper paraphrases it (Roman elites extracted wealth through slave labour rather than
 // investing in productivity), e.g. the "slavery blocked technology" thesis (M. I. Finley, The Ancient Economy,
@@ -386,7 +389,7 @@ const Kerb: React.FC<{ P: Persp }> = ({ P }) => (
 );
 
 // ---------------------------------------------------------------------------
-// THE HEAP: a dome of coins (cream: extracted wealth) that grows only by the coins that land on it
+// THE HEAP: a dome of coins (solid orange: the master's money) that grows only by the coins that land on it
 // ---------------------------------------------------------------------------
 type CoinSpot = { u: number; t: number; H: number; W: number; tilt: number };
 /** the heap's silhouette top at u (-1..1 across): a rounded cone */
@@ -426,6 +429,8 @@ const coinLocal = (i: number, o: number, g = 99): P2 => {
   const e = c01(g / COIN_SLIDE);
   return facePt(c.H, c.W, o, c.u, mix(Math.min(c.t, T_LAND), c.t, e * e));
 };
+/** the money: solid house orange (ACCENT lit face, ACCENT_DEEP shaded face, a burnt edge), dark casing */
+const GOLD: Ink = { main: "#FFB000", deep: "#D98A0C", hair: "#8A5208" };
 const Coin: React.FC<{ x: number; y: number; tilt: number; ink: Ink; lit: boolean; k?: number }> = ({ x, y, tilt, ink, lit, k = 1 }) => (
   <g transform={`translate(${fx(x)} ${fx(y)}) rotate(${tilt.toFixed(1)}) scale(${k.toFixed(3)})`}>
     <ellipse cx={0} cy={2.2} rx={9.5} ry={3.6} fill={ink.hair} stroke={DARK} strokeWidth={1.6} />
@@ -465,7 +470,7 @@ const Heap: React.FC<{ P: Persp; f: number; ink: Ink }> = ({ P, f, ink }) => {
         <path d={domeD} />
       </clipPath>
       <path d={domeD} fill={DARK} stroke={DARK} strokeWidth={7} strokeOpacity={0.55} />
-      <path d={domeD} fill={ink.deep} stroke={DARK} strokeWidth={2.2} />
+      <path d={domeD} fill="#A8640A" stroke={DARK} strokeWidth={2.2} />
       {landed.map((c) => (
         <Coin key={c.i} x={c.x} y={c.y} tilt={COIN_SPOT[c.i].tilt} ink={ink} lit={hash(c.i, 709) > 0.35} />
       ))}
@@ -659,9 +664,24 @@ const slaveState = (j: number, f: number, P: Persp): SlaveState | null => {
   const bag: BagX = { A: hand, ang: mix(POUR_ANG, 90 + swing, e), sc: scale, empty: 1, open: 0.5 };
   return { ...base, pose, bag, bagFront: false };
 };
+/** for the audit scripts (pop detector, contact, depth order): every carrier's state, its bag's grips, on frame f */
+export const auditLine = (f: number) => {
+  const P = perspective(camAt(f), DEPTH);
+  const out: { j: number; s: number; Z: number; at: P2; scale: number; pose: FigPose; variant: number; garb: "exomis" | "tunic"; neck: P2; bottom: P2; bagFront: boolean }[] = [];
+  for (let j = SLAVE_J0; j <= SLAVE_J1; j++) {
+    const st = slaveState(j, f, P);
+    if (!st) continue;
+    out.push({ j, s: st.s, Z: st.Z, at: st.at, scale: st.scale, pose: st.pose, variant: st.look.variant, garb: st.look.garb, neck: bagPt(st.bag, GRIP_NECK), bottom: bagPt(st.bag, GRIP_BOTTOM), bagFront: st.bagFront });
+  }
+  const oAt = P.at(OVERSEER[0], OVERSEER[1]);
+  return { P, line: out, overseer: { at: oAt.at, scale: oAt.scale, pose: overseerPose(f) } };
+};
 const slaveInk = (Z: number, f: number) => tintInk(mixInk(CREAM, DEAD_INK, sinkAt(f)), depthTint(Z, { far: 1500, min: 0.58 }));
+const DOOR_DARK: Ink = { main: "#100C08", deep: "#100C08", hair: "#100C08" };
+/** how far a carrier has gone into the dark doorway (0 at the wall's plane, 1 = lost in the dark) */
+const inDark = (Z: number) => smooth((Z - VILLA.z0) / 85);
 const SlaveFig: React.FC<{ st: SlaveState; f: number; withBag: boolean }> = ({ st, f, withBag }) => {
-  const ink = slaveInk(st.Z, f);
+  const ink = mixInk(slaveInk(st.Z, f), DOOR_DARK, inDark(st.Z));
   // on his back the bag is behind his body (the near fist over its neck); emptied, it hangs from the near fist in front
   const after = st.s > S_POUR + POUR;
   const bag = withBag ? <BagArt x={st.bag} ink={ink} uid={`esk${st.j}`} /> : null;
@@ -749,9 +769,9 @@ const dashes = (P: Persp, l: Line3, upTo: number, dash = DASH, gap = GAP) => {
 };
 /** a structure: its lines in drawing order, drawn by one tip over [t0, t0 + dur]; washes once whole */
 type Structure = { key: string; Z: number; t0: number; dur: number; lines: Line3[]; washes: P3[][]; dash?: [number, number] };
-const drawStructure = (P: Persp, st: Structure, f: number, cam: Cam): { body: React.ReactNode; tip: React.ReactNode } => {
+const drawStructure = (P: Persp, st: Structure, f: number, cam: Cam): React.ReactNode => {
   const prog = c01((f - st.t0) / st.dur);
-  if (prog <= 0) return { body: null, tip: null };
+  if (prog <= 0) return null;
   const lens = st.lines.map(lenOf);
   const total = lens.reduce((a, b) => a + b, 0);
   let left = total * prog;
@@ -770,20 +790,23 @@ const drawStructure = (P: Persp, st: Structure, f: number, cam: Cam): { body: Re
   // the faces soak in as the outline is drawn (the ground's own tone: a nearer outline hides a farther one), then a
   // faint orange wash once it is whole
   const solid = smooth(prog * 1.3);
-  const body = (
+  // the pen's tip is part of the sketch: drawn in its layer, at its depth (a nearer sketch or the villa hides it
+  // exactly as it hides the lines), sized like the line it draws
+  let tip: React.ReactNode = null;
+  if (tipP && prog < 1) {
+    const q = P.p(tipP[0], tipP[1], tipP[2]);
+    const tr = (4.2 * (0.55 + 0.45 * Math.min(1, r))) / cam.k;
+    tip = <circle cx={q[0]} cy={q[1]} r={tr} fill={ORANGE_HEX} stroke={DARK} strokeWidth={1.4 / cam.k} />;
+  }
+  return (
     <g key={st.key}>
       {solid > 0 ? st.washes.map((q, i) => <path key={`s${i}`} d={poly(P, q)} fill={FACE_FILL[i % FACE_FILL.length]} opacity={solid} />) : null}
       {wash > 0 ? st.washes.map((q, i) => <path key={i} d={poly(P, q)} fill={ORANGE_HEX} opacity={0.06 * wash} />) : null}
       <path d={d} fill="none" stroke={DARK} strokeOpacity={0.55} strokeWidth={sw + 2.2 / cam.k} strokeLinecap="butt" strokeLinejoin="round" />
       <path d={d} fill="none" stroke={ORANGE_HEX} strokeWidth={sw} strokeLinecap="butt" strokeLinejoin="round" />
+      {tip}
     </g>
   );
-  let tip: React.ReactNode = null;
-  if (tipP && prog < 1) {
-    const q = P.p(tipP[0], tipP[1], tipP[2]);
-    tip = <circle key={`${st.key}-tip`} cx={q[0]} cy={q[1]} r={4.2 / cam.k} fill={ORANGE_HEX} stroke={DARK} strokeWidth={1.4 / cam.k} />;
-  }
-  return { body, tip };
 };
 const circle3 = (c: P3, R: number, a0: number, n = 56, plane: "xy" = "xy"): Line3 => {
   const out: Line3 = [];
@@ -877,6 +900,14 @@ const VILLAGE: Structure[] = HOUSES.flatMap(houseStruct);
 // ---------------------------------------------------------------------------
 // THE MASTER (reclining, his cup) and THE OVERSEER
 // ---------------------------------------------------------------------------
+/** the overseer faces the incoming line (dir 1), rod in his near fist. raiseRod blends two elbow hints, and the hand's
+ *  thumb side (so the rod's direction) follows the elbow hint: in mid-raise the rod flipped ~160 deg in one frame
+ *  (audit, f114/115 and f167/168). Holding the near elbow's hint at the resting value keeps the rod turning
+ *  continuously: raised, it cocks back over his head; the stroke swings it forward. */
+const overseerPose = (f: number): FigPose => {
+  const q = POSES.raiseRod(1, rodAt(f));
+  return idle(headTurn({ ...q, armL: { ...q.armL, elbow: [-0.3, 1] } }, 0.75, 6), f, 7, 0.8);
+};
 const masterPose = (f: number): FigPose => {
   const q = POSES.recline(1);
   const look = 0.06 * Math.sin(f / 31);
@@ -893,14 +924,12 @@ const ExtractNotCreate: React.FC<z.infer<typeof schema>> = () => {
   const P = perspective(cam, DEPTH);
   const items: Item[] = [];
   const shadows: React.ReactNode[] = [];
-  const tips: React.ReactNode[] = [];
 
   // the alternative (all of it stands beyond the stream, behind everything solid)
   const alt: { Z: number; body: React.ReactNode }[] = [];
   for (const st of [...MILL_STRUCT(f), ...VILLAGE]) {
-    const r = drawStructure(P, st, f, cam);
-    if (r.body) alt.push({ Z: st.Z, body: r.body });
-    if (r.tip) tips.push(r.tip);
+    const body = drawStructure(P, st, f, cam);
+    if (body) alt.push({ Z: st.Z, body });
   }
   alt.sort((a, b) => b.Z - a.Z);
 
@@ -916,8 +945,9 @@ const ExtractNotCreate: React.FC<z.infer<typeof schema>> = () => {
     if (!st) continue;
     const sx = 540 + (st.at[0] - cam.cx) * cam.k;
     if (sx < -260 || sx > 1340) continue;
-    const inside = st.s > S_DOOR - 30 && st.Z > VILLA.z0 - 30;
-    if (st.s > S_DOOR + 70) continue;
+    const inside = st.s > S_DOOR - 30 && st.Z > VILLA.z0;
+    // through the door he drains into the dark interior; gone only once he is lost in it
+    if (inDark(st.Z) >= 1) continue;
     if (inside) {
       items.push({
         Z: VILLA.z0 - 0.5,
@@ -939,7 +969,7 @@ const ExtractNotCreate: React.FC<z.infer<typeof schema>> = () => {
   }
 
   // the heap and the coins in flight
-  const heapInk = tintInk(CREAM, 1);
+  const heapInk = GOLD;
   const Wnow = heapW(heapH(heapAmount(f)));
   shadows.push(<ContactShadow key="csh" P={P} X={HEAP_C[0]} Z={HEAP_C[1]} w={Wnow * 1.08} d={Wnow * 0.9} uid="ecsh" amt={0.85} />);
   items.push({ Z: HEAP_C[1], key: "heap", el: <Heap key="heap" P={P} f={f} ink={heapInk} /> });
@@ -966,7 +996,7 @@ const ExtractNotCreate: React.FC<z.infer<typeof schema>> = () => {
   items.push({
     Z: OVERSEER[1],
     key: "ovs",
-    el: <Overseer key="ovs" pose={idle(headTurn(POSES.raiseRod(1, rodAt(f)), 0.75, 6), f, 7, 0.8)} at={oAt.at} scale={oAt.scale} uid="eovs" variant={0} ink={oInk} cloth={oInk} shade={1} />,
+    el: <Overseer key="ovs" pose={overseerPose(f)} at={oAt.at} scale={oAt.scale} uid="eovs" variant={0} ink={oInk} cloth={oInk} shade={1} />,
   });
 
   items.sort((a, b) => b.Z - a.Z);
@@ -982,7 +1012,6 @@ const ExtractNotCreate: React.FC<z.infer<typeof schema>> = () => {
         {alt.map((a) => a.body)}
         {shadows}
         {items.map((it) => it.el)}
-        {tips}
       </WorldSvg>
     </TexcocoPage>
   );

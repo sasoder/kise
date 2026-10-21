@@ -297,7 +297,7 @@ export const heapAmount = (f: number) => {
 // ---------------------------------------------------------------------------
 const bump = (f: number, up0: number, up1: number, dn0: number, dn1: number) => smooth((f - up0) / (up1 - up0)) * (1 - smooth((f - dn0) / (dn1 - dn0)));
 export const rodAt = (f: number) =>
-  Math.max(0.35 * bump(f, 30, 40, 46, 56), 0.4 * bump(f, 78, 88, 94, 104), bump(f, 108, 119, ROD_HIT_1 - 3, ROD_HIT_1 + 3), bump(f, 160, 172, ROD_HIT_2 - 3, ROD_HIT_2 + 3) * 1, 0.15);
+  Math.max(0.35 * bump(f, 30, 40, 46, 56), 0.4 * bump(f, 78, 88, 94, 104), bump(f, 108, 119, ROD_HIT_1 - 4, ROD_HIT_1 + 4), bump(f, 160, 172, ROD_HIT_2 - 4, ROD_HIT_2 + 4) * 1, 0.15);
 
 // ---------------------------------------------------------------------------
 // THE HILL behind the stream (real, dim): the floor rises from HILL_Z0 to its ridge at HILL_Z1
