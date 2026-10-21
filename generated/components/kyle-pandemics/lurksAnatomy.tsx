@@ -1,17 +1,16 @@
 // ---------------------------------------------------------------------------
-// lurksAnatomy: the engraved chest anatomy inside the translucent worker of LurksInYourChest (kyle-pandemics, cut 32).
+// lurksAnatomy: the lungs inside the translucent worker of LurksInYourChest (kyle-pandemics, cut 32).
 // Built on the cast's rig (kits/maps/texcocoFigures figureRig, through londonCastV2's Worker spec): every point is a 3D
 // point in TORSO-LOCAL units (the hips at the origin, up is - Y, a man ~310 units tall; X across = screen right when
 // he faces us = his left; Z forward = toward us when he faces us), turned with the body's yaw like the cast's own
 // heads (x' = X cos + Z sin), then through the rig's torso transform (lean, crouch) to figure-local and the figure's
-// `at` / `scale` to world px. So the ribcage curves round in perspective, leans and coughs with him.
+// `at` / `scale` to world px. So the lungs turn, lean, breathe and cough with him.
 //
-// Anatomy (real proportions on the cast's torso: shoulders at Y -97, hips at 0): the ribcage (ten ribs from the
-// spine round to the sternum, costal cartilages, the costal margin), the sternum (manubrium, body, xiphoid), the
-// clavicles, the spine behind; the two lungs from just above the clavicles (apex Y -102) to the lower ribs (base
-// Y -37), the right with three lobes (horizontal + oblique fissure), the left with two and the cardiac notch; the
-// trachea and the bronchial tree (no heart drawn: the notch shows where it sits). Light from the upper left: lit upper edges, a dark
-// crescent on the lower right of every volume, hatching on the shadow side.
+// V2 (the user: "are the ribs necessary? ... dial down the style a bit and just make everything a bit more
+// harmonious"): no ribcage, sternum, clavicles or spine any more. Only the two lungs (real proportions on the cast's
+// torso: apex Y -102 just above the shoulder line, base Y -37; the right with three lobes, the left with two and the
+// cardiac notch), the windpipe and main bronchi, a light bronchial tree. One clear shape per lung: a firm dark
+// contour, a lit fill (light from the upper left), one flat shadow tone at the lower right, no hatching.
 //
 // The disease (orange, the clip's rule: orange = the TB bacillus and what it touches): `nodules` (three tubercles in
 // the upper lobes, at the apices), `specks` (the inhaled bacilli coming down the airways to them), `spread` 0..1 (the
@@ -23,7 +22,6 @@ import { hash } from "../kits/maps/incaShared";
 import type { FigRig } from "../kits/maps/texcocoFigures";
 
 type P2 = [number, number];
-type V3 = [number, number, number];
 const c01 = (v: number) => Math.max(0, Math.min(1, v));
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 const ease = (v: number) => {
@@ -33,15 +31,12 @@ const ease = (v: number) => {
 const PP = (v: P2) => `${v[0].toFixed(2)},${v[1].toFixed(2)}`;
 
 export const DARK = "#17120D";
-const INK = "#E9DDBF";
-const INK_DEEP = "#D3C5A2";
 const ACCENT = "#FFB000";
 const ACCENT_DEEP = "#D98A0C";
 // the lung volume: dark umber planes in cream line (the style's architecture manner), lit upper left
 // the lungs are lit organs (rev 1): a mid cream-umber, ink deep at ~0.5 over the page, lighter than the room
 // (rev 2) a touch lighter than the see-through body round them, with a firm dark contour: two clear lungs
 const LUNG = { lit: "#C2B597", mid: "#A89A7D", dark: "#857761", line: "#4A3E31" };
-const BONE = { main: "#E6D9B8", deep: "#B9A985", back: "#8D7C5E" };
 
 /** the view of the torso: the rig, the figure's at / scale, the body yaw, and a world mapper */
 export type ChestView = { rig: FigRig; at: P2; scale: number; yaw: number };
@@ -81,7 +76,7 @@ const lineD = (pts: P2[]) => (pts.length ? `M${pts.map(PP).join("L")}` : "");
 export type ChestState = {
   /** breath -1 (out) .. 1 (in) */
   breath: number;
-  /** the wasting 0..1: the cage narrows, the ribs stand out, the upper lobes retract */
+  /** the wasting 0..1: the lungs narrow, the upper lobes retract */
   waste: number;
   /** each nodule's formation 0..1 */
   nodules: number[];
@@ -89,131 +84,6 @@ export type ChestState = {
   specks: (number | null)[];
   /** the spread 0..1 */
   spread: number;
-};
-
-// ---------------------------------------------------------------------------
-// THE RIBCAGE
-// ---------------------------------------------------------------------------
-type Rib = { W: number; yb: number; ye: number; ys: number; xs: number };
-// W half-width; yb back attachment; ye the bone's front end; ys / xs where its cartilage ends (the sternum's edge for
-// 1-7, the costal margin for 8-10)
-const RIB_YS = [-95, -90, -84.5, -78.5, -72.5, -67, -61.5, -56, -50.5, -45];
-const RIB_DROP = [0, 0.5, 1.5, 2.5, 3.5, 5, 6.5, 7.5, 8, 8];
-const RIB_W = [17, 25, 30, 34, 36.5, 38, 38.5, 38, 37, 35];
-const RIB_YB = [-103, -99.5, -95, -90.5, -86, -81.5, -77, -72.5, -68, -63.5];
-const RIB_XS = [6, 6, 5.5, 5, 5, 4.5, 4, 9.5, 15.5, 21.5];
-const RIBS: Rib[] = RIB_YS.map((ys, i) => ({ W: RIB_W[i], yb: RIB_YB[i], ye: ys + RIB_DROP[i], ys, xs: RIB_XS[i] }));
-/** the sternum's front surface Z at height Y (the upper chest slopes back) */
-const stZ = (Y: number) => mix(18, 28, c01((Y + 97) / 40));
-/** where each bone ends (the lower ribs end further round the side, on the costal margin) */
-const RIB_THE = [0.78, 0.78, 0.78, 0.78, 0.78, 0.78, 0.78, 0.735, 0.68, 0.62].map((v) => v * Math.PI);
-
-type Piece = { pts: P2[]; front: boolean; wBone: number; kind: "bone" | "cart" };
-/** the ribs as projected pieces, split where they pass behind the torso's mid-plane */
-const ribPieces = (pr: Proj, st: ChestState): Piece[] => {
-  const out: Piece[] = [];
-  const nar = 1 - 0.07 * st.waste;
-  const lift = -1.1 * st.breath;
-  const wide = 1 + 0.018 * st.breath;
-  const margin: Record<string, { p: V3 }[]> = { "-1": [], "1": [] };
-  RIBS.forEach((rb, i) => {
-    const TE = RIB_THE[i];
-    for (const sg of [-1, 1]) {
-      const W = rb.W * nar * wide;
-      const D = stZ(rb.ys) + 1.5;
-      const ptsB: { p: P2; d: number }[] = [];
-      const N = 26;
-      for (let j = 0; j <= N; j++) {
-        const th = mix(0.16, TE, j / N);
-        const u = (th - 0.16) / (TE - 0.16);
-        const X = sg * W * Math.sin(th);
-        const Z = -D * Math.cos(th) - 2;
-        const Y = rb.yb + (rb.ye - rb.yb) * Math.sin((u * Math.PI) / 2) + lift * (0.4 + 0.6 * u);
-        ptsB.push({ p: pr.w(X, Y, Z), d: pr.dep(X, Z) });
-      }
-      // split the bone at the mid-plane (depth 0)
-      let cur: P2[] = [ptsB[0].p];
-      let fr = ptsB[0].d > 0;
-      for (let j = 1; j < ptsB.length; j++) {
-        const f2 = ptsB[j].d > 0;
-        cur.push(ptsB[j].p);
-        if (f2 !== fr) {
-          out.push({ pts: cur, front: fr, wBone: 2.1 - i * 0.03, kind: "bone" });
-          cur = [ptsB[j].p];
-          fr = f2;
-        }
-      }
-      out.push({ pts: cur, front: fr, wBone: 2.1 - i * 0.03, kind: "bone" });
-      // the costal cartilage: from the bone's end, medially and up to the sternum (1-6); ribs 7-10 end on the costal
-      // margin, drawn below as one continuous arch from the xiphoid out and down
-      const thE = TE;
-      const Xe = sg * W * Math.sin(thE);
-      const Ze = -D * Math.cos(thE) - 2;
-      const Ye = rb.ye + lift;
-      const Xs = sg * rb.xs * nar;
-      const Ys = rb.ys + lift * 0.6;
-      if (i >= 6) {
-        if (i === 6) margin[String(sg)].push({ p: [Xs, Ys, stZ(rb.ys)] });
-        margin[String(sg)].push({ p: [Xe, Ye, Ze] });
-        continue;
-      }
-      const Zs = stZ(rb.ys);
-      const cart: P2[] = [];
-      for (let j = 0; j <= 12; j++) {
-        const u = j / 12;
-        // a gentle curve: first along the rib's own heading, then turning up toward the sternum
-        const X = mix(Xe, Xs, 1 - (1 - u) * (1 - u));
-        const Y = mix(Ye, Ys, u * u * (i > 3 ? 1 : 0.6) + (i > 3 ? 0 : 0.4 * u));
-        const Z = mix(Ze, Zs, Math.sqrt(u));
-        cart.push(pr.w(X, Y, Z));
-      }
-      out.push({ pts: cart, front: pr.dep(Xe, Ze) > -4, wBone: 1.5 - i * 0.03, kind: "cart" });
-    }
-  });
-  // the costal margin: a smooth arch through the xiphoid side and the ends of ribs 7-10
-  for (const sg of ["-1", "1"]) {
-    const m = margin[sg].map((q) => q.p);
-    const pts: P2[] = [];
-    for (let j = 0; j < m.length - 1; j++) {
-      const a = m[Math.max(0, j - 1)];
-      const b = m[j];
-      const c = m[j + 1];
-      const d = m[Math.min(m.length - 1, j + 2)];
-      for (let n = 0; n < 8; n++) {
-        const t = n / 8;
-        const cr = (k2: 0 | 1 | 2) => {
-          const p0 = a[k2];
-          const p1 = b[k2];
-          const p2 = c[k2];
-          const p3 = d[k2];
-          return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
-        };
-        pts.push(pr.w(cr(0), cr(1), cr(2)));
-      }
-    }
-    const last = m[m.length - 1];
-    pts.push(pr.w(last[0], last[1], last[2]));
-    out.push({ pts, front: true, wBone: 1.6, kind: "cart" });
-  }
-  return out;
-};
-
-const RibStroke: React.FC<{ pc: Piece; k: number; waste: number; back?: boolean }> = ({ pc, k, waste, back }) => {
-  const d = lineD(pc.pts);
-  const w = pc.wBone * k;
-  const ribProm = 1 + 0.35 * waste;
-  if (back) {
-    return <path d={d} fill="none" stroke={BONE.back} strokeOpacity={0.55} strokeWidth={w * 0.75} strokeLinecap="round" strokeLinejoin="round" />;
-  }
-  const isB = pc.kind === "bone";
-  return (
-    <g>
-      <path d={d} fill="none" stroke={DARK} strokeWidth={w + 0.9 * k * ribProm} strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke={isB ? BONE.main : BONE.deep} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
-      {/* the form shadow along the lower edge (light from the upper left) */}
-      <path d={d} transform={`translate(${(0.35 * k).toFixed(2)} ${(0.75 * k).toFixed(2)})`} fill="none" stroke={isB ? BONE.deep : "#9F8F6E"} strokeWidth={w * 0.38} strokeLinecap="round" strokeOpacity={0.9} />
-    </g>
-  );
 };
 
 // ---------------------------------------------------------------------------
@@ -228,7 +98,7 @@ const LUNGS: LungDef[] = [
 const lungSlice = (L: LungDef, t0: number, st: ChestState) => {
   const t = c01(t0);
   // lateral edge: a dome at the apex, out to the ribs, in again a little at the base
-  const lat0 = 6 + 32.5 * Math.pow(Math.sin(Math.min(1, t / 0.62) * (Math.PI / 2)), 0.62) - 1.6 * c01((t - 0.85) / 0.15);
+  const lat0 = 6 + 32.5 * Math.pow(Math.sin(Math.min(1, t / 0.62) * (Math.PI / 2)), 0.62) - 4.5 * Math.pow(c01((t - 0.86) / 0.14), 2);
   // medial edge: the apex rounds in from 17, the mediastinum at ~6.5, the base dome rising medially from t 0.62
   let med = mix(16.5, 6.5, Math.pow(c01(t / 0.22), 0.55));
   if (L.sg === 1) {
@@ -236,8 +106,9 @@ const lungSlice = (L: LungDef, t0: number, st: ChestState) => {
     const nt = c01((t - 0.5) / 0.3);
     med += 11 * Math.sin(Math.PI * nt) * (nt < 1 ? 1 : 0) + (t > 0.8 ? 4 : 0) * c01((t - 0.8) / 0.05);
   }
-  const dome = c01((t - 0.64) / 0.36);
-  med = mix(med, lat0 - 1.5, Math.pow(dome, 1.7));
+  // V2: a broad, rounded base on the diaphragm (not a pointed leaf): the medial edge swings out late and only part way
+  const dome = c01((t - 0.72) / 0.28);
+  med = mix(med, lat0 * 0.55, Math.pow(dome, 1.6));
   const narrow = 1 - 0.07 * st.waste;
   const lat = lat0 * narrow * (1 + 0.02 * st.breath);
   const md = med * (1 - 0.03 * st.waste);
@@ -296,9 +167,20 @@ const upperRegion = (pr: Proj, L: LungDef, li: 0 | 1, st: ChestState): P2[] => {
   pts.push(lungPt(pr, L, st, 0.5, -0.1));
   pts.push(lungPt(pr, L, st, 1.3, -0.05));
   pts.push(lungPt(pr, L, st, 1.3, f[0][1]));
-  // (capped at t 0.58: the disease stays in the upper chest, out of the caption band)
-  f.forEach(([u, t]) => pts.push(lungPt(pr, L, st, u, Math.min(t, 0.58))));
-  pts.push(lungPt(pr, L, st, -0.4, Math.min(0.58, f[f.length - 1][1])));
+  // (capped near t 0.56 so the disease stays in the upper chest, out of the caption band; V2: the cap is a ragged
+  // line, never a straight cut, densely sampled between the fissure's points)
+  const cap = (u: number) => 0.555 + 0.014 * Math.sin(u * 37 + li * 2) + 0.01 * Math.sin(u * 91 + li);
+  for (let j = 0; j < f.length; j++) {
+    const [u0, t0] = f[j];
+    const [u1, t1] = f[Math.min(f.length - 1, j + 1)];
+    const n = j === f.length - 1 ? 1 : 8;
+    for (let m = 0; m < n; m++) {
+      const u = mix(u0, u1, m / n);
+      const t = mix(t0, t1, m / n);
+      pts.push(lungPt(pr, L, st, u, Math.min(t, cap(u))));
+    }
+  }
+  pts.push(lungPt(pr, L, st, -0.4, Math.min(cap(-0.4), f[f.length - 1][1])));
   pts.push(lungPt(pr, L, st, -0.4, -0.05));
   return pts;
 };
@@ -393,48 +275,25 @@ const ragUT = (u: number, t: number, R: number, seed: number, n = 30, teeth = 0.
 export const ChestAnatomy: React.FC<{ view: ChestView; st: ChestState; uid: string }> = ({ view, st, uid }) => {
   const pr = mkProj(view);
   const k = pr.k;
-  const pieces = ribPieces(pr, st);
-  const back = pieces.filter((p) => !p.front);
-  const front = pieces.filter((p) => p.front);
   const lungs = LUNGS.map((L) => lungOutline(pr, L, st));
   // the far lung first (the one with the smaller depth)
   const order: (0 | 1)[] = pr.dep(LUNGS[0].sg * 20, 0) < pr.dep(LUNGS[1].sg * 20, 0) ? [0, 1] : [1, 0];
 
-  // the spine: vertebral bodies behind everything, between the lungs
-  const spine = Array.from({ length: 13 }, (_, i) => {
-    const Y = -110 + i * 6.1;
-    const c = pr.w(0, Y, -22);
-    const c2 = pr.w(0, Y + 4.4, -22);
-    const hw = 4.6 * k * pr.c;
-    return <path key={i} d={`M${PP([c[0] - hw, c[1]])}L${PP([c[0] + hw, c[1]])}L${PP([c2[0] + hw, c2[1]])}L${PP([c2[0] - hw, c2[1]])}Z`} fill={BONE.back} fillOpacity={0.4} stroke={DARK} strokeWidth={0.6 * k} strokeOpacity={0.5} />;
-  });
-
-  // the lungs' fill, shading and contour engraving
+  // V2 (the user: "are the ribs necessary? ... dial down the style"): only the lungs, clean and calm. One clear shape
+  // each (a firm contour, a lit fill, one flat shadow tone on the lower right, no hatching), the fissures and the
+  // bronchial tree as light lines; the windpipe and main bronchi lightly between them.
   const lungEls = order.map((li) => {
     const L = LUNGS[li];
     const ol = lungs[li];
     const d = smoothD(ol);
     const id = `${uid}-lg${li}`;
-    // the inner contours (engraved cream lines following the form), about the lung's centre
-    const cen = lungPt(pr, L, st, 0.5, 0.5, 0);
-    const contours = [0.82, 0.64, 0.46].map((f, j) => (
-      <path key={j} d={smoothD(ol.map((p) => [cen[0] + (p[0] - cen[0]) * f + 1.2 * k * (1 - f), cen[1] + (p[1] - cen[1]) * f + 1.6 * k * (1 - f)] as P2))} fill="none" stroke={LUNG.line} strokeWidth={0.5 * k} strokeOpacity={0.16 + 0.05 * j} />
-    ));
-    // the fissures
-    const fis = [...FISSURES.oblique, ...FISSURES.horizontal].filter((q) => q.L === li).map((q, j) => {
-      const pts = q.pts.map(([u, t]) => lungPt(pr, L, st, u, t));
-      return (
-        <g key={`f${j}`}>
-          <path d={lineD(pts)} fill="none" stroke={DARK} strokeWidth={1.2 * k} strokeLinecap="round" />
-          <path d={lineD(pts)} transform={`translate(${(-0.45 * k).toFixed(2)} ${(-0.55 * k).toFixed(2)})`} fill="none" stroke={INK} strokeWidth={0.5 * k} strokeOpacity={0.35} strokeLinecap="round" />
-        </g>
-      );
-    });
-    // the bronchial tree in this lung
+    const fis = [...FISSURES.oblique, ...FISSURES.horizontal]
+      .filter((q) => q.L === li)
+      .map((q, j) => <path key={`f${j}`} d={lineD(q.pts.map(([u, t]) => lungPt(pr, L, st, u, t)))} fill="none" stroke={LUNG.line} strokeWidth={0.9 * k} strokeOpacity={0.55} strokeLinecap="round" />);
     const tree = BRANCHES.filter((b) => b.lung === li).map((b, j) => {
       const a = onLung(pr, b.a[0], b.a[1] + 1.2 * st.breath * ((b.a[1] + 80) / 40), 2);
       const e = onLung(pr, b.b[0], b.b[1] + 1.2 * st.breath * ((b.b[1] + 80) / 40), 2);
-      return <path key={`b${j}`} d={`M${PP(a)}L${PP(e)}`} stroke={LUNG.line} strokeOpacity={0.75} strokeWidth={b.w * 0.42 * k} strokeLinecap="round" />;
+      return <path key={`b${j}`} d={`M${PP(a)}L${PP(e)}`} stroke={LUNG.line} strokeOpacity={0.32} strokeWidth={Math.max(0.5, b.w * 0.36) * k} strokeLinecap="round" />;
     });
     return (
       <g key={li}>
@@ -449,122 +308,35 @@ export const ChestAnatomy: React.FC<{ view: ChestView; st: ChestState; uid: stri
         </defs>
         <path d={d} fill={LUNG.mid} />
         <g clipPath={`url(#${id})`}>
-          {/* the lit upper-left of the volume, the dark crescent at the lower right, hatched */}
           <path d={d} transform={`translate(${(-3 * k).toFixed(2)} ${(-3.5 * k).toFixed(2)}) `} fill={LUNG.lit} opacity={0.85} />
-          <g mask={`url(#${id}-sh)`}>
-            <path d={d} fill={LUNG.dark} />
-            <path d={hatch(ol, 118, 1.25 * k, li * 5 + 3)} fill="none" stroke={DARK} strokeWidth={0.42 * k} strokeOpacity={0.42} />
-          </g>
-          {contours}
+          <path d={d} mask={`url(#${id}-sh)`} fill={LUNG.dark} opacity={0.8} />
           {tree}
           {fis}
           <Disease pr={pr} L={L} li={li} st={st} uid={`${id}-ds`} />
         </g>
-        <path d={d} fill="none" stroke={DARK} strokeWidth={2.4 * k} strokeLinejoin="round" />
-        <path d={d} transform={`translate(${(-0.5 * k).toFixed(2)} ${(-0.5 * k).toFixed(2)})`} fill="none" stroke={INK} strokeWidth={0.55 * k} strokeOpacity={0.3} clipPath={`url(#${id})`} />
+        <path d={d} fill="none" stroke={DARK} strokeWidth={2.2 * k} strokeLinejoin="round" />
       </g>
     );
   });
 
-  // the trachea (a ringed tube from the neck to the carina) and the main bronchi drawn over the mediastinum
+  // the windpipe and the main bronchi, light, between the lungs
   const trTop = pr.w(0, -99, -4);
   const trBot = pr.w(CARINA[0], CARINA[1], -2);
-  const trW = 6.4 * k;
-  const rings = Array.from({ length: 6 }, (_, i) => {
-    const Y = -101 + i * 3.4;
-    const a = pr.w(-3.1, Y, 0);
-    const b = pr.w(3.1, Y, 0);
-    return `M${PP(a)}Q${PP(pr.w(0, Y + 1.1, 3))} ${PP(b)}`;
-  }).join("");
-  const bronchi = [
-    [CARINA, [-11, -75.5] as P2],
-    [CARINA, [12.5, -77] as P2],
-  ].map(([a, b], i) => <path key={i} d={`M${PP(pr.w(a[0], a[1], -1))}L${PP(pr.w(b[0], b[1], 0))}`} stroke={INK_DEEP} strokeWidth={4.4 * k} strokeLinecap="round" strokeOpacity={0.85} />);
-
-  // the sternum: manubrium, body, xiphoid
-  // (rev 1: narrow, bone-toned, shaded like the ribs: never a white necktie) manubrium, the sternal angle, the body, a
-  // small xiphoid
-  const stPts: [number, number][] = [[-4.6, -97.5], [-2, -96.4], [0, -96.8], [2, -96.4], [4.6, -97.5], [4.3, -92], [3.1, -89.2], [3.4, -84], [3.5, -66], [2.6, -61.5], [1.2, -59.5], [0.9, -56.5], [0, -55.5], [-0.9, -56.5], [-1.2, -59.5], [-2.6, -61.5], [-3.5, -66], [-3.4, -84], [-3.1, -89.2], [-4.3, -92]];
-  const lift = -1.1 * st.breath;
-  const sternum = smoothD(stPts.map(([X, Y]) => pr.w(X * (1 - 0.05 * st.waste), Y + lift * 0.8, stZ(Y) + 1.5)));
-  // the clavicles: S-curves from the sternal notch out and back to the shoulder
-  const clav = (sg: number) => {
-    const pts: P2[] = [];
-    for (let j = 0; j <= 14; j++) {
-      const u = j / 14;
-      const X = sg * mix(5, 35, u) * (1 - 0.04 * st.waste);
-      const Y = -98 - 2.2 * Math.sin(Math.PI * u) + 1.5 * u + lift * 0.6 + 2.5 * st.waste * u;
-      const Z = mix(stZ(-97), -2, u * u) + 3 * Math.sin(Math.PI * u * 1.5);
-      pts.push(pr.w(X, Y, Z));
-    }
-    return pts;
-  };
-
-  return (
-    <g>
-      {spine}
-      {back.map((pc, i) => (
-        <RibStroke key={`bk${i}`} pc={pc} k={k} waste={st.waste} back />
-      ))}
-      {lungEls}
-      <path d={`M${PP(trTop)}L${PP(trBot)}`} stroke={DARK} strokeWidth={trW + 1.4 * k} strokeLinecap="butt" />
-      <path d={`M${PP(trTop)}L${PP(trBot)}`} stroke={INK_DEEP} strokeWidth={trW} strokeLinecap="butt" strokeOpacity={0.9} />
-      <path d={rings} fill="none" stroke={DARK} strokeWidth={0.7 * k} strokeOpacity={0.6} />
-      {bronchi}
-      <Specks pr={pr} st={st} />
-      {front.map((pc, i) => (
-        <RibStroke key={`fr${i}`} pc={pc} k={k} waste={st.waste} />
-      ))}
-      <defs>
-        <clipPath id={`${uid}-stc`}>
-          <path d={sternum} />
-        </clipPath>
-      </defs>
-      <path d={sternum} fill={BONE.deep} stroke={DARK} strokeWidth={1.1 * k} />
-      <g clipPath={`url(#${uid}-stc)`}>
-        {/* lit on the left edge, shaded and hatched on the right (light from the upper left), like the ribs */}
-        <path d={sternum} transform={`translate(${(-1.4 * k).toFixed(2)} 0)`} fill={INK_DEEP} />
-        <path d={sternum} transform={`translate(${(2.2 * k).toFixed(2)} ${(0.6 * k).toFixed(2)})`} fill="#A0906F" />
-        <path d={hatch(stPts.map(([X, Y]) => pr.w(X, Y + lift * 0.8, stZ(Y) + 1.5)), 100, 1.1 * k, 77)} transform={`translate(${(2.4 * k).toFixed(2)} 0)`} fill="none" stroke={DARK} strokeWidth={0.35 * k} strokeOpacity={0.35} />
-      </g>
-      <path d={lineD([pr.w(-3.1, -89.2 + lift * 0.8, stZ(-89) + 1.6), pr.w(3.1, -89.2 + lift * 0.8, stZ(-89) + 1.6)])} stroke={DARK} strokeWidth={0.55 * k} strokeOpacity={0.8} />
-      {[-1, 1].map((sg) => {
-        const d = lineD(clav(sg));
-        return (
-          <g key={sg}>
-            <path d={d} fill="none" stroke={DARK} strokeWidth={3.4 * k} strokeLinecap="round" />
-            <path d={d} fill="none" stroke={BONE.main} strokeWidth={2.4 * k} strokeLinecap="round" />
-            <path d={d} transform={`translate(${(0.3 * k).toFixed(2)} ${(0.8 * k).toFixed(2)})`} fill="none" stroke={BONE.deep} strokeWidth={1.1 * k} strokeLinecap="round" />
-          </g>
-        );
-      })}
+  const airway = (a: P2, b: P2, w: number, key: string) => (
+    <g key={key}>
+      <path d={`M${PP(a)}L${PP(b)}`} stroke={LUNG.line} strokeOpacity={0.55} strokeWidth={(w + 1.2) * k} strokeLinecap="round" />
+      <path d={`M${PP(a)}L${PP(b)}`} stroke={LUNG.lit} strokeWidth={w * k} strokeLinecap="round" />
     </g>
   );
-};
-
-/** parallel hatch lines over a polygon's bounding box (clip it) */
-const hatch = (pts: P2[], ang: number, gap: number, seed: number) => {
-  const xs = pts.map((p) => p[0]);
-  const ys = pts.map((p) => p[1]);
-  const x0 = Math.min(...xs);
-  const x1 = Math.max(...xs);
-  const y0 = Math.min(...ys);
-  const y1 = Math.max(...ys);
-  const r = (ang * Math.PI) / 180;
-  const dx = Math.cos(r);
-  const dy = Math.sin(r);
-  const cx = (x0 + x1) / 2;
-  const cy = (y0 + y1) / 2;
-  const R = Math.hypot(x1 - x0, y1 - y0) / 2;
-  let d = "";
-  let i = 0;
-  for (let o = -R; o <= R; o += gap, i++) {
-    const oo = o + (hash(i, seed) - 0.5) * gap * 0.4;
-    const px = cx - dy * oo;
-    const py = cy + dx * oo;
-    d += `M${PP([px - dx * R, py - dy * R])}L${PP([px + dx * R, py + dy * R])}`;
-  }
-  return d;
+  return (
+    <g>
+      {airway(trTop, trBot, 5.2, "tr")}
+      {airway(pr.w(CARINA[0], CARINA[1], -1), pr.w(-11, -75.5, 0), 3.6, "bl")}
+      {airway(pr.w(CARINA[0], CARINA[1], -1), pr.w(12.5, -77, 0), 3.4, "br")}
+      {lungEls}
+      <Specks pr={pr} st={st} />
+    </g>
+  );
 };
 
 // ---------------------------------------------------------------------------
@@ -647,12 +419,13 @@ const Disease: React.FC<{ pr: Proj; L: LungDef; li: 0 | 1; st: ChestState; uid: 
       const g = ease((frontR(sp, cv.ni) - dist + 1) / 14);
       if (g <= 0) return;
       const rr = cv.R * g;
-      const d = poly(ragUT(cv.u, cv.t, rr, cv.seed, 18, 0.03));
-      const din = poly(ragUT(cv.u - 0.006, cv.t - 0.004, rr * 0.72, cv.seed + 1, 16, 0.03));
+      // (V2) organic, rounded-irregular hollows, not shards
+      const d = smoothD(ragUT(cv.u, cv.t, rr, cv.seed, 16, 0).map(([u, t]) => at(u, t)));
+      const din = smoothD(ragUT(cv.u - 0.006, cv.t - 0.004, rr * 0.7, cv.seed + 1, 14, 0).map(([u, t]) => at(u, t)));
       els.push(
         <g key={`cv${j}`}>
-          <path d={d} fill={ACCENT} stroke={DARK} strokeWidth={1.1 * k} strokeLinejoin="miter" />
-          <path d={din} fill="#1E1711" stroke={DARK} strokeWidth={0.6 * k} />
+          <path d={d} fill={ACCENT} stroke={DARK} strokeWidth={0.9 * k} />
+          <path d={din} fill="#2A2018" />
           <path d={din} transform={`translate(${(0.7 * k).toFixed(2)} ${(0.8 * k).toFixed(2)})`} fill="none" stroke={ACCENT_DEEP} strokeWidth={0.7 * k} strokeOpacity={0.8} />
         </g>,
       );

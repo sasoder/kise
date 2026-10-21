@@ -19,16 +19,21 @@
 // window at the upper left as the light, a sloping roof on the right, a straw pallet). f0: a poor labourer (the
 // Worker: knitted cap, shirt sleeves, waistcoat) stands slack in the middle, breathing; the camera is already
 // pushing in (a dolly, parallax on the room) and lands on his chest by "CHEST" (f22-30), then keeps creeping in.
-// f18-44 his body goes to ~50 % (one eased change) and inside him we see the engraved chest: ribs curving round in
-// perspective, a narrow bone-toned sternum, clavicles, and the two lungs as lit organs (a mid cream-umber, lit upper
-// left, lobes, fissures, a bronchial tree, the cardiac notch). Three orange specks come down the windpipe (f26-48) and
-// lodge in the upper lobes, where they settle as three small tubercles by "LURKS" (f50); they sit still while the
-// lungs breathe slowly round them (f50-80). From f80 ("then it'll just WASTE you AWAY") the orange spreads out of them
-// through the upper and middle lobes (a crisp, organic, monotonic front: hatched consolidation, spotting, cavities
-// eaten out) while he wastes, with the body only: he stoops forward, the head drops, the shoulders round, the cage
-// narrows and the ribs stand out; two cough jolts of the whole torso (f104, f113), the hands stay at his sides. The
-// camera tilts down his body with the stoop, keeping the cage >= ~70 % of the frame width (no pull-back). f126-172
-// ("POOR ... STRESSED"): the settled, living picture, a slow creep in, slow laboured breathing. Nothing new arrives.
+// f18-44 his body goes to ~50 % (one eased change): his engraved hatching fades under one flat translucent body tone
+// with a clean contour (the face keeps its lines), and inside him there are only the two lungs (V2: no ribcage),
+// calm lit organs with a firm contour, the cardiac notch, light fissures and bronchi, the windpipe. Three orange
+// specks come down the windpipe (f26-48) and lodge in the upper lobes, where they settle as three tubercles by
+// "LURKS" (f50); they sit still while the lungs breathe slowly round them (f50-80). From f80 ("then it'll just WASTE
+// you AWAY") the orange spreads out of them through the upper and middle lobes (a crisp, ragged, monotonic front:
+// consolidation hatched along the lung's form, irregular patches, five dark-rimmed cavities eaten out) while he
+// wastes, with the body only: he stoops forward, the head drops (a nod), the shoulders round, the chest narrows; two
+// cough jolts of the whole torso (f104, f113) open his mouth a little; the hands hang at his sides. The camera tilts
+// down his body with the stoop, keeping the lungs big (no pull-back). f118-172 ("POOR ... STRESSED"): the settled,
+// living picture, a slow creep in, slow laboured breathing. Nothing new arrives.
+// CONTINUITY (V2): londonCastV2's sleeve hatching (braceletD) picks its side from the sign of n0 + 0.6 n1 of the limb
+// direction, so a forearm near 31 deg below horizontal flips its stripes; in V1 the far forearm crossed that angle at
+// f116 / f124 (the cough's lean). The far hand now hangs lower and further out so every limb stays clear of it on every
+// frame (checked per frame on the rig: no sign change; the thumb side of both hands stable too).
 // Orange = the disease only (the bacilli, the tubercles, the spread). The body cream, the anatomy cream / umber,
 // the room umber.
 // CAUSE BEFORE EFFECT: each speck reaches its site on f46 / f48 / f50 and its tubercle forms from it (f45-54); the
@@ -39,7 +44,7 @@
 // Y -425 sloping down on the right to a knee wall (X 215, Y -250). He stands at X 0, Z 0 (the front plane). Light: one,
 // the window (upper left). Contact shadow under him; the cast's form shadow; the anatomy lit from the upper left.
 //
-// SOURCES: anatomy proportions (lung apices ~2-3 cm above the clavicles, bases at the 6th rib in front and lower at the
+// SOURCES: anatomy proportions (lung apices ~2-3 cm above the clavicles, bases at the 6th rib level in front, lower at the
 // sides; the right lung three lobes, the left two with the cardiac notch; reactivation TB in the apical / posterior
 // upper lobe segments, cavitation) from standard references (Gray's Anatomy; Cecil / Harrison on post-primary TB).
 // No figures, dates or text on screen.
@@ -203,7 +208,7 @@ const BASE: FigPose = {
   pitch: 5,
   lean: -1,
   crouch: 2,
-  armL: { w: [-40, -140], elbow: [-0.4, 1], fist: 0.35, hand: 4 },
+  armL: { w: [-46, -131], elbow: [-0.3, 1], fist: 0.35, hand: 4 },
   armR: { w: [44, -141], elbow: [0.4, 1], fist: 0.35, hand: -4 },
   footL: [-9, 0],
   footR: [7, -1],
@@ -222,7 +227,7 @@ const WASTED: FigPose = {
   roll: 6.5,
   lean: -13,
   crouch: 15,
-  armL: { w: [-30, -134], elbow: [-0.3, 1], fist: 0.25, hand: 6 },
+  armL: { w: [-58, -122], elbow: [-0.2, 1], fist: 0.25, hand: 6 },
   brow: 0.35,
   lids: 0.62,
   mouth: -1,
@@ -244,7 +249,7 @@ const jolt = (f: number, f0: number) => {
 };
 const coughAt = (f: number) => jolt(f, 104) + 0.8 * jolt(f, 113);
 
-const poseAt = (f: number): { q: FigPose; waste: number } => {
+export const poseAt = (f: number): { q: FigPose; waste: number } => {
   const waste = ease((f - 80) / 44);
   let q = lerpFig(BASE, WASTED, waste);
   const br = breathAt(f);
@@ -259,7 +264,7 @@ const poseAt = (f: number): { q: FigPose; waste: number } => {
 // that keeps the payoff big (f80-126: the cage stays >= ~70 % of the frame width), and a creep in to the end. Keys are
 // on the sternal angle of the KEY POSES (static, never the moving subject): the slack stance, then the wasted stoop.
 // ---------------------------------------------------------------------------
-/** the sternal angle (torso-local 0, -89 on the sternum's front, Z ~20; the anatomy's AX 1.12) of a pose, figure-local */
+/** the sternal angle (torso-local 0, -89 at the chest's front, Z ~20; the anatomy's AX 1.12) of a pose, figure-local: the camera's anchor */
 const sternalAngle = (q: FigPose, nar = 1): P2 => {
   const r = figureRig(SPEC, q);
   const p = r.toFig([1.12 * 20 * Math.sin(q.yaw), -89]);
@@ -298,12 +303,12 @@ const OpenMouth: React.FC<{ q: FigPose; at: P2; scale: number; amt: number }> = 
 };
 
 /** the head's silhouette (face and skull, head-local, before headScale) in black: cuts the anatomy out of the face */
-const HeadShape: React.FC<{ q: FigPose; at: P2; scale: number }> = ({ q, at, scale }) => {
+const HeadShape: React.FC<{ q: FigPose; at: P2; scale: number; fill?: string }> = ({ q, at, scale, fill = "#000" }) => {
   const r = figureRig(SPEC, q);
   const tf = `translate(${at[0].toFixed(3)} ${at[1].toFixed(3)}) scale(${scale.toFixed(5)}) translate(${r.headC[0].toFixed(2)} ${r.headC[1].toFixed(2)}) rotate(${r.headAngle.toFixed(2)}) scale(${SPEC.headScale})`;
   return (
     <g transform={tf}>
-      <ellipse cx={3 * Math.sin(q.headYaw)} cy={-1} rx={24} ry={31.5} fill="#000" />
+      <ellipse cx={3 * Math.sin(q.headYaw)} cy={-1} rx={24} ry={31.5} fill={fill} />
     </g>
   );
 };
@@ -322,7 +327,12 @@ const LurksInYourChest: React.FC<z.infer<typeof schema>> = () => {
   const bodyTf = `translate(${at[0].toFixed(3)} 0) scale(${nar.toFixed(5)} 1) translate(${(-at[0]).toFixed(3)} 0)`;
   // the see-through: one eased change, f18-44
   const reveal = ease((frame - 18) / 26);
-  const bodyA = 1 - 0.52 * reveal;
+  // V2 (harmony): as he turns see-through his engraved hatching fades out under ONE flat translucent body tone with a
+  // clean contour, so two layers of hatching never fight over the lungs; the face keeps its lines (a feathered head
+  // layer) so the sick face still reads
+  const flatA = 0.5 * reveal;
+  const detA = 1 - 0.8 * reveal;
+  const headA = 0.42 * reveal;
   const rig = figureRig(SPEC, q);
   // the specks (f26-50) and the tubercles they form
   const ARR = [46, 48, 50];
@@ -341,6 +351,25 @@ const LurksInYourChest: React.FC<z.infer<typeof schema>> = () => {
           <filter id="lk-white" x="-20%" y="-20%" width="140%" height="140%">
             <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0" />
           </filter>
+          <filter id="lk-flat" x="-10%" y="-10%" width="120%" height="120%">
+            <feMorphology in="SourceAlpha" operator="dilate" radius={2.4 / cam.k} result="dil" />
+            <feFlood floodColor={DARK} result="ink" />
+            <feComposite in="ink" in2="dil" operator="in" result="edge" />
+            <feFlood floodColor="#CDBF9C" result="cream" />
+            <feComposite in="cream" in2="SourceAlpha" operator="in" result="fill" />
+            <feMerge>
+              <feMergeNode in="edge" />
+              <feMergeNode in="fill" />
+            </feMerge>
+          </filter>
+          <filter id="lk-feather" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation={3.2} />
+          </filter>
+          <mask id="lk-head" maskUnits="userSpaceOnUse" x={-20000} y={-20000} width={40000} height={40000}>
+            <g filter="url(#lk-feather)">
+              <HeadShape q={q} at={at} scale={scale} fill="#fff" />
+            </g>
+          </mask>
           {/* the anatomy shows only inside him (over the sleeves too: the body is see-through) */}
           <mask id="lk-body" maskUnits="userSpaceOnUse" x={-20000} y={-20000} width={40000} height={40000}>
             <g filter="url(#lk-white)">
@@ -353,12 +382,26 @@ const LurksInYourChest: React.FC<z.infer<typeof schema>> = () => {
         <Room P={P} />
         <ContactShadow P={P} X={0} Z={0} w={62} d={36} uid="lk-mcs" />
         <g transform={bodyTf}>
-          <g opacity={bodyA}>
+          {flatA > 0.001 ? (
+            <g opacity={flatA} filter="url(#lk-flat)">
+              <Worker pose={q} at={at} scale={scale} uid="lk-mf" />
+            </g>
+          ) : null}
+          <g opacity={detA}>
             <Worker pose={q} at={at} scale={scale} uid="lk-man" shade={1} />
-            {/* (rev 2) the mouth opens a little on each cough (the cast has no open mouth: a dark opening drawn in the
-                head's own frame, where its FaceArt puts the lips) */}
-            {cough > 0.04 ? <OpenMouth q={q} at={at} scale={scale} amt={cough} /> : null}
           </g>
+          {headA > 0.001 ? (
+            <g opacity={headA} mask="url(#lk-head)">
+              <Worker pose={q} at={at} scale={scale} uid="lk-mh" shade={1} />
+            </g>
+          ) : null}
+          {/* (rev 2/3) the mouth opens a little on each cough (the cast has no open mouth: a dark opening drawn in the
+              head's own frame, where its FaceArt puts the lips) */}
+          {cough > 0.04 ? (
+            <g opacity={detA + headA * (1 - detA)}>
+              <OpenMouth q={q} at={at} scale={scale} amt={cough} />
+            </g>
+          ) : null}
           {reveal > 0.001 ? (
             <g opacity={reveal} mask="url(#lk-body)">
               <ChestAnatomy view={{ rig, at, scale, yaw: q.yaw }} st={st} uid="lk-an" />
