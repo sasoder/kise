@@ -6,8 +6,8 @@
 //                  and a blank titulus at his neck, a fettered slave waiting at its back, the dealer pointing to
 //                  him, a buyer in a toga looking up from below. Lit flat and cold (inks sunk toward DEAD).
 //   RIGHT (X > 0)  a red-gloss (terra sigillata) pottery under a timber roof: three rows of potters at their wheels
-//                  (BACK rows only: slaves in plain tunics, dimmed by depth, no collars or fetters), the FRONT ROW of
-//                  stools empty, a domed kiln at the back with a glowing (cream) mouth, a long rack of shelves on which
+//                  (slaves in plain tunics, no collars or fetters), two EMPTY seats (stool + wheel, facing right) at
+//                  the workshop's front-left just across the seam, a domed kiln at the back with a glowing (cream) mouth, a long rack of shelves on which
 //                  ORANGE bowls stack up (orange = productive output), a crate being filled.
 // The split (0..1) slides the two halves apart along X on the floor plane (each a slab with a dark front face), a
 // dark chasm opening between them. Cut C ends at split 1; cut D opens there and reverses it.
@@ -22,7 +22,7 @@
 //   DEPTH, SLAB, SPLIT_DX, halfDX(half, split), halfPersp(cam, half, split) -> { P, dx }: P is the half's own
 //     perspective (local X); draw its points inside <g transform={`translate(${dx} 0)`}> in a WorldSvg of `cam`.
 //   PLATFORM, STEPS, MAIN_SLAVE, WAITING (1), DEALER, BUYER: positions (local, left half) + variants.
-//   FRONT_STATIONS (2, empty in cut C), BACK_STATIONS (6), stationPlace(st) -> { feet, wheel, stool } (local X).
+//   FRONT_STATIONS (2 empty seats, dir 1), BACK_STATIONS (6, dir -1), stationPlace(st) -> { feet, wheel, stool, dir } (local X).
 //   RACK, CRATE, KILN, POSTS: the workshop's volumes.
 //   Poses (pure, frame-driven): mainSlavePose(f), waitingPose(i, f), dealerPose(f), buyerPose(f), potterPhase(i, f).
 //   <MarketWorkshopStage cam frame split seam stack frontSeated hide extra uid />:
@@ -112,8 +112,9 @@ export const STEPS = [
 export type Spot = { X: number; Y: number; Z: number; variant: number };
 /** the slave being sold: front centre of the platform, half turned toward the buyer (down left) */
 export const MAIN_SLAVE: Spot = { X: -166, Y: -PLATFORM.H, Z: 165, variant: 0 };
-/** a fettered slave waiting at the platform's back (one per front stool: cut D walks MAIN_SLAVE and WAITING[0] over) */
-export const WAITING: Spot[] = [{ X: -198, Y: -PLATFORM.H, Z: 335, variant: 1 }];
+/** a fettered slave waiting at the head of the steps beside him, next in line (one per front seat: cut D walks
+ *  MAIN_SLAVE and WAITING[0] over to FRONT_STATIONS) */
+export const WAITING: Spot[] = [{ X: -92, Y: -PLATFORM.H, Z: 150, variant: 1 }];
 /** the dealer (Overseer 2, the auctioneer) on the platform at the slave's left, beside the buyer, presenting him with
  *  his open hand (the traders together on the left, the traded man alone at the platform's front) */
 export const DEALER: Spot = { X: -250, Y: -PLATFORM.H, Z: 212, variant: 2 };
@@ -147,13 +148,18 @@ export const buyerPose = (f: number): FigPose => {
 // ---------------------------------------------------------------------------
 // THE WORKSHOP (right half, local X > 0)
 // ---------------------------------------------------------------------------
-export type Station = { X: number; Z: number; variant: number };
-/** a potter's place: his feet at X (facing left, dir -1), the wheel POTTER.wheelDX units to his left, the stool */
-export const stationPlace = (st: Station) => ({ feet: st.X, wheel: st.X - POTTER.wheelDX, stool: st.X - POTTER.stoolDX });
-/** the FRONT ROW: empty stools at their wheels, waiting (cut D seats the platform slaves here) */
+export type Station = { X: number; Z: number; variant: number; dir?: 1 | -1 }; // dir default -1 (facing left)
+/** a potter's place: his feet at X facing dir, the wheel POTTER.wheelDX units in front of him, the stool behind
+ *  (dir -1: wheel X - 112, stool X + 6, as before) */
+export const stationPlace = (st: Station) => {
+  const d = st.dir ?? -1;
+  return { feet: st.X, wheel: st.X + d * POTTER.wheelDX, stool: st.X + d * POTTER.stoolDX, dir: d };
+};
+/** the two EMPTY seats at the workshop's front-left, just across the seam, facing right into the workshop (cut D
+ *  seats the platform slaves here: the chalk-footed slave at [0], the fettered slave at [1]; <notes>/D_STATIONS.md) */
 export const FRONT_STATIONS: Station[] = [
-  { X: 175, Z: 450, variant: 0 },
-  { X: 380, Z: 450, variant: 1 },
+  { X: 70, Z: 70, variant: 0, dir: 1 },
+  { X: 80, Z: 250, variant: 1, dir: 1 },
 ];
 /** the back rows, worked (slaves in plain tunics, no collars or fetters) */
 export const BACK_STATIONS: Station[] = [
@@ -510,11 +516,11 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
   // the kiln: a brick drum with a dome, its mouth glowing (cream), a little light on the floor before it
   shadow("R", KILN.X, KILN.Z, KILN.R * 1.1, KILN.R * 0.9, "csk", 0.8);
   items.push({ half: "R", Z: KILN.Z, node: (P) => <Kiln key="kiln" P={P} f={f} uid={`${uid}-kiln`} /> });
-  // the potters at the back (worked) and the front row (empty unless seated)
+  // the potters at the back (worked) and the two front seats (empty unless seated)
   const stationItems = (st: Station, key: string, worker: boolean, phase: number) => {
     const pl2 = stationPlace(st);
     shadow("R", pl2.wheel, st.Z, 62, 30, `${key}cw`, 0.8);
-    shadow("R", pl2.stool + 6, st.Z, 40, 22, `${key}cs`, 0.8);
+    shadow("R", pl2.stool - 6 * pl2.dir, st.Z, 40, 22, `${key}cs`, 0.8);
     items.push({
       half: "R",
       Z: st.Z,
@@ -524,8 +530,8 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
         return (
           <g key={key}>
             <Stool at={P.p(pl2.stool, 0, st.Z + 4)} scale={sc} uid={`${uid}-${key}s`} ink={ink} />
-            <PotterWheel at={P.p(pl2.wheel, 0, st.Z - 4)} scale={P.r(st.Z - 4)} uid={`${uid}-${key}w`} ink={ink} turn={worker ? phase : 0.15} dir={-1} />
-            {worker ? <Slave pose={idle(POSES.potter(-1, phase), f, 13 + st.variant, 0.4)} at={P.p(pl2.feet, 0, st.Z)} scale={sc} uid={`${uid}-${key}p`} variant={st.variant} ink={ink} cloth={ink} shade={1} /> : null}
+            <PotterWheel at={P.p(pl2.wheel, 0, st.Z - 4)} scale={P.r(st.Z - 4)} uid={`${uid}-${key}w`} ink={ink} turn={worker ? phase : 0.15} dir={pl2.dir} />
+            {worker ? <Slave pose={idle(POSES.potter(pl2.dir, phase), f, 13 + st.variant, 0.4)} at={P.p(pl2.feet, 0, st.Z)} scale={sc} uid={`${uid}-${key}p`} variant={st.variant} ink={ink} cloth={ink} shade={1} /> : null}
           </g>
         );
       },
