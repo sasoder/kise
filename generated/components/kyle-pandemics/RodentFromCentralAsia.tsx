@@ -15,6 +15,8 @@
 // DURATION: the slot 1.034 -> 7.941 s = 6.907 s x 29.97 = 207 frames (f0..f206).
 //
 // THE MOTION: one continuous crane from a burrow to a continent, the camera always looking north (rodentCamera.ts).
+// V2: the marmot, its burrow, the seep, pebbles and tufts are REAL 3D VOLUMES in the one camera (three.js,
+// rodentSteppe3D.tsx: stepped engraved tones, form-following hatch, back-face outlines, a cast shadow).
 // f0-84 at the grey marmot's eye level on the steppe (grizzled cream-umber fur, a broad flat head, small low ears,
 // bead eyes, two cream incisors, a dark-tipped tail; its burrow loose earth: an irregular heap, an apron of thrown-out
 // soil with clods and pebbles): a visible push-in that arcs round it from its right (parallax
@@ -63,7 +65,8 @@ import { z } from "zod";
 import { PaperTop } from "../kits/maps/incaShared";
 import { RodentGround } from "./rodentGround";
 import { RodentFigures } from "./rodentFigures";
-import { SteppeThings } from "./rodentMarmot";
+import { OriginMark } from "./rodentMarmot";
+import { Steppe3D } from "./rodentSteppe3D";
 import { DURATION, FPS, H, W, camAt, local, toScreen, type Cam } from "./rodentCamera";
 
 export { DURATION, FPS };
@@ -137,8 +140,9 @@ const RodentFromCentralAsia: React.FC<z.infer<typeof schema>> = () => {
     <AbsoluteFill style={{ backgroundColor: LAND }}>
       <RodentGround cam={cam} frame={frame} />
       <GroundLabel cam={cam} frame={frame} />
+      <Steppe3D cam={cam} frame={frame} />
       <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
-        <SteppeThings cam={cam} frame={frame} />
+        <OriginMark cam={cam} />
       </svg>
       <RodentFigures cam={cam} frame={frame} />
       <PaperTop vignette={0.5} />

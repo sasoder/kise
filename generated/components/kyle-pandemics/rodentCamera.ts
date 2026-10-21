@@ -46,10 +46,10 @@ const K = (f: number, r: number, a: number, ty: number, D: number, pitch: number
 const KM = (f: number, tx: number, tz: number, D: number, pitch: number): CamKey => ({ f, tx, ty: 0, tz, D, pitch, arc: 0 });
 export const CAM_KEYS: CamKey[] = [
   // the push-in that arcs round the marmot (from its right toward the burrow mouth)
-  K(0, 3, 5, 31, 100, 5, 30),
-  K(44, 0, 0, 20, 86, 12, 13),
-  K(84, HOLE_RA[0], HOLE_RA[1], 5, 62, 23, -3),
-  K(93, HOLE_RA[0] - 1, HOLE_RA[1] - 4, 3, 74, 25, -2),
+  K(0, 3, 5, 34, 100, 5, 30),
+  K(44, 0, 0, 23, 86, 12, 13),
+  K(84, HOLE_RA[0], HOLE_RA[1], 9, 62, 23, -3),
+  K(93, HOLE_RA[0] - 1, HOLE_RA[1] - 4, 6, 74, 25, -2),
   // the crane
   K(102, -9, -14, 1, 230, 28, 0),
   K(110, -14, -6, 0, 560, 32, 0),

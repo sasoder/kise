@@ -17,26 +17,49 @@ export const RIGHT: [number, number] = [Math.cos(YAW0), Math.sin(YAW0)];
 /** a point `r` right (east) and `a` away (north) of the origin, map px */
 export const local = (r: number, a: number): [number, number] => [ORIGIN[0] + RIGHT[0] * r + AWAY[0] * a, ORIGIN[1] + RIGHT[1] * r + AWAY[1] * a];
 
-export const MOUND = { c: local(0, 0), R: 25, h: 11 };
-export const MARMOT = { at: local(4, 5), h: 40 };
-/** the burrow mouth on the mound's front-left slope, its radius (local r, a of its centre) */
-export const HOLE_RA: [number, number] = [-8, -12.5];
-export const HOLE = { at: local(HOLE_RA[0], HOLE_RA[1]), r: 3.6 };
-/** the fall line from the mouth (local angle, outward from the mound's centre) */
+export const MOUND = { c: local(0, 0), R: 20, h: 14 };
+export const MARMOT = { at: local(3.5, 4.5), h: 40 };
+/** the burrow mouth in the heap's front-left side, its radius (local r, a of its centre) */
+export const HOLE_RA: [number, number] = [-6.2, -9.6];
+export const HOLE = { at: local(HOLE_RA[0], HOLE_RA[1]), r: 3.4 };
+/** the fall line from the mouth (local angle, outward from the heap's centre) */
 export const FALL_ANG = Math.atan2(HOLE_RA[1], HOLE_RA[0]);
-/** loose earth: an irregular heap (its radius wanders with the angle) and, in front of the mouth, the apron of
- *  thrown-out soil (a low lobe the burrow's digging left) */
-const radiusAt = (th: number) => MOUND.R * (1 + 0.09 * Math.sin(3 * th + 1) + 0.06 * Math.sin(5 * th + 2.3) + 0.04 * Math.sin(9 * th + 0.7));
-export const SPOIL = { c: local(Math.cos(FALL_ANG) * (MOUND.R * 0.95), Math.sin(FALL_ANG) * (MOUND.R * 0.95)), r: 13, h: 3.2 };
+/** loose earth: a heap about a third of the marmot's height, its outline wandering with the angle, its surface lumpy;
+ *  a raised lip of soil round the mouth's lower side; in front of the mouth the apron of thrown-out soil */
+const radiusAt = (th: number) => MOUND.R * (1 + 0.1 * Math.sin(3 * th + 1) + 0.07 * Math.sin(5 * th + 2.3) + 0.05 * Math.sin(9 * th + 0.7));
+export const SPOIL = { c: local(Math.cos(FALL_ANG) * (MOUND.R * 1.05), Math.sin(FALL_ANG) * (MOUND.R * 1.05)), r: 12, h: 3.6 };
+const hh = (i: number, k: number) => {
+  const v = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+};
+/** the lumps: soft bumps of clodded earth over the heap (local r, a, radius, height) */
+const LUMPS = Array.from({ length: 22 }, (_, i) => {
+  const ang = hh(i, 1) * Math.PI * 2;
+  const rr = MOUND.R * 0.85 * Math.sqrt(hh(i, 2));
+  return { r: Math.cos(ang) * rr, a: Math.sin(ang) * rr, rad: 2.6 + 2.8 * hh(i, 3), h: 0.7 + 1.3 * hh(i, 4) };
+});
 /** height of the earth at map point (x, y) */
 export const moundY = (x: number, y: number) => {
   const dx = x - MOUND.c[0];
   const dy = y - MOUND.c[1];
-  // local (right, away) angle of the point
+  // local (right, away) coordinates of the point
   const lr = dx * RIGHT[0] + dy * RIGHT[1];
   const la = dx * AWAY[0] + dy * AWAY[1];
   const d = Math.hypot(dx, dy) / radiusAt(Math.atan2(la, lr));
-  const dome = d >= 1 ? 0 : MOUND.h * Math.pow(1 - d * d, 1.3);
+  let dome = d >= 1 ? 0 : MOUND.h * Math.pow(1 - d * d, 1.15);
+  if (dome > 0) {
+    const mask = Math.min(1, dome / 3);
+    for (const q of LUMPS) {
+      const e = ((lr - q.r) ** 2 + (la - q.a) ** 2) / (q.rad * q.rad);
+      if (e < 4) dome += q.h * Math.exp(-e * 1.4) * mask;
+    }
+    // the lip: thrown-up soil round the mouth's lower (outer) side
+    const hr = lr - HOLE_RA[0];
+    const ha = la - HOLE_RA[1];
+    const dh = Math.hypot(hr, ha) / HOLE.r;
+    const outer = (hr * Math.cos(FALL_ANG) + ha * Math.sin(FALL_ANG)) / Math.max(1e-6, Math.hypot(hr, ha));
+    dome += 1.6 * Math.exp(-((dh - 1.45) ** 2) / 0.18) * Math.max(0, 0.35 + 0.65 * outer) * mask;
+  }
   const ds = Math.hypot(x - SPOIL.c[0], y - SPOIL.c[1]) / SPOIL.r;
   const spoil = ds >= 1 ? 0 : SPOIL.h * Math.pow(1 - ds * ds, 1.6);
   return Math.max(dome, spoil);
