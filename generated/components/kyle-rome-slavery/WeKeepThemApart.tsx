@@ -12,18 +12,17 @@
 // that 153 · those 157 · things 162 · don't 170 · go 186 · together 191 · (cut to the speaker at f211)
 // DURATION: the slot 20.087 -> 27.127 s = 7.040 s x 29.97 = 211 frames (f0..f210).
 //
-// THE MOTION: one stage of stone flags in one-point perspective, one camera in three phases. f0-34: close on a slave
-// standing bowed on a Roman sale platform (the catasta: chalked feet, a blank titulus at his neck, the dealer beside
-// him presenting him with an open hand, a buyer in a toga looking up from beside the platform, a fettered slave
-// waiting behind), the sale lit flat and cold, sunk toward DEAD; the camera already easing back. f0-132: one
-// pull-back and drift right brings in, beside the platform, a thriving red-gloss pottery, the LIT half of the stage
-// (warm floor, in-play cream potters at their wheels in the back rows, the front row of stools empty, a domed kiln
-// glowing cream), its ORANGE bowls stacking up on the rack through "progress ... innovation is good". f131-142
-// ("We"): a straight seam cracks along the stage's centre line, front to back; f137-189 the two halves slide apart
-// on the floor plane as two blocks (their faces sinking into the page below, the inner cut faces lit / shaded), an
-// empty dark void opening between them, the camera widening a touch in one lobe; landed on "together" (f191).
-// Then alive to f210: the bowls still stacking, the wheels turning, the slave still bowed.
-// CAUSE BEFORE EFFECT: the crack runs before the slide (contact f131, first movement of the halves f138).
+// THE MOTION (Revision 1, the camera keyed on the words): one stage of stone flags in one-point perspective.
+// f0-~28 CLOSE on the sale ("slavery is bad"): the slave standing bowed at the front of a Roman sale platform (the
+// catasta: chalked feet, a blank titulus at his neck), the dealer beside him presenting him with an open hand, the
+// buyer in a toga below looking up, a fettered slave waiting behind; cold and sunk toward DEAD; a slow push keeps it
+// alive. f24-80 ("and we think progress ... economic"): one sideways pan at the same close zoom over the seam onto the
+// LIT half: a red-gloss pottery (warm floor, potters at their wheels in the back rows, the front row of stools empty,
+// a domed kiln glowing cream, a rack whose ORANGE bowls stack up). f66-150: a slow drift along the rows while the
+// bowls keep stacking ("growth ... innovation is good"). f133-194 ("We tend to think"): one zoom-out to the wide of
+// both halves; the seam cracks along the centre line f146-156 and the halves slide apart f152-189 as two blocks with
+// an empty dark void between, landed on "together" (f191). Then alive to f210.
+// CAUSE BEFORE EFFECT: the crack runs before the slide (crack from f146, first movement of the halves f153).
 // Orange = productive output (the bowls); people are cream; the sale's tones sink toward DEAD.
 //
 // SOURCES (illustrative; nothing on screen): slave sales on a raised platform (catasta) with a label (titulus) at

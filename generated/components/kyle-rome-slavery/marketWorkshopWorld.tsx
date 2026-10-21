@@ -102,22 +102,23 @@ export const halfPersp = (cam: Cam, h: Half, split: number) => {
 // THE SALE (left half, local X < 0)
 // ---------------------------------------------------------------------------
 /** the catasta: a timber platform (box) X0..X1, Z0 (front)..Z1, its top at Y = -H */
-export const PLATFORM = { X0: -250, X1: -20, Z0: 80, Z1: 360, H: 100 };
+export const PLATFORM = { X0: -272, X1: -48, Z0: 80, Z1: 360, H: 100 };
 /** three steps up its front, at the right */
 export const STEPS = [
-  { X0: -112, X1: -30, Z0: 20, Z1: 80, top: -25 },
-  { X0: -112, X1: -30, Z0: 40, Z1: 80, top: -50 },
-  { X0: -112, X1: -30, Z0: 60, Z1: 80, top: -75 },
+  { X0: -140, X1: -60, Z0: 20, Z1: 80, top: -25 },
+  { X0: -140, X1: -60, Z0: 40, Z1: 80, top: -50 },
+  { X0: -140, X1: -60, Z0: 60, Z1: 80, top: -75 },
 ];
 export type Spot = { X: number; Y: number; Z: number; variant: number };
 /** the slave being sold: front centre of the platform, half turned toward the buyer (down left) */
-export const MAIN_SLAVE: Spot = { X: -150, Y: -PLATFORM.H, Z: 165, variant: 0 };
+export const MAIN_SLAVE: Spot = { X: -166, Y: -PLATFORM.H, Z: 165, variant: 0 };
 /** a fettered slave waiting at the platform's back (one per front stool: cut D walks MAIN_SLAVE and WAITING[0] over) */
-export const WAITING: Spot[] = [{ X: -205, Y: -PLATFORM.H, Z: 318, variant: 1 }];
-/** the dealer (Overseer 2, the auctioneer) on the platform at the slave's right, presenting him with his open hand */
-export const DEALER: Spot = { X: -64, Y: -PLATFORM.H, Z: 205, variant: 2 };
+export const WAITING: Spot[] = [{ X: -198, Y: -PLATFORM.H, Z: 335, variant: 1 }];
+/** the dealer (Overseer 2, the auctioneer) on the platform at the slave's left, beside the buyer, presenting him with
+ *  his open hand (the traders together on the left, the traded man alone at the platform's front) */
+export const DEALER: Spot = { X: -250, Y: -PLATFORM.H, Z: 212, variant: 2 };
 /** the buyer (Dominus 0) on the floor beside the platform's left side, upstage (his head and hands clear the caption bands), looking up at him */
-export const BUYER: Spot = { X: -312, Y: 0, Z: 200, variant: 0 };
+export const BUYER: Spot = { X: -334, Y: 0, Z: 215, variant: 0 };
 
 /** the forum's portico behind the sale: columns at PORTICO.xs, depth Z, an architrave on top */
 export const PORTICO = { xs: [-120, -340, -560, -780], Z: 1200, R: 30, H: 700, arch: 64, X0: -900, X1: -60 };
@@ -133,12 +134,13 @@ export const waitingPose = (i: number, f: number): FigPose => {
 };
 export const dealerPose = (f: number): FigPose => {
   // the auctioneer's patter: his near hand open toward the slave, lifted on "slavery", easing down a little after
-  const t = 0.75 + 0.25 * ease(f / 12) - 0.15 * ease((f - 60) / 40);
-  return idle(headTurn(POSES.gesture(-1, t), -0.45, 2), f, 3, 0.6);
+  const t = 0.75 + 0.25 * ease(f / 16) - 0.15 * ease((f - 60) / 40);
+  return idle(headTurn(POSES.gesture(1, t), 0.45, 2), f, 3, 0.6);
 };
 export const buyerPose = (f: number): FigPose => {
-  // facing right, looking up at him; the near hand raised a little, weighing
-  const q = POSES.gesture(1, 0.35 + 0.1 * Math.sin(f / 23));
+  // facing right, looking up at him, weighing him: the near hand a little forward, the far hand up at his chin
+  const g = POSES.gesture(1, 0.35 + 0.1 * Math.sin(f / 23));
+  const q: FigPose = { ...g, armR: { w: [30, -250 + 3 * Math.sin(f / 29)], elbow: [0.5, 1], fist: 0.7, hand: -40 } };
   return idle(headTurn(q, 0.5, -14), f, 9, 0.5);
 };
 
@@ -229,8 +231,8 @@ const BowlStack: React.FC<{ P: Persp; X: number; Y: number; Z: number; n: number
   };
   for (let i = 0; i < n; i++) bowl(Y - i * BOWL.step, `${uid}-${i}`, i === n - 1 && fall <= 0);
   if (fall > 0) {
-    // the next bowl coming down onto the stack (set down from above, ~5 frames)
-    const drop = 24 * (1 - fall * fall);
+    // the next bowl set down onto the stack: lowered from just above, easing in and out (no fall, no bounce)
+    const drop = 16 * (1 - ease(fall));
     bowl(Y - n * BOWL.step - drop, `${uid}-f`, true);
   }
   return <g opacity={tone}>{els}</g>;
@@ -744,47 +746,38 @@ const lobe = (a: number, b: number) => (f: number) => {
   return (x - (L2 / (2 * Math.PI)) * Math.sin((2 * Math.PI * x) / L2)) / L2;
 };
 const C_LAST = 210;
+/** a channel: v0 plus raised-cosine velocity lobes [from, to, change] (each lobe one smooth move; overlapping lobes keep
+ *  the camera moving between moves) */
+type Lobe = readonly [number, number, number];
+const channel = (v0: number, lobes: readonly Lobe[]) => (f: number) => lobes.reduce((v, [a, b, d]) => v + d * lobe(a, b)(f), v0);
+/** cut C's camera, keyed on the words (Revision 1):
+ *  f0-~28 CLOSE on the sale (the slave, the dealer presenting him, the buyer), a slow push so it is alive;
+ *  f24-80 one sideways pan at the same close zoom over the seam onto the lit workshop (lands by "economic growth");
+ *  f66-150 a slow drift along the rows and the rack while the bowls stack;
+ *  f133-194 one zoom-out to the wide showing both halves (the crack and the slide play in it, landing on "together");
+ *  then a creep to f210. */
 export const C_CAM = {
-  /** f0: close on the slave (~560 px, head ~y 700), the VP over him; the buyer's head stays above y ~960 */
-  k0: 2.07,
-  cx0: -210,
-  cy0: -335,
-  /** the wide (~f132): both halves, the seam on the centre line, the slave ~375 px, his head ~y 820, the front wheels
-   *  ~y 990-1090 */
-  k1: 1.36,
-  cx1: 0,
-  cy1: -344,
-  /** the split's widening (f110 -> f206): room for the gap; the slave ~365 px at the end */
-  k2: 1.31,
-  cy2: -339,
-  lobeA: [0, 132] as const,
-  lobeX: [8, 136] as const,
-  lobeB: [110, 206] as const,
+  x: [-255, [[-14, 44, 14], [24, 80, 458], [66, 150, 30], [133, 194, -268], [180, 260, -4]]] as const,
+  lnk: [Math.log(2.1), [[-18, 50, Math.log(2.2 / 2.1)], [60, 150, Math.log(2.26 / 2.2)], [133, 194, Math.log(1.31 / 2.26)], [185, 260, Math.log(0.985)]]] as const,
+  y: [-330, [[-18, 50, -3], [24, 80, -155], [66, 150, -6], [133, 194, 151], [185, 260, 2]]] as const,
 };
-const uA = lobe(...C_CAM.lobeA);
-const uX = lobe(...C_CAM.lobeX);
-const uB = lobe(...C_CAM.lobeB);
-const DRIFT = 0.05;
-export const cutCCamBase = (f: number): Cam => {
-  const a = DRIFT * Math.min(1, f / 132) + (1 - DRIFT) * uA(f);
-  const x = DRIFT * Math.min(1, f / 136) + (1 - DRIFT) * uX(f);
-  const b = 0.85 * uB(f) + 0.15 * c01((f - 110) / (C_LAST - 110));
-  const lk = mix(Math.log(C_CAM.k0), Math.log(C_CAM.k1), a) + (Math.log(C_CAM.k2) - Math.log(C_CAM.k1)) * b;
-  return { k: Math.exp(lk), cx: mix(C_CAM.cx0, C_CAM.cx1, x), cy: mix(C_CAM.cy0, C_CAM.cy1, a) + (C_CAM.cy2 - C_CAM.cy1) * b };
-};
+const CX = channel(C_CAM.x[0], C_CAM.x[1]);
+const LK = channel(C_CAM.lnk[0], C_CAM.lnk[1]);
+const CY = channel(C_CAM.y[0], C_CAM.y[1]);
+export const cutCCamBase = (f: number): Cam => ({ k: Math.exp(LK(f)), cx: CX(f), cy: CY(f) });
 /** cut C's camera, the house hand included */
 export const cutCCamAt = (f: number): Cam => swayCam(cutCCamBase(f), f);
 
 /** cut C's timeline: the crack (seam) and the slide (split), the bowls' fill */
-export const C_SEAM: readonly [number, number] = [131, 142];
-export const C_SPLIT: readonly [number, number] = [137, 189];
+export const C_SEAM: readonly [number, number] = [146, 156];
+export const C_SPLIT: readonly [number, number] = [152, 189];
 export const cutCSeam = (f: number) => ease((f - C_SEAM[0]) / (C_SEAM[1] - C_SEAM[0]));
 export const cutCSplit = (f: number) => {
   const x = c01((f - C_SPLIT[0]) / (C_SPLIT[1] - C_SPLIT[0]));
   return x * x * x * (x * (6 * x - 15) + 10);
 };
-/** the bowls: already working at f0 (0.22), rising f42 -> 122 ("progress ... innovation is good"), still stacking to the end */
-export const cutCStack = (f: number) => 0.22 + 0.58 * ease((f - 40) / 84) + 0.14 * c01((f - 100) / 110);
+/** the bowls: already working at f0 (0.22), rising f48 -> 140 (in view from the pan's landing, "growth ... innovation is good"), still stacking to the end */
+export const cutCStack = (f: number) => 0.22 + 0.6 * ease((f - 48) / 92) + 0.12 * c01((f - 120) / 90);
 
 /** cut C's last frame (f210), exactly: cut D's frame 0 */
 export const C_END = {
