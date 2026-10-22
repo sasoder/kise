@@ -62,6 +62,7 @@ import { hash, mixColor } from "../kits/maps/incaShared";
 import { BLANK_Z, DURATION as SLOT, F, PATH_HALF, STONE, STONES, YEAR_SIZE, YEAR_Y, stoneOutline, LIGHT, camAt, haze, lightOf, proj, type Cam3, type Stone } from "./anotherPandemicWorld";
 import { goosePoseAt } from "./anotherPandemicGoose";
 import { Goose3D, type GooseAir } from "./anotherPandemicGoose3d";
+import { FolkGoose } from "./anotherPandemicFolkGoose";
 import { AirGradient, AirHorizonHaze, AirStage, fogHex, hexRgb, makeAirView, mixHex, formTone, type AirLook, type AirScene, type AirView } from "./pandemicAir";
 
 export const FPS = 30000 / 1001;
@@ -860,7 +861,12 @@ const AirRoad: React.FC<{ frame: number; look: AirLook }> = ({ frame, look }) =>
         </g>
         {els}
       </WorldSvg>
-      {pose ? <Goose3D cam={c} pose={pose} air={air} /> : null}
+      {/* V3 cast take 2: the picture-book greylag (same pose, flight and landing; drawn in the gouache hand) */}
+      {pose && air ? (
+        <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0 }}>
+          <FolkGoose c={c} pose={pose} fog={{ rgb: air.fog, amt: air.fogAmt }} />
+        </svg>
+      ) : null}
     </AirStage>
   );
 };
