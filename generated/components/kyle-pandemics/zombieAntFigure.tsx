@@ -376,6 +376,8 @@ const jawPath = (head: Seg, which: "near" | "far", open: number, view?: AntView)
   const z = which === "near" ? -16 : 16;
   return [...j.outer, ...j.teeth.reverse(), j.innerE[1], j.innerE[0]].map((q) => P(head, [q[0], q[1], z], true));
 };
+/** a mandible blade's outline in the world (V3 take 2: the folk ant draws its pincers from this) */
+export const jawPoly = (head: Seg, which: "near" | "far", open: number): P2[] => jawPath(head, which, open);
 export const Jaw: React.FC<{ head: Seg; which: "near" | "far"; open: number; look: AntLook; view?: AntView }> = ({ head, which, open, look, view }) => {
   const pts = jawPath(head, which, open, view);
   const j = jawLocal(which, open);

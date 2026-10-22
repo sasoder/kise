@@ -39,6 +39,8 @@
 //   bodyShape "spindle" (default) | "cushion": a round knobby ascoma on the bodySide of the stalk at bodyAt, radius
 //             bodyWidth x ripen, as on O. unilateralis (cushion low on the stalk, ~0.2-0.35)            (V2 addition)
 //   wiggle    a finer wobble along the stalk (deg, ~2.6 waves; the real stroma is slightly wavy), default 0 (V2 addition)
+//   look      "engraved" (default, as before) | "gouache": the picture-book cast's flat matte orange with one soft
+//             shadow shape, no casing or hatching; texture laid on by the caller (V3 cast take 2 addition)
 //
 // stalkFrame(spec, u)  -> { p, t, n, w } the centre point, unit tangent, left normal and half-width at u (0..1 of
 //                      the FULL length; for hanging things on it or framing a camera on the tip)
@@ -173,7 +175,7 @@ export const stalkFrame = (spec: StalkSpec, u: number) => {
 };
 export const stalkTip = (spec: StalkSpec, grow: number) => stalkFrame(spec, grow).p;
 
-export const CordycepsStalk: React.FC<StalkSpec & { uid: string; grow?: number; ripen?: number; shadow?: number; lit?: P2; opacity?: number; casing?: number }> = (props) => {
+export const CordycepsStalk: React.FC<StalkSpec & { uid: string; grow?: number; ripen?: number; shadow?: number; lit?: P2; opacity?: number; casing?: number; look?: "engraved" | "gouache" }> = (props) => {
   const q = withDefaults(props);
   const grow = c01(props.grow ?? 1);
   const ripen = c01(props.ripen ?? defaultRipen(props, grow));
@@ -313,7 +315,23 @@ export const CordycepsStalk: React.FC<StalkSpec & { uid: string; grow?: number; 
       pits.push(<circle key={k++} cx={pc[0]} cy={pc[1]} r={pr} fill={FUNGUS.pore} opacity={0.85} />);
       pits.push(<circle key={k++} cx={pc[0] + lit[0] * pr * 0.5} cy={pc[1] + lit[1] * pr * 0.5} r={pr * 0.45} fill={FUNGUS.hi} opacity={0.75} />);
     }
-    cushion = (
+    cushion =
+      props.look === "gouache" ? (
+        <g>
+          <path d={rimD} fill={FUNGUS.main} />
+          <clipPath id={`${props.uid}-cu`}>
+            <path d={rimD} />
+          </clipPath>
+          <g clipPath={`url(#${props.uid}-cu)`}>
+            <circle cx={c[0] - lit[0] * R * 0.55} cy={c[1] - lit[1] * R * 0.55} r={R * 0.95} fill={FUNGUS.deep} opacity={0.85} />
+            {Array.from({ length: 16 }, (_, i) => {
+              const a = hsh(i, q.seed + 9) * Math.PI * 2;
+              const rr = Math.sqrt(hsh(i, q.seed + 13)) * R * 0.78;
+              return <circle key={i} cx={c[0] + Math.cos(a) * rr} cy={c[1] + Math.sin(a) * rr} r={R * (0.08 + 0.03 * hsh(i, q.seed + 17))} fill={FUNGUS.pore} opacity={0.7} />;
+            })}
+          </g>
+        </g>
+      ) : (
       <g>
         <clipPath id={`${props.uid}-cu`}>
           <path d={rimD} />
@@ -327,7 +345,7 @@ export const CordycepsStalk: React.FC<StalkSpec & { uid: string; grow?: number; 
         </g>
         <path d={rimD} fill="none" stroke={FUNGUS.line} strokeWidth={Math.max(1, 1.5 * sc) * (props.casing ?? 1)} strokeLinejoin="round" />
       </g>
-    );
+      );
   }
   // the growing tip, a hair paler (only while it is growing)
   const tipGlow = grow < 0.999 ? (() => {
@@ -342,6 +360,26 @@ export const CordycepsStalk: React.FC<StalkSpec & { uid: string; grow?: number; 
   const b0 = samples[0];
   const ang = (Math.atan2(b0.t[1], b0.t[0]) * 180) / Math.PI;
   const bw = stalkW(q, 0) * sc;
+  if (props.look === "gouache") {
+    // the picture-book look (V3 cast take 2): flat matte orange, ONE soft shadow shape on the side turned from the
+    // light, no casing, no hatching; the caller lays its gouache texture over it
+    return (
+      <g opacity={props.opacity ?? 1}>
+        <defs>
+          <radialGradient id={`${props.uid}-occ`}>
+            <stop offset="0" stopColor="#22180F" stopOpacity={0.6 * shadow} />
+            <stop offset="1" stopColor="#22180F" stopOpacity={0} />
+          </radialGradient>
+        </defs>
+        {shadow > 0 && occOpen > 0.02 ? (
+          <ellipse cx={b0.p[0]} cy={b0.p[1]} rx={bw * 1.05 * occOpen} ry={bw * 2.0 * occOpen} transform={`rotate(${f2(ang)} ${f2(b0.p[0])} ${f2(b0.p[1])})`} fill={`url(#${props.uid}-occ)`} />
+        ) : null}
+        <path d={outline} fill={FUNGUS.main} />
+        <path d={band(darkSide, 0.05, 1.0)} fill={FUNGUS.deep} opacity={0.75} />
+        {cushion}
+      </g>
+    );
+  }
   return (
     <g opacity={props.opacity ?? 1}>
       <defs>
@@ -405,7 +443,9 @@ export const MyceliumThreads: React.FC<{
   branchLen?: number;
   opacity?: number;
   scale?: number;
-}> = ({ path, t, seed = 1, width = 1.6, spread = 5, every = 26, branchLen = 30, opacity = 1, scale = 1 }) => {
+  /** V3 cast take 2 addition: "gouache" drops the thin dark under-stroke (default "engraved": as before) */
+  look?: "engraved" | "gouache";
+}> = ({ path, t, seed = 1, width = 1.6, spread = 5, every = 26, branchLen = 30, opacity = 1, scale = 1, look = "engraved" }) => {
   if (path.length < 2 || t <= 0) return null;
   const { pts, len } = resample(path, 3 * scale);
   const reach = c01(t) * len;
@@ -461,7 +501,7 @@ export const MyceliumThreads: React.FC<{
   const w = width * scale;
   return (
     <g opacity={opacity} strokeLinecap="round" strokeLinejoin="round" fill="none">
-      <path d={md + branches + fine} stroke={FUNGUS.line} strokeWidth={w + 1.4 * scale} strokeOpacity={0.35} />
+      {look === "engraved" ? <path d={md + branches + fine} stroke={FUNGUS.line} strokeWidth={w + 1.4 * scale} strokeOpacity={0.35} /> : null}
       <path d={md} stroke={FUNGUS.main} strokeWidth={w} />
       <path d={branches} stroke={FUNGUS.main} strokeWidth={w * 0.72} />
       <path d={fine} stroke={FUNGUS.main} strokeWidth={w * 0.5} />

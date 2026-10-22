@@ -57,8 +57,8 @@ import { WorldSvg } from "../kits/maps/texcocoShared";
 import { swayCam } from "../kits/maps/incaShared";
 import { AIR, AirHorizonHaze, AirStage, fogHex, makeAirView, type AirScene, type AirView } from "./pandemicAir";
 import { CordycepsStalk, MyceliumThreads } from "./cordyceps";
-import { AntBody, AntLeg, Antenna, DARK, Jaw, JointTufts, antLook, headOutline, jawOutline, legGeometry, mixHex, type AntLook, type LegGeo } from "./zombieAntFigure";
-import { AIRS } from "./creatureAir";
+import { DARK, legGeometry, mixHex, type LegGeo } from "./zombieAntFigure";
+import { ANT_INKS, FolkLayer, antHeadOutline, antSocket, antStalkBase, folkAntBody, folkAntenna, folkDeathThreads, folkJaw, folkJointThreads, folkLeg, type FPart } from "./pandemicFolkAnimals";
 import {
   ANT_S,
   BITE,
@@ -104,7 +104,7 @@ import {
 
 export { DURATION, FPS };
 export const schema = z.object({
-  /** V3: the air the ant is lit in (creatureAir.ts): "A" the chosen sage-teal air, "B" the old umber page */
+  /** kept for the probes' API (the cast is the picture-book ant in palette A) */
   air: z.enum(["A", "B"]).default("A"),
 });
 export const defaultProps = schema.parse({});
@@ -492,7 +492,9 @@ const LEAF_TOP2 = makeLeaf({ ...LEAF, node: [STEM.X - 10, STEM.top + 70], side: 
 // ---------------------------------------------------------------------------
 const stemR = (Y: number) => (Y > NODE[1] ? STEM.R : lerp(STEM.R, 22, Math.min(1, (NODE[1] - Y) / (NODE[1] - STEM.top))));
 const stemX = (Y: number) => STEM.X + (Y < NODE[1] ? -6 * Math.pow((NODE[1] - Y) / (NODE[1] - STEM.top), 2) : 0);
-const Stem: React.FC<{ e: Eye; antShadow: { y0: number; y1: number; amt: number }; fx: Fx }> = ({ e, antShadow, fx }) => {
+const Stem: React.FC<{ e: Eye; antShadow: { y0: number; y1: number; amt: number }; fx: Fx; k: number }> = ({ e, antShadow, fx, k }) => {
+  // V3 take 2: the stem in the picture-book hand: one flat matte colour, one soft shadow shape down its far side,
+  // the gouache texture, fine pale hairs, the nodes as soft lines
   const N = 40;
   const Ls: P2[] = [];
   const Rs: P2[] = [];
@@ -504,13 +506,6 @@ const Stem: React.FC<{ e: Eye; antShadow: { y0: number; y1: number; amt: number 
     Rs.push([xc + R, Y]);
   }
   const body = poly([...Ls, ...Rs.slice().reverse()]);
-  // a faint fibrous texture in the shade only
-  let tex = "";
-  for (let Y = 0; Y > STEM.top + 30; Y -= 9) {
-    const R = stemR(Y);
-    const xc = stemX(Y);
-    tex += `M${f2(xc + R * 0.35)},${f2(Y)}Q${f2(xc + R * 0.7)},${f2(Y + 3)} ${f2(xc + R * 0.95)},${f2(Y + 7)}`;
-  }
   let hairs = "";
   for (let i = 0; i < 90; i++) {
     const Y = -8 - i * 20 - 9 * rnd(i, 61);
@@ -522,41 +517,25 @@ const Stem: React.FC<{ e: Eye; antShadow: { y0: number; y1: number; amt: number 
     const x0 = xc + side * (R - 1);
     hairs += `M${f2(x0)},${f2(Y)}q${f2(side * l * 0.7)},${f2(-l * 0.3)} ${f2(side * l * 0.9)},${f2(-l)}`;
   }
-  const nodes = [-560, -1000, NODE[1]].map((Y, i) => {
+  const nodes = [-560, -1000, NODE[1]].map((Y) => {
     const R = stemR(Y) + 6;
-    return <path key={i} d={`M${f2(STEM.X - R)},${f2(Y + 10)}Q${f2(STEM.X)},${f2(Y + 22)} ${f2(STEM.X + R)},${f2(Y + 10)}`} fill="none" stroke={STEM_C.line} strokeWidth={1.4} strokeOpacity={0.6} />;
+    return `M${f2(STEM.X - R)},${f2(Y + 10)}Q${f2(STEM.X)},${f2(Y + 22)} ${f2(STEM.X + R)},${f2(Y + 10)}`;
   });
-  const foot = proj(e, STEM.X, 0, 0);
-  const footL = proj(e, STEM.X - STEM.R - 10, 0, -STEM.R * 0.6);
-  const footR = proj(e, STEM.X + STEM.R + 10, 0, STEM.R * 0.6);
   const c = (h: string) => fx.c(h, 0);
   return (
-    <g strokeLinejoin="round">
-      <defs>
-        <linearGradient id="za-stemg" gradientUnits="userSpaceOnUse" x1={STEM.X - STEM.R} y1={0} x2={STEM.X + STEM.R} y2={0}>
-          <stop offset="0" stopColor={c(STEM_C.rim)} />
-          <stop offset="0.1" stopColor={c(STEM_C.lit)} />
-          <stop offset="0.38" stopColor={c(STEM_C.lit)} />
-          <stop offset="0.62" stopColor={c(STEM_C.mid)} />
-          <stop offset="0.86" stopColor={c(STEM_C.core)} />
-          <stop offset="1" stopColor={c(STEM_C.back)} />
-        </linearGradient>
-        <clipPath id="za-stem">
-          <path d={body} />
-        </clipPath>
-      </defs>
-      <path d={body} fill="url(#za-stemg)" />
+    <FolkLayer uid="za-stem" parts={[{ d: body, fill: c(STEM_C.lit), sh: 2.6 }]} pxPerUnit={k}>
+      <clipPath id="za-stem">
+        <path d={body} />
+      </clipPath>
       <g clipPath="url(#za-stem)">
-        <path d={tex} stroke={STEM_C.core} strokeWidth={1} strokeOpacity={0.35} fill="none" />
         {antShadow.amt > 0 ? (
           <ellipse cx={XS + 8} cy={(antShadow.y0 + antShadow.y1) / 2 + 46} rx={30} ry={Math.abs(antShadow.y1 - antShadow.y0) / 2 + 20} fill="url(#za-antsh)" opacity={antShadow.amt} />
         ) : null}
       </g>
-      <path d={hairs} fill="none" stroke={c(STEM_C.rim)} strokeWidth={1.1} strokeOpacity={0.6} strokeLinecap="round" />
-      <path d={body} fill="none" stroke={STEM_C.line} strokeWidth={1.3} strokeOpacity={0.85} />
-      {nodes}
-      <path d={`M${pt(footL)}Q${pt([foot[0], foot[1] + 14])} ${pt(footR)}`} fill="none" stroke={STEM_C.line} strokeWidth={1.4} strokeOpacity={0.5} />
-    </g>
+      <path d={hairs} fill="none" stroke={c(STEM_C.rim)} strokeWidth={1.1} strokeOpacity={0.55} strokeLinecap="round" />
+      <path d={nodes.join("")} fill="none" stroke={c(STEM_C.mid)} strokeWidth={2} strokeOpacity={0.7} />
+      <path d={`M${pt(proj(e, STEM.X - STEM.R - 10, 0, -STEM.R * 0.6))}Q${pt([proj(e, STEM.X, 0, 0)[0], proj(e, STEM.X, 0, 0)[1] + 14])} ${pt(proj(e, STEM.X + STEM.R + 10, 0, STEM.R * 0.6))}`} fill="none" stroke={c(STEM_C.mid)} strokeWidth={1.6} strokeOpacity={0.5} />
+    </FolkLayer>
   );
 };
 /** a soft contact shadow on the floor in the medium's shadow colour (londonDepth's ContactShadow, re-coloured) */
@@ -657,7 +636,8 @@ export const antAt = (e: Eye, f: number): AntState => {
 export const stalkSpecAt = (b: BodyPose, f: number) => {
   // V2 (after the photos): one long, thin, slightly wavy stroma from the dorsal pronotum just behind the head, a
   // little longer than the ant, the round knobby fruiting cushion low on it (~quarter of the way along)
-  const base = segPoint(b.meso, [56, -42]);
+  // V3 take 2: the folk ant's pronotum, just behind its head
+  const base = antStalkBase(b);
   const d = segDorsal(b.meso);
   const dorsalDeg = (Math.atan2(d[0], -d[1]) * 180) / Math.PI;
   return {
@@ -733,9 +713,22 @@ const ZombieAnt: React.FC<z.infer<typeof schema>> = ({ air = "A" }) => {
   };
   const veinT = sstep(lin(frame, 104, 144));
   const antGroupRot = frame >= T.clamp[1] ? leafRot : undefined;
-  // V3: the ant in the air: the near side a hair of fog, the far side (legs, antenna ~60 behind) sunk further
-  const look: AntLook = antLook(AIRS[air], 0.06);
-  const farLook: AntLook = antLook(AIRS[air], 0.24);
+  // V3 take 2: the picture-book ant (pandemicFolkAnimals): its parts in the motion's segments and joints, the gouache
+  // texture locked to its mesosoma; the far side in the far ink, a touch into the air
+  void air;
+  const antFrame = { x: b.meso.p[0], y: b.meso.p[1], a: b.meso.a };
+  const sock = antSocket(b);
+  const farParts: FPart[] = [
+    ...farLegs.flatMap((g) => folkLeg(g, mixHex(ANT_INKS.far, AIR.A.ramp[3][1], 0.12))),
+    ...folkAntenna(b.head, ant.antF[0], ant.antF[1], mixHex(ANT_INKS.far, AIR.A.ramp[3][1], 0.12), sock, 0.92),
+  ];
+  const nearParts: FPart[] = [
+    ...folkAntBody(b, ant.mandOpen),
+    ...folkAntenna(b.head, ant.antN[0], ant.antN[1], ANT_INKS.ant, sock),
+    ...nearLegs.flatMap((g) => folkLeg(g, ANT_INKS.ant)),
+    ...folkJointThreads(b, ant.myc),
+    ...folkDeathThreads(b, sstep(lin(frame, 100, 140)), nearLegs),
+  ];
   return (
     <AirStage v={v} bloom={0.22}>
       <WorldSvg cam={cam}>
@@ -774,34 +767,20 @@ const ZombieAnt: React.FC<z.infer<typeof schema>> = ({ air = "A" }) => {
         <LeafShape e={e} leaf={LEAF_A} uid="za-leafA" detail={0.6} Zt={140} fx={fx} />
         {/* the far side of the ant: its legs and antenna stand behind the stem */}
         <g transform={antGroupRot}>
-          {farLegs.map((g) => (
-            <AntLeg key={g.id} g={g} look={farLook} />
-          ))}
-          <Antenna head={b.head} scapeA={ant.antF[0]} funA={ant.antF[1]} look={farLook} />
+          <FolkLayer uid="za-far" parts={farParts} pxPerUnit={cam.k} frame={antFrame} />
         </g>
-        <Stem e={e} antShadow={{ y0: Math.min(...ys), y1: Math.max(...ys), amt: climbing * 0.75 }} fx={fx} />
+        <Stem e={e} antShadow={{ y0: Math.min(...ys), y1: Math.max(...ys), amt: climbing * 0.75 }} fx={fx} k={cam.k} />
         <LeafShape e={e} leaf={LEAF_TOP2} uid="za-leafT2" detail={0.4} fx={fx} />
         <LeafShape e={e} leaf={LEAF_TOP} uid="za-leafT" detail={0.4} fx={fx} />
         {/* the leaf it bites */}
         <g transform={leafRot}>
-          <LeafShape e={e} leaf={BITE_LEAF} uid="za-leaf" detail={1} litEdge tones={BITE_TONES} fx={fx} />
+          <FolkLayer uid="za-leaftx" parts={[]} pxPerUnit={cam.k} wobble={0.5}>
+            <LeafShape e={e} leaf={BITE_LEAF} uid="za-leaf" detail={1} litEdge tones={BITE_TONES} fx={fx} />
+          </FolkLayer>
         </g>
         {/* the ant */}
         <g transform={antGroupRot}>
-          <AntBody uid="za-ant" b={b} look={look} mandOpen={ant.mandOpen} myc={ant.myc} mycOpacity={ant.mycOp} mycWidth={ant.mycW} nearJaw={false} />
-          <Antenna head={b.head} scapeA={ant.antN[0]} funA={ant.antN[1]} look={look} />
-          {nearLegs.map((g) => (
-            <AntLeg key={g.id} g={g} look={look} />
-          ))}
-          {/* V3: fine mycelium threads emerging at the dead ant's joints and plate edges (few; the stalk is the hero) */}
-          <JointTufts b={b} t={sstep(lin(frame, 100, 140))} legs={nearLegs} />
-          {/* r2: the fungus showing at the near legs' joints (hip and knee) from f0 */}
-          {nearLegs.map((g, i) => (
-            <g key={`lt${g.id}`}>
-              <MyceliumThreads path={[lerp2(g.root, g.hip, 0.2), g.hip, lerp2(g.hip, g.knee, 0.3)]} t={ant.myc} seed={30 + i} width={ant.mycW * 0.8} spread={1.6} every={12} branchLen={8} opacity={ant.mycOp} />
-              <MyceliumThreads path={[lerp2(g.knee, g.hip, 0.22), g.knee, lerp2(g.knee, g.ankle, 0.22)]} t={ant.myc} seed={40 + i} width={ant.mycW * 0.7} spread={1.4} every={12} branchLen={7} opacity={ant.mycOp} />
-            </g>
-          ))}
+          <FolkLayer uid="za-ant" parts={nearParts} pxPerUnit={cam.k} frame={antFrame} />
         </g>
         {/* the jaws sunk in the vein: the vein's underside over the mandible tips once they have shut on it */}
         {frame >= T.clamp[1] - 0.5 ? (
@@ -812,13 +791,13 @@ const ZombieAnt: React.FC<z.infer<typeof schema>> = ({ air = "A" }) => {
         ) : null}
         {/* the near jaw blade in front of the vein (the far one behind it): a pincer */}
         <g transform={antGroupRot}>
-          <Jaw head={b.head} which="near" open={ant.mandOpen} look={look} />
+          <FolkLayer uid="za-jaw" parts={folkJaw(b.head, ant.mandOpen)} pxPerUnit={cam.k} frame={antFrame} />
         </g>
         <LeafShape e={e} leaf={LEAF_B} uid="za-leafB" detail={0.6} Zt={-60} fx={fx} />
         {/* the fungus */}
         <g transform={antGroupRot}>
-          <MyceliumThreads path={veinPath(BITE_U, BITE_U + 120)} t={veinT} seed={11} width={1.5} spread={3} every={16} branchLen={14} />
-          <MyceliumThreads path={veinPath(BITE_U, BITE_U - 110)} t={veinT * 0.9} seed={13} width={1.5} spread={3} every={16} branchLen={14} />
+          <MyceliumThreads path={veinPath(BITE_U, BITE_U + 120)} t={veinT} seed={11} width={1.7} spread={3} every={16} branchLen={14} look="gouache" />
+          <MyceliumThreads path={veinPath(BITE_U, BITE_U - 110)} t={veinT * 0.9} seed={13} width={1.7} spread={3} every={16} branchLen={14} look="gouache" />
         </g>
         {/* r2: the stalk drawn LAST, so it stands in front of the leaf, its near edge and the vein on every frame; a mask
             of the head's silhouette (and the near jaw) keeps its base behind the head, where it rises from */}
@@ -826,12 +805,13 @@ const ZombieAnt: React.FC<z.infer<typeof schema>> = ({ air = "A" }) => {
           <g transform={antGroupRot}>
             <mask id="za-stalk-mask" maskUnits="userSpaceOnUse" x={-4000} y={-4000} width={9000} height={9000}>
               <rect x={-4000} y={-4000} width={9000} height={9000} fill="white" />
-              <path d={headOutline(b)} fill="black" />
-              <path d={jawOutline(b.head, ant.mandOpen)} fill="black" />
+              <path d={antHeadOutline(b)} fill="black" />
             </mask>
-            <g mask="url(#za-stalk-mask)">
-              <CordycepsStalk uid="za-stalk" {...spec} grow={grow} ripen={ripen} shadow={1} casing={0.6} />
-            </g>
+            <FolkLayer uid="za-stk" parts={[]} pxPerUnit={cam.k} frame={antFrame}>
+              <g mask="url(#za-stalk-mask)">
+                <CordycepsStalk uid="za-stalk" {...spec} grow={grow} ripen={ripen} shadow={1} look="gouache" />
+              </g>
+            </FolkLayer>
           </g>
         ) : null}
       </WorldSvg>
