@@ -16,30 +16,38 @@
 // DURATION: slot 27.861 -> 35.369 s = 7.508 s x 23.976 = 180 frames (f0..f179). Story clock S = 614 + f (sequence
 //   frame 668 minus cut 1's in, frame 54).
 //
-// THE MOTION: one continuous move. f0 = DEN_CAM_ESTABLISH on a clear afternoon (no storms), jets on approach; from f0
-// the camera pulls up and tilts to a RAISED OBLIQUE (pitch 47, heading 0; one damped glide settled by ~f75, then a slow
-// creep): DEN big in the middle on the world's aerial, four approach corridors pouring in from the four frame corners,
-// each through a cream GATE IN THE SKY (a lit frame at the altitude the jets fly; its own soft ground shadow), the jets
-// 3D airliners at altitude with soft ground shadows offset by their height, descending to four runways (one pinwheel
-// flow: NW -> 16R, NE -> 16L, SE -> 26, SW -> 7).
+// THE MOTION (v4, revision 3: no gate frames, even pacing): one continuous move. f0 = DEN_CAM_ESTABLISH on a clear
+// afternoon (no storms), jets on approach; from f0 the camera pulls up and tilts to a RAISED OBLIQUE (pitch 44,
+// heading 0; one damped glide settled by ~f75, then a slow creep): DEN big in the middle on the world's aerial, four
+// arrival streams pouring in from the four frame corners past the four corner posts (NW, NE, SE, SW; nothing drawn at
+// a post: a post is where its stream turns for the field), 3D airliners at altitude with soft ground shadows,
+// descending to four runways (one pinwheel flow: NW -> 16R, NE -> 17R, SE -> 26, SW -> 7).
 // "We don't know where the thunderstorm will be" (f22-f46): six GHOST forecast storms rise out of the haze round the
-// field's west, north and east, one after another clockwise (4 f apart): the world's storm cells drawn as translucent
-// cream-white towers (~48 %) with a steady warm-amber glow inside the lower body = possible storms (the worst-case
-// forecast), not real ones; the field stays in sun.
-// "Limit all the corner posts" (f57-f90): all four gate frames close in together to a narrow slot, and the stream
-// behind each bunches (jets slow in the last miles before the gate, from f60). "Pull down the amount of traffic"
-// (f104-f165): each gate's release spacing opens, so jets that reach the hold fix while the slot is busy peel into a
-// holding loop beside the corridor (a short contrail draws it) and come round again; behind the gates the spacing opens
-// to a trickle. No jet is deleted mid-air: every jet enters beyond the frame and leaves only by landing (it drains into
-// the runway tone as it rolls out). f165-f179: a trickle onto the runways, loops circling, the ghosts all round.
-// AMBER = the weather's reach (the worst-case forecast storms). Cream jets and gates; nothing else amber. No text.
+// field's west, north and east, one after another clockwise (4 f apart): the world's storm cells (with the world's
+// storm life, boil 0.8) drawn as translucent cream-white towers (~48 %) with a steady warm-amber glow inside the lower
+// body = possible storms (the worst-case forecast), not real ones; the field stays in sun.
+// "Limit all the corner posts" (from f57, staggered NW 59 / NE 63 / SE 67 / SW 71): the jets reaching each post break
+// into a HOLDING CIRCLE beside the post instead of flowing through, one more every 28 f (1 -> 2 -> 3 circling, three
+// places 120 degrees apart on an 84-frame circle, each drawing the circle as a fading contrail); the circles fill by
+// ~f128 and circle on slowly to the end. "Pull down the amount of traffic": fewer jets are fed in (the streams open
+// from the frame corners inward over ~f70-140) and the few still coming slip through each post half a place between
+// two circling jets: a trickle lands. By ~f150 a calm settled frame: three jets circling at each post, sparse streams,
+// a jet now and then landing. Nothing new starts after ~f155. No jet is deleted mid-air: every jet enters beyond the
+// frame (fading up out of the haze far out) and leaves only by landing (it drains into the runway tone as it rolls out).
+// AMBER = the weather's reach (the worst-case forecast storms). Cream jets and contrails; nothing else amber. No text.
 //
-// CUT-LOCAL CHOICES (world files untouched): the gates sit a few miles off the field (not the true ~46 mi; the
+// CUT-LOCAL CHOICES (world files untouched): the corner posts sit a few miles off the field (not the true ~46 mi; the
 // corner-post figure in SOURCES.md is schematic and gives no distances), placed in screen space at the end camera so
-// the four corridors come from the four frame corners and the gates and loops stay out of the caption bands; jets are
-// drawn at a near-constant size at the field's distance (world length follows the camera, like a map symbol: ~40 px at
-// f0, ~54 px at the gates in the end view, bigger near the camera by perspective); gates, streams and ghost storms are
-// cut-local (the world's CornerPost / ArrivalStream are laid out for 46-mile gates).
+// the four streams come from the four frame corners and the holds stay out of the caption bands; jets are drawn at a
+// near-constant size at the field's distance (world length follows the camera, like a map symbol: ~40 px at f0, ~54 px
+// in the end view, bigger near the camera by perspective); the traffic is a scripted schedule (arrival times at each
+// hold fix), so the holds build exactly 1 -> 2 -> 3 and no two jets ever meet; the inbound leg flies faster the farther
+// out (cruise -> approach) so the thinning sweeps in from the corners within the cut.
+//
+// EXPORTS FOR CUT 6 (opens on this cut's last frame; never rename): WORST_S0, WORST_CAM (.at(f)), WORST_CAM_END,
+// WORST_POSTS, WORST_POST_Z, WORST_CORRIDORS, WORST_HOLDS, WORST_HOLD_LAP, worstUpSpeed, WORST_LIMIT_AT,
+// worstJetPosesAt(f), WORST_JETS_END, worstJetLenAt(f), WORST_GHOSTS, worstGhostsAt(f), WORST_GHOST_LOOK, and the
+// drawing helpers' look (cream jets, contrails as below).
 //
 // SOURCES: DEN layout per denverAirfield.ts (LAYOUT_SOURCE); the four arrival corner posts NE / SE / SW / NW per
 // assets-src/scott-weather-fired/SOURCES.md (NWS Denver CWSU, "Denver Air Route Traffic Control Thunderstorm Patterns",
@@ -56,7 +64,6 @@ import {
   HAZE,
   RUNWAYS,
   SUN_DIR,
-  TEX,
   cellItems,
   clamp01,
   fogAt,
@@ -161,19 +168,19 @@ const rayAt = (v: DenView, sx: number, sy: number, zp: number): P2 => {
 };
 
 // ===================================================================================================================
-// THE CORRIDORS: gates, paths, the traffic simulation
+// THE CORRIDORS: corner posts, paths, the traffic schedule
 // ===================================================================================================================
 type PostId = "NE" | "SE" | "SW" | "NW";
 const POSTS: PostId[] = ["NW", "NE", "SE", "SW"];
-/** the gates' altitude (miles): the jets fly through the frame's middle */
+/** the corner posts' (and holding circles') altitude (miles) */
 export const GATE_Z = 0.85;
-/** where each gate sits in the END view (screen px), and the frame corner its corridor comes from */
+/** where each corner post sits in the END view (screen px; `gate` in a corridor), and the frame corner its stream comes from */
 const GATE_SCREEN: Record<PostId, P2> = { NW: { x: 235, y: 470 }, NE: { x: 845, y: 470 }, SE: { x: 935, y: 880 }, SW: { x: 180, y: 880 } };
 const CORNER_SCREEN: Record<PostId, P2> = { NW: { x: -40, y: -60 }, NE: { x: 1120, y: -60 }, SE: { x: 1120, y: 1990 }, SW: { x: -40, y: 1990 } };
 /** each corridor lands on its own runway in one pinwheel flow (no head-on pairs) */
 const LANDING: Record<PostId, { id: string; dir: P2; final: number }> = {
   NW: { id: "16R/34L", dir: { x: 0, y: -1 }, final: 1.7 },
-  NE: { id: "16L/34R", dir: { x: 0, y: -1 }, final: 1.4 },
+  NE: { id: "17R/35L", dir: { x: 0, y: -1 }, final: 1.5 },
   SE: { id: "8/26", dir: { x: -1, y: 0 }, final: 1.7 },
   SW: { id: "7/25", dir: { x: 1, y: 0 }, final: 0.6 },
 };
@@ -254,33 +261,41 @@ const fillet = (pts: P2[], r: number): P2[] => {
   return dense;
 };
 
-/** hold fix this far before the gate; loop radius (miles) */
-const HOLD_BACK = 1.05;
-const LOOP_R = 0.72;
-/** per gate: the south gates hold a little farther back on a tighter loop, so the loop clears the turn toward the
- *  runway just past the gate and stays above the caption band */
+/** the hold at each corner post: the hold fix this far before the post, the holding circle's radius (miles) */
 const HOLD: Record<PostId, { back: number; r: number }> = {
-  NW: { back: HOLD_BACK, r: LOOP_R },
-  NE: { back: HOLD_BACK, r: LOOP_R },
-  SE: { back: 1.3, r: 0.56 },
-  SW: { back: 1.3, r: 0.56 },
+  NW: { back: 0.35, r: 0.8 },
+  NE: { back: 0.35, r: 0.8 },
+  SE: { back: 1.1, r: 0.65 },
+  SW: { back: 1.1, r: 0.65 },
 };
-/** cruise speed (miles / frame, a timelapse); the bunching slow-down in the last miles before the hold fix */
+/** one holding circle takes HOLD_LAP frames; its three places pass the fix SLOT_T frames apart, so the three jets that
+ *  join it (SLOT_T apart) circle 120 degrees apart and never meet */
+const HOLD_LAP = 84;
+const SLOT_T = HOLD_LAP / 3;
+const holdSpeed = (r: number) => (TAU * r) / HOLD_LAP;
+/** cruise speed at the fix and through the post (miles / frame, a timelapse) */
 export const JET_SPEED = 0.08;
-const SLOW_ZONE = 3.2;
 /** the inbound leg: jets enter FAR_MI out (deep in the haze or off-frame) and fly faster the farther out they are
  *  (cruise -> approach: v = JET_SPEED x (1 + d / CRUISE_MI), d = miles to the hold fix), so a change in the entry
  *  rate sweeps in from the frame corners within the cut */
 const FAR_MI = 44;
 const CRUISE_MI = 6;
 const upSpeed = (d: number) => JET_SPEED * (1 + Math.pow(Math.max(0, d) / CRUISE_MI, 1.5));
-/** frames to fly the inbound leg from d0 down to d1 miles before the hold fix (no bunching) */
-const upTime = (d0: number, d1: number) => {
-  let t = 0;
-  for (let d = d1; d < d0; d += 0.05) t += Math.min(0.05, d0 - d) / upSpeed(d + 0.025);
-  return t;
+/** miles before the fix a jet is tau frames before it reaches the fix (the cruise law integrated back from the fix) */
+const DIST_TAB: number[] = (() => {
+  const out = [0];
+  let d = 0;
+  for (let i = 1; i <= 4000 && d < 200; i++) {
+    for (let k = 0; k < 4; k++) d += upSpeed(d) * 0.25;
+    out.push(d);
+  }
+  return out;
+})();
+const distBefore = (tau: number) => {
+  const i = Math.floor(tau);
+  if (i >= DIST_TAB.length - 1) return DIST_TAB[DIST_TAB.length - 1];
+  return lerp(DIST_TAB[i], DIST_TAB[i + 1], tau - i);
 };
-const slowAt = (t: number) => 0.26 * smooth(58, 92, t);
 /** touchdown point (miles), roll-out decay (frames); final lengths per corridor in LANDING */
 const TD_MI = 0.2;
 const ROLL_TAU = 11;
@@ -335,116 +350,59 @@ export const CORRIDORS: Record<PostId, Corridor> = (() => {
   return out;
 })();
 
-/** full-rate spacing (frames); the gates' release spacing opens RELEASE_F0 -> RELEASE_F1 */
-const GAP0 = 21;
-const GAP1 = 52;
-const RELEASE_F0 = 86;
-const RELEASE_F1 = 118;
-const releaseGap = (t: number) => lerp(GAP0 * 0.9, GAP1, smooth(RELEASE_F0, RELEASE_F1, t));
-/** fewer jets fed in: the entry spacing opens GAP0 -> ENTRY_GAP1, timed per corridor so the first gap crosses the
- *  end frame's edge (the corridor's frame corner) at ~ENTRY_AT_EDGE */
-const ENTRY_GAP1 = 62;
-const ENTRY_AT_EDGE = 90;
-/** miles before the hold fix where each corridor leaves the end frame (or fades into the haze) */
-const D_EDGE: Record<PostId, number> = (() => {
-  const out = {} as Record<PostId, number>;
+/** THE SCHEDULE (per post, frames at the hold fix). Before "limit all the corner posts" the jets pass every GAP0
+ *  frames. From LIMIT_AT (staggered across the posts) the next three jets join the holding circle one place apart
+ *  (1 -> 2 -> 3 circling) and circle on to the end; the jets still fed in are fewer and slip through the post half a
+ *  place between two circling jets (gaps open from the frame corners inward): a trickle lands. */
+const GAP0 = 22;
+export const WORST_LIMIT_AT: Record<PostId, number> = { NW: 57, NE: 61, SE: 65, SW: 69 };
+/** frames after the first hold that the later, fewer jets reach the fix (half a place off the circling jets) */
+const LATER = [98, 126, 182, 238, 322];
+type Sched = { a: number; hold: boolean; release: number };
+const SCHEDULE: Record<PostId, Sched[]> = (() => {
+  const out = {} as Record<PostId, Sched[]>;
   for (const id of POSTS) {
-    const c = CORRIDORS[id];
-    let dEdge = FAR_MI;
-    for (let d = 0; d <= FAR_MI; d += 0.1) {
-      const p = pathAt(c.up, c.up.L - d);
-      const q = endView.project(p.x, p.y, GATE_Z + Math.min(1.4, 0.035 * d));
-      if (!q || q.x < -40 || q.x > W + 40 || q.y < -40 || q.y > H + 40) {
-        dEdge = d;
-        break;
-      }
-    }
-    // past ~22 mi out a jet is a speck in the haze: treat that as the corridor's visible edge
-    out[id] = Math.min(dEdge, 22);
+    const j1 = WORST_LIMIT_AT[id] + 2;
+    const list: Sched[] = [];
+    for (let k = 40; k >= 1; k--) list.push({ a: j1 - 2 - GAP0 * k, hold: false, release: 0 });
+    list.push({ a: j1, hold: true, release: Infinity });
+    list.push({ a: j1 + SLOT_T, hold: true, release: Infinity });
+    list.push({ a: j1 + 2 * SLOT_T, hold: true, release: Infinity });
+    for (const dt of LATER) list.push({ a: j1 + dt, hold: false, release: 0 });
+    out[id] = list;
   }
   return out;
 })();
-const entryGap = (id: PostId, t: number) => {
-  const t0 = ENTRY_AT_EDGE - upTime(CORRIDORS[id].up.L, D_EDGE[id]);
-  return lerp(GAP0, ENTRY_GAP1, smooth(t0 - 6, t0 + 10, t));
-};
-const POST_PHASE: Record<PostId, number> = { NW: 0.15, NE: 0.62, SE: 0.38, SW: 0.86 };
 
-/** one jet's recorded state at each frame 0..DURATION (mode 0 none, 1 inbound, 2 holding, 3 down, 4 rolled out) */
+/** one jet's state at each frame 0..DURATION (mode 0 none, 1 inbound, 2 holding, 3 down, 4 rolled out) */
 type JetRec = { mode: Int8Array; s: Float32Array; th: Float32Array; side: 1 | -1; tTd: number; vTd: number };
-const SIM_T0 = -1500;
-const DT = 0.25;
 const TRAFFIC: Record<PostId, JetRec[]> = (() => {
   const out = {} as Record<PostId, JetRec[]>;
+  const nF = DURATION + 1;
   for (const id of POSTS) {
     const c = CORRIDORS[id];
-    type J = { mode: number; s: number; th: number; laps: number; side: 1 | -1; tTd: number; vTd: number; rec: JetRec };
-    const jets: J[] = [];
-    let nextEntry = SIM_T0 + POST_PHASE[id] * GAP0;
-    let nextFree = -Infinity;
-    const queue: J[] = [];
-    const nF = DURATION + 1;
-    for (let t = SIM_T0; t <= DURATION + 0.001; t += DT) {
-      while (t >= nextEntry) {
-        const rec: JetRec = { mode: new Int8Array(nF), s: new Float32Array(nF), th: new Float32Array(nF), side: 1, tTd: Infinity, vTd: 0 };
-        jets.push({ mode: 1, s: (t - nextEntry) * upSpeed(c.up.L), th: 0, laps: 0, side: 1, tTd: Infinity, vTd: 0, rec });
-        nextEntry += entryGap(id, nextEntry);
-      }
-      const slow = slowAt(t);
-      for (const j of jets) {
-        if (j.mode === 1) {
-          const w = smooth(c.up.L - SLOW_ZONE, c.up.L, j.s);
-          j.s += upSpeed(c.up.L - j.s) * (1 - slow * w) * DT;
-          if (j.s >= c.up.L) {
-            const over = j.s - c.up.L;
-            if (queue.length === 0 && t >= nextFree) {
-              j.mode = 3;
-              j.s = over;
-              nextFree = t + releaseGap(t);
-            } else {
-              j.mode = 2;
-              j.th = over / c.loopR;
-              // holding loops on the corridor's in-frame side (one side per gate)
-              j.side = c.outer;
-              j.rec.side = c.outer;
-              queue.push(j);
-            }
-          }
-        } else if (j.mode === 2) {
-          const before = j.th;
-          j.th += ((JET_SPEED * (1 - slow)) / c.loopR) * DT;
-          if (Math.floor(j.th / TAU) > Math.floor(before / TAU)) {
-            // back at the hold fix: released if first in line and the slot is free, else another lap
-            if (queue[0] === j && t >= nextFree) {
-              queue.shift();
-              j.mode = 3;
-              j.s = (j.th - TAU * Math.floor(j.th / TAU)) * c.loopR;
-              nextFree = t + releaseGap(t);
-            }
-          }
-        } else if (j.mode === 3) {
-          const v = JET_SPEED * (1 - slow);
-          j.s += v * DT;
-          if (j.s >= c.down.L) {
-            j.mode = 4;
-            j.tTd = t;
-            j.vTd = v;
-            j.rec.tTd = t;
-            j.rec.vTd = v;
-          }
+    const om = holdSpeed(c.loopR) / c.loopR;
+    out[id] = SCHEDULE[id].map((sc) => {
+      const rec: JetRec = { mode: new Int8Array(nF), s: new Float32Array(nF), th: new Float32Array(nF), side: c.outer, tTd: Infinity, vTd: JET_SPEED };
+      const tDown = sc.hold ? sc.release : sc.a;
+      rec.tTd = tDown + c.down.L / JET_SPEED;
+      for (let f = 0; f < nF; f++) {
+        if (f <= sc.a) {
+          const d = distBefore(sc.a - f);
+          if (d >= c.up.L) continue;
+          rec.mode[f] = 1;
+          rec.s[f] = c.up.L - d;
+        } else if (sc.hold && f < sc.release) {
+          rec.mode[f] = 2;
+          rec.th[f] = om * (f - sc.a);
+        } else {
+          const sd = JET_SPEED * (f - tDown);
+          rec.mode[f] = sd >= c.down.L ? 4 : 3;
+          rec.s[f] = sd;
         }
       }
-      // record at integer frames
-      const fi = Math.round(t);
-      if (Math.abs(t - fi) < 1e-6 && fi >= 0 && fi <= DURATION) {
-        for (const j of jets) {
-          j.rec.mode[fi] = j.mode;
-          j.rec.s[fi] = j.s;
-          j.rec.th[fi] = j.th;
-        }
-      }
-    }
-    out[id] = jets.map((j) => j.rec);
+      return rec;
+    });
   }
   return out;
 })();
@@ -502,10 +460,6 @@ const jetPose = (c: Corridor, j: JetRec, f: number): JetPose | null => {
 
 /** jet length (miles) for a near-constant size at the field's distance: ~40 px at f0, ~54 px in the end view */
 const jetLenFor = (v: DenView, pull: number) => lerp(40, 54, pull) / (v.scaleAt(FIELD.x, FIELD.y, 0) || 1);
-/** the jets' length in the end view; the gates share the jets' symbol scale (sig = len / JET_LEN_END) so a jet always
- *  fits its gate the same way */
-const JET_LEN_END = jetLenFor(endView, 1);
-
 /** Audit helper (per-jet continuity check): every live jet's screen position, opacity and state at frame f. */
 export const worstJetsAt = (f: number) => {
   const v = makeView(WORST_CAM.at(f));
@@ -524,20 +478,11 @@ export const worstJetsAt = (f: number) => {
 };
 
 // ===================================================================================================================
-// DRAWING: light, the 3D airliner, the gate frame
+// DRAWING: light, the 3D airliner
 // ===================================================================================================================
 const SUN3: P3 = [SUN_DIR[0], SUN_DIR[1], SUN_DIR[2]];
 const CREAM = hexRgb(COLOR.cream);
 const CREAM_FOOT = hexRgb(COLOR.creamFoot);
-const BOARD = hexRgb(COLOR.board);
-/** a face's colour from its normal (one key light from the low west sun, plus a soft sky fill from above) */
-const shadeRgb = (n: P3, base = CREAM) => {
-  const l = Math.max(0, n[0] * SUN3[0] + n[1] * SUN3[1] + n[2] * SUN3[2]);
-  const sky = Math.max(0, n[2]);
-  const k = clamp01(0.35 + 0.55 * l + 0.3 * sky);
-  return mixRgb(mixRgb(BOARD, CREAM_FOOT, clamp01(k * 1.4)), base, clamp01((k - 0.45) * 2));
-};
-
 type Item = { d: number; node: React.ReactNode };
 /** The 3D airliner: plan body (lit from above), a fuselage spine, the vertical fin; ground shadow separately. */
 const jetNodes = (v: DenView, key: string, p: JetPose, len: number, runwayRgb: [number, number, number]): { body: Item | null; shadow: React.ReactNode } => {
@@ -575,94 +520,6 @@ const jetNodes = (v: DenView, key: string, p: JetPose, len: number, runwayRgb: [
   };
 };
 
-/** the gate frame (miles): opening half-width open / shut, opening half-height, bar thickness, depth */
-const GATE = { open: 0.78, shut: 0.36, hh: 0.3, bar: 0.15, depth: 0.2 } as const;
-type Box3 = { c: P3; ax: P3; ay: P3; az: P3; e: P3 }; // centre, unit axes, half extents
-const boxCorners = (b: Box3): P3[] => {
-  const out: P3[] = [];
-  for (const sx of [-1, 1])
-    for (const sy of [-1, 1])
-      for (const sz of [-1, 1])
-        out.push([
-          b.c[0] + b.ax[0] * b.e[0] * sx + b.ay[0] * b.e[1] * sy + b.az[0] * b.e[2] * sz,
-          b.c[1] + b.ax[1] * b.e[0] * sx + b.ay[1] * b.e[1] * sy + b.az[1] * b.e[2] * sz,
-          b.c[2] + b.ax[2] * b.e[0] * sx + b.ay[2] * b.e[1] * sy + b.az[2] * b.e[2] * sz,
-        ]);
-  return out;
-};
-// faces as corner indices (sx, sy, sz bits: index = sx*4 + sy*2 + sz with -1 -> 0, 1 -> 1)
-const FACES: { idx: number[]; n: [number, number, number] }[] = [
-  { idx: [4, 5, 7, 6], n: [1, 0, 0] },
-  { idx: [0, 2, 3, 1], n: [-1, 0, 0] },
-  { idx: [2, 6, 7, 3], n: [0, 1, 0] },
-  { idx: [0, 1, 5, 4], n: [0, -1, 0] },
-  { idx: [1, 3, 7, 5], n: [0, 0, 1] },
-  { idx: [0, 4, 6, 2], n: [0, 0, -1] },
-];
-const convexHull = (pts: P2[]): P2[] => {
-  const p = [...pts].sort((a, b) => a.x - b.x || a.y - b.y);
-  const cr = (o: P2, a: P2, b: P2) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-  const lo: P2[] = [];
-  for (const q of p) {
-    while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop();
-    lo.push(q);
-  }
-  const up: P2[] = [];
-  for (const q of p.reverse()) {
-    while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop();
-    up.push(q);
-  }
-  return lo.slice(0, -1).concat(up.slice(0, -1));
-};
-const gateBoxes = (c: Corridor, narrow: number, sig: number): Box3[] => {
-  const u: P3 = [c.inDir.x, c.inDir.y, 0];
-  const a: P3 = [-c.inDir.y, c.inDir.x, 0];
-  const zA: P3 = [0, 0, 1];
-  const w = lerp(GATE.open, GATE.shut, narrow) * sig;
-  const hh = GATE.hh * sig;
-  const bar = GATE.bar * sig;
-  const depth = GATE.depth * sig;
-  const at = (da: number, dz: number): P3 => [c.gate.x + a[0] * da, c.gate.y + a[1] * da, GATE_Z + dz];
-  return [
-    { c: at(-w - bar / 2, 0), ax: a, ay: u, az: zA, e: [bar / 2, depth / 2, hh + bar] },
-    { c: at(w + bar / 2, 0), ax: a, ay: u, az: zA, e: [bar / 2, depth / 2, hh + bar] },
-    { c: at(0, hh + bar / 2), ax: a, ay: u, az: zA, e: [w, depth / 2, bar / 2] },
-    { c: at(0, -hh - bar / 2), ax: a, ay: u, az: zA, e: [w, depth / 2, bar / 2] },
-  ];
-};
-const gateItems = (v: DenView, c: Corridor, narrow: number, sig: number): { items: Item[]; shadow: React.ReactNode } => {
-  const items: Item[] = [];
-  const shadows: React.ReactNode[] = [];
-  gateBoxes(c, narrow, sig).forEach((b, bi) => {
-    const cs = boxCorners(b);
-    const pc = v.project(b.c[0], b.c[1], b.c[2]);
-    if (!pc) return;
-    const fog = fogAt(v, b.c[0], b.c[1], b.c[2]);
-    const faces: React.ReactNode[] = [];
-    FACES.forEach((F, fi) => {
-      const n: P3 = [
-        b.ax[0] * F.n[0] + b.ay[0] * F.n[1] + b.az[0] * F.n[2],
-        b.ax[1] * F.n[0] + b.ay[1] * F.n[1] + b.az[1] * F.n[2],
-        b.ax[2] * F.n[0] + b.ay[2] * F.n[1] + b.az[2] * F.n[2],
-      ];
-      const fc = F.idx.map((i) => cs[i]);
-      const mid: P3 = [(fc[0][0] + fc[2][0]) / 2, (fc[0][1] + fc[2][1]) / 2, (fc[0][2] + fc[2][2]) / 2];
-      const toEye = [v.eye[0] - mid[0], v.eye[1] - mid[1], v.eye[2] - mid[2]];
-      if (n[0] * toEye[0] + n[1] * toEye[1] + n[2] * toEye[2] <= 0) return;
-      const pts = projectPoly(v, fc);
-      const col = rgbHex(mixRgb(shadeRgb(n), HAZE, fog));
-      faces.push(<path key={fi} d={polyD(pts)} fill={col} stroke={col} strokeWidth={0.5} strokeLinejoin="round" />);
-    });
-    items.push({ d: pc.d, node: <g key={`g${c.id}${bi}`}>{faces}</g> });
-    const sp = cs.map(([x, y, zz]) => {
-      const o = shadowOffset(zz);
-      return v.project(x + o.x, y + o.y, 0);
-    });
-    if (sp.every((q) => q)) shadows.push(<path key={`gs${c.id}${bi}`} d={polyD(convexHull(sp as P2[]))} fill={COLOR.shadow} opacity={f3(0.3 * (1 - fog))} />);
-  });
-  return { items, shadow: <g key={`gsh${c.id}`}>{shadows}</g> };
-};
-
 // ===================================================================================================================
 // GHOST FORECAST STORMS (the worst case): the world's cells, translucent cream, amber inner glow, soft amber rim
 // ===================================================================================================================
@@ -690,6 +547,8 @@ const ghostState = (gh: (typeof GHOSTS)[number], f: number, i: number): StormSta
   shadowStrength: 0,
   // a steady warm glow lit inside the lower body (the world's strike glow, held, never flickering)
   glow: 0.3,
+  // the world's storm life, a little gentler: the possible storms billow softly on the story clock
+  boil: 0.8,
 });
 const GhostCanvas: React.FC<{ v: DenView; f: number; S: number; idx: number }> = ({ v, f, S, idx }) => {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -705,7 +564,7 @@ const GhostCanvas: React.FC<{ v: DenView; f: number; S: number; idx: number }> =
     ctx.clearRect(0, 0, W, H);
     resetCloudPool();
     const st = ghostState(gh, f, idx);
-    const its = cellItems(v, st, 0).filter((it) => it.type === "cell");
+    const its = cellItems(v, st, S).filter((it) => it.type === "cell");
     for (const it of its) paintCloudItem(ctx, it);
     // lift the volume toward cream-white, then a soft warm-amber glow inside its lower body
     const sz = gh.size;
@@ -738,35 +597,6 @@ const GhostCanvas: React.FC<{ v: DenView; f: number; S: number; idx: number }> =
   );
 };
 
-/** soften the aerial photo's square edge into the plains (a feathered veil of the plains' tone along its border) */
-const AerialFeather: React.FC<{ v: DenView }> = ({ v }) => {
-  const x0 = TEX.aerial.ox;
-  const y1 = TEX.aerial.oy;
-  const x1 = x0 + TEX.aerial.mi;
-  const y0 = y1 - TEX.aerial.mi;
-  const ring = (inset: number) =>
-    projectPoly(v, [
-      [x0 + inset, y0 + inset, 0],
-      [x1 - inset, y0 + inset, 0],
-      [x1 - inset, y1 - inset, 0],
-      [x0 + inset, y1 - inset, 0],
-    ]);
-  const k = v.scaleAt(FIELD.x, FIELD.y, 0);
-  const outer = ring(-0.15);
-  const inner = ring(0.45);
-  const d = `${polyD(outer)} ${polyD([...inner].reverse())}`;
-  return (
-    <g>
-      <defs>
-        <filter id="wcFeather" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation={f3(Math.max(2, 0.16 * k))} />
-        </filter>
-      </defs>
-      <path d={d} fill="#B9A671" fillRule="evenodd" opacity={0.42} filter="url(#wcFeather)" />
-    </g>
-  );
-};
-
 // ===================================================================================================================
 // THE CUT
 // ===================================================================================================================
@@ -776,7 +606,6 @@ const WorstCaseCornerPosts: React.FC<z.infer<typeof schema>> = () => {
   const cam = WORST_CAM.at(f);
   const v = makeView(cam);
   const pull = smooth(0, 75, f);
-  const narrow = smooth(57, 90, f);
   const len = jetLenFor(v, pull);
   const runwayRgb = hexRgb(DEN_COLORS.runway);
 
@@ -785,9 +614,6 @@ const WorstCaseCornerPosts: React.FC<z.infer<typeof schema>> = () => {
   const trails: React.ReactNode[] = [];
   for (const id of POSTS) {
     const c = CORRIDORS[id];
-    const gi = gateItems(v, c, narrow, len / JET_LEN_END);
-    items.push(...gi.items);
-    shadows.push(gi.shadow);
     TRAFFIC[id].forEach((j, ji) => {
       const p = jetPose(c, j, f);
       if (!p) return;
@@ -795,13 +621,13 @@ const WorstCaseCornerPosts: React.FC<z.infer<typeof schema>> = () => {
       if (!nodes.body) return;
       items.push(nodes.body);
       shadows.push(nodes.shadow);
-      // a held jet draws its loop as a short fading contrail
+      // a held jet draws its holding circle as a fading contrail (three quarters of a circle behind it)
       if (p.loopTh > 0) {
         const u = c.inDir;
         const n = { x: -u.y * p.side, y: u.x * p.side };
         const C = { x: c.hold.x + n.x * c.loopR, y: c.hold.y + n.y * c.loopR };
-        const back = Math.min(p.loopTh, TAU * 0.5);
-        const segs = 20;
+        const back = Math.min(p.loopTh, TAU * 0.75);
+        const segs = 28;
         const lag = (len * 0.5) / c.loopR;
         for (let sI = 0; sI < segs; sI++) {
           const t0 = p.loopTh - lag - (back * sI) / segs;
@@ -814,9 +640,9 @@ const WorstCaseCornerPosts: React.FC<z.infer<typeof schema>> = () => {
               key={`t${id}${ji}_${sI}`}
               d={lineD([pa[0], pa[1]])}
               stroke={COLOR.cream}
-              strokeWidth={f3(Math.max(1.5, len * v.scaleAt(C.x, C.y, GATE_Z) * 0.07))}
+              strokeWidth={f3(Math.max(2, len * v.scaleAt(C.x, C.y, GATE_Z) * 0.085))}
               strokeLinecap="round"
-              opacity={f3(0.55 * (1 - sI / segs) * smooth(0, 0.8, p.loopTh))}
+              opacity={f3(0.62 * (1 - sI / segs) * smooth(0, 0.8, p.loopTh))}
               fill="none"
             />,
           );
@@ -832,7 +658,6 @@ const WorstCaseCornerPosts: React.FC<z.infer<typeof schema>> = () => {
       cells={[]}
       ground={
         <g>
-          <AerialFeather v={v} />
           <defs>
             <filter id="wcSoftShadow" x="-10%" y="-10%" width="120%" height="120%">
               <feGaussianBlur stdDeviation={f3(Math.max(1.2, 0.05 * v.scaleAt(FIELD.x, FIELD.y, 0)))} />
@@ -857,6 +682,57 @@ const WorstCaseCornerPosts: React.FC<z.infer<typeof schema>> = () => {
 };
 
 export default WorstCaseCornerPosts;
+
+// ===================================================================================================================
+// EXPORTS FOR A FOLLOW-ON CUT (cut 6 opens on this cut's last frame). Stable names; never rename.
+// ===================================================================================================================
+export type WorstPostId = PostId;
+export type WorstCorridor = Corridor;
+export type WorstJetPose = JetPose;
+/** the four corner posts (NW, NE, SE, SW) */
+export const WORST_POSTS: readonly PostId[] = POSTS;
+/** the posts' and holds' altitude (miles) */
+export const WORST_POST_Z = GATE_Z;
+/** this cut's last frame's camera (f179) */
+export const WORST_CAM_END: DenCam = WORST_CAM.at(DURATION - 1);
+/** the corridors: post position (`gate`), inbound direction, inbound path (`up`: far point -> hold fix), the path
+ *  through the post to touchdown (`down`), hold fix, landing direction, holding-circle side and radius */
+export const WORST_CORRIDORS: Record<PostId, Corridor> = CORRIDORS;
+/** each post's holding circle (miles): the fix where jets join and leave it, its centre, radius, side, altitude */
+export const WORST_HOLDS: Record<PostId, { fix: P2; centre: P2; r: number; side: 1 | -1; z: number }> = (() => {
+  const out = {} as Record<PostId, { fix: P2; centre: P2; r: number; side: 1 | -1; z: number }>;
+  for (const id of POSTS) {
+    const c = CORRIDORS[id];
+    const n = { x: -c.inDir.y * c.outer, y: c.inDir.x * c.outer };
+    out[id] = { fix: c.hold, centre: { x: c.hold.x + n.x * c.loopR, y: c.hold.y + n.y * c.loopR }, r: c.loopR, side: c.outer, z: GATE_Z };
+  }
+  return out;
+})();
+/** frames per holding circle (speed = 2 pi r / lap) and the inbound cruise speed law (miles / frame at d miles before the fix) */
+export const WORST_HOLD_LAP = HOLD_LAP;
+export const worstUpSpeed = upSpeed;
+/** every live jet at frame f (0..179): its post, index, world pose (x, y, z miles, heading rad, drain 0..1, loopTh =
+ *  angle flown round the holding circle or -1) and phase (1 inbound, 2 holding, 3 through the post / approach,
+ *  4 rolled out) */
+export const worstJetPosesAt = (f: number) => {
+  const out: { post: PostId; idx: number; phase: number; pose: JetPose }[] = [];
+  for (const id of POSTS) {
+    TRAFFIC[id].forEach((j, idx) => {
+      const pose = jetPose(CORRIDORS[id], j, f);
+      if (pose) out.push({ post: id, idx, phase: j.mode[f], pose });
+    });
+  }
+  return out;
+};
+/** the jets as they stand on the last frame */
+export const WORST_JETS_END = worstJetPosesAt(DURATION - 1);
+/** the jets' drawn length (miles) at frame f (a near-constant screen size at the field) */
+export const worstJetLenAt = (f: number) => jetLenFor(makeView(WORST_CAM.at(f)), smooth(0, 75, f));
+/** the ghost forecast storms: spec (world position, size, seed, appearance frame, growth) and their states at f */
+export const WORST_GHOSTS = GHOSTS.map((g, i) => ({ id: `ghost${g.seed}`, x: GHOST_XY[i].x, y: GHOST_XY[i].y, size: g.size, seed: g.seed, appearAt: g.t, growth: g.g }));
+export const worstGhostsAt = (f: number): StormState[] => GHOSTS.map((g, i) => ghostState(g, f, i));
+/** how the ghosts are drawn: canvas opacity, the cream lift and the amber lower-body glow */
+export const WORST_GHOST_LOOK = { opacity: 0.48, creamLift: 0.3, glowZ: 1.9, glowR: 3.4, glowCore: 0.6 } as const;
 
 // ---- module-load checks -------------------------------------------------------------------------------------------
 {
