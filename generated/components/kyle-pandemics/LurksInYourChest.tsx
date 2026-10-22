@@ -15,6 +15,13 @@
 // and 141 · you're 153 · STRESSED 158 · (slot ends 173)
 // DURATION: the slot 32.699 -> 38.472 s = 5.773 s x 29.97 = 173 frames (f0..f172).
 //
+// V3 ENVIRONMENT (pandemicAir.tsx, palette A, mood interior; prop `look`, default "A"; "old" = the delivered V3,
+// pixel for pixel): the garret inside the clip's medium (AirRoom: warm umber plaster, boards and straw fogged by
+// distance, thin darker-local joints, a continuous floor tone) lit by its one window: bright panes, a soft glow round
+// them and a soft beam falling forward and down through the air onto the floor behind him (gradients only, no SVG
+// blur filters: they cost seconds per frame at this zoom); motes, grade, grain, vignette; no bloom (render cost).
+// THE MAN AND HIS LUNGS ARE UNTOUCHED (the cast builder replaces him).
+//
 // THE MOTION: one camera in a bare, cold garret (one-point perspective: boards to the VP, a back wall with one small
 // window at the upper left as the light, a sloping roof on the right, a straw pallet). f0: a poor labourer (the
 // Worker: knitted cap, shirt sleeves, waistcoat) stands slack in the middle, breathing; the camera is already
@@ -58,11 +65,18 @@ import { swayCam } from "../kits/maps/incaShared";
 import { figureRig } from "../kits/maps/texcocoFigures";
 import { STAND, Worker, idle, lerpFig, specOf, type FigPose } from "../kyle-london/londonCastV2";
 import { Box, ContactShadow, GroundPlane, perspective, type DepthOpts, type Persp } from "../kyle-london/londonDepth";
+import { AirStage, fogHex, makeAirView, type AirScene } from "./pandemicAir";
+
+// V3 the medium: palette A, mood interior (cast units: a man ~310 = 1.75 m)
+const AIR_SCENE: AirScene = { look: "A", mood: "interior", F: 1000, fogNear: 400, fogVis: 2400, fogMax: 0.9, hLow: 0, hHigh: 500, moteUnit: 177 };
 import { ChestAnatomy, N_NODULES, type ChestState } from "./lurksAnatomy";
+import { FolkWorker, STAND as FOLK_STAND, buildWorker, type ArmPose, type WorkerPose } from "./pandemicFolk";
+import { FolkChestAnatomy } from "./pandemicFolkLungs";
 
 export const FPS = 30000 / 1001;
 export const DURATION = 173;
-export const schema = z.object({});
+/** V3 (pandemicAir.tsx): "A" = the garret inside the clip's medium (interior); "old" = the delivered V3, pixel for pixel */
+export const schema = z.object({ look: z.enum(["old", "A"]).default("A") });
 export const defaultProps = schema.parse({});
 
 type P2 = [number, number];
@@ -314,10 +328,298 @@ const HeadShape: React.FC<{ q: FigPose; at: P2; scale: number; fill?: string }> 
   );
 };
 
-const LurksInYourChest: React.FC<z.infer<typeof schema>> = () => {
+// ---------------------------------------------------------------------------
+// V3: THE GARRET INSIDE THE CLIP'S MEDIUM (pandemicAir.tsx, palette A, mood interior; look "A"). The same room as
+// Room above (which stays the delivered picture) in local colours (warm umber plaster, boards, straw) fogged by their
+// distance into the air; thin darker-local joints instead of dark casings, cream edges fading with the fog; the
+// window the room's one light: bright panes, a soft beam falling forward and down through the air onto the floor
+// behind him (behind him in depth, so it is drawn before him). The man and his lungs are not touched.
+// ---------------------------------------------------------------------------
+type Tone = (hex: string, Z: number, height?: number) => string;
+const AIR_ROOM = {
+  ceiling: "#3A3128",
+  back: "#5E5040",
+  left: "#6E5E4A",
+  knee: "#4F4336",
+  slope: "#3A3129",
+  floor: "#62523F",
+  joint: "#2E251C",
+  line: "#2A2119",
+  pane: "#E8E2CC",
+  reveal: "#9C9179",
+  sill: { lit: "#8A7859", mid: "#665640", dark: "#3A3026" },
+  pallet: { lit: "#8E7C58", mid: "#6A5A40", dark: "#3E3428" },
+  blanket: "#4A3E30",
+  cream: "#E9DDBF",
+};
+const AirRoom: React.FC<{ P: Persp; tone: Tone; fogOf: (Z: number) => number; shadow: string }> = ({ P, tone, fogOf, shadow }) => {
+  const A = AIR_ROOM;
+  const backPoly: V3[] = [
+    [WALL_L, 0, BACK_Z],
+    [WALL_R, 0, BACK_Z],
+    [WALL_R, KNEE, BACK_Z],
+    [SLOPE_X, CEIL, BACK_Z],
+    [WALL_L, CEIL, BACK_Z],
+  ];
+  let boards = "";
+  for (let X = WALL_L + 34; X < WALL_R; X += 34) {
+    const yTop = X > SLOPE_X ? mix(CEIL, KNEE, (X - SLOPE_X) / (WALL_R - SLOPE_X)) : CEIL;
+    boards += `M${PP(P.p(X, 0, BACK_Z))}L${PP(P.p(X, yTop, BACK_Z))}`;
+  }
+  let lboards = "";
+  for (let Y = -32; Y > CEIL; Y -= 40) lboards += `M${PP(P.p(WALL_L, Y, FRONT_Z))}L${PP(P.p(WALL_L, Y, BACK_Z))}`;
+  let rafters = "";
+  for (let Z = BACK_Z; Z > FRONT_Z; Z -= 150) rafters += `M${PP(P.p(WALL_R, KNEE, Z))}L${PP(P.p(SLOPE_X, CEIL, Z))}`;
+  let knee = "";
+  for (let Y = -32; Y > KNEE; Y -= 40) knee += `M${PP(P.p(WALL_R, Y, FRONT_Z))}L${PP(P.p(WALL_R, Y, BACK_Z))}`;
+  const w = WIN;
+  const fb = fogOf(BACK_Z);
+  const lineB = tone(A.line, BACK_Z, 200);
+  // a surface running in depth (a wall, the floor, the ceiling): bands from front to back, each its fogged tone
+  const depthBands = (key: string, corners: (za: number, zb: number) => V3[], hex: string, height: number, n = 10) =>
+    Array.from({ length: n }, (_, i) => {
+      const za = mix(FRONT_Z, BACK_Z, i / n);
+      const zb = mix(FRONT_Z, BACK_Z, (i + 1) / n);
+      return <path key={`${key}${i}`} d={quad(P, corners(za, zb + 1))} fill={tone(hex, (za + zb) / 2, height)} />;
+    });
+  // the floor boards: joints to the VP, butt joints staggered
+  let fj = "";
+  for (let X = WALL_L + 38; X < WALL_R; X += 38) fj += `M${PP(P.p(X, 0, FRONT_Z))}L${PP(P.p(X, 0, BACK_Z))}`;
+  let fx = "";
+  for (let X = WALL_L, i = 0; X < WALL_R; X += 38, i++) {
+    for (let Z = FRONT_Z + ((i * 137) % 300); Z < BACK_Z; Z += 300) fx += `M${PP(P.p(X, 0, Z))}L${PP(P.p(Math.min(WALL_R, X + 38), 0, Z))}`;
+  }
+  // the window's beam: from the window's opening forward and down to the patch it lights on the floor
+  const patch: V3[] = [
+    [-150, 0, 250],
+    [-70, 0, 250],
+    [-20, 0, 70],
+    [-120, 0, 70],
+  ];
+  const win: V3[] = [
+    [w.x0, w.y0, BACK_Z],
+    [w.x1, w.y0, BACK_Z],
+    [w.x1, w.y1, BACK_Z],
+    [w.x0, w.y1, BACK_Z],
+  ];
+  const beam = [
+    [win[0], win[1], patch[2], patch[3]],
+    [win[3], win[2], patch[1], patch[0]],
+    [win[0], win[3], patch[0], patch[3]],
+  ];
+  const wc = P.p((w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2, BACK_Z);
+  const pc = P.p(-70, 0, 160);
+  return (
+    <g>
+      <defs>
+        <linearGradient id="lka-beam" gradientUnits="userSpaceOnUse" x1={wc[0]} y1={wc[1]} x2={pc[0]} y2={pc[1]}>
+          <stop offset="0" stopColor={A.cream} stopOpacity={0.34} />
+          <stop offset="0.6" stopColor={A.cream} stopOpacity={0.12} />
+          <stop offset="1" stopColor={A.cream} stopOpacity={0.04} />
+        </linearGradient>
+        <radialGradient id="lka-soft">
+          <stop offset="0" stopColor={A.cream} stopOpacity={1} />
+          <stop offset="0.5" stopColor={A.cream} stopOpacity={0.45} />
+          <stop offset="1" stopColor={A.cream} stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id="lka-sh">
+          <stop offset="0" stopColor={shadow} stopOpacity={1} />
+          <stop offset="1" stopColor={shadow} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      {depthBands("c", (za, zb) => [[WALL_L, CEIL, za], [SLOPE_X, CEIL, za], [SLOPE_X, CEIL, zb], [WALL_L, CEIL, zb]], A.ceiling, 425)}
+      <path d={[-150, -80, -10].map((X) => `M${PP(P.p(X, CEIL, FRONT_Z))}L${PP(P.p(X, CEIL, BACK_Z))}`).join("")} fill="none" stroke={A.cream} strokeWidth={1.6 * P.r(200)} strokeOpacity={0.07} />
+      <path d={quad(P, backPoly)} fill={tone(A.back, BACK_Z, 200)} />
+      <path d={boards} fill="none" stroke={A.cream} strokeWidth={1 * P.r(BACK_Z)} strokeOpacity={0.1 * (1 - fb)} />
+      <path d={boards} transform="translate(2 0)" fill="none" stroke={lineB} strokeWidth={1 * P.r(BACK_Z)} strokeOpacity={0.35} />
+      {/* the window: a recess, bright panes (the room's light), the reveal lit, thin bars */}
+      <path d={quad(P, win)} fill={tone(A.line, BACK_Z, 300)} />
+      <path d={quad(P, [[w.x0, w.y0, BACK_Z + w.depth], [w.x1, w.y0, BACK_Z + w.depth], [w.x1, w.y1, BACK_Z + w.depth], [w.x0, w.y1, BACK_Z + w.depth]])} fill={A.pane} />
+      <path d={quad(P, [[w.x1, w.y0, BACK_Z], [w.x1, w.y0, BACK_Z + w.depth], [w.x1, w.y1, BACK_Z + w.depth], [w.x1, w.y1, BACK_Z]])} fill={tone(A.reveal, BACK_Z, 300)} />
+      <path d={quad(P, [[w.x0, w.y1, BACK_Z], [w.x1, w.y1, BACK_Z], [w.x1, w.y1, BACK_Z + w.depth], [w.x0, w.y1, BACK_Z + w.depth]])} fill={tone(A.reveal, BACK_Z, 270)} />
+      <path d={quad(P, [[w.x0, w.y0, BACK_Z], [w.x1, w.y0, BACK_Z], [w.x1, w.y0, BACK_Z + w.depth], [w.x0, w.y0, BACK_Z + w.depth]])} fill={tone(A.line, BACK_Z, 350)} />
+      <path
+        d={`M${PP(P.p((w.x0 + w.x1) / 2, w.y0, BACK_Z + w.depth))}L${PP(P.p((w.x0 + w.x1) / 2, w.y1, BACK_Z + w.depth))}M${PP(P.p(w.x0, (w.y0 + w.y1) / 2, BACK_Z + w.depth))}L${PP(P.p(w.x1, (w.y0 + w.y1) / 2, BACK_Z + w.depth))}`}
+        stroke={tone("#3A3027", BACK_Z, 300)}
+        strokeWidth={3 * P.r(BACK_Z)}
+      />
+      {/* the window's glow in the air round it (a soft disc, no filter: cheap at every zoom) */}
+      <ellipse cx={wc[0]} cy={wc[1]} rx={(w.x1 - w.x0) * 1.6 * P.r(BACK_Z)} ry={(w.y1 - w.y0) * 1.5 * P.r(BACK_Z)} fill="url(#lka-soft)" opacity={0.3} />
+      <Box P={P} X0={w.x0 - 8} X1={w.x1 + 8} Y0={w.y1} Y1={w.y1 + 9} Z0={BACK_Z - 9} Z1={BACK_Z} ink={{ lit: tone(A.sill.lit, BACK_Z, 260), mid: tone(A.sill.mid, BACK_Z, 260), dark: tone(A.sill.dark, BACK_Z, 260) }} uid="lka-sill" />
+      {/* the floor: one continuous tone by distance, thin darker-local joints */}
+      {depthBands("f", (za, zb) => [[WALL_L, 0, za], [WALL_R, 0, za], [WALL_R, 0, zb], [WALL_L, 0, zb]], A.floor, 0, 14)}
+      <path d={fj} fill="none" stroke={tone(A.joint, 0, 0)} strokeWidth={1.1 * P.r(0)} strokeOpacity={0.5} />
+      <path d={fx} fill="none" stroke={tone(A.joint, 0, 0)} strokeWidth={1 * P.r(0)} strokeOpacity={0.4} />
+      {(() => {
+        const c = P.p(-85, 0, 160);
+        const rx = 95 * P.r(160);
+        const ry = Math.max(1, (P.p(-85, 0, 70)[1] - P.p(-85, 0, 250)[1]) / 2) * 1.2;
+        return <ellipse cx={c[0]} cy={c[1]} rx={rx} ry={ry} fill="url(#lka-soft)" opacity={0.2} />;
+      })()}
+      {/* the walls */}
+      {depthBands("l", (za, zb) => [[WALL_L, 0, za], [WALL_L, 0, zb], [WALL_L, CEIL, zb], [WALL_L, CEIL, za]], A.left, 200)}
+      <path d={lboards} fill="none" stroke={A.cream} strokeWidth={1 * P.r(0)} strokeOpacity={0.08} />
+      {depthBands("k", (za, zb) => [[WALL_R, 0, za], [WALL_R, 0, zb], [WALL_R, KNEE, zb], [WALL_R, KNEE, za]], A.knee, 120)}
+      <path d={knee} fill="none" stroke={A.cream} strokeWidth={1 * P.r(0)} strokeOpacity={0.06} />
+      {depthBands("s", (za, zb) => [[WALL_R, KNEE, za], [WALL_R, KNEE, zb], [SLOPE_X, CEIL, zb], [SLOPE_X, CEIL, za]], A.slope, 340)}
+      <path d={rafters} fill="none" stroke={A.cream} strokeWidth={2 * P.r(0)} strokeOpacity={0.07} />
+      <path
+        d={
+          [
+            [WALL_L, 0],
+            [WALL_L, CEIL],
+            [WALL_R, 0],
+            [WALL_R, KNEE],
+            [SLOPE_X, CEIL],
+          ]
+            .map(([x, y]) => `M${PP(P.p(x, y, FRONT_Z))}L${PP(P.p(x, y, BACK_Z))}`)
+            .join("") + `M${backPoly.map(([x, y, z2]) => PP(P.p(x, y, z2))).join("L")}Z`
+        }
+        fill="none"
+        stroke={A.cream}
+        strokeWidth={1.1 * P.r(300)}
+        strokeOpacity={0.14}
+      />
+      {/* the pallet */}
+      <ellipse cx={P.p(125, 0, 300)[0]} cy={P.p(125, 0, 300)[1]} rx={120 * P.r(300)} ry={Math.max(1, (P.p(0, 0, 230)[1] - P.p(0, 0, 380)[1]) / 2)} fill="url(#lka-sh)" opacity={0.4} />
+      <Box P={P} X0={30} X1={200} Y0={-20} Y1={0} Z0={230} Z1={370} ink={{ lit: tone(A.pallet.lit, 300, 20), mid: tone(A.pallet.mid, 300, 20), dark: tone(A.pallet.dark, 300, 20) }} uid="lka-pal" />
+      <path
+        d={Array.from({ length: 26 }, (_, i) => {
+          const X = 32 + i * 6.5;
+          const a = P.p(X, -20, 230);
+          const b = P.p(X + 3 * Math.sin(i * 1.7), -6 + 3 * Math.sin(i * 2.3), 230);
+          return `M${PP(a)}L${PP(b)}`;
+        }).join("")}
+        fill="none"
+        stroke={A.cream}
+        strokeWidth={0.9 * P.r(230)}
+        strokeOpacity={0.2}
+      />
+      <path d={quad(P, [[60, -21, 235], [175, -21, 240], [190, -21, 360], [80, -21, 365]])} fill={tone(A.blanket, 300, 21)} stroke={tone(A.line, 300, 21)} strokeWidth={0.9 * P.r(300)} />
+      <path d={`M${PP(P.p(70, -21.5, 270))}Q${PP(P.p(120, -21.5, 250))} ${PP(P.p(170, -21.5, 285))}`} fill="none" stroke={A.cream} strokeWidth={1 * P.r(300)} strokeOpacity={0.18} />
+      {/* the beam through the air, last of the room (behind him) */}
+      {/* soft-edged by layering: the full beam faint, then a narrower core */}
+      <g>
+        {beam.map((q, i) => (
+          <path key={i} d={quad(P, q as V3[])} fill="url(#lka-beam)" opacity={i === 2 ? 0.3 : 0.45} />
+        ))}
+        {(() => {
+          const shrink = (pts: V3[], k: number): V3[] => {
+            const c = pts.reduce((a, b) => [a[0] + b[0] / 4, a[1] + b[1] / 4, a[2] + b[2] / 4] as V3, [0, 0, 0] as V3);
+            return pts.map((p) => [c[0] + (p[0] - c[0]) * k, c[1] + (p[1] - c[1]) * k, c[2] + (p[2] - c[2]) * k] as V3);
+          };
+          return beam.slice(0, 2).map((q, i) => <path key={`c${i}`} d={quad(P, shrink(q as V3[], 0.7))} fill="url(#lka-beam)" opacity={0.4} />);
+        })()}
+      </g>
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// V3 CAST TAKE 2 (look "A"): THE DRAWN WORKER (pandemicFolk FolkWorker, the approved gouache picture-book cast) in
+// place of the londonCastV2 Worker, at the same physical height in the room (FOLK_S: folk units -> cast units, his
+// skull top 494 folk = 310 cast). Slack, breathing (the same labouring breath), turned a little toward the window
+// (yaw -12); he wastes with the body only, as before: the shoulders drop (slump), the head nods forward (pitch), the
+// chest narrows, heavy lids and worried brows, two cough jolts of the whole torso (f104, f113) that open a small dark
+// mouth; the hands hang at his sides. The see-through is FolkWorker's: the body fades as one layer to ~35 % with a soft
+// band of its own colour kept at the outer edge, and inside him the lungs as glass in the gouache hand with the disease
+// the only opaque thing (pandemicFolkLungs, the same ChestState timing as before). His big picture-book head sets the
+// framing: the push lands head to waist with the sternum at y ~930 (the cap may crop at the top), the lungs ~60 % of
+// the frame's width, the diseased upper lobes ~y 690-1020 (above the caption band), the lower lobes run into it.
+// ---------------------------------------------------------------------------
+const FOLK_S = 310 / 494;
+const ARM_SLACK: ArmPose = { abd: 9, flex: 5, abd2: -6, flex2: 7, droop: 3, thumb: 0 };
+const ARM_WASTED: ArmPose = { abd: 6, flex: 3, abd2: -3, flex2: 4, droop: 2, thumb: 0 };
+const FOLK_BASE: WorkerPose = { ...FOLK_STAND, yaw: -12, headYaw: -5, headPitch: 9, headRoll: 3, bodyRoll: -1.2, slump: 4, armR: ARM_SLACK, armL: { ...ARM_SLACK, abd: 10 }, brows: 2.5, lids: 0.22 };
+export const folkPoseAt = (f: number): { pose: WorkerPose; waste: number; cough: number } => {
+  const waste = ease((f - 80) / 44);
+  const br = breathAt(f);
+  const cg = coughAt(f);
+  const sway = Math.sin((f / 190) * 2 * Math.PI);
+  const pose: WorkerPose = {
+    ...FOLK_BASE,
+    headPitch: mix(9, 25, waste) + 7 * cg - 1.2 * br,
+    headRoll: mix(3, 1.5, waste) + 0.7 * sway,
+    bodyRoll: -1.2 + 0.5 * sway,
+    slump: mix(4, 12, waste) + 3.5 * cg - 0.9 * br,
+    breath: 0.5 + 0.5 * br,
+    armR: mixArmP(ARM_SLACK, ARM_WASTED, waste),
+    armL: mixArmP({ ...ARM_SLACK, abd: 10 }, ARM_WASTED, waste),
+    brows: mix(2.5, 4, waste) + 1.2 * cg,
+    lids: Math.min(0.7, mix(0.22, 0.58, waste) + 0.12 * cg),
+    mouth: 0,
+  };
+  return { pose, waste, cough: cg };
+};
+const mixArmP = (a: ArmPose, b: ArmPose, t: number): ArmPose => ({ abd: mix(a.abd, b.abd, t), flex: mix(a.flex, b.flex, t), abd2: mix(a.abd2, b.abd2, t), flex2: mix(a.flex2, b.flex2, t), droop: mix(a.droop, b.droop, t), thumb: mix(a.thumb, b.thumb, t) });
+/** the sternum of a key pose in world (cast) units, feet at the origin: the camera's anchor (static key poses only) */
+const folkSternum = (f: number, nar = 1): P2 => {
+  const a = buildWorker(folkPoseAt(f).pose).anchors.sternum;
+  return [a[0] * FOLK_S * nar, a[1] * FOLK_S];
+};
+const FSA0 = folkSternum(40);
+const FSA1 = folkSternum(140, 0.94);
+const folkCamAt = makeCamera([
+  { f: 0, k: 3.55, wx: 0, wy: -160, sy: 1050 },
+  { f: 30, k: 8.6, wx: FSA0[0], wy: FSA0[1], sy: 930 },
+  { f: 80, k: 8.85, wx: FSA0[0], wy: FSA0[1], sy: 926 },
+  { f: 118, k: 9.2, wx: FSA1[0], wy: FSA1[1], sy: 900 },
+  { f: 172, k: 9.5, wx: FSA1[0], wy: FSA1[1], sy: 892 },
+]);
+const folkCamOf = (f: number) => swayCam(folkCamAt(f), f);
+
+const LurksFolk: React.FC = () => {
+  const frame = useCurrentFrame();
+  const cam = folkCamOf(frame);
+  const P = perspective(cam, DEPTH);
+  const c0 = folkCamOf(0);
+  const P0 = perspective(c0, DEPTH);
+  const hz = 960 + (P.vp[1] - cam.cy) * cam.k;
+  const air = makeAirView({ scene: { ...AIR_SCENE, F: P.Dc * cam.k }, frame, horizon: hz, cam: { x: cam.cx, y: -DEPTH.eyeY, z: -P.Dc }, rest: { x: c0.cx, y: -DEPTH.eyeY, z: -P0.Dc } });
+  const { pose, waste, cough } = folkPoseAt(frame);
+  // the mouth opens a little with each cough and is closed again by f125
+  const mouth = Math.min(1, cough * 1.2) * (1 - ease((frame - 117) / 8));
+  const at: P2 = P.p(0, 0, 0);
+  const scale = P.r(0) * FOLK_S;
+  const nar = 1 - 0.06 * waste;
+  const bodyTf = `translate(${at[0].toFixed(3)} 0) scale(${nar.toFixed(5)} 1) translate(${(-at[0]).toFixed(3)} 0)`;
+  const reveal = ease((frame - 18) / 26);
+  const ARR = [46, 48, 50];
+  const specks = ARR.map((fa, i) => {
+    const f0 = 26 + i * 2;
+    if (frame < f0 || frame > fa) return null;
+    return ease((frame - f0) / (fa - f0)) * 0.6 + 0.4 * ((frame - f0) / (fa - f0));
+  });
+  const nodules = ARR.map((fa) => ease((frame - (fa - 1)) / 8));
+  const st: ChestState = { breath: breathAt(frame), waste, nodules: nodules.slice(0, N_NODULES), specks, spread: c01((frame - 80) / 48) };
+  const fpose: WorkerPose = { ...pose, mouth };
+  return (
+    <AirStage v={air} bloom={0} shafts={0}>
+      <WorldSvg cam={cam}>
+        <AirRoom P={P} tone={(hex, Z, h = 0) => fogHex(air, hex, P.Dc + Z, h)} fogOf={(Z) => air.fogAt(P.Dc + Z)} shadow={air.pal.shadow} />
+        <ContactShadow P={P} X={0} Z={0} w={62} d={36} uid="lkf-mcs" />
+        <g transform={bodyTf}>
+          <FolkWorker pose={fpose} x={at[0]} y={at[1]} scale={scale} uid="lkf-man" unitPx={cam.k} see={reveal} inside={reveal > 0.001 ? <FolkChestAnatomy pose={fpose} st={st} uid="lkf-an" /> : null} />
+        </g>
+      </WorldSvg>
+    </AirStage>
+  );
+};
+
+const LurksInYourChest: React.FC<z.infer<typeof schema>> = ({ look }) => (look === "A" ? <LurksFolk /> : <LurksV3 look={look} />);
+/** look "old": the delivered V3 picture (the londonCastV2 Worker and lurksAnatomy), unchanged */
+const LurksV3: React.FC<z.infer<typeof schema>> = ({ look }) => {
   const frame = useCurrentFrame();
   const cam = camOf(frame);
   const P = perspective(cam, DEPTH);
+  // V3: the medium (only for look "A")
+  const air = (() => {
+    if (look !== "A") return null;
+    const c0 = camOf(0);
+    const P0 = perspective(c0, DEPTH);
+    const hz = 960 + (P.vp[1] - cam.cy) * cam.k;
+    return makeAirView({ scene: { ...AIR_SCENE, F: P.Dc * cam.k }, frame, horizon: hz, cam: { x: cam.cx, y: -DEPTH.eyeY, z: -P.Dc }, rest: { x: c0.cx, y: -DEPTH.eyeY, z: -P0.Dc } });
+  })();
   const { q, waste } = poseAt(frame);
   // the mouth opens with each cough and is closed again by f125
   const cough = coughAt(frame) * (1 - ease((frame - 117) / 8));
@@ -345,8 +647,7 @@ const LurksInYourChest: React.FC<z.infer<typeof schema>> = () => {
   const nodules = ARR.map((fa) => ease((frame - (fa - 1)) / 8));
   const st: ChestState = { breath: breathAt(frame), waste, nodules: nodules.slice(0, N_NODULES), specks, spread: c01((frame - 80) / 48) };
 
-  return (
-    <TexcocoPage cam={cam} vignette={0.85}>
+  const world = (
       <WorldSvg cam={cam}>
         <defs>
           <filter id="lk-white" x="-20%" y="-20%" width="140%" height="140%">
@@ -380,7 +681,7 @@ const LurksInYourChest: React.FC<z.infer<typeof schema>> = () => {
             <HeadShape q={q} at={at} scale={scale} />
           </mask>
         </defs>
-        <Room P={P} />
+        {air ? <AirRoom P={P} tone={(hex, Z, h = 0) => fogHex(air, hex, P.Dc + Z, h)} fogOf={(Z) => air.fogAt(P.Dc + Z)} shadow={air.pal.shadow} /> : <Room P={P} />}
         <ContactShadow P={P} X={0} Z={0} w={62} d={36} uid="lk-mcs" />
         <g transform={bodyTf}>
           {flatA > 0.001 ? (
@@ -410,6 +711,16 @@ const LurksInYourChest: React.FC<z.infer<typeof schema>> = () => {
           ) : null}
         </g>
       </WorldSvg>
+  );
+  if (air)
+    return (
+      <AirStage v={air} bloom={0} shafts={0}>
+        {world}
+      </AirStage>
+    );
+  return (
+    <TexcocoPage cam={cam} vignette={0.85}>
+      {world}
     </TexcocoPage>
   );
 };
