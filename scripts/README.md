@@ -18,7 +18,7 @@ stills procedures are skills in `.agents/skills/` (`premiere-project`, `news-car
 
 ## New cut
 
-`bun run cut <Name> --clip <clip-slug> --style <dwarkesh|map|chinatalk|cheeky-pint|core-memory|humble|sporttouchen|lovable|name-tag>
+`bun run cut <Name> --clip <clip-slug> --style <dwarkesh|map|3d|chinatalk|cheeky-pint|core-memory|humble|sporttouchen|lovable|name-tag>
 [--fps 24000/1001] [--seconds S | --frames N] [--wide] [--size WxH] [--overlay] [--tag <style>]` writes
 `generated/components/<clip>/<Name>.tsx` from `scripts/templates/<style>.tsx` plus `src/Root.<Name>.tsx` and
 `src/entry.<Name>.ts`, never overwrites, and prints the preview and final render commands. `--tag` is required for

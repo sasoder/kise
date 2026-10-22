@@ -4,7 +4,7 @@
 //   bun run cut <Name> --clip <clip-slug> --style <style> [--fps 24000/1001 | 23.976 | 25 | 30 ...]
 //               [--seconds S | --frames N] [--wide] [--size WxH] [--overlay] [--tag <tag-style>]
 //
-//   <style>  dwarkesh | map | chinatalk | cheeky-pint | core-memory | humble | sporttouchen | lovable | name-tag
+//   <style>  dwarkesh | map | 3d | chinatalk | cheeky-pint | core-memory | humble | sporttouchen | lovable | name-tag
 //   --wide   16:9 at 2048x1080 (CRAFT.md Format); --size sets any other frame (Lovable matches its sequence)
 //   --overlay  a transparent overlay: no ground, static camera (Humble and name tags always are)
 //   --tag    name-tag only: whose tag to wrap (core-memory | cheeky-pint | chinatalk | map | humble)
@@ -28,6 +28,7 @@ const fail = (msg) => {
 const STYLES = {
   dwarkesh: { label: "Dwarkesh style", file: "styles/dwarkesh.md", wide: false, noOverlay: true },
   map: { label: "Dwarkesh map style", file: "styles/dwarkesh-map.md", wide: false },
+  "3d": { label: "Dwarkesh 3D style", file: "styles/dwarkesh-3d.md", wide: false, noOverlay: true },
   chinatalk: { label: "ChinaTalk style (newsprint)", file: "styles/chinatalk.md", wide: false, noOverlay: true },
   "cheeky-pint": { label: "Cheeky Pint style (stout)", file: "styles/cheeky-pint.md", wide: false },
   "core-memory": { label: "Core memory podcast style", file: "styles/core-memory.md", wide: true },
