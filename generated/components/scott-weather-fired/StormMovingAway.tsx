@@ -17,8 +17,10 @@
 // 2's framing: the ring ~880 px wide, a clear cream line, whole and clear of the caption bands in every frame). The
 // ramp busy; ONE mature thunderstorm (cut 3's cell: size 0.72, dark slate base, rain to the ground, sunlit upper
 // turrets) stands just north-east of the field at f0 (0.4 mi east, 4.3 mi north: its base and rain just over the
-// ring's north-east edge, its anvil whole in frame) and sails AWAY east-south-east at cut 3's constant drift (0.06, -0.024) mi/f (a timelapse, ~580 px across the
-// cut), boiling from f0; two soft in-cloud flickers (f10, f25), none near the strike.
+// ring's north-east edge, its anvil whole in frame) and sails AWAY east-south-east at cut 3's constant drift
+// (0.06, -0.024) mi/f (a timelapse, ~580 px across the cut), visibly boiling the whole way (world storm life `boil`, cut 3's value: turrets rising and rolling over, the
+// base churning, the anvil streaming, rain falling in streaks); three soft in-cloud flickers (f9, f27, f62), none
+// within 6 f of the strike.
 // DIRECTION CUE (cut 3's): a soft cream arrow on the ground pointing AWAY along the drift, its tail inside the ring's
 // east part and its head out past the ring's south-east edge, wiped out from its tail f6 -> f18 ("moving" f12);
 // "W" and "E" slide up just inside the ring's west and east points, landed on "west" f19 and "east" f30.
@@ -43,6 +45,7 @@ import { COLOR } from "../kits/cheeky-pint/stoutShared";
 import {
   AirStage,
   LightningStrike,
+  STORM_BOIL,
   RING_MI,
   STRIKE,
   TERMINAL,
@@ -93,8 +96,11 @@ const CELL: StormSpec = {
   x: STORM_AWAY_CELL_F0.x - STORM_IN_DRIFT.vx * STORM_AWAY_S0,
   y: STORM_AWAY_CELL_F0.y - STORM_IN_DRIFT.vy * STORM_AWAY_S0,
 };
-/** in-cloud lightning (cut frames): two soft events, none near the strike (f43-f58) */
-export const STORM_AWAY_FLICKERS = [10, 25];
+/** in-cloud lightning (cut frames): three soft events spaced through the cut, none within 6 f of the strike (f43-f46) */
+export const STORM_AWAY_FLICKERS = [9, 27, 62];
+/** storm life (world `boil`): cut 3's choice when it sets one, else the world default */
+const LOOK: typeof STORM_IN_LOOK & { boil?: number } = STORM_IN_LOOK;
+export const STORM_AWAY_BOIL = LOOK.boil ?? STORM_BOIL;
 
 // ---- the strike: start f43, contact f46; out of the storm's trailing (west) low body at cut 3's bolt height ---------
 export const STORM_AWAY_STRIKE = { start: 43, contact: 43 + STRIKE.contact, to: { x: 2.45, y: 1.4 }, fromOffset: { x: -0.85, y: -0.6 }, baseZ: STORM_IN_STRIKE.baseZ, seed: STORM_IN_STRIKE.seed } as const;
@@ -126,6 +132,7 @@ const cellAt = (f: number): StormState => ({
   growth: STORM_IN_LOOK.growth,
   shadowStrength: STORM_IN_LOOK.shadowStrength,
   rainStrength: STORM_IN_LOOK.rainStrength,
+  boil: STORM_AWAY_BOIL,
   glow: strikeGlow(f - STORM_AWAY_STRIKE.start),
   flicker: flickerAt(f, STORM_AWAY_FLICKERS),
 });
