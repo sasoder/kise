@@ -45,6 +45,10 @@ export type StormState = StormSpec & {
   storminess?: number;
   /** 0..1 in-cloud lightning: the body lit from inside as a soft warm-amber glow (use flickerAt for timed events) */
   flicker?: number;
+  /** 0..1.5 storm life (default STORM_BOIL 1): lobes swell, rise and roll over out of the top and sides while older ones
+   *  sink back and soften, the base churns with ragged scud, the anvil streams downwind, rain falls in streaks; a pure
+   *  function of the story clock S (joins stay exact). An amplitude, not a rate: it can be eased within a cut. */
+  boil?: number;
   /** 0..1 rain-shaft override (default: from growth) */
   rain?: number;
   /** multiplier on the rain shaft's strength (default 1) */
@@ -56,6 +60,16 @@ export type StormState = StormSpec & {
 /** The default flanking-line direction (deg from north): north-north-west, so the turrets step AWAY from the world's
  *  cameras (which look NNW from the south-south-east) and never stand between the camera and the airfield. */
 export const FLANK_DIR_DEFAULT = 330;
+/** the default storm life (boil) */
+export const STORM_BOIL = 1;
+/** One lobe's life cycle at story clock S: 0..1 phase and a C1-smooth envelope (0 at both ends: a lobe is born small
+ *  inside the body, swells and rises, then shrinks and sinks back in; never a pop at the wrap). */
+const lobe = (S: number, period: number, ph: number) => {
+  const p = S / period + ph / (Math.PI * 2);
+  const lp = p - Math.floor(p);
+  const env = Math.sin(Math.PI * lp);
+  return { lp, env, env2: env * env };
+};
 export const CLOUD = {
   baseZ: 1.1,
   topMin: 1.65,
@@ -142,7 +156,7 @@ const LS = (() => {
 /** One drawable at a depth: a cell's lit image (an offscreen canvas placed in screen px) or its rain shaft. */
 export type CloudItem =
   | { type: "cell"; d: number; canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number; soft: number }
-  | { type: "rain"; d: number; pts: { x: number; y: number }[]; a: number; col: RGB; seed: number; S: number };
+  | { type: "rain"; d: number; pts: { x: number; y: number }[]; a: number; col: RGB; seed: number; S: number; boil: number };
 
 type SPuff = { x: number; y: number; rx: number; ry: number; h0: number; bias: number; vy: number; anv: number };
 const POOL: HTMLCanvasElement[] = [];
@@ -226,6 +240,7 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
   const glow = clamp01(c.glow ?? 0);
   const storm = clamp01(c.storminess ?? smooth(0.45, 0.95, c.growth));
   const flick = clamp01(c.flicker ?? 0);
+  const B = Math.max(0, c.boil ?? STORM_BOIL);
   const anvil = smooth(0.68, 1, g);
   const ad = ((c.anvilDir ?? 80) * Math.PI) / 180;
   const adx = Math.sin(ad);
@@ -247,7 +262,8 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
       if (anvil <= 0.001) continue;
       // a flat shelf that flows out of the column's top: it starts as wide as the flared top and spreads downwind,
       // widening, its underside thinning toward the leading edge (wispy there: the edge noise eats it)
-      const along = (pf.ua * 1.15 - 0.15) * CLOUD.anvilLen * anvil;
+      const lbA = lobe(S, 60 + 40 * pf.w, pf.ph);
+      const along = (pf.ua * 1.15 - 0.15 + B * 0.05 * lbA.env) * CLOUD.anvilLen * anvil;
       const rootW = colR(top - 0.5, g, top);
       const half = rootW * (0.9 + 0.12 * along) + 0.35 * along;
       const drift = 0.03 * Math.sin(S * 0.02 * pf.w + pf.ph);
@@ -260,11 +276,14 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
       bias = 0.4 - 0.14 * pf.ua;
     } else if (pf.kind === 1) {
       const Rb = colR(CLOUD.baseZ, g, top);
+      // the base churns: skirt lobes travel slowly round the base, swelling and shrinking (scud)
       const wob = 0.05 * Math.sin(S * 0.03 * pf.w + pf.ph);
-      x = p0.x + Math.cos(pf.th) * pf.rho * Rb * sz * (1 + wob);
-      y = p0.y + Math.sin(pf.th) * pf.rho * Rb * sz * (1 + wob);
-      z = CLOUD.baseZ * sz + 0.1 * sz;
-      r = pf.rr * Rb * sz;
+      const th = pf.th + B * S * 0.0035 * (pf.w - 0.2);
+      const lb = lobe(S, 46 + 30 * pf.w, pf.ph);
+      x = p0.x + Math.cos(th) * pf.rho * Rb * sz * (1 + wob + B * 0.035 * (lb.env2 - 0.5));
+      y = p0.y + Math.sin(th) * pf.rho * Rb * sz * (1 + wob + B * 0.035 * (lb.env2 - 0.5));
+      z = CLOUD.baseZ * sz + 0.1 * sz - B * 0.015 * lb.env * sz;
+      r = pf.rr * Rb * sz * (1 + B * 0.12 * (lb.env2 - 0.45));
       squash = 0.45;
       bias = -0.35;
     } else {
@@ -292,10 +311,18 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
       const hrel = clamp01((z - CLOUD.baseZ) / Math.max(0.4, top - CLOUD.baseZ));
       // the tower leans a little downwind as it climbs into the shear
       const lean = 1.1 * hrel * hrel * smooth(0.3, 1, g) * (fl === 0 ? 1 : 0.4);
-      x = p0.x + (fx0 + Math.cos(pf.th) * pf.rho * Rl + ox + adx * lean) * sz;
-      y = p0.y + (fy0 + Math.sin(pf.th) * pf.rho * Rl + ady * lean) * sz;
-      z = z * sz + oz * sz;
-      r = r * (1 + 0.04 * Math.sin(S * 0.05 * pf.w + pf.ph)) * sz;
+      // storm life: each lobe is born small inside the body, swells, rises and rolls outward over the top, then shrinks
+      // and sinks back in; strongest near the active top, gentler low on the body
+      const lb = lobe(S, 34 + 30 * pf.w, pf.ph);
+      const topW = 0.45 + 0.55 * Math.max(hrel, smooth(1, 2.2, act));
+      const roll = B * topW;
+      const rhoL = pf.rho * (1 + roll * 0.16 * (lb.env2 - 0.45));
+      const thL = pf.th + roll * 0.22 * Math.sin(2 * Math.PI * lb.lp);
+      const riseL = roll * 0.32 * Rl * lb.env;
+      x = p0.x + (fx0 + Math.cos(thL) * rhoL * Rl + ox + adx * lean) * sz;
+      y = p0.y + (fy0 + Math.sin(thL) * rhoL * Rl + ady * lean) * sz;
+      z = z * sz + oz * sz + riseL * sz;
+      r = r * (1 + 0.04 * Math.sin(S * 0.05 * pf.w + pf.ph) + roll * 0.42 * (lb.env2 - 0.45)) * sz;
       bias = 0.22 * hrel - 0.12 + (fl > 0 ? 0.14 : 0);
     }
     const pc = v.project(x, y, z);
@@ -392,7 +419,7 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
   const amps = [0.55, 0.3, 0.17];
   const nx0w = (x0 - centre.x) / kC;
   const ny0w = (y0 - centre.y) / kC;
-  const boil = S * 0.012;
+  const boil = S * (0.012 + 0.016 * B);
   const Nz = new Float32Array(N);
   for (let j = 0; j < h; j++) {
     for (let i = 0; i < w; i++) {
@@ -507,10 +534,13 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
         // the anvil's edge: fibrous streaks drawn out along the shelf (screen-horizontal), thin and wispy
         const fx = (nx0w + i / pxPerMi) / sz;
         const fy = (ny0w + j / pxPerMi) / sz;
-        const fib = vnoise5(fx * 1.6 + c.seed, fy * 16 + boil) * 0.6 + vnoise5(fx * 3.1 - c.seed, fy * 31) * 0.4 - 0.5;
+        const stream = S * 0.012 * B; // the anvil's fibres stream downwind
+        const fib = vnoise5((fx - stream) * 1.6 + c.seed, fy * 16 + boil) * 0.6 + vnoise5((fx - stream * 1.3) * 3.1 - c.seed, fy * 31) * 0.4 - 0.5;
         alpha = smooth(0.22, 0.8, Cb[idx] + fib * 0.9 + nz * 0.3) * 0.96;
       }
-      const above = bottom[i] - j; // raster px above the flat base
+      // raster px above the flat base; the base edge is ragged with churning scud (world-anchored noise on the clock)
+      const scud = B > 0 ? B * baseBand * 0.5 * (vnoise5(((nx0w + i / pxPerMi) / sz) * 2.6 + S * 0.02, S * 0.012 + c.seed) - 0.5) : 0;
+      const above = bottom[i] - j + scud;
       // near the flat base the edge noise fades out, so the base is solid (no holes, the ring never shows through) but
       // keeps the soft coverage edge (no forced fill beyond the cloud: no stubs)
       if (Av[idx] === 0) {
@@ -620,7 +650,7 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
       pts.push({ x: qq.x, y: qq.y });
     }
     const fogR = fogAt(v, p0.x, p0.y, 0.5);
-    items.push({ type: "rain", d: centre.d - 0.05, pts, a: Math.min(1, rainA * (1 - 0.45 * fogR) * 2), col: mixRgb(RAIN, HAZE, fogR * 0.4), seed: c.seed, S });
+    items.push({ type: "rain", d: centre.d - 0.05, pts, a: Math.min(1, rainA * (1 - 0.45 * fogR) * 2), col: mixRgb(RAIN, HAZE, fogR * 0.4), seed: c.seed, S, boil: B });
   }
   return items;
 };
@@ -685,11 +715,19 @@ export const paintCloudItem = (ctx: CanvasRenderingContext2D, it: CloudItem) => 
     g2.addColorStop(1, rgbCss(it.col, 0));
     ctx.strokeStyle = g2;
     ctx.lineWidth = Math.max(1, wTop * (0.015 + 0.035 * hash01(k * 2.3 + it.seed)));
+    if (it.boil > 0) {
+      // falling streaks: dashes that travel down the shaft on the story clock
+      const hS = yBot - yTop;
+      const dash = Math.max(4, hS * (0.08 + 0.06 * hash01(k * 1.9 + it.seed)));
+      ctx.setLineDash([dash, dash * (0.5 + 0.5 * it.boil)]);
+      ctx.lineDashOffset = -(it.S * hS * 0.035 * (0.8 + 0.4 * hash01(k * 3.7))) - hash01(k + 9) * dash * 2;
+    }
     ctx.beginPath();
     ctx.moveTo(xt, yTop);
     ctx.lineTo(lerp(xt, xb, len), yTop + (yBot - yTop) * len);
     ctx.stroke();
   }
+  ctx.setLineDash([]);
   ctx.restore();
 };
 

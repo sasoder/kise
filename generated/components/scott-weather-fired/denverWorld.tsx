@@ -74,7 +74,7 @@ import {
   type DenView,
 } from "./denverCamera";
 import { APRONS, CONCOURSES, GARAGES, PROPERTY, RAMP_LANES, RUNWAY_NOT_IN_AERIAL, ROADS, RUNWAYS, TAXIWAYS, TERMINAL, gatesOf, type Box } from "./denverAirfield";
-import { cellItems, cellShadow, paintCloudItem, resetCloudPool, type CloudItem, type StormState } from "./denverStorms";
+import { STORM_BOIL, cellItems, cellShadow, paintCloudItem, resetCloudPool, type CloudItem, type StormState } from "./denverStorms";
 
 export * from "./denverCamera";
 export * from "./denverAirfield";
@@ -132,9 +132,20 @@ export const POPUP_CELLS: PopupCell[] = [
   { id: "cu3", x: -12, y: 5, seed: 57, size: 0.9, g0: 0.08, g1: 0.2, s0: -10, s1: 100 },
   { id: "cu4", x: 3, y: 26, seed: 59, size: 1.1, g0: 0.14, g1: 0.3, s0: -30, s1: 80 },
 ];
+/** the early swell every cut-1 cell adds from before f0 (so no puff is static in the first second) */
+export const POPUP_SWELL = 0.1;
+/** the first-second kick each cut-1 cell adds, staggered by cell (every small cumulus visibly grows in f0-f12) */
+export const POPUP_KICK = 0.07;
+const popupGrowth = (c: PopupCell, i: number, S: number) =>
+  Math.min(
+    1,
+    lerp(c.g0, c.g1, smooth(c.s0, c.s1, S)) +
+      POPUP_SWELL * smooth(-40, Math.max(c.s0 + 30, 44), S) +
+      POPUP_KICK * smooth(-6 + (i % 4) * 2.5, 12 + (i % 4) * 2.5, S),
+  );
 /** The cut-1 storm states at story clock S (any S; past cut 1 they keep growing toward g1). */
 export const popupCellsAt = (S: number): StormState[] =>
-  POPUP_CELLS.map((c) => ({
+  POPUP_CELLS.map((c, i) => ({
     id: c.id,
     x: c.x,
     y: c.y,
@@ -144,7 +155,10 @@ export const popupCellsAt = (S: number): StormState[] =>
     vy: CELL_DRIFT.vy,
     anvilDir: c.anvilDir,
     flankDir: c.flankDir,
-    growth: lerp(c.g0, c.g1, smooth(c.s0, c.s1, S)),
+    // every cell is already swelling at f0 (an early swell under the main growth), then the staggered pop-up
+    growth: popupGrowth(c, i, S),
+    // small cells boil harder (their lobes roll visibly from f0); the boil eases to the default as they mature
+    boil: STORM_BOIL * (1 + 0.6 * smooth(0.4, 0.15, popupGrowth(c, i, S))),
   }));
 /** cut 1's last frame's storms: cut 2 opens on exactly these (with S = CUT1.last) */
 export const POPUP_END: StormState[] = popupCellsAt(CUT1.last);
@@ -349,7 +363,8 @@ const RIDGE: [number, number, number][] = (() => {
     const xBase = -40 - 4 * Math.sin(y / 23) - (y > 70 ? (y - 70) * 0.35 : 0);
     const n = 0.55 * Math.sin(y * 0.41 + 1.3) + 0.35 * Math.sin(y * 1.13 + 0.4) + 0.2 * Math.sin(y * 2.7);
     const longs = Math.exp(-Math.pow((y - 41) / 9, 2)) * 0.45;
-    const fade = y > 110 ? Math.max(0.35, 1 - (y - 110) / 140) : 1;
+    // taper to the plains at both ends (no cut-off end reading as a shape on the horizon)
+    const fade = (y > 110 ? Math.max(0.35, 1 - (y - 110) / 140) : 1) * smooth(-70, -30, y) * smooth(206, 140, y);
     out.push([xBase, y, (1.05 + 0.32 * n + longs) * 1.35 * fade]);
   }
   return out;
