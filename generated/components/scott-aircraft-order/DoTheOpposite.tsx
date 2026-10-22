@@ -144,9 +144,17 @@ const YardWorld: React.FC<{ f: number }> = ({ f }) => {
   );
 };
 
-/** the near clip (m): 3 by United at the open, out to 60 for the high end camera, where nothing is nearer than ~140 m;
- *  a deeper near plane keeps the far hangar's floor, light spills and ground from z-fighting (they flickered at 3) */
-const nearAt = (f: number) => 3 + 12 * smooth((f - 28) / 34) + 45 * smooth((f - 64) / 52);
+/** the near clip (m): out to 60 for the high end camera, where nothing is nearer than ~140 m; a deeper near plane keeps
+ *  the far hangar's floor, light spills and ground from z-fighting (they flickered at 3).
+ *  REVISION 1 (one-frame glitches at f10 and f32): the world's ground is one 160 km plane of two triangles, and its
+ *  depth, interpolated across those huge near-clipped triangles, lands a few cm too near on some camera states, over a
+ *  screen region with straight edges. Whatever sits just above the ground then loses the depth test there: at f10 a
+ *  hard-edged rectangle of United's contact shadow (0.06 m) and its stand line (0.04 m) vanished; at f32 the hangar's
+ *  lit floor (0.1 m) vanished behind the door gaps. The margin between the ground and those layers grows with the near
+ *  plane, so the opening (near 3) now holds the near plane at 20 m (nothing is nearer than ~57 m there: the ground at
+ *  the frame's foot, United ~73 m) and hands back to the original ramp by f47; f47 on is unchanged. */
+const nearOrig = (f: number) => 3 + 12 * smooth((f - 28) / 34) + 45 * smooth((f - 64) / 52);
+const nearAt = (f: number) => Math.max(nearOrig(f), 20 * (1 - smooth((f - 36) / 20)));
 
 const DoTheOpposite: React.FC<z.infer<typeof schema>> = () => {
   const S = useCurrentFrame();
