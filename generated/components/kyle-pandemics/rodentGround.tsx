@@ -10,6 +10,9 @@
 // (the front's field < reach (rodentCamera THE FRONT: the seep's pools near the burrow, the baked travel-time
 // field front.f32 farther out), clipped to land: an orange wash, an orange hatch whose period is screen-steady, a crisp
 // bright front edge) -> atmospheric depth toward the page (hazeAt) -> above the horizon, the page.
+// V3 (AIR_READY.md, palette A): the map's land remapped to the warm ground, its seas and lakes to the teal medium, the
+// steppe in soft ground tones, the mottle only soft patches, distance fogging into the air at that distance (`air`),
+// and the sky transparent so AirStage's air shows above the horizon.
 // The land mask is drawn here from the vector land (rodentMapData LAND_D minus LAKES_D): a coarse one over the
 // band the front crosses and a fine one round the origin.
 // ---------------------------------------------------------------------------
@@ -19,6 +22,7 @@ import { RODENT_LEVELS_EURASIA, RODENT_PAD, RODENT_TILE, type RodentLevel } from
 import { LAKES_D, LAND_D, project } from "./rodentMapData";
 import { F, H, HAZE, MOUTH, NEAR, POLE, POOL_OFF, RIGHT, RIVULETS, AWAY, W, reachAt, steppeAt, type Cam } from "./rodentCamera";
 import { FRONT_GRID } from "./rodentFrontData";
+import { AIR } from "./pandemicAir";
 
 const TILE_DIR = "kyle-pandemics/rodent";
 /** the land masks: world boxes and texels per world px */
@@ -56,6 +60,10 @@ uniform vec3 uHaze;           // a, b, max
 uniform vec2 uRight, uAway;   // fixed world axes at the origin (the steppe's streaks)
 uniform vec2 uMotO;           // mottle octave: tile world size, blend t
 uniform float uOrange;        // 0..1 master for the disease layer (1 once it exists)
+uniform vec3 uAirNear, uAirFar; // V3: the medium at about the target's distance and at the horizon
+uniform vec3 uGroundOff;      // V3: the map's land family lifted to the warm ground (AIR.A ground)
+uniform vec3 uSeaNew;         // V3: the sea in the teal medium
+uniform vec3 uGMid, uGLit, uGDark, uShadow;
 
 const vec3 LAND = vec3(63.0, 52.0, 40.0) / 255.0;
 const vec3 LAND_RIM = vec3(106.0, 88.0, 56.0) / 255.0;
@@ -63,6 +71,7 @@ const vec3 DARK = vec3(23.0, 18.0, 13.0) / 255.0;
 const vec3 ACC = vec3(255.0, 176.0, 0.0) / 255.0;
 const vec3 ACC_D = vec3(217.0, 138.0, 12.0) / 255.0;
 const vec3 MOT = vec3(10.0, 7.0, 4.0) / 255.0;
+const vec3 SEA = vec3(27.0, 34.0, 38.0) / 255.0;
 
 float sstep(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
 float hash1(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
@@ -75,6 +84,16 @@ float inset(vec4 box, vec2 p) {
   vec2 a = p - box.xy;
   vec2 b = box.xy + box.zw - p;
   return min(min(a.x, a.y), min(b.x, b.y));
+}
+/** the baked map at p (the levels crossfaded by the screen scale k) */
+vec3 mapAt(vec2 p, float k) {
+  vec3 c = level(tE0, uE0, p);
+  float inE0 = sstep(0.0, 300.0, inset(uE0, p));
+  float w1 = sstep(log(uB1.x), log(uB1.y), log(k)) * sstep(0.0, 40.0, inset(uE1, p) * k);
+  c = mix(c, level(tE1, uE1, p), w1);
+  float w2 = sstep(log(uB2.x), log(uB2.y), log(k)) * sstep(0.0, 40.0, inset(uE2, p) * k);
+  c = mix(c, level(tE2, uE2, p), w2);
+  return mix(LAND, c, inE0);
 }
 
 float grid(vec2 p) {
@@ -115,23 +134,35 @@ void main() {
   float a = (fc.x - ${W / 2}.0) / uFocal;
   float bb = -(fc.y - ${H / 2}.0) / uFocal;
   vec3 dir = uF + a * uR + bb * uU;
-  if (dir.y > -1e-6) { outColor = vec4(LAND, 1.0); return; }
+  // V3: above the horizon the air shows through (AirStage paints it)
+  if (dir.y > -1e-6) { outColor = vec4(0.0); return; }
   float t = -uC.y / dir.y;
   vec3 P = uC + t * dir;
   vec2 p = P.xz;
   float dist = t * length(dir);
-  float haze = uHaze.z * sstep(uHaze.x, uHaze.y, dist / uD);
+  // V3 r2: lighter haze on the near map; the far ground converges continuously on the air at the horizon (no edge)
+  float hz0 = 0.8 * sstep(1.6, 4.4, dist / uD);
+  float haze = hz0 + (1.0 - hz0) * sstep(3.5, 14.0, dist / uD);
 
   // the map: per-fragment level by screen scale (frame px per world px)
   float wpp = max(length(dFdx(p)), length(dFdy(p))) * uScale;
   float k = 1.0 / max(wpp, 1e-6);
-  vec3 col = level(tE0, uE0, p);
-  float inE0 = sstep(0.0, 300.0, inset(uE0, p));
-  float w1 = sstep(log(uB1.x), log(uB1.y), log(k)) * sstep(0.0, 40.0, inset(uE1, p) * k);
-  col = mix(col, level(tE1, uE1, p), w1);
-  float w2 = sstep(log(uB2.x), log(uB2.y), log(k)) * sstep(0.0, 40.0, inset(uE2, p) * k);
-  col = mix(col, level(tE2, uE2, p), w2);
-  col = mix(LAND, col, inE0);
+  vec3 col = mapAt(p, k);
+  // V3 r2: the map's cream lines (coasts, water-lines) read at a heavier weight on the near map: their coverage
+  // widened by ~1 px (the brightest of five taps)
+  vec2 ox = dFdx(p) * 0.9;
+  vec2 oy = dFdy(p) * 0.9;
+  vec3 LUM = vec3(0.3, 0.59, 0.11);
+  float ln = sstep(0.42, 0.62, dot(col, LUM));
+  ln = max(ln, sstep(0.42, 0.62, dot(mapAt(p + ox, k), LUM)));
+  ln = max(ln, sstep(0.42, 0.62, dot(mapAt(p - ox, k), LUM)));
+  ln = max(ln, sstep(0.42, 0.62, dot(mapAt(p + oy, k), LUM)));
+  ln = max(ln, sstep(0.42, 0.62, dot(mapAt(p - oy, k), LUM)));
+  // V3: the land warm brown like the ground, the seas and lakes in the teal medium (the map's own lines kept: the
+  // remap is an offset of each family, so the cream coasts and water-lines keep their contrast)
+  float seaW = 1.0 - sstep(0.03, 0.09, length(col - SEA));
+  col = mix(col + uGroundOff + 0.03, uSeaNew + (col - SEA) * 0.85, seaW);
+  col = mix(col, vec3(0.95, 0.92, 0.86), ln * 0.7 * (1.0 - sstep(1.6, 4.0, dist / uD)));
 
   // the steppe (low altitude): a lighter umber near and broken engraved streaks toward the VP
   if (uSteppe > 0.001) {
@@ -150,8 +181,9 @@ void main() {
     float strokeV = (1.0 - sstep(0.035, 0.035 + fy * 1.4, abs(gf.y))) * (1.0 - sstep(len - 0.05, len, abs(gf.x))) * step(0.45, hsh);
     float vis = sstep(2.0, 5.0, cell.y / max(fwidth(along), 1e-6));
     float nearLift = 0.3 * (1.0 - sstep(0.6, 2.6, dist / uD));
-    vec3 steppe = mix(LAND, LAND_RIM, nearLift);
-    steppe = mix(steppe, DARK, 0.14 * fur + 0.24 * strokeV * vis);
+    // V3: the steppe in the warm ground's soft tones (no engraved dark: the streaks only a texture)
+    vec3 steppe = mix(uGMid, uGLit, nearLift);
+    steppe = mix(steppe, uGDark, 0.08 * fur + 0.14 * strokeV * vis);
     col = mix(col, steppe, uSteppe);
   }
 
@@ -160,7 +192,7 @@ void main() {
     float m0 = texture(tMot, p / uMotO.x).a;
     float m1 = texture(tMot, p / (uMotO.x * 2.0) + 0.37).a;
     float m = mix(m0, m1, uMotO.y);
-    col = mix(col, MOT, clamp(m * 0.9, 0.0, 1.0));
+    col = mix(col, uShadow, clamp(m * 0.4, 0.0, 1.0));
   }
 
   // the disease: the field under the front, clipped to land
@@ -188,7 +220,8 @@ void main() {
     }
   }
 
-  col = mix(col, LAND, haze);
+  // V3: distance takes the ground into the air at that distance (near air -> the horizon's)
+  col = mix(col, mix(uAirNear, uAirFar, sstep(1.4, 4.2, dist / uD)), haze);
   outColor = vec4(col, 1.0);
 }`;
 
@@ -287,7 +320,7 @@ const compile = (gl: WebGL2RenderingContext) => {
 };
 
 const init = async (canvas: HTMLCanvasElement): Promise<GLRes> => {
-  const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false, alpha: false });
+  const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false, alpha: true });
   if (!gl) throw new Error("rodentGround: no WebGL2 (render with --gl=angle)");
   const prog = compile(gl);
   gl.useProgram(prog);
@@ -297,7 +330,7 @@ const init = async (canvas: HTMLCanvasElement): Promise<GLRes> => {
   const aPos = gl.getAttribLocation(prog, "aPos");
   gl.enableVertexAttribArray(aPos);
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-  const names = ["uBuf", "uScale", "uC", "uF", "uR", "uU", "uFocal", "uD", "tE0", "tE1", "tE2", "tM0", "tM1", "tMot", "uE0", "uE1", "uE2", "uM0", "uM1", "uB1", "uB2", "uSteppe", "uReach", "uMouth", "uPole", "uPool0", "uPool1", "uPool2", "uPoolOff", "uNear", "tFront", "uG", "uHatch", "uHaze", "uRight", "uAway", "uMotO", "uOrange"];
+  const names = ["uBuf", "uScale", "uC", "uF", "uR", "uU", "uFocal", "uD", "tE0", "tE1", "tE2", "tM0", "tM1", "tMot", "uE0", "uE1", "uE2", "uM0", "uM1", "uB1", "uB2", "uSteppe", "uReach", "uMouth", "uPole", "uPool0", "uPool1", "uPool2", "uPoolOff", "uNear", "tFront", "uG", "uHatch", "uHaze", "uRight", "uAway", "uMotO", "uOrange", "uAirNear", "uAirFar", "uGroundOff", "uSeaNew", "uGMid", "uGLit", "uGDark", "uShadow"];
   const loc: GLRes["loc"] = {};
   for (const n of names) loc[n] = gl.getUniformLocation(prog, n);
   const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
@@ -339,8 +372,20 @@ const init = async (canvas: HTMLCanvasElement): Promise<GLRes> => {
 };
 
 
-const draw = (R: GLRes, cam: Cam, frame: number, scale: number) => {
+export type GroundAir = { near: [number, number, number]; far: [number, number, number] };
+const hex01 = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as [number, number, number];
+const LAND01 = hex01("#3F3428");
+const draw = (R: GLRes, cam: Cam, frame: number, scale: number, air: GroundAir) => {
   const { gl, loc } = R;
+  gl.uniform3fv(loc.uAirNear, air.near);
+  gl.uniform3fv(loc.uAirFar, air.far);
+  const gm = hex01(AIR.A.ground.mid);
+  gl.uniform3f(loc.uGroundOff, gm[0] - LAND01[0], gm[1] - LAND01[1], gm[2] - LAND01[2]);
+  gl.uniform3fv(loc.uSeaNew, hex01("#2B4545"));
+  gl.uniform3fv(loc.uGMid, gm);
+  gl.uniform3fv(loc.uGLit, hex01(AIR.A.ground.lit));
+  gl.uniform3fv(loc.uGDark, hex01(AIR.A.ground.dark));
+  gl.uniform3fv(loc.uShadow, hex01(AIR.A.shadow));
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.uniform2f(loc.uBuf, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.uniform1f(loc.uScale, scale);
@@ -386,7 +431,7 @@ const draw = (R: GLRes, cam: Cam, frame: number, scale: number) => {
 
 let SHARED: Promise<GLRes> | null = null;
 /** the ground canvas (full frame, under every overlay) */
-export const RodentGround: React.FC<{ cam: Cam; frame: number }> = ({ cam, frame }) => {
+export const RodentGround: React.FC<{ cam: Cam; frame: number; air: GroundAir }> = ({ cam, frame, air }) => {
   const ref = useRef<HTMLCanvasElement>(null);
   const [res, setRes] = useState<GLRes | null>(null);
   const [handle] = useState(() => delayRender("rodentGround: building the ground textures", { timeoutInMilliseconds: 240000 }));
@@ -400,11 +445,11 @@ export const RodentGround: React.FC<{ cam: Cam; frame: number }> = ({ cam, frame
   }, []);
   useLayoutEffect(() => {
     if (!res) return;
-    draw(res, cam, frame, scale);
+    draw(res, cam, frame, scale, air);
     if (!done.current) {
       done.current = true;
       continueRender(handle);
     }
-  }, [res, cam, frame, scale, handle]);
+  }, [res, cam, frame, scale, handle, air]);
   return <canvas ref={ref} width={Math.round(W * scale)} height={Math.round(H * scale)} style={{ position: "absolute", left: 0, top: 0, width: W, height: H }} />;
 };

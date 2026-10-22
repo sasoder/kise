@@ -48,8 +48,9 @@ export const CAM_KEYS: CamKey[] = [
   // the push-in that arcs round the marmot (from its right toward the burrow mouth)
   K(0, 3, 5, 34, 100, 5, 30),
   K(44, 0, 0, 23, 86, 12, 13),
-  K(84, HOLE_RA[0], HOLE_RA[1], 9, 62, 23, -3),
-  K(93, HOLE_RA[0] - 1, HOLE_RA[1] - 4, 6, 74, 25, -2),
+  // V3: the target a little higher and back (the marmot's taller V3 head keeps >= 80 px clear of the frame top)
+  K(84, HOLE_RA[0], HOLE_RA[1], 11.2, 63, 23, -3),
+  K(93, HOLE_RA[0] - 1, HOLE_RA[1] - 4, 8, 75, 25, -2),
   // the crane
   K(102, -9, -14, 1, 230, 28, 0),
   K(110, -14, -6, 0, 560, 32, 0),

@@ -17,7 +17,7 @@
 // THE MOTION: one continuous crane from a burrow to a continent, the camera always looking north (rodentCamera.ts).
 // V2: the marmot, its burrow, the seep, pebbles and tufts are REAL 3D VOLUMES in the one camera (three.js,
 // rodentSteppe3D.tsx: stepped engraved tones, form-following hatch, back-face outlines, a cast shadow).
-// f0-84 at the grey marmot's eye level on the steppe (grizzled cream-umber fur, a broad flat head, small low ears,
+// f0-84 at the marmot's eye level on the steppe (V3: marmot3D.ts, a tarbagan; grizzled sandy-buff fur, a broad flat head, small low ears,
 // bead eyes, two cream incisors, a dark-tipped tail; its burrow loose earth: an irregular heap, an apron of thrown-out
 // soil with clods and pebbles): a visible push-in that arcs round it from its right (parallax
 // on the tufts and the mound) down to the burrow mouth, large and near the frame's centre by f84. The marmot lives
@@ -47,9 +47,9 @@
 //
 // SOURCES: the origin, 75.5 E 42.7 N (the Chuy valley at the western end of Lake Issyk-Kul, Kyrgyzstan): the Black
 //   Death's ancestral strain in the Kara-Djigach and Burana cemeteries, 1338-39 (Spyrou et al., "The source of the
-//   Black Death in fourteenth-century central Eurasia", Nature 606, 718-724, 2022). The grey marmot (Marmota
-//   baibacina) stands for the reservoir: the Tian Shan plague foci are kept by marmots and other burrowing rodents
-//   (Spyrou et al. 2022 on the region's rodent reservoirs; the plague-focus literature).
+//   Black Death in fourteenth-century central Eurasia", Nature 606, 718-724, 2022). The rodent: Marmota
+//   (tarbagan / grey marmot, the Central Asian plague reservoir; drawn after photo 04.2b). The Tian Shan plague foci
+//   are kept by marmots and other burrowing rodents (Spyrou et al. 2022; the plague-focus literature).
 //   The westward sweep: Caffa 1346, Constantinople and Messina 1347, France / England / Iberia 1348, Scandinavia
 //   1349 (the conventional chronology); Iceland was spared in 1347-51 (left out of the wash). "Half of the
 //   continent" is the speaker's figure: drawn as exactly every second figure falling, no number on screen.
@@ -62,12 +62,14 @@ import React from "react";
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { loadFont as loadFellSC } from "@remotion/google-fonts/IMFellEnglishSC";
 import { z } from "zod";
-import { PaperTop } from "../kits/maps/incaShared";
 import { RodentGround } from "./rodentGround";
 import { RodentFigures } from "./rodentFigures";
 import { OriginMark } from "./rodentMarmot";
 import { Steppe3D } from "./rodentSteppe3D";
-import { DURATION, FPS, H, W, camAt, local, toScreen, type Cam } from "./rodentCamera";
+import { FolkMarmot, MARMOT_FEET } from "./rodentFolkMarmot";
+import { DURATION, FPS, H, W, camAt, horizonY, local, toScreen, type Cam } from "./rodentCamera";
+import { AIR, AirHorizonHaze, AirStage, makeAirView, rgbHex, type AirScene } from "./pandemicAir";
+import type { Air } from "./creatureAir";
 
 export { DURATION, FPS };
 export const schema = z.object({});
@@ -77,7 +79,6 @@ const { fontFamily: fellSC } = loadFellSC("normal", { weights: ["400"], subsets:
 
 const LAND = "#3F3428";
 const INK = "#E9DDBF";
-const DARK = "#17120D";
 
 // ---------------------------------------------------------------------------
 // CENTRAL ASIA: lying on the ground round the origin (an affine of the ground at its anchor), sliding north while it
@@ -119,7 +120,7 @@ const GroundLabel: React.FC<{ cam: Cam; frame: number }> = ({ cam, frame }) => {
           y={LABEL.size * 0.36}
           textAnchor="middle"
           fill={INK}
-          stroke={DARK}
+          stroke={AIR.A.line}
           strokeOpacity={0.85}
           strokeWidth={LABEL.size * 0.16}
           strokeLinejoin="round"
@@ -133,19 +134,36 @@ const GroundLabel: React.FC<{ cam: Cam; frame: number }> = ({ cam, frame }) => {
   );
 };
 
+// V3 (AIR_READY.md, palette A, mood day): the whole crane inside the medium. The scene in the map's world px; the
+// ground's own distance haze (rodentGround) fogs it toward the air at that distance; the marmot, the burrow, the bits
+// and the tufts take the air at the target's distance.
+const AIR_SCENE: AirScene = { look: "A", mood: "day", F: 1300, fogNear: 400, fogVis: 3000, fogMax: 0.9, hLow: 0, hHigh: 2600, moteUnit: 1500 };
+const camOf = (c: Cam) => ({ x: c.C[0], y: c.C[1], z: -c.C[2] });
+const to01 = (c: [number, number, number]) => c.map((q) => q / 255) as [number, number, number];
 const RodentFromCentralAsia: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const cam = camAt(frame);
+  const v = makeAirView({ scene: AIR_SCENE, frame, horizon: horizonY(cam), cam: camOf(cam), rest: camOf(camAt(0)) });
+  const near = v.airAt(cam.D * 1.5, 0);
+  const far = v.airAt(1e9, 0);
+  const air: Air = { id: "A", body: rgbHex(near), shade: AIR.A.shadow, light: AIR.A.cream, line: AIR.A.line };
   return (
     <AbsoluteFill style={{ backgroundColor: LAND }}>
-      <RodentGround cam={cam} frame={frame} />
-      <GroundLabel cam={cam} frame={frame} />
-      <Steppe3D cam={cam} frame={frame} />
-      <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
-        <OriginMark cam={cam} />
-      </svg>
-      <RodentFigures cam={cam} frame={frame} />
-      <PaperTop vignette={0.5} />
+      <AirStage v={v} bloom={0.2}>
+        <RodentGround cam={cam} frame={frame} air={{ near: to01(near), far: to01(far) }} />
+        <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
+          <AirHorizonHaze v={v} below={200} id="rca-hz" />
+        </svg>
+        <GroundLabel cam={cam} frame={frame} />
+        {/* V3 take 2: the burrow layer split round the 2D marmot (what lies beyond it, the marmot, what lies in front) */}
+        <Steppe3D cam={cam} frame={frame} air={air} part="far" splitAt={MARMOT_FEET} />
+        <FolkMarmot cam={cam} frame={frame} />
+        <Steppe3D cam={cam} frame={frame} air={air} part="near" splitAt={MARMOT_FEET} />
+        <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
+          <OriginMark cam={cam} />
+        </svg>
+        <RodentFigures cam={cam} frame={frame} />
+      </AirStage>
     </AbsoluteFill>
   );
 };
