@@ -487,7 +487,7 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
   const rootY = root ? root.y : centre.y;
   const rootR = Math.max(4, colR(CLOUD.baseZ, g, top) * sz * kC * 0.75);
   const cvs = poolCanvas(w, h);
-  const cx2 = cvs.getContext("2d") as CanvasRenderingContext2D;
+  const cx2 = cvs.getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D;
   const img = cx2.createImageData(w, h);
   const D = img.data;
   const baseZs = CLOUD.baseZ;

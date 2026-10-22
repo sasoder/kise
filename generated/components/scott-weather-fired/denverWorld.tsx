@@ -172,7 +172,7 @@ const loadMips = (src: string, tile: boolean): Promise<Mips> => {
       const c0 = document.createElement("canvas");
       c0.width = img.naturalWidth;
       c0.height = img.naturalHeight;
-      (c0.getContext("2d") as CanvasRenderingContext2D).drawImage(img, 0, 0);
+      (c0.getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D).drawImage(img, 0, 0);
       levels.push(c0);
       while (levels[levels.length - 1].width > 16 && levels.length < 10) {
         const prev = levels[levels.length - 1];
@@ -181,7 +181,7 @@ const loadMips = (src: string, tile: boolean): Promise<Mips> => {
         const c = document.createElement("canvas");
         c.width = w;
         c.height = h;
-        const cx = c.getContext("2d") as CanvasRenderingContext2D;
+        const cx = c.getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D;
         cx.imageSmoothingEnabled = true;
         cx.imageSmoothingQuality = "high";
         if (tile) {
@@ -189,7 +189,7 @@ const loadMips = (src: string, tile: boolean): Promise<Mips> => {
           const tiled = document.createElement("canvas");
           tiled.width = prev.width * 3;
           tiled.height = prev.height * 3;
-          const tc = tiled.getContext("2d") as CanvasRenderingContext2D;
+          const tc = tiled.getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D;
           for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) tc.drawImage(prev, i * prev.width, j * prev.height);
           cx.drawImage(tiled, prev.width, prev.height, prev.width, prev.height, 0, 0, w, h);
         } else {
@@ -360,25 +360,10 @@ const RIDGE: [number, number, number][] = (() => {
 // air by distance, the horizon haze over the ground, the Front Range.
 // ===================================================================================================================
 type TexLayer = { mips: Mips; mi: number; ox: number; oy: number; repeat: boolean };
-const patternCache = new WeakMap<CanvasRenderingContext2D, Map<HTMLCanvasElement, { rep: CanvasPattern | null; no: CanvasPattern | null }>>();
-const patOf = (ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, repeat: boolean) => {
-  let m = patternCache.get(ctx);
-  if (!m) {
-    m = new Map();
-    patternCache.set(ctx, m);
-  }
-  let e = m.get(c);
-  if (!e) {
-    e = { rep: null, no: null };
-    m.set(c, e);
-  }
-  if (repeat) {
-    if (!e.rep) e.rep = ctx.createPattern(c, "repeat");
-    return e.rep;
-  }
-  if (!e.no) e.no = ctx.createPattern(c, "no-repeat");
-  return e.no;
-};
+/** a fresh pattern per draw call: a cached CanvasPattern carries state between frames inside one render tab, which
+ *  made a frame rendered after others differ (by up to 5/255) from the same frame rendered fresh (cut joins must be
+ *  pixel-exact) */
+const patOf = (ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, repeat: boolean) => ctx.createPattern(c, repeat ? "repeat" : "no-repeat");
 /** fill one screen row [y, y + h) with a texture layer under the row's affine mapping */
 const texRow = (ctx: CanvasRenderingContext2D, L: TexLayer, A: P2, B: P2, D: P2, yc: number, y: number, h: number) => {
   const base = L.mips[0];
@@ -1029,7 +1014,13 @@ const Canvas: React.FC<{ draw: (ctx: CanvasRenderingContext2D) => void; deps: un
   useLayoutEffect(() => {
     const cv = ref.current;
     if (!cv) return;
-    draw(cv.getContext("2d") as CanvasRenderingContext2D);
+    // willReadFrequently pins the canvas to the software rasteriser: Chrome otherwise promotes a canvas that is redrawn
+    // every frame to the GPU part-way through a render, which shifts pattern sampling by a few levels (a join between
+    // cuts would then not be pixel-exact)
+    // reset the canvas (backing store and every context state) so each frame draws exactly as a fresh one
+    cv.width = W;
+    cv.height = H;
+    draw(cv.getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   return <canvas ref={ref} width={W} height={H} style={{ position: "absolute", left: 0, top: 0, width: W, height: H }} />;
