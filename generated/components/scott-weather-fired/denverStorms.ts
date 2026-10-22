@@ -124,7 +124,8 @@ const puffsOf = (seed: number): Puff[] => {
   }
   // the base skirt: flattened puffs along the flat base
   for (let k = 0; k < 18; k++) {
-    out.push({ hz: 0, th: (k / 18) * Math.PI * 2 + R(i++) * 0.3, rho: 0.75 + 0.25 * R(i++), rr: 0.3 + 0.12 * R(i++), ph: R(i++) * 6.283, w: 0.5 + R(i++), kind: 1, ua: 0, va: 0 });
+    // irregular: random angles, distances and sizes (evenly spaced skirt lobes read as a frilly curtain)
+    out.push({ hz: 0, th: R(i++) * Math.PI * 2, rho: 0.55 + 0.45 * R(i++), rr: 0.2 + 0.24 * Math.pow(R(i++), 1.6), ph: R(i++) * 6.283, w: 0.5 + R(i++), kind: 1, ua: 0, va: 0 });
   }
   // the anvil: puffs along the downwind axis (ua 0..1) and across it (va -1..1)
   for (let k = 0; k < 90; k++) {
@@ -437,6 +438,7 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
   // the flat bases: the main tower's base circle and each flanking turret's, projected; a column under none of them is
   // not clipped
   const bottom = new Float32Array(w).fill(-1);
+  const colCov = new Float32Array(w);
   {
     const Rb0 = colR(CLOUD.baseZ, g, top);
     const bases: { x: number; y: number; r: number }[] = [{ x: p0.x, y: p0.y, r: Rbase }];
@@ -461,6 +463,21 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
           const t = Math.abs(B.x - A.x) < 1e-6 ? 0 : (i - A.x) / (B.x - A.x);
           bottom[i] = Math.max(bottom[i], A.y + (B.y - A.y) * t);
         }
+      }
+    }
+    // which columns lie over a base (softened over ~a base band): the base is solid there
+    {
+      const raw = new Float32Array(w);
+      for (let i = 0; i < w; i++) raw[i] = bottom[i] >= 0 ? 1 : 0;
+      const rr = Math.max(1, Math.round(Rbase * kC * q * 0.12));
+      for (let i = 0; i < w; i++) {
+        let a = 0;
+        let n = 0;
+        for (let k = Math.max(0, i - rr); k <= Math.min(w - 1, i + rr); k++) {
+          a += raw[k];
+          n++;
+        }
+        colCov[i] = smooth(0.15, 0.85, a / n);
       }
     }
     // columns under no base circle take the nearest covered column's base (no vertical seam at a ring's edge)
@@ -539,15 +556,29 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
         alpha = smooth(0.22, 0.8, Cb[idx] + fib * 0.9 + nz * 0.3) * 0.96;
       }
       // raster px above the flat base; the base edge is ragged with churning scud (world-anchored noise on the clock)
-      const scud = B > 0 ? B * baseBand * 0.5 * (vnoise5(((nx0w + i / pxPerMi) / sz) * 2.6 + S * 0.02, S * 0.012 + c.seed) - 0.5) : 0;
+      // irregular scud: a domain-warped two-octave noise (no lattice rhythm) plus a few ragged dark tufts hanging lower
+      // at random places, all churning slowly on the clock
+      let scud = 0;
+      if (B > 0) {
+        const u = (nx0w + i / pxPerMi) / sz;
+        const warp = vnoise5(u * 0.73 + c.seed * 0.31, S * 0.006) - 0.5;
+        const n1 = vnoise5(u * 1.37 + warp * 2.2 + c.seed, S * 0.011) - 0.5;
+        const n2 = vnoise5(u * 3.91 - warp * 1.7 + c.seed * 2.3, S * 0.019 + 3.1) - 0.5;
+        const tuftN = vnoise5(u * 0.61 + warp + c.seed * 4.7, S * 0.007 + 7.3);
+        const tuft = Math.max(0, tuftN - 0.6) * 4.2 * (0.6 + 0.4 * (n2 + 0.5));
+        scud = B * baseBand * (0.45 * n1 + 0.22 * n2 + 1.35 * tuft);
+      }
       const above = bottom[i] - j + scud;
       // near the flat base the edge noise fades out, so the base is solid (no holes, the ring never shows through) but
       // keeps the soft coverage edge (no forced fill beyond the cloud: no stubs)
       if (Av[idx] === 0) {
         const baseness = smooth(baseBand * 3, baseBand * 0.5, above);
         alpha = Math.max(alpha * (1 - baseness), baseness * smooth(0.3, 0.6, Cb[idx] + nz * 0.15));
+        // over the base's footprint the underside is one solid mass (no see-through gaps between skirt lobes)
+        alpha = Math.max(alpha, 0.98 * colCov[i] * smooth(baseBand * 5, baseBand * 2.5, above) * smooth(0.05, 0.3, Cb[idx]));
       }
-      alpha *= smooth(-0.5, 1.5, above);
+      // a soft, wispy bottom edge (deeper softness where tufts hang)
+      alpha *= smooth(-1.2, 2.2, above);
       if (alpha <= 0.004) continue;
       const cov = alpha;
       const il = i > 0 && Wt[idx - 1] > 0 ? idx - 1 : idx;
@@ -580,6 +611,9 @@ export const cellItems = (v: DenView, c: StormState, S: number): CloudItem[] => 
       // the flat base and the low body sink into the shadow (self-shadowing under the tower)
       const baseShade = 0.32 * Math.exp(-Math.max(0, above) / baseBand);
       let L = 0.08 + 0.98 * Math.pow(wrap, 1.35) + Bi[idx] + 0.12 * hrel - baseShade * (1 - Av[idx]) + 0.1 * nz + 0.1 * Av[idx];
+      // the underside is in its own shadow: the light fades out toward the flat base (the skirt lobes' tops must not
+      // light up as a row of bright arches)
+      if (Av[idx] === 0) L *= 0.3 + 0.7 * smooth(baseBand * 0.4, baseBand * 4, above);
       L = Math.min(1, Math.max(0, L));
       const li = Math.round(L * 255) * 3;
       let r = lut[li];
