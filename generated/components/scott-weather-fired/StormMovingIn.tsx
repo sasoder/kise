@@ -16,8 +16,10 @@
 // line), the real airfield inside it, the ramp busy. ONE mature thunderstorm (size 0.72: dark slate base and rain to
 // the ground, sunlit upper turrets, world round 6) enters from the left edge, 7.5 mi west and 4.4 mi north of the
 // terminal at f0 with its trailing part off frame, and sails toward the airport (bearing ~112) at a constant
-// 0.065 mi/f (a timelapse): its leading edge travels ~365 px and it grows as it comes. Two soft in-cloud flickers
-// (f22, f44). Its dark ground shadow and rain lead it onto the ring's north-west part. The camera only creeps.
+// 0.065 mi/f (a timelapse): its leading edge travels ~365 px and it grows as it comes. It boils the whole way
+// (world storm life at boil 1.5, the maximum: turrets rising and rolling, a churning base, a streaming anvil) and
+// lights from inside three times (in-cloud flickers f14, f32, f50; none near the strike). Its dark ground shadow
+// and rain lead it onto the ring's north-west part. The camera only creeps.
 // DIRECTION CUE (cut 4 imports it): a soft cream arrow on the ground ahead of the storm, along its drift, its tip at
 // the ring, wiped out from its tail f6 -> f18 ("moving"); the storm's shadow and rain roll over it and it drains into
 // the ground after the strike (f66-f80). "W" and "E" slide up just inside the ring's west and east points, landed on
@@ -97,7 +99,7 @@ export const STORM_IN_CAM = makeDenClock(STORM_IN_CAM_START, STORM_IN_CAM_GLIDES
 export const STORM_IN_CAM_END: DenCam = STORM_IN_CAM.at(DURATION - 1);
 
 /** The one storm: a mature cumulonimbus, anvil sheared east (downwind). */
-export const STORM_IN_LOOK = { id: "IN", seed: 23, size: 0.72, anvilDir: 84, growth: 1, shadowStrength: 1.3, rainStrength: 1.4 } as const;
+export const STORM_IN_LOOK = { id: "IN", seed: 23, size: 0.72, anvilDir: 84, growth: 1, shadowStrength: 1.3, rainStrength: 1.4, boil: 1.5 } as const;
 /** Its drift (miles per frame): a timelapse of the westerlies, constant speed, from the west-north-west toward the
  *  airport (bearing ~112; on screen left -> right and a little toward the camera). */
 export const STORM_IN_DRIFT = { vx: 0.06, vy: -0.024 } as const;
@@ -136,8 +138,9 @@ export const STORM_IN_STRIKE_BEARING = (Math.atan2(STORM_IN_STRIKE.to.x, STORM_I
 export const STORM_IN_RAMP = { f0: STORM_IN_STRIKE.contact, f1: STORM_IN_STRIKE.spreadEnd } as const;
 export const rampInActive = (f: number) => 1 - smooth(STORM_IN_RAMP.f0, STORM_IN_RAMP.f1, f);
 
-/** In-cloud lightning (cut frames): two soft events while it sails in, none near the strike. */
-export const STORM_IN_FLICKERS = [22, 44];
+/** In-cloud lightning (cut frames): three soft events spaced across the cut, none within 6 frames of the strike
+ *  (f61-f64), and none over the closing amber at the end. */
+export const STORM_IN_FLICKERS = [14, 32, 50];
 
 // ---- the direction cue (cuts 3 and 4 share it: import STORM_IN_ARROW / StormDriftArrow / STORM_IN_COMPASS /
 // CompassLetters / CreamRing) -------------------------------------------------------------------------------------------
@@ -268,6 +271,7 @@ export const stormInCellAt = (f: number): StormState => ({
   growth: STORM_IN_LOOK.growth,
   shadowStrength: STORM_IN_LOOK.shadowStrength,
   rainStrength: STORM_IN_LOOK.rainStrength,
+  boil: STORM_IN_LOOK.boil,
   glow: strikeGlow(f - STORM_IN_STRIKE.start),
   flicker: flickerAt(f, STORM_IN_FLICKERS),
 });
