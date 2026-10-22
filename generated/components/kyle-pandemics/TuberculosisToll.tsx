@@ -13,6 +13,20 @@
 // this 143 · HORRIBLE 147 · disease 155 · and 170 · it's 173 · just 176 · this 176 (the slot ends at 186).
 // DURATION: the slot 13.080 -> 19.286 s = 6.206 s x 29.97 = 186 frames (f0..f185).
 //
+// V3 ENVIRONMENT (pandemicAir.tsx, palette A, mood day; prop `look`, default "A"; "old" = the delivered V2, pixel for
+// pixel): the hall inside the clip's medium: AirFloor (one continuous warm tone fogging by depth, thin darker-local
+// joints, cream lit edges near, a soft horizon zone), shafts, motes, grade; the labels cased in the medium's shadow
+// colour. Fog here is by DEPTH BEHIND THE FRONT LINE (airD), not the eye's distance: the crane takes the eye far up
+// and back, and eye-distance fog would bury the payoff. THE CROWD'S HOOK: drawPlan(ctx, plan, f, crowdFog) with
+// crowdFogFor(v, cam) (veils toward the air of each band's depth, compounding to CROWD_FOG x fogAt): the new cast's
+// crowd gets the medium through it.
+// V3 FOLK (look "A" now renders TollFolk): the crowd is the picture-book gouache cast (pandemicFolk.tsx): c1900 men,
+// women, children and old people mixed by seed (the hero a grown man), TB in the orange ink, COVID-19 / HIV/AIDS /
+// 1918 flu in cream, skin and hair natural; sprites baked once per tab at exactly the (kind, ink, seed, size tier) the
+// crane shows (FOLK_REQS), the idle sway, contact shadows in the medium's shadow colour, the crowd fog through
+// crowdFogFor. The labels sit on a soft plate of the medium's shadow with a stronger casing (same type), legible at
+// 270 px wide. "old" (TollOld) = the delivered V2.
+//
 // THE MOTION (V2): an isotype in depth, ONE FIGURE = ONE MILLION DEATHS. f0 is close on one orange-coated engraved man,
 // the middle file of the front rank (~900 px tall, head at y ~450-600), his neighbours at the frame edges; the camera is
 // already pulling back. One crane move (the eye rides one straight line back and up, from his brow to ~19 men up; real
@@ -62,12 +76,16 @@ import { loadFont as loadCaslon } from "@remotion/google-fonts/LibreCaslonText";
 import { z } from "zod";
 import { TexcocoPage, WorldSvg, type Cam } from "../kits/maps/texcocoShared";
 import { INK, LAND } from "../kits/maps/incaShared";
-import { BOX, DURATION as SLOT, DZ, END_CAM, F, TB_MID_X, GROUPS, HAIRS, MEN, YAWS, cam3At, project, type Cam3, type Group, type Man } from "./tollWorld";
+import { HERO_X, hash, BOX, DURATION as SLOT, DZ, END_CAM, F, TB_MID_X, GROUPS, HAIRS, MEN, YAWS, cam3At, project, type Cam3, type Group, type Man } from "./tollWorld";
 import { CREAM, DARK, Newton, ORANGE, POSES, Worker, headTurn, type FigPose } from "../kyle-london/londonCastV2";
+import { FolkCanvas, blitFolk, crowdDrawing, crowdSpriteReq, sway, useFolkSprites, type CrowdInk, type CrowdKind, type Sprite as FolkSprite, type SpriteReq } from "./pandemicFolk";
+import { heightOf } from "./pandemicFolkCrowd";
+import { AirHorizonHaze, AirStage, fogHex, makeAirView, mixHex as mixHexAir, rgbHex, type AirScene, type AirView } from "./pandemicAir";
 
 export const FPS = 30000 / 1001;
 export const DURATION = SLOT;
-export const schema = z.object({});
+/** V3 (pandemicAir.tsx): "A" = the hall inside the clip's medium; "old" = the delivered V2, pixel for pixel */
+export const schema = z.object({ look: z.enum(["old", "A"]).default("A") });
 export const defaultProps = schema.parse({});
 
 const { fontFamily: fellSC } = loadFellSC("normal", { weights: ["400"], subsets: ["latin"] });
@@ -161,6 +179,104 @@ const Floor: React.FC<{ c: Cam3 }> = ({ c }) => {
       {bands}
       {lines}
       <path d={lit} fill="none" stroke={INK} strokeWidth={sw(800) * 0.6} strokeOpacity={0.07} />
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// V3: THE HALL INSIDE THE CLIP'S MEDIUM (pandemicAir.tsx, palette A, mood day; look "A"). The floor as one continuous
+// warm tone by distance fogging into the air (no bands), flag joints in a thin darker-local tone, cream lit edges near,
+// a soft horizon zone. THE CROWD'S HOOK: drawPlan takes `crowdFog` (the veils between the depth bands, toward the air
+// of that distance, compounding to v.fogAt(d)); the figures themselves are untouched (the new cast replaces them).
+// ---------------------------------------------------------------------------
+const AIR_SCENE: AirScene = { look: "A", mood: "day", F, fogNear: 900, fogVis: 11000, fogMax: 0.9, hLow: 0, hHigh: 900, moteUnit: 177 };
+/** this cut fogs by DEPTH BEHIND THE FRONT LINE (the crane takes the eye far up and back; fog by the eye's distance
+ *  would bury the payoff): the air's distance of a floor point or a man at depth Z */
+const airD = (Z: number) => Math.max(0, Z + 900);
+/** the crowd takes the fog lighter than the floor (the TB field must stay a dense orange mass) */
+const CROWD_FOG = 0.6;
+const AIR_FLOOR = { near: "#6A5C47", far: "#5B5040", dark: "#342C23", joint: "#2A231B" };
+type CrowdVeil = { Z: number; color: string; alpha: number };
+/** the crowd's fog (the hook): the veils at HAZE_Z_AIR, each the air of its distance, alphas compounding to fogAt */
+const HAZE_Z_AIR = [7400, 6600, 5800, 5000, 4300, 3600, 3000, 2400, 1800, 1300, 800];
+export const crowdFogFor = (v: AirView, c: Cam3): CrowdVeil[] => {
+  const out: CrowdVeil[] = [];
+  // far to near: the farthest men first get the whole fog of their band's distance; each veil adds what is missing
+  void c;
+  const fogs = HAZE_Z_AIR.map((Z) => CROWD_FOG * v.fogAt(airD(Z)));
+  for (let i = 0; i < HAZE_Z_AIR.length; i++) {
+    const target = fogs[i];
+    const next = i + 1 < fogs.length ? fogs[i + 1] : 0;
+    // the veils compound: a man beyond Z_i gets veils i..end, 1 - prod(1 - a_k) = fogAt(Z_i)
+    out.push({ Z: HAZE_Z_AIR[i], color: rgbHex(v.airAt(airD(HAZE_Z_AIR[i]), 150)), alpha: c01(1 - (1 - target) / Math.max(1e-3, 1 - next)) });
+  }
+  return out;
+};
+const AirFloor: React.FC<{ c: Cam3; v: AirView }> = ({ c, v }) => {
+  const zA = Math.max(FLOOR.z0, c.cz + 60);
+  const pt = (X: number, Z: number) => {
+    const p = project(c, X, 0, Z);
+    return p ? `${p.x.toFixed(1)},${p.y.toFixed(1)}` : "0,0";
+  };
+  const y0 = Math.max(-10, c.hy + 0.5);
+  const dAt = (y: number) => (c.h * F) / Math.max(0.5, y - c.hy);
+  const N = 40;
+  const stops = Array.from({ length: N + 1 }, (_, i) => {
+    const t = i / N;
+    const y = y0 + Math.pow(t, 1.6) * (1960 - y0);
+    const Zf = c.cz + dAt(y);
+    const d = airD(Zf);
+    const near = c01((3000 - Zf) / 2600);
+    const local = mixHexAir(mixHexAir(AIR_FLOOR.far, AIR_FLOOR.near, near), AIR_FLOOR.dark, 0.25 * c01((y - 1300) / 600));
+    return <stop key={i} offset={c01((y - y0) / (1960 - y0))} stopColor={fogHex(v, local, d, 0)} />;
+  });
+  const lines: React.ReactNode[] = [];
+  const pieces = 22;
+  const zAt = (i: number) => mix(zA, FLOOR.zFar, Math.pow(i / pieces, 1.6));
+  const sw = (Z: number) => Math.max(0.5, Math.min(2.2, 2.4 * (F / (Z - c.cz))));
+  for (let i = 0; i < pieces; i++) {
+    const za = zAt(i);
+    const zb = zAt(i + 1);
+    const zm = (za + zb) / 2;
+    const fg = v.fogAt(airD(zm));
+    if (fg > 0.9) continue;
+    let d = "";
+    for (let X = Math.ceil(FLOOR.x0 / FLAG) * FLAG; X <= FLOOR.x1; X += FLAG) d += `M${pt(X, za)}L${pt(X, zb)}`;
+    lines.push(<path key={`l${i}`} d={d} fill="none" stroke={fogHex(v, AIR_FLOOR.joint, airD(zm), 0)} strokeWidth={sw(zm)} strokeOpacity={0.55} />);
+  }
+  const cross: Record<string, string> = {};
+  for (let Z = Math.floor(zA / FLAG) * FLAG; Z < FLOOR.zFar; Z += FLAG) {
+    if (Z < zA) continue;
+    const fg = v.fogAt(airD(Z));
+    if (fg > 0.9) continue;
+    const key = `${Math.round(fg * 20)}|${Math.round(sw(Z) * 4)}`;
+    const off = (Math.round(Z / FLAG) % 2) * FLAG * 0.5;
+    let d = "";
+    for (let X = Math.ceil(FLOOR.x0 / FLAG) * FLAG + off; X < FLOOR.x1; X += FLAG) d += `M${pt(X, Z)}L${pt(X + FLAG, Z)}`;
+    cross[key] = (cross[key] ?? "") + d;
+  }
+  const jFar = rgbHex(v.airAt(1e9, 0));
+  Object.entries(cross).forEach(([key, d]) => {
+    const [f20, w4] = key.split("|").map(Number);
+    lines.push(<path key={`x${key}`} d={d} fill="none" stroke={mixHexAir(AIR_FLOOR.joint, jFar, f20 / 20)} strokeWidth={w4 / 4} strokeOpacity={0.5} />);
+  });
+  let lit = "";
+  for (let Z = Math.floor(zA / FLAG) * FLAG; Z < 3000; Z += FLAG) {
+    if (Z < zA) continue;
+    const off = (Math.round(Z / FLAG) % 2) * FLAG * 0.5;
+    for (let X = Math.ceil(FLOOR.x0 / FLAG) * FLAG + off; X < FLOOR.x1; X += FLAG) lit += `M${pt(X + 14, Z + 16)}L${pt(X + FLAG - 30, Z + 16)}`;
+  }
+  return (
+    <g>
+      <defs>
+        <linearGradient id="tta-floor" gradientUnits="userSpaceOnUse" x1={0} y1={y0} x2={0} y2={1960}>
+          {stops}
+        </linearGradient>
+      </defs>
+      <rect x={-20} y={y0} width={1120} height={1960 - y0} fill="url(#tta-floor)" />
+      {lines}
+      <path d={lit} fill="none" stroke={v.pal.cream} strokeWidth={sw(800) * 0.6} strokeOpacity={0.1} />
+      <AirHorizonHaze v={v} below={180} id="tta-hz" />
     </g>
   );
 };
@@ -329,7 +445,7 @@ const planAt = (f: number): Plan => {
 };
 /** depth veils: once the men beyond each Z are drawn, a veil of the page over them (atmospheric depth) */
 const HAZE_Z = [5200, 4400, 3600, 2800, 2000, 1200];
-const drawPlan = (ctx: CanvasRenderingContext2D, p: Plan, f: number) => {
+const drawPlan = (ctx: CanvasRenderingContext2D, p: Plan, f: number, crowdFog?: CrowdVeil[]) => {
   const c = cam3At(f);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = "source-over";
@@ -341,6 +457,19 @@ const drawPlan = (ctx: CanvasRenderingContext2D, p: Plan, f: number) => {
   let band = 0;
   for (let j = 0; j < p.n; j++) {
     const m = MEN[p.idx[j]];
+    if (crowdFog) {
+      // V3 hook: the veils of the medium (the air of each band's distance)
+      while (band < crowdFog.length && m.Z < crowdFog[band].Z) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalCompositeOperation = "source-atop";
+        ctx.globalAlpha = crowdFog[band].alpha;
+        ctx.fillStyle = crowdFog[band].color;
+        ctx.fillRect(0, 0, FRAME_W, FRAME_H);
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 1;
+        band++;
+      }
+    } else
     while (band < HAZE_Z.length && m.Z < HAZE_Z[band]) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = "source-atop";
@@ -388,7 +517,7 @@ const drawPlan = (ctx: CanvasRenderingContext2D, p: Plan, f: number) => {
 /** sizes and gaps in screen px AT THE SETTLED END FRAME (converted to world units at the label's depth, so the label
  *  lives in world space and scales with the camera) */
 type LabelLine = { text: string; font: string; size: number; spacing?: number; gap: number };
-const WorldLabel: React.FC<{ c: Cam3; X: number; Z: number; Y?: number; lines: LabelLine[]; frame: number; f0: number; halo?: number }> = ({ c, X, Z, Y = 0, lines, frame, f0, halo = 0 }) => {
+const WorldLabel: React.FC<{ c: Cam3; X: number; Z: number; Y?: number; lines: LabelLine[]; frame: number; f0: number; halo?: number; casing?: string; strong?: boolean }> = ({ c, X, Z, Y = 0, lines, frame, f0, halo = 0, casing = DARK, strong = false }) => {
   const u = c01((frame - f0) / 12);
   const p0 = project(c, X, Y, Z);
   const sEnd = F / (Z - END_CAM.cz);
@@ -407,9 +536,9 @@ const WorldLabel: React.FC<{ c: Cam3; X: number; Z: number; Y?: number; lines: L
         y={y}
         textAnchor="middle"
         fill={INK}
-        stroke={DARK}
-        strokeOpacity={0.8}
-        strokeWidth={size * 0.16}
+        stroke={casing}
+        strokeOpacity={strong ? 0.92 : 0.8}
+        strokeWidth={size * (strong ? 0.22 : 0.16)}
         strokeLinejoin="round"
         paintOrder="stroke"
         style={{ fontFamily: l.font, fontSize: size, letterSpacing: (l.spacing ?? 0) * size, fontVariantNumeric: "lining-nums" }}
@@ -439,9 +568,17 @@ const WorldLabel: React.FC<{ c: Cam3; X: number; Z: number; Y?: number; lines: L
 /** the labels' floor line: just in front of the one front line */
 const LABEL_Z = -90;
 
-const TuberculosisToll: React.FC<z.infer<typeof schema>> = () => {
+/** the delivered V2 picture (look "old"; its air branch is the superseded first V3 pass, kept for reference) */
+const TollOld: React.FC<z.infer<typeof schema>> = ({ look }) => {
   const frame = useCurrentFrame();
   const plan = useMemo(() => planAt(frame), [frame]);
+  // V3: the medium (only for look "A")
+  const air = useMemo(() => {
+    if (look !== "A") return null;
+    const cc = cam3At(frame);
+    const c0 = cam3At(0);
+    return makeAirView({ scene: AIR_SCENE, frame, horizon: cc.hy, cam: { x: cc.cx, y: cc.h, z: cc.cz }, rest: { x: c0.cx, y: c0.h, z: c0.cz } });
+  }, [look, frame]);
   const ref = useRef<HTMLCanvasElement>(null);
   const bench = useRef<HTMLDivElement>(null);
   const waiting = useRef<number | null>(null);
@@ -450,7 +587,7 @@ const TuberculosisToll: React.FC<z.infer<typeof schema>> = () => {
     const missing = plan.keys.filter((k) => !SPRITES.has(k));
     if (!missing.length) {
       const ctx = ref.current?.getContext("2d");
-      if (ctx) drawPlan(ctx, plan, frame);
+      if (ctx) drawPlan(ctx, plan, frame, air ? crowdFogFor(air, cam3At(frame)) : undefined);
       if (waiting.current !== null) {
         continueRender(waiting.current);
         waiting.current = null;
@@ -467,7 +604,7 @@ const TuberculosisToll: React.FC<z.infer<typeof schema>> = () => {
     Promise.all(missing.map((k) => loadSprite(k, nodes.get(k) as Element)))
       .then(() => setJobs([]))
       .catch((err) => cancelRender(err));
-  }, [plan, frame, jobs]);
+  }, [plan, frame, jobs, air]);
   const c = cam3At(frame);
   const id: Cam = { k: 1, cx: 540, cy: 960 };
   // the labels: the cream groups' on the floor in front of their front rows; TUBERCULOSIS on the field
@@ -484,11 +621,43 @@ const TuberculosisToll: React.FC<z.infer<typeof schema>> = () => {
       ]}
       frame={frame}
       f0={[136, 129, 124][i]}
+      casing={air ? air.pal.shadow : DARK}
     />
   );
   return (
     <AbsoluteFill>
-      <TexcocoPage cam={pageCam(c)}>
+      {air ? (
+        <AirStage v={air} bloom={0.15}>
+        <WorldSvg cam={id}>
+          {air ? <AirFloor c={c} v={air} /> : <Floor c={c} />}
+        </WorldSvg>
+        <canvas ref={ref} width={FRAME_W} height={FRAME_H} style={{ position: "absolute", left: 0, top: 0, width: FRAME_W, height: FRAME_H }} />
+        <WorldSvg cam={id}>
+          <defs>
+            <radialGradient id="tt-halo">
+              <stop offset="0" stopColor={DARK} stopOpacity={0.62} />
+              <stop offset="0.65" stopColor={DARK} stopOpacity={0.4} />
+              <stop offset="1" stopColor={DARK} stopOpacity={0} />
+            </radialGradient>
+          </defs>
+          {GROUPS.map(groupLabel)}
+          <WorldLabel
+            c={c}
+            X={TB_MID_X}
+            Z={LABEL_Z}
+            lines={[
+              { text: "TUBERCULOSIS", font: fellSC, size: 33, spacing: 0.06, gap: 0 },
+              { text: "1 billion+", font: caslon, size: 32, gap: 36 },
+              { text: "past 200 years", font: fell, size: 24, gap: 29 },
+            ]}
+            frame={frame}
+            f0={140}
+            casing={air ? air.pal.shadow : DARK}
+          />
+        </WorldSvg>
+</AirStage>
+      ) : (
+        <TexcocoPage cam={pageCam(c)}>
         <WorldSvg cam={id}>
           <Floor c={c} />
         </WorldSvg>
@@ -515,7 +684,8 @@ const TuberculosisToll: React.FC<z.infer<typeof schema>> = () => {
             f0={140}
           />
         </WorldSvg>
-      </TexcocoPage>
+</TexcocoPage>
+      )}
       <div ref={bench} style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, overflow: "hidden", visibility: "hidden" }}>
         {jobs.map((k) => (
           <SpriteSource key={k} spriteKey={k} />
@@ -524,5 +694,189 @@ const TuberculosisToll: React.FC<z.infer<typeof schema>> = () => {
     </AbsoluteFill>
   );
 };
+
+// ---------------------------------------------------------------------------
+// V3 FOLK (look "A", the default): the crowd is the clip's picture-book gouache cast (pandemicFolk.tsx, read-only):
+// c1900 men, women, children and old people mixed by seed, TB's toll in the ORANGE ink, the other diseases' groups in
+// CREAM, skin and hair natural; front-facing sprites baked once per render tab (the gouache filter baked in) at the
+// power-of-two size tiers the crane actually uses (a man drawn at hPx uses the smallest tier >= hPx), blitted far to
+// near on one canvas with a contact shadow each in the medium's shadow colour and the idle sway; the medium's fog on
+// the crowd through the veils (crowdFogFor). The same men, places, camera, labels and timing as before.
+// ---------------------------------------------------------------------------
+const FOLK_KINDS: CrowdKind[] = ["man", "woman", "boy", "girl", "oldMan", "oldWoman"];
+/** the mix: mostly adults, some children and old people */
+const FOLK_CUM = [0.3, 0.6, 0.7, 0.8, 0.9, 1];
+const FOLK_SEEDS = 4;
+/** a man of the old cast stood ~320 units; a folk man of the same scale */
+const FOLK_WORLD_H = 320;
+const FOLK_TIERS = [1024, 512, 256, 128, 64, 32];
+const FOLK_MAN_UNITS = crowdDrawing("man", "cream", 0).hUnits;
+type FolkMan = { kind: CrowdKind; seed: number; rel: number; ink: CrowdInk };
+const FOLK: FolkMan[] = MEN.map((m, i) => {
+  const r = hash(i + 17, 911);
+  let kind: CrowdKind = FOLK_KINDS[FOLK_CUM.findIndex((q) => r < q)];
+  let seed = Math.floor(hash(i + 3, 917) * FOLK_SEEDS);
+  // the opening's hero (the front rank's middle): a grown man, facing us
+  if (m.orange && m.Z === 0 && m.X === HERO_X) {
+    kind = "man";
+    seed = 1;
+  }
+  const rel = (crowdDrawing(kind, "cream", seed).hUnits / FOLK_MAN_UNITS) * heightOf(kind, seed);
+  return { kind, seed, rel, ink: m.orange ? "orange" : "cream" };
+});
+const folkTier = (h: number) => {
+  let t = FOLK_TIERS[FOLK_TIERS.length - 1];
+  for (const T of FOLK_TIERS) if (T >= h) t = T;
+  return t;
+};
+const inView = (c: Cam3, m: Man) => {
+  const p = project(c, m.X, 0, m.Z);
+  if (!p) return null;
+  if (p.x + BOX.x1 * p.s < 0 || p.x + BOX.x0 * p.s > FRAME_W || p.y + BOX.y0 * p.s > FRAME_H || p.y + BOX.y1 * p.s < 0) return null;
+  return p;
+};
+/** every (kind, ink, seed, tier) the crane shows on any frame: baked once at mount */
+const FOLK_REQS: SpriteReq[] = (() => {
+  const seen = new Map<string, SpriteReq>();
+  for (let f = 0; f < DURATION; f++) {
+    const c = cam3At(f);
+    MEN.forEach((m, i) => {
+      const p = inView(c, m);
+      if (!p) return;
+      const fm = FOLK[i];
+      const r = crowdSpriteReq(fm.kind, fm.ink, fm.seed, folkTier(FOLK_WORLD_H * fm.rel * p.s));
+      if (!seen.has(r.key)) seen.set(r.key, r);
+    });
+  }
+  return [...seen.values()];
+})();
+const FOLK_KEY = MEN.map(() => new Map<number, string>());
+const folkKey = (i: number, tier: number) => {
+  let k = FOLK_KEY[i].get(tier);
+  if (!k) {
+    const fm = FOLK[i];
+    k = crowdSpriteReq(fm.kind, fm.ink, fm.seed, tier).key;
+    FOLK_KEY[i].set(tier, k);
+  }
+  return k;
+};
+let AIR_SHADOW: { col: string; c: HTMLCanvasElement } | null = null;
+const airShadowSprite = (col: string) => {
+  if (AIR_SHADOW && AIR_SHADOW.col === col) return AIR_SHADOW.c;
+  const c = document.createElement("canvas");
+  c.width = 128;
+  c.height = 128;
+  const ctx = c.getContext("2d") as CanvasRenderingContext2D;
+  const [r, g, b] = [1, 3, 5].map((k) => parseInt(col.slice(k, k + 2), 16));
+  const gr = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, `rgba(${r},${g},${b},0.8)`);
+  gr.addColorStop(0.6, `rgba(${r},${g},${b},0.5)`);
+  gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  ctx.fillStyle = gr;
+  ctx.fillRect(0, 0, 128, 128);
+  AIR_SHADOW = { col, c };
+  return c;
+};
+const drawFolk = (ctx: CanvasRenderingContext2D, f: number, get: (key: string) => FolkSprite | undefined, fog: CrowdVeil[], shadowCol: string) => {
+  const c = cam3At(f);
+  const sh = airShadowSprite(shadowCol);
+  let band = 0;
+  MEN.forEach((m, i) => {
+    const p = inView(c, m);
+    if (!p) return;
+    while (band < fog.length && m.Z < fog[band].Z) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = "source-atop";
+      ctx.globalAlpha = fog[band].alpha;
+      ctx.fillStyle = fog[band].color;
+      ctx.fillRect(0, 0, FRAME_W, FRAME_H);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+      band++;
+    }
+    const fm = FOLK[i];
+    // the contact shadow, offset to the lower right (light from the upper left)
+    const w = 70 * fm.rel;
+    const dd = 40;
+    const ps = project(c, m.X + 0.2 * w, 0, m.Z - 0.2 * dd);
+    const pf = project(c, m.X, 0, m.Z - dd);
+    const pb = project(c, m.X, 0, m.Z + dd);
+    if (ps && pf && pb) {
+      const rx = w * ps.s;
+      const ry = Math.max(0.8, (pf.y - pb.y) / 2);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(sh, ps.x - rx, ps.y - ry, 2 * rx, 2 * ry);
+    }
+    const h = FOLK_WORLD_H * fm.rel * p.s;
+    const sw = sway(f, i);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    blitFolk(ctx, get(folkKey(i, folkTier(h))), p.x, p.y, h, { rot: sw.rot, sy: sw.sy });
+  });
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+};
+const TollFolk: React.FC = () => {
+  const frame = useCurrentFrame();
+  const get = useFolkSprites(FOLK_REQS);
+  const c = cam3At(frame);
+  const c0 = cam3At(0);
+  const air = makeAirView({ scene: AIR_SCENE, frame, horizon: c.hy, cam: { x: c.cx, y: c.h, z: c.cz }, rest: { x: c0.cx, y: c0.h, z: c0.cz } });
+  const fog = crowdFogFor(air, c);
+  const id: Cam = { k: 1, cx: 540, cy: 960 };
+  // the labels: cream on a soft plate of the medium's shadow, a stronger casing (they read at 270 px wide)
+  const casing = air.pal.shadow;
+  const groupLabel = (g: Group, i: number) => (
+    <WorldLabel
+      key={g.name}
+      c={c}
+      X={g.cx}
+      Z={LABEL_Z}
+      lines={[
+        { text: g.name, font: fellSC, size: 28, spacing: 0.03, gap: 0 },
+        { text: g.count, font: caslon, size: 27, gap: 31 },
+      ]}
+      frame={frame}
+      f0={[136, 129, 124][i]}
+      casing={casing}
+      halo={92}
+      strong
+    />
+  );
+  return (
+    <AbsoluteFill>
+      <AirStage v={air} bloom={0.15}>
+        <WorldSvg cam={id}>
+          <AirFloor c={c} v={air} />
+        </WorldSvg>
+        <FolkCanvas draw={(ctx) => drawFolk(ctx, frame, get, fog, air.pal.shadow)} />
+        <WorldSvg cam={id}>
+          <defs>
+            <radialGradient id="tt-halo">
+              <stop offset="0" stopColor={air.pal.shadow} stopOpacity={0.62} />
+              <stop offset="0.6" stopColor={air.pal.shadow} stopOpacity={0.45} />
+              <stop offset="1" stopColor={air.pal.shadow} stopOpacity={0} />
+            </radialGradient>
+          </defs>
+          {GROUPS.map(groupLabel)}
+          <WorldLabel
+            c={c}
+            X={TB_MID_X}
+            Z={LABEL_Z}
+            lines={[
+              { text: "TUBERCULOSIS", font: fellSC, size: 33, spacing: 0.06, gap: 0 },
+              { text: "1 billion+", font: caslon, size: 32, gap: 36 },
+              { text: "past 200 years", font: fell, size: 24, gap: 29 },
+            ]}
+            frame={frame}
+            f0={140}
+            casing={casing}
+            halo={150}
+            strong
+          />
+        </WorldSvg>
+      </AirStage>
+    </AbsoluteFill>
+  );
+};
+const TuberculosisToll: React.FC<z.infer<typeof schema>> = ({ look }) => (look === "A" ? <TollFolk /> : <TollOld look={look} />);
 
 export default TuberculosisToll;
