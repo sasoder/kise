@@ -240,3 +240,171 @@ export const Street: React.FC<{ P: Persp; uid: string; pool: [number, number] }>
     </g>
   );
 };
+
+// ---------------------------------------------------------------------------
+// V3: THE LANE INSIDE THE CLIP'S MEDIUM (pandemicAir.tsx, palette A, mood night). The same houses, setts, lamp pool
+// and geometry as Street above (which stays the delivered picture), in local night colours (warm umber plaster and
+// stone) fogged by their distance into the dark teal air; cream lines fade with the fog; the lamp lifts the
+// right-hand fronts and the setts round him; the sky between the eaves and the lane's far end are the air itself.
+// ---------------------------------------------------------------------------
+type AirTone = (hex: string, Z: number, height?: number) => string;
+const AIR_LOCAL = {
+  front: "#3A3229",
+  frontLit: "#5E5242",
+  under: "#2C2620",
+  roof: "#302A23",
+  chimney: "#3A3229",
+  pane: "#211C17",
+  paneLit: "#B8A47E",
+  reveal: "#4C4134",
+  door: "#241E18",
+  doorReveal: "#4A3F32",
+  sill: "#5C4E3D",
+  sett: "#41392F",
+  line: "#211B15",
+  cream: "#E9DDBF",
+};
+const HouseAir: React.FC<{ P: Persp; h: House; tone: AirTone; fogOf: (Z: number) => number }> = ({ P, h, tone, fogOf }) => {
+  const s = h.side;
+  const X0 = s * LANE;
+  const XJ = s * (LANE - h.jetty);
+  const zm = (h.z0 + h.z1) / 2;
+  const fz = fogOf(zm);
+  const L = AIR_LOCAL;
+  const lamp = s === 1 ? c01(1 - Math.max(0, h.z0) / 900) : 0;
+  const base = tone(mixHex(L.front, L.frontLit, lamp), zm, 200);
+  const upper = tone(mixHex(L.front, L.frontLit, lamp * 0.7), zm, 500);
+  const line = (a: number) => a * (1 - fz);
+  const lineC = tone(L.line, zm, 300);
+  const r = P.r(zm);
+  const els: React.ReactNode[] = [];
+  els.push(<path key="g" d={quad(P, [[X0, 0, h.z0], [X0, FLOOR_Y[1], h.z0], [X0, FLOOR_Y[1], h.z1], [X0, 0, h.z1]])} fill={base} />);
+  if (h.jetty > 0) {
+    els.push(<path key="ju" d={quad(P, [[X0, FLOOR_Y[1], h.z0], [XJ, FLOOR_Y[1], h.z0], [XJ, FLOOR_Y[1], h.z1], [X0, FLOOR_Y[1], h.z1]])} fill={tone(L.under, zm, 225)} stroke={lineC} strokeWidth={0.9 * r} />);
+  }
+  els.push(<path key="u" d={quad(P, [[XJ, FLOOR_Y[1], h.z0], [XJ, h.top, h.z0], [XJ, h.top, h.z1], [XJ, FLOOR_Y[1], h.z1]])} fill={upper} />);
+  const XE = s * (LANE - h.jetty - 26);
+  els.push(<path key="ev" d={quad(P, [[XJ, h.top, h.z0], [XE, h.top - 8, h.z0], [XE, h.top - 8, h.z1], [XJ, h.top, h.z1]])} fill={tone(L.under, zm, 640)} stroke={lineC} strokeWidth={0.8 * r} />);
+  const XR = s * (LANE + 150);
+  els.push(<path key="rf" d={quad(P, [[XE, h.top - 8, h.z0], [XR, h.top - 190, h.z0], [XR, h.top - 190, h.z1], [XE, h.top - 8, h.z1]])} fill={tone(L.roof, zm, 760)} stroke={lineC} strokeWidth={0.8 * r} />);
+  // the ridge catches a little of the sky's light: a cream rim
+  els.push(<path key="rg" d={`M${pt(P.p(XR, h.top - 190, h.z0))}L${pt(P.p(XR, h.top - 190, h.z1))}`} fill="none" stroke={L.cream} strokeWidth={1.1 * r} strokeOpacity={line(0.22)} />);
+  if (hsh(h.z0, 13) > 0.5) {
+    const cz = mix(h.z0, h.z1, 0.3 + 0.4 * hsh(h.z0, 17));
+    const cx = s * (LANE + 110);
+    els.push(<path key="chim" d={quad(P, [[cx, h.top - 120, cz], [cx, h.top - 250, cz], [cx, h.top - 250, cz + 40], [cx, h.top - 120, cz + 40]])} fill={tone(L.chimney, cz, 850)} stroke={lineC} strokeWidth={0.8 * r} />);
+  }
+  els.push(
+    <path
+      key="ln"
+      d={`M${pt(P.p(X0, 0, h.z0))}L${pt(P.p(X0, FLOOR_Y[1], h.z0))}M${pt(P.p(XJ, FLOOR_Y[1], h.z0))}L${pt(P.p(XJ, h.top, h.z0))}M${pt(P.p(XJ, FLOOR_Y[2], h.z0))}L${pt(P.p(XJ, FLOOR_Y[2], h.z1))}M${pt(P.p(XJ, FLOOR_Y[1] - 4, h.z0))}L${pt(P.p(XJ, FLOOR_Y[1] - 4, h.z1))}`}
+      fill="none"
+      stroke={L.cream}
+      strokeWidth={1.1 * r}
+      strokeOpacity={line(0.14 + 0.1 * lamp)}
+    />,
+  );
+  const dz0 = mix(h.z0 + 30, h.z1 - 110, h.door);
+  const dz1 = dz0 + 72;
+  els.push(<path key="dr" d={quad(P, [[X0, 0, dz0], [X0, -186, dz0], [X0, -186, dz1], [X0, 0, dz1]])} fill={tone(L.door, dz0, 90)} stroke={L.cream} strokeWidth={1 * r} strokeOpacity={line(0.16)} />);
+  els.push(<path key="drv" d={quad(P, [[X0, 0, dz1], [X0, -186, dz1], [X0 - s * 14, -186, dz1], [X0 - s * 14, 0, dz1]])} fill={tone(L.doorReveal, dz1, 90)} />);
+  const wins: { X: number; y0: number; y1: number; z0: number; z1: number; lit: boolean }[] = [];
+  const span = h.z1 - h.z0;
+  const gz = dz0 > h.z0 + span / 2 ? h.z0 + span * 0.22 : h.z1 - span * 0.42;
+  wins.push({ X: X0, y0: -150, y1: -70, z0: gz, z1: gz + 84, lit: false });
+  for (const [k, y] of [[0, FLOOR_Y[1]], [1, FLOOR_Y[2]]] as const) {
+    for (const t of [0.18, 0.6]) {
+      const z0 = h.z0 + span * t;
+      wins.push({ X: XJ, y0: y - 170, y1: y - 60, z0, z1: z0 + 70, lit: h.lit.includes(k) && t === 0.18 });
+    }
+  }
+  wins.forEach((w, i) => {
+    const hgt = -(w.y0 + w.y1) / 2;
+    // a lit window glows through the air (its light is less fogged than the wall)
+    const paneCol = w.lit ? mixHex(L.paneLit, tone(L.paneLit, w.z0, hgt), 0.45) : tone(L.pane, w.z0, hgt);
+    els.push(
+      <g key={`w${i}`}>
+        <path d={quad(P, [[w.X, w.y1, w.z0], [w.X, w.y0, w.z0], [w.X, w.y0, w.z1], [w.X, w.y1, w.z1]])} fill={paneCol} stroke={L.cream} strokeWidth={1.1 * r} strokeOpacity={line(0.2)} />
+        <path d={quad(P, [[w.X, w.y1, w.z1], [w.X, w.y0, w.z1], [w.X - s * 9, w.y0, w.z1], [w.X - s * 9, w.y1, w.z1]])} fill={tone(L.reveal, w.z1, hgt)} />
+        <path
+          d={`M${pt(P.p(w.X, (w.y0 + w.y1) / 2, w.z0))}L${pt(P.p(w.X, (w.y0 + w.y1) / 2, w.z1))}M${pt(P.p(w.X, w.y0, (w.z0 + w.z1) / 2))}L${pt(P.p(w.X, w.y1, (w.z0 + w.z1) / 2))}`}
+          fill="none"
+          stroke={w.lit ? "#4A3C2C" : L.cream}
+          strokeWidth={1 * r}
+          strokeOpacity={w.lit ? 0.7 : line(0.12)}
+        />
+        <path d={quad(P, [[w.X, w.y1, w.z0 - 6], [w.X + s * 8, w.y1, w.z0 - 6], [w.X + s * 8, w.y1, w.z1 + 6], [w.X, w.y1, w.z1 + 6]])} fill={tone(L.sill, w.z0, hgt)} stroke={lineC} strokeWidth={0.7 * r} />
+      </g>,
+    );
+  });
+  return <g>{els}</g>;
+};
+const SettsAir: React.FC<{ P: Persp; uid: string; pool: [number, number]; tone: AirTone; fogOf: (Z: number) => number; shadow: string }> = ({ P, uid, pool, tone, fogOf }) => {
+  const course = 24;
+  const w = 38;
+  const zA = Math.max(-420, P.zNear);
+  const L = AIR_LOCAL;
+  const groups: Record<string, string> = {};
+  let glint = "";
+  let row = 0;
+  let lastY = Infinity;
+  for (let Z = zA - (((zA % course) + course) % course); Z < Z_FAR; Z += course, row++) {
+    if (Z < zA) continue;
+    const yA = P.p(0, 0, Z)[1];
+    const yB = P.p(0, 0, Z + course)[1];
+    if (Math.abs(yA - yB) * 1 < 1.6) break;
+    if (Math.abs(yA - lastY) < 0.5) continue;
+    lastY = yA;
+    const key = `${Math.round(fogOf(Z) * 20)}`;
+    let d = `M${pt(P.p(-LANE, 0, Z))}L${pt(P.p(LANE, 0, Z))}`;
+    const off = (row % 2) * w * 0.5 + hsh(row, 2) * 6;
+    for (let X = -LANE + off; X < LANE; X += w) {
+      d += `M${pt(P.p(X, 0, Z))}L${pt(P.p(X, 0, Z + course))}`;
+      const dd = Math.hypot((X + w / 2 - pool[0]) / 260, (Z + course / 2 - pool[1]) / 240);
+      if (dd < 1) glint += `M${pt(P.p(X + 6, 0, Z + course * 0.62))}L${pt(P.p(X + w - 8, 0, Z + course * 0.62))}`;
+    }
+    groups[key] = (groups[key] ?? "") + d;
+  }
+  // the lane's tone: one continuous gradient by distance (no bands), lifted in the pool
+  const N = 18;
+  const tones: React.ReactNode[] = [];
+  for (let i = 0; i < N; i++) {
+    const za = mix(zA, Z_FAR, Math.pow(i / N, 1.8));
+    const zb = mix(zA, Z_FAR, Math.pow((i + 1) / N, 1.8));
+    tones.push(<path key={i} d={quad(P, [[-LANE, 0, za], [LANE, 0, za], [LANE, 0, zb + 2], [-LANE, 0, zb + 2]])} fill={tone(L.sett, (za + zb) / 2, 0)} />);
+  }
+  const pc = P.p(pool[0], 0, pool[1]);
+  const prx = 300 * P.r(pool[1]);
+  const pry = Math.max(2, (P.p(pool[0], 0, pool[1] - 260)[1] - P.p(pool[0], 0, pool[1] + 260)[1]) / 2);
+  const r0 = P.r(0);
+  return (
+    <g>
+      {tones}
+      <defs>
+        <radialGradient id={`${uid}-pool`}>
+          <stop offset="0" stopColor="#E3D3AE" stopOpacity={0.26} />
+          <stop offset="0.55" stopColor="#E3D3AE" stopOpacity={0.1} />
+          <stop offset="1" stopColor="#E3D3AE" stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      <ellipse cx={pc[0]} cy={pc[1]} rx={prx} ry={pry} fill={`url(#${uid}-pool)`} />
+      {Object.entries(groups).map(([k, d]) => (
+        <path key={k} d={d} fill="none" stroke={tone(L.line, 0, 0)} strokeWidth={1.3 * r0} strokeOpacity={0.55 * (1 - Number(k) / 20)} />
+      ))}
+      <path d={glint} fill="none" stroke={L.cream} strokeWidth={1.1 * r0} strokeOpacity={0.2} strokeLinecap="round" />
+    </g>
+  );
+};
+/** Street in the medium: `tone(hex, Z, height)` fogs a local colour by the distance of depth Z (pandemicAir fogHex),
+ *  `fogOf(Z)` the fog amount there */
+export const AirStreet: React.FC<{ P: Persp; uid: string; pool: [number, number]; tone: AirTone; fogOf: (Z: number) => number; shadow: string }> = ({ P, uid, pool, tone, fogOf, shadow }) => {
+  const order = [...HOUSES].sort((a, b) => b.z0 - a.z0);
+  return (
+    <g>
+      {order.map((h, i) => (
+        <HouseAir key={i} P={P} h={h} tone={tone} fogOf={fogOf} />
+      ))}
+      <SettsAir P={P} uid={`${uid}-st`} pool={pool} tone={tone} fogOf={fogOf} shadow={shadow} />
+    </g>
+  );
+};

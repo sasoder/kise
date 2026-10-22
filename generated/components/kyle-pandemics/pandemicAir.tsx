@@ -194,7 +194,7 @@ export type MoodSpec = {
 export const MOODS: Record<AirMood, MoodSpec> = {
   day: { tBias: 0, gain: 0.42, dim: 1, fogScale: 1, sun: { x: 170, y: -260, r: 1250, a: 0.42 }, shafts: "rays", slant: 0.36, motes: "dust", moteSize: 1, moteCount: 1, drift: [0.0035, 0.0006, 0] },
   interior: { tBias: 0.12, gain: 0.3, dim: 0.9, fogScale: 0.8, sun: { x: 60, y: 260, r: 900, a: 0.3 }, shafts: "window", slant: 0.62, motes: "dust", moteSize: 0.9, moteCount: 0.8, drift: [0.002, 0.0008, 0] },
-  night: { tBias: 0.34, gain: 0.25, dim: 0.62, fogScale: 0.9, sun: { x: 540, y: 300, r: 700, a: 0.32 }, shafts: "lamp", slant: 0, motes: "dust", moteSize: 0.9, moteCount: 0.8, drift: [0.0025, -0.0004, 0] },
+  night: { tBias: 0.36, gain: 0.25, dim: 0.42, fogScale: 0.9, sun: { x: 540, y: 300, r: 760, a: 0.3 }, shafts: "lamp", slant: 0, motes: "dust", moteSize: 1, moteCount: 1.3, drift: [0.0025, -0.0004, 0] },
   micro: { tBias: -0.04, gain: 0.3, dim: 1, fogScale: 1, sun: { x: 300, y: -300, r: 1400, a: 0.48 }, shafts: "rays", slant: 0.3, motes: "particles", moteSize: 0.75, moteCount: 1.5, drift: [0.0018, 0.0012, 0.001] },
 };
 
@@ -390,9 +390,9 @@ const Shafts: React.FC<{ v: AirView; strength: number; lamp?: Lamp; win?: Window
           <stop offset="0.6" stopColor={cream} stopOpacity="0.14" />
           <stop offset="1" stopColor={cream} stopOpacity="0" />
         </linearGradient>
-        <radialGradient id={`${uid}l`} cx={f3((lamp?.x ?? 540) / W)} cy={f3((lamp?.y ?? 330) / H)} r="0.9" gradientUnits="objectBoundingBox">
-          <stop offset="0" stopColor={cream} stopOpacity="0.5" />
-          <stop offset="0.5" stopColor={cream} stopOpacity="0.16" />
+        <radialGradient id={`${uid}l`} cx={f3(lamp?.x ?? 540)} cy={f3(lamp?.y ?? 330)} r={f3(lamp?.reach ?? 1700)} gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor={cream} stopOpacity="0.55" />
+          <stop offset="0.35" stopColor={cream} stopOpacity="0.2" />
           <stop offset="1" stopColor={cream} stopOpacity="0" />
         </radialGradient>
         <filter id={`${uid}b`} x="-50%" y="-10%" width="200%" height="120%">
@@ -497,7 +497,8 @@ export type AirStageProps = {
 export const AirStage: React.FC<AirStageProps> = ({ v, shafts = 1, motes = 1, grade = 1, grain = 1, vignette = 1, bloom = 0, shaftsBehind = false, lamp, window: win, children, front, overlay }) => {
   const uid = uidOf(useId());
   const stops = Array.from({ length: 21 }, (_, i) => `${rgbHex(v.airAtScreen((H * i) / 20))} ${f3((100 * i) / 20)}%`).join(", ");
-  const sun = v.mood.sun;
+  // at night the glow is the lamp's own (when a lamp is given)
+  const sun = v.mood.shafts === "lamp" && lamp ? { ...v.mood.sun, x: lamp.x, y: lamp.y } : v.mood.sun;
   const g2 = Math.floor(v.frame / 2);
   const grx = (hash01(g2 + 1) * 2 - 1) * 96;
   const gry = (hash01(g2 + 7) * 2 - 1) * 96;
