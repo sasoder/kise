@@ -36,6 +36,14 @@
 // plane, every object a volume (mills as lathed bodies, bars / wall / A-frame / hursts / hoppers / shaft as lit
 // hexahedra, the flywheel's rim and gears with receding bands), contact shadows, depth-sunk inks for the far mill and
 // the far stones, parallax on the truck; the wall's far-side contents are drawn before it.
+// V3 (look "A", the default; "old" = the delivered V2 picture): the world inside the pandemics clip's medium
+// (kyle-pandemics/pandemicAir, palette A, mood interior; ./muscleOrMachineAir): soft rays from the upper left, motes,
+// grade, grain; the floor one tone by distance; every volume re-lit (soft form light, a cream rim on lit tops, thin
+// outlines in a darker local colour, no hatching) and fogged by its distance from the eye; orange (the hoops, gears,
+// geared rim) takes only part of the fog, bloom 0.22; cut 10's engine drawing lifted out of its black casing and fogged.
+// People: the slaves are ./romeFolk (gouache), each fogged by his own distance (fists solved on the bar every frame,
+// facing fixed, per-frame wall occlusion with samples up to the folk crown); the two millers are pandemicFolk's drawn
+// Worker, both mittens solved onto the V2 targets; worker 2 stands nearer a taller stack (the Worker's shorter reach).
 // SOURCES (illustrative, no figures on screen): Pompeii's bakery mills (e.g. the Bakery of Modestus, VII.1.36) are
 // hourglass lava mills, a conical meta under an hourglass catillus turned by bars through its waist lugs, pushed by
 // donkeys or slaves; Apuleius, Metamorphoses 9.12 describes slaves at such a mill. Albion Mills, Southwark (opened 1786,
@@ -48,9 +56,40 @@ import { z } from "zod";
 import { TexcocoPage } from "../kits/maps/texcocoShared";
 import { FRAME_H, FRAME_W, camTransform, mixColor, type Cam, type P2 } from "../kits/maps/incaShared";
 import { ACCENT, ACCENT_DEEP, DARK, HUB_RING_R, INK, RIM_R, SUN, SunAndPlanetMachine } from "../kyle-london/orbitWorld";
-import { ContactShadow, GroundPlane, perspective, tintInk, type Persp, type VolInk } from "../kyle-london/londonDepth";
+import { ContactShadow as ContactShadowV2, GroundPlane, perspective, tintInk, type Persp, type VolInk } from "../kyle-london/londonDepth";
 import { CREAM, POSES, Worker, castAnchors, headTurn, idle, lerpFig, type FigPose } from "../kyle-london/londonCastV2";
 import { Basket, POSES as RPOSES, PUSH, Sack, Slave, mirrorPose } from "./romeCast";
+import * as Folk from "./romeFolk";
+import { AirStage, formTone, mixHex, type Mat } from "../kyle-pandemics/pandemicAir";
+import { FolkWorker, STAND as FOLK_STAND, type ArmPose as FolkArm, type WorkerPose } from "../kyle-pandemics/pandemicFolk";
+import {
+  AirFloor,
+  AirShadow,
+  FLOUR,
+  FLOUR_DK,
+  GRAIN,
+  GRAIN_DK,
+  GRAIN_EDGE,
+  MAT_BRICK,
+  MAT_BURR,
+  MAT_FLOOR,
+  MAT_HOOP,
+  MAT_IRON,
+  MAT_LAVA,
+  MAT_TIMBER,
+  MAT_TRAVERTINE,
+  MM_BLOOM,
+  MM_SHAFTS,
+  ORANGE_LINE,
+  PAL,
+  SACKCLOTH,
+  folkScaleAt,
+  lineOf,
+  mmAirAt,
+  solveArm,
+  workerInks,
+  type MA,
+} from "./muscleOrMachineAir";
 import {
   BAR_R,
   BAR_Y,
@@ -106,8 +145,13 @@ import {
 export const FPS = 30000 / 1001;
 export const DURATION = 147;
 if (PLAN_DURATION !== DURATION) throw new Error("plan / component DURATION mismatch");
-export const schema = z.object({});
+/** V3: "A" = the world inside the pandemics clip's medium (pandemicAir palette A, mood interior; ./muscleOrMachineAir)
+ *  with the drawn casts (./romeFolk slaves, pandemicFolk's Worker on the steam side); "old" = the delivered V2 picture */
+export const schema = z.object({ look: z.enum(["old", "A"]).default("A") });
 export const defaultProps = schema.parse({});
+/** the medium of the current frame (null = the old paper look): every drawn piece reads it */
+const AX = React.createContext<MA | null>(null);
+const useAir = () => React.useContext(AX);
 
 const fx = (v: number) => v.toFixed(2);
 const c01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -118,6 +162,7 @@ const ease = (v: number) => {
 const PT = (v: P2) => `${fx(v[0])},${fx(v[1])}`;
 type V3 = [number, number, number];
 const PAGE = "#3F3428";
+const DARK0 = DARK;
 
 /** ONE INK WEIGHT (cut 10's recipe): figure strokes are in world units, so above INK_K0 every stroke inside .u4ink is
  *  scaled by (INK_K0 / k)^0.75 */
@@ -158,7 +203,7 @@ const hatchD = (x0: number, y0: number, x1: number, y1: number, gap: number, slo
  *  each frustum's outline is its top ellipse + the tangent sides + its bottom's front arc; the right side shaded */
 /** pits: a lava stone's pitted surface (dark pores, a few pale flecks), on the front half, turning with `th` */
 type Pits = { th: number; per: number; seed: string; tone: number };
-const Lathe: React.FC<{ P: Persp; X: number; Z: number; prof: [number, number][]; ink: VolInk; uid: string; top?: "solid" | "none"; litBand?: boolean; pits?: Pits }> = ({
+const Lathe: React.FC<{ P: Persp; X: number; Z: number; prof: [number, number][]; ink: VolInk; uid: string; top?: "solid" | "none"; litBand?: boolean; pits?: Pits; mat?: Mat; orange?: boolean }> = ({
   P,
   X,
   Z,
@@ -168,7 +213,11 @@ const Lathe: React.FC<{ P: Persp; X: number; Z: number; prof: [number, number][]
   top = "solid",
   litBand = false,
   pits,
+  mat,
+  orange = false,
 }) => {
+  const A = useAir();
+  if (A && mat) return <LatheAir P={P} X={X} Z={Z} prof={prof} mat={mat} uid={uid} top={top} pits={pits} orange={orange} A={A} />;
   const r = P.r(Z);
   const sw = 2.3 * r;
   const rings = prof.map(([R, Y]) => ringOf(P, X, Z, R, Y));
@@ -216,13 +265,78 @@ const Lathe: React.FC<{ P: Persp; X: number; Z: number; prof: [number, number][]
   );
 };
 
+/** V3: a body of revolution re-lit for the medium: each frustum a soft horizontal form light (lit at the left, a core
+ *  shadow at the right, a little reflected air at the far edge), the top lit, a cream edge down the lit side, thin
+ *  outlines in a darker local colour, no hatching; fogged by its distance (orange takes only part of the fog) */
+const LatheAir: React.FC<{ P: Persp; X: number; Z: number; prof: [number, number][]; mat: Mat; uid: string; top: "solid" | "none"; pits?: Pits; orange: boolean; A: MA }> = ({ P, X, Z, prof, mat, uid, top, pits, orange, A }) => {
+  const r = P.r(Z);
+  const hMid = -(prof[0][1] + prof[prof.length - 1][1]) / 2;
+  const t = (hex: string) => (orange ? A.orange(hex, Z, hMid) : A.tone(hex, Z, hMid));
+  const fz = A.fog(Z);
+  const ln = orange ? A.orange(ORANGE_LINE, Z, hMid) : t(lineOf(mat));
+  const sw = 1.25 * r;
+  const shade = mixHex(mat.dark, PAL.shadow, 0.2);
+  const refl = mixHex(mat.dark, A.airHex(Z, hMid), 0.45);
+  const rings = prof.map(([R, Y]) => ringOf(P, X, Z, R, Y));
+  const segs: React.ReactNode[] = [];
+  for (let i = prof.length - 2; i >= 0; i--) {
+    const a = rings[i];
+    const b = rings[i + 1];
+    const d = `M${fx(a.c[0] - a.rx)} ${fx(a.c[1])}L${fx(b.c[0] - b.rx)} ${fx(b.c[1])}A${fx(b.rx)} ${fx(Math.max(0.01, b.ry))} 0 0 0 ${fx(b.c[0] + b.rx)} ${fx(b.c[1])}L${fx(a.c[0] + a.rx)} ${fx(a.c[1])}A${fx(a.rx)} ${fx(Math.max(0.01, a.ry))} 0 0 0 ${fx(a.c[0] - a.rx)} ${fx(a.c[1])}Z`;
+    const x0 = Math.min(a.c[0] - a.rx, b.c[0] - b.rx);
+    const x1 = Math.max(a.c[0] + a.rx, b.c[0] + b.rx);
+    const id = `${uid}-s${i}`;
+    // a frustum facing down (its side leaning in toward its foot) is lit less from above
+    const down = c01((Math.abs(b.rx) - Math.abs(a.rx)) / Math.max(1, Math.abs(a.c[1] - b.c[1])) * 0.9);
+    const lit = mixHex(mat.lit, mat.mid, 0.55 * down);
+    segs.push(
+      <g key={i}>
+        <defs>
+          <linearGradient id={`${id}-g`} gradientUnits="userSpaceOnUse" x1={fx(x0)} y1="0" x2={fx(x1)} y2="0">
+            <stop offset="0" stopColor={t(mat.mid)} />
+            <stop offset="0.24" stopColor={t(lit)} />
+            <stop offset="0.52" stopColor={t(mat.mid)} />
+            <stop offset="0.84" stopColor={t(shade)} />
+            <stop offset="1" stopColor={t(refl)} />
+          </linearGradient>
+          <clipPath id={id}>
+            <path d={d} />
+          </clipPath>
+        </defs>
+        <path d={d} fill={`url(#${id}-g)`} />
+        {pits ? (
+          <g clipPath={`url(#${id})`}>
+            <PitsOn P={P} X={X} Z={Z} a={prof[i]} b={prof[i + 1]} pits={pits} k={i} />
+          </g>
+        ) : null}
+        <path d={`M${fx(a.c[0] - a.rx * 0.9)} ${fx(a.c[1])}L${fx(b.c[0] - b.rx * 0.9)} ${fx(b.c[1])}`} stroke={PAL.cream} strokeWidth={1.4 * r} strokeOpacity={0.35 * (1 - fz) * (1 - down)} strokeLinecap="round" />
+        <path d={d} fill="none" stroke={ln} strokeWidth={sw} strokeLinejoin="round" />
+      </g>,
+    );
+  }
+  const tp = rings[0];
+  return (
+    <g>
+      {segs}
+      {top === "solid" ? (
+        <g>
+          <ellipse cx={tp.c[0]} cy={tp.c[1]} rx={tp.rx} ry={tp.ry} fill={t(mat.lit)} stroke={ln} strokeWidth={sw} />
+          <path d={`M${fx(tp.c[0] - tp.rx)} ${fx(tp.c[1])}A${fx(tp.rx)} ${fx(Math.max(0.01, tp.ry))} 0 0 0 ${fx(tp.c[0] + tp.rx * 0.2)} ${fx(tp.c[1] + tp.ry * 0.98)}`} fill="none" stroke={PAL.cream} strokeWidth={1.5 * r} strokeOpacity={0.55 * (1 - fz)} strokeLinecap="round" />
+        </g>
+      ) : null}
+    </g>
+  );
+};
+
 /** the pores of one frustum (profile points a -> b), scattered by its area, turning with the stone */
 const PitsOn: React.FC<{ P: Persp; X: number; Z: number; a: [number, number]; b: [number, number]; pits: Pits; k: number }> = ({ P, X, Z, a, b, pits, k }) => {
   const r = P.r(Z);
   const slant = Math.hypot(a[0] - b[0], a[1] - b[1]);
   const n = Math.round((pits.per * slant * (a[0] + b[0])) / 2 / 400);
-  const dark = mixColor(PAGE, "#120E0A", pits.tone);
-  const pale = mixColor(PAGE, "#9C907B", pits.tone);
+  const A = useAir();
+  const dark = A ? A.tone("#2A231C", Z, 150) : mixColor(PAGE, "#120E0A", pits.tone);
+  const pale = A ? A.tone("#C2B6A0", Z, 150) : mixColor(PAGE, "#9C907B", pits.tone);
+  const opk = A ? 0.7 : 1;
   const els: React.ReactNode[] = [];
   for (let i = 0; i < n; i++) {
     const u = random(`${pits.seed}${k}u${i}`);
@@ -235,7 +349,7 @@ const PitsOn: React.FC<{ P: Persp; X: number; Z: number; a: [number, number]; b:
     const q = P.p(X + R * Math.sin(ang), Y, Z - R * Math.cos(ang));
     const sz = (0.9 + 1.5 * random(`${pits.seed}${k}s${i}`)) * r;
     const isPale = random(`${pits.seed}${k}c${i}`) < 0.15;
-    els.push(<ellipse key={i} cx={q[0]} cy={q[1]} rx={sz * (0.35 + 0.65 * c)} ry={sz * 0.7} fill={isPale ? pale : dark} opacity={isPale ? 0.35 : 0.45} />);
+    els.push(<ellipse key={i} cx={q[0]} cy={q[1]} rx={sz * (0.35 + 0.65 * c)} ry={sz * 0.7} fill={isPale ? pale : dark} opacity={(isPale ? 0.35 : 0.45) * opk} />);
   }
   return <g>{els}</g>;
 };
@@ -259,7 +373,105 @@ const faceTone = (ink: VolInk, n: V3) => {
 };
 /** a convex hexahedron from its 8 corners (front 0-3 = top-left, top-right, bottom-right, bottom-left; back 4-7 the
  *  same), each visible face flat-toned by its normal against the one light, hatched in shade */
-const Hexa: React.FC<{ P: Persp; v: V3[]; ink: VolInk; uid: string; line?: number }> = ({ P, v, ink, uid, line = 1 }) => {
+const HEXA_FACES = [
+  [0, 1, 2, 3],
+  [5, 4, 7, 6],
+  [4, 0, 3, 7],
+  [1, 5, 6, 2],
+  [4, 5, 1, 0],
+  [3, 2, 6, 7],
+];
+/** V3: a convex hexahedron re-lit for the medium: each face a soft form tone by its normal against the one light (no
+ *  flat three-tone steps, no hatching), fogged by its distance (a long receding face as a gradient along its depth),
+ *  thin outlines in a darker local colour, a cream rim along the lit top's edges where it meets a seen face */
+const HexaAir: React.FC<{ P: Persp; v: V3[]; mat: Mat; uid: string; line?: number; orange?: boolean; rim?: number; A: MA }> = ({ P, v, mat, uid, line = 1, orange = false, rim = 1, A }) => {
+  const cen: V3 = v.reduce((s, p) => [s[0] + p[0] / 8, s[1] + p[1] / 8, s[2] + p[2] / 8], [0, 0, 0] as V3);
+  const eye = eyeOf(P);
+  const tn = (hex: string, Z: number, h: number) => (orange ? A.orange(hex, Z, h) : A.tone(hex, Z, h));
+  const vis: boolean[] = [];
+  const norms: V3[] = [];
+  HEXA_FACES.forEach((f, i) => {
+    const q = f.map((j) => v[j]);
+    const fc: V3 = q.reduce((s, p) => [s[0] + p[0] / 4, s[1] + p[1] / 4, s[2] + p[2] / 4], [0, 0, 0] as V3);
+    let n = norm3(cross(sub3(q[1], q[0]), sub3(q[3], q[0])));
+    if (dot(n, sub3(fc, cen)) < 0) n = [-n[0], -n[1], -n[2]];
+    norms[i] = n;
+    vis[i] = dot(n, sub3(eye, fc)) > 0;
+  });
+  const els: React.ReactNode[] = [];
+  const rims: string[] = [];
+  HEXA_FACES.forEach((f, i) => {
+    if (!vis[i]) return;
+    const q = f.map((j) => v[j]);
+    const n = norms[i];
+    const pts = q.map((p) => P.p(p[0], p[1], p[2]));
+    const d = `M${pts.map(PT).join("L")}Z`;
+    const local = formTone(mat, dot(n, TO_LIGHT), PAL.shadow, 0.3);
+    const zs = q.map((p) => p[2]);
+    const z0 = Math.min(...zs);
+    const z1 = Math.max(...zs);
+    const h = -q.reduce((s, p) => s + p[1] / 4, 0);
+    const zm = (z0 + z1) / 2;
+    const ln = orange ? A.orange(ORANGE_LINE, zm, h) : tn(lineOf(mat), zm, h);
+    const sw = 1.25 * P.r(zm) * line;
+    let fill = tn(local, zm, h);
+    let defs: React.ReactNode = null;
+    if (z1 - z0 > 160 && Math.abs(A.fog(z1) - A.fog(z0)) > 0.02) {
+      // the near edge's midpoint -> the far edge's midpoint, stops by 3D depth along it
+      const nearP = q.filter((p) => p[2] < zm);
+      const farP = q.filter((p) => p[2] >= zm);
+      const avg = (ps: V3[]): V3 => ps.reduce((s, p) => [s[0] + p[0] / ps.length, s[1] + p[1] / ps.length, s[2] + p[2] / ps.length], [0, 0, 0] as V3);
+      const N3 = avg(nearP.length ? nearP : q);
+      const F3 = avg(farP.length ? farP : q);
+      const a = P.p(N3[0], N3[1], N3[2]);
+      const b = P.p(F3[0], F3[1], F3[2]);
+      const L2 = (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2;
+      if (L2 > 4) {
+        const stops: React.ReactNode[] = [];
+        for (let k = 0; k <= 6; k++) {
+          const tt = k / 6;
+          const p3: V3 = [N3[0] + (F3[0] - N3[0]) * tt, N3[1] + (F3[1] - N3[1]) * tt, N3[2] + (F3[2] - N3[2]) * tt];
+          const ps = P.p(p3[0], p3[1], p3[2]);
+          const u = ((ps[0] - a[0]) * (b[0] - a[0]) + (ps[1] - a[1]) * (b[1] - a[1])) / L2;
+          stops.push(<stop key={k} offset={c01(u).toFixed(4)} stopColor={tn(local, p3[2], h)} />);
+        }
+        defs = (
+          <defs>
+            <linearGradient id={`${uid}-fg${i}`} gradientUnits="userSpaceOnUse" x1={fx(a[0])} y1={fx(a[1])} x2={fx(b[0])} y2={fx(b[1])}>
+              {stops}
+            </linearGradient>
+          </defs>
+        );
+        fill = `url(#${uid}-fg${i})`;
+      }
+    }
+    els.push(
+      <g key={i}>
+        {defs}
+        <path d={d} fill={fill} stroke={ln} strokeWidth={sw} strokeLinejoin="round" />
+      </g>,
+    );
+    // the rim: a lit top's edges shared with another seen face
+    if (rim > 0 && n[1] < -0.6) {
+      for (let e = 0; e < 4; e++) {
+        const ia = f[e];
+        const ib = f[(e + 1) % 4];
+        const other = HEXA_FACES.findIndex((g, gi) => gi !== i && g.includes(ia) && g.includes(ib));
+        if (other >= 0 && vis[other]) rims.push(`M${PT(P.p(v[ia][0], v[ia][1], v[ia][2]))}L${PT(P.p(v[ib][0], v[ib][1], v[ib][2]))}`);
+      }
+    }
+  });
+  const ra = 0.55 * rim * (1 - A.fog(cen[2]));
+  return (
+    <g>
+      {els}
+      {rims.length && ra > 0.01 ? <path d={rims.join("")} fill="none" stroke={PAL.cream} strokeWidth={1.4 * P.r(cen[2])} strokeOpacity={ra} strokeLinecap="round" /> : null}
+    </g>
+  );
+};
+const Hexa: React.FC<{ P: Persp; v: V3[]; ink: VolInk; uid: string; line?: number; mat?: Mat; orange?: boolean; rim?: number }> = ({ P, v, ink, uid, line = 1, mat, orange, rim }) => {
+  const A = useAir();
+  if (A && mat) return <HexaAir P={P} v={v} mat={mat} uid={uid} line={line} orange={orange} rim={rim} A={A} />;
   const faces = [
     [0, 1, 2, 3],
     [5, 4, 7, 6],
@@ -356,8 +568,10 @@ const MillBase: React.FC<{ P: Persp; m: Mill; f: number; uid: string; tone: numb
   // the flour ring: an annulus in the tray, rising and spreading over the cut
   const heapY = -MILL.baseH - 6 - 8 * grow;
   const heap = ringOf(P, m.X, m.Z, MILL.baseR - 24 + 8 * grow, heapY);
-  const flour = mixColor(PAGE, INK, 0.95 * tone);
-  const flourDk = mixColor(PAGE, "#BCAE8C", 0.92 * tone);
+  const A = useAir();
+  const flour = A ? A.tone(FLOUR, m.Z, 40) : mixColor(PAGE, INK, 0.95 * tone);
+  const flourDk = A ? A.tone(FLOUR_DK, m.Z, 40) : mixColor(PAGE, "#BCAE8C", 0.92 * tone);
+  const lineC = A ? A.tone(lineOf(MAT_LAVA), m.Z, 40) : DARK;
   // heaps of flour on the ring (the front half), growing
   const heaps: React.ReactNode[] = [];
   for (let i = 0; i < 9; i++) {
@@ -368,18 +582,23 @@ const MillBase: React.FC<{ P: Persp; m: Mill; f: number; uid: string; tone: numb
     const w = (16 + 8 * random(`${uid}fw${i}`)) * r;
     heaps.push(
       <g key={i}>
-        <path d={`M${fx(c[0] - w)} ${fx(c[1] + 2 * r)}Q${fx(c[0] - w * 0.2)} ${fx(c[1] - hh * r * 1.6)} ${fx(c[0] + w)} ${fx(c[1] + 2 * r)}Z`} fill={flour} />
+        {A ? (
+          <path d={`M${fx(c[0] - w)} ${fx(c[1] + 2 * r)}C${fx(c[0] - w * 0.55)} ${fx(c[1] - hh * r * 1.25)} ${fx(c[0] + w * 0.4)} ${fx(c[1] - hh * r * 1.25)} ${fx(c[0] + w)} ${fx(c[1] + 2 * r)}Z`} fill={flour} />
+        ) : (
+          <path d={`M${fx(c[0] - w)} ${fx(c[1] + 2 * r)}Q${fx(c[0] - w * 0.2)} ${fx(c[1] - hh * r * 1.6)} ${fx(c[0] + w)} ${fx(c[1] + 2 * r)}Z`} fill={flour} />
+        )}
         <path d={`M${fx(c[0] + w * 0.15)} ${fx(c[1] - hh * r * 0.55)}Q${fx(c[0] + w * 0.6)} ${fx(c[1] - hh * r * 0.2)} ${fx(c[0] + w)} ${fx(c[1] + 2 * r)}`} stroke={flourDk} strokeWidth={2.6 * r} fill="none" />
       </g>,
     );
   }
   return (
     <g>
-      <Lathe P={P} X={m.X} Z={m.Z} prof={pr.base} ink={ink} uid={`${uid}b`} litBand pits={{ th: 0, per: 24, seed: `${uid}bp`, tone }} />
-      <ellipse cx={lip.c[0]} cy={lip.c[1]} rx={lip.rx} ry={lip.ry} fill={ink.dark} stroke={DARK} strokeWidth={1.6 * r} />
+      <Lathe P={P} X={m.X} Z={m.Z} prof={pr.base} ink={ink} uid={`${uid}b`} litBand pits={{ th: 0, per: 24, seed: `${uid}bp`, tone }} mat={MAT_LAVA} />
+      <ellipse cx={lip.c[0]} cy={lip.c[1]} rx={lip.rx} ry={lip.ry} fill={A ? A.tone(mixHex(MAT_LAVA.dark, PAL.shadow, 0.25), m.Z, 50) : ink.dark} stroke={lineC} strokeWidth={(A ? 1.1 : 1.6) * r} />
       <ellipse cx={trough.c[0]} cy={trough.c[1]} rx={trough.rx} ry={trough.ry} fill={flourDk} />
       <ellipse cx={heap.c[0]} cy={heap.c[1]} rx={heap.rx} ry={heap.ry} fill={flour} />
       <path d={`M${fx(heap.c[0] + heap.rx * 0.2)} ${fx(heap.c[1] + heap.ry * 0.98)}A${fx(heap.rx)} ${fx(heap.ry)} 0 0 0 ${fx(heap.c[0] + heap.rx)} ${fx(heap.c[1])}`} fill="none" stroke={flourDk} strokeWidth={4 * r} />
+      {A ? <path d={`M${fx(heap.c[0] - heap.rx * 0.95)} ${fx(heap.c[1])}A${fx(heap.rx)} ${fx(heap.ry)} 0 0 0 ${fx(heap.c[0] - heap.rx * 0.1)} ${fx(heap.c[1] + heap.ry * 0.99)}`} fill="none" stroke={PAL.cream} strokeOpacity={0.5 * (1 - A.fog(m.Z))} strokeWidth={2.2 * r} /> : null}
       {heaps}
     </g>
   );
@@ -403,9 +622,12 @@ const Catillus: React.FC<{ P: Persp; m: Mill; th: number; f: number; uid: string
   const Rt: P2 = [inner.c[0] + inner.rx, inner.c[1]];
   const rise = inner.c[1] - peak[1];
   const dome = `M${PT(L)}C${fx(L[0] + inner.rx * 0.3)} ${fx(inner.c[1] - rise * 0.42)} ${fx(peak[0] - inner.rx * 0.32)} ${fx(peak[1] + rise * 0.08)} ${fx(peak[0] - inner.rx * 0.08)} ${fx(peak[1])}L${fx(peak[0] + inner.rx * 0.08)} ${fx(peak[1])}C${fx(peak[0] + inner.rx * 0.32)} ${fx(peak[1] + rise * 0.08)} ${fx(Rt[0] - inner.rx * 0.3)} ${fx(inner.c[1] - rise * 0.42)} ${fx(Rt[0])} ${fx(Rt[1])}A${fx(inner.rx)} ${fx(inner.ry)} 0 0 1 ${fx(L[0])} ${fx(L[1])}Z`;
-  const grainC = mixColor(PAGE, "#D6C08C", 0.97 * tone);
-  const grainDk = mixColor(PAGE, "#9C8658", tone);
-  const grainEdge = mixColor(PAGE, "#5E4E33", tone);
+  const A = useAir();
+  const grainC = A ? A.tone(GRAIN, m.Z, 330) : mixColor(PAGE, "#D6C08C", 0.97 * tone);
+  const grainDk = A ? A.tone(GRAIN_DK, m.Z, 330) : mixColor(PAGE, "#9C8658", tone);
+  const grainEdge = A ? A.tone(GRAIN_EDGE, m.Z, 330) : mixColor(PAGE, "#5E4E33", tone);
+  const lineC = A ? A.tone(lineOf(MAT_LAVA), m.Z, 200) : DARK;
+  const lw = A ? 0.6 : 1;
   const grains: React.ReactNode[] = [];
   for (let i = 0; i < 70; i++) {
     const rho = Rh * Math.sqrt(random(`${uid}gr${i}`));
@@ -433,10 +655,10 @@ const Catillus: React.FC<{ P: Persp; m: Mill; th: number; f: number; uid: string
     const p1 = P.p(m.X + (MILL.waistR + 6) * Math.sin(a), MILL.waistY - 10, m.Z - (MILL.waistR + 6) * Math.cos(a));
     const q0 = P.p(m.X + (MILL.catBotR - 8) * Math.sin(a), MILL.catBotY - 14, m.Z - (MILL.catBotR - 8) * Math.cos(a));
     const q1 = P.p(m.X + (MILL.waistR + 6) * Math.sin(a), MILL.waistY + 10, m.Z - (MILL.waistR + 6) * Math.cos(a));
-    grooves.push(<path key={j} d={`M${PT(p0)}L${PT(p1)}M${PT(q0)}L${PT(q1)}`} stroke={DARK} strokeWidth={1.5 * r} strokeOpacity={0.45 * Math.min(1, front * 2.5)} />);
+    grooves.push(<path key={j} d={`M${PT(p0)}L${PT(p1)}M${PT(q0)}L${PT(q1)}`} stroke={lineC} strokeWidth={1.5 * r * (A ? 0.8 : 1)} strokeOpacity={(A ? 0.3 : 0.45) * Math.min(1, front * 2.5)} />);
   }
   // flour spilling from under the catillus' front rim onto the tray: a thin pale fringe and a drift of falling flour
-  const flourC = mixColor(PAGE, INK, 0.95 * tone);
+  const flourC = A ? A.tone(FLOUR, m.Z, 60) : mixColor(PAGE, INK, 0.95 * tone);
   const fall = MILL.catBotY - (-MILL.baseH - 8);
   // the flour pouring out under the front rim: a pale curtain from the catillus' lower edge down onto the tray
   const lo = ringOf(P, m.X, m.Z, MILL.catBotR + 2, MILL.catBotY + 2);
@@ -455,14 +677,15 @@ const Catillus: React.FC<{ P: Persp; m: Mill; th: number; f: number; uid: string
   return (
     <g>
       {/* the meta's cone showing between the base and the catillus */}
-      <path d={`M${fx(metaBot.c[0] - metaBot.rx)} ${fx(metaBot.c[1])}L${fx(metaTop.c[0] - metaTop.rx)} ${fx(metaTop.c[1])}L${fx(metaTop.c[0] + metaTop.rx)} ${fx(metaTop.c[1])}L${fx(metaBot.c[0] + metaBot.rx)} ${fx(metaBot.c[1])}A${fx(metaBot.rx)} ${fx(metaBot.ry)} 0 0 1 ${fx(metaBot.c[0] - metaBot.rx)} ${fx(metaBot.c[1])}Z`} fill={ink.dark} stroke={DARK} strokeWidth={2 * r} />
+      <path d={`M${fx(metaBot.c[0] - metaBot.rx)} ${fx(metaBot.c[1])}L${fx(metaTop.c[0] - metaTop.rx)} ${fx(metaTop.c[1])}L${fx(metaTop.c[0] + metaTop.rx)} ${fx(metaTop.c[1])}L${fx(metaBot.c[0] + metaBot.rx)} ${fx(metaBot.c[1])}A${fx(metaBot.rx)} ${fx(metaBot.ry)} 0 0 1 ${fx(metaBot.c[0] - metaBot.rx)} ${fx(metaBot.c[1])}Z`} fill={A ? A.tone(mixHex(MAT_LAVA.dark, PAL.shadow, 0.2), m.Z, 70) : ink.dark} stroke={lineC} strokeWidth={2 * r * lw} />
       {fringe}
-      <Lathe P={P} X={m.X} Z={m.Z} prof={pr.cat} ink={ink} uid={`${uid}c`} top="none" litBand pits={{ th, per: 46, seed: `${uid}cp`, tone }} />
+      <Lathe P={P} X={m.X} Z={m.Z} prof={pr.cat} ink={ink} uid={`${uid}c`} top="none" litBand pits={{ th, per: 46, seed: `${uid}cp`, tone }} mat={MAT_LAVA} />
       {grooves}
       {drops}
       {/* the cup's rim, its dark inside, the grain heaped above the rim */}
-      <ellipse cx={top.c[0]} cy={top.c[1]} rx={top.rx} ry={top.ry} fill={ink.lit} stroke={DARK} strokeWidth={2.3 * r} />
-      <ellipse cx={inner.c[0]} cy={inner.c[1]} rx={inner.rx} ry={inner.ry} fill={ink.dark} stroke={DARK} strokeWidth={1.4 * r} />
+      <ellipse cx={top.c[0]} cy={top.c[1]} rx={top.rx} ry={top.ry} fill={A ? A.tone(MAT_LAVA.lit, m.Z, 340) : ink.lit} stroke={lineC} strokeWidth={2.3 * r * lw} />
+      {A ? <path d={`M${fx(top.c[0] - top.rx)} ${fx(top.c[1])}A${fx(top.rx)} ${fx(top.ry)} 0 0 0 ${fx(top.c[0] + top.rx * 0.2)} ${fx(top.c[1] + top.ry * 0.98)}`} fill="none" stroke={PAL.cream} strokeWidth={1.6 * r} strokeOpacity={0.55 * (1 - A.fog(m.Z))} strokeLinecap="round" /> : null}
+      <ellipse cx={inner.c[0]} cy={inner.c[1]} rx={inner.rx} ry={inner.ry} fill={A ? A.tone(mixHex(MAT_LAVA.dark, PAL.shadow, 0.3), m.Z, 340) : ink.dark} stroke={lineC} strokeWidth={1.4 * r * lw} />
       <clipPath id={`${uid}dome`}>
         <path d={dome} />
       </clipPath>
@@ -471,8 +694,8 @@ const Catillus: React.FC<{ P: Persp; m: Mill; th: number; f: number; uid: string
         <path d={`M${fx(peak[0] + inner.rx * 0.15)} ${fx(peak[1] - 4)}L${fx(Rt[0] + 4)} ${fx(peak[1] - 4)}L${fx(Rt[0] + 4)} ${fx(inner.c[1] + inner.ry + 4)}L${fx(peak[0] + inner.rx * 0.15)} ${fx(inner.c[1] + inner.ry + 4)}Z`} fill={grainDk} opacity={0.55} />
         {grains}
       </g>
-      <path d={dome} fill="none" stroke={DARK} strokeWidth={1.8 * r} strokeLinejoin="round" />
-      <ellipse cx={peak[0]} cy={peak[1] + 1.5 * r} rx={crater.rx} ry={crater.ry} fill={grainEdge} stroke={DARK} strokeWidth={1.1 * r} />
+      <path d={dome} fill="none" stroke={A ? A.tone(GRAIN_EDGE, m.Z, 340) : DARK} strokeWidth={1.8 * r * lw} strokeLinejoin="round" />
+      <ellipse cx={peak[0]} cy={peak[1] + 1.5 * r} rx={crater.rx} ry={crater.ry} fill={grainEdge} stroke={A ? A.tone(GRAIN_EDGE, m.Z, 340) : DARK} strokeWidth={1.1 * r} />
       {trickle}
     </g>
   );
@@ -500,9 +723,9 @@ const CollarBeam: React.FC<{ P: Persp; m: Mill; a: number; side: number; uid: st
   const lenDir = norm3(sub3(ends[1], ends[0]));
   return (
     <g>
-      <Hexa P={P} v={barV(ends[0], ends[1], 9, 13)} ink={timber} uid={`${uid}t`} />
+      <Hexa P={P} v={barV(ends[0], ends[1], 9, 13)} ink={timber} uid={`${uid}t`} mat={MAT_TIMBER} />
       {strapAt.map((c, i) => (
-        <Hexa key={i} P={P} v={barV([c[0] - lenDir[0] * 6, c[1], c[2] - lenDir[2] * 6], [c[0] + lenDir[0] * 6, c[1], c[2] + lenDir[2] * 6], 11, 15)} ink={iron} uid={`${uid}s${i}`} />
+        <Hexa key={i} P={P} v={barV([c[0] - lenDir[0] * 6, c[1], c[2] - lenDir[2] * 6], [c[0] + lenDir[0] * 6, c[1], c[2] + lenDir[2] * 6], 11, 15)} ink={iron} uid={`${uid}s${i}`} mat={MAT_IRON} />
       ))}
     </g>
   );
@@ -513,8 +736,8 @@ const BarHalf: React.FC<{ P: Persp; m: Mill; a: number; uid: string; tone: numbe
   const pt = (R: number, Y = BAR_Y): V3 => [m.X + R * Math.sin(a), Y, m.Z - R * Math.cos(a)];
   return (
     <g>
-      <Hexa P={P} v={barV(pt(BAR_R + 6), pt(MILL.waistR - 4), 8, 8)} ink={ink} uid={`${uid}b`} />
-      <Hexa P={P} v={barV(pt(MILL.waistR + 22), pt(MILL.waistR - 6), 15, 15)} ink={sinkVol(LAVA, tone)} uid={`${uid}l`} />
+      <Hexa P={P} v={barV(pt(BAR_R + 6), pt(MILL.waistR - 4), 8, 8)} ink={ink} uid={`${uid}b`} mat={MAT_TIMBER} />
+      <Hexa P={P} v={barV(pt(MILL.waistR + 22), pt(MILL.waistR - 6), 15, 15)} ink={sinkVol(LAVA, tone)} uid={`${uid}l`} mat={MAT_LAVA} />
     </g>
   );
 };
@@ -586,6 +809,9 @@ export const pusherAt = (P: Persp, m: Mill, th: number, end: 0 | 1, f: number, s
   return { at: pl.at, scale, pose: q, Z, X, dir, grip, hands3 };
 };
 const SlaveFig: React.FC<{ p: Pusher; uid: string; tone: number; k: number; variant: number; fetters: boolean }> = ({ p, uid, tone, k, variant, fetters }) => {
+  const A = useAir();
+  // V3: the drawn slave (romeFolk, gouache), fogged by his own distance; near ones keep their full local colour
+  if (A) return <Folk.Slave pose={p.pose} at={p.at} scale={p.scale} uid={uid} variant={variant} garb="exomis" fetters={fetters} grip={p.grip} fog={{ rgb: A.airHex(p.Z, 150), amount: A.fog(p.Z) }} unitPx={k} />;
   const dim = tone < 0.999 ? tintInk(CREAM, tone) : undefined;
   return (
     <g className="u4ink" style={{ ["--inkf" as string]: inkFactor(k * (p.scale / SCALE)).toFixed(4) } as React.CSSProperties}>
@@ -601,6 +827,7 @@ const STONE_TRIM: VolInk = { lit: "#6F5D47", mid: "#4C3E2F", dark: "#241B14" };
 const Pier: React.FC<{ P: Persp }> = ({ P }) => {
   const { X0, X1, Z0, Z1 } = PIER;
   const Ytop = PIER.Ytop;
+  const A = useAir();
   const r = P.r(Z0);
   const COURSE = 17;
   // brick courses on the front face, and along the side face the camera sees (receding to the VP)
@@ -618,11 +845,22 @@ const Pier: React.FC<{ P: Persp }> = ({ P }) => {
   }
   return (
     <g>
-      <Hexa P={P} v={boxV(X0 - 7, X1 + 7, -52, 0, Z0 - 7, Z1)} ink={STONE_TRIM} uid="pplinth" />
-      <Hexa P={P} v={boxV(X0, X1, Ytop, -52, Z0, Z1)} ink={BRICK} uid="pier" />
-      <path d={d} stroke={DARK} strokeWidth={1.3 * r} strokeOpacity={0.5} fill="none" />
-      <path d={ds} stroke={sideX === X1 ? "#4A3C2D" : DARK} strokeWidth={1.1 * r} strokeOpacity={sideX === X1 ? 0.55 : 0.42} fill="none" />
-      <path d={dv} stroke={DARK} strokeWidth={1.0 * r} strokeOpacity={0.28} fill="none" />
+      <Hexa P={P} v={boxV(X0 - 7, X1 + 7, -52, 0, Z0 - 7, Z1)} ink={STONE_TRIM} uid="pplinth" mat={MAT_TRAVERTINE} />
+      <Hexa P={P} v={boxV(X0, X1, Ytop, -52, Z0, Z1)} ink={BRICK} uid="pier" mat={MAT_BRICK} />
+      {A ? (
+        <g>
+          {/* V3: the mortar courses as a faint texture in a darker brick (lighter on the shaded side), fading with depth */}
+          <path d={d} stroke={A.tone(lineOf(MAT_BRICK), Z0, 500)} strokeWidth={1.1 * r} strokeOpacity={0.3} fill="none" />
+          <path d={ds} stroke={A.tone(sideX === X1 ? MAT_BRICK.mid : lineOf(MAT_BRICK), (Z0 + Z1) / 2, 500)} strokeWidth={1.0 * r} strokeOpacity={sideX === X1 ? 0.35 : 0.26} fill="none" />
+          <path d={dv} stroke={A.tone(lineOf(MAT_BRICK), Z0, 500)} strokeWidth={0.9 * r} strokeOpacity={0.18} fill="none" />
+        </g>
+      ) : (
+        <g>
+          <path d={d} stroke={DARK} strokeWidth={1.3 * r} strokeOpacity={0.5} fill="none" />
+          <path d={ds} stroke={sideX === X1 ? "#4A3C2D" : DARK} strokeWidth={1.1 * r} strokeOpacity={sideX === X1 ? 0.55 : 0.42} fill="none" />
+          <path d={dv} stroke={DARK} strokeWidth={1.0 * r} strokeOpacity={0.28} fill="none" />
+        </g>
+      )}
     </g>
   );
 };
@@ -649,9 +887,21 @@ const gearD = (c: P2, N: number, R: number, depth: number, phase: number) => {
 };
 /** the flywheel's geared ring (machine units round SUN), outside its cream rim; `side` = its receding band */
 const RIM_OUT = RIM_R + 27 + 3;
-const RimGear: React.FC<{ phi: number; side?: boolean }> = ({ phi, side = false }) => {
+const RimGear: React.FC<{ phi: number; side?: boolean; Z?: number }> = ({ phi, side = false, Z = Z_WHEEL }) => {
+  const A = useAir();
   const d = gearD(SUN, N_FLY, FLY_PITCH, 30, phi);
   const ring = `M${SUN[0] - RIM_OUT} ${SUN[1]}a${RIM_OUT} ${RIM_OUT} 0 1 0 ${2 * RIM_OUT} 0a${RIM_OUT} ${RIM_OUT} 0 1 0 ${-2 * RIM_OUT} 0Z`;
+  if (A) {
+    const h = -AXLE_Y;
+    const ln = A.orange(ORANGE_LINE, Z, h);
+    if (side) return <path d={`${d}${ring}`} fillRule="evenodd" fill={A.orange("#9A5A10", Z, h)} stroke={A.orange("#9A5A10", Z, h)} strokeWidth={4} />;
+    return (
+      <g>
+        <path d={`${d}${ring}`} fillRule="evenodd" fill={A.orange(ACCENT, Z, h)} stroke={ln} strokeWidth={2.4} strokeLinejoin="round" />
+        <circle cx={SUN[0]} cy={SUN[1]} r={FLY_PITCH - 22} fill="none" stroke={ln} strokeOpacity={0.35} strokeWidth={2} />
+      </g>
+    );
+  }
   if (side) return <path d={`${d}${ring}`} fillRule="evenodd" fill="#7A4A0C" stroke="#7A4A0C" strokeWidth={4} />;
   return (
     <g>
@@ -662,56 +912,68 @@ const RimGear: React.FC<{ phi: number; side?: boolean }> = ({ phi, side = false 
 };
 /** the pinion on the line shaft (machine units, at the flywheel's left) */
 const PIN_C: P2 = [SUN[0] - (FLY_PITCH + PIN_PITCH) * Math.cos(PIN_ANGLE), SUN[1] + (FLY_PITCH + PIN_PITCH) * Math.sin(PIN_ANGLE)];
-const Pinion: React.FC<{ phi: number; side?: boolean }> = ({ phi, side = false }) => {
+const Pinion: React.FC<{ phi: number; side?: boolean; Z?: number }> = ({ phi, side = false, Z = Z_WHEEL }) => {
+  const A = useAir();
+  const h = -SHAFT_Y;
+  const o = (hex: string) => (A ? A.orange(hex, Z, h) : hex);
+  const ln = A ? A.orange(ORANGE_LINE, Z, h) : DARK;
+  const lw = A ? 0.7 : 1;
   const d = gearD(PIN_C, N_PIN, PIN_PITCH, 30, phi);
-  if (side) return <path d={d} fill="#7A4A0C" stroke="#7A4A0C" strokeWidth={4} />;
+  if (side) return <path d={d} fill={A ? o("#9A5A10") : "#7A4A0C"} stroke={A ? o("#9A5A10") : "#7A4A0C"} strokeWidth={4} />;
   const spokes: React.ReactNode[] = [];
   for (let i = 0; i < 4; i++) {
     const a = phi + (i * Math.PI) / 2 + Math.PI / 4;
-    spokes.push(<path key={i} d={`M${fx(PIN_C[0] + 34 * Math.cos(a))} ${fx(PIN_C[1] + 34 * Math.sin(a))}L${fx(PIN_C[0] + (PIN_PITCH - 34) * Math.cos(a))} ${fx(PIN_C[1] + (PIN_PITCH - 34) * Math.sin(a))}`} stroke={DARK} strokeWidth={20} strokeLinecap="round" />);
+    spokes.push(<path key={i} d={`M${fx(PIN_C[0] + 34 * Math.cos(a))} ${fx(PIN_C[1] + 34 * Math.sin(a))}L${fx(PIN_C[0] + (PIN_PITCH - 34) * Math.cos(a))} ${fx(PIN_C[1] + (PIN_PITCH - 34) * Math.sin(a))}`} stroke={A ? o("#B8700E") : DARK} strokeWidth={20} strokeLinecap="round" />);
   }
   return (
     <g>
-      <path d={d} fill={ACCENT} stroke={DARK} strokeWidth={3.4} strokeLinejoin="round" />
-      <circle cx={PIN_C[0]} cy={PIN_C[1]} r={PIN_PITCH - 30} fill={ACCENT_DEEP} stroke={DARK} strokeWidth={3} />
+      <path d={d} fill={o(ACCENT)} stroke={ln} strokeWidth={3.4 * lw} strokeLinejoin="round" />
+      <circle cx={PIN_C[0]} cy={PIN_C[1]} r={PIN_PITCH - 30} fill={o(ACCENT_DEEP)} stroke={ln} strokeWidth={3 * lw} />
       {spokes}
-      <circle cx={PIN_C[0]} cy={PIN_C[1]} r={PIN_PITCH - 44} fill="none" stroke={DARK} strokeOpacity={0.4} strokeWidth={2} />
-      <rect x={PIN_C[0] - 26} y={PIN_C[1] - 26} width={52} height={52} fill={ACCENT} stroke={DARK} strokeWidth={3} />
-      <rect x={PIN_C[0] - 13} y={PIN_C[1] - 13} width={26} height={26} fill="#3A2E20" stroke={DARK} strokeWidth={2} transform={`rotate(${fx((phi * 180) / Math.PI)} ${PIN_C[0]} ${PIN_C[1]})`} />
+      <circle cx={PIN_C[0]} cy={PIN_C[1]} r={PIN_PITCH - 44} fill="none" stroke={ln} strokeOpacity={0.4} strokeWidth={2} />
+      <rect x={PIN_C[0] - 26} y={PIN_C[1] - 26} width={52} height={52} fill={o(ACCENT)} stroke={ln} strokeWidth={3 * lw} />
+      <rect x={PIN_C[0] - 13} y={PIN_C[1] - 13} width={26} height={26} fill={A ? A.tone(MAT_IRON.dark, Z, h) : "#3A2E20"} stroke={ln} strokeWidth={2 * lw} transform={`rotate(${fx((phi * 180) / Math.PI)} ${PIN_C[0]} ${PIN_C[1]})`} />
     </g>
   );
 };
 /** the crown wheel on the line shaft at depth Zc (face-on, world units), turning with the shaft */
-const CrownWheel: React.FC<{ P: Persp; Zc: number; phi: number; tone: number; uid: string }> = ({ P, Zc, phi, tone, uid }) => {
+const CrownWheel: React.FC<{ P: Persp; Zc: number; phi: number; tone: number; uid: string }> = ({ P, Zc, phi, tone }) => {
   const c = P.p(SHAFT_X, SHAFT_Y, Zc);
   const r = P.r(Zc);
-  const orange = mixColor(PAGE, ACCENT, tone);
-  const deep = mixColor(PAGE, ACCENT_DEEP, tone);
+  const A = useAir();
+  const hh = -SHAFT_Y;
+  const orange = A ? A.orange(ACCENT, Zc, hh) : mixColor(PAGE, ACCENT, tone);
+  const deep = A ? A.orange(ACCENT_DEEP, Zc, hh) : mixColor(PAGE, ACCENT_DEEP, tone);
+  const DARK = A ? A.orange(ORANGE_LINE, Zc, hh) : DARK0;
+  const lw = A ? 0.65 : 1;
   // its receding face (the teeth on its back face toward the stone nut): a thickness band offset toward the VP
   const cb = P.p(SHAFT_X, SHAFT_Y, Zc + 16);
   const rb = P.r(Zc + 16);
   return (
     <g>
-      <path d={gearD(cb, 14, CROWN_R * rb, 12 * rb, phi)} fill={mixColor(PAGE, "#7A4A0C", tone)} stroke={DARK} strokeWidth={1.6 * r} />
-      <path d={gearD(c, 14, CROWN_R * r, 12 * r, phi)} fill={orange} stroke={DARK} strokeWidth={2.2 * r} strokeLinejoin="round" />
-      <circle cx={c[0]} cy={c[1]} r={(CROWN_R - 16) * r} fill={deep} stroke={DARK} strokeWidth={1.6 * r} />
+      <path d={gearD(cb, 14, CROWN_R * rb, 12 * rb, phi)} fill={A ? A.orange("#9A5A10", Zc, hh) : mixColor(PAGE, "#7A4A0C", tone)} stroke={DARK} strokeWidth={1.6 * r * lw} />
+      <path d={gearD(c, 14, CROWN_R * r, 12 * r, phi)} fill={orange} stroke={DARK} strokeWidth={2.2 * r * lw} strokeLinejoin="round" />
+      <circle cx={c[0]} cy={c[1]} r={(CROWN_R - 16) * r} fill={deep} stroke={DARK} strokeWidth={1.6 * r * lw} />
       {[0, 1, 2].map((i) => {
         const a = phi + (i * 2 * Math.PI) / 3;
-        return <path key={i} d={`M${fx(c[0] + 12 * r * Math.cos(a))} ${fx(c[1] + 12 * r * Math.sin(a))}L${fx(c[0] + (CROWN_R - 18) * r * Math.cos(a))} ${fx(c[1] + (CROWN_R - 18) * r * Math.sin(a))}`} stroke={DARK} strokeWidth={7 * r} strokeLinecap="round" />;
+        return <path key={i} d={`M${fx(c[0] + 12 * r * Math.cos(a))} ${fx(c[1] + 12 * r * Math.sin(a))}L${fx(c[0] + (CROWN_R - 18) * r * Math.cos(a))} ${fx(c[1] + (CROWN_R - 18) * r * Math.sin(a))}`} stroke={A ? A.orange("#B8700E", Zc, hh) : DARK} strokeWidth={7 * r} strokeLinecap="round" />;
       })}
-      <rect x={c[0] - 14 * r} y={c[1] - 14 * r} width={28 * r} height={28 * r} fill={orange} stroke={DARK} strokeWidth={1.6 * r} />
+      <rect x={c[0] - 14 * r} y={c[1] - 14 * r} width={28 * r} height={28 * r} fill={orange} stroke={DARK} strokeWidth={1.6 * r * lw} />
     </g>
   );
 };
 /** the stone nut: a lantern pinion on the spindle top, turning (staves sliding round) */
-const StoneNut: React.FC<{ P: Persp; Zs: number; ang: number; tone: number; uid: string }> = ({ P, Zs, ang, tone, uid }) => {
+const StoneNut: React.FC<{ P: Persp; Zs: number; ang: number; tone: number; uid: string }> = ({ P, Zs, ang, tone }) => {
   const Y0 = SHAFT_Y + CROWN_R - 6;
   const Y1 = Y0 + 30;
   const t = ringOf(P, SHAFT_X, Zs, NUT_R, Y0);
   const b = ringOf(P, SHAFT_X, Zs, NUT_R, Y1);
   const r = P.r(Zs);
-  const orange = mixColor(PAGE, ACCENT, tone);
-  const deep = mixColor(PAGE, ACCENT_DEEP, tone);
+  const A = useAir();
+  const hh = -Y0;
+  const orange = A ? A.orange(ACCENT, Zs, hh) : mixColor(PAGE, ACCENT, tone);
+  const deep = A ? A.orange(ACCENT_DEEP, Zs, hh) : mixColor(PAGE, ACCENT_DEEP, tone);
+  const DARK = A ? A.orange(ORANGE_LINE, Zs, hh) : DARK0;
   const staves: React.ReactNode[] = [];
   for (let i = 0; i < 8; i++) {
     const a = ang + (i * Math.PI) / 4;
@@ -736,6 +998,9 @@ const StonePair: React.FC<{ P: Persp; Zs: number; ang: number; tone: number; uid
   const timber = sinkVol(TIMBER, tone);
   const burr = sinkVol(BURR, tone);
   const hoop = sinkVol(HOOP, tone);
+  const A = useAir();
+  const DARK = A ? A.tone(lineOf(MAT_BURR), Zs, 240) : DARK0;
+  const lw = A ? 0.6 : 1;
   const bedTop = -HURST.h - BED_H;
   const runTop = RUNNER_TOP;
   // the runner's top: the eye, the rynd bar and the burr joints, turning
@@ -745,7 +1010,7 @@ const StonePair: React.FC<{ P: Persp; Zs: number; ang: number; tone: number; uid
     const a = ang + (i * Math.PI) / 3;
     const q0 = P.p(X + 24 * Math.sin(a), runTop, Zs - 24 * Math.cos(a));
     const q1 = P.p(X + (STONE_R - 8) * Math.sin(a), runTop, Zs - (STONE_R - 8) * Math.cos(a));
-    marks.push(<path key={i} d={`M${PT(q0)}L${PT(q1)}`} stroke={DARK} strokeWidth={1.3 * r} strokeOpacity={0.45} />);
+    marks.push(<path key={i} d={`M${PT(q0)}L${PT(q1)}`} stroke={DARK} strokeWidth={1.3 * r * (A ? 0.8 : 1)} strokeOpacity={A ? 0.3 : 0.45} />);
   }
   // the hoop's bolts on the runner's side (front half), sliding round
   const bolts: React.ReactNode[] = [];
@@ -753,7 +1018,7 @@ const StonePair: React.FC<{ P: Persp; Zs: number; ang: number; tone: number; uid
     const a = ang * 1 + (i * Math.PI) / 5;
     if (Math.cos(a) < 0.1) continue;
     const p = P.p(X + (STONE_R + 1) * Math.sin(a), runTop + RUNNER_H * 0.5, Zs - (STONE_R + 1) * Math.cos(a));
-    bolts.push(<circle key={i} cx={p[0]} cy={p[1]} r={3 * r} fill={mixColor(PAGE, "#5A3708", tone)} opacity={Math.min(1, Math.cos(a) * 3)} />);
+    bolts.push(<circle key={i} cx={p[0]} cy={p[1]} r={3 * r} fill={A ? A.orange("#8A4A0E", Zs, 240) : mixColor(PAGE, "#5A3708", tone)} opacity={Math.min(1, Math.cos(a) * 3)} />);
   }
   const eye = ringOf(P, X, Zs, 20, runTop);
   // the hopper: an open timber box on a horse, front-left of the spindle, its shoe feeding the eye
@@ -782,27 +1047,28 @@ const StonePair: React.FC<{ P: Persp; Zs: number; ang: number; tone: number; uid
       {([[-1, 1], [1, 1], [-1, -1], [1, -1]] as const).map(([sx, sz]) => {
         const px = X + sx * (HURST.hw - 16);
         const pz = Zs + sz * (HURST.hw - 16);
-        return <Hexa key={`${sx}${sz}`} P={P} v={boxV(px - 14, px + 14, -HURST.h + 24, 0, pz - 14, pz + 14)} ink={timber} uid={`${uid}p${sx}${sz}`} />;
+        return <Hexa key={`${sx}${sz}`} P={P} v={boxV(px - 14, px + 14, -HURST.h + 24, 0, pz - 14, pz + 14)} ink={timber} uid={`${uid}p${sx}${sz}`} mat={MAT_TIMBER} />;
       })}
-      <Hexa P={P} v={boxV(X - HURST.hw + 2, X + HURST.hw - 2, -52, -34, Zs - HURST.hw + 6, Zs - HURST.hw + 22)} ink={timber} uid={`${uid}rl`} />
-      <Hexa P={P} v={boxV(X - HURST.hw, X + HURST.hw, -HURST.h, -HURST.h + 26, Zs - HURST.hw, Zs + HURST.hw)} ink={timber} uid={`${uid}h`} />
-      <Lathe P={P} X={X} Z={Zs} prof={[[STONE_R + 4, bedTop], [STONE_R + 6, -HURST.h]]} ink={burr} uid={`${uid}b`} />
-      <Lathe P={P} X={X} Z={Zs} prof={[[STONE_R, runTop], [STONE_R, runTop + RUNNER_H]]} ink={hoop} uid={`${uid}r`} />
+      <Hexa P={P} v={boxV(X - HURST.hw + 2, X + HURST.hw - 2, -52, -34, Zs - HURST.hw + 6, Zs - HURST.hw + 22)} ink={timber} uid={`${uid}rl`} mat={MAT_TIMBER} />
+      <Hexa P={P} v={boxV(X - HURST.hw, X + HURST.hw, -HURST.h, -HURST.h + 26, Zs - HURST.hw, Zs + HURST.hw)} ink={timber} uid={`${uid}h`} mat={MAT_TIMBER} />
+      <Lathe P={P} X={X} Z={Zs} prof={[[STONE_R + 4, bedTop], [STONE_R + 6, -HURST.h]]} ink={burr} uid={`${uid}b`} mat={MAT_BURR} />
+      <Lathe P={P} X={X} Z={Zs} prof={[[STONE_R, runTop], [STONE_R, runTop + RUNNER_H]]} ink={hoop} uid={`${uid}r`} mat={MAT_HOOP} orange />
       {bolts}
-      <ellipse cx={rt.c[0]} cy={rt.c[1]} rx={rt.rx} ry={rt.ry} fill={burr.lit} stroke={DARK} strokeWidth={1.8 * r} />
+      <ellipse cx={rt.c[0]} cy={rt.c[1]} rx={rt.rx} ry={rt.ry} fill={A ? A.tone(MAT_BURR.lit, Zs, 260) : burr.lit} stroke={DARK} strokeWidth={1.8 * r * lw} />
+      {A ? <path d={`M${fx(rt.c[0] - rt.rx)} ${fx(rt.c[1])}A${fx(rt.rx)} ${fx(rt.ry)} 0 0 0 ${fx(rt.c[0] + rt.rx * 0.2)} ${fx(rt.c[1] + rt.ry * 0.98)}`} fill="none" stroke={PAL.cream} strokeWidth={1.5 * r} strokeOpacity={0.5 * (1 - A.fog(Zs))} strokeLinecap="round" /> : null}
       {marks}
-      <ellipse cx={eye.c[0]} cy={eye.c[1]} rx={eye.rx} ry={eye.ry} fill={burr.dark} stroke={DARK} strokeWidth={1.4 * r} />
+      <ellipse cx={eye.c[0]} cy={eye.c[1]} rx={eye.rx} ry={eye.ry} fill={A ? A.tone(mixHex(MAT_BURR.dark, PAL.shadow, 0.3), Zs, 260) : burr.dark} stroke={DARK} strokeWidth={1.4 * r * lw} />
       {/* the hopper and its shoe */}
-      <path d={`M${PT(shoe0)}L${fx(shoe1[0])} ${fx(shoe1[1] + jig)}`} stroke={DARK} strokeWidth={9 * r} strokeLinecap="round" />
-      <path d={`M${PT(shoe0)}L${fx(shoe1[0])} ${fx(shoe1[1] + jig)}`} stroke={timber.lit} strokeWidth={5.5 * r} strokeLinecap="round" />
-      <Hexa P={P} v={hopV} ink={timber} uid={`${uid}hp`} />
-      <path d={`M${grainTop.map(PT).join("L")}Z`} fill={mixColor(PAGE, "#D9C79A", tone)} stroke={DARK} strokeWidth={1.2 * r} />
+      <path d={`M${PT(shoe0)}L${fx(shoe1[0])} ${fx(shoe1[1] + jig)}`} stroke={A ? A.tone(lineOf(MAT_TIMBER), Zs, 280) : DARK} strokeWidth={(A ? 7.5 : 9) * r} strokeLinecap="round" />
+      <path d={`M${PT(shoe0)}L${fx(shoe1[0])} ${fx(shoe1[1] + jig)}`} stroke={A ? A.tone(MAT_TIMBER.lit, Zs, 280) : timber.lit} strokeWidth={5.5 * r} strokeLinecap="round" />
+      <Hexa P={P} v={hopV} ink={timber} uid={`${uid}hp`} mat={MAT_TIMBER} />
+      <path d={`M${grainTop.map(PT).join("L")}Z`} fill={A ? A.tone(GRAIN, Zs, 380) : mixColor(PAGE, "#D9C79A", tone)} stroke={A ? A.tone(GRAIN_EDGE, Zs, 380) : DARK} strokeWidth={1.2 * r * lw} />
     </g>
   );
 };
 /** the spindle from the stone nut down to the runner's eye (square iron) */
 const Spindle: React.FC<{ P: Persp; Zs: number; tone: number; uid: string }> = ({ P, Zs, tone, uid }) => (
-  <Hexa P={P} v={boxV(SHAFT_X - 7, SHAFT_X + 7, SHAFT_Y + CROWN_R + 22, RUNNER_TOP + 2, Zs - 7, Zs + 7)} ink={sinkVol(IRON, Math.max(tone, 0.8))} uid={uid} />
+  <Hexa P={P} v={boxV(SHAFT_X - 7, SHAFT_X + 7, SHAFT_Y + CROWN_R + 22, RUNNER_TOP + 2, Zs - 7, Zs + 7)} ink={sinkVol(IRON, Math.max(tone, 0.8))} uid={uid} mat={MAT_IRON} />
 );
 
 /** the meal spout of the nearest pair: a square timber chute from the bed stone's case, out over the hurst's left
@@ -824,10 +1090,11 @@ const Spout: React.FC<{ P: Persp; Zs: number }> = ({ P, Zs }) => {
   // the sack hook under the lip
   const r = P.r(B[2]);
   const h0 = P.p(B[0] + 6, B[1] + 6, B[2]);
+  const air = useAir();
   return (
     <g>
-      <Hexa P={P} v={v} ink={TIMBER} uid="spout" />
-      <path d={`M${PT(h0)}q${fx(5 * r)} ${fx(8 * r)} ${fx(-1 * r)} ${fx(13 * r)}`} fill="none" stroke={DARK} strokeWidth={3.2 * r} strokeLinecap="round" />
+      <Hexa P={P} v={v} ink={TIMBER} uid="spout" mat={MAT_TIMBER} />
+      <path d={`M${PT(h0)}q${fx(5 * r)} ${fx(8 * r)} ${fx(-1 * r)} ${fx(13 * r)}`} fill="none" stroke={air ? air.tone(MAT_IRON.dark, B[2], 200) : DARK} strokeWidth={3.2 * r} strokeLinecap="round" />
     </g>
   );
 };
@@ -835,6 +1102,8 @@ const Spout: React.FC<{ P: Persp; Zs: number }> = ({ P, Zs }) => {
  *  inside fills it from the bottom (the full part rounds out, the slack upper part creases), a shake at f112 */
 const SACK_SHAKE = 112;
 const sackJig = (f: number) => 3.2 * Math.sin((f - SACK_SHAKE) * 1.3) * Math.max(0, 1 - Math.abs(f - SACK_SHAKE - 6) / 7) * (f >= SACK_SHAKE ? 1 : 0);
+/** V3: the same shake, calmer (a slower sway under a smooth envelope: no single-frame jerks) */
+const sackJigA = (f: number) => 2.6 * Math.sin((f - SACK_SHAKE + 2) * 0.62) * Math.pow(Math.sin(Math.PI * c01((f - SACK_SHAKE + 2) / 20)), 2);
 const HangingSack: React.FC<{ P: Persp; fill: number; jig: number }> = ({ P, fill, jig }) => {
   const base = P.p(SACK.X, 0, SACK.Z);
   const r = P.r(SACK.Z);
@@ -844,6 +1113,38 @@ const HangingSack: React.FC<{ P: Persp; fill: number; jig: number }> = ({ P, fil
   const Lf = h * (0.3 + 0.42 * fill);
   const body = `M-8 ${neck}C-12 ${neck + 22} ${-wf * 0.78} ${-Lf - 34} ${-wf * 0.93} ${-Lf}C${-wf * 1.06} ${-Lf * 0.62} ${-wf * 1.02} -10 ${-wf * 0.72} -2Q0 5 ${wf * 0.72} -2C${wf * 1.02} -10 ${wf * 1.06} ${-Lf * 0.62} ${wf * 0.93} ${-Lf}C${wf * 0.78} ${-Lf - 34} 12 ${neck + 22} 8 ${neck}Z`;
   const ruff = `M-8 ${neck}L-15 ${neck - 9}L-8 ${neck - 13}L-2 ${-h + 2}L5 ${neck - 13}L13 ${neck - 10}L8 ${neck}Z`;
+  const A = useAir();
+  if (A) {
+    // V3: the sack in the medium's gouache manner: a flat sackcloth body, one soft shade on the right, a lit edge on the
+    // left, the slack part's creases faint, a thin outline in a darker sackcloth
+    const Z = SACK.Z;
+    const t = (hex: string) => A.tone(hex, Z, 100);
+    const ln = t(mixHex(SACKCLOTH.dark, PAL.shadow, 0.3));
+    return (
+      <g transform={`translate(${fx(base[0] + jig * r)} ${fx(base[1])}) scale(${r.toFixed(5)})`}>
+        <defs>
+          <clipPath id="hsack">
+            <path d={body} />
+          </clipPath>
+          <linearGradient id="hsack-g" gradientUnits="userSpaceOnUse" x1={-wf} y1="0" x2={wf} y2="0">
+            <stop offset="0" stopColor={t(SACKCLOTH.lit)} />
+            <stop offset="0.4" stopColor={t(mixHex(SACKCLOTH.lit, SACKCLOTH.mid, 0.35))} />
+            <stop offset="0.72" stopColor={t(SACKCLOTH.mid)} />
+            <stop offset="1" stopColor={t(mixHex(SACKCLOTH.mid, SACKCLOTH.dark, 0.6))} />
+          </linearGradient>
+        </defs>
+        <path d={body} fill="url(#hsack-g)" />
+        <g clipPath="url(#hsack)">
+          <path d={`M-4 ${neck + 8}Q${-wf * 0.5} ${(neck - Lf) / 2} ${-wf * 0.42} ${-Lf - 4}M5 ${neck + 10}Q${wf * 0.15} ${(neck - Lf) / 2} ${wf * 0.3} ${-Lf - 6}M-1 ${neck + 14}L-3 ${-Lf - 14}`} stroke={t(SACKCLOTH.dark)} strokeOpacity={0.4} strokeWidth={1.6} fill="none" />
+          <path d={`M${-wf} ${-Lf}Q0 ${-Lf - 12} ${wf} ${-Lf}`} stroke={t(SACKCLOTH.dark)} strokeOpacity={0.25} strokeWidth={1.4} fill="none" />
+          <path d={`M${-wf * 0.6} ${-Lf * 0.55}Q${-wf * 0.45} ${-Lf * 0.3} ${-wf * 0.55} ${-Lf * 0.08}`} stroke={PAL.cream} strokeOpacity={0.4} strokeWidth={5} fill="none" />
+        </g>
+        <path d={body} fill="none" stroke={ln} strokeWidth={1.6} strokeLinejoin="round" />
+        <path d={ruff} fill={t(SACKCLOTH.mid)} stroke={ln} strokeWidth={1.4} strokeLinejoin="round" />
+        <rect x={-12} y={neck - 3} width={24} height={7} rx={3} fill={t("#7C6A52")} stroke={ln} strokeWidth={1.2} />
+      </g>
+    );
+  }
   return (
     <g transform={`translate(${fx(base[0] + jig * r)} ${fx(base[1])}) scale(${r.toFixed(5)})`}>
       <clipPath id="hsack">
@@ -867,7 +1168,7 @@ const HangingSack: React.FC<{ P: Persp; fill: number; jig: number }> = ({ P, fil
 };
 /** worker 1: facing right at the nearest pair, his near hand on the meal spout, his far hand on the sack's neck (he
  *  gives it a shake at f112) */
-export const workerAt = (P: Persp, f: number) => {
+export const workerAt = (P: Persp, f: number, air = false) => {
   const pl = P.at(WORKER.X, WORKER.Z);
   const scale = SCALE * pl.scale;
   const base: FigPose = { ...POSES.stand(1), lean: 10, crouch: 6, footL: [-26, 0], footR: [18, 0] };
@@ -878,7 +1179,7 @@ export const workerAt = (P: Persp, f: number) => {
   const { A, B } = spoutEnds(STONES_Z[0]);
   const u = 0.62;
   const onSpout = P.p(A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u - 10, A[2] + (B[2] - A[2]) * u);
-  const jig = sackJig(f);
+  const jig = air ? sackJigA(f) : sackJig(f);
   const onNeck = P.p(SACK.X - 2 + jig, -SACK.h + 6, SACK.Z - 6);
   const want = { L: onSpout, R: onNeck };
   let wL: P2 = [(want.L[0] - pl.at[0]) / scale, (want.L[1] - pl.at[1]) / scale];
@@ -898,8 +1199,10 @@ const LyingSack: React.FC<{ P: Persp; c: V3; tone: number; uid: string; tilt?: n
   const r = P.r(c[2]);
   const L = STACK.sl / 2;
   const H = STACK.sh / 2;
-  const main = mixColor(PAGE, CREAM.main, tone);
-  const deep = mixColor(PAGE, CREAM.deep, tone);
+  const A = useAir();
+  const main = A ? A.tone(mixHex(SACKCLOTH.lit, SACKCLOTH.mid, 0.3), c[2], -c[1]) : mixColor(PAGE, CREAM.main, tone);
+  const deep = A ? A.tone(SACKCLOTH.mid, c[2], -c[1]) : mixColor(PAGE, CREAM.deep, tone);
+  const DARK = A ? A.tone(mixHex(SACKCLOTH.dark, PAL.shadow, 0.3), c[2], -c[1]) : DARK0;
   const d = `M${-L + 6} ${-H}Q0 ${-H - 5} ${L - 6} ${-H}Q${L + 2} 0 ${L - 6} ${H}Q0 ${H + 4} ${-L + 6} ${H}Q${-L - 2} 0 ${-L + 6} ${-H}Z`;
   return (
     <g transform={`translate(${fx(p[0])} ${fx(p[1])}) rotate(${tilt.toFixed(2)}) scale(${r.toFixed(5)})`}>
@@ -908,28 +1211,36 @@ const LyingSack: React.FC<{ P: Persp; c: V3; tone: number; uid: string; tilt?: n
       </clipPath>
       <path d={d} fill={main} />
       <path d={`M${-L} 2L${L + 4} 2L${L + 4} ${H + 6}L${-L} ${H + 6}Z`} fill={deep} clipPath={`url(#${uid}c)`} />
-      <path d={d} fill="none" stroke={DARK} strokeWidth={2.2} strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={DARK} strokeWidth={A ? 1.4 : 2.2} strokeLinejoin="round" />
+      {A ? <path d={`M${-L + 7} ${-H + 1}Q0 ${-H - 4} ${L - 8} ${-H + 1}`} stroke={PAL.cream} strokeOpacity={0.45 * (1 - A.fog(c[2]))} strokeWidth={2} fill="none" strokeLinecap="round" /> : null}
       {/* the tied ear */}
-      <path d={`M${L - 5} -5L${L + 7} -9L${L + 9} 2L${L + 6} 8L${L - 5} 5Z`} fill={deep} stroke={DARK} strokeWidth={1.8} strokeLinejoin="round" />
+      <path d={`M${L - 5} -5L${L + 7} -9L${L + 9} 2L${L + 6} 8L${L - 5} 5Z`} fill={deep} stroke={DARK} strokeWidth={A ? 1.2 : 1.8} strokeLinejoin="round" />
       <path d={`M${-L + 12} ${-H + 6}Q-4 ${-H + 2} 6 ${-H + 7}`} stroke={DARK} strokeOpacity={0.35} strokeWidth={1.3} fill="none" />
     </g>
   );
 };
-/** the stack worker 2 builds: the left column one short (his sack goes there), the right column four high */
-const stackSlots = () => {
+/** the stack worker 2 builds: the left column one short (his sack goes there), the right column four high (V3: six
+ *  and seven high, so its top sits at the drawn Worker's chest, in reach of his shorter arms) */
+const STACK_N_A = 6;
+const stackSlots = (air = false) => {
   const out: { c: V3; key: string }[] = [];
   const colX = [STACK.X - STACK.sl / 2 - 1, STACK.X + STACK.sl / 2 + 1];
   colX.forEach((x, ci) => {
-    const n = ci === 0 ? 3 : 4;
+    const n = (air ? STACK_N_A : 3) + ci;
     for (let i = 0; i < n; i++) out.push({ c: [x + (i % 2 ? 2 : -2), -(i + 0.5) * STACK.sh, STACK.Z + ci * 4], key: `s${ci}${i}` });
   });
   return out;
 };
-const STACK_TOP: V3 = [STACK.X - STACK.sl / 2 - 1, -3.5 * STACK.sh, STACK.Z - 2];
-/** worker 2's sack (its centre) over the cut: held at his waist, heaved up, then set on the stack's top (released) */
-const liftSackAt = (f: number): { c: V3; held: boolean } => {
-  const hold: V3 = [WORKER2.X + 62, -168 + 3 * Math.sin(f / 8), WORKER2.Z - 10];
-  const high: V3 = [WORKER2.X + 70, -232, WORKER2.Z - 10];
+const STACK_TOP_V2: V3 = [STACK.X - STACK.sl / 2 - 1, -3.5 * STACK.sh, STACK.Z - 2];
+const STACK_TOP_A: V3 = [STACK.X - STACK.sl / 2 - 1, -(STACK_N_A + 0.5) * STACK.sh, STACK.Z - 2];
+/** V3: worker 2 stands a little nearer the stack (the drawn Worker's reach: ~93 world units) */
+const WORKER2_A = { X: STACK_TOP_A[0] - 67, Z: WORKER2.Z };
+/** worker 2's sack (its centre) over the cut: held at his waist, heaved up, then set on the stack's top (released)
+ *  (V3: held at his belly, heaved to his shoulders, set on the taller stack's top) */
+const liftSackAt = (f: number, air = false): { c: V3; held: boolean } => {
+  const STACK_TOP = air ? STACK_TOP_A : STACK_TOP_V2;
+  const hold: V3 = air ? [WORKER2_A.X + 56, -190 + 3 * Math.sin(f / 8), WORKER2_A.Z - 10] : [WORKER2.X + 62, -168 + 3 * Math.sin(f / 8), WORKER2.Z - 10];
+  const high: V3 = air ? [WORKER2_A.X + 62, -258, WORKER2_A.Z - 10] : [WORKER2.X + 70, -232, WORKER2.Z - 10];
   if (f <= LIFT.up0) return { c: hold, held: true };
   if (f <= LIFT.up1) {
     const t = ease((f - LIFT.up0) / (LIFT.up1 - LIFT.up0));
@@ -966,6 +1277,54 @@ export const worker2At = (P: Persp, f: number) => {
   return { at: pl.at, scale, pose: rel > 0 ? lerpFig(holding, free, rel) : holding, sack: ls };
 };
 
+// ---------------------------------------------------------------------------
+// V3: THE STEAM SIDE'S PEOPLE as the pandemics clip's drawn Worker (pandemicFolk FolkWorker: cap, waistcoat, apron,
+// shirt sleeves; gouache), on the same places, targets and timings as the V2 workers above; both mittens solved onto
+// the same world points (muscleOrMachineAir solveArm)
+// ---------------------------------------------------------------------------
+const REST_HIGH: FolkArm = { abd: 6, flex: 40, abd2: -4, flex2: 78, droop: 8, thumb: 0.55 };
+const REST_LOW: FolkArm = { abd: 8, flex: 22, abd2: -8, flex2: 62, droop: 10, thumb: 0.5 };
+const HANG: FolkArm = { abd: 14, flex: 8, abd2: -10, flex2: 14, droop: 4, thumb: 0 };
+const mixArm = (a: FolkArm, b: FolkArm, t: number): FolkArm => ({
+  abd: a.abd + (b.abd - a.abd) * t,
+  flex: a.flex + (b.flex - a.flex) * t,
+  abd2: a.abd2 + (b.abd2 - a.abd2) * t,
+  flex2: a.flex2 + (b.flex2 - a.flex2) * t,
+  droop: a.droop + (b.droop - a.droop) * t,
+  thumb: a.thumb + (b.thumb - a.thumb) * t,
+});
+const breathAt = (f: number, seed: number) => 0.5 + 0.5 * Math.sin((2 * Math.PI * f) / (4.2 * FPS) + seed);
+/** worker 1, drawn: facing right three-quarter, leaning in; his far (left) mitten on the meal spout, his near (right)
+ *  mitten on the sack's neck (he shakes it at f112, looking down at it) */
+export const worker1Folk = (P: Persp, f: number) => {
+  const w = workerAt(P, f, true);
+  const scale = folkScaleAt(w.scale);
+  const look = c01((f - 104) / 10) * (1 - c01((f - 126) / 12));
+  const base: WorkerPose = { ...FOLK_STAND, yaw: 74, headYaw: 6 - 8 * look, headPitch: 6 + 14 * look, headRoll: 3, bodyPitch: 9, bodyRoll: -1.6 + 0.8 * Math.sin(f / 37), breath: breathAt(f, 0.4) };
+  const loc = (t: P2): P2 => [(t[0] - w.at[0]) / scale, (t[1] - w.at[1]) / scale];
+  const tL = loc(w.want.L);
+  const tR = loc(w.want.R);
+  const pose: WorkerPose = { ...base, armL: solveArm(base, 1, tL, REST_HIGH), armR: solveArm(base, -1, tR, REST_LOW) };
+  return { at: w.at, scale, pose, want: w.want, tL, tR };
+};
+/** worker 2, drawn: holds the filled sack at his waist, heaves it up (f100-114), sets it on the stack (released f128),
+ *  his mittens on its two ends while he holds it, then down to his sides */
+export const worker2Folk = (P: Persp, f: number) => {
+  const pl = P.at(WORKER2_A.X, WORKER2_A.Z);
+  const castScale = SCALE * pl.scale;
+  const scale = folkScaleAt(castScale);
+  const ls = liftSackAt(f, true);
+  const heave = ease((f - LIFT.up0 + 4) / 14) * (1 - ease((f - LIFT.up1) / 14));
+  const set = ease((f - LIFT.up1) / (LIFT.set1 - LIFT.up1)) * (1 - ease((f - LIFT.set1 - 4) / 14));
+  const base: WorkerPose = { ...FOLK_STAND, yaw: 66, headYaw: 4, headPitch: 6 + 8 * set - 8 * heave, headRoll: 2, bodyPitch: 6 + 9 * set - 5 * heave, bodyRoll: -1.6 + 0.6 * Math.sin(f / 29), breath: breathAt(f, 2.1) };
+  const grips = { L: P.p(ls.c[0] + STACK.sl / 2 - 6, ls.c[1] - 8, ls.c[2]), R: P.p(ls.c[0] - STACK.sl / 2 + 8, ls.c[1] - 6, ls.c[2]) };
+  const loc = (t: P2): P2 => [(t[0] - pl.at[0]) / scale, (t[1] - pl.at[1]) / scale];
+  const hold: WorkerPose = { ...base, armL: solveArm(base, 1, loc(grips.L), REST_LOW), armR: solveArm(base, -1, loc(grips.R), REST_LOW) };
+  const rel = ls.held ? 0 : ease((f - LIFT.set1) / 12);
+  const pose: WorkerPose = rel > 0 ? { ...hold, armL: mixArm(hold.armL, HANG, rel), armR: mixArm(hold.armR, HANG, rel) } : hold;
+  return { at: pl.at, scale, pose, sack: ls, grips, rel };
+};
+
 /** the A-frame standard behind the flywheel: two raking legs, a tie, the foot plate and the bearing block */
 const AFrame: React.FC<{ P: Persp }> = ({ P }) => {
   const { footHW, topHW, z0, z1 } = ASTAND;
@@ -993,11 +1352,11 @@ const AFrame: React.FC<{ P: Persp }> = ({ P }) => {
   const tx = footHW - 56 + (topHW - 34 - (footHW - 56)) * u;
   return (
     <g>
-      <Hexa P={P} v={boxV(EX - footHW - 18, EX + footHW + 18, -24, 0, z0 - 14, z1 + 14)} ink={IRON} uid="afoot" />
-      <Hexa P={P} v={leg(-1)} ink={IRON} uid="alegL" />
-      <Hexa P={P} v={leg(1)} ink={IRON} uid="alegR" />
-      <Hexa P={P} v={boxV(EX - tx - 6, EX + tx + 6, tieY - 14, tieY, z0 + 40, z1 - 40)} ink={IRON} uid="atie" />
-      <Hexa P={P} v={boxV(EX - 92, EX + 92, AXLE_Y - 40, AXLE_Y + 52, z0 - 4, z1 + 4)} ink={IRON} uid="ablock" />
+      <Hexa P={P} v={boxV(EX - footHW - 18, EX + footHW + 18, -24, 0, z0 - 14, z1 + 14)} ink={IRON} uid="afoot" mat={MAT_IRON} />
+      <Hexa P={P} v={leg(-1)} ink={IRON} uid="alegL" mat={MAT_IRON} />
+      <Hexa P={P} v={leg(1)} ink={IRON} uid="alegR" mat={MAT_IRON} />
+      <Hexa P={P} v={boxV(EX - tx - 6, EX + tx + 6, tieY - 14, tieY, z0 + 40, z1 - 40)} ink={IRON} uid="atie" mat={MAT_IRON} />
+      <Hexa P={P} v={boxV(EX - 92, EX + 92, AXLE_Y - 40, AXLE_Y + 52, z0 - 4, z1 + 4)} ink={IRON} uid="ablock" mat={MAT_IRON} />
     </g>
   );
 };
@@ -1034,9 +1393,14 @@ export const rayHitsWall = (E: V3, q: V3) => {
   return true;
 };
 /** sample points over a standing figure (feet at X, Z): three heights x three widths */
-export const figureSamples = (X: number, Z: number): V3[] => {
+export const figureSamples = (X: number, Z: number, folk = true): V3[] => {
   const out: V3[] = [];
-  for (const Y of [-5, -80, -160, -240, -320]) for (const dx of [-66, -44, -22, 0, 22, 44, 66]) out.push([X + dx, Y, Z]);
+  // V3 (folk): up to the folk head's crown and the wider pear body; the V2 cast keeps its own samples
+  if (!folk) {
+    for (const Y of [-5, -80, -160, -240, -320]) for (const dx of [-66, -44, -22, 0, 22, 44, 66]) out.push([X + dx, Y, Z]);
+    return out;
+  }
+  for (const Y of [-5, -80, -160, -240, -320, -352]) for (const dx of [-72, -48, -24, 0, 24, 48, 72]) out.push([X + dx, Y, Z]);
   return out;
 };
 const ringSamples = (X: number, Z: number, R: number, Y: number): V3[] => [0, 1, 2, 3, 4, 5].map((i): V3 => [X + R * Math.sin((i * Math.PI) / 3), Y, Z - R * Math.cos((i * Math.PI) / 3)]);
@@ -1046,17 +1410,52 @@ const SLAVE_VARIANTS = [
   [2, 4],
 ];
 type Item = { Z: number; key: string; g?: React.ReactNode; cam?: Cam; el?: React.ReactNode; X?: number; samples?: V3[] };
-const RimSide: React.FC = () => (
-  <g fill="none">
-    <circle cx={SUN[0]} cy={SUN[1]} r={RIM_R} stroke={IRON.dark} strokeWidth={62} />
-    <circle cx={SUN[0]} cy={SUN[1]} r={HUB_RING_R} fill={IRON.dark} />
-  </g>
-);
+const RimSide: React.FC<{ Z?: number }> = ({ Z = Z_WHEEL }) => {
+  const A = useAir();
+  const c = A ? A.tone(mixHex(MAT_IRON.dark, PAL.shadow, 0.2), Z, -AXLE_Y) : IRON.dark;
+  return (
+    <g fill="none">
+      <circle cx={SUN[0]} cy={SUN[1]} r={RIM_R} stroke={c} strokeWidth={62} />
+      <circle cx={SUN[0]} cy={SUN[1]} r={HUB_RING_R} fill={c} />
+    </g>
+  );
+};
 
-const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
+/** V3: cut 10's engine drawing (kyle-london orbitWorld, read only) brought into the medium: its deep-brown casing lifted
+ *  to a dark iron (no black outlines in the air), then the whole drawing pulled toward the air at its distance (orange
+ *  takes only part of the fog here, as everywhere) */
+const EngineInAir: React.FC<{ A: MA; children: React.ReactNode }> = ({ A, children }) => {
+  const air = A.airHex(Z_WHEEL, -AXLE_Y);
+  const a = 0.75 * A.fog(Z_WHEEL);
+  const c = [1, 3, 5].map((i) => parseInt(air.slice(i, i + 2), 16) / 255);
+  const lift = [0.16, 0.165, 0.16];
+  const slope = (i: number) => (1 - lift[i]) * (1 - a);
+  const icpt = (i: number) => lift[i] * (1 - a) + c[i] * a;
+  return (
+    <div style={{ position: "absolute", left: 0, top: 0, width: FRAME_W, height: FRAME_H, filter: "url(#mmEngAir)" }}>
+      <svg width={0} height={0} style={{ position: "absolute" }}>
+        <defs>
+          <filter id="mmEngAir" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+            <feComponentTransfer>
+              <feFuncR type="linear" slope={slope(0).toFixed(4)} intercept={icpt(0).toFixed(4)} />
+              <feFuncG type="linear" slope={slope(1).toFixed(4)} intercept={icpt(1).toFixed(4)} />
+              <feFuncB type="linear" slope={slope(2).toFixed(4)} intercept={icpt(2).toFixed(4)} />
+            </feComponentTransfer>
+          </filter>
+        </defs>
+      </svg>
+      {children}
+    </div>
+  );
+};
+
+const MuscleOrMachine: React.FC<z.infer<typeof schema>> = ({ look }) => {
   const f = useCurrentFrame();
   const cam = camAt(f);
   const P = perspective(cam, DEPTH);
+  // V3: the medium of this frame (null = the delivered V2 picture on the paper page)
+  const A = look === "A" ? mmAirAt(cam, f) : null;
+  const ffog = (Z: number, h = 150): Folk.FolkFog => ({ rgb: A ? A.airHex(Z, h) : PAGE, amount: A ? A.fog(Z) : 0 });
   const items: Item[] = [];
   // X: which side of the wall the thing stands (default: the steam side)
   // samples: 3D points spread over the thing, ray-tested against the wall every frame
@@ -1073,7 +1472,7 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
       const p = pusherAt(P, m, th, e, f, mi * 0.37 + e * 0.5);
       // his half of the bar is drawn just behind him: his fists close on it in front of his chest
       add(p.Z + 0.5, `bar${mi}${e}`, <BarHalf P={P} m={m} a={a} uid={`m${mi}b${e}`} tone={tone} />, undefined, m.X, [0.3, 0.6, 1].map((u): V3 => [m.X + BAR_R * u * Math.sin(a), BAR_Y, m.Z - BAR_R * u * Math.cos(a)]));
-      add(p.Z, `sl${mi}${e}`, <SlaveFig p={p} uid={`m${mi}s${e}`} tone={tone} k={cam.k} variant={SLAVE_VARIANTS[mi][e]} fetters={mi === 0} />, undefined, p.X, [...figureSamples(p.X, p.Z), ...p.hands3]);
+      add(p.Z, `sl${mi}${e}`, <SlaveFig p={p} uid={`m${mi}s${e}`} tone={tone} k={cam.k} variant={SLAVE_VARIANTS[mi][e]} fetters={mi === 0} />, undefined, p.X, [...figureSamples(p.X, p.Z, !!A), ...p.hands3]);
     });
     // the square timber collar at the waist, its beams sorted by depth
     for (let side = 0; side < 4; side++) {
@@ -1090,7 +1489,15 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
     const sc = SCALE * pl.scale;
     add(Z, `prop${pr.key}`, (
       <g className="u4ink" style={{ ["--inkf" as string]: inkFactor(cam.k * pl.scale).toFixed(4) } as React.CSSProperties}>
-        {pr.kind === "sack" ? (
+        {A ? (
+          pr.kind === "sack" ? (
+            <g transform={`rotate(${pr.tilt} ${fx(pl.at[0])} ${fx(pl.at[1])})`}>
+              <Folk.Sack at={pl.at} scale={sc * 1.15} uid={`mm${pr.key}`} fog={ffog(Z, 40)} unitPx={cam.k} />
+            </g>
+          ) : (
+            <Folk.Basket at={pl.at} scale={sc} uid={`mm${pr.key}`} full={0.85} fog={ffog(Z, 30)} unitPx={cam.k} />
+          )
+        ) : pr.kind === "sack" ? (
           <g transform={`rotate(${pr.tilt} ${fx(pl.at[0])} ${fx(pl.at[1])})`}>
             <Sack at={pl.at} scale={sc * 1.15} uid={`mm${pr.key}`} />
           </g>
@@ -1115,13 +1522,14 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
   add((ASTAND.z0 + ASTAND.z1) / 2, "aframe", <AFrame P={P} />);
   for (let i = 0; i < 6; i++) {
     const Z = Z_WHEEL + 30 - i * 5;
-    add(Z, `rs${i}`, <RimSide />, engineCamAt(cam, Z));
-    add(Z - 0.1, `gs${i}`, <RimGear phi={phiF} side />, engineCamAt(cam, Z));
-    add(Z - 0.2, `ps${i}`, <Pinion phi={phiP} side />, engineCamAt(cam, Z));
+    add(Z, `rs${i}`, <RimSide Z={Z} />, engineCamAt(cam, Z));
+    add(Z - 0.1, `gs${i}`, <RimGear phi={phiF} side Z={Z} />, engineCamAt(cam, Z));
+    add(Z - 0.2, `ps${i}`, <Pinion phi={phiP} side Z={Z} />, engineCamAt(cam, Z));
   }
   add(Z_WHEEL + 0.2, "rimgear", <RimGear phi={phiF} />, engineCamAt(cam, Z_WHEEL));
-  items.push({ Z: Z_WHEEL, key: "wheel", el: <SunAndPlanetMachine key="wheel" frame={engineFrameAt(f)} cam={engineCamAt(cam, Z_WHEEL)} idPrefix="mmE" pedestal={false} /> });
-  add(Z_WHEEL - 2, "pinion", <Pinion phi={phiP} />, engineCamAt(cam, Z_WHEEL - 2));
+  const engine = <SunAndPlanetMachine key="wheel" frame={engineFrameAt(f)} cam={engineCamAt(cam, Z_WHEEL)} idPrefix="mmE" pedestal={false} />;
+  items.push({ Z: Z_WHEEL, key: "wheel", el: A ? <EngineInAir key="wheel" A={A}>{engine}</EngineInAir> : engine });
+  add(Z_WHEEL - 2, "pinion", <Pinion phi={phiP} Z={Z_WHEEL - 2} />, engineCamAt(cam, Z_WHEEL - 2));
   // the line shaft in pieces between its crown wheels and the pinion (so each wheel sits on it in depth), held up at
   // its ends by iron hangers from the roof
   const crownZ = STONES_Z.map((Zs) => Zs + CROWN_DZ);
@@ -1129,13 +1537,13 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
   for (let i = 0; i < cuts.length - 1; i++) {
     const za = cuts[i];
     const zb = cuts[i + 1];
-    add((za + zb) / 2, `sh${i}`, <Hexa P={P} v={boxV(SHAFT_X - SHAFT_HW, SHAFT_X + SHAFT_HW, SHAFT_Y - SHAFT_HW, SHAFT_Y + SHAFT_HW, za, zb)} ink={sinkVol(IRON, Math.max(0.6, depthT(za)))} uid={`sh${i}`} />);
+    add((za + zb) / 2, `sh${i}`, <Hexa P={P} v={boxV(SHAFT_X - SHAFT_HW, SHAFT_X + SHAFT_HW, SHAFT_Y - SHAFT_HW, SHAFT_Y + SHAFT_HW, za, zb)} ink={sinkVol(IRON, Math.max(0.6, depthT(za)))} uid={`sh${i}`} mat={MAT_IRON} />);
   }
   [200, 1000].forEach((Zh, i) =>
     add(Zh, `hang${i}`, (
       <g>
-        <Hexa P={P} v={boxV(SHAFT_X - 9, SHAFT_X + 9, -2200, SHAFT_Y - SHAFT_HW, Zh - 9, Zh + 9)} ink={sinkVol(IRON, Math.max(0.6, depthT(Zh)))} uid={`hg${i}`} />
-        <Hexa P={P} v={boxV(SHAFT_X - 26, SHAFT_X + 26, SHAFT_Y - SHAFT_HW - 16, SHAFT_Y + SHAFT_HW + 14, Zh - 16, Zh + 16)} ink={sinkVol(IRON, Math.max(0.6, depthT(Zh)))} uid={`hb${i}`} />
+        <Hexa P={P} v={boxV(SHAFT_X - 9, SHAFT_X + 9, -2200, SHAFT_Y - SHAFT_HW, Zh - 9, Zh + 9)} ink={sinkVol(IRON, Math.max(0.6, depthT(Zh)))} uid={`hg${i}`} mat={MAT_IRON} />
+        <Hexa P={P} v={boxV(SHAFT_X - 26, SHAFT_X + 26, SHAFT_Y - SHAFT_HW - 16, SHAFT_Y + SHAFT_HW + 14, Zh - 16, Zh + 16)} ink={sinkVol(IRON, Math.max(0.6, depthT(Zh)))} uid={`hb${i}`} mat={MAT_IRON} />
       </g>
     )),
   );
@@ -1149,24 +1557,34 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
   });
   const Z1 = STONES_Z[0];
   add(SACK.Z + 20, "spout", <Spout P={P} Zs={Z1} />);
-  add(SACK.Z, "sack", <HangingSack P={P} fill={sackFill(f)} jig={sackJig(f)} />);
-  const wk = workerAt(P, f);
-  add(WORKER.Z, "worker", (
-    <g className="u4ink" style={{ ["--inkf" as string]: inkFactor(cam.k * rOf(WORKER.Z)).toFixed(4) } as React.CSSProperties}>
-      <Worker pose={wk.pose} at={wk.at} scale={wk.scale} uid="mmwk" shade={1} />
-    </g>
-  ));
+  add(SACK.Z, "sack", <HangingSack P={P} fill={sackFill(f)} jig={A ? sackJigA(f) : sackJig(f)} />);
+  if (A) {
+    const wf = worker1Folk(P, f);
+    add(WORKER.Z, "worker", <FolkWorker pose={wf.pose} x={wf.at[0]} y={wf.at[1]} scale={wf.scale} uid="mmwkf" unitPx={cam.k} inks={workerInks(A, WORKER.Z)} />);
+  } else {
+    const wk = workerAt(P, f);
+    add(WORKER.Z, "worker", (
+      <g className="u4ink" style={{ ["--inkf" as string]: inkFactor(cam.k * rOf(WORKER.Z)).toFixed(4) } as React.CSSProperties}>
+        <Worker pose={wk.pose} at={wk.at} scale={wk.scale} uid="mmwk" shade={1} />
+      </g>
+    ));
+  }
   // worker 2, further down the row, and the stack he builds
   const t2 = depthT(WORKER2.Z);
   const ink2 = tintInk(CREAM, t2);
-  stackSlots().forEach((sl) => add(sl.c[2] + 0.1 * sl.c[1], `stk${sl.key}`, <LyingSack P={P} c={sl.c} tone={t2} uid={`stk${sl.key}`} tilt={sl.key.endsWith("1") ? 2 : -1.5} />));
+  stackSlots(!!A).forEach((sl) => add(sl.c[2] + 0.1 * sl.c[1], `stk${sl.key}`, <LyingSack P={P} c={sl.c} tone={t2} uid={`stk${sl.key}`} tilt={sl.key.endsWith("1") ? 2 : -1.5} />));
   const w2 = worker2At(P, f);
-  add(WORKER2.Z, "worker2", (
-    <g className="u4ink" style={{ ["--inkf" as string]: inkFactor(cam.k * rOf(WORKER2.Z)).toFixed(4) } as React.CSSProperties}>
-      <Worker pose={w2.pose} at={w2.at} scale={w2.scale} uid="mmwk2" shade={1} ink={ink2} coat={ink2} />
-    </g>
-  ));
-  add(w2.sack.held ? WORKER2.Z - 12 : STACK_TOP[2] - 20, "liftsack", <LyingSack P={P} c={w2.sack.c} tone={t2} uid="lift" tilt={w2.sack.held ? -4 : -1} />);
+  if (A) {
+    const w2f = worker2Folk(P, f);
+    add(WORKER2.Z, "worker2", <FolkWorker pose={w2f.pose} x={w2f.at[0]} y={w2f.at[1]} scale={w2f.scale} uid="mmwk2f" unitPx={cam.k} inks={workerInks(A, WORKER2.Z)} />);
+  } else
+    add(WORKER2.Z, "worker2", (
+      <g className="u4ink" style={{ ["--inkf" as string]: inkFactor(cam.k * rOf(WORKER2.Z)).toFixed(4) } as React.CSSProperties}>
+        <Worker pose={w2.pose} at={w2.at} scale={w2.scale} uid="mmwk2" shade={1} ink={ink2} coat={ink2} />
+      </g>
+    ));
+  const sack2 = A ? liftSackAt(f, true) : w2.sack;
+  add(sack2.held ? WORKER2.Z - 12 : (A ? STACK_TOP_A : STACK_TOP_V2)[2] - 20, "liftsack", <LyingSack P={P} c={sack2.c} tone={t2} uid="lift" tilt={sack2.held ? -4 : -1} />);
 
   // the wall (REVISION 1): a thing is drawn before the wall when it stands behind the wall's front on the far side
   // from the camera (or anywhere behind its front while the camera faces its end), or when the line of sight to any
@@ -1208,8 +1626,10 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
   }
   flush();
 
-  // contact shadows on the floor, under everything that stands on it
+  // contact shadows on the floor, under everything that stands on it (V3: in the medium's shadow colour, fading with
+  // the fog of their distance)
   const shadows: React.ReactNode[] = [];
+  const ContactShadow: React.FC<{ P: Persp; X: number; Z: number; w?: number; d?: number; uid: string; amt?: number }> = (q) => (A ? <AirShadow {...q} A={A} /> : <ContactShadowV2 {...q} />);
   MILLS.forEach((m, mi) => {
     shadows.push(<ContactShadow key={`ms${mi}`} P={P} X={m.X} Z={m.Z} w={170} d={160} uid={`mcs${mi}`} amt={0.7 * m.tone} />);
     const th = millAngle(m, f);
@@ -1224,9 +1644,23 @@ const MuscleOrMachine: React.FC<z.infer<typeof schema>> = () => {
   STONES_Z.forEach((Zs, i) => shadows.push(<ContactShadow key={`st${i}`} P={P} X={SHAFT_X} Z={Zs} w={150} d={150} uid={`stcs${i}`} amt={0.7 * depthT(Zs)} />));
   shadows.push(<ContactShadow key="sack" P={P} X={SACK.X} Z={SACK.Z} w={46} d={26} uid="skcs" />);
   shadows.push(<ContactShadow key="wk" P={P} X={WORKER.X} Z={WORKER.Z} w={64} d={30} uid="wkcs" />);
-  shadows.push(<ContactShadow key="wk2" P={P} X={WORKER2.X} Z={WORKER2.Z} w={64} d={30} uid="wk2cs" amt={0.85} />);
+  shadows.push(<ContactShadow key="wk2" P={P} X={A ? WORKER2_A.X : WORKER2.X} Z={WORKER2.Z} w={64} d={30} uid="wk2cs" amt={0.85} />);
   shadows.push(<ContactShadow key="stk" P={P} X={STACK.X} Z={STACK.Z} w={70} d={34} uid="stkcs" amt={0.85} />);
 
+  if (A)
+    return (
+      <AX.Provider value={A}>
+        <AirStage v={A.stageV} bloom={MM_BLOOM} shafts={MM_SHAFTS}>
+          <svg width={FRAME_W} height={FRAME_H} viewBox={`0 0 ${FRAME_W} ${FRAME_H}`} style={{ position: "absolute", left: 0, top: 0 }}>
+            <g transform={camTransform(cam).svg}>
+              <AirFloor P={P} A={A} x0={-1500} x1={2700} z0={-900} z1={4400} mat={MAT_FLOOR} course={130} uid="mmgp" />
+              {shadows}
+            </g>
+          </svg>
+          {layers}
+        </AirStage>
+      </AX.Provider>
+    );
   return (
     <TexcocoPage cam={cam}>
       <svg width={FRAME_W} height={FRAME_H} viewBox={`0 0 ${FRAME_W} ${FRAME_H}`} style={{ position: "absolute", left: 0, top: 0 }}>
