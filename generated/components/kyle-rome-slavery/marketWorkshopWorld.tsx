@@ -65,6 +65,9 @@ import {
   type FigPose,
   type Ink,
 } from "./romeCast";
+import { AirFloorP, AirShadowP, AirVolBox, AirVolCyl, worldAirOf, MAT_BRICK, MAT_FLOOR_L, MAT_FLOOR_R, MAT_MARBLE_COLD, MAT_STONE, MAT_STONE_COLD, MAT_TIMBER, MAT_TIMBER_COLD, PAL, lineOf, type WorldAir } from "./marketWorkshopAir";
+import { mixHex } from "../kyle-pandemics/pandemicAir";
+import * as Folk from "./romeFolk";
 
 const c01 = (v: number) => Math.max(0, Math.min(1, v));
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -79,6 +82,12 @@ export const ACCENT = "#FFB000";
 export const ACCENT_DEEP = "#D98A0C";
 export const DEAD = "#8A7B62";
 export const PAGE = "#3F3428";
+/** V3 (romeFolk): the sale's figures drained toward DEAD (cut C's cold inks, a step lighter: the folk colours are
+ *  already muted) and a little extra fog (sunk) */
+export const DRAIN = { main: 0.08, waiting: 0.22, dealer: 0.25, buyer: 0.45 };
+export const SALE_FOG = 0;
+/** V3: the dense espresso air the chasm falls away into (palette A's deep end, never black) */
+const VOID_DEEP = "#2E261E";
 
 // ---------------------------------------------------------------------------
 // THE STAGE
@@ -114,7 +123,7 @@ export type Spot = { X: number; Y: number; Z: number; variant: number };
 export const MAIN_SLAVE: Spot = { X: -166, Y: -PLATFORM.H, Z: 165, variant: 0 };
 /** a fettered slave waiting at the head of the steps beside him, next in line (one per front seat: cut D walks
  *  MAIN_SLAVE and WAITING[0] over to FRONT_STATIONS) */
-export const WAITING: Spot[] = [{ X: -92, Y: -PLATFORM.H, Z: 150, variant: 1 }];
+export const WAITING: Spot[] = [{ X: -82, Y: -PLATFORM.H, Z: 150, variant: 1 }];
 /** the dealer (Overseer 2, the auctioneer) on the platform at the slave's left, beside the buyer, presenting him with
  *  his open hand (the traders together on the left, the traded man alone at the platform's front) */
 export const DEALER: Spot = { X: -250, Y: -PLATFORM.H, Z: 212, variant: 2 };
@@ -206,9 +215,18 @@ const volTint = (v: VolInk, t: number): VolInk => ({ lit: mixColor(PAGE, v.lit, 
 // DRAWN PIECES
 // ---------------------------------------------------------------------------
 /** a stack of n nested red-gloss bowls standing at (X, Y, Z) (Y = the board's top), plus a falling one (u 0..1) */
-const BowlStack: React.FC<{ P: Persp; X: number; Y: number; Z: number; n: number; fall: number; uid: string; tone?: number }> = ({ P, X, Y, Z, n, fall, uid, tone = 1 }) => {
+/** V3: the bowls' paint in the medium. Orange is the one warm glowing material: it takes only part of the fog. */
+export const ORANGE_LINE = "#8A4A0E";
+const bowlPaint = (A: WorldAir | undefined, Z: number, h: number) => {
+  if (!A) return { body: ACCENT, deep: ACCENT_DEEP, line: DARK, lineOp: 1, sw: 1 };
+  const a = A.airHex(Z, h);
+  const t = 0.45 * A.fog(Z);
+  return { body: mixHex(ACCENT, a, t), deep: mixHex(ACCENT_DEEP, a, t), line: mixHex(ORANGE_LINE, a, t), lineOp: 0.85, sw: 0.7 };
+};
+const BowlStack: React.FC<{ P: Persp; X: number; Y: number; Z: number; n: number; fall: number; uid: string; tone?: number; A?: WorldAir }> = ({ P, X, Y, Z, n, fall, uid, tone = 1, A }) => {
   const r = P.r(Z);
-  const sw = 1.7 * r;
+  const bp = bowlPaint(A, Z, -Y);
+  const sw = 1.7 * r * bp.sw;
   const els: React.ReactNode[] = [];
   const bowl = (y0: number, key: string, inner: boolean) => {
     // y0 = the bowl's foot (Y); body flares to the rim at y0 - h
@@ -225,13 +243,13 @@ const BowlStack: React.FC<{ P: Persp; X: number; Y: number; Z: number; n: number
     const body = `M${Pt([rim[0] - rr, rim[1]])}Q${Pt([rim[0] - rr * 0.82, foot[1] - (foot[1] - rim[1]) * 0.2])} ${Pt([foot[0] - rf, foot[1]])}A${rf.toFixed(2)},${ryf.toFixed(2)} 0 0 0 ${Pt([foot[0] + rf, foot[1]])}Q${Pt([rim[0] + rr * 0.82, foot[1] - (foot[1] - rim[1]) * 0.2])} ${Pt([rim[0] + rr, rim[1]])}A${rr.toFixed(2)},${ryr.toFixed(2)} 0 0 1 ${Pt([rim[0] - rr, rim[1]])}Z`;
     els.push(
       <g key={key}>
-        <path d={body} fill={ACCENT} stroke={DARK} strokeWidth={sw} strokeLinejoin="round" />
+        <path d={body} fill={bp.body} stroke={bp.line} strokeOpacity={bp.lineOp} strokeWidth={sw} strokeLinejoin="round" />
         {/* the right side in shade (light from the upper left) */}
-        <path d={`M${Pt([rim[0] + rr * 0.3, rim[1] + ryr])}L${Pt([rim[0] + rr * 0.98, rim[1] + 1])}Q${Pt([rim[0] + rr * 0.82, foot[1] - (foot[1] - rim[1]) * 0.2])} ${Pt([foot[0] + rf, foot[1]])}L${Pt([foot[0] + rf * 0.1, foot[1] + ryf * 0.9])}Z`} fill={ACCENT_DEEP} />
+        <path d={`M${Pt([rim[0] + rr * 0.3, rim[1] + ryr])}L${Pt([rim[0] + rr * 0.98, rim[1] + 1])}Q${Pt([rim[0] + rr * 0.82, foot[1] - (foot[1] - rim[1]) * 0.2])} ${Pt([foot[0] + rf, foot[1]])}L${Pt([foot[0] + rf * 0.1, foot[1] + ryf * 0.9])}Z`} fill={bp.deep} />
         {/* the rim's lip, a fine dark line just under it */}
-        <path d={`M${Pt([rim[0] - rr * 0.97, rim[1] + 2.4 * r])}A${(rr * 0.97).toFixed(2)},${ryr.toFixed(2)} 0 0 0 ${Pt([rim[0] + rr * 0.97, rim[1] + 2.4 * r])}`} fill="none" stroke={DARK} strokeWidth={sw * 0.5} strokeOpacity={0.7} />
-        <path d={`M${Pt([rim[0] - rr, rim[1]])}A${rr.toFixed(2)},${ryr.toFixed(2)} 0 0 0 ${Pt([rim[0] + rr, rim[1]])}`} fill="none" stroke={DARK} strokeWidth={sw} />
-        {inner ? <ellipse cx={rim[0]} cy={rim[1]} rx={rr * 0.86} ry={ryr * 0.8} fill={ACCENT_DEEP} stroke={DARK} strokeWidth={sw * 0.7} /> : null}
+        <path d={`M${Pt([rim[0] - rr * 0.97, rim[1] + 2.4 * r])}A${(rr * 0.97).toFixed(2)},${ryr.toFixed(2)} 0 0 0 ${Pt([rim[0] + rr * 0.97, rim[1] + 2.4 * r])}`} fill="none" stroke={bp.line} strokeWidth={sw * 0.5} strokeOpacity={0.7} />
+        <path d={`M${Pt([rim[0] - rr, rim[1]])}A${rr.toFixed(2)},${ryr.toFixed(2)} 0 0 0 ${Pt([rim[0] + rr, rim[1]])}`} fill="none" stroke={bp.line} strokeOpacity={bp.lineOp} strokeWidth={sw} />
+        {inner ? <ellipse cx={rim[0]} cy={rim[1]} rx={rr * 0.86} ry={ryr * 0.8} fill={bp.deep} stroke={bp.line} strokeOpacity={bp.lineOp} strokeWidth={sw * 0.7} /> : null}
       </g>,
     );
   };
@@ -267,9 +285,29 @@ export type StageProps = {
   hide?: { main?: boolean; waiting?: boolean[] };
   extra?: StageExtra[];
   uid?: string;
+  /** V3: the medium (./marketWorkshopAir worldAirOf); absent = the delivered V2 picture on the paper page */
+  air?: WorldAir;
+  /** V3 (air only), cut D: 0..1 the floor continuing toward the camera out of the air in front of the closed stage
+   *  (FRONT_EXT), with a little near foreground on it (FOREGROUND); it emerges from the dense air far-to-near, the slab's
+   *  front face and edge drop away under it. Cut C: 0 (absent). */
+  front?: number;
+};
+/** V3, cut D: how far the floor continues toward the camera (local Z) once the stage is whole */
+export const FRONT_EXT = -640;
+/** V3, cut D: the near foreground on the continued floor (soft, fogged): a crate of orange bowls at the lower left,
+ *  the edge of a front-row station (its stool and wheel, facing into the workshop) at the lower right */
+export const FOREGROUND = {
+  crate: { X0: 18, X1: 104, Z0: -300, Z1: -228, H: 58 },
+  stool: { X: 288, Z: -282 },
+  wheel: { X: 405, Z: -290 },
+};
+/** emergence of the continued floor at depth Z (0 at the old edge .. FRONT_EXT) for front u: far first, then nearer */
+export const frontEmerge = (u: number, Z: number) => {
+  const d = c01(Z / FRONT_EXT);
+  return ease(u * 1.45 - d * 0.45);
 };
 
-export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split, seam = 0, stack, frontSeated = [false, false], hide = {}, extra = [], uid = "mw" }) => {
+export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split, seam = 0, stack, frontSeated = [false, false], hide = {}, extra = [], uid = "mw", air: A, front = 0 }) => {
   const L = halfPersp(cam, "L", split);
   const R = halfPersp(cam, "R", split);
   const PH = { L: L.P, R: R.P };
@@ -348,11 +386,111 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
   }
   under.push(faceOf("L"), faceOf("R"));
 
+  // ----- V3 (the air): the same blocks inside the medium. The void falls away into dense espresso air (never black);
+  // the slab faces are dressed stone, a cream rim along their top edges, dissolving downward into the air -----
+  const underAir: React.ReactNode[] = [];
+  if (A) {
+    const P0 = perspective(cam, DEPTH);
+    const TV = S.T * 0.62; // the visible depth of a face before it is all air
+    const NYA = 8;
+    if (gap > 0.5) {
+      // the chasm's veil: deep air between the inner faces, darkest at the floor's level near us
+      // looking down into it: the dense air below the floor, by depth (fogging toward the air at that distance, the
+      // far end melting into the air behind its row like the floor's)
+      const NZ = 16;
+      for (let i = 0; i < NZ; i++) {
+        const za = mix(S.z0, S.z1, Math.pow(i / NZ, 1.5));
+        const zb = mix(S.z0, S.z1, Math.pow((i + 1) / NZ, 1.5));
+        const zm = (za + zb) / 2;
+        const melt = Math.pow(c01((zm - 0.62 * S.z1) / (0.38 * S.z1)), 1.3);
+        const col = mixHex(mixHex(VOID_DEEP, A.airHex(zm, -600), A.fog(zm)), A.screenAir(P0.p(0, 0, zm)[1]), melt);
+        underAir.push(<path key={`vd${i}`} d={poly([P0.p(L.dx, 0, za), P0.p(R.dx, 0, za), P0.p(R.dx, 0, zb + (zb - za) * 0.2), P0.p(L.dx, 0, zb + (zb - za) * 0.2)])} fill={col} />);
+      }
+      const NV = 9;
+      for (let j = 0; j < NV; j++) {
+        const ya = (S.T * 1.2 * j) / NV;
+        const yb = (S.T * 1.2 * (j + 1)) / NV;
+        underAir.push(<path key={`vf${j}`} d={poly([P0.p(L.dx, ya, S.z0), P0.p(R.dx, ya, S.z0), P0.p(R.dx, yb, S.z0), P0.p(L.dx, yb, S.z0)])} fill={VOID_DEEP} stroke={VOID_DEEP} strokeWidth={0.5} opacity={0.75 * Math.pow(1 - j / NV, 1.3)} />);
+      }
+    }
+    (["L", "R"] as Half[]).forEach((h) => {
+      const P = PH[h];
+      const x0 = h === "L" ? S.x0 : 0;
+      const x1 = h === "L" ? 0 : S.x1;
+      const mat = h === "L" ? MAT_STONE_COLD : MAT_STONE;
+      const els: React.ReactNode[] = [];
+      if (gap > 0.5) {
+        // the inner (cut) face: the LEFT block's looks right (away from the light: in shade), the RIGHT block's
+        // looks left (into the light: lit)
+        const NZ = 10;
+        const base = h === "L" ? mixHex(mat.dark, PAL.shadow, 0.15) : mat.lit;
+        for (let i = 0; i < NZ; i++) {
+          const za = mix(S.z0, S.z1, Math.pow(i / NZ, 1.5));
+          const zb = mix(S.z0, S.z1, Math.pow((i + 1) / NZ, 1.5));
+          const zm = (za + zb) / 2;
+          const az = 1 - c01((zm - 300) / (S.z1 * 0.85 - 300));
+          for (let j = 0; j < NYA; j++) {
+            const ya = (TV * j) / NYA;
+            const yb = (TV * (j + 1)) / NYA;
+            const col = mixHex(A.tone(base, zm, -(ya + yb) / 2), mixHex(VOID_DEEP, A.airHex(zm, -600), A.fog(zm)), (0.7 * j) / NYA);
+            els.push(<path key={`in${i}-${j}`} d={poly([P.p(0, ya, za), P.p(0, ya, zb), P.p(0, yb, zb), P.p(0, yb, za)])} fill={col} stroke={col} strokeWidth={0.5} opacity={az * Math.pow(1 - j / NYA, 0.7)} />);
+          }
+          // its top edge: a cream rim on the lit face, a darker local line on the shaded one
+          const ea = 1 - c01((zm - 300) / (S.z1 * 0.8 - 300));
+          els.push(<path key={`ie${i}`} d={`M${Pt(P.p(0, 0, za))}L${Pt(P.p(0, 0, zb))}`} stroke={h === "R" ? PAL.cream : A.tone(lineOf(mat), zm)} strokeWidth={(h === "R" ? 1.6 : 1.4) * P.r(zm)} strokeOpacity={ea * (h === "R" ? 0.55 : 0.7) * (1 - A.fog(zm))} />);
+        }
+      }
+      // the front face: dressed stone, lit a little from above, dissolving downward into the air
+      {
+        // one smooth vertical gradient (the face is parallel to the screen): lit stone at the top edge, darkening,
+        // then into the air of the rows below it (no bands)
+        const yTop = P.p(x0, 0, S.z0)[1];
+        const yBot = P.p(x0, TV, S.z0)[1];
+        const below = A.screenAir(TV);
+        const stops: [number, string, number][] = [
+          [0, A.tone(mixHex(mat.lit, mat.mid, 0.4), S.z0), 1],
+          [0.18, A.tone(mat.mid, S.z0), 1],
+          [0.45, mixHex(A.tone(mixHex(mat.mid, mat.dark, 0.5), S.z0), below, 0.3), 0.85],
+          [0.75, mixHex(A.tone(mat.dark, S.z0), below, 0.65), 0.45],
+          [1, below, 0],
+        ];
+        els.push(
+          <g key="frg">
+            <defs>
+              <linearGradient id={`${uid}-ff${h}`} gradientUnits="userSpaceOnUse" x1="0" y1={yTop.toFixed(2)} x2="0" y2={yBot.toFixed(2)}>
+                {stops.map(([o, c, op]) => (
+                  <stop key={o} offset={o} stopColor={c} stopOpacity={op} />
+                ))}
+              </linearGradient>
+            </defs>
+            <path d={poly([P.p(x0, 0, S.z0), P.p(x1, 0, S.z0), P.p(x1, TV, S.z0), P.p(x0, TV, S.z0)])} fill={`url(#${uid}-ff${h})`} />
+          </g>,
+        );
+      }
+      // one course line of the dressed stone, faint
+      els.push(<path key="crs" d={`M${Pt(P.p(x0, TV * 0.3, S.z0))}L${Pt(P.p(x1, TV * 0.3, S.z0))}`} stroke={A.tone(lineOf(mat), S.z0)} strokeWidth={1.2 * P.r(S.z0)} strokeOpacity={0.35} />);
+      underAir.push(
+        <g key={`fca${h}`} transform={`translate(${DX[h].toFixed(3)} 0)`}>
+          {els}
+        </g>,
+      );
+    });
+  }
+
   // ----- the floors (each half's flags): the sale's sunk and cold, the workshop's lit warm -----
   const floors = (["L", "R"] as Half[]).map((h) => {
     const P = PH[h];
     const xa = h === "L" ? S.x0 : 0;
     const xb = h === "L" ? 0 : S.x1;
+    if (A) {
+      return (
+        <g key={`fl${h}`} transform={`translate(${DX[h].toFixed(3)} 0)`}>
+          <AirFloorP P={P} A={A} x0={xa} x1={xb} z0={S.z0} z1={S.z1} mat={h === "L" ? MAT_FLOOR_L : MAT_FLOOR_R} course={130} uid={`${uid}-af${h}`} jointAmt={h === "L" ? 0.75 : 1} />
+          {/* the front edge: a cream rim of light along the slab's top edge */}
+          <path d={`M${Pt(P.p(xa, 0, S.z0))}L${Pt(P.p(xb, 0, S.z0))}`} stroke={PAL.cream} strokeWidth={1.8 * P.r(S.z0)} strokeOpacity={(h === "L" ? 0.4 : 0.55) * (1 - ease(front * 2))} />
+        </g>
+      );
+    }
     const wash: React.ReactNode[] = [];
     if (h === "R") {
       const NB = 10;
@@ -377,17 +515,40 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
   if (seam > 0 && gap <= 0.5) {
     const P0 = perspective(cam, DEPTH);
     const zt = mix(S.z0, S.z1 * 0.8, seam);
-    seamEl = (
-      <g>
-        <path d={`M${Pt(P0.p(0, 0, S.z0))}L${Pt(P0.p(0, 0, zt))}`} stroke={DARK} strokeWidth={3.2 * P0.r(S.z0)} strokeLinecap="round" />
-        <path d={`M${Pt(P0.p(0, 0, S.z0))}L${Pt(P0.p(0, S.T * c01(seam * 4), S.z0))}`} stroke={DARK} strokeWidth={3.2 * P0.r(S.z0)} />
-      </g>
-    );
+    if (A) {
+      // the crack in the medium: a dark line in the shadow colour, fading with depth (in pieces), down the front face
+      const NP = 8;
+      const segs: React.ReactNode[] = [];
+      for (let i = 0; i < NP; i++) {
+        const za = mix(S.z0, zt, i / NP);
+        const zb = mix(S.z0, zt, (i + 1) / NP);
+        segs.push(<path key={i} d={`M${Pt(P0.p(0, 0, za))}L${Pt(P0.p(0, 0, zb))}`} stroke={mixHex(PAL.shadow, A.airHex(za), A.fog(za))} strokeWidth={2.6 * P0.r(za)} strokeLinecap="round" opacity={0.9} />);
+      }
+      seamEl = (
+        <g>
+          {segs}
+          <path d={`M${Pt(P0.p(0, 0, S.z0))}L${Pt(P0.p(0, S.T * 0.62 * c01(seam * 4), S.z0))}`} stroke={PAL.shadow} strokeWidth={2.6 * P0.r(S.z0)} opacity={0.75 * (1 - c01(front * 4))} />
+        </g>
+      );
+    } else
+      seamEl = (
+        <g>
+          <path d={`M${Pt(P0.p(0, 0, S.z0))}L${Pt(P0.p(0, 0, zt))}`} stroke={DARK} strokeWidth={3.2 * P0.r(S.z0)} strokeLinecap="round" />
+          <path d={`M${Pt(P0.p(0, 0, S.z0))}L${Pt(P0.p(0, S.T * c01(seam * 4), S.z0))}`} stroke={DARK} strokeWidth={3.2 * P0.r(S.z0)} />
+        </g>
+      );
   }
 
   // ----- contact shadows (on the floor / the platform top) -----
   const shadows: Item[] = [];
-  const shadow = (h: Half, X: number, Z: number, w: number, d: number, k: string, amt = 1, Y = 0) => shadows.push({ half: h, Z: 1e6, node: (P) => <ContactShadow key={k} P={P} X={X} Z={Z} w={w} d={d} Y={Y} uid={`${uid}-${k}`} amt={amt} /> });
+  const shadow = (h: Half, X: number, Z: number, w: number, d: number, k: string, amt = 1, Y = 0) =>
+    shadows.push({ half: h, Z: 1e6, node: (P) => (A ? <AirShadowP key={k} P={P} A={A} X={X} Z={Z} w={w} d={d} Y={Y} uid={`${uid}-${k}`} amt={amt} /> : <ContactShadow key={k} P={P} X={X} Z={Z} w={w} d={d} Y={Y} uid={`${uid}-${k}`} amt={amt} />) });
+  /** V3: the figures' inks in the medium (the sale drained toward DEAD and a little sunk; the workshop warm) */
+  const coldInkA = (Z: number, dead = 0.62) => (A ? A.ink(mixInk(CREAM, DEAD_INK, dead), Z, 0.05) : coldInk(Z, dead));
+  const warmInkA = (Z: number) => (A ? A.ink(shadeInk(1), Z) : warmInk(Z));
+  /** V3: the folk cast (./romeFolk) in the medium: fogged by its depth (the sale a little more), the sale drained */
+  const upx = cam.k;
+  const ffog = (Z: number, extra = 0, h = 150): Folk.FolkFog => ({ rgb: A ? A.airHex(Z, h) : PAGE, amount: A ? c01(A.figFog(Z) + extra) : 0 });
 
   // ===================== THE SALE =====================
   const pl = PLATFORM;
@@ -405,6 +566,20 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
       for (let z = pl.Z0 + 40; z < pl.Z1; z += 40) planks += `M${Pt(P.p(pl.X0, top, z))}L${Pt(P.p(pl.X1, top, z))}`;
       let boards = "";
       for (let y = top + 25; y < 0; y += 25) boards += `M${Pt(P.p(pl.X0, y, pl.Z0))}L${Pt(P.p(pl.X1, y, pl.Z0))}`;
+      if (A) {
+        const m = MAT_TIMBER_COLD;
+        const ln = A.tone(lineOf(m), pl.Z0);
+        return (
+          <g key="plat">
+            <AirVolBox P={P} A={A} X0={pl.X0} X1={pl.X1} Y0={top} Y1={0} Z0={pl.Z0} Z1={pl.Z1} mat={m} uid={`${uid}-plat`} />
+            <path d={planks} stroke={ln} strokeWidth={sw * 0.7} strokeOpacity={0.4} />
+            <path d={boards} stroke={ln} strokeWidth={sw * 0.7} strokeOpacity={0.4} />
+            {[pl.X0 + 10, pl.X1 - 10].map((x) => (
+              <path key={x} d={poly([P.p(x - 10, top, pl.Z0 - 1), P.p(x + 10, top, pl.Z0 - 1), P.p(x + 10, 0, pl.Z0 - 1), P.p(x - 10, 0, pl.Z0 - 1)])} fill={A.tone(mixHex(m.lit, m.mid, 0.3), pl.Z0, 50)} stroke={ln} strokeWidth={sw * 0.8} />
+            ))}
+          </g>
+        );
+      }
       return (
         <g key="plat">
           <Box P={P} X0={pl.X0} X1={pl.X1} Y0={top} Y1={0} Z0={pl.Z0} Z1={pl.Z1} ink={ink} uid={`${uid}-plat`} />
@@ -419,7 +594,16 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
     },
   });
   STEPS.forEach((st, i) =>
-    items.push({ half: "L", Z: st.Z1 - 1 - i, node: (P) => <Box key={`st${i}`} P={P} X0={st.X0} X1={st.X1} Y0={st.top} Y1={i === 0 ? 0 : STEPS[i - 1].top} Z0={st.Z0} Z1={st.Z1} ink={STEP_COLD} uid={`${uid}-st${i}`} hatch={false} /> }),
+    items.push({
+      half: "L",
+      Z: st.Z1 - 1 - i,
+      node: (P) =>
+        A ? (
+          <AirVolBox key={`st${i}`} P={P} A={A} X0={st.X0} X1={st.X1} Y0={st.top} Y1={i === 0 ? 0 : STEPS[i - 1].top} Z0={st.Z0} Z1={st.Z1} mat={MAT_TIMBER_COLD} uid={`${uid}-st${i}`} />
+        ) : (
+          <Box key={`st${i}`} P={P} X0={st.X0} X1={st.X1} Y0={st.top} Y1={i === 0 ? 0 : STEPS[i - 1].top} Z0={st.Z0} Z1={st.Z1} ink={STEP_COLD} uid={`${uid}-st${i}`} hatch={false} />
+        ),
+    }),
   );
   const figOn = (P: Persp, s: Spot): { at: P2; scale: number } => ({ at: P.p(s.X, s.Y, s.Z), scale: P.r(s.Z) });
   // the waiting slaves (fettered), at the platform's back
@@ -431,7 +615,8 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
       Z: w.Z,
       node: (P) => {
         const o = figOn(P, w);
-        const ink = coldInk(w.Z);
+        const ink = coldInkA(w.Z);
+        if (A) return <Folk.Slave key={`w${i}`} pose={waitingPose(i, f)} at={o.at} scale={o.scale} uid={`${uid}-w${i}`} variant={w.variant} fetters fog={ffog(w.Z, SALE_FOG)} drain={DRAIN.waiting} unitPx={upx} />;
         return <Slave key={`w${i}`} pose={waitingPose(i, f)} at={o.at} scale={o.scale} uid={`${uid}-w${i}`} variant={w.variant} ink={ink} cloth={ink} shade={1} fetters />;
       },
     });
@@ -443,14 +628,23 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
     Z: DEALER.Z,
     node: (P) => {
       const o = figOn(P, DEALER);
-      const ink = coldInk(DEALER.Z);
+      const ink = coldInkA(DEALER.Z);
+      if (A) return <Folk.Overseer key="dl" pose={dealerPose(f)} at={o.at} scale={o.scale} uid={`${uid}-dl`} variant={DEALER.variant} tool="none" fog={ffog(DEALER.Z, SALE_FOG)} drain={DRAIN.dealer} unitPx={upx} />;
       return <Overseer key="dl" pose={dealerPose(f)} at={o.at} scale={o.scale} uid={`${uid}-dl`} variant={DEALER.variant} ink={ink} cloth={ink} shade={1} tool="none" />;
     },
   });
   // the slave on sale: chalked feet, the titulus at his neck
   if (!hide.main) {
     shadow("L", MAIN_SLAVE.X, MAIN_SLAVE.Z, 52, 26, "csm", 1, MAIN_SLAVE.Y);
-    items.push({ half: "L", Z: MAIN_SLAVE.Z, node: (P) => <SaleSlave key="ms" P={P} f={f} uid={`${uid}-ms`} /> });
+    items.push({
+      half: "L",
+      Z: MAIN_SLAVE.Z,
+      node: (P) => {
+        if (!A) return <SaleSlave key="ms" P={P} f={f} uid={`${uid}-ms`} />;
+        const o = figOn(P, MAIN_SLAVE);
+        return <Folk.Slave key="ms" pose={mainSlavePose(f)} at={o.at} scale={o.scale} uid={`${uid}-ms`} variant={MAIN_SLAVE.variant} chalk titulus fog={ffog(MAIN_SLAVE.Z, SALE_FOG)} drain={DRAIN.main} unitPx={upx} />;
+      },
+    });
   }
   // the buyer
   items.push({
@@ -459,7 +653,8 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
     node: (P) => {
       const o = figOn(P, BUYER);
       // the buyer is nearest, so he is sunk a step further toward DEAD: the slave stays the brightest figure on the left
-      const ink = coldInk(BUYER.Z, 0.66);
+      const ink = coldInkA(BUYER.Z, 0.66);
+      if (A) return <Folk.Dominus key="by" pose={buyerPose(f)} at={o.at} scale={o.scale} uid={`${uid}-by`} variant={BUYER.variant} fog={ffog(BUYER.Z, SALE_FOG)} drain={DRAIN.buyer} unitPx={upx} />;
       return <Dominus key="by" pose={buyerPose(f)} at={o.at} scale={o.scale} uid={`${uid}-by`} variant={BUYER.variant} ink={ink} cloth={ink} shade={1} />;
     },
   });
@@ -470,9 +665,22 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
     const ink = volTint(STONE_COLD, depthTint(po.Z, { far: 1400, min: 0.5 }));
     po.xs.forEach((x, i) => {
       shadow("L", x, po.Z, po.R * 1.4, po.R, `cspc${i}`, 0.6);
-      items.push({ half: "L", Z: po.Z + 1, node: (P) => <Cylinder key={`pc${i}`} P={P} X={x} Z={po.Z} R={po.R} Y0={-po.H} Y1={0} ink={ink} uid={`${uid}-pc${i}`} /> });
+      items.push({
+        half: "L",
+        Z: po.Z + 1,
+        node: (P) => (A ? <AirVolCyl key={`pc${i}`} P={P} A={A} X={x} Z={po.Z} R={po.R} Y0={-po.H} Y1={0} mat={MAT_MARBLE_COLD} uid={`${uid}-pc${i}`} /> : <Cylinder key={`pc${i}`} P={P} X={x} Z={po.Z} R={po.R} Y0={-po.H} Y1={0} ink={ink} uid={`${uid}-pc${i}`} />),
+      });
     });
-    items.push({ half: "L", Z: po.Z - po.R - 1, node: (P) => <Box key="parch" P={P} X0={po.X0} X1={po.X1} Y0={-po.H - po.arch} Y1={-po.H} Z0={po.Z - po.R - 6} Z1={po.Z + po.R + 6} ink={ink} uid={`${uid}-parch`} /> });
+    items.push({
+      half: "L",
+      Z: po.Z - po.R - 1,
+      node: (P) =>
+        A ? (
+          <AirVolBox key="parch" P={P} A={A} X0={po.X0} X1={po.X1} Y0={-po.H - po.arch} Y1={-po.H} Z0={po.Z - po.R - 6} Z1={po.Z + po.R + 6} mat={MAT_MARBLE_COLD} uid={`${uid}-parch`} />
+        ) : (
+          <Box key="parch" P={P} X0={po.X0} X1={po.X1} Y0={-po.H - po.arch} Y1={-po.H} Z0={po.Z - po.R - 6} Z1={po.Z + po.R + 6} ink={ink} uid={`${uid}-parch`} />
+        ),
+    });
   }
 
   // ===================== THE WORKSHOP =====================
@@ -494,6 +702,23 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
       }
       let raft = "";
       for (let z = z0 + 45; z < z1; z += 90) raft += `M${Pt(P.p(x0, ROOF_Y, z))}L${Pt(P.p(x1, ROOF_Y, z))}`;
+      if (A) {
+        // the roof's underside in the high, light air: timber in shade, fogged by distance; rafters a darker line
+        const bandsA: React.ReactNode[] = [];
+        for (let i = 0; i < NB; i++) {
+          const za = mix(z0, z1, i / NB);
+          const zb = mix(z0, z1, (i + 1) / NB);
+          const zm = (za + zb) / 2;
+          const col = A.tone(mixHex(MAT_TIMBER.dark, MAT_TIMBER.mid, 0.25), zm, -ROOF_Y);
+          bandsA.push(<path key={i} d={poly([P.p(x0, ROOF_Y, za), P.p(x1, ROOF_Y, za), P.p(x1, ROOF_Y, zb + 2), P.p(x0, ROOF_Y, zb + 2)])} fill={col} />);
+        }
+        return (
+          <g key="roof">
+            {bandsA}
+            <path d={raft} stroke={A.tone(lineOf(MAT_TIMBER), 900, -ROOF_Y)} strokeWidth={4 * P.r(400)} strokeOpacity={0.5} />
+          </g>
+        );
+      }
       return (
         <g key="roof">
           {bands}
@@ -504,18 +729,45 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
     },
   });
   POST_X.forEach((px, i) =>
-    items.push({ half: "R", Z: 9e4 - i, node: (P) => <Box key={`lb${i}`} P={P} X0={px - 20} X1={px + 20} Y0={ROOF_Y + 2} Y1={BEAM_Y} Z0={POST_Z[0] - 30} Z1={POST_Z[POST_Z.length - 1]} ink={TIMBER} uid={`${uid}-lb${i}`} /> }),
+    items.push({
+      half: "R",
+      Z: 9e4 - i,
+      node: (P) =>
+        A ? (
+          <AirVolBox key={`lb${i}`} P={P} A={A} X0={px - 20} X1={px + 20} Y0={ROOF_Y + 2} Y1={BEAM_Y} Z0={POST_Z[0] - 30} Z1={POST_Z[POST_Z.length - 1]} mat={MAT_TIMBER} uid={`${uid}-lb${i}`} rim={0} />
+        ) : (
+          <Box key={`lb${i}`} P={P} X0={px - 20} X1={px + 20} Y0={ROOF_Y + 2} Y1={BEAM_Y} Z0={POST_Z[0] - 30} Z1={POST_Z[POST_Z.length - 1]} ink={TIMBER} uid={`${uid}-lb${i}`} />
+        ),
+    }),
   );
   POST_Z.forEach((pz, j) => {
-    items.push({ half: "R", Z: pz + POST_W / 2 + 0.5, node: (P) => <Box key={`tb${j}`} P={P} X0={POST_X[0] - 20} X1={POST_X[1] + 20} Y0={BEAM_Y - 4} Y1={BEAM_Y + 34} Z0={pz - 16} Z1={pz + 16} ink={volTint(TIMBER, depthTint(pz, { far: 2000, min: 0.8 }))} uid={`${uid}-tb${j}`} /> });
+    items.push({
+      half: "R",
+      Z: pz + POST_W / 2 + 0.5,
+      node: (P) =>
+        A ? (
+          <AirVolBox key={`tb${j}`} P={P} A={A} X0={POST_X[0] - 20} X1={POST_X[1] + 20} Y0={BEAM_Y - 4} Y1={BEAM_Y + 34} Z0={pz - 16} Z1={pz + 16} mat={MAT_TIMBER} uid={`${uid}-tb${j}`} rim={0} />
+        ) : (
+          <Box key={`tb${j}`} P={P} X0={POST_X[0] - 20} X1={POST_X[1] + 20} Y0={BEAM_Y - 4} Y1={BEAM_Y + 34} Z0={pz - 16} Z1={pz + 16} ink={volTint(TIMBER, depthTint(pz, { far: 2000, min: 0.8 }))} uid={`${uid}-tb${j}`} />
+        ),
+    });
     POST_X.forEach((px, i) => {
       shadow("R", px, pz, 34, 20, `cspo${i}${j}`, 0.8);
-      items.push({ half: "R", Z: pz, node: (P) => <Box key={`po${i}${j}`} P={P} X0={px - POST_W / 2} X1={px + POST_W / 2} Y0={BEAM_Y} Y1={0} Z0={pz - POST_W / 2} Z1={pz + POST_W / 2} ink={volTint(TIMBER, depthTint(pz, { far: 2000, min: 0.8 }))} uid={`${uid}-po${i}${j}`} /> });
+      items.push({
+        half: "R",
+        Z: pz,
+        node: (P) =>
+          A ? (
+            <AirVolBox key={`po${i}${j}`} P={P} A={A} X0={px - POST_W / 2} X1={px + POST_W / 2} Y0={BEAM_Y} Y1={0} Z0={pz - POST_W / 2} Z1={pz + POST_W / 2} mat={MAT_TIMBER} uid={`${uid}-po${i}${j}`} />
+          ) : (
+            <Box key={`po${i}${j}`} P={P} X0={px - POST_W / 2} X1={px + POST_W / 2} Y0={BEAM_Y} Y1={0} Z0={pz - POST_W / 2} Z1={pz + POST_W / 2} ink={volTint(TIMBER, depthTint(pz, { far: 2000, min: 0.8 }))} uid={`${uid}-po${i}${j}`} />
+          ),
+      });
     });
   });
   // the kiln: a brick drum with a dome, its mouth glowing (cream), a little light on the floor before it
   shadow("R", KILN.X, KILN.Z, KILN.R * 1.1, KILN.R * 0.9, "csk", 0.8);
-  items.push({ half: "R", Z: KILN.Z, node: (P) => <Kiln key="kiln" P={P} f={f} uid={`${uid}-kiln`} /> });
+  items.push({ half: "R", Z: KILN.Z, node: (P) => (A ? <KilnAir key="kiln" P={P} A={A} f={f} uid={`${uid}-kiln`} /> : <Kiln key="kiln" P={P} f={f} uid={`${uid}-kiln`} />) });
   // the potters at the back (worked) and the two front seats (empty unless seated)
   const stationItems = (st: Station, key: string, worker: boolean, phase: number) => {
     const pl2 = stationPlace(st);
@@ -526,12 +778,22 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
       Z: st.Z,
       node: (P) => {
         const sc = P.r(st.Z);
-        const ink = warmInk(st.Z);
+        const ink = warmInkA(st.Z);
         return (
           <g key={key}>
-            <Stool at={P.p(pl2.stool, 0, st.Z + 4)} scale={sc} uid={`${uid}-${key}s`} ink={ink} />
-            <PotterWheel at={P.p(pl2.wheel, 0, st.Z - 4)} scale={P.r(st.Z - 4)} uid={`${uid}-${key}w`} ink={ink} turn={worker ? phase : 0.15} dir={pl2.dir} />
-            {worker ? <Slave pose={idle(POSES.potter(pl2.dir, phase), f, 13 + st.variant, 0.4)} at={P.p(pl2.feet, 0, st.Z)} scale={sc} uid={`${uid}-${key}p`} variant={st.variant} ink={ink} cloth={ink} shade={1} /> : null}
+            {A ? (
+              <>
+                <Folk.Stool at={P.p(pl2.stool, 0, st.Z + 4)} scale={sc} uid={`${uid}-${key}s`} fog={ffog(st.Z + 4, 0, 30)} unitPx={upx} />
+                <Folk.PotterWheel at={P.p(pl2.wheel, 0, st.Z - 4)} scale={P.r(st.Z - 4)} uid={`${uid}-${key}w`} turn={worker ? phase : 0.15} dir={pl2.dir} fog={ffog(st.Z - 4, 0, 40)} unitPx={upx} />
+                {worker ? <Folk.Slave pose={idle(POSES.potter(pl2.dir, phase), f, 13 + st.variant, 0.4)} at={P.p(pl2.feet, 0, st.Z)} scale={sc} uid={`${uid}-${key}p`} variant={st.variant} fog={ffog(st.Z)} unitPx={upx} /> : null}
+              </>
+            ) : (
+              <>
+                <Stool at={P.p(pl2.stool, 0, st.Z + 4)} scale={sc} uid={`${uid}-${key}s`} ink={ink} />
+                <PotterWheel at={P.p(pl2.wheel, 0, st.Z - 4)} scale={P.r(st.Z - 4)} uid={`${uid}-${key}w`} ink={ink} turn={worker ? phase : 0.15} dir={pl2.dir} />
+                {worker ? <Slave pose={idle(POSES.potter(pl2.dir, phase), f, 13 + st.variant, 0.4)} at={P.p(pl2.feet, 0, st.Z)} scale={sc} uid={`${uid}-${key}p`} variant={st.variant} ink={ink} cloth={ink} shade={1} /> : null}
+              </>
+            )}
           </g>
         );
       },
@@ -543,19 +805,87 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
   for (let b = 0; b < RACK.posts.length - 1; b++) {
     const za = RACK.posts[b];
     const zb = RACK.posts[b + 1];
-    items.push({ half: "R", Z: zb, node: (P) => <RackBay key={`rb${b}`} P={P} za={za} zb={zb} bay={b} stack={stack} uid={`${uid}-rb${b}`} /> });
+    items.push({ half: "R", Z: zb, node: (P) => <RackBay key={`rb${b}`} P={P} za={za} zb={zb} bay={b} stack={stack} uid={`${uid}-rb${b}`} A={A} /> });
   }
   RACK.posts.forEach((pz, i) => {
     shadow("R", (RACK.X0 + RACK.X1) / 2, pz, 30, 16, `csr${i}`, 0.7);
-    items.push({ half: "R", Z: pz - 8, node: (P) => <Box key={`rp${i}`} P={P} X0={RACK.X0} X1={RACK.X0 + 14} Y0={RACK.top} Y1={0} Z0={pz - 7} Z1={pz + 7} ink={volTint(TIMBER, depthTint(pz, { far: 2000, min: 0.8 }))} uid={`${uid}-rp${i}`} /> });
-    items.push({ half: "R", Z: pz - 8.5, node: (P) => <Box key={`rq${i}`} P={P} X0={RACK.X1 - 14} X1={RACK.X1} Y0={RACK.top} Y1={0} Z0={pz - 7} Z1={pz + 7} ink={volTint(TIMBER, depthTint(pz, { far: 2000, min: 0.8 }))} uid={`${uid}-rq${i}`} /> });
+    ([["rp", RACK.X0, RACK.X0 + 14, pz - 8], ["rq", RACK.X1 - 14, RACK.X1, pz - 8.5]] as const).forEach(([k, xa, xb, zz]) =>
+      items.push({
+        half: "R",
+        Z: zz,
+        node: (P) =>
+          A ? (
+            <AirVolBox key={`${k}${i}`} P={P} A={A} X0={xa} X1={xb} Y0={RACK.top} Y1={0} Z0={pz - 7} Z1={pz + 7} mat={MAT_TIMBER} uid={`${uid}-${k}${i}`} />
+          ) : (
+            <Box key={`${k}${i}`} P={P} X0={xa} X1={xb} Y0={RACK.top} Y1={0} Z0={pz - 7} Z1={pz + 7} ink={volTint(TIMBER, depthTint(pz, { far: 2000, min: 0.8 }))} uid={`${uid}-${k}${i}`} />
+          ),
+      }),
+    );
   });
   // the crate at the rack's front end, filling
   shadow("R", (CRATE.X0 + CRATE.X1) / 2, (CRATE.Z0 + CRATE.Z1) / 2, 60, 40, "csc", 0.8);
-  items.push({ half: "R", Z: CRATE.Z1, node: (P) => <Crate key="crate" P={P} stack={stack} uid={`${uid}-crate`} /> });
+  items.push({ half: "R", Z: CRATE.Z1, node: (P) => <Crate key="crate" P={P} stack={stack} uid={`${uid}-crate`} A={A} /> });
+
+  // V3, cut D: the continued floor in front of the stage, emerging out of the dense air, and its near foreground
+  const frontEl: React.ReactNode[] = [];
+  if (A && front > 0 && gap <= 0.5) {
+    const P0 = perspective(cam, DEPTH);
+    const ze = FRONT_EXT;
+    // the continued floor shows through a mask graded along its screen rows: each depth's opacity is its emergence
+    // (far first, then nearer), so it grows toward us out of the air over the slab's dissolving face (no band, no edge)
+    const NS = 24;
+    const rows = Array.from({ length: NS + 1 }, (_, i) => {
+      const Z = mix(0, ze, i / NS);
+      return { y: P0.p(0, 0, Z)[1], e: frontEmerge(front, Z) };
+    });
+    const y0 = rows[0].y;
+    const y1 = rows[NS].y;
+    frontEl.push(
+      <g key="ext">
+        <defs>
+          <linearGradient id={`${uid}-fxg`} gradientUnits="userSpaceOnUse" x1="0" y1={y0.toFixed(2)} x2="0" y2={y1.toFixed(2)}>
+            {rows.map((r, i) => (
+              <stop key={i} offset={((r.y - y0) / (y1 - y0)).toFixed(4)} stopColor="#fff" stopOpacity={r.e.toFixed(4)} />
+            ))}
+          </linearGradient>
+          <mask id={`${uid}-fxm`} maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
+            <rect x={-1e5} y={y0 - 2} width={2e5} height={y1 - y0 + 4} fill={`url(#${uid}-fxg)`} />
+          </mask>
+        </defs>
+        <g mask={`url(#${uid}-fxm)`}>
+          {(["L", "R"] as Half[]).map((h) => (
+            <AirFloorP key={h} P={P0} A={A} x0={h === "L" ? S.x0 : 0} x1={h === "L" ? 0 : S.x1} z0={ze} z1={0.5} mat={h === "L" ? MAT_FLOOR_L : MAT_FLOOR_R} course={130} uid={`${uid}-fx${h}`} jointAmt={h === "L" ? 0.75 : 1} meltFar={false} />
+          ))}
+        </g>
+      </g>,
+    );
+    // the near foreground: each piece emerges with the floor it stands on, soft (a little out of focus) and fogged
+    const fg = FOREGROUND;
+    const fgItem = (Z: number, node: (P: Persp, e: number) => React.ReactNode) => {
+      const e = frontEmerge(front, Z);
+      if (e <= 0.001) return;
+      items.push({
+        half: "R",
+        Z,
+        node: (P) => (
+          <g key={`fg${Z}`} opacity={Math.pow(e, 2.2)} style={{ filter: "blur(2.4px)" }}>
+            {node(P, e)}
+          </g>
+        ),
+      });
+    };
+    const fgAir = (e: number) => 0.26 + 0.6 * (1 - e);
+    shadows.push({ half: "R", Z: 1e6, node: (P) => <AirShadowP key="fgcs-c" P={P} A={A} X={(fg.crate.X0 + fg.crate.X1) / 2} Z={(fg.crate.Z0 + fg.crate.Z1) / 2} w={62} d={42} uid={`${uid}-fgcs-c`} amt={0.8 * frontEmerge(front, fg.crate.Z0)} /> });
+    shadows.push({ half: "R", Z: 1e6, node: (P) => <AirShadowP key="fgcs-s" P={P} A={A} X={fg.stool.X} Z={fg.stool.Z} w={40} d={22} uid={`${uid}-fgcs-s`} amt={0.8 * frontEmerge(front, fg.stool.Z)} /> });
+    shadows.push({ half: "R", Z: 1e6, node: (P) => <AirShadowP key="fgcs-w" P={P} A={A} X={fg.wheel.X} Z={fg.wheel.Z} w={66} d={32} uid={`${uid}-fgcs-w`} amt={0.8 * frontEmerge(front, fg.wheel.Z)} /> });
+    fgItem(fg.crate.Z1, (P, e) => <FrontCrate P={P} A={A} e={e} veil={fgAir(e)} uid={`${uid}-fgc`} />);
+    fgItem(fg.stool.Z, (P, e) => <Folk.Stool at={P.p(fg.stool.X, 0, fg.stool.Z)} scale={P.r(fg.stool.Z)} uid={`${uid}-fgs`} fog={ffog(fg.stool.Z, fgAir(e), 30)} unitPx={upx} />);
+    fgItem(fg.wheel.Z, (P, e) => <Folk.PotterWheel at={P.p(fg.wheel.X, 0, fg.wheel.Z)} scale={P.r(fg.wheel.Z)} uid={`${uid}-fgw`} fog={ffog(fg.wheel.Z, fgAir(e), 40)} unitPx={upx} turn={0.4 + f / 30} dir={1} />);
+  }
 
   // the caller's own items
-  for (const e of extra) items.push(e);
+  // (an extra at Z >= 1e6 is a contact shadow: it joins the shadow layer under everything, as C draws its own)
+  for (const e of extra) (e.Z >= 1e6 ? shadows : items).push(e);
 
   items.sort((a, b) => b.Z - a.Z);
   const draw = (it: Item, i: number) => (
@@ -565,10 +895,13 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
   );
   return (
     <g>
-      {under}
+      {A ? underAir : under}
       {floors}
+      {frontEl}
       {seamEl}
       {shadows.map(draw)}
+      {/* V3: each folk figure and prop carries its own gouache texture (it moves with the figure); a shared layer over
+          the world would anchor the grain to the layer's changing bounding box */}
       {items.map(draw)}
     </g>
   );
@@ -577,12 +910,12 @@ export const MarketWorkshopStage: React.FC<StageProps> = ({ cam, frame: f, split
 // ---------------------------------------------------------------------------
 // THE SALE SLAVE (with chalked feet and the titulus)
 // ---------------------------------------------------------------------------
-const SaleSlave: React.FC<{ P: Persp; f: number; uid: string }> = ({ P, f, uid }) => {
+const SaleSlave: React.FC<{ P: Persp; f: number; uid: string; ink?: Ink }> = ({ P, f, uid, ink: inkIn }) => {
   const s = MAIN_SLAVE;
   const at = P.p(s.X, s.Y, s.Z);
   const sc = P.r(s.Z);
   const pose = mainSlavePose(f);
-  const ink = coldInk(s.Z, 0.3);
+  const ink = inkIn ?? coldInk(s.Z, 0.3);
   const a = romeAnchors("slave", pose, at, sc, { variant: s.variant });
   // the titulus: a small blank board hung on a cord at his neck, resting on his chest
   const bc: P2 = [a.chest[0] + 4 * sc, a.chest[1] + 16 * sc];
@@ -666,16 +999,133 @@ const Kiln: React.FC<{ P: Persp; f: number; uid: string }> = ({ P, f, uid }) => 
   );
 };
 
+/** V3, cut D: the foreground crate of orange bowls (packed rim up), soft and fogged; `veil` = its extra fog */
+const FrontCrate: React.FC<{ P: Persp; A: WorldAir; e: number; veil: number; uid: string }> = ({ P, A, veil, uid }) => {
+  const c = FOREGROUND.crate;
+  const zm = (c.Z0 + c.Z1) / 2;
+  const air = A.airHex(zm, 60);
+  const v = (hex: string) => mixHex(A.tone(hex, zm, 30), air, veil);
+  const mat = { lit: v(MAT_TIMBER.lit), mid: v(MAT_TIMBER.mid), dark: v(MAT_TIMBER.dark) };
+  const open = poly([P.p(c.X0 + 5, -c.H, c.Z0 + 5), P.p(c.X1 - 5, -c.H, c.Z0 + 5), P.p(c.X1 - 5, -c.H, c.Z1 - 5), P.p(c.X0 + 5, -c.H, c.Z1 - 5)]);
+  const level = -c.H * 0.86;
+  const rims: React.ReactNode[] = [];
+  for (let i = 1; i >= 0; i--)
+    for (let j = 0; j < 2; j++) {
+      const X = c.X0 + 24 + j * 40;
+      const Z = c.Z0 + 20 + i * 34;
+      const ctr = P.p(X, level, Z);
+      const rx = BOWL.R * 1.1 * P.r(Z);
+      const ry = Math.max(0.8, (P.p(X, level, Z - BOWL.R)[1] - P.p(X, level, Z + BOWL.R)[1]) / 2);
+      const ot = veil * 0.7;
+      rims.push(
+        <g key={`${i}${j}`}>
+          <ellipse cx={ctr[0]} cy={ctr[1]} rx={rx} ry={ry} fill={mixHex(ACCENT, air, ot)} stroke={mixHex(ORANGE_LINE, air, ot)} strokeOpacity={0.85} strokeWidth={1.1 * P.r(Z)} />
+          <ellipse cx={ctr[0]} cy={ctr[1]} rx={rx * 0.8} ry={ry * 0.72} fill={mixHex(ACCENT_DEEP, air, ot)} />
+        </g>,
+      );
+    }
+  return (
+    <g>
+      <AirVolBox P={P} A={A} X0={c.X0} X1={c.X1} Y0={-c.H} Y1={0} Z0={c.Z0} Z1={c.Z1} mat={mat} uid={`${uid}-bx`} rim={1 - veil} />
+      <path d={open} fill={v(mixHex(PAL.shadow, MAT_TIMBER.dark, 0.4))} />
+      <clipPath id={`${uid}-in`}>
+        <path d={open} />
+      </clipPath>
+      <g clipPath={`url(#${uid}-in)`}>{rims}</g>
+    </g>
+  );
+};
+
+/** V3: the kiln in the medium: a brick drum and dome re-lit softly, its mouth glowing warm cream (the glow resists
+ *  the fog: it is a light), a warm pool on the floor before it and a faint halo in the air round the mouth */
+const KilnAir: React.FC<{ P: Persp; A: WorldAir; f: number; uid: string }> = ({ P, A, f, uid }) => {
+  const k = KILN;
+  const m = MAT_BRICK;
+  const zf = k.Z - k.R;
+  const top = P.p(k.X, -k.H, k.Z);
+  const rx = k.R * P.r(k.Z);
+  const ry = Math.abs((P.p(k.X, -k.H, k.Z - k.R)[1] - P.p(k.X, -k.H, k.Z + k.R)[1]) / 2);
+  const apex = P.p(k.X, -k.H - k.dome, k.Z);
+  const dome = `M${Pt([top[0] - rx, top[1]])}C${Pt([top[0] - rx, apex[1] + (top[1] - apex[1]) * 0.25])} ${Pt([top[0] - rx * 0.55, apex[1]])} ${Pt(apex)}C${Pt([top[0] + rx * 0.55, apex[1]])} ${Pt([top[0] + rx, apex[1] + (top[1] - apex[1]) * 0.25])} ${Pt([top[0] + rx, top[1]])}A${rx.toFixed(2)},${ry.toFixed(2)} 0 0 1 ${Pt([top[0] - rx, top[1]])}Z`;
+  const hD = k.H + k.dome * 0.5;
+  const t = (hex: string, h = hD) => A.tone(hex, k.Z, h);
+  const ln = t(lineOf(m));
+  const sw = 1.25 * P.r(k.Z);
+  const fl = 0.85 + 0.15 * (random(`kiln-${Math.floor(f / 2)}`) - 0.5) + 0.06 * Math.sin(f / 5);
+  const m0 = P.p(k.X - k.mouthW / 2, 0, zf);
+  const m1 = P.p(k.X + k.mouthW / 2, 0, zf);
+  const mt = P.p(k.X, -k.mouthH, zf);
+  const ms = P.p(k.X - k.mouthW / 2, -k.mouthH * 0.62, zf);
+  const mouth = `M${Pt(m0)}L${Pt(ms)}Q${Pt([ms[0], mt[1]])} ${Pt(mt)}Q${Pt([m1[0], mt[1]])} ${Pt([m1[0], ms[1]])}L${Pt(m1)}Z`;
+  const glowFog = 0.3 * A.fog(zf);
+  const glowHot = mixHex(mixHex("#F0C98E", "#FFF0CF", fl), A.airHex(zf, 60), glowFog);
+  const glowEdge = mixHex("#D99A5A", A.airHex(zf, 60), glowFog);
+  const mc: P2 = [(m0[0] + m1[0]) / 2, (m0[1] + mt[1]) / 2];
+  const poolC = P.p(k.X, 0, zf - 240);
+  const poolRx = k.mouthW * 2.6 * P.r(zf - 240);
+  const poolRy = Math.max(2, (P.p(k.X, 0, zf - 520)[1] - P.p(k.X, 0, zf + 40)[1]) / 2);
+  let courses = "";
+  for (let y = -30; y > -k.H; y -= 30) {
+    const c = P.p(k.X, y, k.Z);
+    const ryy = Math.abs((P.p(k.X, y, k.Z - k.R)[1] - P.p(k.X, y, k.Z + k.R)[1]) / 2);
+    courses += `M${Pt([c[0] - rx, c[1]])}A${rx.toFixed(2)},${ryy.toFixed(2)} 0 0 0 ${Pt([c[0] + rx, c[1]])}`;
+  }
+  return (
+    <g>
+      <defs>
+        <radialGradient id={`${uid}-pool`}>
+          <stop offset="0" stopColor="#F6DEAE" stopOpacity={0.3 * fl} />
+          <stop offset="0.5" stopColor="#F6DEAE" stopOpacity={0.12 * fl} />
+          <stop offset="1" stopColor="#F6DEAE" stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id={`${uid}-halo`}>
+          <stop offset="0" stopColor="#FBE4B6" stopOpacity={0.32 * fl} />
+          <stop offset="0.45" stopColor="#FBE4B6" stopOpacity={0.1 * fl} />
+          <stop offset="1" stopColor="#FBE4B6" stopOpacity={0} />
+        </radialGradient>
+        <linearGradient id={`${uid}-dm`} gradientUnits="userSpaceOnUse" x1={(top[0] - rx).toFixed(2)} y1="0" x2={(top[0] + rx).toFixed(2)} y2="0">
+          <stop offset="0" stopColor={t(m.mid)} />
+          <stop offset="0.25" stopColor={t(m.lit)} />
+          <stop offset="0.55" stopColor={t(m.mid)} />
+          <stop offset="0.88" stopColor={t(mixHex(m.dark, PAL.shadow, 0.2))} />
+          <stop offset="1" stopColor={t(mixHex(m.dark, A.airHex(k.Z, hD), 0.45))} />
+        </linearGradient>
+        <radialGradient id={`${uid}-mo`} cx="50%" cy="85%" r="75%">
+          <stop offset="0" stopColor={glowHot} />
+          <stop offset="0.7" stopColor={mixHex(glowHot, glowEdge, 0.5)} />
+          <stop offset="1" stopColor={glowEdge} />
+        </radialGradient>
+      </defs>
+      <ellipse cx={poolC[0]} cy={poolC[1]} rx={poolRx} ry={poolRy} fill={`url(#${uid}-pool)`} />
+      <AirVolCyl P={P} A={A} X={k.X} Z={k.Z} R={k.R} Y0={-k.H} Y1={0} mat={m} uid={`${uid}-cy`} />
+      <path d={dome} fill={`url(#${uid}-dm)`} stroke={ln} strokeWidth={sw} strokeLinejoin="round" />
+      <path d={courses} fill="none" stroke={ln} strokeWidth={sw * 0.6} strokeOpacity={0.35} />
+      {/* the dome's lit crown: a cream rim on its upper left */}
+      <path d={`M${Pt([top[0] - rx * 0.96, top[1] - (top[1] - apex[1]) * 0.35])}Q${Pt([top[0] - rx * 0.8, apex[1]])} ${Pt([apex[0] - rx * 0.1, apex[1] + 1])}`} fill="none" stroke={PAL.cream} strokeWidth={1.6 * P.r(k.Z)} strokeOpacity={0.45 * (1 - A.fog(k.Z))} strokeLinecap="round" />
+      <path d={poly([P.p(k.X - 22, -k.H - k.dome + 8, k.Z), P.p(k.X + 22, -k.H - k.dome + 8, k.Z), P.p(k.X + 18, -k.H - k.dome - 30, k.Z), P.p(k.X - 18, -k.H - k.dome - 30, k.Z)])} fill={t(m.mid, k.H + k.dome)} stroke={ln} strokeWidth={sw} />
+      <path d={mouth} fill={t(mixHex(m.dark, PAL.shadow, 0.5), 50)} stroke={ln} strokeWidth={sw * 1.2} strokeLinejoin="round" />
+      <path d={mouth} fill={`url(#${uid}-mo)`} transform={`translate(${((m0[0] + m1[0]) / 2).toFixed(2)} ${m0[1].toFixed(2)}) scale(0.84) translate(${(-(m0[0] + m1[0]) / 2).toFixed(2)} ${(-m0[1]).toFixed(2)})`} />
+      <ellipse cx={mc[0]} cy={mc[1]} rx={k.mouthW * 1.5 * P.r(zf)} ry={k.mouthH * 1.2 * P.r(zf)} fill={`url(#${uid}-halo)`} />
+    </g>
+  );
+};
+
 // ---------------------------------------------------------------------------
 // THE RACK (one bay: the boards between two posts and the stacks on them)
 // ---------------------------------------------------------------------------
-const RackBay: React.FC<{ P: Persp; za: number; zb: number; bay: number; stack: number; uid: string }> = ({ P, za, zb, bay, stack, uid }) => {
+const RackBay: React.FC<{ P: Persp; za: number; zb: number; bay: number; stack: number; uid: string; A?: WorldAir }> = ({ P, za, zb, bay, stack, uid, A }) => {
   const els: React.ReactNode[] = [];
   const t = depthTint((za + zb) / 2, { far: 2000, min: 0.85 });
   const ink = volTint(TIMBER, t);
   const perBay = NSTACK / (RACK.posts.length - 1);
   RACK.tiers.forEach((ty, ti) => {
-    els.push(<Box key={`b${ti}`} P={P} X0={RACK.X0} X1={RACK.X1} Y0={ty} Y1={ty + RACK.board} Z0={za} Z1={zb} ink={ink} uid={`${uid}-b${ti}`} hatch={false} />);
+    els.push(
+      A ? (
+        <AirVolBox key={`b${ti}`} P={P} A={A} X0={RACK.X0} X1={RACK.X1} Y0={ty} Y1={ty + RACK.board} Z0={za} Z1={zb} mat={MAT_TIMBER} uid={`${uid}-b${ti}`} />
+      ) : (
+        <Box key={`b${ti}`} P={P} X0={RACK.X0} X1={RACK.X1} Y0={ty} Y1={ty + RACK.board} Z0={za} Z1={zb} ink={ink} uid={`${uid}-b${ti}`} hatch={false} />
+      ),
+    );
   });
   // stacks, far to near within the bay, each tier bottom to top
   const st: React.ReactNode[] = [];
@@ -689,7 +1139,7 @@ const RackBay: React.FC<{ P: Persp; za: number; zb: number; bay: number; stack: 
       // the next bowl comes down in the first 40% of its interval
       const fall = n < BOWL.maxPer && fr > 0 && fr < 0.4 ? fr / 0.4 : 0;
       const nn = fr >= 0.4 ? n + 1 : n;
-      st.push(<BowlStack key={`s${j}`} P={P} X={(RACK.X0 + RACK.X1) / 2} Y={RACK.tiers[ti]} Z={Z} n={nn} fall={fall} uid={`${uid}-s${j}`} />);
+      st.push(<BowlStack key={`s${j}`} P={P} X={(RACK.X0 + RACK.X1) / 2} Y={RACK.tiers[ti]} Z={Z} n={nn} fall={fall} uid={`${uid}-s${j}`} A={A} />);
     }
   }
   return (
@@ -703,8 +1153,9 @@ const RackBay: React.FC<{ P: Persp; za: number; zb: number; bay: number; stack: 
 // ---------------------------------------------------------------------------
 // THE CRATE (filling with bowls packed rim up)
 // ---------------------------------------------------------------------------
-const Crate: React.FC<{ P: Persp; stack: number; uid: string }> = ({ P, stack, uid }) => {
+const Crate: React.FC<{ P: Persp; stack: number; uid: string; A?: WorldAir }> = ({ P, stack, uid, A }) => {
   const c = CRATE;
+  const bp = bowlPaint(A, (c.Z0 + c.Z1) / 2, c.H);
   const fill = c01((stack - 0.1) / 0.9);
   const level = -c.H * (0.15 + 0.7 * fill);
   const rims: React.ReactNode[] = [];
@@ -718,14 +1169,29 @@ const Crate: React.FC<{ P: Persp; stack: number; uid: string }> = ({ P, stack, u
       const ry = Math.max(0.8, (P.p(X, level, Z - BOWL.R)[1] - P.p(X, level, Z + BOWL.R)[1]) / 2);
       rims.push(
         <g key={`${i}${j}`}>
-          <ellipse cx={ctr[0]} cy={ctr[1]} rx={rx} ry={ry} fill={ACCENT} stroke={DARK} strokeWidth={1.6 * P.r(Z)} />
-          <ellipse cx={ctr[0]} cy={ctr[1]} rx={rx * 0.8} ry={ry * 0.72} fill={ACCENT_DEEP} stroke={DARK} strokeWidth={1.1 * P.r(Z)} />
+          <ellipse cx={ctr[0]} cy={ctr[1]} rx={rx} ry={ry} fill={bp.body} stroke={bp.line} strokeOpacity={bp.lineOp} strokeWidth={1.6 * P.r(Z) * bp.sw} />
+          <ellipse cx={ctr[0]} cy={ctr[1]} rx={rx * 0.8} ry={ry * 0.72} fill={bp.deep} stroke={bp.line} strokeOpacity={bp.lineOp} strokeWidth={1.1 * P.r(Z) * bp.sw} />
         </g>,
       );
     }
   const sw = 2 * P.r(c.Z0);
   // the box drawn as its back / inner faces, the contents, then its front / near faces
   const inner = poly([P.p(c.X0, -c.H, c.Z1), P.p(c.X1, -c.H, c.Z1), P.p(c.X1, 0, c.Z1), P.p(c.X0, 0, c.Z1)]);
+  if (A) {
+    const open = poly([P.p(c.X0 + 5, -c.H, c.Z0 + 5), P.p(c.X1 - 5, -c.H, c.Z0 + 5), P.p(c.X1 - 5, -c.H, c.Z1 - 5), P.p(c.X0 + 5, -c.H, c.Z1 - 5)]);
+    const zm = (c.Z0 + c.Z1) / 2;
+    return (
+      <g>
+        <AirVolBox P={P} A={A} X0={c.X0} X1={c.X1} Y0={-c.H} Y1={0} Z0={c.Z0} Z1={c.Z1} mat={MAT_TIMBER} uid={`${uid}-bx`} />
+        <path d={open} fill={A.tone(mixHex(PAL.shadow, MAT_TIMBER.dark, 0.4), zm, c.H)} stroke={A.tone(lineOf(MAT_TIMBER), zm)} strokeWidth={sw * 0.6} />
+        <clipPath id={`${uid}-in`}>
+          <path d={open} />
+        </clipPath>
+        <g clipPath={`url(#${uid}-in)`}>{rims}</g>
+        <path d={`M${Pt(P.p(c.X0, -c.H * 0.5, c.Z0))}L${Pt(P.p(c.X1, -c.H * 0.5, c.Z0))}`} stroke={A.tone(lineOf(MAT_TIMBER), c.Z0)} strokeWidth={sw * 0.6} strokeOpacity={0.5} />
+      </g>
+    );
+  }
   return (
     <g>
       <Box P={P} X0={c.X0} X1={c.X1} Y0={-c.H} Y1={0} Z0={c.Z0} Z1={c.Z1} ink={TIMBER} uid={`${uid}-bx`} hatch />
@@ -801,3 +1267,10 @@ export const C_END = {
     potterPhases: BACK_STATIONS.map((_, i) => potterPhase(i, C_LAST)),
   },
 };
+
+/** V3: the medium for a frame of this world (cut C's camera at f0 is the rest for the motes and shafts in both cuts,
+ *  so cut D, rendered with frame = C_END.frame + f, opens on C's last frame exactly) */
+export const C_REST: Cam = cutCCamAt(0);
+export const worldAirAt = (cam: Cam, frame: number) => worldAirOf(cam, frame, C_REST, DEPTH);
+/** V3 AirStage strengths shared by both cuts */
+export const AIR_BLOOM = 0.22;

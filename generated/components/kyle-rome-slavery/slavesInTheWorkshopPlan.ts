@@ -35,6 +35,10 @@ export const CLOSE: readonly [number, number] = [0, 30];
 export const splitAt = (f: number) => (f <= CLOSE[0] ? 1 : 1 - smoother((f - CLOSE[0]) / (CLOSE[1] - CLOSE[0])));
 export const HEAL: readonly [number, number] = [30, 46];
 export const seamAt = (f: number) => (f <= HEAL[0] ? 1 : 1 - ease((f - HEAL[0]) / (HEAL[1] - HEAL[0])));
+/** V3 (the air): the floor continues toward the camera out of the dense air once the slabs touch (f26 -> f92, under
+ *  the push-in), so the landing is floor to the bottom edge with a little soft near foreground */
+export const FRONT: readonly [number, number] = [26, 92];
+export const frontAt = (f: number) => smoother((f - FRONT[0]) / (FRONT[1] - FRONT[0]));
 /** the rack's last bowls come down while they walk in */
 export const stackAt = (f: number) => (f <= 20 ? C_END.stack : mix(C_END.stack, 1, ease((f - 20) / 100)));
 

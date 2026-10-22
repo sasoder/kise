@@ -40,8 +40,11 @@ import { z } from "zod";
 import { TexcocoPage, WorldSvg } from "../kits/maps/texcocoShared";
 import { swayCam, type Cam, type P2 } from "../kits/maps/incaShared";
 import { ContactShadow, depthTint, tintInk, type Persp } from "../kyle-london/londonDepth";
-import { ACCENT, ACCENT_DEEP, C_END, DEAD, MAIN_SLAVE, MarketWorkshopStage, WAITING, halfPersp, mainSlavePose, waitingPose, type StageExtra } from "./marketWorkshopWorld";
-import { CREAM, DARK, POSES, PotterWheel, Slave, Stool, idle, lerpFig, mixInk, poseTrack, romeAnchors, shadeInk, walkPose, type FigPose, type Ink } from "./romeCast";
+import { ACCENT, ACCENT_DEEP, AIR_BLOOM, C_END, DEAD, DRAIN, SALE_FOG, MAIN_SLAVE, MarketWorkshopStage, ORANGE_LINE, WAITING, halfPersp, mainSlavePose, waitingPose, worldAirAt, type StageExtra } from "./marketWorkshopWorld";
+import { AirShadowP, type WorldAir } from "./marketWorkshopAir";
+import * as Folk from "./romeFolk";
+import { AirStage } from "../kyle-pandemics/pandemicAir";
+import { CREAM, DARK, DARK as DARK0, POSES, PotterWheel, Slave, Stool, idle, lerpFig, mixInk, poseTrack, romeAnchors, shadeInk, walkPose, type FigPose, type Ink } from "./romeCast";
 import {
   C_HAS_D_STATIONS,
   DURATION as PLAN_DURATION,
@@ -53,6 +56,7 @@ import {
   bowlForm,
   camBase,
   ease,
+  frontAt,
   handRise,
   seamAt,
   seatPlace,
@@ -67,7 +71,8 @@ import {
 
 export const FPS = 30000 / 1001;
 export const DURATION = 143;
-export const schema = z.object({});
+/** V3: "A" = the world inside the pandemics clip's medium (as cut C's look "A"); "old" = the delivered V2 picture */
+export const schema = z.object({ look: z.enum(["old", "A"]).default("A") });
 export const defaultProps = schema.parse({});
 
 /** cut C's camera continued, the house hand on it */
@@ -76,7 +81,7 @@ export const camAt = (f: number): Cam => swayCam(camBase(f), G(f));
 // ----- the join with cut C (asserted at load) -----
 if (PLAN_DURATION !== DURATION) throw new Error("plan and cut disagree on DURATION");
 if (C_END.frame !== 210 || C_END.split !== 1 || C_END.seam !== 1) throw new Error("cut C's end state changed: re-check the join");
-if (splitAt(0) !== C_END.split || seamAt(0) !== C_END.seam || stackAt(0) !== C_END.stack) throw new Error("f0 must be cut C's last frame");
+if (frontAt(0) !== 0 || splitAt(0) !== C_END.split || seamAt(0) !== C_END.seam || stackAt(0) !== C_END.stack) throw new Error("f0 must be cut C's last frame");
 {
   const c = camAt(0);
   if (c.k !== C_END.cam.k || c.cx !== C_END.cam.cx || c.cy !== C_END.cam.cy) throw new Error("f0's camera must be C_END.cam");
@@ -102,10 +107,13 @@ const coldInk = (Z: number, dead = 0.62) => tintInk(mixInk(CREAM, DEAD_INK, dead
 const warmInk = (Z: number) => tintInk(shadeInk(1), depthTint(Z, { far: 1800, min: 0.74 }));
 /** crossing the seam he comes into the workshop's light (X -30 -> 90) */
 const lightAt = (X: number) => ease((X + 30) / 120);
-const walkerInk = (who: Who, X: number, Z: number) => {
-  const cold = coldInk(Z, who === "main" ? 0.3 : 0.62);
+/** V3 (the air): cut C's own air inks (marketWorkshopWorld coldInkA / warmInkA) */
+const coldInkAir = (A: WorldAir, Z: number, dead = 0.62) => A.ink(mixInk(CREAM, DEAD_INK, dead), Z, 0.05);
+const warmInkAir = (A: WorldAir, Z: number) => A.ink(shadeInk(1), Z);
+const walkerInk = (who: Who, X: number, Z: number, A?: WorldAir) => {
+  const cold = A ? coldInkAir(A, Z, who === "main" ? 0.3 : 0.62) : coldInk(Z, who === "main" ? 0.3 : 0.62);
   const t = lightAt(X);
-  return t <= 0 ? cold : mixInk(cold, warmInk(Z), t);
+  return t <= 0 ? cold : mixInk(cold, A ? warmInkAir(A, Z) : warmInk(Z), t);
 };
 
 // ---------------------------------------------------------------------------
@@ -290,10 +298,14 @@ const ChalkSlave: React.FC<{ pose: FigPose; at: P2; sc: number; ink: Ink; uid: s
 
 /** the bowl being thrown on his wheel: the clay lump (m 0) drawn up into an open, flaring red-gloss bowl (m 1); it
  *  turns orange as it becomes the product. Wheel-local units (the wheel head's centre), not mirrored. */
-const ThrownBowl: React.FC<{ at: P2; sc: number; m: number; turn: number; clay: string }> = ({ at, sc, m, turn, clay }) => {
+const ThrownBowl: React.FC<{ at: P2; sc: number; m: number; turn: number; clay: string; A?: WorldAir; Z?: number }> = ({ at, sc, m, turn, clay, A, Z = 0 }) => {
   const v = vessel(m);
-  const col = mixHex(clay, ACCENT, ease(m / 0.28));
-  const deep = mixHex(clay, ACCENT_DEEP, ease(m / 0.28));
+  // V3: orange takes only part of the fog (the one glowing material); its outline a darker orange, not the casing
+  const ft = A ? 0.45 * A.fog(Z) : 0;
+  const airC = A ? A.airHex(Z, 80) : clay;
+  const DARK = A ? mixHex(ORANGE_LINE, airC, ft) : DARK0;
+  const col = mixHex(mixHex(clay, ACCENT, ease(m / 0.28)), airC, ft);
+  const deep = mixHex(mixHex(clay, ACCENT_DEEP, ease(m / 0.28)), airC, ft);
   const ryOf = (r: number) => r * 0.3;
   const wall = `M${-v.rw},${v.ry}Q${-v.cx},${v.cy} ${-v.bw},${v.by}A${v.bw},${ryOf(v.bw)} 0 0 0 ${v.bw},${v.by}Q${v.cx},${v.cy} ${v.rw},${v.ry}`;
   const body = `${wall}A${v.rw},${ryOf(v.rw)} 0 0 1 ${-v.rw},${v.ry}Z`;
@@ -311,17 +323,17 @@ const ThrownBowl: React.FC<{ at: P2; sc: number; m: number; turn: number; clay: 
       <path d={`M${(v.rw * 0.35).toFixed(2)},${(v.ry + ryOf(v.rw)).toFixed(2)}L${(v.rw * 0.97).toFixed(2)},${(v.ry + 1).toFixed(2)}Q${v.cx},${v.cy} ${v.bw},${v.by}L${(v.bw * 0.2).toFixed(2)},${(v.by + ryOf(v.bw) * 0.9).toFixed(2)}Q${(sh[0] * 0.35).toFixed(2)},${sh[1].toFixed(2)} ${(v.rw * 0.35).toFixed(2)},${(v.ry + ryOf(v.rw)).toFixed(2)}Z`} fill={deep} opacity={0.85} />
       <path d={rings} fill="none" stroke={DARK} strokeWidth={0.9} strokeOpacity={mix(0.45, 0.22, m)} />
       {/* the open mouth: the inside seen from above, darker */}
-      <ellipse cx={0} cy={v.ry} rx={v.rw} ry={ryOf(v.rw)} fill={mixHex(clay, ACCENT, ease(m / 0.28))} stroke={DARK} strokeWidth={2.2} />
+      <ellipse cx={0} cy={v.ry} rx={v.rw} ry={ryOf(v.rw)} fill={col} stroke={DARK} strokeWidth={2.2} />
       <ellipse cx={0} cy={v.ry + ryOf(v.rw) * 0.12} rx={v.rw * 0.84} ry={ryOf(v.rw) * 0.72} fill={deep} stroke={DARK} strokeWidth={1.2} strokeOpacity={0.7} />
     </g>
   );
 };
 
 /** his wheel: C's own (still) wheel until it moves (so f0 is exact), then turning with the bowl on it */
-const WorkedWheel: React.FC<{ P: Persp; who: Who; f: number; uid: string }> = ({ P, who, f, uid }) => {
+const WorkedWheel: React.FC<{ P: Persp; who: Who; f: number; uid: string; A?: WorldAir }> = ({ P, who, f, uid, A }) => {
   const turn = wheelTurn(who, f);
   const st = SEATS[who];
-  const ink = warmInk(st.Z);
+  const ink = A ? warmInkAir(A, st.Z) : warmInk(st.Z);
   if (turn === 0.15 && C_HAS_D_STATIONS) return null;
   const wh = wheelAt(P, who);
   const m = bowlForm(who, f);
@@ -330,22 +342,42 @@ const WorkedWheel: React.FC<{ P: Persp; who: Who; f: number; uid: string }> = ({
     <g>
       {/* preview only, until C carries the stations: the empty stool C will draw */}
       {C_HAS_D_STATIONS ? null : <Stool at={P.p(seatPlace(st).stool, 0, st.Z + 4)} scale={P.r(st.Z)} uid={`${uid}-tmps`} ink={ink} />}
-      <PotterWheel at={wh.at} scale={wh.sc} uid={`${uid}-w`} ink={ink} turn={turn} dir={st.dir} clay={m <= 0} />
-      {m > 0 ? <ThrownBowl at={wh.at} sc={wh.sc} m={m} turn={turn} clay={clay} /> : null}
+      {A ? (
+        <Folk.PotterWheel at={wh.at} scale={wh.sc} uid={`${uid}-w`} turn={turn} dir={st.dir} clay={m <= 0} fog={{ rgb: A.airHex(st.Z - 4, 40), amount: A.figFog(st.Z - 4) }} unitPx={A.cam.k} />
+      ) : (
+        <PotterWheel at={wh.at} scale={wh.sc} uid={`${uid}-w`} ink={ink} turn={turn} dir={st.dir} clay={m <= 0} />
+      )}
+      {m > 0 ? <ThrownBowl at={wh.at} sc={wh.sc} m={m} turn={turn} clay={clay} A={A} Z={st.Z - 4} /> : null}
     </g>
   );
 };
 
-const Walker: React.FC<{ P: Persp; who: Who; f: number; uid: string }> = ({ P, who, f, uid }) => {
+const Walker: React.FC<{ P: Persp; who: Who; f: number; uid: string; A?: WorldAir }> = ({ P, who, f, uid, A }) => {
   const s = walkerState(who, f, P);
   const at = P.p(s.hip[0], s.hip[1], s.hip[2]);
   const sc = P.r(s.hip[2]);
-  const ink = walkerInk(who, s.hip[0], s.hip[2]);
+  const ink = walkerInk(who, s.hip[0], s.hip[2], A);
   // on the treads his own shadow (C's figures' shadows lie under everything, so the steps would hide it there)
   const onTread = Math.sin(Math.PI * c01(-s.hip[1] / 100));
-  const shadow = onTread > 0.01 ? <ContactShadow P={P} X={s.hip[0]} Z={s.hip[2]} w={52} d={26} Y={s.hip[1]} uid={`${uid}-cs`} amt={onTread} /> : null;
-  const fig =
+  const shadow =
+    onTread > 0.01 ? (
+      A ? (
+        <AirShadowP P={P} A={A} X={s.hip[0]} Z={s.hip[2]} w={52} d={26} Y={s.hip[1]} uid={`${uid}-cs`} amt={onTread} />
+      ) : (
+        <ContactShadow P={P} X={s.hip[0]} Z={s.hip[2]} w={52} d={26} Y={s.hip[1]} uid={`${uid}-cs`} amt={onTread} />
+      )
+    ) : null;
+  // V3 (romeFolk): out of the sale's drained, sunk look into the workshop's own colours as he crosses the seam
+  const lt = lightAt(s.hip[0]);
+  const fogA = A ? { rgb: A.airHex(s.hip[2], 150), amount: c01(A.figFog(s.hip[2]) + SALE_FOG * (1 - lt)) } : undefined;
+  const drain = mix(who === "main" ? DRAIN.main : DRAIN.waiting, 0, lt);
+  const fig = A ? (
     who === "main" ? (
+      <Folk.Slave pose={s.pose} at={at} scale={sc} uid={uid} variant={MAIN_SLAVE.variant} chalk titulus grip={s.grip} fog={fogA} drain={drain} unitPx={A.cam.k} />
+    ) : (
+      <Folk.Slave pose={s.pose} at={at} scale={sc} uid={uid} variant={WAITING[0].variant} fetters grip={s.grip} fog={fogA} drain={drain} unitPx={A.cam.k} />
+    )
+  ) : who === "main" ? (
       <ChalkSlave pose={s.pose} at={at} sc={sc} ink={ink} uid={uid} grip={s.grip} />
     ) : (
       <Slave pose={s.pose} at={at} scale={sc} uid={uid} variant={WAITING[0].variant} ink={ink} cloth={ink} shade={1} fetters grip={s.grip} />
@@ -380,21 +412,23 @@ export const auditWalker = (who: Who, f: number) => {
   return { cam, dx, P, at: [at[0] + dx, at[1]] as P2, sc: P.r(s.hip[2]), pose: s.pose, grip: s.grip ? { L: s.grip.L ? ([s.grip.L[0] + dx, s.grip.L[1]] as P2) : undefined, R: s.grip.R ? ([s.grip.R[0] + dx, s.grip.R[1]] as P2) : undefined } : undefined, hip: s.hip, variant: variantOf(who), depth: depthOf(who, f) };
 };
 
-const SlavesInTheWorkshop: React.FC<z.infer<typeof schema>> = () => {
+const SlavesInTheWorkshop: React.FC<z.infer<typeof schema>> = ({ look }) => {
   const f = useCurrentFrame();
   const cam = camAt(f);
   const split = splitAt(f);
+  // V3: the medium on cut C's clock (frame G(f), C's rest), so f0 is C's f210 exactly
+  const A = look === "A" ? worldAirAt(cam, G(f)) : undefined;
   const extra: StageExtra[] = [];
   (["wait", "main"] as Who[]).forEach((who) => {
     // the worked wheel at the station's depth (after C's station item, before the potter)
-    extra.push({ half: "R", Z: SEATS[who].Z, node: (P) => <WorkedWheel key={`ww-${who}`} P={P} who={who} f={f} uid={`d-${who}`} /> });
+    extra.push({ half: "R", Z: SEATS[who].Z, node: (P) => <WorkedWheel key={`ww-${who}`} P={P} who={who} f={f} uid={`d-${who}`} A={A} /> });
   });
   (["wait", "main"] as Who[]).forEach((who) => {
     const Z = depthOf(who, f);
     const X = f < sitStart(who) ? WALKS[who].hip(f)[0] : SEATS[who].X;
     // on the left half until he crosses the seam (both halves share one perspective once split is 0)
     const half = split > 0 || X < 0 ? "L" : "R";
-    extra.push({ half, Z, node: (P) => <Walker key={`wk-${who}`} P={P} who={who} f={f} uid={`d-${who}-fig`} /> });
+    extra.push({ half, Z, node: (P) => <Walker key={`wk-${who}`} P={P} who={who} f={f} uid={`d-${who}-fig`} A={A} /> });
     // his contact shadow in C's own layer (under every item), as C draws it for him on its last frame, then following
     // his hip (and out under the stool as he sits)
     extra.push({
@@ -405,17 +439,27 @@ const SlavesInTheWorkshop: React.FC<z.infer<typeof schema>> = () => {
         const u = f < s0 ? 0 : smoother(c01((f - s0) / SIT_LEN));
         const h = f < s0 ? WALKS[who].hip(f) : ([mix(WALKS[who].hip(s0)[0], SEATS[who].X, u), 0, Z] as V3);
         const w = who === "main" ? 52 : 50;
-        return <ContactShadow key={`cs-${who}`} P={P} X={h[0] + 20 * u} Z={h[2]} w={mix(w, 64, u)} d={26} Y={h[1]} uid={`wk-${who === "main" ? "csm" : "csw0"}`} amt={1} />;
+        const cid = `wk-${who === "main" ? "csm" : "csw0"}`;
+        return A ? (
+          <AirShadowP key={`cs-${who}`} P={P} A={A} X={h[0] + 20 * u} Z={h[2]} w={mix(w, 64, u)} d={26} Y={h[1]} uid={cid} amt={1} />
+        ) : (
+          <ContactShadow key={`cs-${who}`} P={P} X={h[0] + 20 * u} Z={h[2]} w={mix(w, 64, u)} d={26} Y={h[1]} uid={cid} amt={1} />
+        );
       },
     });
   });
-  return (
-    <TexcocoPage cam={cam}>
-      <WorldSvg cam={cam}>
-        <MarketWorkshopStage cam={cam} frame={G(f)} split={split} seam={seamAt(f)} stack={stackAt(f)} hide={{ main: true, waiting: [true] }} extra={extra} uid="wk" />
-      </WorldSvg>
-    </TexcocoPage>
+  const world = (
+    <WorldSvg cam={cam}>
+      <MarketWorkshopStage cam={cam} frame={G(f)} split={split} seam={seamAt(f)} stack={stackAt(f)} hide={{ main: true, waiting: [true] }} extra={extra} uid="wk" air={A} front={A ? frontAt(f) : 0} />
+    </WorldSvg>
   );
+  if (A)
+    return (
+      <AirStage v={A.v} bloom={AIR_BLOOM}>
+        {world}
+      </AirStage>
+    );
+  return <TexcocoPage cam={cam}>{world}</TexcocoPage>;
 };
 
 export default SlavesInTheWorkshop;

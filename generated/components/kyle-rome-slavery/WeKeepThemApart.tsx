@@ -34,17 +34,30 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { TexcocoPage, WorldSvg } from "../kits/maps/texcocoShared";
-import { MarketWorkshopStage, C_END, cutCCamAt, cutCSeam, cutCSplit, cutCStack } from "./marketWorkshopWorld";
+import { AirStage } from "../kyle-pandemics/pandemicAir";
+import { AIR_BLOOM, MarketWorkshopStage, C_END, cutCCamAt, cutCSeam, cutCSplit, cutCStack, worldAirAt } from "./marketWorkshopWorld";
 
 export const FPS = 30000 / 1001;
 export const DURATION = 211;
 if (C_END.frame !== DURATION - 1) throw new Error("C_END must be this cut's last frame");
-export const schema = z.object({});
+/** V3: "A" = the world inside the pandemics clip's medium (pandemicAir palette A, mood day; ./marketWorkshopAir);
+ *  "old" = the delivered V2 picture on the paper page */
+export const schema = z.object({ look: z.enum(["old", "A"]).default("A") });
 export const defaultProps = schema.parse({});
 
-const WeKeepThemApart: React.FC<z.infer<typeof schema>> = () => {
+const WeKeepThemApart: React.FC<z.infer<typeof schema>> = ({ look }) => {
   const f = useCurrentFrame();
   const cam = cutCCamAt(f);
+  if (look === "A") {
+    const air = worldAirAt(cam, f);
+    return (
+      <AirStage v={air.v} bloom={AIR_BLOOM}>
+        <WorldSvg cam={cam}>
+          <MarketWorkshopStage cam={cam} frame={f} split={cutCSplit(f)} seam={cutCSeam(f)} stack={cutCStack(f)} uid="wk" air={air} />
+        </WorldSvg>
+      </AirStage>
+    );
+  }
   return (
     <TexcocoPage cam={cam}>
       <WorldSvg cam={cam}>
