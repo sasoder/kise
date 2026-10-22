@@ -34,6 +34,11 @@
 // SOURCES (illustrative; nothing on screen): the treadwheel crane of the Tomb of the Haterii relief (Rome, c. AD
 //   100-120, Vatican Museums), men walking inside the wheel; Vitruvius, De architectura X.2 (hoisting machines, the
 //   polyspastos, the treadwheel); Roman building sites used slave and hired labour.
+// V3 (Oct 22): look "A" (default) = the world inside the pandemics clip's medium (pandemicAir palette A, mood day;
+// ./slavesTurnTheCraneAir: fog by world depth, the air dense low and light high so the crane-up climbs the ramp) with
+// the picture-book gouache cast (./romeFolk, fogged by each figure's own depth); the orange wheel the one warm,
+// faintly blooming material; marble cream, timber umber, hemp rope, re-lit (soft form light, cream rims, outlines in
+// a darker local colour). Geometry, kinematics, camera and timing unchanged. look "old" = the delivered V2 picture.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
@@ -42,6 +47,28 @@ import { TexcocoPage, WorldSvg } from "../kits/maps/texcocoShared";
 import { ACCENT, ACCENT_DEEP, INK, swayCam, type P2 } from "../kits/maps/incaShared";
 import { Box, ContactShadow, Cylinder, DARK, GroundPlane, perspective, type Persp, type VolInk } from "../kyle-london/londonDepth";
 import { POSES as RomePoses, Slave, idle, type FigPose } from "./romeCast";
+import * as Folk from "./romeFolk";
+import { AirStage, mixHex as mixA, type Mat } from "../kyle-pandemics/pandemicAir";
+import {
+  AirBox,
+  AirCyl,
+  AirFloor,
+  AirShadow,
+  AirHorizonHazeW,
+  MAT_GROUND,
+  MAT_HEMP,
+  MAT_IRON,
+  MAT_MARBLE,
+  MAT_ORANGE,
+  MAT_STONE,
+  MAT_TIMBER,
+  ORANGE_LINE,
+  PAL,
+  craneAirOf,
+  formMat,
+  lineOf,
+  type CraneAir,
+} from "./slavesTurnTheCraneAir";
 import {
   AXLE_H,
   BEAR_Z0,
@@ -100,6 +127,8 @@ export const DURATION = PLAN_DURATION;
 export const schema = z.object({
   /** probe only: hold the camera at this frame (-1 = the cut's camera) */
   camFrame: z.number().default(-1),
+  /** V3: "A" = in the pandemics clip's air with the folk cast; "old" = the delivered V2 picture on the paper page */
+  look: z.enum(["old", "A"]).default("A"),
 });
 export const defaultProps = schema.parse({});
 
@@ -127,7 +156,7 @@ const tintVol = (v: VolInk, t: number): VolInk => ({ lit: mixHex(PAGE, v.lit, t)
 const tone3 = (v: number, ink: VolInk) => (v > 0.3 ? ink.lit : v > -0.35 ? ink.mid : ink.dark);
 
 /** a beam between two 3D points, square section w (units), drawn as a band with a lit and a dark edge */
-const Beam3: React.FC<{ pp: Persp; k: number; a: [number, number, number]; b: [number, number, number]; w: number; ink: VolInk }> = ({ pp, k, a, b, w, ink }) => {
+const Beam3: React.FC<{ pp: Persp; k: number; a: [number, number, number]; b: [number, number, number]; w: number; ink: VolInk; A?: CraneAir; mat?: Mat; uid?: string }> = ({ pp, k, a, b, w, ink, A: Air, mat = MAT_TIMBER, uid }) => {
   const A = pp.p(a[0], a[1], a[2]);
   const B = pp.p(b[0], b[1], b[2]);
   const wa = (w * pp.r(a[2])) / 2;
@@ -151,6 +180,45 @@ const Beam3: React.FC<{ pp: Persp; k: number; a: [number, number, number]; b: [n
     [B[0] - litSide * nx * wb, B[1] - litSide * ny * wb],
     [A[0] - litSide * nx * wa, A[1] - litSide * ny * wa],
   ];
+  if (Air) {
+    // V3: soft form light along the beam (lit side, mid, a shade band), a cream rim on the lit edge, a darker local
+    // outline; fogged by depth, toward the air at each end's height (a gradient along long beams)
+    const ta = (hex: string) => Air.tone(hex, a[2], -a[1]);
+    const tb = (hex: string) => Air.tone(hex, b[2], -b[1]);
+    const fz = Air.fog((a[2] + b[2]) / 2);
+    const shade = mixA(mat.dark, PAL.shadow, 0.2);
+    const grad = (id: string, hex: string) => (
+      <linearGradient id={id} gradientUnits="userSpaceOnUse" x1={A[0].toFixed(2)} y1={A[1].toFixed(2)} x2={B[0].toFixed(2)} y2={B[1].toFixed(2)}>
+        <stop offset="0" stopColor={ta(hex)} />
+        <stop offset="1" stopColor={tb(hex)} />
+      </linearGradient>
+    );
+    const body = uid ? `url(#${uid}-m)` : Air.tone(mat.mid, (a[2] + b[2]) / 2, -(a[1] + b[1]) / 2);
+    const dk = uid ? `url(#${uid}-d)` : Air.tone(shade, (a[2] + b[2]) / 2, -(a[1] + b[1]) / 2);
+    const lit = uid ? `url(#${uid}-l)` : Air.tone(mixA(mat.lit, mat.mid, 0.35), (a[2] + b[2]) / 2, -(a[1] + b[1]) / 2);
+    const litBand: P2[] = [
+      [A[0] + litSide * nx * wa, A[1] + litSide * ny * wa],
+      [B[0] + litSide * nx * wb, B[1] + litSide * ny * wb],
+      [B[0] + litSide * nx * wb * 0.25, B[1] + litSide * ny * wb * 0.25],
+      [A[0] + litSide * nx * wa * 0.25, A[1] + litSide * ny * wa * 0.25],
+    ];
+    return (
+      <g>
+        {uid ? (
+          <defs>
+            {grad(`${uid}-m`, mat.mid)}
+            {grad(`${uid}-d`, shade)}
+            {grad(`${uid}-l`, mixA(mat.lit, mat.mid, 0.35))}
+          </defs>
+        ) : null}
+        <path d={poly(q)} fill={body} />
+        <path d={poly(litBand)} fill={lit} />
+        <path d={poly(dark)} fill={dk} />
+        <path d={poly(q)} fill="none" stroke={Air.tone(lineOf(mat), (a[2] + b[2]) / 2, -(a[1] + b[1]) / 2)} strokeWidth={sw(k, 1.1)} strokeLinejoin="round" />
+        <path d={`M${P([A[0] + litSide * nx * wa * 0.86, A[1] + litSide * ny * wa * 0.86])}L${P([B[0] + litSide * nx * wb * 0.86, B[1] + litSide * ny * wb * 0.86])}`} stroke={PAL.cream} strokeWidth={sw(k, 1.3)} strokeOpacity={0.5 * (1 - fz)} strokeLinecap="round" />
+      </g>
+    );
+  }
   return (
     <g>
       <path d={poly(q)} fill={ink.mid} stroke={DARK} strokeWidth={sw(k, 1.8)} strokeLinejoin="round" />
@@ -161,9 +229,20 @@ const Beam3: React.FC<{ pp: Persp; k: number; a: [number, number, number]; b: [n
 };
 
 /** a rope (pale hemp) through 3D points */
-const Rope: React.FC<{ pp: Persp; k: number; pts: [number, number, number][]; w?: number }> = ({ pp, k, pts, w = 0.045 * U }) => {
+const Rope: React.FC<{ pp: Persp; k: number; pts: [number, number, number][]; w?: number; A?: CraneAir }> = ({ pp, k, pts, w = 0.045 * U, A }) => {
   const d = `M${pts.map((q) => P(pp.p(q[0], q[1], q[2]))).join("L")}`;
   const ww = Math.max(w * pp.r(pts[0][2]), 1.4 / k);
+  if (A) {
+    // V3: pale hemp with a thin darker-hemp edge, fogged by depth at its mean height
+    const zm = pts.reduce((acc, q) => acc + q[2], 0) / pts.length;
+    const hm = -pts.reduce((acc, q) => acc + q[1], 0) / pts.length;
+    return (
+      <g>
+        <path d={d} fill="none" stroke={A.tone(MAT_HEMP.dark, zm, hm)} strokeWidth={ww + sw(k, 1.0)} strokeLinecap="round" strokeLinejoin="round" />
+        <path d={d} fill="none" stroke={A.tone(MAT_HEMP.mid, zm, hm)} strokeWidth={ww} strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    );
+  }
   return (
     <g>
       <path d={d} fill="none" stroke={DARK} strokeWidth={ww + sw(k, 1.6)} strokeLinecap="round" strokeLinejoin="round" />
@@ -184,7 +263,8 @@ const annulusD = (pp: Persp, cx: number, cy: number, ro: number, ri: number, Z: 
   if (ri <= 0) return outer;
   return `${outer}M${i.c[0] + i.r},${i.c[1]}a${i.r},${i.r} 0 1 1 ${-2 * i.r},0a${i.r},${i.r} 0 1 1 ${2 * i.r},0Z`;
 };
-const Ring: React.FC<{ pp: Persp; k: number; cx: number; cy: number; ro: number; ri: number; z0: number; z1: number; ink: VolInk; front?: string }> = ({ pp, k, cx, cy, ro, ri, z0, z1, ink, front }) => {
+const Ring: React.FC<{ pp: Persp; k: number; cx: number; cy: number; ro: number; ri: number; z0: number; z1: number; ink: VolInk; front?: string; A?: CraneAir; mat?: Mat; orange?: boolean; frontMat?: string; rim?: number }> = ({ pp, k, cx, cy, ro, ri, z0, z1, ink, front, A, mat, orange, frontMat, rim = 1 }) => {
+  if (A && mat) return <RingAir pp={pp} k={k} cx={cx} cy={cy} ro={ro} ri={ri} z0={z0} z1={z1} A={A} mat={mat} orange={orange} front={frontMat} rim={rim} />;
   const V: P2 = [pp.vp[0] - cx, pp.vp[1] - cy];
   const pt = (rad: number, a: number, Z: number) => pp.p(cx + rad * Math.cos(a), cy + rad * Math.sin(a), Z);
   const NB = 72;
@@ -216,9 +296,60 @@ const Ring: React.FC<{ pp: Persp; k: number; cx: number; cy: number; ro: number;
   );
 };
 
+/** V3: a ring re-lit for the medium: smooth form light round its outer and inner surfaces, the front face lit flat with
+ *  a cream rim along its upper-left edge, outlines in a darker local colour (orange: ORANGE_LINE), fogged by depth */
+const RingAir: React.FC<{ pp: Persp; k: number; cx: number; cy: number; ro: number; ri: number; z0: number; z1: number; A: CraneAir; mat: Mat; orange?: boolean; front?: string; rim: number }> = ({ pp, k, cx, cy, ro, ri, z0, z1, A, mat, orange, front, rim }) => {
+  const h = -cy;
+  const zm = (z0 + z1) / 2;
+  const t = (hex: string, Z = zm) => (orange ? A.toneO(hex, Z, h) : A.tone(hex, Z, h));
+  const ln = t(orange ? ORANGE_LINE : lineOf(mat));
+  const V: P2 = [pp.vp[0] - cx, pp.vp[1] - cy];
+  const pt = (rad: number, a: number, Z: number) => pp.p(cx + rad * Math.cos(a), cy + rad * Math.sin(a), Z);
+  const NB = 96;
+  const outer: React.ReactNode[] = [];
+  const inner: React.ReactNode[] = [];
+  for (let i = 0; i < NB; i++) {
+    const a0 = (i / NB) * 2 * Math.PI;
+    const a1 = ((i + 1) / NB) * 2 * Math.PI;
+    const am = (a0 + a1) / 2;
+    const nx = Math.cos(am);
+    const ny = Math.sin(am);
+    const dot = V[0] * nx + V[1] * ny;
+    if (dot > ro) {
+      const f = t(formMat(mat, nx * LIGHT[0] + ny * LIGHT[1]));
+      outer.push(<path key={i} d={poly([pt(ro, a0, z0), pt(ro, a1, z0), pt(ro, a1, z1), pt(ro, a0, z1)])} fill={f} stroke={f} strokeWidth={0.6} />);
+    }
+    if (ri > 0 && dot < ri) {
+      const f = t(formMat(mat, -(nx * LIGHT[0] + ny * LIGHT[1])));
+      inner.push(<path key={i} d={poly([pt(ri, a0, z0), pt(ri, a1, z0), pt(ri, a1, z1), pt(ri, a0, z1)])} fill={f} stroke={f} strokeWidth={0.6} />);
+    }
+  }
+  const fc = ring(pp, cx, cy, ro, z0);
+  const fz = A.fog(z0);
+  // the cream rim: the upper-left arc of the front face's outer edge (screen angles, y down: 180 = left, 270 = up)
+  const arc = (r: number, a0: number, a1: number) => `M${P([fc.c[0] + r * Math.cos(a0), fc.c[1] + r * Math.sin(a0)])}A${r.toFixed(2)},${r.toFixed(2)} 0 0 1 ${P([fc.c[0] + r * Math.cos(a1), fc.c[1] + r * Math.sin(a1)])}`;
+  const rr = fc.r - sw(k, 1.4) * 0.6;
+  return (
+    <g>
+      <path d={annulusD(pp, cx, cy, ro, ri, z1)} fill={t(mixA(mat.dark, PAL.shadow, 0.25), z1)} fillRule="evenodd" stroke={ln} strokeWidth={sw(k, 0.9)} />
+      {inner}
+      {outer}
+      <path d={annulusD(pp, cx, cy, ro, ri, z0)} fill={t(front ?? mixA(mat.lit, mat.mid, 0.3), z0)} fillRule="evenodd" stroke={ln} strokeWidth={sw(k, 1.15)} />
+      {rim > 0 ? <path d={arc(rr, (165 * Math.PI) / 180, (300 * Math.PI) / 180)} fill="none" stroke={orange ? PAL.orangeHot : PAL.cream} strokeWidth={sw(k, 1.6)} strokeOpacity={0.55 * rim * (1 - fz)} strokeLinecap="round" /> : null}
+    </g>
+  );
+};
+
 /** spokes of a wheel face at depth Z (a .. b along Z for their thickness) */
-const Spokes: React.FC<{ pp: Persp; k: number; th: number; za: number; zb: number; ink: VolInk; hw?: number }> = ({ pp, k, th, za, zb, ink, hw = 0.06 * U }) => {
+const Spokes: React.FC<{ pp: Persp; k: number; th: number; za: number; zb: number; ink: VolInk; hw?: number; A?: CraneAir; mat?: Mat }> = ({ pp, k, th, za, zb, ink, hw = 0.06 * U, A, mat = MAT_ORANGE }) => {
   const els: React.ReactNode[] = [];
+  // V3: orange in the medium (half the fog), outlines in the darker orange, the lit edge a pale warm highlight
+  const h = AXLE_H;
+  const tO = (hex: string, Z: number) => (A ? A.toneO(hex, Z, h) : hex);
+  const sideFill = A ? tO(mixA(mat.dark, PAL.shadow, 0.15), zb) : ink.dark;
+  const faceFill = A ? tO(mixA(mat.mid, mat.lit, 0.25), za) : ink.mid;
+  const lineC = A ? tO(ORANGE_LINE, za) : DARK;
+  const litC = A ? tO(PAL.orangeHot, za) : ink.lit;
   for (let j = 0; j < N_SPOKES; j++) {
     const a = th + SPOKE0 + (j / N_SPOKES) * 2 * Math.PI;
     const ux = Math.cos(a);
@@ -233,9 +364,9 @@ const Spokes: React.FC<{ pp: Persp; k: number; th: number; za: number; zb: numbe
     const sideS = (pp.vp[0] - mx) * px + (pp.vp[1] - my) * py > 0 ? 1 : -1;
     els.push(
       <g key={j}>
-        <path d={poly([c(r0, sideS, za), c(r1, sideS, za), c(r1, sideS, zb), c(r0, sideS, zb)])} fill={ink.dark} stroke={DARK} strokeWidth={sw(k, 0.9)} />
-        <path d={poly([c(r0, -1, za), c(r1, -1, za), c(r1, 1, za), c(r0, 1, za)])} fill={ink.mid} stroke={DARK} strokeWidth={sw(k, 1.3)} />
-        <path d={`M${P(c(r0 + 8, -0.5, za))}L${P(c(r1 - 8, -0.5, za))}`} stroke={ink.lit} strokeWidth={sw(k, 1.3)} strokeOpacity={0.85} />
+        <path d={poly([c(r0, sideS, za), c(r1, sideS, za), c(r1, sideS, zb), c(r0, sideS, zb)])} fill={sideFill} stroke={lineC} strokeWidth={sw(k, A ? 0.7 : 0.9)} />
+        <path d={poly([c(r0, -1, za), c(r1, -1, za), c(r1, 1, za), c(r0, 1, za)])} fill={faceFill} stroke={lineC} strokeWidth={sw(k, A ? 0.95 : 1.3)} />
+        <path d={`M${P(c(r0 + 8, -0.5, za))}L${P(c(r1 - 8, -0.5, za))}`} stroke={litC} strokeWidth={sw(k, 1.3)} strokeOpacity={A ? 0.45 : 0.85} />
       </g>,
     );
   }
@@ -243,7 +374,7 @@ const Spokes: React.FC<{ pp: Persp; k: number; th: number; za: number; zb: numbe
 };
 
 /** the treads: slats across the wheel between the rims, at the treads' surface, turning with the wheel */
-const Treads: React.FC<{ pp: Persp; k: number; th: number }> = ({ pp, k, th }) => {
+const Treads: React.FC<{ pp: Persp; k: number; th: number; A?: CraneAir }> = ({ pp, k, th, A }) => {
   let lit = "";
   let dark = "";
   for (let j = 0; j < N_SLATS; j++) {
@@ -256,6 +387,17 @@ const Treads: React.FC<{ pp: Persp; k: number; th: number }> = ({ pp, k, th }) =
     else dark += seg;
   }
   const w = 0.075 * U;
+  if (A) {
+    const tO = (hex: string) => A.toneO(hex, 190, AXLE_H - RT);
+    return (
+      <g>
+        <path d={dark} stroke={tO(ORANGE_LINE)} strokeWidth={w * pp.r(190) + sw(k, 1.0)} strokeLinecap="butt" />
+        <path d={dark} stroke={tO(mixA(MAT_ORANGE.dark, PAL.shadow, 0.1))} strokeWidth={w * pp.r(190)} strokeLinecap="butt" />
+        <path d={lit} stroke={tO(ORANGE_LINE)} strokeWidth={w * pp.r(190) + sw(k, 1.0)} strokeLinecap="butt" />
+        <path d={lit} stroke={tO(mixA(MAT_ORANGE.mid, MAT_ORANGE.lit, 0.35))} strokeWidth={w * pp.r(190)} strokeLinecap="butt" />
+      </g>
+    );
+  }
   return (
     <g>
       <path d={dark} stroke={DARK} strokeWidth={w * pp.r(190) + sw(k, 1.6)} strokeLinecap="butt" />
@@ -549,13 +691,236 @@ const Worker: React.FC<{ pp: Persp; f: number }> = ({ pp, f }) => {
     </g>
   );
 };
-const SlavesTurnTheCrane: React.FC<z.infer<typeof schema>> = ({ camFrame }) => {
+// ===================================================================================================================
+// V3: THE WORLD IN THE AIR (look "A"): the same geometry, painted for the medium (./slavesTurnTheCraneAir), the cast
+// redrawn as the folk (./romeFolk), each figure fogged by its own depth
+// ===================================================================================================================
+const lwA = (k: number, base: number) => base / Math.pow(k, 0.6);
+const StylobateA: React.FC<{ A: CraneAir; k: number }> = ({ A, k }) => (
+  <g>
+    {[0, 1, 2].map((i) => (
+      <AirBox key={i} A={A} X0={COL_X - (1.35 - i * 0.22) * U} X1={COL_X + 9 * U} Y0={-(i + 1) * (STYLO_H / 3)} Y1={-i * (STYLO_H / 3)} Z0={-60 + i * 40} Z1={900} mat={MAT_STONE} uid={`styA${i}`} lw={lwA(k, 1.0)} />
+    ))}
+  </g>
+);
+const ColumnA: React.FC<{ A: CraneAir; k: number }> = ({ A, k }) => {
+  const n = Math.max(1, Math.round((-STYLO_H - COL_TOP) / (1.1 * U)));
+  const DR = (-STYLO_H - COL_TOP) / n;
+  const joints = Array.from({ length: n - 1 }, (_, i) => -STYLO_H - (i + 1) * DR);
+  return <AirCyl A={A} X={COL_X} Z={COL_Z} R={COL_R} Y0={COL_TOP} Y1={-STYLO_H} mat={MAT_MARBLE} uid="colA" lw={lwA(k, 1.1)} joints={joints} flutes={8} />;
+};
+const SCAF_X = [COL_X + 0.72 * U, COL_X + 1.7 * U];
+const ScaffoldBackA: React.FC<{ A: CraneAir; pp: Persp; k: number }> = ({ A, pp, k }) => (
+  <g>
+    {SCAF_X.map((x, i) => (
+      <Beam3 key={i} A={A} uid={`scbA${i}`} pp={pp} k={k} a={[x, -STYLO_H, COL_Z + 200]} b={[x, PLATFORM_Y - 1.3 * U, COL_Z + 200]} w={0.12 * U} ink={TIMBER} />
+    ))}
+  </g>
+);
+const ScaffoldFrontA: React.FC<{ A: CraneAir; pp: Persp; k: number }> = ({ A, pp, k }) => (
+  <g>
+    <AirBox A={A} X0={COL_X + 0.62 * U} X1={COL_X + 1.82 * U} Y0={PLATFORM_Y} Y1={PLATFORM_Y + 0.09 * U} Z0={COL_Z - 90} Z1={COL_Z + 210} mat={MAT_TIMBER} uid="plankA" lw={lwA(k, 1.0)} />
+    {SCAF_X.map((x, i) => (
+      <Beam3 key={i} A={A} uid={`scfA${i}`} pp={pp} k={k} a={[x, -STYLO_H, COL_Z - 80]} b={[x, PLATFORM_Y - 1.3 * U, COL_Z - 80]} w={0.12 * U} ink={TIMBER} />
+    ))}
+    <Beam3 A={A} uid="scdA" pp={pp} k={k} a={[SCAF_X[0], -STYLO_H - 0.5 * U, COL_Z - 80]} b={[SCAF_X[1], PLATFORM_Y + 0.2 * U, COL_Z - 80]} w={0.08 * U} ink={TIMBER} />
+    <Beam3 A={A} pp={pp} k={k} a={[SCAF_X[0], PLATFORM_Y - 1.0 * U, COL_Z - 80]} b={[SCAF_X[1], PLATFORM_Y - 1.0 * U, COL_Z - 80]} w={0.08 * U} ink={TIMBER} />
+  </g>
+);
+const JibLegA: React.FC<{ A: CraneAir; pp: Persp; k: number; z0: number; uid: string }> = ({ A, pp, k, z0, uid }) => <Beam3 A={A} uid={uid} pp={pp} k={k} a={legAt(z0, 0)} b={legAt(z0, 0.985)} w={0.26 * U} ink={TIMBER} />;
+const RungsA: React.FC<{ A: CraneAir; pp: Persp; k: number }> = ({ A, pp, k }) => (
+  <g>
+    {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+      <Beam3 key={i} A={A} pp={pp} k={k} a={legAt(JIB_ZA, i / 8.2)} b={legAt(JIB_ZB, i / 8.2)} w={0.1 * U} ink={TIMBER} />
+    ))}
+  </g>
+);
+const SheaveA: React.FC<{ A: CraneAir; pp: Persp; k: number; th: number }> = ({ A, pp, k, th }) => {
+  const za = JIB_ZH - 26;
+  const zb = JIB_ZH + 26;
+  const c = pp.p(SHEAVE_C[0], SHEAVE_C[1], za);
+  const r = SHEAVE_R * pp.r(za);
+  const turn = th * (DRUM_R / SHEAVE_R);
+  let marks = "";
+  for (let j = 0; j < 4; j++) {
+    const a = turn + (j * Math.PI) / 2;
+    marks += `M${P([c[0] + 0.3 * r * Math.cos(a), c[1] + 0.3 * r * Math.sin(a)])}L${P([c[0] + 0.8 * r * Math.cos(a), c[1] + 0.8 * r * Math.sin(a)])}`;
+  }
+  const h = -SHEAVE_C[1];
+  return (
+    <g>
+      <AirBox A={A} X0={SHEAVE_C[0] - 0.12 * U} X1={SHEAVE_C[0] + 0.12 * U} Y0={HEAD[1] - 0.25 * U} Y1={SHEAVE_C[1] + 0.05 * U} Z0={zb + 2} Z1={zb + 30} mat={MAT_TIMBER} uid="cheekBA" lw={lwA(k, 0.9)} />
+      <Ring A={A} mat={MAT_ORANGE} orange pp={pp} k={k} cx={SHEAVE_C[0]} cy={SHEAVE_C[1]} ro={SHEAVE_R} ri={0} z0={za} z1={zb} ink={WHEEL} />
+      <path d={marks} stroke={A.toneO(ORANGE_LINE, za, h)} strokeWidth={lwA(k, 1.2)} strokeLinecap="round" />
+      <circle cx={c[0]} cy={c[1]} r={r * 0.22} fill={A.tone(MAT_IRON.mid, za, h)} stroke={A.tone(lineOf(MAT_IRON), za, h)} strokeWidth={lwA(k, 0.9)} />
+      <AirBox A={A} X0={SHEAVE_C[0] - 0.12 * U} X1={SHEAVE_C[0] + 0.12 * U} Y0={HEAD[1] - 0.25 * U} Y1={SHEAVE_C[1] - 0.05 * U} Z0={za - 30} Z1={za - 2} mat={MAT_TIMBER} uid="cheekFA" lw={lwA(k, 0.9)} />
+    </g>
+  );
+};
+const HoistRopeA: React.FC<{ A: CraneAir; pp: Persp; k: number; f: number }> = ({ A, pp, k, f }) => {
+  const g = ropeGeom();
+  const lb = loadBottom(f);
+  const hookTop = lb - LOAD_H - 0.62 * U;
+  const arc: [number, number, number][] = [];
+  for (let i = 0; i <= 8; i++) {
+    const a = g.a0 + ((0 - g.a0 + (g.a0 > 0 ? -2 * Math.PI : 0)) * i) / 8;
+    arc.push([SHEAVE_C[0] + SHEAVE_R * Math.cos(a), SHEAVE_C[1] + SHEAVE_R * Math.sin(a), JIB_ZH]);
+  }
+  return <Rope A={A} pp={pp} k={k} pts={[g.off, ...arc, [COL_X, hookTop, JIB_ZH]]} />;
+};
+const LoadA: React.FC<{ A: CraneAir; pp: Persp; k: number; f: number }> = ({ A, pp, k, f }) => {
+  const lb = loadBottom(f);
+  const top = lb - LOAD_H;
+  const blockY0 = top - 0.62 * U;
+  const blockY1 = top - 0.36 * U;
+  const z = COL_Z;
+  const h = -top;
+  const lug = (s: 1 | -1) =>
+    [
+      [COL_X + s * 0.1 * U, blockY1, z],
+      [COL_X + s * 0.42 * U, top - 0.1 * U, z - 20],
+      [COL_X + s * (LOAD_R + 0.03 * U), top + 0.22 * U, z - 20],
+    ] as [number, number, number][];
+  const tong = (s: 1 | -1) => `M${lug(s).map((q) => P(pp.p(q[0], q[1], q[2]))).join("L")}`;
+  const tw = 0.07 * U * pp.r(z);
+  const tO = (hex: string) => A.toneO(hex, z, h);
+  return (
+    <g>
+      <path d={tong(-1)} fill="none" stroke={tO(ORANGE_LINE)} strokeWidth={tw + lwA(k, 1.0)} strokeLinejoin="round" strokeLinecap="round" />
+      <path d={tong(-1)} fill="none" stroke={tO(MAT_ORANGE.dark)} strokeWidth={tw} strokeLinejoin="round" strokeLinecap="round" />
+      <AirCyl A={A} X={COL_X} Z={z} R={LOAD_R} Y0={top} Y1={lb} mat={MAT_MARBLE} uid="loadA" lw={lwA(k, 1.1)} flutes={5} />
+      <path d={tong(1)} fill="none" stroke={tO(ORANGE_LINE)} strokeWidth={tw + lwA(k, 1.0)} strokeLinejoin="round" strokeLinecap="round" />
+      <path d={tong(1)} fill="none" stroke={tO(MAT_ORANGE.lit)} strokeWidth={tw} strokeLinejoin="round" strokeLinecap="round" />
+      <AirBox A={A} X0={COL_X - 0.16 * U} X1={COL_X + 0.16 * U} Y0={blockY0} Y1={blockY1} Z0={z - 26} Z1={z + 26} mat={MAT_ORANGE} orange uid="hookA" lw={lwA(k, 0.9)} />
+    </g>
+  );
+};
+const RopeDrumA: React.FC<{ A: CraneAir; pp: Persp; k: number; th: number }> = ({ A, pp, k, th }) => {
+  const dc = pp.p(XW, YW, DRUM_Z0);
+  const dr = DRUM_R * pp.r(DRUM_Z0);
+  let coils = "";
+  for (let i = 1; i <= 3; i++) {
+    const rr = dr * (1 - i * 0.06);
+    coils += `M${dc[0] + rr},${dc[1]}a${rr},${rr} 0 1 0 ${-2 * rr},0a${rr},${rr} 0 1 0 ${2 * rr},0`;
+  }
+  let marks = "";
+  for (let j = 0; j < 3; j++) {
+    const a = th + SPOKE0 + (j * 2 * Math.PI) / 3;
+    marks += `M${P([dc[0] + 0.25 * dr * Math.cos(a), dc[1] + 0.25 * dr * Math.sin(a)])}L${P([dc[0] + 0.7 * dr * Math.cos(a), dc[1] + 0.7 * dr * Math.sin(a)])}`;
+  }
+  const t = (hex: string) => A.tone(hex, DRUM_Z0, AXLE_H);
+  return (
+    <g>
+      <Ring A={A} mat={MAT_HEMP} frontMat={MAT_TIMBER.mid} rim={0.6} pp={pp} k={k} cx={XW} cy={YW} ro={DRUM_R} ri={0} z0={DRUM_Z0} z1={DRUM_Z1} ink={TIMBER} />
+      <path d={coils} fill="none" stroke={t(MAT_HEMP.mid)} strokeWidth={lwA(k, 2.0)} />
+      <path d={coils} fill="none" stroke={t(MAT_HEMP.dark)} strokeWidth={lwA(k, 0.6)} strokeOpacity={0.6} />
+      <path d={marks} stroke={t(lineOf(MAT_TIMBER))} strokeWidth={lwA(k, 1.3)} strokeLinecap="round" />
+    </g>
+  );
+};
+const WheelBackA: React.FC<{ A: CraneAir; pp: Persp; k: number; th: number; f: number }> = ({ A, pp, k, th, f }) => (
+  <g>
+    <Beam3 A={A} uid="farBeamA" pp={pp} k={k} a={[XW - 0.3 * U, YW, DRUM_Z1 + 30]} b={farLegAtAxle()} w={0.24 * U} ink={TIMBER} />
+    <RopeDrumA A={A} pp={pp} k={k} th={th} />
+    <HoistRopeA A={A} pp={pp} k={k} f={f} />
+    <Ring A={A} mat={MAT_IRON} rim={0.5} pp={pp} k={k} cx={XW} cy={YW} ro={0.1 * U} ri={0} z0={ZN} z1={DRUM_Z0} ink={TIMBER} />
+    <Ring A={A} mat={MAT_ORANGE} orange frontMat={MAT_ORANGE.mid} rim={0.5} pp={pp} k={k} cx={XW} cy={YW} ro={R_OUT} ri={RT} z0={ZF} z1={ZF + RIM_T} ink={WHEEL} />
+    <Spokes A={A} pp={pp} k={k} th={th + 0.3} za={ZF} zb={ZF + RIM_T} ink={WHEEL} />
+    <Treads A={A} pp={pp} k={k} th={th} />
+  </g>
+);
+const WheelFrontA: React.FC<{ A: CraneAir; pp: Persp; k: number; th: number }> = ({ A, pp, k, th }) => (
+  <g>
+    <Spokes A={A} pp={pp} k={k} th={th} za={ZN} zb={ZN + RIM_T} ink={WHEEL} hw={0.045 * U} />
+    <Ring A={A} mat={MAT_ORANGE} orange pp={pp} k={k} cx={XW} cy={YW} ro={R_OUT} ri={RT} z0={ZN} z1={ZN + RIM_T} ink={WHEEL} />
+    <Ring A={A} mat={MAT_ORANGE} orange frontMat={MAT_ORANGE.mid} rim={0.6} pp={pp} k={k} cx={XW} cy={YW} ro={0.21 * U} ri={0} z0={ZN - 12} z1={ZN + RIM_T + 6} ink={WHEEL} />
+    <Ring A={A} mat={MAT_IRON} rim={0.5} pp={pp} k={k} cx={XW} cy={YW} ro={0.1 * U} ri={0} z0={BEAR_Z1} z1={ZN - 12} ink={TIMBER} />
+    <Beam3 A={A} uid="nearBeamA" pp={pp} k={k} a={[XW - 0.3 * U, YW, (BEAR_Z0 + BEAR_Z1) / 2]} b={nearLegAtAxle()} w={0.22 * U} ink={TIMBER} />
+    <AirBox A={A} X0={XW - 0.17 * U} X1={XW + 0.17 * U} Y0={YW - 0.17 * U} Y1={YW + 0.17 * U} Z0={BEAR_Z0} Z1={BEAR_Z1} mat={MAT_TIMBER} uid="bearingA" lw={lwA(k, 1.0)} />
+    <circle cx={pp.p(XW, YW, BEAR_Z0)[0]} cy={pp.p(XW, YW, BEAR_Z0)[1]} r={0.09 * U * pp.r(BEAR_Z0)} fill={A.tone(MAT_IRON.dark, BEAR_Z0, AXLE_H)} stroke={A.tone(lineOf(MAT_IRON), BEAR_Z0, AXLE_H)} strokeWidth={lwA(k, 0.9)} />
+  </g>
+);
+/** the folk fog of a figure: the air at its own depth and mid-body height, by the people's fog of its depth */
+const folkFog = (A: CraneAir, Z: number, feetY: number): Folk.FolkFog => ({ rgb: A.airHex(-feetY + 150), amount: A.figFog(Z) });
+const WalkerA: React.FC<{ A: CraneAir; pp: Persp; k: number; w: number; f: number }> = ({ A, pp, k, w, f }) => {
+  const W = WALKERS[w];
+  const { pose, at } = walkerPose(w, f);
+  return (
+    <g>
+      <AirShadow A={A} X={at[0]} Z={W.z} Y={at[1]} w={60} d={26} uid={`wcsA${w}`} amt={0.75} />
+      <Folk.Slave pose={pose} at={pp.p(at[0], at[1], W.z)} scale={pp.r(W.z) * FIG} uid={`walkerA${w}`} variant={W.variant} garb={W.garb} fetters fog={folkFog(A, W.z, at[1])} unitPx={k} />
+    </g>
+  );
+};
+const WorkerA: React.FC<{ A: CraneAir; pp: Persp; k: number; f: number }> = ({ A, pp, k, f }) => {
+  const { q, near: n3, far: f3 } = workerPose(f);
+  const at = pp.p(WORKER_X, PLATFORM_Y, WORKER_Z);
+  const near = pp.p(n3[0], n3[1], n3[2]);
+  const far = pp.p(f3[0], f3[1], f3[2]);
+  return (
+    <g>
+      <AirShadow A={A} X={WORKER_X} Z={WORKER_Z} Y={PLATFORM_Y} w={62} d={30} uid="wkcsA" amt={0.8} />
+      <Folk.Slave pose={q} at={at} scale={pp.r(WORKER_Z) * FIG} uid="workerA" variant={4} garb="tunic" grip={{ R: near, L: far }} fog={folkFog(A, WORKER_Z, PLATFORM_Y)} unitPx={k} />
+    </g>
+  );
+};
+/** the whole world in the air, in the delivered painter's order */
+const CraneWorldA: React.FC<{ A: CraneAir; pp: Persp; k: number; frame: number; th: number }> = ({ A, pp, k, frame, th }) => {
+  const guyAnchor = (z: number): [number, number, number] => [XW - 5.5 * U, 0, z];
+  return (
+    <g>
+      <AirFloor A={A} x0={-4200} x1={4200} z0={-2600} z1={3400} mat={MAT_GROUND} course={300} lw={1.2} />
+      <AirHorizonHazeW A={A} id="hazeA" />
+      {/* soft contact shadows on the ground: the wheel's (it hangs 0.35 m above it), the jib's feet, the temple's foot */}
+      <AirShadow A={A} X={XW - 0.1 * U} Z={(ZN + ZF) / 2 + 60} w={1.75 * U} d={190} uid="wheelGs" amt={0.55} />
+      <AirShadow A={A} X={JIB_FOOT_X} Z={JIB_ZA} w={0.45 * U} d={40} uid="jibAs" amt={0.7} />
+      <AirShadow A={A} X={JIB_FOOT_X} Z={JIB_ZB} w={0.45 * U} d={40} uid="jibBs" amt={0.6} />
+      <Rope A={A} pp={pp} k={k} pts={[guyAnchor(JIB_ZB + 200), [HEAD[0], HEAD[1], JIB_ZB - 40]]} w={0.035 * U} />
+      <StylobateA A={A} k={k} />
+      <JibLegA A={A} pp={pp} k={k} z0={JIB_ZB} uid="jibBA" />
+      <ScaffoldBackA A={A} pp={pp} k={k} />
+      <ColumnA A={A} k={k} />
+      <LoadA A={A} pp={pp} k={k} f={frame} />
+      <ScaffoldFrontA A={A} pp={pp} k={k} />
+      <WorkerA A={A} pp={pp} k={k} f={frame} />
+      <WheelBackA A={A} pp={pp} k={k} th={th} f={frame} />
+      {[1, 0].map((w) => (
+        <WalkerA key={w} A={A} pp={pp} k={k} w={w} f={frame} />
+      ))}
+      <WheelFrontA A={A} pp={pp} k={k} th={th} />
+      <SheaveA A={A} pp={pp} k={k} th={th} />
+      <RungsA A={A} pp={pp} k={k} />
+      <JibLegA A={A} pp={pp} k={k} z0={JIB_ZA} uid="jibAA" />
+      <Rope A={A} pp={pp} k={k} pts={[guyAnchor(JIB_ZA - 200), [HEAD[0], HEAD[1], JIB_ZA + 40]]} w={0.035 * U} />
+    </g>
+  );
+};
+/** the camera and perspective of a frame (the delivered ones) */
+const camOf = (cf: number) => {
+  const cam = swayCam(camAt(cf), cf);
+  const pp = perspective(cam, { eyeY: eyeAt(cam.cy), dRef: DEPTH.dRef, kRef: DEPTH.kRef, dolly: DEPTH.dolly });
+  return { cam, pp };
+};
+const REST = camOf(0);
+/** V3 AirStage strengths */
+export const AIR_BLOOM = 0.22;
+
+const SlavesTurnTheCrane: React.FC<z.infer<typeof schema>> = ({ camFrame, look }) => {
   const frame = useCurrentFrame();
   const cf = camFrame >= 0 ? camFrame : frame;
-  const cam = swayCam(camAt(cf), cf);
+  const { cam, pp } = camOf(cf);
   const k = cam.k;
-  const pp = perspective(cam, { eyeY: eyeAt(cam.cy), dRef: DEPTH.dRef, kRef: DEPTH.kRef, dolly: DEPTH.dolly });
   const th = wheelAngle(frame);
+  if (look === "A") {
+    const A = craneAirOf(cam, pp, frame, { cam: REST.cam, P: REST.pp });
+    return (
+      <AirStage v={A.v} bloom={AIR_BLOOM}>
+        <WorldSvg cam={cam}>
+          <CraneWorldA A={A} pp={pp} k={k} frame={frame} th={th} />
+        </WorldSvg>
+      </AirStage>
+    );
+  }
   const guyAnchor = (z: number): [number, number, number] => [XW - 5.5 * U, 0, z];
   return (
     <TexcocoPage cam={cam} vignette={0.5}>
