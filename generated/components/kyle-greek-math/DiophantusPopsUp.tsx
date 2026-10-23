@@ -13,41 +13,42 @@
 // early 150-160 · Roman Empire 160-178 · Like 183 ("Euclid" is said at f-34, on camera, before the cut)
 // DURATION: the slot 4.738 -> 10.944 s = sequence frames 142 -> 328 at 29.97 = 186 frames (f0..f185).
 //
-// THE MOTION (V2, the director's review of V1: opening f0-14 and ending f110-185 kept exactly; the middle rebuilt):
-// one continuous glide in the Stair world. f0-14 ("very hard to say"): the eye just above and behind Euclid's right
-// shoulder on his landing (his three-quarter back, ~430 px, the Elements glowing at his side, EUCLID carved in the riser
-// below), the frame leaning left into a fog bank that hides what comes after. f14-30: the eye rises up and forward over
-// him; he sinks out of the frame's lower left (f17) and the landing's top drops away under the frame (gone by ~f26) as
-// the fog opens and the look begins its one turn right. f26-57 ("But you get like these really interesting people"):
-// the first lone column (Archimedes, the sphere in the cylinder) surfaces from the dense low air ahead, rises and
-// settles left of centre (settled ~f40-53, ~220-290 px figure + capital), then slides out to the left as the turn
-// reaches its fastest (~f57). f58-100 ("pop up"): the second (Apollonius, the cone) surfaces on the right (~f60),
-// settles on the right on "pop up" (~f76-88, x ~880-930, ~180-300 px) and slides out of the right edge (~f96-100,
-// <= 34 px a frame) as Diophantus's column rises dead ahead and settles on his name (~f105), the frame centred on him
-// from ~f95. Both lone columns are the cut's own, placed for this flight and drawn exactly like the world's (the
-// world's Archimedes / Apollonius / Ptolemy stay sunk in A); neither is in any frame from f101 on. f100-170 ("who's
-// later is in the Roman, early Roman Empire"): the eye eases in and across toward him; behind him a Roman aqueduct
-// comes out of the haze (clear by "Roman", f143), and a dominus in his toga and a freeman in his tunic stroll out from
-// behind the column along the terrace (~f128 on). f165-185 settled and alive: Diophantus writes, the Romans walk, motes
-// drift, a slow creep (~1.5 px a frame). Resolved frame: Diophantus ~320 px (head ~y 470) before the aqueduct's arches,
-// DIOPHANTUS on his band at y ~1000-1020, the Romans small on the terrace (faces ~y 920-975), all above the caption
-// bands; below them the column and the terrace sink into the dense low air.
+// THE MOTION (V3, Revision 1: "rushed; the pillars are too far from each other" -> the scale and the smoothness of
+// kyle-rome-slavery FreeStreetNoEngine's street; the style unchanged). One calm glide down an avenue of lone columns.
+// f0 ("very hard to say"): as delivered, the eye just above and behind Euclid's right shoulder on his landing (EUCLID
+// carved in the riser), the frame leaning left into the fog. f0-34: the glide eases out of f0 and up over Euclid (he
+// sinks out of the lower left by ~f14) into the fog while the look begins its one slow turn right. f34-140: one
+// near-constant glide (~0.36 m a frame) straight down the avenue (heading 15 deg right of the world's depth), the look
+// settling onto the glide's heading by f84, so the avenue opens from the frame's middle. Four lone columns, the cut's
+// own, alternate left / right ~3 m off the glide and ~6 m apart along it, each rising out of the low air and settled
+// before the glide passes it, ~230-420 px (scholar) as it slides out of the frame, the next one already standing behind
+// it in the haze: Archimedes (sphere in the cylinder; left; settled f44, out of the frame f63), Apollonius (the cone;
+// right; f58 / f86), Eratosthenes (the Earth's measure; left; f72 / f100), Hipparchus (a chord; right; settled f86 on
+// "pop up", out f111). Diophantus closes the avenue: his column rises dead ahead and settles on his name (~f105).
+// f90-140: the glide bends softly right toward him while the look moves onto him (f100-168); the Roman aqueduct comes
+// out of the haze behind him (clear by "Roman", f143), a dominus and a freeman stroll out along the terrace (~f128 on).
+// f140-185: a soft ease into V2's end camera (blended over f168-185): the end composition exactly as delivered.
+// Diophantus ~320 px (head ~y 470) before the aqueduct's arches, DIOPHANTUS on his band at y ~1000-1020, the Romans
+// small on the terrace (faces ~y 920-975), all above the caption bands; below them the column and the terrace sink
+// into the dense low air.
 // Orange = Greek mathematical knowledge (the Elements, the works on the columns, Diophantus's Arithmetica); the
 // Romans, the aqueduct and everything else in muted earth tones, people never orange. No text but the world's carved
 // EUCLID and DIOPHANTUS.
 //
 // DEPTH: greekStairWorld's level pinhole (StairCam: eye X, height E, depth Zc, focal F, horizon row hy) plus this
 // cut's horizontal lens shift `sh` (the world has no yaw; the shift turns the frame without bending a vertical).
-// Units U = 178 per metre. f0: eye (1.95, 11.7, 2.0) m, F 1000, Euclid 4.4 m ahead; V2 rises ~2.2 m over him by f30
-// and comes back down to a level 10.6 m by f110 (the plan's OFFSETS: smooth offsets on the V1 camera, zero with zero
-// velocity and acceleration outside f14-110; the look is one smooth turn); the end: eye (19.6, 10.6, 53.6) m, F 2500,
-// Diophantus 14.4 m ahead (Z 68 m), the aqueduct at Z 82 m. The cut's lone columns: Archimedes at (0.0, 21.0) m and
-// Apollonius at (13.0, 41.0) m, capital tops 9 m (diophantusPopsUpPlan LONE). The world in three depth passes (back Z >= 76 m, columns Z 24-68 m, near Z <= 9 m) with this
-// cut's own air between them: a fog bank of camera-facing veils (Z 9.6-16 m) and wisps (Z 10-23 m) that thin as the
+// Units U = 178 per metre. f0: eye (1.98, 11.7, 2.1) m, F 1000, Euclid 4.4 m ahead; the glide (diophantusPopsUpPlan
+// V3: heading + speed integrated per frame, the late heading and the cruise solved to land on V2's end eye) rises
+// ~1 m over him by f24 and comes down to 10.6 m; the end: eye (19.6, 10.6, 53.6) m, F 2500, Diophantus 14.4 m ahead
+// (Z 68 m), the aqueduct at Z 82 m. The avenue (diophantusPopsUpPlan AVENUE / LONE): each column placed by the frame
+// the glide passes it (12 m ahead, 3 m to the side of the look), capital tops 9.0-9.9 m; the world's COLUMNS are
+// untouched (its Archimedes / Apollonius / Ptolemy stay sunk in A). The world in three depth passes (back Z >= 76 m,
+// columns Z 24-68 m, near Z <= 9 m) with this cut's own air between them: a fog bank of camera-facing veils (Z 9.6-16 m) and wisps (Z 10-23 m) that thin as the
 // eye nears them, and one far-haze veil (Z 72 m) that keeps the Roman background hidden until the approach. The
 // backdrop rows are re-read 50 m ahead of the eye (see sceneOf: the world's stairAirOf reads them at the absolute
 // Z = 50 m, which inverts once the eye passes Z ~50 m). The columns rise via the world's opts.rise on a surfacing
-// profile (the world clamps rise at 1: the settle approaches from below, no overshoot). The generations are hidden
+// profile (the world clamps rise at 1: the settle approaches from below, no overshoot); the avenue's columns on their
+// own profile (gathering speed inside the low air, one soft deceleration once visible). The generations are hidden
 // (behind and below the eye; no slivers); the third Roman (roman2) is hidden; roman0/roman1 are drawn by this cut.
 //
 // SOURCES: the world's (greekStairWorld header): Archimedes' sphere in the cylinder (On the Sphere and Cylinder;
@@ -59,7 +60,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AIR, AirStage, RomeFolk, WorldSvg, airRamp, lineOf, mixHex, rgbHex, smoothstep, type AirView, type Cam, type Mat } from "../kits/dwarkesh-3d/dwarkesh3d";
 import * as GF from "./greekFolk";
-import { CAPITAL, GENERATIONS, GreekStairWorld, NEAR, TERRACE, U, WORK_DIAGRAMS, lowAirAt, stairAirOf, tOfHeight, type StairAir, type WorldOpts } from "./greekStairWorld";
+import { CAPITAL, COLUMNS, GENERATIONS, GreekStairWorld, NEAR, TERRACE, U, WORK_DIAGRAMS, lowAirAt, riseOffset, stairAirOf, tOfHeight, type StairAir, type WorldOpts } from "./greekStairWorld";
 import { DURATION as PLAN_DURATION, LONE, OFF_JOIN, REST_A, WALKERS, cameraA, loneDrop, loneRise, riseA, type ACam, type LoneCol } from "./diophantusPopsUpPlan";
 
 export const FPS = 30000 / 1001;
@@ -254,6 +255,52 @@ const loneVeil = (S: StairAir, Z: number, feetH: number) => {
   const fd = 1 - (1 - 0.82 * S.fog(Z)) * (1 - lowAirAt(h));
   return { fog: { rgb: S.air(h), amount: Math.min(0.86, fd) }, tone: 1 - smoothstep(LONE_GATE, 1, fd) };
 };
+/** the avenue's works (orange line diagrams on the tablets): the world's two, plus Eratosthenes' measure of the Earth
+ *  (the circle, the two radii to Syene and Alexandria, the parallel sun rays) and Hipparchus' chords */
+const circ = (cx: number, cy: number, r: number, n = 40): [number, number][] => Array.from({ length: n + 1 }, (_, k) => [cx + r * Math.cos((2 * Math.PI * k) / n), cy + r * Math.sin((2 * Math.PI * k) / n)] as [number, number]);
+export const LONE_WORKS: Record<string, GF.DiagramSpec> = {
+  sphereCylinder: WORK_DIAGRAMS.sphereCylinder,
+  cone: WORK_DIAGRAMS.cone,
+  eratosthenes: {
+    lines: [
+      circ(0, 0.12, 0.58),
+      [
+        [0, 0.12],
+        [0, -0.46],
+      ],
+      [
+        [0, 0.12],
+        [0.2, -0.43],
+      ],
+      [
+        [-0.08, -0.95],
+        [-0.08, -0.5],
+      ],
+      [
+        [0.3, -0.95],
+        [0.3, -0.5],
+      ],
+    ],
+  },
+  hipparchus: {
+    lines: [
+      circ(0, 0, 0.66),
+      [
+        [-0.66, 0],
+        [0.66, 0],
+      ],
+      [
+        [-0.66, 0],
+        [0.33, -0.57],
+        [0.66, 0],
+      ],
+      [
+        [0.33, -0.57],
+        [0.33, 0],
+      ],
+    ],
+  },
+};
 export const loneScholarPose = (col: LoneCol, i: number, t: number) => GF.idle(GF.POSES.holdTablet(col.dir), t, 21 + i * 2.3);
 const LoneScholar: React.FC<{ S: StairAir; col: LoneCol; i: number; drop: number; t: number }> = ({ S, col, i, drop, t }) => {
   const X = col.X * U;
@@ -267,7 +314,7 @@ const LoneScholar: React.FC<{ S: StairAir; col: LoneCol; i: number; drop: number
   return (
     <g>
       <Contact S={S} X={X} H={H} Z={Z} w={60} uid={`lc-${col.id}`} />
-      <GF.GreekFigure kind="scholar" variant={col.variant} pose={loneScholarPose(col, i, t)} at={at} scale={scale} uid={`lf-${col.id}`} fog={veil.fog} tone={veil.tone} unitPx={S.k} held={{ two: "tablet", diagram: WORK_DIAGRAMS[col.work] }} />
+      <GF.GreekFigure kind="scholar" variant={col.variant} pose={loneScholarPose(col, i, t)} at={at} scale={scale} uid={`lf-${col.id}`} fog={veil.fog} tone={veil.tone} unitPx={S.k} held={{ two: "tablet", diagram: LONE_WORKS[col.work] }} />
     </g>
   );
 };
@@ -285,7 +332,7 @@ const loneOnScreen = (S: StairAir, cam: Cam, col: LoneCol, drop: number) => {
 };
 const loneItems = (S: StairAir, cam: Cam, f: number): Item[] => {
   const out: Item[] = [];
-  if (f <= OFF_JOIN.f0 || f >= OFF_JOIN.f1) return out;
+  if (f <= OFF_JOIN.f0) return out;
   LONE.forEach((col, i) => {
     const drop = loneDrop(col, loneRise(col, f));
     if (!loneOnScreen(S, cam, col, drop)) return;
@@ -401,6 +448,12 @@ export const sceneOf = (f: number, probe?: Probe) => {
   return { c, t, Sback, Scols, Snear, cam, v };
 };
 
+/** the world's column pass (in A only Diophantus rises there; the world's other lone columns stay sunk) comes out of
+ *  the dense low air the way the avenue's columns do (LONE_EMERGE, by his capital's height): while his column is sunk
+ *  the world tints its top a little darker than the haze behind it, which would read as a dark speck (~f54-76) */
+const DIO_I = COLUMNS.findIndex((col) => col.id === "diophantus");
+export const colsPassOpacity = (rise: number[]) => smoothstep(LONE_EMERGE.h0 * U, LONE_EMERGE.h1 * U, COLUMNS[DIO_I].top - riseOffset(DIO_I, rise[DIO_I] ?? 1));
+
 const DiophantusPopsUp: React.FC<z.infer<typeof schema>> = ({ probe }) => {
   const frame = useCurrentFrame();
   const pr: Probe | undefined = probe ? (JSON.parse(probe) as Probe) : undefined;
@@ -408,6 +461,7 @@ const DiophantusPopsUp: React.FC<z.infer<typeof schema>> = ({ probe }) => {
   // the cut's own air and lone columns between the world's column pass (only Diophantus stands there in A) and its
   // near pass, in one painter's order far -> near
   const fb = fogBankItems(v, cam, c);
+  const colsOp = colsPassOpacity(Scols.opts.rise ?? []);
   // (the fog-bank sheets first, in V1's order, so the approved opening renders bit for bit as V1; then the wisps and
   // the lone columns in one depth order: the columns stand beyond the bank's last sheet, Z 16 m, when they surface)
   const mid = { defs: <defs>{fb.defs}</defs>, items: [...fb.items, ...[...wispItems(Sback, c, frame), ...loneItems(Scols, cam, frame)].sort((a, b) => b.z - a.z)] };
@@ -416,7 +470,7 @@ const DiophantusPopsUp: React.FC<z.infer<typeof schema>> = ({ probe }) => {
       <WorldSvg cam={cam}>
         <GreekStairWorld S={Sback} />
         <FarHaze v={v} cam={cam} c={c} />
-        <GreekStairWorld S={Scols} />
+        {colsOp >= 1 ? <GreekStairWorld S={Scols} /> : colsOp > 0.002 ? <g opacity={colsOp}><GreekStairWorld S={Scols} /></g> : null}
         {mid.defs}
         {mid.items.map((it) => it.el)}
         <GreekStairWorld S={Snear} />

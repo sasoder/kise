@@ -185,7 +185,8 @@ const smoothT = (u: number) => {
   const v = c01(u);
   return v * v * (3 - 2 * v);
 };
-export const cameraA = (f: number): ACam => {
+/** V2's camera (delivered 00ea220): the V1 base with the V2 middle offsets; kept for the V3 end and the comparison */
+export const cameraV2 = (f: number): ACam => {
   const b = baseA(f);
   // outside the reshaped middle: the V1 camera itself, bit for bit
   if (f <= OFF_JOIN.f0 || f >= OFF_JOIN.f1) return b;
@@ -196,7 +197,141 @@ export const cameraA = (f: number): ACam => {
   const tan = tanB + (target - tanB) * w + off("tan", f);
   return { X: b.X + off("X", f) * U, E: b.E + off("E", f) * U, Zc: b.Zc + off("Zc", f) * U, F, hy: b.hy + off("hy", f), sh: -F * tan };
 };
-export const REST_A = cameraA(0);
+export const REST_A = cameraV2(0);
+
+// ---- V3 (Revision 1: "rushed; the pillars are too far from each other") -------------------------------------------
+const smooth5 = (t: number) => {
+  const u = c01(t);
+  return u * u * u * (u * (6 * u - 15) + 10);
+};
+/** the turn's profile: zero rate at both ends, a flatter middle than smooth5 (peak rate ~1.65 x mean, not 1.875) */
+const V3_TURN = (t: number) => {
+  const u = c01(t);
+  return u * u * (3 - 2 * u) * 0.6 + u * u * u * (u * (6 * u - 15) + 10) * 0.4;
+};
+/** the glide (plan): straight down the avenue on a heading of `avenue` degrees (nearly along the world's depth, so
+ *  the avenue opens symmetrically: the world camera has no yaw, only a lens shift) until l0, then a soft bend right
+ *  over l0..l1 onto a heading solved so the glide ends exactly on V2's end eye, and from e0 a soft ease onto V2's
+ *  approach heading. The late heading `mid` and the cruise are solved together. Speed (frames): a gentle ease out of
+ *  f0 (V1's own f0 speed) over easeIn, one near-constant calm cruise, a soft ease from easeOut0 into V2's end creep;
+ *  the camera blends into V2's end over join0..f185. */
+export const V3_SPEED = { easeIn: 34, easeOut0: 140, join0: 168 };
+export const V3_HEAD = { avenue: 15, l0: 90, l1: 130, e0: 134 };
+const V3_END = cameraV2(DURATION - 1);
+const V3_PRE = cameraV2(DURATION - 2);
+const V3_V0 = Math.hypot(cameraV2(1).X - cameraV2(0).X, cameraV2(1).Zc - cameraV2(0).Zc) / U;
+const V3_VE = Math.hypot(V3_END.X - V3_PRE.X, V3_END.Zc - V3_PRE.Zc) / U;
+const V3_LEAN = Math.atan(-cameraV2(0).sh / cameraV2(0).F);
+const V3_HEND = Math.atan2(V3_END.X - cameraV2(DURATION - 12).X, V3_END.Zc - cameraV2(DURATION - 12).Zc);
+const v3Speed = (f: number, vc: number) => {
+  const a = smooth5(f / V3_SPEED.easeIn);
+  const b = smooth5((f - V3_SPEED.easeOut0) / (DURATION - 1 - V3_SPEED.easeOut0));
+  return (V3_V0 + (vc - V3_V0) * a) * (1 - b) + V3_VE * b;
+};
+const V3_AVE = (V3_HEAD.avenue * Math.PI) / 180;
+const v3Heading = (f: number, mid: number) =>
+  V3_AVE + (mid - V3_AVE) * smooth5((f - V3_HEAD.l0) / (V3_HEAD.l1 - V3_HEAD.l0)) + (V3_HEND - mid) * smooth5((f - V3_HEAD.e0) / (DURATION - 1 - V3_HEAD.e0));
+/** integrate the glide frame by frame (8 substeps) from V1's f0 eye: per frame X, Z, arc s (metres) and heading */
+const v3Integrate = (mid: number, vc: number) => {
+  const X = [cameraV2(0).X / U];
+  const Z = [cameraV2(0).Zc / U];
+  const S = [0];
+  const SUB = 8;
+  for (let f = 1; f < DURATION; f++) {
+    let x = X[f - 1];
+    let z = Z[f - 1];
+    let s = S[f - 1];
+    for (let k = 0; k < SUB; k++) {
+      const t = f - 1 + (k + 0.5) / SUB;
+      const v = v3Speed(t, vc) / SUB;
+      const h = v3Heading(t, mid);
+      x += v * Math.sin(h);
+      z += v * Math.cos(h);
+      s += v;
+    }
+    X.push(x);
+    Z.push(z);
+    S.push(s);
+  }
+  return { X, Z, S };
+};
+/** solve (mid heading, cruise) so the glide's last frame is V2's end eye (2-D Newton, finite differences) */
+const V3_SOL = (() => {
+  const tx = V3_END.X / U;
+  const tz = V3_END.Zc / U;
+  let m = 0.35;
+  let vc = 0.36;
+  const err = (mm: number, v: number) => {
+    const r = v3Integrate(mm, v);
+    return [r.X[DURATION - 1] - tx, r.Z[DURATION - 1] - tz];
+  };
+  for (let it = 0; it < 30; it++) {
+    const e = err(m, vc);
+    if (Math.hypot(e[0], e[1]) < 1e-7) break;
+    const dm = 1e-5;
+    const dv = 1e-5;
+    const em = err(m + dm, vc);
+    const ev = err(m, vc + dv);
+    const j11 = (em[0] - e[0]) / dm;
+    const j21 = (em[1] - e[1]) / dm;
+    const j12 = (ev[0] - e[0]) / dv;
+    const j22 = (ev[1] - e[1]) / dv;
+    const det = j11 * j22 - j12 * j21;
+    m -= (j22 * e[0] - j12 * e[1]) / det;
+    vc -= (-j21 * e[0] + j11 * e[1]) / det;
+  }
+  return { mid: m, vc, ...v3Integrate(m, vc) };
+})();
+export const V3_MID_DEG = (V3_SOL.mid * 180) / Math.PI;
+export const V3_CRUISE = V3_SOL.vc;
+export const V3_LENGTH = V3_SOL.S[DURATION - 1];
+export const V3_S = { s: V3_SOL.S, vc: V3_SOL.vc };
+/** the glide at frame f (fractional): plan position (m) and heading tan */
+const v3At = (f: number) => {
+  const i = Math.max(0, Math.min(DURATION - 2, Math.floor(f)));
+  const t = c01(f - i);
+  return { X: lerp(V3_SOL.X[i], V3_SOL.X[i + 1], t), Z: lerp(V3_SOL.Z[i], V3_SOL.Z[i + 1], t), tan: Math.tan(v3Heading(f, V3_SOL.mid)) };
+};
+/** the frame at which the glide reaches arc s (m) */
+export const v3FrameAt = (sm: number) => {
+  const S = V3_SOL.S;
+  for (let f = 0; f < DURATION - 1; f++) if (S[f + 1] >= sm) return f + (sm - S[f]) / Math.max(1e-9, S[f + 1] - S[f]);
+  return DURATION - 1;
+};
+/** the glide by arc length s (m): plan position and heading tan */
+export const v3PathAt = (sm: number) => v3At(v3FrameAt(sm));
+/** E (eye height, m): up over Euclid as the glide leaves the landing, then down to the scholars' eye level */
+export const V3_E: Key[] = [
+  [0, 11.69],
+  [24, 12.75],
+  [70, 11.1],
+  [140, 10.62],
+  [185, 10.6],
+];
+const V3_EF = pchip(V3_E, true);
+const DIO_TAN = (X: number, Zc: number) => (DIO.X / U - X) / (DIO.Z / U - Zc);
+/** V3 look (the world camera has no yaw: the look is the lens shift sh = -F tan(look)): from V1's f0 lean (onto
+ *  Euclid's landing) round onto the avenue's heading by turn1 in one slow, flat-middled turn (the vanishing point
+ *  comes to the frame's centre as the first column rises), then from dio0 onto Diophantus by dio1 */
+export const V3_LOOK = { turn1: 84, dio0: 100, dio1: 168 };
+/** the V3 camera: the driven glide, E, a single-lobe zoom and horizon row, the look; blended into V2's end camera over
+ *  join0..f185 (V2's end composition, as delivered) */
+export const cameraA = (f: number): ACam => {
+  const v2 = cameraV2(f);
+  const v20 = cameraV2(0);
+  const q = v3At(f);
+  const u = c01(f / (DURATION - 1));
+  const lnF = lerp(Math.log(v20.F), Math.log(V3_END.F), smooth5(u * 1.06));
+  const F = Math.exp(lnF);
+  const hy = lerp(v20.hy, V3_END.hy, smooth5((f - 8) / 160));
+  const wDio = smooth5((f - V3_LOOK.dio0) / (V3_LOOK.dio1 - V3_LOOK.dio0));
+  const wAve = V3_TURN(f / V3_LOOK.turn1);
+  const tan = Math.tan((V3_LEAN + (V3_AVE - V3_LEAN) * wAve) * (1 - wDio) + Math.atan(DIO_TAN(q.X, q.Z)) * wDio);
+  const c: ACam = { X: q.X * U, E: V3_EF(f) * U, Zc: q.Z * U, F, hy, sh: -F * tan };
+  const j = smooth5((f - V3_SPEED.join0) / (DURATION - 1 - V3_SPEED.join0));
+  if (j <= 0) return c;
+  return { X: lerp(c.X, v2.X, j), E: lerp(c.E, v2.E, j), Zc: lerp(c.Zc, v2.Zc, j), F: Math.exp(lerp(Math.log(c.F), Math.log(v2.F), j)), hy: lerp(c.hy, v2.hy, j), sh: lerp(c.sh, v2.sh, j) };
+};
 
 /** project a world point (X, H, Z; units) to screen px with the shift (no sway) */
 export const screenA = (c: ACam, X: number, H: number, Z: number): [number, number] => {
@@ -233,7 +368,7 @@ const V1_ARCHIMEDES = { f0: 4, dur: 40 };
 /** V2: the world's Archimedes, Apollonius and Ptolemy stay sunk through the new middle (the cut draws its own two lone
  *  columns there); from f110 on they stand as in V1 (all behind the eye or far off-screen in the approved ending, but
  *  standing keeps V1's page, so f110-185 render pixel for pixel as approved) */
-export const WORLD_COLS_STAND_FROM = 110;
+export const WORLD_COLS_STAND_FROM = 10000;
 export const riseA = (f: number): number[] =>
   COLUMNS.map((c) => {
     const r = RISE[c.id as keyof typeof RISE];
@@ -256,11 +391,48 @@ export const WALKERS = [
  *  the first on the left (Archimedes, the sphere in the cylinder) settles by "interesting" (~f52), the second on the
  *  right (Apollonius, the cone and its section) by "pop up" (~f82); each slides out of the frame as the glide turns
  *  toward Diophantus. X, Z, top in metres (top = the capital's top = the scholar's feet), R the shaft radius. */
-export type LoneCol = { id: string; X: number; Z: number; top: number; R: number; work: "sphereCylinder" | "cone"; variant: number; dir: 1 | -1; rise: { f0: number; dur: number } };
-export const LONE: LoneCol[] = [
-  { id: "a-archimedes", X: 0.0, Z: 21.0, top: 9.0, R: 0.5, work: "sphereCylinder", variant: 5, dir: 1, rise: { f0: 8, dur: 40 } },
-  { id: "a-apollonius", X: 13.0, Z: 41.0, top: 9.0, R: 0.48, work: "cone", variant: 6, dir: -1, rise: { f0: 44, dur: 38 } },
+export type LoneCol = { id: string; X: number; Z: number; top: number; R: number; work: string; variant: number; dir: 1 | -1; rise: { f0: number; dur: number } };
+/** V3: an avenue of lone columns close to the glide (Revision 1), alternating left / right, each placed by the frame
+ *  the glide passes it: at frame `pass` it stands AVENUE.d metres ahead of the eye and AVENUE.a metres to the side of
+ *  the look (so it is big and readable there, ~300 px, and slides out of the frame at a calm pace a few frames later),
+ *  consecutive columns ~6-8 m apart along the glide; each is settled well before its pass; Diophantus closes the
+ *  avenue. side -1 left, +1 right; top = the capital's top (the scholar's feet), so each scholar stands about at the
+ *  eye as he passes. Works: Archimedes (sphere in the cylinder), Apollonius (the cone), Eratosthenes (the Earth's
+ *  circumference: the circle, the two radii, the parallel rays), Hipparchus (a chord in a circle). */
+export const AVENUE = { a: 3.0, d: 12.0, pass0: 54, dpass: 17, dur: 40, firstSettle: 44, lastSettle: 86 };
+const AVENUE_LOOK = [
+  { id: "a-archimedes", side: -1 as const, top: 9.9, work: "sphereCylinder", variant: 5 },
+  { id: "a-apollonius", side: 1 as const, top: 9.5, work: "cone", variant: 6 },
+  { id: "a-eratosthenes", side: -1 as const, top: 9.2, work: "eratosthenes", variant: 4 },
+  { id: "a-hipparchus", side: 1 as const, top: 9.0, work: "hipparchus", variant: 2 },
 ];
-export const loneRise = (c: LoneCol, f: number) => springUp(f, c.rise.f0, c.rise.dur);
+/** settles evenly staggered from firstSettle to lastSettle ("pop up"); each rise lasts dur (97 % at 0.75 dur) */
+const AVENUE_COLS = AVENUE_LOOK.map((c, i) => {
+  const settle = AVENUE.firstSettle + ((AVENUE.lastSettle - AVENUE.firstSettle) * i) / (AVENUE_LOOK.length - 1);
+  return { ...c, pass: AVENUE.pass0 + AVENUE.dpass * i, rise: { f0: Math.round(settle - 0.75 * AVENUE.dur), dur: AVENUE.dur } };
+});
+export const LONE: LoneCol[] = AVENUE_COLS.map((c) => {
+  const cam = cameraA(c.pass);
+  const t = -cam.sh / cam.F;
+  const n = Math.hypot(1, t);
+  // look axis in plan (t, 1)/n, its right normal (1, -t)/n
+  const X = cam.X / U + (AVENUE.d * t) / n + (c.side * AVENUE.a) / n;
+  const Z = cam.Zc / U + AVENUE.d / n - (c.side * AVENUE.a * t) / n;
+  return { id: c.id, X, Z, top: c.top, R: 0.5, work: c.work, variant: c.variant, dir: c.side < 0 ? 1 : -1, rise: c.rise };
+});
+/** the avenue's rise: it gathers speed while still inside the low air (a lone scholar first shows at rise ~0.24),
+ *  so the visible part is one soft deceleration from the surfacing to the settle (no slow-then-fast kink) */
+const LONE_RISE_SHAPE = pchip(
+  [
+    [0, 0],
+    [0.12, 0.1],
+    [0.2, 0.24],
+    [0.5, 0.78],
+    [0.75, 0.97],
+    [1, 1],
+  ],
+  true,
+);
+export const loneRise = (c: LoneCol, f: number) => c01(LONE_RISE_SHAPE(c01((f - c.rise.f0) / c.rise.dur)));
 /** a lone column's drop at rise 0..1 (the world's riseOffset: at 0 his head is ~1 m under the low air's floor) */
 export const loneDrop = (c: LoneCol, rise: number) => (1 - c01(rise)) * (c.top + 3.0) * U;
