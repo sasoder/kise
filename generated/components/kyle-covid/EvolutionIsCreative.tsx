@@ -41,6 +41,16 @@
 // last frame. Orange = THE pathogen only (the docked virion and its copies, from WEAKNESS on); everything else cream /
 // DEAD / air.
 //
+// USER REVISION 2 (the shared light, covidAura): every orange virion throws the clip's light (virionAura: radius 2.4 x
+// its crowned body radius, envelope + spikes; centre alpha 0.7 x how lit), from the moment the winner turns orange:
+// the docked one's light starts at the contact point with the orange (f126) and grows round the whole virion with the
+// spread (centre cup -> body, radius 0.45 -> 1, f126-f138); its light lies BEHIND it (lighting the air and the cell)
+// with a 0.35 share over it, so its crown keeps its contrast. The infected cell glows warmly from inside as it fills
+// (cellAura, 0.35 x fill: 0.2 x the wrap + 0.8 x the virions made), each virion made inside throws a 0.55 share of its
+// light behind it, and the copies carry theirs out (0.55 inside -> 1 once out). The canvas is transparent over the
+// air, so the light is a true screen in two parts (see lightAt). Frames f0-f125 are unchanged; the cream microbes, the
+// tree, the tissue, the camera and the timing are as delivered. The light stays above y ~950 (clear of the bands).
+//
 // DEPTH: one pinhole camera (evolutionScene.ts), F 1400, looking along +Z, keyed in 2D (k / wx / wy / sy, pchip) and
 // solved to a real dolly; the tree near Z 0 (-1.6..2.4), the front row of cells Z ~0.6, rows behind at Z 5 and 11; fog
 // by world depth Z (fogZ), so the pull-back never buries the tree.
@@ -54,6 +64,7 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirStage, makeAirView, type AirScene, type AirView, type RGB } from "../kits/dwarkesh-3d/dwarkesh3d";
+import { AURA_COLORS, AURA_STOPS, cellAura, virionAura } from "./covidAura";
 import { MicrobeCanvas, drawMicrobe, inkOf, mixGenome, shapeOf, span, type Genome } from "./covidMicrobes";
 import {
   COPIES,
@@ -108,6 +119,69 @@ const STRAND = hexRgb("#EAE0CB");
 const ORANGE = hexRgb("#FFB000");
 
 type Ctx = CanvasRenderingContext2D;
+
+// ---- the light the virus throws (user revision 2: covidAura, the shared look of every orange thing) ------------------
+/** the share of a virion's light drawn OVER it (the rest lights the air and the cell behind it, so its crown keeps its
+ *  contrast: AURA_READY "a hero in close-up") */
+const AURA_FRONT = 0.35;
+/** virions still inside the cell are seen through its membrane: their light a share of a free one's */
+const AURA_IN = 0.55;
+/** the light itself (covidAura's look: its stops, colours and fog, a screen blend). This canvas is TRANSPARENT over the
+ *  air (AirStage paints the air below it), and a canvas "screen" over transparent pixels is a plain paint (it darkened
+ *  the air's blue: an olive halo). So the light is laid in two parts: over what is drawn, a screen masked by the
+ *  canvas's own alpha; over the bare air, behind everything (destination-over), the air at that row already screened
+ *  by the light, at the light's alpha (exactly screen(air, light x a)). */
+let SCRATCH: HTMLCanvasElement | null = null;
+const lightAt = (ctx: Ctx, v: AirView, cx: number, cy: number, r: number, a: number, fog: number) => {
+  if (a <= 0.002 || r <= 0.5) return;
+  const fa = c01(fog);
+  const al = c01(a * (1 - 0.5 * fa));
+  const air = v.airAtScreen(cy);
+  const cols = AURA_COLORS.map((h) => mixR(hexRgb(h), air, 0.5 * fa));
+  const x0 = Math.floor(cx - r);
+  const y0 = Math.floor(cy - r);
+  const w = Math.ceil(cx + r) - x0;
+  const h = Math.ceil(cy + r) - y0;
+  if (!SCRATCH) SCRATCH = document.createElement("canvas");
+  if (SCRATCH.width < w || SCRATCH.height < h) {
+    SCRATCH.width = Math.max(SCRATCH.width, w);
+    SCRATCH.height = Math.max(SCRATCH.height, h);
+  }
+  const sx = SCRATCH.getContext("2d");
+  if (!sx) return;
+  sx.setTransform(1, 0, 0, 1, 0, 0);
+  sx.globalCompositeOperation = "source-over";
+  sx.clearRect(0, 0, w, h);
+  const g1 = sx.createRadialGradient(cx - x0, cy - y0, 0, cx - x0, cy - y0, r);
+  AURA_STOPS.forEach(([o, k], i) => g1.addColorStop(o, css(cols[i], al * k)));
+  sx.fillStyle = g1;
+  sx.fillRect(0, 0, w, h);
+  sx.globalCompositeOperation = "destination-in";
+  sx.drawImage(ctx.canvas, x0, y0, w, h, 0, 0, w, h);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "screen";
+  ctx.drawImage(SCRATCH, 0, 0, w, h, x0, y0, w, h);
+  ctx.globalCompositeOperation = "destination-over";
+  const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  AURA_STOPS.forEach(([o, k], i) => {
+    const sc: RGB = [0, 1, 2].map((j) => 255 - ((255 - air[j]) * (255 - cols[i][j])) / 255) as RGB;
+    g2.addColorStop(o, css(sc, al * k));
+  });
+  ctx.fillStyle = g2;
+  ctx.fillRect(x0, y0, w, h);
+  ctx.restore();
+};
+/** a virion's body radius for its light: the crowned body (envelope + spikes), in genome units: the light wraps the crown
+ *  as a person's wraps the whole figure (the envelope alone, 0.6 u, left the light hidden under the spikes at 270 px) */
+const crownR = (g: Genome) => g.girth + g.spikeLen;
+const VCROWN = crownR(VIRION);
+/** the light of one orange virion at screen (x, y), body radius bodyR px, lit 0..1, k a share (behind / front / in) */
+const glowAt = (ctx: Ctx, v: AirView, x: number, y: number, bodyR: number, lit: number, k: number, fog: number) => {
+  const a = virionAura([x, y], bodyR, lit);
+  lightAt(ctx, v, a.c[0], a.c[1], a.r, a.a * k, fog);
+};
 
 // ---- the tissue ----------------------------------------------------------------------------------------------------
 const TZ = 0.6;
@@ -379,7 +453,23 @@ const dockRot = (o: Org, f: number) => {
   const tr = Math.round(rc.roll / TAU) * TAU;
   return { yaw: lerp(r.yaw, ty, w), pitch: lerp(r.pitch, 0, w), roll: lerp(r.roll, tr, w), wave: r.wave };
 };
+/** the docked virion's light: it starts at the contact point with the orange and grows round the whole virion as the
+ *  orange spreads over it (centre cup -> body, radius 0.45 -> 1 of its full size, alpha with the spread) */
+const dockGlow = (ctx: Ctx, o: Org, f: number, c: Cam, v: AirView, ds: ReturnType<typeof dockState>, k: number) => {
+  if (ds.orangeR <= 0) return;
+  const p = dockCentre(o, f);
+  const q = project(c, p.X, p.Y, p.Z);
+  const cup = project(c, DOCK.cup.x, DOCK.cup.y, TZ);
+  const u = ds.orangeR;
+  const bodyR = crownR(dockGenome(o, f)) * q.s * lerp(0.45, 1, u);
+  glowAt(ctx, v, lerp(cup.x, q.x, u), lerp(cup.y, q.y, u), bodyR, u, k, fogZ(p.Z));
+};
 const drawDock = (ctx: Ctx, o: Org, f: number, c: Cam, v: AirView, ds: ReturnType<typeof dockState>) => {
+  dockGlow(ctx, o, f, c, v, ds, 1);
+  drawDockInner(ctx, o, f, c, v, ds);
+  dockGlow(ctx, o, f, c, v, ds, AURA_FRONT);
+};
+const drawDockInner = (ctx: Ctx, o: Org, f: number, c: Cam, v: AirView, ds: ReturnType<typeof dockState>) => {
   if (ds.wrap < 0.005) {
     drawDockBody(ctx, o, f, c, v, ds, 1);
     return;
@@ -434,6 +524,11 @@ const copyScreen = (cp: (typeof COPIES)[number], f: number, c: Cam) => {
   const q = project(c, lerp(s0.x, st.x, m), lerp(s0.y, st.y, m), lerp(s0.z, TZ, m));
   return { x: q.x, y: q.y, px: q.s * lerp(0.45, 1, sstep(fA, cp.f0 + 4, f)), rot: { yaw: cp.seed * 0.7, pitch: 0.2 * Math.sin(f * 0.04 + cp.seed), roll: cp.seed + f * 0.015 } };
 };
+/** a copy's light: lit as it is made (it grows from the first one in), through the membrane while inside, free once out */
+const copyGlow = (cp: (typeof COPIES)[number], f: number, c: Cam) => {
+  const st = copyAt(cp, f);
+  return { lit: sstep(cp.f0 - 6, cp.f0 + 4, f), share: lerp(AURA_IN, 1, sstep(0.2, 0.6, st.e)), bodyR: VCROWN * copyScreen(cp, f, c).px };
+};
 const drawInfection = (ctx: Ctx, f: number, c: Cam, v: AirView, cellP: Path2D, pass: "inside" | "outside") => {
   const q = project(c, INFECTED.cx, INFECTED.cy, TZ);
   if (pass === "outside") {
@@ -452,6 +547,32 @@ const drawInfection = (ctx: Ctx, f: number, c: Cam, v: AirView, cellP: Path2D, p
   // crisp virions made inside, seen through the translucent membrane: each comes out of one already there
   const air = v.airAtScreen(q.y);
   const ink = inkOf({ orange: 1, fog: fogZ(TZ), air });
+  // their light, BEHIND them (so they stay crisp): the cell glows warmly from inside as they fill it (covidAura
+  // cellAura), and each one made in it throws its own light round itself (a share of a free virion's)
+  const fogT = fogZ(TZ);
+  let made = 0;
+  INSIDE.forEach((iv) => (made += sstep(iv.f0, iv.f0 + 12, f)));
+  const fill = c01(0.2 * dockState(f).wrap + (0.8 * made) / INSIDE.length);
+  if (fill > 0) {
+    let mr = 0;
+    INFECTED.pts.forEach((pt) => (mr += Math.hypot(pt[0] - INFECTED.cx, pt[1] - INFECTED.cy)));
+    const ca = cellAura([q.x, q.y], (mr / INFECTED.pts.length) * q.s * infSwell(f), fill);
+    lightAt(ctx, v, ca.c[0], ca.c[1], ca.r, ca.a, fogT);
+  }
+  INSIDE.forEach((iv, k) => {
+    if (f < iv.f0) return;
+    const g = sstep(iv.f0, iv.f0 + 9, f);
+    const p = posOfIn(k, f);
+    const qq = project(c, p.x, p.y, p.z);
+    glowAt(ctx, v, qq.x, qq.y, VCROWN * qq.s * (0.28 + 0.34 * g), g, AURA_IN, fogT);
+  });
+  // the copies' light too (behind them, carried out with them: a share while inside, a free virion's once out)
+  COPIES.forEach((cp) => {
+    if (f < cp.f0 - 6) return;
+    const cs = copyScreen(cp, f, c);
+    const cg = copyGlow(cp, f, c);
+    glowAt(ctx, v, cs.x, cs.y, cg.bodyR, cg.lit, cg.share, fogT);
+  });
   // the first one comes out of the docked virion (from behind it, up through the membrane): not clipped
   const first = (k: number) => k === 0 && f < INSIDE[0].f0 + 12;
   ctx.save();
@@ -505,6 +626,9 @@ const drawCopiesOut = (ctx: Ctx, f: number, c: Cam, v: AirView, cellP: Path2D) =
     ctx.clip(outside, "evenodd");
     drawMicrobe(ctx, [{ s: sh, x: cs.x, y: cs.y }], cs.px, ink);
     ctx.restore();
+    // its light carried out with it: the share over it (the light behind it is drawn with the inside pass)
+    const cg = copyGlow(cp, f, c);
+    glowAt(ctx, v, cs.x, cs.y, cg.bodyR, cg.lit, cg.share * AURA_FRONT, fogZ(TZ));
     // the membrane stretched over the part pushing out, pinching off as it leaves
     const cap = sstep(0.18, 0.4, st.e) * (1 - sstep(0.72, 0.95, st.e));
     if (cap > 0.01) {
