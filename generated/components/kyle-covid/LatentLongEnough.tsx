@@ -20,14 +20,14 @@
 // grows (f34 -> f84, to 1) while he laughs at his phone (the cast's laugh face, f40 -> f64, ramped over 10 frames each
 // way). On LATENT the camera lands on a medium-close two-shot: him ~61 % of the frame height (head ~290 px wide, ~y 514;
 // the two lung lobes ~y 785; feet ~y 1550), the woman seated on the right: glowing at full, the picture of health;
-// nobody reacts (he reads on, a small amused nod f90 -> f108). On FOR (f102 -> f122) he lowers the phone, turns his head to her and chats, and she leans in; a soft
-// cone of tiny orange specks leaves his mouth (born from f108, full by f118; the cast's breathSpecks rule copied here so
-// each speck knows when it reaches her) and drifts across, arcing over the deep aisle (in front of the far passengers,
-// touching nobody), into her face. Contact: the first specks reach her at f138 (LONG); first reaction: her chest
-// kindles from the specks breathed in (visible ~f142, infected 0.36 by f156; derived from the arrivals, not a timer).
+// nobody reacts (he reads on, a small amused nod f90 -> f108). On FOR (f102 -> f122) he lowers the phone, turns his head to her and chats, and she leans in; the
+// warm cloud of his breath hangs round his head and shoulders (covidHaze, user revision 1: see below) and, as he
+// talks, its front lobe fills the air between them; she sits inside its thin edge. Contact: on the chat she breathes in (f126 ->
+// f136, her shoulders lift a touch), drawing in the few motes near her mouth; first reaction: from LONG (f138) her
+// chest kindles (infected 0.36 by f156, driven by the frame).
 // She answers (f140 -> f152), then smiles and nods: perfectly well. f146 -> f160: a settled living hold (him talking,
 // her smiling, the train swaying, the tunnel lights).
-// Orange = THE VIRUS only (the clip's ORANGE RULE): his lung glow, the breathed specks, her kindling glow; everything
+// Orange = THE VIRUS only (the clip's ORANGE RULE): his lung glow, the haze of his breath, her kindling glow; everything
 // else in the carriage's and the cast's muted local colours.
 //
 // DEPTH: the carriage's set, light and camera grammar (CARRIAGE_DEPTH dRef 700 at kRef 2, dolly 0.5, CARRIAGE_SCENE:
@@ -37,12 +37,22 @@
 // his head, the nearer right poles between them), latentCamAt(f) and LANDING (the f84 camera). Passengers (all well, no
 // masks): an elder near the camera on the left bench (passed by the dolly), three sitters deeper down the left bench
 // (seen in the wide, behind him once the camera lands), a girl on her phone further along the right bench (Z 1648) and a
-// man standing by the far end door (Z 1975); the breath passes in front of the last two, far nearer than they are.
+// man standing by the far end door (Z 1975); the haze sits in front of the last two, far nearer than they are (no mote
+// ever rides a face).
 //
 // REVIEW 2: his phone is held low at belly height (the upper arm down his near side, the forearm below the lungs), so
 // both lung lobes and the windpipe show whole on every frame; the Carrier wears no backpack in cuts 3 and 21 (the
 // director's decision: the straps made the glow read as a bib); he stays recognisable by the red beanie and the cream
 // puffer. The exported staging constants are unchanged.
+//
+// USER REVISION 1 (00;00;06;28, "when the virus gets transferred from the guy to the girl it's super weird ... much more
+// in the atmosphere almost, a subtle cloud around him"): the steered breath cone is gone. Every exhale (his breathing,
+// the laugh f40 -> f64, the chat from ~f110) feeds a warm cloud of air round him (covidHaze, depth mode, anchored at his
+// feet, centred on his head): a feathered orange veil round his head and shoulders on every side (thickest round his
+// face, ~0.24 from ~f100), a lobe in front of his face that fills while he talks, a wide faint halo, so her face sits in
+// its thin edge (~0.07 at f120), and sparse tiny motes wandering inside it (none up at the ceiling or down the aisle).
+// It builds with his glow (barely at f0, ~0.12 at f60) and swells a touch on each exhale. Her kindle is a function of the
+// frame. Nothing else changed (camera, timing, poles, passengers, glow v3, 161 frames).
 //
 // SOURCES: none (no real figures; the latency fact is the speaker's).
 // ---------------------------------------------------------------------------
@@ -50,9 +60,9 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirShadow, AirStage, WorldSvg, airWorldOf, type AirWorld, type Cam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { hash } from "../kits/maps/incaShared";
 import { CARRIAGE_DEPTH, CARRIAGE_SCENE, CarriageStage, NEAR_POLES, carriageSway, polePoint, polesOf, seatNear, swayPose, type Pole, type StageItem } from "./covidCarriage";
-import { BreathSpecks, CovidFigure, POSES, covidAnchors, lerpPose, type CovidFigureProps, type CovidKind, type CovidPose, type P2, type Speck } from "./covidFolk";
+import { CovidFigure, POSES, covidAnchors, lerpPose, type CovidFigureProps, type CovidKind, type CovidPose, type P2 } from "./covidFolk";
+import { HazeCloud, breathRhythm, hazeAt, type HazeAvoid, type HazeEmitter } from "./covidHaze";
 
 export const FPS = 30000 / 1001;
 export const DURATION = 161;
@@ -138,6 +148,11 @@ export const BEAT = {
   herLook0: 108,
   herLook1: 124,
   herChat: 140,
+  /** revision 3 (user 1): her breath in before she answers, and her kindle from LONG */
+  inhale0: 126,
+  inhale1: 136,
+  kindle0: 138,
+  kindle1: 156,
 };
 
 /** the phone hand's wrist (rig units from his feet, facing right): belly height just in front of him, the upper arm
@@ -202,6 +217,9 @@ export const womanPose = (frame: number): CovidPose => {
     q = lerpPose(q, { ...ch, headYaw: q.headYaw - 0.08, open: (ch.open ?? 0) * talk }, chatA * 0.8);
   }
   q = POSES.nod(q, c01((frame - (BEAT.herChat + 12)) / 16), 7);
+  // her breath in, the chat going on (f126 -> f136, out again as she answers): the shoulders lift a touch, the chin up
+  const inh = herInhale(frame);
+  q = { ...q, crouch: q.crouch - 2.4 * inh, pitch: q.pitch - 2.5 * inh, open: Math.max(q.open ?? 0, 0.12 * inh) };
   return swayPose(q, frame, 0.5, 2);
 };
 
@@ -230,60 +248,44 @@ export const othersAt = (frame: number): FigSpec[] => {
 };
 
 // ===================================================================================================================
-// THE BREATH: the cast's breathSpecks rule (copied, so each speck knows when it reaches her: it is breathed IN there,
-// fading into her mouth, and the arrivals kindle her chest)
+// THE SHARED AIR (user revision 1): no stream. Every exhale (his breathing, the laugh, the chat) adds to a faint warm
+// haze round his head and shoulders that diffuses into the carriage's air with the sway (covidHaze); she sits inside its
+// thin edge, breathes in (f126 -> f138) and her chest kindles from LONG (f138), driven by the frame.
 // ===================================================================================================================
-/** the breath (finalise: the specks 1.4x larger and 1.5x as many as review 2 for phone size: rate 1.9 -> 2.85, size 1.4) */
-const BR = { rate: 2.85, life: 62, reach: 250, spread: 0.42, seed: 0.15, arc: 0.3, size: 1.4 };
-type BreathFrame = { specks: Speck[]; arrived: number };
-const breathAmount = (birth: number) => sst(BEAT.breath0, BEAT.breathFull, birth);
-/** the specks at a frame from his mouth to her mouth (world px), and the weighted count of specks that have reached her */
-export const breathAt = (frame: number, mouth: P2, dir: P2, scale: number, target: P2): BreathFrame => {
-  const { rate, life, spread, seed } = BR;
-  const reach = BR.reach * scale;
-  const nrm: P2 = [-dir[1], dir[0]];
-  const out: Speck[] = [];
-  const tLen = Math.hypot(target[0] - mouth[0], target[1] - mouth[1]);
-  const i0 = Math.floor((BEAT.breath0 - 2) * rate);
-  const i1 = Math.floor(frame * rate);
-  let arrived = 0;
-  for (let i = i0; i <= i1; i++) {
-    const birth = i / rate;
-    const age = frame - birth;
-    if (age < 0) continue;
-    const h1 = hash(i + 7.3, 31 + seed);
-    const h2 = hash(i + 1.9, 47 + seed);
-    const h3 = hash(i + 4.1, 59 + seed);
-    const amt = c01(breathAmount(birth));
-    if (amt <= 0.003) continue;
-    const puff = 0.3 + 0.7 * Math.max(0, Math.sin((birth / (3.4 * 29.97)) * 2 * Math.PI + seed)) ** 0.6;
-    if (h3 > 0.25 + 0.75 * puff) continue;
-    const u = Math.min(1, age / life);
-    const s = reach * (0.82 + 0.36 * h2) * (1 - (1 - u) ** 1.7);
-    const v = Math.min(1, (s / Math.max(1, tLen)) * 1.05);
-    // breathed in: once it reaches her (v 1) it fades out over a few frames; it counts toward her glow
-    const inhaled = sst(0.9, 1, v);
-    arrived += amt * inhaled;
-    if (age > life) continue;
-    const th = spread * (2 * h1 - 1) * (0.55 + 0.45 * u);
-    const sway = 6 * scale * Math.sin(age * 0.05 + h1 * 6.28) * u;
-    const free: P2 = [mouth[0] + dir[0] * s * Math.cos(th) + nrm[0] * s * Math.sin(th) + sway * nrm[0], mouth[1] + dir[1] * s * Math.cos(th) + nrm[1] * s * Math.sin(th) - 8 * scale * u * u + sway * nrm[1]];
-    const C: P2 = [mix(mouth[0], target[0], 0.7), Math.min(mouth[1], target[1]) - BR.arc * tLen];
-    const bz: P2 = [(1 - v) * (1 - v) * mouth[0] + 2 * (1 - v) * v * C[0] + v * v * target[0], (1 - v) * (1 - v) * mouth[1] + 2 * (1 - v) * v * C[1] + v * v * target[1]];
-    const lat = s * Math.sin(th) * (1 - v) * 0.9;
-    const path: P2 = [bz[0] + nrm[0] * lat + sway * nrm[0] * (1 - v), bz[1] + nrm[1] * lat + sway * nrm[1] * (1 - v)];
-    const w = sst(0, 0.3, u);
-    const p: P2 = [free[0] + (path[0] - free[0]) * w, free[1] + (path[1] - free[1]) * w];
-    const r = BR.size * Math.max(0.9, (1.0 + 1.1 * h2) * scale * (1 - 0.3 * u)) * (1 - 0.5 * inhaled);
-    const a = amt * sst(0, 0.06, u) * (1 - u) ** 0.6 * (0.65 + 0.35 * h1) * (1 - inhaled);
-    if (a > 0.01) out.push({ p, r, a });
+/** his mouth and breath direction at a frame, rig units from his feet (memoised: the haze asks for every puff) */
+const MOUTH_MEMO = new Map<number, { m: P2; d: P2; c: P2 }>();
+const carrierMouth = (f: number) => {
+  let v = MOUTH_MEMO.get(f);
+  if (!v) {
+    const a = covidAnchors("carrier", carrierPose(f), [0, 0], 1, { variant: 0 });
+    v = { m: a.mouth, d: a.mouthDir, c: a.headC };
+    MOUTH_MEMO.set(f, v);
   }
-  return { specks: out, arrived };
+  return v;
 };
-/** her glow from the specks she has breathed in (cause before effect): ~0.35 by f158 */
-/** the arrivals that bring her to full kindle (scaled with the speck rate so her kindle keeps its timing) */
-const HER_FULL = 24 * (BR.rate / 1.9);
-export const womanInfected = (arrived: number) => 0.36 * sst(0, 1, arrived / HER_FULL);
+/** how much he breathes out at a frame: grows with the glow (barely at f0, full at LATENT), on the exhale of each
+ *  breath, in bursts on the laugh (f40 -> f64), steadily while he talks (pausing while she answers) */
+export const carrierShedAt = (f: number) => {
+  const s = c01((carrierInfected(f) - 0.3) / 0.7);
+  const shed = 0.08 + 0.92 * s ** 0.5;
+  const lamt = sst(BEAT.laugh0, BEAT.laugh0 + 10, f) * (1 - sst(BEAT.laugh1 - 10, BEAT.laugh1, f));
+  const talk = c01(sst(BEAT.turn0 + 8, BEAT.turn0 + 14, f) * (1 - sst(BEAT.herChat - 2, BEAT.herChat + 3, f)) + sst(BEAT.herChat + 12, BEAT.herChat + 18, f));
+  let e = breathRhythm(f, 96, 0.4);
+  e = mix(e, 0.7 + 0.3 * Math.abs(Math.sin((f * Math.PI) / 5)), lamt);
+  e = mix(e, 0.62 + 0.38 * Math.sin(f * 0.45) ** 2, talk);
+  // the laugh pushes more air out (ha-ha bursts)
+  return Math.min(1, shed * e * (1 + 0.6 * lamt));
+};
+/** how hard his breath pushes out: quiet breathing, the laugh, talking to her (the talk carries his air across) */
+export const carrierPushAt = (f: number) => {
+  const lamt = sst(BEAT.laugh0, BEAT.laugh0 + 10, f) * (1 - sst(BEAT.laugh1 - 10, BEAT.laugh1, f));
+  const talk = c01(sst(BEAT.turn0 + 8, BEAT.turn0 + 14, f) * (1 - sst(BEAT.herChat - 2, BEAT.herChat + 3, f)) + sst(BEAT.herChat + 12, BEAT.herChat + 18, f));
+  return Math.max(0.3, 0.8 * lamt, 1.0 * talk);
+};
+/** her breath in (shoulders lift a touch while the chat goes on, just before she answers) */
+export const herInhale = (f: number) => sst(BEAT.inhale0, BEAT.inhale1, f) * (1 - sst(BEAT.herChat, BEAT.herChat + 12, f));
+/** her glow, from the frame: kindling from LONG (f138) after the breath in, ~0.36 by f156 */
+export const womanInfected = (frame: number) => 0.36 * sst(BEAT.kindle0, BEAT.kindle1, frame);
 
 // ===================================================================================================================
 // THE SCENE (pure: the checks import it)
@@ -303,9 +305,23 @@ export const sceneAt = (frame: number) => {
   const cAt = A.P.at(CARRIER_FEET.X, CARRIER_FEET.Z);
   const grip = A.P.p(GRIP3[0], GRIP3[1], GRIP3[2]);
   const cA = covidAnchors("carrier", cq, cAt.at, cAt.scale, { variant: 0, grip: { R: grip } });
-  const target: P2 = [mix(wA.mouth[0], wA.headC[0], 0.12), mix(wA.mouth[1], wA.headC[1], 0.05)];
-  const br = breathAt(frame, cA.mouth, cA.mouthDir, cAt.scale, target);
-  return { cam, A, cq, cAt, cA, grip, wq, wAt, wA, br, herInf: womanInfected(br.arrived), hisInf: carrierInfected(frame) };
+  // the shared air: his haze in the carriage's 3D air (no target: it hangs round him, his feet the anchor); motes never ride his face or a far passenger's face, and
+  // her breath in draws the motes near her mouth in
+  const FX = CARRIER_FEET.X;
+  const FZ = CARRIER_FEET.Z;
+  const em: HazeEmitter = { project: (u) => ({ p: A.P.p(FX + u[0], u[1], FZ + u[2]), s: A.P.r(FZ + u[2]) }), mouthAt: (f) => carrierMouth(f).m, centreAt: (f) => carrierMouth(f).c, dirAt: (f) => carrierMouth(f).d, amountAt: carrierShedAt, pushAt: carrierPushAt, seed: 3.1 };
+  const avoid: HazeAvoid[] = [
+    { c: cA.headC, r: 30 * cAt.scale, layer: "front" },
+    { c: wA.headC, r: 30 * wAt.scale, layer: "all" },
+  ];
+  for (const o of othersAt(frame)) {
+    const pa = A.P.at(o.X, o.Z);
+    // the far passengers: no mote on a face or a body (a glint on a coat would read as a glow)
+    const oa = covidAnchors(o.kind, o.pose, pa.at, pa.scale, { variant: o.v });
+    avoid.push({ c: oa.headC, r: 46 * pa.scale, layer: "all" }, { c: oa.chest, r: 60 * pa.scale, layer: "all" }, { c: oa.hip, r: 55 * pa.scale, layer: "all" });
+  }
+  const haze = hazeAt([em], frame, { avoid, below: cam.cy + (1050 - 960) / cam.k, sinks: [{ c: wA.mouth, r: 60 * cAt.scale, pull: (f) => sst(BEAT.inhale0, BEAT.inhale1 + 4, f), from: BEAT.inhale0 }] });
+  return { cam, A, cq, cAt, cA, grip, wq, wAt, wA, haze, herInf: womanInfected(frame), hisInf: carrierInfected(frame) };
 };
 
 const figItem = (A: AirWorld, f: FigSpec, frame: number, camK: number, extra?: React.ReactNode): StageItem => {
@@ -333,8 +349,11 @@ const LatentLongEnough: React.FC<z.infer<typeof schema>> = () => {
     { kind: "commuter", v: 2, uid: "wom", pose: S.wq, X: WOMAN_SEAT.X, Z: WOMAN_SEAT.Z, props: { infected: S.herInf } },
     { kind: "carrier", v: 0, uid: "car", pose: S.cq, X: CARRIER_FEET.X, Z: CARRIER_FEET.Z, props: { infected: S.hisInf, grip: { R: S.grip }, hold: { L: "phone" }, carry: "none" } },
   ];
-  // the breath is drawn with the woman's item when she is in front (she sits deeper, Z 360: it goes with the Carrier)
-  const items = figs.map((f) => figItem(A, f, frame, cam.k, f.uid === "car" && S.br.specks.length ? <BreathSpecks specks={S.br.specks} uid="carbr" fog={A.folkFog(f.Z)} /> : undefined));
+  // the haze round him: the part behind him just behind his depth (over the woman, deeper), the part in front after him
+  const items = figs.map((f) => figItem(A, f, frame, cam.k));
+  const hz = CARRIER_FEET.Z;
+  items.push({ Z: hz + 1, key: "hazeB", node: <HazeCloud haze={S.haze} layer="back" uid="hzb" fog={A.folkFog(hz)} /> });
+  items.push({ Z: hz - 1, key: "hazeF", node: <HazeCloud haze={S.haze} layer="front" uid="hzf" fog={A.folkFog(hz)} /> });
   return (
     <AbsoluteFill>
       <AirStage v={A.v} bloom={0.22} shafts={0}>
