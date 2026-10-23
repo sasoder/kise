@@ -21,8 +21,8 @@
 // (0.06, -0.024) mi/f (a timelapse, ~580 px across the cut), visibly boiling the whole way (world storm life `boil`, cut 3's value: turrets rising and rolling over, the
 // base churning, the anvil streaming, rain falling in streaks); three soft in-cloud flickers (f9, f27, f62), none
 // within 6 f of the strike.
-// DIRECTION CUE (cut 3's): a soft cream arrow on the ground pointing AWAY along the drift, its tail inside the ring's
-// east part and its head out past the ring's south-east edge, wiped out from its tail f6 -> f18 ("moving" f12);
+// DIRECTION CUE (cut 3's): a soft cream arrow on the ground UNDER the storm, its tail under the base, pointing AWAY
+// along the drift and out across the ring's north-east edge, wiped out from its tail f6 -> f18 ("moving" f12);
 // "W" and "E" slide up just inside the ring's west and east points, landed on "west" f19 and "east" f30.
 // On "happens three miles" one bolt leaves the storm's trailing (west) low body and strikes the ground INSIDE the
 // ring's east-north-east edge (bearing ~60, 2.82 mi out): strike start f43, CONTACT f46 (= the first reaction frame:
@@ -121,8 +121,10 @@ const litAt = (f: number) => (f < STORM_AWAY_CLOSURE.out.f0 ? 0 : 1 - smooth(STO
 /** the ramp: a brief slow while the rule fires, then rolling again (never stops) */
 const rampActive = (f: number) => 1 - 0.6 * (smooth(46, 52, f) - smooth(58, 66, f));
 
-// ---- the arrow: cut 3's arrow, pointing AWAY along the drift, its tail inside the ring's east part -------------------
-const ARROW = { ...STORM_IN_ARROW, tail: { x: 1.55, y: -0.75 }, len: 1.95 };
+// ---- the arrow: cut 3's arrow (look, size, draw timing), on the ground UNDER the storm as in cut 3: its tail under the
+// storm's base / in its shadow while it draws (f6-f18), pointing AWAY along the drift (east-south-east); the storm
+// rolls along it as it leaves ---------------------------------------------------------------------------------------
+const ARROW = { ...STORM_IN_ARROW, tail: { x: 0.9, y: 3.75 } };
 
 // ---- the compass letters: W on "west" (f19), E on "east" (f30) --------------------------------------------------------
 const COMPASS = { W: { f0: 11, f1: 19 }, E: { f0: 22, f1: 30 } } as const;
