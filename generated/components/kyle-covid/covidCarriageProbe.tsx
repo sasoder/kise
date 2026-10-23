@@ -116,20 +116,20 @@ export const CarriageEmpty: React.FC<{ bands?: boolean }> = ({ bands = false }) 
 // ---------------------------------------------------------------------------
 // the side-pole grammar of cut 12: hold the pole (grip), let go, sicken back onto the seat behind (props.frame 0..59)
 // ---------------------------------------------------------------------------
-const sickenFigs = (A: AirWorld, frame: number): FigSpec[] => {
-  const ps = poleSeat(polesOf("L")[0], "officer", 0);
+const sickenFigs = (A: AirWorld, frame: number, ov = 0): FigSpec[] => {
+  const ps = poleSeat(polesOf("L")[0], "officer", ov);
   const t = Math.min(1, frame / 59);
   const X = ps.feet.X - ps.dir * sickenBack(t, "officer", 0);
   const { at, scale } = A.P.at(X, ps.feet.Z);
   const free = POSES.sicken(ps.dir, t);
   const g = A.P.p(ps.grip[0], ps.grip[1], ps.grip[2]);
-  const held = covidGripTo("officer", 0, free, ps.dir > 0 ? { L: g } : { R: g }, at, scale);
+  const held = covidGripTo("officer", ov, free, ps.dir > 0 ? { L: g } : { R: g }, at, scale);
   const release = Math.min(1, Math.max(0, (t - 0.1) / 0.2));
   const pose = lerpPose(held, free, release * release * (3 - 2 * release));
   const R1 = seatNear("R", 228);
   return [
-    { kind: "officer", v: 0, uid: "off", pose, X, Z: ps.feet.Z, props: { infected: 1, sick: Math.min(1, t * 1.6) } },
+    { kind: "officer", v: ov, uid: "off", pose, X, Z: ps.feet.Z, props: { infected: 1, sick: Math.min(1, t * 1.6) } },
     { kind: "commuter", v: 3, uid: "r1", pose: swayPose(POSES.leanAway(POSES.sit(-1), Math.max(0, (t - 0.4) / 0.6), 1), frame, 0.4, 7), X: R1.X, Z: R1.Z },
   ];
 };
-export const CarriageSicken: React.FC<{ frame?: number; k?: number }> = ({ frame = 0, k = 3.0 }) => <Scene frame={frame} bands k={k} figs={sickenFigs} />;
+export const CarriageSicken: React.FC<{ frame?: number; k?: number; variant?: number }> = ({ frame = 0, k = 3.0, variant = 0 }) => <Scene frame={frame} bands k={k} figs={(A, f) => sickenFigs(A, f, variant)} />;

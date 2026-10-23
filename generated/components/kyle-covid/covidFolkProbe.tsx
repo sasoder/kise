@@ -603,4 +603,69 @@ export const CovidFolkRow4: React.FC = () => {
     </SheetAir>
   );
 };
+// ---------------------------------------------------------------------------
+// GLOW 4 (round 4: the suit): v3 above v4, the Officer standing at yaw 0 / 0.6 / 0.9 and seated slumped, and the other
+// kinds with lapels or an open coat front (Commuter 1 coat + scarf, Elder 0 cardigan, Elder 2 coat, Elder 1 coat)
+// ---------------------------------------------------------------------------
+type G4Cell = { kind: CovidKind; v: number; pose: CovidPose; label: string; seat?: boolean; props?: Partial<CovidFigureProps> };
+const G4_CELLS: G4Cell[] = [
+  { kind: "officer", v: 0, pose: { ...POSES.turnTo(0), headYaw: 0 }, label: "Officer yaw 0" },
+  { kind: "officer", v: 0, pose: { ...POSES.turnTo(-0.6), headYaw: -0.55 }, label: "Officer yaw 0.6" },
+  { kind: "officer", v: 0, pose: { ...POSES.turnTo(-0.9), headYaw: -0.8 }, label: "Officer yaw 0.9" },
+  { kind: "officer", v: 0, pose: POSES.slump(1, 20), label: "Officer slump, sick", seat: true, props: { sick: 1 } },
+  { kind: "commuter", v: 1, pose: POSES.stand(1), label: "Commuter 1 (coat, scarf)" },
+  { kind: "elder", v: 0, pose: POSES.stand(-1), label: "Elder 0 (cardigan)" },
+  { kind: "elder", v: 2, pose: POSES.front(), label: "Elder 2 (coat, scarf)" },
+  { kind: "officer", v: 3, pose: { ...POSES.turnTo(-0.6), headYaw: -0.55 }, label: "Officer v3 shirtsleeves 0.6" },
+  { kind: "officer", v: 3, pose: POSES.slump(1, 20), label: "Officer v3 slump", seat: true, props: { sick: 1 } },
+];
+export const G4_W = G4_CELLS.length * 560 + 80;
+export const G4_H = 2700;
+export const CovidFolkGlow4: React.FC = () => {
+  const sc = scaleForPx(1200);
+  const rows = [1290, 2600];
+  return (
+    <SheetAir w={G4_W} h={G4_H} base={rows} id="g4">
+      {G4_CELLS.map((c, i) =>
+        (["v3", "v4"] as const).map((gs, r) => {
+          const x = 330 + i * 560;
+          const at: P2 = [x, rows[r]];
+          return (
+            <g key={`${i}${gs}`}>
+              {c.seat ? <Bench hip={at} s={sc} dir={1} /> : null}
+              <CovidContactShadow at={at} scale={sc} uid={`g4s${i}${r}`} />
+              <CovidFigure kind={c.kind} variant={c.v} pose={c.pose} at={at} scale={sc} uid={`g4f${i}${gs}`} infected={1} frame={40} glowStyle={gs} {...c.props} />
+              <Lbl x={x} y={rows[r] + 44} t={`${gs === "v3" ? "round 3 (v3)" : "NEW (v4)"} · ${c.label}`} size={26} />
+            </g>
+          );
+        }),
+      )}
+    </SheetAir>
+  );
+};
+/** the 270-px check: the Officer standing and slumped with two coat-front kinds (~520 px), v3 above v4 */
+export const CovidFolkRow4Suit: React.FC = () => {
+  const rowsP: G4Cell[][] = [
+    [G4_CELLS[0], G4_CELLS[1], G4_CELLS[3], G4_CELLS[4]],
+    [G4_CELLS[0], G4_CELLS[1], G4_CELLS[3], G4_CELLS[4]],
+    [{ ...G4_CELLS[0], v: 3 }, G4_CELLS[7], G4_CELLS[8], G4_CELLS[6]],
+  ];
+  const sc = scaleForPx(520);
+  return (
+    <SheetAir w={1080} h={1860} base={[600, 1220, 1840]} id="r4s" grain={1}>
+      {(["v3", "v4", "v4"] as const).map((gs, r) =>
+        rowsP[r].map((p, i) => {
+          const at: P2 = [150 + i * 260, 590 + r * 620];
+          return (
+            <g key={`${gs}${i}`}>
+              {p.seat ? <Bench hip={at} s={sc} dir={1} /> : null}
+              <CovidContactShadow at={at} scale={sc} uid={`r4ss${r}${i}`} />
+              <CovidFigure kind={p.kind} variant={p.v} pose={p.pose} at={at} scale={sc} uid={`r4sf${gs}${i}`} infected={1} frame={30 + i * 7} glowStyle={gs} {...p.props} />
+            </g>
+          );
+        }),
+      )}
+    </SheetAir>
+  );
+};
 export { covidAnchors };

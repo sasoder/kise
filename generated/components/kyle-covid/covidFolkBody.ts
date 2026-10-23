@@ -39,7 +39,7 @@ const D2R = Math.PI / 180;
 /** a paint shape (pandemicFolkPaint's Shape) plus a soft blur (rig units) for the glows */
 /** a radial gradient fill over the shape's own box (objectBoundingBox): stops [offset, #hex, opacity] */
 export type RadialFill = { stops: [number, string, number][]; cx?: number; cy?: number; r?: number };
-export type CShape = Shape & { blur?: number; glow?: boolean; blend?: "screen" | "normal"; grad?: RadialFill; litFrom?: boolean };
+export type CShape = Shape & { blur?: number; glow?: boolean; blend?: "screen" | "normal"; grad?: RadialFill; litFrom?: boolean; lapel?: boolean };
 
 // ---- path helpers (rig units in, folk units out) -------------------------------------------------------------------
 const f = (p: P2): P2 => [p[0] * FU, p[1] * FU];
@@ -96,7 +96,7 @@ const CHILD: Spec = { ...MAN, a: 33, hw: 28, H: 60, hipY: -92, limb: 0.66, headS
 export type CovidKind = "carrier" | "officer" | "commuter" | "elder" | "youth" | "parent" | "child" | "medic";
 export const COVID_KINDS: CovidKind[] = ["carrier", "officer", "commuter", "elder", "youth", "parent", "child", "medic"];
 export type HairKind = "crop" | "side" | "buzz" | "curly" | "receding" | "bob" | "long" | "bun" | "pony";
-export type Top = "puffer" | "parka" | "suit" | "coat" | "hoodie" | "cardigan" | "coverall";
+export type Top = "puffer" | "parka" | "suit" | "coat" | "hoodie" | "cardigan" | "coverall" | "shirt";
 export type Lower = "trousers" | "skirt";
 export type ShoeKind = "sneaker" | "dress" | "boot";
 export type Hat = "none" | "beanie" | "flatcap" | "bobble" | "hood";
@@ -111,6 +111,8 @@ export type CovidInks = {
   /** the shirt under a suit / cardigan / coat, the tie */
   shirt: string;
   tie: string;
+  /** the belt (shirtsleeves) */
+  belt: string;
   /** trousers / skirt, tights under a skirt */
   lower: string;
   tights: string;
@@ -158,6 +160,7 @@ const BASE: CovidInks = {
   top2: "#B5A57F",
   shirt: "#EEEAE0",
   tie: "#2F5552",
+  belt: "#3B2D25",
   lower: "#4E5961",
   tights: "#3E3C3C",
   shoe: "#3E3029",
@@ -206,6 +209,9 @@ const LOOKS: Record<CovidKind, Look[]> = {
     LK({ ...SUIT, skin: SKIN.fair, hair: HAIR.darkBrown }, { spec: MAN, hair: "side", top: "suit", topLen: 0.42, shoe: "dress", tie: true }),
     LK({ ...SUIT, top: "#6B6D6E", top2: "#5D5F60", lower: "#646668", skin: SKIN.olive, hair: HAIR.greyBrown }, { spec: MAN, hair: "side", top: "suit", topLen: 0.42, shoe: "dress", tie: true, plump: 0.3 }),
     LK({ ...SUIT, skin: SKIN.tan, hair: HAIR.blackBrown }, { spec: MAN, hair: "side", top: "suit", topLen: 0.42, shoe: "dress", tie: true }),
+    // v3: THE Officer (v0's face, hair and trousers) in shirtsleeves: white shirt tucked into the grey trousers, the tie,
+    // a dark belt, no jacket (the glow reads whole on the white shirt at any size)
+    LK({ ...SUIT, top: "#ECE8DE", top2: "#D9D4C8", skin: SKIN.fair, hair: HAIR.darkBrown, belt: "#3B2D25" }, { spec: MAN, hair: "side", top: "shirt", topLen: 0, shoe: "dress", tie: true }),
   ],
   commuter: [
     LK({ skin: SKIN.warm, hair: HAIR.brown, top: "#8E8668", top2: "#7A7358", lower: "#56626B", shoe: "#E4DED2", sole: "#7F858A", bag: "#5E4A3A", strap: "#4C3C30" }, { spec: MAN, hair: "crop", beard: "stubble", top: "parka", topLen: 0.5, carry: "shoulderBag" }),
@@ -739,7 +745,7 @@ export type BuildOpts = {
    *  heart) each a bright core falling off softly to a transparent edge, a soft halo into the cloth, a faint luminous
    *  windpipe and bronchi (the Y) rising into the neck; "v2" (round 2: flat lobes) and "v1" (the first version) are
    *  kept for comparison sheets only */
-  glowStyle?: "v1" | "v2" | "v3";
+  glowStyle?: "v1" | "v2" | "v3" | "v4";
 };
 export type CovidAnchors = {
   headC: P2;
@@ -891,8 +897,8 @@ export const buildCovidFolk = (kind: CovidKind, variant: number, q0: CovidPose, 
   const fs = HR / 31.5;
 
   // ---- garment facts ---------------------------------------------------------------------------------------------
-  const puff = L.top === "puffer" ? 3.2 : L.top === "parka" ? 2.2 : L.top === "coat" ? 1.4 : L.top === "hoodie" ? 1.6 : L.top === "coverall" ? 2.6 : 1.0;
-  const sleeveK = L.top === "puffer" ? 1.24 : L.top === "parka" ? 1.17 : L.top === "hoodie" ? 1.14 : L.top === "coverall" ? 1.2 : 1.08;
+  const puff = L.top === "puffer" ? 3.2 : L.top === "parka" ? 2.2 : L.top === "coat" ? 1.4 : L.top === "hoodie" ? 1.6 : L.top === "coverall" ? 2.6 : L.top === "shirt" ? 0.4 : 1.0;
+  const sleeveK = L.top === "puffer" ? 1.24 : L.top === "parka" ? 1.17 : L.top === "hoodie" ? 1.14 : L.top === "coverall" ? 1.2 : L.top === "shirt" ? 1.0 : 1.08;
   const hdx = q.hem - Math.tan((q.lean * Math.PI) / 180) * 20;
 
   // ---- the arms ----------------------------------------------------------------------------------------------------
@@ -1059,7 +1065,7 @@ export const buildCovidFolk = (kind: CovidKind, variant: number, q0: CovidPose, 
   const topHull = hangHull(r, B, k, -16, L.topLen, L.top === "coat" ? 5 : L.top === "suit" ? 1 : 0, hdx, puff, L.top === "coat" ? 0.9 : 0.8);
   const topHullD = closedD(topHull, 0.8);
   if (L.topLen > 0.3 || !hemPts.length) hemPts = topHull;
-  if (L.top !== "coverall") hangShapes.push({ d: topHullD, fill: top });
+  if (L.top !== "coverall" && L.top !== "shirt") hangShapes.push({ d: topHullD, fill: top });
   // the top's front edge (coat, suit, parka, cardigan: an opening; puffer: the zip) down the hanging part
   const frontEdge = (x: number) => {
     const a = tor([x, -16], puff + 0.4);
@@ -1067,7 +1073,7 @@ export const buildCovidFolk = (kind: CovidKind, variant: number, q0: CovidPose, 
     const b = add(legMid, [hdx * 0.4 + x * 0.6 * B.cY, 4]);
     return { a, b, w: frontW(torD([x, -16], puff)) };
   };
-  if (L.top !== "hoodie") {
+  if (L.top !== "hoodie" && L.top !== "shirt") {
     const fe = frontEdge(L.top === "suit" ? 0 : -1);
     if (fe.w > 0.02 && L.topLen > 0.12) hangShapes.push({ d: lineD([fe.a, mix2(fe.a, fe.b, 0.5), fe.b]), fill: shadeOf(top, 0.2), det: 1.5, keep: true, op: 0.6 * fe.w, clip: topHullD });
   }
@@ -1104,7 +1110,22 @@ export const buildCovidFolk = (kind: CovidKind, variant: number, q0: CovidPose, 
   const hu = 6 * hunch;
   const neckTop = shY - 8 - hu;
   // the V of the shirt (suit, cardigan, coat over a shirt)
-  if (L.top === "suit" || L.top === "cardigan" || (L.top === "coat" && !L.female)) {
+  if (L.top === "shirt") {
+    // shirtsleeves: the collar points, the tie, the button placket, a breast pocket; tucked into the trousers at a belt
+    if (L.tie) {
+      reg([[-3.4, shY - 1 - hu], [3.4, shY - 1 - hu], [2.6, shY + 5 - hu * 0.5], [-2.6, shY + 5 - hu * 0.5]], shadeOf(ink.tie, 0.1), 1.1, { sh: 0 });
+      reg([[-2.6, shY + 5], [2.6, shY + 5], [4.8, shY + 46], [0, shY + 54], [-4.8, shY + 46]], ink.tie, 1.1, { sh: 0.5 }, 0.4);
+    }
+    reg([[-10, neckTop + 1], [-1, shY - 1 - hu], [-9, shY + 8 - hu * 0.5], [-15, shY + 2 - hu]], ink.top2, 1.4, { sh: 0.6 }, 0.4);
+    reg([[10, neckTop + 1], [1, shY - 1 - hu], [9, shY + 8 - hu * 0.5], [15, shY + 2 - hu]], ink.top2, 1.4, { sh: 0.6 }, 0.4);
+    det([[0, shY + 54], [0, -18]], shadeOf(top, 0.22), 1.3, 0.55);
+    for (const by of [shY + 62, -40, -26]) reg(ellPts([1.6, by], 1.8, 1.8, 0, 8), shadeOf(top, 0.3), 1.2, { sh: 0 }, 0.9);
+    reg([[A * 0.28, shY + 30], [A * 0.62, shY + 30], [A * 0.62, shY + 44], [A * 0.28, shY + 44]], top, 1.3, { sh: 0.5 }, 0.3);
+    // the trousers' waistband and the belt over the shirt's tucked foot (the shirt blousing a little over it)
+    torsoShapes.push({ d: closedD(bandOn(-A * 1.06, A * 1.06, () => -15, () => 9, 0.4), 0.6), fill: ink.lower, sh: 0.3 });
+    torsoShapes.push({ d: closedD(bandOn(-A * 1.07, A * 1.07, () => -15, () => -8, 0.8), 0.6), fill: ink.belt, sh: 0.4 });
+    reg(ellPts([0, -11.5], 3.4, 2.6, 0, 8), "#9C9488", 1.2, { sh: 0 }, 0.9);
+  } else if (L.top === "suit" || L.top === "cardigan" || (L.top === "coat" && !L.female)) {
     const vb = L.top === "suit" ? shY + 44 : L.top === "cardigan" ? shY + 50 : shY + 30;
     const vw = L.top === "coat" ? 15 : 14;
     reg([[-vw, neckTop], [vw, neckTop], [3, vb], [0, vb + 3], [-3, vb]], ink.shirt, 0.8, { sh: 0.3 });
@@ -1128,7 +1149,7 @@ export const buildCovidFolk = (kind: CovidKind, variant: number, q0: CovidPose, 
         ],
         L.top === "cardigan" ? top : ink.top2,
         1.6,
-        { sh: 0.7 },
+        { sh: 0.7, litFrom: true, lapel: true },
         0.4,
       );
     }
@@ -1170,7 +1191,7 @@ export const buildCovidFolk = (kind: CovidKind, variant: number, q0: CovidPose, 
   // the scarf: a band round the neck and one end down the front
   if (L.scarf) {
     reg([[-24, neckTop - 5], [24, neckTop - 5], [27, shY + 10], [0, shY + 17], [-27, shY + 10]], ink.scarf, 3.2, { sh: 0.6 }, 0.55);
-    reg([[3, shY + 8], [19, shY + 6], [21, shY + 46], [5, shY + 48]], ink.scarf, 3.6, { sh: 0.7, litFrom: true }, 0.45);
+    reg([[3, shY + 8], [19, shY + 6], [21, shY + 46], [5, shY + 48]], ink.scarf, 3.6, { sh: 0.7 }, 0.45);
     det([[5, shY + 43], [20, shY + 41]], shadeOf(ink.scarf, 0.25), 1.4, 0.5, 3.8);
   }
   // the carried things' straps on the front
@@ -1183,9 +1204,19 @@ export const buildCovidFolk = (kind: CovidKind, variant: number, q0: CovidPose, 
 
   // ---- THE INFECTION: two lung-shaped orange glows behind the clothes, specks drifting inside -------------------------
   const glowShapes: CShape[] = [];
-  const gStyle = o.glowStyle ?? "v3";
+  const gStyle = o.glowStyle ?? "v4";
   const v1 = gStyle === "v1";
-  const v3 = gStyle === "v3";
+  // v4 = v3 plus a warm light lifting the cloth itself inside each lobe (a dark suit, coat or hoodie glows as brightly
+  // as a cream puffer; the lapels and front panels lit from behind like the straps)
+  const v4 = gStyle === "v4";
+  const v3 = gStyle === "v3" || v4;
+  // the cloth lift is for dark and mid cloth (a suit, a coat, a hoodie); a cream puffer or a white shirt needs none
+  const topLum = (() => {
+    const h = top.replace("#", "");
+    const [rr, gg, bb] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+    return 0.2126 * rr + 0.7152 * gg + 0.0722 * bb;
+  })();
+  const liftK = sst(0.84, 0.62, topLum);
   const lungs = (v1 ? [LUNG_R, LUNG_L] : v3 ? [LUNG3_R, LUNG3_L] : [LOBE_R, LOBE_L]).map((lp) => {
     const front = lp.map(([x, y]): P2 => [x * hw, shY + y]);
     const R = regionOn(front, puff + 0.5, 3);
@@ -1203,11 +1234,14 @@ export const buildCovidFolk = (kind: CovidKind, variant: number, q0: CovidPose, 
       const a = inf * lg.vis;
       if (a < 0.01) continue;
       const pts = lg.pts;
+      // v4: the cloth itself lit from behind first (a warm light over whatever the chest wears, falling off to the
+      // lobe's edge), so the orange reads equally bright on a grey suit, a charcoal coat or a cream puffer
+      if (v4 && liftK > 0.01) glowShapes.push({ d: closedD(scaleAbout(pts, lg.c, 1.04), 0.9), fill: "#F4DCA6", glow: true, blur: 3, op: a * liftK, clip: torsoD, sh: 0, grad: { stops: [[0, "#F7E4B6", 0.82], [0.5, "#F2D69C", 0.6], [0.82, "#EDCB8C", 0.26], [1, "#EDCB8C", 0]], cy: 0.47, r: 0.6 } });
       glowShapes.push({ d: closedD(scaleAbout(pts, lg.c, 1.2), 0.9), fill: ACC, glow: true, blur: 6, op: a, clip: torsoD, sh: 0, grad: { stops: [[0, ACC, 0.4], [0.6, ACC, 0.17], [1, ACC, 0]], cy: 0.45 } });
       glowShapes.push({ d: closedD(pts, 0.9), fill: ACC, glow: true, blur: 1.8, op: a, clip: torsoD, sh: 0, grad: { stops: [[0, ACC_SPECK, 0.95], [0.3, ACC_HOT, 0.84], [0.62, ACC, 0.56], [0.86, ACC, 0.24], [1, ACC, 0.06]], cy: 0.47, r: 0.6 } });
       glowShapes.push({ d: closedD(scaleAbout(pts, lg.c, 0.9), 0.9), fill: ACC, glow: true, blur: 3, op: a, clip: torsoD, sh: 0, blend: "screen", grad: { stops: [[0, ACC, 0.55], [0.65, ACC, 0.2], [1, ACC, 0]], cy: 0.42 } });
     }
-    const details = torsoShapes.slice(1).filter((d) => d.litFrom);
+    const details = torsoShapes.slice(1).filter((d) => d.litFrom && (v4 || !d.lapel));
     for (const lg of lungs) {
       const a = inf * lg.vis;
       if (a < 0.01) continue;

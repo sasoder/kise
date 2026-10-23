@@ -17,7 +17,7 @@
 //   Carrier   THE COVID man (cuts 3, 21): a young man, muted red-brown BEANIE, oatmeal-cream PUFFER, slate trousers,
 //             white sneakers, an umber BACKPACK. v0 warm skin (THE Carrier), v1 olive, v2 deep (same outfit).
 //   Officer   THE SARS-1 man (cut 12): grey SUIT, white shirt, muted dark-teal TIE, dark shoes, short side-parted hair.
-//             v0 (THE Officer), v1 older charcoal suit, v2 tan skin.
+//             v0 (THE Officer), v1 older charcoal suit, v2 tan skin, v3 THE Officer in shirtsleeves (no jacket, a belt).
 //   Commuter  v0 man, khaki parka + shoulder bag; v1 man, charcoal long coat + scarf, phone; v2 woman, oatmeal long
 //             coat, long hair, boots, shoulder bag; v3 woman, dusty-teal puffer, bob, a paper coffee cup.
 //   Elder     v0 man, flat cap, cardigan over a shirt, glasses; v1 woman, short white curls, red-brown coat, glasses,
@@ -38,7 +38,9 @@
 //                           luminous windpipe rising into the neck and splitting into the bronchi (the lungs-icon Y),
 //                           tiny brighter specks inside; the straps / scarf crossing the chest lit from behind; the far
 //                           lobe narrows as he turns, visible to yaw ~1. At crowd size (~150 px) a warm chest glow.
-//                           glowStyle?: "v3" | "v2" (round 2) | "v1" (the first): v1 / v2 for comparison sheets only.
+//                           Default glowStyle "v4" = v3 + the cloth lit from behind inside the lobes on dark / mid
+//                           cloth (a suit, a coat) and the lapels relit, so the lungs read whole across a suit front.
+//                           glowStyle?: "v4" | "v3" | "v2" | "v1": the older ones for comparison sheets only.
 //     breathOut?: 0..1      a soft cone of tiny orange specks leaving the mouth, drifting with the air a figure-width
 //                           or two, thinning (drawn after the figure, outside its paint). breathTarget?: a world point
 //                           the specks steer to (a neighbour's mouth); breathReach?, breathSeed?
@@ -437,8 +439,8 @@ export type CovidFigureProps = {
   inks?: Partial<CovidInks>;
   hold?: { L?: HandProp; R?: HandProp };
   carry?: Carry;
-  /** "v3" (default: light with a windpipe) | "v2" (round 2) | "v1" (the first glow): v1 / v2 for comparisons only */
-  glowStyle?: "v1" | "v2" | "v3";
+  /** "v4" (default: v3 + the cloth lit from behind, lapels too) | "v3" | "v2" | "v1": the older ones for comparisons */
+  glowStyle?: "v1" | "v2" | "v3" | "v4";
   tone?: number;
   unitPx?: number;
   texture?: boolean;

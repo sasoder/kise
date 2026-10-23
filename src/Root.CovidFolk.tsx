@@ -1,5 +1,5 @@
 import {Composition} from 'remotion';
-import {CovidFolkCrowd, CovidFolkGlow, CovidFolkGlow3, CovidFolkRow4, G3_H, G3_W, GLOW_H, GLOW_W, CovidFolkHeads, HEADS_H, HEADS_W, CovidFolkMotion, CovidFolkPhone, CovidFolkStrip, CovidFolkStyle, STRIPS, STYLE_H, STYLE_W, motionFrames, stripSize} from '../generated/components/kyle-covid/covidFolkProbe';
+import {CovidFolkCrowd, CovidFolkGlow, CovidFolkGlow3, CovidFolkGlow4, CovidFolkRow4Suit, G4_H, G4_W, CovidFolkRow4, G3_H, G3_W, GLOW_H, GLOW_W, CovidFolkHeads, HEADS_H, HEADS_W, CovidFolkMotion, CovidFolkPhone, CovidFolkStrip, CovidFolkStyle, STRIPS, STYLE_H, STYLE_W, motionFrames, stripSize} from '../generated/components/kyle-covid/covidFolkProbe';
 
 // Probe sheets of the kyle-covid modern cast (covidFolk.tsx).
 export const RemotionRoot = () => (
@@ -9,6 +9,8 @@ export const RemotionRoot = () => (
     <Composition id="CovidFolkGlow" component={CovidFolkGlow} durationInFrames={1} fps={30} width={GLOW_W} height={GLOW_H} />
     <Composition id="CovidFolkGlow3" component={CovidFolkGlow3} durationInFrames={1} fps={30} width={G3_W} height={G3_H} />
     <Composition id="CovidFolkRow4" component={CovidFolkRow4} durationInFrames={1} fps={30} width={1080} height={1240} />
+    <Composition id="CovidFolkGlow4" component={CovidFolkGlow4} durationInFrames={1} fps={30} width={G4_W} height={G4_H} />
+    <Composition id="CovidFolkRow4Suit" component={CovidFolkRow4Suit} durationInFrames={1} fps={30} width={1080} height={1860} />
     <Composition id="CovidFolkPhone" component={CovidFolkPhone} durationInFrames={1} fps={30} width={1080} height={1920} />
     <Composition id="CovidFolkCrowd" component={CovidFolkCrowd} durationInFrames={1} fps={30} width={1080} height={1920} />
     {STRIPS.map((s) => (
