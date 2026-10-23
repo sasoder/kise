@@ -54,7 +54,8 @@
 //   breathRhythm(f, period = 96, seed = 0) 0.35..1   the out-breath (more on the exhale half)
 //   <HazeCloud haze layer="back" | "front" uid fog? veil? motes? />   one layer (world px) inside WorldSvg; fog = a
 //     FolkFog (A.folkFog(Z)): the haze takes half the fog, like the glow
-//   HAZE   the look values (below, settled on cut 3; per emitter: opts), HAZE_COLORS { veil, moteCore, moteHalo }
+//   HAZE   the look values (below, settled on cut 3; per emitter: opts), HAZE_COLORS { veil, moteCore, moteHalo };
+//     opts.strength (default 1 = the delivered look) scales the whole cloud: 1.42 = the revision-2 look (cap 0.34)
 // PAINTER'S ORDER in a covidCarriage cut: two StageItems round the emitter's figure at depth Z,
 //   { Z: Z + 1, node: <HazeCloud layer="back" .../> } and { Z: Z - 1, node: <HazeCloud layer="front" .../> }.
 // COST: ~14 envelope blobs + ~55 puffs + up to ~250 mote births per emitter; cut 3's whole scene ~5 ms per frame.
@@ -105,6 +106,10 @@ export const HAZE = {
   /** the veil's alpha per weight at full build, and the cap on the thickest alpha */
   gain: 0.026,
   cap: 0.24,
+  /** one knob for the whole cloud (user revision 2, "slightly more pronounced"): veil gain and cap x strength, mote
+   *  size x (1 + 0.72 (strength - 1)) and alpha x (1 + 0.36 (strength - 1)). 1 = the delivered R1 look; 1.42 = cap 0.34,
+   *  motes 1.3x larger */
+  strength: 1,
   // ---- THE EXHALE PUFFS: short-lived soft puffs at the mouth (each breath adds a little, then joins the envelope) ----
   rate: 0.5,
   life: 110,
@@ -259,7 +264,7 @@ export const hazeAt = (emitters: HazeEmitter[], frame: number, o: { avoid?: Haze
         H.wander * Math.sin(frame * (0.008 + 0.005 * hb(k + 0.4)) + 6.28 * hb(k + 0.5)),
       ];
       const rs = (0.72 + 0.28 * build) * (1 + H.swell * swell);
-      const as = H.gain * build ** 1.2 * (1 + 1.5 * H.swell * swell);
+      const as = H.gain * H.strength * build ** 1.2 * (1 + 1.5 * H.swell * swell);
       const add = (k: number, off: V3, r: number, w: number) => {
         const wv = wan(k);
         pushBlob([c[0] + off[0] + wv[0], c[1] + off[1] + wv[1], c[2] + off[2] + wv[2]], r * rs, w * as);
@@ -297,7 +302,7 @@ export const hazeAt = (emitters: HazeEmitter[], frame: number, o: { avoid?: Haze
       const sg = H.diff * Math.sqrt(t) * 0.8;
       const u: V3 = [m[0] + (dv[0] / dn) * bl + sg * g[0] * 1.3, m[1] + (dv[1] / dn) * bl + sg * g[1], m[2] + sg * g[2] * 0.6];
       const r = H.r0 * (0.7 + 0.6 * h(6)) + H.grow * Math.sqrt(t);
-      const a = w * H.puffGain * sst(0, H.fadeIn, t) * (1 - sst(0.4 * H.life, H.life, t));
+      const a = w * H.puffGain * H.strength * sst(0, H.fadeIn, t) * (1 - sst(0.4 * H.life, H.life, t));
       pushBlob(u, r, a);
     }
     // ---- the motes: born in the cloud, wandering slowly inside its soft bounds -----------------------------------------
@@ -339,8 +344,8 @@ export const hazeAt = (emitters: HazeEmitter[], frame: number, o: { avoid?: Haze
       const front = frontOf(u[2]);
       const pr = proj(u);
       let p = pr.p;
-      let a = H.moteAlpha * (0.4 + 0.6 * h(20)) * (0.6 + 0.4 * w) * sst(0, H.moteFade[0], t) * (1 - sst(H.moteFade[1] * H.moteLife, H.moteLife, t));
-      let r = H.moteSize * (0.7 + 0.7 * h(21)) * pr.s;
+      let a = Math.min(1, H.moteAlpha * (1 + 0.36 * (H.strength - 1))) * (0.4 + 0.6 * h(20)) * (0.6 + 0.4 * w) * sst(0, H.moteFade[0], t) * (1 - sst(H.moteFade[1] * H.moteLife, H.moteLife, t));
+      let r = H.moteSize * (1 + 0.72 * (H.strength - 1)) * (0.7 + 0.7 * h(21)) * pr.s;
       // an inhale draws the motes near the mouth in (they fade there): the ones near it on the sink's `from` frame
       let taken = 0;
       for (const sk of sinks) {
@@ -387,7 +392,7 @@ export const hazeAt = (emitters: HazeEmitter[], frame: number, o: { avoid?: Haze
     }
     peak = Math.max(peak, 1 - Math.exp(-D));
   }
-  const cap = emitters.length ? Math.min(...emitters.map((e) => e.opts?.cap ?? HAZE.cap)) : HAZE.cap;
+  const cap = emitters.length ? Math.min(...emitters.map((e) => (e.opts?.cap ?? HAZE.cap) * (e.opts?.strength ?? HAZE.strength))) : HAZE.cap;
   if (peak > cap) {
     const k = cap / peak;
     for (const B of blobs) B.a *= k;

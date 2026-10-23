@@ -54,6 +54,13 @@
 // It builds with his glow (barely at f0, ~0.12 at f60) and swells a touch on each exhale. Her kindle is a function of the
 // frame. Nothing else changed (camera, timing, poles, passengers, glow v3, 161 frames).
 //
+// USER REVISION 2 (00;00;03;05, "the aura around him needs to be slightly more pronounced ... you should still
+// understand that that man is sick and now he's making others sick"): the virus throws a soft warm light (covidAura,
+// COMMON.md "THE AURA"): his, on his chest, from f0 at his infected level 0.3 growing with the glow to full by LATENT,
+// drawn behind him at full and over him at AURA_FRONT 0.35 (the lungs keep their contrast); hers kindling with her glow
+// from LONG; both fading out above the caption bands (rows 960 -> 1070). The cloud a step stronger (HAZE_STRENGTH
+// 1.42: veil cap 0.34, motes 1.3x larger). Nothing else changed.
+//
 // SOURCES: none (no real figures; the latency fact is the speaker's).
 // ---------------------------------------------------------------------------
 import React from "react";
@@ -63,6 +70,7 @@ import { AirShadow, AirStage, WorldSvg, airWorldOf, type AirWorld, type Cam, typ
 import { CARRIAGE_DEPTH, CARRIAGE_SCENE, CarriageStage, NEAR_POLES, carriageSway, polePoint, polesOf, seatNear, swayPose, type Pole, type StageItem } from "./covidCarriage";
 import { CovidFigure, POSES, covidAnchors, lerpPose, type CovidFigureProps, type CovidKind, type CovidPose, type P2 } from "./covidFolk";
 import { HazeCloud, breathRhythm, hazeAt, type HazeAvoid, type HazeEmitter } from "./covidHaze";
+import { AuraGlow, auraFor } from "./covidAura";
 
 export const FPS = 30000 / 1001;
 export const DURATION = 161;
@@ -223,7 +231,10 @@ export const womanPose = (frame: number): CovidPose => {
   return swayPose(q, frame, 0.5, 2);
 };
 
-export const carrierInfected = (frame: number) => mix(0.3, 1, sst(BEAT.glowFrom, BEAT.glowFull, frame));
+/** user revision 2 (the note at this cut's f0): he is the lit one from the first frame: infected 0.6 at f0, full by f66
+ *  (BEAT.glowFrom / glowFull keep the R1 values 34 / 84 for reference) */
+export const GLOW_R2 = { start: 0.6, from: 0, full: 66 };
+export const carrierInfected = (frame: number) => mix(GLOW_R2.start, 1, sst(GLOW_R2.from, GLOW_R2.full, frame));
 
 /** the other passengers (all well, ordinary, no masks). The near elder is passed by the dolly; the left bench's sitters
  *  are seen in the wide and hide behind him once the camera lands; a girl on her phone further along the right bench
@@ -282,6 +293,12 @@ export const carrierPushAt = (f: number) => {
   const talk = c01(sst(BEAT.turn0 + 8, BEAT.turn0 + 14, f) * (1 - sst(BEAT.herChat - 2, BEAT.herChat + 3, f)) + sst(BEAT.herChat + 12, BEAT.herChat + 18, f));
   return Math.max(0.3, 0.8 * lamt, 1.0 * talk);
 };
+/** user revision 2: the cloud a step stronger (covidHaze strength: veil cap 0.24 -> 0.34, motes 1.3x larger) */
+export const HAZE_STRENGTH = 1.42;
+/** the share of a figure's aura drawn over the figure (the rest of the light sits behind it, on the air) */
+export const AURA_FRONT = 0.35;
+/** the light behind each figure: 0.55 x height (AURA personR 0.40 x 1.375), centre alpha 0.75 (0.65 x 1.154) at full */
+export const AURA_BACK = { rK: 0.55 / 0.4, aK: 0.75 / 0.65 };
 /** her breath in (shoulders lift a touch while the chat goes on, just before she answers) */
 export const herInhale = (f: number) => sst(BEAT.inhale0, BEAT.inhale1, f) * (1 - sst(BEAT.herChat, BEAT.herChat + 12, f));
 /** her glow, from the frame: kindling from LONG (f138) after the breath in, ~0.36 by f156 */
@@ -309,7 +326,7 @@ export const sceneAt = (frame: number) => {
   // her breath in draws the motes near her mouth in
   const FX = CARRIER_FEET.X;
   const FZ = CARRIER_FEET.Z;
-  const em: HazeEmitter = { project: (u) => ({ p: A.P.p(FX + u[0], u[1], FZ + u[2]), s: A.P.r(FZ + u[2]) }), mouthAt: (f) => carrierMouth(f).m, centreAt: (f) => carrierMouth(f).c, dirAt: (f) => carrierMouth(f).d, amountAt: carrierShedAt, pushAt: carrierPushAt, seed: 3.1 };
+  const em: HazeEmitter = { opts: { strength: HAZE_STRENGTH }, project: (u) => ({ p: A.P.p(FX + u[0], u[1], FZ + u[2]), s: A.P.r(FZ + u[2]) }), mouthAt: (f) => carrierMouth(f).m, centreAt: (f) => carrierMouth(f).c, dirAt: (f) => carrierMouth(f).d, amountAt: carrierShedAt, pushAt: carrierPushAt, seed: 3.1 };
   const avoid: HazeAvoid[] = [
     { c: cA.headC, r: 30 * cAt.scale, layer: "front" },
     { c: wA.headC, r: 30 * wAt.scale, layer: "all" },
@@ -321,7 +338,18 @@ export const sceneAt = (frame: number) => {
     avoid.push({ c: oa.headC, r: 46 * pa.scale, layer: "all" }, { c: oa.chest, r: 60 * pa.scale, layer: "all" }, { c: oa.hip, r: 55 * pa.scale, layer: "all" });
   }
   const haze = hazeAt([em], frame, { avoid, below: cam.cy + (1050 - 960) / cam.k, sinks: [{ c: wA.mouth, r: 60 * cAt.scale, pull: (f) => sst(BEAT.inhale0, BEAT.inhale1 + 4, f), from: BEAT.inhale0 }] });
-  return { cam, A, cq, cAt, cA, grip, wq, wAt, wA, haze, herInf: womanInfected(frame), hisInf: carrierInfected(frame) };
+  // the light the virus throws (user revision 2, covidAura): round his chest from f0 (infected 0.3) growing with the
+  // glow; round hers as she kindles from LONG
+  const hisInf = carrierInfected(frame);
+  const herInf = womanInfected(frame);
+  // the hero's split (director, U2 review): the light BEHIND each of them larger and a touch stronger (0.55 x height,
+  // centre alpha 0.75 at full: a soft rim round head, shoulders and arms against the air), the share over them
+  // AURA_FRONT of the standard aura
+  const hisAura = auraFor("carrier", cq, cAt.at, cAt.scale, hisInf, { variant: 0, grip: { R: grip } });
+  const herAura = auraFor("commuter", wq, wAt.at, wAt.scale, herInf, { variant: 2 });
+  const hisBack = auraFor("carrier", cq, cAt.at, cAt.scale, hisInf, { variant: 0, grip: { R: grip }, ...AURA_BACK });
+  const herBack = auraFor("commuter", wq, wAt.at, wAt.scale, herInf, { variant: 2, ...AURA_BACK });
+  return { cam, A, cq, cAt, cA, grip, wq, wAt, wA, haze, herInf, hisInf, hisAura, herAura, hisBack, herBack };
 };
 
 const figItem = (A: AirWorld, f: FigSpec, frame: number, camK: number, extra?: React.ReactNode): StageItem => {
@@ -354,6 +382,15 @@ const LatentLongEnough: React.FC<z.infer<typeof schema>> = () => {
   const hz = CARRIER_FEET.Z;
   items.push({ Z: hz + 1, key: "hazeB", node: <HazeCloud haze={S.haze} layer="back" uid="hzb" fog={A.folkFog(hz)} /> });
   items.push({ Z: hz - 1, key: "hazeF", node: <HazeCloud haze={S.haze} layer="front" uid="hzf" fog={A.folkFog(hz)} /> });
+  // the auras (AURA_READY's close-up split): the light behind each figure at full (it lights the air round them), and a
+  // share of it over the figure (AURA_FRONT: it spills onto them, while the lungs keep their contrast)
+  const front = (q: typeof S.hisAura) => ({ ...q, a: q.a * AURA_FRONT });
+  // the light fades out between screen rows 960 and 1070 (the caption bands start at 1080)
+  const fb: [number, number] = [cam.cy + (960 - 960) / cam.k, cam.cy + (1070 - 960) / cam.k];
+  items.push({ Z: hz + 0.5, key: "auraCb", node: <AuraGlow aura={S.hisBack} uid="aurcb" fog={A.folkFog(hz)} fadeBelow={fb} /> });
+  items.push({ Z: hz - 0.5, key: "auraCf", node: <AuraGlow aura={front(S.hisAura)} uid="aurcf" fog={A.folkFog(hz)} fadeBelow={fb} /> });
+  items.push({ Z: WOMAN_SEAT.Z + 0.5, key: "auraWb", node: <AuraGlow aura={S.herBack} uid="aurwb" fog={A.folkFog(WOMAN_SEAT.Z)} fadeBelow={fb} /> });
+  items.push({ Z: WOMAN_SEAT.Z - 0.5, key: "auraWf", node: <AuraGlow aura={front(S.herAura)} uid="aurwf" fog={A.folkFog(WOMAN_SEAT.Z)} fadeBelow={fb} /> });
   return (
     <AbsoluteFill>
       <AirStage v={A.v} bloom={0.22} shafts={0}>
