@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import { AbsoluteFill, Img, interpolate, random, staticFile, useCurrentFrame } from "remotion";
 import {
   BLUE,
@@ -35,8 +35,8 @@ import {
 //     {x, y, k}: (x, y) = the focus-plane world point at the frame's centre, k = the focus plane's scale. A plane's
 //     world px equal screen px at the rest camera (x0, y0, k 1); farther planes scale and slide less (parallax).
 //   * The CHAIN (orange #FFB765 back, purple #BC37FF, blue #0046FF front, the photo core on top) has ONE meaning in
-//     this clip: PRODUCTION, copies coming off the line. Flat colour silhouettes of a cut-out (its alpha as a CSS
-//     mask over a flat colour, one node per layer), no glow, no gradient, never faded: a layer exists or it does not.
+//     this clip: PRODUCTION, copies coming off the line. Flat colour silhouettes of a cut-out (its <Img> through an
+//     SVG feFlood + feComposite "in" filter, one node per layer; never a CSS mask-image, which drops layers), no glow, no gradient, never faded: a layer exists or it does not.
 //     At most one chain moment per cut, at its payoff.
 //   * Type (only where a brief asks): Barlow 800/900 uppercase, white on its hard black copy at +4/+4 world px.
 //   * Film life, screen space, over everything: grain new every frame, a smooth gate weave <= ~1 px, exposure
@@ -321,8 +321,9 @@ export const chainProgress = (
 };
 
 /**
- * The chain echo of a cut-out: flat ORANGE / PURPLE / BLUE copies of its silhouette (its alpha as a CSS mask over a
- * flat colour, one node per layer), BEHIND the core, each stepped out along `dir` (unit vector, default straight up)
+ * The chain echo of a cut-out: flat ORANGE / PURPLE / BLUE copies of its silhouette (the cut-out's own <Img>
+ * through an SVG filter: feFlood of the flat colour, feComposite "in" its alpha; one node per layer: an exact flat
+ * colour that loads with the image, unlike a CSS mask-image, which can drop a whole layer on a frame), BEHIND the core, each stepped out along `dir` (unit vector, default straight up)
  * by `steps[i] * step` world px at progress 1 (default steps [3, 2, 1], step CROWN_STEP 12: the crown). Use a big
  * `step` (e.g. a fraction of the subject's length) for copies stepping out of the subject; a small one for a crown or
  * a fast mover's trail. `progress` = one number for all three or [orange, purple, blue] (see chainProgress).
@@ -369,7 +370,16 @@ export const ChainCutOut: React.FC<{
   const b = boxAt(x, y, w, h, anchor);
   const turn = rotate || flipX ? `rotate(${rotate}deg) scaleX(${flipX ? -1 : 1})` : undefined;
   const pr = typeof progress === "number" ? [progress, progress, progress] : progress;
-  const silhouette = (key: string, fill: string, dx: number, dy: number, z: number) => (
+  const uid = `zkj-chain-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const fills: [string, string][] = [
+    ["c0", CHAIN[0]],
+    ["c1", CHAIN[1]],
+    ["c2", CHAIN[2]],
+    ["shadow", SHADOW],
+    ["core", INK],
+  ];
+  const fid = (key: string) => `${uid}-${key}`;
+  const silhouette = (key: string, filterKey: string, dx: number, dy: number, z: number) => (
     <div
       key={key}
       style={{
@@ -381,24 +391,32 @@ export const ChainCutOut: React.FC<{
         zIndex: z,
         transform: turn,
         transformOrigin: `${b.ax - b.left}px ${b.ay - b.top}px`,
-        backgroundColor: fill,
-        ...maskStyle(url),
       }}
-    />
+    >
+      <Img src={url} style={{ position: "absolute", left: 0, top: 0, width: w, height: h, maxWidth: "none", filter: `url(#${fid(filterKey)})` }} />
+    </div>
   );
   return (
     <div style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, isolation: "isolate" }}>
-      {/* keeps the render waiting until the PNG is loaded, so the masks never miss a frame */}
-      {core === "photo" ? null : <Img src={url} style={{ position: "absolute", left: b.left, top: b.top, width: 1, height: 1, opacity: 0 }} />}
+      <svg width={0} height={0} style={{ position: "absolute" }} aria-hidden>
+        <defs>
+          {fills.map(([key, colour]) => (
+            <filter key={key} id={fid(key)} colorInterpolationFilters="sRGB" x="0" y="0" width="100%" height="100%">
+              <feFlood floodColor={colour} floodOpacity={1} result="flat" />
+              <feComposite in="flat" in2="SourceAlpha" operator="in" />
+            </filter>
+          ))}
+        </defs>
+      </svg>
       {CHAIN.map((c, i) => {
         if (pr[i] <= 0) return null;
         const n = steps[i] * step * pr[i];
-        return silhouette(`chain-${i}`, c, dir.dx * n, dir.dy * n, i + 1);
+        return silhouette(`chain-${c}`, `c${i}`, dir.dx * n, dir.dy * n, i + 1);
       })}
       {core === "white" ? (
         <>
-          {silhouette("shadow", SHADOW, SHADOW_OFF, SHADOW_OFF, 0)}
-          {silhouette("core", INK, 0, 0, 5)}
+          {silhouette("shadow", "shadow", SHADOW_OFF, SHADOW_OFF, 0)}
+          {silhouette("core", "core", 0, 0, 5)}
         </>
       ) : null}
       {core === "photo" ? (
@@ -561,7 +579,7 @@ export const DustMotes: React.FC<{
  * f6, a line of type rising in at f4, film life over all. Rendered through src/entry.TwentyYearsOnePlane.ts
  * (composition "ArchiveProbe", 48 frames).
  */
-export const PROBE_DURATION = 48;
+export const PROBE_DURATION = 60;
 export const ArchiveProbe: React.FC = () => {
   const frame = useCurrentFrame();
   const g = camEase(frame / PROBE_DURATION, 1);
@@ -586,6 +604,8 @@ export const ArchiveProbe: React.FC = () => {
             shadow={{ w: 380, h: 60, dy: 4, opacity: 0.6 }}
             shade="linear-gradient(to bottom, rgba(0,0,0,0) 55%, rgba(0,0,0,0.3) 100%)"
           />
+          {/* the graphic-standard core ("white"), flipped, below the caption bands */}
+          <ChainCutOut src="heads/bret.png" x={540} y={1840} w={220} aspect={474 / 643} flipX progress={pr} core="white" />
           <ArchiveText text="1958" x={540} y={300} size={150} frame={frame} f0={4} k={cam.k} />
         </ArchiveCamera>
       </FilmLife>
