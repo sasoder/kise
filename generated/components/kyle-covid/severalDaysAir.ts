@@ -65,10 +65,11 @@ const FIG_FOG = { near: 300, vis: 2200, max: 0.75 };
 export type CycleWorld = AirWorld & { night: number; nightOf: (hex: string, Z: number, h?: number) => string };
 /** the kit's airWorldOf on the cycle view; tone adds the night (a local colour fogged, then sunk toward the night air
  *  by NIGHT_SINK * n); fog (rims, joints, shadows) rises at night (no sun: rims and cast shadows fade) */
-export const cycleWorldOf = (o: { cam: Cam; rest: Cam; depth: DepthOpts; frame: number; night: number; side?: number }): CycleWorld => {
+export const cycleWorldOf = (o: { cam: Cam; rest: Cam; depth: DepthOpts; restDepth?: DepthOpts; frame: number; night: number; side?: number }): CycleWorld => {
   const { cam, rest, depth, frame, night: n } = o;
   const P = perspective(cam, depth);
-  const P0 = perspective(rest, depth);
+  // the f0 camera's own depth (the push moves the eye: the motes' and shafts' parallax is measured from f0)
+  const P0 = perspective(rest, o.restDepth ?? depth);
   const toSY = (wy: number) => 960 + (wy - cam.cy) * cam.k;
   const v = cycleView({
     scene: { ...AIR_SCENE, F: P.Dc * cam.k },

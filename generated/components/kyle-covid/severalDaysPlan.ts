@@ -42,8 +42,7 @@ const speedAt = (f: number, a: number, b: number) => (f <= a ? 1 : f >= b ? 0 : 
 // THE DEPTH CAMERA (review 1: pushed in, the eye lowered): eye 1.12 m up (the horizon at the Carrier's chest), the
 // front plane 760 units (4.3 m) from the eye at k 2.9 (the walking Carrier ~50 % of the frame's height); a zoom is half
 // dolly. The camera TRUCKS right with him a little slower than his pace (he drifts slowly into the frame's right half:
-// the street he walked opens on the left), decelerates in one lobe (f92-f124) and settles; for the bench it pushes in a
-// little (k 2.9 -> 3.0: seated ~40 %) and tilts (the floor row 1445 -> 1370).
+// the street he walked opens on the left); from f92 the truck blends into the push onto him (THE CAMERA, below).
 // ===================================================================================================================
 export const DEPTH: DepthOpts = { eyeY: -200, dRef: 760, kRef: 2.9, dolly: 0.5 };
 export const K0 = 2.9;
@@ -55,19 +54,87 @@ export const V_WALK = (2 * STRIDE) / CYCLE;
 /** his walk: constant pace, then slowing f100 -> stop f122 */
 export const HERO_DEC = [100, 122] as const;
 export const HERO_X0 = 0;
-/** the camera's truck: CAM_V, decelerating f92 -> f136 */
-export const CAM_DEC = [92, 124] as const;
 export const CAM_X0 = 29;
 export const CAM_V = 3.15;
-/** the zoom and tilt (one lobe, with the truck's deceleration) */
-const ZOOM = [96, 140] as const;
-const FLOOR_SY0 = 1445;
-const FLOOR_SY1 = 1370;
-export const camAt = (f: number): Cam => {
-  const z = sst5(ZOOM[0], ZOOM[1], f);
+/** THE DELIVERED CAMERA (revision 2, approved): the truck decelerating f92 -> f124, a small zoom and tilt for the
+ *  bench (k 2.9 -> 3.0, f96-f140). Identical to the new camera through f92; kept only for the passers-by's layout
+ *  (each passer-by's path is solved from where it crosses him on screen), so their world paths stay as delivered. */
+const CAM_DEC_V1 = [92, 124] as const;
+const ZOOM_V1 = [96, 140] as const;
+const camAtV1 = (f: number): Cam => {
+  const z = sst5(ZOOM_V1[0], ZOOM_V1[1], f);
   const k = Math.exp(lerp(Math.log(K0), Math.log(K1), z));
-  const sy = lerp(FLOOR_SY0, FLOOR_SY1, z);
-  return { k, cx: CAM_X0 + travel(f, CAM_V, CAM_DEC[0], CAM_DEC[1]), cy: 0 - (sy - 960) / k };
+  const sy = lerp(1445, 1370, z);
+  return { k, cx: CAM_X0 + travel(f, CAM_V, CAM_DEC_V1[0], CAM_DEC_V1[1]), cy: 0 - (sy - 960) / k };
+};
+
+// ===================================================================================================================
+// THE CAMERA (user revision 1: "utilize the camera a bit more with like a zoom ... more dynamic towards the end").
+// Through f92 exactly the delivered truck (eye 200 up, the front plane 760 from the eye at k 2.9). From f92, as he
+// slows, the sideways truck blends into a forward DOLLY toward him: the truck decelerates in one long lobe
+// (f92 -> CAM_DEC[1]) while the push accelerates out of rest at f92 (one smooth lobe, peak speed ~PUSH_PEAK, easing
+// out by ~f150, then a slow creep to the end), so the camera never stops between them. A physical camera: its
+// distance to his plane D falls 760 -> D_END (a dolly, ~1.6 m) at a nearly constant focal length (F = k D), so the
+// people behind him grow less than he does and stay in shot, the bollards in front sweep out of frame below and to
+// the sides; the eye lowers (EYE_END) and the framing tilts down onto him (CY_END). End: him seated, head to feet
+// ~63 % of the frame height, face ~y 560-760, the lungs above y 1040, a little right of centre; the glowing group
+// behind him on the left.
+// ===================================================================================================================
+/** the truck: CAM_V, decelerating f92 -> CAM_DEC[1] (raised cosine) */
+export const CAM_DEC = [92, 146] as const;
+/** the push: from rest at PUSH[0], peak speed at PUSH_PEAK, the lobe out by PUSH[1]; then a creep (CREEP of the
+ *  peak speed) to the end */
+export const PUSH = [92, 152] as const;
+export const PUSH_PEAK = 119;
+const CREEP = 0.05;
+const D0 = DEPTH.dRef;
+const F0 = K0 * D0;
+/** the end camera (at f157, the creep included) */
+export const K_END = 4.4;
+const F_END = F0 * 1.02;
+const D_END = F_END / K_END;
+const EYE_END = -178;
+const CY0 = -(1445 - 960) / K0;
+const CY_END = -120.5;
+/** the push's speed profile (relative): an asymmetric smooth lobe (sin^2 up, cos^2 down) plus the creep */
+const pushV = (f: number) => {
+  const up = c01((f - PUSH[0]) / (PUSH_PEAK - PUSH[0]));
+  const dn = c01((f - PUSH_PEAK) / (PUSH[1] - PUSH_PEAK));
+  const lobe = f <= PUSH[0] ? 0 : f <= PUSH_PEAK ? Math.sin((Math.PI / 2) * up) ** 2 : Math.cos((Math.PI / 2) * dn) ** 2;
+  return lobe + CREEP * sst(PUSH_PEAK + 8, PUSH[1] - 4, f);
+};
+const PUSH_DT = 0.125;
+const PUSH_T: number[] = (() => {
+  const out = [0];
+  let s = 0;
+  for (let f = 0; f < DURATION + 2; f += PUSH_DT) {
+    s += pushV(f + PUSH_DT / 2) * PUSH_DT;
+    out.push(s);
+  }
+  const end = out[Math.round((DURATION - 1) / PUSH_DT)];
+  return out.map((v) => v / end);
+})();
+/** the push's progress 0 (f <= 92) .. 1 (f157) */
+export const pushAt = (f: number) => {
+  const x = Math.max(0, f) / PUSH_DT;
+  const i = Math.min(PUSH_T.length - 2, Math.floor(x));
+  return lerp(PUSH_T[i], PUSH_T[i + 1], c01(x - i));
+};
+/** the physical camera at f: cx (the truck), D (its distance to his plane), F (the focal length), the eye height */
+export const rigAt = (f: number) => {
+  const u = pushAt(f);
+  const D = lerp(D0, D_END, u);
+  const F = F0 * Math.pow(F_END / F0, u);
+  return { u, cx: CAM_X0 + travel(f, CAM_V, CAM_DEC[0], CAM_DEC[1]), D, F, k: F / D, eyeY: lerp(DEPTH.eyeY, EYE_END, u), cy: lerp(CY0, CY_END, u) };
+};
+export const camAt = (f: number): Cam => {
+  const r = rigAt(f);
+  return { k: r.k, cx: r.cx, cy: r.cy };
+};
+/** the depth camera at f (perspective(cam, depthAt(f)) puts the eye D from his plane at the eye height of f) */
+export const depthAt = (f: number): DepthOpts => {
+  const r = rigAt(f);
+  return { eyeY: r.eyeY, dRef: r.D, kRef: r.k, dolly: 0.5 };
 };
 
 // ===================================================================================================================
@@ -131,8 +198,10 @@ export const LAMPS = [-75, 600];
  *  night shows lamps lit along the street */
 export const BACK_LAMPS = [145, 590, 1035];
 export const Z_BACK_LAMP = 690;
-/** bollards along the kerb (low: they slide past under the people, the foreground's parallax) */
-export const BOLLARDS = [-300, -150, 0, 150, 300, 450, 600, 750];
+/** bollards along the kerb (low: they slide past under the people, the foreground's parallax). The one after 300 stands
+ *  at 520 (was 450; user revision 1, the director): at 450 the push parked it in front of his shins in the payoff
+ *  frame; at 520 the truck never brings it into frame and the push carries it out to the right (it is never on screen) */
+export const BOLLARDS = [-300, -150, 0, 150, 300, 520, 600, 750];
 /** the bench (backless: a timber seat on two iron frames) on the pavement, facing the street */
 export const BENCH = { x0: 300, x1: 560, z0: 34, z1: 92, h: 82 };
 
@@ -258,7 +327,7 @@ export type Walker = {
 };
 export const walkerV = (w: Walker) => (2 * w.stride) / w.cycle;
 const rOf = (Z: number, f: number) => {
-  const k = camAt(f).k;
+  const k = camAtV1(f).k;
   const Dc = DEPTH.dRef * Math.pow(DEPTH.kRef / k, DEPTH.dolly);
   return Dc / (Dc + Z);
 };
@@ -347,7 +416,7 @@ const passer = (id: string, kind: CovidKind, variant: number, Z: number, ks: num
   const fe = ks + CROSS_LEAD;
   const v = PASS_SPX / (rOf(Z, 0) * K0) - CAM_V;
   const cycle = (2 * stride) / v;
-  const C = camAt(fe);
+  const C = camAtV1(fe);
   const xe = C.cx + (heroX(fe) - C.cx) / rOf(Z, fe);
   // he says hi ~8 frames before: the first specks take ~5 frames to cross the short gap and reach their face (contact
   // ks - 3), and the kindle starts at ks

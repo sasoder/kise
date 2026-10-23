@@ -23,22 +23,34 @@
 // evening) and the shafts swing with them; each night the air darkens and the shop windows, the lanterns, the far
 // city's windows and the street lamps along the back of the pavement come on cream (cones and pools only where
 // their lamp is in view).
-// Four passers-by come toward him one at a time (kindles start f18, f40, f62, f84): he glances, smiles, says hi, a
-// soft puff of orange specks drifts onto their face (CONTACT: the first specks reach the mouth 3 frames before the
-// kindle starts), they pass behind him and walk on to his left with their chest kindling, unaware. From f99 he
+// He carries a subtle warm cloud of his own air round his head and shoulders (covidHaze, the clip's shared air, as
+// cut 3; user revision 1: nothing aimed at anyone) and leaves a short faint trail of it hanging in the street behind
+// him (fading over ~30-40 frames). Four passers-by come toward him one at a time (kindles start f18, f40, f62, f84): he
+// glances, smiles, says hi (the cloud's front lobe fills), their face walks into his cloud (CONTACT: ~4-8 frames before
+// the kindle starts) and on through it as they pass behind him; they walk on to his left with their chest kindling,
+// unaware. From f99 he
 // slows; the illness shows (pale grey-green, the flush, droopy lids, a sweat drop) and he coughs twice into his fist
-// (f99-f127, a spray of specks); he stops (f122), turns to the street and sinks onto a bench (f124-f142); the truck
-// decelerates in one lobe (f92-f124) and the camera pushes in a little for the bench (k 2.9 -> 3.0, f96-f140). The hold
-// (f142-f157): him slumped on the bench right of centre, turned a little toward the street he walked, his hands in his
+// (f99-f127, a spray of specks); he stops (f122), turns to the street and sinks onto a bench (f124-f142). THE PUSH
+// (user revision 1): from f92, as he slows, the sideways truck blends into a forward dolly toward him, one continuous
+// camera (the truck decelerates f92-f146 while the push accelerates out of rest at f92, peaks at f119 and eases out by
+// f152, then creeps to the end; the eye lowers 1.12 -> 1.0 m and the framing tilts down onto him), so his paling and the
+// cough happen as the camera comes in, and it lands on a close frame of him seated (head to feet ~61 % of the frame,
+// the face ~y 470-690, the lungs above y 1000, a little right of centre). Behind him everything softens by its depth as
+// the camera comes in (a little more air, a slight defocus), the glowing people he passed still in shot on his left.
+// The bollards in front sweep down and out of frame to the left (the one that stood at X 450 moved to 520: no post in
+// front of him in the payoff frame). The
+// hold (f146-f157): him slumped on the bench right of centre, turned a little toward the street he walked, his hands in his
 // lap (the lungs' glow in view); on the left, at three depths, glowing people still about: the flat cap and the girl
 // a step back, chatting; the first passer-by, the teal puffer with her coffee, walking back in days later; the
 // white-haired woman nearer us, waiting by the bench; a well man walks in on the right; two well friends talk inside
 // the cafe.
-// Orange = the virus only (the lungs' glow, the breath and cough specks; a faint chest halo at night). The set, the
+// Orange = the virus only (the lungs' glow, his air (the haze), the cough's specks; a faint chest halo at night). The set, the
 // clothes and the lights are muted local colours and cream; no text, no numbers.
 //
 // DEPTH (review 1: pushed in, the eye lowered): eye 200 units (1.12 m, his chest) up, dRef 760 at kRef 2.9, dolly
-// 0.5; the walking Carrier ~50 % of the frame's height, seated ~40 %; fog by the eye's distance (palette A, the day
+// 0.5 through f92 (the walking Carrier ~50 % of the frame's height); the push (user revision 1, severalDaysPlan rigAt)
+// dollies the eye from 760 to ~511 units from his plane at a nearly constant focal length (k 2.9 -> 4.4) and lowers it
+// to 178 units; fog by the eye's distance (palette A, the day
 // mood blended into the night mood by the clock). Z: kerb -240, bollards -214, lampposts -214, the Carrier 0, the
 // bench 34-92, passers-by 300-600, the cafe guests 880, the shop row's front 780, the far city 1700-2600.
 //
@@ -50,11 +62,13 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirShadow, AirStage, WorldSvg, mixHex, swayCam, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { BreathSpecks, CovidFigure, POSES, breathe, covidAnchors, type CovidPose, type Speck } from "./covidFolk";
+import { HazeCloud, breathRhythm, hazeAt, type Haze, type HazeEmitter, type HazeOpts } from "./covidHaze";
 import { cycleWorldOf, type CycleWorld } from "./severalDaysAir";
 import {
   BACKS,
   COUGH,
   DEPTH,
+  depthAt,
   DURATION,
   ENCOUNTERS,
   FPS,
@@ -67,6 +81,7 @@ import {
   heroSick,
   lerp,
   nightAt,
+  pushAt,
   sst,
   sunAt,
   BACK_LAMPS,
@@ -75,6 +90,7 @@ import {
   Z_BACK_LAMP,
   Z_KERB,
   Z_LAMP,
+  Z_SHOP,
   walkerPose,
   walkerX,
   type Walker,
@@ -82,12 +98,18 @@ import {
 import { Alley, BackLamps, Bench, Bollards, CastShadows, FarCity, Ground, LampCones, LampPools, LanternGlow, Lanterns, Lampposts, ShopGlow, ShopRow, lampLit, type Caster, type Inside } from "./severalDaysStreet";
 
 export { DURATION, FPS };
-export const schema = z.object({});
+/** haze: false draws the cut without the shared air (a check: the frames diff-blend against the revision without it) */
+export const schema = z.object({ haze: z.boolean().default(true) });
 export const defaultProps = schema.parse({});
 
 /** the covidFolk glow this cut was approved and delivered with (Round 3, "v3"); pinned so the committed source
  *  re-renders the delivered .mov exactly (covidFolk's default moved on to "v4") */
 const GLOW = "v3" as const;
+
+/** the push's softening of what lies behind him (at the end, at the shop row's depth): a defocus (screen px at
+ *  full size) and a little more air on the people */
+const DOF_PX = 3;
+const DOF_AIR = 0.2;
 
 const REST = swayCam(camAt(0), 0);
 const camOf = (f: number) => swayCam(camAt(f), f);
@@ -142,64 +164,98 @@ export const walkerPoseAt = (w: Walker, f: number): CovidPose => {
 };
 
 // ===================================================================================================================
-// THE BREATH (world-anchored specks: each born where his mouth was): a puff steered onto each passer-by's face as he
-// says hi (contact = the first specks reach the mouth; the kindle starts there), and the cough's spray. Drawn just
-// behind him (between him and the people behind), so no speck ever sits on his own face.
+// THE SHARED AIR (user revision 1: no puffs aimed at people; covidHaze, the clip's shared air, as cut 3): a subtle warm
+// cloud round his head and shoulders that he carries along the street (the envelope, centred on his head now), and a
+// short faint trail left hanging where he walked (his exhale puffs and motes stay where they were breathed out and fade
+// over ~30-40 frames, so the street never fills with orange). Each passer-by walks into the front of his cloud (its lobe
+// fills as he says hi) and on through it behind him; their chest starts to kindle a few frames after their face enters
+// it (the timetable of the delivered cut: kindles at ENCOUNTERS). The cough adds to the air (and keeps its spray of
+// specks out past his fist, as delivered).
 // ===================================================================================================================
-const MOUTH = new Map<number, { m: P2; d: P2; s: number }>();
-const heroMouthAt = (fi: number) => {
-  const hit = MOUTH.get(fi);
+const HERO_A = new Map<number, ReturnType<typeof covidAnchors>>();
+/** his anchors at integer frame fi, world px (his plane Z 0: world px = units) */
+const heroA = (fi: number) => {
+  const hit = HERO_A.get(fi);
   if (hit) return hit;
   const a = covidAnchors("carrier", heroPose(fi), [heroAtX(fi), 0], 1);
-  const out = { m: a.mouth, d: a.mouthDir, s: 1 };
-  MOUTH.set(fi, out);
-  return out;
+  HERO_A.set(fi, a);
+  return a;
 };
-const PMOUTH = new Map<string, P2>();
-/** a walker's mouth in the 2D world at frame fi (projected at its depth) */
-const walkerMouthAt = (w: Walker, fi: number, A: CycleWorld | null) => {
-  const key = `${w.id}|${fi}`;
-  const hit = PMOUTH.get(key);
+/** saying hi to each passer-by (talking: the cloud's front lobe fills), and the cough (more breathed out, pushed) */
+const talkAt = (f: number) => {
+  let hi = 0;
+  for (const ks of ENCOUNTERS) hi = Math.max(hi, bump(f, ks - 13, ks - 9, ks - 3, ks + 3));
+  return hi;
+};
+const coughAt = (f: number) => bump(f, COUGH[0], COUGH[0] + 4, COUGH[1] - 4, COUGH[1]);
+/** TWO EMITTERS, one breath. THE CLOUD he carries: cut 3's look values (HAZE) on an anchor that walks with him (his
+ *  feet now), so the envelope, its puffs and its motes go along the street with him; the lobe and the halo a little
+ *  lower (no seated neighbour: the passers-by walk through its edge). THE TRAIL: the same breath, anchored to the
+ *  street (what he breathes out stays where it was breathed out): only a thin share of short-lived puffs and motes,
+ *  fading over ~30-40 frames behind him, so the street never fills with orange. */
+const HAZE_CARRIED: Partial<HazeOpts> = { lobeW: 5, haloW: 0.9, moteRate: 0.42 };
+/** the veil's strength by the camera: the walk is framed at ~2.9 px per unit (cut 3 lands at ~3.9), so the walk's
+ *  veil is a little stronger than cut 3's to stay a warm tint at phone size; as the push comes in (4.4 px per unit) it
+ *  eases back toward cut 3's values */
+const veilAt = (f: number) => {
+  const u = pushAt(f);
+  return { gain: lerp(0.045, 0.032, u), cap: lerp(0.3, 0.26, u) };
+};
+const HAZE_TRAIL: Partial<HazeOpts> = { gain: 0, life: 44, puffGain: 0.035, moteRate: 0.22, moteLife: 58, moteFade: [12, 0.4], boundBack: 900, boundFwd: 900 };
+const heroLocal = (f: number) => covidAnchors("carrier", heroPose(Math.round(f)), [0, 0], 1);
+const HL = new Map<number, ReturnType<typeof covidAnchors>>();
+const heroL = (f: number) => {
+  const fi = Math.round(f);
+  const hit = HL.get(fi);
   if (hit) return hit;
-  const Afi = A ?? cycleWorldOf({ cam: camOf(fi), rest: REST, depth: DEPTH, frame: fi, night: nightAt(fi) });
-  const { at, scale } = Afi.P.at(walkerX(w, fi), w.Z);
-  const m = covidAnchors(w.kind, walkerPoseAt(w, fi), at, scale, { variant: w.variant }).mouth;
-  PMOUTH.set(key, m);
-  return m;
+  const a = heroLocal(fi);
+  HL.set(fi, a);
+  return a;
 };
-const bez = (a: P2, c: P2, b: P2, t: number): P2 => [(1 - t) * (1 - t) * a[0] + 2 * (1 - t) * t * c[0] + t * t * b[0], (1 - t) * (1 - t) * a[1] + 2 * (1 - t) * t * c[1] + t * t * b[1]];
-const breathOf = (f: number, A: CycleWorld): Speck[] => {
+const breath = {
+  // he faces right the whole cut (seated he turns only a little to the street): the lobe stays on his right, no flip
+  dirAt: (): P2 => [1, 0.15],
+  amountAt: (f: number) => c01(breathRhythm(f, 96, 0.7) * (1 + 0.25 * coughAt(f))),
+  pushAt: (f: number) => Math.max(0.3, talkAt(f), 0.8 * coughAt(f)),
+};
+type Avoid = { c: P2; r: number; layer?: "front" | "all" };
+export const hazeOf = (A: CycleWorld, f: number, avoid: Avoid[]): Haze => {
+  const hxNow = heroAtX(f);
+  const carried: HazeEmitter = {
+    ...breath,
+    // rig units from his feet now (his plane Z 0)
+    project: (u) => ({ p: A.P.p(hxNow + u[0], u[1], u[2]), s: A.P.r(u[2]) }),
+    mouthAt: (g) => {
+      const m = heroL(g).mouth;
+      return [m[0], m[1], 0];
+    },
+    centreAt: (g) => {
+      const c = heroL(g).headC;
+      return [c[0], c[1], 0];
+    },
+    seed: 21.3,
+    opts: { ...HAZE_CARRIED, ...veilAt(f) },
+  };
+  const trail: HazeEmitter = {
+    ...breath,
+    // anchored to the street (the world's origin): units = world units on his walk line
+    project: (u) => ({ p: A.P.p(u[0], u[1], u[2]), s: A.P.r(u[2]) }),
+    mouthAt: (g) => {
+      const m = heroA(Math.round(g)).mouth;
+      return [m[0], m[1], 0];
+    },
+    centreAt: (g) => {
+      const c = heroA(Math.round(g)).headC;
+      return [c[0], c[1], 0];
+    },
+    seed: 7.9,
+    opts: { ...HAZE_TRAIL, cap: veilAt(f).cap },
+  };
+  return hazeAt([carried, trail], f, { avoid, below: A.cam.cy + (1050 - 960) / A.k });
+};
+/** the cough's spray: a burst at each cough, out past the fist, falling and fading (world-anchored specks) */
+const coughSpray = (f: number): Speck[] => {
   const out: Speck[] = [];
-  // the puffs onto the passers-by
-  for (const w of PASSERS) {
-    const e = w.enc!;
-    if (f < e.puff[0] || f > e.puff[1] + 18) continue;
-    const T = walkerMouthAt(w, Math.round(f), A);
-    const rate = 4;
-    for (let i = Math.ceil(e.puff[0] * rate); i <= Math.floor(Math.min(f, e.puff[1]) * rate); i++) {
-      const b = i / rate;
-      const age = f - b;
-      const h1 = hash1(i * 1.7 + w.seed * 13);
-      const h2 = hash1(i * 3.1 + w.seed * 7);
-      const h3 = hash1(i * 5.3 + w.seed * 3);
-      const travelT = 5 + 2.5 * h2;
-      const u = c01(age / travelT);
-      if (u >= 1) continue;
-      const O = heroMouthAt(Math.round(b));
-      const L = Math.hypot(T[0] - O.m[0], T[1] - O.m[1]);
-      const C: P2 = [O.m[0] + O.d[0] * L * 0.5, O.m[1] + O.d[1] * L * 0.5 - 6];
-      const v = Math.pow(u, 0.85);
-      const pt = bez(O.m, C, T, v);
-      const nx = -(T[1] - O.m[1]) / Math.max(1, L);
-      const ny = (T[0] - O.m[0]) / Math.max(1, L);
-      const lat = (2 * h1 - 1) * L * 0.22 * Math.sin(Math.PI * v) + 3 * Math.sin(age * 0.4 + h3 * 6);
-      const scaleT = 0.8;
-      const r = Math.max(0.9, (1.3 + 1.3 * h2) * lerp(1, scaleT, v));
-      const a = sst(0, 0.1, u) * (1 - sst(0.78, 1, u)) * (0.7 + 0.3 * h1);
-      out.push({ p: [pt[0] + nx * lat, pt[1] + ny * lat], r, a });
-    }
-  }
-  // the cough's spray: a burst at each cough, out past the fist, falling and fading
   const nC = 2;
   for (let c = 0; c < nC; c++) {
     const ct = COUGH[0] + (COUGH[1] - COUGH[0]) * (0.16 + (0.66 * (c + 0.08)) / nC);
@@ -210,13 +266,13 @@ const breathOf = (f: number, A: CycleWorld): Speck[] => {
       if (age < 0 || age > 34) continue;
       const h1 = hash1(c * 31 + j * 1.3 + 5);
       const h2 = hash1(c * 17 + j * 2.9 + 9);
-      const O = heroMouthAt(Math.round(b));
+      const O = heroA(Math.round(b)).mouth;
       const u = age / 34;
       const s = 80 * (1 - Math.pow(1 - u, 2.2)) * (0.6 + 0.6 * h2);
       const th = 0.8 * (2 * h1 - 1) - 0.1;
       const dx = Math.cos(th);
       const dy = Math.sin(th) + 0.25;
-      const p: P2 = [O.m[0] + 10 + dx * s, O.m[1] + dy * s + 14 * u * u];
+      const p: P2 = [O[0] + 10 + dx * s, O[1] + dy * s + 14 * u * u];
       const a = 0.75 * sst(0, 0.05, u) * Math.pow(1 - u, 1.2);
       out.push({ p, r: Math.max(0.8, 1.0 + 1.1 * h2), a });
     }
@@ -262,16 +318,29 @@ const cafeInside = (A: CycleWorld, frame: number): Inside => (s, o, i, lit) => {
 // THE CUT
 // ===================================================================================================================
 type Item = { Z: number; el: React.ReactNode };
-const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = () => {
+const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = ({ haze: withHaze = true }) => {
   const frame = useCurrentFrame();
   const cam = camOf(frame);
   const n = nightAt(frame);
   const sun = sunAt(frame);
-  const A = cycleWorldOf({ cam, rest: REST, depth: DEPTH, frame, night: n, side: sun.side });
+  const A = cycleWorldOf({ cam, rest: REST, depth: depthAt(frame), restDepth: DEPTH, frame, night: n, side: sun.side });
   const P = A.P;
-  /** a figure's fog: by its depth (the kit's figFog), then the night (less inside a lamp's pool) */
+  // THE PUSH's depth: as the camera comes in on him, everything behind him softens by its depth (a little more air,
+  // a slight defocus), so the sick man stands out against the glowing people he passed (user revision 1)
+  const u = pushAt(frame);
+  const deep = (Z: number) => u * Math.pow(c01((Z - 120) / 660), 0.8);
+  const dofDef = (Z: number, id: string) => {
+    const sd = (DOF_PX * deep(Z)) / A.k;
+    return sd * A.k < 0.15 ? null : (
+      <filter id={id} x="-15%" y="-10%" width="130%" height="120%">
+        <feGaussianBlur stdDeviation={sd} />
+      </filter>
+    );
+  };
+  /** a figure's fog: by its depth (the kit's figFog, plus the push's air), then the night (less inside a lamp's pool) */
   const figFog = (X: number, Z: number) => {
-    const base = A.folkFog(Z);
+    const b0 = A.folkFog(Z);
+    const base = { rgb: b0.rgb, amount: 1 - (1 - b0.amount) * (1 - DOF_AIR * deep(Z)) };
     const lit = c01(lampLit(X, frame, Z));
     const nt = n * 0.46 * (1 - 0.6 * lit);
     const amount = 1 - (1 - base.amount) * (1 - nt);
@@ -282,6 +351,7 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = () => {
   const items: Item[] = [];
   /** the time-lapse shadows' casters (a figure's height from its head anchor) */
   const casters: Caster[] = [];
+  const avoid: Avoid[] = [];
   /** at night an infected chest glows into the dark air round it (a soft orange halo at the chest) */
   const halo = (kind: Walker["kind"], variant: number, q: CovidPose, at: P2, scale: number, inf: number, uid: string) => {
     const a = n * inf;
@@ -308,10 +378,15 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = () => {
     const q = walkerPoseAt(w, frame);
     const inf = w.inf(frame);
     casters.push({ X, Z: w.Z, H: -covidAnchors(w.kind, q, [0, 0], 1, { variant: w.variant }).headTop[1] + 8, W: 66 });
+    // the haze's motes never ride a passer-by's face or body (the veil passes over them: they walk through it)
+    const wa = covidAnchors(w.kind, q, at, scale, { variant: w.variant });
+    avoid.push({ c: wa.headC, r: 46 * scale }, { c: wa.chest, r: 60 * scale }, { c: wa.hip, r: 55 * scale });
+    const dof = dofDef(w.Z, `${uid}dof`);
     items.push({
       Z: w.Z,
       el: (
-        <g key={uid}>
+        <g key={uid} filter={dof ? `url(#${uid}dof)` : undefined}>
+          {dof ? <defs>{dof}</defs> : null}
           <AirShadow A={A} X={X} Z={w.Z} w={58} d={28} uid={`${uid}s`} amt={0.8} />
           <CovidFigure kind={w.kind} variant={w.variant} pose={q} at={at} scale={scale} uid={uid} infected={inf} frame={frame} fog={figFog(X, w.Z)} unitPx={cam.k} hold={w.hold} glowStyle={GLOW} />
           {halo(w.kind, w.variant, q, at, scale, inf, uid)}
@@ -330,8 +405,15 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = () => {
   for (const X of BOLLARDS) casters.push({ X, Z: Z_KERB + 26, H: 112, W: 18 });
   for (const X of LAMPS) casters.push({ X, Z: Z_LAMP, H: 1400, W: 15 });
   for (const X of BACK_LAMPS) casters.push({ X, Z: Z_BACK_LAMP, H: 700, W: 11 });
-  const specks = breathOf(frame, A);
-  items.push({ Z: 1, el: <BreathSpecks key="hb" specks={specks} uid="hb" /> });
+  // his air: the cloud behind his centre before him (the people behind are inside it), the part in front after him
+  avoid.push({ c: heroA(frame).headC, r: 30, layer: "front" });
+  items.push({ Z: 1, el: <BreathSpecks key="hb" specks={coughSpray(frame)} uid="hb" /> });
+  if (withHaze) {
+    const haze = hazeOf(A, frame, avoid);
+    const hf = figFog(hx, 0);
+    items.push({ Z: 1.5, el: <HazeCloud key="hzb" haze={haze} layer="back" uid="hzb" fog={hf} /> });
+    items.push({ Z: -1, el: <HazeCloud key="hzf" haze={haze} layer="front" uid="hzf" fog={hf} /> });
+  }
   items.push({
     Z: 0,
     el: (
@@ -343,19 +425,27 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = () => {
     ),
   });
   items.sort((a, b) => b.Z - a.Z);
+  const setDof = dofDef(Z_SHOP, "sd-setdof");
+  const lampDof = dofDef(Z_BACK_LAMP, "sd-lampdof");
   return (
     <AirStage v={A.v} bloom={0.22} shafts={Math.pow(1 - n, 1.3)} motes={1 - 0.5 * n} grade={1 - 0.3 * n} vignette={1 - 0.15 * n}>
       <WorldSvg cam={cam}>
-        <FarCity A={A} f={frame} />
-        <Alley A={A} />
-        <ShopRow A={A} f={frame} inside={cafeInside(A, frame)} />
-        <Lanterns A={A} f={frame} />
+        <g filter={setDof ? "url(#sd-setdof)" : undefined}>
+          {setDof ? <defs>{setDof}</defs> : null}
+          <FarCity A={A} f={frame} />
+          <Alley A={A} />
+          <ShopRow A={A} f={frame} inside={cafeInside(A, frame)} />
+          <Lanterns A={A} f={frame} />
+        </g>
         <Ground A={A} />
         <ShopGlow A={A} f={frame} />
         <LanternGlow A={A} f={frame} />
         <LampPools A={A} f={frame} />
         <CastShadows A={A} sun={sun} casters={casters} bench />
-        <BackLamps A={A} f={frame} />
+        <g filter={lampDof ? "url(#sd-lampdof)" : undefined}>
+          {lampDof ? <defs>{lampDof}</defs> : null}
+          <BackLamps A={A} f={frame} />
+        </g>
         <LampCones A={A} f={frame} which="back" />
         {items.map((it) => it.el)}
         <Bollards A={A} />
