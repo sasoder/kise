@@ -85,6 +85,10 @@ export { DURATION, FPS };
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
+/** the covidFolk glow this cut was approved and delivered with (Round 3, "v3"); pinned so the committed source
+ *  re-renders the delivered .mov exactly (covidFolk's default moved on to "v4") */
+const GLOW = "v3" as const;
+
 const REST = swayCam(camAt(0), 0);
 const camOf = (f: number) => swayCam(camAt(f), f);
 
@@ -245,7 +249,7 @@ const cafeInside = (A: CycleWorld, frame: number): Inside => (s, o, i, lit) => {
         const { at, scale } = P.at(g.X, Z_GUEST);
         const base = { ...POSES.sit(g.dir), yaw: g.dir * 0.9, headYaw: g.dir * 0.8 };
         const q = breathe(POSES.chat(base, frame + 40 * k, g.dir, 0.8, g.seed), frame, 1, g.seed);
-        return <CovidFigure key={k} kind={g.kind} variant={g.variant} pose={q} at={at} scale={scale} uid={`gst${k}`} frame={frame} fog={fog} unitPx={A.k} />;
+        return <CovidFigure key={k} kind={g.kind} variant={g.variant} pose={q} at={at} scale={scale} uid={`gst${k}`} frame={frame} fog={fog} unitPx={A.k} glowStyle={GLOW} />;
       })}
       {/* their small table and two cups */}
       <path d={tb(-168, -122, -134, -126) + tb(-147, -143, -126, -92)} fill={mixHex(A.tone("#5E452F", Z_GUEST, 120), room, 0.4)} />
@@ -309,7 +313,7 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = () => {
       el: (
         <g key={uid}>
           <AirShadow A={A} X={X} Z={w.Z} w={58} d={28} uid={`${uid}s`} amt={0.8} />
-          <CovidFigure kind={w.kind} variant={w.variant} pose={q} at={at} scale={scale} uid={uid} infected={inf} frame={frame} fog={figFog(X, w.Z)} unitPx={cam.k} hold={w.hold} />
+          <CovidFigure kind={w.kind} variant={w.variant} pose={q} at={at} scale={scale} uid={uid} infected={inf} frame={frame} fog={figFog(X, w.Z)} unitPx={cam.k} hold={w.hold} glowStyle={GLOW} />
           {halo(w.kind, w.variant, q, at, scale, inf, uid)}
         </g>
       ),
@@ -333,7 +337,7 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = () => {
     el: (
       <g key="hero">
         <AirShadow A={A} X={hx} Z={0} w={64} d={30} uid="hs" amt={0.85} />
-        <CovidFigure kind="carrier" variant={0} pose={hq} at={H.at} scale={H.scale} uid="hero" infected={1} sick={heroSick(frame)} frame={frame} fog={figFog(hx, 0)} unitPx={cam.k} carry="none" />
+        <CovidFigure kind="carrier" variant={0} pose={hq} at={H.at} scale={H.scale} uid="hero" infected={1} sick={heroSick(frame)} frame={frame} fog={figFog(hx, 0)} unitPx={cam.k} carry="none" glowStyle={GLOW} />
         {halo("carrier", 0, hq, H.at, H.scale, 1, "hero")}
       </g>
     ),
