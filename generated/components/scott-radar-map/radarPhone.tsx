@@ -365,14 +365,19 @@ export const RadarMap: React.FC<RadarMapProps> = ({ width, reveal = 1, drift = 0
 // THE PHONE
 // ===================================================================================================================
 export const PHONE_W = 780;
-export const PHONE_H = 1820;
+/** a modern iPhone (71.5 x 147.5 mm): height / width = 2.063 */
+export const PHONE_H = 1608;
+/** the metal frame band, then the dark glass border: together a thin, even bezel (~2.5 % of the width) */
+const FRAME = 6;
 const BEZEL = 20;
-const R_BODY = 116;
+/** corner radius ~0.14 x width; the screen's corners concentric with the body's */
+const R_BODY = 109;
 const R_SCREEN = R_BODY - BEZEL;
 export const SCREEN = { x: BEZEL, y: BEZEL, w: PHONE_W - 2 * BEZEL, h: PHONE_H - 2 * BEZEL } as const;
 /** the thread's layout in SCREEN px (add SCREEN.x / SCREEN.y for phone px) */
 export const THREAD = {
-  island: { y: 24, w: 206, h: 58 },
+  /** the Dynamic Island: a pill ~0.27 x the body width, near the top */
+  island: { y: 22, w: 211, h: 60 },
   /** the header row: United's avatar with "United" next to it, centred as a group */
   avatar: { cy: 142, r: 38 },
   name: { px: 38, gap: 18 },
@@ -389,9 +394,9 @@ const UI = {
   bubble: "#D6C8B1",
   divider: "#D5C8B3",
   inputLine: "#CDBFA8",
-  island: "#2A1B12",
-  body: ["#5B4231", "#45301F", "#36261A"],
-  rim: "rgba(245,238,225,0.55)",
+  island: "#24170F",
+  glass: "#2B1D13",
+  metal: ["#C9B49A", "#7A6250", "#4A3627", "#8E7661", "#D8C7AE"],
 } as const;
 const B1_LINES = ["Your flight UA 1453 is", "delayed 1 hr due to", "weather."];
 
@@ -477,23 +482,43 @@ export const Phone: React.FC<PhoneProps> = ({ variant = "radar", scale = 1, reve
             }}
           />
         ) : null}
-        {/* the side keys */}
+        {/* the side buttons (small, in the frame's metal): action + volume on the left, the side button on the right */}
         {[
-          { x: -5, y: 300, h: 70 },
-          { x: -5, y: 410, h: 120 },
-          { x: -5, y: 550, h: 120 },
-          { x: PHONE_W - 1, y: 440, h: 190 },
+          { x: -4, y: 262, h: 56 },
+          { x: -4, y: 362, h: 96 },
+          { x: -4, y: 482, h: 96 },
+          { x: PHONE_W - 1, y: 400, h: 150 },
         ].map((k, i) => (
-          <div key={i} style={{ position: "absolute", left: k.x, top: k.y, width: 6, height: k.h, borderRadius: 3, backgroundColor: i === 3 ? UI.body[2] : UI.body[1] }} />
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: k.x,
+              top: k.y,
+              width: 5,
+              height: k.h,
+              borderRadius: 2.5,
+              background: `linear-gradient(to bottom, ${UI.metal[3]}, ${UI.metal[2]})`,
+            }}
+          />
         ))}
-        {/* the body: warm espresso, lit from above-left, a cream rim on its top and left edges */}
+        {/* the metal frame: a thin band round the body, lit from above-left (a cream glint on its top-left edge) */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             borderRadius: R_BODY,
-            background: `linear-gradient(155deg, ${UI.body[0]} 0%, ${UI.body[1]} 38%, ${UI.body[2]} 100%)`,
-            boxShadow: `inset 3px 3px 0 0 ${UI.rim}, inset -2px -2px 0 0 rgba(34,21,11,0.55)`,
+            background: `linear-gradient(150deg, ${UI.metal[4]} 0%, ${UI.metal[0]} 12%, ${UI.metal[1]} 40%, ${UI.metal[2]} 70%, ${UI.metal[3]} 100%)`,
+            boxShadow: `inset 1.5px 1.5px 0 0 rgba(255,246,230,0.55), inset -1.5px -1.5px 0 0 rgba(34,21,11,0.5)`,
+          }}
+        />
+        {/* the dark glass border inside the frame (even all round) */}
+        <div
+          style={{
+            position: "absolute",
+            inset: FRAME,
+            borderRadius: R_BODY - FRAME,
+            background: `linear-gradient(155deg, ${UI.glass} 0%, ${UI.island} 100%)`,
           }}
         />
         {/* the screen */}

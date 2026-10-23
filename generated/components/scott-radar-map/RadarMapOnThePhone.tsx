@@ -14,8 +14,8 @@
 // THE MOTION: inside the terminal by the gate-side glass wall (the world of WeatherDelaysCut: tent roof, warm haze,
 // low sun bands; outside, denverWorld's AirStage with the storm boiling on the horizon, all soft behind the focus),
 // a customer's phone (the shared radarPhone prop) is already rising into frame at f0 and tilting up toward the
-// camera; it settles by ~f15 at ~63 % of the frame width (top leaning back 18 deg, the holder's view; its bottom runs off
-// frame), so the soft glass and the thunderstorm outside (anvil, slate base, rain; on the open left side) frame it. The United thread is
+// camera; it settles by ~f15 near-frontal at ~64 % of the frame width (a real iPhone's proportions, top leaning back ~6 deg,
+// mild perspective; shown whole), so the soft glass and the thunderstorm outside (anvil, slate base, rain; on the open left side) frame it. The United thread is
 // on screen as it rises; the plain delay bubble slides up into place f3 -> f12 ("customers" f6). On "weather" (f23)
 // the image bubble arrives below it (f22 -> f31) holding the map, dimmed while it loads; a radar sweep turns
 // clockwise about O'Hare from due south at a constant rate f27 -> f43, so the squall line WEST of the airport is
@@ -407,9 +407,9 @@ const HallCanvas: React.FC<{ c: ICam; f: number }> = ({ c, f }) => {
 // ===================================================================================================================
 /** the phone's pivot: the radar image's centre (phone px) */
 const PIV = { x: PHONE_W / 2, y: SCREEN.y + THREAD.b2.y + THREAD.b2.h / 2 };
-const PERSP = 1250;
-const REST = { y: 828, tilt: 18.5, rz: -0.8, k: 0.94 };
-const START = { y: 2330, tilt: 38, rz: -5, k: 0.915 };
+const PERSP = 2800;
+const REST = { y: 846, tilt: 6.5, rz: -0.8, k: 0.875 };
+const START = { y: 2300, tilt: 30, rz: -5, k: 0.85 };
 const RISE_A = 0.31; // the damped rise's rate (per frame); ~97 % home by f15
 const RISE_T0 = 1.6; // frames of pre-roll before f0
 const riseAt = (f: number) => {

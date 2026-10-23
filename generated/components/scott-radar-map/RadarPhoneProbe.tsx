@@ -17,7 +17,7 @@ const RadarPhoneProbe: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: f === 1 ? COLOR.ground : BG }}>
       {f === 0 ? (
-        <div style={{ position: "absolute", left: (1080 - PHONE_W) / 2, top: 0 }}>
+        <div style={{ position: "absolute", left: (1080 - PHONE_W) / 2, top: 120 }}>
           <Phone variant="radar" drift={40} sun={0} />
         </div>
       ) : null}
