@@ -35,6 +35,10 @@
 // f124 / 127 / 159; circles ~345x89, 345x89, 296x54 px at rest). The jets lined up on 28C and 27R never go; the next
 // jets on the parallel taxiways ease to a stop in their queues by f156. f160-f183: jets circling, queues waiting in
 // the sun, the wall boiling; only the camera creeps.
+// REVISION 1 (user, 2026-10-23: "glitching in the clouds ... which clouds are in the front and in the back"): the
+// storm elements no longer depth-sort per frame (neighbouring towers swapped at f15, f33, f53 as the camera panned and
+// tilted); ohareWorld draws them in one fixed back-to-front order by world x (rankX), each anvil just behind its own
+// tower, each tower's rain just after it, the squall shelf at its own fixed rank. Nothing else changed.
 // CONTACT FRAMES: amber lights when the route tip reaches the wall (state from the visible tip, not a timer); each hold
 // begins at its jet's fix (tangent to the route: a continuous peel); no two jets come closer than 1.29 jet lengths
 // (audited per frame).
@@ -132,16 +136,17 @@ const LINE: { id: string; x: number; y: number; seed: number; size: number; g: n
   return { id: `L${i}`, x: LINE_X + (i % 2 ? 1.6 : -1.4) + (r1 - 0.5) * 1.6 + 0.08 * y, y, seed: 201 + i * 7, size, g: big ? 0.66 : 0.5 + 0.15 * r1 };
 });
 /** the big towers' anvils: shelves at their tops spreading along the line (the tower top pierces each from below) */
-const ANVILS = LINE.filter((c) => c.g >= 0.66).map((c, i) => ({ x: c.x - 0.9, y: c.y, zTop: 6.25 * c.size, thick: 1.5 * c.size, half: 5.2 * c.size, seed: 3 + i * 1.7 }));
+const ANVILS = LINE.filter((c) => c.g >= 0.66).map((c, i) => ({ x: c.x - 0.9, y: c.y, zTop: 6.25 * c.size, thick: 1.5 * c.size, half: 5.2 * c.size, seed: 3 + i * 1.7, rankX: c.x }));
 /** the line's x at a given y (its cells' mean, for the routes' ends) */
 const lineXAt = (y: number) => LINE_X + 0.08 * y;
 export const lineXAtY = lineXAt;
 /** in-cloud flickers (start frames) per cell: two spaced in "the weather was over the horizon", one on
  *  "thunderstorms", one late */
 const FLICKERS: Record<string, number[]> = { L9: [9], L14: [26], L7: [117], L12: [158] };
-const cellsAt = (S: number): StormState[] =>
+const cellsAt = (S: number): (StormState & { rankX: number })[] =>
   LINE.map((c) => ({
     id: c.id,
+    rankX: c.x,
     x: c.x,
     y: c.y,
     seed: c.seed,

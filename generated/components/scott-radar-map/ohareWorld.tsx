@@ -549,7 +549,7 @@ const groundJetDraw = (v: DenView, j: GroundJet) => (ctx: CanvasRenderingContext
 
 /** the storm wall's tone: the line's world x, its tops' and its base's heights (miles), the darkening 0..1 */
 export type StormShade = { x: number; zTop: number; zBase: number; amount: number };
-type StandingOpts = { S: number; cells: StormState[]; groundJets: GroundJet[]; gateGlint: (i: number) => number; stormShade?: StormShade; anvils?: Anvil[]; squall?: Squall };
+type StandingOpts = { S: number; cells: RankedStorm[]; groundJets: GroundJet[]; gateGlint: (i: number) => number; stormShade?: StormShade; anvils?: Anvil[]; squall?: Squall };
 const airfieldItems = (v: DenView, o: StandingOpts): Item[] => {
   const items: Item[] = [];
   const tris: Tri[] = [];
@@ -599,7 +599,7 @@ const airfieldItems = (v: DenView, o: StandingOpts): Item[] => {
 /** An anvil: a flat-topped shelf spreading from a big tower's top along the line (world centre x, y, its top z, its
  *  thickness and half-length in miles), tapering to thin wispy ends; sunlit cream on top, shaded warm grey below,
  *  veiled by the air; its edges stream slowly on the story clock. Drawn behind the cells (the tower rises into it). */
-export type Anvil = { x: number; y: number; zTop: number; thick: number; half: number; seed: number };
+export type Anvil = { x: number; y: number; zTop: number; thick: number; half: number; seed: number; rankX?: number };
 const anvilNoise = (t: number, seed: number) =>
   0.5 * Math.sin(t * 0.9 + seed) + 0.3 * Math.sin(t * 2.3 + seed * 1.7) + 0.2 * Math.sin(t * 5.1 + seed * 0.3);
 const drawAnvil = (ctx: CanvasRenderingContext2D, v: DenView, a: Anvil, S: number) => {
@@ -641,7 +641,7 @@ const drawAnvil = (ctx: CanvasRenderingContext2D, v: DenView, a: Anvil, S: numbe
 /** The squall line's base: one continuous dark warm-slate shelf along the line in front of the cells' bases (its top
  *  edge lumpy, churning slowly on the story clock), and rain curtains hanging from it to the ground, heavier in places,
  *  streaked, falling (the streaks travel down on the clock), veiled by the air. */
-export type Squall = { x: number; y0: number; y1: number; zTop: number; zBot: number; seed: number };
+export type Squall = { x: number; y0: number; y1: number; zTop: number; zBot: number; seed: number; rankX?: number };
 const drawSquall = (ctx: CanvasRenderingContext2D, v: DenView, q: Squall, S: number) => {
   const n = 220;
   const top: P2[] = [];
@@ -730,18 +730,31 @@ const drawStanding = (ctx: CanvasRenderingContext2D, v: DenView, o: StandingOpts
   resetCloudPool();
   // 1. the storm cells (all far behind the airfield): painted far -> near on their own canvas, then the wall's lower
   // body toned down to a heavy warm slate (screen-vertical gradient between the line's tops and its base)
-  const cloud: CloudItem[] = [];
-  for (const c of o.cells) cloud.push(...cellItems(v, c, o.S));
-  cloud.sort((a, b) => b.d - a.d);
-  if (cloud.length) {
+  // ONE STABLE BACK-TO-FRONT ORDER for the whole cut (never a per-frame depth sort, which flips neighbouring towers
+  // as the camera pans and tilts): every storm element is ranked by a fixed world key (its x: the cameras always look
+  // west, so a smaller x is farther), farthest first. Each tower's anvil is drawn just before its own tower (behind its
+  // dome, in front of every farther tower), each tower's rain just after it, the squall shelf and its curtains at the
+  // shelf's own key (behind the nearest rank of towers, in front of the far rank).
+  type Op = { key: number; sub: number; draw: (cc: CanvasRenderingContext2D) => void };
+  const ops: Op[] = [];
+  o.cells.forEach((c, i) => {
+    const its = cellItems(v, c, o.S);
+    const key = c.rankX ?? c.x;
+    ops.push({ key, sub: 1 + i * 1e-3, draw: (cc) => its.forEach((it) => paintCloudItem(cc, it)) });
+  });
+  (o.anvils ?? []).forEach((an, i) => ops.push({ key: an.rankX ?? an.x, sub: 0 + i * 1e-3, draw: (cc) => drawAnvil(cc, v, an, o.S) }));
+  if (o.squall) {
+    const sq = o.squall;
+    ops.push({ key: sq.rankX ?? sq.x + 1.0, sub: 2, draw: (cc) => drawSquall(cc, v, sq, o.S) });
+  }
+  ops.sort((a, b) => a.key - b.key || a.sub - b.sub);
+  if (ops.length) {
     if (!CELLS_CV) CELLS_CV = document.createElement("canvas");
     const cv = CELLS_CV;
     cv.width = W;
     cv.height = H;
     const cc = cv.getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D;
-    for (const an of o.anvils ?? []) drawAnvil(cc, v, an, o.S);
-    for (const it of cloud) paintCloudItem(cc, it);
-    if (o.squall) drawSquall(cc, v, o.squall, o.S);
+    for (const op of ops) op.draw(cc);
     const sh = o.stormShade;
     if (sh) {
       const a = v.project(sh.x, v.cam.ty, sh.zTop);
@@ -873,10 +886,12 @@ const Canvas: React.FC<{ draw: (ctx: CanvasRenderingContext2D) => void; deps: un
   return <canvas ref={ref} width={W} height={H} style={{ position: "absolute", left: 0, top: 0, width: W, height: H }} />;
 };
 
+/** a storm cell with its fixed layer rank (world x key; smaller = farther = drawn first); default its x */
+export type RankedStorm = StormState & { rankX?: number };
 export type OhareStageProps = {
   S: number;
   v: DenView;
-  cells?: StormState[];
+  cells?: RankedStorm[];
   groundJets?: GroundJet[];
   /** glint strength 0..1 of gate jet i (default none) */
   gateGlint?: (i: number) => number;
