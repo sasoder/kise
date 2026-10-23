@@ -34,6 +34,7 @@ import {
   AirCyl,
   AirFloor,
   AirHorizonHazeW,
+  AirShadow,
   AirStage,
   MAT,
   PandemicFolk,
@@ -59,7 +60,16 @@ import {
   COLOSSEUM,
   COL_FLANK,
   COL_FRONT,
+  ERECHTHEION,
+  HOUSES,
+  OLIVES,
+  PROPYLAEA,
+  RAMP,
   ROCK_BOULDERS,
+  TERRACES,
+  TERRACE_WALL,
+  WALL_COURSES,
+  rockSurface,
   ROCK_RINGS,
   ROCK_SHOULDER,
   TEMPLE_LIFT,
@@ -173,8 +183,16 @@ const ROCK: Mat = { lit: "#A39079", mid: "#7A6A57", dark: "#433A30" };
 const PLATEAU: Mat = { lit: "#9C8C72", mid: "#857659", dark: "#5A4F3E" };
 /** the citadel wall: dressed limestone, a touch lighter than the rock */
 const WALL_STONE: Mat = { lit: "#B9A88C", mid: "#95856C", dark: "#5B4F40" };
-const MARBLE = MAT.marble;
+/** marble (revision 1: a touch warmer in the light) */
+const MARBLE: Mat = { lit: "#F2E5CB", mid: "#D7C6A3", dark: "#908369" };
 const MARBLE_SHADE: Mat = { lit: "#CFC2A6", mid: "#A89C82", dark: "#6E6554" };
+/** the circuit wall's dressed ashlar on the upper cliff (revision 1) */
+const ASHLAR = "#B4A286";
+/** small houses: lime plaster walls, roofs of muted red-brown tile (never near the accent) */
+const PLASTER: Mat = { lit: "#CBBDA2", mid: "#A99B80", dark: "#665B4B" };
+const ROOF_TILE: Mat = { lit: "#8C6E5C", mid: "#6F5546", dark: "#43322A" };
+const OLIVE_LEAF = { lit: "#A3A585", mid: "#7F8668", dark: "#525B47" };
+const OLIVE_WOOD = "#5E4C3E";
 /** the Colosseum: warm travertine (Roman warm stone), no orange */
 const TRAVERTINE: Mat = { lit: "#C2B192", mid: "#9C8B6E", dark: "#5B4F3E" };
 const TUFT_INKS = [
@@ -396,10 +414,225 @@ const norm3 = (a: V3): V3 => {
   const n = Math.hypot(a[0], a[1], a[2]) || 1;
   return [a[0] / n, a[1] / n, a[2] / n];
 };
+// ===================================================================================================================
+// REVISION 1: THE DETAIL ON THE ACROPOLIS (footprint unchanged): the ramp, terrace walls, the Erechtheion and the
+// Propylaea on the rock, a handful of houses and olives at its foot behind the crowd line
+// ===================================================================================================================
+/** a quad's outward test against the eye (the outward side is the one away from `inside`) */
+const seenFrom = (E: V3, q: V3[], inside: V3) => {
+  const nn = norm3(cross3(sub3(q[1], q[0]), sub3(q[3], q[0])));
+  const mid: V3 = [(q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2, (q[0][2] + q[2][2]) / 2];
+  const out: V3 = dot3(nn, sub3(inside, mid)) > 0 ? [-nn[0], -nn[1], -nn[2]] : nn;
+  return { out, mid, seen: dot3(out, sub3(E, mid)) > 0 };
+};
+/** the ramp up the west end of the rock: a dusty band on the faces, its outer edge a thin retaining line */
+const Ramp: React.FC<{ A: AirWorld; c: Cam3 }> = ({ A, c }) => {
+  const P = A.P;
+  const pts: V3[] = [];
+  for (let k = 0; k < RAMP.length - 1; k++) {
+    const [i0, s0] = RAMP[k];
+    const [i1, s1] = RAMP[k + 1];
+    const n = 14;
+    for (let j = 0; j < n; j++) pts.push(rockSurface(i0 + ((i1 - i0) * j) / n, s0 + ((s1 - s0) * j) / n));
+  }
+  pts.push(rockSurface(RAMP[RAMP.length - 1][0], RAMP[RAMP.length - 1][1]));
+  const Zm = pts.reduce((a, q) => a + q[2], 0) / pts.length;
+  if (Zm < c.z + 600) return null;
+  const fz = A.fog(Zm);
+  const r = P.r(Zm);
+  // a path cut into the face: the shadow it throws under each run, its outer lip, then the lit tread
+  const line = (dy: number, dz: number) => `M${pts.map((q) => Pt(P.p(q[0], q[1] + dy, q[2] + dz))).join("L")}`;
+  return (
+    <g>
+      <path d={line(55, -25)} fill="none" stroke={A.tone(mixHex(ROCK.dark, PAL.shadow, 0.35), Zm, ROCK_H / 2)} strokeWidth={115 * r} strokeOpacity={0.45 * (1 - fz)} strokeLinejoin="round" strokeLinecap="butt" />
+      <path d={line(18, -40)} fill="none" stroke={A.tone(ROCK.mid, Zm, ROCK_H / 2)} strokeWidth={115 * r} strokeOpacity={0.9} strokeLinejoin="round" strokeLinecap="butt" />
+      <path d={line(-14, -20)} fill="none" stroke={A.tone(mixHex(ROCK.lit, "#C2B091", 0.5), Zm, ROCK_H / 2)} strokeWidth={82 * r} strokeOpacity={0.9} strokeLinejoin="round" strokeLinecap="butt" />
+    </g>
+  );
+};
+/** a low wall from a to b on a level (Y), its outer face where seen and a lit top */
+const LowWall: React.FC<{ A: AirWorld; c: Cam3; a: [number, number]; b: [number, number]; Y: number; h: number; t: number; mat: Mat }> = ({ A, c, a, b, Y, h, t, mat }) => {
+  const P = A.P;
+  const E = eyeOf(c);
+  const dx = b[0] - a[0];
+  const dz = b[1] - a[1];
+  const l = Math.hypot(dx, dz) || 1;
+  const nx = dz / l;
+  const nz = -dx / l;
+  const o0: V3 = [a[0], Y, a[1]];
+  const o1: V3 = [b[0], Y, b[1]];
+  const i0: V3 = [a[0] - nx * t, Y, a[1] - nz * t];
+  const i1: V3 = [b[0] - nx * t, Y, b[1] - nz * t];
+  const up = (v: V3): V3 => [v[0], v[1] - h, v[2]];
+  const Zm = (a[1] + b[1]) / 2;
+  const w = A.lw(1);
+  const els: React.ReactNode[] = [];
+  const midIn: V3 = [(i0[0] + i1[0]) / 2 - nx * 10, Y - h / 2, (i0[2] + i1[2]) / 2 - nz * 10];
+  for (const [f0, f1, key] of [[o0, o1, "o"], [i1, i0, "i"]] as [V3, V3, string][]) {
+    const q: V3[] = [up(f0), up(f1), f1, f0];
+    const ctr: V3 = key === "o" ? midIn : [(o0[0] + o1[0]) / 2 + nx * 10, Y - h / 2, (o0[2] + o1[2]) / 2 + nz * 10];
+    const f = seenFrom(E, q, ctr);
+    if (!f.seen) continue;
+    const ndl = f.out[0] * LIGHT[0] - f.out[1] * LIGHT[1] + f.out[2] * LIGHT[2];
+    const col = A.tone(shadeOf(mat, ndl), Zm, -Y + h / 2);
+    els.push(<path key={key} d={poly(q.map((v) => P.p(v[0], v[1], v[2])))} fill={col} stroke={col} strokeWidth={w} strokeLinejoin="round" />);
+  }
+  const tq = [up(o0), up(o1), up(i1), up(i0)].map((v) => P.p(v[0], v[1], v[2]));
+  const tc = A.tone(mat.lit, Zm, -Y + h);
+  els.push(<path key="t" d={poly(tq)} fill={tc} stroke={tc} strokeWidth={w} strokeLinejoin="round" />);
+  els.push(<path key="r" d={`M${Pt(tq[0])}L${Pt(tq[1])}`} stroke={PAL.cream} strokeWidth={w * 1.1} strokeOpacity={0.4 * (1 - A.fog(Zm))} strokeLinecap="round" />);
+  return <g>{els}</g>;
+};
+/** a small Doric / Ionic temple front facing us (the Erechtheion, the Propylaea's hall): steps, the dark cella with
+ *  its door, a row of columns, the entablature (front and seen flank), the pediment and the roof where seen */
+const MiniTemple: React.FC<{ A: AirWorld; c: Cam3; X: number; Z: number; W: number; L: number; colR: number; colS: number; n: number; colH: number; ent: number; ped: number; step: number; Y: number; uid: string }> = (p) => {
+  const { A, c, X, Z, W, L, colR, colS, n, colH, ent, ped, step, Y, uid } = p;
+  const P = A.P;
+  const E = eyeOf(c);
+  const w = A.lw(1);
+  const hw = W / 2;
+  const yS = Y - step * 2;
+  const yCap = yS - colH;
+  const yEnt = yCap - ent;
+  const els: React.ReactNode[] = [];
+  els.push(<Box3 key="s0" A={A} X0={X - hw - step} X1={X + hw + step} Y0={Y - step} Y1={Y} Z0={Z - step} Z1={Z + L + step} mat={MARBLE} uid={`${uid}s0`} rim={0.6} />);
+  els.push(<Box3 key="s1" A={A} X0={X - hw} X1={X + hw} Y0={yS} Y1={Y - step} Z0={Z} Z1={Z + L} mat={MARBLE} uid={`${uid}s1`} rim={0.6} />);
+  const cz = Z + colS * 1.1;
+  els.push(<Box3 key="ce" A={A} X0={X - hw + colS * 0.55} X1={X + hw - colS * 0.55} Y0={yCap} Y1={yS} Z0={cz} Z1={Z + L - 60} mat={MARBLE_SHADE} uid={`${uid}ce`} rim={0} skip={["tp"]} frontTone={A.tone(mixHex(MARBLE_SHADE.dark, PAL.shadow, 0.2), cz, -yCap)} />);
+  // the door
+  {
+    const a = P.p(X - colS * 0.42, yS - colH * 0.66, cz - 2);
+    const b = P.p(X + colS * 0.42, yS, cz - 2);
+    els.push(<path key="door" d={`M${a[0]},${a[1]}L${b[0]},${a[1]}L${b[0]},${b[1]}L${a[0]},${b[1]}Z`} fill={A.tone(mixHex(PAL.shadow, MARBLE_SHADE.dark, 0.35), cz, -yS)} opacity={0.8} />);
+  }
+  for (let k = 0; k < n; k++) {
+    const cx = X + (k - (n - 1) / 2) * colS;
+    els.push(<AirCyl key={`c${k}`} A={A} X={cx} Z={Z + colR * 1.6} R={colR} Y0={yCap + 24} Y1={yS} mat={MARBLE} uid={`${uid}c${k}`} flutes={5} lw={w} />);
+    els.push(<Box3 key={`k${k}`} A={A} X0={cx - colR * 1.35} X1={cx + colR * 1.35} Y0={yCap} Y1={yCap + 26} Z0={Z + colR * 0.3} Z1={Z + colR * 2.9} mat={MARBLE} uid={`${uid}k${k}`} rim={0.4} />);
+  }
+  els.push(<Box3 key="ent" A={A} X0={X - hw} X1={X + hw} Y0={yEnt} Y1={yCap} Z0={Z} Z1={Z + L} mat={MARBLE} uid={`${uid}e`} rim={0.8} skip={["tp"]} />);
+  const zf = Z - 6;
+  const eL: V3 = [X - hw - 10, yEnt, zf];
+  const eR: V3 = [X + hw + 10, yEnt, zf];
+  const ap: V3 = [X, yEnt - ped, zf];
+  for (const [ea, key, tn] of [[eL, "rl", MARBLE.lit], [eR, "rr", MARBLE_SHADE.mid]] as [V3, string, string][]) {
+    const q: V3[] = [ea, ap, [ap[0], ap[1], Z + L + 6], [ea[0], ea[1], Z + L + 6]];
+    const f = seenFrom(E, q, [X, yEnt + 50, Z + L / 2]);
+    if (!f.seen) continue;
+    els.push(<path key={key} d={poly(q.map((v) => P.p(v[0], v[1], v[2])))} fill={A.tone(tn, Z + L / 2, -yEnt)} stroke={A.tone(lineOf(MARBLE), Z + L / 2, -yEnt)} strokeWidth={w} strokeLinejoin="round" />);
+  }
+  const pf = [P.p(eL[0], eL[1], zf), P.p(ap[0], ap[1], zf), P.p(eR[0], eR[1], zf)];
+  els.push(<path key="ped" d={poly(pf)} fill={A.tone(MARBLE.mid, zf, -yEnt)} stroke={A.tone(lineOf(MARBLE), zf, -yEnt)} strokeWidth={w} strokeLinejoin="round" />);
+  els.push(<path key="pr" d={`M${Pt(pf[0])}L${Pt(pf[1])}`} stroke={PAL.cream} strokeWidth={w * 1.2} strokeOpacity={0.5 * (1 - A.fog(zf))} strokeLinecap="round" />);
+  return <g>{els}</g>;
+};
+/** the Propylaea: the central hall (six columns) between two lower wings with dark openings */
+const Propylaea: React.FC<{ A: AirWorld; c: Cam3; uid: string }> = ({ A, c, uid }) => {
+  const Q = PROPYLAEA;
+  const Y = -ROCK_H;
+  const P = A.P;
+  const wing = (x0: number, key: string) => {
+    const z0 = Q.Z + 260;
+    const els: React.ReactNode[] = [<Box3 key={`${key}b`} A={A} X0={x0} X1={x0 + Q.wingW} Y0={Y - Q.wingH} Y1={Y} Z0={z0} Z1={z0 + Q.wingL} mat={MARBLE} uid={`${uid}${key}`} rim={0.7} />];
+    let d = "";
+    for (let k = 0; k < 3; k++) {
+      const xa = x0 + Q.wingW * (0.14 + k * 0.28);
+      const a = P.p(xa, Y - Q.wingH * 0.72, z0 - 2);
+      const b = P.p(xa + Q.wingW * 0.16, Y - Q.wingH * 0.06, z0 - 2);
+      d += `M${a[0]},${a[1]}L${b[0]},${a[1]}L${b[0]},${b[1]}L${a[0]},${b[1]}Z`;
+    }
+    els.push(<path key={`${key}o`} d={d} fill={A.tone(mixHex(PAL.shadow, MARBLE_SHADE.dark, 0.4), z0, ROCK_H)} opacity={0.75} />);
+    return els;
+  };
+  // the wing on the eye's far side first
+  const left = wing(Q.X - Q.W / 2 - Q.wingW - 120, "wl");
+  const right = wing(Q.X + Q.W / 2 + 120, "wr");
+  return (
+    <g>
+      {c.x > Q.X ? left : right}
+      <MiniTemple A={A} c={c} X={Q.X} Z={Q.Z} W={Q.W} L={Q.L} colR={Q.colR} colS={Q.colS} n={6} colH={Q.colH} ent={Q.ent} ped={Q.ped} step={Q.step} Y={Y} uid={`${uid}h`} />
+      {c.x > Q.X ? right : left}
+    </g>
+  );
+};
+/** a small house: lime-plastered walls (the lit side and the shade side), a door and a window, a low tiled roof
+ *  (ridge along X), the gable on the side the eye sees */
+const House: React.FC<{ A: AirWorld; c: Cam3; h: (typeof HOUSES)[number] }> = ({ A, c, h }) => {
+  const P = A.P;
+  const E = eyeOf(c);
+  const w = A.lw(1);
+  const X0 = h.X - h.W / 2;
+  const X1 = h.X + h.W / 2;
+  const Z0 = h.Z - h.D / 2;
+  const Z1 = h.Z + h.D / 2;
+  const yW = -h.H;
+  const yR = -h.H - h.roof;
+  const zc = h.Z;
+  const els: React.ReactNode[] = [];
+  els.push(<AirShadow key="sh" A={A} X={h.X} Z={h.Z} w={h.W * 0.62} d={h.D * 0.6} uid={`hs${h.seed}`} amt={0.55} />);
+  els.push(<Box3 key="b" A={A} X0={X0} X1={X1} Y0={yW} Y1={0} Z0={Z0} Z1={Z1} mat={PLASTER} uid={`h${h.seed}`} rim={0.5} skip={["tp"]} />);
+  const op = (xa: number, xb: number, ya: number, yb: number, key: string) => {
+    const a = P.p(xa, ya, Z0 - 2);
+    const b = P.p(xb, yb, Z0 - 2);
+    els.push(<path key={key} d={`M${a[0]},${a[1]}L${b[0]},${a[1]}L${b[0]},${b[1]}L${a[0]},${b[1]}Z`} fill={A.tone(mixHex(PAL.shadow, PLASTER.dark, 0.3), Z0, h.H / 2)} opacity={0.8} />);
+  };
+  const dx = (hash(h.seed, 1) - 0.5) * h.W * 0.3;
+  op(h.X + dx - h.W * 0.09, h.X + dx + h.W * 0.09, -h.H * 0.62, 0, "door");
+  op(h.X + dx + h.W * (dx > 0 ? -0.36 : 0.2), h.X + dx + h.W * (dx > 0 ? -0.22 : 0.34), -h.H * 0.72, -h.H * 0.5, "win");
+  // the roof: two slopes (front and back) and the gables where seen
+  const inside: V3 = [h.X, yW + 20, zc];
+  const fr: V3[] = [[X0 - 25, yW, Z0 - 25], [X1 + 25, yW, Z0 - 25], [X1 + 25, yR, zc], [X0 - 25, yR, zc]];
+  const bk: V3[] = [[X1 + 25, yW, Z1 + 25], [X0 - 25, yW, Z1 + 25], [X0 - 25, yR, zc], [X1 + 25, yR, zc]];
+  for (const [q, key] of [[bk, "rb"], [fr, "rf"]] as [V3[], string][]) {
+    const f = seenFrom(E, q, inside);
+    if (!f.seen) continue;
+    const ndl = f.out[0] * LIGHT[0] - f.out[1] * LIGHT[1] + f.out[2] * LIGHT[2];
+    const col = A.tone(shadeOf(ROOF_TILE, ndl + 0.15), h.Z, h.H);
+    els.push(<path key={key} d={poly(q.map((v) => P.p(v[0], v[1], v[2])))} fill={col} stroke={col} strokeWidth={w} strokeLinejoin="round" />);
+  }
+  for (const [xg, key] of [[X0, "gl"], [X1, "gr"]] as [number, string][]) {
+    const tri: V3[] = [[xg, yW, Z0], [xg, yW, Z1], [xg, yR, zc], [xg, yR, zc]];
+    const f = seenFrom(E, tri, inside);
+    if (!f.seen) continue;
+    const ndl = f.out[0] * LIGHT[0] - f.out[1] * LIGHT[1] + f.out[2] * LIGHT[2];
+    const col = A.tone(shadeOf(PLASTER, ndl), h.Z, h.H);
+    els.push(<path key={key} d={poly([tri[0], tri[1], tri[2]].map((v) => P.p(v[0], v[1], v[2])))} fill={col} stroke={col} strokeWidth={w} strokeLinejoin="round" />);
+  }
+  const rp = [P.p(X0 - 25, yR, zc), P.p(X1 + 25, yR, zc)];
+  els.push(<path key="ridge" d={`M${Pt(rp[0])}L${Pt(rp[1])}`} stroke={PAL.cream} strokeWidth={w * 1.1} strokeOpacity={0.3 * (1 - A.fog(h.Z))} strokeLinecap="round" />);
+  return <g>{els}</g>;
+};
+/** an olive tree: a short twisted trunk and a soft grey-green crown of three or four lobes, lit at the upper left */
+const OliveTree: React.FC<{ A: AirWorld; o: (typeof OLIVES)[number] }> = ({ A, o }) => {
+  const P = A.P;
+  const [bx, by] = P.p(o.X, o.Y, o.Z);
+  const r = o.r * P.r(o.Z);
+  const fz = A.fog(o.Z);
+  const t = (hex: string) => A.tone(hex, o.Z, -o.Y + o.r * 1.5);
+  const th = r * 1.15;
+  const lean = (hash(o.seed, 1) - 0.5) * r * 0.5;
+  const lobes = [0, 1, 2, 3].map((k) => ({ x: bx + lean + (k - 1.5) * r * 0.55 + (hash(o.seed, 10 + k) - 0.5) * r * 0.3, y: by - th - r * (0.45 + 0.35 * hash(o.seed, 20 + k)), rr: r * (0.5 + 0.18 * hash(o.seed, 30 + k)) }));
+  return (
+    <g>
+      <ellipse cx={bx + r * 0.35} cy={by + r * 0.05} rx={r * 1.2} ry={r * 0.32} fill={PAL.shadow} opacity={0.32 * (1 - fz)} />
+      <path d={`M${bx - r * 0.13},${by} C${bx - r * 0.2},${by - th * 0.4} ${bx + lean * 0.4 + r * 0.12},${by - th * 0.6} ${bx + lean},${by - th} L${bx + lean + r * 0.12},${by - th} C${bx + lean * 0.4 + r * 0.24},${by - th * 0.55} ${bx + r * 0.05},${by - th * 0.35} ${bx + r * 0.13},${by} Z`} fill={t(OLIVE_WOOD)} />
+      {lobes.map((l, k) => (
+        <ellipse key={`d${k}`} cx={l.x} cy={l.y} rx={l.rr * 1.1} ry={l.rr * 0.82} fill={t(OLIVE_LEAF.mid)} />
+      ))}
+      {lobes.map((l, k) => (
+        <ellipse key={`s${k}`} cx={l.x + l.rr * 0.25} cy={l.y + l.rr * 0.3} rx={l.rr * 0.8} ry={l.rr * 0.45} fill={t(OLIVE_LEAF.dark)} opacity={0.55} />
+      ))}
+      {lobes.map((l, k) => (
+        <ellipse key={`l${k}`} cx={l.x - l.rr * 0.25} cy={l.y - l.rr * 0.25} rx={l.rr * 0.6} ry={l.rr * 0.42} fill={t(OLIVE_LEAF.lit)} opacity={0.7} />
+      ))}
+    </g>
+  );
+};
+
 type RockFace = { z: number; el: React.ReactNode };
 /** the rock's faces (cliff band and talus band), its plateau and the wall: returned in pieces so the scene can put the
  *  temple between the back walls and the front walls */
-const rockParts = (A: AirWorld, c: Cam3, uid: string) => {
+const rockParts = (A: AirWorld, c: Cam3, uid: string, detail = true) => {
   const P = A.P;
   const E = eyeOf(c);
   const R = ROCK_RINGS;
@@ -453,9 +686,47 @@ const rockParts = (A: AirWorld, c: Cam3, uid: string) => {
       const ya = Math.min(q[0][1], q[1][1]);
       const yb = Math.max(q[2][1], q[3][1]);
       const extra: React.ReactNode[] = [];
-      // broken strata: a seam and a cream lip on some faces only, at a height that wanders face to face
+      // revision 1: the circuit wall's ashlar on the upper cliff: a lighter band with its courses and staggered joints
+      // (the lines fade where the band is small on screen, so a far view stays tidy)
+      {
+        const WB = WALL_COURSES.band;
+        const lerp3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+        const L = (u: number, t: number) => pp(lerp3(lerp3(qc[0], qc[3], u), lerp3(qc[1], qc[2], u), t));
+        const band = [L(0, 0), L(0, 1), L(WB, 1), L(WB, 0)];
+        const bandPx = Math.abs(band[3][1] - band[0][1]) * A.k;
+        extra.push(<path key="ash" d={poly(band)} fill={A.tone(mixHex(ASHLAR, base, 0.35), Zm, ROCK_H * 0.85)} opacity={0.55} />);
+        const la = 0.32 * (1 - fz) * c01((bandPx - 14) / 40);
+        if (la > 0.01) {
+          const nC = WALL_COURSES.courses;
+          const fwid = Math.hypot(qc[1][0] - qc[0][0], qc[1][2] - qc[0][2]);
+          let dc = "";
+          let dj = "";
+          for (let k = 1; k <= nC; k++) {
+            const u = (WB * k) / nC;
+            const a0 = L(u, 0);
+            const a1 = L(u, 1);
+            dc += `M${Pt(a0)}L${Pt(a1)}`;
+            const nJ = Math.max(1, Math.round(fwid / WALL_COURSES.joint));
+            for (let j = 0; j < nJ; j++) {
+              const t = (j + (k % 2 ? 0.25 : 0.75) + (hash(i * 31 + k, j) - 0.5) * 0.2) / nJ;
+              if (t <= 0.02 || t >= 0.98) continue;
+              const b0 = L((WB * (k - 1)) / nC, t);
+              const b1 = L(u, t);
+              dj += `M${Pt(b0)}L${Pt(b1)}`;
+            }
+          }
+          const lc = A.tone(mixHex(ROCK.dark, PAL.shadow, 0.25), Zm, ROCK_H * 0.85);
+          extra.push(<path key="crs" d={dc} fill="none" stroke={lc} strokeWidth={w * 0.9} strokeOpacity={la} strokeLinecap="round" />);
+          extra.push(<path key="jnt" d={dj} fill="none" stroke={lc} strokeWidth={w * 0.75} strokeOpacity={la * 0.75} strokeLinecap="round" />);
+          // the wall's foot on the living rock: a soft cream lip and a shadow seam
+          const f0 = L(WB, 0);
+          const f1 = L(WB, 1);
+          extra.push(<path key="wft" d={`M${Pt(f0)}L${Pt(f1)}`} stroke={A.tone(mixHex(ROCK.dark, PAL.shadow, 0.35), Zm, ROCK_H * 0.7)} strokeWidth={w * 1.3} strokeOpacity={la * 1.3} strokeLinecap="round" />);
+        }
+      }
+      // broken strata: a seam and a cream lip on some faces only, at a height that wanders face to face (below the wall)
       ROCK_LEDGES.forEach((u0, j) => {
-        if (hash(i * 5 + j, 71) < 0.45) return;
+        if (hash(i * 5 + j, 71) < 0.45 || u0 < WALL_COURSES.band + 0.05) return;
         const u = u0 + 0.06 * Math.sin(i * 0.7 + j * 2.1);
         const lerp3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
         const s0 = 0.1 + 0.3 * hash(i * 5 + j, 72);
@@ -470,10 +741,13 @@ const rockParts = (A: AirWorld, c: Cam3, uid: string) => {
       });
       // a fissure down from the edge on some joints: a thin dark wedge
       if (hash(i, 74) < 0.38) {
-        const tt = at(R.top, i, yTop);
+        const t0 = at(R.top, i, yTop);
         const bb = at(R.sh, i, ySh);
-        const depth = 0.55 + 0.4 * hash(i, 75);
-        const lo: V3 = [tt[0] + (bb[0] - tt[0]) * depth, tt[1] + (bb[1] - tt[1]) * depth, tt[2] + (bb[2] - tt[2]) * depth];
+        // (revision 1: from the foot of the circuit wall down, never through its masonry)
+        const WB = WALL_COURSES.band;
+        const tt: V3 = [t0[0] + (bb[0] - t0[0]) * WB, t0[1] + (bb[1] - t0[1]) * WB, t0[2] + (bb[2] - t0[2]) * WB];
+        const depth = WB + (0.55 + 0.4 * hash(i, 75)) * (1 - WB);
+        const lo: V3 = [t0[0] + (bb[0] - t0[0]) * depth, t0[1] + (bb[1] - t0[1]) * depth, t0[2] + (bb[2] - t0[2]) * depth];
         const a0 = pp(tt);
         const a1 = pp(lo);
         const wd = 3.2 / A.k;
@@ -598,13 +872,24 @@ const rockParts = (A: AirWorld, c: Cam3, uid: string) => {
     <Box3 key="ter" A={A} X0={T.X - T.W / 2 - 300} X1={T.X + T.W / 2 + 300} Y0={yTop - TEMPLE_LIFT} Y1={yTop} Z0={T.Z - 260} Z1={T.Z + T.L + 300} mat={PLATEAU} uid={`${uid}ter`} rim={0.5} />
   );
   const frontWallZ = T.Z - 100;
+  // revision 1: on the plateau, far to near: terrace walls, the Erechtheion, the sacred olive
+  const plateauItems: RockFace[] = [
+    ...TERRACES.map((tw, k) => ({ z: (tw.a[1] + tw.b[1]) / 2, el: <LowWall key={`tw${k}`} A={A} c={c} a={tw.a} b={tw.b} Y={yTop} h={TERRACE_WALL.h} t={TERRACE_WALL.t} mat={WALL_STONE} /> })),
+    {
+      z: ERECHTHEION.Z + ERECHTHEION.L / 2,
+      el: <MiniTemple key="er" A={A} c={c} X={ERECHTHEION.X} Z={ERECHTHEION.Z} W={ERECHTHEION.W} L={ERECHTHEION.L} colR={ERECHTHEION.colR} colS={ERECHTHEION.colS} n={6} colH={ERECHTHEION.colH} ent={ERECHTHEION.ent} ped={ERECHTHEION.ped} step={ERECHTHEION.step} Y={yTop} uid={`${uid}er`} />,
+    },
+    ...OLIVES.filter((o) => o.Y < 0).map((o) => ({ z: o.Z, el: <OliveTree key={`po${o.seed}`} A={A} o={o} /> })),
+  ].sort((a, b) => b.z - a.z);
   return {
     body: (
       <g>
         {faces.map((f) => f.el)}
+        {detail ? <Ramp A={A} c={c} /> : null}
         {boulders.map((b) => b.el)}
         {plateau}
         {walls.filter((q) => q.z >= frontWallZ).map((q) => q.el)}
+        {detail ? plateauItems.map((q) => q.el) : null}
         {terrace}
       </g>
     ),
@@ -612,13 +897,19 @@ const rockParts = (A: AirWorld, c: Cam3, uid: string) => {
   };
 };
 /** the rock (faces, talus, plateau, the back walls and the terrace) and the front walls, with the temple between */
-export const Acropolis: React.FC<{ A: AirWorld; c: Cam3; uid: string; temple?: boolean }> = ({ A, c, uid, temple = true }) => {
-  const parts = rockParts(A, c, uid);
+export const Acropolis: React.FC<{ A: AirWorld; c: Cam3; uid: string; temple?: boolean; detail?: boolean }> = ({ A, c, uid, temple = true, detail = true }) => {
+  const parts = rockParts(A, c, uid, detail);
+  // revision 1: at the foot, behind the crowd line: houses and olives, far to near
+  const foot: RockFace[] = detail
+    ? [...HOUSES.map((h) => ({ z: h.Z, el: <House key={`hs${h.seed}`} A={A} c={c} h={h} /> })), ...OLIVES.filter((o) => o.Y === 0).map((o) => ({ z: o.Z, el: <OliveTree key={`fo${o.seed}`} A={A} o={o} /> }))].sort((a, b) => b.z - a.z)
+    : [];
   return (
     <g>
       {parts.body}
-      {temple ? <Parthenon A={A} c={c} uid={`${uid}pt`} /> : null}
+      {temple ? <Parthenon A={A} c={c} uid={`${uid}pt`} detail={detail} /> : null}
+      {detail ? <Propylaea A={A} c={c} uid={`${uid}pr`} /> : null}
       {parts.front}
+      {foot.map((f) => f.el)}
     </g>
   );
 };
@@ -658,7 +949,7 @@ const Box3: React.FC<{ A: AirWorld; X0: number; X1: number; Y0: number; Y1: numb
   void uid;
   return <g>{els}</g>;
 };
-export const Parthenon: React.FC<{ A: AirWorld; c: Cam3; uid: string }> = ({ A, c, uid }) => {
+export const Parthenon: React.FC<{ A: AirWorld; c: Cam3; uid: string; detail?: boolean }> = ({ A, c, uid, detail = true }) => {
   const P = A.P;
   const T = TEMPLE;
   const yBase = -ROCK_H - TEMPLE_LIFT;
@@ -679,7 +970,14 @@ export const Parthenon: React.FC<{ A: AirWorld; c: Cam3; uid: string }> = ({ A, 
   els.push(
     <Box3 key="cella" A={A} X0={T.X - hw + T.cellaInX} X1={T.X + hw - T.cellaInX} Y0={yCap} Y1={yStylo} Z0={T.Z + T.cellaInZ} Z1={T.Z + T.L - T.cellaInZ} mat={MARBLE_SHADE} uid={`${uid}ce`} rim={0} frontTone={A.tone(mixHex(MARBLE_SHADE.dark, PAL.shadow, 0.25), T.Z + T.cellaInZ, -yCap)} />,
   );
-  // the peristyle's ceiling shadow: a dark band under the entablature across the whole depth (seen between columns)
+  // revision 1: the great door in the pronaos wall (seen between the middle columns)
+  if (detail) {
+    const zc = T.Z + T.cellaInZ - 2;
+    const a = P.p(T.X - 230, yStylo - T.colH * 0.72, zc);
+    const b = P.p(T.X + 230, yStylo, zc);
+    const ft = A.lw(0.9);
+    els.push(<path key="door" d={`M${a[0]},${a[1]}L${b[0]},${a[1]}L${b[0]},${b[1]}L${a[0]},${b[1]}Z`} fill={A.tone(mixHex(PAL.shadow, MARBLE_SHADE.dark, 0.3), zc, -yStylo)} stroke={A.tone(MARBLE_SHADE.lit, zc, -yStylo)} strokeWidth={ft * 2} strokeOpacity={0.35} />);
+  }
   const colEl = (X: number, Z: number, key: string) => (
     <g key={key}>
       <AirCyl A={A} X={X} Z={Z} R={T.colR} Y0={yCap + 40} Y1={yStylo} mat={MARBLE} uid={`${uid}${key}`} joints={[yStylo - 260, yStylo - 520, yStylo - 780]} flutes={7} lw={w} />
@@ -734,7 +1032,19 @@ export const Parthenon: React.FC<{ A: AirWorld; c: Cam3; uid: string }> = ({ A, 
     const mid: V3 = [(a[0] + apex[0]) / 2, (a[1] + apex[1]) / 2, (zf + zb) / 2];
     const outward: V3 = nn[1] < 0 ? nn : [-nn[0], -nn[1], -nn[2]];
     if (dot3(outward, sub3(E, mid)) <= 0) return null;
-    return <path key={key} d={poly(quad.map((v) => P.p(v[0], v[1], v[2])))} fill={A.tone(toneHex, mid[2], -mid[1])} stroke={A.tone(lineOf(MARBLE), mid[2], -mid[1])} strokeWidth={w} strokeLinejoin="round" />;
+    // revision 1: the cover-tile rows along the slope and the ridge's lit line
+    let rows = "";
+    for (const t of [0.34, 0.67]) {
+      const r0: V3 = [a[0] + (apex[0] - a[0]) * t, a[1] + (apex[1] - a[1]) * t, zf];
+      rows += `M${Pt(P.p(r0[0], r0[1], zf))}L${Pt(P.p(r0[0], r0[1], zb))}`;
+    }
+    return (
+      <g key={key}>
+        <path d={poly(quad.map((v) => P.p(v[0], v[1], v[2])))} fill={A.tone(toneHex, mid[2], -mid[1])} stroke={A.tone(lineOf(MARBLE), mid[2], -mid[1])} strokeWidth={w} strokeLinejoin="round" />
+        <path d={rows} stroke={A.tone(MARBLE_SHADE.mid, mid[2], -mid[1])} strokeWidth={w * 0.9} strokeOpacity={0.35} />
+        <path d={`M${Pt(P.p(apex[0], apex[1], zf))}L${Pt(P.p(apex[0], apex[1], zb))}`} stroke={PAL.cream} strokeWidth={w * 1.2} strokeOpacity={0.4 * (1 - A.fog(mid[2]))} />
+      </g>
+    );
   };
   els.push(slope(eaveL, "roofL", MARBLE.lit));
   els.push(slope(eaveR, "roofR", MARBLE_SHADE.mid));
@@ -747,6 +1057,71 @@ export const Parthenon: React.FC<{ A: AirWorld; c: Cam3; uid: string }> = ({ A, 
   ];
   els.push(<path key="ped" d={poly(pf)} fill={A.tone(MARBLE.mid, zf, -yEnt)} stroke={A.tone(lineOf(MARBLE), zf, -yEnt)} strokeWidth={w} strokeLinejoin="round" />);
   els.push(<path key="tymp" d={poly(pin)} fill={A.tone(mixHex(MARBLE.mid, MARBLE_SHADE.mid, 0.6), zf, -yEnt)} />);
+  if (detail) {
+    const fzz = 1 - A.fog(zf);
+    // the pediment's sculpture: a row of figures under the raking cornice (tallest in the middle, reclining at the
+    // corners), lighter marble with a soft shade at the right
+    const N = 11;
+    const base = yEnt - 26;
+    const span = (hw + 20) * (1 - inset * 1.6) * 0.9;
+    const tym = mixHex(MARBLE.mid, MARBLE_SHADE.mid, 0.6);
+    const fillF = A.tone(mixHex(tym, MARBLE.lit, 0.42), zf, -yEnt);
+    const shadeF = A.tone(mixHex(tym, MARBLE_SHADE.dark, 0.3), zf, -yEnt);
+    const fig: React.ReactNode[] = [];
+    const sp = (X: number, Y: number) => P.p(X, Y, zf + 34);
+    for (let k = 0; k < N; k++) {
+      const u = (k - (N - 1) / 2) / ((N - 1) / 2);
+      const Xk = T.X + u * span;
+      const room = (T.ped * (1 - inset * 1.4) - 30) * (1 - Math.abs(u));
+      const side = u < 0 ? -1 : 1;
+      const headR = 21;
+      const shapes: string[] = [];
+      if (Math.abs(u) < 0.35) {
+        // standing: a robe tapering to the shoulders, a head
+        const hb = room - headR * 2.4;
+        const [a0, a1, a2, a3] = [sp(Xk - 30, base), sp(Xk + 30, base), sp(Xk + 30, base - hb), sp(Xk - 30, base - hb)];
+        shapes.push(`M${Pt(a0)}L${Pt(a1)}L${Pt(a2)}L${Pt(a3)}Z`);
+        const hc = sp(Xk, base - hb - headR * 1.05);
+        shapes.push(`M${hc[0] - headR * P.r(zf)},${hc[1]}a${headR * P.r(zf)},${headR * P.r(zf)} 0 1 0 ${2 * headR * P.r(zf)},0a${headR * P.r(zf)},${headR * P.r(zf)} 0 1 0 ${-2 * headR * P.r(zf)},0Z`);
+      } else if (Math.abs(u) < 0.7) {
+        // kneeling / seated: a lower mound leaning toward the middle, a head
+        const hb = Math.max(30, room - headR * 2.4);
+        const lean = -side * 18;
+        const [a0, a1, a2, a3] = [sp(Xk - 40, base), sp(Xk + 40, base), sp(Xk + 28 + lean, base - hb), sp(Xk - 28 + lean, base - hb)];
+        shapes.push(`M${Pt(a0)}L${Pt(a1)}L${Pt(a2)}L${Pt(a3)}Z`);
+        const hc = sp(Xk + lean, base - hb - headR);
+        const rr = headR * P.r(zf);
+        shapes.push(`M${hc[0] - rr},${hc[1]}a${rr},${rr} 0 1 0 ${2 * rr},0a${rr},${rr} 0 1 0 ${-2 * rr},0Z`);
+      } else {
+        // reclining toward the corner: a long low body, the head raised toward the middle
+        const len = 150;
+        const hgt = Math.max(16, Math.min(34, room * 0.8));
+        const x0 = Xk - side * len * 0.5;
+        const x1 = Xk + side * len * 0.5;
+        const [a0, a1, a2, a3] = [sp(x0, base), sp(x1, base), sp(x1, base - hgt * 0.45), sp(x0, base - hgt)];
+        shapes.push(`M${Pt(a0)}L${Pt(a1)}L${Pt(a2)}L${Pt(a3)}Z`);
+        const hc = sp(x0 + side * 6, base - hgt - headR * 0.6);
+        const rr = headR * 0.85 * P.r(zf);
+        shapes.push(`M${hc[0] - rr},${hc[1]}a${rr},${rr} 0 1 0 ${2 * rr},0a${rr},${rr} 0 1 0 ${-2 * rr},0Z`);
+      }
+      const d = shapes.join("");
+      fig.push(<path key={`s${k}`} d={d} fill={shadeF} opacity={0.5} transform={`translate(${(6 * P.r(zf)).toFixed(2)} 0)`} />);
+      fig.push(<path key={`f${k}`} d={d} fill={fillF} />);
+    }
+    els.push(<g key="sculpt">{fig}</g>);
+    // the taenia (the architrave's crowning band) and the mutules' shadow under the cornice, front
+    const ta = [P.p(T.X - hw + 20, yCap - T.ent * 0.42, e0 + 9), P.p(T.X + hw - 20, yCap - T.ent * 0.42, e0 + 9)];
+    const mu = [P.p(T.X - hw - 20, yEnt + T.ent * 0.14, e0 - 26), P.p(T.X + hw + 20, yEnt + T.ent * 0.14, e0 - 26)];
+    const dk = A.tone(mixHex(MARBLE_SHADE.dark, PAL.shadow, 0.2), T.Z, -yCap);
+    els.push(<path key="taen" d={`M${Pt(ta[0])}L${Pt(ta[1])}`} stroke={dk} strokeWidth={w * 1.2} strokeOpacity={0.45 * fzz} />);
+    els.push(<path key="mut" d={`M${Pt(mu[0])}L${Pt(mu[1])}`} stroke={dk} strokeWidth={w * 1.6} strokeOpacity={0.4 * fzz} />);
+    // acroteria: a palmette at the apex and a griffin-ish knob at each corner (small, lit)
+    const acro = (v: P2, r: number, key: string) => els.push(<path key={key} d={`M${v[0] - r * 0.7},${v[1]} Q${v[0] - r * 0.8},${v[1] - r * 1.6} ${v[0]},${v[1] - r * 2} Q${v[0] + r * 0.8},${v[1] - r * 1.6} ${v[0] + r * 0.7},${v[1]} Z`} fill={A.tone(MARBLE.mid, zf, -yApex)} />);
+    const rA = 26 * P.r(zf);
+    acro(pf[1], rA * 1.2, "acA");
+    acro(pf[0], rA, "acL");
+    acro(pf[2], rA, "acR");
+  }
   els.push(<path key="pedRim" d={`M${Pt(pf[0])}L${Pt(pf[1])}`} fill="none" stroke={PAL.cream} strokeWidth={w * 1.4} strokeOpacity={0.6 * (1 - A.fog(zf))} strokeLinecap="round" />);
   return <g>{els}</g>;
 };
@@ -999,7 +1374,7 @@ export const athensSpriteReqs = (shots: { cam: Cam3; life: number }[]): GF.Sprit
 // ===================================================================================================================
 // THE SCENE: the whole world in its painter's order inside the medium
 // ===================================================================================================================
-export type SceneHide = Partial<Record<"athenians" | "romans" | "tufts" | "patches" | "track" | "colosseum" | "rock" | "temple", boolean>>;
+export type SceneHide = Partial<Record<"athenians" | "romans" | "tufts" | "patches" | "track" | "colosseum" | "rock" | "temple" | "detail", boolean>>;
 /** the whole world inside the medium. `reqs`: every crowd sprite the CALLER's camera path shows (athensSpriteReqs over
  *  all its frames, computed once at module load: the sprites are baked once per render tab, on its first frame) */
 export const AthensRomeScene: React.FC<{ cam: Cam3; life: number; reqs: GF.SpriteReq[]; hide?: SceneHide; bloom?: number }> = ({ cam: c, life, reqs, hide = {}, bloom = 0.22 }) => {
@@ -1020,7 +1395,7 @@ export const AthensRomeScene: React.FC<{ cam: Cam3; life: number; reqs: GF.Sprit
         <LowAirSink A={A} />
         {tufts ? <TuftLayer A={A} c={c} zMin={1500} zMax={1e9} uid="tA" /> : null}
         {hide.colosseum ? null : <Colosseum A={A} c={c} uid="col" />}
-        {hide.rock ? null : <Acropolis A={A} c={c} uid="rk" temple={!hide.temple} />}
+        {hide.rock ? null : <Acropolis A={A} c={c} uid="rk" temple={!hide.temple} detail={!hide.detail} />}
         {tufts ? <TuftLayer A={A} c={c} zMin={ATHENS_FRONT_Z + 900} zMax={1500} uid="tB" /> : null}
       </WorldSvg>
       {rom.length ? <GF.FolkCanvas draw={(ctx) => drawFigs(ctx, rom, get, veils, shadow)} /> : null}

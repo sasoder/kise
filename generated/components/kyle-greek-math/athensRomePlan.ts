@@ -131,6 +131,84 @@ export const WALL = { inset: 70, h: 150, t: 110 };
 /** the Parthenon stands on a low rise (the rock's highest part, a terrace), so the wall never hides its steps */
 export const TEMPLE_LIFT = 150;
 
+// ---- REVISION 1 (additive): the detail on the Acropolis (footprint unchanged) ----------------------------------------
+/** a point on the rock's surface: ring position i (fractional index into ROCK_RINGS) and s (0 = the plateau's edge,
+ *  0.5 = the shoulder, 1 = the foot) -> world (X, Y, Z) */
+export const rockSurface = (i: number, s: number): [number, number, number] => {
+  const R = ROCK_RINGS;
+  const m = R.top.length;
+  const i0 = ((Math.floor(i) % m) + m) % m;
+  const i1 = (i0 + 1) % m;
+  const f = i - Math.floor(i);
+  const lp = (ring: [number, number][]): [number, number] => [ring[i0][0] + (ring[i1][0] - ring[i0][0]) * f, ring[i0][1] + (ring[i1][1] - ring[i0][1]) * f];
+  const t = lp(R.top);
+  const h = lp(R.sh);
+  const b = lp(R.foot);
+  if (s <= 0.5) {
+    const u = s / 0.5;
+    return [t[0] + (h[0] - t[0]) * u, -ROCK_H + (ROCK_H - ROCK_H * ROCK_SHOULDER) * u, t[1] + (h[1] - t[1]) * u];
+  }
+  const u = (s - 0.5) / 0.5;
+  return [h[0] + (b[0] - h[0]) * u, -ROCK_H * ROCK_SHOULDER * (1 - u), h[1] + (b[1] - h[1]) * u];
+};
+/** the ramp up the west end of the front face to the Propylaea: legs as (ring position, s) waypoints */
+export const RAMP: [number, number][] = [
+  [0.6, 1.0],
+  [5.2, 0.74],
+  [2.0, 0.46],
+  [5.0, 0.2],
+  [3.6, 0.0],
+];
+/** the circuit wall's ashlar on the upper cliff: the band's depth (fraction of the cliff, from the edge) and courses */
+export const WALL_COURSES = { band: 0.55, courses: 5, joint: 230 };
+/** the Propylaea: the gateway at the west (left) end of the plateau, facing us; a hexastyle front with two wings */
+export const PROPYLAEA = { X: -4650, Z: 1120, W: 1340, L: 950, colR: 54, colS: 236, colH: 620, ent: 150, ped: 140, step: 45, wingW: 430, wingL: 560, wingH: 520 };
+/** the Erechtheion: the small Ionic temple behind and left of the Parthenon, facing us (its east porch) */
+export const ERECHTHEION = { X: -3620, Z: 3600, W: 1180, L: 1700, colR: 40, colS: 210, colH: 560, ent: 120, ped: 110, step: 40 };
+/** low terrace walls on the plateau (from, to: world X, Z), height and thickness */
+export const TERRACES: { a: [number, number]; b: [number, number] }[] = [
+  { a: [-5150, 2250], b: [-3050, 2050] },
+  { a: [-4500, 6000], b: [-2950, 5850] },
+  { a: [-2600, 8350], b: [1300, 7950] },
+];
+export const TERRACE_WALL = { h: 60, t: 50 };
+/** a handful of small houses tucked against the rock's foot, BEHIND the crowd line and outside its columns (left of
+ *  X -3000, right of X 1900): just beyond the talus, on ground the tufts already keep clear of */
+export type House = { X: number; Z: number; W: number; D: number; H: number; roof: number; seed: number };
+export const HOUSES: House[] = (() => {
+  const out: House[] = [];
+  const at = (i: number, out0: number) => {
+    const R = ROCK_RINGS.foot;
+    const m = R.length;
+    const a = R[(i - 1 + m) % m];
+    const b = R[(i + 1) % m];
+    const tx = b[0] - a[0];
+    const tz = b[1] - a[1];
+    const l = Math.hypot(tx, tz) || 1;
+    return [R[i][0] + (tz / l) * out0, R[i][1] - (tx / l) * out0] as [number, number];
+  };
+  [
+    [75, 230, 560, 470, 380],
+    [1, 260, 520, 440, 360],
+    [5, 280, 600, 500, 420],
+    [31, 260, 560, 480, 380],
+    [33, 260, 600, 500, 400],
+  ].forEach(([i, o, W, D, H], k) => {
+    const [X, Z] = at(i, o);
+    out.push({ X, Z: Z - D / 2, W, D, H, roof: 0.32 * H, seed: 3100 + k });
+  });
+  return out;
+})();
+/** a few olive trees: at the foot (behind the crowd line, outside its columns) and the sacred olive by the Erechtheion */
+export type Olive = { X: number; Z: number; Y: number; r: number; seed: number };
+export const OLIVES: Olive[] = [
+  { X: -6120, Z: -330, Y: 0, r: 230, seed: 1 },
+  { X: -3330, Z: -640, Y: 0, r: 200, seed: 2 },
+  { X: 3480, Z: 400, Y: 0, r: 220, seed: 3 },
+  { X: -6800, Z: 820, Y: 0, r: 210, seed: 4 },
+  { X: -4700, Z: 4250, Y: -ROCK_H, r: 190, seed: 5 },
+];
+
 /** THE PARTHENON (simple marble volumes; proportions of the real temple, Doric, 8 x 17 columns, at ~97 units per
  *  real metre, i.e. a little under the cast's scale: a picture-book temple). Its axis X, its front (stylobate edge) Z. */
 export const TEMPLE = {
@@ -339,6 +417,8 @@ export const TUFTS: Tuft[] = (() => {
       const px = X + (hash(seed, 2) - 0.5) * cell * 0.8;
       const pz = Z + (hash(seed, 3) - 0.5) * cell * 0.8;
       if (inRockFoot(px, pz, 250) || inAthens(px, pz, 380) || inRome(px, pz, 300) || distToTrack(px, pz) < TRACK_W + 140) continue;
+      // (revision 1) clear of the houses and olives at the rock's foot
+      if (HOUSES.some((h) => Math.abs(px - h.X) < h.W / 2 + 160 && Math.abs(pz - h.Z) < h.D / 2 + 160) || OLIVES.some((o) => o.Y === 0 && Math.hypot(px - o.X, (pz - o.Z) * 1.6) < o.r * 1.6 + 120)) continue;
       out.push({ X: px, Z: pz, r: 44 + Math.pow(hash(seed, 4), 1.6) * 90, kind: hash(seed, 5) < 0.16 ? 1 : 0, seed });
     }
     Z += cell;
