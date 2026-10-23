@@ -14,39 +14,50 @@
 // it 43 · made 46 · you 49 · SICK 52 · pretty 58 · QUICK 65 · (And 79)
 // DURATION: the slot 12.679 -> 15.415 s = 2.736 s x 29.97 = 82 frames (f0..f81).
 //
-// THE MOTION (review 1 applied): cut 3's place and camera grammar, the opposite outcome. f0 is cut 3's LANDING camera
-// exactly: at the centre aisle pole (cut 3's POLE, Z 330) stands the Officer (the SARS-1 man, covidFolk Round 4's
-// variant 3: in shirtsleeves, white shirt, dark-teal tie, belt) where cut 3's Carrier stood (CARRIER_FEET, the FAR hand
-// on GRIP3, the body turned toward us, yaw 0.62, so both lungs show), pleasant, his near hand low at his trouser pocket,
-// an orange glow already in his lungs (infected 0.6). On VIRULENT the glow flares to full (f15 -> f28), his face pales
-// (sick 0 -> 1 by f58) and his near hand goes to his forehead (f17 -> f27); he coughs twice into his fist (f36, f43;
-// the cast's elbow cough flips the forearm as it passes horizontal) and lets go of the pole (f38 -> f47). THE SINK
-// (f35 -> f61): one soft continuous fold back onto the left bench seat right behind him (the nearest seat: the right
-// bench is ~1.4 m away past the pole, four steps; the director allowed the nearest seat): the hips travel back and down
-// together, the knees bend because the feet stay planted (each foot one step back, the near foot f40 -> f51, the far
-// foot f44 -> f56, solved through rigPose's seated-foot rule), the body leans forward a little on the way down, his
-// near hand on his thigh; no crouch. Seated by ~f58 (SICK 52 mid-sink), slumped at yaw 0.62 and breathing heavily from
-// QUICK on, both hands low in his lap, both lungs and the windpipe glowing whole. The neighbours: the woman across the
-// aisle (cut 3's seat) looks up as his hand goes to his forehead, then leaves the frame as the camera moves to him; the
-// woman on his bench (the seat beside his, Z 452) is in view from ~f21, looks at him, gets up on the first cough
-// (f36 -> f47) at his left, a hand to her mouth (f39 -> f48), and steps off into the aisle (f42 -> f64), passing behind
-// him while he sinks (f47 -> f53: her seat is behind his on screen, so her way into the aisle must cross behind him),
-// and stands leaning away, watching him; the passengers deeper down the carriage turn and lean away. NO orange leaves
-// his body (no breath specks; nobody kindles): the virus stays in the one man everyone can see is ill. f62 -> f81: a
-// settled living hold (his heavy breath, her watching, the sway, the tunnel lights, a slow camera creep).
-// Cause -> effect: his hand to his forehead (f17 -> f27) -> the woman across looks up (f24); his first cough (f36) ->
-// the woman beside him gets up (f36).
-// THE CAMERA: one eased move from LANDING (smootherstep on a clock started 14 frames before f0, so it is under way on
-// the first frame; peak speed ~f32): a truck left that brings him to the middle of the frame for the coughs and follows
-// him into the seat (cx 43 -> -104), a gentle push-in (k 7.19 -> 7.91) and the horizon row rising (766 -> 572) so his
-// slumped head stays high (head ~y 530, the lungs ~y 800, the hands ~y 1030 at the end); a slow creep to the last frame.
+// THE MOTION (user revision 1, notes/rev_12_user1.md: "one continuous motion, not word for word; not rushed at the
+// end"): ONE long overlapping arc instead of beats on the words. Every move is one smooth hump of velocity (`hump`: the
+// CDF of u^a (1-u)^b, zero speed at both ends, the peak at a / (a + b)), the moves overlap, nothing new starts after
+// f55 and f60 -> f81 is a calm living hold.
+// f0 is cut 3's LANDING camera trucked 40 world px left (the director, v6 review: the cut opens straight off the speaker,
+// so he is whole at f0, his near arm ~64 px inside the left edge; CAM_KEYS.open): at the centre aisle pole (cut 3's POLE, Z 330) stands the Officer (the SARS-1
+// man, covidFolk Round 4's variant 3: in shirtsleeves, white shirt, dark-teal tie, belt) where cut 3's Carrier stood
+// (CARRIER_FEET, the FAR hand on GRIP3, the body turned toward us, yaw 0.62, so both lungs show), his near hand low at
+// his trouser pocket, an orange glow in his lungs. From f0 he is already going: the glow flares (0.62 -> 1, fastest at
+// f0, full by ~f36) and the pallor creeps in on one smooth ramp (sick 0 -> 1, f0 -> f52).
+// ONE GESTURE: his near hand rises slowly to his forehead (f2 -> f25), slides down to his mouth (f20 -> f31) for ONE soft
+// cough (peak f33) while he is already bending, then goes down onto his knee as he sits (f37 -> f60).
+// ONE SINK: the hips go back (f4 -> f52, fastest ~f22) a little ahead of the way down (f14 -> f64, slowest at the
+// landing): he bends at the knees and lowers himself onto the left bench seat right behind him, steadying on the pole
+// with his far hand at first (let go f12 -> f34, the hand then to his lap), the near foot then the far foot stepping
+// back inside the sink (their steps ride the hips' path), the body leaning forward a little on the way down. Seated by
+// ~f55: slumped at yaw 0.62, head bowed, hands on his knee and lap, breathing heavily (~1.35 s) to the end, both lungs
+// and the windpipe glowing whole.
+// THE NEIGHBOUR overlaps with him: the woman on his bench (the seat beside his, Z 452) notices early (f10 -> f22),
+// rises slowly (f16 -> f50) leaning forward over her feet, her hand over her mouth (f22 -> f40), and steps away into the
+// aisle in the same move (the walk f20 -> f64: its speed one hump, its stride with it, its first steps still low with the
+// rise), watching him the whole way; she settles standing apart at his right, leaning away (f30 -> f66), and shifts her
+// weight a little in the hold. Her seat is behind his on screen, so she crosses behind him (painter's order by Z); timed
+// so she passes behind his body while still low (~f28) and comes out at his shoulder (~f32-36). The woman across the
+// aisle (cut 3's seat) looks up as his hand rises and leans away; the passengers deeper down the carriage turn and lean
+// away, all inside f8 -> f54.
+// NO orange leaves his body (no breath specks; nobody kindles): the virus stays in the one man everyone can see is ill.
+// Cause -> effect: his hand rising to his forehead (f2 ->) -> the woman across looks up (f8 ->) and the woman beside
+// him notices (f10 ->); his sink and the cough (f14 -> f40) -> she is already up and stepping away.
+// THE CAMERA: one eased move over the whole slot: the pan follows him (a hump f-4 -> f56, blended 75/25 with a long tail
+// to f104; the opening shift is taken out along it by f38, so it starts gently from f0, peaks ~f29 and decelerates into
+// the end, still creeping on f81; f38 -> f81 are pixel for pixel v6's), the zoom on the long
+// tail only, easing a touch WIDER (k 7.19 -> 6.91), the horizon row rising (766 -> 630) on one hump with his sink
+// (f0 -> f56) so his head lands once on screen. The end: him whole and left of centre (head ~x 430), his seat and back
+// in shot, her standing at his right, apart. The framing is set by the caption bands: seated, his head-to-knee span is
+// ~440 px at this zoom, so with his hands on his knee above y 1080 his seated head sits at ~y 595 (the note's 640-820
+// would put his hands in the first band); the glow ~y 760-950.
 // Orange = THE VIRUS only (the clip's ORANGE RULE): his lung glow and nothing else; the cast's and carriage's muted
 // local colours everywhere else (her puffer is the cast's muted red-brown).
 //
 // DEPTH: the carriage's set and grammar (CARRIAGE_DEPTH dRef 700 at kRef 2, dolly 0.5, CARRIAGE_SCENE: fog by the
 // eye's distance, mood interior), cut 3's landing eye (-212) easing to -206; cut 3's HIDE_POLES / HIDE_STRAPS. The
 // Officer X -60 -> his seat X -182 at Z 330; the woman across at the right bench Z 452; the woman beside him at the
-// left bench Z 452 -> standing X -60; the deep passengers at the right bench Z 1648, the left bench Z 1280 and by the
+// left bench Z 452 -> standing X ~-55; the deep passengers at the right bench Z 1648, the left bench Z 1280 and by the
 // far door (Z 1975).
 //
 // SOURCES: none on screen. The fact behind the picture (SARS-1 spread mostly after symptoms showed, so the sick could
@@ -57,7 +68,7 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirShadow, AirStage, WorldSvg, airWorldOf, type AirWorld, type Cam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { CARRIAGE_SCENE, CarriageStage, carriageSway, seatNear, swayPose, type StageItem } from "./covidCarriage";
-import { CovidFigure, POSES, WALK_CYCLE, covidAnchors, covidGripTo, lerpPose, rigPose, seatFootX, sitBack, sitDown, type CovidFigureProps, type CovidKind, type CovidPose, type P2 } from "./covidFolk";
+import { CovidFigure, POSES, covidAnchors, covidGripTo, lerpPose, rigPose, seatFootX, sitBack, sitDown, type CovidFigureProps, type CovidKind, type CovidPose, type P2 } from "./covidFolk";
 import { CARRIER_FEET, GRIP3, HIDE_POLES, HIDE_STRAPS, LANDING, POLE, latentCamAt } from "./LatentLongEnough";
 
 export const FPS = 30000 / 1001;
@@ -70,12 +81,37 @@ const sst = (a: number, b: number, v: number) => {
   const u = c01((v - a) / (b - a));
   return u * u * (3 - 2 * u);
 };
-/** smootherstep (zero velocity and acceleration at both ends) */
-const sst5 = (a: number, b: number, v: number) => {
-  const u = c01((v - a) / (b - a));
-  return u * u * u * (u * (u * 6 - 15) + 10);
-};
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/** ONE SMOOTH HUMP OF VELOCITY: the normalised CDF of u^a (1-u)^b on 0..1 (zero speed at both ends unless a or b is 0,
+ *  the speed peaking at u = a / (a + b): b > a = a long deceleration, slowest at the landing). Tabulated once. */
+const HUMP_N = 4096;
+const humpTables = new Map<string, Float64Array>();
+const humpCdf = (a: number, b: number) => {
+  const key = `${a}|${b}`;
+  let T = humpTables.get(key);
+  if (!T) {
+    T = new Float64Array(HUMP_N + 1);
+    let acc = 0;
+    for (let i = 1; i <= HUMP_N; i++) {
+      const u = (i - 0.5) / HUMP_N;
+      acc += Math.pow(u, a) * Math.pow(1 - u, b);
+      T[i] = acc;
+    }
+    for (let i = 1; i <= HUMP_N; i++) T[i] /= acc;
+    humpTables.set(key, T);
+  }
+  return T;
+};
+/** a move from frame f0 to f1 (0 -> 1), its speed one hump skewed by (a, b) */
+export const hump = (f0: number, f1: number, a = 2, b = 2) => {
+  const T = humpCdf(a, b);
+  return (f: number) => {
+    const x = c01((f - f0) / (f1 - f0)) * HUMP_N;
+    const i = Math.min(HUMP_N - 1, Math.floor(x));
+    return T[i] + (T[i + 1] - T[i]) * (x - i);
+  };
+};
 
 // ===================================================================================================================
 // CUT 3'S STAGING (imported, asserted): the same centre aisle pole, the same stance, the same camera grammar
@@ -85,8 +121,40 @@ if (Math.abs(L84.cam.k - LANDING.cam.k) > 1e-9 || Math.abs(L84.cam.cx - LANDING.
 if (CARRIER_FEET.Z !== POLE.Z || GRIP3[0] !== POLE.X || GRIP3[2] !== POLE.Z) throw new Error("SickPrettyQuick: cut 3's pole staging changed");
 
 // ===================================================================================================================
-// THE CAMERA: f0 = cut 3's landing camera exactly; one eased move (truck left with him, a gentle push-in, the eye's
-// horizon row rising so his head stays high as he sits)
+// THE TIMELINE OF MOVES (frames; f0 = 12.679 s): each one hump, overlapping
+// ===================================================================================================================
+export const MOVES = {
+  /** the glow flares from f0 (fastest at f0) and the pallor creeps in on one ramp */
+  glow: [0, 36, 0.35, 2.2],
+  pale: [0, 52, 1.5, 1.5],
+  /** ONE GESTURE: the near hand pocket -> forehead -> mouth (one soft cough) -> his knee */
+  toFore: [2, 25, 1.6, 2.2],
+  toMouth: [20, 31, 2, 2],
+  coughAt: 33,
+  toKnee: [37, 60, 1.6, 2.6],
+  /** ONE SINK: the hips back and down onto the seat (fastest ~f28, slowest at the landing) */
+  sink: [14, 64, 2, 2.6],
+  /** the hips' way back to the seat (a little ahead of the sit, broader, so the camera can stay with him) */
+  hips: [4, 52, 1.4, 2.4],
+  /** the far hand lets go of the pole inside the sink */
+  letGo: [12, 34, 2, 2],
+  /** THE NEIGHBOUR: notices, rises, a hand over her mouth, steps away in one move, settles */
+  notice: [10, 22, 2, 2],
+  rise: [16, 50, 1.6, 2.4],
+  cover: [22, 40, 2, 2],
+  walk: [20, 64, 1.1, 2.6],
+  settle: [30, 66, 1.4, 2.4],
+  /** the woman across the aisle and the deep passengers */
+  lookUp: [8, 22, 2, 2],
+  across: [16, 46, 2, 2],
+  away: [20, 52, 2, 2],
+} as const;
+type Mv = readonly [number, number, number, number];
+const mv = (m: Mv) => hump(m[0], m[1], m[2], m[3]);
+
+// ===================================================================================================================
+// THE CAMERA: f0 = cut 3's landing camera exactly; ONE eased move over the whole slot (truck left with him, the horizon
+// row rising a little, the zoom easing a touch wider so the seated man is whole above the caption bands)
 // ===================================================================================================================
 /** the horizon (vanishing point) row of cut 3's landing */
 const HR0 = 960 - (LANDING.cam.cy - LANDING.depth.eyeY) * LANDING.cam.k;
@@ -95,79 +163,43 @@ export const CAM_KEYS = {
   cx0: LANDING.cam.cx,
   eye0: LANDING.depth.eyeY,
   hr0: HR0,
-  k1: 7.75,
-  cx1: -100,
+  k1: 6.9,
+  cx1: -121,
   eye1: -206,
-  hr1: 572,
-  kCreep: 0.02,
-  cxCreep: -4,
-  /** the move runs f0 -> fEnd (smootherstep on a biased clock: the velocity peaks as he sinks, ~f46) */
-  fEnd: 80,
-  pre: 14,
-  bias: 1.0,
+  hr1: 630,
+  /** the move: the pan follows him (one hump with his sink, the camera a little ahead) blended with a long tail that
+   *  carries it, decelerating, to the end (w = the tail's share; the sum is still one hump of speed); the zoom rides the
+   *  long hump alone; the tilt (the horizon row and the eye) one hump with his sink, so his head lands once on screen */
+  pan: { pre: -4, post: 56, a: 1.8, b: 2.2 },
+  tail: { pre: -10, post: 104, a: 1.6, b: 2.2, w: 0.25 },
+  tilt: { pre: 0, post: 56, a: 2.4, b: 2 },
+  /** THE OPENING (director, v6 review): the cut opens straight off the speaker, so f0 starts `shift` world px further
+   *  left than cut 3's landing (he is whole, his near arm inside the left edge). The shift is taken out ALONG the pan's
+   *  own progress ((1 - e / e(until))^3), so the pan stays one lobe, only its early part shorter, and every frame
+   *  from f(until) on is exactly the v6 camera. */
+  open: { shift: 40, until: 38 },
 };
-const camE = (f: number) => {
-  const K = CAM_KEYS;
-  // the clock starts K.pre frames before f0, so the move is already under way (gently) on the first frame
-  const at = (g: number) => sst5(0, 1, c01((g + K.pre) / (K.fEnd + K.pre)) ** K.bias);
-  return (at(f) - at(0)) / (1 - at(0));
+const camEase = (o: { pre: number; post: number; a: number; b: number }, f: number) => {
+  const H = hump(o.pre, o.post, o.a, o.b);
+  return (H(f) - H(0)) / (1 - H(0));
 };
-export const camAt = (f: number): { cam: Cam; depth: DepthOpts } => {
+export const camAt = (f: number, opening = true): { cam: Cam; depth: DepthOpts } => {
   const K = CAM_KEYS;
-  const e = camE(f);
-  // plus a slow creep over the whole cut (log-zoom and a little sideways), so the last frames never stand still
-  const u = f / (DURATION - 1);
-  const k = Math.exp(mix(Math.log(K.k0), Math.log(K.k1), e) + K.kCreep * u);
-  const eyeY = mix(K.eye0, K.eye1, e);
-  const hr = mix(K.hr0, K.hr1, e);
-  const cx = mix(K.cx0, K.cx1, e) + K.cxCreep * u;
+  const eTail = camEase(K.tail, f);
+  const e = mix(camEase(K.pan, f), eTail, K.tail.w);
+  const et = camEase(K.tilt, f);
+  const k = Math.exp(mix(Math.log(K.k0), Math.log(K.k1), eTail));
+  const eyeY = mix(K.eye0, K.eye1, et);
+  const hr = mix(K.hr0, K.hr1, et);
+  const eUntil = mix(camEase(K.pan, K.open.until), camEase(K.tail, K.open.until), K.tail.w);
+  const u = c01(e / eUntil);
+  // taken out fastest where the pan is slowest (its start), gone with zero speed at f(until): (1 - u)^3
+  const cx = mix(K.cx0, K.cx1, e) - (opening ? K.open.shift : 0) * (1 - u) ** 3;
   return { cam: { k, cx, cy: eyeY + (960 - hr) / k }, depth: { ...LANDING.depth, eyeY } };
 };
-const REST = camAt(0).cam;
-
-// ===================================================================================================================
-// THE BEATS (frames; f0 = 12.679 s)
-// ===================================================================================================================
-export const BEAT = {
-  /** VIRULENT 23: the glow flares, the face pales, the near hand to the forehead */
-  flare0: 15,
-  flare1: 28,
-  pale0: 16,
-  brow0: 17,
-  brow1: 27,
-  /** the cough (two coughs): the hand from the forehead to the mouth (the cast's fist cough: its elbow cough flips the
-   *  forearm as it passes horizontal) */
-  elbow0: 30,
-  elbow1: 35,
-  cough1At: 36,
-  cough2At: 43,
-  /** the far hand lets go of the pole; one soft sink back onto the seat, the near foot then the far foot stepping
-   *  back (SICK 52 mid-sink, seated by ~f58) */
-  let0: 38,
-  let1: 47,
-  body0: 35,
-  body1: 61,
-  step0: 40,
-  step1: 56,
-  /** sick 1 by f58; the near hand from the mouth to his thigh (braced, doubled over), then into his lap */
-  sick1: 58,
-  thigh0: 41,
-  thigh1: 54,
-  knee0: 57,
-  knee1: 69,
-  /** the neighbours notice (the first cough) and lean away */
-  notice: 34,
-  away0: 38,
-  away1: 58,
-  /** the woman on his bench: gets up on his first cough, a hand to her mouth, steps off into the aisle (one move with
-   *  the rise) and stands watching him */
-  rise0: 36,
-  rise1: 47,
-  mouth0: 39,
-  mouth1: 48,
-  walk0: 42,
-  walk1: 64,
-};
+/** the medium's parallax reference (motes, shafts): the f0 camera WITHOUT the opening shift, so the air of every frame
+ *  from f(until) on is exactly v6's */
+const REST = camAt(0, false).cam;
 
 // ===================================================================================================================
 // THE OFFICER: at cut 3's pole (CARRIER_FEET, the far hand on GRIP3), sickens and sinks back onto the left bench
@@ -187,54 +219,69 @@ export const OFFICER_SEAT = { X: -182, Z: POLE.Z };
 export const OFFICER_V = 3;
 const HOLD = POSES.standHold(1, "pole", "far");
 const SEATED_YAW = 0.62;
+/** the forward lean on the way down (deg): the counterweight of a real sit-down, small so the head lands once */
+export const LEAN_BUMP = { v: 5 };
 const STAND_YAW = 0.62;
 /** the officer's thigh (rig units: covidFolkBody MAN.leg[0]) for rigPose's seated-foot rule */
 const SEAT_LEG0 = 69;
 /** the seated feet's offsets from the hips (rigPose's seated rule on the slump at SEATED_YAW), set a little further
- *  forward (+16..20 units: a sick man's legs slide out a little; the feet step back less) */
+ *  forward (+22..26 units: a sick man's legs slide out a little; the feet step back less) */
 const SEATED_FEET = (() => {
   const r = rigPose("officer", OFFICER_V, { ...POSES.slump(1, 0), yaw: SEATED_YAW });
-  return { L: r.footL[0] + 20, R: r.footR[0] + 16 };
+  return { L: r.footL[0] + 26, R: r.footR[0] + 22 };
 })();
-/** the cough jolts (two coughs): 0..1 */
-const jolt = (f: number) => {
-  const one = (c: number) => (f < c ? sst(c - 3, c, f) : 1 - sst(c, c + 6, f));
-  return Math.max(one(BEAT.cough1At), one(BEAT.cough2At));
+const M = {
+  glow: mv(MOVES.glow),
+  pale: mv(MOVES.pale),
+  toFore: mv(MOVES.toFore),
+  toMouth: mv(MOVES.toMouth),
+  toKnee: mv(MOVES.toKnee),
+  sink: mv(MOVES.sink),
+  hips: mv(MOVES.hips),
+  letGo: mv(MOVES.letGo),
 };
-/** the body's path hold -> doubled over -> seated: s 0..1 */
-const bodyS = (f: number) => sst5(BEAT.body0, BEAT.body1, f);
+/** the one soft cough: a quick jolt in (4 frames) and a slow release (10), 0..1 */
+const jolt = (f: number) => {
+  const c = MOVES.coughAt;
+  return f < c ? sst(c - 4, c, f) : 1 - sst(c, c + 10, f);
+};
 export const officerAt = (frame: number) => {
   const f = frame;
-  const s = bodyS(f);
-  const sit = sst(0.08, 1, s);
-  const pale = sst(BEAT.pale0, BEAT.sick1, f);
-  const flareT = sst(BEAT.flare0, BEAT.flare1, f);
-  const brow = sst(BEAT.brow0, BEAT.brow1, f);
+  // the hip height follows the sink directly (the rig's crouch is linear in sit)
+  const sit = M.sink(f);
+  const s = sit;
+  const pale = M.pale(f);
+  const flareT = M.glow(f);
+  const up = M.toFore(f);
+  const mouthT = M.toMouth(f);
+  const kneeT = M.toKnee(f);
+  // how much the hand is at his face (worried brows, the head bowing into it)
+  const atFace = up * (1 - kneeT);
   const j = jolt(f);
   // the slumped seat (heavy breathing)
   const t = f / 29.97;
   const br = Math.sin((t / 1.35) * 2 * Math.PI);
-  const seated: CovidPose = { ...POSES.slump(1, f), yaw: SEATED_YAW, headYaw: 0.66, lean: 13 + 1.6 * br, pitch: 20 - 2 * br, hunch: 0.78 - 0.1 * br, crouch: -1.1 * br };
-  // standing: the hold, a pleasant face, the near hand resting at the jacket's pocket (clear of the chest)
-  const glance = sst(0, 14, f);
-  // the body turned a little more toward us than the cast's hold (yaw 0.62, not 0.78): both lungs show at f0
-  const stand: CovidPose = { ...HOLD, yaw: STAND_YAW, headYaw: mix(0.62, 0.72, glance), pitch: mix(1, 3, glance), look: [mix(0.15, 0.35, glance), 0.15], mouth: 0.22, armL: { w: [-8, -158], elbow: [-0.45, 1], fist: 0.45, hand: 8 } };
-  // VIRULENT: the head bows into the hand, the shoulders rise
-  const ill: CovidPose = { ...stand, pitch: 3 + 9 * brow, look: [0.2, 0.55 * brow], mouth: mix(0.22, 0.1, brow), hunch: 0.35 * brow, worry: brow };
-  // THE SINK: one soft continuous fold from the standing hold into the seat (no deep crouch): the hips travel back and
-  // down together (the knees bend because the feet stay planted), the body leans forward a little on the way down
-  // (the counterweight of a real sit-down) and settles into the slump
+  const seated: CovidPose = { ...POSES.slump(1, f), yaw: SEATED_YAW, headYaw: 0.66, lean: 14 + 1.6 * br, pitch: 22 - 2 * br, hunch: 0.78 - 0.1 * br, crouch: -1.1 * br };
+  // standing: the hold, a pleasant face (souring with the pallor), the near hand resting at his trouser pocket
+  const glance = sst(0, 16, f);
+  const stand: CovidPose = { ...HOLD, yaw: STAND_YAW, headYaw: mix(0.62, 0.72, glance), pitch: mix(1, 3, glance), look: [mix(0.15, 0.35, glance), 0.15], mouth: mix(0.22, 0.12, pale), armL: { w: [-8, -158], elbow: [-0.45, 1], fist: 0.45, hand: 8 } };
+  // the head bows into the hand, the shoulders rise, the brows worry
+  const ill: CovidPose = { ...stand, pitch: 3 + 9 * atFace, look: [0.2, 0.55 * atFace], mouth: mix(stand.mouth, 0.1, atFace), hunch: 0.35 * atFace, worry: Math.max(atFace, pale) };
+  // THE SINK: one soft continuous fold from the standing hold into the seat: the hips travel back and down together
+  // (the knees bend), the body leans forward a little on the way down (the counterweight of a real sit-down)
   let q = lerpPose(ill, seated, sit);
-  q = { ...q, lean: q.lean + 9 * Math.sin(Math.PI * s), pitch: q.pitch + 4 * Math.sin(Math.PI * s) };
-  // the cough jolts
-  q = { ...q, lean: q.lean + 4 * j, pitch: q.pitch + 7 * j, crouch: q.crouch + 2.5 * j, open: Math.max(q.open ?? 0, 0.85 * j), lids: Math.max(q.lids, 0.4 * j) };
+  const bend = Math.sin(Math.PI * s) * (1 - 0.5 * s);
+  q = { ...q, lean: q.lean + LEAN_BUMP.v * bend, pitch: q.pitch + 3 * bend };
+  // the one soft cough
+  q = { ...q, lean: q.lean + 3 * j, pitch: q.pitch + 5 * j, crouch: q.crouch + 1.8 * j, open: Math.max(q.open ?? 0, 0.7 * j), lids: Math.max(q.lids, 0.35 * j) };
   // the hips' path to the seat (X -60 -> OFFICER_SEAT.X), a little ahead of the sit so they are over the seat when low
-  const X = mix(CARRIER_FEET.X, OFFICER_SEAT.X, sst(0, 0.96, s));
-  // THE FEET: each foot's standing place is planted in the world except during its one step back (near foot first);
-  // the pose's foot offsets are solved through rigPose's seated-foot rule (mapped = o + sit (fx + c - 0.7 o)) so the
-  // drawn feet land exactly there
-  const stepL = sst(BEAT.step0, BEAT.step0 + 11, f);
-  const stepR = sst(BEAT.step0 + 4, BEAT.step1, f);
+  const p = M.hips(f);
+  const X = mix(CARRIER_FEET.X, OFFICER_SEAT.X, p);
+  // THE FEET: each foot planted in the world except during its one step back (near foot first), timed on the hips'
+  // own path so the steps live inside the sink; the pose's foot offsets are solved through rigPose's seated-foot rule
+  // (mapped = o + sit (fx + c - 0.7 o)) so the drawn feet land exactly there
+  const stepL = sst(0.05, 0.46, p);
+  const stepR = sst(0.16, 0.62, p);
   const asn = Math.abs(Math.sin(q.yaw));
   const fxS = SEAT_LEG0 * mix(0.32, 1, asn) * 0.93;
   const cL = -4 * (1 - asn);
@@ -242,92 +289,109 @@ export const officerAt = (frame: number) => {
   const PL = mix(CARRIER_FEET.X + HOLD.footL[0], OFFICER_SEAT.X + SEATED_FEET.L, stepL);
   const PR = mix(CARRIER_FEET.X + HOLD.footR[0], OFFICER_SEAT.X + SEATED_FEET.R, stepR);
   const solve = (P: number, c: number) => (P - X - sit * (fxS + c)) / (1 - 0.7 * sit);
-  const liftL = Math.sin(Math.PI * stepL) * 10;
-  const liftR = Math.sin(Math.PI * stepR) * 10;
+  const liftL = Math.sin(Math.PI * stepL) * 8;
+  const liftR = Math.sin(Math.PI * stepR) * 8;
   q = { ...q, footL: [solve(PL, cL), (HOLD.footL[1] - liftL) / (1 - 0.7 * sit)], footR: [solve(PR, cR), (HOLD.footR[1] - liftR) / (1 - 0.7 * sit)] };
-  // THE ARMS. Near (L): pocket -> forehead -> the fist at the mouth (the coughs) -> braced on his thigh -> his lap once seated. Far (R): the pole -> his lap.
-  const kneeL = armTo(q, "L", "knee");
-  const thighL: Arm = { ...kneeL, w: [kneeL.w[0] - 10, kneeL.w[1] - 36] };
-  // to the forehead the wrist rises along the near side of the chest (a quadratic arc) and quickly (10 frames), so it
-  // crosses the glow only for a moment
+  // THE NEAR ARM (L), one gesture: pocket -> forehead (the wrist rising along the near side of the chest, a quadratic
+  // arc) -> the fist at the mouth (the cough) -> down onto his knee
   const fore = armTo(q, "L", "forehead");
-  const toFore = lerpArm(q.armL, fore, brow);
+  const toFore = lerpArm(q.armL, fore, up);
   const side: P2 = [Math.min(q.armL.w[0], fore.w[0]) - 20, (q.armL.w[1] + fore.w[1]) / 2];
-  const bz = (a: number, c: number, b: number, t: number) => (1 - t) * (1 - t) * a + 2 * (1 - t) * t * c + t * t * b;
-  toFore.w = [bz(q.armL.w[0], side[0], fore.w[0], brow), bz(q.armL.w[1], side[1], fore.w[1], brow)];
-  const nearA = lerpArm(lerpArm(lerpArm(toFore, armTo(q, "L", "mouth"), sst(BEAT.elbow0, BEAT.elbow1, f)), thighL, sst(BEAT.thigh0, BEAT.thigh1, f)), armTo(q, "L", "lap"), sst(BEAT.knee0, BEAT.knee1, f));
-  // the far hand, let go: forward on his thigh (in front of the body, below the lungs) as he sinks, into
-  // his lap as he sits
+  const bz = (a: number, c: number, b: number, u: number) => (1 - u) * (1 - u) * a + 2 * (1 - u) * u * c + u * u * b;
+  toFore.w = [bz(q.armL.w[0], side[0], fore.w[0], up), bz(q.armL.w[1], side[1], fore.w[1], up)];
+  const kneeA = armTo(q, "L", "knee");
+  const onKnee: Arm = { ...kneeA, w: [kneeA.w[0] - 6, kneeA.w[1] - 14] };
+  const nearA = lerpArm(lerpArm(toFore, armTo(q, "L", "mouth"), mouthT), onKnee, kneeT);
+  // THE FAR ARM (R): steadying on the pole, let go inside the sink, forward onto his thigh, into his lap as he sits
   const lapR = armTo(q, "R", "lap");
-  const farFree = lerpArm({ ...lapR, w: [lapR.w[0] + 42, lapR.w[1] - 30] }, lapR, sst(0.5, 1, sit));
-  // while he holds the pole the far hand keeps the cast's gripping fist (the wrist itself is solved onto GRIP3 in sceneAt)
-  const rel = sst(BEAT.let0, BEAT.let1, f);
+  const farFree = lerpArm({ ...lapR, w: [lapR.w[0] + 42, lapR.w[1] - 30] }, lapR, sst(0.15, 0.85, sit));
+  const rel = M.letGo(f);
   const gripArm = HOLD.armR;
   const farA: Arm = { ...farFree, elbow: [mix(gripArm.elbow[0], farFree.elbow[0], rel), mix(gripArm.elbow[1], farFree.elbow[1], rel)], fist: mix(gripArm.fist, farFree.fist, rel), hand: mix(gripArm.hand, farFree.hand, rel) };
   q = { ...q, armL: nearA, armR: farA, handTo: undefined };
   const sw = mix(1, 0.45, sit);
   q = swayPose(q, f, sw, 0);
-  return { pose: q, X, Z: CARRIER_FEET.Z, release: rel, infected: mix(0.6, 1, flareT), sick: pale };
+  return { pose: q, X, Z: CARRIER_FEET.Z, release: rel, infected: mix(0.62, 1, flareT), sick: pale };
 };
 
 // ===================================================================================================================
-// THE NEIGHBOURS (all well; they notice on the first cough and lean away)
+// THE NEIGHBOURS (all well; they notice early and move away while he sinks)
 // ===================================================================================================================
 export type FigSpec = { kind: CovidKind; v: number; pose: CovidPose; X: number; Z: number; props?: Partial<CovidFigureProps>; uid: string; shadow?: [number, number] };
 const NB_INKS = { top: "#7E4E44", top2: "#6C433A" };
+const N = {
+  notice: mv(MOVES.notice),
+  rise: mv(MOVES.rise),
+  cover: mv(MOVES.cover),
+  walk: mv(MOVES.walk),
+  settle: mv(MOVES.settle),
+  lookUp: mv(MOVES.lookUp),
+  across: mv(MOVES.across),
+  away: mv(MOVES.away),
+};
+/** her walk: the stride amount follows the walk's speed (one hump), so the step starts and lands softly */
+const WALK_SPAN = MOVES.walk[1] - MOVES.walk[0];
+const walkSpeedAt = (f: number) => (N.walk(f + 0.5) - N.walk(f - 0.5)) * WALK_SPAN;
+const WALK_PEAK = (() => {
+  let m = 0;
+  for (let g = MOVES.walk[0]; g <= MOVES.walk[1]; g += 0.25) m = Math.max(m, walkSpeedAt(g));
+  return m;
+})();
+/** the walk's whole phase advance (cycles: one cycle = two steps = 88 units): her standing place beside him */
+export const NB_END_X = -55;
+/** her forward lean (deg) at mid-rise */
+export const NB_DUCK = { v: 14 };
 export const othersAt = (frame: number): FigSpec[] => {
   const f = frame;
   const s = (side: "L" | "R", z: number) => seatNear(side, z);
   const R452 = s("R", 452);
   const R1648 = s("R", 1648);
   const L1280 = s("L", 1280);
-  const look = sst(BEAT.notice, BEAT.notice + 6, f);
-  const away = (d: number) => sst(BEAT.away0 + d, BEAT.away1 + d, f);
+  const look = N.notice(f);
+  const away = (d: number) => mv([MOVES.away[0] + d, MOVES.away[1] + d, 2, 2])(f);
   const drift = (seed: number, amp: number) => amp * Math.sin(f * 0.021 + seed);
-  // across the aisle: the woman with the coffee cup (cut 3's seat): looks up at the cough, leans away to the window
-  const look1 = sst(BEAT.brow0 + 7, BEAT.brow0 + 14, f);
+  // across the aisle: the woman with the coffee cup (cut 3's seat): looks up as his hand rises, leans away to the window
+  const look1 = N.lookUp(f);
   const r1base: CovidPose = { ...POSES.sit(-1), headYaw: mix(-0.6, -0.95, look1), pitch: mix(14, 2, look1), look: [mix(-0.1, -0.6, look1), mix(0.7, 0, look1)], worry: look1, armR: { w: [40, -150], elbow: [0.3, 1], fist: 0.8, hand: -60 }, armL: { w: [30, -146], elbow: [-0.2, 1], fist: 0.6, hand: -40 } };
-  const r1 = POSES.leanAway(r1base, sst(BEAT.cough1At - 4, BEAT.cough1At + 12, f), 1, "none");
-  // his bench, the next seat along: the woman rises as he backs onto the seat beside her (feet planted: sitDown
-  // reversed), her far hand over her mouth, steps off into the aisle (a short walk, at advancing with the phase) and
-  // stands leaning away, looking back at him
+  const r1 = POSES.leanAway(r1base, N.across(f), 1, "none");
+  // his bench, the next seat along: she notices, rises (feet planted: sitDown reversed), her near hand over her mouth,
+  // and steps off into the aisle in one move (the rise blends into the walk), watching him all the way, then stands
+  // leaning away
   const nbSeat = seatNear("L", 452);
   const NB: [CovidKind, number] = ["parent", 0];
-  const rise = sst(BEAT.rise0, BEAT.rise1, f);
-  // she sits turned a little toward the carriage's end (yaw 0.55: her knees stay hidden behind him at f0, no sliver at
-  // the frame's edge); her feet go forward fxN units on that yaw, the standing place is that far in front of the seat
+  const rise = N.rise(f);
   const NB_YAW = 0.5;
-  // her puffer in a muted red-brown (the cast's elder v1 coat colour): she separates from his grey suit
   const fxN = seatFootX(NB[0], NB[1], NB_YAW);
-  const backN = (t: number) => (sitBack(t, NB[0], NB[1]) / seatFootX(NB[0], NB[1])) * fxN;
+  const backN = (u: number) => (sitBack(u, NB[0], NB[1]) / seatFootX(NB[0], NB[1])) * fxN;
   const Xs = nbSeat.X + fxN;
-  const WALK_SPEED = 1.9;
-  const wAmt = (g: number) => sst(BEAT.walk0, BEAT.walk0 + 6, g) * (1 - sst(BEAT.walk1 - 7, BEAT.walk1, g));
-  // the walk starts at phase 0.25 (both feet under her: the left planted, the right mid-swing), so it blends in from
-  // the risen stance without a skate
-  let phase = 0.25;
-  for (let g = BEAT.walk0; g < f; g++) phase += (WALK_SPEED * wAmt(g + 0.5)) / WALK_CYCLE;
-  const wa = wAmt(f);
-  const cover = sst(BEAT.mouth0, BEAT.mouth1, f);
+  // the walk's phase (0.25 at the start: both feet under her) and her travel, tied together (88 units a cycle)
+  const PHASES = (NB_END_X - Xs) / 88;
+  const wf = N.walk(f);
+  const phase = 0.25 + PHASES * wf;
+  const wa = c01(walkSpeedAt(f) / WALK_PEAK) ** 0.7;
+  const cover = N.cover(f);
   const watch = { headYaw: -0.12, pitch: 1, look: [-0.85, 0.05] as P2, worry: 1 };
-  const seatedN: CovidPose = { ...POSES.sit(1), yaw: NB_YAW, armL: { w: [40, -132], elbow: [-0.2, 1], fist: 0.2, hand: 26 }, armR: { w: [48, -134], elbow: [0.2, 1], fist: 0.3, hand: 26 }, headYaw: mix(0.7, 0.05, look), pitch: mix(16, 3, look), look: [mix(0.1, -0.6, look), mix(0.7, 0, look)], worry: 0.7 * look };
+  const seatedN: CovidPose = { ...POSES.sit(1), yaw: NB_YAW, armL: { w: [40, -141], elbow: [-0.2, 1], fist: 0.2, hand: 26 }, armR: { w: [48, -143], elbow: [0.2, 1], fist: 0.3, hand: 26 }, headYaw: mix(0.7, 0.05, look), pitch: mix(16, 3, look), look: [mix(0.1, -0.6, look), mix(0.7, 0, look)], worry: 0.7 * look };
   let nq = seatedN;
-  if (rise > 0.001) nq = lerpPose(seatedN, { ...sitDown(1, 1 - rise), yaw: mix(NB_YAW, 0.62, rise), ...watch, lean: -4 }, sst(0, 0.4, rise));
-  // while she slips past behind him she looks where she is going (her face turned to the aisle), then turns back to
-  // watch him once she is clear of him (f51 -> f57)
-  const back = sst(BEAT.walk0 + 9, BEAT.walk0 + 15, f);
-  const going = { headYaw: mix(0.8, watch.headYaw, back), look: [mix(0.6, watch.look[0], back), 0.05] as P2 };
-  if (wa > 0.001) nq = lerpPose(nq, { ...POSES.walk(1, phase, wa), ...watch, ...going }, wa);
-  const done = sst(BEAT.walk1 - 7, BEAT.walk1, f);
-  if (done > 0.001) nq = lerpPose(nq, { ...POSES.leanAway({ ...POSES.turnTo(1.05), pitch: 2 }, 0.8, 1, "none"), ...watch, headYaw: -0.05 }, done);
-  nq = { ...nq, handTo: { L: { to: "mouth", amt: cover } } };
+  if (rise > 0.0001) nq = lerpPose(seatedN, { ...sitDown(1, 1 - rise), yaw: mix(NB_YAW, 0.62, rise), ...watch, lean: -4 }, sst(0, 0.4, rise));
+  // the first steps are taken while she is still getting up: the walk carries the rise's seat (sit, the hips still low),
+  // so her height follows the rise, not the walk
+  if (wa > 0.0001) nq = lerpPose(nq, { ...POSES.walk(1, phase, wa), ...watch, sit: nq.sit ?? 0, seatH: nq.seatH }, Math.min(1, wa * 1.6) * sst(0, 0.25, wf));
+  const done = N.settle(f);
+  // the living hold: a small, slow shift of her weight (one sway, from the settle on)
+  const shift = done * Math.sin(((f - MOVES.settle[0]) / 29.97 / 2.6) * 2 * Math.PI);
+  if (done > 0.0001) nq = lerpPose(nq, { ...POSES.leanAway({ ...POSES.turnTo(1.05), pitch: 2 }, 0.8, 1, "none"), ...watch, headYaw: -0.05 }, done);
+  // getting up she leans forward over her feet (the counterweight of a real rise), so she ducks behind him as she
+  // slips past his head
+  const duck = Math.sin(Math.PI * rise) * (1 - 0.25 * rise);
+  nq = { ...nq, lean: nq.lean + NB_DUCK.v * duck + 1.6 * shift, roll: nq.roll + 1.2 * shift, handTo: { L: { to: "mouth", amt: cover } } };
   const nbX = Xs - backN(1 - rise) + 88 * (phase - 0.25);
   return [
     { kind: "commuter", v: 3, uid: "r1", pose: swayPose(r1, f, 0.45, 7), X: R452.X, Z: R452.Z },
     { kind: NB[0], v: NB[1], uid: "nb", pose: swayPose(nq, f, mix(0.45, 1, rise), 3), X: nbX, Z: nbSeat.Z, props: { hold: { L: "none", R: "handbag" }, inks: NB_INKS } },
-    { kind: "youth", v: 1, uid: "r2", pose: swayPose(POSES.leanAway({ ...POSES.sit(-1), headYaw: mix(-0.5, -0.8, look), pitch: mix(10, 4, look) }, away(5) * 0.8, 1), f, 0.45, 11), X: R1648.X, Z: R1648.Z },
+    { kind: "youth", v: 1, uid: "r2", pose: swayPose(POSES.leanAway({ ...POSES.sit(-1), headYaw: mix(-0.5, -0.8, look), pitch: mix(10, 4, look) }, away(2) * 0.8, 1), f, 0.45, 11), X: R1648.X, Z: R1648.Z },
     { kind: "parent", v: 1, uid: "l2", pose: swayPose({ ...POSES.sit(1), headYaw: mix(0.8, 0.4, look) }, f, 0.45, 9), X: L1280.X, Z: L1280.Z },
-    { kind: "elder", v: 2, uid: "far", pose: swayPose(POSES.leanAway({ ...POSES.turnTo(-0.3), headYaw: mix(-0.1, -0.6, look) + drift(8, 0.05), pitch: 3 }, away(9) * 0.7, 1), f, 1, 13), X: 95, Z: 1975 },
+    { kind: "elder", v: 2, uid: "far", pose: swayPose(POSES.leanAway({ ...POSES.turnTo(-0.3), headYaw: mix(-0.1, -0.6, look) + drift(8, 0.05), pitch: 3 }, away(4) * 0.7, 1), f, 1, 13), X: 95, Z: 1975 },
   ];
 };
 
