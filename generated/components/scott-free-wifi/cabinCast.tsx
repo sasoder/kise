@@ -282,7 +282,7 @@ export const Passenger: React.FC<{ x: number; y: number; spec: CastSpec; pose: P
           <stop offset="1" stopColor="#FFF4DF" stopOpacity="0" />
         </radialGradient>
         <radialGradient id={`${uid}fl`} gradientUnits="userSpaceOnUse" cx={f3(-1.3 * R)} cy={f3(0.3 * R)} r={f3(2.0 * R)}>
-          <stop offset="0" stopColor="#FFF8EA" stopOpacity={f3(0.8 * cream)} />
+          <stop offset="0" stopColor="#FFF8EA" stopOpacity={f3(0.42 * cream)} />
           <stop offset="1" stopColor="#FFF6E4" stopOpacity="0" />
         </radialGradient>
         <radialGradient id={`${uid}fa`} gradientUnits="userSpaceOnUse" cx={f3(-1.5 * R)} cy={f3(0.4 * R)} r={f3(1.9 * R)}>
@@ -375,9 +375,20 @@ export const Passenger: React.FC<{ x: number; y: number; spec: CastSpec; pose: P
         {/* headphones: cup + band */}
         {spec.headphones ? (
           <g>
-            <path d={band} stroke={mixHex(spec.headphones, COLOR.shadow, 0.15)} strokeWidth={9} fill="none" strokeLinecap="round" />
-            <rect x={f3(cup[0] - 0.24 * R)} y={f3(cup[1] - 0.33 * R)} width={f3(0.48 * R)} height={f3(0.66 * R)} rx={f3(0.2 * R)} fill={spec.headphones} />
-            <rect x={f3(cup[0] - 0.24 * R)} y={f3(cup[1] - 0.33 * R)} width={f3(0.48 * R)} height={f3(0.12 * R)} rx={f3(0.06 * R)} fill={topOf(spec.headphones)} />
+            {/* a clear cream band and ear cup, each with a thin warm rim so they read over hair and skin */}
+            <path d={band} stroke={mixHex(spec.headphones, COLOR.shadow, 0.45)} strokeWidth={17} fill="none" strokeLinecap="round" />
+            <path d={band} stroke={spec.headphones} strokeWidth={11} fill="none" strokeLinecap="round" />
+            <rect
+              x={f3(cup[0] - 0.29 * R)}
+              y={f3(cup[1] - 0.38 * R)}
+              width={f3(0.58 * R)}
+              height={f3(0.76 * R)}
+              rx={f3(0.24 * R)}
+              fill={spec.headphones}
+              stroke={mixHex(spec.headphones, COLOR.shadow, 0.45)}
+              strokeWidth={3}
+            />
+            <rect x={f3(cup[0] - 0.12 * R)} y={f3(cup[1] - 0.2 * R)} width={f3(0.24 * R)} height={f3(0.4 * R)} rx={f3(0.1 * R)} fill={mixHex(spec.headphones, COLOR.shadow, 0.2)} />
           </g>
         ) : null}
       </g>
@@ -403,7 +414,7 @@ export const Passenger: React.FC<{ x: number; y: number; spec: CastSpec; pose: P
       {spec.shortSleeve ? <circle cx={E[0]} cy={E[1]} r={(RIG.armW / 2) * bk} fill={sleeve} /> : null}
       {/* the phone (held or resting) */}
       {phone ? <PhoneProp at={phoneAt} angle={phoneRot} glow={phone.glow} uid={uid} /> : null}
-      <circle cx={W[0]} cy={W[1]} r={RIG.hand * bk} fill={mixHex(mixHex(spec.skin, COLOR.shadow, 0.08), "#FFF4DF", 0.35 * cream)} />
+      <circle cx={W[0]} cy={W[1]} r={RIG.hand * bk} fill={mixHex(mixHex(spec.skin, COLOR.shadow, 0.08), "#FFF4DF", 0.2 * cream)} />
       {/* the device's cream light: a soft pool over the face, the hands and the device (light, not an object) */}
       {cream > 0.002 ? (
         <ellipse
@@ -412,7 +423,7 @@ export const Passenger: React.FC<{ x: number; y: number; spec: CastSpec; pose: P
           rx={lap ? 140 : 128}
           ry={lap ? 118 : 122}
           fill={`url(#${uid}cl)`}
-          opacity={f3(0.8 * cream)}
+          opacity={f3(0.4 * cream)}
           style={{ mixBlendMode: "screen" }}
         />
       ) : null}

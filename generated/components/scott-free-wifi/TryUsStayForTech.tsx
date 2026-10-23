@@ -15,24 +15,24 @@
 // technology f82 · (the f92, next line) (notes/word_frames.txt; "not" is 5 frames before f0).
 // DURATION: the slot 13.722 -> 17.893 s = sequence frames 329 -> 429 = 100 frames (f0..f99).
 //
-// THE MOTION: one continuous glide through a cutaway United jet in flight, nose left, its near wall cut open from the
-// crown to the floor. f0: close on the crown, the Starlink radome against the dusk with the link landing on it (the
-// clip's link look: a soft cream cone, narrow above and radome-wide where it lands, a bright thin core, small cream
-// data packets travelling down it, a soft cream pool on the crown); the intact skin with windows and a door to the
-// left, the cutaway's edge to the right, no passengers yet; the camera already craning down and aft (the sky's
-// horizon rides down with the crane, then rests at y ~1720: under the belly only golden haze and a far fogged deck).
-// The signal enters the radome and runs aft inside the crown's cut face as a cream thread (from f12, one constant
-// speed, small packets flowing along it the whole cut, so Starlink stays in the top band); where its head passes a
-// row, a thin cream drop runs down to that passenger's phone or laptop, which lights on contact and throws a soft cream
-// pool over the face and hands (rows 0-3 at f24 / f29 / f40 / f48: "try us for Starlink"). "And they're going to stay": from the bulkhead an amber thread runs
-// aft along the floor (United's own system, one constant speed) and climbs each seat's shell to the screen on its back,
-// which wakes amber with United's globe on contact (row r at f51.5 + 5r); two frames later its passenger settles
-// (puts the phone down or shuts the laptop, leans back, smiles, headphones on with the far hand) and the cream device
-// light drains (a laptop's screen dims within 7 frames of the amber, before its lid shuts). The cabin is lit: cream
-// bins and ceiling, a warm board wall, golden pools from the windows over seats and faces (never over the screens),
-// mid-board seats, deep brown only in the footwell. The camera tracks aft with the wave and pushes in (k 1.25: heads
-// ~150 px at y ~770, the floor at ~1350) to a settled living frame: two rows of relaxed passengers in the amber glow,
-// the camera still creeping, the golden light drifting across the far windows.
+// THE MOTION (V2): f0, the whole United jet side-on over the golden deck (cream fuselage, cockpit, windows and doors,
+// wing and engine, the amber fin with United's globe), its near wall cut away over rows 0-8, the Starlink radome on its
+// crown and a Starlink satellite near the top of the frame with the clip's link look coming down to the radome (a soft
+// cream cone, narrow above and radome-wide where it lands, a bright thin core, small cream data packets travelling
+// down it, a soft cream pool on the crown). One fast smooth push (f0-24) into the cutaway's first rows; the sky's
+// horizon settles low with the zoom (y ~1720: under the belly only golden haze and a far fogged deck). The signal runs
+// aft inside the crown's cut face as a cream thread (from f12, one constant speed, packets flowing along it the whole
+// cut); where its head passes a row, a thin cream drop runs down to that passenger's phone or laptop, which lights on
+// contact with a soft cream light on cheek and hands (rows 0-2 at f24 / f29 / f39: "try us for Starlink").
+// "And they're going to stay": from the bulkhead an amber thread runs aft along the floor (United's own system, one
+// constant speed) and climbs each seat's shell to the screen on its back, which wakes amber with United's globe on
+// contact (row r at ~f51.5 + 4.5r); two frames later its passenger settles (leans back, smiles, eyes close for some,
+// headphones lifted on by the far hand) while EVERY DEVICE STAYS LIT (they enjoy the Wi-Fi AND the rest of the tech:
+// phones in a relaxed hold still glowing, laptops open). The cabin is lit: cream bins and ceiling, a warm board wall,
+// golden pools from the windows over seats and faces (never over the screens), mid-board seats, deep brown only in the
+// footwell. The camera tracks aft with the wave and pushes in tight (k 1.52: heads ~180 px at y ~800-890, the screens
+// ~300 px wide above y 1060) to a settled living frame: two passengers, phone and laptop lit, in the amber glow of
+// their screens, the camera still creeping, the golden light drifting across the far windows.
 // CONTACT / REACTION: drop tip reaches device = device starts lighting (cream(r)); amber thread reaches the screen =
 // screen starts waking (A(r)); first passenger reaction A(r) + 2 (cabinPlan.poseAt).
 // AMBER = UNITED'S OWN TECHNOLOGY (the seatback screens and the thread that wakes them); cream light = Starlink.
@@ -68,6 +68,7 @@ import {
   screenTilePath,
   WindowLight,
   SeatBody,
+  Satellite,
   layerScale,
   layerTf,
   openingPath,
@@ -140,12 +141,14 @@ export const AMBER_F = CAST.map(
 // CAMERA — the cabin layer's centre and zoom on the house damped follower (aircraftShared airTrack: x, y, f=k in log)
 // ---------------------------------------------------------------------------
 const PRE = 24;
-const START: SideCam = { mode: "side", x: -650, y: -860, z: 0, f: 1.3 };
+const START: SideCam = { mode: "side", x: 1450, y: -1450, z: 0, f: 0.074 };
 const GLIDES: AirGlide[] = [
-  { f0: -6, f1: 40, to: { x: 290, f: 1.1 }, warp: 1.35 },
-  // the crane down runs ahead of the pan: the first rows' faces are above the caption bands before their devices light
-  { f0: -2, f1: 26, to: { y: -352 }, warp: 1.15 },
-  { f0: 34, f1: 102, to: { x: 1822, y: -314, f: 1.25 } },
+  // the wide (the whole jet, the satellite above) -> one fast smooth push into the cutaway's first rows
+  { f0: -3, f1: 24, to: { x: 230, y: -345, f: 1.15 } },
+  // a drift aft over rows 0-2 while their devices light
+  { f0: 24, f1: 48, to: { x: 330 } },
+  // track aft with the amber wave and push in tight on rows 3-4 for the settle
+  { f0: 44, f1: 100, to: { x: 1290, y: -392, f: 1.53 } },
 ];
 const TRACK = airTrack(
   START,
@@ -162,7 +165,11 @@ export const camAt = (f: number): LayerCam => {
 const SKY_CAM: SideCam = { mode: "side", x: 0, y: CRUISE - 7, z: 0, f: 1500, horizon: 1720 };
 /** the crane down tilts the view a little: at the crown the horizon sits low (the radome against the deeper dusk),
  *  then rises to its rest as the camera comes down into the rows (derived from the cabin camera's height) */
-const skyCamAt = (S: number): SideCam => ({ ...SKY_CAM, horizon: 1720 + Math.max(0, -camAt(S).y - 314) * 0.5 });
+const skyCamAt = (S: number): SideCam => {
+  // the wide shows the jet over the deck (horizon ~1300); pushing in, the horizon settles low (~1720)
+  const u = Math.max(0, Math.min(1, Math.log(camAt(S).k / 0.074) / Math.log(1 / 0.074)));
+  return { ...SKY_CAM, horizon: 1300 + 420 * u };
+};
 
 // ---------------------------------------------------------------------------
 // THE CABIN (screen px overlay; pure: AirStage mounts it twice)
@@ -188,7 +195,7 @@ const Cabin: React.FC<{ S: number }> = ({ S }) => {
     LAYER.hull,
     LAYER.mid,
   )[1];
-  const linkTop = cam.y - 960 / sHull - 80;
+  const linkTop = CABIN.satY + 72 * 1.6;
   const poses = CAST.map((_, r) => poseAt(r, S, CREAM_F[r], AMBER_F[r]));
   const screenOn = CAST.map((_, r) => smooth((S - AMBER_F[r]) / 6));
   // the amber floor thread and the risers it has reached
@@ -347,7 +354,8 @@ const Cabin: React.FC<{ S: number }> = ({ S }) => {
       </g>
       {/* the hull, the radome, the link, the signal in the crown */}
       <g transform={layerTf(cam, LAYER.hull)}>
-        <Hull />
+        <Hull k={sHull} />
+        <Satellite />
         <CrownStrand head={head} S={S} />
         <LinkBeam S={S} top={linkTop} />
         <Radome glow={0.45} />

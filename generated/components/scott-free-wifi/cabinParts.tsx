@@ -253,6 +253,8 @@ export const ScreenTile: React.FC<{ x: number; on: number; k: number }> = ({
 // ===================================================================================================================
 // THE CABIN WORLD — layers at depth (a paper theatre under one pinhole: nearer layers slide faster on a pan)
 // ===================================================================================================================
+/** the row pitch (cabin px between seat backs); row r's seat back stands at r * ROW_PITCH */
+export const ROW_PITCH = 390;
 export const CABIN = {
   /** the crown: its top (the skin), the skin's underside, the cut face's lower edge (the cabin's ceiling line) */
   crownTop: -830,
@@ -261,17 +263,25 @@ export const CABIN = {
   /** the floor's cut face and the belly below it */
   floorT: -6,
   floorB: 40,
-  bellyLine: 74,
-  bellyB: 138,
-  /** the cutaway's forward edge (hull layer) and its corner radius */
-  xOpen: -490,
+  bellyLine: 110,
+  bellyB: 240,
+  /** the cutaway: forward edge, aft edge (hull layer), corner radius; rows 0..8 sit inside it */
+  xOpen: -450,
+  xOpenEnd: 8 * ROW_PITCH + 300,
   openR: 56,
+  /** the jet: nose tip, tail cone tip (hull layer, nose LEFT) */
+  xNose: -4400,
+  xTail: 7300,
+  /** the near wing's root (x) */
+  xWing: 600,
   /** the Starlink radome on the crown: centre x, length, height */
   XR: -640,
   radomeLen: 560,
   radomeH: 60,
+  /** the satellite the link comes from (hull layer, drawn high over the crown: an honest cheat, as in wifiSky) */
+  satY: -830 - 7400,
   /** the bulkhead (where the seat ahead of row 0 would stand); the galley is forward of it */
-  XB: -430,
+  XB: -ROW_PITCH,
   xMin: -4000,
   xMax: 8000,
   /** far-wall windows: centre height, size */
@@ -287,8 +297,7 @@ export const LAYER = {
   far: 260,
   D: 5200,
 } as const;
-export const layerScale = (k: number, Z: number) =>
-  (k * LAYER.D) / (LAYER.D + Z);
+export const layerScale = (k: number, Z: number) => (k * LAYER.D) / (LAYER.D + Z);
 export type LayerCam = { x: number; y: number; k: number };
 /** the SVG transform of a layer at depth Z under the camera (its world px -> screen px) */
 export const layerTf = (c: LayerCam, Z: number) => {
@@ -302,197 +311,211 @@ export const reLayer = (c: LayerCam, p: P2, Za: number, Zb: number): P2 => {
 };
 
 const HULL_COL = {
-  skin: "#F2E9DA",
-  skinFoot: "#E3D6C1",
   belly: "#8E8B83",
   bellyFoot: "#7D7A73",
   cut: "#A08066",
   cutDeep: "#8A6B53",
   cutEdge: "#D9C6AA",
   window: "#4A3629",
+  wing: "#E4D8C3",
+  wingFoot: "#B9A78C",
+  nacelle: "#E8DECB",
+  nacelleFoot: "#C2B39A",
 } as const;
 
-const roundedOpen = (
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  r: number,
-) =>
-  `M${f3(x1)} ${f3(y0)}L${f3(x0 + r)} ${f3(y0)}Q${f3(x0)} ${f3(y0)} ${f3(x0)} ${f3(y0 + r)}L${f3(x0)} ${f3(y1 - r)}Q${f3(x0)} ${f3(y1)} ${f3(x0 + r)} ${f3(y1)}L${f3(x1)} ${f3(y1)}Z`;
+const roundRect = (x0: number, y0: number, x1: number, y1: number, r: number) =>
+  `M${f3(x0 + r)} ${f3(y0)}L${f3(x1 - r)} ${f3(y0)}Q${f3(x1)} ${f3(y0)} ${f3(x1)} ${f3(y0 + r)}L${f3(x1)} ${f3(y1 - r)}Q${f3(x1)} ${f3(y1)} ${f3(x1 - r)} ${f3(y1)}` +
+  `L${f3(x0 + r)} ${f3(y1)}Q${f3(x0)} ${f3(y1)} ${f3(x0)} ${f3(y1 - r)}L${f3(x0)} ${f3(y0 + r)}Q${f3(x0)} ${f3(y0)} ${f3(x0 + r)} ${f3(y0)}Z`;
 
 /** the cutaway's opening (hull layer), grown by `pad` under the cut face: the interior layers are clipped to it */
 export const openingPath = (pad = 12) =>
-  roundedOpen(
-    CABIN.xOpen - pad,
-    CABIN.crownB - pad,
-    CABIN.xMax + 100,
-    CABIN.floorT + pad,
-    CABIN.openR + pad,
-  );
+  roundRect(CABIN.xOpen - pad, CABIN.crownB - pad, CABIN.xOpenEnd + pad, CABIN.floorT + pad, CABIN.openR + pad);
 
-/** THE HULL (hull layer): the fuselage seen side-on, its near wall cut away from the crown to the floor aft of
- *  xOpen; the cut face shows as a board band round the opening; the crown's cream skin on top, United's warm-slate
- *  belly below, a row of windows on the intact skin forward of the cut. */
-export const Hull: React.FC = () => {
+/** the fuselage outline (hull layer): a rounded nose on the left, the tail cone sweeping up on the right */
+const fuselageD = () => {
+  const C = CABIN;
+  const N = C.xNose;
+  const T = C.xTail;
+  return (
+    `M${N + 1000} ${C.crownTop}L${T - 1900} ${C.crownTop}C${T - 1100} ${C.crownTop} ${T - 300} -720 ${T} -650L${T} -560` +
+    `C${T - 500} -470 ${T - 1800} ${C.bellyB} ${T - 3200} ${C.bellyB}L${N + 1000} ${C.bellyB}` +
+    `C${N + 300} ${C.bellyB} ${N} 20 ${N} -250C${N} -560 ${N + 380} ${C.crownTop} ${N + 1000} ${C.crownTop}Z`
+  );
+};
+/** the amber fin (United): root along the crown at the tail, swept back */
+const finD = () => {
+  const T = CABIN.xTail;
+  const top = CABIN.crownTop - 2150;
+  return `M${T - 3000} ${CABIN.crownTop + 2}L${T - 1350} ${top}L${T - 520} ${top}L${T - 200} -690L${T - 900} ${CABIN.crownTop + 2}Z`;
+};
+const UNITED_MARK = MARKS.united;
+
+/** THE JET (hull layer): United's airliner seen side-on, nose LEFT: cream fuselage, warm-slate belly, windows and
+ *  doors, the cockpit glazing, the amber fin with United's globe (the tail crop, as on the clip's fins), the near wing
+ *  and its engine, the tailplane; its near wall cut away from the crown to the floor over rows 0-8. The cut face shows
+ *  as a board band all round the opening. `k` = the hull layer's screen scale (for the fin's bloom). */
+export const Hull: React.FC<{ k?: number }> = ({ k = 1 }) => {
   const uid = uidOf(useId());
   const C = CABIN;
   const T = 40; // the cut face's width
-  const outer = `M${C.xMin} ${C.crownTop}L${C.xMax} ${C.crownTop}L${C.xMax} ${C.bellyB}L${C.xMin} ${C.bellyB}Z`;
-  const hole = roundedOpen(C.xOpen, C.crownB, C.xMax + 100, C.floorT, C.openR);
-  const cutOuter = roundedOpen(
-    C.xOpen - T,
-    C.skinB,
-    C.xMax + 100,
-    C.floorB,
-    C.openR + T,
-  );
-  const DOOR = { x: C.xOpen - 470, w: 124, y0: -600, y1: -24 };
+  const fus = fuselageD();
+  const hole = roundRect(C.xOpen, C.crownB, C.xOpenEnd, C.floorT, C.openR);
+  const cutOuter = roundRect(C.xOpen - T, C.skinB, C.xOpenEnd + T, C.floorB, C.openR + T);
+  const cutMid = roundRect(C.xOpen - T * 0.45, C.skinB + 12, C.xOpenEnd + T * 0.45, C.floorB - 12, C.openR + T * 0.45);
+  const DOORS = [C.xNose + 1350, C.xOpenEnd + 700, C.xTail - 3500];
+  const DW = 124;
   const wins: number[] = [];
-  for (let x = C.xOpen - 110; x > C.xMin; x -= 150)
-    if (Math.abs(x - DOOR.x) > DOOR.w / 2 + 40) wins.push(x);
+  for (let x = C.xNose + 1150; x < C.xTail - 3300; x += 150) {
+    if (x > C.xOpen - 90 && x < C.xOpenEnd + 90) continue;
+    if (DOORS.some((d) => Math.abs(x - d) < DW / 2 + 40)) continue;
+    wins.push(x);
+  }
+  // the fin and its globe: the tail crop square, its lower-right corner on the fin's root trailing edge
+  const finTop = C.crownTop - 2150;
+  const finH = -690 - finTop;
+  const side = finH * 1.18;
+  const gx1 = C.xTail - 200;
+  const gy1 = -690;
+  const toU = (y: number) => ((y - (gy1 - side)) * 24) / side;
+  const W0 = C.xWing;
+  const nac = { x0: W0 + 60, x1: W0 + 1420, cy: 470, h: 400 };
+  const bloom = [
+    { blur: 7, a: 0.36 },
+    { blur: 24, a: 0.2 },
+    { blur: 60, a: 0.06 },
+  ]
+    .map((l) => `drop-shadow(0 0 ${f3(l.blur / k)}px rgba(255,170,30,${l.a}))`)
+    .join(" ");
   return (
     <g>
       <defs>
         {/* the tube under the key light: a bright band just under the crown, darkening toward the belly */}
-        <linearGradient
-          id={`${uid}s`}
-          gradientUnits="userSpaceOnUse"
-          x1="0"
-          y1={C.crownTop}
-          x2="0"
-          y2={C.bellyLine}
-        >
+        <linearGradient id={`${uid}s`} gradientUnits="userSpaceOnUse" x1="0" y1={C.crownTop} x2="0" y2={C.bellyLine}>
           <stop offset="0" stopColor="#EFE5D3" />
           <stop offset="0.1" stopColor="#F8F2E7" />
           <stop offset="0.55" stopColor="#EADFCB" />
           <stop offset="1" stopColor="#D2C3AA" />
         </linearGradient>
-        <linearGradient
-          id={`${uid}b`}
-          gradientUnits="userSpaceOnUse"
-          x1="0"
-          y1={C.bellyLine}
-          x2="0"
-          y2={C.bellyB}
-        >
+        <linearGradient id={`${uid}b`} gradientUnits="userSpaceOnUse" x1="0" y1={C.bellyLine} x2="0" y2={C.bellyB}>
           <stop offset="0" stopColor={HULL_COL.belly} />
           <stop offset="1" stopColor={HULL_COL.bellyFoot} />
         </linearGradient>
+        <linearGradient id={`${uid}a`} gradientUnits="userSpaceOnUse" x1="0" y1={finTop} x2="0" y2={C.crownTop}>
+          <stop offset="0" stopColor={COLOR.amberTop} />
+          <stop offset="1" stopColor={COLOR.amberFoot} />
+        </linearGradient>
+        <linearGradient id={`${uid}g`} gradientUnits="userSpaceOnUse" x1="0" y1={f3(toU(finTop))} x2="0" y2={f3(toU(C.crownTop))}>
+          <stop offset="0" stopColor={COLOR.amberTop} />
+          <stop offset="1" stopColor={COLOR.amberFoot} />
+        </linearGradient>
+        <linearGradient id={`${uid}w`} gradientUnits="userSpaceOnUse" x1="0" y1="-40" x2="0" y2="250">
+          <stop offset="0" stopColor={HULL_COL.wing} />
+          <stop offset="1" stopColor={HULL_COL.wingFoot} />
+        </linearGradient>
+        <linearGradient id={`${uid}n`} gradientUnits="userSpaceOnUse" x1="0" y1={nac.cy - nac.h / 2} x2="0" y2={nac.cy + nac.h / 2}>
+          <stop offset="0" stopColor={HULL_COL.nacelle} />
+          <stop offset="1" stopColor={HULL_COL.nacelleFoot} />
+        </linearGradient>
         <clipPath id={`${uid}h`}>
-          <path d={outer + hole} clipRule="evenodd" />
+          <path d={fus + hole} clipRule="evenodd" />
+        </clipPath>
+        <clipPath id={`${uid}f`}>
+          <path d={finD()} />
         </clipPath>
       </defs>
-      <path d={outer + hole} fillRule="evenodd" fill={`url(#${uid}s)`} />
+      {/* the fin, behind the fuselage's crown */}
+      <g style={{ filter: bloom }}>
+        <path d={finD()} fill={`url(#${uid}a)`} />
+        <g clipPath={`url(#${uid}f)`}>
+          <g transform={`translate(${f3(gx1 - side)} ${f3(gy1 - side)}) scale(${f3(side / 24)})`}>
+            <rect x={0.02} y={0.25} width={23.6} height={23.73} fill={COLOR.inkDark} />
+            {UNITED_MARK.paths.map((pp, i) => (
+              <path key={i} d={pp.d} transform={`matrix(${pp.m.join(" ")})`} fill={`url(#${uid}g)`} />
+            ))}
+          </g>
+        </g>
+        <path d={`M${C.xTail - 3000} ${C.crownTop}L${C.xTail - 1350} ${finTop}L${C.xTail - 520} ${finTop}`} stroke={COLOR.amberHot} strokeWidth={14} fill="none" strokeLinejoin="round" />
+      </g>
+      <path d={fus + hole} fillRule="evenodd" fill={`url(#${uid}s)`} />
       <g clipPath={`url(#${uid}h)`}>
-        <rect
-          x={C.xMin}
-          y={C.bellyLine}
-          width={C.xMax - C.xMin}
-          height={C.bellyB - C.bellyLine + 10}
-          fill={`url(#${uid}b)`}
-        />
+        <rect x={C.xMin - 2000} y={C.bellyLine} width={C.xMax - C.xMin + 4000} height={C.bellyB - C.bellyLine + 400} fill={`url(#${uid}b)`} />
         {/* the cut face round the opening */}
         <path d={cutOuter + hole} fillRule="evenodd" fill={HULL_COL.cut} />
-        <path
-          d={
-            roundedOpen(
-              C.xOpen - T * 0.45,
-              C.skinB + 12,
-              C.xMax + 100,
-              C.floorB - 12,
-              C.openR + T * 0.45,
-            ) + hole
-          }
-          fillRule="evenodd"
-          fill={HULL_COL.cutDeep}
-        />
-        {/* the crown's lit top edge and the skin line over the cut */}
-        <rect
-          x={C.xMin}
-          y={C.crownTop}
-          width={C.xMax - C.xMin}
-          height={3}
-          fill="#FFFAF1"
-        />
-        <rect
-          x={C.xOpen - T}
-          y={C.skinB - 1}
-          width={C.xMax - C.xOpen + T}
-          height={2.5}
-          fill={HULL_COL.cutEdge}
-        />
-        {/* the windows on the intact skin, and the forward door */}
+        <path d={cutMid + hole} fillRule="evenodd" fill={HULL_COL.cutDeep} />
+        {/* the crown's lit top edge */}
+        <rect x={C.xMin - 2000} y={C.crownTop} width={C.xMax - C.xMin + 4000} height={3} fill="#FFFAF1" />
+        {/* the windows on the intact skin, the doors, the cockpit glazing */}
         {wins.map((x) => (
           <g key={x}>
-            <rect
-              x={x - 23}
-              y={CABIN.winY - 36}
-              width={46}
-              height={72}
-              rx={21}
-              fill={HULL_COL.window}
-            />
-            <rect
-              x={x - 14}
-              y={CABIN.winY - 27}
-              width={8}
-              height={26}
-              rx={4}
-              fill="#7A6455"
-            />
+            <rect x={x - 23} y={CABIN.winY - 36} width={46} height={72} rx={21} fill={HULL_COL.window} />
+            <rect x={x - 14} y={CABIN.winY - 27} width={8} height={26} rx={4} fill="#7A6455" />
           </g>
         ))}
-        {/* skin panel seams: a lap joint over the window belt and faint frames */}
-        <rect
-          x={C.xMin}
-          y={CABIN.winY - 78}
-          width={C.xOpen - C.xMin}
-          height={1.6}
-          fill="#DCCFB8"
-        />
-        <rect
-          x={C.xMin}
-          y={CABIN.winY + 70}
-          width={C.xOpen - C.xMin}
-          height={1.6}
-          fill="#DCCFB8"
-        />
-        <rect
-          x={DOOR.x - DOOR.w / 2}
-          y={DOOR.y0}
-          width={DOOR.w}
-          height={DOOR.y1 - DOOR.y0}
-          rx={26}
-          fill="none"
-          stroke="#C9B89D"
-          strokeWidth={3}
-        />
-        <rect
-          x={DOOR.x - 20}
-          y={CABIN.winY - 30}
-          width={40}
-          height={60}
-          rx={18}
+        {DOORS.map((d) => (
+          <g key={`d${d}`}>
+            <rect x={d - DW / 2} y={-600} width={DW} height={576} rx={26} fill="none" stroke="#C9B89D" strokeWidth={3} />
+            <rect x={d - 20} y={CABIN.winY - 30} width={40} height={60} rx={18} fill={HULL_COL.window} />
+          </g>
+        ))}
+        <path
+          d={`M${C.xNose + 360} -470L${C.xNose + 600} -520L${C.xNose + 820} -520L${C.xNose + 830} -440L${C.xNose + 330} -420Z`}
           fill={HULL_COL.window}
         />
         {/* the belly line: a thin warm rule where the cream meets United's slate */}
-        <rect
-          x={C.xMin}
-          y={C.bellyLine - 3}
-          width={C.xMax - C.xMin}
-          height={3}
-          fill="#BFAE93"
-        />
+        <rect x={C.xMin - 2000} y={C.bellyLine - 3} width={C.xMax - C.xMin + 4000} height={3} fill="#BFAE93" />
       </g>
       {/* the floor's lit edge where the cabin floor meets the cut */}
-      <rect
-        x={C.xOpen + C.openR}
-        y={C.floorT}
-        width={C.xMax - C.xOpen}
-        height={3}
-        fill={HULL_COL.cutEdge}
+      <rect x={C.xOpen + C.openR} y={C.floorT} width={C.xOpenEnd - C.xOpen - 2 * C.openR} height={3} fill={HULL_COL.cutEdge} />
+      {/* the tailplane (near side) */}
+      <path
+        d={`M${C.xTail - 2350} -470L${C.xTail - 700} -800L${C.xTail - 420} -790L${C.xTail - 1500} -430Z`}
+        fill={`url(#${uid}w)`}
       />
+      {/* the near wing: a slim swept sliver below the floor, the raked tip turning up; its engine hung under it */}
+      <path
+        d={`M${W0} 175L${W0 + 3700} 30C${W0 + 3800} 26 ${W0 + 3870} 0 ${W0 + 3900} -60L${W0 + 3930} -50C${W0 + 3900} 30 ${W0 + 3850} 60 ${W0 + 3760} 66L${W0 + 1700} 240L${W0} 262Z`}
+        fill={`url(#${uid}w)`}
+      />
+      <path d={`M${W0 + 520} 200L${W0 + 980} 190L${W0 + 1060} ${nac.cy - nac.h / 2 + 20}L${W0 + 440} ${nac.cy - nac.h / 2 + 20}Z`} fill={HULL_COL.wingFoot} />
+      <path
+        d={`M${nac.x0 + 160} ${nac.cy - nac.h / 2}L${nac.x1 - 260} ${nac.cy - nac.h / 2 + 30}C${nac.x1 - 80} ${nac.cy - nac.h / 2 + 50} ${nac.x1} ${nac.cy - 40} ${nac.x1} ${nac.cy}` +
+          `C${nac.x1} ${nac.cy + 40} ${nac.x1 - 80} ${nac.cy + nac.h / 2 - 50} ${nac.x1 - 260} ${nac.cy + nac.h / 2 - 30}L${nac.x0 + 160} ${nac.cy + nac.h / 2}` +
+          `C${nac.x0 + 40} ${nac.cy + nac.h / 2} ${nac.x0} ${nac.cy + 100} ${nac.x0} ${nac.cy}C${nac.x0} ${nac.cy - 100} ${nac.x0 + 40} ${nac.cy - nac.h / 2} ${nac.x0 + 160} ${nac.cy - nac.h / 2}Z`}
+        fill={`url(#${uid}n)`}
+      />
+      <ellipse cx={nac.x0 + 40} cy={nac.cy} rx={50} ry={nac.h / 2 - 22} fill="#8C7A66" />
+      <path d={`M${nac.x0 + 160} ${nac.cy - nac.h / 2 + 8}L${nac.x1 - 260} ${nac.cy - nac.h / 2 + 36}`} stroke="#FBF6EC" strokeWidth={8} strokeLinecap="round" />
+    </g>
+  );
+};
+
+/** THE SATELLITE (hull layer, high over the crown): a Starlink V2 Mini side-on in card style — a flat cream bus with
+ *  its phased-array tiles underneath, two long solar wings of warm dark-brown cells in a cream frame */
+export const Satellite: React.FC<{ x?: number; y?: number }> = ({ x = CABIN.XR + 20, y = CABIN.satY }) => {
+  // the solar wings turned to face the sun (and us): two long panels of warm dark-brown cells in a cream frame
+  const wing = (dir: -1 | 1) => {
+    const x0 = dir < 0 ? x - 190 - 1150 : x + 190;
+    const H = 380;
+    const cells: React.ReactNode[] = [];
+    for (let i = 1; i < 8; i++) cells.push(<rect key={`v${i}`} x={x0 + (i * 1150) / 8 - 3} y={y - H / 2} width={6} height={H} fill="#6A4A32" />);
+    for (let j = 1; j < 3; j++) cells.push(<rect key={`h${j}`} x={x0} y={y - H / 2 + (j * H) / 3 - 3} width={1150} height={6} fill="#6A4A32" />);
+    return (
+      <g key={dir}>
+        <rect x={dir < 0 ? x - 190 : x + 130} y={y - 12} width={60} height={24} fill="#CDBA9C" />
+        <rect x={x0 - 12} y={y - H / 2 - 12} width={1174} height={H + 24} rx={8} fill="#E8DCC6" />
+        <rect x={x0} y={y - H / 2} width={1150} height={H} fill="#3F2819" />
+        {cells}
+        <rect x={x0} y={y - H / 2} width={1150} height={10} fill="#8A6A4E" />
+      </g>
+    );
+  };
+  return (
+    <g transform={`translate(${f3(x)} ${f3(y)}) scale(1.6) translate(${f3(-x)} ${f3(-y)})`}>
+      {wing(-1)}
+      {wing(1)}
+      <rect x={x - 130} y={y - 60} width={260} height={110} rx={10} fill={COLOR.cream} />
+      <rect x={x - 130} y={y - 60} width={260} height={8} rx={4} fill="#FFFFFF" />
+      <rect x={x - 110} y={y + 50} width={220} height={22} rx={4} fill="#B6A386" />
     </g>
   );
 };
@@ -788,8 +811,8 @@ export const FarWall: React.FC<{ S: number; x0: number; x1: number }> = ({
   const uid = uidOf(useId());
   const C = CABIN;
   const wins: number[] = [];
-  const first = Math.ceil((x0 - 300) / 430);
-  for (let i = first; i * 430 + 170 < x1 + 300; i++) wins.push(i * 430 + 170);
+  const first = Math.ceil((x0 - 300) / ROW_PITCH);
+  for (let i = first; i * ROW_PITCH + 170 < x1 + 300; i++) wins.push(i * ROW_PITCH + 170);
   const drift = S * 1.1;
   return (
     <g>
@@ -939,9 +962,9 @@ export const FarWall: React.FC<{ S: number; x0: number; x1: number }> = ({
 /** THE OVERHEAD BINS (bins layer): a row of bin doors above the seats, the reading-light strip under them */
 export const Bins: React.FC<{ x0: number; x1: number }> = ({ x0, x1 }) => {
   const doors: number[] = [];
-  const first = Math.max(0, Math.floor((x0 - CABIN.XB) / 430) - 1);
-  for (let i = first; CABIN.XB + 60 + i * 430 < x1 + 500; i++)
-    doors.push(CABIN.XB + 60 + i * 430);
+  const first = Math.max(0, Math.floor((x0 - CABIN.XB) / ROW_PITCH) - 1);
+  for (let i = first; CABIN.XB + 60 + i * ROW_PITCH < x1 + 500; i++)
+    doors.push(CABIN.XB + 60 + i * ROW_PITCH);
   return (
     <g>
       <rect
@@ -956,7 +979,7 @@ export const Bins: React.FC<{ x0: number; x1: number }> = ({ x0, x1 }) => {
           <rect
             x={x + 6}
             y={-768}
-            width={418}
+            width={ROW_PITCH - 12}
             height={140}
             rx={14}
             fill="#F2E9DA"
@@ -964,13 +987,13 @@ export const Bins: React.FC<{ x0: number; x1: number }> = ({ x0, x1 }) => {
           <rect
             x={x + 6}
             y={-768}
-            width={418}
+            width={ROW_PITCH - 12}
             height={4}
             rx={2}
             fill="#FFFBF2"
           />
           <rect
-            x={x + 180}
+            x={x + ROW_PITCH / 2 - 35}
             y={-648}
             width={70}
             height={10}
@@ -988,26 +1011,21 @@ export const Bins: React.FC<{ x0: number; x1: number }> = ({ x0, x1 }) => {
         fill="#D9C7AB"
       />
       {doors.map((x) => (
-        <circle key={`l${x}`} cx={x + 240} cy={-601} r={5} fill="#FFF6E6" />
+        <circle key={`l${x}`} cx={x + ROW_PITCH / 2 + 30} cy={-601} r={5} fill="#FFF6E6" />
       ))}
     </g>
   );
 };
 
-/** THE BULKHEAD (mid layer): the partition ahead of row 0, seen edge-on; row 0's screen is mounted on its aft face */
+/** THE BULKHEAD (mid layer): a slim board partition ahead of row 0, seen edge-on (row 0's screen is mounted on its aft
+ *  face); in the cabin's board tone so it never reads as a piece of the cream outer skin */
 export const Bulkhead: React.FC = () => {
   const x = CABIN.XB;
   const rx = x + SEAT.rearX(-326) + 2;
   return (
     <g>
-      <rect
-        x={x + 12}
-        y={-820}
-        width={rx - x - 12}
-        height={826}
-        fill="#EADDC8"
-      />
-      <rect x={rx - 14} y={-820} width={14} height={826} fill="#CDB89A" />
+      <rect x={rx - 34} y={-820} width={34} height={826} fill="#A88A6B" />
+      <rect x={rx - 8} y={-820} width={8} height={826} fill="#8E7258" />
     </g>
   );
 };
@@ -1021,8 +1039,8 @@ export const WindowLight: React.FC<{ S: number; x0: number; x1: number }> = ({
 }) => {
   const uid = uidOf(useId());
   const wins: number[] = [];
-  const first = Math.ceil((x0 - 600) / 430);
-  for (let i = first; i * 430 + 170 < x1 + 600; i++) wins.push(i * 430 + 170);
+  const first = Math.ceil((x0 - 600) / ROW_PITCH);
+  for (let i = first; i * ROW_PITCH + 170 < x1 + 600; i++) wins.push(i * ROW_PITCH + 170);
   const drift = 18 * Math.sin(S * 0.035);
   return (
     <g style={{ mixBlendMode: "screen" }}>
