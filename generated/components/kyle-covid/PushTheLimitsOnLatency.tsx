@@ -30,9 +30,9 @@
 // CAUSE BEFORE EFFECT: each kindle follows its infector's breath specks (SPECK_LEAD 18 frames before tInf); each panel's
 // contact frame is the frame its lift reaches 0 (the near hand still on the rail; release from contact + 4).
 // Orange = THE VIRUS only (the clip's ORANGE RULE): the chest glows (the cast's v3 lung light; on the crowd sprites the
-// glow layer at glowA 0.87 plus a soft screen halo of its light round the chest, the same halo on the live figures, so an
-// infected person reads as a warm light in the chest at phone size and the un-lit ones stay clearly un-lit) and the
-// breath specks. Everything else in muted local colours; the barrier stripes are a muted brick red-brown (#8E5443).
+// glow layer at glowA 0.87 plus the light it throws, the clip's shared covidAura (revision 2: r 0.40 x standing height,
+// a 0.65 at full kindle, fogged with the person; the same aura on the live figures and the sick), so an infected person
+// reads as a person glowing in a warm light at phone size and the un-lit ones stay clearly un-lit) and the breath specks. Everything else in muted local colours; the barrier stripes are a muted brick red-brown (#8E5443).
 //
 // DEPTH: a real crane eye on a shift lens (verticals stay vertical, so the billboard cast stands upright), mapped onto a
 // londonDepth perspective per frame (pushLimitsWorld camOf): focal F 2000 px, the ring's centre = the world origin.
@@ -64,6 +64,7 @@ import {
   type P2,
   type Sprite,
 } from "./covidFolk";
+import { AuraGlow, auraFor, drawAura, type Aura } from "./covidAura";
 import {
   BENCH,
   DURATION as SLOT,
@@ -94,7 +95,8 @@ import {
 
 export const FPS = 30000 / 1001;
 export const DURATION = SLOT;
-export const schema = z.object({ glowA: z.number().default(0.87), halo: z.number().default(0.5), haloR: z.number().default(85), specks: z.number().default(1) });
+// aura / auraR: multipliers on covidAura's person values (1 = AURA: r 0.40 x standing height, a 0.65 at full kindle)
+export const schema = z.object({ glowA: z.number().default(0.87), aura: z.number().default(1), auraR: z.number().default(1), specks: z.number().default(1) });
 export const defaultProps = schema.parse({});
 
 const c01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -135,6 +137,14 @@ const CHEST: [number, number][] = PEOPLE.map((p) => {
   const q = p.walk ? POSES.walk(p.walk.dir, 0, 1) : crowdPose(p.kind, p.view, "infected-hi", Math.floor(p.seed / nv));
   const c = buildCovidFolk(p.kind, variant, q, {}).anchors.chest;
   return [c[0], c[1]];
+});
+/** each crowd person's covidAura (revision 2), in rig units at the feet (u = 1): the shared module's aura at infected 0
+ *  and 1 (it is linear in `infected`, so a kindle lerps between them); its centre is the chest anchor, as CHEST */
+const AURA_UNIT: [Aura, Aura][] = PEOPLE.map((p) => {
+  const nv = COVID_VARIANTS[p.kind];
+  const variant = ((p.seed % nv) + nv) % nv;
+  const q = p.walk ? POSES.walk(p.walk.dir, 0, 1) : crowdPose(p.kind, p.view, "infected-hi", Math.floor(p.seed / nv));
+  return [auraFor(p.kind, q, [0, 0], 1, 0, { variant }), auraFor(p.kind, q, [0, 0], 1, 1, { variant })];
 });
 const ALL_REQS: CovidSpriteReq[] = (() => {
   const m = new Map<string, CovidSpriteReq>();
@@ -227,7 +237,7 @@ const shadowSprite = () => {
 /** how far a chest has kindled at frame f (a short eased ramp: no pops) */
 export const kindleAt = (p: Person, f: number) => (p.tInf < -100 ? 1 : sst(0, 1, (f - p.tInf) / KINDLE));
 
-export type GlowLook = { glowA: number; halo: number; haloR: number; specks: number };
+export type GlowLook = { glowA: number; aura: number; auraR: number; specks: number };
 const drawPerson = (ctx: CanvasRenderingContext2D, p: Person, f: number, e: Eye, A: AirWorld, get: (k: string) => Sprite | undefined, look: GlowLook) => {
   if (p.live) return;
   const X = walkerX(p, f);
@@ -262,22 +272,14 @@ const drawPerson = (ctx: CanvasRenderingContext2D, p: Person, f: number, e: Eye,
   const kin = kindleAt(p, f);
   if (kin > 0.002 && is) {
     blitFogged(ctx, glowOf(wr.key, ws, is), is, q.x, q.y, h, fogCol, 0.5 * fogAmt, kin * look.glowA, rot, sy);
-    // the light the lungs throw: a soft warm halo round the chest (screen), so a crowd reads lit from inside
-    if (look.halo > 0) {
+    // the light the virus throws (covidAura, revision 2): a soft warm screen light on the chest, wrapping head,
+    // shoulders and torso, fogged with the person (colour halfway into the air, alpha by half the fog)
+    if (look.aura > 0) {
       const u = h / 312;
-      const cx = q.x + CHEST[p.i][0] * u;
-      const cy = q.y + CHEST[p.i][1] * u * sy;
-      const r = look.haloR * u;
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      const a = look.halo * kin * (1 - 0.5 * fogAmt);
-      g.addColorStop(0, `rgba(255,190,60,${a.toFixed(3)})`);
-      g.addColorStop(0.45, `rgba(255,170,20,${(a * 0.45).toFixed(3)})`);
-      g.addColorStop(1, "rgba(255,160,0,0)");
-      ctx.save();
-      ctx.globalCompositeOperation = "screen";
-      ctx.fillStyle = g;
-      ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
-      ctx.restore();
+      const [a0, a1] = AURA_UNIT[p.i];
+      const r = (a0.r + (a1.r - a0.r) * kin) * u * look.auraR;
+      const a = (a0.a + (a1.a - a0.a) * kin) * look.aura;
+      drawAura(ctx, [q.x + a1.c[0] * u, q.y + a1.c[1] * u * sy], r, a, { rgb: fogCol, amount: fogAmt });
     }
   }
   // the breath that passed it on: a few tiny orange specks drift from the infector's mouth to this chest just before
@@ -316,20 +318,6 @@ const drawSpecks = (ctx: CanvasRenderingContext2D, p: Person, f: number, e: Eye,
     ctx.fillRect(x - r * 2.8, y - r * 2.8, r * 5.6, r * 5.6);
   }
 };
-
-/** the light the lungs throw round a live figure's chest (as the crowd's: a soft warm screen-blended halo) */
-const ChestHalo: React.FC<{ c: P2; r: number; a: number; uid: string }> = ({ c, r, a, uid }) => (
-  <g style={{ mixBlendMode: "screen" }}>
-    <defs>
-      <radialGradient id={`${uid}g`}>
-        <stop offset="0" stopColor="#FFBE3C" stopOpacity={a} />
-        <stop offset="0.45" stopColor="#FFAA14" stopOpacity={a * 0.45} />
-        <stop offset="1" stopColor="#FFA000" stopOpacity={0} />
-      </radialGradient>
-    </defs>
-    <circle cx={c[0]} cy={c[1]} r={r} fill={`url(#${uid}g)`} />
-  </g>
-);
 
 // ===================================================================================================================
 // THE SET: the plaza floor, building fronts at the back, the bench, planters
@@ -538,7 +526,7 @@ export const livePose = (p: Person, f: number): CovidPose => {
   const walk = POSES.walk(w.dir, lwPhase(w, f), am);
   return lerpPose(chat, walk, Math.min(1, am / w.amount));
 };
-const liveNode = (A: AirWorld, p: Person, f: number, unitPx: number, halo: number, haloR: number) => {
+const liveNode = (A: AirWorld, p: Person, f: number, unitPx: number, look: GlowLook) => {
   const X = walkerX(p, f);
   const { at, scale } = A.P.at(X, p.Z);
   const pose = livePose(p, f);
@@ -548,7 +536,7 @@ const liveNode = (A: AirWorld, p: Person, f: number, unitPx: number, halo: numbe
     <g>
       <AirShadow A={A} X={X} Z={p.Z} w={62} d={30} uid={`lvS${p.i}`} amt={0.8} />
       <CovidFigure kind={p.kind} variant={variant} pose={pose} at={at} scale={scale} uid={`lv${p.i}`} frame={f} infected={kin} fog={A.folkFog(p.Z)} unitPx={unitPx} />
-      {kin > 0.01 ? <ChestHalo c={covidAnchors(p.kind, pose, at, scale, { variant }).chest} r={haloR * scale} a={0.9 * halo * kin} uid={`lvH${p.i}`} /> : null}
+      {kin > 0.01 && look.aura > 0 ? <AuraGlow aura={auraFor(p.kind, pose, at, scale, kin, { variant, rK: look.auraR, aK: look.aura })} uid={`lvH${p.i}`} fog={A.folkFog(p.Z)} /> : null}
     </g>
   );
 };
@@ -558,7 +546,8 @@ const liveNode = (A: AirWorld, p: Person, f: number, unitPx: number, halo: numbe
 // ===================================================================================================================
 type Item = { Z: number; kind: "crowd"; p: Person } | { Z: number; kind: "svg"; key: string; node: React.ReactNode };
 
-const PushTheLimitsOnLatency: React.FC<z.infer<typeof schema>> = ({ glowA, halo, haloR, specks }) => {
+const PushTheLimitsOnLatency: React.FC<z.infer<typeof schema>> = ({ glowA, aura, auraR, specks }) => {
+  const look: GlowLook = { glowA, aura, auraR, specks };
   const frame = useCurrentFrame();
   const get = useCovidSprites(ALL_REQS);
   const e = eyeAt(frame);
@@ -566,7 +555,7 @@ const PushTheLimitsOnLatency: React.FC<z.infer<typeof schema>> = ({ glowA, halo,
   const rest: Cam = camOf(eyeAt(0)).cam;
   const A = airWorldOf({ cam, rest, depth, frame, fogBy: "depth" });
   const items: Item[] = [];
-  for (const p of PEOPLE) items.push(p.live ? { Z: p.Z, kind: "svg", key: `lv${p.i}`, node: liveNode(A, p, frame, cam.k, halo, haloR) } : { Z: p.Z, kind: "crowd", p });
+  for (const p of PEOPLE) items.push(p.live ? { Z: p.Z, kind: "svg", key: `lv${p.i}`, node: liveNode(A, p, frame, cam.k, look) } : { Z: p.Z, kind: "crowd", p });
   items.push({ Z: BENCH.Z1, kind: "svg", key: "bench", node: <Bench A={A} /> });
   EXTRA_BENCHES.forEach((b, i) => items.push({ Z: b.Z1, kind: "svg", key: `xb${i}`, node: <Bench A={A} b={b} uid={`xb${i}`} /> }));
   SICK.forEach((s, i) => {
@@ -579,7 +568,7 @@ const PushTheLimitsOnLatency: React.FC<z.infer<typeof schema>> = ({ glowA, halo,
         <g>
           {s.seat ? null : <AirShadow A={A} X={s.X} Z={s.Z} w={62} d={30} uid={`skS${i}`} amt={0.8} />}
           <CovidFigure kind={s.kind} variant={s.variant} pose={sickPose(i, frame)} at={at} scale={scale} uid={`sk${i}`} frame={frame} sick={1} infected={0.8} fog={A.folkFog(s.Z)} unitPx={cam.k} />
-          <ChestHalo c={covidAnchors(s.kind, sickPose(i, frame), at, scale, { variant: s.variant }).chest} r={haloR * scale} a={0.8 * halo} uid={`skH${i}`} />
+          {aura > 0 ? <AuraGlow aura={auraFor(s.kind, sickPose(i, frame), at, scale, 0.8, { variant: s.variant, rK: auraR, aK: aura })} uid={`skH${i}`} fog={A.folkFog(s.Z)} /> : null}
         </g>
       ),
     });
@@ -596,7 +585,7 @@ const PushTheLimitsOnLatency: React.FC<z.infer<typeof schema>> = ({ glowA, halo,
       <FolkCanvas
         key={`c${layers.length}`}
         draw={(ctx) => {
-          for (const p of ps) drawPerson(ctx, p, frame, e, A, get, { glowA, halo, haloR, specks });
+          for (const p of ps) drawPerson(ctx, p, frame, e, A, get, look);
         }}
       />,
     );
