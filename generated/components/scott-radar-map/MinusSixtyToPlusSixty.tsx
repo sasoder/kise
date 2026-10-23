@@ -44,6 +44,7 @@ import {
   CAM_GLIDES,
   CAM_START,
   DOWN,
+  FOOTNOTE,
   GROUND,
   JET_AT,
   NUM,
@@ -132,6 +133,32 @@ const CastNumeral: React.FC<React.ComponentProps<typeof Numeral>> = (p) => (
   </>
 );
 
+/** The NPS footnote: screen-fixed, the stout entrance (24 px slide up, fade, blur) from FOOTNOTE.in. */
+const Footnote: React.FC<{ f: number }> = ({ f }) => {
+  const a = easeOut3((f - FOOTNOTE.in) / FOOTNOTE.enterF);
+  if (a <= 0.002) return null;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: FOOTNOTE.x0,
+        top: FOOTNOTE.top,
+        width: FOOTNOTE.x1 - FOOTNOTE.x0,
+        fontFamily: FONT_LABEL,
+        fontSize: FOOTNOTE.px,
+        lineHeight: `${FOOTNOTE.line}px`,
+        color: COLOR.inkCreamLo,
+        textAlign: "left",
+        opacity: a,
+        transform: `translateY(${(1 - a) * 24}px)`,
+        filter: a < 1 ? `blur(${6 * (1 - a)}px)` : undefined,
+      }}
+    >
+      {FOOTNOTE.text}
+    </div>
+  );
+};
+
 const MinusSixtyToPlusSixty: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
   const look = CAM.at(f);
@@ -180,6 +207,7 @@ const MinusSixtyToPlusSixty: React.FC<z.infer<typeof schema>> = () => {
           <PlacedPhone look={look} x={PHONE_L_X} foot={PHONE_FOOT} lift={0} variant="plain" S={f} id="pPlain" />
           {f >= PHONE_IN.f0 ? <PlacedPhone look={look} x={rx} foot={PHONE_FOOT} lift={rLift} variant="radar" S={f} id="pRadar" /> : null}
         </div>
+        <Footnote f={f} />
         </>
       }
     />

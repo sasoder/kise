@@ -379,7 +379,7 @@ export const Sign: React.FC<{ x: number; y: number; k: number; text: string; px:
 
 /**
  * ZeroTick — the quiet scale mark at the left margin: a short cream tick along the slab's lit edge and, on the soil
- * just below it, "0" (Söhne Dreiviertelfett) followed by "NPS" (Kräftig caps, +0.06 em) on one baseline. World
+ * just below it, "0" (Söhne Dreiviertelfett) followed by "NPS*" (Kräftig caps, +0.06 em; the asterisk points to the footnote) on one baseline. World
  * space at world sizes (the numerals' convention); the tick's thickness stays screen px. (x, top) = the tick's left
  * end on the ground line; `baseline` = the label's baseline (world px).
  */
@@ -401,7 +401,7 @@ export const ZeroTick: React.FC<{ x: number; top: number; len: number; k: number
       0
     </text>
     <text x={f3(x + zeroPx * 0.62 + gap)} y={f3(baseline)} fontFamily={labelFont} fontSize={f3(npsPx)} letterSpacing="0.06em" fill={COLOR.inkCream}>
-      NPS
+      NPS*
     </text>
   </g>
 );
