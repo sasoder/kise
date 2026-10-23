@@ -62,6 +62,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirShadow, AirStage, WorldSvg, mixHex, swayCam, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { BreathSpecks, CovidFigure, POSES, breathe, covidAnchors, type CovidPose, type Speck } from "./covidFolk";
+import { AURA, AuraGlow, auraFor, standingHeight } from "./covidAura";
 import { HazeCloud, breathRhythm, hazeAt, type Haze, type HazeEmitter, type HazeOpts } from "./covidHaze";
 import { cycleWorldOf, type CycleWorld } from "./severalDaysAir";
 import {
@@ -99,7 +100,8 @@ import { Alley, BackLamps, Bench, Bollards, CastShadows, FarCity, Ground, LampCo
 
 export { DURATION, FPS };
 /** haze: false draws the cut without the shared air (a check: the frames diff-blend against the revision without it) */
-export const schema = z.object({ haze: z.boolean().default(true) });
+/** aura: false draws revision 1 (h4) exactly: no aura, the cloud at strength 1 (a check: the frames diff-blend against it) */
+export const schema = z.object({ haze: z.boolean().default(true), aura: z.boolean().default(true) });
 export const defaultProps = schema.parse({});
 
 /** the covidFolk glow this cut was approved and delivered with (Round 3, "v3"); pinned so the committed source
@@ -194,6 +196,25 @@ const coughAt = (f: number) => bump(f, COUGH[0], COUGH[0] + 4, COUGH[1] - 4, COU
  *  street (what he breathes out stays where it was breathed out): only a thin share of short-lived puffs and motes,
  *  fading over ~30-40 frames behind him, so the street never fills with orange. */
 const HAZE_CARRIED: Partial<HazeOpts> = { lobeW: 5, haloW: 0.9, moteRate: 0.42 };
+/** USER REVISION 2 ("a slightly more pronounced aura", COMMON.md THE AURA): his cloud and trail a step stronger, by cut
+ *  3's ratio (covidHaze strength 1.42 over the street values below), and the light the virus throws (covidAura): round
+ *  him as cut 3 (the full aura behind him, AURA_BACK, a share over him, AURA_FRONT), round every infected passer-by as
+ *  cut 39 (the standard aura over the figure, kindling with their glow) */
+export const HAZE_STRENGTH = 1.42;
+export const AURA_FRONT = 0.35;
+export const AURA_BACK = { rK: 0.55 / 0.4, aK: 0.75 / 0.65 };
+/** the people behind him soften with the push's depth (rev 1), their light too: up to a quarter less at the shop row's
+ *  depth at the end (the end group still glows as a group of lit people; he stays the one the eye goes to) */
+const AURA_DEEP = 0.25;
+/** his back aura's size through the push: cut 3's AURA_BACK radius while he walks (~500 px on screen at k 2.9); as the
+ *  camera comes in it eases (with the push) to a fixed ~445 px on screen, so it keeps wrapping his head and shoulders
+ *  but no longer washes the background (the well man on the right, the shop front beyond the group) */
+const BACK_PX_END = 445;
+const backRK = (f: number, k: number) => {
+  const u = sst(0, 0.8, pushAt(f));
+  const perK = AURA.personR * standingHeight("carrier", 0) * k;
+  return lerp(AURA_BACK.rK, BACK_PX_END / perK, u);
+};
 /** the veil's strength by the camera: the walk is framed at ~2.9 px per unit (cut 3 lands at ~3.9), so the walk's
  *  veil is a little stronger than cut 3's to stay a warm tint at phone size; as the push comes in (4.4 px per unit) it
  *  eases back toward cut 3's values */
@@ -219,7 +240,15 @@ const breath = {
   pushAt: (f: number) => Math.max(0.3, talkAt(f), 0.8 * coughAt(f)),
 };
 type Avoid = { c: P2; r: number; layer?: "front" | "all" };
-export const hazeOf = (A: CycleWorld, f: number, avoid: Avoid[]): Haze => {
+/** at the end (seated, alone on the bench: nobody on his right) the cloud's front lobe and wide halo stay at the
+ *  revision-1 strength (their weights / strength), so the stronger cloud stays round him and the well man on his right
+ *  and the shop front are not warmed (director, u2b) */
+const sideAt = (f: number, strength: number) => {
+  const u = sst(0, 0.8, pushAt(f));
+  const k = lerp(1, 1 / strength, u);
+  return { lobeW: (HAZE_CARRIED.lobeW ?? 5) * k, haloW: (HAZE_CARRIED.haloW ?? 0.9) * k };
+};
+export const hazeOf = (A: CycleWorld, f: number, avoid: Avoid[], strength = HAZE_STRENGTH): Haze => {
   const hxNow = heroAtX(f);
   const carried: HazeEmitter = {
     ...breath,
@@ -234,7 +263,7 @@ export const hazeOf = (A: CycleWorld, f: number, avoid: Avoid[]): Haze => {
       return [c[0], c[1], 0];
     },
     seed: 21.3,
-    opts: { ...HAZE_CARRIED, ...veilAt(f) },
+    opts: { ...HAZE_CARRIED, ...veilAt(f), ...sideAt(f, strength), strength },
   };
   const trail: HazeEmitter = {
     ...breath,
@@ -249,7 +278,7 @@ export const hazeOf = (A: CycleWorld, f: number, avoid: Avoid[]): Haze => {
       return [c[0], c[1], 0];
     },
     seed: 7.9,
-    opts: { ...HAZE_TRAIL, cap: veilAt(f).cap },
+    opts: { ...HAZE_TRAIL, cap: veilAt(f).cap, strength },
   };
   return hazeAt([carried, trail], f, { avoid, below: A.cam.cy + (1050 - 960) / A.k });
 };
@@ -318,7 +347,7 @@ const cafeInside = (A: CycleWorld, frame: number): Inside => (s, o, i, lit) => {
 // THE CUT
 // ===================================================================================================================
 type Item = { Z: number; el: React.ReactNode };
-const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = ({ haze: withHaze = true }) => {
+const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = ({ haze: withHaze = true, aura: withAura = true }) => {
   const frame = useCurrentFrame();
   const cam = camOf(frame);
   const n = nightAt(frame);
@@ -352,6 +381,8 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = ({ haze: with
   /** the time-lapse shadows' casters (a figure's height from its head anchor) */
   const casters: Caster[] = [];
   const avoid: Avoid[] = [];
+  /** the light fades out above the caption bands (screen rows 960 -> 1070, as cut 3) */
+  const fadeB: [number, number] = [cam.cy + (960 - 960) / cam.k, cam.cy + (1070 - 960) / cam.k];
   /** at night an infected chest glows into the dark air round it (a soft orange halo at the chest) */
   const halo = (kind: Walker["kind"], variant: number, q: CovidPose, at: P2, scale: number, inf: number, uid: string) => {
     const a = n * inf;
@@ -390,6 +421,7 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = ({ haze: with
           <AirShadow A={A} X={X} Z={w.Z} w={58} d={28} uid={`${uid}s`} amt={0.8} />
           <CovidFigure kind={w.kind} variant={w.variant} pose={q} at={at} scale={scale} uid={uid} infected={inf} frame={frame} fog={figFog(X, w.Z)} unitPx={cam.k} hold={w.hold} glowStyle={GLOW} />
           {halo(w.kind, w.variant, q, at, scale, inf, uid)}
+          {withAura && inf > 0.01 ? <AuraGlow aura={auraFor(w.kind, q, at, scale, inf, { variant: w.variant, aK: 1 - AURA_DEEP * deep(w.Z) })} uid={`${uid}au`} fog={figFog(X, w.Z)} fadeBelow={fadeB} /> : null}
         </g>
       ),
     });
@@ -409,7 +441,7 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = ({ haze: with
   avoid.push({ c: heroA(frame).headC, r: 30, layer: "front" });
   items.push({ Z: 1, el: <BreathSpecks key="hb" specks={coughSpray(frame)} uid="hb" /> });
   if (withHaze) {
-    const haze = hazeOf(A, frame, avoid);
+    const haze = hazeOf(A, frame, avoid, withAura ? HAZE_STRENGTH : 1);
     const hf = figFog(hx, 0);
     items.push({ Z: 1.5, el: <HazeCloud key="hzb" haze={haze} layer="back" uid="hzb" fog={hf} /> });
     items.push({ Z: -1, el: <HazeCloud key="hzf" haze={haze} layer="front" uid="hzf" fog={hf} /> });
@@ -424,6 +456,13 @@ const SeveralDaysBeforeIllness: React.FC<z.infer<typeof schema>> = ({ haze: with
       </g>
     ),
   });
+  if (withAura) {
+    // his light: the full aura behind him (it lights the air round him), a share over him (the lungs keep their shape)
+    const hisAura = auraFor("carrier", hq, H.at, H.scale, 1, { rK: backRK(frame, cam.k) / AURA_BACK.rK });
+    const hisBack = auraFor("carrier", hq, H.at, H.scale, 1, { ...AURA_BACK, rK: backRK(frame, cam.k) });
+    items.push({ Z: 0.5, el: <AuraGlow key="aurhb" aura={hisBack} uid="aurhb" fog={figFog(hx, 0)} fadeBelow={fadeB} /> });
+    items.push({ Z: -0.5, el: <AuraGlow key="aurhf" aura={{ ...hisAura, a: hisAura.a * AURA_FRONT }} uid="aurhf" fog={figFog(hx, 0)} fadeBelow={fadeB} /> });
+  }
   items.sort((a, b) => b.Z - a.Z);
   const setDof = dofDef(Z_SHOP, "sd-setdof");
   const lampDof = dofDef(Z_BACK_LAMP, "sd-lampdof");
