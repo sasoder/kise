@@ -54,6 +54,14 @@
 // Orange = THE VIRUS only (the clip's ORANGE RULE): his lung glow and nothing else; the cast's and carriage's muted
 // local colours everywhere else (her puffer is the cast's muted red-brown).
 //
+// USER REVISION 2 ("to match with the previous graphic ... he can also have a similar more pronounced aura"): cut 3's
+// look round HIM only, from f0: the light the virus throws (covidAura: AURA_BACK behind him, AURA_FRONT 0.35 over him,
+// fading above the caption bands) and his breath cloud (covidHaze at HAZE_STRENGTH 1.42, anchored on his own feet so
+// it rides with him into the seat; the one soft cough adds a puff inside it). It never reaches anyone: its forward
+// reach is short (OFFICER_HAZE), her mote clear zone is wide, she has no glow and no aura, and the light behind him sits
+// just behind her depth, so she steps out of his air unlit (clear of the cloud by ~f44). Motion, camera, timing and
+// length are v7's: `aura: false` renders v7 frame for frame.
+//
 // DEPTH: the carriage's set and grammar (CARRIAGE_DEPTH dRef 700 at kRef 2, dolly 0.5, CARRIAGE_SCENE: fog by the
 // eye's distance, mood interior), cut 3's landing eye (-212) easing to -206; cut 3's HIDE_POLES / HIDE_STRAPS. The
 // Officer X -60 -> his seat X -182 at Z 330; the woman across at the right bench Z 452; the woman beside him at the
@@ -69,11 +77,14 @@ import { z } from "zod";
 import { AirShadow, AirStage, WorldSvg, airWorldOf, type AirWorld, type Cam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { CARRIAGE_SCENE, CarriageStage, carriageSway, seatNear, swayPose, type StageItem } from "./covidCarriage";
 import { CovidFigure, POSES, covidAnchors, covidGripTo, lerpPose, rigPose, seatFootX, sitBack, sitDown, type CovidFigureProps, type CovidKind, type CovidPose, type P2 } from "./covidFolk";
-import { CARRIER_FEET, GRIP3, HIDE_POLES, HIDE_STRAPS, LANDING, POLE, latentCamAt } from "./LatentLongEnough";
+import { AURA_BACK, AURA_FRONT, CARRIER_FEET, GRIP3, HAZE_STRENGTH, HIDE_POLES, HIDE_STRAPS, LANDING, POLE, latentCamAt } from "./LatentLongEnough";
+import { HazeCloud, breathRhythm, hazeAt, type HazeAvoid, type HazeEmitter } from "./covidHaze";
+import { AuraGlow, auraFor } from "./covidAura";
 
 export const FPS = 30000 / 1001;
 export const DURATION = 82;
-export const schema = z.object({});
+/** aura: false renders v7 exactly (the motion-unchanged proof of user revision 2) */
+export const schema = z.object({ aura: z.boolean().default(true) });
 export const defaultProps = schema.parse({});
 
 const c01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -413,6 +424,76 @@ export const sceneAt = (frame: number) => {
   return { cam, A, o, oAt, pose, oA };
 };
 
+// ===================================================================================================================
+// USER REVISION 2: THE AURA AND THE BREATH CLOUD (cut 3's look: covidAura with AURA_BACK behind him and AURA_FRONT over
+// him; covidHaze at HAZE_STRENGTH), round HIM only. From f0 (he is infected 0.62 -> 1); the cloud rides with him into
+// the seat (its anchor is his own feet, so the air he has breathed stays round him); the one soft cough adds a puff
+// inside it. It never reaches anyone: its forward reach (toward the aisle, where she goes) is kept short, so the woman
+// rises out of its thin edge and is clear of it by ~f50; no mote rides her (avoid), she never kindles (infected 0, no
+// aura), and the light behind him sits behind her in the painter's order (she stands in front of it, unlit).
+// ===================================================================================================================
+/** his mouth, head and breath direction at a frame, rig units from his own feet (memoised: the haze asks per puff) */
+const OFF_MEMO = new Map<number, { m: P2; c: P2; d: P2 }>();
+const officerMouth = (f: number) => {
+  let v = OFF_MEMO.get(f);
+  if (!v) {
+    const a = covidAnchors("officer", officerAt(f).pose, [0, 0], 1, { variant: OFFICER_V });
+    v = { m: a.mouth, c: a.headC, d: a.mouthDir };
+    OFF_MEMO.set(f, v);
+  }
+  return v;
+};
+/** how much he breathes out: with his glow (0.62 -> 1, so well under way at f0), his breath rhythm (quiet standing,
+ *  heavy and quicker once seated), and the one soft cough */
+export const officerShedAt = (f: number) => {
+  const inf = mix(0.62, 1, M.glow(f));
+  const s = c01((inf - 0.3) / 0.7);
+  const shed = 0.08 + 0.92 * s ** 0.5;
+  const seat = M.sink(f);
+  const e = mix(breathRhythm(f, 96, 0.4), breathRhythm(f, 40, 1.3), seat);
+  return Math.min(1, shed * e * (1 + 0.5 * jolt(f)));
+};
+/** how hard the breath pushes out: quiet, a little more on the cough */
+const officerPushAt = (f: number) => 0.3 + 0.3 * jolt(f);
+/** the cloud's look for this cut: cut 3's strength; its forward reach (the lobe in front of his face, the wide halo, the
+ *  motes' forward bound) kept short, since nobody stays in front of him: the aisle is where she steps away */
+export const OFFICER_HAZE = { strength: HAZE_STRENGTH, lobeW: 1.6, lobeD: [62, 104] as P2, lobeR: [56, 64] as P2, lobeY: [22, 34] as P2, lobeZ: [0, 16] as P2, haloD: 20, haloR: 150, haloW: 0.55, boundFwd: 105, moteLobe: 0.08 };
+/** the share of the light behind him: placed just behind her depth, so it lights the carriage air round them both but
+ *  never falls on her */
+const AURA_BACK_Z = 460;
+/** the mote clear zones round her and round the far passengers, x cut 3's radii */
+const NB_CLEAR = 2.4;
+const FAR_CLEAR = 2.4;
+export const airAt = (frame: number, S: ReturnType<typeof sceneAt>) => {
+  const { A, cam, o, oAt, pose } = S;
+  // the haze anchor: his own feet now (rig units = stage units); his mouth history is in his own body frame
+  const em: HazeEmitter = {
+    opts: OFFICER_HAZE,
+    project: (u) => ({ p: A.P.p(o.X + u[0], u[1], o.Z + u[2]), s: A.P.r(o.Z + u[2]) }),
+    mouthAt: (f) => officerMouth(f).m,
+    centreAt: (f) => officerMouth(f).c,
+    dirAt: (f) => officerMouth(f).d,
+    amountAt: officerShedAt,
+    pushAt: officerPushAt,
+    seed: 5.3,
+  };
+  const avoid: HazeAvoid[] = [{ c: S.oA.headC, r: 30 * oAt.scale, layer: "front" }];
+  for (const f of othersAt(frame)) {
+    const pa = A.P.at(f.X, f.Z);
+    const fa = covidAnchors(f.kind, f.pose, pa.at, pa.scale, { variant: f.v });
+    // her (and every passenger's) head, chest and hips: no mote on them. Their clear zones are wider than cut 3's (the
+    // zone's soft edge is 0.6 r wide): she moves fast as she gets up and steps away, and the cloud rides with him past
+    // the far passengers, so a mote she or they pass fades over several frames instead of blinking off or on; hers also
+    // keeps his cloud's motes well off her as she leaves it
+    const w = f.Z > 1000 ? FAR_CLEAR : f.uid === "nb" ? NB_CLEAR : 1;
+    avoid.push({ c: fa.headC, r: 46 * pa.scale * w, layer: "all" }, { c: fa.chest, r: 60 * pa.scale * w, layer: "all" }, { c: fa.hip, r: 55 * pa.scale * w, layer: "all" });
+  }
+  const haze = hazeAt([em], frame, { avoid, below: cam.cy + (1050 - 960) / cam.k });
+  const aura = auraFor("officer", pose, oAt.at, oAt.scale, o.infected, { variant: OFFICER_V });
+  const back = auraFor("officer", pose, oAt.at, oAt.scale, o.infected, { variant: OFFICER_V, ...AURA_BACK });
+  return { haze, aura: { ...aura, a: aura.a * AURA_FRONT }, back };
+};
+
 const figItem = (A: AirWorld, f: FigSpec, frame: number, camK: number): StageItem => {
   const { at, scale } = A.P.at(f.X, f.Z);
   const [sw, sd] = f.shadow ?? [58, 34];
@@ -428,12 +509,23 @@ const figItem = (A: AirWorld, f: FigSpec, frame: number, camK: number): StageIte
   };
 };
 
-const SickPrettyQuick: React.FC<z.infer<typeof schema>> = () => {
+const SickPrettyQuick: React.FC<z.infer<typeof schema>> = ({ aura: withAura = true }) => {
   const frame = useCurrentFrame();
   const S = sceneAt(frame);
   const { A, cam, o } = S;
   const figs: FigSpec[] = [...othersAt(frame), { kind: "officer", v: OFFICER_V, uid: "off", pose: S.pose, X: o.X, Z: o.Z, props: { infected: o.infected, sick: o.sick } }];
   const items = figs.map((f) => figItem(A, f, frame, cam.k));
+  if (withAura) {
+    const L = airAt(frame, S);
+    const hz = o.Z;
+    const fogZ = A.folkFog(hz);
+    // the light fades out between screen rows 960 and 1070 (the caption bands start at 1080), as in cut 3
+    const fb: [number, number] = [cam.cy + (960 - 960) / cam.k, cam.cy + (1070 - 960) / cam.k];
+    items.push({ Z: hz + 1, key: "hazeB", node: <HazeCloud haze={L.haze} layer="back" uid="hzb" fog={fogZ} /> });
+    items.push({ Z: hz - 1, key: "hazeF", node: <HazeCloud haze={L.haze} layer="front" uid="hzf" fog={fogZ} /> });
+    items.push({ Z: AURA_BACK_Z, key: "auraB", node: <AuraGlow aura={L.back} uid="aurb" fog={fogZ} fadeBelow={fb} /> });
+    items.push({ Z: hz - 0.5, key: "auraF", node: <AuraGlow aura={L.aura} uid="aurf" fog={fogZ} fadeBelow={fb} /> });
+  }
   return (
     <AbsoluteFill>
       <AirStage v={A.v} bloom={0.22} shafts={0}>
