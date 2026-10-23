@@ -15,7 +15,8 @@
 // DURATION: slot 24.983 -> 31.240 s = 6.257 s x 24000/1001 = 150 frames (f0..f149).
 //
 // THE MOTION: side view at the airfield. The apron slab's near cut edge is ZERO on an NPS scale (a cream tick and
-// "0 NPS" on the soil at the left margin); two glass columns of one width, one rung = 10 NPS on both. The camera opens
+// "0 NPS*" on the soil at the left margin; "*Net Promoter Score" on the same baseline just right of the −60 column, entering
+// on "NPS", f44-54); two glass columns of one width, one rung = 10 NPS on both. The camera opens
 // pushed in on the plain phone (one text bubble) standing at the left slot; the slot parts on "numbers" (f9-19) and
 // a drained umber column sinks into the earth cutaway (f20-43), the camera dipping with it to frame the whole column;
 // the column is the count: as it lands a cream "−60" enters whole under its foot (f43-53, blur-in + slide up). On "the normal way of sending it" the camera rises back past
@@ -44,7 +45,7 @@ import {
   CAM_GLIDES,
   CAM_START,
   DOWN,
-  FOOTNOTE,
+  NPS_NOTE,
   GROUND,
   JET_AT,
   NUM,
@@ -133,29 +134,24 @@ const CastNumeral: React.FC<React.ComponentProps<typeof Numeral>> = (p) => (
   </>
 );
 
-/** The NPS footnote: screen-fixed, the stout entrance (24 px slide up, fade, blur) from FOOTNOTE.in. */
-const Footnote: React.FC<{ f: number }> = ({ f }) => {
-  const a = easeOut3((f - FOOTNOTE.in) / FOOTNOTE.enterF);
+/** The NPS note in world space (on the soil under the slab edge): the stout entrance (24 screen px slide up, fade,
+ *  blur) from NPS_NOTE.in. */
+const NpsNote: React.FC<{ f: number; k: number }> = ({ f, k }) => {
+  const a = easeOut3((f - NPS_NOTE.in) / NPS_NOTE.enterF);
   if (a <= 0.002) return null;
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: FOOTNOTE.x0,
-        top: FOOTNOTE.top,
-        width: FOOTNOTE.x1 - FOOTNOTE.x0,
-        fontFamily: FONT_LABEL,
-        fontSize: FOOTNOTE.px,
-        lineHeight: `${FOOTNOTE.line}px`,
-        color: COLOR.inkCreamLo,
-        textAlign: "left",
-        opacity: a,
-        transform: `translateY(${(1 - a) * 24}px)`,
-        filter: a < 1 ? `blur(${6 * (1 - a)}px)` : undefined,
-      }}
+    <text
+      x={NPS_NOTE.x}
+      y={ZERO_TICK.baseline + ((1 - a) * 24) / k}
+      textAnchor="start"
+      fontFamily={FONT_LABEL}
+      fontSize={NPS_NOTE.px}
+      fill={COLOR.inkCreamLo}
+      opacity={a}
+      style={{ filter: a < 1 ? `blur(${(6 * (1 - a)) / k}px)` : undefined }}
     >
-      {FOOTNOTE.text}
-    </div>
+      {NPS_NOTE.text}
+    </text>
   );
 };
 
@@ -182,6 +178,7 @@ const MinusSixtyToPlusSixty: React.FC<z.infer<typeof schema>> = () => {
         <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0 }}>
           <g transform={tf}>
             <EarthSection x0={-1400} x1={2600} top={GROUND} depth={2600} k={k} fog={FOG} pockets={[{ x: DOWN.x, w: DOWN.w, d }]} />
+            <NpsNote f={f} k={k} />
             <ZeroTick x={ZERO_TICK.x} top={GROUND} len={ZERO_TICK.len} k={k} baseline={ZERO_TICK.baseline} zeroPx={ZERO_TICK.zeroPx} npsPx={ZERO_TICK.npsPx} gap={ZERO_TICK.gap} numFont={FONT_NUM} labelFont={FONT_LABEL} />
             <Slot x={DOWN.x} top={GROUND} w={DOWN.w} k={k} open={clamp01((f - SLOT_DOWN.f0) / (SLOT_DOWN.f1 - SLOT_DOWN.f0))} />
             <Slot x={UP.x} top={GROUND} w={UP.w} k={k} open={clamp01((f - SLOT_UP.f0) / (SLOT_UP.f1 - SLOT_UP.f0))} />
@@ -207,7 +204,6 @@ const MinusSixtyToPlusSixty: React.FC<z.infer<typeof schema>> = () => {
           <PlacedPhone look={look} x={PHONE_L_X} foot={PHONE_FOOT} lift={0} variant="plain" S={f} id="pPlain" />
           {f >= PHONE_IN.f0 ? <PlacedPhone look={look} x={rx} foot={PHONE_FOOT} lift={rLift} variant="radar" S={f} id="pRadar" /> : null}
         </div>
-        <Footnote f={f} />
         </>
       }
     />

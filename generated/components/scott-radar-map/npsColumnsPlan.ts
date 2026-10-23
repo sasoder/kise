@@ -104,22 +104,13 @@ export const upFill = (h: number) => Math.max(0, h - UP.headroom * Math.min(1, h
  *  entrance (blur-in + a 24 px slide toward its column's end) over `enterF` frames. */
 export const NUM = { px: 136, cap: 98, gap: 36, minusIn: 43, plusIn: 116, enterF: 10, slide: 24 } as const;
 
-// --- the NPS footnote ----------------------------------------------------------------------------------------
-/** SCREEN-fixed (never slides off with the camera): Söhne Kräftig in sentence case (stoutShared loads no text
- *  weight), cream-lo on the earth, entering on "NPS" (f44) with the stout entrance and staying to the end. It sits
- *  in the lower RIGHT, not centred: the −60 numeral and its column sweep the lower left of the frame on the climb
- *  and pull-back (f98-f140; their right edge stays left of x 490 anywhere in y 1676-1876), so a full-width line
- *  would cross them. `x0`/`x1` screen px, `top` the first line's top. */
-export const FOOTNOTE = {
-  text: "*Net Promoter Score: customers who would recommend minus those who wouldn\u2019t, from \u2212100 to +100",
-  x0: 506,
-  x1: 1016,
-  top: 1678,
-  px: 38,
-  line: 48,
-  in: 44,
-  enterF: 10,
-} as const;
+// --- the NPS note --------------------------------------------------------------------------------------------
+/** "*Net Promoter Score": one line in WORLD space on the dark soil just under the slab's cut face, LEFT-aligned 34 px
+ *  right of the −60 column's glass, on the same baseline as "0 NPS*" (ZERO_TICK.baseline), so the two labels flank
+ *  the column and move with the earth. Left-aligned (not at the right margin) so the whole line is inside the frame
+ *  when it enters during the dip (f44: the frame's right edge is at world x ~853). Söhne Kräftig in sentence case
+ *  (stoutShared loads no text weight), cream-lo; it enters on "NPS" (f44) with the stout entrance and stays. */
+export const NPS_NOTE = { text: "*Net Promoter Score", x: 474, px: 38, in: 44, enterF: 10 } as const;
 
 // --- the camera ---------------------------------------------------------------------------------------------
 /** makeClockCam LOOK + k. Opens pushed in on the plain phone and its slot (the apron edge at mid-frame, the radar
