@@ -48,6 +48,15 @@
 // THE AIR: palette A's ramp by height (sage-petrol high, espresso low), dimmed for night; every surface and microbe is
 // fogged toward it by the eye's distance (local colour kept near) and a petrol veil hangs in the high air over the house
 // front; the cream lights and the orange virion are unfogged, so they stand out of it.
+// USER REVISION 2 (the shared light, covidAura; sized for this small subject, director): the virion throws the clip's light round
+// itself (sized for this small subject: radius 4 x its crowned body radius, at least 110 screen px, centre alpha
+// 0.8; cut 48 uses virionAura's 2.4 x and 0.7) from its entrance at the left (f80 on, the
+// light a step ahead of it out of the dark): the full light behind it in the set's SVG (a true screen: the air, the
+// door and the flags round it) and a 0.35 share over it on its canvas (covidAura lightAt). As it squeezes under the door
+// (f124-f155) its light goes in with it and a soft warm wash spills out of the slit onto the sill and the step (centre
+// alpha 0.91 x the squeeze, 1.7 x virionAura's radius wide, flattened 0.4), staying while it is inside. Frames f0-f80 are
+// unchanged; the cream microbes, the door, the lamp, the night, the camera and the timing are as delivered. The light
+// stays above y ~1036 (clear of the bands).
 // Orange = THE virus only (the one virion). Interior light, window, lantern: cream #F3EBDD; the door timber, plaster,
 // stone and iron (no brass); the hand in the cast's skin.
 //
@@ -67,6 +76,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirStage, WorldSvg, airRamp, airWorldOf, c01, mixHex, rgbHex, swayCam, type AirWorld, type Cam, type DepthOpts, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { GENOMES, MicrobeCanvas, SWARM_KINDS, bakeSwarm, blitSwarm, drawMicrobe, inkOf, mixInk, shapeOf, span, wobble } from "./covidMicrobes";
+import { AURA, AURA_COLORS, AURA_STOPS, AuraGlow, lightAt } from "./covidAura";
 import { F_ANCHOR, buildSwarm, floorAt, leverWalk, micAt, type V3 } from "./lockDoorSwarm";
 import {
   Bolt,
@@ -458,6 +468,54 @@ const HighAir: React.FC<{ A: AirWorld; uid: string; th: number }> = ({ A, uid, t
 };
 
 // ---------------------------------------------------------------------------
+// THE VIRION'S LIGHT (user revision 2: covidAura, the shared look of every orange thing, sized for this small subject):
+// a light round it (radius 4 x its crowned body radius, at least 110 px, centre alpha 0.8), the full light BEHIND it in the set's
+// SVG (a true screen there: it lights the air, the door and the flags round it) and a 0.35 share over it on its canvas
+// (covidAura lightAt: a screen of what that canvas has drawn, i.e. it and the microbes behind it). As it squeezes
+// under the door its own light goes in with it and a soft warm wash spills out of the slit onto the sill and the step
+// (from the gap it used), which stays once it is inside: the end frame says "it got in".
+// ---------------------------------------------------------------------------
+const V_FRONT = 0.35;
+/** this cut's virion is small (~25 px across), so its light is sized for a small subject (director, review of R2u): a
+ *  radius of 4 x its crowned body radius with a floor of 110 screen px, centre alpha 0.8 (cut 48: 2.4 x, 0.7) */
+const V_LIGHT_R = 4;
+const V_LIGHT_MIN = 110;
+const V_LIGHT_A = 0.8;
+/** the virion's crowned body radius (envelope + spikes) as a share of its span */
+const V_CROWN = (GENOMES.virion.girth + GENOMES.virion.spikeLen) / span(GENOMES.virion);
+/** the wash under the door: a share of the virion's centre alpha, its width (x the light's radius) and flattening */
+const WASH_A = 1.3;
+const WASH_W = 1.7;
+const WASH_FLAT = 0.4;
+/** the light fades out above the caption bands: screen rows FADE_Y0 -> FADE_Y1 */
+const FADE_Y0 = 1000;
+const FADE_Y1 = 1072;
+const VirionWash: React.FC<{ c: P2; r: number; a: number; uid: string; fade: [number, number] }> = ({ c, r, a, uid, fade }) => {
+  if (a < 0.002) return null;
+  const x0 = c[0] - r;
+  const y0 = c[1] - r;
+  return (
+    <g style={{ mixBlendMode: "screen" }} mask={`url(#${uid}-fm)`}>
+      <defs>
+        <linearGradient id={`${uid}-fg`} gradientUnits="userSpaceOnUse" x1={0} y1={f2(fade[0])} x2={0} y2={f2(fade[1])}>
+          <stop offset="0" stopColor="#fff" stopOpacity={1} />
+          <stop offset="1" stopColor="#fff" stopOpacity={0} />
+        </linearGradient>
+        <mask id={`${uid}-fm`} maskUnits="userSpaceOnUse" x={f2(x0)} y={f2(y0)} width={f2(2 * r)} height={f2(2 * r)}>
+          <rect x={f2(x0)} y={f2(y0)} width={f2(2 * r)} height={f2(2 * r)} fill={`url(#${uid}-fg)`} />
+        </mask>
+        <radialGradient id={`${uid}-g`} gradientUnits="userSpaceOnUse" cx={f2(c[0])} cy={f2(c[1])} r={f2(r)} gradientTransform={`translate(${f2(c[0])} ${f2(c[1])}) scale(1 ${WASH_FLAT}) translate(${f2(-c[0])} ${f2(-c[1])})`}>
+          {AURA_STOPS.map(([o, k], i) => (
+            <stop key={i} offset={o} stopColor={AURA_COLORS[i]} stopOpacity={(c01(a) * k).toFixed(3)} />
+          ))}
+        </radialGradient>
+      </defs>
+      <ellipse cx={f2(c[0])} cy={f2(c[1])} rx={f2(r)} ry={f2(r * WASH_FLAT)} fill={`url(#${uid}-g)`} />
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // THE CUT
 // ---------------------------------------------------------------------------
 const LockThatDoor: React.FC<z.infer<typeof schema>> = () => {
@@ -509,6 +567,17 @@ const LockThatDoor: React.FC<z.infer<typeof schema>> = () => {
   const slitTop = toScreen(leafP(A, th, 0, 0));
   const slitR = toScreen(leafP(A, th, DW, 0));
   const slitBot = toScreen(P.p(0, FL, DZ));
+  // the virion's light (screen px): round it while it is on our side, going in with it as it squeezes under
+  const vq = sc(vP);
+  const vCrown = V_CROWN * V_SPAN * P.r(vP[2]) * cam.k;
+  const vOut = frame < F_V0 ? 0 : 1 - sstep(lin(sq, 0.35, 1));
+  const vAura = { c: [vq[0], lerp(vq[1], (slitTop[1] + slitBot[1]) / 2, Math.min(1, sq * 2))] as P2, r: Math.max(V_LIGHT_MIN, V_LIGHT_R * vCrown), a: V_LIGHT_A * c01(vOut) };
+  // the wash out of the slit onto the sill (screen px), from the gap it used, staying once it is in
+  const vWashA = frame < F_V_CONTACT ? 0 : sstep(lin(sq, 0.25, 1));
+  const vCrownDoor = V_CROWN * V_SPAN * P.r(DZ) * cam.k;
+  const washR = AURA.virionR * vCrownDoor * WASH_W;
+  const toWorld = (p: P2): P2 => [cam.cx + (p[0] - 540) / cam.k, cam.cy + (p[1] - 960) / cam.k];
+  const fadeW: [number, number] = [toWorld([0, FADE_Y0])[1], toWorld([0, FADE_Y1])[1]];
   // the heading follows the travel over a wide window, so a hard stop turns it over ~12 frames, not in a snap
   const velOf = (m: (typeof SWARM)[number]) => {
     const a = sc(micAt(m, frame - 6).p);
@@ -589,6 +658,13 @@ const LockThatDoor: React.FC<z.infer<typeof schema>> = () => {
         glow(ctx, q[0], slitMid - slotH * 0.25, spanPx * 0.9, 0.55);
         ctx.restore();
       }
+      // its light: a share over it (and the microbes behind it); the full light lies behind it in the set
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(-10, -10, 1100, FADE_Y1 + 10);
+      ctx.clip();
+      lightAt(ctx, vAura.c, vAura.r, vAura.a * V_FRONT);
+      ctx.restore();
       return;
     }
     // THROUGH: it stands up again on the hall's floor and moves a little way in; seen only through the slot, its
@@ -723,6 +799,8 @@ const LockThatDoor: React.FC<z.infer<typeof schema>> = () => {
         <LampPool A={A} uid="ltd-pool" a={0.45} />
         <CrackSpill A={A} th={th} a={crackAt(frame)} uid="ltd-cs" />
         <SlitSpill A={A} a={gaps * 0.9} uid="ltd-ss" />
+        <VirionWash c={toWorld([vq[0], slitBot[1] + 0.3 * washR * WASH_FLAT])} r={washR / cam.k} a={AURA.virionA * WASH_A * vWashA} uid="ltd-vw" fade={fadeW} />
+        <AuraGlow aura={{ c: toWorld(vAura.c), r: vAura.r / cam.k, a: vAura.a }} uid="ltd-vl" fadeBelow={fadeW} />
       </WorldSvg>
       <MicrobeCanvas draw={(ctx) => drawMicrobes(ctx, "back")} />
       <WorldSvg cam={cam}>

@@ -34,6 +34,16 @@
 //                                                 (a = how lit it is 0..1; o: { rK?, aK? })
 //   cellAura(c, cellR, fill, o?)                  -> Aura for a cell filling with virions (fill 0..1)
 //   standingHeight(kind, variant = 0)             rig units from the feet to the top of the head, standing (memoised)
+//   lightAt(ctx, c, r, a, fog?, backdrop?)        canvas (screen px): the light as a TRUE screen on a canvas that is
+//                                                 TRANSPARENT where nothing is drawn (a MicrobeCanvas / FolkCanvas over
+//                                                 AirStage's air or over a separate SVG set). drawAura's "screen" there
+//                                                 is a plain paint (it darkens the blue: an olive ring). lightAt screens
+//                                                 what this canvas has drawn (masked by its own alpha) and, with
+//                                                 backdrop = the RGB showing through the canvas at that spot (e.g.
+//                                                 v.airAtScreen(cy)), lays screen(backdrop, light) behind the bare
+//                                                 pixels (destination-over): exactly screen(backdrop, light x a). With
+//                                                 no backdrop it lights only what this canvas has drawn (for a share
+//                                                 drawn over an organism). Added for cuts 48 / 56 (cut 48's builder)
 //   AURA                                          the look values below; AURA_STOPS, AURA_COLORS
 // ---------------------------------------------------------------------------
 import React from "react";
@@ -172,3 +182,63 @@ export const virionAura = (c: P2, bodyR: number, a = 1, o: { rK?: number; aK?: n
 
 /** a cell filling with virions: a warm light from inside (fill 0..1) */
 export const cellAura = (c: P2, cellR: number, fill: number, o: { rK?: number; aK?: number } = {}): Aura => ({ c, r: AURA.cellR * cellR * (o.rK ?? 1), a: AURA.cellA * c01(fill) * (o.aK ?? 1) });
+
+// ---- a true screen on a transparent canvas (added for cuts 48 / 56; an addition: nothing above changed) ------------
+type RGBf = [number, number, number];
+const rgbOfFog = (v: RGBf | string): RGBf => (typeof v === "string" ? hexRgb(v) : v);
+const cssA3 = (c: RGBf, a: number) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${c01(a).toFixed(3)})`;
+let LIGHT_SCRATCH: HTMLCanvasElement | null = null;
+/** canvas (screen px): the light as a true screen on a canvas that is transparent where nothing is drawn. Over what the
+ *  canvas has drawn: a screen masked by the canvas's own alpha. Over the bare pixels (only with `backdrop`, the RGB that
+ *  shows through the canvas there): behind everything, the backdrop already screened by the light, at the light's
+ *  alpha (exactly screen(backdrop, light x a)). Fog as drawAura (colour halfway into fog.rgb, alpha x (1 - 0.5 amount)),
+ *  mixed in floats. ctx state restored. */
+export const lightAt = (ctx: CanvasRenderingContext2D, c: P2, r: number, a: number, fog?: FogLike | null, backdrop?: RGBf | string | null) => {
+  if (a <= 0.002 || r <= 0.5) return;
+  const fa = fog ? c01(fog.amount) : 0;
+  const al = c01(a * (1 - 0.5 * fa));
+  const fr: RGBf = fog ? rgbOfFog(fog.rgb) : [0, 0, 0];
+  const cols = AURA_COLORS.map((h): RGBf => {
+    const k = hexRgb(h);
+    const t = 0.5 * fa;
+    return [k[0] + (fr[0] - k[0]) * t, k[1] + (fr[1] - k[1]) * t, k[2] + (fr[2] - k[2]) * t];
+  });
+  const [cx, cy] = c;
+  const x0 = Math.floor(cx - r);
+  const y0 = Math.floor(cy - r);
+  const w = Math.ceil(cx + r) - x0;
+  const h = Math.ceil(cy + r) - y0;
+  if (!LIGHT_SCRATCH) LIGHT_SCRATCH = document.createElement("canvas");
+  if (LIGHT_SCRATCH.width < w || LIGHT_SCRATCH.height < h) {
+    LIGHT_SCRATCH.width = Math.max(LIGHT_SCRATCH.width, w);
+    LIGHT_SCRATCH.height = Math.max(LIGHT_SCRATCH.height, h);
+  }
+  const sx = LIGHT_SCRATCH.getContext("2d");
+  if (!sx) return;
+  sx.setTransform(1, 0, 0, 1, 0, 0);
+  sx.globalCompositeOperation = "source-over";
+  sx.clearRect(0, 0, w, h);
+  const g1 = sx.createRadialGradient(cx - x0, cy - y0, 0, cx - x0, cy - y0, r);
+  AURA_STOPS.forEach(([o, k], i) => g1.addColorStop(o, cssA3(cols[i], al * k)));
+  sx.fillStyle = g1;
+  sx.fillRect(0, 0, w, h);
+  sx.globalCompositeOperation = "destination-in";
+  sx.drawImage(ctx.canvas, x0, y0, w, h, 0, 0, w, h);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "screen";
+  ctx.drawImage(LIGHT_SCRATCH, 0, 0, w, h, x0, y0, w, h);
+  if (backdrop) {
+    const bd = rgbOfFog(backdrop);
+    ctx.globalCompositeOperation = "destination-over";
+    const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    AURA_STOPS.forEach(([o, k], i) => {
+      const sc: RGBf = [0, 1, 2].map((j) => 255 - ((255 - bd[j]) * (255 - cols[i][j])) / 255) as RGBf;
+      g2.addColorStop(o, cssA3(sc, al * k));
+    });
+    ctx.fillStyle = g2;
+    ctx.fillRect(x0, y0, w, h);
+  }
+  ctx.restore();
+};

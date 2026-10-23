@@ -48,7 +48,7 @@
 // with a 0.35 share over it, so its crown keeps its contrast. The infected cell glows warmly from inside as it fills
 // (cellAura, 0.35 x fill: 0.2 x the wrap + 0.8 x the virions made), each virion made inside throws a 0.55 share of its
 // light behind it, and the copies carry theirs out (0.55 inside -> 1 once out). The canvas is transparent over the
-// air, so the light is a true screen in two parts (see lightAt). Frames f0-f125 are unchanged; the cream microbes, the
+// air, so the light is a true screen in two parts (covidAura lightAt). Frames f0-f125 are unchanged; the cream microbes, the
 // tree, the tissue, the camera and the timing are as delivered. The light stays above y ~950 (clear of the bands).
 //
 // DEPTH: one pinhole camera (evolutionScene.ts), F 1400, looking along +Z, keyed in 2D (k / wx / wy / sy, pchip) and
@@ -64,7 +64,7 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirStage, makeAirView, type AirScene, type AirView, type RGB } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { AURA_COLORS, AURA_STOPS, cellAura, virionAura } from "./covidAura";
+import { cellAura, lightAt, virionAura } from "./covidAura";
 import { MicrobeCanvas, drawMicrobe, inkOf, mixGenome, shapeOf, span, type Genome } from "./covidMicrobes";
 import {
   COPIES,
@@ -126,52 +126,12 @@ type Ctx = CanvasRenderingContext2D;
 const AURA_FRONT = 0.35;
 /** virions still inside the cell are seen through its membrane: their light a share of a free one's */
 const AURA_IN = 0.55;
-/** the light itself (covidAura's look: its stops, colours and fog, a screen blend). This canvas is TRANSPARENT over the
- *  air (AirStage paints the air below it), and a canvas "screen" over transparent pixels is a plain paint (it darkened
- *  the air's blue: an olive halo). So the light is laid in two parts: over what is drawn, a screen masked by the
- *  canvas's own alpha; over the bare air, behind everything (destination-over), the air at that row already screened
- *  by the light, at the light's alpha (exactly screen(air, light x a)). */
-let SCRATCH: HTMLCanvasElement | null = null;
-const lightAt = (ctx: Ctx, v: AirView, cx: number, cy: number, r: number, a: number, fog: number) => {
-  if (a <= 0.002 || r <= 0.5) return;
-  const fa = c01(fog);
-  const al = c01(a * (1 - 0.5 * fa));
+/** the light itself: covidAura's lightAt, a true screen on this canvas, which is transparent over the air (AirStage
+ *  paints the air below it): over what is drawn a screen masked by the canvas's own alpha; over the bare air, behind
+ *  everything, the air at that row already screened by the light (exactly screen(air, light x a)) */
+const lightOf = (ctx: Ctx, v: AirView, cx: number, cy: number, r: number, a: number, fog: number) => {
   const air = v.airAtScreen(cy);
-  const cols = AURA_COLORS.map((h) => mixR(hexRgb(h), air, 0.5 * fa));
-  const x0 = Math.floor(cx - r);
-  const y0 = Math.floor(cy - r);
-  const w = Math.ceil(cx + r) - x0;
-  const h = Math.ceil(cy + r) - y0;
-  if (!SCRATCH) SCRATCH = document.createElement("canvas");
-  if (SCRATCH.width < w || SCRATCH.height < h) {
-    SCRATCH.width = Math.max(SCRATCH.width, w);
-    SCRATCH.height = Math.max(SCRATCH.height, h);
-  }
-  const sx = SCRATCH.getContext("2d");
-  if (!sx) return;
-  sx.setTransform(1, 0, 0, 1, 0, 0);
-  sx.globalCompositeOperation = "source-over";
-  sx.clearRect(0, 0, w, h);
-  const g1 = sx.createRadialGradient(cx - x0, cy - y0, 0, cx - x0, cy - y0, r);
-  AURA_STOPS.forEach(([o, k], i) => g1.addColorStop(o, css(cols[i], al * k)));
-  sx.fillStyle = g1;
-  sx.fillRect(0, 0, w, h);
-  sx.globalCompositeOperation = "destination-in";
-  sx.drawImage(ctx.canvas, x0, y0, w, h, 0, 0, w, h);
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = "screen";
-  ctx.drawImage(SCRATCH, 0, 0, w, h, x0, y0, w, h);
-  ctx.globalCompositeOperation = "destination-over";
-  const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  AURA_STOPS.forEach(([o, k], i) => {
-    const sc: RGB = [0, 1, 2].map((j) => 255 - ((255 - air[j]) * (255 - cols[i][j])) / 255) as RGB;
-    g2.addColorStop(o, css(sc, al * k));
-  });
-  ctx.fillStyle = g2;
-  ctx.fillRect(x0, y0, w, h);
-  ctx.restore();
+  lightAt(ctx, [cx, cy], r, a, { rgb: air, amount: fog }, air);
 };
 /** a virion's body radius for its light: the crowned body (envelope + spikes), in genome units: the light wraps the crown
  *  as a person's wraps the whole figure (the envelope alone, 0.6 u, left the light hidden under the spikes at 270 px) */
@@ -180,7 +140,7 @@ const VCROWN = crownR(VIRION);
 /** the light of one orange virion at screen (x, y), body radius bodyR px, lit 0..1, k a share (behind / front / in) */
 const glowAt = (ctx: Ctx, v: AirView, x: number, y: number, bodyR: number, lit: number, k: number, fog: number) => {
   const a = virionAura([x, y], bodyR, lit);
-  lightAt(ctx, v, a.c[0], a.c[1], a.r, a.a * k, fog);
+  lightOf(ctx, v, a.c[0], a.c[1], a.r, a.a * k, fog);
 };
 
 // ---- the tissue ----------------------------------------------------------------------------------------------------
@@ -557,7 +517,7 @@ const drawInfection = (ctx: Ctx, f: number, c: Cam, v: AirView, cellP: Path2D, p
     let mr = 0;
     INFECTED.pts.forEach((pt) => (mr += Math.hypot(pt[0] - INFECTED.cx, pt[1] - INFECTED.cy)));
     const ca = cellAura([q.x, q.y], (mr / INFECTED.pts.length) * q.s * infSwell(f), fill);
-    lightAt(ctx, v, ca.c[0], ca.c[1], ca.r, ca.a, fogT);
+    lightOf(ctx, v, ca.c[0], ca.c[1], ca.r, ca.a, fogT);
   }
   INSIDE.forEach((iv, k) => {
     if (f < iv.f0) return;
