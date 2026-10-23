@@ -22,12 +22,12 @@
 // drops one bolt (~170 px tall at full res) from under its base to the ground 0.6 mi inside the ring's WNW edge: the
 // tip leaves the base at f75, CONTACT f78; FIRST REACTION f78 (an amber pool on the ground at the hit, the cell's base
 // lit from inside, the amber closure leaving the ring at the strike's bearing). The closure runs both ways round the
-// ring as an amber band and the two fronts meet on the east side at f104; "3 MI" (the ring's own label, RING_LABEL_PX)
-// slides up on the ring's far side by "three" (landed f93). As the ring closes the ramp brakes to a stop (rampActive
+// ring as an amber band and the two fronts meet on the east side at f104 (no "3 MI" label: cut on the user's note,
+// the ring carries it on its own). As the ring closes the ramp brakes to a stop (rampActive
 // 1 -> 0 over f104-f116). f110-f119: amber ring, stopped ramp, storms still boiling, the strike's afterglow gone.
 // LIFE (revision 2): the push is front-loaded (moving from f1); the mature cells keep climbing past cut 1 (GROW_ON,
 // f0-f90); two in-cloud flickers (NE f10 on "thunderstorms", W f61 before it strikes; none on f75-f80); the cream ring
-// carries a soft underlay so it reads at 270 px; "3 MI" at RING_LABEL_PX_BIG.
+// carries a soft underlay so it reads at 270 px.
 // AMBER = the weather's reach (the strike, the closed ring = the ramp is closed); cream = the subject (storm tops, the
 // terminal's peaks, the ring before it closes), the plains the context.
 //
@@ -35,7 +35,7 @@
 // travel 64, cut 1's DENVER_LABEL (imported) - asserted below and proven with a still-vs-still difference image.
 //
 // SOURCES: the 3-mile lightning rule is the speaker's line; DEN's layout per denverAirfield.ts (LAYOUT_SOURCE). No
-// figures on screen beyond the line's own "3 MI".
+// text or figures on screen after "DENVER" drains out.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
@@ -48,7 +48,6 @@ import {
   DEN_CAM_RING,
   LightningStrike,
   POPUP_END,
-  RING_LABEL_PX_BIG,
   RING_MI,
   STRIKE,
   TERMINAL,
@@ -89,8 +88,6 @@ const S0 = CUT1.last;
 export const CUT2_CAM_GOAL: DenCam = { tx: 0.6, ty: -1.5, dist: 9.75, pitch: 26, heading: -22, fov: DEN_CAM_RING.fov };
 const GLIDE_FRAMES = 74;
 const CREEP = { from: 40, frames: 230, heading: 2, distK: 1 };
-/** "3 MI": the ring's own label (RING_LABEL_PX) on the ring's far side; the default ESE spot is too low in this view */
-const LABEL_AT = 12;
 const D2R = Math.PI / 180;
 type Raw = number[]; // tx, ty, ln dist, pitch, heading, ln tan(fov / 2)
 const toRaw = (c: DenCam): Raw => [c.tx, c.ty, Math.log(c.dist), c.pitch, c.heading, Math.log(Math.tan((c.fov * D2R) / 2))];
@@ -137,7 +134,6 @@ const cellsAt = (S: number) =>
   });
 export const CONTACT = STRIKE_F0 + STRIKE.contact; // f78 = the first reaction frame too
 const MEET = 104; // the two amber fronts meet in the east
-const LABEL_IN = { f0: 82, f1: 93 }; // "three" f94
 const RAMP_STOP = { f0: 104, f1: 116 };
 /** cut 1's "DENVER" world label (DenverPopUpStorms DENVER_LABEL, as it stands at cut 1's last frame), carried through
  *  the joint and drained out on "hard ... The" (f22-f34), before the ring draws */
@@ -235,7 +231,6 @@ const LightningThreeMiles: React.FC<z.infer<typeof schema>> = () => {
   const u = Math.max(0, Math.min(1, (f - CONTACT + 1) / (MEET - CONTACT + 1)));
   const spread = f < CONTACT ? 0 : Math.sin((u * Math.PI) / 2);
   const back = STRIKE_BEARING - 180 * spread; // the counter-clockwise front
-  const labIn = smooth(LABEL_IN.f0, LABEL_IN.f1, f);
   const den = v.project(DENVER_LABEL.x, DENVER_LABEL.y, DENVER_LABEL.z);
   const denExit = smooth(DENVER_EXIT.f0, DENVER_EXIT.f1, f);
   const backDot = spread > 0.001 && spread < 0.999 ? v.project(TERMINAL.x + Math.sin((back * Math.PI) / 180) * RING_MI, TERMINAL.y + Math.cos((back * Math.PI) / 180) * RING_MI, 0) : null;
@@ -250,7 +245,7 @@ const LightningThreeMiles: React.FC<z.infer<typeof schema>> = () => {
       ground={
         <>
           {draw > 0.0005 ? <RingUnderlay v={v} draw={draw} /> : null}
-          {draw > 0.0005 ? <ThreeMileRing v={v} draw={draw} lit={0} label labelAt={LABEL_AT} labelIn={labIn} labelPx={RING_LABEL_PX_BIG} /> : null}
+          {draw > 0.0005 ? <ThreeMileRing v={v} draw={draw} lit={0} /> : null}
           {spread > 0 ? <ThreeMileRing v={v} draw={spread} lit={1} from={back} /> : null}
           <StrikePool v={v} t={tStrike} />
           {backDot ? <circle cx={backDot.x} cy={backDot.y} r={3.2} fill={COLOR.amberHot} /> : null}
