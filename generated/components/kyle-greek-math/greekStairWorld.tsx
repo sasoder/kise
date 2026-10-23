@@ -326,7 +326,16 @@ export type StairAir = AirWorld & {
   noCloud: StairAir;
 };
 
-const cloudBandAtS = (H: number, Z: number, sink: number) => cloudBandAt(H, Z, sink);
+/** (Revision 1: mist, not a blanket) the cloud's veil on things: a wide soft edge (MIST.edge under the top, fading out
+ *  MIST.above over it); stone keeps a little of itself through it (MIST.stone), so the stair shows through the mist */
+export const MIST = { edge0: 0.6 * U, edge: 1.4 * U, lift: 0.35 * U, above: 0.2 * U, stone: 0.86, sea: 0.6, seaNear: 0.55, seaSoft: 170 };
+/** while the sea has not sunk the edge is tighter and a little higher (Euclid stands on nothing); draining, it widens */
+export const mistBandAt = (H: number, Z: number = LANDING.Z0, sink = 0) => {
+  const top = cloudTopAt(Z, sink) - sink + MIST.lift * (1 - c01(sink / U));
+  const edge = lerp(MIST.edge0, MIST.edge, c01(sink / (1.5 * U)));
+  return 1 - smoothstep(top - edge, top + MIST.above, H);
+};
+const cloudBandAtS = (H: number, Z: number, sink: number) => mistBandAt(H, Z, sink);
 export const stairAirOf = (c: StairCam, t: number, rest: StairCam, opts: WorldOpts = {}, sway = true): StairAir => {
   const cam = kitCamOf(c, sway ? t : null);
   const Zfp = c.Zc + DFP;
@@ -357,10 +366,10 @@ export const stairAirOf = (c: StairCam, t: number, rest: StairCam, opts: WorldOp
   const sink = Math.max(0, opts.cloudSink ?? 0);
   const make = (cloud: number): StairAir => {
     const cloudBandAt = (H: number, Z: number) => cloudBandAtS(H, Z, sink);
-    const fogAmt = (Z: number, H: number) => 1 - (1 - depthFog(Z)) * (1 - lowAirAt(H)) * (1 - cloud * cloudBandAt(H, Z));
+    const fogAmt = (Z: number, H: number) => 1 - (1 - depthFog(Z)) * (1 - lowAirAt(H)) * (1 - MIST.stone * cloud * cloudBandAt(H, Z));
     // the air (depth fog and the low air), then the cloud over it in its own colour
-    const tone = (hex: string, Z: number, h = 0) => mixHex(mixHex(hex, air(h), 1 - (1 - depthFog(Z)) * (1 - lowAirAt(h))), cloudColAt(h), cloud * cloudBandAt(h, Z));
-    const toneO = (hex: string, Z: number, h = 0) => mixHex(mixHex(hex, air(h), 1 - (1 - 0.5 * depthFog(Z)) * (1 - 0.92 * lowAirAt(h))), cloudColAt(h), 0.94 * cloud * cloudBandAt(h, Z));
+    const tone = (hex: string, Z: number, h = 0) => mixHex(mixHex(hex, air(h), 1 - (1 - depthFog(Z)) * (1 - lowAirAt(h))), cloudColAt(h), MIST.stone * cloud * cloudBandAt(h, Z));
+    const toneO = (hex: string, Z: number, h = 0) => mixHex(mixHex(hex, air(h), 1 - (1 - 0.5 * depthFog(Z)) * (1 - 0.92 * lowAirAt(h))), cloudColAt(h), 0.94 * MIST.stone * cloud * cloudBandAt(h, Z));
     const figVeil = (Z: number, feetH: number) => {
       const h = feetH + 0.9 * U;
       const fd = 1 - (1 - 0.82 * depthFog(Z)) * (1 - lowAirAt(h));
@@ -467,12 +476,18 @@ export const Block: React.FC<{ S: StairAir; X0: number; X1: number; H0: number; 
 }) => {
   const c = S.c;
   if (Z1 - c.Zc < NEAR) return null;
+  // (Revision 1b) a block wholly sunk in the mist dissolves (it fades into the mist and the air behind it) instead of
+  // standing as a mist-coloured silhouette with hard edges
+  const mistOp = 1 - S.cloud * smoothstep(0.72, 1, S.band(H1, Z0));
+  if (mistOp < 0.004) return null;
   const lw = S.lw(1.05);
   const ln = (Z: number, H: number) => S.tone(lineOf(mat), Z, H);
   const els: React.ReactNode[] = [];
   const defs: React.ReactNode[] = [];
   // the vertical faces stop where the block in front hides them (only while the eye is in front of the stair)
-  const Hb = drop !== undefined && c.Zc < Z0 ? Math.max(H0, H1 - drop) : H0;
+  // (Revision 1b) while the step in front is still dissolved in the mist, this riser runs on down into the mist (no
+  // hard lower edge in the air)
+  const Hb = drop !== undefined && c.Zc < Z0 && S.cloud * S.band(H1 - RISE, Z0) < 0.05 ? Math.max(H0, H1 - drop) : H0;
   // a vertical face's fill: a gradient by height through many stops (the low air and the cloud's edge change fast)
   const vertFace = (pts: V3[], local: (H: number) => string, Zm: number, key: string, Hlo = H0) => {
     const q = clipProj(S, pts);
@@ -553,7 +568,7 @@ export const Block: React.FC<{ S: StairAir; X0: number; X1: number; H0: number; 
     els.push(<path key="rim" d={d} fill="none" stroke={PAL.cream} strokeWidth={lw * 1.25} strokeOpacity={ra} strokeLinecap="round" />);
   }
   return (
-    <g>
+    <g opacity={mistOp < 0.999 ? mistOp.toFixed(3) : undefined}>
       <defs>{defs}</defs>
       {els}
     </g>
@@ -1216,39 +1231,77 @@ export const PUFFS: Puff[] = (() => {
  *  direction (seen from an eye just over it, it fills the frame below the horizon row: a soft, milky band, lighter far
  *  off); it thins away into the air as the sea drains (sink 0.15 -> 2.2 m), leaving the local billows and the veil */
 export const FOG_SEA = { s0: 0.15 * U, s1: 2.2 * U, soft: 46, deep: 260 };
-const FogSea: React.FC<{ S: StairAir }> = ({ S }) => {
+const FogSea: React.FC<{ S: StairAir; near?: boolean }> = ({ S, near: nearLayer }) => {
   const k = 1 - smoothstep(FOG_SEA.s0, FOG_SEA.s1, S.sink);
-  const a = S.cloud * k;
+  // (Revision 1b) as the sea drains it breaks up: fainter, more ragged, its veils drifting apart
+  const brk = c01(S.sink / FOG_SEA.s1);
+  const a = S.cloud * k * (nearLayer ? MIST.seaNear : MIST.sea);
   const top = LANDING.H + CLOUD.billows - S.sink;
   if (a < 0.005 || S.c.E <= top) return null;
   const hy = S.v.horizon;
   if (hy > 1960) return null;
-  // the frame in 2D world units
   const cam = S.cam;
-  const wx0 = cam.cx - 600 / cam.k;
-  const ww = 1200 / cam.k;
+  const wx = (sx: number) => cam.cx + (sx - 540) / cam.k;
   const wy = (sy: number) => cam.cy + (sy - 960) / cam.k;
+  const t = S.t;
   const far = mixHex(rgbHex(S.v.airAtScreen(hy)), cloudColAt(top + 0.2 * U), 0.55);
   const mid = cloudColAt(top);
-  const near = mixHex(cloudColAt(top - 0.4 * U), SHADE, 0.05);
-  const y0 = hy - 4;
-  const y1 = Math.max(hy + FOG_SEA.soft, 1980);
-  const st = (sy: number) => c01((sy - y0) / (y1 - y0));
-  return (
-    <g>
-      <defs>
-        <linearGradient id="fog-sea" gradientUnits="userSpaceOnUse" x1="0" y1={wy(y0).toFixed(2)} x2="0" y2={wy(y1).toFixed(2)}>
-          <stop offset="0" stopColor={far} stopOpacity={0} />
-          <stop offset={st(hy + FOG_SEA.soft * 0.5).toFixed(3)} stopColor={far} stopOpacity={0.6 * a} />
-          <stop offset={st(hy + FOG_SEA.soft).toFixed(3)} stopColor={far} stopOpacity={0.92 * a} />
-          <stop offset={st(hy + FOG_SEA.deep).toFixed(3)} stopColor={mid} stopOpacity={a} />
-          <stop offset="1" stopColor={near} stopOpacity={a} />
-        </linearGradient>
-      </defs>
-      <rect x={wx0.toFixed(2)} y={wy(y0).toFixed(2)} width={ww.toFixed(2)} height={(wy(y1) - wy(y0)).toFixed(2)} fill="url(#fog-sea)" />
-    </g>
-  );
+  const low = mixHex(cloudColAt(top - 0.4 * U), SHADE, 0.06);
+  // MIST VEILS at several depths: each a translucent sheet with a ragged, feathered top (no straight edge), its own
+  // value and drift speed (parallax), the farther ones higher (nearer the horizon) and paler
+  const layers = nearLayer
+    ? [
+        { off: 120, amp: 85, op: 0.34, col: mid, sp: 0.9, seed: 11 },
+        { off: 230, amp: 70, op: 0.4, col: low, sp: 1.4, seed: 17 },
+      ]
+    : [
+        { off: -30, amp: 60, op: 0.2, col: far, sp: 0.35, seed: 3 },
+        { off: 40, amp: 75, op: 0.26, col: mixHex(far, mid, 0.5), sp: 0.55, seed: 5 },
+        { off: 120, amp: 90, op: 0.3, col: mid, sp: 0.8, seed: 7 },
+      ];
+  const N = 28;
+  const els: React.ReactNode[] = [];
+  layers.forEach((L, li) => {
+    const amp = L.amp * (1 + 1.6 * brk);
+    const yAt = (x: number) => {
+      const u = x / 1080;
+      const ph = t * 0.012 * L.sp;
+      const n = 0.55 * Math.sin(2 * Math.PI * (1.3 * u + ph) + L.seed) + 0.3 * Math.sin(2 * Math.PI * (3.1 * u - 1.4 * ph) + L.seed * 1.7) + 0.15 * Math.sin(2 * Math.PI * (7.3 * u + 2.2 * ph) + L.seed * 2.9);
+      return hy + L.off + amp * n + 260 * brk * (li + 1) * 0.5;
+    };
+    const pts: P2[] = [];
+    for (let j = 0; j <= N; j++) {
+      const sx = -60 + (1200 * j) / N;
+      pts.push([wx(sx), wy(yAt(sx))]);
+    }
+    let d = `M${Pt(pts[0])}`;
+    for (let j = 1; j < pts.length; j++) {
+      const m: P2 = [(pts[j - 1][0] + pts[j][0]) / 2, (pts[j - 1][1] + pts[j][1]) / 2];
+      d += `Q${Pt(pts[j - 1])} ${Pt(m)}`;
+    }
+    d += `L${Pt(pts[pts.length - 1])}L${Pt([wx(1140), wy(2000)])}L${Pt([wx(-60), wy(2000)])}Z`;
+    const yTop = Math.min(...pts.map((q) => q[1]));
+    const feather = 240 / cam.k;
+    const id = `${nearLayer ? "fsn" : "fs"}${li}`;
+    const op = L.op * a * (1 - 0.55 * brk);
+    els.push(
+      <g key={li}>
+        <defs>
+          <linearGradient id={id} gradientUnits="userSpaceOnUse" x1="0" y1={yTop.toFixed(2)} x2="0" y2={(yTop + feather * 2.2).toFixed(2)}>
+            <stop offset="0" stopColor={L.col} stopOpacity={0} />
+            <stop offset="0.35" stopColor={L.col} stopOpacity={0.45 * op} />
+            <stop offset="0.7" stopColor={L.col} stopOpacity={0.85 * op} />
+            <stop offset="1" stopColor={L.col} stopOpacity={op} />
+          </linearGradient>
+        </defs>
+        <path d={d} fill={`url(#${id})`} />
+      </g>,
+    );
+  });
+  return <g>{els}</g>;
 };
+/** (Revision 1b) which wisps are tendrils rising over the mist's top (a third of them, by their seed) */
+const TENDRIL = (p: { ph: number }) => (hash01(p.ph * 7.77 + 1) < 0.34 ? 1 : 0);
 /** (V2) the opening's churn: the billows roll and swell (gone by f135, so C's end and D are unchanged) */
 export const CHURN = { x: 0.22 * U, h: 0.1 * U, r: 0.14, f0: 100, f1: 135 };
 const puffAt = (p: Puff, t: number, sink: number) => {
@@ -1257,7 +1310,9 @@ const puffAt = (p: Puff, t: number, sink: number) => {
   const span = 2 * PUFF_X;
   X = ((((X + PUFF_X) % span) + span) % span) - PUFF_X;
   const edge = 1 - smoothstep(0.75, 1, Math.abs(X) / PUFF_X);
-  const H = cloudTopAt(p.Z, sink) - sink - p.dz - billowDrop(p.Z, sink) + 0.1 * U * Math.sin(t / 37 + p.ph) + ch * CHURN.h * Math.sin(t / 15 + p.ph * 3.1);
+  // (Revision 1b) a third of the wisps are tendrils, lifted over the mist's top and thinning as they rise and curl
+  const tend = TENDRIL(p);
+  const H = cloudTopAt(p.Z, sink) - sink - p.dz - billowDrop(p.Z, sink) + 0.1 * U * Math.sin(t / 37 + p.ph) + ch * CHURN.h * Math.sin(t / 15 + p.ph * 3.1) + tend * (p.dz + (0.15 + 0.55 * hash01(p.ph * 13.1)) * U) * (0.85 + 0.15 * Math.sin(t / 23 + p.ph));
   // a billow under the tread at its depth would be inside the stone: it fades as it goes in
   const st = stairTopAt(p.Z);
   const inStone = st === -Infinity ? 1 : smoothstep(st + 0.05 * p.R, st + 0.5 * p.R, H);
@@ -1273,29 +1328,47 @@ const PuffEl: React.FC<{ S: StairAir; p: Puff; i: number }> = ({ S, p, i }) => {
   const rs = rr * S.k * 1.4;
   if (sc[0] < -rs || sc[0] > 1080 + rs || sc[1] < -rs || sc[1] > 1920 + rs) return null;
   const lit = smoothstep(CLOUD.H1, LANDING.H, st.H);
-  // a billow: a body (the cloud's colour a little under it) and a lit cap up and to the left
-  const body = mixHex(cloudColAt(st.H - 0.5 * st.R), SHADE, 0.06);
-  const cap = mixHex(cloudColAt(st.H + 0.5 * st.R), PAL.cream, 0.32 + 0.26 * lit);
-  // a billow that would fill the frame reads as a flat veil: it thins out as it grows past ~520 px
+  // (Revision 1) a wisp of mist, not a billow: two or three long, thin, translucent streaks, offset and of uneven
+  // length, drifting; no lit cap, no rounded top
+  const col = mixHex(cloudColAt(st.H), PAL.cream, 0.24 + 0.2 * lit);
+  const colLo = mixHex(cloudColAt(st.H - 0.3 * st.R), SHADE, 0.12);
+  // a wisp that would fill the frame reads as a flat veil: it thins out as it grows past ~520 px
   const big = 1 - smoothstep(520, 1100, rr * S.k);
-  const a = S.cloud * p.a * st.edge * (1 - S.fog(p.Z)) * big;
+  // knots and gaps: each wisp's density breathes slowly (denser knots, thin patches the stair shows through);
+  // tendrils thin out as they rise; draining, the mist disperses (patchier, longer streaks)
+  const tend = TENDRIL(p);
+  const brk = c01(S.sink / (2.5 * U));
+  const knot = c01(0.35 + 0.95 * (0.5 + 0.5 * Math.sin(S.t / (19 + 13 * hash01(i * 3.3)) + p.ph * 2.7)) - 0.35 * brk * hash01(i * 5.1));
+  const a = S.cloud * p.a * st.edge * (1 - S.fog(p.Z)) * big * knot * (tend ? 0.38 : 1);
   if (a < 0.01) return null;
+  const h1 = hash01(i * 1.7 + 3);
+  const h2 = hash01(i * 2.3 + 5);
+  const len = (2.0 + 1.6 * h1) * (1 + 0.7 * brk) * (tend ? 0.7 : 1);
+  const streaks: [number, number, number, number, string][] = [
+    [0, 0, len, 0.34, col],
+    [(h2 - 0.5) * 1.6, 0.22 + 0.12 * h1, len * (0.55 + 0.3 * h2), 0.22, colLo],
+    [(h1 - 0.5) * 1.4, -0.2 - 0.1 * h2, len * (0.4 + 0.25 * h1), 0.16, col],
+  ];
+  const drift = Math.sin(S.t / 31 + p.ph) * 0.12;
+  // a tendril leans and curls (a slow tilt)
+  const tilt = tend ? (h2 - 0.5) * 40 + 12 * Math.sin(S.t / 27 + p.ph) : (h2 - 0.5) * 6;
   return (
-    <g>
+    <g transform={`rotate(${tilt.toFixed(2)} ${c[0].toFixed(2)} ${c[1].toFixed(2)})`}>
       <defs>
         <radialGradient id={`pf${i}b`}>
-          <stop offset="0" stopColor={body} stopOpacity={0.8 * a} />
-          <stop offset="0.55" stopColor={body} stopOpacity={0.6 * a} />
-          <stop offset="1" stopColor={body} stopOpacity={0} />
+          <stop offset="0" stopColor={col} stopOpacity={0.5 * a} />
+          <stop offset="0.45" stopColor={col} stopOpacity={0.26 * a} />
+          <stop offset="1" stopColor={col} stopOpacity={0} />
         </radialGradient>
         <radialGradient id={`pf${i}c`}>
-          <stop offset="0" stopColor={cap} stopOpacity={0.7 * a} />
-          <stop offset="0.5" stopColor={cap} stopOpacity={0.42 * a} />
-          <stop offset="1" stopColor={cap} stopOpacity={0} />
+          <stop offset="0" stopColor={colLo} stopOpacity={0.4 * a} />
+          <stop offset="0.5" stopColor={colLo} stopOpacity={0.18 * a} />
+          <stop offset="1" stopColor={colLo} stopOpacity={0} />
         </radialGradient>
       </defs>
-      <ellipse cx={c[0]} cy={c[1]} rx={rr * 1.35} ry={rr * 0.85} fill={`url(#pf${i}b)`} />
-      <ellipse cx={c[0] - rr * 0.22} cy={c[1] - rr * 0.28} rx={rr * 0.95} ry={rr * 0.58} fill={`url(#pf${i}c)`} />
+      {streaks.map(([dx, dy, w, h, cc], j) => (
+        <ellipse key={j} cx={c[0] + (dx + drift * (j + 1)) * rr} cy={c[1] + dy * rr} rx={rr * w} ry={rr * h} fill={`url(#pf${i}${cc === colLo ? "c" : "b"})`} />
+      ))}
     </g>
   );
 };
@@ -1647,6 +1720,8 @@ export const GreekStairWorld: React.FC<{ S: StairAir }> = ({ S }) => {
   if (!hide.has("cloud") && S.cloud > 0.002) PUFFS.forEach((p, i) => add(p.Z, <PuffEl key={`pf${i}`} S={S} p={p} i={i} />));
   // the fog sea's far surface: behind the stair and everything on it, in front of the far world
   if (!hide.has("cloud") && S.cloud > 0.002) add(LANDING.Z1 + 0.5, <FogSea key="sea" S={S} />);
+  // (Revision 1) a second, nearer layer of the sea's haze over the landing's tread (behind Euclid, before the steps)
+  if (!hide.has("cloud") && S.cloud > 0.002) add(EUCLID.Z + 0.1, <FogSea key="sea-n" S={S} near />);
   items.sort((a, b) => b.z - a.z);
   return <g>{items.map((it) => it.el)}</g>;
 };
