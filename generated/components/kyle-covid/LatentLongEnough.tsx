@@ -103,6 +103,8 @@ const REST = camAt(0);
 // ===================================================================================================================
 // THE PEOPLE
 // ===================================================================================================================
+/** the cast's glow pinned to the one this cut was delivered on (covidFolk round 3; later rounds changed the default) */
+const GLOW_STYLE = "v3" as const;
 export type FigSpec = { kind: CovidKind; v: number; pose: CovidPose; X: number; Z: number; props?: Partial<CovidFigureProps>; uid: string; shadow?: [number, number] };
 
 /** THE STAGING (cut 12 imports these: the same pole, the same camera grammar) */
@@ -315,7 +317,7 @@ const figItem = (A: AirWorld, f: FigSpec, frame: number, camK: number, extra?: R
     node: (
       <g>
         <AirShadow A={A} X={f.X} Z={f.Z} w={sw} d={sd} uid={`${f.uid}sh`} amt={0.75} />
-        <CovidFigure kind={f.kind} variant={f.v} pose={f.pose} at={at} scale={scale} uid={f.uid} fog={A.folkFog(f.Z)} unitPx={camK} frame={frame} {...f.props} />
+        <CovidFigure kind={f.kind} variant={f.v} pose={f.pose} at={at} scale={scale} uid={f.uid} fog={A.folkFog(f.Z)} unitPx={camK} frame={frame} glowStyle={GLOW_STYLE} {...f.props} />
         {extra}
       </g>
     ),
