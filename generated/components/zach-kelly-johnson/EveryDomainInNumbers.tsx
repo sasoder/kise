@@ -33,6 +33,15 @@
 // apart and is gone ~7 frames after its start, so at most two copies of a run are in colour at once; every chain layer
 // is painted under every photo of its run (and under the subject), so a colour never lies over a photo. Subs carry a
 // soft top-light from the surface; far destroyers haze toward mid-grey, darker than the water behind them.
+// USER REVISION 1 ("tighter in the center … on 'they have to be…' zoom in"), supersedes the layout and camera above:
+// one compact cluster round the middle (rockets just above the horizon at y 714, the destroyer on the surface, the sub
+// SHALLOW just under the waterline at y 887, copies tight round their leads). Camera: k 2.0 on the surface at f0, a
+// pull-back with a pan right and a tilt down that frames the whole cluster by ~f95 (eases to rest at f98), then from
+// f98 a push-in to k 1.38 about world (540, 960) landing at f125 while the copies step out, then a push creep to k
+// 1.41. The sub now glides in from the right edge (bow at the edge at f46, braking into its slow glide by f92), since
+// a shallow sub cannot come in through the bottom edge. Everything readable stays above screen y 1080 on every frame
+// (plan band check); below the cluster the deep runs through the caption bands as empty water. Ships and subs glide at
+// 0.6 px a frame.
 // CHAIN = PRODUCTION (archiveShared legend): copies coming off the line. This cut's one chain moment is the run.
 //
 // Cause and effect: every copy starts exactly behind its subject (hidden by it) and steps out from there; the rocket is
@@ -111,7 +120,7 @@ const SPACE = "zach-kelly-johnson/B/plate_nightsky_milkyway_pano.jpg"; // 2600 x
 const DEEP = "zach-kelly-johnson/B/plate_underwater_sunrays.jpg"; // 1736 x 2600, the sun at (744, 440)
 const DEEP_W = 1400;
 const DEEP_S = DEEP_W / 1736;
-const DEEP_SUN_Y = 770; // world y of the sun: just above the cut, so only its rays show below the surface
+const DEEP_SUN_Y = CUT_Y - 198; // world y of the sun: above the cut, so only its rays show below the surface
 const DEEP_X = 540 - 744 * DEEP_S;
 const DEEP_Y = DEEP_SUN_Y - 440 * DEEP_S;
 
