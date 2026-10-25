@@ -1,0 +1,11 @@
+{
+  "file": "public/barca-real/eagle.png",
+  "source": "https://commons.wikimedia.org/wiki/File:Bald_eagle_in_flight_(53543289441).jpg",
+  "original_source": "https://www.flickr.com/photos/usfwsmidwest/53543289441",
+  "credit": "Courtney Celley/USFWS",
+  "license": "Public domain (US Fish and Wildlife Service federal employee work)",
+  "subject": "Bald eagle in flight over a wetland in Burnett County, Wisconsin",
+  "date_taken": "2024-02-19",
+  "changes": "Apple Vision foreground mask; background-only blue-edge alpha cleanup; tight crop. Original RGB bird pixels retained.",
+  "original_bytes": 6565761
+}
