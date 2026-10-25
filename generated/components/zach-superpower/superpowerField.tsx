@@ -13,8 +13,7 @@ import { BLACK, CHAIN, EASE_LAND, INK, SHADOW, SHADOW_OFF, clamp } from "../kits
 // the line the glyph stands on, the glyph goes UP from there (negative y).
 // `size` is the glyph's WIDTH in world px. Both take the same props:
 //   ink     the fill of the silhouette (white, a chain colour, black)
-//   detail  true (default) = the full glyph: its parts on their own hard
-//           shadows (the chip over the brain) and the black print marks.
+//   detail  true (default) = the full glyph with its black print marks.
 //           false = the silhouette only, one flat fill: what ChainEcho copies
 //           and what the hard shadow is drawn from ("copy the shape only").
 //   shadow  true (default) = the whole glyph's hard black copy behind it.
@@ -22,12 +21,11 @@ import { BLACK, CHAIN, EASE_LAND, INK, SHADOW, SHADOW_OFF, clamp } from "../kits
 //   `FieldEchoRise` = a copy rising as a chain echo; the crown closes up
 //   under the core once it is in, so a copy at rest is plain white.
 //
-//   BrainChip     a side-view brain facing LEFT (frontal lobe left, the
-//                 cerebellum tucked under the back, the brainstem down to the
-//                 standing line), nine short printed grooves, and a flat square
-//                 implant chip seated on top with four fine electrode threads
-//                 printed down into the brain (no cable).
-//                 Height BRAIN_H_RATIO x size.
+//   BrainChip     the brain-computer interface as the conventional icon: a
+//                 head in profile facing LEFT (smooth white silhouette, one dot
+//                 eye, a short neck down to the standing line) with a black
+//                 printed chip and three circuit traces inside it where the
+//                 brain sits. Height BRAIN_H_RATIO x size.
 //   HumanoidRobot a front-view humanoid in Unitree H1 proportions (tall,
 //                 slender), kept a little cute: round helmet, wraparound visor,
 //                 round shoulder and knee joints, narrow waist, arms with a
@@ -54,106 +52,93 @@ export type GlyphProps = {
 };
 
 // =========================================================================
-// BRAIN + CHIP. Designed in a 100-wide unit box, base centre at (0, 0).
+// THE BRAIN-COMPUTER INTERFACE: the conventional BCI icon, a HEAD IN PROFILE
+// with a chip in it. A smooth flat white silhouette facing LEFT (cranium,
+// forehead, a small nose bump, lips, chin, a short neck down to the standing
+// line), one black dot eye, and printed in black inside the head where the
+// brain sits: a rounded square chip with short pin ticks on its four sides
+// and a white die, and three thin circuit traces running a little way from
+// it through the head, each ending in a dot. No brain folds, no cable, no
+// stalk. Designed in a 100-wide unit box, base centre at (0, 0): ink
+// x -48..+49, y -115..0.
+// (The export keeps its old name, BrainChip.)
 // =========================================================================
 export const BRAIN_UNIT = 100;
-/** the glyph's ink: x -51..+48, y -100..0 (chip pins to brainstem foot) */
-export const BRAIN_H_RATIO = 1.0;
-const BRAIN_BODY =
-  "M -36 -26 " +
-  "C -46 -28 -52 -40 -50 -52 " + // the frontal pole
-  "C -49 -64 -42 -74 -32 -80 " + // the forehead
-  "C -24 -85 -14 -88 -4 -88 " + // the crown, two soft bumps
-  "C 6 -89 16 -87 24 -83 " +
-  "C 34 -78 42 -71 46 -62 " +
-  "C 50 -54 50 -44 46 -38 " + // the occipital pole
-  "C 44 -34 42 -32 40 -31 " +
-  "C 48 -27 48 -14 38 -10 " + // the cerebellum, tucked under the back
-  "C 31 -7 24 -8 19 -12 " +
-  "L 22 0 L 10 0 L 7 -16 " + // the brainstem, down to the standing line
-  "C 0 -17 -8 -16 -16 -17 " + // the temporal lobe's underside
-  "C -24 -18 -30 -20 -32 -24 " +
-  "C -33 -25 -34 -26 -36 -26 Z";
-/** printed grooves (black, round caps): kept short of the outline */
-const BRAIN_GROOVES = [
-  "M -31 -31 C -18 -35 -2 -39 13 -51", // the lateral fissure
-  "M 9 -82 C 5 -75 11 -70 7 -63 C 5 -59 7 -56 9 -55", // the central sulcus
-  "M -41 -59 C -35 -55 -31 -63 -25 -59 C -20 -56 -17 -63 -12 -65", // frontal folds
-  "M -43 -44 C -37 -42 -31 -48 -23 -44",
-  "M 17 -78 C 21 -72 15 -66 21 -62 C 25 -59 26 -55 30 -55", // parietal
-  "M 36 -69 C 33 -61 40 -57 37 -48", // occipital
-  "M -22 -24 C -14 -27 -8 -22 0 -26 C 5 -28 10 -26 14 -31", // temporal
-  "M 24 -19 C 30 -21 37 -23 42 -21", // the cerebellum's folia
-  "M 26 -13 C 31 -15 37 -16 41 -15",
+/** height / width of the glyph's ink */
+export const BRAIN_H_RATIO = 1.15;
+const HEAD =
+  "M -8 0 " +
+  "C -9 -8 -9 -16 -10 -22 " + // the front of the neck
+  "C -16 -26 -25 -29 -31 -33 " + // under the jaw
+  "C -36 -36 -38 -40 -37 -44 " + // the chin
+  "C -40 -47 -40 -51 -38 -54 " + // the lips
+  "C -41 -56 -48 -60 -48 -64 " + // the nose
+  "C -48 -68 -42 -71 -39 -75 " +
+  "C -40 -85 -36 -96 -27 -103 " + // the forehead
+  "C -17 -112 3 -117 21 -111 " + // the crown
+  "C 39 -105 50 -88 49 -68 " + // the back of the head
+  "C 48 -52 40 -41 29 -35 " + // the nape
+  "C 24 -31 23 -24 24 -16 " +
+  "C 25 -10 27 -5 29 0 Z";
+const EYE = { cx: -27, cy: -71, r: 3.8 };
+const CHIP = { cx: 8, cy: -77, s: 28, rx: 4.5 };
+const DIE = 11;
+const PIN = { len: 5.5, w: 3.4, at: [-7.5, 0, 7.5] };
+const TRACE_W = 3;
+const TRACE_DOT = 3.8;
+const TRACES: { d: string; end: [number, number] }[] = [
+  { d: "M 22 -73 L 31 -73 L 36 -67 L 36 -58", end: [36, -58] }, // out of the right side, down the back
+  { d: "M 2 -91 L 2 -97 L -8 -101", end: [-8, -101] }, // out of the top, toward the forehead
+  { d: "M -6 -81 L -14 -81 L -18 -87", end: [-18, -87] }, // out of the left side
 ];
-const BRAIN_GROOVE_W = 4.5;
-// the implant: a flat square chip seated ON the top of the brain (seen edge
-// on, so a slab), turned to the dome's slope, a black die on its face and four
-// pins along its top; under it four fine electrode threads run DOWN into the
-// brain (black printed lines, Neuralink style). No cable.
-const CHIP = { cx: -10, cy: -89.5, w: 32, h: 11, rot: -5 };
-const CHIP_PINS = [-11, -3.7, 3.7, 11]; // pin centres along the top, unit px
-const CHIP_PIN = { w: 3.6, h: 4 };
-const THREADS = [
-  "M -21 -83 Q -23 -77 -25 -69",
-  "M -14 -84 Q -15 -77 -16 -67",
-  "M -7 -85 Q -7 -78 -8 -68",
-  "M 0 -86 Q 1 -79 0 -70",
-];
-const THREAD_W = 3;
 
-const chipShape = (fill: string) => (
-  <g transform={`translate(${CHIP.cx} ${CHIP.cy}) rotate(${CHIP.rot})`}>
-    <rect x={-CHIP.w / 2} y={-CHIP.h / 2} width={CHIP.w} height={CHIP.h} rx={2} fill={fill} />
-    {CHIP_PINS.map((p) => (
-      <rect key={p} x={p - CHIP_PIN.w / 2} y={-CHIP.h / 2 - CHIP_PIN.h + 1} width={CHIP_PIN.w} height={CHIP_PIN.h} fill={fill} />
-    ))}
-  </g>
-);
-const chipMark = () => (
-  <g transform={`translate(${CHIP.cx} ${CHIP.cy}) rotate(${CHIP.rot})`}>
-    <rect x={-8} y={-2.5} width={16} height={5} rx={1} fill={BLACK} />
-  </g>
-);
-
-const brainPaint = (fill: string, detail: boolean, off = SHADOW_OFF) => {
-  if (!detail) {
-    return (
-      <>
-        <path d={BRAIN_BODY} fill={fill} />
-        {chipShape(fill)}
-      </>
+const headPrint = () => {
+  const h = CHIP.s / 2;
+  const ticks: React.ReactNode[] = [];
+  for (const t of PIN.at) {
+    ticks.push(
+      <rect key={`l${t}`} x={-h - PIN.len + 0.5} y={t - PIN.w / 2} width={PIN.len} height={PIN.w} fill={BLACK} />,
+      <rect key={`r${t}`} x={h - 0.5} y={t - PIN.w / 2} width={PIN.len} height={PIN.w} fill={BLACK} />,
+      <rect key={`t${t}`} x={t - PIN.w / 2} y={-h - PIN.len + 0.5} width={PIN.w} height={PIN.len} fill={BLACK} />,
+      <rect key={`b${t}`} x={t - PIN.w / 2} y={h - 0.5} width={PIN.w} height={PIN.len} fill={BLACK} />,
     );
   }
-  // full: the chip sits on its own hard shadow over the brain, so it
-  // separates from the brain by its shadow (never an outline); `off` is in
-  // unit px. The threads are printed under it.
   return (
     <>
-      <path d={BRAIN_BODY} fill={fill} />
-      <g fill="none" stroke={BLACK} strokeLinecap="round">
-        {BRAIN_GROOVES.map((d) => (
-          <path key={d} d={d} strokeWidth={BRAIN_GROOVE_W} />
-        ))}
-        {THREADS.map((d) => (
-          <path key={d} d={d} strokeWidth={THREAD_W} />
+      <circle cx={EYE.cx} cy={EYE.cy} r={EYE.r} fill={BLACK} />
+      <g fill="none" stroke={BLACK} strokeWidth={TRACE_W} strokeLinecap="round" strokeLinejoin="round">
+        {TRACES.map((t) => (
+          <path key={t.d} d={t.d} />
         ))}
       </g>
-      <g transform={`translate(${off} ${off})`}>{chipShape(SHADOW)}</g>
-      {chipShape(fill)}
-      {chipMark()}
+      {TRACES.map((t) => (
+        <circle key={`d${t.d}`} cx={t.end[0]} cy={t.end[1]} r={TRACE_DOT} fill={BLACK} />
+      ))}
+      <g transform={`translate(${CHIP.cx} ${CHIP.cy})`}>
+        {ticks}
+        <rect x={-h} y={-h} width={CHIP.s} height={CHIP.s} rx={CHIP.rx} fill={BLACK} />
+        <rect x={-DIE / 2} y={-DIE / 2} width={DIE} height={DIE} rx={1.5} fill={INK} />
+      </g>
     </>
   );
 };
 
-/** THE BRAIN-COMPUTER INTERFACE. (x, y) = base centre, size = width. */
+const brainPaint = (fill: string, detail: boolean) => (
+  <>
+    <path d={HEAD} fill={fill} />
+    {detail ? headPrint() : null}
+  </>
+);
+
+/** THE BRAIN-COMPUTER INTERFACE (a head with a chip in it). (x, y) = base
+ *  centre, size = width. `bare` = the head silhouette only. */
 export const BrainChip: React.FC<GlyphProps> = ({ x, y, size, ink = INK, detail = true, shadow = true, bare = false }) => {
   const s = size / BRAIN_UNIT;
   const off = SHADOW_OFF / s; // the hard shadow stays +4/+4 WORLD px at every size
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`}>
       {shadow ? <g transform={`translate(${off} ${off})`}>{brainPaint(SHADOW, false)}</g> : null}
-      {brainPaint(ink, bare ? false : detail, off)}
+      {brainPaint(ink, bare ? false : detail)}
     </g>
   );
 };

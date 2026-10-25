@@ -13,7 +13,7 @@ const H = 1920;
 
 // -- the layout (mirrors superpowerField's BRAIN_ROW / ROBOT_ROWS; asserted
 //    equal in the cut at module load) ----------------------------------------
-export const P_BRAIN = { n: 8, size: 112, pitch: 122, cx: 540, ruleY: 410, first: 3, hRatio: 1.0 };
+export const P_BRAIN = { n: 8, size: 112, pitch: 122, cx: 540, ruleY: 410, first: 3, hRatio: 1.15 };
 export const P_ROBOT = { cols: 10, size: 84, pitch: 96, cx: 540, ruleYs: [720, 1040], first: 4, hRatio: 207 / 86 };
 const brainX = (i: number) => P_BRAIN.cx + (i - (P_BRAIN.n - 1) / 2) * P_BRAIN.pitch;
 const robotX = (c: number) => P_ROBOT.cx + (c - (P_ROBOT.cols - 1) / 2) * P_ROBOT.pitch;

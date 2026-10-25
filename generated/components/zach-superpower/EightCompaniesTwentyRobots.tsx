@@ -14,11 +14,11 @@
 //   robots f83-f90 · there's f94 · like f98 · 20 f100-f109 · END f115.
 // DURATION: the slot 16.7667 -> 21.5632 s (sequence frames 402 -> 517) = 4.796 s x 23.976 = 115 frames (f0..f114).
 //
-// THE MOTION: one camera move that opens close on ONE brain with its implant chip and is already pulling back.
-// From f8 seven more brains rise beside it from behind their rule, outward right/left, each on the frame the
+// THE MOTION: one camera move that opens close on ONE head with a chip in it (the BCI icon) and is already pulling back.
+// From f8 seven more heads rise beside it from behind their rule, outward right/left, each on the frame the
 // pull-back brings its slot into frame (f8 .. f31), as chain-echo copies: the colours lead the rise and close up
 // under the white core once it is in, so the resolved copies are plain white. The rule runs out under each slot
-// just before its brain rises. The pull-back turns into a tilt down with a push in (f34-f62, k 1.0 -> ~1.09):
+// just before its head rises. The pull-back turns into a tilt down with a push in (f34-f62, k 1.0 -> ~1.09):
 // one humanoid robot rises plain (f54, landed ~f61) and reads ~225 px tall on "humanoid" (f66). Then the camera
 // pulls back to the resolved frame (f57-f80) while nineteen copies rise outward row by row (row 0 f64-f73,
 // row 1 f79-f88), all twenty landed by ~f97, before "20" (f100). The resolved frame holds both bays (screen y
@@ -26,15 +26,15 @@
 // CHAIN = COPIES (the clip's legend): only the copies wear it, and only while they rise.
 //
 // THE CAMERA (eightCompaniesPlan.ts): one target track through the house damper, pre-rolled from f-14 so it is
-// already moving at f0. Damped k: f0 4.24 (the brain 475 px, 44 % of the width) · f12 2.94 · f24 1.67 · f36 1.07
+// already moving at f0. Damped k: f0 4.24 (the head 475 px wide, 44 % of the width) · f12 2.94 · f24 1.67 · f36 1.07
 // · f45 1.02 · f61 1.094 (the push's top) · f66 1.08 · f81 1.0 · f114 1.025. Nothing readable enters the caption
 // bands (y 1080-1250, 1360-1460) at any frame; only bare rule ends pass through 1080-1180 while they run out
 // (row 0 ~f47-f52, row 1 ~f74-f79).
 //
-// SOURCES: none (no figures on screen). Glyph shapes, checked against animation_source/refs/: a side-view human
-// brain; a flat square implant chip seated on it with four electrode threads printed down into the brain
-// (bci_braingate_utah_array_ref.jpg, Neuralink-style threads); a Unitree G1 / H1 style humanoid, stylised
-// (unitree_g1_fullbody_photo.jpg). Each row's rule runs out from under its first glyph as that glyph rises and
+// SOURCES: none (no figures on screen). Glyph shapes: the brain-computer interface is the conventional BCI icon,
+// a head in profile with a printed chip and circuit traces inside it (revision 2, on the user's note: the
+// brain-with-implant drawing is gone; the export keeps its name BrainChip); a Unitree G1 / H1 style humanoid,
+// stylised (animation_source/refs/unitree_g1_fullbody_photo.jpg). Each row's rule runs out from under its first glyph as that glyph rises and
 // reaches each later slot as its glyph rises, so no rule ever stands alone.
 // ---------------------------------------------------------------------------
 import React from "react";
@@ -107,7 +107,7 @@ const ROBOT_SLOTS: [number, number][][] = ROBOT_ROWS.ruleYs.map((_, r) =>
 
 const spanProps = ([x0, x1]: [number, number]) => ({ x0, x1 });
 
-/** the brain row: the first brain stands there from f0; seven copies rise as chain echoes */
+/** the BCI row: the first head stands there from f0; seven copies rise as chain echoes */
 const BrainRow: React.FC<{ frame: number; id: string }> = ({ frame, id }) => (
   <g>
     <defs>
