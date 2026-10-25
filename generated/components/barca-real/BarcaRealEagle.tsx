@@ -6,8 +6,11 @@
 // Word guide: current dialogue.transcript.json. Parent supplies the eagle SFX.
 // DURATION: sequence frames 858..891; 30.729613198648902 -> 31.947336798595366 s.
 // 34 frames at 254016000000 / 9097684646 fps, matching Premiere's frame duration.
-// MOTION: A full-size bald eagle glides in from the right, reaching its perch at
-// f9. It settles vertically by f12 and holds still; no scale-in, fade or exit.
+// MOTION: The whole full-size bird follows one 18-frame eased arc from beyond
+// the right edge, banking gently from 7 degrees to level. It starts at rest,
+// accelerates gradually, then eases into the original centre (540, 1485) and
+// holds to f33. No image wrapper clips the wing, and no opacity/scale pop.
+// Revised 2026-10-25: old f1 jumped ~490 px; ease-in-out now starts at ~5 px.
 // SOURCES: Real bald eagle photo by Courtney Celley/USFWS, public domain.
 // https://commons.wikimedia.org/wiki/File:Bald_eagle_in_flight_(53543289441).jpg
 // Sky removed with Apple Vision foreground mask and blue-edge alpha cleanup.
@@ -32,13 +35,21 @@ const clamped = {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'} as const;
 
 const BarcaRealEagle: React.FC<z.infer<typeof schema>> = ({transparent, backdrop}) => {
   const frame = useCurrentFrame();
-  const y = frame <= 9
-    ? interpolate(frame, [0, 9], [1530, 1478], {...clamped, easing: Easing.out(Easing.cubic)})
-    : interpolate(frame, [9, 12], [1478, 1485], {...clamped, easing: Easing.inOut(Easing.quad)});
+  // A symmetric ease makes the first visible feather travel only a few pixels.
+  // Use the same progress for translation and banking: no independent resets.
+  const travel = interpolate(frame, [0, 18], [0, 1], {
+    ...clamped,
+    easing: Easing.bezier(0.42, 0, 0.58, 1),
+  });
+  const x = 1400 - 860 * travel;
+  const y = (1 - travel) ** 2 * 1540
+    + 2 * (1 - travel) * travel * 1430
+    + travel ** 2 * 1485;
+  const height = 620 * 749 / 1870;
+
 
   return (
     <AbsoluteFill style={{
-      overflow: 'hidden',
       backgroundColor: backdrop === 'grey' ? '#808080' : transparent ? undefined : BG,
       backgroundImage: !transparent && backdrop !== 'grey' ? GLOW : undefined,
     }}>
@@ -46,11 +57,12 @@ const BarcaRealEagle: React.FC<z.infer<typeof schema>> = ({transparent, backdrop
         src={staticFile('barca-real/eagle.png')}
         style={{
           position: 'absolute',
-          left: interpolate(frame, [0, 9], [1430, 540], {...clamped, easing: Easing.bezier(0.1, 0.72, 0.2, 1)}) - 310,
-          top: y - 220,
+          left: x - 310,
+          top: y - height / 2,
           width: 620,
-          height: 440,
-          objectFit: 'contain',
+          height,
+          rotate: `${7 * (1 - travel)}deg`,
+          transformOrigin: 'center center',
         }}
       />
     </AbsoluteFill>
