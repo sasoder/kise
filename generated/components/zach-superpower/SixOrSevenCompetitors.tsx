@@ -27,6 +27,9 @@
 // The rise timing is tied to the reveal: the pull-back cannot uncover the row's right half sooner without a whip,
 // so the sixth lands ~f21 and the seventh ~f27, a few frames after the brief's ~f17 / ~f26 (Whisper's onsets
 // run early; the director accepted this).
+// FLAGS (revision 1, user note: make it clear they are Chinese): every rocket wears its national flag as livery,
+// printed on the body in the flag's real colours (the one exception to white / black): the US flag on the Falcon 9's
+// second stage, the Chinese flag on each competitor's upper first stage (inside the hollow one's outline too).
 // CHAIN = COPIES (the clip's legend): only on China's competitors, never on the Falcon 9.
 //
 // SOURCES: rocket heights and outlines: see superpowerRockets.tsx's header.
@@ -122,7 +125,7 @@ const SixOrSevenCompetitors: React.FC<z.infer<typeof schema>> = () => {
           <RuleClip id={CLIP_ID} x0={ROW_RULE_X0 - 400} x1={ROW_RULE_X1 + 400} y={ROW_RULE_Y} />
         </defs>
         {/* the original, standing on the rule from f0 */}
-        <Rocket kind="falcon9" x={ROW_X.falcon9} y={ROW_RULE_Y} id="s7c-f9" />
+        <Rocket kind="falcon9" x={ROW_X.falcon9} y={ROW_RULE_Y} id="s7c-f9" flag />
         {/* China's competitors, rising from behind the same rule, left to right */}
         {COMPETITORS.map((kind) => (
           <RisingRocket
@@ -136,6 +139,7 @@ const SixOrSevenCompetitors: React.FC<z.infer<typeof schema>> = () => {
             id={`s7c-${kind}`}
             hollow={kind === ROW_HOLLOW}
             travel={RISE_TRAVEL_F}
+            flag
           />
         ))}
         {/* the rule they all stand on: the occluder */}

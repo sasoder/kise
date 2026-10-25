@@ -437,6 +437,111 @@ export const Falcon9Print: React.FC<{ x: number; y: number; scale?: number }> = 
   );
 };
 
+// -- flag decals (livery) -------------------------------------------------------------
+// The one exception to white / black: a flag only reads in its own colours.
+// Printed flat on the body, no shadow, moving with the rocket.
+export const CN_RED = "#DE2910";
+export const CN_YELLOW = "#FFDE00";
+export const US_RED = "#B22234";
+export const US_BLUE = "#3C3B6E";
+
+const starPath = (cx: number, cy: number, r: number, rotDeg = 0) => {
+  const pts: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = ((-90 + rotDeg + i * 36) * Math.PI) / 180;
+    const rr = i % 2 === 0 ? r : r * 0.382;
+    pts.push(`${(cx + rr * Math.cos(a)).toFixed(2)} ${(cy + rr * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M${pts.join(" L")} Z`;
+};
+
+/** The flag of the PRC, w wide (3:2), top-left at (x, y): the red field, the
+ *  big star and the four small ones each pointing at its centre (the
+ *  official 30 x 20 construction). */
+export const ChinaFlag: React.FC<{ x: number; y: number; w: number }> = ({ x, y, w }) => {
+  const u = w / 30;
+  const small: [number, number][] = [
+    [10, 2],
+    [12, 4],
+    [12, 7],
+    [10, 9],
+  ];
+  return (
+    <g>
+      <rect x={x} y={y} width={w} height={(w * 2) / 3} fill={CN_RED} />
+      <path d={starPath(x + 5 * u, y + 5 * u, 3 * u)} fill={CN_YELLOW} />
+      {small.map(([sx, sy], i) => {
+        const toBig = (Math.atan2(5 - sy, 5 - sx) * 180) / Math.PI; // a point aims at the big star
+        return <path key={i} d={starPath(x + sx * u, y + sy * u, u, toBig + 90)} fill={CN_YELLOW} />;
+      })}
+    </g>
+  );
+};
+
+/** The US flag, w wide (1.9:1), top-left at (x, y): 13 stripes, the blue
+ *  canton with a simplified field of white stars (dots) for small sizes. */
+export const UsFlag: React.FC<{ x: number; y: number; w: number }> = ({ x, y, w }) => {
+  const h = w / 1.9;
+  const sh = h / 13;
+  const cw = 0.4 * w;
+  const ch = 7 * sh;
+  const dots: React.ReactNode[] = [];
+  const cols = 5;
+  const rows = 4;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      dots.push(
+        <circle
+          key={`${r}-${c}`}
+          cx={x + ((c + 0.5 + (r % 2) * 0.25) * cw) / (cols + 0.25)}
+          cy={y + ((r + 0.5) * ch) / rows}
+          r={Math.min(cw / cols, ch / rows) * 0.22}
+          fill={INK}
+        />,
+      );
+    }
+  }
+  return (
+    <g>
+      <rect x={x} y={y} width={w} height={h} fill={INK} />
+      {Array.from({ length: 7 }, (_, i) => (
+        <rect key={i} x={x} y={y + 2 * i * sh} width={w} height={sh} fill={US_RED} />
+      ))}
+      <rect x={x} y={y} width={cw} height={ch} fill={US_BLUE} />
+      {dots}
+    </g>
+  );
+};
+
+/** Where each rocket carries its flag: `top` = the decal's top edge (metres
+ *  above the base), `w` = its width (world px at scale 1), as wide as the body
+ *  allows with a thin white margin. The Falcon 9's US flag sits on the second
+ *  stage, as on refs/falcon9_side_illustration (clear of the SPACEX print);
+ *  the Chinese flags sit on the upper first stage, below the dark band. */
+export const FLAG_DECALS: Record<RocketKind, { top: number; w: number }> = {
+  falcon9: { top: 54.6, w: 52 },
+  tianlong3: { top: 43.0, w: 54 },
+  zhuque2: { top: 32.2, w: 47 },
+  ceres1: { top: 13.7, w: 18 },
+  hyperbola1: { top: 15.3, w: 18 },
+  gravity1: { top: 18.9, w: 36 },
+  kinetica1: { top: 21.0, w: 36 },
+  nebula1: { top: 21.8, w: 34 },
+};
+
+/** The flag decal of a rocket whose axis is x and base y. */
+export const FlagDecal: React.FC<{ kind: RocketKind; x: number; y: number; scale?: number }> = ({
+  kind,
+  x,
+  y,
+  scale = 1,
+}) => {
+  const f = FLAG_DECALS[kind];
+  const w = f.w * scale;
+  const top = y - f.top * PX_PER_M * scale;
+  return kind === "falcon9" ? <UsFlag x={x - w / 2} y={top} w={w} /> : <ChinaFlag x={x - w / 2} y={top} w={w} />;
+};
+
 // -- the glyph -------------------------------------------------------------------------
 /**
  * A ROCKET, axis at x, base on y (world px), on its hard shadow.
@@ -444,6 +549,9 @@ export const Falcon9Print: React.FC<{ x: number; y: number; scale?: number }> = 
  *             outline, nothing inside (the "up to" part of a range); needs `id`.
  *   ink     — the fill (white, a chain colour, or black); print only on white.
  *   shadow  — false drops the black copy (for a chain layer, say).
+ *   flag    — the national flag decal (default OFF): the US flag on the Falcon 9's
+ *             second stage, the Chinese flag on the others (also on a hollow
+ *             one, inside its outline). Livery: no shadow of its own.
  *   print   — the black print (default on): the Falcon 9's interstage, legs and
  *             wordmark; the other types' PRINT_BANDS. false = bare silhouette.
  */
@@ -457,7 +565,8 @@ export const Rocket: React.FC<{
   ink?: string;
   shadow?: boolean;
   print?: boolean;
-}> = ({ kind, x, y, scale = 1, hollow = false, id, ink = INK, shadow = true, print }) => {
+  flag?: boolean;
+}> = ({ kind, x, y, scale = 1, hollow = false, id, ink = INK, shadow = true, print, flag = false }) => {
   const d = rocketPath(kind, x, y, scale);
   const printOn = (print ?? true) && !hollow && ink === INK;
   const showPrint = printOn && kind === "falcon9";
@@ -478,6 +587,7 @@ export const Rocket: React.FC<{
           </g>
         ) : null}
         <path d={d} fill="none" stroke={ink} strokeWidth={2 * STROKE} clipPath={`url(#${cid})`} />
+        {flag && ink === INK ? <FlagDecal kind={kind} x={x} y={y} scale={scale} /> : null}
       </g>
     );
   }
@@ -496,12 +606,21 @@ export const Rocket: React.FC<{
           fill={BLACK}
         />
       ))}
+      {flag && ink === INK ? <FlagDecal kind={kind} x={x} y={y} scale={scale} /> : null}
     </g>
   );
 };
 
 /** THE ORIGINAL: the Falcon 9 with its print (axis x, base y). */
-export const Falcon9: React.FC<{ x: number; y: number; scale?: number; hollow?: boolean; id?: string; shadow?: boolean }> = (
+export const Falcon9: React.FC<{
+  x: number;
+  y: number;
+  scale?: number;
+  hollow?: boolean;
+  id?: string;
+  shadow?: boolean;
+  flag?: boolean;
+}> = (
   props,
 ) => <Rocket kind="falcon9" {...props} />;
 
@@ -579,7 +698,9 @@ export const RisingRocket: React.FC<{
   hollow?: boolean;
   echo?: boolean;
   travel?: number;
-}> = ({ frame, start, kind, x, y, clipId, id, scale = 1, hollow = false, echo = true, travel = ECHO_TRAVEL }) => {
+  /** the flag decal on the core (default off; the colour copies never carry it) */
+  flag?: boolean;
+}> = ({ frame, start, kind, x, y, clipId, id, scale = 1, hollow = false, echo = true, travel = ECHO_TRAVEL, flag = false }) => {
   if (frame < start) return null;
   const depth = rocketHeightPx(kind, scale) + 3 * ECHO_LEAD + SHADOW_OFF + STROKE + 4;
   if (!echo || kind === "falcon9") {
@@ -587,7 +708,7 @@ export const RisingRocket: React.FC<{
     return (
       <g clipPath={`url(#${clipId})`}>
         <g transform={`translate(0 ${r.dy})`}>
-          <Rocket kind={kind} x={x} y={y} scale={scale} hollow={hollow} id={id} />
+          <Rocket kind={kind} x={x} y={y} scale={scale} hollow={hollow} id={id} flag={flag} />
         </g>
       </g>
     );
@@ -621,11 +742,11 @@ export const RisingRocket: React.FC<{
       ) : null}
       <g transform={`translate(0 ${coreDy})`}>
         {hollow ? (
-          <Rocket kind={kind} x={x} y={y} scale={scale} hollow id={id} />
+          <Rocket kind={kind} x={x} y={y} scale={scale} hollow id={id} flag={flag} />
         ) : (
           <>
             {rising ? null : <path d={rocketPath(kind, x, y, scale)} fill={SHADOW} transform={`translate(${SHADOW_OFF} ${SHADOW_OFF})`} />}
-            <Rocket kind={kind} x={x} y={y} scale={scale} shadow={false} />
+            <Rocket kind={kind} x={x} y={y} scale={scale} shadow={false} flag={flag} />
           </>
         )}
       </g>
