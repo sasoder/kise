@@ -19,7 +19,8 @@
 // (2.5 -> 4.7 m) and pulls back, and the yard opens behind them: hand-workers at slabs and rock, carriers with baskets,
 // rows of them deep into the haze, the colonnade going up far off. f40-140 ("but they don't have
 // technology. They don't have ideas"): one lateral glide at an even speed along the front row toward the forge, past
-// the rope team leaning back on a taut rope as their block inches along on wooden rollers. f110-188 ("It's a late Iron
+// the rope team hauling a taut rope (facing away from the block, leaning into the pull, the rope at the hip) as their
+// block comes on in steps, one per heave, on wooden rollers. f110-188 ("It's a late Iron
 // Age civilization"): the glide eases into a push-in on the smith at his anvil, the iron toolkit on its rack behind him;
 // his hammer strikes the blade on "Iron" (contact f160, the first cream sparks f161) and once more (f190); the yard keeps
 // working behind him in the haze.
@@ -197,6 +198,10 @@ const TOOLS_ON_RACK: { kind: ToolKind; dx: number; rot: number; bar: 0 | 1 }[] =
 const RACK = { X0: 700, X1: 1090, Z: 560, top: -430, bar: -392, bar2: -236 };
 const HEARTH = { x0: 240, x1: 470, z0: 230, z1: 440, top: -128 };
 const ANVIL_Z = SMITH.Z;
+/** the rope team's heave period (frames): the block comes on in steps, one per heave */
+const HEAVE = 46;
+/** the block's travel: a step per heave (its speed 0 between heaves), BLOCK_V units per frame on average */
+const ropeTravel = (f: number) => BLOCK_V * (f - (HEAVE / (2 * Math.PI)) * Math.sin((2 * Math.PI * f) / HEAVE));
 /** the smith's rhythm: blows every SMITH_PERIOD frames (contacts f100, f130, f160 on "Iron", f190); after the f190 blow
  *  he rests the hammer on the blade, lifting it only a hair, so the last frame is just after a blow (face clear) */
 const LAST_BLOW = SMITH_CONTACT + SMITH_PERIOD;
@@ -290,13 +295,17 @@ const PeopleButIron: React.FC<z.infer<typeof schema>> = () => {
 
   // ---- the front row: the stone-cutters of the opening -------------------------------------------------------------
   items.push(...strikerItems(A, eye, f, { key: "cA", kind: "slave", variant: 1, X: CUTTERS_X - 170, Z: 30, dir: 1, tool: "hammer", period: 29, off: 9, work: "slab", ang: 0.12, garb: "exomis" }));
-  items.push(...strikerItems(A, eye, f, { key: "cB", kind: "freeman", variant: 1, X: CUTTERS_X + 210, Z: 190, dir: -1, tool: "hammer", period: 32, off: 24, work: "slab", ang: -0.2 }));
-  items.push(...strikerItems(A, eye, f, { key: "cC", kind: "slave", variant: 0, X: CUTTERS_X - 520, Z: 360, dir: 1, tool: "pick", period: 34, off: 3, work: "rock", ang: 0.3 }));
+  items.push(...strikerItems(A, eye, f, { key: "cB", kind: "freeman", variant: 1, X: CUTTERS_X - 270, Z: 300, dir: -1, tool: "hammer", period: 32, off: 24, work: "slab", ang: -0.2 }));
+  items.push(...strikerItems(A, eye, f, { key: "cC", kind: "slave", variant: 0, X: CUTTERS_X - 380, Z: 700, dir: 1, tool: "pick", period: 34, off: 3, work: "rock", ang: 0.3 }));
   items.push(walkerItem(A, f, { key: "cD", kind: "slave", variant: 2, X: CUTTERS_X - 60, Z: -170, dir: 1, off: 7 }));
 
-  // ---- the rope team: a block on rollers, a taut rope receding diagonally, five men leaning back on it -------------
+  // ---- the rope team: a block on rollers, a taut rope receding diagonally, five men hauling it -------------------
+  // (Rev 1, "it looks like they are pushing instead of pulling": they now face AWAY from the block, toward where they
+  // go, leaning ~22-30 deg into the pull, the rope held at the hip behind them, the back foot driving; the block comes
+  // on in steps, one per heave, and the men walk forward only as it moves)
   {
-    const travel = BLOCK_V * f;
+    const travel = ropeTravel(f);
+    const heave = (g: number) => 0.5 - 0.5 * Math.cos((2 * Math.PI * g) / HEAVE);
     const ux = Math.cos(ROPE_ANG);
     const uz = Math.sin(ROPE_ANG);
     // the perpendicular in plan, toward us (its Z < 0)
@@ -306,9 +315,10 @@ const PeopleButIron: React.FC<z.infer<typeof schema>> = () => {
     const bcz = BLOCK.Z + uz * travel;
     const yB = -2 * BLOCK.roll;
     // the hook: the middle of the block's leading face
-    const hook: [number, number, number] = [bcx + (ux * BLOCK.w) / 2, yB - 58, bcz + (uz * BLOCK.w) / 2];
-    const Lr = 1150;
-    const endY = -196;
+    const hook: [number, number, number] = [bcx + (ux * BLOCK.w) / 2, yB - 95, bcz + (uz * BLOCK.w) / 2];
+    // straight and taut from the hook to the lead man's grip at his hip
+    const Lr = 1004;
+    const endY = -166;
     const ropeAt = (s: number): [number, number, number] => [hook[0] + ux * s, hook[1] + (endY - hook[1]) * Math.min(1, s / Lr), hook[2] + uz * s];
     const pr = (p: [number, number, number]) => P.p(p[0], p[1], p[2]);
     // rollers under the block, rolling (centres at half the block's travel), their axes across the motion
@@ -341,16 +351,19 @@ const PeopleButIron: React.FC<z.infer<typeof schema>> = () => {
     const ropeCol = (Z: number) => A.tone(MAT.hemp.mid, Z, 150);
     let sPrev = 0;
     men.forEach((m, i) => {
-      const fp = ropeAt(m.s + 84);
+      // he stands just beyond the rope (it runs past his near hip), facing the way he hauls
+      const fp = ropeAt(m.s + 6);
       const Xm = fp[0] - nx * 30;
       const Zm = fp[2] - nz * 30;
-      // walking backward (to the right, toward us) as the block comes on: phase from the screen-x component of travel
-      const ph = -(travel * ux + i * 17) / (2 * RomeFolk.PUSH.stride);
-      const base = RomeFolk.POSES.push(-1, ph);
-      const strain = 0.5 + 0.5 * Math.sin((2 * Math.PI * (f + i * 5)) / 46);
-      const q: FigPose = { ...base, lean: -20 - 4 * strain, crouch: 20 + 6 * strain + (4 - i) * 3, pitch: -6 };
-      const gA = pr(ropeAt(m.s));
-      const gB = pr(ropeAt(m.s + 24));
+      // walking forward only as the block comes on (the planted back foot drives; feet still between heaves)
+      const ph = (travel * ux + i * 17) / (2 * RomeFolk.PUSH.stride);
+      const base = RomeFolk.POSES.push(1, ph);
+      // the heave: each man leans harder into the rope as it comes (a little ahead of the block's surge)
+      const hv = heave(f + 3 - i);
+      const q: FigPose = { ...base, lean: 22 + 8 * hv, crouch: 14 + 8 * hv, pitch: -4 - 4 * hv, brow: 0.8, mouth: -0.4 };
+      // both fists on the rope at his hip, the rear one behind him
+      const gA = pr(ropeAt(m.s + 4));
+      const gB = pr(ropeAt(m.s - 20));
       items.push({
         Z: Zm,
         key: `rm${i}`,
@@ -363,20 +376,21 @@ const PeopleButIron: React.FC<z.infer<typeof schema>> = () => {
       });
       // the rope from the previous man's grip to this man's: on his far side it lies behind him, on his near side over him
       const a = pr(ropeAt(sPrev));
-      const b = pr(ropeAt(m.s + 24));
+      const b = pr(ropeAt(m.s + 4));
       const zSeg = (ropeAt(sPrev)[2] + ropeAt(m.s)[2]) / 2;
       items.push({
         Z: Zm - 1,
         key: `rp${i}`,
         el: <path key={`rp${i}`} d={`M${a[0].toFixed(2)},${a[1].toFixed(2)}L${b[0].toFixed(2)},${b[1].toFixed(2)}`} stroke={ropeCol(zSeg)} strokeWidth={ropeW * P.r(zSeg)} strokeLinecap="round" />,
       });
-      sPrev = m.s + 24;
+      sPrev = m.s + 4;
     });
-    // the tail beyond the last man: slack, down to the ground
+    // the end beyond the last man's grip
     const tail0 = ropeAt(sPrev);
     const tA = pr(tail0);
-    const tB = P.p(tail0[0] + ux * 110, -36, tail0[2] + uz * 110);
-    const tC = P.p(tail0[0] + ux * 190 + nx * 30, 0, tail0[2] + uz * 190 + nz * 30);
+    // the rope's end: a short slack end dangling from the lead man's front fist
+    const tB = P.p(tail0[0] + ux * 26 + nx * 10, tail0[1] + 10, tail0[2] + uz * 26 + nz * 10);
+    const tC = P.p(tail0[0] + ux * 20 + nx * 24, tail0[1] + 62, tail0[2] + uz * 20 + nz * 24);
     items.push({ Z: tail0[2] - 60, key: "rpt", el: <path key="rpt" d={`M${tA[0].toFixed(2)},${tA[1].toFixed(2)}Q${tB[0].toFixed(2)},${tB[1].toFixed(2)} ${tC[0].toFixed(2)},${tC[1].toFixed(2)}`} fill="none" stroke={ropeCol(tail0[2])} strokeWidth={ropeW * P.r(tail0[2])} strokeLinecap="round" /> });
   }
 
