@@ -16,42 +16,34 @@
 // (So 287, the speaker on camera next)
 // DURATION: the slot 99.600 -> 109.509 s = 9.909 s x 29.97 = 297 frames (f0..f296).
 //
-// THE MOTION (Revision 1: the stage turned into depth): one lateral glide, left to right at ONE even speed (1.75 units
-// = ~4.2 screen px per frame, constant from
-// f0 to f296, only the house hand-sway on top) and one zoom: a truck, the vanishing point travels with the eye, so the
-// arcade behind parallaxes against the people. The stations are laid out along the glide so it never has to slow or
-// re-accelerate: the money travels left to right and the camera follows it. f0-62 ("banks that take money from
-// depositors"): the banker's timber table runs into the picture under the arcade of a forum basilica, the eye 3.9 m up
-// looking down into it; at its left side a freeman tips his purse and silver
-// coins pour onto the table (f24-62, the first lands ~f31), a freewoman with her purse and a slave carrying his master's
-// pouch wait behind him, each a step further back (no head over another); the banker (a Dominus in a white toga with the stripe) rests a hand on his table.
-// f64-100: he puts his hand to the heap and sweeps it across the table (contact f74, the coins ride ahead of his hand)
-// and off its edge into the open iron-bound strongbox (arca) standing beside it (coins over the edge ~f92-102, each
-// one vanishing below the box's front rim). f100-160 ("keep balances"): he lifts his wax-tablet codex off the table
-// (contact f110), holds it up and writes, the stylus adding three rows of tally strokes to the right leaf (f124-150),
-// then lays it down. f148-200 ("lend out to debtors"): he steps to the box, takes the full coin bag out by its neck
-// (contact f172, it rises from f172) and holds it out across the box to the merchant waiting at the arcade's end (his
-// hands on it at f190, the banker lets go at f198). f198-296 ("who want to go and
-// do entrepreneurial things"): the merchant holds the bag to his chest, turns (f200-210) and walks out of the arcade's
-// shade into the sunlit street (f208-252), past his new shop stocked with amphorae, to his carter waiting at a loaded
-// handcart; the carter looks back at him (f238-250), the merchant opens his free hand toward the street ("go",
-// f248-262), the carter nods (f254-264) and pushes off: the cart begins to roll at f270, its wheel turning by its
-// travel. The resolved frame: the merchant with the bag, the carter and the rolling cart in the middle and right, the
-// bank's arcade in shade on the left. No labels; the only marks are the ledger's tally strokes (artefact text).
+// THE MOTION (Revision 3, the user's Rev 1 notes): one lateral glide, left to right at ONE even speed (2.0 units =
+// ~4.8 screen px per frame, constant f0-f296; only the house hand-sway on top) and one zoom, the eye 3.9 m up looking
+// down into the stage (a truck: the arcade parallaxes behind). The money travels left to right and the camera follows.
+// f0-62 ("banks that take money from depositors"): at the left end of a solid timber counter under the shaded arcade
+// of a forum basilica a freeman tips his purse and silver coins pour onto the counter top (f24-62); a freewoman and a
+// slave with his master's pouch queue behind him, each a step further back. The banker (a Dominus, white toga with the
+// stripe) stands BEHIND the counter the whole time: its top and panelled front (and the strongbox) cut his body at the
+// hips, his feet are never seen. f74-100: his hand meets the heap (f74) and sweeps it along the counter and off its
+// right end into the open iron-bound strongbox standing there (lid lifted off, leaning on its side). f100-160 ("keep
+// balances"): he lifts his wax-tablet codex (contact f110), writes three rows of tally strokes (f124-150), lays it
+// down. f158-206 ("lend out to debtors"): his right hand arcs over the box's rim to an open leather bag heaped with
+// silver (contact f172), lifts it and holds it out, arm extended, across the gap to the merchant waiting right of the
+// box (f182-198); the merchant's hands close on it at f198, the banker lets go at f206. f206-242: the merchant holds
+// it to his chest, turns and walks out of the shade into the sunlit street to his carter at a two-wheeled handcart
+// loaded with amphorae. f240-280 ("entrepreneurial things"): the carter turns and holds out his palm (f242-250); the
+// merchant tips the bag and six silver coins drop into it (f250-260); the carter closes his fist on them (f262-266),
+// turns back, takes up the poles and pushes off; the cart rolls from f280, its wheels turning by its travel.
 // CAUSE BEFORE EFFECT: coins come out of the purse's mouth and land before they are swept; the sweeping hand touches
-// the heap on the frame it moves (f74); the bag moves only while a hand holds it (banker f172-198, merchant from f190);
-// the cart moves only with the carter's fists on its handles (from f270).
-// DEVIATIONS FROM THE STORYBOARD (for the director): the strongbox stands BESIDE the table's end (so the sweep drops
-// the coins straight in), not behind the banker; only the first depositor pours (a second pour behind him was hidden
-// by his body); the merchant's payment of a coin to a worker became an open-hand "go" to his carter (two figures
-// exchanging a coin merged into one blob at phone size).
+// the heap on the frame it moves (f74); the bag moves only while a hand holds it (banker f172-206, merchant from f198);
+// the paid coins leave the bag's mouth while it is tipped; the cart moves only with the carter's fists on its poles.
+// DEVIATIONS FROM THE STORYBOARD: the strongbox stands at the counter's right end (the sweep drops the coins straight in),
+// not behind the banker; only the first depositor pours.
 // Orange: none (the clip's rule: orange = technology and ideas; money and business are not technology). Coins are
 // silver / pale pewter, the bag leather, people in the folk cast's muted colours.
 //
 // DEPTH: eye 3.9 m up (eyeY -700), Dc 1000 units at the one zoom K 2.4 (no zoom: kRef = K), fog by the eye's distance.
-// The table X 0-90 runs Z -80..240; the queue at Z 30 / 150 / 270; the banker Z 72 at its right side; the strongbox
-// X 92-202, Z -60..20 against its near end (lid up, ~280 px wide); the arcade face Z 400; the shop row Z 520; the
-// merchant Z 0; the carter Z 100, the cart Z 75-125.
+// The counter X 0-190, Z 20-95; the strongbox X 192-296, Z 24-98; the banker Z 132 behind them; the queue at Z 46 /
+// 160 / 280; the merchant Z 10 (X 422 -> 452); the carter Z 60, his cart Z 40-84; the arcade face Z 400; shops Z 520.
 //
 // FACTS (header only; nothing on screen): Roman argentarii kept their banking tables (mensae) in the tabernae of the
 // Forum (the Basilica Aemilia's tabernae argentariae); they took deposits, kept accounts (codex accepti et expensi),
@@ -99,7 +91,7 @@ const K = 2.4;
 /** the eye 3.9 m up looking down into the stage (the table recedes, the queue's heads step up the frame), Dc 1000 */
 const DEPTH: DepthOpts = { eyeY: -700, dRef: 1000, kRef: K, dolly: 0.5 };
 /** world units per frame (at the front plane): ~4 screen px per frame */
-const GLIDE_V = 1.75;
+const GLIDE_V = 2.0;
 const GLIDE_X0 = -49;
 const CAM_Y = -150;
 const camAt = (f: number): Cam => ({ k: K, cx: GLIDE_X0 + GLIDE_V * f, cy: CAM_Y });
@@ -152,25 +144,27 @@ const walkAmt = (f: number, f0: number, f1: number, ramp: number) => Math.min(ez
 
 // ===================================================================================================================
 // THE SET (units: the cast's, 178 per metre; Y up is -, floor Y 0; Z depth behind the front plane)
-// The banker's table runs INTO the picture (its long sides receding to the VP); the depositors queue along its left side,
-// each a step further back and to the left; the banker stands at its right side with the open strongbox in front of
-// him against the table's near end; the merchant waits right of the box, at the arcade's end.
+// Revision 2: the banker stands BEHIND a solid timber counter (its top and panelled front hide his lower body
+// cleanly; his toga never crosses the counter's front edge). The depositors queue at the counter's left end, each a
+// step further back; the open strongbox stands at its right end (its lid lifted off and leaning against its side), the
+// banker moves along behind counter and box (his feet always hidden); the merchant waits right of the box.
 // ===================================================================================================================
-const TABLE = { x0: 0, x1: 90, z0: -80, z1: 240, top: -151, th: 13 };
-const BOX = { x0: 92, x1: 202, z0: -60, z1: 20, top: -140 };
+const TABLE = { x0: 0, x1: 190, z0: 20, z1: 95, top: -151, th: 14 };
+const BOX = { x0: 192, x1: 296, z0: 24, z1: 98, top: -140 };
 const ARC = { z0: 400, z1: 470, spring: -380, ent0: -560, ent1: -650 };
 /** pier centres (half width 30) and the arcade's end pier (the street opens to its right) */
 const PIERS = [-580, -300, -20];
-const END_PIER = { x0: 210, x1: 290 };
+const END_PIER = { x0: 280, x1: 360 };
 const SHOPS_Z = 520;
-const STREET_X = 290;
+const STREET_X = 360;
 /** the shade under the arcade: 1 left of SHADE_X0, 0 right of SHADE_X1 */
-const SHADE_X0 = 220;
-const SHADE_X1 = 350;
+const SHADE_X0 = 300;
+const SHADE_X1 = 420;
 
 const COIN = { top: "#B7BDBA", edge: "#5C6362", glint: "#F4F2EA", r: 6.4, line: "#4A504F" };
 const LEATHER = { lit: "#C4A57C", mid: "#9E7E58", dark: "#5E4632", tie: "#4A3527" };
 const WOOD: Mat = { lit: "#9C7A55", mid: "#6F5539", dark: "#3A2B1D" };
+const CARTWOOD: Mat = { lit: "#A88A62", mid: "#7E6244", dark: "#45331F" };
 const BOXWOOD: Mat = { lit: "#7E6247", mid: "#5C4632", dark: "#2F2219" };
 const PLASTER: Mat = { lit: "#C8B898", mid: "#A89878", dark: "#6E614E" };
 const TRAVERTINE: Mat = { lit: "#B8A88A", mid: "#988769", dark: "#625544" };
@@ -183,28 +177,38 @@ const ROOF: Mat = { lit: "#9A6650", mid: "#7A4E3C", dark: "#43291F" };
 // ===================================================================================================================
 const T = {
   pour1: [24, 62] as const,
-  sweep: [74, 98] as const,
+  sweep: [74, 100] as const,
   codexReach: [100, 110] as const,
   codexLift: [110, 122] as const,
   write: [124, 150] as const,
-  codexDown: [150, 160] as const,
-  boxReach: [160, 172] as const,
+  codexDown: [150, 158] as const,
+  /** the banker moves along behind the counter to the box */
+  toBox: [150, 168] as const,
+  boxReach: [158, 172] as const,
   bagLift: [172, 182] as const,
-  bagOut: [182, 190] as const,
-  bagHand: [190, 198] as const,
-  hug: [198, 206] as const,
-  turn: [200, 210] as const,
-  walk: [208, 252] as const,
-  coin: [248, 262] as const,
-  carterFace: [236, 248] as const,
-  carterTurn: [262, 272] as const,
-  roll: [270, 297] as const,
+  bagOut: [182, 192] as const,
+  /** he holds it out; the merchant reaches and takes hold at f198 */
+  reach: [184, 198] as const,
+  bagHand: [198, 206] as const,
+  hug: [206, 214] as const,
+  turn: [208, 218] as const,
+  walk: [216, 242] as const,
+  /** the pay: the bag comes over the carter's palm and tips; six coins drop; it comes back upright */
+  tipIn: [240, 250] as const,
+  pour: [250, 260] as const,
+  tipOut: [262, 270] as const,
+  /** the carter turns to him, palm out; closes his fist on the coins; turns back to his cart */
+  cFaceL: [232, 244] as const,
+  palm: [242, 250] as const,
+  close: [262, 266] as const,
+  cFaceR: [268, 278] as const,
+  roll: [280, 297] as const,
 };
 
 // ---- the coins ----------------------------------------------------------------------------------------------------
 type Coin = { te: number; rest: V3; g: number; tilt: number };
 const N1 = 56;
-const HEAP1 = { x: 45, z: 52 };
+const HEAP1 = { x: 42, z: 50 };
 const COINS: Coin[] = (() => {
   const out: Coin[] = [];
   for (let i = 0; i < N1; i++) {
@@ -212,17 +216,16 @@ const COINS: Coin[] = (() => {
     const a = hash(i, 11) * Math.PI * 2;
     const rad = Math.sqrt(hash(i, 12)) * (9 + 17 * u);
     const x = HEAP1.x + Math.cos(a) * rad;
-    const zz = HEAP1.z + Math.sin(a) * rad * 0.8;
+    const zz = HEAP1.z + Math.sin(a) * rad * 0.7;
     const h = 1.8 + 24 * u * Math.max(0, 1 - rad / 30);
     out.push({ te: lerp(T.pour1[0] + 6, T.pour1[1] - 9, (i + hash(i, 15) * 0.8) / N1), rest: [x, TABLE.top - h, zz], g: 6 + 30 * hash(i, 13), tilt: (hash(i, 14) - 0.5) * 30 });
   }
   return out;
 })();
 const FALL_T = 9;
-/** the sweep: the banker's hand travels a straight path across the table top, from left of the heap to the table's right
- *  edge by the box (S0 -> S1, in X/Z); each coin rides ahead of the hand by its packing gap once the hand reaches it */
-const S0: P2 = [22, 60];
-const S1: P2 = [TABLE.x1 - 2, -14];
+/** the sweep: the banker's hand travels along the counter top from left of the heap to its right end by the box */
+const S0: P2 = [16, 50];
+const S1: P2 = [TABLE.x1 - 2, 54];
 const SL = Math.hypot(S1[0] - S0[0], S1[1] - S0[1]);
 const SD: P2 = [(S1[0] - S0[0]) / SL, (S1[1] - S0[1]) / SL];
 const sweepH = (f: number) => SL * ez(f, T.sweep[0], T.sweep[1]);
@@ -234,7 +237,7 @@ const pushedXZ = (c: Coin, f: number): P2 => {
   const off = Math.max(0, sweepH(f) + c.g * 0.5 + 4 - u);
   return [c.rest[0] + SD[0] * off, c.rest[2] + SD[1] * off];
 };
-/** the frame a pushed coin goes over the table's right edge (Infinity if never) */
+/** the frame a pushed coin goes over the counter's right end (Infinity if never) */
 const edgeFrame = (c: Coin): number => {
   for (let g = T.sweep[0]; g <= T.sweep[1] + 1; g += 0.25) if (pushedXZ(c, g)[0] >= TABLE.x1) return g;
   return Infinity;
@@ -247,8 +250,8 @@ const coinsIn = (f: number) => EDGE.filter((e) => f >= e + 7).length;
 // ---- the codex (wax-tablet ledger): its centre, tilt (90 = lying flat, ~15 = held up facing us) -------------------
 const CODEX_W = 31;
 const CODEX_H = 38;
-const CODEX_TABLE: V3 = [56, TABLE.top - 1.5, 132];
-const CODEX_HELD: V3 = [122, -244, 42];
+const CODEX_TABLE: V3 = [150, TABLE.top - 1.5, 70];
+const CODEX_HELD: V3 = [146, -250, 104];
 const codexC = track3([
   [T.codexLift[0], CODEX_TABLE],
   [T.codexLift[1], CODEX_HELD],
@@ -271,20 +274,25 @@ const ROWS = [
 const STROKES = ROWS.flatMap((r, j) => Array.from({ length: r.n }, (_, i) => ({ u: 6 + i * 3.1 + (i % 5 === 4 ? 1.5 : 0), v: r.v, j, x: i % 5 === 4 })));
 const strokesDone = (f: number) => STROKES.length * lin(f, T.write[0], T.write[1] - 2);
 
-// ---- the bag (a tied leather coin bag, ~150 px tall at the hand-over) ---------------------------------------------
+// ---- the loan: an open leather bag heaped with silver (~150 px) -----------------------------------------------------
 const BAG_K = 1.25;
-const BAG_IN_BOX: V3 = [150, -142, -20];
-const BAG_UP: V3 = [156, -226, -20];
-const BAG_OUT: V3 = [214, -222, -12];
-const BAG_GIVEN: V3 = [228, -216, -8];
+const BAG_IN_BOX: V3 = [244, -118, 62];
+const BAG_UP: V3 = [252, -222, 62];
+/** held out across the box toward the merchant (the arm extended), f192-198 */
+const BAG_OUT: V3 = [300, -206, 40];
+const BAG_GIVEN: V3 = [304, -204, 36];
 
-// ---- the banker, the queue, the merchant, the carter, the cart ------------------------------------------------------
-const BANKER = { x: 136, z: 72 };
-const MER = { x0: 302, z: 0, x1: 372 };
+// ---- the banker, the merchant, the carter, the cart -----------------------------------------------------------------
+const BANKER_Z = 132;
+/** behind the counter (feet hidden): under the heap, along with the sweep, at the ledger, behind the box */
+const bankerX = (f: number) => lerp(lerp(lerp(92, 138, ez(f, T.sweep[0] - 4, T.sweep[1])), 214, ez(f, T.toBox[0], T.toBox[1])), 196, ez(f, 214, 240));
+const MER = { x0: 422, z: 10, x1: 452 };
 /** the merchant's stride (units), solved so his walk lands at MER.x1 */
-const MER_STRIDE = 29;
-const CARTER = { x: 504, z: 100 };
-const CART = { z0: 75, z1: 125, hx: 38, len: 96 };
+const MER_STRIDE = 23;
+const CARTER = { x: 595, z: 60 };
+const CART = { z0: 40, z1: 84, hx: 36, gap: 10, len: 84 };
+/** the carter's open palm, held out to the merchant */
+const PALM: V3 = [522, -178, 38];
 
 // ===================================================================================================================
 // DRAWN PROPS
@@ -306,8 +314,16 @@ const CoinShape: React.FC<{ c: P2; s: number; tilt: number; fog: (h: string) => 
 const Bag: React.FC<{ c: P2; s: number; size?: number; tilt?: number; fog: (h: string) => string; uid: string }> = ({ c, s, size = 1, tilt = 0, fog, uid }) => {
   const k = s * size;
   const body = "M-24,-6 C-27,12 -16,25 0,25 C16,25 27,12 24,-6 C21,-17 11,-21 6,-23 L-6,-23 C-11,-21 -21,-17 -24,-6Z";
-  const neck = "M-7,-22 L7,-22 L9,-31 C4,-34 -4,-34 -9,-31Z";
-  const ruff = "M-11,-31 C-7,-38 7,-38 11,-31 C6,-29 -6,-29 -11,-31Z";
+  const neck = "M-9,-21 L9,-21 L13,-29 C6,-31 -6,-31 -13,-29Z";
+  // the open mouth, heaped with silver (the loan is money, plainly)
+  const heap: [number, number, number][] = [
+    [-7, -30, -12],
+    [6, -30.5, 10],
+    [-1, -31, 4],
+    [-4, -33.5, -20],
+    [4, -34, 16],
+    [0, -36.5, 2],
+  ];
   return (
     <g transform={`translate(${Pt(c)}) rotate(${tilt.toFixed(2)}) scale(${k.toFixed(4)})`}>
       <defs>
@@ -320,10 +336,17 @@ const Bag: React.FC<{ c: P2; s: number; size?: number; tilt?: number; fog: (h: s
       <path d={body} fill={`url(#${uid}g)`} />
       <path d="M-12,4 C-8,14 4,16 12,9" fill="none" stroke={fog(LEATHER.dark)} strokeWidth={1.4} strokeOpacity={0.35} strokeLinecap="round" />
       <path d={neck} fill={fog(LEATHER.mid)} />
-      <path d={ruff} fill={fog(LEATHER.lit)} />
-      <ellipse cx={0} cy={-33.2} rx={5.5} ry={1.6} fill={fog(COIN.top)} />
-      <path d="M-9,-24 C-3,-21 3,-21 9,-24" fill="none" stroke={fog(LEATHER.tie)} strokeWidth={2.6} strokeLinecap="round" />
-      <path d="M6,-23 C9,-17 8,-12 10,-8" fill="none" stroke={fog(LEATHER.tie)} strokeWidth={1.6} strokeLinecap="round" />
+      <ellipse cx={0} cy={-29.5} rx={13.5} ry={3.6} fill={fog("#3A2B1F")} />
+      {heap.map(([x, y, t], i) => (
+        <g key={i} transform={`translate(${x} ${y}) rotate(${t})`}>
+          <ellipse cx={0} cy={1.1} rx={5.2} ry={2.1} fill={fog(COIN.edge)} stroke={fog(COIN.line)} strokeWidth={0.4} />
+          <ellipse cx={0} cy={0} rx={5.2} ry={2.1} fill={fog(COIN.top)} stroke={fog(COIN.line)} strokeWidth={0.35} />
+          <ellipse cx={-1.4} cy={-0.5} rx={2.1} ry={0.8} fill={fog(COIN.glint)} opacity={0.6} />
+        </g>
+      ))}
+      <path d="M-13,-29 C-6,-26.6 6,-26.6 13,-29" fill="none" stroke={fog(LEATHER.lit)} strokeWidth={1.8} strokeLinecap="round" />
+      <path d="M-9,-21 C-3,-19 3,-19 9,-21" fill="none" stroke={fog(LEATHER.tie)} strokeWidth={2.4} strokeLinecap="round" />
+      <path d="M8,-20 C11,-14 9,-10 12,-6" fill="none" stroke={fog(LEATHER.tie)} strokeWidth={1.5} strokeLinecap="round" />
       <path d="M-20,-9 C-17,-16 -10,-19 -5,-20" fill="none" stroke={fog("#F3EBDD")} strokeWidth={1.6} strokeOpacity={0.35} strokeLinecap="round" />
     </g>
   );
@@ -349,7 +372,7 @@ const Purse: React.FC<{ c: P2; s: number; tip: number; fog: (h: string) => strin
 // THE ARCADE, THE STREET, THE BACKDROP
 // ===================================================================================================================
 /** the arcade of the basilica: a wall of arches on piers with engaged columns and an entablature; tabernae dim behind */
-const Arcade: React.FC<{ A: AirWorld }> = ({ A }) => {
+const Arcade: React.FC<{ A: AirWorld; people?: React.ReactNode }> = ({ A, people }) => {
   const P = A.P;
   const z0 = ARC.z0;
   const xa = -900;
@@ -362,6 +385,7 @@ const Arcade: React.FC<{ A: AirWorld }> = ({ A }) => {
       <path d={poly([P.p(xa, 0, zf), P.p(xb, 0, zf), P.p(xb, -1100, zf), P.p(xa, -1100, zf)])} fill={A.tone("#5E5244", zf, 300)} />
       <path d={poly([P.p(xa, 0, z0), P.p(xb, 0, z0), P.p(xb, 0, zf), P.p(xa, 0, zf)])} fill={A.tone("#5A4E40", (z0 + zf) / 2, 0)} />
       {hallCols}
+      {people}
       <defs>
         <linearGradient id="bk-in" gradientUnits="userSpaceOnUse" x1="0" y1={P.p(0, -520, z0)[1].toFixed(2)} x2="0" y2={P.p(0, 0, z0)[1].toFixed(2)}>
           <stop offset="0" stopColor="#2A2620" stopOpacity={0.55} />
@@ -574,46 +598,68 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
     return { rgb: base.amount > 0.001 ? base.rgb : "#3A3A33", amount: Math.max(base.amount, sh) };
   };
   const fogNear = (Z: number) => (h: string) => A.tone(h, Z, 100);
-  const merX = (g: number) => MER.x0 + walkTravel(g, T.walk[0], T.walk[1], 8, MER_STRIDE, 30);
+  const merX = (g: number) => MER.x0 + walkTravel(g, T.walk[0], T.walk[1], 6, MER_STRIDE, 30);
   const merFacing = (g: number) => ez(g, T.turn[0], T.turn[1]); // 0 = facing left, 1 = facing right
+  const payingAt = (g: number) => ez(g, T.tipIn[0], T.tipIn[1]) * (1 - ez(g, T.tipOut[0], T.tipOut[1]));
+  /** the tipped bag's centre: its mouth just above the carter's palm */
+  const TIP_C: V3 = (() => {
+    const m = rot2([0, -31 * BAG_K], 100);
+    return [PALM[0] - m[0], PALM[1] - 30 - m[1], PALM[2] - 4];
+  })();
 
   // ---------------------------------------------------------------- the bag's path (banker, then merchant)
   const bagAt = (g: number): V3 => {
     if (g < T.bagLift[0]) return BAG_IN_BOX;
     if (g < T.bagLift[1]) return mix3(BAG_IN_BOX, BAG_UP, ez(g, T.bagLift[0], T.bagLift[1]));
     if (g < T.bagOut[1]) return mix3(BAG_UP, BAG_OUT, ez(g, T.bagOut[0], T.bagOut[1]));
+    if (g < T.bagHand[0]) return BAG_OUT;
     if (g < T.bagHand[1]) return mix3(BAG_OUT, BAG_GIVEN, ez(g, T.bagHand[0], T.bagHand[1]));
     const X = merX(g);
     const hugged: V3 = [X + lerp(-26, 26, merFacing(g)), -214, MER.z - 22];
     if (g < T.hug[1]) return mix3(BAG_GIVEN, hugged, ez(g, T.bagHand[1], T.hug[1]));
     const bob = g > T.walk[0] && g < T.walk[1] ? 2.2 * Math.sin((4 * Math.PI * (g - T.walk[0])) / 30) : 0;
-    return [hugged[0], hugged[1] + bob, hugged[2]];
+    return mix3([hugged[0], hugged[1] + bob, hugged[2]], TIP_C, payingAt(g));
+  };
+  /** the bag's tilt (deg, + = its mouth swings toward screen right): a little on the lift, 100 when he tips it to pay */
+  const bagTilt = (g: number) => (g > T.bagLift[0] && g < T.bagHand[0] ? -5 : 0) + 100 * payingAt(g);
+  /** the bag's open mouth in 3D (where the paid coins leave it) */
+  const bagMouth3 = (g: number): V3 => {
+    const b = bagAt(g);
+    const m = rot2([0, -31 * BAG_K], bagTilt(g));
+    return [b[0] + m[0], b[1] + m[1], b[2]];
   };
   const bag3 = bagAt(f);
   const bag2 = p3(bag3);
   const bagS = P.r(bag3[2]);
-  const bagSide = (dx: number, dy: number): P2 => [bag2[0] + dx * BAG_K * bagS, bag2[1] + dy * BAG_K * bagS];
-  const neck3: V3 = [bag3[0] - 2, bag3[1] - 30 * BAG_K, bag3[2]];
+  const bagSide = (dx: number, dy: number): P2 => {
+    const v = rot2([dx * BAG_K * bagS, dy * BAG_K * bagS], bagTilt(f));
+    return [bag2[0] + v[0], bag2[1] + v[1]];
+  };
+  /** the banker's fist round the bag's neck (just under its open mouth) */
+  const neck3: V3 = [bag3[0] - 1, bag3[1] - 24 * BAG_K, bag3[2]];
 
-  // ---------------------------------------------------------------- the banker (stands at the table's right side)
-  const bFeet = P.at(BANKER.x, BANKER.z);
+  // ---------------------------------------------------------------- the banker (behind the counter: feet never seen)
+  const BX = bankerX(f);
+  const bFeet = P.at(BX, BANKER_Z);
   const bankerBase = poseTrack([
-    [0, RomeFolk.headTurn(RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(-1), 0.6), -0.6)],
-    [T.sweep[0] - 6, { ...RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(-1), 0.6), lean: -10, pitch: 10 }],
-    [T.sweep[1], { ...RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(-1), 0.3), lean: -4, pitch: 8 }],
-    [T.codexReach[1], { ...RomeFolk.POSES.front(), pitch: 6 }],
+    [0, RomeFolk.headTurn(RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(-1), 0.55), -0.6)],
+    [T.sweep[0] - 6, { ...RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(-1), 0.4), pitch: 10 }],
+    [T.sweep[1], { ...RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(1), 0.3), pitch: 8 }],
     [T.codexLift[1], RomeFolk.POSES.front()],
     [T.codexDown[1], { ...RomeFolk.POSES.front(), pitch: 6 }],
-    [T.boxReach[1], { ...RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(1), 0.4), crouch: 18, pitch: 16 }],
-    [T.bagLift[1], { ...RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(1), 0.6), crouch: 4, pitch: 4 }],
-    [T.bagHand[1], { ...RomeFolk.POSES.stand(1), lean: 8, pitch: 2 }],
-    [T.bagHand[1] + 14, RomeFolk.headTurn(RomeFolk.POSES.stand(1), 0.7)],
-    [250, RomeFolk.headTurn(RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(1), 0.5), 0.5)],
+    [T.boxReach[1], { ...RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(1), 0.5), lean: 6, pitch: 14 }],
+    [T.bagLift[1], { ...RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(1), 0.7), pitch: 4 }],
+    [T.bagOut[1], RomeFolk.headTurn({ ...RomeFolk.POSES.stand(1), lean: 8, brow: -0.3, mouth: 0.3 }, 0.75)],
+    [T.bagHand[1], RomeFolk.headTurn({ ...RomeFolk.POSES.stand(1), lean: 8, brow: -0.3, mouth: 0.3 }, 0.75)],
+    [T.bagHand[1] + 18, RomeFolk.headTurn(RomeFolk.POSES.stand(1), 0.7)],
+    [260, RomeFolk.headTurn(RomeFolk.lerpFig(RomeFolk.POSES.front(), RomeFolk.POSES.stand(1), 0.5), 0.5)],
   ]);
   const bPose0 = RomeFolk.idle(bankerBase(f), f, 1);
   const free0 = RomeFolk.romeAnchors("dominus", bPose0, bFeet.at, bFeet.scale, { variant: 0 });
   const sweepY = TABLE.top - 6;
-  const restL3: V3 = [TABLE.x1 - 8, TABLE.top - 4, 76];
+  // the left hand rests on the counter's back edge beside him whenever it has nothing to do
+  const restL3: V3 = [Math.min(TABLE.x1 - 10, BX - 34), TABLE.top - 4, TABLE.z1 - 12];
+  const restR3: V3 = [Math.min(TABLE.x1 - 6, BX + 30), TABLE.top - 4, TABLE.z1 - 10];
   const codexL = codexPt(f, -CODEX_W - 2, 4);
   const codexR = codexPt(f, CODEX_W + 2, 4);
   const sIdx = Math.min(STROKES.length - 1, Math.floor(strokesDone(f)));
@@ -625,95 +671,156 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
     const q = sweepAt(h - 5);
     return [q[0], sweepY, q[1]];
   };
-  let bGrip: { L?: P2; R?: P2 } = {};
+  /** a smooth arc (quadratic) between two 3D points over a waypoint */
+  const arc3 = (a: V3, m: V3, b: V3, t: number): V3 => mix3(mix3(a, m, t), mix3(m, b, t), t);
+  let gL: V3 = restL3;
+  let gR: V3 = restR3;
+  const c0L = codexPt(T.codexLift[0], -CODEX_W - 2, 4);
+  const c0R = codexPt(T.codexLift[0], CODEX_W + 2, 4);
+  const cdR = codexPt(T.codexDown[1], CODEX_W + 2, 4);
+  const cdL = codexPt(T.codexDown[1], -CODEX_W - 2, 4);
   if (f < T.sweep[0] - 10) {
-    bGrip = { L: p3(restL3) };
+    gL = handAt(0);
+    gL = mix3(restL3, gL, 0);
   } else if (f < T.sweep[0]) {
-    bGrip = { L: p3(mix3(restL3, handAt(0), ez(f, T.sweep[0] - 10, T.sweep[0]))) };
+    gL = mix3(restL3, handAt(0), ez(f, T.sweep[0] - 10, T.sweep[0]));
   } else if (f < T.sweep[1] + 2) {
-    bGrip = { L: p3(handAt(sweepH(f))) };
+    gL = handAt(sweepH(f));
   } else if (f < T.codexLift[0]) {
-    const u = ez(f, T.sweep[1] + 2, T.codexLift[0]);
-    const c0L = codexPt(T.codexLift[0], -CODEX_W - 2, 4);
-    const c0R = codexPt(T.codexLift[0], CODEX_W + 2, 4);
-    bGrip = { L: p3(mix3(handAt(SL), c0L, u)), R: mix2(free0.handR, p3(c0R), ez(f, T.codexReach[0], T.codexLift[0])) };
-  } else if (f < T.write[0] || (f >= T.codexDown[0] && f < T.codexDown[1] + 2)) {
-    bGrip = { L: p3(codexL), R: p3(codexR) };
+    gL = mix3(handAt(SL), c0L, ez(f, T.sweep[1] + 2, T.codexLift[0]));
+    gR = mix3(restR3, c0R, ez(f, T.codexReach[0], T.codexLift[0]));
+  } else if (f < T.write[0] || (f >= T.codexDown[0] && f < T.codexDown[1])) {
+    gL = codexL;
+    gR = codexR;
   } else if (f < T.codexDown[0]) {
-    const tp = p3(tip3);
-    bGrip = { L: p3(codexL), R: [tp[0] + 7 * bFeet.scale, tp[1] + 5 * bFeet.scale] };
-  } else if (f < T.boxReach[1]) {
-    const u = ez(f, T.codexDown[1] + 2, T.boxReach[1]);
-    const lu = ez(f, T.codexDown[1] + 2, T.codexDown[1] + 14);
-    bGrip = { L: mix2(p3(codexPt(T.codexDown[1], -CODEX_W - 2, 4)), free0.handL, lu), R: p3(mix3(codexPt(T.codexDown[1], CODEX_W + 2, 4), neck3, u)) };
-  } else if (f < T.bagHand[1]) {
-    bGrip = { R: p3(neck3) };
-  } else if (f < T.bagHand[1] + 14) {
-    bGrip = { R: mix2(p3(neck3), free0.handR, ez(f, T.bagHand[1], T.bagHand[1] + 14)) };
+    gL = codexL;
+    gR = tip3;
+  } else {
+    // the left hand lets go of the codex and comes to rest on the counter; the right hand arcs over the box's rim
+    // to the bag's neck (contact f172), lifts it, holds it out to the merchant, lets go at f206 and comes back
+    gL = mix3(cdL, restL3, ez(f, T.codexDown[1], T.codexDown[1] + 12));
+    if (f < T.boxReach[1]) {
+      const over: V3 = [BAG_IN_BOX[0] - 6, BOX.top - 64, BAG_IN_BOX[2] + 6];
+      gR = arc3(cdR, over, neck3, ez(f, T.codexDown[1], T.boxReach[1]));
+    } else if (f < T.bagHand[1]) {
+      gR = neck3;
+    } else {
+      gR = mix3(neck3, [BX + 40, -170, BANKER_Z - 40], ez(f, T.bagHand[1], T.bagHand[1] + 16));
+      if (f >= T.bagHand[1] + 16) gR = mix3([BX + 40, -170, BANKER_Z - 40], restR3, ez(f, T.bagHand[1] + 16, T.bagHand[1] + 30));
+    }
   }
+  const writingNow = f >= T.write[0] && f < T.codexDown[0];
+  const bGrip: { L?: P2; R?: P2 } = { L: p3(gL), R: writingNow ? [p3(gR)[0] + 7 * bFeet.scale, p3(gR)[1] + 5 * bFeet.scale] : p3(gR) };
+  void free0;
   const bPose = RomeFolk.gripTo("dominus", 0, bPose0, bGrip, bFeet.at, bFeet.scale);
-  const banker = (uid: string, onlyArm?: "L" | "R") => <RomeFolk.Dominus key={uid} pose={bPose} at={bFeet.at} scale={bFeet.scale} uid={uid} variant={0} stripe ring fog={figD(BANKER.x, BANKER.z)} unitPx={A.k} onlyArm={onlyArm} />;
+  const banker = (uid: string, onlyArm?: "L" | "R") => <RomeFolk.Dominus key={uid} pose={bPose} at={bFeet.at} scale={bFeet.scale} uid={uid} variant={0} stripe ring fog={figD(BX, BANKER_Z)} unitPx={A.k} onlyArm={onlyArm} />;
 
   // ---------------------------------------------------------------- the merchant
   const mX = merX(f);
   const mFeet = P.at(mX, MER.z);
-  const mStandL = RomeFolk.POSES.stand(-1);
+  const mStandL = RomeFolk.headTurn(RomeFolk.POSES.stand(-1), -0.8);
   const mStandR = { ...RomeFolk.POSES.stand(1), lean: 5, pitch: 3 };
   const walking = f > T.walk[0] && f < T.walk[1];
-  const mAmt = walkAmt(f, T.walk[0], T.walk[1], 8);
-  const mPoseBase = walking ? { ...RomeFolk.walkPose(mStandR, (f - T.walk[0]) / 30, mAmt, MER_STRIDE), lean: 12 * mAmt + 5 * (1 - mAmt) } : RomeFolk.lerpFig(mStandL, mStandR, merFacing(f));
-  const gesture3: V3 = [MER.x1 + 80, -214, MER.z + 22];
+  const mAmt = walkAmt(f, T.walk[0], T.walk[1], 6);
+  const eager = ez(f, T.reach[0], T.reach[1]) * (1 - ez(f, T.hug[0], T.hug[1]));
+  const paying = payingAt(f);
+  const mPoseBase = walking
+    ? { ...RomeFolk.walkPose(mStandR, (f - T.walk[0]) / 30, mAmt, MER_STRIDE), lean: 12 * mAmt + 5 * (1 - mAmt) }
+    : {
+        ...RomeFolk.lerpFig(mStandL, mStandR, merFacing(f)),
+        lean: lerp(0, -4, eager) * (1 - merFacing(f)) + 6 * paying * merFacing(f),
+        pitch: 3 + 10 * paying,
+        brow: lerp(0, -0.4, Math.max(eager, paying)),
+        mouth: lerp(0, 0.35, Math.max(eager, paying)),
+      };
   let mGrip: { L?: P2; R?: P2 } = {};
-  if (f >= T.bagOut[0] && f < T.bagHand[0]) {
-    const u = ez(f, T.bagOut[0], T.bagHand[0]);
+  if (f >= T.reach[0] && f < T.bagHand[0]) {
+    // both hands come up and out, open, and close on the bag's near half at f198
+    const u = ez(f, T.reach[0], T.reach[1]);
     const n0 = RomeFolk.romeAnchors("freeman", RomeFolk.idle(mStandL, f, 2), mFeet.at, mFeet.scale, { variant: 2 });
-    mGrip = { L: mix2(n0.handL, bagSide(24, 8), u), R: mix2(n0.handR, bagSide(-24, 10), u) };
-  } else if (f >= T.bagHand[0] && f < T.coin[0]) {
-    mGrip = { L: bagSide(lerp(24, -24, merFacing(f)), 8), R: bagSide(lerp(-24, 24, merFacing(f)), 10) };
-  } else if (f >= T.coin[0]) {
-    // the free hand leaves the bag and opens toward the cart and the street: "go" (the other arm keeps the bag)
-    mGrip = { L: mix2(bagSide(-24, 8), p3(gesture3), ez(f, T.coin[0], T.coin[1])), R: bagSide(24, 10) };
+    mGrip = { L: mix2(n0.handL, bagSide(26, 4), u), R: mix2(n0.handR, bagSide(10, 22), u) };
+  } else if (f >= T.bagHand[0] && f < T.turn[0]) {
+    mGrip = { L: bagSide(26, 4), R: bagSide(10, 22) };
+  } else if (f >= T.turn[0]) {
+    // holding the bag at his chest; when paying, one hand at its neck and one under its base, tipping it
+    const u = merFacing(f);
+    const hold: { L: P2; R: P2 } = { L: bagSide(lerp(26, -26, u), 4), R: bagSide(lerp(10, 26, u), lerp(22, 6, u)) };
+    const tipG: { L: P2; R: P2 } = { L: bagSide(-4, -22), R: bagSide(4, 24) };
+    mGrip = { L: mix2(hold.L, tipG.L, paying), R: mix2(hold.R, tipG.R, paying) };
   }
-  const mOpen = ez(f, T.coin[0] + 4, T.coin[1]);
+  const mOpen = ez(f, T.reach[0], T.reach[0] + 8) * (1 - ez(f, T.reach[1] - 3, T.reach[1]));
   const mPoseB = RomeFolk.idle(mPoseBase, f, 2);
   const mPose = RomeFolk.gripTo(
     "freeman",
     2,
-    { ...mPoseB, armL: { ...mPoseB.armL, fist: lerp(mPoseB.armL.fist, 0, mOpen), hand: lerp(mPoseB.armL.hand, -48, mOpen) }, brow: lerp(mPoseB.brow, -0.3, mOpen), mouth: lerp(mPoseB.mouth, 0.3, mOpen) },
+    { ...mPoseB, armL: { ...mPoseB.armL, fist: lerp(mPoseB.armL.fist, 0, mOpen) }, armR: { ...mPoseB.armR, fist: lerp(mPoseB.armR.fist, 0, mOpen) } },
     mGrip,
     mFeet.at,
     mFeet.scale,
   );
 
   // ---------------------------------------------------------------- the carter and the cart
+  // he waits at his handcart, fists on its poles; turns to the merchant and holds out his open palm; the coins land in
+  // it; he closes his fist on them and tucks it at his belt, turns back, takes up the poles and pushes off
   const rollStart = T.roll[0];
   let cDx = 0;
-  for (let h = rollStart; h < f; h++) cDx += 1.05 * ez(h + 0.5, rollStart, rollStart + 12);
+  for (let h = rollStart; h < f; h++) cDx += 1.0 * ez(h + 0.5, rollStart, rollStart + 12);
   const cX = CARTER.x + cDx;
   const cFeet = P.at(cX, CARTER.z);
-  const handle3: V3 = [CARTER.x + CART.hx + cDx, -178, CARTER.z - 14];
-  const handle3b: V3 = [CARTER.x + CART.hx + cDx, -178, CARTER.z + 14];
+  const handle3: V3 = [CARTER.x + CART.hx + cDx, -178, CARTER.z - 18];
+  const handle3b: V3 = [CARTER.x + CART.hx + cDx, -178, CARTER.z + 18];
+  const cFace = ez(f, T.cFaceL[0], T.cFaceL[1]) * (1 - ez(f, T.cFaceR[0], T.cFaceR[1]));
+  const cHold = RomeFolk.POSES.push(1, 0, 0);
+  const cTurned = { ...RomeFolk.headTurn(RomeFolk.POSES.stand(-1), -0.75, 10), brow: -0.2, mouth: 0.25 };
+  const palmOut = ez(f, T.palm[0], T.palm[1]) * (1 - ez(f, T.close[1], T.close[1] + 8));
+  const fistC = ez(f, T.close[0], T.close[1]);
   let cPose: FigPose;
+  let cGrip: { L?: P2; R?: P2 };
   if (f < rollStart) {
-    const look = ez(f, T.carterFace[0], T.carterFace[1]) * (1 - ez(f, T.carterTurn[0], T.carterTurn[1]));
-    const nod = Math.sin(Math.PI * lin(f, 254, 264)) * 9;
-    const q = RomeFolk.POSES.push(1, 0, 0);
-    cPose = RomeFolk.idle({ ...q, headYaw: lerp(q.headYaw, -0.55, look), pitch: q.pitch + nod, brow: lerp(q.brow, -0.2, look), mouth: lerp(q.mouth, 0.2, look) }, f, 3);
+    const look = ez(f, T.cFaceL[0] - 10, T.cFaceL[0]) * (1 - cFace);
+    const q = RomeFolk.lerpFig({ ...cHold, headYaw: lerp(cHold.headYaw, -0.55, look) }, cTurned, cFace);
+    cPose = RomeFolk.idle({ ...q, armR: { ...q.armR, fist: lerp(lerp(q.armR.fist, 0, palmOut), 1, fistC), hand: lerp(q.armR.hand, -36, palmOut) } }, f, 3);
+    const a0 = RomeFolk.romeAnchors("freeman", cPose, cFeet.at, cFeet.scale, { variant: 1 });
+    // off the poles as he turns to the merchant, back on as he turns away (fists on them by f280)
+    const onH = 1 - ez(f, T.cFaceL[0], T.cFaceL[0] + 8) + ez(f, T.cFaceR[0] + 2, T.roll[0] - 2);
+    const belt: P2 = p3([CARTER.x - 14, -150, CARTER.z - 30]);
+    let r: P2 = mix2(a0.handR, p3(handle3b), c01(onH));
+    r = mix2(r, p3(PALM), palmOut);
+    r = mix2(r, belt, ez(f, T.close[1], T.close[1] + 8) * (1 - ez(f, T.cFaceR[0] + 2, T.roll[0] - 2)));
+    cGrip = { L: mix2(a0.handL, p3(handle3), c01(onH)), R: r };
   } else {
     cPose = RomeFolk.POSES.push(1, (f - rollStart) / 40, ez(f, rollStart, rollStart + 12));
+    cGrip = { L: p3(handle3), R: p3(handle3b) };
   }
-  const cPoseG = RomeFolk.gripTo("freeman", 1, cPose, { L: p3(handle3), R: p3(handle3b) }, cFeet.at, cFeet.scale);
+  const cPoseG = RomeFolk.gripTo("freeman", 1, cPose, cGrip, cFeet.at, cFeet.scale);
+  // the pay: silver tipped from the bag's mouth into his palm (visible until his fist closes)
+  const payCoins: { c: P2; s: number; tilt: number; key: string }[] = [];
+  if (f >= T.pour[0] && f < T.close[0] + 3) {
+    const mouth = bagMouth3(f);
+    for (let i = 0; i < 6; i++) {
+      const te = T.pour[0] + i * 1.6;
+      if (f < te) continue;
+      const land: V3 = [PALM[0] - 4 + 7 * hash(i, 71), PALM[1] - 6 - 3 * (i % 3), PALM[2] - 4 + 8 * hash(i, 72)];
+      const s = c01((f - te) / 7);
+      const m0 = bagMouth3(te);
+      const pos: V3 = s < 1 ? [lerp(m0[0], land[0], s), m0[1] + (land[1] - m0[1]) * s * s, lerp(m0[2], land[2], s)] : land;
+      void mouth;
+      payCoins.push({ c: p3(pos), s: P.r(pos[2]), tilt: (hash(i, 73) - 0.5) * 40 + (1 - s) * 60, key: `pc${i}` });
+    }
+  }
 
   // ---------------------------------------------------------------- the queue
-  const d1 = { X: -50, Z: 30 };
-  const d2 = { X: -118, Z: 150 };
-  const sl = { X: -186, Z: 270 };
+  const d1 = { X: -40, Z: 46 };
+  const d2 = { X: -112, Z: 160 };
+  const sl = { X: -182, Z: 280 };
   const d1Feet = P.at(d1.X, d1.Z);
   const d2Feet = P.at(d2.X, d2.Z);
   const slFeet = P.at(sl.X, sl.Z);
   const raise = ez(f, T.pour1[0] - 14, T.pour1[0]) * (1 - ez(f, T.pour1[1] + 2, T.pour1[1] + 16));
   const tip = lerp(0, 128, ez(f, T.pour1[0], T.pour1[0] + 7)) * (1 - ez(f, T.pour1[1] - 4, T.pour1[1] + 6));
-  const d1Hold3: V3 = mix3([d1.X + 30, -150, d1.Z - 16], [HEAP1.x - 6, -222, HEAP1.z - 4], raise);
+  const d1Rest3: V3 = [d1.X + 30, -150, d1.Z - 16];
+  const d1Up3: V3 = [HEAP1.x - 8, -224, HEAP1.z - 6];
+  const d1Hold3: V3 = mix3(d1Rest3, d1Up3, raise);
   const d2Hold3: V3 = [d2.X + 26, -196, d2.Z - 26];
   const slPouch3: V3 = [sl.X + 26, -196, sl.Z - 24];
   const d1Pose = RomeFolk.gripTo("freeman", 0, RomeFolk.idle(RomeFolk.headTurn(RomeFolk.POSES.stand(1), 0.75, 8 * raise), f, 4), { L: p3(d1Hold3) }, d1Feet.at, d1Feet.scale);
@@ -725,7 +832,7 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
   };
 
   // ---------------------------------------------------------------- the coins
-  const coinFog = fogNear(40);
+  const coinFog = fogNear(50);
   const tableCoins: { c: P2; s: number; tilt: number; key: string; zz: number; yy: number }[] = [];
   const pourCoins: { c: P2; s: number; tilt: number; key: string }[] = [];
   const boxFalling: { c: P2; s: number; tilt: number; key: string }[] = [];
@@ -733,7 +840,7 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
   COINS.forEach((c, i) => {
     if (f < c.te) return;
     const tipAng = lerp(0, 128, ez(c.te, T.pour1[0], T.pour1[0] + 7));
-    const m0 = purseMouth(mix3([d1.X + 30, -150, d1.Z - 16], [HEAP1.x - 6, -222, HEAP1.z - 4], ez(c.te, T.pour1[0] - 14, T.pour1[0])), tipAng);
+    const m0 = purseMouth(mix3(d1Rest3, d1Up3, ez(c.te, T.pour1[0] - 14, T.pour1[0])), tipAng);
     if (f < c.te + FALL_T) {
       const s = (f - c.te) / FALL_T;
       const pos: V3 = [lerp(m0[0], c.rest[0], s), m0[1] + (c.rest[1] - m0[1]) * s * s, lerp(m0[2], c.rest[2], s)];
@@ -743,19 +850,18 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
     const e = EDGE[i];
     if (f < e) {
       const xz = pushedXZ(c, f);
-      const pushed = xz[0] > c.rest[0] + 0.01 || xz[1] < c.rest[2] - 0.01;
       const moved = Math.hypot(xz[0] - c.rest[0], xz[1] - c.rest[2]);
+      const pushed = moved > 0.01;
       const yy = pushed ? TABLE.top - 1.6 - 7 * hash(i, 41) * c01(moved / 30) : c.rest[1];
       tableCoins.push({ c: p3([xz[0], yy, xz[1]]), s: P.r(xz[1]), tilt: c.tilt + (pushed ? 14 * Math.sin(moved * 0.09 + i) : 0), key: `tc${i}`, zz: xz[1], yy });
       return;
     }
-    // over the edge: it drops into the box
+    // over the end: it drops into the box
     const t = f - e;
     const ez0 = pushedXZ(c, e);
     const y = TABLE.top - 1.6 + 0.6 * t * t;
     if (y > fillY) return;
-    const zz = ez0[1] + SD[1] * 1.6 * t;
-    boxFalling.push({ c: p3([TABLE.x1 + 2 + SD[0] * 2.4 * t, y, zz]), s: P.r(zz), tilt: c.tilt + t * 18, key: `bc${i}` });
+    boxFalling.push({ c: p3([TABLE.x1 + 3 + 2.2 * t, y, ez0[1]]), s: P.r(ez0[1]), tilt: c.tilt + t * 18, key: `bc${i}` });
   });
   tableCoins.sort((a, b) => b.zz - a.zz || b.yy - a.yy);
   const boxCoins: React.ReactNode[] = [];
@@ -766,7 +872,7 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
     boxCoins.push(<CoinShape key={i} c={p3([x, fillY - 1.5 * hash(i, 53), zz])} s={P.r(zz)} tilt={(hash(i, 54) - 0.5) * 40} fog={fogNear(zz)} />);
   }
 
-  // ---------------------------------------------------------------- the light: the arcade's shade, the street's sun
+  // ---------------------------------------------------------------- the light: the arcade's shade (and its roof's), the street's sun
   const vw = (() => {
     const yTop = cam.cy - 1200 / cam.k;
     const yBot = cam.cy + 1200 / cam.k;
@@ -776,6 +882,8 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
     const x1 = P.p(SHADE_X1, 0, 150)[0];
     return { yTop, yBot, xl, xr, x0, x1 };
   })();
+  const roofY0 = cam.cy - 960 / cam.k;
+  const roofY1 = cam.cy - 260 / cam.k;
   const shadeVeil = (
     <g>
       <defs>
@@ -783,16 +891,28 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
           <stop offset="0" stopColor="#241F1A" stopOpacity={0.42} />
           <stop offset="1" stopColor="#241F1A" stopOpacity={0} />
         </linearGradient>
+        <linearGradient id="bk-svm" gradientUnits="userSpaceOnUse" x1={vw.x0.toFixed(2)} y1="0" x2={vw.x1.toFixed(2)} y2="0">
+          <stop offset="0" stopColor="#fff" />
+          <stop offset="1" stopColor="#000" />
+        </linearGradient>
+        <linearGradient id="bk-roof" gradientUnits="userSpaceOnUse" x1="0" y1={roofY0.toFixed(2)} x2="0" y2={roofY1.toFixed(2)}>
+          <stop offset="0" stopColor="#1E1A16" stopOpacity={0.55} />
+          <stop offset="1" stopColor="#1E1A16" stopOpacity={0} />
+        </linearGradient>
+        <mask id="bk-roofm" maskUnits="userSpaceOnUse" x={vw.xl.toFixed(2)} y={vw.yTop.toFixed(2)} width={(vw.xr - vw.xl).toFixed(2)} height={(vw.yBot - vw.yTop).toFixed(2)}>
+          <rect x={vw.xl.toFixed(2)} y={vw.yTop.toFixed(2)} width={(vw.xr - vw.xl).toFixed(2)} height={(vw.yBot - vw.yTop).toFixed(2)} fill="url(#bk-svm)" />
+        </mask>
         <linearGradient id="bk-sun" gradientUnits="userSpaceOnUse" x1={vw.x0.toFixed(2)} y1="0" x2={vw.x1.toFixed(2)} y2="0">
           <stop offset="0" stopColor="#F3E6C8" stopOpacity={0} />
           <stop offset="1" stopColor="#F3E6C8" stopOpacity={0.13} />
         </linearGradient>
       </defs>
       <rect x={vw.xl.toFixed(2)} y={vw.yTop.toFixed(2)} width={(vw.x1 - vw.xl).toFixed(2)} height={(vw.yBot - vw.yTop).toFixed(2)} fill="url(#bk-sv)" />
+      {/* the portico's roof: its shadow darkens the top of the frame on the arcade side */}
+      <rect x={vw.xl.toFixed(2)} y={roofY0.toFixed(2)} width={(vw.xr - vw.xl).toFixed(2)} height={(roofY1 - roofY0).toFixed(2)} fill="url(#bk-roof)" mask="url(#bk-roofm)" />
       <rect x={vw.x0.toFixed(2)} y={vw.yTop.toFixed(2)} width={(vw.xr - vw.x0).toFixed(2)} height={(vw.yBot - vw.yTop).toFixed(2)} fill="url(#bk-sun)" />
     </g>
   );
-  // the lower frame sinks into the dense low air (a soft gradient in camera space, over the floor's near rows)
   const lowAir = (() => {
     const y0 = cam.cy + (1480 - 960) / cam.k;
     const y1 = cam.cy + (1920 - 960) / cam.k;
@@ -813,45 +933,54 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
     );
   })();
 
-  // ---------------------------------------------------------------- the props
-  const Table = (() => {
+  // ---------------------------------------------------------------- the counter: a solid timber mensa, panelled front
+  const Counter = (() => {
     const { x0, x1, z0, z1, top, th } = TABLE;
-    const legs: [number, number][] = [
-      [x0 + 5, z1 - 17],
-      [x1 - 17, z1 - 17],
-      [x0 + 5, z0 + 5],
-      [x1 - 17, z0 + 5],
-    ];
+    const t = (h: string) => A.tone(h, z0, 60);
+    const panels: React.ReactNode[] = [];
+    const n = 3;
+    for (let i = 0; i < n; i++) {
+      const a = lerp(x0 + 12, x1 - 12, i / n) + 6;
+      const b = lerp(x0 + 12, x1 - 12, (i + 1) / n) - 6;
+      const q = [p3([a, top + th + 22, z0 - 0.6]), p3([b, top + th + 22, z0 - 0.6]), p3([b, -26, z0 - 0.6]), p3([a, -26, z0 - 0.6])];
+      panels.push(
+        <g key={i}>
+          <path d={poly(q)} fill={t(mixHex(WOOD.mid, WOOD.dark, 0.18))} stroke={t(lineOf(WOOD))} strokeWidth={A.lw(0.9)} />
+          <path d={`M${Pt(q[0])}L${Pt(q[1])}M${Pt(q[0])}L${Pt(q[3])}`} stroke={t(WOOD.dark)} strokeWidth={2.4 * P.r(z0)} strokeOpacity={0.6} />
+          <path d={`M${Pt(q[3])}L${Pt(q[2])}M${Pt(q[1])}L${Pt(q[2])}`} stroke={t(mixHex(WOOD.lit, "#F3EBDD", 0.2))} strokeWidth={1.6 * P.r(z0)} strokeOpacity={0.5} />
+        </g>,
+      );
+    }
     return (
       <g>
-        {legs.map(([x, zz], i) => (
-          <AirBox key={i} A={A} X0={x} X1={x + 12} Y0={top + th} Y1={0} Z0={zz} Z1={zz + 12} mat={WOOD} uid={`bk-tl${i}`} rim={0.3} />
-        ))}
-        <AirBox A={A} X0={x0 + 4} X1={x1 - 4} Y0={top + th} Y1={top + th + 18} Z0={z0 + 3} Z1={z1 - 3} mat={WOOD} uid="bk-ap" rim={0.2} />
-        <AirBox A={A} X0={x0} X1={x1} Y0={top} Y1={top + th} Z0={z0} Z1={z1} mat={WOOD} uid="bk-tp" />
+        {/* a plinth along its foot */}
+        <AirBox A={A} X0={x0 + 1} X1={x1 - 1} Y0={-14} Y1={0} Z0={z0 - 2} Z1={z1 - 2} mat={WOOD} uid="bk-cpl" rim={0.2} />
+        <AirBox A={A} X0={x0 + 4} X1={x1 - 4} Y0={top + th} Y1={0} Z0={z0 + 2} Z1={z1 - 4} mat={WOOD} uid="bk-cbody" rim={0.2} />
+        {panels}
+        <AirBox A={A} X0={x0} X1={x1} Y0={top} Y1={top + th} Z0={z0 - 4} Z1={z1} mat={WOOD} uid="bk-ctop" />
       </g>
     );
   })();
   const BoxBack = (
     <g>
-      <path d={poly([p3([BOX.x0, BOX.top, BOX.z1]), p3([BOX.x1, BOX.top, BOX.z1]), p3([BOX.x1, BOX.top, BOX.z0]), p3([BOX.x0, BOX.top, BOX.z0])])} fill={A.tone("#2C2119", -20, 40)} />
-      <path d={poly([p3([BOX.x0 + 4, fillY, BOX.z1 - 4]), p3([BOX.x1 - 4, fillY, BOX.z1 - 4]), p3([BOX.x1 - 4, fillY, BOX.z0 + 4]), p3([BOX.x0 + 4, fillY, BOX.z0 + 4])])} fill={A.tone("#868B89", -20, 40)} />
+      <path d={poly([p3([BOX.x0, BOX.top, BOX.z1]), p3([BOX.x1, BOX.top, BOX.z1]), p3([BOX.x1, BOX.top, BOX.z0]), p3([BOX.x0, BOX.top, BOX.z0])])} fill={A.tone("#2C2119", 60, 40)} />
+      <path d={poly([p3([BOX.x0 + 4, fillY, BOX.z1 - 4]), p3([BOX.x1 - 4, fillY, BOX.z1 - 4]), p3([BOX.x1 - 4, fillY, BOX.z0 + 4]), p3([BOX.x0 + 4, fillY, BOX.z0 + 4])])} fill={A.tone("#868B89", 60, 40)} />
       {boxCoins}
     </g>
   );
+  // the lid, lifted off and leaning against the box's right side (inner face toward us, iron straps)
   const lid = (() => {
-    const a = (112 * Math.PI) / 180;
-    const L = BOX.z1 - BOX.z0;
-    const tipY = BOX.top - L * Math.sin(a);
-    const tipZ = BOX.z1 - L * Math.cos(a);
-    const q: P2[] = [p3([BOX.x0, BOX.top, BOX.z1]), p3([BOX.x1, BOX.top, BOX.z1]), p3([BOX.x1, tipY, tipZ]), p3([BOX.x0, tipY, tipZ])];
+    const xb = BOX.x1 + 2;
+    const xt = BOX.x1 + 26;
+    const q: P2[] = [p3([xb, 0, BOX.z0 + 4]), p3([xb, 0, BOX.z1 - 4]), p3([xt, BOX.top + 6, BOX.z1 - 4]), p3([xt, BOX.top + 6, BOX.z0 + 4])];
+    const q2: P2[] = [p3([xb, 0, BOX.z0 + 4]), p3([xt, BOX.top + 6, BOX.z0 + 4]), p3([xt + 4, BOX.top + 8, BOX.z0 + 4]), p3([xb + 4, 0, BOX.z0 + 4])];
     return (
       <g>
-        <path d={poly(q)} fill={A.tone(mixHex(BOXWOOD.lit, BOXWOOD.mid, 0.3), BOX.z1, 120)} stroke={A.tone(MAT.iron.mid, BOX.z1, 120)} strokeWidth={4 * P.r(BOX.z1)} strokeLinejoin="round" />
-        {[0.14, 0.86].map((u) => (
-          <path key={u} d={`M${Pt(bil(q, u, 0))}L${Pt(bil(q, u, 1))}`} stroke={A.tone(MAT.iron.mid, BOX.z1, 120)} strokeWidth={6 * P.r(BOX.z1)} />
+        <path d={poly(q)} fill={A.tone(mixHex(BOXWOOD.lit, BOXWOOD.mid, 0.3), BOX.z0, 60)} stroke={A.tone(MAT.iron.mid, BOX.z0, 60)} strokeWidth={4 * P.r(BOX.z0)} strokeLinejoin="round" />
+        {[0.18, 0.82].map((u) => (
+          <path key={u} d={`M${Pt(bil(q, u, 0))}L${Pt(bil(q, u, 1))}`} stroke={A.tone(MAT.iron.mid, BOX.z0, 60)} strokeWidth={6 * P.r(BOX.z0)} />
         ))}
-        <path d={poly([bil(q, 0.1, 0.12), bil(q, 0.9, 0.12), bil(q, 0.9, 0.88), bil(q, 0.1, 0.88)])} fill="none" stroke={A.tone(BOXWOOD.mid, BOX.z1, 120)} strokeWidth={1.2 * P.r(BOX.z1)} strokeOpacity={0.6} />
+        <path d={poly(q2)} fill={A.tone(BOXWOOD.dark, BOX.z0, 60)} />
       </g>
     );
   })();
@@ -909,50 +1038,90 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
       </g>
     );
   })();
-  const writing = f >= T.write[0] && f < T.codexDown[0];
-  const stylus = writing
+  const stylus = writingNow
     ? (() => {
         const tp = p3(tip3);
         const s = P.r(codexC(f)[2]);
-        return <path d={`M${Pt(tp)}L${Pt([tp[0] + 15 * s, tp[1] + 11 * s])}`} stroke={A.tone("#5A4636", 20, 100)} strokeWidth={2.2 * s} strokeLinecap="round" />;
+        return <path d={`M${Pt(tp)}L${Pt([tp[0] + 15 * s, tp[1] + 11 * s])}`} stroke={A.tone("#5A4636", 100, 100)} strokeWidth={2.2 * s} strokeLinecap="round" />;
       })()
     : null;
   const codexHeld = f >= T.codexLift[0] && f < T.codexDown[1];
+
+  // ---------------------------------------------------------------- the handcart: a finished two-wheeled cart
   const Cart = (() => {
-    const x0 = CARTER.x + CART.hx + 16 + cDx;
+    const x0 = CARTER.x + CART.hx + CART.gap + cDx;
     const x1 = x0 + CART.len;
     const { z0, z1 } = CART;
-    const R = 42;
-    const wheelX = x0 + 46;
+    const R = 44;
+    const axX = (x0 + x1) / 2 - 6;
     const ang = (cDx / R) * (180 / Math.PI);
-    const wc = p3([wheelX, -R, z0 - 4]);
-    const ws = P.r(z0 - 4);
-    const spokes = Array.from({ length: 6 }, (_, i) => {
-      const a = ((ang + i * 60) * Math.PI) / 180;
-      return `M${Pt(wc)}L${Pt([wc[0] + Math.cos(a) * R * 0.86 * ws, wc[1] + Math.sin(a) * R * 0.86 * ws])}`;
-    }).join("");
-    const amph = [0, 1, 2].map((i) => {
-      const X = x0 + 18 + i * 30;
-      const Zm = lerp(z0 + 14, z1 - 14, i % 2 ? 0.8 : 0.2);
+    const bedY = -96;
+    const sideY = -136;
+    const wheel = (zz: number, key: string, far: boolean) => {
+      const c = p3([axX, -R, zz]);
+      const s = P.r(zz);
+      const sp = Array.from({ length: 8 }, (_, i) => {
+        const a = ((ang + i * 45) * Math.PI) / 180;
+        return `M${Pt([c[0] + Math.cos(a) * 9 * s, c[1] + Math.sin(a) * 9 * s])}L${Pt([c[0] + Math.cos(a) * R * 0.88 * s, c[1] + Math.sin(a) * R * 0.88 * s])}`;
+      }).join("");
+      const tn = (h: string) => A.tone(far ? mixHex(h, "#22180F", 0.25) : h, zz, 30);
+      return (
+        <g key={key}>
+          <circle cx={c[0]} cy={c[1]} r={R * 0.93 * s} fill="none" stroke={tn(CARTWOOD.mid)} strokeWidth={8 * s} />
+          <circle cx={c[0]} cy={c[1]} r={R * s} fill="none" stroke={tn(MAT.iron.mid)} strokeWidth={3.2 * s} />
+          <circle cx={c[0]} cy={c[1]} r={R * 0.86 * s} fill="none" stroke={tn(CARTWOOD.dark)} strokeWidth={1.2 * s} strokeOpacity={0.6} />
+          <path d={sp} stroke={tn(CARTWOOD.mid)} strokeWidth={3.6 * s} strokeLinecap="round" />
+          <circle cx={c[0]} cy={c[1]} r={10 * s} fill={tn(CARTWOOD.dark)} />
+          <circle cx={c[0]} cy={c[1]} r={4.5 * s} fill={tn(MAT.iron.mid)} />
+        </g>
+      );
+    };
+    const slats = (zz: number, key: string) => (
+      <path
+        key={key}
+        d={[0.25, 0.5, 0.75].map((u) => `M${Pt(p3([lerp(x0, x1, u), sideY + 3, zz - 0.6]))}L${Pt(p3([lerp(x0, x1, u), bedY - 3, zz - 0.6]))}`).join("")}
+        stroke={A.tone(CARTWOOD.dark, zz, 60)}
+        strokeWidth={2.2 * P.r(zz)}
+        strokeOpacity={0.7}
+      />
+    );
+    const amph = (
+      [
+        [0.22, 0.72, -5],
+        [0.52, 0.7, 4],
+        [0.8, 0.74, -3],
+        [0.32, 0.3, 6],
+        [0.66, 0.28, -6],
+      ] as [number, number, number][]
+    ).map(([u, w, a], i) => {
+      const X = lerp(x0, x1, u);
+      const Zm = lerp(z0, z1, w);
       const { at, scale } = P.at(X, Zm);
-      return <RomeFolk.Amphora key={i} at={[at[0], at[1] - 108 * scale]} scale={scale * 0.82} uid={`bk-ca${i}`} fog={amphFog(A, Zm)} unitPx={A.k} angle={i % 2 ? 5 : -4} />;
+      return <RomeFolk.Amphora key={i} at={[at[0], at[1] + (bedY + 4) * scale]} scale={scale * 0.74} uid={`bk-ca${i}`} fog={amphFog(A, Zm)} unitPx={A.k} angle={a} />;
     });
+    const pole = (zb: number, zh: number, key: string) => (
+      <g key={key}>
+        <path d={`M${Pt(p3([x0 + 10, bedY - 10, zb]))}L${Pt(p3([CARTER.x + CART.hx + cDx - 4, -178, zh]))}`} stroke={A.tone(CARTWOOD.mid, (zb + zh) / 2, 80)} strokeWidth={7 * P.r((zb + zh) / 2)} strokeLinecap="round" />
+        <path d={`M${Pt(p3([x0 + 10, bedY - 12, zb]))}L${Pt(p3([CARTER.x + CART.hx + cDx - 4, -180, zh]))}`} stroke={A.tone(CARTWOOD.lit, (zb + zh) / 2, 80)} strokeWidth={2 * P.r((zb + zh) / 2)} strokeOpacity={0.6} strokeLinecap="round" />
+      </g>
+    );
     return (
       <g>
-        <AirShadow A={A} X={(x0 + x1) / 2} Z={(z0 + z1) / 2} w={70} d={36} uid="bk-cs" amt={0.6} />
-        <circle cx={p3([wheelX, -R, z1 + 2])[0]} cy={p3([wheelX, -R, z1 + 2])[1]} r={R * P.r(z1 + 2)} fill="none" stroke={A.tone(WOOD.dark, z1, 30)} strokeWidth={7 * P.r(z1)} />
-        {[
-          [z0 + 6, CARTER.z - 14],
-          [z1 - 6, CARTER.z + 14],
-        ].map(([zb, zh], i) => (
-          <path key={i} d={`M${Pt(p3([x0 + 8, -112, zb]))}L${Pt(p3([CARTER.x + CART.hx + cDx - 4, -178, zh]))}`} stroke={A.tone(WOOD.mid, (zb + zh) / 2, 80)} strokeWidth={6 * P.r((zb + zh) / 2)} strokeLinecap="round" />
-        ))}
+        <AirShadow A={A} X={(x0 + x1) / 2} Z={(z0 + z1) / 2} w={72} d={40} uid="bk-cs" amt={0.65} />
+        {wheel(z1 + 7, "wf", true)}
+        {pole(z1 - 4, CARTER.z + 18, "pf")}
+        {/* the bed: the far side, the two ends, the floor; then the load sitting in it; then the near side over it */}
+        <AirBox A={A} X0={x0} X1={x1} Y0={sideY} Y1={bedY} Z0={z1 - 4} Z1={z1} mat={CARTWOOD} uid="bk-cfs" rim={0.5} />
+        <AirBox A={A} X0={x0} X1={x1} Y0={bedY - 4} Y1={bedY + 6} Z0={z0} Z1={z1} mat={CARTWOOD} uid="bk-cfl" rim={0.3} />
+        <AirBox A={A} X0={x0} X1={x0 + 4} Y0={sideY} Y1={bedY} Z0={z0} Z1={z1} mat={CARTWOOD} uid="bk-cel" rim={0.5} />
+        <AirBox A={A} X0={x1 - 4} X1={x1} Y0={sideY} Y1={bedY} Z0={z0} Z1={z1} mat={CARTWOOD} uid="bk-cer" rim={0.5} />
         {amph}
-        <AirBox A={A} X0={x0} X1={x1} Y0={-128} Y1={-92} Z0={z0} Z1={z1} mat={WOOD} uid="bk-cb" />
-        <circle cx={wc[0]} cy={wc[1]} r={R * ws} fill="none" stroke={A.tone(WOOD.mid, z0, 30)} strokeWidth={8 * ws} />
-        <circle cx={wc[0]} cy={wc[1]} r={R * ws} fill="none" stroke={A.tone(MAT.iron.mid, z0, 30)} strokeWidth={2.4 * ws} />
-        <path d={spokes} stroke={A.tone(WOOD.mid, z0, 30)} strokeWidth={4.2 * ws} strokeLinecap="round" />
-        <circle cx={wc[0]} cy={wc[1]} r={8 * ws} fill={A.tone(WOOD.dark, z0, 30)} />
+        {/* the axle under the bed */}
+        <path d={`M${Pt(p3([axX, -R, z0 - 7]))}L${Pt(p3([axX, -R, z1 + 7]))}`} stroke={A.tone(MAT.iron.dark, (z0 + z1) / 2, 30)} strokeWidth={5 * P.r(z0)} />
+        <AirBox A={A} X0={x0} X1={x1} Y0={sideY} Y1={bedY} Z0={z0} Z1={z0 + 4} mat={CARTWOOD} uid="bk-cns" rim={0.7} />
+        {slats(z0, "sl")}
+        {wheel(z0 - 7, "wn", false)}
+        {pole(z0 + 4, CARTER.z - 18, "pn")}
       </g>
     );
   })();
@@ -962,35 +1131,45 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
     const { at, scale } = P.at(X, Zs);
     return <RomeFolk.Amphora key={i} at={at} scale={scale} uid={`bk-st${i}`} fog={amphFog(A, Zs)} unitPx={A.k} angle={i === 2 ? 8 : 0} />;
   });
+  // life in the basilica's hall behind the arches: a few people far back in the dim air
+  const hall = (
+    [
+      [-420, 900, 0, -1, 0.3],
+      [-360, 940, 1, 1, 0.3],
+      [-60, 1000, 2, 1, 0.2],
+      [180, 880, 0, -1, 0.25],
+    ] as [number, number, number, 1 | -1, number][]
+  ).map(([X, Zh, v, dir], i) => {
+    const { at, scale } = P.at(X, Zh);
+    return <RomeFolk.Freeman key={i} pose={RomeFolk.idle(RomeFolk.POSES.stand(dir), f, 10 + i)} at={at} scale={scale} uid={`bk-hf${i}`} variant={v} pilleus={false} apron={false} fog={{ rgb: A.airHex(Zh, 120), amount: 0.62 }} unitPx={A.k} texture={false} />;
+  });
   // a few things on the floor: dropped coins
   const dropped = (
     [
-      [18, -170, 20],
-      [236, -150, -15],
-      [-96, -40, 50],
-      [300, 90, 10],
+      [-10, -130, 20],
+      [330, -110, -15],
+      [-96, -10, 50],
+      [380, 150, 10],
     ] as [number, number, number][]
   ).map(([x, zz, t], i) => <CoinShape key={i} c={p3([x, -1, zz])} s={P.r(zz)} tilt={t} fog={fogNear(zz)} />);
 
-  const bagEl = <Bag c={bag2} s={bagS} size={BAG_K} fog={fogNear(bag3[2])} uid="bk-bag" tilt={f > T.bagLift[0] && f < T.bagHand[1] ? -6 : 0} />;
+  const bagEl = <Bag c={bag2} s={bagS} size={BAG_K} fog={fogNear(bag3[2])} uid="bk-bag" tilt={bagTilt(f)} />;
   const bagInBox = f < T.bagLift[0] + 3;
-  const bagOverBox = !bagInBox && f < T.bagOut[0];
   const merchant = <RomeFolk.Freeman pose={mPose} at={mFeet.at} scale={mFeet.scale} uid="bk-mer" variant={2} pilleus={false} apron={false} fog={figD(mX, MER.z)} unitPx={A.k} />;
-  const armIntoBox = f >= T.boxReach[0] && f < T.bagHand[1] + 14;
+  const armToBox = f >= T.codexDown[1] && f < T.bagHand[1] + 30;
   return (
     <AirStage v={A.v} bloom={0}>
       <WorldSvg cam={cam}>
         <AirFloor A={A} x0={-1400} x1={2400} z0={-700} z1={4200} mat={FLOOR} course={150} plank={150} />
         <Street A={A} frame={f} />
-        <Arcade A={A} />
+        <Arcade A={A} people={hall} />
         {stack}
         {dropped}
         {shadeVeil}
         <AirShadow A={A} X={sl.X} Z={sl.Z} w={60} d={28} uid="bk-sh-sl" amt={0.7} />
         <AirShadow A={A} X={d2.X} Z={d2.Z} w={60} d={28} uid="bk-sh-d2" amt={0.75} />
-        <AirShadow A={A} X={(TABLE.x0 + TABLE.x1) / 2} Z={(TABLE.z0 + TABLE.z1) / 2} w={60} d={170} uid="bk-sh-t" amt={0.55} />
-        <AirShadow A={A} X={BANKER.x} Z={BANKER.z} w={70} d={30} uid="bk-sh-b" amt={0.75} />
-        <AirShadow A={A} X={(BOX.x0 + BOX.x1) / 2} Z={(BOX.z0 + BOX.z1) / 2} w={70} d={50} uid="bk-sh-bx" amt={0.75} />
+        <AirShadow A={A} X={(TABLE.x0 + TABLE.x1) / 2} Z={(TABLE.z0 + TABLE.z1) / 2} w={120} d={60} uid="bk-sh-t" amt={0.7} />
+        <AirShadow A={A} X={(BOX.x0 + BOX.x1) / 2} Z={(BOX.z0 + BOX.z1) / 2} w={64} d={50} uid="bk-sh-bx" amt={0.75} />
         <AirShadow A={A} X={d1.X} Z={d1.Z} w={62} d={28} uid="bk-sh-d1" amt={0.75} />
         <AirShadow A={A} X={cX} Z={CARTER.z} w={60} d={28} uid="bk-sh-c" amt={0.7} />
         <AirShadow A={A} X={mX} Z={MER.z} w={62} d={28} uid="bk-sh-m" amt={0.75} />
@@ -1002,32 +1181,26 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
         {/* the street: the carter and his cart */}
         {Cart}
         <RomeFolk.Freeman pose={cPoseG} at={cFeet.at} scale={cFeet.scale} uid="bk-carter" variant={1} pilleus={false} apron={false} inks={{ tunic: "#9A9070" }} fog={figD(cX, CARTER.z)} unitPx={A.k} />
-        {/* the table (receding), its coins and the codex */}
-        {Table}
+        {/* the banker behind his counter and the strongbox (his body first, then everything in front of it) */}
+        {banker("bk-banker")}
+        {BoxBack}
+        {bagInBox ? bagEl : null}
+        {boxFalling.map((c) => (
+          <CoinShape key={c.key} c={c.c} s={c.s} tilt={c.tilt} fog={coinFog} />
+        ))}
+        {armToBox && bagInBox ? banker("bk-banker-Rb", "R") : null}
+        {BoxFront}
+        {lid}
+        {Counter}
         {codexHeld ? null : Codex}
         {tableCoins.map((c) => (
           <CoinShape key={c.key} c={c.c} s={c.s} tilt={c.tilt} fog={coinFog} />
         ))}
-        {/* the banker beside his table, the open strongbox in front of him */}
-        {banker("bk-banker")}
-        {codexHeld ? (
-          <g>
-            {Codex}
-            {stylus}
-            {banker("bk-banker-L2", "L")}
-            {banker("bk-banker-R2", "R")}
-          </g>
-        ) : null}
-        {BoxBack}
-        {bagInBox ? bagEl : null}
-        {lid}
-        {boxFalling.map((c) => (
-          <CoinShape key={c.key} c={c.c} s={c.s} tilt={c.tilt} fog={coinFog} />
-        ))}
-        {armIntoBox && bagInBox ? banker("bk-banker-R3", "R") : null}
-        {BoxFront}
-        {armIntoBox && !bagInBox ? banker("bk-banker-R3", "R") : null}
-        {bagOverBox ? bagEl : null}
+        {/* his hands always work on top of the counter: his arms are drawn over it */}
+        {banker("bk-banker-L", "L")}
+        {codexHeld ? Codex : null}
+        {stylus}
+        {!armToBox || !bagInBox ? banker("bk-banker-R", "R") : null}
         {/* the first depositor pouring */}
         <RomeFolk.Freeman pose={d1Pose} at={d1Feet.at} scale={d1Feet.scale} uid="bk-d1" variant={0} pilleus={false} apron={false} fog={figD(d1.X, d1.Z)} unitPx={A.k} />
         <Purse c={p3(d1Hold3)} s={P.r(d1Hold3[2])} tip={tip} fog={fogNear(d1Hold3[2])} uid="bk-p1" />
@@ -1035,9 +1208,12 @@ const BanksLendToDebtors: React.FC<z.infer<typeof schema>> = () => {
           <CoinShape key={c.key} c={c.c} s={c.s} tilt={c.tilt} fog={coinFog} flat={0.6} />
         ))}
         {/* the merchant and the bag */}
-        {f >= T.bagOut[0] && f < T.bagHand[1] + 14 ? banker("bk-banker-R4", "R") : null}
         {merchant}
-        {!bagInBox && !bagOverBox ? bagEl : null}
+        {!bagInBox ? bagEl : null}
+        {payCoins.map((c) => (
+          <CoinShape key={c.key} c={c.c} s={c.s} tilt={c.tilt} fog={coinFog} flat={0.55} />
+        ))}
+        {f >= T.bagLift[0] && f < T.bagHand[1] + 2 ? banker("bk-banker-Rh", "R") : null}
         {lowAir}
       </WorldSvg>
     </AirStage>
