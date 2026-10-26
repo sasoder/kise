@@ -5,27 +5,28 @@
 // CHECK LINE: "Out of a row of ten children, smallpox took one, then two."
 //
 // THE LINE: "But in a world where like 10, 20 percent of kids die of smallpox, it's [this horrible decision]"
-// WORD -> FRAME (f0 = 41.909 s): in 2 · a 12 · WORLD 15 · where 23 · like 27 · TEN 34 · TWENTY 46 · PERCENT 56 · of 67 ·
-// KIDS 81 · DIE 100 · of 110 · SMALLPOX 113 · it's 132 · end 136.
-// DURATION: the slot 41.909 -> 46.446 s = 4.538 s x 29.97 = 136 frames (f0..f135).
+// WORD -> FRAME (rev 1, the re-cut edit, f0 = 41.008 s): in 3 · a 12 · WORLD 15 · where 23 · like 27 · TEN 34 ·
+// TWENTY 47 · PERCENT 57 · of 65 · KIDS 80 · DIE 101 · of 110 · SMALLPOX 113 · it's 132 · end 136.
+// DURATION: the slot (delivered at 41.909 -> 46.446 s; rev 1 places it at 41.008 s, same length) = 4.538 s x 29.97 = 136 frames (f0..f135).
 //
 // THE MOTION (round 2, the director's restage): ten Georgian children (vaccineFolk Child v0..v9, every one distinct)
 // sit in two rows of five at the front of a schoolroom: a low form at the front (feet on the floor) and a bench on the
 // gallery step behind (feet dangling, swinging), the back row staggered so no face hides; the plaster end wall with
-// two tall sash windows and a door close behind them. One continuous camera: f0 close on three front faces (~600 px
-// children), already pulling back in one lobe so both rows are in frame by ~f45 and settled at the counting frame (front
-// row ~340 px, back ~255 px; 5 + 5). The pox comes up on a front-row child on "ten" (f22-34) and on a back-row child on
-// "twenty" (f34-46). From "kids" the two drain and sink into the air (f80-112 and f86-118), leaving their places empty;
-// their row neighbours turn their heads toward the gaps. A gentle creep in to the last frame: eight children, two
-// gaps, still living. No numbers and no text: the speaker's 10-20 % stays spoken.
+// two tall sash windows and a door close behind them. REV 1 CAMERA (the user: "a tad bit more dramatic"): f0 on the
+// front faces (k 2.5), already pulling back in one lobe out to the whole room on "a world" (k ~1.9 at f15, 1.4 at rest:
+// both benches, the wall and windows; 5 + 5 countable), its tail drifting to f80; on "kids" (from f74) one push in
+// toward the two fading children (k 1.4 -> 2.4, a smootherstep landing by ~f111 on "smallpox"), then a slow creep. The pox comes up on a front-row child on "ten" (f22-34) and on a back-row child on
+// "twenty" (f35-47). From f68 (43;08) the two fade and sink into the air (f68-114 and f72-118: still visible through the push, gone as it
+// lands), leaving their places empty;
+// their row neighbours turn their heads toward the gaps. The last frame: eight children, two gaps, still living. No numbers and no text: the speaker's 10-20 % stays spoken.
 // Orange = the vaccine only: none in this cut. POX #8E4552 (the cast's `pox`) is the disease; the deaths are the cast's
 // `drain` (to 0.6) + a fog toward the air (soft, low contrast, the pox fading first) + a fade out of the place, never a
 // body. The floor in front of the front form falls into the dense low air (LowAir), so the bottom third is air.
 //
 // DEPTH: eye 1.4 m up (eyeY -250); dRef 880 at kRef 2, dolly 0.5 (a close, wide lens: the back row ~0.77 the front's
 // size); fog by the eye's distance. Front form seat 55 at Z 0, the step 118 high (Z 215..), the back bench seat 84 on it
-// at Z 300, the wall at Z 470 (fogged as if further back so the children separate from it). CAMERA: one pull-back
-// lobe from f0 (k 3.05 -> 1.85, speed peak ~f12, rest by f84) with a quintic creep in (k -> 1.9) from f56.
+// at Z 300, the wall at Z 470 (fogged as if further back so the children separate from it). CAMERA: see REV 1 CAMERA
+// above; focus = the front row's head tops at a screen point, so the caption bands are solved along the whole path.
 //
 // SOURCES: none (no figures on screen; the 10-20 % is the speaker's, spoken only).
 // ---------------------------------------------------------------------------
@@ -111,19 +112,21 @@ export const KIDS: Kid[] = [
 ];
 /** the two children smallpox takes: one in the front row (on "ten"), one in the back row (on "twenty") */
 export const SICK = [
-  { i: 1, poxAt: 34 - 12, drainAt: 80, drainLen: 32 },
-  { i: 8, poxAt: 46 - 12, drainAt: 86, drainLen: 32 },
+  { i: 1, poxAt: 34 - 12, drainAt: 68, drainLen: 46 },
+  { i: 8, poxAt: 47 - 12, drainAt: 72, drainLen: 46 },
 ];
 
 // ===================================================================================================================
-// THE CAMERA: one pull-back lobe from f0 (k 3.05, three front faces, -> K_COUNT by ~f56), then a gentle creep in
-// toward the front-row gap
+// THE CAMERA (rev 1, the user: "a tad bit more dramatic ... zooming out more in the beginning and zooming in"): one
+// pull-back lobe from f0 out to the whole room on "a world" (k 2.5 -> 1.4, wider than the delivered counting frame),
+// coming to rest under "percent"/"of"; then on "kids" (f78) one clear push in toward the two fading children (k 1.4 ->
+// 2.5), landing by "die"..."smallpox" (~f110) and settling with a slow living creep to the last frame
 // ===================================================================================================================
-/** the pull-back's progress: a speed profile already moving at f0 (half its peak), peaking ~f12, a soft tail to rest at
- *  f84 (one acceleration, one deceleration lobe), integrated once */
-const PULL_END = 84;
+/** the pull-back's progress: a speed profile already moving at f0 (half its peak), peaking ~f10, a soft tail to rest at
+ *  f80 (one acceleration, one deceleration lobe; the push picks up under its tail, so the camera never stops), integrated once */
+const PULL_END = 80;
 const PULL: number[] = (() => {
-  const v = (f: number) => (0.5 + 0.5 * sst(0, 12, f)) * Math.pow(1 - c01(f / PULL_END), 2.1);
+  const v = (f: number) => (0.5 + 0.5 * sst(0, 10, f)) * Math.pow(1 - c01(f / PULL_END), 2.0);
   const acc = [0];
   for (let f = 0; f < 160; f++) acc.push(acc[f] + (v(f) + v(f + 1)) / 2);
   const tot = acc[PULL_END];
@@ -133,19 +136,23 @@ const pullP = (f: number) => {
   const i = Math.max(0, Math.min(158, Math.floor(f)));
   return lerp(PULL[i], PULL[i + 1], f - i);
 };
-/** the creep in: starts under the pull's tail, still moving on the last frame */
-const creepP = (f: number) => smoother(56, 190, f) / smoother(56, 190, 135);
+/** the push in: starts on "kids" (f77), the bulk lands by f111 (smootherstep: no jolt at either end), and a small
+ *  share keeps creeping to the last frame (the settle stays alive) */
+export const PUSH = { from: 74, land: 111, tail: 0.06 };
+const pushP = (f: number) => (1 - PUSH.tail) * smoother(PUSH.from, PUSH.land, f) + (PUSH.tail * smoother(PUSH.from, 175, f)) / smoother(PUSH.from, 175, 135);
 type Focus = { X: number; Y: number; Z: number; sx: number; sy: number; k: number };
 /** the focus: the front row's head tops (Y -196) at a screen point */
-const F0: Focus = { X: KIDS[1].X + S * 0.45, Y: -196, Z: 0, sx: 540, sy: 620, k: 3.05 };
-const F1: Focus = { X: 0, Y: -196, Z: 0, sx: 540, sy: 788, k: K_COUNT };
-const F2: Focus = { X: -12, Y: -196, Z: 0, sx: 540, sy: 778, k: 1.9 };
+const F0: Focus = { X: KIDS[1].X + S * 0.45, Y: -196, Z: 0, sx: 540, sy: 660, k: 2.5 };
+/** the whole room on "a world": both benches, the wall and its windows, the floor sinking into the low air */
+const FW: Focus = { X: 0, Y: -196, Z: 0, sx: 540, sy: 845, k: 1.4 };
+/** the push's landing: between the two fading children (front slot 1, back slot 3), both large in frame */
+const FP: Focus = { X: -22, Y: -196, Z: 0, sx: 540, sy: 650, k: 2.4 };
 export const focusAt = (f: number): Focus => {
   const p = pullP(f);
-  const c = creepP(f);
-  const m = (a: number, b: number, d: number) => lerp(a, b, p) + (d - b) * c;
-  const lk = m(Math.log(F0.k), Math.log(F1.k), Math.log(F2.k));
-  return { X: m(F0.X, F1.X, F2.X), Y: m(F0.Y, F1.Y, F2.Y), Z: m(F0.Z, F1.Z, F2.Z), sx: m(F0.sx, F1.sx, F2.sx), sy: m(F0.sy, F1.sy, F2.sy), k: Math.exp(lk) };
+  const q = pushP(f);
+  const m = (a: number, b: number, d: number) => lerp(a, b, p) + (d - b) * q;
+  const lk = m(Math.log(F0.k), Math.log(FW.k), Math.log(FP.k));
+  return { X: m(F0.X, FW.X, FP.X), Y: m(F0.Y, FW.Y, FP.Y), Z: m(F0.Z, FW.Z, FP.Z), sx: m(F0.sx, FW.sx, FP.sx), sy: m(F0.sy, FW.sy, FP.sy), k: Math.exp(lk) };
 };
 /** the 2D camera that puts the 3D focus point at its screen point */
 export const camAt = (f: number): Cam => {
@@ -294,8 +301,8 @@ const KidFig: React.FC<{ A: AirWorld; i: number; f: number }> = ({ A, i, f }) =>
   // what is behind it: the wall (back row) or the step's riser (front row), so the child dissolves into its own
   // backdrop instead of darkening into a silhouette; the dot eyes go with the face, never last
   const behind = k.row === 1 ? A.tone(PLASTER.mid, WALL_Z + 1100, 500) : A.tone(mixHex(STEP_MAT.lit, STEP_MAT.mid, 0.5), STEP.z0, 60);
-  const fog = { rgb: mixHex(ff.rgb as string, behind, sst(0, 0.4, dr)), amount: lerp(ff.amount, 0.86, sst(0.03, 0.5, dr)) };
-  const tone = 1 - sst(0.3, 1, dr);
+  const fog = { rgb: mixHex(ff.rgb as string, behind, sst(0, 0.4, dr)), amount: lerp(ff.amount, 0.86, sst(0.05, 0.62, dr)) };
+  const tone = 1 - sst(0.42, 1, dr);
   if (tone <= 0.001) return null;
   return (
     <g>
