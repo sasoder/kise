@@ -3,7 +3,6 @@
 // lateral dolly along the near edge of row B of the shared farm, ./farmPlan), the four stations, the ghosts' outlines
 // (cast units, a man ~312 = 1.75 m) and their timings. The drawing is ./ModernYieldsMissing.tsx.
 // ---------------------------------------------------------------------------
-import { pchip } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { OX_TEAM, oxTeamX, type FarmEye, type Farmer } from "./farmPlan";
 
 export type P2 = [number, number];
@@ -18,27 +17,68 @@ export const WORLD_F = 158;
 export const worldFrame = (f: number) => f + WORLD_F;
 
 // ===================================================================================================================
-// THE CAMERA: one lateral dolly to screen right, the eye 1.7 m up at Z 2160 (just inside row B), looking into the
-// valley; the stations stand on one line at Z ~2900 (~1.75 px/unit), their bases near y 1050. ONE EVEN SPEED (15
-// units/frame, ~26 px/frame at the stations) from f0, landing on the heaps f200 -> f246, then a creep to the cut.
+// THE CAMERA (Rev 1, the user: "everything moves a bit too fast ... hold for one or a few beats more on each
+// segment"; the director's review of the first Rev 1 preview: cap the moves at ~40-45 px/frame, ~40 f each, dolly
+// out a little during each move and settle back in on arrival): the eye 1.7 m up, looking into the valley; the
+// stations stand on one line at Z ~2900, their bases near y 1050 in the holds. MOVE -> HOLD -> MOVE -> HOLD:
+//   hold 1 f0-39    the ox team and tractor (drawn f0-34; "traction" f39)
+//   move 1 f39-82
+//   hold 2 f82-98   the manure man and the sack (drawn f68-92, the fan fully open by f98; "fertilizers" f96)
+//   move 2 f98-142
+//   hold 3 f142-164 the modern wheat (risen f138-160; "yields" f163)
+//   move 3 f164-210
+//   hold 4 f210-274 the heaps (ghost drawn f212-255; "productive" f257) to the cut
+// In a hold the eye drifts ~0.3 units/frame (still). A move's speed rises over its first fifth (smoothstep), runs
+// level, and falls over its last fifth; the eye backs out 150 units (the stations ~17 % smaller at most) on a flat-topped
+// bell over the move and settles back in on arrival. The eye X is the integral of that speed (a table at load).
 // ===================================================================================================================
 export const EYE = { H: 300, Z: 2160, F: 1300, hy: 523 };
-export const CAM = { X0: 0, v: 15, creep: 1.3, land: [200, 246] as [number, number] };
-const SPEED = pchip(
-  [
-    [0, CAM.v],
-    [CAM.land[0], CAM.v],
-    [CAM.land[1], CAM.creep],
-    [274, CAM.creep],
-  ],
-  true,
-);
-export const camSpeed = (f: number) => SPEED(Math.max(0, Math.min(274, f)));
+/** the holds: [first frame, last frame, eye X at its start, eye X at its end] */
+export const HOLDS: [number, number, number, number][] = [
+  [0, 39, 380, 392],
+  [82, 98, 1380, 1385],
+  [142, 164, 2440, 2447],
+  [210, 274, 3378, 3398],
+];
+export const MOVE = { ramp: 0.2, dollyOut: 150, bellRamp: 0.32 };
+/** which move a frame is in (index i = from hold i to hold i + 1) and its progress t, or null in a hold */
+const moveAt = (f: number): { i: number; t: number } | null => {
+  for (let i = 0; i < HOLDS.length - 1; i++) {
+    const a = HOLDS[i][1];
+    const b = HOLDS[i + 1][0];
+    if (f > a && f < b) return { i, t: (f - a) / (b - a) };
+  }
+  return null;
+};
+/** the level-topped speed shape of a move (0 at its ends, 1 on the level) */
+const shape = (t: number) => smooth(t / MOVE.ramp) * smooth((1 - t) / MOVE.ramp);
+const SHAPE_AREA = (() => {
+  let acc = 0;
+  const N = 2000;
+  for (let i = 0; i < N; i++) acc += shape((i + 0.5) / N) / N;
+  return acc;
+})();
+const holdV = (h: [number, number, number, number]) => (h[3] - h[2]) / Math.max(1, h[1] - h[0]);
+/** the eye's speed (units/frame) at a frame */
+export const camSpeed = (f: number) => {
+  const m = moveAt(f);
+  if (!m) {
+    const h = HOLDS.find(([a, b]) => f >= a && f <= b) ?? HOLDS[HOLDS.length - 1];
+    return holdV(h);
+  }
+  const A = HOLDS[m.i];
+  const B = HOLDS[m.i + 1];
+  const n = B[0] - A[1];
+  const vA = holdV(A);
+  const vB = holdV(B);
+  const peak = (B[2] - A[3] - n * (vA + vB) * 0.5) / (n * SHAPE_AREA);
+  return vA + (vB - vA) * m.t + peak * shape(m.t);
+};
 const X_TABLE: number[] = (() => {
-  const out = [CAM.X0];
+  const out = [HOLDS[0][2]];
   for (let f = 0; f < 300; f++) {
     let acc = 0;
-    for (let i = 0; i < 8; i++) acc += (camSpeed(f + i / 8) + camSpeed(f + (i + 1) / 8)) / 16;
+    for (let i = 0; i < 16; i++) acc += camSpeed(f + (i + 0.5) / 16) / 16;
     out.push(out[f] + acc);
   }
   return out;
@@ -48,8 +88,14 @@ export const camX = (f: number) => {
   const i = Math.floor(g);
   return X_TABLE[i] + (X_TABLE[i + 1] - X_TABLE[i]) * (g - i);
 };
-export const eyeAt = (f: number): FarmEye => ({ X: camX(f), H: EYE.H, Z: EYE.Z, F: EYE.F, hy: EYE.hy });
-/** screen px per world unit at depth Z (constant along the dolly: the eye's Z never changes) */
+/** the eye's depth: backing out during each move on a flat-topped bell, settled in every hold */
+export const camZ = (f: number) => {
+  const m = moveAt(f);
+  if (!m) return EYE.Z;
+  return EYE.Z - MOVE.dollyOut * smooth(m.t / MOVE.bellRamp) * smooth((1 - m.t) / MOVE.bellRamp);
+};
+export const eyeAt = (f: number): FarmEye => ({ X: camX(f), H: EYE.H, Z: camZ(f), F: EYE.F, hy: EYE.hy });
+/** screen px per world unit at depth Z in a hold (the dash sizes are fixed by it, so they never change) */
 export const scaleAtZ = (Z: number) => EYE.F / (Z - EYE.Z);
 
 // ===================================================================================================================
@@ -66,7 +112,7 @@ export const dashFor = (Z: number, w = STROKE_PX): [number, number] => [(3 * w) 
 // about as tall as the oxen, travelling with them. Its pen glides in from off the left edge, draws f0 -> f36
 // ("traction" f39-57).
 // ===================================================================================================================
-export const TRACTOR = { Z: 3030, dx: 390, draw: [0, 36] as [number, number], R: 135, Rf: 80, s: 0.72 };
+export const TRACTOR = { Z: 3030, dx: 390, draw: [0, 34] as [number, number], R: 135, Rf: 80, s: 0.72 };
 /** the tractor's rear-axle X at a frame (moves with the oxen) */
 export const tractorX = (f: number) => oxTeamX(worldFrame(f)) - OX_TEAM.dir * TRACTOR.dx;
 export const arc = (c: P2, R: number, a0: number, a1: number, n: number): P2[] => {
@@ -126,8 +172,8 @@ export const tractorStrokes = (roll: number): P2[][] => {
 // ===================================================================================================================
 export const MANURE_MAN: Farmer = { id: "c20man", kind: "freeman", variant: 1, X: 1250, Z: 2870, dir: 1, role: "stand", ph: 0, cyc: 40, tunic: "#9A9070" };
 export const FLING = { cyc: 40, release: 0.58, flight: 13 };
-export const SACK = { X: 1435, Z: 2930, draw: [74, 106] as [number, number] };
-export const SPINNER = { X: 1555, Z: 2990, h: 66, r: 38, open: [103, 114] as [number, number] };
+export const SACK = { X: 1435, Z: 2930, draw: [68, 92] as [number, number] };
+export const SPINNER = { X: 1555, Z: 2990, h: 66, r: 38, open: [86, 92] as [number, number] };
 export const sackStrokes = (): P2[][] => [
   // the fat sack, from its right foot round to close there; the neck gathered and tied, a tuft above the tie
   [
@@ -180,7 +226,7 @@ export const FAN = { phi0: -10, phi1: 190, rays: 13, R: 640, apex: 70, speed: 1 
 // 3x the stalks: pairs every 21 units in three even rows 80 apart) and big heavy drooping ears. The plants rise one by
 // one under a sweeping pen that glides in from the left, f138 -> f172 ("yields" f163-178).
 // ===================================================================================================================
-export const MODERN_WHEAT = { x0: 2240, x1: 2760, step: 21, rows: [2770, 2850, 2930], h: 108, ear: 32, earW: 7, sweep: [138, 172] as [number, number], grow: 8, lead: 420 };
+export const MODERN_WHEAT = { x0: 2180, x1: 2700, step: 21, rows: [2770, 2850, 2930], h: 108, ear: 32, earW: 7, sweep: [138, 160] as [number, number], grow: 8, lead: 420 };
 
 // ===================================================================================================================
 // STATION 4, "made agriculture stupendously productive": a clearing at the right of B3 (the world's B3 wheat is
@@ -195,7 +241,7 @@ export const ROMAN_HEAP = { X: 3390, Z: 2905, w: 62, h: 74 };
 /** the reaped clearing in B3: no standing wheat right of X = x0 + slope (Z - 2000), between z0 (ragged toward us) and
  *  z1 */
 export const REAPED = { x0: 3205, slope: 0.05, z0: 2600, z1: 3220, x1: 3900 };
-export const BIG_HEAP = { X: 3434, Z: 3020, w: 303, h: 258, draw: [210, 254] as [number, number] };
+export const BIG_HEAP = { X: 3434, Z: 3020, w: 303, h: 258, draw: [212, 255] as [number, number] };
 export const bigHeapMound = (): P2[] => {
   const { w, h } = BIG_HEAP;
   // a broad grain mound in the Roman heap's own profile (farmWorld heapShapes: ~0.6 h at 0.55 w, a gently rounded

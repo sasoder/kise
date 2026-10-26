@@ -17,12 +17,14 @@
 // 257-268
 // DURATION: the slot 20.387 -> 29.529 s in the sequence (frames 611 -> 885) = 274 frames at 30000/1001.
 //
-// THE MOTION: one lateral dolly to screen right at ONE EVEN SPEED (15 units/frame, ~26 px/frame at the stations) from
-// f0, past four Roman things standing on one line along the near edge of row B (their bases near y 1050, ~1.75
-// px/unit), landing on the heaps f200-246, then a 1.3/frame creep. Beside each Roman thing a DASHED ORANGE ghost of
-// the modern thing Rome never had (the clip's dashed orange = technology Rome never had): a bold dashed line (~8.5 px,
-// round caps, dash 3x / gap 2x the stroke, a soft glow, bloom 0.22) drawn by ONE moving pen tip that glides in along
-// a lead-in from off the frame edge and dims into the finished line.
+// THE MOTION (Rev 1, after the director's review): a lateral dolly to screen right that MOVES -> HOLDS -> MOVES ->
+// HOLDS: it holds still (~0.3 unit/frame) on each Roman thing, arriving just before its word (holds f0-39, f82-98,
+// f142-164, f210-274), with three eased moves between (f39-82, f98-142, f164-210; level-topped speed, peaks 38-44
+// px/frame at the stations) during which the eye backs out ~15 % and settles back in on arrival. Past four
+// Roman things standing on one line along the near edge of row B (their bases near y 1050, ~1.75 px/unit). Beside
+// each a DASHED ORANGE ghost of the modern thing Rome never had (the clip's dashed orange = technology Rome never had):
+// a bold dashed line (~8.5 px, round caps, dash 3x / gap 2x the stroke, a soft glow, bloom 0.24) drawn by ONE moving
+// pen tip that glides in along a lead-in from off the frame edge and dims into the finished line.
 //   f0-57 "mechanized traction": the world's ox team ploughing B2 (walking left); over it a dashed tractor (big rear
 //     wheel, small front wheel, bonnet, cab, exhaust; 0.72x life so it stands about as tall as the oxen, ~555 px)
 //     travels with the oxen, its wheels rolling; pen in from the left, drawn f0-36, front wheel first.
@@ -371,8 +373,8 @@ const sackGhost = (A: AirWorld, f: number): FarmItem[] => {
     const age = (f - open) * FAN.speed;
     for (let k = 0; k < FAN.perRay; k++) {
       const t = frac(k / FAN.perRay + age + hash(r * 3.3) * 0.13);
-      // a granule exists only once it has had time to leave the disc since the ray opened
-      if (age < 1 && t > age) continue;
+      // the spray's front bursts out to the landing within 6 frames of the ray opening, then the granules stream
+      if (t > c01((f - open) / 6)) continue;
       const a = pos(t);
       const b = pos(Math.min(1, t + 0.022));
       const pa = P.p(a[0], -a[1], a[2]);
@@ -549,6 +551,8 @@ const B3_SLICES: { z: number; tufts: Tuft[] }[] = (() => {
     if (inReaped(t.X, t.Z)) continue;
     // a little less density in the nearest rows, so the near wheat does not wall the foot of the frame
     if (t.Z < 2580 && hash(t.X * 0.7 + t.Z * 0.31) < 0.38) continue;
+    // the very nearest tufts (huge, mostly below the frame) would rush past in the moves: left out
+    if (t.Z < 2500) continue;
     const b = Math.floor((t.Z - 2000) / 60);
     const arr = bins.get(b) ?? [];
     arr.push(t);
