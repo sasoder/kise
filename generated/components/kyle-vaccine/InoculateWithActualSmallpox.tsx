@@ -12,6 +12,19 @@
 // ACTUAL 82 · SMALLPOX 91 · which 118 · end 125.
 // DURATION: the slot 34.034 -> 38.205 s = 4.171 s x 29.97 = 125 frames (f0..f124).
 //
+// REV 1 (the user's notes, Oct 26; REV1_notes_20261026.md): re-timed to the re-cut word table (same 125 f: f0 =
+// 33.133 s; that 6 · people 15 · would 21 · inoculate 25 · a 44 · PERSON 60 · with 70 · ACTUAL 82 · SMALLPOX 91 ·
+// which 118; the beats already sat on these frames). (1) The see-through rim at the dab is gone: it was a second,
+// clipped copy of the Inoculator drawn over the arms (its edges and its fade showed as a transparent border on his
+// coat); there is no copy now: the blade comes down from above his arm so her hand never needs to be in front of
+// him, and the girl is drawn before the Inoculator. (2) The girl's arm gets plum pox DOTS (the same pustule drawing,
+// colour and size range as the sick man's), one per dab where the tip touches (three dabs, contact f72 / f81 / f89,
+// each dot swelling in from the next frame), not lines. (3) Her arm moves more naturally: the blade's angle is the
+// cut's own (one slow eased turn in her fingers through the carry, then turned down as she draws back), the tip
+// travels in arcs set by the cut (down from above onto his arm; low in and out at the girl, below her face), the
+// elbow leads the carry, the wrist follows and the hand's angle comes last, each with a little anticipation and
+// settle; the shoulders lean and roll toward the working side a beat late, a slight shoulder lift with the reach.
+//
 // ROUND 2 (director): one table, frontal, a medium shot pushed in; the cut's own larger lancet.
 // THE SET: a plain cottage table across the frame (its top at ~y 960-990; its front, the legs and the floor sink into
 // a band of dense low air). LEFT: the sick man on a stool, a man in a coat, waistcoat and breeches (the cast's
@@ -21,20 +34,19 @@
 // apron. RIGHT: the girl (Child v1) on a tall stool, turned toward the table, her bared near arm (R) laid over the
 // table's corner; her mother (Parent v0) stands behind her, one hand on her shoulder.
 // THE LANCET: the cut's own (BigLancet: a bright steel leaf blade 16 units ~ 47-50 px on screen, on a cream handle),
-// drawn every frame along the line from her hand (the cast's mitten anchor) through the cast lancet's tip; the cast's
-// small lancet is hidden (the figure is drawn in its solved pose with hold "none"). The cast lancet still drives the
-// hand's solve; the aim is corrected so the BIG tip lands exactly on each contact point (error 0.0 world px).
+// drawn every frame from her hand (the cast's mitten anchor) along the cut's blade angle; the cast's small lancet is
+// not drawn (hold "none"). The hand is solved one blade-length back from the tip's path; corrections make the tip
+// exact on each contact point (error 0.0 world px).
 // THE MOTION: f0 close on the dip: the blade tip lands on the big pustule on his forearm (DIP_CONTACT f10), presses and
 // comes away (f18) carrying a plum speck (drawn by the cut, ~21 px across). The carry (f26-60): her hand lifts the
 // blade in an arc over the table while she sidesteps behind it toward the girl (her feet are hidden by the table) and
 // turns a little (yaw -0.12 -> 0.12). The reach (f52-72): the tip lands on the girl's bared upper arm (SCR_CONTACT f72)
-// as she screws her eyes shut (f64-68, flinch f60-116); two scratches (tip on the skin f72-80, f84-93, lifted between);
-// the plum mark is drawn behind the tip and stays, the speck shrinks as it is left in the scratch. The blade draws
-// back a little (f93-114); the girl opens her eyes (f92-96) and looks at the mark; the Inoculator lifts her head and
-// turns it three-quarter toward the girl (f96-112) so her eyes read; a creep to the end.
-// While the blade reaches for an arm, her hand and blade are drawn a second time on top (a capsule clip from the wrist
-// to the tip, above the table's front edge), so the blade sits over the arm it touches; her forearm and elbow stay in
-// depth order (behind the girl's head).
+// as she screws her eyes shut (f64-68, flinch f60-116); three dabs (tip on the skin f72-74, f81-83, f89-91, lifted
+// between), a plum pox dot left at each, the speck shrinking as it is left. The blade draws back and turns down
+// (f93-114); the girl opens her eyes (f92-96) and looks at the dots; the Inoculator lifts her head and turns it
+// three-quarter toward the girl (f96-112) so her eyes read; a creep to the end.
+// Draw order: the girl, then the Inoculator (behind the table, but her hand reaches in front of the girl's arm), the
+// table's front, then the sick man (in front of her); the dots, the big lancet and its speck on top.
 // THE CAMERA: k 3.15 -> 3.3 (push lobe f10-92, then a creep) with one lateral move wx -86 -> 108 (a cosine lobe
 // f10-64, then a creep): f0 frames the sick man, the dip and the Inoculator (the girl is fully off the right edge, her
 // offered forearm already on the table); the landing frames the Inoculator, the girl and her mother, the scratch at
@@ -131,8 +143,9 @@ const DIP_OFF = 32;
 const CARRY = [26, 60] as const;
 const REACH_A = 52;
 export const SCR_CONTACT = 72;
-const S1 = [73, 80] as const;
-const S2 = [84, 90] as const;
+/** the three dabs on the girl's arm: the tip lands on each at its frame and stays ~2 f, then lifts and moves on */
+const DABS = [72, 81, 89] as const;
+const DAB_HOLD = 2;
 const WD_A = 93;
 const WD_B = 114;
 
@@ -208,22 +221,53 @@ const reachAmt = (f: number) => {
   if (f <= SCR_CONTACT) return eio(lin(f, REACH_A, SCR_CONTACT), 1.8);
   return 1 - sst(lin(f, WD_A, WD_B));
 };
+/** the blade's direction on screen (rad, SVG y down): pointing down-left at the dip (the hand above and to the right
+ *  of the pustule), turned slowly in her fingers through the carry to nearly level, pointing right, for the girl (the
+ *  hand to the left of her arm, below her face); a little anticipation and settle */
+const DIP_ANGLE = (128 * Math.PI) / 180;
+const GIRL_ANGLE = (-25 * Math.PI) / 180;
+/** after the dabs the blade is turned down as she draws it back (away from the girl's face) */
+const REST_ANGLE = (62 * Math.PI) / 180;
+const bladeAngle = (f: number) => mix(mix(DIP_ANGLE, GIRL_ANGLE, backOut(lin(f, CARRY[0] + 2, CARRY[1] + 2), 0.08)), REST_ANGLE, backOut(lin(f, WD_A + 2, WD_B + 2), 0.08));
+const bladeDir = (f: number): P2 => [Math.cos(bladeAngle(f)), Math.sin(bladeAngle(f))];
 const inoX = (f: number) => mix(INO.X0, INO.X1, cosE(lin(f, CARRY[0], CARRY[1] + 4)));
 
+/** an eased move with a little anticipation and a little overshoot that settles (zero speed at both ends):
+ *  cosE(u) + a sin^2(pi u)(2u - 1); a 0.12 = about 3 % each way */
+const backOut = (u: number, a = 0.12) => {
+  const v = c01(u);
+  const sn = Math.sin(Math.PI * v);
+  return cosE(v) + a * sn * sn * (2 * v - 1);
+};
 const inoPose = (f: number): VPose => {
   const amt = reachAmt(f);
   const side = cosE(lin(f, CARRY[0], CARRY[1]));
-  const yaw = mix(-0.12, 0.12, side);
+  // the body turns first, the shoulder and elbow lead the carry, the wrist follows and the hand's angle comes last,
+  // each landing with a small settle (overlap; no rigid rod from one pivot)
+  const yaw = mix(-0.12, 0.12, cosE(lin(f, CARRY[0] - 2, CARRY[1] - 4)));
   const base = standAt(yaw);
-  const carry = bezArm(DIP_READY, CARRY_MID, SCR_READY, side);
-  const arm = f >= WD_A ? lerpArm(SCR_READY, REST_R, sst(lin(f, WD_A, WD_B))) : carry;
+  const uE = backOut(lin(f, CARRY[0] - 2, CARRY[1] - 6), 0.1);
+  const uW = backOut(lin(f, CARRY[0] + 1, CARRY[1]), 0.14);
+  const uH = cosE(lin(f, CARRY[0] + 4, CARRY[1] + 3));
+  const cW = bezArm(DIP_READY, CARRY_MID, SCR_READY, uW);
+  const cE = bezArm(DIP_READY, CARRY_MID, SCR_READY, uE);
+  const cH = bezArm(DIP_READY, CARRY_MID, SCR_READY, uH);
+  const carry: Arm = { w: cW.w, elbow: cE.elbow, fist: cW.fist, hand: cH.hand };
+  // the draw-back after the dabs eases out with a small settle
+  const wd = backOut(lin(f, WD_A, WD_B), 0.12);
+  const arm = f >= WD_A ? lerpArm(SCR_READY, REST_R, wd) : carry;
+  // the shoulders follow the hand a beat late: a lean and a little roll toward the side she works on, a slight
+  // shoulder lift as she reaches
+  const sideLag = cosE(lin(f, CARRY[0] + 4, CARRY[1] + 6));
   const q: VPose = {
     ...base,
+    lean: mix(-3, 3.5, sideLag) * (0.5 + 0.5 * amt),
+    hunch: 0.18 * amt,
     // at the landing her head lifts and turns three-quarter toward the girl, so her eyes read
     headYaw: mix(mix(-0.3, 0.3, side), 0.62, sst(lin(f, 96, 112))),
     pitch: mix(12 + 10 * amt, 3, sst(lin(f, 96, 112))),
     crouch: 4 + 10 * amt,
-    roll: mix(3, -3, side) * (0.4 + 0.6 * amt),
+    roll: mix(3, -3, sideLag) * (0.4 + 0.6 * amt),
     look: [mix(mix(-0.6, 0.6, side), 0.7, sst(lin(f, 96, 112))), mix(0.6, 0.35, sst(lin(f, 96, 112)))],
     brow: 0.1,
     armR: arm,
@@ -242,26 +286,29 @@ type ArmFrame = { o: P2; d: P2; n: P2; s: number };
 /** a point on an arm in its local frame: u along it (cast units), v across (+ = the arm's right of its direction) */
 const onArm = (F: ArmFrame, u: number, v: number): P2 => add(F.o, add(mul(F.d, u * F.s), mul(F.n, v * F.s)));
 
-// the scratch strokes in the girl's upper-arm frame (origin armSpotL, d = shoulder -> elbow), on the bare lower half
-// of the upper arm (the pushed-up sleeve covers the spot's upper side)
-const ST1: [P2, P2] = [
-  [5, -3.2],
-  [14, -3.8],
+// the three dab points in the girl's upper-arm frame (origin armSpot, d = shoulder -> elbow), on the bare lower part
+// of the upper arm (the pushed-up sleeve covers the spot's upper side); radius = the dot left there (the same pox
+// drawing as the sick man's pustules)
+const DOTS: { p: P2; r: number }[] = [
+  { p: [7.5, -1], r: 3.4 },
+  { p: [12.5, 1.3], r: 3.0 },
+  { p: [17, -0.6], r: 2.7 },
 ];
-const ST2: [P2, P2] = [
-  [5.5, 2.2],
-  [14.5, 1.6],
-];
-const scratchLocal = (f: number): { p: P2; touch: boolean } => {
-  if (f < S1[0]) return { p: ST1[0], touch: f >= SCR_CONTACT };
-  if (f <= S1[1]) return { p: mix2(ST1[0], ST1[1], eio(lin(f, S1[0], S1[1]), 1.5)), touch: true };
-  if (f < S2[0]) {
-    const u = lin(f, S1[1], S2[0]);
-    const p = mix2(ST1[1], ST2[0], sst(u));
-    return { p: [p[0], p[1] - 4 * Math.sin(Math.PI * u)], touch: false };
+/** where the blade's tip is on the girl's arm (local), between dabs lifted off the skin in a small arc */
+const dabLocal = (f: number): P2 => {
+  const lift = (u: number) => -6 * Math.sin(Math.PI * c01(u));
+  if (f <= DABS[0] + DAB_HOLD) return DOTS[0].p;
+  for (let i = 0; i < DABS.length - 1; i++) {
+    const a = DABS[i] + DAB_HOLD;
+    const b = DABS[i + 1];
+    if (f <= b) {
+      const u = cosE(lin(f, a, b));
+      const p = mix2(DOTS[i].p, DOTS[i + 1].p, u);
+      return [p[0], p[1] + lift(u)];
+    }
+    if (f <= b + DAB_HOLD) return DOTS[i + 1].p;
   }
-  if (f <= S2[1]) return { p: mix2(ST2[0], ST2[1], eio(lin(f, S2[0], S2[1]), 1.5)), touch: true };
-  return { p: ST2[1], touch: f < WD_A + 2 };
+  return DOTS[DOTS.length - 1].p;
 };
 /** the pustules drawn large on his forearm (fractions along elbow -> wrist, radius in units); [0] is the one dipped */
 const PUSTULES: [number, number, number][] = [
@@ -307,35 +354,44 @@ export const frameState = (f: number) => {
   // the Inoculator
   const iF = figAt(A, inoX(f), INO.Z);
   const iQ = inoPose(f);
-  const scr = scratchLocal(f);
+  const dab = dabLocal(f);
   const P0 = PUSTULES[0];
-  const target: P2 =
+  const target0: P2 =
     f <= DIP_OFF
       ? (() => {
           // the dip: land on the pustule's top, press in a little, come away
           const press = sst(lin(f, DIP_CONTACT, DIP_CONTACT + 3)) * (1 - sst(lin(f, DIP_PRESS_END - 3, DIP_PRESS_END)));
           return onArm(sArm, fore * P0[0] + 0.6 * press, P0[1] - P0[2] + 1.8 * press);
         })()
-      : onArm(cArm, scr.p[0], scr.p[1]);
-  const hold = { L: "none" as const, R: "lancet" as const };
+      : onArm(cArm, dab[0], dab[1]);
+  const hold = { L: "none" as const, R: "none" as const };
+  const target: P2 = target0;
   // the solver leaves a small residual at full reach: aim past it once so the tip sits on the point
-  // THE BIG LANCET: the cut draws its own (the cast's prop does not scale). The cast's lancet is used only to SOLVE the
-  // hand (its key = the small tip); the big blade runs along the same line, its tip LANCET.ext units beyond the small
-  // one. Aim the solver so that the BIG tip lands on the point (the extension taken off, then up to four corrections).
-  const ext = BIG_LANCET.ext * iF.scale;
-  const solve = (reachTo: P2) => vaccineAnchors("inoculator", iQ, iF.at, iF.scale, { variant: 0, hold, reachTo });
-  const bigTip = (an: ReturnType<typeof solve>): P2 => add(an.keyR, mul(norm(sub(an.keyR, an.mittenR)), ext));
+  // THE BIG LANCET: the cut draws its own (the cast's prop does not scale), at its own angle (bladeDir: one slow
+  // eased turn in her fingers through the carry, never a whip around the wrist). The TIP's path is set here: from
+  // where her hand would carry it (the pose with no reach) to the point, by the reach envelope, lifted in an arc while
+  // partial; the hand (solved with no prop: its key = the hand's centre) is put one blade-length back along the blade
+  // and corrected until the tip is exact.
+  const dir = bladeDir(f);
+  const len = BIG_LANCET.len * iF.scale;
+  const qFree: VPose = { ...iQ, reach: undefined };
+  const qReach: VPose = { ...iQ, reach: { arm: "R", amt: 1 } };
+  const free = vaccineAnchors("inoculator", qFree, iF.at, iF.scale, { variant: 0, hold });
+  const naturalTip = add(free.mittenR, mul(dir, len));
   const amt = reachAmt(f);
-  const w = amt > 0.5 ? sst((amt - 0.5) / 0.5) : 0;
-  const iAn0 = solve(target);
-  let aim: P2 = sub(target, sub(bigTip(iAn0), iAn0.keyR));
+  // the arc: over his arm the blade comes down from above; at the girl it swings in and away low, below her face
+  const lift = (f <= DIP_OFF ? 16 : -9) * iF.scale * Math.sin(Math.PI * amt);
+  const desired: P2 = add(mix2(naturalTip, target, amt), [0, -lift]);
+  const solve = (reachTo: P2) => vaccineAnchors("inoculator", qReach, iF.at, iF.scale, { variant: 0, hold, reachTo });
+  const bigTip = (an: ReturnType<typeof solve>): P2 => add(an.mittenR, mul(dir, len));
+  let aim: P2 = sub(desired, mul(dir, len));
   let iAn = solve(aim);
-  for (let it = 0; it < 4 && w > 0; it++) {
-    aim = add(aim, mul(sub(target, bigTip(iAn)), w));
+  for (let it = 0; it < 3; it++) {
+    aim = add(aim, sub(desired, bigTip(iAn)));
     iAn = solve(aim);
   }
   const tip = bigTip(iAn);
-  return { cam, A, aim, sF, sQ, sGrip, sOpt, sAn, sArm, pustules, cF, cQ, cGrip, cAn, cArm, mF, mQ, mGrip, mAn, iF, iQ, iAn, tip, target, hold, scr };
+  return { cam, A, aim, sF, sQ, sGrip, sOpt, sAn, sArm, pustules, cF, cQ, cGrip, cAn, cArm, mF, mQ, mGrip, mAn, iF, iQ, iAn, tip, target, hold, dab };
 };
 
 // ---------------------------------------------------------------------------
@@ -434,8 +490,8 @@ const Stool: React.FC<{ A: AirWorld; X: number; Z: number; h: number; w: number;
 // ---------------------------------------------------------------------------
 // THE SMALLPOX MATTER: the pustules, the speck on the blade, the mark in the scratch
 // ---------------------------------------------------------------------------
-const Pustule: React.FC<{ c: P2; s: number; r: number; opened: number }> = ({ c, s, r, opened }) => (
-  <g>
+const Pustule: React.FC<{ c: P2; s: number; r: number; opened: number; op?: number }> = ({ c, s, r, opened, op = 1 }) => (
+  <g opacity={op}>
     <circle cx={c[0] + 0.3 * r * s} cy={c[1] + 0.35 * r * s} r={r * 1.12 * s} fill={POX_DEEP} opacity={0.55} />
     <circle cx={c[0]} cy={c[1]} r={r * s} fill={POX} />
     <circle cx={c[0] - 0.3 * r * s} cy={c[1] - 0.33 * r * s} r={r * (0.4 - 0.15 * opened) * s} fill={mixHex(POX, "#E9C9C4", 0.55)} opacity={0.9} />
@@ -449,33 +505,24 @@ const Speck: React.FC<{ c: P2; s: number; amt: number }> = ({ c, s, amt }) =>
       <circle cx={c[0] - 0.8 * s} cy={c[1] - 0.9 * s} r={1.4 * s * Math.sqrt(amt)} fill={POX} />
     </g>
   );
-const Mark: React.FC<{ F: ArmFrame; f: number }> = ({ F, f }) => {
-  const seg = (st: [P2, P2], a: number, b: number, key: string) => {
-    if (f < a) return null;
-    const u = eio(lin(f, a, b), 1.5);
-    const p0 = onArm(F, st[0][0], st[0][1]);
-    const p1 = onArm(F, mix(st[0][0], st[1][0], u), mix(st[0][1], st[1][1], u));
-    const d = `M${Pt(p0)}L${Pt(p1)}`;
-    return (
-      <g key={key}>
-        <path d={d} stroke={POX} strokeWidth={5 * F.s} strokeLinecap="round" fill="none" opacity={0.45} />
-        <path d={d} stroke={POX_DEEP} strokeWidth={2.4 * F.s} strokeLinecap="round" fill="none" />
-      </g>
-    );
-  };
-  return (
-    <g>
-      {seg(ST1, S1[0], S1[1], "a")}
-      {seg(ST2, S2[0], S2[1], "b")}
-    </g>
-  );
-};
-/** the speck's amount on the blade: picked up as the tip leaves the pustule, left in the two scratches */
-const speckAmt = (f: number) => sst(lin(f, DIP_LEAVE - 2, DIP_LEAVE + 3)) * (1 - 0.55 * sst(lin(f, S1[0], S1[1])) - 0.45 * sst(lin(f, S2[0], S2[1])));
+/** the dots left on the girl's arm: each appears under the tip on its dab (the frame after the touch), swelling in
+ *  over 4 frames; the same pustule drawing, colour and size range as the sick man's */
+const Dots: React.FC<{ F: ArmFrame; f: number }> = ({ F, f }) => (
+  <g>
+    {DOTS.map((d, i) => {
+      const g = sst(lin(f, DABS[i] + 0.5, DABS[i] + 4.5));
+      if (g <= 0.001) return null;
+      return <Pustule key={i} c={onArm(F, d.p[0], d.p[1])} s={F.s} r={d.r * (0.55 + 0.45 * g)} opened={0} op={g} />;
+    })}
+  </g>
+);
+
+/** the speck's amount on the blade: picked up as the tip leaves the pustule, left a third at each dab */
+const speckAmt = (f: number) => sst(lin(f, DIP_LEAVE - 2, DIP_LEAVE + 3)) * (1 - 0.34 * sst(lin(f, DABS[0], DABS[0] + 3)) - 0.33 * sst(lin(f, DABS[1], DABS[1] + 3)) - 0.33 * sst(lin(f, DABS[2], DABS[2] + 3)));
 
 /** the cut's own lancet, larger than the cast's: a bright steel leaf blade on a cream handle, drawn from the hand
  *  (the mitten centre) to the tip along the hand's line every frame, so it never slips */
-const BIG_LANCET = { ext: 10, blade: 16, handle0: 7, w: 3.6, bladeW: 4.4 };
+const BIG_LANCET = { len: 33, blade: 16, handle0: 7, w: 3.6, bladeW: 4.4 };
 const BigLancet: React.FC<{ mitten: P2; tip: P2; s: number }> = ({ mitten, tip, s }) => {
   const d = norm(sub(tip, mitten));
   const n: P2 = [-d[1], d[0]];
@@ -526,15 +573,6 @@ const InoculateWithActualSmallpox: React.FC<z.infer<typeof schema>> = () => {
   const wBot = A.P.p(WIN.X1, WIN.Y1, WALL_Z);
   const toS = (p: P2): P2 => [540 + (p[0] - cam.cx) * k, 960 + (p[1] - cam.cy) * k];
   const win = { x: toS(wTop)[0], y0: toS(wTop)[1], y1: toS(wBot)[1], beams: 3 };
-  // her lancet hand and blade are drawn once more on top of everything (a capsule clip from the wrist to the tip):
-  // she reaches over the table to the arms in front of her
-  // only the hand (from just behind the wrist) and the blade: her forearm and elbow stay in depth order, behind the girl
-  const t = S.tip;
-  const dv = norm(sub(t, S.iAn.wristR));
-  const e = add(S.iAn.wristR, mul(dv, -5 * S.iF.scale));
-  const nv: P2 = [-dv[1], dv[0]];
-  const rr = 13 * S.iF.scale;
-  const capsule = poly([add(e, mul(nv, rr)), add(add(t, mul(nv, rr)), mul(dv, rr)), add(add(t, mul(nv, -rr)), mul(dv, rr)), add(e, mul(nv, -rr))]);
   // the figure is drawn in its SOLVED pose with the small cast lancet hidden (hold none); the big lancet goes on top
   const solvedPose: VPose = { ...S.iAn.pose, reach: undefined };
   const ino = (uid: string) => <VaccineFigure kind="inoculator" variant={0} pose={solvedPose} at={S.iF.at} scale={S.iF.scale} uid={uid} hold={{ L: "none", R: "none" }} frame={frame} fog={A.folkFog(INO.Z)} unitPx={k} />;
@@ -545,8 +583,10 @@ const InoculateWithActualSmallpox: React.FC<z.infer<typeof schema>> = () => {
         {/* the mother behind the girl */}
         <AirShadow A={A} X={MOTHER.X} Z={MOTHER.Z} w={56} d={26} uid="mS" amt={0.8} />
         <VaccineFigure kind="parent" variant={0} pose={S.mQ} at={S.mF.at} scale={S.mF.scale} uid="mother" grip={{ R: S.mGrip }} frame={frame} fog={A.folkFog(MOTHER.Z)} unitPx={k} />
-        {/* the table's top, the Inoculator behind it, the table's front */}
+        {/* the table's top; the girl at its right end; the Inoculator behind it; the table's front */}
         <TableTop A={A} />
+        <Stool A={A} X={CHILD.X} Z={CHILD.Z} h={CHILD.seat} w={34} uid="stC" />
+        <VaccineFigure kind="child" variant={CHILD.v} pose={S.cQ} at={S.cF.at} scale={S.cF.scale} uid="child" grip={S.cGrip} frame={frame} fog={A.folkFog(CHILD.Z)} unitPx={k} />
         <AirShadow A={A} X={inoX(frame)} Z={INO.Z} w={58} d={26} uid="iS" amt={0.8} />
         {ino("ino")}
         <TableFront A={A} />
@@ -556,25 +596,8 @@ const InoculateWithActualSmallpox: React.FC<z.infer<typeof schema>> = () => {
         {S.pustules.map((pu, i) => (
           <Pustule key={i} c={pu.c} s={S.sF.scale} r={pu.r} opened={i === 0 ? sst(lin(frame, DIP_CONTACT, DIP_LEAVE)) : 0} />
         ))}
-        {/* the girl on her stool at the right end */}
-        <Stool A={A} X={CHILD.X} Z={CHILD.Z} h={CHILD.seat} w={34} uid="stC" />
-        <VaccineFigure kind="child" variant={CHILD.v} pose={S.cQ} at={S.cF.at} scale={S.cF.scale} uid="child" grip={S.cGrip} frame={frame} fog={A.folkFog(CHILD.Z)} unitPx={k} />
-        <Mark F={S.cArm} f={frame} />
-        {/* her hand and blade over the arms */}
-        <defs>
-          <clipPath id="bladeClip">
-            <path d={capsule} />
-          </clipPath>
-        </defs>
-        <defs>
-          <clipPath id="aboveTable">
-            <rect x={cam.cx - 2000} y={cam.cy - 2000} width={4000} height={A.P.p(0, TABLE.top, TABLE.Z0)[1] - (cam.cy - 2000)} />
-          </clipPath>
-        </defs>
-        {/* from the dip until it leaves the sick man's arm, and from the reach for the girl on; above the table's edge */}
-        <g clipPath="url(#aboveTable)" opacity={frame >= REACH_A ? 1 : sst(reachAmt(frame) / 0.3)}>
-          <g clipPath="url(#bladeClip)">{ino("inoTop")}</g>
-        </g>
+        {/* the dots on the girl's arm, the big lancet and its speck on top */}
+        <Dots F={S.cArm} f={frame} />
         <BigLancet mitten={S.iAn.mittenR} tip={S.tip} s={S.iF.scale} />
         <Speck c={speckC} s={S.iF.scale} amt={speckAmt(frame)} />
       </WorldSvg>
