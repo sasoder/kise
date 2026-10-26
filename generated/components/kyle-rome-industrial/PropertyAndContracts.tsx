@@ -69,6 +69,13 @@ import {
   type P2,
 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import {
+  CART,
+  COINS,
+  COIN_FLIGHT,
+  FARMER,
+  MERCHANT,
+  PORTER,
+  ROAD_GOODS,
   DOM,
   DURATION as PLAN_DURATION,
   FOLD_GRIP,
@@ -107,6 +114,7 @@ import {
   YARD_X1,
   ZB,
   eyeAt,
+  keptAt,
   foldAngle,
   hashIJ,
   kitCamOf,
@@ -176,16 +184,19 @@ const PLOT_COL: Record<PlotKind, { base: string; row: string; rowW: number; rowG
 // THE AIR ON THIS CAMERA (the kit's airWorldOf, with the eye's own rest point and the fog scaled to its height)
 // ===================================================================================================================
 type World = AirWorld & { e: Eye; eye: V3; dist: (Z: number) => number; sc: (X: number, Y: number, Z: number) => P2 };
-const EYE0 = eyeAt(0);
+// the motes and shafts parallax against the APPROVED cut's f0 camera, so the kept part (from JOIN) stays pixel-identical
+const EYE0 = keptAt(0);
 const sceneFor = (e: Eye) => {
   const ds = (1.9 * e.eh) / U; // metres: the subject's distance scale
   return { ...AIR_SCENE_EYE, fogNear: m(0.8 * ds), fogVis: m(3.3 * ds), fogMax: 0.9, hLow: 0, hHigh: m(7), moteUnit: U * 3 };
 };
 const worldOf = (e: Eye, frame: number, sway: boolean): World => {
   const kc = kitCamOf(e);
-  const cam: Cam = sway ? swayCam(kc.cam, frame) : kc.cam;
+  const camEye: Cam = sway ? swayCam(kc.cam, frame) : kc.cam;
   const depth = { eyeY: kc.eyeY, dRef: kc.Dc, kRef: 1, dolly: 0 };
-  const P = perspective(cam, depth);
+  const P = perspective(camEye, depth);
+  // the drawing camera carries the horizontal lens shift (Rev 1 opening): the VP sits xs px off the frame's centre
+  const cam: Cam = { ...camEye, cx: camEye.cx - e.xs / camEye.k };
   const v = makeAirView({
     scene: { ...sceneFor(e), F: e.F },
     frame,
@@ -323,7 +334,7 @@ const GroundLayer: React.FC<{ W: World; frame: number }> = ({ W }) => {
   const e = W.e;
   const zNear = e.ez + Math.max(m(0.4), (0.7 * e.eh * e.F) / Math.max(200, 1920 - e.yh));
   const zFar = e.ez + m(900);
-  const halfAt = (Z: number) => ((620 + 80) * (Z - e.ez)) / e.F; // half the view's width at depth Z (+ margin)
+  const halfAt = (Z: number) => ((620 + 80 + Math.abs(e.xs)) * (Z - e.ez)) / e.F; // half the view's width at depth Z (+ margin, + the lens shift)
   const q = (r: Quad) => {
     const z0 = Math.max(r.z0, zNear);
     const z1 = Math.min(r.z1, zFar);
@@ -383,7 +394,7 @@ const GroundLayer: React.FC<{ W: World; frame: number }> = ({ W }) => {
   // the balks: grass strips between plots across (the even Z boundaries), no wall
   const balkD: string[] = [];
   for (let j = jMin; j <= jMax; j++) {
-    if (zIsRoad(j)) continue;
+    if (zIsRoad(j) || j === -1) continue; // (Rev 1: no strip across the opening's foreground)
     const d = q({ x0: e.ex - m(3000), x1: e.ex + m(3000), z0: m(ZB(j) - 0.22), z1: m(ZB(j) + 0.22) });
     if (d) balkD.push(d);
   }
@@ -550,7 +561,7 @@ const Hills: React.FC<{ W: World }> = ({ W }) => {
   const ridge = (dM: number, h0: number, h1: number, seed: number, key: string) => {
     const Z = e.ez + m(dM);
     const pts: P2[] = [];
-    const halfW = (700 * m(dM)) / e.F;
+    const halfW = ((700 + Math.abs(e.xs)) * m(dM)) / e.F;
     const N = 48;
     for (let i = 0; i <= N; i++) {
       const X = e.ex - halfW + (2 * halfW * i) / N;
@@ -570,7 +581,7 @@ const Walls: React.FC<{ W: World }> = ({ W }) => {
   const e = W.e;
   const zNear = e.ez + m(0.6);
   const zFar = e.ez + m(260);
-  const halfAt = (Z: number) => (700 * (Z - e.ez)) / e.F;
+  const halfAt = (Z: number) => ((700 + Math.abs(e.xs)) * (Z - e.ez)) / e.F;
   const top: string[] = [];
   const side: string[] = [];
   const front: string[] = [];
@@ -743,7 +754,9 @@ const Tribunal: React.FC<{ W: World; frame: number }> = ({ W, frame }) => {
   const seatY = -Hh;
   const sc = W.P.r(seatZ);
   const at = W.sc(seatX, seatY, seatZ);
-  const g = span(frame, MAG_A, MAG_B);
+  // Rev 1: he also lifts his hand on "good institutions" (f61) as the camera passes, and lowers it again
+  const early = Math.sin(Math.PI * c01((frame - 46) / 40));
+  const g = Math.max(span(frame, MAG_A, MAG_B), 0.85 * early);
   const base: RomeFolk.FigPose = {
     ...RomeFolk.STAND,
     yaw: 0.12,
@@ -974,6 +987,15 @@ const Leaf: React.FC<{ W: World; side: 1 | -1; phi: number; writing: number; cor
   return <g>{els}</g>;
 };
 
+/** the buyer's fingers wrapped over the back of the owner's hand (drawn over both hands once they meet) */
+const ClaspFingers: React.FC<{ at: P2; sc: number; fill: string; shade: string; a: number }> = ({ at, sc, fill, shade, a }) => (
+  <g opacity={a}>
+    {[-1, 0, 1, 2].map((k) => (
+      <ellipse key={k} cx={at[0] - 1 * sc + k * 3.6 * sc} cy={at[1] - 5.5 * sc + Math.abs(k - 0.5) * 0.9 * sc} rx={2.3 * sc} ry={3.4 * sc} fill={fill} stroke={shade} strokeWidth={0.6 * sc} />
+    ))}
+  </g>
+);
+
 const TableGroup: React.FC<{ W: World; frame: number }> = ({ W, frame }) => {
   const f = frame;
   const toW = (v: V3): P2 => W.sc(v[0], v[1], v[2]);
@@ -994,8 +1016,10 @@ const TableGroup: React.FC<{ W: World; frame: number }> = ({ W, frame }) => {
   const sealPt = (x: number): V3 => [m(x), -m(TABLE.top + TABLE.th / 2 + 2 * TAB.t) - 1, m(TAB.zc - TAB.d / 2)];
   // the handshake: both near hands to a point above the tablets, then a gentle shake
   const reach = span(f, SHAKE_A, SHAKE_MEET);
-  const shakeY = f > SHAKE_MEET ? 7 * Math.sin(((f - SHAKE_MEET) / 7) * Math.PI) * Math.exp(-(f - SHAKE_MEET) / 14) : 0;
-  const shakeP: V3 = [m(0.0), -m(1.05) + shakeY, m(0.97)];
+  // Rev 1: the right hands clasp (dextrarum iunctio): the owner's right (his near arm) and the buyer's right (his
+  // far arm: he faces left) meet palm to palm at one point and HOLD, with one small press down and up together
+  const shakeY = f > SHAKE_MEET ? 4 * Math.sin(Math.PI * c01((f - SHAKE_MEET - 1) / 9)) : 0;
+  const shakeP: V3 = [m(-0.02), -m(1.08) + shakeY, m(0.97)];
   // the near hands rest on the table's back edge; every reach blends from there (so the near arms are always drawn
   // over the table and never change layer)
   const tableTopY = -m(TABLE.top + TABLE.th / 2);
@@ -1007,8 +1031,9 @@ const TableGroup: React.FC<{ W: World; frame: number }> = ({ W, frame }) => {
   const pD = pressAt(f, SEALS[0].f);
   const sealD = toW(sealPt(SEALS[0].x));
   let handD = mixP(restD, [sealD[0], sealD[1] - 3 * scD], pD);
-  handD = mixP(handD, [shake[0] - 9 * scD, shake[1]], reach);
-  const poseD = RomeFolk.gripTo("dominus", 0, { ...RomeFolk.POSES.stand(1), headYaw: 0.75, crouch: 8 + 26 * pD, lean: 6 + 14 * pD + 9 * reach, pitch: 6 + 8 * pD }, { L: handD }, atD, scD);
+  handD = mixP(handD, [shake[0] + 5 * scD, shake[1]], reach);
+  const poseD0 = RomeFolk.gripTo("dominus", 0, { ...RomeFolk.POSES.stand(1), headYaw: 0.75, crouch: 8 + 26 * pD, lean: 6 + 14 * pD + 11 * reach, pitch: 6 + 8 * pD }, { L: handD }, atD, scD);
+  const poseD: RomeFolk.FigPose = reach > 0 ? { ...poseD0, armL: { ...poseD0.armL, fist: lerp(poseD0.armL.fist, 0.55, reach) } } : poseD0;
   // the Freeman: facing left; writes (stylus), folds the right leaf, seals SEALS[2], shakes
   const pF = pressAt(f, SEALS[2].f);
   const writing = c01(f / WRITE_END);
@@ -1039,8 +1064,12 @@ const TableGroup: React.FC<{ W: World; frame: number }> = ({ W, frame }) => {
     handF = mixP(restF, [s[0], s[1] - 3 * scF], pF);
     bendF = pF;
   }
-  handF = mixP(handF, [shake[0] + 9 * scF, shake[1] + 2 * scF], reach);
-  const poseF = RomeFolk.gripTo("freeman", 0, { ...RomeFolk.POSES.stand(-1), headYaw: -0.72, crouch: 8 + 26 * bendF, lean: -6 - 14 * bendF - 9 * reach, pitch: 8 + 8 * bendF }, { R: handF }, atF, scF);
+  const baseF: RomeFolk.FigPose = { ...RomeFolk.POSES.stand(-1), headYaw: -0.72, crouch: 8 + 26 * bendF, lean: -6 - 14 * bendF - 11 * reach, pitch: 8 + 8 * bendF };
+  // his near (left) hand stays on the table; his right (far) hand comes from his side to the clasp
+  const farRest = RomeFolk.romeAnchors("freeman", baseF, atF, scF, { variant: 0 }).handFar;
+  const clasp = reach > 0 ? { L: mixP(farRest, [shake[0] - 6 * scF, shake[1] - 1 * scF], reach) } : {};
+  const poseF0 = RomeFolk.gripTo("freeman", 0, baseF, { R: handF, ...clasp }, atF, scF);
+  const poseF: RomeFolk.FigPose = reach > 0 ? { ...poseF0, armL: { ...poseF0.armL, fist: lerp(poseF0.armL.fist, 0.55, reach) } } : poseF0;
   // the witness: facing us, watching; bends over to seal SEALS[1]
   const pW = pressAt(f, SEALS[1].f);
   const lookW = c01((f - 150) / 40);
@@ -1109,7 +1138,140 @@ const TableGroup: React.FC<{ W: World; frame: number }> = ({ W, frame }) => {
       {pW > 0 ? <RomeFolk.Freeman variant={2} pilleus={false} pose={idW} at={atW} scale={scW} uid="witA" fog={W.folkFog(ZW)} unitPx={W.k} apron={false} onlyArm="L" /> : null}
       <RomeFolk.Dominus variant={0} ring pose={idD} at={atD} scale={scD} uid="domA" fog={W.folkFog(ZD)} unitPx={W.k} onlyArm="L" />
       <RomeFolk.Freeman variant={0} pilleus={false} pose={idF} at={atF} scale={scF} uid="freA" fog={W.folkFog(ZF)} unitPx={W.k} apron={false} onlyArm="R" />
+      {reach > 0.92 ? <ClaspFingers at={RomeFolk.romeAnchors("dominus", idD, atD, scD, { variant: 0 }).handNear} sc={scD} fill={W.tone("#DDB28E", ZF, m(1))} shade={W.tone("#B98E6C", ZF, m(1))} a={span(f, SHAKE_MEET - 3, SHAKE_MEET)} /> : null}
       {f < STYLUS_DOWN ? stylus : null}
+    </g>
+  );
+};
+
+// ===================================================================================================================
+// REV 1: THE TRADE AT THE ESTATE'S ROAD (the opening)
+// ===================================================================================================================
+const CART_WOOD: Mat = { lit: "#9C7A55", mid: "#6F5539", dark: "#3F2E1F" };
+const SILVER = { face: "#CFCBBE", rim: "#8C887C", glint: "#F1EDE2" };
+/** a wheel facing the camera: rim, six spokes, hub (X-Y plane at depth Z) */
+const Wheel: React.FC<{ W: World; x: number; y: number; z: number; r: number; turn?: number }> = ({ W, x, y, z, r, turn = 0 }) => {
+  const Z = m(z);
+  const c = W.sc(m(x), -m(y), Z);
+  const R = m(r) * W.P.r(Z);
+  const t = (h: string) => W.tone(h, Z, m(0.5));
+  let sp = "";
+  for (let k = 0; k < 6; k++) {
+    const a = turn + (k * Math.PI) / 3;
+    sp += `M${(c[0] + Math.cos(a) * R * 0.15).toFixed(2)},${(c[1] + Math.sin(a) * R * 0.15).toFixed(2)}L${(c[0] + Math.cos(a) * R * 0.86).toFixed(2)},${(c[1] + Math.sin(a) * R * 0.86).toFixed(2)}`;
+  }
+  return (
+    <g>
+      <circle cx={c[0]} cy={c[1]} r={R * 0.93} fill="none" stroke={t(CART_WOOD.dark)} strokeWidth={R * 0.16} />
+      <circle cx={c[0]} cy={c[1]} r={R * 0.93} fill="none" stroke={t(CART_WOOD.mid)} strokeWidth={R * 0.09} />
+      <path d={sp} stroke={t(CART_WOOD.mid)} strokeWidth={R * 0.07} strokeLinecap="round" />
+      <circle cx={c[0]} cy={c[1]} r={R * 0.17} fill={t(CART_WOOD.dark)} />
+      <path d={`M${(c[0] - R * 0.66).toFixed(2)},${(c[1] - R * 0.66).toFixed(2)}A${(R * 0.93).toFixed(2)},${(R * 0.93).toFixed(2)} 0 0 1 ${(c[0] + R * 0.5).toFixed(2)},${(c[1] - R * 0.78).toFixed(2)}`} fill="none" stroke={PAL.cream} strokeOpacity={0.35 * (1 - W.fog(Z))} strokeWidth={R * 0.04} />
+    </g>
+  );
+};
+/** the merchant's handcart, its amphorae and the sacks already loaded, the far wheel, the shafts */
+const Cart: React.FC<{ W: World }> = ({ W }) => {
+  const C = CART;
+  const top = -m(C.top);
+  const els: React.ReactNode[] = [];
+  els.push(<AirShadow key="sh" A={W} X={m((C.x0 + C.x1) / 2 + 0.3)} Z={m((C.z0 + C.z1) / 2)} w={m(1.1)} d={m(0.6)} uid="cartS" amt={0.6} />);
+  els.push(<Wheel key="wf" W={W} x={C.wheelX} y={C.wheelR} z={C.z1 + 0.06} r={C.wheelR} />);
+  // the shafts, resting on the ground toward the road
+  for (const zz of [C.z0 + 0.15, C.z1 - 0.15]) {
+    const a = W.sc(m(C.x0 + 0.1), -m(0.78), m(zz));
+    const b = W.sc(m(C.x0 - 1.15), -m(0.05), m(zz));
+    els.push(<path key={`sf${zz}`} d={`M${Pt(a)}L${Pt(b)}`} stroke={W.tone(CART_WOOD.mid, m(zz), m(0.4))} strokeWidth={m(0.07) * W.P.r(m(zz))} strokeLinecap="round" />);
+  }
+  els.push(<AirBox key="bed" A={W} X0={m(C.x0)} X1={m(C.x1)} Y0={top} Y1={top + m(0.13)} Z0={m(C.z0)} Z1={m(C.z1)} mat={CART_WOOD} uid="cartB" />);
+  // the load: amphorae (two rows) and two sacks of wheat at the right end
+  const amph: [number, number][] = [
+    [8.05, -3.3], [8.4, -3.3], [8.75, -3.3],
+    [7.9, -3.65], [8.25, -3.65], [8.6, -3.65],
+  ];
+  amph.forEach(([x, z], i) => {
+    const Z = m(z);
+    els.push(<RomeFolk.Amphora key={`a${i}`} at={W.sc(m(x), top, Z)} scale={W.P.r(Z)} angle={i % 2 ? 4 : -3} uid={`amph${i}`} fog={W.folkFog(Z, m(C.top))} unitPx={W.k} />);
+  });
+  [[9.15, -3.35], [9.07, -3.7]].forEach(([x, z], i) => {
+    const Z = m(z);
+    els.push(<RomeFolk.Sack key={`s${i}`} at={W.sc(m(x), top, Z)} scale={W.P.r(Z)} uid={`csack${i}`} fog={W.folkFog(Z, m(C.top))} unitPx={W.k} />);
+  });
+  // the near rail and the near wheel
+  els.push(<AirBox key="rail" A={W} X0={m(C.x0)} X1={m(C.x1)} Y0={top - m(0.2)} Y1={top} Z0={m(C.z0) - m(0.04)} Z1={m(C.z0)} mat={CART_WOOD} uid="cartR" />);
+  els.push(<Wheel key="wn" W={W} x={C.wheelX} y={C.wheelR} z={C.z0 - 0.08} r={C.wheelR} turn={0.3} />);
+  return <g>{els}</g>;
+};
+/** the farmer and the merchant in front of the cart: silver poured from the purse into the farmer's palm */
+const TradePair: React.FC<{ W: World; frame: number }> = ({ W, frame: f }) => {
+  const toW = (v: V3): P2 => W.sc(v[0], v[1], v[2]);
+  const ZF = m(FARMER.z);
+  const ZM = m(MERCHANT.z);
+  const scF = W.P.r(ZF);
+  const scM = W.P.r(ZM);
+  const atF = W.sc(m(FARMER.x), 0, ZF);
+  const atM = W.sc(m(MERCHANT.x), 0, ZM);
+  const mid = (FARMER.x + MERCHANT.x) / 2;
+  // the farmer's palm (cupped, held out from f4) and the merchant's purse above it
+  const out = span(f, 0, 6);
+  const close = span(f, COINS[COINS.length - 1] + COIN_FLIGHT + 2, COINS[COINS.length - 1] + COIN_FLIGHT + 9);
+  const palm3: V3 = [m(mid - 0.08), -m(0.98), m(FARMER.z + 0.02)];
+  const purse3: V3 = [m(mid + 0.1), -m(1.2), m(MERCHANT.z - 0.02)];
+  const palm = toW(palm3);
+  const purse = toW(purse3);
+  const restF: P2 = [atF[0] + 40 * scF, atF[1] - 140 * scF];
+  const restM: P2 = [atM[0] - 40 * scM, atM[1] - 145 * scM];
+  const pour = Math.sin(Math.PI * c01((f - COINS[0] + 4) / (COINS[COINS.length - 1] - COINS[0] + 12)));
+  const handF: P2 = [lerp(restF[0], palm[0], out * (1 - close * 0.6)), lerp(restF[1], palm[1], out) + 6 * scF * close];
+  const handM: P2 = [lerp(restM[0], purse[0], out), lerp(restM[1], purse[1], out) + 8 * scM * pour];
+  const poseF = RomeFolk.gripTo("slave", 4, { ...RomeFolk.POSES.stand(1), headYaw: 0.75, pitch: 10, armL: { ...RomeFolk.POSES.stand(1).armL, fist: lerp(0.05, 0.85, close) } }, { L: handF }, atF, scF);
+  const poseM = RomeFolk.gripTo("overseer", 2, { ...RomeFolk.POSES.stand(-1), headYaw: -0.7, pitch: 8, brow: -0.2, mouth: 0.2, armR: { ...RomeFolk.POSES.stand(-1).armR, fist: 0.7 } }, { R: handM }, atM, scM);
+  // the coins: each falls from the purse's mouth to the palm, then lies in it (closed in the fist after)
+  const coins: React.ReactNode[] = [];
+  const coinR = m(0.075);
+  COINS.forEach((c0, i) => {
+    if (f < c0) return;
+    const u = c01((f - c0) / COIN_FLIGHT);
+    const from: P2 = [purse[0] - 8 * scM, purse[1] + 10 * scM];
+    const to: P2 = [handF[0] + (i - 2) * 4 * scF, handF[1] - 5 * scF - i * 2.2 * scF];
+    if (u >= 1 && close > 0.5) return;
+    const x = lerp(from[0], to[0], u);
+    const y = lerp(from[1], to[1], u * u);
+    const tilt = u < 1 ? Math.abs(Math.cos(u * 5 + i)) : 0.35;
+    const r = coinR * scF;
+    coins.push(
+      <g key={i}>
+        <ellipse cx={x} cy={y} rx={r} ry={Math.max(r * 0.25, r * tilt)} fill={W.tone(SILVER.face, ZF, m(1))} stroke={W.tone(SILVER.rim, ZF, m(1))} strokeWidth={r * 0.25} />
+        <circle cx={x - r * 0.3} cy={y - r * 0.15 * tilt} r={r * 0.22} fill={SILVER.glint} opacity={0.8 * (1 - W.fog(ZF))} />
+      </g>,
+    );
+  });
+  // the purse: a small leather pouch in the merchant's near hand
+  const ancM = RomeFolk.romeAnchors("overseer", poseM, atM, scM, { variant: 2, tool: "none" });
+  const ph = ancM.handNear;
+  const purseNode = <path d={`M${ph[0] - 7 * scM},${ph[1] + 2 * scM}Q${ph[0] - 12 * scM},${ph[1] + 20 * scM} ${ph[0] - 2 * scM},${ph[1] + 22 * scM}Q${ph[0] + 8 * scM},${ph[1] + 18 * scM} ${ph[0] + 4 * scM},${ph[1] + 2 * scM}Z`} fill={W.tone("#A9875E", ZM, m(1))} stroke={W.tone("#5C4330", ZM, m(1))} strokeWidth={W.lw(1)} />;
+  return (
+    <g>
+      <AirShadow A={W} X={m(MERCHANT.x)} Z={ZM} w={62} d={30} uid="merS" amt={0.8} />
+      <RomeFolk.Overseer variant={2} tool="none" pose={RomeFolk.idle(poseM, f, 11)} at={atM} scale={scM} uid="merchant" fog={W.folkFog(ZM)} unitPx={W.k} />
+      {purseNode}
+      <AirShadow A={W} X={m(FARMER.x)} Z={ZF} w={62} d={30} uid="farS" amt={0.8} />
+      <RomeFolk.Slave variant={4} garb="tunic" pose={RomeFolk.idle(poseF, f, 12)} at={atF} scale={scF} uid="farmer" fog={W.folkFog(ZF)} unitPx={W.k} />
+      {coins}
+    </g>
+  );
+};
+/** the porter behind the cart, bringing one more sack of the estate's wheat */
+const Porter: React.FC<{ W: World; frame: number }> = ({ W, frame: f }) => {
+  const adv = (2 * RomeFolk.WALK.stride) / RomeFolk.WALK_CYCLE; // units per frame, planted feet do not slide
+  const Z = m(PORTER.z);
+  const X = m(PORTER.x0) + adv * f;
+  const sc = W.P.r(Z);
+  const pose = RomeFolk.POSES.carry(1, f / RomeFolk.WALK_CYCLE);
+  return (
+    <g>
+      <AirShadow A={W} X={X} Z={Z} w={62} d={30} uid="porS" amt={0.8} />
+      <RomeFolk.Slave variant={2} garb="tunic" load="sack" pose={pose} at={W.sc(X, 0, Z)} scale={sc} uid="porter" fog={W.folkFog(Z)} unitPx={W.k} />
     </g>
   );
 };
@@ -1130,7 +1292,7 @@ const Objects: React.FC<{ W: World; frame: number }> = ({ W, frame }) => {
   const inView = (x: number, z: number, r = 2) => {
     const d = m(z) - e.ez;
     if (d < m(0.5)) return false;
-    const sx = 540 + ((m(x) - e.ex) * e.F) / d;
+    const sx = 540 + e.xs + ((m(x) - e.ex) * e.F) / d;
     const pad = (m(r) * e.F) / d;
     return sx > -pad - 40 && sx < 1080 + pad + 40;
   };
@@ -1154,6 +1316,8 @@ const Objects: React.FC<{ W: World; frame: number }> = ({ W, frame }) => {
       corners.forEach(([x, zz], k) => {
         if (i === -1 && j === 0 && k === 1) return;
         if (kind === "yard") return;
+        // Rev 1: no stones in the opening's foreground (in front of the yard line; behind the camera from JOIN on)
+        if (zz < -2.5) return;
         if (m(zz) - e.ez > m(dMax) || !inView(x, zz, 1)) return;
         items.push({ z: m(zz), node: <Terminus key={`t${i}_${j}_${k}`} W={W} x={x} z={zz} uid={`t${i}_${j}_${k}`} /> });
       });
@@ -1181,6 +1345,24 @@ const Objects: React.FC<{ W: World; frame: number }> = ({ W, frame }) => {
   }
   if (inView((HOUSE.x0 + HOUSE.x1) / 2, HOUSE.z0, 4)) items.push({ z: m((HOUSE.z0 + HOUSE.z1) / 2), node: <Farmhouse key="house" W={W} uid="house" /> });
   if (inView(TRIBUNAL.x, TRIBUNAL.z, 3)) items.push({ z: m(TRIBUNAL.z + 1), node: <Tribunal key="trib" W={W} frame={frame} /> });
+  ROAD_GOODS.forEach((g, i) => {
+    if (!inView(g.x, g.z, 0.5)) return;
+    const Z = m(g.z);
+    const at = W.sc(m(g.x), 0, Z);
+    const sc = W.P.r(Z);
+    items.push({
+      z: Z,
+      node: (
+        <g key={`rg${i}`}>
+          <AirShadow A={W} X={m(g.x)} Z={Z} w={m(0.3)} d={m(0.18)} uid={`rg${i}s`} amt={0.7} />
+          {g.kind === "sack" ? <RomeFolk.Sack at={at} scale={sc} uid={`rg${i}`} fog={W.folkFog(Z)} unitPx={W.k} /> : <RomeFolk.Amphora at={at} scale={sc} angle={g.angle} uid={`rg${i}`} fog={W.folkFog(Z)} unitPx={W.k} />}
+        </g>
+      ),
+    });
+  });
+  if (inView((CART.x0 + CART.x1) / 2, CART.z0, 2.2)) items.push({ z: m((CART.z0 + CART.z1) / 2), node: <Cart key="cart" W={W} /> });
+  if (inView(PORTER.x0 + 0.3, PORTER.z, 1)) items.push({ z: m(PORTER.z), node: <Porter key="porter" W={W} frame={frame} /> });
+  if (inView((FARMER.x + MERCHANT.x) / 2, FARMER.z, 1.4)) items.push({ z: m(FARMER.z), node: <TradePair key="trade" W={W} frame={frame} /> });
   if (inView(SURVEYOR.x, SURVEYOR.z, 2)) items.push({ z: m(SURVEYOR.z), node: <SurveyorGroup key="surv" W={W} frame={frame} /> });
   if (inView(PIVOT.x - 0.4, PIVOT.z, 2.5)) items.push({ z: m(PIVOT.z), node: <StoneGroup key="stone" W={W} frame={frame} /> });
   if (inView(0, TABLE.z1, 1.6)) items.push({ z: m(TABLE.z1), node: <TableGroup key="table" W={W} frame={frame} /> });

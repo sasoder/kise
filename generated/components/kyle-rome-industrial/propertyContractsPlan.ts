@@ -50,7 +50,8 @@ export const WALL_HW = 0.3;
 export const WALL_H = 0.55;
 /** boundary along Z number i (at X = XB0 + PITCH i): road for even i, wall for odd i */
 export const xIsRoad = (i: number) => ((i % 2) + 2) % 2 === 0;
-export const zIsRoad = (j: number) => ((j % 2) + 2) % 2 === 1;
+/** (Rev 1: no road across the opening's foreground: boundary j -1 is a grass balk) */
+export const zIsRoad = (j: number) => ((j % 2) + 2) % 2 === 1 && j !== -1;
 export const XB = (i: number) => XB0 + PITCH * i;
 export const ZB = (j: number) => ZB0 + PITCH * j;
 export const xHW = (i: number) => (xIsRoad(i) ? ROAD_HW : WALL_HW);
@@ -67,13 +68,14 @@ export const hashIJ = hashN;
 const KINDS: PlotKind[] = ["wheat", "stubble", "plough", "olive", "wheat", "vines", "meadow", "olive", "plough", "stubble"];
 export const plotKind = (i: number, j: number): PlotKind => {
   if (i === -1 && j === 0) return "stubble";
+  if ((i === -1 || i === 0) && j === -2) return "wheat"; // the opening's foreground: standing wheat
   if (i === -1 && j === -1) return "yard";
   if (i === -1 && j === 1) return "wheat";
   if (i === 0 && j === 0) return "wheat";
   if (i === -2 && j === 0) return "olive";
   if (i === 0 && j === 1) return "plough";
   if (i === -2 && j === 1) return "vines";
-  if (i === 0 && j === -1) return "olive";
+  if (i === 0 && j === -1) return "stubble"; // Rev 1: open ground on the far verge, where the merchant's cart stands
   if (i === -2 && j === -1) return "plough";
   const k = KINDS[Math.floor(hashN(i, j) * KINDS.length) % KINDS.length];
   // no tall groves in the near cells the crane starts over (they would wall off the low frame)
@@ -123,6 +125,29 @@ export const YARD_X1 = 1.3;
 export const HOUSE = { x0: -4.0, x1: -1.6, z0: -3.2, z1: 0.2, h: 2.9, ridge: 3.9 };
 export const TRIBUNAL = { x: 1.25, z: 10.0, w: 2.8, d: 1.6, h: 1.15 };
 
+// ---- REV 1: the trade at the estate's road (the opening) -----------------------------------------------------------
+/** the opening's lens shift at f0 (px; the VP sits left of centre so the roadside trade is centred) */
+export const XS0 = -650;
+/** a merchant's handcart of amphorae on the far verge of the road along Z (X 5.3), two sacks of the estate's wheat
+ *  already on it, a man bringing a third on his shoulder; the merchant pours silver into the farmer's palm */
+export const CART = { x0: 7.75, x1: 9.45, z0: -4.05, z1: -3.05, top: 0.86, wheelR: 0.5, wheelX: 8.6 };
+export const FARMER = { x: 6.5, z: -4.6 };
+export const MERCHANT = { x: 7.3, z: -4.55 };
+/** the porter walks behind the cart (his legs hidden by it) toward its right end, a sack on his shoulder */
+export const PORTER = { x0: 8.55, z: -2.55 };
+/** coins: four denarii, each from the merchant's purse to the farmer's palm (start frame, 7 frames of flight) */
+export const COINS = [9, 13, 17, 21, 25];
+/** goods waiting on the road for the cart (the opening's foreground): sacks of the estate's wheat, amphorae */
+export const ROAD_GOODS: { kind: "sack" | "amphora"; x: number; z: number; angle?: number }[] = [
+  { kind: "sack", x: 4.85, z: -8.35 },
+  { kind: "sack", x: 5.1, z: -8.55 },
+  { kind: "sack", x: 5.02, z: -8.12 },
+  { kind: "amphora", x: 5.5, z: -7.95, angle: -4 },
+  { kind: "amphora", x: 5.75, z: -8.1, angle: 5 },
+  { kind: "amphora", x: 5.62, z: -7.72, angle: -2 },
+];
+export const COIN_FLIGHT = 7;
+
 // ---- the timelines (frames) ----------------------------------------------------------------------------------------
 /** the Freeman writes on the right leaf until WRITE_END, lays the stylus down at STYLUS_DOWN */
 export const WRITE_END = 152;
@@ -159,13 +184,13 @@ export const pressAt = (f: number, contact: number) => {
 export const MAG_A = 228;
 export const MAG_B = 240;
 /** the handshake: the near hands reach from SHAKE_A, meet at SHAKE_MEET, shake to the end */
-export const SHAKE_A = 236;
-export const SHAKE_MEET = 247;
+export const SHAKE_A = 229;
+export const SHAKE_MEET = 240;
 
 // ===================================================================================================================
 // THE CAMERA
 // ===================================================================================================================
-export type Eye = { ex: number; eh: number; ez: number; F: number; yh: number };
+export type Eye = { ex: number; eh: number; ez: number; F: number; yh: number; xs: number };
 /** each axis keyed on its own (metres for ex / eh / ez, px for F / yh), so each moves in one smooth lobe:
  *  the push forward and the sink run from f0 and settle at the end; the slide left to the table is one bell
  *  centred on "There's relatively" (f120 -> f232); the horizon row dips while looking down on the stone and rises
@@ -196,16 +221,64 @@ const EYE_PATH: Eye[] = (() => {
     const t = target(f + LEAD);
     v = v.map((vi, i) => vi + (t[i] - s[i]) * CAM_STIFF - vi * CAM_DAMP);
     s = s.map((si, i) => si + v[i]);
-    if (f >= 0) out.push({ ex: m(s[0]), eh: m(Math.exp(s[1])), ez: -m(Math.exp(-s[2])), F: Math.exp(s[3]), yh: s[4] });
+    if (f >= 0) out.push({ ex: m(s[0]), eh: m(Math.exp(s[1])), ez: -m(Math.exp(-s[2])), F: Math.exp(s[3]), yh: s[4], xs: 0 });
   }
   return out;
 })();
-export const eyeAt = (f: number): Eye => {
+export const keptAt = (f: number): Eye => {
   const i = Math.max(0, Math.min(EYE_PATH.length - 2, Math.floor(f)));
   const t = Math.max(0, Math.min(1, f - i));
   const a = EYE_PATH[i];
   const b = EYE_PATH[i + 1];
-  return { ex: lerpN(a.ex, b.ex, t), eh: lerpN(a.eh, b.eh, t), ez: lerpN(a.ez, b.ez, t), F: lerpN(a.F, b.F, t), yh: lerpN(a.yh, b.yh, t) };
+  return { ex: lerpN(a.ex, b.ex, t), eh: lerpN(a.eh, b.eh, t), ez: lerpN(a.ez, b.ez, t), F: lerpN(a.F, b.F, t), yh: lerpN(a.yh, b.yh, t), xs: 0 };
+};
+
+// ===================================================================================================================
+// REV 1: THE TRADE OPENING (f0 -> JOIN). The approved cut is kept from JOIN on, camera and all. The camera opens low
+// and close on the trade at the estate's road (a horizontal lens shift xs centres it; xs reaches 0 by ~f66), rises and
+// travels forward up the road past the tribunal ("institutions", f61) and sinks into the kept view of the stone,
+// blended into the kept path over f100..JOIN (identical from JOIN on).
+// ===================================================================================================================
+export const JOIN = 127;
+/** the opening's own camera: keyed targets (the last keys ARE the kept camera's states, so the two paths converge)
+ *  run through the same damped follow as the kept path; it is then blended into the kept path over BLEND_A..JOIN with
+ *  a smootherstep weight, so position, speed and acceleration all carry through the join */
+const BLEND_A = 104;
+const OPEN_PATH: Eye[] = (() => {
+  const kf = [100, 112, JOIN, 140];
+  const kv = kf.map((f) => keptAt(f));
+  const tr = (key: (e: Eye) => number, lead: [number, number][]) => pchip([...lead, ...kf.map((f, i) => [f, key(kv[i])] as [number, number])]);
+  const tx = tr((e) => e.ex / U, [[0, 3.75]]);
+  const th = tr((e) => Math.log(e.eh / U), [[0, Math.log(2.45)], [30, Math.log(2.8)], [55, Math.log(4.35)], [80, Math.log(7.45)]]);
+  const tz = tr((e) => -Math.log(-e.ez / U), [[0, -Math.log(12.0)], [30, -Math.log(11.6)], [55, -Math.log(11.1)], [80, -Math.log(10.3)]]);
+  const tF = tr((e) => Math.log(e.F), [[0, Math.log(1480)], [40, Math.log(1450)]]);
+  const ty = tr((e) => e.yh, [[0, 560], [30, 500], [55, 370], [80, 190]]);
+  const tsx = pchip([[0, XS0], [26, XS0 * 0.9], [62, 0], [80, 0], [140, 0]], true);
+  const target = (f: number) => [tx(f), th(f), tz(f), tF(f), ty(f), tsx(f)];
+  const PRE = 40;
+  const LEAD = 4;
+  let st = target(0);
+  let v = st.map(() => 0);
+  const out: Eye[] = [];
+  for (let f = -PRE + 1; f <= JOIN + 2; f++) {
+    const t = target(Math.max(0, f + LEAD));
+    v = v.map((vi, i) => vi + (t[i] - st[i]) * CAM_STIFF - vi * CAM_DAMP);
+    st = st.map((si, i) => si + v[i]);
+    if (f >= 0) out.push({ ex: m(st[0]), eh: m(Math.exp(st[1])), ez: -m(Math.exp(-st[2])), F: Math.exp(st[3]), yh: st[4], xs: Math.abs(st[5]) < 0.01 ? 0 : st[5] });
+  }
+  return out;
+})();
+export const eyeAt = (f: number): Eye => {
+  if (f >= JOIN) return keptAt(f);
+  const i = Math.max(0, Math.min(OPEN_PATH.length - 2, Math.floor(f)));
+  const u = Math.max(0, Math.min(1, f - i));
+  const a = OPEN_PATH[i];
+  const b2 = OPEN_PATH[i + 1];
+  const o: Eye = { ex: lerpN(a.ex, b2.ex, u), eh: lerpN(a.eh, b2.eh, u), ez: lerpN(a.ez, b2.ez, u), F: lerpN(a.F, b2.F, u), yh: lerpN(a.yh, b2.yh, u), xs: lerpN(a.xs, b2.xs, u) };
+  const k = keptAt(f);
+  const w = ease5((f - BLEND_A) / (JOIN - BLEND_A));
+  if (w <= 0) return o;
+  return { ex: lerpN(o.ex, k.ex, w), eh: Math.exp(lerpN(Math.log(o.eh), Math.log(k.eh), w)), ez: -Math.exp(lerpN(Math.log(-o.ez), Math.log(-k.ez), w)), F: lerpN(o.F, k.F, w), yh: lerpN(o.yh, k.yh, w), xs: lerpN(o.xs, 0, w) };
 };
 /** the depth kit's 2D camera and depth options for an eye */
 export const kitCamOf = (e: Eye): { cam: Cam; eyeY: number; Dc: number } => {
@@ -217,5 +290,5 @@ export const kitCamOf = (e: Eye): { cam: Cam; eyeY: number; Dc: number } => {
 /** screen point of a world point under an eye (no sway): for checks and culling */
 export const screenOfEye = (e: Eye, X: number, Y: number, Z: number): [number, number] => {
   const d = Z - e.ez;
-  return [540 + ((X - e.ex) * e.F) / d, e.yh + ((Y + e.eh) * e.F) / d];
+  return [540 + e.xs + ((X - e.ex) * e.F) / d, e.yh + ((Y + e.eh) * e.F) / d];
 };
