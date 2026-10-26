@@ -1188,108 +1188,232 @@ const Beams = (ctx: Ctx, z0: number, z1: number, key: string): React.ReactNode[]
   return out;
 };
 
-/** Hero's aeolipile: a square firebox, a wide low cauldron on it, two pipes rising from its lid and turning in to
- *  carry the sphere on a horizontal axis, two bent jets on the sphere breathing faint steam. Orange (technology),
- *  turning slowly: the one machine, a toy. (Silhouette: a box, a bowl, a goalpost holding a ball; no legs, no arms.) */
+/** Hero's aeolipile (Pneumatica, 1st c. AD), Rev 1: unmistakable at phone size. A low bronze fire basin with the fire
+ *  licking up round a lidded cauldron (the boiler) set on it, two stout pipes rising from the lid and turning in to
+ *  carry a sealed sphere on a horizontal axis (X), two bent nozzles on its equator jetting steam, the sphere spinning
+ *  (a meridian band turns with it). Orange (technology); the fire hotter; the steam cream. ~1.3 m on its plinth. */
 const Aeolipile = (ctx: Ctx): React.ReactNode[] => {
   const c = ctx.c;
   const out: React.ReactNode[] = [];
   const X = DEVICE.X;
   const Z = DEVICE.Z;
   const Y = DEVICE.top;
-  /** the device's scale (it stands ~0.65 m) */
-  const K = 1.25;
-  const d = Math.max(NEAR, depthAt(c, [X, Y + 0.25, Z]));
-  const o = (hex: string) => toneO(ctx, hex, d, Y + 0.25);
+  const K = DEVICE.h / 1.0;
+  const d = Math.max(NEAR, depthAt(c, [X, Y + 0.6, Z]));
+  const o = (hex: string) => toneO(ctx, hex, d, Y + 0.6);
   const ln = o(ORANGE_LINE);
-  const w = lwAt(0.006, d, 0.5, 1.6);
-  const ring = (y: number, r: number, n = 28) => Array.from({ length: n }, (_, i): V3 => [X + r * Math.cos((i / n) * Math.PI * 2), y, Z + r * Math.sin((i / n) * Math.PI * 2)]);
-  // the firebox (a low square box) with its dark mouth on the side toward the camera
-  const FB = 0.15 * K;
-  const yF = Y + 0.1 * K;
-  out.push(...boxFaces(ctx, X - FB, X + FB, Y, yF, Z - FB, Z + FB, { lit: ORANGE.mid, mid: ORANGE.dark, dark: "#6E4106" }, "fb", 0.3));
-  // the cauldron: a wide, low bowl (hull of its rims) with a horizontal form gradient, its lid
-  const yb = yF;
-  const yt = yF + 0.12 * K;
-  const rb = projPoly(c, ring(yb, 0.13 * K));
-  const rt = projPoly(c, ring(yt, 0.17 * K));
-  if (rb.length >= 3 && rt.length >= 3) {
-    const body = hull2([...rb, ...rt]);
-    const xs = body.map((p) => p[0]);
-    const gid = uidOf(ctx, "cg");
+  const w = lwAt(0.008, d, 0.6, 2.2);
+  const seg = (a: V3, b: V3) => {
+    const sg = projSeg(c, a, b);
+    return sg ? `M${fx(sg[0][0])},${fx(sg[0][1])}L${fx(sg[1][0])},${fx(sg[1][1])}` : "";
+  };
+  const ring = (y: number, r: number, n = 36) => Array.from({ length: n }, (_, i): V3 => [X + r * K * Math.cos((i / n) * Math.PI * 2), Y + y * K, Z + r * K * Math.sin((i / n) * Math.PI * 2)]);
+  const hullOf = (rs: V3[][]) => hull2(rs.flatMap((r) => projPoly(c, r)));
+  const hgrad = (q: P2[], stops: [number, string][]) => {
+    const xs = q.map((p) => p[0]);
+    const gid = uidOf(ctx, "ag");
     ctx.defs.push(
       <linearGradient key={gid} id={gid} gradientUnits="userSpaceOnUse" x1={fx(Math.min(...xs))} y1="0" x2={fx(Math.max(...xs))} y2="0">
-        <stop offset="0" stopColor={o(ORANGE.mid)} />
-        <stop offset="0.3" stopColor={o(ORANGE.lit)} />
-        <stop offset="0.75" stopColor={o(ORANGE.mid)} />
-        <stop offset="1" stopColor={o(ORANGE.dark)} />
+        {stops.map(([t, col], i) => (
+          <stop key={i} offset={t} stopColor={o(col)} />
+        ))}
       </linearGradient>,
     );
-    out.push(<path key="cb" d={dPoly(body)} fill={`url(#${gid})`} stroke={ln} strokeWidth={w} />);
-    if (c.y > yt) out.push(<path key="ct" d={dPoly(rt)} fill={o(mixHex(ORANGE.lit, "#FFE7A8", 0.25))} stroke={ln} strokeWidth={w} />);
+    return `url(#${gid})`;
+  };
+  // THE FIRE BASIN AND THE FIRE (inside it): drawn back to front: the basin's dark inside, the glowing coal bed, the
+  // fire's glow, the flames behind the cauldron, the cauldron, the flames in front of it, then the basin's front wall
+  // over their feet, so the fire stays inside the basin. Flames are their own colours (red to amber at the base,
+  // cream tips), soft and flickering, distinct from the bronze orange of the device.
+  const RIM_Y = 0.13;
+  const rimE = projPoly(c, ring(RIM_Y, 0.245));
+  const qf = toCam(c, [X, Y + 0.08 * K, Z]);
+  if (rimE.length >= 3 && c.y > Y + RIM_Y * K) {
+    out.push(<path key="bin" d={dPoly(rimE)} fill={o("#4A2410")} />);
+    const coal = projPoly(c, ring(0.09, 0.2));
+    if (coal.length >= 3) {
+      const gid = uidOf(ctx, "co");
+      ctx.defs.push(
+        <radialGradient key={gid} id={gid}>
+          <stop offset="0" stopColor="#FFB45A" />
+          <stop offset="0.55" stopColor="#D2552A" />
+          <stop offset="1" stopColor="#7A2A14" />
+        </radialGradient>,
+      );
+      out.push(<path key="coal" d={dPoly(coal)} fill={`url(#${gid})`} />);
+    }
   }
-  // the sphere on its horizontal axis (along X), carried by two pipes rising from the lid and turning in
-  const sc: V3 = [X, yt + 0.27 * K, Z];
-  const R = 0.072 * K;
+  if (qf[2] > NEAR) {
+    const sf = camToScreen(c, qf);
+    const kk = (F * K) / qf[2];
+    const gid = uidOf(ctx, "fg");
+    const fl = 0.9 + 0.1 * Math.sin(ctx.f * 0.37);
+    ctx.defs.push(
+      <radialGradient key={gid} id={gid}>
+        <stop offset="0" stopColor="#FF9A3C" stopOpacity={0.42 * fl} />
+        <stop offset="0.5" stopColor="#FF9A3C" stopOpacity={0.13 * fl} />
+        <stop offset="1" stopColor="#FF9A3C" stopOpacity={0} />
+      </radialGradient>,
+    );
+    out.push(<ellipse key="fglow" cx={fx(sf[0])} cy={fx(sf[1] - 0.1 * kk)} rx={fx(0.42 * kk)} ry={fx(0.3 * kk)} fill={`url(#${gid})`} style={{ mixBlendMode: "screen" }} />);
+  }
+  const tongues: { x: number; zz: number; h: number; ph: number; wd: number; sp: number }[] = Array.from({ length: 11 }, (_, i) => {
+    const t = (i / 11) * Math.PI * 2 + 0.4 * hash01(i * 2.3);
+    const rr = 0.1 + 0.08 * hash01(i * 4.9);
+    return { x: rr * Math.cos(t), zz: rr * Math.sin(t), h: 0.16 + 0.1 * hash01(i * 3.7 + 1), ph: hash01(i * 5.1) * 6.28, wd: 0.045 + 0.025 * hash01(i * 7.7), sp: 0.35 + 0.25 * hash01(i * 9.3) };
+  });
+  const blurId = uidOf(ctx, "fb");
+  ctx.defs.push(
+    <filter key={blurId} id={blurId} x="-50%" y="-30%" width="200%" height="160%">
+      <feGaussianBlur stdDeviation={fx(Math.max(0.4, (F * 0.006 * K) / Math.max(NEAR, qf[2])))} />
+    </filter>,
+  );
+  const tongueEl = (tg: (typeof tongues)[number], i: number, front = false) => {
+    const base: V3 = [X + tg.x * K, Y + 0.09 * K, Z + tg.zz * K];
+    const q = toCam(c, base);
+    if (q[2] < NEAR) return null;
+    const sb = camToScreen(c, q);
+    const k = (F * K) / q[2];
+    const fl = 1 + 0.28 * Math.sin(ctx.f * tg.sp + tg.ph) + 0.12 * Math.sin(ctx.f * 1.07 + tg.ph * 2.3);
+    const h = (front ? 0.5 : 1) * tg.h * fl * k;
+    const wd = (front ? 0.85 : 1) * tg.wd * k;
+    const sw = 0.022 * k * Math.sin(ctx.f * 0.27 + tg.ph) + 0.012 * k * Math.sin(ctx.f * 0.61 + tg.ph * 1.7);
+    const tx = sb[0] + sw;
+    const ty = sb[1] - h;
+    // a soft, rounded tongue: a wide belly, a rounded tip leaning with the flicker
+    const dd = `M${fx(sb[0] - wd)},${fx(sb[1])}C${fx(sb[0] - wd * 1.1)},${fx(sb[1] - h * 0.5)} ${fx(tx - wd * 0.55)},${fx(sb[1] - h * 0.82)} ${fx(tx)},${fx(ty)}C${fx(tx + wd * 0.55)},${fx(sb[1] - h * 0.82)} ${fx(sb[0] + wd * 1.1)},${fx(sb[1] - h * 0.5)} ${fx(sb[0] + wd)},${fx(sb[1])}Q${fx(sb[0])},${fx(sb[1] + wd * 0.35)} ${fx(sb[0] - wd)},${fx(sb[1])}Z`;
+    const gid = uidOf(ctx, "fl");
+    ctx.defs.push(
+      <linearGradient key={gid} id={gid} gradientUnits="userSpaceOnUse" x1="0" y1={fx(sb[1])} x2="0" y2={fx(ty)}>
+        <stop offset="0" stopColor="#B8361C" stopOpacity={0.95} />
+        <stop offset="0.35" stopColor="#E8742A" stopOpacity={0.95} />
+        <stop offset="0.7" stopColor="#FFC877" stopOpacity={0.92} />
+        <stop offset="0.92" stopColor="#FFF1D2" stopOpacity={0.85} />
+        <stop offset="1" stopColor="#FFF6E2" stopOpacity={0.2} />
+      </linearGradient>,
+    );
+    return <path key={`fl${i}`} d={dd} fill={`url(#${gid})`} filter={`url(#${blurId})`} />;
+  };
+  const tBack = tongues.map((t, i) => ({ t, i, back: toCam(c, [X + t.x * K, Y, Z + t.zz * K])[2] > qf[2] }));
+  for (const tb of tBack.filter((x) => x.back)) {
+    const el = tongueEl(tb.t, tb.i);
+    if (el) out.push(el);
+  }
+  // the cauldron (the boiler): a round-bottomed bowl set down into the basin, a rim band, a domed lid
+  const bowl = hullOf([ring(0.15, 0.08), ring(0.2, 0.15), ring(0.26, 0.19), ring(0.33, 0.185)]);
+  if (bowl.length >= 3) out.push(<path key="cb" d={dPoly(bowl)} fill={hgrad(bowl, [[0, ORANGE.mid], [0.3, "#FFD27A"], [0.62, ORANGE.lit], [1, ORANGE.mid]])} stroke={ln} strokeWidth={w} />);
+  const rim = projPoly(c, ring(0.33, 0.19));
+  if (rim.length >= 3 && c.y > Y + 0.33 * K) out.push(<path key="rim" d={dPoly(rim)} fill={o(ORANGE.dark)} stroke={ln} strokeWidth={w} />);
+  const lid = hullOf([ring(0.33, 0.175), ring(0.38, 0.12), ring(0.405, 0.05)]);
+  if (lid.length >= 3) out.push(<path key="lid" d={dPoly(lid)} fill={hgrad(lid, [[0, ORANGE.mid], [0.3, "#FFD98A"], [1, ORANGE.dark]])} stroke={ln} strokeWidth={w} />);
+  for (const tb of tBack.filter((x) => !x.back)) {
+    const el = tongueEl(tb.t, tb.i, true);
+    if (el) out.push(el);
+  }
+  // the basin's wall over the flames' feet (its outer body less its opening), a lit lip
+  const basin = hullOf([ring(0, 0.17), ring(RIM_Y, 0.25)]);
+  if (basin.length >= 3) {
+    const opening = c.y > Y + RIM_Y * K ? dPoly(rimE) : "";
+    out.push(<path key="bas" d={dPoly(basin) + opening} fillRule="evenodd" fill={hgrad(basin, [[0, ORANGE.dark], [0.3, ORANGE.mid], [0.75, ORANGE.dark], [1, "#6E4106"]])} stroke={ln} strokeWidth={w} />);
+    if (opening) out.push(<path key="lip" d={dPoly(rimE)} fill="none" stroke={o("#FFD27A")} strokeOpacity={0.7} strokeWidth={lwAt(0.012 * K, d, 0.8, 3)} />);
+  }
+  // the sphere on its axis (X), hung between two stout pipes that rise from the lid into its poles
+  const sc: V3 = [X, Y + 0.74 * K, Z];
+  const R = 0.13 * K;
   const qs = toCam(c, sc);
   if (qs[2] > NEAR) {
     const ssc = camToScreen(c, qs);
     const sr = (F * R) / qs[2];
-    let pipes = "";
+    const tubeW = lwAt(0.04 * K, d, 2, 14);
+    let tubes = "";
     for (const sx of [-1, 1]) {
+      // vertical and parallel from either side of the lid, turning in at the top into the sphere's pole (its axis)
       const pts: V3[] = [
-        [X + sx * 0.13 * K, yt, Z],
-        [X + sx * 0.13 * K, sc[1], Z],
-        [X + sx * (R + 0.006), sc[1], Z],
+        [X + sx * 0.165 * K, Y + 0.34 * K, Z],
+        [X + sx * 0.165 * K, sc[1], Z],
+        [X + sx * (0.13 - 0.01) * K, sc[1], Z],
       ];
-      const s1 = projSeg(c, pts[0], pts[1]);
-      const s2 = projSeg(c, pts[1], pts[2]);
-      if (s1) pipes += `M${fx(s1[0][0])},${fx(s1[0][1])}L${fx(s1[1][0])},${fx(s1[1][1])}`;
-      if (s2) pipes += `L${fx(s2[1][0])},${fx(s2[1][1])}`;
+      tubes += seg(pts[0], pts[1]) + seg(pts[1], pts[2]).replace("M", "L");
     }
-    out.push(<path key="pp" d={pipes} stroke={o(ORANGE.mid)} strokeWidth={lwAt(0.026 * K, d, 1.4, 8)} strokeLinecap="round" strokeLinejoin="round" fill="none" />);
-    // the jets: two bent tubes on the sphere's equator, turning about X; a faint breath of steam from each tip
-    const phi = ctx.f * 0.05;
-    const backJ: React.ReactNode[] = [];
-    const frontJ: React.ReactNode[] = [];
-    const steam: React.ReactNode[] = [];
+    out.push(<path key="tubes" d={tubes} stroke={o(ORANGE.dark)} strokeWidth={tubeW * 1.18} strokeLinecap="round" strokeLinejoin="round" fill="none" />);
+    out.push(<path key="tubesM" d={tubes} stroke={o(ORANGE.mid)} strokeWidth={tubeW} strokeLinecap="round" strokeLinejoin="round" fill="none" />);
+    out.push(<path key="tubesHi" d={tubes} stroke={o("#FFD27A")} strokeOpacity={0.6} strokeWidth={tubeW * 0.32} strokeLinecap="round" strokeLinejoin="round" fill="none" />);
+    // the spin, the nozzles and the steam jets
+    const SPIN = 0.085;
+    const phi = ctx.f * SPIN;
+    const LNZ = 0.1 * K;
+    const BND = 0.095 * K;
+    const nozzle = (a: number, k: number) => {
+      const rx: V3 = [0, Math.cos(a + k * Math.PI), Math.sin(a + k * Math.PI)];
+      const tx: V3 = [0, -Math.sin(a + k * Math.PI), Math.cos(a + k * Math.PI)];
+      const p0: V3 = [sc[0], sc[1] + rx[1] * R * 0.9, sc[2] + rx[2] * R * 0.9];
+      const p1: V3 = [sc[0], sc[1] + rx[1] * (R + LNZ), sc[2] + rx[2] * (R + LNZ)];
+      // the bend points against the spin (the jet pushes the sphere round)
+      const p2: V3 = [p1[0], p1[1] - tx[1] * BND, p1[2] - tx[2] * BND];
+      return { p0, p1, p2, dir: [0, -tx[1], -tx[2]] as V3 };
+    };
+    const back: React.ReactNode[] = [];
+    const front: React.ReactNode[] = [];
+    const nzW = lwAt(0.032 * K, d, 1.6, 11);
     for (const k of [0, 1]) {
-      const a = phi + k * Math.PI;
-      const rx: V3 = [0, Math.cos(a), Math.sin(a)];
-      const tx: V3 = [0, -Math.sin(a), Math.cos(a)];
-      const p0: V3 = [sc[0], sc[1] + rx[1] * R, sc[2] + rx[2] * R];
-      const p1: V3 = [sc[0], sc[1] + rx[1] * (R + 0.055 * K), sc[2] + rx[2] * (R + 0.055 * K)];
-      const p2: V3 = [p1[0], p1[1] + tx[1] * 0.05 * K, p1[2] + tx[2] * 0.05 * K];
-      const s1 = projSeg(c, p0, p1);
-      const s2 = projSeg(c, p1, p2);
-      if (!s1 || !s2) continue;
-      const dd = `M${fx(s1[0][0])},${fx(s1[0][1])}L${fx(s1[1][0])},${fx(s1[1][1])}L${fx(s2[1][0])},${fx(s2[1][1])}`;
-      const behind = toCam(c, p1)[2] > qs[2];
-      const el = <path key={`jet${k}`} d={dd} stroke={o(behind ? ORANGE.dark : ORANGE.mid)} strokeWidth={lwAt(0.02 * K, d, 1.2, 6.5)} strokeLinecap="round" strokeLinejoin="round" fill="none" />;
-      (behind ? backJ : frontJ).push(el);
-      // steam: three small puffs leaving the tip backward along the jet, growing and fading
-      for (let j = 0; j < 3; j++) {
-        const u = (ctx.f * 0.045 + j / 3 + k * 0.5) % 1;
-        const P: V3 = [p2[0], p2[1] + tx[1] * 0.12 * u + 0.05 * u * u, p2[2] + tx[2] * 0.12 * u];
+      const nz = nozzle(phi, k);
+      const behind = toCam(c, nz.p1)[2] > qs[2];
+      const dd = seg(nz.p0, nz.p1) + seg(nz.p1, nz.p2).replace("M", "L");
+      (behind ? back : front).push(
+        <g key={`nz${k}`}>
+          <path d={dd} stroke={o(ORANGE.dark)} strokeWidth={nzW * 1.2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d={dd} stroke={o(behind ? ORANGE.mid : "#FFC94D")} strokeWidth={nzW} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </g>,
+      );
+      // steam: puffs leaving the tip along the jet at the moment they left (the jets trail into a spiral), growing,
+      // rising a little, fading
+      const LIFE = 16;
+      const N = 24;
+      for (let j = 0; j < N; j++) {
+        const u = (ctx.f / LIFE + j / N + k * 0.5) % 1;
+        const ne = nozzle((ctx.f - u * LIFE) * SPIN, k);
+        const dist = (0.02 + u * 0.62) * K;
+        const P: V3 = [ne.p2[0], ne.p2[1] + ne.dir[1] * dist + 0.2 * K * u * u, ne.p2[2] + ne.dir[2] * dist];
         const q = toCam(c, P);
         if (q[2] < NEAR) continue;
         const sp = camToScreen(c, q);
-        steam.push(<circle key={`st${k}${j}`} cx={fx(sp[0])} cy={fx(sp[1])} r={fx((F * (0.012 + 0.03 * u)) / q[2])} fill={CREAM} opacity={(0.32 * (1 - u) * u * 4 * visOf(ctx, d)).toFixed(3)} />);
+        const r = (F * (0.028 + 0.14 * u) * K) / q[2];
+        const al = 0.66 * Math.pow(1 - u, 1.1) * smoothstep(0, 0.05, u) * (0.4 + 0.6 * visOf(ctx, d));
+        if (al < 0.01) continue;
+        const pf = <circle key={`st${k}${j}`} cx={fx(sp[0])} cy={fx(sp[1])} r={fx(r)} fill="url(#clsteam)" opacity={al.toFixed(3)} />;
+        (q[2] > qs[2] ? back : front).push(pf);
       }
     }
-    out.push(...backJ);
+    out.push(...back);
     const gid = uidOf(ctx, "sg");
     ctx.defs.push(
       <radialGradient key={gid} id={gid} cx="0.36" cy="0.32" r="0.75">
-        <stop offset="0" stopColor={o("#FFE3A0")} />
-        <stop offset="0.45" stopColor={o(ORANGE.lit)} />
-        <stop offset="0.85" stopColor={o(ORANGE.mid)} />
+        <stop offset="0" stopColor={o("#FFE7B0")} />
+        <stop offset="0.4" stopColor={o(ORANGE.lit)} />
+        <stop offset="0.82" stopColor={o(ORANGE.mid)} />
         <stop offset="1" stopColor={o(ORANGE.dark)} />
       </radialGradient>,
     );
     out.push(<circle key="sph" cx={fx(ssc[0])} cy={fx(ssc[1])} r={fx(sr)} fill={`url(#${gid})`} stroke={ln} strokeWidth={w} />);
-    // the axis pivots (small bosses where the pipes meet the sphere)
-    out.push(...frontJ, ...steam);
+    // the turning meridian band: a great circle through the axis, at the spin (front half only)
+    let mer = "";
+    let pen = false;
+    for (let i = 0; i <= 48; i++) {
+      const t = (i / 48) * Math.PI * 2;
+      const a = phi + Math.PI / 2;
+      const p: V3 = [sc[0] + R * 0.99 * Math.cos(t), sc[1] + R * 0.99 * Math.sin(t) * Math.cos(a), sc[2] + R * 0.99 * Math.sin(t) * Math.sin(a)];
+      const vis = dot3(sub3(p, sc), sub3([c.x, c.y, c.z], p)) > 0;
+      const qq = toCam(c, p);
+      if (!vis || qq[2] < NEAR) {
+        pen = false;
+        continue;
+      }
+      const s2 = camToScreen(c, qq);
+      mer += `${pen ? "L" : "M"}${fx(s2[0])},${fx(s2[1])}`;
+      pen = true;
+    }
+    if (mer) out.push(<path key="mer" d={mer} stroke={o(ORANGE.mid)} strokeOpacity={0.85} strokeWidth={lwAt(0.022 * K, d, 1, 6)} fill="none" />);
+    out.push(...front);
   }
   return out;
 };
@@ -1402,6 +1526,11 @@ const CenturiesOfLittleScience: React.FC<z.infer<typeof schema>> = () => {
           <radialGradient id={moteG}>
             <stop offset="0" stopColor={CREAM} stopOpacity={1} />
             <stop offset="0.5" stopColor={CREAM} stopOpacity={0.7} />
+            <stop offset="1" stopColor={CREAM} stopOpacity={0} />
+          </radialGradient>
+          <radialGradient id="clsteam">
+            <stop offset="0" stopColor={CREAM} stopOpacity={0.95} />
+            <stop offset="0.55" stopColor={CREAM} stopOpacity={0.55} />
             <stop offset="1" stopColor={CREAM} stopOpacity={0} />
           </radialGradient>
           <linearGradient id="cl-low" x1="0" y1="1320" x2="0" y2="1920" gradientUnits="userSpaceOnUse">

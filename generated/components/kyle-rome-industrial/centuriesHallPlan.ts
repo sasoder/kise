@@ -106,7 +106,9 @@ export const PLINTHS: { id: string; X: number; Z: number }[] = BAYS.flatMap(([b0
   return ([-1, 1] as const).map((s) => ({ id: `p${i}${s < 0 ? "L" : "R"}`, X: s * PLINTH_X, Z: zc }));
 });
 /** the aeolipile's plinth on the axis of the end chamber; the device's centre height (look-at target) */
-export const DEVICE = { X: 0, Z: 33.6, top: PLINTH.h, cy: PLINTH.h + 0.27 };
+/** Rev 1: the plinth stands 2 m past arch VI (the camera is on it by ~f200); the device stands ~1.3 m (fire basin,
+ *  cauldron, pivot tubes, the sphere and its jets); cy = its middle (the look-at height) */
+export const DEVICE = { X: 0, Z: 31.4, top: PLINTH.h, cy: PLINTH.h + 0.65, h: 1.3 };
 
 // ---- the windows (left wall: the light; right wall: dim panes; the end wall) and the light -------------------------
 export const WIN = { y0: 5.0, y1: 8.05, hw: 0.72, depth: 0.55 };
@@ -132,16 +134,17 @@ const smoother = (u: number) => {
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 // THE TIMING (frames): the opening's pull-back f0..~32, the forward dolly accelerated once (f30 -> f70) to V, held
-// constant down the axis; from f172 the camera turns (one eased yaw, YAW_END over f172-274, peak 2.61 deg/f ~ 35 px/f
+// constant down the axis; from f176 the camera turns (one eased yaw, YAW_END over f176-274, peak 2.53 deg/f, ~34 px/f
 // on the far hall) while it keeps the aeolipile dead ahead: it rides a line through the device at radius R, and R
-// eases from the dolly's closing speed to rest at R_END (f~169 -> f252). The swing round the device's +X side is the
-// turn itself; the total speed peaks at 0.204 m/f (a 2 % swell at f~205) and only falls after it.
-export const T = { turn1: 46, rise1: 48, x1: 54, acc0: 30, acc1: 70, yaw0: 172, yaw1: 274, r1: 252 };
+// eases from the dolly's closing speed to rest at R_END by f232 (3.7 m at f200: the device is the subject from there).
+// The swing round the device's +X side is the turn itself; the total speed never exceeds V and only falls after the
+// dolly (the closing speed is capped by the swing). Arch VI's right pier passes 0.31 m clear (camera X <= 2.29 there).
+export const T = { turn1: 46, rise1: 48, x1: 54, acc0: 30, acc1: 70, yaw0: 176, yaw1: 274, r1: 232 };
 /** the turn: settles ~15 deg short of looking straight back down the hall; the yaw ease's time warp (a later peak) */
 export const YAW_END = -165;
-const YAW_WARP = 1.2;
+const YAW_WARP = 1.0;
 /** the radius the camera comes to rest at, behind the aeolipile */
-export const R_END = 2.6;
+export const R_END = 2.8;
 /** the opening: where the camera starts (close on bay I's right armarium) */
 const OPEN = { x: 2.05, z: -0.42, y: 1.52, yaw: 56, vBack: 0.042 };
 /** the dolly's speed (m / frame) after the one acceleration */
@@ -219,11 +222,13 @@ export const camAt = (f: number): HallCam => {
   // height: up from the shelf's height to the dolly's (from f0), down a little round the aeolipile
   const ur = c01(f / T.rise1);
   const rise = -1.1 * ur * ur * ur + 1.6 * ur * ur + 0.5 * ur;
-  const y = lerp(OPEN.y, 2.6, rise) + lerp(0, -0.62, smoother((f - 204) / 58));
+  const y = lerp(OPEN.y, 2.6, rise) + lerp(0, -1.05, smoother((f - 200) / 64));
   // the principal point: the eye's row lifted in the dolly (more floor, arches above), then set so the aeolipile
   // sits near the frame's middle as the camera swings round it (a vertical lens shift: verticals stay vertical)
   const dz = Math.hypot(DEVICE.X - x, DEVICE.Z - z);
-  const pyDevice = 945 - (F * (y - DEVICE.cy)) / Math.max(0.5, dz);
+  // (35 px higher through the orbit, where the camera looks down on it, so its basin stays above y ~1100 and clear of
+  // the name tag at y 1140-1280; eased back at rest so arch VI's numeral stays in frame)
+  const pyDevice = lerp(875, 910, smoother((f - 238) / 34)) - (F * (y - DEVICE.cy)) / Math.max(0.5, dz);
   const pyDolly = lerp(960, 1000, sstep(f / 50));
   const py = lerp(pyDolly, pyDevice, smoother((f - 140) / 72));
   return { x, y, z, yaw, px: 540, py, f };
