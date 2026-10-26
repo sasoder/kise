@@ -14,6 +14,14 @@
 // steam). The ramp's silhouette against the air draws the hockey stick. Orange = the technology, the only orange in
 // the world. "AD 100" (a milestone on Rome's street) and "1800" (a broad carved stone at the knee) are the only text.
 //
+// REV 1 (the user's notes, Oct 26: "the train is glitching, the buildings seem glitched in, it looks unfinished"):
+// every mill and the engine house stand on a TERRACE cut into the hill (TERRACES: a level floor, an earth cut face
+// uphill, a stone fill wall downhill); mills grow up out of their terrace one by one (body, then the cornice and the
+// roof, then the chimney, then the smoke); windows sit in recessed reveals; real hipped roofs with eaves. The road of
+// history bends into the rail without a break (TRACK: one spline from the road to the ramp's near edge, ballast,
+// sleepers, two rails); the train runs on it with spoked turning wheels and continuous steam. The ramp's top rounds
+// over into its flanks (SHOULDER) under a cream crest rim; contours are faint and keep off the track.
+//
 // UNITS: metres. X across (right +), Z forward (away from the viewer +), h height (up +); the kit's Y = -h.
 // Rome's centre (0, 0). The town's street runs along D1 (streetAt(s)). The road of history: roadAt(s) from ROAD0
 // (the town's east side) along DT (toward the viewer and right) to the knee at s = KNEE_S; the climb runs along D2
@@ -32,11 +40,14 @@
 //   airOf(c, frame, rest) -> TAir: the kit's AirWorld (v for <AirStage>, P, tone / toneO / fog / airHex / folkFog ...)
 //   plus .fogH / .toneH / .toneOH / .airH / .folkFogH by height (h, metres) and .c (the camera).
 //
-// DRAWING: <TakeoffWorld A frame font extras? hide? uid? /> draws the whole world in painter's order (world depth Z,
-//   stable under any camera that looks along +Z): the plain and the road of history on it, Rome's plateau (its ground,
-//   the street's paving) with the road redrawn over it, then the climb's quads and every building, figure, milestone,
-//   farm, mill, chimney, smoke plume and the train sorted far to near. extras: [{ d, key, el }] are
-//   sorted in with it (d = the item's world Z). hide: { town, figures, industry, milestones, train, smoke }.
+// DRAWING: <TakeoffWorld A frame font extras? hide? uid? build? /> draws the whole world in two passes (stable under
+//   any camera that looks along +Z). GROUND first: the plain and the road of history on it, Rome's plateau (its
+//   ground, the street's paving) with the road redrawn over it, the climb's top (terraces cut into it, contours), the
+//   track (the road bending into the rail: TRACK), the crest rims. Then OBJECTS sorted far to near by world Z: the
+//   climb's flanks, every building, figure, milestone, farm, terrace wall, mill, chimney, smoke plume and the train.
+//   So no ground quad ever covers a mill or a wagon. extras: [{ d, key, el, terrain? }] sort in with the objects
+//   (d = the item's world Z). hide: { town, figures, industry, milestones, train, smoke }. build (a frame, optional):
+//   the mills' rise clock (BUILD, millGrowth, chimGrowth, smokeStart); leave it out and the industry is fully built.
 //   font: the milestones' inscription face (cut 4 loads Cinzel 700). Helpers for extras: Solid / boxFaces /
 //   gableFaces (convex solids lit and fogged), lwAt, project, rOf, FIG_M (metres per RomeFolk unit: a figure's
 //   scale = rOf(c, Z) * FIG_M, unitPx 1, fog A.folkFogH(Z, ground h)), terrainH(X, Z).
@@ -125,11 +136,27 @@ const climbLocal = (X: number, Z: number) => {
   const dz = Z - KNEE.Z;
   return { s: dx * D2[0] + dz * D2[1], n: dx * D2[1] - dz * D2[0] };
 };
-const climbAt = (X: number, Z: number) => {
-  const { s, n } = climbLocal(X, Z);
+/** the ramp's rounded shoulders: the top curves down over its last SHOULDER m on each side into the flanks */
+export const SHOULDER = { w: 9, drop: 5 };
+/** the top's height across (n) at a given crest height: level, then a rounded lip at both edges */
+const topAcross = (top: number, n: number) => {
+  const inN = CLIMB.halfW - SHOULDER.w;
+  const inF = CLIMB.nFar + SHOULDER.w;
+  const t = n > inN ? (n - inN) / SHOULDER.w : n < inF ? (inF - n) / SHOULDER.w : 0;
+  return top - SHOULDER.drop * Math.min(top / 12, 1) * t * t;
+};
+/** TERRACES: level platforms cut half into the slope (half cut, half fill) under each mill and the engine house:
+ *  s0..s1 along the climb, n0..n1 across; the floor at the slope's height at the middle */
+export type Terrace = { s0: number; s1: number; n0: number; n1: number; g: number };
+const slopeAt = (s: number, n: number) => {
   const top = climbH(s);
   const out = n >= 0 ? Math.max(0, n - CLIMB.halfW) : Math.max(0, CLIMB.nFar - n);
-  return Math.max(0, top - out * CLIMB.flank);
+  return Math.max(0, out > 0 ? topAcross(top, n >= 0 ? CLIMB.halfW : CLIMB.nFar) - out * CLIMB.flank : topAcross(top, n));
+};
+const climbAt = (X: number, Z: number) => {
+  const { s, n } = climbLocal(X, Z);
+  for (const t of TERRACES_LIST) if (s >= t.s0 && s <= t.s1 && n >= t.n0 && n <= t.n1) return t.g;
+  return slopeAt(s, n);
 };
 /** the living-standard profile along the road of history: Rome's plateau, the flat, the climb */
 export const profileH = (s: number) => (s >= KNEE_S ? climbH(s - KNEE_S) : plateauAt(roadAt(s).X, roadAt(s).Z));
@@ -443,54 +470,210 @@ const plateauItems = (A: TAir): Item[] => {
   const vs = [...side.map((v) => -v).reverse(), ...side];
   return patchItems(A, "pl", map, us, vs, (u, v) => (Math.abs(v) < ROAD_W / 2 ? (u > PAVE.s0 && u < PAVE.s1 ? BASALT : ROAD_MAT) : LAND), 0, paveDeco);
 };
-/** the rail line up the middle of the climb: a dark ballast bed, sleepers, two iron rails with a cream glint */
-export const RAIL = { n: 50, bed: 4.6, gauge: 1.44, sleeper: 0.8 };
-const BALLAST: Mat = { lit: "#6E655A", mid: "#5A5249", dark: "#2E2925" };
-const railDeco: Deco = (A, u0, u1, v0, v1, zm, hm) => {
-  const c = A.c;
-  if (Math.abs((v0 + v1) / 2 - RAIL.n) > RAIL.bed / 2) return null;
-  const rr = rOf(c, zm);
-  const vis = 1 - A.fogH(zm, hm);
-  const P = (u: number, v0n: number) => {
-    const v = RAIL.n + v0n;
-    return project(c, KNEE.X + u * D2[0] + v * D2[1], climbH(u) + 0.12, KNEE.Z + u * D2[1] - v * D2[0]);
-  };
-  const ua = u0;
-  const n = Math.max(2, Math.ceil((u1 - ua) / 2));
-  const line = (v: number) => {
-    const q: string[] = [];
-    for (let i = 0; i <= n; i++) q.push(pt(P(ua + ((u1 - ua) * i) / n, v)));
-    return `M${q.join("L")}`;
-  };
-  let sl = "";
-  const slA = smoothstep(3, 6, rr * RAIL.sleeper);
-  if (slA > 0.01) for (let u = Math.ceil(ua / RAIL.sleeper) * RAIL.sleeper; u < u1; u += RAIL.sleeper) sl += `M${pt(P(u, -1.25))}L${pt(P(u, 1.25))}`;
-  const w = Math.max(0.5, Math.min(2.4, 0.09 * rr));
-  return (
-    <g>
-      {sl ? <path d={sl} stroke={A.toneH("#4A3A2C", zm, hm)} strokeWidth={w * 1.6} strokeOpacity={0.7 * vis * slA} /> : null}
-      <path d={line(-RAIL.gauge / 2) + line(RAIL.gauge / 2)} fill="none" stroke={A.toneH("#3A3D3F", zm, hm)} strokeWidth={w} />
-      <path d={line(-RAIL.gauge / 2) + line(RAIL.gauge / 2)} fill="none" stroke={CREAM} strokeWidth={w * 0.45} strokeOpacity={0.35 * vis} transform="translate(0,-0.4)" />
-    </g>
-  );
-};
-/** the climb: the top (a grid in the climb's frame: s along D2 from the knee, n across) and the two flanks, whose
- *  vertices run exactly from the top's edge down to the flank's foot (t 0..1), so no quad straddles the foot */
+/** the climb: the TOP (a grid in the climb's frame, its lines on every terrace's edges so no quad straddles a terrace
+ *  wall; a quad inside a terrace lies level at the floor, one outside follows the slope and the rounded shoulders) and
+ *  the two FLANKS (vertices from the top's edge down to the flank's foot, t 0..1). Faint terrace lines run across the
+ *  slope and strata along the near flank, so the ramp reads as worked ground, not a raw plane. */
 export const CLIMB_SMAX = 430;
-const climbItems = (A: TAir): Item[] => {
-  const P3 = (s: number, n: number, h: number): [number, number, number] => [KNEE.X + s * D2[0] + n * D2[1], h, KNEE.Z + s * D2[1] - n * D2[0]];
+const P3 = (s: number, n: number, h: number): V3 => [KNEE.X + s * D2[0] + n * D2[1], h, KNEE.Z + s * D2[1] - n * D2[0]];
+const uniq = (a: number[]) => Array.from(new Set(a.map((v) => Math.round(v * 1000) / 1000))).sort((x, y) => x - y);
+const CONTOUR = "#4F4434";
+const climbTopItems = (A: TAir): Item[] => {
+  const c = A.c;
+  const T = TERRACES_LIST;
+  const us = uniq([...range(-6, CLIMB_XC.xc, 30), ...range(CLIMB_XC.xc, CLIMB_SMAX, 26), ...T.flatMap((t) => [t.s0, t.s1])]);
+  const inN = CLIMB.halfW - SHOULDER.w;
+  const inF = CLIMB.nFar + SHOULDER.w;
+  const vs = uniq([...range(CLIMB.nFar, inF, 3), ...range(inF, inN, 8), ...range(inN, CLIMB.halfW, 3), ...T.flatMap((t) => [t.n0, t.n1])]);
+  const out: Item[] = [];
+  for (let i = 0; i < us.length - 1; i++) {
+    for (let j = 0; j < vs.length - 1; j++) {
+      const u0 = us[i];
+      const u1 = us[i + 1];
+      const v0 = vs[j];
+      const v1 = vs[j + 1];
+      const um = (u0 + u1) / 2;
+      const vm = (v0 + v1) / 2;
+      const ter = T.find((t) => um > t.s0 && um < t.s1 && vm > t.n0 && vm < t.n1);
+      const hh = (u: number, v: number) => (ter ? ter.g : slopeAt(u, v));
+      const q: V3[] = [P3(u0, v0, hh(u0, v0)), P3(u1, v0, hh(u1, v0)), P3(u1, v1, hh(u1, v1)), P3(u0, v1, hh(u0, v1))];
+      const zm = (q[0][2] + q[1][2] + q[2][2] + q[3][2]) / 4;
+      if (Math.max(q[0][2], q[1][2], q[2][2], q[3][2]) < c.Z + CAM_NEAR) continue;
+      const hm = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
+      const a1 = [q[2][0] - q[0][0], q[2][1] - q[0][1], q[2][2] - q[0][2]];
+      const b1 = [q[3][0] - q[1][0], q[3][1] - q[1][1], q[3][2] - q[1][2]];
+      let nn = nrm([a1[1] * b1[2] - a1[2] * b1[1], a1[2] * b1[0] - a1[0] * b1[2], a1[0] * b1[1] - a1[1] * b1[0]]);
+      if (nn[1] < 0) nn = [-nn[0], -nn[1], -nn[2]];
+      const xm = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4;
+      if (nn[0] * (c.X - xm) + nn[1] * (c.H - hm) + nn[2] * (c.Z - zm) < 0) continue;
+      const near = c01((60 - (zm - c.Z)) / 50);
+      const col = A.toneH(mixHex(landTone(nn, ter ? TERRACE_FLOOR : LAND), PAL.shadow, NEAR_SINK * near * near), zm, hm);
+      const qc = Math.min(q[0][2], q[1][2], q[2][2], q[3][2]) < c.Z + CAM_NEAR * 1.5 ? clipNear(q, c) : q;
+      if (qc.length < 3) continue;
+      const pts = qc.map((p) => project(c, p[0], p[1], p[2]));
+      // faint terrace lines across the open slope every CONTOUR_S metres (not on the terraces themselves)
+      let deco: React.ReactNode = null;
+      if (!ter && um > 8 && vm < CLIMB.halfW - SHOULDER.w - 1 && vm > CLIMB.nFar + SHOULDER.w + 1 && Math.abs(vm - RAIL.n) > 9) {
+        let d = "";
+        for (let k = Math.ceil(u0 / CONTOUR_S); k * CONTOUR_S < u1; k++) {
+          const u = k * CONTOUR_S;
+          d += `M${pt(project(c, ...(P3(u, v0, slopeAt(u, v0) + 0.05) as [number, number, number])))}L${pt(project(c, ...(P3(u, v1, slopeAt(u, v1) + 0.05) as [number, number, number])))}`;
+        }
+        if (d) deco = <path d={d} stroke={A.toneH(CONTOUR, zm, hm)} strokeOpacity={0.16 * (1 - A.fogH(zm, hm))} strokeWidth={Math.max(0.5, Math.min(1.4, 0.06 * rOf(c, zm)))} fill="none" />;
+      }
+      const key = `clt${i}_${j}`;
+      out.push({
+        d: zm,
+        terrain: true,
+        key,
+        el: (
+          <g key={key}>
+            <path d={poly(pts)} fill={col} stroke={col} strokeWidth={0.6} strokeLinejoin="round" />
+            {deco}
+          </g>
+        ),
+      });
+    }
+  }
+  return out;
+};
+export const CONTOUR_S = 14;
+const TERRACE_FLOOR: Mat = { lit: "#8A7A60", mid: "#6F624C", dark: "#3C3329" };
+/** the near flank's strata: horizontal bands every STRATA m of height */
+const STRATA = 9;
+/** the ramp's finished edge: a fine cream rim along both crests (the style's rim on a lit top edge), fading with the haze */
+const CrestRim: React.FC<{ A: TAir }> = ({ A }) => {
+  const c = A.c;
+  const els: React.ReactNode[] = [];
+  [CLIMB.nFar + 0.6, CLIMB.halfW - 0.6].forEach((n, k) => {
+    const us = range(2, CLIMB_SMAX, 90, 1.2);
+    for (let i = 0; i < us.length - 1; i++) {
+      const a = P3(us[i], n, slopeAt(us[i], n) + 0.1);
+      const b = P3(us[i + 1], n, slopeAt(us[i + 1], n) + 0.1);
+      if (Math.min(a[2], b[2]) < c.Z + 2) continue;
+      const zm = (a[2] + b[2]) / 2;
+      const al = 0.5 * (1 - A.fogH(zm, (a[1] + b[1]) / 2)) * smoothstep(2, 14, us[i]);
+      if (al < 0.02) continue;
+      els.push(<path key={`${k}_${i}`} d={`M${pt(project(c, a[0], a[1], a[2]))}L${pt(project(c, b[0], b[1], b[2]))}`} stroke={CREAM} strokeOpacity={al} strokeWidth={Math.max(0.7, Math.min(2.2, 0.08 * rOf(c, zm)))} strokeLinecap="round" />);
+    }
+  });
+  return <g>{els}</g>;
+};
+const climbFlankItems = (A: TAir, side: 1 | -1): Item[] => {
+  const c = A.c;
   const us = [...range(-6, CLIMB_XC.xc, 30), ...range(CLIMB_XC.xc, CLIMB_SMAX, 26).slice(1)];
-  const vs = [...range(CLIMB.nFar, RAIL.n - RAIL.bed / 2, 8), RAIL.n + RAIL.bed / 2, CLIMB.halfW];
-  const top = patchItems(A, "clt", (u, v) => P3(u, v, climbH(u)), us, vs, (_u, v) => (Math.abs(v - RAIL.n) < RAIL.bed / 2 ? BALLAST : LAND), 0, railDeco);
   const ts = range(0, 1, 6, 1.4);
-  const flank = (side: 1 | -1, key: string) =>
-    patchItems(A, key, (u, t) => {
-      const hTop = climbH(u);
-      return P3(u, side > 0 ? CLIMB.halfW + (t * hTop) / CLIMB.flank : CLIMB.nFar - (t * hTop) / CLIMB.flank, hTop * (1 - t));
-    }, us, ts, () => LAND, 0);
-  // the rail's approach across the plain from the left, into the knee
-  const appr = patchItems(A, "cla", (u, v) => P3(u, v, 0.03), range(-44, -2, 9), [RAIL.n - RAIL.bed / 2, RAIL.n + RAIL.bed / 2], () => BALLAST, -0.4, railDeco);
-  return [...top, ...flank(1, "cfn"), ...flank(-1, "cff"), ...appr];
+  const edgeN = side > 0 ? CLIMB.halfW : CLIMB.nFar;
+  const map = (u: number, t: number): [number, number, number] => {
+    const hTop = slopeAt(u, edgeN);
+    return P3(u, edgeN + side * ((t * hTop) / CLIMB.flank), hTop * (1 - t));
+  };
+  const deco: Deco | undefined =
+    side > 0
+      ? (A2, u0, u1, v0, v1, zm, hm) => {
+          let d = "";
+          const h0 = slopeAt(u0, edgeN);
+          const h1 = slopeAt(u1, edgeN);
+          for (let k = 1; k * STRATA < Math.max(h0, h1); k++) {
+            const lv = k * STRATA;
+            const tA = h0 > lv ? 1 - lv / h0 : -1;
+            const tB = h1 > lv ? 1 - lv / h1 : -1;
+            if (tA < v0 || tA > v1 || tB < v0 || tB > v1) continue;
+            const a1 = map(u0, tA);
+            const b1 = map(u1, tB);
+            d += `M${pt(project(A2.c, a1[0], a1[1], a1[2]))}L${pt(project(A2.c, b1[0], b1[1], b1[2]))}`;
+          }
+          return d ? <path d={d} stroke={A2.toneH(CONTOUR, zm, hm)} strokeOpacity={0.3 * (1 - A2.fogH(zm, hm))} strokeWidth={Math.max(0.6, Math.min(2, 0.1 * rOf(A2.c, zm)))} fill="none" /> : null;
+        }
+      : undefined;
+  void c;
+  return patchItems(A, side > 0 ? "cfn" : "cff", map, us, ts, () => FLANK, 0, deco);
+};
+const FLANK: Mat = { lit: "#857459", mid: "#6A5C47", dark: "#352C23" };
+
+// ===================================================================================================================
+// THE TRACK: the road of history itself, bending up the climb as the railway. TRACK(u): u metres from the knee along
+// the climb (u < 0 back along the flat road); for u <= -TRACK_BLEND[0] it IS the road, for u >= TRACK_BLEND[1] it runs
+// up the climb's near edge at n = RAIL.n; between, one smooth bend. Ballast, sleepers and two rails on it.
+// ===================================================================================================================
+export const RAIL = { n: 50, bed: 4.6, gauge: 1.44, sleeper: 0.8 };
+export const TRACK_BLEND: [number, number] = [70, 26];
+const BALLAST: Mat = { lit: "#6E655A", mid: "#5A5249", dark: "#2E2925" };
+const trackXZ = (u: number): [number, number] => {
+  const r = roadAt(KNEE_S + u);
+  const cl = P3(u, RAIL.n, 0);
+  const w = smoothstep(-TRACK_BLEND[0], TRACK_BLEND[1], u);
+  const ww = w * w * (3 - 2 * w);
+  return [r.X + (cl[0] - r.X) * ww, r.Z + (cl[2] - r.Z) * ww];
+};
+const trackH = (u: number) => {
+  const [X, Z] = trackXZ(u);
+  const { s, n } = climbLocal(X, Z);
+  return Math.max(terrainH(X, Z), s > 0 && n <= CLIMB.halfW ? slopeAt(s, n) : 0);
+};
+/** the track's centre at u: [X, h, Z], its unit tangent (with the slope) and its sideways unit (level, toward the viewer) */
+export const TRACK = (u: number) => {
+  const [X, Z] = trackXZ(u);
+  const h = trackH(u);
+  const e = 0.6;
+  const [Xa, Za] = trackXZ(u - e);
+  const [Xb, Zb] = trackXZ(u + e);
+  const ha = trackH(u - e);
+  const hb = trackH(u + e);
+  const T = nrm([Xb - Xa, hb - ha, Zb - Za]);
+  const hl = Math.hypot(T[0], T[2]) || 1;
+  const C: V3 = [T[2] / hl, 0, -T[0] / hl];
+  return { P: [X, h, Z] as V3, T, C };
+};
+export const TRACK_U0 = -TRACK_BLEND[0];
+export const TRACK_U1 = 330;
+const trackItems = (A: TAir): Item[] => {
+  const c = A.c;
+  const out: Item[] = [];
+  const us = [...range(TRACK_U0, TRACK_BLEND[1] + 10, 40), ...range(TRACK_BLEND[1] + 10, TRACK_U1, 40, 1.3).slice(1)];
+  const at = (u: number, v: number, lift = 0.08): V3 => {
+    const t = TRACK(u);
+    return [t.P[0] + t.C[0] * v, t.P[1] + lift, t.P[2] + t.C[2] * v];
+  };
+  for (let i = 0; i < us.length - 1; i++) {
+    const u0 = us[i];
+    const u1 = us[i + 1];
+    const zm = (at(u0, 0)[2] + at(u1, 0)[2]) / 2;
+    if (Math.max(at(u0, 0)[2], at(u1, 0)[2]) < c.Z + 2) continue;
+    const hm = (at(u0, 0)[1] + at(u1, 0)[1]) / 2;
+    const rr = rOf(c, zm);
+    const vis = 1 - A.fogH(zm, hm);
+    const band = (v0: number, v1: number, mat: Mat, lift: number) => {
+      const q = [at(u0, v0, lift), at(u1, v0, lift), at(u1, v1, lift), at(u0, v1, lift)];
+      const col = A.toneH(formTone(mat, 0.45, PAL.shadow), zm, hm);
+      return <path d={poly(q.map((p) => project(c, p[0], p[1], p[2])))} fill={col} stroke={col} strokeWidth={0.6} />;
+    };
+    const line = (v: number, lift: number) => `M${pt(project(c, ...(at(u0, v, lift) as [number, number, number])))}L${pt(project(c, ...(at(u1, v, lift) as [number, number, number])))}`;
+    let sl = "";
+    const slA = smoothstep(3, 6, rr * RAIL.sleeper);
+    if (slA > 0.01) for (let u = Math.ceil(u0 / RAIL.sleeper) * RAIL.sleeper; u < u1; u += RAIL.sleeper) sl += `M${pt(project(c, ...(at(u, -1.3, 0.14) as [number, number, number])))}L${pt(project(c, ...(at(u, 1.3, 0.14) as [number, number, number])))}`;
+    const w = Math.max(0.5, Math.min(2.4, 0.09 * rr));
+    // the road fades into the ballast bed through the bend
+    const railA = smoothstep(-TRACK_BLEND[0] + 6, -TRACK_BLEND[0] + 30, (u0 + u1) / 2);
+    const key = `trk${i}`;
+    out.push({
+      d: zm,
+      terrain: true,
+      key,
+      el: (
+        <g key={key}>
+          {band(-ROAD_W / 2, ROAD_W / 2, ROAD_MAT, 0.05)}
+          <g opacity={railA}>
+            {band(-RAIL.bed / 2, RAIL.bed / 2, BALLAST, 0.1)}
+            {sl ? <path d={sl} stroke={A.toneH("#4A3A2C", zm, hm)} strokeWidth={w * 1.6} strokeOpacity={0.75 * vis * slA} /> : null}
+            <path d={line(-RAIL.gauge / 2, 0.2) + line(RAIL.gauge / 2, 0.2)} fill="none" stroke={A.toneH("#3A3D3F", zm, hm)} strokeWidth={w} />
+            <path d={line(-RAIL.gauge / 2, 0.24) + line(RAIL.gauge / 2, 0.24)} fill="none" stroke={CREAM} strokeWidth={w * 0.45} strokeOpacity={0.35 * vis} />
+          </g>
+        </g>
+      ),
+    });
+  }
+  return out;
 };
 /** the road: a worn strip along the centre line, draped on the terrain */
 const roadDecal = (A: TAir, s0: number, s1: number): React.ReactNode[] => roadItems(A, s0, s1).sort((a, b) => b.d - a.d).map((it) => it.el);
@@ -745,7 +928,9 @@ const milestonePos = (m: { s: number; n: number }) => {
   return { X: r.X + m.n * r.dz, Z: r.Z - m.n * r.dx };
 };
 /** "1800": a broad carved stone at the foot of the climb, its face toward the viewer (axis-aligned box) */
-export const M_1800 = { X: KNEE.X - 4, Z: KNEE.Z - 22, W: 13, D: 2.6, Hs: 8.4, text: "1800", cap: 4.4 };
+/** "1800" stands at the roadside where the road of history reaches the climb's foot (left of the road, clear of the
+ *  track's bend) */
+export const M_1800 = { X: roadAt(KNEE_S - 28).X + 20 * DT[1], Z: roadAt(KNEE_S - 28).Z - 20 * DT[0], W: 20, D: 2.8, Hs: 9.6, text: "1800", cap: 5.4 };
 const KneeStone: React.FC<{ A: TAir; font: string }> = ({ A, font }) => {
   const c = A.c;
   const m = M_1800;
@@ -753,7 +938,7 @@ const KneeStone: React.FC<{ A: TAir; font: string }> = ({ A, font }) => {
   const X1 = m.X + m.W / 2;
   const g = terrainH(m.X, m.Z);
   const Zf = m.Z - m.D / 2;
-  const ty = g + m.Hs * 0.5;
+  const ty = g + 0.8 + (m.Hs - 0.8) * 0.4;
   const p = project(c, m.X, ty, Zf - 0.05);
   const fs = m.cap * 1.38 * rOf(c, Zf);
   const vis = (1 - A.fogH(Zf, ty)) * smoothstep(3, 8, fs);
@@ -859,8 +1044,8 @@ const SOOT = "#3A2C25";
 export const climbP = (s: number, n: number, h: number): V3 => [KNEE.X + s * D2[0] + n * D2[1], h, KNEE.Z + s * D2[1] - n * D2[0]];
 export type Mill = { s0: number; s1: number; n0: number; n1: number; Hb: number; floors: number; lit: number; seed: number };
 export type Chim = { s: number; n: number; R: number; Hc: number; seed: number; plume?: Plume };
-/** the climb's few big mills, stepped up the slope on stone terraces (s along the climb, n across, + toward the
- *  viewer), each with a tall chimney behind it; lit windows more and more the higher up */
+/** the climb's few big mills, stepped up the slope, each on its own terrace (TERRACES), with a tall chimney on the
+ *  terrace beside it; lit windows more and more the higher up */
 export const FACTORIES = (() => {
   const spec = [
     { s0: 5, s1: 21, n0: 8, n1: 44, Hb: 24 },
@@ -875,134 +1060,192 @@ export const FACTORIES = (() => {
   const plumes: (Plume | undefined)[] = [
     undefined,
     undefined,
-    { len: 40, rise: 0.9, drift: 1.15, grow: 0.095, op: 0.3 },
-    { len: 62, rise: 1.15, drift: 0.8, grow: 0.16, op: 0.27 },
-    { len: 50, rise: 0.85, drift: 1.0, grow: 0.11, op: 0.32 },
-    { len: 72, rise: 1.0, drift: 1.3, grow: 0.14, op: 0.34 },
+    { len: 40, rise: 0.9, drift: 1.15, grow: 0.095, op: 0.3, speed: 1.5 },
+    { len: 62, rise: 1.15, drift: 0.8, grow: 0.16, op: 0.27, speed: 1.5 },
+    { len: 50, rise: 0.85, drift: 1.0, grow: 0.11, op: 0.32, speed: 1.5 },
+    { len: 72, rise: 1.0, drift: 1.3, grow: 0.14, op: 0.34, speed: 1.5 },
   ];
-  const chims: Chim[] = spec.map((m, i) => ({ s: m.s1 + 2.5, n: m.n0 + 5, R: 2.1, Hc: 62 + 8 * random(`cH${i}`), seed: i + 1, plume: plumes[i] }));
+  // the chimney stands on the terrace, beside the mill's far uphill corner
+  const chims: Chim[] = spec.map((m, i) => ({ s: m.s1 - 2.6, n: m.n0 - 4.2, R: 2.1, Hc: 62 + 8 * random(`cH${i}`), seed: i + 1, plume: plumes[i] }));
   return { mills, chims };
 })();
-/** a window grid on one wall: u along the wall (0..1), floors up from the wall's foot (level floors) */
-const windowsOn = (A: TAir, a: V3, b: V3, footA: number, footB: number, roof: number, floors: number, lit: number, seed: number, glow: number) => {
+/** the terrace under a mill: cut mostly INTO the hill (the floor at the slope's height a quarter of the way up: a low
+ *  stone retaining wall in front, an earth cut face behind) */
+export const terraceOf = (m: { s0: number; s1: number; n0: number; n1: number }, pad = { s: 2, nNear: 2, nFar: 8 }): Terrace => {
+  const s0 = m.s0 - pad.s;
+  const s1 = m.s1 + pad.s;
+  return { s0, s1, n0: m.n0 - pad.nFar, n1: m.n1 + pad.nNear, g: climbH(s0 + 0.25 * (s1 - s0)) };
+};
+/** the engine house at the climb's foot (far side) */
+export const ENGINE = { s0: 2, s1: 13, n0: -22, n1: -11, Hh: 15, beamOut: 5.5, beamIn: 3.5, period: 62, amp: 0.2 };
+export const TERRACES: Terrace[] = [...FACTORIES.mills.map((m) => terraceOf(m)), terraceOf(ENGINE, { s: 1.5, nNear: 1.5, nFar: 1.5 })];
+const TERRACES_LIST = TERRACES;
+/** when each mill is built in cut 4 (frames of the `build` clock): walls rise a..b, the chimney after, then smoke */
+export const BUILD = FACTORIES.mills.map((_, i) => ({ a: 70 + 4.5 * i, b: 83 + 4.5 * i }));
+const ease = (u: number) => u * u * (3 - 2 * u);
+export const millGrowth = (i: number, build?: number) => (build === undefined ? 1 : ease(c01((build - BUILD[i].a) / (BUILD[i].b - BUILD[i].a))));
+export const chimGrowth = (i: number, build?: number) => (build === undefined ? 1 : ease(c01((build - (BUILD[i].b - 6)) / 12)));
+/** the frame (build clock) from which a chimney smokes (-Infinity when fully built from the start) */
+export const smokeStart = (i: number, build?: number) => (build === undefined ? -Infinity : BUILD[i].b);
+
+/** a wall polygon with an explicit outward normal: lit by it, culled when it faces away, fogged by its centre */
+const WallFace: React.FC<{ A: TAir; q: V3[]; n: V3; mat: Mat; lw?: number }> = ({ A, q, n, mat, lw }) => {
+  const c = A.c;
+  if (q.length < 3) return null;
+  const fc = cen(q);
+  if (n[0] * (c.X - fc[0]) + n[1] * (c.H - fc[1]) + n[2] * (c.Z - fc[2]) <= 0) return null;
+  const col = A.toneH(formTone(mat, ndl(n), PAL.shadow, 0.28), fc[2], fc[1]);
+  const ln = A.toneH(lineOf(mat), fc[2], fc[1]);
+  const qc = Math.min(...q.map((p) => p[2])) < c.Z + CAM_NEAR * 1.5 ? clipNear(q, c) : q;
+  if (qc.length < 3) return null;
+  return <path d={poly(qc.map((p) => project(c, p[0], p[1], p[2])))} fill={col} stroke={ln} strokeWidth={lw ?? lwAt(c, fc[2])} strokeLinejoin="round" />;
+};
+const N_DOWN: V3 = [-D2[0], 0, -D2[1]];
+const N_NEAR: V3 = [D2[1], 0, -D2[0]];
+const neg = (v: V3): V3 => [-v[0], -v[1], -v[2]];
+/** a terrace's walls: the downhill retaining wall, the two side walls (fill below the crossing, cut above) and the
+ *  uphill cut face, all in stone, following the slope's line exactly */
+const TerraceWalls: React.FC<{ A: TAir; t: Terrace }> = ({ A, t }) => {
+  const els: React.ReactNode[] = [];
+  const N = 8;
+  const sl = (s1: number, n: number) => slopeAt(s1, n);
+  // the downhill retaining wall (fill): from the slope up to the floor
+  const nn = range(t.n0, t.n1, 4);
+  const down: V3[] = [...nn.map((n) => P3(t.s0, n, sl(t.s0, n) - 0.4)), ...nn.slice().reverse().map((n) => P3(t.s0, n, t.g))];
+  els.push(<WallFace key="dn" A={A} q={down} n={N_DOWN} mat={STONE_T} />);
+  // the uphill cut face: from the floor up to the slope
+  const up: V3[] = [...nn.map((n) => P3(t.s1, n, t.g)), ...nn.slice().reverse().map((n) => P3(t.s1, n, Math.max(t.g, sl(t.s1, n))))];
+  els.push(<WallFace key="up" A={A} q={up} n={N_DOWN} mat={FLANK} />);
+  // the side walls: below the floor where the slope is lower (fill, facing out), above it where higher (cut, facing in)
+  const ss = range(t.s0, t.s1, N);
+  ([[t.n1, N_NEAR], [t.n0, neg(N_NEAR)]] as [number, V3][]).forEach(([n, out], k) => {
+    const fill: V3[] = [];
+    const cut: V3[] = [];
+    ss.forEach((s1) => {
+      const h = sl(s1, n);
+      if (h <= t.g) fill.push(P3(s1, n, h - 0.4));
+      if (h >= t.g) cut.push(P3(s1, n, h));
+    });
+    const sStar = ss.find((s1) => sl(s1, n) >= t.g) ?? t.s1;
+    if (fill.length) els.push(<WallFace key={`f${k}`} A={A} q={[...fill, P3(sStar, n, t.g), P3(t.s0, n, t.g)]} n={out} mat={STONE_T} />);
+    if (cut.length) els.push(<WallFace key={`c${k}`} A={A} q={[P3(sStar, n, t.g), ...cut, P3(t.s1, n, t.g)]} n={neg(out)} mat={FLANK} />);
+  });
+  return <g>{els}</g>;
+};
+/** a window grid on one wall (a to b along the wall, level floors from `foot`): each window a dark reveal with the
+ *  lit (or dark) pane set into it, offset away from the light so the wall reads thick; only floors below `top` */
+const windowsOn = (A: TAir, a: V3, b: V3, foot: number, roof: number, top: number, floors: number, lit: number, seed: number, glow: number) => {
   const c = A.c;
   const len = Math.hypot(b[0] - a[0], b[2] - a[2]);
   const nCol = Math.max(2, Math.floor(len / 2.8));
+  let dRev = "";
   let dLit = "";
   let dDark = "";
-  const fl = (roof - Math.max(footA, footB) - 1.2) / floors;
+  const fl = (roof - foot - 2.4) / floors;
+  const P = (u: number, y: number) => project(c, a[0] + (b[0] - a[0]) * u, y, a[2] + (b[2] - a[2]) * u);
+  const quad = (u0: number, u1: number, y0: number, y1: number) => `M${pt(P(u0, y0))}L${pt(P(u1, y0))}L${pt(P(u1, y1))}L${pt(P(u0, y1))}Z`;
   for (let k = 0; k < floors; k++) {
-    const y0 = Math.max(footA, footB) + 0.9 + k * fl;
-    const y1 = y0 + fl * 0.6;
+    const y0 = foot + 1.9 + k * fl;
+    const y1 = y0 + fl * 0.58;
+    if (y1 > top - 0.4) break;
     for (let j = 0; j < nCol; j++) {
       const u0 = (j + 0.24) / nCol;
       const u1 = (j + 0.76) / nCol;
-      const P = (u: number, y: number) => project(c, a[0] + (b[0] - a[0]) * u, y, a[2] + (b[2] - a[2]) * u);
-      const q = `M${pt(P(u0, y0))}L${pt(P(u1, y0))}L${pt(P(u1, y1))}L${pt(P(u0, y1))}Z`;
-      if (random(`w${seed}_${k}_${j}`) < lit) dLit += q;
-      else dDark += q;
-    }
-  }
-  // the lower floors of a downhill wall (below the uphill foot) get windows too
-  const extra = Math.min(footA, footB);
-  const top0 = Math.max(footA, footB);
-  if (top0 - extra > 3) {
-    const nf = Math.floor((top0 - extra - 1) / fl);
-    for (let k = 0; k < nf; k++) {
-      const y0 = top0 - (k + 1) * fl + 0.9;
-      const y1 = y0 + fl * 0.55;
-      for (let j = 0; j < nCol; j++) {
-        const u0 = (j + 0.28) / nCol;
-        const u1 = (j + 0.72) / nCol;
-        // only where the wall stands above the ground (the foot runs from footA at u 0 to footB at u 1)
-        const gu = footA + (footB - footA) * ((u0 + u1) / 2);
-        if (y0 < gu + 0.6) continue;
-        const P = (u: number, y: number) => project(c, a[0] + (b[0] - a[0]) * u, y, a[2] + (b[2] - a[2]) * u);
-        const q = `M${pt(P(u0, y0))}L${pt(P(u1, y0))}L${pt(P(u1, y1))}L${pt(P(u0, y1))}Z`;
-        if (random(`wl${seed}_${k}_${j}`) < lit) dLit += q;
-        else dDark += q;
-      }
+      dRev += quad(u0, u1, y0, y1);
+      const du = (u1 - u0) * 0.16;
+      const dy = (y1 - y0) * 0.14;
+      const pane = quad(u0 + du, u1, y0, y1 - dy);
+      if (random(`w${seed}_${k}_${j}`) < lit) dLit += pane;
+      else dDark += pane;
     }
   }
   const zm = (a[2] + b[2]) / 2;
-  const hm = (roof + extra) / 2;
+  const hm = (roof + foot) / 2;
   return (
     <g>
+      {dRev ? <path d={dRev} fill={A.toneH("#2C211B", zm, hm)} /> : null}
       {dDark ? <path d={dDark} fill={A.toneH(SOOT, zm, hm)} /> : null}
       {dLit ? <path d={dLit} fill={A.toneOH(mixHex(ACCENT_DEEP, ACCENT, glow), zm, hm)} /> : null}
     </g>
   );
 };
-const MillSolid: React.FC<{ A: TAir; m: Mill; frame: number }> = ({ A, m, frame }) => {
+/** a box in the climb's frame (s0..s1 along, n0..n1 across, h0..h1) as a convex solid */
+const climbBox = (s0: number, s1: number, n0: number, n1: number, h0: number, h1: number, mat: Mat, top?: Mat): Face[] => {
+  const b = (s: number, n: number, h: number) => P3(s, n, h);
+  return [
+    { q: [b(s0, n0, h0), b(s0, n1, h0), b(s0, n1, h1), b(s0, n0, h1)], mat },
+    { q: [b(s1, n0, h0), b(s1, n1, h0), b(s1, n1, h1), b(s1, n0, h1)], mat },
+    { q: [b(s0, n0, h0), b(s1, n0, h0), b(s1, n0, h1), b(s0, n0, h1)], mat },
+    { q: [b(s0, n1, h0), b(s1, n1, h0), b(s1, n1, h1), b(s0, n1, h1)], mat },
+    { q: [b(s0, n0, h1), b(s1, n0, h1), b(s1, n1, h1), b(s0, n1, h1)], mat: top ?? mat, rim: 1 },
+  ];
+};
+const SOCLE: Mat = { lit: "#8E8270", mid: "#6F6455", dark: "#3E362D" };
+const CORNICE: Mat = { lit: "#B9A88C", mid: "#958670", dark: "#4E463B" };
+/** a mill: on its terrace floor, a stone socle, brick walls with recessed windows, a stone cornice and a slate gable
+ *  roof (the gables to the slope). `grow` 0..1 raises it from its floor (walls, floors of windows, then the roof). */
+const MillSolid: React.FC<{ A: TAir; m: Mill; t: Terrace; frame: number; grow: number }> = ({ A, m, t, frame, grow }) => {
   const c = A.c;
-  const g0 = climbH(m.s0);
-  const g1 = climbH(m.s1);
-  const roof = g1 + m.Hb;
-  const P = climbP;
-  // the terrace: a stone pad from the slope up to the mill's level floor (g1)
-  const pad: Face[] =
-    g1 - g0 > 0.4
-      ? [
-          { q: [P(m.s0, m.n0, g0 - 0.5), P(m.s0, m.n1, g0 - 0.5), P(m.s0, m.n1, g1), P(m.s0, m.n0, g1)], mat: STONE_T },
-          { q: [P(m.s0, m.n0, g0 - 0.5), P(m.s1, m.n0, g1 - 0.5), P(m.s1, m.n0, g1), P(m.s0, m.n0, g1)], mat: STONE_T },
-          { q: [P(m.s0, m.n1, g0 - 0.5), P(m.s1, m.n1, g1 - 0.5), P(m.s1, m.n1, g1), P(m.s0, m.n1, g1)], mat: STONE_T },
-          { q: [P(m.s0, m.n0, g1), P(m.s0, m.n1, g1), P(m.s1, m.n1, g1), P(m.s1, m.n0, g1)], mat: STONE_T },
-        ]
-      : [];
-  const f = g1;
-  const b00 = P(m.s0, m.n0, f);
-  const b01 = P(m.s0, m.n1, f);
-  const b10 = P(m.s1, m.n0, f);
-  const b11 = P(m.s1, m.n1, f);
-  const t00 = P(m.s0, m.n0, roof);
-  const t01 = P(m.s0, m.n1, roof);
-  const t10 = P(m.s1, m.n0, roof);
-  const t11 = P(m.s1, m.n1, roof);
-  const faces: Face[] = [
-    { q: [b00, b01, t01, t00], mat: BRICK },
-    { q: [b10, b11, t11, t10], mat: BRICK },
-    { q: [b00, b10, t10, t00], mat: BRICK },
-    { q: [b01, b11, t11, t01], mat: BRICK },
-  ];
-  // a low slate roof, the ridge along the slope
-  const nm = (m.n0 + m.n1) / 2;
-  const rh = roof + 2.4;
-  const r0 = P(m.s0, nm, rh);
-  const r1 = P(m.s1, nm, rh);
-  const roofF: Face[] = [
-    { q: [t00, t10, r1, r0], mat: SLATE, rim: 1 },
-    { q: [t01, t11, r1, r0], mat: SLATE, rim: 1 },
-    { q: [t00, t01, r0], mat: BRICK },
-    { q: [t10, t11, r1], mat: BRICK },
-  ];
+  const f = t.g;
+  const Hc = Math.max(0.01, m.Hb * grow);
+  const top = f + Hc;
+  const roofOn = smoothstep(0.86, 1, grow);
   const glow = 0.55 + 0.45 * Math.sin(frame / 9 + m.seed * 1.7) * Math.sin(frame / 23 + m.seed);
-  const toEye = (q: V3[], n: V3) => {
-    const fc = cen(q);
-    return n[0] * (c.X - fc[0]) + n[1] * (c.H - fc[1]) + n[2] * (c.Z - fc[2]) > 0;
-  };
-  const nDown: V3 = [-D2[0], 0, -D2[1]];
-  const nNear: V3 = [D2[1], 0, -D2[0]];
-  const wins: React.ReactNode[] = [];
-  if (toEye([b00, b01, t01, t00], nDown)) wins.push(<g key="wd">{windowsOn(A, b00, b01, f, f, roof, m.floors, m.lit, m.seed, glow)}</g>);
-  if (toEye([b01, b11, t11, t01], nNear)) wins.push(<g key="wn">{windowsOn(A, b01, b11, f, f, roof, m.floors, m.lit, m.seed + 500, glow)}</g>);
-  if (toEye([b00, b10, t10, t00], [-nNear[0], 0, -nNear[2]])) wins.push(<g key="wf">{windowsOn(A, b10, b00, f, f, roof, m.floors, m.lit, m.seed + 900, glow)}</g>);
-  return (
-    <g>
-      {pad.length ? <Solid A={A} faces={pad} /> : null}
-      <Solid A={A} faces={faces} />
-      {wins}
-      <Solid A={A} faces={roofF} />
-    </g>
-  );
+  const els: React.ReactNode[] = [];
+  if (grow > 0.001) {
+    els.push(<Solid key="body" A={A} faces={climbBox(m.s0, m.s1, m.n0, m.n1, f, top, BRICK, SLATE)} />);
+    els.push(<Solid key="socle" A={A} faces={climbBox(m.s0 - 0.35, m.s1 + 0.35, m.n0 - 0.35, m.n1 + 0.35, f, f + Math.min(1.7, Hc), SOCLE)} />);
+    const toEye = (q: V3[], n: V3) => {
+      const fc = cen(q);
+      return n[0] * (c.X - fc[0]) + n[1] * (c.H - fc[1]) + n[2] * (c.Z - fc[2]) > 0;
+    };
+    const roofH = f + m.Hb;
+    const b00 = P3(m.s0, m.n0, f);
+    const b01 = P3(m.s0, m.n1, f);
+    const b10 = P3(m.s1, m.n0, f);
+    const b11 = P3(m.s1, m.n1, f);
+    const hi = (v: V3): V3 => [v[0], top, v[2]];
+    if (toEye([b00, b01, hi(b01), hi(b00)], N_DOWN)) els.push(<g key="wd">{windowsOn(A, b00, b01, f, roofH, top, m.floors, m.lit, m.seed, glow)}</g>);
+    if (toEye([b01, b11, hi(b11), hi(b01)], N_NEAR)) els.push(<g key="wn">{windowsOn(A, b01, b11, f, roofH, top, m.floors, m.lit, m.seed + 500, glow)}</g>);
+    if (toEye([b00, b10, hi(b10), hi(b00)], neg(N_NEAR))) els.push(<g key="wf">{windowsOn(A, b10, b00, f, roofH, top, m.floors, m.lit, m.seed + 900, glow)}</g>);
+    // the cornice rides on the wall's top; the roof settles on once the walls are up
+    els.push(<Solid key="cor" A={A} faces={climbBox(m.s0 - 0.5, m.s1 + 0.5, m.n0 - 0.5, m.n1 + 0.5, top - Math.min(0.9, Hc), top + 0.3, CORNICE)} />);
+    if (roofOn > 0) {
+      const rt = top + 0.3;
+      const rh = rt + 3.2 * roofOn;
+      const nm = (m.n0 + m.n1) / 2;
+      const e = 0.6;
+      const t00 = P3(m.s0 - e, m.n0 - e, rt);
+      const t01 = P3(m.s0 - e, m.n1 + e, rt);
+      const t10 = P3(m.s1 + e, m.n0 - e, rt);
+      const t11 = P3(m.s1 + e, m.n1 + e, rt);
+      const r0 = P3(m.s0 - e, nm, rh);
+      const r1 = P3(m.s1 + e, nm, rh);
+      els.push(
+        <Solid
+          key="roof"
+          A={A}
+          faces={[
+            { q: [t00, t10, r1, r0], mat: SLATE, rim: 1 },
+            { q: [t01, t11, r1, r0], mat: SLATE, rim: 1 },
+            { q: [t00, t01, r0], mat: BRICK },
+            { q: [t10, t11, r1], mat: BRICK },
+            { q: [t00, t01, t11, t10], mat: SLATE },
+          ]}
+        />,
+      );
+    }
+  }
+  return <g>{els}</g>;
 };
 /** smoke: puffs born at a chimney's mouth on a fixed beat, rising and drifting downwind, swelling and thinning */
 export const WIND: V3 = [-1.0, 0.0, -0.12];
 const SMOKE_C = { lit: "#9C9284", mid: "#7E7468", dark: "#4E463E" };
 /** a plume's character: puffs (length), draught (rise), how hard the wind takes it (drift), how fast it swells
  *  (grow) and how dense it starts (op). Every plume leans the same way, with the wind. */
-export type Plume = { len: number; rise: number; drift: number; grow: number; op: number };
+export type Plume = { len: number; rise: number; drift: number; grow: number; op: number; speed?: number };
 const PLUME_STEAM: Plume = { len: 30, rise: 1, drift: 0.9, grow: 0.085, op: 0.32 };
-const Smoke: React.FC<{ A: TAir; X: number; h: number; Z: number; seed: number; frame: number; uid: string; scale?: number; tint?: string; plume?: Plume }> = ({ A, X, h, Z, seed, frame, uid, scale = 1, tint, plume = PLUME_STEAM }) => {
+const Smoke: React.FC<{ A: TAir; X: number; h: number; Z: number; seed: number; frame: number; uid: string; scale?: number; tint?: string; plume?: Plume; start?: number; srcAt?: (t: number) => V3 }> = ({ A, X, h, Z, seed, frame, uid, scale = 1, tint, plume = PLUME_STEAM, start = -Infinity, srcAt }) => {
   const c = A.c;
   const P = 4;
   const N = plume.len;
@@ -1012,15 +1255,18 @@ const Smoke: React.FC<{ A: TAir; X: number; h: number; Z: number; seed: number; 
   for (let k = 0; k < N; k++) {
     const born = (base - k) * P - ph;
     const age = frame - born;
-    if (age < 0) continue;
+    if (age < 0 || born < start) continue;
     const t = age / (N * P);
+    // a puff leaves the mouth where the mouth was when it was puffed (a moving engine leaves its steam behind)
+    const o = srcAt ? srcAt(born) : ([X, h, Z] as V3);
     // rising out of the mouth, then bending downwind
-    const rise = (0.42 * age - 0.0009 * age * age) * scale * plume.rise;
-    const drift = (0.08 * age + 0.0016 * age * age) * scale * plume.drift;
-    const px = X + WIND[0] * drift + Math.sin(age / 17 + seed) * 0.6 * scale;
-    const pz = Z + WIND[2] * drift;
-    const ph2 = h + rise;
-    const rad = (1.9 + plume.grow * age) * scale;
+    const ag = age * (plume.speed ?? 1);
+    const rise = (0.42 * ag - 0.0009 * ag * ag) * scale * plume.rise;
+    const drift = (0.08 * ag + 0.0016 * ag * ag) * scale * plume.drift;
+    const px = o[0] + WIND[0] * drift + Math.sin(age / 17 + seed) * 0.6 * scale;
+    const pz = o[2] + WIND[2] * drift;
+    const ph2 = o[1] + rise;
+    const rad = (1.9 + plume.grow * ag) * scale;
     // dense at the mouth, thinning as it rises and spreads
     const a = Math.pow(1 - t, 2.2) * Math.min(1, age / 6) * plume.op;
     if (a < 0.012) continue;
@@ -1047,18 +1293,16 @@ const Smoke: React.FC<{ A: TAir; X: number; h: number; Z: number; seed: number; 
 const IRON: Mat = { lit: "#5E6467", mid: "#3F4447", dark: "#202426" };
 const CARRIAGE: Mat = { lit: "#8A5A48", mid: "#6C4334", dark: "#38221A" };
 /** the train is built in its own units and scaled by TRAIN.k to world metres (a big, readable 1830s train) */
-const railFrame = (s: number, K = TRAIN.k) => {
-  const m = climbSlope(s);
-  const th = Math.atan(m);
-  const B = climbP(s, RAIL.n, climbH(s));
-  const T: V3 = [D2[0] * Math.cos(th), Math.sin(th), D2[1] * Math.cos(th)];
-  const N: V3 = [-D2[0] * Math.sin(th), Math.cos(th), -D2[1] * Math.sin(th)];
-  const C: V3 = [D2[1], 0, -D2[0]];
+const railFrame = (u: number, K = TRAIN.k) => {
+  const { P: B, T, C } = TRACK(u);
+  // the vehicle's up: perpendicular to the track, toward the sky
+  let N: V3 = [T[1] * C[2] - T[2] * C[1], T[2] * C[0] - T[0] * C[2], T[0] * C[1] - T[1] * C[0]];
+  if (N[1] < 0) N = neg(N);
   return (a0: number, b0: number, c0: number): V3 => {
     const a = a0 * K;
     const b = b0 * K;
     const cc = c0 * K;
-    return [B[0] + a * T[0] + b * N[0] + cc * C[0], B[1] + a * T[1] + b * N[1] + cc * C[1], B[2] + a * T[2] + b * N[2] + cc * C[2]];
+    return [B[0] + a * T[0] + b * N[0] + cc * C[0], B[1] + 0.25 + a * T[1] + b * N[1] + cc * C[1], B[2] + a * T[2] + b * N[2] + cc * C[2]];
   };
 };
 type RF = ReturnType<typeof railFrame>;
@@ -1096,114 +1340,134 @@ const TK = (v: number) => v * TRAIN.k;
 const Locomotive: React.FC<{ A: TAir; frame: number; uid: string }> = ({ A, frame, uid }) => {
   const c = A.c;
   const s0 = LOCO_S(frame);
-  const els: React.ReactNode[] = [];
-  const zOf = (v: V3) => v[2];
-  // the carriages and the tender behind (downhill), each on its own stretch of rail; drawn from the far end
-  const cars: { s: number; len: number; kind: "car" | "tender" }[] = [];
+  // the vehicles behind the engine (downhill), each centred on its own stretch of track
+  type Veh = { u: number; len: number; kind: "loco" | "car" | "tender" };
+  const vehs: Veh[] = [{ u: s0 - TK(TRAIN.loco / 2), len: TRAIN.loco, kind: "loco" }];
   let back = s0 - TK(TRAIN.loco + TRAIN.gap);
-  cars.push({ s: back - TK(TRAIN.tender / 2), len: TRAIN.tender, kind: "tender" });
+  vehs.push({ u: back - TK(TRAIN.tender / 2), len: TRAIN.tender, kind: "tender" });
   back -= TK(TRAIN.tender + TRAIN.gap);
   for (let i = 0; i < TRAIN.cars; i++) {
-    cars.push({ s: back - TK(TRAIN.car / 2), len: TRAIN.car, kind: "car" });
+    vehs.push({ u: back - TK(TRAIN.car / 2), len: TRAIN.car, kind: "car" });
     back -= TK(TRAIN.car + TRAIN.gap);
   }
-  const lwv = lwAt(c, climbP(s0, 0, 0)[2], 0.04);
+  const lwv = lwAt(c, TRACK(s0).P[2], 0.04);
+  // the wheels turn with the distance run (all wheels the same distance)
   const wheel = (L: RF, a: number, r: number, cc: number, key: string) => {
     const q: P2[] = [];
-    for (let i = 0; i < 14; i++) {
-      const t = (i / 14) * Math.PI * 2;
+    for (let i = 0; i < 16; i++) {
+      const t = (i / 16) * Math.PI * 2;
       const v = L(a + r * Math.cos(t), r + r * Math.sin(t), cc);
       q.push(project(c, v[0], v[1], v[2]));
     }
     const v0 = L(a, r, cc);
-    return <path key={key} d={poly(q)} fill={A.toneH(mixHex(IRON.dark, "#5A3A2A", 0.3), zOf(v0), v0[1])} stroke={A.toneH(IRON.mid, zOf(v0), v0[1])} strokeWidth={lwv} />;
+    const th = -s0 / (r * TRAIN.k);
+    let sp = "";
+    for (let k = 0; k < 3; k++) {
+      const an = th + (k * Math.PI) / 3;
+      const pa = L(a + 0.8 * r * Math.cos(an), r + 0.8 * r * Math.sin(an), cc + 0.02);
+      const pb = L(a - 0.8 * r * Math.cos(an), r - 0.8 * r * Math.sin(an), cc + 0.02);
+      sp += `M${pt(project(c, pa[0], pa[1], pa[2]))}L${pt(project(c, pb[0], pb[1], pb[2]))}`;
+    }
+    const tnw = (hex: string) => A.toneH(hex, v0[2], v0[1]);
+    return (
+      <g key={key}>
+        <path d={poly(q)} fill={tnw(mixHex(IRON.dark, "#5A3A2A", 0.3))} stroke={tnw(IRON.mid)} strokeWidth={lwv * 1.4} />
+        <path d={sp} stroke={tnw(IRON.mid)} strokeWidth={lwv * 1.1} strokeLinecap="round" />
+      </g>
+    );
   };
-  cars.reverse().forEach((cr, i) => {
-    const L = railFrame(cr.s);
-    const h = cr.len / 2;
-    if (cr.kind === "tender") {
-      els.push(<Solid key={`t${i}`} A={A} faces={oboxFaces(L, -h, h, 0.7, 2.7, -1.3, 1.3, IRON)} />);
-      els.push(wheel(L, -h * 0.55, 0.45, 1.32, `tw${i}a`), wheel(L, h * 0.55, 0.45, 1.32, `tw${i}b`));
-    } else {
-      els.push(<Solid key={`c${i}`} A={A} faces={oboxFaces(L, -h, h, 0.75, 3.1, -1.35, 1.35, CARRIAGE, MAT.timber)} />);
-      // a row of small cream windows on the near side
-      const v0 = L(0, 2.2, 1.37);
-      let d = "";
-      for (let k = 0; k < 4; k++) {
-        const a0 = -h + 0.9 + k * ((cr.len - 1.8) / 4);
-        const q = [L(a0, 1.9, 1.37), L(a0 + 0.9, 1.9, 1.37), L(a0 + 0.9, 2.7, 1.37), L(a0, 2.7, 1.37)].map((v) => project(c, v[0], v[1], v[2]));
-        d += poly(q);
+  const drawn = vehs
+    .map((v) => ({ v, z: TRACK(v.u).P[2] }))
+    .sort((p, q) => q.z - p.z)
+    .map(({ v }, i) => {
+      const L = railFrame(v.u);
+      const h = v.len / 2;
+      const els: React.ReactNode[] = [];
+      const zm = TRACK(v.u).P;
+      const tn = (hex: string) => A.toneH(hex, zm[2], zm[1]);
+      if (v.kind === "tender") {
+        els.push(<Solid key="tb" A={A} faces={oboxFaces(L, -h, h, 0.7, 2.6, -1.3, 1.3, IRON)} />);
+        els.push(<Solid key="tc" A={A} faces={oboxFaces(L, -h + 0.4, h - 0.4, 2.6, 3.0, -1.1, 1.1, mixMat(IRON, "#2A2420"))} />);
+        els.push(wheel(L, -h * 0.55, 0.45, 1.32, "w1"), wheel(L, h * 0.55, 0.45, 1.32, "w2"));
+      } else if (v.kind === "car") {
+        els.push(<Solid key="cb" A={A} faces={oboxFaces(L, -h, h, 0.75, 3.1, -1.35, 1.35, CARRIAGE, MAT.timber)} />);
+        els.push(<Solid key="cr" A={A} faces={oboxFaces(L, -h - 0.15, h + 0.15, 3.1, 3.4, -1.5, 1.5, MAT.timber)} />);
+        let d = "";
+        for (let k = 0; k < 4; k++) {
+          const a0 = -h + 0.8 + k * ((v.len - 1.6) / 4);
+          d += poly([L(a0, 1.85, 1.37), L(a0 + 0.95, 1.85, 1.37), L(a0 + 0.95, 2.75, 1.37), L(a0, 2.75, 1.37)].map((q) => project(c, q[0], q[1], q[2])));
+        }
+        els.push(<path key="cw" d={d} fill={tn("#D8CBAE")} />);
+        els.push(wheel(L, -h * 0.65, 0.45, 1.36, "w1"), wheel(L, h * 0.65, 0.45, 1.36, "w2"));
+      } else {
+        // the locomotive: frame, buffer beam, boiler (a cylinder along the track) with orange bands, smokebox,
+        // flared chimney, dome, cab with an overhanging roof, the firebox's orange glow, spoked wheels
+        const mid = L(0, 2, 0);
+        const tl = (hex: string) => A.toneH(hex, mid[2], mid[1]);
+        els.push(<Solid key="lf" A={A} faces={oboxFaces(L, -h, h, 0.6, 1.2, -1.2, 1.2, IRON)} />);
+        els.push(<Solid key="bb" A={A} faces={oboxFaces(L, h - 0.25, h + 0.1, 0.55, 1.25, -1.35, 1.35, BRICK)} />);
+        const bR = 0.85;
+        const bB = 2.05;
+        const ring = (a: number, half = false): P2[] => {
+          const q: P2[] = [];
+          const n = 18;
+          for (let k = 0; k <= n; k++) {
+            const t = half ? -Math.PI / 2 + (k / n) * Math.PI : (k / n) * Math.PI * 2;
+            const p = L(a, bB + bR * Math.sin(t), bR * Math.cos(t));
+            q.push(project(c, p[0], p[1], p[2]));
+          }
+          return q;
+        };
+        const aF = h - 0.4;
+        const aB = -h + 2.4;
+        els.push(<path key="bo" d={poly(hull([...ring(aF), ...ring(aB)]))} fill={tl(formTone(IRON, 0.1, PAL.shadow))} stroke={tl(lineOf(IRON))} strokeWidth={lwv} />);
+        els.push(<path key="bu" d={poly(hull([...ring(aF).slice(2, 8), ...ring(aB).slice(2, 8)]))} fill={tl(IRON.lit)} opacity={0.7} />);
+        const bands = [aB + 0.5, (aB + aF) / 2, aF - 0.5].map((a) => `M${ring(a, true).map(pt).join("L")}`).join("");
+        els.push(<path key="bnd" d={bands} fill="none" stroke={A.toneOH(ACCENT, mid[2], mid[1])} strokeWidth={Math.max(0.9, 0.22 * rOf(c, mid[2]))} strokeLinecap="round" />);
+        els.push(<path key="sb" d={poly(ring(aF))} fill={tl(IRON.dark)} stroke={tl(lineOf(IRON))} strokeWidth={lwv} />);
+        const stack = (a: number, r: number, b0: number, b1: number, key: string, flare = 1) => {
+          const q: P2[] = [];
+          for (let k = 0; k < 14; k++) {
+            const t = (k / 14) * Math.PI * 2;
+            const p0 = L(a + r * Math.cos(t), b0, r * Math.sin(t));
+            const p1 = L(a + r * flare * Math.cos(t), b1, r * flare * Math.sin(t));
+            q.push(project(c, p0[0], p0[1], p0[2]), project(c, p1[0], p1[1], p1[2]));
+          }
+          return <path key={key} d={poly(hull(q))} fill={tl(formTone(IRON, 0.2, PAL.shadow))} stroke={tl(lineOf(IRON))} strokeWidth={lwv} />;
+        };
+        els.push(stack(aF - 0.8, 0.32, bB + bR * 0.8, bB + bR + 1.25, "ch", 1.4));
+        els.push(stack((aF + aB) / 2 - 0.3, 0.42, bB + bR * 0.8, bB + bR + 0.45, "dm", 0.8));
+        els.push(<Solid key="cab" A={A} faces={oboxFaces(L, -h, -h + 2.3, 1.2, 3.8, -1.2, 1.2, IRON, IRON)} />);
+        els.push(<Solid key="cabr" A={A} faces={oboxFaces(L, -h - 0.25, -h + 2.55, 3.8, 4.05, -1.45, 1.45, mixMat(IRON, "#2A2420"))} />);
+        const flick = 0.75 + 0.25 * Math.sin(frame / 3.1) * Math.sin(frame / 7.3);
+        els.push(<path key="fb" d={poly([L(-h + 2.2, 1.0, 1.23), L(-h + 2.95, 1.0, 1.23), L(-h + 2.95, 1.9, 1.23), L(-h + 2.2, 1.9, 1.23)].map((q) => project(c, q[0], q[1], q[2])))} fill={A.toneOH(mixHex(ACCENT_DEEP, ACCENT, flick), mid[2], mid[1])} />);
+        els.push(<path key="cw" d={poly([L(-h + 0.5, 2.5, 1.23), L(-h + 1.7, 2.5, 1.23), L(-h + 1.7, 3.4, 1.23), L(-h + 0.5, 3.4, 1.23)].map((q) => project(c, q[0], q[1], q[2])))} fill={A.toneOH(mixHex(ACCENT_DEEP, ACCENT, flick * 0.8), mid[2], mid[1])} opacity={0.8} />);
+        [h - 1.0, 0.6, -0.9, -2.4].forEach((a, k) => els.push(wheel(L, a, k === 0 ? 0.5 : 0.78, 1.24, `lw${k}`)));
       }
-      els.push(<path key={`cw${i}`} d={d} fill={A.toneH("#D8CBAE", zOf(v0), v0[1])} />);
-      els.push(wheel(L, -h * 0.65, 0.45, 1.36, `cw${i}a`), wheel(L, h * 0.65, 0.45, 1.36, `cw${i}b`));
-    }
-  });
-  // the locomotive: frame, boiler (a cylinder along the rail), smokebox, chimney, dome, cab, firebox glow, wheels
-  const sl = s0 - TK(TRAIN.loco / 2);
-  const L = railFrame(sl);
-  const h = TRAIN.loco / 2;
-  const mid = L(0, 2, 0);
-  els.push(<Solid key="lf" A={A} faces={oboxFaces(L, -h, h, 0.6, 1.2, -1.2, 1.2, IRON)} />);
-  // the boiler
-  const bR = 0.85;
-  const bB = 2.05;
-  const ring = (a: number, half = false): P2[] => {
-    const q: P2[] = [];
-    const n = 16;
-    for (let i = 0; i <= n; i++) {
-      const t = half ? -Math.PI / 2 + (i / n) * Math.PI : (i / n) * Math.PI * 2;
-      const v = L(a, bB + bR * Math.sin(t), bR * Math.cos(t));
-      q.push(project(c, v[0], v[1], v[2]));
-    }
-    return q;
+      return <g key={`v${i}`}>{els}</g>;
+    });
+  // the steam from the chimney, each puff left where the chimney was when it puffed
+  const mouth = (t: number): V3 => {
+    const u = LOCO_S(t) - TK(TRAIN.loco / 2);
+    const L = railFrame(u);
+    return L(TRAIN.loco / 2 - 1.2, 2.05 + 0.85 + 1.3, 0);
   };
-  const aF = h - 0.4;
-  const aB = -h + 2.4;
-  const bodyHull = hull([...ring(aF), ...ring(aB)]);
-  const tn = (hex: string) => A.toneH(hex, mid[2], mid[1]);
-  els.push(<path key="bo" d={poly(bodyHull)} fill={tn(formTone(IRON, 0.1, PAL.shadow))} stroke={tn(lineOf(IRON))} strokeWidth={lwv} />);
-  // the lit upper flank of the boiler
-  const upper = hull([...ring(aF).slice(2, 7), ...ring(aB).slice(2, 7)]);
-  els.push(<path key="bu" d={poly(upper)} fill={tn(IRON.lit)} opacity={0.75} />);
-  // orange boiler bands (the near half rings)
-  const bands = [aB + 0.5, (aB + aF) / 2, aF - 0.5].map((a) => `M${ring(a, true).map(pt).join("L")}`).join("");
-  const orangeCol = A.toneOH(ACCENT, mid[2], mid[1]);
-  els.push(<path key="bb" d={bands} fill="none" stroke={orangeCol} strokeWidth={Math.max(0.8, 0.22 * rOf(c, mid[2]))} strokeLinecap="round" />);
-  // the smokebox front
-  els.push(<path key="sb" d={poly(ring(aF))} fill={tn(IRON.dark)} stroke={tn(lineOf(IRON))} strokeWidth={lwv} />);
-  // chimney and dome (short vertical-ish cylinders off the boiler's top)
-  const stack = (a: number, r: number, b0: number, b1: number, key: string, flare = 1) => {
-    const q: P2[] = [];
-    for (let i = 0; i < 12; i++) {
-      const t = (i / 12) * Math.PI * 2;
-      const v0 = L(a + r * Math.cos(t), b0, r * Math.sin(t));
-      const v1 = L(a + r * flare * Math.cos(t), b1, r * flare * Math.sin(t));
-      q.push(project(c, v0[0], v0[1], v0[2]), project(c, v1[0], v1[1], v1[2]));
-    }
-    return <path key={key} d={poly(hull(q))} fill={tn(formTone(IRON, 0.2, PAL.shadow))} stroke={tn(lineOf(IRON))} strokeWidth={lwv} />;
-  };
-  els.push(stack(aF - 0.8, 0.32, bB + bR * 0.8, bB + bR + 1.25, "ch", 1.35));
-  els.push(stack((aF + aB) / 2 - 0.3, 0.42, bB + bR * 0.8, bB + bR + 0.45, "dm", 0.8));
-  // the cab and the firebox's orange mouth under it
-  els.push(<Solid key="cab" A={A} faces={oboxFaces(L, -h, -h + 2.3, 1.2, 4.0, -1.25, 1.25, IRON, IRON)} />);
-  const fb = [L(-h + 2.2, 1.0, 1.27), L(-h + 2.95, 1.0, 1.27), L(-h + 2.95, 1.9, 1.27), L(-h + 2.2, 1.9, 1.27)].map((v) => project(c, v[0], v[1], v[2]));
-  const flick = 0.75 + 0.25 * Math.sin(frame / 3.1) * Math.sin(frame / 7.3);
-  els.push(<path key="fb" d={poly(fb)} fill={A.toneOH(mixHex(ACCENT_DEEP, ACCENT, flick), mid[2], mid[1])} />);
-  const cw = [L(-h + 0.5, 2.6, 1.27), L(-h + 1.7, 2.6, 1.27), L(-h + 1.7, 3.5, 1.27), L(-h + 0.5, 3.5, 1.27)].map((v) => project(c, v[0], v[1], v[2]));
-  els.push(<path key="cw" d={poly(cw)} fill={A.toneOH(mixHex(ACCENT_DEEP, ACCENT, flick * 0.8), mid[2], mid[1])} opacity={0.8} />);
-  [h - 1.0, 0.6, -0.9, -2.4].forEach((a, i) => els.push(wheel(L, a, i === 0 ? 0.5 : 0.78, 1.24, `lw${i}`)));
-  // the steam from the chimney
-  const top = L(aF - 0.8, bB + bR + 1.3, 0);
-  els.push(<Smoke key="st" A={A} X={top[0]} h={top[1]} Z={top[2]} seed={77} frame={frame} uid={`${uid}st`} scale={0.45} tint="#D8D0C2" />);
-  return <g>{els}</g>;
+  const m0 = mouth(frame);
+  return (
+    <g>
+      {drawn}
+      <Smoke key="st" A={A} X={m0[0]} h={m0[1]} Z={m0[2]} seed={77} frame={frame} uid={`${uid}st`} scale={0.45} tint="#D8D0C2" srcAt={mouth} />
+    </g>
+  );
 };
+const mixMat = (m: Mat, to: string): Mat => ({ lit: mixHex(m.lit, to, 0.3), mid: mixHex(m.mid, to, 0.3), dark: mixHex(m.dark, to, 0.3) });
 /** the beam-engine house at the climb's foot: a tall stone house, the orange beam rocking out of its top */
-export const ENGINE = { s0: 2, s1: 13, n0: -22, n1: -11, Hh: 15, beamOut: 5.5, beamIn: 3.5, period: 62, amp: 0.2 };
 const BeamEngine: React.FC<{ A: TAir; frame: number }> = ({ A, frame }) => {
   const c = A.c;
   const E = ENGINE;
-  const g0 = climbH(E.s0);
-  const g1 = climbH(E.s1);
+  const tE = TERRACES[TERRACES.length - 1];
+  const g0 = tE.g;
+  const g1 = tE.g;
   const roof = g1 + E.Hh;
   const P = climbP;
   const house: Face[] = [
@@ -1253,38 +1517,63 @@ const BeamEngine: React.FC<{ A: TAir; frame: number }> = ({ A, frame }) => {
     </g>
   );
 };
-const industryItems = (A: TAir, frame: number, hide: Hide): Item[] => {
+const industryItems = (A: TAir, frame: number, hide: Hide, build?: number): Item[] => {
   const out: Item[] = [];
   FACTORIES.mills.forEach((m, i) => {
-    const C = climbP((m.s0 + m.s1) / 2, (m.n0 + m.n1) / 2, 0);
-    out.push({ d: C[2] - 0.3, key: `ml${i}`, el: <MillSolid key={`ml${i}`} A={A} m={m} frame={frame} /> });
+    const t = TERRACES[i];
+    const C = P3((t.s0 + t.s1) / 2, (t.n0 + t.n1) / 2, 0);
+    out.push({
+      d: C[2],
+      key: `ml${i}`,
+      el: (
+        <g key={`ml${i}`}>
+          <TerraceWalls A={A} t={t} />
+          <MillSolid A={A} m={m} t={t} frame={frame} grow={millGrowth(i, build)} />
+        </g>
+      ),
+    });
   });
   {
     const E = ENGINE;
-    const C0 = climbP((E.s0 + E.s1) / 2, (E.n0 + E.n1) / 2, 0);
-    out.push({ d: C0[2] - 0.3, key: "beng", el: <BeamEngine key="beng" A={A} frame={frame} /> });
-    const ch = climbP(E.s1 - 1.5, E.n0 + 2.2, 0);
-    const top = climbH(E.s1) + 30;
-    out.push({ d: ch[2] - 0.4, key: "bech", el: <AirCyl key="bech" A={A} X={ch[0]} Z={ch[2]} R={1.2} Y0={-top} Y1={-climbH(E.s1 - 2.6)} mat={STONE_T} uid="bech" lw={lwAt(A.c, ch[2])} /> });
+    const tE = TERRACES[TERRACES.length - 1];
+    const C0 = P3((tE.s0 + tE.s1) / 2, (tE.n0 + tE.n1) / 2, 0);
+    out.push({
+      d: C0[2],
+      key: "beng",
+      el: (
+        <g key="beng">
+          <TerraceWalls A={A} t={tE} />
+          <BeamEngine A={A} frame={frame} />
+        </g>
+      ),
+    });
+    const ch = P3(E.s1 - 1.5, E.n0 + 2.2, 0);
+    const top = tE.g + 30;
+    out.push({ d: ch[2] - 0.4, key: "bech", el: <AirCyl key="bech" A={A} X={ch[0]} Z={ch[2]} R={1.2} Y0={-top} Y1={-tE.g} mat={STONE_T} uid="bech" lw={lwAt(A.c, ch[2])} /> });
   }
   if (!hide.train) {
-    const Lp = climbP(LOCO_S(frame) - 12, RAIL.n, 0);
-    out.push({ d: Lp[2] - 1.5, key: "loco", el: <Locomotive key="loco" A={A} frame={frame} uid="loco" /> });
+    const Lp = TRACK(LOCO_S(frame) - TK(TRAIN.loco / 2)).P;
+    out.push({ d: Lp[2] - 2, key: "loco", el: <Locomotive key="loco" A={A} frame={frame} uid="loco" /> });
   }
   FACTORIES.chims.forEach((ch, i) => {
-    const P0 = climbP(ch.s, ch.n, 0);
-    const g = climbH(ch.s - ch.R);
-    const top = climbH(ch.s) + ch.Hc;
+    const t = TERRACES[i];
+    const P0 = P3(ch.s, ch.n, 0);
+    const g = t.g;
+    const gc = chimGrowth(i, build);
+    if (gc <= 0.001) return;
+    const top = g + ch.Hc * gc;
     out.push({
       d: P0[2] - 0.5,
       key: `ch${i}`,
       el: (
         <g key={`ch${i}`}>
-          <AirCyl A={A} X={P0[0]} Z={P0[2]} R={ch.R} Y0={-top} Y1={-g} mat={BRICK} uid={`chc${i}`} lw={lwAt(A.c, P0[2])} joints={[g + (top - g) * 0.92].map((y) => -y)} />
+          <AirCyl A={A} X={P0[0]} Z={P0[2]} R={ch.R} Y0={-top} Y1={-g} mat={BRICK} uid={`chc${i}`} lw={lwAt(A.c, P0[2])} joints={gc > 0.95 ? [-(g + (top - g) * 0.92)] : []} />
         </g>
       ),
     });
-    if (!hide.smoke && ch.plume) out.push({ d: P0[2] - 30, key: `sm${i}`, el: <Smoke key={`sm${i}`} A={A} X={P0[0]} h={top + 0.5} Z={P0[2]} seed={ch.seed} frame={frame} uid={`sm${i}`} plume={ch.plume} /> });
+    // smoke pours from the chimney's mouth from half-way up its rise (each puff from where the mouth was)
+    const mouth = (t: number): V3 => [P0[0], g + ch.Hc * chimGrowth(i, build === undefined ? undefined : t) + 0.5, P0[2]];
+    if (!hide.smoke && ch.plume && gc > 0.5) out.push({ d: P0[2] - 30, key: `sm${i}`, el: <Smoke key={`sm${i}`} A={A} X={P0[0]} h={top + 0.5} Z={P0[2]} seed={ch.seed} frame={frame} uid={`sm${i}`} plume={ch.plume} start={smokeStart(i, build)} srcAt={mouth} /> });
   });
   return out;
 };
@@ -1324,14 +1613,22 @@ const farmItems = (A: TAir): Item[] =>
     };
   });
 
-export const TakeoffWorld: React.FC<{ A: TAir; frame: number; font: string; extras?: Item[]; hide?: Hide; uid?: string }> = ({ A, frame, font, extras = [], hide = {}, uid = "tw" }) => {
-  // the plateau's ground is drawn first (everything in this world stands on or beyond it), then the road over it
+export const TakeoffWorld: React.FC<{ A: TAir; frame: number; font: string; extras?: Item[]; hide?: Hide; uid?: string; build?: number }> = ({ A, frame, font, extras = [], hide = {}, uid = "tw", build }) => {
+  // PASS 1, the ground: the plateau, the road over it, the climb's top (terraces' floors included) and the track on
+  // it. Nothing in this world is hidden by ground it stands on from any camera that looks up or across the climb, so
+  // the ground never paints over a building or the train (no z-fighting, no flicker).
   const plateau = plateauItems(A).filter((it) => it.d > A.c.Z - 200);
   plateau.sort((a, b) => b.d - a.d);
-  const items: Item[] = [...climbItems(A), ...extras];
+  const ground: Item[] = climbTopItems(A);
+  ground.sort((a, b) => b.d - a.d);
+  // the track lies ON the ground: drawn after all of it (nothing on the ground can cover it)
+  const track = trackItems(A);
+  track.sort((a, b) => b.d - a.d);
+  // PASS 2, everything standing, sorted with the climb's near flank (which hides what stands beyond its edge)
+  const items: Item[] = [...climbFlankItems(A, 1), ...climbFlankItems(A, -1), ...extras];
   if (!hide.town) items.push(...templeItems(A), ...houseItems(A), aqueductItem(A), ...farmItems(A));
   if (!hide.figures) items.push(...folkItems(A, frame));
-  if (!hide.industry) items.push(...industryItems(A, frame, hide));
+  if (!hide.industry) items.push(...industryItems(A, frame, hide, build));
   if (!hide.milestones) {
     const p1 = milestonePos(M_AD100);
     items.push({ d: p1.Z, key: "m100", el: <Milestone key="m100" A={A} m={M_AD100} uid="m100" font={font} /> });
@@ -1343,12 +1640,19 @@ export const TakeoffWorld: React.FC<{ A: TAir; frame: number; font: string; extr
   return (
     <g>
       <Plain A={A} id={`${uid}-plain`} />
-      {roadDecal(A, ROAD_S0, KNEE_S + 2)}
+      {roadDecal(A, ROAD_S0, KNEE_S - TRACK_BLEND[0])}
       <HorizonHaze A={A} id={`${uid}-hz`} />
       {plateau.map((it) => (
         <React.Fragment key={it.key}>{it.el}</React.Fragment>
       ))}
-      {roadDecal(A, -100, 95)}
+      {roadDecal(A, -100, KNEE_S - TRACK_BLEND[0])}
+      {ground.map((it) => (
+        <React.Fragment key={it.key}>{it.el}</React.Fragment>
+      ))}
+      {track.map((it) => (
+        <React.Fragment key={it.key}>{it.el}</React.Fragment>
+      ))}
+      {hide.industry ? null : <CrestRim A={A} />}
       {live.map((it) => (
         <React.Fragment key={it.key}>{it.el}</React.Fragment>
       ))}

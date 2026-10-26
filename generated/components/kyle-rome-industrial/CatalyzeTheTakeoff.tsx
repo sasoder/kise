@@ -30,6 +30,12 @@
 // never reverses; the climb's foot settles at ~(360, 1690). The haze thins with the eye's height (takeoffWorld).
 // Orange = technology only (mill windows, the engine's beam, the locomotive's bands and firebox); Rome has none.
 //
+// REV 1 (the user's notes, Oct 26): a finishing pass, same camera, same slot. The mills rise one by one on their
+// terraces (build={frame}: mill i from f70 + 4.5i, done by f83 + 4.5i; chimney then smoke follow), the train runs on
+// a continuous track that is the road of history bending up the ramp, the ramp has a finished crest, and nothing
+// pops or flickers (ground drawn first, objects sorted over it). The "1800" stone is broader (20 m) so the carved
+// numerals sit inside it.
+//
 // DEPTH: metres. CAM_F0 eye 14.5 m (6.5 m over the plateau), 26 m before Rome's centre, F 900. CAM_END eye 45.8 m,
 // at X 104, Z -273 (the knee ~165 m ahead, Rome ~279 m), F 1100. Path: a cubic Bezier in X/Z (PATH_C1, PATH_C2) on
 // the track's speed curve (SPEED, flat-topped), height on its own slightly earlier curve (SPEED_H), zoom on the
@@ -142,7 +148,7 @@ const CatalyzeTheTakeoff: React.FC<z.infer<typeof schema>> = ({ probeCam, camFra
     <AirStage v={A.v} bloom={0.25}>
       <AbsoluteFill>
         <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0 }}>
-          <TakeoffWorld A={A} frame={frame} font={cinzel} />
+          <TakeoffWorld A={A} frame={frame} font={cinzel} build={frame} />
         </svg>
       </AbsoluteFill>
     </AirStage>
