@@ -1,33 +1,38 @@
 // ---------------------------------------------------------------------------
 // SpreadsForACentury (kyle-vaccine, cut 53). Dwarkesh 3D style (styles/dwarkesh-3d.md): a 3D cut flying over a baked
 // map laid as a ground (the pattern of kyle-pandemics/RodentFromCentralAsia.tsx), inside the misty teal air.
-// Opaque 1080x1920, 29.97 fps, 133 frames. RENDER WITH --gl=angle (the ground is WebGL2).
+// Opaque 1080x1920, 29.97 fps, 182 frames (Rev 1). RENDER WITH --gl=angle (the ground is WebGL2).
 //
 // CHECK LINE: "The smallpox-inoculation trick came out of Africa and China and crept across the map for generations
 // until, in one English village, Jenner found the vaccine."
 //
-// THE LINE: "[And so we actually don't know where that comes from. It may come from Africa. It may come from China.]
-// It spreads for like a century or more before Jenner discovered [vaccine]."
-// WORD -> FRAME (f0 = 53.287 s): It -5 · SPREADS 2 · for 7 · like 17 · a 21 · CENTURY 24 · or 36 · more 45 · before 53 ·
-//   JENNER 71 · DISCOVERED 87 · (And 106) · end 133.
-// DURATION: the slot 53.287 -> 57.724 s = 4.437 s x 29.97 = 133 frames (f0..f132).
+// THE LINE: "[And so we actually don't know where that comes from.] It may come from Africa. It may come from China.
+// It spreads for like a century or more before Jenner discovers [vaccination]."
+// WORD -> FRAME (Rev 1, the re-cut edit, f0 = 50.751 s; REV1_notes_20261026.md): come 0 · from 4 · AFRICA 9 · it 21 ·
+//   may 24 · come 24 · from 28 · CHINA 31 · It 45 · SPREADS 51 · for 57 · like 66 · a 70 · CENTURY 73 · or 85 · more 94 ·
+//   Before 119 · JENNER 122 · DISCOVERS 135 · VACCINATION 150 · (And 179).
+// DURATION: the user's stretched slot 50.751 -> 56.823 s = 6.072 s x 29.97 = 182 frames (f0..f181), played in real
+//   time: the new head f0-f45 covers "it may come from Africa, it may come from China"; every beat of the delivered
+//   133 f cut plays SHIFT = 49 frames later (spreadPlan.ts; the camera's speed lobe peaks ~f99).
 //
 // THE MOTION: one continuous camera over a baked map of Africa, Europe and western Asia (land the style's warm
 // sand-umber, sea a deeper air-petrol, soft coast, no borders), high and oblique, always looking north
 // (spreadCamera.ts: one Bezier glide from over the Sahara round the eastern Mediterranean and north-west onto England,
-// D 6200 -> 1000, pitch 45 -> 53 deg, one speed lobe peaking ~f44 (centre pan <= ~32 px/frame), then a slow creep). f0: the practice (SMALLPOX
-// plum, a matte stain with ink dots, soft ink-in-paper edges) already lies over West Africa (low in frame, ~y 1130-1300)
-// and comes in as a line from the frame's east edge, labelled AFRICA (over the Sahara) and CHINA (just north of the
-// line) in caps ~35 px on soft plates, lying on the ground, sliding up f0-f10, readable to ~f34 / ~f36; each sinks
-// back into the air before the move would carry it out of frame or into a caption band. As the camera settles on
-// England (f62-f86) the continent's plum recedes 25 % so Britain and the orange lead. f0-f60 the plum creeps town by town along the
-// trade roads (spreadPlan.ts: each trail's tip at a constant speed, each town's dot inking when the tip reaches it):
-// across Persia and Anatolia to Constantinople (f22), up over the Sahara to Tripoli and Fez, then across Europe to
-// London (f49) and out over Britain and the near continent; Berkeley is the old trick's last station (its dot inks
-// f62). CAUSE: the orange kindles AT the Berkeley plum dot (contact: the dot is there from f62; first reaction: the
-// point lights on f71, "Jenner"), one eased ramp f70 -> f87 (lit from f71) to a soft glow warming the land round it ("discovered");
-// the medium's bloom picks it out. f90-f132 a settled living frame: England and the near continent, plum everywhere,
-// the stains still creeping, the one orange glow near the middle (Berkeley y ~905-925).
+// D 6200 -> 1000, pitch 45 -> 53 deg, one speed lobe peaking ~f99 (centre pan <= ~32 px/frame) over a slow creep, so
+// the head drifts gently while the map opens). f0-f45: the practice (SMALLPOX plum, a matte stain with ink dots, soft
+// ink-in-paper edges) already lies at its two sources, over West Africa (low in frame) and as a line in from the east
+// edge across Persia into Anatolia. AFRICA (over the Sahara, above the West African stain) slides up onto the ground
+// on "Africa" (in f0 -> f9), CHINA (on the incoming line from the east edge, by Tosya, its plate inside x <= ~1000) on "China" (in f22 -> f31); caps
+// ~33-35 px on soft plates; each sinks back into the air before the move would carry it out of frame or into a caption
+// band (~f76 / ~f83). f49-f111 ("spreads for like a century or more") the plum creeps town by town along the trade
+// roads (spreadPlan.ts: each trail's tip at a constant speed, each town's dot inking when the tip reaches it): across
+// Anatolia to Constantinople (f71), up over the Sahara to Tripoli and Fez, then across Europe to London (f98) and out
+// over Britain and the near continent; Berkeley is the old trick's last station (its dot inks f111). As the camera
+// settles on England (f111-f135) the continent's plum recedes 25 % so Britain and the orange lead. CAUSE: the orange
+// kindles AT the Berkeley plum dot (contact: the dot is there from f111; first reaction: the point lights on f122,
+// "Jenner"), one eased ramp f121 -> f140 to a soft glow warming the land round it ("discovers vaccination"); the
+// medium's bloom picks it out. f140-f181 a settled living frame: England and the near continent, plum everywhere, the
+// stains still creeping, the one orange glow near the middle (Berkeley y ~905-925).
 // Orange = THE VACCINE only (the light at Berkeley); SMALLPOX plum = the inoculation practice's spread; the map and
 // the air in the style's earthy tones. No years, no numbers, no arrows; labels only AFRICA and CHINA.
 //
@@ -77,7 +82,8 @@ const to01 = (c: [number, number, number]) => c.map((q) => q / 255) as [number, 
 // band or its text across the frame's edge (no sliver at the edge; found by scanning the camera, LABEL_OUT), it sinks
 // back into the air (slides down, fades) over OUT_T frames.
 // ---------------------------------------------------------------------------
-const IN = { f0: 0, f1: 10, lift: 26 };
+/** the slide in: each label lands on its word (AFRICA f9, CHINA f31: GLabel.in) */
+const IN = { lift: 26 };
 const OUT_T = 7;
 /** the text's width in font units (Fell SC caps + 0.16 em tracking), approx. */
 const textW = (L: GLabel) => 0.84 * L.size * L.text.length;
@@ -122,21 +128,24 @@ export const labelBox = (f: number, L: GLabel, part: "plate" | "text" = "plate")
   return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
 };
 const BAND_TOP = 1080;
+/** no label text right of this (its soft plate then stays inside x <= ~1000) */
+const RIGHT_LIMIT = 985;
 /** the first frame each label's plate would touch a caption band, or its text the frame's edge (DURATION if never) */
 export const LABEL_OUT = LABELS.map((L) => {
-  for (let f = 0; f < DURATION; f++) {
+  for (let f = L.in[0]; f < DURATION; f++) {
     const b = labelBox(f, L);
     const t = labelBox(f, L, "text");
-    if (b.y1 > BAND_TOP - 6 || t.x0 < 10 || t.x1 > W - 10) return f;
+    // the right edge kept well inside (the CHINA plate sits where the line comes in from beyond the frame)
+    if (b.y1 > BAND_TOP - 6 || t.x0 < 10 || t.x1 > RIGHT_LIMIT) return f;
   }
   return DURATION;
 });
 
 const GroundLabel: React.FC<{ cam: Cam; frame: number; L: GLabel; out: number }> = ({ cam, frame, L, out }) => {
   const ease = Easing.bezier(0.16, 1, 0.3, 1);
-  const uIn = interpolate(frame, [IN.f0, IN.f1], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
+  const uIn = interpolate(frame, [L.in[0], L.in[1]], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
   const uOut = interpolate(frame, [out - OUT_T, out - 1], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.45, 0, 0.55, 1) });
-  const op = Math.min(interpolate(frame, [IN.f0, IN.f0 + 8], [0.15, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), 1 - uOut);
+  const op = Math.min(interpolate(frame, [L.in[0], L.in[0] + 8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), 1 - uOut);
   if (op <= 0.001) return null;
   const g = labelGeo(cam, L);
   const k = labelK(L);

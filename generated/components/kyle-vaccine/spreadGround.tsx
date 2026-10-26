@@ -362,7 +362,7 @@ const BRIT = new Float32Array(
     ] as [number, number][]
   ).flatMap(([lon, lat]) => project(lon, lat)),
 );
-const DIM = { f0: 62, f1: 86 };
+const DIM = { f0: 111, f1: 135 };
 const hex01 = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as [number, number, number];
 const c01 = (v: number) => Math.max(0, Math.min(1, v));
 

@@ -10,13 +10,16 @@
 // distance D, pitched down by `pitch`, yawed to the local north of the map at the target (LCC meridians converge on
 // the pole, so north stays up everywhere). ONE MOVE: the target rides one cubic Bezier from over the Sahara (f0) round
 // the eastern Mediterranean and north-west onto England, log D falls 6200 -> 1000 and the pitch steepens 45 -> 53 deg,
-// all on ONE progress u(f), the integral of a single speed bump (peak ~f38) over a small constant creep: already
-// moving on f0, one deceleration lobe into England by ~f90, then a slow creep to the last frame.
+// all on ONE progress u(f), the integral of a single speed bump (Rev 1: peak ~f99, after "spreads" f51) over a small
+// constant creep: a gentle drift through the head while the map opens, one acceleration and one deceleration lobe
+// into England by ~f140, then a slow creep to the last frame (f181).
 // ---------------------------------------------------------------------------
 import { project } from "./spreadMapData";
 
 export const FPS = 30000 / 1001;
-export const DURATION = 133;
+/** Rev 1: the slot stretched to 50.751 -> 56.823 s (182 f); the head f0-f45 covers "it may come from Africa, it may come
+ *  from China", the old cut's beats sit ~49 f later */
+export const DURATION = 182;
 export const W = 1080;
 export const H = 1920;
 /** focal length, px */
@@ -42,7 +45,7 @@ export const PATH_LL: [number, number][] = [
   [2, 51.5],
   [-2.0, 51.25],
 ];
-export const TRACK = { D0: 6200, D1: 1000, pitch0: 45, pitch1: 53, peak: 50, width: 26, creep: 0.05, dExp: 2.0 };
+export const TRACK = { D0: 6200, D1: 1000, pitch0: 45, pitch1: 53, peak: 99, width: 26, creep: 0.05, dExp: 2.0 };
 export type Track = typeof TRACK;
 /** the camera's progress u(f) (0 at f0, 1 at the last frame): the integral of one speed bump over a small creep */
 const progressOf = (T: Track) => {

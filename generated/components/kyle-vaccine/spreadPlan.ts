@@ -12,7 +12,7 @@
 // Tabriz) and the Ottoman caravan road (Erzurum, Erzincan, Sivas, Tokat, Amasya, Tosya, Bolu, Izmit) to Constantinople;
 // Smyrna (Pylarini's report, 1714) and Aleppo on branches. West Africa (Onesimus, an enslaved West African man in
 // Boston, described it to Cotton Mather, 1721): the Akan / Hausa lands (Kumasi, Ouagadougou, Djenne, Timbuktu, Gao,
-// Old Oyo, Zaria, Kano, Katsina, Sokoto), north over the trans-Saharan roads (Agadez, Ghat, Murzuq -> Tripoli;
+// Old Oyo, Zaria, Kano, Katsina, Sokoto), north over the trans-Saharan roads (Agadez, Iferouane in the Air, Ghat, Murzuq -> Tripoli;
 // Taoudenni, Sijilmasa -> Fez) to the Ottoman regencies (Tripoli, Tunis, Algiers). Lady Mary Wortley Montagu saw it in
 // Constantinople (letter of 1 April 1717), had her son inoculated there (1718) and her daughter in London (1721); the
 // trail across Europe follows her 1716-17 road (London, Rotterdam, Cologne, Frankfurt, Nuremberg, Regensburg, Vienna,
@@ -31,19 +31,20 @@ export type Trail = { id: string; from?: string; t0: number; t1: number; w: numb
 // sizes: 1.3 the named hubs, 1.15 Berkeley, 1 a town, 0.8 a small station
 export const TRAILS: Trail[] = [
   // ---- the African source, already inked at f0 ----
-  { id: "w1", t0: -70, t1: -26, w: 88, R: 168, towns: [["Kumasi", -1.62, 6.69], ["Ouagadougou", -1.52, 12.37], ["Djenne", -4.55, 13.9], ["Timbuktu", -3.0, 16.77]] },
-  { id: "w2", t0: -64, t1: -22, w: 88, R: 168, towns: [["Old Oyo", 4.13, 8.93], ["Zaria", 7.7, 11.1], ["Kano", 8.52, 12.0], ["Katsina", 7.6, 13.0]] },
-  { id: "w3", from: "Kumasi", t0: -60, t1: -40, w: 80, R: 154, towns: [["Kumasi", -1.62, 6.69], ["Abomey", 1.99, 7.18], ["Old Oyo", 4.13, 8.93]] },
-  { id: "w4", from: "Timbuktu", t0: -26, t1: -10, w: 80, R: 154, towns: [["Timbuktu", -3.0, 16.77], ["Gao", -0.04, 16.27]] },
-  { id: "w5", from: "Katsina", t0: -22, t1: -12, w: 80, R: 154, towns: [["Katsina", 7.6, 13.0], ["Sokoto", 5.24, 13.06]] },
+  { id: "w1", t0: -150, t1: -100, w: 88, R: 168, towns: [["Kumasi", -1.62, 6.69], ["Ouagadougou", -1.52, 12.37], ["Djenne", -4.55, 13.9], ["Timbuktu", -3.0, 16.77]] },
+  { id: "w2", t0: -140, t1: -95, w: 88, R: 168, towns: [["Old Oyo", 4.13, 8.93], ["Zaria", 7.7, 11.1], ["Kano", 8.52, 12.0], ["Katsina", 7.6, 13.0]] },
+  { id: "w3", from: "Kumasi", t0: -130, t1: -110, w: 80, R: 154, towns: [["Kumasi", -1.62, 6.69], ["Abomey", 1.99, 7.18], ["Old Oyo", 4.13, 8.93]] },
+  { id: "w4", from: "Timbuktu", t0: -100, t1: -80, w: 80, R: 154, towns: [["Timbuktu", -3.0, 16.77], ["Gao", -0.04, 16.27]] },
+  { id: "w5", from: "Katsina", t0: -95, t1: -80, w: 80, R: 154, towns: [["Katsina", 7.6, 13.0], ["Sokoto", 5.24, 13.06]] },
+  { id: "w6", from: "Kano", t0: -90, t1: -62, w: 80, R: 154, towns: [["Kano", 8.52, 12.0], ["Agadez", 7.99, 16.97], ["Iferouane", 8.42, 19.07, 0.8]] },
   // ---- the line from China, coming in at the frame's east edge (its tip at Erzurum on f0) ----
-  { id: "e0", t0: -96, t1: 0, w: 76, R: 140, towns: [["Samarkand", 66.97, 39.65], ["Bukhara", 64.42, 39.77], ["Merv", 61.84, 37.66], ["Mashhad", 59.6, 36.3], ["Nishapur", 58.8, 36.2], ["Rey", 51.43, 35.6], ["Qazvin", 50.0, 36.27], ["Tabriz", 46.29, 38.08], ["Erzurum", 41.27, 39.9]] },
+  { id: "e0", t0: -150, t1: -49, w: 76, R: 140, towns: [["Samarkand", 66.97, 39.65], ["Bukhara", 64.42, 39.77], ["Merv", 61.84, 37.66], ["Mashhad", 59.6, 36.3], ["Nishapur", 58.8, 36.2], ["Rey", 51.43, 35.6], ["Qazvin", 50.0, 36.27], ["Tabriz", 46.29, 38.08], ["Erzurum", 41.27, 39.9], ["Erzincan", 39.49, 39.75], ["Sivas", 37.02, 39.75], ["Tokat", 36.55, 40.31], ["Amasya", 35.83, 40.65], ["Tosya", 34.04, 41.01]] },
   // ---- f0 on: west across Anatolia to Constantinople ----
-  { id: "e1", from: "Erzurum", t0: 0, t1: 22, w: 42, R: 119, towns: [["Erzurum", 41.27, 39.9], ["Erzincan", 39.49, 39.75], ["Sivas", 37.02, 39.75], ["Tokat", 36.55, 40.31], ["Amasya", 35.83, 40.65], ["Tosya", 34.04, 41.01], ["Bolu", 31.6, 40.73], ["Izmit", 29.92, 40.77], ["Constantinople", 28.98, 41.01, 1.3]] },
+  { id: "e1", from: "Tosya", t0: 0, t1: 22, w: 42, R: 119, towns: [["Tosya", 34.04, 41.01], ["Bolu", 31.6, 40.73], ["Izmit", 29.92, 40.77], ["Constantinople", 28.98, 41.01, 1.3]] },
   { id: "e2", from: "Sivas", t0: 10, t1: 26, w: 35, R: 98, towns: [["Sivas", 37.02, 39.75], ["Kayseri", 35.48, 38.73], ["Konya", 32.48, 37.87], ["Afyon", 30.54, 38.76], ["Smyrna", 27.14, 38.42]] },
   { id: "e3", from: "Tabriz", t0: 3, t1: 24, w: 35, R: 98, towns: [["Tabriz", 46.29, 38.08], ["Mosul", 43.13, 36.34], ["Urfa", 38.79, 37.16], ["Aleppo", 37.16, 36.2]] },
   // ---- up from West Africa over the Sahara ----
-  { id: "n1", from: "Kano", t0: -10, t1: 26, w: 42, R: 119, towns: [["Kano", 8.52, 12.0], ["Agadez", 7.99, 16.97], ["Ghat", 10.17, 24.96], ["Murzuq", 13.92, 25.92], ["Tripoli", 13.19, 32.89]] },
+  { id: "n1", from: "Iferouane", t0: 0, t1: 26, w: 42, R: 119, towns: [["Iferouane", 8.42, 19.07, 0.8], ["Ghat", 10.17, 24.96], ["Murzuq", 13.92, 25.92], ["Tripoli", 13.19, 32.89]] },
   { id: "n2", from: "Timbuktu", t0: 4, t1: 30, w: 42, R: 119, towns: [["Timbuktu", -3.0, 16.77], ["Taoudenni", -3.98, 22.68], ["Sijilmasa", -4.27, 31.28], ["Fez", -5.0, 34.03]] },
   { id: "n3", from: "Tripoli", t0: 28, t1: 31, w: 35, R: 98, towns: [["Tripoli", 13.19, 32.89], ["Tunis", 10.18, 36.8], ["Algiers", 3.06, 36.75]] },
   // ---- Constantinople across Europe to London (Lady Mary's road, the other way) ----
@@ -81,15 +82,17 @@ const build = () => {
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const L = cum[cum.length - 1];
     // a trail that leaves another trail's town starts no earlier than the stain's arrival there (cause first)
-    let t0 = t.t0;
+    // trail times are written on the delivered cut's clock ("spreads" = f2); Rev 1 plays them SHIFT frames later
+    let t0 = t.t0 + SHIFT;
+    const t1 = t.t1 + SHIFT;
     if (t.from) {
       const src = dots.get(t.from);
       if (!src) throw new Error(`spreadPlan: trail ${t.id} leaves ${t.from}, which no earlier trail reaches`);
       if (t.towns[0][0] !== t.from) throw new Error(`spreadPlan: trail ${t.id} must start at ${t.from}`);
       t0 = Math.max(t0, src.arrive);
     }
-    if (t.t1 <= t0) throw new Error(`spreadPlan: trail ${t.id} ends (f${t.t1}) before it starts (f${t0.toFixed(1)})`);
-    const at = (i: number) => t0 + ((t.t1 - t0) * cum[i]) / L;
+    if (t1 <= t0) throw new Error(`spreadPlan: trail ${t.id} ends (f${t1}) before it starts (f${t0.toFixed(1)})`);
+    const at = (i: number) => t0 + ((t1 - t0) * cum[i]) / L;
     t.towns.forEach(([name, , , size = 1], i) => {
       const a = at(i);
       const prev = dots.get(name);
@@ -104,6 +107,8 @@ const build = () => {
   }
   return { dots: [...dots.values()], segs };
 };
+/** Rev 1: the delivered cut's clock -> the 182 f slot (old "spreads" f2 -> f51, "Jenner" f71 -> f122) */
+export const SHIFT = 49;
 export const PLAN = build();
 export const DOTS = PLAN.dots;
 export const SEGS = PLAN.segs;
@@ -127,7 +132,7 @@ export const DOT_R = 8.4;
 // the orange: at the Berkeley dot, kindling on "Jenner" (first lit frame f71), a soft glow by "discovered" (f87)
 // ---------------------------------------------------------------------------
 export const BERKELEY = dotOf("Berkeley");
-export const KINDLE = { f0: 70, f1: 87 };
+export const KINDLE = { f0: 121, f1: 140 };
 
 // ---------------------------------------------------------------------------
 // the two labels: AFRICA over the West African source, FROM / CHINA (stacked) ON the incoming line, a little west of
@@ -136,10 +141,10 @@ export const KINDLE = { f0: 70, f1: 87 };
 // before the camera's move would carry it into a caption band or out of the frame (state from its screen position).
 // ---------------------------------------------------------------------------
 /** size: the font size in screen px at f0 (caps ~0.43 of it, ~34-36 px; the label is world space: it scales with the camera after) */
-export type GLabel = { text: string; pre?: string; lon: number; lat: number; size: number };
+export type GLabel = { text: string; pre?: string; lon: number; lat: number; size: number; in: [number, number] };
 export const LABELS: GLabel[] = [
-  { text: "AFRICA", lon: 6.5, lat: 28, size: 84 },
-  { text: "CHINA", pre: "FROM", lon: 33, lat: 41.0, size: 78 },
+  { text: "AFRICA", lon: 6.5, lat: 28, size: 84, in: [0, 9] },
+  { text: "CHINA", lon: 32.0, lat: 40.0, size: 66, in: [22, 31] },
 ];
 
 // ---------------------------------------------------------------------------
