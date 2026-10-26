@@ -8,19 +8,22 @@
 // onto the shelf with everything else we know."
 //
 // THE LINE: "But then the beauty of cultural evolution is that we can store that information. [And]"
-// WORD -> FRAME (f0 = 68.001 s): then 2 · the 6 · BEAUTY 10 · of 23 · CULTURAL 29 · EVOLUTION 38 · is 50 · that 73 ·
-// we 77 · can 80 · STORE 83 · that 95 · INFORMATION 102 · (And 121) · end 131
-// DURATION: the slot 68.001 -> 72.372 s = 4.371 s x 29.97 = 131 frames (f0..f130).
+// WORD -> FRAME (REV1 re-cut clock, f0 = 67.100 s): But -4 · then 2 · the 6 · BEAUTY 10 · of 25 · CULTURAL 29 ·
+// EVOLUTION 38 · is 49 · that 74 · we 77 · can 80 · STORE 83 · that 95 · INFORMATION 101 · and 114 · end 131
+// DURATION: the slot (first cut 68.001 -> 72.372 s; same 131 f in the re-cut) = 4.371 s x 29.97 = 131 frames (f0..f130).
 //
 // THE MOTION: near the front of the library, beside the first bookcase, Jenner holds his book open toward us, its pages
 // glowing orange with the discovery (their light on his face and hands). On "beauty of cultural evolution" (f8-42) he
-// closes it: the light squeezes into a bright seam round the boards. He turns in place to the bookcase (yaw -0.72 ->
-// -2.32, f34-70, his head leading), the book turning spine-out on the fingers of his near (left) hand, lifts it to the
+// closes it: the light squeezes into a bright seam round the boards. REV1 ("a lot of glitching as he's doing the movement"): he no longer turns through profile (the
+// cast swaps waistcoat front / coat back there); he eases from three-quarter front to a three-quarter toward the case
+// (yaw -0.72 -> -1.12, f36-74), stands closer to the slot (X -344) so his arm bends, his far hand leaves the cover
+// in behind the closed book and on behind his body (f40-61, hidden), the near hand slides under the book's tail
+// (f40-54) and the book turns spine-out on it in one slow continuous turn (f44-82) while it rises, lifts it to the
 // free slot at shoulder height (f50-82) and on STORE slides it home: the hand moves onto the spine's lower third
 // (f70-80; contact f80), the spine moves from f82 (first reaction), home f99 by INFORMATION; a soft shadow on the
 // spines to its right, as wide as the depth still to go, shows the push. His hand lets go (f100-108) and comes back to
-// his chest (f104-128, above the caption band) while he steps back half a pace to the right (f106-124, out of
-// shot but a coat edge); the spine (a warm orange binding lit from within, two thin darker bands, the light leaking at
+// his chest (f104-128, above the caption band) while he steps back half a pace to the right (f104-126, out of
+// shot by f130: the last frame is the book alone in its row); the spine (a warm orange binding lit from within, two thin darker bands, the light leaking at
 // its head and tail onto its neighbours) glows at the frame's centre among dozens of others (f100-130, a living frame: the glow breathing, motes, a slow creep). The far hand lets go of the book at
 // f44-58 and hangs behind his body. The camera is ONE move (libraryWorld STORE_CAM: one even tapered-cosine lobe f14-122, plateau f47-89, a creep
 // at both ends): a medium shot on Jenner (~670 px tall) and the open book (k 2.05), pushing in and panning left with the
@@ -41,7 +44,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirShadow, AirStage, WorldSvg, c01, lerp } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { LIB_BLOOM, LibraryStage, ShelfGlow, STORE_LAST, VACCINE_SLOT, VB, VaccineBook, bookGrips, libraryAir, storeCamAt, vec3, type BookPose, type LibItem, type V3 } from "./libraryWorld";
-import { Jenner, breathe, standAt, vaccineAnchors, type VPose } from "./vaccineFolk";
+import { Jenner, breathe, standAt, vaccineAnchors, walkPose, type VPose } from "./vaccineFolk";
 
 export const FPS = 30000 / 1001;
 export const DURATION = 131;
@@ -60,19 +63,19 @@ const { add3, mul3, norm3, cross3 } = vec3;
 // ---------------------------------------------------------------------------------------------------------------------
 export const BEAT = {
   close: [8, 42] as const, // the book closes (beauty .. evolution)
-  turn: [34, 70] as const, // the body turns to the case; the book turns spine-out
+  turn: [36, 74] as const, // the body eases a little further toward the case (three-quarter, never through profile)
+  carry: [40, 66] as const, // the closed book comes to his left front
+  spin: [44, 82] as const, // the book turns spine-out in his hand
   lift: [50, 82] as const, // up to the slot, sticking out by its depth
   contact: 80, // the hand on the spine
   slide: [82, 99] as const, // STORE 83: the push, home by INFORMATION 102
   release: [100, 108] as const,
-  lower: [104, 128] as const,
+  lower: [99, 112] as const, // the arm down to his side, elbow first
 };
 /** Jenner's feet */
-export const JENNER = { X: -322, Z: -66 };
+export const JENNER = { X: -344, Z: -66 };
 /** his queue's ribbon in a muted slate (the cast's near-black bow reads as a moustache from behind at this size) */
 const JENNER_INKS = { ribbon: "#56606C" };
-/** where his left hand comes to rest after shelving: at his chest, his own left lapel */
-const LAPEL: V3 = [-342, -236, -84];
 
 // the book's frame from yaw psi (the fore-edge direction about the vertical: 0 = +Z into the hall, PI = toward us,
 // + toward +X) and tilt tau (the fore-edge lifted toward up)
@@ -93,16 +96,18 @@ export const bookAt = (f: number) => {
   const sl = smooth((f - BEAT.slide[0]) / (BEAT.slide[1] - BEAT.slide[0]));
   // orientation: shown open toward us, tipped back (psi ~ PI + 0.25: a little to screen left, tau 0.62) -> spine-out,
   // upright (psi 2 PI: the fore-edge into the shelf), turning the way his body turns
-  const psi = lerp(Math.PI + 0.22, 2 * Math.PI, tn);
-  const tau = lerp(0.66, 0, smooth((f - BEAT.turn[0] - 4) / (BEAT.turn[1] - BEAT.turn[0] - 4)));
+  const sp = smooth((f - BEAT.spin[0]) / (BEAT.spin[1] - BEAT.spin[0]));
+  const psi = lerp(Math.PI + 0.22, 2 * Math.PI, sp);
+  const tau = lerp(0.66, 0, sp);
   const fr = frameOf(psi, tau);
   // the spine's centre: in front of him at waist-chest height, then to his left front, then up to the slot
   const S = VACCINE_SLOT;
-  const pHold: V3 = [-352, -212, -128];
-  const pSide: V3 = [-382, -228, -104];
+  const pHold: V3 = [-374, -212, -128];
+  const pSide: V3 = [-398, -228, -104];
   const pSlot: V3 = [S.X, S.Y - VB.h / 2, S.Z - VB.d];
   const pHome: V3 = [S.X, S.Y - VB.h / 2, S.Z];
-  let c: V3 = add3(mul3(pHold, 1 - tn), mul3(pSide, tn));
+  const cr = smooth((f - BEAT.carry[0]) / (BEAT.carry[1] - BEAT.carry[0]));
+  let c: V3 = add3(mul3(pHold, 1 - cr), mul3(pSide, cr));
   // the lift arcs a little up before it settles in front of the slot
   const arc = Math.sin(Math.PI * lf) * 8;
   c = add3(mul3(c, 1 - lf), mul3(pSlot, lf));
@@ -121,19 +126,34 @@ export const bookAt = (f: number) => {
 const P2of = (A: ReturnType<typeof libraryAir>, p: V3): [number, number] => A.P.p(p[0], p[1], p[2]);
 export const jennerPose = (f: number): VPose => {
   const tn = smooth((f - BEAT.turn[0]) / (BEAT.turn[1] - BEAT.turn[0]));
-  const yaw = lerp(-0.72, -2.32, tn);
+  // REV1: a small, slow turn that stays three-quarter (the cast swaps the waistcoat front and the coat back as a figure
+  // passes profile, |yaw| ~1.3; so he never gets there)
+  const yaw = lerp(-0.72, -1.12, tn);
   // the head: down to the pages, up a little as the book closes, leading the turn, then up to the slot
-  const lead = -0.34 * Math.sin(Math.PI * smooth((f - BEAT.turn[0] + 6) / (BEAT.turn[1] - BEAT.turn[0])));
+  const lead = -0.12 * Math.sin(Math.PI * smooth((f - BEAT.turn[0] + 6) / (BEAT.turn[1] - BEAT.turn[0])));
   const pitch = lerp(16, 4, smooth((f - 24) / 22)) - 8 * smooth((f - 58) / 24) + 4 * smooth((f - 104) / 20);
   const q: VPose = { ...standAt(yaw), headYaw: yaw + lead - 0.06, pitch, look: [0, lerp(0.5, 0, smooth((f - 22) / 20))] };
-  const st = stepT(f);
-  const dip = 3.2 * Math.sin(Math.PI * st);
-  return breathe({ ...q, crouch: q.crouch + dip, lean: q.lean - 2.5 * Math.sin(Math.PI * st) }, f, 0.8, 2);
+  // REV1b: the step back is a real step: the cast's walk cycle run backwards (one cycle = two planted steps of
+  // WALK_STRIDE), his feet advancing exactly with `at` (jennerPos), the weight shifting with the cycle's own bob and a
+  // small lean back against the direction of travel
+  const p = stepP(f);
+  const amt = smooth(p / 0.2) * smooth((1 - p) / 0.2);
+  const qq = amt > 0.001 ? walkPose(q, 1 - p, amt) : q;
+  return breathe({ ...qq, lean: qq.lean + 2 * amt }, f, 0.8, 2);
 };
-/** after letting go he steps back half a pace to the right (f106-124), out of the book's way */
-export const STEP = { f: [106, 124] as const, dX: 44, dZ: -12 };
-const stepT = (f: number) => smooth((f - STEP.f[0]) / (STEP.f[1] - STEP.f[0]));
-export const jennerPos = (f: number) => ({ X: JENNER.X + STEP.dX * stepT(f), Z: JENNER.Z + STEP.dZ * stepT(f) });
+/** after letting go he steps back to the right (f102-126): one walk cycle backwards = 2 x 44 units, out of shot */
+export const STEP = { f: [102, 126] as const, dX: 88, dZ: 0 };
+/** the step's progress: an even pace with short soft ends (the feet stay planted: x follows it exactly) */
+const stepP = (f: number) => {
+  const [a, b] = STEP.f;
+  const x = c01((f - a) / (b - a));
+  const r = 0.16;
+  // trapezoid velocity (ramps of r at each end), integrated and normalised
+  const area = 1 - r;
+  const pos = x < r ? (x * x) / (2 * r) : x > 1 - r ? 1 - r - ((1 - x) * (1 - x)) / (2 * r) : x - r / 2;
+  return c01(pos / area);
+};
+export const jennerPos = (f: number) => ({ X: JENNER.X + STEP.dX * stepP(f), Z: JENNER.Z + STEP.dZ * stepP(f) });
 export const jennerAt = (A: ReturnType<typeof libraryAir>, f: number) => {
   const p = jennerPos(f);
   return A.P.at(p.X, p.Z);
@@ -151,22 +171,29 @@ export const jennerGrips = (A: ReturnType<typeof libraryAir>, f: number, B: Retu
   // carrying: from the cover's edge to under the book's tail (the book rides on his fingers, its spine and the glowing
   // head in view above the hand), then onto the spine's lower third for the push
   const tail: V3 = vec3.add3(vec3.add3(B.pose.c, vec3.mul3(B.pose.ey, -VB.h * 0.5)), vec3.mul3(B.pose.ez, VB.d * 0.22));
-  const toTail = smooth((f - 46) / 16);
+  const toTail = smooth((f - 40) / 14);
   const onSpine = smooth((f - 70) / (BEAT.contact - 70));
   let R = mixP(mixP(P2of(A, g.L), P2of(A, tail), toTail), P2of(A, spineFront), onSpine);
-  // the release: off the spine toward us and down, then back to his side
-  const rel = smooth((f - BEAT.release[0]) / (BEAT.release[1] - BEAT.release[0]));
+  // REV1b, the release: the hand lifts off the spine and the arm comes down to his side in one eased arc, elbow first
+  // (the hand first draws back toward his body, then drops), f99-112; after that the arm hangs free (no grip)
   const low = smooth((f - BEAT.lower[0]) / (BEAT.lower[1] - BEAT.lower[0]));
-  const off: [number, number] = [8 * scale, 10 * scale];
-  R = mixP(R, [R[0] + off[0], R[1] + off[1]], rel);
-  // then the hand comes back to his chest (his own left lapel), staying above the caption band, leaving the frame right
-  // (a fixed world point in front of his left breast, high enough to stay above the y 1080 caption band at the end)
-  const lapel = P2of(A, [LAPEL[0] + STEP.dX * stepT(f), LAPEL[1], LAPEL[2] + STEP.dZ * stepT(f)]);
-  R = [lerp(R[0], lapel[0], smooth(low * 1.25)), lerp(R[1], lapel[1], low)];
+  let Rg: [number, number] | undefined = R;
+  if (low > 0) {
+    const P0 = R;
+    const T = rest.handR;
+    const C: [number, number] = [lerp(P0[0], T[0], 0.72), lerp(P0[1], T[1], 0.22)];
+    const u = low;
+    Rg = [(1 - u) * (1 - u) * P0[0] + 2 * u * (1 - u) * C[0] + u * u * T[0], (1 - u) * (1 - u) * P0[1] + 2 * u * (1 - u) * C[1] + u * u * T[1]];
+    if (low >= 0.999) Rg = undefined;
+  }
   // his right (armL, the far hand): on the +ex cover until the book is closed, then back to his side
-  const letGo = smooth((f - 44) / 14);
-  const L = mixP(P2of(A, g.R), rest.handL, letGo);
-  return { L: letGo < 0.999 ? L : undefined, R };
+  // REV1: it goes back behind his body (hidden by the torso: his back is to the screen right) instead of hanging at the
+  // front edge of the waistcoat, where it would cross the caption bands as the camera pushes in
+  const behind: [number, number] = [rest.hip[0] + 20 * scale, rest.hip[1] - 14 * scale];
+  // the path: off the cover in behind the closed book (it hides the hand), then on behind his body
+  const bookMid = P2of(A, vec3.add3(B.pose.c, vec3.mul3(B.pose.ez, VB.d * 0.5)));
+  const L = mixP(mixP(P2of(A, g.R), bookMid, smooth((f - 40) / 10)), behind, smooth((f - 49) / 12));
+  return { L, R: Rg };
 };
 
 /** this cut's own items (Jenner, his shadow, the book, its glow and shadow, the pages' light) at cut frame `frame`,
