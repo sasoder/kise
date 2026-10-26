@@ -36,7 +36,7 @@ export const BOWL_Y = -94;
 export const XS = 460; // column spacing
 export const ZS = 600; // potter spacing along a column
 export const COL_MIN = -9;
-export const COL_MAX = 12;
+export const COL_MAX = 4;
 export const ROW_MAX = 17;
 /** rows in front of the artisan (none in his own column: the aisle that leads the eye back to him) */
 export const ROW_MIN = -4;
@@ -56,7 +56,7 @@ export const BOARDS = { zs: [-900, -1500, -2100, -2700], len: 240, bowls: 4, dx:
 export const boardXs = (Z: number, x0: number, x1: number) => {
   if (Z === -450) return [56];
   const out: number[] = [];
-  for (let X = 56 + Math.ceil((x0 - 56) / BOARDS.dx) * BOARDS.dx; X <= x1; X += BOARDS.dx) {
+  for (let X = 56 + Math.ceil((x0 - 56) / BOARDS.dx) * BOARDS.dx; X <= Math.min(x1, 1900); X += BOARDS.dx) {
     if (Z === -330 && X + BOARDS.len / 2 > -20 && X - BOARDS.len / 2 < 190) continue;
     out.push(X + (Z === -330 ? 0 : ((Math.round(Z / 600) % 2) * BOARDS.dx) / 2));
   }
@@ -64,7 +64,7 @@ export const boardXs = (Z: number, x0: number, x1: number) => {
 };
 /** the cart of crated bowls leaving along the lane before the stacking yard (a man pushing it, constant pace) */
 export const CART = { Z: 1650, X0: 900, stride: 30, cycle: 40 };
-export const cartX = (f: number, xk: number) => xk + CART.X0 + ((2 * CART.stride) / CART.cycle) * f;
+export const cartX = (f: number, x0: number) => x0 + ((2 * CART.stride) / CART.cycle) * f;
 /** the plaza kept clear of potters (the steps, the kiln and a margin) */
 export const plazaHas = (X: number, Z: number, XK: number) => {
   const d = Math.abs(X - XK);
@@ -123,6 +123,74 @@ const C_A = camEnd(CAM.k0, CAM.s0);
 const C_B = camEnd(CAM.k1, CAM.s1);
 export const camOf = (p: number): Cam => ({ k: kAt(p), cx: mix(C_A.cx, C_B.cx, p), cy: mix(C_A.cy, C_B.cy, p * p) });
 export const depthOf = (p: number): DepthOpts => ({ eyeY: eyeAt(p), dRef: CAM.dRef, kRef: CAM.k1, dolly: CAM.dolly });
+// ---------------------------------------------------------------------------
+// REV 1: after the pull-back (kept as it was through ~f130) the camera pans sideways past the kiln to the quay, where
+// the district's output ships out. One continuous move: the pull-back's speed fades out (f140-195) while the pan runs
+// (f126-188, smootherstep), then a slow push-in on the crates to the cut.
+// ---------------------------------------------------------------------------
+/** rev 1b: the landing is low and oblique (the eye ~2.6 m, the horizon at y ~850) so towers, ship and people stand up */
+export const PAN = { f0: 126, f1: 194, cxLand: 3650, cyLand: -470 + 150 / 1.0, eyeLand: -470, push: 0.2 };
+const smoother = (v: number) => {
+  const u = Math.max(0, Math.min(1, v));
+  return u * u * u * (u * (6 * u - 15) + 10);
+};
+const LK: number[] = (() => {
+  const out: number[] = [];
+  let lk = Math.log(kAt(camP(0)));
+  for (let f = 0; f <= DURATION + 2; f++) {
+    out.push(lk + PAN.push * smoother((f - 150) / 105));
+    const v = Math.log(kAt(camP(f + 1))) - Math.log(kAt(camP(f)));
+    const w = f < 140 ? 1 : f > 195 ? 0 : 0.5 * (1 + Math.cos((Math.PI * (f - 140)) / 55));
+    lk += v * w;
+  }
+  return out;
+})();
+const lkAt = (f: number) => {
+  const i = Math.max(0, Math.min(LK.length - 2, Math.floor(f)));
+  return mix(LK[i], LK[i + 1], f - i);
+};
+/** the camera (2D centre and zoom) and its depth (the eye) at frame f */
+export const camAtF = (f: number): { cam: Cam; depth: DepthOpts } => {
+  const p = camP(f);
+  const old = camOf(p);
+  const sp = smoother((f - PAN.f0) / (PAN.f1 - PAN.f0));
+  const sv = smoother((f - PAN.f0) / (200 - PAN.f0));
+  return {
+    cam: { k: Math.exp(lkAt(f)), cx: mix(old.cx, PAN.cxLand, sp), cy: mix(old.cy, PAN.cyLand, sv) },
+    depth: { eyeY: mix(eyeAt(p), PAN.eyeLand, sv), dRef: CAM.dRef, kRef: CAM.k1, dolly: CAM.dolly },
+  };
+};
+
+/** the quay where the output ships out: a paved deck (the floor) to a stone quay wall, the river beyond, a barge */
+export const QUAY = { deck0: 2250, wall: 3350, wallW: 110, water: 80, river1: 15000, barge: { x0: 3530, x1: 4210, z0: -700, z1: 3700, deck: 30 } };
+/** the corbita moored along the quay: centre line xc, half beam B, bow z0 (near), stern z1; deck at the sheer */
+/** the corbita moored stern-to the quay, lying across the view: centre line Z zc, stern xs at the quay, bow xb out in
+ *  the river, half beam B; the deck at the sheer; the gangplank runs along the centre line onto the stern */
+export const SHIP = { zc: 480, xs: 3560, xb: 6100, B: 380, deck: -70, mastX: 4170, mastTop: -1750 };
+/** towers of crates packed with stacked bowls on the deck: rows along the quay */
+export const TOWERS = { xs: [2430, 2730, 3030], z0: 0, z1: 5120, dz: 320, levels: 3 };
+/** dock workers carrying crates toward the barge (constant pace, planted feet) */
+export const DOCKERS: Carrier[] = [
+  // the foreground pair at the gangplank (one already climbing it) and one on the near lane
+  { Z: 480, X0: 2800, dir: 1, ph: 0.15, variant: 2 },
+  { Z: 480, X0: 2580, dir: 1, ph: 0.6, variant: 1 },
+  // in front of the first row of towers, on the open paving
+  { Z: 160, X0: 2440, dir: 1, ph: 0.35, variant: 2 },
+  // the rest further along the quay
+  { Z: 2080, X0: 2380, dir: 1, ph: 0.85, variant: 2 },
+  { Z: 2720, X0: 2460, dir: 1, ph: 0.5, variant: 2 },
+];
+/** the gangplank: from the quay's edge (X0, on the wall's coping) up to the ship's rail (X1) */
+export const PLANK_RUN = { X0: 3300, X1: 3600, Y0: -14, Y1: -160 };
+/** the height a walker stands at: on the plank between its ends, else the quay */
+export const standY = (X: number, Z: number) => (Math.abs(Z - SHIP.zc) < 1 ? (X <= PLANK_RUN.X0 ? 0 : PLANK_RUN.Y0 + ((PLANK_RUN.Y1 - PLANK_RUN.Y0) * Math.min(1, (X - PLANK_RUN.X0) / (PLANK_RUN.X1 - PLANK_RUN.X0)))) : 0);
+/** the cart line coming down the near road to the quay */
+export const CARTS = [
+  { Z: 3680, X0: 2050 },
+  { Z: 4320, X0: 1850 },
+  { Z: 4960, X0: 2000 },
+];
+
 /** the kiln stands on the camera's end centre line: the vanishing point lands on it */
 export const XK = camOf(1).cx;
 /** the kiln's cut face (the smoke and the painter's order key on it) */
@@ -184,7 +252,6 @@ export const CARRIERS: Carrier[] = [
   { Z: 900, X0: -1300, dir: 1, ph: 0.65, variant: 2 },
   { Z: 1500, X0: 2450, dir: -1, ph: 0.8, variant: 2 },
   { Z: 1500, X0: -1900, dir: 1, ph: 0.2, variant: 2 },
-  { Z: 3300, X0: 3900, dir: -1, ph: 0.45, variant: 2 },
   { Z: 4500, X0: -3300, dir: 1, ph: 0.9, variant: 2 },
 ];
 export const carrierX = (c: Carrier, f: number) => c.X0 + c.dir * WALK_V * f;

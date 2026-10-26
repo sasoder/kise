@@ -14,34 +14,32 @@
 // moved 154 · from 164 · artisanal 172 · to 200 · sort 206 · of 211 · industrial 217 · scale 236 · But 258 (on camera)
 // DURATION: the slot 65.165 -> 73.941 s = 8.776 s x 29.97 = 263 frames (f0..f262).
 //
-// THE MOTION: one continuous, even pull-back and rise from f0 (one speed lobe: a gentle start, an even plateau f55-165,
-// a long settle into a creep; zoom 4.2 -> 0.46). f0-92 close on ONE potter at his kick wheel, his hands and the rising
-// bowl at the frame's middle (bowl y ~950), riding up its wall as the terracotta bowl rises out of the lump in three
-// pulls (the artisan); a row of his finished bowls in the foreground, the district behind him only air. f80-172 the rise
-// lifts the identical potters behind him out from behind his back and the neighbouring columns come in from the sides:
-// column after column of identical men at identical wheels, boards of drying bowls between them, carriers walking boards
-// of bowls on their heads toward the kiln; the kiln emerges out of the air. f172-252 the pull-back reaches the whole
-// district: every column converges on one great barrel-vaulted brick kiln at the vanishing point, its front cut away to
-// show the load inside (tiers of tall columns of nested bowls), the stoke hole glowing deep red-brown at its foot, smoke
-// from its chimney, rows of tall stacks of upturned bowls around and in front of it, a handcart of crated bowls leaving;
-// the full reveal lands on "industrial scale" (f217-252). The artisan ends as the first man of the central column
-// (bowl x 560, y ~1045; his face <= 997 and hands <= 1051, out of the caption bands on every frame), dimmed 15 %.
-// f252-262 settled and alive (wheels, pulls, carriers, cart, smoke, the camera's creep).
+// THE MOTION (Rev 1, Oct 26: "not much going on ... then maybe it can pan to the side and something else shows"):
+// one continuous camera. f0-~135 as approved: close on ONE potter at his kick wheel (bowl y ~950), the terracotta bowl
+// rising under his hands in three pulls, then the even pull-back and rise: the identical potters behind him, columns
+// of identical men at identical wheels, boards of drying bowls, carriers, the great cutaway brick kiln with its load of
+// stacked bowls emerging out of the air. From f126 the pull-back fades out while the camera pans sideways (f126-194,
+// smootherstep), past the kiln, and comes down low and oblique (eye ~2.6 m) onto the quay where the output ships out:
+// towers of open crates packed with the kiln's stacked bowls marching back along the quay into the haze, dockers
+// carrying crates on their heads up a gangplank onto a Roman merchant ship (corbita) moored stern-to, lying across the
+// view: curved dark hull on a level waterline, planks and wale, a short dim rippled reflection, the swan-neck stern
+// post, its cargo of the same crates inside its rails, mast and half-furled sail. A slow push-in lands "industrial
+// scale" (f217-236); f236-262 settled and alive (walkers, ripples, the creep).
 // BEATS: f0 the lump under his hands · f41 "scale" the bowl half drawn · f92 "and" the bowl finished, the first
-// clones showing in the air · f130 rows on both sides, the kiln emerging · f172 "artisanal" the kiln and its load clear ·
-// f217 "industrial" the district whole · f252 settled.
-// CAUSE BEFORE EFFECT: the bowl grows only while his hands ride up its wall (heroRise / heroForm share the pulls).
+// clones showing · f120 the district, the kiln emerging · f150 the pan past the kiln · f180 arriving at the quay ·
+// f217 "industrial" the quay, the ship, the crates · f236 "scale" · f262 settled.
+// CAUSE BEFORE EFFECT: the bowl grows only while his hands ride up its wall (heroRise / heroForm share the pulls); the
+// walkers' feet are planted (constant pace), the gangplank rests on the quay's coping and the ship's stern.
 // No orange in this cut (the clip rule: orange = technology; this scale is organisation, not a new machine). Clay and
-// bowls terracotta red-brown (rims a lighter highlight), the kiln's brick a duller umber red-brown, the stoke hole a deep
-// red-brown glow at most; people never orange.
+// bowls terracotta red-brown (rims a lighter highlight), brick a duller umber red-brown, the stoke hole a deep
+// red-brown glow at most; people never orange. Faces stay out of the caption bands where they settle (the potter's
+// face <= 997 and hands <= 1051 through the pull-back; the dockers' faces settle at y ~810-980).
 //
-// DEPTH: londonDepth with dRef 3000 at kRef 0.46, dolly 0.6 (Dc ~790 at f0 -> 3000 at the end); the 2D centre moves
-// straight (cx on p, cy on p^2) so the vanishing point never swings; the eye rises on p^1.6 from 0.45 m (below the
-// bowl: the clones behind him stay behind his back) to 5.6 m. Fog by world depth, its reach growing with the pull-back
-// (fogVisAt / fogMaxAt / figVisAt: in the close-up the district dissolves completely). The artisan at X 0, Z 0;
-// columns every 460 along X, potters every 600 along Z (none in front of him); boards of drying bowls in rows between
-// the near rows; the stacking yard Z 1850-2650 (a lane up the middle) and beside the kiln to Z 5000; the kiln's cut face
-// at Z 2900, its back wall 4300, centred on the camera's end line. The lower frame sinks into the dense low air (LowAir).
+// DEPTH: londonDepth with dRef 3000 at kRef 0.46, dolly 0.6; camAtF (artisanalPlan): the approved pull-back for
+// f0-~140, then the pan's blend to the quay landing (cx 3650, eye -470, zoom ~0.93). Fog by world depth, its reach
+// growing with the pull-back. The artisan at X 0, Z 0; potter columns every 460 (to X 1840), rows every 600; the
+// kiln's cut face Z 2900 on the camera's pull-back end line; the quay: deck from X 2250, the wall at 3350, the river
+// beyond; crate towers at X 2430-3030 from Z 0 to 5120; the ship's centre line Z 480, stern X 3560, bow 6100.
 //
 // SOURCES (illustrative; nothing on screen): La Graufesenque (southern Gaul, 1st c. AD): terra sigillata workshops
 // sharing huge kilns; the potters' firing lists scratched on plates record single firings of ~25,000-35,000 vessels
@@ -59,6 +57,13 @@ import {
   DURATION as PLAN_DURATION,
   BOARDS,
   CART,
+  CARTS,
+  DOCKERS,
+  PLANK_RUN,
+  QUAY,
+  SHIP,
+  standY,
+  TOWERS,
   boardXs,
   cartX,
   KILN,
@@ -71,10 +76,9 @@ import {
   XS,
   YARD_STACKS,
   ZS,
-  camOf,
+  camAtF,
   camP,
   carrierX,
-  depthOf,
   ease,
   fogMaxAt,
   figMaxAt,
@@ -445,7 +449,7 @@ const yardRows = (() => {
   const Y = YARD_STACKS;
   let k = 0;
   for (let Z = Y.z0; Z <= Y.z1; Z += Y.dz, k++) rows.push({ Z, Xs: stackXs(XK - Y.half, XK + Y.half, Y.dx, k % 2 ? Y.dx / 2 : 0, (X) => Math.abs(X - XK) < Y.lane) });
-  for (let Z = Y.side.z0; Z <= Y.side.z1; Z += Y.side.dz, k++) rows.push({ Z, Xs: stackXs(XK - Y.side.x1, XK + Y.side.x1, Y.dx, k % 2 ? Y.dx / 2 : 0, (X) => Math.abs(X - XK) < Y.side.x0) });
+  for (let Z = Y.side.z0; Z <= Y.side.z1; Z += Y.side.dz, k++) rows.push({ Z, Xs: stackXs(XK - Y.side.x1, XK + Y.side.x1, Y.dx, k % 2 ? Y.dx / 2 : 0, (X) => Math.abs(X - XK) < Y.side.x0 || X > XK + 2000) });
   return rows;
 })();
 
@@ -487,10 +491,10 @@ const Smoke: React.FC<{ A: AirWorld; f: number }> = ({ A, f }) => {
 // ---------------------------------------------------------------------------
 // THE CART: two crates of finished bowls on a handcart, pushed away along the lane before the stacking yard
 // ---------------------------------------------------------------------------
-const CartArt: React.FC<{ A: AirWorld; f: number }> = ({ A, f }) => {
+const CartArt: React.FC<{ A: AirWorld; f: number; Z: number; X0: number; uid: string }> = ({ A, f, Z: Zc, X0, uid }) => {
   const P = A.P;
-  const Z = CART.Z;
-  const Xf = cartX(f, XK);
+  const Z = Zc;
+  const Xf = cartX(f, X0);
   const { at, scale } = P.at(Xf, Z);
   const pose = RomeFolk.POSES.push(1, f / CART.cycle, 1);
   const t = (hex: string, h = 120) => A.tone(hex, Z, h);
@@ -529,35 +533,39 @@ const CartArt: React.FC<{ A: AirWorld; f: number }> = ({ A, f }) => {
 // ---------------------------------------------------------------------------
 // THE CARRIERS (a board of drying bowls on the near shoulder)
 // ---------------------------------------------------------------------------
-const CarrierArt: React.FC<{ A: AirWorld; c: Carrier; f: number }> = ({ A, c, f }) => {
+const CarrierArt: React.FC<{ A: AirWorld; c: Carrier; f: number; crate?: boolean }> = ({ A, c, f, crate }) => {
   const P = A.P;
   const X = carrierX(c, f);
-  const { at, scale } = P.at(X, c.Z);
+  const at = P.p(X, standY(X, c.Z), c.Z);
+  const scale = P.r(c.Z);
   const pose = RomeFolk.POSES.carry(c.dir, f / WALK_CYCLE + c.ph, 1);
   const an = RomeFolk.romeAnchors("slave", pose, at, scale, { variant: c.variant });
   // the board rides on his head (the near hand up at its edge steadying it), clear of his face
   const L = an.headTop as P2;
-  const len = 200 * scale;
-  const th = 9 * scale;
-  const bx0 = L[0] - len * 0.5 - c.dir * 22 * scale;
+  const len = (crate ? 150 : 200) * scale;
+  const th = (crate ? 62 : 9) * scale;
+  const bx0 = L[0] - len * 0.5 - c.dir * (crate ? 10 : 22) * scale;
   const by = L[1] - th + 3 * scale;
+  void crate;
   // the near hand under the board's leading half (the near arm is L facing right, R facing left)
-  const hold: P2 = [L[0] + c.dir * 34 * scale, by + th + 7 * scale];
+  const hold: P2 = [L[0] + c.dir * (crate ? 40 : 34) * scale, by + th + (crate ? 2 : 7) * scale];
   const grip = c.dir > 0 ? { L: hold } : { R: hold };
   const t = (hex: string) => A.tone(hex, c.Z, 280);
   let bowls = "";
   let mouths = "";
-  for (let i = 0; i < 4; i++) {
-    const cx = bx0 + len * (0.14 + 0.24 * i);
+  const nb = crate ? 3 : 4;
+  for (let i = 0; i < nb; i++) {
+    const cx = bx0 + len * (crate ? 0.19 + 0.31 * i : 0.14 + 0.24 * i);
     const s = scale;
     bowls += `M${n2(cx - 13 * s)},${n2(by)}Q${n2(cx - 24 * s)},${n2(by - 8 * s)} ${n2(cx - 25 * s)},${n2(by - 24 * s)}L${n2(cx + 25 * s)},${n2(by - 24 * s)}Q${n2(cx + 24 * s)},${n2(by - 8 * s)} ${n2(cx + 13 * s)},${n2(by)}Z`;
     mouths += ellD(cx, by - 24 * s, 25 * s, 6 * s);
   }
   return (
     <g>
-      <AirShadow A={A} X={X} Z={c.Z} w={58} d={28} uid={`cs${c.Z}${c.X0}`} amt={0.7} />
+      <AirShadow A={A} X={X} Z={c.Z} Y={standY(X, c.Z)} w={58} d={28} uid={`cs${c.Z}${c.X0}`} amt={0.7} />
       <RomeFolk.Slave pose={pose} at={at} scale={scale} uid={`cr${c.Z}${c.X0}`} variant={c.variant} inks={{ tunic: "#94826A" }} grip={grip} fog={A.folkFog(c.Z)} unitPx={A.k} />
       <path d={`M${n2(bx0)},${n2(by)}h${n2(len)}v${n2(th)}h${n2(-len)}Z`} fill={t(PLANK.lit)} stroke={t("#3A2B1D")} strokeWidth={A.lw(1)} />
+      {crate ? <path d={`M${n2(bx0)},${n2(by + th * 0.5)}h${n2(len)}M${n2(bx0 + len * 0.5)},${n2(by)}v${n2(th)}`} stroke={t("#5A4330")} strokeWidth={A.lw(1.3)} /> : null}
       <path d={bowls} fill={t(CLAY.mid)} stroke={t(CLAY.line)} strokeWidth={A.lw(1)} />
       <path d={mouths} fill={t(CLAY.in)} stroke={t(CLAY.line)} strokeWidth={A.lw(1)} />
     </g>
@@ -626,6 +634,231 @@ const BoardRow: React.FC<{ A: AirWorld; Z: number; Xs: number[]; bare?: boolean 
   );
 };
 
+// ---------------------------------------------------------------------------
+// REV 1, THE QUAY: the river (water below the quay's edge), the stone quay wall, towers of open crates packed with
+// the same stacked bowls, a barge being loaded at a gangplank
+// ---------------------------------------------------------------------------
+const WATER = { lit: "#5E7F7A", mid: "#43625E" };
+const STONE: Mat = { lit: "#9B8B76", mid: "#6F6352", dark: "#3A3129" };
+const River: React.FC<{ A: AirWorld; f: number }> = ({ A, f }) => {
+  const P = A.P;
+  const x0 = QUAY.wall;
+  const x1 = QUAY.river1;
+  const Y = QUAY.water;
+  const zA = Math.max(-2600, P.zNear + 20);
+  const rA = P.r(zA);
+  const rB = P.r(16000);
+  const N = 60;
+  const Zof = (i: number) => P.Dc / mix(rA, rB, i / N) - P.Dc;
+  const bands: React.ReactNode[] = [];
+  for (let i = 0; i < N; i++) {
+    const za = Zof(i);
+    const zb = Zof(i + 1);
+    const zb2 = i < N - 1 ? zb + (zb - za) * 0.25 : zb;
+    const zm = (za + zb) / 2;
+    const melt = Math.pow(c01((zm - 9000) / 7000), 1.3);
+    bands.push(<path key={i} d={poly([P.p(x0, Y, za), P.p(x1, Y, za), P.p(x1, Y, zb2), P.p(x0, Y, zb2)])} fill={mixHex(A.tone(mixHex(WATER.mid, WATER.lit, c01(1 - zm / 6000) * 0.4), zm, 0), A.screenAir(P.p(0, 0, zm)[1]), melt)} />);
+  }
+  // the current: short light dashes drifting downstream (toward us), seeded in the world
+  let d = "";
+  for (let i = 0; i < 170; i++) {
+    const X = x0 + 120 + h01(i, 41) * 3600;
+    const Z0 = -2200 + Math.pow(h01(i, 43), 1.4) * 9000;
+    const Z = Z0 - ((f * 4 + h01(i, 47) * 900) % 900);
+    if (Z < zA + 50) continue;
+    const L = 60 + 80 * h01(i, 51);
+    d += `M${Pt(P.p(X - L / 2, Y, Z))}L${Pt(P.p(X + L / 2, Y, Z))}`;
+  }
+  return (
+    <g>
+      {bands}
+      <path d={d} fill="none" stroke="#C9D6CC" strokeWidth={A.lw(2)} strokeOpacity={0.3} strokeLinecap="round" />
+    </g>
+  );
+};
+const QuayWall: React.FC<{ A: AirWorld }> = ({ A }) => {
+  const z0 = Math.max(-2600, A.P.zNear + 30);
+  return <AirBox A={A} X0={QUAY.wall - QUAY.wallW} X1={QUAY.wall} Y0={-14} Y1={QUAY.water} Z0={z0} Z1={16000} mat={STONE} uid="qwall" lw={A.lw(1.2)} />;
+};
+
+/** an open crate (a timber cage) packed with three columns of the kiln's stacked bowls; Y = its floor */
+const CR = { W: 230, D: 160, H: 118, n: 7 };
+const Crate: React.FC<{ A: AirWorld; X: number; Y: number; Z: number }> = ({ A, X, Y, Z }) => {
+  const P = A.P;
+  const t = (hex: string) => A.tone(hex, Z, -Y + 60);
+  const x0 = X - CR.W / 2;
+  const x1 = X + CR.W / 2;
+  const zf = Z - CR.D / 2;
+  const zb = Z + CR.D / 2;
+  const yt = Y - CR.H;
+  const L = (a: [number, number, number], b: [number, number, number]) => `M${Pt(P.p(a[0], a[1], a[2]))}L${Pt(P.p(b[0], b[1], b[2]))}`;
+  const back = L([x0, Y, zb], [x0, yt, zb]) + L([x1, Y, zb], [x1, yt, zb]) + L([x0, yt, zb], [x1, yt, zb]) + L([x0, yt, zf], [x0, yt, zb]) + L([x1, yt, zf], [x1, yt, zb]);
+  const front = L([x0, Y, zf], [x0, yt, zf]) + L([x1, Y, zf], [x1, yt, zf]) + L([x0, yt, zf], [x1, yt, zf]) + L([x0, Y - 6, zf], [x1, Y - 6, zf]) + L([x0, Y - CR.H * 0.45, zf], [x1, Y - CR.H * 0.45, zf]);
+  const floor = poly([P.p(x0, Y, zf), P.p(x1, Y, zf), P.p(x1, Y, zb), P.p(x0, Y, zb)]);
+  const bw = 13 * P.r(Z);
+  return (
+    <g>
+      <path d={floor} fill={t(PLANK.mid)} />
+      <path d={back} stroke={t("#4A3626")} strokeWidth={bw} strokeLinecap="square" />
+      <StackRow A={A} Xs={[X - 72, X, X + 72]} Y={Y - 4} Z={Z} n={CR.n} />
+      <path d={front} stroke={t(PLANK.lit)} strokeWidth={bw} strokeLinecap="square" />
+      <path d={front} stroke={t("#3A2B1D")} strokeWidth={bw * 0.25} strokeOpacity={0.5} />
+    </g>
+  );
+};
+const Tower: React.FC<{ A: AirWorld; X: number; Z: number; levels: number; Y?: number }> = ({ A, X, Z, levels, Y = 0 }) => (
+  <g>
+    <AirShadow A={A} X={X} Z={Z} w={150} d={100} Y={Y} uid={`tw${X}_${Z}`} amt={0.6} />
+    {Array.from({ length: levels }, (_, k) => (
+      <Crate key={k} A={A} X={X} Y={Y - k * (CR.H + 3)} Z={Z} />
+    ))}
+  </g>
+);
+/** the corbita moored stern-to the quay (the Mediterranean way), lying across the view so its long side shows: a curved
+ *  dark hull on a level waterline (planks, wale, a short dim rippled reflection), the swan-neck stern post at the quay,
+ *  the cargo of the same crates inside its rails, the mast with its yard braced round and the half-furled sail */
+const Ship: React.FC<{ A: AirWorld; f: number; S: typeof SHIP; uid: string }> = ({ A, f, S, uid }) => {
+  const P = A.P;
+  const W = QUAY.water;
+  const hull = { lit: "#6A4A34", mid: "#4A3325", dark: "#2A1D15" };
+  const Xof = (u: number) => mix(S.xs, S.xb, u);
+  const hb = (u: number) => S.B * Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, u))), 0.5);
+  const sheer = (u: number) => S.deck - 95 * Math.pow(1 - u, 6) - 120 * Math.pow(u, 6);
+  const N = 48;
+  const us = Array.from({ length: N + 1 }, (_, i) => i / N);
+  const near = us.map((u): P2 => P.p(Xof(u), sheer(u), S.zc - hb(u)));
+  const far = us.map((u): P2 => P.p(Xof(u), sheer(u), S.zc + hb(u)));
+  const inW = us.filter((u) => u > 0.04 && u < 0.96);
+  const wl = inW.map((u): P2 => P.p(Xof(u), W, S.zc - hb(u) * 0.86));
+  const t = (hex: string, h = 100) => A.tone(hex, S.zc, h);
+  const lw = A.lw(1.2);
+  const ln = t(hull.dark);
+  const els: React.ReactNode[] = [];
+  // the reflection: a short dim mirror right under the waterline, broken into drifting strips
+  const rd = (u: number) => (W - sheer(u)) * 0.3;
+  const reflS = inW.map((u): P2 => P.p(Xof(u), W + rd(u), S.zc - hb(u) * 0.86));
+  const ry0 = Math.min(...wl.map((q) => q[1]));
+  const ry1 = Math.max(...reflS.map((q) => q[1]));
+  const rx0 = Math.min(...wl.map((q) => q[0])) - 20;
+  const rx1 = Math.max(...wl.map((q) => q[0])) + 20;
+  let strips = "";
+  const rN = 8;
+  for (let i = 0; i < rN; i++) {
+    const y = mix(ry0, ry1, (i + 0.5) / rN);
+    const sh = (6 * Math.sin(f / 9 + i * 1.7)) / A.k;
+    strips += `M${n2(rx0 + sh)},${n2(y)}L${n2(rx1 + sh)},${n2(y)}`;
+  }
+  els.push(
+    <g key="refl">
+      <defs>
+        <clipPath id={`${uid}refl`}>
+          <path d={`M${wl.map(Pt).join("L")}L${[...reflS].reverse().map(Pt).join("L")}Z`} />
+        </clipPath>
+      </defs>
+      <path d={strips} clipPath={`url(#${uid}refl)`} stroke={t("#22302E", 0)} strokeWidth={((ry1 - ry0) / rN) * 0.62} strokeOpacity={0.32} strokeDasharray={`${n2(90 / A.k)} ${n2(22 / A.k)}`} />
+    </g>,
+  );
+  // the deck (seen from just above) and the far rail
+  els.push(<path key="deck" d={`M${near.map(Pt).join("L")}L${[...far].reverse().map(Pt).join("L")}Z`} fill={t("#8C6E50")} stroke={ln} strokeWidth={lw} />);
+  els.push(<path key="farrail" d={`M${far.map(Pt).join("L")}`} fill="none" stroke={t(hull.mid)} strokeWidth={A.lw(4)} />);
+  // the cargo: two lines of towers inside the rails (far line first), where the hull holds them with room to spare
+  const cargo = (side: number) => {
+    const out: React.ReactNode[] = [];
+    for (let X = S.xs + 255; X <= S.xb - 380; X += 236) {
+      const u = (X - S.xs) / (S.xb - S.xs);
+      if (hb(u) < 95 + CR.D / 2 + 25) continue;
+      if (Math.abs(X - S.mastX) < 110) continue;
+      out.push(<Tower key={`${uid}${side}${X}`} A={A} X={X} Z={S.zc + side * 95} levels={2} Y={sheer(u) + 50} />);
+    }
+    return out;
+  };
+  els.push(...cargo(1));
+  // the mast, its yard braced round at an angle, the sail half furled on it
+  {
+    const yY = S.mastTop + 160;
+    const ang = 0.75;
+    const ya = P.p(S.mastX - 560 * Math.sin(ang), yY, S.zc - 560 * Math.cos(ang));
+    const yb = P.p(S.mastX + 560 * Math.sin(ang), yY, S.zc + 560 * Math.cos(ang));
+    const pt = (s: number, dy: number, dz = 0) => P.p(S.mastX + s * 520 * Math.sin(ang), yY + dy, S.zc + s * 520 * Math.cos(ang) + dz);
+    const r = P.r(S.zc);
+    let folds = "";
+    for (const s of [-0.6, -0.25, 0.1, 0.45]) folds += `M${Pt(pt(s, 30))}L${Pt(pt(s * 0.88, 300))}`;
+    const sail = t("#CFC3A8", 1600);
+    els.push(
+      <g key="mast">
+        <AirCyl A={A} X={S.mastX} Z={S.zc} R={22} Y0={S.mastTop} Y1={S.deck} mat={hull} uid={`${uid}mast`} lw={A.lw(1)} />
+        <path d={`M${Pt(pt(-1, 20))}L${Pt(pt(1, 20))}L${Pt(pt(0.85, 310))}Q${Pt(pt(0, 350))} ${Pt(pt(-0.85, 310))}Z`} fill={sail} stroke={t("#8E8068", 1600)} strokeWidth={A.lw(1)} />
+        <path d={folds} stroke={t("#A89A80", 1600)} strokeWidth={A.lw(1.2)} strokeOpacity={0.8} />
+        <path d={`M${Pt(ya)}L${Pt(yb)}`} stroke={t(hull.mid, 1700)} strokeWidth={20 * r} strokeLinecap="round" />
+        <path d={`M${Pt(pt(-1, 20))}Q${Pt(pt(0, 70))} ${Pt(pt(1, 20))}`} fill="none" stroke={sail} strokeWidth={40 * r} strokeLinecap="round" />
+      </g>,
+    );
+  }
+  els.push(...cargo(-1));
+  // the near side of the hull, over the cargo's feet: dark wood, plank lines, a lighter wale, the level waterline
+  const stemAt = (a: number, end: 0 | 1): P2 => {
+    const u = end;
+    const dx = (end === 0 ? -1 : 1) * 150 * (1 - Math.pow(Math.max(0, 1 - a), 2)) * 0.6;
+    return P.p(Xof(u) + dx - (end === 0 ? -1 : 1) * 90, mix(W, sheer(u), a), S.zc);
+  };
+  const sternUp = Array.from({ length: 9 }, (_, i) => stemAt(i / 8, 0));
+  const bowUp = Array.from({ length: 9 }, (_, i) => stemAt(1 - i / 8, 1));
+  const side = `M${near.map(Pt).join("L")}L${bowUp.map(Pt).join("L")}L${[...wl].reverse().map(Pt).join("L")}L${sternUp.map(Pt).join("L")}Z`;
+  let strakes = "";
+  for (const v of [0.35, 0.6, 0.82]) strakes += `M${inW.map((u) => Pt(P.p(Xof(u), mix(sheer(u) + 45, W, v), S.zc - hb(u) * mix(0.98, 0.86, v)))).join("L")}`;
+  const wale = inW.map((u): P2 => P.p(Xof(u), sheer(u) + 45, S.zc - hb(u) * 0.98));
+  const wy0 = Math.min(...near.map((q) => q[1]));
+  const wy1 = Math.max(...wl.map((q) => q[1]));
+  // the swan-neck stern post at the quay end, the stem at the bow
+  const post = (end: 0 | 1, h: number, curl: number) =>
+    Array.from({ length: 15 }, (_, i) => {
+      const a = i / 14;
+      const s = end === 0 ? -1 : 1;
+      return P.p(Xof(end) + s * (40 + 120 * Math.sin((a * Math.PI) / 2)) - s * curl * a * a * a, sheer(end) - h * Math.sin((a * Math.PI) / 2) - 40 * a * a, S.zc);
+    });
+  els.push(
+    <g key="side">
+      <defs>
+        <linearGradient id={`${uid}side`} gradientUnits="userSpaceOnUse" x1="0" y1={n2(wy0)} x2="0" y2={n2(wy1)}>
+          <stop offset="0" stopColor={t(hull.lit)} />
+          <stop offset="0.5" stopColor={t(hull.mid)} />
+          <stop offset="1" stopColor={t(hull.dark, 0)} />
+        </linearGradient>
+      </defs>
+      <path d={`M${post(0, 330, 140).map(Pt).join("L")}`} fill="none" stroke={t(hull.mid, 400)} strokeWidth={24 * P.r(S.zc)} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={`M${post(1, 220, 60).map(Pt).join("L")}`} fill="none" stroke={t(hull.mid, 300)} strokeWidth={24 * P.r(S.zc)} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={side} fill={`url(#${uid}side)`} stroke={ln} strokeWidth={lw} strokeLinejoin="round" />
+      <path d={strakes} fill="none" stroke={t(hull.dark)} strokeWidth={A.lw(1.2)} strokeOpacity={0.55} />
+      <path d={`M${wale.map(Pt).join("L")}`} fill="none" stroke={t("#8C6A4C")} strokeWidth={A.lw(3)} strokeOpacity={0.8} />
+      <path d={`M${near.map(Pt).join("L")}`} fill="none" stroke="#F3EBDD" strokeWidth={A.lw(1.6)} strokeOpacity={0.35 * (1 - A.fog(S.zc))} />
+      <path d={`M${wl.map(Pt).join("L")}`} fill="none" stroke="#C9D6CC" strokeWidth={A.lw(1.6)} strokeOpacity={0.45} />
+    </g>,
+  );
+  return <g>{els}</g>;
+};
+/** the gangplank: resting on the quay's coping and on the ship's rail */
+const Gangplank: React.FC<{ A: AirWorld }> = ({ A }) => {
+  const P = A.P;
+  const R = PLANK_RUN;
+  const Z = SHIP.zc;
+  const q = [P.p(R.X0 - 40, R.Y0, Z - 70), P.p(R.X1 + 30, R.Y1, Z - 70), P.p(R.X1 + 30, R.Y1, Z + 70), P.p(R.X0 - 40, R.Y0, Z + 70)];
+  const fr = [P.p(R.X0 - 40, R.Y0, Z - 70), P.p(R.X1 + 30, R.Y1, Z - 70), P.p(R.X1 + 30, R.Y1 + 14, Z - 70), P.p(R.X0 - 40, R.Y0 + 14, Z - 70)];
+  let cleats = "";
+  for (let i = 1; i < 6; i++) {
+    const u = i / 6;
+    const X = mix(R.X0 - 40, R.X1 + 30, u);
+    const Y = mix(R.Y0, R.Y1, u) - 3;
+    cleats += `M${Pt(P.p(X, Y, Z - 66))}L${Pt(P.p(X, Y, Z + 66))}`;
+  }
+  return (
+    <g>
+      <path d={poly(fr)} fill={A.tone(PLANK.mid, Z, 0)} stroke={A.tone("#3A2B1D", Z, 0)} strokeWidth={A.lw(1)} />
+      <path d={poly(q)} fill={A.tone(PLANK.lit, Z, 0)} stroke={A.tone("#3A2B1D", Z, 0)} strokeWidth={A.lw(1)} />
+      <path d={cleats} stroke={A.tone("#5A4330", Z, 0)} strokeWidth={A.lw(1.4)} />
+    </g>
+  );
+};
+
 /** the lower frame sinks into the dense low air (the medium's height ramp, painted over the near floor) */
 const LOW = { y0: 1120, y1: 1920, amt: 0.62 };
 const LowAir: React.FC<{ A: AirWorld }> = ({ A }) => {
@@ -651,14 +884,15 @@ const LowAir: React.FC<{ A: AirWorld }> = ({ A }) => {
 // ---------------------------------------------------------------------------
 // THE CUT
 // ---------------------------------------------------------------------------
-const REST = swayCam(camOf(0), 0);
+const REST = swayCam(camAtF(0).cam, 0);
 
 const ArtisanalToIndustrial: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
   const p = camP(f);
-  const cam = swayCam(camOf(p), f);
+  const CF = camAtF(f);
+  const cam = swayCam(CF.cam, f);
   const vis = fogVisAt(p);
-  const A = airWorldOf({ cam, rest: REST, depth: depthOf(p), frame: f, fogBy: "depth", scene: { fogVis: vis, fogMax: fogMaxAt(p) }, figFog: { near: 150, vis: figVisAt(p), max: figMaxAt(p) } });
+  const A = airWorldOf({ cam, rest: REST, depth: CF.depth, frame: f, fogBy: "depth", scene: { fogVis: vis, fogMax: fogMaxAt(p) }, figFog: { near: 150, vis: figVisAt(p), max: figMaxAt(p) } });
   const P = A.P;
   const k = cam.k;
   const toS = (q: P2): P2 => [540 + (q[0] - cam.cx) * k, 960 + (q[1] - cam.cy) * k];
@@ -680,7 +914,21 @@ const ArtisanalToIndustrial: React.FC<z.infer<typeof schema>> = () => {
     items.push({ Z: c.Z, node: <CarrierArt key={`c${c.Z}${c.X0}`} A={A} c={c} f={f} /> });
   }
   items.push({ Z: CHIMNEY.Z, node: <Chimney key="chim" A={A} /> });
-  if (onScreen(cartX(f, XK) - 40, cartX(f, XK) + 460, -380, CART.Z)) items.push({ Z: CART.Z, node: <CartArt key="cart" A={A} f={f} /> });
+  for (const X of TOWERS.xs)
+    for (let Z = TOWERS.z0; Z <= TOWERS.z1; Z += TOWERS.dz)
+      if (onScreen(X - CR.W / 2, X + CR.W / 2, -TOWERS.levels * CR.H - 20, Z, 40)) items.push({ Z, node: <Tower key={`t${X}_${Z}`} A={A} X={X} Z={Z} levels={TOWERS.levels} /> });
+  for (const c of DOCKERS) {
+    const X = carrierX(c, f);
+    if (onScreen(X - 160, X + 160, -420, c.Z)) items.push({ Z: c.Z, node: <CarrierArt key={`d${c.Z}_${c.X0}`} A={A} c={c} f={f} crate /> });
+  }
+  if (onScreen(SHIP.xs - 200, SHIP.xb, SHIP.mastTop, SHIP.zc - SHIP.B, 40)) {
+    items.push({ Z: SHIP.zc + SHIP.B, node: <Ship key="ship" A={A} f={f} S={SHIP} uid="sh1" /> });
+    items.push({ Z: SHIP.zc + 1, node: <Gangplank key="gang" A={A} /> });
+  }
+  [{ Z: CART.Z, X0: XK + CART.X0 }, ...CARTS].forEach((c, ci) => {
+    const X = cartX(f, c.X0);
+    if (onScreen(X - 40, X + 460, -380, c.Z)) items.push({ Z: c.Z, node: <CartArt key={`cart${ci}`} A={A} f={f} Z={c.Z} X0={c.X0} uid={`cart${ci}`} /> });
+  });
   items.push({ Z: KILN.z0 + 1, node: <KilnInside key="kin" A={A} f={f} /> });
   items.push({ Z: KILN.z0, node: <KilnFace key="kface" A={A} f={f} /> });
   items.push({ Z: KILN.z0 - 1, node: <Smoke key="smoke" A={A} f={f} /> });
@@ -698,6 +946,8 @@ const ArtisanalToIndustrial: React.FC<z.infer<typeof schema>> = () => {
     <AirStage v={A.v} bloom={0}>
       <WorldSvg cam={cam}>
         <Floor A={A} x0={XK - 12000} x1={XK + 12000} z1={16000} />
+        <River A={A} f={f} />
+        <QuayWall A={A} />
         <AirHorizonHazeW A={A} id="haze" />
         {items.map((it) => it.node)}
       </WorldSvg>
