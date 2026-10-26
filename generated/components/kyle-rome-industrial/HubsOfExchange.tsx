@@ -1,42 +1,38 @@
 // ---------------------------------------------------------------------------
 // HubsOfExchange (kyle-rome-industrial, cut 56). Dwarkesh 3D style (styles/dwarkesh-3d.md).
-// Opaque 1080x1920, 29.97 fps, 120 frames. RENDER WITH --gl=angle (the map ground is WebGL2).
+// Opaque 1080x1920, 29.97 fps, 72 frames. RENDER WITH --gl=angle (the map ground is WebGL2).
 // One continuous pinhole camera over the shared Mediterranean map world (medMapWorld.tsx, read-only), opening on cut
 // 45's last frame (WheatForGlass END_CAM_KEY, asserted at module load).
+// REV 1 (user, Oct 26): "I like zooming out and showing an entire map of the hubs. The graphic can end at a zoomed-out
+// shot of these hubs, the hubs highlighted on the map, at 00;00;59;08." The Pharos push-in is dropped; the cut ends
+// on the whole map of hubs.
 //
-// CHECK LINE: "Roman cities were the knots of this trade network — routes converge on them from every direction —
-// and in a few of them there was real technology (the lit Pharos of Alexandria)."
+// CHECK LINE: "Roman cities were the knots of this trade network: routes converge on them from every direction."
 //
-// THE LINE: "[Cities are these sort of like] hubs of productivity and exchange. And there's some technology. [I mean…]"
-// WORD -> FRAME (Whisper, heard ~6 frames later): hubs -8 · of 7 · productivity 18 · and 34 · exchange 49 · And 72 ·
-//   there's 74 · some 80 · technology 86 · (I, on camera, 114)
-// DURATION: the slot 56.924 -> 60.928 s = 4.004 s x 29.97 = 120 frames (f0..f119).
+// THE LINE: "[Cities are these sort of like] hubs of productivity and exchange."
+// WORD -> FRAME (Whisper, heard ~6 frames later): hubs -8 · of 7 · productivity 18 · and 34 · exchange 49
+// DURATION: the slot 56.924 -> 59.326 s (a V1 cut) = 2.402 s x 29.97 = 72 frames (f0..f71).
 //
-// THE MOTION: f0 is cut 45's last frame (the eastern Mediterranean, the two ships, Alexandria, the Sidon workshop).
-// f0-54 the camera pulls back and swings round (one lobe; yaw 9 -> -68, pitch 77 -> 46) into an OBLIQUE view looking
-// west-north-west along the length of the Mediterranean from above the Levant (director, Oct 26): Alexandria near at
-// the bottom left, Antioch near at the bottom right (both below the caption bands), Ephesus and the Aegean mid-way,
-// Carthage and Rome far up the frame in the haze (FarAir veils the top); the wide drifts f54-62. On the way the great
-// cities rise out of the ground as 3D clusters (stone walls with towers, a temple, red-tile houses; each building
-// rises at full size out of the ground, clipped by it, the centre first), each as it comes into frame: Antioch f2,
-// Ephesus f13, Rome f29 (with its amphitheatre), Carthage f37. Sea lanes are drawn by moving tips (thin cream lines on
-// the water; five out of Alexandria's harbour mouth from f2, then between the other hubs), roads by dashed tips on the
-// land, all meeting at the hubs; ships sail the lanes and pack trains walk the roads at constant speed. Cut 45's EGYPT
-// / SYRIA slide back off (f18-36). f62-104 the camera eases down toward Alexandria (one lobe, peak 7.7 %/frame at f85;
-// yaw back to -5; the Pharos glides on one eased screen path to x 410, y 860, its rise leading so it is above the
-// caption bands from f80) until its harbour, the moles and the Pharos fill the frame with the lanes fanning out from
-// the harbour mouth; the Pharos lights its fire ORANGE on "some technology" (f82 catch -> f96 full), a soft glow on
-// the water and a faint beam sweeping over the sea from f90. f104-119 settled: the beam sweeping, a grain ship sailing
-// in from the west, cut 45's glass ship come to rest outside the eastern mole (it slows from f46, stops ~f92, sail
-// brailed), a slow creep.
-// The cities (Alexandria too, by moving the camera: scaledView) grow as map symbols with their distance from the
-// camera, like cut 45's ships: 1x nearer than 950 world px (so f0 and the end are exact), 1.9x by 3000.
+// THE MOTION: f0 is cut 45's last frame. f0-48 one calm eased move (sine in-out, no damper lag; Alexandria glides on
+// one straight screen path, no swing out and back): the camera pulls back and turns (yaw 9 -> -63, pitch 77 -> 47)
+// into an oblique view looking north-west along the Mediterranean from above the Levant: Alexandria near at the
+// bottom left, Antioch near at the bottom right, Ephesus and the Aegean mid-way, Rome and Carthage far up the frame in
+// the haze (FarAir veils the top). f48-71 it holds (a barely-there creep) on the whole map of hubs. On the way the
+// cities rise out of the ground as 3D clusters (walls with towers, a temple, red-tile houses; each building at full
+// size out of the ground, the centre first) as they come into frame: Antioch f2, Ephesus f13, Rome f30 (with its
+// amphitheatre), Carthage f38. Sea lanes are drawn by moving tips (thin cream lines on the water), roads by dashed
+// tips on the land, all meeting at the hubs; ships sail the lanes and pack trains walk the roads at constant speed.
+// THE HIGHLIGHTS: each hub lights up as the map widens: a warm pale-gold ring drawn round it by a moving tip, a soft
+// glow on the ground inside (Alexandria f12 and Antioch f18 on "productivity", Ephesus f26, Rome f34, Carthage f40);
+// each route glows warm once drawn, every route glowing by "exchange" (f49). Cut 45's EGYPT / SYRIA slide back off
+// (f18-36). The cities grow as map symbols with their distance from the camera (1x nearer than 950 world px, so f0 is
+// exact; up to 1.9x by 3000).
 // JOIN: f0 is cut 45's f294 pixel for pixel (frame-difference max 0); cut 45's clock continues as 294 + f.
-// Orange = technology only: the Pharos fire (and, carried over from cut 45, the Sidon furnace, which banks down to a
-// faint ember during the pull-back and is out of frame by "technology"). Lanes, roads, people, cities never orange.
+// Orange = technology only: the Sidon furnace carried over from cut 45, banking down to a faint ember during the
+// pull-back (rev 1 never lights the Pharos). Lanes, roads, halos (pale gold-cream), people, cities never orange.
 //
-// DEPTH: medMapWorld's pinhole (F 1300): D 870 -> 1850 (the oblique wide, f48-58) -> ~240 (f104), pitch 77 -> 46 ->
-// 43, yaw 9 -> -68 (west-north-west) -> -5 (about the local meridian at Alexandria). Fog: the ground's haze
+// DEPTH: medMapWorld's pinhole (F 1300): D 870 -> 1950 (the oblique wide, from f48), pitch 77 -> 47, yaw 9 -> -63
+// (north-west). Fog: the ground's haze
 // (hazeOf). Cities at one symbolic scale with Alexandria (M_WPX = 1.2 world px per metre): Rome's walls 50 m in radius,
 // the others 40 m. Ships at SHIP_WPX x shipGrow(D) (cut 45's), pack animals at 2.4 x M_WPX.
 //
@@ -92,7 +88,7 @@ import {
 import { EGYPT, END_CAM_KEY, camAt as camAt45, GLASS_PATH, LowAir, SYRIA, WHEAT_PATH, WORKSHOP, shipPoses } from "./WheatForGlass";
 
 export const FPS = 30000 / 1001;
-export const DURATION = 120;
+export const DURATION = 72;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
@@ -127,16 +123,15 @@ type Key = { f: number; tx?: number; tz?: number; D: number; pitch: number; yaw:
  *  straight eased screen path from where the wide leaves it to its place in the last frame */
 export const CAM_KEYS: Key[] = [
   { f: 0, tx: END.tx, tz: END.tz, D: END.D, pitch: END.pitch, yaw: END.yaw },
-  // the pull-back and swing round into the oblique wide: looking west-north-west along the Mediterranean from above
-  // the Levant, Alexandria and Antioch near (below the caption bands), Ephesus and Athens mid-way, Rome and Carthage
-  // far up in the haze
-  { f: 54, tx: -535, tz: -652, D: 1860, pitch: 46, yaw: -68 },
-  // through the wide without a stop (a slow drift on), then down toward Alexandria
-  { f: 62, tx: -520, tz: -641, D: 1810, pitch: 45.5, yaw: -66 },
-  { f: 98, D: 250, pitch: 43.5, yaw: -4.5 },
-  { f: 119, D: 234, pitch: 42.8, yaw: -4.8 },
+  // one calm pull-back and turn into the oblique wide of the whole map of hubs: looking north-west along the
+  // Mediterranean from above the Levant, Alexandria and Antioch near (below the caption bands), Ephesus and Athens
+  // mid-way, Rome and Carthage far up in the haze; one eased move f0-48, settled for "exchange"@49
+  { f: 48, tx: -520, tz: -700, D: 1950, pitch: 47, yaw: -63 },
+  // the hold: a barely-there creep to the last frame
+  { f: 71, tx: -518, tz: -698, D: 1936, pitch: 46.8, yaw: -63.2 },
 ];
-const PUSH = { f0: 62, f1: 102, to: [410, 860] as P2 };
+/** (rev 0's push-in to the Pharos; dropped in rev 1: never reached) */
+const PUSH = { f0: 1000, f1: 1001, to: [410, 860] as P2 };
 const EASE_Y = Easing.bezier(0.4, 0, 0.15, 1);
 const makeCamTrack = (keys: Key[], duration: number) => {
   const tk = keys.filter((q) => q.tx !== undefined);
@@ -190,7 +185,55 @@ const makeCamTrack = (keys: Key[], duration: number) => {
   };
   return { camAt, raw };
 };
-const TRACK = makeCamTrack(CAM_KEYS, DURATION);
+/** rev 1: one calm eased move (no damper lag, so it can use the whole f0-48 window and peak lower): distance, pitch
+ *  and yaw ease in-out from cut 45's end to the wide; the target is solved so the Pharos (Alexandria) glides on one
+ *  straight eased screen path from where cut 45 left it to its place in the wide (no swing out and back); then a
+ *  barely-there creep to the last frame */
+const MOVE_END = 48;
+const makeCalmTrack = (keys: Key[]) => {
+  const [k0, k1, k2] = keys;
+  const ease = Easing.inOut(Easing.sin);
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const ch = (f: number) => {
+    if (f <= MOVE_END) {
+      const u = ease(c01(f / MOVE_END));
+      return { D: Math.exp(lerp(Math.log(k0.D), Math.log(k1.D), u)), p: lerp(k0.pitch, k1.pitch, u), y: lerp(k0.yaw, k1.yaw, u), u };
+    }
+    const u = c01((f - MOVE_END) / (k2.f - MOVE_END));
+    return { D: Math.exp(lerp(Math.log(k1.D), Math.log(k2.D), u)), p: lerp(k1.pitch, k2.pitch, u), y: lerp(k1.yaw, k2.yaw, u), u: 1 };
+  };
+  const solve = (P: P2, D: number, p: number, y: number) => {
+    const g = groundAt(camFrom(0, 0, 0, D, p, y), P[0], P[1])!;
+    let A = pharosAt(1);
+    for (let it = 0; it < 5; it++) A = pharosAt(growAt(camFrom(A[0] - g[0], 0, A[1] - g[1], D, p, y), ALEX_O));
+    return [A[0] - g[0], A[1] - g[1]];
+  };
+  const camK = (q: Key) => camFrom(q.tx!, 0, q.tz!, q.D, q.pitch, q.yaw);
+  const scr = (c: Cam) => {
+    const A = pharosAt(growAt(c, ALEX_O));
+    const v = toScreen(c, A[0], 0, A[1]);
+    return [v.x, v.y] as P2;
+  };
+  const P0 = scr(camK(k0));
+  const P1 = scr(camK(k1));
+  const P2s = scr(camK(k2));
+  const raw: number[][] = [];
+  for (let f = 0; f <= DURATION + 2; f++) {
+    const q = ch(f);
+    const P: P2 = f <= MOVE_END ? [lerp(P0[0], P1[0], q.u), lerp(P0[1], P1[1], q.u)] : [lerp(P1[0], P2s[0], c01((f - MOVE_END) / (k2.f - MOVE_END))), lerp(P1[1], P2s[1], c01((f - MOVE_END) / (k2.f - MOVE_END)))];
+    const T = f === 0 ? [k0.tx!, k0.tz!] : solve(P, q.D, q.p, q.y);
+    raw.push([T[0], T[1], Math.log(q.D), q.p, q.y]);
+  }
+  const at = (q: number[]) => camFrom(q[0], 0, q[1], Math.exp(q[2]), q[3], q[4]);
+  const camAt = (frame: number): Cam => {
+    const i = Math.max(0, Math.min(raw.length - 2, Math.floor(frame)));
+    const t = Math.max(0, Math.min(1, frame - i));
+    return at(raw[i].map((v, j) => v + (raw[i + 1][j] - v) * t));
+  };
+  return { camAt, raw };
+};
+void makeCamTrack;
+const TRACK = makeCalmTrack(CAM_KEYS);
 export const camAt = TRACK.camAt;
 export const CAM_RAW = TRACK.raw;
 // the join: f0 is cut 45's last camera
@@ -237,8 +280,8 @@ const city = (id: string, anchor: P2, inland: [number, number], R: number, t0: n
 const CITY_SPECS: CitySpec[] = [
   city("antioch", PLACES.antioch, [0, 0], 40, 2, 18, [-6, 10, 0.3]),
   city("ephesus", LL(27.36, 37.94), [0.55, 0.85], 40, 13, 18, [8, 6, -0.4]),
-  city("carthage", LL(10.3, 36.84), [-0.5, -0.9], 40, 37, 18, [4, 12, 0.2]),
-  city("rome", LL(12.33, 41.77), [0.75, 0.6], 50, 29, 20, [-14, 18, 0], [22, -20]),
+  city("carthage", LL(10.3, 36.84), [-0.5, -0.9], 40, 38, 16, [4, 12, 0.2]),
+  city("rome", LL(12.33, 41.77), [0.75, 0.6], 50, 30, 18, [-14, 18, 0], [22, -20]),
 ];
 const cityBuild = (S: CitySpec): Bldg[] => {
   const ny = (northYaw(S.at[0], S.at[1]) * Math.PI) / 180;
@@ -424,22 +467,22 @@ const cityAt = (id: string): P2 => CITY_SPECS.find((c) => c.id === id)!.at;
 const OSTIA_LANE_CTRL: P2[] = [MOUTH_OUT, WEST_OUT, LL(27.5, 32.8), LL(24.5, 34.35), LL(21.0, 35.5), LL(18.0, 36.3), LL(15.6, 36.4), LL(13.0, 36.85), LL(12.3, 37.45), LL(13.1, 38.45), LL(13.4, 39.6), LL(12.85, 40.8), OSTIA_P];
 export const LANES: Lane[] = [
   // the five lanes out of Alexandria's harbour mouth (drawn outward: the hub at f0 is the only one standing)
-  lane("alexOstia", OSTIA_LANE_CTRL, 4, 44),
-  lane("alexSel", [MOUTH_OUT, LL(30.6, 31.95), LL(32.3, 32.8), LL(33.9, 34.25), LL(35.0, 35.35), LL(35.55, 35.95), SEL_P], 3, 26),
-  lane("alexEph", [MOUTH_OUT, LL(29.6, 32.2), LL(28.9, 34.0), LL(28.25, 35.45), LL(27.45, 36.1), LL(26.85, 36.65), LL(26.95, 37.4), EPH_P], 6, 30),
-  lane("alexCar", [MOUTH_OUT, WEST_OUT, LL(26.0, 32.1), LL(23.0, 33.15), LL(20.5, 33.25), LL(17.0, 32.9), LL(14.0, 33.6), LL(12.0, 34.6), LL(11.6, 36.0), LL(11.25, 37.2), LL(10.6, 37.05), CARTH_P], 8, 50),
-  lane("alexSid", [MOUTH_OUT, LL(30.9, 32.4), LL(32.2, 33.1), LL(33.4, 33.4), LL(34.5, 33.6), LL(35.3, 33.56)], 2, 22),
+  lane("alexOstia", OSTIA_LANE_CTRL, 4, 38),
+  lane("alexSel", [MOUTH_OUT, LL(30.6, 31.95), LL(32.3, 32.8), LL(33.9, 34.25), LL(35.0, 35.35), LL(35.55, 35.95), SEL_P], 3, 22),
+  lane("alexEph", [MOUTH_OUT, LL(29.6, 32.2), LL(28.9, 34.0), LL(28.25, 35.45), LL(27.45, 36.1), LL(26.85, 36.65), LL(26.95, 37.4), EPH_P], 6, 26),
+  lane("alexCar", [MOUTH_OUT, WEST_OUT, LL(26.0, 32.1), LL(23.0, 33.15), LL(20.5, 33.25), LL(17.0, 32.9), LL(14.0, 33.6), LL(12.0, 34.6), LL(11.6, 36.0), LL(11.25, 37.2), LL(10.6, 37.05), CARTH_P], 8, 40),
+  lane("alexSid", [MOUTH_OUT, LL(30.9, 32.4), LL(32.2, 33.1), LL(33.4, 33.4), LL(34.5, 33.6), LL(35.3, 33.56)], 2, 18),
   // between the other hubs (drawn into the later hub)
-  lane("antEph", [SEL_P, LL(35.45, 36.05), LL(34.6, 35.98), LL(33.0, 35.72), LL(31.0, 35.95), LL(29.0, 36.2), LL(28.3, 36.55), LL(27.6, 37.05), LL(27.15, 37.55), EPH_P], 14, 40),
-  lane("carOst", [CARTH_P, LL(10.75, 37.45), LL(11.3, 38.6), LL(11.8, 40.0), LL(12.1, 41.2), OSTIA_P], 40, 56),
-  lane("ephWest", [EPH_P, LL(26.9, 37.45), LL(25.9, 37.12), LL(24.85, 36.45), LL(23.4, 36.12), LL(21.0, 35.95), LL(18.6, 36.32)], 22, 52),
+  lane("antEph", [SEL_P, LL(35.45, 36.05), LL(34.6, 35.98), LL(33.0, 35.72), LL(31.0, 35.95), LL(29.0, 36.2), LL(28.3, 36.55), LL(27.6, 37.05), LL(27.15, 37.55), EPH_P], 12, 34),
+  lane("carOst", [CARTH_P, LL(10.75, 37.45), LL(11.3, 38.6), LL(11.8, 40.0), LL(12.1, 41.2), OSTIA_P], 32, 46),
+  lane("ephWest", [EPH_P, LL(26.9, 37.45), LL(25.9, 37.12), LL(24.85, 36.45), LL(23.4, 36.12), LL(21.0, 35.95), LL(18.6, 36.32)], 20, 42),
   // roads (dashed), into the cities
-  lane("appia", [LL(15.4, 41.0), LL(14.25, 41.08), LL(13.6, 41.3), LL(13.05, 41.62), cityAt("rome")], 34, 52, true),
-  lane("flaminia", [LL(12.6, 43.7), LL(12.75, 43.0), LL(12.65, 42.4), cityAt("rome")], 36, 54, true),
-  lane("carIn", [LL(8.4, 35.9), LL(9.2, 36.3), LL(9.7, 36.5), cityAt("carthage")], 40, 56, true),
-  lane("sardis", [LL(29.8, 38.6), LL(28.8, 38.45), LL(28.1, 38.25), cityAt("ephesus")], 18, 36, true),
-  lane("beroea", [LL(37.8, 36.05), LL(37.15, 36.2), LL(36.75, 36.25), cityAt("antioch")], 8, 26, true),
-  lane("apamea", [LL(36.6, 34.9), LL(36.4, 35.4), LL(36.35, 35.85), cityAt("antioch")], 10, 28, true),
+  lane("appia", [LL(15.4, 41.0), LL(14.25, 41.08), LL(13.6, 41.3), LL(13.05, 41.62), cityAt("rome")], 30, 44, true),
+  lane("flaminia", [LL(12.6, 43.7), LL(12.75, 43.0), LL(12.65, 42.4), cityAt("rome")], 32, 46, true),
+  lane("carIn", [LL(8.4, 35.9), LL(9.2, 36.3), LL(9.7, 36.5), cityAt("carthage")], 32, 46, true),
+  lane("sardis", [LL(29.8, 38.6), LL(28.8, 38.45), LL(28.1, 38.25), cityAt("ephesus")], 16, 32, true),
+  lane("beroea", [LL(37.8, 36.05), LL(37.15, 36.2), LL(36.75, 36.25), cityAt("antioch")], 8, 22, true),
+  lane("apamea", [LL(36.6, 34.9), LL(36.4, 35.4), LL(36.35, 35.85), cityAt("antioch")], 10, 24, true),
   lane("seleucia", [SEL_P, LL(36.05, 36.16), PLACES.antioch], 6, 14, true),
   lane("canopus", [LL(30.75, 31.12), LL(30.3, 31.18), LL(30.07, 31.24), quayPt(48 * M_WPX, -24 * M_WPX)], 4, 24, true),
 ];
@@ -483,14 +526,19 @@ const LaneLine: React.FC<{ cam: Cam; air: MedAir; L: Lane; frame: number }> = ({
   if (!segs.length && !last) return null;
   const dist = n ? distSum / n : distTo(cam, tp[0], 0, tp[1]);
   const fogA = air.fogAmt(dist);
-  const col = mixHex("#F3EBDD", air.airHexAt(dist), fogA * 0.85);
-  const wPx = L.road ? 1.5 : 1.9;
+  // the route glows warm once drawn (all of them by "exchange")
+  const g = Math.max(c01((frame - L.to) / 8), c01((frame - 41) / 8));
+  const col = mixHex(mixHex("#F3EBDD", GLOW, 0.5 * g), air.airHexAt(dist), fogA * 0.85 * (1 - 0.5 * g));
+  const wPx = (L.road ? 1.5 : 1.9) + 0.6 * g;
   const drawing = s < L.path.len - 0.5;
   const tipA = drawing ? 1 : 0;
   return (
     <g>
+      {g > 0.01
+        ? segs.map((d, i) => <path key={`g${i}`} d={d} fill="none" stroke={GLOW} strokeOpacity={0.16 * g} strokeWidth={7} strokeLinecap="round" strokeLinejoin="round" />)
+        : null}
       {segs.map((d, i) => (
-        <path key={i} d={d} fill="none" stroke={col} strokeOpacity={L.road ? 0.6 : 0.55} strokeWidth={wPx} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={L.road ? "5 6" : undefined} />
+        <path key={i} d={d} fill="none" stroke={col} strokeOpacity={(L.road ? 0.6 : 0.55) + 0.3 * g} strokeWidth={wPx} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={L.road ? "5 6" : undefined} />
       ))}
       {tipA > 0 && tq.z > 0.5 ? (
         <g>
@@ -498,6 +546,66 @@ const LaneLine: React.FC<{ cam: Cam; air: MedAir; L: Lane; frame: number }> = ({
           <circle cx={f2(tq.x)} cy={f2(tq.y)} r={2.6} fill="#F6F0E2" opacity={0.95} />
         </g>
       ) : null}
+    </g>
+  );
+};
+
+// ===================================================================================================================
+// THE HUB HALOS: a warm ring drawn round each city by a moving tip, with a soft glow inside it on the ground (under the
+// buildings), lighting up as the map widens; pale gold-cream, never the orange of technology
+// ===================================================================================================================
+const GLOW = "#F4DFAE";
+type Halo = { id: string; centre: (k: number) => P2; r: number; on: number };
+const HALOS: Halo[] = [
+  { id: "alexandria", centre: (k) => { const c = quayPt(0, 2 * M_WPX); return [ALEX_O[0] + (c[0] - ALEX_O[0]) * k, ALEX_O[1] + (c[1] - ALEX_O[1]) * k]; }, r: 60, on: 12 },
+  ...CITY_SPECS.map((S) => ({
+    id: S.id,
+    centre: (k: number): P2 => [S.anchor[0] + (S.at[0] - S.anchor[0]) * k, S.anchor[1] + (S.at[1] - S.anchor[1]) * k],
+    r: S.R + 14,
+    on: ({ antioch: 18, ephesus: 26, rome: 34, carthage: 40 } as Record<string, number>)[S.id],
+  })),
+];
+const HALO_DRAW = 10;
+const HubHalo: React.FC<{ cam: Cam; air: MedAir; H: Halo; frame: number }> = ({ cam, air, H, frame }) => {
+  const u = c01((frame - H.on) / HALO_DRAW);
+  if (u <= 0) return null;
+  const anchor = H.id === "alexandria" ? ALEX_O : CITY_SPECS.find((c) => c.id === H.id)!.anchor;
+  const k = growAt(cam, anchor);
+  const c = H.centre(k);
+  const r = H.r * M_WPX * k;
+  const N = 72;
+  const ease = Easing.inOut(Easing.sin)(u);
+  const a0 = -Math.PI / 2;
+  const pts: string[] = [];
+  const all: { x: number; y: number }[] = [];
+  for (let i = 0; i <= N; i++) {
+    const a = a0 + (i / N) * Math.PI * 2;
+    const q = toScreen(cam, c[0] + Math.cos(a) * r, 0.4, c[1] + Math.sin(a) * r);
+    if (q.z < 0.5) return null;
+    all.push(q);
+    if (i / N <= ease + 1e-9) pts.push(`${pts.length ? "L" : "M"}${f2(q.x)},${f2(q.y)}`);
+  }
+  const cs = toScreen(cam, c[0], 0, c[1]);
+  const rx = Math.max(...all.map((q) => Math.abs(q.x - cs.x)));
+  const ry = Math.max(...all.map((q) => Math.abs(q.y - cs.y)));
+  const fogK = 1 - 0.6 * air.fogAmt(distTo(cam, c[0], 0, c[1]));
+  const glow = c01((frame - H.on - 4) / 10) * fogK;
+  const tipA = u < 1 ? 1 : 0;
+  const tip = all[Math.min(N, Math.round(ease * N))];
+  const gid = `halo-${H.id}`;
+  return (
+    <g>
+      <defs>
+        <radialGradient id={gid} gradientUnits="userSpaceOnUse" cx={f2(cs.x)} cy={f2(cs.y)} r={f2(rx * 1.25)} gradientTransform={`translate(${f2(cs.x)} ${f2(cs.y)}) scale(1 ${f2(ry / rx)}) translate(${f2(-cs.x)} ${f2(-cs.y)})`}>
+          <stop offset="0" stopColor={GLOW} stopOpacity={0.26 * glow} />
+          <stop offset="0.75" stopColor={GLOW} stopOpacity={0.2 * glow} />
+          <stop offset="1" stopColor={GLOW} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      <ellipse cx={f2(cs.x)} cy={f2(cs.y)} rx={f2(rx * 1.25)} ry={f2(ry * 1.25)} fill={`url(#${gid})`} />
+      <path d={pts.join("")} fill="none" stroke={GLOW} strokeOpacity={0.22 * fogK} strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={pts.join("")} fill="none" stroke={GLOW} strokeOpacity={0.95 * fogK} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+      {tipA && tip ? <circle cx={f2(tip.x)} cy={f2(tip.y)} r={3} fill="#FBF3DF" /> : null}
     </g>
   );
 };
@@ -739,6 +847,9 @@ const HubsOfExchange: React.FC<z.infer<typeof schema>> = () => {
           <GroundLabel cam={cam} text="SYRIA" at={SYRIA.at} cap={SYRIA.cap} u={LABELS_OUT(frame)} air={air} plate={1} />
           {LANES.map((L) => (
             <LaneLine key={L.id} cam={cam} air={air} L={L} frame={frame} />
+          ))}
+          {HALOS.map((Hh) => (
+            <HubHalo key={Hh.id} cam={cam} air={air} H={Hh} frame={frame} />
           ))}
           {paint(items)}
           <FarAir air={air} cam={cam} />
