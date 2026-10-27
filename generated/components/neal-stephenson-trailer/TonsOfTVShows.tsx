@@ -11,7 +11,7 @@
 //   work 64 · it's ~78 · you 88 (ends ~95) · cut 105 (the edit goes to Neal: "The whole AI revolution…").
 // DURATION: the slot 45.8792 -> 50.2585 s (sequence frames 1100 -> 1205) = 4.379 s x 23.976 = 105 frames (f0..f104).
 //
-// THE MOTION (KellysProductionRun's, at 16:9): one continuous dolly pull-back from a close-up of Neal's face (already
+// THE MOTION (KellysProductionRun's, at 16:9; revision 2 made every flight one smooth path on one speed profile): one continuous dolly pull-back from a close-up of Neal's face (already
 // moving at f0; one acceleration, one long deceleration landing f88, then a creep: camAt45). His seven books, in
 // publication order, come out from behind his head every 6 frames from f3 (Snow Crash first): each is born hidden
 // behind his brow on a deeper plane (smaller, farther off), slides out sideways past his temple (left for the three
@@ -34,7 +34,7 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { BookCutOut, COVER_H, COVER_ROW, NEAL, NealFigure, bookBob, camAt45 } from "./booksWorld";
-import { CAPTION_BANDS, CaptionBands, NealFilmLife, NealPaper, NealPlane, depthTransform } from "./nealShared";
+import { CAPTION_BANDS, CaptionBands, NealFilmLife, NealPaper, NealPlane, depthScale, depthTransform } from "./nealShared";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 105;
@@ -42,38 +42,78 @@ export const schema = z.object({ bands: z.boolean() });
 export const defaultProps = schema.parse({ bands: false });
 
 // ---------------------------------------------------------------------------
-// THE FLIGHTS. Path points are REST px (booksWorld); the book is drawn on a plane of depth d that runs from D0
-// (behind his head) to 1 (the row) over the arc, at 1/d of its row size.
+// THE FLIGHTS (revision 2: smoother). Each book flies ONE smooth path (rest px, on the focus plane) from behind his
+// brow to its slot. Left books (0-2): one cubic arc, out sideways and round up into the slot (handles 0.55: a quarter
+// ellipse). The centre book (3): straight up. Right books (4-6) fill inside-out, so each later one must pass UNDER
+// the one(s) already landed: it runs out along a level lane, then a wide cubic turn (starting TURN_R x the rise
+// before its slot's x) bends it up into the slot; the turn's first three control points are level, so direction and
+// curvature are continuous where the lane meets it (no corner). The tangent is the curve's exact derivative.
+// Speed: ONE profile per flight, v(u) ~ smoother(u / RAMP_IN) x smoother((1 - u) / RAMP_OUT), u = (f - t0) / dur: from
+// rest with zero acceleration, one smooth peak, into the slot with zero speed and zero acceleration (no snap, no
+// bounce). Launches every 6 frames; durations 29-43 frames: longer for longer paths and for flights flown while the
+// camera is still close (DUR_K), so the peak screen speeds stay in one family.
+// Depth: every book is DRAWN on the focus plane (its screen path is the smooth world path: no parallax lurch); its
+// depth d only sets its size (a cover at depth d: depthScale(k, d) / (d k) of its row size) and the paint order.
+// d holds D0 for the first DEPTH_LAG of the flight's time, then eases to 1 by the landing (smootherstep, so the
+// growth starts and ends at rate 0): small while it passes under landed books, full size in its slot.
+// Lean: from the smooth sideways velocity, tanh-capped at LEAN_MAX, 0 at rest. Trail: its step opens and closes
+// continuously with speed. Bob: crossfades in over ~8 frames after landing.
 // ---------------------------------------------------------------------------
-const D0 = 1.8;
-const T0 = [3, 9, 15, 21, 27, 33, 39]; // one every 6 frames, Snow Crash first
-const TD = 16; // frames of deceleration into the slot
-/** each flight's length in frames (launch -> landed); its cruise speed follows from its path length */
-const DUR = [40, 38, 34, 16, 16, 23, 36];
-const LEAN = 8; // deg of lean at 30 rest px a frame sideways
-const TRAIL_SCREEN = 8; // chain step, screen px at speed (full from 17 rest px a frame)
-const SETTLING = 3; // rest px a frame: slower than this a book is settling, not flying
+/** depth at birth (behind his head): the left and centre books (nothing to pass under), the right books (they pass
+ *  under the landed ones, so they stay farther off, smaller, until under their slot) */
+const D0_L = 2;
+const D0_R = 2.6;
+const D0 = [D0_L, D0_L, D0_L, D0_L, D0_R, D0_R, D0_R];
+const DEPTH_LAG = 0.35; // fraction of the flight time before the book starts coming forward
+const STRIDE = 6; // frames between launches
+const T0 = Array.from({ length: 7 }, (_, i) => 3 + STRIDE * i); // Snow Crash first
+/** flight frames = DUR_BASE + DUR_PER_PX x path length x (camera k 15 frames after launch)^DUR_K */
+const DUR_BASE = 24;
+const DUR_PER_PX = 0.012;
+const DUR_K = 1;
+const RAMP_IN = 0.55; // the speed profile's smooth rise, as a fraction of the flight (the two ramps overlap: one peak)
+const RAMP_OUT = 0.55; // its smooth settle
+const LEAN_MAX = 4.5; // deg: the most a book leans into its sideways travel
+const LEAN_V = 22; // rest px a frame sideways at which the lean is ~3/4 of LEAN_MAX (tanh)
+const TRAIL_SCREEN = 8; // chain step, screen px at full speed
+const TRAIL_V = 18; // rest px a frame at which the trail is fully open (it opens and closes smoothly with speed)
 /** the side each book leaves his head by: -1 left, 0 straight up, +1 right */
 const SIDE = [-1, -1, -1, 0, 1, 1, 1];
 /** where it is born, relative to his brow (rest px on the focus plane) */
 const BORN_DX = 18;
+/** right books: the turn begins TURN_R x the rise before the slot's x (the level lane runs up to there) */
+const TURN_R = 1.2;
+/** the turn's handles: the leaving one (level) and the arriving one (vertical), as fractions of the run and the rise */
+const HX_L = 0.55;
+const HY_L = 0.55;
+const HX_R = 0.55;
+const HY_R = 0.7;
 
 type Pt = [number, number];
-type Flight = { i: number; t0: number; P: Pt[]; T: number[]; L: number; Llane: number; V: number; Tc: number; Td: number; tA: number };
+type Flight = { i: number; t0: number; S: Pt; side: number; Llane: number; C: [Pt, Pt, Pt, Pt]; T: number[]; L: number; dur: number; tA: number };
 
-const N_LUT = 240;
-const at = (P: Pt[], u: number): Pt => {
-  const t = Math.min(1, Math.max(0, u)) * (P.length - 1);
-  const i = Math.min(P.length - 2, Math.floor(t));
-  const k = t - i;
-  return [P[i][0] + (P[i + 1][0] - P[i][0]) * k, P[i][1] + (P[i + 1][1] - P[i][1]) * k];
+const bez = (C: [Pt, Pt, Pt, Pt], u: number): Pt => {
+  const v = 1 - u;
+  const w = [v * v * v, 3 * v * v * u, 3 * v * u * u, u * u * u];
+  return [w[0] * C[0][0] + w[1] * C[1][0] + w[2] * C[2][0] + w[3] * C[3][0], w[0] * C[0][1] + w[1] * C[1][1] + w[2] * C[2][1] + w[3] * C[3][1]];
 };
-const lut = (P: Pt[]) => {
+/** the curve's derivative (exact, so the tangent is smooth) */
+const bezD = (C: [Pt, Pt, Pt, Pt], u: number): Pt => {
+  const v = 1 - u;
+  const w = [3 * v * v, 6 * v * u, 3 * u * u];
+  return [
+    w[0] * (C[1][0] - C[0][0]) + w[1] * (C[2][0] - C[1][0]) + w[2] * (C[3][0] - C[2][0]),
+    w[0] * (C[1][1] - C[0][1]) + w[1] * (C[2][1] - C[1][1]) + w[2] * (C[3][1] - C[2][1]),
+  ];
+};
+const N_LUT = 600;
+/** cumulative arc length at u = j / N_LUT (Simpson-free: fine chords) */
+const lut = (C: [Pt, Pt, Pt, Pt]) => {
   const out = [0];
-  let prev = at(P, 0);
-  for (let i = 1; i <= N_LUT; i++) {
-    const q = at(P, i / N_LUT);
-    out.push(out[i - 1] + Math.hypot(q[0] - prev[0], q[1] - prev[1]));
+  let prev = bez(C, 0);
+  for (let j = 1; j <= N_LUT; j++) {
+    const q = bez(C, j / N_LUT);
+    out.push(out[j - 1] + Math.hypot(q[0] - prev[0], q[1] - prev[1]));
     prev = q;
   }
   return out;
@@ -90,92 +130,105 @@ const uAt = (T: number[], s: number) => {
   }
   return (lo + (s - T[lo]) / (T[hi] - T[lo])) / N_LUT;
 };
-const cubic = (A: Pt, B: Pt, C: Pt, D: Pt, n: number): Pt[] =>
-  Array.from({ length: n + 1 }, (_, j): Pt => {
-    const u = j / n;
-    const v = 1 - u;
-    const w = [v * v * v, 3 * v * v * u, 3 * v * u * u, u * u * u];
-    return [w[0] * A[0] + w[1] * B[0] + w[2] * C[0] + w[3] * D[0], w[0] * A[1] + w[1] * B[1] + w[2] * C[1] + w[3] * D[1]];
-  });
-const line = (A: Pt, D: Pt, n: number): Pt[] => Array.from({ length: n + 1 }, (_, j): Pt => [A[0] + ((D[0] - A[0]) * j) / n, A[1] + ((D[1] - A[1]) * j) / n]);
-/** distance flown at frame f: cruise V, then v = V (1-u)^2 to rest over Td */
-const flownAt = (fl: Flight, f: number) => {
-  const t = f - fl.t0;
-  if (t <= 0) return 0;
-  if (t <= fl.Tc) return fl.V * t;
-  const u = Math.min(1, (t - fl.Tc) / fl.Td);
-  return fl.V * fl.Tc + (fl.V * fl.Td * (1 - Math.pow(1 - u, 3))) / 3;
-};
-const smooth = (x: number) => {
+const smoother = (x: number) => {
   const t = Math.min(1, Math.max(0, x));
-  return t * t * (3 - 2 * t);
+  return t * t * t * (t * (6 * t - 15) + 10);
+};
+/** the speed profile's distance fraction E(u): the normalised integral of a smooth trapezoid v(u) = smoother(u /
+ *  RAMP_IN) x smoother((1 - u) / RAMP_OUT) (a table, linearly read): peak speed ~1.6 x the mean, no plateau edges */
+const N_E = 2000;
+const E_TABLE: number[] = (() => {
+  const out = [0];
+  for (let j = 1; j <= N_E; j++) {
+    const u = (j - 0.5) / N_E;
+    out.push(out[j - 1] + smoother(u / RAMP_IN) * smoother((1 - u) / RAMP_OUT));
+  }
+  return out.map((x) => x / out[N_E]);
+})();
+const ease = (u: number) => {
+  if (u <= 0) return 0;
+  if (u >= 1) return 1;
+  const t = u * N_E;
+  const j = Math.floor(t);
+  return E_TABLE[j] + (E_TABLE[j + 1] - E_TABLE[j]) * (t - j);
 };
 
-const FLIGHTS: Flight[] = COVER_ROW.map((slot, i) => {
-  const t0 = T0[i];
-  const side = SIDE[i];
-  // born hidden behind his brow at t0: the brow's screen point, as rest px on the plane D0
-  const cam = camAt45(t0);
-  const sb = depthTransform(cam, 1).toScreen(NEAL.brow.x + side * BORN_DX, NEAL.brow.y);
-  const td = depthTransform(cam, D0);
-  // never lower than its bottom edge 22 screen px above the first caption band
-  const halfH = (COVER_H / D0 / 2) * td.k;
-  const sy = Math.min(sb.y, CAPTION_BANDS[0][0] - 22 - halfH);
-  const S: Pt = [(sb.x - td.tx) / td.k, (sy - td.ty) / td.k];
-  const D: Pt = [slot.cx, slot.cy];
-  let P: Pt[];
-  let Llane = 0;
-  if (side === 0) {
-    P = line(S, D, 120);
-  } else {
+const FLIGHTS: Flight[] = (() => {
+  const raw = COVER_ROW.map((slot, i) => {
+    const side = SIDE[i];
+    // born hidden behind his brow at its launch: the brow point (every book is placed on the focus plane; its
+    // depth only sets its size, so the screen path is the smooth world path, with no parallax lurch)
+    const cam = camAt45(T0[i]);
+    const t1 = depthTransform(cam, 1);
+    const sb = t1.toScreen(NEAL.brow.x + side * BORN_DX, NEAL.brow.y);
+    // never lower than its bottom edge 22 screen px above the first caption band
+    const halfH = (COVER_H / 2) * (depthScale(cam.k, D0[i]) / D0[i]);
+    const sy = Math.min(sb.y, CAPTION_BANDS[0][0] - 22 - halfH);
+    const S: Pt = [(sb.x - t1.tx) / t1.k, (sy - t1.ty) / t1.k];
+    const D: Pt = [slot.cx, slot.cy];
     const rise = S[1] - D[1];
-    const rad = 0.3 * rise; // the turn's horizontal reach
-    const qx = side < 0 ? Math.min(S[0], D[0] + rad) : Math.max(S[0], D[0] - rad);
+    if (side === 0) {
+      const C: [Pt, Pt, Pt, Pt] = [S, [S[0] + (D[0] - S[0]) / 3, S[1] - rise / 3], [S[0] + (2 * (D[0] - S[0])) / 3, S[1] - (2 * rise) / 3], D];
+      const T = lut(C);
+      return { i, S, side, Llane: 0, C, T, L: T[N_LUT] };
+    }
+    // left: no lane, one arc from S. Right: the lane, level from S to Q, then the turn from Q up into the slot
+    const [HX, HY] = side < 0 ? [HX_L, HY_L] : [HX_R, HY_R];
+    const qx = side < 0 ? S[0] : Math.max(S[0], D[0] - TURN_R * rise);
     const Q: Pt = [qx, S[1]];
-    Llane = Math.abs(qx - S[0]);
-    const dx = Math.abs(D[0] - qx);
-    const arc = cubic(Q, [Q[0] + side * 0.6 * dx, Q[1]], [D[0], D[1] + 0.5 * rise], D, 120);
-    P = Llane > 1 ? [...line(S, Q, 60).slice(0, -1), ...arc] : arc;
-  }
-  const T = lut(P);
-  const L = T[N_LUT];
-  const Td = Math.min(TD, DUR[i]);
-  const Tc = DUR[i] - Td;
-  const V = L / (Tc + Td / 3);
-  return { i, t0, P, T, L, Llane: Math.min(Llane, L), V, Tc, Td, tA: t0 + Tc + Td };
-});
+    const C: [Pt, Pt, Pt, Pt] = [Q, [Q[0] + HX * (D[0] - Q[0]), Q[1]], [D[0], D[1] + HY * (Q[1] - D[1])], D];
+    const T = lut(C);
+    const Llane = Math.abs(qx - S[0]);
+    return { i, S, side, Llane, C, T, L: Llane + T[N_LUT] };
+  });
+  return raw.map((r) => {
+    const dur = DUR_BASE + DUR_PER_PX * r.L * Math.pow(camAt45(T0[r.i] + 15).k, DUR_K);
+    return { ...r, t0: T0[r.i], dur, tA: T0[r.i] + dur };
+  });
+})();
 
 type BookState = { x: number; y: number; d: number; scale: number; rot: number; tx: number; ty: number; speed: number; flying: boolean; landed: boolean };
-/** where book i is at frame f (rest px on its plane d) */
+const flownAt = (fl: Flight, f: number) => fl.L * ease((f - fl.t0) / fl.dur);
+/** where book i is at frame f (rest px on the focus plane; d is its depth, which sets its size and paint order) */
 const stateOf = (i: number, f: number): BookState => {
   const fl = FLIGHTS[i];
-  const s = Math.min(fl.L, flownAt(fl, f));
-  const u = uAt(fl.T, s);
-  const [x, y] = at(fl.P, u);
-  const a = at(fl.P, Math.max(0, u - 0.003));
-  const b = at(fl.P, Math.min(1, u + 0.003));
-  const tl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-  const tx = (b[0] - a[0]) / tl;
-  const ty = (b[1] - a[1]) / tl;
+  const s = flownAt(fl, f);
+  const onLane = s < fl.Llane;
+  const u = onLane ? 0 : uAt(fl.T, s - fl.Llane);
+  const [x, y] = onLane ? [fl.S[0] + fl.side * s, fl.S[1]] : bez(fl.C, u);
+  const dv = onLane ? [fl.side, 0] : u < 1e-4 ? [fl.side, 0] : bezD(fl.C, u);
+  const tl = Math.hypot(dv[0], dv[1]) || 1;
+  const tx = dv[0] / tl;
+  const ty = dv[1] / tl;
+  // speed in rest px a frame (central difference of the smooth profile)
   const speed = Math.max(0, flownAt(fl, f + 0.5) - flownAt(fl, f - 0.5));
-  const d = s <= fl.Llane ? D0 : D0 + (1 - D0) * smooth((s - fl.Llane) / Math.max(1, fl.L - fl.Llane));
+  // depth: holds D0, then eases to 1 by the landing (zero rate at both ends of the change)
+  const d = 1 + (D0[i] - 1) * (1 - smoother(((f - fl.t0) / fl.dur - DEPTH_LAG) / (1 - DEPTH_LAG)));
   const landed = f >= fl.tA;
+  // the bob crossfades in over ~8 frames after landing (bookBob's own ramp; 0 before)
   const bob = bookBob(i, f, f - fl.tA);
-  return { x, y: y + (landed || speed < SETTLING ? bob : 0), d, scale: 1 / d, rot: (LEAN * tx * speed) / 30, tx, ty, speed, flying: f >= fl.t0 && speed > SETTLING, landed };
+  // the lean: from the smooth sideways velocity, capped by tanh; back to 0 as the speed goes to 0
+  const rot = LEAN_MAX * Math.tanh((tx * speed) / LEAN_V);
+  // the size of a cover at depth d, drawn on the focus plane: its depth plane's screen scale over the focus plane's
+  const k = camAt45(f).k;
+  const scale = depthScale(k, d) / (d * k);
+  return { x, y: y + bob, d, scale, rot, tx, ty, speed, flying: f >= fl.t0 && !landed, landed };
 };
 
 // ---------------------------------------------------------------------------
 // REVIEW AIDS (not drawn): the schedule; per frame, the screen box of every book and any two that overlap.
 // ---------------------------------------------------------------------------
-export const FLIGHT_TABLE = FLIGHTS.map((fl) => ({ i: fl.i, t0: fl.t0, tA: fl.tA, L: fl.L, Llane: fl.Llane, start: fl.P[0] }));
+export const FLIGHT_TABLE = FLIGHTS.map((fl) => ({ i: fl.i, t0: fl.t0, tA: fl.tA, dur: fl.dur, L: fl.L, start: fl.S }));
+/** the chain step in screen px at a speed (rest px a frame): smooth in speed, no threshold */
+const trailScreen = (speed: number) => TRAIL_SCREEN * smoother(speed / TRAIL_V);
 type Box = { cx: number; cy: number; hw: number; hh: number; a: number };
 /** book i's screen box at frame f (the whole silhouette, plus its trail when flying) */
 export const bookBox = (i: number, f: number): Box => {
   const st = stateOf(i, f);
-  const t = depthTransform(camAt45(f), st.d);
+  const t = depthTransform(camAt45(f), 1);
   const c = t.toScreen(st.x, st.y);
   const k = t.k * st.scale;
-  const trail = st.flying ? 1.5 * TRAIL_SCREEN : 0;
+  const trail = 1.5 * trailScreen(st.speed);
   // the cover box (+ thickness and shadow, ~12 px), the trail added along the travel axis
   const hw = (COVER_ROW[i].right - COVER_ROW[i].left + 24) * 0.5 * k;
   const hh = (290 + 16) * 0.5 * k;
@@ -212,12 +265,12 @@ const TonsOfTVShows: React.FC<z.infer<typeof schema>> = ({ bands }) => {
       <NealFilmLife frame={frame}>
         <NealPaper frame={frame} cam={cam} />
         {order.map(({ i, st }) => {
-          const kd = depthTransform(cam, st.d).k;
-          // the trail opens with speed and is gone below ~3 rest px a frame (it collapses into the cover as it lands)
-          const step = st.flying ? (TRAIL_SCREEN * smooth((st.speed - SETTLING) / 14)) / kd : 0;
+          // the trail opens and closes continuously with speed (it collapses into the cover as the book lands);
+          // its step is in focus-plane world px
+          const step = trailScreen(st.speed) / cam.k;
           return (
-            <NealPlane key={i} cam={cam} d={st.d}>
-              <BookCutOut i={i} x={st.x} y={st.y} scale={st.scale} rotate={st.rot} trail={step > 0 ? { dx: -st.tx, dy: -st.ty, step } : null} />
+            <NealPlane key={i} cam={cam} d={1}>
+              <BookCutOut i={i} x={st.x} y={st.y} scale={st.scale} rotate={st.rot} trail={step > 0.05 ? { dx: -st.tx, dy: -st.ty, step } : null} />
             </NealPlane>
           );
         })}
