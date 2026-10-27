@@ -224,8 +224,9 @@ export const SCurveGraph: React.FC<SCurveGraphState> = ({ eArc: ea, sProg: sp, c
 // -- the camera ---------------------------------------------------------------------------------------------------------
 // Linear keys through the damped follow (runCamera2), one continuous camera: it opens CLOSE on the pen point near the
 // bottom-left (k 1.8, the tip already running in from screen x ~650 and settling near the centre), pulls back and slides right as the curve steepens, reaching the
-// full-graph framing (k ~1.0) by ~f44 ("singularity") so the rocket off the top is seen in the wide; a small tilt up as
-// it rockets (baseline stays above screen y 607), back down as the S-curve peels, then a slow creep in.
+// full-graph framing (k ~0.97) by ~f44 ("singularity") so the rocket off the top is seen in the wide; the camera keeps
+// rising with the rocket (the graph settles LOWER in frame, rev 3: its visual centre near the frame centre, the bare
+// baseline at screen ~y 670 inside the first caption band), eases back a touch as the S-curve peels, then a slow creep in.
 // k 1.8 keeps the paper under 1.0x of its source (PaperGround's limit is k 1.84).
 const keyed = (keys: [number, number][]) => (f: number) =>
   interpolate(
@@ -237,24 +238,25 @@ const keyed = (keys: [number, number][]) => (f: number) =>
 const camX = keyed([
   [0, 560],
   [10, 580],
-  [38, 955],
-  [84, 990],
-  [98, 1000],
+  [38, 950],
+  [84, 965],
+  [98, 975],
 ]);
 const camY = keyed([
   [0, 541],
-  [36, 541],
-  [52, 518],
-  [62, 518],
-  [82, 540],
-  [98, 540],
+  [30, 520],
+  [54, 418],
+  [64, 418],
+  [82, 430],
+  [98, 430],
 ]);
 const camK = keyed([
   [0, 1.8],
   [6, 1.78],
-  [36, 1.0],
-  [70, 1.0],
-  [98, 1.035],
+  [38, 0.98],
+  [56, 0.95],
+  [70, 0.95],
+  [98, 0.975],
 ]);
 const CAM_F: number[] = [];
 const CAM_CX: number[] = [];
@@ -276,11 +278,18 @@ export const SCURVE_JOIN_FRAME = DURATION - 1;
 export const SCURVE_END_CAM: NealCam = camAt(SCURVE_JOIN_FRAME);
 export const SCURVE_END_STATE: SCurveGraphState = graphState(SCURVE_JOIN_FRAME);
 
-// the baseline must stay clear of the first caption band along the whole camera path
+// Caption bands along the whole camera path (rev 3, the user: "the graph sits too high"): the bare baseline and the
+// flat tail may sit inside the FIRST band (607-703) but never reach the second (765); the parting point, the S-curve's
+// rise, plateau and crown stay above it; the crown never leaves the top of the frame.
 for (let f = 0; f < DURATION; f++) {
   const c = camAt(f);
-  const yBase = 540 + (BASE + SHADOW_OFF + STROKE / 2 - c.y) * c.k;
-  if (yBase >= 607) throw new Error(`SCurveGuy: baseline reaches screen y ${yBase.toFixed(1)} at f${f}`);
+  const sy = (y: number) => 540 + (y - c.y) * c.k;
+  const yBase = sy(BASE + SHADOW_OFF + STROKE / 2);
+  if (yBase >= 703) throw new Error(`SCurveGuy: baseline reaches screen y ${yBase.toFixed(1)} at f${f}`);
+  const yPart = sy(BASE - HP + GRAPH_SHADOW_OFF + GRAPH_STROKE / 2);
+  if (yPart >= 607) throw new Error(`SCurveGuy: parting point reaches screen y ${yPart.toFixed(1)} at f${f}`);
+  const yCrown = sy(BASE - PLATEAU - GRAPH_STROKE / 2 - 3 * GRAPH_CROWN_STEP);
+  if (f >= 60 && yCrown < 40) throw new Error(`SCurveGuy: crown top at screen y ${yCrown.toFixed(1)} at f${f}`);
 }
 
 const SCurveGuy: React.FC<z.infer<typeof schema>> = ({ bands }) => {
