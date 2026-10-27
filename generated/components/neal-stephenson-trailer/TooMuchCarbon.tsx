@@ -12,9 +12,10 @@
 // DURATION: the slot 22.4808 -> 27.0687 s = 4.588 s x 23.976 = 110 frames (sequence f539 -> f649; f0..f109).
 //
 // THE MOTION: f0 is cut 18's last frame (the S-curve graph on the paper). The camera pans right along the same paper
-// (one acceleration, one deceleration, a slight breath out and a lift; landing ~f38), leaving the S-curve behind, onto
+// (one acceleration, one deceleration, a slight breath out; landing ~f38), leaving the S-curve behind, onto
 // a second graph in the same white-ink axis style whose axes draw out of their corner as it comes into view (f10-f40,
-// the x-axis tip running ahead of the camera), with "1958" and "2026" rising in under the x-axis ends. From f42
+// the x-axis tip running ahead of the camera), with "1958" and "2026" rising in just above the x-axis ends,
+// inside the plot (rev 3: the axis itself sits in the first caption band). From f42
 // ("scared") the CO2 line draws every month from March 1958, left to right at an even pace, the seasonal sawtooth
 // showing, its tip reaching September 2026 on "atmosphere" (f95): one line growing through "scared of are too much
 // carbon in the atmosphere". "CO2" rises in beside the end (f86). f96-109: the complete record held alive (a slow
@@ -60,7 +61,6 @@ import {
   STROKE,
   clamp,
   fontFamily,
-  inCaptionBand,
   runCamera2,
   textRise,
   type,
@@ -150,15 +150,15 @@ const T_CO2 = 86;
 
 // -- the camera: 18's own damped track, extended ------------------------------------------------------------------------
 // Global frame G = this cut's frame + SCURVE_JOIN_FRAME. Keys G 0..98 restate SCurveGuy's camera keys verbatim (asserted
-// below against SCURVE_END_CAM); keys after G 98 are this cut's. The pan: x target runs 1000 -> 2750 (the CO2 graph's
+// below against SCURVE_END_CAM); keys after G 98 are this cut's. The pan: x target runs 975 -> 2750 (the CO2 graph's
 // middle) on one eased ramp, f0 -> f30; the damped follow lags it ~6 frames, so the camera lands ~f38 (under 2 px/f
-// by ~f40) with no overshoot. On the way the camera breathes out a little (k 1.03 -> ~0.89 at ~f20 -> 1.0), so
+// by ~f40) with no overshoot. On the way the camera breathes out a little (k 0.97 -> ~0.89 at ~f20 -> 1.0), so
 // mid-pan the S-curve's plateau and the new axes share the frame and the screen speed peaks lower (~62 px/f). The fast
 // stretch (~f6-f34) takes the house fast-pan recipe, lightened: a horizontal-only Gaussian on the ink plane, sigma 0.08
 // x the camera's screen px per frame (peak ~5 px), exactly 0 when slow (deathCountShared's blurX uses ~0.22; at 0.15-0.22 the new
-// y-axis, a thin vertical drawing during the pan, smeared to a grey ghost); paper and film life stay sharp. A slight lift (y 540 -> 580) puts the new baseline
-// just above the frame's middle (screen y ~528), so the years under it clear the first caption band. Then a slow creep
-// in (k 1.0 -> 1.025, y 580 -> 572, x +22) to the last frame.
+// y-axis, a thin vertical drawing during the pan, smeared to a grey ghost); paper and film life stay sharp. y eases 430 ->
+// 440 (rev 3: the graph's visual centre at the frame's centre, the bare x-axis inside band 1). Then a slow creep in
+// (k 1.0 -> 1.02, x +22) to the last frame.
 const J = SCURVE_JOIN_FRAME;
 const keyed = (keys: [number, number][]) => (g: number) =>
   interpolate(
@@ -167,32 +167,36 @@ const keyed = (keys: [number, number][]) => (g: number) =>
     keys.map((k) => k[1]),
     clamp,
   );
-// 18's keys (SCurveGuy.tsx, "the camera"), G 0 .. 98
+// 18's keys (SCurveGuy.tsx rev 3, "the camera"), G 0 .. 98
 const X18: [number, number][] = [
   [0, 560],
   [10, 580],
-  [38, 955],
-  [84, 990],
-  [98, 1000],
+  [38, 950],
+  [84, 965],
+  [98, 975],
 ];
 const Y18: [number, number][] = [
   [0, 541],
-  [36, 541],
-  [52, 518],
-  [62, 518],
-  [82, 540],
-  [98, 540],
+  [30, 520],
+  [54, 418],
+  [64, 418],
+  [82, 430],
+  [98, 430],
 ];
 const K18: [number, number][] = [
   [0, 1.8],
   [6, 1.78],
-  [36, 1.0],
-  [70, 1.0],
-  [98, 1.035],
+  [38, 0.98],
+  [56, 0.95],
+  [70, 0.95],
+  [98, 0.975],
 ];
 const PAN_F1 = 30;
 const CAM_X_LAND = (GX0 + GX1) / 2; // 2750
-const CAM_Y_LAND = BASE + 12; // the baseline 12 px above the frame's middle
+// rev 3 (the user on 18: "this graph sits too high"): the CO2 graph lands LOWER, its visual centre at the frame's
+// centre: the record climbs from screen y ~642 (1958, the bare start inside band 1 like 18's flat tail) to ~295 (2026);
+// the bare x-axis sits at ~668, inside the first band (allowed).
+const CAM_Y_LAND = 440;
 const smooth = (u: number) => {
   const x = Math.max(0, Math.min(1, u));
   return x * x * (3 - 2 * x);
@@ -202,22 +206,22 @@ const smooth = (u: number) => {
 const panEase = (u: number) =>
   0.5 * Math.max(0, Math.min(1, u)) + 0.5 * smooth(u);
 const camXOwn = (f: number) => {
-  if (f <= PAN_F1) return 1000 + (CAM_X_LAND - 1000) * panEase(f / PAN_F1);
+  if (f <= PAN_F1) return 975 + (CAM_X_LAND - 975) * panEase(f / PAN_F1);
   return CAM_X_LAND + 22 * smooth((f - PAN_F1) / (DURATION - 1 - PAN_F1));
 };
 const camYOwn = (f: number) => {
-  if (f <= PAN_F1) return 540 + (CAM_Y_LAND - 540) * smooth(f / PAN_F1);
-  return CAM_Y_LAND - 8 * smooth((f - PAN_F1) / (DURATION - 1 - PAN_F1));
+  if (f <= PAN_F1) return 430 + (CAM_Y_LAND - 430) * smooth(f / PAN_F1);
+  return CAM_Y_LAND;
 };
-// k: 18 ends heading to 1.035; across the pan it breathes out to 0.88 (target, f16) and back to 1.0 (the wide graph
-// lands at the same scale as 18's), then creeps in to 1.025 over the record and the hold.
+// k: 18 ends heading to 0.975; across the pan it breathes out to 0.88 (target, f16) and back to 1.0, then creeps in
+// to 1.02 over the record and the hold (centred on the frame's middle, so the labels stay above the first band).
 const K_DIP = 0.88;
 const K_DIP_F = 16;
 const camKOwn = (f: number) => {
-  if (f <= K_DIP_F) return 1.035 + (K_DIP - 1.035) * smooth(f / K_DIP_F);
+  if (f <= K_DIP_F) return 0.975 + (K_DIP - 0.975) * smooth(f / K_DIP_F);
   if (f <= PAN_F1)
     return K_DIP + (1.0 - K_DIP) * smooth((f - K_DIP_F) / (PAN_F1 - K_DIP_F));
-  return 1.0 + 0.025 * smooth((f - PAN_F1) / (DURATION - 1 - PAN_F1));
+  return 1.0 + 0.02 * smooth((f - PAN_F1) / (DURATION - 1 - PAN_F1));
 };
 
 const CAM_F: number[] = [];
@@ -275,27 +279,41 @@ const panBlur = (f: number) => {
 const YEAR_SIZE = 56; // the style's label size
 const CO2_SIZE = 56;
 const CAP = 0.7; // Barlow cap height per em
-const YEAR_BASE = BASE + STROKE / 2 + 10 + YEAR_SIZE * CAP; // years hang under the baseline
+// Years sit just ABOVE the x-axis ends, inside the plot (the axis is in caption band 1): "1958" left-aligned beside the
+// y-axis, above the record's start (its bottom ~35 px clear of the line); "2026" right-aligned at the axis end, in the
+// empty lower right under the record's end.
+const YEAR_BASE = Y_LO - 50;
+const YEAR_1958_X = GX0 + 20;
 // CO2: right-aligned up-left of the record's end, in the empty upper left of the graph
 const CO2_X = GX1 - 48;
 const CO2_BASE = Y_HI - 30;
 
-// the screen footprint of the type, the baseline and the record's end must stay above y 600 (bands 607-703, 765-821)
+// Caption bands (screen y 607-703, 765-821) along the whole camera path (rev 3): the bare x-axis and the record's flat
+// start (before ~1972) may sit inside the FIRST band; the year labels, the record from 1980 on (its climb and tip) and
+// the CO2 label stay above it; the CO2 label stays inside the top of the frame.
+const CLEAR_FROM = CO2_T.findIndex((t) => t >= 1980);
 for (let f = 0; f < DURATION; f++) {
   const c = camAt(f);
   const sy = (y: number) => 540 + (y - c.y) * c.k;
   const yearBottom = sy(YEAR_BASE + SHADOW_OFF);
-  if (
-    f >= T_1958 &&
-    (yearBottom >= 600 ||
-      inCaptionBand(sy(YEAR_BASE - YEAR_SIZE * CAP), yearBottom))
-  ) {
+  if (f >= T_1958 && yearBottom >= 603) {
     throw new Error(
       `TooMuchCarbon: year labels reach screen y ${yearBottom.toFixed(1)} at f${f}`,
     );
   }
-  if (sy(BASE + SHADOW_OFF + STROKE / 2) >= 600)
-    throw new Error(`TooMuchCarbon: baseline in a band at f${f}`);
+  if (sy(BASE + SHADOW_OFF + STROKE / 2) >= 703)
+    throw new Error(`TooMuchCarbon: baseline reaches band 2 at f${f}`);
+  if (f >= REC_F0) {
+    let low = -Infinity;
+    for (let j = CLEAR_FROM; j < N; j++) low = Math.max(low, PY[j]);
+    const yLow = sy(low + SHADOW_OFF + STROKE / 2);
+    if (yLow >= 603)
+      throw new Error(
+        `TooMuchCarbon: record after 1980 reaches screen y ${yLow.toFixed(1)} at f${f}`,
+      );
+  }
+  if (f >= T_CO2 && sy(CO2_BASE - CO2_SIZE * CAP) < 60)
+    throw new Error(`TooMuchCarbon: CO2 label too near the top at f${f}`);
 }
 
 // -- drawing ----------------------------------------------------------------------------------------------------------------
@@ -338,17 +356,18 @@ const Rising: React.FC<{
   );
 };
 
-const YearLabel: React.FC<{ text: string; x: number; dy: number }> = ({
-  text,
-  x,
-  dy,
-}) => (
+const YearLabel: React.FC<{
+  text: string;
+  x: number;
+  dy: number;
+  anchor: "start" | "end";
+}> = ({ text, x, dy, anchor }) => (
   <Inked
     render={(fill) => (
       <text
         x={x}
         y={YEAR_BASE + dy}
-        textAnchor="middle"
+        textAnchor={anchor}
         fill={fill}
         style={type(YEAR_SIZE, 800)}
       >
@@ -432,10 +451,17 @@ const TooMuchCarbon: React.FC<z.infer<typeof schema>> = ({ bands }) => {
                 </g>
               ) : null}
               <Rising frame={frame} f0={T_1958} k={cam.k}>
-                {(dy) => <YearLabel text="1958" x={DX0} dy={dy} />}
+                {(dy) => (
+                  <YearLabel
+                    text="1958"
+                    x={YEAR_1958_X}
+                    dy={dy}
+                    anchor="start"
+                  />
+                )}
               </Rising>
               <Rising frame={frame} f0={T_2026} k={cam.k}>
-                {(dy) => <YearLabel text="2026" x={GX1} dy={dy} />}
+                {(dy) => <YearLabel text="2026" x={GX1} dy={dy} anchor="end" />}
               </Rising>
               <Rising frame={frame} f0={T_CO2} k={cam.k}>
                 {(dy) => <Co2Label dy={dy} />}
