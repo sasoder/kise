@@ -69,6 +69,7 @@ import {
   medAir,
   northYaw,
   paint,
+  makePath,
   pathAt,
   project,
   quayPt,
@@ -614,22 +615,22 @@ const HubHalo: React.FC<{ cam: Cam; air: MedAir; H: Halo; frame: number }> = ({ 
 // THE SHIPS: cut 45's two (continued exactly) and the lanes' traffic, at cut 45's symbol scale (shipGrow), constant
 // speed. Each is off frame at f0 (the join) and sails into view as the camera opens.
 // ===================================================================================================================
-const V_SHIP = 1.75;
 const rev = (p: Path): Path => smoothPath([...p.pts].reverse().filter((_, i, a) => i % 6 === 0 || i === a.length - 1), 4);
 const laneOf = (id: string) => LANES.find((l) => l.id === id)!.path;
 type Traffic = { id: string; path: Path; s0: number; v: number; cargo: "wheat" | "glass" | "none"; ph: number };
-const INTO_ALEX_OST = rev(laneOf("alexOstia"));
-const INTO_ALEX_CAR = rev(laneOf("alexCar"));
+/** rev 2 (user: "avoid having them close to land and just have them slowly travelling"): every ship is on the map for
+ *  all 72 frames, never reaches the end of its course, and sails slowly (about 1.6 world px a frame, ~1 px on screen
+ *  in the wide) on an open-water stretch of a lane, well clear of every coast and island: mid-way between Egypt and
+ *  Crete, and the open Ionian; with cut 45's two (the wheat ship north-east to Sidon, the glass ship bearing out to sea)
+ *  that is four ships. The two new ones are off
+ *  frame at f0 (the join) and come into view as the camera opens. (The inbound ships at Alexandria and the Aegean and
+ *  Anatolian-coast ships of rev 0/1 are gone.) */
+const SLOW = 1.6;
+const revLane = (id: string, s: number) => laneOf(id).len - s;
+const OST_IN = rev(laneOf("alexOstia"));
 export const TRAFFIC: Traffic[] = [
-  // inbound to Alexandria: in the last frame they sail in toward the harbour mouth
-  { id: "inO", path: INTO_ALEX_OST, s0: INTO_ALEX_OST.len - 278, v: V_SHIP, cargo: "none", ph: 0.7 },
-  { id: "inC", path: INTO_ALEX_CAR, s0: INTO_ALEX_CAR.len - 470, v: V_SHIP, cargo: "wheat", ph: 1.9 },
-  // the wide's traffic
-  { id: "ostA", path: laneOf("alexOstia"), s0: 1000, v: 2.2, cargo: "wheat", ph: 2.6 },
-  { id: "carA", path: laneOf("alexCar"), s0: 880, v: 2.2, cargo: "none", ph: 3.4 },
-  { id: "carO", path: rev(laneOf("carOst")), s0: 160, v: 2.2, cargo: "none", ph: 4.1 },
-  { id: "antE", path: laneOf("antEph"), s0: 780, v: 2.2, cargo: "glass", ph: 5.0 },
-  { id: "ephW", path: rev(laneOf("ephWest")), s0: 260, v: 2.2, cargo: "none", ph: 5.7 },
+  { id: "libA", path: OST_IN, s0: revLane("alexOstia", 420), v: SLOW, cargo: "wheat", ph: 2.6 },
+  { id: "ionE", path: OST_IN, s0: revLane("alexOstia", 1160), v: SLOW, cargo: "none", ph: 3.4 },
 ];
 /** the glass ship's arrival: cut 45's constant-speed arclength in, a constant deceleration over its last DEC world px
  *  to a stop STOP short of its course's end (clear of the eastern mole); v = speed / cruising speed */
@@ -642,20 +643,31 @@ const glassArrive = (sLin: number) => {
   const t = x / (2 * GLASS_DEC);
   return { s: s1 + 2 * GLASS_DEC * (t - (t * t) / 2), v: 1 - t };
 };
+/** the glass ship's open-water course: cut 45's GLASS_PATH up to 12 world px past its f0 arclength, then a gentle turn
+ *  north-west out to sea (~65-80 world px off the delta coast by the last frame) */
+const GLASS_S0 = 68 + 1.3125 * 294;
+const GLASS_OPEN: Path = (() => {
+  const keep = GLASS_PATH.pts.filter((_, i) => GLASS_PATH.cum[i] <= GLASS_S0 + 12);
+  const ext = smoothPath([pathAt(GLASS_PATH, GLASS_S0 + 12).at, pathAt(GLASS_PATH, GLASS_S0 + 26).at, [92, -142], [55, -185]], 24);
+  return makePath([...keep, ...ext.pts]);
+})();
 const bob = (frame: number, ph: number) => ({ roll: 0.025 * Math.sin(frame * 0.07 + ph), pitch: 0.012 * Math.sin(frame * 0.05 + ph * 1.7), heave: 0.08 * Math.sin(frame * 0.06 + ph) });
 const shipItems = (cam: Cam, air: MedAir, frame: number): (Item | null)[] => {
   const items: (Item | null)[] = [];
   // cut 45's two, exactly as its tradeItems (without its Alexandria: drawn below with the Pharos lit). The glass ship
   // ends its voyage outside Alexandria's eastern mole: it slows to a stop there (its sail brailed up as it comes in)
   const sp = shipPoses(F45(frame), cam.D);
-  const g = glassArrive(sp.gS);
-  const glass = g.s === sp.gS ? sp.glass : { ...sp.glass, ...pathAt(GLASS_PATH, g.s), sail: 1 - 0.65 * (1 - g.v) };
+  // rev 2: the glass ship no longer runs in along the Egyptian coast to Alexandria's mole; from its f0 pose it bears
+  // away north-west into open water at its cut-45 speed (same course for its first 12 world px, so f0 joins exactly)
+  const glass = { ...sp.glass, ...pathAt(GLASS_OPEN, sp.gS) };
+  const g = { s: sp.gS, v: 1 };
+  void glassArrive;
   items.push(
     shipWaterItem(cam, air, sp.wheat, "wsw"),
     wakeItem(cam, air, WHEAT_PATH, sp.wS, 150, "wwk", 1, 18 * sp.wheat.scale),
     ...corbitaItems(cam, air, sp.wheat, "wship"),
     shipWaterItem(cam, air, glass, "gsw"),
-    wakeItem(cam, air, GLASS_PATH, g.s, 150, "gwk", g.v, 18 * sp.glass.scale),
+    wakeItem(cam, air, GLASS_OPEN, g.s, 150, "gwk", g.v, 18 * sp.glass.scale),
     ...corbitaItems(cam, air, glass, "gship"),
   );
   const scale = sp.wheat.scale;
