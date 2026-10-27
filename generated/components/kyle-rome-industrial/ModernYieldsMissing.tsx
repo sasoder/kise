@@ -17,10 +17,11 @@
 // 257-268
 // DURATION: the slot 20.387 -> 29.529 s in the sequence (frames 611 -> 885) = 274 frames at 30000/1001.
 //
-// THE MOTION (Rev 1, after the director's review): a lateral dolly to screen right that MOVES -> HOLDS -> MOVES ->
-// HOLDS: it holds still (~0.3 unit/frame) on each Roman thing, arriving just before its word (holds f0-39, f82-98,
-// f142-164, f210-274), with three eased moves between (f39-82, f98-142, f164-210; level-topped speed, peaks 38-44
-// px/frame at the stations) during which the eye backs out ~15 % and settles back in on arrival. Past four
+// THE MOTION (Rev 2): ONE continuous lateral dolly to screen right that never stops until the final settle (the
+// user: "ease in and ease out, to still keep the movement while giving time to look at each part"): it slows to a
+// ~5 px/frame drift at each station (troughs f28, f91, f162, f230, near "traction", "fertilizers", "yields"), speeds
+// up on a smooth raised cosine between them (peaks 35-40 px/frame at the stations, the eye backing out ~19 % mid-way
+// and fully in again at each trough), and eases to rest on the heaps by f258 ("productive" f257). Past four
 // Roman things standing on one line along the near edge of row B (their bases near y 1050, ~1.75 px/unit). Beside
 // each a DASHED ORANGE ghost of the modern thing Rome never had (the clip's dashed orange = technology Rome never had):
 // a bold dashed line (~8.5 px, round caps, dash 3x / gap 2x the stroke, a soft glow, bloom 0.24) drawn by ONE moving

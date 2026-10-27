@@ -17,70 +17,63 @@ export const WORLD_F = 158;
 export const worldFrame = (f: number) => f + WORLD_F;
 
 // ===================================================================================================================
-// THE CAMERA (Rev 1, the user: "everything moves a bit too fast ... hold for one or a few beats more on each
-// segment"; the director's review of the first Rev 1 preview: cap the moves at ~40-45 px/frame, ~40 f each, dolly
-// out a little during each move and settle back in on arrival): the eye 1.7 m up, looking into the valley; the
-// stations stand on one line at Z ~2900, their bases near y 1050 in the holds. MOVE -> HOLD -> MOVE -> HOLD:
-//   hold 1 f0-39    the ox team and tractor (drawn f0-34; "traction" f39)
-//   move 1 f39-82
-//   hold 2 f82-98   the manure man and the sack (drawn f68-92, the fan fully open by f98; "fertilizers" f96)
-//   move 2 f98-142
-//   hold 3 f142-164 the modern wheat (risen f138-160; "yields" f163)
-//   move 3 f164-210
-//   hold 4 f210-274 the heaps (ghost drawn f212-255; "productive" f257) to the cut
-// In a hold the eye drifts ~0.3 units/frame (still). A move's speed rises over its first fifth (smoothstep), runs
-// level, and falls over its last fifth; the eye backs out 150 units (the stations ~17 % smaller at most) on a flat-topped
-// bell over the move and settles back in on arrival. The eye X is the integral of that speed (a table at load).
+// THE CAMERA (Rev 2, the user on Rev 1's holds: "a lot better now but almost a bit too rigid. Instead of holding on
+// each part, ease in and ease out, to still keep the movement while giving time to look at each part"): ONE
+// continuous lateral path that never stops until the final settle. The eye 1.7 m up, looking into the valley; the
+// stations on one line at Z ~2900, their bases near y 1050 as the camera passes them.
+//   At each station the speed sinks to a slow drift (~2.8 units/frame, ~5 px/frame) at a trough frame near its word:
+//     tractor f28 (drawn f0-34, "traction" f39), fertiliser f91 (sack drawn f68-92, fan open by f98, "fertilizers"
+//     f96), wheat f162 (risen f138-160, "yields" f163), harvest f230 (ghost heap f212-255, "productive" f257).
+//   Between troughs the speed rises and falls on one raised cosine (sin^2), sized so the path covers the distance
+//   between stations; peaks stay under ~40 px/frame at the stations because the eye also backs out (up to 170
+//   units, ~19 %) on the same sin^2 and is fully back in at every trough.
+//   Before f28 it drifts at the trough speed; after f230 the drift eases to rest by f262 (the only stop).
+// The eye X is the integral of that speed (a table at load).
 // ===================================================================================================================
 export const EYE = { H: 300, Z: 2160, F: 1300, hy: 523 };
-/** the holds: [first frame, last frame, eye X at its start, eye X at its end] */
-export const HOLDS: [number, number, number, number][] = [
-  [0, 39, 380, 392],
-  [82, 98, 1380, 1385],
-  [142, 164, 2440, 2447],
-  [210, 274, 3378, 3398],
+/** the stations' trough frames and the eye X there */
+export const TROUGHS: [number, number][] = [
+  [28, 400],
+  [91, 1372],
+  [162, 2440],
+  [230, 3352],
 ];
-export const MOVE = { ramp: 0.2, dollyOut: 150, bellRamp: 0.32 };
-/** which move a frame is in (index i = from hold i to hold i + 1) and its progress t, or null in a hold */
-const moveAt = (f: number): { i: number; t: number } | null => {
-  for (let i = 0; i < HOLDS.length - 1; i++) {
-    const a = HOLDS[i][1];
-    const b = HOLDS[i + 1][0];
-    if (f > a && f < b) return { i, t: (f - a) / (b - a) };
+export const PATH = { vMin: 2.8, settle: 32, dollyOut: 170 };
+/** which transition a frame is in (i = from trough i to i + 1) and its progress s, or null */
+const legAt = (f: number): { i: number; s: number } | null => {
+  for (let i = 0; i < TROUGHS.length - 1; i++) {
+    const a = TROUGHS[i][0];
+    const b = TROUGHS[i + 1][0];
+    if (f >= a && f < b) return { i, s: (f - a) / (b - a) };
   }
   return null;
 };
-/** the level-topped speed shape of a move (0 at its ends, 1 on the level) */
-const shape = (t: number) => smooth(t / MOVE.ramp) * smooth((1 - t) / MOVE.ramp);
-const SHAPE_AREA = (() => {
-  let acc = 0;
-  const N = 2000;
-  for (let i = 0; i < N; i++) acc += shape((i + 0.5) / N) / N;
-  return acc;
-})();
-const holdV = (h: [number, number, number, number]) => (h[3] - h[2]) / Math.max(1, h[1] - h[0]);
+/** the peak speed of transition i, so that it covers its distance: D = T (vMin + vPk) / 2 */
+const legPeak = (i: number) => {
+  const [a, xa] = TROUGHS[i];
+  const [b, xb] = TROUGHS[i + 1];
+  return (2 * (xb - xa)) / (b - a) - PATH.vMin;
+};
 /** the eye's speed (units/frame) at a frame */
 export const camSpeed = (f: number) => {
-  const m = moveAt(f);
-  if (!m) {
-    const h = HOLDS.find(([a, b]) => f >= a && f <= b) ?? HOLDS[HOLDS.length - 1];
-    return holdV(h);
-  }
-  const A = HOLDS[m.i];
-  const B = HOLDS[m.i + 1];
-  const n = B[0] - A[1];
-  const vA = holdV(A);
-  const vB = holdV(B);
-  const peak = (B[2] - A[3] - n * (vA + vB) * 0.5) / (n * SHAPE_AREA);
-  return vA + (vB - vA) * m.t + peak * shape(m.t);
+  const last = TROUGHS[TROUGHS.length - 1][0];
+  if (f < TROUGHS[0][0]) return PATH.vMin;
+  if (f >= last) return PATH.vMin * (1 - smooth((f - last) / PATH.settle));
+  const m = legAt(f) as { i: number; s: number };
+  const k = Math.sin(Math.PI * m.s) ** 2;
+  return PATH.vMin + (legPeak(m.i) - PATH.vMin) * k;
 };
 const X_TABLE: number[] = (() => {
-  const out = [HOLDS[0][2]];
-  for (let f = 0; f < 300; f++) {
+  // integrate from the first trough both ways so X(28) is exactly its key
+  const out: number[] = new Array(301).fill(0);
+  const f0 = TROUGHS[0][0];
+  out[f0] = TROUGHS[0][1];
+  for (let f = f0; f < 300; f++) {
     let acc = 0;
     for (let i = 0; i < 16; i++) acc += camSpeed(f + (i + 0.5) / 16) / 16;
-    out.push(out[f] + acc);
+    out[f + 1] = out[f] + acc;
   }
+  for (let f = f0; f > 0; f--) out[f - 1] = out[f] - PATH.vMin;
   return out;
 })();
 export const camX = (f: number) => {
@@ -88,11 +81,11 @@ export const camX = (f: number) => {
   const i = Math.floor(g);
   return X_TABLE[i] + (X_TABLE[i + 1] - X_TABLE[i]) * (g - i);
 };
-/** the eye's depth: backing out during each move on a flat-topped bell, settled in every hold */
+/** the eye's depth: backing out between stations on the same sin^2, fully in at every trough */
 export const camZ = (f: number) => {
-  const m = moveAt(f);
+  const m = legAt(f);
   if (!m) return EYE.Z;
-  return EYE.Z - MOVE.dollyOut * smooth(m.t / MOVE.bellRamp) * smooth((1 - m.t) / MOVE.bellRamp);
+  return EYE.Z - PATH.dollyOut * Math.sin(Math.PI * m.s) ** 2;
 };
 export const eyeAt = (f: number): FarmEye => ({ X: camX(f), H: EYE.H, Z: camZ(f), F: EYE.F, hy: EYE.hy });
 /** screen px per world unit at depth Z in a hold (the dash sizes are fixed by it, so they never change) */
