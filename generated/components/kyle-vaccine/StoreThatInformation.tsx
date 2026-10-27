@@ -28,8 +28,14 @@
 // f44-58 and hangs behind his body. The camera is ONE move (libraryWorld STORE_CAM: one even tapered-cosine lobe f14-122, plateau f47-89, a creep
 // at both ends): a medium shot on Jenner (~670 px tall) and the open book (k 2.05), pushing in and panning left with the
 // book onto the shelf (k 5.0, the spine ~50 px wide, centred at x ~545, y ~905). Cut 76's first frame = f130 (STORE_END).
-// The book is drawn in front of Jenner while he shows it and behind his hand once it travels to the shelf: the front
-// copy crossfades out over f58-66 so the change of order never pops.
+// The book is drawn in front of Jenner while he shows it and behind his hand once it travels to the shelf. REV2 ("his
+// hand still glitches a bit", f33): each hand's grip is a point in the book's own frame and moves with it; the far
+// hand's elbow keeps one side (ELBOW_HINT: its arm no longer flips round as the closing book comes under his shoulder);
+// the near hand slides from behind the cover out under the tail. REV2b (the book "levitating" over his palm, f58-72): the
+// hand sits under the book's lowest point (the tail's corner at the spine) and is raised, frame by frame, until its
+// outline touches the book's (REST_GAP 0), so the book rests on his palm all the way; the order changes over f63-67
+// where front and back order renders are identical bar the book's soft light (a crossfade of that light only), before
+// the hand comes up onto the spine in front.
 // Orange = the vaccine knowledge only: the pages' light, the seam's leak, the shelved book's glow. Everything else in
 // muted earthy local colours; Jenner never orange.
 //
@@ -124,6 +130,88 @@ export const bookAt = (f: number) => {
 // carries it, pushes the spine home and lowers.
 // ---------------------------------------------------------------------------------------------------------------------
 const P2of = (A: ReturnType<typeof libraryAir>, p: V3): [number, number] => A.P.p(p[0], p[1], p[2]);
+/** REV2: the far arm's elbow hint (figure space) and the frames it blends in and back out over */
+const ELBOW_HINT = { v: [1, 0.3] as [number, number], in: [12, 26] as const, out: [72, 86] as const };
+/** REV2b: the near hand's outline keeps this clearance (world units) from the book's outline while the book rides on
+ *  it: touching, never overlapping (so the change of order there shows nothing) */
+const REST_GAP = 0;
+type P2 = [number, number];
+/** the book's screen outline (world px): the hull of its eight corners */
+export const bookOutline = (A: ReturnType<typeof libraryAir>, pose: BookPose): P2[] => {
+  const pts: P2[] = [];
+  for (const sx of [-VB.w / 2, VB.w / 2]) for (const sy of [-VB.h / 2, VB.h / 2]) for (const sz of [0, VB.d]) pts.push(P2of(A, add3(add3(add3(pose.c, mul3(pose.ex, sx)), mul3(pose.ey, sy)), mul3(pose.ez, sz))));
+  const ps = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o: P2, a: P2, b: P2) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: P2[] = [];
+  const up: P2[] = [];
+  for (const q of ps) {
+    while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop();
+    lo.push(q);
+  }
+  for (const q of [...ps].reverse()) {
+    while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop();
+    up.push(q);
+  }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+};
+/** signed distance of q to a convex outline: + inside (depth), - outside (the true distance) */
+export const sdPoly = (H: P2[], q: P2) => {
+  let inside = true;
+  let dmin = Infinity;
+  for (let i = 0; i < H.length; i++) {
+    const a = H[i];
+    const b = H[(i + 1) % H.length];
+    const ex = b[0] - a[0];
+    const ey = b[1] - a[1];
+    const l2 = ex * ex + ey * ey || 1;
+    if (ex * (q[1] - a[1]) - ey * (q[0] - a[0]) < 0) inside = false;
+    const t = c01(((q[0] - a[0]) * ex + (q[1] - a[1]) * ey) / l2);
+    dmin = Math.min(dmin, Math.hypot(q[0] - a[0] - t * ex, q[1] - a[1] - t * ey));
+  }
+  return inside ? dmin : -dmin;
+};
+/** the near hand's drawn outline (world px), sampled: the cast's mitten (vaccineFolkBody mitten: an ellipse of
+ *  len 0.56 x wid 0.5 along the hand, the thumb), the shirt cuff and the coat's turned-back cuff at the wrist */
+export const nearHandPoints = (an: ReturnType<typeof vaccineAnchors>): P2[] => {
+  const W = an.wristR as P2;
+  const k = Math.hypot(an.handR[0] - W[0], an.handR[1] - W[1]) / 11;
+  const dd = [an.mittenR[0] - W[0], an.mittenR[1] - W[1]];
+  const dl = Math.hypot(dd[0], dd[1]) || 1;
+  const d: P2 = [dd[0] / dl, dd[1] / dl];
+  const n: P2 = [-d[1], d[0]];
+  const fist = c01(an.pose.armR.fist);
+  const len = lerp(21, 18, fist) * k;
+  const wid = lerp(16.5, 17.5, fist) * k;
+  const out: P2[] = [];
+  const ell = (c: P2, u: P2, rx: number, ry: number) => {
+    for (let i = 0; i < 40; i++) {
+      const t = (i / 40) * 2 * Math.PI;
+      out.push([c[0] + u[0] * Math.cos(t) * rx - u[1] * Math.sin(t) * ry, c[1] + u[1] * Math.cos(t) * rx + u[0] * Math.sin(t) * ry]);
+    }
+  };
+  ell(an.mittenR as P2, d, len * 0.56, wid * 0.5);
+  // the thumb (both sides: the outline must not reach the book whichever side it is on)
+  for (const ts of [-1, 1]) {
+    const tb: P2 = [W[0] + d[0] * 6 * k + n[0] * ts * 7 * k, W[1] + d[1] * 6 * k + n[1] * ts * 7 * k];
+    const a = (-ts * lerp(28, 70, fist) * Math.PI) / 180;
+    const u: P2 = [d[0] * Math.cos(a) - d[1] * Math.sin(a), d[0] * Math.sin(a) + d[1] * Math.cos(a)];
+    ell([tb[0] + u[0] * 4 * k, tb[1] + u[1] * 4 * k], u, 5.4 * k, 4.2 * k);
+  }
+  // the cuffs: capsules along the forearm at the wrist
+  const fe = [W[0] - an.elbowR[0], W[1] - an.elbowR[1]];
+  const fl = Math.hypot(fe[0], fe[1]) || 1;
+  const cu: P2 = [fe[0] / fl, fe[1] / fl];
+  const cap = (s0: number, s1: number, r: number) => {
+    for (let j = 0; j <= 6; j++) {
+      const s = lerp(s0, s1, j / 6);
+      const c: P2 = [W[0] + cu[0] * s, W[1] + cu[1] * s];
+      for (let i = 0; i < 16; i++) out.push([c[0] + Math.cos((i / 16) * 2 * Math.PI) * r, c[1] + Math.sin((i / 16) * 2 * Math.PI) * r]);
+    }
+  };
+  cap(-k, 3 * k, 8.25 * k);
+  cap(-9 * k, 1.5 * k, 10.2 * k);
+  return out;
+};
 export const jennerPose = (f: number): VPose => {
   const tn = smooth((f - BEAT.turn[0]) / (BEAT.turn[1] - BEAT.turn[0]));
   // REV1: a small, slow turn that stays three-quarter (the cast swaps the waistcoat front and the coat back as a figure
@@ -132,7 +220,15 @@ export const jennerPose = (f: number): VPose => {
   // the head: down to the pages, up a little as the book closes, leading the turn, then up to the slot
   const lead = -0.12 * Math.sin(Math.PI * smooth((f - BEAT.turn[0] + 6) / (BEAT.turn[1] - BEAT.turn[0])));
   const pitch = lerp(16, 4, smooth((f - 24) / 22)) - 8 * smooth((f - 58) / 24) + 4 * smooth((f - 104) / 20);
-  const q: VPose = { ...standAt(yaw), headYaw: yaw + lead - 0.06, pitch, look: [0, lerp(0.5, 0, smooth((f - 22) / 20))] };
+  const q0: VPose = { ...standAt(yaw), headYaw: yaw + lead - 0.06, pitch, look: [0, lerp(0.5, 0, smooth((f - 22) / 20))] };
+  // REV2: the far hand (the rig's armL, on the book's screen-left cover) keeps its elbow on ONE side all through the
+  // closing and the tuck behind his body. The stand pose's elbow hint points down; as the closing book brings that grip
+  // in right under his shoulder the arm's direction passes the hint, the elbow flipped sides and the hand swung round
+  // (the jump the user saw at f33-55). The hint here points across his chest (the side the elbow is already on), so the
+  // solve never reaches the flip; it blends in and out where the old hint already put the elbow at full bend on that
+  // side, so f0 and the last frame are unchanged.
+  const eh = smooth((f - ELBOW_HINT.in[0]) / (ELBOW_HINT.in[1] - ELBOW_HINT.in[0])) * (1 - smooth((f - ELBOW_HINT.out[0]) / (ELBOW_HINT.out[1] - ELBOW_HINT.out[0])));
+  const q: VPose = eh > 0 ? { ...q0, armL: { ...q0.armL, elbow: [lerp(q0.armL.elbow[0], ELBOW_HINT.v[0], eh), lerp(q0.armL.elbow[1], ELBOW_HINT.v[1], eh)] } } : q0;
   // REV1b: the step back is a real step: the cast's walk cycle run backwards (one cycle = two planted steps of
   // WALK_STRIDE), his feet advancing exactly with `at` (jennerPos), the weight shifting with the cycle's own bob and a
   // small lean back against the direction of travel
@@ -165,15 +261,47 @@ export const jennerGrips = (A: ReturnType<typeof libraryAir>, f: number, B: Retu
   const rest = vaccineAnchors("jenner", q, at, scale, { hold: { L: "none", R: "none" } });
   const g = bookGrips(B.pose, B.open);
   const mixP = (a: [number, number], b: [number, number], t: number): [number, number] => [lerp(a[0], b[0], t), lerp(a[1], b[1], t)];
+  // his right (armL, the far hand): on the +ex cover until the book is closed, then back to his side
+  // REV1: it goes back behind his body (hidden by the torso: his back is to the screen right) instead of hanging at the
+  // front edge of the waistcoat, where it would cross the caption bands as the camera pushes in
+  const behind: [number, number] = [rest.hip[0] + 20 * scale, rest.hip[1] - 14 * scale];
+  // the path: off the cover in behind the closed book (it hides the hand), then on behind his body
+  // (REV2: the on-the-book part in the book's own frame, so the hand moves with it)
+  const bookMid: V3 = vec3.add3(B.pose.c, vec3.mul3(B.pose.ez, VB.d * 0.5));
+  const Lg = mixP(P2of(A, vec3.add3(vec3.mul3(g.R, 1 - smooth((f - 40) / 10)), vec3.mul3(bookMid, smooth((f - 40) / 10)))), behind, smooth((f - 49) / 12));
   // his left (armR, the near hand): the book's -ex cover all the way, moving onto the spine for the push
   // the push lands on the spine's lower third, so the glowing head of the spine stays in view
   const spineFront: V3 = vec3.add3(vec3.add3(B.pose.c, vec3.mul3(B.pose.ez, -1.5)), vec3.mul3(B.pose.ey, -VB.h * 0.3));
   // carrying: from the cover's edge to under the book's tail (the book rides on his fingers, its spine and the glowing
   // head in view above the hand), then onto the spine's lower third for the push
-  const tail: V3 = vec3.add3(vec3.add3(B.pose.c, vec3.mul3(B.pose.ey, -VB.h * 0.5)), vec3.mul3(B.pose.ez, VB.d * 0.22));
+  // REV2: every target is a point in the BOOK's own frame and the hand's point moves between them in 3D, so the hand
+  // rides with the book. REV2b: under the tail the book RESTS on his fingers on every frame: the hand's point sits below
+  // the tail by exactly the drop that brings the hand's outline up against the book's (REST_GAP, solved per frame), so
+  // they touch and never overlap; the book goes behind him there (the order change) with nothing of him overlapping it
   const toTail = smooth((f - 40) / 14);
   const onSpine = smooth((f - 70) / (BEAT.contact - 70));
-  let R = mixP(mixP(P2of(A, g.L), P2of(A, tail), toTail), P2of(A, spineFront), onSpine);
+  const mix3 = (a: V3, b: V3, t: number): V3 => vec3.add3(vec3.mul3(a, 1 - t), vec3.mul3(b, t));
+  // under the book's lowest point: the tail's corner at the spine on this cover's side (the turning, tipped book's
+  // lowest point all through f44-80), so the book's weight sits on his palm
+  const tailAt = (drop: number): V3 => vec3.add3(vec3.add3(B.pose.c, vec3.mul3(B.pose.ey, -VB.h * 0.5 - drop)), vec3.mul3(B.pose.ex, -VB.w * 0.5));
+  let tail = tailAt(0);
+  if (toTail > 0 && onSpine < 1) {
+    const H = bookOutline(A, B.pose);
+    // the hand's outline at a drop: its deepest point into the book (+ = overlap, - = gap)
+    const reach = (drop: number) => {
+      const an = vaccineAnchors("jenner", q, at, scale, { grip: { L: Lg, R: P2of(A, tailAt(drop)) }, hold: { L: "none", R: "none" } });
+      return Math.max(...nearHandPoints(an).map((p) => sdPoly(H, p)));
+    };
+    let lo = 0;
+    let hi = 30;
+    for (let it = 0; it < 22; it++) {
+      const mid = (lo + hi) / 2;
+      if (reach(mid) > -REST_GAP) lo = mid;
+      else hi = mid;
+    }
+    tail = tailAt(hi);
+  }
+  const R = P2of(A, mix3(mix3(g.L, tail, toTail), spineFront, onSpine));
   // REV1b, the release: the hand lifts off the spine and the arm comes down to his side in one eased arc, elbow first
   // (the hand first draws back toward his body, then drops), f99-112; after that the arm hangs free (no grip)
   const low = smooth((f - BEAT.lower[0]) / (BEAT.lower[1] - BEAT.lower[0]));
@@ -186,14 +314,7 @@ export const jennerGrips = (A: ReturnType<typeof libraryAir>, f: number, B: Retu
     Rg = [(1 - u) * (1 - u) * P0[0] + 2 * u * (1 - u) * C[0] + u * u * T[0], (1 - u) * (1 - u) * P0[1] + 2 * u * (1 - u) * C[1] + u * u * T[1]];
     if (low >= 0.999) Rg = undefined;
   }
-  // his right (armL, the far hand): on the +ex cover until the book is closed, then back to his side
-  // REV1: it goes back behind his body (hidden by the torso: his back is to the screen right) instead of hanging at the
-  // front edge of the waistcoat, where it would cross the caption bands as the camera pushes in
-  const behind: [number, number] = [rest.hip[0] + 20 * scale, rest.hip[1] - 14 * scale];
-  // the path: off the cover in behind the closed book (it hides the hand), then on behind his body
-  const bookMid = P2of(A, vec3.add3(B.pose.c, vec3.mul3(B.pose.ez, VB.d * 0.5)));
-  const L = mixP(mixP(P2of(A, g.R), bookMid, smooth((f - 40) / 10)), behind, smooth((f - 49) / 12));
-  return { L, R: Rg };
+  return { L: Lg, R: Rg };
 };
 
 /** this cut's own items (Jenner, his shadow, the book, its glow and shadow, the pages' light) at cut frame `frame`,
@@ -205,9 +326,10 @@ export const storeItems = (A: ReturnType<typeof libraryAir>, frame: number): Lib
   const { at, scale } = jennerAt(A, frame);
   const grip = jennerGrips(A, frame, B);
   const items: LibItem[] = [];
-  // the book: in front of Jenner while he shows it, behind his hand once it travels to the shelf (a short crossfade of
-  // the front copy hides the change of order where the hand overlaps it)
-  const SW = [58, 66] as const;
+  // the book: in front of Jenner while he shows it, behind him once it travels to the shelf. REV2: the order changes
+  // only while nothing of him overlaps the book (f63-67, the hand touching under the tail); the crossfade only eases the
+  // book's own soft light on him
+  const SW = [63, 67] as const;
   const front = 1 - smooth((frame - SW[0]) / (SW[1] - SW[0]));
   const bookNode = (k: string, op = 1) => (
     <g key={k} opacity={op}>
