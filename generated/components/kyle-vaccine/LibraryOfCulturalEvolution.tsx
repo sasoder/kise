@@ -19,11 +19,8 @@
 // pace toward the aisle (f3-f27), his left hand staying at his lapel, the other coming to his waistcoat front (no
 // hand hangs into the caption band while he is big), his head turning out to the hall. As the neighbouring shelves
 // enter the frame, people of other eras each slide one book home on their own beat, nearest first (a ripple outward
-// from Jenner's book): a Roman freeman (lands f46, STORED), Pasteur (f62), a c.1900 worker on the rolling ladder
-// (pandemics Worker, f74, the top shelf), a present-day commuter (covidFolk, f86). Each: the book carried in both
-// hands at the chest, the near hand lifts it beside the slot turning it spine-out (the far hand to the chest), the
-// hand moves onto the spine's lower third (contact = landing - 10) and pushes it home (first reaction the same frame:
-// the book moves into the face; home at the landing), lets go, and the arms come to rest folded at the chest.
+// from Jenner's book): a Roman freeman (lands f46, STORED), Pasteur (f62), a present-day commuter on the rolling
+// ladder (covidFolk, f80, the top shelf). (See REV1 / REV2 below for how each one moves.)
 // f110-f165: the settled, living hall (stack 0's two levels of thousands of spines, the aisle and the rows of stacks
 // running into the haze, the galleries, the barrel vault and the end window; the figures ~200 px; the worker on his
 // ladder; the orange spine a warm point at x ~560, y ~945), motes, breathing, the glow breathing, a slow creep.
@@ -47,19 +44,31 @@
 // hand on the rail; the c.1900 Worker's rigid 2.5D arm was dropped). Cut 68 REV1 ends with Jenner out of shot at
 // jennerPos(130): here he stands there from jennerPose(130 + f) (his far hand behind his hip as 68 leaves it), his
 // left hand coming up to his lapel while still out of shot (f2-f18), revealed by the pull-back from ~f31.
-// SOURCES: none on screen. Casts: vaccineFolk (Jenner, Pasteur), romeFolk (Freeman), pandemicFolk (Worker), covidFolk
-// (Commuter), all imported read-only. (The Greek scholar of the first round was dropped: at the less wide end only the
+// REV2 (Oct 27, the user: "the other ppls hands and arms glitch here also a bit", f~30; the director: as the Roman
+// enters, his forearm and the book pop between frames, hands and book do not move as one, the near hand passes through
+// the book). Every shelver now: (1) both hands are FIXED to the book while they hold it (the far hand at its hold by the
+// spine edge, then on the spine for the push; the near hand under its bottom edge), so hand and book move as one; the
+// grips land exactly (probe: hand-to-grip <= 0.05 px); (2) ONE draw order for the whole action, the book behind the
+// figure (carried out in front of the chest, clear of the torso), the hands over it: no swap, no cross-fade; (3) each
+// gripping arm's elbow hint is set every frame across its own shoulder->wrist line (bendHint): the rigs' soft elbow
+// bends fully on one side, so the forearm and upper arm keep their lengths and the elbow never flips (rev 1: the hint
+// lay along the arm as the hand passed the shoulder, the forearm shrank and flipped in 1-2 frames); (4) the hand swings
+// about the shoulder (swing) on the lift and on the way down, never folding through it (arm stays at 0.45-0.87 of its
+// length); the feet stand 85 from the slot so both hands reach. The Roman stands still (no step) and lifts the book
+// from the chest while still at the frame's edge (f10-f32), lines it up (12 -> 7 out), then pushes; the near hands come
+// down to the belt only once the belt is above the caption band. Jenner's lapel arm gets bendHint too (from f3).
+// SOURCES: none on screen. Casts: vaccineFolk (Jenner, Pasteur), romeFolk (Freeman), covidFolk (Commuter), all
+// imported read-only. (The Greek scholar of the first round was dropped: at the less wide end only the
 // left face of stack 0 is in frame, room for four shelvers.)
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { AIR_SCENE_EYE, AirShadow, AirStage, FIG_FOG, PandemicFolk, RomeFolk, WorldSvg, c01, fogHex, lerp, makeAirView, mixHex, perspective, rgbHex, swayCam, workerScale, type AirWorld, type Cam } from "../kits/dwarkesh-3d/dwarkesh3d";
+import { AIR_SCENE_EYE, AirShadow, AirStage, FIG_FOG, RomeFolk, WorldSvg, c01, fogHex, lerp, makeAirView, mixHex, perspective, rgbHex, swayCam, type AirWorld, type Cam } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { Book, DEPTH, LIB_BLOOM, LIB_REST, LIB_SCENE, LibraryStage, STORE_END_CAM, STORE_LAST, ShelfGlow, VACCINE_SLOT, VB, booksOn, libraryAir, slotAt, storeCamBase, vec3, type BookPose, type LibItem, type RowRef, type V3 } from "./libraryWorld";
 import { jennerPose, jennerPos, storeItems } from "./StoreThatInformation";
 import { Jenner, Pasteur, breathe as vBreathe, standAt as vStandAt, vaccineAnchors, walkPose, type VPose } from "./vaccineFolk";
 import * as Covid from "../kyle-covid/covidFolk";
-import { buildWorker, type WorkerPose } from "../kyle-pandemics/pandemicFolkWorker";
 import { WORKER_INKS } from "../kyle-pandemics/pandemicFolk";
 
 export const FPS = 30000 / 1001;
@@ -166,7 +175,7 @@ const smooth = (v: number) => {
   return x * x * x * (x * (6 * x - 15) + 10);
 };
 type P2 = [number, number];
-type CastKind = "rome" | "covid" | "pasteur" | "worker";
+type CastKind = "rome" | "covid" | "pasteur";
 export type Shelver = {
   id: string;
   cast: CastKind;
@@ -192,6 +201,9 @@ export type Shelver = {
   stepIn?: number;
   /** the frame the hands start down into the rest pose (late enough that the hands stay above the caption band) */
   restAt?: number;
+  /** the lift starts this many frames before the landing (default 24) and takes reachLen frames (default 16) */
+  reachFrom?: number;
+  reachLen?: number;
   /** on the rolling ladder: back three-quarter to us, the near hand holding the rail */
   ladder?: boolean;
 };
@@ -205,9 +217,9 @@ const LADDER_RUNG = (() => {
   return { X: -930, Y: lerp(0, -444, t), Z: lerp(-92, -6, t) };
 })();
 const SHELVERS0: Shelver[] = [
-  { id: "rom", cast: "rome", variant: 0, X: 0, Z: -40, dir: 1, side: "L", shelf: 2, slotX: -516, land: 46, col: "#D9C9A5", reach: 75, stepIn: 40, restAt: 56 },
-  { id: "pas", cast: "pasteur", variant: 0, X: 0, Z: -40, dir: 1, side: "L", shelf: 2, slotX: -718, land: 62, col: "#E6DAC0", reach: 75, stepIn: 40, restAt: 70 },
-  { id: "com", cast: "covid", variant: 0, X: -930, Z: LADDER_RUNG.Z, feetY: LADDER_RUNG.Y, dir: 1, side: "L", shelf: 0, slotX: -862, land: 80, col: "#D9C9A5", stepIn: 0, restAt: 90, ladder: true },
+  { id: "rom", cast: "rome", variant: 0, X: 0, Z: -40, dir: 1, side: "L", shelf: 2, slotX: -516, land: 46, col: "#D9C9A5", reach: 85, stepIn: 0, restAt: 50, reachFrom: 36, reachLen: 22 },
+  { id: "pas", cast: "pasteur", variant: 0, X: 0, Z: -40, dir: 1, side: "L", shelf: 2, slotX: -718, land: 62, col: "#E6DAC0", reach: 85, stepIn: 40, restAt: 66 },
+  { id: "com", cast: "covid", variant: 0, X: -930, Z: LADDER_RUNG.Z, feetY: LADDER_RUNG.Y, dir: 1, side: "L", shelf: 0, slotX: -825, land: 80, col: "#D9C9A5", stepIn: 0, restAt: 90, ladder: true },
 ];
 /** the existing spine nearest X on that shelf (the new book covers it exactly: it reads as pushed home) */
 const slotNear = (side: "L" | "R", shelf: number, X: number) => {
@@ -226,26 +238,25 @@ const slotNear = (side: "L" | "R", shelf: number, X: number) => {
   return slotAt(row, shelf, best);
 };
 export const SLOTS = Object.fromEntries(SHELVERS0.map((s) => [s.id, slotNear(s.side, s.shelf, s.slotX)]));
-export const SHELVERS: Shelver[] = SHELVERS0.map((s) => (s.cast === "worker" || s.ladder ? s : { ...s, X: SLOTS[s.id].X - s.dir * (s.reach ?? 60) }));
+export const SHELVERS: Shelver[] = SHELVERS0.map((s) => (s.ladder ? s : { ...s, X: SLOTS[s.id].X - s.dir * (s.reach ?? 60) }));
 
-/** the beats of one shelving, from its landing frame L (the book home):
- *  step in L-38..L-18 (feet planted), reach L-24..L-8 (the far hand carries the book up into the gap, turning it
- *  spine-out, the elbow bent, the body leaning in), the hand onto the spine L-10..L-7, a small push L-7..L (contact
- *  L-7, the book moves the same frame), release L+1..L+6, the hand lingers on the shelf, then both arms down into the
- *  rest pose from restAt (elbow first) */
+/** REV2: the beats of one shelving, from its landing frame L (the book home). The book is carried in the FAR hand at the
+ *  far hip (the near hand rests on the belt the whole time); step in L-38..L-18 (feet planted), reach L-24..L-8 (the
+ *  far hand lifts the book up into the gap, turning it spine-out, the elbow bent, the body leaning in), the hand slides
+ *  onto the spine L-11..L-7, a small push L-7..L (hand and book as one), release L+1..L+6 onto the shelf lip, then the
+ *  far arm comes down to the belt from restAt */
 const phases = (s: Shelver, f: number) => {
   const L = s.land;
   const rest = s.restAt ?? L + 10;
   return {
     step: smooth((f - (L - 38)) / 20),
-    reach: smooth((f - (L - 24)) / 16),
-    onSpine: smooth((f - (L - 10)) / 3),
+    reach: smooth((f - (L - (s.reachFrom ?? 24))) / (s.reachLen ?? 16)),
+    onSpine: smooth((f - (L - 11)) / 4),
     push: smooth((f - (L - 7)) / 7),
     release: smooth((f - (L + 1)) / 5),
-    nearOff: smooth((f - (L - 26)) / 16),
-    nearDown: smooth((f - Math.max(L - 11, rest - 2)) / 15), // after the push for a big near figure (its hands stay above the band) // the near hand leaves the book as the far hand takes it up
     down: smooth((f - rest) / 15),
-    swap: smooth((f - (L - 15)) / 4), // the book's draw order: in front of the figure -> behind his hand (beside him)
+    nearLip: smooth((f - (L - 3)) / 5),
+    nearDown: smooth((f - (rest - 2)) / 15),
   };
 };
 /** the feet's X: one walk cycle toward the slot (the step) with short soft ends; `at` follows it exactly */
@@ -259,64 +270,68 @@ const frameOfYaw = (psi: number): Omit<BookPose, "c"> => {
   const ey: V3 = [0, -1, 0];
   return { ex: vec3.cross3(ez, ey), ey, ez };
 };
-/** the book's 3D pose at frame f: held at the chest (cover to us, spine toward the slot), carried up into the gap
- *  (sticking out 12) turning spine-out, a small push home */
-export const bookPoseOf = (s: Shelver, f: number): BookPose => {
+/** the far hand's hold on the book, in the book's frame: on the cover by the spine edge, a little below the middle (the
+ *  hand is fixed to the book there while it carries it: hand and book move as one) */
+const HOLD_IN = 3;
+const HOLD_DOWN = 0.12;
+const holdOn = (B: BookPose, h: number): V3 => vec3.add3(vec3.add3(B.c, vec3.mul3(B.ez, HOLD_IN)), vec3.mul3(B.ey, -h * HOLD_DOWN));
+/** where the far hand carries the book (world): in both hands at the chest, out in front of it (clear of the torso:
+ *  the book is drawn behind the figure all through); on the ladder at the chest, between him and the shelf */
+const carryHold = (s: Shelver, X: number): V3 => (s.ladder ? [s.X + 26, (s.feetY ?? 0) - 170, s.Z + 14] : [X + s.dir * 56, -246, s.Z - 10]);
+/** the near hand's hold, in the book's frame: under its bottom edge, a third of the way back from the spine */
+const underOf = (B: BookPose, h: number): V3 => vec3.add3(vec3.add3(B.c, vec3.mul3(B.ez, BOOK_D * 0.36)), vec3.mul3(B.ey, -h * 0.5));
+/** a point swung about a centre: the polar interpolation (radius and angle, mirrored by dir) from a to b. A hand that
+ *  swings about the shoulder keeps its distance from it (the arm never folds through the shoulder: the elbow moves
+ *  only as the hand does) */
+const swing = (S: P2, a: P2, b: P2, t: number, dir: number): P2 => {
+  const pol = (p: P2) => {
+    const dx = (p[0] - S[0]) * dir;
+    const dy = p[1] - S[1];
+    return [Math.hypot(dx, dy), Math.atan2(dy, dx)];
+  };
+  const [ra, aa] = pol(a);
+  const [rb, ab] = pol(b);
+  const rr = lerp(ra, rb, t);
+  const an = lerp(aa, ab, t);
+  return [S[0] + dir * rr * Math.cos(an), S[1] + rr * Math.sin(an)];
+};
+/** the far shoulder's nominal place (world, the figure's plane) when the rig's is not at hand (the cull) */
+const SHOULDER_NOM: P2 = [27, -249];
+/** the book's 3D pose at frame f: carried at the far hip (cover to us, spine toward the slot), lifted up into the gap
+ *  (sticking out 12) turning spine-out, a small push home. REV2: the hand's hold point swings about the far shoulder
+ *  `Sh` (world X, Y; the rig's, from shelverRig) from the hip up to the gap: the arm swings forward and up like a
+ *  pendulum (rev 1 lifted it straight up past the shoulder, folding the arm through it) */
+export const bookPoseOf = (s: Shelver, f: number, Sh?: P2): BookPose => {
   const sl = SLOTS[s.id];
   const ph = phases(s, f);
   const X = feetX(s, f);
-  const carry: V3 = s.cast === "worker" || s.ladder ? [s.X + 26, (s.feetY ?? 0) - 150 - sl.h / 2, s.Z - 14] : [X + s.dir * 14, -194 - sl.h / 2 + 22, s.Z - 26];
-  const inGap: V3 = [sl.X, sl.Y - sl.h / 2, sl.Z - 12];
-  const home: V3 = [sl.X, sl.Y - sl.h / 2, sl.Z];
+  const S: P2 = Sh ?? [(s.ladder ? s.X : X) + s.dir * SHOULDER_NOM[0], (s.feetY ?? 0) + SHOULDER_NOM[1]];
+  const psi0 = -s.dir * Math.PI * 0.5;
   const r = ph.reach;
-  // the path: up and out in an arc (the hand rises first, then carries it across into the gap)
-  const up = 18 * Math.sin(Math.PI * r);
-  let c: V3 = [lerp(carry[0], inGap[0], smooth((r - 0.1) / 0.9)), lerp(carry[1], inGap[1], smooth(r / 0.8)) - up, lerp(carry[2], inGap[2], r)];
+  const psi = lerp(psi0, 0, smooth((r - 0.05) / 0.85));
+  const fr = frameOfYaw(psi);
+  const holdOff = (q: Omit<BookPose, "c">): V3 => vec3.add3(vec3.mul3(q.ez, HOLD_IN), vec3.mul3(q.ey, -sl.h * HOLD_DOWN));
+  const h0 = carryHold(s, X);
+  // the hold point with the book in the gap (spine-out, sticking out 12)
+  const h1 = vec3.add3([sl.X, sl.Y - sl.h / 2, sl.Z - 12], holdOff(frameOfYaw(0)));
+  // a lift that ends well before the push (the Roman's, done before he is in view): the book creeps on into the gap
+  // (12 -> 7 out) while he lines it up, so nothing freezes
+  const rEnd = s.land - (s.reachFrom ?? 24) + (s.reachLen ?? 16);
+  const win = s.land - 7 - rEnd;
+  if (win > 3) h1[2] += 5 * smooth((f - rEnd) / win);
+  const hp = swing(S, [h0[0], h0[1]], [h1[0], h1[1]], r, s.dir);
+  const hand: V3 = [hp[0], hp[1], lerp(h0[2], h1[2], r)];
+  let c = vec3.sub3(hand, holdOff(fr));
+  const home: V3 = [sl.X, sl.Y - sl.h / 2, sl.Z];
   c = vec3.add3(vec3.mul3(c, 1 - ph.push), vec3.mul3(home, ph.push));
-  const psi = lerp(-s.dir * Math.PI * 0.5, 0, smooth((r - 0.05) / 0.85));
-  return { c, ...frameOfYaw(psi) };
-};
-
-/** the Worker (pandemicFolk's 2.5D rig has no grips): his right arm solved by a few Gauss-Newton steps on
- *  (flex, abd), the elbow bent (flex2), so the hand lands on a world point; figure units are worker units, y down */
-const WK_YAW = 140;
-const wkBase = (f: number, lookUp: number, lean: number): WorkerPose => PandemicFolk.breathe({ ...PandemicFolk.stand(WK_YAW), headPitch: 6 - 22 * lookUp, headYaw: -8 + 6 * lookUp, bodyPitch: 3 * lean, bodyRoll: -2.5 * lean }, f);
-const WK_ARM = { abd2: -6, flex2: 58, droop: 14, thumb: 0.5 };
-const wkHand = (q: WorkerPose, flex: number, abd: number): P2 => {
-  const a = buildWorker({ ...q, armR: { ...q.armR, flex, abd, ...WK_ARM } }, {}).anchors.handR;
-  return [a[0], a[1]];
-};
-const wkSolve = (q: WorkerPose, target: P2, g0: P2 = [130, 25]): { flex: number; abd: number; err: number } => {
-  let [fl, ab] = g0;
-  let h = wkHand(q, fl, ab);
-  for (let it = 0; it < 7; it++) {
-    const e: P2 = [target[0] - h[0], target[1] - h[1]];
-    if (Math.hypot(e[0], e[1]) < 0.3) break;
-    const d = 0.5;
-    const hf = wkHand(q, fl + d, ab);
-    const ha = wkHand(q, fl, ab + d);
-    const J = [[(hf[0] - h[0]) / d, (ha[0] - h[0]) / d], [(hf[1] - h[1]) / d, (ha[1] - h[1]) / d]];
-    const det = J[0][0] * J[1][1] - J[0][1] * J[1][0];
-    if (Math.abs(det) < 1e-6) break;
-    let dfl = (J[1][1] * e[0] - J[0][1] * e[1]) / det;
-    let dab = (-J[1][0] * e[0] + J[0][0] * e[1]) / det;
-    const m = Math.max(Math.abs(dfl), Math.abs(dab));
-    if (m > 25) {
-      dfl *= 25 / m;
-      dab *= 25 / m;
-    }
-    fl = Math.max(-10, Math.min(178, fl + dfl));
-    ab = Math.max(-10, Math.min(120, ab + dab));
-    h = wkHand(q, fl, ab);
-  }
-  return { flex: fl, abd: ab, err: Math.hypot(target[0] - h[0], target[1] - h[1]) };
+  return { c, ...fr };
 };
 
 /** the body: three-quarter toward the slot; the step (walk cycle with planted feet); a lean into the reach and a little
  *  stretch up; the head lifts to the gap and settles; breathing */
 const castPose = (s: Shelver, f: number) => {
   const ph = phases(s, f);
-  const yaw = s.dir * 0.92;
+  const yaw = s.dir * 1.05;
   const lookUp = smooth((f - (s.land - 30)) / 16) * (1 - 0.7 * ph.down);
   const leanIn = Math.sin((Math.PI / 2) * ph.reach) * (1 - ph.release * 0.7) * (1 - ph.down);
   const base0 =
@@ -330,119 +345,116 @@ const castPose = (s: Shelver, f: number) => {
   }
   return base;
 };
-/** the rest pose: the hands loosely together at the waist front (no hand hangs into the caption band while the
- *  figure is still big); the far hand a little nearer the slot side */
-/** REV1b: the rest pose: the hands together resting on the belt in front (elbows down at the sides; it keeps the hands
- *  above the caption band while the figure is big); the ladder figure's own hanging hand */
-const restHands = (s: Shelver, pose: unknown, at: P2, scale: number): { L: P2; R: P2 } => {
-  if (!s.ladder) {
-    const far: P2 = [at[0] + s.dir * 12 * scale, at[1] - 156 * scale];
-    const near: P2 = [at[0] + s.dir * 2 * scale, at[1] - 160 * scale];
-    return s.dir === 1 ? { R: far, L: near } : { L: far, R: near };
+
+type Grip = { L?: P2; R?: P2 };
+type ArmAnchors = { shoulderL: P2; shoulderR: P2; wristL: P2; wristR: P2; handL: P2; handR: P2; hip: P2 };
+type Posed = { armL: { elbow: P2 }; armR: { elbow: P2 } };
+/** a cast member's anchors (world px) for a pose and grips */
+const anchorsOf = (s: Shelver, pose: unknown, at: P2, scale: number, grip?: Grip): ArmAnchors => {
+  if (s.cast === "pasteur") return vaccineAnchors("pasteur", pose as VPose, at, scale, { grip, hold: { L: "none", R: "none" } });
+  if (s.cast === "covid") return Covid.covidAnchors("commuter", pose as Covid.CovidPose, at, scale, { variant: s.variant, grip }) as unknown as ArmAnchors;
+  return RomeFolk.romeAnchors("freeman", pose as RomeFolk.FigPose, at, scale, { variant: s.variant, grip }) as unknown as ArmAnchors;
+};
+/** REV2: each gripping arm's elbow hint set from its own shoulder->wrist line (the unit normal, on side `side`). The
+ *  rigs' soft elbow bends fully only when the hint lies across the arm; near the arm's line it shortens both bones and,
+ *  as the hand passes the shoulder, flips the elbow to the other side in a frame or two (the rev-1 forearm pops). With
+ *  the hint across the arm every frame, the elbow always bends fully on the same side: the bones keep their lengths and
+ *  the elbow moves only as the hand does. side +1 = the elbow below / behind for a figure facing screen right. */
+export const bendHint = <Q extends Posed>(pose: Q, grip: Grip, side: number, anchors: (q: Q) => ArmAnchors): Q => {
+  let q = pose;
+  const across = (S: P2, W: P2): P2 => {
+    const d: P2 = [W[0] - S[0], W[1] - S[1]];
+    const l = Math.hypot(d[0], d[1]) || 1;
+    return [(-side * d[1]) / l, (side * d[0]) / l];
+  };
+  for (let it = 0; it < 3; it++) {
+    const a = anchors(q);
+    q = { ...q, armL: grip.L ? { ...q.armL, elbow: across(a.shoulderL, a.wristL) } : q.armL, armR: grip.R ? { ...q.armR, elbow: across(a.shoulderR, a.wristR) } : q.armR };
   }
-  if (s.cast === "pasteur") {
-    const a = vaccineAnchors("pasteur", pose as VPose, at, scale, { hold: { L: "none", R: "none" } });
-    return { L: a.handL, R: a.handR };
-  }
-  if (s.cast === "covid") {
-    const a = Covid.covidAnchors("commuter", pose as Covid.CovidPose, at, scale, { variant: s.variant });
-    return { L: a.handL as P2, R: a.handR as P2 };
-  }
-  const a = RomeFolk.romeAnchors("freeman", pose as RomeFolk.FigPose, at, scale, { variant: s.variant });
-  return { L: a.handL as P2, R: a.handR as P2 };
+  return q;
 };
 const bez = (a: P2, c: P2, b: P2, u: number): P2 => [(1 - u) * (1 - u) * a[0] + 2 * u * (1 - u) * c[0] + u * u * b[0], (1 - u) * (1 - u) * a[1] + 2 * u * (1 - u) * c[1] + u * u * b[1]];
 
-/** probe: when given, each figure's hands and head (world px) are pushed here (the caption-band check) */
-export const shelverItems = (A: AirWorld, s: Shelver, f: number, probe?: { id: string; pts: P2[] }[]): LibItem[] => {
+/** one shelver's rig at frame f: the pose (elbows set by bendHint), the grips (world px), where he stands, the book;
+ *  the far and near hands' keys. Exported for the probes (hand-to-grip distances, elbows) */
+export const shelverRig = (A: AirWorld, s: Shelver, f: number) => {
   const sl = SLOTS[s.id];
   const ph = phases(s, f);
-  const B = bookPoseOf(s, f);
   const P = (p: V3): P2 => A.P.p(p[0], p[1], p[2]);
   const X = feetX(s, f);
   const at = A.P.p(X, s.feetY ?? 0, s.Z);
   const scale = A.P.r(s.Z);
+  const mix = (a: P2, b: P2, t: number): P2 => [lerp(a[0], b[0], t), lerp(a[1], b[1], t)];
+  const fkey: "L" | "R" = s.ladder ? LADDER_FAR : s.dir === 1 ? "R" : "L";
+  const nkey: "L" | "R" = fkey === "R" ? "L" : "R";
+  const pose0 = castPose(s, f);
+  const a0 = anchorsOf(s, pose0, at, scale);
+  const S0 = fkey === "R" ? a0.shoulderR : a0.shoulderL;
+  const B = bookPoseOf(s, f, [X + (S0[0] - at[0]) / scale, (s.feetY ?? 0) + (S0[1] - at[1]) / scale]);
+  // the rest: the hands on the belt in front (following the hips: the lean, the crouch, the step); on the ladder the
+  // far hand hangs, the near hand holds the rail (the rail nearer the slot, at chest height)
+  const rest: { L: P2; R: P2 } = s.ladder
+    ? { L: a0.handL, R: a0.handR }
+    : (() => {
+        const far: P2 = [a0.hip[0] + s.dir * 12 * scale, a0.hip[1] - 24 * scale];
+        const near: P2 = [a0.hip[0] + s.dir * 2 * scale, a0.hip[1] - 28 * scale];
+        return s.dir === 1 ? { R: far, L: near } : { L: far, R: near };
+      })();
+  const rail: P2 = A.P.p(-930 + s.dir * 26, (s.feetY ?? 0) - 200, lerp(-92, -6, ((s.feetY ?? 0) - 200) / -444));
+  // the FAR hand: fixed to the book at its hold while carrying and lifting it, slides onto the spine's lower third for
+  // the push (fixed to the book again: hand and book move as one), lifts off onto the shelf lip below it, then swings
+  // down about the shoulder to its rest
+  const hold = P(holdOn(B, sl.h));
+  const spine = P(vec3.add3(vec3.add3(B.c, vec3.mul3(B.ez, -1.5)), vec3.mul3(B.ey, -sl.h * 0.3)));
+  const lip = A.P.p(sl.X + s.dir * 2, sl.Y + 6, sl.Z - 4);
+  const H = mix(mix(hold, spine, ph.onSpine), lip, ph.release);
+  const Hd = ph.down > 0 ? swing(S0, H, rest[fkey], ph.down, s.dir) : H;
+  // the NEAR hand: on the belt (on the ladder: the rail) the whole time
+  // REV2: the near hand under the book's bottom edge (fixed to the book: they move as one) from the carry through
+  // the push; it slides off onto the shelf lip with the push's end, and from restAt - 2 swings down about its
+  // shoulder to the belt (late enough that it stays above the caption band while the figure is big)
+  const Sn = nkey === "R" ? a0.shoulderR : a0.shoulderL;
+  const lipN = A.P.p(sl.X - s.dir * 3, sl.Y + 4, sl.Z - 6);
+  const Nb = mix(P(underOf(B, sl.h)), lipN, ph.nearLip);
+  const N = s.ladder ? rail : ph.nearDown > 0 ? swing(Sn, Nb, rest[nkey], ph.nearDown, s.dir) : Nb;
+  const grip = { [fkey]: Hd, [nkey]: N } as Grip;
+  const pose = bendHint(pose0 as Posed, grip, s.dir, (q) => anchorsOf(s, q, at, scale, grip)) as typeof pose0;
+  return { sl, ph, B, X, at, scale, pose, grip, fkey, nkey, anchors: () => anchorsOf(s, pose, at, scale, grip) };
+};
+
+/** probe: when given, each figure's hands and head (world px) are pushed here (the caption-band check) */
+export const shelverItems = (A: AirWorld, s: Shelver, f: number, probe?: { id: string; pts: P2[] }[]): LibItem[] => {
+  const B0 = bookPoseOf(s, f);
   // cull a figure wholly off the frame (screen x of its body and its book, with a margin)
   {
+    const X = feetX(s, f);
+    const at = A.P.p(X, s.feetY ?? 0, s.Z);
+    const scale = A.P.r(s.Z);
     const sx = (wx: number) => 540 + (wx - A.cam.cx) * A.k;
-    const bx = sx(A.P.p(B.c[0], B.c[1], B.c[2])[0]);
+    const bx = sx(A.P.p(B0.c[0], B0.c[1], B0.c[2])[0]);
     const x0 = Math.min(sx(at[0] - 130 * scale), bx - 60);
     const x1 = Math.max(sx(at[0] + 130 * scale), bx + 60);
     if (x1 < -20 || x0 > 1100) return [];
   }
-  const mix = (a: P2, b: P2, t: number): P2 => [lerp(a[0], b[0], t), lerp(a[1], b[1], t)];
+  const R = shelverRig(A, s, f);
+  const { sl, B, X, at, scale, pose, grip } = R;
   const bw = Math.max(sl.w, 9);
-  // the FAR hand (the leading arm: no crossing of the chest) holds the book by its spine edge, then moves onto the
-  // spine's lower third for the push
-  const hold = P(vec3.add3(vec3.add3(B.c, vec3.mul3(B.ez, 3)), vec3.mul3(B.ey, -sl.h * 0.12)));
-  const spine = P(vec3.add3(vec3.add3(B.c, vec3.mul3(B.ez, -1.5)), vec3.mul3(B.ey, -sl.h * 0.3)));
-  let H = mix(hold, spine, ph.onSpine);
-  // release: a small lift off the spine (toward us and down), the hand lingering on the shelf lip below the book
-  const lip = A.P.p(sl.X + s.dir * 2, sl.Y + 6, sl.Z - 4);
-  H = mix(H, lip, ph.release);
-  if (s.cast === "worker") {
-    const ws = workerScale(scale);
-    const lookUp = smooth((f - (s.land - 34)) / 16);
-    const q = wkBase(f, lookUp, Math.sin((Math.PI / 2) * ph.reach) * (1 - ph.release));
-    const natW = (() => {
-      const a = buildWorker(q, {}).anchors.handR;
-      return [at[0] + a[0] * ws, at[1] + a[1] * ws] as P2;
-    })();
-    // his hand down to his side after a beat on the shelf (elbow first)
-    const dn = smooth((f - (s.land + 12)) / 18);
-    const Hw = dn > 0 ? bez(H, [lerp(H[0], natW[0], 0.75), lerp(H[1], natW[1], 0.2)], natW, dn) : H;
-    const T: P2 = [(Hw[0] - at[0]) / ws, (Hw[1] - at[1]) / ws];
-    const sol = wkSolve(q, T);
-    const arm = { ...q.armR, flex: sol.flex, abd: sol.abd, ...WK_ARM, flex2: lerp(WK_ARM.flex2, q.armR.flex2, dn), droop: lerp(WK_ARM.droop, q.armR.droop, dn) };
-    if (probe) probe.push({ id: s.id, pts: [Hw, Hw, [at[0], at[1] - 300 * scale]] });
-    const fig = () => <PandemicFolk.FolkWorker key={s.id} uid={s.id} pose={{ ...q, armR: dn >= 0.999 ? q.armR : arm }} x={at[0]} y={at[1]} scale={ws} inks={A.workerInks(s.Z, -(s.feetY ?? 0))} unitPx={A.k} />;
-    const items: LibItem[] = [{ Z: -96, key: `${s.id}fig`, node: fig }];
-    const book = (k: string, op: number) => (
-      <g key={k} opacity={op}>
-        <Book A={A} pose={B} w={bw} h={sl.h} d={BOOK_D} col={s.col} uid={k} />
-      </g>
-    );
-    if (ph.swap > 0) items.push({ Z: -2, key: `${s.id}bkB`, node: () => book(`${s.id}bkB`, 1) });
-    if (ph.swap < 1) items.push({ Z: -100, key: `${s.id}bkF`, node: () => book(`${s.id}bkF`, 1 - ph.swap) });
-    return items;
-  }
-  const pose = castPose(s, f);
-  const rest = restHands(s, pose, at, scale);
-  const fkey: "L" | "R" = s.ladder ? LADDER_FAR : s.dir === 1 ? "R" : "L";
-  const nkey: "L" | "R" = fkey === "R" ? "L" : "R";
-  // after the beat on the shelf the far arm comes down to its rest (elbow first: across, then down)
-  const Hd = ph.down > 0 ? bez(H, [lerp(H[0], rest[fkey][0], 0.7), lerp(H[1], rest[fkey][1], 0.25)], rest[fkey], ph.down) : H;
-  // the NEAR hand: under the book's tail while it is carried at the chest, then it lets go and comes to rest against
-  // the chest (above the caption band while the figure is big), and down to its side with the far arm
-  const tail = P(vec3.add3(vec3.add3(B.c, vec3.mul3(B.ey, -sl.h * 0.5)), vec3.mul3(B.ez, BOOK_D * 0.62)));
-  // on the ladder the near hand holds the rail (the rail nearer the slot, at chest height)
-  const rail: P2 = A.P.p(-930 + s.dir * 26, (s.feetY ?? 0) - 200, lerp(-92, -6, ((s.feetY ?? 0) - 200) / -444));
-  // REV1b: the near hand supports the book from below (under its tail, touching it) all the way up to the gap; as the
-  // far hand moves onto the spine for the push it drops in one eased arc (down first, then in) to rest on the belt:
-  // it never holds a pose out at chest height
-  const N = s.ladder ? mix(tail, rail, ph.nearOff) : ph.nearDown > 0 ? bez(tail, [lerp(tail[0], rest[nkey][0], 0.3), lerp(tail[1], rest[nkey][1], 0.8)], rest[nkey], ph.nearDown) : tail;
-  const grip = { [fkey]: Hd, [nkey]: N } as { L?: P2; R?: P2 };
   const fog = A.folkFog(s.Z);
   const uid = `${s.id}`;
-  if (probe) probe.push({ id: s.id, pts: [Hd, N, [at[0], at[1] - 280 * scale]] });
+  if (probe) probe.push({ id: s.id, pts: [grip[R.fkey] as P2, grip[R.nkey] as P2, [at[0], at[1] - 280 * scale]] });
   const fig = () => {
     const common = { at, scale, fog, unitPx: A.k, grip } as const;
     if (s.cast === "pasteur") return <Pasteur key={uid} uid={uid} pose={pose as VPose} {...common} hold={{ L: "none", R: "none" }} frame={f} />;
     if (s.cast === "covid") return <Covid.Commuter key={uid} uid={uid} variant={s.variant} pose={pose as Covid.CovidPose} {...common} frame={f} hold={{ L: "none", R: "none" }} />;
     return <RomeFolk.Freeman key={uid} uid={uid} variant={s.variant} pose={pose as RomeFolk.FigPose} {...common} />;
   };
-  const book = (k: string, op: number) => (
-    <g key={k} opacity={op}>
-      <Book A={A} pose={B} w={bw} h={sl.h} d={BOOK_D} col={s.col} uid={k} />
-    </g>
-  );
-  const zf = s.ladder ? -96 : s.Z;
+  // ONE draw order for the whole action: the book behind the figure (at his far hip, then beside him in the gap), the
+  // hand on its near face drawn over it; no swap
   const items: LibItem[] = [
-    { Z: zf, key: `${uid}fig`, node: fig },
+    { Z: s.ladder ? -96 : s.Z, key: `${uid}fig`, node: fig },
+    { Z: s.ladder ? -2 : s.Z + 4, key: `${uid}bk`, node: () => <Book key={`${uid}bk`} A={A} pose={B} w={bw} h={sl.h} d={BOOK_D} col={s.col} uid={`${uid}bk`} /> },
   ];
   if (!s.ladder) items.push({ Z: s.Z + 1, key: `${uid}sh`, node: () => <AirShadow key={`${uid}sh`} A={A} X={X} Z={s.Z} w={62} d={30} uid={`${uid}sh`} amt={0.8} /> });
-  if (ph.swap > 0) items.push({ Z: s.ladder ? -2 : s.Z + 4, key: `${uid}bkB`, node: () => book(`${uid}bkB`, 1) });
-  if (ph.swap < 1) items.push({ Z: zf - 4, key: `${uid}bkF`, node: () => book(`${uid}bkF`, 1 - ph.swap) });
   return items;
 };
 
@@ -458,20 +470,28 @@ const jenPose = (f: number): VPose => {
   const look = smooth((f - 30) / 60);
   return { ...q, headYaw: q.headYaw + 0.1 * look, pitch: q.pitch - 7 * look };
 };
-export const jennerItems = (A: AirWorld, f: number, probe?: { id: string; pts: P2[] }[]): LibItem[] => {
+/** Jenner's rig at frame f (exported for the probes): his pose, grips and anchors. REV2: the lapel arm's elbow is set by
+ *  bendHint (full bend, one side) once it moves (f > 2; f0-f2 are cut 68's pose untouched) */
+export const jennerRig = (A: AirWorld, f: number) => {
   const jp = jennerPos(STORE_LAST);
   const { at, scale } = A.P.at(jp.X, jp.Z);
-  const q = jenPose(f);
-  const rest = vaccineAnchors("jenner", q, at, scale, { hold: { L: "none", R: "none" } });
+  const q0 = jenPose(f);
+  const rest = vaccineAnchors("jenner", q0, at, scale, { hold: { L: "none", R: "none" } });
   // cut 68's far-hand grip (StoreThatInformation jennerGrips at f >= 61): behind his hip, hidden by his body
   const behind: P2 = [rest.hip[0] + 20 * scale, rest.hip[1] - 14 * scale];
   // his left hand (the rig's armR) up to his lapel while out of shot: elbow first
   const up = smooth((f - 2) / 16);
   const lapel: P2 = [rest.chest[0] - 10 * scale, rest.chest[1] - 24 * scale];
   const R = up > 0 ? bez(rest.handR, [lerp(rest.handR[0], lapel[0], 0.2), lerp(rest.handR[1], lapel[1], 0.7)], lapel, up) : undefined;
-  const grip = { L: behind, ...(R ? { R } : {}) };
+  const grip: Grip = { L: behind, ...(R ? { R } : {}) };
+  const anchors = (q: VPose) => vaccineAnchors("jenner", q, at, scale, { grip, hold: { L: "none", R: "none" } });
+  const pose = R ? bendHint(q0, { R }, Math.sin(q0.yaw) >= 0 ? 1 : -1, anchors) : q0;
+  return { jp, at, scale, pose, grip, anchors: () => anchors(pose) };
+};
+export const jennerItems = (A: AirWorld, f: number, probe?: { id: string; pts: P2[] }[]): LibItem[] => {
+  const { jp, at, scale, pose: q, grip, anchors } = jennerRig(A, f);
   if (probe) {
-    const an = vaccineAnchors("jenner", q, at, scale, { grip, hold: { L: "none", R: "none" } });
+    const an = anchors();
     probe.push({ id: "jen", pts: [an.handR, an.handL, an.headC] });
   }
   return [
