@@ -13,7 +13,12 @@
 // THE MOTION: one dive. f0 a real "3 nm" chip (the Lunar Lake Compute Tile die shot, no product name) lies on the
 // board with an amber "3 nm" sticker on it, the camera already pushing in. The push turns into a log-space dive into
 // the die (x40): the sticker leaves the frame to the right (~f9), the photo runs out of resolution and defocuses
-// (sharp -> soft crossfade = a focus pull), then drains into the ground's tone and gives way to the board, while a
+// (sharp -> soft crossfade = a focus pull), then (V2, the user: inside the chip it should be a chip, not the pub board)
+// is graded down into dark silicon, blue-grey graphite (the magnified die you dive through IS the new ground; the board
+// is only ever seen around the die at f0-4); faint horizontal fins (FinFET: the gates cross them; 5 nm wide per IRDS,
+// spacing illustrative) and a deeper interconnect/routing layer (rectilinear traces, jogs, vias, cell blocks in the
+// die's own olive / violet / copper, defocused, ~1.7:1 on the silicon, calm behind the readout; ramped in f21-38 as the
+// dive settles, so it never strobes) resolve in it, while a
 // nearer drawn plane (2.5D: the gates sit nearer the lens than the die surface, so they outgrow it at the end of
 // the dive) resolves out of the dark: a long row of cream gate strips at the real gate pitch, landing ~f26 with four
 // in frame. "very little": a tiny amber bracket drawn to TRUE scale (3 nm = 1/15 of the 45 nm pitch: ~17 px against
@@ -51,7 +56,7 @@
 //   The 3 nm sliver is the name drawn at true scale against the 45 nm pitch (3 / 45 = 1 / 15), not a measured part.
 // ---------------------------------------------------------------------------
 import React, { useId } from "react";
-import { useCurrentFrame } from "remotion";
+import { random, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { ALPHA, COLOR, EDGE, GEO, Numeral, bloomFilter, StoutStage, clamp01, lerp, mixHex, rectPath, smoothstep } from "../kits/cheeky-pint/stoutShared";
 import { GRADE, PriceSticker, SHADOW_S, StoutShadow, gradeMatrix, type Cam, type Grade, type ShadowPart } from "./pricingShared";
@@ -105,13 +110,18 @@ const B = (Math.log(R) - early(DURATION - 1)) / lobe(DURATION - 1);
 export const kDie = (f: number) => Math.exp(early(f) + B * lobe(f));
 /** The gate plane: the same dolly, H above the die (nearer the lens). */
 const H = 0.25 / R;
-const kGateRaw = (f: number) => {
+/** A plane at height c / R above the die (c < 0: below it, farther from the lens): its zoom at frame f. */
+const kPlaneRaw = (f: number, c: number) => {
   const kd = kDie(f);
-  return kd / (1 - H * kd);
+  return kd / (1 - (c / R) * kd);
 };
-const KG_END = kGateRaw(DURATION - 1);
+/** That plane's screen scale with its units = screen px at f67. */
+const planeScale = (f: number, c: number) => kPlaneRaw(f, c) / kPlaneRaw(DURATION - 1, c);
 /** The gate plane's screen scale: G units are screen px at f67. */
-export const sGate = (f: number) => kGateRaw(f) / KG_END;
+export const sGate = (f: number) => planeScale(f, H * R);
+/** V2 (inside the chip): the fins sit a little under the gates, the routing layer far under the die photo's plane. */
+const FIN_C = 0.2;
+const ROUTE_C = -0.5;
 /** The zoom centre's screen point: T's screen position (eases to the gates' centre). */
 const S0 = { x: DIE_F0.x + (T.x - DIE.w / 2), y: DIE_F0.y + (T.y - DIE.h / 2) };
 const S1 = { x: 540, y: 765 };
@@ -126,10 +136,13 @@ export const screenCentre = (f: number) => {
 // ===========================================================================
 /** defocus: the soft bake over the sharp one (the photo runs out of resolution past k ~2.8) */
 const SOFT_K = [2.6, 7] as const;
-/** drain: the photo's tone sinks to the ground's (through its alpha) */
-const DRAIN_K = [6, 16] as const;
-/** give way: the drained photo hands the frame back to the board (its own fibres, pool, vignette) */
-const GIVE_K = [14, 24] as const;
+/** drain (V2): the magnified photo is graded down into dark silicon (it stays: the die you dive through IS the ground) */
+const DRAIN_K = [6, 18] as const;
+/** the fins resolve in the silicon (tone ramp on the same zoom), then the far routing layer, over the dive's
+ *  deceleration and settle (f21 -> f38: ~6 %/f -> ~0.1 %/f; a zoom-keyed ramp crammed it into 4 frames), so its
+ *  traces are near invisible while they still move fast and cannot strobe */
+const FIN_K = [11, 28] as const;
+const ROUTE_F = [21, 38] as const;
 /** the gates' tone: the photo's own local tone -> cream (they resolve out of the defocused die) */
 const GATE_K = [7, 24] as const;
 const lk = (k: number, ab: readonly [number, number]) => span(Math.log(k), Math.log(ab[0]), Math.log(ab[1]));
@@ -141,6 +154,111 @@ const PITCH = 260; // one 45 nm gate pitch on screen at the resolve
 const GATE = { w: GATE_W_SHARE * PITCH, top: -245, bottom: 245, n: 22 } as const; // n each side of the centre
 const gateX = (i: number) => (i + 0.5) * PITCH; // i = -n .. n-1; i -1 and 0 straddle the centre
 const GATE_R = GEO.RADIUS * (GATE.w / GEO.TILE);
+// V2: INSIDE THE CHIP. The die photo is graded down under a silicon layer (blue-grey graphite, L* ~25: dark but
+// not black; cream and amber keep the style's contrast minimums on it, measured on the resolved still).
+const SILICON = "#373848"; // a cool violet-grey (the die's dusty violet in the graphite); pool + vignette warm it
+const SILICON_A = 0.8; // how much of the silicon tone lies over the magnified photo at the end
+const SILICON_SAT = 0.3; // the photo's saturation under it (from DIE_GRADE.saturate)
+/** Fins (FinFET: the gates cross the fins at right angles). Width 5 nm (IRDS 2022 MM-7 "3nm": FinFET fin width
+ *  5.0 nm) at the gate pitch's scale; their spacing is ILLUSTRATIVE (fin pitch is not sourced), unlabelled. */
+const FIN = { w: (5 / GATE_PITCH_NM) * PITCH, pitch: 0.6 * PITCH, n: 1, color: mixHex(SILICON, COLOR.cream, 0.1), a: 1 } as const;
+/** The far routing layer (its own plane, below the die): the circuitry we dived through, redrawn. Rectilinear metal
+ *  traces of three widths with right-angle jogs, square vias at their ends, a few cell blocks with rows of cells;
+ *  muted colours taken from the die photo (olive / bronze, dusty violet, copper), slightly defocused. Denser toward
+ *  the edges, calm behind the readout (a screen-space mask) so the type keeps its contrast. P units = screen px at
+ *  f67, origin = the zoom centre. Generated once, deterministically (remotion random). Widths >= 6 P (>= 5 px on
+ *  screen while it is visible). */
+const ROUTE = {
+  x: [-980, 980] as const,
+  y: [-1320, 1800] as const,
+  trackH: 34,
+  trackV: 46,
+  widths: [6, 10, 16] as const,
+  colors: { olive: "#6E6747", violet: "#655F80", copper: "#86654B" } as const,
+  block: { fill: "#45434F", row: "#3A3946" },
+  a: 0.78,
+  blur: 1.4, // screen px: slightly out of focus (it is deeper than the gates)
+  calm: { cx: 540, cy: 400, rx: 360, ry: 230 }, // screen: behind "45 nm", "3 nm" and the brackets
+} as const;
+type RouteStyle = keyof typeof ROUTE.colors;
+const ROUTING = (() => {
+  let n = 0;
+  const r = () => random(`nm-route-${n++}`);
+  const pick = <T,>(xs: readonly T[], ws: number[]) => {
+    const u = r() * ws.reduce((a, b) => a + b, 0);
+    let acc = 0;
+    for (let i = 0; i < xs.length; i++) if ((acc += ws[i]) >= u) return xs[i];
+    return xs[xs.length - 1];
+  };
+  // density: calm near the subject (the gates' centre and the readout above it), busy toward the edges
+  const dens = (x: number, y: number) => {
+    const dx = x / 520;
+    const dy = (y + 250) / 760;
+    return 0.14 + 0.86 * smoothstep(Math.hypot(dx, dy) - 0.3);
+  };
+  const traces: Record<string, string> = {};
+  const add = (st: RouteStyle, w: number, d: string) => {
+    const key = `${st}|${w}`;
+    traces[key] = (traces[key] ?? "") + d;
+  };
+  const vias: { x: number; y: number; s: number; st: RouteStyle }[] = [];
+  const styles: RouteStyle[] = ["olive", "violet", "copper"];
+  const styleW = [0.46, 0.3, 0.24];
+  // horizontal tracks, some with a right-angle jog to a nearby track
+  for (let y = ROUTE.y[0]; y <= ROUTE.y[1]; y += ROUTE.trackH) {
+    if (r() < 0.22) continue;
+    let x = ROUTE.x[0] + r() * 200;
+    while (x < ROUTE.x[1]) {
+      const len = 60 + r() * 380;
+      const d0 = dens(x + len / 2, y);
+      if (r() < d0) {
+        const st = pick(styles, styleW);
+        const w = pick(ROUTE.widths, [0.5, 0.35, 0.15]);
+        let d = `M${f3(x)} ${f3(y)}H${f3(x + len)}`;
+        let ex = x + len;
+        let ey = y;
+        if (r() < 0.32) {
+          ey = y + ROUTE.trackH * (r() < 0.5 ? -1 : 1) * (1 + Math.floor(r() * 3));
+          ex = x + len + 40 + r() * 160;
+          d += `V${f3(ey)}H${f3(ex)}`;
+        }
+        add(st, w, d);
+        if (r() < 0.7) vias.push({ x, y, s: w + 8, st });
+        if (r() < 0.7) vias.push({ x: ex, y: ey, s: w + 8, st });
+      }
+      x += len + 30 + r() * 220 * (1.3 - d0);
+    }
+  }
+  // vertical tracks (the next metal layer), fewer
+  for (let x = ROUTE.x[0]; x <= ROUTE.x[1]; x += ROUTE.trackV) {
+    if (r() < 0.35) continue;
+    let y = ROUTE.y[0] + r() * 300;
+    while (y < ROUTE.y[1]) {
+      const len = 80 + r() * 460;
+      const d0 = dens(x, y + len / 2);
+      if (r() < d0 * 0.85) {
+        const st = pick(styles, [0.36, 0.4, 0.24]);
+        const w = pick(ROUTE.widths, [0.45, 0.4, 0.15]);
+        add(st, w, `M${f3(x)} ${f3(y)}V${f3(y + len)}`);
+        if (r() < 0.6) vias.push({ x, y, s: w + 8, st });
+        if (r() < 0.6) vias.push({ x, y: y + len, s: w + 8, st });
+      }
+      y += len + 40 + r() * 260 * (1.3 - d0);
+    }
+  }
+  // cell blocks, away from the subject
+  const blocks: { x: number; y: number; w: number; h: number }[] = [];
+  for (let i = 0; blocks.length < 16 && i < 400; i++) {
+    const w = 110 + r() * 200;
+    const h = 80 + r() * 190;
+    const x = ROUTE.x[0] + r() * (ROUTE.x[1] - ROUTE.x[0] - w);
+    const y = ROUTE.y[0] + r() * (ROUTE.y[1] - ROUTE.y[0] - h);
+    if (dens(x + w / 2, y + h / 2) < 0.75) continue;
+    if (blocks.some((b) => x < b.x + b.w + 40 && b.x < x + w + 40 && y < b.y + b.h + 40 && b.y < y + h + 40)) continue;
+    blocks.push({ x, y, w, h });
+  }
+  return { traces: Object.entries(traces).map(([k, d]) => ({ st: k.split("|")[0] as RouteStyle, w: Number(k.split("|")[1]), d })), vias, blocks };
+})();
 // the graded soft die's mean around T (measured from chip_computetile_soft.jpg through DIE_GRADE: #614D35 over
 // +-20 px, #624E38 over +-60 px): the gates start in the photo's own tone, so they resolve out of it, not onto it
 const DARK = "#624E38";
@@ -174,8 +292,6 @@ const Die: React.FC<{ kd: number; S: { x: number; y: number } }> = ({ kd, S }) =
   const uid = uidOf(useId());
   const soft = lk(kd, SOFT_K);
   const drain = lk(kd, DRAIN_K);
-  const give = lk(kd, GIVE_K);
-  if (give >= 0.999) return null;
   const box = { x: 0, y: 0, w: DIE.w, h: DIE.h };
   const img = (src: string, extra?: React.SVGProps<SVGImageElement>) => (
     <image href={src} x="0" y="0" width={f3(box.w)} height={f3(box.h)} preserveAspectRatio="none" filter={`url(#${uid}g)`} {...extra} />
@@ -187,10 +303,10 @@ const Die: React.FC<{ kd: number; S: { x: number; y: number } }> = ({ kd, S }) =
   const sticker = { x: STICKER.cx - STICKER.w / 2, y: STICKER.cy - STICKER.h / 2, w: STICKER.w, h: STICKER.h, r: 0.07 * STICKER.h };
   const sil: ShadowPart[] = [{ d: rectPath(0, 0, box.w, box.h, 1) }];
   return (
-    <g opacity={f3(1 - give)} transform={`translate(${fx(S.x)} ${fx(S.y)}) scale(${fx(kd)}) translate(${fx(-T.x)} ${fx(-T.y)})`}>
+    <g transform={`translate(${fx(S.x)} ${fx(S.y)}) scale(${fx(kd)}) translate(${fx(-T.x)} ${fx(-T.y)})`}>
       <defs>
         <filter id={`${uid}g`} colorInterpolationFilters="sRGB" x="0" y="0" width="1" height="1">
-          <feColorMatrix type="saturate" values={f3(DIE_GRADE.saturate)} />
+          <feColorMatrix type="saturate" values={f3(lerp(DIE_GRADE.saturate, SILICON_SAT, drain))} />
           <feColorMatrix type="matrix" values={gradeMatrix(DIE_GRADE)} />
         </filter>
         <linearGradient id={`${uid}r`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={f3(box.h)}>
@@ -205,7 +321,75 @@ const Die: React.FC<{ kd: number; S: { x: number; y: number } }> = ({ kd, S }) =
       {soft > 0.001 ? img(CHIP_SOFT, { opacity: f3(soft) }) : null}
       <rect x="0" y="0" width={f3(box.w)} height={f3(box.h)} fill={`url(#${uid}r)`} />
       {showSticker ? <PriceSticker box={sticker} k={kd} text={`${NAME_NM} nm`} /> : null}
-      {drain > 0.001 ? <rect x="0" y="0" width={f3(box.w)} height={f3(box.h)} fill={COLOR.ground} opacity={f3(drain)} /> : null}
+      {drain > 0.001 ? <rect x="0" y="0" width={f3(box.w)} height={f3(box.h)} fill={SILICON} opacity={f3(SILICON_A * drain)} /> : null}
+    </g>
+  );
+};
+
+/** The far routing layer (V2): its own deeper plane (parallax), resolving as the dive slows; defocused; calm behind
+ *  the readout through a screen-space mask. */
+const Routing: React.FC<{ f: number; S: { x: number; y: number }; kd: number }> = ({ f, S, kd }) => {
+  const uid = uidOf(useId());
+  const t = span(f, ROUTE_F[0], ROUTE_F[1]);
+  if (t <= 0.001 || kd <= 0) return null;
+  const sc = planeScale(f, ROUTE_C);
+  const c = ROUTE.calm;
+  return (
+    <g opacity={f3(ROUTE.a * t)}>
+      <defs>
+        <radialGradient id={`${uid}cg`} gradientUnits="userSpaceOnUse" cx={c.cx} cy={c.cy} r={c.rx} gradientTransform={`translate(${c.cx} ${c.cy}) scale(1 ${f3(c.ry / c.rx)}) translate(${-c.cx} ${-c.cy})`}>
+          <stop offset="0" stopColor="#000" />
+          <stop offset="0.55" stopColor="#000" />
+          <stop offset="1" stopColor="#fff" />
+        </radialGradient>
+        <mask id={`${uid}m`} maskUnits="userSpaceOnUse" x="0" y="0" width="1080" height="1920">
+          <rect x="0" y="0" width="1080" height="1920" fill={`url(#${uid}cg)`} />
+        </mask>
+        <filter id={`${uid}b`} filterUnits="userSpaceOnUse" x="0" y="0" width="1080" height="1920">
+          <feGaussianBlur stdDeviation={f3(ROUTE.blur)} />
+        </filter>
+      </defs>
+      <g mask={`url(#${uid}m)`}>
+        <g filter={`url(#${uid}b)`}>
+          <g transform={`translate(${fx(S.x)} ${fx(S.y)}) scale(${fx(sc)})`}>
+            {ROUTING.blocks.map((b, i) => (
+              <g key={`k${i}`}>
+                <rect x={f3(b.x)} y={f3(b.y)} width={f3(b.w)} height={f3(b.h)} fill={ROUTE.block.fill} />
+                <path
+                  d={Array.from({ length: Math.floor(b.h / 22) - 1 }, (_, j) => `M${f3(b.x + 8)} ${f3(b.y + 22 * (j + 1))}H${f3(b.x + b.w - 8)}`).join("")}
+                  stroke={ROUTE.block.row}
+                  strokeWidth="6"
+                  fill="none"
+                />
+              </g>
+            ))}
+            {ROUTING.traces.map((tr, i) => (
+              <path key={`t${i}`} d={tr.d} fill="none" stroke={ROUTE.colors[tr.st]} strokeWidth={tr.w} strokeLinejoin="miter" strokeLinecap="square" />
+            ))}
+            {ROUTING.vias.map((v, i) => (
+              <rect key={`v${i}`} x={f3(v.x - v.s / 2)} y={f3(v.y - v.s / 2)} width={f3(v.s)} height={f3(v.s)} fill={mixHex(ROUTE.colors[v.st], COLOR.cream, 0.12)} />
+            ))}
+          </g>
+        </g>
+      </g>
+    </g>
+  );
+};
+
+/** The fins (V2): long horizontal silicon strips under the gates, resolving with the same zoom. */
+const Fins: React.FC<{ f: number; S: { x: number; y: number }; kd: number }> = ({ f, S, kd }) => {
+  const t = lk(kd, FIN_K);
+  if (t <= 0.001) return null;
+  const sc = planeScale(f, FIN_C);
+  const xa = -S.x / sc - 20;
+  const xb = (1080 - S.x) / sc + 20;
+  const rows: string[] = [];
+  for (let j = -FIN.n; j <= FIN.n; j++) rows.push(rectPath(xa, j * FIN.pitch - FIN.w / 2, xb - xa, FIN.w, 0));
+  return (
+    <g transform={`translate(${fx(S.x)} ${fx(S.y)}) scale(${fx(sc)})`}>
+      {rows.map((d, j) => (
+        <path key={j} d={d} fill={FIN.color} opacity={f3(FIN.a * t)} />
+      ))}
     </g>
   );
 };
@@ -279,6 +463,8 @@ const NanometersVsReality: React.FC<z.infer<typeof schema>> = () => {
     <StoutStage S={f} cam={cam} rest={rest} pool={pool}>
       <g transform={unstage}>
         <Die kd={kd} S={S} />
+        <Routing f={f} S={S} kd={kd} />
+        <Fins f={f} S={S} kd={kd} />
         {showGates ? (
           <g transform={`translate(${fx(S.x)} ${fx(S.y)}) scale(${fx(sg)})`}>
             <defs>
