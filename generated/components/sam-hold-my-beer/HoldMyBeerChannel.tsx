@@ -14,10 +14,11 @@
 // to that row while the pointer glides to it and clicks: the amber selection pill grows out of the click
 // (the old quiet selection on #general drains) and the push lands on the huge row a few frames before
 // "Model". Then the blur lifts left to right with the words: "astra" across Model/Name, "-" on Dash, "hold" on
-// Hold, "-my" on My, "-beer" on Beer; a slow creep holds the settled name to the cut.
+// Hold, "-my" on My, "-beer" on Beer, while the camera eases gently back to give the name its padding.
 //   f0        the window, sidebar + part of #general; row text ~34 screen px; the redacted row at y ~899
-//   f-6..31   the push (k 2.29 at f0 -> 5.6) onto the row, landing ~f37-39 (damped follower), then a creep
-//             superposed from f18 (k 5.72 at f84): one deceleration lobe, never a stop
+//   f-6..31   the push (k 2.29 at f0) onto the row, landing ~f37-40 at k ~5.28 (damped follower); a slow
+//             ease-out superposed from f26 turns it round smoothly and draws back to k ~5.0 at f84 (still
+//             moving): the pill keeps 54 -> 80 px of padding from each edge after the landing
 //   f0..26    the pointer glides from the pane to the row; CLICK: press peaks f27 (contact frame), the
 //             first amber pill frame is f28 (the pill grows sideways out of the tip, f28-33); #general's
 //             quiet pill drains over the same frames; the row's text turns to Slack ink on the amber
@@ -26,7 +27,7 @@
 //             sharp on its word: astra f36-56 (Model/Name), "-" f50-58 (Dash 57), hold f57-70 (Hold 66),
 //             -my f64-75 (My 72), -beer f68-79 (Beer 75); each character comes up from a lighter ink smudge
 //             to full ink as it sharpens
-//   f79..84   settled: the full name readable, the creep and the grain alive
+//   f79..84   settled: the full name readable, the slow ease-out and the grain alive
 // AMBER = the model ("astra"): here only its channel's selection pill. Cream = the subject, board = context;
 // the Slack window keeps Slack's real colours (pane warm near-white, nothing black).
 //
@@ -67,15 +68,17 @@ const ROW_TOP = channelTop(ASTRA_INDEX); // 334
 const ROW_CY = ROW_TOP + SIDEBAR.rowH / 2; // 348
 const GENERAL_INDEX = 3;
 const K0 = 2.25; // the start look's scale: the follower has crept to ~2.29 by f0 (a row's 15 px text ~34 screen px)
-const K1 = 5.6; // landing: at f84 (k 5.72) "# astra-hold-my-beer" is 80 % of the width (ink x 69-930), cap ~62 px, the pill x 12-1064
-const K2 = 5.78; // the creep's end (f84 reaches ~5.72 on the way)
+const K1 = 5.3; // the push's target: the landing peaks at k ~5.28 (f40), the pill ~54 px in from each edge
+const K2 = 4.85; // the ease-out's end (f84 reaches k ~5.0 on the way: the pill ~920 px wide, ~80 px in from each edge)
 /** The start look: at f0 the window's left edge sits at screen x ~32, its top at ~101, the redacted row at y ~899. */
 const START = { x: 0 - (36 - 540) / K0, y: ROW_CY - (900 - 960) / K0, k: K0 };
-/** Landing: the pill's centre (x 100) on the frame's centre line, the row's centre at screen y 875. */
-const LAND = { x: SIDEBAR.w / 2, y: ROW_CY - (875 - 960) / K1 };
+/** The look after the push: the pill's centre (x 100) on the frame's centre line, the row's centre at screen y ~870-875. */
+const LAND = { x: SIDEBAR.w / 2, y: ROW_CY - (875 - 960) / 5.0 };
 const GLIDES: Glide[] = [
   { f0: -6, f1: 31, dx: LAND.x - START.x, dy: LAND.y - START.y, k: K1 },
-  { f0: 18, f1: 118, k: K2 },
+  // Rev 1 (user: "zoom out the camera just a bit to give it a bit more padding"): after the landing the camera
+  // eases gently OUT through the reveal, superposed on the push's end, still moving at f84
+  { f0: 26, f1: 115, k: K2 },
 ];
 export const CAM = makeClockCam(START, GLIDES, DURATION + 4);
 const POOL = makePoolTrack({ x: 300, y: 330 }, [{ f0: -6, f1: 32, x: LAND.x, y: ROW_CY }], DURATION + 4);
