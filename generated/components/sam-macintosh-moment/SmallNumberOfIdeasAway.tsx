@@ -19,12 +19,13 @@
 // board tone, a lightbulb in ink on each. "ideas": as the camera passes them each card warms through cream to
 // amber, its bulb's glass lit (f55 / 58 / 61). "away from a super mainstream": a short dashed stretch further on,
 // the milestone, a tall cream flag on a slim pole, is planted in the rule from above the frame (f60 -> f76; its stake
-// sinks into the line; board in flight, cream as it lands; its cloth flies left, back over the dashed gap), and the
-// crowd rises up out of the rule behind and to the right of the pole, a wave from the flag outward, dark as it comes
-// up and lit as it lands (f66 -> f86..90; "mainstream" f86). Settled by ~f92: Dots at TODAY -> the three amber ideas
-// -> the flag with its crowd (8 fully in frame, the row running off the right edge), the rule at y 880; a living
-// hold to f107 (bobs, blinks, the cloth's ripple, drift, grain). Dots never leaves the frame. The rule between the
-// third idea and the flag stays dashed: not there yet.
+// sinks into the line; board in flight, cream as it lands; its cloth flies left, back over the dashed gap), and on
+// "super mainstream" the crowd rises up out of the rule (from behind it) to stand ON the rule right of the pole,
+// a wave from the flag outward, dark as it comes up and lit as it lands (f70 -> f86..90; "mainstream" f86): the
+// destination on the timeline, on the same footing as Dots and the ideas, their bodies cut clean by the rule. Settled
+// by ~f92: Dots at TODAY -> the three amber ideas -> the flag with its crowd (7 fully in frame, the row running off
+// the right edge), the rule at y 880; a living hold to f107 (bobs, blinks, the cloth's ripple, drift, grain). Dots
+// never leaves the frame. The rule between the third idea and the flag stays dashed: not there yet.
 // CAMERA: makeClockCam, k 1.84 (f0, on TODAY) -> 1.5 (~f50, Dots + the ideas) -> 0.85 (settled ~f92, the whole
 // stretch), one move right and wider; max speed ~15 px/f, max accel ~1.0; the rule stays at screen y ~830-880;
 // readable things above y 1080 (TODAY's baseline <= ~960).
@@ -92,11 +93,9 @@ export const defaultProps = schema.parse({});
 
 /** An idea card waits this far above its rest (world px): above the frame's top edge when its drop starts. */
 const DROP_H = 620;
-/** The crowd reads as people from the shoulders: short torsos (head units) that fade into the board over FADE
- *  (world px below the head centre), above the rule; the shared shadow's silhouettes stop inside the opaque part. */
-const CROWD_BODY = 252;
-const SHADOW_BODY = 170;
-const FADE = { y0: 1.78 * CROWD_ROW.r, y1: 4.03 * CROWD_ROW.r } as const;
+/** The crowd stands on the rule: each torso (head units) runs on below the rule's top edge and is cut clean there
+ *  (the rule in front of its base); one shared shadow for the row. */
+const CROWD_BODY = (CROWD_ROW.headUp + 60) / (CROWD_ROW.r / BUST.R);
 /** The mainstream's cast: the shared CROWD plus five recolours of it, so neighbours never repeat; all turned left,
  *  back along the rule toward today (converging profiles would meet nose to nose). */
 const MAIN_CAST: BustSpec[] = [
@@ -155,49 +154,15 @@ const SmallNumberOfIdeasAway: React.FC<z.infer<typeof schema>> = () => {
         <clipPath id="sn26above">
           <rect x={-3000} y={LINE_TOP - 4000} width={8000} height={4000} />
         </clipPath>
-        {crowd.map((c) => (
-          <React.Fragment key={c.i}>
-            <linearGradient
-              id={`sn26cf${c.i}`}
-              gradientUnits="userSpaceOnUse"
-              x1="0"
-              y1={c.y + FADE.y0}
-              x2="0"
-              y2={c.y + FADE.y1}
-            >
-              <stop offset="0" stopColor="#fff" />
-              <stop offset="1" stopColor="#000" />
-            </linearGradient>
-            <mask
-              id={`sn26cm${c.i}`}
-              maskUnits="userSpaceOnUse"
-              maskContentUnits="userSpaceOnUse"
-              x={c.x - 200}
-              y={c.y - 200}
-              width={400}
-              height={200 + FADE.y1 + 10}
-            >
-              <rect
-                x={c.x - 200}
-                y={c.y - 200}
-                width={400}
-                height={200 + FADE.y1 + 10}
-                fill={`url(#sn26cf${c.i})`}
-              />
-            </mask>
-          </React.Fragment>
-        ))}
       </defs>
-      {/* the mainstream, behind the rule and the pin: ONE shadow for the row, then the people left to right */}
+      {/* the mainstream, standing on the rule (cut clean at its top edge): ONE shadow, then the people left to right */}
       <g clipPath="url(#sn26above)">
         <UnionShadow
-          sil={crowd.flatMap((c) =>
-            bustSil(c.x, c.y, R, c.facing, SHADOW_BODY),
-          )}
+          sil={crowd.flatMap((c) => bustSil(c.x, c.y, R, c.facing, CROWD_BODY))}
           s={R / BUST.R}
         />
         {crowd.map((c) => (
-          <g key={c.i} mask={`url(#sn26cm${c.i})`}>
+          <g key={c.i}>
             <Bust
               x={c.x}
               y={c.y}

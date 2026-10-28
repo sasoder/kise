@@ -67,15 +67,19 @@ export const FLAG = {
   w: 168,
   clothH: 112,
 } as const;
-/** The mainstream: one row of busts standing behind and to the right of the flag (heads at `headY`), shoulders
- *  overlapping (each face clear of the next head), running off the right edge; they rise up out of the rule (hidden
- *  below its top edge until they come up). At rest 8 stand fully inside the frame. */
+/** The mainstream: one row of busts standing ON the rule to the right of the flag (the destination on the
+ *  timeline, the same footing as Dots and the ideas): head centres `headUp` above the rule's top edge, their
+ *  bodies cut clean by the rule in front of their base (no fade). Shoulders overlap, each face clear of the next
+ *  head; the first face clears the pole; the row runs off the right edge (7 fully in frame at rest). */
+const CROWD_R = 60;
+const CROWD_UP = 2.35 * CROWD_R;
 export const CROWD_ROW = {
-  headY: 424,
-  r: 54,
-  pitch: 52,
-  x0: 790,
-  n: 16,
+  headUp: CROWD_UP,
+  headY: LINE_TOP - CROWD_UP,
+  r: CROWD_R,
+  pitch: 57,
+  x0: 802,
+  n: 14,
   focus: FLAG.x,
 } as const;
 export const CROWD_X = Array.from(
@@ -84,7 +88,7 @@ export const CROWD_X = Array.from(
 );
 /** a fixed height variation along the row (world px): the shoulder humps step, so it reads as people */
 export const CROWD_DY = CROWD_X.map(
-  (_, i) => [0, -10, 6, -4, 10, -7, 2, -10, 8, -2, 9][i % 11],
+  (_, i) => [0, -9, 5, -4, 9, -6, 2, -9, 7, -2, 8][i % 11],
 );
 /** how far below its place a bust waits: its hair fully under the rule's top edge */
 export const CROWD_DROP = LINE_TOP - CROWD_ROW.headY + 1.2 * CROWD_ROW.r + 30;
@@ -116,9 +120,9 @@ export const WARM_FRAMES = 10;
  *  frame (f60 -> f76, so no sliver of it waits at the frame's edge), board in flight, cream as it lands. */
 export const FLAG_DROP = { f0: 60, frames: 16, h: 720 } as const;
 export const FLAG_LIT = 70;
-/** "away from a super mainstream": the crowd rises out of the rule behind and right of the flag, a wave from the
- *  flag outward, dark as it comes up and lit as it lands (f86 .. f90, "mainstream" f86). */
-export const RISE = { f0: 66, spread: 4, reach: 700, each: 20 } as const;
+/** "super mainstream": the crowd rises up out of the rule (from behind it) right of the flag, a wave from the flag
+ *  outward, dark as it comes up and lit into the light as it lands (f86 .. f90, "mainstream" f86). */
+export const RISE = { f0: 70, spread: 4, reach: 700, each: 16 } as const;
 export const riseStart = (x: number) =>
   RISE.f0 +
   RISE.spread * Math.min(1, Math.abs(x - CROWD_ROW.focus) / RISE.reach);
@@ -157,7 +161,7 @@ export const POOL_AT = makePoolTrack(
       f0: 58,
       f1: 84,
       x: FLAG.x + 220,
-      y: CROWD_ROW.headY + 140,
+      y: CROWD_ROW.headY - 30,
       strength: 2.0,
     },
     { f0: 84, f1: 98, x: 620, y: 700, strength: 1.9 },
