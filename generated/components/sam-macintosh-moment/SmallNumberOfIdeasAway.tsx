@@ -1,8 +1,9 @@
 // ---------------------------------------------------------------------------
-// SmallNumberOfIdeasAway (sam-macintosh-moment, cut 26). Cheeky Pint style (stout) (styles/cheeky-pint.md).
-// Opaque 1080x1920, 23.976 fps, 108 frames. Palette B1 (the stoutShared default).
+// SmallNumberOfIdeasAway (sam-macintosh-moment, cut 26), rev 1: the TIMELINE. Cheeky Pint style (stout)
+// (styles/cheeky-pint.md). Opaque 1080x1920, 23.976 fps, 108 frames. Palette B1 (the stoutShared default).
 //
-// CHECK LINE: "a personal agent like Dots is only a few missing ideas away from a huge mainstream audience".
+// CHECK LINE: "personal agents like Dots are today only a few ideas short of their mainstream moment, and it isn't
+// far ahead on the timeline."
 //
 // THE LINE (Sam Altman): "But I think this is like a small number of ideas away from a super mainstream thing."
 // ("this" = personal agents such as OpenAI's Dots.)
@@ -10,33 +11,40 @@
 // away f63 · from f72 · a f78 · super f81 · mainstream f86 · thing f93 · ("Oh" f103, John).
 // DURATION: the slot 26.109 -> 30.614 s = 4.504 s x 23.976 = 108 frames (f0..f107); hard cut after f107.
 //
-// THE MOTION: one path down the board under one continuous pull-back. f0: tight on the cream Dots tile (OpenAI's
-// ring + "dots", ~430 px wide, centre y ~780) settling onto the board in the light, its few people close beside it,
-// the camera already gliding back; the stones are not drawn yet. "small number": the light runs ahead down a gentle
-// diagonal and lights three equal stepping stones across the empty gap (f31 / 37 / 43, from the board's own tone to
-// cream lo): dashed outlines of tiles not built yet, a lightbulb in each. "ideas": the three bulbs warm to amber,
-// nearest first (f55 / 58 / 61). "away ... from a super mainstream": the pull-back continues and the light travels on
-// past the stones while a long row of ~13+ people (heads about Dots's four), shoulder humps overlapping and running
-// off both edges, rises from below the frame into the light, a wave from under the last stone out to both edges
-// (f60 -> f85..90; dim as they come up, lit over the second half of the rise); their short torsos fade into the board
-// just below the shoulders (no columns). Resolved from ~f90: the Dots group y ~291-518 (tile ~227 px, group x ~65-853)
-// -> three 140 px amber-bulb stones stepping down y ~574-877 -> the crowd (hair-chin y ~903-1018, torsos gone by
-// ~1195, dark board below); nothing has crossed. A living hold to f107 (bobs, blinks, a slow creep, drift, grain).
-// CAMERA: makeClockCam, k 1.92 -> 1.27 (path centred mid-cut; each stone lights as it clears the caption band)
-// -> 1.0 (f98) + a slow creep; max speed ~16 px/f, no stall, eases out.
-// CONTACT / REACTION: the pool's centre passes stone i -> stone i lights (LIT_F); the rise wave reaches a bust -> it
-// starts rising (riseStart).
+// THE MOTION: one camera tracking right along ONE horizontal time axis while it widens. f0: close on a thick cream
+// time rule (small ticks under it): solid behind TODAY, dashed cream lo ahead (the future is not built), its dashed
+// tip drawing on ahead of the camera from f0; the cream Dots tile (OpenAI's ring + "dots") stands pinned on the rule
+// at TODAY and settles; "TODAY" (the only word) slides up in under the rule. "small number" (f27 -> f51): three
+// small idea cards drop onto the dashed rule just ahead of today from above the frame, close and evenly spaced, at
+// board tone, a lightbulb in ink on each. "ideas": as the camera passes them each card warms through cream to
+// amber, its bulb's glass lit (f55 / 58 / 61). "away from a super mainstream": a short dashed stretch further on,
+// the milestone, a tall cream flag on a slim pole, is planted in the rule from above the frame (f60 -> f76; its stake
+// sinks into the line; board in flight, cream as it lands; its cloth flies left, back over the dashed gap), and the
+// crowd rises up out of the rule behind and to the right of the pole, a wave from the flag outward, dark as it comes
+// up and lit as it lands (f66 -> f86..90; "mainstream" f86). Settled by ~f92: Dots at TODAY -> the three amber ideas
+// -> the flag with its crowd (8 fully in frame, the row running off the right edge), the rule at y 880; a living
+// hold to f107 (bobs, blinks, the cloth's ripple, drift, grain). Dots never leaves the frame. The rule between the
+// third idea and the flag stays dashed: not there yet.
+// CAMERA: makeClockCam, k 1.84 (f0, on TODAY) -> 1.5 (~f50, Dots + the ideas) -> 0.85 (settled ~f92, the whole
+// stretch), one move right and wider; max speed ~15 px/f, max accel ~1.0; the rule stays at screen y ~830-880;
+// readable things above y 1080 (TODAY's baseline <= ~960).
+// CONTACT / REACTION: an idea card's foot meets the rule -> it settles (lift -> rest); the camera passes a card ->
+// it warms (WARM_F); the flag's stake meets the rule -> it settles and turns cream (FLAG_LIT); the rise wave reaches
+// a bust -> it rises.
 // AMBER = the few missing ideas that would make personal agents indispensable (COMMON.md); cream = the subject (Dots,
-// the people), cream lo = what is not built yet.
+// the milestone, the people), cream lo = the future not built yet.
 //
-// SOURCES: Dots = OpenAI's personal agent (COMMON.md). Lightbulb = Lucide "lightbulb" (ISC), inlined. No figures.
+// SOURCES: Dots = OpenAI's personal agent (COMMON.md). Lightbulb = Lucide "lightbulb" (ISC), inlined. No figures,
+// no years: the only text is "TODAY".
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
+  Label,
+  METRIC,
+  SPACE,
   StoutStage,
-  amberBandFor,
   lerp,
   smoothstep,
 } from "../kits/cheeky-pint/stoutShared";
@@ -55,43 +63,42 @@ import {
 } from "./macintoshShared";
 import {
   CAM,
+  CROWD_DROP,
   CROWD_DY,
   CROWD_ROW,
   CROWD_X,
   DOTS,
-  FAINT,
-  HEAD_R,
-  FEW,
-  LIT_F,
-  LIT_FRAMES,
+  IDEA,
+  IdeaNode,
+  LINE,
+  LINE_TOP,
+  MilestoneFlag,
   POOL_AT,
   SETTLE,
-  STONES,
-  Stone,
-  WARM_F,
-  WARM_FRAMES,
+  TODAY,
+  TODAY_IN,
+  TODAY_PX,
+  TimeRule,
   crowdAt,
-} from "./ideasPath";
+  ideaAt,
+  flagAt,
+  tipAt,
+} from "./timelinePath";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 108;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
-/** People: the shared Bust, one head radius for Dots's few and the crowd (world px). HEAD_UP = the head centre
- *  above the floor / slot they stand in; the body runs down to it. */
-const HEAD_UP = (100 / 44) * HEAD_R;
-const BODY_LEN = (HEAD_UP / HEAD_R) * BUST.R;
-/** The crowd reads as people from the shoulders: short torsos (head units) that end soon below the shoulder humps and
- *  fade into the board over FADE (world px below the head centre: at rest ~y 1060 -> ~1195), so no long parallel
- *  columns run down the frame; below them is dark board. The shared shadow's silhouettes stop inside the opaque part
- *  (SHADOW_BODY), so it reads as one soft shadow under the row. */
-const CROWD_BODY = 270;
+/** An idea card waits this far above its rest (world px): above the frame's top edge when its drop starts. */
+const DROP_H = 620;
+/** The crowd reads as people from the shoulders: short torsos (head units) that fade into the board over FADE
+ *  (world px below the head centre), above the rule; the shared shadow's silhouettes stop inside the opaque part. */
+const CROWD_BODY = 252;
 const SHADOW_BODY = 170;
-const FADE = { y0: 100, y1: 232 } as const;
-/** The mainstream's cast: the shared CROWD plus five recolours of it (other tops / hair), so neighbours along the
- *  dense row never repeat; all turned one way (left, up the row toward Dots: converging profiles would meet nose to
- *  nose). */
+const FADE = { y0: 1.78 * CROWD_ROW.r, y1: 4.03 * CROWD_ROW.r } as const;
+/** The mainstream's cast: the shared CROWD plus five recolours of it, so neighbours never repeat; all turned left,
+ *  back along the rule toward today (converging profiles would meet nose to nose). */
 const MAIN_CAST: BustSpec[] = [
   ...CROWD,
   { ...CROWD[0], top: CLOTH.rust, hair: HAIR.auburn, hairStyle: "crop" },
@@ -124,10 +131,10 @@ const SmallNumberOfIdeasAway: React.FC<z.infer<typeof schema>> = () => {
   const S = useCurrentFrame();
   const cam = CAM.at(S);
   const k = cam.k;
-  const band = amberBandFor(cam);
   const pool = POOL_AT(S);
+  const flag = flagAt(S);
   const settle = smoothstep((S - SETTLE.f0) / (SETTLE.f1 - SETTLE.f0));
-  // the crowd: everyone turned one way, up the row toward the Dots side (converging profiles would meet nose to nose)
+  const R = CROWD_ROW.r;
   const crowd = CROWD_X.map((x, i) => {
     const c = crowdAt(x, i, S);
     const facing: -1 | 1 = -1;
@@ -135,21 +142,19 @@ const SmallNumberOfIdeasAway: React.FC<z.infer<typeof schema>> = () => {
       x,
       i,
       ...c,
-      y: CROWD_ROW.headY + CROWD_DY[i] + c.sink * CROWD_ROW.drop,
+      y: CROWD_ROW.headY + CROWD_DY[i] + c.sink * CROWD_DROP,
       facing,
     };
   });
+  const todayBase =
+    LINE.y + LINE.w / 2 + TODAY.tick + (SPACE.AXIS + TODAY_PX * METRIC.cap) / k;
   return (
     <StoutStage S={S} cam={cam} rest={CAM.rest} pool={pool}>
-      {/* the mainstream: ONE shadow for the whole row, then the people left to right (each face, turned left, sits in
-          front of its neighbour's back); bodies run off the bottom of the frame */}
-      <UnionShadow
-        sil={crowd.flatMap((c) =>
-          bustSil(c.x, c.y, HEAD_R, c.facing, SHADOW_BODY),
-        )}
-        s={HEAD_R / BUST.R}
-      />
       <defs>
+        {/* the crowd comes up out of the rule: nothing of it below the rule's top edge */}
+        <clipPath id="sn26above">
+          <rect x={-3000} y={LINE_TOP - 4000} width={8000} height={4000} />
+        </clipPath>
         {crowd.map((c) => (
           <React.Fragment key={c.i}>
             <linearGradient
@@ -183,63 +188,65 @@ const SmallNumberOfIdeasAway: React.FC<z.infer<typeof schema>> = () => {
           </React.Fragment>
         ))}
       </defs>
-      {crowd.map((c) => (
-        <g key={c.i} mask={`url(#sn26cm${c.i})`}>
-          <Bust
-            x={c.x}
-            y={c.y}
-            r={HEAD_R}
-            bodyLen={CROWD_BODY}
-            spec={MAIN_CAST[(c.i * 7 + 3) % MAIN_CAST.length]}
-            facing={c.facing}
-            pose={{
-              dim: c.dark,
-              bob: c.bob,
-              smile: 0.4 * (1 - c.dark),
-              blink: blinkAt(c.i, S),
-            }}
-          />
-        </g>
-      ))}
-      {/* the three stones, lit by the light running ahead, their bulbs warming on "ideas" */}
-      {STONES.map((p, i) => (
-        <Stone
-          key={i}
-          x={p.x}
-          y={p.y}
-          k={k}
-          band={band}
-          lit={lerp(FAINT, 1, smoothstep((S - LIT_F[i]) / LIT_FRAMES))}
-          warm={smoothstep((S - WARM_F[i]) / WARM_FRAMES)}
+      {/* the mainstream, behind the rule and the pin: ONE shadow for the row, then the people left to right */}
+      <g clipPath="url(#sn26above)">
+        <UnionShadow
+          sil={crowd.flatMap((c) =>
+            bustSil(c.x, c.y, R, c.facing, SHADOW_BODY),
+          )}
+          s={R / BUST.R}
         />
-      ))}
-      {/* Dots's few people, turned toward the tile, then the tile settling in the light */}
-      {FEW.map((dx, i) => {
-        const x = DOTS.x + dx;
-        const facing: -1 | 1 = dx < 0 ? 1 : -1;
-        return (
-          <g key={i}>
-            <UnionShadow
-              sil={bustSil(x, DOTS.floor - HEAD_UP, HEAD_R, facing, BODY_LEN)}
-              s={HEAD_R / BUST.R}
-              contact={{ x, y: DOTS.floor, w: 2.6 * HEAD_R }}
-            />
+        {crowd.map((c) => (
+          <g key={c.i} mask={`url(#sn26cm${c.i})`}>
             <Bust
-              x={x}
-              y={DOTS.floor - HEAD_UP}
-              r={HEAD_R}
-              spec={CROWD[i]}
-              facing={facing}
-              bodyLen={BODY_LEN}
+              x={c.x}
+              y={c.y}
+              r={R}
+              bodyLen={CROWD_BODY}
+              spec={MAIN_CAST[(c.i * 7 + 3) % MAIN_CAST.length]}
+              facing={c.facing}
               pose={{
-                bob: 3 * Math.sin(S * (0.12 + 0.02 * i) + i * 1.7),
-                smile: 0.5,
-                blink: blinkAt(i + 20, S),
+                dim: c.dark,
+                bob: c.bob,
+                smile: 0.4 * (1 - c.dark),
+                blink: blinkAt(c.i, S),
               }}
             />
           </g>
+        ))}
+      </g>
+      {/* the milestone flag, planted in the rule: drawn before the rule so its stake sinks into the line */}
+      {flag.shown ? (
+        <MilestoneFlag
+          k={k}
+          dim={flag.dim}
+          fall={flag.fall}
+          lift={flag.lift}
+          ph={flag.ph}
+        />
+      ) : null}
+      {/* the time rule: solid behind today, the dashed future drawn ahead by its tip */}
+      <TimeRule tip={tipAt(S)} k={k} />
+
+      {/* the three ideas, dropped onto the rule, warming on "ideas" */}
+      {IDEA.xs.map((x, i) => {
+        const s = ideaAt(i, S);
+        if (!s.shown) return null;
+        return (
+          <IdeaNode
+            key={i}
+            x={x}
+            floor={LINE_TOP}
+            size={IDEA.size}
+            k={k}
+            fall={(1 - s.land) * DROP_H}
+            lift={s.lift}
+            dim={s.dim}
+            warm={s.warm}
+          />
         );
       })}
+      {/* Dots, pinned on the rule at TODAY */}
       <DotsMark
         x={DOTS.x}
         floor={DOTS.floor - 6 * lerp(1, 0, settle)}
@@ -247,6 +254,15 @@ const SmallNumberOfIdeasAway: React.FC<z.infer<typeof schema>> = () => {
         k={k}
         lift={lerp(1, 0, settle)}
         wordmark
+      />
+      <Label
+        x={TODAY.x}
+        y={todayBase}
+        k={k}
+        px={TODAY_PX}
+        text="TODAY"
+        tone="cream"
+        enter={(S - TODAY_IN) / 12}
       />
     </StoutStage>
   );
