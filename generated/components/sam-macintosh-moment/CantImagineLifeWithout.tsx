@@ -10,17 +10,21 @@
 // even f55 · ChatGPT f61 · they f77 · do f81 · say f84 · (word ends ~f90).
 // DURATION: the slot 16.225 -> 20.312 s = 4.087 s x 23.976 = 98 frames (f0..f97). Hard cut back to the speaker.
 //
-// THE MOTION: a row of five picture-book people (macintoshShared busts, the cabinCast look) chatting on the stout
-// board. Each cream speech bubble grows out of its tail's tip just above its speaker's head (from 38 % of its size,
+// THE MOTION (rev 1: "the bodies are unnaturally long" -> a tighter camera, shoulders only): two groups of
+// picture-book people (macintoshShared busts, the cabinCast look) chatting on the stout board, the Codex pair on the
+// left, the ChatGPT trio to its right. The camera opens close on the Codex pair (k ~1.9, heads ~330 px) and, from
+// "or" (f46) pans right in one eased glide (house follower, peak ~56 px/f at f58), easing back a little (k 1.58) to
+// land on the trio just after "ChatGPT" (arriving f66-68, settled ~f74), then creeps. The busts fade out into the ground
+// ~1.3 head-heights under the chin (one world-space mask over the crowd and its shadow): only shoulders show. Each cream speech bubble grows out of its tail's tip just above its speaker's head (from 38 % of its size,
 // fading up over 4 f: never a speck) and lifts into place (weighty, floating, then settling to lifted), one after
 // another left to right; nothing passes a face; every tail ends just above its own speaker's head. A talking
 // bob runs on each speaker while their bubble rises. On "coding agents" the Codex mark slides up into the two left
-// bubbles with the name "CODEX" under it (landed f27 / f29), on "even ChatGPT" the blossom and "CHATGPT" into the
+// bubbles with the name "CODEX" under it (landed f26 / f28), on "even ChatGPT" the blossom and "CHATGPT" into the
 // three right ones, which are already
 // waiting (landed f60-62.5, visibly from ~f57). On "they do say" each mark eases left and an amber heart comes in beside it, in
-// one wave left to right (landed f78-84), and the people smile. The camera drifts left -> right along the row from
-// f0 (a little close on the Codex people) and eases out to a settled frame holding all five and every bubble, then
-// creeps (k 1.11 -> 1.04, heads ~y 760-955, bubbles ~y 265-745); living hold: idle head bobs, blinks, bubbles' float drift, grain.
+// one wave left to right (the trio's land f79-84), and the people smile. Codex pair: one tier of two bubbles; the
+// trio: the honeycomb (upper 2 / 4, lower 3). Chins at screen y 1020 on every frame; living hold: idle head bobs,
+// blinks, bubbles' float drift, the camera's creep, grain.
 // TEXT: only the product names (FONT_LABEL caps, inkDark, ~32 px on screen): at 270 px the Codex mark alone read as
 // an unknown blob (review 2). The heart is ~80-90 % of the mark's height.
 // HEART vs AMBER FILL: the heart (beside the mark, inside the cream bubble) — "Codex ❤" reads instantly as "loved"
@@ -46,11 +50,12 @@ export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
 // ---------------------------------------------------------------------------
-// THE WORLD (world px; the settled frame is ~k 1.04 centred on x 540)
+// THE WORLD (world px; Codex frame ~k 1.9 on x ~240, the trio's settled frame ~k 1.58 on x ~873)
 // ---------------------------------------------------------------------------
 const HEAD_R = 80;
-/** facing pairs stand wider apart than back-to-back neighbours (noses never meet): 0 > < 1   2 > < 3   4 > */
-const XS = [135, 375, 540, 780, 945];
+/** facing pairs stand wider apart than back-to-back neighbours (noses never meet): 0 > < 1     2 > < 3   4 >
+ *  (the groups stand 290 apart: neither the Codex frame nor the trio's holds a sliver of the other group) */
+const XS = [135, 375, 665, 905, 1070];
 const FACING: (-1 | 1)[] = [1, -1, 1, -1, 1];
 /** the five speakers: x, head-centre y (a little height variation), CROWD[i] (person 4 turned to face right) */
 export const PEOPLE = [0, 1, 2, 3, 4].map((i) => ({
@@ -62,31 +67,35 @@ export const PEOPLE = [0, 1, 2, 3, 4].map((i) => ({
 }));
 /** the lowest readable thing (the lowest chin) — kept above the caption band on every camera */
 const CHIN_Y = Math.max(...PEOPLE.map((p) => p.y + p.r));
-const BW = 256;
-const BH = 200;
-const UPPER_Y = 498;
-const LOWER_Y = 712;
-/** the mark's tile (optical rule: Codex ~92, the blossom ~106 world px), the heart (~83 tall: 80-90 % of the mark),
- *  the product name (FONT_LABEL caps, ~32 px on screen at the rest k ~1.04) */
-const MARK_TILE = 140;
-const HEART_W = 96;
-const NAME_PX = 31;
+/** the busts' fade (world y): opaque to just under the chins, gone ~1.3 head-heights (208) below them */
+const BODY_FADE: [number, number] = [CHIN_Y + 28, CHIN_Y + 206];
+/** rev 1: the bubble and its contents at 0.82 of rev 0's world size (the camera is ~1.6-1.9x closer, so on screen
+ *  they are still larger than the approved ones: ~400 px wide at the Codex close-up, ~330 px on the trio) */
+const BW = 210;
+const BH = 164;
+/** the mark's tile, the heart (80-90 % of the mark's height), the product name (FONT_LABEL caps, ~42 px on screen
+ *  at the Codex close-up, ~35 px on the trio) */
+const MARK_TILE = 115;
+const HEART_W = 79;
+const NAME_PX = 22;
 const NAME: Record<MarkId, string> = { codex: "Codex", chatgpt: "ChatGPT", dots: "dots" };
-type BubbleSpec = { x: number; y: number; tip: [number, number]; root: number; mark: MarkId; rise0: number; mark0: number; heart0: number };
-/** bubble i belongs to person i; upper tier 0 / 2 / 4, lower tier 1 / 3 (a honeycomb). Each bubble GROWS out of its
- *  tail's tip (above its speaker's head) and lifts into place: scaled about the tip, so the body rises out of the
- *  point. An upper bubble's tip sits in the middle of the gap between the lower bubbles, so while it is still small
- *  it passes up through the gap and never crosses a neighbour, a face or the crowd. */
-export const BUBBLE_SIZE = { w: 256, h: 200 };
+type BubbleSpec = { x: number; y: number; tip: [number, number]; root: number; tw: number; mark: MarkId; rise0: number; mark0: number; heart0: number };
+/** bubble i belongs to person i. The Codex pair: one tier, each bubble straight over its speaker. The trio: a
+ *  honeycomb (upper 2 / 4, lower 3); the upper tails run down past the lower bubble's sides. Each bubble GROWS out of
+ *  its tail's tip (above its speaker's head) and lifts into place: scaled about the tip, so the body rises out of the
+ *  point and never crosses a neighbour, a face or the crowd. The trio's bubbles rise as the pan reveals them (late
+ *  enough that the top tier never leaves the frame top while the camera is still close); their marks slide in as the
+ *  pan lands. */
+export const BUBBLE_SIZE = { w: BW, h: BH };
 export const BUBBLES: BubbleSpec[] = [
-  { x: 181, y: UPPER_Y, root: 4, tip: [186, 846], mark: "codex", rise0: -17, mark0: 19, heart0: 69 },
-  { x: 357, y: LOWER_Y, root: -20, tip: [330, 864], mark: "codex", rise0: -3, mark0: 21, heart0: 70.5 },
-  { x: 540, y: UPPER_Y, root: 4, tip: [550, 842], mark: "chatgpt", rise0: 8, mark0: 52, heart0: 72 },
-  { x: 723, y: LOWER_Y, root: -18, tip: [700, 864], mark: "chatgpt", rise0: 19, mark0: 53.5, heart0: 73.5 },
-  { x: 899, y: UPPER_Y, root: 8, tip: [926, 846], mark: "chatgpt", rise0: 27, mark0: 54.5, heart0: 75 },
+  { x: 128, y: 738, root: 28, tip: [178, 864], tw: 46, mark: "codex", rise0: -17, mark0: 18, heart0: 69 },
+  { x: 362, y: 726, root: -14, tip: [336, 852], tw: 46, mark: "codex", rise0: -3, mark0: 20, heart0: 70.5 },
+  { x: 700, y: 564, root: 0, tip: [702, 846], tw: 70, mark: "chatgpt", rise0: 36, mark0: 55, heart0: 70 },
+  { x: 875, y: 740, root: -4, tip: [866, 866], tw: 46, mark: "chatgpt", rise0: 40, mark0: 57, heart0: 72.5 },
+  { x: 1050, y: 564, root: 26, tip: [1100, 846], tw: 70, mark: "chatgpt", rise0: 43, mark0: 59, heart0: 75 },
 ];
 export const RISE_F = 24; // frames a bubble's grow-and-lift takes
-const MARK_F = 8; // frames a mark's entrance takes (ChatGPT lands f60 / f61.5 / f62.5, visibly from ~f57)
+const MARK_F = 8; // frames a mark's entrance takes (Codex lands f26 / f28; ChatGPT f63 / f65 / f67 as the pan lands)
 const HEART_F = 9; // frames a heart's entrance takes
 
 /** the rise: weighty — a soft start, a long damped settle, no overshoot */
@@ -136,16 +145,20 @@ const poseAt = (i: number, f: number) => {
 // CAMERA — x and k on the house damped follower; y derived from k so the chins never reach the caption band
 // ---------------------------------------------------------------------------
 const XK = makeClockCam(
-  { x: 430, y: 960, k: 1.12 },
+  { x: 232, y: 960, k: 1.87 },
   [
-    // the drift along the row, easing out to the settled frame of all five
-    { f0: -24, f1: 54, dx: 110, k: 1.04 },
+    // close on the Codex pair through "coding agents": a slow push-in creep (never a dead hold)
+    { f0: -30, f1: 44, dx: 10, k: 1.93 },
+    // "or even ChatGPT": the pan right to the trio (visibly from ~f43, peak ~f57, landing f66-70) ...
+    { f0: 40, f1: 68, dx: 630 },
+    // ... easing back a little, just ahead of the pan, so the honeycomb's top tier stays in frame
+    { f0: 36, f1: 64, k: 1.58 },
     // the creep through the hold
-    { f0: 54, f1: 150, dx: 4, k: 1.052 },
+    { f0: 64, f1: 130, dx: 6, k: 1.56 },
   ],
   DURATION,
 );
-const CHIN_SCREEN = 955; // where the lowest chin sits on screen (heads ~y 760-955, well above the band at 1080)
+const CHIN_SCREEN = 1020; // where the lowest chin sits on screen (above the caption band at 1080 on every frame)
 export const camAt = (f: number) => {
   const c = XK.at(f);
   return { x: c.x, y: CHIN_Y - (CHIN_SCREEN - 960) / c.k, k: c.k };
@@ -158,11 +171,25 @@ const CantImagineLifeWithout: React.FC<z.infer<typeof schema>> = () => {
   const bubbles = BUBBLES.map((b, i) => ({ b, s: bubbleAt(b, i, S) }));
   return (
     <StoutStage S={S} cam={cam} rest={camAt(0)} pool={{ x: cam.x, y: 760, strength: 1.25 }}>
-      {/* the crowd: one shadow layer, then the busts left to right */}
-      <CrowdShadow busts={PEOPLE} />
-      {PEOPLE.map((p, i) => (
-        <Bust key={i} x={p.x} y={p.y} r={p.r} spec={p.spec} facing={p.facing} pose={poseAt(i, S)} />
-      ))}
+      {/* the crowd: one shadow layer, then the busts left to right, all fading into the ground ~1.3 head-heights
+          under the chins (one world-space mask: shoulders only, no long bodies) */}
+      <defs>
+        <linearGradient id="cilw-body-fade" gradientUnits="userSpaceOnUse" x1="0" y1={BODY_FADE[0]} x2="0" y2={BODY_FADE[1]}>
+          <stop offset="0" stopColor="#fff" stopOpacity={1} />
+          <stop offset="0.35" stopColor="#fff" stopOpacity={0.74} />
+          <stop offset="0.7" stopColor="#fff" stopOpacity={0.3} />
+          <stop offset="1" stopColor="#fff" stopOpacity={0} />
+        </linearGradient>
+        <mask id="cilw-body-mask" maskUnits="userSpaceOnUse" x={-800} y={0} width={2800} height={2000}>
+          <rect x={-800} y={0} width={2800} height={2000} fill="url(#cilw-body-fade)" />
+        </mask>
+      </defs>
+      <g mask="url(#cilw-body-mask)">
+        <CrowdShadow busts={PEOPLE} />
+        {PEOPLE.map((p, i) => (
+          <Bust key={i} x={p.x} y={p.y} r={p.r} spec={p.spec} facing={p.facing} pose={poseAt(i, S)} />
+        ))}
+      </g>
       {/* the bubbles, each grown out of its tail's tip above its speaker (upper tier behind the lower tier) */}
       {[0, 2, 4, 1, 3].map((i) => {
         const { b, s } = bubbles[i];
@@ -175,7 +202,7 @@ const CantImagineLifeWithout: React.FC<z.infer<typeof schema>> = () => {
               y={b.y}
               w={BW}
               h={BH}
-              tail={{ root: b.root, tip: b.tip, width: b.y === UPPER_Y ? 58 : 46 }}
+              tail={{ root: b.root, tip: b.tip, width: b.tw }}
               k={k}
               mark={b.mark}
               markIn={s.markIn}
