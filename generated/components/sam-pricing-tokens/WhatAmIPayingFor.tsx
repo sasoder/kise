@@ -12,9 +12,10 @@
 // DURATION: the slot 17.184 -> 22.606 s (sequence frames 412 -> 542) = 5.422 s x 23.976 = 130 frames (f0..f129).
 //
 // THE MOTION: f0 is cut 11's last frame (a world match: the price tag standing in the OpenAI tile's slot, the tile
-// toned 0.7, CUT11_END_CAM). The camera eases back and a little down (f0-42) while two customers rise into the frame
-// from below the bottom corners (heads first, closing in to either side of the tile), big and close, in profile,
-// looking up at the tag: the cream one (left, nearest) and a board-toned one (right). On "negative" (f41-49) both
+// toned 0.7, CUT11_END_CAM). The camera eases a little down and in (f0-42) while two customers lean in from the
+// left and right frame edges (V2, the user's note: no tall bodies; each torso runs out through its own side edge),
+// big and close, in profile, their faces flanking the tag: the cream one (left, the lit subject) and a board-toned
+// one (right). On "negative" (f41-49) both
 // sour as one change: a deep downturned mouth, brows angled down hard, heads tipped back 7 deg and the whole bust
 // leaning back 3.5 deg together (this cut's FaceOverlay over CustomerBust). On "I need" (f80) the tile prints a long
 // thermal receipt UP out of the slot IN FRONT of the tag (f80-103): its torn top first, blank "?" rows, the printed
@@ -82,6 +83,7 @@ export const TILE_X = CUT11_WORLD.x;
 export const TILE_FLOOR = CUT11_WORLD.floor;
 export const SLOT_Y = TILE_FLOOR - TILE.size; // 1126: the tag's foot in cut 11, the receipt's exit
 export const TILE_DIM = 0.7; // cut 11's end tone of the tile
+export const TAG_H = TAG.h * TAG_ART.footV; // the standing tag's height above the slot
 /** the receipt: width (inside the 344-px slot), the torn top's teeth, and how far it is out of the slot at rest */
 export const RECEIPT = { w: 326, tooth: 11, teeth: 15 };
 const ROW_N = 5;
@@ -105,17 +107,24 @@ export const RECEIPT_OUT = P.out;
 /** the total's sticker: the tag's PriceSticker recipe, sized to the paper */
 const TOTAL_W = 0.92 * RECEIPT.w;
 
-type Person = { x: number; y: number; r: number; spec: BustSpec; facing: -1 | 1; main?: boolean; dim: number; from: number; f0: number; back: number };
-/** the two customers either side of the tile, big and close, in profile toward the receipt (focus plane). They rise
- *  into the frame from below (the head first, the body under it: nothing enters from a side edge): `from` = how far
- *  below their place they start (world px; all of them below cut 11's frame at f0), `f0` = when they set off. */
+type Person = { x: number; y: number; r: number; spec: BustSpec; facing: -1 | 1; main?: boolean; dim: number; base: number; out: number; f0: number; back: number };
+/**
+ * V2 (the user's note on v1: "their bodies are unnaturally long"): the two customers LEAN IN from the left and right
+ * frame edges, `base` deg off upright toward the receipt about a pivot PIVOT head radii down their body, so each
+ * torso runs out through its own side edge about one head-height below the shoulder (no tall column down to the
+ * frame's foot); the head is turned back up against the lean (Bust's tilt) so the face looks level at the paper.
+ * (x, y) = the head centre at rest (before the gestures). They slide in along the frame from outside their own edge
+ * (`out` world px, from `f0`): the face leads (the leaned body trails down and out behind it), and the heads stay at
+ * their own height the whole way, above the caption bands on every frame.
+ */
 const BODY_LEN = 1000;
 export const PEOPLE: Person[] = [
-  { x: 787, y: 944, r: 86, spec: CROWD[2], facing: -1, dim: 0.35, from: 1060, f0: 0, back: 1.3 },
-  { x: 233, y: 966, r: 92, spec: CROWD[3], facing: 1, dim: 0, main: true, from: 1060, f0: 3, back: 1.1 },
+  { x: 734, y: 930, r: 82, spec: CROWD[2], facing: -1, dim: 0.35, base: 76, out: 420, f0: 0, back: 1.3 },
+  { x: 340, y: 948, r: 94, spec: CROWD[3], facing: 1, dim: 0, main: true, base: 76, out: 400, f0: 3, back: 1.1 },
 ];
-const WALK_F = 39;
-const RISE_OUT = 210;
+const WALK_F = 34;
+/** Bust's bob (head units) that lowers each head onto its shoulders, over the collar: the neck stays hidden */
+const NECK_SINK = -24;
 
 // ---------------------------------------------------------------------------
 // TIMING (frames from f0)
@@ -149,10 +158,10 @@ export const swayAt = (f: number) => swingAt(f, { f0: PRINT1 - 2, amp: 0.9, peri
 // ---------------------------------------------------------------------------
 // THE PEOPLE — the rise in, the souring (one change), the lean in and squint to read
 // ---------------------------------------------------------------------------
-/** the rise: in from below, a soft start and a long settle, no overshoot */
+/** the lean-in: in from the side, already moving, a long settle, no overshoot */
 export const walkAt = (i: number, f: number) => {
   const u = clamp01((f - PEOPLE[i].f0) / WALK_F);
-  return lerp(smoothstep(u), 1 - Math.pow(1 - u, 2), 0.5);
+  return lerp(smoothstep(u), 1 - Math.pow(1 - u, 2), 0.6);
 };
 export const sourAt = (i: number, f: number) => smoothstep((f - SOUR0 - [0, 1][i]) / SOUR_F);
 const tri = (f: number, at: number) => Math.max(0, 1 - Math.abs(f - at) / 1.5);
@@ -162,8 +171,8 @@ export const poseAt = (i: number, f: number) => {
   const lean = p.main ? smoothstep((f - LEAN0) / LEAN_F) : 0;
   const w = walkAt(i, f);
   const idle = 1.1 * Math.sin((f + i * 17) / 12.5);
-  // the rise: they arrive leaning a little toward the tag, straightening as they settle
-  const walkLean = 2 * (1 - smoothstep(w));
+  // they arrive leaning a little further in, easing back to their lean as they settle
+  const walkLean = 3 * (1 - smoothstep(w));
   return {
     // CustomerBust's own sour stays 0: the stronger frown, brow and head droop are this cut's (FaceOverlay, tilt)
     sour: 0,
@@ -171,25 +180,31 @@ export const poseAt = (i: number, f: number) => {
     squint: lean,
     // faces up at the paper. NOTE Bust's tilt sign: it rotates the head by -tilt about the neck, so a NEGATIVE tilt
     // lifts the face (measured on the render). On "negative" the heads tip back 7 deg; reading, the face dips in 4.
-    tilt: -(p.main ? 11 : 9) - 0.8 * Math.sin((f + i * 11) / 15) - 7 * sour + (p.main ? 4 : 0) * lean,
-    bob: idle + 2 * lean,
+    // The body's lean is countered at the neck (0.9 of it) so the face stays near level.
+    tilt: -0.9 * (p.base + walkLean) - (p.main ? 9 : 7) - 0.8 * Math.sin((f + i * 11) / 15) - 7 * sour + (p.main ? 4 : 0) * lean,
+    // the head sits down ON the shoulder line (Bust's bob lowers it over the collar): no neck shows
+    bob: NECK_SINK + idle + 2 * lean,
     smile: 0.3,
     // the squint narrows the eye (Bust's blink, part way), a blink still closes it
     blink: Math.max(blinkAt(i + 2, f), tri(f, HOLD_BLINK[i]), 0.5 * lean),
     dim: p.dim,
     /** the whole bust leans (deg about a pivot low on the body): toward the tag as they rise, back 3.5 deg from the paper on
      *  "negative" with the head, the cream customer then 5 deg in toward it to read */
-    lean: p.facing * (walkLean - 3.5 * sour + (p.main ? 5 * lean : 0)),
+    lean: p.facing * (p.base + walkLean - 3.5 * sour + (p.main ? 5 * lean : 0)),
   };
 };
-/** a bust's world place on its rise (in from below the frame) */
+/** a bust's drawing place (CustomerBust's x, y: its head centre before the lean) on its slide in from the side; the
+ *  lean then turns it about the pivot PIVOT r below that point (leanTf) */
 export const placeAt = (i: number, f: number) => {
   const p = PEOPLE[i];
   const w = walkAt(i, f);
-  // a little outward while low, closing in as they come up: the heads clear the tile's sides on the way up
-  return { x: p.x - p.facing * RISE_OUT * Math.sqrt(1 - w), y: p.y + p.from * (1 - w) };
+  const a = p.facing * p.base * D2R;
+  // the pivot, fixed in the body: the rest head centre plus the leaned body axis down to the pivot
+  const px = p.x - Math.sin(a) * PIVOT * p.r - p.facing * p.out * (1 - w);
+  const py = p.y + Math.cos(a) * PIVOT * p.r;
+  return { x: px, y: py - PIVOT * p.r };
 };
-const PIVOT = 6.5; // the lean pivot, head radii below the head centre
+const PIVOT = 4; // the lean pivot, head radii below the head centre (about the chest)
 const leanTf = (x: number, y: number, r: number, deg: number) => `rotate(${f3(deg)} ${f3(x)} ${f3(y + PIVOT * r)})`;
 /** a bust's head centre after its rise, tilt about the neck, bob and lean (for the checks) */
 export const headAt = (i: number, f: number) => {
@@ -255,6 +270,31 @@ const BodyFill: React.FC<{ id: string; x: number; y: number; r: number; facing: 
 };
 
 /**
+ * The neck, tucked away. CustomerBust draws a fixed neck block (x -18..30, y 26..shoulderY+30 in its own head units)
+ * that the head sits on; with these strong leans the head counter-tilts about the neck point and the block shows
+ * under the jaw as a second jaw. This mask (in the bust's own frame) hides that block everywhere except where the
+ * torso or the head (its circle, after the same bob and tilt as the bust) are drawn: no neck shows on any frame.
+ */
+const NECK_RECT = { x: -18, y: 26, w: 48, h: BUST.shoulderY + 4 };
+const NeckMask: React.FC<{ id: string; x: number; y: number; r: number; facing: -1 | 1; tilt: number; bob: number }> = (q) => {
+  const [nx, ny] = BUST.neck;
+  return (
+    <defs>
+      <mask id={q.id} maskUnits="userSpaceOnUse" x={-4000} y={-4000} width={8000} height={8000}>
+        <g transform={`translate(${f3(q.x)} ${f3(q.y)}) scale(${f3((-q.facing * q.r) / 60)} ${f3(q.r / 60)})`}>
+          <rect x={-2000} y={-2000} width={4000} height={4000} fill="#fff" />
+          <rect x={NECK_RECT.x - 1} y={NECK_RECT.y - 1} width={NECK_RECT.w + 2} height={NECK_RECT.h + 2} fill="#000" />
+          <path d={torsoD(BODY_LEN)} fill="#fff" />
+          <g transform={`translate(0 ${f3(-q.bob)}) rotate(${f3(-q.tilt)} ${nx} ${ny})`}>
+            <circle cx={0} cy={0} r={60} fill="#fff" />
+          </g>
+        </g>
+      </mask>
+    </defs>
+  );
+};
+
+/**
  * The face's change, drawn over CustomerBust (whose sour 0..1 tops out at a 6-unit mouth drop and a 0.6 brow: too
  * faint at phone size). In the bust's own head frame (head units, R 60, facing left, after its bob and tilt):
  * a skin patch (the bust's own skin gradient, clipped to the head) over Bust's mouth, then the mouth from Bust's
@@ -301,16 +341,16 @@ const FaceOverlay: React.FC<{ id: string; x: number; y: number; r: number; facin
 };
 
 // ---------------------------------------------------------------------------
-// CAMERA — cut 11's frame, eased back and a little down for the rise-in (lands ~f42), a creep, then up and in with
+// CAMERA — cut 11's frame, eased a little down and in as the customers lean in (lands ~f42), a creep, then up and in with
 // the paper (f78-118), and a slow creep in on the receipt through the hold (still moving at f129).
 // ---------------------------------------------------------------------------
 export const CAM0 = CUT11_END_CAM;
 const CAM = makeClockCam(
   CAM0,
   [
-    { f0: 0, f1: 42, dy: 1078 - CUT11_END_CAM.y, k: 1.05 },
-    { f0: 34, f1: 84, dy: 4, k: 1.065 },
-    { f0: 78, f1: 118, dy: -52, k: 1.28 },
+    { f0: 0, f1: 42, dy: 1050 - CUT11_END_CAM.y, k: 1.18 },
+    { f0: 34, f1: 84, dy: 2, k: 1.19 },
+    { f0: 78, f1: 118, dy: -24, k: 1.28 },
     { f0: 106, f1: 190, dy: -14, k: 1.42 },
   ],
   DURATION,
@@ -419,6 +459,8 @@ const WhatAmIPayingFor: React.FC<z.infer<typeof schema>> = ({ rows }) => {
   const pool = POOL(S);
   return (
     <StoutStage S={S} cam={cam} rest={rest} pool={{ x: pool.x, y: pool.y, strength: 1.3 }}>
+      {/* the customers' ONE shadow, on the board (under the till, so it never dirties the paper) */}
+      <UnionShadow sil={crowdSil} s={SHADOW_S} />
       {/* the till: the tile, and what stands in its slot (ONE shadow; the pieces under the tile's face) */}
       <OpenAISlotTile x={TILE_X} floor={TILE_FLOOR} k={k} dim={TILE_DIM} extraSil={sil} occupant={tagIn ? TAG.w : paperIn ? RECEIPT.w : 0}>
         {tagIn ? <PriceTag {...tagProps} shadow={false} /> : null}
@@ -437,11 +479,13 @@ const WhatAmIPayingFor: React.FC<z.infer<typeof schema>> = ({ rows }) => {
           </g>
         ) : null}
       </OpenAISlotTile>
-      {/* the customers, nearer than the tile: their ONE shadow, then the busts back to front */}
-      <UnionShadow sil={crowdSil} s={SHADOW_S} />
+      {/* the customers, nearer than the tile (their ONE shadow is drawn under the till: on the board only) */}
       {PEOPLE.map((p, i) => (
         <g key={i} transform={leanTf(places[i].x, places[i].y, p.r, poses[i].lean)}>
-          <CustomerBust x={places[i].x} y={places[i].y} r={p.r} spec={p.spec} facing={p.facing} pose={poses[i]} bodyLen={BODY_LEN} />
+          <NeckMask id={`b17nm${i}`} x={places[i].x} y={places[i].y} r={p.r} facing={p.facing} tilt={poses[i].tilt} bob={poses[i].bob} />
+          <g mask={`url(#b17nm${i})`}>
+            <CustomerBust x={places[i].x} y={places[i].y} r={p.r} spec={p.spec} facing={p.facing} pose={poses[i]} bodyLen={BODY_LEN} />
+          </g>
           <BodyFill id={`b17bf${i}`} x={places[i].x} y={places[i].y} r={p.r} facing={p.facing} top={p.spec.top} dim={p.dim} />
           <FaceOverlay id={`b17fo${i}`} x={places[i].x} y={places[i].y} r={p.r} facing={p.facing} spec={p.spec} tilt={poses[i].tilt} bob={poses[i].bob} dim={p.dim} frown={poses[i].frown} squint={poses[i].squint} smile={poses[i].smile} />
         </g>

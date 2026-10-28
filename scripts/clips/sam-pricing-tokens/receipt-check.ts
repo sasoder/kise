@@ -15,8 +15,9 @@ const C = await import("../../../generated/components/sam-pricing-tokens/WhatAmI
 type Cam = { x: number; y: number; k: number };
 const toS = (c: Cam, x: number, y: number) => ({ x: 540 + (x - c.x) * c.k, y: 960 + (y - c.y) * c.k });
 const BAND0 = 1080;
-let w = { nose: Infinity, fN: -1, iN: -1, disc: Infinity, fD: -1, iD: -1, hh: Infinity, fH: -1, chin: -Infinity, fC: -1, iC: -1, f0vis: false, crop: Infinity, fK: -1, iK: -1 };
+let w = { nose: Infinity, fN: -1, iN: -1, disc: Infinity, fD: -1, iD: -1, hh: Infinity, fH: -1, chin: -Infinity, fC: -1, iC: -1, f0vis: false, crop: Infinity, fK: -1, iK: -1, tag: Infinity, fT: -1, iT: -1 };
 const lines: string[] = [];
+const perCrop = [Infinity, Infinity];
 for (let f = 0; f < C.DURATION; f++) {
   const cam = C.camAt(f);
   const out = C.outAt(f);
@@ -52,17 +53,29 @@ for (let f = 0; f < C.DURATION; f++) {
       const bx = toS(cam, h.x - h.p.facing * h.p.back * h.r, h.y).x;
       const m = h.p.facing === 1 ? bx : 1080 - bx;
       if (m < w.crop) w = { ...w, crop: m, fK: f, iK: i };
+      perCrop[i] = Math.min(perCrop[i], m);
     }
-    if (f >= 40) {
+    {
+      // every frame: the chin above the caption band
       const chin = toS(cam, h.x, h.y + h.r).y;
       if (chin > w.chin) w = { ...w, chin, fC: f, iC: i };
     }
     if (f === 0) {
-      // f0 must be cut 11's frame: every bust wholly below it (the head's top, hair included, under the frame)
-      const s = toS(cam, h.x, h.y - 1.3 * h.r);
-      if (s.y < 1922) w = { ...w, f0vis: true };
+      // f0 must be cut 11's frame: every head (a 1.3 r disc, hair included) wholly outside it (the leaned body
+      // trails out behind the head, so a hidden head means a hidden bust)
+      const c = toS(cam, h.x, h.y);
+      const R = 1.3 * h.r * cam.k;
+      if (c.x + R > -2 && c.x - R < 1082 && c.y + R > -2 && c.y - R < 1922) w = { ...w, f0vis: true };
     }
   });
+  // the standing tag (before it sinks): heads vs its rectangle (world 540 +- TAG.w / 2, its top to the slot)
+  if (f < C.SINK0) {
+    heads.forEach((h, i) => {
+      const t0 = C.SLOT_Y - C.TAG_H;
+      const dD = (Math.hypot(Math.max(x0 - 2 - h.x, 0, h.x - (x1 + 2)), Math.max(t0 - h.y, 0, h.y - C.SLOT_Y)) - 1.3 * h.r) * cam.k;
+      if (dD < w.tag) w = { ...w, tag: dD, fT: f, iT: i };
+    });
+  }
   const d = Math.hypot(heads[0].x - heads[1].x, heads[0].y - heads[1].y) - 1.3 * (heads[0].r + heads[1].r);
   if (d < w.hh) w = { ...w, hh: d * cam.k, fH: f };
   if (f % 6 === 0 || f === C.DURATION - 1) {
@@ -77,7 +90,8 @@ console.log(lines.join("\n"));
 console.log("min gap nose -> receipt (screen px)", w.nose.toFixed(1), "at f", w.fN, "bust", w.iN);
 console.log("min gap head disc (1.3 r) -> receipt (screen px)", w.disc.toFixed(1), "at f", w.fD, "bust", w.iD);
 console.log("min gap head <-> head (1.3 r discs, screen px)", w.hh.toFixed(1), "at f", w.fH);
-console.log("lowest chin on screen from f40", w.chin.toFixed(1), "at f", w.fC, "bust", w.iC, "(band from", BAND0, ")");
+console.log("lowest chin on screen, every frame", w.chin.toFixed(1), "at f", w.fC, "bust", w.iC, "(band from", BAND0, ")");
 console.log("a bust visible at f0:", w.f0vis);
-console.log("back of head -> frame edge from f104 (screen px, < 0 = cropped)", w.crop.toFixed(1), "at f", w.fK, "bust", w.iK);
+console.log("min gap head disc (1.3 r) -> standing tag (screen px)", w.tag.toFixed(1), "at f", w.fT, "bust", w.iT);
+console.log("back of head -> frame edge from f104 (screen px, < 0 = cropped)", w.crop.toFixed(1), "at f", w.fK, "bust", w.iK, "| per bust", perCrop.map((v) => v.toFixed(1)).join(" "));
 console.log("camera", JSON.stringify(camCheck(C.camAt, 0, C.DURATION)));
