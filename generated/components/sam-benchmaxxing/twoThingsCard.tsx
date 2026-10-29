@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
-// twoThingsCard — cut 9's own card (TwoThingsToCareAbout, sam-benchmaxxing, REV 1). A COPY of benchShared's ThingCard
+// twoThingsCard — cut 9's own card (TwoThingsToCareAbout, sam-benchmaxxing, REV 2). A COPY of benchShared's ThingCard
 // (its geometry, tile body, turn and slot, from THING_LAYOUT; benchShared's ThingCard itself is untouched: cut 18 and
 // cut 3 use it) with three changes for this cut:
-//   * the front has NO flat glyph: a slot runs across the face (OBJ_SLOT) and the card's 3D object rises out of it
-//     (twoThings3d.tsx, drawn in a WebGL layer above the chart); the two-line ink label stays below the slot;
+//   * the front has NO flat glyph, no slot and no rule: just cream and the two-line ink label; the card's 3D object
+//     (twoThings3d.tsx flask, openaiBuddy3d.tsx buddy, WebGL layers above the chart) arrives in front of it;
 //   * the back's amber numeral is lifted a step toward amberHot over one soft cast shadow (amber and the board sit at
 //     nearly the same luminance, 1.04:1 measured; the radar-map CastNumeral recipe), so the numerals read in value;
 //   * the card's slot in the apron parts (`slotOpen`) before the card pops, and `rise` may overshoot 1 (the pop: the
@@ -43,16 +43,13 @@ const Body: React.FC<{ x: number; y0: number; w: number; h: number; r: number; k
   );
 };
 
-/** the front: cream, the slot across the face (the object's mouth), the two-line ink label */
+/** the front: cream and the two-line ink label only (REV 2: no slot, no rule; the 3D object stands in front of it) */
 const Front: React.FC<{ id: ThingId; x: number; y0: number; w: number; h: number; k: number }> = ({ id, x, y0, w, h, k }) => {
   const L = THING_LAYOUT;
   const px = L.labelPx * w;
-  const sy = y0 + OBJ_SLOT_Y * h;
   return (
     <g>
       <Body x={x} y0={y0} w={w} h={h} r={L.radius * w} k={k} dim={0} />
-      <Slot x={x} top={sy} w={OBJ_SLOT_W * w} k={k} />
-      <SlotLip x={x} top={sy} w={OBJ_SLOT_W * w} k={k} />
       {THING[id].lines.map((s, i) => (
         <text key={i} x={f3(x)} y={f3(y0 + L.line1 * h + i * L.lineGap * px)} textAnchor="middle" fontFamily={FONT_LABEL} fontSize={f3(px)} letterSpacing="0.06em" fill={COLOR.inkDark}>
           {s}
@@ -90,10 +87,6 @@ const Back: React.FC<{ id: ThingId; x: number; y0: number; w: number; h: number;
     </g>
   );
 };
-
-/** the slot across the front, as fractions (kept here so the card copy needs nothing from the plan at module load) */
-export const OBJ_SLOT_Y = 0.585;
-export const OBJ_SLOT_W = 0.62;
 
 /**
  * ThingCardOpen — ThingCard's copy (see the file header). flip 0 = back to us .. 1 = front; rise 0..~1.04 out of

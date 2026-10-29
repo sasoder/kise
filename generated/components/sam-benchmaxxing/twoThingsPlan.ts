@@ -1,16 +1,18 @@
 // ---------------------------------------------------------------------------
-// twoThingsPlan — the pure plan of cut 9, TwoThingsToCareAbout (sam-benchmaxxing), REV 1 (user notes 2026-10-29,
-// notes/REV1_9_TwoThings.md): the two cards' geometry on the chart plane (benchShared chart px), their pop, flips,
+// twoThingsPlan — the pure plan of cut 9, TwoThingsToCareAbout (sam-benchmaxxing), REV 2 (user notes 2026-10-29,
+// notes/REV1_9_TwoThings.md + REV2_9_TwoThings.md): the two cards' geometry on the chart plane (benchShared chart px), their pop, flips,
 // the 3D objects' pops and the camera glides. No React, so a planner script can import it.
 //
 // GEOMETRY. Two cards of one width W stand side by side in slots on the apron's ground line (benchShared GROUND),
 // centred about x 540 with a gap G. W is chosen so a revealed card read at k ~1.0 is ~810-826 px wide on screen and its
 // label's cap height is >= 64 px (cap = 0.718 x 0.112 x W x k). Each revealed front carries a slot across its face
-// (twoThingsCard OBJ_SLOT_Y x h from the card top) above the two-line label; the card's 3D object rises out of it.
+// REV 2: no slot and no rule on the front; the card's 3D object arrives fully formed in front of its face, above the
+// two-line label.
 // Vertical framing (screen px; ground line on screen = 960 + (GROUND - look.y) k):
 //   * the centred pair (k ~0.55-0.64): ground just ABOVE the first caption band (y ~1076), so a popping card's amber
 //     numeral is never in a band;
-//   * the reveal holds (k ~1.0): ground at y ~1290-1296, card top ~y 145, object ~y 375-815, label ~y 868-1060.
+//   * the reveal holds (k ~1.0): ground at y ~1290-1296, card top ~y 150, flask ~y 305-825 / buddy ~y
+//     335-815, label ~y 871-1060.
 // ---------------------------------------------------------------------------
 import { GROUND, thingH } from "./benchShared";
 
@@ -33,11 +35,12 @@ export const PITCH = CARD_W + CARD_GAP;
 export const C1 = 540 - PITCH / 2;
 export const C2 = 540 + PITCH / 2;
 
-/** the 3D objects, in chart px at k 1 (they scale with the camera): the flask's height, the smiley's diameter and its
- *  hover above the slot once out */
-export const FLASK_H = 432;
-export const SMILEY_D = 392;
-export const SMILEY_HOVER = 22;
+/** the 3D objects, in chart px at k 1 (they scale with the camera), each centred on its card a little above the label:
+ *  the flask's height and the y of its foot below the card top; the OpenAI buddy's height and the y of its centre */
+export const FLASK_H = 490;
+export const FLASK_FOOT = 0.55; // x card h below the card top (label cap top ~0.632 h; the tilted foot reads ~50 px lower)
+export const BUDDY_H = 470;
+export const BUDDY_CY = 0.372; // x card h below the card top
 
 /** Beats (frames from the comp start at 24000/1001; the brief's word table). */
 export const BEAT = {
@@ -79,14 +82,33 @@ export const FLIP = [
 ] as const;
 export const flipOf = (i: 0 | 1, f: number) => clamp01((f - FLIP[i].f0) / (FLIP[i].f1 - FLIP[i].f0));
 
-// --- the 3D objects rise out of the front's slot once the front faces us, with a pop (overshoot) and a settle
+// --- the 3D objects ARRIVE fully formed once the front faces us: each pops forward out of the card face toward the
+// camera, from half size and a little depth behind the card plane to full size with one springy overshoot and a small
+// settling turn, fading in over its first ~2 frames, its soft shadow landing on the card as it arrives (REV 2)
 export const OBJ_POP = [
-  { f0: 80, f1: 92 },
-  { f0: 161, f1: 173 },
+  { f0: 80, f1: 89 },
+  { f0: 161, f1: 170 },
 ] as const;
-/** 0 = below the slot (hidden), 1 = out and resting; overshoots past 1 and settles */
-export const objPopOf = (i: 0 | 1, f: number) => (f <= OBJ_POP[i].f0 ? 0 : popEase((f - OBJ_POP[i].f0) / (OBJ_POP[i].f1 - OBJ_POP[i].f0), 1.4));
-/** the smiley's wink around "work with": the left eye closes and opens (0 open .. 1 shut) */
+export type Arrival = { t: number; show: boolean; scale: number; z: number; turn: number; alpha: number; shadow: number };
+/** the arrival of object i at frame f: scale 0.5 -> 1 (overshoot ~3.5%), z px toward camera (-420 -> 0), the settling
+ *  turn (1 at the start -> 0, damped: multiply by your amplitude), alpha, and the shadow's strength 0..1 */
+export const arrivalOf = (i: 0 | 1, f: number): Arrival => {
+  const { f0, f1 } = OBJ_POP[i];
+  const t = f - f0;
+  if (t <= 0) return { t, show: false, scale: 0.5, z: -420, turn: 1, alpha: 0, shadow: 0 };
+  const u = Math.min(1, t / (f1 - f0));
+  const p = popEase(u, 1.4);
+  return {
+    t,
+    show: true,
+    scale: 0.5 + 0.5 * p,
+    z: -420 * Math.max(0, 1 - p),
+    turn: Math.exp(-t / 2.8) * Math.cos(t * 0.7),
+    alpha: ss(t / 2.5),
+    shadow: ss((t - 1) / 7),
+  };
+};
+/** the buddy's wink around "work with": the left eye closes and opens (0 open .. 1 shut) */
 export const WINK = { f0: 173, f1: 182 } as const;
 export const winkOf = (f: number) => {
   const u = clamp01((f - WINK.f0) / (WINK.f1 - WINK.f0));
