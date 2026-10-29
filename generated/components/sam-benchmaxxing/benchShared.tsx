@@ -26,12 +26,14 @@
 //                     html = screen-px DOM above the chart overlay.
 //   ROW, rowX(i), EVEN_RUNGS, LAB_MARK_OF, OPENAI_SLOT, glassH(rungs), capY(rungs)   the 5-tile chart row
 //   TOWER_CAM_START, TOWER_CAM_GLIDES, TOWER_CAM, EVEN_LOOK (= cut 1's camera at f20), EVEN_F   cut 1's camera
+//   REV 1: LIFT_CAM, LIFT_EVEN_LOOK, liftAt(f), liftLook, liftScreenTf(f)   cut 1's camera lifted clear of the Shorts overlay
 //   <Slot> <SlotLip>  a slot in the apron (or a tile's top edge) and its lit front lip (draw the lip after the piece)
 //   <BenchColumn x base w? rungs fill k band? headroom? slot? open? cap? shadow?>  glass column with rungs rising out of
 //                     a slot at `base`: fill "amber" (the score: band gradient, fixed bloom, hot top edge) | "board"
 //                     (umber glass fill, dim rungs) | "empty" (faint dashed glass outline, no fill, no rungs).
 //                     cap(topY) draws content riding the glass top (a tile whose floor is topY).
 //   <LabTile x floor size k mark dim?>  an anonymous lab: board tile + one fictional ink mark (LAB_MARKS ids)
+//   REV 1: <LabTile ... logo?>  a real lab mark instead (LAB_LOGOS: claude | gemini | grok | deepseek; LAB_LOGO_OF by slot)
 //   <OpenAITile x floor size k lean? pivotX? bob? glow?>  macintoshShared's ChatGPTMark (cream tile, ink blossom),
 //                     tipped `lean` deg about (x + pivotX, floor), raised `bob` px, a soft amber underlight `glow` 0..1
 //   <ThingCard id x floor w k flip? rise? slot? band?>  a tall cream card (0.72 aspect) in a slot on the apron: back =
@@ -44,7 +46,7 @@
 //                     (2D, in `under`): a distant plain-paint 787-10 crossing at constant speed with its contrail
 // ===================================================================================================================
 import React, { useId } from "react";
-import { ALPHA, COLOR, EDGE, FONT_LABEL, FONT_NUM, STROKE, bloomFilter, clamp01, mixHex, rectPath } from "../kits/cheeky-pint/stoutShared";
+import { ALPHA, COLOR, EDGE, FILL_REF, FONT_LABEL, FONT_NUM, STROKE, bloomFilter, clamp01, mixHex, rectPath } from "../kits/cheeky-pint/stoutShared";
 import { GLYPH_STROKE, makeClockCam } from "../kits/cheeky-pint/museShared";
 import type { Glide } from "../kits/dwarkesh/outgrowShared";
 import { AirStage, B787, JET_DIMS, airProject, fogAmount, jetPoint, type AirCam, type GroundSpec } from "../scott-aircraft-order/aircraftShared";
@@ -153,6 +155,37 @@ export const TOWER_CAM_GLIDES: Glide[] = [
 export const TOWER_CAM = benchCam(TOWER_CAM_START, TOWER_CAM_GLIDES, 69);
 export const EVEN_F = 20;
 export const EVEN_LOOK: Look = TOWER_CAM.at(EVEN_F);
+
+// ===================================================================================================================
+// REV 1 (2026-10-29, the YouTube Shorts bottom overlay): cuts 1 and 35 lifted so every tile face's bottom edge sits at
+// or above y 1500. LIFT_CAM = cut 1's camera (TOWER_CAM) with its whole picture moved by one screen similarity per frame,
+// p' = (540, 960) + s (p - (540, 960)) - (0, L): L eases 340 -> 235 px over f0-20 (the camera tilts up with the rising
+// columns, which start low in their slots), then L -> 172 and s -> 0.9 through the crane (f22-56: it pulls back a touch
+// more, so the tower's tile stays near the top while the stubs clear the overlay). Same motion story, lifted framing.
+// LIFT_EVEN_LOOK (= LIFT_CAM.at(EVEN_F)) is the even chart cut 35 opens on. Screen-px layers (cut 1's cloud) take
+// liftScreenTf(f) so they move with the picture.
+// ===================================================================================================================
+export const LIFT = { L0: 340, Leven: 235, Lend: 172, sEnd: 0.9, a0: -6, a1: 22, c0: 22, c1: 56 } as const;
+const liftN = (f: number) => ss((f - LIFT.a0) / (LIFT.a1 - LIFT.a0));
+/** the lift L (screen px, up) and the scale s about the frame middle at cut 1's frame f */
+export const liftAt = (f: number) => {
+  const e1 = (liftN(f) - liftN(0)) / (liftN(EVEN_F) - liftN(0));
+  const e2 = ss((f - LIFT.c0) / (LIFT.c1 - LIFT.c0));
+  return { L: LIFT.L0 - (LIFT.L0 - LIFT.Leven) * e1 - (LIFT.Leven - LIFT.Lend) * e2, s: 1 - (1 - LIFT.sEnd) * e2 };
+};
+/** a look with its picture lifted by L and scaled by s (see above) */
+export const liftLook = (c: Look, L: number, s: number): Look => ({ x: c.x, y: c.y + L / (c.k * s), k: c.k * s });
+/** the same move as an SVG transform for a SCREEN-px layer */
+export const liftScreenTf = (f: number) => {
+  const { L, s } = liftAt(f);
+  return `translate(0 ${f3(-L)}) translate(540 960) scale(${f3(s)}) translate(-540 -960)`;
+};
+const liftCamAt = (f: number) => {
+  const { L, s } = liftAt(f);
+  return liftLook(TOWER_CAM.at(f), L, s);
+};
+export const LIFT_CAM = { at: liftCamAt, rest: liftCamAt(0) };
+export const LIFT_EVEN_LOOK: Look = LIFT_CAM.at(EVEN_F);
 
 // ===================================================================================================================
 // SLOT, LIP, CONTACT SHADOW (npsColumnsParts, copied and adapted)
@@ -360,6 +393,36 @@ export const LAB_MARKS = {
   bars: { d: "M-33 -30H33V-15H-33ZM-33 -7.5H33V7.5H-33ZM-33 15H33V30H-33Z", round: 0 },
 } as const;
 export type LabMark = keyof typeof LAB_MARKS;
+/** REV 1: the REAL marks of the four other labs (cuts 1 and 35), inlined unchanged from the prepared single-colour SVGs
+ *  in public/sam-benchmaxxing/ (sources and licences: LOGOS.md there). box = the measured ink box in the file's units
+ *  [x, y, w, h], fill = inked share of that box, cy = centroid offset (fraction of h), both measured with resvg; drawn
+ *  at a uniform scale, nonzero fill, as the files are. */
+export const LAB_LOGOS = {
+  // Claude spark (Anthropic), Commons File:Claude_AI_symbol.svg, CC0
+  claude: { box: [0, 0, 99.9, 100.07], fill: 0.398, cy: -0.017, d: "m19.6 66.5 19.7-11 .3-1-.3-.5h-1l-3.3-.2-11.2-.3L14 53l-9.5-.5-2.4-.5L0 49l.2-1.5 2-1.3 2.9.2 6.3.5 9.5.6 6.9.4L38 49.1h1.6l.2-.7-.5-.4-.4-.4L29 41l-10.6-7-5.6-4.1-3-2-1.5-2-.6-4.2 2.7-3 3.7.3.9.2 3.7 2.9 8 6.1L37 36l1.5 1.2.6-.4.1-.3-.7-1.1L33 25l-6-10.4-2.7-4.3-.7-2.6c-.3-1-.4-2-.4-3l3-4.2L28 0l4.2.6L33.8 2l2.6 6 4.1 9.3L47 29.9l2 3.8 1 3.4.3 1h.7v-.5l.5-7.2 1-8.7 1-11.2.3-3.2 1.6-3.8 3-2L61 2.6l2 2.9-.3 1.8-1.1 7.7L59 27.1l-1.5 8.2h.9l1-1.1 4.1-5.4 6.9-8.6 3-3.5L77 13l2.3-1.8h4.3l3.1 4.7-1.4 4.9-4.4 5.6-3.7 4.7-5.3 7.1-3.2 5.7.3.4h.7l12-2.6 6.4-1.1 7.6-1.3 3.5 1.6.4 1.6-1.4 3.4-8.2 2-9.6 2-14.3 3.3-.2.1.2.3 6.4.6 2.8.2h6.8l12.6 1 3.3 2 1.9 2.7-.3 2-5.1 2.6-6.8-1.6-16-3.8-5.4-1.3h-.8v.4l4.6 4.5 8.3 7.5L89 80.1l.5 2.4-1.3 2-1.4-.2-9.2-7-3.6-3-8-6.8h-.5v.7l1.8 2.7 9.8 14.7.5 4.5-.7 1.4-2.6 1-2.7-.6-5.8-8-6-9-4.7-8.2-.5.4-2.9 30.2-1.3 1.5-3 1.2-2.5-2-1.4-3 1.4-6.2 1.6-8 1.3-6.4 1.2-7.9.7-2.6v-.2H49L43 72l-9 12.3-7.2 7.6-1.7.7-3-1.5.3-2.8L24 86l10-12.8 6-7.9 4-4.6-.1-.5h-.3L17.2 77.4l-4.7.6-2-2 .2-3 1-1 8-5.5Z" },
+  // Google Gemini spark 2025, Commons File:Google_Gemini_icon_2025.svg, PD-textlogo
+  gemini: { box: [0, 0, 64.9, 64.9], fill: 0.353, cy: -0.001, d: "M32.447 0c.68 0 1.273.465 1.439 1.125a38.904 38.904 0 001.999 5.905c2.152 5 5.105 9.376 8.854 13.125 3.751 3.75 8.126 6.703 13.125 8.855a38.98 38.98 0 005.906 1.999c.66.166 1.124.758 1.124 1.438 0 .68-.464 1.273-1.125 1.439a38.902 38.902 0 00-5.905 1.999c-5 2.152-9.375 5.105-13.125 8.854-3.749 3.751-6.702 8.126-8.854 13.125a38.973 38.973 0 00-2 5.906 1.485 1.485 0 01-1.438 1.124c-.68 0-1.272-.464-1.438-1.125a38.913 38.913 0 00-2-5.905c-2.151-5-5.103-9.375-8.854-13.125-3.75-3.749-8.125-6.702-13.125-8.854a38.973 38.973 0 00-5.905-2A1.485 1.485 0 010 32.448c0-.68.465-1.272 1.125-1.438a38.903 38.903 0 005.905-2c5-2.151 9.376-5.104 13.125-8.854 3.75-3.749 6.703-8.125 8.855-13.125a38.972 38.972 0 001.999-5.905A1.485 1.485 0 0132.447 0z" },
+  // Grok 2025 slashed ring, Commons File:Grok-icon.svg, CC0
+  grok: { box: [69.22, 75.88, 373.56, 358.38], fill: 0.238, cy: -0.007, d: "M213.235 306.019l178.976-180.002v.169l51.695-51.763c-.924 1.32-1.86 2.605-2.785 3.89-39.281 54.164-58.46 80.649-43.07 146.922l-.09-.101c10.61 45.11-.744 95.137-37.398 131.836-46.216 46.306-120.167 56.611-181.063 14.928l42.462-19.675c38.863 15.278 81.392 8.57 111.947-22.03 30.566-30.6 37.432-75.159 22.065-112.252-2.92-7.025-11.67-8.795-17.792-4.263l-124.947 92.341zm-25.786 22.437l-.033.034L68.094 435.217c7.565-10.429 16.957-20.294 26.327-30.149 26.428-27.803 52.653-55.359 36.654-94.302-21.422-52.112-8.952-113.177 30.724-152.898 41.243-41.254 101.98-51.661 152.706-30.758 11.23 4.172 21.016 10.114 28.638 15.639l-42.359 19.584c-39.44-16.563-84.629-5.299-112.207 22.313-37.298 37.308-44.84 102.003-1.128 143.81z" },
+  // DeepSeek whale (eye = its hole), Commons File:Deepseek-logo-icon.svg, CC0
+  deepseek: { box: [67.33, 115.72, 377.88, 278.12], fill: 0.502, cy: -0.031, d: "M440.898 139.167c-4.001-1.961-5.723 1.776-8.062 3.673-.801.612-1.479 1.407-2.154 2.141-5.848 6.246-12.681 10.349-21.607 9.859-13.048-.734-24.192 3.368-34.04 13.348-2.093-12.307-9.048-19.658-19.635-24.37-5.54-2.449-11.141-4.9-15.02-10.227-2.708-3.795-3.447-8.021-4.801-12.185-.861-2.509-1.725-5.082-4.618-5.512-3.139-.49-4.372 2.142-5.601 4.349-4.925 9.002-6.833 18.921-6.647 28.962.432 22.597 9.972 40.597 28.932 53.397 2.154 1.47 2.707 2.939 2.032 5.082-1.293 4.41-2.832 8.695-4.186 13.105-.862 2.817-2.157 3.429-5.172 2.205-10.402-4.346-19.391-10.778-27.332-18.553-13.481-13.044-25.668-27.434-40.873-38.702a177.614 177.614 0 00-10.834-7.409c-15.512-15.063 2.032-27.434 6.094-28.902 4.247-1.532 1.478-6.797-12.251-6.736-13.727.061-26.285 4.653-42.288 10.777-2.34.92-4.801 1.593-7.326 2.142-14.527-2.756-29.608-3.368-45.367-1.593-29.671 3.305-53.368 17.329-70.788 41.272-20.928 28.785-25.854 61.482-19.821 95.59 6.34 35.943 24.683 65.704 52.876 88.974 29.239 24.123 62.911 35.943 101.32 33.677 23.329-1.346 49.307-4.468 78.607-29.27 7.387 3.673 15.142 5.144 28.008 6.246 9.911.92 19.452-.49 26.839-2.019 11.573-2.449 10.773-13.166 6.586-15.124-33.915-15.797-26.47-9.368-33.24-14.573 17.235-20.39 43.213-41.577 53.369-110.222.8-5.448.121-8.877 0-13.287-.061-2.692.553-3.734 3.632-4.041 8.494-.981 16.742-3.305 24.314-7.471 21.975-12.002 30.84-31.719 32.933-55.355.307-3.612-.061-7.348-3.879-9.245v-.003zM249.4 351.89c-32.872-25.838-48.814-34.352-55.4-33.984-6.155.368-5.048 7.41-3.694 12.002 1.415 4.532 3.264 7.654 5.848 11.634 1.785 2.634 3.017 6.551-1.784 9.493-10.587 6.55-28.993-2.205-29.856-2.635-21.421-12.614-39.334-29.269-51.954-52.047-12.187-21.924-19.267-45.435-20.435-70.542-.308-6.061 1.478-8.207 7.509-9.307 7.94-1.471 16.127-1.778 24.068-.615 33.547 4.9 62.108 19.902 86.054 43.66 13.666 13.531 24.007 29.699 34.658 45.496 11.326 16.778 23.514 32.761 39.026 45.865 5.479 4.592 9.848 8.083 14.035 10.656-12.62 1.407-33.673 1.714-48.075-9.676zm15.899-102.519c.521-2.111 2.421-3.658 4.722-3.658a4.74 4.74 0 011.661.305c.678.246 1.293.614 1.786 1.163.861.859 1.354 2.083 1.354 3.368 0 2.695-2.154 4.837-4.862 4.837a4.748 4.748 0 01-4.738-4.034 5.01 5.01 0 01.077-1.981zm47.208 26.915c-2.606.996-5.2 1.778-7.707 1.88-4.679.244-9.787-1.654-12.556-3.981-4.308-3.612-7.386-5.631-8.679-11.941-.554-2.695-.247-6.858.246-9.246 1.108-5.144-.124-8.451-3.754-11.451-2.954-2.449-6.711-3.122-10.834-3.122-1.539 0-2.954-.673-4.001-1.224-1.724-.856-3.139-3-1.785-5.634.432-.856 2.525-2.939 3.018-3.305 5.6-3.185 12.065-2.144 18.034.244 5.54 2.266 9.727 6.429 15.759 12.307 6.155 7.102 7.263 9.063 10.773 14.39 2.771 4.163 5.294 8.451 7.018 13.348.877 2.561.071 4.74-2.341 6.277-.981.625-2.109 1.044-3.191 1.458z" },
+} as const;
+export type LabLogo = keyof typeof LAB_LOGOS;
+/** REV 1 slot order, left to right: Claude, Gemini, (OpenAI), Grok, DeepSeek */
+export const LAB_LOGO_OF = ["claude", "gemini", null, "grok", "deepseek"] as const;
+/** the logos' optical size = the fictional marks' (their box's geometric mean = LOGO_K x tile x (FILL_REF / fill)^0.25,
+ *  opticalFit's rule at the size the ring / triangle / diamond / square-in marks had on the board tiles) */
+export const LOGO_K = 0.44;
+/** where a logo lands on a tile of `size` centred on (x, cy): its transform */
+export const labLogoTf = (logo: LabLogo, x: number, cy: number, size: number) => {
+  const m = LAB_LOGOS[logo];
+  const [bx, by, bw, bh] = m.box;
+  const gm = LOGO_K * size * Math.pow(FILL_REF / m.fill, 0.25);
+  const sc = gm / Math.sqrt(bw * bh);
+  const ox = x - (bx + bw / 2) * sc;
+  const oy = cy - 0.5 * m.cy * gm - (by + bh / 2) * sc;
+  return `translate(${f3(ox)} ${f3(oy)}) scale(${f3(sc)})`;
+};
 /** the tile's top-lit card body + its lit top edge (MarkTile's recipe), cream at dim 0, board at dim 1 */
 const TileBody: React.FC<{ x: number; y0: number; w: number; h: number; r: number; k: number; dim: number }> = ({ x, y0, w, h, r, k, dim }) => {
   const uid = uidOf(useId());
@@ -378,14 +441,16 @@ const TileBody: React.FC<{ x: number; y0: number; w: number; h: number; r: numbe
     </g>
   );
 };
-/** LabTile — an anonymous lab: a board tile with one fictional ink mark (`mark`); `dim` 0 = board (default), lower
- *  values lift it toward cream. No shadow of its own (it rides a column, which owns the object's one shadow). */
-export const LabTile: React.FC<{ x: number; floor: number; size: number; k: number; mark: LabMark; dim?: number; lean?: number; pivotX?: number }> = ({
+/** LabTile — another lab: a board tile with one ink mark: a fictional `mark` (LAB_MARKS), or (REV 1) a real `logo`
+ *  (LAB_LOGOS), which wins when given; `dim` 0 = board (default), lower values lift it toward cream. No shadow of its
+ *  own (it rides a column, which owns the object's one shadow). */
+export const LabTile: React.FC<{ x: number; floor: number; size: number; k: number; mark?: LabMark; logo?: LabLogo; dim?: number; lean?: number; pivotX?: number }> = ({
   x,
   floor,
   size,
   k,
-  mark,
+  mark = "ring",
+  logo,
   dim = 1,
   lean = 0,
   pivotX = 0,
@@ -396,15 +461,19 @@ export const LabTile: React.FC<{ x: number; floor: number; size: number; k: numb
   return (
     <g transform={lean ? `rotate(${f3(lean)} ${f3(x + pivotX)} ${f3(floor)})` : undefined}>
       <TileBody x={x} y0={floor - size} w={size} h={size} r={tileRadius(size)} k={k} dim={dim} />
-      <path
-        transform={`translate(${f3(x)} ${f3(cy)}) scale(${f3(sc)})`}
-        d={m.d}
-        fill={COLOR.inkDark}
-        fillRule="evenodd"
-        stroke={m.round ? COLOR.inkDark : "none"}
-        strokeWidth={m.round || undefined}
-        strokeLinejoin="round"
-      />
+      {logo ? (
+        <path transform={labLogoTf(logo, x, cy, size)} d={LAB_LOGOS[logo].d} fill={COLOR.inkDark} />
+      ) : (
+        <path
+          transform={`translate(${f3(x)} ${f3(cy)}) scale(${f3(sc)})`}
+          d={m.d}
+          fill={COLOR.inkDark}
+          fillRule="evenodd"
+          stroke={m.round ? COLOR.inkDark : "none"}
+          strokeWidth={m.round || undefined}
+          strokeLinejoin="round"
+        />
+      )}
     </g>
   );
 };

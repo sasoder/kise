@@ -12,8 +12,8 @@
 // DURATION: the slot 1.418 -> 4.296 s = 2.878 s x 23.976 = 69 frames (f0..f68).
 //
 // THE MOTION: a benchmark chart on the airfield apron: five glass columns rising out of slots in the apron edge, each
-// lab's tile riding its column's cap (OpenAI's cream blossom tile in slot 3 of 5, four anonymous board tiles). It opens
-// on the whole chart with the apron line in shot (y ~1860): the short columns already rising out of their slots as bars
+// lab's tile riding its column's cap (OpenAI's cream blossom tile in slot 3 of 5; Claude, Gemini, Grok and DeepSeek on
+// board tiles, left to right around it). It opens on the whole chart with the apron line in shot: the short columns already rising out of their slots as bars
 // under each tile, settled level by f18-20 (a fair, even chart; the camera eases back a touch). On "OpenAI" (f29) OpenAI's amber column does not stop: it rises again (f27-59), its tile riding the cap,
 // and the camera cranes up and pulls back with it in one eased move (glide f22-54 on the damped follower), so by
 // "bench" (f50) the amber tower spans the frame and the other four are stubs at the bottom. As the camera cranes up it
@@ -29,10 +29,18 @@
 // No aircraft in this cut (CUT1_JET / BenchJet stay exported in benchShared but are not rendered here).
 // Cause before effect: OpenAI's column is touching its tile throughout (the tile's floor IS the glass top).
 // AMBER = OpenAI's score (its column's fill); board/umber glass = the other labs' scores; cream = the OpenAI tile.
-// No numbers, no axis, no names (the chart is a shape, not data).
+// No numbers, no axis, no names (the chart is a shape, not data; the labs are their marks).
+//
+// REV 1 (user, 2026-10-29): (1) LIFT — the YouTube Shorts username overlay covers y > ~1520, so the framing is lifted
+// (benchShared LIFT_CAM: TOWER_CAM's picture moved up 340 -> 235 px over f0-20 as the columns rise, then 172 px and
+// pulled back to 0.9x through the crane): every tile face's bottom edge sits at or above y 1500 in every frame; the
+// tile faces may cross the 1360-1460 caption band (accepted). The cloud band moves with the picture (liftScreenTf).
+// (2) REAL LOGOS on the four other labs' tiles (benchShared LAB_LOGOS / LAB_LOGO_OF): Claude, Gemini, OpenAI, Grok,
+// DeepSeek. Timing, motion, cloud, OpenAI tile and amber unchanged.
 //
 // SOURCES: no figures. The OpenAI blossom from sam-macintosh-moment/macintoshShared.tsx (Commons "OpenAI logo 2025
-// (symbol).svg"); the other labs are fictional marks (benchShared LAB_MARKS). The cloud palette is wifiSky's CloudDeck
+// (symbol).svg"); the Claude, Gemini, Grok and DeepSeek marks from public/sam-benchmaxxing/*_mark.svg (Commons; see
+// public/sam-benchmaxxing/LOGOS.md), drawn unchanged as ink stamps. The cloud palette is wifiSky's CloudDeck
 // colours (scott-free-wifi), drawn here as a 2D band.
 // ---------------------------------------------------------------------------
 import React from "react";
@@ -44,13 +52,15 @@ import {
   BenchStage,
   EVEN_RUNGS,
   GROUND,
-  LAB_MARK_OF,
+  LAB_LOGO_OF,
+  LIFT_CAM,
   LabTile,
   OPENAI_SLOT,
   OpenAITile,
   ROW,
   TOWER_CAM,
   capY,
+  liftScreenTf,
   rowX,
 } from "./benchShared";
 
@@ -219,15 +229,16 @@ const CloudLayer: React.FC<{ f: number; part: "back" | "front" }> = ({ f, part }
 
 const BenchmaxxedTower: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
-  const look = TOWER_CAM.at(f);
+  // REV 1: the lifted camera (benchShared LIFT_CAM = TOWER_CAM's picture lifted / pulled back clear of the Shorts overlay)
+  const look = LIFT_CAM.at(f);
   const k = look.k;
   const band = amberBandFor(look);
   const lean = LEAN.deg * ss((f - LEAN.f0) / (LEAN.f1 - LEAN.f0));
   const glint = f >= GLINT.f0 ? 0.12 + 0.76 * clamp01((f - GLINT.f0) / (GLINT.f1 - GLINT.f0)) : undefined;
-  // the cloud is screen px: undo the chart transform for it
-  const toScreen = `translate(${look.x} ${look.y}) scale(${1 / k}) translate(-540 -960)`;
+  // the cloud is screen px (laid out for TOWER_CAM's picture): undo the chart transform, then move it with the lift
+  const toScreen = `translate(${look.x} ${look.y}) scale(${1 / k}) translate(-540 -960) ${liftScreenTf(f)}`;
   return (
-    <BenchStage look={look} S={f} rest={TOWER_CAM.rest}>
+    <BenchStage look={look} S={f} rest={LIFT_CAM.rest}>
       {/* the far cloud row and its haze, behind the glass */}
       <g transform={toScreen}>
         <CloudLayer f={f} part="back" />
@@ -254,11 +265,11 @@ const BenchmaxxedTower: React.FC<z.infer<typeof schema>> = () => {
       </g>
       {/* the tiles riding their caps (the cap top IS the glass top) */}
       {EVEN_RUNGS.map((_, i) => {
-        const mark = LAB_MARK_OF[i];
+        const logo = LAB_LOGO_OF[i];
         const x = rowX(i);
         const top = capY(rungsAt(i, f), GROUND);
-        return mark ? (
-          <LabTile key={i} x={x} floor={top} size={ROW.tile} k={k} mark={mark} />
+        return logo ? (
+          <LabTile key={i} x={x} floor={top} size={ROW.tile} k={k} logo={logo} />
         ) : (
           <OpenAITile key={i} x={x} floor={top} size={ROW.tile} k={k} lean={lean} pivotX={-ROW.col / 2} />
         );

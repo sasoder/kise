@@ -14,3 +14,12 @@
 - 2026-10-29 (director, cut 1 rev 2; no shared code changed): cut 1 no longer renders the jet or its contrail
   (9/11-adjacent risk). `CUT1_JET`, `BenchJet`, `BenchContrail` stay exported, unchanged. Cut 1's cloud layer is local
   to BenchmaxxedTower.tsx (`CLOUD`, `cloudY`), not in benchShared.
+- 2026-10-29 (REV 1 of cuts 1 + 35, "LiftAndLogos"; new names only, every old export unchanged):
+  `LIFT`, `liftAt(f)`, `liftLook(look, L, s)`, `liftScreenTf(f)`, `LIFT_CAM` {at, rest}, `LIFT_EVEN_LOOK` — cut 1's
+  camera with its picture lifted clear of the YouTube Shorts bottom overlay (a screen similarity of TOWER_CAM's picture:
+  up 340 -> 235 px over f0-20, then 172 px and scale 0.9 through the crane f22-56); every tile face's bottom edge <= y 1500
+  in both cuts. `TOWER_CAM`, `EVEN_LOOK` keep their old values (cuts 1 and 35 now use LIFT_CAM / LIFT_EVEN_LOOK).
+  `LAB_LOGOS` (claude, gemini, grok, deepseek: the prepared public/sam-benchmaxxing/*_mark.svg paths inlined unchanged,
+  with measured ink box / fill / centroid), `LabLogo`, `LAB_LOGO_OF` (Claude, Gemini, null, Grok, DeepSeek), `LOGO_K`,
+  `labLogoTf`, and `LabTile` gained an optional `logo` prop (wins over `mark`; `mark` is now optional, default "ring").
+  `LAB_MARKS` / `LAB_MARK_OF` unchanged. stoutShared `FILL_REF` added to the imports.

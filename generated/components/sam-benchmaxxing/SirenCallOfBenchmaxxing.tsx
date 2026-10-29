@@ -11,8 +11,8 @@
 // believe 52 · we 58 · are 61 · better 62 · at 67 · that 70 · (back on camera at 76) (notes/word_frames.txt, CUT 35).
 // DURATION: the slot 35.702 -> 38.872 s = 3.170 s x 23.976 = 76 frames (f0..f75).
 //
-// THE MOTION: it opens on EXACTLY cut 1's even chart (EVEN_RUNGS at EVEN_LOOK, cut 1's story clock at f20, so sky,
-// motes and grain match): five tiles riding their columns' caps, OpenAI's cream blossom tile on its modest amber column
+// THE MOTION: it opens on EXACTLY cut 1's even chart (EVEN_RUNGS at LIFT_EVEN_LOOK, cut 1's story clock at f20, so
+// sky, motes and grain match): five tiles riding their columns' caps (Claude, Gemini, OpenAI, Grok, DeepSeek), OpenAI's cream blossom tile on its modest amber column
 // in slot 3, the camera already creeping. From f1 a soft cream call comes down from above the frame: a ripple of three
 // concentric sound-wave bands (feathered, ~16-24 px, brightest at the arc's centre, low contrast), evenly spaced and
 // each wider than the one before, reaching down to the column tops as they start to rise (f24-40), gone by ~f46. On "siren call of benchmaxxing" (f24-52) the four other
@@ -29,8 +29,13 @@
 // AMBER = OpenAI's score (its column's fill, unchanged, modest, and its underglow); board/umber glass = the other labs'
 // scores; cream = the OpenAI tile and the lure. No numbers, no text.
 //
+// REV 1 (user, 2026-10-29): lifted with cut 1 (benchShared LIFT_CAM / LIFT_EVEN_LOOK) so every tile face's bottom edge
+// sits at or above y 1500 (the YouTube Shorts overlay; tile faces may cross the 1360-1460 band, accepted), and the
+// four other labs carry their real marks (benchShared LAB_LOGOS: Claude, Gemini, Grok, DeepSeek). Nothing else changed.
+//
 // SOURCES: no figures. The OpenAI blossom from sam-macintosh-moment/macintoshShared.tsx via benchShared OpenAITile
-// (Commons "OpenAI logo 2025 (symbol).svg"); the other labs are fictional marks (benchShared LAB_MARKS).
+// (Commons "OpenAI logo 2025 (symbol).svg"); the Claude, Gemini, Grok and DeepSeek marks from
+// public/sam-benchmaxxing/*_mark.svg (Commons; see public/sam-benchmaxxing/LOGOS.md), drawn unchanged as ink stamps.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
@@ -40,15 +45,15 @@ import {
   BenchColumn,
   BenchStage,
   EVEN_F,
-  EVEN_LOOK,
   EVEN_RUNGS,
   GROUND,
-  LAB_MARK_OF,
+  LAB_LOGO_OF,
+  LIFT_CAM,
+  LIFT_EVEN_LOOK,
   LabTile,
   OPENAI_SLOT,
   OpenAITile,
   ROW,
-  TOWER_CAM,
   benchCam,
   rowX,
   type Look,
@@ -72,7 +77,25 @@ const ss = (v: number) => {
  *  constant speed (chart px/f) so they stay evenly spaced; wave i's bottom crosses the frame top (chart y top) at
  *  enter + i * gap. Each band thickens as it travels (w0 -> w1 screen px, the lower one always the wider); it drains
  *  into the sky as its bottom passes fade0 -> fade1 (chart y: the rising column tops, well above OpenAI's tile). */
-export const LURE = { n: 3, enter: 1, gap: 6, top: -120, speed: 36, srcY: -720, halfW: 680, w0: 16, w1: 24, alpha: 0.4, fade0: 640, fade1: 1060 } as const;
+const LURE_V1 = { top: -120, speed: 36, fade1: 1060 } as const;
+/** REV 1: the opening look is cut 1's LIFTED even chart (LIFT_EVEN_LOOK): the waves still enter through the frame top
+ *  (top = the opening frame's top edge in chart px) and still drain at the same place among the rising columns
+ *  (fade0..fade1, chart px), so they come a touch faster to keep the approved timing (reach the column tops f24-40). */
+const LURE_TOP = LIFT_EVEN_LOOK.y - 960 / LIFT_EVEN_LOOK.k + 2;
+export const LURE = {
+  n: 3,
+  enter: 1,
+  gap: 6,
+  top: LURE_TOP,
+  speed: (LURE_V1.speed * (LURE_V1.fade1 - LURE_TOP)) / (LURE_V1.fade1 - LURE_V1.top),
+  srcY: LURE_TOP - 600,
+  halfW: 680,
+  w0: 16,
+  w1: 24,
+  alpha: 0.4,
+  fade0: 640,
+  fade1: LURE_V1.fade1,
+} as const;
 /** the siren call: each other lab's column rises from its start frame over RISE.dur frames, to its final rungs */
 export const RISE = { dur: 19 } as const;
 /** start frames by slot (inner pair first: slot 1 on "siren", then 3, 0, 4) */
@@ -95,22 +118,23 @@ export const rungsAt = (i: number, f: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// CAMERA: starts on EVEN_LOOK exactly (the follower's f0 offset is removed), already creeping at f0, tilts up a
+// CAMERA: starts on LIFT_EVEN_LOOK (cut 1's lifted f20 look) exactly (the follower's f0 offset is removed), already creeping at f0, tilts up a
 // little with the rising columns (f26-55), then a slow living creep
 // ---------------------------------------------------------------------------
+const START = LIFT_EVEN_LOOK;
 const RAW_CAM = benchCam(
-  EVEN_LOOK,
+  START,
   [
-    { f0: -24, f1: 40, dy: -6, k: EVEN_LOOK.k * 1.016 },
+    { f0: -24, f1: 40, dy: -6, k: START.k * 1.016 },
     { f0: 26, f1: 55, dy: -26 },
-    { f0: 50, f1: 116, dy: -6, k: EVEN_LOOK.k * 1.02 },
+    { f0: 50, f1: 116, dy: -6, k: START.k * 1.02 },
   ],
   DURATION,
 );
 const RAW0 = RAW_CAM.at(0);
 export const camAt = (f: number): Look => {
   const c = RAW_CAM.at(f);
-  return { x: c.x - RAW0.x + EVEN_LOOK.x, y: c.y - RAW0.y + EVEN_LOOK.y, k: (c.k / RAW0.k) * EVEN_LOOK.k };
+  return { x: c.x - RAW0.x + START.x, y: c.y - RAW0.y + START.y, k: (c.k / RAW0.k) * START.k };
 };
 
 // ---------------------------------------------------------------------------
@@ -176,10 +200,10 @@ const SirenCallOfBenchmaxxing: React.FC<z.infer<typeof schema>> = () => {
   const shift = CHILL.shift * ss((f - CHILL.lean0) / (CHILL.lean1 - CHILL.lean0));
   return (
     // story clock continues cut 1's (its even chart is cut 1's f20); the ground's parallax origin is cut 1's rest
-    <BenchStage look={look} S={EVEN_F + f} rest={TOWER_CAM.rest}>
+    <BenchStage look={look} S={EVEN_F + f} rest={LIFT_CAM.rest}>
       <Lure f={f} k={k} />
       {EVEN_RUNGS.map((_, i) => {
-        const mark = LAB_MARK_OF[i];
+        const logo = LAB_LOGO_OF[i];
         const x = rowX(i);
         const isOpenAI = i === OPENAI_SLOT;
         return (
@@ -192,8 +216,8 @@ const SirenCallOfBenchmaxxing: React.FC<z.infer<typeof schema>> = () => {
             k={k}
             band={band}
             cap={(top) =>
-              mark ? (
-                <LabTile x={x} floor={top} size={ROW.tile} k={k} mark={mark} />
+              logo ? (
+                <LabTile x={x} floor={top} size={ROW.tile} k={k} logo={logo} />
               ) : (
                 <g transform={shift ? `translate(${f3(shift)} 0)` : undefined}>
                   <OpenAITile x={x} floor={top} size={ROW.tile} k={k} lean={lean} pivotX={CHILL.pivotX} glow={glow} />
