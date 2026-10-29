@@ -115,15 +115,15 @@ with a Chrome User-Agent and `Accept: application/json` returns ~20 years of dai
 - A rotated EXIF orientation is refused by the assembler (the error names it). Re-encode upright, which drops the tag:
   `ffmpeg -v error -noautorotate -i in.jpg -vf transpose=1 -q:v 2 out.jpg` (orientation 6; `transpose=2` for 8,
   `hflip,vflip` for 3), and check it on the sheet.
+- Non-square pixels: a JFIF density with unequal X and Y (seen Oct 29 as h:w, e.g. 2:3 on a 1920x1280) makes
+  Premiere show the still stretched; the assembler refuses it. Square it losslessly:
+  `exiftool -overwrite_original -JFIF:ResolutionUnit=inches -JFIF:XResolution=72 -JFIF:YResolution=72 f.jpg`, and
+  check `ffprobe -show_entries stream=sample_aspect_ratio` reads 1:1.
 - Contact sheets: a labelled sheet of ~600 px thumbs (`iiurlwidth=600`) to choose from, then a sheet of the downloaded
   files to confirm.
 
 ## 5. Name and record
 - In `<clip>/images/`: `<SS.s>_<Words>_<Subject>.<ext>`, `SS.s` = the word onset in sequence seconds, one decimal,
-- Non-square pixels: a JFIF density with unequal X and Y (seen Oct 29 as h:w, e.g. 2:3 on a 1920x1280) makes
-  Premiere show the still stretched; the assembler refuses it. Square it losslessly:
-  `exiftool -overwrite_original -JFIF:ResolutionUnit=inches -JFIF:XResolution=72 -JFIF:YResolution=72 f.jpg`, and
-  check `ffprobe -show_entries stream=sample_aspect_ratio` reads 1:1.
   zero-padded (`05.9_TooMuchCeiling_OSullivanMinersTimberingComstock1867.jpg`).
 - Exactly one image per timestamp, so the names count up. A follow-on shot takes its own later word. True alternates go
   in `images/alternates/` under the same timestamp.
