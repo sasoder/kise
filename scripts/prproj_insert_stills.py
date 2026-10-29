@@ -68,6 +68,10 @@ def jpeg_info(path):
             i += 2; continue
         ln = struct.unpack(">H", data[i + 2:i + 4])[0]
         seg = data[i + 4:i + 2 + ln]
+        if m == 0xE0 and seg[:5] == b"JFIF\0" and seg[8:10] != seg[10:12]:  # unequal density = non-square pixels
+            xd, yd = struct.unpack(">HH", seg[8:12])
+            sys.exit(f"{path}: JFIF density {xd}:{yd} makes Premiere show it stretched; square it losslessly with "
+                     f"exiftool -overwrite_original -JFIF:ResolutionUnit=inches -JFIF:XResolution=72 -JFIF:YResolution=72")
         if m == 0xE1 and seg[:6] == b"Exif\0\0":
             t = seg[6:]; bo = "<" if t[:2] == b"II" else ">"
             off = struct.unpack(bo + "I", t[4:8])[0]
