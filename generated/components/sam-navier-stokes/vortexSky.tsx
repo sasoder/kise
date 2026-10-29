@@ -31,6 +31,10 @@
 //                          occlude (default true): the deck's heads hide its foot (ray-marched; off saves time far away).
 //                          tube: tube thickness factor (1; raise it on small far vortices so tubes stay > 1 px).
 //                          rate: spin speed factor (1).
+//                          ADDED (cut 19): detail "field" (the squat eddy of cut 19's field: waist arms ~0.75 of the
+//                          height, a skirt flaring into the deck, a blunt rounded crown); lift 0..1 (unfilled cream
+//                          toward lit cream); haze 0..1 (extra aerial haze, on the amber at only 20 %). Defaults leave
+//                          every existing vortex pixel-identical (cut 10 f109 still diff = 0).
 //   vortexAxis(v, h) -> [X, Y, Z]   the axis point at height fraction h (with the lean) of v = { at, height, seed }
 //   vortexReach(v, h) -> m          the widest tube centreline's distance from the axis at height fraction h
 //   vortexFront(fill, lead) etc.: the front on each tube sits at fill + lead_i (lead_i ~ +-0.03, the core ahead), with
@@ -240,11 +244,13 @@ export const deckTopAt = (xz: [number, number], S: number, air: V3 = VORTEX_AIR,
 // ===================================================================================================================
 // THE VORTEX GEOMETRY (local units: height 1, the axis on local Y, the foot at the origin)
 // ===================================================================================================================
-export type VortexDetail = "hi" | "lo";
+export type VortexDetail = "hi" | "lo" | "field";
 type Tube = { c: V3[]; rad: number[]; h: number[]; r: number[]; s: number[]; lead: number; fam: number };
 const DET = {
   hi: { core: 18, mid: 18, outer: 34, segH: 360, segO: 190, ring: 9 },
   lo: { core: 6, mid: 7, outer: 12, segH: 130, segO: 70, ring: 6 },
+  // ADDED for cut 19 (SHARED_CHANGES): the squat "field" eddy, see buildFieldTubes
+  field: { core: 5, mid: 9, outer: 16, segH: 120, segO: 80, ring: 6 },
 } as const;
 /** the per-seed character of a vortex: tube counts, radii, turns, lean, the waist and its tilt, phase */
 const character = (seed: number) => {
@@ -261,7 +267,119 @@ const character = (seed: number) => {
     tiltDir: R("tdir") * Math.PI * 2,
   };
 };
+// ADDED for cut 19 (SHARED_CHANGES): detail "field" — the small vortices of cut 19's field. The same family (a core
+// rope, a sheath of helices, long waist arms on a tilted disc, one sense of rotation) in squat proportions closer to
+// the user's reference: the waist arms span ~0.7-0.8 of the height (dominant), a wide lower half whose skirt arms flare
+// out into the deck, and a blunt rounded crown (the sheath closes as a dome; the core ends inside it: no needle top).
+// Fatter tubes, so it reads at 100-600 px tall. hi / lo are untouched.
+const buildFieldTubes = (seed: number): Tube[] => {
+  const D = DET.field;
+  const ch = character(seed);
+  const R = (k: string) => random(`vortex-${seed}-f-${k}`);
+  const tubes: Tube[] = [];
+  const W = ch.width;
+  const waist = lerp(0.36, 0.44, R("waist"));
+  const tilt = (r: number, th: number) => ch.tilt * 0.7 * r * Math.cos(th - ch.tiltDir);
+  // the sheath's envelope (fraction of 0.22): wide below the waist and a little wider again at the foot, a dome above
+  const env = (h: number) => {
+    if (h < waist) return lerp(1.08, 1, sstep(0, 1, h / waist));
+    const u = c01((h - waist) / (1 - waist));
+    return Math.pow(Math.max(0, 1 - u * u * u), 0.32);
+  };
+  const push = (t: Tube, r: number, th: number, h: number, rad: number, sv: number) => {
+    t.c.push([r * Math.cos(th), h, r * Math.sin(th)]);
+    t.rad.push(rad);
+    t.h.push(h);
+    t.r.push(r);
+    t.s.push(sv);
+  };
+  const tk = 1.75;
+  // --- the core rope: tight helices from the foot to inside the dome (h ~0.82), short tapers
+  const coreTurns = lerp(4.6, 5.4, R("ct")) * ch.turns;
+  for (let i = 0; i < D.core; i++) {
+    const k = `c${i}`;
+    const r0 = lerp(0.016, 0.045, (i % 3) / 2) * W;
+    const h0 = 0.01 + 0.03 * R(k + "a");
+    const h1 = lerp(0.66, 0.74, R(k + "b"));
+    const th0 = (i / D.core) * Math.PI * 2;
+    const tr = lerp(0.0028, 0.0034, R(k + "w")) * tk;
+    const t: Tube = { c: [], rad: [], h: [], r: [], s: [], lead: 0.016 + lerp(-0.012, 0.012, R(k + "l")), fam: 0 };
+    for (let j = 0; j <= D.segH; j++) {
+      const u = j / D.segH;
+      const h = lerp(h0, h1, u);
+      push(t, r0 * (0.6 + 0.4 * Math.min(1, env(h))), th0 + coreTurns * Math.PI * 2 * (h - h0), h, tr * Math.pow(sstep(0, 0.06, u), 0.8) * Math.pow(1 - sstep(0.9, 1, u), 0.6), u);
+    }
+    tubes.push(t);
+  }
+  // --- the sheath: helices of one pitch, radii stepping out, wide low down, closing over the top as a dome
+  const midTurns = lerp(3.4, 3.9, R("mt")) * ch.turns;
+  for (let i = 0; i < D.mid; i++) {
+    const k = `m${i}`;
+    const r0 = lerp(0.09, 0.22, (i + 0.4 * R(k + "r")) / D.mid) * W;
+    const h0 = lerp(0.0, 0.05, R(k + "a"));
+    const h1 = lerp(0.8, 0.88, R(k + "b"));
+    const th0 = ((i * 0.618034) % 1) * Math.PI * 2;
+    const tr = lerp(0.0028, 0.0036, R(k + "w")) * tk;
+    const N = Math.round(D.segH * 0.9);
+    const t: Tube = { c: [], rad: [], h: [], r: [], s: [], lead: lerp(-0.015, 0.015, R(k + "l")), fam: 1 };
+    for (let j = 0; j <= N; j++) {
+      const u = j / N;
+      const hb = lerp(h0, h1, u);
+      // the dome: the radius closes toward the crown, but never to a point (the last loops stay ~45 % wide)
+      const r = r0 * Math.max(0.45, env(hb));
+      const th = th0 + midTurns * Math.PI * 2 * (hb - h0);
+      const h = hb + tilt(r, th) * Math.exp(-Math.pow((hb - waist) / 0.18, 2));
+      push(t, r, th, h, tr * Math.pow(sstep(0, 0.1, u), 0.8) * Math.pow(1 - sstep(0.9, 1, u), 0.5), u);
+    }
+    tubes.push(t);
+  }
+  // --- the waist arms (dominant): out of the sheath just above / below the waist, long shallow arcs on the tilted
+  //     disc out to 0.3-0.4 of the height, whip tips
+  const outTurns = lerp(1.0, 1.15, R("ot")) * ch.turns;
+  for (let i = 0; i < D.outer; i++) {
+    const k = `o${i}`;
+    const up = i % 2 === 0;
+    const hA = waist + (up ? 1 : -1) * lerp(0.06, 0.18, R(k + "a"));
+    const hW = waist + lerp(-0.03, 0.03, R(k + "hw"));
+    const rA = lerp(0.1, 0.16, R(k + "ra")) * W;
+    const rM = lerp(0.27, 0.4, Math.pow((i + 0.5 * R(k + "rm")) / D.outer, 0.8)) * W;
+    const th0 = ((i * 0.381966) % 1) * Math.PI * 2;
+    const tr = lerp(0.003, 0.004, R(k + "w")) * tk;
+    const t: Tube = { c: [], rad: [], h: [], r: [], s: [], lead: lerp(-0.03, 0.01, R(k + "l")), fam: 2 };
+    for (let j = 0; j <= D.segO; j++) {
+      const u = j / D.segO;
+      const r = lerp(rA, rM, Math.pow(u, 0.8));
+      const th = th0 + outTurns * Math.PI * 2 * u;
+      const toW = 1 - Math.pow(1 - u, 2.2);
+      const h = lerp(hA, hW, toW) + tilt(r, th) * toW;
+      push(t, r, th, h, tr * Math.pow(sstep(0, 0.08, u), 0.8) * Math.pow(1 - u, 0.9) * 1.5, u);
+    }
+    tubes.push(t);
+  }
+  // --- the skirt: arms from the lower sheath sweeping out and down into the deck tops (the foot flares)
+  const nSkirt = 7;
+  for (let i = 0; i < nSkirt; i++) {
+    const k = `s${i}`;
+    const hA = lerp(0.16, 0.28, R(k + "a"));
+    const rA = lerp(0.12, 0.18, R(k + "ra")) * W;
+    const rM = lerp(0.26, 0.34, R(k + "rm")) * W;
+    const th0 = ((i + 0.3 * R(k + "p")) / nSkirt) * Math.PI * 2;
+    const tr = lerp(0.003, 0.0038, R(k + "w")) * tk;
+    const N = Math.round(D.segO * 0.8);
+    const t: Tube = { c: [], rad: [], h: [], r: [], s: [], lead: lerp(-0.01, 0.02, R(k + "l")), fam: 2 };
+    for (let j = 0; j <= N; j++) {
+      const u = j / N;
+      const r = lerp(rA, rM, Math.pow(u, 0.9));
+      const th = th0 + 0.8 * Math.PI * 2 * u;
+      const h = lerp(hA, -0.02, Math.pow(u, 0.8));
+      push(t, r, th, h, tr * Math.pow(sstep(0, 0.1, u), 0.8) * Math.pow(1 - u, 0.7) * 1.4, u);
+    }
+    tubes.push(t);
+  }
+  return tubes;
+};
 const buildTubes = (seed: number, det: VortexDetail): Tube[] => {
+  if (det === "field") return buildFieldTubes(seed);
   const D = DET[det];
   const ch = character(seed);
   const R = (k: string) => random(`vortex-${seed}-${det === "hi" ? "h" : "l"}-${k}`);
@@ -553,6 +671,9 @@ uniform float uDeckTop;
 uniform vec2 uDrift;
 uniform vec3 uCloud;
 uniform vec3 uCloudShade;
+uniform float uLift;      // ADDED (cut 19): lifts the cream toward lit cream (0 = unchanged)
+uniform float uHaze;      // ADDED (cut 19): extra aerial haze, mostly on the cream (0 = unchanged)
+uniform float uGlow;      // ADDED (cut 19): the amber band at the hero's brightness for a small, far body (0 = unchanged)
 varying vec3 vW;
 varying vec3 vN;
 varying float vH;
@@ -612,6 +733,8 @@ void main() {
   float fres = pow(1.0 - clamp(abs(dot(n, V)), 0.0, 1.0), 3.0);
   col = mix(col, uCream, 0.5 * fres * smoothstep(0.05, 0.7, n.y));
   col += base * 0.08 * pow(max(dot(n, normalize(uL + V)), 0.0), 14.0);
+  col = mix(col, base * vec3(1.03, 1.0, 0.95), uLift);
+  float ambK = 0.0;
   // --- the amber front: each tube amber below fill + its lead, a 2 px hot top edge, a short warm glow above
   if (uFill > 0.0005) {
     // a soft, ragged level while it climbs; it gathers into a near-clean level as it nears the tick
@@ -622,10 +745,14 @@ void main() {
     float hot = amb * (1.0 - smoothstep(1.2 * px, 2.6 * px, dh));
     vec3 am = mix(uAmberFoot, uAmberTop, smoothstep(F - 0.42, F - 0.02, vH));
     am = mix(uAmberFoot * 0.64, am * 1.03, lit) * mix(0.86, 1.0, ao);
+    // glow (cut 19): the band toward amberTop, a lit side toward amberHot, a shade side that stays amber, not ochre
+    vec3 amG = mix(mix(uAmberFoot, uAmberTop, 0.55 + 0.45 * smoothstep(F - 0.42, F - 0.02, vH)) * 0.9, mix(uAmberTop, uAmberHot, 0.3), lit);
+    am = mix(am, amG, uGlow);
     am = mix(am, uAmberHot, hot * 0.9);
     float warm = (1.0 - amb) * (1.0 - smoothstep(0.0, 0.04, -dh));
     col = mix(col, mix(col, uAmberHot, 0.6), warm * warm);
     col = mix(col, am, amb);
+    ambK = amb;
   }
   // --- into the cloud: the foot dissolves into the deck's tone
   col = mix(col, mix(uCloudShade, uCloud, lit * 0.6 + 0.4), inCloud * 0.9);
@@ -635,6 +762,8 @@ void main() {
   // --- distance fog toward the sky behind this fragment
   float d = length(vW - cameraPosition);
   float f = uFogP.z * (1.0 - exp(-max(0.0, d - uFogP.x) / uFogP.y));
+  f = f + (1.0 - f) * uHaze * (1.0 - 0.8 * ambK);
+  f = f * (1.0 - 0.85 * uGlow * ambK);
   gl_FragColor = vec4(mix(col, sky, f), 1.0);
 }`;
 const SKY_O = [0, 0.24, 0.46, 0.66, 0.83, 0.93, 1];
@@ -674,6 +803,9 @@ const makeVortexMat = () =>
       uTime: { value: 0 },
       uCloud: { value: v3("#F7EEDD") },
       uCloudShade: { value: v3("#C9AE8C") },
+      uLift: { value: 0 },
+      uHaze: { value: 0 },
+      uGlow: { value: 0 },
     },
   });
 
@@ -699,6 +831,13 @@ export type VortexProps = {
   tube?: number;
   /** spin speed factor (1) */
   rate?: number;
+  /** ADDED (cut 19) 0..1: lifts the unfilled cream toward lit cream (0 = unchanged) */
+  lift?: number;
+  /** ADDED (cut 19) 0..1: extra aerial haze toward the sky, on the cream fully and on the amber at 20 % (0 = unchanged) */
+  haze?: number;
+  /** ADDED (cut 19) 0..1: the amber band at the big one's brightness on a small, far body: band toward amberTop, lit side
+   *  toward amberHot, shade side kept amber, and the distance fog / haze mostly off the amber (0 = unchanged) */
+  glow?: number;
 };
 /** the axis point at height fraction h (the lean is a gentle curve: offset x h^2) */
 export const vortexAxis = (v: VortexSpec, h: number): V3 => {
@@ -715,7 +854,7 @@ export const vortexReach = (v: VortexSpec, h: number, detail: VortexDetail = "hi
 /** the vortex's default turn at story frame S (deg) */
 export const vortexSpin = (seed: number, S: number, rate = 1) => S * VORTEX_SPIN * rate + character(seed).phase;
 
-export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, detail = "hi", seed = 1, dim = 0, occlude = true, tube = 1, rate = 1 }) => {
+export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, detail = "hi", seed = 1, dim = 0, occlude = true, tube = 1, rate = 1, lift = 0, haze = 0, glow = 0 }) => {
   const { cam, S, air, deck } = useV();
   const o = useMemo(() => {
     const g = vortexGeo(seed, detail);
@@ -734,6 +873,9 @@ export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, deta
   u.uAt.value.set(at[0], at[1], -at[2]);
   u.uFill.value = c01(fill);
   u.uDim.value = c01(dim);
+  u.uLift.value = c01(lift);
+  u.uHaze.value = c01(haze);
+  u.uGlow.value = c01(glow);
   u.uOcc.value = occlude && deck ? 1 : 0;
   u.uDeckBase.value = deck ? deck.base : 0;
   u.uDeckTop.value = deck ? deck.top : -1e6;
