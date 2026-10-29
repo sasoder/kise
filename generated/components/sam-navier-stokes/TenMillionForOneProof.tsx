@@ -35,6 +35,8 @@ import { z } from "zod";
 import { airProject } from "../scott-aircraft-order/aircraftShared";
 import { Glint, glintLife } from "../sam-benchmaxxing/sparkleShine";
 import {
+  CUT10_FILL_PARTS,
+  CUT10_LOOK,
   CUT10_RING_DRAW,
   CUT10_SUB_ENTER,
   CUT10_TICK_ENTER,
@@ -138,6 +140,8 @@ const TenMillionForOneProof: React.FC<z.infer<typeof schema>> = () => {
             seed={NS_VORTEX.seed}
             fill={cut10Fill(f)}
             shine={cut10Shine(f)}
+            look={CUT10_LOOK}
+            fillParts={CUT10_FILL_PARTS}
           />
           <CostRing v={NS_VORTEX} h={NS_TICK.h} draw={CUT10_RING_DRAW(f)} />
         </>

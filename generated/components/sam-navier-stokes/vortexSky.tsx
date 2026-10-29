@@ -96,6 +96,29 @@ export const VORTEX_FOG = { near: 1500, vis: 9000, max: 0.3 } as const;
  *  500 m of the axis through S 0..220) */
 export const NS_VORTEX = { at: [-2550, 2300, 2550] as V3, height: 6300, seed: 1 } as const;
 export type VortexSpec = { at: V3; height: number; seed: number };
+/** ADDED (real look): the vortex's tube colours after OpenAI's own picture (assets-src/sam-navier-stokes/
+ *  openai_vortex_hires.png), per family. lit = the key-lit side, shd = the shade side. The core is a dark, matte burnt
+ *  orange (with a few mauve-tan ribbons), so the luminous amber fill always reads as something else. */
+export const VORTEX_REAL = {
+  coreLit: "#A65C20",
+  coreShd: "#3A1D0B",
+  mauveLit: "#968089",
+  mauveShd: "#3A2F37",
+  blueLit: "#1A6FE4",
+  blueShd: "#0A2C5E",
+  deepLit: "#0E58AE",
+  deepShd: "#081F44",
+  tealLit: "#0C7C98",
+  tealShd: "#06303E",
+  cyanLit: "#10D2E2",
+  cyanTip: "#0CF4FC",
+  cyanShd: "#05707E",
+} as const;
+export type VortexLook = "cream" | "real";
+/** ADDED (fill parts): which tubes the amber fill takes. "all" = every tube (the default); "inner" = only the core and
+ *  middle helices, so the outer arms keep their colour (the real look's cyan flare) above and below the front */
+export type VortexFillParts = "all" | "inner";
+const glv = (h: string) => `vec3(${hex3(h).map((c) => c.toFixed(4)).join(", ")})`;
 
 // ===================================================================================================================
 // THE STAGE + CONTEXT
@@ -676,6 +699,8 @@ uniform float uHaze;      // ADDED (cut 19): extra aerial haze, mostly on the cr
 uniform float uGlow;      // ADDED (cut 19): the amber band at the hero's brightness for a small, far body (0 = unchanged)
 uniform float uShine;     // ADDED (cut 10 rev 1): the shine band's centre, height fraction (< -0.5 = off, the default)
 uniform vec3 uShineCol;   // ADDED (cut 10 rev 1): the shine's hot white
+uniform float uInner;     // ADDED (fill parts): 1 = the amber fills only the core and middle helices (the outer arms never)
+uniform float uLook;      // ADDED (real look): 1 = the real colours (VORTEX_REAL), 0 = cream (the default)
 uniform vec3 uShineGlow;  // ADDED (cut 10 rev 1): the shine's hot amber glow (saturated, so the amber bloom takes it)
 varying vec3 vW;
 varying vec3 vN;
@@ -737,9 +762,40 @@ void main() {
   col = mix(col, uCream, 0.5 * fres * smoothstep(0.05, 0.7, n.y));
   col += base * 0.08 * pow(max(dot(n, normalize(uL + V)), 0.0), 14.0);
   col = mix(col, base * vec3(1.03, 1.0, 0.95), uLift);
+  // --- the real look (off by default): the picture's colours per family, under the same golden key, warm bounce,
+  // rim and fog. Core matte; the middle blues and outer cyans glossy, taking a warm-white key highlight.
+  if (uLook > 0.5) {
+    float hs = fract(vLead * 7919.37 + vFam * 0.371);
+    vec3 cLit;
+    vec3 cShd;
+    float gloss;
+    if (vFam < 0.5) {
+      float mv = step(0.8, hs);
+      cLit = mix(${glv(VORTEX_REAL.coreLit)}, ${glv(VORTEX_REAL.mauveLit)}, mv) * mix(0.88, 1.06, fract(hs * 13.7));
+      cShd = mix(${glv(VORTEX_REAL.coreShd)}, ${glv(VORTEX_REAL.mauveShd)}, mv);
+      gloss = 0.12;
+    } else if (vFam < 1.5) {
+      float k = fract(hs * 3.0);
+      cLit = hs < 0.34 ? ${glv(VORTEX_REAL.deepLit)} : (hs < 0.8 ? ${glv(VORTEX_REAL.blueLit)} : ${glv(VORTEX_REAL.tealLit)});
+      cShd = hs < 0.34 ? ${glv(VORTEX_REAL.deepShd)} : (hs < 0.8 ? ${glv(VORTEX_REAL.blueShd)} : ${glv(VORTEX_REAL.tealShd)});
+      cLit *= mix(0.9, 1.1, k);
+      gloss = 1.0;
+    } else {
+      cLit = mix(${glv(VORTEX_REAL.cyanLit)}, ${glv(VORTEX_REAL.cyanTip)}, smoothstep(0.12, 0.34, vR)) * mix(0.9, 1.05, hs);
+      cShd = ${glv(VORTEX_REAL.cyanShd)};
+      gloss = 0.9;
+    }
+    // the golden key on the lit side, the warm deck bounce below, the shade side kept in its own hue
+    vec3 rc = mix(cShd, cLit * vec3(1.05, 1.0, 0.94), lit) * mix(0.78, 1.0, ao);
+    rc = mix(rc, rc * uBounce, 0.3 * max(-n.y, 0.0));
+    rc = mix(rc, cLit * 1.25 + vec3(0.06, 0.05, 0.02), 0.32 * gloss * fres * smoothstep(0.05, 0.7, n.y));
+    rc += vec3(1.0, 0.91, 0.74) * gloss * 0.32 * pow(max(dot(n, normalize(uL + V)), 0.0), 26.0);
+    rc = mix(rc, cLit * 1.03, uLift);
+    col = rc;
+  }
   float ambK = 0.0;
   // --- the amber front: each tube amber below fill + its lead, a 2 px hot top edge, a short warm glow above
-  if (uFill > 0.0005) {
+  if (uFill > 0.0005 && (uInner < 0.5 || vFam < 1.5)) {
     // a soft, ragged level while it climbs; it gathers into a near-clean level as it nears the tick
     float F = uFill + vLead * smoothstep(0.0, 0.08, uFill) * (1.0 - 0.6 * smoothstep(0.6, 0.85, uFill));
     float dh = F - vH;
@@ -780,6 +836,7 @@ void main() {
   // --- distance fog toward the sky behind this fragment
   float d = length(vW - cameraPosition);
   float f = uFogP.z * (1.0 - exp(-max(0.0, d - uFogP.x) / uFogP.y));
+  f = f * (1.0 - 0.4 * uLook * (1.0 - ambK));
   f = f + (1.0 - f) * uHaze * (1.0 - 0.8 * ambK);
   f = f * (1.0 - 0.85 * uGlow * ambK);
   gl_FragColor = vec4(mix(col, sky, f), 1.0);
@@ -827,6 +884,8 @@ const makeVortexMat = () =>
       uShine: { value: -1 },
       uShineCol: { value: v3("#FFFBF2") },
       uShineGlow: { value: v3("#FFC629") },
+      uLook: { value: 0 },
+      uInner: { value: 0 },
     },
   });
 
@@ -863,6 +922,11 @@ export type VortexProps = {
    *  undefined = off (the default, output unchanged). Hot white #FFFBF2 core (sparkleShine's ShineSweep white) with
    *  soft amber edges, a specular glint on every tube. */
   shine?: number;
+  /** ADDED (real look): "real" = the picture's colours (VORTEX_REAL: burnt-orange core, blue middle, cyan outer arms);
+   *  "cream" = the default, output unchanged. The amber fill is the same in both. */
+  look?: VortexLook;
+  /** ADDED (fill parts): "inner" = the amber fills only the core and middle helices; "all" = the default, unchanged */
+  fillParts?: VortexFillParts;
 };
 /** the axis point at height fraction h (the lean is a gentle curve: offset x h^2) */
 export const vortexAxis = (v: VortexSpec, h: number): V3 => {
@@ -879,7 +943,7 @@ export const vortexReach = (v: VortexSpec, h: number, detail: VortexDetail = "hi
 /** the vortex's default turn at story frame S (deg) */
 export const vortexSpin = (seed: number, S: number, rate = 1) => S * VORTEX_SPIN * rate + character(seed).phase;
 
-export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, detail = "hi", seed = 1, dim = 0, occlude = true, tube = 1, rate = 1, lift = 0, haze = 0, glow = 0, shine }) => {
+export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, detail = "hi", seed = 1, dim = 0, occlude = true, tube = 1, rate = 1, lift = 0, haze = 0, glow = 0, shine, look = "cream", fillParts = "all" }) => {
   const { cam, S, air, deck } = useV();
   const o = useMemo(() => {
     const g = vortexGeo(seed, detail);
@@ -901,6 +965,8 @@ export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, deta
   u.uLift.value = c01(lift);
   u.uHaze.value = c01(haze);
   u.uGlow.value = c01(glow);
+  u.uLook.value = look === "real" ? 1 : 0;
+  u.uInner.value = fillParts === "inner" ? 1 : 0;
   u.uShine.value = shine === undefined ? -1 : Math.max(-0.4, shine);
   u.uOcc.value = occlude && deck ? 1 : 0;
   u.uDeckBase.value = deck ? deck.base : 0;
@@ -1137,4 +1203,8 @@ export const CUT10_SUB_ENTER = (f: number) => c01((f - 39) / 11);
 /** the level ring round the vortex at the tick's height: drawn out from the rule f21 -> f33 */
 export const CUT10_RING_DRAW = (f: number) => sstep(0, 1, (f - 21) / 12);
 /** cut 10's last frame (f109): cut 19 opens on exactly this (S continues: cut 19's S = CUT10_END.S + its frame) */
+/** ADDED (real look): cut 10's vortex look (and so the look cut 19 opens on) */
+export const CUT10_LOOK: VortexLook = "real";
+/** ADDED (fill parts): cut 10's amber takes the core and middle helices only; the cyan arms stay cyan (cut 19 passes the same) */
+export const CUT10_FILL_PARTS: VortexFillParts = "inner";
 export const CUT10_END = { f: 109, S: 109, cam: cut10Cam(109), fill: CUT10_FILL_END } as const;
