@@ -34,7 +34,7 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirStage } from "../scott-aircraft-order/aircraftShared";
-import { AIR_GROUND, AIR_REST, CUT1_END, CUT1_END_S, CUT1_FRAMES, LLAMA, airCamFor, climbLabelAt, coinAt, cut1Look, drawnAt } from "./costGraphPlan";
+import { AIR_GROUND, AIR_REST, CUT1_END, CUT1_END_S, CUT1_FRAMES, LLAMA, PLOT, airCamFor, climbLabelAt, coinAt, cut1Look, drawnAt } from "./costGraphPlan";
 import { CostGraph, graphTransform } from "./costGraphParts";
 
 export const FPS = 24000 / 1001;
@@ -49,6 +49,8 @@ export const defaultProps = schema.parse({});
     throw new Error(`FrontierCostClimbs: camera at f${CUT1_END_S} ${JSON.stringify(e)} != CUT1_END`);
   }
 }
+
+const NO_TICK = { e: 0, x: PLOT.labelX };
 
 const FrontierCostClimbs: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
@@ -67,8 +69,8 @@ const FrontierCostClimbs: React.FC<z.infer<typeof schema>> = () => {
               drawn={drawnAt(f)}
               coin={(i) => (i < LLAMA ? 1 : coinAt(i, f))}
               label={(i) => (i < LLAMA ? 0 : climbLabelAt(i, f))}
-              axes={0}
-              years={0}
+              tick={() => NO_TICK}
+              year={() => 0}
               title={0}
             />
           </g>

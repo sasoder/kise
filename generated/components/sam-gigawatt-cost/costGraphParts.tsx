@@ -20,6 +20,10 @@ const capsEm = (s: string) =>
 const numEm = (s: string) => [...s].reduce((a, ch) => a + (ch === "$" ? 0.6 : ch === "M" ? 0.86 : 0.6), 0);
 const pxOf = (kind: "name" | "value" | "callout") => (kind === "name" ? TYPE.name : kind === "value" ? TYPE.value : TYPE.callout);
 const widthOf = (text: string, kind: "name" | "value" | "callout") => (kind === "name" ? capsEm(text) : numEm(text)) * pxOf(kind);
+/** a $ tick label's width, a year's width, the title's width (world px) */
+export const TICK_W = (m: number) => numEm(m === 0 ? "$0" : `$${m}M`) * TYPE.tick;
+export const YEAR_W = numEm("2020") * TYPE.year;
+export const TITLE_W = capsEm(TITLE.text) * TYPE.title;
 /** a label's box (world px) for the gridline knockout */
 export const labelBox = (L: PointLabel) => {
   let top = Infinity;
@@ -100,17 +104,18 @@ export const Coin: React.FC<{ p: Point; open: number; k: number; lw: number }> =
 /**
  * CostGraph — the whole graph at a look. `drawn` = the line's drawn arc length (S_TOTAL = all), `coin(i)` 0..1,
  * `label(i)` 0..1 (each point's label entrance), `grid` 0..1 the gridlines and axis lines (they are there from the
- * start; 1), `axes` 0..1 the $ labels, `years` 0..1 the year row, `title` 0..1.
+ * start), `tick(m)` = the $m label's entrance 0..1 and its world x (cut 2 keeps the $ labels at the frame's left edge
+ * until the camera reaches the plot's left end: a sticky y axis), `year(y)` 0..1 each year's entrance, `title` 0..1.
  */
 export const CostGraph: React.FC<{
   look: Look;
   drawn: number;
   coin: (i: number) => number;
   label: (i: number) => number;
-  axes: number;
-  years: number;
+  tick: (m: number) => { e: number; x: number };
+  year: (y: number) => number;
   title: number;
-}> = ({ look, drawn, coin, label, axes, years, title }) => {
+}> = ({ look, drawn, coin, label, tick, year, title }) => {
   const uid = uidOf(useId());
   const k = look.k;
   const hair = 1.6 / k;
@@ -144,25 +149,28 @@ export const CostGraph: React.FC<{
         <line key={y} x1={f3(xOf(y))} x2={f3(xOf(y))} y1={Y0} y2={f3(Y0 + 12)} stroke={COLOR.inkCream} strokeOpacity={0.7} strokeWidth={f3(2.4 / k)} />
       ))}
       {/* the $ labels on the left, sitting on their gridlines */}
-      <Rise e={axes} k={k}>
-        <g fontFamily={FONT_NUM} fontWeight={700} fontSize={TYPE.tick} fill={COLOR.inkCream} style={{ fontFeatureSettings: '"lnum" 1' }}>
-          {[0, ...GRID_M].map((m) => (
-            <text key={m} x={PLOT.labelX} y={f3(Y0 - m * PX_PER_M - 10)} letterSpacing="-0.015em">
-              {`$${m}M`.replace("$0M", "$0")}
-            </text>
-          ))}
-        </g>
-      </Rise>
+      <g fontFamily={FONT_NUM} fontWeight={700} fontSize={TYPE.tick} fill={COLOR.inkCream} style={{ fontFeatureSettings: '"lnum" 1' }}>
+        {[0, ...GRID_M].map((m) => {
+          const t = tick(m);
+          return (
+            <Rise key={m} e={t.e} k={k}>
+              <text x={f3(t.x)} y={f3(Y0 - m * PX_PER_M - 10)} letterSpacing="-0.015em">
+                {`$${m}M`.replace("$0M", "$0")}
+              </text>
+            </Rise>
+          );
+        })}
+      </g>
       {/* the years under the axis */}
-      <Rise e={years} k={k}>
-        <g fontFamily={FONT_NUM} fontWeight={700} fontSize={TYPE.year} fill={COLOR.inkCream} style={{ fontFeatureSettings: '"lnum" 1' }}>
-          {YEARS.map((y) => (
-            <text key={y} x={f3(xOf(y))} y={f3(Y0 + 50)} textAnchor="middle" letterSpacing="-0.015em">
+      <g fontFamily={FONT_NUM} fontWeight={700} fontSize={TYPE.year} fill={COLOR.inkCream} style={{ fontFeatureSettings: '"lnum" 1' }}>
+        {YEARS.map((y) => (
+          <Rise key={y} e={year(y)} k={k}>
+            <text x={f3(xOf(y))} y={f3(Y0 + 50)} textAnchor="middle" letterSpacing="-0.015em">
               {y}
             </text>
-          ))}
-        </g>
-      </Rise>
+          </Rise>
+        ))}
+      </g>
       {/* the line (amber = the dollars) and its tip */}
       <g style={{ filter: bloomFilter(k) }}>
         <polyline points={pts.join(" ")} fill="none" stroke={COLOR.amberTop} strokeWidth={f3(lw)} strokeLinejoin="round" strokeLinecap="round" />

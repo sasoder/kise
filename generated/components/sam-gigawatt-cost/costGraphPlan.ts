@@ -191,12 +191,22 @@ const c1raw = (f: number) => betaCdf((f + C1_PRE) / C1_T) * (1 - C1_VC * (C1_T))
 const C1_END_RAW = c1raw(CUT1_END_S) + C1_VC * (CUT1_END_S + C1_PRE - C1_T);
 export const cut1Progress = (f: number) => (c1raw(f) + C1_VC * Math.max(0, f + C1_PRE - C1_T)) / C1_END_RAW;
 export const cut1Look = (f: number) => C1.at(cut1Progress(f));
-/** cut 2's pull-back: CUT1_END -> WIDE (p 1 at f22, landed by ~f20), then a slow creep on past it */
+/** cut 2's pull-back: CUT1_END -> WIDE (p 1 at f14, landed by ~f12), then a slow creep on past it */
 const C2 = zoomPath(CUT1_END, WIDE);
-const C2_T = 22;
+const C2_T = 14;
+const C2_TY = 6;
 const C2_VC = 0.0025;
 export const cut2Progress = (f: number) => (1 - C2_VC * C2_T) * betaCdf(f / C2_T) + C2_VC * f;
-export const cut2Look = (f: number) => C2.at(cut2Progress(f));
+/** the vertical runs ahead (rev 3b, the user: the years and $ should fill in from the first frame): the $0 axis
+ *  rises out of the caption band on a faster clock (C2_TY) than the zoom and the sideways reveal (C2_T); from f14 on
+ *  both clocks agree (the creep) */
+const cut2Fast = (f: number) => (1 - C2_VC * C2_T) * betaCdf(f / C2_TY) + C2_VC * f;
+export const cut2Look = (f: number): Look => {
+  const c = C2.at(cut2Progress(f));
+  const kf = C2.at(cut2Fast(f)).k;
+  const axisY = C2.fixed.y + (Y0 - C2.fixed.y) * kf; // the $0 axis's screen row on the fast clock (WIDE is k 1)
+  return { x: c.x, y: Y0 - (axisY - 960) / c.k, k: c.k };
+};
 export const CUT_FIXED = { cut1: C1.fixed, cut2: C2.fixed } as const;
 
 // --- the haze (AirStage's side camera) ------------------------------------------------------------------------------
@@ -219,7 +229,8 @@ export const AIR_GROUND = { aprons: [] as [number, number, number, number][] };
 
 // --- the titles (world px, the wide) -------------------------------------------------------------------------------
 export const TITLE = { x: 60, y: 200, subY: 244, text: "COST TO TRAIN FRONTIER AI MODELS", sub: "SELECTED MODELS · EPOCH AI ESTIMATES · 2023 US$" } as const;
-/** cut 2's entrances (frames): the context the wide brings in */
-export const ENTER2 = { title: [14, 24], axes: [15, 25], years: [15, 25] } as const;
-/** the early models' names, each once it is inside the frame (right to left as the left side comes in) */
-export const ENTER2_EARLY: Record<number, readonly [number, number]> = { 3: [4, 14], 2: [5, 15], 1: [8, 18], 0: [13, 23] };
+/** cut 2's text entrances (rev 3b): each label starts its Rise (ENTER2_DUR frames) on the first frame from f1 on where
+ *  it stays inside the frame and above the caption bands for the whole entrance, in order (GoneUpToThisPoint.tsx
+ *  computes the frames); the $100M-$400M labels ride the frame's left edge (a sticky y axis) and go f1-f4. */
+export const ENTER2_DUR = 7;
+export const ENTER2_TICKS = [100, 200, 300, 400] as const;
