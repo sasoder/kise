@@ -25,7 +25,7 @@ const PICKS: Pick[] = [
   { model: "GPT-3.5 (davinci-002)", short: ["GPT-3.5"], lab: "openai" },
   { model: "GPT-4 (Mar 2023)", short: ["GPT-4"], lab: "openai" },
   { model: "Gemini 1.0 Ultra", short: ["GEMINI", "ULTRA"], lab: "gemini" },
-  { model: "Llama 3.1-405B", short: ["LLAMA 3.1"], lab: "meta" },
+  { model: "Llama 3.1-405B", short: ["LLAMA", "3.1"], lab: "meta" },
   { model: "Grok 3", short: ["GROK 3"], lab: "xai", value: "$218M" },
   { model: "GPT-4.5", short: ["GPT-4.5"], lab: "openai", value: "$366M" },
   { model: "Grok 4", short: ["GROK 4"], lab: "xai", value: "$388M" },
@@ -38,19 +38,21 @@ const yearOf = (iso: string) => {
 
 // --- the axes ------------------------------------------------------------------------------------------------
 /** x: 2020.0 at X0, PX_PER_YEAR per year; y: $0 at Y0, PX_PER_M per $1M (linear) */
-export const X0 = 100;
-export const PX_PER_YEAR = 150;
+export const X0 = 150;
+export const PX_PER_YEAR = 142;
 export const Y0 = 1000;
-export const PX_PER_M = 1.5;
+export const PX_PER_M = 1.2;
 export const xOf = (year: number) => X0 + (year - 2020) * PX_PER_YEAR;
 export const yOf = (usd: number) => Y0 - (usd / 1e6) * PX_PER_M;
 export const YEARS = [2020, 2021, 2022, 2023, 2024, 2025] as const;
 export const GRID_M = [100, 200, 300, 400] as const;
 /** the plot's left/right ends (gridlines, axis) and the left margin the $ labels sit on */
-export const PLOT = { x0: 60, x1: 1030, labelX: 60 } as const;
+export const PLOT = { x0: 90, x1: 990, labelX: 90 } as const;
 /** type (world px = screen px in the wide) */
 export const TYPE = { name: 39, value: 40, callout: 56, tick: 38, year: 38, title: 40, sub: 24 } as const;
 export const LINE_GAP = 46;
+/** the year labels' baseline (8 px lower than rev 3: the coins on the $0 floor sit right above the years) */
+export const YEAR_BASE = Y0 + 58;
 
 export type Align = "start" | "middle" | "end";
 /** a label: anchor (world), alignment, lines (each a name or a value) and the first baseline */
@@ -71,20 +73,20 @@ const place = (i: number, x: number, y: number, p: Pick): PointLabel => {
   switch (i) {
     case 0: // GPT-3: above, nudged right of the "$0" tick
       return { x: x + 20, base: y - COIN_R - 16, align: "middle", lines: names, gap: [] };
-    case 1: // GPT-3.5: above, a little left (GPT-4's name sits up to its right)
-      return { x: x - 28, base: y - COIN_R - 16, align: "middle", lines: names, gap: [] };
+    case 1: // GPT-3.5: above, a little right (clear of the 2021|2022 gap cut 1's last frame crops at)
+      return { x: x + 10, base: y - COIN_R - 16, align: "middle", lines: names, gap: [] };
     case 2: // GPT-4: above, ending just left of its coin's centre (Gemini's two lines sit to its right)
       return { x: x - 8, base: y - COIN_R - 16, align: "end", lines: names, gap: [] };
     case 3: // Gemini 1.0 Ultra: above, two lines, a little left (clear of Llama's coin and the climb)
-      return { x: x - 19, base: y - COIN_R - 16 - LINE_GAP, align: "middle", lines: names, gap: [LINE_GAP] };
-    case 4: // Llama 3.1: right of the dot, under the climb
-      return { x: x + COIN_R + 12, base: y + 14, align: "start", lines: names, gap: [] };
-    case 5: // Grok 3: right of the dot, name + value
-      return { x: x + COIN_R + 12, base: y - 8, align: "start", lines: [...names, { text: p.value!, kind: "value" }], gap: [44] };
+      return { x: x - 21, base: y - COIN_R - 22 - LINE_GAP, align: "middle", lines: names, gap: [LINE_GAP] };
+    case 4: // Llama 3.1: right of the dot, under the climb, two lines (LLAMA / 3.1) so the right margin stays wide
+      return { x: x + COIN_R + 12, base: y - 8, align: "start", lines: names, gap: [44] };
+    case 5: // Grok 3: left of the dot (the right of the climb stays open), name + value
+      return { x: x - COIN_R - 12, base: y - 8, align: "end", lines: [...names, { text: p.value!, kind: "value" }], gap: [44] };
     case 6: // GPT-4.5: left of the dot, name + value
       return { x: x - COIN_R - 12, base: y - 8, align: "end", lines: [...names, { text: p.value!, kind: "value" }], gap: [44] };
-    default: // Grok 4: above, name + the big callout
-      return { x, base: y - COIN_R - 78, align: "middle", lines: [...names, { text: p.value!, kind: "callout" }], gap: [58] };
+    default: // Grok 4: above, name + the big callout, ending at the coin's right edge (the right margin stays wide)
+      return { x: x + COIN_R, base: y - COIN_R - 78, align: "end", lines: [...names, { text: p.value!, kind: "callout" }], gap: [58] };
   }
 };
 export const POINTS: Point[] = PICKS.map((p, i) => {
@@ -169,17 +171,22 @@ export const betaCdf = (x: number) => {
   return 6 * u * u - 8 * u * u * u + 3 * u * u * u * u;
 };
 
-/** CUT 1's last frame (f36) = CUT 2's f0: the whole recent climb, Grok 4's name at y ~255 and Llama 3.1's name
- *  and coin above y ~1060 (the caption bands stay clear), the 2025 cluster at the right, 2020-22 off the left */
-const CLIMB_TOP = POINTS[N - 1].label.base - TYPE.name * 0.75; // Grok 4's name cap top
-const CLIMB_BOT = POINTS[LLAMA].y + COIN_R + 2; // Llama's coin
-export const CUT1_END_K = (1056 - 256) / (CLIMB_BOT - CLIMB_TOP);
-/** the climb's middle (between Llama 3.1 and the 2025 cluster) sits at screen x ~640 */
-export const CUT1_END: Look = { x: 860 - (640 - 540) / CUT1_END_K, y: CLIMB_TOP - (256 - 960) / CUT1_END_K, k: CUT1_END_K };
-/** CUT 1's opening look (close on Llama 3.1, its coin at screen ~(300, 980) with its name to the right above the
- *  caption band, the line arriving from Gemini at the lower left; the tip shoots up out of it) */
+/** THE YEAR ROW STAYS PUT (rev 4: every label is part of the chart from the first frame, so the year row is on
+ *  screen in both cuts): every look of both cuts keeps world y YEAR_ROW (the year labels' baseline) at screen y
+ *  YEAR_ROW, 1058, above caption band 1, and both pull-backs zoom about points on that row, so it never moves. */
+export const YEAR_ROW = YEAR_BASE;
+/** a look at zoom k that keeps the year row at screen YEAR_ROW and world x `wx` at screen x `sx` */
+const rowLook = (wx: number, sx: number, k: number): Look => ({ x: wx - (sx - 540) / k, y: YEAR_ROW - (YEAR_ROW - 960) / k, k });
+/** CUT 1's last frame (f36) = CUT 2's f0: the whole climb with the floor under it (Gemini, GPT-4, GPT-3.5, the years
+ *  2022-25 and the $0 axis), Grok 4's name at y ~125, Llama's label ~190 px in from the right edge; the frame's
+ *  left edge falls in the clean gap between "2021" / GPT-3's name and "2022" / GPT-3.5's name (world x ~362) */
+export const CUT1_END_K = 1.44;
+const CUT1_END_LEFT = 362;
+export const CUT1_END: Look = rowLook(CUT1_END_LEFT, 0, CUT1_END_K);
+/** CUT 1's opening look (close on Llama 3.1, its coin at screen x ~380 with its name to the right, the line arriving
+ *  from Gemini at the left; the tip shoots up out of it) */
 const C1_K0 = 1.95;
-export const CUT1_START: Look = { x: POINTS[LLAMA].x + (540 - 330) / C1_K0, y: POINTS[LLAMA].y + (960 - 990) / C1_K0, k: C1_K0 };
+export const CUT1_START: Look = rowLook(POINTS[LLAMA].x, 380, C1_K0);
 export const CUT1_FRAMES = 37;
 export const CUT1_END_S = CUT1_FRAMES - 1;
 /** cut 1's pull-back: under way from a pre-roll (moving at f0), most of it by ~f26, a creep into CUT1_END at f36 */
@@ -191,22 +198,12 @@ const c1raw = (f: number) => betaCdf((f + C1_PRE) / C1_T) * (1 - C1_VC * (C1_T))
 const C1_END_RAW = c1raw(CUT1_END_S) + C1_VC * (CUT1_END_S + C1_PRE - C1_T);
 export const cut1Progress = (f: number) => (c1raw(f) + C1_VC * Math.max(0, f + C1_PRE - C1_T)) / C1_END_RAW;
 export const cut1Look = (f: number) => C1.at(cut1Progress(f));
-/** cut 2's pull-back: CUT1_END -> WIDE (p 1 at f14, landed by ~f12), then a slow creep on past it */
+/** cut 2's pull-back: CUT1_END -> WIDE (p 1 at f22, landed by ~f20), then a slow creep on past it */
 const C2 = zoomPath(CUT1_END, WIDE);
-const C2_T = 14;
-const C2_TY = 6;
+const C2_T = 22;
 const C2_VC = 0.0025;
 export const cut2Progress = (f: number) => (1 - C2_VC * C2_T) * betaCdf(f / C2_T) + C2_VC * f;
-/** the vertical runs ahead (rev 3b, the user: the years and $ should fill in from the first frame): the $0 axis
- *  rises out of the caption band on a faster clock (C2_TY) than the zoom and the sideways reveal (C2_T); from f14 on
- *  both clocks agree (the creep) */
-const cut2Fast = (f: number) => (1 - C2_VC * C2_T) * betaCdf(f / C2_TY) + C2_VC * f;
-export const cut2Look = (f: number): Look => {
-  const c = C2.at(cut2Progress(f));
-  const kf = C2.at(cut2Fast(f)).k;
-  const axisY = C2.fixed.y + (Y0 - C2.fixed.y) * kf; // the $0 axis's screen row on the fast clock (WIDE is k 1)
-  return { x: c.x, y: Y0 - (axisY - 960) / c.k, k: c.k };
-};
+export const cut2Look = (f: number) => C2.at(cut2Progress(f));
 export const CUT_FIXED = { cut1: C1.fixed, cut2: C2.fixed } as const;
 
 // --- the haze (AirStage's side camera) ------------------------------------------------------------------------------
@@ -228,9 +225,5 @@ export const AIR_REST = airCamFor(WIDE);
 export const AIR_GROUND = { aprons: [] as [number, number, number, number][] };
 
 // --- the titles (world px, the wide) -------------------------------------------------------------------------------
-export const TITLE = { x: 60, y: 200, subY: 244, text: "COST TO TRAIN FRONTIER AI MODELS", sub: "SELECTED MODELS · EPOCH AI ESTIMATES · 2023 US$" } as const;
-/** cut 2's text entrances (rev 3b): each label starts its Rise (ENTER2_DUR frames) on the first frame from f1 on where
- *  it stays inside the frame and above the caption bands for the whole entrance, in order (GoneUpToThisPoint.tsx
- *  computes the frames); the $100M-$400M labels ride the frame's left edge (a sticky y axis) and go f1-f4. */
-export const ENTER2_DUR = 7;
-export const ENTER2_TICKS = [100, 200, 300, 400] as const;
+export const TITLE = { x: 90, y: 260, subY: 304, text: "COST TO TRAIN FRONTIER AI MODELS", sub: "SELECTED MODELS · EPOCH AI ESTIMATES · 2023 US$" } as const;
+

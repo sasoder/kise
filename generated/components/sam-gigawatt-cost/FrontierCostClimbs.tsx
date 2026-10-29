@@ -18,6 +18,9 @@
 // as the tip draws it and its name + training cost sliding up after it. ONE damped pull-back about a fixed point
 // (under way from a pre-roll) widens the frame as the tip climbs, so the line keeps rising inside a frame that keeps
 // catching it; by ~f26 the frame holds the whole climb (Llama 3.1 to Grok 4, 2023-25), then a creep to f36.
+// THE STATIC TEXT (rev 4, the user: "have the text in all the time"): the $ scale, the years, the earlier models'
+// names and the title are part of the chart, in from f0 wherever the frame holds them; only the climb's own coins and
+// names enter, as the tip draws them. The year row stays at y 1050 (above the caption bands) all through.
 // Cut 2 (GoneUpToThisPoint) opens on f36 pixel for pixel (CUT1_END) and pulls back to the whole graph.
 // Cause before effect: each coin opens on the frame the tip reaches it (reachF), its label 2 frames later.
 // AMBER = the dollars (the line); cream = the coins, the type.
@@ -34,7 +37,7 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirStage } from "../scott-aircraft-order/aircraftShared";
-import { AIR_GROUND, AIR_REST, CUT1_END, CUT1_END_S, CUT1_FRAMES, LLAMA, PLOT, airCamFor, climbLabelAt, coinAt, cut1Look, drawnAt } from "./costGraphPlan";
+import { AIR_GROUND, AIR_REST, CUT1_END, CUT1_END_S, CUT1_FRAMES, LLAMA, airCamFor, climbLabelAt, coinAt, cut1Look, drawnAt } from "./costGraphPlan";
 import { CostGraph, graphTransform } from "./costGraphParts";
 
 export const FPS = 24000 / 1001;
@@ -49,8 +52,6 @@ export const defaultProps = schema.parse({});
     throw new Error(`FrontierCostClimbs: camera at f${CUT1_END_S} ${JSON.stringify(e)} != CUT1_END`);
   }
 }
-
-const NO_TICK = { e: 0, x: PLOT.labelX };
 
 const FrontierCostClimbs: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
@@ -68,10 +69,10 @@ const FrontierCostClimbs: React.FC<z.infer<typeof schema>> = () => {
               look={look}
               drawn={drawnAt(f)}
               coin={(i) => (i < LLAMA ? 1 : coinAt(i, f))}
-              label={(i) => (i < LLAMA ? 0 : climbLabelAt(i, f))}
-              tick={() => NO_TICK}
-              year={() => 0}
-              title={0}
+              label={(i) => (i < LLAMA ? 1 : climbLabelAt(i, f))}
+              axes={1}
+              years={1}
+              title={1}
             />
           </g>
         </svg>
