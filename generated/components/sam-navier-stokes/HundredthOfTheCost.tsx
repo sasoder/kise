@@ -87,10 +87,9 @@ const proj = (e: Eye, x: number, y: number, h: number) => {
 // --- the page -------------------------------------------------------------------------------------------------------
 const PAGE = { x0: -400, y0: -500, x1: 1480, y1: 2500 } as const;
 const MARGIN = 96; // the page's text measure: x 96 .. 984
-const RULE = { y: 128, thick: 3, thin: 1.25, gap: 5 } as const; // the double masthead rule
-const DATE = { base: 184, px: 44 } as const; // dateline baseline, size (world px)
-const HAIR = { y: 204, w: 1.25 } as const; // the rule under the dateline
-const HEAD = { base: 284, px: 84 } as const; // the headline
+const RULE = { y: 104, thick: 3, thin: 1.25, gap: 5 } as const; // the double masthead rule
+const DATE = { base: 196, px: 88 } as const; // dateline baseline, size (world px): cap 64 px at rest (Rev 1; its hairline dropped for room)
+const HEAD = { base: 282, px: 84 } as const; // the headline
 
 // --- the photo: the vortex, standing H_PHOTO proud of the page ---------------------------------------------------------
 const H_PHOTO = 40;
@@ -323,7 +322,6 @@ const Page: React.FC = () => {
       {/* masthead: the thin double rule */}
       <rect x={MARGIN} y={RULE.y} width={1080 - 2 * MARGIN} height={RULE.thick} fill={COLOR.inkDark} />
       <rect x={MARGIN} y={RULE.y + RULE.thick + RULE.gap} width={1080 - 2 * MARGIN} height={RULE.thin} fill={COLOR.inkDark} />
-      <rect x={MARGIN} y={HAIR.y} width={1080 - 2 * MARGIN} height={HAIR.w} fill={COLOR.inkDark} />
     </g>
   );
 };
