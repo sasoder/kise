@@ -13,17 +13,17 @@
 // install 72 · (Sam) And 91 · run 99 · it 104 · for 106 · five 109 · years 111 · (on camera) Yep 119 · okay 124.
 // DURATION: the slot 38.038 -> 43.544 s (sequence frames 912-1044) = 132 frames (f0..f131).
 //
-// THE MOTION: one slow push across all 132 frames (damped start, still easing at the end) toward a gold column and
-// the one-gigawatt campus behind it at golden hour. From f0 a stack of fourteen gold slabs rises out of its slot in
+// THE MOTION: one slow push across all 132 frames (damped start, still easing at the end) toward a column of cash and
+// the one-gigawatt campus behind it at golden hour. From f0 a stack of fourteen $5B layers of banknote bundles (sage notes, amber paper straps) rises out of its slot in
 // the concrete apron in front of the campus and lands on "billion" (f15) under a big cream "$70B" and "PER
 // GIGAWATT". On "the cost to install" the campus's eight halls light up from inside: amber in every louvre band,
 // pooling on the pad between the halls (f61-72). The year rule surfaces out of the bare near apron (f78-88, a soft
 // front left to right: its groove and five dark tiles). On "and run it for five years" a lit front runs along the rule
 // inlaid at the apron's near edge and five year tiles light amber in turn, 1 to 5 (f91-111), while the warmth of the
 // running campus gathers over its roofs. Settled living frame from ~f112: column, $70B, lit campus, five lit years.
-// Cause before effect: the slot is open at f0 and the gold's first pixel clears its lip on f1; each year tile lights
+// Cause before effect: the slot is open at f0 and the cash's first pixel clears its lip on f1; each year tile lights
 // when the run front reaches it.
-// AMBER = the dollars: the gold column, the money at work in the halls, each year it pays for. Cream = the halls,
+// AMBER = the dollars: the cash's paper straps, the money at work in the halls, each year it pays for. Cream = the halls,
 // the type. The $70B is never split into parts (no source for a breakdown).
 //
 // SOURCES: "$70 billion" per gigawatt, the five-year total cost of ownership (install + run it for five years), is the
@@ -35,7 +35,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { airProject, AirStage } from "../scott-aircraft-order/aircraftShared";
 import { CampusWarmth, DesertGround, GigawattCampus } from "./campusWorld";
-import { COST_70, CUT6_END_CAM, CostApron, CostReadout, GoldColumn, HallsAlight, YearMarks, costTopFar, cut6CamAt, yearAt } from "./gigawattCost";
+import { COST_70, CUT6_END_CAM, CostApron, CashColumn, CostReadout, HallsAlight, YearMarks, costTopFar, cut6CamAt, yearAt } from "./gigawattCost";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 132;
@@ -94,7 +94,7 @@ const SeventyBillionAGigawatt: React.FC<z.infer<typeof schema>> = () => {
           <GigawattCampus at={[0, 0]} glow={glowAt(f)} />
           <HallsAlight fill={fillAt(f)} />
           <CampusWarmth at={[0, 0]} glow={warmthAt(f)} />
-          <GoldColumn billions={COST_70} rise={rise} />
+          <CashColumn billions={COST_70} rise={rise} />
         </>
       }
       overlay={

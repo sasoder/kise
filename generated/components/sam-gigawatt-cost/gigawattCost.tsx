@@ -5,10 +5,12 @@
 // The medium is the Scott "air" look (scott-aircraft-order/aircraftShared.tsx AirStage, read-only): render with
 // --gl=angle; everything 3D goes inside <AirStage world>, the readout and year labels in its `overlay`.
 //
-// WHAT IT IS. The dollars are GOLD: a neat stack of bullion slabs (each a tapered ingot, the classic stacked-gold
-// silhouette), ONE SLAB = $5B, so $70B = 14 slabs and $20B = 4. The stack rises out of a real slot in a concrete
-// apron in front of the campus, under the stage's one key light (LIGHT.side, from the upper left and a little in
-// front), with a contact ring and a cast shadow on the apron. Nothing floats.
+// WHAT IT IS. The dollars are CASH (the user's note on cut 6: "gold should be cash instead"): a neat stack of banknote
+// bundles (cashBundle.tsx: sage notes, paper edges, amber paper straps), ONE LAYER = $5B, so $70B = 14 layers and
+// $20B = 4. Each layer keeps the old slab's footprint and height (COST.slab, 100 x 56 x 28 m) as a 2 x 3 x 8 block of
+// bundles. The stack rises out of a real slot in a concrete apron in front of the campus, under the stage's one key
+// light (LIGHT.side, from the upper left and a little in front), with a contact ring and a cast shadow on the apron.
+// Nothing floats.
 //
 // WORLD UNITS: metres, as aircraftShared: X right, Y up (ground 0), Z AWAY from the camera. The campus sits at
 // [0, 0], heading 0 (campusWorld: pad x -495..365, z -200..200). The column stands on the near apron, front right
@@ -24,8 +26,11 @@
 //                        contact ring and cast shadow (exact swept box of the visible stack), and the five year
 //                        tiles (years: 0..5, each tile turns from unlit glass to lit amber as the front passes;
 //                        rule 0..1: the rule's entrance, surfacing out of the concrete left to right; 0 = bare apron).
-//   <GoldColumn billions rise at?>  the slab stack: `rise` 0..1 = how much of it has come up out of the slot (the
-//                        whole stack translates; what is below the apron is hidden), billions = its full size.
+//   <CashColumn billions rise at? renderOrder?>  the cash stack: `rise` 0..1 = how much of it has come up out of the
+//                        slot (the whole stack translates; what is below the apron is hidden), billions = its full
+//                        size. Draws at renderOrder 6 (CASH_COLUMN_ORDER), after CampusWarmth. GoldColumn = the same
+//                        component under its old name; GoldIngotColumn = the superseded gold ingots (unused).
+//   cashColumnItems(billions, at?), CASH_LAYER, CASH_LAYER_BUNDLE   the column's bundles as plain items / its layer
 //   <CostReadout cam text sub enter px?>  the readout over the column's top (SCREEN svg; pin it with the same
 //                        cam): Söhne Dreiviertelfett numerals in cream that cast one soft shadow down-right, the
 //                        stout entrance (blur in + 24 px slide up); `sub` in Kräftig caps under it.
@@ -37,10 +42,12 @@ import { useThree } from "@react-three/fiber";
 // three.js ships without type declarations here (no @types/three installed)
 // @ts-expect-error untyped module
 import * as THREE from "three";
+import { random } from "remotion";
 import { SKY } from "../kits/cheeky-pint/droneSeaShared";
 import { COLOR, FONT_LABEL, FONT_NUM, TRACK } from "../kits/cheeky-pint/stoutShared";
 import { AIR_COLOR, LIGHT, airCamAt, airProject, airTrack, type AirCam, type AirGlide, type SideCam, type V3 } from "../scott-aircraft-order/aircraftShared";
 import { CAMPUS, CAMPUS_FOG, campusToWorld } from "./campusWorld";
+import { CashBundles, type BundleItem, type BundleSize } from "./cashBundle";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -431,9 +438,9 @@ const stackGeo = (n: number) => {
 // ===================================================================================================================
 // COMPONENTS (pure per frame: AirStage mounts `world` twice)
 // ===================================================================================================================
-/** GoldColumn — the stack of gold slabs for `billions` (whole slabs of COST.perSlab), risen `rise` 0..1 out of
- *  its slot at `at`. The whole stack translates up; the part still in the slot is hidden. */
-export const GoldColumn: React.FC<{ billions: number; rise: number; at?: [number, number]; fog?: number }> = ({ billions, rise, at = COST.at, fog = 1 }) => {
+/** GoldIngotColumn — the first (gold) version of the column: a stack of tapered ingots, one per $5B. Superseded by
+ *  CashColumn on the user's note "gold should be cash instead"; kept for reference, drawn by nobody. */
+export const GoldIngotColumn: React.FC<{ billions: number; rise: number; at?: [number, number]; fog?: number }> = ({ billions, rise, at = COST.at, fog = 1 }) => {
   const L = useLight();
   const n = Math.max(1, Math.round(billions / COST.perSlab));
   const fullH = n * COST.slab.H;
@@ -476,8 +483,51 @@ export const GoldColumn: React.FC<{ billions: number; rise: number; at?: [number
   return <primitive object={o.mesh} />;
 };
 
+/** the cash column's layer: COST.slab's footprint and height ($5B) as a wrapped block of bundles, nx (along L) x nz
+ *  (along W) x ny courses. Bundle = { L/nx, W/nz, H/ny } (50 x 18.7 x 3.5 m: a real bundle's proportions, x 320). */
+export const CASH_LAYER = { nx: 2, nz: 3, ny: 8 } as const;
+export const CASH_LAYER_BUNDLE: BundleSize = { L: COST.slab.L / CASH_LAYER.nx, W: COST.slab.W / CASH_LAYER.nz, H: COST.slab.H / CASH_LAYER.ny };
+/** the column draws AFTER CampusWarmth (5, no depth test): it stands in front of the campus, so the warm air over
+ *  the halls must not veil the paper (gold hid it, amber on amber). Still depth-tested against everything. */
+export const CASH_COLUMN_ORDER = 6;
+/** the column's bundles as plain items (column frame -> world), foot at y 0, before the rise */
+export const cashColumnItems = (billions: number, at: [number, number] = COST.at): BundleItem[] => {
+  const n = Math.max(1, Math.round(billions / COST.perSlab));
+  const { nx, nz, ny } = CASH_LAYER;
+  const b = CASH_LAYER_BUNDLE;
+  const out: BundleItem[] = [];
+  for (let i = 0; i < n; i++) {
+    // each $5B layer a hand-stacked block: a small offset per layer (as the ingots had), tiny ones per bundle
+    const jx = ((Math.sin(i * 12.9898 + 4.1) * 43758.5453) % 1) * 1.6;
+    const jz = ((Math.sin(i * 78.233 + 1.7) * 43758.5453) % 1) * 1.2;
+    for (let y = 0; y < ny; y++)
+      for (let z = 0; z < nz; z++)
+        for (let x = 0; x < nx; x++) {
+          const k = `cc${i}:${x}:${y}:${z}`;
+          const lx = jx + (x - (nx - 1) / 2) * b.L + (random(`${k}x`) - 0.5) * 0.9;
+          const lz = jz + (z - (nz - 1) / 2) * b.W + (random(`${k}z`) - 0.5) * 0.5;
+          const ly = i * COST.slab.H + y * b.H;
+          const w = campusToWorld(at, COST.heading, [lx, ly, lz]);
+          out.push({ at: [w[0], ly, w[2]], heading: COST.heading + (random(`${k}h`) - 0.5) * 0.5, size: b, seed: random(`${k}s`) });
+        }
+  }
+  return out;
+};
+/** CashColumn — THE COLUMN: a stack of $5B layers of cash bundles (COST.slab's footprint and height per layer, so
+ *  costHeight is unchanged), risen `rise` 0..1 out of its slot at `at`. The whole stack translates up; the part
+ *  still in the slot is hidden. ONE instanced draw (14 layers x 48 bundles for $70B). renderOrder 6. */
+export const CashColumn: React.FC<{ billions: number; rise: number; at?: [number, number]; fog?: number; renderOrder?: number }> = ({ billions, rise, at = COST.at, fog = 1, renderOrder = CASH_COLUMN_ORDER }) => {
+  const n = Math.max(1, Math.round(billions / COST.perSlab));
+  const fullH = n * COST.slab.H;
+  const [ax, az] = at;
+  const items = useMemo(() => cashColumnItems(billions, [ax, az]), [billions, ax, az]);
+  return <CashBundles items={items} size={CASH_LAYER_BUNDLE} lift={-(1 - c01(rise)) * (fullH + 1)} clip fog={fog} light="side" renderOrder={renderOrder} />;
+};
+/** GoldColumn — the old name of the column, kept so every importer keeps working: it now draws the CASH column. */
+export const GoldColumn = CashColumn;
+
 /** CostApron — the concrete apron in front of the campus with the column's slot, contact and shadow, and the year
- *  rule. `billions` + `rise` must match the GoldColumn (the shadow is the visible stack's). `years` 0..5: tile i is
+ *  rule. `billions` + `rise` must match the CashColumn (the shadow is the visible stack's). `years` 0..5: tile i is
  *  lit by c01(years - i); `front` is the run front along the rule (world X; default from `years`). */
 export const CostApron: React.FC<{ billions: number; rise: number; open?: number; years?: number; rule?: number; at?: [number, number]; fog?: number }> = ({
   billions,
