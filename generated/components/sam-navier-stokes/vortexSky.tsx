@@ -700,6 +700,7 @@ uniform float uGlow;      // ADDED (cut 19): the amber band at the hero's bright
 uniform float uShine;     // ADDED (cut 10 rev 1): the shine band's centre, height fraction (< -0.5 = off, the default)
 uniform vec3 uShineCol;   // ADDED (cut 10 rev 1): the shine's hot white
 uniform float uInner;     // ADDED (fill parts): 1 = the amber fills only the core and middle helices (the outer arms never)
+uniform float uRealLight; // ADDED (cut 19): 1 = the field's lighter real look (no deep navy, cyan-first crown); 0 = off
 uniform float uLook;      // ADDED (real look): 1 = the real colours (VORTEX_REAL), 0 = cream (the default)
 uniform vec3 uShineGlow;  // ADDED (cut 10 rev 1): the shine's hot amber glow (saturated, so the amber bloom takes it)
 varying vec3 vW;
@@ -774,6 +775,15 @@ void main() {
       cLit = mix(${glv(VORTEX_REAL.coreLit)}, ${glv(VORTEX_REAL.mauveLit)}, mv) * mix(0.88, 1.06, fract(hs * 13.7));
       cShd = mix(${glv(VORTEX_REAL.coreShd)}, ${glv(VORTEX_REAL.mauveShd)}, mv);
       gloss = 0.12;
+    } else if (vFam < 1.5 && uRealLight > 0.5) {
+      // (cut 19) the field's lighter crown: no deep navy; ~55 % of the sheath helices cyan, the rest mid blue / teal
+      float k = fract(hs * 3.0);
+      float cy = step(0.45, hs);
+      vec3 bl = hs < 0.22 ? ${glv(VORTEX_REAL.blueLit)} : ${glv(VORTEX_REAL.tealLit)};
+      vec3 bs = hs < 0.22 ? ${glv(VORTEX_REAL.blueShd)} : ${glv(VORTEX_REAL.tealShd)};
+      cLit = mix(bl * mix(0.9, 1.1, k), mix(${glv(VORTEX_REAL.cyanLit)}, ${glv(VORTEX_REAL.cyanTip)}, 0.3 * k), cy);
+      cShd = mix(mix(bs, bl * 0.55, 0.35), ${glv(VORTEX_REAL.cyanShd)}, cy);
+      gloss = mix(1.0, 0.9, cy);
     } else if (vFam < 1.5) {
       float k = fract(hs * 3.0);
       cLit = hs < 0.34 ? ${glv(VORTEX_REAL.deepLit)} : (hs < 0.8 ? ${glv(VORTEX_REAL.blueLit)} : ${glv(VORTEX_REAL.tealLit)});
@@ -885,6 +895,7 @@ const makeVortexMat = () =>
       uShineCol: { value: v3("#FFFBF2") },
       uShineGlow: { value: v3("#FFC629") },
       uLook: { value: 0 },
+      uRealLight: { value: 0 },
       uInner: { value: 0 },
     },
   });
@@ -927,6 +938,9 @@ export type VortexProps = {
   look?: VortexLook;
   /** ADDED (fill parts): "inner" = the amber fills only the core and middle helices; "all" = the default, unchanged */
   fillParts?: VortexFillParts;
+  /** ADDED (cut 19) with look "real": the field's lighter crown (no deep navy, ~55 % of the middle helices cyan, the
+   *  rest mid blue / teal), so small eddies read cyan-first like the hero (default false = unchanged) */
+  realLight?: boolean;
 };
 /** the axis point at height fraction h (the lean is a gentle curve: offset x h^2) */
 export const vortexAxis = (v: VortexSpec, h: number): V3 => {
@@ -943,7 +957,7 @@ export const vortexReach = (v: VortexSpec, h: number, detail: VortexDetail = "hi
 /** the vortex's default turn at story frame S (deg) */
 export const vortexSpin = (seed: number, S: number, rate = 1) => S * VORTEX_SPIN * rate + character(seed).phase;
 
-export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, detail = "hi", seed = 1, dim = 0, occlude = true, tube = 1, rate = 1, lift = 0, haze = 0, glow = 0, shine, look = "cream", fillParts = "all" }) => {
+export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, detail = "hi", seed = 1, dim = 0, occlude = true, tube = 1, rate = 1, lift = 0, haze = 0, glow = 0, shine, look = "cream", fillParts = "all", realLight = false }) => {
   const { cam, S, air, deck } = useV();
   const o = useMemo(() => {
     const g = vortexGeo(seed, detail);
@@ -966,6 +980,7 @@ export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, deta
   u.uHaze.value = c01(haze);
   u.uGlow.value = c01(glow);
   u.uLook.value = look === "real" ? 1 : 0;
+  u.uRealLight.value = realLight ? 1 : 0;
   u.uInner.value = fillParts === "inner" ? 1 : 0;
   u.uShine.value = shine === undefined ? -1 : Math.max(-0.4, shine);
   u.uOcc.value = occlude && deck ? 1 : 0;

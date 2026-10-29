@@ -27,6 +27,10 @@
 // one's 84 %) over 12 f, starting 6 f before its body is in shot (its arms lead). The end (f98-f109): two near ones
 // (~30-33 % of the frame) stand whole in the lower half, lower-left and right of centre; settled, living: spin, deck
 // drift, a slow creep.
+// REAL LOOK (Rev 1): every vortex wears vortexSky's real colours (CUT10_LOOK: burnt-orange core, blue middle helices,
+// cyan outer arms, after OpenAI's picture), like cut 10. The big one fills only its core and middle (CUT10_FILL_PARTS,
+// as cut 10); the field fills all its tubes at the base, so the amber across the deck stays the payoff (glow 1) while
+// the blue/cyan crowns keep it recognisable; far crowns fog warmly into the horizon (haze up to 0.9), lift 0.25.
 // AMBER = compute money spent on the math (the clip's decision); cream = the math / the proofs (the flows).
 // Cause -> effect: a small vortex's amber starts as it comes into shot (fieldFill), never while it is unseen at f0.
 //
@@ -37,7 +41,7 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { type SideCam } from "../scott-aircraft-order/aircraftShared";
 import { z } from "zod";
-import { CUT10_END, CostRing, CostTick, NS_TICK, NS_VORTEX, Vortex, VortexStage, cut10Cam, vortexSpin } from "./vortexSky";
+import { CUT10_END, CUT10_FILL_PARTS, CUT10_LOOK, CostRing, CostTick, NS_TICK, NS_VORTEX, Vortex, VortexStage, cut10Cam, vortexSpin } from "./vortexSky";
 import { DUR19, FIELD, cam19, fieldFill, fieldVisible } from "./hundredsPlan";
 
 export const FPS = 24000 / 1001;
@@ -50,14 +54,19 @@ const REST = cut10Cam(0);
 /** AERIAL PERSPECTIVE, per vortex (vortexSky's `haze`): a far one's cream tubes sink toward the haze with its ground
  *  distance from the camera, its amber keeps most of its glow, so the far field reads as amber points to the horizon.
  *  `LIFT` lifts the unfilled cream above the deck's shadows. Neither touches the big one (f0 is cut 10's f109). */
-export const LIFT = 0.5;
+export const LIFT = 0.25;
 /** the field's amber at the big one's brightness (vortexSky `glow`) */
 export const GLOW = 1;
-export const HAZE = { near: 12000, far: 36000, max: 0.78 } as const;
+export const HAZE = { near: 12000, far: 30000, max: 0.9 } as const;
+export const MID_HAZE = { near: 8000, far: 20000, max: 0.22 } as const;
 const hazeAt = (v: { at: readonly number[] }, cam: SideCam) => {
   const d = Math.hypot(v.at[0] - cam.x, v.at[2] - cam.z);
-  const t = Math.max(0, Math.min(1, (d - HAZE.near) / (HAZE.far - HAZE.near)));
-  return HAZE.max * t * t * (3 - 2 * t);
+  const ss = (t: number) => {
+    const c = Math.max(0, Math.min(1, t));
+    return c * c * (3 - 2 * c);
+  };
+  // a light veil on the mid rows (MID_HAZE by 20 km), then the far ones sink into the horizon (HAZE.max by HAZE.far)
+  return MID_HAZE.max * ss((d - MID_HAZE.near) / (MID_HAZE.far - MID_HAZE.near)) + (HAZE.max - MID_HAZE.max) * ss((d - HAZE.near) / (HAZE.far - HAZE.near));
 };
 
 const HundredsOfMillionsOfMath: React.FC<z.infer<typeof schema>> = () => {
@@ -86,10 +95,12 @@ const HundredsOfMillionsOfMath: React.FC<z.infer<typeof schema>> = () => {
                 lift={LIFT}
                 haze={hazeAt(v, cam)}
                 glow={GLOW}
+                look={CUT10_LOOK}
+                realLight
               />
             ) : null,
           )}
-          <Vortex at={NS_VORTEX.at} height={NS_VORTEX.height} seed={NS_VORTEX.seed} fill={CUT10_END.fill} />
+          <Vortex at={NS_VORTEX.at} height={NS_VORTEX.height} seed={NS_VORTEX.seed} fill={CUT10_END.fill} look={CUT10_LOOK} fillParts={CUT10_FILL_PARTS} />
           <CostRing v={NS_VORTEX} h={NS_TICK.h} />
         </>
       }
