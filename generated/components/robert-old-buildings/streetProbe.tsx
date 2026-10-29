@@ -18,12 +18,18 @@ export const schema = z.object({
   glow: z.number(),
   sweepY: z.number(),
   sweepAmt: z.number(),
+  sweepCol: z.string().optional(),
+  sweepGlint: z.number().optional(),
+  rimLo: z.number().optional(),
+  rimHi: z.number().optional(),
+  rimMax: z.number().optional(),
+  rimWarm: z.number().optional(),
 });
 export const defaultProps = schema.parse({ x: 0, y: 47.2, z: -2.6, yaw: 180, pitch: 6, f: 1250, lamp: 1, glow: 0, sweepY: 0, sweepAmt: 0 });
 
 const StreetProbe: React.FC<z.infer<typeof schema>> = (p) => {
   const frame = useCurrentFrame();
   const cam = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, f: p.f };
-  return <StreetStage cam={cam} rest={cam} frame={frame + 40} lamp={p.lamp} glow={p.glow} bloom={p.glow > 0 ? 0.22 : 0} sweep={{ y: p.sweepY, amt: p.sweepAmt }} />;
+  return <StreetStage cam={cam} rest={cam} frame={frame + 40} lamp={p.lamp} glow={p.glow} bloom={p.glow > 0 ? 0.22 : 0} sweep={{ y: p.sweepY, amt: p.sweepAmt, col: p.sweepCol, glint: p.sweepGlint }} glowRim={{ lo: p.rimLo, hi: p.rimHi, max: p.rimMax, warm: p.rimWarm }} />;
 };
 export default StreetProbe;

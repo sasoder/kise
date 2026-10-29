@@ -164,6 +164,10 @@ export const ACROSS = (() => {
   };
 })();
 
+/** the main cornice's corona: how far it projects from the across facade (m), and the consoles under it */
+const CORONA_PROJ = 2.15;
+const CONSOLE_PROJ = 1.3;
+
 // ===================================================================================================================
 // CAMERA
 // ===================================================================================================================
@@ -218,7 +222,7 @@ export const COL = {
   across: "#C4B9A3",
   acrossDk: "#AFA48E",
   carve: "#D6CBB3",
-  slate: "#55595A",
+  slate: "#1E2430",
   asphalt: "#5B5246",
   walk: "#857659",
   kerb: "#8E8473",
@@ -374,6 +378,10 @@ uniform vec3 uLampPos;
 uniform vec3 uLampCol;
 uniform float uTime;
 uniform vec3 uSweep;   // a soft band of cream light on the building across: centre y, half-width, amount
+uniform vec3 uSweepCol;   // the band's tint (default: the medium's cream)
+uniform float uSweepGlint; // the pane glint's strength (default 1)
+uniform vec4 uGlowRim;    // the rim's smoothstep edges (lo, hi), its alpha clamp, the lit-face warmth multiplier
+uniform vec3 uCrownShade; // the corona's core shadow on the crown storey: on (0/1), soffit y, corona projection
 varying vec3 vCol;
 varying vec2 vUv;
 varying vec3 vN;
@@ -416,6 +424,13 @@ vec3 stone(vec3 base, vec2 p, float bw, float ch, float rust) {
   vec3 avg = base * mix(0.97, 0.9, rust);
   return mix(avg, detail, vis);
 }
+// the crown seen close (cut 32's landing): the height veil thins on it, so its slate and its shadows keep their depth
+// as in the photographs (only when the crown is drawn: uCrownShade.x; distant views keep the full veil)
+float crownFogK() {
+  if (uCrownShade.x < 0.5 || vW.z < 15.5) return 1.0;
+  float up = smoothstep(${(ACROSS.crown.y0 - 3.0).toFixed(2)}, ${(ACROSS.crown.y0 - 0.2).toFixed(2)}, vW.y);
+  return 1.0 - 0.4 * up * (1.0 - smoothstep(10.0, 40.0, length(vW - cameraPosition)));
+}
 vec3 lightIt(vec3 base, vec3 n, vec3 V, float rim) {
   float ndl = dot(n, uL);
   float lit = smoothstep(-0.45, 0.95, ndl);
@@ -441,6 +456,12 @@ void main() {
     float k = 0.12 + 0.26 * smoothstep(0.0, 1.0, vUv.y) + 0.06 * vAux.w;
     float fres = pow(1.0 - clamp(abs(dot(n, V)), 0.0, 1.0), 3.0);
     col = mix(base, refl, k + 0.3 * fres);
+    if (uSweep.z > 0.0 && vW.z > 16.0) {
+      // the panes of the building across catch the passing band: a cream glint, brightest on a diagonal streak
+      float ks = uSweep.z * exp(-pow((vW.y - uSweep.x) / max(uSweep.y, 0.01), 2.0));
+      float streak = 1.0 - smoothstep(0.0, 0.22, abs(vUv.x - 0.65 * vUv.y - 0.15));
+      col = mix(col, uSweepCol * 1.2, ks * uSweepGlint * (0.6 + 0.35 * streak));
+    }
     gl_FragColor = vec4(inAir(col, vW), 1.0);
     return;
   }
@@ -489,7 +510,19 @@ void main() {
     base = mix(base * (0.96 + 0.06 * h21(floor(vUv / 1.5))), base * 0.7, j * 0.6);
   }
   col = lightIt(base, n, V, rim);
-  if (uSweep.z > 0.0 && vW.z > 16.0) col = mix(col, uCream, uSweep.z * 0.42 * exp(-pow((vW.y - uSweep.x) / max(uSweep.y, 0.01), 2.0)));
+  if (uCrownShade.x > 0.5 && vW.z > 15.5 && vW.y < uCrownShade.y && vW.y > uCrownShade.y - 3.0) {
+    // the deep corona's core shadow on the crown storey (a stylised steep light, slope 1.6): the frieze and the wall
+    // under the soffit fall into a band of shade; the consoles' fronts, standing out, catch light lower down
+    float zl = ${ACROSS.z.toFixed(2)} - vW.z;
+    float zc = zl + (uCrownShade.y - vW.y) * 1.6;
+    float sh = 1.0 - smoothstep(uCrownShade.z - 0.35, uCrownShade.z + 0.1, zc);
+    col = mix(col, col * 0.55 + uShadow * 0.12, 0.8 * sh);
+  }
+  if (uSweep.z > 0.0 && vW.z > 16.0) {
+    // the band of cream light on the building across: the stone lifts clearly past its own cream (amt 1 = plainly lit)
+    float k = uSweep.z * exp(-pow((vW.y - uSweep.x) / max(uSweep.y, 0.01), 2.0));
+    col = mix(col, uSweepCol * 1.16, 0.7 * k) + uSweepCol * 0.12 * k;
+  }
   if (vAux.z > 0.001) {
     // THE ACCENT: hand-carved stonework (the clip's one orange). glow 0..1 = the carving touched by warm light, NOT
     // painted: the relief keeps its stone body colour (warmed only a little on its lit faces), and a warm orange RIM
@@ -502,19 +535,19 @@ void main() {
     // only where the carved surface CURVES away (its normal turning per metre): a flat side face seen edge-on stays
     // stone, so the orange is a thin line along the relief's rounded edges, never a painted plane
     float curv = length(fwidth(vN)) / max(length(fwidth(vW)), 1e-5);
-    float rimK = smoothstep(0.25, 0.85, fres) * smoothstep(0.3, 1.8, curv);
-    col *= mix(vec3(1.0), vec3(1.05, 0.99, 0.92), g * lit);
+    float rimK = smoothstep(0.1, 0.7, fres) * smoothstep(0.3, 1.8, curv);
+    col *= mix(vec3(1.0), vec3(1.05, 0.99, 0.92), g * lit * uGlowRim.w);
     // a deep, red-leaning orange (the grade lifts it toward amber; it must still read orange, not gold)
     // (a half-mixed orange over cream reads as tan or gold, so the rim is sharpened: where it is, it is nearly whole)
     vec3 rimC = mix(mix(uAccentDeep, vec3(0.93, 0.42, 0.04), 0.6), uAccent, 0.12 + 0.25 * lit);
-    float a = clamp(g * smoothstep(0.12, 0.55, rimK) * (0.85 + 0.25 * lit), 0.0, 0.95);
+    float a = clamp(g * smoothstep(uGlowRim.x, uGlowRim.y, rimK) * (0.85 + 0.25 * lit), 0.0, uGlowRim.z);
     col = mix(col, rimC, a);
     float d = length(vW - cameraPosition);
     // the rim takes half the fog (the one glowing material)
-    gl_FragColor = vec4(mix(col, airAt(d, vW.y), fogAmt(d, vW.y) * (1.0 - 0.5 * a)), 1.0);
+    gl_FragColor = vec4(mix(col, airAt(d, vW.y), crownFogK() * fogAmt(d, vW.y) * (1.0 - 0.5 * a)), 1.0);
     return;
   }
-  gl_FragColor = vec4(inAir(col, vW), 1.0);
+  gl_FragColor = vec4(inAirK(col, vW, crownFogK()), 1.0);
 }`;
 /** soft shadows laid on walls (uv 0..1, v = 0 at the casting edge): the medium's shadow colour, fading with the fog */
 const DECAL_FRAG = /* glsl */ `
@@ -640,6 +673,10 @@ const makeMats = (): Mats => {
       uLampCol: { value: v3(LAMP_COL) },
       uTime: { value: 0 },
       uSweep: { value: new THREE.Vector3(0, 1, 0) },
+      uSweepCol: { value: v3(PAL.cream) },
+      uSweepGlint: { value: 1 },
+      uGlowRim: { value: new THREE.Vector4(0.12, 0.55, 0.95, 1) },
+      uCrownShade: { value: new THREE.Vector3(0, ACROSS.crown.soffit, CORONA_PROJ) },
     },
   });
   const decal = new THREE.ShaderMaterial({
@@ -664,10 +701,19 @@ const makeMats = (): Mats => {
   const spill = new THREE.ShaderMaterial({
     vertexShader: SOLID_VERT,
     fragmentShader: SPILL_FRAG,
-    side: THREE.DoubleSide,
+    // front faces only (the facade quad faces +Z, the sill quad +Y): from inside his room the facade quad is culled,
+    // so it can no longer veil the view out and vanish as the eye crosses it. Colour adds exactly as
+    // AdditiveBlending did (src x srcAlpha + dst); alpha is left as it was, so it never lifts the sky behind.
+    side: THREE.FrontSide,
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    blending: THREE.CustomBlending,
+    blendEquation: THREE.AddEquation,
+    blendSrc: THREE.SrcAlphaFactor,
+    blendDst: THREE.OneFactor,
+    blendEquationAlpha: THREE.AddEquation,
+    blendSrcAlpha: THREE.ZeroFactor,
+    blendDstAlpha: THREE.OneFactor,
     uniforms: { ...airUniforms(), uLamp: { value: 0 }, uLampCol: { value: v3(LAMP_COL) } },
   });
   const curtain = new THREE.ShaderMaterial({
@@ -693,12 +739,12 @@ const decalSide = (D: GB, x0: number, w: number, y0: number, y1: number, z: numb
   D.quad([x0, y1, z], [x0, y0, z], [x0 + w, y0, z], [x0 + w, y1, z], [0, 0, 1], "#000000", [[0.5, 0], [0.5, 0], [0.5, 1], [0.5, 1]], [amt, 0.0001, 0, 0]);
 };
 
-type Built = { solid: Any; decal: Any; glass: Any; spill: Any; curtain: Any };
+type Built = { solid: Any; decal: Any; glass: Any; spill: Any; curtain: Any; inner: Any };
 let BUILT: Built | null = null;
 
 /** one window opening in a wall facing +Z at z = 0 (or the across building's -Z face via `flip`): reveals, sash,
  *  glass (or nothing when `open`, for his lit window), sill, lintel; and the shadows they cast */
-const windowAt = (S: GB, D: GB, o: { x: number; sill: number; w: number; h: number; reveal: number; stone: string; seed: number; open?: boolean; lintel?: "flat" | "none"; brick?: boolean }) => {
+const windowAt = (S: GB, D: GB, o: { x: number; sill: number; w: number; h: number; reveal: number; stone: string; seed: number; open?: boolean; inner?: GB; lintel?: "flat" | "none"; brick?: boolean }) => {
   const { x, sill, w, h, reveal } = o;
   const xl = x - w / 2;
   const xr = x + w / 2;
@@ -727,6 +773,16 @@ const windowAt = (S: GB, D: GB, o: { x: number; sill: number; w: number; h: numb
   S.box(xl, xl + fw, sill, head, zs - 0.05, zs, sash, aux(M.plain, 0.5), "nz");
   S.box(xr - fw, xr, sill, head, zs - 0.05, zs, sash, aux(M.plain, 0.5), "nz");
   S.box(xl + fw, xr - fw, mid - 0.035, mid + 0.035, zs - 0.04, zs + 0.005, sash, aux(M.plain, 0.6), "nz");
+  if (o.inner) {
+    // his open window is seen from INSIDE in cut 32: the sash boxes' back faces (and the outer sill's), which the
+    // street never sees, go in a separate mesh that StreetScene draws only while the eye is near or inside
+    const I = o.inner;
+    I.box(xl, xr, sill, sill + fw, zs - 0.05, zs, sash, aux(M.plain, 0.5), "pz px nx py ny");
+    I.box(xl, xr, head - fw, head, zs - 0.06, zs - 0.02, sash, aux(M.plain, 0.4), "pz px nx py ny");
+    I.box(xl, xl + fw, sill, head, zs - 0.05, zs, sash, aux(M.plain, 0.5), "pz px nx py ny");
+    I.box(xr - fw, xr, sill, head, zs - 0.05, zs, sash, aux(M.plain, 0.5), "pz px nx py ny");
+    I.box(xl + fw, xr - fw, mid - 0.035, mid + 0.035, zs - 0.04, zs + 0.005, sash, aux(M.plain, 0.6), "pz px nx py ny");
+  }
   // the jamb's and head's shadows across the sash and glass (light from the upper left)
   decalSide(D, xl + fw, 0.2, sill + fw, head - fw, zs + 0.012, 0.42);
   decalZ(D, xl + fw, xr - fw, head - fw, 0.34, zs + 0.012, 0.4, 0.05, 0.12);
@@ -775,7 +831,7 @@ const wallWithHoles = (S: GB, x0: number, x1: number, y0: number, y1: number, ho
   }
 };
 
-const buildHis = (S: GB, D: GB, G: GB, SP: GB, C: GB) => {
+const buildHis = (S: GB, D: GB, G: GB, SP: GB, C: GB, IN: GB) => {
   const { x0, x1, bays, winW, winH, sillUp, reveal } = HIS;
   const base = floorY(3);
   const topY = HIS.cornice;
@@ -796,7 +852,7 @@ const buildHis = (S: GB, D: GB, G: GB, SP: GB, C: GB) => {
   for (let fl = 3; fl <= 15; fl++) {
     for (let b = 0; b < bays; b++) {
       const his = fl === HIS_WINDOW.floor && b === HIS_WINDOW.bay;
-      windowAt(S, D, { x: HIS.bayX(b), sill: floorY(fl) + sillUp, w: winW, h: winH, reveal, stone: COL.hisStone, seed: fl * 31 + b * 7.3, open: his });
+      windowAt(S, D, { x: HIS.bayX(b), sill: floorY(fl) + sillUp, w: winW, h: winH, reveal, stone: COL.hisStone, seed: fl * 31 + b * 7.3, open: his, inner: his ? IN : undefined });
     }
   }
   // ---- quoins at both corners, floors 3..15 (alternating long and short blocks, a hair proud)
@@ -1210,12 +1266,29 @@ export const buildCrownGeo = () => {
   // ---- the giant consoles on every pier, from floor 15's sill line up to the corona
   const cTop = c.soffit;
   const cH = cTop - (f15 + sillUp - 0.05);
-  for (const px of piers) giantConsole(T, px, cTop, 0.5, cH, 0.95, carve, carveDk, K, triZY, [M.plain, 0.9, 0.45, 0]);
+  for (const px of piers) giantConsole(T, px, cTop, 0.56, cH, CONSOLE_PROJ, carve, carveDk, K, triZY, [M.plain, 0.9, 0.45, 0]);
   // ---- the main cornice: bed moulding with egg-and-dart between the consoles, the corona, a cymatium
   T.box(x0 - 0.05, x1 + 0.05, fr0 + 0.6, cTop, 0, 0.2, COL.carve, P(0.6), "nz");
   eggAndDart(T, x0, x1, fr0 + 0.75, 0.2, 0.12, carve, K);
-  T.box(x0 - 0.7, x1 + 0.7, cTop, cTop + 0.42, 0, 1.18, COL.carve, P(1.0), "");
-  T.box(x0 - 0.76, x1 + 0.76, cTop + 0.42, c.corniceTop, 0, 1.26, shadeHex(COL.carve, 1.03), P(1.0), "");
+  // the corona: a deep overhang (~0.85 m past the consoles' fronts) on a shadowed soffit, modillions under its lip;
+  // StreetStage throws its core shadow over the frieze (uCrownShade)
+  const soffitC = shadeHex(COL.carve, 0.38);
+  T.box(x0 - 0.9, x1 + 0.9, cTop, cTop + 0.44, 0, CORONA_PROJ, COL.carve, P(1.0), "", soffitC);
+  T.box(x0 - 0.96, x1 + 0.96, cTop + 0.44, c.corniceTop, 0, CORONA_PROJ + 0.08, shadeHex(COL.carve, 1.03), P(1.0), "");
+  // scrolled modillions: a thick root at the dentil line tapering on an S to a short tip under the corona's lip
+  const mzb = CONSOLE_PROJ - 0.1;
+  const mzt = CORONA_PROJ - 0.12;
+  const crownMod: [number, number][] = [[mzt, cTop], [mzt, cTop - 0.11]];
+  for (let i = 1; i <= 10; i++) {
+    const t = i / 10;
+    crownMod.push([mzt - (mzt - mzb) * t, cTop - 0.11 - 0.2 * t * t + 0.035 * Math.sin(Math.PI * 2 * t) * (1 - t)]);
+  }
+  crownMod.push([mzb, cTop]);
+  for (let x = x0 - 0.6; x < x1 + 0.6; x += 0.46) {
+    if (piers.some((q) => Math.abs(q - x) < 0.45)) continue;
+    extrudeZY(T, [...crownMod].reverse(), x - 0.075, x + 0.075, rgb01(shadeHex(COL.carve, 0.8)), P(0.7), 0.6, triZY);
+  }
+  T.box(x0 - 0.9, x1 + 0.9, cTop - 0.1, cTop, CONSOLE_PROJ - 0.15, CONSOLE_PROJ - 0.02, COL.carve, P(0.6), "", soffitC);
   decalZ(TD, x0, x1, fr0 + 0.6, 1.4, 0.21, 0.45, 0.02, -0.5);
   // the gutter and the mansard's foot
   T.box(x0 - 0.1, x1 + 0.1, c.corniceTop, c.atticY0, -0.2, 0.3, COL.across, P(0.8), "");
@@ -1230,7 +1303,7 @@ export const buildCrownGeo = () => {
   }
   prof.push([-4.5, my1]);
   prof.push([-4.5, my0]);
-  extrudeZY(T, prof, x0 - 0.05, x1 + 0.05, rgb01(COL.slate), aux(M.slate, 0.35), 0.5, triZY);
+  extrudeZY(T, prof, x0 - 0.05, x1 + 0.05, rgb01(COL.slate), aux(M.slate, 0.08), 0.5, triZY);
   // the dormers: big ones under segmental hoods on the even bays, small plain ones between
   for (let b = 0; b < bays; b++) {
     const big = b % 2 === 0;
@@ -1257,9 +1330,9 @@ export const buildCrownGeo = () => {
         const ang = Math.PI / 2 + (t - 0.5) * 1.6;
         return [x + R * Math.cos(ang) * 1.0, hy - R * Math.sin(1.6 / 2) * 0 + R * (Math.sin(ang) - Math.cos(0.8)) * 0.55, rr];
       };
-      tube(D2, (t) => arc(t, 0.14), () => 0.085, carve, P(0.9) as Aux, 24, 8);
-      tube(D2, (t) => { const p = arc(t, 0.2); return [p[0], p[1] + 0.12, p[2]]; }, () => 0.07, carve, P(1.0) as Aux, 24, 8);
-      D2.box(x - 0.14, x + 0.14, hy - 0.12, hy + 0.32, 0, 0.18, COL.carve, P(0.8), "nz");
+      tube(D2, (t) => arc(t, 0.14), () => 0.085, carve, K, 24, 8);
+      tube(D2, (t) => { const p = arc(t, 0.2); return [p[0], p[1] + 0.12, p[2]]; }, () => 0.07, carve, K, 24, 8);
+      D2.box(x - 0.14, x + 0.14, hy - 0.12, hy + 0.32, 0, 0.18, COL.carve, [M.plain, 0.8, 0.6, 0], "nz");
       for (let i = 0; i < 5; i++) {
         const ang = Math.PI * (0.15 + (0.7 * i) / 4);
         tube(D2, (t) => [x + Math.cos(ang) * 0.22 * t, hy + 0.32 + Math.sin(ang) * 0.24 * t, 0.17], (t) => 0.035 + 0.02 * Math.sin(Math.PI * t), carve, K, 6, 5);
@@ -1302,10 +1375,11 @@ const built = (): Built => {
   const G = new GB();
   const SP = new GB();
   const C = new GB();
-  buildHis(S, D, G, SP, C);
+  const IN = new GB();
+  buildHis(S, D, G, SP, C, IN);
   buildStreet(S, D);
   buildAcross(S, D);
-  BUILT = { solid: S.geo(), decal: D.geo(), glass: G.geo(), spill: SP.geo(), curtain: C.geo() };
+  BUILT = { solid: S.geo(), decal: D.geo(), glass: G.geo(), spill: SP.geo(), curtain: C.geo(), inner: IN.geo() };
   return BUILT;
 };
 
@@ -1334,7 +1408,12 @@ const lightFor = (cam: StreetCam): V3 => {
   const n = Math.hypot(...l);
   return [l[0] / n, l[1] / n, l[2] / n];
 };
-export type Sweep = { y: number; w?: number; amt: number };
+/** the sweep: y centre (m), w half-width (m, default 2.5), amt 0..1 (clamped), col the band's tint (hex, default the
+ *  medium's cream), glint the pane glint's strength (default 1) */
+export type Sweep = { y: number; w?: number; amt: number; col?: string; glint?: number };
+/** the glow's rim: lo/hi its smoothstep edges (default 0.12 / 0.55), max its alpha clamp (default 0.95), warm a
+ *  multiplier on the lit faces' body warmth (default 1) */
+export type GlowRim = { lo?: number; hi?: number; max?: number; warm?: number };
 export type StreetStageProps = {
   cam: StreetCam;
   rest: StreetCam;
@@ -1345,6 +1424,8 @@ export type StreetStageProps = {
   curtain?: number;
   /** the crown's accent glow 0..1 */
   glow?: number;
+  /** the glow's rim shape (see GlowRim; every field defaults to today's look) */
+  glowRim?: GlowRim;
   /** a soft band of cream light passing over the building across (its storeys counted by eye): y centre (m), w
    *  half-width (m), amt 0..1 */
   sweep?: Sweep;
@@ -1359,7 +1440,7 @@ export type StreetStageProps = {
   /** hide parts (probes) */
   hide?: "crown"[];
 };
-const StreetScene: React.FC<{ cam: StreetCam; frame: number; lamp: number; curtain: number; glow: number; sweep?: Sweep; eyeT: number; air: AirScene; hide: string[] }> = ({ cam, frame, lamp, curtain, glow, sweep, eyeT, air, hide }) => {
+const StreetScene: React.FC<{ cam: StreetCam; frame: number; lamp: number; curtain: number; glow: number; glowRim?: GlowRim; sweep?: Sweep; eyeT: number; air: AirScene; hide: string[] }> = ({ cam, frame, lamp, curtain, glow, glowRim, sweep, eyeT, air, hide }) => {
   const mats = useMemo(makeMats, []);
   const B = built();
   const CR = buildCrownGeo();
@@ -1373,11 +1454,17 @@ const StreetScene: React.FC<{ cam: StreetCam; frame: number; lamp: number; curta
     if (m.uniforms.uTime) m.uniforms.uTime.value = frame;
   }
   mats.solid.uniforms.uGlow.value = glow;
-  mats.solid.uniforms.uSweep.value.set(sweep?.y ?? 0, sweep?.w ?? 2.5, sweep?.amt ?? 0);
+  mats.solid.uniforms.uSweep.value.set(sweep?.y ?? 0, sweep?.w ?? 2.5, Math.min(1, Math.max(0, sweep?.amt ?? 0)));
+  mats.solid.uniforms.uSweepCol.value.copy(v3(sweep?.col ?? PAL.cream));
+  mats.solid.uniforms.uSweepGlint.value = sweep?.glint ?? 1;
+  mats.solid.uniforms.uGlowRim.value.set(glowRim?.lo ?? 0.12, glowRim?.hi ?? 0.55, glowRim?.max ?? 0.95, glowRim?.warm ?? 1);
+  mats.solid.uniforms.uCrownShade.value.x = hide.includes("crown") ? 0 : 1;
   mats.curtain.uniforms.uStir.value = curtain;
   return (
     <>
       <mesh geometry={B.solid} material={mats.solid} />
+      {/* his window's inside closures: only near or inside it (they are hidden from the street; cut 26 never draws them) */}
+      {cam.z < 1.0 ? <mesh geometry={B.inner} material={mats.solid} /> : null}
       {hide.includes("crown") ? null : <mesh geometry={CR.solid} material={mats.solid} />}
       <mesh geometry={B.curtain} material={mats.curtain} />
       <mesh geometry={B.decal} material={mats.decal} renderOrder={2} />
@@ -1393,7 +1480,7 @@ export const streetAirView = (cam: StreetCam, rest: StreetCam, frame: number, ai
   const toV = (c: StreetCam) => ({ x: dot([c.x, 0, c.z], B0.right), y: c.y, z: dot([c.x, 0, c.z], B0.fwd) });
   return makeAirView({ scene, frame, horizon: horizonRow(cam), cam: toV(cam), rest: toV(rest) });
 };
-export const StreetStage: React.FC<StreetStageProps> = ({ cam, rest, frame, lamp = 0, curtain = 1, glow = 0, sweep, extra, air, shafts = 1, motes = 1, bloom = 0, overlay, front, hide = [] }) => {
+export const StreetStage: React.FC<StreetStageProps> = ({ cam, rest, frame, lamp = 0, curtain = 1, glow = 0, glowRim, sweep, extra, air, shafts = 1, motes = 1, bloom = 0, overlay, front, hide = [] }) => {
   const v = streetAirView(cam, rest, frame, air);
   // the glowing carving's soft halo: the kit's orange-only bloom, raised with glow (a cut's own bloom wins if higher)
   const bl = Math.max(bloom, 0.45 * glow);
@@ -1401,7 +1488,7 @@ export const StreetStage: React.FC<StreetStageProps> = ({ cam, rest, frame, lamp
     <AirStage v={v} shafts={shafts} motes={motes} bloom={bl} overlay={overlay} front={front}>
       <ThreeCanvas width={W} height={H} flat linear style={{ position: "absolute", left: 0, top: 0 }} gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}>
         <CameraRig cam={cam} />
-        <StreetScene cam={cam} frame={frame} lamp={lamp} curtain={curtain} glow={glow} sweep={sweep} eyeT={v.eyeT} air={v.scene} hide={hide} />
+        <StreetScene cam={cam} frame={frame} lamp={lamp} curtain={curtain} glow={glow} glowRim={glowRim} sweep={sweep} eyeT={v.eyeT} air={v.scene} hide={hide} />
         {extra}
       </ThreeCanvas>
     </AirStage>
@@ -1418,6 +1505,7 @@ export const CarvedCrown: React.FC<{ cam: StreetCam; glow?: number; eyeT?: numbe
     m.uniforms.uFog.value.set(STREET_AIR.fogNear, STREET_AIR.fogVis, STREET_AIR.fogMax, eyeT);
   }
   mats.solid.uniforms.uGlow.value = glow;
+  mats.solid.uniforms.uCrownShade.value.x = 1;
   return (
     <>
       <mesh geometry={CR.solid} material={mats.solid} />

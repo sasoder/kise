@@ -339,12 +339,12 @@ export const giantConsole = (S: Sink, x: number, y: number, wd: number, ht: numb
   extrudeZY(S, pts.reverse(), x - wd / 2, x + wd / 2, col, body, 0.7, tri);
   // the head: big volutes on both sides, a shield cushion with a rolled rim and a shell on the front
   for (const sx of [x - wd / 2 - 0.01, x + wd / 2 + 0.01]) {
-    volute(S, [sx, y - ht * 0.13, proj * 0.66], ht * 0.11, 1.5, ht * 0.022, 1, col, a, "zy", Math.PI * 0.5);
-    volute(S, [sx, y - ht * 0.86, proj * 0.36], ht * 0.07, 1.4, ht * 0.018, -1, col, a, "zy", -Math.PI * 0.5);
+    volute(S, [sx, y - ht * 0.15, proj * 0.64], ht * 0.15, 1.6, ht * 0.034, 1, col, a, "zy", Math.PI * 0.5);
+    volute(S, [sx, y - ht * 0.86, proj * 0.36], ht * 0.08, 1.4, ht * 0.022, -1, col, a, "zy", -Math.PI * 0.5);
   }
   const zh = zf(0.17) + 0.02;
-  ellipsoid(S, [x, y - ht * 0.17, zh], [wd * 0.36, ht * 0.11, wd * 0.14], col, a, 14, true);
-  tube(S, (t) => [x + wd * 0.38 * Math.cos(t * Math.PI * 2), y - ht * 0.17 + ht * 0.115 * Math.sin(t * Math.PI * 2), zh + wd * 0.02], () => wd * 0.045, col, a, 30, 6);
+  ellipsoid(S, [x, y - ht * 0.17, zh], [wd * 0.42, ht * 0.125, wd * 0.2], col, a, 14, true);
+  tube(S, (t) => [x + wd * 0.44 * Math.cos(t * Math.PI * 2), y - ht * 0.17 + ht * 0.13 * Math.sin(t * Math.PI * 2), zh + wd * 0.04], () => wd * 0.065, col, a, 30, 6);
   for (let i = 0; i < 5; i++) {
     const ang = Math.PI * (0.2 + (0.6 * i) / 4);
     tube(S, (t) => [x + Math.cos(ang) * wd * 0.3 * t, y - ht * 0.06 + Math.sin(ang) * ht * 0.05 * t, zf(0.05) + 0.02], (t) => wd * (0.035 + 0.02 * Math.sin(Math.PI * t)), col, a, 6, 5);
