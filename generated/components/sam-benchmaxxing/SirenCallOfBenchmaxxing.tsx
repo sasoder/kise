@@ -21,7 +21,10 @@
 // OpenAI's tile low in frame. OpenAI's column never moves. On "I believe we are better at that" (f52-70) the OpenAI tile
 // goes chill: an easy lean back (+6 deg about a point just inside the cap's right corner, the reverse of cut 1's smug tip), a slow gentle
 // rock on that corner (period 40 f, ~5 px at the free edge: its bob, keeping contact with its cap) and a soft amber
-// underglow settling in under it. Living hold f66-75: sky drift, motes, grain, the rock, a slow camera creep.
+// underglow settling in under it. REV 2: once the others have risen, the camera pushes in onto OpenAI's low tile in one
+// eased move (f47-66), landing as it goes chill; living hold f66-75 close on it (tile ~440 px wide, face above y 1080),
+// its modest amber column below, the bases of the tall Gemini and Grok columns framing it at the sides: sky drift,
+// motes, grain, the rock, a slow creep in.
 // Cause before effect: each lab's tile rides its own column's glass top (its floor IS the cap) the whole way up; the
 // first wave reaches the column tops (~f24) as the first column starts to rise (f24): the call pulls them up.
 // The resting tiles sit clear of the caption bands: the four tall tiles rest with their feet above y 1080 (~y 740-1040),
@@ -55,6 +58,7 @@ import {
   OpenAITile,
   ROW,
   benchCam,
+  capY,
   rowX,
   type Look,
 } from "./benchShared";
@@ -118,8 +122,8 @@ export const rungsAt = (i: number, f: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// CAMERA: starts on LIFT_EVEN_LOOK (cut 1's lifted f20 look) exactly (the follower's f0 offset is removed), already creeping at f0, tilts up a
-// little with the rising columns (f26-55), then a slow living creep
+// CAMERA: starts on LIFT_EVEN_LOOK (cut 1's lifted f20 look) exactly (the follower's f0 offset is removed), already
+// creeping at f0, tilts up a little with the rising columns (f26-55); REV 2: then pushes in onto OpenAI's tile (PUSH)
 // ---------------------------------------------------------------------------
 const START = LIFT_EVEN_LOOK;
 const RAW_CAM = benchCam(
@@ -132,9 +136,30 @@ const RAW_CAM = benchCam(
   DURATION,
 );
 const RAW0 = RAW_CAM.at(0);
-export const camAt = (f: number): Look => {
+/** rev 1's camera (approved; unchanged up to the push) */
+const camV1 = (f: number): Look => {
   const c = RAW_CAM.at(f);
   return { x: c.x - RAW0.x + START.x, y: c.y - RAW0.y + START.y, k: (c.k / RAW0.k) * START.k };
+};
+/** REV 2 (user, 2026-10-29): once the others have risen, one eased push-in onto the low OpenAI tile (f47-66), landing
+ *  as it goes chill: the zoom eases in log space while the tile's centre (`anchor`, chart px; x a touch left for the
+ *  settle shift) travels in a straight line on screen to `at` (screen px), then a slow creep in about it to the cut.
+ *  End: the tile ~440 px wide, its face resting above y 1080 (y ~570-1070), its amber column below, the bases of the
+ *  tall Gemini and Grok columns framing it at the frame's sides. */
+export const PUSH = { f0: 47, f1: 66, k: 2.3, anchor: { x: 534, y: capY(EVEN_RUNGS[OPENAI_SLOT]) - ROW.tile / 2 }, at: { x: 540, y: 830 }, creep: 0.003 } as const;
+export const camAt = (f: number): Look => {
+  const v = camV1(f);
+  if (f <= PUSH.f0) return v;
+  const e = ss((f - PUSH.f0) / (PUSH.f1 - PUSH.f0));
+  const A = PUSH.anchor;
+  const kT = PUSH.k * (1 + PUSH.creep * Math.max(0, f - PUSH.f1));
+  const k = Math.exp(Math.log(v.k) + (Math.log(kT) - Math.log(v.k)) * e);
+  // the anchor's screen position under rev 1's camera, eased to its landing spot
+  const p1x = 540 + (A.x - v.x) * v.k;
+  const p1y = 960 + (A.y - v.y) * v.k;
+  const px = p1x + (PUSH.at.x - p1x) * e;
+  const py = p1y + (PUSH.at.y - p1y) * e;
+  return { x: A.x - (px - 540) / k, y: A.y - (py - 960) / k, k };
 };
 
 // ---------------------------------------------------------------------------
