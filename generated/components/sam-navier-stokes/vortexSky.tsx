@@ -674,6 +674,9 @@ uniform vec3 uCloudShade;
 uniform float uLift;      // ADDED (cut 19): lifts the cream toward lit cream (0 = unchanged)
 uniform float uHaze;      // ADDED (cut 19): extra aerial haze, mostly on the cream (0 = unchanged)
 uniform float uGlow;      // ADDED (cut 19): the amber band at the hero's brightness for a small, far body (0 = unchanged)
+uniform float uShine;     // ADDED (cut 10 rev 1): the shine band's centre, height fraction (< -0.5 = off, the default)
+uniform vec3 uShineCol;   // ADDED (cut 10 rev 1): the shine's hot white
+uniform vec3 uShineGlow;  // ADDED (cut 10 rev 1): the shine's hot amber glow (saturated, so the amber bloom takes it)
 varying vec3 vW;
 varying vec3 vN;
 varying float vH;
@@ -754,6 +757,21 @@ void main() {
     col = mix(col, am, amb);
     ambK = amb;
   }
+  // --- the shine (off by default): one band of light along the height. A hot amber glow, brighter than the lit amber
+  // (it blooms through the stage's amber bloom, and reads as a hot band on the cream crown too), and in its narrow core
+  // hot-white glints: specular on each tube's lit side, hottest on the edges facing the key light. Each tube's lead
+  // staggers it a touch, so it runs along the flow.
+  if (uShine > -0.5) {
+    float sd = abs(vH + 1.2 * vLead - uShine) / 0.085;
+    float band = 1.0 - smoothstep(0.0, 1.0, sd);
+    float core = 1.0 - smoothstep(0.0, 0.22, sd);
+    float key = smoothstep(-0.1, 0.8, ndl);
+    float spec = pow(max(dot(n, normalize(uL + V)), 0.0), 16.0);
+    float edge = fres * key;
+    col = mix(col, uShineGlow * mix(1.0, 1.3, key), band * (0.6 + 0.35 * key));
+    float hi = clamp(0.5 * key + 2.6 * spec + 2.0 * edge, 0.0, 1.6);
+    col += uShineCol * hi * (core + 0.35 * band * spec);
+  }
   // --- into the cloud: the foot dissolves into the deck's tone
   col = mix(col, mix(uCloudShade, uCloud, lit * 0.6 + 0.4), inCloud * 0.9);
   // --- dim (spent / context): toned toward the haze and board
@@ -806,6 +824,9 @@ const makeVortexMat = () =>
       uLift: { value: 0 },
       uHaze: { value: 0 },
       uGlow: { value: 0 },
+      uShine: { value: -1 },
+      uShineCol: { value: v3("#FFFBF2") },
+      uShineGlow: { value: v3("#FFC629") },
     },
   });
 
@@ -838,6 +859,10 @@ export type VortexProps = {
   /** ADDED (cut 19) 0..1: the amber band at the big one's brightness on a small, far body: band toward amberTop, lit side
    *  toward amberHot, shade side kept amber, and the distance fog / haze mostly off the amber (0 = unchanged) */
   glow?: number;
+  /** ADDED (cut 10 rev 1): the shine band's centre as a height fraction (about -0.15..1.15 crosses the whole vortex);
+   *  undefined = off (the default, output unchanged). Hot white #FFFBF2 core (sparkleShine's ShineSweep white) with
+   *  soft amber edges, a specular glint on every tube. */
+  shine?: number;
 };
 /** the axis point at height fraction h (the lean is a gentle curve: offset x h^2) */
 export const vortexAxis = (v: VortexSpec, h: number): V3 => {
@@ -854,7 +879,7 @@ export const vortexReach = (v: VortexSpec, h: number, detail: VortexDetail = "hi
 /** the vortex's default turn at story frame S (deg) */
 export const vortexSpin = (seed: number, S: number, rate = 1) => S * VORTEX_SPIN * rate + character(seed).phase;
 
-export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, detail = "hi", seed = 1, dim = 0, occlude = true, tube = 1, rate = 1, lift = 0, haze = 0, glow = 0 }) => {
+export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, detail = "hi", seed = 1, dim = 0, occlude = true, tube = 1, rate = 1, lift = 0, haze = 0, glow = 0, shine }) => {
   const { cam, S, air, deck } = useV();
   const o = useMemo(() => {
     const g = vortexGeo(seed, detail);
@@ -876,6 +901,7 @@ export const Vortex: React.FC<VortexProps> = ({ at, height, fill = 0, spin, deta
   u.uLift.value = c01(lift);
   u.uHaze.value = c01(haze);
   u.uGlow.value = c01(glow);
+  u.uShine.value = shine === undefined ? -1 : Math.max(-0.4, shine);
   u.uOcc.value = occlude && deck ? 1 : 0;
   u.uDeckBase.value = deck ? deck.base : 0;
   u.uDeckTop.value = deck ? deck.top : -1e6;
@@ -1080,14 +1106,30 @@ const CUT10_TRACK = airTrack(
 );
 /** cut 10's camera at its frame f (fractional fine; -20 <= f <= 140) */
 export const cut10Cam = (f: number): SideCam => airCamAt(CUT10_TRACK, f + PRE) as SideCam;
-/** the front's level in cut 10: climbs from the base on "cost" (f13), to the tick by ~f76, nudges past on "a little
- *  more" (f96 -> f104) */
-export const cut10Fill = (f: number) => {
-  // a near-linear climb with an eased start and a long deceleration into the tick level
+// v1's fill (held under the tick, nudged past on "a little more"): kept only because its f109 value is CUT10_END.fill,
+// which cut 19 opens on, and that number must not move by a bit
+const cut10FillV1 = (f: number) => {
   const c = 1 - Math.pow(1 - Math.pow(c01((f - 12) / 66), 1.1), 1.6);
   const toTick = lerp(0.07, NS_TICK.h - 0.012, c);
   const nudge = 0.07 * easeOutCubic(c01((f - 95) / 10));
   return f < 12 ? 0 : toTick + nudge;
+};
+const CUT10_FILL_END = cut10FillV1(109);
+/** the front's level in cut 10 (rev 1): climbs from the base on "cost" (f13) straight to its final level just past the
+ *  tick, settled by f80 (exactly CUT10_END.fill from f80 on); "a little more" is the shine now, not a nudge */
+export const cut10Fill = (f: number) => {
+  if (f < 12) return 0;
+  if (f >= 80) return CUT10_FILL_END;
+  // a near-linear climb with an eased start and a long deceleration into the final level
+  const c = 1 - Math.pow(1 - Math.pow(c01((f - 12) / 68), 1.1), 1.6);
+  return lerp(0.07, CUT10_FILL_END, c);
+};
+/** the shine's band (rev 1) on "Maybe a little more": one pass deck line -> crown, f96 -> f106, crossing the tick (0.78) on
+ *  "more" (f103); undefined (off) outside it, so f107-f109 are the settled end */
+export const cut10Shine = (f: number) => {
+  if (f < 96 || f > 106) return undefined;
+  // from the deck line (half the band still in the cloud on f96) to the tick on f103, then a touch quicker off the crown
+  return f <= 103 ? lerp(0.04, NS_TICK.h, (f - 96) / 7) : NS_TICK.h + 0.12 * (f - 103);
 };
 /** the ~$10M tick's entrance (f21 -> f31: landed on "million", f31) and the NAVIER-STOKES line's (f39 -> f50: landed on "Navier") */
 export const CUT10_TICK_ENTER = (f: number) => c01((f - 21) / 10);
@@ -1095,4 +1137,4 @@ export const CUT10_SUB_ENTER = (f: number) => c01((f - 39) / 11);
 /** the level ring round the vortex at the tick's height: drawn out from the rule f21 -> f33 */
 export const CUT10_RING_DRAW = (f: number) => sstep(0, 1, (f - 21) / 12);
 /** cut 10's last frame (f109): cut 19 opens on exactly this (S continues: cut 19's S = CUT10_END.S + its frame) */
-export const CUT10_END = { f: 109, S: 109, cam: cut10Cam(109), fill: cut10Fill(109) } as const;
+export const CUT10_END = { f: 109, S: 109, cam: cut10Cam(109), fill: CUT10_FILL_END } as const;

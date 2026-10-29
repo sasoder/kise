@@ -17,9 +17,11 @@
 // front leaves the deck and climbs the tubes (cause: the money running up the streamlines) while the camera rises and
 // eases back until the whole vortex is in shot (~f32), then creeps in. On "million" the ~$10M tick slides in (landed
 // f31): a rule touching the vortex at 78 % of its height, and a thin cream level ring drawn round the vortex from it
-// (f21 -> f33); NAVIER–STOKES lands under the rule on "Navier" (f50). The front reaches the ring ~f76 with a cream
-// crown above, holds, and on "a little more" (f95 -> f105) crosses it by ~7 % of the height and settles; f105-f109 the
-// flow keeps turning, the camera creeping.
+// (f21 -> f33); NAVIER–STOKES lands under the rule on "Navier" (f50). The front climbs straight on past the ring and
+// settles just above it by f80 (its final level, a cream crown above). REV 1 (user: "that kind of light flare effect
+// that goes through the entire thing ... like it glistens"): on "Maybe a little more" (f96 -> f106) one shine sweeps the
+// whole vortex base to crown, every tube catching a hot-white glint with soft amber edges, crossing the tick on "more"
+// (f103); f107-f109 settled, the flow turning, the camera creeping (f109 = cut 19's f0, byte-identical).
 // AMBER = compute money spent on the math; cream = the math / the proof (the flow).
 //
 // SOURCES: "~$10M" is Sam Altman's own on-show estimate ("order 10 million for like Navier-Stokes"), so on screen with
@@ -30,12 +32,94 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { CUT10_RING_DRAW, CUT10_SUB_ENTER, CUT10_TICK_ENTER, CostRing, CostTick, NS_TICK, NS_VORTEX, Vortex, VortexStage, cut10Cam, cut10Fill } from "./vortexSky";
+import { airProject } from "../scott-aircraft-order/aircraftShared";
+import { Glint, glintLife } from "../sam-benchmaxxing/sparkleShine";
+import {
+  CUT10_RING_DRAW,
+  CUT10_SUB_ENTER,
+  CUT10_TICK_ENTER,
+  CostRing,
+  CostTick,
+  NS_TICK,
+  NS_VORTEX,
+  Vortex,
+  VortexStage,
+  cut10Cam,
+  cut10Fill,
+  cut10Shine,
+  vortexAxis,
+  vortexReach,
+} from "./vortexSky";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 110;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
+
+// rev 1: six tiny four-point glints ride the shine (sparkleShine's Glint), staggered across the width on the near
+// face, each born where the band will be at its peak (~4-5 f lives); the last is gone by f106. k = across the width
+// (-1 left .. 1 right, as a share of the reach); ring = on the level ring's edge instead of the near face.
+const GLINTS = [
+  { at: 97.0, life: 5, k: -0.35, r: 22, rot: 6, tone: "cream" as const },
+  { at: 98.4, life: 5, k: 0.45, r: 26, rot: -8, tone: "cream" as const },
+  { at: 99.6, life: 5, k: -0.62, r: 30, rot: 10, tone: "cream" as const },
+  { at: 100.8, life: 4.5, k: 0.22, r: 24, rot: -4, tone: "cream" as const },
+  {
+    at: 101.6,
+    life: 4.4,
+    k: -1,
+    r: 26,
+    rot: 4,
+    tone: "hot" as const,
+    ring: true,
+  },
+  { at: 102.4, life: 3.6, k: 0.38, r: 20, rot: -10, tone: "hot" as const },
+];
+const glintAt = (g: (typeof GLINTS)[number]) => {
+  const h = g.ring ? NS_TICK.h : (cut10Shine(g.at + 0.38 * g.life) ?? 0.5);
+  const ax = vortexAxis(NS_VORTEX, h);
+  const R = vortexReach(NS_VORTEX, h);
+  if (g.ring) return [ax[0] + g.k * R, ax[1], ax[2]] as const;
+  // on the near face (the camera looks along +Z)
+  return [
+    ax[0] + g.k * 0.55 * R,
+    ax[1],
+    ax[2] - Math.sqrt(1 - g.k * g.k) * 0.55 * R,
+  ] as const;
+};
+const ShineGlints: React.FC<{ f: number }> = ({ f }) => {
+  // nothing at all outside the glints' lives (f109 stays cut 19's f0, byte for byte)
+  if (GLINTS.every((g) => glintLife(f, g.at, g.life) <= 0)) return null;
+  const cam = cut10Cam(f);
+  return (
+    <svg
+      width={1080}
+      height={1920}
+      viewBox="0 0 1080 1920"
+      style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
+    >
+      {GLINTS.map((g, i) => {
+        const life01 = glintLife(f, g.at, g.life);
+        if (life01 <= 0) return null;
+        const w = glintAt(g);
+        const p = airProject(cam, [w[0], w[1], w[2]]);
+        return (
+          <Glint
+            key={i}
+            x={p.x}
+            y={p.y}
+            r={g.r}
+            life01={life01}
+            t01={(f - g.at) / g.life}
+            rot={g.rot}
+            tone={g.tone}
+            cross={g.r >= 26}
+          />
+        );
+      })}
+    </svg>
+  );
+};
 
 const TenMillionForOneProof: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
@@ -48,22 +132,31 @@ const TenMillionForOneProof: React.FC<z.infer<typeof schema>> = () => {
       rest={cut10Cam(0)}
       world={
         <>
-          <Vortex at={NS_VORTEX.at} height={NS_VORTEX.height} seed={NS_VORTEX.seed} fill={cut10Fill(f)} />
+          <Vortex
+            at={NS_VORTEX.at}
+            height={NS_VORTEX.height}
+            seed={NS_VORTEX.seed}
+            fill={cut10Fill(f)}
+            shine={cut10Shine(f)}
+          />
           <CostRing v={NS_VORTEX} h={NS_TICK.h} draw={CUT10_RING_DRAW(f)} />
         </>
       }
       overlay={
-        <CostTick
-          at={NS_TICK.at}
-          length={NS_TICK.length}
-          text={NS_TICK.text}
-          size={NS_TICK.size}
-          sub={NS_TICK.sub}
-          subSize={NS_TICK.subSize}
-          inset={NS_TICK.inset}
-          enter={CUT10_TICK_ENTER(f)}
-          subEnter={CUT10_SUB_ENTER(f)}
-        />
+        <>
+          <CostTick
+            at={NS_TICK.at}
+            length={NS_TICK.length}
+            text={NS_TICK.text}
+            size={NS_TICK.size}
+            sub={NS_TICK.sub}
+            subSize={NS_TICK.subSize}
+            inset={NS_TICK.inset}
+            enter={CUT10_TICK_ENTER(f)}
+            subEnter={CUT10_SUB_ENTER(f)}
+          />
+          <ShineGlints f={f} />
+        </>
       }
     />
   );
