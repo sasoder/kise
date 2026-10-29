@@ -1,7 +1,8 @@
 // ---------------------------------------------------------------------------
-// HundredthOfTheCost (sam-navier-stokes, cut 1), Rev 2. Cheeky Pint style (stout) (styles/cheeky-pint.md), with the
-// user's real vortex picture blended in as a 2.5D cut-out (the reality-plus-graphic idea of the Kelly Johnson clip,
-// in Cheeky Pint material). Opaque 1080x1920, 23.976 fps, 96 frames. Palette B1 (the stoutShared default).
+// HundredthOfTheCost (sam-navier-stokes, cut 1), Rev 3. Cheeky Pint style (stout) (styles/cheeky-pint.md), in the
+// "air" look of the Scott clips: the clip's shared world vortexSky.tsx (wifiSky's cruise sky: the golden cumulus deck,
+// the warm haze, the sky deepening to espresso), so cuts 1, 10 and 19 are one world. Opaque 1080x1920, 23.976 fps,
+// 96 frames. RENDER WITH --gl=angle.
 //
 // CHECK LINE: "A year on, the same Navier–Stokes proof could be redone for a hundredth of what it first cost."
 //
@@ -10,309 +11,333 @@
 //   cost 56 · a 65 · year 72 · from 79 · when 82 · it 85 · was 86 · done 89 · (next line "So" 96).
 // DURATION: the slot 1.334667 -> 5.338667 s = 4.004 s x 23.976 = 96 frames (f0..f95).
 //
-// REV 2 (the user: "pretty boring ... the camera can be more dynamic ... stacks of money to show the cost ... start
-// with the navier stokes thing in the middle and then it pans to the right"): the same newsprint page, vortex
-// cut-out, masthead (headline left, dateline right) and a new staging, cost object and camera. Rev 2b (the director's
-// review of 2a): a real pinhole camera (hundredthCamera.ts), so the money stands tall and shows its tops and one side;
-// the money holds the frame through "1/100th of the cost"; the end is a deliberate two-shot.
+// REV 3 (the user on Rev 2b: "looks a lot better now, but I might have made a mistake when I told you to integrate the
+// picture ... it's still not very smooth and compelling ... it can ease in and ease out more ... the end is cut off
+// kind of ... ignore what I said about having to integrate the picture, but it would still be nice to have that kind of
+// shape with its right colors"): the newsprint page and the photo cut-out are dropped (their files are kept); the
+// hero is the clip's own 3D Navier–Stokes vortex (NS_VORTEX: the same object, seed and shape as cuts 10 and 19), with
+// no amber fill (the cost here is the cash); the cost is the cash the user liked, as giant 3D bundles in the same sky.
 //
-// THE MOTION: ONE continuous camera track (raised-cosine moves summed: slow at the ends, fastest mid-truck, never
-// still). f0: tight on the vortex photo (k 1.5, the vortex filling the width), the headline above it, already moving
-// right. "Stokes at" (f0-f30): the camera trucks RIGHT, lifts and lowers its angle (phi 64 -> ~48), and
-// reveals the cost standing on the paper beside the photo: 100 banknote bundles in a stepped mound of 2 columns x 5
-// rows (stacks of 14 / 12 / 10 / 8 / 6 from back to front), the bundles from hundredthMoney.tsx (cream-sage notes,
-// ONE amber bank strap each), ~85% of the frame width at f37. "1/100th of the cost" (f30-f56): a slow push and drift
-// on the money while a wave runs from the mound's front-right corner to its back-left; stack by stack the bundles
-// sink into the page (the top goes down, the seams with it) and tone from notes through dimmed notes into printed
-// outlines in the paper's dim ink (tone and height, never opacity); the back-left stack (nearest the photo) sinks
-// last and keeps ONE bundle standing, amber-strapped and lit, on "cost" (f56). f56-f70: the camera pulls back LEFT and
-// rises toward top-down until the dateline is whole (~f62); on "year" its last digit rolls 6 -> 7 on a feathered drum
-// (f63 -> f71). f72-95: the two-shot (the vortex left of centre, the lit bundle ~240 px wide right of it, the whole
-// imprint footprint, the masthead above), on a slow drift that never stops. The roll is derived from the camera's x
-// velocity, so it returns to zero.
-// Cause before effect: the wave front is the cause; a stack's first sinking frame is start_i = WAVE.f0 + perPitch x
-// its distance from the source, its last start_i + SINK (the one that stays: f56).
-// AMBER = money spent on compute for the math (the cost: the bank straps). The photo = the proof itself. Dim ink =
-// spent cost.
+// THE LAYOUT (Rev 3b/3c): the cash stands BESIDE the vortex at about the same depth, at sky scale, one giant object
+// family with it: the mound rises out of the deck tops just right of the vortex's foot (its rows span Z 0..3440, the
+// vortex stands at Z 2550), and the bundles are so big that the one left standing is ~280 px wide in the end shot.
+// THE MOTION (Rev 3c): ONE move in ONE direction, one ease-in and one ease-out, no return (aircraftShared airTrack,
+// smoothstep glides under its damped follower). Every key is monotone: the camera trucks right, rises (y 6300 -> 7100,
+// the heaps 1400-2500, the deck plane at 3700) and pans left (yaw 0 -> -8.2), an arc round onto the pair, while the
+// lens widens (the pull-back) and then, from ~f34, slowly closes again (the push in). f0: near rest (~7 px/f), the
+// vortex centred and big, the cash out of frame right. The speed is a single hump (peak ~51 px/f ~f17) easing out to
+// ~7-8 px/f by ~f40, where it lands on the two-shot: the vortex whole on the left, the mound whole on the right. The
+// 99 drain in that shot during the move's slow tail, which becomes a push in toward the pair (vortex + one bundle),
+// slowing ~7 -> 4 px/f to f95, never stopping. f95: the vortex whole and large (~55% of the frame height), the bundle
+// beside its foot (~280 px wide, between the caption bands), the date beside the crown.
+// THE CASH (hundredthCash.tsx, three.js in the world: the vortex's light, fog and cloud): 100 bundles (hundredthMoney's
+// cream-sage notes, ONE amber bank strap each) in a stepped mound of 2 columns x 5 rows: the column nearer the vortex
+// 12 / 10 / 9 / 7 / 5 and the far column 16 / 14 / 11 / 9 / 7 bundles from the back row to the front.
+// "1/100th of the cost" (f37 -> f56): a wave runs from the mound's front-right stack to its back-left; stack by stack
+// the bundles sink DOWN into the cloud, each stack whole (the deck's heaps swallow it by height and its cloud tone,
+// never opacity; once its top is under the highest heap beneath it, it is gone, so no stray corner lingers in a dip),
+// the last of the 99 gone by "cost" (f56). The stack nearest the vortex's foot (second row, near column) sinks to ONE
+// bundle, which settles on the cloud where nothing in front hides it from the end camera (f43 -> f56), its strap lit hot
+// amber with a warm glow from f47, landing on "cost".
+// THE DATE: a CostTick-style tick beside the vortex's crown, inside the final composition (cut 10's ~$10M tick family:
+// Söhne, cream, the soft brown shade and halo, a cream rule from the vortex's silhouette), so the camera never drags it
+// in from an edge: SEPT 2026 makes its own stout entrance (slide up + fade + blur, f47 -> f59), and on "a year" its
+// last digit rolls 6 -> 7 on a feathered drum (f62 -> f71, landed before "year" f72).
+// Cause before effect: the wave front is the cause; a stack's first sinking frame is start_i = WAVE.f0 + WAVE.span x
+// its share of the distance from the wave's source.
+// AMBER = the cost (the bank straps). The vortex = the proof itself, in the picture's colours (vortexSky's real look,
+// CUT10_LOOK), no fill.
 //
-// THE 3D: the page is the plane z = 0; the camera is a pinhole (F 2000) at elevation phi and azimuth psi. Every plane
-// parallel to the page (the paper and its type, the photo 40 px proud, each bundle's top note) is drawn with a CSS
-// matrix3d homography; the bundles' sides, straps and seams are projected point by point; painter's order by depth.
-// camCheck3 (the house numbers in screen space): max |dv| 2.38 px/f^2 (f10), max speed 52 px/f at f1 (the opening is a
-// fast mid-move, easing from f0; under 45 from f10), min speed 0.42 px/f.
-//
-// SOURCES: the vortex picture is OpenAI's own illustration of the Navier–Stokes blow-up (the original of the user's
-// reference; assets-src/sam-navier-stokes/openai_vortex_hires.png, 1300x1452, unlabelled), cut out by
-// assets-src/sam-navier-stokes/make_vortex_cutout.py -> vortexData.ts. The paper tile: make_paper_tile.py ->
-// paperData.ts. The dates: OpenAI published the Navier–Stokes result on Sept 8 2026 (COMMON.md facts); "a year from
-// when it was done" -> SEPT 2027. No dollar figures, numbers or arrows on screen besides the dateline.
+// SOURCES: the vortex is vortexSky's NS_VORTEX (redrawn after the user's reference assets-src/sam-navier-stokes/
+// user_vortex.png). The dates: OpenAI published the Navier–Stokes result on Sept 8 2026 (COMMON.md facts); "a year
+// from when it was done" -> SEPT 2027. No dollar figures, numbers or arrows on screen besides the date.
 // ---------------------------------------------------------------------------
 import React, { useId } from "react";
-import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { COLOR, FONT_LABEL, FONT_NUM, Label, StoutStage, TNUM_ADV, TRACK, clamp01, labelWidth, smoothstep } from "../kits/cheeky-pint/stoutShared";
-import { PhotoCutOut, StoutShadow, photoCutOutSil } from "../sam-pricing-tokens/pricingShared";
-import { VORTEX_AXIS_U, VORTEX_BOX, VORTEX_H, VORTEX_SRC, VORTEX_W } from "./vortexData";
-import { PAPER_SRC, PAPER_TILE } from "./paperData";
-import { BUNDLE, Stack, StackShadow, f3, type StackSpec, type StackState } from "./hundredthMoney";
-import { F, depthOf, makeTrack, planeCss, viewOf, type Move, type Shot, type View } from "./hundredthCamera";
+import { COLOR, FONT_LABEL, FONT_NUM, TNUM_ADV, TRACK, clamp01, easeOutCubic, labelWidth, smoothstep } from "../kits/cheeky-pint/stoutShared";
+import { airCamAt, airProject, airTrack, type SideCam, type V3 } from "../scott-aircraft-order/aircraftShared";
+import { CUT10_LOOK, NS_VORTEX, VORTEX_AIR, Vortex, VortexStage, deckTopAt, vortexAxis, vortexReach } from "./vortexSky";
+import { CashStack, type Bundle } from "./hundredthCash";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 96;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
-// --- the camera: a real pinhole camera (hundredthCamera.ts), ONE track of raised-cosine moves -------------------------------
-// f0: tight on the vortex from high above (phi 62), already trucking right. The truck lowers the camera (phi -> ~38),
-// swings it (psi) and pulls a little out as it lands on the money (~f30); a slow push holds the mound while 99 go
-// (f30-56); then it rises (phi ~52), comes back left and pulls out to the two-shot (f56-88); a slow drift to the end.
-const SHOT0: Shot = { tx: 540, ty: 749, tz: 0, k: 1.5, phi: 64, psi: 0, rho: 0 };
-const MOVES: Move[] = [
-  { c: -6, w: 26, tx: 660, ty: 170, tz: 110, k: 0.72, phi: -14, psi: -4 }, // the truck right, at speed at f0 ...
-  { c: 17, w: 26, tx: 640, ty: 170, tz: 150, k: 0.67, phi: -13, psi: -5 }, // ... and its long settle on the money (to ~f39)
-  { c: 46, w: 26, tx: 20, k: 1.05, psi: 2 }, // the slow push on the mound while 99 go
-  { c: 73, w: 20, tx: -405, ty: -80, tz: -260, k: 0.63, phi: 26, psi: 5 }, // up, back left and out to the two-shot (f53..f93)
-  { c: 110, w: 50, tx: -30, k: 0.97, phi: 2 }, // the drift under the end
-];
-const track = makeTrack(SHOT0, MOVES);
-const ROLL = 0.025; // degrees of roll per world px / frame of the target's x velocity: the camera banks into the truck
-export const shotAt = (f: number): Shot => {
-  const s = track(f);
-  return { ...s, rho: ROLL * (track(f + 0.5).tx - track(f - 0.5).tx) };
-};
+const f2 = (v: number) => (Math.round(v * 100) / 100).toString();
 
-// --- the page -------------------------------------------------------------------------------------------------------
-const PAGE = { x0: -900, y0: -3200, x1: 2900, y1: 2500 } as const;
-const PW = PAGE.x1 - PAGE.x0;
-const PH = PAGE.y1 - PAGE.y0;
-// the masthead over the spread: the headline flush left over the photo, the dateline flush right over the money
-const TEXT_L = 240;
-const TEXT_R = 1741;
-const RULE = { y: 236, thick: 3, thin: 1.25, gap: 5 } as const; // the double masthead rule
-const DATE = { base: 340, px: 92, right: TEXT_R } as const; // dateline baseline, size (world px)
-const HEAD = { base: 340, px: 88, left: TEXT_L } as const; // the headline
+// ===================================================================================================================
+// THE CAMERA: one long eased move (aircraftShared's damped follower over long smoothstep glides)
+// ===================================================================================================================
+const AX = NS_VORTEX.at;
+/** f0: the vortex centred and big, the cash (all but a corner) out of frame right */
+const CAM0: SideCam = { mode: "side", x: AX[0] - 60, y: 6300, z: -6200, f: 2600, horizon: 960, pitch: 4.2, yaw: 0 };
+/** where the move's truck, rise and pan land (~f46): the vortex whole on the left, the mound whole on the right */
+const CAM_PAIR = { x: 76, y: 7100, horizon: 675, pitch: 9, yaw: -8.22 } as const;
+/** the lens: wide for the two-shot (~f38), then a slow push in toward the pair (the vortex and the one bundle) */
+const LENS = { wide: 946, push: 1800 } as const;
+const PRE = 40;
+const at = (f: number) => PRE + f;
+const TRACK_ = airTrack(
+  CAM0,
+  [
+    // ONE move. The camera trucks right, rises and pans left round onto the pair (an arc, f-4 -> f46), while the lens
+    // widens (the pull-back, f-4 -> f38): eased in from near rest on f0, fastest ~f18-22, easing out by ~f40 ...
+    { f0: at(-4), f1: at(47), to: { ...CAM_PAIR }, warp: 0.97 },
+    { f0: at(-4), f1: at(37), to: { f: LENS.wide } },
+    // ... and its tail, from ~f33: the lens pushes in slowly toward the pair (front-loaded: warp < 1), so the shot
+    // keeps drifting in to f95 and past it, slowing (~6 -> 4 px/f), never stopping. The camera never moves back.
+    { f0: at(34), f1: at(131), to: { f: LENS.push }, warp: 0.57 },
+  ],
+  PRE + 120,
+);
+export const camAt = (f: number) => airCamAt(TRACK_, f + PRE) as SideCam;
 
-// --- the photo: the vortex, standing H_PHOTO proud of the page ---------------------------------------------------------
-const H_PHOTO = 40;
-const PHOTO_ASPECT = VORTEX_W / VORTEX_H;
-const CONTENT = { w: 600, top: 420 } as const; // the content box (VORTEX_BOX): 600 wide, its axis on x 540
-const PHOTO = (() => {
-  const w = CONTENT.w / ((VORTEX_BOX[2] - VORTEX_BOX[0]) / VORTEX_W);
-  const h = w / PHOTO_ASPECT;
-  const y = CONTENT.top - (VORTEX_BOX[1] / VORTEX_H) * h;
-  return { x: 540 - (VORTEX_AXIS_U - 0.5) * w, cy: y + h / 2, h, w };
-})();
-const PHOTO_PAD = 60;
-const PHOTO_Q = 2; // css px per world px of the photo's plane (rasterised at >= its screen size)
-const PHOTO_BOX = { x0: PHOTO.x - PHOTO.w / 2 - PHOTO_PAD, y0: PHOTO.cy - PHOTO.h / 2 - PHOTO_PAD, w: PHOTO.w + 2 * PHOTO_PAD, h: PHOTO.h + 2 * PHOTO_PAD };
-
-// --- the cost: 100 bundles in a stepped mound of 10 stacks (2 across, 5 deep), right of the photo -----------------------
-// rows back -> front hold 14, 12, 10, 8, 6 bundles a stack (2 x 50 = 100): the back rows tower over the front ones
+// ===================================================================================================================
+// THE CASH
+// ===================================================================================================================
+/** a giant bundle (m): the note face 150 : 64, 36 / 390 of its width thick */
+export const BUNDLE: Bundle = { w: 1500, d: 640, t: 138, strap: 0.2 };
 const COLS = 2;
 const ROWS = 5;
-const ROW_N = [14, 12, 10, 8, 6] as const;
-const GX = 16;
-const GY = 18;
-const WALL = { x0: 945, yFront: 1500 } as const; // x0: just off the tight f0 frame (screen x ~1121 at f0); yFront: the front row's near edge
-const WALL_W = COLS * BUNDLE.w + (COLS - 1) * GX;
-const SURV = { col: 0, row: 0 } as const; // the one that stays: the back-left stack, nearest the photo (beside it in the two-shot)
-const SINK = 12;
-const stackXY = (col: number, row: number) => ({ x: WALL.x0 + col * (BUNDLE.w + GX), y: WALL.yFront - BUNDLE.d - (ROWS - 1 - row) * (BUNDLE.d + GY) });
-// the wave starts at the mound's front-right corner (nearest the eye) and runs back and left across it; its far end
-// is the one that stays (back row, nearest the photo)
-const WAVE_SRC = { x: WALL.x0 + WALL_W + 20, y: WALL.yFront + 20 };
-const distOf = (col: number, row: number) => {
-  const p = stackXY(col, row);
-  return Math.hypot(p.x + BUNDLE.w / 2 - WAVE_SRC.x, p.y + BUNDLE.d / 2 - WAVE_SRC.y) / (BUNDLE.w + GX);
+/** bundles per stack, [column][row]: row 0 the back to row 4 the front; the column nearer the vortex a step lower */
+const STACK_N = [
+  [12, 10, 9, 7, 5],
+  [16, 14, 11, 9, 7],
+];
+const GX = 60;
+const GZ = 60;
+/** the mound's front-left corner (X, Z) */
+const MOUND = { x0: -580, zFront: 0 } as const;
+const SURV = { row: 1, col: 0 } as const;
+/** how far below the deck's lowest point under a stack its foot sits (m) */
+const FOOT_SINK = 60;
+const SINK = 8;
+const WAVE = { f0: 37, span: 10 } as const;
+const SURV_SINK = { f0: 43, f1: 56 } as const;
+
+type StackSpec = { i: number; row: number; col: number; x: number; z: number; n: number; base: number; crest: number; start: number; survivor: boolean };
+const stackXZ = (row: number, col: number) => ({ x: MOUND.x0 + col * (BUNDLE.w + GX), z: MOUND.zFront + (ROWS - 1 - row) * (BUNDLE.d + GZ) });
+const deckMin = (x: number, z: number) => {
+  let m = Infinity;
+  for (const S of [0, 48, 96]) for (const [u, v] of [[0, 0], [1, 0], [0, 1], [1, 1], [0.5, 0.5], [0.5, 0], [0, 0.5], [1, 0.5], [0.5, 1]]) m = Math.min(m, deckTopAt([x + u * BUNDLE.w, z + v * BUNDLE.d], S, VORTEX_AIR));
+  return m;
 };
-const ALL: { col: number; row: number }[] = [];
-for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) ALL.push({ col, row });
-const D_MIN = Math.min(...ALL.map((p) => distOf(p.col, p.row)));
-const D_SURV = distOf(SURV.col, SURV.row);
-/** the wave: its first stack starts sinking on "1" (f29), the one that stays finishes on "cost" (f56) */
-const WAVE = { f0: 29, f1: 56, perPitch: (56 - SINK - 29) / (D_SURV - D_MIN) } as const;
-const STACKS: StackSpec[] = ALL.map(({ col, row }, i) => {
-  const p = stackXY(col, row);
-  return { i, col, row, x: p.x, y: p.y, n: ROW_N[row], start: WAVE.f0 + (distOf(col, row) - D_MIN) * WAVE.perPitch, survivor: col === SURV.col && row === SURV.row };
-});
-const SURV_START = WAVE.f0 + (D_SURV - D_MIN) * WAVE.perPitch;
-const LAST = Math.max(...STACKS.map((s) => s.start)) + SINK;
-if (LAST > 56.5) throw new Error(`HundredthOfTheCost: the drain ends at f${LAST.toFixed(1)}, after "cost" (f56)`);
-if (STACKS.some((s) => !s.survivor && s.start > SURV_START)) throw new Error("HundredthOfTheCost: the one that stays is not the wave's last");
-if (STACKS.reduce((a, s) => a + s.n, 0) !== 100) throw new Error("HundredthOfTheCost: not 100 bundles");
-/** a stack's state at frame f: height (world px) and tone (0 notes .. 1 printed outline) */
-const stackAt = (s: StackSpec, f: number): StackState => {
-  const u = smoothstep(clamp01((f - s.start) / SINK));
-  const H = s.n * BUNDLE.t;
-  if (s.survivor) return { s, h: H - (H - BUNDLE.t) * u, t: 0 };
-  const t = smoothstep(clamp01((f - s.start - 1.5) / (SINK - 1.5))); // the height leads, the tone follows
-  return { s, h: H * (1 - u), t };
+/** the deck's highest point under a stack (m): a sinking stack goes on down past it, so it leaves no stray top behind */
+const deckMax = (x: number, z: number) => {
+  let m = -Infinity;
+  for (const S of [0, 48, 96]) for (let u = 0; u <= 1.001; u += 0.25) for (let v = 0; v <= 1.001; v += 0.25) m = Math.max(m, deckTopAt([x + u * BUNDLE.w, z + v * BUNDLE.d], S, VORTEX_AIR));
+  return m;
 };
+const SRC = stackXZ(ROWS - 1, COLS - 1);
+const STACKS: StackSpec[] = (() => {
+  const raw: Omit<StackSpec, "start">[] = [];
+  for (let row = 0; row < ROWS; row++)
+    for (let col = 0; col < COLS; col++) {
+      const { x, z } = stackXZ(row, col);
+      raw.push({ i: raw.length, row, col, x, z, n: STACK_N[col][row], base: deckMin(x, z) - FOOT_SINK, crest: deckMax(x, z), survivor: row === SURV.row && col === SURV.col });
+    }
+  const dist = (s: { x: number; z: number }) => Math.hypot(s.x - SRC.x, s.z - SRC.z);
+  const far = Math.max(...raw.filter((s) => !s.survivor).map(dist));
+  return raw.map((s) => ({ ...s, start: s.survivor ? SURV_SINK.f0 : WAVE.f0 + (WAVE.span * dist(s)) / far }));
+})();
 const SURV_SPEC = STACKS.find((s) => s.survivor) as StackSpec;
-/** the one that stays is lit: its light comes up as the wave reaches it */
-const litAt = (f: number) => smoothstep(clamp01((f - (SURV_SPEC.start + 2)) / 14));
+/** the one that stays ends with its top bundle standing whole on the cloud, its foot clear of every heap between it and
+ *  the end camera (the deck's heights along the sight lines from its near edge, at the end frames) */
+const clearance = (cam: SideCam, p: V3, S: number) => {
+  let m = Infinity;
+  for (let i = 1; i <= 120; i++) {
+    const t = i / 120;
+    const q: V3 = [p[0] + (cam.x - p[0]) * t, p[1] + (cam.y - p[1]) * t, p[2] + (cam.z - p[2]) * t];
+    if (q[1] > 3700) break;
+    m = Math.min(m, q[1] - deckTopAt([q[0], q[2]], S, VORTEX_AIR));
+  }
+  return m;
+};
+const SURV_REST = (() => {
+  let need = -Infinity;
+  for (const f of [60, 78, 95])
+    for (const u of [0.08, 0.5, 0.92]) {
+      let y = 1200;
+      while (y < 4000 && clearance(camAt(f), [SURV_SPEC.x + u * BUNDLE.w, y, SURV_SPEC.z], f) < 200) y += 5;
+      need = Math.max(need, y);
+    }
+  return need - (SURV_SPEC.n - 1) * BUNDLE.t;
+})();
+const sinkOf = (s: StackSpec, f: number) => {
+  if (s.survivor) {
+    const u = clamp01((f - SURV_SINK.f0) / (SURV_SINK.f1 - SURV_SINK.f0));
+    // a slow start, a long soft landing
+    return s.base + (SURV_REST - s.base) * smoothstep(Math.pow(u, 0.8));
+  }
+  const u = clamp01((f - s.start) / SINK);
+  // down into the heap, gathering pace (it is out of sight before it would slow)
+  // the whole stack goes down as one, gathering pace, until its top is well under the deck's highest point beneath it
+  // (so no corner is left showing through a dip between the heaps); then it is culled, out of sight
+  // (it starts with some way on, so a short stack whose top sits at the cloud's surface is not left lingering there)
+  return s.base - (s.n * BUNDLE.t + (s.crest - s.base) + 250) * (u * (0.3 + 0.7 * u));
+};
+/** the one that stays: its strap lights up as it settles */
+const litAt = (f: number) => smoothstep(clamp01((f - 47) / 12));
+if (STACKS.length !== COLS * ROWS || STACKS.reduce((a, s) => a + s.n, 0) !== 100) throw new Error("HundredthOfTheCost: the mound must hold 100 bundles");
+if (Math.max(...STACKS.filter((s) => !s.survivor).map((s) => s.start + SINK)) > 56.01) throw new Error("HundredthOfTheCost: the 99 must be gone by f56");
 
-// --- the dateline drum: SEPT 202[6 -> 7] ------------------------------------------------------------------------------
-const ROLL_F = { f0: 63, f1: 71 } as const;
-const rollAt = (f: number) => smoothstep((f - ROLL_F.f0) / (ROLL_F.f1 - ROLL_F.f0));
+// ===================================================================================================================
+// THE DATE: SEPT 202[6 -> 7], a tick beside the vortex (cut 10's CostTick family)
+// ===================================================================================================================
+const DATE_H = 0.8;
+const DATE = (() => {
+  const ax = vortexAxis(NS_VORTEX, DATE_H);
+  const r = vortexReach(NS_VORTEX, DATE_H);
+  return { at: [ax[0] + r, ax[1], ax[2]] as V3, length: 2600, size: 500 };
+})();
+const ENTER = { f0: 47, f1: 59 } as const;
+const ROLL_F = { f0: 62, f1: 71 } as const;
+const rollAt = (f: number) => smoothstep(clamp01((f - ROLL_F.f0) / (ROLL_F.f1 - ROLL_F.f0)));
+const HALO = `drop-shadow(0 0 6px rgba(34,21,11,0.7)) drop-shadow(0 0 18px rgba(34,21,11,0.45))`;
 
-const Dateline: React.FC<{ f: number }> = ({ f }) => {
-  const uid = `dl${useId().replace(/[^A-Za-z0-9]/g, "")}`;
-  const fs = DATE.px;
+const DateTick: React.FC<{ f: number; cam: SideCam }> = ({ f, cam }) => {
+  const uid = `dt${useId().replace(/[^A-Za-z0-9]/g, "")}`;
+  const a = easeOutCubic(clamp01((f - ENTER.f0) / (ENTER.f1 - ENTER.f0)));
+  if (a <= 0.002) return null;
+  const p0 = airProject(cam, DATE.at);
+  const p1 = airProject(cam, [DATE.at[0] + DATE.length, DATE.at[1], DATE.at[2]]);
+  const fs = DATE.size * p0.s;
+  const lift = (1 - a) * 24;
+  const blurIn = 6 * (1 - a);
+  const ruleW = Math.max(1.5, 0.011 * fs);
+  const base = p0.y - 0.16 * fs;
+  const x0 = p0.x + 0.06 * fs;
   const sept = labelWidth("SEPT", fs);
-  const space = 0.36 * fs;
+  const space = 0.3 * fs;
   const adv = TNUM_ADV * fs + TRACK.numeral * fs;
-  const yearW = 4 * adv - TRACK.numeral * fs;
-  const x0 = DATE.right - (sept + space + yearW);
-  const yx = x0 + sept + space; // the year's left edge
+  const yx = x0 + sept + space;
   const digitX = (i: number) => yx + i * adv + (TNUM_ADV * fs) / 2;
   const r = rollAt(f);
   const lineH = fs;
-  const speed = (rollAt(f + 0.5) - rollAt(f - 0.5)) * lineH; // world px per frame
+  const speed = (rollAt(f + 0.5) - rollAt(f - 0.5)) * lineH;
   const blur = 0.32 * speed;
-  // the drum's window: the resting digit's cap box + a feather F above and below (the resting digit is never feathered)
+  // the drum's window: the resting digit's cap box + a feather above and below
   const F = 0.16 * fs;
-  const top = DATE.base - 0.729 * fs - F;
-  const bot = DATE.base + F;
+  const top = base - 0.729 * fs - F;
+  const bot = base + F;
   const fe = F / (bot - top);
   const numStyle: React.CSSProperties = { fontFeatureSettings: '"tnum" 1, "lnum" 1' };
+  const sx = x0 + 1.9 * fs;
+  const sy = base - 0.3 * fs;
   return (
-    <g fill={COLOR.inkDark}>
+    <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
       <defs>
-        <linearGradient id={`${uid}g`} gradientUnits="userSpaceOnUse" x1="0" y1={f3(top)} x2="0" y2={f3(bot)}>
+        <radialGradient id={`${uid}sh`}>
+          <stop offset="0" stopColor={COLOR.shadow} stopOpacity="0.56" />
+          <stop offset="0.55" stopColor={COLOR.shadow} stopOpacity="0.34" />
+          <stop offset="1" stopColor={COLOR.shadow} stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={`${uid}g`} gradientUnits="userSpaceOnUse" x1="0" y1={f2(top)} x2="0" y2={f2(bot)}>
           <stop offset="0" stopColor="#fff" stopOpacity="0" />
-          <stop offset={f3(fe)} stopColor="#fff" stopOpacity="1" />
-          <stop offset={f3(1 - fe)} stopColor="#fff" stopOpacity="1" />
+          <stop offset={f2(fe)} stopColor="#fff" stopOpacity="1" />
+          <stop offset={f2(1 - fe)} stopColor="#fff" stopOpacity="1" />
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
-        <mask id={`${uid}m`} maskUnits="userSpaceOnUse" x={f3(digitX(3) - fs)} y={f3(top)} width={f3(2 * fs)} height={f3(bot - top)}>
-          <rect x={f3(digitX(3) - fs)} y={f3(top)} width={f3(2 * fs)} height={f3(bot - top)} fill={`url(#${uid}g)`} />
+        <mask id={`${uid}m`} maskUnits="userSpaceOnUse" x={f2(digitX(3) - fs)} y={f2(top)} width={f2(2 * fs)} height={f2(bot - top)}>
+          <rect x={f2(digitX(3) - fs)} y={f2(top)} width={f2(2 * fs)} height={f2(bot - top)} fill={`url(#${uid}g)`} />
         </mask>
         <filter id={`${uid}b`} x="-10%" y="-40%" width="120%" height="180%">
-          <feGaussianBlur stdDeviation={`0 ${f3(blur)}`} />
+          <feGaussianBlur stdDeviation={`0 ${f2(blur)}`} />
         </filter>
       </defs>
-      <text x={f3(x0)} y={f3(DATE.base)} fontFamily={FONT_LABEL} fontWeight={500} fontSize={f3(fs)} letterSpacing={`${TRACK.label}em`} style={{ fontFeatureSettings: '"case" 1' }}>
-        SEPT
-      </text>
-      {["2", "0", "2"].map((d, i) => (
-        <text key={i} x={f3(digitX(i))} y={f3(DATE.base)} textAnchor="middle" fontFamily={FONT_NUM} fontWeight={700} fontSize={f3(fs)} style={numStyle}>
-          {d}
+      <ellipse cx={f2(sx)} cy={f2(sy)} rx={f2(2.9 * fs)} ry={f2(1.4 * fs)} fill={`url(#${uid}sh)`} opacity={f2(a)} />
+      <g opacity={f2(a)} transform={`translate(0 ${f2(lift)})`} style={{ filter: `${blurIn > 0.05 ? `blur(${f2(blurIn)}px) ` : ""}${HALO}` }} fill={COLOR.inkCream}>
+        <line x1={f2(p0.x)} y1={f2(p0.y)} x2={f2(p1.x)} y2={f2(p1.y)} stroke={COLOR.inkCream} strokeWidth={f2(ruleW)} />
+        <text x={f2(x0)} y={f2(base)} fontFamily={FONT_LABEL} fontWeight={500} fontSize={f2(fs)} letterSpacing={`${TRACK.label}em`} style={{ fontFeatureSettings: '"case" 1' }}>
+          SEPT
         </text>
-      ))}
-      <g mask={`url(#${uid}m)`}>
-        <g filter={blur > 0.05 ? `url(#${uid}b)` : undefined} fontFamily={FONT_NUM} fontWeight={700} fontSize={f3(fs)} style={numStyle}>
-          {r < 1 ? (
-            <text x={f3(digitX(3))} y={f3(DATE.base - r * lineH)} textAnchor="middle">
-              6
-            </text>
-          ) : null}
-          {r > 0 ? (
-            <text x={f3(digitX(3))} y={f3(DATE.base + (1 - r) * lineH)} textAnchor="middle">
-              7
-            </text>
-          ) : null}
+        {["2", "0", "2"].map((d, i) => (
+          <text key={i} x={f2(digitX(i))} y={f2(base)} textAnchor="middle" fontFamily={FONT_NUM} fontWeight={700} fontSize={f2(fs)} style={numStyle}>
+            {d}
+          </text>
+        ))}
+        <g mask={`url(#${uid}m)`}>
+          <g filter={blur > 0.05 ? `url(#${uid}b)` : undefined} fontFamily={FONT_NUM} fontWeight={700} fontSize={f2(fs)} style={numStyle}>
+            {r < 1 ? (
+              <text x={f2(digitX(3))} y={f2(base - r * lineH)} textAnchor="middle">
+                6
+              </text>
+            ) : null}
+            {r > 0 ? (
+              <text x={f2(digitX(3))} y={f2(base + (1 - r) * lineH)} textAnchor="middle">
+                7
+              </text>
+            ) : null}
+          </g>
         </g>
       </g>
-    </g>
-  );
-};
-
-// --- the page ---------------------------------------------------------------------------------------------------------
-const MONEY_LIGHT = { x: WALL.x0 + WALL_W * 0.5, y: WALL.yFront - 450, r: 1100 } as const;
-const Page: React.FC = () => {
-  const uid = `pg${useId().replace(/[^A-Za-z0-9]/g, "")}`;
-  return (
-    <g>
-      <defs>
-        <linearGradient id={`${uid}p`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="1920">
-          <stop offset="0" stopColor={COLOR.cream} />
-          <stop offset="1" stopColor={COLOR.creamFoot} />
-        </linearGradient>
-        <radialGradient id={`${uid}k`} gradientUnits="userSpaceOnUse" cx="260" cy="260" r="1500">
-          <stop offset="0" stopColor={COLOR.amberHot} stopOpacity="0.2" />
-          <stop offset="0.5" stopColor={COLOR.amberHot} stopOpacity="0.07" />
-          <stop offset="1" stopColor={COLOR.amberHot} stopOpacity="0" />
-        </radialGradient>
-        {/* a warm light over the money column */}
-        <radialGradient id={`${uid}m`} gradientUnits="userSpaceOnUse" cx={MONEY_LIGHT.x} cy={MONEY_LIGHT.y} r={MONEY_LIGHT.r}>
-          <stop offset="0" stopColor={COLOR.amberHot} stopOpacity="0.16" />
-          <stop offset="0.55" stopColor={COLOR.amberHot} stopOpacity="0.05" />
-          <stop offset="1" stopColor={COLOR.amberHot} stopOpacity="0" />
-        </radialGradient>
-        <pattern id={`${uid}f`} patternUnits="userSpaceOnUse" x="0" y="0" width={PAPER_TILE} height={PAPER_TILE}>
-          <image href={PAPER_SRC} x="0" y="0" width={PAPER_TILE} height={PAPER_TILE} />
-        </pattern>
-      </defs>
-      <rect x={PAGE.x0} y={PAGE.y0} width={PAGE.x1 - PAGE.x0} height={PAGE.y1 - PAGE.y0} fill={`url(#${uid}p)`} />
-      <rect x={PAGE.x0} y={PAGE.y0} width={PAGE.x1 - PAGE.x0} height={PAGE.y1 - PAGE.y0} fill={`url(#${uid}f)`} style={{ mixBlendMode: "multiply" }} />
-      <rect x={PAGE.x0} y={PAGE.y0} width={PAGE.x1 - PAGE.x0} height={PAGE.y1 - PAGE.y0} fill={`url(#${uid}k)`} />
-      <rect x={PAGE.x0} y={PAGE.y0} width={PAGE.x1 - PAGE.x0} height={PAGE.y1 - PAGE.y0} fill={`url(#${uid}m)`} />
-      {/* masthead: the thin double rule, across both columns */}
-      <rect x={TEXT_L} y={RULE.y} width={TEXT_R - TEXT_L} height={RULE.thick} fill={COLOR.inkDark} />
-      <rect x={TEXT_L} y={RULE.y + RULE.thick + RULE.gap} width={TEXT_R - TEXT_L} height={RULE.thin} fill={COLOR.inkDark} />
-    </g>
-  );
-};
-
-/** the light on the paper round the one that stays */
-const SurvivorGlow: React.FC<{ lit: number }> = ({ lit }) => {
-  if (lit < 0.005) return null;
-  const s = SURV_SPEC;
-  return (
-    <g>
-      <defs>
-        <radialGradient id="hsGlow" gradientUnits="userSpaceOnUse" cx={s.x + BUNDLE.w / 2} cy={s.y + BUNDLE.d / 2} r={520}>
-          <stop offset="0" stopColor={COLOR.amberHot} stopOpacity={f3(0.6 * lit)} />
-          <stop offset="0.45" stopColor={COLOR.amberHot} stopOpacity={f3(0.22 * lit)} />
-          <stop offset="1" stopColor={COLOR.amberHot} stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <ellipse cx={s.x + BUNDLE.w / 2} cy={s.y + BUNDLE.d / 2} rx={620} ry={520} fill="url(#hsGlow)" />
-    </g>
-  );
-};
-
-export const PROBE = () => ({ STACKS, stackAt, BUNDLE, labelWidth, HEAD, DATE, PHOTO });
-
-/** a plane of the page world drawn by CSS 3D (local px = world px x q) */
-const Plane: React.FC<{ v: View; h: number; box: { x0: number; y0: number; w: number; h: number }; q?: number; children: React.ReactNode }> = ({ v, h, box, q = 1, children }) => (
-  <div style={{ position: "absolute", left: 0, top: 0, width: box.w * q, height: box.h * q, transformOrigin: "0 0", transform: planeCss(v, h, box.x0, box.y0, 1 / q, 1 / q) }}>
-    <svg width={box.w * q} height={box.h * q} viewBox={`${f3(box.x0)} ${f3(box.y0)} ${f3(box.w)} ${f3(box.h)}`} style={{ display: "block", overflow: "visible" }}>
-      {children}
     </svg>
-  </div>
-);
+  );
+};
+
+// ===================================================================================================================
+// THE ONE THAT STAYS: a warm glow round its lit strap (overlay, screen blend, pinned to the strap)
+// ===================================================================================================================
+const SurvivorGlow: React.FC<{ f: number; cam: SideCam }> = ({ f, cam }) => {
+  const uid = `sg${useId().replace(/[^A-Za-z0-9]/g, "")}`;
+  const lit = litAt(f);
+  if (lit < 0.01) return null;
+  const s = SURV_SPEC;
+  const y = sinkOf(s, f) + (s.n - 0.5) * BUNDLE.t;
+  const c = airProject(cam, [s.x + BUNDLE.w / 2, y, s.z]);
+  const top = airProject(cam, [s.x + BUNDLE.w / 2, y + 0.5 * BUNDLE.t, s.z + BUNDLE.d / 2]);
+  const r = 0.55 * BUNDLE.w * c.s;
+  return (
+    <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0, mixBlendMode: "screen" }}>
+      <defs>
+        <radialGradient id={`${uid}g`}>
+          <stop offset="0" stopColor={COLOR.amberTop} stopOpacity="0.5" />
+          <stop offset="0.35" stopColor={COLOR.amberTop} stopOpacity="0.22" />
+          <stop offset="1" stopColor={COLOR.amberTop} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse cx={f2(c.x)} cy={f2((c.y + top.y) / 2)} rx={f2(0.55 * r)} ry={f2(0.75 * r)} fill={`url(#${uid}g)`} opacity={f2(lit)} />
+    </svg>
+  );
+};
+
+// ===================================================================================================================
+// THE FRAME
+// ===================================================================================================================
+export const PROBE = () => ({ STACKS, BUNDLE, SURV_REST, DATE, sinkOf, camAt });
 
 const HundredthOfTheCost: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
-  const shot = shotAt(f);
-  const v = viewOf(shot);
-  const states = STACKS.map((s) => stackAt(s, f));
-  // painter's order: the farthest from the camera first
-  const order = [...states].sort((a, b) => depthOf(v, b.s.x + BUNDLE.w / 2, b.s.y + BUNDLE.d / 2, b.h / 2) - depthOf(v, a.s.x + BUNDLE.w / 2, a.s.y + BUNDLE.d / 2, a.h / 2));
-  const sil = photoCutOutSil({ src: VORTEX_SRC, x: PHOTO.x, y: PHOTO.cy, h: PHOTO.h, aspect: PHOTO_ASPECT });
+  const S = f;
+  const cam = camAt(f);
   const lit = litAt(f);
-  const kAt = (x: number, y: number) => F / depthOf(v, x, y, 0); // screen px per world px there
-  const scene = (
-    <AbsoluteFill>
-      <Plane v={v} h={0} box={{ x0: PAGE.x0, y0: PAGE.y0, w: PW, h: PH }}>
-        <Page />
-        <Dateline f={f} />
-        <Label x={HEAD.left} y={HEAD.base} k={1} px={HEAD.px} text="NAVIER–STOKES" tone="dark" anchor="start" />
-        <SurvivorGlow lit={lit} />
-        <StackShadow stacks={states} />
-        <StoutShadow parts={sil} s={1.5} elevation="lifted" />
-      </Plane>
-      <Plane v={v} h={H_PHOTO} box={PHOTO_BOX} q={PHOTO_Q}>
-        <PhotoCutOut src={VORTEX_SRC} x={PHOTO.x} y={PHOTO.cy} h={PHOTO.h} aspect={PHOTO_ASPECT} k={1} shadow={false} />
-      </Plane>
-      {order.map((st) => (
-        <Stack key={st.s.i} st={st} v={v} k={kAt(st.s.x + BUNDLE.w / 2, st.s.y + BUNDLE.d)} lit={st.s.survivor ? lit : 0} />
-      ))}
-    </AbsoluteFill>
+  return (
+    <VortexStage
+      cam={cam}
+      S={S}
+      rest={camAt(0)}
+      world={
+        <>
+          <Vortex at={NS_VORTEX.at} height={NS_VORTEX.height} seed={NS_VORTEX.seed} fill={0} look={CUT10_LOOK} />
+          {STACKS.map((s) => {
+            const y = sinkOf(s, f);
+            // gone once its top is under the deck's highest point beneath it: past there only odd corners would show
+            // through dips between the heaps, so the stack goes down whole
+            if (!s.survivor && y + s.n * BUNDLE.t < s.crest - 20) return null;
+            return <CashStack key={s.i} cam={cam} S={S} at={[s.x, y, s.z]} n={s.n} bundle={BUNDLE} glow={s.survivor ? lit : 0} />;
+          })}
+        </>
+      }
+      overlay={
+        <>
+          <SurvivorGlow f={f} cam={cam} />
+          <DateTick f={f} cam={cam} />
+        </>
+      }
+    />
   );
-  return <StoutStage S={f} cam={{ x: 540, y: 960, k: 1 }} sway={false} overlay={scene} />;
 };
 
 export default HundredthOfTheCost;
