@@ -91,9 +91,20 @@ export const CUT6_FRAMES = 132;
 export const CUT6_CAM_START: SideCam = { mode: "side", x: -95, y: 440, z: -1000, f: 1000, pitch: 14.4, yaw: -0.3, horizon: 719 };
 const CUT6_GLIDES: AirGlide[] = [{ f0: 0, f1: 150, to: { x: -112, y: 432, z: -949, pitch: 14.6, yaw: 0.4 } }];
 export const CUT6_TRACK = airTrack(CUT6_CAM_START, CUT6_GLIDES, CUT6_FRAMES + 2);
+/** the first part's camera (f0-131 as approved) */
 export const cut6CamAt = (f: number) => airCamAt(CUT6_TRACK, f) as SideCam;
-/** cut 6's resolved camera (its last frame, f131); cut 7 opens on it */
+/** cut 6's resolved camera at f131 (the end of the approved first part); cut 7 opened on it */
 export const CUT6_END_CAM: SideCam = cut6CamAt(CUT6_FRAMES - 1);
+
+// --- rev 2: the cut runs on to f224 ("if that number were like 20 instead of 70 ... much happier") -------------------
+/** the extended cut's length (frames): the slot 38.038-47.422 s */
+export const CUT6_FRAMES_LONG = 225;
+/** after f131 a second glide blends in (it starts at rest on f131, so f0-131 are frame for frame the approved
+ *  ones): the camera rises and tips down a little, a touch back, so the horizon climbs and the field of new campuses
+ *  behind the first one fills the upper frame. Still easing at f224 (no dead hold). */
+const CUT6_GLIDES_LONG: AirGlide[] = [...CUT6_GLIDES, { f0: 131, f1: 250, to: { x: -104, y: 575, z: -965, pitch: 20, yaw: 0.36, horizon: 660 } }];
+export const CUT6_TRACK_LONG = airTrack(CUT6_CAM_START, CUT6_GLIDES_LONG, CUT6_FRAMES_LONG + 2);
+export const cut6LongCamAt = (f: number) => airCamAt(CUT6_TRACK_LONG, f) as SideCam;
 
 // ===================================================================================================================
 // SHADERS
