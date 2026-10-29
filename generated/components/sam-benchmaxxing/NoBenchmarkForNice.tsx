@@ -1,7 +1,9 @@
 // ---------------------------------------------------------------------------
-// NoBenchmarkForNice (sam-benchmaxxing, cut 18). Cheeky Pint style carried into the AIR, as the Scott Kirby clips
+// NoBenchmarkForNice (sam-benchmaxxing, cut 18), REV 2 (user note 2026-10-29, notes/REV2_18_NoBenchmarkForNice.md:
+// the nice tile's flat smile glyph becomes cut 9's OpenAI buddy, no rule under it). Cheeky Pint style carried into the AIR, as the Scott Kirby clips
 // (styles/cheeky-pint.md; COMMON.md). The clip's world: benchShared's BenchStage (AirStage over the airfield apron),
-// BenchTile, BenchColumn, BenchGlyph, Slot, ContactShadow, imported read-only.
+// BenchTile, BenchColumn, Slot, ContactShadow, imported read-only; cut 9's OpenAI buddy (openaiBuddy3d.tsx
+// OpenAIBuddyLayer, a WebGL layer in BenchStage's html slot), imported read-only.
 // Opaque 1080x1920, 23.976 fps, 100 frames. RENDER WITH --gl=angle (AirStage is WebGL).
 //
 // CHECK LINE: "coding and maths have benchmark columns with a scale (SWE-bench, AIME); 'nice to work with' has only an
@@ -17,25 +19,28 @@
 // edge. f0 framed on SWE-bench with AIME beside it, both columns already rising (SWE f-4..26, AIME f0..30), settled at
 // different heights while the camera creeps in. On "great benchmarks" the camera trucks right along the row in one
 // eased move (glide f27-69, a small push in) and arrives on the third tile, the "nice to work with" tile (cut 9's
-// ThingCard front at tile scale: smile glyph over NICE TO / WORK WITH), on "being enjoyable". Its slot opens f60-70 and
-// nothing rises: a faint dashed glass outline draws upward f70-84 (two tips climb the sides and meet across the top)
-// to AIME's height, where a score would be, and a small ink "?" slides up into its middle f80-88. Living hold
+// card front at tile scale: the OpenAI blossom with a cute face over NICE TO / WORK WITH, no rule), on "being enjoyable". Its slot opens f60-70 and
+// nothing rises: a bold dashed outline, its solid feet out of the slot, draws upward f70-84 (two tips climb the sides
+// and meet across the top) to AIME's height, where a score would be, and a big bold ink "?" slides up into its middle
+// f80-88. The buddy's one life beat: it blinks f86-91 and opens its eyes looking up at the "?" (glance f85-91, held). Living hold
 // f88-100: AIME's amber column at the left edge (its tile dimmed toward board), the empty outline and "?" centred, the
-// smile tile below, the camera creeping in about the "?", sky drift, motes, grain.
+// buddy tile below, the camera creeping in about the "?", sky drift, motes, grain.
 // Cause before effect: the nice slot is open (f70) before the outline's first dash (f71); the outline is closed (f84)
 // before the "?" is fully in (f88).
 // AMBER = a score (the two benchmark fills only). Cream = the tiles. No numbers.
 //
 // SOURCES: benchmark names are real: SWE-bench (Princeton NLP's coding benchmark; "SWE-bench Verified" with OpenAI),
 // AIME (the American Invitational Mathematics Examination). The column heights are not scores (no numbers on screen):
-// AIME stands a little taller than SWE-bench, as frontier models score higher on AIME. Glyphs: Lucide "code", "sigma",
-// "smile" (benchShared BENCH_GLYPHS).
+// AIME stands a little taller than SWE-bench, as frontier models score higher on AIME. Glyphs: Lucide "code", "sigma"
+// (benchShared BENCH_GLYPHS). The OpenAI blossom: public/sam-benchmaxxing/openai_mark.svg (Commons File:OpenAI logo
+// 2025 (symbol).svg, PD-textlogo) via openaiBuddy3d.tsx.
 // ---------------------------------------------------------------------------
 import React, { useId } from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { ALPHA, COLOR, EDGE, FONT_LABEL, FONT_NUM, amberBandFor, clamp01, mixHex, rectPath } from "../kits/cheeky-pint/stoutShared";
-import { BENCH_TILE, BenchColumn, BenchGlyph, BenchStage, BenchTile, ContactShadow, GROUND, Slot, SlotLip, benchCam, glassH, tileRadius, type Look } from "./benchShared";
+import { BENCH_TILE, BenchColumn, BenchStage, BenchTile, ContactShadow, GROUND, Slot, SlotLip, benchCam, glassH, tileRadius, toScreenB, type Look } from "./benchShared";
+import { BUDDY_ASPECT, OpenAIBuddyLayer } from "./openaiBuddy3d";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 100;
@@ -84,28 +89,31 @@ export const DIM = { f0: 58, f1: 74, to: 0.5 } as const;
 // ---------------------------------------------------------------------------
 /** the look that puts world (wx, wy) at screen (sx, sy) at zoom k */
 const lookFor = (wx: number, wy: number, sx: number, sy: number, k: number): Look => ({ x: wx - (sx - 540) / k, y: wy - (sy - 960) / k, k });
-/** f0: SWE-bench at screen x 255 (AIME whole beside it, its right edge on the frame's), the tiles' floor at y 1886 */
-const L0 = lookFor(X.swe, GROUND, 255, 1886, 1.58);
+/** f0: SWE-bench at screen x 255 (AIME whole beside it, its right edge on the frame's), the tiles' floor at y 1480
+ *  (SHORTS LIFT: every tile face's bottom edge <= y 1500 on every frame, clear of the YouTube Shorts username overlay
+ *  below ~1520, as cuts 1 and 35; tile faces may cross the 1360-1460 caption band, accepted by the director) */
+const L0 = lookFor(X.swe, GROUND, 255, 1480, 1.58);
 /** the opening creep (in a touch) */
-const L1 = lookFor(X.swe, GROUND, 243, 1890, 1.605);
+const L1 = lookFor(X.swe, GROUND, 243, 1484, 1.605);
 /** the truck's end: the frame's left edge just past AIME's label (AIME_EDGE right of its centre), so only the right
  *  strip of its amber column and the blank corner of its tile stay in shot; the nice tile lands at screen x ~545; floor
- *  at y 1906 (tile face top y ~1468, clear of the 1360-1460 band) */
+ *  at y 1488 (the hold's creep about the "?" carries it to ~1495 by f99; the outline's top stays in frame) */
 export const AIME_EDGE = 64;
-const L2 = lookFor(X.aime + AIME_EDGE, GROUND, 0, 1906, 1.78);
+export const FLOOR_END = 1488;
+const L2 = lookFor(X.aime + AIME_EDGE, GROUND, 0, FLOOR_END, 1.78);
 const NICE_SX = 540 + (X.nice - L2.x) * L2.k;
 /** the hold's creep: in about the "?" (it stays put; the tile sinks away from the band) */
-const qScreenY = 1906 - (GROUND - Q_Y) * 1.78;
+const qScreenY = FLOOR_END - (GROUND - Q_Y) * 1.78;
 const L3 = lookFor(X.nice, Q_Y, NICE_SX, qScreenY, 1.83);
 const glide = (a: Look, b: Look, f0: number, f1: number, warp?: number) => ({ f0, f1, dx: b.x - a.x, dy: b.y - a.y, k: b.k, warp });
 export const CAM = benchCam(L0, [glide(L0, L1, -24, 44), glide(L1, L2, 27, 69), glide(L2, L3, 66, 150)], DURATION);
 
 // ---------------------------------------------------------------------------
-// THE NICE TILE: cut 9's ThingCard front (smile glyph over the two-line ink label, Kräftig caps) at BenchTile's size
+// THE NICE TILE: cut 9's card front (the OpenAI buddy over the two-line ink label, Kräftig caps, no rule) at BenchTile's size
 // and material (benchShared TileBody's recipe: cream -> creamFoot, radius tileRadius(h) x 0.8, lit top edge)
 // ---------------------------------------------------------------------------
 /** layout as fractions of W (y from the tile top): label font so "WORK WITH" fills ~0.88 W; cap = 0.718 x font */
-export const NICE_TILE = { glyphSize: 0.36, glyphCy: 0.215, labelPx: 0.149, line2: 0.716, lineGap: 1.18, tracking: "0.02em" } as const;
+export const NICE_TILE = { buddyH: 0.38, buddyCy: 0.23, labelPx: 0.149, line2: 0.74, lineGap: 1.18, tracking: "0.02em" } as const;
 const NiceTile: React.FC<{ x: number; floor: number; w: number; k: number; dim?: number }> = ({ x, floor, w, k, dim = 0 }) => {
   const uid = `nt${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
   const N = NICE_TILE;
@@ -130,7 +138,26 @@ const NiceTile: React.FC<{ x: number; floor: number; w: number; k: number; dim?:
         strokeOpacity={lerp(ALPHA.edge, ALPHA.edgeBoard, dim)}
         strokeWidth={f3(EDGE.CREAM / k)}
       />
-      <BenchGlyph name="smile" x={x} y={y0 + N.glyphCy * w} size={N.glyphSize * w} />
+      {/* the buddy's soft shadow on the tile face (cut 9's "round" ObjectShadow at tile scale): down-right of it, and a
+          contact pool under it; the buddy itself is a WebGL layer above the chart (BuddyOnTile) */}
+      <ellipse
+        cx={f3(x + N.buddyH * w * BUDDY_ASPECT * 0.1)}
+        cy={f3(y0 + N.buddyCy * w + N.buddyH * w * 0.05)}
+        rx={f3((N.buddyH * w * BUDDY_ASPECT) / 2)}
+        ry={f3((N.buddyH * w) / 2)}
+        fill={COLOR.shadow}
+        opacity={0.2}
+        style={{ filter: `blur(${f3(9 / Math.max(0.4, k))}px)` }}
+      />
+      <ellipse
+        cx={f3(x + N.buddyH * w * BUDDY_ASPECT * 0.02)}
+        cy={f3(y0 + (N.buddyCy + N.buddyH / 2) * w + 2 / k)}
+        rx={f3(N.buddyH * w * BUDDY_ASPECT * 0.36)}
+        ry={f3(5 / k)}
+        fill={COLOR.shadow}
+        opacity={0.36}
+        style={{ filter: `blur(${f3(4 / Math.max(0.4, k))}px)` }}
+      />
       {["NICE TO", "WORK WITH"].map((s, i) => (
         <text key={s} x={f3(x)} y={f3(i === 0 ? b1 : b2)} textAnchor="middle" fontFamily={FONT_LABEL} fontSize={f3(px)} letterSpacing={N.tracking} fill={COLOR.inkDark}>
           {s}
@@ -213,6 +240,22 @@ const QuestionMark: React.FC<{ x: number; y: number; k: number; u: number; f: nu
   );
 };
 
+/** the buddy's one life beat as the "?" lands: a blink (f86-91) and it opens its eyes looking up at the "?" */
+export const BUDDY_BEAT = { blink: { f0: 86, f1: 91 }, glance: { f0: 85, f1: 91, y: 1 } } as const;
+const buddyPose = (f: number) => {
+  const b = win(f, BUDDY_BEAT.blink.f0, BUDDY_BEAT.blink.f1);
+  const blink = Math.sin(Math.PI * b) ** 2;
+  const g = ss(win(f, BUDDY_BEAT.glance.f0, BUDDY_BEAT.glance.f1));
+  return { squash: 0, sway: 0, tilt: 0, wink: 0, blink, glance: { x: 0, y: BUDDY_BEAT.glance.y * g } };
+};
+/** the buddy on the nice tile, in screen px for its WebGL layer (mounted only while the tile is in frame) */
+const BuddyOnTile: React.FC<{ look: Look; f: number }> = ({ look, f }) => {
+  const N = NICE_TILE;
+  const c = toScreenB(look, X.nice, TILE_TOP + N.buddyCy * W);
+  if (c.x < -300 || c.x > 1380) return null;
+  return <OpenAIBuddyLayer x={c.x} cy={c.y} height={N.buddyH * W * look.k} pose={buddyPose(f)} tone="dark" />;
+};
+
 const NoBenchmarkForNice: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
   const look = CAM.at(f);
@@ -231,7 +274,7 @@ const NoBenchmarkForNice: React.FC<z.infer<typeof schema>> = () => {
   })();
   const qu = win(f, QMARK.f0, QMARK.f1);
   return (
-    <BenchStage look={look} S={f} rest={CAM.rest}>
+    <BenchStage look={look} S={f} rest={CAM.rest} html={<BuddyOnTile look={look} f={f} />}>
       {(["swe", "aime"] as const).map((id) => (
         <g key={id}>
           <ContactShadow x={X[id]} y={GROUND} w={W * 0.85} k={k} />
