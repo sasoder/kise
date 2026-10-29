@@ -289,9 +289,77 @@ export type BlockProps = {
   shadow?: number;
   /** a dust puff where it lands (default true) */
   dust?: boolean;
+  /** 0..1: SINKS INTO THE PAGE (upright or lying): a tear opens round its footprint (pale lip, a soft umber inside),
+   *  the block goes down through it (clipped by the opening swept upward), the tear closes over it; gone at 1.
+   *  sinkState(u) gives the schedule. */
+  sink?: number;
 };
-export const Block: React.FC<BlockProps> = ({ A, spec, color, sticker, topple = 0, toppleDir = "forward", uid, shadow = 1, dust = true }) => {
+/** the sink's schedule from the 0..1 drive: the tear (0..1), the opening's scale (0.86 -> 1 as it tears, -> 0 as it
+ *  closes), its lip, the descent (0..1 of the depth), the closing (0..1) */
+export const sinkState = (u: number) => {
+  const v = c01(u);
+  const tear = sstep(0, 0.18, v);
+  const closing = sstep(0.76, 1, v);
+  const q = c01((v - 0.12) / 0.7);
+  const down = q < 0.5 ? 2 * q * q : 1 - Math.pow(-2 * q + 2, 2) / 2;
+  const open = v <= 0 ? 0 : closing > 0 ? 1 - closing : 0.86 + 0.14 * tear;
+  return { tear, open, lip: tear * (1 - closing), down, closing };
+};
+/** convex hull of screen points (monotone chain) */
+const hull2 = (pts: { x: number; y: number }[]) => {
+  const p = pts.slice().sort((a, b) => a.x - b.x || a.y - b.y);
+  const cr = (o: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lo: typeof p = [];
+  for (const q of p) {
+    while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop();
+    lo.push(q);
+  }
+  const up: typeof p = [];
+  for (const q of p.slice().reverse()) {
+    while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop();
+    up.push(q);
+  }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+};
+export const Block: React.FC<BlockProps> = ({ A, spec: spec0, color, sticker, topple = 0, toppleDir = "forward", uid, shadow: shadow0 = 1, dust = true, sink = 0 }) => {
   const ang = toppleAngle(topple);
+  // THE SINK: the footprint (from the un-sunk corners), the descent, the opening
+  const sk = sinkState(sink);
+  const sinking = sink > 0;
+  if (sink >= 1) return null;
+  const V0 = blockCorners(spec0, ang, toppleDir);
+  const nf0 = dirOfYaw(spec0.face);
+  const rb0 = norm(cross(UP, nf0));
+  const along0 = V0.map((p) => (p[0] - spec0.x) * nf0[0] + (p[2] - spec0.z) * nf0[2]);
+  const across0 = V0.map((p) => (p[0] - spec0.x) * rb0[0] + (p[2] - spec0.z) * rb0[2]);
+  const fhs = (Math.max(...along0) - Math.min(...along0)) / 2;
+  const fht = (Math.max(...across0) - Math.min(...across0)) / 2;
+  const fa = (Math.max(...along0) + Math.min(...along0)) / 2;
+  const fc = (Math.max(...across0) + Math.min(...across0)) / 2;
+  const fcx = spec0.x + nf0[0] * fa + rb0[0] * fc;
+  const fcz = spec0.z + nf0[2] * fa + rb0[2] * fc;
+  const maxY = Math.max(...V0.map((p) => p[1])) - (spec0.lift ?? 0);
+  const pad = 0.08 * (fhs + fht);
+  const depth = maxY * 1.6 + pad;
+  const spec: BlockSpec = sinking ? { ...spec0, lift: (spec0.lift ?? 0) - depth * sk.down } : spec0;
+  const shadow = shadow0 * (sinking ? 1 - sstep(0.06, 0.3, sink) : 1);
+  /** the torn opening: a jagged rounded rectangle round the footprint, scaled k about its centre */
+  const openingPts = (k: number, grow: number, sd: number): V3[] => {
+    const out: V3[] = [];
+    const n = 44;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const c = Math.cos(a);
+      const sn = Math.sin(a);
+      const ux = Math.sign(c) * Math.pow(Math.abs(c), 0.28);
+      const uy = Math.sign(sn) * Math.pow(Math.abs(sn), 0.28);
+      const jag = 1 + 0.06 * (hashN(sd * 31 + i) - 0.5) + 0.03 * Math.sin(a * 7 + sd);
+      const la = ux * (fhs + pad) * grow * jag * k;
+      const lc = uy * (fht + pad) * grow * jag * k;
+      out.push([fcx + nf0[0] * la + rb0[0] * lc, 0, fcz + nf0[2] * la + rb0[2] * lc]);
+    }
+    return out;
+  };
   const V = blockCorners(spec, ang, toppleDir);
   const mat = WOOD[color];
   const dist = A.dist(spec.x, spec.h * 0.4, spec.z);
@@ -337,32 +405,90 @@ export const Block: React.FC<BlockProps> = ({ A, spec, color, sticker, topple = 
       </g>
     );
   }
-  // the landing puff (cause: the block hits the ground at topple ~0.78)
-  let puff: React.ReactNode = null;
+  // the landing puff (cause: the block hits the ground at topple ~0.78): the specks behind the block (farther along
+  // the view than its footprint's centre) are drawn before its faces, those in front after
+  const puffBack: React.ReactNode[] = [];
+  const puffFront: React.ReactNode[] = [];
   if (dust && topple > 0.76 && topple < 1) {
     const t = (topple - 0.76) / 0.24;
     const tip: V3 = [spec.x + nf[0] * sg * (spec.d / 2 + spec.h), 0, spec.z + nf[2] * sg * (spec.d / 2 + spec.h)];
     const rb = norm(cross(UP, nf));
-    const specks: React.ReactNode[] = [];
+    const fh = dirOfYaw(A.cam.yaw);
     for (let i = 0; i < 9; i++) {
       const a = (i / 9) * Math.PI * 2 + 0.4;
-      const along = Math.cos(a) * spec.w * (0.55 + 0.5 * t);
+      const alongQ = Math.cos(a) * spec.w * (0.55 + 0.5 * t);
       const out = Math.sin(a) * spec.h * 0.35 * (0.6 + 0.8 * t) * sg;
-      const p = add(add(tip, mul(rb, along)), mul(nf, out - sg * spec.h * 0.4));
+      const p = add(add(tip, mul(rb, alongQ)), mul(nf, out - sg * spec.h * 0.4));
       const lift = spec.h * 0.12 * Math.sin(Math.PI * t) * (0.6 + 0.4 * Math.cos(i * 2.1));
-      const s = scr(A, [p[0], lift, p[2]]);
-      const r = Math.max(0.8, spec.w * 0.05 * s.s * (1 + t));
-      specks.push(<circle key={i} cx={f2(s.x)} cy={f2(s.y)} r={f2(r)} fill={A.tone(i % 3 === 0 ? "#D9CDB4" : "#8F7D62", dist)} opacity={(1 - t) * 0.75} />);
+      const sp = scr(A, [p[0], lift, p[2]]);
+      const r = Math.max(0.8, spec.w * 0.05 * sp.s * (1 + t));
+      const el = <circle key={i} cx={f2(sp.x)} cy={f2(sp.y)} r={f2(r)} fill={A.tone(i % 3 === 0 ? "#D9CDB4" : "#8F7D62", dist)} opacity={(1 - t) * 0.75} />;
+      const behind = (p[0] - fcx) * fh[0] + (p[2] - fcz) * fh[2] > 0;
+      (behind ? puffBack : puffFront).push(el);
     }
-    puff = <g key="pf">{specks}</g>;
   }
-  return (
-    <g>
-      <ContactShadow A={A} x={sx} z={sz} a={half} b={half * (0.6 + 0.4 * lie)} amt={shadow} uid={`${uid}-sh`} push={0.8} />
-      <FootOcclusion A={A} pts={V.filter((p) => p[1] <= 0.03 * spec.h + (spec.lift ?? 0))} amt={shadow} />
+  const body = (
+    <>
+      {sinking ? null : <FootOcclusion A={A} pts={V.filter((p) => p[1] <= 0.03 * spec.h + (spec.lift ?? 0))} amt={shadow} />}
       {P.els}
       {stickerEl}
-      {puff}
+    </>
+  );
+  if (!sinking) {
+    return (
+      <g>
+        <ContactShadow A={A} x={sx} z={sz} a={half} b={half * (0.6 + 0.4 * lie)} amt={shadow} uid={`${uid}-sh`} push={0.8} />
+        {puffBack.length ? <g key="pb">{puffBack}</g> : null}
+        {body}
+        {puffFront.length ? <g key="pf">{puffFront}</g> : null}
+      </g>
+    );
+  }
+  // sinking: the opening (pale lip, a soft umber inside, the far wall's earth), the block clipped by the opening
+  // swept upward, then a soft umber shade over the opening as the block goes under
+  const cam = A.cam;
+  const fdist = A.dist(fcx, 0, fcz);
+  const fz = A.hazeAt(fdist);
+  const kc = sk.closing > 0 ? Math.max(sk.open, 0.001) : 1;
+  const base = openingPts(kc, 1, 5).map((p) => toScreen(cam, p[0], 0, p[2]));
+  const top = openingPts(kc, 1, 5).map((p) => toScreen(cam, p[0], maxY * 3 + 10, p[2]));
+  const clipD = `M${hull2([...base, ...top])
+    .map((p) => `${f2(p.x)},${f2(p.y)}`)
+    .join("L")}Z`;
+  const dOf = (q: { x: number; y: number }[]) => `M${q.map((p) => `${f2(p.x)},${f2(p.y)}`).join("L")}Z`;
+  let opening: React.ReactNode = null;
+  let shade: React.ReactNode = null;
+  if (sk.open > 0.005) {
+    const inner = openingPts(sk.open, 1, 5).map((p) => toScreen(cam, p[0], 0, p[2]));
+    const outer = openingPts(sk.open, 1.09 + 0.05 * sk.lip, 9).map((p) => toScreen(cam, p[0], 0, p[2]));
+    const cy = inner.reduce((q, p) => q + p.y, 0) / inner.length;
+    const far = inner.filter((p) => p.y <= cy + 2);
+    opening = (
+      <g>
+        <path d={`${dOf(outer)}${dOf(inner.slice().reverse())}`} fill={A.tone("#CDBB94", fdist)} fillOpacity={0.7 * sk.lip * (1 - fz)} fillRule="evenodd" />
+        <path d={dOf(inner)} fill={A.tone("#3B2D21", fdist)} />
+        {far.length > 2 ? <path d={dOf(hull2(far))} fill={A.tone("#5E4A36", fdist)} opacity={0.45} /> : null}
+        <path d={dOf(inner)} fill="none" stroke={A.tone("#2A1F16", fdist)} strokeWidth={1.4} strokeOpacity={0.6 * sk.lip} strokeLinejoin="round" />
+      </g>
+    );
+    // the soft umber shade once the block is going under (modest: not a black pit)
+    const deep = 0.55 * sstep(0.35, 0.95, sk.down);
+    if (deep > 0.01) shade = <path d={dOf(inner)} fill={A.tone("#2E2219", fdist)} fillOpacity={deep} />;
+  }
+  const cid = `${uid}-snk`;
+  return (
+    <g>
+      <defs>
+        <clipPath id={cid}>
+          <path d={clipD} />
+        </clipPath>
+      </defs>
+      <ContactShadow A={A} x={sx} z={sz} a={half} b={half * (0.6 + 0.4 * lie)} amt={shadow} uid={`${uid}-sh`} push={0.8} />
+      {opening}
+      {puffBack.length ? <g key="pb">{puffBack}</g> : null}
+      <g clipPath={`url(#${cid})`}>{body}</g>
+      {shade}
+      {puffFront.length ? <g key="pf">{puffFront}</g> : null}
     </g>
   );
 };
@@ -397,22 +523,51 @@ const ringOf = (A: InsWorld, x: number, y: number, z: number, R: number): Ring =
   const pb = toScreen(A.cam, x - fh[0] * R, y, z - fh[2] * R);
   return { cx: c.x, cy: c.y, rx: R * c.s, ry: Math.max(0.3, Math.abs(pf.y - pb.y) / 2), z: c.z };
 };
-const easeInOut = (t: number) => {
-  const v = c01(t);
-  return v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2;
-};
 const hashN = (n: number) => {
   const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
   return s - Math.floor(s);
 };
-/** the rise's schedule from the 0..1 drive: hole open, the pawn's sink (world units below ground, as a fraction of its
- *  height), the hole closing */
+/** the pawn's turned radius at a height y (units of its size, 0 foot .. ~1.045 the head's top) */
+const pawnRadiusAt = (y: number) => {
+  if (y < PAWN.base.y1) return PAWN.base.r;
+  const B = PAWN.body;
+  if (y < B[B.length - 1][0]) {
+    for (let i = 1; i < B.length; i++) if (y <= B[i][0]) return B[i - 1][1] + ((B[i][1] - B[i - 1][1]) * (y - B[i - 1][0])) / (B[i][0] - B[i - 1][0]);
+  }
+  if (y < PAWN.collar.y1) return PAWN.collar.r;
+  const hd = Math.abs(y - PAWN.head.y);
+  const head = hd < PAWN.head.r ? Math.sqrt(PAWN.head.r * PAWN.head.r - hd * hd) : 0;
+  if (y < PAWN.neck.y1) return Math.max(PAWN.neck.r0, head);
+  return head;
+};
+const PAWN_TOP = PAWN.head.y + PAWN.head.r;
+/** the widest section of the pawn at or above a height: what has already come up through the ground */
+const widestAbove = (y: number) => {
+  let m = 0;
+  for (let i = 0; i <= 48; i++) {
+    const q = y + ((PAWN_TOP - y) * i) / 48;
+    if (q >= 0 && q <= PAWN_TOP) m = Math.max(m, pawnRadiusAt(q));
+  }
+  return y <= 0 ? PAWN.base.r : m;
+};
+/** the rise's schedule from the 0..1 drive. The TEAR GROWS WITH THE PAWN: it opens over the first 0.06 at the head's
+ *  size as the head breaks the surface, then is always as wide as the widest part that has come up through it; it
+ *  closes under the foot over 0.84..1. Run backwards (a pawn sinking back) it reads in order too: the tear opens round
+ *  the foot, the pawn goes down, the head goes under and then the tear closes over it.
+ *  hole: the tear's openness 0..1 (holeR / its full radius); holeR: its radius in units of the pawn's size; sink: how
+ *  far below the ground the foot is (units of size); up: the emergence 0..1 (fast out of the ground, settling). */
 export const riseState = (u: number) => {
   const v = c01(u);
-  const open = sstep(0, 0.12, v);
+  // the head breaks the surface ~1 frame (of a 15-frame rise) after the tear starts: run backwards, the head goes
+  // under and the tear then closes over it
+  const t = c01((v - 0.05) / 0.79);
+  const up = 1 - Math.pow(1 - t, 2.4);
+  const sink = PAWN_TOP * (1 - up) + 0.002;
   const close = sstep(0.84, 1, v);
-  const up = easeInOut((v - 0.06) / 0.78);
-  return { hole: open * (1 - close), sink: 1.04 * (1 - up), dust: sstep(0.05, 0.2, v) * (1 - sstep(0.8, 1, v)), up };
+  const tear = Math.max(widestAbove(sink), PAWN.head.r * 1.05 * sstep(0, 0.08, v) * (sink > PAWN.neck.y1 ? 1 : 0));
+  const holeR = 1.18 * tear * sstep(0, 0.04, v) * (1 - close);
+  const full = 1.18 * PAWN.base.r;
+  return { hole: holeR / full, holeR, sink: v >= 0.84 ? 0 : sink, dust: sstep(0.02, 0.12, v) * (1 - sstep(0.8, 1, v)), up };
 };
 export type PawnProps = { A: InsWorld; x: number; z: number; size: number; color?: "orange" | "cream"; rise?: number; uid: string; seed?: number; shadow?: number };
 export const Pawn: React.FC<PawnProps> = ({ A, x, z, size, color = "orange", rise = 1, uid, seed = 1, shadow = 1 }) => {
@@ -507,8 +662,8 @@ export const Pawn: React.FC<PawnProps> = ({ A, x, z, size, color = "orange", ris
   const rising = rise < 1;
   let hole: React.ReactNode = null;
   let clip: string | null = null;
-  const Rh = R(PAWN.base.r) * 1.22 * (0.2 + 0.8 * st.hole) + R(PAWN.base.r) * 0.0;
-  if (rising && st.hole > 0.01) {
+  const Rh = st.holeR * size;
+  if (rising && st.holeR > 0.004) {
     const n = 28;
     const fh = dirOfYaw(A.cam.yaw);
     const rv = A.cam.r;
@@ -531,7 +686,8 @@ export const Pawn: React.FC<PawnProps> = ({ A, x, z, size, color = "orange", ris
       { x: -50, y: g.y },
     ];
     const hpts = Math.sign(area(pts)) === Math.sign(area(rect)) ? pts : pts.slice().reverse();
-    clip = `M${rect.map((p) => `${f2(p.x)},${f2(p.y)}`).join("L")}ZM${hpts.map((p) => `${f2(p.x)},${f2(p.y)}`).join("L")}Z`;
+    // only while part of the pawn is still under the ground (standing on it, nothing is hidden)
+    if (st.sink > 0.001) clip = `M${rect.map((p) => `${f2(p.x)},${f2(p.y)}`).join("L")}ZM${hpts.map((p) => `${f2(p.x)},${f2(p.y)}`).join("L")}Z`;
     const inner = A.tone("#140E09", dist);
     const wall = A.tone("#4A3A2A", dist);
     // the far wall: the back half of the opening, a little earth catching light
@@ -568,6 +724,10 @@ export const Pawn: React.FC<PawnProps> = ({ A, x, z, size, color = "orange", ris
         {specks}
       </g>
     );
+  } else if (rising && st.sink > 0.001) {
+    // no tear yet (or already closed) but the foot is still under: the ground still hides what is below it
+    const g = toScreen(A.cam, x, 0, z);
+    clip = `M-50,-50H1130V${f2(g.y)}H-50Z`;
   }
   const shadowEl =
     st.up > 0.6 ? (
@@ -598,7 +758,7 @@ export const Pawn: React.FC<PawnProps> = ({ A, x, z, size, color = "orange", ris
       </defs>
       {hole}
       {shadowEl}
-      <g clipPath={clip ? `url(#${cid})` : undefined}>{off < -size * 1.0 ? null : parts}</g>
+      <g clipPath={clip ? `url(#${cid})` : undefined}>{off <= -size * PAWN_TOP ? null : parts}</g>
     </g>
   );
 };

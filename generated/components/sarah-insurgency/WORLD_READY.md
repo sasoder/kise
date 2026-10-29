@@ -44,6 +44,15 @@ Approved by the director. Every cut imports the world from `./insurgencyShared`.
   The other states stand alone. Western land claims are not shown. The lines are drawn dashed in cream.
 - **The Greenland clip:** the Atlantic bake leaves one false-coast warning, where land is cut at 83N in north Greenland. It sits deep in the haze.
 
+## Changes
+
+**2026-10-30** (asked for by the cut builders). Every change adds something. Existing exports, props and defaults are the same, so running cuts keep working.
+- **`Pawn` rise timing:** the tear now grows with the pawn. It is always slightly wider than the widest part of the pawn already above ground. The head breaks the surface about one frame after the tear starts (in a 15-frame rise), and the tear closes under the base at the end. Run `rise` from 1 to 0 for a sink: the tear opens round the foot, the pawn goes down, the head goes under, and then the tear closes. `riseState(u)` gains `holeR` (the hole radius in pawn heights).
+- **`Block` landing dust:** the topple's puff is split. The specks behind the block are drawn before its faces and the specks in front after them.
+- **`Block sink` (0..1), new:** the block sinks into the page. A tear opens round its footprint, with a pale lip and a soft umber shadow inside (not a black pit). The block goes down, clipped by the opening, then the tear closes, and at 1 nothing is left. `sinkState(u)` gives the schedule `{ tear, open, lip, down, closing }`. This is taken from the cut-1 design in `DontGiveUp.tsx`. Use it on its own; do not combine it with `topple`.
+- **`stars1777` sticker (FlagKind), new:** the 1777 Flag Resolution flag. It has 13 stripes in orange and cream, and a dark umber canton with a circle of 13 cream stars. It reads at about 40 px. Use it for the American block next to the cream Union block, because `grandUnion`'s British canton reads as British there. `grandUnion` is unchanged.
+- **Probe `InsurgencyPieceProbe`, new:** 120 frames on the page world, in `src/Root.InsurgencyWorldProbe.tsx`. Frames 0–19 are a pawn rise, 24–47 a pawn sink, and 48–119 a `stars1777` block that topples back, lands in its dust and then sinks.
+
 ## Files
 - **Clip modules:** `insurgencyShared.tsx`, `insurgencyCamera.ts`, `insurgencyAir.tsx`, `insurgencyGround.tsx`, `insurgencyFlags.tsx`, `insurgencyPieces.tsx`, `insurgencyOverlays.tsx`.
 - **Map data:** `insChinaMapData.ts`, `insChinaLevels*.ts`, `insAtlanticMapData.ts`, `insAtlanticLevels*.ts`.

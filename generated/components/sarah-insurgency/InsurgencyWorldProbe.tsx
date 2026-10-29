@@ -243,3 +243,31 @@ export const InsurgencyWorldProbe: React.FC<ProbeProps> = (p) => (
     {p.bands ? <Bands /> : null}
   </AbsoluteFill>
 );
+
+// ---- the piece-timing probe (InsurgencyPieceProbe): close on the page, one piece at a time ---------------------------
+//   f0-19    a pawn RISES (drive 0 -> 1 over 15 frames from f2)
+//   f24-43   a pawn SINKS back (the same drive run 1 -> 0)
+//   f48-71   a block topples back and lands (the landing dust split behind / in front of it)
+//   f72-119  the lying block SINKS into the page (sink 0 -> 1 over 40 frames from f76)
+export const PIECE_PROBE_FRAMES = 120;
+const PIECE_CAM = camTrack([key(0, VIEWS.page, { D: 230, pitch: 31, yaw: -8 }), key(119, VIEWS.page, { D: 230, pitch: 31, yaw: -8 })], 140);
+export const InsurgencyPieceProbe: React.FC<ProbeProps> = ({ grade }) => {
+  const frame = useCurrentFrame();
+  const cam = PIECE_CAM(frame);
+  const A = insWorld({ cam, rest: PIECE_CAM(0), frame, grade });
+  let el: React.ReactNode = null;
+  if (frame < 24) el = <Pawn A={A} x={0} z={0} size={44} rise={Math.max(0, Math.min(1, (frame - 2) / 15))} uid="pr" seed={3} />;
+  else if (frame < 48) el = <Pawn A={A} x={0} z={0} size={44} rise={Math.max(0, Math.min(1, 1 - (frame - 26) / 15))} uid="ps" seed={3} />;
+  else {
+    const tu = Math.max(0, Math.min(1, (frame - 50) / 16));
+    const sk = Math.max(0, Math.min(1, (frame - 76) / 40));
+    el = <Block A={A} spec={blockSpec(-10, 20, 60, 170)} color="orange" sticker="stars1777" topple={tu} toppleDir="back" sink={sk} uid="bs" />;
+  }
+  return (
+    <InsurgencyStage A={A}>
+      <PageGround3D cam={cam} air={A.ground} fog={A.fog} />
+      <HorizonHaze A={A} id="hzP" />
+      <WorldLayer>{el}</WorldLayer>
+    </InsurgencyStage>
+  );
+};

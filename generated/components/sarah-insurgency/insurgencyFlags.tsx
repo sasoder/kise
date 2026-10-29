@@ -9,11 +9,13 @@
 //               canton (the blue sky), the cream sun: twelve rays, a dark ring, a cream disc
 //   grandUnion  the Continental Colours, 1776: thirteen stripes, orange (the red) and cream, the pre-1801 Union
 //               in the canton
+//   stars1777   the Flag Resolution flag, 1777: thirteen stripes, orange (the red) and cream, a dark canton (the blue)
+//               with thirteen cream stars in a circle. Reads as American (not British) beside the cream Union block
 // Re-exported by insurgencyShared.tsx.
 // ---------------------------------------------------------------------------
 import React from "react";
 
-export type FlagKind = "japan" | "union1606" | "roc" | "grandUnion";
+export type FlagKind = "japan" | "union1606" | "roc" | "grandUnion" | "stars1777";
 export const FLAG_W = 30;
 export const FLAG_H = 20;
 export const FLAG_INK = { cream: "#EFE6D0", creamDeep: "#D6C7A2", dark: "#2E241B", orange: "#FFB000", orangeDeep: "#E39A10", edge: "#3A2D21" };
@@ -87,6 +89,37 @@ export const FlagArt: React.FC<{ kind: FlagKind; id: string }> = ({ kind, id }) 
         <rect x={x} y={y} width={w} height={h} fill={FLAG_INK.orange} />
         <rect x={x} y={y} width={cw} height={ch} fill={FLAG_INK.dark} />
         <Sun cx={x + cw / 2} cy={y + ch / 2} r={ch * 0.42} />
+      </g>
+    );
+  } else if (kind === "stars1777") {
+    const n = 13;
+    const sh = h / n;
+    const stripes: React.ReactNode[] = [];
+    for (let i = 0; i < n; i++) stripes.push(<rect key={i} x={x} y={y + i * sh} width={w} height={sh + 0.02} fill={i % 2 === 0 ? FLAG_INK.orange : FLAG_INK.cream} />);
+    const cw = w * 0.44;
+    const ch = sh * 7;
+    const cx = x + cw / 2;
+    const cy = y + ch / 2;
+    const ring = ch * 0.31;
+    const sr = ch * 0.085;
+    const stars: string[] = [];
+    for (let i = 0; i < 13; i++) {
+      const a = (i / 13) * Math.PI * 2 - Math.PI / 2;
+      const px = cx + ring * Math.cos(a);
+      const py = cy + ring * Math.sin(a);
+      const pts: string[] = [];
+      for (let k = 0; k < 10; k++) {
+        const b = (k * Math.PI) / 5 - Math.PI / 2;
+        const r = k % 2 === 0 ? sr : sr * 0.45;
+        pts.push(`${(px + r * Math.cos(b)).toFixed(3)},${(py + r * Math.sin(b)).toFixed(3)}`);
+      }
+      stars.push(`M${pts.join("L")}Z`);
+    }
+    art = (
+      <g>
+        {stripes}
+        <rect x={x} y={y} width={cw} height={ch} fill={FLAG_INK.dark} />
+        <path d={stars.join("")} fill={FLAG_INK.cream} />
       </g>
     );
   } else {

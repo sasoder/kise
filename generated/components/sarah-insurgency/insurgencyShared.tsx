@@ -52,18 +52,27 @@
 // ---- THE PIECES (insurgencyPieces.tsx; SVG, air-lit, fogged by own distance; draw far -> near) --------------------
 //   <WorldLayer>...</WorldLayer>    the full-frame SVG for overlays and pieces
 //   sortFarToNear(A, items, (it) => [x, z])  painter's order
-//   <Block A spec color sticker? topple? toppleDir? uid shadow? dust? />
+//   <Block A spec color sticker? topple? toppleDir? uid shadow? dust? sink? />
 //       spec: BlockSpec { x, z, w, h, d, face (yaw the sticker faces; 180 = south, toward a north-looking lens), lift? }
 //       blockSpec(x, z, w, face?, h?, d?) the default (square face, 0.42 w thick). color "orange"|"cream".
-//       sticker: FlagKind "japan"|"union1606"|"roc"|"grandUnion" (two-tone period flags, read at ~40 px).
+//       sticker: FlagKind "japan"|"union1606"|"roc"|"grandUnion"|"stars1777" (two-tone period flags, read at ~40 px;
+//       stars1777 = the 1777 Flag Resolution flag, 13 stripes + a circle of 13 cream stars on a dark umber canton:
+//       use it for the American block beside a cream Union block, grandUnion's canton reads British).
 //       topple 0..1: falls flat with weight (toppleAngle: slow off the vertical, fast down, a small rebound at 0.78,
-//       a dust puff); the sticker goes with the face. toppleDir "forward" (face down) | "back" (face up).
+//       a dust puff split in front of / behind the block); the sticker goes with the face. toppleDir "forward"
+//       (face down) | "back" (face up).
+//       sink 0..1: the block sinks INTO the page: a tear opens round its footprint (pale lip, a soft umber shadow
+//       inside, not a black pit), the block goes down clipped by the opening, then the tear closes; gone at 1.
+//       sinkState(u) gives the schedule { tear, open, lip, down, closing }. Default 0 = unchanged.
 //       Its top face is one value step lighter than its sides (WOOD_TOP).
 //   splitBlock(spec, cols, rows?) -> BlockSpec[]  sub-blocks tiling the parent exactly; lerpBlock(a, b, t) animates
 //       each to its target (merge = the reverse); clusterSpots(x, z, n, spacing) ground spots for the men it splits into
 //   <Pawn A x z size color? rise? uid seed? />   a turned wooden pawn (size = its height). rise 0..1: the map surface
-//       parts (a torn dark slit, its earth wall, a dust lip) and the pawn comes UP out of the ground, the hole closes
-//       under it (riseState(u) gives the schedule). Never fade or scale it in.
+//       parts (a torn dark slit, its earth wall, a dust lip) and the pawn comes UP out of the ground: the head breaks
+//       the surface ~1 frame (of a 15-frame rise) after the tear starts and the tear grows WITH the pawn (always just
+//       wider than the widest section already up), then closes under it. Run rise 1 -> 0 for a SINK: the tear opens
+//       round the foot, the pawn goes down, the head goes under, then the tear closes. riseState(u) gives the
+//       schedule { hole, holeR, sink, dust, up }. Never fade or scale it in.
 //   <Garrison A x z size uid face? topple? />   a small cream block at a town
 //   <ValueColumn A x z r height color? uid />   a TURNED column (plinth ring, shaft, bead, capital ring; height = the
 //       whole), orange glows faintly via the stage bloom; cream dull
