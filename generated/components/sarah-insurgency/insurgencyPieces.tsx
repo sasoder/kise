@@ -764,13 +764,82 @@ export const Pawn: React.FC<PawnProps> = ({ A, x, z, size, color = "orange", ris
 };
 
 // ===================================================================================================================
-// VALUE COLUMN: an upright column (AirCyl's light) whose height is the value; orange glows faintly (the stage's
-// bloom), cream is dull
+// VALUE COLUMN: a CLASSICAL column whose height is the value (restyled 2026-10-30 for cuts 91 / 96: the smooth tube
+// read as a pipe). From the foot: a stepped SQUARE plinth (two slabs), a torus, the FLUTED shaft (18 flutes as
+// engraved grooves in the wood's dark tone with a lit edge toward the light, a slight entasis and a taper to 0.88 r at
+// the top), an annulet, the echinus flaring up, and a SQUARE abacus slab on top (sharp corners, wider than the
+// shaft). Same painted wood as the Pawn (WOOD, the Pawn's lathe gradient; the square slabs air-lit like the Blocks,
+// WOOD_TOP on top, the cream rim on their top edges); orange takes half the fog (toneO) and glows faintly through
+// the stage bloom; cream is dull. API unchanged (r = the shaft radius, height = the whole); new optional props:
+// face (yaw of the square parts' front, default 20) and sink (world units the whole column is lowered below the
+// ground, default 0, for a rise: the caller clips at the ground; ItsHome's RisingColumn).
 // ===================================================================================================================
-export const ValueColumn: React.FC<{ A: InsWorld; x: number; z: number; r: number; height: number; color?: "orange" | "cream"; uid: string; shadow?: number }> = ({ A, x, z, r, height, color = "orange", uid, shadow = 1 }) => {
+/** the column's parts for shaft radius r and height h (world units, y from the foot): square slabs (hw = half-width)
+ *  and turned parts (rings [y, radius]) */
+export type ValueColumnPart = { key: string; y0: number; y1: number; square?: number; rings?: [number, number][]; flutes?: boolean };
+export const valueColumnParts = (r: number, h: number): ValueColumnPart[] => {
+  const t1 = Math.min(0.3 * r, 0.05 * h);
+  const t2 = Math.min(0.24 * r, 0.04 * h);
+  const tt = Math.min(0.26 * r, 0.04 * h);
+  const ta = Math.min(0.36 * r, 0.06 * h);
+  const te = Math.min(0.4 * r, 0.06 * h);
+  const tn = Math.min(0.12 * r, 0.02 * h);
+  const s0 = t1 + t2 + tt;
+  const s1 = h - ta - te - tn;
+  // the shaft: entasis (a slight swell) and a taper to 0.88 r at the top
+  const shaft: [number, number][] = Array.from({ length: 9 }, (_, i) => {
+    const t = i / 8;
+    return [s0 + (s1 - s0) * t, r * (1 + 0.03 * Math.sin(Math.PI * t) - 0.12 * t)];
+  });
+  return [
+    { key: "p1", y0: 0, y1: t1, square: 1.5 * r },
+    { key: "p2", y0: t1, y1: t1 + t2, square: 1.32 * r },
+    {
+      key: "torus",
+      y0: t1 + t2,
+      y1: s0,
+      rings: [
+        [t1 + t2, 1.06 * r],
+        [t1 + t2 + 0.5 * tt, 1.17 * r],
+        [s0, 1.04 * r],
+      ],
+    },
+    { key: "shaft", y0: s0, y1: s1, rings: shaft, flutes: true },
+    {
+      key: "annulet",
+      y0: s1,
+      y1: s1 + tn,
+      rings: [
+        [s1, 0.94 * r],
+        [s1 + tn, 0.94 * r],
+      ],
+    },
+    {
+      key: "echinus",
+      y0: s1 + tn,
+      y1: h - ta,
+      rings: [
+        [s1 + tn, 0.9 * r],
+        [s1 + tn + 0.5 * te, 1.1 * r],
+        [h - ta, 1.2 * r],
+      ],
+    },
+    { key: "abacus", y0: h - ta, y1: h, square: 1.34 * r },
+  ];
+};
+/** the widest horizontal half-extent (world units; a square part counts by its half-DIAGONAL) of the parts above
+ *  the ground when the column is lowered by `sink`: what a tear round it must clear */
+export const valueColumnWidestAbove = (r: number, h: number, sink: number) =>
+  valueColumnParts(r, h).reduce((m, p) => (p.y1 - sink > 0 ? Math.max(m, p.square ? p.square * Math.SQRT2 : Math.max(...(p.rings ?? []).map((q) => q[1]))) : m), 0);
+
+const COLUMN_CREAM: Mat = { lit: "#E6DCC6", mid: "#C3B696", dark: "#7E735E" };
+const COLUMN_CREAM_TOP: Mat = { lit: "#F4ECDA", mid: "#DCD0B4", dark: "#93876F" };
+export type ValueColumnProps = { A: InsWorld; x: number; z: number; r: number; height: number; color?: "orange" | "cream"; uid: string; shadow?: number; face?: number; sink?: number };
+export const ValueColumn: React.FC<ValueColumnProps> = ({ A, x, z, r, height, color = "orange", uid, shadow = 1, face = 20, sink = 0 }) => {
   if (height <= 0) return null;
-  const mat = color === "orange" ? WOOD.orange : { lit: "#E6DCC6", mid: "#C3B696", dark: "#7E735E" };
   const orange = color === "orange";
+  const mat = orange ? WOOD.orange : COLUMN_CREAM;
+  const top = orange ? WOOD_TOP.orange : COLUMN_CREAM_TOP;
   const dist = A.dist(x, 0, z);
   const tone = (hex: string) => (orange ? A.toneO(hex, dist) : A.tone(hex, dist));
   const fz = A.hazeAt(dist);
@@ -779,27 +848,29 @@ export const ValueColumn: React.FC<{ A: InsWorld; x: number; z: number; r: numbe
   const shade = mixHex(mat.dark, SHADOW, 0.15);
   const air = A.airAt(dist);
   const refl = mixHex(mat.mid, `#${air.map((q) => Math.round(q).toString(16).padStart(2, "0")).join("")}`, 0.4);
-  // a TURNED column: a plinth ring at the foot, the shaft, a bead and a capital ring at the top (a made object)
-  const baseH = Math.min(r * 0.42, height * 0.12);
-  const capH = Math.min(r * 0.62, height * 0.18);
-  const beadH = Math.min(r * 0.18, height * 0.05);
-  const segs: [number, number, number][] = [
-    [0, baseH, r * 1.2],
-    [baseH, height - capH - beadH, r],
-    [height - capH - beadH, height - capH, r * 1.08],
-    [height - capH, height, r * 1.24],
-  ];
-  const els: React.ReactNode[] = [];
+  const off = -sink;
+  const nf = dirOfYaw(face);
+  const rb = norm(cross(UP, nf));
+  const eyeY = A.cam.C[1];
   const defs: React.ReactNode[] = [];
-  segs.forEach(([y0, y1, R], i) => {
-    if (y1 - y0 <= 1e-6) return;
-    const bt = ringOf(A, x, y0, z, R);
-    const tp = ringOf(A, x, y1, z, R);
-    const x0 = Math.min(tp.cx - tp.rx, bt.cx - bt.rx);
-    const x1 = Math.max(tp.cx + tp.rx, bt.cx + bt.rx);
-    const gid = `${uid}-g${i}`;
+  /** a square slab, air-lit as a Block (polyhedron: visible faces, form light, cream rim on the top edges) */
+  const slab = (p: ValueColumnPart) => {
+    const hw = p.square ?? 0;
+    const P = (a: number, y: number, b: number): V3 => [x + nf[0] * a + rb[0] * b, y + off, z + nf[2] * a + rb[2] * b];
+    const V: V3[] = [P(-hw, p.y0, -hw), P(-hw, p.y0, hw), P(hw, p.y0, hw), P(hw, p.y0, -hw), P(-hw, p.y1, -hw), P(-hw, p.y1, hw), P(hw, p.y1, hw), P(hw, p.y1, -hw)];
+    return polyhedron(A, V, BOX_FACES(mat, top), { uid: `${uid}-${p.key}`, orange, line: OUTLINE[color], dist, rim: 1, lw }).els;
+  };
+  /** a turned part (the Pawn's lathe gradient), its outline closed by the top ring's upper arc and the bottom ring's
+   *  lower arc (right from above and from below), caps where the eye sees them */
+  const turned = (p: ValueColumnPart) => {
+    const rings = p.rings ?? [];
+    const E = rings.map(([y, R]) => ringOf(A, x, y + off, z, R));
+    const b = E[0];
+    const t = E[E.length - 1];
+    const xs = E.flatMap((e) => [e.cx - e.rx, e.cx + e.rx]);
+    const gid = `${uid}-${p.key}-g`;
     defs.push(
-      <linearGradient key={gid} id={gid} gradientUnits="userSpaceOnUse" x1={f2(x0)} y1="0" x2={f2(x1)} y2="0">
+      <linearGradient key={gid} id={gid} gradientUnits="userSpaceOnUse" x1={f2(Math.min(...xs))} y1="0" x2={f2(Math.max(...xs))} y2="0">
         <stop offset="0" stopColor={tone(mat.mid)} />
         <stop offset="0.24" stopColor={tone(mat.lit)} />
         <stop offset="0.52" stopColor={tone(mixHex(mat.lit, mat.mid, 0.6))} />
@@ -807,30 +878,67 @@ export const ValueColumn: React.FC<{ A: InsWorld; x: number; z: number; r: numbe
         <stop offset="1" stopColor={tone(refl)} />
       </linearGradient>,
     );
-    const body = `M${f2(tp.cx - tp.rx)},${f2(tp.cy)}L${f2(bt.cx - bt.rx)},${f2(bt.cy)}A${f2(bt.rx)},${f2(bt.ry)} 0 0 0 ${f2(bt.cx + bt.rx)},${f2(bt.cy)}L${f2(tp.cx + tp.rx)},${f2(tp.cy)}Z`;
-    els.push(<path key={`b${i}`} d={body} fill={`url(#${gid})`} stroke={line} strokeWidth={f2(lw)} strokeLinejoin="round" />);
-    els.push(<path key={`r${i}`} d={`M${f2(tp.cx - tp.rx * 0.9)},${f2(tp.cy)}L${f2(bt.cx - bt.rx * 0.9)},${f2(bt.cy)}`} stroke={CREAM_RIM} strokeWidth={f2(lw * 1.2)} strokeOpacity={0.45 * (1 - fz)} />);
-    // each ring's top ledge (seen from above): a lit ellipse, its front-left edge catching the light
-    if (A.cam.C[1] > y1) {
-      els.push(<ellipse key={`t${i}`} cx={f2(tp.cx)} cy={f2(tp.cy)} rx={f2(tp.rx)} ry={f2(tp.ry)} fill={tone(mixHex(mat.lit, "#FFF0CC", orange ? 0.25 : 0.12))} stroke={line} strokeWidth={f2(lw)} />);
-      els.push(
-        <path
-          key={`e${i}`}
-          d={`M${f2(tp.cx - tp.rx)},${f2(tp.cy)}A${f2(tp.rx)},${f2(tp.ry)} 0 0 0 ${f2(tp.cx + tp.rx * 0.3)},${f2(tp.cy + tp.ry * 0.96)}`}
-          fill="none"
-          stroke={CREAM_RIM}
-          strokeWidth={f2(lw * 1.15)}
-          strokeOpacity={0.6 * (1 - fz)}
-          strokeLinecap="round"
-        />,
-      );
+    const right = E.slice().reverse().map((e) => `${f2(e.cx + e.rx)},${f2(e.cy)}`);
+    const left = E.map((e) => `${f2(e.cx - e.rx)},${f2(e.cy)}`);
+    const d = `M${f2(t.cx - t.rx)},${f2(t.cy)}A${f2(t.rx)},${f2(t.ry)} 0 0 1 ${f2(t.cx + t.rx)},${f2(t.cy)}L${right.join("L")}A${f2(b.rx)},${f2(b.ry)} 0 0 1 ${f2(b.cx - b.rx)},${f2(b.cy)}L${left.join("L")}Z`;
+    const els: React.ReactNode[] = [<path key={`${p.key}-b`} d={d} fill={`url(#${gid})`} stroke={line} strokeWidth={f2(lw)} strokeLinejoin="round" />];
+    if (p.flutes) {
+      // 18 flutes: a groove in the dark tone, its lit edge on the side toward the light; strength by how squarely it
+      // faces the lens (they crowd and fade toward the silhouette)
+      const N = 18;
+      const toEye = norm([A.cam.C[0] - x, 0, A.cam.C[2] - z]);
+      for (let i = 0; i < N; i++) {
+        const a = ((i + 0.5) / N) * Math.PI * 2;
+        const n: V3 = [nf[0] * Math.cos(a) + rb[0] * Math.sin(a), 0, nf[2] * Math.cos(a) + rb[2] * Math.sin(a)];
+        const vis = dot(n, toEye);
+        if (vis < 0.12) continue;
+        const k = sstep(0.12, 0.45, vis);
+        const ndl = dot(n, A.L);
+        // the grooves run between the shaft's end rings (short of the torus and the annulet)
+        const y0 = rings[0][0] + 0.25 * r;
+        const y1 = rings[rings.length - 1][0] - 0.2 * r;
+        const along = (da: number) => {
+          const nn: V3 = [nf[0] * Math.cos(a + da) + rb[0] * Math.sin(a + da), 0, nf[2] * Math.cos(a + da) + rb[2] * Math.sin(a + da)];
+          const pts: string[] = [];
+          for (let j = 0; j <= 6; j++) {
+            const yy = y0 + ((y1 - y0) * j) / 6;
+            const tt = (yy - rings[0][0]) / Math.max(1e-6, rings[rings.length - 1][0] - rings[0][0]);
+            const R = r * (1 + 0.03 * Math.sin(Math.PI * tt) - 0.12 * tt) * 1.002;
+            const s = toScreen(A.cam, x + nn[0] * R, yy + off, z + nn[2] * R);
+            pts.push(`${f2(s.x)},${f2(s.y)}`);
+          }
+          return `M${pts.join("L")}`;
+        };
+        const gw = Math.max(0.7, 0.07 * r * toScreen(A.cam, x, (y0 + y1) / 2 + off, z).s);
+        els.push(<path key={`fl${i}`} d={along(0)} fill="none" stroke={tone(mixHex(mat.dark, SHADOW, 0.25))} strokeOpacity={(0.55 * k).toFixed(3)} strokeWidth={f2(gw)} strokeLinecap="round" />);
+        if (ndl > -0.1) els.push(<path key={`fh${i}`} d={along(-0.07)} fill="none" stroke={tone(mat.lit)} strokeOpacity={(0.5 * k * sstep(-0.1, 0.5, ndl) * (1 - fz)).toFixed(3)} strokeWidth={f2(gw * 0.8)} strokeLinecap="round" />);
+      }
     }
-  });
+    // the rim light down the lit (left) side
+    els.push(<path key={`${p.key}-rl`} d={`M${E.map((e) => `${f2(e.cx - e.rx * 0.9)},${f2(e.cy)}`).join("L")}`} fill="none" stroke={CREAM_RIM} strokeWidth={f2(lw * 1.1)} strokeOpacity={0.35 * (1 - fz)} strokeLinecap="round" />);
+    const yTop = rings[rings.length - 1][0] + off;
+    const yBot = rings[0][0] + off;
+    if (eyeY > yTop) els.push(<ellipse key={`${p.key}-cap`} cx={f2(t.cx)} cy={f2(t.cy)} rx={f2(t.rx)} ry={f2(t.ry)} fill={tone(top.mid)} stroke={line} strokeWidth={f2(lw)} />);
+    if (eyeY < yBot) els.push(<ellipse key={`${p.key}-bot`} cx={f2(b.cx)} cy={f2(b.cy)} rx={f2(b.rx)} ry={f2(b.ry)} fill={tone(shade)} stroke={line} strokeWidth={f2(lw)} />);
+    return els;
+  };
+  // painter's order along the stack: the parts farthest above / below the eye first, the part at eye level last
+  const parts = valueColumnParts(r, height).filter((p) => p.y1 + off > -height);
+  const vd = (p: ValueColumnPart) => (eyeY > p.y1 + off ? eyeY - (p.y1 + off) : eyeY < p.y0 + off ? p.y0 + off - eyeY : 0);
+  const order = parts.slice().sort((a, b) => vd(b) - vd(a));
+  const els = order.map((p) => <g key={p.key}>{p.square ? slab(p) : turned(p)}</g>);
+  const hw = 1.5 * r;
+  const foot: V3[] = [
+    [x + (nf[0] + rb[0]) * hw, 0, z + (nf[2] + rb[2]) * hw],
+    [x + (nf[0] - rb[0]) * hw, 0, z + (nf[2] - rb[2]) * hw],
+    [x - (nf[0] + rb[0]) * hw, 0, z - (nf[2] + rb[2]) * hw],
+    [x - (nf[0] - rb[0]) * hw, 0, z - (nf[2] - rb[2]) * hw],
+  ];
   return (
     <g>
       <defs>{defs}</defs>
-      <ContactShadow A={A} x={x} z={z} a={r * 1.7} b={r * 1.5} amt={shadow} uid={`${uid}-sh`} />
-      <FootOcclusion A={A} pts={groundRing(x, z, r * 1.2)} grow={0.1} amt={shadow} />
+      {shadow > 0.001 ? <ContactShadow A={A} x={x} z={z} a={r * 2.1} b={r * 1.9} amt={shadow} uid={`${uid}-sh`} /> : null}
+      {shadow > 0.001 ? <FootOcclusion A={A} pts={foot} grow={0.06} amt={shadow} /> : null}
       {els}
     </g>
   );

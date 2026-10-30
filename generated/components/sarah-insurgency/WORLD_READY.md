@@ -53,6 +53,22 @@ Approved by the director. Every cut imports the world from `./insurgencyShared`.
 - **`stars1777` sticker (FlagKind), new:** the 1777 Flag Resolution flag. It has 13 stripes in orange and cream, and a dark umber canton with a circle of 13 cream stars. It reads at about 40 px. Use it for the American block next to the cream Union block, because `grandUnion`'s British canton reads as British there. `grandUnion` is unchanged.
 - **Probe `InsurgencyPieceProbe`, new:** 120 frames on the page world, in `src/Root.InsurgencyWorldProbe.tsx`. Frames 0–19 are a pawn rise, 24–47 a pawn sink, and 48–119 a `stars1777` block that topples back, lands in its dust and then sinks.
 
+**2026-10-30, later** (asked for by the director for cuts 91 and 96). The change adds to the API and is backward compatible.
+- **`ValueColumn` restyled as a classical column.** The smooth tube read as a pipe. From the foot up it now has:
+  - a stepped SQUARE plinth (two slabs) and a torus;
+  - an 18-flute shaft. Each flute is a groove in the wood's dark tone, with a lit edge on the side toward the light. The shaft has a slight entasis and tapers to 0.88 r at the top.
+  - an annulet, a flaring echinus, and a SQUARE abacus slab with sharp corners.
+
+  The material is exactly the Pawn's orange: WOOD plus the Pawn's lathe gradient. The square slabs are air-lit like the Blocks, with WOOD_TOP on top and the cream rim on their top edges. Fog is by distance, and orange takes half of it. `r` (the shaft radius) and `height` (the whole column) mean what they did before. New optional props:
+  - `face`: the yaw of the square parts' front. Default 20.
+  - `sink`: how far the whole column is lowered below the ground, in world units. Default 0. The caller clips at the ground.
+
+  New exports: `valueColumnParts(r, h)` and `valueColumnWidestAbove(r, h, sink)`. The second gives the widest half-extent above the ground, counting square parts by their half-diagonal, so a tear can be sized to it. Cut 91's `RisingColumn` (`itsHomeWorld.tsx`) uses them for the column's rise out of a tear.
+- **Warning for every cut: never project ground geometry near or behind the lens.** A ground point near the camera projects to huge screen coordinates. One SVG path with coordinates in the thousands breaks the stage's multiply blend. The paper mottle then composites as a beige veil over the whole frame. Cut 91 hit this with near-foreground field parcels at f0–10. It showed in stills and short frame ranges but not always in a full render.
+  - The fix: clip ground polygons and lines at a near eye depth before projecting. Cut 91 uses 0.7 x the depth where the frame's bottom row meets the ground: `nearZ` in `itsHomeWorld.tsx`.
+  - The kit's `GroundLine` (near limit 1) can still produce such paths in low, close views.
+  - To check for it: look at the per-frame mean colour of a preview for a pale jump.
+
 ## Files
 - **Clip modules:** `insurgencyShared.tsx`, `insurgencyCamera.ts`, `insurgencyAir.tsx`, `insurgencyGround.tsx`, `insurgencyFlags.tsx`, `insurgencyPieces.tsx`, `insurgencyOverlays.tsx`.
 - **Map data:** `insChinaMapData.ts`, `insChinaLevels*.ts`, `insAtlanticMapData.ts`, `insAtlanticLevels*.ts`.
