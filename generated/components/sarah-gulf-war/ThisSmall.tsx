@@ -17,12 +17,12 @@
 // ~3,000 civilians bar) with the empty coalition slot at the right edge. One continuous camera move: it trucks right to
 // bring the slot in (the group's right edge lands by ~f40) while, at the SAME px-per-death, the slot's foot draws out
 // from its centre (f2-11) and the coalition's tiny ACCENT bar rises from it to its 8 px (fewer than 400; f8-24) with its
-// glow; "Coalition" slides up under it (f20-30, "death") and "under 400" above it (f26-36, "death rate"). The zoom,
+// glow; "Coalition" slides up under it (f20-30, "death") and "<400" above it (f26-36, "death rate"). The zoom,
 // already creeping in at cut 90's end slope, grows into one gentle push-in and drop toward the baseline (its lobe peaks
 // ~f55, "for one side is", ~90 % by f72, "this small"), the right side holding while the push opens to the left, and it
 // settles with the three-bar group (military, civilians, coalition) centred with even margins: k 1 -> 1.09, as far as
 // the frame allows with the whole group in shot (its ink runs from world x 74, the left end of "20,000–35,000", to
-// 1004, the right end of "under 400": 930 px, so ~33 px margins at k 1.09). The settled frame reads, side by side on
+// 1004, the right end of rev 1's "under 400": 930 px, so ~33 px margins at k 1.09; rev 2 keeps this framing). The settled frame reads, side by side on
 // one baseline: huge, smaller, barely there. f72-83: settled and alive (the creep, the house sway, motes).
 // Orange = the coalition's dead (the family's rule); the Iraqi dead stay DEAD umber and creamLo, as in cut 90.
 //
@@ -34,20 +34,25 @@
 // speed fades out over 16 f), so the join has no velocity step. Then swayCam(cam, f + 162) and the air at frame
 // f + 162, so the sway, motes, shafts and grain carry straight on from cut 90.
 //
+// REV 2 (user's notes): as cut 90 rev 3, the whole chart sits CHART_DROP (gulfChart) screen px lower on every frame via
+// IraqisLost's chartCamOf; the air, motes and grain stay on the plain camera. The number reads "<400" instead of "under
+// 400". The camera is unchanged. The user allows the name labels in the old caption band y 1080-1250. The screen ys in
+// the next paragraph are the numbers BEFORE this drop.
+//
 // FRAMING: the lowest readable text (the name row, baseline BASE + NAME_DY) ends at screen y <= ~1060 + 5 sway on every
 // frame; nothing readable in y 1080-1250 or 1360-1460. On the last frame everything is in shot: the title's top at
 // screen y ~24, the military number's at ~148, the name row ends at ~1054.
 //
 // SOURCES (COMMON.md, gulfChart FIG): Iraqi military deaths 20,000-35,000 (Wikipedia, "Gulf War", casualty estimates;
 // PDA 20,000-26,000); Iraqi civilians ~3,000 (Iraqi govt 2,300; PDA 3,664); coalition deaths 292-379 by source ->
-// on screen "under 400", drawn at FIG.coalitionUnder = 400 x PX_PER = 8 px.
+// on screen "<400", drawn at FIG.coalitionUnder = 400 x PX_PER = 8 px.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { WorldSvg, c01, mixHex, swayCam, type Cam } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { Bar, COL, CategoryLabel, ChartDefs, ChartStage, ChartText, ChartTitle, FIG, FONT, Foot, NumberLabel, Plate, chartAirOf, enter, fmt, grow } from "./gulfChart";
-import { BAR_W, BASE, DURATION as DURATION_90, GROUP_CX, K_END, NAME_DY, NUM_GAP, PX_PER, SLOTS, TY, camAt as camAt90 } from "./IraqisLost";
+import { BAR_W, BASE, DURATION as DURATION_90, GROUP_CX, K_END, NAME_DY, NUM_GAP, PX_PER, SLOTS, TY, camAt as camAt90, chartCamOf } from "./IraqisLost";
 
 export const FPS = 24;
 export const DURATION = 84;
@@ -89,7 +94,8 @@ const lobe = (t0: number, t1: number, a: number, b: number) => {
   const norm = raw(F_END);
   return (f: number) => raw(f) / norm;
 };
-/** the three-bar group's ink: world x 74 (the left end of "20,000–35,000") to 1004 (the right end of "under 400") */
+/** the camera's framing span: world x 74 (the left end of "20,000–35,000") to 1004 (the right end of rev 1's "under
+ *  400"; rev 2's shorter "<400" keeps the settled framing, so the rightmost ink is now "Coalition", ~976) */
 const INK_L = 74;
 const INK_R = 1004;
 const K_FIN = 1.09;
@@ -173,10 +179,10 @@ const T = {
   coalName: [20, 10], // lands f30 ("death", real ~f20)
   coalNum: [26, 10], // lands f36 ("rate", real ~f41)
 } as const;
-/** "under 400": between the civilians' 62 (cut 90) and the 48 of the names, so it clears "~3,000" beside it and reads
- *  from the moment it lands (k ~1.0: 54 screen px) to the settled push (k 1.09: 59 px) */
+/** the number's size, between the civilians' 62 (cut 90) and the 48 of the names (k ~1.0: 54 screen px when it lands,
+ *  k 1.09: 59 px settled) */
 const COAL_NUM = 54;
-const COAL_TEXT = "under 400";
+const COAL_TEXT = "<400";
 /** the number floats higher over the sliver than NUM_GAP (22): tight above an 8 px bar it read as underlined text */
 const COAL_GAP = 44;
 
@@ -199,7 +205,7 @@ const ThisSmall: React.FC<z.infer<typeof schema>> = () => {
   const coalNum = enter(frame, T.coalNum[0], T.coalNum[1]);
   return (
     <ChartStage A={A}>
-      <WorldSvg cam={cam}>
+      <WorldSvg cam={chartCamOf(cam)}>
         <ChartDefs uid={UID} />
         <defs>
           <linearGradient id={`${UID}-civ`} x1="0" y1="0" x2="1" y2="0">
