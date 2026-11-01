@@ -32,7 +32,9 @@
 // gentle push in over the descent (f84-104) that eases to a creep in to the last frame; cx trucks from cut 69's end
 // to the ledger's centre (one smootherstep, f0-70); the vertical is solved as cut 69's (the plates' bottom at screen
 // END_ANCHOR), and that anchor eases up a touch (f84-116) with the descent. The kit's sway on top.
-// FRAMING: everything readable stays above y 1062 on every frame (caption bands y 1080-1250 and 1360-1460 clear).
+// FRAMING (user's note, Nov 1): the whole ledger sits LEDGER_DROP = 80 px lower, as in cut 69: the plates' bottom at
+// screen y 1142 at the open, easing to 1108 by f116. The troop plates' number line therefore overlaps the top caption
+// band (y 1080-1250) on purpose, the user's call; the band 1360-1460 and the frame bottom stay clear.
 //
 // SOURCES (COMMON.md, verified for the clip): Congress (Apr 1992) put the US cost of the Gulf War at $61.1B, of which
 // about $52-54B was paid by other countries ($36B Kuwait, Saudi Arabia and the Gulf states; $16B Germany and Japan)
@@ -55,6 +57,7 @@ import {
   END_CAM,
   FONT,
   ICON_H,
+  LEDGER_DROP,
   PITCH_X,
   PLATE_BOTTOM,
   PLATE_TOP,
@@ -172,8 +175,9 @@ const P_SU = TYPE.num * PLATE_SIZE;
 /** plate geometry from the top of its name line (as BurdenPlate): the number's baseline and the soft halo */
 const P_NUM_DY = P_SN * 0.72 + P_SU * 1.02;
 const P_HALO_UP = (34 - 2) * PLATE_SIZE;
-/** the plate's halo top sits this far (screen px) under the frame top while the column is held */
-const TOP_MARGIN = 70;
+/** the plate's halo top sits this far (screen px) under the frame top while the column is held; the ledger's drop keeps
+ *  every world value of the cut as it was */
+const TOP_MARGIN = 70 + LEDGER_DROP;
 /** the column's top stands this far (world) under the number's baseline */
 const NUM_TO_TOP = 46 * PLATE_SIZE;
 /** the contact line: the top rank's helmet tops */
