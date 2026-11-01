@@ -31,9 +31,12 @@
 //
 // CAMERA: d ln k / df continues cut 74's end slope (+0.002 / f) and eases to a slow creep in (+0.0008 / f, f0-30); the
 // pull-back is one sin^2 lobe over f92-148 (peak ~ -0.0055 / f) easing to a creep out (-0.0006 / f) that runs to the
-// last frame (k 0.630 -> ~0.58); cx eases to the coalition's centre and the plates' bottom anchor 1028 -> 1046 with the same
+// last frame (k 0.630 -> ~0.58); cx eases to the coalition's centre and the plates' bottom anchor (END_ANCHOR - 34 ->
+// 1046 + LEDGER_DROP, i.e. 1108 -> 1126) with the same
 // lobe; the vertical is solved as cut 69 / 74 (the plates' bottom at the screen anchor). The kit's sway on top (wf).
-// FRAMING: everything readable stays above y 1046 on every frame (caption bands y 1080-1250 and 1360-1460 clear).
+// FRAMING (user's note, Nov 1): the whole ledger sits LEDGER_DROP = 80 px lower, as in cuts 69 and 74: the plates' bottom
+// ends at y 1126, so the troop plates overlap the top caption band (y 1080-1250), accepted because the user asked for
+// this move; nothing reaches y 1360-1460. burdenAirOf keeps the air where it was.
 // CONTACT: the allies' column foot touches the helmets (CONTACT_Y) on f83; first reaction f84 (squash, warmth).
 //
 // JOIN: f0 is rebuilt from cut 74's exports (camAt74, anchorAt, planBundles, CONTACT_Y, FOOT_Y0, PLATE_SIZE, ...);
@@ -57,6 +60,7 @@ import {
   COL,
   FONT,
   ICON_H,
+  LEDGER_DROP,
   PITCH_X,
   PLATE_BOTTOM,
   PLATE_TOP,
@@ -140,7 +144,7 @@ export const CAM80 = {
   A: 0.0045,
   sE: -0.0006,
   /** the plates' bottom anchor at the end (screen y) */
-  anchorEnd: 1046,
+  anchorEnd: 1046 + LEDGER_DROP,
 };
 const rateAt = (f: number) => {
   const u = (f - CAM80.P0) / (CAM80.P1 - CAM80.P0);
