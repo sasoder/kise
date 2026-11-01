@@ -192,7 +192,7 @@ void main() {
   // the mottle (world space, two octaves)
   {
     float m0 = texture(tMot, p / uMotO.x).a;
-    float m1 = texture(tMot, p / (uMotO.x * 2.0) + 0.37).a;
+    float m1 = texture(tMot, p / (uMotO.x * 2.0)).a; // no offset: m1 must equal the next octave's m0, or the mottle jumps at each crossing
     float mm = mix(m0, m1, uMotO.y);
     col = mix(col, uShadow, clamp(mm * 0.3, 0.0, 1.0));
   }

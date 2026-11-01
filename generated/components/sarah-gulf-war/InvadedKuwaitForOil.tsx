@@ -241,7 +241,8 @@ const sheetItem = (cam: Cam, air: GulfAir, i: number, frame: number): Item | nul
 const ramp = (frame: number, f0: number, f1: number) => c01((frame - f0) / (f1 - f0));
 const LBL = {
   // IRAQ (opening): behind the column at f0, below the lower caption band; it leaves the frame at the bottom by f8
-  // and is not drawn after f60 (still off frame), so it never re-enters into the band as the camera rises
+  // and is not drawn after f30 (far off frame, y > 2500), so it never re-enters into the band as the camera rises. Not
+  // later: by f59 this spot reaches the camera's plane, where its plate projects huge and dims the whole frame
   iraq: { at: [-34, -91] as P2, cap: 1.5 },
   // IRAQ (end): in the gap between the caption bands (y ~1320 at f173), slid up once the camera has settled there
   iraqEnd: { at: [-12.8, -82.3] as P2, cap: 2.2 },
@@ -313,7 +314,7 @@ const InvadedKuwaitForOil: React.FC<z.infer<typeof schema>> = () => {
         <GulfGround cam={cam} frame={frame} air={air} lit={lit} />
         <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0 }}>
           {paint(ground)}
-          {frame < 60 ? <GroundLabel cam={cam} air={air} text="IRAQ" at={LBL.iraq.at} cap={LBL.iraq.cap} u={1} up={182} plate={0.4} /> : null}
+          {frame < 30 ? <GroundLabel cam={cam} air={air} text="IRAQ" at={LBL.iraq.at} cap={LBL.iraq.cap} u={1} up={182} plate={0.4} /> : null}
           <GroundLabel cam={cam} air={air} text="IRAQ" at={LBL.iraqEnd.at} cap={LBL.iraqEnd.cap} u={ramp(frame, 159, 170)} up={178} plate={0.4} slide={12} />
           <GroundLabel cam={cam} air={air} text="KUWAIT" at={LBL.kuwait.at} cap={capAt(LBL.kuwait, frame)} u={ramp(frame, 9, 23)} up={210} plate={0.4} />
           <GroundLabel cam={cam} air={air} text="2 AUG 1990" at={LBL.date.at} cap={capAt(LBL.date, frame)} u={ramp(frame, 13, 27)} up={210} plate={0.6} track={0.12} />
