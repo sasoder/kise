@@ -25,19 +25,23 @@
 // FRAMING: f0: the chart 630 px wide, exactly centred (margins 224 / 226), baseline y 980. f41: k 1.35, baseline y 945,
 // Korea's label ~70 px from the left edge, Iraq's ~130 from the right (the push centres the Gulf bar, the third of
 // four, so the margins can only nearly match), Vietnam's 58,220 ~60 px under the top edge, the title in the open air
-// at the upper right. Type at the settled frame (screen px): names 49 (Caslon, title case), years 41, numbers 62, title
-// 59 (TYPE_PHONE in gulfChart). Lowest text on any frame y 1052 (measured); nothing in either caption band.
+// at the upper right. Type at the settled frame (screen px): names 49 (Caslon, title case), numbers 62, title
+// 59 (TYPE_PHONE in gulfChart).
+//
+// REV 3 (user's notes, Nov 1): the years are gone (war names and numbers stay; the names keep their place) and the whole
+// chart sits CHART_DROP lower on every frame through the chart's own camera, while the air keeps the rev 2 camera. So
+// the positions above are all CHART_DROP lower on screen (e.g. the Gulf foot lands at y 945 + CHART_DROP), and the names
+// now reach into the old caption band at y 1080-1250, which the user has allowed (lowest text y ~1098, measured).
 //
 // SOURCES: CRS RL32492, "American War and Military Operations Casualties: Lists and Statistics" (Jul 29 2020), Tables
 // 1 / 7 / 6 / 12: Korean War 36,574 (in theater), Vietnam Conflict 58,220, Persian Gulf War (1990-91) 383, Operation
-// Iraqi Freedom (2003-10) 4,418 (gulfChart FIG.us). Years: Korea 1950-53, Vietnam 1955-75 (the CRS table's span),
-// Gulf War 1990-91, Iraq 2003-10 (OIF).
+// Iraqi Freedom (2003-10) 4,418 (gulfChart FIG.us).
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { WorldSvg, swayCam } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { Bar, COL, CategoryLabel, ChartDefs, ChartStage, ChartTitle, FIG, NumberLabel, barCentres, chartAirOf, countUp, enter, grow, pushCam } from "./gulfChart";
+import { Bar, CHART_DROP, COL, CategoryLabel, ChartDefs, ChartStage, ChartTitle, FIG, NumberLabel, barCentres, chartAirOf, countUp, enter, grow, pushCam } from "./gulfChart";
 
 export const FPS = 24;
 export const DURATION = 42;
@@ -54,19 +58,18 @@ const PITCH = 173.2;
 const XS = barCentres(4, 540, BAR_W, PITCH - BAR_W);
 const MAX_H = 600;
 const PX_PER = MAX_H / FIG.us.vietnam;
-const T = { title: 44, name: 36, sub: 30, num: 46 };
+const T = { title: 44, name: 36, num: 46 };
 const NAME_DY = 40;
-const SUB_DY = 76;
 const NUM_GAP = 16;
 
-type War = { key: keyof typeof FIG.us; name: string; years: string; kind: "cream" | "accent"; f0: number; dur: number };
+type War = { key: keyof typeof FIG.us; name: string; kind: "cream" | "accent"; f0: number; dur: number };
 /** date order; f0 / dur = the bar's growth: all four already ~10-17 % up at f0, settling Gulf f13, Korea f14,
  *  Vietnam f18, Iraq f19 */
 const WARS: War[] = [
-  { key: "korea", name: "Korea", years: "1950–53", kind: "cream", f0: -3.0, dur: 17 },
-  { key: "vietnam", name: "Vietnam", years: "1955–75", kind: "cream", f0: -3.2, dur: 21.3 },
-  { key: "gulf", name: "Gulf War", years: "1990–91", kind: "accent", f0: -2.4, dur: 15.6 },
-  { key: "iraq", name: "Iraq", years: "2003–10", kind: "cream", f0: -2.6, dur: 21.6 },
+  { key: "korea", name: "Korea", kind: "cream", f0: -3.0, dur: 17 },
+  { key: "vietnam", name: "Vietnam", kind: "cream", f0: -3.2, dur: 21.3 },
+  { key: "gulf", name: "Gulf War", kind: "accent", f0: -2.4, dur: 15.6 },
+  { key: "iraq", name: "Iraq", kind: "cream", f0: -2.6, dur: 21.6 },
 ];
 const GULF_X = XS[2];
 /** the title (stacked, two lines) sits in the open air at the upper right, beside Vietnam and centred over the two
@@ -83,11 +86,13 @@ const REST = swayCam(camAt(0), 0);
 const HardlyAnybodyDied: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const cam = swayCam(camAt(frame), frame);
+  // the air, motes and grain stay on the undropped camera; only the chart's own camera sits CHART_DROP lower on screen
   const A = chartAirOf(cam, REST, frame);
+  const chartCam = { ...cam, cy: cam.cy - CHART_DROP / cam.k };
   const title = enter(frame, -3, 10);
   return (
     <ChartStage A={A}>
-      <WorldSvg cam={cam}>
+      <WorldSvg cam={chartCam}>
         <ChartDefs uid="had" />
         <ChartTitle uid="had" x={TITLE_X} y={TITLE_Y} text={"US military\ndeaths"} o={title.o} lift={title.lift} size={T.title} />
         {WARS.map((w, i) => (
@@ -104,7 +109,7 @@ const HardlyAnybodyDied: React.FC<z.infer<typeof schema>> = () => {
           const lab = enter(frame, w.f0 - 0.5, 10);
           return (
             <g key={w.key}>
-              <CategoryLabel uid="had" x={x} base={BASE} name={w.name} sub={w.years} o={lab.o} lift={lab.lift} nameSize={T.name} subSize={T.sub} nameDy={NAME_DY} subDy={SUB_DY} />
+              <CategoryLabel uid="had" x={x} base={BASE} name={w.name} o={lab.o} lift={lab.lift} nameSize={T.name} nameDy={NAME_DY} />
               <NumberLabel
                 uid="had"
                 x={x}

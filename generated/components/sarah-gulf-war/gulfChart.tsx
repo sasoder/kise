@@ -352,3 +352,6 @@ export const NumberLabel: React.FC<{ uid: string; x: number; y: number; text: st
       <ChartText x={x} y={y} size={size} font={FONT.num} text={text} fill={fill} />
     </g>
   );
+
+/** screen px every piece of the death-toll charts (cuts 6, 90, 107) sits lower than first delivered (user's note); the air stays put */
+export const CHART_DROP = 80;
