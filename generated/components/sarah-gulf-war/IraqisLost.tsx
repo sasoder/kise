@@ -23,6 +23,10 @@
 // Colour: the Iraqi dead are DEAD umber (soldiers) and creamLo (civilians); orange stays reserved for the coalition's
 // sliver in cut 107. The third slot (SLOTS.coal) exists in the layout, at the right edge of the last frame, but nothing is drawn there.
 //
+// REV 3 (user's note, "move it down slightly"): the whole chart sits CHART_DROP (gulfChart) screen px lower on every
+// frame via chartCamOf; the air, motes and grain stay on camAt. The user allows the name labels in the old caption band
+// y 1080-1250. The screen ys in the next paragraph are the numbers BEFORE this drop.
+//
 // FRAMING: linear and honest, ONE px-per-death for every bar: 35,000 = 700 px (PX_PER 0.02; 3,000 = 60 px; 400 = 8 px).
 // Type at gulfChart rev 2's phone sizes on the settled frame (k 1: title 58, names 48, numbers 62 screen px). The
 // baseline sits at screen y 996 (the zoom is anchored on it), so the one-line name row under it ends by y ~1070 with
@@ -38,7 +42,7 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { WorldSvg, c01, mixHex, swayCam, type Cam } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { COL, CategoryLabel, ChartDefs, ChartStage, ChartText, ChartTitle, FIG, FONT, Foot, NumberLabel, Plate, chartAirOf, creep, enter, fmt, grow, typeAt } from "./gulfChart";
+import { CHART_DROP, COL, CategoryLabel, ChartDefs, ChartStage, ChartText, ChartTitle, FIG, FONT, Foot, NumberLabel, Plate, chartAirOf, creep, enter, fmt, grow, typeAt } from "./gulfChart";
 
 export const FPS = 24;
 export const DURATION = 163;
@@ -82,6 +86,9 @@ export const camAt = (f: number): Cam => {
   return { k, cx: GROUP_CX, cy: BASE - (BASE - 960) / k };
 };
 const REST = swayCam(camAt(0), 0);
+/** the camera the CHART is drawn with: the air's camera with the chart CHART_DROP screen px lower at any zoom. BASE, TY,
+ *  SLOTS and camAt keep their first-delivery values: camAt still drives the air, this offsets only the drawing. */
+export const chartCamOf = (cam: Cam): Cam => ({ ...cam, cy: cam.cy - CHART_DROP / cam.k });
 
 // ---- timing -------------------------------------------------------------------------------------------------------
 const T = {
@@ -179,7 +186,7 @@ const IraqisLost: React.FC<z.infer<typeof schema>> = () => {
   const civX0 = SLOTS.civ - BAR_W.civ / 2;
   return (
     <ChartStage A={A}>
-      <WorldSvg cam={cam}>
+      <WorldSvg cam={chartCamOf(cam)}>
         <ChartDefs uid={UID} />
         <defs>
           <linearGradient id={`${UID}-civ`} x1="0" y1="0" x2="1" y2="0">
