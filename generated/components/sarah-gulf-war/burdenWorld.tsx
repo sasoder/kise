@@ -25,7 +25,7 @@
 //   marchPhase(wf) -> the gait phase (0 = standing; the march ends exactly on 0)
 //   PLATE_TOP, PLATE_BOTTOM   the Y under the blocks where the plates sit (top of the name line / bottom of the halo)
 //   camAt(wf) -> Cam   cut 69's camera (before swayCam); END_CAM = camAt(86); END_K, END_ANCHOR (the plate bottom's
-//     screen y, 1062 on every frame); CAM_SLOPE_END (d ln k / df and d cx / df at f86) for a continuing camera
+//     screen y, 1062 + LEDGER_DROP on every frame); CAM_SLOPE_END (d ln k / df and d cx / df at f86) for a continuing camera
 //   burdenAirOf(cam, rest, wf) -> AirWorld-like { v }   the medium: the horizon held at screen y HORIZON_SY (a far
 //     backdrop does not zoom), motes parallax the dolly AND the rise of the pull-back; REST_CAM = swayCam(camAt(0), 0)
 //   drainAt(wf) / veilAt(wf)   cut 69's drain of the troops toward DEAD (0 -> 0.15) and their air veil (0.04 -> 0.10)
@@ -150,8 +150,11 @@ export const iconAt = (b: Block, i: number) => {
 export const PLATE_TOP = 26;
 /** the bottom of the plates' soft halo (the text ends ~16 above it) */
 export const PLATE_BOTTOM = 222;
-/** the plate bottom's screen y on every frame of cut 69 (clear of the 1080 caption band) */
-export const END_ANCHOR = 1062;
+/** screen px every piece of the troops-and-cash ledger (cuts 69, 74, 80) sits lower than first delivered (user's note);
+ *  it lives in the vertical solve (END_ANCHOR), and burdenAirOf takes it back out, so the air stays put */
+export const LEDGER_DROP = 80;
+/** the plate bottom's screen y on every frame of cut 69 (the user allows the plates into the old 1080 caption band) */
+export const END_ANCHOR = 1062 + LEDGER_DROP;
 /** the camera's channels, each C1 (no kinks), in ln k: MOVE 1 (f0-40) eases out of a moving start (truck right and
  *  widen as the US block arrives); a DRIFT out runs under everything, slow (d0) through the first half and ramping
  *  (f62-80) to a visible creep (d1) that carries the tail f76-86 and on into cut 74; MOVE 2, the pull-back on
@@ -225,9 +228,10 @@ export const burdenAirOf = (cam: Cam, rest: Cam, wf: number): { v: AirView } => 
     scene: { ...AIR_SCENE_EYE, F: Dc * cam.k },
     frame: wf,
     horizon: HORIZON_SY,
-    // the eye rides the horizon row: as the pull-back rises the motes sink past it
-    cam: { x: cam.cx, y: -worldYAt(cam, HORIZON_SY), z: -Dc },
-    rest: { x: rest.cx, y: -worldYAt(rest, HORIZON_SY), z: -dcOf(rest.k) },
+    // the eye rides the horizon row: as the pull-back rises the motes sink past it. Read at the row LEDGER_DROP lower:
+    // the same world Y as before the drop, on any camera solved with it, so the air stays exactly where it was
+    cam: { x: cam.cx, y: -worldYAt(cam, HORIZON_SY + LEDGER_DROP), z: -Dc },
+    rest: { x: rest.cx, y: -worldYAt(rest, HORIZON_SY + LEDGER_DROP), z: -dcOf(rest.k) },
   });
   return { v };
 };

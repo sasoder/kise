@@ -19,7 +19,7 @@
 // frame), and halts in one cosine step over f27-34, landing exactly on the standing pose; its plate "U.S. 700,000",
 // centred under the block and riding with it, slides up while the block decelerates (f24, readable by ~f32). A slow
 // drift out. On "small potatoes" (f58-80) the camera pulls back in one smootherstep lobe (k ~0.98 -> 0.64) about the
-// plates' bottom line, which stays at screen y 1062: both blocks gather low onto that line and read small under the
+// plates' bottom line, which stays at screen y 1142: both blocks gather low onto that line and read small under the
 // open air above them (where cut 74's money lands), the troops draining a little toward the dim tone, still
 // readable (icons 70 px, names 44 px, numbers 64 px at f86). f80-86: the drift out keeps going as a visible creep
 // (d ln k -0.005/f, the block tops sinking ~2 px/f) while the icons breathe out of phase and the motes sink.
@@ -28,11 +28,11 @@
 // CAMERA (burdenWorld camAt): k 1.12 -> 0.97 and a truck right (cx -176 -> 0) easing out of a moving start over f0-40
 // as the US arrives, a drift out under everything (-0.0008/f, ramping over f62-80 to -0.005/f), the pull-back as one
 // smootherstep lobe in ln k over f58-80 (peak speed ~f69), sized so k = 0.625 at f86. The kit's sway on top.
-// FRAMING: f0 the allies' block centred at x 430, helmets y ~265, its plate ending at y 1062. f40 the ledger spans
-// x ~24-1034 (the allies' plate is far wider than its two columns), helmets y ~348, soles ~839, plates under them
-// ending by 1062. f86 it spans x ~335-863 (with the plates), helmets y 617, soles 923, plates by 1062; open air above.
-// The vertical is solved from the zoom (burdenWorld camAt), so nothing readable enters y 1080-1250 or 1360-1460 on
-// any frame.
+// FRAMING (with LEDGER_DROP, the user's note: the ledger 80 px lower, the air unchanged): f0 the allies' block centred
+// at x 430, helmets y ~345, its plate ending at y 1142. f40 the ledger spans x ~24-1034 (the allies' plate is far wider
+// than its two columns), helmets y ~452, soles ~927, plates under them ending by 1142. f86 it spans x ~335-863 (with the
+// plates), helmets y 697, soles 1003, plates by 1142; open air above. The vertical is solved from the zoom (burdenWorld
+// camAt). The plates now run into the old caption band y 1080-1250, as the user allows; nothing reaches y 1360-1460.
 //
 // SOURCES: US troops in theater 1990-91 694,550 (CRS RL32492, Table 8: 584,342 active + 110,208 recalled) ->
 // "700,000"; non-US coalition troops well over 200,000 (UK 53,462, Saudi Arabia 60,000, Egypt 40,000, France 18,000,
