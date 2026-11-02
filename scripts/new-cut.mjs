@@ -4,7 +4,7 @@
 //   bun run cut <Name> --clip <clip-slug> --style <style> [--fps 24000/1001 | 23.976 | 25 | 30 ...]
 //               [--seconds S | --frames N] [--wide] [--size WxH] [--overlay] [--tag <tag-style>]
 //
-//   <style>  dwarkesh | map | 3d | chinatalk | cheeky-pint | core-memory | humble | sporttouchen | lovable | name-tag
+//   <style>  dwarkesh | map | 3d | chinatalk | cheeky-pint | core-memory | wip | humble | sporttouchen | lovable | name-tag
 //   --wide   16:9 at 2048x1080 (CRAFT.md Format); --size sets any other frame (Lovable matches its sequence)
 //   --overlay  a transparent overlay: no ground, static camera (Humble and name tags always are)
 //   --tag    name-tag only: whose tag to wrap (core-memory | cheeky-pint | chinatalk | map | humble)
@@ -32,6 +32,7 @@ const STYLES = {
   chinatalk: { label: "ChinaTalk style (newsprint)", file: "styles/chinatalk.md", wide: false, noOverlay: true },
   "cheeky-pint": { label: "Cheeky Pint style (stout)", file: "styles/cheeky-pint.md", wide: false },
   "core-memory": { label: "Core memory podcast style", file: "styles/core-memory.md", wide: true },
+  wip: { label: "Works in Progress style", file: "styles/works-in-progress.md", wide: false, noOverlay: true },
   humble: { label: "Humble Co. style", file: "styles/humble.md", wide: true, overlay: true, fps: 30 },
   sporttouchen: { label: "Sporttouchen style", file: "styles/sporttouchen.md", wide: true, fps: 30 },
   lovable: { label: "Lovable style", file: "styles/lovable.md", wide: true },

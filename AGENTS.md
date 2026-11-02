@@ -23,6 +23,7 @@ Nothing else. Do not browse old cuts, other kits or other styles unless the styl
 | "map style", any history clip | `styles/dwarkesh-map.md` | the clip's own `<clip>/<clip>Shared.tsx` on the `sarah-pearl-harbor/pearlShared.tsx` pattern; figures on `kits/maps/texcocoFigures.tsx` | `sarah-winning-battle-vs-war/SouthManchuriaRailway.tsx`, `sheppard-capture-not-kill/AllAdultMales.tsx`, `sheppard-conquistador-advantages/SteelAndHorses.tsx` |
 | "ChinaTalk style" | `styles/chinatalk.md` | `kits/chinatalk/chinatalkVintage.tsx` (API: `kits/chinatalk/chinatalkVintage.md`) | `logan-brezhnev/SovietEconomicDecline.tsx`, `logan-brezhnev/TechnologyAllocates.tsx`, `logan-brezhnev/BrezhnevChoseDecay.tsx` |
 | "Cheeky Pint style" | `styles/cheeky-pint.md` | `kits/cheeky-pint/stoutShared.tsx`; at sea `kits/cheeky-pint/oceanShared.tsx` | `toto-mercedes-financials/BillionInRevenueStout.tsx`, `meta-talent-density/TalentDensity.tsx`, `will-guinness-ttest/InsideThePint.tsx`; at sea `will-hunting-mines/HuntingMines.tsx` |
+| "Works in Progress style", "works in progress" | `styles/works-in-progress.md` | `kits/works-in-progress/wipShared.tsx` | `wip-anthropic/CarnegieLibraries.tsx`, `wip-anthropic/QuarterOfAnthropic.tsx`, `wip-anthropic/DifferentTastes.tsx` |
 | "core memory podcast style" | `styles/core-memory.md` | `kits/core-memory/deathCountShared.tsx` (9:16), `kits/core-memory/cerroShared.tsx` (16:9) | `joel-oil-companies-solar/PeakForSolar.tsx`, `brent-death-count/RockCollapsedReports.tsx`, `brent-death-count/ZeroedItDown.tsx`; sting `kits/core-memory/VastLogoChannelSplit.tsx` |
 | icons to animate | `styles/icon-loops.md` | `kits/core-memory/coreMemoryIcon.tsx` (core memory look only) | `kits/core-memory/WormholeIconLoop.tsx`, `joel-hyperscalers-solar/ServerIconCoreMemory.tsx` |
 | name tag, lower third | `styles/name-tags.md` | the style's tag component | `kits/name-tags/NameTagStout.tsx`, `kits/name-tags/NameTagNewsprint.tsx`, `kits/name-tags/NameTagMapStyle.tsx` |
@@ -44,7 +45,7 @@ Nothing else. Do not browse old cuts, other kits or other styles unless the styl
   bun run cut KingStillThere --clip sarah-death-ground --style map --fps 24 --seconds 9.792
   ```
 
-  Styles: `dwarkesh`, `map`, `chinatalk`, `cheeky-pint`, `core-memory`, `humble`, `sporttouchen`, `lovable`,
+  Styles: `dwarkesh`, `map`, `chinatalk`, `cheeky-pint`, `core-memory`, `wip`, `humble`, `sporttouchen`, `lovable`,
   `name-tag --tag <style>`. `--frames N` instead of `--seconds`; `--wide` composes a 16:9 trailer at 2048x1080
   (CRAFT.md Format); `--size WxH` another frame (Lovable); `--overlay` a transparent overlay. Only when no template
   fits, write the Root and entry by hand: several people's tags in one Root on `src/Root.NameTagMapStyle.tsx` (one
