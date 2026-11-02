@@ -15,10 +15,12 @@
 //   cardMap(rock)              world -> world under the card's rock (identity at rock 0)
 //   ChartCard({ k, rock })     the card with its one shadow, its lit top edge and its base rule
 //   AmberCurve({ s, k, band, rock, tip })   the line drawn from 0 to s, its shadow, bloom, hot filament and hot tip
+//   GROUND_Y, GroundFloor({ k })   the ground the card-less cuts stand on, its gradient and lit top edge
+//   LineStroke({ d, e, k, band })  the wide cuts' line on any path (d to its tip e); holds LINE_HOLD_PX on screen when wide
 // Draw ChartCard first, then AmberCurve. Everything is at full precision.
 // ---------------------------------------------------------------------------
 import React, { useId } from "react";
-import { ALPHA, AmberGradient, COLOR, EDGE, bloomFilter, clamp01, lerp, smoothstep } from "../kits/cheeky-pint/stoutShared";
+import { ALPHA, AmberGradient, COLOR, EDGE, bloomFilter, clamp01, lerp, mixHex, smoothstep } from "../kits/cheeky-pint/stoutShared";
 import { UnionShadow } from "../kits/cheeky-pint/museShared";
 
 export const CARD = {
@@ -239,6 +241,56 @@ export const AmberCurve: React.FC<{ s: number; k: number; band: [number, number]
         {tip ? <circle cx={n6(e.x)} cy={n6(e.y)} r={n6(W * 0.5)} fill={`url(#${uid}t)`} /> : null}
       </g>
       {/* the hot filament down the line's middle: it follows every corner exactly */}
+      <path d={d} fill="none" stroke={COLOR.amberHot} strokeOpacity={0.42} strokeWidth={n6(W * 0.16)} strokeLinecap="round" strokeLinejoin="round" />
+    </g>
+  );
+};
+
+// --- the card-less world of AlwaysMoreCompute and OutOfHand: one ground, one line ---------------------------------------
+/** The ground's top edge: the same base as the chart card's rule. */
+export const GROUND_Y = CARD.ruleY;
+const FLOOR = { x: -1600, w: 8000, h: 3600 };
+/** The ground, drawn in front of everything still inside it: its gradient and its lit top edge. */
+export const GroundFloor: React.FC<{ k: number }> = ({ k }) => {
+  const uid = useId().replace(/[^A-Za-z0-9_-]/g, "_");
+  const floorTop = mixHex(COLOR.ground, COLOR.board, 0.34);
+  const floorFoot = mixHex(COLOR.ground, COLOR.board, 0.06);
+  return (
+    <>
+      <defs>
+        <linearGradient id={`${uid}g`} gradientUnits="userSpaceOnUse" x1="0" y1={GROUND_Y} x2="0" y2={GROUND_Y + 1250}>
+          <stop offset="0" stopColor={floorTop} />
+          <stop offset="1" stopColor={floorFoot} />
+        </linearGradient>
+      </defs>
+      <rect x={FLOOR.x} y={GROUND_Y} width={FLOOR.w} height={FLOOR.h} fill={`url(#${uid}g)`} />
+      <path d={`M${FLOOR.x} ${n6(GROUND_Y + EDGE.CREAM / k / 2)}H${FLOOR.x + FLOOR.w}`} stroke={COLOR.edge} strokeOpacity={ALPHA.edgeBoard} strokeWidth={n6(EDGE.CREAM / k)} />
+    </>
+  );
+};
+
+export const LINE_HOLD_PX = 32; // the line's on-screen weight at the wide
+/** The line's world weight at camera k: the close weight, then held on screen through the wide (the hero of the frame). */
+export const lineWeight = (k: number) => Math.pow(Math.pow(LINE_HOLD_PX, 6) + Math.pow(curveWeight(k) * k, 6), 1 / 6) / k;
+/** A drawn path `d` ending at its tip `e`, in the recipe of AmberCurve (shadow, bloom, hot filament, hot tip). */
+export const LineStroke: React.FC<{ d: string; e: P; k: number; band: [number, number] }> = ({ d, e, k, band }) => {
+  const uid = useId().replace(/[^A-Za-z0-9_-]/g, "_");
+  const W = lineWeight(k);
+  return (
+    <g>
+      <UnionShadow sil={[{ d, stroke: W }]} s={1.3} elevation="rest" />
+      <defs>
+        <AmberGradient id={`${uid}a`} y0={band[0]} y1={band[1]} />
+        <radialGradient id={`${uid}t`} gradientUnits="userSpaceOnUse" cx={n6(e.x)} cy={n6(e.y)} r={n6(W * 0.62)}>
+          <stop offset="0" stopColor={COLOR.amberHot} />
+          <stop offset="0.55" stopColor={COLOR.amberHot} />
+          <stop offset="1" stopColor={COLOR.amberTop} />
+        </radialGradient>
+      </defs>
+      <g style={{ filter: bloomFilter(k) }}>
+        <path d={d} fill="none" stroke={`url(#${uid}a)`} strokeWidth={n6(W)} strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={n6(e.x)} cy={n6(e.y)} r={n6(W * 0.62)} fill={`url(#${uid}t)`} />
+      </g>
       <path d={d} fill="none" stroke={COLOR.amberHot} strokeOpacity={0.42} strokeWidth={n6(W * 0.16)} strokeLinecap="round" strokeLinejoin="round" />
     </g>
   );

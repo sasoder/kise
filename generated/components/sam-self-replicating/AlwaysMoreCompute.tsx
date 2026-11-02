@@ -1,14 +1,15 @@
 // ---------------------------------------------------------------------------
 // AlwaysMoreCompute (sam-self-replicating, cut 15). Cheeky Pint style (stout) (styles/cheeky-pint.md).
-// Opaque 1080x1920, 23.976 fps, 105 frames. Palette B1.
+// Opaque 1080x1920, 23.976 fps, 112 frames. Palette B1.
 //
 // CHECK LINE: "Pull back and the bumps are noise on one climb, and however many racks we build, demand is always still
 // above them."
 //
 // THE LINE: "But I think the trend is toward a, we always just want more compute."
 // WORD -> FRAME: But 0 · I 3 · think 5 · the 10 · trend 13 · is 22 · toward 33 · a 46 · we 63 · always 72 · just 78 ·
-// want 83 · more 87 · compute 92 · Like 104.
-// DURATION: the slot 15.474 -> 19.853 s = 4.379 s x 23.976 = 105 frames (f0..f104).
+// want 83 · more 87 · compute 92 · Like 104 · the 110.
+// DURATION: the slot 15.474 -> 20.145 s (sequence frames 371-483) = 112 frames (f0..f111). Rev 1 added f105-f111 to the
+// first delivery's 105 frames; f0-f104 are pixel-identical to it.
 //
 // THE MOTION: one amber line drawing while the camera makes one long eased pull-back and rise: it opens close on cut A's
 // stumbles (the same geometry, imported from computeCurve, up to the crouch), and by "trend" they are ripples on one
@@ -22,12 +23,12 @@
 import React, { useId } from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { ALPHA, AmberGradient, COLOR, EDGE, StoutStage, amberBandFor, bloomFilter, clamp01, lerp, mixHex, rectPath, smoothstep } from "../kits/cheeky-pint/stoutShared";
+import { ALPHA, COLOR, EDGE, StoutStage, amberBandFor, bloomFilter, clamp01, lerp, mixHex, rectPath, smoothstep } from "../kits/cheeky-pint/stoutShared";
 import { UnionShadow, makeClockCam, makePoolTrack } from "../kits/cheeky-pint/museShared";
-import { CARD, CURVE_LEN, KINK, curveAt, curveWeight } from "./computeCurve";
+import { CURVE_LEN, GROUND_Y, GroundFloor, KINK, LineStroke, curveAt } from "./computeCurve";
 
 export const FPS = 24000 / 1001;
-export const DURATION = 105;
+export const DURATION = 112;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
@@ -35,7 +36,6 @@ const n6 = (v: number) => (Math.round(v * 1e6) / 1e6).toString();
 
 // --- the long curve: cut A's line up to its crouch, then one long sweep on (A's own overshoot belongs to A) -----------
 type P = { x: number; y: number };
-const GROUND_Y = CARD.ruleY; // the same base as A's chart
 const hermite = (a: P, b: P, ma: P, mb: P, t: number): P => {
   const t2 = t * t;
   const t3 = t2 * t;
@@ -92,6 +92,9 @@ const TIP_KEYS: readonly [number, number][] = [
 ];
 const TIP_M0 = 3;
 const TIP_MN = 22;
+// Rev 1's tail, f104 -> f111: it leaves on f104's speed and eases to a creep. It sits outside TIP_KEYS so the slopes above,
+// and with them every frame up to f104, stay as delivered.
+const TAIL = { f0: 104, f1: 111, a0: C + 2480, a1: C + 2480 + 112, m0: TIP_MN, m1: 10 } as const;
 const tipSlopes = (() => {
   const n = TIP_KEYS.length;
   const d: number[] = [];
@@ -102,6 +105,13 @@ const tipSlopes = (() => {
   return m;
 })();
 export const tipArc = (f: number) => {
+  if (f > TAIL.f0) {
+    const h = TAIL.f1 - TAIL.f0;
+    const t = (f - TAIL.f0) / h;
+    const t2 = t * t;
+    const t3 = t2 * t;
+    return (2 * t3 - 3 * t2 + 1) * TAIL.a0 + (t3 - 2 * t2 + t) * h * TAIL.m0 + (-2 * t3 + 3 * t2) * TAIL.a1 + (t3 - t2) * h * TAIL.m1;
+  }
   const K = TIP_KEYS;
   const hit = K.findIndex((q, j) => j < K.length - 1 && f < K[j + 1][0]);
   const i = hit < 0 ? K.length - 2 : hit;
@@ -151,7 +161,6 @@ const riseAt = (f: number, t: Tower) => {
 };
 /** Slots run on past the last tower and off the frame: there is always room for one more. */
 const SLOTS = Array.from({ length: 12 }, (_, i) => RACK.x0 + i * RACK.pitch);
-const FLOOR = { x: -1600, w: 8000, h: 3600 };
 
 const Rack: React.FC<{ t: Tower; f: number; k: number; uid: string }> = ({ t, f, k, uid }) => {
   const rise = riseAt(f, t);
@@ -190,33 +199,13 @@ const Rack: React.FC<{ t: Tower; f: number; k: number; uid: string }> = ({ t, f,
   );
 };
 
-const LINE_HOLD_PX = 32; // the line's on-screen weight at the wide
-/** The line drawn to its tip: the recipe of computeCurve's AmberCurve (shadow, bloom, hot filament, hot tip), on the long path. */
-const LongCurve: React.FC<{ arc: number; k: number; band: [number, number]; uid: string }> = ({ arc, k, band, uid }) => {
+/** The line drawn to its tip, on the long path. */
+const LongCurve: React.FC<{ arc: number; k: number; band: [number, number] }> = ({ arc, k, band }) => {
   let d = "";
   for (let i = 0; i < LINE.length && LINE_ARC[i] < arc; i++) d += `${i ? "L" : "M"}${n6(LINE[i].x)} ${n6(LINE[i].y)}`;
   const e = lineAt(arc);
   d += `L${n6(e.x)} ${n6(e.y)}`;
-  // A's weight close in, then held on screen through the wide: the line stays the hero of the frame
-  const W = Math.pow(Math.pow(LINE_HOLD_PX, 6) + Math.pow(curveWeight(k) * k, 6), 1 / 6) / k;
-  return (
-    <g>
-      <UnionShadow sil={[{ d, stroke: W }]} s={1.3} elevation="rest" />
-      <defs>
-        <AmberGradient id={`${uid}a`} y0={band[0]} y1={band[1]} />
-        <radialGradient id={`${uid}t`} gradientUnits="userSpaceOnUse" cx={n6(e.x)} cy={n6(e.y)} r={n6(W * 0.62)}>
-          <stop offset="0" stopColor={COLOR.amberHot} />
-          <stop offset="0.55" stopColor={COLOR.amberHot} />
-          <stop offset="1" stopColor={COLOR.amberTop} />
-        </radialGradient>
-      </defs>
-      <g style={{ filter: bloomFilter(k) }}>
-        <path d={d} fill="none" stroke={`url(#${uid}a)`} strokeWidth={n6(W)} strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx={n6(e.x)} cy={n6(e.y)} r={n6(W * 0.62)} fill={`url(#${uid}t)`} />
-      </g>
-      <path d={d} fill="none" stroke={COLOR.amberHot} strokeOpacity={0.42} strokeWidth={n6(W * 0.16)} strokeLinecap="round" strokeLinejoin="round" />
-    </g>
-  );
+  return <LineStroke d={d} e={e} k={k} band={band} />;
 };
 
 const AlwaysMoreCompute: React.FC<z.infer<typeof schema>> = () => {
@@ -230,8 +219,6 @@ const AlwaysMoreCompute: React.FC<z.infer<typeof schema>> = () => {
     const top = GROUND_Y - t.h * riseAt(S, t);
     return { d: rectPath(t.x0, top, RACK.w, GROUND_Y - top, RACK.r, true, false) };
   });
-  const floorTop = mixHex(COLOR.ground, COLOR.board, 0.34);
-  const floorFoot = mixHex(COLOR.ground, COLOR.board, 0.06);
   return (
     <StoutStage S={S} cam={cam} rest={CAM.rest} pool={POOL(S)}>
       <defs>
@@ -239,19 +226,14 @@ const AlwaysMoreCompute: React.FC<z.infer<typeof schema>> = () => {
           <stop offset="0" stopColor={COLOR.cream} />
           <stop offset="1" stopColor={COLOR.creamFoot} />
         </linearGradient>
-        <linearGradient id={`${uid}g`} gradientUnits="userSpaceOnUse" x1="0" y1={GROUND_Y} x2="0" y2={GROUND_Y + 1250}>
-          <stop offset="0" stopColor={floorTop} />
-          <stop offset="1" stopColor={floorFoot} />
-        </linearGradient>
       </defs>
       {sil.length ? <UnionShadow sil={sil} s={4} elevation="rest" /> : null}
       {TOWERS.map((t, i) => (
         <Rack key={i} t={t} f={S} k={k} uid={uid} />
       ))}
-      <LongCurve arc={tipArc(S)} k={k} band={amberBandFor(cam)} uid={uid} />
+      <LongCurve arc={tipArc(S)} k={k} band={amberBandFor(cam)} />
       {/* the ground, in front of everything that is still inside it, with its slots */}
-      <rect x={FLOOR.x} y={GROUND_Y} width={FLOOR.w} height={FLOOR.h} fill={`url(#${uid}g)`} />
-      <path d={`M${FLOOR.x} ${n6(GROUND_Y + EDGE.CREAM / k / 2)}H${FLOOR.x + FLOOR.w}`} stroke={COLOR.edge} strokeOpacity={ALPHA.edgeBoard} strokeWidth={n6(EDGE.CREAM / k)} />
+      <GroundFloor k={k} />
       {SLOTS.map((x, i) => (
         <rect key={i} x={n6(x - 6)} y={GROUND_Y} width={RACK.w + 12} height={RACK.slit} rx={RACK.slit / 2} fill={COLOR.inkDark} fillOpacity={ALPHA.slot + 0.2} />
       ))}
