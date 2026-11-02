@@ -10,15 +10,18 @@
 //   payload 68 · with 73 · a 85 · three 91 · kilo 97 · aircraft 102 · speech ends ~119
 // DURATION: the slot 30.948 -> 35.953 s = 5.005 s x 23.976 = 120 frames (f0..f119).
 //
-// THE MOTION: A huge iron weight sits on a print of Indian farmland lying on the paper, its tether slack and moving,
-// under a slow push. The tether goes taut f41 (cause), the weight's right side comes up f41-47 about its left corner
-// (first reaction), it leaves the ground on "five" (air under the whole base by f52) and the print sinks, shrinks and slides back under it as its
-// shadow on the land shrinks and softens. From "with" f73 one eased tilt and pull-back brings down the aircraft that is
-// pulling, surprisingly small, flying along its nose (the land and the clouds go backwards under it). On "three" the
-// 3 KG weight comes down behind the aircraft's wing to hang beside it; the crown rises off the 5 KG at f98. Settled by
-// f108, still climbing and swaying.
+// THE MOTION (round 3; the user's slot plays f0-115, settled by f108): Already in motion on f0: a visible slow push and
+// pan, the slack tether swinging, the clouds drifting. A huge blank iron weight sits on a print of Indian farmland lying on
+// the paper. The tether goes taut f41 (cause), the weight's right side comes up about its left corner (first reaction),
+// and on "five" the stamp is struck into the iron (landed f47) as it leaves the ground (air under the whole base by f52),
+// the chain rising off its shoulders. The print sinks, shrinks and slides back as the shadow on it shrinks and softens.
+// From "with" f73 one eased tilt and pull-back brings down the aircraft that is pulling, flying along its nose. On "three"
+// the 3 KG comes down behind the wing and rides with the aircraft; a white ink leader is drawn from the fuselage to it,
+// touching on "aircraft" (f102). Ink is the annotation, the black rope is the load: the leader runs across, it does not hang.
+// To the last frame the aircraft pitches and heaves against the swinging load.
 //
-// CHAIN (one meaning in this clip): what Airbound's aircraft outdoes. Here, the 5 KG it out-lifts.
+// CHAIN (one meaning in this clip): what Airbound's aircraft outdoes. One sting: the 5 KG on "five kilos", off its
+// shoulders only (never the ring or the tether point), rising f47-55 and back into the iron by about f78.
 // AREAS: 3 KG drawn at sqrt(0.6) of the 5 KG's height = 60 % of its area.
 //
 // SOURCES: fk_land.png from Airbound's own aerial (fields_clean_healed.jpg); aircraft_flight_ai.png and
@@ -29,7 +32,7 @@
 import React from "react";
 import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { CaptionBands, CHAIN, CROWN_STEP, type NealCam, NealFilmLife, NealPaper, PhotoCutOut, SHADOW, Silhouette, W, chainProgress, clamp, fontFamily, runCamera2 } from "../neal-stephenson-trailer/nealShared";
+import { CaptionBands, CHAIN, CROWN_STEP, Inked, type NealCam, NealFilmLife, NealPaper, NealSvg, PhotoCutOut, SHADOW, Silhouette, W, chainProgress, clamp, fontFamily, runCamera2 } from "../neal-stephenson-trailer/nealShared";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 120;
@@ -77,9 +80,16 @@ const TAUT = 41;
 const ease = (f: number, a: number, b: number, e = Easing.inOut(Easing.cubic)) => interpolate(f, [a, b], [0, 1], { easing: e, ...clamp });
 
 const CAM_F = [0, 44, 60, 70, 100, 119];
-const CAM_K = [1.2, 1.25, 1.26, 1.25, 0.94, 0.92];
-const CAM_BY = [812, 812, 796, 790, 812, 808];
-const CAM_BX = [960, 960, 955, 935, 835, 825];
+const CAM_K = [1.12, 1.25, 1.26, 1.25, 0.94, 0.92];
+const K_REF = CAM_K[0]; // the print is 1:1 at the opening scale
+const CAM_BY = [812, 812, 796, 790, 814, 806];
+const CAM_BX = [978, 960, 955, 935, 825, 815];
+// the track starts before f0, so the push is already under way on the first frame
+const PRE = 24;
+const PRE_F = [0, ...CAM_F.map((v) => v + PRE)];
+const PRE_K = [1.05, ...CAM_K];
+const PRE_BY = [812, ...CAM_BY];
+const PRE_BX = [988, ...CAM_BX];
 
 const ss = (v: number, a: number, b: number) => {
   const x = Math.max(0, Math.min(1, (v - a) / (b - a)));
@@ -105,8 +115,9 @@ const LAND_FLOW = 0.72;
 const riseOf = (f: number) => 520 * ease(f, 44, 112, Easing.bezier(0.45, 0, 0.3, 1)) + f * 0.25 + Math.max(0, f - 112) * 1;
 
 // -- pieces --------------------------------------------------------------------
-/** A weight: iron photo core, hard shadow, stamp in the iron, optional crown. Local coords: top-left of its box. */
-const Weight: React.FC<{ h: number; label: string; crown?: [number, number, number] | null }> = ({ h, label, crown }) => {
+/** A weight: iron photo core, hard shadow, stamp in the iron, optional shoulder chain. Local coords: top-left of its box.
+ *  `strike` 0..1: the stamp coming down into the iron (0 = not there yet). `icon`: the aircraft's silhouette stamped below the label. */
+const Weight: React.FC<{ h: number; label: string; crown?: number[] | null; strike?: number; icon?: boolean }> = ({ h, label, crown, strike = 1, icon }) => {
   const w = h * IRON_ASPECT;
   const fs = 0.222 * h;
   const stampTop = 0.386 * h;
@@ -124,16 +135,32 @@ const Weight: React.FC<{ h: number; label: string; crown?: [number, number, numb
     letterSpacing: "0.01em",
     whiteSpace: "nowrap",
   };
+  const iconW = 0.62 * w;
+  const iconX = (w - iconW) / 2;
+  const iconY = 0.665 * h;
   return (
     <div style={{ position: "absolute", left: 0, top: 0, width: w, height: h }}>
       <Silhouette {...place} colour={SHADOW} dx={5} dy={5} />
-      {crown
-        ? CHAIN.map((c, i) => (crown[i] > 0 ? <Silhouette key={c} {...place} colour={c} dx={0} dy={-(3 - i) * (CROWN_STEP - 2) * crown[i]} /> : null))
-        : null}
+      {crown ? (
+        // the shoulders only: the band over the ring and the neck is cut away, its edges hidden behind the ring
+        <div style={{ position: "absolute", left: 0, top: 0, width: w, height: h, clipPath: "polygon(0 29%, 33% 29%, 33% 42%, 67% 42%, 67% 29%, 100% 29%, 100% 100%, 0 100%)" }}>
+          {CHAIN.map((c, i) => (crown[i] > 0 ? <Silhouette key={c} {...place} colour={c} dx={0} dy={-(3 - i) * (CROWN_STEP - 2) * crown[i]} /> : null))}
+        </div>
+      ) : null}
       <div style={{ position: "absolute", left: 0, top: 0, width: w, height: h, isolation: "isolate" }}>
         <Img src={staticFile(IRON)} style={{ position: "absolute", left: 0, top: 0, width: w, height: h, maxWidth: "none", filter: IRON_FILTER }} />
-        <div style={{ ...text, color: "#000", transform: `translate(${0.006 * h}px, ${0.006 * h}px)` }}>{label}</div>
-        <div style={{ ...text, color: "#F4F2EC" }}>{label}</div>
+        {strike > 0 ? (
+          <div style={{ position: "absolute", left: 0, top: 0, width: w, height: h, opacity: Math.min(1, strike * 2), transformOrigin: `50% ${stampTop + fs / 2}px`, transform: `scale(${1 + 0.2 * (1 - strike)})` }}>
+            <div style={{ ...text, color: "#000", transform: `translate(${0.006 * h}px, ${0.006 * h}px)` }}>{label}</div>
+            <div style={{ ...text, color: "#F4F2EC" }}>{label}</div>
+          </div>
+        ) : null}
+        {icon ? (
+          <>
+            <Silhouette src={AIR} x={iconX} y={iconY} w={iconW} aspect={AIR_ASPECT} anchor="top-left" colour="#000" dx={0.006 * h} dy={0.006 * h} />
+            <Silhouette src={AIR} x={iconX} y={iconY} w={iconW} aspect={AIR_ASPECT} anchor="top-left" colour="#F4F2EC" />
+          </>
+        ) : null}
         {/* the iron's own mottling over the stamp, so it is printed on the metal rather than floating over it */}
         <Img src={staticFile(IRON)} style={{ position: "absolute", left: 0, top: 0, width: w, height: h, maxWidth: "none", mixBlendMode: "multiply", filter: "grayscale(1) brightness(3.4) contrast(0.9)" }} />
       </div>
@@ -164,9 +191,8 @@ const FiveKilosThreeKilo: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const f = frame;
 
   // the camera's track: the weight's base on screen and the focus-plane scale. One push, one tilt and pull-back.
-  const c = runCamera2(f, CAM_F, CAM_BY, CAM_BX, CAM_K);
+  const c = runCamera2(f + PRE, PRE_F, PRE_BY, PRE_BX, PRE_K);
   const k = c.k;
-  const k0 = CAM_K[0];
   const by = c.cy;
   const bx = c.cx;
 
@@ -177,7 +203,7 @@ const FiveKilosThreeKilo: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const hgt = Math.min(1, sink / SINK);
 
   // the sway: nothing before lift-off, swells with the load swinging free, then calms but never stops
-  const swayAmp = interpolate(f, [LIFT_OFF, 66, 119], [0, 2.3, 1.2], clamp);
+  const swayAmp = interpolate(f, [LIFT_OFF, 66, 119], [0, 2.3, 1.9], clamp);
   const sway = swayAmp * Math.sin((f - LIFT_OFF) * 0.125);
   // effort: right side up about the left corner of the base, then it rights itself under the tether
   const effort = -2.1 * ease(f, TAUT - 3, LIFT_OFF, Easing.inOut(Easing.sin)) * (1 - ease(f, LIFT_OFF + 1, 68));
@@ -190,15 +216,17 @@ const FiveKilosThreeKilo: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const rad = deg(effort);
   const vx = ringRest.x - baseLeft.x;
   const vy = ringRest.y - baseLeft.y;
+  // the load heaving the whole rig: one slow dip per swing, once it is well up
+  const heave = 5 * ss(f, 76, 96) * Math.sin((f - LIFT_OFF) * 0.125 + 1.1);
   const ring = {
     x: baseLeft.x + vx * Math.cos(rad) - vy * Math.sin(rad),
-    y: baseLeft.y + vx * Math.sin(rad) + vy * Math.cos(rad),
+    y: baseLeft.y + vx * Math.sin(rad) + vy * Math.cos(rad) + heave,
   };
   const angle5 = effort + sway;
 
   // the tether: slack and alive, taut at f41, then leaning forward with the sway
   const taut = ease(f, 26, TAUT, Easing.inOut(Easing.quad));
-  const phi = deg(interpolate(f, [0, TAUT], [8, LEAN], clamp) + 0.55 * sway);
+  const phi = deg(interpolate(f, [0, TAUT], [8, LEAN], clamp) + 3.5 * (1 - taut) * Math.sin(f * 0.1) + 1.1 * sway);
   const dir = { x: Math.sin(phi), y: -Math.cos(phi) };
   const tetherNow = interpolate(f, [66, 94], [TETHER_OFF, TETHER], { easing: Easing.inOut(Easing.sin), ...clamp });
   const belly = { x: ring.x + dir.x * tetherNow * k, y: ring.y + dir.y * tetherNow * k };
@@ -206,13 +234,14 @@ const FiveKilosThreeKilo: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const tetherLen = taut >= 1 ? tetherNow * k : 900;
   for (let i = 0; i <= 40; i++) {
     const s = i / 40;
-    const a = 46 * (1 - taut) * Math.sqrt(s) * Math.sin(s * 7.2 - f * 0.17);
+    const a = 78 * (1 - taut) * Math.sqrt(s) * Math.sin(s * 7.2 - f * 0.17);
     tetherPts.push(`${ring.x + dir.x * tetherLen * s - dir.y * a},${ring.y + dir.y * tetherLen * s + dir.x * a}`);
   }
 
   // the aircraft: pivots about the tether point on its belly; flies along its nose, straining
   const airS = k * (1 + 0.05 * ease(f, 80, 119));
-  const pitch = -11 - 1.5 * Math.sin(f * 0.11 + 1) - 0.45 * sway;
+  // strain: the nose hauls up and sags with each swing of the load, to the last frame
+  const pitch = -11 - 1.2 * Math.sin(f * 0.11 + 1) - 1.05 * sway;
   const rollX = 7 + 3 * Math.sin(f * 0.07);
   const rollY = -6 + 4 * Math.sin(f * 0.05 + 0.6);
   const airTransform: React.CSSProperties = {
@@ -236,20 +265,36 @@ const FiveKilosThreeKilo: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   );
   const airOn = f >= 60; // far above the frame until then
 
-  // the 3 KG: comes down from above, behind the wing, to hang beside the aircraft. Its own slow sway.
+  // the 3 KG: comes down from above, behind the wing, and rides with the aircraft. Barely swings: it is not a load.
   const in3 = interpolate(f, [84, 104], [0, 1], { easing: Easing.bezier(0.16, 1, 0.3, 1), ...clamp });
   const three = {
-    x: belly.x + (interpolate(in3, [0, 1], [110, 450])) * k,
-    y: belly.y + interpolate(in3, [0, 1], [-760, -60]) * k,
+    x: belly.x + interpolate(in3, [0, 1], [110, 470]) * k,
+    y: belly.y + interpolate(in3, [0, 1], [-760, -20]) * k,
   };
-  const sway3 = 1.6 * Math.sin((f - 84) * 0.1 + 0.6) * in3;
+  const sway3 = 0.5 * Math.sin((f - 84) * 0.1 + 0.6) * in3;
 
-  // the crown on the 5 KG: the load the aircraft out-lifts
-  const crown = chainProgress(f, 98) as [number, number, number];
+  // the leader, white ink: aircraft = this weight. Fuselage dot first, the tip drawn across to the weight's shoulder.
+  const lead = ease(f, 91, 102, Easing.inOut(Easing.quad));
+  const pr = deg(pitch);
+  const aL = { x: 47 * airS, y: -24 * airS };
+  const leadA = { x: belly.x + aL.x * Math.cos(pr) - aL.y * Math.sin(pr), y: belly.y + aL.x * Math.sin(pr) + aL.y * Math.cos(pr) };
+  const r3 = deg(sway3);
+  const bL = { x: -0.3 * H3 * IRON_ASPECT * k, y: (0.385 - RING_Y) * H3 * k };
+  const leadB = { x: three.x + bL.x * Math.cos(r3) - bL.y * Math.sin(r3), y: three.y + bL.x * Math.sin(r3) + bL.y * Math.cos(r3) };
+  const tip = { x: leadA.x + (leadB.x - leadA.x) * lead, y: leadA.y + (leadB.y - leadA.y) * lead };
+  const dotA = 9 * ss(f, 89, 92);
+  const dotB = 9 * ss(f, 100, 103);
+
+  // the stamp struck into the 5 KG: lands on "five"
+  const strike = interpolate(f, [43, 47], [0, 1], { easing: Easing.in(Easing.quad), ...clamp });
+
+  // the one chain sting: off the 5 KG's shoulders on "five kilos", back into the iron before the reveal
+  const crownUp = chainProgress(f, 46);
+  const crown = crownUp.map((v, i) => v * (1 - ease(f, 64 + 2 * (2 - i), 74 + 2 * (2 - i))));
 
   // the land print: locked to the weight until lift-off (same anchor, same scale), then it sinks, shrinks, slides back
-  const shrink = 1 - 0.05 * ease(f, LIFT_OFF, 114, Easing.bezier(0.45, 0, 0.3, 1));
-  const ls = (k / k0) * shrink;
+  const shrink = 1 - 0.11 * ease(f, LIFT_OFF, 114, Easing.bezier(0.45, 0, 0.3, 1));
+  const ls = (k / K_REF) * shrink;
   const contactX = bx - travel;
   const contactY = by + sink;
   const landX = contactX - CONTACT.u * LAND_W * ls;
@@ -269,23 +314,23 @@ const FiveKilosThreeKilo: React.FC<z.infer<typeof schema>> = ({ bands }) => {
 
   const cam: NealCam = { x: W / 2 + flow, y: 540 - rise, k: k / CAM_K[5] };
 
-  const cl = (x0: number, y0: number, par: number) => ({
-    x: x0 - (flow + f * 0.6) * par,
+  const cl = (x0: number, y0: number, par: number, drift: number) => ({
+    x: x0 - flow * par - f * drift,
     y: y0 + rise * par,
-    s: (k / k0) ** Math.min(1, par) * 1,
+    s: (k / K_REF) ** Math.min(1, par),
   });
-  const a = cl(1560, 545, 0.3);
-  const b = cl(400, 300, 0.42);
-  const top = cl(1800, -240, 0.78);
+  const a = cl(1760, 600, 0.3, 0.9); // sits down behind the horizon, its lower edge out of sight until the print has sunk
+  const b = cl(560, 300, 0.42, 1.6);
+  const top = cl(2081, -300, 0.78, 1.2);
 
   return (
     <AbsoluteFill>
       <NealFilmLife frame={f}>
         <NealPaper frame={f} cam={cam} />
         {/* far clouds lie on the paper behind the print */}
-        <Cloud src={CLOUD_A} aspect={CLOUD_A_ASPECT} x={a.x} y={a.y} w={640} s={a.s} filter={CLOUD_DARK_FILTER} />
+        <Cloud src={CLOUD_A} aspect={CLOUD_A_ASPECT} x={a.x} y={a.y} w={560} s={a.s} filter={CLOUD_DARK_FILTER} />
         <Cloud src={CLOUD_B} aspect={CLOUD_B_ASPECT} x={b.x} y={b.y} w={430} s={b.s} />
-        <Cloud src={CLOUD_B} aspect={CLOUD_B_ASPECT} x={top.x} y={top.y} w={560} s={top.s} flip />
+        <Cloud src={CLOUD_B} aspect={CLOUD_B_ASPECT} x={top.x} y={top.y} w={400} s={top.s} flip />
 
         {/* the land print lying on the paper */}
         <div style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, transformOrigin: "0 0", transform: `translate(${landX}px, ${landY}px) scale(${ls})` }}>
@@ -361,7 +406,7 @@ const FiveKilosThreeKilo: React.FC<z.infer<typeof schema>> = ({ bands }) => {
               transform: `translate(${three.x - 0.5 * H3 * IRON_ASPECT}px, ${three.y - RING_Y * H3}px) rotate(${sway3}deg) scale(${k})`,
             }}
           >
-            <Weight h={H3} label="3 KG" />
+            <Weight h={H3} label="3 KG" icon />
           </div>
         ) : null}
 
@@ -382,11 +427,25 @@ const FiveKilosThreeKilo: React.FC<z.infer<typeof schema>> = ({ bands }) => {
             transform: `translate(${ring.x - 0.5 * H5 * IRON_ASPECT}px, ${ring.y - RING_Y * H5}px) rotate(${angle5}deg) scale(${k})`,
           }}
         >
-          <Weight h={H5} label="5 KG" crown={crown} />
+          <Weight h={H5} label="5 KG" crown={crown} strike={strike} />
         </div>
 
         {airOn ? airBox : null}
 
+        {/* the leader: ink, drawn across, on top of both */}
+        {dotA > 0 ? (
+          <NealSvg>
+            <Inked
+              render={(c) => (
+                <>
+                  {lead > 0 ? <line x1={leadA.x} y1={leadA.y} x2={tip.x} y2={tip.y} stroke={c} strokeWidth={4} strokeLinecap="round" /> : null}
+                  <circle cx={leadA.x} cy={leadA.y} r={dotA} fill={c} />
+                  {dotB > 0 ? <circle cx={leadB.x} cy={leadB.y} r={dotB} fill={c} /> : null}
+                </>
+              )}
+            />
+          </NealSvg>
+        ) : null}
       </NealFilmLife>
       <CaptionBands on={bands} />
     </AbsoluteFill>

@@ -18,8 +18,8 @@
 // up, a move that carries words to pies with no cut. Each pie rises from behind the clouds on its own easing, unlinked to
 // the aircraft; its wedge is a window onto a black-and-white photograph (freight, then the Mumbai local) that sweeps by
 // itself; the chain marks each payoff once (a crown on the finished wedge). The aircraft is the through-line: under way
-// at f0, travelling right across the words, on one shallow line low across pie one, through the gap and low across pie
-// two, then climbing away to the right of it into the clear paper upper right, whole and still moving at f217, banking along its heading, its one soft shadow on the paper falling further off as it
+// at f0, travelling right across the words, skimming the cloud tops under pie one, dipping and rising on its own line,
+// then one shallow climb behind pie two and out past the right edge, whole and still moving at f217, banking along its heading, its one soft shadow on the clouds softening away as it
 // climbs.
 //
 // CHAIN MEANING: what Airbound's aircraft outdoes.
@@ -335,32 +335,38 @@ const AC_FILTER = "grayscale(1) sepia(0.14) contrast(1.12) brightness(1.02)"; //
 const AC_W = 1884;
 const AC_H = 719;
 const HULL = { x: 1150, y: 330 };
-// One shallow line low across both pies, then the climb; keys run past f217 so the smoothing never eases it to a stop.
+// It skims the cloud tops under pie one on a line of its own, dipping and rising, so its silhouette sits on bright cloud and
+// never on a dark photo; then one shallow climb along its nose that passes BEHIND pie two, comes out and leaves past the right edge under its own speed.
+// Keys run past f217 so the smoothing never eases it to a stop. Nothing here is keyed to a pie's rim or sweep.
 const AC_X = track(
   [
-    [-40, 40],
+    [-40, 120],
     [0, 430],
-    [60, 960],
-    [110, 1100],
-    [150, 1290],
-    [178, 1580],
-    [195, 1632],
-    [217, 1677],
-    [240, 1772],
+    [60, 780],
+    [100, 900],
+    [146, 1060],
+    [160, 1240],
+    [175, 1470],
+    [200, 1860],
+    [217, 2130],
+    [240, 2490],
   ],
   10,
 );
 const AC_Y = track(
   [
-    [-40, 724],
-    [0, 720],
-    [60, 714],
-    [110, 708],
-    [150, 704],
-    [172, 690],
-    [195, 545],
-    [217, 130],
-    [240, -175],
+    [-40, 690],
+    [0, 716],
+    [28, 752],
+    [56, 724],
+    [90, 805],
+    [125, 805],
+    [146, 720],
+    [160, 670],
+    [175, 590],
+    [200, 450],
+    [217, 355],
+    [240, 225],
   ],
   10,
 );
@@ -368,11 +374,12 @@ const AC_WIDE = track(
   [
     [-40, 780],
     [0, 760],
-    [60, 690],
-    [110, 600],
-    [160, 520],
-    [217, 410],
-    [240, 395],
+    [60, 680],
+    [110, 590],
+    [160, 500],
+    [195, 450],
+    [217, 420],
+    [240, 400],
   ],
   8,
 );
@@ -384,10 +391,12 @@ const acPose = (frame: number) => {
   const h = (w * AC_H) / AC_W;
   const dx = AC_X(frame + 2) - AC_X(frame - 2) + 4 * CAM_V(frame);
   const dy = AC_Y(frame + 2) - AC_Y(frame - 2);
-  const heading = Math.max(-20, Math.min(4, (Math.atan2(dy, Math.max(20, dx)) * 180) / Math.PI));
-  const roll = heading * 0.92 + 2.4 * Math.sin(frame / 16 + 0.6);
-  const yaw = -8 + 6 * Math.sin(frame / 26 + 1.3);
-  const pitch = -5 * Math.sin(frame / 21) + heading * 0.3;
+  const heading = Math.max(-17, Math.min(10, (Math.atan2(dy, Math.max(20, dx)) * 180) / Math.PI));
+  // The swings calm on the climb, so the on-screen rotation stays under about 20 degrees and the pose stays readable.
+  const calm = interpolate(frame, [130, 160], [1, 0.4], clamp);
+  const roll = heading * 0.95 + 6 * calm * Math.sin(frame / 14 + 0.6);
+  const yaw = -8 + 12 * calm * Math.sin(frame / 19 + 1.3);
+  const pitch = -10 * calm * Math.sin(frame / 17) + heading * 0.3;
   return {
     y,
     w,
@@ -400,12 +409,12 @@ const acPose = (frame: number) => {
   };
 };
 
-/** One soft dark blur on the paper, under the words, pies and bank; further off the higher it flies. Baked, no filter. */
+/** One soft dark blur on the clouds it skims, softening away as it climbs so it never sits on open sky. Baked, no filter. */
 const AircraftShadow: React.FC<{ frame: number }> = ({ frame }) => {
   const { y, w, h, left, top, origin, tf, img } = acPose(frame);
   const lift = 26 + Math.max(0, 760 - y) * 0.15;
   return (
-    <div style={{ position: "absolute", left: left + lift * 0.75, top: top + lift, width: w, height: h, transformOrigin: origin, transform: tf, opacity: 0.25 }}>
+    <div style={{ position: "absolute", left: left + lift * 0.75, top: top + lift, width: w, height: h, transformOrigin: origin, transform: tf, opacity: 0.25 * interpolate(y, [500, 680], [0, 1], clamp) }}>
       <Img src={staticFile(AC_SHADOW)} style={img} />
     </div>
   );
@@ -446,26 +455,35 @@ const Aircraft: React.FC<{ frame: number }> = ({ frame }) => {
   );
 };
 
+/** Pie two rises from behind the bank, then, settled and with the aircraft still clear of it, is painted over the aircraft. */
+const PIE_2_OVER = 143;
+
 // -- the cut -----------------------------------------------------------------
 export const CheaperFasterVersatile: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const frame = useCurrentFrame();
   const cam = camAt(frame);
+  const pie2 = <Pie frame={frame} x={PIE_2X} riseAt={132} riseEnd={146} riseBy={700} sweepAt={144} sweepEnd={186} deg={324} photo="cfv_pie_people.jpg" label="90%" numAt={140} crownAt={186} />;
   return (
     <AbsoluteFill>
       <NealFilmLife frame={frame} seed="cfv" vignette={0.24}>
         <PaperGround frame={frame} cx={cam.x} cy={cam.y} cxRest={(camX(0) + CAM_END) / 2} cyRest={420} k={cam.k} />
-        <AircraftShadow frame={frame} />
         <Bank d={D_BACK} frame={frame} drift={-0.08} items={BACK_ITEMS} />
         <NealPlane cam={cam} d={1}>
-          <Pie frame={frame} x={PIE_1X} riseAt={50} riseEnd={72} riseBy={450} sweepAt={66} sweepEnd={110} deg={288} photo="cfv_pie_freight.jpg" label="80%" numAt={66} crownAt={110} />
-          <Pie frame={frame} x={PIE_2X} riseAt={116} riseEnd={148} riseBy={700} sweepAt={144} sweepEnd={186} deg={324} photo="cfv_pie_people.jpg" label="90%" numAt={138} crownAt={186} />
+          <Pie frame={frame} x={PIE_1X} riseAt={64} riseEnd={75} riseBy={450} sweepAt={66} sweepEnd={110} deg={288} photo="cfv_pie_freight.jpg" label="80%" numAt={66} crownAt={110} />
+          {frame < PIE_2_OVER ? pie2 : null}
           {/* latest first: the outgoing word stays in front while it sinks, so a rising sting never paints over it */}
           <Word text="VERSATILE" frame={frame} start={35} centreAt={52} size={340} sinkAt={57} sinkEnd={70} />
           <Word text="FASTER" frame={frame} start={18} centreAt={31} size={480} sinkAt={35} sinkEnd={44} />
           <Word text="CHEAPER" frame={frame} start={-6} centreAt={12} size={400} sinkAt={18} sinkEnd={23} />
         </NealPlane>
         <Bank d={D_FRONT} frame={frame} drift={-0.1} items={FRONT_ITEMS} />
+        <AircraftShadow frame={frame} />
         <Aircraft frame={frame} />
+        {frame >= PIE_2_OVER ? (
+          <NealPlane cam={cam} d={1}>
+            {pie2}
+          </NealPlane>
+        ) : null}
         <Bank d={D_NEAR} frame={frame} items={NEAR_ITEMS} soft={2} />
         <AbsoluteFill style={{ background: "linear-gradient(to bottom, rgba(24,22,20,0) 76%, rgba(24,22,20,0.42) 90%, rgba(24,22,20,0.8) 100%)" }} />
       </NealFilmLife>
