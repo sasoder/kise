@@ -21,7 +21,7 @@
 // SF tile stays untouched in the payoff.
 // Contact frames: stamps 14, 23, 31, 38, 44, 49, 54, 58, 62, 66, 69, 72 (each flat 5 frames on); top
 // tile joins 122, right 124, diagonal 124; the press starts 144 and is off the block at 162. A day cut-out of the real
-// city lies along the page's foot on a far plane, below the second caption band, and rises as the camera pulls back.
+// city lies along the page's foot on a far plane and rises as the camera pulls back.
 // SPOT INK: indigo = the logos, printed base; clay = Anthropic only. No postmark in this cut.
 //
 // SOURCES: animation_source/assets_raw/SOURCES.txt. Logos and IPOs (Wikipedia article and infobox, checked 2026-11-02):
@@ -71,30 +71,31 @@ const Y0 = CY - (3 * T) / 2;
 const YM = CY - T / 2;
 const Y2 = CY + T / 2;
 
-// Camera. Final wide: block 2T x 0.618 = 940 px, y 130-1070, so block centre (XM, YM) sits at screen (540, 600):
-// y = YM + 360 / 0.618. In the grid state (k about 1.2) the tile's stamps end at or above y 1070: tile top at y 205.
-const K_WIDE = 0.618;
-const K_GRID = 1.2;
+// Camera. Padded: the SF tile opens at x 120-960 (k 1.105) and the final block settles at x 120-960, y 190-1030
+// (2T x 0.5526 = 840 px, block centre at screen y 610). The tile never exceeds that width before the pull-back.
 const camAt = runWipCamera(
   [
-    { f: -30, x: CX, y: CY + 40, k: 1.72 },
-    { f: 6, x: CX, y: CY + 95, k: 1.5 }, // the horizon stays near y 700-800 through f12
-    { f: 36, x: CX, y: YM + (960 - 205) / K_GRID, k: K_GRID },
-    { f: 84, x: CX + 6, y: YM + (960 - 215) / 1.16, k: 1.16, ease: "linear" },
+    { f: -30, x: CX, y: YM + (960 - 420) / 1.105, k: 1.105 },
+    { f: 6, x: CX, y: YM + (960 - 345) / 1.1, k: 1.1 }, // the horizon stays near y 730-750 through f12
+    { f: 36, x: CX, y: YM + (960 - 200) / 1.08, k: 1.08 },
+    { f: 84, x: CX + 4, y: YM + (960 - 208) / 1.06, k: 1.06, ease: "linear" },
     // the pull-back reaches the slow drift at f118 and never stops: it runs through the pause into the press and the creep
-    { f: 118, x: XM - 12, y: YM + 385 / 0.68, k: 0.68 },
-    { f: DURATION, x: XM, y: YM + 360 / K_WIDE, k: K_WIDE - 0.008, ease: "linear" },
+    { f: 118, x: XM - 10, y: YM + 378 / 0.611, k: 0.611 },
+    { f: DURATION, x: XM, y: YM + 352 / 0.5526, k: 0.5455, ease: "linear" },
   ],
   DURATION,
 );
 
-// The ground strip: a far plane, so it scales little under the camera. Its top rises from about y 1640 at f0 to y 1470 at
-// the end, and the wave cut along its bottom lies just above the frame's bottom edge there. See the bands check.
-const GROUND_D = 4;
+// The sheet sits a little farther back than the kit's default, so this wider final camera stays on it.
+const PAPER_DEPTH = 1.7;
+
+// The ground strip, on a far plane: its top rises from about y 1535 at f0 to y 1375 at the end, behind the caption bands
+// (nothing on it is read), bleeding off both sides and off the bottom on every frame (its foot is at about y 1931 at the end).
+const GROUND_D = 3;
 const GROUND_W = 1620;
-const GROUND_ASPECT = 3.3003;
-const GROUND_TOP = CY + 671;
-const GROUND_X = 640;
+const GROUND_ASPECT = 2908 / 1268;
+const GROUND_TOP = YM + 1066;
+const GROUND_X = CX + 145;
 
 // assets_raw/logos, one ink: colours become currentColor, whites stay white (under multiply white prints nothing).
 const LOGOS = {
@@ -251,7 +252,7 @@ const QuarterOfAnthropic: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   return (
     <>
       <WipFilmLife frame={frame}>
-        <PaperGround cam={cam} />
+        <PaperGround cam={cam} d={PAPER_DEPTH} />
         <WipPlane cam={cam} d={GROUND_D}>
           <CutOut src="wip-anthropic/quarter_ground_day.png" x={GROUND_X} y={GROUND_TOP + GROUND_W / GROUND_ASPECT / 2} w={GROUND_W} aspect={GROUND_ASPECT} border={7} lift={0.25} seed="sf-ground" />
         </WipPlane>
