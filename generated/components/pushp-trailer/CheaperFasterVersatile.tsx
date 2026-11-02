@@ -1,435 +1,475 @@
 // ---------------------------------------------------------------------------
-// CheaperFasterVersatile (pushp-trailer, cut 8). Core memory podcast style (styles/core-memory.md), real-photo world
-// (notes/COMMON.md): Airbound's real sky and aircraft in colour, the show's ink on top. Opaque 1920x1080, 23.976 fps,
-// 218 frames.
+// CheaperFasterVersatile (pushp-trailer, cut 8), round 2. Core Memory podcast style, the ARCHIVE COLLAGE at 16:9
+// (../neal-stephenson-trailer/nealShared). Opaque 1920x1080, 23.976 fps, 218 frames; finals --scale 2.
 //
-// CHECK LINE: "Airbound's real aircraft is out to beat most of logistics (80%) and nearly all human transport (90%) on
-// cost, speed and versatility: the viewer sees those shares get claimed by the aircraft's own flight."
+// CHECK LINE: Airbound's aircraft flies on through the sky while what it beats, most of logistics and nearly all human
+// transport, becomes real around it.
 //
 // THE LINE: "that are cheaper, faster, and more versatile than 80% of the entire logistics market and 90% of the human
 // transportation market."
-// WORD -> FRAME: cheaper 8 · faster 27 · and 40 · more 44 · versatile 48 · than 55 · 80 68 · % 77 · entire 101 ·
-// logistics 109 · market 124 · and 135 · 90 144 · % 151 · human 176 · transportation 189 · market 200 · ends ~200-210.
+// WORD -> FRAME: cheaper 8, faster 27, and 40, more 44, versatile 48, than 55, 80 68, % 77, entire 101, logistics 109,
+// market 124, and 135, 90 144, % 151, human 176, transportation 189, market 200, speech ends ~205.
 // DURATION: the slot 8.634 -> 17.726 s = 9.092 s x 23.976 = 218 frames (f0..f217).
 //
-// THE MOTION: one long sky, the camera tracking right with the aircraft, easing up from f0 and down into the end. Three
-// words rise behind the passing aircraft, each held fully in frame past its word on a slower pan, and slide off with the
-// world (VERSATILE fully off by f80, the camera picking up from f52 into one curve); the aircraft flies under the letters
-// so the hull covers no more than their bottom third on the landing frames, climbs
-// onto pie one's rim and its own clockwise flight draws the wedge (contact f68, first wedge f69, 288 deg at f105), swinging
-// wide of the rim on the lower-left arc so the wing stays off the digits, carries on over the open slice to pie two
-// (contact f144, 324 deg at f178) and flies on past the sliver, clear of the crown, with both pies in shot. The numerals
-// are print on the whole disc, settled by f72 and f148; the glyphs are uncovered by the wedge.
-// CHAIN = what Airbound's aircraft outdoes: a small crown steps up from behind each finished wedge. The words use the
-// show's sting by the brief.
+// THE MOTION: the squared paper is a long sky above a sea of real-cloud flats (natural contour, soft shadow). One word at
+// a time owns the frame: each rises centred and huge from behind the bank in the chain sting a few frames before its
+// onset, then sinks back behind the clouds as the next rises (all word pixels gone by f70). The camera creeps right over
+// the words, then from f56 tilts up and keeps running: the bank falls to the bottom quarter of the frame as pie one comes
+// up, a move that carries words to pies with no cut. Each pie rises from behind the clouds on its own easing, unlinked to
+// the aircraft; its wedge is a window onto a black-and-white photograph (freight, then the Mumbai local) that sweeps by
+// itself; the chain marks each payoff once (a crown on the finished wedge). The aircraft is the through-line: under way
+// at f0, travelling right across the words, on one shallow line low across pie one, through the gap and low across pie
+// two, then climbing away to the right of it into the clear paper upper right, whole and still moving at f217, banking along its heading, its one soft shadow on the paper falling further off as it
+// climbs.
 //
-// SOURCES: 80% and 90% are Naman Pushp's stated goal as spoken, not measured data; deliberately unsourced on screen.
-// Plate and aircraft: Airbound's own photograph, airbound.co img-slide1-desktop (notes/hero_sources.txt; not a free
-// licence). aircraft_palms_decon.png is aircraft_palms.png with the sky colour keyed and decontaminated
-// (scripts/clips/pushp-trailer/clean-aircraft-matte.ts); sky_palms_healed.jpg is sky_palms_clean.jpg with the paint-out
-// patch re-sampled from the same photo's cloud (scripts/clips/pushp-trailer/heal-sky-plate.ts). Glyphs: Lucide `package` and `user-round` geometry, made solid.
+// CHAIN MEANING: what Airbound's aircraft outdoes.
+//
+// SOURCES: these shares are the speaker's stated goal, not data, so no source lines. Clouds: plate_sky_cumulus (the Kelly
+// Johnson clip's plate), cut by scripts/clips/pushp-trailer/bake-cfv-clouds.py. Pie photos: the clip's stills
+// 11.5a ContainerShipKochiIndia2023 and 16.0a MumbaiLocalHangingOffDoors2006, same script. Aircraft: fk_aircraft.png, the
+// same cleaned aircraft and grade as FiveKilosThreeKilo (AI-made from Airbound's photos).
 // ---------------------------------------------------------------------------
 import React from "react";
-import { AbsoluteFill, Img, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, random, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { camEase, clamp01, sway } from "../kits/dwarkesh/fieldShared";
 import {
-  BLACK,
-  CHAIN,
-  CROWN_STEP,
+  BLUE,
+  CaptionBands,
   EASE_LAND,
   INK,
-  Inked,
-  OP_LOW,
+  NEAL_FILTER,
+  type NealCam,
+  NealFilmLife,
+  NealPlane,
+  NealSvg,
+  ORANGE,
+  PURPLE,
+  PaperGround,
   SHADOW,
-  SHADOW_OFF,
-  runCamera2,
-  textRise,
-  type,
-} from "../kits/core-memory/cerroShared";
+  clamp,
+  depthTransform,
+  type as typeStyle,
+} from "../neal-stephenson-trailer/nealShared";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 218;
-export const schema = z.object({});
-export const defaultProps = schema.parse({});
+export const schema = z.object({ bands: z.boolean() });
+export const defaultProps = schema.parse({ bands: false });
 
-const W = 1920;
-const H = 1080;
-const LAST = DURATION - 1;
+// ---------------------------------------------------------------------------
+// Tracks: coarse keys, linearly interpolated, then box-smoothed per frame at module load (deterministic).
+// ---------------------------------------------------------------------------
+const PRE = 40;
+const track = (keys: [number, number][], win = 7) => {
+  const F = keys.map((k) => k[0]);
+  const V = keys.map((k) => k[1]);
+  const raw: number[] = [];
+  for (let f = -PRE - win; f <= DURATION + win; f++) raw.push(interpolate(f, F, V, clamp));
+  const out: number[] = [];
+  for (let f = -PRE; f <= DURATION; f++) {
+    let s = 0;
+    for (let i = -win; i <= win; i++) s += raw[f + PRE + win + i];
+    out.push(s / (2 * win + 1));
+  }
+  return (f: number) => {
+    const c = Math.max(-PRE, Math.min(DURATION, f)) + PRE;
+    const a = Math.floor(c);
+    const b = Math.min(a + 1, out.length - 1);
+    return out[a] + (out[b] - out[a]) * (c - a);
+  };
+};
 
-// -- beats (from the word table) ----------------------------------------------
-const F_RIM1 = 68; // "80": the aircraft is on pie one's rim at 12 o'clock
-const F_DONE1 = 105; // 288 deg, ahead of "logistics"
-const F_LEAVE1 = 118; // creep ends, the run to pie two begins, so it is well under way on "and" (f135)
-const F_RIM2 = 144; // "90"
-const F_DONE2 = 178; // 324 deg, just after "human"
-const DEG1 = 288;
-const DEG2 = 324;
+// -- the camera --------------------------------------------------------------
+const CAM_V = track([
+  [-40, 6],
+  [54, 6],
+  [68, 9],
+  [106, 5],
+  [126, 9],
+  [150, 6],
+  [186, 1.5],
+  [217, 0.9],
+]);
+const CAM_K = track(
+  [
+    [-40, 1],
+    [48, 1],
+    [92, 1.05],
+    [122, 1.04],
+    [176, 1],
+    [217, 0.992],
+  ],
+  10,
+);
+/** The tilt: the camera rises so the bank falls from y ~570 to the bottom quarter. */
+const TILT = 244;
+const CAM_Y = track(
+  [
+    [-40, 540],
+    [58, 540],
+    [106, 540 - TILT],
+    [217, 540 - TILT - 3],
+  ],
+  12,
+);
+const CAM_XS: number[] = [960];
+for (let f = 1; f <= PRE + DURATION; f++) CAM_XS.push(CAM_XS[f - 1] + CAM_V(f - PRE));
+const camX = (f: number) => {
+  const c = Math.max(0, Math.min(PRE + DURATION, f + PRE));
+  const a = Math.floor(c);
+  const b = Math.min(a + 1, CAM_XS.length - 1);
+  return CAM_XS[a] + (CAM_XS[b] - CAM_XS[a]) * (c - a);
+};
+const X_REST = camX(0);
+const CAM_END = camX(DURATION - 1);
+const camAt = (f: number): NealCam => ({ x: camX(f), y: CAM_Y(f), k: CAM_K(f), x0: X_REST, y0: 540 });
+/** The world x on plane d that sits at screen x `sx` on frame f. */
+const at = (f: number, d: number, sx: number) => {
+  const t = depthTransform(camAt(f), d);
+  return (sx - t.tx) / t.k;
+};
 
-// -- world layout -------------------------------------------------------------
-const PIE_R = 260;
-const PIE_Y = 490;
-const PIE1_X = 4510;
-const PIE2_X = PIE1_X + 950;
-const WORD_SIZE = 250; // cap height 175
-const WORD_BASE = 424;
-const WORDS = [
-  { text: "CHEAPER", x: 932, start: 1, stagger: 1, travel: 18 }, // squeezed: its word is at f8, the cut starts at f0
-  { text: "FASTER", x: 1945, start: 15, stagger: 2, travel: 22 },
-  { text: "VERSATILE", x: 3065, start: 36, stagger: 2, travel: 22 },
+// -- the set: real-cloud flats, natural contour, base and sides dissolving, one soft shadow ------------------------
+const FLATS = {
+  tower: { w: 1680, h: 1250 },
+  shelfb: { w: 880, h: 810 },
+  crest: { w: 1360, h: 810 },
+  knob: { w: 780, h: 650 },
+  lump: { w: 580, h: 430 },
+} as const;
+type FlatName = keyof typeof FLATS;
+
+const Flat: React.FC<{ name: FlatName; x: number; y: number; s: number; flip?: boolean; air?: number; cast?: number; soft?: number }> = ({
+  name,
+  x,
+  y,
+  s,
+  flip,
+  air = 0,
+  cast = 20,
+  soft = 0,
+}) => {
+  const { w, h } = FLATS[name];
+  const box: React.CSSProperties = {
+    position: "absolute",
+    left: x,
+    top: y,
+    width: w * s,
+    height: h * s,
+    maxWidth: "none",
+    transform: flip ? "scaleX(-1)" : undefined,
+  };
+  const parts: string[] = [];
+  if (air > 0) parts.push(`contrast(${1 - 0.34 * air}) brightness(${1 + 0.1 * air})`);
+  if (soft > 0) parts.push(`blur(${soft}px)`);
+  return (
+    <>
+      <Img src={staticFile(`pushp-trailer/cfv_${name}_natsoft.png`)} style={{ ...box, left: x + cast, top: y + cast * 1.25, opacity: air > 0 ? 0.65 : 1 }} />
+      <Img src={staticFile(`pushp-trailer/cfv_${name}_nat.png`)} style={{ ...box, filter: parts.length ? parts.join(" ") : undefined }} />
+    </>
+  );
+};
+
+type Placed = { name: FlatName; f: number; sx: number; y: number; s: number; flip?: boolean; air?: number };
+const Bank: React.FC<{ d: number; frame: number; drift?: number; items: Placed[]; soft?: number }> = ({ d, frame, drift = 0, items, soft }) => (
+  <NealPlane cam={camAt(frame)} d={d}>
+    {items.map((p, i) => (
+      <Flat key={`${p.name}${i}`} name={p.name} x={at(p.f, d, p.sx) + drift * frame * (i % 2 ? 1 : 0.7)} y={p.y} s={p.s} flip={p.flip} air={p.air} soft={soft} />
+    ))}
+  </NealPlane>
+);
+
+const D_BACK = 1.3;
+const D_FRONT = 0.92;
+const D_NEAR = 0.62;
+
+const BACK_ITEMS: Placed[] = [
+  { name: "crest", f: 0, sx: -300, y: 440, s: 0.92, air: 0.35, flip: true },
+  { name: "shelfb", f: 0, sx: 420, y: 400, s: 1.3, air: 0.35 },
+  { name: "crest", f: 0, sx: 1120, y: 446, s: 0.96, air: 0.35 },
+  { name: "shelfb", f: 0, sx: 1960, y: 396, s: 1.34, air: 0.35, flip: true },
+  { name: "crest", f: 0, sx: 2640, y: 442, s: 0.94, air: 0.35, flip: true },
 ];
-const STING_RISE = 130;
-// The aircraft's anchor inside the 760x400 cut-out (its body, not the image box) and its wings' share of the width.
-const AC_W = 760;
-const AC_H = 400;
-const AC_ANCHOR_X = 365;
-const AC_ANCHOR_Y = 190;
-const AC_WING = 645 / 760;
-const WING_BIG = 640;
-const WING_RIM = 300;
+// Flats overlap by more than their dissolving sides, so the sea has no seam and nothing shows through it.
+const FRONT_ITEMS: Placed[] = [
+  { name: "shelfb", f: 0, sx: -640, y: 322, s: 1.72, flip: true },
+  { name: "crest", f: 0, sx: -20, y: 470, s: 1.2 },
+  { name: "shelfb", f: 0, sx: 800, y: 350, s: 1.58 },
+  { name: "shelfb", f: 0, sx: 1330, y: 296, s: 1.9, flip: true },
+  { name: "crest", f: 0, sx: 2120, y: 482, s: 1.14, flip: true },
+  { name: "shelfb", f: 0, sx: 2850, y: 336, s: 1.64 },
+  { name: "crest", f: 0, sx: 3400, y: 464, s: 1.24 },
+];
+const NEAR_ITEMS: Placed[] = [{ name: "crest", f: 24, sx: 540, y: 640, s: 1.2 }];
 
-// -- the camera: its own key track ---------------------------------------------
-const WORD_SPEED = 43.5; // over the words, slow enough to read each one
-const RUN_SPEED = 61; // from f52 into the sweep, carrying VERSATILE off the left
-// The end of the camera's travel relative to the pies; the onward move is solved to land there.
-const CAM_END_X = PIE1_X + 534;
-// A speed profile integrated into a target, then the kit's damped follower. It never reads the aircraft.
-const onwardShape = (f: number) => camEase((f - 100) / 18, 1) * (1 - camEase((f - 118) / 22, 1)); // before 3 o'clock
-const speedAt = (f: number) => {
-  const ramp = (a: number, b: number) => camEase((f - a) / (b - a), 1);
-  const run = (WORD_SPEED + (RUN_SPEED - WORD_SPEED) * ramp(52, 64)) * ramp(0, 14) * (1 - ramp(70, 88));
-  return 1.1 * (1 - 0.6 * ramp(140, 170)) + run;
-};
-const CAM_F: number[] = [];
-const CAM_CX: number[] = [];
-const CAM_CY: number[] = [];
-const CAM_K: number[] = [];
-{
-  let base = W / 2;
-  let shape = 0;
-  for (let f = 0; f < DURATION; f++) {
-    base += speedAt(f + 5);
-    shape += onwardShape(f + 5);
-  }
-  const onwardSpeed = (CAM_END_X - base) / shape;
-  let x = W / 2;
-  for (let f = 0; f <= DURATION; f++) {
-    CAM_F.push(f);
-    CAM_CX.push(x);
-    x += speedAt(f + 5) + onwardSpeed * onwardShape(f + 5); // the follower lags about five frames; lead it by that
-    const inK = camEase((f - 60) / 24, 1);
-    const outK = camEase((f - 102) / 44, 1);
-    const k = 1 + 0.46 * inK - 0.41 * outK; // 1.0 on the words, 1.46 on pie one, 1.05 on the comparison
-    CAM_K.push(k);
-    CAM_CY.push(H / 2 + 14.5 * inK * (1 - outK) + 1.4 * outK); // pie one centre at screen y 450, the comparison at 486
-  }
-}
-const CAM = Array.from({ length: DURATION + 1 }, (_, f) => runCamera2(f, CAM_F, CAM_CY, CAM_CX, CAM_K));
+// -- the words ---------------------------------------------------------------
+const CHAIN_LAYERS = [ORANGE, PURPLE, BLUE];
+const STING_TRAVEL = 16;
+const STING_STAGGER = 2;
+const WORD_DROP = 470; // far enough below the bank that no word pixel is left
+const WORD_SHADOW = 9;
+const WORD_BASE = 578;
+const WORD_CLIP = 760;
 
-// -- the aircraft's flight: one C1 path, one table --------------------------------
-const hermite = (u: number, a: number, va: number, b: number, vb: number, span: number) => {
-  const t = u;
-  const t2 = t * t;
-  const t3 = t2 * t;
-  return (
-    (2 * t3 - 3 * t2 + 1) * a + (t3 - 2 * t2 + t) * va * span + (-2 * t3 + 3 * t2) * b + (t3 - t2) * vb * span
-  );
-};
-const rad = (d: number) => (d * Math.PI) / 180;
-// The flight line: the rim, swinging wide on the lower-left arc so the wing stays off the numeral's digits.
-const WIDE_ARC = 62;
-const flightR = (deg: number) => {
-  const d = ((deg % 360) + 360) % 360;
-  return PIE_R + WIDE_ARC * camEase((d - 140) / 105, 1) * (1 - camEase((d - 285) / 35, 1));
-};
-const rimPos = (px: number, deg: number) => {
-  const r = flightR(deg);
-  return { x: px + r * Math.sin(rad(deg)), y: PIE_Y - r * Math.cos(rad(deg)) };
-};
-// Clockwise on the flight line, velocity in world px per frame for an angular speed in deg per frame.
-const rimVel = (deg: number, w: number) => {
-  const a = rimPos(0, deg - 0.5);
-  const b = rimPos(0, deg + 0.5);
-  return { x: (b.x - a.x) * w, y: (b.y - a.y) * w };
-};
-const W_IN = 10; // deg per frame on contact, about 45 px per frame
-const W_OUT1 = 1.0; // the creep after the sweep eases
-const W_OUT2 = 2.4;
-const DEG_LEAVE1 = DEG1 + 22;
-
-const F_FREE = 53; // tracking the camera until here, drawing ahead of it and under the words, then the climb to the rim
-const trackX = (f: number) => CAM[f].cx - 130 + 680 * camEase(f / F_FREE, 1);
-const trackY = (f: number) => 536 + 2 * camEase(f / F_FREE, 1);
-
-type Pt = { x: number; y: number; deg1: number; deg2: number };
-const FLIGHT: Pt[] = [];
-{
-  const freeEnd = { x: trackX(F_FREE), y: trackY(F_FREE) };
-  const freeVel = { x: trackX(F_FREE) - trackX(F_FREE - 1), y: trackY(F_FREE) - trackY(F_FREE - 1) };
-  const seg = (f: number, f0: number, f1: number, a: { x: number; y: number }, va: { x: number; y: number }, b: { x: number; y: number }, vb: { x: number; y: number }) => {
-    const span = f1 - f0;
-    const u = (f - f0) / span;
-    return { x: hermite(u, a.x, va.x, b.x, vb.x, span), y: hermite(u, a.y, va.y, b.y, vb.y, span) };
-  };
-  const leave1 = rimPos(PIE1_X, DEG_LEAVE1);
-  // Past the sliver: clear of the disc and crown from f198 on, then drifting up and right.
-  const F_CLEAR = 198;
-  const clear = { x: PIE2_X + 110, y: 122 };
-  const clearVel = { x: 9.5, y: -1.2 };
-  const end = { x: PIE2_X + 230, y: 118 };
-  for (let f = 0; f <= DURATION; f++) {
-    let p: { x: number; y: number };
-    let deg1 = 0;
-    let deg2 = 0;
-    if (f <= F_FREE) {
-      p = { x: trackX(f), y: trackY(f) };
-    } else if (f < F_RIM1) {
-      p = seg(f, F_FREE, F_RIM1, freeEnd, freeVel, rimPos(PIE1_X, 0), rimVel(0, W_IN));
-    } else if (f < F_DONE1) {
-      deg1 = hermite((f - F_RIM1) / (F_DONE1 - F_RIM1), 0, W_IN, DEG1, W_OUT1 * 2, F_DONE1 - F_RIM1);
-      p = rimPos(PIE1_X, deg1);
-    } else if (f < F_LEAVE1) {
-      deg1 = hermite((f - F_DONE1) / (F_LEAVE1 - F_DONE1), DEG1, W_OUT1 * 2, DEG_LEAVE1, W_OUT1 * 1.2, F_LEAVE1 - F_DONE1);
-      p = rimPos(PIE1_X, deg1);
-    } else if (f < F_RIM2) {
-      deg1 = DEG1;
-      p = seg(f, F_LEAVE1, F_RIM2, leave1, rimVel(DEG_LEAVE1, W_OUT1 * 1.2), rimPos(PIE2_X, 0), rimVel(0, W_IN));
-    } else if (f < F_DONE2) {
-      deg1 = DEG1;
-      deg2 = hermite((f - F_RIM2) / (F_DONE2 - F_RIM2), 0, W_IN, DEG2, W_OUT2, F_DONE2 - F_RIM2);
-      p = rimPos(PIE2_X, deg2);
-    } else {
-      deg1 = DEG1;
-      deg2 = DEG2;
-      p =
-        f < F_CLEAR
-          ? seg(f, F_DONE2, F_CLEAR, rimPos(PIE2_X, DEG2), rimVel(DEG2, W_OUT2), clear, clearVel)
-          : seg(f, F_CLEAR, DURATION, clear, clearVel, end, { x: 6, y: -0.6 });
-    }
-    FLIGHT.push({ x: p.x, y: p.y, deg1, deg2 });
-  }
-}
-// The wedge is read off the aircraft's visible position (its angle round the disc), clamped at the share. Never a timer.
-const angleRound = (x: number, y: number, px: number) => {
-  const a = (Math.atan2(x - px, PIE_Y - y) * 180) / Math.PI;
-  return a < 0 ? a + 360 : a;
-};
-const WEDGE1: number[] = [];
-const WEDGE2: number[] = [];
-{
-  let w1 = 0;
-  let w2 = 0;
-  FLIGHT.forEach((p, f) => {
-    if (f > F_RIM1 && f <= F_DONE1) w1 = Math.max(w1, Math.min(DEG1, angleRound(p.x, p.y, PIE1_X)));
-    if (f >= F_DONE1) w1 = DEG1;
-    if (f > F_RIM2 && f <= F_DONE2) w2 = Math.max(w2, Math.min(DEG2, angleRound(p.x, p.y, PIE2_X)));
-    if (f >= F_DONE2) w2 = DEG2;
-    WEDGE1.push(w1);
-    WEDGE2.push(w2);
-  });
-}
-// Roll: continuous, from horizontal velocity (averaged over seven frames), right wing down when moving right.
-const VX = FLIGHT.map((p, f) => p.x - FLIGHT[Math.max(0, f - 1)].x);
-VX[0] = VX[1];
-const ROLL = FLIGHT.map((_, f) => {
-  let sum = 0;
-  let n = 0;
-  for (let i = f - 3; i <= f + 3; i++) {
-    sum += VX[Math.max(0, Math.min(DURATION, i))];
-    n++;
-  }
-  return 15 * Math.tanh(sum / n / 62);
-});
-const WING_FAR = 240; // it keeps flying away past pie two
-const WING = (f: number) =>
-  WING_BIG + (WING_RIM - WING_BIG) * camEase((f - 46) / 26, 1) + (WING_FAR - WING_RIM) * camEase((f - 176) / 41, 1);
-
-// -- the plate: a far layer. Its edges are computed here, so they can never show. ----------------------------------
-const PLATE_SCALE = 1.04;
-const PLATE_W = 3000 * PLATE_SCALE;
-const PLATE_H = 1600 * PLATE_SCALE;
-const PLATE_X0 = -8;
-const PLATE_Y0 = -216; // palm crowns in the bottom third at f0
-const PLATE_DRIFT = 0.08; // px per frame, the clouds' own slow move
-// Solved so the whole budget is spent and the right edge lands 10 px past the frame on the last frame.
-const PLATE_PARALLAX = (PLATE_W - W - 10 + PLATE_X0 - LAST * PLATE_DRIFT) / (CAM[LAST].cx - CAM[0].cx);
-const plateAt = (frame: number) => {
-  const c = CAM[frame];
-  return {
-    x: PLATE_X0 - (c.cx - CAM[0].cx) * PLATE_PARALLAX - frame * PLATE_DRIFT,
-    y: PLATE_Y0 - (c.cy - CAM[0].cy) * PLATE_PARALLAX,
-  };
-};
-{
-  const endX = plateAt(LAST).x;
-  if (endX + PLATE_W < W + 8) throw new Error(`plate's right edge shows at the end: ${endX + PLATE_W}`);
-}
-
-// -- drawing ------------------------------------------------------------------
-const wedgePath = (px: number, deg: number) => {
-  if (deg <= 0) return "";
-  const endX = px + PIE_R * Math.sin(rad(deg));
-  const endY = PIE_Y - PIE_R * Math.cos(rad(deg));
-  const large = deg > 180 ? 1 : 0;
-  return `M ${px} ${PIE_Y} L ${px} ${PIE_Y - PIE_R} A ${PIE_R} ${PIE_R} 0 ${large} 1 ${endX} ${endY} Z`;
-};
-
-const PackageGlyph: React.FC = () => (
-  <g strokeLinecap="round" strokeLinejoin="round">
-    <path
-      d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"
-      fill={BLACK}
-      stroke={BLACK}
-      strokeWidth={2}
-    />
-    <path d="M12 21.6V12M3.6 7.2 12 12l8.4-4.8M7.5 4.27l9 5.15" fill="none" stroke={INK} strokeWidth={1.25} />
-  </g>
-);
-const PersonGlyph: React.FC = () => (
-  <g strokeLinecap="round" strokeLinejoin="round" fill={BLACK} stroke={BLACK} strokeWidth={2}>
-    <circle cx={12} cy={8} r={5} />
-    <path d="M20 21a8 8 0 0 0-16 0Z" />
-  </g>
-);
-
-const NUM_DX = 20;
-const NUM_BASE = 111;
-
-const Pie: React.FC<{
-  id: string;
-  frame: number;
-  px: number;
-  wedge: number;
-  doneAt: number;
-  printAt: number;
-  k: number;
-  label: string;
-  glyph: React.ReactNode;
-}> = ({ id, frame, px, wedge, doneAt, printAt, k, label, glyph }) => {
-  const d = wedgePath(px, wedge);
-  const print = textRise(frame, printAt, k);
-  const crown = (i: number) => {
-    // A colour starts hidden exactly behind the wedge and steps out to its rung: nothing fades, nothing pops.
-    const t = EASE_LAND(clamp01((frame - doneAt - i * 2) / 22));
-    return -t * (CROWN_STEP - 2) * (3 - i);
-  };
-  return (
-    <g>
-      <circle cx={px} cy={PIE_Y} r={PIE_R} fill={INK} opacity={OP_LOW} />
-      {frame >= doneAt
-        ? CHAIN.map((c, i) => <path key={c} d={d} fill={c} transform={`translate(0 ${crown(i)})`} />)
-        : null}
-      {d ? <Inked render={(fill) => <path d={d} fill={fill} />} /> : null}
-      {d ? (
-        <>
-          <defs>
-            <clipPath id={id}>
-              <path d={d} />
-            </clipPath>
-          </defs>
-          {/* the glyph lives on the wedge, so the sweep uncovers it */}
-          <g clipPath={`url(#${id})`}>
-            <g transform={`translate(${px + 26} ${PIE_Y - 188}) scale(5.4)`}>{glyph}</g>
-          </g>
-        </>
-      ) : null}
-      {/* the numeral is print on the whole disc, settled as he says it; local coordinates, as Chrome misplaces <text> at
-          very large x */}
-      {print.opacity > 0 ? (
-        <g transform={`translate(${px + NUM_DX} ${PIE_Y + NUM_BASE + print.dy})`} opacity={print.opacity}>
-          <text x={0} y={0} textAnchor="middle" fill={BLACK} style={type(150, 900)}>
-            {label}
-          </text>
-        </g>
-      ) : null}
-    </g>
-  );
-};
-
-const StingWord: React.FC<{ frame: number; word: (typeof WORDS)[number]; offLeft: boolean }> = ({ frame, word, offLeft }) => {
-  const { text, x, start, stagger, travel } = word;
-  if (frame < start || offLeft) return null;
-  const at = (s: number) => STING_RISE * (1 - EASE_LAND(clamp01((frame - s) / travel)));
-  const coreStart = start + 3 * stagger;
-  const coreDy = at(coreStart);
-  const lastColourLand = start + 2 * stagger + travel;
-  const node = (fill: string, dx: number, dy: number) => (
-    <text x={dx} y={dy} textAnchor="middle" fill={fill} style={type(WORD_SIZE, 900)}>
+/** Centred, huge; rises in the chain sting, then is swallowed by the clouds. Nothing fades. */
+const Word: React.FC<{ text: string; frame: number; start: number; centreAt: number; size: number; sinkAt: number; sinkEnd: number }> = ({
+  text,
+  frame,
+  start,
+  centreAt,
+  size,
+  sinkAt,
+  sinkEnd,
+}) => {
+  if (frame < start || frame > sinkEnd) return null;
+  const x = at(centreAt, 1, 960);
+  const sink = interpolate(frame, [sinkAt, sinkEnd], [0, WORD_DROP], { easing: Easing.bezier(0.55, 0, 0.8, 0.5), ...clamp });
+  const pos = (i: number) =>
+    WORD_BASE + sink + WORD_DROP * (1 - interpolate(frame, [start + i * STING_STAGGER, start + i * STING_STAGGER + STING_TRAVEL], [0, 1], { easing: EASE_LAND, ...clamp }));
+  const core = pos(3);
+  const coreIn = frame >= start + 3 * STING_STAGGER;
+  const colorsGone = frame > start + 3 * STING_STAGGER + 9;
+  const t = (fill: string, y: number, dx = 0) => (
+    <text x={x + dx} y={y} textAnchor="middle" fill={fill} style={typeStyle(size, 900)}>
       {text}
     </text>
   );
   return (
-    <g transform={`translate(${x} ${WORD_BASE})`}>
-      {frame >= coreStart ? node(SHADOW, SHADOW_OFF, SHADOW_OFF + coreDy) : null}
-      {frame < lastColourLand + stagger
-        ? CHAIN.map((c, i) => (frame >= start + i * stagger ? <g key={c}>{node(c, 0, at(start + i * stagger))}</g> : null))
-        : null}
-      {frame >= coreStart ? node(INK, 0, coreDy) : null}
-    </g>
+    <div style={{ position: "absolute", left: -2000, top: -1000, width: 12000, height: 1000 + WORD_CLIP, overflow: "hidden" }}>
+      <div style={{ position: "absolute", left: 2000, top: 1000 }}>
+        <NealSvg>
+          {coreIn ? t(SHADOW, core + WORD_SHADOW, WORD_SHADOW) : null}
+          {!colorsGone ? CHAIN_LAYERS.map((c, i) => (frame >= start + i * STING_STAGGER ? <React.Fragment key={c}>{t(c, pos(i))}</React.Fragment> : null)) : null}
+          {coreIn ? t(INK, core) : null}
+        </NealSvg>
+      </div>
+    </div>
   );
 };
 
-const CheaperFasterVersatile: React.FC<z.infer<typeof schema>> = () => {
-  const frame = useCurrentFrame();
-  const f = Math.max(0, Math.min(DURATION, frame));
-  const { cx, cy, k } = CAM[f];
-  const s = sway(frame);
-  const tx = W / 2 - cx * k + s.dx;
-  const ty = H / 2 - cy * k + s.dy;
-  const plate = plateAt(f);
-  const p = FLIGHT[f];
-  const wing = WING(f);
-  const acScale = wing / AC_WING / AC_W;
-  // A very small hover, on top of the path, never read by the wedge.
-  const bobY = 2.4 * Math.sin(frame / 8.5);
-  const bobX = 1.2 * Math.sin(frame / 13);
-  const acTransform = `translate(${p.x + bobX - AC_ANCHOR_X}px, ${p.y + bobY - AC_ANCHOR_Y}px) rotate(${ROLL[f]}deg) scale(${acScale})`;
+// -- the pies ----------------------------------------------------------------
+const PIE_R = 292;
+const PIE_SCREEN_Y = 456;
+const PIE_1X = CAM_END - 586;
+const PIE_2X = CAM_END + 264;
+/** The numeral hangs below the wedge vertex, so the vertex and the stripe's end stay clear above it. Baseline y 596. */
+const NUM_DROP = 82;
+
+const wedgePolygon = (r: number, deg: number) => {
+  const pts = [`${r}px ${r}px`];
+  const n = Math.max(2, Math.ceil(deg / 3));
+  for (let i = 0; i <= n; i++) {
+    const a = ((deg * i) / n - 90) * (Math.PI / 180);
+    pts.push(`${(r + r * Math.cos(a)).toFixed(2)}px ${(r + r * Math.sin(a)).toFixed(2)}px`);
+  }
+  return `polygon(${pts.join(",")})`;
+};
+
+const Pie: React.FC<{
+  frame: number;
+  x: number;
+  riseAt: number;
+  riseEnd: number;
+  riseBy: number;
+  sweepAt: number;
+  sweepEnd: number;
+  deg: number;
+  photo: string;
+  label: string;
+  numAt: number;
+  crownAt: number;
+}> = ({ frame, x, riseAt, riseEnd, riseBy, sweepAt, sweepEnd, deg, photo, label, numAt, crownAt }) => {
+  if (frame < riseAt) return null;
+  // Held at its screen height while the camera tilts past it, so the bank falls away from under it; world-fixed once the
+  // tilt is done.
+  const rise = riseBy * (1 - interpolate(frame, [riseAt, riseEnd], [0, 1], { easing: EASE_LAND, ...clamp }));
+  const cy = PIE_SCREEN_Y + rise - (540 - CAM_Y(frame));
+  const sweep = deg * interpolate(frame, [sweepAt, sweepEnd], [0, 1], { easing: Easing.bezier(0.42, 0, 0.18, 1), ...clamp });
+  const r = PIE_R;
+  const box: React.CSSProperties = { position: "absolute", left: x - r, top: cy - r, width: 2 * r, height: 2 * r };
+  const poly = sweep > 0.05 ? wedgePolygon(r, sweep) : null;
+  const a = ((sweep - 90) * Math.PI) / 180;
+  const numT = interpolate(frame, [numAt, numAt + 12], [0, 1], { easing: Easing.bezier(0.2, 0.8, 0.3, 1), ...clamp });
+  const size = 176;
   return (
-    <AbsoluteFill style={{ backgroundColor: "#7E8CA4", overflow: "hidden" }}>
-      <Img
-        src={staticFile("pushp-trailer/sky_palms_healed.jpg")}
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          width: PLATE_W,
-          height: PLATE_H,
-          maxWidth: "none",
-          transform: `translate(${plate.x + s.dx * 0.32}px, ${plate.y + s.dy * 0.32}px)`,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          width: W,
-          height: H,
-          transformOrigin: "0 0",
-          transform: `translate(${tx}px, ${ty}px) scale(${k})`,
-        }}
-      >
-        <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-          {WORDS.map((w) => (
-            <StingWord key={w.text} frame={frame} word={w} offLeft={tx + (w.x + 800) * k < 0} />
-          ))}
-          <Pie id="pie-one" frame={frame} px={PIE1_X} wedge={WEDGE1[f]} doneAt={F_DONE1} printAt={60} k={k} label="80%" glyph={<PackageGlyph />} />
-          <Pie id="pie-two" frame={frame} px={PIE2_X} wedge={WEDGE2[f]} doneAt={F_DONE2} printAt={136} k={k} label="90%" glyph={<PersonGlyph />} />
-        </svg>
-        <Img
-          src={staticFile("pushp-trailer/aircraft_palms_decon.png")}
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            width: AC_W,
-            height: AC_H,
-            maxWidth: "none",
-            transformOrigin: `${AC_ANCHOR_X}px ${AC_ANCHOR_Y}px`,
-            transform: acTransform,
-          }}
-        />
+    <>
+      <NealSvg>
+        <circle cx={x + 6} cy={cy + 6} r={r} fill="none" stroke={SHADOW} strokeWidth={8} />
+        <circle cx={x} cy={cy} r={r} fill="none" stroke={INK} strokeWidth={8} />
+      </NealSvg>
+      {poly ? <div style={{ ...box, left: x - r + 8, top: cy - r + 8, background: SHADOW, clipPath: poly }} /> : null}
+      {poly
+        ? CHAIN_LAYERS.map((c, i) => {
+            const p = interpolate(frame, [crownAt + i * 2, crownAt + i * 2 + 16], [0, 1], { easing: EASE_LAND, ...clamp });
+            if (p <= 0) return null;
+            return <div key={c} style={{ ...box, top: cy - r - (3 - i) * 12 * p, background: c, clipPath: poly }} />;
+          })
+        : null}
+      {poly ? (
+        <div style={{ ...box, clipPath: poly, overflow: "hidden" }}>
+          <Img src={staticFile(`pushp-trailer/${photo}`)} style={{ position: "absolute", left: 0, top: 0, width: 2 * r, height: 2 * r, maxWidth: "none", filter: NEAL_FILTER }} />
+        </div>
+      ) : null}
+      <NealSvg>
+        <circle cx={x} cy={cy} r={r} fill="none" stroke={INK} strokeWidth={8} strokeDasharray={`${(sweep / 360) * 2 * Math.PI * r} ${2 * Math.PI * r}`} transform={`rotate(-90 ${x} ${cy})`} />
+        {poly ? <path d={`M${x} ${cy - r} L${x} ${cy} L${x + r * Math.cos(a)} ${cy + r * Math.sin(a)}`} fill="none" stroke={INK} strokeWidth={8} strokeLinejoin="round" /> : null}
+        {numT > 0 ? (
+          <g opacity={numT} transform={`translate(0 ${(1 - numT) * 24})`}>
+            <text x={x + 7} y={cy + size * 0.33 + NUM_DROP + 7} textAnchor="middle" fill={SHADOW} style={typeStyle(size, 900)}>
+              {label}
+            </text>
+            <text x={x} y={cy + size * 0.33 + NUM_DROP} textAnchor="middle" fill={INK} style={typeStyle(size, 900)}>
+              {label}
+            </text>
+          </g>
+        ) : null}
+      </NealSvg>
+    </>
+  );
+};
+
+// -- the aircraft -------------------------------------------------------------
+const AC_SRC = "pushp-trailer/fk_aircraft.png";
+const AC_SHADOW = "pushp-trailer/cfv_aircraft_shadow_soft.png";
+const AC_FILTER = "grayscale(1) sepia(0.14) contrast(1.12) brightness(1.02)"; // the same as FiveKilosThreeKilo's AIRCRAFT_FILTER
+const AC_W = 1884;
+const AC_H = 719;
+const HULL = { x: 1150, y: 330 };
+// One shallow line low across both pies, then the climb; keys run past f217 so the smoothing never eases it to a stop.
+const AC_X = track(
+  [
+    [-40, 40],
+    [0, 430],
+    [60, 960],
+    [110, 1100],
+    [150, 1290],
+    [178, 1580],
+    [195, 1632],
+    [217, 1677],
+    [240, 1772],
+  ],
+  10,
+);
+const AC_Y = track(
+  [
+    [-40, 724],
+    [0, 720],
+    [60, 714],
+    [110, 708],
+    [150, 704],
+    [172, 690],
+    [195, 545],
+    [217, 130],
+    [240, -175],
+  ],
+  10,
+);
+const AC_WIDE = track(
+  [
+    [-40, 780],
+    [0, 760],
+    [60, 690],
+    [110, 600],
+    [160, 520],
+    [217, 410],
+    [240, 395],
+  ],
+  8,
+);
+
+const acPose = (frame: number) => {
+  const x = AC_X(frame);
+  const y = AC_Y(frame);
+  const w = AC_WIDE(frame);
+  const h = (w * AC_H) / AC_W;
+  const dx = AC_X(frame + 2) - AC_X(frame - 2) + 4 * CAM_V(frame);
+  const dy = AC_Y(frame + 2) - AC_Y(frame - 2);
+  const heading = Math.max(-20, Math.min(4, (Math.atan2(dy, Math.max(20, dx)) * 180) / Math.PI));
+  const roll = heading * 0.92 + 2.4 * Math.sin(frame / 16 + 0.6);
+  const yaw = -8 + 6 * Math.sin(frame / 26 + 1.3);
+  const pitch = -5 * Math.sin(frame / 21) + heading * 0.3;
+  return {
+    y,
+    w,
+    h,
+    left: x - (HULL.x / AC_W) * w,
+    top: y - (HULL.y / AC_H) * h,
+    origin: `${(HULL.x / AC_W) * w}px ${(HULL.y / AC_H) * h}px`,
+    tf: `perspective(${w * 2.2}px) rotateZ(${roll}deg) rotateY(${yaw}deg) rotateX(${pitch}deg)`,
+    img: { position: "absolute", left: 0, top: 0, width: w, height: h, maxWidth: "none" } as React.CSSProperties,
+  };
+};
+
+/** One soft dark blur on the paper, under the words, pies and bank; further off the higher it flies. Baked, no filter. */
+const AircraftShadow: React.FC<{ frame: number }> = ({ frame }) => {
+  const { y, w, h, left, top, origin, tf, img } = acPose(frame);
+  const lift = 26 + Math.max(0, 760 - y) * 0.15;
+  return (
+    <div style={{ position: "absolute", left: left + lift * 0.75, top: top + lift, width: w, height: h, transformOrigin: origin, transform: tf, opacity: 0.25 }}>
+      <Img src={staticFile(AC_SHADOW)} style={img} />
+    </div>
+  );
+};
+
+const Aircraft: React.FC<{ frame: number }> = ({ frame }) => {
+  const { w, h, left, top, origin, tf, img } = acPose(frame);
+  const rotors = [
+    { px: 640, py: 118, rx: 150, ry: 26, tilt: 18, seed: "a" },
+    { px: 1685, py: 372, rx: 96, ry: 18, tilt: 14, seed: "b" },
+  ];
+  const k = w / AC_W;
+  return (
+    <>
+      <div style={{ position: "absolute", left, top, width: w, height: h, transformOrigin: origin, transform: tf }}>
+        <Img src={staticFile(AC_SRC)} style={{ ...img, filter: AC_FILTER }} />
+        {rotors.map((r) => {
+          const o = 0.1 + 0.08 * random(`cfv-rotor-${r.seed}-${frame}`);
+          return (
+            <div
+              key={r.seed}
+              style={{
+                position: "absolute",
+                left: (r.px - r.rx) * k,
+                top: (r.py - r.ry) * k,
+                width: 2 * r.rx * k,
+                height: 2 * r.ry * k,
+                borderRadius: "50%",
+                background: `rgba(30,30,30,${o})`,
+                transform: `rotate(${r.tilt}deg)`,
+                filter: `blur(${Math.max(1, 6 * k)}px)`,
+              }}
+            />
+          );
+        })}
       </div>
+    </>
+  );
+};
+
+// -- the cut -----------------------------------------------------------------
+export const CheaperFasterVersatile: React.FC<z.infer<typeof schema>> = ({ bands }) => {
+  const frame = useCurrentFrame();
+  const cam = camAt(frame);
+  return (
+    <AbsoluteFill>
+      <NealFilmLife frame={frame} seed="cfv" vignette={0.24}>
+        <PaperGround frame={frame} cx={cam.x} cy={cam.y} cxRest={(camX(0) + CAM_END) / 2} cyRest={420} k={cam.k} />
+        <AircraftShadow frame={frame} />
+        <Bank d={D_BACK} frame={frame} drift={-0.08} items={BACK_ITEMS} />
+        <NealPlane cam={cam} d={1}>
+          <Pie frame={frame} x={PIE_1X} riseAt={50} riseEnd={72} riseBy={450} sweepAt={66} sweepEnd={110} deg={288} photo="cfv_pie_freight.jpg" label="80%" numAt={66} crownAt={110} />
+          <Pie frame={frame} x={PIE_2X} riseAt={116} riseEnd={148} riseBy={700} sweepAt={144} sweepEnd={186} deg={324} photo="cfv_pie_people.jpg" label="90%" numAt={138} crownAt={186} />
+          {/* latest first: the outgoing word stays in front while it sinks, so a rising sting never paints over it */}
+          <Word text="VERSATILE" frame={frame} start={35} centreAt={52} size={340} sinkAt={57} sinkEnd={70} />
+          <Word text="FASTER" frame={frame} start={18} centreAt={31} size={480} sinkAt={35} sinkEnd={44} />
+          <Word text="CHEAPER" frame={frame} start={-6} centreAt={12} size={400} sinkAt={18} sinkEnd={23} />
+        </NealPlane>
+        <Bank d={D_FRONT} frame={frame} drift={-0.1} items={FRONT_ITEMS} />
+        <Aircraft frame={frame} />
+        <Bank d={D_NEAR} frame={frame} items={NEAR_ITEMS} soft={2} />
+        <AbsoluteFill style={{ background: "linear-gradient(to bottom, rgba(24,22,20,0) 76%, rgba(24,22,20,0.42) 90%, rgba(24,22,20,0.8) 100%)" }} />
+      </NealFilmLife>
+      <CaptionBands on={bands} />
     </AbsoluteFill>
   );
 };
