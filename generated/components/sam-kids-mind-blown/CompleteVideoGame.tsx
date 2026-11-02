@@ -10,7 +10,8 @@
 // DURATION: the slot 16.850 -> 20.145 s = 3.295 s x 23.976 = 79 frames (f0..f78).
 //
 // THE MOTION: one push-in from the kid to inside the game. The kid sits on a stool much too tall, feet swinging, tongue out then
-// a grin, hands on the laptop; the camera eases past him from f0 while the lid squares up to us (yaw 30 -> 0). From f34 the blinking
+// a grin, hands on the laptop; the laptop never moves in the world (fixed yaw 30, pitch 14, the pose of cut 49): the camera alone
+// eases past him from f0 and ends with the skewed screen filling about 85 % of the frame's width. From f34 the blinking
 // amber cursor grows into a column and sweeps the level left to right, slower, with the first ground and the stone tower up before
 // "make": ground rising out of the screen's foot, the tower out of the ground, platforms and coins off the column; at its last stop
 // (f63) the column IS the flagpole and the flag unfurls ("complete"). The kid sits back as it starts: hands to the lap, head, arms and
@@ -38,21 +39,23 @@ export const defaultProps = schema.parse({});
 // THE WORLD
 // ---------------------------------------------------------------------------
 const FLOOR_Y = 1290;
-const DESK = { x0: 405, x1: 1050, y: 800, floorY: FLOOR_Y, depth: 110, legInset: 76 };
+const DESK = { x0: 405, x1: 1050, y: 800, floorY: FLOOR_Y, depth: 110, legInset: 123 };
 const LAP = { x: 660, y: 838, w: 340 };
 const KID = { x: 350, y: 950, scale: 1.34 };
 const STOOL = { x: KID.x - 10, seatY: KID.y, floorY: FLOOR_Y, w: 176 };
-const YAW0 = 30;
-const PITCH0 = 14;
-const PITCH1 = 12;
-const yawAt = (f: number) => lerp(YAW0, 0, smoothstep((f + 6) / 62));
-const pitchAt = (f: number) => lerp(PITCH0, PITCH1, smoothstep((f + 6) / 62));
+// the laptop's one pose, for all 79 frames: nobody touches it, so it never turns
+const POSE = { ...LAP, yaw: 30, pitch: 14 };
+const LF = laptopFrame(POSE);
 
-// the final framing: the screen spans 85 % of the frame, centred on y 790 (the ground bricks end above y 1080)
-const lapEnd = laptopFrame({ ...LAP, yaw: 0, pitch: PITCH1 });
-const K_END = (1080 * 0.85) / lapEnd.scr.w;
-const scrMid = lapEnd.screenPoint(0.5, 0.5);
-const LOOK_END = { x: scrMid[0], y: scrMid[1] + (960 - 790) / K_END };
+// the final framing, solved from the screen as it projects (a skewed parallelogram): its bounding box spans 85 % of the frame's
+// width, centred across; its lowest corner (and so the ground bricks) sits above y 1080
+const SCR_CORNERS = [LF.screenPoint(0, 0), LF.screenPoint(1, 0), LF.screenPoint(1, 1), LF.screenPoint(0, 1)];
+const SCR_L = Math.min(...SCR_CORNERS.map((p) => p[0]));
+const SCR_R = Math.max(...SCR_CORNERS.map((p) => p[0]));
+const SCR_B = Math.max(...SCR_CORNERS.map((p) => p[1]));
+const K_END = (1080 * 0.85) / (SCR_R - SCR_L);
+const scrMid = LF.screenPoint(0.5, 0.5);
+const LOOK_END = { x: (SCR_L + SCR_R) / 2, y: SCR_B + (960 - 1066) / K_END };
 const LOOK_0 = { x: 542, y: 815, k: 1.3 };
 const CAM = makeClockCam(
   LOOK_0,
@@ -67,11 +70,13 @@ const POOL = makePoolTrack({ x: 560, y: 760, strength: 1.5 }, [{ f0: 0, f1: 60, 
 // ---------------------------------------------------------------------------
 // THE GAME: one grid, 80 x 50 cells. Everything below is whole cells on the game's own clock.
 // ---------------------------------------------------------------------------
-const CELL_WORLD = lapEnd.scr.w / 80;
+const CELL_WORLD = LF.scr.w / 80;
 const COLS = 80;
 const ROWS = 50;
 const GROUND = 43; // the top row of the ground (the screen ends above band 1)
 const SKY = COLOR.cream;
+// under the sky: the bezel's own tone, so the slanted screen edge can't fringe cream between the bricks and the bezel
+const SCREEN_BASE = mixHex(COLOR.inkDark, COLOR.ground, 0.25);
 const INK = "#4A3122";
 const BRICK = COLOR.board;
 const BRICK_HI = mixHex(COLOR.board, COLOR.cream, 0.42);
@@ -336,19 +341,15 @@ const Game: React.FC<{ f: number; k: number }> = ({ f, k }) => {
 const CompleteVideoGame: React.FC<z.infer<typeof schema>> = () => {
   const S = useCurrentFrame();
   const cam = CAM.at(S);
-  const yaw = yawAt(S);
-  const pitch = pitchAt(S);
   // the kid is nearer the lens than the laptop: he and the stool slide off the left a little faster than the camera alone would carry them
   const kidX = KID.x - 30 * smoothstep((S - 30) / 22);
   const kid = { ...KID, x: kidX };
   const stool = { ...STOOL, x: STOOL.x + kidX - KID.x };
-  const lap = { ...LAP, yaw, pitch };
-  const F = laptopFrame(lap);
-  // the hands tap on the deck; the targets move with the deck as it squares up
+  // the hands tap on the deck, whose targets never move
   const tap = (ph: number) => (Math.floor((S + ph) / 3) % 2 ? -3 : 0);
   // both hands leave the keys for the lap as the kid sits back to watch (far f26-44, near f34-48): off the frame's left edge with him
-  const hN = F.deck(0.06, 0.55);
-  const hFk = F.deck(0.16, 0.42);
+  const hN = LF.deck(0.06, 0.55);
+  const hFk = LF.deck(0.16, 0.42);
   const lapN: [number, number] = [kidX + 34, KID.y - 30];
   const lapF: [number, number] = [kidX + 44, KID.y - 22];
   const leaveN = smoothstep((S - 34) / 14);
@@ -374,10 +375,10 @@ const CompleteVideoGame: React.FC<z.infer<typeof schema>> = () => {
   const pool = POOL(S);
   return (
     <StoutStage S={S} cam={cam} rest={CAM.rest} pool={{ x: pool.x, y: pool.y, strength: pool.strength }}>
-      <UnionShadow sil={[...stoolSil(stool), ...deskSil(DESK), ...laptopSil(lap), ...personSil(kidP)]} s={1.2} />
+      <UnionShadow sil={[...stoolSil(stool), ...deskSil(DESK), ...laptopSil(POSE), ...personSil(kidP)]} s={1.2} />
       <Stool {...stool} />
       <Desk {...DESK} />
-      <Laptop {...lap} shadow={false} k={cam.k} glow={glow * 0.9} cols={COLS} rows={ROWS} screen={<Game f={S} k={cam.k} />} />
+      <Laptop {...POSE} shadow={false} k={cam.k} glow={glow * 0.9} cols={COLS} rows={ROWS} screenColor={SCREEN_BASE} screen={<Game f={S} k={cam.k} />} />
       <Kid {...kidP} shadow={false} />
     </StoutStage>
   );
