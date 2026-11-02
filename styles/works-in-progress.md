@@ -48,6 +48,10 @@ Paper things move like paper: slid, dealt, pressed, and lifted, with ease in and
 lands with a short press, not a bounce. The camera moves through the page continuously; depth comes from parallax
 between the page and the pasted objects.
 
+Keep it sleek: few things moving at once, one camera curve, and same-size stamps set down in place. When several things
+compete, cut them rather than slow them down. In the settled frame, stamps, maps and heads stay about 90-120 px from the
+left and right edges. A ground strip that bleeds off the frame needs no padding.
+
 ## Kit
 
 `generated/components/kits/works-in-progress/wipShared.tsx`. Start a cut with `bun run cut <Name> --clip <clip> --style wip
