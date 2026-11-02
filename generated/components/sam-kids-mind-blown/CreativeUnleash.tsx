@@ -16,6 +16,8 @@
 // AMBER = what gets made; the only other amber is its light on the faces and round the lids. People and laptops stay muted.
 // Creations are born hidden behind a lid at 60 % size, grow only while they emerge, rise straight up a corridor clear of the
 // heads, fan out only above head height, and leave through the top. Below the plank: stools, legs, table legs on the board.
+// DEPTH AT EACH SEAT: deck, then arms and hands, then lid. We see the lid's back, so the keyboard is on its far side: the hands
+// type in the strip of deck left of the lid, the fingers going under it, and the near arm lies over the plank's back edge.
 // HEAD CHECK: every creation is tested against every head box on every frame from f0; a module-load assert throws on a hit.
 //
 // SOURCES: the OpenAI blossom via kidsShared's Laptop (Commons "OpenAI logo 2025 (symbol)"). No figures.
@@ -25,7 +27,8 @@ import { random, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { COLOR, StoutStage, amberBandFor, clamp01, lerp, mixHex, smoothstep } from "../kits/cheeky-pint/stoutShared";
 import { UnionShadow, makeClockCam, makePoolTrack, type SilItem } from "../kits/cheeky-pint/museShared";
-import { ADULT, ADULT_SPECS, Adult, CHILD, KID_SPEC, Kid, LAPTOP, Laptop, Stool, amberGlowFilter, blinkAt, headCentre, laptopFrame, personSil, polyD, stoolSil, swingAt, worldToLocal, type P2 } from "./kidsShared";
+import { solveArm } from "../scott-free-wifi/cabinCast";
+import { ADULT, ADULT_SPECS, Adult, CHILD, KID_SPEC, Kid, LAPTOP, Laptop, Stool, amberGlowFilter, blinkAt, circleD, headCentre, laptopFrame, localToWorld, personSil, polyD, stoolSil, swingAt, worldToLocal, type P2 } from "./kidsShared";
 import { MakeBody, makeSil, type MakeName } from "./unleashGlyphs";
 
 export const FPS = 24000 / 1001;
@@ -44,6 +47,8 @@ const ADULT_CUT = 80; // the hip origin below the plank's back edge
 const KID_Y = 56;
 const KID_SCALE = 0.92;
 const LANE_DX = 156; // a seat's corridor, from its x
+const NEAR_DECK = { u: 0.57, v: 0.73 }; // the wrists' rest on the deck (u 0..1 far to near end of the hinge, v hinge to front edge)
+const FAR_DECK = { u: 0.28, v: 0.85 };
 type Seat = { x: number; kid?: boolean; variant: number; scale: number; lapDx: number; make: MakeName[]; phase: number; offs: number[]; v: number; swing: number };
 const WIDE = [-110, 0, 110];
 const NARROW = [-63, 63];
@@ -79,6 +84,24 @@ const headBox = (s: Seat) => {
   };
 };
 const TABLE_LEGS = [-985, -461, 215, 738, 1260];
+const NEAR_REACH = 0.95; // the near arm a touch shorter, so its elbow rides above the plank's back edge and the deck's front corner stays clear
+/** the near arm as world shapes: it lies on the plank, so the cut at the plank must not slice it (same solve as the rig's Person) */
+const nearArmClip = (b: typeof ADULT, p: { x: number; y: number; scale: number; lean: number; hand: P2 }): string[] => {
+  const a = (p.lean * Math.PI) / 180;
+  const S: P2 = [b.shoulder[0] * Math.cos(a) - b.shoulder[1] * Math.sin(a), b.shoulder[0] * Math.sin(a) + b.shoulder[1] * Math.cos(a)];
+  const { E, W } = solveArm(S, p.hand, b.upper * NEAR_REACH, b.fore * NEAR_REACH, 1);
+  const band = (A: P2, B: P2, w: number) => {
+    const r = (w / 2) * p.scale;
+    const [ax, ay] = localToWorld(A, p);
+    const [bx, by] = localToWorld(B, p);
+    const len = Math.hypot(bx - ax, by - ay);
+    const nx = (-(by - ay) / len) * r;
+    const ny = ((bx - ax) / len) * r;
+    return polyD([[ax + nx, ay + ny], [bx + nx, by + ny], [bx - nx, by - ny], [ax - nx, ay - ny]]);
+  };
+  const [ex, ey] = localToWorld(E, p);
+  return [band(S, E, b.armW), band(E, W, b.armW - 1.5), circleD(ex, ey, (b.armW / 2) * p.scale)];
+};
 
 // --- THE CAMERA: k on one key through the house follower; y derived from k so the table holds its screen height ---------
 const K_TRACK = makeClockCam(
@@ -226,8 +249,9 @@ const CreativeUnleash: React.FC<z.infer<typeof schema>> = () => {
     const fig = { x: s.x, y: figY(s), scale: s.scale };
     const tapA = Math.sin((S + s.phase) * 0.62);
     const tapB = Math.sin((S + s.phase) * 0.62 + 2.1);
-    const near = F.deck(0.63 + 0.035 * tapA, 0.58 + 0.03 * Math.abs(tapB));
-    const far = F.deck(0.36 + 0.035 * tapB, 0.5 + 0.03 * Math.abs(tapA));
+    // the wrists on the palm rest of the strip we can see left of the lid, the mittens reaching forward onto the keys and under the lid
+    const near = F.deck(NEAR_DECK.u + 0.035 * tapA, NEAR_DECK.v + 0.03 * Math.abs(tapB));
+    const far = F.deck(FAR_DECK.u + 0.035 * tapB, FAR_DECK.v + 0.03 * Math.abs(tapA));
     const pose = {
       ...fig,
       legs: "seat" as const,
@@ -235,6 +259,7 @@ const CreativeUnleash: React.FC<z.infer<typeof schema>> = () => {
       swingFar: s.swing ? swingAt(S, s.swing * 0.8, s.kid ? 27 : 41, s.phase + (s.kid ? 13 : 19)) : -3,
       hand: worldToLocal(near, fig),
       farHand: worldToLocal(far, fig),
+      nearReach: NEAR_REACH,
       lean: LEAN.mid + LEAN.amp * Math.sin((S + s.phase) / 17),
       headTilt: TILT.mid + TILT.amp * Math.sin((S + s.phase) / 23),
       blink: blinkAt(S, (s.x + 700) * 0.013, 61),
@@ -288,20 +313,30 @@ const CreativeUnleash: React.FC<z.infer<typeof schema>> = () => {
           <path key={`g${s.x}`} d={polyD(frameOf(s, LAP.tilt - LIFT_DEG * liftOf(s, S)).lidHull)} fill={COLOR.amberTop} stroke={COLOR.amberTop} strokeWidth={5 / k} strokeLinejoin="round" />
         ))}
       </g>
-      {/* over the plank: each laptop, then that person's torso, head and arms again, cut at the plank */}
+      {/* over the plank, in depth order for each seat: the deck and lid, then that person's torso, head and arms again (cut at the
+          plank), kept off the lid's hull: we see the lid's back, so the hands are on the keyboard behind it */}
       {seats.map((s) => {
         const { pose, front } = poseOf(s);
         const id = `cuClip${Math.round(s.x + 2000)}`;
+        const tilt = LAP.tilt - LIFT_DEG * liftOf(s, S);
         return (
           <g key={s.x}>
-            <Laptop x={s.x + s.lapDx} y={HINGE_Y} w={LAP_W} {...LAP} tilt={LAP.tilt - LIFT_DEG * liftOf(s, S)} k={k} shadow />
+            <Laptop x={s.x + s.lapDx} y={HINGE_Y} w={LAP_W} {...LAP} tilt={tilt} k={k} shadow />
             <defs>
               <clipPath id={id}>
                 <rect x={s.x - 400} y={-900} width={400 + (front - s.x)} height={900} />
                 <rect x={front} y={-900} width={500} height={s.kid ? 924 : 934} />
+                {nearArmClip(s.kid ? CHILD : ADULT, pose).map((d) => (
+                  <path key={d} d={d} />
+                ))}
+              </clipPath>
+              <clipPath id={`${id}lid`}>
+                <path clipRule="evenodd" d={`M${s.x - 900} -1800H${s.x + 900}V900H${s.x - 900}Z${polyD(frameOf(s, tilt).lidHull)}`} />
               </clipPath>
             </defs>
-            <g clipPath={`url(#${id})`}>{body(s, pose)}</g>
+            <g clipPath={`url(#${id}lid)`}>
+              <g clipPath={`url(#${id})`}>{body(s, pose)}</g>
+            </g>
           </g>
         );
       })}
