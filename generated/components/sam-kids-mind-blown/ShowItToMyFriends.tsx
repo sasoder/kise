@@ -15,6 +15,10 @@
 // nearer plane rises into frame during it. From f50 to "friends" (f74) the kid's hands turn the tablet in true perspective, yaw
 // 0 -> 58: the lit screen stays in view at an angle, finished checklist and robot, and everyone looks at it. Its back is never
 // shown. Its light is a soft glow in the air behind the friends (derived from the yaw, fixed after it); skin is never tinted.
+// NOTHING IN THE ROW OVERLAPS A FACE (rev 3): a wider end camera (k about 0.87, head 165 px on screen) and a row opened and
+// staggered high-low-high hold a visible gap of 24+ px between the tablet and the first friend (nose, hair, pointing hand and arm)
+// through the slide, and 10-15 px between each nose and the head in front. The first friend arrives later, from further right.
+// Numbers: sceneAt(S) is what is drawn, and what the per-frame gap check measures.
 // CONTACTS: the near hand is on the tablet's lower left corner on every frame.
 // AMBER = what gets made: the app's ticks and robot, then its light; cream = the tablet, board = the table and stools.
 //
@@ -44,8 +48,8 @@ const CAM = makeClockCam(
   { x: 412, y: 889, k: 2.7 },
   [
     { f0: -30, f1: 42, k: 2.8, dx: 4 },
-    { f0: 26, f1: 80, dx: 124, dy: 71, k: 0.985 },
-    { f0: 72, f1: 104, k: 1.02 },
+    { f0: 26, f1: 80, dx: 184, dy: 30, k: 0.855 },
+    { f0: 72, f1: 104, k: 0.885 },
   ],
   DURATION,
 );
@@ -244,10 +248,10 @@ const END_YAW = 58; // the screen stays lit and in view, at an angle; its back i
 const FIG = 1.44; // heads 190 px wide at k 1
 const KID = { x: 150, y: 1089, scale: FIG } as const;
 const FRIENDS = [
-  // left to right, each drawn in front of the one on its left: a nose can only land on the next one's back hair, never a face
-  { variant: 0, x: 586, y: 1086, slide: 225, in: 46, seed: 5, lean: 5 },
-  { variant: 2, x: 786, y: 1075, slide: 190, in: 50, seed: 2, lean: 5 },
-  { variant: 1, x: 942, y: 1098, slide: 150, in: 53, seed: 8, lean: 5 },
+  // left to right, a huddle with its heads staggered, each drawn in front of the one on its left; every nose stays clear of the head in front (`tilt`: chin a little up at rest)
+  { variant: 0, x: 604, y: 1086, slide: 290, in: 51, seed: 5, lean: 5, tilt: 0 },
+  { variant: 2, x: 830, y: 1130, slide: 300, in: 52, seed: 2, lean: 5, tilt: -10 },
+  { variant: 1, x: 1034, y: 1062, slide: 310, in: 55, seed: 8, lean: 5, tilt: -12 },
 ] as const;
 // the table and stools as in cut 1: a thin plank on legs, whole figures on stools behind it, feet dangling short of the floor
 const FLOOR = 1330;
@@ -257,7 +261,7 @@ const PLANK_D = 20;
 const PLANK_EDGE = 8;
 const PLANK_X0 = -500;
 const PLANK_X1 = 1580;
-const TABLE_LEGS = [34, 1052];
+const TABLE_LEGS = [34, 1154];
 const tableLegD = (x: number, w: number, y1: number) => `M${x - w / 2} ${PLANK_Y + PLANK_D + PLANK_EDGE - 2}H${x + w / 2}L${x + w / 2 - 3} ${y1}H${x - w / 2 + 3}Z`;
 /** the ponytail friend, on a warm cream skin (her ear follows, the rig derives it from the skin) */
 const PONY_SPEC = { ...FRIEND_SPECS[1], skin: "#F3D7B5" };
@@ -268,17 +272,21 @@ const rotL = (p: P2, deg: number): P2 => {
 };
 
 // ---------------------------------------------------------------------------
-const ShowItToMyFriends: React.FC<z.infer<typeof schema>> = () => {
-  const S = useCurrentFrame();
+/** every moving number of a frame, pure: the component draws it, and the rev 3 gap check measures the same numbers */
+export const sceneAt = (S: number) => {
   const cam = CAM.at(S);
   const pool = POOL(S);
-  const tableM = cam.k; // nearer the lens: it is below the frame until the pull-back brings it up
+  // nearer the lens: it is below the frame until the pull-back brings it up, and true to the figures at the end; the plank eases
+  // down a touch during the pull-back so the highest stool's seat shows under it
+  const tableEase = ss(S, 26, 80);
+  const tableM = cam.k * lerp(1, 1 / CAM.at(DURATION - 1).k, tableEase);
+  const plankDrop = 6 * tableEase;
 
   // the tablet: the turn is one eased change of the yaw; its position comes in to the kid's reach and goes out again
   const turn = ss(S, 50, 74);
   const yaw = -3 + 3 * ss(S, 0, 50) + END_YAW * turn + 1.4 * Math.sin((S - 74) / 11) * ss(S, 72, 86);
   const pose: Pose = {
-    x: 412 - 59 * ss(S, 52, 76),
+    x: 412 - 65 * ss(S, 56, 78),
     y: 830 + 2.5 * Math.sin(S / 17) - 4 * ss(S, 50, 76),
     yaw,
     pitch: 3 + 2 * Math.sin(S / 23),
@@ -296,7 +304,7 @@ const ShowItToMyFriends: React.FC<z.infer<typeof schema>> = () => {
   const kidPose = {
     ...KID,
     lean: kidLean,
-    headTilt: lerp(lerp(-14, 2, ss(S, 42, 62)), -7, ss(S, 70, 86)), // chin up while off frame, so no nose-tip sliver at the edge
+    headTilt: lerp(lerp(-14, 2, ss(S, 42, 62)), -7, ss(S, 66, 82)), // chin up while off frame, so no nose-tip sliver at the edge
     legs: "seat" as const,
     swing: swingAt(S, 12, 29, 0),
     swingFar: swingAt(S, 10, 29, 12),
@@ -313,17 +321,17 @@ const ShowItToMyFriends: React.FC<z.infer<typeof schema>> = () => {
   const light = smoothstep((Math.sin(yaw * D2R) - 0.3) / 0.5) * (yaw > 0 ? 1 : 0);
 
   const friendPoses = FRIENDS.map((fr, i) => {
-    const arrive = ss(S, fr.in, fr.in + 24);
+    const arrive = ss(S, fr.in, fr.in + 25);
     const turnTo = ss(S, 54 + i * 2, 72);
     const isPointer = fr.variant === 0;
     const raise = isPointer ? ss(S, 73, 84) : 0;
     const base = {
-      x: fr.x + fr.slide * (1 - arrive) + 2.5 * Math.sin((S + fr.seed * 7) / 21),
+      x: fr.x + fr.slide * (1 - arrive) + 1.5 * Math.sin((S + fr.seed * 7) / 21),
       y: fr.y,
       scale: FIG,
       facing: -1 as const,
-      lean: lerp(-7, fr.lean, turnTo) + 0.9 * Math.sin((S + fr.seed * 5) / 14),
-      headTilt: lerp(-9, 0, turnTo) + 1.1 * Math.sin((S + fr.seed * 9) / 19),
+      lean: lerp(-7, fr.lean, turnTo) + 0.5 * Math.sin((S + fr.seed * 5) / 14),
+      headTilt: lerp(-9, fr.tilt, turnTo) + 0.8 * Math.sin((S + fr.seed * 9) / 19),
       legs: "seat" as const,
       swing: swingAt(S, 12, 31, fr.seed * 4),
       swingFar: swingAt(S, 10, 31, fr.seed * 4 + 13),
@@ -331,7 +339,7 @@ const ShowItToMyFriends: React.FC<z.infer<typeof schema>> = () => {
     };
     const shoulderL = rotL(CHILD.shoulder, base.lean);
     const rest: P2 = [shoulderL[0] + 8, shoulderL[1] + (CHILD.upper + CHILD.fore) * 0.92];
-    const aim = worldToLocal([pose.x + 96, pose.y + 124], base); // an easy arm under the chin toward the tablet's near low corner, clear of the face
+    const aim = worldToLocal([pose.x + 120, pose.y + 150], base); // an easy arm under the chin toward the tablet's near low corner, clear of the face
     const hand2: P2 = [lerp(rest[0], aim[0], raise), lerp(rest[1], aim[1], raise)];
     return {
       ...base,
@@ -343,6 +351,13 @@ const ShowItToMyFriends: React.FC<z.infer<typeof schema>> = () => {
       raise,
     };
   });
+
+  return { cam, pool, tableM, plankDrop, pose, P, kidPose, nearArm, light, friendPoses };
+};
+
+const ShowItToMyFriends: React.FC<z.infer<typeof schema>> = () => {
+  const S = useCurrentFrame();
+  const { cam, pool, tableM, plankDrop, pose, P, kidPose, nearArm, light, friendPoses } = sceneAt(S);
 
   // one shadow: the kid and the tablet touch, the friends stand as a huddle
   const tabletSil: SilItem[] = [{ d: polyD(hull([...rrPts(-TAB.W / 2, -TAB.H / 2, TAB.W, TAB.H, TAB.R, 4).map((q) => P(q[0], q[1], TAB.T / 2)), ...rrPts(-TAB.W / 2, -TAB.H / 2, TAB.W, TAB.H, TAB.R, 4).map((q) => P(q[0], q[1], -TAB.T / 2))])) }];
@@ -359,7 +374,7 @@ const ShowItToMyFriends: React.FC<z.infer<typeof schema>> = () => {
         ? [...personSil({ ...p, legs: "none" as const }), ...personSil({ ...p, x: p.x + curlyLegOff }).slice(-6), ...stoolSil(stoolOf({ x: p.x + curlyLegOff, y: p.y }))]
         : [...personSil(p), ...stoolSil(stoolOf(p))],
     )];
-  const tableSil: SilItem[] = [{ d: `M${PLANK_X0} ${PLANK_Y}H${PLANK_X1}V${PLANK_Y + PLANK_D + PLANK_EDGE}H${PLANK_X0}Z` }, ...TABLE_LEGS.map((x) => ({ d: tableLegD(x, 26, FLOOR) }))];
+  const tableSil: SilItem[] = [{ d: `M${PLANK_X0} ${PLANK_Y}H${PLANK_X1}V${PLANK_Y + PLANK_D + PLANK_EDGE}H${PLANK_X0}Z` }, ...TABLE_LEGS.map((x) => ({ d: tableLegD(x, 26, FLOOR - plankDrop) }))];
 
   // the screen's far edge: where its light leaves for the friends
   const edgeA = P(TAB.W / 2, 0, TAB.T / 2);
@@ -431,10 +446,10 @@ const ShowItToMyFriends: React.FC<z.infer<typeof schema>> = () => {
         </g>
       </g>
       {/* a plane nearer the lens: it magnifies faster as the camera closes, so it is below the frame through the close */}
-      <g transform={`translate(${f3(cam.x)} ${f3(cam.y)}) scale(${f3(tableM)}) translate(${f3(-cam.x)} ${f3(-cam.y)})`}>
+      <g transform={`translate(${f3(cam.x)} ${f3(cam.y)}) scale(${f3(tableM)}) translate(${f3(-cam.x)} ${f3(-cam.y + plankDrop)})`}>
         <UnionShadow sil={tableSil} s={1.2} />
-        <path d={TABLE_LEGS.map((x) => tableLegD(x + 44, 18, FLOOR - 26)).join("")} fill={mixHex(COLOR.boardFoot, COLOR.ground, 0.6)} />
-        <path d={TABLE_LEGS.map((x) => tableLegD(x, 26, FLOOR)).join("")} fill={mixHex(COLOR.boardFoot, COLOR.ground, 0.38)} />
+        <path d={TABLE_LEGS.map((x) => tableLegD(x + 44, 18, FLOOR - 26 - plankDrop)).join("")} fill={mixHex(COLOR.boardFoot, COLOR.ground, 0.6)} />
+        <path d={TABLE_LEGS.map((x) => tableLegD(x, 26, FLOOR - plankDrop)).join("")} fill={mixHex(COLOR.boardFoot, COLOR.ground, 0.38)} />
         <rect x={PLANK_X0} y={PLANK_Y} width={PLANK_X1 - PLANK_X0} height={PLANK_D} fill={COLOR.board} />
         <rect x={PLANK_X0} y={PLANK_Y + PLANK_D} width={PLANK_X1 - PLANK_X0} height={PLANK_EDGE} fill={COLOR.boardFoot} />
       </g>
