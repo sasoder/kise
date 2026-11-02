@@ -7,7 +7,7 @@
 //   <style>  dwarkesh | map | 3d | chinatalk | cheeky-pint | core-memory | wip | humble | sporttouchen | lovable | name-tag
 //   --wide   16:9 at 2048x1080 (CRAFT.md Format); --size sets any other frame (Lovable matches its sequence)
 //   --overlay  a transparent overlay: no ground, static camera (Humble and name tags always are)
-//   --tag    name-tag only: whose tag to wrap (core-memory | cheeky-pint | chinatalk | map | humble)
+//   --tag    name-tag only: whose tag to wrap (core-memory | cheeky-pint | chinatalk | map | wip | humble)
 //
 // Writes generated/components/<clip>/<Name>.tsx (from scripts/templates/<style>.tsx), src/Root.<Name>.tsx and
 // src/entry.<Name>.ts. Never overwrites; prints the preview and final render commands.
@@ -45,6 +45,7 @@ const TAGS = {
   "cheeky-pint": { file: "NameTagStout", extra: " backdrop={false}", frames: 96, at: "{ x: 84, y: 1620, toX: 180, toY: 1280 }", atNote: "bottom-left" },
   chinatalk: { file: "NameTagNewsprint", extra: " durationInFrames={DURATION}", frames: null, at: "{ x: 84, y: 1620, toX: 180, toY: 1280 }", atNote: "bottom-left" },
   map: { file: "NameTagMapStyle", extra: " durationInFrames={DURATION}", frames: null, at: "{ x: 84, y: 1330, toX: 180, toY: 1140 }", atNote: "the plate's top-left" },
+  wip: { file: "NameTagWip", extra: " durationInFrames={DURATION}", frames: null, at: "{ x: 84, y: 1620, toX: 180, toY: 1280 }", atNote: "bottom-left" },
   humble: { file: "NameTagHumble", extra: "", frames: 150, at: "{ x: 84, y: 1620, toX: 180, toY: 1280 }", atNote: "bottom-left" },
 };
 
