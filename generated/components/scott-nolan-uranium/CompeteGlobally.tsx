@@ -10,9 +10,13 @@
 //
 // THE MOTION: one continuous camera over cut C's map. It opens tight and low on the thin amber film at the foot of a glass at
 // Paducah, Kentucky, cranes up the whole empty height while arcing round it, then pulls back and trucks east over the bare
-// Atlantic as the map grows out from under it (the land's plan zoom falls to the true map by f82), and as it glides three
-// glasses come up out of slots in the land and fill to their real heights in one overlapping wave. On "over time" it pulls
-// back until all four share the frame and amber climbs the US glass, still rising on the last frame, its goal unlabelled.
+// Atlantic as the map grows out from under it (the land's plan zoom falls to the true map by f82). From about f70 the US glass
+// stands whole and upright left of centre, the one subject, until Europe's glass rises on the right; then one steady pull
+// back east (US kept in frame) as three glasses come up out of slots in the land and fill to their real heights in one
+// overlapping wave. It settles by about f150, high above the map with its axis level and the lens shifted down: four equal
+// glasses, truly upright, tops in one row, the map receding behind them and coming forward under them; the names on small
+// plates on one screen baseline under the lowest base, each centred on its glass, sliding up on its word. Amber climbs the US glass, still rising on the last
+// frame, its goal unlabelled. Each glass has one constant-width rim hairline, one soft contact shadow and a flat lit amber top.
 // AMBER = uranium fuel capacity, one job; glass = room to hold it; cream = land, the sea is the bare board.
 //
 // SOURCES: heights to scale from CAPACITY_MSWU in nuclearFacts.ts (WNA "Uranium Enrichment", 27 Oct 2026, citing Nuclear
@@ -29,7 +33,7 @@ import * as THREE from "three";
 import { z } from "zod";
 import { COLOR, FONT_LABEL } from "../kits/cheeky-pint/stoutShared";
 import { CAPACITY_MSWU, PADUCAH } from "./nuclearFacts";
-import { NuclearStage, SoftShadows, SHADOW_LEN, WorldSlab, mapProjectTall, nuclearMaterial, nuclearProject, nuclearTrack, slabTop, type NuclearCam, type ShadowItem } from "./nuclearWorld";
+import { NuclearStage, SHADOW_DIR, WorldSlab, mapProjectTall, nuclearMaterial, nuclearProject, nuclearTrack, slabTop, type NuclearCam, type NuclearGlide } from "./nuclearWorld";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 168;
@@ -45,14 +49,13 @@ const smooth = (a: number, b: number, v: number) => {
 };
 
 // --- the columns: one glass for all four, so the levels compare. World units per million SWU/yr.
-const UNIT = 20;
-const GLASS_H = 650;
-const R = 48;
-const RUNG = 5 * UNIT;
+const GLASS_H = 500;
+const R = 46;
+const UNIT = (GLASS_H * 0.92) / CAPACITY_MSWU.russia;
 const FILM = 3;
 const BASE_Y = slabTop();
 const PAD = mapProjectTall(PADUCAH.lon, PADUCAH.lat);
-const EU = mapProjectTall(6, 47.5);
+const EU = mapProjectTall(2, 47.5);
 const RU = mapProjectTall(60.1, 57.3);
 const CN = mapProjectTall(103.8, 36.1);
 const H_EU = CAPACITY_MSWU.europe * UNIT;
@@ -63,7 +66,7 @@ const H_CN = CAPACITY_MSWU.china * UNIT;
 const RIVALS = [
   { key: "eu", at: EU, h: H_EU, label: "EUROPE", glass: [80, 110], amber: [90, 116], lab: [106, 116] },
   { key: "ru", at: RU, h: H_RU, label: "RUSSIA", glass: [90, 120], amber: [100, 126], lab: [116, 126] },
-  { key: "cn", at: CN, h: H_CN, label: "CHINA", glass: [102, 130], amber: [112, 138], lab: [128, 138] },
+  { key: "cn", at: CN, h: H_CN, label: "CHINA", glass: [108, 134], amber: [116, 142], lab: [136, 146] },
 ] as const;
 const usLevel = (f: number) => {
   const e = smooth(140, 186, f);
@@ -77,35 +80,45 @@ const glide = (a: number, b: number, f: number) => {
   return t * t * t * (t * (t * 6 - 15) + 10);
 };
 
-// --- the camera: the target sits on the land, so (cx, cy) says where that ground point lands on screen
-const TRACK = nuclearTrack(
-  { tx: PAD[0], ty: 0, tz: PAD[1], d: 1333, yaw: -22, pitch: 16, f: 1800, cy: 1050, cx: 520 },
-  [
-    { f0: -14, f1: 66, to: { yaw: 10, cx: 470 } },
-    { f0: 40, f1: 122, to: { tx: -70, tz: (EU[1] + PAD[1]) / 2, pitch: 28, d: 1650, f: 2200, cy: 1030 } },
-    { f0: 94, f1: 142, to: { tx: 135, tz: (RU[1] + CN[1]) / 2, d: 1600, cx: 480 } },
-    { f0: 124, f1: 168, to: { tx: (PAD[0] + CN[0]) / 2 - 8, tz: (RU[1] + PAD[1]) / 2 - 8, yaw: -3, d: 3035, f: 3400, pitch: 28, cx: 540, cy: 970 } },
-  ],
-  DURATION,
-);
-// the opening: a crane up the empty glass, arcing round it, its own damped track. It hands over to TRACK on one quintic, f44-85:
-// from f85 on the camera is exactly TRACK.
-const OPEN = nuclearTrack(
-  { tx: PAD[0], ty: 10, tz: PAD[1], d: 260, yaw: -25, pitch: 20, f: 1400, cy: 880, cx: 540 },
-  [{ f0: -10, f1: 52, to: { ty: 300, d: 900, f: 1500, pitch: 22, yaw: 28, cy: 690, cx: 470 } }],
-  DURATION,
-);
-const JOIN = [44, 85] as const;
+// --- the camera, as a shot: aim point (tx, ty, tz) seen from distance d at elevation a and the yaw, landing on screen at
+// (gx, gy). u is the lens shift: 0 aims the camera at the point (an orbit, as NuclearCam), 1 keeps the camera level and
+// shifts the lens instead, like an architectural camera, so every upright stays truly vertical however high the eye is.
+type Shot = { tx: number; ty: number; tz: number; d: number; yaw: number; a: number; u: number; f: number; gx: number; gy: number };
+const shotTrack = (start: Shot, glides: { f0: number; f1: number; to: Partial<Shot> }[]) => nuclearTrack(start as unknown as NuclearCam, glides as unknown as NuclearGlide[], DURATION) as unknown as Shot[];
+const shotToCam = (s: Shot): NuclearCam => {
+  const a = (s.a * Math.PI) / 180;
+  const pc = a * (1 - s.u);
+  const eyeY = s.ty + s.d * Math.sin(a);
+  const dc = (s.d * Math.cos(a)) / Math.cos(pc);
+  const ty = eyeY - dc * Math.sin(pc);
+  const dy = ty - s.ty;
+  return { tx: s.tx, ty, tz: s.tz, d: dc, yaw: s.yaw, pitch: (pc * 180) / Math.PI, f: s.f, cx: s.gx, cy: s.gy - (s.f * dy * Math.cos(pc)) / (dc + dy * Math.sin(pc)) };
+};
+const TRACK = shotTrack({ tx: PAD[0], ty: 0, tz: PAD[1], d: 1250, yaw: 20, a: 18, u: 0.6, f: 2000, gy: 900, gx: 360 }, [
+  { f0: 40, f1: 110, to: { u: 1 } },
+  // the US tube is the one big subject, whole in frame left of centre, until Europe's glass rises on the right
+  { f0: 50, f1: 112, to: { tx: PAD[0] + 60, tz: PAD[1] + 10, d: 2000, f: 2900, a: 20, gx: 400, gy: 905 } },
+  // then one steady pull back east, the US kept in frame on the left, until all four stand in a row, settled by about f150.
+  // The end camera is high (30 deg) with its axis level and the lens shifted down, so the four stand upright and the map
+  // recedes behind them and comes forward under them (land about y 770-1350). Its eye is just above the glass tops, so
+  // perspective puts the four tops on one row (y 259-264) although the bases sit at their real depths (y 863-937).
+  { f0: 90, f1: 146, to: { tx: -12, tz: 130, yaw: 0, d: 1100, f: 1143, a: 30, gx: 535, gy: 865 } },
+]);
+// the opening: a crane up the empty glass, arcing round it, aimed (u 0), handed over to TRACK on one quintic (JOIN)
+const OPEN = shotTrack({ tx: PAD[0], ty: 10, tz: PAD[1], d: 260, yaw: -25, a: 20, u: 0, f: 1400, gy: 880, gx: 540 }, [
+  { f0: -10, f1: 30, to: { ty: 190, d: 540, a: 21, yaw: 14, gy: 640, gx: 500 } },
+  { f0: 14, f1: 48, to: { ty: 30, d: 1000, f: 1700, a: 20, yaw: 26, gy: 860, gx: 440 } },
+]);
+const JOIN = [40, 92] as const;
 const camAt = (f: number): NuclearCam => {
   const i = Math.max(0, Math.min(TRACK.length - 1, f));
   const w = glide(JOIN[0], JOIN[1], f);
-  if (w >= 1) return TRACK[i];
-  // close up we look at the film from nearly side on, so it reads as liquid in a tube; gone by f58, f60 on is untouched
-  const a = { ...OPEN[i], pitch: OPEN[i].pitch - 13 * (1 - glide(22, 58, f)) } as Record<string, number>;
-  const b = TRACK[i] as Record<string, number>;
-  const o: Record<string, number> = {};
-  for (const k of Object.keys(a)) o[k] = k === "d" || k === "f" ? Math.exp(Math.log(a[k]) * (1 - w) + Math.log(b[k]) * w) : a[k] * (1 - w) + b[k] * w;
-  return o as NuclearCam;
+  // close up we look at the film from nearly side on, so it reads as liquid in a tube; gone by f58
+  const o = { ...OPEN[i], a: OPEN[i].a - 13 * (1 - glide(22, 58, f)) } as Record<string, number>;
+  const t = TRACK[i] as Record<string, number>;
+  const m: Record<string, number> = {};
+  for (const k of Object.keys(o)) m[k] = k === "d" || k === "f" ? Math.exp(Math.log(o[k]) * (1 - w) + Math.log(t[k]) * w) : o[k] * (1 - w) + t[k] * w;
+  return shotToCam(m as Shot);
 };
 // the land starts magnified in plan about Paducah, so a tight low shot has a big surface under it, and falls to the true map by f82
 const landZoom = (f: number) => 1 + 3.6 * (1 - glide(0, 80, f)) + 2.4 * (1 - glide(0, 44, f));
@@ -134,10 +147,8 @@ void main() {
   vN = normalize(mat3(modelMatrix) * normal);
   gl_Position = projectionMatrix * viewMatrix * wp;
 }`;
-// a constant-width hairline in screen px at the silhouette: cream, backed by a warm line that holds it on the cream land
 const GLASS_FRAG = /* glsl */ `
 ${SHARED_GLSL}
-uniform float uR;
 varying vec3 vW;
 varying vec3 vN;
 void main() {
@@ -146,16 +157,17 @@ void main() {
   float nv = abs(dot(n, V));
   float px = length(cameraPosition - vW) / uF;
   float wall = smoothstep(0.25, 0.6, 1.0 - abs(n.y));
-  float edge = uR * (1.0 - sqrt(max(0.0, 1.0 - nv * nv))) / px;
-  float hair = wall * (1.0 - smoothstep(1.3, 2.5, edge));
-  float back = wall * (1.0 - smoothstep(2.5, 5.0, edge)) * (1.0 - hair);
+  // one rim: a hairline of constant screen width wherever the glass turns away, walls and the top's shoulder alike,
+  // backed by a warm line that holds it on the cream land
+  float w = max(fwidth(nv), 1e-4);
+  float hair = 1.0 - smoothstep(1.1 * w, 2.3 * w, nv);
+  float back = (1.0 - smoothstep(2.3 * w, 4.6 * w, nv)) * (1.0 - hair);
   vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), V));
   float s = dot(n, right);
   // the streak belongs to the wide shots: close up it would read as a beam of light
   float streak = wall * smoothstep(0.58, 0.68, -s) * (1.0 - smoothstep(0.76, 0.84, -s)) * (1.0 - smoothstep(1.8, 3.2, 1.0 / px));
-  float rim = (1.0 - wall) * pow(1.0 - nv, 2.0);
   vec3 col = mix(uCream, uBoardTone * 0.72, back);
-  float a = 0.03 + 0.1 * streak + 0.9 * hair + 0.42 * back + 0.22 * rim;
+  float a = 0.03 + 0.08 * streak + 0.85 * hair + 0.36 * back + 0.03 * (1.0 - wall);
   float fg = fogAt(vW);
   gl_FragColor = vec4(mix(col, uFogCol, fg), a * (1.0 - fg));
 }`;
@@ -163,7 +175,6 @@ const AMBER_FRAG = /* glsl */ `
 ${SHARED_GLSL}
 uniform float uH;
 uniform float uBase;
-uniform float uRung;
 varying vec3 vW;
 varying vec3 vN;
 varying vec3 vL;
@@ -176,20 +187,13 @@ void main() {
   float lit = smoothstep(-0.55, 0.95, dot(n, uL));
   float band = clamp(y / max(uH, 1.0), 0.0, 1.0);
   vec3 col = mix(uAmberFoot, uAmberTop, 0.3 + 0.7 * mix(lit, band, 0.35));
-  // rungs: a hairline tick every unit up the lit side only, whole rings read as a stack of coins
-  float dr = abs(y / uRung - floor(y / uRung + 0.5)) * uRung / px;
-  vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), V));
-  float side = smoothstep(0.1, 0.2, -dot(n, right));
-  float rung = (1.0 - smoothstep(0.8, 1.7, dr)) * step(uRung * 0.5, y) * (1.0 - smoothstep(uH - px * 10.0, uH - px * 5.0, y)) * (1.0 - top) * side;
-  col = mix(col, uAmberFoot * 0.7, 0.6 * rung);
-  // the hot top edge: the rim of the level, the surface a shade under it
+  // the level: a hot line where the wall meets it, the surface flat and lit by the key, a thin meniscus at its rim
   float hotWall = smoothstep(uH - px * 2.6, uH - px * 0.6, y) * (1.0 - top);
   col = mix(col, uAmberHot, hotWall);
-  // close up the level shows its meniscus: a hot rim, no gradient across the surface (one reads as a yolk)
-  float close = smoothstep(2.2, 4.0, 1.0 / px);
-  float rr = length(vL.xz) / ${(R * 0.965).toFixed(3)};
-  float hotTop = 0.45 + close * 0.5 * smoothstep(0.93, 0.995, rr);
-  col = mix(col, mix(uAmberTop, uAmberHot, clamp(hotTop, 0.0, 1.0)), top);
+  float rim = (1.0 - length(vL.xz) / ${(R * 0.965).toFixed(3)}) * ${(R * 0.965).toFixed(3)} / px;
+  vec3 surf = mix(uAmberTop, uAmberHot, 0.4);
+  surf = mix(surf, uAmberHot, 0.8 * (1.0 - smoothstep(1.2, 2.6, rim)));
+  col = mix(col, surf, top);
   float fg = fogAt(vW);
   gl_FragColor = vec4(mix(col, uFogCol, fg), 1.0);
 }`;
@@ -220,10 +224,10 @@ const amberGeo = (() => {
 const GlassAmberColumn: React.FC<{ at: [number, number]; rise: number; level: number; f: number; order: number; lift?: number }> = ({ at, rise, level, f, order, lift = 0 }) => {
   const o = useMemo(() => {
     const shared = nuclearMaterial("glass").uniforms;
-    const glassU = { ...shared, uF: { value: 1 }, uR: { value: R } };
+    const glassU = { ...shared, uF: { value: 1 } };
     const back = new THREE.Mesh(glassGeo(), new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: GLASS_FRAG, transparent: true, depthWrite: false, side: THREE.BackSide, uniforms: glassU }));
     const front = new THREE.Mesh(glassGeo(), new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: GLASS_FRAG, transparent: true, depthWrite: false, side: THREE.FrontSide, uniforms: glassU }));
-    const amberMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: AMBER_FRAG, uniforms: { ...shared, uF: { value: 1 }, uH: { value: 1 }, uBase: { value: 0 }, uRung: { value: RUNG } } });
+    const amberMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: AMBER_FRAG, uniforms: { ...shared, uF: { value: 1 }, uH: { value: 1 }, uBase: { value: 0 } } });
     const amber = new THREE.Mesh(amberGeo(), amberMat);
     for (const m of [back, front, amber]) m.frustumCulled = false;
     return { back, front, amber, glassU, amberMat };
@@ -263,7 +267,7 @@ void main() {
 const SLOT_VERT = /* glsl */ `
 varying vec2 vUv;
 void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-/** The dark slot under a glass: one soft disc on the land. */
+/** The tube's one soft contact shadow on the map, also the slot it rises out of: a soft disc nudged away from the key. */
 const Slot: React.FC<{ at: [number, number]; rise: number; alpha?: number; soft?: number; radius?: number }> = ({ at, rise, alpha = 0.42, soft = 0.86, radius = R * 1.15 }) => {
   const m = useMemo(() => {
     const g = new THREE.PlaneGeometry(1, 1);
@@ -278,7 +282,7 @@ const Slot: React.FC<{ at: [number, number]; rise: number; alpha?: number; soft?
   m.material.uniforms.uA.value = alpha;
   m.material.uniforms.uIn.value = soft;
   m.scale.set(size, 1, size);
-  m.position.set(at[0], BASE_Y + 0.5, -at[1]);
+  m.position.set(at[0] + SHADOW_DIR[0] * radius * 0.16, BASE_Y + 0.5, -(at[1] + SHADOW_DIR[1] * radius * 0.16));
   return <primitive object={m} />;
 };
 
@@ -329,37 +333,37 @@ const GlassFoot: React.FC<{ at: [number, number]; h: number; f: number }> = ({ a
   return <primitive object={o.me} />;
 };
 
-const columnShadows = (at: [number, number], rise: number, level: number): ShadowItem[] => {
-  if (rise <= 0) return [];
-  const out: ShadowItem[] = [];
-  out.push({ x: at[0], z: at[1], len: GLASS_H * rise * SHADOW_LEN, r: R * 0.95, soft: R * 0.5, alpha: 0.26 * smooth(0, 0.05, rise) });
-  // a film casts nothing: its alpha comes in with the level, and a shadow shorter than its penumbra would step at its root
-  if (level > 0.02) out.push({ x: at[0], z: at[1], len: Math.max(level * SHADOW_LEN, 30), r: R * 0.92, soft: R * 0.45, alpha: 0.9 * smooth(0, 60, level) });
-  return out;
-};
-
-// --- labels live in world space: a billboard pinned to the column, scaled by the camera
-const LABEL_SIZE = 40;
-const WorldLabel: React.FC<{ cam: NuclearCam; p: [number, number, number]; text: string; t: number; align?: "center" | "left"; scale?: number }> = ({ cam, p, text, t, align = "center", scale = 1 }) => {
+// --- labels: centred under each tube's base on the map, upright to the camera, all one size (the camera's scale at its
+// target), on a small espresso plate so they read on cream land and on the bare board alike. They slide up from under the base.
+const LABEL_SIZE = 36;
+const LABEL_GAP = 16;
+const SITES: [number, number][] = [PAD, EU, RU, CN];
+/** one screen baseline for all four plates: just under the lowest base front (all four counted, so it never jumps) */
+const labelBaseline = (cam: NuclearCam) => Math.max(...SITES.map((p) => nuclearProject(cam, [p[0], BASE_Y, p[1] - R]).y));
+const BaseLabel: React.FC<{ cam: NuclearCam; at: [number, number]; text: string; t: number; baseline: number }> = ({ cam, at, text, t, baseline }) => {
   if (t <= 0) return null;
   const e = 1 - (1 - t) * (1 - t);
-  const q = nuclearProject(cam, [p[0], p[1] - (1 - e) * 26, p[2]]);
-  const size = LABEL_SIZE * scale * q.s;
+  const k = cam.f / cam.d;
+  const q = nuclearProject(cam, [at[0], BASE_Y, at[1]]);
+  const size = LABEL_SIZE * k;
   return (
     <div
       style={{
         position: "absolute",
         left: q.x,
-        top: q.y,
-        transform: `translate(${align === "center" ? "-50%" : "0"}, -50%)`,
+        top: baseline + (LABEL_GAP + (1 - e) * 22) * k,
+        transform: "translateX(-50%)",
         fontFamily: FONT_LABEL,
         fontSize: size,
-        letterSpacing: "0.06em",
+        letterSpacing: "0.04em",
         lineHeight: 1,
         whiteSpace: "nowrap",
         color: COLOR.cream,
         opacity: e,
-        textShadow: `0 ${size * 0.03}px ${size * 0.22}px rgba(34,21,11,0.6)`,
+        padding: `${size * 0.18}px ${size * 0.2}px ${size * 0.12}px ${size * 0.26}px`,
+        borderRadius: size * 0.22,
+        background: "rgba(46,30,20,0.88)",
+        boxShadow: `0 ${size * 0.06}px ${size * 0.3}px rgba(34,21,11,0.35)`,
       }}
     >
       {text}
@@ -374,7 +378,7 @@ const CompeteGlobally: React.FC<z.infer<typeof schema>> = () => {
   const us = usLevel(f);
   const foot = footH(f);
   const state = RIVALS.map((r) => ({ ...r, rise: glide(r.glass[0], r.glass[1], f), level: r.h * glide(r.amber[0], r.amber[1], f) }));
-  const shadows = [...columnShadows(PAD, 1, us), ...state.flatMap((r) => columnShadows(r.at as [number, number], r.rise, r.level * c01(r.rise * 4)))];
+  const baseline = labelBaseline(cam);
   return (
     <NuclearStage
       cam={cam}
@@ -385,9 +389,8 @@ const CompeteGlobally: React.FC<z.infer<typeof schema>> = () => {
       world={
         <>
           <WorldSlab projection="tall" zoomAbout={{ x: PAD[0], z: PAD[1], m: landZoom(f) }} />
-          <SoftShadows items={shadows} y={BASE_Y} />
-          <Slot at={PAD} rise={1} alpha={0.42 - 0.3 * c01(foot / 3)} />
-          {state.map((r) => (r.rise > 0 ? <Slot key={r.key} at={r.at as [number, number]} rise={r.rise} /> : null))}
+          <Slot at={PAD} rise={1} alpha={0.5 - 0.36 * c01(foot / 3)} soft={0.45} radius={R * 1.4} />
+          {state.map((r) => (r.rise > 0 ? <Slot key={r.key} at={r.at as [number, number]} rise={r.rise} soft={0.45} radius={R * 1.4} alpha={0.5 * smooth(0.15, 0.6, r.rise)} /> : null))}
           {foot > 0.01 ? <Slot at={PAD} rise={1} alpha={0.3 * c01(foot / 3)} soft={0.8} radius={FOOT_R * 1.2} /> : null}
           {foot > 0.01 ? <GlassFoot at={PAD} h={foot} f={cam.f} /> : null}
           <GlassAmberColumn at={PAD} rise={1} level={us + filmExtra(f)} f={cam.f} order={0} lift={foot} />
@@ -396,9 +399,9 @@ const CompeteGlobally: React.FC<z.infer<typeof schema>> = () => {
       }
       overlay={
         <>
-          <WorldLabel cam={cam} p={[PAD[0] + R + 14, 170, PAD[1]]} text="U.S." t={c01((f - 37) / 9)} align="left" scale={1.4 - 0.4 * glide(120, 150, f)} />
+          <BaseLabel cam={cam} at={PAD} text="U.S." t={c01((f - 37) / 9)} baseline={baseline} />
           {state.map((r) => (
-            <WorldLabel key={r.key} cam={cam} p={[r.at[0], BASE_Y + r.h + 40, r.at[1]]} text={r.label} t={c01((f - r.lab[0]) / (r.lab[1] - r.lab[0]))} />
+            <BaseLabel key={r.key} cam={cam} at={r.at as [number, number]} text={r.label} t={c01((f - r.lab[0]) / (r.lab[1] - r.lab[0]))} baseline={baseline} />
           ))}
         </>
       }
