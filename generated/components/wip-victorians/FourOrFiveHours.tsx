@@ -14,7 +14,7 @@
 // (9 to 9, a 996 day), then the ink winds back round the dial on the watch's own minute hand, opening between the two hands, f17-51, to a wedge of exactly four
 // hours from IX to I on "four", and eases out one more hour, f57-64, to exactly five on "hours". From f64 it holds on the push
 // and the ticking seconds hand. The last frame is the join to cut 17: camera exactly {540, 960, 1}.
-// Contact frames: the "996" mark touches the ink on f3 (its word). It is printed on the red, so the edge wipes it away (gone by f35).
+// No "996" mark on the red (the user, Nov 3: the red stamps add nothing); the captions carry the number.
 // SPOT INK: red = the empire's men's time, multiplied into the white enamel so the numerals show through. No indigo.
 //
 // SOURCES: watch by Francois Czapek, Metropolitan Museum DP338176, CC0 (commons File:Watch_MET_DP338176.jpg);
@@ -23,8 +23,8 @@
 import React from "react";
 import { Easing, interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { CaptionBandsDebug, InkPrint, MONO, PaperGround, WipCam, WipFilmLife, inkPress } from "../kits/works-in-progress/wipShared";
-import { PocketWatch, WATCH_X, WATCH_Y } from "./watchShared";
+import { CaptionBandsDebug, PaperGround, WipCam, WipFilmLife } from "../kits/works-in-progress/wipShared";
+import { PocketWatch } from "./watchShared";
 
 export const FPS = 24;
 export const DURATION = 97;
@@ -46,26 +46,6 @@ const hoursAt = (frame: number) =>
     ? interpolate(frame, [17, 51], [12, 4], { ...clamp, easing: WIND_BACK })
     : interpolate(frame, [57, 64], [4, 5], { ...clamp, easing: WIND });
 
-// The mark sits below the pivot, clear of the final wedge, and across the red.
-const MARK = "#470410";
-const MARK_D = 316;
-const MARK_X = WATCH_X + 6;
-const MARK_Y = WATCH_Y + 170;
-
-const NineNineSix: React.FC<{ press: number }> = ({ press }) => (
-  <InkPrint x={MARK_X - MARK_D / 2} y={MARK_Y - MARK_D / 2} w={MARK_D} h={MARK_D} ink={MARK} seed="mark-996" rotate={-9} rough={2.2} wear={0.5} misregister={1.4} press={press}>
-    {(ink) => (
-      <svg width={MARK_D} height={MARK_D} viewBox={`0 0 ${MARK_D} ${MARK_D}`} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-        <circle cx={MARK_D / 2} cy={MARK_D / 2} r={MARK_D / 2 - 7} fill="none" stroke={ink} strokeWidth={10} />
-        <circle cx={MARK_D / 2} cy={MARK_D / 2} r={MARK_D / 2 - 24} fill="none" stroke={ink} strokeWidth={4} />
-        <text x={MARK_D / 2} y={MARK_D / 2} textAnchor="middle" dominantBaseline="central" fontFamily={MONO} fontWeight={500} fontSize={118} letterSpacing={-3} fill={ink} stroke={ink} strokeWidth={2.5}>
-          996
-        </text>
-      </svg>
-    )}
-  </InkPrint>
-);
-
 const FourOrFiveHours: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const frame = useCurrentFrame();
   const cam = camAt(frame);
@@ -73,7 +53,7 @@ const FourOrFiveHours: React.FC<z.infer<typeof schema>> = ({ bands }) => {
     <>
       <WipFilmLife frame={frame}>
         <PaperGround cam={cam} />
-        <PocketWatch frame={frame} cam={cam} hours={hoursAt(frame)} onInk={<NineNineSix press={inkPress(frame, 3)} />} />
+        <PocketWatch frame={frame} cam={cam} hours={hoursAt(frame)} />
       </WipFilmLife>
       <CaptionBandsDebug on={bands} />
     </>
