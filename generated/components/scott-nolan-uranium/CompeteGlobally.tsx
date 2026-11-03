@@ -100,9 +100,9 @@ const TRACK = shotTrack({ tx: PAD[0], ty: 0, tz: PAD[1], d: 1250, yaw: 20, a: 18
   { f0: 50, f1: 112, to: { tx: PAD[0] + 60, tz: PAD[1] + 10, d: 2000, f: 2900, a: 20, gx: 400, gy: 905 } },
   // then one steady pull back east, the US kept in frame on the left, until all four stand in a row, settled by about f150.
   // The end camera is high (30 deg) with its axis level and the lens shifted down, so the four stand upright and the map
-  // recedes behind them and comes forward under them (land about y 770-1350). Its eye is just above the glass tops, so
-  // perspective puts the four tops on one row (y 259-264) although the bases sit at their real depths (y 863-937).
-  { f0: 90, f1: 146, to: { tx: -12, tz: 130, yaw: 0, d: 1100, f: 1143, a: 30, gx: 535, gy: 865 } },
+  // recedes behind them and comes forward under them (land about y 760-1310), the outer tubes about 90 px in from the edges. Its eye is just above the glass tops, so
+  // perspective puts the four tops on one row (y 318-323) although the bases sit at their real depths (y 860-925).
+  { f0: 90, f1: 146, to: { tx: -12, tz: 130, yaw: 0, d: 1100, f: 1030, a: 30, gx: 535, gy: 865 } },
 ]);
 // the opening: a crane up the empty glass, arcing round it, aimed (u 0), handed over to TRACK on one quintic (JOIN)
 const OPEN = shotTrack({ tx: PAD[0], ty: 10, tz: PAD[1], d: 260, yaw: -25, a: 20, u: 0, f: 1400, gy: 880, gx: 540 }, [
