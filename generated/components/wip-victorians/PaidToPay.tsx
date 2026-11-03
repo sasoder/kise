@@ -13,14 +13,19 @@
 // it 133 · was 140 · a 142 · prestigious 145 · position 152
 // DURATION: the slot 44.583 -> 52.000 s = 7.417 s x 24 = 178 frames (f0..f177).
 //
-// THE MOTION: one rising camera. A real MP stands on the paper; a red "£0" postmark presses beside him on "paid". From "shell
-// out" white notes deal from behind his coat onto one growing pile that lifts him, the camera climbing with him, so the postmark
-// sinks under the money. The Palace, tower first, rises from behind the pile and settles as he stops. On "prestigious" a gold crowned
-// portcullis on a short red ribbon is pinned to his lapel, the badge level with the clock face; a glint crosses it once; a slow creep holds to the cut.
-// Contact frames: postmark 15. Notes: first leaves the coat 51, first lands 60, last lands by 118 (derived from the lift curve; he
-// starts lifting at 64, once the base row is down; the pile stops at 120). Tower 92-143. Portcullis touches 146, flat 150.
-// SPOT INK: red = the empire's mark on the MP: the postmark, then the ribbon. Gold = the honour, the one real colour.
-// NOT A FIGURE: "£0" is the speaker's "weren't even paid" (MPs had no salary until 1911). Nothing else on screen is a claim.
+// THE MOTION: one camera that pulls back, then climbs. It opens close on a real MP alone on the paper, his top hat high in frame
+// and his coat filling it, and eases back (anchored on his hat, so the bare paper opens below him) while the captions carry
+// "weren't even paid"; the pull-back is still settling when, on "shell out", white notes deal from behind his coat onto one
+// growing pile that lifts him, and the pull-back hands over to the climb with him without a kink. The Palace, tower first, rises
+// from behind the pile and settles as he stops. On "prestigious" a gold crowned portcullis on a short red ribbon is pinned to his
+// lapel, the badge level with the clock face; a glint crosses it once; a slow creep holds to the cut.
+// Camera: k 1.64 at f0 easing to the rise's 1.01 by f76 (fastest about f8, still moving at f51); the hat holds near screen y
+// 260-290 throughout, his soles rise on screen from y 1569 (f0) to 1055 (f64); the camera's y turns from the pull-back into the
+// climb through zero speed at about f63 with no corner. From f100 the camera is the delivered one. Nothing new enters before f51.
+// Contact frames: notes: first leaves the coat 51, first lands 60, last lands by 118 (derived from the lift curve; he starts
+// lifting at 64, once the base row is down; the pile stops at 120). Tower 92-143. Portcullis touches 146, flat 150.
+// SPOT INK: red is only the ribbon (the mark the honour hangs from). Gold = the honour, the one real colour.
+// NOT A FIGURE: nothing on screen is a claim; "weren't even paid" (MPs had no salary until 1911) is carried by the captions.
 //
 // SOURCES (animation_source/assets_raw/SOURCES.txt): MP: Sir Benjamin Stone, MP at the Palace of Westminster gate, from his 1906
 // Pictures (Commons, no restrictions), westminster_mp/MP_StoneFullLength_topHat2.jpg. Note: Bank of England £10 white note, 1888
@@ -31,7 +36,7 @@
 import React from "react";
 import { Easing, Img, interpolate, random, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { CaptionBandsDebug, CutOut, PaperGround, Postmark, RED, WipCam, WipFilmLife, WipPlane, inkPress, slide } from "../kits/works-in-progress/wipShared";
+import { CaptionBandsDebug, CutOut, PaperGround, RED, WipCam, WipFilmLife, WipPlane, slide } from "../kits/works-in-progress/wipShared";
 import { CHAINS_INNER, CROWN_INNER } from "./portcullisSvg";
 
 export const FPS = 24;
@@ -47,15 +52,6 @@ const LIFT_START = 64; // the base row has landed
 const LIFT_END = 120; // "just"
 const liftAt = (f: number) => interpolate(f, [LIFT_START, LIFT_END], [0, RISE], { ...clamp, easing: Easing.bezier(0.36, 0, 0.66, 1) });
 
-const camAt = (f: number): WipCam => ({
-  x: interpolate(f, [-10, LIFT_START + 10], [472, 540], { ...clamp, easing: Easing.bezier(0.42, 0, 0.58, 1) }),
-  y: 960 - interpolate(f, [0, LIFT_START], [0, 12], clamp) - liftAt(f) * 0.976,
-  k: 1 + (0.02 * f) / (DURATION - 1),
-  x0: 540,
-  y0: 960,
-});
-const CAM_END_Y = camAt(DURATION - 1).y;
-
 // -- the MP ----------------------------------------------------------------------------------------------------------------
 const MP_ASPECT = 0.3278;
 const MP_H = 780;
@@ -63,6 +59,51 @@ const MP_W = MP_H * MP_ASPECT;
 const MP_X = 385;
 const GROUND = 1032; // his soles on the page at f0
 const feetY = (f: number) => GROUND - liftAt(f);
+
+// The rise as delivered: the camera climbs with his feet once the pile lifts him.
+const riseYAt = (f: number) => 960 - interpolate(f, [0, LIFT_START], [0, 12], clamp) - liftAt(f) * 0.976;
+// The lift starts at full acceleration, so where the pull-back hands over (f64) the camera's y would turn a corner. A short
+// triangular average rounds that corner (the man drifts at most ~8 px on screen); it fades out by f100, so from there on the
+// camera is exactly the delivered one.
+const RISE_SMOOTH_R = 8;
+const RISE_SMOOTH_OUT = 100;
+const riseYSmooth = (f: number) => {
+  const fade = interpolate(f, [RISE_SMOOTH_OUT - 20, RISE_SMOOTH_OUT], [1, 0], { ...clamp, easing: Easing.bezier(0.42, 0, 0.58, 1) });
+  const raw = riseYAt(f);
+  if (fade === 0) return raw;
+  let sum = 0;
+  let n = 0;
+  for (let i = -RISE_SMOOTH_R; i <= RISE_SMOOTH_R; i++) {
+    const wi = RISE_SMOOTH_R + 1 - Math.abs(i);
+    sum += wi * riseYAt(f + i);
+    n += wi;
+  }
+  return raw + (sum / n - raw) * fade;
+};
+const riseCamAt = (f: number) => ({
+  x: interpolate(f, [-10, LIFT_START + 10], [472, 540], { ...clamp, easing: Easing.bezier(0.42, 0, 0.58, 1) }),
+  y: riseYSmooth(f),
+  k: 1 + (0.02 * f) / (DURATION - 1),
+});
+// The opening: close on him, his hat high in frame, easing back until the rise has the camera. The pull-back is anchored on
+// his hat (its screen y eases from OPEN_HAT to where the rise holds it), so the frame opens downward onto the bare paper
+// where the notes will land. OPEN weights the opening in, 1 before f0 (so it is already moving at f0) to 0 at OPEN_END;
+// the zoom blends in log space, so it reads as one speed.
+const OPEN_K = 1.75;
+const OPEN_X = 392; // he stands in the middle
+const OPEN_HAT = 290; // his hat's screen y at the opening key
+const OPEN_START = -8;
+const OPEN_END = 76;
+const openAt = (f: number) => 1 - interpolate(f, [OPEN_START, OPEN_END], [0, 1], { ...clamp, easing: Easing.bezier(0.25, 0.2, 0.35, 1) });
+const camAt = (f: number): WipCam => {
+  const r = riseCamAt(f);
+  const w = openAt(f);
+  const k = Math.exp(Math.log(r.k) + (Math.log(OPEN_K) - Math.log(r.k)) * w);
+  const hat = feetY(f) - MP_H;
+  const hatScreen = (960 + (hat - r.y) * r.k) * (1 - w) + OPEN_HAT * w;
+  return { x: r.x + (OPEN_X - r.x) * w, y: hat - (hatScreen - 960) / k, k, x0: 540, y0: 960 };
+};
+const CAM_END_Y = camAt(DURATION - 1).y;
 
 // -- the pile: three columns, one size, later notes on top. Each lands when the lift curve reaches its height -----------------
 const NOTE_W = 340;
@@ -231,10 +272,6 @@ const PaidToPay: React.FC<z.infer<typeof schema>> = ({ bands }) => {
             </WipPlane>
           </div>
         ) : null}
-        {/* the red mark: multiplies into the page, then the notes bury it */}
-        <WipPlane cam={cam} ink>
-          <Postmark x={745} y={640} size={350} ink={RED} seed="ptp-salary" rotate={-9} top="MEMBER'S SALARY" bottom="HOUSE OF COMMONS" date="£0" press={inkPress(frame, 15)} wear={0.22} />
-        </WipPlane>
         {/* the pile, later notes on top */}
         <WipPlane cam={cam}>
           {notes.map((n) => {
