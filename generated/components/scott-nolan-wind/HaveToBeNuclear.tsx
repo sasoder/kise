@@ -11,10 +11,13 @@
 //   everything 92 · else 100 · is 108 · on 113 · cost 116. Next line on camera from f129.
 // DURATION: the slot 31.949 -> 37.329 s = 5.380 s x 24000/1001 = 129 frames (f0..f128).
 //
-// THE MOTION: f0 is cut A's resolved frame (CUT_A_END_CAM, CUT_A_PLUG_END, cut A's story clock), the plug hovering over the
-// row. Through the pause it turns to face the socket and sets off on one smooth swoop (a spline at one eased speed on
-// screen, peak 44 px/frame at f11-12, one lobe): down the left of the cooling tower, low along the plinth fronts, onto the
-// socket's axis, and on "to be nuclear" pushes home. Amber current runs from the plug back along the cable to the data
+// THE MOTION: f0 is cut A v2's resolved frame (CUT_A_END_CAM_V2, CUT_A_PLUG_END_V2, cut A's story clock; no labels here), the plug hovering over the
+// row. v2 (user, Nov 3: no "searching"): ONE decided move into nuclear. Cut A's drift carries on and the plug eases off
+// through the pause (the slow start of the move, not a hold), then comes down in front of the nuclear plinth on one arc
+// that always heads right and down toward the socket (no detour, no sideways back-and-forth), its prongs turning steadily
+// to the socket the whole way, square before a short straight push along the socket's axis that slows into the seat.
+// Path speed is one hump (world, peak 39 units/f at f13); on screen, peak 34 px/f at f15-16, and the last ~28 px are the
+// push away from the camera, which reads upward on screen. Amber current runs from the plug back along the cable to the data
 // center, whose racks then light amber. From "The one thing" one camera glide lowers the eye from the high wide to the
 // front of the lineup (the data center stays at the foot of the frame), while banknote bricks are dealt from above onto
 // a pile on the board just behind each plinth, centred on its plant, so every plant stands in front of its own pile. Each
@@ -22,8 +25,8 @@
 // then coal; nuclear's pile keeps climbing, well above its cooling tower, and lands tallest by "cost".
 // Last landings: wind f68.5, solar f70.4, gas f77.2, coal f86.8, nuclear f114 (first landings from f50).
 // Living hold: turbine, smoke, glint, the core, the last brick settling, a slow camera creep.
-// CAUSE: prong tips touch the socket face at f26 (CONTACT_F; f25 is 22 units short), the face seats flush at f27 (SEAT_F);
-// first reaction (current leaves the plug) f28; the current front reaches the hall at f40 and the racks light from f40.
+// CAUSE: prong tips enter the socket at f26 (CONTACT_F; f25 is 4 units short), the face settles flush at f28 (SEAT_F) on
+// "nuclear"; first reaction (current leaves the plug) f28; the current front reaches the hall at f40 and the racks light from f40.
 // No pile grows except by a brick landing on it; each brick is in frame only as it falls in from above the frame top.
 // AMBER = nuclear (the core, the current, the racks it powers). Money is stoutCash's real banknotes, never gold or amber.
 //
@@ -41,8 +44,8 @@ import { BUNDLE_REAL, StoutCash, type BundleItem, type BundleSize } from "../sco
 import {
   CUT_A_DURATION,
   CUT_A_DRAPE,
-  CUT_A_END_CAM,
-  CUT_A_PLUG_END,
+  CUT_A_END_CAM_V2,
+  CUT_A_PLUG_END_V2,
   CUT_A_S0,
   DataCenter,
   LINEUP,
@@ -53,7 +56,7 @@ import {
   PowerCable,
   THREE,
   c01,
-  cutAPlugAt,
+  cutAPlugAtV2,
   sharedUniforms,
   smooth,
   socketOf,
@@ -67,20 +70,17 @@ export const DURATION = 129;
 export const schema = z.object({ showValues: z.boolean() });
 export const defaultProps = schema.parse({ showValues: false });
 
-/** swoop waypoints (world): down the left of the cooling tower, then low in front of the plinths; prongs square by PLUG_TURN_F */
-const PLUG_WAYS: [V3, V3] = [[-250, 320, -400], [-110, 70, -310]];
-const PLUG_TURN_F = 8;
 /** story clock: cut A's clock carried on, so f0 is cut A's last frame */
 const S0 = CUT_A_S0 + CUT_A_DURATION - 1;
 
 // --- the camera: cut A's resolved wide, a slow creep while the plug seats, then one glide down to the front of the row ------
 /** distances are set for f 2200 and scaled by cut A's focal length, so the framing holds if cut A changes lens */
-const FK = CUT_A_END_CAM.f / 2200;
+const FK = CUT_A_END_CAM_V2.f / 2200;
 const END_CAM: Partial<NuclearCam> = { tx: 0, ty: 200, tz: -66, d: 2300 * FK, yaw: 0, pitch: 18, cy: 861 };
 const TRACK = nuclearTrack(
-  CUT_A_END_CAM,
+  CUT_A_END_CAM_V2,
   [
-    { f0: -10, f1: 46, to: { d: CUT_A_END_CAM.d * 0.975 } },
+    { f0: -10, f1: 46, to: { d: CUT_A_END_CAM_V2.d * 0.975 } },
     { f0: 30, f1: 118, to: END_CAM },
     // the hold's creep: a little closer and a little higher together, so the data center keeps clear of the lower caption band
     { f0: 104, f1: 220, to: { d: 2250 * FK, pitch: 18.8 } },
@@ -89,78 +89,90 @@ const TRACK = nuclearTrack(
 );
 export const camAt = (f: number): NuclearCam => nuclearCamAt(TRACK, f);
 
-// --- the plug: hover (cut A's drift carried on), then ONE smooth swoop along a spline at an eased arc-length speed: down the
-// left of the cooling tower (clear of it on screen), along in front of the plinth fronts, onto the socket's axis, push home.
+// --- the plug: ONE decided move. From cut A's pose it eases off (the pause is the slow start, not a hold), comes down in
+// front of the nuclear plinth on a single cubic that lands on the socket's axis PUSH short of it, then pushes straight
+// home along the axis and stops flush. The prongs turn steadily to the socket over the whole descent (no snap of the
+// plug, so none of the cable), square before the push.
 const SOCK = socketOf("nuclear");
-const TRAVEL_F0 = 0;
-export const SEAT_F = 27;
+export const SEAT_F = 28;
 /** prong tips touch the socket face when the plug's face is PLUG.PRONG short of it: CONTACT_F (see PRONG_TIP_Z) */
 export const CONTACT_F = 26;
-const hover = (f: number) => cutAPlugAt(CUT_A_DURATION - 1 + f);
+const hover = (f: number) => cutAPlugAtV2(CUT_A_DURATION - 1 + f);
 const norm = (v: V3): V3 => {
   const l = Math.hypot(v[0], v[1], v[2]) || 1;
   return [v[0] / l, v[1] / l, v[2] / l];
 };
-const P_START = hover(TRAVEL_F0).end;
-const D_START = norm(hover(TRAVEL_F0).dir);
-/** the swoop's spline: the last three points lie on the socket's axis, so the final run is straight along it */
-const SWOOP_PTS: V3[] = [P_START, PLUG_WAYS[0], PLUG_WAYS[1], [SOCK.pos[0], SOCK.pos[1], SOCK.pos[2] - 92], [SOCK.pos[0], SOCK.pos[1], SOCK.pos[2] - 46], SOCK.pos];
-const SWOOP = new THREE.CatmullRomCurve3(
-  SWOOP_PTS.map((q) => new THREE.Vector3(q[0], q[1], q[2])),
-  false,
-  "centripetal",
+const P_START = hover(0).end;
+/** frames over which cut A's hover drift fades out under the move */
+const DRIFT_OUT = 8;
+const D_SOCK = norm(SOCK.dir);
+/** the straight push along the socket's axis (world units of the face's travel) */
+const PUSH = 36;
+/** the cubic's handles: off the start pose (down and toward the socket), and back along the axis from the push's start */
+const LEAD_START: V3 = [60,-380,140];
+const LEAD_AXIS = 120;
+const V = (q: V3) => new THREE.Vector3(q[0], q[1], q[2]);
+const Q_PUSH: V3 = [SOCK.pos[0] - D_SOCK[0] * PUSH, SOCK.pos[1] - D_SOCK[1] * PUSH, SOCK.pos[2] - D_SOCK[2] * PUSH];
+const PATH = new THREE.CurvePath<THREE.Vector3>();
+PATH.add(
+  new THREE.CubicBezierCurve3(
+    V(P_START),
+    V([P_START[0] + LEAD_START[0], P_START[1] + LEAD_START[1], P_START[2] + LEAD_START[2]]),
+    V([Q_PUSH[0] - D_SOCK[0] * LEAD_AXIS, Q_PUSH[1] - D_SOCK[1] * LEAD_AXIS, Q_PUSH[2] - D_SOCK[2] * LEAD_AXIS]),
+    V(Q_PUSH),
+  ),
 );
-SWOOP.arcLengthDivisions = 2000;
-/** speed along the path: eases in from rest, peaks early, then slows steadily into the seat (a firm stop when flush) */
-const SPEED_IN = 0.42;
-const SPEED_POW = 0.38;
+PATH.add(new THREE.LineCurve3(V(Q_PUSH), V(SOCK.pos)));
+(PATH.curves[0] as THREE.CubicBezierCurve3).arcLengthDivisions = 2000;
+PATH.updateArcLengths();
+const PATH_N = 1500;
+/** samples of the path by arc length: point, and the fraction of the path at the push's start */
+const PATH_PTS = Array.from({ length: PATH_N + 1 }, (_, i) => PATH.getPointAt(i / PATH_N));
+const U_PUSH = (() => {
+  const L = PATH.getCurveLengths();
+  return L[0] / L[1];
+})();
+/** speed along the path: one hump, a slow start from cut A's drift and a long soft arrival */
+const SPEED_IN = 0.5;
+const SPEED_POW = 0.6;
 const speedShape = (t: number) => smooth(0, SPEED_IN, t) * Math.pow(Math.max(0, 1 - t), SPEED_POW);
 const SPEED_CUM = (() => {
   const n = 4000;
   const a = new Float64Array(n + 1);
-  for (let i = 1; i <= n; i++) a[i] = a[i - 1] + (speedShape((i - 0.5) / n) / n);
+  for (let i = 1; i <= n; i++) a[i] = a[i - 1] + speedShape((i - 0.5) / n) / n;
   for (let i = 0; i <= n; i++) a[i] /= a[n];
   return a;
 })();
-/** path fraction -> spline u, by a metric that is mostly SCREEN distance (the camera barely moves during the swoop), so the
- *  plug's speed on screen follows speedShape: the steep descent no longer races and the push along the axis no longer crawls */
-const SCREEN_W = 0.75;
-const SWOOP_MAP = (() => {
-  const n = 1200;
+/** path fraction -> arc fraction by a metric that blends SCREEN distance (the camera barely moves) with world distance, so the
+ *  speed on screen follows speedShape and the push along the axis (short on screen) still takes its time */
+const SCREEN_W = 0;
+const PATH_MAP = (() => {
   const c = nuclearCamAt(TRACK, 14);
-  const us: number[] = [];
   const ms: number[] = [0];
-  let prev = SWOOP.getPointAt(0);
-  let prevS = nuclearProject(c, [prev.x, prev.y, prev.z]);
-  us.push(0);
-  for (let i = 1; i <= n; i++) {
-    const u = i / n;
-    const q = SWOOP.getPointAt(u);
+  let prevS = nuclearProject(c, [PATH_PTS[0].x, PATH_PTS[0].y, PATH_PTS[0].z]);
+  for (let i = 1; i <= PATH_N; i++) {
+    const q = PATH_PTS[i];
     const qs = nuclearProject(c, [q.x, q.y, q.z]);
-    const dw = q.distanceTo(prev) * qs.s;
-    const dsc = Math.hypot(qs.x - prevS.x, qs.y - prevS.y);
-    ms.push(ms[i - 1] + SCREEN_W * dsc + (1 - SCREEN_W) * dw);
-    us.push(u);
-    prev = q;
+    const dw = q.distanceTo(PATH_PTS[i - 1]) * qs.s;
+    ms.push(ms[i - 1] + SCREEN_W * Math.hypot(qs.x - prevS.x, qs.y - prevS.y) + (1 - SCREEN_W) * dw);
     prevS = qs;
   }
-  return { us, ms: ms.map((m) => m / ms[n]) };
+  return ms.map((m) => m / ms[PATH_N]);
 })();
-const swoopU = (f: number) => {
-  const t = c01((f - TRAVEL_F0) / (SEAT_F - TRAVEL_F0));
+const pathU = (f: number) => {
+  const t = c01(f / SEAT_F);
   const x = t * (SPEED_CUM.length - 1);
   const i = Math.min(SPEED_CUM.length - 2, Math.floor(x));
   const m = SPEED_CUM[i] + (SPEED_CUM[i + 1] - SPEED_CUM[i]) * (x - i);
-  const { us, ms } = SWOOP_MAP;
   let lo = 0;
-  let hi = ms.length - 1;
+  let hi = PATH_N;
   while (hi - lo > 1) {
     const mid = (lo + hi) >> 1;
-    if (ms[mid] <= m) lo = mid;
+    if (PATH_MAP[mid] <= m) lo = mid;
     else hi = mid;
   }
-  const k = (m - ms[lo]) / Math.max(1e-9, ms[hi] - ms[lo]);
-  return us[lo] + (us[hi] - us[lo]) * k;
+  const k = (m - PATH_MAP[lo]) / Math.max(1e-9, PATH_MAP[hi] - PATH_MAP[lo]);
+  return (lo + k) / PATH_N;
 };
 const slerp = (a: V3, b: V3, t: number): V3 => {
   const d = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]));
@@ -171,21 +183,28 @@ const slerp = (a: V3, b: V3, t: number): V3 => {
   const wb = Math.sin(t * om) / s;
   return norm([a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb]);
 };
-/** the cable keeps cut A's drape throughout (it only shapes the hanging run, which shrinks to nothing as the plug seats) */
+/** the cable's drape eases from cut A v2's (which keeps its cable clear of cut A's labels) back to CUT_A_DRAPE by the seat, so
+ *  every frame from the seat on is v1's; it only shapes the hanging run, which shrinks to nothing as the plug seats */
 export const plugAt = (f: number): { end: V3; dir: V3; roll: number; drape: [number, number] } => {
-  if (f <= TRAVEL_F0) return hover(f);
-  const u = swoopU(f);
-  // the plug turns to face the socket as it sets off (by time, so the turn leads the travel): its tail, and so the cable's
-  // straight lead out of it, swings toward the camera before the plug moves far, and the cable never sweeps the tower
-  const turn = smooth(TRAVEL_F0 + 1, PLUG_TURN_F, f);
-  const dir = slerp(D_START, norm(SOCK.dir), turn);
-  const q = SWOOP.getPointAt(u);
-  return { end: [q.x, q.y, q.z], dir, roll: 90 * (1 - turn), drape: CUT_A_DRAPE };
+  if (f <= 0) return hover(f);
+  const u = pathU(f);
+  // the turn follows the travel: square to the socket (and level) by the start of the push
+  const turn = smooth(0, U_PUSH, u);
+  const q = PATH.getPointAt(u);
+  // cut A's slow drift carries on under the move and fades out as it gathers speed, so f0 -> f1 keeps cut A's velocity
+  const h = hover(f);
+  const keep = 1 - smooth(0, DRIFT_OUT, f);
+  const end: V3 = [q.x + (h.end[0] - P_START[0]) * keep, q.y + (h.end[1] - P_START[1]) * keep, q.z + (h.end[2] - P_START[2]) * keep];
+  const dk = smooth(0, SEAT_F, f);
+  const drape: [number, number] = [h.drape[0] + (CUT_A_DRAPE[0] - h.drape[0]) * dk, h.drape[1] + (CUT_A_DRAPE[1] - h.drape[1]) * dk];
+  return { end, dir: slerp(norm(h.dir), D_SOCK, turn), roll: 90 * (1 - turn), drape };
 };
-/** current: 0 until the face seats, then the front runs at one speed from the plug to the hall (there by f40) */
+/** current: 0 until the face seats (its first frame is f28, as in v1), then the front runs at one speed from the plug to the
+ *  hall (there by f40) */
+const CURRENT_F0 = 27;
 const CURRENT_T = 13;
-const currentAt = (f: number) => c01((f - SEAT_F) / CURRENT_T);
-const litAt = (f: number) => c01((f - (SEAT_F + CURRENT_T)) / 14);
+const currentAt = (f: number) => c01((f - CURRENT_F0) / CURRENT_T);
+const litAt = (f: number) => c01((f - (CURRENT_F0 + CURRENT_T)) / 14);
 
 
 
@@ -193,9 +212,9 @@ const litAt = (f: number) => c01((f - (SEAT_F + CURRENT_T)) / 14);
 {
   const p0 = plugAt(0);
   const c0 = camAt(0) as Record<string, number>;
-  const ca = CUT_A_END_CAM as Record<string, number>;
+  const ca = CUT_A_END_CAM_V2 as Record<string, number>;
   const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
-  const ok = [0, 1, 2].every((i) => near(p0.end[i], CUT_A_PLUG_END.end[i]) && near(p0.dir[i], CUT_A_PLUG_END.dir[i])) && p0.roll === CUT_A_PLUG_END.roll && p0.drape === CUT_A_PLUG_END.drape && Object.keys(ca).every((k) => near(c0[k], ca[k]));
+  const ok = [0, 1, 2].every((i) => near(p0.end[i], CUT_A_PLUG_END_V2.end[i]) && near(p0.dir[i], CUT_A_PLUG_END_V2.dir[i])) && p0.roll === CUT_A_PLUG_END_V2.roll && [0, 1].every((i) => near(p0.drape[i], CUT_A_PLUG_END_V2.drape[i])) && Object.keys(ca).every((k) => near(c0[k], ca[k]));
   if (!ok) throw new Error("HaveToBeNuclear: f0 no longer matches cut A's last frame");
 }
 
