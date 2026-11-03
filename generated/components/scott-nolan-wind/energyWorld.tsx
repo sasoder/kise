@@ -13,10 +13,12 @@
 //   <DataCenter S lit? dim? shadow?>, DC, DC_AT, DC_OUTLET
 //   <PowerCable end dir roll? current? from? rise? lead? shadow?>, PLUG, CABLE_R, cablePoints(...)
 //   <PlinthColumn kind rise height level fill? camF rung? order?>, columnShadowItems(...), COLUMN
+//   <PlantLabels only? dim? shadow?>, LABEL, LABEL_TEXT, labelFootOf, labelTopOf, labelWidthOf, labelShadowItems (opt-in)
 //   CUT_A_END_CAM, CUT_A_PLUG_END (cut A's resolved camera and plug, where cut C opens)
 // ===================================================================================================================
 export * from "./energyCore";
 export * from "./energyPlants";
 export * from "./energyDataCenter";
 export * from "./energyColumn";
+export * from "./energyLabels";
 export * from "./cutAState";

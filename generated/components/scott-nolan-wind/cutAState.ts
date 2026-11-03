@@ -16,6 +16,17 @@ export const CUT_A_TRACK = nuclearTrack(
   CUT_A_DURATION,
 );
 export const cutACamAt = (f: number): NuclearCam => nuclearCamAt(CUT_A_TRACK, f);
+/**
+ * cut A v2 (plant labels): the same track with the opening lifted, so the labels under the plinths clear the caption
+ * band (y 1080) from f0. The lift (screen px on cy) eases out to nothing by f40, so cut A v2's last frame is exactly
+ * CUT_A_END_CAM. cutACamAt / CUT_A_END_CAM keep the v1 values (cut C imports them).
+ */
+export const CUT_A_V2_LIFT = { cy: -60, until: 40 } as const;
+export const cutACamAtV2 = (f: number): NuclearCam => {
+  const c = cutACamAt(f);
+  const t = Math.min(1, Math.max(0, f / CUT_A_V2_LIFT.until));
+  return { ...c, cy: c.cy + CUT_A_V2_LIFT.cy * (1 - t * t * (3 - 2 * t)) };
+};
 
 // the plug's drift along the row: it comes in over nuclear's right, passes over nuclear without stopping and eases toward
 // gas, its prongs leading, looking about as it goes; on the last frame it hangs between gas and nuclear, still drifting
@@ -35,3 +46,15 @@ export const cutAPlugAt = (f: number): { end: V3; dir: V3; roll: number; drape: 
 };
 export const CUT_A_END_CAM: NuclearCam = cutACamAt(CUT_A_DURATION - 1);
 export const CUT_A_PLUG_END = cutAPlugAt(CUT_A_DURATION - 1);
+
+/**
+ * cut A v2: the same plug path, but the cable's hanging run lands so that it crosses the label row in the gap between
+ * NUCLEAR and WIND in every frame (it never runs across a label). The landing point is drape[0] of the plug's height
+ * beside the tail; it eases from just under the plug (the opening) to beside it, which keeps the cable's touchdown on
+ * the board nearly still while the plug drifts left. drape[1] stays CUT_A_DRAPE's.
+ */
+export const cutADrapeV2 = (f: number): [number, number] => [-0.09 + 0.47 * (1 - Math.exp(-f / 14)), CUT_A_DRAPE[1]];
+export const cutAPlugAtV2 = (f: number): { end: V3; dir: V3; roll: number; drape: [number, number] } => ({ ...cutAPlugAt(f), drape: cutADrapeV2(f) });
+/** cut A v2's last frame (where cut C v2 opens): camera (equal to CUT_A_END_CAM) and plug + cable (end, dir, roll, drape) */
+export const CUT_A_END_CAM_V2: NuclearCam = cutACamAtV2(CUT_A_DURATION - 1);
+export const CUT_A_PLUG_END_V2 = cutAPlugAtV2(CUT_A_DURATION - 1);

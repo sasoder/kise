@@ -13,8 +13,11 @@
 // dome) and pulls back and down, so that by "data centers" (f40-45) the plug's cable leads the eye down along the board to
 // the data center in the foreground. Meanwhile the plug drifts left along the row, prongs leading, looking about: it passes
 // over nuclear without stopping and on the last frame hangs between gas and nuclear, still drifting (cut C seats it).
-// AMBER = nuclear: only the small steady core in the dome; the plug does not favour it. No labels: the plants name themselves.
-// Camera track and plug path live in cutAState.ts (CUT_A_END_CAM / CUT_A_PLUG_END for cut C's join).
+// AMBER = nuclear: only the small steady core in the dome; the plug does not favour it.
+// v2 (user note, Nov 3): a name label under each plinth (COAL GAS NUCLEAR WIND SOLAR, all cream, part of the set from f0);
+// the opening is lifted (cutACamAtV2) so the labels clear the caption band along the whole crane.
+// Camera track and plug path live in cutAState.ts (CUT_A_END_CAM / CUT_A_PLUG_END for cut C's join; v2's last frame is CUT_A_END_CAM_V2 / CUT_A_PLUG_END_V2;
+// its cable crosses the label row between NUCLEAR and WIND in every frame).
 //
 // SOURCES: none (no figures on screen).
 // ---------------------------------------------------------------------------
@@ -22,8 +25,8 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { NuclearStage } from "../scott-nolan-uranium/nuclearWorld";
-import { CUT_A_DURATION, CUT_A_S0, cutACamAt, cutAPlugAt } from "./cutAState";
-import { DataCenter, Lineup, PowerCable } from "./energyWorld";
+import { CUT_A_DURATION, CUT_A_S0, cutACamAtV2, cutAPlugAtV2 } from "./cutAState";
+import { DataCenter, Lineup, PlantLabels, PowerCable } from "./energyWorld";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 57;
@@ -34,8 +37,8 @@ if (CUT_A_DURATION !== DURATION) throw new Error("cutAState's duration must matc
 const WhatTypeOfEnergy: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
   const S = CUT_A_S0 + f;
-  const cam = cutACamAt(f);
-  const plug = cutAPlugAt(f);
+  const cam = cutACamAtV2(f);
+  const plug = cutAPlugAtV2(f);
   return (
     <NuclearStage
       cam={cam}
@@ -45,6 +48,7 @@ const WhatTypeOfEnergy: React.FC<z.infer<typeof schema>> = () => {
       world={
         <>
           <Lineup S={S} />
+          <PlantLabels />
           <DataCenter S={S} />
           <PowerCable end={plug.end} dir={plug.dir} roll={plug.roll} drape={plug.drape} />
         </>
