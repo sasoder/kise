@@ -37,7 +37,7 @@ import { z } from "zod";
 import { COLOR, FONT_LABEL, FONT_NUM } from "../kits/cheeky-pint/stoutShared";
 import { NuclearStage, SoftShadows, nuclearProject, nuclearTrack, nuclearCamAt, type NuclearCam, type ShadowItem } from "../scott-nolan-uranium/nuclearWorld";
 import { DEATHS_LABEL, DEATHS_PER_TWH } from "./energyFacts";
-import { COLUMN, Lineup, PLINTH, PlinthColumn, c01, columnShadowItems, glide, slotOf, smooth, type PlantKind } from "./energyWorld";
+import { COLUMN, Lineup, PLINTH, PlantLabels, PlinthColumn, c01, columnShadowItems, glide, slotOf, smooth, type PlantKind } from "./energyWorld";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 155;
@@ -77,27 +77,29 @@ const PAIR_X = (colAt("nuclear")[0] + colAt("wind")[0]) / 2;
 
 // --- the camera (orbit about a target on the slot line; cy is where the target lands on screen)
 const TRACK = nuclearTrack(
-  { tx: -244, ty: 200, tz: -66, d: 1460, yaw: -12, pitch: 12, f: 2200, cx: 540, cy: 1210 },
+  { tx: -213, ty: 200, tz: -66, d: 1600, yaw: -4, pitch: 14, f: 2200, cx: 540, cy: 1215 },
   [
-    { f0: -24, f1: 104, to: { d: 1390, yaw: -11, cy: 1222 } },
-    { f0: 84, f1: 128, to: { tx: PAIR_X, ty: 290, d: 960, pitch: 8, yaw: 3, cy: 880 } },
-    { f0: 124, f1: 190, to: { d: 930, yaw: 5 } },
+    { f0: -24, f1: 104, to: { d: 1575, yaw: -3, cy: 1221 } },
+    { f0: 84, f1: 128, to: { tx: 122, ty: 290, d: 1075, pitch: 20, yaw: 2, cy: 932 } },
+    { f0: 124, f1: 190, to: { d: 1017, yaw: 4, cy: 945 } },
   ],
   DURATION,
 );
-// the rotor turns always. While it is off frame (to f88) it turns slowly in a phase where no blade points far enough left for
-// its tip to reach into the opening's right edge; it is up to its real pace (2.4 deg per frame, about 10 rpm) before the truck
-// reveals it. Precomputed per frame so it is deterministic.
-const SPIN0 = 50;
+// wind's plinth edge and two blade tips sit in the opening's right margin (the plinths are 10 units apart, so no padded framing
+// of coal-gas-nuclear can leave wind out). Until f80 the rotor is parked in the phase that reaches least far left (one blade
+// pointing right, two at 60 deg off horizontal) and wind is down in the board tone; it spins up to its real pace (2.4 deg per
+// frame, about 10 rpm) over f80-104 as the truck turns to it. Precomputed per frame so it is deterministic.
+const SPIN0 = 90;
 const SPIN = (() => {
   const out = [SPIN0];
-  for (let f = 1; f <= DURATION + 2; f++) out.push(out[f - 1] + 0.7 + 1.7 * smooth(80, 104, f));
+  for (let f = 1; f <= DURATION + 2; f++) out.push(out[f - 1] + 2.4 * smooth(80, 104, f));
   return out;
 })();
 const spinAt = (f: number) => SPIN[Math.max(0, Math.min(SPIN.length - 1, Math.round(f)))];
 export const camAt = (f: number): NuclearCam => nuclearCamAt(TRACK, f);
 // the slot decal floats 0.4 above the plinth top and draws after the opaque fill, so a fill's first frame starts above it
 const FIRST_FILL = 0.7;
+const WIND_HIDE = 1;
 
 // --- numerals and the unit: world-space billboards that slide up while fading in. The numerals' world size eases with the truck.
 const numUnits = (f: number) => 44 - 6 * glide(92, 128, f);
@@ -163,6 +165,8 @@ const SaferThanWind: React.FC<z.infer<typeof schema>> = () => {
   const cam = camAt(f);
   const lit = glide(26, 40, f);
   const recede = 0.32 * glide(26, 40, f);
+  // wind's plinth edge sits in the opening's right margin: it stays down in the board tone until the truck turns to it
+  const hidden = WIND_HIDE * (1 - glide(84, 102, f));
   const state = columnsAt(f);
   const shadows: ShadowItem[] = state.flatMap((c) => columnShadowItems(c.kind, c.rise, Math.min(c.height, 640), Math.min(c.level, 640)).map((it) => ({ ...it, x: it.x + DX })));
   const nu = numUnits(f);
@@ -180,8 +184,9 @@ const SaferThanWind: React.FC<z.infer<typeof schema>> = () => {
             smoke={{ coal: 1.5, gas: 0.45 }}
             spin={spinAt(f)}
             lift={{ nuclear: lit, wind: 0.35 * glide(100, 116, f) }}
-            dim={{ coal: recede, gas: recede }}
+            dim={{ coal: recede, gas: recede, wind: hidden }}
           />
+          <PlantLabels only={["coal", "gas", "nuclear", "wind"]} dim={{ coal: recede, gas: recede, wind: hidden }} />
           <SoftShadows items={shadows} y={0.02} />
           {state.map((c, i) => (
             <group key={c.kind} position={[DX, 0, 0]}>
