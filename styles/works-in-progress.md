@@ -30,8 +30,11 @@ Each page is one theme pair from the site: a pale printed paper and its dark ink
   a hard offset one.
 - **Ink marks:** postmarks, stamps and rules print into the paper: `mix-blend-mode: multiply` with a rough, uneven ink
   texture and slight misregistration. Ink overlapping a photo darkens it.
-- **Postage stamps** are the house object, from the magazine's own feature art: perforated white-bordered prints with a
-  real picture, cancelled by a postmark. Use them when a thing is one of many, or sent, or counted.
+- **Postage stamps and postmarks** come from the magazine's own feature art, and the site is a reference, not a template.
+  Use one only when the line is about post or sending something. Never as decoration or as a way to
+  "label" a subject: the user rejected a Penny Black, an empire postmark, a school postmark and a £0 salary postmark in one
+  clip as forced (Nov 3: "these red stamps [don't] really add anything"). Show the real thing instead (the school's own
+  building, the MP's own banknotes): real cut-outs blended into the page are what the user likes.
 - **Real colours** only for a real brand mark or a real material whose colour is the point (gold, a lab's mark).
 - **Film life:** faint grain, new every frame. No gate weave, no glow, no gradient fills.
 
