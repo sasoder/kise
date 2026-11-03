@@ -759,7 +759,7 @@ const Q4 = new THREE.Quaternion();
 const S3 = new THREE.Vector3();
 /** the separation at clock S, in the machine's unit space. Heavy U-238 hugs the wall and sinks; a share is always being
  *  flung out from the axis. U-235 peels inward from the feed at mid height, gathers on the axis and rises to the top. */
-const fillParticles = (heavy: Any, amber: Any, S: number) => {
+const fillParticles = (heavy: Any, amber: Any, S: number, glow = 1) => {
   const R = CENTRIFUGE.R * 0.9;
   const y0 = 0.075;
   const y1 = 0.885;
@@ -801,7 +801,7 @@ const fillParticles = (heavy: Any, amber: Any, S: number) => {
     const y = lerp(0.42 + 0.14 * c, y1, u * u * 0.5 + u * 0.5);
     const th = c * 6.283 * 5 + S * (0.46 + 0.05 * b);
     P3.set(Math.cos(th) * r * R, y, Math.sin(th) * r * R);
-    const sz = 0.0037 * (0.75 + 0.5 * b) * smooth(0, 0.06, u) * (1 - smooth(0.96, 1, u));
+    const sz = 0.0037 * (1 + 0.4 * (glow - 1)) * (0.75 + 0.5 * b) * smooth(0, 0.06, u) * (1 - smooth(0.96, 1, u));
     S3.set(sz, sz, sz);
     M4.compose(P3, Q4, S3);
     amber.setMatrixAt(i, M4);
@@ -810,12 +810,14 @@ const fillParticles = (heavy: Any, amber: Any, S: number) => {
 };
 const COLUMN_FRAG = /* glsl */ `
 ${COMMON_GLSL}
+uniform float uGlow;
 varying vec3 vW; varying vec3 vN; varying vec2 vU;
 void main() {
   vec3 V = normalize(cameraPosition - vW);
   float nv = abs(dot(normalize(vN), V));
   float a = pow(nv, 2.6) * smoothstep(0.0, 0.12, vU.y) * (1.0 - smoothstep(0.93, 1.0, vU.y));
   a *= mix(0.3, 0.9, smoothstep(0.1, 0.9, vU.y));
+  a = min(1.0, a * uGlow);
   gl_FragColor = vec4(mix(uAmberTop, uAmberHot, nv * nv * 0.5), a * (1.0 - fogAt(vW)));
 }`;
 const COLUMN_VERT = /* glsl */ `
@@ -841,9 +843,11 @@ export type CentrifugeProps = {
   /** story clock */
   S: number;
   shadow?: number;
+  /** cutaway only: strength of the amber on the axis (1 = the original look) */
+  glow?: number;
 };
 /** One machine; `cutaway` shows the glass casing, the spinning rotor and the separation inside. */
-export const Centrifuge: React.FC<CentrifugeProps> = ({ at, y = 0, h = CENTRIFUGE.H, mode = "solid", rise = 1, S, shadow = 1 }) => {
+export const Centrifuge: React.FC<CentrifugeProps> = ({ at, y = 0, h = CENTRIFUGE.H, mode = "solid", rise = 1, S, shadow = 1, glow = 1 }) => {
   const o = useMemo(() => {
     const p = centrifugeParts();
     const group = new THREE.Group();
@@ -863,7 +867,7 @@ export const Centrifuge: React.FC<CentrifugeProps> = ({ at, y = 0, h = CENTRIFUG
       amber = makeParticles(AMBER_N, 1, COLOR.amberTop, 2);
       group.add(heavy, amber);
       const colG = new THREE.CylinderGeometry(CENTRIFUGE.R * 0.26, CENTRIFUGE.R * 0.26, 0.56, 20, 1, true);
-      const col = new THREE.Mesh(colG, new THREE.ShaderMaterial({ vertexShader: COLUMN_VERT, fragmentShader: COLUMN_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { ...U } }));
+      const col = new THREE.Mesh(colG, new THREE.ShaderMaterial({ vertexShader: COLUMN_VERT, fragmentShader: COLUMN_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { ...U, uGlow: { value: 1 } } }));
       col.position.y = 0.61;
       col.renderOrder = 4;
       col.frustumCulled = false;
@@ -882,12 +886,13 @@ export const Centrifuge: React.FC<CentrifugeProps> = ({ at, y = 0, h = CENTRIFUG
       front.frustumCulled = false;
       group.add(back, front);
     }
-    return { group, heavy, amber, solid, rotorMat };
+    return { group, heavy, amber, solid, rotorMat, column: group.children.find((c: Any) => c.material?.uniforms?.uGlow) };
   }, [mode]);
   o.group.position.set(at[0], y - (1 - rise) * h * RISE_SINK, -at[1]);
   o.group.scale.setScalar(h);
   o.solid.material.uniforms.uSpin.value = S * 0.34;
-  if (o.heavy) fillParticles(o.heavy, o.amber, S);
+  if (o.heavy) fillParticles(o.heavy, o.amber, S, glow);
+  if (o.column) o.column.material.uniforms.uGlow.value = glow;
   if (o.rotorMat) o.rotorMat.uniforms.uSpin.value = S * 0.34;
   return (
     <>
@@ -1010,9 +1015,10 @@ const pointIn = (pt: [number, number], r: Ring) => {
   return inside;
 };
 type LandData = { geo: Any; mask: Any; shadow: Any; box: [number, number, number, number]; ids: Map<string, number>; ms: number; verts: number };
-const landCaches = new Map<SlabProjection, LandData>();
-const buildLand = (kind: SlabProjection): LandData => {
-  const have = landCaches.get(kind);
+const landCaches = new Map<string, LandData>();
+const buildLand = (kind: SlabProjection, islandMin = 0.06): LandData => {
+  const key = `${kind}:${islandMin}`;
+  const have = landCaches.get(key);
   if (have) return have;
   const projection = kind === "tall" ? projTall : proj;
   const t0 = performance.now();
@@ -1061,7 +1067,7 @@ const buildLand = (kind: SlabProjection): LandData => {
           if (out.length > 1 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) < 0.02) out.pop();
           return out;
         })
-        .filter((r) => r.length >= 3 && Math.abs(ringArea(r)) > 0.06);
+        .filter((r) => r.length >= 3 && Math.abs(ringArea(r)) > islandMin);
       if (!clean.length) continue;
       clean.sort((a, b) => Math.abs(ringArea(b)) - Math.abs(ringArea(a)));
       const sign = Math.sign(ringArea(clean[0]));
@@ -1198,7 +1204,7 @@ const buildLand = (kind: SlabProjection): LandData => {
   const mask = raster(WORLD_SLAB.PPU, WORLD_SLAB.PPU * 1.25);
   const shadow = raster(1.6, 1.6 * 2.6);
   const made: LandData = { geo: g, mask, shadow, box: [minX, minZ, bw, bh], ids, ms: performance.now() - t0, verts: pos.length / 3 };
-  landCaches.set(kind, made);
+  landCaches.set(key, made);
   return made;
 };
 const LAND_VERT = /* glsl */ `
@@ -1289,7 +1295,7 @@ void main() {
   gl_FragColor = vec4(mix(col, uFogCol, fogAt(vW)), 0.0);
 }`;
 /** How long the slab took to build on this page (ms), for the stage's performance notes. */
-export const worldSlabBuildMs = (kind: SlabProjection = "equal-earth") => landCaches.get(kind)?.ms ?? -1;
+export const worldSlabBuildMs = (kind: SlabProjection = "equal-earth", islandMin = 0.06) => landCaches.get(`${kind}:${islandMin}`)?.ms ?? -1;
 /** Land as a lifted clay card. highlight: { ISO alpha-2 or numeric id: 0..1 } raises the country and warms it to amber. */
 export const WorldSlab: React.FC<{
   highlight?: Record<string, number>;
@@ -1299,10 +1305,12 @@ export const WorldSlab: React.FC<{
   zoomAbout?: { x: number; z: number; m: number };
   /** "equal-earth" (default, mapProject) or "tall" (mapProjectTall) */
   projection?: SlabProjection;
-}> = ({ highlight, dim = 0, shadow = 1, zoomAbout, projection = "equal-earth" }) => {
+  /** islands smaller than this (square world units) are left out; their walls read as spikes from a low camera */
+  islandMin?: number;
+}> = ({ highlight, dim = 0, shadow = 1, zoomAbout, projection = "equal-earth", islandMin = 0.06 }) => {
   const floorRef = React.useContext(FloorCtx);
   const o = useMemo(() => {
-    const d = buildLand(projection);
+    const d = buildLand(projection, islandMin);
     const mat = new THREE.ShaderMaterial({
       vertexShader: LAND_VERT,
       fragmentShader: LAND_FRAG,
@@ -1323,7 +1331,7 @@ export const WorldSlab: React.FC<{
     me.frustumCulled = false;
     me.renderOrder = -90;
     return { d, mat, me };
-  }, [projection]);
+  }, [projection, islandMin]);
   const hi = o.mat.uniforms.uHi.value as Float32Array;
   hi.fill(0);
   if (highlight) {
