@@ -15,12 +15,14 @@
 // (left f0, right f9, left f18, right f27) on "where are we going to get"; in each, a weak dashed amber ghost of the missing
 // pellet shows while the light is on it and fades as the light moves on. Then it
 // swings ahead (f32-f42) onto the one pad at the aisle's end, the spot made for it. Its tag types in on its words: "19" (f39),
-// ".75" (f47), "%" (f60). The push arrives over that pad (f71-f85): its socket is empty, only a faint amber ghost outline of the
-// pellet stack that should stand in it (f72-f86). "HALEU" lands under the tag (f100-f108). A slow creep in to the cut, no hold.
+// ".75" (f47), "%" (f60). The push arrives over that pad (f71-f85): its dashed amber ghost shows first (f66-f74), then the real
+// uranium pellet, solid and glowing in cut 5's palette (fuelShared UraniumPellet + PelletGlow), rises up out of the socket into
+// that outline on "uranium" (f74-f90) and the ghost goes (f80-f88): the search found it (rev Nov 4, user: "the same orange
+// palette thing like we shown earlier"). "HALEU" lands under the tag (f100-f108). A slow creep in to the cut, no hold.
 // CAUSE: a pad brightens, and its ghost shows, only while the light's pool is on it (the store is dark round the light); the
-// house light pool rides the search light's spot. The end pad's ghost is the stronger one and it holds.
-// AMBER = uranium fuel only: the ghosts of the missing pellets are the only amber in the cut. Pads cream, dimmed to board in the dark.
-// PELLET: the ghost is drawn to cut A's shared pellet (fuelShared PELLET: diameter = height, chamfer 0.06 of the height), upright.
+// house light pool rides the search light's spot. The end pad's pellet comes up only once the light and the push are on it.
+// AMBER = uranium fuel only: the ghosts of the missing pellets and the found pellet are the only amber in the cut. Pads cream, dimmed to board in the dark.
+// PELLET: the found pellet is cut A's shared pellet and every ghost is drawn to it (fuelShared PELLET: diameter = height, chamfer 0.06 of the height), upright.
 //
 // SOURCES (COMMON.md, verified by the director Nov 4): HALEU is enriched above 5% and below 20% U-235; advanced reactors mostly
 // want 19.75%.
@@ -34,7 +36,7 @@ import * as THREE from "three";
 import { z } from "zod";
 import { CAM_DAMP, CAM_STIFF, camEase } from "../kits/cheeky-pint/oceanShared";
 import { COLOR, FONT_NUM, Label, TRACK } from "../kits/cheeky-pint/stoutShared";
-import { PELLET } from "./fuelShared";
+import { PELLET, PelletGlow, UraniumPellet, type PelletPose } from "./fuelShared";
 import { KEY_LIGHT, NuclearStage, SHADOW_LEN, SoftShadows, nuclearProject, type NuclearCam, type ShadowItem } from "../scott-nolan-uranium/nuclearWorld";
 
 export const FPS = 24000 / 1001;
@@ -473,15 +475,27 @@ const Shaft: React.FC<{ cam: NuclearCam; b: { x: number; z: number; r: number } 
   );
 };
 
-const GHOST_F0 = 72;
-const GHOST_F1 = 86;
+const GHOST_F0 = 66;
+const GHOST_F1 = 74;
+// the found pellet: up out of the socket (its top starts below the socket floor, inside the pad) into its seat, ease-out
+const FOUND_F0 = 74;
+const FOUND_F1 = 90;
+const GHOST_OUT0 = 80;
+const GHOST_OUT1 = 88;
+const foundPose = (f: number): PelletPose => {
+  const u = easeOut3((f - FOUND_F0) / (FOUND_F1 - FOUND_F0));
+  const y0 = PEL_Y0 - (1 - u) * (PEL_H + 0.5);
+  const c: [number, number, number] = [DEST.x, y0 + PEL_H / 2, DEST.z];
+  // the glow only above the pad's top: below it the pellet is inside the socket
+  return { c, h: PEL_H, hideBelow: DEST_H - c[1] };
+};
 
 const Overlay: React.FC<{ cam: NuclearCam; f: number }> = ({ cam, f }) => {
   const p = nuclearProject(cam, NUM_AT);
   const px = NUM_WORLD * p.s;
   const lab = nuclearProject(cam, [NUM_AT[0], NUM_AT[1] - LAB_DROP, NUM_AT[2]]);
   const labPx = LAB_WORLD * lab.s;
-  const g = smooth(GHOST_F0, GHOST_F1, f);
+  const g = smooth(GHOST_F0, GHOST_F1, f) * (1 - smooth(GHOST_OUT0, GHOST_OUT1, f));
   const gLift = (1 - easeOut3((f - GHOST_F0) / (GHOST_F1 - GHOST_F0))) * -2.5;
   // each part of the tag keeps its place in the whole centred string and comes up into it on its word
   let prevOff = 0;
@@ -528,11 +542,13 @@ const AlmostTwentyPercent: React.FC<z.infer<typeof schema>> = () => {
           <FineFloor />
           <SoftShadows items={SHADOWS} />
           <Store f={f} fog={FOG_UNITS} />
+          {f >= FOUND_F0 ? <UraniumPellet pose={foundPose(f)} /> : null}
         </>
       }
       overlay={
         <>
           <Shaft cam={cam} b={b} />
+          {f >= FOUND_F0 + 2 ? <PelletGlow cam={cam} poses={[foundPose(f)]} /> : null}
           <Overlay cam={cam} f={f} />
         </>
       }
