@@ -13,17 +13,17 @@
 // DURATION: the slot 30.155 -> 37.746 s = 7.591 s x 23.976 = 182 frames (f0..f181).
 //
 // THE MOTION: one view over the tilted North Atlantic, looking east-north-east from inland US (yaw 67, pitch 48): the US group
-// near and large in the lower middle, Scandinavia, the Baltic and western Russia far at the top. f0: a convoy of amber 30B
-// cylinders (few, big, one speed, one spacing: 6.8 units a frame, 24 frames apart) runs out of a cream depot at St Petersburg, round Europe and across the ocean,
-// up the coast through an open boom gate and into its twin, a cream receiving depot at the mouth of Chesapeake Bay, beside the
-// US group (three SMR modules, one gigawatt plant, one empty lit slot at its centre-front). RUSSIA (by f10) and U.S. (by f20)
-// are map type printed flat on their land. From f36 a cream date counter over the mid-Atlantic rolls to JAN 1 2028 (lands f61);
-// the St Petersburg depot releases its last cylinder at ~f40 and none after ~f62; the last one through clears the gate by ~f64;
-// only then does the arm swing down (f65, contact f74, the cause); the two still on the water keep coming at full speed and brake
-// to a stop nose to tail against the arm (f90, f112), the lane draining to board dim behind the last of them: by ~f116 the route
-// back to Russia is dim and empty. From f85 one slow eased push in on the US group, settling ~f150 on the empty slot with the queue and
-// the dim route beyond; then a living hold (steam, a slow creep). The US end is exaggerated x1.6 against the map so it reads.
-// AMBER = uranium fuel (the cylinders) and nothing else; cream = land, reactors, depots, gate; the sea is the bare board.
+// near and large in the lower middle, Scandinavia, the Baltic and western Russia far at the top. f0: a steady, busy stream of
+// amber 30B cylinders (one size, one speed, one spacing: 9.5 units a frame, one every 7 frames, ~7 on the route at once) runs
+// out of the warm-lit dispatch door of a cream depot at St Petersburg, round Europe and across the ocean, up the coast and into
+// its twin, a cream receiving depot at the mouth of Chesapeake Bay beside the US group (three SMR modules, one gigawatt plant,
+// one empty lit slot at its centre-front). RUSSIA (by f10) and U.S. (by f20) are map type printed flat on their land. From f36
+// a cream date counter over the mid-Atlantic rolls to JAN 1 2028 (lands f61). THE CUT-OFF IS AT THE SOURCE, on "that" (f68):
+// the last cylinder leaves at f67 and nothing follows; the depot's door light goes out (f67-72) and the door shutters (f70-79).
+// The stream's tail pulls away from Russia, the lane behind it draining to board dim, and runs into the US depot by ~f120:
+// nothing arriving. From f85 one slow eased push in on the US group, settling ~f150 on the empty slot with the dim route
+// beyond; then a living hold (steam, a slow creep). The US end is exaggerated x1.6 against the map.
+// AMBER = uranium fuel (the cylinders) and nothing else; cream = land, reactors, depots; the sea is the bare board.
 //
 // SOURCES (COMMON.md, verified by the director, Nov 4): Russia (Rosatom/TENEX) is the only commercial HALEU supplier today; the
 // Prohibiting Russian Uranium Imports Act (13 May 2024) lets DOE waivers allow imports only until 1 Jan 2028. The cylinder is a
@@ -41,13 +41,10 @@ import {
   CYL_D,
   CYL_L,
   DEPOT_SCALE,
-  GATE_SCALE,
   GW_RF,
   GW_SCALE,
-  G_S,
   LAND_Y,
   L_END,
-  QUEUE,
   SLOT_D,
   SLOT_RF,
   SLOT_W,
@@ -57,10 +54,11 @@ import {
   US_M,
   US_R,
   US_YAW,
-  armDeg,
   cylAt,
   laneAt,
   laneLit,
+  lightAt,
+  shutAt,
   projectTall,
   smooth,
   travelY,
@@ -68,7 +66,7 @@ import {
   type Cyl,
   type V3,
 } from "./waiverMotion";
-import { BoomGate, Cylinders, DEPOT, Depot, EmptySlot, GATE, LaneRibbon, SlotRim, type CylPose } from "./waiverWorld";
+import { Cylinders, DEPOT, Depot, EmptySlot, LaneRibbon, SlotRim, type CylPose } from "./waiverWorld";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 182;
@@ -86,19 +84,9 @@ const c01 = (v: number) => Math.max(0, Math.min(1, v));
 
 // --- the two depots: St Petersburg's door is the lane's start, the receiving depot's door (a twin, off the Delmarva coast) its end
 const DOOR = laneAt(0);
+/** the St Petersburg depot drawn bigger than its US twin: it is far off, and its dispatch door is the cut-off's beat */
+const RU_DEPOT_SCALE = 9;
 const US_DOOR = laneAt(L_END);
-
-// --- the US gate on the water short of the receiving depot
-const G_P = laneAt(G_S);
-// the post on the near side of the lane; the arm reaches over it back and to the left, so lying down it reads as a slant across
-// the lane, not as a bar pointing into the picture (which would look the same as the raised arm)
-const ARM_DIR: [number, number] = (() => {
-  const x = US_F[0] - US_R[0] * 0.9;
-  const z = US_F[1] - US_R[1] * 0.9;
-  const l = Math.hypot(x, z);
-  return [x / l, z / l];
-})();
-const GATE_AT: [number, number] = [G_P.x - ARM_DIR[0] * 0.75 * GATE_SCALE, G_P.z - ARM_DIR[1] * 0.75 * GATE_SCALE];
 
 // --- the reactors round the empty slot (layout in waiverMotion)
 const SMRS = SMR_RF.map(([r, f]) => usAt(r, f));
@@ -260,7 +248,7 @@ const cylShadow = (p: CylPose, surf: number): ShadowItem | null => {
 };
 
 // label and counter places
-const RUSSIA_AT = mapProjectTall(40, 55); // south-west on Russia's land, so it sits well clear of the top edge at the end
+const RUSSIA_AT = mapProjectTall(45.5, 50.5); // on the Volga, just right of the St Petersburg depot's door (the cut-off's beat) and clear of the top edge at the end
 const US_LABEL_AT = usAt(-3, -11); // just under the group, clear of the slot
 const COUNTER_AT: V3 = (() => {
   const p = mapProjectTall(-38, 47.5);
@@ -272,7 +260,7 @@ const WaiverRunsOut: React.FC<z.infer<typeof schema>> = () => {
   const S = f + 900;
   const cam = camAt(f);
   const poses: (CylPose | null)[] = [];
-  for (let j = -AHEAD; j <= QUEUE; j++) poses.push(poseOf(cylAt(j, f)));
+  for (let j = -AHEAD; j <= 0; j++) poses.push(poseOf(cylAt(j, f)));
   const seaSh: ShadowItem[] = [];
   for (const p of poses) {
     if (!p) continue;
@@ -296,15 +284,13 @@ const WaiverRunsOut: React.FC<z.infer<typeof schema>> = () => {
           <SoftShadows
             items={[
               ...seaSh,
-              { x: GATE_AT[0], z: GATE_AT[1], len: GATE.POST_H * GATE_SCALE * SHADOW_LEN, r: 0.4 * GATE_SCALE, soft: 0.25 * GATE_SCALE },
-              ...[DOOR, US_DOOR].map((d) => ({ x: d.x - d.tx * DEPOT.W * 0.5 * DEPOT_SCALE * (d === DOOR ? 1 : -1), z: d.z - d.tz * DEPOT.W * 0.5 * DEPOT_SCALE * (d === DOOR ? 1 : -1), len: (DEPOT.H + 1) * DEPOT_SCALE * SHADOW_LEN, r: DEPOT.D * 0.5 * DEPOT_SCALE, soft: 0.6 * DEPOT_SCALE })),
+              ...([[DOOR, RU_DEPOT_SCALE, 1], [US_DOOR, DEPOT_SCALE, -1]] as const).map(([d, k, sg]) => ({ x: d.x - d.tx * DEPOT.W * 0.5 * k * sg, z: d.z - d.tz * DEPOT.W * 0.5 * k * sg, len: (DEPOT.H + 1) * k * SHADOW_LEN, r: DEPOT.D * 0.5 * k, soft: 0.6 * k })),
             ]}
             y={0.02}
           />
           <SoftShadows items={usShadows} y={LAND_Y + 0.02} />
-          <Depot at={[DOOR.x, DOOR.z]} facing={[DOOR.tx, DOOR.tz]} y={0} scale={DEPOT_SCALE} />
+          <Depot at={[DOOR.x, DOOR.z]} facing={[DOOR.tx, DOOR.tz]} y={0} scale={RU_DEPOT_SCALE} shut={shutAt(f)} light={lightAt(f)} />
           <Depot at={[US_DOOR.x, US_DOOR.z]} facing={[-US_DOOR.tx, -US_DOOR.tz]} y={0} scale={DEPOT_SCALE} />
-          <BoomGate at={GATE_AT} across={ARM_DIR} y={0} angleDeg={armDeg(f)} scale={GATE_SCALE} />
           {SMRS.map((at, i) => (
             <SmrModule key={i} at={at} y={LAND_Y} scale={SMR_SCALE} shadow={false} />
           ))}
@@ -314,7 +300,7 @@ const WaiverRunsOut: React.FC<z.infer<typeof schema>> = () => {
       }
       overlay={
         <>
-          <MapType cam={cam} at={RUSSIA_AT} text="RUSSIA" t={c01((f - 0) / 10)} w={150} stretch={3.4} />
+          <MapType cam={cam} at={RUSSIA_AT} text="RUSSIA" t={c01((f - 0) / 10)} w={110} stretch={3.4} />
           <MapType cam={cam} at={US_LABEL_AT} text="U.S." t={c01((f - 8) / 12)} w={15 * US_M} stretch={1.15} />
           <DateCounter cam={cam} at={COUNTER_AT} f={f} size={17} />
         </>

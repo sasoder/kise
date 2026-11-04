@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// waiverMotion: the pure motion model of WaiverRunsOut (scott-nolan-fuel, cut 30): the sea lane, the convoy's timing, the gate,
+// waiverMotion: the pure motion model of WaiverRunsOut (scott-nolan-fuel, cut 30): the sea lane, the convoy's timing, the cut-off,
 // the drain, the US layout. No React, no fonts, so it also runs under bun for timing printouts. World units as in nuclearWorld.
 // ---------------------------------------------------------------------------
 // @ts-expect-error untyped module
@@ -36,7 +36,7 @@ export const LAND_Y = 3.4; // nuclearWorld's slabTop() (WaiverRunsOut asserts th
 // ===================================================================================================================
 // THE US END, laid out square to the camera (yaw US_YAW): R = screen right, F = into the picture, in units of US_M. The empty
 // slot sits centre front; the reactors stand round it (two SMRs either side, one behind right, the gigawatt plant behind left).
-// The convoy ends at a receiving depot on the water off the Delmarva coast, a twin of St Petersburg's, behind the boom gate.
+// The convoy ends at a receiving depot on the water off the Delmarva coast, a twin of St Petersburg's.
 // ===================================================================================================================
 const D2R = Math.PI / 180;
 export const US_YAW = 67;
@@ -174,62 +174,39 @@ export const laneSOf = (x: number, z: number) => {
 
 // ===================================================================================================================
 // THE CONVOY. One size of cylinder (30B, 2.7 : 1), exaggerated so it reads in the wide view. St Petersburg releases one every
-// SPACING frames; every cylinder runs at one speed V the whole way, on the water, into the US depot (cut at its door).
-// THE STOP: the last release is before ~f62; the last one through clears the gate; the arm comes down (f65, contact f74); every cylinder still on the water comes on at
-// speed and stops nose to tail against the arm. By ~f110 the lane back to Russia is empty and drained to board dim.
+// SPACING frames, a steady busy stream; every cylinder runs at one speed V the whole way, on the water, into the US receiving
+// depot (cut at its door).
+// THE CUT-OFF is at the source, on "that" (f68): the last one leaves at LAST_RELEASE and nothing follows; the depot's warm
+// door light goes out as it leaves and the door shutters. The stream's tail pulls away from Russia, the lane behind it drains
+// to board dim, and the tail runs into the US depot by ~f120.
 // ===================================================================================================================
 export const CYL_ASPECT = 2.7;
 export const CYL_D = 4.1;
 export const CYL_L = CYL_D * CYL_ASPECT;
 export const LIFT = 0.35 * US_M; // travelling: one level up off the water
 export const L_END = LANE.length;
-export const V = 6.8;
-export const SPACING = 24; // frames between releases
+export const V = 9.5;
+export const SPACING = 7; // frames between releases: ~7 on the route at once
 export const SP = V * SPACING; // units between cylinders
-export const GATE_SCALE = 8.1; // 3x the v2 gate (the v1 gate was drawn for a 1.0 cylinder)
-/** the gate's line: on the water, short of the depot door */
-export const G_S = L_END - 1.2 * CYL_L - 4;
 export const travelY = (moving = 1) => CYL_D / 2 + LIFT * moving;
 
 // --- the beats
-export const TAIL_AT_GATE = 62.5; // the last one through: its centre crosses the gate's line (its tail is clear by ~f63.3)
-export const T_TAIL = TAIL_AT_GATE - G_S / V; // its release
-export const LAST_RELEASE_BY = 62;
-export const QUEUE = Math.floor((LAST_RELEASE_BY - T_TAIL) / SPACING); // released after the tail, before the stop
-export const ARM_F0 = 65; // the swing starts only once the last one through is clear of the gate
-export const ARM_F1 = 74; // contact: the arm lies across the lane
-export const OPEN_DEG = 82;
-export const armDeg = (f: number) => OPEN_DEG * (1 - glide(ARM_F0, ARM_F1, f));
-export const AHEAD = 6; // the tail (k 0) and the ones before it still visible at f0
-export const GAP = 1.0; // the first one's nose short of the arm's line
-export const QGAP = 2.2; // nose to tail in the queue, a clear gap so each reads as one
-export const BRAKE_D = 2.6 * CYL_L; // each brakes over this distance, constant deceleration
-const BRAKE_T = (2 * BRAKE_D) / V;
-export const releaseOf = (j: number) => T_TAIL + j * SPACING; // j > 0 queued, j = 0 the tail, j < 0 ahead of it
-export const slotOf = (j: number) => G_S - GAP - CYL_L / 2 - (j - 1) * (CYL_L + QGAP);
-/** the frame queued cylinder j stops */
-export const stopFrame = (j: number) => releaseOf(j) + (slotOf(j) - BRAKE_D) / V + BRAKE_T;
+export const LAST_RELEASE = 67; // "that" (f68): the last one out of St Petersburg; nothing after it
+export const LIGHT_F0 = 67; // the depot's door light goes out as the last one leaves
+export const LIGHT_F1 = 72;
+export const lightAt = (f: number) => 1 - glide(LIGHT_F0, LIGHT_F1, f);
+export const SHUT_F0 = 70; // then the dispatch door shutters
+export const SHUT_F1 = 79;
+export const shutAt = (f: number) => glide(SHUT_F0, SHUT_F1, f);
+export const AHEAD = 19; // the ones released before the last (j < 0); the first of them is already past the US door at f0
+export const releaseOf = (j: number) => LAST_RELEASE + j * SPACING; // j = 0 the last, j < 0 ahead of it
+/** the frame a cylinder j passes s */
+export const passFrame = (j: number, s: number) => releaseOf(j) + s / V;
+/** the frame the last one is wholly inside the US depot */
+export const LAST_IN = passFrame(0, L_END + CYL_L / 2);
 
 export type Cyl = { s: number; v: number; moving: number };
-/** cylinder j: j <= 0 runs free into the depot; j >= 1 stops at its place in the queue */
-export const cylAt = (j: number, f: number): Cyl => {
-  const t = f - releaseOf(j);
-  const free = V * t;
-  if (j <= 0) return { s: free, v: V, moving: 1 };
-  const sb = slotOf(j) - BRAKE_D;
-  if (free <= sb) return { s: free, v: V, moving: 1 };
-  const tb = Math.min((free - sb) / V, BRAKE_T);
-  const tStop = stopFrame(j);
-  return { s: sb + V * tb - (V * tb * tb) / (2 * BRAKE_T), v: V * (1 - tb / BRAKE_T), moving: 1 - smooth(tStop - 2, tStop + 6, f) };
-};
-/** the frame a free-running cylinder j passes s */
-export const passFrame = (j: number, s: number) => releaseOf(j) + s / V;
-export const QUEUE_DONE = stopFrame(QUEUE);
-/** the lane drains to board dim behind the last cylinder released; past the gate, behind the tail; under the queue once it is full */
-export const laneLit = (s: number, f: number) => {
-  let pass: number;
-  if (s >= G_S) pass = passFrame(0, s) + 2;
-  else if (s < slotOf(QUEUE) - CYL_L / 2) pass = passFrame(QUEUE, s) + 3;
-  else pass = QUEUE_DONE + 4;
-  return 1 - smooth(0, 12, f - pass);
-};
+/** cylinder j: one speed from the St Petersburg door into the US depot */
+export const cylAt = (j: number, f: number): Cyl => ({ s: V * (f - releaseOf(j)), v: V, moving: 1 });
+/** the drain follows the stream's tail from St Petersburg to the US door */
+export const laneLit = (s: number, f: number) => 1 - smooth(0, 12, f - (passFrame(0, s) + 3));

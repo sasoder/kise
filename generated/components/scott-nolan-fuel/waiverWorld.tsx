@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // waiverWorld: the props of WaiverRunsOut (scott-nolan-fuel, cut 30), on nuclearWorld's stage. RENDER --gl=angle.
-// The sea lane St Petersburg -> Baltimore on the tall map, the UF6 transport cylinders (amber = fuel), the cream depot, the
-// boom gate, the empty slot in the US land. World units as in nuclearWorld (X right, Y up, Z north; map: mapProjectTall).
+// The sea lane St Petersburg -> Baltimore on the tall map, the UF6 transport cylinders (amber = fuel), the cream depots (with
+// a door light and a shutter), the empty slot in the US land. World units as in nuclearWorld (X right, Y up, Z north; map: mapProjectTall).
 // ---------------------------------------------------------------------------
 import React, { useMemo } from "react";
 // three.js ships without type declarations here (no @types/three installed)
@@ -272,7 +272,26 @@ const clayMesh = (g: Any, dim = false, order = 1) => {
 // at = the door's centre on the ground, facing = the lane's direction out of it (unit x, z). W along the facing, D across.
 // ===================================================================================================================
 export const DEPOT = { W: 3.2, D: 2.0, H: 1.5, ROOF: 0.5, DOOR_W: 1.2, DOOR_H: 1.15 } as const;
-export const Depot: React.FC<{ at: [number, number]; facing: [number, number]; y: number; scale?: number }> = ({ at, facing, y, scale = 1 }) => {
+const DOOR_DARK = hex3("#2A1B11");
+const DOOR_WARM = hex3("#FBE2B0"); // a warm lit interior (a pale light, not the fuel's amber)
+const GLOW_VERT = /* glsl */ `
+varying vec2 vQ;
+void main() {
+  vQ = position.xy * 2.0;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+const GLOW_FRAG = /* glsl */ `
+uniform vec3 uCol;
+uniform float uA;
+varying vec2 vQ;
+void main() {
+  float d = length(vQ);
+  if (d > 1.0) discard;
+  float a = uA * pow(1.0 - d, 2.2);
+  gl_FragColor = vec4(uCol, a);
+}`;
+/** light 0..1: the door's warm interior light (1 = lit, 0 = the dark opening); shut 0..1: the shutter over the door */
+export const Depot: React.FC<{ at: [number, number]; facing: [number, number]; y: number; scale?: number; shut?: number; light?: number }> = ({ at, facing, y, scale = 1, shut = 0, light = 0 }) => {
   const o = useMemo(() => {
     const grp = new THREE.Group();
     const body = clayMesh(rboxGeo(DEPOT.W, DEPOT.H, DEPOT.D, 0.16, 0.9));
@@ -299,65 +318,46 @@ export const Depot: React.FC<{ at: [number, number]; facing: [number, number]; y
     door.renderOrder = 2;
     door.frustumCulled = false;
     grp.add(door);
-    return grp;
+    // the light's spill: a soft warm disc on the end wall and the water in front of the door (never writes the canvas alpha)
+    const gm = new THREE.ShaderMaterial({
+      vertexShader: GLOW_VERT,
+      fragmentShader: GLOW_FRAG,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.SrcAlphaFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
+      blendSrcAlpha: THREE.ZeroFactor,
+      blendDstAlpha: THREE.OneFactor,
+      uniforms: { uCol: { value: new THREE.Vector3(...DOOR_WARM) }, uA: { value: 0 } },
+    });
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(DEPOT.DOOR_W * 3.2, DEPOT.DOOR_W * 3.2), gm);
+    glow.rotation.y = Math.PI / 2;
+    glow.position.set(0.12, DEPOT.DOOR_H * 0.45, 0);
+    glow.renderOrder = 3;
+    glow.frustumCulled = false;
+    grp.add(glow);
+    // the dispatch shutter: a cream clay panel that rolls down over the door from its head (shut 0 = open, 1 = closed)
+    const shutter = clayMesh(rboxGeo(0.08, DEPOT.DOOR_H, DEPOT.DOOR_W + 0.14, 0.03, 1));
+    shutter.position.set(0.06, DEPOT.DOOR_H / 2, 0);
+    shutter.visible = false;
+    grp.add(shutter);
+    return { grp, shutter, dm, gm };
   }, []);
+  const l = Math.max(0, Math.min(1, light));
+  o.dm.color.setRGB(...(DOOR_DARK.map((v, i) => v + (DOOR_WARM[i] - v) * l) as V3), THREE.LinearSRGBColorSpace);
+  o.gm.uniforms.uA.value = 0.55 * l;
+  const k = Math.max(0, Math.min(1, shut));
+  o.shutter.visible = k > 0.001;
+  o.shutter.scale.set(1, Math.max(0.001, k), 1);
+  o.shutter.position.y = DEPOT.DOOR_H * (1 - k / 2);
   // local +X is the facing (the door's outward normal); three's z = -Z
-  o.position.set(at[0], y, -at[1]);
-  o.rotation.y = Math.atan2(facing[1], facing[0]);
-  o.scale.setScalar(scale);
-  return <primitive object={o} />;
-};
-
-// ===================================================================================================================
-// THE BOOM GATE: a post on a small footing and a striped arm on a pivot. at = the post, the arm reaches along `across`
-// (unit x, z) over the lane. open 0..1 (1 = arm raised to OPEN_DEG, 0 = level across the lane).
-// ===================================================================================================================
-export const GATE = { POST_H: 1.75, POST_W: 0.6, PIVOT_Y: 1.15, ARM_L: 4.0, ARM_T: 0.3, TAIL_L: 0.9, OPEN_DEG: 82 } as const;
-export const BoomGate: React.FC<{ at: [number, number]; across: [number, number]; y: number; angleDeg: number; scale?: number }> = ({ at, across, y, angleDeg, scale = 1 }) => {
-  const o = useMemo(() => {
-    const grp = new THREE.Group();
-    const foot = clayMesh(rboxGeo(1.0, 0.22, 1.0, 0.08, 0.2));
-    foot.position.set(0, 0.11, 0);
-    grp.add(foot);
-    const post = clayMesh(rboxGeo(GATE.POST_W, GATE.POST_H, GATE.POST_W, 0.22, 0.85));
-    post.position.set(0, GATE.POST_H / 2, 0);
-    grp.add(post);
-    const cap = clayMesh(rboxGeo(GATE.POST_W * 1.25, 0.16, GATE.POST_W * 1.25, 0.06, 1));
-    cap.position.set(0, GATE.POST_H + 0.05, 0);
-    grp.add(cap);
-    // the arm: pivots about local Z at the post's face; alternating cream and board bands (a barrier arm, not a lever)
-    const pivot = new THREE.Group();
-    pivot.position.set(GATE.POST_W / 2 + 0.12, GATE.PIVOT_Y, 0);
-    const hub = clayMesh(withClayAttrs(new THREE.CylinderGeometry(0.2, 0.2, 0.26, 20).rotateX(Math.PI / 2), 1));
-    pivot.add(hub);
-    const bands = 6;
-    const bl = GATE.ARM_L / bands;
-    for (let i = 0; i < bands; i++) {
-      const seg = clayMesh(rboxGeo(bl + (i === bands - 1 ? 0 : 0.02), GATE.ARM_T, GATE.ARM_T, i === bands - 1 ? 0.08 : 0.03, 1), i % 2 === 1);
-      seg.position.set(0.12 + bl * (i + 0.5), 0, 0);
-      pivot.add(seg);
-    }
-    const tail = clayMesh(rboxGeo(GATE.TAIL_L, GATE.ARM_T * 1.9, GATE.ARM_T * 1.6, 0.07, 0.8));
-    tail.position.set(-GATE.TAIL_L / 2 - 0.05, 0, 0);
-    pivot.add(tail);
-    grp.add(pivot);
-    return { grp, pivot };
-  }, []);
   o.grp.position.set(at[0], y, -at[1]);
-  o.grp.rotation.y = Math.atan2(across[1], across[0]);
+  o.grp.rotation.y = Math.atan2(facing[1], facing[0]);
   o.grp.scale.setScalar(scale);
-  o.pivot.rotation.z = (angleDeg * Math.PI) / 180;
   return <primitive object={o.grp} />;
-};
-/** the arm's tip and pivot in world, for audits */
-export const gateArmWorld = (at: [number, number], across: [number, number], y: number, angleDeg: number, k = 1) => {
-  const a = (angleDeg * Math.PI) / 180;
-  const px = (GATE.POST_W / 2 + 0.25) * k;
-  const L = (GATE.ARM_L + 0.25) * k;
-  return {
-    pivot: [at[0] + across[0] * px, y + GATE.PIVOT_Y * k, at[1] + across[1] * px] as V3,
-    tip: [at[0] + across[0] * (px + L * Math.cos(a)), y + GATE.PIVOT_Y * k + L * Math.sin(a), at[1] + across[1] * (px + L * Math.cos(a))] as V3,
-  };
 };
 
 // ===================================================================================================================
