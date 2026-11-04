@@ -178,6 +178,13 @@ const ASPHALT: Mat = { lit: "#8D8F86", mid: "#727469", dark: "#46483F" };
 const SHOULDER: Mat = { lit: "#A49A7E", mid: "#877E66", dark: "#4E4A3D" };
 
 type RoadKind = "hwy" | "dirt";
+/** the dirt road's soft entry: frames it runs (F0 to F1, exclusive), the frame its time ramp starts, and the screen
+ *  rows over which it goes from the ground's tone (Y0, the bottom edge) to full caliche (Y1, about the mid frame) */
+const SOFT_F0 = 112;
+const SOFT_F1 = 130;
+const SOFT_T0 = 122;
+const SOFT_Y0 = 1880;
+const SOFT_Y1 = 1000;
 /** one road's pieces as items; `sFrom`/`sTo` limit it along its length */
 /** keep the part of a world polygon (X, Z) on one side of the line Z = c (Sutherland-Hodgman) */
 const clipZ = (q: P2[], c: number, far: boolean): P2[] => {
@@ -249,6 +256,15 @@ export const roadItems = (W: World, kind: RoadKind, o: { sFrom?: number; sTo?: n
     const rM = P.r(zm);
     const pxPerU = rM * A.k;
     const sub = Math.max(1, Math.min(4, Math.round(((sn - sa) * pxPerU) / 60)));
+    // the dirt road's soft entry: its caliche share k at the piece's two ends (by their screen row, and the frame)
+    let soft: { y: [number, number]; k: [number, number]; g: string } | null = null;
+    if (kind === "dirt" && W.frame >= SOFT_F0 && W.frame < SOFT_F1) {
+      const kT = sstep(SOFT_T0, SOFT_F1 - 1, W.frame);
+      const ends = [lineAt(L, sa).p, lineAt(L, sn).p].map((q) => toK(q)[1]);
+      const kOf = (yk: number) => Math.max(kT, 1 - sstep(SOFT_Y1, SOFT_Y0, 960 + (yk - A.cam.cy) * A.k));
+      const k: [number, number] = [kOf(ends[0]), kOf(ends[1])];
+      if (Math.min(k[0], k[1]) < 0.999) soft = { y: [ends[0], ends[1]], k, g: A.tone(groundLocal(midW[0], midW[1]), zm, hM) };
+    }
     const band = (o0: number, o1: number): P2[] => {
       const a: P2[] = [];
       const b: P2[] = [];
@@ -282,15 +298,33 @@ export const roadItems = (W: World, kind: RoadKind, o: { sFrom?: number; sTo?: n
         }
       } else {
         const hw = half(sa);
-        els.push(<path key="vg" d={D(-hw - 70, hw + 70)} fill={A.tone(mixHex(formTone(RMAT.grassDry, 0.6, PAL.shadow, 0.2), RMAT.caliche.mid, 0.35), zm, hM)} opacity={0.85} />);
-        els.push(<path key="cl" d={D(-hw, hw)} fill={A.tone(mixHex(mixHex(RMAT.caliche.lit, PAL.cream, 0.28), RMAT.caliche.mid, 0.12 + 0.2 * vnoise(sa / 500, 2, 9)), zm, hM)} />);
+        // the soft entry (f112-129 only): where the road rises in from the frame's bottom edge it starts in the
+        // ground's own tone and turns caliche as it climbs into the mid frame, so no pale band races up the edge
+        const fillOf = (c: string, tag: string) => {
+          if (!soft) return c;
+          const [yA, yB] = soft.y;
+          const [kA, kB] = soft.k;
+          if (Math.abs(yB - yA) < 1) return mixHex(soft.g, c, (kA + kB) / 2);
+          const gid = `dsoft${W.frame}_${keyS}_${tag}`;
+          defs.push(
+            <linearGradient key={gid} id={gid} gradientUnits="userSpaceOnUse" x1="0" y1={n2(yA)} x2="0" y2={n2(yB)}>
+              <stop offset="0" stopColor={mixHex(soft.g, c, kA)} />
+              <stop offset="1" stopColor={mixHex(soft.g, c, kB)} />
+            </linearGradient>,
+          );
+          return `url(#${gid})`;
+        };
+        const defs: React.ReactNode[] = [];
+        els.push(<path key="vg" d={D(-hw - 70, hw + 70)} fill={fillOf(A.tone(mixHex(formTone(RMAT.grassDry, 0.6, PAL.shadow, 0.2), RMAT.caliche.mid, 0.35), zm, hM), "vg")} opacity={0.85} />);
+        els.push(<path key="cl" d={D(-hw, hw)} fill={fillOf(A.tone(mixHex(mixHex(RMAT.caliche.lit, PAL.cream, 0.28), RMAT.caliche.mid, 0.12 + 0.2 * vnoise(sa / 500, 2, 9)), zm, hM), "cl")} />);
         // two wheel ruts, a little darker, and the grassy hump between them when close
         const rw = 52;
         const op = c01((rw * pxPerU - 0.5) / 1.5);
         if (op > 0.02) {
-          els.push(<path key="rt" d={D(-170, -170 + rw) + D(170 - rw, 170)} fill={A.tone(RMAT.caliche.mid, zm, hM)} opacity={0.55 * op} />);
-          els.push(<path key="hm" d={D(-40, 40)} fill={A.tone(mixHex(RMAT.grassDry.mid, RMAT.caliche.mid, 0.4), zm, hM)} opacity={0.4 * op} />);
+          els.push(<path key="rt" d={D(-170, -170 + rw) + D(170 - rw, 170)} fill={fillOf(A.tone(RMAT.caliche.mid, zm, hM), "rt")} opacity={0.55 * op} />);
+          els.push(<path key="hm" d={D(-40, 40)} fill={fillOf(A.tone(mixHex(RMAT.grassDry.mid, RMAT.caliche.mid, 0.4), zm, hM), "hm")} opacity={0.4 * op} />);
         }
+        if (defs.length) els.unshift(<defs key="df">{defs}</defs>);
       }
       return <g key={keyS}>{els}</g>;
     };
