@@ -479,6 +479,8 @@ export type RebekahPose = {
   armL: number;
   armR: number;
   hold: number;
+  /** optional: the LEFT hand also holds the shawl closed at her chest (0 = hanging and swinging, default; 1 = holding) */
+  holdL?: number;
   wind: { g: number; ph: number; dir: [number, number] };
   /** the ground under her in figure space: y(x, z) (default flat) */
   slope: [number, number];
@@ -522,6 +524,35 @@ export const rebekahStand = (frame: number, yaw = 35, o: Partial<RebekahPose> = 
     frame,
     ...o,
   };
+};
+
+/** a vertical band's visible near face: the near half of its top ring, then the near half of its bottom ring */
+const nearBandD = (v: View, top: V3[], bot: V3[]) => {
+  const half = (ring: V3[]) => {
+    const r = ring.map((p) => proj(v, p));
+    let iL = 0;
+    let iR = 0;
+    r.forEach((q, i) => {
+      if (q.x < r[iL].x) iL = i;
+      if (q.x > r[iR].x) iR = i;
+    });
+    const n = r.length;
+    const walk = (dir: 1 | -1) => {
+      const out: typeof r = [];
+      for (let i = iL, k = 0; k <= n; k++, i = (i + dir + n) % n) {
+        out.push(r[i]);
+        if (i === iR) break;
+      }
+      return out;
+    };
+    const a = walk(1);
+    const b = walk(-1);
+    const md = (x: typeof r) => x.reduce((s, q) => s + q.d, 0) / x.length;
+    return (md(a) >= md(b) ? a : b).map((q) => [q.x, q.y] as P2);
+  };
+  const t = half(top);
+  const b = half(bot).reverse();
+  return smoothClosed(t.concat(b), 0.8);
 };
 
 export const buildRebekah = (pose: RebekahPose, inks = REBEKAH_INKS): Shape[] => {
@@ -642,34 +673,48 @@ export const buildRebekah = (pose: RebekahPose, inks = REBEKAH_INKS): Shape[] =>
   const shL = upper([50, -340, -2]);
   const shR = upper([-50, -340, -2]);
   const swingL = pose.armL * D2R;
-  const elL = upper([56, -340 + 74 * Math.cos(swingL), -2 + 74 * Math.sin(swingL)]);
-  const wrL = upper([54, -340 + 74 * Math.cos(swingL) + 62 * Math.cos(swingL + 0.22), -2 + 74 * Math.sin(swingL) + 62 * Math.sin(swingL + 0.22)]);
+  const hl = pose.holdL ?? 0;
+  const elLh = upper([56, -340 + 74 * Math.cos(swingL), -2 + 74 * Math.sin(swingL)]);
+  const wrLh = upper([54, -340 + 74 * Math.cos(swingL) + 62 * Math.cos(swingL + 0.22), -2 + 74 * Math.sin(swingL) + 62 * Math.sin(swingL + 0.22)]);
+  // holding with both hands (holdL): the elbows tucked up under the shawl's edge, the forearms across the chest
+  const elL = hl > 0 ? lerp3(elLh, upper([47, -306, 16]), hl) : elLh;
+  const wrL = hl > 0 ? lerp3(wrLh, upper([12, -295, 50]), hl) : wrLh;
   const swingR = pose.armR * D2R;
   const elRh = upper([-56, -340 + 74 * Math.cos(swingR), -2 + 74 * Math.sin(swingR)]);
   const wrRh = upper([-54, -340 + 74 * Math.cos(swingR) + 62 * Math.cos(swingR + 0.22), -2 + 74 * Math.sin(swingR) + 62 * Math.sin(swingR + 0.22)]);
   const elRk = upper([-52, -276, 20]);
   const wrRk = upper([-14, -300, 46]);
-  const elR = lerp3(elRh, elRk, pose.hold);
+  const elR0 = lerp3(elRh, elRk, pose.hold);
+  const elR = hl > 0 ? lerp3(elR0, upper([-47, -306, 16]), hl * pose.hold) : elR0;
   const wrR = lerp3(wrRh, wrRk, pose.hold);
   const armL = armShapes(v, shL, elL, wrL, inks.shirt, inks.skin, [30, 25, 21]);
   const armR = armShapes(v, shR, elR, wrR, inks.shirt, inks.skin, [30, 25, 21], 14);
   const bodyD = proj(v, upper([0, -300, 0])).d;
   // an arm is behind the body when its elbow is on the far side; crossfade over a short depth range
   const behind = (el: V3) => 1 - sstep(-14, 6, proj(v, el).d - bodyD);
-  const bL = behind(elL);
-  const bR = behind(elR);
-  if (bL > 0.01) S.push({ ...armL.sleeve, op: bL }, { ...armL.hand, op: bL });
-  if (bR > 0.01) S.push({ ...armR.sleeve, op: bR }, { ...armR.hand, op: bR });
-  // the bodice, then the belt
-  S.push({ d: outlineD(v, BD, 0.85), fill: inks.shirt });
+  // a folded arm (holdL) is judged by its forearm, which lies across the chest: behind her when seen from the back
+  const bL = behind(hl > 0 ? lerp3(elL, wrL, 0.6 * hl) : elL);
+  const bR = behind(hl > 0 ? lerp3(elR, wrR, 0.6 * hl * pose.hold) : elR);
+  // the belt; under it a plug in the skirt's colour fills the waist between the belt's bottom edge and the skirt's
+  // top (seen from below, the skirt's and bodice's drape outlines both stop short of it)
   const beltFn = (phi: number, t: number): V3 => {
     const s = Math.sin(phi * D2R);
     const c = Math.cos(phi * D2R);
     return upper([46 * s, lerp(WAIST_Y - 8, WAIST_Y + 5, t), (c >= 0 ? 37 : 35) * c]);
   };
-  S.push({ d: outlineD(v, drape(beltFn, 40, 2), 0.8), fill: inks.belt, sh: 0.5 });
+  const BELT = drape(beltFn, 40, 2);
+  const plugPts = BELT.grid[BELT.grid.length - 1].concat(SK.grid[0]).map((p) => { const q = proj(v, p); return [q.x, q.y] as P2; });
+  const plugH = hull(plugPts);
+  if (plugH.length >= 3) S.push({ d: smoothClosed(plugH, 0.8), fill: inks.skirt });
+  if (bL > 0.01) S.push({ ...armL.sleeve, op: bL }, { ...armL.hand, op: bL * (1 - hl) });
+  if (bR > 0.01) S.push({ ...armR.sleeve, op: bR }, { ...armR.hand, op: bR });
+  // the bodice, then the belt
+  S.push({ d: outlineD(v, BD, 0.85), fill: inks.shirt });
+  // the belt as one solid band: its near half between the top and bottom edges (a drape outline assumes a view from
+  // above, and seen from below, as on the crest, it left a pale ring under the belt)
+  S.push({ d: nearBandD(v, BELT.grid[0], BELT.grid[BELT.grid.length - 1]), fill: inks.belt, sh: 0.5 });
   // arms on the near side (under the shawl: the shawl is drawn after them)
-  if (bL < 0.99) S.push({ ...armL.sleeve, op: 1 - bL }, { ...armL.hand, op: 1 - bL });
+  if (bL < 0.99) S.push({ ...armL.sleeve, op: 1 - bL }, { ...armL.hand, op: (1 - bL) * (1 - hl) });
   if (bR < 0.99) S.push({ ...armR.sleeve, op: 1 - bR });
   // the high collar
   const col = tube3(v, [upper([0, -352, 1]), upper([0, -378, 3])], [36, 33]);
@@ -693,7 +738,16 @@ export const buildRebekah = (pose: RebekahPose, inks = REBEKAH_INKS): Shape[] =>
   // the right hand holding the shawl at her chest: on top while it is in front of her chest, hidden behind her as she
   // turns away (a short crossfade as it passes the shawl's silhouette)
   const handFront = sstep(-8, 8, proj(v, armR.hand3).d - proj(v, upper([0, -300, 30])).d);
-  const handVis = lerp(1 - bR, handFront, pose.hold);
+  let handVis = lerp(1 - bR, handFront, pose.hold);
+  // the left hand holding it too (holdL): both hands show while she faces the camera at least a little, and fade as
+  // she turns away (from behind they are hidden in front of her, never poking out at the shawl's edge)
+  if (hl > 0) {
+    const facing = (proj(v, upper([0, -300, 60])).d - proj(v, upper([0, -300, 0])).d) / 60;
+    const fv = sstep(0.12, 0.4, facing);
+    const vL = hl * fv;
+    if (vL > 0.01) S.push({ ...armL.hand, op: vL });
+    handVis = lerp(handVis, handVis * fv, hl);
+  }
   if (handVis > 0.01) S.push({ ...armR.hand, op: handVis });
   // ---- the head -------------------------------------------------------------------------------------------------------
   const neck: V3 = [0, -372, 2];

@@ -270,7 +270,7 @@ const NothingButMoreHills: React.FC<z.infer<typeof schema>> = () => {
   const fig = (
     <g>
       <FolkShadowW A={A} X={her.X} Z={her.Z} Y={-her.H} uid="rbS" />
-      <Rebekah pose={her.pose} at={A.P.p(her.X, -her.H, her.Z)} scale={A.P.r(her.Z) * FIG_W} uid="rb" fog={A.folkFog(her.Z, her.H)} unitPx={A.k} />
+      <Rebekah pose={{ ...her.pose, holdL: 1 }} at={A.P.p(her.X, -her.H, her.Z)} scale={A.P.r(her.Z) * FIG_W} uid="rb" fog={A.folkFog(her.Z, her.H)} unitPx={A.k} />
     </g>
   );
   const items: Item[] = [
