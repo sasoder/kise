@@ -3,14 +3,14 @@
 // chart there (both curves 2010 -> 2025, both years in, the objects at the 2025 tips), S = CUT_A_S0 + 60.
 import { nuclearCamAt, nuclearTrack, type NuclearCam, type NuclearGlide } from "../scott-nolan-uranium/nuclearWorld";
 import { c01 } from "../scott-nolan-wind/energyWorld";
-import type { CostChartProps } from "./costCurveWorld";
+import { COST_AXIS, YEAR_LABEL, type CostChartProps } from "./costCurveWorld";
 
 export const CUT_A_DURATION = 61;
 /** cut A's story clock at its f0 (S = CUT_A_S0 + f): grain and the panel's glint run on it */
 export const CUT_A_S0 = 600;
 /** the stage's board texture scale and light pool, fixed for the cut (cut B passes the same to continue the frame) */
 export const CUT_A_BOARD_UNITS = 1000;
-export const CUT_A_POOL = { x: 540, y: 660, strength: 0.95 } as const;
+export const CUT_A_POOL = { x: 540, y: 766, strength: 0.95 } as const;
 
 /**
  * The tips' year at frame f: both curves draw together, already moving on f0 (2010.37), slightly accelerating into the
@@ -33,6 +33,7 @@ export const CUT_A_YEARS = { 2010: [6, 16], 2025: [31, 41] } as const;
 export const CUT_A_AXIS = { grow: [2, 13], cost: [9, 19] } as const;
 export const cutAAxisAt = (f: number) => ({
   year: 2010,
+  cap: COST_AXIS.CAP / CUT_A_REFRAME.s,
   grow: c01((f - CUT_A_AXIS.grow[0]) / (CUT_A_AXIS.grow[1] - CUT_A_AXIS.grow[0])),
   t: c01((f - CUT_A_AXIS.cost[0]) / (CUT_A_AXIS.cost[1] - CUT_A_AXIS.cost[0])),
 });
@@ -60,7 +61,25 @@ const TRACK = nuclearTrack(
   // computed well past A's end (the follower is causal: A's frames are unchanged), so cut B can continue A's drift
   CUT_A_DURATION + PRE + 120,
 );
-export const cutACamAt = (f: number): NuclearCam => nuclearCamAt(TRACK, f + PRE);
+/**
+ * rev 3 (the user: "a bit too top heavy, more padding, move everything down"): the same motion and timing, framed smaller and
+ * lower. Every camera of the track is pulled back by 1 / s (d / s: the picture shrinks by ~s about the frame point cx, cy)
+ * and that frame point is moved by (dx, dy). The labels and the two objects grow by 1 / s in the world (cutAChartAt), so they
+ * keep their rev-2 size in px.
+ */
+export const CUT_A_REFRAME = { s: 0.72, dx: 0, dy: 108 } as const;
+export const cutACamAt = (f: number): NuclearCam => {
+  const c = nuclearCamAt(TRACK, f + PRE);
+  const R = CUT_A_REFRAME;
+  return { ...c, d: c.d / R.s, cx: c.cx + R.dx, cy: c.cy + R.dy };
+};
+/** rev 3: the world size of the labels and objects, 1 / s of their defaults, so they hold their px size in the smaller chart */
+export const CUT_A_SIZES = {
+  cap: YEAR_LABEL.CAP / CUT_A_REFRAME.s,
+  yearGap: YEAR_LABEL.GAP / CUT_A_REFRAME.s,
+  costCap: COST_AXIS.CAP / CUT_A_REFRAME.s,
+  markScale: 1 / CUT_A_REFRAME.s,
+} as const;
 export const CUT_A_END_CAM: NuclearCam = cutACamAt(CUT_A_DURATION - 1);
 
 /** the chart's state at cut A's frame f (spread into <CostChart S={S} {...cutAChartAt(f)} />) */
@@ -72,6 +91,9 @@ export const cutAChartAt = (f: number): Omit<CostChartProps, "S"> => {
     baseline: { from: 2010, to: 2025 },
     years: cutAYearsAt(f),
     axis: cutAAxisAt(f),
+    cap: CUT_A_SIZES.cap,
+    yearGap: CUT_A_SIZES.yearGap,
+    markScale: CUT_A_SIZES.markScale,
   };
 };
 /** cut A's last frame (f60): where cut B opens */

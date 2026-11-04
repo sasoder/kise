@@ -334,19 +334,24 @@ const smoothTip = (series: Series, tip: number): [number, number] => {
   for (let i = 0; i < n; i++) y += pointAt(series, Math.max(y0, tip - (MARK.LAG * i) / (n - 1)))[1] / n;
   return [pointAt(series, tip)[0], y];
 };
-/** where the two objects are centred when the solar tip is at year `solarTip` and the battery tip at `batteryTip` */
-export const marksAt = (solarTip: number, batteryTip: number): Record<Series, V3> => {
+/**
+ * where the two objects are centred when the solar tip is at year `solarTip` and the battery tip at `batteryTip`.
+ * `scale` (opt-in, default 1: unchanged) = the objects' size factor (CostChart `markScale`): their reach from the tip and
+ * the GAP grow with them, so a bigger object still sits on its tip.
+ */
+export const marksAt = (solarTip: number, batteryTip: number, scale = 1): Record<Series, V3> => {
   const s = smoothTip("solar", solarTip);
   const b = smoothTip("battery", batteryTip);
   let ys = s[1] + MARK.solar.dy;
   let yb = b[1] + MARK.battery.dy;
   // push apart only inside GAP: zero when clear by e or more, C1 smooth through the knee (battery stays above, panel below)
-  const d = MARK.GAP - (yb - ys);
-  const e = 12;
+  const d = MARK.GAP * scale - (yb - ys);
+  const e = 12 * scale;
   const push = d <= -e ? 0 : d >= e ? d : ((d + e) * (d + e)) / (4 * e);
   yb += push / 2;
   ys -= push / 2;
-  return { solar: [s[0] + MARK.solar.dx, ys, LINE_Z.solar], battery: [b[0] + MARK.battery.dx, yb, LINE_Z.battery] };
+  const reach = (dx: number) => (scale === 1 ? dx : CHART.BEAD_R * 0.4 + (dx - CHART.BEAD_R * 0.4) * scale);
+  return { solar: [s[0] + reach(MARK.solar.dx), ys, LINE_Z.solar], battery: [b[0] + reach(MARK.battery.dx), yb, LINE_Z.battery] };
 };
 /** one object's place, both tips at the same year (cut A); see marksAt for different tips */
 export const markAt = (series: Series, tip: number): V3 => marksAt(tip, tip)[series];
@@ -488,10 +493,10 @@ const markMesh = (geo: Any, mat: Any) => {
   return m;
 };
 /** the board shadow of an object floating at `at` (as strong as the curves' own) */
-export const markShadowItems = (kind: Series, at: V3, alpha = 0.95): ShadowItem[] => {
+export const markShadowItems = (kind: Series, at: V3, alpha = 0.95, scale = 1): ShadowItem[] => {
   const [x, z] = dropOf(at);
-  const w = kind === "battery" ? MARK.CELL.L * 0.46 : MARK.PANEL.W * 0.4;
-  const r = kind === "battery" ? MARK.CELL.R * 0.95 : MARK.PANEL.D * 0.42;
+  const w = (kind === "battery" ? MARK.CELL.L * 0.46 : MARK.PANEL.W * 0.4) * scale;
+  const r = (kind === "battery" ? MARK.CELL.R * 0.95 : MARK.PANEL.D * 0.42) * scale;
   const out: ShadowItem[] = [];
   for (let i = 0; i < 11; i++) out.push({ x: x - w + (i * 2 * w) / 10, z, len: 0.01, r: r * 1.3, soft: 26 + at[1] * 0.1, alpha: 0.6 * alpha * (1 - 0.45 * c01(at[1] / 900)) });
   return out;
@@ -504,9 +509,11 @@ export type MarkProps = {
   glint?: number;
   /** rev 1: the object's tone on the ladder (0 cream, 1 board), matching its curve. Default 0 */
   tone?: number;
+  /** opt-in size factor (default 1); place it with marksAt(..., scale) */
+  scale?: number;
 };
 /** the solar panel, centred at `at` (world) */
-export const SolarMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow = true, glint = -0.5 }) => {
+export const SolarMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow = true, glint = -0.5, scale = 1 }) => {
   const o = useMemo(() => {
     const p = panelParts();
     const mat = markClay();
@@ -530,29 +537,31 @@ export const SolarMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow =
     return { g, mat, cellMat };
   }, []);
   o.g.position.set(at[0], at[1], -at[2]);
+  o.g.scale.setScalar(scale);
   const lv = Math.max(0, Math.min(2, tone + c01(dim)));
   o.mat.uniforms.uLevel.value = lv;
   o.cellMat.uniforms.uDim.value = c01(lv - tone);
   o.cellMat.uniforms.uGlint.value = glint;
   return (
     <>
-      {shadow ? <SoftShadows items={markShadowItems("solar", at)} /> : null}
+      {shadow ? <SoftShadows items={markShadowItems("solar", at, 0.95, scale)} /> : null}
       <primitive object={o.g} />
     </>
   );
 };
 /** the battery cell, centred at `at` (world), + end to the right */
-export const BatteryMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow = true }) => {
+export const BatteryMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow = true, scale = 1 }) => {
   const o = useMemo(() => {
     const mat = markClay();
     const m = markMesh(batteryGeo(), mat);
     return { m, mat };
   }, []);
   o.m.position.set(at[0], at[1], -at[2]);
+  o.m.scale.setScalar(scale);
   o.mat.uniforms.uLevel.value = Math.max(0, Math.min(2, tone + c01(dim)));
   return (
     <>
-      {shadow ? <SoftShadows items={markShadowItems("battery", at)} /> : null}
+      {shadow ? <SoftShadows items={markShadowItems("battery", at, 0.95, scale)} /> : null}
       <primitive object={o.m} />
     </>
   );
@@ -902,13 +911,15 @@ export type CostChartProps = {
   variant?: "free" | "card";
   /** rev 2: the cost axis (upright rod + COST) at the rail's left end; omitted = none */
   axis?: CostAxisProps;
+  /** opt-in (cut A rev 3, the user's reframe): the two objects' size factor, default 1; they still sit on their tips */
+  markScale?: number;
 };
 /** the panel's glint, a pure function of the story clock: one slow pass every 150 frames */
 export const glintAt = (S: number) => -0.6 + ((S % 150) / 150) * 2.4;
-export const CostChart: React.FC<CostChartProps> = ({ S, solar, battery, marks = true, baseline, years = {}, dim = {}, amber = {}, tone = {}, posts = false, cap, yearGap, variant = "free", axis }) => {
+export const CostChart: React.FC<CostChartProps> = ({ S, solar, battery, marks = true, baseline, years = {}, dim = {}, amber = {}, tone = {}, posts = false, cap, yearGap, variant = "free", axis, markScale = 1 }) => {
   const ts = tone.solar ?? DEFAULT_TONE.solar;
   const tb = tone.battery ?? DEFAULT_TONE.battery;
-  const at = marksAt(solar.to, battery.to);
+  const at = marksAt(solar.to, battery.to, markScale);
   const sAt = at.solar;
   const bAt = at.battery;
   const top = Math.max(pointAt("solar", solar.from)[1], pointAt("battery", battery.from)[1]) + CARD.PAD_TOP;
@@ -921,8 +932,8 @@ export const CostChart: React.FC<CostChartProps> = ({ S, solar, battery, marks =
       {axis ? <CostAxis {...axis} /> : null}
       <CostLine series="battery" from={battery.from} to={battery.to} dim={dim.battery} tone={tb} posts={posts} amber={amber.battery} />
       <CostLine series="solar" from={solar.from} to={solar.to} dim={dim.solar} tone={ts} posts={posts} amber={amber.solar} />
-      {marks ? <BatteryMark at={bAt} dim={dim.battery} tone={tb} /> : null}
-      {marks ? <SolarMark at={sAt} dim={dim.solar} tone={ts} glint={glintAt(S)} /> : null}
+      {marks ? <BatteryMark at={bAt} dim={dim.battery} tone={tb} scale={markScale} /> : null}
+      {marks ? <SolarMark at={sAt} dim={dim.solar} tone={ts} glint={glintAt(S)} scale={markScale} /> : null}
       {Object.entries(years).map(([y, t]) => (
         <YearLabel key={y} year={Number(y)} t={t} cap={cap} gap={yearGap} />
       ))}
