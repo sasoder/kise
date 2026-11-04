@@ -8,12 +8,14 @@
 //   <GigawattPlant at y? scale? rise? dim? yaw? shadow? S steam? steamFrom?>   containment + dome, one cooling tower
 //   smrShadowItems(at, {scale, rise}), gigawattShadowItems(at, {scale, rise, yaw})   their board shadows (+ the slot ring)
 //   smrPortOf(at, {y, scale}), gigawattPortOf(at, {y, scale, rise, yaw})            the dark fuel port's centre (world) and radius
+//   URANIUM FUEL (added Nov 4, see SHARED_CHANGES.md): <UraniumPellet pose>, <PelletGlow cam poses> (overlay), pelletRowPoses(...),
+//   pelletShadowItems(poses), <FuelRod mouth dir len>, fuelRodShadowItems(...), PELLET
 // rise 0..1: the object comes up out of a slot in the surface it stands on (the slot opens as a dark ring first; the surface
 // hides the sunk part). dim 0..1: tone to the board (never opacity). The fuel port is ground-dark: nothing in here is amber.
 // ===================================================================================================================
-import React, { useMemo } from "react";
-import { COLOR } from "../kits/cheeky-pint/stoutShared";
-import { KEY_LIGHT, SHADOW_LEN, SoftShadows, type ShadowItem } from "../scott-nolan-uranium/nuclearWorld";
+import React, { useId, useMemo } from "react";
+import { COLOR, bloomFilter } from "../kits/cheeky-pint/stoutShared";
+import { KEY_LIGHT, SHADOW_DIR, SHADOW_LEN, SoftShadows, nuclearProject, type NuclearCam, type ShadowItem } from "../scott-nolan-uranium/nuclearWorld";
 import { EW_COLOR, THREE, c01, energyClay, flipZ, hash01, lathe, merge, mesh, paint, sharedUniforms, smooth, vec3Of, type Any, type V3 } from "../scott-nolan-wind/energyCore";
 
 const D2R = Math.PI / 180;
@@ -476,4 +478,345 @@ const TowerSteam: React.FC<{ mouth: V3; scale: number; S: number; amount: number
   o.P.needsUpdate = o.RA.needsUpdate = true;
   o.m.uniforms.uDim.value = c01(dim);
   return <primitive object={o.me} />;
+};
+
+// ===================================================================================================================
+// URANIUM FUEL (added Nov 4 for cut A's landing; cut B uses it too). A real UO2 fuel pellet: height about its diameter,
+// 45-degree chamfers on both ends, shallowly dished end faces, a ceramic sheen; the house amber (amberFoot -> amberTop by the
+// key, a 2 px amberHot hot edge along its top, the fixed house bloom round its screen silhouette via <PelletGlow>). Normals
+// are analytic per profile region, so the chamfers and the dish read as facets at any orientation (standing or lying).
+// A FuelRod is the open zirconium cladding tube the pellets slide into: cream clay, a dark bore, the far end closed.
+// World X/Y/Z as everywhere here; a pose's axis is a world unit vector along the pellet's length.
+// ===================================================================================================================
+export const PELLET = { ASPECT: 1, CHAMFER: 0.06, LAND: 0.72, DISH: 0.025 } as const; // ASPECT = diameter / height; CHAMFER, DISH of the height; LAND = dish radius / pellet radius
+export type PelletPose = {
+  /** the pellet's centre (world) */
+  c: V3;
+  /** unit world vector along its length (default up: standing) */
+  axis?: V3;
+  /** height (length) in world units */
+  h: number;
+  /** diameter (default h * PELLET.ASPECT) */
+  d?: number;
+  /** the part with axial coordinate (from c, along axis) below this is inside something: no glow is drawn there */
+  hideBelow?: number;
+};
+const pelletGeoCache = new Map<string, Any>();
+const pelletGeo = (aspect: number) => {
+  const key = aspect.toFixed(3);
+  const have = pelletGeoCache.get(key);
+  if (have) return have;
+  const R = aspect / 2;
+  const C = PELLET.CHAMFER;
+  const land = (R - C) * PELLET.LAND;
+  const dish: [number, number][] = [];
+  for (let i = 0; i <= 5; i++) {
+    const rr = (land * i) / 5;
+    dish.push([Math.max(0.0001, rr), PELLET.DISH * (1 - (rr / land) ** 2)]);
+  }
+  const prof: [number, number][] = [...dish, [R - C, 0], [R, C], [R, 1 - C], [R - C, 1], ...dish.slice().reverse().map(([r, y]) => [r, 1 - y] as [number, number])];
+  const g = new THREE.LatheGeometry(prof.map((p) => new THREE.Vector2(p[0], p[1])), 96);
+  g.translate(0, -0.5, 0);
+  pelletGeoCache.set(key, g);
+  return g;
+};
+const PELLET_VERT = /* glsl */ `
+varying vec3 vP;
+varying vec3 vW;
+varying vec3 vX;
+varying vec3 vY;
+varying vec3 vZ;
+void main() {
+  vP = position + vec3(0.0, 0.5, 0.0);
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vW = wp.xyz;
+  mat3 m = mat3(modelMatrix);
+  vX = normalize(m * vec3(1.0, 0.0, 0.0));
+  vY = normalize(m * vec3(0.0, 1.0, 0.0));
+  vZ = normalize(m * vec3(0.0, 0.0, 1.0));
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}`;
+const PELLET_FRAG = /* glsl */ `
+uniform vec3 uL;
+uniform vec3 uAmberTop;
+uniform vec3 uAmberFoot;
+uniform vec3 uAmberHot;
+uniform float uHotPx;
+uniform float uR;
+uniform float uC;
+uniform float uLand;
+varying vec3 vP;
+varying vec3 vW;
+varying vec3 vX;
+varying vec3 vY;
+varying vec3 vZ;
+void main() {
+  float rr = length(vP.xz);
+  vec2 rd = rr > 1e-4 ? vP.xz / rr : vec2(0.0);
+  float y = vP.y;
+  float topEnd = step(0.5, y);
+  float ys = topEnd > 0.5 ? 1.0 - y : y;
+  float sg = topEnd > 0.5 ? 1.0 : -1.0;
+  vec3 n;
+  float face = 0.0;
+  float cham = 0.0;
+  float dishK = 0.0;
+  if (ys < uC - 0.0006 && rr > uR - uC - 0.0012) {
+    n = normalize(vec3(rd.x, sg, rd.y));
+    cham = 1.0;
+  } else if (ys < uC && rr <= uR - uC - 0.0012) {
+    face = 1.0;
+    // the dish: a shallow cup inside the land (its slope drawn a little steeper than the geometry, so it reads)
+    dishK = rr < uLand ? 0.3 * rr / uLand : 0.0;
+    n = normalize(vec3(-rd.x * dishK, sg, -rd.y * dishK));
+  } else {
+    n = vec3(rd.x, 0.0, rd.y);
+  }
+  vec3 nW = normalize(vX * n.x + vY * n.y + vZ * n.z);
+  vec3 nF = normalize(vY * sg);              // this end's flat face normal
+  float endUp = nF.y;                        // how much this end faces up
+  float lying = 1.0 - step(0.7, abs(vY.y));
+  vec3 V = normalize(cameraPosition - vW);
+  float lit = smoothstep(-0.5, 0.9, dot(nW, uL));
+  vec3 col = mix(uAmberFoot, uAmberTop, lit);
+  col = mix(col, uAmberHot, 0.5 * pow(max(nW.y, 0.0), 6.0));
+  // chamfers read as their own bands: an up-facing one in the wall's amber (so the hot land edge above it pops), others a groove
+  if (cham > 0.5) col = endUp > 0.5 ? mix(uAmberFoot, uAmberTop, 0.35 + 0.65 * lit) : mix(col, uAmberFoot, endUp < -0.5 ? 0.55 : 0.3);
+  // the dish: the slope that turns to the light lifts, the one turned away settles (a cup, not a dome)
+  // an end face that does not face up stays a light, solid face (darker than its chamfer it would read as a hole)
+  if (face > 0.5 && endUp <= 0.5) col = mix(col, mix(uAmberTop, uAmberHot, 0.22), 0.75);
+  if (face > 0.5 && rr < uLand) {
+    // (kept faint: a strong dish on an end facing us reads as the open end of a tube)
+    float dl = dot(nW - nF, uL) / 0.3;
+    float dk = endUp > 0.5 ? 0.45 : 0.4;
+    col = dl > 0.0 ? mix(col, uAmberHot, 0.3 * dk * dl) : mix(col, uAmberFoot, -0.35 * dk * dl);
+  }
+  // the ceramic sheen: a soft specular lobe of the key
+  float spec = pow(max(dot(nW, normalize(uL + V)), 0.0), 30.0);
+  col = mix(col, uAmberHot, 0.45 * spec);
+  // hot edges, 2 px: round an up-facing end's land, and along the top of a lying pellet with its falloff
+  float w = max(fwidth(rr), 1e-5);
+  float ring = step(ys, uC + 0.002) * (1.0 - smoothstep(uHotPx * 0.5 - 0.5, uHotPx * 0.5 + 0.5, abs(rr - (uR - uC)) / w));
+  col = mix(col, uAmberHot, ring * (endUp > 0.5 ? 1.0 : 0.0));
+  if (face < 0.5 && cham < 0.5) {
+    float a = acos(clamp(nW.y, -1.0, 1.0));
+    float wa = max(fwidth(a), 1e-5);
+    float px = a / wa;
+    float line = 1.0 - smoothstep(uHotPx * 0.5 - 0.5, uHotPx * 0.5 + 0.5, px);
+    float fall = 1.0 - smoothstep(0.0, uHotPx * 6.0, px);
+    col = mix(col, uAmberHot, lying * max(line, 0.3 * fall));
+  }
+  gl_FragColor = vec4(col, 1.0);
+}`;
+const pelletMatCache = new Map<string, Any>();
+const pelletMat = (aspect: number) => {
+  const key = aspect.toFixed(3);
+  const have = pelletMatCache.get(key);
+  if (have) return have;
+  const u = sharedUniforms();
+  const R = aspect / 2;
+  const m = new THREE.ShaderMaterial({
+    vertexShader: PELLET_VERT,
+    fragmentShader: PELLET_FRAG,
+    extensions: { derivatives: true },
+    uniforms: {
+      uL: u.uL,
+      uAmberTop: u.uAmberTop,
+      uAmberFoot: u.uAmberFoot,
+      uAmberHot: u.uAmberHot,
+      uHotPx: { value: 2 },
+      uR: { value: R },
+      uC: { value: PELLET.CHAMFER },
+      uLand: { value: (R - PELLET.CHAMFER) * PELLET.LAND },
+    },
+  });
+  pelletMatCache.set(key, m);
+  return m;
+};
+const UP: V3 = [0, 1, 0];
+const norm3 = (v: V3): V3 => {
+  const l = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / l, v[1] / l, v[2] / l];
+};
+/** one uranium fuel pellet (a child of NuclearStage `world`); its shadow comes from pelletShadowItems */
+export const UraniumPellet: React.FC<{ pose: PelletPose }> = ({ pose }) => {
+  const d = pose.d ?? pose.h * PELLET.ASPECT;
+  const aspect = d / pose.h;
+  const me = useMemo(() => {
+    const m = new THREE.Mesh(pelletGeo(aspect), pelletMat(aspect));
+    m.frustumCulled = false;
+    m.renderOrder = 2;
+    return m;
+  }, [aspect]);
+  // 2 px at full resolution (a half-res preview draws the same line in half the pixels)
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  me.material.uniforms.uHotPx.value = 2 * dpr;
+  const ax = norm3(pose.axis ?? UP);
+  me.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(ax[0], ax[1], -ax[2]));
+  me.scale.setScalar(pose.h);
+  me.position.set(pose.c[0], pose.c[1], -pose.c[2]);
+  return <primitive object={me} />;
+};
+/** a row of pellets lying end to end along `dir` (horizontal unit vector, the way they travel) from `mouth` (the row's
+ *  leading end, e.g. a rod's open end, centre height = the pellets' axis); `slide` (world units) moves the row along dir.
+ *  Each pose's hideBelow is set to the mouth plane, so a pellet that has passed the mouth glows only outside it. */
+export const pelletRowPoses = (o: { mouth: V3; dir: V3; n: number; h: number; d?: number; gap?: number; slide?: number }): PelletPose[] => {
+  const dir = norm3(o.dir);
+  const gap = o.gap ?? o.h * 0.06;
+  const out: PelletPose[] = [];
+  for (let k = 0; k < o.n; k++) {
+    const a = (k + 0.5) * (o.h + gap) - (o.slide ?? 0); // the centre's distance back from the mouth
+    out.push({ c: [o.mouth[0] - dir[0] * a, o.mouth[1] - dir[1] * a, o.mouth[2] - dir[2] * a], axis: [-dir[0], -dir[1], -dir[2]], h: o.h, d: o.d, hideBelow: -a });
+  }
+  return out;
+};
+/** the poses' soft shadows (gather them into the cut's one SoftShadows) */
+export const pelletShadowItems = (poses: PelletPose[], alpha = 1): ShadowItem[] =>
+  poses.map((p) => {
+    const ax = norm3(p.axis ?? UP);
+    const d = p.d ?? p.h * PELLET.ASPECT;
+    const top = p.c[1] + Math.abs(ax[1]) * p.h * 0.5 + (1 - Math.abs(ax[1])) * d * 0.5;
+    if (Math.abs(ax[1]) > 0.7) return { x: p.c[0], z: p.c[2], len: top * SHADOW_LEN, r: d * 0.5, alpha };
+    const hx = Math.hypot(ax[0], ax[2]) || 1;
+    const dx = ax[0] / hx;
+    const dz = ax[2] / hx;
+    const off = top * SHADOW_LEN * 0.5;
+    return { x: p.c[0] - dx * p.h * 0.5 + SHADOW_DIR[0] * off, z: p.c[2] - dz * p.h * 0.5 + SHADOW_DIR[1] * off, len: p.h, r: d * 0.5, dirX: dx, dirZ: dz, alpha };
+  });
+// the pellet's screen silhouette (convex: the hull of its projected rims), clipped at hideBelow
+const pelletHull = (cam: NuclearCam, p: PelletPose) => {
+  const ax = norm3(p.axis ?? UP);
+  const ref: V3 = Math.abs(ax[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  const e1 = norm3([ax[1] * ref[2] - ax[2] * ref[1], ax[2] * ref[0] - ax[0] * ref[2], ax[0] * ref[1] - ax[1] * ref[0]]);
+  const e2: V3 = [ax[1] * e1[2] - ax[2] * e1[1], ax[2] * e1[0] - ax[0] * e1[2], ax[0] * e1[1] - ax[1] * e1[0]];
+  const h = p.h;
+  const r = (p.d ?? h * PELLET.ASPECT) / 2;
+  const c = PELLET.CHAMFER * h;
+  const lo = Math.max(-h / 2, p.hideBelow ?? -1e9);
+  if (lo >= h / 2 - 0.01) return null;
+  const rings: [number, number][] = ([[-h / 2, r - c], [-h / 2 + c, r], [h / 2 - c, r], [h / 2, r - c]] as [number, number][]).filter((q) => q[0] >= lo);
+  if (lo > -h / 2) rings.unshift([lo, r]);
+  const pts: [number, number][] = [];
+  for (let i = 0; i < 64; i++) {
+    const a = (i / 64) * Math.PI * 2;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    for (const [t, rr] of rings) {
+      const w: V3 = [0, 1, 2].map((j) => p.c[j] + ax[j] * t + (e1[j] * ca + e2[j] * sa) * rr) as V3;
+      const s = nuclearProject(cam, w);
+      pts.push([s.x, s.y]);
+    }
+  }
+  pts.sort((u, v) => u[0] - v[0] || u[1] - v[1]);
+  const cross = (o: number[], a: number[], b: number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const chain = (list: [number, number][]) => {
+    const out: [number, number][] = [];
+    for (const q of list) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+      out.push(q);
+    }
+    return out.slice(0, -1);
+  };
+  const hull = chain(pts).concat(chain(pts.slice().reverse()));
+  return "M" + hull.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join("L") + "Z";
+};
+/** the fixed house bloom (bloomFilter(1)) round the pellets' screen silhouettes: pass it as NuclearStage's `overlay`
+ *  (or inside it). It draws the glow only, outside the bodies; the 3D pellets are the bodies. */
+export const PelletGlow: React.FC<{ cam: NuclearCam; poses: PelletPose[] }> = ({ cam, poses }) => {
+  const id = `pg${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  const paths = poses.map((p) => pelletHull(cam, p)).filter((d): d is string => !!d);
+  if (!paths.length) return null;
+  return (
+    <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0 }}>
+      <defs>
+        <mask id={id} maskUnits="userSpaceOnUse" x={-200} y={-200} width={1480} height={2320}>
+          <rect x={-200} y={-200} width={1480} height={2320} fill="#fff" />
+          {paths.map((d, i) => (
+            <path key={i} d={d} fill="#000" />
+          ))}
+        </mask>
+      </defs>
+      <g mask={`url(#${id})`} style={{ filter: bloomFilter(1) }}>
+        {paths.map((d, i) => (
+          <path key={i} d={d} fill={COLOR.amberTop} />
+        ))}
+      </g>
+    </svg>
+  );
+};
+// --- the fuel rod: an open zirconium cladding tube lying on the board ------------------------------------------------
+// Metal, not card: a cool board-friendly grey with a crisp specular streak along its length, a thin lighter wall rim at the
+// open mouth and a dark bore, so it reads as a tube (rev3 Nov 4: the cream rod read as a cigarette with an amber filter).
+export const ROD_COLOR = { zirc: "#ABABA6", rim: "#D9D7D0", bore: "#3A2A20" } as const;
+const ROD_VERT = /* glsl */ `
+attribute vec3 aCol;
+varying vec3 vW;
+varying vec3 vN;
+varying vec3 vC;
+void main() {
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vW = wp.xyz;
+  vN = normalize(mat3(modelMatrix) * normal);
+  vC = aCol;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}`;
+const ROD_FRAG = /* glsl */ `
+uniform vec3 uL;
+uniform vec2 uFogRange;
+uniform vec3 uFogCol;
+uniform vec3 uBoardTone;
+uniform float uDim;
+varying vec3 vW;
+varying vec3 vN;
+varying vec3 vC;
+void main() {
+  vec3 V = normalize(cameraPosition - vW);
+  vec3 n = normalize(vN);
+  if (dot(n, V) < 0.0) n = -n;
+  float lit = smoothstep(-0.5, 0.9, dot(n, uL));
+  vec3 col = vC * mix(0.58, 1.02, lit);
+  col *= 1.0 - 0.14 * max(-n.y, 0.0);                       // the board's warm dark reflected low on the tube
+  float metal = smoothstep(0.35, 0.5, dot(vC, vec3(0.333)));  // the bore stays matte
+  float h = max(dot(n, normalize(uL + V)), 0.0);
+  col += vec3(1.0, 0.99, 0.96) * metal * (0.85 * pow(h, 70.0) + 0.12 * pow(h, 8.0));
+  col = mix(col, uBoardTone, 0.85 * uDim);
+  gl_FragColor = vec4(mix(col, uFogCol, smoothstep(uFogRange.x, uFogRange.y, length(vW - cameraPosition))), 1.0);
+}`;
+const rodGeoCache = new Map<string, Any>();
+const rodGeo = (len: number, r: number, bore: number) => {
+  const key = `${len}:${r}:${bore}`;
+  const have = rodGeoCache.get(key);
+  if (have) return have;
+  // local frame: +Y runs from the open mouth (y 0) into the rod; the far end is closed
+  const rim = lathe([[bore, 0], [r, 0]], 72, ROD_COLOR.rim);
+  const shell = lathe([[r, 0], [r, len], [0.0001, len]], 72, ROD_COLOR.zirc);
+  const wall = lathe([[bore, len - 1], [bore, 0]], 72, ROD_COLOR.bore);
+  const floor = lathe([[0.0001, len - 1], [bore, len - 1]], 72, ROD_COLOR.bore);
+  const g = merge([rim, shell, wall, floor]);
+  rodGeoCache.set(key, g);
+  return g;
+};
+/** an open fuel rod lying along `dir` (horizontal unit vector, into the rod) from its open `mouth` (the axis centre at the
+ *  mouth; mouth y = the axis height, usually the pellets' radius, so it rests on the board). r = outer radius, bore = inner. */
+export const FuelRod: React.FC<{ mouth: V3; dir: V3; len: number; r: number; bore: number; dim?: number }> = ({ mouth, dir, len, r, bore, dim = 0 }) => {
+  const o = useMemo(() => {
+    const u = sharedUniforms();
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: ROD_VERT,
+      fragmentShader: ROD_FRAG,
+      side: THREE.DoubleSide,
+      uniforms: { uL: u.uL, uFogRange: u.uFogRange, uFogCol: u.uFogCol, uBoardTone: u.uBoardTone, uDim: { value: 0 } },
+    });
+    return { me: mesh(rodGeo(len, r, bore), mat, 1), mat };
+  }, [len, r, bore]);
+  const dd = norm3(dir);
+  o.mat.uniforms.uDim.value = c01(dim);
+  o.me.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dd[0], dd[1], -dd[2]));
+  o.me.position.set(mouth[0], mouth[1], -mouth[2]);
+  return <primitive object={o.me} />;
+};
+export const fuelRodShadowItems = (mouth: V3, dir: V3, len: number, r: number, alpha = 1): ShadowItem[] => {
+  const dd = norm3([dir[0], 0, dir[2]]);
+  const off = (mouth[1] + r) * SHADOW_LEN * 0.5;
+  return [{ x: mouth[0] + SHADOW_DIR[0] * off, z: mouth[2] + SHADOW_DIR[1] * off, len, r: r * 1.02, dirX: dd[0], dirZ: dd[2], alpha }];
 };
