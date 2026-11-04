@@ -546,10 +546,14 @@ const SMOKE_LOOK: Record<SmokeKind, { life: number; n: number; r0: number; grow:
   coal: { life: 120, n: 26, r0: 10, grow: 3.6, rise: 1.25, wind: [0.75, 0.55], alpha: 0.82, lit: EW_COLOR.smokeLit, shade: EW_COLOR.smokeShade },
   gas: { life: 64, n: 12, r0: 7, grow: 2.2, rise: 1.05, wind: [0.55, 0.4], alpha: 0.22, lit: EW_COLOR.hazeLit, shade: EW_COLOR.hazeShade },
 };
-export type SmokeProps = { at: V3; S: number; kind?: SmokeKind; amount?: number; seed?: number };
+export type SmokeLook = (typeof SMOKE_LOOK)[SmokeKind];
+/** opt-in `look`: overrides of the kind's look (e.g. a cooling tower's steam); omitted = the kind's look unchanged */
+export type SmokeProps = { at: V3; S: number; kind?: SmokeKind; amount?: number; seed?: number; look?: Partial<SmokeLook> };
 /** a plume out of the stack mouth `at` (world). amount 0..~1.6 scales its density and size. */
-export const Smoke: React.FC<SmokeProps> = ({ at, S, kind = "coal", amount = 1, seed = 0 }) => {
-  const L = SMOKE_LOOK[kind];
+export const Smoke: React.FC<SmokeProps> = ({ at, S, kind = "coal", amount = 1, seed = 0, look }) => {
+  const lookKey = look ? JSON.stringify(look) : "";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const L = useMemo(() => (look ? { ...SMOKE_LOOK[kind], ...look } : SMOKE_LOOK[kind]), [kind, lookKey]);
   const o = useMemo(() => {
     const g = new THREE.InstancedBufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));

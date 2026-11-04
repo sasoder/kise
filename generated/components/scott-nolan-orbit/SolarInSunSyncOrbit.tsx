@@ -11,14 +11,16 @@
 // and/in 69 · sun 74 · sync 77 · orbit 83 · (if 91, after the slot)
 // DURATION: the slot 24.524 -> 28.612 s = 4.088 s x 23.976 = 98 frames (f0..f97).
 //
-// THE MOTION: one continuous rise. It opens low on the energyWorld board on just two plants, NUCLEAR (left, its core
-// toned to cream: amber is the sun's power here) and SOLAR (right), both lit cream, with their labels, the camera
-// drifting. On "is actually" nuclear recedes by tone while one move (f22-40) carries the camera onto SOLAR and nuclear
-// fully out of the left edge. On "pure solar" its panel array lifts off the plinth, whole (the plinth stays, the legs
-// fold up, a small bus comes up out of the plinth under it), and SOLAR's label sinks into the board (gone by f50). The
-// camera cranes up WITH the array in one eased rise (f44-86), tilting from looking down to looking slightly up: the board
-// drops away into a warm haze, the sky darkens to espresso space, and on the way up the four rows (thickening into solid
-// panels) re-fold into two wings either side of the bus. The tilt brings the sun down into frame at the upper left
+// THE MOTION: one continuous rise. It opens CLOSE on NUCLEAR (rev 1), the subject: sharp, its core toned to cream (amber
+// is the sun's power here), steam rising out of the cooling tower, a slow push in; SOLAR waits off frame to the right.
+// On "is actually pure" one eased pan (f25-44) carries the camera right onto SOLAR while the focus racks from nuclear to
+// solar (a screen-space depth of field: the out-of-focus side blurred, f27-45); NUCLEAR softens, dims and leaves by the
+// left edge. SOLAR is sharp and centred, its label readable, on "solar" (f48). Its panel array then lifts off the plinth,
+// whole (the plinth stays, the legs fold up, a small bus comes up out of the plinth under it), and SOLAR's label sinks
+// into the board (f47-53). The camera cranes up WITH the array in one eased rise (f47-84), tilting from looking down to
+// looking slightly up: the board drops away into a warm haze, the sky darkens to espresso space, and on the way up the
+// four rows (thickening into solid panels) re-fold into two wings either side of the bus. The tilt brings the sun down
+// into frame at the upper left
 // (f71-86); an amber front sweeps the cells from the sun's side (f64-77). The whole Earth rises in under the satellite
 // (f70-81), lit from the side: day on the left, a brown night on the right ~40 % of the disc top to bottom. The orbit
 // ring (dawn-dusk: in the day/night line's plane) draws out of the satellite both ways (f73-90) into a closed loop that
@@ -42,7 +44,7 @@ import { COLOR } from "../kits/cheeky-pint/stoutShared";
 import { SKY } from "../kits/cheeky-pint/droneSeaShared";
 import { ATMO, LitGlobe, MVO_TEX, NIGHT, WATER } from "../kits/cheeky-pint/marsOceanShared";
 import { NuclearStage, SoftShadows, nuclearCamAt, nuclearEye, nuclearMaterial, nuclearProject, nuclearTrack, type NuclearCam } from "../scott-nolan-uranium/nuclearWorld";
-import { Lineup, PlantLabels, labelShadowItems } from "../scott-nolan-wind/energyWorld";
+import { LINEUP, Lineup, NUCLEAR, PLINTH, PlantLabels, Smoke, labelShadowItems } from "../scott-nolan-wind/energyWorld";
 import {
   ARRAY_HOME,
   OrbitRing,
@@ -67,20 +69,21 @@ export const DURATION = 98;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 // ---------------------------------------------------------------------------
-// CAMERA: the house damped follower (nuclearTrack). Low on the two plants; toward solar; the crane (ty with the array,
+// CAMERA: the house damped follower (nuclearTrack). Close on nuclear; the pan onto solar; the crane (ty with the array,
 // pitch 17 -> -10, push in); a slow creep to the end. The array's height is the crane's height (it rises WITH it).
 // ---------------------------------------------------------------------------
 const TY_LIFTED = ARRAY_HOME[1] + 45;
 export const LIFT = 45;
 export const CRANE = 900;
-export const START: NuclearCam = { tx: 214, ty: TY_LIFTED, tz: 30, d: 1620, yaw: 0, pitch: 12, f: 2200, cy: 760, cx: 540 };
+export const START: NuclearCam = { tx: 0, ty: TY_LIFTED, tz: 0, d: 880, yaw: 0, pitch: 10, f: 2200, cy: 600, cx: 540 };
 export const TRACK = nuclearTrack(
   START,
   [
-    { f0: -30, f1: 30, to: { d: 1590, tx: 216 } },
-    // "is actually": one move onto SOLAR that carries NUCLEAR fully out of the left edge by ~f40 (no slice parked there)
-    { f0: 22, f1: 40, to: { tx: 428, tz: -ARRAY_HOME[2], d: 1120, pitch: 12, cy: 660 } },
-    { f0: 44, f1: 86, to: { ty: TY_LIFTED + CRANE, pitch: -10, d: 1040, cy: 730 } },
+    // "the competitor for nuclear": close on NUCLEAR, a slow push in with a drift toward where we are going
+    { f0: -30, f1: 34, to: { d: 840, tx: 16 } },
+    // "is actually pure solar": one eased pan right onto SOLAR; NUCLEAR leaves by the left edge (no slice parked there)
+    { f0: 25, f1: 44, to: { tx: 428, tz: -ARRAY_HOME[2], d: 1120, pitch: 12, cy: 660 } },
+    { f0: 47, f1: 84, to: { ty: TY_LIFTED + CRANE, pitch: -10, d: 1040, cy: 730 } },
     { f0: 84, f1: 140, to: { d: 995 } },
   ],
   DURATION,
@@ -125,9 +128,9 @@ export const SPACE = { hor: "#3B281C", mid: SKY.top, top: "#2E1F16" } as const;
 const skyLookAt = (f: number): SkyLook => {
   const up = ease(f, 60, 76);
   return {
-    hor: mixHex(mixHex(COLOR.ground, HAZE, ease(f, 46, 60)), SPACE.hor, up),
-    mid: mixHex(COLOR.ground, SPACE.mid, ease(f, 50, 76)),
-    top: mixHex(COLOR.ground, SPACE.top, ease(f, 50, 80)),
+    hor: mixHex(mixHex(COLOR.ground, HAZE, ease(f, 50, 61)), SPACE.hor, up),
+    mid: mixHex(COLOR.ground, SPACE.mid, ease(f, 52, 76)),
+    top: mixHex(COLOR.ground, SPACE.top, ease(f, 52, 80)),
     band: 0.42 - 0.12 * ease(f, 56, 80),
   };
 };
@@ -151,6 +154,28 @@ const SunGlow: React.FC<{ x: number; y: number; a: number }> = ({ x, y, a }) => 
   );
 };
 
+/** RACK FOCUS (a lens's depth of field, done honestly in screen space): the frame splits at the midpoint between the two
+ *  plants; the side not in focus is blurred (a backdrop blur over the board), crossfading over a soft seam. Focus is on
+ *  NUCLEAR to f27, pulls to SOLAR with the pan, and is fully on SOLAR by f45. */
+export const FOCUS = { f0: 27, f1: 45, blur: 9, seam: 150 } as const;
+const FocusBlur: React.FC<{ mid: number; left: number; right: number }> = ({ mid, left, right }) => {
+  const a = (mid - FOCUS.seam).toFixed(1);
+  const b = (mid + FOCUS.seam).toFixed(1);
+  const side = (px: number, grad: string) =>
+    px > 0.05 ? (
+      <AbsoluteFill style={{ backdropFilter: `blur(${px.toFixed(2)}px)`, WebkitBackdropFilter: `blur(${px.toFixed(2)}px)`, maskImage: grad, WebkitMaskImage: grad }} />
+    ) : null;
+  return (
+    <>
+      {side(left, `linear-gradient(to right, #000 ${a}px, transparent ${b}px)`)}
+      {side(right, `linear-gradient(to right, transparent ${a}px, #000 ${b}px)`)}
+    </>
+  );
+};
+/** the cooling tower's steam: the kit's gas haze (pale cream) made big and slow, rising nearly straight up */
+const STEAM = { life: 80, n: 24, r0: 24, grow: 2.2, rise: 2.1, wind: [0.2, 0.06] as [number, number], alpha: 0.4 };
+const STEAM_AT: [number, number, number] = [LINEUP.nuclear[0] + NUCLEAR.TOWER.x, PLINTH.H + NUCLEAR.TOWER.h - 6, LINEUP.nuclear[1] + NUCLEAR.TOWER.z];
+
 const rgbOf = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as [number, number, number];
 
 const SolarInSunSyncOrbit: React.FC<z.infer<typeof schema>> = () => {
@@ -161,23 +186,23 @@ const SolarInSunSyncOrbit: React.FC<z.infer<typeof schema>> = () => {
   // (raw sRGB values like the kit's own uniforms: no colour management)
   const sky = skyLookAt(f);
   nuclearMaterial("clay").uniforms.uFogCol.value.set(...rgbOf(sky.hor));
-  const fh = ease(f, 46, 64);
+  const fh = ease(f, 50, 64);
   const fog: [number, number] = [1.6 - 0.35 * fh, 6 - 3.6 * fh];
 
   // the array: lift, crane, fold, turn, amber
-  const lift = LIFT * ease(f, 41, 53);
+  const lift = LIFT * ease(f, 47, 57);
   const crane = Math.max(0, cam.ty - TY_LIFTED);
   const at: [number, number, number] = [ARRAY_HOME[0], ARRAY_HOME[1] + lift + crane, ARRAY_HOME[2]];
-  const q = new THREE.Quaternion().slerpQuaternions(QI, SAT_Q, ease(f, 48, 75));
+  const q = new THREE.Quaternion().slerpQuaternions(QI, SAT_Q, ease(f, 52, 75));
   const pose = {
     at,
     q,
-    fold: ease(f, 50, 73),
-    legs: ease(f, 43, 53),
-    bus: 0.4 * ease(f, 42, 53) + 0.6 * ease(f, 57, 71),
+    fold: ease(f, 53, 73),
+    legs: ease(f, 48, 57),
+    bus: 0.4 * ease(f, 48, 57) + 0.6 * ease(f, 58, 71),
     front: -1.7 + 3.4 * ease(f, 64, 77),
     glint: -0.4 + ((S / 110) % 1) * 1.9,
-    flight: ease(f, 45, 58),
+    flight: ease(f, 50, 60),
   };
 
   // the orbit picture: the globe's centre from the satellite's screen point; it rises in from below
@@ -195,7 +220,14 @@ const SolarInSunSyncOrbit: React.FC<z.infer<typeof schema>> = () => {
   const sunA = 0.35 + 0.65 * ease(f, 56, 78);
   // SOLAR's label recedes as its array leaves: toned to the board and sunk down through it by f50, before the crane takes
   // it into the caption bands; its contact shadow goes with it
-  const solarRecede = ease(f, 41, 50);
+  const solarRecede = ease(f, 47, 53);
+  // the rack focus: from NUCLEAR to SOLAR with the pan
+  const focus = ease(f, FOCUS.f0, FOCUS.f1);
+  const nucScr = nuclearProject(cam, [LINEUP.nuclear[0], 120, LINEUP.nuclear[1]]);
+  const solScr = nuclearProject(cam, [LINEUP.solar[0], 60, LINEUP.solar[1]]);
+  const blurNuc = FOCUS.blur * focus;
+  const blurSol = FOCUS.blur * (1 - focus);
+  const nucDim = 0.6 * ease(f, 30, 44);
   const labelShadow = (["nuclear", "solar"] as const).flatMap((k) => labelShadowItems(k, 0.32 * (k === "solar" ? 1 - solarRecede : 1)));
 
   return (
@@ -208,14 +240,17 @@ const SolarInSunSyncOrbit: React.FC<z.infer<typeof schema>> = () => {
       world={
         <>
           <SkyDome cam={cam} look={sky} />
-          <Lineup S={S} only={["nuclear", "solar"]} core="cream" dim={{ nuclear: ease(f, 28, 40) }} bare={{ solar: true }} occ={{ solar: liftedCaps(lift + crane) }} />
+          <Lineup S={S} only={["nuclear", "solar"]} core="cream" dim={{ nuclear: nucDim }} bare={{ solar: true }} occ={{ solar: liftedCaps(lift + crane) }} />
           {/* SOLAR recedes into the board as its array leaves, so no label crosses the caption bands on the crane */}
+          {f < 60 ? <Smoke at={STEAM_AT} S={S} kind="gas" amount={1.2} seed={5} look={STEAM} /> : null}
           <SoftShadows items={labelShadow} />
-          <PlantLabels only={["nuclear", "solar"]} shadow={false} dim={{ nuclear: ease(f, 28, 40), solar: solarRecede }} sink={{ solar: solarRecede }} />
+          <PlantLabels only={["nuclear", "solar"]} shadow={false} dim={{ nuclear: nucDim, solar: solarRecede }} sink={{ solar: solarRecede }} />
         </>
       }
       overlay={
         <AbsoluteFill>
+          {/* the rack focus over the board (the array's own canvas is blurred with it below) */}
+          <FocusBlur mid={(nucScr.x + solScr.x) / 2} left={blurNuc} right={blurSol} />
           {/* the sun: a soft hot disc in its own glow, upper left; it comes down into frame as the crane tilts up */}
           <SunGlow x={sun.x} y={sun.y} a={sunA} />
           <LitGlobe
@@ -232,9 +267,11 @@ const SolarInSunSyncOrbit: React.FC<z.infer<typeof schema>> = () => {
             grade={{ exposure: 1.05, sat: 0.8, warm: 0.08, ambient: 0.006, limb: 0.12, highlight: 2.4, terminator: [0.02, 0.16] }}
           />
           <OrbitRing o={ORBIT} centre={gc} ext={ringExt} s={SAT_S} />
-          <SatCanvas cam={cam} id="solarSatBloom">
-            <SolarArray pose={pose} />
-          </SatCanvas>
+          <AbsoluteFill style={blurSol > 0.05 ? { filter: `blur(${blurSol.toFixed(2)}px)` } : undefined}>
+            <SatCanvas cam={cam} id="solarSatBloom">
+              <SolarArray pose={pose} />
+            </SatCanvas>
+          </AbsoluteFill>
         </AbsoluteFill>
       }
     />
@@ -246,5 +283,5 @@ export default SolarInSunSyncOrbit;
 /** probe values for the header and the checks */
 export const probe = (f: number) => {
   const cam = camAt(f);
-  return { cam, sat: nuclearProject(cam, [ARRAY_HOME[0], ARRAY_HOME[1] + LIFT * ease(f, 41, 53) + Math.max(0, cam.ty - TY_LIFTED), -ARRAY_HOME[2]]) };
+  return { cam, sat: nuclearProject(cam, [ARRAY_HOME[0], ARRAY_HOME[1] + LIFT * ease(f, 47, 57) + Math.max(0, cam.ty - TY_LIFTED), -ARRAY_HOME[2]]) };
 };
