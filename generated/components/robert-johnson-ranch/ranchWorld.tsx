@@ -725,6 +725,58 @@ const logWall = (A: AirWorld, pts: [W3, W3], h0: number, h1: number, key: string
   }
   return els;
 };
+/** a convex hull (monotone chain) of 2D points */
+const hull2 = (pts: P2[]): P2[] => {
+  const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: P2, a: P2, b: P2) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: P2[] = [];
+  for (const q of p) {
+    while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop();
+    lo.push(q);
+  }
+  const up: P2[] = [];
+  for (let i = p.length - 1; i >= 0; i--) {
+    const q = p[i];
+    while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop();
+    up.push(q);
+  }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+};
+/** a saddle-notched log corner at (cx, cz): sx / sz = which way the corner faces (+-1). Courses alternate: the logs of
+ *  the front/back wall (along X) stick out past the side wall by `out` (end grain facing sx), and those of the side
+ *  wall (along Z) stick out past the front/back wall (end grain facing sz). Each stub = the hull of its two end discs,
+ *  then its end grain disc when that faces the camera. */
+const logCorner = (A: AirWorld, cx: number, cz: number, sx: number, sz: number, h0: number, h1: number, M: Mat, key: string) => {
+  const els: React.ReactNode[] = [];
+  const R = DOGRUN.logH * 0.5;
+  const out = 26;
+  const Zm = cz;
+  const grain = A.tone(mixHex(M.lit, CHINK, 0.35), Zm, (h0 + h1) / 2);
+  const body = A.tone(M.mid, Zm, (h0 + h1) / 2);
+  const line = A.tone(mixHex(M.dark, PAL.shadow, 0.3), Zm, (h0 + h1) / 2);
+  const ring = (c: W3, axis: "x" | "z"): P2[] =>
+    Array.from({ length: 16 }, (_, i) => {
+      const a = (i / 16) * Math.PI * 2;
+      const u = Math.cos(a) * R;
+      const v = Math.sin(a) * R * 0.95;
+      return axis === "x" ? PP(A, c[0], c[1] + v, c[2] + u) : PP(A, c[0] + u, c[1] + v, c[2]);
+    });
+  let k = 0;
+  for (let h = h0 + R; h < h1 - 2; h += DOGRUN.logH, k++) {
+    const alongX = k % 2 === 0;
+    // the stub from just inside the corner to `out` past it
+    const base: W3 = alongX ? [cx - sx * 6, h, cz] : [cx, h, cz - sz * 6];
+    const end: W3 = alongX ? [cx + sx * out, h, cz] : [cx, h, cz + sz * out];
+    const axis = alongX ? "x" : "z";
+    const rb = ring(base, axis);
+    const re = ring(end, axis);
+    const hl = hull2(rb.concat(re));
+    els.push(<path key={`${key}b${k}`} d={polyD(hl)} fill={body} stroke={line} strokeWidth={A.lw(0.7)} strokeOpacity={0.6} strokeLinejoin="round" />);
+    const n: W3 = alongX ? [sx, 0, 0] : [0, 0, sz];
+    if (seen(A, end, n)) els.push(<path key={`${key}e${k}`} d={polyD(re)} fill={grain} stroke={line} strokeWidth={A.lw(0.7)} strokeOpacity={0.7} />);
+  }
+  return els;
+};
 export const DogRunHouse: React.FC<{ A: AirWorld; X0: number; Z0: number; H0?: number; inside?: React.ReactNode; timber?: Mat }> = ({ A, X0, Z0, H0 = 0, inside, timber }) => {
   const TM = timber ?? RMAT.timber;
   const D = DOGRUN;
@@ -752,7 +804,7 @@ export const DogRunHouse: React.FC<{ A: AirWorld; X0: number; Z0: number; H0?: n
     // back, sides, front faces with back-face culling (the box), then logs on the visible faces
     boxFaces(A, x0, x1, H0, top, zf, zb, TM, key, ["tp", "bt"]).forEach(push);
     // front wall logs
-    if (seen(A, [x0, H0, zf], [0, 0, -1])) els.push(...logWall(A, [[x0, H0, zf], [x1, H0, zf]], H0, top, `${key}F`, true));
+    if (seen(A, [x0, H0, zf], [0, 0, -1])) els.push(...logWall(A, [[x0, H0, zf], [x1, H0, zf]], H0, top, `${key}F`, false));
     // the side walls: the breezeway side (a door) and the outer side
     const inner = sideL ? x1 : x0;
     const outer = sideL ? x0 : x1;
@@ -778,6 +830,22 @@ export const DogRunHouse: React.FC<{ A: AirWorld; X0: number; Z0: number; H0?: n
       const c3 = PP(A, wx - 68, H0 + 230, zf - 4);
       const c4 = PP(A, wx + 68, H0 + 230, zf - 4);
       els.push(<path key={`${key}wx`} d={`M${Pt(c1)}L${Pt(c2)}M${Pt(c3)}L${Pt(c4)}`} stroke={A.tone("#B8AB8C", zf, 230)} strokeWidth={9 * A.P.r(zf)} />);
+    }
+    // the notched corners: at each corner the logs of the two walls cross on alternate courses, each sticking out a
+    // little past the other wall (a short round stub with its end grain), in 3D, so they read from every angle
+    for (const [cx, sx] of [
+      [x0, -1],
+      [x1, 1],
+    ] as [number, number][]) {
+      for (const [cz, sz] of [
+        [zf, -1],
+        [zb, 1],
+      ] as [number, number][]) {
+        const sideSeen = seen(A, [cx, H0 + 200, zr], [sx, 0, 0]);
+        const faceSeen = seen(A, [(x0 + x1) / 2, H0 + 200, cz], [0, 0, sz]);
+        if (!sideSeen && !faceSeen) continue;
+        els.push(...logCorner(A, cx, cz, sx, sz, H0, top, TM, `${key}k${sx}${sz}`));
+      }
     }
   };
   // the roof's undersides (soffits) when the camera is below a slope's plane: drawn BEFORE the walls, which hide all
@@ -1091,9 +1159,10 @@ export const RidgeStackV2: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: string;
 };
 /** CedarBush: an Ashe juniper clump drawn as rounded, irregular dark masses (better read than CedarClump's spires);
  *  units ~500 tall at size 1 */
-const cedarBushShapes = (seed: number, frame: number): Shape[] => {
+const cedarBushShapes = (seed: number, frame: number, m: Mat = RMAT.cedar, rim?: string): Shape[] => {
   const S: Shape[] = [];
   S.push({ d: ellP(20, -4, 300, 26), fill: "#2A2E26", cast: true, op: 0.3 });
+  if (rim) S.push({ d: ellP(30, -2, 250, 16), fill: "#2A2E26", cast: true, op: 0.25 });
   const sw = (i: number) => Math.sin(frame * 0.045 + i * 1.3 + seed) * 2.5;
   const masses: [number, number, number, number, number][] = [
     [-170, -150, 130, 140, 0.35],
@@ -1102,18 +1171,22 @@ const cedarBushShapes = (seed: number, frame: number): Shape[] => {
     [-80, -120, 160, 115, 0.45],
     [100, -110, 160, 105, 0.5],
   ];
-  masses.forEach(([x, y, rx, ry, dk], i) => S.push({ d: blobP(x + sw(i) * (y / -260), y, rx, ry, seed + i * 5, 0.16), fill: mixHex(RMAT.cedar.mid, RMAT.cedar.dark, dk) }));
+  // a rim of light on the upper-left edge: the masses again, a little up and left, in the rim colour, under them
+  if (rim) masses.forEach(([x, y, rx, ry], i) => S.push({ d: blobP(x + sw(i) * (y / -260) - 9, y - 9, rx, ry, seed + i * 5, 0.16), fill: rim, op: 0.85 }));
+  masses.forEach(([x, y, rx, ry, dk], i) => S.push({ d: blobP(x + sw(i) * (y / -260), y, rx, ry, seed + i * 5, 0.16), fill: mixHex(m.mid, m.dark, dk) }));
   [
     [-70, -360, 70, 60],
     [-150, -230, 60, 50],
     [40, -300, 55, 45],
-  ].forEach(([x, y, rx, ry], i) => S.push({ d: blobP(x + sw(i + 7), y, rx, ry, seed + 40 + i, 0.2), fill: RMAT.cedar.lit, sh: 0.5, op: 0.75 }));
+  ].forEach(([x, y, rx, ry], i) => S.push({ d: blobP(x + sw(i + 7), y, rx, ry, seed + 40 + i, 0.2), fill: m.lit, sh: 0.5, op: 0.75 }));
   return S;
 };
-export const CedarBush: React.FC<{ A: AirWorld; X: number; Z: number; H: number; size?: number; seed?: number; frame: number; uid: string }> = ({ A, X, Z, H, size = 2.4 * U, seed = 1, frame, uid }) => {
+/** optional: mat = the foliage's tones (default RMAT.cedar), rim = a light colour for a rim on the upper-left edge (and a
+ *  second, softer contact shadow) */
+export const CedarBush: React.FC<{ A: AirWorld; X: number; Z: number; H: number; size?: number; seed?: number; frame: number; uid: string; mat?: Mat; rim?: string }> = ({ A, X, Z, H, size = 2.4 * U, seed = 1, frame, uid, mat, rim }) => {
   const r = A.P.r(Z);
   const sc = (r * size) / 500;
-  return <RanchPaint shapes={cedarBushShapes(seed, frame)} at={PP(A, X, H, Z)} scale={sc} uid={uid} fog={{ rgb: A.airHex(Z, H + size * 0.5), amount: A.fog(Z) }} unitPx={A.k} />;
+  return <RanchPaint shapes={cedarBushShapes(seed, frame, mat, rim)} at={PP(A, X, H, Z)} scale={sc} uid={uid} fog={{ rgb: A.airHex(Z, H + size * 0.5), amount: A.fog(Z) }} unitPx={A.k} />;
 };
 
 // ===================================================================================================================
@@ -1152,7 +1225,19 @@ export const hillTop = (rd: Ridge, X: number) => {
 /** the near hills' paint: olive-khaki from the ground's ramp (lit, body, shaded flank); then grey-green; then haze */
 const HILL_NEAR = { lit: "#93845F", mid: "#7C6E52", dark: "#5A4F3B" };
 const HILL_MID = { lit: "#8F937C", mid: "#7A806C", dark: "#5F6656" };
-export const HillCountryRidges: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: string; frame?: number }> = ({ A, ridges, uid }) => {
+/** the grass-covered hills: her slope's dry yellow-green (lit), olive (shade); then paler grey-green */
+const HILL_GRASS_NEAR = { lit: "#A9A87A", mid: "#8F9065", dark: "#6A714C" };
+const HILL_GRASS_MID = { lit: "#A9AF8F", mid: "#979E80", dark: "#7F886C" };
+/** optional: tRange maps this stack's depth rank into [t0, t1] of the near..far paint (a far skyline stack: [0.9, 1]);
+ *  hazeHex = the colour the far ones dissolve into (default: the sky at their row), hazeMix = how far toward it from
+ *  the sky (default 1); fade = extra mix toward the haze 0..1;
+ *  grass = the bodies in her slope's dry yellow-green / olive grass (lit faces lighter, shaded flanks olive), paling to
+ *  grey-green with distance, small limestone ledges on some bench edges, the tree clumps fuller;
+ *  flatFar = the far half as clean stacked silhouettes: flat, gently graded fills, no flank shading inside a layer */
+export const HillCountryRidges: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: string; frame?: number; tRange?: [number, number]; hazeHex?: string; hazeMix?: number; fade?: number; grass?: boolean; flatFar?: boolean }> = ({ A, ridges, uid, tRange, hazeHex, hazeMix = 1, fade = 0, grass = false, flatFar = false }) => {
+  const NEAR = grass ? HILL_GRASS_NEAR : HILL_NEAR;
+  const MID = grass ? HILL_GRASS_MID : HILL_MID;
+  const hazeAt = (y: number) => (hazeHex ? mixHex(A.screenAir(y), hazeHex, hazeMix) : A.screenAir(y));
   const P = A.P;
   const k = A.k;
   const sorted = ridges.slice().sort((a, b) => b.Z - a.Z);
@@ -1180,12 +1265,13 @@ export const HillCountryRidges: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: st
         }
         if (toSy(yMin) > 1980) return null;
         // depth 0 (nearest) .. 1 (farthest), by log distance from the eye
-        const t = zMax > zMin ? c01(Math.log((Z + A.Dc) / (zMin + A.Dc)) / Math.log((zMax + A.Dc) / (zMin + A.Dc))) : 0;
+        const tl = zMax > zMin ? c01(Math.log((Z + A.Dc) / (zMin + A.Dc)) / Math.log((zMax + A.Dc) / (zMin + A.Dc))) : 0;
+        const t = tRange ? lerp(tRange[0], tRange[1], tl) : tl;
         const yMean = pts.reduce((s, p) => s + p[1], 0) / pts.length;
-        const sky = A.screenAir(yMean);
+        const sky = hazeAt(yMean);
         const g = sstep(0.04, 0.55, t);
-        const haze = 0.1 + 0.5 * Math.pow(sstep(0.04, 1, t), 1.3);
-        const paint = (c: "lit" | "mid" | "dark") => mixHex(mixHex(HILL_NEAR[c], HILL_MID[c], g), sky, haze);
+        const haze = grass ? 0.05 + 0.8 * Math.pow(t, 1.15) : 0.1 + 0.5 * Math.pow(sstep(0.04, 1, t), 1.3);
+        const paint = (c: "lit" | "mid" | "dark") => mixHex(mixHex(mixHex(NEAR[c], MID[c], g), sky, haze), sky, fade);
         const body = paint("mid");
         const lit = paint("lit");
         const shade = paint("dark");
@@ -1193,7 +1279,7 @@ export const HillCountryRidges: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: st
         const next = sorted[i + 1];
         let yN = yMin + 220 / k;
         if (next && next.Z > P.zNear + 100) yN = Math.max(yMin + 40 / k, PP(A, A.cam.cx, next.H + next.amp * 0.2, next.Z)[1]);
-        const mist = mixHex(mixHex(A.screenAir(yN), PAL.creamLo, 0.25), body, 0.6 - 0.3 * t);
+        const mist = flatFar ? mixHex(body, mixHex(hazeAt(yN), PAL.creamLo, 0.2), 0.3 - 0.2 * t) : mixHex(mixHex(hazeAt(yN), PAL.creamLo, 0.25), body, 0.6 - 0.3 * t);
         const gid = `${uid}h${i}`;
         const cid = `${uid}hc${i}`;
         const outline = `M${pts.map(Pt).join("L")}L${n2(pts[N][0])},${n2(bottomY)}L${n2(pts[0][0])},${n2(bottomY)}Z`;
@@ -1210,11 +1296,22 @@ export const HillCountryRidges: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: st
           const dep = Math.max(8 / k, F[1] - Pk[1]) * 0.9 + 6 / k;
           return `M${s.map(Pt).join("L")}L${n2(F[0])},${n2(F[1] + dep * 0.6)}L${n2(Pk[0] + 0.3 * (F[0] - Pk[0]))},${n2(F[1] + dep)}Z`;
         };
-        if (t < 0.85) {
+        let ledges = "";
+        if (t < (flatFar ? 0.5 : 0.85)) {
           for (let q = Math.floor(X0 / cell) - 2; q <= Math.ceil((X0 + 2 * hw) / cell) + 2; q++) {
             const b = hillBump(si, q, cell);
             shadeD += wedge(b.cx + (b.mesa ? 0.42 : 0.2) * b.wr, b.cx + 0.97 * b.wr);
             litD += wedge(b.cx - (b.mesa ? 0.42 : 0.2) * b.wl, b.cx - 0.97 * b.wl);
+            // a small limestone ledge on some bench edges (the shoulder, just under the flat top)
+            if (grass && b.mesa && t < 0.2 && hash2(q, si, 33) < 0.4) {
+              const l0 = b.cx + (hash2(q, si, 34) < 0.5 ? 0.38 : -0.62) * (hash2(q, si, 34) < 0.5 ? b.wr : b.wl);
+              const l1 = l0 + 0.14 * (b.wr + b.wl) * 0.5;
+              const run = Array.from({ length: 6 }, (_, j) => {
+                const p = top(lerp(l0, l1, j / 5));
+                return [p[0], p[1] + 5 / k] as P2;
+              });
+              ledges += `M${run.map(Pt).join("L")}`;
+            }
           }
         }
         // trees on the nearer ridges: live-oak motts and cedar brakes in patches, on the crest and down the slope;
@@ -1242,10 +1339,10 @@ export const HillCountryRidges: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: st
               const cy = p[1] + down;
               if (sz * k < 1) continue;
               const cedar = cedarPatch ? hash(hs * 53) < 0.75 : hash(hs * 53) < 0.25;
-              const nb = 1 + Math.floor(hash(hs * 71) * 3);
+              const nb = grass ? 2 + Math.floor(hash(hs * 71) * 3) : 1 + Math.floor(hash(hs * 71) * 3);
               for (let m = 0; m < nb; m++) {
-                const ox = m === 0 ? 0 : (m === 1 ? -0.85 : 0.9) * sz;
-                const oy = m === 0 ? 0 : 0.25 * sz;
+                const ox = m === 0 ? 0 : [-0.85, 0.9, -0.3, 0.45][(m - 1) % 4] * sz;
+                const oy = m === 0 ? 0 : [0.25, 0.2, 0.45, -0.35][(m - 1) % 4] * sz;
                 const rr = m === 0 ? sz : sz * (0.55 + 0.25 * hash(hs * 17 + m));
                 if (cedar) cedars += circ(cx + ox * 0.8, cy + oy, rr * 0.7, rr * 0.9);
                 else {
@@ -1258,7 +1355,7 @@ export const HillCountryRidges: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: st
         }
         const tf = 0.3 + 0.6 * sstep(0, 0.42, t);
         const oakC = mixHex(RMAT.oak.mid, body, tf);
-        const cedarC = mixHex(mixHex(RMAT.cedar.dark, RMAT.cedar.mid, 0.5), body, tf * 0.9);
+        const cedarC = grass ? mixHex(mixHex(RMAT.cedar.mid, RMAT.oak.dark, 0.4), body, tf * 0.9) : mixHex(mixHex(RMAT.cedar.dark, RMAT.cedar.mid, 0.5), body, tf * 0.9);
         const capC = mixHex(RMAT.oak.lit, lit, 0.25 + 0.6 * tf);
         const flankOp = 1 - 0.7 * t;
         const blur = Math.max(2, 9 * (1 - t)) / k;
@@ -1277,7 +1374,7 @@ export const HillCountryRidges: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: st
                 <path d={outline} />
               </clipPath>
             </defs>
-            <path d={outline} fill={`url(#${gid})`} />
+            <path d={outline} fill={`url(#${gid})`} opacity={flatFar ? 1 - 0.7 * sstep(0.72, 1, t) : 1} />
             {shadeD ? (
               <g clipPath={`url(#${cid})`}>
                 <g filter={`url(#${gid}f)`}>
@@ -1286,6 +1383,7 @@ export const HillCountryRidges: React.FC<{ A: AirWorld; ridges: Ridge[]; uid: st
                 </g>
               </g>
             ) : null}
+            {ledges ? <path d={ledges} fill="none" stroke={mixHex(mixHex("#B9A27A", body, 0.3 + 0.5 * t), PAL.cream, 0.1)} strokeWidth={6 / k} strokeLinecap="round" opacity={0.6} /> : null}
             {cedars ? <path d={cedars} fill={cedarC} /> : null}
             {oaks ? <path d={oaks} fill={oakC} /> : null}
             {caps ? <path d={caps} fill={capC} opacity={0.7} /> : null}

@@ -574,6 +574,7 @@ export const buildRebekah = (pose: RebekahPose, inks = REBEKAH_INKS): Shape[] =>
   const hipL: V3 = [pel[0] + 14, pel[1], pel[2]];
   const hipR: V3 = [pel[0] - 14, pel[1], pel[2]];
   const toeOf = (fs: FootState): V3 => add3(fs.p, [Math.sin(fs.yaw * D2R) * 26, -10, Math.cos(fs.yaw * D2R) * 26]);
+  const climb = sstep(0.12, 0.4, Math.abs(pose.slope[1]));
   const skirtFn = (phi: number, t: number): V3 => {
     const s = Math.sin(phi * D2R);
     const c = Math.cos(phi * D2R);
@@ -595,15 +596,17 @@ export const buildRebekah = (pose: RebekahPose, inks = REBEKAH_INKS): Shape[] =>
     // the cloth gives a little to the legs but never bells out: the push past the ring is soft-capped (a trailing
     // ankle shows below the back hem instead)
     const softcap = (e: number, E: number) => (e <= 0 ? 0 : E * Math.tanh(e / E));
-    const bF = b + softcap(front - cz - b, 16);
-    const bB = b + softcap(cz - back - b, 8);
+    // on a climb the trailing leg reaches far down-slope: the cloth follows it further and hangs a little longer, so
+    // the stocking only peeks at the hem
+    const bF = b + softcap(0.65 * (front - cz - b), 28);
+    const bB = b + softcap((0.65 + 0.35 * climb) * (cz - back - b), 28 + 60 * climb);
     const tw = pose.hem.twist * t * D2R;
     const lx = a * s;
     const lz = (c >= 0 ? bF : bB) * c;
     const x = cx + lx * Math.cos(tw) + lz * Math.sin(tw);
     const z = cz + lz * Math.cos(tw) - lx * Math.sin(tw);
     // height: the hem runs parallel to the ground, lifted where a foot pushes up under it
-    let yHem = gY(x, z) - ANKLE - 7;
+    let yHem = gY(x, z) - ANKLE - 7 + 7 * climb;
     for (const fs of [pose.feet.L, pose.feet.R]) {
       const toe = toeOf(fs);
       const top = Math.min(fs.p[1], toe[1]) - 9;
