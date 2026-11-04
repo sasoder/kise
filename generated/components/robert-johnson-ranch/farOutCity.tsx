@@ -16,7 +16,21 @@
 import React from "react";
 import { mixHex, type AirWorld, type Mat } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { CAR_MAT, Sedan } from "./farOutCar";
-import { PAL, add, c01, face3, hash, line3, n2, poly3, polyD, proj, Pt, type P2, type Toner, type V3 } from "./farOutFaces";
+import { PAL, add, c01, face3, hash, line3, n2, poly3, polyD, proj, Pt, sstep, type P2, type Toner, type V3 } from "./farOutFaces";
+/** fine facade detail fades in with its size on screen (never a hard switch, never a sub-pixel grid that shimmers):
+ *  the elements pushed since `i0` go into one group at opacity `op` */
+/** a facade pattern of period `per` px that moves `mv` px a frame (the skyline shrinking) strobes once it moves more
+ *  than ~a third of its period: it fades out over that range (a still or slowly shrinking city keeps its detail) */
+const strobeFade = (mv: number, per: number) => 1 - sstep(0.3, 0.55, mv / Math.max(0.5, per));
+const fadeTail = (els: React.ReactNode[], i0: number, op: number, key: string) => {
+  if (op >= 0.999 || els.length <= i0) return;
+  const part = els.splice(i0);
+  els.push(
+    <g key={key} opacity={n2(op)}>
+      {part}
+    </g>,
+  );
+};
 
 export const U = 178;
 export const CITY_MAT = {
@@ -126,7 +140,7 @@ const towerPattern = (style: TowerSpec["style"], W: number, Hh: number, floor: n
   }
   return q;
 };
-export const Tower: React.FC<{ A: AirWorld; s: TowerSpec; o: V3; tone: Toner; uid: string }> = ({ A, s, o, tone: tn, uid }) => {
+export const Tower: React.FC<{ A: AirWorld; s: TowerSpec; o: V3; tone: Toner; uid: string; rel?: number }> = ({ A, s, o, tone: tn, uid, rel = 0 }) => {
   const X = o[0] + s.X;
   const Z = o[2] + s.Z;
   const H = o[1];
@@ -149,25 +163,34 @@ export const Tower: React.FC<{ A: AirWorld; s: TowerSpec; o: V3; tone: Toner; ui
     const key = `${uid}t${ti}`;
     els.push(...boxFaces(A, x0, x1, h0, h1, z0, z1, mat, key, tn, lw));
     // the facade pattern on the front and the visible side (when a floor is big enough on screen)
-    if (floor * px > 2.2) {
+    // the pattern's periods across (bays, columns) and up (floors), and how far it moves a frame as the city shrinks
+    const perX = (s.style === "piers" ? 640 : s.style === "glass" ? 420 : s.style === "grid" ? 520 : 1e9) * px;
+    const perY = (s.style === "piers" ? 1e9 : floor) * px;
+    const strobe = Math.min(strobeFade(rel * (Math.abs(s.X) + s.w) * px, perX), strobeFade(rel * s.h * px, perY));
+    const towerWin = sstep(3.5, 9, floor * px) * strobe;
+    const towerWinI = els.length;
+    if (towerWin > 0.005) {
       const Hh = h1 - h0;
       const winC = tn(s.style === "glass" ? mixHex(mat.lit, "#E8E2D2", 0.3) : WIN, Z, (h0 + h1) / 2);
       const faceW = x1 - x0;
       const pat = towerPattern(s.style, faceW, Hh, floor, ti === 0 ? floor * 0.6 : 60, (s.seed ?? 1) + ti);
-      els.push(<path key={`${key}wf`} d={quadsOn(A, [x0, h0, z0 - 2], [faceW, 0, 0], [0, Hh, 0], pat)} fill={winC} opacity={s.style === "glass" ? 0.55 : 0.85} />);
+      // a glass face's mullions and floor lines are ~20 units: they go before they are thinner than a pixel
+      const lineFade = s.style === "glass" ? sstep(0.7, 2, 20 * px) : 1;
+      els.push(<path key={`${key}wf`} d={quadsOn(A, [x0, h0, z0 - 2], [faceW, 0, 0], [0, Hh, 0], pat)} fill={winC} opacity={(s.style === "glass" ? 0.55 : 0.85) * lineFade} />);
       const camX = A.cam.cx;
       const sideX = camX < x0 ? x0 : camX > x1 ? x1 : null;
       if (sideX !== null) {
         const sd = z1 - z0;
         const patS = towerPattern(s.style, sd, Hh, floor, ti === 0 ? floor * 0.6 : 60, (s.seed ?? 1) + ti + 50);
         const sgn = sideX === x0 ? -2 : 2;
-        els.push(<path key={`${key}ws`} d={quadsOn(A, [sideX + sgn, h0, z0], [0, 0, sd], [0, Hh, 0], patS)} fill={winC} opacity={(s.style === "glass" ? 0.5 : 0.8) * (sideX === x0 ? 1 : 0.75)} />);
+        els.push(<path key={`${key}ws`} d={quadsOn(A, [sideX + sgn, h0, z0], [0, 0, sd], [0, Hh, 0], patS)} fill={winC} opacity={(s.style === "glass" ? 0.5 : 0.8) * (sideX === x0 ? 1 : 0.75) * lineFade} />);
       }
       // a sky glint on a glass tower's lit side
       if (s.style === "glass") {
         els.push(<path key={`${key}gl`} d={poly3(A, [[x0, h0 + Hh * 0.55, z0 - 3], [x0 + faceW * 0.35, h0 + Hh * 0.95, z0 - 3], [x0 + faceW * 0.55, h0 + Hh * 0.95, z0 - 3], [x0, h0 + Hh * 0.3, z0 - 3]])} fill={tn("#B8C6BF", Z, h1)} opacity={0.18} />);
       }
     }
+    fadeTail(els, towerWinI, towerWin, `${key}wfd`);
     // the cornice / parapet band and the rim
     els.push(<path key={`${key}cn`} d={line3(A, [[x0, h1 - 60, z0 - 2], [x1, h1 - 60, z0 - 2]])} stroke={tn(mat.dark, Z, h1)} strokeWidth={Math.max(lw, 40 * A.P.r(Z))} opacity={0.35} />);
     els.push(boxRim(A, x0, x1, h0, h1, z0, `${key}rm`, rimOp * (1 - A.fog(Z)), lw));
@@ -189,7 +212,7 @@ export const Tower: React.FC<{ A: AirWorld; s: TowerSpec; o: V3; tone: Toner; ui
 };
 
 export type BlockSpec = { X: number; Z: number; w: number; d: number; floors: number; mat: keyof typeof CITY_MAT; awning?: boolean; seed?: number };
-export const LowBlock: React.FC<{ A: AirWorld; s: BlockSpec; o: V3; tone: Toner; uid: string }> = ({ A, s, o, tone: tn, uid }) => {
+export const LowBlock: React.FC<{ A: AirWorld; s: BlockSpec; o: V3; tone: Toner; uid: string; rel?: number }> = ({ A, s, o, tone: tn, uid, rel = 0 }) => {
   const X0 = o[0] + s.X - s.w / 2;
   const X1 = X0 + s.w;
   const Z0 = o[2] + s.Z;
@@ -202,7 +225,9 @@ export const LowBlock: React.FC<{ A: AirWorld; s: BlockSpec; o: V3; tone: Toner;
   const els: React.ReactNode[] = [];
   els.push(...boxFaces(A, X0, X1, H, H1, Z0, Z1, mat, uid, tn, lw));
   const px = pxAt(A, Z0);
-  if (fh * px > 2.4) {
+  const blockWin = sstep(3.5, 9, fh * px) * Math.min(strobeFade(rel * (Math.abs(s.X) + s.w) * px, 560 * px), strobeFade(rel * s.floors * fh * px, fh * px));
+  const blockWinI = els.length;
+  if (blockWin > 0.005) {
     // the storefront band (dark glass) and the upper windows
     const q: [number, number, number, number][] = [];
     const Hh = H1 - H;
@@ -218,14 +243,18 @@ export const LowBlock: React.FC<{ A: AirWorld; s: BlockSpec; o: V3; tone: Toner;
     // a light in a couple of the storefronts
     els.push(<path key={`${uid}wl`} d={quadsOn(A, [X0, H, Z0 - 3], [s.w, 0, 0], [0, Hh, 0], [[0.12, 0.3, 120 / Hh, (fh * 0.7) / Hh]])} fill={tn(WIN_LIGHT, Z0, 300)} opacity={0.7} />);
   }
+  fadeTail(els, blockWinI, blockWin, `${uid}wfd`);
   // the cornice: a slightly projecting band at the top
   const cz = Z0 - 50;
   els.push(...boxFaces(A, X0 - 50, X1 + 50, H1 - 110, H1 + 20, cz, Z1, mat, `${uid}c`, tn, lw));
-  if (s.awning && fh * px > 1.5) {
+  const awningFade = sstep(2, 5, fh * px);
+  const awningFadeI = els.length;
+  if (s.awning && awningFade > 0.005) {
     // a muted canvas awning over the storefront: a sloping quad and its front valance
     const aw = CITY_MAT.sage;
     els.push(face3(A, [[X0 + s.w * 0.08, H + fh * 0.98, Z0 - 2], [X1 - s.w * 0.08, H + fh * 0.98, Z0 - 2], [X1 - s.w * 0.08, H + fh * 0.72, Z0 - 260], [X0 + s.w * 0.08, H + fh * 0.72, Z0 - 260]], [(X0 + X1) / 2, H + 200, Z0 + 200], aw, `${uid}aw`, { tone: tn, lw }));
   }
+  fadeTail(els, awningFadeI, awningFade, `${uid}awd`);
   els.push(boxRim(A, X0 - 50, X1 + 50, H1 - 110, H1 + 20, cz, `${uid}rm`, 0.5 * (1 - A.fog(Z0)), lw));
   return <g>{els}</g>;
 };
@@ -300,7 +329,7 @@ const Drum: React.FC<{ A: AirWorld; X: number; Z: number; R: number; h0: number;
 
 /** the Capitol's dimensions (units; origin = the main block's front centre at the ground) */
 export const CAP = { half: 14500, depth: 8000, wallH: 4300, parapet: 300, pavHalf: 4300, pavOut: 750, pavH: 5000, pedH: 1350, endIn: 11300, endOut: 400, endH: 4750, domeZ: 4300, domeR: 2750, domeBase: 9400, domeTop: 13300, statueTop: 16700 };
-export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string }> = ({ A, o, tone: tn, uid }) => {
+export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string; rel?: number }> = ({ A, o, tone: tn, uid, rel = 0 }) => {
   const C = CAP;
   const M = CITY_MAT.granite;
   const [X, H, Z] = o;
@@ -311,7 +340,10 @@ export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string }>
   // ---- the wings (one long block), its parapet, then the end pavilions and the central pavilion
   els.push(...boxFaces(A, X - C.half + 1200, X + C.half - 1200, H, H + C.wallH, Z, Z + C.depth, M, `${uid}w`, tn, lw));
   // windows on the wings: four floors, a rusticated base line
-  if (300 * px > 1.6) {
+  const capStrobe = strobeFade(rel * C.half * px, 620 * px);
+  const wingWin = sstep(2.5, 6, 300 * px) * capStrobe;
+  const wingWinI = els.length;
+  if (wingWin > 0.005) {
     const q: [number, number, number, number][] = [];
     const W = 2 * (C.half - 1200);
     const n = Math.floor(W / 620);
@@ -331,6 +363,7 @@ export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string }>
     els.push(<path key="ww" d={quadsOn(A, [X - W / 2, H, Z - 3], [W, 0, 0], [0, C.wallH, 0], q)} fill={tn(WIN, Z, 2000)} opacity={0.75} />);
     els.push(<path key="wb" d={line3(A, [[X - W / 2, H + 1300, Z - 3], [X + W / 2, H + 1300, Z - 3]]) + line3(A, [[X - W / 2, H + C.wallH - 220, Z - 3], [X + W / 2, H + C.wallH - 220, Z - 3]])} stroke={tn(M.dark, Z, 2000)} strokeWidth={Math.max(lw, 60 * A.P.r(Z))} opacity={0.35} />);
   }
+  fadeTail(els, wingWinI, wingWin, "wwfd");
   els.push(...boxFaces(A, X - C.half + 1200, X + C.half - 1200, H + C.wallH, H + C.wallH + C.parapet, Z + 80, Z + C.depth - 80, M, `${uid}pp`, tn, lw));
   // the end pavilions, each with a small pediment
   const pediment = (x0: number, x1: number, h0: number, ph: number, z: number, key: string) => {
@@ -350,7 +383,9 @@ export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string }>
     const x0 = s < 0 ? X - C.half : X + C.endIn;
     const x1 = s < 0 ? X - C.endIn : X + C.half;
     els.push(...boxFaces(A, x0, x1, H, H + C.endH, Z - C.endOut, Z + C.depth - 600, M, `${uid}e${s}`, tn, lw));
-    if (300 * px > 1.6) {
+    const pavWin = sstep(2.5, 6, 300 * px) * capStrobe;
+    const pavWinI = els.length;
+    if (pavWin > 0.005) {
       const q: [number, number, number, number][] = [];
       const W = x1 - x0;
       for (let i = 0; i < 4; i++) {
@@ -364,6 +399,7 @@ export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string }>
       }
       els.push(<path key={`ew${s}`} d={quadsOn(A, [x0, H, Z - C.endOut - 3], [W, 0, 0], [0, C.endH, 0], q)} fill={tn(WIN, Z, 2000)} opacity={0.75} />);
     }
+    fadeTail(els, pavWinI, pavWin, `epfd${s}`);
     pediment(x0 - 100, x1 + 100, H + C.endH, 800, Z - C.endOut - 4, `${uid}ep${s}`);
     els.push(boxRim(A, x0, x1, H, H + C.endH, Z - C.endOut, `${uid}er${s}`, 0.5 * (1 - fogZ), lw));
   }
@@ -407,7 +443,9 @@ export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string }>
       </g>,
     );
     // the ribs (meridians) and two rings of small windows
-    if (R * px > 6) {
+    const domeDetail = sstep(6, 14, R * px);
+    const domeDetailI = els.length;
+    if (domeDetail > 0.005) {
       let ribs = "";
       for (let k = -3; k <= 3; k++) {
         const a = (k / 3.5) * (Math.PI / 2);
@@ -433,6 +471,7 @@ export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string }>
       }
       els.push(<path key="dw" d={wins} fill={tn(WIN, dz, hm)} opacity={0.6} />);
     }
+    fadeTail(els, domeDetailI, domeDetail, "domefd");
     // the cream rim on the dome's lit (left) edge
     els.push(<path key="drim" d={`M${left.slice(2, N - 2).map(Pt).join("L")}`} fill="none" stroke={PAL.cream} strokeWidth={lw * 1.4} strokeOpacity={0.55 * (1 - fogZ)} />);
   }
@@ -479,7 +518,9 @@ export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string }>
     [X - 3100, H + 4200, pz - 2],
   ];
   els.push(<path key="rc" d={poly3(A, recess)} fill={tn(mixHex(M.dark, PAL.shadow, 0.2), pz, 2500)} opacity={0.9} />);
-  if (300 * px > 1) {
+  const colFade = sstep(1.2, 3, 300 * px);
+  const colFadeI = els.length;
+  if (colFade > 0.005) {
     let cols = "";
     let colLit = "";
     for (const cx of [-2700, -900, 900, 2700]) {
@@ -496,6 +537,7 @@ export const Capitol: React.FC<{ A: AirWorld; o: V3; tone: Toner; uid: string }>
     els.push(<path key="sp" d={poly3(A, [[X - 3500, H, pz - 500], [X + 3500, H, pz - 500], [X + 3300, H + 1100, pz - 6], [X - 3300, H + 1100, pz - 6]])} fill={tn(M.mid, pz, 500)} />);
     els.push(<path key="spl" d={steps} stroke={tn(M.dark, pz, 500)} strokeWidth={lw} opacity={0.5} />);
   }
+  fadeTail(els, colFadeI, colFade, "colfd");
   pediment(px0 - 150, px1 + 150, H + C.pavH, C.pedH, pz - 10, `${uid}cped`);
   els.push(boxRim(A, px0, px1, H, H + C.pavH, pz, `${uid}cprm`, 0.5 * (1 - fogZ), lw));
   return <g>{els}</g>;
@@ -562,13 +604,15 @@ const CITY_CARS: [number, number, number, number, keyof typeof CAR_MAT, number][
   [22000, -21800, -1, 0, "slate", 60],
 ];
 
-export const AustinCity: React.FC<{ A: AirWorld; o: V3; tone: Toner; frame: number; uid: string; cars?: boolean }> = ({ A, o, tone, frame, uid, cars = true }) => {
+/** `rel`: how fast the skyline shrinks on screen (its relative width change per frame); fine facade patterns fade out
+ *  while it is fast enough to make them strobe */
+export const AustinCity: React.FC<{ A: AirWorld; o: V3; tone: Toner; frame: number; uid: string; cars?: boolean; rel?: number }> = ({ A, o, tone, frame, uid, cars = true, rel = 0 }) => {
   const [X, H, Z] = o;
   type It = { z: number; node: React.ReactNode };
   const its: It[] = [];
-  TOWERS.forEach((s, i) => its.push({ z: Z + s.Z, node: <Tower key={`t${i}`} A={A} s={s} o={o} tone={tone} uid={`${uid}t${i}`} /> }));
-  BLOCKS.forEach((s, i) => its.push({ z: Z + s.Z, node: <LowBlock key={`b${i}`} A={A} s={s} o={o} tone={tone} uid={`${uid}b${i}`} /> }));
-  its.push({ z: Z - CAP.pavOut - 500, node: <Capitol key="cap" A={A} o={o} tone={tone} uid={`${uid}cap`} /> });
+  TOWERS.forEach((s, i) => its.push({ z: Z + s.Z, node: <Tower key={`t${i}`} A={A} s={s} o={o} tone={tone} uid={`${uid}t${i}`} rel={rel} /> }));
+  BLOCKS.forEach((s, i) => its.push({ z: Z + s.Z, node: <LowBlock key={`b${i}`} A={A} s={s} o={o} tone={tone} uid={`${uid}b${i}`} rel={rel} /> }));
+  its.push({ z: Z - CAP.pavOut - 500, node: <Capitol key="cap" A={A} o={o} tone={tone} uid={`${uid}cap`} rel={rel} /> });
   if (cars) {
     CITY_CARS.forEach(([cx, cz, hx, hz, m, v], i) => {
       const t = frame * v;

@@ -13,7 +13,7 @@ import { AIR, formTone, mixHex, type AirWorld, type Mat } from "../kits/dwarkesh
 import { CedarBush, LiveOak, RMAT, U, type Item } from "./ranchWorld";
 import { CedarPost } from "./farOutCar";
 import { c01, hash, lerp, line3, n2, polyD, proj, Pt, sstep, type P2, type V3 } from "./farOutFaces";
-import { DIRT_HALF, FARM_X, FARM_Z, GUARD_AT, HWY_DIR, HWY_X, JUNCTION, LEFT_DIR, ROUTE, TH, nearestRoad, rawH } from "./farOutPlan";
+import { DIRT_HALF, FARM_X, FARM_Z, GUARD_AT, HWY_DIR, HWY_X, JUNCTION, LEFT_DIR, ROUTE, TH, cityGone, eastOf, flatIn, nearestRoad, rawH } from "./farOutPlan";
 
 const PAL = AIR.A;
 export type World = { A: AirWorld; oz: number; frame: number };
@@ -37,12 +37,20 @@ const pow2Step = (base: number, want: number) => base * Math.pow(2, Math.max(0, 
 // ===================================================================================================================
 // THE GROUND'S COLOUR (HillGround's groundLocal, on the world terrain)
 // ===================================================================================================================
-const groundLocal = (X: number, Z: number) => {
+/** `d` (the eye's distance) flattens the form light with distance: far slopes keep only a little of their lit/shade
+ *  contrast and no pale limestone risers, so a far sun-facing hill never turns snow-white against the flat land */
+/** cut 59's grass hills (ranchWorld HILL_GRASS_NEAR) */
+const HILL_GRASS = { lit: "#A9A87A", mid: "#8F9065", dark: "#6A714C" };
+const groundLocal = (X: number, Z: number, d = 0) => {
+  const kf = 1 - 0.7 * sstep(4000, 20000, d);
   const e = 40;
   const hx = (TH(X + e, Z) - TH(X - e, Z)) / (2 * e);
   const hz = (TH(X, Z + e) - TH(X, Z - e)) / (2 * e);
   const nl = Math.hypot(hx, 1, hz);
-  const ndl = (-hx * LIGHT[0] + LIGHT[1] - hz * LIGHT[2]) / nl;
+  // (the second half's folds are lit softly: the slices sample the light once per row, and a hard light on a fold
+  // shows as blocks of shade)
+  const ea = eastOf(X, Z);
+  const ndl = LIGHT[1] + ((-hx * LIGHT[0] + LIGHT[1] - hz * LIGHT[2]) / nl - LIGHT[1]) * kf * (1 - 0.6 * ea);
   const gm = RMAT.grass;
   const pn = vnoise(X / 1300, Z / 1000, 7);
   const mot = vnoise(X / 900, Z / 1500, 11) - 0.5;
@@ -52,17 +60,26 @@ const groundLocal = (X: number, Z: number) => {
   let out = mixHex(g1, mixHex(gm.dark, "#55604A", 0.5), 0.06 * sstep(0.55, 0.85, pat));
   // the limestone showing on the benches' steep risers (pale, a little warm)
   const slope = Math.hypot(hx, hz);
-  if (slope > 0.3) out = mixHex(out, formTone(RMAT.caliche, ndl, PAL.shadow, 0.2), 0.16 * sstep(0.3, 0.8, slope));
-  // the swept farm yard
-  const fy = Math.hypot((X - FARM_X) / 1.4, Z - (FARM_Z + 200));
-  if (fy < 1100) out = mixHex(out, formTone(RMAT.dirt, ndl, PAL.shadow, 0.2), 0.5 * (1 - sstep(500, 1100, fy)));
+  if (slope > 0.3) out = mixHex(out, formTone(RMAT.caliche, ndl, PAL.shadow, 0.2), 0.16 * kf * sstep(0.3, 0.8, slope));
+  // the second half's country in the dry yellow-green of cut 59's slope (warm late-afternoon grass)
+  if (ea > 0) out = mixHex(out, formTone(HILL_GRASS, ndl, PAL.shadow, 0.2), 0.45 * ea);
   return out;
 };
 
 // ===================================================================================================================
 // THE SLICES (world Z on a power-of-two grid: 30 units near, ~2% of the distance far)
 // ===================================================================================================================
-const SAMPLES = 96;
+/** the haze the far ridge rows pale into (cut 59's FAR_HAZE, a touch warmer: the late-afternoon light holds) */
+export const FAR_HAZE = "#B7BA9E";
+const SAMPLES = 300;
+/** the height the land is toned at: as is up to 500, then a third of the rest, so the tall ridges of the second half
+ *  do not take the kit's pale high-altitude air (hHigh 1250) and read as snow */
+const landToneH = (H: number) => (H <= 500 ? Math.max(0, H) : 500 + (H - 500) / 3);
+/** the slices' levels: a slice at world Z = m * 30 * 2^j (m odd) belongs to level j; it is drawn while the grid wanted
+ *  at its distance (0.021 d) is finer than its level's spacing, and fades out (opacity) over the last part of that
+ *  range instead of vanishing, so a hill's outline never jumps when the grid coarsens; the top level never fades */
+const SLICE_BASE = 30;
+const SLICE_TOP = 7;
 export const landItems = (W: World, o: { dFar?: number; margin?: number } = {}): Item[] => {
   const { A } = W;
   const P = A.P;
@@ -76,59 +93,64 @@ export const landItems = (W: World, o: { dFar?: number; margin?: number } = {}):
   const eyeY = P.opts.eyeY;
   // the far land pales toward a dry sage (the clip's pale far land), never the teal of the air at the horizon
   const FAR_LAND = "#B4BBA0";
-  const farC = mixHex(A.tone(mixHex(RMAT.grass.mid, RMAT.grassDry.mid, 0.5), dFar - A.Dc, 0), FAR_LAND, 0.42);
+  const farC0 = mixHex(A.tone(mixHex(RMAT.grass.mid, RMAT.grassDry.mid, 0.5), dFar - A.Dc, 0), FAR_LAND, 0.42);
+  // the second half: the land under the far ridge rows is their haze (cut 59's pale grey-green), a clear horizon
+  const fi = flatIn(W.frame);
+  const farC = fi > 0 ? mixHex(farC0, FAR_HAZE, fi) : farC0;
   out.push({ Z: 1e9, node: <rect key="plain" x={n2(A.cam.cx - 800 / k)} y={n2(eyeY)} width={n2(1600 / k)} height={n2(bottomY - eyeY)} fill={farC} /> });
-  let d = Math.max(P.zNear + 60 + A.Dc, 700);
-  let si = 0;
-  let prevZw = -Infinity;
-  while (d < dFar) {
-    const step = pow2Step(30, 0.021 * d);
-    // the next world slice on this level's grid (always strictly beyond the last one: no float stall)
-    let Zw = (Math.floor((camZw + d) / step + 1e-7) + 1) * step;
-    if (Zw <= prevZw + 1) Zw = prevZw + step;
-    prevZw = Zw;
-    d = Zw - camZw;
-    if (d >= dFar) break;
-    const Zk = Zw - W.oz;
-    const r = P.r(Zk);
-    const hw = (540 + margin) / (k * r);
-    const xa = A.cam.cx - hw;
-    const xb = A.cam.cx + hw;
-    const sx = pow2Step(8, (xb - xa) / SAMPLES);
-    const i0 = Math.floor(xa / sx);
-    const i1 = Math.ceil(xb / sx);
-    const top: P2[] = [];
-    const stops: { o: number; c: string }[] = [];
-    let minY = 1e9;
-    const every = Math.max(1, Math.round((i1 - i0) / 40));
-    for (let i = i0; i <= i1; i++) {
-      const X = i * sx;
-      const H = TH(X, Zw);
-      const q = P.p(X, -H, Zk);
-      top.push(q);
-      minY = Math.min(minY, q[1]);
-      if ((i - i0) % every === 0 || i === i1) stops.push({ o: (i - i0) / (i1 - i0), c: mixHex(A.tone(groundLocal(X, Zw), Zk, Math.max(0, H)), FAR_LAND, 0.42 * sstep(26000, 100000, d)) });
+  const dMin = Math.max(P.zNear + 60 + A.Dc, 700);
+  for (let j = 0; j <= SLICE_TOP; j++) {
+    const sp = SLICE_BASE * 2 ** j;
+    const dEnd = j === SLICE_TOP ? dFar : Math.min(dFar, sp / 0.021);
+    for (let m = Math.ceil((camZw + dMin) / sp); m * sp <= camZw + dEnd; m++) {
+      if (j < SLICE_TOP && m % 2 === 0) continue;
+      const Zw = m * sp;
+      const d = Zw - camZw;
+      const op = j === SLICE_TOP ? 1 : 1 - sstep(0.55 * sp, sp, 0.021 * d);
+      if (op <= 0.003) continue;
+      const Zk = Zw - W.oz;
+      const r = P.r(Zk);
+      const hw = (540 + margin) / (k * r);
+      const xa = A.cam.cx - hw;
+      const xb = A.cam.cx + hw;
+      const sx = pow2Step(4, (xb - xa) / SAMPLES);
+      const i0 = Math.floor(xa / sx);
+      const i1 = Math.ceil(xb / sx);
+      const top: P2[] = [];
+      const stops: { o: number; c: string }[] = [];
+      let minY = 1e9;
+      // the colour stops on a world-anchored subset of the samples
+      const every = 2 ** Math.max(0, Math.ceil(Math.log2((i1 - i0) / 48)));
+      for (let i = i0; i <= i1; i++) {
+        const X = i * sx;
+        const H = TH(X, Zw);
+        const q = P.p(X, -H, Zk);
+        top.push(q);
+        minY = Math.min(minY, q[1]);
+        if (i % every === 0 || i === i0 || i === i1) stops.push({ o: (i - i0) / (i1 - i0), c: mixHex(A.tone(groundLocal(X, Zw, d), Zk, landToneH(H)), FAR_LAND, 0.42 * sstep(26000, 100000, d)) });
+      }
+      if (minY > bottomY) continue;
+      const gid = `ld${Zw}`;
+      const dd = `M${top.map(Pt).join("L")}L${n2(top[top.length - 1][0])},${n2(bottomY)}L${n2(top[0][0])},${n2(bottomY)}Z`;
+      out.push({
+        Z: Zk,
+        node: (
+          <g key={`s${Zw}`}>
+            <defs>
+              <linearGradient id={gid} gradientUnits="userSpaceOnUse" x1={n2(top[0][0])} y1="0" x2={n2(top[top.length - 1][0])} y2="0">
+                {stops.map((s, i) => (
+                  <stop key={i} offset={s.o.toFixed(4)} stopColor={s.c} />
+                ))}
+              </linearGradient>
+            </defs>
+            <path d={dd} fill={`url(#${gid})`} opacity={op < 0.999 ? n2(op) : undefined} />
+          </g>
+        ),
+      });
     }
-    si++;
-    if (minY > bottomY) continue;
-    const gid = `ld${si}`;
-    const dd = `M${top.map(Pt).join("L")}L${n2(top[top.length - 1][0])},${n2(bottomY)}L${n2(top[0][0])},${n2(bottomY)}Z`;
-    out.push({
-      Z: Zk,
-      node: (
-        <g key={`s${Zw}`}>
-          <defs>
-            <linearGradient id={gid} gradientUnits="userSpaceOnUse" x1={n2(top[0][0])} y1="0" x2={n2(top[top.length - 1][0])} y2="0">
-              {stops.map((s, i) => (
-                <stop key={i} offset={s.o.toFixed(4)} stopColor={s.c} />
-              ))}
-            </linearGradient>
-          </defs>
-          <path d={dd} fill={`url(#${gid})`} />
-        </g>
-      ),
-    });
   }
+  // far to near among themselves (the scene sorts all items by Z; equal Z keeps this order)
+  out.sort((a, b) => b.Z - a.Z);
   return out;
 };
 
@@ -275,6 +297,10 @@ export const roadItems = (W: World, kind: RoadKind, o: { sFrom?: number; sTo?: n
       }
       return [...a, ...b.reverse()];
     };
+    // once the city has gone (f160 on), the highway back toward it fades into the far land instead of running to the
+    // horizon as a dark wedge
+    const farFade = kind === "hwy" ? 1 - cityGone(W.frame) * sstep(14000, 40000, Math.min(za, zb) + A.Dc) : 1;
+    if (farFade < 0.01) continue;
     const draw = (clip: { c: number; far: boolean } | null, keyS: string): React.ReactNode => {
       const D = (o0: number, o1: number) => {
         const q = band(o0, o1);
@@ -326,7 +352,11 @@ export const roadItems = (W: World, kind: RoadKind, o: { sFrom?: number; sTo?: n
         }
         if (defs.length) els.unshift(<defs key="df">{defs}</defs>);
       }
-      return <g key={keyS}>{els}</g>;
+      return (
+        <g key={keyS} opacity={farFade < 0.999 ? n2(farFade) : undefined}>
+          {els}
+        </g>
+      );
     };
     // a body on the road whose cut line crosses this piece: split it there
     const pa = lineAt(L, sa).p;
@@ -385,11 +415,16 @@ const clearAt = (X: number, Z: number, pad: number) => {
   if (Math.hypot(X - GUARD_AT[0], Z - GUARD_AT[1]) < 900 + pad) return true;
   return false;
 };
-export const tuftItems = (W: World, o: { step?: number; dMax?: number } = {}): Item[] => {
+export const tuftItems = (W: World, o: { step?: number; dMax?: number; dFrom?: number; sMul?: number; op?: number; seed?: number } = {}): Item[] => {
   const { A } = W;
   const P = A.P;
   const st = o.step ?? 150;
   const dMax = o.dMax ?? 7000;
+  const dFrom = o.dFrom ?? 0;
+  const sMul = o.sMul ?? 1;
+  const opAll = o.op ?? 1;
+  const sd = o.seed ?? 17;
+  if (opAll < 0.01) return [];
   const camX = A.cam.cx;
   const camZw = W.oz - A.Dc;
   const out: Item[] = [];
@@ -398,12 +433,12 @@ export const tuftItems = (W: World, o: { step?: number; dMax?: number } = {}): I
     const dRow = j * st - camZw;
     const hw = ((560 + 60) * dRow) / (A.k * A.Dc);
     for (let i = Math.floor((camX - hw) / st); i <= (camX + hw) / st; i++) {
-      const seed = hash2(i, j, 17) * 1000;
+      const seed = hash2(i, j, sd) * 1000;
       if (hash(seed) < 0.3) continue;
       const X = (i + hash(seed + 11)) * st;
       const Z = (j + hash(seed + 13)) * st;
       const dd = Z - camZw;
-      if (dd < dMin || dd > dMax) continue;
+      if (dd < Math.max(dMin, dFrom) || dd > dMax) continue;
       if (clearAt(X, Z, 60)) continue;
       const Zk = Z - W.oz;
       const H = TH(X, Z);
@@ -411,9 +446,9 @@ export const tuftItems = (W: World, o: { step?: number; dMax?: number } = {}): I
       const sy = 960 + (q[1] - A.cam.cy) * A.k;
       const sx = 540 + (q[0] - A.cam.cx) * A.k;
       if (sy < -40 || sy > 1990 || sx < -80 || sx > 1160) continue;
-      const s = 62 * (0.7 + 0.6 * hash(seed + 17));
+      const s = 62 * sMul * (0.7 + 0.6 * hash(seed + 17));
       if (s * P.r(Zk) * A.k < 1.6) continue;
-      const op = 1 - sstep(dMax * 0.7, dMax, dd);
+      const op = opAll * (1 - sstep(dMax * 0.7, dMax, dd)) * (dFrom > 0 ? sstep(dFrom, dFrom + 1200, dd) : 1);
       out.push({ Z: Zk, node: <Tuft key={`t${i}_${j}`} A={A} X={X} Zk={Zk} H={H} s={s} seed={seed} frame={W.frame} op={op} /> });
     }
   }
@@ -438,31 +473,64 @@ const blocks = (X: number, Z: number, top: number, R: number, s: Seg) => {
 };
 const TREE_CELL = 1500;
 type Tree = { X: number; Z: number; kind: 0 | 1 | 2; size: number; seed: number };
-const treeCache = new Map<string, Tree | null>();
+const treeCache = new Map<string, Tree[]>();
 const CEDAR_LIGHT: Mat = { lit: "#7A8B70", mid: "#5A6B58", dark: "#36443A" };
 // cut 59's lit bush (NothingButMoreHills): olive with a pale rim on the lit side, never a black shape
 const BUSH_MAT: Mat = { lit: "#76845A", mid: "#52603C", dark: "#3D4A33" };
 const CEDAR_RIM = "#B9B98E";
-const treeAt = (i: number, j: number, keep: Seg[], camPath: P2[]): Tree | null => {
+const treeOk = (t: Tree, keep: Seg[], camPath: P2[], east = false) => {
+  if (clearAt(t.X, t.Z, t.kind === 0 ? 520 : 380)) return false;
+  const top = TH(t.X, t.Z) + (t.kind === 0 ? 1.2 : 1.05) * t.size;
+  const R = (t.kind === 0 ? 0.95 : 0.5) * t.size;
+  // (the second half's camera is high: a tree under it sweeps through the bottom of the frame, so none near its path)
+  if (camPath.some((q) => Math.hypot(q[0] - t.X, q[1] - t.Z) < (east ? 6500 : t.kind === 0 ? 1400 : 3600))) return false;
+  return !keep.some((sg) => blocks(t.X, t.Z, top, R, sg));
+};
+const treeAt = (i: number, j: number, keep: Seg[], camPath: P2[]): Tree[] => {
   const key = `${i},${j}`;
-  if (treeCache.has(key)) return treeCache.get(key) ?? null;
+  const hit = treeCache.get(key);
+  if (hit) return hit;
   const h = (k: number) => hash2(i, j, 50 + k);
   const X = (i + 0.15 + 0.7 * h(1)) * TREE_CELL;
   const Z = (j + 0.15 + 0.7 * h(2)) * TREE_CELL;
-  // density: the hills more wooded on their slopes and in the draws, the city's plain sparse
-  const plain = sstep(38000, 50000, Z);
-  const dens = lerp(0.46, 0.12, plain) * (0.6 + 0.8 * vnoise(X / 9000, Z / 9000, 61));
-  let t: Tree | null = null;
-  if (h(3) < dens && !clearAt(X, Z, 520) && Math.hypot(X - FARM_X, Z - (FARM_Z + 600)) > 3400) {
-    const kind = (h(4) < 0.66 ? 0 : h(4) < 0.86 ? 1 : 2) as 0 | 1 | 2;
-    const size = kind === 0 ? (4.2 + 2.2 * h(5)) * U : kind === 1 ? (2.2 + 1.0 * h(5)) * U : (2.6 + 1.2 * h(5)) * U;
-    const top = TH(X, Z) + (kind === 0 ? 1.2 : 1.05) * size;
-    const R = (kind === 0 ? 0.95 : 0.5) * size;
-    const nearCam = camPath.some((q) => Math.hypot(q[0] - X, q[1] - Z) < (kind === 0 ? 1400 : 3600));
-    if (!nearCam && !keep.some((sg) => blocks(X, Z, top, R, sg))) t = { X, Z, kind, size, seed: Math.floor(h(6) * 97) + 1 };
+  const out: Tree[] = [];
+  if (eastOf(X, Z) < 0.5) {
+    // density: the hills more wooded on their slopes and in the draws, the city's plain sparse
+    const plain = sstep(38000, 50000, Z);
+    const dens = lerp(0.46, 0.12, plain) * (0.6 + 0.8 * vnoise(X / 9000, Z / 9000, 61));
+    if (h(3) < dens && !clearAt(X, Z, 520) && Math.hypot(X - FARM_X, Z - (FARM_Z + 600)) > 3400) {
+      const kind = (h(4) < 0.66 ? 0 : h(4) < 0.86 ? 1 : 2) as 0 | 1 | 2;
+      const size = kind === 0 ? (4.2 + 2.2 * h(5)) * U : kind === 1 ? (2.2 + 1.0 * h(5)) * U : (2.6 + 1.2 * h(5)) * U;
+      const t: Tree = { X, Z, kind, size, seed: Math.floor(h(6) * 97) + 1 };
+      if (treeOk(t, keep, camPath)) out.push(t);
+    }
+  } else {
+    // the second half's country: mostly open grass; now and then a mott of live oaks or a cedar brake, in a fold or
+    // on a slope (2-5 crowns close together), and a rare lone tree
+    const e = 40;
+    const slope = Math.hypot(TH(X + e, Z) - TH(X - e, Z), TH(X, Z + e) - TH(X, Z - e)) / (2 * e);
+    const mott = vnoise(X / 6500 + 2.7, Z / 5200 + 0.4, 71);
+    const pClump = 0.34 * sstep(0.64, 0.8, mott) * (0.4 + Math.min(1, slope * 6));
+    if (h(3) < pClump) {
+      const brake = vnoise(X / 9000, Z / 9000, 72) > 0.55;
+      const n = 2 + Math.floor(h(7) * 3);
+      for (let m = 0; m < n; m++) {
+        const hm = (k: number) => hash2(i * 7 + m, j * 5 - m, 90 + k);
+        const kind = (brake ? (hm(1) < 0.75 ? 1 : 2) : hm(1) < 0.7 ? 0 : 2) as 0 | 1 | 2;
+        const size = kind === 0 ? (4.0 + 2.0 * hm(2)) * U : kind === 1 ? (2.2 + 1.0 * hm(2)) * U : (2.6 + 1.2 * hm(2)) * U;
+        const ang = hm(3) * Math.PI * 2;
+        const rr = m === 0 ? 0 : 260 + 300 * hm(4);
+        const t: Tree = { X: X + Math.cos(ang) * rr, Z: Z + Math.sin(ang) * rr * 0.8, kind, size, seed: Math.floor(hm(5) * 97) + 1 };
+        if (treeOk(t, keep, camPath, true)) out.push(t);
+      }
+    } else if (h(3) > 0.975) {
+      const kind = (h(4) < 0.6 ? 0 : 2) as 0 | 1 | 2;
+      const t: Tree = { X, Z, kind, size: (kind === 0 ? 4.6 + 1.8 * h(5) : 2.6 + 1.0 * h(5)) * U, seed: Math.floor(h(6) * 97) + 1 };
+      if (treeOk(t, keep, camPath, true)) out.push(t);
+    }
   }
-  treeCache.set(key, t);
-  return t;
+  treeCache.set(key, out);
+  return out;
 };
 export const treeItems = (W: World, keep: Seg[], camPath: P2[], o: { dMax?: number } = {}): Item[] => {
   const { A } = W;
@@ -476,8 +544,7 @@ export const treeItems = (W: World, keep: Seg[], camPath: P2[], o: { dMax?: numb
     const dRow = Math.max(dMin, j * TREE_CELL - camZw);
     const hw = ((620 + 80) * dRow) / (A.k * A.Dc) + TREE_CELL;
     for (let i = Math.floor((camX - hw) / TREE_CELL); i <= (camX + hw) / TREE_CELL; i++) {
-      const t = treeAt(i, j, keep, camPath);
-      if (!t) continue;
+      for (const [ti, t] of treeAt(i, j, keep, camPath).entries()) {
       const dd = t.Z - camZw;
       if (dd < dMin || dd > dMax) continue;
       const Zk = t.Z - W.oz;
@@ -488,9 +555,11 @@ export const treeItems = (W: World, keep: Seg[], camPath: P2[], o: { dMax?: numb
       if (sx + px < -40 || sx - px > 1120) continue;
       const sy = 960 + (q[1] - A.cam.cy) * A.k;
       if (sy - px * 1.2 > 1960 || sy < -20) continue;
-      if (px < 2.2) continue;
-      const op = 1 - sstep(dMax * 0.78, dMax, dd);
-      const uid = `tr${i}_${j}`;
+      // fade, never cut: out as it shrinks to a couple of px, out with distance, out where it nears the camera
+      if (px < 1.6) continue;
+      const op = sstep(1.6, 4.5, px) * (1 - sstep(dMax * 0.78, dMax, dd)) * sstep(dMin, dMin + 700, dd);
+      if (op < 0.01) continue;
+      const uid = `tr${i}_${j}_${ti}`;
       const node =
         t.kind === 0 ? (
           <LiveOak key={uid} A={A} X={t.X} Z={Zk} H={H} size={t.size} seed={t.seed} frame={W.frame} uid={uid} />
@@ -500,6 +569,7 @@ export const treeItems = (W: World, keep: Seg[], camPath: P2[], o: { dMax?: numb
           <CedarBush key={uid} A={A} X={t.X} Z={Zk} H={H} size={t.size} seed={t.seed + 3} frame={W.frame} uid={uid} mat={BUSH_MAT} rim={CEDAR_RIM} />
         );
       out.push({ Z: Zk - t.size * 0.3, node: op < 0.999 ? <g key={`g${uid}`} opacity={op}>{node}</g> : node });
+      }
     }
   }
   return out;

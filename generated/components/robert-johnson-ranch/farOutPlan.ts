@@ -85,9 +85,9 @@ const TURN_R = 700;
 /** the farm (cut 26's set: the porch's front edge at (FARM_X, FARM_Z), the house facing -Z) */
 export const FARM_X = 26500;
 export const FARM_Z = 600;
-/** the caliche ranch road from the guard to the farm yard (Catmull-Rom nodes): toward the camera, a left turn east
- *  ("turn left on the dirt road"), along the foot of the hills and over a low saddle, then down to the farm, which it
- *  reaches from beside the house */
+/** the caliche ranch road from the guard (Catmull-Rom nodes): toward the camera, a left turn east ("turn left on the
+ *  dirt road"), along the foot of the hills, then on east through valley after valley of empty Hill Country (the car
+ *  never arrives anywhere: the road runs on out of the last frame) */
 export const DIRT_NODES: V2[] = [
   [GUARD_AT[0], GUARD_AT[1]],
   [GUARD_AT[0] + 1300 * LEFT_DIR[0], GUARD_AT[1] + 1300 * LEFT_DIR[1]],
@@ -98,13 +98,15 @@ export const DIRT_NODES: V2[] = [
   [14600, 500],
   [17800, 700],
   [20300, 1600],
-  [22300, 3600],
-  [24100, 5200],
-  [25600, 5000],
-  [25900, 3600],
-  [FARM_X - 1300, FARM_Z + 1500],
-  [FARM_X - 1300, FARM_Z + 600],
-  [FARM_X - 1350, FARM_Z + 150],
+  [23500, 1000],
+  [26800, -700],
+  [29800, -1300],
+  [31200, -400],
+  [31500, 1200],
+  [30600, 2600],
+  [30200, 3700],
+  [30500, 4700],
+  [31200, 5700],
 ];
 
 /** the speed of the car (units per frame) at frame keys, before the farm leg is scaled to arrive on FARM */
@@ -120,9 +122,8 @@ const SPEED_KEYS: V2[] = [
   [186, 62],
 ];
 const SPEED = pchipKeys(SPEED_KEYS);
-/** the frames the car reaches the start of the left turn and stops at the farm */
+/** the frame the car reaches the start of the left turn */
 export const F_TURN = 146;
-export const F_STOP = 303;
 const F_DIRT = 186;
 
 type RP = { X: number; Z: number; s: number };
@@ -226,35 +227,25 @@ export const routeAt = (s: number): V2 => {
   return [lerp(P[lo].X, P[hi].X, t), lerp(P[lo].Z, P[hi].Z, t)];
 };
 
-/** the distance driven by frame f: the highway table to F_DIRT, then the farm leg (accelerate, cruise, slow to a
- *  stop on FARM), its cruise speed solved so it stops exactly at the farm yard on F_STOP */
+/** the distance driven by frame f: the highway table to F_DIRT, then the dirt-road leg: it picks up to a steady
+ *  cruise and keeps going past the last frame (nowhere to arrive) */
+const V_CRUISE = 250;
 export const sAt = (() => {
   const v0 = SPEED(F_DIRT);
-  const acc = (f: number) => s5(F_DIRT, F_DIRT + 40, f);
-  const dec = (f: number) => 1 - s5(F_STOP - 26, F_STOP, f);
-  let I1 = 0;
-  let I2 = 0;
-  for (let i = 0; i < (F_STOP - F_DIRT) * 8; i++) {
-    const f = F_DIRT + (i + 0.5) / 8;
-    I1 += ((1 - acc(f)) * dec(f)) / 8;
-    I2 += (acc(f) * dec(f)) / 8;
-  }
-  const remain = ROUTE.sEnd - S_HWY(F_DIRT);
-  const vmax = (remain - v0 * I1) / I2;
+  const acc = (f: number) => s5(F_DIRT, F_DIRT + 44, f);
   const tab: number[] = [];
   let s = S_HWY(F_DIRT);
-  for (let i = 0; i <= (DURATION + 4 - F_DIRT) * 8; i++) {
+  for (let i = 0; i <= (DURATION + 24 - F_DIRT) * 8; i++) {
     tab.push(s);
     const f = F_DIRT + (i + 0.5) / 8;
-    s += ((v0 * (1 - acc(f)) + vmax * acc(f)) * dec(f) * (f < F_STOP ? 1 : 0)) / 8;
+    s += (v0 * (1 - acc(f)) + V_CRUISE * acc(f)) / 8;
   }
-  const fn = (f: number) => {
+  return (f: number) => {
     if (f <= F_DIRT) return S_HWY(f);
     const x = Math.min(tab.length - 2, (f - F_DIRT) * 8);
     const i = Math.floor(x);
     return Math.min(ROUTE.sEnd, lerp(tab[i], tab[i + 1], x - i));
   };
-  return Object.assign(fn, { vmax });
 })();
 
 /** MILES FROM AUSTIN: 0 at the edge of town, 22 on the guard, 44 at the farm yard (linear in distance on each leg) */
@@ -306,7 +297,35 @@ const bench = (h: number, step = 620) => {
   const fr = h / step - n;
   return step * (n + s5(0.3, 0.75, fr) * 0.85 + fr * 0.15);
 };
+/** THE EAST (the second half's country): the part of the world the opening (f0-150) never sees, east of its view's
+ *  right edge (EDGE: the farthest X any f0-150 camera shows at each Z, plus a margin; nothing at Z < -6500 is ever in
+ *  the opening's view). eastOf -> 0 (as delivered) .. 1 (the second half's land) */
+const EDGE: V2[] = [
+  [-6500, 1500],
+  [-4000, 3058],
+  [0, 5239],
+  [4000, 7310],
+  [8000, 8773],
+  [20000, 12600],
+  [60000, 26563],
+  [140000, 55897],
+  [400000, 151000],
+];
+const edgeAt = (Z: number) => {
+  if (Z <= EDGE[0][0]) return EDGE[0][1];
+  for (let i = 0; i < EDGE.length - 1; i++) if (Z <= EDGE[i + 1][0]) return lerp(EDGE[i][1], EDGE[i + 1][1], (Z - EDGE[i][0]) / (EDGE[i + 1][0] - EDGE[i][0]));
+  return EDGE[EDGE.length - 1][1];
+};
+export const eastOf = (X: number, Z: number) => Math.max(1 - sstep(-11000, -6500, Z), sstep(edgeAt(Z) + 1500, edgeAt(Z) + 6000, X));
+/** the second half's land: long low folds running across the view (east-west), a draw now and then, no benches */
+const eastH = (X: number, Z: number) =>
+  620 * (vnoise(X / 7600 + 5.1, Z / 2700 + 2.3, 41) - 0.45) + 260 * (vnoise(X / 2600 + 1.3, Z / 1400, 42) - 0.5) + 90 * (vnoise(X / 800, Z / 700, 43) - 0.5);
 export const rawH = (X: number, Z: number) => {
+  const e = eastOf(X, Z);
+  const w = e < 1 ? westH(X, Z) : 0;
+  return e > 0 ? lerp(w, eastH(X, Z), e) : w;
+};
+const westH = (X: number, Z: number) => {
   // the plain toward Austin: no hills near town, and along the highway's own strip until the Hill Country begins
   // (Z < ~8000); off to the sides the hills stay
   const strip = sstep(8000, 26000, Z) * (1 - sstep(3500, 9500, Math.abs(X - HWY_X)));
@@ -316,20 +335,15 @@ export const rawH = (X: number, Z: number) => {
     const d2 = ((X - b.X) / b.rx) ** 2 + ((Z - b.Z) / b.rz) ** 2;
     if (d2 < 4) h += b.h * Math.exp(-1.6 * d2) * (0.85 + 0.3 * vnoise(X / 1500, Z / 1500, 31));
   }
-  // the farm's yard: a flat pad (cut 26's flat), the hillside rising behind the house
-  const fd = Math.hypot(X - FARM_X, Z - (FARM_Z + 700));
-  const farmRise = 1100 * sstep(FARM_Z + 1700, FARM_Z + 4200, Z) * (0.86 + 0.14 * Math.sin(X / 1300 + 0.7)) * (1 - sstep(4000, 7000, Math.abs(X - FARM_X)));
   h = lerp(0, bench(Math.max(-300, h)), region);
-  // the field in front of the farm (the last frame's foreground): calm, a gentle slope, no shaded draws
-  const field = (1 - sstep(4500, 7500, Math.abs(X - FARM_X))) * sstep(FARM_Z - 12000, FARM_Z - 8500, Z) * (1 - sstep(FARM_Z - 1800, FARM_Z - 500, Z));
-  h = lerp(h, 0.2 * h + 120, 0.8 * field);
-  h = lerp(0, h, sstep(1300, 3200, fd)) + farmRise;
   return h;
 };
+/** the ranch road's steepest grade past the guard (rise over run) */
+const DIRT_GRADE = 0.1;
 /** the road samples with their smoothed heights (each road follows the land, smoothed along its length) */
 const ROADS: RS[] = (() => {
   const out: RS[] = [];
-  const add = (pts: V2[], kind: number, step: number) => {
+  const add = (pts: V2[], kind: number, step: number, gradeFromS?: number) => {
     const dense: V2[] = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const [a, b] = [pts[i], pts[i + 1]];
@@ -339,7 +353,7 @@ const ROADS: RS[] = (() => {
     dense.push(pts[pts.length - 1]);
     const raw = dense.map(([x, z]) => rawH(x, z));
     const W = Math.round((kind === 0 ? 2600 : 900) / step);
-    dense.forEach(([x, z], i) => {
+    const hs = dense.map((_, i) => {
       let s = 0;
       let w = 0;
       for (let k = -W; k <= W; k++) {
@@ -348,8 +362,40 @@ const ROADS: RS[] = (() => {
         s += raw[j] * wk;
         w += wk;
       }
-      out.push({ X: x, Z: z, kind, h: s / w });
+      return s / w;
     });
+    // the ranch road past the guard is graded: from `gradeFrom` along it, its height follows the smoothed land at
+    // no more than DIRT_GRADE (a rate limiter: it cuts into a bench's riser and climbs on after it), then is smoothed
+    // again (which keeps the grade), so the car never meets a wall
+    if (gradeFromS !== undefined) {
+      let run = 0;
+      let gradeFrom = dense.length;
+      for (let i = 1; i < dense.length; i++) {
+        run += Math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]);
+        if (run >= gradeFromS) {
+          gradeFrom = i;
+          break;
+        }
+      }
+      const lim = hs.slice();
+      for (let i = gradeFrom + 1; i < dense.length; i++) {
+        const ds = Math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]);
+        const m = DIRT_GRADE * ds;
+        lim[i] = lim[i - 1] + Math.max(-m, Math.min(m, hs[i] - lim[i - 1]));
+      }
+      const S = 4;
+      for (let i = gradeFrom; i < dense.length; i++) {
+        let a = 0;
+        let w = 0;
+        for (let k = -S; k <= S; k++) {
+          const j = Math.max(gradeFrom, Math.min(dense.length - 1, i + k));
+          a += lim[j];
+          w++;
+        }
+        hs[i] = a / w;
+      }
+    }
+    dense.forEach(([x, z], i) => out.push({ X: x, Z: z, kind, h: hs[i] }));
   };
   const P = ROUTE.pts;
   const hw: V2[] = [];
@@ -361,7 +407,8 @@ const ROADS: RS[] = (() => {
   add(HWY_EXTRA, 0, 220);
   const dirt: V2[] = [];
   for (const p of P) if (p.s > ROUTE.sT1) dirt.push([p.X, p.Z]);
-  add(dirt, 1, 120);
+  // graded from ~1800 units past the turn's start (the guard, its approach and the road's first stretch as they were)
+  add(dirt, 1, 120, 1800);
   return out;
 })();
 /** a spatial grid over the road samples */
@@ -437,6 +484,32 @@ export const TH = (X: number, Z: number) => {
 // ===================================================================================================================
 export type CarState = { X: number; Z: number; H: number; heading: V2; up: [number, number, number]; s: number; v: number; roll: number; steer: number; miles: number; onDirt: boolean; bounce: number };
 const WHEELBASE = 555;
+/** the axles along the car (farOutCar's CAR.axleF / axleR) and the most the body may pitch or roll (tangents): the
+ *  pitch follows the road (the graded ranch road keeps it within ~6 degrees; the highway's own dips run steeper) */
+const AXLE_F = 300;
+const AXLE_R = -255;
+const PITCH_MAX = Math.tan((24 * Math.PI) / 180);
+const ROLL_MAX = Math.tan((3 * Math.PI) / 180);
+const softClamp = (v: number, m: number) => m * Math.tanh(v / m);
+/** the road under a wheel at route distance s: the land along the route averaged over +-150 (no kinks), plus the
+ *  cattle guard's pipe tops (~24 over the road), eased on and off over its curbs */
+const GUARD_TOP = 24;
+const contactH = (s: number) => {
+  let h = 0;
+  let w = 0;
+  for (let k = -150; k <= 150; k += 30) {
+    const wk = Math.exp(-((k / 90) ** 2));
+    const [X, Z] = routeAt(s + k);
+    h += TH(X, Z) * wk;
+    w += wk;
+  }
+  const [X, Z] = routeAt(s);
+  const dx = X - GUARD_AT[0];
+  const dz = Z - GUARD_AT[1];
+  const ta = dx * LEFT_DIR[0] + dz * LEFT_DIR[1];
+  const ua = dx * HWY_DIR[0] + dz * HWY_DIR[1];
+  return h / w + GUARD_TOP * (1 - sstep(170, 330, Math.abs(ta))) * (1 - sstep(400, 460, Math.abs(ua)));
+};
 export const carAt = (f: number): CarState => {
   const s = sAt(f);
   const [X, Z] = routeAt(s);
@@ -461,12 +534,16 @@ export const carAt = (f: number): CarState => {
   while (dh < -Math.PI) dh += 2 * Math.PI;
   const kappa = dh / 460;
   const steer = Math.atan(WHEELBASE * kappa);
-  const H = TH(X, Z);
-  // the ground's normal under the car (over its own footprint)
-  const e = 280;
-  const gx = (TH(X + e, Z) - TH(X - e, Z)) / (2 * e);
-  const gz = (TH(X, Z + e) - TH(X, Z - e)) / (2 * e);
-  const n = [-gx, 1, -gz];
+  // the wheels on the road: each axle's contact height on the road surface (smoothed along the route, with the
+  // guard's pipes), the body pitched through both contacts (a few degrees at most) and rolled with the land across
+  const hf = contactH(s + AXLE_F);
+  const hr = contactH(s + AXLE_R);
+  const tp = softClamp((hf - hr) / (AXLE_F - AXLE_R), PITCH_MAX);
+  const H = hr - AXLE_R * tp;
+  const lx = -hz;
+  const lz = hx;
+  const tr = softClamp((TH(X + lx * 180, Z + lz * 180) - TH(X - lx * 180, Z - lz * 180)) / 360, ROLL_MAX);
+  const n = [-hx * tp - lx * tr, 1, -hz * tp - lz * tr];
   const nl = Math.hypot(n[0], n[1], n[2]);
   const v = (sAt(f + 0.5) - sAt(f - 0.5)) || 0;
   // over the guard: each axle's wheels tick over the pipes (a few units of judder while on them)
@@ -498,8 +575,6 @@ const carSmooth = (f: number): [number, number, number] => {
   }
   return [sx / sw, sz / sw, sh / sw];
 };
-/** the end target: between the farmhouse and the car's stop in its yard */
-export const END_T: [number, number, number] = [FARM_X - 250, 0, FARM_Z + 300];
 const K = (keys: V2[]) => pchipKeys(keys);
 /** the camera's distance to its target (log), focal, height over the target's ground, and the target's screen point */
 /** the camera's keys: distance D to the target (log), lens C, the target's screen x/y, and the horizon's screen y
@@ -584,29 +659,49 @@ const CAM_YH = K([
   [300, 470],
   [340, 470],
 ]);
+/** THE SECOND HALF (from f150): one continuous rise and pull-back over the empty Hill Country, the car small on the
+ *  dirt road, the horizon climbing the frame so the land fills it. Given as targets (f, D, C, sx, sy, yH) and applied
+ *  as smooth offsets on the keys above that are zero, with zero slope, at f150: every frame to f150 is unchanged. */
+const RISE: [number, number, number, number, number, number][] = [
+  [175, 7700, 1880, 470, 880, 462],
+  [205, 8900, 1840, 470, 900, 448],
+  [240, 11200, 1790, 462, 915, 428],
+  [275, 13700, 1745, 448, 925, 412],
+  [305, 15600, 1712, 436, 930, 403],
+  [321, 16500, 1700, 430, 930, 400],
+  [345, 17800, 1690, 424, 930, 396],
+];
+const riseOff = (base: (f: number) => number, col: number, log = false) =>
+  K([[130, 0], [150, 0], ...RISE.map((r) => [r[0], (log ? Math.log(r[col]) : r[col]) - base(r[0])] as V2)]);
+const OFF_D = riseOff(CAM_D, 1, true);
+const OFF_C = riseOff(CAM_C, 2);
+const OFF_SX = riseOff(CAM_SX, 3);
+const OFF_SY = riseOff(CAM_SY, 4);
+const OFF_YH = riseOff(CAM_YH, 5);
+const camD = (f: number) => Math.exp(CAM_D(f) + (f > 150 ? OFF_D(f) : 0));
+const camC = (f: number) => CAM_C(f) + (f > 150 ? OFF_C(f) : 0);
+const camSX = (f: number) => CAM_SX(f) + (f > 150 ? OFF_SX(f) : 0);
+const camSY = (f: number) => CAM_SY(f) + (f > 150 ? OFF_SY(f) : 0);
+const camYH = (f: number) => CAM_YH(f) + (f > 150 ? OFF_YH(f) : 0);
 /** how far the target leans from the car toward the cattle guard (so both sit in frame around "cattle guard") */
 export const guardLean = (f: number) => 0.42 * s5(104, 140, f) * (1 - s5(170, 214, f));
 export type CamW = { X: number; Z: number; E: number; C: number; yH: number; D: number; tX: number; tZ: number; tH: number };
 export const camAt = (f: number): CamW => {
-  const c = carSmooth(Math.min(f, 300));
+  const c = carSmooth(f);
   const gH = TH(GUARD_AT[0], GUARD_AT[1]);
   const gl = guardLean(f);
-  const cx = lerp(c[0], GUARD_AT[0], gl);
-  const cz = lerp(c[1], GUARD_AT[1], gl);
-  const ch = lerp(c[2], gH, gl);
-  const b = s5(232, 296, f);
-  const tX = lerp(cx, END_T[0], b);
-  const tZ = lerp(cz, END_T[2], b);
-  const tH = lerp(ch, TH(END_T[0], END_T[2]), b);
-  const D = Math.exp(CAM_D(f));
-  const C = CAM_C(f);
-  const sx = CAM_SX(f);
-  const sy = CAM_SY(f);
+  const tX = lerp(c[0], GUARD_AT[0], gl);
+  const tZ = lerp(c[1], GUARD_AT[1], gl);
+  const tH = lerp(c[2], gH, gl);
+  const D = camD(f);
+  const C = camC(f);
+  const sx = camSX(f);
+  const sy = camSY(f);
   const X = tX - ((sx - 540) * D) / C;
   const Z = tZ - D;
   // the framed height, raised (smoothly) where the land under the camera would come too close: a short crane over
   // the rise; the target keeps its screen point, the horizon moves
-  const E = tH + ((sy - CAM_YH(f)) * D) / C + camLift(f);
+  const E = tH + ((sy - camYH(f)) * D) / C + camLift(f);
   return { X, Z, E, C, yH: sy - ((E - tH) * C) / D, D, tX, tZ, tH };
 };
 const CAM_CLEAR = 420;
@@ -635,16 +730,15 @@ const camLift = (() => {
 })();
 /** the framed camera without the lift */
 const camBase = (f: number) => {
-  const c = carSmooth(Math.min(f, 300));
+  const c = carSmooth(f);
   const gH = TH(GUARD_AT[0], GUARD_AT[1]);
   const gl = guardLean(f);
-  const b = s5(232, 296, f);
-  const tX = lerp(lerp(c[0], GUARD_AT[0], gl), END_T[0], b);
-  const tZ = lerp(lerp(c[1], GUARD_AT[1], gl), END_T[2], b);
-  const tH = lerp(lerp(c[2], gH, gl), TH(END_T[0], END_T[2]), b);
-  const D = Math.exp(CAM_D(f));
-  const C = CAM_C(f);
-  return { X: tX - ((CAM_SX(f) - 540) * D) / C, Z: tZ - D, E: tH + ((CAM_SY(f) - CAM_YH(f)) * D) / C };
+  const tX = lerp(c[0], GUARD_AT[0], gl);
+  const tZ = lerp(c[1], GUARD_AT[1], gl);
+  const tH = lerp(c[2], gH, gl);
+  const D = camD(f);
+  const C = camC(f);
+  return { X: tX - ((camSX(f) - 540) * D) / C, Z: tZ - D, E: tH + ((camSY(f) - camYH(f)) * D) / C };
 };
 /** world -> screen (for planning and the review) */
 export const toScreen = (c: CamW, X: number, H: number, Z: number) => {
@@ -691,8 +785,11 @@ export const cityZ = (() => {
     return lerp(tab[i], tab[i + 1], x - i);
   };
 })();
-/** the city's fog toward the haze (0 near .. 1 gone): clear at f0, a faint silhouette at the end */
-export const cityFog = (f: number) => lerp(0.06, 0.42, s5(0, 300, f) * 0.6 + 0.4 * c01(f / 300));
+/** the city leaving for good: from f128, as the camera comes down to the guard, it sinks behind the hills between
+ *  (its backdrop lift lets go) and fades into the haze; gone by f160 and never drawn again */
+export const cityGone = (f: number) => s5(128, 160, f);
+/** the city's fog toward the haze (0 near .. 1 gone): clear at f0, thickening, all haze by f160 */
+export const cityFog = (f: number) => lerp(lerp(0.06, 0.42, s5(0, 300, f) * 0.6 + 0.4 * c01(f / 300)), 1, cityGone(f));
 /** the city's backdrop lift (world height under its base): the painted-backdrop cheat that keeps the skyline above
  *  the hills between the camera and the horizon. Per frame: the highest terrain line on screen across the skyline's
  *  middle; the base is lifted until it tucks just behind it. Smoothed (running max, then an average) so it glides. */
@@ -731,6 +828,60 @@ export const cityLift = (() => {
     }
     const x = Math.max(0, Math.min(tab.length - 1.001, f - F0));
     const i = Math.floor(x);
-    return lerp(tab[i], tab[i + 1], x - i);
+    return lerp(tab[i], tab[i + 1], x - i) * (1 - cityGone(f));
   };
 })();
+
+// ===================================================================================================================
+// THE FAR COUNTRY (the second half): Hill Country ridge rows (cut 59's HillCountryRidges, grass + flatFar), world
+// rows at fixed Z from FLAT_Z0 out to the horizon, set from the end camera so the rows stack the way cut 59's do
+// (row i's crest at yH + (y0 - yH) * 0.8^i at f321); they come up out of the haze over f150-192 while the far land
+// beyond FLAT_Z0 goes (the opening never shows them). The ranch road crosses them: xRoad = the screen x (at f321)
+// where it tops each row, winding left and right toward a point near the horizon.
+// ===================================================================================================================
+export const FLAT_Z0 = 4000;
+export const FLAT_IN: [number, number] = [150, 192];
+export const flatIn = (f: number) => s5(FLAT_IN[0], FLAT_IN[1], f);
+export type FlatRow = { Z: number; H: number; amp: number; lambda: number; seed: number; tree: number; dots: number; xRoad: number; yRow: number };
+let FLATS: FlatRow[] | null = null;
+export const flatRows = (): FlatRow[] => {
+  if (FLATS) return FLATS;
+  const ce = camAt(DURATION - 1);
+  const n = 13;
+  const d0 = FLAT_Z0 - ce.Z;
+  // the nearest row's crest just above the car's stretch of road (the car at y ~930), the rows stacking up to the
+  // horizon like cut 59's (0.8 per row)
+  const y0 = 815;
+  FLATS = Array.from({ length: n }, (_, i) => {
+    const d = d0 * Math.pow(1.36, i);
+    const y = ce.yH + (y0 - ce.yH) * Math.pow(0.8, i);
+    const px = d / ce.C;
+    const far = Math.max(0, i - 4);
+    const ampPx = 115 * Math.pow(0.85, Math.min(i, 4)) * Math.pow(0.74, far);
+    const lamPx = 170 * Math.pow(0.9, Math.min(i, 4)) * (1 + 0.18 * far);
+    return {
+      Z: ce.Z + d,
+      H: ce.E - (y - ce.yH) * px,
+      amp: ampPx * px,
+      lambda: lamPx * px,
+      seed: 11 + i * 3.7,
+      tree: 11 * Math.pow(0.72, i) * px,
+      dots: i < 4 ? [0.22, 0.15, 0.09, 0.04][i] : 0,
+      xRoad: 700 + (i === 0 ? 40 : 95 * (i % 2 ? -1 : 1) * Math.pow(0.72, i - 1)),
+      yRow: y,
+    };
+  });
+  return FLATS;
+};
+/** where the ranch road reaches world Z (the first crossing along it, past the guard) */
+export const dirtXAtZ = (Z: number) => {
+  const P = ROUTE.pts;
+  for (let i = 1; i < P.length; i++) {
+    if (P[i].s <= ROUTE.sGuard) continue;
+    if ((P[i - 1].Z - Z) * (P[i].Z - Z) <= 0 && P[i].Z !== P[i - 1].Z) {
+      const u = (Z - P[i - 1].Z) / (P[i].Z - P[i - 1].Z);
+      return lerp(P[i - 1].X, P[i].X, u);
+    }
+  }
+  return P[P.length - 1].X;
+};
