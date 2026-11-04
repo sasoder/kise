@@ -22,8 +22,8 @@
 // (f38-60, friction) into the light under the hand, while the camera eases in closer (f34-72: this one matters).
 // The nib touches T2 at f66 and writes "No, never" heavier (weight 1.6): "No," f66.5-78.6, "never" f81-88.8; the pen
 // returns once, lifted (f88.8-91.4), and strikes ONE heavy underline under "never" left to right f91.4-95.2 (a bit
-// thicker than the downstrokes, climbing slightly, tapering as the pen lifts). As the underline ends the paper goes dead (dim f93.5-100.5:
-// toward DEAD and the air, its type fading); the tray's orange keeps its glow at the frame edge. The pen lifts
+// thicker than the downstrokes, climbing slightly, tapering as the pen lifts). The telegram stays lit to the end, its
+// "No, never" crisp (the earlier going-dead dim read as the graphic fading out; user, Nov 4). The pen lifts
 // and the hand sweeps off to the lower right (cut 1's flourish out, gone by ~f98); the camera keeps a slow drift.
 // The pen's direction is low-passed (PEN_DIRS: 7-frame centred average, <= 5 deg/frame in 3D and <= 4.5 deg/frame
 // on screen); the nib stays exactly on the stroke front.
@@ -460,8 +460,8 @@ const NoNever: React.FC<z.infer<typeof schema>> = () => {
   const p2 = t2Pose(frame);
   const nNo: Notation = { ...NO, progress: progNo(frame) };
   const nNever: Notation = { ...NEVER, progress: progNever(frame) };
-  // the paper goes dead as the underline ends
-  const dim = ss(93.5, 100.5, frame);
+  // no going-dead dim: it read as a fade-out (user, Nov 4)
+  const dim = 0;
   const nib = nibAt(frame);
   const t1On = t1Travel(frame) < T1_GONE;
   const t2On = frame >= T2_IN0;
