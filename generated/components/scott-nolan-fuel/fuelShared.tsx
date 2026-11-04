@@ -4,14 +4,14 @@
 // and the energy world's clay (scott-nolan-wind/energyCore). RENDER WITH --gl=angle.
 //
 // WORLD: X right, Y up (board = 0), Z away. Sizes below are at scale 1; every prop scales with `scale`.
-//   <SmrModule at y? scale? rise? dim? yaw? shadow? slot?>  one small modular reactor (a small domed reactor building, no door), SMR_TOP tall
+//   <SmrModule at y? scale? rise? dim? yaw? shadow? slot?>  one small modular reactor (a low drum under a shallow dome, no door), SMR_TOP tall
 //   <GigawattPlant at y? scale? rise? dim? yaw? shadow? S steam? steamFrom?>   containment + dome, one cooling tower
 //   smrShadowItems(at, {scale, rise}), gigawattShadowItems(at, {scale, rise, yaw})   their board shadows (+ the slot ring)
-//   smrPortOf(at, {y, scale}), gigawattPortOf(at, {y, scale, rise, yaw})            the dark fuel port's centre (world) and radius
+//   smrPortOf(at, {y, scale}), gigawattPortOf(at, {y, scale, rise, yaw})            the dome crown (world); no port is drawn since v3
 //   URANIUM FUEL (added Nov 4, see SHARED_CHANGES.md): <UraniumPellet pose>, <PelletGlow cam poses> (overlay), pelletRowPoses(...),
 //   pelletShadowItems(poses), <FuelRod mouth dir len>, fuelRodShadowItems(...), PELLET
 // rise 0..1: the object comes up out of a slot in the surface it stands on (the slot opens as a dark ring first; the surface
-// hides the sunk part). dim 0..1: tone to the board (never opacity). The fuel port is ground-dark: nothing in here is amber.
+// hides the sunk part). dim 0..1: tone to the board (never opacity). Nothing in here is amber.
 // ===================================================================================================================
 import React, { useId, useMemo } from "react";
 import { COLOR, bloomFilter } from "../kits/cheeky-pint/stoutShared";
@@ -27,17 +27,18 @@ const rotXZ = (x: number, z: number, deg: number): [number, number] => {
 const RISE_SINK = 1.03;
 
 // ===================================================================================================================
-// THE FUEL PORT: a collar standing on a crown, a dark socket inside it (the empty fuel opening), ground-toned floor
+// THE SHALLOW DOME (look v3, user's review Nov 4: a tall hemispherical dome with a dark port in its crown read as phallic).
+// A spherical cap of base radius r and rise h, closed at the crown: real containments are a wide drum under a low dome, and
+// nothing on a roof is open. Profile points from the eave (rr = r) to the crown (rr = 0), standing on y0.
 // ===================================================================================================================
-/** the socket's inner wall: a step above the ground, so the opening reads dark but not as a flat black disc */
-const PORT_WALL = "#553A27";
-const portParts = (r: number, y0: number): Any[] => {
-  // a thin low lip, so the port reads as a socket in the head rather than a bottle's neck
-  const t = r * 0.2;
-  const collar = lathe([[r + t, y0 - t * 1.6], [r + t, y0 + t * 0.2], [r + t * 0.5, y0 + t * 0.65], [r, y0 + t * 0.65], [r, y0 + t * 0.2]], 40, EW_COLOR.creamFoot);
-  const wall = lathe([[r, y0 + t * 0.2], [r, y0 - t * 2.2]], 40, PORT_WALL);
-  const floor = lathe([[r, y0 - t * 2.2], [0.0001, y0 - t * 2.2]], 40, COLOR.ground);
-  return [collar, wall, floor];
+const capProfile = (r: number, h: number, y0: number, n: number): [number, number][] => {
+  const rs = (r * r + h * h) / (2 * h);
+  const out: [number, number][] = [];
+  for (let i = 1; i <= n; i++) {
+    const rr = r * (1 - i / n);
+    out.push([Math.max(0.0001, rr), y0 + Math.sqrt(rs * rs - rr * rr) - (rs - h)]);
+  }
+  return out;
 };
 
 // ===================================================================================================================
@@ -81,37 +82,27 @@ const placeSlot = (m: Any, x: number, y: number, z: number, r: number) => {
 };
 
 // ===================================================================================================================
-// SMR MODULE (look v2, director's review Nov 4: the v1 capsule read as a salt shaker). A small reactor building in the same
-// family as the gigawatt containment: a short cylinder with a hemispherical dome, about 1.25:1 (height : diameter), a footing
-// ring and a springline band, and a small dark fuel hatch in the dome's crown. Plain cream. (v2.1, Nov 4: no door; a dark
-// door made the small domes read as igloos or huts. SMR.DOOR_W / DOOR_H stay exported but nothing draws them.)
+// SMR MODULE (look v3, user's review Nov 4: the v2 tall drum + hemisphere + crown hatch read as phallic). A small reactor
+// building in the same family as the gigawatt containment: a wide low drum under a shallow dome, about 0.7:1 (height :
+// diameter), a footing ring and a slim eave, the roof closed. Plain cream. (No door: a dark door made the small domes read as
+// igloos or huts. SMR.PORT_R / DOOR_W / DOOR_H stay exported but nothing draws them.)
 // ===================================================================================================================
-export const SMR = { H: 31.6, R: 12.5, WALL: 18, PORT_R: 2.3, DOOR_W: 4.4, DOOR_H: 7 } as const;
+export const SMR = { H: 18.3, R: 12.5, WALL: 12, CAP: 5.5, PORT_R: 2.3, DOOR_W: 4.4, DOOR_H: 7 } as const;
 const smrGeo = (() => {
   let g: Any = null;
   return () => {
     if (g) return g;
-    const { R, WALL: Wl } = SMR;
-    const portR = SMR.PORT_R;
-    const collarR = portR * 1.2;
-    const prof: [number, number][] = [[0.0001, 0], [R + 1.1, 0], [R + 1.1, 1.8], [R + 0.5, 2.4], [R, 2.6], [R, Wl - 1.4]];
-    // the springline band
-    prof.push([R + 0.45, Wl - 1.2], [R + 0.6, Wl - 0.8], [R + 0.6, Wl + 0.3], [R + 0.3, Wl + 0.7], [R, Wl + 0.8]);
-    for (let i = 1; i <= 26; i++) {
-      const a = (i / 26) * (Math.PI / 2);
-      const rr = R * Math.cos(a);
-      if (rr < collarR) break;
-      prof.push([rr, Wl + 0.8 + R * Math.sin(a)]);
-    }
-    const crownY = Wl + 0.8 + R * Math.sqrt(Math.max(0, 1 - (collarR / R) ** 2));
-    prof.push([collarR, crownY]);
-    const shell = lathe(prof, 64, EW_COLOR.cream);
-    g = flipZ(merge([shell, ...portParts(portR, crownY)]));
+    const { R, WALL: Wl, CAP } = SMR;
+    const prof: [number, number][] = [[0.0001, 0], [R + 1.1, 0], [R + 1.1, 1.8], [R + 0.5, 2.4], [R, 2.6], [R, Wl]];
+    // the slim eave
+    prof.push([R + 0.35, Wl + 0.15], [R + 0.35, Wl + 0.6], [R, Wl + 0.75]);
+    prof.push(...capProfile(R, CAP, Wl + 0.75, 24));
+    g = flipZ(lathe(prof, 64, EW_COLOR.cream));
     return g;
   };
 })();
-/** the module's true top (the hatch lip), scale 1 */
-export const SMR_TOP = SMR.WALL + 0.8 + SMR.R;
+/** the module's true top (the dome's crown), scale 1 */
+export const SMR_TOP = SMR.WALL + 0.75 + SMR.CAP;
 
 export type SmrProps = {
   at: [number, number];
@@ -140,7 +131,7 @@ export const smrShadowItems = (at: [number, number], o: { scale?: number; rise?:
     { x: at[0], z: at[1], len: (SMR_TOP * r + 1) * s * SHADOW_LEN, r: SMR.R * 1.02 * s, soft: SMR.R * 0.6 * s, alpha: a * smooth(0, 0.08, r) },
   ];
 };
-/** the fuel port's centre (world) and radius */
+/** the dome's crown (world) and the old port radius (nothing is open there since look v3) */
 export const smrPortOf = (at: [number, number], o: { y?: number; scale?: number; rise?: number } = {}) => {
   const s = o.scale ?? 1;
   const sink = (1 - (o.rise ?? 1)) * SMR_TOP * RISE_SINK * s;
@@ -168,16 +159,16 @@ export const SmrModule: React.FC<SmrProps> = ({ at, y = 0, scale = 1, rise = 1, 
 };
 
 // ===================================================================================================================
-// GIGAWATT PLANT. A large light water reactor station: the containment (a cylinder with a hemispherical dome, a ring girder
-// at the springline, the fuel port on the crown) in front, one natural-draught cooling tower (hyperboloid on crossed columns)
-// behind and to the right. Real-leaning proportions: an AP1000-like containment is ~40 m across and ~65 m tall, a tower
+// GIGAWATT PLANT. A large light water reactor station: the containment (a wide cylinder under a shallow closed dome, a ring
+// girder at the eave; look v3, Nov 4: the tall hemisphere with a crown port read as phallic) in front, one natural-draught cooling tower (hyperboloid on crossed columns)
+// behind and to the right. Real-leaning proportions: a PWR containment is ~40 m across and ~60-70 m tall, a tower
 // ~150 m; the SMR building stands at SMR_TOP. The tower here is a little short of true scale, so a frame can hold both.
 // ===================================================================================================================
 export const GIGA = {
-  CONT: { x: 0, z: 0, r: 36, wall: 80 },
+  CONT: { x: 0, z: 0, r: 36, wall: 54, cap: 15 },
   TOWER: { x: 132, z: 108, h: 250, rBase: 100, rThroat: 62.5, yThroat: 170, legs: 22 },
 } as const;
-const GIGA_CONT_TOP = GIGA.CONT.wall + GIGA.CONT.r;
+const GIGA_CONT_TOP = GIGA.CONT.wall + 1.8 + GIGA.CONT.cap;
 const GIGA_PORT_R = 7.5;
 const hyper = (y: number) => {
   const T = GIGA.TOWER;
@@ -200,24 +191,15 @@ const contGeo = (() => {
   let g: Any = null;
   return () => {
     if (g) return g;
-    const { r, wall } = GIGA.CONT;
-    const portR = GIGA_PORT_R;
-    const collarR = portR * 1.2;
+    const { r, wall, cap } = GIGA.CONT;
     const prof: [number, number][] = [[0.0001, 0], [r + 2.6, 0], [r + 2.6, 4.2], [r + 1.4, 5.2], [r, 5.6], [r, wall - 4.2]];
-    // the ring girder at the springline
+    // the ring girder at the eave
     prof.push([r + 0.9, wall - 3.8], [r + 1.5, wall - 3], [r + 1.5, wall + 0.8], [r + 0.8, wall + 1.6], [r, wall + 1.8]);
-    for (let i = 1; i <= 30; i++) {
-      const a = (i / 30) * (Math.PI / 2);
-      const rr = r * Math.cos(a);
-      if (rr < collarR) break;
-      prof.push([rr, wall + 1.8 + (r - 1.8) * Math.sin(a)]);
-    }
-    const crownY = wall + 1.8 + (r - 1.8) * Math.sqrt(Math.max(0, 1 - (collarR / r) ** 2));
-    prof.push([collarR, crownY]);
+    prof.push(...capProfile(r, cap, wall + 1.8, 30));
     // a faint banding of the wall (the concrete lifts), as lathe rings in the foot tone
     const bands: Any[] = [];
     for (const yb of [wall * 0.36, wall * 0.68]) bands.push(lathe([[r + 0.05, yb - 0.5], [r + 0.4, yb - 0.25], [r + 0.4, yb + 0.25], [r + 0.05, yb + 0.5]], 72, EW_COLOR.creamFoot));
-    g = flipZ(merge([lathe(prof, 96, EW_COLOR.cream), ...bands, ...portParts(portR, crownY)]));
+    g = flipZ(merge([lathe(prof, 96, EW_COLOR.cream), ...bands]));
     return g;
   };
 })();
@@ -286,7 +268,7 @@ export const gigawattShadowItems = (at: [number, number], o: { scale?: number; r
   }
   return out;
 };
-/** the containment's fuel port: centre (world) and radius */
+/** the containment's crown (world) and the old port radius (nothing is open there since look v3) */
 export const gigawattPortOf = (at: [number, number], o: { y?: number; scale?: number; rise?: number; yaw?: number } = {}) => {
   const s = o.scale ?? 1;
   const [cx, cz] = rotXZ(GIGA.CONT.x, GIGA.CONT.z, o.yaw ?? 0);
