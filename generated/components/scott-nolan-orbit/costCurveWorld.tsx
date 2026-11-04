@@ -184,9 +184,16 @@ export type CostLineProps = {
   amber?: number;
   /** draw its board shadow here (default true); false if you gather curveShadowItems into your own layer */
   shadow?: boolean;
-};
+} & LineLook;
+/**
+ * opt-in (cut B: the battery curve losing conviction), defaults unchanged: `dash` 0..1 breaks the tube into a sparser
+ * dotted line (each segment between beads shrinks about its middle to 1 - DASH_CUT x dash of its length), `beadScale` and
+ * `tubeScale` thin the beads and the tube.
+ */
+export type LineLook = { dash?: number; beadScale?: number; tubeScale?: number };
+export const DASH_CUT = 0.78;
 /** one price curve as a clay tube, beaded at each data row, drawn between two fractional years */
-export const CostLine: React.FC<CostLineProps> = ({ series, from, to, dim = 0, tone = 0, posts = false, amber, shadow = true }) => {
+export const CostLine: React.FC<CostLineProps> = ({ series, from, to, dim = 0, tone = 0, posts = false, amber, shadow = true, dash = 0, beadScale = 1, tubeScale = 1 }) => {
   const [y0, y1] = SPAN[series];
   const a = Math.max(y0, Math.min(from, to));
   const b = Math.min(y1, Math.max(from, to));
@@ -234,9 +241,19 @@ export const CostLine: React.FC<CostLineProps> = ({ series, from, to, dim = 0, t
     const len = d.length();
     t.visible = len > 0.01;
     if (!t.visible) continue;
+    if (dash > 0) {
+      // opt-in dotted line: the piece keeps its middle (1 - DASH_CUT x dash of the segment)
+      const k = 1 - DASH_CUT * c01(dash);
+      const u = d.clone().normalize();
+      const off = (len * (1 - k)) / 2;
+      t.position.set(p[0] + u.x * off, p[1] + u.y * off, -p[2] + u.z * off);
+      t.quaternion.setFromUnitVectors(Y_AXIS, u);
+      t.scale.set(CHART.TUBE_R * tubeScale, len * k, CHART.TUBE_R * tubeScale);
+      continue;
+    }
     t.position.set(p[0], p[1], -p[2]);
     t.quaternion.setFromUnitVectors(Y_AXIS, d.normalize());
-    t.scale.set(CHART.TUBE_R, len, CHART.TUBE_R);
+    t.scale.set(CHART.TUBE_R * tubeScale, len, CHART.TUBE_R * tubeScale);
   }
   // beads: on every data row in [a, b] and on both ends (an end on a data row is that row's bead)
   const beadAt: V3[] = [];
@@ -251,7 +268,7 @@ export const CostLine: React.FC<CostLineProps> = ({ series, from, to, dim = 0, t
     s.visible = !!p && pts.length > 0;
     if (!s.visible) continue;
     s.position.set(p[0], p[1], -p[2]);
-    s.scale.setScalar(CHART.BEAD_R);
+    s.scale.setScalar(CHART.BEAD_R * beadScale);
   }
   // posts (opt-in): from each data bead straight down to the board
   const stemAt = posts ? ROWS[series].filter((r) => r.year >= a - 1e-6 && r.year <= b + 1e-6).map((r) => r.p) : [];
@@ -511,6 +528,8 @@ export type MarkProps = {
   tone?: number;
   /** opt-in size factor (default 1); place it with marksAt(..., scale) */
   scale?: number;
+  /** opt-in (cut B, BatteryMark only): a roll about the view axis in degrees, + = the + end (right) dips; default 0 */
+  tilt?: number;
 };
 /** the solar panel, centred at `at` (world) */
 export const SolarMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow = true, glint = -0.5, scale = 1 }) => {
@@ -550,7 +569,7 @@ export const SolarMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow =
   );
 };
 /** the battery cell, centred at `at` (world), + end to the right */
-export const BatteryMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow = true, scale = 1 }) => {
+export const BatteryMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow = true, scale = 1, tilt = 0 }) => {
   const o = useMemo(() => {
     const mat = markClay();
     const m = markMesh(batteryGeo(), mat);
@@ -558,6 +577,7 @@ export const BatteryMark: React.FC<MarkProps> = ({ at, dim = 0, tone = 0, shadow
   }, []);
   o.m.position.set(at[0], at[1], -at[2]);
   o.m.scale.setScalar(scale);
+  o.m.rotation.set(0, 0, (-tilt * Math.PI) / 180);
   o.mat.uniforms.uLevel.value = Math.max(0, Math.min(2, tone + c01(dim)));
   return (
     <>
@@ -913,10 +933,12 @@ export type CostChartProps = {
   axis?: CostAxisProps;
   /** opt-in (cut A rev 3, the user's reframe): the two objects' size factor, default 1; they still sit on their tips */
   markScale?: number;
+  /** opt-in (cut B): per-series line look (dash, beadScale, tubeScale; see LineLook); default none */
+  line?: Partial<Record<Series, LineLook>>;
 };
 /** the panel's glint, a pure function of the story clock: one slow pass every 150 frames */
 export const glintAt = (S: number) => -0.6 + ((S % 150) / 150) * 2.4;
-export const CostChart: React.FC<CostChartProps> = ({ S, solar, battery, marks = true, baseline, years = {}, dim = {}, amber = {}, tone = {}, posts = false, cap, yearGap, variant = "free", axis, markScale = 1 }) => {
+export const CostChart: React.FC<CostChartProps> = ({ S, solar, battery, marks = true, baseline, years = {}, dim = {}, amber = {}, tone = {}, posts = false, cap, yearGap, variant = "free", axis, markScale = 1, line = {} }) => {
   const ts = tone.solar ?? DEFAULT_TONE.solar;
   const tb = tone.battery ?? DEFAULT_TONE.battery;
   const at = marksAt(solar.to, battery.to, markScale);
@@ -930,8 +952,8 @@ export const CostChart: React.FC<CostChartProps> = ({ S, solar, battery, marks =
       ) : null}
       <Baseline from={baseline.from} to={baseline.to} />
       {axis ? <CostAxis {...axis} /> : null}
-      <CostLine series="battery" from={battery.from} to={battery.to} dim={dim.battery} tone={tb} posts={posts} amber={amber.battery} />
-      <CostLine series="solar" from={solar.from} to={solar.to} dim={dim.solar} tone={ts} posts={posts} amber={amber.solar} />
+      <CostLine series="battery" from={battery.from} to={battery.to} dim={dim.battery} tone={tb} posts={posts} amber={amber.battery} {...line.battery} />
+      <CostLine series="solar" from={solar.from} to={solar.to} dim={dim.solar} tone={ts} posts={posts} amber={amber.solar} {...line.solar} />
       {marks ? <BatteryMark at={bAt} dim={dim.battery} tone={tb} scale={markScale} /> : null}
       {marks ? <SolarMark at={sAt} dim={dim.solar} tone={ts} glint={glintAt(S)} scale={markScale} /> : null}
       {Object.entries(years).map(([y, t]) => (
