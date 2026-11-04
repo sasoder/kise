@@ -148,6 +148,8 @@ uniform vec3 uAtmo;
 uniform float uAtmoW, uAtmoA;
 uniform vec3 uNight;
 uniform float uExposure, uSat, uWarm, uAmbient, uLimb;
+uniform vec2 uTerm;
+uniform float uBasin;
 uniform float uGridA, uGridStep, uGridW, uGridLand, uGridMaxLat, uPoleFade, uLimbFade, uGridGlow;
 uniform vec3 uGridColor;
 uniform float uLayer;
@@ -188,7 +190,7 @@ void main() {
     gx.x -= round(gx.x); gy.x -= round(gy.x);
     vec3 alb = toLin(textureGrad(uTex, uv, gx, gy).rgb);
     float ndl = dot(n, normalize(uL));
-    float soft = smoothstep(-0.16, 0.32, ndl);
+    float soft = smoothstep(uTerm.x, uTerm.y, ndl);
     float lit = soft * (0.3 + 0.7 * clamp(ndl, 0.0, 1.0));
     float limb = mix(1.0 - uLimb, 1.0, pow(z, 0.45));
     vec3 c = alb * (lit * uExposure * limb) * vec3(1.0 + uWarm, 1.0, 1.0 - uWarm) + alb * uAmbient + toLin(uNight) * 0.55 * (1.0 - soft);
@@ -213,7 +215,7 @@ void main() {
       vec3 murk = mix(uMurkDark, uMurkLit, ol);
       murk = mix(murk, uMurkShelf, shelf * 0.3 * (0.35 + 0.65 * ol));
       // depth: the basin's middle goes down to the floor tone; the continental shelf keeps a thin teal rim
-      murk = mix(murk, uMurkDeep, smoothstep(0.02, 0.6, basin));
+      murk = mix(murk, uMurkDeep, smoothstep(0.02, 0.6, basin) * uBasin);
       float band = smoothstep(0.6, 0.97, oc.g) * (1.0 - smoothstep(0.02, 0.2, basin));
       murk = mix(murk, uCoast * (0.55 + 0.45 * ol), band * 0.6);
       float nz = vnoise(b * 2.6 + vec3(uTime * 0.010, 0.0, uTime * 0.007)) * 0.6 + vnoise(b * 6.0 - vec3(0.0, uTime * 0.009, 0.0)) * 0.4;
@@ -305,7 +307,7 @@ const compile = (gl: WebGL2RenderingContext, type: number, src: string) => {
 
 const UNIFORMS = [
   "uTex", "uOcean", "uEmis", "uRes", "uCenter", "uR", "uM", "uL", "uHasOcean", "uReveal", "uTime", "uMurkLit", "uMurkDark",
-  "uMurkShelf", "uHasEmis", "uEmisColor", "uEmisStrength", "uAtmo", "uAtmoW", "uAtmoA", "uNight", "uExposure", "uSat", "uWarm",
+  "uMurkShelf", "uHasEmis", "uEmisColor", "uEmisStrength", "uAtmo", "uAtmoW", "uAtmoA", "uNight", "uTerm", "uBasin", "uExposure", "uSat", "uWarm",
   "uAmbient", "uLimb", "uGridA", "uGridStep", "uGridW", "uGridLand", "uGridMaxLat", "uGridColor", "uMurkDeep", "uGlint",
   "uPoleFade", "uLimbFade", "uGridGlow", "uLayer", "uGridMask", "uHasGridMask", "uHi", "uCoast", "uMotes",
 ];
@@ -374,12 +376,23 @@ export type GlobeProps = {
     glint?: number;
     /** marine snow in the sunk water: 0 off .. ~0.3 faint */
     motes?: number;
+    /** opt-in: how far the basins' middles sink to `deep` (default 1); 0 keeps the open sea one lit-to-dark ramp */
+    basin?: number;
   } | null;
   /** an unlit glow layer (R = intensity), e.g. measured seafloor */
   emissive?: { src: string; color?: string; strength?: number } | null;
   atmosphere?: { color: string; width: number; strength: number } | null;
   /** exposure (lit side gain), sat(uration), warm(th) tint, ambient (unlit albedo floor), limb darkening */
-  grade?: { exposure?: number; sat?: number; warm?: number; ambient?: number; limb?: number; highlight?: number };
+  grade?: {
+    exposure?: number;
+    sat?: number;
+    warm?: number;
+    ambient?: number;
+    limb?: number;
+    highlight?: number;
+    /** opt-in: the day/night ramp over n.l, [start, end] (default [-0.16, 0.32]); narrower = a crisper terminator */
+    terminator?: [number, number];
+  };
   /** a graticule painted ON the sphere (no draw-on; use GlobeLines for that): step deg, screen-px width,
    *  landOnly = stops at the coast (needs `ocean`), maxLat = where meridians and parallels end */
   grid?: {
@@ -480,6 +493,7 @@ export const LitGlobe: React.FC<GlobeProps> = (p) => {
     gl.uniform1f(u.uWarm, g.warm ?? 0.04);
     gl.uniform1f(u.uAmbient, g.ambient ?? 0.06);
     gl.uniform1f(u.uLimb, g.limb ?? 0.15);
+    gl.uniform2f(u.uTerm, g.terminator?.[0] ?? -0.16, g.terminator?.[1] ?? 0.32);
     const gr = p.grid ?? null;
     gl.uniform1f(u.uGridA, gr ? gr.opacity ?? 0.6 : 0);
     gl.uniform1f(u.uGridStep, gr?.step ?? 15);
@@ -492,6 +506,7 @@ export const LitGlobe: React.FC<GlobeProps> = (p) => {
     gl.uniform1f(u.uLayer, p.layer === "grid" ? 1 : 0);
     gl.uniform3f(u.uMurkDeep, ...hexRgb(oc?.deep ?? WATER.murkDeep));
     gl.uniform1f(u.uGlint, oc?.glint ?? 0);
+    gl.uniform1f(u.uBasin, oc?.basin ?? 1);
     gl.uniform3f(u.uGridColor, ...hexRgb(gr?.color ?? AMBER.top));
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.finish();

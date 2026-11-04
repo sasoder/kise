@@ -488,6 +488,27 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`;
 
+// opt-in (cut C of scott-nolan-orbit, where amber = the sun's power): the same assemblies in the plant's cream clay, no glow,
+// receding by tone with the plant's dim. Used only when <Plant core="cream">; the default amber core above is unchanged.
+const CORE_FRAG_CREAM = /* glsl */ `
+${COMMON_GLSL}
+uniform float uDim;
+varying vec3 vW; varying vec3 vN; varying vec2 vU; varying float vPh;
+void main() {
+  vec3 V = normalize(cameraPosition - vW);
+  vec3 n = normalize(vN);
+  if (dot(n, V) < 0.0) n = -n;
+  float side = 1.0 - step(0.5, abs(n.y));
+  float ex = min(vU.x, 1.0 - vU.x);
+  float ey = min(vU.y, 1.0 - vU.y);
+  float seam = side > 0.5 ? ex : min(ex, ey);
+  vec3 base = mix(uCreamFoot, uCream, 0.35 + 0.65 * (1.0 - side));
+  base = mix(base, mix(base * 0.86, uBoardTone, 1.0), uDim);
+  vec3 col = clayShade(base, n, V);
+  col *= mix(0.8, 1.0, smoothstep(0.0, 0.14, seam));
+  gl_FragColor = vec4(mix(col, uFogCol, fogAt(vW)), 1.0);
+}`;
+
 // ===================================================================================================================
 // SMOKE AND HAZE: soft lit puffs born at a stack's mouth, a pure function of the story clock
 // ===================================================================================================================
@@ -578,8 +599,17 @@ export const Smoke: React.FC<SmokeProps> = ({ at, S, kind = "coal", amount = 1, 
 // THE PLANT COMPONENT
 // ===================================================================================================================
 type PlantMeshes = { body: Any; mat: Any; board: ShadowItem[]; extra: Any[]; cellMat?: Any; coreMat?: Any; head?: Any; rotor?: Any };
-const cache = new Map<PlantKind, { geo: Any; occ: ShadowCap[]; board: Built["board"]; glass?: Any; core?: Any; cells?: Any; head?: { nacelle: Any; rotor: Any } }>();
-const plantGeo = (kind: PlantKind) => {
+type PlantGeo = { geo: Any; occ: ShadowCap[]; board: Built["board"]; glass?: Any; core?: Any; cells?: Any; head?: { nacelle: Any; rotor: Any } };
+const cache = new Map<string, PlantGeo>();
+const plantGeo = (kind: PlantKind, bare = false): PlantGeo => {
+  if (bare && kind === "solar") {
+    // opt-in: the solar plinth without its panels (they have lifted off as their own object)
+    const hb = cache.get("solar:bare");
+    if (hb) return hb;
+    const eb: PlantGeo = { geo: flipZ(merge(plinthGeo())), occ: [], board: [] };
+    cache.set("solar:bare", eb);
+    return eb;
+  }
   const have = cache.get(kind);
   if (have) return have;
   let b: Built;
@@ -606,6 +636,11 @@ const plantGeo = (kind: PlantKind) => {
   const entry = { geo, occ: b.occ, board: b.board, glass, core, cells, head };
   cache.set(kind, entry);
   return entry;
+};
+/** opt-in helper: a plant's analytic contact shadows on its plinth top (world X/Z capsules), as Plant builds them; for `occ` */
+export const plantContactCaps = (kind: PlantKind): ShadowCap[] => {
+  const [X, Z] = LINEUP[kind];
+  return plantGeo(kind).occ.map((c) => ({ ...c, x: c.x + X, z: c.z + Z }));
 };
 /** the board shadow items of a plinth and its plant (world), for one SoftShadows layer */
 export const plantShadowItems = (kind: PlantKind, alpha = 1): ShadowItem[] => {
@@ -638,12 +673,18 @@ export type PlantProps = {
   glint?: number;
   /** draw this plant's own board shadow (false when a Lineup gathers them) */
   shadow?: boolean;
+  /** opt-in, solar only: the plinth without its panels (they lifted off as their own object); default false */
+  bare?: boolean;
+  /** opt-in: replaces the analytic contact shadows on the plinth top (world X/Z capsules), set every frame */
+  occ?: ShadowCap[];
+  /** opt-in, nuclear only: "cream" tones the core to the plant's clay (no amber, no bloom); default "amber" */
+  core?: "amber" | "cream";
 };
 /** one plinth with its plant, at its LINEUP place */
-export const Plant: React.FC<PlantProps> = ({ kind, S, dim = 0, lift = 0, smoke = 1, spin, glint, shadow = true }) => {
+export const Plant: React.FC<PlantProps> = ({ kind, S, dim = 0, lift = 0, smoke = 1, spin, glint, shadow = true, bare = false, occ, core = "amber" }) => {
   const [X, Z] = LINEUP[kind];
   const o = useMemo((): PlantMeshes => {
-    const g = plantGeo(kind);
+    const g = plantGeo(kind, bare);
     const occW = g.occ.map((c) => ({ ...c, x: c.x + X, z: c.z + Z }));
     const mat = energyClay(occW, PLINTH.H);
     const body = mesh(g.geo, mat, 1);
@@ -659,7 +700,10 @@ export const Plant: React.FC<PlantProps> = ({ kind, S, dim = 0, lift = 0, smoke 
       extra.push(gm);
     }
     if (g.core) {
-      coreMat = new THREE.ShaderMaterial({ vertexShader: CORE_VERT, fragmentShader: CORE_FRAG, uniforms: { ...sharedUniforms(), uS: { value: 0 } } });
+      coreMat =
+        core === "cream"
+          ? new THREE.ShaderMaterial({ vertexShader: CORE_VERT, fragmentShader: CORE_FRAG_CREAM, side: THREE.DoubleSide, uniforms: { ...sharedUniforms(), uDim: { value: 0 } } })
+          : new THREE.ShaderMaterial({ vertexShader: CORE_VERT, fragmentShader: CORE_FRAG, uniforms: { ...sharedUniforms(), uS: { value: 0 } } });
       const cm = mesh(g.core, coreMat, 2);
       cm.position.set(X, 0, -Z);
       extra.push(cm);
@@ -694,14 +738,24 @@ export const Plant: React.FC<PlantProps> = ({ kind, S, dim = 0, lift = 0, smoke 
       extra.push(head);
     }
     return { body, mat, board: [], extra, cellMat, coreMat, head, rotor };
-  }, [kind, X, Z]);
+  }, [kind, X, Z, bare, core]);
   o.mat.uniforms.uDim.value = c01(dim);
   o.mat.uniforms.uLift.value = c01(lift);
+  if (occ) {
+    const arr = o.mat.uniforms.uOcc.value;
+    for (let i = 0; i < arr.length; i++) {
+      const c = occ[i];
+      if (c) arr[i].set(c.x, c.z, c.len, c.r);
+      else arr[i].set(0, 0, 0, 0);
+    }
+    o.mat.uniforms.uOccN.value = Math.min(arr.length, occ.length);
+  }
   if (o.cellMat) {
     o.cellMat.uniforms.uGlint.value = glint ?? -0.4 + ((S / 110) % 1) * 1.9;
     o.cellMat.uniforms.uDim.value = c01(dim);
   }
-  if (o.coreMat) o.coreMat.uniforms.uS.value = S;
+  if (o.coreMat && o.coreMat.uniforms.uS) o.coreMat.uniforms.uS.value = S;
+  if (o.coreMat && o.coreMat.uniforms.uDim) o.coreMat.uniforms.uDim.value = c01(dim);
   if (o.rotor) o.rotor.rotation.set(0, 0, -(spin ?? S * 3) * D2R);
   const smokeAt = (x: number, y: number, z: number): V3 => [X + x, PLINTH.H + y, Z + z];
   return (
@@ -728,16 +782,20 @@ export type LineupProps = {
   smoke?: Partial<Record<"coal" | "gas", number>>;
   spin?: number;
   glint?: number;
+  /** opt-in (see PlantProps): plants drawn bare (solar without its panels), per-plant contact-shadow overrides, the core's tone */
+  bare?: Partial<Record<PlantKind, boolean>>;
+  occ?: Partial<Record<PlantKind, ShadowCap[]>>;
+  core?: "amber" | "cream";
 };
 /** the five plants on their plinths, in one row, with one shadow layer */
-export const Lineup: React.FC<LineupProps> = ({ S, only, dim = {}, lift = {}, smoke = {}, spin, glint }) => {
+export const Lineup: React.FC<LineupProps> = ({ S, only, dim = {}, lift = {}, smoke = {}, spin, glint, bare = {}, occ = {}, core }) => {
   const kinds = (only ?? (["coal", "gas", "nuclear", "wind", "solar"] as PlantKind[])).slice();
   const items = kinds.flatMap((k) => plantShadowItems(k));
   return (
     <>
       <SoftShadows items={items} />
       {kinds.map((k) => (
-        <Plant key={k} kind={k} S={S} dim={dim[k]} lift={lift[k]} smoke={k === "coal" || k === "gas" ? smoke[k] ?? 1 : 0} spin={spin} glint={glint} shadow={false} />
+        <Plant key={k} kind={k} S={S} dim={dim[k]} lift={lift[k]} smoke={k === "coal" || k === "gas" ? smoke[k] ?? 1 : 0} spin={spin} glint={glint} shadow={false} bare={bare[k]} occ={occ[k]} core={core} />
       ))}
     </>
   );

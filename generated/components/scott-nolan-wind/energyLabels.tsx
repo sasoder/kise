@@ -146,7 +146,7 @@ const useWords = () => {
   return words;
 };
 
-const LabelMesh: React.FC<{ kind: PlantKind; g: Glyphs; dim: number }> = ({ kind, g, dim }) => {
+const LabelMesh: React.FC<{ kind: PlantKind; g: Glyphs; dim: number; sink?: number }> = ({ kind, g, dim, sink = 0 }) => {
   const o = useMemo(() => {
     const k = LABEL.CAP / (METRIC.cap * PX);
     const w = g.w * k;
@@ -168,7 +168,8 @@ const LabelMesh: React.FC<{ kind: PlantKind; g: Glyphs; dim: number }> = ({ kind
     return { geo, mat };
   }, [kind, g]);
   o.mat.uniforms.uDim.value = dim;
-  return <mesh geometry={o.geo} material={o.mat} renderOrder={5} />;
+  // opt-in sink: the word goes down through the board (whose depth hides it), 1 = its cap height + a little, gone
+  return <mesh geometry={o.geo} material={o.mat} renderOrder={5} position={sink > 0 ? [0, -sink * LABEL.CAP * 1.15, 0] : undefined} />;
 };
 
 export type PlantLabelsProps = {
@@ -178,15 +179,17 @@ export type PlantLabelsProps = {
   dim?: Partial<Record<PlantKind, number>>;
   /** draw the faint contact shadows here (default true); false if you add labelShadowItems to your own layer */
   shadow?: boolean;
+  /** opt-in, per plant: 0 standing (default) .. 1 sunk through the board out of sight (the board's depth hides it) */
+  sink?: Partial<Record<PlantKind, number>>;
 };
 /** the plants' name labels, on the board in front of each plinth. Opt-in; mount inside the stage's world. */
-export const PlantLabels: React.FC<PlantLabelsProps> = ({ only, dim = {}, shadow = true }) => {
+export const PlantLabels: React.FC<PlantLabelsProps> = ({ only, dim = {}, shadow = true, sink = {} }) => {
   const words = useWords();
   const kinds = only ?? [...PLANTS];
   return (
     <>
       {shadow ? <SoftShadows items={kinds.flatMap((k) => labelShadowItems(k))} /> : null}
-      {words ? kinds.map((k) => <LabelMesh key={k} kind={k} g={words[k]} dim={dim[k] ?? 0} />) : null}
+      {words ? kinds.map((k) => <LabelMesh key={k} kind={k} g={words[k]} dim={dim[k] ?? 0} sink={sink[k] ?? 0} />) : null}
     </>
   );
 };

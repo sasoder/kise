@@ -488,7 +488,8 @@ const Floor: React.FC<{ units: number }> = ({ units }) => {
 // THE STAGE
 // ===================================================================================================================
 const SUPERSAMPLE = 2;
-const CameraRig: React.FC<{ cam: NuclearCam }> = ({ cam }) => {
+/** the stage's camera (exported for a second canvas that must share it exactly; opt-in, scott-nolan-orbit cut C) */
+export const CameraRig: React.FC<{ cam: NuclearCam }> = ({ cam }) => {
   const { camera, gl } = useThree();
   const c = camera as Any;
   const e = nuclearEye(cam);
