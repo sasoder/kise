@@ -16,7 +16,7 @@
 // 800.
 // ---------------------------------------------------------------------------
 import React from "react";
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill, Easing, spring } from "remotion";
 import { loadFont } from "@remotion/google-fonts/FrankRuhlLibre";
 
 const { fontFamily: LABEL_FONT_FAMILY } = loadFont("normal", { weights: ["800"], subsets: ["latin"] });
@@ -445,3 +445,334 @@ export const Policy: React.FC<{ x: number; y: number; s: number; rot?: number }>
     <rect x={-52} y={58} width={50} height={8} fill={INK} />
   </g>
 );
+
+// ===============================================================================================================
+// CONTINUATION PARTS (CallUpAnyone, cut 62). New exports only: everything above is unchanged, so GraftMachine renders
+// pixel-identically. Traced from notes/reference/picto_src70.0.png (borough president, phone) and picto_src76.2.png
+// (the governor), both at the same 4K pixel scale (dial 116-117 px in both), by tools/trace_desk.py in the cut's
+// animation_source folder (median 7, threshold, approxPolyDP eps 2 px).
+// ===============================================================================================================
+
+// ---------------------------------------------------------------------------------------------------------------
+// GraftMachine's final frame (f285), as data: the layout of Moses, his label and the row of four, so a continuation
+// can open on exactly that picture. (Values copied from GraftMachine.tsx; GraftMachine itself does not read them.)
+// ---------------------------------------------------------------------------------------------------------------
+
+export const GM_FINAL_FRAME = 285;
+const GM_MX = 540;
+const GM_S_M = 0.67;
+export const GM_MOSES_BOTTOM = 44 + MOSES_H * GM_S_M;
+const GM_LABEL_TOP = GM_MOSES_BOTTOM + 30;
+const GM_S_LABEL = 0.68;
+export const GM_ROW_BASE = 1055;
+// stage -> slot scales, kept as the same arithmetic GraftMachine ends its rise on (lerp(s0, s1, 1))
+const fin = (s0: number, s1: number) => s0 + (s1 - s0) * 1;
+export const GM_SLOTS = {
+  vault: { x: 189.5, s: fin(0.4265, 0.2073), h: 844 },
+  worker: { x: 379.5, s: fin(0.43, 0.214), h: 840 },
+  scales: { x: 604, s: fin(0.4, 0.193), h: 881 },
+  hat: { x: 877, s: fin(1.0, 0.486), h: 360 },
+};
+const GM_COIN_PAN_S = 0.52 / 0.4;
+const GM_COIN_POS: [number, number][] = [
+  [-66, PAN_TOP - 66],
+  [66, PAN_TOP - 66],
+  [0, PAN_TOP - 66 - 114],
+];
+const gmClamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const gmInOut = Easing.inOut(Easing.cubic);
+// GraftMachine's faint breathe of the finished row; F is GraftMachine time (continue it with F = 285 + f)
+export const gmBreathe = (F: number) =>
+  1 + 0.012 * gmInOut(gmClamp01((F - 274) / (280 - 274))) * Math.sin(((F - 274) * 2 * Math.PI) / 30);
+// the scales' settled tilt: three landed coins, each sprung (same springs as GraftMachine)
+export const gmTilt = (F: number) =>
+  [177, 181, 185].reduce(
+    (acc, lf) =>
+      acc + 3.2 * (F > lf ? spring({ frame: F - lf, fps: 24, config: { damping: 11, stiffness: 140, mass: 0.6 } }) : 0),
+    0,
+  );
+
+// The row at GraftMachine time F. lift[i] (world px up) and bump[i] (extra scale) let a continuation animate a slot
+// without changing its resting picture (both 0 = GraftMachine's frame exactly).
+export const GraftRowFinal: React.FC<{ F: number; lift?: number[]; bump?: number[] }> = ({
+  F,
+  lift = [0, 0, 0, 0],
+  bump = [0, 0, 0, 0],
+}) => {
+  const br = gmBreathe(F);
+  const tilt = gmTilt(F);
+  const y = (i: number) => GM_ROW_BASE - lift[i];
+  const k = (i: number) => (bump[i] ? 1 + bump[i] : 1);
+  const { vault, worker, scales, hat } = GM_SLOTS;
+  return (
+    <g>
+      <TopHat x={hat.x} y={y(3)} s={hat.s * br * k(3)} />
+      <Scales
+        x={scales.x}
+        y={y(2)}
+        s={scales.s * br * k(2)}
+        tilt={tilt}
+        rightPan={GM_COIN_POS.map(([px, py], i) => <Coin key={`pc${i}`} x={px} y={py} s={GM_COIN_PAN_S} />)}
+      />
+      <Worker x={worker.x} y={y(1)} s={worker.s * br * k(1)} />
+      <VaultBody x={vault.x} y={y(0)} s={vault.s * br * k(0)} />
+      <VaultDoor x={vault.x} y={y(0)} s={vault.s * br * k(0)} open={0} />
+    </g>
+  );
+};
+export const GraftMosesFinal: React.FC = () => (
+  <g>
+    <MosesBust x={GM_MX} y={GM_MOSES_BOTTOM} s={GM_S_M} />
+    <MosesLabel x={GM_MX} y={GM_LABEL_TOP} s={GM_S_LABEL} />
+  </g>
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// The desk scene. Anchor for the phone and both men: the phone dial's x and the top of the desk slab (the phone
+// base stands on it; the men are cut off by it). The desk itself is a plain slab + front, sized freely.
+// ---------------------------------------------------------------------------------------------------------------
+
+export const DESK_SLAB = 43; // slab thickness at 4K
+export const DESK_OVERHANG = 28; // the slab overhangs the front on each side
+const BOSS_B_BODY =
+  "M163 -70 L163 -1 L448 -1 L426 -25 L395 -186 L400 -191 L445 -166 L454 -158 L459 -130 L455 -125 L447 -15 L456 -1 L480 -1 L489 -13 L480 -121 L477 -128 L481 -157 L488 -165 L537 -191 L540 -188 L538 -168 L511 -23 L508 -17 L489 -1 L792 -1 L788 -39 L751 -113 L746 -118 L661 -163 L571 -182 L529 -213 L536 -242 L564 -261 L584 -293 L588 -329 L577 -339 L562 -389 L540 -423 L503 -448 L469 -456 L432 -450 L397 -424 L373 -389 L361 -344 L346 -330 L354 -292 L371 -263 L398 -241 L402 -214 L366 -182 L272 -163 L192 -118 L183 -110 Z";
+const BOSS_B_SHIRT =
+  "M536 -188 L488 -162 L483 -156 L481 -125 L491 -12 L483 -1 L493 -6 L509 -23 L538 -183 Z M400 -189 L397 -185 L429 -22 L453 -1 L445 -13 L454 -126 L452 -157 Z";
+const BOSS_G_BODY =
+  "M155 -215 L155 -156 L177 -148 L181 -143 L155 -93 L155 -1 L954 -1 L952 -80 L905 -174 L897 -183 L837 -217 L792 -238 L680 -261 L635 -301 L636 -336 L672 -364 L692 -395 L697 -409 L702 -449 L684 -465 L668 -526 L633 -572 L596 -596 L556 -605 L506 -597 L464 -568 L437 -528 L420 -472 L399 -448 L407 -402 L433 -361 L465 -336 L469 -304 L431 -268 L419 -260 L309 -240 L213 -188 L188 -190 Z";
+const BOSS_G_SHIRT =
+  "M462 -272 L501 -65 L525 -40 L551 -19 L599 -63 L638 -269 L631 -269 L571 -234 L567 -194 L580 -56 L557 -28 L549 -23 L522 -55 L534 -190 L531 -233 L511 -247 Z";
+const PHONE_HANDSET =
+  "M-245 -178 L-239 -166 L-131 -166 L-100 -177 L-95 -173 L-96 -166 L-82 -166 L-82 -178 L-78 -182 L1 -190 L77 -182 L81 -177 L81 -166 L94 -166 L96 -175 L126 -166 L237 -166 L243 -177 L240 -181 L187 -181 L148 -206 L77 -227 L13 -233 L-81 -228 L-145 -208 L-187 -182 L-242 -181 Z";
+const PHONE_BASE =
+  "M-184 -1 L162 -1 L162 -69 L156 -76 L127 -155 L123 -159 L98 -159 L94 -165 L81 -165 L77 -159 L-78 -157 L-82 -165 L-96 -165 L-100 -157 L-125 -155 Z";
+const PHONE_DIAL =
+  "M-12 -135 L-30 -128 L-47 -113 L-55 -99 L-58 -89 L-58 -66 L-51 -48 L-36 -31 L-18 -22 L-9 -20 L8 -20 L28 -27 L46 -43 L53 -55 L56 -65 L56 -91 L46 -112 L30 -127 L10 -135 Z M-17 -48 L-12 -47 L-8 -42 L-9 -38 L-14 -34 L-18 -35 L-22 -40 L-22 -43 Z M-33 -62 L-30 -61 L-25 -55 L-27 -50 L-32 -47 L-39 -52 L-39 -57 Z M36 -79 L41 -78 L45 -73 L44 -69 L39 -65 L36 -65 L31 -70 L31 -74 Z M-41 -82 L-38 -82 L-33 -77 L-33 -73 L-38 -68 L-42 -68 L-47 -74 L-45 -79 Z M-3 -96 L2 -96 L10 -92 L17 -82 L17 -74 L15 -69 L10 -63 L4 -60 L-8 -61 L-16 -68 L-19 -75 L-19 -80 L-16 -87 L-9 -94 Z M32 -100 L37 -100 L42 -94 L40 -89 L35 -86 L28 -92 L28 -95 Z M-36 -103 L-31 -101 L-29 -98 L-29 -93 L-34 -89 L-37 -89 L-42 -94 L-42 -98 Z M20 -117 L23 -117 L28 -112 L28 -108 L23 -103 L18 -104 L14 -109 L15 -113 Z M-23 -118 L-18 -118 L-14 -114 L-14 -109 L-20 -104 L-27 -109 L-27 -114 Z M0 -124 L5 -122 L8 -117 L3 -110 L-2 -110 L-6 -114 L-6 -119 Z";
+// head tops above the slab at 4K (borough 767 -> 1223, governor 561 -> 1166) and right shoulder edges from the dial
+export const BOSS_B_TOP = 456;
+export const BOSS_G_TOP = 605;
+export const BOSS_B_RIGHT = 836;
+export const BOSS_G_RIGHT = 955;
+export const HANDSET_LEFT = -245; // the handset's earpiece end, x from the dial
+export const HANDSET_PIVOT: [number, number] = [0, -166]; // where it rests on the cradle prongs
+export const RING_CENTRE: [number, number] = [0, -223]; // the ring marks' arc centre and radius
+export const RING_R = 285;
+
+// The desk: slab (with the faint light edge the original shows on its top) and front. (x, y) = the slab's top
+// centre in world px, w = the front's world width, bottom = the front's world bottom.
+export const Desk: React.FC<{ x: number; y: number; s: number; w: number; bottom: number; children?: React.ReactNode }> = ({
+  x,
+  y,
+  s,
+  w,
+  bottom,
+  children,
+}) => {
+  const o = DESK_OVERHANG * s;
+  const t = DESK_SLAB * s;
+  return (
+    <g>
+      <rect x={n(x - w / 2)} y={n(y + t - 1)} width={n(w)} height={n(bottom - y - t + 1)} fill={INK} />
+      <rect x={n(x - w / 2 - o)} y={n(y)} width={n(w + 2 * o)} height={n(t)} fill={INK} />
+      <rect x={n(x - w / 2 - o)} y={n(y + 0.2 * t)} width={n(w + 2 * o)} height={n(Math.max(1, 0.06 * t))} fill={lift(38)} />
+      {children}
+    </g>
+  );
+};
+
+// A man at the desk: "borough" (picto_src70.0) or "governor" (the heavier man, picto_src76.2), cut at the slab.
+export const Boss: React.FC<{ x: number; y: number; s: number; kind: "borough" | "governor" }> = ({ x, y, s, kind }) => {
+  const body = kind === "borough" ? BOSS_B_BODY : BOSS_G_BODY;
+  const shirt = kind === "borough" ? BOSS_B_SHIRT : BOSS_G_SHIRT;
+  return (
+    <g transform={anchor(x, y, s)}>
+      <path d={shirt} fill={INK} stroke={INK} strokeWidth={6} strokeLinejoin="round" />
+      <path d={body} fill={INK} />
+      <path d={shirt} fill={WHITE} />
+    </g>
+  );
+};
+
+// The rotary phone. lift (4K px up) and tilt (deg) move the handset off its cradle when it rings.
+export const Phone: React.FC<{ x: number; y: number; s: number; lift?: number; tilt?: number }> = ({
+  x,
+  y,
+  s,
+  lift: up = 0,
+  tilt = 0,
+}) => (
+  <g transform={anchor(x, y, s)}>
+    <path d={PHONE_BASE} fill={INK} />
+    <path d={PHONE_DIAL} fill={WHITE} fillRule="evenodd" />
+    <g
+      transform={`translate(${n(HANDSET_PIVOT[0])} ${n(HANDSET_PIVOT[1] - up)}) rotate(${n(tilt)}) translate(${n(-HANDSET_PIVOT[0])} ${n(-HANDSET_PIVOT[1])})`}
+    >
+      <path d={PHONE_HANDSET} fill={INK} />
+    </g>
+  </g>
+);
+
+// The ring marks: six short white strokes on an arc over the handset (three each side, as picto_src74.0), thin at
+// the inner end. k scales their length, spread pushes them out (both 1 = the original); angles (deg, 0 = 3 o'clock,
+// -90 = 12 o'clock) picks which marks to draw.
+const RING_ANGLES = [-155, -132, -107, -73, -48, -25];
+export const RingMarks: React.FC<{
+  x: number;
+  y: number;
+  s: number;
+  k?: number;
+  spread?: number;
+  opacity?: number;
+  angles?: number[];
+}> = ({ x, y, s, k = 1, spread = 1, opacity = 1, angles = RING_ANGLES }) => {
+  const r0 = RING_R * spread - 32 * k;
+  const r1 = RING_R * spread + 32 * k;
+  return (
+    <g transform={anchor(x, y, s)} opacity={opacity}>
+      {angles.map((a) => {
+        const c = Math.cos((a * Math.PI) / 180);
+        const si = Math.sin((a * Math.PI) / 180);
+        const px = -si;
+        const py = c;
+        const cx = RING_CENTRE[0];
+        const cy = RING_CENTRE[1];
+        const w0 = 3;
+        const w1 = 7.5;
+        const pts = [
+          [cx + c * r0 + px * w0, cy + si * r0 + py * w0],
+          [cx + c * r1 + px * w1, cy + si * r1 + py * w1],
+          [cx + c * r1 - px * w1, cy + si * r1 - py * w1],
+          [cx + c * r0 - px * w0, cy + si * r0 - py * w0],
+        ];
+        return (
+          <path
+            key={a}
+            d={"M" + pts.map(([u, v]) => `${n(u)} ${n(v)}`).join(" L") + " Z"}
+            fill={WHITE}
+            stroke={WHITE}
+            strokeWidth={5}
+            strokeLinejoin="round"
+          />
+        );
+      })}
+    </g>
+  );
+};
+
+// The desk's label, set like Moses' (same face, caps): lines centred on x, (x, y) = top centre of the first line's
+// caps. shown = how many characters are typed so far (all lines in order); the layout never shifts as they type.
+export const DeskLabel: React.FC<{ x: number; y: number; s: number; lines: string[]; shown?: number; opacity?: number }> = ({
+  x,
+  y,
+  s,
+  lines,
+  shown = 1e9,
+  opacity = 1,
+}) => {
+  const fs = (LABEL_CAP * s) / CAP_RATIO;
+  let count = 0;
+  return (
+    <g opacity={opacity} fontFamily={LABEL_FONT} fontWeight={800} fontSize={n(fs)} fill={LABEL_WHITE} textAnchor="middle">
+      {lines.map((line, li) => (
+        <text key={li} x={n(x)} y={n(y + (LABEL_CAP + li * LABEL_PITCH) * s)}>
+          {line.split("").map((ch, ci) => {
+            count += 1;
+            return (
+              <tspan key={ci} fillOpacity={count <= shown ? 1 : 0}>
+                {ch}
+              </tspan>
+            );
+          })}
+        </text>
+      ))}
+    </g>
+  );
+};
+
+// The coiled phone cord: a loop-and-hook coil (prolate trochoid) laid along a base curve in WORLD px, drawn from
+// its start to `drawn` (0..1) of its length. The base curve is the cubic p0-p1-p2-p3, or, when `via` is given, a
+// Catmull-Rom spline through p0, via..., p3 (p1/p2 ignored). pitch = world px per turn, amp = coil half-height,
+// width = stroke.
+export const CoiledCord: React.FC<{
+  p0: [number, number];
+  p1?: [number, number];
+  p2?: [number, number];
+  p3: [number, number];
+  via?: [number, number][];
+  drawn?: number;
+  pitch?: number;
+  amp?: number;
+  width?: number;
+  side?: 1 | -1;
+}> = ({ p0, p1, p2, p3, via, drawn = 1, pitch = 16, amp = 7, width = 3.4, side = 1 }) => {
+  if (drawn <= 0) return null;
+  const N = 240;
+  const B: [number, number][] = [];
+  if (via && via.length > 0) {
+    const P = [p0, ...via, p3];
+    const segs = P.length - 1;
+    for (let i = 0; i <= N; i++) {
+      const g = (i / N) * segs;
+      const k = Math.min(segs - 1, Math.floor(g));
+      const t = g - k;
+      const a = P[Math.max(0, k - 1)];
+      const b = P[k];
+      const c = P[k + 1];
+      const d = P[Math.min(segs, k + 2)];
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const cr = (q0: number, q1: number, q2: number, q3: number) =>
+        0.5 * (2 * q1 + (-q0 + q2) * t + (2 * q0 - 5 * q1 + 4 * q2 - q3) * t2 + (-q0 + 3 * q1 - 3 * q2 + q3) * t3);
+      B.push([cr(a[0], b[0], c[0], d[0]), cr(a[1], b[1], c[1], d[1])]);
+    }
+  } else {
+    const c1 = p1 ?? p0;
+    const c2 = p2 ?? p3;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const u = 1 - t;
+      B.push([
+        u * u * u * p0[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * p3[0],
+        u * u * u * p0[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * p3[1],
+      ]);
+    }
+  }
+  const cum = [0];
+  for (let i = 1; i <= N; i++) cum.push(cum[i - 1] + Math.hypot(B[i][0] - B[i - 1][0], B[i][1] - B[i - 1][1]));
+  const L = cum[N];
+  const Ld = L * Math.min(1, drawn);
+  const at = (d: number) => {
+    let i = 1;
+    while (i < N && cum[i] < d) i++;
+    const seg = cum[i] - cum[i - 1] || 1;
+    const t = (d - cum[i - 1]) / seg;
+    const x = B[i - 1][0] + (B[i][0] - B[i - 1][0]) * t;
+    const y = B[i - 1][1] + (B[i][1] - B[i - 1][1]) * t;
+    const tx = (B[i][0] - B[i - 1][0]) / seg;
+    const ty = (B[i][1] - B[i - 1][1]) / seg;
+    return { x, y, tx, ty };
+  };
+  const b = 0.2 * pitch; // along-track swing just over pitch / 2pi: big humps on one side, a small hook between
+  const pts: string[] = [];
+  const step = 1.2;
+  for (let d = 0; d <= Ld; d += step) {
+    const p = at(d);
+    const th = (2 * Math.PI * d) / pitch;
+    const nx = -p.ty * side;
+    const ny = p.tx * side;
+    const ax = p.x + p.tx * b * Math.sin(th) + nx * amp * Math.cos(th);
+    const ay = p.y + p.ty * b * Math.sin(th) + ny * amp * Math.cos(th);
+    pts.push(`${n(ax)} ${n(ay)}`);
+  }
+  if (pts.length < 2) return null;
+  return (
+    <path
+      d={"M" + pts.join(" L")}
+      fill="none"
+      stroke={INK}
+      strokeWidth={width}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  );
+};
