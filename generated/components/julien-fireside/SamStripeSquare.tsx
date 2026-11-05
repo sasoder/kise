@@ -1,5 +1,5 @@
 /**
- * Check: identify the guest as Sam Gerstenzang, co-founder of Boulton & Watt.
+ * Check: identify the guest as Sam Gerstenzang, Cofounder of Boulton & Watt.
  * Source: original Platform Summit Fireside Chat introduction; title spelling
  * verified against https://www.linkedin.com/in/samgerstenzang and the guest's
  * own https://samgerstenzang.substack.com/about profile.
@@ -20,7 +20,7 @@ export const FPS = 60000 / 1001;
 export const DURATION = 279;
 export const defaultProps = schema.parse({
   name: 'Sam Gerstenzang',
-  job: 'Co-founder',
+  job: 'Cofounder',
   company: 'Boulton & Watt',
   align: 'left',
 });
