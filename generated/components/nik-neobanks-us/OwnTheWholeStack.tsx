@@ -147,15 +147,22 @@ const TRACK = nuclearTrack(
   DURATION + PRE,
 );
 const trackAt = (f: number): NuclearCam => TRACK[Math.max(0, Math.min(TRACK.length - 1, Math.round(f) + PRE))];
-// from the pull-back on, the stack's near foot is held on a line just above caption band 1: the vertical framing is solved from
-// the zoom, so no pull-back can carry the bases into a band
+// from the pull-back on, the stack's near foot is held on a line (just above caption band 1, then gliding down to centre the end
+// group, rev 2): the vertical framing is solved from the zoom
 const FOOT_NEAR: V3 = [STACK_AT[0], 0, STACK_AT[1] - SLOT_D / 2 - SLOT_RIM];
 const FOOT_LINE = 1048;
+/**
+ * Rev 2 (user, Nov 5: the end shot "could be more centered ... it could sit right over the captions"): during the pull-back
+ * the foot line glides down so the end group (stack + pile, ~986 px tall) is centred on the frame (y ~467..1453), over the
+ * caption bands. Measured on rev 1 f168: group y 82..1068 with the foot on 1048, so +385 px.
+ */
+const FOOT_END = FOOT_LINE + 385;
+const footLineAt = (f: number) => FOOT_LINE + (FOOT_END - FOOT_LINE) * glide(84, 158, f);
 const camAt = (f: number): NuclearCam => {
   const c = trackAt(f);
   const foot = nuclearProject({ ...c, cy: 960 }, FOOT_NEAR).y;
   const w = smooth(36, 84, f);
-  return { ...c, cy: 960 + w * (FOOT_LINE - foot) + (1 - w) * (c.cy - 960) };
+  return { ...c, cy: 960 + w * (footLineAt(f) - foot) + (1 - w) * (c.cy - 960) };
 };
 
 // a bundle is dealt from above the frame's top edge: its start height is solved from the camera at the frame it starts, and its
@@ -270,7 +277,7 @@ const OwnTheWholeStack: React.FC<z.infer<typeof schema>> = () => {
       S={S}
       fog={[2.2, 9]}
       boardUnits={300}
-      pool={{ x: 470, y: 720, strength: 1 }}
+      pool={{ x: 470, y: 720 + footLineAt(f) - FOOT_LINE, strength: 1 }}
       world={
         <>
           <SoftShadows items={shadowsAt(f)} />
