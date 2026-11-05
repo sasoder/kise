@@ -87,7 +87,7 @@ const boardUnder = (c: NuclearCam, x: number, y: number): [number, number, numbe
   return [e[0] + t * dir[0], 0, e[2] + t * dir[2]];
 };
 const STAT_X = 540;
-const STAT_BASE = 418;
+const STAT_BASE = 618;
 const NUM_PX = 200; // a little over HERO (184), as the brief allows
 const LAB_PX = 46; // LABEL (30) is tiny on a phone: the label goes in a cream card, in ink, larger (style file)
 const CARD = { w: 560, h: 140, gap: 28, r: 10, line: 56 };
@@ -138,7 +138,7 @@ const EuropeAlreadyTheirs: React.FC<z.infer<typeof schema>> = () => {
       fog={FOG}
       boardUnits={BOARD_UNITS}
       floor={false}
-      pool={{ x: 560, y: 760, strength: 1 }}
+      pool={{ x: 560, y: 960, strength: 1 }}
       world={<RevolutWorld cam={cam} tones={tonesAt(f)} boardUnits={BOARD_UNITS} fog={FOG} islandMin={ISLAND_MIN} />}
       overlay={<Stat cam={cam} f={f} />}
     />

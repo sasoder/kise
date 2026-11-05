@@ -52,7 +52,7 @@ const track = (start: NuclearCam, glides: Glide[], frames: number): NuclearCam[]
 const START = mapProjectTall(10.7, 53);
 const HOLD = mapProjectTall(9.7, 52);
 export const CAM_KEYS = {
-  start: { tx: START[0], ty: 0, tz: START[1], d: 500, yaw: -6, pitch: 31, f: 2200, cx: 540, cy: 820 } as NuclearCam,
+  start: { tx: START[0], ty: 0, tz: START[1], d: 500, yaw: -6, pitch: 31, f: 2200, cx: 540, cy: 1020 } as NuclearCam,
   hold: { tx: HOLD[0], tz: HOLD[1], d: 413, yaw: -10, pitch: 25 } as Partial<NuclearCam>,
 };
 /** one eased push-in and crane down over the whole cut; its slow tail runs past the last frame (a living hold) */
