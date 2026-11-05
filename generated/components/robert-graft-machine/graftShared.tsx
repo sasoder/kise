@@ -296,11 +296,41 @@ export const Bond: React.FC<{
 };
 
 // ---------------------------------------------------------------------------------------------------------------
-// Scissors (black, side view as the original's): pivot at the origin, blades pointing to -x, one handle and ring
-// to +x. open 0..1 = blades 2..18 deg off the axis. Anchored at the pivot.
+// Scissors (black, side view): two mirrored halves crossing at a pivot screw. Each half is one rigid piece: a blade
+// to -x on one side of the axis and, across the pivot, a shank to +x ending in a hollow finger ring on the other
+// side (half A: blade below the axis, ring above; half B mirrored). open 0..1 = each half 2..18 deg off the axis,
+// so the blades open in a V and the rings spread. Anchored at the pivot; 4K units (blade 270, ring centre 205 out).
 // ---------------------------------------------------------------------------------------------------------------
 
-export const SCISSOR_BLADE = 267;
+export const SCISSOR_BLADE = 270;
+const SCISSOR_RING: [number, number] = [205, -64];
+const SCISSOR_RING_R = 58;
+const SCISSOR_HOLE_R = 37;
+// blade body below the axis (cutting edge on y ~0), a slight belly, a fine point
+const SCISSOR_BLADE_PATH = "M-270 0 L-210 9 L-120 19 L-30 24 L14 20 L22 6 L14 -6 L-40 -4 L-150 -2 Z";
+const ScissorHalf: React.FC = () => {
+  const [rx, ry] = SCISSOR_RING;
+  const d = Math.hypot(rx, ry);
+  const ex = rx - (rx / d) * (SCISSOR_RING_R - 6);
+  const ey = ry - (ry / d) * (SCISSOR_RING_R - 6);
+  return (
+    <g>
+      <path d={SCISSOR_BLADE_PATH} fill={INK} />
+      <path
+        d={`M0 6 C 60 8, ${n(ex - 60)} ${n(ey + 30)}, ${n(ex)} ${n(ey)}`}
+        fill="none"
+        stroke={INK}
+        strokeWidth={30}
+        strokeLinecap="round"
+      />
+      <path
+        d={`M${rx + SCISSOR_RING_R} ${ry} A${SCISSOR_RING_R} ${SCISSOR_RING_R} 0 1 1 ${rx - SCISSOR_RING_R} ${ry} A${SCISSOR_RING_R} ${SCISSOR_RING_R} 0 1 1 ${rx + SCISSOR_RING_R} ${ry} Z M${rx + SCISSOR_HOLE_R} ${ry} A${SCISSOR_HOLE_R} ${SCISSOR_HOLE_R} 0 1 0 ${rx - SCISSOR_HOLE_R} ${ry} A${SCISSOR_HOLE_R} ${SCISSOR_HOLE_R} 0 1 0 ${rx + SCISSOR_HOLE_R} ${ry} Z`}
+        fill={INK}
+        fillRule="evenodd"
+      />
+    </g>
+  );
+};
 export const Scissors: React.FC<{ x: number; y: number; s: number; rot?: number; open: number }> = ({
   x,
   y,
@@ -309,18 +339,16 @@ export const Scissors: React.FC<{ x: number; y: number; s: number; rot?: number;
   open,
 }) => {
   const half = 2 + 16 * Math.max(0, Math.min(1, open));
-  const blade = `30,-13 30,13 ${-SCISSOR_BLADE},0`;
   return (
     <g transform={anchor(x, y, s, rot)}>
-      <polygon points={blade} fill={INK} transform={`rotate(${n(-half)})`} />
-      <polygon points={blade} fill={INK} transform={`rotate(${n(half)})`} />
-      <rect x={0} y={-24} width={160} height={48} fill={INK} />
-      <path
-        d="M203 -53 A53 53 0 1 1 202.9 -53 Z M203 -30 A30 30 0 1 0 203.1 -30 Z"
-        fill={INK}
-        fillRule="evenodd"
-      />
-      <circle cx={0} cy={0} r={11} fill={WHITE} />
+      <g transform={`rotate(${n(half)}) scale(1 -1)`}>
+        <ScissorHalf />
+      </g>
+      <g transform={`rotate(${n(-half)})`}>
+        <ScissorHalf />
+      </g>
+      <circle cx={0} cy={0} r={15} fill={WHITE} />
+      <circle cx={0} cy={0} r={5} fill={INK} />
     </g>
   );
 };
@@ -447,53 +475,83 @@ export const Policy: React.FC<{ x: number; y: number; s: number; rot?: number }>
 );
 
 // ===============================================================================================================
-// CONTINUATION PARTS (CallUpAnyone, cut 62). New exports only: everything above is unchanged, so GraftMachine renders
-// pixel-identically. Traced from notes/reference/picto_src70.0.png (borough president, phone) and picto_src76.2.png
+// THE SHARED LAYOUT and the CONTINUATION PARTS (CallUpAnyone, cut 62). The desk parts are traced from
+// notes/reference/picto_src70.0.png (borough president, phone) and picto_src76.2.png
 // (the governor), both at the same 4K pixel scale (dial 116-117 px in both), by tools/trace_desk.py in the cut's
 // animation_source folder (median 7, threshold, approxPolyDP eps 2 px).
 // ===============================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------
-// GraftMachine's final frame (f285), as data: the layout of Moses, his label and the row of four, so a continuation
-// can open on exactly that picture. (Values copied from GraftMachine.tsx; GraftMachine itself does not read them.)
+// THE SHARED LAYOUT (rev 1, Nov 5): one compact central column, read by BOTH GraftMachine and CallUpAnyone so the
+// join (CallUpAnyone f0 = GraftMachine f285) is exact by construction. Safe area x 100-920, y 220-1520.
+//   Moses: bust 0.52 x 4K = 424 x 490, x 540, y 222-712. Label: cap 40 (0.48), y 734-829.
+//   Row of four (the collected beneficiaries): baseline y 955, icons ~102-108 tall, equal 55 px gaps, x ~239-841.
+//   Stage (where each beneficiary is introduced): floor y 1160, icons ~180-200 tall (tops >= 970), centred near
+//   x 540-620, right under the row; the lower part dips into caption band 1 (y 1080-1250), no text there.
 // ---------------------------------------------------------------------------------------------------------------
 
 export const GM_FINAL_FRAME = 285;
-const GM_MX = 540;
-const GM_S_M = 0.67;
-export const GM_MOSES_BOTTOM = 44 + MOSES_H * GM_S_M;
-const GM_LABEL_TOP = GM_MOSES_BOTTOM + 30;
-const GM_S_LABEL = 0.68;
-export const GM_ROW_BASE = 1055;
-// stage -> slot scales, kept as the same arithmetic GraftMachine ends its rise on (lerp(s0, s1, 1))
-const fin = (s0: number, s1: number) => s0 + (s1 - s0) * 1;
-export const GM_SLOTS = {
-  vault: { x: 189.5, s: fin(0.4265, 0.2073), h: 844 },
-  worker: { x: 379.5, s: fin(0.43, 0.214), h: 840 },
-  scales: { x: 604, s: fin(0.4, 0.193), h: 881 },
-  hat: { x: 877, s: fin(1.0, 0.486), h: 360 },
+export const G_MX = 540;
+export const G_S_M = 0.52;
+export const G_MOSES_TOP = 222;
+export const G_MOSES_BOTTOM = G_MOSES_TOP + MOSES_H * G_S_M;
+export const G_S_LABEL = 0.48;
+export const G_LABEL_TOP = G_MOSES_BOTTOM + 22;
+export const G_ROW_BASE = 955;
+export const G_STAGE_FLOOR = 1160;
+// 4K heights of the four beneficiaries (bottom-centre anchored), and their 4K widths at rest
+export const G_H = { vault: 844, worker: 840, scales: 881, hat: 360 };
+const G_W = { vault: 844, worker: 492, scales: 1276, hat: 416 };
+// row scales (target heights 105 / 108 / 102 / 105 px) and x positions with equal gaps about x 540
+const ROW_GAP = 55;
+const rowS = { vault: 105 / 844, worker: 108 / 840, scales: 102 / 881, hat: 105 / 360 };
+const rowWidths = [G_W.vault * rowS.vault, G_W.worker * rowS.worker, G_W.scales * rowS.scales, G_W.hat * rowS.hat];
+const rowTotal = rowWidths.reduce((a, b) => a + b, 0) + 3 * ROW_GAP;
+const rowX = rowWidths.map(
+  (w, i) => G_MX - rowTotal / 2 + rowWidths.slice(0, i).reduce((a, b) => a + b, 0) + i * ROW_GAP + w / 2,
+);
+export const G_SLOTS = {
+  vault: { x: rowX[0], s: rowS.vault },
+  worker: { x: rowX[1], s: rowS.worker },
+  scales: { x: rowX[2], s: rowS.scales },
+  hat: { x: rowX[3], s: rowS.hat },
 };
-const GM_COIN_PAN_S = 0.52 / 0.4;
-const GM_COIN_POS: [number, number][] = [
+// stage positions and scales (vault 190, worker 200, scales 180, hat 180 px tall)
+export const G_STAGE = {
+  vault: { x: 600, s: 190 / 844 },
+  worker: { x: 540, s: 200 / 840 },
+  scales: { x: 540, s: 180 / 881 },
+  hat: { x: 620, s: 0.5 },
+};
+// the coins on the scales' right pan (pan-local units) and their scale on the pan (= the flying coin's world size)
+export const G_COIN_S = 0.27;
+export const G_COIN_PAN_S = G_COIN_S / G_STAGE.scales.s;
+export const G_PAN_COIN_POS: [number, number][] = [
   [-66, PAN_TOP - 66],
   [66, PAN_TOP - 66],
   [0, PAN_TOP - 66 - 114],
 ];
-const gmClamp01 = (v: number) => Math.max(0, Math.min(1, v));
-const gmInOut = Easing.inOut(Easing.cubic);
-// GraftMachine's faint breathe of the finished row; F is GraftMachine time (continue it with F = 285 + f)
+// coins land on the pan on these frames (GraftMachine time); each landing tips the pan one sprung step
+export const G_SCALE_COIN_LAND = [177, 181, 185];
+const G_TILT_STEP = 3.2;
+const gClamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const gInOut = Easing.inOut(Easing.cubic);
+export const G_BREATHE_F0 = 274;
+// the faint breathe of the finished row; F is GraftMachine time (a continuation goes on with F = 285 + f)
 export const gmBreathe = (F: number) =>
-  1 + 0.012 * gmInOut(gmClamp01((F - 274) / (280 - 274))) * Math.sin(((F - 274) * 2 * Math.PI) / 30);
-// the scales' settled tilt: three landed coins, each sprung (same springs as GraftMachine)
+  1 +
+  0.012 * gInOut(gClamp01((F - G_BREATHE_F0) / 6)) * Math.sin(((F - G_BREATHE_F0) * 2 * Math.PI) / 30);
+// the scales' tilt at GraftMachine time F (three landed coins, each sprung)
 export const gmTilt = (F: number) =>
-  [177, 181, 185].reduce(
+  G_SCALE_COIN_LAND.reduce(
     (acc, lf) =>
-      acc + 3.2 * (F > lf ? spring({ frame: F - lf, fps: 24, config: { damping: 11, stiffness: 140, mass: 0.6 } }) : 0),
+      acc +
+      G_TILT_STEP * (F > lf ? spring({ frame: F - lf, fps: 24, config: { damping: 11, stiffness: 140, mass: 0.6 } }) : 0),
     0,
   );
 
-// The row at GraftMachine time F. lift[i] (world px up) and bump[i] (extra scale) let a continuation animate a slot
-// without changing its resting picture (both 0 = GraftMachine's frame exactly).
+// The finished row at GraftMachine time F. GraftMachine draws exactly this once every icon has landed; lift[i]
+// (world px up) and bump[i] (extra scale) let a continuation animate a slot (both 0 = GraftMachine's picture).
 export const GraftRowFinal: React.FC<{ F: number; lift?: number[]; bump?: number[] }> = ({
   F,
   lift = [0, 0, 0, 0],
@@ -501,9 +559,9 @@ export const GraftRowFinal: React.FC<{ F: number; lift?: number[]; bump?: number
 }) => {
   const br = gmBreathe(F);
   const tilt = gmTilt(F);
-  const y = (i: number) => GM_ROW_BASE - lift[i];
+  const y = (i: number) => G_ROW_BASE - lift[i];
   const k = (i: number) => (bump[i] ? 1 + bump[i] : 1);
-  const { vault, worker, scales, hat } = GM_SLOTS;
+  const { vault, worker, scales, hat } = G_SLOTS;
   return (
     <g>
       <TopHat x={hat.x} y={y(3)} s={hat.s * br * k(3)} />
@@ -512,7 +570,7 @@ export const GraftRowFinal: React.FC<{ F: number; lift?: number[]; bump?: number
         y={y(2)}
         s={scales.s * br * k(2)}
         tilt={tilt}
-        rightPan={GM_COIN_POS.map(([px, py], i) => <Coin key={`pc${i}`} x={px} y={py} s={GM_COIN_PAN_S} />)}
+        rightPan={G_PAN_COIN_POS.map(([px, py], i) => <Coin key={`pc${i}`} x={px} y={py} s={G_COIN_PAN_S} />)}
       />
       <Worker x={worker.x} y={y(1)} s={worker.s * br * k(1)} />
       <VaultBody x={vault.x} y={y(0)} s={vault.s * br * k(0)} />
@@ -520,10 +578,16 @@ export const GraftRowFinal: React.FC<{ F: number; lift?: number[]; bump?: number
     </g>
   );
 };
-export const GraftMosesFinal: React.FC = () => (
-  <g>
-    <MosesBust x={GM_MX} y={GM_MOSES_BOTTOM} s={GM_S_M} />
-    <MosesLabel x={GM_MX} y={GM_LABEL_TOP} s={GM_S_LABEL} />
+// Moses and his label at rest (pop = 1); GraftMachine scales the pair about the bust's centre for its first frames
+export const G_MOSES_CY = G_MOSES_TOP + (MOSES_H * G_S_M) / 2;
+export const GraftMosesFinal: React.FC<{ pop?: number }> = ({ pop = 1 }) => (
+  <g
+    transform={
+      pop === 1 ? undefined : `translate(${G_MX} ${n(G_MOSES_CY)}) scale(${n(pop)}) translate(${-G_MX} ${n(-G_MOSES_CY)})`
+    }
+  >
+    <MosesBust x={G_MX} y={G_MOSES_BOTTOM} s={G_S_M} />
+    <MosesLabel x={G_MX} y={G_LABEL_TOP} s={G_S_LABEL} />
   </g>
 );
 
