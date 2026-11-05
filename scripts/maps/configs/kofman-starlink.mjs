@@ -9,7 +9,10 @@
 // Occupied: DeepStateMap, 3 Nov 2026 (assets-src/kofman-starlink/deepstate_occupied_20261103.geojson, 28 polygons:
 // occupied areas, ORDLO, Crimea, Tuzla), unioned, clipped to the outline, slivers dropped.
 // Terminals: a jittered, relaxed dot field over free Ukraine (outline minus occupied), the Dwarkesh crowd grain
-// (FiniteJobs' relaxation), kept clear of the border line and the front.
+// (FiniteJobs' relaxation), kept clear of the border line and the front, then thinned to exactly DOT_COUNT dots.
+// The field is a COUNT: 1 dot = 25 terminals, 2,000 dots = 50,000, the "over 50,000" Starlink terminals delivered to
+// Ukraine through the Ministry of Digital Transformation (Ukrinform, 3 Apr 2025, after a Fedorov announcement:
+// https://ukrinform.net/amp/rubric-society/3978117-ukraine-receives-5000-more-starlink-terminals-from-poland.html).
 import { countryMP, featureMP, inter, loadFeatures, union, clean, ringArea } from "../lib/geo.mjs";
 import { mpD, mpBox } from "../lib/data.mjs";
 
@@ -18,10 +21,13 @@ const crimeaPick = (b) => b.x0 > 32 && b.x1 < 37 && b.y0 > 44 && b.y1 < 46.5;
 
 // --- the terminal field --------------------------------------------------------------------------------------------
 /** mean dot radius, world px (= screen px at the resolved view, k 1) */
-const DOT_R = 4.6;
+const DOT_R = 4.0;
 /** jittered-grid pitch (world px) before relaxation; ~40 % cover at DOT_R */
-const PITCH = 12.3;
+const PITCH = 10.4;
 const JITTER = 0.9;
+/** exactly this many dots: 1 dot = TERMINALS_PER_DOT terminals */
+const DOT_COUNT = 2000;
+const TERMINALS_PER_DOT = 25;
 const RELAX_GAP = 1.06;
 const RELAX_ITERS = 40;
 /** clear of the border line's centre (half the LINE weight at k 1 plus paper) and of the front */
@@ -151,7 +157,15 @@ const terminalField = (ukr, occ) => {
     cells.get(c).push(p);
     out.push(p);
   });
-  return out.map((p) => [r2(p.x), r2(p.y), Math.round(p.r * 1000) / 1000, Math.round(p.h * 1000) / 1000]);
+  if (out.length < DOT_COUNT) throw new Error(`terminal field: ${out.length} dots < ${DOT_COUNT}; lower PITCH`);
+  // thin to exactly DOT_COUNT: drop the surplus by a hash of the dot's position (scattered, so no hole forms)
+  const keep = out
+    .map((p, i) => ({ p, i, d: hash(Math.round(p.x * 7) + Math.round(p.y * 13) * 1009, 3) }))
+    .sort((a, b) => b.d - a.d)
+    .slice(0, DOT_COUNT)
+    .sort((a, b) => a.i - b.i)
+    .map((e) => e.p);
+  return keep.map((p) => [r2(p.x), r2(p.y), Math.round(p.r * 1000) / 1000, Math.round(p.h * 1000) / 1000]);
 };
 
 const areaOf = (mp) => mp.reduce((s, poly) => s + Math.abs(ringArea(poly[0])) - poly.slice(1).reduce((t, h) => t + Math.abs(ringArea(h)), 0), 0);
@@ -209,6 +223,8 @@ export default {
             },
             type: ": { ukraine: number; occupied: number; free: number }",
           },
+          { name: "DOT_COUNT", value: DOT_COUNT, doc: "the number of terminal dots (exact)", type: ": number" },
+          { name: "TERMINALS_PER_DOT", value: TERMINALS_PER_DOT, doc: "terminals one dot stands for (2,000 x 25 = 50,000)", type: ": number" },
           { name: "DOT_R", value: DOT_R, doc: "mean terminal dot radius, world px", type: ": number" },
           { name: "PLACES", value: (c) => Object.fromEntries(Object.entries({ lviv: [24.03, 49.84], kyiv: [30.52, 50.45], uzhhorod: [22.29, 48.62], kharkiv: [36.23, 49.99], odesa: [30.73, 46.48] }).map(([k, ll]) => [k, c.P(ll).map(r2)])), type: ": Record<string, P2>" },
           {

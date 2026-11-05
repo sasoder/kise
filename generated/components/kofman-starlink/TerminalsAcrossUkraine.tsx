@@ -3,7 +3,7 @@
 // generated/components/kits/chinatalk/chinatalkVintage.md).
 // Opaque 1080x1920, 24 fps, 143 frames.
 //
-// CHECK LINE: "Thousands of Starlink terminals spread across all of free Ukraine, right up to the front."
+// CHECK LINE: "Over 50,000 Starlink terminals spread across all of free Ukraine, right up to the front."
 //
 // THE LINE: "And to scale up like the rapid proliferation of the many, many thousands of Starlink terminals across
 // Ukraine, it's proven an essential enabling technology."
@@ -21,7 +21,13 @@
 // field is complete and lives by one slow travelling highlight: a soft band in which the terminals shift toward RED_HI
 // (colour only) sweeps once across free Ukraine west -> east, f90 -> the front at f135, while the camera creeps. Through the
 // pull-back the western border keeps >= 60 screen px of paper inside the left edge (a zoom-only bound on the camera x).
-// Landings: kicker STARLINK TERMINALS lands f49, UKRAINE f74, the hatch f54-84, source line f92.
+// THE COUNT (rev 3): the field is a count, 1 dot = 25 terminals, exactly 2,000 dots = 50,000. A counter above the map
+// reads the births off the field (dots shown x 25, down to the 100), comes into frame with its legend (a dot "= 25
+// terminals") on "thousands" (enters f30, lands f38, in frame from ~f33 at ~24,000), climbs fastest f34-44 and lands
+// on 50,000+ on f80, the frame the last terminal appears; it never changes after (rounded down, so 50,000 never shows
+// without its "+"). The counter is the headline at 1.9x the kit value size, the legend key 1.3x. The layout is one
+// centred column on the wide (k 0.9): kicker (no rules) y 196, counter 292, legend 376, map 420-996, source line 1032.
+// Landings: kicker STARLINK TERMINALS lands f49, counter f38 -> 50,000+ f80, the hatch f54-84 (unlabelled), source f88.
 // RED = Starlink (the terminals). Nothing else is red.
 //
 // SOURCES: Ukraine outline: Natural Earth 10m (world-atlas). This Natural Earth build assigns Crimea to "Russia", so
@@ -29,7 +35,10 @@
 // border, same NE coast, exact join at Perekop). Occupied territory as of 3 Nov 2026: DeepStateMap
 // (https://deepstatemap.live), assets-src/kofman-starlink/deepstate_occupied_20261103.geojson, 28 polygons unioned and
 // clipped to the outline. Built by scripts/maps/configs/kofman-starlink.mjs (build only, no bake) into
-// ukraineMapData.ts. The dot count is a picture of "many, many thousands", not a census: one dot is not one terminal.
+// ukraineMapData.ts. The count: "over 50,000" Starlink terminals delivered to Ukraine through the Ministry of Digital
+// Transformation, Ukrinform, 3 Apr 2025, after a Fedorov announcement
+// (https://ukrinform.net/amp/rubric-society/3978117-ukraine-receives-5000-more-starlink-terminals-from-poland.html);
+// on screen as 50,000+ and as 2,000 dots of 25. Where a dot stands is a picture of spread, not a location record.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
@@ -38,12 +47,14 @@ import {
   FeatherWipe,
   HatchFill,
   INK_HI,
-  Kicker,
   Label,
   RED,
   RED_DEEP,
   RED_HI,
   RedGroup,
+  SOURCE_PX,
+  EDGE_SAFE,
+  FRAME_W,
   SourceLine,
   VStage,
   V_INK,
@@ -51,14 +62,16 @@ import {
   easeOutCubic,
   enterFrom,
   enterU,
+  labelWidth,
   lineW,
   mixHex,
   runVCamera,
   smoothstep,
+  vz,
 } from "../kits/chinatalk/chinatalkVintage";
 import type { Pt } from "../kits/chinatalk/chinatalkVintage";
 import { hash, makeTone } from "../kits/dwarkesh/fieldShared";
-import { DOTS, DOT_R, OCCUPIED, OCCUPIED_BOX, PLACES, UKRAINE_BOX, UKRAINE_D } from "./ukraineMapData";
+import { DOTS, DOT_COUNT, DOT_R, OCCUPIED, OCCUPIED_BOX, PLACES, TERMINALS_PER_DOT, UKRAINE_BOX, UKRAINE_D } from "./ukraineMapData";
 
 export const FPS = 24;
 export const DURATION = 143;
@@ -73,6 +86,10 @@ export const defaultProps = schema.parse({});
 // sway included), joined with a soft minimum so the track stays one smooth curve. It binds through the pull-back and
 // only grazes the wide (the resolved view sits ~4 px west of its key: the map's side margins even out at ~64 px).
 // The spread then fills toward the right.
+// The vertical is likewise a smooth function of the zoom alone: the map's top edge sits at screen y MAP_TOP_SCREEN(k),
+// ~395 on the close opening and 400 on the wide, lifted by up to TOP_LIFT through the middle of the pull-back (in
+// log zoom), so the page above the map (the counter, the legend, the kicker) comes into frame early, while the count
+// is still running, instead of along the top edge. The follower's own y is not used.
 // ---------------------------------------------------------------------------
 const SEED = { x: PLACES.lviv[0] + 6, y: PLACES.lviv[1] + 6 };
 /** the outline's westernmost world x (Zakarpattia) */
@@ -84,16 +101,26 @@ const followCam = runVCamera(
   [
     { f: -20, x: SEED.x + 34, y: SEED.y + 4, k: 2.9 },
     { f: -6, x: SEED.x + 37, y: SEED.y + 8, k: 2.86, ease: "linear" },
-    { f: 72, x: 540, y: 958, k: 1.025 },
-    { f: DURATION, x: 543, y: 957, k: 1.0, ease: "linear" },
+    { f: 72, x: 540, y: 978, k: 0.915 },
+    { f: DURATION, x: 541, y: 976, k: 0.9, ease: "linear" },
   ],
   DURATION,
 );
 const softMin = (a: number, b: number, s: number) => Math.min(a, b) - s * Math.log1p(Math.exp(-Math.abs(a - b) / s));
+const MAP_TOP = UKRAINE_BOX[1];
+const K_OPEN = followCam(0).k;
+const K_WIDE = 0.9;
+const TOP_OPEN = 395;
+const TOP_WIDE = 420;
+const TOP_LIFT = 150;
+const mapTopScreen = (k: number) => {
+  const u = clamp01((Math.log(K_OPEN) - Math.log(k)) / (Math.log(K_OPEN) - Math.log(K_WIDE)));
+  return TOP_OPEN + (TOP_WIDE - TOP_OPEN) * u + TOP_LIFT * Math.sin(Math.PI * u);
+};
 export const camAt = (S: number) => {
   const c = followCam(S);
   const bound = WEST_X + (540 - LEFT_PAD) / c.k;
-  return { ...c, x: softMin(c.x, bound, SOFT) };
+  return { ...c, x: softMin(c.x, bound, SOFT), y: MAP_TOP - (mapTopScreen(c.k) - 960) / c.k };
 };
 
 // ---------------------------------------------------------------------------
@@ -188,11 +215,60 @@ const bandAt = (S: number, x: number, h: number) => {
 // ---------------------------------------------------------------------------
 // LAYOUT (world px == screen px at the resolved view)
 // ---------------------------------------------------------------------------
+// One centred column, laid out in SCREEN px on the wide (k K_WIDE, map top at TOP_WIDE) and placed in the world from
+// there: kicker, counter, legend, the map (screen y 400-1002), the source line (1036). All above y 1060.
 const MAP_CX = (UKRAINE_BOX[0] + UKRAINE_BOX[2]) / 2;
-const KICKER_Y = UKRAINE_BOX[1] - 92;
-const KICKER_W = 640;
-const UKRAINE_LABEL = { x: 218, y: 902 };
-const SOURCE = { x: UKRAINE_BOX[0] + 4, y: UKRAINE_BOX[3] + 30 };
+const WIDE_CY = MAP_TOP - (TOP_WIDE - 960) / K_WIDE;
+const worldY = (screenY: number) => WIDE_CY + (screenY - 960) / K_WIDE;
+const KICKER_Y = worldY(196);
+const COUNTER_Y = worldY(292);
+const LEGEND_Y = worldY(376);
+const SOURCE_Y = worldY(1032);
+/** The counter is the headline: the kit's "value" label drawn COUNTER_GAIN x its size (a scale about its own centre;
+ *  the kit's font, weight, figures and entrance are untouched). Above k 1 the gain cancels the size law, so the number
+ *  keeps its wide-shot size on screen through the pull-back instead of growing past the frame edge. */
+const COUNTER_GAIN = 1.9;
+const counterScale = (k: number) => COUNTER_GAIN * (k > 1 ? Math.pow(k, -0.75) : 1);
+/** the legend's key text at LEGEND_GAIN x the kit's source-line size (its dot stays a field dot) */
+const LEGEND_GAIN = 1.3;
+const scaleAbout = (x: number, y: number, s: number) =>
+  `translate(${x.toFixed(3)} ${y.toFixed(3)}) scale(${s.toFixed(5)}) translate(${(-x).toFixed(3)} ${(-y).toFixed(3)})`;
+// THE COUNT: every dot is TERMINALS_PER_DOT terminals. The counter reads the births straight off the field (a dot is
+// counted from the frame it shows), x 25, rounded to the nearest 100; it rides the spread (fastest on f34-44) and lands
+// on 50,000+ on the frame the last terminal appears, then never changes.
+const COUNT_FINAL = "50,000+";
+/** the counter (and its legend) land here: on "thousands" (f34), once the camera has brought the page above the map in */
+const COUNTER_F = 38;
+const SOURCE_F = 88;
+const LEGEND_TEXT = "= 25 terminals";
+const SOURCE_TEXT = "Source: Ministry of Digital Transformation, via Ukrinform, Apr 2025";
+const BIRTHS = TERMS.map((t) => t.birth).sort((a, b) => a - b);
+export const bornAt = (S: number) => {
+  let lo = 0;
+  let hi = BIRTHS.length;
+  while (lo < hi) {
+    const m = (lo + hi) >> 1;
+    if (BIRTHS[m] < S) lo = m + 1;
+    else hi = m;
+  }
+  return lo;
+};
+export const countText = (S: number) => {
+  const n = bornAt(S);
+  if (n >= DOT_COUNT) return COUNT_FINAL;
+  // rounded DOWN, so "50,000" never shows without its "+": the "+" arrives with the 2,000th dot
+  return (Math.floor((n * TERMINALS_PER_DOT) / 100) * 100).toLocaleString("en-US");
+};
+/** the legend, centred as a group: a terminal dot, a gap, then the italic key (its width estimated from the kit's
+ *  source-line size: Source Serif 4 Italic averages ~0.47 em a glyph) */
+const legendGeom = (k: number) => {
+  const fs = LEGEND_GAIN * Math.max(SOURCE_PX * vz(k), SOURCE_PX / k);
+  const textW = 0.47 * fs * LEGEND_TEXT.length;
+  const gap = 0.45 * fs;
+  const w = 2 * DOT_R + gap + textW;
+  const x0 = MAP_CX - w / 2;
+  return { dotX: x0 + DOT_R, textX: x0 + 2 * DOT_R + gap };
+};
 const OCC_POLYS: Pt[][] = OCCUPIED.filter((r) => r.length > 6).map((r) => r.map(([x, y]) => ({ x, y })));
 const HATCH_ANCHOR = { x: 0, y: 0 };
 /** the hatch soaks in west -> east behind the wave */
@@ -215,7 +291,6 @@ const TerminalsAcrossUkraine: React.FC<z.infer<typeof schema>> = () => {
     if (age <= 0) continue;
     if (Math.abs(t.x - cam.x) > hw || Math.abs(t.y - cam.y) > hh) continue;
     const g = easeOutCubic(clamp01(age / GROW_F));
-    if (g <= 0.01) continue;
     const wet = Math.pow(0.5, Math.max(0, age - GROW_F * 0.5) / DRY_F);
     const fill = tone(t.rest + (1 - t.rest) * wet);
     const hl = bandAt(S, t.x, t.h);
@@ -223,6 +298,15 @@ const TerminalsAcrossUkraine: React.FC<z.infer<typeof schema>> = () => {
   }
 
   const hatchU = clamp01((S - HATCH_F0) / (HATCH_F1 - HATCH_F0));
+  const legend = legendGeom(k);
+  // the scaled counter's own edge fade (the kit fades a label by its unscaled box)
+  const cs = counterScale(k);
+  const chw = (labelWidth(COUNT_FINAL, "value", k) / 2) * cs;
+  const cLeft = 540 + (MAP_CX - chw - cam.x) * k;
+  const cRight = 540 + (MAP_CX + chw - cam.x) * k;
+  const cEdge = smoothstep(Math.min(cLeft, FRAME_W - cRight) / EDGE_SAFE);
+  // the legend comes in with the number, never ahead of it
+  const legendU = enterU(S, COUNTER_F) * cEdge;
 
   return (
     <VStage S={S} cam={cam}>
@@ -239,9 +323,17 @@ const TerminalsAcrossUkraine: React.FC<z.infer<typeof schema>> = () => {
       {/* the border: thick ink, the whole country (Crimea included) */}
       <path d={UKRAINE_D} fill="none" stroke={V_INK} strokeOpacity={INK_HI} strokeWidth={lineW(k).toFixed(3)} strokeLinejoin="round" />
 
-      <Kicker text="Starlink terminals" x={MAP_CX} y={KICKER_Y} k={k} width={KICKER_W} anchor="middle" appear={enterU(S, 49)} />
-      <Label text="Ukraine" x={UKRAINE_LABEL.x} y={UKRAINE_LABEL.y} k={k} size="head" appear={enterU(S, 74)} />
-      <SourceLine text="Front line: DeepStateMap, 3 Nov 2026" x={SOURCE.x} y={SOURCE.y} k={k} appear={enterFrom(S, 92)} />
+      <Label text="Starlink terminals" x={MAP_CX} y={KICKER_Y} k={k} size="word" appear={enterU(S, 49)} />
+      <g transform={scaleAbout(MAP_CX, COUNTER_Y, cs)}>
+        <Label text={countText(S)} x={MAP_CX - labelWidth(COUNT_FINAL, "value", k) / 2} y={COUNTER_Y} k={k} size="value" anchor="start" rung={INK_HI * cEdge} appear={enterU(S, COUNTER_F)} />
+      </g>
+      <RedGroup k={k}>
+        <circle cx={legend.dotX} cy={LEGEND_Y} r={(DOT_R * easeOutCubic(legendU)).toFixed(3)} fill={tone(0.6)} />
+      </RedGroup>
+      <g transform={scaleAbout(legend.textX, LEGEND_Y, LEGEND_GAIN)}>
+        <SourceLine text={LEGEND_TEXT} x={legend.textX} y={LEGEND_Y} k={k} rung={INK_HI} appear={legendU} />
+      </g>
+      <SourceLine text={SOURCE_TEXT} x={MAP_CX} y={SOURCE_Y} k={k} anchor="middle" appear={enterFrom(S, SOURCE_F)} />
     </VStage>
   );
 };
