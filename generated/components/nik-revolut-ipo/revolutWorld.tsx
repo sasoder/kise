@@ -10,6 +10,11 @@
 //     base = board clay mixed toward cream by `cream`; amber sweeps west -> east across the country by `amber` and
 //     lifts it out of the slab (WORLD_SLAB.RAISE x raise).
 //   useRevolutBoard(): call at the top of the cut (suspends until the board texture is loaded).
+//
+// ADDITIONS (logged per the clip's rule: add, never change; StillToLaunch renders pixel-identical, proven by a
+// difference blend of its f0 and f117 before/after):
+//   - EuropeAlreadyTheirs (cut 21): CountryTone.lift (0..1, default 0), a lift out of the slab that is NOT tied to
+//     amber (WORLD_SLAB.RAISE x lift, added to the amber raise), so a country can warm board -> cream and rise a little.
 // ===================================================================================================================
 import React, { useMemo } from "react";
 import { continueRender, delayRender, staticFile } from "remotion";
@@ -382,7 +387,7 @@ void main() {
   float wall = step(1.5, aTop);
   float tp = wall > 0.5 ? aTop - 2.0 : 1.0;
   vec4 tone = uTone[int(aId + 0.5)];
-  float rs = smoothstep(0.0, 0.6, tone.y) * tone.z;
+  float rs = smoothstep(0.0, 0.6, tone.y) * tone.z + tone.w;
   vec3 p = position;
   p.y = tp * (uT + uRaise * rs);
   vec4 wp = modelMatrix * vec4(p, 1.0);
@@ -451,7 +456,8 @@ void main() {
   gl_FragColor = vec4(mix(col, uFogCol, fogAt(vW)), 0.0);
 }`;
 
-export type CountryTone = { cream?: number; amber?: number; raise?: number };
+/** lift: 0..1 of WORLD_SLAB.RAISE, independent of amber (default 0; added for EuropeAlreadyTheirs) */
+export type CountryTone = { cream?: number; amber?: number; raise?: number; lift?: number };
 /** The board floor plus the land slab, each country toned. In NuclearStage's `world`, with `floor={false}` on the stage. */
 export const RevolutWorld: React.FC<{
   cam: NuclearCam;
@@ -512,7 +518,7 @@ export const RevolutWorld: React.FC<{
     const id = o.d.ids.get(ISO_NUM[k] ?? k);
     if (id === undefined) continue;
     const t = tones[k];
-    arr[id].set(c01(t.cream ?? 0), c01(t.amber ?? 0), t.raise ?? 1, 0);
+    arr[id].set(c01(t.cream ?? 0), c01(t.amber ?? 0), t.raise ?? 1, t.lift ?? 0);
   }
   return (
     <>
