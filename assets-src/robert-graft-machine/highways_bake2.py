@@ -1,12 +1,16 @@
 # Stage 2: export plates for Remotion at PS=0.7 of the 4K base coords, and the road reveal steps.
+# rev1: the plate is the ROAD-FREE plate (highways_thin.py); the thin web is its own layer drawn on along the roads from
+# Manhattan (thin_XX.png), and the thick highways thicken out of their thin lines (roads_XX.png: a widening wedge behind
+# the front, so the thin line visibly turns thick).
 import numpy as np, cv2, sys, json, os
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra
 S=sys.argv[1]; OUT=sys.argv[2]
 os.makedirs(OUT,exist_ok=True)
-PS=0.7; X0=560; PADTOP=700; FEATHER_UP=320; FEATHER_DOWN=230; SMEAR_X=200; CUT=1900  # source rows from CUT down are replaced by the synthesised shore   # plate covers 4K x 560..3840, y -700..2860; pad above y 0 is flat dark ground
-clean=cv2.imread(f'{S}/clean_full.png',0)
+PS=0.7; X0=300; PADTOP=700; FEATHER_UP=320; FEATHER_DOWN=230; SMEAR_X=200; CUT=1900  # source rows from CUT down are replaced by the synthesised shore   # plate covers 4K x 560..3840, y -700..2860; pad above y 0 is flat dark ground
+clean=cv2.imread(f'{S}/noroad_full.png',0)
 nj=np.load(f'{S}/nj.npy'); alpha=np.load(f'{S}/alpha.npy'); core=np.load(f'{S}/core.npy')
+thin_a=np.load(f'{S}/thin_a.npy'); thin_rgb=np.load(f'{S}/thin_rgb.npy')
 H,W=clean.shape
 PADBOT=700
 def extbottom(a,thr):
@@ -73,44 +77,78 @@ njp=toplate(nj,border=cv2.BORDER_REFLECT,thr=127)
 rgba=np.zeros(njp.shape+(4,),np.uint8); rgba[...,3]=njp
 cv2.imwrite(f'{OUT}/nj_mask.png',rgba)
 print('plate',plate.shape)
-# geodesic distance at quarter res
-q=0.25
-aq=cv2.resize(alpha,None,fx=q,fy=q,interpolation=cv2.INTER_AREA)
-road=aq>0.35
-h,w=road.shape
-cost=np.where(road,1.0,9.0).ravel()
-idx=np.arange(h*w).reshape(h,w)
-rows=[];cols=[];vals=[]
-for dy,dx in [(0,1),(1,0),(1,1),(1,-1)]:
-    ys0=slice(0,h-dy); xs0=slice(max(0,-dx),w-max(0,dx)); ys1=slice(dy,h); xs1=slice(max(0,dx),w-max(0,-dx) if max(0,-dx)>0 else w)
-    xs1=slice(max(0,dx), w+min(0,dx))
-    a=idx[ys0,xs0].ravel(); b=idx[ys1,xs1].ravel()
-    L=np.hypot(dx,dy)
-    v=L*(cost[a]+cost[b])/2
-    rows+= [a,b]; cols+=[b,a]; vals+=[v,v]
-G=coo_matrix((np.concatenate(vals),(np.concatenate(rows),np.concatenate(cols))),shape=(h*w,h*w)).tocsr()
-seed=(int(1851*q),int(450*q))
-ys,xs=np.nonzero(road); i=((xs-seed[0])**2+(ys-seed[1])**2).argmin(); seedi=ys[i]*w+xs[i]
-dist=dijkstra(G,indices=seedi).reshape(h,w)/q   # in 4K px
-del G
-print('dist max on roads',dist[road].max())
-dfull=cv2.resize(dist.astype(np.float32),(W,H),interpolation=cv2.INTER_LINEAR)
-dpl=toplate(dfull,interp=cv2.INTER_LINEAR,border=cv2.BORDER_REPLICATE)
-apl=toplate(alpha,border=cv2.BORDER_CONSTANT)
+# the plate's top fade, as a weight per plate row, so roads fade into the dark ground with the land under them
+def topw():
+    n=FEATHER_UP+FEATHER_DOWN; rows=np.zeros(PADTOP+H+PADBOT,np.float32)
+    r=np.arange(n,dtype=np.float32)/n; rows[PADTOP-FEATHER_UP:PADTOP+FEATHER_DOWN]=r*r*(3-2*r); rows[PADTOP+FEATHER_DOWN:]=1
+    return cv2.resize(rows[:,None],(1,int(round((PADTOP+H+PADBOT)*PS))),interpolation=cv2.INTER_AREA)
+# geodesic distance along a road mask from upper Manhattan, at quarter res, in 4K px
+def geodesic(mask4k,offcost):
+    q=0.25
+    road=cv2.resize(mask4k.astype(np.float32),None,fx=q,fy=q,interpolation=cv2.INTER_AREA)>0.2
+    h,w=road.shape
+    cost=np.where(road,1.0,offcost).ravel()
+    idx=np.arange(h*w).reshape(h,w)
+    rows=[];cols=[];vals=[]
+    for dy,dx in [(0,1),(1,0),(1,1),(1,-1)]:
+        ys0=slice(0,h-dy); xs0=slice(max(0,-dx),w-max(0,dx)); ys1=slice(dy,h); xs1=slice(max(0,dx), w+min(0,dx))
+        a=idx[ys0,xs0].ravel(); b=idx[ys1,xs1].ravel()
+        v=np.hypot(dx,dy)*(cost[a]+cost[b])/2
+        rows+=[a,b]; cols+=[b,a]; vals+=[v,v]
+    G=coo_matrix((np.concatenate(vals),(np.concatenate(rows),np.concatenate(cols))),shape=(h*w,h*w)).tocsr()
+    seed=(int(1851*q),int(450*q))
+    ys,xs=np.nonzero(road); i=((xs-seed[0])**2+(ys-seed[1])**2).argmin(); seedi=ys[i]*w+xs[i]
+    dist=dijkstra(G,indices=seedi).reshape(h,w)/q
+    del G
+    print('dist max on roads',dist[road].max())
+    return cv2.resize(dist.astype(np.float32),(W,H),interpolation=cv2.INTER_LINEAR)
+TW=topw()
+def bbox(a):
+    ys,xs=np.nonzero(a>0.02); return xs.min()-4,xs.max()+5,ys.min()-4,ys.max()+5
+el=lambda r: cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2*r+1,2*r+1))
+# ---- THIN web: drawn on by a soft front along the roads (all of them), f2..f52 in the comp
+dthin=geodesic((thin_a>0.35)|(core>0),6.0)
+tapl=toplate(thin_a,border=cv2.BORDER_CONSTANT)*TW; tapl[:int(PADTOP*PS)]=0
+trgb=toplate(cv2.GaussianBlur(thin_rgb,(0,0),1.3),border=cv2.BORDER_CONSTANT)
+tdpl=toplate(dthin,interp=cv2.INTER_LINEAR,border=cv2.BORDER_REPLICATE)
+tx0,tx1,ty0,ty1=bbox(tapl)
+tapl=tapl[ty0:ty1,tx0:tx1]; trgb=trgb[ty0:ty1,tx0:tx1]; tdpl=tdpl[ty0:ty1,tx0:tx1]
+TD=float(tdpl[tapl>0.3].max()); NT=40; TSOFT=60.0
+for k in range(NT+1):
+    front=(TD+TSOFT)*k/NT
+    a=tapl*np.clip((front-tdpl)/TSOFT+0.5,0,1) if k<NT else tapl
+    a8=np.clip(a*255+0.5,0,255).astype(np.uint8)
+    im=np.zeros(a.shape+(4,),np.uint8); im[...,0]=im[...,1]=im[...,2]=np.where(a8>0,trgb,0); im[...,3]=a8
+    cv2.imwrite(f'{OUT}/thin_{k:02d}.png',im,[cv2.IMWRITE_PNG_COMPRESSION,9])
+print('thin',TD,tapl.shape)
+# ---- THICK: the same front logic along the thick network; behind the front each road widens from its centre line
+# to full width over TAPER px, so the thin line already on the map visibly turns thick
+dist=geodesic(alpha>0.35,9.0)
+din=cv2.distanceTransform(core.astype(np.uint8),cv2.DIST_L2,5)
+dout=cv2.distanceTransform((1-core).astype(np.uint8),cv2.DIST_L2,5)
+Hw=cv2.dilate(din,el(14))                    # local half width
+rad=np.where(core>0,Hw-din,Hw+dout)          # distance from the centre line
+del din,dout
+dpl=toplate(dist,interp=cv2.INTER_LINEAR,border=cv2.BORDER_REPLICATE)
+apl=toplate(alpha,border=cv2.BORDER_CONSTANT)*TW
+rpl=toplate(rad,interp=cv2.INTER_LINEAR,border=cv2.BORDER_REPLICATE)*PS
+hpl=toplate(Hw,interp=cv2.INTER_LINEAR,border=cv2.BORDER_REPLICATE)*PS
 apl[:int(PADTOP*PS)]=0
-# crop roads to their bbox
-ys,xs=np.nonzero(apl>0.02)
-bx0,bx1,by0,by1=xs.min()-4,xs.max()+5,ys.min()-4,ys.max()+5
-apl=apl[by0:by1,bx0:bx1]; dpl=dpl[by0:by1,bx0:bx1]
+bx0,bx1,by0,by1=bbox(apl)
+apl=apl[by0:by1,bx0:bx1]; dpl=dpl[by0:by1,bx0:bx1]; rpl=rpl[by0:by1,bx0:bx1]; hpl=hpl[by0:by1,bx0:bx1]
 D=float(dpl[apl>0.3].max())
-N=48; SOFT=40.0
+N=48; TAPER=520.0   # 4K px behind the front over which a road reaches full width
 tot=float(apl.sum()); frac=[]
 for k in range(N+1):
-    front=D*k/N + (SOFT/2 if k==N else 0)
-    a=apl*np.clip((front-dpl)/SOFT+0.5,0,1) if k<N else apl
+    front=(D+TAPER)*k/N
+    g=np.clip((front-dpl)/TAPER,0,1); g=g*g*(3-2*g)
+    wdt=g*(hpl+3.0*PS)
+    a=apl*np.clip((wdt-rpl)/(1.2)+0.5,0,1)*np.clip(g*6,0,1) if k<N else apl
     frac.append(round(float(a.sum())/tot,5))
     im=np.zeros(a.shape+(4,),np.uint8); im[...,3]=np.clip(a*255+0.5,0,255).astype(np.uint8)
     cv2.imwrite(f'{OUT}/roads_{k:02d}.png',im,[cv2.IMWRITE_PNG_COMPRESSION,9])
-meta=dict(PS=PS,X0=X0,PADTOP=PADTOP,PADBOT=PADBOT,plateW=int(plate.shape[1]),plateH=int(plate.shape[0]),roadsX=int(bx0),roadsY=int(by0),roadsW=int(bx1-bx0),roadsH=int(by1-by0),steps=N,frac=frac,distMax=D)
+meta=dict(PS=PS,X0=X0,PADTOP=PADTOP,PADBOT=PADBOT,plateW=int(plate.shape[1]),plateH=int(plate.shape[0]),
+          roadsX=int(bx0),roadsY=int(by0),roadsW=int(bx1-bx0),roadsH=int(by1-by0),steps=N,frac=frac,distMax=D,
+          thinX=int(tx0),thinY=int(ty0),thinW=int(tx1-tx0),thinH=int(ty1-ty0),thinSteps=NT)
 json.dump(meta,open(f'{S}/meta.json','w'))
 print(json.dumps({k:v for k,v in meta.items() if k!='frac'})); print(frac)
