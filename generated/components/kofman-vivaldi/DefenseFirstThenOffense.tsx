@@ -1,10 +1,10 @@
 // ---------------------------------------------------------------------------
-// DefenseFirstThenOffense (kofman-vivaldi, cut 28). ChinaTalk style (newsprint) (styles/chinatalk.md; kit API in
-// generated/components/kits/chinatalk/chinatalkVintage.md).
-// Opaque 1080x1920, 24 fps, 248 frames.
+// DefenseFirstThenOffense (kofman-vivaldi, cut 28), revision 2: on the Lyman map. ChinaTalk style (newsprint)
+// (styles/chinatalk.md; kit API in generated/components/kits/chinatalk/chinatalkVintage.md; the clip's two-colour map
+// in lymanShared.tsx). Delivered as 28_DefenseFirstThenOffense.mov. Opaque 1080x1920, 24 fps, 248 frames.
 //
-// CHECK LINE: "the new technology (a drone) first goes to the side that is dug in and makes its defense hold; later
-// the very same side uses that same drone to attack forward."
+// CHECK LINE: "the drones first hold the Ukrainian line (Russian attacks die in their kill zone); later the same
+// drones lead the Ukrainian push, and the front moves east over the Vivaldi salient."
 //
 // THE LINE: "It's easiest to apply technology to the defense first, and it's easier to do defense on land than
 // offense. And then usually that technology then gets adapted over time by the same force to enable offensive
@@ -15,63 +15,72 @@
 // force 211 · to enable 218-221 · offensive 227 · operations 235 · (cut back to the speaker at 248).
 // DURATION: the slot 28.833 -> 39.167 s = 10.333 s x 24 = 248 frames (f0..f247).
 //
-// THE PICTURE: a plain newspaper battle figure seen from above. Two held sides with a field between: our ground
-// fills the frame below our trench and theirs the frame above their trench, each the house ink wash under a fine
-// hatch (as the clip's map draws held ground); bare paper between is the field. Both trenches are heavy crenellated
-// lines at the red-line weight with teeth 48 wide and 44 deep: ours INK_HI (teeth tops world y 960), theirs INK_LO
-// (teeth bottoms world y 380), teeth facing each other. One big solid red drone (Phosphor "drone", DRONE_D, 300 world
-// px) is the technology.
+// THE PICTURE: the shared Lyman map (lymanShared LymanMap: Ukrainian ground blue, Russian-held ground the grey wash
+// under the hatch, the Donets, LYMAN, UKRAINE / RUSSIAN-HELD) on 15 Aug 2026, the Russian-held salient bulging west
+// north of Lyman. RED = the drones (Phosphor "drone", DRONE_D) and their kill zone. Nothing else is red (the retaken
+// patch's fine RED_DEEP edge, the clip's memory thread, settles in at the end as in cuts 0-18).
 //
-// THE MOTION: the drone flies in from the left frame edge, low over our trench (heading the way it travels,
-// decelerating; in view from f4), and touches the top of one tooth at f44 ("defense"). From that contact the trench
-// floods red outward along its length (frame edges red by ~f54), and right behind its front a red wash under a fine
-// red hatch soaks out into the 280-px strip of field in front of the trench: the ground the drone covers. On "and ...
-// easier" a dashed ink attack arrow marches straight down out of the enemy tooth above the drone (f65-86), dies on
-// the edge of that red strip and bleeds away head-first (f88-101): the defense holds. From "And then" the strip and
-// the trench's red drain back together into the point under the drone (f106-142), so only the drone is red, while
-// the drone lifts off (60 world px) and slowly turns from the + to the X, nose up-field (f112-188); through "over
-// time" the camera opens up-field (k 1.28 -> 1.05, f150-204). On "by the same force" the drone flies up the field
-// (f194-232) and a solid red arrow is written out of our tooth behind it (head out at f199), the drone always just
-// ahead of the arrow's head (the head is a filled red point, wet while it travels, instead of a round bead). The head
-// touches the enemy trench at f230 and the enemy segment it hits floods red from that point (first red f230, settled
-// f244). The drone settles hovering just beyond the enemy line (f232) and holds alive (a slow hover bob, the camera's
-// creep) to f247; end framing: their trench at screen y ~363, ours ~1000, both washes in shot.
-// CONTACTS: drone -> our trench f44, flood visible f44, kill zone from f46. Dashed arrow stops on the zone's edge
-// f86 (it never reaches the drone). Red arrow head -> enemy trench f230, flood visible f230.
-// RED = the technology (the drone) and what it does. Nothing else is red.
+// THE MOTION: three red drones fly in from the west frame edge and take station over the Ukrainian side of the
+// salient's front (arrivals f36, f40, f44 "defense"); from the point of the front under each one a red kill zone (one
+// flat RED wash, no hatch of its own) opens along the front on the Russian-held side: a narrow band ~78 world px deep
+// hugging the line, only along the stretch the drones watch, with a short taper at each end (settled ~f62). On
+// "easier to do defense on land" three heavy dashed ink Russian attack arrows (the weight of the Ukrainian ones) run
+// west from deep in the salient, stop dead on the band's edge (f84 "defense", f90, f97 "land") and bleed away. The
+// drones hold station through "And then usually" (the camera holds its x too), then from f108 move east over the
+// Russian-held side in one move (slow at first: "adapted over time"); the band goes with them, always just ahead of
+// them (the front they are taking, pushed 180 world px east); the front follows 16 frames behind (f124-238) as the
+// real 15 Aug front morphs into the real 15 Oct front, the ground behind it turning blue (the Vivaldi patch), each
+// drone's solid ink Ukrainian attack arrow growing out of the old front behind it. The camera pushes in through the
+// defense, drifts east with the advance, and creeps to the end, where the patch's RED_DEEP edge settles (f228-246) and
+// the drones hover over the Russian side of the new front with the kill zone just ahead of them.
+// CONTACTS: drone A/B/C station on f36/40/44, its kill zone's first red on the same frame. Russian arrows stop on the
+// band's edge on f84/90/97 (they never reach the line). The front leaves the 15 Aug line on f124.
 //
-// SOURCES: none (no figures). Drone silhouette: Phosphor "drone" fill, MIT (vivaldiPictos.ts).
+// SOURCES: front lines and areas: DeepStateMap (deepstatemap.live) history snapshots of 15 Aug and 15 Oct 2026, via
+// lymanFrontData.ts / lymanShared.tsx (VIVALDI_OLD_EDGE -> VIVALDI_NEW_EDGE; HELD_20261015 + the morphing patch);
+// the morph between the two fronts is drawn, not data (only its two ends are real). The Donets: Natural Earth; Lyman:
+// OpenStreetMap Nominatim. Drone counts, arrows and the kill zone are illustrative, not data. The SourceLine names
+// DeepStateMap, 15 Aug and 15 Oct 2026.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   DashedPath,
-  HatchFill,
   INK_HI,
-  INK_LO,
   InkDiffuse,
-  LINE,
   Pictogram,
   RED,
   RED_LINE,
-  RED_WET,
   RedGroup,
+  SourceLine,
   V_INK,
   VStage,
-  WET_DRY_F,
   WetLine,
   clamp01,
   cumLen,
-  easeInOutCubic,
   inkDiffuse,
-  mixHex,
   pointAtLen,
+  polyD,
   runVCamera,
   smoothstep,
+  toWorld,
   wpx,
 } from "../kits/chinatalk/chinatalkVintage";
-import type { DashMod, Pt } from "../kits/chinatalk/chinatalkVintage";
+import type { Cam, DashMod, Pt, VCamKey } from "../kits/chinatalk/chinatalkVintage";
+import { HELD_20261015 } from "./lymanFrontData";
+import {
+  FRONT_OCT_NORTH,
+  FRONT_OCT_SOUTH,
+  FrontLine,
+  LymanMap,
+  RetakenPatch,
+  SALIENT_RUSSIAN_LABEL,
+  SideLabel,
+  VIVALDI_NEW_EDGE,
+  VIVALDI_OLD_EDGE,
+  despike,
+} from "./lymanShared";
 import { DRONE_D } from "./vivaldiPictos";
 
 export const FPS = 24;
@@ -81,336 +90,396 @@ export const defaultProps = schema.parse({});
 
 const ID = "dfo";
 
-// --- the two trenches: crenellated (square-wave) lines, world px ------------------------------------------
-/** tooth lattice: teeth 48 wide and 44 deep, centred on 540 + PERIOD * n; both lines run on past the frame edges on
- *  every camera state */
-const PERIOD = 96;
-const TOOTH_HALF = 24;
-const TOOTH_D = 44;
-const TEETH_N = 9;
-const X_START = 540 - PERIOD * TEETH_N - TOOTH_HALF - 52;
-const X_END = 540 + PERIOD * TEETH_N + TOOTH_HALF + 52;
-/** ours: baseline at the rear, teeth facing up-field */
-const OUR_TOOTH = 960;
-const OUR_BASE = OUR_TOOTH + TOOTH_D;
-/** theirs: baseline at their rear (top), teeth facing down toward us */
-const THEIR_BASE = 336;
-const THEIR_TOOTH = THEIR_BASE + TOOTH_D;
-/** the tooth the drone defends, the one the enemy attack comes out of and the one it later attacks: one column */
-const HOLD_X = 540 - PERIOD;
-/** each side's held ground: the house ink wash under a fine hatch, from its trench to past the frame edge */
-const SIDE_FAR = 2400;
-const OUR_SIDE: Pt[] = [];
-const THEIR_SIDE: Pt[] = [];
-/** the kill zone: the strip of field in front of our trench that the drone covers, world px deep */
-const STRIP_D = 280;
-const STRIP_TOP = OUR_TOOTH - STRIP_D;
-const STRIP: Pt[] = [];
-/** house values for held ground (styles/chinatalk.md "Areas"; as the clip's map draws it), locked to the world */
-const SIDE_HATCH = { fill: 0.1, lineOpacity: 0.35, angleDeg: 45, anchor: { x: 0, y: 0 } } as const;
-/** the kill zone: the same hatch in red, a little stronger so it holds against the red trench */
-const ZONE_HATCH = { fill: 0.16, lineOpacity: 0.5, angleDeg: 45, anchor: { x: 0, y: 0 } } as const;
-
-const trenchPts = (base: number, tooth: number): Pt[] => {
-  const pts: Pt[] = [{ x: X_START, y: base }];
-  for (let n = -TEETH_N; n <= TEETH_N; n++) {
-    const c = 540 + PERIOD * n;
-    pts.push({ x: c - TOOTH_HALF, y: base }, { x: c - TOOTH_HALF, y: tooth }, { x: c, y: tooth }, { x: c + TOOTH_HALF, y: tooth }, { x: c + TOOTH_HALF, y: base });
-  }
-  pts.push({ x: X_END, y: base });
-  return pts;
-};
-const OURS = trenchPts(OUR_BASE, OUR_TOOTH);
-const THEIRS = trenchPts(THEIR_BASE, THEIR_TOOTH);
-OUR_SIDE.push(...OURS, { x: X_END, y: OUR_BASE + SIDE_FAR }, { x: X_START, y: OUR_BASE + SIDE_FAR });
-THEIR_SIDE.push(...THEIRS, { x: X_END, y: THEIR_BASE - SIDE_FAR }, { x: X_START, y: THEIR_BASE - SIDE_FAR });
-STRIP.push(...OURS, { x: X_END, y: STRIP_TOP }, { x: X_START, y: STRIP_TOP });
-/** a trench's arc length per world px across */
-const ARC_PER_X = (PERIOD + 2 * TOOTH_D) / PERIOD;
-
-/** split a polyline at the vertex (x, y): the two halves both start at that vertex and run outward */
-const splitAt = (pts: Pt[], x: number, y: number) => {
-  const i = pts.findIndex((p) => Math.abs(p.x - x) < 0.01 && Math.abs(p.y - y) < 0.01);
-  return { right: pts.slice(i), left: pts.slice(0, i + 1).reverse() };
-};
-const OURS_SPLIT = splitAt(OURS, HOLD_X, OUR_TOOTH);
-const THEIRS_SPLIT = splitAt(THEIRS, HOLD_X, THEIR_TOOTH);
-const lenOf = (pts: Pt[]) => {
+// --- the front: the real 15 Aug edge of the salient morphing into the real 15 Oct edge ----------------------------
+/** both edges sampled at the same arc fractions (every vertex of each kept), so the morph is exact at both ends */
+const fracs = (pts: Pt[]) => {
   const c = cumLen(pts);
-  return c[c.length - 1];
+  return c.map((s) => s / c[c.length - 1]);
 };
-const OURS_R = Math.max(lenOf(OURS_SPLIT.right), lenOf(OURS_SPLIT.left));
+const FR = Array.from(new Set([...fracs(VIVALDI_OLD_EDGE), ...fracs(VIVALDI_NEW_EDGE)].map((f) => Math.round(f * 1e6) / 1e6))).sort((a, b) => a - b);
+const sampleAt = (pts: Pt[]) => {
+  const c = cumLen(pts);
+  const L = c[c.length - 1];
+  return FR.map((f) => pointAtLen(pts, c, f * L));
+};
+const OLD_S = sampleAt(VIVALDI_OLD_EDGE);
+const NEW_S = sampleAt(VIVALDI_NEW_EDGE);
+/** the salient's front at progress t (0 = 15 Aug, 1 = 15 Oct), north to south */
+const morph = (t: number): Pt[] => OLD_S.map((a, i) => ({ x: a.x + (NEW_S[i].x - a.x) * t, y: a.y + (NEW_S[i].y - a.y) * t }));
+/** the whole visible front at t: Oct north of the salient, the morph, Oct south of it */
+const frontAt = (t: number): Pt[] => despike([...FRONT_OCT_NORTH, ...morph(t).slice(1), ...FRONT_OCT_SOUTH.slice(1)]);
+/** Russian-held ground at t: HELD 15 Oct + what is left of the salient (between the front at t and the Oct edge) */
+const heldAt = (t: number): string[] => {
+  if (t >= 0.999) return [HELD_20261015];
+  const m = morph(t);
+  return [HELD_20261015, polyD([...m, ...[...NEW_S].reverse()], true)];
+};
 
-// --- the flood (red soaking along a trench from the point of contact) ---------------------------------------
+// --- timing ----------------------------------------------------------------------------------------------------------
+/** the drones' advance (slow out of station: "adapted over time"), then the front following behind */
+const ADV_F0 = 108;
+const ADV_F1 = 222;
+const FRONT_LAG = 16;
+const advEase = (u: number) => {
+  const x = clamp01(u);
+  // a slow start that builds, then settles: smootherstep weighted toward the end
+  return x * x * x * (x * (x * 6 - 15) + 10);
+};
+const tDrone = (S: number) => advEase((S - ADV_F0) / (ADV_F1 - ADV_F0));
+const tFront = (S: number) => tDrone(S - FRONT_LAG);
+/** the kill zone's line: the front the drones are taking (the morph at the drones' progress), pushed east by
+ *  ZONE_SHIFT x that progress (tapered to nothing at the two fixed ends of the salient). Each drone sits ~90 world px
+ *  west of the old front on station and ~90 east of the new one at the end, so the band keeps the same place
+ *  relative to them throughout: just ahead of them, one band, never a field */
+const ZONE_SHIFT = 180;
+const ZONE_TAPER = 0.15;
+const zoneLineAt = (t: number): Pt[] => {
+  const m = morph(t);
+  const sh = ZONE_SHIFT * t;
+  const shifted = m.map((q, i) => ({ x: q.x + sh * smoothstep(Math.min(FR[i], 1 - FR[i]) / ZONE_TAPER), y: q.y }));
+  return despike([...FRONT_OCT_NORTH, ...shifted.slice(1), ...FRONT_OCT_SOUTH.slice(1)]);
+};
+/** the ground east (the Russian side) of a front-like line: it runs from far north to far south, so close it far east */
+const FAR_EAST = 4000;
+const beyondOf = (line: Pt[]): string =>
+  polyD([...line, { x: FAR_EAST, y: line[line.length - 1].y }, { x: FAR_EAST, y: line[0].y }], true);
+/** the patch's RED_DEEP edge settles once the front is home */
+const EDGE_F0 = 228;
+const EDGE_F = 18;
+
+// --- the drones ----------------------------------------------------------------------------------------------------
+const DRONE_SIZE = 170;
+type Drone = {
+  id: string;
+  /** station over the Ukrainian side of the 15 Aug front, and the point of the front under it (the contact) */
+  station: Pt;
+  contact: Pt;
+  /** the end: over the Russian side of the 15 Oct front, and where its Ukrainian attack ends (on that front) */
+  final: Pt;
+  arrowEnd: Pt;
+  /** where it comes in from (off the west frame edge), an optional control point for its curve (A keeps clear of the
+   *  UKRAINE label), and the frame it takes station */
+  from: Pt;
+  via?: Pt;
+  arrive: number;
+  /** its Russian attack: from deep in the salient toward its contact; it stops on the kill zone's edge (computed) */
+  atkFrom: Pt;
+  atkF0: number;
+};
+const DRONES: Drone[] = [
+  {
+    id: "a",
+    station: { x: 560, y: 445 },
+    contact: { x: 560, y: 528 },
+    final: { x: 858, y: 452 },
+    arrowEnd: { x: 768, y: 474 },
+    from: { x: -300, y: 60 },
+    via: { x: 520, y: 250 },
+    arrive: 36,
+    atkFrom: { x: 900, y: 590 },
+    atkF0: 64,
+  },
+  {
+    id: "b",
+    station: { x: 170, y: 690 },
+    contact: { x: 262, y: 690 },
+    final: { x: 735, y: 640 },
+    arrowEnd: { x: 645, y: 655 },
+    from: { x: -470, y: 610 },
+    arrive: 40,
+    atkFrom: { x: 760, y: 640 },
+    atkF0: 70,
+  },
+  {
+    id: "c",
+    station: { x: -14, y: 812 },
+    contact: { x: 76, y: 818 },
+    final: { x: 640, y: 790 },
+    arrowEnd: { x: 555, y: 798 },
+    from: { x: -480, y: 760 },
+    arrive: 44,
+    atkFrom: { x: 600, y: 884 },
+    atkF0: 77,
+  },
+];
+const ENTRY_F0 = -2;
+/** the way in: a curve from off the west edge that arrives heading toward the drone's later advance */
+const entryPts = (d: Drone): Pt[] => {
+  const hx = d.final.x - d.station.x;
+  const hy = d.final.y - d.station.y;
+  const h = Math.hypot(hx, hy);
+  const c = d.via ?? { x: d.station.x - (hx / h) * 220, y: d.station.y - (hy / h) * 220 };
+  return Array.from({ length: 81 }, (_, i) => {
+    const t = i / 80;
+    const a = (1 - t) * (1 - t);
+    const b = 2 * t * (1 - t);
+    const e = t * t;
+    return { x: a * d.from.x + b * c.x + e * d.station.x, y: a * d.from.y + b * c.y + e * d.station.y };
+  });
+};
+const ENTRIES = DRONES.map((d) => {
+  const pts = entryPts(d);
+  const cum = cumLen(pts);
+  return { pts, cum, len: cum[cum.length - 1] };
+});
+const headingDeg = (a: Pt, b: Pt) => (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+const BOB_A = 2.5;
+const BOB_T = 44;
+export const droneAt = (i: number, S: number): { x: number; y: number; rot: number } => {
+  const d = DRONES[i];
+  const e = ENTRIES[i];
+  if (S < d.arrive) {
+    const u = clamp01((S - ENTRY_F0) / (d.arrive - ENTRY_F0));
+    const s = e.len * (1 - (1 - u) * (1 - u));
+    const p = pointAtLen(e.pts, e.cum, s);
+    const q = pointAtLen(e.pts, e.cum, Math.min(e.len, s + 3));
+    const r = pointAtLen(e.pts, e.cum, Math.max(0, s - 3));
+    return { x: p.x, y: p.y, rot: headingDeg(r, q) + 90 };
+  }
+  const t = tDrone(S);
+  // on station it turns (eased, the short way under the drone's four-fold symmetry) from its arrival heading to the
+  // heading of its later advance
+  const endA = pointAtLen(e.pts, e.cum, e.len - 3);
+  const rotEnd = headingDeg(endA, d.station) + 90;
+  const rotAdv = headingDeg(d.station, d.final) + 90;
+  const delta = ((((rotAdv - rotEnd + 45) % 90) + 90) % 90) - 45;
+  const rot = rotEnd + delta * smoothstep((S - d.arrive) / 16);
+  const bob = BOB_A * Math.sin((2 * Math.PI * (S - d.arrive)) / BOB_T + i * 2.1) * smoothstep((S - d.arrive) / 10);
+  return {
+    x: d.station.x + (d.final.x - d.station.x) * t,
+    y: d.station.y + (d.final.y - d.station.y) * t + bob,
+    rot,
+  };
+};
+
+// --- the kill zone ---------------------------------------------------------------------------------------------------
+/** its depth (world px): the band is the stroke of the zone's line, clipped to the Russian side of that line, so it is
+ *  ZONE_HALF deep everywhere and never grows into a field */
+const ZONE_HALF = 78;
+/** it opens from each drone's contact (world px over frames), soaking fast then slowing, along the stretch of front
+ *  the three drones watch only, with a short taper at its two ends */
+const ZONE_OPEN_F = 22;
+const ZONE_REACH = 200;
+const ZONE_FEATHER = 70;
 const SOAK_P = 1.6;
 const soak = (u: number) => 1 - Math.pow(1 - clamp01(u), SOAK_P);
-const soakInv = (e: number) => 1 - Math.pow(1 - clamp01(e), 1 / SOAK_P);
-/** ours: from the drone's touch to both ends of the trench */
-const OUR_FLOOD_F0 = 44;
-const OUR_FLOOD_F = 30;
-/** the kill zone soaks out behind the trench's front, a soft-edged disc from the contact */
-const ZONE_LAG = 2;
-const ZONE_FEATHER = 140;
-/** ...and back: drained into the point under the drone */
-const DRAIN_F0 = 106;
-const DRAIN_F = 36;
-/** theirs: the segment the arrow hits, about two and a half teeth each way */
-const HIT_F0 = 230;
-const HIT_F = 14;
-const HIT_R = 2.4 * (PERIOD + 2 * TOOTH_D);
+/** one clean flat RED wash, no hatch of its own (the map's hatch shows through) */
+const ZONE_WASH = 0.34;
 
-// --- the drone ------------------------------------------------------------------------------------------------
-const DRONE_SIZE = 300;
-/** half its extent across the arms (rotate 0, the X) and along an arm (rotate 45, the +), world px */
-const HALF_X = (82 / 256) * DRONE_SIZE;
-const HALF_PLUS = (97.7 / 256) * DRONE_SIZE;
-/** hover on our tooth: its lower rotor rests on the tooth's top line */
-const HOVER: Pt = { x: HOLD_X, y: OUR_TOOTH - HALF_PLUS + 2 };
-/** the way in: a curve from off the left edge, low behind our trench, rising into the hover heading 45 deg up-right */
-const ENTRY_P0: Pt = { x: -170, y: 800 };
-const ENTRY_C: Pt = { x: HOVER.x - 40, y: HOVER.y + 40 };
-const ENTRY_F0 = -1;
-const ENTRY_F1 = OUR_FLOOD_F0;
-const ENTRY_PTS: Pt[] = Array.from({ length: 121 }, (_, i) => {
-  const t = i / 120;
-  const a = (1 - t) * (1 - t);
-  const b = 2 * t * (1 - t);
-  const c = t * t;
-  return { x: a * ENTRY_P0.x + b * ENTRY_C.x + c * HOVER.x, y: a * ENTRY_P0.y + b * ENTRY_C.y + c * HOVER.y };
+// --- the attacks -----------------------------------------------------------------------------------------------------
+/** the Russian attacks: as heavy as the Ukrainian ones, they run in fast (barely easing) and stop dead on the kill
+ *  zone's edge: stops f84 "defense", f90, f97 "land" */
+const ATK_F = 20;
+const ATK_BLEED_AFTER = 2;
+const ATK_BLEED_RUN = 5;
+const ATK_BLEED_F = 11;
+const atkEase = (u: number) => 1 - Math.pow(1 - clamp01(u), 1.35);
+/** arrow heads, SCREEN px at k = 1 */
+const UA_HEAD = { len: 44, w: 46 };
+/** distance from p to a polyline */
+const distToLine = (p: Pt, pts: Pt[]) => {
+  let best = Infinity;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const L2 = dx * dx + dy * dy || 1;
+    const t = clamp01(((p.x - a.x) * dx + (p.y - a.y) * dy) / L2);
+    best = Math.min(best, Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy));
+  }
+  return best;
+};
+/** where each Russian attack's tip stops: the first point on its way to the contact that touches the kill zone */
+const FRONT_0 = frontAt(0);
+const ATK_TO: Pt[] = DRONES.map((d) => {
+  const dx = d.contact.x - d.atkFrom.x;
+  const dy = d.contact.y - d.atkFrom.y;
+  for (let i = 0; i <= 400; i++) {
+    const q = { x: d.atkFrom.x + (dx * i) / 400, y: d.atkFrom.y + (dy * i) / 400 };
+    if (distToLine(q, FRONT_0) <= ZONE_HALF + 2) return q;
+  }
+  throw new Error(`DefenseFirstThenOffense: attack ${d.id} never reaches the kill zone`);
 });
-const ENTRY_CUM = cumLen(ENTRY_PTS);
-const ENTRY_LEN = ENTRY_CUM[ENTRY_CUM.length - 1];
-/** decelerating into the hover (a quadratic ease-out: arrives at rest on the touch) */
-const entryEase = (u: number) => 1 - Math.pow(1 - clamp01(u), 2);
-/** lift and turn: up off the tooth, from the + (heading up-right) to the X (heading up-field) */
-const LIFT_F0 = 112;
-const LIFT_F = 76;
-const LIFT_Y = HOVER.y - 60;
-/** the attack: up the field to hover just beyond the enemy line */
-const GO_F0 = 194;
-const GO_F = 38;
-const FINAL_Y = THEIR_BASE - RED_LINE / 2 - HALF_X - 16;
-/** the hover's life: a slow bob, world px */
-const BOB_A = 3;
-const BOB_T = 46;
-
-/** heading in screen degrees (-90 = up the page): the X-config drone's nose lies between its two front arms */
-const headingAt = (s: number) => {
-  const a = pointAtLen(ENTRY_PTS, ENTRY_CUM, Math.max(0, s - 2));
-  const b = pointAtLen(ENTRY_PTS, ENTRY_CUM, Math.min(ENTRY_LEN, s + 2));
-  return (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
-};
-/** eased out of the hover and into the next one (a sine in-out: no burst of speed) */
-const goEase = (u: number) => 0.5 - 0.5 * Math.cos(Math.PI * clamp01(u));
-const goY = (S: number) => LIFT_Y + (FINAL_Y - LIFT_Y) * goEase((S - GO_F0) / GO_F);
-export const droneAt = (S: number): { x: number; y: number; rot: number } => {
-  if (S < ENTRY_F1) {
-    const s = ENTRY_LEN * entryEase((S - ENTRY_F0) / (ENTRY_F1 - ENTRY_F0));
-    const p = pointAtLen(ENTRY_PTS, ENTRY_CUM, s);
-    return { x: p.x, y: p.y, rot: headingAt(s) + 90 };
-  }
-  const bobOn = smoothstep((S - ENTRY_F1) / 12) * (1 - smoothstep((S - GO_F0 + 4) / 10)) + smoothstep((S - (GO_F0 + GO_F - 4)) / 10);
-  const bob = BOB_A * Math.sin((2 * Math.PI * (S - ENTRY_F1)) / BOB_T) * bobOn;
-  const lift = goEase((S - LIFT_F0) / LIFT_F);
-  const rot0 = headingAt(ENTRY_LEN) + 90;
-  const rot = rot0 * (1 - lift);
-  const y = S < GO_F0 ? HOVER.y + (LIFT_Y - HOVER.y) * lift : goY(S);
-  return { x: HOVER.x, y: y + bob, rot };
-};
-
-// --- the enemy attack: a dashed ink arrow that stops short of the drone and bleeds away --------------------------
-/** straight down out of their tooth at the drone; its head dies on the kill zone's edge */
-const ATK_FROM: Pt = { x: HOLD_X, y: THEIR_TOOTH - 30 };
-const ATK_DIR = { x: 0, y: 1 };
-const ATK_TIP: Pt = { x: HOLD_X, y: STRIP_TOP };
-const ATK_LEN = Math.hypot(ATK_TIP.x - ATK_FROM.x, ATK_TIP.y - ATK_FROM.y);
-const ATK_F0 = 65;
-const ATK_F = 21;
-const ATK_BLEED_F0 = 88;
-const ATK_BLEED_RUN = 4;
-const ATK_BLEED_F = 9;
-/** marching down at an even pace that slows into the stop */
-const atkEase = (u: number) => {
-  const x = clamp01(u);
-  return x < 0.55 ? x / 0.775 : 0.55 / 0.775 + ((1 - 0.55 / 0.775) * (1 - Math.pow(1 - (x - 0.55) / 0.45, 2)));
-};
-
-// --- the red arrow: written up the field behind the drone ------------------------------------------------------------
-const ARROW_FROM_Y = OUR_BASE;
-/** the gap between the drone's centre and the arrow head's point: from its emergence out of our tooth to the touch */
-const ARROW_OUT_F = 199;
-const G0 = OUR_TOOTH - goY(ARROW_OUT_F);
-const G1 = THEIR_TOOTH - goY(HIT_F0);
-const apexAt = (S: number) => {
-  const g = G0 + (G1 - G0) * clamp01((S - ARROW_OUT_F) / (HIT_F0 - ARROW_OUT_F));
-  return Math.max(THEIR_TOOTH, goY(S) + g);
-};
-/** the frame the head's point passed world y (inverse of apexAt over the flight) */
-const frameAtApex = (y: number) => {
-  let lo = ARROW_OUT_F - 12;
-  let hi = HIT_F0;
-  for (let i = 0; i < 30; i++) {
-    const mid = (lo + hi) / 2;
-    if (apexAt(mid) > y) lo = mid;
-    else hi = mid;
-  }
-  return (lo + hi) / 2;
-};
-/** arrow head, SCREEN px at k = 1 */
-const HEAD_LEN = 50;
-const HEAD_W = 54;
-const DASH_HEAD_LEN = 38;
-const DASH_HEAD_W = 38;
-
-// --- the camera: close on our trench (just above the caption bands) and the drone's way in, a gentle push as the
-// trench floods, then through "over time" it opens up-field, our trench held where it is, to the whole field with
-// both trenches and the full arrow, and creeps in to the end -------------------------------------------------------
-/** the camera at zoom k with our trench's baseline at screen y `sy` */
-const onOurs = (f: number, x: number, k: number, sy: number, ease?: "linear") => ({ f, x, y: OUR_TOOTH - (sy - 960) / k, k, ease });
-export const camAt = runVCamera(
-  [onOurs(-24, 520, 1.26, 1040), onOurs(50, 516, 1.3, 1040), onOurs(150, 520, 1.28, 1040), onOurs(204, 524, 1.05, 994), onOurs(DURATION - 1, 524, 1.065, 1004, "linear")],
-  DURATION,
-);
-
-/** a filled arrow head, point at `tip`, pointing along unit `dir` */
 const headD = (tip: Pt, dir: Pt, len: number, w: number) => {
   const bx = tip.x - dir.x * len;
   const by = tip.y - dir.y * len;
-  const nx = -dir.y;
-  const ny = dir.x;
-  return `M${tip.x.toFixed(2)} ${tip.y.toFixed(2)}L${(bx + (nx * w) / 2).toFixed(2)} ${(by + (ny * w) / 2).toFixed(2)}L${(bx - (nx * w) / 2).toFixed(2)} ${(by - (ny * w) / 2).toFixed(2)}Z`;
+  return `M${tip.x.toFixed(2)} ${tip.y.toFixed(2)}L${(bx - (dir.y * w) / 2).toFixed(2)} ${(by + (dir.x * w) / 2).toFixed(2)}L${(bx + (dir.y * w) / 2).toFixed(2)} ${(by - (dir.x * w) / 2).toFixed(2)}Z`;
+};
+const unit = (a: Pt, b: Pt) => {
+  const L = Math.hypot(b.x - a.x, b.y - a.y);
+  return { x: (b.x - a.x) / L, y: (b.y - a.y) / L, L };
 };
 
-/** red soaked along both halves of a trench out to radius r (arc length from the contact) */
-const TrenchRed: React.FC<{ id: string; halves: { right: Pt[]; left: Pt[] }; r: number; k: number; ageAt?: (s: number) => number }> = ({
-  id,
-  halves,
-  r,
-  k,
-  ageAt,
-}) =>
-  r > 0.5 ? (
-    <>
-      <WetLine id={`${id}-r`} points={halves.right} len={r} k={k} ageAt={ageAt} shadow={false} />
-      <WetLine id={`${id}-l`} points={halves.left} len={r} k={k} ageAt={ageAt} shadow={false} />
-    </>
-  ) : null;
+// --- labels ----------------------------------------------------------------------------------------------------------
+/** RUSSIAN-HELD sits on the salient (as cut 0 sets it) and bleeds away as the drones start over it */
+const RU_LABEL_BLEED_F0 = 116;
+const RU_LABEL_BLEED_F = 14;
+
+// --- the camera: the salient with Lyman below the bands, a push in through the defense, an eastward drift with the
+// advance, a creep to the end ------------------------------------------------------------------------------------------
+const CAM_KEYS: VCamKey[] = [
+  { f: -24, x: 400, y: 800, k: 0.88 },
+  { f: 64, x: 404, y: 790, k: 0.95 },
+  { f: 132, x: 404, y: 784, k: 0.96 },
+  { f: 216, x: 540, y: 764, k: 1.0 },
+  { f: DURATION - 1, x: 548, y: 760, k: 1.025, ease: "linear" },
+];
+export const camAt = runVCamera(CAM_KEYS, DURATION);
+const MAP_HATCH_K = 0.96;
+/** the source line: two lines in the lower left, under Lyman, clear of the front on every camera state (world-locked) */
+const SOURCE_AT: Pt = toWorld(camAt(DURATION - 1), 48, 1790);
+const SOURCE_LINES = ["Front lines: DeepStateMap,", "15 Aug and 15 Oct 2026"];
+const SOURCE_LEAD = 34;
 
 const DefenseFirstThenOffense: React.FC<z.infer<typeof schema>> = () => {
   const S = useCurrentFrame();
-  const cam = camAt(S);
+  const cam: Cam = camAt(S);
   const k = cam.k;
 
-  // our trench's red: soaks out from the touch, later drains back into it
-  const ourR: number =
-    S < DRAIN_F0 ? OURS_R * soak((S - OUR_FLOOD_F0 + 0.5) / OUR_FLOOD_F) : OURS_R * (1 - easeInOutCubic((S - DRAIN_F0) / DRAIN_F));
-  const ourAge = S < DRAIN_F0 ? (s: number) => S - (OUR_FLOOD_F0 + OUR_FLOOD_F * soakInv(s / OURS_R)) : undefined;
-  // the kill zone: a disc from the contact that follows the trench's front across (and drains back with it)
-  const zoneR = (S < DRAIN_F0 ? OURS_R * soak((S - OUR_FLOOD_F0 - ZONE_LAG) / OUR_FLOOD_F) : ourR) / ARC_PER_X;
-  // their trench's red, at the hit
-  const hitR = HIT_R * soak((S - HIT_F0 + 0.5) / HIT_F);
-  const hitAge = (s: number) => S - (HIT_F0 + HIT_F * soakInv(s / HIT_R));
+  const tf = tFront(S);
+  const held = heldAt(tf);
+  const zoneLine = zoneLineAt(tDrone(S));
+  const beyond = beyondOf(zoneLine);
 
-  // the enemy attack
-  const atkD = ATK_LEN * atkEase((S - ATK_F0) / ATK_F);
-  const atkTip: Pt = { x: ATK_FROM.x + ATK_DIR.x * atkD, y: ATK_FROM.y + ATK_DIR.y * atkD };
-  const dHeadLen = wpx(DASH_HEAD_LEN, k);
-  const atkShaftTo: Pt = { x: atkTip.x - ATK_DIR.x * (dHeadLen - 2), y: atkTip.y - ATK_DIR.y * (dHeadLen - 2) };
-  const atkMod = (_i: number, sMid: number, total: number): DashMod => {
-    const u = clamp01((S - ATK_BLEED_F0 - (1 - sMid / total) * ATK_BLEED_RUN) / ATK_BLEED_F);
-    if (u <= 0) return null;
-    const d = inkDiffuse(u);
-    return { opacity: d.opacity, blur: d.blur, spread: d.spread };
-  };
-  const atkOn = S >= ATK_F0 && S < ATK_BLEED_F0 + ATK_BLEED_RUN + ATK_BLEED_F + 1;
+  // the view in world px (for masks), with margin for the sway
+  const hw = 620 / k + 80;
+  const hh = 1040 / k + 80;
+  const box = { x: cam.x - hw, y: cam.y - hh, width: 2 * hw, height: 2 * hh };
+  const rect: Pt[] = [
+    { x: box.x, y: box.y },
+    { x: box.x + box.width, y: box.y },
+    { x: box.x + box.width, y: box.y + box.height },
+    { x: box.x, y: box.y + box.height },
+  ];
 
-  // the red arrow
-  const apex = apexAt(S);
-  const headLen = wpx(HEAD_LEN, k);
-  const shaftTop = apex + headLen - 3;
-  const arrowOn = S >= ARROW_OUT_F - 12;
-  const headWet = S < HIT_F0 ? 1 : 1 - smoothstep((S - HIT_F0) / WET_DRY_F);
+  // the kill zone's opening discs, one per drone contact
+  // (each disc rides with its drone, so the zone moves with them: it covers the stretch of front they watch)
+  const discs = DRONES.map((d, i) => {
+    const p = droneAt(i, S);
+    const c = S < d.arrive ? d.contact : { x: d.contact.x + p.x - d.station.x, y: d.contact.y + p.y - d.station.y };
+    return { c, r: ZONE_REACH * soak((S - d.arrive + 0.5) / ZONE_OPEN_F) };
+  });
+  const zoneOn = discs.some((q) => q.r > 0.5);
 
-  const drone = droneAt(S);
+  const uHead = { len: wpx(UA_HEAD.len, k), w: wpx(UA_HEAD.w, k) };
 
   return (
     <VStage S={S} cam={cam}>
       <defs>
-        <clipPath id={`${ID}-above-ours`}>
-          <rect x={-2000} y={-2000} width={5000} height={2000 + OUR_TOOTH} />
-        </clipPath>
-        <clipPath id={`${ID}-below-theirs`}>
-          <rect x={-2000} y={THEIR_TOOTH} width={5000} height={4000} />
-        </clipPath>
-        {zoneR > 0.5 ? (
+        {zoneOn ? (
           <>
-            <radialGradient id={`${ID}-zone-g`} gradientUnits="userSpaceOnUse" cx={HOLD_X} cy={OUR_TOOTH} r={(zoneR + ZONE_FEATHER).toFixed(2)}>
-              <stop offset={0} stopColor="#FFFFFF" />
-              <stop offset={(zoneR / (zoneR + ZONE_FEATHER)).toFixed(4)} stopColor="#FFFFFF" />
-              <stop offset={1} stopColor="#FFFFFF" stopOpacity={0} />
-            </radialGradient>
-            <mask id={`${ID}-zone-m`} maskUnits="userSpaceOnUse" x={X_START} y={STRIP_TOP - 10} width={X_END - X_START} height={OUR_BASE - STRIP_TOP + 20}>
-              <rect x={X_START} y={STRIP_TOP - 10} width={X_END - X_START} height={OUR_BASE - STRIP_TOP + 20} fill={`url(#${ID}-zone-g)`} />
+            {discs.map((q, i) =>
+              q.r > 0.5 ? (
+                <radialGradient key={i} id={`${ID}-disc-${i}`} gradientUnits="userSpaceOnUse" cx={q.c.x} cy={q.c.y} r={(q.r + ZONE_FEATHER).toFixed(2)}>
+                  <stop offset={0} stopColor="#FFFFFF" />
+                  <stop offset={(q.r / (q.r + ZONE_FEATHER)).toFixed(4)} stopColor="#FFFFFF" />
+                  <stop offset={1} stopColor="#FFFFFF" stopOpacity={0} />
+                </radialGradient>
+              ) : null,
+            )}
+            <mask id={`${ID}-open`} maskUnits="userSpaceOnUse" {...box}>
+              {discs.map((q, i) => (q.r > 0.5 ? <rect key={i} {...box} fill={`url(#${ID}-disc-${i})`} /> : null))}
             </mask>
+            <mask id={`${ID}-band`} maskUnits="userSpaceOnUse" {...box}>
+              <path d={polyD(zoneLine)} fill="none" stroke="#FFFFFF" strokeWidth={2 * ZONE_HALF} strokeLinecap="round" strokeLinejoin="round" />
+            </mask>
+            <clipPath id={`${ID}-held`}>
+              <path d={beyond} clipRule="evenodd" />
+            </clipPath>
           </>
         ) : null}
       </defs>
 
-      {/* the two held sides, and the kill zone the drone covers in front of ours */}
-      <HatchFill id={`${ID}-their-side`} region={THEIR_SIDE} k={k} {...SIDE_HATCH} />
-      <HatchFill id={`${ID}-our-side`} region={OUR_SIDE} k={k} {...SIDE_HATCH} />
-      {zoneR > 0.5 ? (
-        <g mask={`url(#${ID}-zone-m)`}>
-          <HatchFill id={`${ID}-zone`} region={STRIP} k={k} color={RED} {...ZONE_HATCH} />
-        </g>
-      ) : null}
+      <LymanMap id={ID} k={k} hatchK={MAP_HATCH_K} held={held} places={["Lyman"]}>
+        {/* the memory thread: the retaken patch's fine RED_DEEP edge settles once the front is home */}
+        <RetakenPatch id={`${ID}-patch`} k={k} fill={0} edge={smoothstep((S - EDGE_F0) / EDGE_F)} />
 
-      {/* the enemy attack: out of their tooth, down at the drone; stops short and bleeds away */}
-      {atkOn ? (
-        <g clipPath={`url(#${ID}-below-theirs)`}>
-          <DashedPath points={[ATK_FROM, atkShaftTo]} k={k} S={S} dashMod={atkMod} width={LINE} />
-          <InkDiffuse u={(S - ATK_BLEED_F0) / ATK_BLEED_F} k={k} cx={atkTip.x} cy={atkTip.y}>
-            <path d={headD(atkTip, ATK_DIR, dHeadLen, wpx(DASH_HEAD_W, k))} fill={V_INK} opacity={INK_HI} />
-          </InkDiffuse>
-        </g>
-      ) : null}
+        {/* the kill zone: red on the Russian-held side of the line the drones hold */}
+        {zoneOn ? (
+          <g clipPath={`url(#${ID}-held)`}>
+            <g mask={`url(#${ID}-band)`}>
+              <g mask={`url(#${ID}-open)`}>
+                <path d={polyD(rect, true)} fill={RED} opacity={ZONE_WASH} />
+              </g>
+            </g>
+          </g>
+        ) : null}
 
-      {/* the red arrow: out of our tooth, up the field behind the drone */}
-      {arrowOn ? (
-        <g clipPath={`url(#${ID}-above-ours)`}>
-          <RedGroup k={k}>
-            <WetLine
-              id={`${ID}-arrow`}
-              points={[
-                { x: HOLD_X, y: ARROW_FROM_Y },
-                { x: HOLD_X, y: Math.min(ARROW_FROM_Y, shaftTop) },
-              ]}
-              len={Math.max(0, ARROW_FROM_Y - shaftTop)}
-              k={k}
-              ageAt={(s) => S - frameAtApex(ARROW_FROM_Y - s - headLen)}
-              shadow={false}
-            />
-            <path d={headD({ x: HOLD_X, y: apex }, { x: 0, y: -1 }, headLen, wpx(HEAD_W, k))} fill={mixHex(RED, RED_WET, headWet)} />
-          </RedGroup>
-        </g>
-      ) : null}
+        {/* the Russian attacks: heavy dashed ink out of the salient at the drones; they stop on the kill zone's edge */}
+        {DRONES.map((d, di) => {
+          if (S < d.atkF0) return null;
+          const stop = d.atkF0 + ATK_F;
+          const bleed0 = stop + ATK_BLEED_AFTER;
+          if (S >= bleed0 + ATK_BLEED_RUN + ATK_BLEED_F + 1) return null;
+          const u = unit(d.atkFrom, ATK_TO[di]);
+          const dist = u.L * atkEase((S - d.atkF0) / ATK_F);
+          if (dist < 1) return null;
+          const tip = { x: d.atkFrom.x + u.x * dist, y: d.atkFrom.y + u.y * dist };
+          const hl = Math.min(uHead.len, dist);
+          const shaftLen = Math.max(0, dist - hl + 3);
+          const shaftTo = { x: d.atkFrom.x + u.x * shaftLen, y: d.atkFrom.y + u.y * shaftLen };
+          const mod = (_i: number, sMid: number, total: number): DashMod => {
+            const v = clamp01((S - bleed0 - (1 - sMid / total) * ATK_BLEED_RUN) / ATK_BLEED_F);
+            if (v <= 0) return null;
+            const q = inkDiffuse(v);
+            return { opacity: q.opacity, blur: q.blur, spread: q.spread };
+          };
+          return (
+            <g key={d.id}>
+              {shaftLen > 1 ? <DashedPath points={[d.atkFrom, shaftTo]} k={k} S={S} dashMod={mod} width={RED_LINE} /> : null}
+              <InkDiffuse u={(S - bleed0) / ATK_BLEED_F} k={k} cx={tip.x} cy={tip.y}>
+                <path d={headD(tip, u, hl, uHead.w * Math.min(1, dist / uHead.len))} fill={V_INK} opacity={INK_HI} />
+              </InkDiffuse>
+            </g>
+          );
+        })}
 
-      {/* their trench, and the segment the arrow takes */}
-      <WetLine id={`${ID}-theirs`} points={THEIRS} k={k} ink rung={INK_LO} width={RED_LINE} />
-      <RedGroup k={k}>
-        <TrenchRed id={`${ID}-hit`} halves={THEIRS_SPLIT} r={hitR} k={k} ageAt={hitAge} />
-      </RedGroup>
+        {/* the Ukrainian attacks: solid ink, out of the old front behind each drone, their heads on the moving front */}
+        {tf > 0.002
+          ? DRONES.map((d) => {
+              const u = unit(d.contact, d.arrowEnd);
+              const tipDist = u.L * tf;
+              if (tipDist < 2) return null;
+              const tip = { x: d.contact.x + u.x * tipDist, y: d.contact.y + u.y * tipDist };
+              const shaft = Math.max(0, tipDist - uHead.len + 3);
+              return (
+                <g key={d.id}>
+                  {shaft > 1 ? (
+                    <WetLine
+                      id={`${ID}-ua-${d.id}`}
+                      points={[d.contact, { x: d.contact.x + u.x * shaft, y: d.contact.y + u.y * shaft }]}
+                      k={k}
+                      ink
+                      rung={INK_HI}
+                      width={RED_LINE}
+                    />
+                  ) : null}
+                  <path d={headD(tip, u, Math.min(uHead.len, tipDist), uHead.w * Math.min(1, tipDist / uHead.len))} fill={V_INK} opacity={INK_HI} />
+                </g>
+              );
+            })
+          : null}
 
-      {/* our trench, flooded by the drone's defense and drained back into it */}
-      <WetLine id={`${ID}-ours`} points={OURS} k={k} ink rung={INK_HI} width={RED_LINE} />
-      <RedGroup k={k}>
-        <TrenchRed id={`${ID}-hold`} halves={OURS_SPLIT} r={ourR} k={k} ageAt={ourAge} />
-      </RedGroup>
+        {/* the front, real at both ends */}
+        <FrontLine id={`${ID}-front`} points={frontAt(tf)} k={k} />
+      </LymanMap>
+
+      {/* the side labels (shared placements) */}
+      <SideLabel which="ukraine" k={k} />
+      <SideLabel which="russian" k={k} at={SALIENT_RUSSIAN_LABEL} diffuse={clamp01((S - RU_LABEL_BLEED_F0) / RU_LABEL_BLEED_F)} />
 
       {/* the technology */}
       <RedGroup k={k}>
-        <Pictogram d={DRONE_D} x={drone.x} y={drone.y} size={DRONE_SIZE} color={RED} rung={1} rotate={drone.rot} />
+        {DRONES.map((d, i) => {
+          const p = droneAt(i, S);
+          return <Pictogram key={d.id} d={DRONE_D} x={p.x} y={p.y} size={DRONE_SIZE} color={RED} rung={1} rotate={p.rot} />;
+        })}
       </RedGroup>
+
+      {SOURCE_LINES.map((t, i) => (
+        <SourceLine key={t} text={t} x={SOURCE_AT.x} y={SOURCE_AT.y + i * SOURCE_LEAD} k={k} />
+      ))}
     </VStage>
   );
 };
