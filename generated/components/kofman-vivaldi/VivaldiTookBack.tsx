@@ -20,6 +20,12 @@
 // written over the red's east edge by an ink bead, north to south, f66-86, and the date crosses to OCT 2026 (f70-84).
 // The camera pushes from k 0.83 (salient ~60 % of the frame) to k 1.10 (the red ~80 %) through the soak and creeps on
 // to the last frame; the source line enters at f88. Nothing fades out at the end.
+// TWO COLOURS (revision 5 Nov): Ukrainian-held ground is a flat print blue (lymanShared UA_BLUE #3F6A8C at UA_WASH
+// 0.33), Russian-held ground the ink wash + hatch. "UKRAINE" sits on the blue for the whole cut; "RUSSIAN-HELD" sits on
+// the salient (SALIENT_RUSSIAN_LABEL) and bleeds away f38-52 as the red takes that ground. From f100 (SETTLED_F, the
+// flood is long at rest) the map is drawn by VivaldiEndMap: the same picture with a flat RetakenPatch, so cut 11 can
+// open on the exact last frame from the exported end state (VIVALDI_END_CAM, _HELD, _FRONTS, _PATCH, _LABELS,
+// VIVALDI_HEADER, VIVALDI_HATCH_K, VIVALDI_PLACES; RetakenPatch fill 1 -> 0 / edge 0 -> 1 is the remembered patch).
 // Contact: the red's first seep on the old front at f27 (t > 0); the old front's bleed starts on the same frame.
 // RED = the ground Ukraine took back in Vivaldi. Nothing else is red.
 //
@@ -55,7 +61,7 @@ import {
   KICKER_PAD,
 } from "../kits/chinatalk/chinatalkVintage";
 import type { Cam, Pt, VCamKey } from "../kits/chinatalk/chinatalkVintage";
-import { HELD_20261103, MAINFRONT_20261103, RETAKEN_VIVALDI } from "./lymanFrontData";
+import { HELD_20261015, HELD_20261103, MAINFRONT_20261103, RETAKEN_VIVALDI } from "./lymanFrontData";
 import {
   FRAMING_SALIENT,
   FRAMING_SALIENT_OPEN,
@@ -66,6 +72,9 @@ import {
   FrontLine,
   HELD_AUG_DRAWN,
   LymanMap,
+  RetakenPatch,
+  SALIENT_RUSSIAN_LABEL,
+  SideLabel,
   VIVALDI_NEW_EDGE,
   VIVALDI_OLD_EDGE,
 } from "./lymanShared";
@@ -75,7 +84,7 @@ export const FPS = 24;
 export const DURATION = 145;
 export const schema = z.object({
   /** stills of the shared map only: "sector" (FRAMING_SECTOR, 3 Nov 2026) or "salient" (FRAMING_SALIENT, 15 Aug) */
-  probe: z.enum(["none", "sector", "salient"]),
+  probe: z.enum(["none", "sector", "salient", "stalemate"]),
 });
 export const defaultProps = schema.parse({ probe: "none" });
 
@@ -232,6 +241,13 @@ const DATE_X0 = 70;
 /** the source line closes the header block under the date (under the map it would cross the front by Lyman) */
 const sourceY = (k: number) => dateY(k) + labelCapH("head", k) / 2 + 34;
 const SOURCE = { x: 20, f: 88 };
+/** RUSSIAN-HELD sits on the salient (SALIENT_RUSSIAN_LABEL) and bleeds away from the frame the red front touches its
+ *  west end (field level at world (260, 760) -> f37) */
+const RUSSIAN_BLEED_F0 = 38;
+const RUSSIAN_BLEED_F = 14;
+/** once the wet has dried (T1 + WET_DRY_F) the soak is drawn as the exported RetakenPatch at fill 1 over the 15 Oct map
+ *  (blue under the patch, no hatch): the same pixels, and the state cut 11 opens on */
+const SETTLED_F = 100;
 
 // --- the camera: one push through the soak, then a creep to the last frame ---------------------------------
 const key = (f: number, c: Cam, ease?: VCamKey["ease"]): VCamKey => ({ f, x: c.x, y: c.y, k: c.k, ease });
@@ -245,15 +261,55 @@ const camAt = runVCamera(
 );
 export { camAt };
 
-const Probe: React.FC<{ S: number; probe: "sector" | "salient" }> = ({ S, probe }) => {
-  const cam = probe === "sector" ? FRAMING_SECTOR : FRAMING_SALIENT;
+// --- the END STATE (cut 11 opens on this exact last frame) -------------------------------------------------------
+/** the hatch pitch is locked at this zoom for the whole cut */
+export const VIVALDI_HATCH_K = 0.95;
+export const VIVALDI_PLACES = ["Lyman"] as const;
+/** the camera on the last frame (f144) */
+export const VIVALDI_END_CAM: Cam = camAt(DURATION - 1);
+/** held ground on the last frame: the 15 Oct map (the patch is Ukrainian; blue under the red) */
+export const VIVALDI_END_HELD = HELD_20261015;
+/** the front on the last frame, as three static ink FrontLines (north, the new edge along the patch, south) */
+export const VIVALDI_END_FRONTS: Pt[][] = [FRONT_OCT_NORTH, NEW_EDGE, SOUTH_STATIC];
+/** the patch on the last frame: RetakenPatch fill 1 (flat RED with its outside paper shadow), no RED_DEEP edge yet */
+export const VIVALDI_END_PATCH = { fill: 1, edge: 0 } as const;
+/** labels on the last frame: UKRAINE at SIDE_LABELS.ukraine (shown); RUSSIAN-HELD gone (it bled away on the salient);
+ *  LYMAN dot + label; the header block below fully in (kit Kicker, "head" Label anchor start, SourceLine) */
+export const VIVALDI_END_LABELS = { ukraine: true, russian: false, places: VIVALDI_PLACES } as const;
+export const VIVALDI_HEADER = {
+  kicker: { text: "Operation Vivaldi", x: KICKER.x, y: KICKER.y, width: KICKER.w },
+  date: { text: "Oct 2026", x: KICKER.x, y: dateY(FRAMING_SALIENT.k) },
+  source: { text: "Front line: DeepStateMap, 15 Aug and 15 Oct 2026", x: SOURCE.x, y: sourceY(FRAMING_SALIENT.k) },
+} as const;
+/** The settled map from SETTLED_F to the end (= cut 11's first frame): 15 Oct held ground with the blue, the red patch,
+ *  the three front pieces, Lyman. Put SideLabel ukraine and the VIVALDI_HEADER furniture over it. */
+export const VivaldiEndMap: React.FC<{ k: number; id?: string; patch?: { fill: number; edge: number } }> = ({ k, id = "vtb", patch = VIVALDI_END_PATCH }) => (
+  <LymanMap id={id} k={k} hatchK={VIVALDI_HATCH_K} held={VIVALDI_END_HELD} fronts={VIVALDI_END_FRONTS} places={VIVALDI_PLACES}>
+    <RetakenPatch id={`${id}-patch`} k={k} fill={patch.fill} edge={patch.edge} />
+  </LymanMap>
+);
+
+/** cut 11's last camera (LooksLikeStalemate STALEMATE_END_CAM, 5 Nov 2026), for the label check only */
+const PROBE_STALEMATE_CAM: Cam = { x: 708.63, y: 895.17, k: 0.9585 };
+const Probe: React.FC<{ S: number; probe: "sector" | "salient" | "stalemate" }> = ({ S, probe }) => {
+  const cam = probe === "sector" ? FRAMING_SECTOR : probe === "stalemate" ? PROBE_STALEMATE_CAM : FRAMING_SALIENT;
   const k = cam.k;
   return (
     <VStage S={S} cam={cam}>
-      {probe === "sector" ? (
-        <LymanMap id="p" k={k} held={HELD_20261103} fronts={[MAINFRONT_20261103]} places={["Lyman", "Siversk", "Yarova"]} dots={["Serednie", "Zelena Dolyna", "Kolodiazi"]} />
+      {probe !== "salient" ? (
+        <>
+          <LymanMap id="p" k={k} held={HELD_20261103} fronts={[MAINFRONT_20261103]} places={["Lyman", "Siversk", "Yarova"]} dots={["Serednie", "Zelena Dolyna", "Kolodiazi"]}>
+            <RetakenPatch id="p-patch" k={k} />
+          </LymanMap>
+          <SideLabel which="ukraine" k={k} />
+          <SideLabel which="russian" k={k} />
+        </>
       ) : (
-        <LymanMap id="p" k={k} held={HELD_AUG_DRAWN} fronts={[FRONT_AUG_DRAWN]} places={["Lyman"]} />
+        <>
+          <LymanMap id="p" k={k} held={HELD_AUG_DRAWN} fronts={[FRONT_AUG_DRAWN]} places={["Lyman"]} />
+          <SideLabel which="ukraine" k={k} />
+          <SideLabel which="russian" k={k} at={SALIENT_RUSSIAN_LABEL} />
+        </>
       )}
     </VStage>
   );
@@ -269,20 +325,28 @@ const VivaldiTookBack: React.FC<z.infer<typeof schema>> = ({ probe }) => {
   const beadOn = S < NEW_F0 ? 0 : 1 - smoothstep((S - NEW_F1) / BEAD_DRAIN_F);
   return (
     <VStage S={S} cam={cam}>
-      <defs>
-        <HatchBleedMask S={S} />
-      </defs>
-      <LymanMap id="vtb" k={k} hatchK={0.95} held={HELD_AUG_DRAWN} heldMask="url(#vtb-bleed)" fronts={[FRONT_OCT_NORTH, SOUTH_STATIC]} places={["Lyman"]}>
-        <Flood S={S} k={k} />
-        <FrontLine id="vtb-old" points={OLD_EDGE} k={k} diffuse={clamp01((S - T0) / OLD_BLEED_F)} />
-        {S >= NEW_F0 ? (
-          <FrontLine id="vtb-new" points={NEW_EDGE} k={k} len={newLen} ageAt={(s) => S - newFrameOf(s)} bead={beadOn} />
-        ) : null}
-      </LymanMap>
-      <Kicker text="Operation Vivaldi" x={KICKER.x} y={KICKER.y} k={k} width={KICKER.w} />
+      {S < SETTLED_F ? (
+        <>
+          <defs>
+            <HatchBleedMask S={S} />
+          </defs>
+          <LymanMap id="vtb" k={k} hatchK={VIVALDI_HATCH_K} held={HELD_AUG_DRAWN} heldMask="url(#vtb-bleed)" fronts={[FRONT_OCT_NORTH, SOUTH_STATIC]} places={VIVALDI_PLACES}>
+            <Flood S={S} k={k} />
+            <FrontLine id="vtb-old" points={OLD_EDGE} k={k} diffuse={clamp01((S - T0) / OLD_BLEED_F)} />
+            {S >= NEW_F0 ? (
+              <FrontLine id="vtb-new" points={NEW_EDGE} k={k} len={newLen} ageAt={(s) => S - newFrameOf(s)} bead={beadOn} />
+            ) : null}
+          </LymanMap>
+        </>
+      ) : (
+        <VivaldiEndMap k={k} />
+      )}
+      <SideLabel which="ukraine" k={k} />
+      <SideLabel which="russian" k={k} at={SALIENT_RUSSIAN_LABEL} diffuse={clamp01((S - RUSSIAN_BLEED_F0) / RUSSIAN_BLEED_F)} />
+      <Kicker text={VIVALDI_HEADER.kicker.text} x={KICKER.x} y={KICKER.y} k={k} width={KICKER.w} />
       <Label text="Aug 2026" x={KICKER.x} y={dateY(kEnd)} k={k} size="head" anchor="start" rung={INK_HI} diffuse={clamp01((S - DATE_X0) / 14)} />
-      <Label text="Oct 2026" x={KICKER.x} y={dateY(kEnd)} k={k} size="head" anchor="start" rung={INK_HI} appear={enterFrom(S, DATE_X0 + 2)} />
-      <SourceLine text="Front line: DeepStateMap, 15 Aug and 15 Oct 2026" x={SOURCE.x} y={sourceY(kEnd)} k={k} appear={enterFrom(S, SOURCE.f)} />
+      <Label text={VIVALDI_HEADER.date.text} x={KICKER.x} y={dateY(kEnd)} k={k} size="head" anchor="start" rung={INK_HI} appear={enterFrom(S, DATE_X0 + 2)} />
+      <SourceLine text={VIVALDI_HEADER.source.text} x={SOURCE.x} y={sourceY(kEnd)} k={k} appear={enterFrom(S, SOURCE.f)} />
     </VStage>
   );
 };

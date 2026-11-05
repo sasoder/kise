@@ -1,10 +1,11 @@
 // ---------------------------------------------------------------------------
 // lymanShared — the Lyman sector map in ChinaTalk material (kofman-vivaldi; owner: cut 0, VivaldiTookBack).
-// Used by cuts 0 (VivaldiTookBack), 11 (LooksLikeStalemate) and 18 (SpaceReopened). After LYMAN_READY.md, exports are
-// only ADDED; every change is logged in SHARED_CHANGES.md beside this file.
+// Used by cuts 0, 11, 18, 28 and 50. After LYMAN_READY.md, exports are only ADDED; every change is logged in
+// SHARED_CHANGES.md beside this file.
 //
-// The newsprint page IS the land: Russian-held ground (HELD = occupied + grey zone) is an ink wash under the house
-// hatch; Ukrainian-held ground is bare paper; the front is the edge of the wash, drawn by FrontLine. Rivers are an ink
+// Two sides, two colours (REVISION_1105, user request): Russian-held ground (HELD = occupied + grey zone) is an ink
+// wash under a hatch (solid grey territory); Ukrainian-held ground is a flat wash of one muted print blue (UA_BLUE);
+// red stays the one accent. The front is the edge between them, drawn by FrontLine. Rivers are an ink
 // hair at INK_LO. Places are an ink dot + a kit "word" Label. No graticule, borders, compass, scale bar or legend.
 // Everything is drawn in WORLD px (lymanFrontData.ts: 40 px per km, north up, world (540, 960) = 37.85E 49.10N) inside
 // the kit's VStage; pass the CURRENT cam.k as `k` everywhere. Geometry is real (DeepStateMap via lymanFrontData.ts).
@@ -16,7 +17,10 @@ import {
   HatchFill,
   INK_HI,
   INK_LO,
+  LINE,
   Label,
+  RED,
+  RED_DEEP,
   V_INK,
   V_PAPER,
   WET_DRY_F,
@@ -27,6 +31,7 @@ import {
   inkDiffuse,
   lineW,
   mixHex,
+  paperShadow,
   pointAtLen,
   polyD,
   smoothstep,
@@ -83,9 +88,13 @@ export const despike = (pts: Pt[]): Pt[] => {
 };
 
 // --- the house map look ------------------------------------------------------------
-/** HatchFill values for held ground (styles/chinatalk.md "Areas"): the kit's default pitch / line weight / angle with
- *  the house wash 0.10 under hatch lines at 0.35 */
-export const MAP_HATCH = { fill: 0.1, lineOpacity: 0.35, angleDeg: 45 } as const;
+/** HatchFill values for Russian-held ground: the kit's default pitch / line weight / angle, the wash and the lines
+ *  raised from the house 0.10 / 0.35 so the held side reads as solid grey territory beside the blue (REVISION_1105) */
+export const MAP_HATCH = { fill: 0.18, lineOpacity: 0.45, angleDeg: 45 } as const;
+/** Ukrainian-held ground: one muted print blue, a quiet second spot ink on the newsprint (user request, 5 Nov 2026;
+ *  this clip only). Flat: no gradient, no hatch. Drawn at UA_WASH over the paper. */
+export const UA_BLUE = "#3F6A8C";
+export const UA_WASH = 0.33;
 /** the hatch is locked to the world at this anchor (it never swims while the camera moves) */
 export const HATCH_ANCHOR: Pt = { x: 0, y: 0 };
 /** a place dot's radius, SCREEN px at k = 1 (through the kit size law) */
@@ -138,6 +147,93 @@ export const HeldWash: React.FC<{
       <g clipPath={`url(#${id}-clip)`} opacity={rung < 1 ? rung.toFixed(4) : undefined}>
         <HatchFill id={`${id}-hatch`} region={rect} k={hatchK ?? k} anchor={HATCH_ANCHOR} {...MAP_HATCH} />
       </g>
+    </g>
+  );
+};
+
+/** Ukrainian-held ground: the flat UA_BLUE wash over everything in view that is NOT in `held` (the same path(s) you
+ *  pass to HeldWash; several paths are treated as their union, so shared inner edges leave no seam). `rung`
+ *  multiplies UA_WASH. */
+export const UkraineWash: React.FC<{ id: string; held: string | readonly string[]; k: number; rung?: number }> = ({ id, held, rung = 1 }) => {
+  const view = useViewRect();
+  if (rung <= 0.002) return null;
+  const ds = typeof held === "string" ? [held] : held;
+  const r = view ?? { x0: -2000, y0: -2000, x1: 3600, y1: 3600 };
+  const box = { x: r.x0, y: r.y0, width: r.x1 - r.x0, height: r.y1 - r.y0 };
+  return (
+    <g>
+      <defs>
+        <mask id={`${id}-out`} maskUnits="userSpaceOnUse" {...box}>
+          <rect {...box} fill="#FFFFFF" />
+          {ds.map((p, i) => (
+            <path key={i} d={p} fill="#000000" fillRule="evenodd" />
+          ))}
+        </mask>
+      </defs>
+      <rect {...box} fill={UA_BLUE} opacity={(UA_WASH * rung).toFixed(4)} mask={`url(#${id}-out)`} />
+    </g>
+  );
+};
+
+/** The side labels (kit "word", INK_HI), world positions clear of both caption bands at FRAMING_SECTOR and
+ *  STALEMATE_END_CAM (UKRAINE also at FRAMING_SALIENT / _OPEN and cut 0's whole camera path). RUSSIAN-HELD does not fit
+ *  the narrow grey strip at FRAMING_SALIENT; there cut 0 sets it on the salient itself (SALIENT_RUSSIAN_LABEL, Aug
+ *  state only: it bleeds away as the red takes the ground). */
+export const SIDE_LABELS = {
+  ukraine: { text: "Ukraine", x: 360, y: 420 },
+  russian: { text: "Russian-held", x: 960, y: 700 },
+} as const;
+export const SALIENT_RUSSIAN_LABEL = { text: "Russian-held", x: 450, y: 760 } as const;
+/** One side label: `which` picks the text and default place; `at` overrides the place; appear / diffuse as kit Label. */
+export const SideLabel: React.FC<{
+  which: "ukraine" | "russian";
+  k: number;
+  at?: Pt;
+  appear?: number;
+  diffuse?: number;
+  rung?: number;
+}> = ({ which, k, at, appear = 1, diffuse = 0, rung = INK_HI }) => {
+  const d = SIDE_LABELS[which];
+  return <Label text={d.text} x={at?.x ?? d.x} y={at?.y ?? d.y} k={k} size="word" rung={rung} appear={appear} diffuse={diffuse} />;
+};
+
+/** The retaken Vivaldi patch after cut 0 (the memory thread): `fill` (0..1) is cut 0's flat RED over the patch (1 =
+ *  cut 0's last frame; 0 = the patch shows the blue under it, as Ukrainian ground); `edge` (0..1) is the fine RED_DEEP
+ *  outline at rest (LINE / 2) it keeps in every later cut. Draw it inside LymanMap's children, with
+ *  `held={HELD_20261015}` (the patch is then blue underneath), under the front lines. */
+export const PATCH_EDGE_PX = LINE / 2;
+export const RetakenPatch: React.FC<{ id: string; k: number; fill?: number; edge?: number }> = ({ id, k, fill = 0, edge = 1 }) => {
+  const f = Math.max(0, Math.min(1, fill));
+  const e = Math.max(0, Math.min(1, edge));
+  return (
+    <g>
+      <defs>
+        <mask id={`${id}-out`} maskUnits="userSpaceOnUse" x={-4000} y={-4000} width={9000} height={9000}>
+          <rect x={-4000} y={-4000} width={9000} height={9000} fill="#FFFFFF" />
+          <path d={RETAKEN_VIVALDI} fill="#000000" fillRule="evenodd" />
+        </mask>
+      </defs>
+      {f > 0.002 ? (
+        <>
+          {/* the red's paper shadow, only where it falls outside the patch (as cut 0 draws it) */}
+          <g mask={`url(#${id}-out)`} opacity={f < 1 ? f.toFixed(4) : undefined}>
+            <g style={{ filter: paperShadow(k) }}>
+              <path d={RETAKEN_VIVALDI} fill={RED} fillRule="evenodd" />
+            </g>
+          </g>
+          <path d={RETAKEN_VIVALDI} fill={RED} fillRule="evenodd" opacity={f < 1 ? f.toFixed(4) : undefined} />
+        </>
+      ) : null}
+      {e > 0.002 ? (
+        <path
+          d={RETAKEN_VIVALDI}
+          fill="none"
+          stroke={RED_DEEP}
+          strokeOpacity={e.toFixed(4)}
+          strokeWidth={wpx(PATCH_EDGE_PX, k).toFixed(3)}
+          strokeLinejoin="round"
+        />
+      ) : null}
     </g>
   );
 };
@@ -272,7 +368,7 @@ export const FrontLine: React.FC<{
   );
 };
 
-/** The whole map, bottom to top: held wash, rivers, `children` (your overlays), the `fronts` (static FrontLines, ink
+/** The whole map, bottom to top: Ukrainian blue (`ukraine`, default on), held wash, rivers, `children` (your overlays), the `fronts` (static FrontLines, ink
  *  at INK_HI), place dots + labels. `held` is one or more area path strings (union). `places` get a dot and a label;
  *  `dots` get a dot only. Paper is the kit's VStage page; the map draws none. */
 export const LymanMap: React.FC<{
@@ -287,9 +383,12 @@ export const LymanMap: React.FC<{
   places?: readonly string[];
   dots?: readonly string[];
   placeAppear?: Partial<Record<string, number>>;
+  ukraine?: boolean;
+  ukraineRung?: number;
   children?: React.ReactNode;
-}> = ({ id, k, held, hatchK, rung = 1, heldMask, rivers = true, fronts, places = [], dots = [], placeAppear, children }) => (
+}> = ({ id, k, held, hatchK, rung = 1, heldMask, rivers = true, fronts, places = [], dots = [], placeAppear, ukraine = true, ukraineRung = 1, children }) => (
   <g>
+    {ukraine ? <UkraineWash id={`${id}-ua`} held={held} k={k} rung={ukraineRung} /> : null}
     <HeldWash id={`${id}-held`} d={held} k={k} hatchK={hatchK} rung={rung} mask={heldMask} />
     {rivers ? <Rivers k={k} /> : null}
     {children}
