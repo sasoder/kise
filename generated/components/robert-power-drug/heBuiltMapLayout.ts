@@ -12,16 +12,24 @@ export const FOCUS_Y = 900;
 // Bronx strip clears its towers), the Narrows where the Verrazano's grey road crosses, the Upper West Side (Manhattan
 // land here runs x 1645-1765 at y 760), the south end of Flushing Bay, the barrier island where the Wantagh Parkway
 // ends (the Jones Beach water tower). Array order = layer order (newest on top).
-export type Hero = { id: string; x: number; y: number; w: number; h: number; sc: number; pop: number; rot0: number };
+export type Hero = {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  sc: number;
+  pop: number;
+};
 export const HEROES: Hero[] = [
-  { id: "tri", x: 1990, y: 650, w: 420, h: 177, sc: 1.5, pop: 3, rot0: -9 },
-  { id: "ver", x: 1525, y: 1357, w: 570, h: 248, sc: 1.5, pop: 21, rot0: 8 },
-  { id: "jones", x: 3200, y: 1386, w: 132, h: 618, sc: 1.5, pop: 88, rot0: -6 },
-  { id: "umb", x: 3350, y: 1404, w: 225, h: 262, sc: 1.5, pop: 97, rot0: 10 },
-  { id: "lin", x: 1690, y: 760, w: 375, h: 231, sc: 1.25, pop: 115, rot0: 8 },
-  { id: "shea", x: 2170, y: 895, w: 450, h: 228, sc: 1.5, pop: 139, rot0: -8 },
+  { id: "tri", x: 1990, y: 650, w: 420, h: 177, sc: 1.5, pop: 3 },
+  { id: "ver", x: 1525, y: 1357, w: 570, h: 248, sc: 1.5, pop: 21 },
+  { id: "jones", x: 3200, y: 1386, w: 132, h: 618, sc: 1.5, pop: 88 },
+  { id: "umb", x: 3350, y: 1404, w: 225, h: 262, sc: 1.5, pop: 97 },
+  { id: "lin", x: 1690, y: 760, w: 375, h: 231, sc: 1.25, pop: 115 },
+  { id: "shea", x: 2170, y: 895, w: 450, h: 228, sc: 1.5, pop: 139 },
 ];
-export const POP_D = 8; // frames of a pop (easeOutBack: crosses 1.0 at ~0.6, i.e. 5 frames in)
+export const POP_D = 6; // frames of an entrance (plain ease-out, essentially in 5 frames after its start = on the noun)
 export const PARK_SC = 1.05; // parks and pools drawing scale
 export const PARK_KIND_SC = [1, 1.1, 1.05]; // per kind: tree, lane pool, kidney pool (the pools are wider)
 
@@ -43,21 +51,101 @@ export const ROLL_POP = 52; // the paper roll pops on at the GWB end
 export const STRIP_RUN: [number, number] = [57, 79]; // unrolls east: "Cross" 58 -> done in "Expressway" (72-80)
 
 // ---- labels: top centre of the first line's caps, cap height (world px), lines, word frame
-export type Lbl = { id: string; x: number; y: number; cap: number; lines: string[]; word: number; stay?: boolean; hold?: number };
+export type Lbl = {
+  id: string;
+  x: number;
+  y: number;
+  cap: number;
+  lines: string[];
+  word: number;
+  stay?: boolean;
+  hold?: number;
+};
 export const LABELS: Lbl[] = [
-  { id: "tri", x: 1990, y: 676, cap: 56, lines: ["TRIBOROUGH", "BRIDGE"], word: 8 },
-  { id: "ver", x: 1525, y: 915, cap: 68, lines: ["VERRAZANO", "BRIDGE"], word: 26, hold: 14 },
-  { id: "cb", x: 2060, y: 214, cap: 56, lines: ["CROSS BRONX", "EXPRESSWAY"], word: 58, hold: 20 },
-  { id: "jones", x: 3230, y: 598, cap: 60, lines: ["JONES", "BEACH"], word: 93, hold: 20 },
-  { id: "lin", x: 1650, y: 786, cap: 80, lines: ["LINCOLN", "CENTER"], word: 120, hold: 18 },
-  { id: "shea", x: 2170, y: 921, cap: 60, lines: ["SHEA", "STADIUM"], word: 144, hold: 10 },
-  { id: "nia", x: 2088, y: -340, cap: 70, lines: ["NIAGARA"], word: 171, stay: true },
-  { id: "stl", x: 2600, y: -880, cap: 70, lines: ["ST. LAWRENCE"], word: 186, stay: true },
+  {
+    id: "tri",
+    x: 1990,
+    y: 676,
+    cap: 56,
+    lines: ["TRIBOROUGH", "BRIDGE"],
+    word: 8,
+  },
+  {
+    id: "ver",
+    x: 1525,
+    y: 915,
+    cap: 68,
+    lines: ["VERRAZANO", "BRIDGE"],
+    word: 26,
+    hold: 14,
+  },
+  {
+    id: "cb",
+    x: 2060,
+    y: 214,
+    cap: 56,
+    lines: ["CROSS BRONX", "EXPRESSWAY"],
+    word: 58,
+    hold: 20,
+  },
+  {
+    id: "jones",
+    x: 3230,
+    y: 598,
+    cap: 60,
+    lines: ["JONES", "BEACH"],
+    word: 93,
+    hold: 20,
+  },
+  {
+    id: "lin",
+    x: 1650,
+    y: 786,
+    cap: 80,
+    lines: ["LINCOLN", "CENTER"],
+    word: 120,
+    hold: 18,
+  },
+  {
+    id: "shea",
+    x: 2170,
+    y: 921,
+    cap: 60,
+    lines: ["SHEA", "STADIUM"],
+    word: 144,
+    hold: 10,
+  },
+  {
+    id: "nia",
+    x: 2088,
+    y: -340,
+    cap: 70,
+    lines: ["NIAGARA"],
+    word: 171,
+    stay: true,
+  },
+  {
+    id: "stl",
+    x: 2600,
+    y: -880,
+    cap: 70,
+    lines: ["ST. LAWRENCE"],
+    word: 186,
+    stay: true,
+  },
 ];
 export const PITCH = 1.36; // line pitch / cap height (the original: 114 / 84)
 
 // ---- the two dams, far upstate: never on the plate, they hang in the dark ground north of the city
-export type DamSpec = { id: string; x: number; y: number; w: number; h: number; land: number; arrowRot: number };
+export type DamSpec = {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  land: number;
+  arrowRot: number;
+};
 export const DAM_SC = 1.25; // drawing scale; w, h below are the drawing's own units
 export const DAMS: DamSpec[] = [
   { id: "nia", x: 2088, y: -360, w: 480, h: 165, land: 171, arrowRot: -38 },
@@ -69,7 +157,10 @@ export const ARROW_LEN = 330;
 // as the camera comes back down the dams are lifted away north, off the top edge (they never sit as a sliver there)
 export const DAM_LIFT: [number, number] = [196, 228];
 export const damLift = (frame: number) => {
-  const t = Math.min(1, Math.max(0, (frame - DAM_LIFT[0]) / (DAM_LIFT[1] - DAM_LIFT[0])));
+  const t = Math.min(
+    1,
+    Math.max(0, (frame - DAM_LIFT[0]) / (DAM_LIFT[1] - DAM_LIFT[0])),
+  );
   return -1000 * t * t;
 };
 
@@ -144,24 +235,27 @@ export const toScreen = (frame: number, x: number, y: number) => {
 
 // ---- eases
 export const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
-export const backOut = (t: number, c1 = 1.70158) => {
-  const u = clamp01(t);
-  const c3 = c1 + 1;
-  return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2);
-};
-export const popState = (frame: number, start: number, rot0: number, d = POP_D) => {
+export const easeOut = (t: number) => 1 - Math.pow(1 - clamp01(t), 3); // cubic, no overshoot
+// an entrance: scale 0.9 -> 1 and opacity 0 -> 1 on a plain ease-out; no spin, no drop (the shadow stays at its landed
+// size and fades in with the piece).
+export const popState = (frame: number, start: number, d = POP_D) => {
   const t = (frame - start) / d;
-  if (t <= 0) return { s: 0, rot: rot0, on: false, lift: 1 };
-  if (t >= 1) return { s: 1, rot: 0, on: true, lift: 0 };
-  // lift: the piece is dropped onto the map, its shadow large and soft at first, tight as it lands (~0.85 of the pop)
-  const lift = Math.pow(1 - clamp01(t / 0.85), 1.5);
-  return { s: Math.max(0, backOut(t)), rot: rot0 * (1 - backOut(t, 2.2)), on: true, lift };
+  if (t <= 0) return { s: 0.9, o: 0, on: false };
+  const e = easeOut(t);
+  return { s: 0.9 + 0.1 * e, o: e, on: true };
 };
-// label: slides up while fading in around its word, fades after ~1 s (stay = keeps until its dam is lifted away)
-export const labelState = (frame: number, word: number, stay = false, hold = 26) => {
+// label: rises a few px while fading in around its word, fades after ~1 s (stay = keeps until its dam is lifted away)
+export const labelState = (
+  frame: number,
+  word: number,
+  stay = false,
+  hold = 26,
+) => {
   const a = clamp01((frame - (word - 3)) / 7);
   const ein = 1 - Math.pow(1 - a, 3);
   // the dam labels (stay) fade while their dams are lifted away north, so they never clip at an edge on the way out
-  const out = stay ? 1 - clamp01((frame - (DAM_LIFT[0] + 2)) / 10) : 1 - clamp01((frame - (word + hold)) / 8);
-  return { o: ein * out, dy: (1 - ein) * 16 };
+  const out = stay
+    ? 1 - clamp01((frame - (DAM_LIFT[0] + 2)) / 10)
+    : 1 - clamp01((frame - (word + hold)) / 8);
+  return { o: ein * out, dy: (1 - ein) * 10 }; // a 10 world px rise (~8 screen px)
 };

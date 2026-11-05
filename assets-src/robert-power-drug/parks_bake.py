@@ -127,7 +127,7 @@ for x, y in cands:
         break
 
 # pop frames: density peaks on "parks" (f262), first on "hundreds" (f235), last lands by "pools" (f276)
-F0, F1 = 233, 272  # pop START frames; a pop lands ~4 frames after its start
+F0, F1 = 233, 272  # entrance START frames; a piece is essentially in ~5 frames after its start
 fs = np.arange(F0, F1 + 1, dtype=np.float64)
 pdf = 0.25 + np.exp(-0.5 * ((fs - 258) / 8.0) ** 2)
 cdf = np.cumsum(pdf)

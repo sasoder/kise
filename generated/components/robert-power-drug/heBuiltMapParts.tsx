@@ -7,19 +7,24 @@ import React from "react";
 import { INK, PAPER, WHITE } from "../robert-graft-machine/graftShared";
 
 // The die-cut paper border (sticker-style, ~6-10 screen px at hero size), its hand-cut wobble and the card's paper
-// grain come from the filters in <PaperDefs/>; the drop shadow lifts with LiftCtx (1 = held above the map at the
-// start of a pop, 0 = lying on it), larger and softer while lifted, tight once landed.
+// grain come from the filters in <PaperDefs/>; the drop shadow is the piece lying on the map: tight, down-right, one
+// size throughout (it fades in with the piece, never shrinks as if dropped).
 export const RIM_W = 7;
 export const RIM_LIGHT = "rgb(238,237,234)"; // the white paper border of a black card
 export const RIM_DARK = "rgb(206,205,202)"; // the border of a white card (a shade under the card so the cut reads)
-export const LiftCtx = React.createContext(0);
 const n = (v: number) => Math.round(v * 100) / 100;
 
 // A silhouette function paints its shapes in one colour; grow > 0 adds a stroke of that width on every side.
 type Sil = (c: string, grow: number) => React.ReactNode;
 const shape = (c: string, grow: number): React.SVGProps<SVGPathElement> =>
-  grow > 0 ? { fill: c, stroke: c, strokeWidth: grow * 2, strokeLinejoin: "round" } : { fill: c };
-const line = (c: string, w: number, grow: number): React.SVGProps<SVGPathElement> => ({
+  grow > 0
+    ? { fill: c, stroke: c, strokeWidth: grow * 2, strokeLinejoin: "round" }
+    : { fill: c };
+const line = (
+  c: string,
+  w: number,
+  grow: number,
+): React.SVGProps<SVGPathElement> => ({
   fill: "none",
   stroke: c,
   strokeWidth: w + grow * 2,
@@ -27,26 +32,50 @@ const line = (c: string, w: number, grow: number): React.SVGProps<SVGPathElement
   strokeLinejoin: "round",
 });
 
-const SHADOW_BLURS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
-export const shadowFor = (lift: number) => {
-  const l = Math.min(1, Math.max(0, lift));
-  const b = Math.round(4 + 10 * l);
-  return { id: `pShadow${b}`, dx: 7 + 13 * l, dy: 10 + 19 * l, o: 0.4 - 0.08 * l };
-};
+export const SHADOW = { id: "pShadow", dx: 7, dy: 10, o: 0.4 };
 const grainRow = (c: number) => `0 0 0 0 ${c}  0 0 0 0 ${c}  0 0 0 0 ${c}`;
 export const PaperDefs: React.FC = () => (
   <>
-    {SHADOW_BLURS.map((b) => (
-      <filter key={b} id={`pShadow${b}`} x="-40%" y="-40%" width="180%" height="180%">
-        <feGaussianBlur stdDeviation={b} />
-      </filter>
-    ))}
+    <filter id={SHADOW.id} x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation={4} />
+    </filter>
     {/* the paper border: a slight hand-cut wobble (displacement in the piece's own space, so it never boils) + grain */}
-    <filter id="pEdge" x="-15%" y="-15%" width="130%" height="130%" colorInterpolationFilters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves={2} seed={4} result="w" />
-      <feDisplacementMap in="SourceGraphic" in2="w" scale={7} xChannelSelector="R" yChannelSelector="G" result="d" />
-      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={9} result="g" />
-      <feColorMatrix in="g" type="matrix" values={`${grainRow(0.25)}  0 0 0 0.7 -0.33`} result="ga" />
+    <filter
+      id="pEdge"
+      x="-15%"
+      y="-15%"
+      width="130%"
+      height="130%"
+      colorInterpolationFilters="sRGB"
+    >
+      <feTurbulence
+        type="fractalNoise"
+        baseFrequency="0.045"
+        numOctaves={2}
+        seed={4}
+        result="w"
+      />
+      <feDisplacementMap
+        in="SourceGraphic"
+        in2="w"
+        scale={7}
+        xChannelSelector="R"
+        yChannelSelector="G"
+        result="d"
+      />
+      <feTurbulence
+        type="fractalNoise"
+        baseFrequency="0.85"
+        numOctaves={2}
+        seed={9}
+        result="g"
+      />
+      <feColorMatrix
+        in="g"
+        type="matrix"
+        values={`${grainRow(0.25)}  0 0 0 0.7 -0.33`}
+        result="ga"
+      />
       <feComposite in="ga" in2="d" operator="in" result="gc" />
       <feMerge>
         <feMergeNode in="d" />
@@ -58,9 +87,28 @@ export const PaperDefs: React.FC = () => (
       ["pGrainL", 1, "0.5 -0.24"],
       ["pGrainD", 0.2, "0.6 -0.29"],
     ].map(([id, c, a]) => (
-      <filter key={id as string} id={id as string} x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
-        <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves={2} seed={id === "pGrainL" ? 13 : 17} result="g" />
-        <feColorMatrix in="g" type="matrix" values={`${grainRow(c as number)}  0 0 0 ${a}`} result="ga" />
+      <filter
+        key={id as string}
+        id={id as string}
+        x="0"
+        y="0"
+        width="100%"
+        height="100%"
+        colorInterpolationFilters="sRGB"
+      >
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.8"
+          numOctaves={2}
+          seed={id === "pGrainL" ? 13 : 17}
+          result="g"
+        />
+        <feColorMatrix
+          in="g"
+          type="matrix"
+          values={`${grainRow(c as number)}  0 0 0 ${a}`}
+          result="ga"
+        />
         <feComposite in="ga" in2="SourceGraphic" operator="in" result="gc" />
         <feMerge>
           <feMergeNode in="SourceGraphic" />
@@ -71,18 +119,21 @@ export const PaperDefs: React.FC = () => (
   </>
 );
 
-export const Cutout: React.FC<{ sil: Sil; detail?: React.ReactNode; card?: "black" | "white" }> = ({
-  sil,
-  detail,
-  card = "black",
-}) => {
-  const lift = React.useContext(LiftCtx);
-  const sh = shadowFor(lift);
+export const Cutout: React.FC<{
+  sil: Sil;
+  detail?: React.ReactNode;
+  card?: "black" | "white";
+}> = ({ sil, detail, card = "black" }) => {
+  const sh = SHADOW;
   const body = card === "black" ? INK : PAPER;
   const rim = card === "black" ? RIM_LIGHT : RIM_DARK;
   return (
     <g>
-      <g transform={`translate(${n(sh.dx)} ${n(sh.dy)})`} opacity={n(sh.o)} filter={`url(#${sh.id})`}>
+      <g
+        transform={`translate(${n(sh.dx)} ${n(sh.dy)})`}
+        opacity={n(sh.o)}
+        filter={`url(#${sh.id})`}
+      >
         {sil("#000", RIM_W + 2)}
       </g>
       <g filter="url(#pEdge)">{sil(rim, RIM_W)}</g>
@@ -105,9 +156,33 @@ const arch = (cx: number, w: number, y0: number, y1: number) => {
 // ---------------------------------------------------------------------------------------------------------------
 // Suspension bridge (Triborough: short and stout; Verrazano: long, tall towers, long sag)
 // ---------------------------------------------------------------------------------------------------------------
-type BridgeSpec = { w: number; tx: number; th: number; dy: number; dt: number; beams: number; susp: number };
-export const TRIBOROUGH: BridgeSpec = { w: 280, tx: 62, th: 118, dy: 30, dt: 12, beams: 1, susp: 22 };
-export const VERRAZANO: BridgeSpec = { w: 380, tx: 118, th: 165, dy: 38, dt: 13, beams: 2, susp: 24 };
+type BridgeSpec = {
+  w: number;
+  tx: number;
+  th: number;
+  dy: number;
+  dt: number;
+  beams: number;
+  susp: number;
+};
+export const TRIBOROUGH: BridgeSpec = {
+  w: 280,
+  tx: 62,
+  th: 118,
+  dy: 30,
+  dt: 12,
+  beams: 1,
+  susp: 22,
+};
+export const VERRAZANO: BridgeSpec = {
+  w: 380,
+  tx: 118,
+  th: 165,
+  dy: 38,
+  dt: 13,
+  beams: 2,
+  susp: 24,
+};
 
 export const Bridge: React.FC<{ b: BridgeSpec }> = ({ b }) => {
   const { w, tx, th, dy, dt, beams, susp } = b;
@@ -141,7 +216,8 @@ export const Bridge: React.FC<{ b: BridgeSpec }> = ({ b }) => {
     return "M" + pts.join(" L");
   };
   const hangers: string[] = [];
-  for (let x = -tx + susp; x < tx - susp / 2; x += susp) hangers.push(`M${n(x)} ${n(mainY(x))} L${n(x)} ${n(deckTop)}`);
+  for (let x = -tx + susp; x < tx - susp / 2; x += susp)
+    hangers.push(`M${n(x)} ${n(mainY(x))} L${n(x)} ${n(deckTop)}`);
   for (const sgn of [-1, 1]) {
     for (let d = tx + susp; d < half - 26; d += susp) {
       const x = sgn * d;
@@ -156,7 +232,11 @@ export const Bridge: React.FC<{ b: BridgeSpec }> = ({ b }) => {
       <path d={rect(half - 26, deckTop - 8, half, 0)} {...shape(c, g)} />
       {/* towers */}
       {[-tx, tx].map((x) => (
-        <path key={x} d={rect(x - tw / 2, -th, x + tw / 2, 0)} {...shape(c, g)} />
+        <path
+          key={x}
+          d={rect(x - tw / 2, -th, x + tw / 2, 0)}
+          {...shape(c, g)}
+        />
       ))}
       <path d={cablePath()} {...line(c, 6, g)} />
       <path d={hangers.join(" ")} {...line(c, 3.4, g)} />
@@ -172,12 +252,25 @@ export const Bridge: React.FC<{ b: BridgeSpec }> = ({ b }) => {
     for (let i = 0; i <= beams; i++) {
       const y0 = top + i * seg + (i > 0 ? 4 : 0);
       const y1 = top + (i + 1) * seg - (i < beams ? 4 : 0);
-      slots.push(<path key={`${x}-${i}`} d={rect(x - sw / 2, y0, x + sw / 2, y1)} fill={WHITE} />);
+      slots.push(
+        <path
+          key={`${x}-${i}`}
+          d={rect(x - sw / 2, y0, x + sw / 2, y1)}
+          fill={WHITE}
+        />,
+      );
     }
-    slots.push(<path key={`${x}-low`} d={rect(x - sw / 2, -dy + 6, x + sw / 2, -8)} fill={WHITE} />);
+    slots.push(
+      <path
+        key={`${x}-low`}
+        d={rect(x - sw / 2, -dy + 6, x + sw / 2, -8)}
+        fill={WHITE}
+      />,
+    );
   }
   const dashes: string[] = [];
-  for (let x = -half + 30; x < half - 30; x += 22) dashes.push(rect(x, -dy - dt / 2 - 1.6, x + 12, -dy - dt / 2 + 1.6));
+  for (let x = -half + 30; x < half - 30; x += 22)
+    dashes.push(rect(x, -dy - dt / 2 - 1.6, x + 12, -dy - dt / 2 + 1.6));
   return (
     <Cutout
       sil={sil}
@@ -231,7 +324,8 @@ export const MetOpera: React.FC = () => {
 const SHEA_RX = 150;
 const SHEA_TOP = -100;
 const SHEA_RY = 32;
-const rimY = (x: number) => SHEA_TOP - SHEA_RY * Math.sqrt(Math.max(0, 1 - (x / SHEA_RX) ** 2));
+const rimY = (x: number) =>
+  SHEA_TOP - SHEA_RY * Math.sqrt(Math.max(0, 1 - (x / SHEA_RX) ** 2));
 export const SheaBowl: React.FC = () => {
   const posts = [-112, -42, 42, 112];
   const sil: Sil = (c, g) => (
@@ -251,16 +345,29 @@ export const SheaBowl: React.FC = () => {
       })}
     </g>
   );
-  const band = (cy: number, rx: number, ry: number) => `M${-rx} ${cy} A${rx} ${ry} 0 0 0 ${rx} ${cy}`;
+  const band = (cy: number, rx: number, ry: number) =>
+    `M${-rx} ${cy} A${rx} ${ry} 0 0 0 ${rx} ${cy}`;
   const detail = (
     <g>
       <ellipse cx={0} cy={SHEA_TOP} rx={124} ry={22} fill={WHITE} />
       <path d="M0 -83 L24 -96 L0 -109 L-24 -96 Z" fill={INK} />
-      <path d={band(-74, 146, 26)} stroke={WHITE} strokeWidth={4.5} fill="none" />
-      <path d={band(-44, 140, 20)} stroke={WHITE} strokeWidth={4.5} fill="none" />
+      <path
+        d={band(-74, 146, 26)}
+        stroke={WHITE}
+        strokeWidth={4.5}
+        fill="none"
+      />
+      <path
+        d={band(-44, 140, 20)}
+        stroke={WHITE}
+        strokeWidth={4.5}
+        fill="none"
+      />
       {posts.map((x) => {
         const y = rimY(x) + 4;
-        return <path key={x} d={rect(x - 9, y - 37, x + 9, y - 32)} fill={WHITE} />;
+        return (
+          <path key={x} d={rect(x - 9, y - 37, x + 9, y - 32)} fill={WHITE} />
+        );
       })}
     </g>
   );
@@ -340,7 +447,12 @@ export const Umbrella: React.FC = () => {
 // ---------------------------------------------------------------------------------------------------------------
 // The power dams: white cards on the dark ground, black spillway bays, foaming water at the foot
 // ---------------------------------------------------------------------------------------------------------------
-export const Dam: React.FC<{ w: number; h: number; gates: number; block: "right" | "left" }> = ({ w, h, gates, block }) => {
+export const Dam: React.FC<{
+  w: number;
+  h: number;
+  gates: number;
+  block: "right" | "left";
+}> = ({ w, h, gates, block }) => {
   // front elevation from downstream: the wall, its crest, a row of spillway gates under the crest pouring black
   // water down the face into the foaming tailwater, and the powerhouse at one end
   const half = w / 2;
@@ -350,13 +462,19 @@ export const Dam: React.FC<{ w: number; h: number; gates: number; block: "right"
   const foot = 24;
   const sil: Sil = (c, g) => (
     <g>
-      <path d={`M${-half} ${-foot} L${-half + 26} ${-h} L${half - 26} ${-h} L${half} ${-foot} Z`} {...shape(c, g)} />
+      <path
+        d={`M${-half} ${-foot} L${-half + 26} ${-h} L${half - 26} ${-h} L${half} ${-foot} Z`}
+        {...shape(c, g)}
+      />
       <path d={rect(-half + 14, -h - 14, half - 14, -h + 1)} {...shape(c, g)} />
       <path d={rect(bx0, -h - 12 - blockH, bx1, -h - 12)} {...shape(c, g)} />
       <path d={rect(-half - 18, -foot - 2, half + 18, 0)} {...shape(c, g)} />
     </g>
   );
-  const span = (bx0 < 0 ? [bx1 + 24, half - 50] : [-half + 50, bx0 - 24]) as [number, number];
+  const span = (bx0 < 0 ? [bx1 + 24, half - 50] : [-half + 50, bx0 - 24]) as [
+    number,
+    number,
+  ];
   const pitch = (span[1] - span[0]) / gates;
   const gw = pitch * 0.62;
   const gateTop = -h + 8;
@@ -370,18 +488,24 @@ export const Dam: React.FC<{ w: number; h: number; gates: number; block: "right"
     water.push(
       `M${n(x - gw / 2)} ${n(gateBot)} L${n(x + gw / 2)} ${n(gateBot)} L${n(x + gw / 2 + 5)} ${-foot + 1} L${n(x - gw / 2 - 5)} ${-foot + 1} Z`,
     );
-    streaks.push(`M${n(x - gw * 0.18)} ${n(gateBot + 6)} L${n(x - gw * 0.22)} ${-foot - 8}`);
-    streaks.push(`M${n(x + gw * 0.2)} ${n(gateBot + 16)} L${n(x + gw * 0.24)} ${-foot - 4}`);
+    streaks.push(
+      `M${n(x - gw * 0.18)} ${n(gateBot + 6)} L${n(x - gw * 0.22)} ${-foot - 8}`,
+    );
+    streaks.push(
+      `M${n(x + gw * 0.2)} ${n(gateBot + 16)} L${n(x + gw * 0.24)} ${-foot - 4}`,
+    );
   }
   const winPaths: string[] = [];
-  for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) {
-    const x = bx0 + 10 + j * 17;
-    const y = -h - 12 - blockH + 12 + i * 20;
-    winPaths.push(rect(x, y, x + 11, y + 12));
-  }
+  for (let i = 0; i < 2; i++)
+    for (let j = 0; j < 3; j++) {
+      const x = bx0 + 10 + j * 17;
+      const y = -h - 12 - blockH + 12 + i * 20;
+      winPaths.push(rect(x, y, x + 11, y + 12));
+    }
   const wave = (y: number, ph: number) => {
     const pts: string[] = [];
-    for (let x = -half - 12; x <= half + 12; x += 6) pts.push(`${n(x)} ${n(y + 2.4 * Math.sin(x / 8 + ph))}`);
+    for (let x = -half - 12; x <= half + 12; x += 6)
+      pts.push(`${n(x)} ${n(y + 2.4 * Math.sin(x / 8 + ph))}`);
     return "M" + pts.join(" L");
   };
   return (
@@ -391,11 +515,22 @@ export const Dam: React.FC<{ w: number; h: number; gates: number; block: "right"
       detail={
         <g>
           <path d={water.join(" ")} fill={INK} />
-          <path d={streaks.join(" ")} stroke={WHITE} strokeWidth={2.6} strokeLinecap="round" fill="none" />
+          <path
+            d={streaks.join(" ")}
+            stroke={WHITE}
+            strokeWidth={2.6}
+            strokeLinecap="round"
+            fill="none"
+          />
           <path d={winPaths.join(" ")} fill={INK} />
           <path d={rect(-half + 14, -h - 3, half - 14, -h)} fill={INK} />
           <path d={rect(-half - 18, -foot - 2, half + 18, 0)} fill={INK} />
-          <path d={wave(-17, 0) + " " + wave(-8, 2.2)} stroke={WHITE} strokeWidth={2.8} fill="none" />
+          <path
+            d={wave(-17, 0) + " " + wave(-8, 2.2)}
+            stroke={WHITE}
+            strokeWidth={2.8}
+            fill="none"
+          />
         </g>
       }
     />
@@ -418,7 +553,13 @@ export const Tree: React.FC = () => {
         [8, -36, 15],
         [0, -48, 20],
       ].map(([x, y, r], i) => (
-        <circle key={i} cx={x} cy={y} r={r} {...(shape(c, g) as React.SVGProps<SVGCircleElement>)} />
+        <circle
+          key={i}
+          cx={x}
+          cy={y}
+          r={r}
+          {...(shape(c, g) as React.SVGProps<SVGCircleElement>)}
+        />
       ))}
     </g>
   );
@@ -426,7 +567,13 @@ export const Tree: React.FC = () => {
     <Cutout
       sil={sil}
       detail={
-        <path d="M-20 -50 A16 16 0 0 1 -8 -66 M6 -40 A12 12 0 0 0 16 -48" stroke={WHITE} strokeWidth={3.6} fill="none" strokeLinecap="round" />
+        <path
+          d="M-20 -50 A16 16 0 0 1 -8 -66 M6 -40 A12 12 0 0 0 16 -48"
+          stroke={WHITE}
+          strokeWidth={3.6}
+          fill="none"
+          strokeLinecap="round"
+        />
       }
     />
   );
@@ -439,9 +586,17 @@ export const Tree: React.FC = () => {
 export const Pool: React.FC = () => {
   // deck x -54..54, y -50..0; water x -44..44, y -42..-8 in three lanes
   const sil: Sil = (c, g) => (
-    <rect x={-54} y={-50} width={108} height={50} rx={6} {...(shape(c, g) as React.SVGProps<SVGRectElement>)} />
+    <rect
+      x={-54}
+      y={-50}
+      width={108}
+      height={50}
+      rx={6}
+      {...(shape(c, g) as React.SVGProps<SVGRectElement>)}
+    />
   );
-  const lane = (y: number) => `M-37 ${y} L31 ${y} M-37 ${y - 4} L-37 ${y + 4} M31 ${y - 4} L31 ${y + 4}`;
+  const lane = (y: number) =>
+    `M-37 ${y} L31 ${y} M-37 ${y - 4} L-37 ${y + 4} M31 ${y - 4} L31 ${y + 4}`;
   return (
     <Cutout
       card="white"
@@ -449,7 +604,12 @@ export const Pool: React.FC = () => {
       detail={
         <g>
           <rect x={-44} y={-42} width={88} height={34} rx={3} fill={INK} />
-          <path d={lane(-30.7) + " " + lane(-19.3)} stroke={WHITE} strokeWidth={3.2} fill="none" />
+          <path
+            d={lane(-30.7) + " " + lane(-19.3)}
+            stroke={WHITE}
+            strokeWidth={3.2}
+            fill="none"
+          />
           {/* the ladder: two rails over the deck, hooked down into the water */}
           <path
             d="M53 -29 L44 -29 q-4 0 -4 4 M53 -21 L44 -21 q-4 0 -4 4"
@@ -467,7 +627,15 @@ export const Pool: React.FC = () => {
 const KIDNEY =
   "M-44 -28 C-44 -49 -24 -56 -12 -46 C-4 -40 4 -40 12 -44 C26 -50 40 -44 40 -30 C40 -15 26 -8 8 -8 C-10 -8 -44 -6 -44 -28 Z";
 export const KidneyPool: React.FC = () => {
-  const sil: Sil = (c, g) => <path d={KIDNEY} fill={c} stroke={c} strokeWidth={22 + g * 2} strokeLinejoin="round" />;
+  const sil: Sil = (c, g) => (
+    <path
+      d={KIDNEY}
+      fill={c}
+      stroke={c}
+      strokeWidth={22 + g * 2}
+      strokeLinejoin="round"
+    />
+  );
   return (
     <Cutout
       card="white"
@@ -483,7 +651,13 @@ export const KidneyPool: React.FC = () => {
             strokeLinecap="round"
             fill="none"
           />
-          <path d="M10 -27 q5 -4.5 10 0 t10 0" stroke={WHITE} strokeWidth={3} strokeLinecap="round" fill="none" />
+          <path
+            d="M10 -27 q5 -4.5 10 0 t10 0"
+            stroke={WHITE}
+            strokeWidth={3}
+            strokeLinecap="round"
+            fill="none"
+          />
         </g>
       }
     />
