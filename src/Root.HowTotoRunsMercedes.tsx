@@ -1,7 +1,7 @@
 import {Composition} from 'remotion';
 import HowTotoRunsMercedes, {DURATION, FPS, defaultProps, schema} from '../generated/components/toto-twenty-person/HowTotoRunsMercedes';
 
-// Private render entry for HowTotoRunsMercedes (toto-twenty-person; Cheeky Pint style (stout)): the clip title card, "How Toto runs" / "Mercedes F1" on one cream stout card.
+// Private render entry for HowTotoRunsMercedes (toto-twenty-person; Cheeky Pint style (stout)): the clip title card, "How Toto runs" / "Mercedes F1" as the name-tag strips title (TitleCardCheekyPint, as in toto-mercedes-job).
 // Transparent overlay 1080x1920, 25 fps, 54 frames.
 export const RemotionRoot = () => (
   <Composition
