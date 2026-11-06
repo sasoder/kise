@@ -16,23 +16,22 @@
 // exposed 243 · and 254 · lose 262 · your 267 · job 272 (ends 280) · so 280
 // DURATION: slot 42.040 -> 53.360 s = 11.320 s x 25 = 283 frames (f0..f282). S = frame + 1051.
 //
-// THE MOTION: one camera move, a pull back then one long push in. f0 is cut C's last frame (C_END_CAM, C_END_POOL
-// x the breath, AUDI_END_C and C's pay props; all imported). The camera pulls back to the recap (f0-f38, "of these
-// people"): all three teams in one frame, centred mid-frame (their visual centre at y 660) and on Red Bull, so
-// Ferrari's hub and Audi's tower sit mirror-placed about the frame's centre, the widest side 60 px in from the edge. A warm bead runs up each principal's
-// reporting line to the amber above him (Ferrari f38 up his spoke to the CEO, Red Bull f46 up the stem and out along
-// the four branches to the owners, Audi f54 up the one rule behind the managers to the top), each line staying a
-// little brighter behind it, steady by f67. From f70 one eased push in on Audi's principal (the truck leads, the zoom
-// runs to ~f190); Ferrari and Red Bull dim by tone (f80-f104) and leave left. "A decision" (f129-f139): the
-// decision, an amber document with a cream rosette seal and ink tick, enters beside his head (the stout entrance)
-// and he raises it (f139). On "escalated it through the hierarchy" a dashed cream road draws up the tower's right
-// side, peg by peg, to the amber top (f170-f207), and a hollow cream ghost of the decision climbs it, stopping
-// beside each manager; the real one never moves: the ghost and road fade back into the board (f207-f215) as he
-// lowers it. "Might be exposed" (f230-f250): the tower, the second hire and the pay dim by tone, the light gathers
-// on him alone. "Lose your job": his reporting line snaps up away from his head into the lowest manager
-// (f256-f263); he dims (f256-f266) and drops out by his entrance run back (slide down, blur out, his shadow
-// shrinking), the decision and his F1 tag going with him (f262-f277). His light stays on the empty spot under the
-// standing tower; a slow creep in about the spot keeps the hold alive to f282.
+// THE MOTION: one camera move, a pull back then one long push in. f0 is cut C's last frame (C_END_CAM, C_END_POOL x
+// the breath, AUDI_END_C and C's pay props; all imported). The camera pulls back to the recap (f0-f38, "of these
+// people"): all three teams in one frame, centred mid-frame (their visual centre at y 660), their whole span centred
+// across with 60 px side margins. A warm bead runs up each principal's reporting line to the amber above him (Ferrari
+// f38 up his spoke to the CEO, Red Bull f46 up the stem and out along the four branches to the owners, Audi f54 up
+// the one rule behind the managers to the top), each line staying a little brighter behind it, steady by f67. From
+// f70 one eased push in on Audi's principal (the truck leads, the zoom runs to ~f190); Ferrari and Red Bull dim by
+// tone (f80-f104) and leave left. "A decision" (f129-f139): the decision, an amber document with a cream rosette seal
+// and ink tick, enters beside his head (the stout entrance) and he raises it (f139). On "escalated it through the
+// hierarchy" a dashed cream road draws up the tower's right side, peg by peg, to the amber top (f170-f207), and a
+// hollow cream ghost of the decision climbs it, stopping beside each manager; the real one never moves: the ghost and
+// road fade back into the board (f207-f215) as he lowers it. "Might be exposed" (f230-f250): the tower, the second
+// hire and the pay dim by tone, the light gathers on him alone. "Lose your job": his reporting line snaps up away
+// from his head into the lowest manager (f256-f263); he dims (f256-f266) and drops out by his entrance run back
+// (slide down, blur out, his shadow shrinking), the decision and his F1 tag going with him (f262-f277). His light
+// stays on the empty spot under the standing tower; a slow creep in about the spot keeps the hold alive to f282.
 // Contacts: each bead leaves the head on its first frame and reaches the amber on its last; the road starts at the
 // decision's top edge (f170) and stops beside the amber top (f207); the decision is drawn in his exit group, so it
 // slides and fades with him.
@@ -112,16 +111,17 @@ const REST: Cam = C_REST;
 // ===========================================================================
 // THE CAMERA — pull back to the recap, one long push in on Audi's principal, a slow creep on the empty spot
 // ===========================================================================
-/** The recap: centred on Red Bull (the middle team), so Ferrari's and Audi's principals stand mirror-placed about
- *  the frame's centre; the wider side (Ferrari's ring) RECAP_MARGIN in from the frame's edge. Centred vertically in
+/** The recap: the three teams' whole span (Ferrari's ring to Audi's second hire, the pay included) centred in the
+ *  frame with equal side margins (RECAP_MARGIN, as orgWorld's RECAP), as large as that allows. Centred vertically in
  *  the picture area: the group's visual centre (world y -375, halfway from the tiles' top to the feet) at RECAP_MID_SY,
  *  so the recap reads mid-frame (feet at ~y 784, tiles' top at ~y 536). */
 const RECAP_MARGIN = 60;
 const RECAP_MID_SY = 660;
 const RECAP_MID_Y = (TEAM_BOX.redbull.y0 + FLOOR_Y) / 2;
-const RECAP_HALF = Math.max(REDBULL.x - TEAM_BOX.ferrari.x0, TEAM_BOX.audi.x1 - REDBULL.x, C_PAY_BOX.x1 - REDBULL.x, REDBULL.x - C_PAY_BOX.x0);
-const RECAP_K = (540 - RECAP_MARGIN) / RECAP_HALF;
-const RECAP_D: Cam = feetCam(REDBULL.x, RECAP_K, RECAP_MID_SY + (FLOOR_Y - RECAP_MID_Y) * RECAP_K);
+const RECAP_X0 = Math.min(TEAM_BOX.ferrari.x0, C_PAY_BOX.x0);
+const RECAP_X1 = Math.max(TEAM_BOX.audi.x1, C_PAY_BOX.x1);
+const RECAP_K = (1080 - 2 * RECAP_MARGIN) / (RECAP_X1 - RECAP_X0);
+const RECAP_D: Cam = feetCam((RECAP_X0 + RECAP_X1) / 2, RECAP_K, RECAP_MID_SY + (FLOOR_Y - RECAP_MID_Y) * RECAP_K);
 /** The push in: his feet at y 950, the whole tower (tile included) above him, the pay and the second hire beside. */
 const K_END = 1.1;
 const END_FEET_SY = 950;
@@ -540,12 +540,11 @@ const audiAt = (f: number): AudiState => ({ ...AUDI_END_C, dim: audiDim(f) });
   // the recap mid-frame: the group's visual centre at y 640-680
   const mid = toScreen(RECAP_D, 0, RECAP_MID_Y).y;
   if (mid < 640 || mid > 680) fail(`recap centre at y ${mid.toFixed(0)}`);
-  // the recap: Ferrari's and Audi's principals mirror-placed; both sides >= 56 px in; the principals as large as allowed
-  const pl = toScreen(RECAP_D, 0, 0).x;
-  const pr = toScreen(RECAP_D, AUDI.px, 0).x;
-  if (Math.abs(pl + pr - 1080) > 0.5) fail("recap not symmetric");
+  // the recap: equal side margins (>= 56 px); the tiles below y 260
   const xs = [TEAM_BOX.ferrari.x0, TEAM_BOX.audi.x1, C_PAY_BOX.x0, C_PAY_BOX.x1].map((x) => toScreen(RECAP_D, x, 0).x);
-  if (Math.min(...xs) < 56 || Math.max(...xs) > 1024) fail(`recap margins ${Math.min(...xs).toFixed(0)}..${Math.max(...xs).toFixed(0)}`);
+  const ml = Math.min(...xs);
+  const mr = 1080 - Math.max(...xs);
+  if (ml < 56 || mr < 56 || Math.abs(ml - mr) > 1) fail(`recap margins ${ml.toFixed(0)} / ${mr.toFixed(0)}`);
   if (toScreen(RECAP_D, 0, TEAM_BOX.redbull.y0).y < 260) fail("recap: tiles too high");
   // the camera: speed (house cap 45 px/f)
   const cc = camCheck(camRaw, 0, DURATION - 1);
