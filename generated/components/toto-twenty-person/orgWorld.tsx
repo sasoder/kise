@@ -174,10 +174,12 @@ export const AUDI = {
   managers: AU_MANAGERS,
   /** the amber corporate top */
   top: AU_TOP,
-  /** the second hire (cut C) stands here, on FLOOR_Y, an ordinary peg */
-  secondX: AU + 220,
-  /** the pay props' room (cut C draws them), mirroring the second hire: centred on x, standing on FLOOR_Y,
-   *  at most w x h */
+  /** the second hire (cut C) stands here, on FLOOR_Y, an ordinary peg, beside the principal: 90 px between
+   *  their peg boxes, just right of cut D's raised decision and its ghost (SHARED_CHANGES: builder C, user notes;
+   *  was AU + 220, where cut C's hire now only waits before stepping in) */
+  secondX: AU + 174,
+  /** the pay props' room (cut C draws them; cut C places its own pay at C_PAY): centred on x, standing on
+   *  FLOOR_Y, at most w x h */
   pay: { x: AU - 220, w: 190, h: 150 },
   /** the one rule: from the principal's head up to the top's feet (the pegs between stand over it) */
   rule: [bustExit(AU, FLOOR_Y, PRINCIPAL_SIZE, 0, -1), [AU, AU_TOP.feet + RULE_GAP]] as P[],
@@ -789,7 +791,11 @@ export const F1Tag: React.FC<{ x: number; feet: number; k: number; dim?: number 
     const m = REDBULL.owners[3 - i];
     if (Math.abs(o.x - RB + (m.x - RB)) > 1e-6 || o.feet !== m.feet) fail("owners not mirrored");
   });
-  if (Math.abs(AUDI.secondX - AU + (AUDI.pay.x - AU)) > 1e-6) fail("Audi's second hire and pay room not mirrored");
+  // the second hire stands beside the principal, nearer than the old AU + 220 (136 px between peg boxes) but
+  // right of cut D's decision beside his head (cut D checks the decision and its ghost against him per frame;
+  // cut C places its own pay at C_PAY, so he no longer mirrors AUDI.pay's centre)
+  const air = AUDI.secondX - PEG_SIZE / 2 - (AU + PRINCIPAL_SIZE / 2);
+  if (air < 80 || air > 100) fail(`Audi's second hire ${air.toFixed(0)} px from the principal`);
   // nothing overlaps on the ring: neighbours' boxes clear by >= 40 px; the tile clear of the top report
   for (let k = 0; k < 10; k++) {
     const a = FERRARI.ring[k];

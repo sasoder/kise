@@ -19,15 +19,16 @@
 // corporate structure": the three kraft managers f22, f31, f40, the corporate top f49); the top warms to amber and
 // the four-rings tile settles above him on "like Audi" (f56-69, rings readable ~f66). The camera cranes back down
 // to HOME.audi (f72-~118) and holds (sway, drift, grain, the pool's breath). "people from the group": a kraft peg
-// slides out from behind the lowest manager (quickly) and glides down to stand beside the empty spot, on the right (f98-134).
+// slides out from behind the lowest manager (quickly) and glides down to wait right of the empty spot (f98-134).
 // "from... Formula One": a second kraft peg with the small F1 tag glides in from the right, high over the group
 // hire's head (f146-207), drops down the clear channel between the tower and the hire (~30 px each side) and
 // curves into the principal's spot on "hired" (lands f207). "to run the team": he warms to cream and the headset lowers onto him (f207-225), his rule
-// draws up from his head to the corporate top (f218-234); the group hire warms to cream beside him (f209-223).
-// "salary": the pay envelope with its banknotes enters on the other side, mirroring the hire (f240-250); "bonus":
+// draws up from his head to the corporate top (f218-234); the group hire steps in from his waiting spot to stand
+// beside him at AUDI.secondX, warming to cream as he goes (f209-225; user note: he stood awkwardly far away).
+// "salary": the pay envelope with its banknotes enters on the principal's other side (f240-250); "bonus":
 // the ribboned BONUS envelope joins it and three coins land on their stack (f260-274). Living hold on HOME.audi.
 // Contacts: the group hire is drawn under the lowest manager until it has slid out from behind him; each hire's
-// own (lifted) shadow hands over to the world state's shadow on the frame it lands (group f134, F1 f207).
+// own (lifted) shadow hands over to the world state's shadow on the frame it lands (F1 f207, group f225).
 // AMBER = the power to decide over the principal (Audi: the corporate top); cream = the principal (and, at Audi,
 // the hire beside him: AUDI_DONE); kraft = anyone. The pay is real-object colour (REVISION_1 #7).
 //
@@ -78,10 +79,11 @@ const lin = (f: number, f0: number, f1: number) => clamp01((f - f0) / (f1 - f0))
 type P2 = [number, number];
 
 // ===========================================================================
-// THE PAY (cut C's own props): mirroring the second hire, the bonus on the outer side
+// THE PAY (cut C's own props): on the principal's left, the bonus on the outer side
 // ===========================================================================
 /** The pay's placement: the salary envelope's foot centre, its scale (the whole group ~336 px wide at HOME.audi,
- *  SALARY / BONUS cap height ~24 px), the bonus on the outer (left) side. The group's centre mirrors the hire's. */
+ *  SALARY / BONUS cap height ~24 px), the bonus on the outer (left) side. (It no longer mirrors the
+ *  hire: he stands nearer, at AUDI.secondX.) */
 export const C_PAY = { x: AUDI.px - 152, y: FLOOR_Y, scale: 1.12, side: -1 as const } as const;
 
 // ===========================================================================
@@ -142,19 +144,20 @@ const T = {
   top: 49,
   topAmber: [57, 69],
   tile: [56, 67],
-  group: [98, 134], // out from behind the lowest manager, down to AUDI.secondX
+  group: [98, 134], // out from behind the lowest manager, down to GROUP_WAIT_X
   f1: [146, 207], // in from the right, high over the group hire, down into the principal's spot
   warmF: [207, 221],
   headset: [211, 225],
   rule: [218, 234],
   warmG: [209, 223],
+  stepG: [209, 225], // from GROUP_WAIT_X in to AUDI.secondX, beside the principal, warming as he goes
   salary: [240, 250],
   bonus: [260, 275],
 } as const;
 
 const audiAt = (f: number): AudiState => {
   const inF = f >= T.f1[1];
-  const inG = f >= T.group[1];
+  const inG = f >= T.stepG[1];
   return {
     ...AUDI_EMPTY,
     managers: T.managers.map((m) => lin(f, m, m + T.levelF)),
@@ -190,9 +193,12 @@ const along = (pts: P2[]) => {
   };
 };
 const M0 = AUDI.managers[0];
+/** where the group hire first lands and waits while the F1 hire comes down past him (the old AUDI.secondX); on
+ *  "to run the team" he steps in to AUDI.secondX */
+const GROUP_WAIT_X = AUDI.px + 220;
 /** the group hire: x and y on their own eases, x front-loaded, so it slides out from behind the lowest manager
- *  quickly (~5 f) and only then comes down onto the floor at AUDI.secondX */
-const groupPos = (u: number): P2 => [lerp(M0.x, AUDI.secondX, restToRest(clamp01(u / 0.42))), lerp(M0.feet, FLOOR_Y, restToRest(clamp01((u - 0.16) / 0.84)))];
+ *  quickly (~5 f) and only then comes down onto the floor at GROUP_WAIT_X */
+const groupPos = (u: number): P2 => [lerp(M0.x, GROUP_WAIT_X, restToRest(clamp01(u / 0.42))), lerp(M0.feet, FLOOR_Y, restToRest(clamp01((u - 0.16) / 0.84)))];
 /** the F1 hire: in from off the right edge, high over the group hire's head, then down between the hire and the
  *  lowest manager into the principal's spot */
 const F1_HIGH = -150;
@@ -203,22 +209,32 @@ const F1_PATH = along([
 ]);
 /** lift up over the first 18 %, held, settled over the last 22 % */
 const LIFT_ENV = (u: number) => (u <= 0 || u >= 1 ? 0 : smoothstep(u / 0.18) * (1 - smoothstep((u - 0.78) / 0.22)));
-type Hire = { on: boolean; x: number; feet: number; lift: number; shadow: number };
-const OFF: Hire = { on: false, x: 0, feet: 0, lift: 0, shadow: 0 };
+/** phase: "path" out from behind the manager (drawn under the tower), "wait" standing at GROUP_WAIT_X (drawn as
+ *  the world draws the second hire), "step" in to AUDI.secondX (lifted a touch, warming) */
+type Hire = { on: boolean; x: number; feet: number; lift: number; shadow: number; warm: number; phase: "path" | "wait" | "step" };
+const OFF: Hire = { on: false, x: 0, feet: 0, lift: 0, shadow: 0, warm: 0, phase: "path" };
+/** the step in: x on rest-to-rest from GROUP_WAIT_X to AUDI.secondX */
+const stepX = (u: number) => lerp(GROUP_WAIT_X, AUDI.secondX, restToRest(clamp01(u)));
 const groupAt = (f: number): Hire => {
-  if (f < T.group[0] || f >= T.group[1]) return OFF;
+  if (f < T.group[0] || f >= T.stepG[1]) return OFF;
+  if (f >= T.stepG[0]) {
+    const u = (f - T.stepG[0]) / (T.stepG[1] - T.stepG[0]);
+    const lift = LIFT_ENV(u);
+    return { on: true, x: stepX(u), feet: FLOOR_Y - LIFT_DY * lift, lift, shadow: 1, warm: win(f, T.warmG[0], T.warmG[1]), phase: "step" };
+  }
+  if (f >= T.group[1]) return { on: true, x: GROUP_WAIT_X, feet: FLOOR_Y, lift: 0, shadow: 1, warm: 0, phase: "wait" };
   const u = (f - T.group[0]) / (T.group[1] - T.group[0]);
   const [x, y] = groupPos(u);
   const lift = LIFT_ENV(u);
   // its shadow grows out from behind the manager's as it slides out (no doubled shadow at the start)
-  return { on: true, x, feet: y - LIFT_DY * lift, lift, shadow: smoothstep(u / 0.2) };
+  return { on: true, x, feet: y - LIFT_DY * lift, lift, shadow: smoothstep(u / 0.2), warm: 0, phase: "path" };
 };
 const f1At = (f: number): Hire => {
   if (f < T.f1[0] || f >= T.f1[1]) return OFF;
   const u = (f - T.f1[0]) / (T.f1[1] - T.f1[0]);
   const [x, y] = F1_PATH(restToRest(u));
   const lift = LIFT_ENV(u);
-  return { on: true, x, feet: y - LIFT_DY * lift, lift, shadow: 1 };
+  return { on: true, x, feet: y - LIFT_DY * lift, lift, shadow: 1, warm: 0, phase: "path" };
 };
 
 // ===========================================================================
@@ -265,7 +281,7 @@ export const C_PAY_BOX = payBox(C_PAY.x, C_PAY.y, C_PAY.scale, C_PAY.side, true)
   if (!eq(audiAt(DURATION - 1), AUDI_DONE)) fail(`end state differs from AUDI_DONE: ${JSON.stringify(audiAt(DURATION - 1))}`);
   if (!eq(audiAt(0), AUDI_EMPTY)) fail("f0 Audi state is not AUDI_EMPTY");
   if (T.bonus[1] > DURATION - 2 || T.salary[1] > T.bonus[0]) fail("the pay does not settle before the end");
-  // the pay at HOME.audi: ~300-340 px wide, its words' cap height >= 24 px, its centre mirroring the second hire,
+  // the pay at HOME.audi: ~300-340 px wide, its words' cap height >= 24 px, 
   // clear of the principal's shoulders, inside the picture area and the frame's left side
   const pb = payBox(C_PAY.x, C_PAY.y, C_PAY.scale, C_PAY.side, true);
   const kE = C_END_CAM.k;
@@ -273,7 +289,6 @@ export const C_PAY_BOX = payBox(C_PAY.x, C_PAY.y, C_PAY.scale, C_PAY.side, true)
   if (wPx < 300 || wPx > 340) fail(`pay ${wPx.toFixed(0)} px wide`);
   const cap = Math.min(PAY.salary.sticker.px, PAY.bonus.text.px) * C_PAY.scale * kE * 0.718;
   if (cap < 24) fail(`pay words cap ${cap.toFixed(1)} px`);
-  if (Math.abs((pb.x0 + pb.x1) / 2 - (2 * AUDI.px - AUDI.secondX)) > 25) fail("pay not mirroring the second hire");
   if (pb.x1 > AUDI.px - PRINCIPAL_SIZE / 2 - 18) fail("pay crowds the principal");
   if (540 + (pb.x0 - C_END_CAM.x) * kE < 60) fail("pay outside the picture area");
   // collisions: each travelling hire (its real outline: shoulders + head) against every peg standing then
@@ -308,6 +323,8 @@ export const C_PAY_BOX = payBox(C_PAY.x, C_PAY.y, C_PAY.scale, C_PAY.side, true)
     for (const [n, b] of statics) {
       // the group hire starts hidden behind the lowest manager and slides out from behind him
       if (g.on && (groupOut || n !== "manager0") && dist(gs, b) < 2) fail(`group hire touches ${n} at f${f}`);
+      // standing and stepping in he keeps clear air from everyone
+      if (g.on && g.phase !== "path" && dist(gs, b) < 40) fail(`group hire crowds ${n} at f${f} (${dist(gs, b).toFixed(1)})`);
       if (h.on && dist(hs, b) < 20) fail(`F1 hire touches ${n} at f${f} (${dist(hs, b).toFixed(1)})`);
     }
     if (g.on && h.on && dist(gs, hs) < 20) fail(`the hires touch at f${f}`);
@@ -317,7 +334,10 @@ export const C_PAY_BOX = payBox(C_PAY.x, C_PAY.y, C_PAY.scale, C_PAY.side, true)
   // the landings are seamless: each path ends exactly on its spot
   const gl = groupPos(1);
   const fl = F1_PATH(1);
-  if (Math.hypot(gl[0] - AUDI.secondX, gl[1] - FLOOR_Y) > 1e-6 || Math.hypot(fl[0] - AUDI.px, fl[1] - FLOOR_Y) > 1e-6) fail("a hire's path misses its spot");
+  if (Math.hypot(gl[0] - GROUP_WAIT_X, gl[1] - FLOOR_Y) > 1e-6 || Math.hypot(fl[0] - AUDI.px, fl[1] - FLOOR_Y) > 1e-6) fail("a hire's path misses its spot");
+  if (Math.abs(stepX(1) - AUDI.secondX) > 1e-6 || stepX(0) !== GROUP_WAIT_X || !(AUDI.secondX < GROUP_WAIT_X)) fail("the step in misses AUDI.secondX");
+  // he steps in only once the F1 hire has landed, and is warm when the world takes him over
+  if (T.stepG[0] < T.f1[1] || T.warmG[1] > T.stepG[1]) fail("the step in starts before the F1 hire lands");
 }
 
 // ===========================================================================
@@ -335,7 +355,7 @@ const AudiHiredToRun: React.FC<z.infer<typeof schema>> = () => {
   const traveller = (p: Hire, size: number) => (
     <g>
       <UnionShadow sil={principalSil(p.x, p.feet, size, 0)} s={size / 96} lift={p.lift} contact={{ x: p.x, y: p.feet, w: size * 0.8 }} strength={p.shadow} />
-      <PrincipalPeg x={p.x} y={p.feet} k={k} size={size} warm={0} appear={1} headset={0} shadow={false} />
+      <PrincipalPeg x={p.x} y={p.feet} k={k} size={size} warm={p.warm} appear={1} headset={0} shadow={false} />
     </g>
   );
   return (
@@ -343,8 +363,11 @@ const AudiHiredToRun: React.FC<z.infer<typeof schema>> = () => {
       <FerrariOrg k={k} band={band} s={FERRARI_DONE} />
       <RedBullOrg k={k} band={band} s={REDBULL_DONE} />
       {/* the group hire is drawn under the tower: it starts hidden behind the lowest manager */}
-      {g.on ? traveller(g, PEG_SIZE) : null}
+      {g.on && g.phase === "path" ? traveller(g, PEG_SIZE) : null}
       <AudiOrg k={k} band={band} s={a} />
+      {/* waiting, he is drawn exactly as AudiOrg draws the second hire (last in it); stepping in, as a traveller */}
+      {g.on && g.phase === "wait" ? <PrincipalPeg x={g.x} y={FLOOR_Y} k={k} size={PEG_SIZE} appear={1} warm={0} shade={0} headset={0} /> : null}
+      {g.on && g.phase === "step" ? traveller(g, PEG_SIZE) : null}
       <AudiExtrasC k={k} f1Tag={f >= T.f1[1] ? 1 : 0} salary={lin(f, T.salary[0], T.salary[1])} bonus={lin(f, T.bonus[0], T.bonus[1])} />
       {h.on ? (
         <g>
