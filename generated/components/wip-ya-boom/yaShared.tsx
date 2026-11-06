@@ -494,6 +494,31 @@ const MarkerRough: React.FC<{ id: string; scale: number; seed: string }> = ({ id
 );
 
 /**
+ * The hand's "1" is a bare bar in this font ("100M" reads "IOOM"), so every "1" gets a short flag at the top of its stem, as a
+ * hooked hand-written one: a rounded stroke in the text's own ink, inside the glyph's box, so the pen mask, the rough edge and
+ * the stroke thickening treat it as part of the letter. `right`: the flag's tip end as a fraction of the glyph's advance from
+ * its right side (the stem's middle); the rest in em of the font size (Nanum Pen Script). A "1" after another letter gets
+ * `room` em more space so its flag does not touch it. Short and steep, so a tilted "1" never reads as a 7.
+ */
+export const ONE_FLAG = { right: 0.46, top: 0.215, len: 0.15, weight: 0.058, angle: -52, room: 0.07 };
+const OneFlag: React.FC = () => (
+  <span
+    aria-hidden
+    style={{
+      position: "absolute",
+      right: `${ONE_FLAG.right * 100}%`,
+      top: `${ONE_FLAG.top}em`,
+      width: `${ONE_FLAG.len}em`,
+      height: `${ONE_FLAG.weight}em`,
+      borderRadius: `${ONE_FLAG.weight / 2}em`,
+      background: "currentColor",
+      transform: `rotate(${ONE_FLAG.angle}deg)`,
+      transformOrigin: "100% 50%",
+    }}
+  />
+);
+
+/**
  * A real figure written in red felt-tip, ON AN `ink` WipPlane (it multiplies into the paper and any photo under it).
  * (x, y) = the text's centre (anchor "center") or its left middle (anchor "left"), world px. `size` = font size (the
  * hand's x-height is small: 130-170 reads on a phone). Written on left to right by a mask that follows the pen from
@@ -554,8 +579,18 @@ export const MarkerText: React.FC<{
           const wob = Math.sin(i * 1.7 + ph) * size * 0.022 + (random(`${s}-y${i}`) - 0.5) * size * 0.03;
           const rot = (random(`${s}-r${i}`) - 0.5) * 5;
           return (
-            <span key={i} style={{ display: "inline-block", transform: `translateY(${wob.toFixed(2)}px) rotate(${rot.toFixed(2)}deg)`, whiteSpace: "pre" }}>
+            <span
+              key={i}
+              style={{
+                display: "inline-block",
+                position: c === "1" ? "relative" : undefined,
+                marginLeft: c === "1" && i > 0 ? `${ONE_FLAG.room}em` : undefined,
+                transform: `translateY(${wob.toFixed(2)}px) rotate(${rot.toFixed(2)}deg)`,
+                whiteSpace: "pre",
+              }}
+            >
               {c}
+              {c === "1" ? <OneFlag /> : null}
             </span>
           );
         })}
