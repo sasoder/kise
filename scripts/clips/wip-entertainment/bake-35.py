@@ -9,6 +9,7 @@ Copies the raws into assets-src/wip-entertainment/35/ (once), then writes into p
   cs_copy_<n>.jpg      photocopy generation n (n = 2 .. copies + 1): a sheet of copy paper with the poster copied onto
                        it a little skewed and off-centre, each from the generation before (blur, harder contrast, toner
                        speckle, a grey fog creeping in from the lid edge, the odd black copier edge)
+  cs_stack_<k>.png     the stack of bills thinned k of --steps steps (cs_chunk_<k>.png, the wads, only with --chunks)
   cs_bill.png          the banknote, graded, as a flat rectangle (the stack in the cut is many of it)
 Prints the sizes the cut needs.
 """
@@ -35,6 +36,7 @@ p.add_argument("--bill-mid", type=float, default=0.55)
 p.add_argument("--copies", type=int, default=12)
 p.add_argument("--stack")
 p.add_argument("--steps", type=int, default=8)
+p.add_argument("--chunks", action="store_true", help="also write cs_chunk_<k>.png (the sliding wads of v1; the hard-cut cut does not use them)")
 p.add_argument("--thin", type=float, default=0.86, help="share of the edge band gone by the last state")
 p.add_argument("--out", default=None, help="output folder (default public/wip-entertainment)")
 a = p.parse_args()
@@ -236,7 +238,7 @@ if a.stack:
     for k, sh in enumerate(shares):
         st = state(sh)
         save(st, OUT / f"cs_stack_{k}.png")
-        if prev is not None:
+        if prev is not None and a.chunks:
             m = np.clip(seam[None, :] + sh * thick[None, :] - yy + 0.5, 0, 1)
             save(prev * m[..., None], OUT / f"cs_chunk_{k}.png")
         prev = st
