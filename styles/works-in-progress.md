@@ -55,6 +55,17 @@ Keep it sleek: few things moving at once, one camera curve, and same-size stamps
 compete, cut them rather than slow them down. In the settled frame, stamps, maps and heads stay about 90-120 px from the
 left and right edges. A ground strip that bleeds off the frame needs no padding.
 
+## Stripped-down variant (user, Nov 6–7, "entertainment industry")
+
+When the user asks for "stripped down / messier": the off-white paper, hand-cut b&w prints, masking tape and a red
+felt-tip as the only accent (shared module `generated/components/wip-entertainment/messyShared.tsx`). The focus is on the
+things happening, not on animation: "the red pen getting drawn is very extra and over the top" (Nov 7).
+- Changes of state are **hard cuts on the words**: a print is there or it is not; a pile is whole, then half. No
+  slides, deals, draw-ons, write-ons, tears in progress or settle wobbles.
+- Markings (circles, arrows, lines, a scrawled year or number) are welcome but **cut in whole** on their frame, static:
+  no draw-on, no boil.
+- The camera stays still. The frame lives through the paper grain only.
+
 ## Kit
 
 `generated/components/kits/works-in-progress/wipShared.tsx`. Start a cut with `bun run cut <Name> --clip <clip> --style wip
