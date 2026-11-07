@@ -4,23 +4,24 @@
 // Opaque 1080x1920, 24 fps, 117 frames.
 //
 // CHECK LINE: "the share of Americans who read for pleasure fell from 28% in 2004 to 16% in 2023, about 40% fewer". With
-// the sound off: a photocopied woman absorbed in a book is taped to the page, and over her a red felt-tip draws one falling line from
-// "28% / 2004" down to "16% / 2023", with "-40%" scrawled along the drop.
+// the sound off: a photocopied woman absorbed in a book is taped to the page, and over her a red felt-tip line falls from
+// "28% / 2004" down to "16% / 2023", with "-40%" marked along the drop, each mark cut in on its word.
 //
 // THE LINE: "The percentage of Americans reading for pleasure has dropped 40% over the last 20 years."
 // WORD -> FRAME: The -2 · percentage 1 · of 11 · Americans 17 · reading 23 · for 34 · pleasure 39 · has 46 · dropped 53 ·
 // 40 62 · % 73 · over 81 · the 89 · last 92 · 20 97 · years 103 · (Today's 115, the next cut)
 // DURATION: the slot 46.875 -> 51.750 s = 4.875 s x 24 = 117 frames (f0..f116).
 //
-// THE MOTION: one slow push (k 0.94 -> 1.0) over the page. A big photocopied reader, ~1000 px tall, is taped on at f0 and
-// never animated: her face just above the true middle (y ~830-1000), her body and book running down through the caption
-// bands (no readable thing there). Above her the felt-tip draws the slope as the frame's big diagonal, upper left (2004,
-// y 420) falling past over her head to the right (2023, y 860). It presses the 2004 dot and writes "28%" over it as
-// "Americans reading" is said, the mono "2004" rising under the dot; from "has" it draws the line falling by its tip to the
-// 2023 point, reaching it on "40"; it scrawls "-40%" along the drop (on the free paper above it) by "%", then writes "16%"
-// under the 2023 dot while "2023" rises beside it. From f84 the picture is settled; only the push and the grain live.
-// Pen frames: dot 2004 9-13 · "28%" 13-22 · line 42-62 (even pen speed, peak ~62 px/frame) · dot 2023 62-65 · "-40%" 64-73 ·
-// "16%" 75-83. Labels: "2004" rises from 15, "2023" from 77.
+// BEAT MAP (rev 2, hard cuts; each cut on its word's Whisper onset + 4 frames; every mark cuts in whole and stays static):
+//   f0   the reader, taped on (top strip across her hair's edge, one across the skirt's foot), on the still page
+//   f21  the 2004 dot, "28%" and the mono "2004"                          ("Americans")
+//   f57  the falling line, the 2023 dot, "16%" and the mono "2023"         ("dropped")
+//   f66  "-40%" along the drop                                             ("40")
+//   f66-f116 the settled picture; only the paper grain lives.
+// THE PICTURE: one still framing (the approved v2 last frame's camera, held from f0; no push). A big photocopied reader,
+// ~1000 px tall, her face just above the true middle (y ~830-1000), her body and book running down through the caption
+// bands (no readable thing there). Above her the slope is the frame's big diagonal, upper left (2004, y 420) falling past
+// over her head to the right (2023, y 860); "-40%" sits along the drop on the free paper above it.
 // SPOT INK: red = the editor's felt-tip: the two figures, the falling line and the drop. No other colour.
 // HONEST SLOPE: the two points sit on one vertical scale with an unseen zero (the drop is 12/28 of the 28 point's height
 // above that zero); only the two sourced points, joined by one straight-ish stroke; no axes, gridlines or title.
@@ -32,7 +33,7 @@
 // skirt (--crop 430,1080,1720,2900), baked by scripts/clips/wip-ya-boom/bake-ReadingLess.py to public/wip-ya-boom/rl_reader.png.
 // ---------------------------------------------------------------------------
 import React from "react";
-import { Easing, interpolate, useCurrentFrame } from "remotion";
+import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { CaptionBandsDebug, PaperGround, WipFilmLife, WipPlane, runWipCamera } from "../kits/works-in-progress/wipShared";
 import { MarkerPath, MarkerText, MonoLabel, THEME, Tape, XeroxCutOut } from "./yaShared";
@@ -77,35 +78,27 @@ const OVER = 104;
 const DROP_LABEL_X = MID_X + Math.sin(SLOPE) * OVER;
 const DROP_LABEL_Y = MID_Y - Math.cos(SLOPE) * OVER;
 
-// -- pen and label frames -------------------------------------------------------------------------------------------------
-const DOT_A = 9;
-const TXT_A = 13;
-const YEAR_A = 15;
-const LINE_IN = 42;
-const LINE_DUR = 20;
-// the long stroke on an even pen speed (peak ~62 world px/frame over its ~830 px), not penEase's quick middle
-const LINE_EASE = Easing.bezier(0.3, 0, 0.55, 1);
-const lineAt = (f: number) => interpolate(f, [LINE_IN, LINE_IN + LINE_DUR], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: LINE_EASE });
-const DOT_B = LINE_IN + LINE_DUR;
-const TXT_DROP = 64;
-const TXT_B = 75;
-const YEAR_B = 77;
+// -- the hard cuts (word onset + 4) ----------------------------------------------------------------------------------------
+const CUT_2004 = 21; // "Americans" 17
+const CUT_2023 = 57; // "dropped" 53
+const CUT_DROP = 66; // "40" 62
+const LONG_AGO = -1000; // a label's textRise long finished: it is simply there
 
 const FIG_SIZE = 200;
 const DROP_SIZE = 168;
 
-// -- the camera: one slow push in, still easing at the cut --------------------------------------------------
-const camAt = runWipCamera(
+// -- the camera: still. The framing is v2's approved last frame (its push, read at f116), held for the whole cut ----------
+const CAM = runWipCamera(
   [
     { f: -24, x: 548, y: 925, k: 0.94 },
     { f: 150, x: 538, y: 966, k: 1.012 },
   ],
   DURATION,
-);
+)(DURATION - 1);
 
 const ReadingLess: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const frame = useCurrentFrame();
-  const cam = camAt(frame);
+  const cam = CAM;
   return (
     <>
       <WipFilmLife frame={frame} theme={THEME}>
@@ -124,26 +117,36 @@ const ReadingLess: React.FC<z.infer<typeof schema>> = ({ bands }) => {
           />
           {/* the top strip straddles her hair's cut edge (the matte's top at u 0.5 is v 0.047, rotated about the centre) */}
           <Tape x={HAIR_TAPE_X} y={HAIR_TAPE_Y} len={124} angle={78} seed="rl-tape-top" />
-          <MonoLabel text="2004" x={AX - 6} y={AY + 40} frame={frame} start={YEAR_A} size={40} align="center" />
-          <MonoLabel text="2023" x={BX + 26} y={BY - 22} frame={frame} start={YEAR_B} size={40} />
+          {frame >= CUT_2004 ? <MonoLabel text="2004" x={AX - 6} y={AY + 40} frame={frame} start={LONG_AGO} size={40} align="center" /> : null}
+          {frame >= CUT_2023 ? <MonoLabel text="2023" x={BX + 26} y={BY - 22} frame={frame} start={LONG_AGO} size={40} /> : null}
         </WipPlane>
         <WipPlane cam={cam} ink>
-          <MarkerPath shape={{ kind: "ring", cx: AX, cy: AY, rx: 9, ry: 8, turns: 1.7, tilt: 0 }} nib={25} frame={frame} start={DOT_A} dur={4} seed="rl-dot-a" />
-          <MarkerText text="28%" x={AX + 118} y={AY - 112} size={FIG_SIZE} frame={frame} start={TXT_A} dur={9} rotate={-3} seed="rl-28" />
-          <MarkerPath shape={{ kind: "line", points: LINE }} nib={15} frame={frame} start={LINE_IN} progress={lineAt(frame)} seed="rl-line" />
-          <MarkerPath shape={{ kind: "ring", cx: BX, cy: BY, rx: 9, ry: 8, turns: 1.7, tilt: 0 }} nib={25} frame={frame} start={DOT_B} dur={3} seed="rl-dot-b" />
-          <MarkerText
-            text="-40%"
-            x={DROP_LABEL_X}
-            y={DROP_LABEL_Y}
-            size={DROP_SIZE}
-            frame={frame}
-            start={TXT_DROP}
-            dur={9}
-            rotate={(SLOPE * 180) / Math.PI - 1}
-            seed="rl-40"
-          />
-          <MarkerText text="16%" x={BX - 20} y={BY + 98} size={FIG_SIZE} frame={frame} start={TXT_B} dur={8} rotate={-2} seed="rl-16" />
+          {frame >= CUT_2004 ? (
+            <>
+              <MarkerPath shape={{ kind: "ring", cx: AX, cy: AY, rx: 9, ry: 8, turns: 1.7, tilt: 0 }} nib={25} frame={frame} start={0} progress={1} seed="rl-dot-a" />
+              <MarkerText text="28%" x={AX + 118} y={AY - 112} size={FIG_SIZE} frame={frame} start={0} progress={1} rotate={-3} seed="rl-28" />
+            </>
+          ) : null}
+          {frame >= CUT_2023 ? (
+            <>
+              <MarkerPath shape={{ kind: "line", points: LINE }} nib={15} frame={frame} start={0} progress={1} seed="rl-line" />
+              <MarkerPath shape={{ kind: "ring", cx: BX, cy: BY, rx: 9, ry: 8, turns: 1.7, tilt: 0 }} nib={25} frame={frame} start={0} progress={1} seed="rl-dot-b" />
+              <MarkerText text="16%" x={BX - 20} y={BY + 98} size={FIG_SIZE} frame={frame} start={0} progress={1} rotate={-2} seed="rl-16" />
+            </>
+          ) : null}
+          {frame >= CUT_DROP ? (
+            <MarkerText
+              text="-40%"
+              x={DROP_LABEL_X}
+              y={DROP_LABEL_Y}
+              size={DROP_SIZE}
+              frame={frame}
+              start={0}
+              progress={1}
+              rotate={(SLOPE * 180) / Math.PI - 1}
+              seed="rl-40"
+            />
+          ) : null}
         </WipPlane>
       </WipFilmLife>
       <CaptionBandsDebug on={bands} />
