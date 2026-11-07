@@ -12,18 +12,17 @@
 // fairy 75 · tales 79 · and 89 · Shakespeare's 92 · plays 102 (Whisper, early: beats land ~3-4 frames after).
 // DURATION: the slot 50.083 -> 54.917 s = 4.833 s x 24 = 116 frames (f0..f115).
 //
-// THE MOTION: one gesture three times, hands pasting on a desk, in three rows down the page (y ~90-1070), one pair per
-// row, zig-zagging left / right / left. "Reworking old stories": the three old prints are dealt in from the left on twos,
-// crooked (the Warrior Vase, Dorothea Viehmann, Holinshed's arch). Then on each name the classic is dealt in from the
-// right over the right ~38 % of its source, lands with a small settle wobble, and a piece of masking tape is pressed on in
-// place across the seam, new onto old. The old thing's identifying part stays in view beside the new one (the vase's
-// warriors, Viehmann's face, Holinshed's engraved arch and column). Everything travels level, so nothing crosses a caption
-// band. The camera creeps in the whole cut (k 1.00 -> ~1.03); Holinshed's settle and the creep fill f34-40; the settled
-// frame from f104 stays alive with grain.
-// Contact frames (dealIn's `landed`): vase f4, Viehmann f16, Holinshed f28; Homer f52, KHM 1812 f72, First Folio f96.
-// Tape pressed flat (stickOn start + 2): f58, f78, f102, on a top corner of each classic. Nothing else touches anything.
-// SPOT INK: red = the author's marker only: one small hand-drawn arrow per pair, source -> classic over the seam, drawn
-// f54-60, f74-80, f98-104 (shaft, then barbs), boiling every 3 frames after. No text.
+// THE MOTION (rev 3, the stripped-down variant: hard cuts, no animation; styles/works-in-progress.md and the clip's
+// notes/REVISION_hardcut.md): three rows down the page (y ~90-1070), one pair per row, zig-zagging left / right / left.
+// f0: the three old prints already lie on the page, crooked (the Warrior Vase, Dorothea Viehmann, Holinshed's arch). On
+// each name the classic HARD CUTS in over the right ~38 % of its source, in the same frame as its piece of tape and a
+// small red marker arrow from the old print over the seam onto the new one: f53 Homer's bust ("Homer's" 49), f72 the
+// 1812 Kinder- und Hausmärchen ("Grimm's" 68), f96 the First Folio ("Shakespeare's" 92). Hold to f115. The old thing's
+// identifying part stays in view beside the new one (the vase's warriors, Viehmann's face, Holinshed's engraved arch and
+// column). The camera is still, fixed at the approved rev-2 settled framing; the frame lives through the paper grain only.
+// Contact frames: none (nothing moves; every change is a cut).
+// SPOT INK: red = the author's marker only: one small arrow per pair, source -> classic over the seam, cut in whole with
+// its classic and static (no draw-on, no boil). No text.
 //
 // SOURCES (animation_source/assets_raw/SOURCES.txt; raw copies in assets-src/wip-entertainment/50/; bake
 // scripts/clips/wip-entertainment/bake-50.py through bake-roughcut.py, Vision mattes for the vase and the bust):
@@ -43,23 +42,24 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { CaptionBandsDebug, WipPlane, runWipCamera } from "../kits/works-in-progress/wipShared";
-import { MarkerStroke, MessyFilmLife, MessyPaper, RoughCutPrint, Tape, dealIn, drawT, handArrow, stickOn } from "./messyShared";
+import { MarkerStroke, MessyFilmLife, MessyPaper, RoughCutPrint, Tape, handArrow } from "./messyShared";
 
 export const FPS = 24;
 export const DURATION = 116;
 export const schema = z.object({ bands: z.boolean() });
 export const defaultProps = schema.parse({ bands: false });
 
-// One camera: a slow creep in, already running at f0, linear so it never stops.
-const camAt = runWipCamera(
+// The camera is STILL (rev 3). It sits at the approved rev-2 settled framing: that cut's creep track evaluated at its last
+// frame, kept so the layout below (solved in screen px on that frame) lands on exactly the same pixels.
+const rev2CamAt = runWipCamera(
   [
     { f: -24, x: 540, y: 960, k: 1 },
     { f: DURATION + 12, x: 540, y: 948, k: 1.035, ease: "linear" },
   ],
   DURATION,
 );
+const SETTLED = rev2CamAt(DURATION - 1);
 // The layout is solved in screen px on the settled frame (screen -> world).
-const SETTLED = camAt(DURATION - 1);
 const wx = (sx: number) => SETTLED.x + (sx - 540) / SETTLED.k;
 const wy = (sy: number) => SETTLED.y + (sy - 960) / SETTLED.k;
 const ws = (s: number) => s / SETTLED.k;
@@ -72,10 +72,6 @@ type Print = {
   sy: number;
   sw: number; // the PNG's full width, screen px on the settled frame
   rot: number;
-  start: number; // dealIn start; lands at start + dur
-  dur: number;
-  from: { x: number; y: number }; // world offset, off frame
-  fromRot: number;
   page?: boolean; // a printed page: lighter tone table and finer grain, so the paper stays paper
 };
 
@@ -83,15 +79,16 @@ type Print = {
 // y ~90-1070 (rows overlap a little). Screen px on the settled frame; `sw` = the baked PNG's full width (border included).
 // Kept clear of the classic: the vase's marching warriors (its left ~62 %), Viehmann's face (crop puts it at ~1/3 across),
 // Holinshed's arch and left column.
-// THE OLD THINGS: dealt in from the left on "Reworking old stories", crooked.
+// THE OLD THINGS: on the page from f0, crooked.
 const SOURCES: Print[] = [
-  { key: "vase", src: "wip-entertainment/os_vase.png", aspect: 1.226, sx: 315, sy: 270, sw: 430, rot: 2.2, start: -6, dur: 10, from: { x: -760, y: -120 }, fromRot: -7 },
-  { key: "viehmann", src: "wip-entertainment/os_viehmann.png", aspect: 1.0034, sx: 545, sy: 605, sw: 330, rot: -2.8, start: 6, dur: 10, from: { x: -820, y: 0 }, fromRot: -8 },
-  { key: "holinshed", src: "wip-entertainment/os_holinshed.png", aspect: 1.1555, sx: 280, sy: 895, sw: 360, rot: 3.0, start: 18, dur: 10, from: { x: -760, y: 0 }, fromRot: -7, page: true },
+  { key: "vase", src: "wip-entertainment/os_vase.png", aspect: 1.226, sx: 315, sy: 270, sw: 430, rot: 2.2 },
+  { key: "viehmann", src: "wip-entertainment/os_viehmann.png", aspect: 1.0034, sx: 545, sy: 605, sw: 330, rot: -2.8 },
+  { key: "holinshed", src: "wip-entertainment/os_holinshed.png", aspect: 1.1555, sx: 280, sy: 895, sw: 360, rot: 3.0, page: true },
 ];
 
-// THE CLASSICS: each dealt in from the right over its source's right side on its name, then taped across the seam.
+// THE CLASSICS: each hard cuts in over its source's right side on its name (`at`), with its tape and its arrow.
 type Classic = Print & {
+  at: number; // the hard cut: the word's Whisper onset + ~4 frames
   tape: { dx: number; dy: number; w: number; rot: number };
   arrow: { a: [number, number]; b: [number, number] }; // screen px on the settled frame: from the source, over the seam, onto the classic
 };
@@ -104,10 +101,7 @@ const CLASSICS: Classic[] = [
     sy: 274,
     sw: 320,
     rot: -2.4,
-    start: 40,
-    dur: 12,
-    from: { x: 860, y: 0 },
-    fromRot: 8,
+    at: 53,
     tape: { dx: 118, dy: -152, w: 124, rot: 36 },
     arrow: { a: [282, 410], b: [432, 430] },
   },
@@ -119,10 +113,7 @@ const CLASSICS: Classic[] = [
     sy: 600,
     sw: 390,
     rot: 2.6,
-    start: 60,
-    dur: 12,
-    from: { x: 760, y: 0 },
-    fromRot: 8,
+    at: 72,
     page: true,
     tape: { dx: 138, dy: -160, w: 124, rot: 38 },
     arrow: { a: [500, 700], b: [640, 668] },
@@ -135,101 +126,63 @@ const CLASSICS: Classic[] = [
     sy: 892,
     sw: 330,
     rot: -2.2,
-    start: 84,
-    dur: 12,
-    from: { x: 880, y: 0 },
-    fromRot: 8,
+    at: 96,
     page: true,
     tape: { dx: -148, dy: -156, w: 124, rot: -36 },
     arrow: { a: [258, 1036], b: [408, 1026] },
   },
 ];
-// THE RED MARKER (the author's hand): as each classic lands, a quick arrow from the source over the seam onto the classic,
-// the same gesture three times: shaft, then the two barbs, from ARROW_AFTER frames after the landing (f54-60, f74-80,
-// f98-104). Kept on the lower part of each seam, off the faces, the warriors and the titles; the tape went to a
-// top corner of each classic (Homer's and the 1812 page's far corner, the Folio's onto Holinshed's top) so the two never meet.
-const ARROW_AFTER = 2;
+// THE RED MARKER (the author's hand): one arrow per pair from the source over the seam onto the classic, kept on the lower
+// part of each seam, off the faces, the warriors and the titles; the tape sits on a top corner of each classic (Homer's and
+// the 1812 page's far corner, the Folio's onto Holinshed's top) so the two never meet. Cut in whole, static: the stroke is
+// rendered complete with no boil, and its felt edge is drawn at one fixed frame so its texture never re-jitters.
 const ARROW_W = 10;
 const ARROW_HEAD = 26;
 const arrowStrokes = (c: Classic) =>
   handArrow({ x: wx(c.arrow.a[0]), y: wy(c.arrow.a[1]) }, { x: wx(c.arrow.b[0]), y: wy(c.arrow.b[1]) }, `${c.key}-arrow`, ws(ARROW_HEAD));
-// [start, end] of shaft, barb, barb, relative to the landing + ARROW_AFTER
-const ARROW_TIMES: [number, number][] = [
-  [0, 3.5],
-  [3.5, 5],
-  [5, 6.5],
-];
-
-// Tape is pressed on in place, not flown in: two poses (up a little, then flat), TAPE_AFTER frames after the landing.
-const TAPE_AFTER = 4;
-const TAPE_FROM = { x: 10, y: -18 };
 
 const PAGE_GAMMA = 0.72;
 const PAGE_GRAIN = 0.06;
 
-const PrintOnPage: React.FC<{ p: Print; frame: number }> = ({ p, frame }) => {
-  const d = dealIn(frame, { start: p.start, dur: p.dur, from: p.from, rot: p.fromRot });
-  if (frame < p.start) return null;
-  return (
-    <RoughCutPrint
-      src={p.src}
-      x={wx(p.sx) + d.dx}
-      y={wy(p.sy) + d.dy}
-      w={ws(p.sw)}
-      aspect={p.aspect}
-      rotate={p.rot + d.rot}
-      lift={d.lift}
-      gamma={p.page ? PAGE_GAMMA : 1}
-      grain={p.page ? PAGE_GRAIN : 0.12}
-      seed={p.key}
-    />
-  );
-};
+const PrintOnPage: React.FC<{ p: Print }> = ({ p }) => (
+  <RoughCutPrint
+    src={p.src}
+    x={wx(p.sx)}
+    y={wy(p.sy)}
+    w={ws(p.sw)}
+    aspect={p.aspect}
+    rotate={p.rot}
+    gamma={p.page ? PAGE_GAMMA : 1}
+    grain={p.page ? PAGE_GRAIN : 0.12}
+    seed={p.key}
+  />
+);
 
 const OldStoriesRemixed: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const frame = useCurrentFrame();
-  const cam = camAt(frame);
+  const cam = SETTLED;
+  const on = CLASSICS.filter((c) => frame >= c.at);
   return (
     <>
       <MessyFilmLife frame={frame}>
         <MessyPaper cam={cam} />
         <WipPlane cam={cam}>
           {SOURCES.map((p) => (
-            <PrintOnPage key={p.key} p={p} frame={frame} />
+            <PrintOnPage key={p.key} p={p} />
           ))}
-          {CLASSICS.map((c) => {
-            const land = c.start + c.dur;
-            return (
-              <React.Fragment key={c.key}>
-                <PrintOnPage p={c} frame={frame} />
-                <Tape
-                  x={wx(c.sx + c.tape.dx)}
-                  y={wy(c.sy + c.tape.dy)}
-                  w={ws(c.tape.w)}
-                  h={ws(46)}
-                  rotate={c.tape.rot}
-                  press={stickOn(frame, land + TAPE_AFTER, 2)}
-                  from={TAPE_FROM}
-                  seed={`${c.key}-tape`}
-                />
-              </React.Fragment>
-            );
-          })}
+          {on.map((c) => (
+            <React.Fragment key={c.key}>
+              <PrintOnPage p={c} />
+              <Tape x={wx(c.sx + c.tape.dx)} y={wy(c.sy + c.tape.dy)} w={ws(c.tape.w)} h={ws(46)} rotate={c.tape.rot} seed={`${c.key}-tape`} />
+            </React.Fragment>
+          ))}
         </WipPlane>
         <WipPlane cam={cam} ink>
-          {CLASSICS.map((c) => {
-            const t0 = c.start + c.dur + ARROW_AFTER;
-            return arrowStrokes(c).map((pts, i) => (
-              <MarkerStroke
-                key={`${c.key}-${i}`}
-                points={pts}
-                frame={frame}
-                progress={drawT(frame, t0 + ARROW_TIMES[i][0], t0 + ARROW_TIMES[i][1])}
-                width={ws(ARROW_W)}
-                seed={`${c.key}-arrow-${i}`}
-              />
-            ));
-          })}
+          {on.map((c) =>
+            arrowStrokes(c).map((pts, i) => (
+              <MarkerStroke key={`${c.key}-${i}`} points={pts} frame={c.at} progress={1} boil={0} width={ws(ARROW_W)} seed={`${c.key}-arrow-${i}`} />
+            )),
+          )}
         </WipPlane>
       </MessyFilmLife>
       <CaptionBandsDebug on={bands} />
