@@ -3,26 +3,23 @@
 // kit generated/components/kits/works-in-progress/wipShared.tsx; clip module ./messyShared.tsx; notes/COMMON.md).
 // Opaque 1080x1920, 24 fps, 102 frames.
 //
-// CHECK LINE: "The five biggest films of 2025 were all sequels or remakes." With no sound: five real 2025 posters are
-// dealt onto the page, then from under every one of them slides the older poster (or the game's cover) it was built on.
+// CHECK LINE: "The five biggest films of 2025 were all sequels or remakes." With no sound: five real 2025 posters cut onto
+// the page one by one, then from under every one of them the older poster (or the game's cover) it was built on is there.
 //
 // THE LINE: "All five of the highest-grossing films of 2025 came from existing franchises."
 // WORD -> FRAME (Whisper, often 0.2-0.4 s early): All -1 · five 3 · of 10 · the 15 · highest 16 · grossing 23 · films 29 ·
 // of 38 · 2025 43 · came 52 · from 66 · existing 71 · franchises 78 · (next line 100)
 // DURATION: the slot 22.792 -> 27.042 s = 4.25 s x 24 = 102 frames (f0..f101).
 //
-// THE MOTION: one page, one slow creep in (k 0.955 -> ~1.0 about the collage's middle, y 588). The five posters, b&w
-// hand-cut prints, are dealt by hand on twos in rank order from the page's edges, each landing with a small settle
-// wobble, into a loose overlapping pile that fills the page above the caption bands (#1 is already landing on f0). From
-// "came from" the five originals are pulled out from under them in a ripple (3 frames apart, on twos), each to about 40 %
-// showing at an angle with its own title clear, lying over the earlier posters and under the later ones, as if the new
-// posters had been pasted over them. On "franchises" the author's red marker writes each original's year on the print
-// itself in the same ripple. Settled from f94: grain, the creep and the marker's boil.
-// Contact frames (dealIn `landed`): Ne Zha 2 f4, Zootopia 2 f14, Avatar: Fire and Ash f24, Lilo & Stitch f34, A Minecraft
-// Movie f44. Tape pressed flat: Avatar's f30, Lilo's f40. Originals pulled from f56, 59, 62, 65, 68 (first sliver out on f58,
-// 60, 64, 66, 70), at rest on f68, 72, 74, 78, 80, settle wobble done by f86. Years written f78-82, 81-85, 84-88, 87-91,
-// 90-94 (2019, 2016, 2009, 2002, 2011).
-// SPOT INK: red = the author's felt-tip only: the five years, on an ink plane (multiplies into the prints).
+// THE MOTION (rev 2, hard cuts: notes/REVISION_hardcut.md, the stripped-down variant): no animation, only things
+// happening. A still camera on the approved settled framing; every change is a hard cut on its word. Ne Zha 2 is already
+// on the page at f0; Zootopia 2 cuts in on f7, Avatar: Fire and Ash (with its tape) on f14, Lilo & Stitch (with its tape)
+// on f20, A Minecraft Movie on f27 (five / highest-grossing / films). On f75 ("existing") all five originals are there at
+// once, out from under their posters at an angle (about 40 % showing, titles clear), lying over the earlier posters and
+// under the later ones as if the new posters had been pasted over them. On f82 ("franchises") all five red years are
+// there at once, written on the prints. Held to f101; the frame lives on the paper grain only.
+// Cuts: f0, 7, 14, 20, 27, 75, 82. Nothing deals, slides, wobbles, presses, writes on or boils.
+// SPOT INK: red = the author's felt-tip only: the five years, on an ink plane (multiplies into the prints), cut in whole.
 //
 // SOURCES: the ranking, notes/top5_2025.md (Box Office Mojo 2025 worldwide, cross-checked on The Numbers; same five, same
 // order): 1 Ne Zha 2 (sequel to Ne Zha, 2019), 2 Zootopia 2 (Zootopia, 2016), 3 Avatar: Fire and Ash (Avatar, 2009),
@@ -44,268 +41,149 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { CaptionBandsDebug, WipPlane, paperEase, runWipCamera } from "../kits/works-in-progress/wipShared";
-import { MessyFilmLife, MessyPaper, RoughCutPrint, Scrawl, Tape, dealIn, onTwos, stickOn } from "./messyShared";
+import { CaptionBandsDebug, WipPlane, runWipCamera } from "../kits/works-in-progress/wipShared";
+import { MessyFilmLife, MessyPaper, RoughCutPrint, Scrawl, Tape } from "./messyShared";
 
 export const FPS = 24;
 export const DURATION = 102;
 export const schema = z.object({ bands: z.boolean() });
 export const defaultProps = schema.parse({ bands: false });
 
-// -- the camera: one slow creep in about the collage's middle (screen y FOCUS), already running at f0 ------------------
+// -- the camera: still, on the approved settled framing (rev 1's last frame: its creep's end, kept exactly) ----------------
 const FOCUS = 588;
 const K0 = 0.955;
-const camAt = runWipCamera(
+const CAM = runWipCamera(
   [
     { f: -24, x: 540, y: FOCUS + (960 - FOCUS) / K0, k: K0 },
     { f: DURATION + 20, x: 540, y: 960, k: 1, ease: "linear" },
   ],
   DURATION,
-);
-// The layout is solved in the screen px of the last frame (screen -> world).
-const SETTLED = camAt(DURATION - 1);
-const wx = (sx: number) => SETTLED.x + (sx - 540) / SETTLED.k;
-const wy = (sy: number) => SETTLED.y + (sy - 960) / SETTLED.k;
-const ws = (s: number) => s / SETTLED.k;
+)(DURATION - 1);
+// The layout is in the screen px of that framing (screen -> world).
+const wx = (sx: number) => CAM.x + (sx - 540) / CAM.k;
+const wy = (sy: number) => CAM.y + (sy - 960) / CAM.k;
+const ws = (s: number) => s / CAM.k;
 
 // -- the prints ---------------------------------------------------------------------------------------------------
-// The collage was solved by a small search (scratch layout.py) over every poster and original rest pose: all five poster
-// titles wholly clear, each original 38-43 % visible with its title clear and a light patch for its year, each still
-// 40-60 % under its own poster, everything inside x 90-990, y 110-1070. 330 px posters could not do that without
-// burying Ne Zha 2 under the rest (25 % visible); 300 px is the largest width that keeps every poster about half visible.
-const PW = 300; // a poster's photo window on the settled frame (screen px); 2:3
+// The collage was solved by a small search over every poster and original pose: all five poster titles wholly clear, each
+// original 38-43 % visible with its title clear and a light patch for its year, each still 40-60 % under its own poster,
+// everything inside x 90-990, y 110-1070. 330 px posters could not do that without burying Ne Zha 2 under the rest (25 %
+// visible); 300 px is the largest width that keeps every poster about half visible.
+const PW = 300; // a poster's photo window (screen px); 2:3
 const ASPECT = 2 / 3;
-const ORIG_K = 0.9; // the originals a touch smaller (older, smaller prints), so each lies wholly under its poster at first
-const DEAL_DUR = 10;
-const SLIDE_DUR = 12;
+const ORIG_K = 0.9; // the originals a touch smaller: older, smaller prints
 const YEAR_SIZE = 64; // screen px: about 16 px tall on a 270 px wide phone frame
+const ORIGINALS_AT = 75; // "existing"
+const YEARS_AT = 82; // "franchises"
 
 type Film = {
   key: string;
   poster: string;
   orig: string;
-  x: number; // poster centre, settled screen px
+  x: number; // poster centre, screen px
   y: number;
   rot: number;
-  from: { x: number; y: number }; // where the hand deals it from (settled screen px offset: off frame)
-  fromRot: number;
-  deal: number; // the deal's first frame
-  peek: { x: number; y: number; rot: number }; // the original's rest, relative to the poster centre (screen px), absolute rotation
-  slide: number; // the original's first pull
+  at: number; // the poster's cut
+  peek: { x: number; y: number; rot: number }; // the original's centre relative to the poster's (screen px), absolute rotation
   year: string;
   yearAt: [number, number]; // where the year starts on the original (u at its left end, v at its middle)
-  yearStart: number;
 };
 
-// Rank order = deal order. Paint order: each original directly under its own poster (o1 p1 o2 p2 ...), so an original
-// pulled out lies over the earlier posters and under the later ones, as a pile of paper would.
+// Rank order = cut order. Paint order: each original directly under its own poster (o1 p1 o2 p2 ...).
 const FILMS: Film[] = [
-  {
-    key: "nezha",
-    poster: "ff_nezha2",
-    orig: "ff_nezha_2019",
-    x: 490,
-    y: 834,
-    rot: 1.6,
-    from: { x: -820, y: 180 },
-    fromRot: -14,
-    deal: -6,
-    peek: { x: -225, y: -15, rot: 6.2 },
-    slide: 56,
-    year: "2019",
-    yearAt: [0.2, 0.55],
-    yearStart: 78,
-  },
-  {
-    key: "zootopia",
-    poster: "ff_zootopia2",
-    orig: "ff_zootopia_2016",
-    x: 604,
-    y: 357,
-    rot: -3.4,
-    from: { x: 80, y: -800 },
-    fromRot: 10,
-    deal: 4,
-    peek: { x: 186, y: 8, rot: 11 },
-    slide: 59,
-    year: "2016",
-    yearAt: [0.37, 0.28],
-    yearStart: 81,
-  },
-  {
-    key: "avatar",
-    poster: "ff_avatar3",
-    orig: "ff_avatar_2009",
-    x: 812,
-    y: 654,
-    rot: -1.8,
-    from: { x: 760, y: 150 },
-    fromRot: 13,
-    deal: 14,
-    peek: { x: -2, y: 187, rot: -5.8 },
-    slide: 62,
-    year: "2009",
-    yearAt: [0.22, 0.735],
-    yearStart: 84,
-  },
-  {
-    key: "lilo",
-    poster: "ff_lilo2025",
-    orig: "ff_lilo_2002",
-    x: 269,
-    y: 539,
-    rot: -3.3,
-    from: { x: -740, y: -100 },
-    fromRot: -12,
-    deal: 24,
-    peek: { x: 2, y: -210, rot: 2.6 },
-    slide: 65,
-    year: "2002",
-    yearAt: [0.1, 0.41],
-    yearStart: 87,
-  },
-  {
-    key: "minecraft",
-    poster: "ff_minecraft_movie",
-    orig: "ff_minecraft_2011",
-    x: 520,
-    y: 634,
-    rot: -3.8,
-    from: { x: 780, y: 280 },
-    fromRot: 12,
-    deal: 34,
-    peek: { x: -37, y: -163, rot: 4.8 },
-    slide: 68,
-    year: "2011",
-    yearAt: [0.36, 0.265],
-    yearStart: 90,
-  },
+  { key: "nezha", poster: "ff_nezha2", orig: "ff_nezha_2019", x: 490, y: 834, rot: 1.6, at: 0, peek: { x: -225, y: -15, rot: 6.2 }, year: "2019", yearAt: [0.2, 0.55] },
+  { key: "zootopia", poster: "ff_zootopia2", orig: "ff_zootopia_2016", x: 604, y: 357, rot: -3.4, at: 7, peek: { x: 186, y: 8, rot: 11 }, year: "2016", yearAt: [0.37, 0.28] },
+  { key: "avatar", poster: "ff_avatar3", orig: "ff_avatar_2009", x: 812, y: 654, rot: -1.8, at: 14, peek: { x: -2, y: 187, rot: -5.8 }, year: "2009", yearAt: [0.22, 0.735] },
+  { key: "lilo", poster: "ff_lilo2025", orig: "ff_lilo_2002", x: 269, y: 539, rot: -3.3, at: 20, peek: { x: 2, y: -210, rot: 2.6 }, year: "2002", yearAt: [0.1, 0.41] },
+  { key: "minecraft", poster: "ff_minecraft_movie", orig: "ff_minecraft_2011", x: 520, y: 634, rot: -3.8, at: 27, peek: { x: -37, y: -163, rot: 4.8 }, year: "2011", yearAt: [0.36, 0.265] },
 ];
 
-// Tape: stuck on by hand just after its print lands, on outer edges nothing later covers.
+// Tape: there in the same frame as the print it holds, on outer edges nothing later covers.
 const TAPES = [
-  { on: "avatar", x: 958, y: 560, w: 104, rot: 96, start: 26, from: { x: 700, y: -300 } },
-  { on: "lilo", x: 124, y: 470, w: 112, rot: 82, start: 36, from: { x: -700, y: 300 } },
+  { on: "avatar", x: 958, y: 560, w: 104, rot: 96 },
+  { on: "lilo", x: 124, y: 470, w: 112, rot: 82 },
 ];
+const filmAt = (key: string) => FILMS.find((f) => f.key === key)?.at ?? 0;
 
-const posterPose = (f: Film, frame: number) => {
-  const d = dealIn(frame, { start: f.deal, dur: DEAL_DUR, from: { x: ws(f.from.x), y: ws(f.from.y) }, rot: f.fromRot, wobble: 1.3 });
-  return { x: wx(f.x) + d.dx, y: wy(f.y) + d.dy, rot: f.rot + d.rot, lift: d.lift };
-};
-
-// The original is PULLED out from under its poster (not dealt): it starts slowly from rest, so its first pose shows only a
-// sliver past the poster's edge, speeds up, and eases to a stop with a small settle wobble, on twos.
-const pullOut = (frame: number, start: number, dur: number) => {
-  const f = onTwos(frame);
-  const t = paperEase(Math.min(1, Math.max(0, (f - start) / dur)));
-  const after = f - (start + dur);
-  const wob = after >= 0 && after <= 6 ? Math.exp(-after / 2.4) * Math.cos(after * 1.35) : 0;
-  return { t, wob, out: f > start };
-};
-
-const origPose = (f: Film, frame: number) => {
-  // from exactly under its poster (its centre and angle) to its rest
-  const { t, wob, out } = pullOut(frame, f.slide, SLIDE_DUR);
-  return {
-    sx: f.x + f.peek.x * t, // settled screen px
-    sy: f.y + f.peek.y * t,
-    rot: f.rot + (f.peek.rot - f.rot) * t + 0.9 * wob,
-    lift: 0.12 * Math.sin(Math.PI * t),
-    out,
-  };
-};
-
-// A point of the original (u, v) in world px, on its pose of this frame: the year is written ON the print and moves with it.
-const onOrig = (f: Film, frame: number, u: number, v: number) => {
-  const p = origPose(f, frame);
+// A point of the original (u, v) in world px: the year is written ON the print.
+const onOrig = (f: Film, u: number, v: number) => {
   const w = PW * ORIG_K;
   const h = w / ASPECT;
-  const a = (p.rot * Math.PI) / 180;
+  const a = (f.peek.rot * Math.PI) / 180;
   const lx = (u - 0.5) * w;
   const ly = (v - 0.5) * h;
-  return { x: wx(p.sx + lx * Math.cos(a) - ly * Math.sin(a)), y: wy(p.sy + lx * Math.sin(a) + ly * Math.cos(a)), rot: p.rot };
+  const cx = f.x + f.peek.x;
+  const cy = f.y + f.peek.y;
+  return { x: wx(cx + lx * Math.cos(a) - ly * Math.sin(a)), y: wy(cy + lx * Math.sin(a) + ly * Math.cos(a)) };
 };
 
 const FiveFranchises: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const frame = useCurrentFrame();
-  const cam = camAt(frame);
   return (
     <>
       <MessyFilmLife frame={frame}>
-        <MessyPaper cam={cam} />
-        <WipPlane cam={cam}>
-          {FILMS.map((f) => {
-            const o = origPose(f, frame);
-            const dealt = onTwos(frame) >= f.deal;
-            const p = posterPose(f, frame);
-            return (
-              <React.Fragment key={f.key}>
-                {o.out ? (
-                  <RoughCutPrint
-                    src={`wip-entertainment/${f.orig}.jpg`}
-                    rect
-                    x={wx(o.sx)}
-                    y={wy(o.sy)}
-                    w={ws(PW * ORIG_K)}
-                    aspect={ASPECT}
-                    rotate={o.rot}
-                    lift={o.lift}
-                    border={[5, 16]}
-                    grain={0.07}
-                    seed={`o-${f.key}`}
-                  />
-                ) : null}
-                {dealt ? (
-                  <RoughCutPrint
-                    src={`wip-entertainment/${f.poster}.jpg`}
-                    rect
-                    x={p.x}
-                    y={p.y}
-                    w={ws(PW)}
-                    aspect={ASPECT}
-                    rotate={p.rot}
-                    lift={p.lift}
-                    border={[6, 18]}
-                    grain={0.07}
-                    seed={`p-${f.key}`}
-                  />
-                ) : null}
-              </React.Fragment>
-            );
-          })}
-          {TAPES.map((t) => (
-            <Tape
-              key={t.on}
-              x={wx(t.x)}
-              y={wy(t.y)}
-              w={ws(t.w)}
-              h={ws(46)}
-              rotate={t.rot}
-              press={stickOn(frame, t.start, 4)}
-              from={t.from}
-              seed={`tape-${t.on}`}
-            />
+        <MessyPaper cam={CAM} />
+        <WipPlane cam={CAM}>
+          {FILMS.map((f) => (
+            <React.Fragment key={f.key}>
+              {frame >= ORIGINALS_AT ? (
+                <RoughCutPrint
+                  src={`wip-entertainment/${f.orig}.jpg`}
+                  rect
+                  x={wx(f.x + f.peek.x)}
+                  y={wy(f.y + f.peek.y)}
+                  w={ws(PW * ORIG_K)}
+                  aspect={ASPECT}
+                  rotate={f.peek.rot}
+                  border={[5, 16]}
+                  grain={0.07}
+                  seed={`o-${f.key}`}
+                />
+              ) : null}
+              {frame >= f.at ? (
+                <RoughCutPrint
+                  src={`wip-entertainment/${f.poster}.jpg`}
+                  rect
+                  x={wx(f.x)}
+                  y={wy(f.y)}
+                  w={ws(PW)}
+                  aspect={ASPECT}
+                  rotate={f.rot}
+                  border={[6, 18]}
+                  grain={0.07}
+                  seed={`p-${f.key}`}
+                />
+              ) : null}
+            </React.Fragment>
           ))}
+          {TAPES.map((t) =>
+            frame >= filmAt(t.on) ? (
+              <Tape key={t.on} x={wx(t.x)} y={wy(t.y)} w={ws(t.w)} h={ws(46)} rotate={t.rot} press={1} seed={`tape-${t.on}`} />
+            ) : null,
+          )}
         </WipPlane>
-        {/* the author's red marker: each original's year, written on the print */}
-        <WipPlane cam={cam} ink>
-          {FILMS.map((f) => {
-            const at = onOrig(f, frame, f.yearAt[0], f.yearAt[1]);
-            return (
-              <Scrawl
-                key={f.key}
-                text={f.year}
-                x={at.x}
-                y={at.y}
-                size={ws(YEAR_SIZE)}
-                frame={frame}
-                start={f.yearStart}
-                perLetter={1}
-                rotate={at.rot - 4}
-                seed={`year-${f.key}`}
-              />
-            );
-          })}
+        {/* the author's red marker: each original's year, on the print, cut in whole and static */}
+        <WipPlane cam={CAM} ink>
+          {frame >= YEARS_AT
+            ? FILMS.map((f) => {
+                const at = onOrig(f, f.yearAt[0], f.yearAt[1]);
+                return (
+                  <Scrawl
+                    key={f.key}
+                    text={f.year}
+                    x={at.x}
+                    y={at.y}
+                    size={ws(YEAR_SIZE)}
+                    frame={YEARS_AT} // pinned: the felt edge's displacement re-jitters every 3 frames otherwise
+                    start={YEARS_AT - 200}
+                    perLetter={1}
+                    boil={0}
+                    rotate={f.peek.rot - 4}
+                    seed={`year-${f.key}`}
+                  />
+                );
+              })
+            : null}
         </WipPlane>
       </MessyFilmLife>
       <CaptionBandsDebug on={bands} />
