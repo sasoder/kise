@@ -3,27 +3,36 @@
 // generated/components/kits/works-in-progress/wipShared.tsx) with the clip's materials (./yaShared.tsx).
 // Opaque 1080x1920, 24 fps, 54 frames.
 //
-// CHECK LINE: "This is about the giant YA book franchises of the 2000s, all at once." With no sound: the real covers of Harry
-// Potter, The Hunger Games, Twilight, Percy Jackson, The Fault in Our Stars and Divergent are slapped onto the page one after
-// another into one crooked, overlapping heap.
+// BEAT MAP (rev 2, hard cuts; each cut lands about 4 frames after the word's Whisper onset):
+//   f0   The Fault in Our Stars, already pasted at the top of the heap ("What" f0)
+//   f7   The Hunger Games (left) and Divergent (right, taped) cut in, partly on it ("happened" f3)
+//   f27  Harry Potter and the Deathly Hallows (centre) and Percy Jackson (right, taped) cut in on the upper row's bottoms ("YA" f23)
+//   f36  Twilight cuts in, lowest and on top (taped), and the heap is whole ("gold" f32, "gold rush")
+//   f36-f53 held; only the paper grain and the film life move
+//
+// CHECK LINE: "This is about the giant YA book franchises of the 2000s, all at once." With no sound: the real covers of The
+// Fault in Our Stars, The Hunger Games, Divergent, Harry Potter, Percy Jackson and Twilight are suddenly there on the page,
+// in three hard cuts, as one crooked, overlapping heap.
 //
 // THE LINE: "What happened to the YA gold rush?"
 // WORD -> FRAME: What 0 · happened 3 · to 15 · the 21 · YA 23 · gold 32 · rush 40
 // DURATION: the slot 0.000 -> 2.250 s = 2.25 s x 24 = 54 frames (f0..f53).
 //
-// THE MOTION: one rush of books. It opens close on Harry Potter, already down (skidding its last px) and 64 % of the frame
-// wide; the camera runs one continuous pull-back to the end while the other five are dealt in from off frame, each from its own
-// side, every 6 frames, crooked (4-10 deg, alternating) and each landing 38-57 % on the ones before, so the heap grows faster
-// than the camera opens. Every title stays clear of the later covers (the layout was solved for it). The camera tilts down with
-// the growing heap (world y 480 -> 962, following the low covers as they land, settled by ~f42) while it pulls back (k 1.63 at
-// f0 -> 1.0 by ~f46), so no title sits in a caption band once its cover is down (Divergent's crosses the band's top on its
-// contact frame only); from f35 the heap is settled and the pull-back creeps out to the cut.
-// Contact frames (slapDown: in the air SLAP_DUR 9 frames before, skid SKID_DUR 6 after; the skid is the first reaction, on the
-// contact frame): Harry Potter -3 (skid ends f3, on "happened"), The Hunger Games 5, Twilight 11, Percy Jackson 17, The Fault in
-// Our Stars 23 ("YA"), Divergent 29 (before "gold" 32), its 12 px skid ends f35.
-// End frame (k 1.0): covers 420 px wide, the heap x -56..1104 (the outer two bleed), y 166..1230; every title is wholly visible,
-// inside x 45..1035, and every visible title and author name is above y 1060. Twilight is a scissored copy cut short above its author line (crop 0.86 of the cover's height).
-// Transient: Harry Potter's author line (bottom of the cover) sits in the first caption band f0-f5, until the next covers land on it.
+// REV 2 (user, Nov 7: "still a bit over the top, it can be more stripped down"; REVISION_hardcut.md): no slap-downs, no
+// camera. A cover is on the page or it is not; its tape is there in the same frame. One still framing (world = screen).
+// The heap is now centred on the frame's middle (bbox y 170..1766, centre ~968) instead of high at ~700. Because the
+// camera no longer tilts, the heap was laid out again for the still frame: the same six covers, the same 420 px width and
+// look, crooked 4-10 deg, each new cover 19-55 % on the ones before. The upper row is Fault in Our Stars, Hunger Games and
+// Divergent. The lower row, Harry Potter and Percy Jackson, lies on their bottoms, so their author lines end hidden.
+// Twilight lies lowest, on top.
+// Bands (checked on every held state, f0 / f7 / f27 / f36):
+//   - Every title (Harry Potter with "and the Deathly Hallows") is wholly visible in the end frame, inside x 60..1020.
+//   - No title, author line or tagline sits in y 1080-1250 or 1360-1460 in any state. The art does: the mockingjay
+//     ring, Harry, Percy's sea and Twilight's hands.
+//   - Twilight's small title sits in the gap between the bands (y ~1262-1310). Harry Potter's faint J. K. ROWLING line
+//     also sits in that gap, under Twilight from f36.
+//   - Twilight is the scissored copy, cut short above its author line (0.86 of its height). Percy is now cut the same way
+//     (0.85), which drops its "One / The Lightning Thief" line from the lower band.
 // SPOT INK: none (no marker in this cut: nothing to mark yet). No text: the covers are the artefacts.
 //
 // SOURCES (animation_source/assets_raw/SOURCES.txt): the publishers' US first-edition front covers, from
@@ -35,36 +44,15 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { CaptionBandsDebug, PaperGround, WipCam, WipFilmLife, WipPlane, runWipCamera } from "../kits/works-in-progress/wipShared";
-import { THEME, TapeSpec, XeroxCutOut, slapDown } from "./yaShared";
+import { THEME, TapeSpec, XeroxCutOut } from "./yaShared";
 
 export const FPS = 24;
 export const DURATION = 54;
 export const schema = z.object({ bands: z.boolean() });
 export const defaultProps = schema.parse({ bands: false });
 
-// One pull-back, two tracks through the kit's damped follower: the tilt down from Harry Potter to the heap's middle follows the
-// low covers as they land (so their titles land above the caption bands), the zoom runs on to the end. Both start at the same key, so
-// the rest camera (the paper's parallax anchor) is shared. World = screen at the end (camera ~(540, 962), k ~1.0).
-const tiltAt = runWipCamera(
-  [
-    { f: -16, x: 532, y: 480, k: 1 },
-    { f: 34, x: 540, y: 962, k: 1 },
-    { f: 90, x: 540, y: 966, k: 1, ease: "linear" },
-  ],
-  DURATION,
-);
-const zoomAt = runWipCamera(
-  [
-    { f: -16, x: 532, y: 480, k: 1.72 },
-    { f: 46, x: 532, y: 480, k: 1.0 },
-    { f: 90, x: 532, y: 480, k: 0.975, ease: "linear" },
-  ],
-  DURATION,
-);
-const camAt = (f: number): WipCam => {
-  const t = tiltAt(f);
-  return { ...t, k: zoomAt(f).k };
-};
+// One still framing: world = screen (camera at the frame's centre, k 1). Its key sits before f0 so the paper is at rest.
+const CAM: WipCam = runWipCamera([{ f: -12, x: 540, y: 960, k: 1 }], DURATION)(0);
 
 type Cover = {
   name: string;
@@ -73,62 +61,70 @@ type Cover = {
   x: number;
   y: number;
   rotate: number;
-  contact: number;
-  from: { x: number; y: number };
-  spin: number;
-  skid?: number;
+  at: number; // the frame it cuts in on
+  crop?: number; // scissored copy cut short: the fraction of the cover's height kept, from the top
   tape?: TapeSpec[];
   gamma?: number;
-  position?: string;
 };
 
 const COVER_W = 420;
-// Paint order = landing order: each lands on the ones before. Positions solved so every title stays uncovered and every visible
-// title and author name ends above y 1060 (end frame).
+const CUT_HAPPENED = 7;
+const CUT_YA = 27;
+const CUT_GOLD = 36;
+// Paint order = cut order: each cut lies on the ones before. Positions solved on the still frame for every held state.
 const COVERS: Cover[] = [
-  { name: "hp", src: "wip-ya-boom/ya0_hp_deathly_hallows.png", aspect: 1382 / 1984, x: 531.8, y: 482.6, rotate: -5.9, contact: -3, from: { x: 40, y: -1400 }, spin: -6 },
-  { name: "hg", src: "wip-ya-boom/ya0_hunger_games.png", aspect: 793 / 1200, x: 348.0, y: 640.4, rotate: 4, contact: 5, from: { x: -1000, y: -160 }, spin: 12 },
-  {
-    name: "twilight",
-    src: "wip-ya-boom/ya0_twilight.png",
-    // cut short above the author line: 0.86 of the cover's height, from the top
-    aspect: 1695 / 2560 / 0.86,
-    position: "50% 0%",
-    x: 166.1,
-    y: 835.1,
-    rotate: -4.2,
-    contact: 11,
-    from: { x: -900, y: 760 },
-    spin: -12,
-    tape: [{ at: "t", along: 0.64, angle: 82 }],
-    gamma: 0.9,
-  },
-  { name: "percy", src: "wip-ya-boom/ya0_percy_jackson.png", aspect: 1556 / 2288, x: 778.6, y: 573.0, rotate: 5.7, contact: 17, from: { x: 1000, y: -420 }, spin: 14, tape: [{ at: "r", along: 0.42, angle: 8 }] },
-  { name: "tfios", src: "wip-ya-boom/ya0_fault_in_our_stars.png", aspect: 1701 / 2547, x: 491.4, y: 893.6, rotate: -9.2, contact: 23, from: { x: -140, y: 1300 }, spin: -10 },
+  // upper row: each one's lower text stays above the first band while it is on top, and ends under the covers cut in later
+  { name: "tfios", src: "wip-ya-boom/ya0_fault_in_our_stars.png", aspect: 1701 / 2547, x: 468.8, y: 495.3, rotate: 4.3, at: 0 },
+  { name: "hg", src: "wip-ya-boom/ya0_hunger_games.png", aspect: 793 / 1200, x: 274.1, y: 825.1, rotate: -4, at: CUT_HAPPENED },
   {
     name: "divergent",
     src: "wip-ya-boom/ya0_divergent.png",
     aspect: 1594 / 2400,
-    x: 846.4,
-    y: 850.1,
-    rotate: 9.6,
-    contact: 29,
-    from: { x: 1050, y: 240 },
-    spin: 11,
-    skid: 12,
-    tape: [{ at: "b", along: 0.7, angle: 97 }],
+    x: 812.5,
+    y: 677.3,
+    rotate: 10,
+    at: CUT_HAPPENED,
+    tape: [{ at: "t", along: 0.3, angle: 97 }],
+  },
+  // lower row, on the upper row's bottoms: titles at their tops, above the first band; Harry Potter's faint author line
+  // (J. K. ROWLING) falls in the gap between the bands, and Percy is cut short above its bottom subtitle
+  { name: "hp", src: "wip-ya-boom/ya0_hp_deathly_hallows.png", aspect: 1382 / 1984, x: 364.9, y: 1052.0, rotate: -4, at: CUT_YA },
+  {
+    name: "percy",
+    src: "wip-ya-boom/ya0_percy_jackson.png",
+    aspect: 1556 / 2288,
+    crop: 0.85,
+    x: 815.2,
+    y: 1104.2,
+    rotate: 4,
+    at: CUT_YA,
+    tape: [{ at: "r", along: 0.42, angle: 8 }],
+  },
+  // last, lowest and on top, on "gold rush": the scissored Twilight (cut short above its author line), its small title in the
+  // gap between the bands (y ~1262-1310), the hands and apple below
+  {
+    name: "twilight",
+    src: "wip-ya-boom/ya0_twilight.png",
+    aspect: 1695 / 2560,
+    crop: 0.86,
+    x: 243.9,
+    y: 1468.0,
+    rotate: -8.9,
+    at: CUT_GOLD,
+    tape: [{ at: "t", along: 0.64, angle: 82 }],
+    gamma: 0.9,
   },
 ];
 
 const YaGoldRush: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const frame = useCurrentFrame();
-  const cam = camAt(frame);
+  const cam = CAM;
   return (
     <>
       <WipFilmLife frame={frame} theme={THEME}>
         <PaperGround cam={cam} theme={THEME} />
         <WipPlane cam={cam}>
-          {COVERS.map((c) => (
+          {COVERS.filter((c) => frame >= c.at).map((c) => (
             <XeroxCutOut
               key={c.name}
               src={c.src}
@@ -136,12 +132,11 @@ const YaGoldRush: React.FC<z.infer<typeof schema>> = ({ bands }) => {
               x={c.x}
               y={c.y}
               w={COVER_W}
-              aspect={c.aspect}
-              position={c.position}
+              aspect={c.crop ? c.aspect / c.crop : c.aspect}
+              position={c.crop ? "50% 0%" : undefined}
               rotate={c.rotate}
               tape={c.tape}
               gamma={c.gamma}
-              slap={slapDown(frame, c.contact, { from: c.from, spin: c.spin, skid: c.skid })}
               seed={`ya0-${c.name}`}
             />
           ))}
