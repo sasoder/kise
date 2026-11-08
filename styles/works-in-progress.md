@@ -65,6 +65,10 @@ things happening, not on animation: "the red pen getting drawn is very extra and
 - Markings (circles, arrows, lines, a scrawled year or number) are welcome but **cut in whole** on their frame, static:
   no draw-on, no boil.
 - The camera stays still. The frame lives through the paper grain only.
+- Nov 7 ranking: "ya boom" (`wip-ya-boom/yaShared.tsx`: b&w photocopy cut-outs on one page, tape, mono labels, red
+  marker only) was judged better than the first "entertainment industry" pass, "definitely a step more in the right
+  direction", but "still a bit over the top, can be more stripped down". Both first passes still moved too much (camera
+  pulls and descents, deals, slap-downs, write-ons, a hand, a toppling tower). Keep ya boom's look; apply the rules above.
 
 ## Kit
 

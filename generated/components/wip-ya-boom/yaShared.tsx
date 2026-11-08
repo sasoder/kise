@@ -324,6 +324,8 @@ const tapePlacement = (spec: TapeSpec, w: number, h: number, seed: string, i: nu
  *   border         the mean scissor margin, world px (cover default 13, person 9).
  *   contrast 0..1  how hard the copier's curve is (default 0.6); `gamma` > 1 darkens the mid-tones, < 1 opens a dark subject.
  *   speckle 0..1   toner specks and drop-outs (default 0.5). `edge` 0..1 the darkened rim (default 0.3).
+ *   colour         true: the photo keeps its own colours (bake it with bake-photo.py --colour); no photocopy grade, the
+ *                  scissored paper margin, tape and shadow stay. Default false (the b&w photocopy).
  *   tape           strips stuck on it, e.g. ["tl", "br"] or [{at: "t", along: 0.3}]. They travel with it.
  *   slap           slapDown(frame, contact, {...}): its offset, spin, lift and press. Without it the paste lies still.
  *   lift / shadow  a still paste's lift (0 flat .. 1 carried) and the shadow's strength.
@@ -345,6 +347,7 @@ export const XeroxCutOut: React.FC<{
   gamma?: number;
   speckle?: number;
   edge?: number;
+  colour?: boolean;
   tape?: TapeSpec[];
   slap?: Slap;
   lift?: number;
@@ -366,6 +369,7 @@ export const XeroxCutOut: React.FC<{
   gamma = 1,
   speckle = 0.5,
   edge = 0.3,
+  colour = false,
   tape = [],
   slap = SLAP_REST,
   lift,
@@ -382,7 +386,7 @@ export const XeroxCutOut: React.FC<{
   const L = lift ?? slap.lift;
   const edgeR = Math.max(3, Math.min(w, h) * 0.03);
   const photo = (
-    <div style={{ position: "absolute", left: 0, top: 0, width: w, height: h, filter: `url(#${gradeId})` }}>
+    <div style={{ position: "absolute", left: 0, top: 0, width: w, height: h, filter: colour ? undefined : `url(#${gradeId})` }}>
       <Img
         src={staticFile(src)}
         style={{

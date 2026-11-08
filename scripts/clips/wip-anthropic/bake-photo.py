@@ -6,7 +6,7 @@ levels to the same black and white, the mid-tone pulled to the same grey, a litt
   swift scripts/clips/neal-stephenson-trailer/neal-matte.swift <in.jpg> <scratch>/mask.png fg
   # the graded print
   uv run --offline --with numpy --with pillow --with scipy python scripts/clips/wip-anthropic/bake-photo.py \
-      <in.jpg> public/wip-anthropic/<name>.png [--matte <scratch>/mask.png] [--max 1600] [--crop x0,y0,x1,y1] [--mid 0.46]
+      <in.jpg> public/wip-anthropic/<name>.png [--matte <scratch>/mask.png] [--max 1600] [--crop x0,y0,x1,y1] [--mid 0.46] [--colour]
 
 Prints w, h and the aspect for CutOut. The kit's CutOut / PrintPhoto then add the shared print finish at render time
 (duotone black and white of the page, print grain), so a baked and an unbaked photo sit on the page the same way;
@@ -25,6 +25,7 @@ p.add_argument("--matte")
 p.add_argument("--max", type=int, default=1600)
 p.add_argument("--crop")
 p.add_argument("--mid", type=float, default=0.46, help="the median of the print, 0..1")
+p.add_argument("--colour", action="store_true", help="keep the photo's colour: the same levels, mid-tone and local contrast per channel, no greyscale")
 a = p.parse_args()
 
 im = ImageOps.exif_transpose(Image.open(a.src)).convert("RGB")
@@ -58,6 +59,14 @@ g = np.clip(g + 0.45 * (g - gaussian_filter(g, r)), 0, 1)
 # a printed S-curve
 g = g * g * (3 - 2 * g) * 0.45 + g * 0.55
 
+if a.colour:
+    # the same levels and mid-tone as the grey print, applied to each channel, so colour photos still match each other
+    c = np.clip((rgb - lo) / max(hi - lo, 1e-3), 0, 1) ** np.clip(gamma, 0.45, 2.2)
+    c = np.clip(c + 0.3 * (c - gaussian_filter(c, (r, r, 0))), 0, 1)
+    out = np.dstack([c, alpha])
+    Image.fromarray((out * 255 + 0.5).astype(np.uint8), "RGBA").save(a.out, optimize=True)
+    print(f"{a.out}: {im.width} x {im.height}, aspect {im.width / im.height:.4f}, colour")
+    raise SystemExit(0)
 out = np.dstack([g, g, g, alpha])
 Image.fromarray((out * 255 + 0.5).astype(np.uint8), "RGBA").save(a.out, optimize=True)
 print(f"{a.out}: {im.width} x {im.height}, aspect {im.width / im.height:.4f}, median {np.median(g[alpha > 0.5]):.3f}")
