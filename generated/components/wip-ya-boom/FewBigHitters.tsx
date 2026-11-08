@@ -3,6 +3,9 @@
 // generated/components/kits/works-in-progress/wipShared.tsx) with the clip's materials (./yaShared.tsx).
 // Opaque 1080x1920, 24 fps, 144 frames.
 //
+// REV 3 (Nov 8, "bring back all the colors"): rev 2's cuts, framing and layout unchanged; every cover and portrait in its
+// own colour (baked with bake-photo.py --colour, XeroxCutOut `colour`: no photocopy grade, the scissored margin, tape and
+// shadow stay), the publisher logos in their real brand colours on their paper slips; the red ring stays.
 // BEAT MAP (rev 2, hard cuts; each cut lands about 4 frames after the word's Whisper onset):
 //   f0   the Bestsellers list (header, eight empty ruled slots) and the four authors' portraits under it, already pasted
 //   f14  covers 1-4 cut in, with their tape: It Ends with Us, Fourth Wing, Verity, Onyx Storm ("charts" f10)
@@ -13,8 +16,8 @@
 //   f107-f143 held; only the paper grain lives
 //
 // CHECK LINE: "the bestseller chart is now filled by the same few authors, and all the big publishers are crowding round
-// them". With no sound: a photocopied "Bestsellers" list fills with real covers by only four authors (Colleen Hoover and
-// Rebecca Yarros three times each), the four authors' photocopied portraits under it get one red ring, and the logos of the
+// them". With no sound: a printed "Bestsellers" list fills with real covers by only four authors (Colleen Hoover and
+// Rebecca Yarros three times each), the four authors' cut-out portraits under it get one red ring, and the logos of the
 // Big Five publishers are suddenly pressed in all round them.
 //
 // THE LINE: "Today's book charts are dominated by a dwindling number of big hitting authors that all of the publishing houses
@@ -30,8 +33,8 @@
 // the paper grain only.
 // Framing: the list and the four faces (face-box bottoms at y 1044) sit above y 1080; the portraits' torsos and the bottom
 // slips' blank paper cross the bands; the bottom slips' printed marks start below y 1460 (about y 1470).
-// SPOT INK: red = the editor's felt-tip marking "the same few" (the ring round the four authors). No real colour: the logos
-// are printed in one black ink.
+// SPOT INK: red = the editor's felt-tip marking "the same few" (the ring round the four authors). Real colour: the covers,
+// the portraits and the publishers' own logo colours (rev 3).
 //
 // The list is a header and eight ruled slots only: no rank numbers, no section, no claim about a real chart.
 // SOURCES (animation_source/assets_raw/SOURCES.txt): front covers (publisher art) of It Ends with Us, It Starts with Us,
@@ -159,6 +162,7 @@ const FewBigHitters: React.FC<z.infer<typeof schema>> = ({ bands }) => {
           {frame >= LOGO_CUT &&
             BOTTOM_LOGOS.map((l) => (
             <XeroxCutOut
+              colour
               key={l.name}
               src={l.src}
               kind="cover"
@@ -178,13 +182,14 @@ const FewBigHitters: React.FC<z.infer<typeof schema>> = ({ bands }) => {
         <WipPlane cam={cam}>
           {PEOPLE.map((p) => {
             const bx = personBox(p);
-            return <XeroxCutOut key={p.name} src={p.src} kind="person" x={bx.x} y={bx.y} w={bx.w} aspect={p.aspect} rotate={p.rotate} flipX={p.flipX} gamma={p.gamma} seed={`fbh-${p.name}`} />;
+            return <XeroxCutOut colour key={p.name} src={p.src} kind="person" x={bx.x} y={bx.y} w={bx.w} aspect={p.aspect} rotate={p.rotate} flipX={p.flipX} gamma={p.gamma} seed={`fbh-${p.name}`} />;
           })}
         </WipPlane>
         <WipPlane cam={cam}>
           {COVERS.map((c, i) =>
             frame < COVER_CUT[i] ? null : (
             <XeroxCutOut
+              colour
               key={c.name}
               src={c.src}
               kind="cover"
@@ -207,6 +212,7 @@ const FewBigHitters: React.FC<z.infer<typeof schema>> = ({ bands }) => {
           {frame >= LOGO_CUT &&
             TOP_LOGOS.map((l) => (
             <XeroxCutOut
+              colour
               key={l.name}
               src={l.src}
               kind="cover"

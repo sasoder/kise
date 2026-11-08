@@ -1,9 +1,9 @@
 """Bake the covers, author portraits and publisher logos of FewBigHitters (wip-ya-boom, cut 51) into public/wip-ya-boom/.
 
-Covers: the kit's one grade, no matte (flat rectangles). People: the Apple Vision person matte, cropped to head and shoulders,
-then the grade. Logos: the real SVG marks turned into ONE black ink on white copy paper (colour fills -> ink; PRH's orange
-oval -> paper, so its penguin prints as the familiar one-colour mark; HarperCollins drops the grey "Publishers"), with a
-paper margin round the mark; the photocopy finish is added at render time by XeroxCutOut. Run from the kise repo root:
+Covers: the kit's one grade in colour (bake-photo.py --colour), no matte (flat rectangles). People: the Apple Vision person
+matte, cropped to head and shoulders, then the same colour grade. Logos: the real SVG marks in their own brand colours
+(SINGLE_INK = False; rev 1/2 printed them in one black ink), HarperCollins without the grey "Publishers", on white copy paper
+with a margin round the mark (more paper above the three bottom slips' marks). Run from the kise repo root:
   uv run --offline --with numpy --with pillow --with scipy python scripts/clips/wip-ya-boom/bake-FewBigHitters.py [--only covers|people|logos]
 """
 import argparse
@@ -16,6 +16,9 @@ RAW = "/Users/tom/Documents/tom fant/wip/nov/entertainment industry + ya boom/ya
 OUT = "public/wip-ya-boom"
 BAKE = ["uv", "run", "--offline", "--with", "numpy", "--with", "pillow", "--with", "scipy", "python", "scripts/clips/wip-anthropic/bake-photo.py"]
 INK = "#121212"
+# rev 3 (Nov 8, "bring back all the colors"): photos and covers keep their colour (bake-photo.py --colour) and the logos keep
+# their real brand colours, as each logo file shows them. True = rev 1/2: every logo printed in one black ink.
+SINGLE_INK = False
 
 COVERS = [
     ("cover_ItEndsWithUs.jpg", "fbh_itendswithus.png", 0.5),
@@ -54,7 +57,7 @@ os.makedirs(OUT, exist_ok=True)
 
 if a.only in (None, "covers"):
     for raw, out, mid in COVERS:
-        subprocess.run(BAKE + [os.path.join(RAW, "covers", raw), os.path.join(OUT, out), "--max", "900", "--mid", str(mid)], check=True)
+        subprocess.run(BAKE + [os.path.join(RAW, "covers", raw), os.path.join(OUT, out), "--max", "900", "--mid", str(mid), "--colour"], check=True)
 
 if a.only in (None, "people"):
     from PIL import Image, ImageDraw
@@ -73,7 +76,7 @@ if a.only in (None, "people"):
                 for poly in erase:
                     d.polygon([((x0 + x * (x1 - x0)) * sx, (y0 + y * (y1 - y0)) * sy) for x, y in poly], fill=0)
                 m.save(mask)
-            subprocess.run(BAKE + [src, os.path.join(OUT, out), "--matte", mask, "--max", "1200", "--crop", crop, "--mid", str(mid)], check=True)
+            subprocess.run(BAKE + [src, os.path.join(OUT, out), "--matte", mask, "--max", "1200", "--crop", crop, "--mid", str(mid), "--colour"], check=True)
 
 if a.only in (None, "logos"):
     for raw, out, remap, drop, margin, top in LOGOS:
@@ -90,9 +93,10 @@ if a.only in (None, "logos"):
             if col.lower() in ("#fff", "#ffffff", "white", "none"):
                 return m.group(0)
             return m.group(1) + INK
-        svg = re.sub(r"(fill(?:=\"|:))(#[0-9a-fA-F]{3,6}|white|none)", ink, svg)
-        # gradient fills (Macmillan's wave) print as solid ink too
-        svg = re.sub(r"(fill(?:=\"|:))url\(#[^)]+\)", lambda m: m.group(1) + INK, svg)
+        if SINGLE_INK:
+            svg = re.sub(r"(fill(?:=\"|:))(#[0-9a-fA-F]{3,6}|white|none)", ink, svg)
+            # gradient fills (Macmillan's wave) print as solid ink too
+            svg = re.sub(r"(fill(?:=\"|:))url\(#[^)]+\)", lambda m: m.group(1) + INK, svg)
         # paths with no fill draw black by default: that is ink already. Now the paper margin: grow the viewBox and lay a
         # white sheet under the mark.
         vb = re.search(r'viewBox="([^"]+)"', svg)
