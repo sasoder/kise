@@ -11,8 +11,8 @@
 // resigning 29 · about 41 · one 46 · thing 53 · or 58 · another 62 · about 68 · twice 84 · a 92 · day 97 · (He 109).
 // DURATION: the slot 48.792 -> 54.083 s = 5.292 s x 24 = 127 frames (f0..f126).
 //
-// THE MOTION: the original's pinned card on the dark cork, re-staged tall: the card 900 px wide in the upper
-// middle, its push pin top centre, the typed side sheets tucked under it above and peeking in below, cut by the
+// THE MOTION: the original's pinned card on the dark cork, re-staged tall: the card 900 px wide centred on the
+// frame (centre y 950, rev 1), its push pin top centre, the typed side sheets tucked under it above and peeking in below, cut by the
 // frame. Frame 0 already holds the cork, the card, the printed grey attribution and the opening quote mark; the
 // quote types on letter by letter with the voice (each word's letters inside its spoken span, "day.”" done by f100),
 // under one slow push-in (k 1 -> 1.04) that runs from f0 to the last frame, then a living hold (push + grain).
@@ -43,7 +43,10 @@ export const defaultProps = schema.parse({});
 // world px per lifted px: the card is 2058 px wide in the 4K frame, lifted at 0.5 -> 1029, shown 900 wide
 const S = 900 / 1029;
 
-const CARD = { x: 90, y: 368, w: 900, h: 640 };
+// rev 1 (user, Nov 8: "move down … so everything is a bit more centered"): the whole board moves down 262 px so the
+// card's centre sits at y 950; the attribution may sit in the upper caption band (rev1_notes.md B)
+const CARD = { x: 90, y: 630, w: 900, h: 640 };
+const FOCUS_Y = CARD.y + CARD.h / 2 - 8; // the push target, moved down with the card (was 680 for the card at 368)
 // the pin crop (4K x 1720..2060, y 240..600) has the head centre at (211, 105) 4K px = (105.5, 52.5) lifted px
 const PIN = { w: 170, h: 180, cx: 105.5, cy: 52.5 };
 const PIN_AT = { x: 540, y: CARD.y + 17 }; // the original's head sits 38 4K px below the card's top edge
@@ -80,17 +83,18 @@ const STROKE = 1.1;
 
 const QuoteCard: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
-  const cam = driftTransform(frame / (DURATION - 1), 1, 1.04, 540, 680, 0, -6);
+  const cam = driftTransform(frame / (DURATION - 1), 1, 1.04, 540, FOCUS_Y, 0, -6);
   const sheetShadow = "drop-shadow(0 10px 12px rgba(0,0,0,0.6))";
   return (
     <AbsoluteFill style={{ backgroundColor: "rgb(30,30,30)", overflow: "hidden" }}>
       <div style={{ position: "absolute", left: 0, top: 0, width: 1080, height: 1920, transformOrigin: "0 0", transform: cam.css }}>
         <CorkPlate src="qc_cork.jpg" w={1440} h={2400} s={S} cx={540} cy={960} />
-        {/* typed side sheets, cut by the frame on their outer side: lower halves above the card, tops below it */}
-        <Cutout src="qc_sheetL.png" w={400} h={965} s={S} x={-44} y={CARD.y + 60 - 844} rot={-1.6} style={{ filter: sheetShadow }} />
-        <Cutout src="qc_sheetR.png" w={390} h={960} s={S} x={1080 + 44 - 341} y={CARD.y + 80 - 840} rot={1.3} style={{ filter: sheetShadow }} />
-        <Cutout src="qc_sheetL.png" w={400} h={965} s={S} x={-40} y={1452} rot={1.1} style={{ filter: sheetShadow }} />
-        <Cutout src="qc_sheetR.png" w={390} h={960} s={S} x={1080 + 40 - 341} y={1482} rot={-1.4} style={{ filter: sheetShadow }} />
+        {/* typed side sheets, cut by the frame on their outer side: their lower parts peek in above the card (to y ~390),
+            their tops below it (from y ~1450), so no line of type shows twice; cork round the card between them */}
+        <Cutout src="qc_sheetL.png" w={400} h={965} s={S} x={-44} y={374 - 844} rot={-1.6} style={{ filter: sheetShadow }} />
+        <Cutout src="qc_sheetR.png" w={390} h={960} s={S} x={1080 + 44 - 341} y={400 - 840} rot={1.3} style={{ filter: sheetShadow }} />
+        <Cutout src="qc_sheetL.png" w={400} h={965} s={S} x={-40} y={1450} rot={1.1} style={{ filter: sheetShadow }} />
+        <Cutout src="qc_sheetR.png" w={390} h={960} s={S} x={1080 + 40 - 341} y={1480} rot={-1.4} style={{ filter: sheetShadow }} />
         <PaperSheet
           src="qc_paper.jpg"
           x={CARD.x}

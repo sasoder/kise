@@ -13,7 +13,7 @@
 // DURATION: the slot 62.167 -> 67.125 s = 4.958 s x 24 = 119 frames (f0..f118).
 //
 // THE MOTION: the original's white form pinned at its top corners to the warm cork, re-staged tall (900 px wide,
-// all type above y 1080), lying on a small static stack of identical forms whose edges show under it. Frame 0
+// centred on y ~950 since rev 1), lying on a small static stack of identical forms whose edges show under it. Frame 0
 // holds the cork, the stack and the printed header (CITY OF NEW YORK / RESIGNATION / rule); "I, Robert Moses, do
 // hereby resign as" types on with the voice ("I," on f5 ... "as" on f59), the blank rule after "as" and the second
 // blank line draw on through "so-and-so" (f66-80), "Dated ____, 193__" and the signature line with "(Signature)"
@@ -32,8 +32,11 @@ export const DURATION = 119;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
-const FORM = { x: 90, y: 220, w: 900, h: 800 };
-// the push-in ends at K_END about (540, 600); the type's right edge sits at form x 805 (world 895) so it stays
+// rev 1 (user, Nov 8: "it should be more centered"): the whole board moves down 315 px so the form and its stack
+// centre on y ~950; Dated/Signature may sit in the upper caption band (rev1_notes.md B)
+const FORM = { x: 90, y: 535, w: 900, h: 800 };
+const FOCUS_Y = FORM.y + 380; // the push target, moved down with the form (was 600 for the form at 220)
+// the push-in ends at K_END about (540, FOCUS_Y); the type's right edge sits at form x 805 (world 895) so it stays
 // inside the apps' safe x 920 at the last frame (540 + 355 x 1.06 = 916)
 const K_END = 1.06;
 const TEXT_L = 60;
@@ -111,16 +114,18 @@ const Rule: React.FC<{ p: number; w?: number; flex?: boolean; thick?: number; dr
 
 const ResignForm: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
-  const cam = driftTransform(frame / (DURATION - 1), 1, K_END, 540, 600, 0, 0);
+  const cam = driftTransform(frame / (DURATION - 1), 1, K_END, 540, FOCUS_Y, 0, 0);
   const body: React.CSSProperties = { fontFamily: FORM_FONT, fontWeight: 500, color: INK };
   return (
     <AbsoluteFill style={{ backgroundColor: "rgb(80,76,70)", overflow: "hidden" }}>
       <div style={{ position: "absolute", left: 0, top: 0, width: 1080, height: 1920, transformOrigin: "0 0", transform: cam.css }}>
         <CorkPlate src="rf_cork.jpg" w={1440} h={2400} s={0.875} cx={540} cy={960} />
-        {/* the rest of the board: two typed sheets low in the corners, below the caption bands, cut by the frame and
+        {/* the rest of the board: typed sheets peeking in above and below the form at the corners, cut by the frame and
             soft like the original's out-of-focus edges (the QuoteCard sheets, warmed to this board's light) */}
-        <Cutout src="qc_sheetL.png" w={400} h={965} s={0.86} x={-46} y={1500} rot={1.6} style={{ filter: SIDE_SHEET }} />
-        <Cutout src="qc_sheetR.png" w={390} h={960} s={0.86} x={1080 + 46 - 335} y={1540} rot={-1.2} style={{ filter: SIDE_SHEET }} />
+        <Cutout src="qc_sheetL.png" w={400} h={965} s={0.86} x={-46} y={400 - 830} rot={-1.4} style={{ filter: SIDE_SHEET }} />
+        <Cutout src="qc_sheetR.png" w={390} h={960} s={0.86} x={1080 + 46 - 335} y={425 - 826} rot={1.2} style={{ filter: SIDE_SHEET }} />
+        <Cutout src="qc_sheetL.png" w={400} h={965} s={0.86} x={-46} y={1460} rot={1.6} style={{ filter: SIDE_SHEET }} />
+        <Cutout src="qc_sheetR.png" w={390} h={960} s={0.86} x={1080 + 46 - 335} y={1495} rot={-1.2} style={{ filter: SIDE_SHEET }} />
         {STACK.map((s, i) => (
           <PaperSheet
             key={i}
