@@ -33,6 +33,10 @@
 //     also sits in that gap, under Twilight from f36.
 //   - Twilight is the scissored copy, cut short above its author line (0.86 of its height). Percy is now cut the same way
 //     (0.85), which drops its "One / The Lightning Thief" line from the lower band.
+// REV 3 (user, Nov 8: "bring back all the colors"; REVISION_colour.md): rev 2 exactly (cuts, framing, layout, crops,
+// tape), the six covers re-baked in their own colours (bake-YaGoldRush.py --colour) and shown with XeroxCutOut `colour`:
+// no photocopy grade, the copy-paper margin, tape and shadow stay. In colour Harry Potter's J. K. ROWLING line reads
+// clearly; it is still in the gap between the bands (f27-f35), under Twilight from f36.
 // SPOT INK: none (no marker in this cut: nothing to mark yet). No text: the covers are the artefacts.
 //
 // SOURCES (animation_source/assets_raw/SOURCES.txt): the publishers' US first-edition front covers, from
@@ -129,6 +133,7 @@ const YaGoldRush: React.FC<z.infer<typeof schema>> = ({ bands }) => {
               key={c.name}
               src={c.src}
               kind="cover"
+              colour
               x={c.x}
               y={c.y}
               w={COVER_W}

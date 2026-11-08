@@ -1,5 +1,5 @@
-"""Bake the six covers of YaGoldRush (wip-ya-boom, cut 0) with the Works in Progress kit's one photo grade (no matte: covers
-are flat rectangles). The photocopy look is added at render time by yaShared.tsx's XeroxCutOut.
+"""Bake the six covers of YaGoldRush (wip-ya-boom, cut 0) in colour (rev 3: --colour, the kit grade per channel; no matte: covers
+are flat rectangles). XeroxCutOut shows them with `colour`: no photocopy grade, only the copy-paper margin, tape and shadow.
 
   python3 scripts/clips/wip-ya-boom/bake-YaGoldRush.py
 """
@@ -25,7 +25,7 @@ for name, (raw, mid) in COVERS.items():
         [
             "uv", "run", "--offline", "--with", "numpy", "--with", "pillow", "--with", "scipy", "python",
             os.path.join(ROOT, "scripts", "clips", "wip-anthropic", "bake-photo.py"),
-            os.path.join(RAW, raw), os.path.join(OUT, f"{name}.png"), "--max", "1100", "--mid", str(mid),
+            os.path.join(RAW, raw), os.path.join(OUT, f"{name}.png"), "--max", "1100", "--mid", str(mid), "--colour",
         ],
         check=True,
     )
