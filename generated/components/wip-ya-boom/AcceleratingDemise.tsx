@@ -2,6 +2,7 @@
 // AcceleratingDemise (wip-ya-boom, cut 68, the clip's last shot). Works in Progress style (styles/works-in-progress.md,
 // "Stripped-down variant"; kit generated/components/kits/works-in-progress/wipShared.tsx) with the clip's materials
 // (./yaShared.tsx). Opaque 1080x1920, 24 fps, 111 frames. Rev 2: states shown as hard cuts (notes/REVISION_hardcut.md).
+// Rev 3: every spine in its cover's own colours (bake-photo.py --colour, XeroxCutOut colour; notes/REVISION_colour.md).
 //
 // BEAT MAP (every change is a hard cut, on the word's onset + 4 frames; nothing moves in between):
 // f0   the leaning tower of 11 photocopied spines, 2.5 deg, its contact shadow on the page ("In the attempt")
@@ -234,6 +235,7 @@ const AcceleratingDemise: React.FC<z.infer<typeof schema>> = ({ bands }) => {
                 key={b.key}
                 src={b.s.src}
                 kind="cover"
+                colour
                 x={pose.x}
                 y={pose.y}
                 w={b.w}

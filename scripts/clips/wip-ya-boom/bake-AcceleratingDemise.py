@@ -1,8 +1,8 @@
 """Bake the spines and the hand of AcceleratingDemise (wip-ya-boom, cut 68) into public/wip-ya-boom/ad_*.png.
 
 Spines: a horizontal band of a real front cover (the author's name, or a strip of the cover art with no lettering) cut out as
-a flat strip, so a stack of them reads as book spines seen side-on; the kit's one grade, no matte. The photocopy finish is
-added at render time by yaShared.tsx's XeroxCutOut.
+a flat strip, so a stack of them reads as book spines seen side-on; the kit's levels in colour (--colour, rev 3), no matte.
+XeroxCutOut shows them in their own colours (its colour prop).
 Hand: assets_raw/photos/hand_ReachingBookOnShelf_colour.jpg (the back of a hand with its fingers on a shelf), a traced
 scissor-cut polygon (the automatic mattes miss the fingers), turned upside down so the fingers hang over the top of a lying
 spine and the wrist runs up out of the frame.
@@ -65,7 +65,7 @@ if a.only in (None, "spines"):
         src = os.path.join(RAW, "covers", raw)
         w, h = Image.open(src).size
         crop = f"{round(side * w)},{round(y0 * h)},{round((1 - side) * w)},{round(y1 * h)}"
-        subprocess.run(BAKE + [src, os.path.join(OUT, f"{out}.png"), "--crop", crop, "--max", "900", "--mid", str(mid)], check=True)
+        subprocess.run(BAKE + [src, os.path.join(OUT, f"{out}.png"), "--crop", crop, "--max", "900", "--mid", str(mid), "--colour"], check=True)
 
 if a.only in (None, "hand"):
     from PIL import Image, ImageDraw
@@ -81,4 +81,4 @@ if a.only in (None, "hand"):
         win.transpose(Image.Transpose.ROTATE_180).save(turned_src)
         mask.transpose(Image.Transpose.ROTATE_180).save(turned_mask)
         # turned, the hand spans x 225-1290, y 330-2215 of the window; crop to it with a little air
-        subprocess.run(BAKE + [turned_src, os.path.join(OUT, "ad_hand_down.png"), "--matte", turned_mask, "--crop", "200,300,1320,2240", "--max", "1100", "--mid", "0.5"], check=True)
+        subprocess.run(BAKE + [turned_src, os.path.join(OUT, "ad_hand_down.png"), "--matte", turned_mask, "--crop", "200,300,1320,2240", "--max", "1100", "--mid", "0.5", "--colour"], check=True)
