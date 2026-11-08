@@ -106,9 +106,8 @@ export const FiringGlowDefs: React.FC = () => (
   </defs>
 );
 
-// The glint halo (merged Hydra cut only): the same bloom recipe as FIRING_GLOW (luminance key, a tight and a wide blur
-// under the source), stronger, applied to a white disc over each glinting eye. Put <FiringGlintDefs/> next to
-// <FiringGlowDefs/>; Hydra draws the discs only while a head has glint > 0.
+// FIRING_GLINT: a stronger version of the bloom (kept for compatibility; since Hydra rev 2 nothing draws with it, the
+// glint's light is the exp falloff in Hydra.tsx).
 export const FIRING_GLINT = "firingGlint";
 export const FiringGlintDefs: React.FC = () => (
   <defs>
@@ -466,7 +465,7 @@ export const neckPoint = (pose: NeckPose, u: number): [number, number] => {
 const headT = (pose: NeckPose, scale: number) =>
   `translate(${n(pose.head[0])} ${n(pose.head[1])}) rotate(${n(pose.ang)}) scale(${n(HEAD_S * scale)})`;
 
-// a glint swells the eye to 3x its radius (a lit head's eye is 1.75x); Hydra adds a bloom halo (FIRING_GLINT)
+// a glint swells the eye to 3x its radius (a lit head's eye is 1.75x); the light it casts is the caller's (Hydra.tsx)
 export const GLINT_GROW = 2;
 export const HydraHead: React.FC<{ pose: NeckPose; lit?: number; scale?: number; glint?: number }> = ({
   pose,
@@ -585,16 +584,6 @@ export const Hydra: React.FC<{ G: number; heads: HeadState[]; underTags?: React.
             glint={heads[i].glint ?? 0}
           />
         ) : null,
-      )}
-      {heads.some((h) => (h.glint ?? 0) > 0.001) && (
-        <g filter={`url(#${FIRING_GLINT})`}>
-          {poses.map((p, i) => {
-            const g = clamp01(heads[i].glint ?? 0);
-            if (g <= 0.001 || heads[i].grow <= 0.001) return null;
-            const e = eyeWorld(p, 1 + 0.08 * clamp01(heads[i].lit ?? 0));
-            return <circle key={`g${i}`} cx={n(e.x)} cy={n(e.y)} r={n(e.r * (1 + GLINT_GROW) * g)} fill={F_EYE} />;
-          })}
-        </g>
       )}
       <HydraBody />
       {overHeads}

@@ -38,9 +38,14 @@
 // frame in the builder's scratch: scripts/bounds.ts).
 //
 // THE ADDITIONS: on "12" (f35-63) the twelve eyes flash one after another, left to right, 2 f apart: each eye swells
-// to 3x in 2 f with a white bloom halo (FIRING_GLINT, the show's glow recipe, stronger) and eases back over 4 f, and
-// its head dips 4 deg forward as it counts. On "at the same time" all twelve flash together once (up f78-81, held to
-// f83, settled by f91), with the heads' existing unison dip. The snip: the scissors (re-placed so their rings stay in frame at the tight framing)
+// to 3x in 2 f and eases back over 4 f, its head dips 4 deg forward as it counts, and the eye is a light source: white
+// light with an exponential falloff I(r) = exp(-r/50) (world px, no edge: it reaches 0 at r 300) spills onto its own
+// neck, the neighbouring heads and the grey ground (visible to ~200 px). White at alpha I composited normally is
+// exactly a screen blend, so the ground brightens additively and overlapping lights add up like light. The light is
+// laid twice: full under the hydra (the ground) and at 35% over it (the black silhouettes pick up a faint light,
+// brighter on the side facing the eye). On "at the same time" all twelve light together once (up f78-81, held to f83,
+// settled by f91), each at half a count's light, overlapping into one glow over the fan, with the heads' existing unison dip.
+// Rev 2 (user): the earlier disc halo read as "a circle lit around each head"; replaced by this falloff. The snip: the scissors (re-placed so their rings stay in frame at the tight framing)
 // jam on the necks on "cut" (CONTACT f335); on f336 the head whose neck the blades close on recoils away from them
 // (the head rears back 18 deg and its upper neck gives 3 deg about the fork, out in 3 f) and settles back over 11 f — one
 // reaction, no damage; V1's six-head jerk is dropped for it.
@@ -56,7 +61,6 @@ import { AbsoluteFill, Easing, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   FIRING_GLOW,
-  FiringGlintDefs,
   FiringGlowDefs,
   FiringGround,
   HeadState,
@@ -67,6 +71,7 @@ import {
 import { PostLabels, tpHeads } from "./TwelvePosts";
 import { HANDS_SNIP, HandsLayout, handsAct } from "./HydraHands";
 import { camTransform } from "./hydraCamera";
+import { eyeWorld, neckPose } from "./firingShared";
 
 export const FPS = 24;
 export const DURATION = 366;
@@ -115,6 +120,49 @@ const flinch = (h: number) => {
   return 1 - inOut(clamp01((t - 3) / 11));
 };
 
+// ---- the light an eye casts --------------------------------------------------------------------------------------
+const LIGHT_R = 300; // world px, where the falloff reaches 0
+const LIGHT_R0 = 50; // world px, I(r) = exp(-r / r0)
+const LIGHT_PEAK = 0.72; // alpha of the white light at the eye at a full glint
+const LIGHT_ON_INK = 0.35; // the share laid over the silhouettes
+const FLARE_LIGHT = 0.5; // in the unison flash each eye casts half a count's light: twelve overlap into one glow
+const LIGHT_ID = "hydraEyeLight";
+const LIGHT_STOPS = 64;
+const tail = Math.exp(-LIGHT_R / LIGHT_R0);
+const lightStops = Array.from({ length: LIGHT_STOPS + 1 }, (_, j) => {
+  const t = j / LIGHT_STOPS;
+  const I = (Math.exp((-t * LIGHT_R) / LIGHT_R0) - tail) / (1 - tail);
+  return { offset: t, a: Math.max(0, I) };
+});
+const LightDefs: React.FC = () => (
+  <defs>
+    <radialGradient id={LIGHT_ID} cx="50%" cy="50%" r="50%">
+      {lightStops.map((q) => (
+        <stop key={q.offset} offset={q.offset.toFixed(5)} stopColor="#ffffff" stopOpacity={q.a.toFixed(5)} />
+      ))}
+    </radialGradient>
+  </defs>
+);
+const EyeLights: React.FC<{ G: number; heads: HeadState[]; light: number[]; gain: number }> = ({ G, heads, light, gain }) => (
+  <g>
+    {heads.map((s, i) => {
+      const g = clamp01(light[i] ?? 0);
+      if (g <= 0.001 || s.grow <= 0.001) return null;
+      const e = eyeWorld(neckPose(i, G, s.grow, s.nod ?? 0, s.bend ?? 0), 1 + 0.08 * clamp01(s.lit ?? 0));
+      return (
+        <circle
+          key={i}
+          cx={e.x.toFixed(2)}
+          cy={e.y.toFixed(2)}
+          r={LIGHT_R}
+          fill={`url(#${LIGHT_ID})`}
+          opacity={(gain * LIGHT_PEAK * g).toFixed(4)}
+        />
+      );
+    })}
+  </g>
+);
+
 const HydraCut: React.FC<z.infer<typeof schema>> = () => {
   const h = useCurrentFrame();
   const G = worldG(h);
@@ -130,8 +178,10 @@ const HydraCut: React.FC<z.infer<typeof schema>> = () => {
     heads = act.heads;
     layer = act.layer;
   }
+  const light: number[] = [];
   heads = heads.map((s, i) => {
     const c = countAt(i, h);
+    light[i] = Math.max(c, FLARE_LIGHT * flareAt(h));
     return { ...s, glint: Math.max(c, flareAt(h)), nod: (s.nod ?? 0) + (i < 6 ? -1 : 1) * COUNT_NOD * c };
   });
 
@@ -140,12 +190,14 @@ const HydraCut: React.FC<z.infer<typeof schema>> = () => {
       <FiringGround G={h} />
       <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0 }}>
         <FiringGlowDefs />
-        <FiringGlintDefs />
+        <LightDefs />
         <g transform={camTransform(h)}>
+          <EyeLights G={G} heads={heads} light={light} gain={1} />
           <g filter={`url(#${FIRING_GLOW})`}>
             <HydraFan G={G} heads={heads} underTags={h >= ACT2 && h < ACT3 ? <PostLabels G={G} heads={heads} /> : null} />
             {layer}
           </g>
+          <EyeLights G={G} heads={heads} light={light} gain={LIGHT_ON_INK} />
         </g>
       </svg>
     </AbsoluteFill>
