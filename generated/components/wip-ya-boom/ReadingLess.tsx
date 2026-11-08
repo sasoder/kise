@@ -13,24 +13,27 @@
 // DURATION: the slot 46.875 -> 51.750 s = 4.875 s x 24 = 117 frames (f0..f116).
 //
 // BEAT MAP (rev 2, hard cuts; each cut on its word's Whisper onset + 4 frames; every mark cuts in whole and stays static):
-//   f0   the reader, taped on (top strip across her hair's edge, one across the skirt's foot), on the still page
+//   f0   the reader, taped on (top strip across her hair's edge, one across her ankles), on the still page
 //   f21  the 2004 dot, "28%" and the mono "2004"                          ("Americans")
 //   f57  the falling line, the 2023 dot, "16%" and the mono "2023"         ("dropped")
 //   f66  "-40%" along the drop                                             ("40")
 //   f66-f116 the settled picture; only the paper grain lives.
-// THE PICTURE: one still framing (the approved v2 last frame's camera, held from f0; no push). A big photocopied reader,
-// ~1000 px tall, her face just above the true middle (y ~830-1000), her body and book running down through the caption
-// bands (no readable thing there). Above her the slope is the frame's big diagonal, upper left (2004, y 420) falling past
+// THE PICTURE: one still framing (the approved v2 last frame's camera, held from f0; no push). A big cut-out reader,
+// ~960 px tall, sitting cross-legged, her face just above the true middle (y ~840-1000), her book and legs running down
+// through the caption bands (no readable thing there). Above her the slope is the frame's big diagonal, upper left (2004, y 420) falling past
 // over her head to the right (2023, y 860); "-40%" sits along the drop on the free paper above it.
+// COLOUR (rev 3): a present-day colour photo of a woman reading (2021) replaces the 1910s glass plate; she shows her own
+// colours (bake-photo.py --colour, XeroxCutOut colour: no photocopy grade), on the same spot, at the same height.
 // SPOT INK: red = the editor's felt-tip: the two figures, the falling line and the drop. No other colour.
 // HONEST SLOPE: the two points sit on one vertical scale with an unseen zero (the drop is 12/28 of the 28 point's height
 // above that zero); only the two sourced points, joined by one straight-ish stroke; no axes, gridlines or title.
 //
 // SOURCES: share of Americans who read for pleasure on a given day: 28% in 2004, 16% in 2023, about -40% (UF/UCL, iScience,
 // Aug 2025, American Time Use Survey; https://news.ufl.edu/2025/08/reading-for-pleasure-study/), verified by the director.
-// Reader: Missouri State Archives, "Historic Fashion - 1910s" glass plate (Flickr 49233107183, no known copyright
-// restrictions), assets_raw/photos/reader_Woman1910sSeatedReading.jpg, person matte (neal-matte.swift), cropped head to
-// skirt (--crop 430,1080,1720,2900), baked by scripts/clips/wip-ya-boom/bake-ReadingLess.py to public/wip-ya-boom/rl_reader.png.
+// Reader: "Woman sitting on an armchair cross legged and reading an old book", Shixart1985, 2021, Wikimedia Commons,
+// CC BY 2.0 (https://commons.wikimedia.org/wiki/File:Woman_sitting_on_an_armchair_cross_legged_and_reading_an_old_book.jpg),
+// assets_raw/photos/reader_WomanArmchairCrossLeggedReading2021.jpg; fg matte (neal-matte.swift) with two armchair scraps
+// cleared, cropped head to feet, baked (--colour) by scripts/clips/wip-ya-boom/bake-ReadingLess.py to public/wip-ya-boom/rl_reader.png.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
@@ -43,17 +46,20 @@ export const DURATION = 117;
 export const schema = z.object({ bands: z.boolean() });
 export const defaultProps = schema.parse({ bands: false });
 
-// -- the reader: a big photocopy taped to the page under the drop, her face just above the true middle -----------------------
+// -- the reader: a big colour cut-out taped to the page under the drop, her face just above the true middle -----------------------
 const READER_SRC = "wip-ya-boom/rl_reader.png";
-const READER_ASPECT = 0.7086;
-const READER_H = 1000;
-const READER_X = 438;
+const READER_ASPECT = 0.8507;
+const READER_H = 960;
+const READER_W = READER_H * READER_ASPECT;
+const READER_X = 470;
 const READER_Y = 1180;
 const READER_ROT = -2;
-// the hair's top edge at the middle of the cut-out, world px: (0, -0.453 H) from the centre, turned by READER_ROT
-const HAIR_UP = READER_H * (0.5 - 0.047) + 6; // + the scissor margin, half of it
-const HAIR_TAPE_X = READER_X + HAIR_UP * Math.sin((READER_ROT * Math.PI) / 180);
-const HAIR_TAPE_Y = READER_Y - HAIR_UP * Math.cos((READER_ROT * Math.PI) / 180);
+// the hair's top edge (the matte's top: u 0.375, v 0.029), world px from the centre, turned by READER_ROT about it
+const HAIR_DX = READER_W * (0.375 - 0.5);
+const HAIR_DY = -(READER_H * (0.5 - 0.029) + 6); // + the scissor margin, half of it
+const ROT_RAD = (READER_ROT * Math.PI) / 180;
+const HAIR_TAPE_X = READER_X + HAIR_DX * Math.cos(ROT_RAD) - HAIR_DY * Math.sin(ROT_RAD);
+const HAIR_TAPE_Y = READER_Y + HAIR_DX * Math.sin(ROT_RAD) + HAIR_DY * Math.cos(ROT_RAD);
 
 // -- the chart: two sourced points on one vertical scale with an unseen zero ---------------------------------------------
 const V0 = 28;
@@ -109,13 +115,14 @@ const ReadingLess: React.FC<z.infer<typeof schema>> = ({ bands }) => {
             kind="person"
             x={READER_X}
             y={READER_Y}
-            w={READER_H * READER_ASPECT}
+            w={READER_W}
             aspect={READER_ASPECT}
             rotate={READER_ROT}
+            colour
             tape={[{ at: "b", along: 0.55, angle: -4 }]}
             seed="rl-reader"
           />
-          {/* the top strip straddles her hair's cut edge (the matte's top at u 0.5 is v 0.047, rotated about the centre) */}
+          {/* the top strip straddles her hair's cut edge (the matte's top at u 0.375, v 0.029, rotated about the centre) */}
           <Tape x={HAIR_TAPE_X} y={HAIR_TAPE_Y} len={124} angle={78} seed="rl-tape-top" />
           {frame >= CUT_2004 ? <MonoLabel text="2004" x={AX - 6} y={AY + 40} frame={frame} start={LONG_AGO} size={40} align="center" /> : null}
           {frame >= CUT_2023 ? <MonoLabel text="2023" x={BX + 26} y={BY - 22} frame={frame} start={LONG_AGO} size={40} /> : null}
