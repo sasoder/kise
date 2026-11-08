@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// RichAuthors (wip-ya-boom, cut 21), rev 2: hard cuts. Works in Progress style, "Stripped-down variant"
+// RichAuthors (wip-ya-boom, cut 21), rev 3: hard cuts, pictures in colour. Works in Progress style, "Stripped-down variant"
 // (styles/works-in-progress.md; kit generated/components/kits/works-in-progress/wipShared.tsx) with the clip's materials
 // (./yaShared.tsx). Opaque 1080x1920, 24 fps, 217 frames.
 //
@@ -28,8 +28,9 @@
 // Rowling with "$1B" underlined beside her; Meyer with "100M copies" and the four Twilight covers in a crooked row under
 // her; Collins with her name, "$55M", "2012-13" and The Hunger Games in a column beside her. Each framing keeps the block
 // above in view at the top, so the three read as one page. Every paste lies flat with its tape on; every mark is complete
-// on its frame. The frame lives through the paper grain and the film life only.
-// SPOT INK: red = the editor's felt-tip, the money and the count. No indigo, no real colour.
+// on its frame. Rev 3: every portrait and cover is in its own colours (baked with bake-photo.py --colour, `colour` on each
+// cut-out: no photocopy grade), on the scissored copy-paper margin with its tape and shadow. The frame lives through the paper grain and the film life only.
+// SPOT INK: red = the editor's felt-tip, the money and the count. No indigo; the only other colour is the pictures' own.
 //
 // SOURCES (facts verified by the director, animation_source/notes/COMMON.md): Rowling the first billionaire author (Forbes
 // billionaires list 2004); Meyer's Twilight saga, four books (Twilight 2005, New Moon 2006, Eclipse 2007, Breaking Dawn 2008),
@@ -124,14 +125,13 @@ const RichAuthors: React.FC<z.infer<typeof schema>> = ({ bands }) => {
           {on(AT.rowling) ? (
             <XeroxCutOut
               src={ROWLING.src}
+              colour
               kind="person"
               x={R.x}
               y={R.y}
               w={rw}
               aspect={ROWLING.aspect}
               rotate={R.rot}
-              gamma={1.9}
-              contrast={0.5}
               tape={[{ at: "l", along: 0.84, len: 110 }, { at: "r", along: 0.8, len: 110 }]}
               seed="ra-rowling"
             />
@@ -139,13 +139,13 @@ const RichAuthors: React.FC<z.infer<typeof schema>> = ({ bands }) => {
           {on(AT.meyer) ? (
             <XeroxCutOut
               src={MEYER.src}
+              colour
               kind="person"
               x={M.x}
               y={M.y}
               w={mw}
               aspect={MEYER.aspect}
               rotate={M.rot}
-              gamma={1.15}
               tape={[{ at: "l", along: 0.8, len: 110 }, { at: "r", along: 0.86, len: 110 }]}
               seed="ra-meyer"
             />
@@ -155,6 +155,7 @@ const RichAuthors: React.FC<z.infer<typeof schema>> = ({ bands }) => {
                 <XeroxCutOut
                   key={c.src}
                   src={c.src}
+                  colour
                   kind="cover"
                   x={c.x}
                   y={c.y}
@@ -171,19 +172,19 @@ const RichAuthors: React.FC<z.infer<typeof schema>> = ({ bands }) => {
             <>
               <XeroxCutOut
                 src={COLLINS.src}
+                colour
                 kind="person"
                 x={C.x}
                 y={C.y}
                 w={cw}
                 aspect={COLLINS.aspect}
                 rotate={C.rot}
-                gamma={1.5}
-                contrast={0.55}
                 tape={[{ at: "r", along: 0.82, len: 110 }]}
                 seed="ra-collins"
               />
               <XeroxCutOut
                 src={HG.src}
+                colour
                 kind="cover"
                 x={HG.x}
                 y={HG.y}
