@@ -14,7 +14,12 @@
 // apportioned 182 · for 199 · those 203 · projects 210 · (he'd 223).
 // DURATION: the slot 71.083 -> 80.458 s = 9.375 s x 24 = 225 frames (f0..f224).
 //
-// THE MOTION: f0 is fully drawn: the Mayor's white hand holds a black rubber stamp beside the resignation slip, and
+// REV 1 (user: more dynamic with the camera; the piece sat high and the hand was cut by the left edge): the hand now
+// comes straight down from the top edge with the stamp hanging just above the slip; one continuous living camera
+// (keys in CAM below) opens close on slip and hand, pushes in on "accepted", eases down to the bridge by
+// "forfeiting", tracks bridge -> parkway -> tower as each plan breaks (breaks staggered 0 / 11 / 22 f), holds wider
+// and drifts, follows the sacks up a little on "money", settles on the whole picture centred near y 900 by f206.
+// THE MOTION (v1): f0 is fully drawn: the Mayor's white hand holds a black rubber stamp above the resignation slip, and
 // under it three of Moses's projects stand half-built (a suspension bridge missing its middle span, an elevated
 // parkway ending in mid-air, the Jones Beach water tower stopped halfway), each with its unbuilt part as a dashed
 // white plan, a working crane (trolley and hook moving) and a sack of money. "accepted": the stamp swings over and
@@ -33,6 +38,9 @@ import { z } from "zod";
 import { FIRING_GLOW, FiringGlowDefs, FiringGround, MayorHand } from "./firingShared";
 import {
   BRIDGE,
+  CamKey,
+  camAt,
+  camTransform,
   BRIDGE_GANTRY_Y,
   BRIDGE_MID,
   BridgeSolid,
@@ -82,17 +90,40 @@ const rotV = (x: number, y: number, deg: number): Pt => {
 };
 const IMPRINT_POS: Pt = [SLIP_C[0] + IMPRINT_LOCAL[0] * SLIP_S, SLIP_C[1] + IMPRINT_LOCAL[1] * SLIP_S];
 // the stamp: at rest beside/above the slip, on contact its face centre is the imprint's centre
-// at rest the stamp hangs over the slip's empty top-left corner (clear of every word), face 40 px below its top
-const STAMP_REST: Pt = [276, 465];
+const STAMP_REST: Pt = [560, 396]; // rev 1: hangs just above the slip's top edge, centre, the hand straight above
 const STAMP_REST_ROT = -2;
 const CONTACT = 16;
 // the Mayor's hand (builder A's, firingShared): fingertip anchor; the stamp's knob sits in the pinch, just under and
 // behind the fingertip
 const HAND_S = 0.5;
-const KNOB_FROM_TIP: Pt = [-13, 21];
-// the camera: still while the stamp and the plans act, then one slow creep in on the stopped projects (1 -> 1.015)
-const CAM_C: Pt = [520, 700];
-const camScale = (f: number) => 1 + 0.015 * Easing.inOut(Easing.sin)(Math.max(0, Math.min(1, (f - 92) / 132)));
+const KNOB_FROM_TIP: Pt = [-13, 21]; // in the hand's own frame (fingers along +x)
+// rev 1: the hand comes down from the top of the frame, turned so the arm runs up out of the top edge (never cut by
+// the left edge at any camera pose)
+const HAND_ROT = 80;
+// the camera (rev 1): one continuous living camera, world point (fx, fy) shown at screen (sx, sy) = (540, 900):
+// close on the slip and hand, a firm push onto the imprint on "accepted", down to the bridge by "forfeiting", a
+// track across bridge -> parkway -> tower as each plan breaks, wider through "projects Moses was working on", up a
+// little with the money, settling on the whole picture (slip + three projects centred near y 900) by f205, drifting.
+const K = (f: number, fx: number, fy: number, k: number): CamKey => ({ f, fx, fy, k, sx: 540, sy: 900 });
+const CAM: CamKey[] = [
+  K(0, 540, 528, 1.15),
+  K(9, 537, 534, 1.16),
+  K(20, 512, 572, 1.21),
+  K(48, 508, 588, 1.23),
+  // the track (~1.5x): bridge centred while its plan breaks (f77-83), glide, parkway centred (f89-95), glide,
+  // tower centred (f101-111); the glides ease in and out and the holds keep drifting toward the next project
+  K(76, 232, 880, 1.48),
+  K(83, 282, 884, 1.5),
+  K(89, 530, 888, 1.51),
+  K(95, 592, 888, 1.52),
+  K(101, 826, 886, 1.52),
+  K(111, 872, 882, 1.5),
+  K(134, 528, 768, 1.03),
+  K(166, 506, 758, 1.045),
+  K(190, 520, 712, 1.0),
+  K(206, 512, 748, 1.0),
+  K(224, 510, 744, 1.016),
+];
 
 // ---- the cranes -----------------------------------------------------------------------------------------------
 const STOP = 73; // "forfeiting": the work stops dead
@@ -127,8 +158,8 @@ const mkPlan = (dashes: Dash[], offset: number, seed: string): PlanDash[] => {
 };
 const PLANS: PlanDash[] = [
   ...mkPlan(dashify(bridgePlan(), 12, 8, 1), 0, "br"),
-  ...mkPlan(dashify(parkwayPlan(), 12, 8, 2), 2, "pk"),
-  ...mkPlan(dashify(towerPlan(), 12, 8, 3), 4, "tw"),
+  ...mkPlan(dashify(parkwayPlan(), 12, 8, 2), 11, "pk"),
+  ...mkPlan(dashify(towerPlan(), 12, 8, 3), 22, "tw"),
 ];
 
 // ---- the sacks --------------------------------------------------------------------------------------------------
@@ -150,7 +181,7 @@ const cubic = (p0: Pt, p1: Pt, p2: Pt, p3: Pt, t: number): Pt => {
 const Forfeit: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const f = frame;
-  const camK = camScale(f);
+  const cam = camAt(CAM, f);
 
   // ---- the stamp: rest -> arc over -> down (contact f16) -> hold -> lift back to rest ----
   const faceOff = rotV(0, (IMPRINT_H / 2) * STAMP_S, IMPRINT_ROT);
@@ -174,7 +205,8 @@ const Forfeit: React.FC<z.infer<typeof schema>> = () => {
   const drift = f >= 30 ? 2.5 * Math.sin((f - 30) * 0.09) * prog(f, 30, 40) : 0;
   sp = [sp[0], sp[1] + drift];
   const knob = rotV(0, -STAMP_KNOB * STAMP_S, srot);
-  const tip: Pt = [sp[0] + knob[0] - KNOB_FROM_TIP[0], sp[1] + knob[1] - KNOB_FROM_TIP[1]];
+  const kft = rotV(KNOB_FROM_TIP[0], KNOB_FROM_TIP[1], HAND_ROT + srot);
+  const tip: Pt = [sp[0] + knob[0] - kft[0], sp[1] + knob[1] - kft[1]];
   // the slip gives a little under the blow
   const slipDip = f >= CONTACT ? 3 * Math.exp(-(f - CONTACT) / 3) * (f - CONTACT < 1 ? 1 : 1) : 0;
   const inked = f >= CONTACT;
@@ -204,9 +236,9 @@ const Forfeit: React.FC<z.infer<typeof schema>> = () => {
       <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
         <FiringGlowDefs />
         <g filter={`url(#${FIRING_GLOW})`}>
-          <g transform={`translate(${CAM_C[0]} ${CAM_C[1]}) scale(${camK}) translate(${-CAM_C[0]} ${-CAM_C[1]})`}>
+          <g transform={camTransform(cam)}>
           {/* ---- the projects ---- */}
-          <Ground x0={92} x1={920} />
+          <Ground x0={-700} x1={1800} />
           <BridgeSolid />
           <Hook x={BRIDGE_MID} top={BRIDGE_GANTRY_Y + 2} hookY={gantryHook} sway={hookSway(f, 0)} load="beam" />
           <Gantry x={BRIDGE_MID} y={BRIDGE_GANTRY_Y} />
@@ -246,7 +278,7 @@ const Forfeit: React.FC<z.infer<typeof schema>> = () => {
           {/* ---- the slip, the label, the stamp, the hand ---- */}
           <Slip id="slip" x={SLIP_C[0]} y={SLIP_C[1] + slipDip} s={SLIP_S} inked={inked} imprintS={STAMP_S / SLIP_S} />
           <RubberStamp x={sp[0]} y={sp[1]} rot={srot} s={STAMP_S} />
-          <MayorHand x={tip[0]} y={tip[1]} s={HAND_S} />
+          <MayorHand x={tip[0]} y={tip[1]} s={HAND_S} rot={HAND_ROT + srot} arm={1800} />
           </g>
         </g>
       </svg>

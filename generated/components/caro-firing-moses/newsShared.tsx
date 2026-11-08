@@ -16,7 +16,15 @@ import React from "react";
 import { random } from "remotion";
 import { loadFont as loadOldStandard } from "@remotion/google-fonts/OldStandardTT";
 import { F_INK, F_WHITE } from "./firingShared";
-import { LABEL_FONT } from "../robert-graft-machine/graftShared";
+import { LABEL_FONT, MosesBust } from "../robert-graft-machine/graftShared";
+import { loadFont as loadMaguntia } from "@remotion/google-fonts/UnifrakturMaguntia";
+import { loadFont as loadCook } from "@remotion/google-fonts/UnifrakturCook";
+import { loadFont as loadAlfaSlab } from "@remotion/google-fonts/AlfaSlabOne";
+import { loadFont as loadArchivoBlack } from "@remotion/google-fonts/ArchivoBlack";
+import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
+import { loadFont as loadOswald } from "@remotion/google-fonts/Oswald";
+import { loadFont as loadAbril } from "@remotion/google-fonts/AbrilFatface";
+import { loadFont as loadBodoni } from "@remotion/google-fonts/BodoniModa";
 
 // the clip's own hydra tones (builder A measured them on the show's 4K frames; grain sits on the ground only, so
 // these are the rendered values)
@@ -747,6 +755,295 @@ export const Politician: React.FC<{ x: number; y: number; s?: number; arm?: numb
         <path d="M-6 -6 L44 -5 L46 5 L-6 7 Z" fill={INK} />
         <path d="M44 -6 L58 -4 L60 -1 L52 0 L52 3 L45 6 Z" fill={INK} />
       </g>
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------------------------------------------
+// The living camera (rev 1): key poses through which one continuous camera passes. Each channel is a monotone cubic
+// (Fritsch-Carlson) through the keys, so the velocity is continuous (no parking at a key, no overshoot) and a
+// steep segment followed by a flat one reads as one firm ease into a slow drift.
+// ---------------------------------------------------------------------------------------------------------------
+export const monotone = (xs: number[], ys: number[], x: number): number => {
+  const m = xs.length;
+  if (x <= xs[0]) return ys[0];
+  if (x >= xs[m - 1]) return ys[m - 1];
+  const d: number[] = [];
+  for (let i = 0; i < m - 1; i++) d.push((ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]));
+  const t: number[] = [d[0]];
+  for (let i = 1; i < m - 1; i++) {
+    if (d[i - 1] * d[i] <= 0) t.push(0);
+    else {
+      const h0 = xs[i] - xs[i - 1];
+      const h1 = xs[i + 1] - xs[i];
+      const w1 = 2 * h1 + h0;
+      const w2 = h1 + 2 * h0;
+      t.push((w1 + w2) / (w1 / d[i - 1] + w2 / d[i]));
+    }
+  }
+  t.push(d[m - 2]);
+  let i = 0;
+  while (x > xs[i + 1]) i++;
+  const h = xs[i + 1] - xs[i];
+  const s = (x - xs[i]) / h;
+  const s2 = s * s;
+  const s3 = s2 * s;
+  return (
+    (2 * s3 - 3 * s2 + 1) * ys[i] + (s3 - 2 * s2 + s) * h * t[i] + (-2 * s3 + 3 * s2) * ys[i + 1] + (s3 - s2) * h * t[i + 1]
+  );
+};
+// a camera pose: world point (fx, fy) shown at screen (sx, sy), zoom k
+export type CamKey = { f: number; fx: number; fy: number; k: number; sx: number; sy: number };
+export type Cam = Omit<CamKey, "f">;
+export const camAt = (keys: CamKey[], f: number): Cam => {
+  const xs = keys.map((c) => c.f);
+  const ch = (key: keyof Cam) => monotone(xs, keys.map((c) => c[key]), f);
+  return { fx: ch("fx"), fy: ch("fy"), k: ch("k"), sx: ch("sx"), sy: ch("sy") };
+};
+export const camTransform = (c: Cam) =>
+  `translate(${n(c.sx)} ${n(c.sy)}) scale(${n(c.k)}) translate(${n(-c.fx)} ${n(-c.fy)})`;
+// world -> screen under a camera
+export const toScreen = (c: Cam, p: Pt): Pt => [c.sx + (p[0] - c.fx) * c.k, c.sy + (p[1] - c.fy) * c.k];
+
+// ---------------------------------------------------------------------------------------------------------------
+// Rev 1 (FrontPages): six DIFFERENT New York dailies of 1962, each set in our own type (no logo lifts), one story.
+// Broadsheets (tall, 440 x 700): The New York Times and the Herald Tribune (blackletter nameplates), the
+// Journal-American (bold slab nameplate). Tabloids (squat, 420 x 540): the Daily News (heavy sans nameplate), the
+// Daily Mirror (white on a black band), the New York Post (fat serif). Headlines vary, the picture is the same:
+// Moses, his white glow behind him (graftShared MosesBust, retoned to the hydra's tones by RETONE_ID).
+// Every page is anchored at its CENTRE; page-local units = world px at s 1. The top ~390 units of every page hold
+// its nameplate, headline and picture (the next row of papers covers the rest).
+// Fonts: UnifrakturMaguntia (Times), UnifrakturCook 700 (Herald Tribune), Alfa Slab One (Journal-American),
+// Archivo Black (Daily News, J-A headline), Oswald 700 (Mirror), Abril Fatface (Post), Anton (tabloid headlines),
+// Old Standard TT 700 (Times headline), Bodoni Moda 800 (Herald Tribune headline).
+// ---------------------------------------------------------------------------------------------------------------
+const { fontFamily: F_MAGUNTIA } = loadMaguntia("normal", { weights: ["400"], subsets: ["latin"] });
+const { fontFamily: F_COOK } = loadCook("normal", { weights: ["700"], subsets: ["latin"] });
+const { fontFamily: F_ALFA } = loadAlfaSlab("normal", { weights: ["400"], subsets: ["latin"] });
+const { fontFamily: F_ARCHIVO } = loadArchivoBlack("normal", { weights: ["400"], subsets: ["latin"] });
+const { fontFamily: F_ANTON } = loadAnton("normal", { weights: ["400"], subsets: ["latin"] });
+const { fontFamily: F_OSWALD } = loadOswald("normal", { weights: ["700"], subsets: ["latin"] });
+const { fontFamily: F_ABRIL } = loadAbril("normal", { weights: ["400"], subsets: ["latin"] });
+const { fontFamily: F_BODONI } = loadBodoni("normal", { weights: ["800"], subsets: ["latin"] });
+
+export const RETONE_ID = "newsRetone";
+// The bust's tones remapped to the hydra's (graftShared ink 7 -> 15, white 247 -> 242).
+export const RetoneDefs: React.FC = () => (
+  <filter id={RETONE_ID} colorInterpolationFilters="sRGB">
+    <feComponentTransfer>
+      <feFuncR type="linear" slope={0.9459} intercept={0.0328} />
+      <feFuncG type="linear" slope={0.9459} intercept={0.0328} />
+      <feFuncB type="linear" slope={0.9459} intercept={0.0328} />
+    </feComponentTransfer>
+  </filter>
+);
+
+// The shared picture: Moses (bust) with his white glow on the press photo's grey. Box (x, y, w, h) page-local;
+// The bust is sized from the box (head room ~12 % of h, shoulders cut by the bottom edge); zoom > 1 crops tighter;
+// cx = the bust's centre x.
+export const MosesPhoto: React.FC<{
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  zoom?: number;
+  cx?: number;
+}> = ({ id, x, y, w, h, zoom = 1, cx }) => {
+  const bustH = 1.05 * h * zoom;
+  const drop = bustH - (1 - 0.12 / zoom) * h;
+  const s = bustH / 942;
+  const bx = cx ?? x + w / 2;
+  const base = y + h + drop;
+  const headY = base - 588 * s;
+  return (
+    <g>
+      <defs>
+        <clipPath id={`${id}clip`} clipPathUnits="userSpaceOnUse">
+          <rect x={x} y={y} width={w} height={h} />
+        </clipPath>
+        <radialGradient id={`${id}glow`}>
+          <stop offset="0%" stopColor={WHITE} stopOpacity={0.9} />
+          <stop offset="40%" stopColor={WHITE} stopOpacity={0.42} />
+          <stop offset="100%" stopColor={WHITE} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      <rect x={x} y={y} width={w} height={h} fill={lift(74)} />
+      <g clipPath={`url(#${id}clip)`}>
+        <circle cx={n(bx)} cy={n(headY)} r={n(760 * s)} fill={`url(#${id}glow)`} />
+        <g filter={`url(#${RETONE_ID})`}>
+          <MosesBust x={bx} y={base} s={s} />
+        </g>
+      </g>
+      <rect x={x} y={y} width={w} height={h} fill="none" stroke={INK} strokeWidth={2.5} />
+    </g>
+  );
+};
+
+const Bars: React.FC<{ x0: number; x1: number; y0: number; y1: number; cols: number; seed: string; pitch?: number; bh?: number }> = ({
+  x0,
+  x1,
+  y0,
+  y1,
+  cols,
+  seed,
+  pitch = 10,
+  bh = 4.5,
+}) => {
+  const gut = 10;
+  const cw = (x1 - x0 - gut * (cols - 1)) / cols;
+  const out: React.ReactNode[] = [];
+  for (let c = 0; c < cols; c++) {
+    const cx = x0 + c * (cw + gut);
+    let i = 0;
+    for (let y = y0; y + bh <= y1; y += pitch) {
+      const last = random(`${seed}p${c}${i}`) > 0.84;
+      const w = last ? cw * (0.3 + 0.45 * random(`${seed}q${c}${i}`)) : cw;
+      out.push(<rect key={`${c}-${i}`} x={n(cx)} y={n(y)} width={n(w)} height={bh} fill={BAR_GREY} />);
+      i++;
+    }
+    if (c < cols - 1) out.push(<rect key={`g${c}`} x={n(cx + cw + gut / 2 - 0.5)} y={y0} width={1} height={y1 - y0} fill={lift(170)} />);
+  }
+  return <g>{out}</g>;
+};
+
+type TxtProps = { x?: number; y: number; size: number; font: string; weight?: number; w?: number; fill?: string; children: string };
+const Txt: React.FC<TxtProps> = ({ x = 0, y, size, font, weight = 400, w, fill = INK, children }) => (
+  <text
+    x={x}
+    y={y}
+    fontFamily={font}
+    fontWeight={weight}
+    fontSize={size}
+    fill={fill}
+    textAnchor="middle"
+    {...(w ? { textLength: w, lengthAdjust: "spacingAndGlyphs" } : {})}
+  >
+    {children}
+  </text>
+);
+
+export type PaperKind = "times" | "herald" | "journal" | "news" | "mirror" | "post";
+export const PAPER_SIZE: Record<PaperKind, { w: number; h: number }> = {
+  times: { w: 440, h: 700 },
+  herald: { w: 440, h: 700 },
+  journal: { w: 440, h: 700 },
+  news: { w: 420, h: 540 },
+  mirror: { w: 420, h: 540 },
+  post: { w: 420, h: 540 },
+};
+
+// the page's contents, page-local, (0, 0) = centre
+const PaperBody: React.FC<{ kind: PaperKind; id: string }> = ({ kind, id }) => {
+  const { w: W, h: H } = PAPER_SIZE[kind];
+  const t = -H / 2;
+  const L = -W / 2 + 18;
+  const R = W / 2 - 18;
+  const TW = R - L;
+  const dateline = (y: number) => (
+    <g>
+      <rect x={L} y={y} width={TW} height={2.4} fill={INK} />
+      <rect x={L} y={y + 6} width={70} height={4} fill={BAR_GREY} />
+      <rect x={-40} y={y + 6} width={80} height={4} fill={BAR_GREY} />
+      <rect x={R - 70} y={y + 6} width={70} height={4} fill={BAR_GREY} />
+      <rect x={L} y={y + 14} width={TW} height={1.2} fill={INK} />
+    </g>
+  );
+  switch (kind) {
+    case "times":
+      return (
+        <g>
+          <Txt y={t + 66} size={54} font={F_MAGUNTIA} w={TW - 4}>The New York Times</Txt>
+          {dateline(t + 78)}
+          <Txt y={t + 140} size={44} font={SERIF} weight={700} w={TW}>MOSES QUITS ALL POSTS</Txt>
+          <rect x={-60} y={t + 152} width={120} height={1.5} fill={INK} />
+          <MosesPhoto id={`${id}ph`} x={L} y={t + 164} w={TW * 0.5} h={196} zoom={0.92} />
+          <Bars x0={L + TW * 0.5 + 10} x1={R} y0={t + 164} y1={H / 2 - 22} cols={3} seed={`${id}a`} />
+          <Bars x0={L} x1={L + TW * 0.5} y0={t + 372} y1={H / 2 - 22} cols={3} seed={`${id}b`} />
+        </g>
+      );
+    case "herald":
+      return (
+        <g>
+          <Txt y={t + 64} size={46} font={F_COOK} weight={700} w={TW - 4}>New York Herald Tribune</Txt>
+          <rect x={L} y={t + 76} width={TW} height={4.5} fill={INK} />
+          <rect x={L} y={t + 84} width={TW} height={1.2} fill={INK} />
+          <rect x={L} y={t + 89} width={TW} height={4} fill={BAR_GREY} />
+          <Txt y={t + 154} size={58} font={F_BODONI} weight={800} w={TW}>CITY LOSES MOSES</Txt>
+          <Bars x0={L} x1={L + TW * 0.4 - 6} y0={t + 172} y1={H / 2 - 22} cols={2} seed={`${id}a`} />
+          <MosesPhoto id={`${id}ph`} x={L + TW * 0.4 + 4} y={t + 172} w={TW * 0.6 - 4} h={196} />
+          <Bars x0={L + TW * 0.4 + 4} x1={R} y0={t + 380} y1={H / 2 - 22} cols={3} seed={`${id}b`} />
+        </g>
+      );
+    case "journal":
+      return (
+        <g>
+          <Txt y={t + 30} size={16} font={F_OSWALD} weight={700} w={110}>NEW YORK</Txt>
+          <Txt y={t + 80} size={50} font={F_ALFA} w={TW}>JOURNAL-AMERICAN</Txt>
+          <rect x={L} y={t + 90} width={TW} height={7} fill={INK} />
+          <rect x={L} y={t + 102} width={TW} height={4} fill={BAR_GREY} />
+          <Txt y={t + 166} size={58} font={F_ARCHIVO} w={TW}>MOSES RESIGNS</Txt>
+          <MosesPhoto id={`${id}ph`} x={-TW * 0.36} y={t + 182} w={TW * 0.72} h={186} zoom={0.86} />
+          <Bars x0={L} x1={-TW * 0.36 - 10} y0={t + 182} y1={H / 2 - 22} cols={1} seed={`${id}a`} />
+          <Bars x0={TW * 0.36 + 10} x1={R} y0={t + 182} y1={H / 2 - 22} cols={1} seed={`${id}b`} />
+          <Bars x0={-TW * 0.36} x1={TW * 0.36} y0={t + 380} y1={H / 2 - 22} cols={3} seed={`${id}c`} />
+        </g>
+      );
+    case "news":
+      return (
+        <g>
+          <Txt y={t + 70} size={62} font={F_ARCHIVO} w={TW - 96}>DAILY NEWS</Txt>
+          <rect x={R - 40} y={t + 22} width={40} height={40} fill="none" stroke={INK} strokeWidth={2} />
+          <Txt x={R - 20} y={t + 50} size={20} font={F_OSWALD} weight={700}>5¢</Txt>
+          <rect x={L} y={t + 22} width={40} height={40} fill="none" stroke={INK} strokeWidth={2} />
+          <rect x={L + 8} y={t + 32} width={24} height={4} fill={BAR_GREY} />
+          <rect x={L + 8} y={t + 42} width={24} height={4} fill={BAR_GREY} />
+          <Txt y={t + 94} size={14} font={F_OSWALD} weight={700} w={260}>NEW YORK&apos;S PICTURE NEWSPAPER</Txt>
+          <rect x={L} y={t + 102} width={TW} height={4} fill={INK} />
+          <Txt y={t + 208} size={112} font={F_ANTON} w={TW}>MOSES QUITS</Txt>
+          <MosesPhoto id={`${id}ph`} x={L} y={t + 224} w={TW} h={158} zoom={1.0} cx={L + TW * 0.5} />
+          <rect x={L} y={t + 390} width={TW * 0.7} height={6} fill={INK} />
+          <Bars x0={L} x1={R} y0={t + 404} y1={H / 2 - 20} cols={3} seed={`${id}a`} />
+        </g>
+      );
+    case "mirror":
+      return (
+        <g>
+          <rect x={L} y={t + 16} width={TW} height={84} fill={INK} />
+          <Txt y={t + 80} size={62} font={F_OSWALD} weight={700} w={TW - 40} fill={PAPER}>DAILY MIRROR</Txt>
+          <Txt y={t + 222} size={128} font={F_ANTON} w={TW}>MOSES OUT!</Txt>
+          <MosesPhoto id={`${id}ph`} x={L} y={t + 238} w={TW} h={262} cx={L + TW * 0.56} />
+        </g>
+      );
+    case "post":
+      return (
+        <g>
+          <Txt y={t + 64} size={52} font={F_ABRIL} w={TW - 40}>New York Post</Txt>
+          <rect x={L} y={t + 76} width={TW} height={2} fill={INK} />
+          <rect x={L} y={t + 81} width={TW} height={5} fill={INK} />
+          <Txt y={t + 150} size={66} font={F_ANTON} w={TW}>MASTER BUILDER</Txt>
+          <Txt y={t + 258} size={108} font={F_ANTON} w={TW * 0.62}>QUITS</Txt>
+          <MosesPhoto id={`${id}ph`} x={L} y={t + 274} w={TW} h={226} zoom={1.1} cx={L + TW * 0.44} />
+        </g>
+      );
+  }
+};
+
+// A newspaper: the sheet (with a hard drop shadow so overlapping sheets read apart) and its front page.
+export const Newspaper: React.FC<{ kind: PaperKind; id: string; x: number; y: number; s?: number; rot?: number }> = ({
+  kind,
+  id,
+  x,
+  y,
+  s = 1,
+  rot = 0,
+}) => {
+  const { w, h } = PAPER_SIZE[kind];
+  return (
+    <g transform={`translate(${n(x)} ${n(y)}) rotate(${n(rot)}) scale(${n(s)})`}>
+      <rect x={-w / 2 + 5} y={-h / 2 + 7} width={w} height={h} fill={INK} opacity={0.35} />
+      <rect x={-w / 2} y={-h / 2} width={w} height={h} fill={PAPER} />
+      <PaperBody kind={kind} id={id} />
     </g>
   );
 };
