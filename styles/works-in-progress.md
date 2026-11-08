@@ -69,6 +69,9 @@ things happening, not on animation: "the red pen getting drawn is very extra and
   marker only) was judged better than the first "entertainment industry" pass, "definitely a step more in the right
   direction", but "still a bit over the top, can be more stripped down". Both first passes still moved too much (camera
   pulls and descents, deals, slap-downs, write-ons, a hand, a toppling tower). Keep ya boom's look; apply the rules above.
+- Nov 8, on ya boom's hard-cut pass: "a lot more raw and authentic now … matches the style more", but "stripped down" never
+  meant losing colour: "bring back all the colors". Photos, covers and logos keep their own colours (bake-photo.py
+  `--colour`, XeroxCutOut `colour`): no greyscale, no photocopy grade. Stripped down is about motion, not colour.
 
 ## Kit
 
