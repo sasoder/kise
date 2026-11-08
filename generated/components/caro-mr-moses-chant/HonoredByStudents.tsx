@@ -9,7 +9,22 @@
 // New 57 · York 64 · (next line "This" 71). Whisper, may run ~5 frames early.
 // DURATION: the slot 19.8333 -> 22.8333 s = 3.000 s x 24 = 72 frames (f0..f71).
 //
-// FRAMING PROP (director's review, rev 2): framing 'faces' (default) keeps both men in the picture: one gentle push
+// FRAMING PROP (editor's note, rev 3, Nov 8): framing 'centre' (default) keeps the eye at the centre of the screen. The
+// page is torn just under the caption's last line ("outstanding citizen."), above the rule and the next stories' heads,
+// on the show's own near-black ground (honored_tear.png, assets-src/caro-mr-moses-chant/honored_tear.py), so the camera
+// can carry the headline to the true middle. THE MOTION ('centre'): the same opening frame as 'faces' / 'caption' (the
+// medal hand-over at the screen centre, k 0.87); one eased push and tilt down (its own bezier, moving from f0, done f44:
+// through "voted Moses the most") that slides the screen-centre point from the hand-over to the highlighter box while k
+// grows 0.87 -> 1.27 (geometric), so from f43 on the box's centre sits at (540, 945): HONORED BY STUDENTS whole and
+// horizontally centred (the full line would need k ~0.68, caps ~25 px), caps ~50 px. A 2.5 % creep anchored on the box
+// (k 1.302 at f71) keeps it exactly there to the end. The photo's lower half fills the top of the frame, the 3-line caption
+// sits under the headline, the tear at y ~1150-1185, the dark ground below it (the user's captions run over it).
+// The torn edge: a roughly level tear (world y 2101-2129, inside the measured ink gaps) with a light unprinted fibre band
+// of irregular width, a short soft fuzz and a few loose fibres, a ~1-level contact shadow on the ground; the ground is the
+// reference's own black beyond the show's torn right edge (rgb 1, 1, 4; std ~1, so the overlay grain barely touches it,
+// as in the reference). The camera never leaves the real page except below the tear (left >= 1467, right <= 2898, top
+// >= 17).
+// FRAMING 'faces' (director's review, rev 2) keeps both men in the picture: one gentle push
 // (k 0.87 -> 0.901, x1.035) drifting right and down from the same opening frame, both faces in frame throughout (Moses
 // loses his ear at the left edge from ~f20, never his eye or smile), the caption headline below the lower band
 // (highlighter box y ~1639-1703 at f52, caps ~34 px), the same highlighter sweep f43 -> f52. framing 'caption' is
@@ -44,10 +59,11 @@ import { z } from "zod";
 export const FPS = 24;
 export const DURATION = 72;
 export const schema = z.object({
-  // 'faces' (default): a gentle push that keeps both men's faces in frame. 'caption': rev 1, the push onto the caption.
-  framing: z.enum(["faces", "caption"]),
+  // 'centre' (default, rev 3): the page torn under the caption, the headline carried to the centre of the screen.
+  // 'faces': rev 2, a gentle push that keeps both men's faces in frame. 'caption': rev 1, the push onto the caption.
+  framing: z.enum(["centre", "faces", "caption"]),
 });
-export const defaultProps = schema.parse({ framing: "faces" });
+export const defaultProps = schema.parse({ framing: "centre" });
 
 const DIR = "caro-mr-moses-chant";
 const GROUND = "#0b0a0a"; // never seen: the camera stays inside the page
@@ -110,9 +126,44 @@ const cameraFaces = (f: number) => {
   return { k, left: right - 1080 / k, top: F_T0 + (F_T1 - F_T0) * p };
 };
 
+// ---- 'centre' camera (rev 3): the point at screen S(p) is world F(p); both slide on the push's own ease, k geometric.
+// f0: S = screen centre, F = the world point the shared opening frame puts there (the hand-over), so f0 is identical to
+// 'faces' and 'caption'. p = 1: the highlighter box's centre (2479, 1941.5) at screen (540, 945). The creep scales about
+// that same anchor, so the box does not move from f44 to f71.
+const C_K1 = 1.27;
+const C_CREEP = 0.025;
+const C_S0 = { x: 540, y: 960 };
+const C_F0 = { x: R0 - 1080 / K0 + C_S0.x / K0, y: BOTTOM - 1920 / K0 + C_S0.y / K0 };
+const C_S1 = { x: 540, y: 945 };
+const C_F1 = { x: HL.x + HL.w / 2, y: HL.y + HL.h / 2 };
+// Its own ease (moving from f0, done f44): the tilt is ~1150 screen px, so a flatter middle than the push ease keeps the
+// peak at ~41 px/f (f12) instead of ~51.
+const progressCentre = (f: number) =>
+  interpolate(f, [0, MOVE_END], [0, 1], {
+    easing: Easing.bezier(0.2, 0, 0.35, 1),
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+const cameraCentre = (f: number) => {
+  const p = progressCentre(f);
+  const k = K0 * Math.pow(C_K1 / K0, p) * (1 + (C_CREEP * f) / (DURATION - 1));
+  const fx = C_F0.x + (C_F1.x - C_F0.x) * p;
+  const fy = C_F0.y + (C_F1.y - C_F0.y) * p;
+  const sx = C_S0.x + (C_S1.x - C_S0.x) * p;
+  const sy = C_S0.y + (C_S1.y - C_S0.y) * p;
+  return { k, left: fx - sx / k, top: fy - sy / k };
+};
+
+// ---- the torn strip (rev 3): plate rows 2480..2782 re-baked with the tear and the dark ground, plus 24 rows of ground
+// past the plate's bottom edge (so the plate's anti-aliased last row never shows), laid over the plate
+const TEAR = { x: 1360, y: 2480 / 1.25, w: 1560, h: 326 / 1.25 };
+const DARK = "rgb(1, 1, 4)"; // the reference's ground beyond the show's torn right edge (BGR mean 3.5 / 1.3 / 1.4)
+
 const HonoredByStudents: React.FC<z.infer<typeof schema>> = ({ framing }) => {
   const frame = useCurrentFrame();
-  const { k, left, top } = framing === "caption" ? cameraCaption(frame) : cameraFaces(frame);
+  const torn = framing === "centre";
+  const { k, left, top } =
+    framing === "caption" ? cameraCaption(frame) : framing === "faces" ? cameraFaces(frame) : cameraCentre(frame);
 
   const sweep = interpolate(frame, SWEEP, [0, 1], {
     easing: Easing.bezier(0.35, 0, 0.45, 1),
@@ -127,7 +178,7 @@ const HonoredByStudents: React.FC<z.infer<typeof schema>> = ({ framing }) => {
   const gy = Math.floor(random(`gy${frame}`) * 120);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: GROUND, overflow: "hidden" }}>
+    <AbsoluteFill style={{ backgroundColor: torn ? DARK : GROUND, overflow: "hidden" }}>
       <div
         style={{
           position: "absolute",
@@ -143,6 +194,12 @@ const HonoredByStudents: React.FC<z.infer<typeof schema>> = ({ framing }) => {
           src={staticFile(`${DIR}/honored_plate.jpg`)}
           style={{ position: "absolute", left: PLATE.x, top: PLATE.y, width: PLATE.w, height: PLATE.h, maxWidth: "none" }}
         />
+        {torn ? (
+          <Img
+            src={staticFile(`${DIR}/honored_tear.png`)}
+            style={{ position: "absolute", left: TEAR.x, top: TEAR.y, width: TEAR.w, height: TEAR.h, maxWidth: "none" }}
+          />
+        ) : null}
         {hlW > 0.5 ? (
           <div
             style={{
