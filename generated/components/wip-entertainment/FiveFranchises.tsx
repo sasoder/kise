@@ -42,7 +42,7 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { CaptionBandsDebug, WipPlane, runWipCamera } from "../kits/works-in-progress/wipShared";
-import { MessyFilmLife, MessyPaper, RoughCutPrint, Scrawl, Tape } from "./messyShared";
+import { MessyFilmLife, MessyPaper, PRINT_WHITE, RoughCutPrint, Scrawl, Tape, contactShadow, handCutRect } from "./messyShared";
 
 export const FPS = 24;
 export const DURATION = 102;
@@ -117,6 +117,33 @@ const onOrig = (f: Film, u: number, v: number) => {
   return { x: wx(cx + lx * Math.cos(a) - ly * Math.sin(a)), y: wy(cy + lx * Math.sin(a) + ly * Math.cos(a)) };
 };
 
+// The scrap under a year: a hand-cut slip round the Scrawl's box, turned with it about the word's left end.
+const SCRAP_PAD = 10;
+const SCRAP_BORDER: [number, number] = [3, 9];
+const YearScrap: React.FC<{ f: Film }> = ({ f }) => {
+  const at = onOrig(f, f.yearAt[0], f.yearAt[1]);
+  const tw = ws(YEAR_SIZE * 2.55) + 2 * ws(SCRAP_PAD);
+  const th = ws(YEAR_SIZE * 1.02);
+  const b = ws(SCRAP_BORDER[1]) * 2;
+  const cut = handCutRect(tw, th, `scrap-${f.key}`, [ws(SCRAP_BORDER[0]), ws(SCRAP_BORDER[1])]);
+  const poly = `polygon(${cut.map((p) => `${(p.x + b).toFixed(1)}px ${(p.y + b).toFixed(1)}px`).join(", ")})`;
+  const left = at.x - ws(SCRAP_PAD);
+  return (
+    <div style={{ position: "absolute", left: left - b, top: at.y - th / 2 - b, width: tw + 2 * b, height: th + 2 * b, filter: contactShadow(0, 0.7) }}>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          clipPath: poly,
+          backgroundColor: PRINT_WHITE,
+          transformOrigin: `${b + ws(SCRAP_PAD)}px ${b + th / 2}px`,
+          transform: `rotate(${f.peek.rot - 4}deg)`,
+        }}
+      />
+    </div>
+  );
+};
+
 const FiveFranchises: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   const frame = useCurrentFrame();
   return (
@@ -161,6 +188,9 @@ const FiveFranchises: React.FC<z.infer<typeof schema>> = ({ bands }) => {
               <Tape key={t.on} x={wx(t.x)} y={wy(t.y)} w={ws(t.w)} h={ws(46)} rotate={t.rot} press={1} seed={`tape-${t.on}`} />
             ) : null,
           )}
+          {/* colour pass (Nov 8): each year on a scrap of white paper stuck on its original, there with the year, so the
+              red reads on a red or busy poster */}
+          {frame >= YEARS_AT ? FILMS.map((f) => <YearScrap key={f.key} f={f} />) : null}
         </WipPlane>
         {/* the author's red marker: each original's year, on the print, cut in whole and static */}
         <WipPlane cam={CAM} ink>

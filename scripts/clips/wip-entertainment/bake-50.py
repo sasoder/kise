@@ -6,7 +6,7 @@ public/wip-entertainment/os_*.png. The two objects are matted first with Apple V
   swift scripts/clips/neal-stephenson-trailer/neal-matte.swift assets-src/wip-entertainment/50/<vase>.jpg <scratch>/vase.png fg
   swift scripts/clips/neal-stephenson-trailer/neal-matte.swift assets-src/wip-entertainment/50/<bust>.jpg <scratch>/bust.png fg
   uv run --offline --with numpy --with pillow --with scipy --with opencv-python-headless python \
-      scripts/clips/wip-entertainment/bake-50.py <scratch>   # reads <scratch>/vase.png and <scratch>/bust.png
+      scripts/clips/wip-entertainment/bake-50.py <scratch> [--colour]   # reads <scratch>/vase.png and <scratch>/bust.png
 
 Title pages are cut as rectangles (--rect) round their identifying part (rev 2: rows ~320 px tall, so each page is
 scissored down to its title block / Holinshed's arch / the Folio's title and Droeshout head), without the book's edges; they bake with a high
@@ -16,6 +16,7 @@ import subprocess
 import sys
 
 scratch = sys.argv[1]
+COLOUR = ["--colour"] if "--colour" in sys.argv[2:] else []
 SRC = "assets-src/wip-entertainment/50"
 OUT = "public/wip-entertainment"
 RC = "scripts/clips/wip-entertainment/bake-roughcut.py"
@@ -32,5 +33,5 @@ JOBS = [
 
 for name, src, show_w, extra in JOBS:
     cmd = [sys.executable, RC, f"{SRC}/{src}", f"{OUT}/{name}.png", "--show-w", str(show_w), "--max", "1100", "--seed", name,
-           "--json", f"{scratch}/{name}.json", *extra]
+           "--json", f"{scratch}/{name}.json", *extra, *COLOUR]
     subprocess.run(cmd, check=True)

@@ -36,6 +36,7 @@ p.add_argument("--seed", default=None)
 p.add_argument("--nibble", type=float, default=0.12, help="share of snips that cut a little into the subject")
 p.add_argument("--rect", action="store_true")
 p.add_argument("--json")
+p.add_argument("--colour", action="store_true", help="keep the photo's colour (bake-photo.py --colour)")
 a = p.parse_args()
 rng = np.random.default_rng(sum((i + 1) * ord(ch) for i, ch in enumerate(a.seed or a.out.rsplit("/", 1)[-1])))
 
@@ -61,6 +62,7 @@ if max(im.size) > a.max:
 # -- the grade (bake-photo.py's, unchanged) --
 rgb = np.asarray(im, dtype=np.float64) / 255
 g = 0.30 * rgb[..., 0] + 0.59 * rgb[..., 1] + 0.11 * rgb[..., 2]
+g_raw = g.copy()
 alpha = np.asarray(mt, dtype=np.float64) / 255 if mt else np.ones(g.shape)
 if mt:
     core = binary_erosion(alpha > 0.5, iterations=1)
@@ -74,6 +76,13 @@ g = g ** np.clip(gamma, 0.45, 2.2)
 r = max(g.shape) / 180
 g = np.clip(g + 0.45 * (g - gaussian_filter(g, r)), 0, 1)
 g = g * g * (3 - 2 * g) * 0.45 + g * 0.55
+if a.colour:
+    # the grey print's tone curve on the luminance, the photo's own chroma added back: matched brightness, true
+    # colours (a per-channel curve turned the British Museum's pale marble Homer orange)
+    # the chroma is stretched with the levels, at most 1.5x, so a faded ticket keeps its colour without turning loud
+    col = np.clip(g[..., None] + (rgb - g_raw[..., None]) * min(1.5, 1 / max(hi - lo, 1e-3)), 0, 1)
+else:
+    col = np.dstack([g, g, g])
 
 # -- the scissors --
 solid = alpha > 0.5
@@ -112,18 +121,18 @@ cut = Image.new("L", (canvas.shape[1] * SS, canvas.shape[0] * SS), 0)
 ImageDraw.Draw(cut).polygon([(float(x * SS), float(y * SS)) for x, y in poly], fill=255)
 cut = np.asarray(cut.resize((canvas.shape[1], canvas.shape[0]), Image.LANCZOS), dtype=np.float64) / 255
 
-grey = np.ones(canvas.shape)
+grey = np.ones(canvas.shape + (3,))
 asub = np.zeros(canvas.shape)
-grey[pad : pad + H, pad : pad + W] = g
+grey[pad : pad + H, pad : pad + W] = col
 asub[pad : pad + H, pad : pad + W] = alpha
-tone = grey * asub + 1.0 * (1 - asub)  # the subject on its white border
+tone = grey * asub[..., None] + 1.0 * (1 - asub[..., None])  # the subject on its white border
 # trim to the cut
 ys, xs = np.where(cut > 0.01)
 y0, y1, x0, x1 = max(0, ys.min() - 2), ys.max() + 3, max(0, xs.min() - 2), xs.max() + 3
 tone, cutc = tone[y0:y1, x0:x1], cut[y0:y1, x0:x1]
-rgba = np.dstack([tone, tone, tone, cutc])
+rgba = np.dstack([tone, cutc])
 Image.fromarray((rgba * 255 + 0.5).astype(np.uint8), "RGBA").save(a.out, optimize=True)
-oh, ow = tone.shape
+oh, ow = tone.shape[:2]
 w_world = ow / px_per_world
 print(f"{a.out}: {ow} x {oh}, aspect {ow / oh:.4f}; RoughCutPrint w {w_world:.1f} for a subject {a.show_w:g} wide; "
       f"subject box in the PNG x {sx0 + pad - x0}..{sx1 + pad - x0}, y {sy0 + pad - y0}..{sy1 + pad - y0}; {len(poly)} snips")

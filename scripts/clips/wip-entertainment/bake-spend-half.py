@@ -5,7 +5,7 @@ shape of their own (the notched Beverley ticket, the Admit One stub) are matted 
   for f in cinema_ticket_Beverley_Paris_entree ticket_admit_one; do
     swift scripts/clips/neal-stephenson-trailer/neal-matte.swift assets-src/wip-entertainment/13/$f.jpg <scratch>/mask/$f.png fg; done
   uv run --offline --with numpy --with pillow --with scipy --with opencv-python-headless python \
-      scripts/clips/wip-entertainment/bake-spend-half.py <scratch>
+      scripts/clips/wip-entertainment/bake-spend-half.py <scratch> [--colour]
 
 Raw copies: assets-src/wip-entertainment/13/ (from animation_source/assets_raw/13, credits in SOURCES.txt there).
 Writes public/wip-entertainment/sh_<name>.png and prints each one's size and aspect.
@@ -14,6 +14,7 @@ import subprocess
 import sys
 
 scratch = sys.argv[1]
+COLOUR = ["--colour"] if "--colour" in sys.argv[2:] else []
 RAW = "assets-src/wip-entertainment/13"
 OUT = "public/wip-entertainment"
 PY = sys.executable
@@ -39,6 +40,7 @@ for name, (src, crop, mid) in RECT.items():
     args = [PY, "scripts/clips/wip-anthropic/bake-photo.py", f"{RAW}/{src}.jpg", f"{OUT}/sh_{name}.png", "--max", "900", "--mid", str(mid)]
     if crop:
         args += ["--crop", crop]
+    args += COLOUR
     subprocess.run(args, check=True)
 
 for name, (src, show_w, mid) in CUT.items():
@@ -60,6 +62,7 @@ for name, (src, show_w, mid) in CUT.items():
             name,
             "--nibble",
             "0.08",
+            *COLOUR,
         ],
         check=True,
     )

@@ -2,7 +2,10 @@
 before it, so every generation is rougher), and one banknote as a flat print for the stack of bills.
 
   uv run --offline --with numpy --with pillow --with scipy python scripts/clips/wip-entertainment/bake-35.py \
-      "<assets_raw>/35" --poster <file> --bill <file> [--bill-crop x0,y0,x1,y1] [--copies 12]
+      "<assets_raw>/35" --poster <file> --bill <file> [--bill-crop x0,y0,x1,y1] [--copies 12] [--colour]
+
+--colour   the poster, its photocopies (colour copies: the same loss per generation, black toner specks) and the bills
+           keep their own colours; the poster's channel mix is for the grey print only.
 
 Copies the raws into assets-src/wip-entertainment/35/ (once), then writes into public/wip-entertainment/:
   cs_poster.jpg        the poster's 2:3 window in the clip's one photo grade (bake-photo.py); RoughCutPrint `rect` cuts it
@@ -39,6 +42,7 @@ p.add_argument("--steps", type=int, default=8)
 p.add_argument("--chunks", action="store_true", help="also write cs_chunk_<k>.png (the sliding wads of v1; the hard-cut cut does not use them)")
 p.add_argument("--thin", type=float, default=0.86, help="share of the edge band gone by the last state")
 p.add_argument("--out", default=None, help="output folder (default public/wip-entertainment)")
+p.add_argument("--colour", action="store_true", help="keep the colour (bake-photo.py --colour)")
 a = p.parse_args()
 
 RAW = Path(a.raw)
@@ -62,7 +66,7 @@ def raw_copy(name: str) -> Path:
 
 
 def grade(src: Path, out: Path, box, mid: float, mx: int):
-    args = [sys.executable, str(BAKE), str(src), str(out), "--max", str(mx), "--mid", str(mid)]
+    args = [sys.executable, str(BAKE), str(src), str(out), "--max", str(mx), "--mid", str(mid)] + (["--colour"] if a.colour else [])
     if box:
         args += ["--crop", ",".join(map(str, box))]
     subprocess.run(args, check=True, stdout=subprocess.DEVNULL)
@@ -70,7 +74,7 @@ def grade(src: Path, out: Path, box, mid: float, mx: int):
 
 # -- the poster: its largest centred 2:3 window (or --poster-crop), graded --------------------------------------------
 psrc = raw_copy(a.poster)
-if a.poster_mix:
+if a.poster_mix and not a.colour:
     rgbp = np.asarray(Image.open(psrc).convert("RGB"), dtype=np.float32)
     gp = rgbp @ np.array([float(v) for v in a.poster_mix.split(",")], dtype=np.float32)
     psrc = TMP / "poster_mix.png"
@@ -85,7 +89,7 @@ else:
     ch = round(w * 3 / 2)
     box = (0, (h - ch) // 2, w, (h - ch) // 2 + ch)
 grade(psrc, TMP / "poster.png", box, a.poster_mid, 1050)
-poster = Image.open(TMP / "poster.png").convert("L")
+poster = Image.open(TMP / "poster.png").convert("RGB" if a.colour else "L")
 poster.convert("RGB").save(OUT / "cs_poster.jpg", quality=92)
 print(f"cs_poster.jpg {poster.size[0]}x{poster.size[1]} aspect {poster.size[0] / poster.size[1]:.4f}")
 
@@ -100,11 +104,13 @@ PAPER = 247.0  # copy paper white (0..255), a touch brighter than the print's wh
 TONER = 22.0
 rng = np.random.default_rng(35)
 
-img = np.asarray(poster.resize((PW, PH), Image.LANCZOS), dtype=np.float64) / 255
+img = np.asarray(poster.convert("RGB").resize((PW, PH), Image.LANCZOS), dtype=np.float64) / 255  # 3 channels either way
 
 
 def warp(g: np.ndarray, rot_deg: float, scale: float, dx: float, dy: float) -> np.ndarray:
     """The copier's misplacement: rotate/scale/shift the image about its centre (out-of-bounds = paper white)."""
+    if g.ndim == 3:
+        return np.dstack([warp(g[..., c], rot_deg, scale, dx, dy) for c in range(g.shape[2])])
     hh, ww = g.shape
     yy, xx = np.mgrid[0:hh, 0:ww].astype(np.float64)
     cx, cy = ww / 2, hh / 2
@@ -127,7 +133,7 @@ def speckle(shape, density: float, seed: int) -> np.ndarray:
 for n in range(2, a.copies + 2):
     k = (n - 1) / a.copies  # 0..1 through the generations
     # the copier: soft focus, then an S-curve (harder each time), a small skew and shift
-    g = gaussian_filter(img, 0.45 + 0.2 * k)
+    g = gaussian_filter(img, (0.45 + 0.2 * k, 0.45 + 0.2 * k, 0))
     gain = 1.02 + 0.03 * k
     g = np.clip(0.5 + (g - 0.5) * gain, 0, 1)
     g = 0.85 * g + 0.15 * g * g * (3 - 2 * g)
@@ -138,10 +144,10 @@ for n in range(2, a.copies + 2):
 
     # the sheet: paper white; the copy lands on it skewed and off-centre (a slightly skewed crop: an edge of the image may
     # run off the sheet), then speckle all over (heavier in the image) and a black copier edge on one side now and then
-    sheet = np.ones((SH, SW))
+    sheet = np.ones((SH, SW, 3))
     rot2 = rng.uniform(-1.8, 1.8)
     off = (rng.uniform(-0.6, 0.6) * PW * MARGIN, rng.uniform(-0.6, 0.6) * PW * MARGIN)
-    big = np.ones((SH, SW))
+    big = np.ones((SH, SW, 3))
     y0 = (SH - PH) // 2
     x0 = (SW - PW) // 2
     big[y0 : y0 + PH, x0 : x0 + PW] = g
@@ -154,7 +160,7 @@ for n in range(2, a.copies + 2):
         along = region.shape[1] if region.shape[1] > region.shape[0] else region.shape[0]
         dark = 0.25 + 0.5 * gaussian_filter(rng.random(along), 18) + (rng.random(along) < 0.04) * 0.6
         dark = np.clip(dark, 0, 1)
-        big[sl] = np.minimum(region, dark[None, :] if region.shape[1] > region.shape[0] else dark[:, None])
+        big[sl] = np.minimum(region, (dark[None, :] if region.shape[1] > region.shape[0] else dark[:, None])[..., None])
     big = warp(big, rot2, 1.0, off[0], off[1])
     sheet = big
     # fog: grey creeping in from one side of this sheet only (the lid not quite down); it does not compound
@@ -163,9 +169,9 @@ for n in range(2, a.copies + 2):
     if side == 1 or side == 3:
         ramp = ramp[::-1]
     fog = (ramp[:, None] if side < 2 else ramp[None, :]) * (0.08 + 0.14 * k)
-    sheet = np.clip(sheet - fog * (0.5 + gaussian_filter(rng.random(sheet.shape), 30) * 2.0), 0, 1)
+    sheet = np.clip(sheet - (fog * (0.5 + gaussian_filter(rng.random(sheet.shape[:2]), 30) * 2.0))[..., None], 0, 1)
     dens = 0.0004 + 0.0022 * k
-    specks = speckle(sheet.shape, dens, 1000 + n) * 0.85
+    specks = (speckle(sheet.shape[:2], dens, 1000 + n) * 0.85)[..., None]
     sheet = np.clip(sheet - specks, 0, 1)
     # a share of this sheet's specks inside the image ride into the next generation
     img = np.clip(img - 0.5 * specks[y0 : y0 + PH, x0 : x0 + PW], 0, 1)
@@ -186,7 +192,7 @@ for n in range(2, a.copies + 2):
             for xx in range(SW):
                 sheet[SH - wpx - int(jag[xx]) :, xx] *= 0.12
     out = TONER + (PAPER - TONER) * sheet
-    Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), "L").convert("RGB").save(OUT / f"cs_copy_{n}.jpg", quality=90)
+    Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), "RGB").save(OUT / f"cs_copy_{n}.jpg", quality=90)
 print(f"cs_copy_2..{a.copies + 1}.jpg {SW}x{SH} aspect {SW / SH:.4f} (print window {PW}x{PH} at its centre)")
 
 # -- the stack of bills, thinning --------------------------------------------------------------------------------------
@@ -205,7 +211,7 @@ if a.stack:
     cut = TMP / "stack_cut.png"
     subprocess.run(
         [sys.executable, str(ROOT / "scripts/clips/wip-entertainment/bake-roughcut.py"), str(ssrc), str(cut), "--show-w", "600", "--matte", str(mask),
-         "--max", "1100", "--seed", "cs_stack", "--nibble", "0.08"],
+         "--max", "1100", "--seed", "cs_stack", "--nibble", "0.08"] + (["--colour"] if a.colour else []),
         check=True,
     )
     rgba = np.asarray(Image.open(cut).convert("RGBA"), dtype=np.float64) / 255

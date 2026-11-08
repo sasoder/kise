@@ -399,13 +399,16 @@ const hexRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2
 const toneTable = (black: number, white: number, gamma: number) =>
   Array.from({ length: 17 }, (_, i) => (black + (white - black) * (i / 16) ** gamma).toFixed(4)).join(" ");
 
-/** Greyscale, levels onto the print's black and PRINT_WHITE, and a print grain. In: SourceGraphic. */
-const MessyGrade: React.FC<{ result: string; seed: string; gamma: number; grain: number }> = ({ result, seed, gamma, grain }) => {
+/**
+ * Levels onto the print's black and PRINT_WHITE (per channel), and a print grain. In: SourceGraphic. `mono`: greyscale
+ * first (the b&w print of the first passes). Default colour: the user wants the colours back (Nov 8).
+ */
+const MessyGrade: React.FC<{ result: string; seed: string; gamma: number; grain: number; mono: boolean }> = ({ result, seed, gamma, grain, mono }) => {
   const b = hexRgb(PHOTO_BLACK);
   const w = hexRgb(PRINT_WHITE);
   return (
     <>
-      <feColorMatrix in="SourceGraphic" type="saturate" values="0" result="grey" />
+      <feColorMatrix in="SourceGraphic" type="saturate" values={mono ? "0" : "1"} result="grey" />
       <feComponentTransfer in="grey" result="toned">
         <feFuncR type="table" tableValues={toneTable(b[0], w[0], gamma)} />
         <feFuncG type="table" tableValues={toneTable(b[1], w[1], gamma)} />
@@ -474,8 +477,8 @@ export const handCutRect = (ww: number, wh: number, seed: string, border: [numbe
 };
 
 /**
- * A b&w photograph cut out by hand and stuck on the page: the print grade (greyscale onto PHOTO_BLACK .. PRINT_WHITE,
- * print grain), an uneven scissor-cut white border, crooked (seeded ±1.5-4 deg unless `rotate`), a soft contact
+ * A photograph cut out by hand and stuck on the page: the print grade (levels onto PHOTO_BLACK .. PRINT_WHITE, print
+ * grain; in colour unless `mono`, then greyscale first), an uneven scissor-cut white border, crooked (seeded ±1.5-4 deg unless `rotate`), a soft contact
  * shadow that grows with `lift` (0 lying flat .. 1 carried). (x, y) = centre in plane px.
  *
  * Two modes:
@@ -502,8 +505,9 @@ export const RoughCutPrint: React.FC<{
   fit?: "cover" | "contain";
   position?: string;
   seed?: string;
+  mono?: boolean;
   style?: React.CSSProperties;
-}> = ({ src, x, y, w, aspect, rect = false, border = [5, 22], rotate, flipX = false, lift = 0, shadow = 1, gamma = 1, grain = 0.12, fit = "cover", position = "50% 50%", seed = src, style }) => {
+}> = ({ src, x, y, w, aspect, rect = false, border = [5, 22], rotate, flipX = false, lift = 0, shadow = 1, gamma = 1, grain = 0.12, fit = "cover", position = "50% 50%", seed = src, mono = false, style }) => {
   const id = useFilterId("print");
   const h = w / aspect;
   const rot = rotate ?? (random(`${seed}-rs`) < 0.5 ? -1 : 1) * (1.5 + 2.5 * random(`${seed}-rm`));
@@ -511,7 +515,7 @@ export const RoughCutPrint: React.FC<{
     <svg width={0} height={0} style={{ position: "absolute" }} aria-hidden>
       <defs>
         <filter id={id} colorInterpolationFilters="sRGB" x="0" y="0" width="100%" height="100%">
-          <MessyGrade result="out" seed={seed} gamma={gamma} grain={grain} />
+          <MessyGrade result="out" seed={seed} gamma={gamma} grain={grain} mono={mono} />
         </filter>
       </defs>
     </svg>

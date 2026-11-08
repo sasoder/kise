@@ -4,7 +4,9 @@ Copies the raws into assets-src/wip-entertainment/22/ (once), crops each to one 
 clip's one photo grade (scripts/clips/wip-anthropic/bake-photo.py: greyscale, matched levels, local contrast) into
 public/wip-entertainment/ff_<name>.jpg. No matte: RoughCutPrint's `rect` mode cuts the border at render time.
 
-  uv run --offline --with numpy --with pillow --with scipy python scripts/clips/wip-entertainment/bake-22.py "<assets_raw>/22"
+  uv run --offline --with numpy --with pillow --with scipy python scripts/clips/wip-entertainment/bake-22.py "<assets_raw>/22" [--colour]
+
+--colour keeps each poster's own colours (bake-photo.py --colour; the channel mixes are for the grey print only).
 """
 import shutil
 import subprocess
@@ -16,6 +18,7 @@ import numpy as np
 from PIL import Image
 
 RAW = Path(sys.argv[1])
+COLOUR = "--colour" in sys.argv[2:]
 ROOT = Path(__file__).resolve().parents[3]
 SRC = ROOT / "assets-src/wip-entertainment/22"
 OUT = ROOT / "public/wip-entertainment"
@@ -46,7 +49,7 @@ for name, spec in FILES.items():
     if not raw.exists():
         shutil.copy2(RAW / name, raw)
     src = raw
-    if len(spec) > 2:
+    if len(spec) > 2 and not COLOUR:
         rgb = np.asarray(Image.open(raw).convert("RGB"), dtype=np.float32)
         g = rgb @ np.array(spec[2], dtype=np.float32)
         src = TMP / f"{out}_mix.png"
@@ -59,7 +62,7 @@ for name, spec in FILES.items():
         ch = round(w * 3 / 2)
         box = (0, (h - ch) // 2, w, (h - ch) // 2 + ch)
     subprocess.run(
-        [sys.executable, str(BAKE), str(src), str(TMP / f"{out}.png"), "--crop", ",".join(map(str, box)), "--max", "1050", "--mid", str(mid)],
+        [sys.executable, str(BAKE), str(src), str(TMP / f"{out}.png"), "--crop", ",".join(map(str, box)), "--max", "1050", "--mid", str(mid)] + (["--colour"] if COLOUR else []),
         check=True,
     )
     # no alpha in a flat poster: a JPEG keeps public/ light (every render copies it)
