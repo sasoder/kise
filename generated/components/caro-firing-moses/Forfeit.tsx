@@ -17,7 +17,7 @@
 // REV 1 (user: more dynamic with the camera; the piece sat high and the hand was cut by the left edge): the hand now
 // comes straight down from the top edge with the stamp hanging just above the slip; one continuous living camera
 // (keys in CAM below) opens close on slip and hand, pushes in on "accepted", eases down to the bridge by
-// "forfeiting", tracks bridge -> parkway -> tower as each plan breaks (breaks staggered 0 / 11 / 22 f), holds wider
+// "forfeiting", tracks bridge -> parkway -> tower as each plan breaks (rev 2: one smooth eased curve, breaks f73 / f90 / f106), holds wider
 // and drifts, follows the sacks up a little on "money", settles on the whole picture centred near y 900 by f206.
 // THE MOTION (v1): f0 is fully drawn: the Mayor's white hand holds a black rubber stamp above the resignation slip, and
 // under it three of Moses's projects stand half-built (a suspension bridge missing its middle span, an elevated
@@ -117,13 +117,42 @@ const CAM: CamKey[] = [
   K(89, 530, 888, 1.51),
   K(95, 592, 888, 1.52),
   K(101, 826, 886, 1.52),
-  K(111, 872, 882, 1.5),
+  K(114, 872, 882, 1.5),
   K(134, 528, 768, 1.03),
   K(166, 506, 758, 1.045),
   K(190, 520, 712, 1.0),
   K(206, 512, 748, 1.0),
   K(224, 510, 744, 1.016),
 ];
+
+// rev 2 (user: the track was "a bit too snappy"): the camera's x is ONE smooth curve, a Gaussian-smoothed (sigma 5 f)
+// polyline through these keys, so velocity and acceleration are continuous: it eases left onto the bridge, turns
+// round over it as its plan breaks, pans right at a steady <= ~28.5 px/f past the parkway as its plan breaks, eases
+// to a turn over the tower as its plan breaks, then pulls back. The x of the CAM keys above is not used.
+const TRACK_X: Pt[] = [
+  [0, 540], [9, 537], [20, 512], [48, 508], [79, 236], [97, 569], [113, 872], [118, 884], [134, 528],
+  [166, 506], [190, 520], [206, 512], [224, 510],
+];
+const linX = (f: number) => {
+  if (f <= TRACK_X[0][0]) return TRACK_X[0][1];
+  for (let i = 0; i < TRACK_X.length - 1; i++) {
+    const [a, va] = TRACK_X[i];
+    const [b, vb] = TRACK_X[i + 1];
+    if (f <= b) return va + ((vb - va) * (f - a)) / (b - a);
+  }
+  return TRACK_X[TRACK_X.length - 1][1];
+};
+const TRACK_SIG = 5;
+const trackX = (f: number) => {
+  let sum = 0;
+  let wsum = 0;
+  for (let j = -3 * TRACK_SIG; j <= 3 * TRACK_SIG; j++) {
+    const w = Math.exp(-0.5 * (j / TRACK_SIG) ** 2);
+    sum += w * linX(f + j);
+    wsum += w;
+  }
+  return sum / wsum;
+};
 
 // ---- the cranes -----------------------------------------------------------------------------------------------
 const STOP = 73; // "forfeiting": the work stops dead
@@ -145,8 +174,8 @@ const RIG = {
 
 // ---- the plans: every dash breaks off once, falls with gravity, leaves the frame ----------------------------------
 type PlanDash = Dash & { breakF: number; seed: string };
-const PLAN_START = 77;
-const PLAN_SPREAD = 17;
+const PLAN_START = 73; // rev 2: bridge f73-86, parkway f90-103, tower f106-119, each under the passing camera
+const PLAN_SPREAD = 13;
 const mkPlan = (dashes: Dash[], offset: number, seed: string): PlanDash[] => {
   // break from the far end of the plan back toward the built part, with a little jitter
   const maxAlong = Math.max(...dashes.map((d) => d.along), 1);
@@ -158,8 +187,8 @@ const mkPlan = (dashes: Dash[], offset: number, seed: string): PlanDash[] => {
 };
 const PLANS: PlanDash[] = [
   ...mkPlan(dashify(bridgePlan(), 12, 8, 1), 0, "br"),
-  ...mkPlan(dashify(parkwayPlan(), 12, 8, 2), 11, "pk"),
-  ...mkPlan(dashify(towerPlan(), 12, 8, 3), 22, "tw"),
+  ...mkPlan(dashify(parkwayPlan(), 12, 8, 2), 17, "pk"),
+  ...mkPlan(dashify(towerPlan(), 12, 8, 3), 33, "tw"),
 ];
 
 // ---- the sacks --------------------------------------------------------------------------------------------------
@@ -181,7 +210,7 @@ const cubic = (p0: Pt, p1: Pt, p2: Pt, p3: Pt, t: number): Pt => {
 const Forfeit: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const f = frame;
-  const cam = camAt(CAM, f);
+  const cam = { ...camAt(CAM, f), fx: trackX(f) };
 
   // ---- the stamp: rest -> arc over -> down (contact f16) -> hold -> lift back to rest ----
   const faceOff = rotV(0, (IMPRINT_H / 2) * STAMP_S, IMPRINT_ROT);
