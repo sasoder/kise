@@ -19,7 +19,7 @@
 // horizontally centred (the full line would need k ~0.68, caps ~25 px), caps ~50 px. A 2.5 % creep anchored on the box
 // (k 1.302 at f71) keeps it exactly there to the end. The photo's lower half fills the top of the frame, the 3-line caption
 // sits under the headline, the tear at y ~1150-1185, the dark ground below it (the user's captions run over it).
-// The torn edge: a roughly level tear (world y 2101-2129, inside the measured ink gaps) with a light unprinted fibre band
+// The torn edge: a roughly level tear (world y 2093-2130, inside the measured ink gaps) with a light unprinted fibre band
 // of irregular width, a short soft fuzz and a few loose fibres, a ~1-level contact shadow on the ground; the ground is the
 // reference's own black beyond the show's torn right edge (rgb 1, 1, 4; std ~1, so the overlay grain barely touches it,
 // as in the reference). The camera never leaves the real page except below the tear (left >= 1467, right <= 2898, top
