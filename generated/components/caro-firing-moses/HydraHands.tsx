@@ -42,6 +42,7 @@ import {
   HH_DURATION,
   HH_G0,
   HString,
+  HeadState,
   HYDRA_DY,
   MayorHand,
   SerifLabel,
@@ -66,7 +67,7 @@ const in2 = Easing.in(Easing.quad);
 const bump = (f: number, a: number, b: number) => (f <= a || f >= b ? 0 : Math.sin(Math.PI * ((f - a) / (b - a))));
 
 export const HAND_S = 0.36;
-const HAND_LABEL_SIZE = 74; // 1.22x the first pass (cap 49); 1.3x made the two labels touch
+export const HAND_LABEL_SIZE = 74; // 1.22x the first pass (cap 49); 1.3x made the two labels touch
 const MAYOR_TIP: [number, number] = [258, 340 + HYDRA_DY];
 const GOV_TIP: [number, number] = [826, 372 + HYDRA_DY];
 const STRING_U = 0.88; // where on the neck a string ties
@@ -87,20 +88,40 @@ const SNIP: [number, number] = [109, 113]; // blades shut on the bundle: CONTACT
 const STRAIN: [number, number] = [113, 121];
 const SC_OUT: [number, number] = [121, 140];
 
-const HydraHands: React.FC<z.infer<typeof schema>> = () => {
-  const frame = useCurrentFrame();
-  const f = frame;
+// The hands act as a reusable layer (the merged Hydra cut re-places the labels and the scissors and swaps the jam's
+// head jerks for one flinch): HANDS_V1 is this cut's own layout, so HydraHands renders exactly as delivered.
+export type HandsLayout = {
+  mayorLabel: { x: number; y: number; anchor: "start" | "middle" | "end" };
+  govLabel: { x: number; y: number; anchor: "start" | "middle" | "end" };
+  scRest: [number, number];
+  jamJerks: boolean; // V1: the gripped heads 3-8 jerk while the scissors strain
+};
+export const HANDS_V1: HandsLayout = {
+  mayorLabel: { x: 104, y: 404, anchor: "start" },
+  govLabel: { x: 918, y: 462, anchor: "end" },
+  scRest: SC_REST,
+  jamJerks: true,
+};
+export const HANDS_SNIP = SNIP;
+export const HANDS_STRAIN = STRAIN;
+export const HAND_TIPS = { mayor: MAYOR_TIP, governor: GOV_TIP };
+
+/** The hands act at its local frame f (0..143): the head states and the layer of strings, hands, labels, scissors. */
+export const handsAct = (f: number, layout: HandsLayout = HANDS_V1, headsIn?: HeadState[]) => {
   const G = HH_G0 + f;
 
   // ---- head states: TwelvePosts' (tags settled) plus the jerks of the strings landing and of the jam -----------
-  const heads = tpHeads(G).map((h, i) => {
+  const heads = (headsIn ?? tpHeads(G)).map((h, i) => {
     const land = (i < 6 ? mayorStringAt(i) : govStringAt(i - 6)) + STRING_RUN;
     const toward = i < 6 ? -1 : 1; // a tug turns the head toward its hand
     const tug = toward * 5 * bump(f, land, land + 8);
-    const jam = i >= 3 && i <= 8 ? 3.5 * Math.sin((f - STRAIN[0]) * 2.4) * bump(f, STRAIN[0], STRAIN[1] + 2) : 0;
+    const jam =
+      layout.jamJerks && i >= 3 && i <= 8
+        ? 3.5 * Math.sin((f - STRAIN[0]) * 2.4) * bump(f, STRAIN[0], STRAIN[1] + 2)
+        : 0;
     return { ...h, nod: (h.nod ?? 0) + tug + jam };
   });
-  const poses = heads.map((h, i) => neckPose(i, G, h.grow, h.nod));
+  const poses = heads.map((h, i) => neckPose(i, G, h.grow, h.nod, h.bend));
 
   // ---- hands: slide in, then a slow bob (the strings follow) ---------------------------------------------------
   const mIn = prog(f, MAYOR_IN[0], MAYOR_IN[1], out3);
@@ -131,23 +152,46 @@ const HydraHands: React.FC<z.infer<typeof schema>> = () => {
   open -= 0.55 * prog(f, SNIP[0], SNIP[1], Easing.in(Easing.cubic)); // jams at 0.45
   open += 0.4 * prog(f, STRAIN[1], STRAIN[1] + 6, inOut); // gives up, opens again
   const shake = bump(f, STRAIN[0], STRAIN[1]);
-  const scX = SC_REST[0] + (1 - scIn) * 520 + scOut * 560 + 3 * Math.sin((f - STRAIN[0]) * 2.9) * shake;
-  const scY = SC_REST[1] + 2.5 * Math.sin((f - STRAIN[0]) * 3.7) * shake;
+  const scX = layout.scRest[0] + (1 - scIn) * 520 + scOut * 560 + 3 * Math.sin((f - STRAIN[0]) * 2.9) * shake;
+  const scY = layout.scRest[1] + 2.5 * Math.sin((f - STRAIN[0]) * 3.7) * shake;
   const scRot = -4 + 2.5 * Math.sin((f - STRAIN[0]) * 2.2) * shake;
   const scissorsOn = f >= SC_IN[0] && f < SC_OUT[1];
 
-  const handsAndStrings = (
+  const layer = (
     <g>
       {strings}
       {f >= MAYOR_IN[0] && <MayorHand x={mTip[0]} y={mTip[1]} s={HAND_S} rot={mRot} />}
       {f >= GOV_IN[0] && <GovernorHand x={gTip[0]} y={gTip[1]} s={HAND_S} rot={gRot} />}
-      <SerifLabel text="the Mayor" x={104} y={404} size={HAND_LABEL_SIZE} shown={mLabel} />
-      <SerifLabel text="the Governor" x={918} y={462} size={HAND_LABEL_SIZE} anchor="end" shown={gLabel} />
+      <SerifLabel
+        text="the Mayor"
+        x={layout.mayorLabel.x}
+        y={layout.mayorLabel.y}
+        size={HAND_LABEL_SIZE}
+        anchor={layout.mayorLabel.anchor}
+        shown={mLabel}
+      />
+      <SerifLabel
+        text="the Governor"
+        x={layout.govLabel.x}
+        y={layout.govLabel.y}
+        size={HAND_LABEL_SIZE}
+        anchor={layout.govLabel.anchor}
+        shown={gLabel}
+      />
       {scissorsOn && <WhiteScissors x={scX} y={scY} s={SC_S} rot={scRot} open={open} />}
     </g>
   );
+  return { G, heads, layer, tips: { mayor: mTip, governor: gTip }, scissors: { x: scX, y: scY, open, on: scissorsOn } };
+};
 
-  return <TwelvePostsWorld G={G} heads={heads}>{handsAndStrings}</TwelvePostsWorld>;
+const HydraHands: React.FC<z.infer<typeof schema>> = () => {
+  const frame = useCurrentFrame();
+  const { G, heads, layer } = handsAct(frame);
+  return (
+    <TwelvePostsWorld G={G} heads={heads}>
+      {layer}
+    </TwelvePostsWorld>
+  );
 };
 
 export default HydraHands;

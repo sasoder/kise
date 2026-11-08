@@ -155,7 +155,7 @@ const PostLabel: React.FC<{ p: Post; f: number; G: number; heads: HeadState[] }>
   if (f < p.typeAt || f >= p.flyEnd) return null;
   const total = p.lines[0].length + p.lines[1].length;
   const typed = prog(f, p.typeAt, p.typeEnd) * total;
-  const pose = neckPose(p.head, G, heads[p.head].grow, heads[p.head].nod ?? 0);
+  const pose = neckPose(p.head, G, heads[p.head].grow, heads[p.head].nod ?? 0, heads[p.head].bend ?? 0);
   // where the leader lands: 72 % of the way from the head's join to its tip
   const a = (pose.ang * Math.PI) / 180;
   const tip: [number, number] = [pose.head[0] + Math.sin(a) * 0.72 * HEAD_LEN, pose.head[1] - Math.cos(a) * 0.72 * HEAD_LEN];
@@ -197,6 +197,15 @@ const PostLabel: React.FC<{ p: Post; f: number; G: number; heads: HeadState[] }>
     </g>
   );
 };
+
+/** The three post labels (with their leaders and flights) at global frame G, for a world drawn elsewhere. */
+export const PostLabels: React.FC<{ G: number; heads: HeadState[] }> = ({ G, heads }) => (
+  <g>
+    {POSTS.map((p) => (
+      <PostLabel key={p.head} p={p} f={G - TP_G0} G={G} heads={heads} />
+    ))}
+  </g>
+);
 
 /** The whole picture at global frame G (TwelvePosts and HydraHands share it). */
 export const TwelvePostsWorld: React.FC<{

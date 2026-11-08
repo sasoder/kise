@@ -106,6 +106,45 @@ export const FiringGlowDefs: React.FC = () => (
   </defs>
 );
 
+// The glint halo (merged Hydra cut only): the same bloom recipe as FIRING_GLOW (luminance key, a tight and a wide blur
+// under the source), stronger, applied to a white disc over each glinting eye. Put <FiringGlintDefs/> next to
+// <FiringGlowDefs/>; Hydra draws the discs only while a head has glint > 0.
+export const FIRING_GLINT = "firingGlint";
+export const FiringGlintDefs: React.FC = () => (
+  <defs>
+    <filter
+      id={FIRING_GLINT}
+      filterUnits="userSpaceOnUse"
+      x={-200}
+      y={-200}
+      width={1480}
+      height={2320}
+      colorInterpolationFilters="sRGB"
+    >
+      <feColorMatrix
+        in="SourceGraphic"
+        type="matrix"
+        values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0.8 0.8 0.8 0 -1.5"
+        result="lum"
+      />
+      <feGaussianBlur in="lum" stdDeviation={6} result="tight" />
+      <feGaussianBlur in="lum" stdDeviation={17} result="wide" />
+      <feComponentTransfer in="tight" result="tightA">
+        <feFuncA type="linear" slope={0.95} />
+      </feComponentTransfer>
+      <feComponentTransfer in="wide" result="wideA">
+        <feFuncA type="linear" slope={0.85} />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="wideA" />
+        <feMergeNode in="wideA" />
+        <feMergeNode in="tightA" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+);
+
 // ---------------------------------------------------------------------------------------------------------------
 // The hands (traced from hydraHands_seqf700.png). 4K units, origin = the FINGERTIP (where the strings leave), the
 // Mayor's fingers point to +x (he enters from the left), the Governor's to -x (from the right). The dark sleeve is
@@ -391,10 +430,10 @@ const rotAbout = (p: [number, number], c: [number, number], deg: number): [numbe
 
 export type NeckPose = { pts: [number, number][]; head: [number, number]; ang: number };
 /** The posed neck i at global frame G with grow g (scale about the root) and an extra head angle. */
-export const neckPose = (i: number, G: number, g: number, extraAng = 0): NeckPose => {
+export const neckPose = (i: number, G: number, g: number, extraAng = 0, bend = 0): NeckPose => {
   const nk = NECKS[i];
   const ts = trunkSway(i, G);
-  const sw = swayAngle(i, G);
+  const sw = swayAngle(i, G) + bend;
   // while growing, the neck also rises out of the body (EMERGE px lower at g 0, so the head starts hidden in it)
   const lift = EMERGE * (1 - Math.min(1, g));
   const gr = (p: [number, number]): [number, number] => [
@@ -427,10 +466,17 @@ export const neckPoint = (pose: NeckPose, u: number): [number, number] => {
 const headT = (pose: NeckPose, scale: number) =>
   `translate(${n(pose.head[0])} ${n(pose.head[1])}) rotate(${n(pose.ang)}) scale(${n(HEAD_S * scale)})`;
 
-export const HydraHead: React.FC<{ pose: NeckPose; lit?: number; scale?: number }> = ({ pose, lit = 0, scale = 1 }) => (
+// a glint swells the eye to 3x its radius (a lit head's eye is 1.75x); Hydra adds a bloom halo (FIRING_GLINT)
+export const GLINT_GROW = 2;
+export const HydraHead: React.FC<{ pose: NeckPose; lit?: number; scale?: number; glint?: number }> = ({
+  pose,
+  lit = 0,
+  scale = 1,
+  glint = 0,
+}) => (
   <g transform={headT(pose, scale)}>
     <path d={HEAD_PATH} fill={F_INK} />
-    <circle cx={EYE[0]} cy={EYE[1]} r={n(EYE_R * (1 + 0.75 * clamp01(lit)))} fill={F_EYE} />
+    <circle cx={EYE[0]} cy={EYE[1]} r={n(EYE_R * Math.max(1 + 0.75 * clamp01(lit), 1 + GLINT_GROW * clamp01(glint)))} fill={F_EYE} />
   </g>
 );
 
@@ -501,14 +547,25 @@ export const HydraTag: React.FC<{ at: [number, number]; ang: number }> = ({ at, 
 // (undefined = no tag). `underTags` draws above the necks, below tags/heads (labels flying into their tags).
 // ---------------------------------------------------------------------------------------------------------------
 
-export type HeadState = { grow: number; lit?: number; nod?: number; tag?: number };
+// glint (0..1, optional): the eye alone flares (no head scale), for the count-off in the merged Hydra cut.
+// bend (deg, optional): the upper neck turns about its fork (a flinch); the head follows.
+export type HeadState = { grow: number; lit?: number; nod?: number; tag?: number; glint?: number; bend?: number };
+/** World position and radius of head's eye (for the glint halo). */
+export const eyeWorld = (pose: NeckPose, scale = 1): { x: number; y: number; r: number } => {
+  const a = (pose.ang * Math.PI) / 180;
+  const s = HEAD_S * scale;
+  const ex = EYE[0] * s;
+  const ey = EYE[1] * s;
+  return { x: pose.head[0] + ex * Math.cos(a) - ey * Math.sin(a), y: pose.head[1] + ex * Math.sin(a) + ey * Math.cos(a), r: EYE_R * s };
+};
+
 export const Hydra: React.FC<{ G: number; heads: HeadState[]; underTags?: React.ReactNode; overHeads?: React.ReactNode }> = ({
   G,
   heads,
   underTags,
   overHeads,
 }) => {
-  const poses = heads.map((h, i) => neckPose(i, G, h.grow, h.nod ?? 0));
+  const poses = heads.map((h, i) => neckPose(i, G, h.grow, h.nod ?? 0, h.bend ?? 0));
   return (
     <g>
       {poses.map((p, i) => (heads[i].grow > 0.001 ? <NeckShape key={`n${i}`} pose={p} /> : null))}
@@ -520,8 +577,24 @@ export const Hydra: React.FC<{ G: number; heads: HeadState[]; underTags?: React.
       })}
       {poses.map((p, i) =>
         heads[i].grow > 0.001 ? (
-          <HydraHead key={`h${i}`} pose={p} lit={heads[i].lit ?? 0} scale={1 + 0.08 * clamp01(heads[i].lit ?? 0)} />
+          <HydraHead
+            key={`h${i}`}
+            pose={p}
+            lit={heads[i].lit ?? 0}
+            scale={1 + 0.08 * clamp01(heads[i].lit ?? 0)}
+            glint={heads[i].glint ?? 0}
+          />
         ) : null,
+      )}
+      {heads.some((h) => (h.glint ?? 0) > 0.001) && (
+        <g filter={`url(#${FIRING_GLINT})`}>
+          {poses.map((p, i) => {
+            const g = clamp01(heads[i].glint ?? 0);
+            if (g <= 0.001 || heads[i].grow <= 0.001) return null;
+            const e = eyeWorld(p, 1 + 0.08 * clamp01(heads[i].lit ?? 0));
+            return <circle key={`g${i}`} cx={n(e.x)} cy={n(e.y)} r={n(e.r * (1 + GLINT_GROW) * g)} fill={F_EYE} />;
+          })}
+        </g>
       )}
       <HydraBody />
       {overHeads}
