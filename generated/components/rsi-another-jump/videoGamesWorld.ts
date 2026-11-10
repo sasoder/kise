@@ -2,18 +2,18 @@
 // rsi-another-jump — the world of cut 7 (`WholeVideoGames`): every position,
 // schedule and track the cut draws, as pure functions of the frame. No React.
 //
-// It continues cut 2's world (`outputShared.tsx`): the 2022 card stays where
-// cut 2 put it (600 x 370 world px centred on (540, 870)) and this cut's camera
-// starts on cut 2's resolved camera (f81) and pulls back ~3.5x around it.
+// It continues cut 2's world (`outputShared.tsx`, v2): cut 2's two 2022 cards
+// (limerick and Python, together 110..970 x 368..1030 world px) stay where cut 2
+// put them and this cut's camera starts on cut 2's resolved camera (f81) and
+// pulls back ~3.5x.
 //
 // WORLD LAYOUT at the resting zoom K_END (0.285; a world px is 0.285 screen px),
-// with the card in the top-left corner of the frame:
-//   card        world (240..840, 685..1055)      screen ~ (205..375, 97..203)
-//   game window world (217..2617, 1260..3060)    screen ~ (198..882, 261..774)
-//   code        two columns of 4 files flanking the window (x -333..127 and
-//               2707..3167), the files the game is built from
-//   the model   rests at the hub (1417, 3340), just under the window
-//   the flood   pages pile up from a floor at world y 7300 to ~3600 at the end
+// with cut 2's two cards in the top-left corner of the frame:
+//   cut 2       world (110..970, 368..1030)      screen ~ (171..410, 47..231)
+//   game window world (217..2617, 1145..2945)    screen ~ (200..867, 263..764)
+//   code        written inside the window by nine carets, then built into the level
+//   the model   rests at the hub (1417, 3275), just under the window
+//   the pages   four neat stacks under the window, bottoms at world y 3960 (screen ~1072)
 // ---------------------------------------------------------------------------
 import {
   CAM_DAMP,
@@ -23,7 +23,11 @@ import {
   smoothstep,
   sway,
 } from "../kits/dwarkesh/fieldShared";
-import { CARD_CX, CARD_CY, PL_LAST, plCamAt } from "./outputShared";
+import { PL_LAST, pl2CamAt } from "./outputShared";
+
+/** The camera's world anchor: a fixed point the pull-back is written around (the middle of cut 1's old card,
+ *  kept so the layout below holds; cut 2's v2 picture sits around it, 110..970 x 368..1030). */
+const ANCHOR = { x: 540, y: 870 };
 
 export const VG_DURATION = 149;
 /** Cut 2's frame this cut's f0 continues (its resolved, last frame). */
@@ -49,8 +53,8 @@ export const easeOutBack = (u: number, s = 1.6) => {
 // ---------------------------------------------------------------------------
 // LAYOUT (world px)
 // ---------------------------------------------------------------------------
-/** The card's screen centre at the end: the top-left of the frame. */
-export const CARD_SCREEN_END = { x: 290, y: 150 };
+/** The anchor's screen position at the end: puts cut 2's two cards small in the top-left (screen y ~36..220). */
+export const ANCHOR_SCREEN_END = { x: 290, y: 186 };
 
 // THE GAME. A 16 x 12 tile view (4:3), tile T world px.
 export const T = 150;
@@ -58,10 +62,10 @@ export const VIEW_COLS = 16;
 export const VIEW_ROWS = 12;
 export const WIN_W = VIEW_COLS * T; // 2400
 export const WIN_H = VIEW_ROWS * T; // 1800
-export const WIN_CX = CARD_CX + (540 - CARD_SCREEN_END.x) / K_END; // ~1417: centred at the end
+export const WIN_CX = ANCHOR.x + (540 - ANCHOR_SCREEN_END.x) / K_END; // ~1417: centred at the end
 export const WIN_X0 = WIN_CX - WIN_W / 2;
 export const WIN_X1 = WIN_X0 + WIN_W;
-export const WIN_Y0 = 1260;
+export const WIN_Y0 = 1145; // ~32 screen px under cut 2's code card at the end
 export const WIN_Y1 = WIN_Y0 + WIN_H;
 /** The window outline, the style's one weight at the resting zoom. */
 export const WIN_STROKE = wpx(6.5);
@@ -94,18 +98,18 @@ const G_K = gammaProgress(0.8, 14, 190);
 const G_S = gammaProgress(0.8, 8, 190);
 
 const base81 = (() => {
-  const c = plCamAt(PL_F0);
+  const c = pl2CamAt(PL_F0);
   const s = sway(PL_F0);
   return { cx: c.cx - s.dx, cy: c.cy - s.dy, k: c.k };
 })();
 const base80 = (() => {
-  const c = plCamAt(PL_F0 - 1);
+  const c = pl2CamAt(PL_F0 - 1);
   const s = sway(PL_F0 - 1);
   return { cx: c.cx - s.dx, cy: c.cy - s.dy, k: c.k };
 })();
 const anchorOf = (b: { cx: number; cy: number; k: number }) => ({
-  x: 540 + (CARD_CX - b.cx) * b.k,
-  y: 960 + (CARD_CY - b.cy) * b.k,
+  x: 540 + (ANCHOR.x - b.cx) * b.k,
+  y: 960 + (ANCHOR.y - b.cy) * b.k,
 });
 const A0 = anchorOf(base81);
 const A_PREV = anchorOf(base80);
@@ -115,8 +119,8 @@ const camTarget = (f: number) => {
   const gs = G_S(f);
   return {
     lk: lerp(Math.log(base81.k), Math.log(K_TARGET_END), gk),
-    sx: lerp(A0.x, CARD_SCREEN_END.x, gs),
-    sy: lerp(A0.y, CARD_SCREEN_END.y, gs),
+    sx: lerp(A0.x, ANCHOR_SCREEN_END.x, gs),
+    sy: lerp(A0.y, ANCHOR_SCREEN_END.y, gs),
   };
 };
 
@@ -144,10 +148,10 @@ const CAM_TABLE: Cam[] = (() => {
     const d = sway(PL_F0 + f);
     if (f === 0) {
       // exactly cut 2's camera at its f81
-      const c = plCamAt(PL_F0);
+      const c = pl2CamAt(PL_F0);
       out.push({ cx: c.cx, cy: c.cy, k: c.k });
     } else {
-      out.push({ cx: CARD_CX - (sx - 540) / k + d.dx, cy: CARD_CY - (sy - 960) / k + d.dy, k });
+      out.push({ cx: ANCHOR.x - (sx - 540) / k + d.dx, cy: ANCHOR.y - (sy - 960) / k + d.dy, k });
     }
   }
   return out;
@@ -182,8 +186,8 @@ export const F_AGENT0 = 2;
 export const F_AGENT1 = 50;
 type Knot = { f: number; x: number; y: number };
 const AGENT_KNOTS: Knot[] = [
-  { f: F_AGENT0, x: 975, y: -360 },
-  { f: 11, x: 1040, y: 860 },
+  { f: F_AGENT0, x: 1100, y: -360 },
+  { f: 11, x: 1120, y: 880 },
   { f: 19, x: 1150, y: 1330 },
   { f: 31, x: 1330, y: 2230 },
   { f: 42, x: 1405, y: 3020 },
@@ -666,135 +670,85 @@ export const BAR_LEAVES: Map<CodeBar, number> = (() => {
 export const BUILD_SLOT = slotOf;
 
 // ---------------------------------------------------------------------------
-// THE FLOOD. Proof pages, each carrying its medal, pour out of the model, are
-// flung sideways and fall into a pile that rises from a floor below the frame
-// like a level. The schedule is written as LANDINGS: a landing density that
-// starts at F_LAND0 and keeps climbing to F_LAND_PEAK (the pile's top rises
-// steadily through the frame), then falls to a trickle. Each landing takes the
-// lowest of three hashed spots on the pile's height map (so the pile rises as a
-// level, not a cone); its fall from the model fixes its flight time, and
-// emission = landing - flight. Early pages fall far (long flights), late ones
-// barely drop, so the EMISSION rate climbs on its own: tempo and count ride one
-// curve. Pages are drawn in landing order, one fixed order for the whole cut,
-// so no page ever changes layer.
+// THE PAGES. From "churns" the model sends out proof pages, each carrying its
+// medal, at one steady unhurried rhythm (no acceleration), and lays them into
+// four neat stacks under the game window, two each side of the model. Each
+// stack grows a page-edge at a time; the pages arc gently out of the model and
+// come to rest with zero speed (no bounce). The last page leaves before
+// "contributions" (f123) and the scene holds, alive, to the end. Pages are drawn
+// in landing order, one fixed order for the whole cut, so no page changes layer.
 // ---------------------------------------------------------------------------
 export const PAGE_W = 470;
 export const PAGE_H = 610;
 export const PAGE_STROKE = wpx(6.5);
-export const F_LAND0 = 90;
-export const F_LAND_PEAK = 139;
-export const F_LAND_TRICKLE = 146;
-const LAND_RATE0 = 0.35;
-const LAND_RATE_PEAK = 3.8;
-const LAND_RATE_TRICKLE = 0.45;
-export const PILE_FLOOR = 7000;
-export const PILE_X0 = -560;
-export const PILE_X1 = 3440;
-const PILE_BIN = 40;
-const PILE_RISE = 0.245; // a landing page raises the pile under it by this share of its height
-const N_PAGES_MAX = 140;
-
-export const landRateAt = (f: number) => {
-  if (f < F_LAND0) return 0;
-  if (f <= F_LAND_PEAK) {
-    const u = (f - F_LAND0) / (F_LAND_PEAK - F_LAND0);
-    return lerp(LAND_RATE0, LAND_RATE_PEAK, Math.pow(u, 1.5)) * smoothstep((f - F_LAND0) / 5);
-  }
-  const u = smoothstep((f - F_LAND_PEAK) / (F_LAND_TRICKLE - F_LAND_PEAK));
-  return lerp(LAND_RATE_PEAK, LAND_RATE_TRICKLE, u);
-};
+/** first page leaves the model (just before "churns"), and the steady interval between pages */
+export const F_PAGE0 = 70;
+export const PAGE_EVERY = 1.9;
+export const N_PAGES = 26;
+/** frames from leaving the model to resting on its stack */
+const PAGE_FLIGHT = 8;
+/** a stack's base page rests with its bottom edge here (world), clear of the caption band */
+const STACK_BASE = 3960;
+/** each page lands this much higher on its stack (world px): the stack grows a page edge at a time */
+const STACK_STEP = 46;
+/** the stacks' centres (world x): two each side of the model, inner ones clear of it */
+export const STACK_X = [
+  HUB.x + (150 - 540) / K_END,
+  HUB.x + (395 - 540) / K_END,
+  HUB.x + (685 - 540) / K_END,
+  HUB.x + (930 - 540) / K_END,
+];
+/** the order the stacks are fed in: inner left, outer right, inner right, outer left, ... */
+const STACK_ORDER = [1, 3, 2, 0];
 
 export type Page = {
   i: number;
+  stack: number;
   fEmit: number;
+  fLand: number;
   x1: number;
   y1: number;
-  rot1: number;
   rot0: number;
-  vy0: number;
-  T: number;
-  fLand: number;
+  rot1: number;
+  /** the arc's height over its chord (world px) */
+  lift: number;
 };
 
-const G_PAGE = 14; // world px / frame^2 until drag
-const V_TERM = 170; // terminal fall speed, world px / frame
-const TAU_X = 10; // sideways drag
-
-/** y offset after t frames with gravity + linear-drag terminal speed, launched with vy0. */
-const fallY = (t: number, vy0: number) => {
-  const tau = V_TERM / G_PAGE;
-  return V_TERM * t + (vy0 - V_TERM) * tau * (1 - Math.exp(-t / tau));
-};
-
-/** Every page, in LANDING order (= draw order). */
 export const PAGES: Page[] = (() => {
-  const nb = Math.ceil((PILE_X1 - PILE_X0) / PILE_BIN);
-  const surf: number[] = new Array(nb).fill(PILE_FLOOR);
+  const n = [0, 0, 0, 0];
   const out: Page[] = [];
-  let acc = 0;
-  let i = 0;
-  for (let f = F_LAND0; f < VG_DURATION + 30 && i < N_PAGES_MAX; f += 0.25) {
-    const r = landRateAt(f) * 0.25;
-    acc += r;
-    if (acc < 1) continue;
-    acc -= 1;
-    const fLand = f;
-    // three hashed candidate spots; take the lowest (largest y) surface
-    let bestX = 0;
-    let bestTop = -Infinity;
-    for (let c = 0; c < 3; c++) {
-      const x = PILE_X0 + PAGE_W / 2 + hash(i * 3 + c, 71) * (PILE_X1 - PILE_X0 - PAGE_W);
-      const b0 = Math.floor((x - PAGE_W / 2 - PILE_X0) / PILE_BIN);
-      const b1 = Math.floor((x + PAGE_W / 2 - PILE_X0) / PILE_BIN);
-      let top = Infinity;
-      for (let b = Math.max(0, b0); b <= Math.min(nb - 1, b1); b++) top = Math.min(top, surf[b]);
-      if (top > bestTop) {
-        bestTop = top;
-        bestX = x;
-      }
-    }
-    const y1 = bestTop + PAGE_H * (0.5 - PILE_RISE);
-    const newTop = y1 - PAGE_H / 2;
-    const b0 = Math.floor((bestX - PAGE_W / 2 - PILE_X0) / PILE_BIN);
-    const b1 = Math.floor((bestX + PAGE_W / 2 - PILE_X0) / PILE_BIN);
-    for (let b = Math.max(0, b0); b <= Math.min(nb - 1, b1); b++) {
-      surf[b] = Math.min(surf[b], newTop + 30 * hash(b + i, 5));
-    }
-    // flight: flung sideways and down out of the model (it never rises toward
-    // the window above), falling to y1
-    const dy = y1 - HUB.y;
-    // the further it has to fall, the harder it is thrown down
-    const vy0 = 20 + 15 * hash(i, 73) + 0.028 * Math.max(0, dy);
-    let tt = 3;
-    while (fallY(tt, vy0) < dy && tt < 200) tt += 0.05;
+  for (let i = 0; i < N_PAGES; i++) {
+    const stack = STACK_ORDER[i % 4];
+    const j = n[stack]++;
+    const fEmit = F_PAGE0 + i * PAGE_EVERY;
     out.push({
       i,
-      fEmit: fLand - tt,
-      x1: bestX,
-      y1,
-      rot1: (hash(i, 79) - 0.5) * 26,
-      rot0: (hash(i, 83) - 0.5) * 50,
-      vy0,
-      T: tt,
-      fLand,
+      stack,
+      fEmit,
+      fLand: fEmit + PAGE_FLIGHT,
+      x1: STACK_X[stack] + (j === 0 ? 0 : (hash(i, 71) - 0.5) * 26),
+      y1: STACK_BASE - PAGE_H / 2 - j * STACK_STEP,
+      rot0: (hash(i, 83) - 0.5) * 8,
+      rot1: j === 0 ? 0 : (hash(i, 79) - 0.5) * 3,
+      lift: 30 + 30 * hash(i, 73),
     });
-    i++;
   }
   return out;
 })();
-export const F_POUR0 = PAGES.reduce((m, p) => Math.min(m, p.fEmit), Infinity);
+export const F_PAGES_DONE = PAGES[PAGES.length - 1].fLand;
 
-/** A page's state at frame f: null before emission. */
+/** A page's state at frame f: null before it leaves the model. */
 export const pageAt = (p: Page, f: number) => {
   const t = f - p.fEmit;
   if (t < 0) return null;
-  if (t >= p.T) return { x: p.x1, y: p.y1, rot: p.rot1, s: 1, landed: true, t };
-  const y = HUB.y + fallY(t, p.vy0);
-  const ex = (1 - Math.exp(-t / TAU_X)) / (1 - Math.exp(-p.T / TAU_X));
-  const x = HUB.x + (p.x1 - HUB.x) * ex;
-  const u = t / p.T;
-  const rot = lerp(p.rot0, p.rot1, easeInOutCubic(u));
-  // out of the model: grows from the model's size over the first frames
-  const s = lerp(0.3, 1, easeOutCubic(t / 7));
+  if (f >= p.fLand) return { x: p.x1, y: p.y1, rot: p.rot1, s: 1, landed: true, t };
+  const u = t / (p.fLand - p.fEmit);
+  // eased out to rest: it arrives with no speed, so it settles rather than lands
+  const e = easeInOutCubic(u);
+  const x = lerp(HUB.x, p.x1, e);
+  const y = lerp(HUB.y, p.y1, e) - p.lift * Math.sin(Math.PI * e);
+  const rot = lerp(p.rot0, p.rot1, e);
+  // out of the model: small at the mark, it opens to full size along the way and arrives full size, still
+  const s = lerp(0.25, 1, easeInOutCubic(Math.min(1, u * 1.15)));
   return { x, y, rot, s, landed: false, t };
 };

@@ -12,44 +12,43 @@
 //   that 139.
 // DURATION: the slot 7.382 -> 13.597 s = 6.215 s x 23.976 = 149 frames (sequence f177 -> f326; f0..f148).
 //
-// THE MOTION: one continuous pull-back (k 0.995 -> 0.278, ~3.6x, fastest during the dive, creeping to the last
-// frame) from cut 2's resolved card, which drains to ACCENT_DEEP / INK_LO and ends as a small dim card in the
-// top-left corner. Today's model is its lab's mark, the same OpenAI mark as the old card's but bright ACCENT
-// (GPT-6 Astra, OpenAI, released 3 Sep 2026; the speaker's "Aster"), labelled GPT-6 ASTRA in white on the old
-// label's line right of the card (slides up f22-30). It drops in from above the frame past the card and dives
-// through the window's space, the white window outline opening from where it crossed in (f18-35); nine carets
-// peel off it as it passes each band and write indented code bars inside the window (f19-52), then every code bar
-// flies into the level, a core bar morphing into its tile (f36-63), and the carets fly home into the mark. The
-// white runner drops in (f58-64) and runs, jumps the pits and the little staircase, collects coins and heads for
-// the white goal flag while the level scrolls (to the last frame). From f70 ("churns")
-// proof pages, each a white card with bar-lines, a sum, an integral and the white Fields medal, are flung out of
-// the model at a rate that rises to "contributions" and fall into a pile that rises up the bottom of the frame
-// like a flood (f97-145), then trickles. Orange = the AI and what it makes; white = people, structure, the medal.
+// THE MOTION: one continuous pull-back (k 0.987 -> 0.278, ~3.6x, fastest during the dive, creeping to the last
+// frame) from cut 2's resolved picture (its v2 limerick card and Python card), which dims to context and ends as a
+// small dim pair of cards in the top-left corner. Today's model is its lab's mark, the same OpenAI mark as the
+// old card's but bright ACCENT (GPT-6 Astra, OpenAI, released 3 Sep 2026; the speaker's "Aster"), labelled
+// GPT-6 ASTRA in white on the GPT-3.5 label's line right of cut 2's cards (slides up f26-34). It drops in from
+// above the frame past the cards and dives through the window's space, the white window outline opening from
+// where it crossed in (f15-32); nine carets peel off it as it passes each band and write indented code bars inside
+// the window (f17-50), then every code bar flies into the level, a core bar morphing into its tile (f35-62), and
+// the carets fly home into the mark. The white runner drops in (f58-64) and runs, jumps the pits and the little
+// staircase, collects coins and heads for the white goal flag while the level scrolls (to the last frame).
+// From f70 ("churns") the mark sends out proof pages, each a white card with bar-lines, a sum, an integral and a
+// white Fields medal, one every 1.9 frames at one steady, unhurried rhythm (26 in all), and lays them into four
+// neat stacks under the window that grow a page edge at a time; each page comes to rest with no speed and its
+// medal is quietly pressed in white. The last page rests at f126; from "contributions" the scene holds, alive
+// (the mark breathes, the runner runs, the flag waves). Orange = the AI and what it makes; white = people,
+// structure, the medal.
 //
-// CONTACTS: a tile is emitted on the frame its file's caret is at that spot and lands at fLand (BUILDS); a page
-// leaves from behind the model on fEmit and lands on fLand (PAGES); a coin is collected on the frame the runner's
-// body reaches it (coinCollectAt).
+// CONTACTS: a tile is emitted from its code bar and lands at fLand (BUILDS); a page leaves from behind the model
+// on fEmit and rests on its stack at fLand (PAGES); a coin is collected on the frame the runner's body reaches it
+// (coinCollectAt).
 //
-// SHARED WORLD: cut 2 (`PassableLimerick`) is imported, never edited: the card's geometry, bars and caret
-// (`barsAt(PL_LAST)`), its header and cut 2's camera (`plCamAt`). f0 is cut 2's f81 exactly (camera, sway clock,
-// grid clock, card); the camera then continues from cut 2's state. Everything this cut adds is in
-// `videoGamesWorld.ts`.
+// SHARED WORLD: cut 2 (`PassableLimerick`) is imported, never edited: its v2 picture is drawn by its own
+// `OutputScene2022` and its camera is `pl2CamAt`. f0 is cut 2's f81 exactly (camera, sway clock, grid clock,
+// picture); the camera then continues from cut 2's state. Everything this cut adds is in `videoGamesWorld.ts`.
 //
 // SOURCES: the OpenAI mark is brandGlyphs `OPENAI` (cut 2's). The Fields Medal is drawn as a plain white disc with
-// an inner ring, hung from a short V of ribbon (no profile: it read as a blob at phone size). The game is a generic
-// platformer (bricks, coins, a little staircase, a white goal flag), not any one real game. No figures, no text
-// but the card's own "GPT-3.5" label.
+// an inner ring, hung from a short V of ribbon. The game is a generic platformer (bricks, coins, a little
+// staircase, a white goal flag), not any one real game. No figures; text only GPT-6 ASTRA and cut 2's own.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   ACCENT,
-  ACCENT_DEEP,
   BG_BASE,
   BG_DIM,
   GridBackground,
-  OP_UNREAD_DOT,
   SHADOW_BLUR,
   SHADOW_OPACITY,
   SHADOW_Y,
@@ -58,40 +57,24 @@ import {
   clamp01,
   hash,
   iconShadow,
-  makeTone,
   smoothstep,
   squirclePath,
   worldTransform,
 } from "../kits/dwarkesh/fieldShared";
 import { OPENAI } from "../kits/dwarkesh/brandGlyphs";
-import { INK, INK_HI, INK_LO, Label } from "../kits/dwarkesh/alignShared";
+import { INK, INK_HI, Label } from "../kits/dwarkesh/alignShared";
 import {
-  CARD_H,
-  CARD_STROKE,
-  CARD_W,
-  CARD_X0,
-  CARD_Y0,
-  CARET_H,
-  CARET_LEAD,
-  CARET_W,
+  COMP2_X1,
+  COMP2_Y0,
+  COMP2_Y1,
   GRID_W0,
-  LABEL_SIZE,
-  LABEL_TEXT,
-  LABEL_X,
-  LABEL_Y,
-  MARK_SIZE,
-  MARK_TONE,
-  MARK_X,
-  MARK_CY,
-  MARK_Y,
-  OUTPUT_ACCENT,
-  PL_CY_REST,
+  MARK2_CY,
+  OutputScene2022,
+  PL2_CY_REST,
+  PL2_SETTLED,
   PL_FPS,
   PL_LAST,
-  WORD_H,
-  barsAt,
-  caretAt,
-  resolvedCamera,
+  resolvedCamera2,
 } from "./outputShared";
 import {
   AGENT_R,
@@ -128,7 +111,6 @@ import {
   agentAt,
   blockCaretAt,
   camAt,
-  cardStrokeMul,
   coinCollectAt,
   drainAt,
   easeOutBack,
@@ -150,21 +132,20 @@ export const defaultProps = schema.parse({});
 // --- the joined cut: asserted at module load ---------------------------------
 {
   const c = camAt(0);
-  const r = resolvedCamera;
+  const r = resolvedCamera2;
   if (c.k !== r.k || c.cx !== r.cx || c.cy !== r.cy) {
     throw new Error(`WholeVideoGames: f0 camera ${JSON.stringify(c)} is not cut 2's resolved camera`);
   }
-  const done = barsAt(PL_LAST).every((b) => b.w === b.full);
-  if (!done) throw new Error("WholeVideoGames: cut 2's card is not complete at PL_LAST");
+  if (PL2_SETTLED > PL_LAST) throw new Error("WholeVideoGames: cut 2's picture is not settled at PL_LAST");
 }
 
-// The caption bands, asserted on every frame: the window (once its ground is in), the card and the model at
-// rest stay above y 1080.
+// The caption bands, asserted on every frame: the window (once its ground is in), cut 2's two cards and the
+// model at rest stay above y 1080; the two cards keep clear air at the top of the frame.
 for (let f = 0; f < DURATION; f++) {
   const c = camAt(f);
   const sy = (wy: number) => 960 + (wy - c.cy) * c.k;
-  if (sy(CARD_Y0 + CARD_H) > 1078 || sy(CARD_Y0) < 30) {
-    throw new Error(`WholeVideoGames f${f}: the card leaves its air (${sy(CARD_Y0).toFixed(0)}-${sy(CARD_Y0 + CARD_H).toFixed(0)})`);
+  if (sy(COMP2_Y1) > 1078 || sy(COMP2_Y0) < 30) {
+    throw new Error(`WholeVideoGames f${f}: cut 2's cards leave their air (${sy(COMP2_Y0).toFixed(0)}-${sy(COMP2_Y1).toFixed(0)})`);
   }
   if (f >= 37 && sy(WIN_Y0 + WIN_H) > 1080) throw new Error(`WholeVideoGames f${f}: the game's ground is in the caption band`);
   if (f >= 12) {
@@ -173,68 +154,24 @@ for (let f = 0; f < DURATION; f++) {
   }
 }
 
-const CARD_TONE = makeTone(OUTPUT_ACCENT, ACCENT_DEEP);
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+// The pages and their stacks stay above the caption band on every frame (their rotated extent).
+for (let f = 0; f < DURATION; f++) {
+  const c = camAt(f);
+  for (const p of PAGES) {
+    const st = pageAt(p, f);
+    if (!st) continue;
+    const r = (st.rot * Math.PI) / 180;
+    const ext = (PAGE_H / 2) * st.s * Math.abs(Math.cos(r)) + (PAGE_W / 2) * st.s * Math.abs(Math.sin(r));
+    if (960 + (st.y + ext - c.cy) * c.k > 1078) throw new Error(`WholeVideoGames f${f}: page ${p.i} is in the caption band`);
+  }
+}
 
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 // A page's own flat fill, a step under the field, so a pile of them reads as stacked cards.
 const PAGE_FILL = "#545454";
+/** cut 2's picture's opacity once drained (the old output recedes to context, never removed) */
+const OLD_DIM = 0.55;
 const TILE_GAP = 10;
-
-// ---------------------------------------------------------------------------
-// THE 2022 CARD: cut 2's `OutputCard2022` markup, drawn from cut 2's exports, with its tones draining. At
-// d = 0 it is the same markup with the same values (proved by the f0 difference image).
-// ---------------------------------------------------------------------------
-const OldCard: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
-  const d = drainAt(frame);
-  const bars = barsAt(PL_LAST);
-  const c = caretAt(PL_LAST);
-  const s = MARK_SIZE / 24;
-  const accent = d <= 0 ? OUTPUT_ACCENT : CARD_TONE(d);
-  const inkOp = lerp(INK_HI, INK_LO, d);
-  return (
-    <>
-      <path
-        d={squirclePath(CARD_W, CARD_H)}
-        transform={`translate(${CARD_X0} ${CARD_Y0})`}
-        fill="none"
-        stroke={INK}
-        strokeWidth={CARD_STROKE * cardStrokeMul(frame)}
-        opacity={inkOp}
-        style={{ filter: iconShadow(k) }}
-      />
-      <g style={{ filter: iconShadow(k, undefined, undefined, 0.27) }}>
-        <g transform={`translate(${MARK_X} ${MARK_Y}) scale(${s})`}>
-          {OPENAI.paths.map((p, i) => (
-            <path key={i} d={p} fill={MARK_TONE} fillRule="evenodd" />
-          ))}
-        </g>
-      </g>
-      {bars.map((b, i) =>
-        b.w < 0.5 ? null : (
-          <rect
-            key={i}
-            x={b.x}
-            y={b.y}
-            width={b.w}
-            height={WORD_H}
-            rx={WORD_H / 2}
-            fill={b.kind === "def" ? INK : accent}
-            opacity={b.kind === "def" ? inkOp : OP_UNREAD_DOT}
-          />
-        ),
-      )}
-      <rect
-        x={c.x + CARET_LEAD - CARET_W / 2}
-        y={c.y + WORD_H / 2 - CARET_H / 2}
-        width={CARET_W}
-        height={CARET_H}
-        rx={CARET_W / 2}
-        fill={accent}
-        opacity={OP_UNREAD_DOT}
-      />
-    </>
-  );
-};
 
 // ---------------------------------------------------------------------------
 // THE CODE inside the window, and the carets that write it. A bar leaves the code on the frame it flies off to
@@ -476,8 +413,8 @@ const SIGMA = "M-30 -36 H30 V-24 M30 -36 H-30 L4 0 L-30 36 H30 V24";
 const INTEGRAL = "M18 -40 C10 -46 2 -40 0 -26 L-2 26 C-4 40 -12 46 -20 40";
 const MEDAL_R = 88;
 
-/** stamp: 0 while the page flies (the medal is an empty white outline), 0 → 1 over STAMP_F frames from the landing. */
-const STAMP_F = 3;
+/** stamp: 0 while the page flies (the medal is an empty white outline), 0 → 1 over STAMP_F frames as it comes to rest. */
+const STAMP_F = 5;
 const PageCard: React.FC<{ seed: number; stamp: number }> = ({ seed, stamp }) => {
   const w = PAGE_W;
   const h = PAGE_H;
@@ -518,19 +455,23 @@ const PageCard: React.FC<{ seed: number; stamp: number }> = ({ seed, stamp }) =>
     <g>
       <path d={squirclePath(w, h)} transform={`translate(${x0} ${y0})`} fill={PAGE_FILL} stroke={INK} strokeWidth={PAGE_STROKE} />
       {lines}
-      {/* the medal, stamped on arrival: its outline flies with the page, the landing presses it in (white fill,
-          a short punch about the disc) */}
-      <g transform={`translate(${mx} ${myy}) scale(${1 + 0.2 * Math.sin(Math.PI * stamp)}) translate(${-mx} ${-myy})`}>
-        <g fill={INK} fillOpacity={stamp} stroke={INK} strokeWidth={PAGE_STROKE} strokeLinejoin="round">
-          <path d={`M${mx - 66} ${rTop} L${mx - 28} ${rTop} L${mx + 12} ${rBot} L${mx - 26} ${rBot} Z`} />
-          <path d={`M${mx + 66} ${rTop} L${mx + 28} ${rTop} L${mx - 12} ${rBot} L${mx + 26} ${rBot} Z`} />
-          <circle cx={mx} cy={myy} r={MEDAL_R} fill={stamp > 0 ? INK : PAGE_FILL} fillOpacity={1} />
-        </g>
-        {/* the inner ring, pressed in by the stamp */}
-        {stamp > 0 && (
-          <circle cx={mx} cy={myy} r={MEDAL_R * 0.6} fill="none" stroke={PAGE_FILL} strokeWidth={PAGE_STROKE * 1.1} opacity={stamp} />
-        )}
+      {/* the medal: its white outline flies with the page; as the page comes to rest the white is quietly pressed
+          in (no punch, no flash) and leaves the inner ring */}
+      <g fill="none" stroke={INK} strokeWidth={PAGE_STROKE} strokeLinejoin="round">
+        <path d={`M${mx - 66} ${rTop} L${mx - 28} ${rTop} L${mx + 12} ${rBot} L${mx - 26} ${rBot} Z`} />
+        <path d={`M${mx + 66} ${rTop} L${mx + 28} ${rTop} L${mx - 12} ${rBot} L${mx + 26} ${rBot} Z`} />
+        <circle cx={mx} cy={myy} r={MEDAL_R} fill={PAGE_FILL} />
       </g>
+      {stamp > 0 && (
+        <g opacity={stamp}>
+          <g fill={INK} stroke={INK} strokeWidth={PAGE_STROKE} strokeLinejoin="round">
+            <path d={`M${mx - 66} ${rTop} L${mx - 28} ${rTop} L${mx + 12} ${rBot} L${mx - 26} ${rBot} Z`} />
+            <path d={`M${mx + 66} ${rTop} L${mx + 28} ${rTop} L${mx - 12} ${rBot} L${mx + 26} ${rBot} Z`} />
+            <circle cx={mx} cy={myy} r={MEDAL_R} />
+          </g>
+          <circle cx={mx} cy={myy} r={MEDAL_R * 0.6} fill="none" stroke={PAGE_FILL} strokeWidth={PAGE_STROKE * 1.1} />
+        </g>
+      )}
     </g>
   );
 };
@@ -542,7 +483,7 @@ const Pages: React.FC<{ frame: number }> = ({ frame }) => (
       if (!s) return null;
       return (
         <g key={p.i} transform={`translate(${s.x.toFixed(2)} ${s.y.toFixed(2)}) rotate(${s.rot.toFixed(3)}) scale(${s.s.toFixed(4)})`}>
-          <PageCard seed={p.i} stamp={clamp01((frame - p.fLand) / STAMP_F)} />
+          <PageCard seed={p.i} stamp={smoothstep((frame - p.fLand + 2) / STAMP_F)} />
         </g>
       );
     })}
@@ -553,7 +494,7 @@ const Pages: React.FC<{ frame: number }> = ({ frame }) => (
 // TODAY'S MODEL: its lab's mark (the same OpenAI mark cut 2's card carries in the deep tone), bright, upright,
 // nothing behind it; 1.8x the old dot's diameter so it reads at phone size. It keeps the dot's dive path and timing.
 // Its name, GPT-6 ASTRA, slides up beside the old card's GPT-3.5 on the same line once the camera has pulled back
-// far enough for it to sit wholly in frame (f22).
+// far enough for it to sit wholly in frame (f26).
 // ---------------------------------------------------------------------------
 const NEW_MARK = 3.6 * AGENT_R; // the mark's box, world px
 const Agent: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
@@ -571,9 +512,9 @@ const Agent: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
 };
 
 const NEW_LABEL_TEXT = "GPT-6 ASTRA";
-/** Its left edge, world: right of the old card with clear air, on the old label's line (centre MARK_CY). */
-const NEW_LABEL_X = CARD_X0 + CARD_W + 190;
-const NEW_LABEL_F0 = 22;
+/** Its left edge, world: right of cut 2's cards with clear air, on the GPT-3.5 label's line (centre MARK2_CY). */
+const NEW_LABEL_X = COMP2_X1 + 110;
+const NEW_LABEL_F0 = 26;
 const NEW_LABEL_IN = 8;
 /** Screen font size on the settled frame (cap height ~0.7 of it: >= 40 px). Held near steady on screen during
  *  the pull-back (it shrinks with k^0.2, not k), the way the old card's strokes are. */
@@ -593,7 +534,7 @@ const WholeVideoGames: React.FC<z.infer<typeof schema>> = () => {
         dim={BG_DIM}
         frame={GRID_W0 + PL_F0 + frame}
         cy={cy}
-        cyRest={PL_CY_REST}
+        cyRest={PL2_CY_REST}
         cx={cx}
         cxRest={cam0.cx}
         k={k}
@@ -611,6 +552,8 @@ const WholeVideoGames: React.FC<z.infer<typeof schema>> = () => {
             transform: `translate(${tx}px, ${ty}px) scale(${k})`,
           }}
         >
+          {/* cut 2's resolved picture (its own component, so f0 is cut 2's f81), dimming to context */}
+          <OutputScene2022 k={k} opacity={lerp(1, OLD_DIM, drainAt(frame))} />
           <svg
             width={1080}
             height={1920}
@@ -622,7 +565,6 @@ const WholeVideoGames: React.FC<z.infer<typeof schema>> = () => {
                 <rect x={WIN_X0} y={WIN_Y0} width={WIN_W} height={WIN_H} />
               </clipPath>
             </defs>
-            <OldCard frame={frame} k={k} />
             {frame > F_DRAIN0 ? (
               <>
                 <Code frame={frame} />
@@ -634,21 +576,11 @@ const WholeVideoGames: React.FC<z.infer<typeof schema>> = () => {
               </>
             ) : null}
           </svg>
-          <Label
-            k={k}
-            x={LABEL_X}
-            y={LABEL_Y}
-            text={LABEL_TEXT}
-            inT={1}
-            size={LABEL_SIZE}
-            align="left"
-            opacity={lerp(INK_HI, INK_LO, drainAt(frame))}
-          />
           {frame > F_DRAIN0 ? (
             <Label
               k={k}
               x={NEW_LABEL_X}
-              y={MARK_CY - newLabelSize(k) * 0.53}
+              y={MARK2_CY - newLabelSize(k) * 0.53}
               text={NEW_LABEL_TEXT}
               inT={smoothstep((frame - NEW_LABEL_F0) / NEW_LABEL_IN)}
               size={newLabelSize(k)}
