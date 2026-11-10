@@ -3,7 +3,7 @@
 // Opaque 1080x1920, 23.976 fps, 379 frames.
 //
 // CHECK LINE: "in three years the AI went from botching school arithmetic, past a maths competition and an
-// olympiad gold, to solving real open problems — one step up per year."
+// olympiad gold, to solving real open problems — one year at a time."
 //
 // THE LINE: "As recently as 2023, these models couldn't reliably add four-digit numbers. In 2024, they could
 // barely solve any problems in a high school math competition. In 2025, they could win a gold medal in the
@@ -16,33 +16,32 @@
 // this 292 · year 298 · finally 315 · started 323 · solve 335 · some 341 · niche 345 · open 353 · problems 361.
 // DURATION: the slot 1.960 -> 17.768 s = 15.807 s x 23.976 = 379 frames (f0..f378).
 //
-// THE MOTION: one white staircase, one step per year, climbing up-right (a profile stair cannot zig-zag
-// without its risers stacking into one spine, so the camera follows the diagonal instead and the active landing
-// stays in the central column). The camera is one damped track: three eased moves landing to landing, each
-// craning up first and panning right 2 f later (the shape of the leap), on a constant creep up the stair and a
-// slow zoom creep (k 0.99 -> 1.03), never a hold. The AI is ONE orange dot that leaps up each riser and works the
-// year's artefact through a short orange thread: 2023 it writes 4,738 + 2,594 = 7,322 right-to-left (tens digit
-// wrong; true sum 7,332) and a white ring lands on the wrong digit; 2024 its thread runs down the margin of a
-// 15-problem competition sheet and ticks only two; 2025 it reaches the IMO medal and the medal converts
-// white -> orange; 2026 it chains through three of six dashed "?" cards, each closing to solid orange with a
-// white tick. The dot grows (r 23 -> 35 world) and goes ACCENT_DEEP -> ACCENT a step per year, over the second
-// half of each leap. Above the 2026 landing the stair continues as dashed steps fading into the grid.
-// Director pass: short risers (run 580, rise 480) so every resting frame holds the current landing near the
-// middle, last year's landing lower-left (white drained to INK_LO, its orange kept in ACCENT_DEEP) and the next
-// riser upper-right; the year is cut into the face of its step, under the tread's right end. Every year label
-// and artefact is in the world from f0 at INK_AHEAD (the camera reveals it), lights to INK_HI as the dot lands
-// and drains to INK_LO after it leaves. Each camera move starts 8 f before the leap, so the new landing reaches
-// the centre as the dot lands. Dot 46 -> 70 screen px; leap peak ~46 screen px/f (measured with dotOnScreen).
-// BEATS (contact -> first reaction): hop 0 lands f4 (opening: the dot drops onto 2023, camera settling from
-// down-left). Thread on 2023's answer row f46; tip on a column -> that digit slides in f46/51/56/61 (units,
-// tens, hundreds, thousands). Ring draws f64-73, lands (back ease) f76. Leaps: off f76/174/268, land
-// f102/200/294 (on "2024", "2025", "this year"). Sheet thread arrives f118, tip passes row 2 f121 -> tick f122-129,
-// row 8 f141 -> tick f142-149, thread fades f166-174. Medal thread arrives on the rim f224 -> wipe from the
-// contact point f228-240, face + inner ring f232-242 ("gold medal" 238/242), thread holds with packets, fades
-// f258-268. Cards: dot -> A arrives f327 -> dashes close + white -> orange f327-335, "?" -> tick f328-338;
-// A -> B arrives f343, B -> C arrives f357 (settled f366, "problems" 361). Resolved and alive (packets on the
-// chain, marching dashes, sway, grid drift, creep) f366-378.
-// Orange = the AI, nothing else; white = people, maths, structure, labels; dashed = not solved yet.
+// THE MOTION (rev 2, the user's note: a timeline instead of stairs, the OpenAI mark instead of a dot, not
+// cramped): one thin white horizontal timeline at screen y ~1000 with a year tick every 880 world px, its year
+// label under the line right of the tick. Horizontal, so every label and artefact keeps its screen height the
+// whole way and never crosses the caption bands (1080-1250, 1360-1460). One year owns the frame: its artefact
+// (~610-630 px wide) stands above the line, centred, the mark parked on the year's tick under its lower-left
+// corner. The camera is one damped track gliding right: three eased moves year to year, each starting 8 f
+// before the mark leaves so the new year reaches its seat as the mark arrives, on a constant creep right and a
+// slow zoom creep (k 0.99 -> 1.02), never a hold. The last year slides out left, dimmed (white -> INK_LO, its
+// orange kept in ACCENT_DEEP); the next one slides in at INK_AHEAD and lights as the mark lands.
+// The AI is the OpenAI mark (kits/dwarkesh/brandGlyphs OPENAI), a bead on the line in the AI's orange, 105 -> 135
+// px and ACCENT_DEEP -> ACCENT a step per year (over the second half of each glide), spinning as it glides and
+// a hair at rest. Behind it the line is orange (its progress), a gradient deep -> bright that matches the mark's
+// tone at each year. It works each artefact through the style's Thread: 2023 it writes 4,738 + 2,594 = 7,322
+// right-to-left (tens digit wrong; true sum 7,332) and a white ring lands on the wrong digit; 2024 its thread
+// runs down the margin of a 15-problem competition sheet and ticks only two; 2025 it reaches the IMO medal and
+// the medal converts white -> orange; 2026 it chains through three of six dashed "?" cards, each closing to
+// solid orange with a white tick. Past 2026 the line goes on dashed, marching right into the dark.
+// BEATS (contact -> first reaction): the mark glides in from the left and parks on 2023 at f8 (sum card
+// already up). Thread on 2023's answer row f46; tip on a column -> that digit slides in f46/51/56/61. Ring draws
+// f68-77, lands (back ease) f80, read on the still card f80-86. Glides: off f88/186/268, arrive f104/202/294 ("2024",
+// "2025", "this year"); the camera pans f83-101 and f181-199.
+// Sheet thread arrives f118, tip passes row 2 f121 -> tick f122-129, row 8 f141 -> tick f142-149, fades
+// f166-174. Medal thread on the rim f224 -> wipe f228-240, face f232-242 ("gold medal" 238/242), packets, fades
+// f258-268. Cards: mark -> A f327, A -> B f343, B -> C f357 ("problems" 361). Resolved and alive (packets,
+// marching dashes, idle spin, sway, grid drift, creep) f362-378.
+// Orange = the AI, nothing else; white = people, maths, structure, labels; dashed = not solved / not yet.
 //
 // SOURCES: the years are the speaker's. The four-digit sum is illustrative (the speaker's claim), not data.
 // "IMO" = International Mathematical Olympiad (gold-medal level, 2025). No figures on screen.
@@ -85,6 +84,7 @@ import {
 } from "../kits/dwarkesh/alignShared";
 import { strokeFor } from "../kits/dwarkesh/punishShared";
 import { threadPackets } from "../kits/dwarkesh/trapShared";
+import { OPENAI } from "../kits/dwarkesh/brandGlyphs";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 379;
@@ -107,222 +107,189 @@ const LABEL_SIZE = worldPx(48, K_REST);
 const MODEL_TONE = makeTone(ACCENT_DEEP, ACCENT);
 const CONVERT_TONE = makeTone("#FFFFFF", ACCENT);
 
+type P = { x: number; y: number };
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
 // ---------------------------------------------------------------------------
-// The staircase. Step n (n = 0..3 are 2023..2026) has its tread from x L(n) to L(n)+RUN at height T(n); the
-// riser up to step n+1 stands at x L(n+1). Steps below 2023 are solid, steps above 2026 are dashed.
+// The timeline. Year n (0..3 = 2023..2026) has its tick at x tickX(n) on the line at Y_LINE. The line is solid
+// up to a little past 2026 and dashed beyond it.
 // ---------------------------------------------------------------------------
-// Short risers: at rest the frame holds the current landing, last year's landing lower-left and the next
-// riser upper-right, so every frame reads as a stair being climbed.
-const RUN = 580;
-const RISE = 480;
-const L0 = 200;
-const T0 = 1400;
-const Lx = (n: number) => L0 + RUN * n;
-const Ty = (n: number) => T0 - RISE * n;
+const Y_LINE = 996;
+const SPACING = 880;
+const X0 = 220;
+const tickX = (n: number) => X0 + SPACING * n;
 const YEARS = ["2023", "2024", "2025", "2026"];
+const LINE_START = tickX(0) - 3000;
+const SOLID_END = tickX(3) + 380;
+const DASH_FADE = 1100; // world px past SOLID_END where the dashes have faded out
+const TICK_H = 26; // half-height of a year tick
+const MINOR_H = 12; // half-height of a quarter tick
 
-// The dot. Hero size, a step bigger and riper each year.
-const DOT_R = [23, 27, 31, 35]; // 46 -> 70 screen px across
-const DOT_T = [0, 0.34, 0.67, 1];
-const DOT_X = 50; // its seat on a tread, from the tread's left end
-
-// Hops: the dot leaves step `from` at f0 and lands on step `to` at f1.
-const HOPS = [
-  { f0: -20, f1: 4, to: 0 },
-  { f0: 76, f1: 102, to: 1 },
-  { f0: 174, f1: 200, to: 2 },
+// ---------------------------------------------------------------------------
+// The mark: the OpenAI glyph, a bead on the line. It glides tick to tick, a step bigger and riper each year.
+// ---------------------------------------------------------------------------
+const MARK_S = [105, 115, 125, 135]; // px across
+const MARK_T = [0, 0.34, 0.67, 1];
+const GLIDES = [
+  { f0: -16, f1: 8, to: 0 },
+  { f0: 88, f1: 104, to: 1 },
+  { f0: 186, f1: 202, to: 2 },
   { f0: 268, f1: 294, to: 3 },
 ];
+const ENTRY_X = tickX(0) - 620;
+// Half linear, half smoothstep: it pushes off (no dead start) and settles onto the tick.
+const glideEase = (t: number) => 0.5 * t + 0.5 * smoothstep(t);
 
-// The arc of a hop from a seat on step n to the seat on step n+1, in step-n-relative px. It rises almost
-// straight up past the artefact's left edge and the label, then crosses over and drops onto the next tread
-// just right of the riser top.
-const bez = (p0: number, p1: number, p2: number, p3: number, t: number) => {
-  const u = 1 - t;
-  return (
-    u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3
-  );
-};
-const hopPos = (n: number, t: number, r0: number, r1: number) => {
-  const L = Lx(n);
-  const T = Ty(n);
-  const x = bez(L + DOT_X, L + 20, L + 380, L + RUN + DOT_X, t);
-  const y = bez(T - r0 - SW / 2, T - 1000, T - 640, T - RISE - r1 - SW / 2, t);
-  return { x, y };
-};
-// The bezier's own parameter runs fastest off the tread (its first handle is long), so the dot is moved by
-// ARC LENGTH instead: s (0..1 of the path) -> t through a table built once. The speed along the path is then
-// exactly the ease's, slowest at takeoff and landing, fastest mid-air where the camera is moving with it.
-const HOP_LUT: number[] = (() => {
-  const N = 400;
-  const acc: number[] = [0];
-  let prev = hopPos(0, 0, 27, 27);
-  for (let i = 1; i <= N; i++) {
-    const p = hopPos(0, i / N, 27, 27);
-    acc.push(acc[i - 1] + Math.hypot(p.x - prev.x, p.y - prev.y));
-    prev = p;
+const markState = (f: number) => {
+  let at = -1;
+  for (const g of GLIDES) {
+    if (f >= g.f1) at = g.to;
   }
-  return acc.map((a) => a / acc[N]);
-})();
-const tOfS = (s: number) => {
-  const v = clamp01(s);
-  let lo = 0;
-  let hi = HOP_LUT.length - 1;
-  while (hi - lo > 1) {
-    const m = (lo + hi) >> 1;
-    if (HOP_LUT[m] < v) lo = m;
-    else hi = m;
-  }
-  const span = HOP_LUT[hi] - HOP_LUT[lo];
-  const u = span > 0 ? (v - HOP_LUT[lo]) / span : 0;
-  return (lo + u) / (HOP_LUT.length - 1);
-};
-// Half linear, half smoothstep: the dot springs off the tread (no dead start) and settles onto the next.
-const hopEase = (t: number) => tOfS(0.5 * t + 0.5 * smoothstep(t));
-
-const dotState = (f: number) => {
-  // which hop are we in / after
-  let step = -1;
-  for (const h of HOPS) {
-    if (f >= h.f1) step = h.to;
-  }
-  for (const h of HOPS) {
-    if (f > h.f0 && f < h.f1) {
-      const t = hopEase((f - h.f0) / (h.f1 - h.f0));
-      const n = h.to - 1;
-      const rPrev = DOT_R[Math.max(0, n)];
-      const rNext = DOT_R[h.to];
-      const p = hopPos(n, t, rPrev, rNext);
-      // it ripens and grows over the second half of the leap: it arrives as the next year's model
-      const g = smoothstep((t - 0.45) / 0.55);
-      const r = rPrev + (rNext - rPrev) * g;
-      const tone =
-        DOT_T[Math.max(0, n)] + (DOT_T[h.to] - DOT_T[Math.max(0, n)]) * g;
-      return { x: p.x, y: p.y, r, tone };
+  for (const g of GLIDES) {
+    if (f > g.f0 && f < g.f1) {
+      const t = (f - g.f0) / (g.f1 - g.f0);
+      const n = g.to - 1;
+      const from = n < 0 ? ENTRY_X : tickX(n);
+      const x = lerp(from, tickX(g.to), glideEase(t));
+      // it grows and ripens over the second half of the glide: it arrives as the next year's model
+      const gr = smoothstep((t - 0.45) / 0.55);
+      const m = Math.max(0, n);
+      return {
+        x,
+        y: Y_LINE,
+        s: lerp(MARK_S[m], MARK_S[g.to], gr),
+        tone: lerp(MARK_T[m], MARK_T[g.to], gr),
+      };
     }
   }
-  const n = Math.max(0, step);
-  const r = DOT_R[n];
-  return { x: Lx(n) + DOT_X, y: Ty(n) - r - SW / 2, r, tone: DOT_T[n] };
+  const n = Math.max(0, at);
+  return { x: tickX(n), y: Y_LINE, s: MARK_S[n], tone: MARK_T[n] };
 };
+// Spin: tied to the distance travelled (a quarter of a rolling wheel's, so the six-fold knot never strobes),
+// plus a slow idle turn so the parked mark is alive.
+const markSpin = (x: number, f: number) =>
+  (((x - X0) * 0.004 + f * 0.004) * 180) / Math.PI;
 
-// A landing is INK_LO until the dot lands on it, INK_HI while it is there, and drains back to INK_LO once the
-// dot has left.
-const landF = (n: number) => HOPS[n].f1;
-const INK_AHEAD = 0.25; // a landing not reached yet: present, quieter than a passed one
-const leaveF = (n: number) => (n + 1 < HOPS.length ? HOPS[n + 1].f0 : 1e9);
+// A year is INK_AHEAD until the mark lands on it, INK_HI while the mark is there, and drains to INK_LO once
+// the mark has left. 2023 opens already up.
+const landF = (n: number) => GLIDES[n].f1;
+const leaveF = (n: number) => (n + 1 < GLIDES.length ? GLIDES[n + 1].f0 : 1e9);
+const INK_AHEAD = 0.4;
 const inkOf = (n: number, f: number) => {
   const up = interpolate(
     f,
-    [landF(n) - 2, landF(n) + 8],
-    [INK_AHEAD, INK_HI],
+    [landF(n) - 4, landF(n) + 6],
+    [n === 0 ? 0.75 : INK_AHEAD, INK_HI],
     clamp,
   );
   const down = interpolate(
     f,
-    [leaveF(n) + 4, leaveF(n) + 18],
+    [leaveF(n) + 2, leaveF(n) + 16],
     [0, INK_HI - INK_LO],
     clamp,
   );
   return up - down;
 };
 const drainOf = (n: number, f: number) =>
-  interpolate(f, [leaveF(n) + 4, leaveF(n) + 18], [0, 1], clamp);
+  interpolate(f, [leaveF(n) + 2, leaveF(n) + 16], [0, 1], clamp);
 
 // ---------------------------------------------------------------------------
-// The camera: a per-frame target (three eased moves landing to landing, on a slow constant creep up the
-// stair and a slow zoom creep), followed by the kit's damped tracker in x, y and k.
-// The focus of landing n puts its tread at screen y ~1010 and its group (dot + artefact) at screen x 540.
+// The camera: a per-frame target (three eased moves year to year on a slow constant creep right and a slow
+// zoom creep), followed by the kit's damped tracker in x, y and k. At rest the mark sits at screen x ~220 and
+// the year's artefact is centred.
 // ---------------------------------------------------------------------------
-const TREAD_SCREEN_Y = 995;
-// where the tread's left end sits on screen at rest; the last landing sits further right so the orange 2025
-// medal stays in shot lower-left beside the 2026 cards
-const TREAD_SCREEN_X = [270, 270, 270, 360];
-const anchor = (n: number, k: number) => ({
-  x: Lx(n) + (540 - TREAD_SCREEN_X[n]) / k,
-  y: Ty(n) - (TREAD_SCREEN_Y - 960) / k,
-});
-// Each move cranes UP first and pans RIGHT a few frames later, the shape of the dot's own leap (straight up past
-// the artefact, then across), so the camera never drags the rising dot off the left edge.
-// The move LEADS the leap: it starts 8 f before takeoff and its target arrives 4 f after the landing, so the
-// new landing reaches the centre as the dot lands.
-const X_LAG = 2;
+const MARK_SCREEN_X = 220;
+const CAM_Y = 960;
+const anchorX = (n: number, k: number) => tickX(n) + (540 - MARK_SCREEN_X) / k;
+// Each move LEADS the glide by ~5 f (the damped follow lags about that much), so the new year is near its seat
+// as the mark lands; the 2023 card and the 2024 sheet hold still and whole through their punch (ring landed
+// f80, read f80-86; sheet whole to f186) and the move is a short quick pan (peak ~65 px/f) on the year word.
 const MOVES = [
-  { f0: 68, f1: 106, warp: 0.85 },
-  { f0: 166, f1: 204, warp: 0.85 },
-  { f0: 260, f1: 298, warp: 0.85 },
+  { f0: 83, f1: 101, warp: 1 },
+  { f0: 181, f1: 199, warp: 1 },
+  { f0: 260, f1: 296, warp: 0.85 },
 ];
-const K_AT = (f: number) => 0.99 + 0.04 * clamp01(f / (DURATION - 1));
-const CREEP = 0.16; // world px per frame up the stair diagonal
-const CREEP_DIR = (() => {
-  const l = Math.hypot(RUN, RISE);
-  return { x: RUN / l, y: -RISE / l };
-})();
+const K_AT = (f: number) => 0.99 + 0.03 * clamp01(f / (DURATION - 1));
+const CREEP = 0.22; // world px per frame, rightward
 
 const camTarget = (f: number) => {
   const k = K_AT(f);
-  let x = anchor(0, k).x;
-  let y = anchor(0, k).y;
+  let x = anchorX(0, k);
   MOVES.forEach((m, i) => {
     const g = camEase((f - m.f0) / (m.f1 - m.f0), m.warp);
-    const gx = camEase((f - m.f0 - X_LAG) / (m.f1 - m.f0), m.warp);
-    const a = anchor(i, k);
-    const b = anchor(i + 1, k);
-    x += (b.x - a.x) * gx;
-    y += (b.y - a.y) * g;
+    x += (anchorX(i + 1, k) - anchorX(i, k)) * g;
   });
-  x += CREEP_DIR.x * CREEP * (f - 190);
-  y += CREEP_DIR.y * CREEP * (f - 190);
-  return { x, y, k };
+  x += CREEP * (f - 190);
+  return { x, y: CAM_Y, k };
 };
 
 const CAM: { cx: number; cy: number; k: number }[] = (() => {
-  const CX: number[] = [];
-  const CY: number[] = [];
-  const K: number[] = [];
-  for (let f = 0; f <= DURATION; f++) {
-    const t = camTarget(f);
-    CX.push(t.x);
-    CY.push(t.y);
-    K.push(t.k);
-  }
-  // The opening is already moving: the camera starts a little down-left of the 2023 landing (where the dot
-  // has just come from) and the kit's damped follow (runCamera's loop, with x) settles it onto the landing
-  // over the first ~30 frames.
+  const T = Array.from({ length: DURATION + 1 }, (_, f) => camTarget(f));
+  // The opening is already moving: the camera starts a little left (where the mark has come from) and the
+  // kit's damped follow settles it over the first ~30 frames.
   const out: { cx: number; cy: number; k: number }[] = [];
-  const START = { x: CX[0] - 90, y: CY[0] + 75 };
-  let cx = START.x;
-  let cy = START.y;
-  let k = K[0];
+  let cx = T[0].x - 120;
+  let cy = T[0].y;
+  let k = T[0].k;
   let vx = 0;
   let vy = 0;
   let vk = 0;
   out.push({ cx, cy, k });
   for (let f = 1; f <= DURATION; f++) {
-    vx += (CX[f] - cx) * CAM_STIFF - vx * CAM_DAMP;
+    vx += (T[f].x - cx) * CAM_STIFF - vx * CAM_DAMP;
     cx += vx;
-    vy += (CY[f] - cy) * CAM_STIFF - vy * CAM_DAMP;
+    vy += (T[f].y - cy) * CAM_STIFF - vy * CAM_DAMP;
     cy += vy;
-    vk += (K[f] - k) * CAM_STIFF - vk * CAM_DAMP;
+    vk += (T[f].k - k) * CAM_STIFF - vk * CAM_DAMP;
     k += vk;
     out.push({ cx, cy, k });
   }
   return out;
 })();
 
-/** The dot's screen position (no sway) at a frame: what the speed check in the hand-off measures. */
-export const dotOnScreen = (f: number) => {
+// The grid's parallax is measured from mid-travel, so its shift stays inside the image's overscan both ways.
+const BG_CX_REST = (CAM[0].cx + CAM[DURATION].cx) / 2;
+
+/** The camera at a frame (for the hand-off checks). */
+export const camAt = (f: number) => CAM[Math.max(0, Math.min(DURATION, f))];
+
+/** The mark's screen position and size (no sway) at a frame: what the speed check measures. */
+export const markOnScreen = (f: number) => {
   const c = CAM[Math.max(0, Math.min(DURATION, f))];
-  const d = dotState(f);
+  const m = markState(f);
   const { tx, ty } = worldTransform(c.cx, c.cy, c.k);
-  return { x: tx + d.x * c.k, y: ty + d.y * c.k, r: d.r * c.k };
+  return { x: tx + m.x * c.k, y: ty + m.y * c.k, s: m.s * c.k };
 };
+
+// ---------------------------------------------------------------------------
+// The artefacts are drawn in their own local frame (origin at the bottom-left of the old landing; every one is
+// centred on local x 335 with its bottom at local y ~-6) and placed above their tick, scaled to ~610-630 px
+// wide. Strokes inside are SW / sc, so the screen stroke stays the one weight.
+// ---------------------------------------------------------------------------
+const ART_SC = [1.3, 1.36, 1.36, 1.32];
+const ART_CX = 335;
+const ART_BOT = 905;
+const ART = ART_SC.map((sc, n) => ({
+  sc,
+  ox: tickX(n) + (540 - MARK_SCREEN_X) - sc * ART_CX,
+  oy: ART_BOT,
+}));
+const toW = (n: number, p: P): P => ({
+  x: ART[n].ox + ART[n].sc * p.x,
+  y: ART[n].oy + ART[n].sc * p.y,
+});
+const Placed: React.FC<{ n: number; children: React.ReactNode }> = ({
+  n,
+  children,
+}) => (
+  <g transform={`translate(${ART[n].ox} ${ART[n].oy}) scale(${ART[n].sc})`}>
+    {children}
+  </g>
+);
 
 // ---------------------------------------------------------------------------
 // Small drawing helpers.
 // ---------------------------------------------------------------------------
-type P = { x: number; y: number };
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const arcD = (cx: number, cy: number, r: number, a0: number, a1: number) => {
   const sweep = a1 - a0;
   if (Math.abs(sweep) < 1e-4) return "";
@@ -371,8 +338,8 @@ const tickPts = (cx: number, cy: number, s: number): P[] => [
   { x: cx + 0.52 * s, y: cy - 0.34 * s },
 ];
 
-// The style's Thread: an accent line drawn from the dot's rim with a small white head, which holds (packets
-// running out and back on a long hold) and then fades.
+// The style's Thread: an accent line drawn from the mark's rim with a small white head, which holds (packets
+// running out and back on a long hold) and then fades. World coordinates.
 const Thread: React.FC<{
   frame: number;
   k: number;
@@ -383,6 +350,7 @@ const Thread: React.FC<{
   opacity?: number;
   packets?: boolean;
   phase?: number;
+  weight?: number;
 }> = ({
   frame,
   k,
@@ -393,6 +361,7 @@ const Thread: React.FC<{
   opacity = 1,
   packets = false,
   phase = 0,
+  weight = THREAD,
 }) => {
   const p = clamp01(progress);
   if (p <= 0 || opacity <= 0) return null;
@@ -414,43 +383,50 @@ const Thread: React.FC<{
         x2={tip.x}
         y2={tip.y}
         stroke={ACCENT}
-        strokeWidth={THREAD}
+        strokeWidth={weight}
         strokeLinecap="round"
       />
       {pk.map((q, i) => (
-        <circle key={i} cx={q.x} cy={q.y} r={PACKET_R} fill={ACCENT} />
+        <circle
+          key={i}
+          cx={q.x}
+          cy={q.y}
+          r={PACKET_R * (weight / THREAD)}
+          fill={ACCENT}
+        />
       ))}
       {p < 1 ? <circle cx={tip.x} cy={tip.y} r={HEAD_R} fill={INK} /> : null}
     </g>
   );
 };
 
+type MarkPos = { x: number; y: number; r: number };
+
 // ---------------------------------------------------------------------------
 // 2023: the column-addition card. 4,738 + 2,594; the AI writes 7,322 right to left, tens digit wrong.
 // ---------------------------------------------------------------------------
 const SUM = (() => {
-  const L = Lx(0);
-  const T = Ty(0);
-  const box = { x0: L + 95, y0: T - 376, x1: L + 575, y1: T - SW * 1.2 };
+  const box = { x0: 95, y0: -376, x1: 575, y1: -8 };
   const fs = 88;
   const pitch = 50;
-  const right = L + 517; // units column centre
+  const right = 517; // units column centre
   const col = (i: number) => right - pitch * i - (i >= 3 ? 24 : 0); // i: 0 units .. 3 thousands
   const commaX = right - pitch * 2 - 37;
-  const rows = { a: T - 262, b: T - 162, ans: T - 42 };
-  const rule = { x0: L + 190, x1: L + 548, y: T - 132 };
+  const rows = { a: -262, b: -162, ans: -42 };
+  const rule = { x0: 190, x1: 548, y: -132 };
   // the answer, written units first
   const ans = ["2", "2", "3", "7"]; // units, tens (wrong: should be 3), hundreds, thousands
   const writeF = [46, 51, 56, 61];
   const ring = { x: col(1), y: rows.ans - fs * 0.36, r: 48 };
-  return { L, T, box, fs, col, commaX, rows, rule, ans, writeF, ring };
+  return { box, fs, col, commaX, rows, rule, ans, writeF, ring };
 })();
 
 const SumCard: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
   const S = SUM;
+  const sc = ART[0].sc;
+  const sw = SW / sc;
   const ink = inkOf(0, frame);
-  const drain = drainOf(0, frame);
-  const orange = MODEL_TONE(1 - drain);
+  const orange = MODEL_TONE(1 - drainOf(0, frame));
   const w = S.box.x1 - S.box.x0;
   const h = S.box.y1 - S.box.y0;
   const digits = (str: string, y: number, color: string) =>
@@ -483,21 +459,21 @@ const SumCard: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
     </text>
   );
   // the ring on the wrong digit: drawn head-led from the top, landing with the style's back ease
-  const rU = clamp01((frame - 64) / 9);
-  const rLand = interpolate(frame, [64, 76], [0, 1], {
+  const rU = clamp01((frame - 68) / 9);
+  const rLand = interpolate(frame, [68, 80], [0, 1], {
     ...clamp,
     easing: Easing.out(Easing.back(1.6)),
   });
   const rr = S.ring.r * (1.18 - 0.18 * rLand);
   return (
-    <g>
-      <g style={{ filter: iconShadow(k) }} opacity={ink}>
+    <Placed n={0}>
+      <g style={{ filter: iconShadow(k * sc) }} opacity={ink}>
         <path
           d={squirclePath(w, h)}
           transform={`translate(${S.box.x0} ${S.box.y0})`}
           fill="none"
           stroke={INK}
-          strokeWidth={SW}
+          strokeWidth={sw}
         />
         {digits("4738", S.rows.a, INK)}
         {comma(S.rows.a, INK)}
@@ -520,7 +496,7 @@ const SumCard: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
           y1={S.rule.y}
           y2={S.rule.y}
           stroke={INK}
-          strokeWidth={SW}
+          strokeWidth={sw}
           strokeLinecap="round"
         />
         {rU > 0 ? (
@@ -534,7 +510,7 @@ const SumCard: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
             )}
             fill="none"
             stroke={INK}
-            strokeWidth={SW}
+            strokeWidth={sw}
             strokeLinecap="round"
           />
         ) : null}
@@ -562,15 +538,11 @@ const SumCard: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
           </g>
         );
       })}
-    </g>
+    </Placed>
   );
 };
 
-const sumThread = (
-  frame: number,
-  k: number,
-  dot: { x: number; y: number; r: number },
-) => {
+const sumThread = (frame: number, k: number, mark: MarkPos) => {
   const S = SUM;
   const tipX = interpolate(
     frame,
@@ -578,7 +550,7 @@ const sumThread = (
     [0, 1, 2, 3].map((i) => S.col(i) - 8),
     clamp,
   );
-  const to = { x: tipX, y: S.rows.ans - S.fs * 0.3 };
+  const to = toW(0, { x: tipX, y: S.rows.ans - S.fs * 0.3 });
   const progress = interpolate(frame, [36, 46], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.quad),
@@ -588,8 +560,8 @@ const sumThread = (
     <Thread
       frame={frame}
       k={k}
-      from={dot}
-      fromR={dot.r + 4}
+      from={mark}
+      fromR={mark.r + 6}
       to={to}
       progress={progress}
       opacity={opacity}
@@ -601,23 +573,19 @@ const sumThread = (
 // 2024: the competition sheet. 15 numbered problem rows; the thread runs down the margin and ticks two.
 // ---------------------------------------------------------------------------
 const SHEET = (() => {
-  const L = Lx(1);
-  const T = Ty(1);
-  const box = { x0: L + 110, y0: T - 466, x1: L + 560, y1: T - SW * 1.2 };
+  const box = { x0: 110, y0: -466, x1: 560, y1: -8 };
   const rows = 15;
   const pitch = 24;
-  const row0 = T - 368;
+  const row0 = -368;
   const rowY = (i: number) => row0 + pitch * i;
-  const tickX = L + 152;
-  const numX = L + 208;
-  const barX = L + 224;
+  const tickX = 152;
+  const numX = 208;
+  const barX = 224;
   const barLen = (i: number) => 100 + 200 * hash(i, 4.1);
   const scan = { f0: 118, f1: 164 };
   const passF = (i: number) => scan.f0 + ((scan.f1 - scan.f0) * i) / (rows - 1);
   const solved = [1, 7];
   return {
-    L,
-    T,
     box,
     rows,
     pitch,
@@ -634,21 +602,22 @@ const SHEET = (() => {
 
 const Sheet: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
   const S = SHEET;
+  const sc = ART[1].sc;
+  const sw = SW / sc;
   const ink = inkOf(1, frame);
-  const drain = drainOf(1, frame);
-  const orange = MODEL_TONE(1 - drain);
+  const orange = MODEL_TONE(1 - drainOf(1, frame));
   const w = S.box.x1 - S.box.x0;
   const h = S.box.y1 - S.box.y0;
-  const barH = worldPx(11, K_REST);
+  const barH = 11.5;
   return (
-    <g>
-      <g style={{ filter: iconShadow(k) }} opacity={ink}>
+    <Placed n={1}>
+      <g style={{ filter: iconShadow(k * sc) }} opacity={ink}>
         <path
           d={squirclePath(w, h)}
           transform={`translate(${S.box.x0} ${S.box.y0})`}
           fill="none"
           stroke={INK}
-          strokeWidth={SW}
+          strokeWidth={sw}
         />
         {/* the paper's title block */}
         <path
@@ -691,24 +660,20 @@ const Sheet: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
         return (
           <path
             key={i}
-            d={partialPolyline(tickPts(S.tickX, S.rowY(i), 40), u)}
+            d={partialPolyline(tickPts(S.tickX, S.rowY(i), 34), u)}
             fill="none"
             stroke={orange}
-            strokeWidth={SW}
+            strokeWidth={sw}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         );
       })}
-    </g>
+    </Placed>
   );
 };
 
-const sheetThread = (
-  frame: number,
-  k: number,
-  dot: { x: number; y: number; r: number },
-) => {
+const sheetThread = (frame: number, k: number, mark: MarkPos) => {
   const S = SHEET;
   const ty = interpolate(
     frame,
@@ -716,7 +681,7 @@ const sheetThread = (
     [S.rowY(0), S.rowY(S.rows - 1)],
     clamp,
   );
-  const to = { x: S.tickX - 30, y: ty };
+  const to = toW(1, { x: S.tickX - 30, y: ty });
   const progress = interpolate(frame, [107, 118], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.quad),
@@ -726,8 +691,8 @@ const sheetThread = (
     <Thread
       frame={frame}
       k={k}
-      from={dot}
-      fromR={dot.r + 4}
+      from={mark}
+      fromR={mark.r + 6}
       to={to}
       progress={progress}
       opacity={opacity}
@@ -739,12 +704,11 @@ const sheetThread = (
 // 2025: the IMO medal on its ribbon. The thread reaches its rim and it converts white -> orange.
 // ---------------------------------------------------------------------------
 const MEDAL = (() => {
-  const L = Lx(2);
-  const T = Ty(2);
-  const c = { x: L + 335, y: T - 180 };
+  const sw = SW / ART_SC[2];
+  const c = { x: 335, y: -180 };
   const R = 166;
   const Ri = 127;
-  const top = T - 470;
+  const top = -470;
   // two straps converging on the disc, each a quad cut where it meets the rim
   const strap = (side: -1 | 1) => {
     const outerTop = { x: c.x + side * 150, y: top };
@@ -752,13 +716,13 @@ const MEDAL = (() => {
     const outerBot = { x: c.x + side * 84, y: c.y - R + 20 };
     const innerBot = { x: c.x + side * 20, y: c.y - R + 4 };
     const cut = (a: P, b: P) => {
-      // walk from a toward b until the point is SW*1.5 outside the rim
+      // walk from a toward b until the point is sw*1.6 outside the rim
       let lo = 0;
       let hi = 1;
       for (let i = 0; i < 30; i++) {
         const m = (lo + hi) / 2;
         const p = { x: lerp(a.x, b.x, m), y: lerp(a.y, b.y, m) };
-        if (Math.hypot(p.x - c.x, p.y - c.y) > R + SW * 1.6) lo = m;
+        if (Math.hypot(p.x - c.x, p.y - c.y) > R + sw * 1.6) lo = m;
         else hi = m;
       }
       return { x: lerp(a.x, b.x, lo), y: lerp(a.y, b.y, lo) };
@@ -771,23 +735,14 @@ const MEDAL = (() => {
     };
   };
   const contactA = Math.PI * 0.86; // where the thread meets the rim (left, a little low)
-  return {
-    L,
-    T,
-    c,
-    R,
-    Ri,
-    top,
-    strap,
-    contactA,
-    convert: { f0: 228, f1: 240 },
-  };
+  return { c, R, Ri, strap, contactA, convert: { f0: 228, f1: 240 } };
 })();
 
 const Medal: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
   const M = MEDAL;
+  const sc = ART[2].sc;
+  const sw = SW / sc;
   const ink = inkOf(2, frame);
-  const drain = drainOf(2, frame);
   const wipe = interpolate(frame, [M.convert.f0, M.convert.f1], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.quad),
@@ -802,25 +757,36 @@ const Medal: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
     frame,
     [M.convert.f0 + 4, M.convert.f1 + 6],
     [0, 1],
-    {
-      ...clamp,
-      easing: Easing.out(Easing.back(1.6)),
-    },
+    { ...clamp, easing: Easing.out(Easing.back(1.6)) },
   );
-  const orange = MODEL_TONE(1 - drain);
+  const orange = MODEL_TONE(1 - drainOf(2, frame));
   const faceCol = face >= 1 ? orange : CONVERT_TONE(face);
   const ri = M.Ri * (face > 0 ? 0.92 + 0.08 * land : 1);
   const straps = ([-1, 1] as const).map((s) => M.strap(s));
+  const imo = (col: string) => (
+    <text
+      x={M.c.x}
+      y={M.c.y + 31}
+      fill={col}
+      fontFamily={FONT_LABEL}
+      fontWeight={LABEL_WEIGHT}
+      fontSize={88}
+      textAnchor="middle"
+      letterSpacing="0.04em"
+    >
+      IMO
+    </text>
+  );
   return (
-    <g>
-      <g style={{ filter: iconShadow(k) }} opacity={ink}>
+    <Placed n={2}>
+      <g style={{ filter: iconShadow(k * sc) }} opacity={ink}>
         {straps.map((s, i) => (
           <path
             key={i}
             d={`M${s.outerEnd.x} ${s.outerEnd.y} L${s.outerTop.x} ${s.outerTop.y} L${s.innerTop.x} ${s.innerTop.y} L${s.innerEnd.x} ${s.innerEnd.y}`}
             fill="none"
             stroke={INK}
-            strokeWidth={SW}
+            strokeWidth={sw}
             strokeLinejoin="round"
             strokeLinecap="round"
           />
@@ -832,49 +798,36 @@ const Medal: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
           r={M.R}
           fill="none"
           stroke={INK}
-          strokeWidth={SW}
+          strokeWidth={sw}
         />
         {face < 1 ? (
-          <g opacity={1}>
+          <g>
             <circle
               cx={M.c.x}
               cy={M.c.y}
               r={ri}
               fill="none"
               stroke={INK}
-              strokeWidth={SW}
+              strokeWidth={sw}
             />
-            <text
-              x={M.c.x}
-              y={M.c.y + 31}
-              fill={INK}
-              fontFamily={FONT_LABEL}
-              fontWeight={LABEL_WEIGHT}
-              fontSize={88}
-              textAnchor="middle"
-              letterSpacing="0.04em"
-            >
-              IMO
-            </text>
+            {imo(INK)}
           </g>
         ) : null}
       </g>
       {wipe > 0 ? (
-        <g>
-          <path
-            d={arcD(
-              M.c.x,
-              M.c.y,
-              M.R,
-              M.contactA - Math.PI * wipe,
-              M.contactA + Math.PI * wipe,
-            )}
-            fill="none"
-            stroke={orange}
-            strokeWidth={SW}
-            strokeLinecap="round"
-          />
-        </g>
+        <path
+          d={arcD(
+            M.c.x,
+            M.c.y,
+            M.R,
+            M.contactA - Math.PI * wipe,
+            M.contactA + Math.PI * wipe,
+          )}
+          fill="none"
+          stroke={orange}
+          strokeWidth={sw}
+          strokeLinecap="round"
+        />
       ) : null}
       {face > 0 ? (
         <g opacity={face >= 1 ? 1 : face}>
@@ -884,36 +837,22 @@ const Medal: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
             r={ri}
             fill="none"
             stroke={faceCol}
-            strokeWidth={SW}
+            strokeWidth={sw}
           />
-          <text
-            x={M.c.x}
-            y={M.c.y + 31}
-            fill={faceCol}
-            fontFamily={FONT_LABEL}
-            fontWeight={LABEL_WEIGHT}
-            fontSize={88}
-            textAnchor="middle"
-            letterSpacing="0.04em"
-          >
-            IMO
-          </text>
+          {imo(faceCol)}
         </g>
       ) : null}
-    </g>
+    </Placed>
   );
 };
 
-const medalThread = (
-  frame: number,
-  k: number,
-  dot: { x: number; y: number; r: number },
-) => {
+const medalThread = (frame: number, k: number, mark: MarkPos) => {
   const M = MEDAL;
-  const to = {
-    x: M.c.x + (M.R + SW * 0.2) * Math.cos(M.contactA),
-    y: M.c.y + (M.R + SW * 0.2) * Math.sin(M.contactA),
-  };
+  const sw = SW / ART_SC[2];
+  const to = toW(2, {
+    x: M.c.x + (M.R + sw * 0.2) * Math.cos(M.contactA),
+    y: M.c.y + (M.R + sw * 0.2) * Math.sin(M.contactA),
+  });
   const progress = interpolate(frame, [210, 224], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.quad),
@@ -923,8 +862,8 @@ const medalThread = (
     <Thread
       frame={frame}
       k={k}
-      from={dot}
-      fromR={dot.r + 4}
+      from={mark}
+      fromR={mark.r + 6}
       to={to}
       progress={progress}
       opacity={opacity}
@@ -937,23 +876,21 @@ const medalThread = (
 // 2026: six dashed "?" cards (open problems). Three close up to solid orange with a white tick.
 // ---------------------------------------------------------------------------
 const CARDS = (() => {
-  const L = Lx(3);
-  const T = Ty(3);
   const s = 144;
   const list = [
-    { x: L + 170, y: T - 86 }, // 0 bottom-left  (A)
-    { x: L + 332, y: T - 92 }, // 1 bottom-mid  (C)
-    { x: L + 494, y: T - 84 }, // 2 bottom-right
-    { x: L + 180, y: T - 256 }, // 3 top-left     (B)
-    { x: L + 342, y: T - 262 }, // 4 top-mid
-    { x: L + 502, y: T - 252 }, // 5 top-right
+    { x: 170, y: -86 }, // 0 bottom-left  (A)
+    { x: 332, y: -92 }, // 1 bottom-mid  (C)
+    { x: 494, y: -84 }, // 2 bottom-right
+    { x: 180, y: -256 }, // 3 top-left     (B)
+    { x: 342, y: -262 }, // 4 top-mid
+    { x: 502, y: -252 }, // 5 top-right
   ];
   const solve = [
     { card: 0, f: 327 },
     { card: 3, f: 343 },
     { card: 1, f: 357 },
   ];
-  return { L, T, s, list, solve };
+  return { s, list, solve };
 })();
 const cardSolveF = (i: number) => {
   const s = CARDS.solve.find((q) => q.card === i);
@@ -962,10 +899,12 @@ const cardSolveF = (i: number) => {
 
 const Cards: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
   const C = CARDS;
+  const sc = ART[3].sc;
+  const sw = SW / sc;
   const ink = inkOf(3, frame);
   const half = C.s / 2;
   return (
-    <g>
+    <Placed n={3}>
       {C.list.map((c, i) => {
         const f0 = cardSolveF(i);
         const close = interpolate(frame, [f0, f0 + 8], [0, 1], {
@@ -975,7 +914,7 @@ const Cards: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
         const swap = interpolate(frame, [f0 + 1, f0 + 11], [0, 1], clamp);
         const col = close >= 1 ? ACCENT : CONVERT_TONE(close);
         const strokeOp = lerp(ink, 1, close);
-        const march = frame * MARCH * (1 - close);
+        const march = (frame * MARCH * (1 - close)) / sc;
         return (
           <g key={i}>
             <path
@@ -984,15 +923,17 @@ const Cards: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
               fill="none"
               stroke={col}
               opacity={strokeOp}
-              strokeWidth={SW}
+              strokeWidth={sw}
               strokeLinecap="butt"
               strokeDasharray={
-                close >= 1 ? undefined : `${DASH_ON} ${DASH_OFF * (1 - close)}`
+                close >= 1
+                  ? undefined
+                  : `${DASH_ON / sc} ${(DASH_OFF / sc) * (1 - close)}`
               }
               strokeDashoffset={-march}
-              style={close > 0 ? undefined : { filter: iconShadow(k) }}
+              style={close > 0 ? undefined : { filter: iconShadow(k * sc) }}
             />
-            <g style={{ filter: iconShadow(k) }} opacity={ink}>
+            <g style={{ filter: iconShadow(k * sc) }} opacity={ink}>
               {swap < 1 ? (
                 <text
                   x={c.x}
@@ -1013,7 +954,7 @@ const Cards: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
                   fill="none"
                   stroke={INK}
                   opacity={swap / Math.max(ink, 1e-4)}
-                  strokeWidth={SW}
+                  strokeWidth={sw}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
@@ -1022,46 +963,47 @@ const Cards: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
           </g>
         );
       })}
-    </g>
+    </Placed>
   );
 };
 
-// The chain: dot -> A, A -> B, B -> C. Each link starts at the rim of the card that was just solved.
+// The chain: mark -> A, A -> B, B -> C. Each link starts at the rim of the card that was just solved.
 const edgeToward = (c: P, half: number, toward: P): P => {
   const dx = toward.x - c.x;
   const dy = toward.y - c.y;
   const s = half / Math.max(Math.abs(dx), Math.abs(dy), 1e-6);
   return { x: c.x + dx * s, y: c.y + dy * s };
 };
-const cardThreads = (
-  frame: number,
-  k: number,
-  dot: { x: number; y: number; r: number },
-) => {
+const cardThreads = (frame: number, k: number, mark: MarkPos) => {
   const C = CARDS;
-  const half = C.s / 2 + SW;
+  const half = C.s / 2 + SW / ART_SC[3];
   const A = C.list[0];
   const B = C.list[3];
   const Cc = C.list[1];
+  // the mark in the cards' local frame, to aim the first link's end at it
+  const markL = {
+    x: (mark.x - ART[3].ox) / ART[3].sc,
+    y: (mark.y - ART[3].oy) / ART[3].sc,
+  };
   const links = [
     {
-      from: dot,
-      fromR: dot.r + 4,
-      to: edgeToward(A, half, dot),
+      from: mark as P,
+      fromR: mark.r + 6,
+      to: toW(3, edgeToward(A, half, markL)),
       f0: 316,
       f1: 327,
     },
     {
-      from: edgeToward(A, half, B),
+      from: toW(3, edgeToward(A, half, B)),
       fromR: 0,
-      to: edgeToward(B, half, A),
+      to: toW(3, edgeToward(B, half, A)),
       f0: 337,
       f1: 343,
     },
     {
-      from: edgeToward(B, half, Cc),
+      from: toW(3, edgeToward(B, half, Cc)),
       fromR: 0,
-      to: edgeToward(Cc, half, B),
+      to: toW(3, edgeToward(Cc, half, B)),
       f0: 351,
       f1: 357,
     },
@@ -1080,108 +1022,139 @@ const cardThreads = (
       })}
       packets
       phase={i * 6}
+      weight={SW}
     />
   ));
 };
 
 // ---------------------------------------------------------------------------
-// The staircase itself.
+// The timeline itself: orange behind the mark (its progress), white ahead of it, broken around the mark so it
+// reads as a bead on the line; a tick per year and a short tick per quarter; dashed past 2026, marching on.
 // ---------------------------------------------------------------------------
-const SOLID_FROM = -4;
-const SOLID_PTS: P[] = (() => {
-  const pts: P[] = [{ x: Lx(SOLID_FROM), y: Ty(SOLID_FROM) + RISE }];
-  for (let n = SOLID_FROM; n <= 3; n++) {
-    pts.push({ x: Lx(n), y: Ty(n) });
-    pts.push({ x: Lx(n) + RUN, y: Ty(n) });
+const TRAIL_ID = "climbing-years-trail";
+const Timeline: React.FC<{ frame: number; k: number; mark: MarkPos }> = ({
+  frame,
+  k,
+  mark,
+}) => {
+  const gap = mark.r + 12;
+  const leftEnd = mark.x - gap;
+  const rightStart = mark.x + gap;
+  // a tick near the mark fades out so it never shows through the knot
+  const nearMark = (x: number) =>
+    clamp01((Math.abs(x - mark.x) - gap * 0.9) / 24);
+  const minors: number[] = [];
+  for (let q = -16; q <= 15; q++) {
+    if (q % 4 === 0) continue;
+    const x = X0 + (SPACING * q) / 4;
+    if (x < SOLID_END - 40) minors.push(x);
   }
-  return pts;
-})();
-const DASH_PTS: P[] = (() => {
-  const pts: P[] = [{ x: Lx(4), y: Ty(3) }];
-  for (let n = 4; n <= 7; n++) {
-    pts.push({ x: Lx(n), y: Ty(n) });
-    pts.push({ x: Lx(n) + RUN, y: Ty(n) });
-  }
-  return pts;
-})();
-const DASH_LEN = (() => {
-  let s = 0;
-  for (let i = 1; i < DASH_PTS.length; i++)
-    s += Math.hypot(
-      DASH_PTS[i].x - DASH_PTS[i - 1].x,
-      DASH_PTS[i].y - DASH_PTS[i - 1].y,
-    );
-  return s;
-})();
-const dashAt = (s: number): { p: P; seg: number } => {
-  let left = s;
-  for (let i = 1; i < DASH_PTS.length; i++) {
-    const a = DASH_PTS[i - 1];
-    const b = DASH_PTS[i];
-    const l = Math.hypot(b.x - a.x, b.y - a.y);
-    if (left <= l)
-      return {
-        p: { x: lerp(a.x, b.x, left / l), y: lerp(a.y, b.y, left / l) },
-        seg: i,
-      };
-    left -= l;
-  }
-  return { p: DASH_PTS[DASH_PTS.length - 1], seg: DASH_PTS.length - 1 };
-};
-// Where the dashed part has faded to nothing (world px along it).
-const DASH_FADE = RISE * 2.4 + RUN * 1.6;
-
-const Stair: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
-  const solidD = SOLID_PTS.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join(
-    " ",
-  );
-  // the dashes, each its own segment so each can carry its own fade; they march up the stair
+  // the dashes past the solid line, each its own segment so each carries its own fade; they march right
   const period = DASH_ON + DASH_OFF;
-  const off = (frame * MARCH) % period;
-  const dashes: { d: string; op: number }[] = [];
-  for (
-    let s0 = off - period;
-    s0 < Math.min(DASH_LEN, DASH_FADE);
-    s0 += period
-  ) {
+  const off = (frame * MARCH * 1.6) % period;
+  const dashes: { a: number; b: number; op: number }[] = [];
+  for (let s0 = off - period; s0 < DASH_FADE; s0 += period) {
     const a = Math.max(0, s0);
-    const b = Math.min(DASH_LEN, s0 + DASH_ON);
+    const b = Math.min(DASH_FADE, s0 + DASH_ON);
     if (b <= a) continue;
-    const A = dashAt(a);
-    const B = dashAt(b);
-    const pts: P[] = [A.p];
-    for (let j = A.seg; j < B.seg; j++) pts.push(DASH_PTS[j]);
-    pts.push(B.p);
-    const mid = (a + b) / 2;
-    const op = INK_HI * Math.pow(clamp01(1 - mid / DASH_FADE), 1.3);
+    const op = INK_HI * Math.pow(clamp01(1 - (a + b) / 2 / DASH_FADE), 1.3);
     dashes.push({
-      d: pts
-        .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
-        .join(" "),
+      a: SOLID_END + DASH_OFF + a,
+      b: SOLID_END + DASH_OFF + b,
       op,
     });
   }
   return (
-    <g style={{ filter: iconShadow(k) }}>
-      <path
-        d={solidD}
-        fill="none"
-        stroke={INK}
+    <g>
+      <defs>
+        <linearGradient
+          id={TRAIL_ID}
+          gradientUnits="userSpaceOnUse"
+          x1={tickX(0)}
+          y1={0}
+          x2={tickX(3)}
+          y2={0}
+        >
+          <stop offset={0} stopColor={ACCENT_DEEP} />
+          <stop offset={1} stopColor={ACCENT} />
+        </linearGradient>
+      </defs>
+      <g style={{ filter: iconShadow(k) }}>
+        {rightStart < SOLID_END ? (
+          <line
+            x1={rightStart}
+            x2={SOLID_END}
+            y1={Y_LINE}
+            y2={Y_LINE}
+            stroke={INK}
+            strokeWidth={SW}
+            opacity={INK_HI}
+          />
+        ) : null}
+        {dashes.map((q, i) => (
+          <line
+            key={i}
+            x1={q.a}
+            x2={q.b}
+            y1={Y_LINE}
+            y2={Y_LINE}
+            stroke={INK}
+            strokeWidth={SW}
+            opacity={q.op}
+          />
+        ))}
+        {minors.map((x) => (
+          <line
+            key={x}
+            x1={x}
+            x2={x}
+            y1={Y_LINE - MINOR_H}
+            y2={Y_LINE + MINOR_H}
+            stroke={INK}
+            strokeWidth={SW}
+            opacity={INK_LO * nearMark(x)}
+          />
+        ))}
+        {YEARS.map((_, n) => (
+          <line
+            key={n}
+            x1={tickX(n)}
+            x2={tickX(n)}
+            y1={Y_LINE - TICK_H}
+            y2={Y_LINE + TICK_H}
+            stroke={INK}
+            strokeWidth={SW}
+            opacity={INK_HI * nearMark(tickX(n))}
+          />
+        ))}
+      </g>
+      {/* the progress: the AI's colour on the line it has travelled */}
+      <line
+        x1={LINE_START}
+        x2={leftEnd}
+        y1={Y_LINE}
+        y2={Y_LINE}
+        stroke={`url(#${TRAIL_ID})`}
         strokeWidth={SW}
-        strokeLinejoin="miter"
-        strokeLinecap="butt"
-        opacity={INK_HI}
       />
-      {dashes.map((q, i) => (
-        <path
-          key={i}
-          d={q.d}
-          fill="none"
-          stroke={INK}
-          strokeWidth={SW}
-          strokeLinejoin="miter"
-          opacity={q.op}
-        />
+    </g>
+  );
+};
+
+const Mark: React.FC<{ frame: number; x: number; s: number; tone: number }> = ({
+  frame,
+  x,
+  s,
+  tone,
+}) => {
+  const size = s * breath(frame, 0.3);
+  const rot = markSpin(x, frame);
+  return (
+    <g
+      transform={`translate(${x} ${Y_LINE}) rotate(${rot.toFixed(3)}) scale(${size / 24}) translate(-12 -12)`}
+    >
+      {OPENAI.paths.map((d, i) => (
+        <path key={i} d={d} fill={MODEL_TONE(tone)} fillRule="evenodd" />
       ))}
     </g>
   );
@@ -1190,22 +1163,17 @@ const Stair: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
 // ---------------------------------------------------------------------------
 // The cut.
 // ---------------------------------------------------------------------------
-// The year is cut into the face of its step, under the tread at its right end (right next to the riser it
-// climbs from), so the year below-left stays readable while its landing is in shot.
-const LABEL_W = 104; // "2023" in Roboto Condensed 700 caps at 48 px, measured
-const LABEL_POS = YEARS.map((_, n) => ({
-  x: Lx(n) + RUN - 30 - LABEL_W / 2,
-  top: Ty(n) + 22,
-}));
+// The year label sits under the line, just right of its tick (the parked mark covers the tick itself).
+const LABEL_GAP = 16; // label's left edge, past the parked mark's rim
+const LABEL_DY = 18;
 
 const ClimbingTheYears: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const { cx, cy, k } = CAM[Math.max(0, Math.min(DURATION, frame))];
-  const s = sway(frame);
+  const sw = sway(frame);
   const { tx, ty } = worldTransform(cx, cy, k);
-  const d = dotState(frame);
-  const dot = { x: d.x, y: d.y, r: d.r };
-  const dotR = d.r * breath(frame, 0.3);
+  const m = markState(frame);
+  const mark: MarkPos = { x: m.x, y: m.y, r: m.s / 2 };
   return (
     <AbsoluteFill style={{ backgroundColor: BG_BASE }}>
       <GridBackground
@@ -1216,9 +1184,9 @@ const ClimbingTheYears: React.FC<z.infer<typeof schema>> = () => {
         cy={cy}
         cyRest={CAM[0].cy}
         cx={cx}
-        cxRest={CAM[0].cx}
+        cxRest={BG_CX_REST}
         k={k}
-        parallax={0.15}
+        parallax={0.1}
       />
       <AbsoluteFill
         style={{
@@ -1233,7 +1201,7 @@ const ClimbingTheYears: React.FC<z.infer<typeof schema>> = () => {
             width: 1080,
             height: 1920,
             transformOrigin: "0 0",
-            transform: `translate(${tx + s.dx}px, ${ty + s.dy}px) scale(${k})`,
+            transform: `translate(${tx + sw.dx}px, ${ty + sw.dy}px) scale(${k})`,
           }}
         >
           <svg
@@ -1246,26 +1214,27 @@ const ClimbingTheYears: React.FC<z.infer<typeof schema>> = () => {
               overflow: "visible",
             }}
           >
-            <Stair frame={frame} k={k} />
+            <Timeline frame={frame} k={k} mark={mark} />
             <SumCard frame={frame} k={k} />
             <Sheet frame={frame} k={k} />
             <Medal frame={frame} k={k} />
             <Cards frame={frame} k={k} />
-            {sumThread(frame, k, dot)}
-            {sheetThread(frame, k, dot)}
-            {medalThread(frame, k, dot)}
-            {cardThreads(frame, k, dot)}
-            <circle cx={d.x} cy={d.y} r={dotR} fill={MODEL_TONE(d.tone)} />
+            {sumThread(frame, k, mark)}
+            {sheetThread(frame, k, mark)}
+            {medalThread(frame, k, mark)}
+            {cardThreads(frame, k, mark)}
+            <Mark frame={frame} x={m.x} s={m.s} tone={m.tone} />
           </svg>
           {YEARS.map((y, n) => (
             <Label
               key={y}
               k={k}
-              x={LABEL_POS[n].x}
-              y={LABEL_POS[n].top}
+              x={tickX(n) + MARK_S[n] / 2 + LABEL_GAP}
+              y={Y_LINE + LABEL_DY}
               text={y}
               inT={1}
               size={LABEL_SIZE}
+              align="left"
               opacity={inkOf(n, frame)}
             />
           ))}
