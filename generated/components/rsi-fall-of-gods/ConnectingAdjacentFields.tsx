@@ -12,7 +12,8 @@
 // a 134 · superhuman 136 · capacity 148 · to 156 · (connect 168 · ideas 175 play over the speaker).
 // DURATION: the slot 90.382 -> 97.389 s = 7.007 s x 23.976 = 168 frames (f0..f167).
 //
-// THE MOTION: one orange dot (the AI; no lab is named) sits at the hub of a loose, grown cluster of white
+// THE MOTION: the AI (rev 3, the user's note: the OpenAI mark, filled ACCENT, upright, breathing, ~2.3x the old
+// dot's radius, nothing behind it) sits at the hub of a loose, grown cluster of white
 // station rings, each a neighbouring field (atom, dna, cpu, sigma, flask, brain nearest; telescope, microscope,
 // sprout, magnet, globe, pill further out). Seats are hashed Poisson-disc (dense near the hub, sparser outward),
 // and each field links only to its 2-4 real neighbours (Gabriel graph, planar), so threads run at varied angles
@@ -22,8 +23,8 @@
 // its middle and hangs there for good. Sends ride ONE escalation curve (one every ~2.2 f at f0, ~1.1 f from
 // ~f100), ordered outward by distance from the hub plus a hash jitter. The camera is one continuous pull-back from
 // f0 (k 1.8 -> ~0.965 in log space, firm by "ton", main travel ~f40-140, then a creep) that opens on the hub and
-// four fields and reveals the rest bleeding off the edges. The hub holds its screen size against the zoom (57 px
-// radius at the open, ~42, i.e. 85 across, at the end), breathing, packets leaving it on every frame. From ~f145
+// four fields and reveals the rest bleeding off the edges. The mark holds its screen size against the zoom (~265
+// px across at the open, ~195 at the end); every spoke and packet leaves from and returns to its edge. From ~f145
 // the lit web is resolved; the frontier's sends keep running out past the frame to f167.
 //
 // CAUSE -> EFFECT: sends start at T0 = -8, so at f0 the first spokes are DRAWING out of the hub (heads
@@ -31,7 +32,10 @@
 // spoke's head out of the hub; it leaves atom's ring at f9 and its head touches dna's ring at tc = 13.5 (the
 // contact); the stems start out of the thread's midpoint on tc + 1 (f15), berries full by ~f24. A traveller may
 // ride a thread still being drawn but never overtakes its head (one speed for all). Visible fruiting links: 4 by
-// f34 ("ton"), ~17 by f86, 28 by f167.
+// f34 ("ton"), ~13 by f86, 28 by f167.
+// CAPTION BANDS (checked every frame with the sway): the mark never enters them; no field icon is in them at
+// f0-42 or from f158 to the end. During the pull-back three fields (flask f50-124, brain f59-157, magnet
+// f82-126) cross them as texture, which the brief allows.
 //
 // Orange = the AI, nothing else (the hub, its packets, threads and finds); white = the fields (people's knowledge).
 // Stations stay white: the threads and the fruit carry the orange.
@@ -62,6 +66,8 @@ import {
   worldTransform,
 } from "../kits/dwarkesh/fieldShared";
 import { INK, INK_HI, LINK_IDLE, LINK_LIVE, worldPx } from "../kits/dwarkesh/alignShared";
+import { OPENAI } from "../kits/dwarkesh/brandGlyphs";
+import { MODEL_SHADOW_OPACITY } from "../kits/dwarkesh/trapShared";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 168;
@@ -80,7 +86,14 @@ const GLYPH = 0.6; // icon box as a fraction of the ring's diameter
 const HUB_R0 = 30;
 const HUB_SCREEN_MIN = 40;
 const hubR = (k: number) => Math.pow(HUB_R0 ** 4 + (HUB_SCREEN_MIN / k) ** 4, 0.25);
-const HUB_GAP = 22; // where spokes start, under the disc
+// The AI is drawn as the OpenAI mark (the user's note), filled ACCENT, upright, breathing, with nothing behind it.
+// Its half-width is MARK_SCALE x the old hub dot's radius, so it keeps hubR's hold against the zoom: ~119 screen
+// px half-width at the open, ~92 at the end. Spokes and packets leave from and arrive at its edge (MARK_EDGE of
+// the half em: the blossom's outer lobes, measured off the path, reach ~0.92 of the 24 box's half).
+const MARK_SCALE = 2.3;
+const MARK_EDGE = 0.92;
+const markHalf = (k: number) => MARK_SCALE * hubR(k);
+const markEdge = (k: number) => markHalf(k) * MARK_EDGE;
 const PACKET_R = worldPx(3.6, K_REST);
 const HEAD_R = worldPx(4.2, K_REST); // the white head of a thread being drawn
 const FRUIT_R = worldPx(12.5, K_REST); // a berry ~24 screen px across at rest
@@ -166,6 +179,16 @@ const inset = (p: { x: number; y: number }, cy: number, k: number) => {
     if (inEnd > -rEnd * 0.95 && inEnd < -rEnd * 0.2) continue; // no slivers at the end; bleeding halves are fine
     NODES.push({ x: c.x, y: c.y, icon: "", hub: false });
   }
+  // A field seated in the narrow gap between the bands is nudged so its whole ICON clears both bands at rest
+  // (centre within 1250 + g .. 1360 - g, g = the icon's half box at the last frame's zoom plus sway), not just its centre.
+  const g = STATION_R * GLYPH * CAM_FIN.k + 7; // + the sway (5) and 2 px of air
+  NODES.forEach((n) => {
+    if (n.hub) return;
+    const y = screenOf(n, CAM_FIN.cy, CAM_FIN.k).y;
+    if (y < 1250 || y > 1360) return;
+    const yc = Math.min(1360 - g, Math.max(1250 + g, y));
+    n.y += (yc - y) / CAM_FIN.k;
+  });
 })();
 
 // --- the links: each field to its 2-4 real neighbours ---------------------------------------------------------
@@ -264,7 +287,8 @@ const EDGES: Edge[] = (() => {
   });
 })();
 
-const radiusOf = (i: number) => (NODES[i].hub ? HUB_GAP : STATION_R);
+// The hub's edge depends on the zoom (the mark holds its screen size); fields are fixed rings.
+const radiusOf = (i: number, k: number = CAM_K[0]) => (NODES[i].hub ? markEdge(k) : STATION_R);
 
 const T0 = -8;
 const ODO_T: number[] = [];
@@ -429,12 +453,12 @@ const World: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
     const len = dist(A, B);
     const ux = (B.x - A.x) / len;
     const uy = (B.y - A.y) / len;
-    const r0 = radiusOf(s.src);
-    const r1 = radiusOf(s.dst);
+    const r0 = radiusOf(s.src, k);
+    const r1 = radiusOf(s.dst, k);
     if (D < Ls + r0) {
       // the packet on its way out through the web: hidden while it passes inside a ring or the hub
       const p = at(s.path, s.cum, Math.min(D, Ls));
-      const inside = s.path.some((ni) => dist(p, NODES[ni]) < radiusOf(ni) - PACKET_R * 0.5);
+      const inside = s.path.some((ni) => dist(p, NODES[ni]) < radiusOf(ni, k) - PACKET_R * 0.5);
       if (!inside && D < Ls) {
         packets.push(<circle key={`p${si}`} cx={p.x} cy={p.y} r={PACKET_R} fill={ACCENT} />);
       }
@@ -527,7 +551,17 @@ const World: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
         )}
       </g>
       <g>{heads}</g>
-      <circle cx={HUB.x} cy={HUB.y} r={hubR(k) * breath(frame, 0.37)} fill={ACCENT} />
+      <g style={{ filter: iconShadow(k, undefined, undefined, MODEL_SHADOW_OPACITY) }}>
+        <g
+          transform={`translate(${HUB.x} ${HUB.y}) scale(${((2 * markHalf(k) * breath(frame, 0.37)) / 24).toFixed(
+            6,
+          )}) translate(-12 -12)`}
+        >
+          {OPENAI.paths.map((d) => (
+            <path key={d.length} d={d} fill={ACCENT} fillRule="evenodd" />
+          ))}
+        </g>
+      </g>
     </svg>
   );
 };
