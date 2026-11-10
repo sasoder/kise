@@ -14,13 +14,14 @@
 //
 // THE MOTION: one continuous pull-back (k 0.995 -> 0.278, ~3.6x, fastest during the dive, creeping to the last
 // frame) from cut 2's resolved card, which drains to ACCENT_DEEP / INK_LO and ends as a small dim card in the
-// top-left corner. Today's model, an unbranded bright agent dot (the model name was heard as "Aster" and is
-// unverified, so no name and no mark), drops in from above the frame past the card, fans eight carets out on
-// threads to eight code files flanking where the game will be (f10-18, "can build"), and dives through the
-// window's space, the white window outline opening from where it crossed in (f18-35). The files are written as
-// indented code bars and every block of the first screen flies out of a file's caret as a code bar, morphs into
-// its tile and lands (top down, bricks to ground, f35-50); the white runner drops in on "from scratch" and runs,
-// jumps the pits and the little staircase, collects coins and heads for the white goal flag while the level scrolls (to the last frame). From f70 ("churns")
+// top-left corner. Today's model is its lab's mark, the same OpenAI mark as the old card's but bright ACCENT
+// (GPT-6 Astra, OpenAI, released 3 Sep 2026; the speaker's "Aster"), labelled GPT-6 ASTRA in white on the old
+// label's line right of the card (slides up f22-30). It drops in from above the frame past the card and dives
+// through the window's space, the white window outline opening from where it crossed in (f18-35); nine carets
+// peel off it as it passes each band and write indented code bars inside the window (f19-52), then every code bar
+// flies into the level, a core bar morphing into its tile (f36-63), and the carets fly home into the mark. The
+// white runner drops in (f58-64) and runs, jumps the pits and the little staircase, collects coins and heads for
+// the white goal flag while the level scrolls (to the last frame). From f70 ("churns")
 // proof pages, each a white card with bar-lines, a sum, an integral and the white Fields medal, are flung out of
 // the model at a rate that rises to "contributions" and fall into a pile that rises up the bottom of the frame
 // like a flood (f97-145), then trickles. Orange = the AI and what it makes; white = people, structure, the medal.
@@ -81,6 +82,7 @@ import {
   MARK_SIZE,
   MARK_TONE,
   MARK_X,
+  MARK_CY,
   MARK_Y,
   OUTPUT_ACCENT,
   PL_CY_REST,
@@ -104,6 +106,7 @@ import {
   CODE_H,
   FEEDS,
   GOAL_COL,
+  K_END,
   F_DRAIN0,
   OUTLINE_D0,
   PAGES,
@@ -166,7 +169,7 @@ for (let f = 0; f < DURATION; f++) {
   if (f >= 37 && sy(WIN_Y0 + WIN_H) > 1080) throw new Error(`WholeVideoGames f${f}: the game's ground is in the caption band`);
   if (f >= 12) {
     const a = agentAt(f);
-    if (sy(a.y) + AGENT_R * c.k > 1080) throw new Error(`WholeVideoGames f${f}: the model is in the caption band`);
+    if (sy(a.y) + 1.8 * AGENT_R * 1.05 * c.k > 1080) throw new Error(`WholeVideoGames f${f}: the model is in the caption band`);
   }
 }
 
@@ -547,12 +550,35 @@ const Pages: React.FC<{ frame: number }> = ({ frame }) => (
 );
 
 // ---------------------------------------------------------------------------
-// TODAY'S MODEL: one bright dot (a dot with a tail read as a falling drop, so it dives as a plain dot).
+// TODAY'S MODEL: its lab's mark (the same OpenAI mark cut 2's card carries in the deep tone), bright, upright,
+// nothing behind it; 1.8x the old dot's diameter so it reads at phone size. It keeps the dot's dive path and timing.
+// Its name, GPT-6 ASTRA, slides up beside the old card's GPT-3.5 on the same line once the camera has pulled back
+// far enough for it to sit wholly in frame (f22).
 // ---------------------------------------------------------------------------
-const Agent: React.FC<{ frame: number }> = ({ frame }) => {
+const NEW_MARK = 3.6 * AGENT_R; // the mark's box, world px
+const Agent: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
   const p = agentAt(frame);
-  return <circle cx={p.x} cy={p.y} r={AGENT_R * breath(frame, 0.37)} fill={ACCENT} />;
+  const sz = NEW_MARK * breath(frame, 0.37);
+  return (
+    <g style={{ filter: iconShadow(k, undefined, undefined, 0.27) }}>
+      <g transform={`translate(${p.x - sz / 2} ${p.y - sz / 2}) scale(${sz / 24})`}>
+        {OPENAI.paths.map((d, i) => (
+          <path key={i} d={d} fill={ACCENT} fillRule="evenodd" />
+        ))}
+      </g>
+    </g>
+  );
 };
+
+const NEW_LABEL_TEXT = "GPT-6 ASTRA";
+/** Its left edge, world: right of the old card with clear air, on the old label's line (centre MARK_CY). */
+const NEW_LABEL_X = CARD_X0 + CARD_W + 190;
+const NEW_LABEL_F0 = 22;
+const NEW_LABEL_IN = 8;
+/** Screen font size on the settled frame (cap height ~0.7 of it: >= 40 px). Held near steady on screen during
+ *  the pull-back (it shrinks with k^0.2, not k), the way the old card's strokes are. */
+const NEW_LABEL_FS_END = 60;
+const newLabelSize = (k: number) => (NEW_LABEL_FS_END * Math.pow(k / K_END, 0.2)) / k;
 
 const WholeVideoGames: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
@@ -604,7 +630,7 @@ const WholeVideoGames: React.FC<z.infer<typeof schema>> = () => {
                 <WindowOutline frame={frame} k={k} />
                 <TilesInFlight frame={frame} />
                 <Pages frame={frame} />
-                <Agent frame={frame} />
+                <Agent frame={frame} k={k} />
               </>
             ) : null}
           </svg>
@@ -618,6 +644,17 @@ const WholeVideoGames: React.FC<z.infer<typeof schema>> = () => {
             align="left"
             opacity={lerp(INK_HI, INK_LO, drainAt(frame))}
           />
+          {frame > F_DRAIN0 ? (
+            <Label
+              k={k}
+              x={NEW_LABEL_X}
+              y={MARK_CY - newLabelSize(k) * 0.53}
+              text={NEW_LABEL_TEXT}
+              inT={smoothstep((frame - NEW_LABEL_F0) / NEW_LABEL_IN)}
+              size={newLabelSize(k)}
+              align="left"
+            />
+          ) : null}
         </div>
       </AbsoluteFill>
       <Vignette />
