@@ -199,7 +199,11 @@ const drainOf = (n: number, f: number) =>
 // the year's artefact is centred.
 // ---------------------------------------------------------------------------
 const MARK_SCREEN_X = 220;
-const CAM_Y = 960;
+// The user's note "move the graphic down slightly": the whole world (line, labels, mark, artefacts, threads,
+// trail, dashes) sits DROP screen px lower than first delivered; the camera simply looks DROP higher. The grid's
+// parallax is measured from the camera's own start, so the background does not move.
+const DROP = 110;
+const CAM_Y = 960 - DROP;
 const anchorX = (n: number, k: number) => tickX(n) + (540 - MARK_SCREEN_X) / k;
 // Each move LEADS the glide by ~5 f (the damped follow lags about that much), so the new year is near its seat
 // as the mark lands; the 2023 card and the 2024 sheet hold still and whole through their punch (ring landed
