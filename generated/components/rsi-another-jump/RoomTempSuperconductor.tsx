@@ -12,7 +12,7 @@
 // put 101 · together 110 · at 120 · finding 129 · a 137 · room-temperature 141 · superconductor 155
 // DURATION: the slot 37.496 -> 44.962 s = 7.466 s x 23.976 = 179 frames (f0..f178).
 //
-// THE MOTION: one reach -> search -> find. The camera opens close on the AI (one big ACCENT dot, the mind); a
+// THE MOTION: one reach -> search -> find. The camera opens close on the AI (the OpenAI mark in ACCENT, brandGlyphs `OPENAI`; a plain dot until Nov 10); a
 // thread leaves it f6 and lands on a white station ring with a flask (the lab) at f28 while the camera pulls back
 // after it; the ring turns orange from the thread's contact point, complete on "lab" (f52). From f53 a wave of
 // tests spreads out of the lab through a feathered field of candidate tiles (white outline -> solid ACCENT_DEEP,
@@ -69,6 +69,7 @@ import {
 import { INK, INK_LO, Label, worldPx } from "../kits/dwarkesh/alignShared";
 import { arcPath, hermite, runCam3, threadPackets } from "../kits/dwarkesh/trapShared";
 import { HIGHLIGHT } from "../kits/dwarkesh/levelUp";
+import { OPENAI } from "../kits/dwarkesh/brandGlyphs";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 179;
@@ -117,6 +118,9 @@ const PACKET_PX = 5;
 // ---------------------------------------------------------------------------
 const AI: P = { x: 262, y: 205 };
 const R_AI = 55; // 110 px at the wide: the biggest orange thing
+/** The AI is the OpenAI mark (user, Nov 10: "change the 37 graphic dot to an OpenAI logo"), as in cuts 2, 7, 15
+ *  and 21. Its 24-unit box is a little wider than the old dot so the open mark carries the same weight. */
+const AI_MARK = 2.3 * R_AI;
 const LAB: P = { x: 500, y: 498 };
 const LAB_R = 60;
 
@@ -443,7 +447,7 @@ const RoomTempSuperconductor: React.FC<z.infer<typeof schema>> = () => {
 
   // --- the AI's thread to the lab -------------------------------------------------------------------------
   const dirAL = { x: (LAB.x - AI.x) / dist(AI, LAB), y: (LAB.y - AI.y) / dist(AI, LAB) };
-  const thFrom = { x: AI.x + dirAL.x * (R_AI + 10), y: AI.y + dirAL.y * (R_AI + 10) };
+  const thFrom = { x: AI.x + dirAL.x * (AI_MARK / 2 + 8), y: AI.y + dirAL.y * (AI_MARK / 2 + 8) };
   const thTo = { x: LAB.x - dirAL.x * (LAB_R + STROKE / 2 + 4), y: LAB.y - dirAL.y * (LAB_R + STROKE / 2 + 4) };
   const thU = interpolate(frame, [TH_F0, TH_F1], [0, 1], { ...clamp, easing: Easing.bezier(0.33, 0, 0.45, 1) });
   const thTip = { x: lerp(thFrom.x, thTo.x, thU), y: lerp(thFrom.y, thTo.y, thU) };
@@ -733,8 +737,17 @@ const RoomTempSuperconductor: React.FC<z.infer<typeof schema>> = () => {
               />
             </g>
 
-            {/* the AI's mind */}
-            <circle cx={AI.x} cy={AI.y} r={R_AI * breath(frame, 0.37)} fill={labOrange} />
+            {/* the AI: the OpenAI mark */}
+            {(() => {
+              const sz = AI_MARK * breath(frame, 0.37);
+              return (
+                <g transform={`translate(${AI.x - sz / 2} ${AI.y - sz / 2}) scale(${sz / 24})`}>
+                  {OPENAI.paths.map((d, i) => (
+                    <path key={i} d={d} fill={labOrange} fillRule="evenodd" />
+                  ))}
+                </g>
+              );
+            })()}
 
             {/* the magnet: N half white, S half drained white, both solid */}
             {lift < Infinity ? (
