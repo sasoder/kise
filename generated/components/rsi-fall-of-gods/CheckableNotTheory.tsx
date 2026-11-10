@@ -18,17 +18,18 @@
 // field from below, ordered by distance from a source under the frame plus a hash jitter, each card's conversion
 // frame being the frame an agent reaches it (an event simulation at module scope; nothing runs on a timer).
 // On "Like finding counter-examples" one agent comes up from the front onto the big hero claim near the centre
-// and slashes a big orange X across it with its own body as the drawing tip: CONTACT f52 (lower-left end),
-// (the ends of the X sit on the card's bottom and top edges) stroke 1 up-right f52-58, hop left along the top
-// f58-62, stroke 2 down-right f62-67 (lands before
-// "counter-examples" f69), where the agent pushes off downward. FIRST REACTION f68: the card is knocked out of
-// its seat (tilts 9 deg about its lower-right corner, left side down, drops 16, Easing.out cubic, settled f82)
-// and dims to context. In the quiet after the X the camera rises (one damped move, keys f68-125, k 1.30 -> 1.08,
-// peak ~33 screen px/f at f95) past the climbing front to the field's feathered top edge and the empty DASHED
-// slot above it: a big dashed squircle with a dashed
-// Lucide lightbulb in it, dashes marching. No agent ever goes up there. Resolved from ~f128: the slot at the
-// middle (screen y 650-1054), the orange-ticked field below with agents finishing the top rows; a slow creep,
-// the march and the agents keep it alive to f139.
+// and slashes a big orange X across it with its own body as the drawing tip (the ends of the X sit on the card's
+// bottom and top edges): CONTACT f47 (lower-left end), stroke 1 up-right f47-53, hop left along the top f53-57,
+// stroke 2 down-right f57-62 (lands on "finding", ahead of "counter-examples" f69), where the agent pushes off
+// downward. FIRST REACTION f63: the card is knocked out of its seat (tilts 9 deg about its lower-right corner,
+// left side down, drops 16, Easing.out cubic, settled f77) and dims to context.
+// REV 2 (user: "zoom into the new theorem a little as he's saying 'rather than' ... speed up the camera for the
+// first part so the theorem is visible"): right after the X the camera rises fast (one damped move, keys
+// f58-80, k 1.25 -> 0.98, peak ~54 screen px/f at f71, settled ~f86) past the climbing front to the field's
+// feathered top edge and the empty DASHED slot above it — a big dashed squircle with a dashed Lucide lightbulb,
+// dashes marching — whole on screen by f84 (y ~445-790). From "Rather" (f89) a slow continuous push into the
+// slot: k 0.98 -> ~1.29 (x1.31), the slot easing down to centre ~y 820 and still moving on f139, the ticked
+// field falling away at the bottom. No agent ever goes up there.
 // Orange = the AI, nothing else; white = people and what they build; dashed = not real yet.
 //
 // SOURCES: no figures. Icons: Lucide `lightbulb` (glass + two base lines) and `check`, ISC, inlined on the 24 grid
@@ -74,57 +75,68 @@ export const defaultProps = schema.parse({});
 type P = { x: number; y: number };
 
 // ---------------------------------------------------------------------------
-// SCALE. Strokes are sized for K_REST, between the opening (1.30) and the rest
-// (1.08), so the one weight reads ~6.5 screen px inside the field and ~5.4 on
-// the wide.
+// SCALE. Strokes are sized for K_REST, between the opening (1.25), the reveal
+// (0.98) and the end of the push (1.32), so the one weight reads ~5-8 screen px.
 // ---------------------------------------------------------------------------
-const K0 = 1.3; // inside the field, on the hero
-const K1 = 1.08; // the resolved wide
+const K0 = 1.25; // inside the field, on the hero
+const K_MID = 0.98; // the reveal: the slot whole in frame, f84
+const K_END = 1.32; // the push into the slot, still drifting at f139
 const K_REST = 1.2;
 const STROKE = worldPx(6, K_REST);
 const THREAD = STROKE / 2;
-const DASH_ON = worldPx(26, K1);
-const DASH_OFF = worldPx(18, K1);
-const MARCH = worldPx(0.6, K1);
+const DASH_ON = worldPx(26, K_REST);
+const DASH_OFF = worldPx(18, K_REST);
+const MARCH = worldPx(0.6, K_REST);
 const AGENT_R = DOT_RADIUS * 1.5; // local multiplier: the dots have to hold their own against 100 px cards
 
 // ---------------------------------------------------------------------------
 // THE WORLD. TOP is the field's nominal top edge (world y). The hero claim sits
-// 830 world px below it, near the centre; the slot sits above it.
+// 760 world px below it, near the centre; the slot sits FIELD_GAP above it.
 // ---------------------------------------------------------------------------
 const TOP = 520;
-const HERO = { x: 540, y: TOP + 830, w: 196, h: 126 };
+const HERO = { x: 540, y: TOP + 760, w: 196, h: 126 };
+const FIELD_GAP = 120;
+const SLOT_W = 650;
+const SLOT_H = 348;
+const SLOT = { x: 540, y: TOP - FIELD_GAP - SLOT_H / 2, w: SLOT_W, h: SLOT_H };
 
-// The camera, as content: the hero at screen y 860 on the opening, the field's
-// nominal top edge at screen y 1150 and the slot's centre at 850 on the rest.
-const OPEN_HERO_SY = 860;
+// The camera, as content.
+//   f0        k 1.25, the hero at screen y 840 (a slow creep up from f0, so nothing is ever held)
+//   f58-80    THE RISE: keys on a warped smoothstep to k 0.98 with the slot's centre at screen y 640 —
+//             the slot whole on screen (y ~470-810) and the field's top edge under it at ~930; the damper
+//             settles it by ~f86, just before "Rather" (f89)
+//   f84-139   THE PUSH: k 0.98 -> 1.32 with the slot's centre easing down to screen y 840. The ease is a
+//             smoothstep over f84-f164 read only to f139 (normalised there), so the camera is still
+//             moving on the last frame. The slot ends 858 x 460 screen px, its bottom edge at ~1070,
+//             clear of the caption band at 1080.
+const OPEN_HERO_SY = 840;
 const CY0 = HERO.y - (OPEN_HERO_SY - 960) / K0;
-const REST_TOP_SY = 1150;
-const CY1 = TOP - (REST_TOP_SY - 960) / K1;
-const REST_F = 128; // the resolved frame the rest is framed for
-const SLOT_SY = 850;
-const SLOT = {
-  x: 540,
-  y: CY1 + (SLOT_SY - 960) / K1,
-  w: worldPx(700, K1),
-  h: worldPx(400, K1),
-};
-
-// One move. A slow creep up from f0 (0.5 world px a frame, so nothing is ever
-// held) with the rise laid on it: target keys f68-125 on a warped smoothstep,
-// zoom and height off the same eased curve, then the damper.
+const MID_SLOT_SY = 640;
+const END_SLOT_SY = 840;
+const cyForSlot = (slotSy: number, k: number) => SLOT.y - (slotSy - 960) / k;
+const CY_MID = cyForSlot(MID_SLOT_SY, K_MID);
 const CREEP = 0.5;
-const RISE_F0 = 68;
-const RISE_F1 = 125;
-const RISE_WARP = 0.9;
+const RISE_F0 = 58;
+const RISE_F1 = 80;
+const RISE_WARP = 0.85;
+const PUSH_F0 = 84;
+const PUSH_VIRTUAL_END = 164;
+const PUSH_NORM = smoothstep((DURATION - 1 - PUSH_F0) / (PUSH_VIRTUAL_END - PUSH_F0));
 const CAM_F: number[] = [];
 const CAM_CY: number[] = [];
 const CAM_K: number[] = [];
 for (let f = 0; f <= DURATION; f++) {
-  const g = camEase((f - RISE_F0) / (RISE_F1 - RISE_F0), RISE_WARP);
   CAM_F.push(f);
-  CAM_K.push(K0 + (K1 - K0) * g);
-  CAM_CY.push(CY0 + (CY1 + CREEP * REST_F - CY0) * g - CREEP * f);
+  if (f < PUSH_F0) {
+    const g = camEase((f - RISE_F0) / (RISE_F1 - RISE_F0), RISE_WARP);
+    CAM_K.push(K0 + (K_MID - K0) * g);
+    CAM_CY.push(CY0 - CREEP * Math.min(f, RISE_F0) + (CY_MID - (CY0 - CREEP * RISE_F0)) * g);
+  } else {
+    const g = smoothstep((f - PUSH_F0) / (PUSH_VIRTUAL_END - PUSH_F0)) / PUSH_NORM;
+    const k = K_MID + (K_END - K_MID) * g;
+    CAM_K.push(k);
+    CAM_CY.push(cyForSlot(MID_SLOT_SY + (END_SLOT_SY - MID_SLOT_SY) * g, k));
+  }
 }
 export const camAt = (frame: number) => runCamera(frame, CAM_F, CAM_CY, CAM_K);
 
@@ -238,6 +250,14 @@ const CARDS: Card[] = (() => {
       }
     }
   }
+  // Rev 2 edge pass: the two lone feather cards at the far left of the top edge sat half on the frame's left edge
+  // through the push (f84-f123). They move out past it, so nothing hangs on the edge.
+  for (const [n, x] of [
+    [0, -195],
+    [1, -95],
+  ] as const) {
+    raw[n].x = x;
+  }
   const out = raw.map((r) => makeCard(r.i, r.x, r.y, r.w, r.h, false));
   out.push(makeCard(9999, HERO.x, HERO.y, HERO.w, HERO.h, true));
   return out;
@@ -248,16 +268,16 @@ const HERO_I = NCARD - 1;
 // ---------------------------------------------------------------------------
 // THE WAVE. Each card's scheduled frame comes from its distance to a source far
 // below the frame (so the front is a shallow arc climbing the field), mapped so
-// the front sits at screen ~1360 on f0, passes the hero row ~f50 and reaches
-// the top edge ~f116, plus a hash jitter. Agents chase that schedule; a card's
+// the front sits at screen ~1300 on f0, passes the hero row ~f42 and reaches
+// the top edge ~f82, plus a hash jitter. Agents chase that schedule; a card's
 // conversion frame is the frame an agent actually reaches it.
 // ---------------------------------------------------------------------------
 const SOURCE: P = { x: 640, y: HERO.y + 1150 };
 const D_HERO = Math.hypot(HERO.x - SOURCE.x, HERO.y - SOURCE.y);
-const D_F0 = D_HERO - (1360 - OPEN_HERO_SY) / K0;
+const D_F0 = D_HERO - (1300 - OPEN_HERO_SY) / K0;
 const D_TOP = SOURCE.y - TOP;
 const waveTime = (c: Card) =>
-  interpolate(Math.hypot(c.x - SOURCE.x, c.y - SOURCE.y), [D_F0, D_HERO, D_TOP], [0, 50, 116], {
+  interpolate(Math.hypot(c.x - SOURCE.x, c.y - SOURCE.y), [D_F0, D_HERO, D_TOP], [0, 42, 82], {
     extrapolateLeft: "extend",
     extrapolateRight: "extend",
   }) +
@@ -271,11 +291,11 @@ const WAVE = CARDS.map(waveTime);
 // it, it revisits a neighbouring card (so the ticked field keeps its workers).
 // Agent HERO_AGENT is routed so it lands on the hero's X at exactly HERO_CONTACT.
 // ---------------------------------------------------------------------------
-const NA = 84;
+const NA = 100;
 const SIM_START = -44;
 const LOOKAHEAD = 18;
 const REACH = 470;
-const HERO_CONTACT = 52;
+const HERO_CONTACT = 47;
 const X_HALF = { x: HERO.h / 2, y: HERO.h / 2 }; // edge to edge: the claim is crossed out top to bottom
 // The X, drawn by the agent's own body: it comes up from the front below and lands on the card's bottom edge
 // (the lower-left end), slashes up to the top edge, hops left along the top, slashes down to the bottom edge and
@@ -294,7 +314,7 @@ const FALL_LEN = 14;
 
 const CONV_T = 7; // frames for an edge to convert, both ways round from the contact
 
-const travelFrames = (d: number) => Math.max(6, Math.min(24, Math.round(d / 12.5)));
+const travelFrames = (d: number) => Math.max(5, Math.min(22, Math.round(d / 15)));
 
 type Stop = {
   card: number; // -1 = the X script
