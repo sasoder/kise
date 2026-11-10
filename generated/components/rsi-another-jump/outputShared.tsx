@@ -302,9 +302,14 @@ export const PL2_CY_REST = cam2Targets(0).cy;
 /** THE RESOLVED CAMERA (v2): cut 2's f81, sway included. */
 export const resolvedCamera2 = pl2CamAt(PL_LAST);
 export const CAM2_REST_K = resolvedCamera2.k;
+/** The user's "bring these down a bit like the others" (round 3): cuts 2 and 7 sit the same 190 px lower on screen
+ *  as cuts 15 and 21 (CAM15_SHIFT_Y). A screen offset only, applied identically in both cuts so the 2 -> 7 join stays
+ *  pixel-exact; the grid behind is not moved. */
+export const PL2_SHIFT_Y = 190;
+/** screen position of a world point at cut 2's frame f, the shift included */
 export const pl2ScreenAt = (f: number, wx: number, wy: number) => {
   const c = pl2CamAt(f);
-  return { x: 540 + (wx - c.cx) * c.k, y: 960 + (wy - c.cy) * c.k };
+  return { x: 540 + (wx - c.cx) * c.k, y: 960 + PL2_SHIFT_Y + (wy - c.cy) * c.k };
 };
 
 // --- v2 drawing --------------------------------------------------------------

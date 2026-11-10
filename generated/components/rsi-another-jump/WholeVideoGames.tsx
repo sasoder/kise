@@ -71,6 +71,7 @@ import {
   MARK2_CY,
   OutputScene2022,
   PL2_CY_REST,
+  PL2_SHIFT_Y,
   PL2_SETTLED,
   PL_FPS,
   PL_LAST,
@@ -139,18 +140,18 @@ export const defaultProps = schema.parse({});
   if (PL2_SETTLED > PL_LAST) throw new Error("WholeVideoGames: cut 2's picture is not settled at PL_LAST");
 }
 
-// The caption bands, asserted on every frame: the window (once its ground is in), cut 2's two cards and the
+// The caption bands, asserted on every frame (all limits PL2_SHIFT_Y lower since round 3, as cut 2): the window (once its ground is in), cut 2's two cards and the
 // model at rest stay above y 1080; the two cards keep clear air at the top of the frame.
 for (let f = 0; f < DURATION; f++) {
   const c = camAt(f);
-  const sy = (wy: number) => 960 + (wy - c.cy) * c.k;
-  if (sy(COMP2_Y1) > 1078 || sy(COMP2_Y0) < 30) {
+  const sy = (wy: number) => 960 + PL2_SHIFT_Y + (wy - c.cy) * c.k;
+  if (sy(COMP2_Y1) > 1078 + PL2_SHIFT_Y || sy(COMP2_Y0) < 30) {
     throw new Error(`WholeVideoGames f${f}: cut 2's cards leave their air (${sy(COMP2_Y0).toFixed(0)}-${sy(COMP2_Y1).toFixed(0)})`);
   }
-  if (f >= 37 && sy(WIN_Y0 + WIN_H) > 1080) throw new Error(`WholeVideoGames f${f}: the game's ground is in the caption band`);
+  if (f >= 37 && sy(WIN_Y0 + WIN_H) > 1080 + PL2_SHIFT_Y) throw new Error(`WholeVideoGames f${f}: the game's ground is in the caption band`);
   if (f >= 12) {
     const a = agentAt(f);
-    if (sy(a.y) + 1.8 * AGENT_R * 1.05 * c.k > 1080) throw new Error(`WholeVideoGames f${f}: the model is in the caption band`);
+    if (sy(a.y) + 1.8 * AGENT_R * 1.05 * c.k > 1080 + PL2_SHIFT_Y) throw new Error(`WholeVideoGames f${f}: the model is in the caption band`);
   }
 }
 
@@ -162,7 +163,7 @@ for (let f = 0; f < DURATION; f++) {
     if (!st) continue;
     const r = (st.rot * Math.PI) / 180;
     const ext = (PAGE_H / 2) * st.s * Math.abs(Math.cos(r)) + (PAGE_W / 2) * st.s * Math.abs(Math.sin(r));
-    if (960 + (st.y + ext - c.cy) * c.k > 1078) throw new Error(`WholeVideoGames f${f}: page ${p.i} is in the caption band`);
+    if (960 + PL2_SHIFT_Y + (st.y + ext - c.cy) * c.k > 1078 + PL2_SHIFT_Y) throw new Error(`WholeVideoGames f${f}: page ${p.i} is in the caption band`);
   }
 }
 
@@ -549,7 +550,7 @@ const WholeVideoGames: React.FC<z.infer<typeof schema>> = () => {
             width: 1080,
             height: 1920,
             transformOrigin: "0 0",
-            transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+            transform: `translate(${tx}px, ${ty + PL2_SHIFT_Y}px) scale(${k})`,
           }}
         >
           {/* cut 2's resolved picture (its own component, so f0 is cut 2's f81), dimming to context */}

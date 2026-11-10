@@ -60,6 +60,7 @@ import {
   LIM2_LH,
   OutputScene2022,
   PL2_CY_REST,
+  PL2_SHIFT_Y,
   PL_DURATION,
   PL_FPS,
   lim2LineY,
@@ -75,13 +76,15 @@ export const defaultProps = schema.parse({});
 
 // The caption bands, asserted at module load on every frame of the camera path. The lowest things in the
 // picture are the cards' bottom edges (the code card's from its entrance on, the limerick card's before it); both
-// stay above screen y 1080 (the code card's including its entrance rise), and every limerick line's box too.
+// stay above screen y 1080 + PL2_SHIFT_Y (the code card's including its entrance rise), and every limerick line's
+// box too. Since round 3 the whole picture sits PL2_SHIFT_Y lower, so the code card reaches into the first caption
+// band, as cuts 15 and 21 do; the second band (1360+) stays clear.
 for (let f = 0; f < DURATION; f++) {
   const limBot = pl2ScreenAt(f, L2_X0, L2_Y1).y;
   const codeBot = pl2ScreenAt(f, C2_X0, C2_Y1 + CODE2_RISE * (1 - code2In(f))).y;
   const lineBot = pl2ScreenAt(f, L2_X0, lim2LineY(4) + LIM2_LH).y;
   const bot = f >= CODE2_IN0 ? Math.max(limBot, codeBot) : Math.max(lineBot, limBot);
-  if (bot > 1080) throw new Error(`PassableLimerick f${f}: lowest edge at screen y ${bot.toFixed(1)}`);
+  if (bot > 1080 + PL2_SHIFT_Y) throw new Error(`PassableLimerick f${f}: lowest edge at screen y ${bot.toFixed(1)}`);
   if (f >= CODE2_IN0) {
     const l = pl2ScreenAt(f, C2_X0, C2_Y1).x;
     const r = pl2ScreenAt(f, C2_X1, C2_Y1).x;
@@ -120,7 +123,7 @@ const PassableLimerick: React.FC<z.infer<typeof schema>> = () => {
             width: 1080,
             height: 1920,
             transformOrigin: "0 0",
-            transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+            transform: `translate(${tx}px, ${ty + PL2_SHIFT_Y}px) scale(${k})`,
           }}
         >
           <OutputScene2022 frame={frame} k={k} />
