@@ -20,13 +20,16 @@ import { OPENAI } from "../kits/dwarkesh/brandGlyphs";
 // (revision 3, the user's note) The figure's head is the OpenAI knot, upright,
 // filled in the figure's own tone, HEAD_MARK_SCALE x the old round head's
 // diameter, centred where that head's centre was minus half the growth so the
-// figure's top (and so `figureHeight`) is unchanged. Two small dark eyes sit on
-// the knot's two right-hand vertical bands, looking the way the figure walks;
-// they are dots on the bands, so the knot's shape still reads around them.
+// figure's top (and so `figureHeight`) is unchanged. The knot's centre opening is
+// filled in the same tone (FACE_UNITS, a disc hidden under the bands), and two
+// dark eyes sit on it, a little toward the way the figure faces: big enough to
+// read, and a wink, on a phone (each ~14 px across at cut 15's f103 framing).
 export const HEAD_MARK = OPENAI;
 export const HEAD_MARK_SCALE = 1.1;
 /** eye centres and radius in the mark's own 24-unit box */
-export const EYE_UNITS = { back: { x: 15.1, y: 13.3 }, front: { x: 19.1, y: 13.3 }, r: 0.85 };
+export const EYE_UNITS = { back: { x: 10.8, y: 11.9 }, front: { x: 14.5, y: 11.9 }, r: 1.35 };
+/** the disc that fills the mark's centre opening (the face), in mark units */
+export const FACE_UNITS = { x: 12, y: 12, r: 3.1 };
 export const EYE_TONE = "#2B1C02"; // a deep brown-black, never pure black on orange
 /** the dashed (forecast) figure draws its head as the mark filled at this opacity */
 export const DASHED_HEAD_OPACITY = 0.55;
@@ -35,7 +38,7 @@ export const DASHED_HEAD_OPACITY = 0.55;
  *  wink is a morph, never a swap. */
 export const eyePath = (cx: number, cy: number, r: number, closed: number) => {
   const o = 1 - clamp01(closed);
-  const th = r * 0.42;
+  const th = r * 0.95; // the closed curve's stroke ~ the eye's radius
   const N = 18;
   const up: string[] = [];
   const lo: string[] = [];
@@ -696,6 +699,7 @@ export const AiFigure: React.FC<{
       {limb(g.neck, p.neckW, nearC, "nk")}
       <path d={poly(g.torso)} fill={nearC} />
       <g transform={`translate(${g.mark.x.toFixed(3)} ${g.mark.y.toFixed(3)}) scale(${(g.mark.size / 24).toFixed(5)})`}>
+        {eyes ? <circle cx={FACE_UNITS.x} cy={FACE_UNITS.y} r={FACE_UNITS.r} fill={nearC} /> : null}
         {HEAD_MARK.paths.map((d, i) => (
           <path key={i} d={d} fill={nearC} fillRule="evenodd" />
         ))}
@@ -944,19 +948,19 @@ export const HeightBar: React.FC<{
 // Revision 3 (the user's notes): the whole composition sits ~190 px lower on
 // screen (every ruleScreenY +190; the year labels now reach into the caption
 // band, which the user asked for), and on "to a" (f73) the camera pushes in
-// "a little" on the intern so the wink at f88-f98 reads: keys f73 -> f84 to
-// k 1.29 (warp 0.8, so the damper is ~90% there by f88), then a slow drift to
-// k 1.295 by f103. The push is framed so the 2023 label's left edge and the
-// cup's right edge both keep ~65-70 px to the frame edges; 2022 leaves the
-// frame on the left during the push.
+// on the intern so the wink at f88-f98 reads: keys f73 -> f84 to k 1.39
+// (warp 0.8, so the damper is ~90% there by f88), then a slow drift to k 1.4
+// by f103. The push travels with the figure, so the intern ends as the subject
+// (body centre at screen x ~680, not against the right edge); 2022 and 2023
+// leave the frame on the left during the push, 2024-2025 stay in.
 export const CAM15 = {
   open: { k: 1.3, cx: X_2022 + (540 - 430) / 1.3, ruleScreenY: 1138 },
   rest: { k: 1.0, cx: 503, ruleScreenY: 1170 },
   /** the creep's end, where the push starts (f73) */
   prePush: { k: 1.01, cx: 506, ruleScreenY: 1171 },
   /** the push's keys end here (f84) */
-  zoom: { k: 1.29, cx: 602, ruleScreenY: 1232 },
-  end: { k: 1.295, cx: 603.5, ruleScreenY: 1234 },
+  zoom: { k: 1.39, cx: 758, ruleScreenY: 1246 },
+  end: { k: 1.4, cx: 760, ruleScreenY: 1250 },
   pullF1: 38, // the pull-back's keys end here (the damper settles it ~f46)
   pushF0: 73, // "to a"
   pushF1: 84,

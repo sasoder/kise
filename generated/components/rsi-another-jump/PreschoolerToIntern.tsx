@@ -12,15 +12,16 @@
 //
 // THE MOTION: one white timeline, 2022 -> 2026, draws head-led on "in the last four years" (f0-f36), each tick
 // dropping and each year sliding up as the head reaches it, while the camera pulls back from k 1.3 on the
-// 2022 end (a small deep-orange preschooler standing on the rule: its head is the OpenAI mark with two small
-// dark eyes, a backpack, a big juice box in hand) to the whole span (settled ~f46). From f40 ("basically") the
+// 2022 end (a small deep-orange preschooler standing on the rule: its head is the OpenAI mark, its centre
+// opening filled as a face with two dark eyes, a backpack, a big juice box in hand) to the whole span (settled ~f46). From f40 ("basically") the
 // figure walks right at constant speed and grows as it goes — age is its position on the rule, so it is
 // exactly one quarter grown at 2023 — its OpenAI-mark head shrinking against a lengthening body, its tone
 // ripening deep -> ACCENT, the juice box turning into a lidded coffee cup, the backpack cross-fading out
 // (f60-71) as an ID badge on a lanyard (f62-74) and a collar and tie (f67-78) cross-fade in (identityAt);
 // at every tick it leaves its height behind as a thin deep bar that comes out from behind its torso, so a
 // rising staircase builds behind it. On "to a" (f73) the camera starts a gentle push-in toward the figure
-// (k 1.0 -> ~1.29, ~91% done by f88), so the head is big when it stops on 2026 at f88 as a grown-up intern;
+// (k 1.0 -> 1.4, ~90% done by f88) and travels with it, so it ends as the subject (body at screen x ~684), head
+// ~118 px, eyes ~13 px, when it stops on 2026 at f88 as a grown-up intern;
 // at the end of "savant" its front eye winks at the camera (closes f88-91, holds, reopens f95-98: one wink,
 // no head tilt), and it holds alive (breath, slow camera creep, grid drift) to f103.
 // Orange = the AI, nothing else; white = structure, years, the drink and the badge.
@@ -33,12 +34,12 @@
 // f44, out f45 · 2023 f54 -> f55/f56 · 2024 f64 -> f65/f66 · 2025 f74 -> f76 · 2026: the intern stops on it at
 // f88, so its bar stays hidden behind the figure (it exists for cut 21).
 // CAMERA (CAM15 in the world, whole composition shifted CAM15_SHIFT_Y = 190 px lower than v1): k 1.3 on the 2022
-// end -> k 1.0 on the whole span, keys f0-f38, settled ~f46; creep to k 1.01 to f73; push f73-f84 to k 1.29
-// toward the figure (warp 0.8, damped), then creep to k 1.295 to f103 (resolved f103: k 1.294, cx 600.4).
-// Rule's screen y 1138 (f0) -> ~1170 (wide, f40-f73) -> 1238.6 (f103). Year labels (white pixels) reach
-// y 1241 wide and 1246-1329 at f103: they now sit in the caption band (accepted by the director). Margins:
-// figure and cup >= 67 px from the right edge on every frame; during the push 2022 and the rule's tail
-// leave the frame on the left (from ~f81), by design.
+// end -> k 1.0 on the whole span, keys f0-f38, settled ~f46; creep to k 1.01 to f73; push f73-f84 to k 1.39,
+// cx 758 toward the figure (warp 0.8, damped: k 1.358 at f88), then creep to k 1.4 to f103 (resolved f103:
+// k 1.3986, cx 759.83, cy 773.09 before sway). Rule's screen y 1138 (f0) -> ~1170 (wide, f40-f73) -> 1254.7
+// (f103). Year labels (white pixels) reach y 1241 wide and 1262-1353 at f103, in the caption band (accepted
+// by the director). From f88 the intern's hip is at screen x 710 -> 684; the cup keeps >= 112 px from the right
+// edge on every frame. During the push 2022 and 2023 leave the frame on the left; 2024-2026 stay in.
 // SOURCES: the years only. ChatGPT (GPT-3.5) launched 30 Nov 2022; the essay is read in Nov 2026 — "the last
 // four years" = 2022 -> 2026. No other figure on screen.
 //
