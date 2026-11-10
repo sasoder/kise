@@ -13,8 +13,8 @@
 // DURATION: the slot 21.521 -> 27.861 s = 6.340 s x 23.976 = 152 frames (f0..f151).
 //
 // THE MOTION: f0 is cut 15's last frame, pixel for pixel (same world, camera, grid clock, sway, breath and planted
-// feet; proven with a still-vs-still difference image, max 0). The camera travels right as the rule runs on past
-// 2026 as a DASHED (forecast) line, 2027 and 2028 sliding up (2028 settled by f13). The five height marks of the
+// feet; proven with a still-vs-still difference image, max 0): cut 15's push-in, k 1.40 on the intern. The camera
+// pulls straight back out (k 1.0 by ~f20) and travels right as the rule runs on past 2026 as a DASHED (forecast) line, 2027 and 2028 sliding up (2028 settled by f13). The five height marks of the
 // 2022 -> 2026 climb lift off as a dashed copy (f2-6), are carried right and land on 2028 -> 2032 (f28), stretched
 // so the copy's first mark is exactly the intern's height: the same climb, starting where the intern is (the intern
 // is to the giant what the preschooler was to the intern, x2.22). From f16 the intern walks on along the dashed
@@ -30,9 +30,16 @@
 // packets out and back along the ground thread, marching dashes, breath, camera creep, grid drift. No fade.
 // CAUSE -> EFFECT: the thread's head touches a ring's bottom -> it lights and its check starts, same frame:
 //   chip f104 (check done f110) · chart f115 (f121) · flask f126 (f132 "verifiable").
+// THE HEAD: the figure is cut 15's, so its head is the OpenAI mark with two eyes (open all through; the wink is
+//   cut 15's only). The forecast contour follows the mark's OUTER outline as a marching dashed line (jumpWorld's
+//   HEAD_OUTER), the same dash as the body's, not cut 15's ghost-fill dashed head (the giant stays solid). The
+//   copy's dashed bars are cut out under the figure and its contour band (SilhouetteCut), so nothing shows through
+//   the mark's gaps.
 // CAMERA: one key track (k, cx, the rule's screen y) through the kit damper, started at rest on cut 15's resolved
-//   camera; peak pan ~39 screen px/frame at f12. Year labels end at screen y <= 1068 on every frame. Settled
-//   (f88-151): nothing readable within 62 px of either edge (measured on full-size stills).
+//   camera (v3: k 1.398596, cx 759.831, cy 773.086). The whole cut sits 190 px lower on screen than the first
+//   delivery (CAM15_SHIFT_Y, as cut 15): rule at screen y ~1195 when settled, labels end at ~1258 (in the caption
+//   band, as cut 15's). Settled (f88-151), measured on the preview: content >= 62 px from the left edge and >= 68 px
+//   from the right (the rule itself runs off the left, as in cut 15), giant's head top at y ~360.
 // FORECAST TREATMENT: timelineWorld's own `dashed` AiFigure (hollow outline, dashed stick limbs) was rendered first
 //   (a test render, since removed): the figure goes transparent, loses its cup and badge and the copy bar shows through
 //   it, so it does not read as one solid figure. The build uses jumpWorld's ForecastOutline instead.
@@ -68,6 +75,7 @@ import {
   AiFigure,
   CAM15_CX0,
   CAM15_CY0,
+  CAM15_SHIFT_Y,
   GROUND_Y,
   H_INTERN,
   HeightBar,
@@ -96,7 +104,10 @@ import {
   ICON_CANDLES,
   ICON_CPU,
   ICON_FLASK,
+  OUTLINE_GAP,
+  OUTLINE_SW,
   ReachThread,
+  SilhouetteCut,
 } from "./jumpWorld";
 
 export const FPS = 24000 / 1001;
@@ -107,7 +118,7 @@ export const defaultProps = schema.parse({});
 // --- cut 15's resolved state (f103), asserted ---------------------------------------
 const C15_LAST = 103;
 const C15 = cam15(C15_LAST);
-if (Math.abs(C15.k - 1.01964) > 2e-4 || Math.abs(C15.cx - 509.874) > 0.02 || Math.abs(C15.cy - 958.459) > 0.02) {
+if (Math.abs(C15.k - 1.398596) > 2e-4 || Math.abs(C15.cx - 759.831) > 0.02 || Math.abs(C15.cy - 773.086) > 0.02) {
   throw new Error(`AnotherJumpThatBig: cut 15's resolved camera moved (${C15.k}, ${C15.cx}, ${C15.cy})`);
 }
 /** the one clock shared with cut 15: grid drift, sway and breath continue from its last frame */
@@ -220,13 +231,16 @@ const CHECK_F = 6;
 const LIT_F = 8;
 
 // --- the camera ----------------------------------------------------------------------------
-// One key track (k, cx, and the rule's SCREEN y, so cy is solved from k and the year labels never reach the
-// caption band) through the kit's damper, started at rest on cut 15's resolved camera. Move 1 (f0-22) pans to
-// 2027-28 at k 1.0; move 2 (f12-84) carries on right and pulls back to frame the giant whole; a creep to f151.
+// One key track (k, cx, and the rule's SCREEN y, so cy is solved from k and the rule holds its screen height)
+// through the kit's damper, started at rest on cut 15's resolved camera. Move 1 (f0-18) pulls back from cut 15's
+// push-in and pans to 2027-28 at k 1.0; move 2 (f10-84) carries on right and pulls back to frame the giant whole;
+// a creep to f151.
+/** the user's "move everything down": the same 190 px lower on screen as cut 15 (a camera offset only) */
+const SHIFT_Y = CAM15_SHIFT_Y;
 const CAM = {
-  m1: { f0: 0, f1: 20, k: 1.0, cx: 1120, ry: 990 },
-  m2: { f0: 10, f1: 84, k: 0.758, cx: 1818, ry: 1004 },
-  creep: { k: 0.752, cx: 1822, ry: 1006 },
+  m1: { f0: 0, f1: 18, k: 1.0, cx: 1120, ry: 990 + SHIFT_Y },
+  m2: { f0: 10, f1: 84, k: 0.758, cx: 1818, ry: 1004 + SHIFT_Y },
+  creep: { k: 0.752, cx: 1822, ry: 1006 + SHIFT_Y },
 };
 const cyFor = (k: number, ry: number) => RULE_Y - (ry - 960) / k;
 const CAM_TRACK = (() => {
@@ -343,8 +357,17 @@ const AnotherJumpThatBig: React.FC<z.infer<typeof schema>> = () => {
               <HeightBar key={yr} id={`bar${yr}`} x={yearX(yr)} h={OLD_H[i]} revealX={yr === 2026 ? pose.backX : Infinity} />
             ))}
             {/* the dashed copy of the climb */}
-            {copyOn
-              ? OLD_YEARS.map((yr, i) => (
+            {/* the copy's bars pass behind the figure, whose OpenAI head has gaps: cut them out under the
+                figure and its dashed outline band */}
+            <defs>
+              <mask id="copyFigCut" maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
+                <rect x={-1e5} y={-1e5} width={2e5} height={2e5} fill="white" />
+                <SilhouetteCut pose={pose} grow={OUTLINE_GAP + OUTLINE_SW} />
+              </mask>
+            </defs>
+            {copyOn ? (
+              <g mask="url(#copyFigCut)">
+                {OLD_YEARS.map((yr, i) => (
                   <DashedBar
                     key={`c${yr}`}
                     x={yearX(yr) + cp.dx}
@@ -352,8 +375,9 @@ const AnotherJumpThatBig: React.FC<z.infer<typeof schema>> = () => {
                     h={OLD_H[i] * cp.s}
                     march={march}
                   />
-                ))
-              : null}
+                ))}
+              </g>
+            ) : null}
             <TimelineRule
               k={k}
               frame={frame}

@@ -2,7 +2,11 @@ import React from "react";
 import { ACCENT, clamp01, iconShadow } from "../kits/dwarkesh/fieldShared";
 import { INK, INK_HI } from "../kits/dwarkesh/alignShared";
 import { arcPath } from "../kits/dwarkesh/trapShared";
-import { BAR_TONE, BAR_W, FigurePose, STROKE_W, figurePose } from "./timelineWorld";
+import { BAR_TONE, BAR_W, FigurePose, HEAD_MARK, STROKE_W, figurePose } from "./timelineWorld";
+
+/** the OpenAI head's outer contour: the mark's first subpath (absolute M), on its 24 box. The forecast contour
+ *  follows this edge only, so the knot's inner bands are never dashed (that scribbles the mark). */
+export const HEAD_OUTER = HEAD_MARK.paths[0].split(/(?=[Mm])/)[0];
 
 // ---------------------------------------------------------------------------
 // jumpWorld — cut 21's (`AnotherJumpThatBig`) additions to the timeline world.
@@ -30,6 +34,51 @@ export const OUTLINE_SW = STROKE_W * 1.1;
 export const OUTLINE_DASH = 24;
 export const OUTLINE_SPACE = 15;
 
+/** The pose's parts the outline follows, shared by the outline and `SilhouetteCut`. */
+const silhouetteParts = (g: FigurePose) => {
+  const { p } = g;
+  const legPts = (side: "near" | "far") => {
+    const l = g.legs.find((q) => q.side === side)!;
+    return [l.hip, l.knee, l.ankle];
+  };
+  const limbs: { pts: P[]; w: number }[] = [
+    { pts: g.farArm, w: p.armT },
+    { pts: legPts("far"), w: p.legT },
+    { pts: g.neck, w: p.neckW },
+    { pts: legPts("near"), w: p.legT },
+    { pts: g.nearArm, w: p.armT },
+  ];
+  const feet = [g.footFar, g.footNear];
+  const polys = [g.torso, g.drinkBody, ...(g.lidH > 0.05 ? [g.lid] : [])];
+  const ms = g.mark.size / 24;
+  const markT = `translate(${g.mark.x.toFixed(3)} ${g.mark.y.toFixed(3)}) scale(${ms.toFixed(5)})`;
+  return { limbs, feet, polys, ms, markT };
+};
+
+/**
+ * The figure's silhouette dilated by `grow`, filled black: goes inside a white
+ * `<mask>` to cut out whatever lies behind the figure (the OpenAI head has gaps).
+ */
+export const SilhouetteCut: React.FC<{ pose: FigurePose; grow: number }> = ({ pose: g, grow }) => {
+  const { limbs, feet, polys, ms, markT } = silhouetteParts(g);
+  return (
+    <g fill="black" stroke="black" strokeLinejoin="round" strokeLinecap="round">
+      {polys.map((q, i) => (
+        <path key={`p${i}`} d={poly(q)} strokeWidth={2 * grow} />
+      ))}
+      <g transform={markT} strokeWidth={(2 * grow) / ms}>
+        <path d={HEAD_OUTER} />
+      </g>
+      {limbs.map((l, i) => (
+        <path key={`l${i}`} d={line(l.pts)} fill="none" strokeWidth={l.w + 2 * grow} />
+      ))}
+      {feet.map((f, i) => (
+        <ellipse key={`f${i}`} cx={f.cx} cy={f.cy} rx={f.rx} ry={f.ry} strokeWidth={2 * grow} />
+      ))}
+    </g>
+  );
+};
+
 /**
  * A dashed contour OUTSIDE the figure's silhouette (body + drink), `gap` off it.
  * Every part is stroked with a band 2 x (gap + sw) wide (a limb: its own width
@@ -47,39 +96,16 @@ export const ForecastOutline: React.FC<{
   gap?: number;
   sw?: number;
 }> = ({ id, k, pose: g, march, color = ACCENT, clipX0 = -1e5, gap = OUTLINE_GAP, sw = OUTLINE_SW }) => {
-  const { p } = g;
-  const legPts = (side: "near" | "far") => {
-    const l = g.legs.find((q) => q.side === side)!;
-    return [l.hip, l.knee, l.ankle];
-  };
-  const limbs: { pts: P[]; w: number }[] = [
-    { pts: g.farArm, w: p.armT },
-    { pts: legPts("far"), w: p.legT },
-    { pts: g.neck, w: p.neckW },
-    { pts: legPts("near"), w: p.legT },
-    { pts: g.nearArm, w: p.armT },
-  ];
-  const feet = [g.footFar, g.footNear];
-  const polys = [g.torso, g.drinkBody, ...(g.lidH > 0.05 ? [g.lid] : [])];
+  const { limbs, feet, polys, ms, markT } = silhouetteParts(g);
   const dashArr = `${OUTLINE_DASH} ${OUTLINE_SPACE}`;
   const band = 2 * (gap + sw);
+  // the head is the OpenAI mark: its outer contour (HEAD_OUTER), in the mark's own 24-unit frame
   return (
     <g style={{ filter: iconShadow(k) }}>
       <defs>
         <mask id={`${id}-m`} maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
           <rect x={-1e5} y={-1e5} width={2e5} height={2e5} fill="white" />
-          <g fill="black" stroke="black" strokeLinejoin="round" strokeLinecap="round">
-            {polys.map((q, i) => (
-              <path key={`p${i}`} d={poly(q)} strokeWidth={2 * gap} />
-            ))}
-            <circle cx={g.head.x} cy={g.head.y} r={g.headR + gap} strokeWidth={0} />
-            {limbs.map((l, i) => (
-              <path key={`l${i}`} d={line(l.pts)} fill="none" strokeWidth={l.w + 2 * gap} />
-            ))}
-            {feet.map((f, i) => (
-              <ellipse key={`f${i}`} cx={f.cx} cy={f.cy} rx={f.rx} ry={f.ry} strokeWidth={2 * gap} />
-            ))}
-          </g>
+          <SilhouetteCut pose={g} grow={gap} />
         </mask>
         <clipPath id={`${id}-c`}>
           <rect x={clipX0} y={-1e5} width={2e5} height={2e5} />
@@ -98,7 +124,9 @@ export const ForecastOutline: React.FC<{
           {polys.map((q, i) => (
             <path key={`p${i}`} d={poly(q)} strokeWidth={band} />
           ))}
-          <circle cx={g.head.x} cy={g.head.y} r={g.headR} strokeWidth={band} />
+          <g transform={markT} strokeWidth={band / ms} strokeDasharray={`${OUTLINE_DASH / ms} ${OUTLINE_SPACE / ms}`} strokeDashoffset={-march / ms}>
+            <path d={HEAD_OUTER} />
+          </g>
           {limbs.map((l, i) => (
             <path key={`l${i}`} d={line(l.pts)} strokeWidth={l.w + band} />
           ))}
@@ -147,7 +175,7 @@ export const HumanFigure: React.FC<{ k: number; x: number; breathT: number; faci
       <ellipse cx={g.footFar.cx} cy={g.footFar.cy} rx={g.footFar.rx} ry={g.footFar.ry} fill={HUMAN_FAR} />
       {limb(g.neck, p.neckW, INK)}
       <path d={poly(g.torso)} fill={INK} />
-      <circle cx={g.head.x} cy={g.head.y} r={g.headR} fill={INK} />
+      <circle cx={g.head.x} cy={g.top + p.headD / 2} r={p.headD / 2} fill={INK} />
       {limb(legPts("near"), p.legT, INK)}
       <ellipse cx={g.footNear.cx} cy={g.footNear.cy} rx={g.footNear.rx} ry={g.footNear.ry} fill={INK} />
       {limb(nearArm, p.armT, INK)}
