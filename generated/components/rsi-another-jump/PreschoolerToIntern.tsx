@@ -12,15 +12,17 @@
 //
 // THE MOTION: one white timeline, 2022 -> 2026, draws head-led on "in the last four years" (f0-f36), each tick
 // dropping and each year sliding up as the head reaches it, while the camera pulls back from k 1.3 on the
-// 2022 end (a small deep-orange preschooler standing on the rule, topknot, backpack, a big juice box in hand) to
-// the whole span (settled ~f50). From f40 ("basically") the figure walks right at constant speed and grows as
-// it goes — age is its position on the rule, so it is exactly one quarter grown at 2023 — its head shrinking
-// against a lengthening body, its tone ripening deep -> ACCENT, the juice box turning into a lidded coffee cup,
-// the topknot sinking into the head, the backpack cross-fading out (f60-71) as an ID badge on a lanyard (f62-74)
-// and a collar and tie (f67-78) cross-fade in (identityAt in the world);
+// 2022 end (a small deep-orange preschooler standing on the rule: its head is the OpenAI mark with two small
+// dark eyes, a backpack, a big juice box in hand) to the whole span (settled ~f46). From f40 ("basically") the
+// figure walks right at constant speed and grows as it goes — age is its position on the rule, so it is
+// exactly one quarter grown at 2023 — its OpenAI-mark head shrinking against a lengthening body, its tone
+// ripening deep -> ACCENT, the juice box turning into a lidded coffee cup, the backpack cross-fading out
+// (f60-71) as an ID badge on a lanyard (f62-74) and a collar and tie (f67-78) cross-fade in (identityAt);
 // at every tick it leaves its height behind as a thin deep bar that comes out from behind its torso, so a
-// rising staircase builds behind it. It stops on 2026 at f88 as a grown-up intern (settled before "intern"
-// f89) and holds alive (breath, slow camera creep, grid drift) to f103.
+// rising staircase builds behind it. On "to a" (f73) the camera starts a gentle push-in toward the figure
+// (k 1.0 -> ~1.29, ~91% done by f88), so the head is big when it stops on 2026 at f88 as a grown-up intern;
+// at the end of "savant" its front eye winks at the camera (closes f88-91, holds, reopens f95-98: one wink,
+// no head tilt), and it holds alive (breath, slow camera creep, grid drift) to f103.
 // Orange = the AI, nothing else; white = structure, years, the drink and the badge.
 //
 // THE WALK (makeWalk): 2022 -> 2026 (760 world px) between f40 and f88, 18.5 px/frame at full speed with a 6-frame
@@ -30,10 +32,13 @@
 // CAUSE -> EFFECT (a height bar is uncovered by the torso walking off it): hip over 2022 f40 -> bar first visible
 // f44, out f45 · 2023 f54 -> f55/f56 · 2024 f64 -> f65/f66 · 2025 f74 -> f76 · 2026: the intern stops on it at
 // f88, so its bar stays hidden behind the figure (it exists for cut 21).
-// CAMERA (CAM15 in the world): k 1.3 on the 2022 end -> k 1.0 on the whole span, keys f0-f38, settled ~f46; then a
-// slow creep to k 1.02 to f103. Rule's screen y 948 -> 980 -> 982; year labels end at screen y <= 1056 on every
-// frame (caption band starts 1080).
-//
+// CAMERA (CAM15 in the world, whole composition shifted CAM15_SHIFT_Y = 190 px lower than v1): k 1.3 on the 2022
+// end -> k 1.0 on the whole span, keys f0-f38, settled ~f46; creep to k 1.01 to f73; push f73-f84 to k 1.29
+// toward the figure (warp 0.8, damped), then creep to k 1.295 to f103 (resolved f103: k 1.294, cx 600.4).
+// Rule's screen y 1138 (f0) -> ~1170 (wide, f40-f73) -> 1238.6 (f103). Year labels (white pixels) reach
+// y 1241 wide and 1246-1329 at f103: they now sit in the caption band (accepted by the director). Margins:
+// figure and cup >= 67 px from the right edge on every frame; during the push 2022 and the rule's tail
+// leave the frame on the left (from ~f81), by design.
 // SOURCES: the years only. ChatGPT (GPT-3.5) launched 30 Nov 2022; the essay is read in Nov 2026 — "the last
 // four years" = 2022 -> 2026. No other figure on screen.
 //
@@ -52,6 +57,7 @@ import {
   Vignette,
   clamp01,
   camEase,
+  smoothstep,
   sway,
   worldTransform,
 } from "../kits/dwarkesh/fieldShared";
@@ -109,6 +115,15 @@ const tickFrame = (yr: number) => reachFrame(yearX(yr));
 // --- the walk ---------------------------------------------------------------
 const ageAt = (x: number) => clamp01((x - X0) / (X1 - X0));
 const WALK = makeWalk({ x0: X0, x1: X1, f0: 40, f1: 88, easeIn: 6, easeOut: 8, ageAt });
+
+// --- the wink ----------------------------------------------------------------
+// The front eye closes as "savant" ends (f88 -> f91), holds closed f91 -> f95,
+// and reopens by f98: one wink, at the camera, after the push-in has landed.
+const WINK = { close0: 88, close1: 91, open0: 95, open1: 98 };
+const winkAt = (f: number) =>
+  f < WINK.open0
+    ? smoothstep((f - WINK.close0) / (WINK.close1 - WINK.close0))
+    : 1 - smoothstep((f - WINK.open0) / (WINK.open1 - WINK.open0));
 
 const PreschoolerToIntern: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
@@ -169,7 +184,7 @@ const PreschoolerToIntern: React.FC<z.infer<typeof schema>> = () => {
               years={YEARS}
               tickFrame={tickFrame}
             />
-            <AiFigure id="ai" k={k} x={hipX} age={age} feet={feet} gait={gait} breathT={frame} />
+            <AiFigure id="ai" k={k} x={hipX} age={age} feet={feet} gait={gait} breathT={frame} wink={winkAt(frame)} />
           </svg>
           <YearLabels k={k} frame={frame} years={YEARS} tickFrame={tickFrame} />
         </div>

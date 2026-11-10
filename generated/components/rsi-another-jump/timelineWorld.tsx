@@ -14,6 +14,43 @@ import {
   squirclePath,
 } from "../kits/dwarkesh/fieldShared";
 import { INK, INK_HI, Label, STROKE_PX, THREAD_PX, worldPx } from "../kits/dwarkesh/alignShared";
+import { OPENAI } from "../kits/dwarkesh/brandGlyphs";
+
+// --- the head: the OpenAI mark ----------------------------------------------
+// (revision 3, the user's note) The figure's head is the OpenAI knot, upright,
+// filled in the figure's own tone, HEAD_MARK_SCALE x the old round head's
+// diameter, centred where that head's centre was minus half the growth so the
+// figure's top (and so `figureHeight`) is unchanged. Two small dark eyes sit on
+// the knot's two right-hand vertical bands, looking the way the figure walks;
+// they are dots on the bands, so the knot's shape still reads around them.
+export const HEAD_MARK = OPENAI;
+export const HEAD_MARK_SCALE = 1.1;
+/** eye centres and radius in the mark's own 24-unit box */
+export const EYE_UNITS = { back: { x: 15.1, y: 13.3 }, front: { x: 19.1, y: 13.3 }, r: 0.85 };
+export const EYE_TONE = "#2B1C02"; // a deep brown-black, never pure black on orange
+/** the dashed (forecast) figure draws its head as the mark filled at this opacity */
+export const DASHED_HEAD_OPACITY = 0.55;
+/** An eye as one closed lens: `closed` 0 = a round dot, 1 = a thin upward
+ *  curve (a closed, smiling eye) with pointed ends. One shape all the way, so a
+ *  wink is a morph, never a swap. */
+export const eyePath = (cx: number, cy: number, r: number, closed: number) => {
+  const o = 1 - clamp01(closed);
+  const th = r * 0.42;
+  const N = 18;
+  const up: string[] = [];
+  const lo: string[] = [];
+  for (let i = 0; i <= N; i++) {
+    const t = -1 + (2 * i) / N;
+    const xx = cx + r * t * lerpN(1, 1.25, 1 - o);
+    const circ = r * Math.sqrt(Math.max(0, 1 - t * t));
+    const arc = cy + r * 0.3 - r * 0.6 * (1 - t * t); // bulges up
+    const half = (th / 2) * Math.sqrt(Math.max(0, 1 - t * t));
+    up.push(`${xx.toFixed(3)} ${(o * (cy - circ) + (1 - o) * (arc - half)).toFixed(3)}`);
+    lo.push(`${xx.toFixed(3)} ${(o * (cy + circ) + (1 - o) * (arc + half)).toFixed(3)}`);
+  }
+  return `M${up.join(" L")} L${lo.reverse().join(" L")} Z`;
+};
+const lerpN = (a: number, b: number, t: number) => a + (b - a) * t;
 
 // ---------------------------------------------------------------------------
 // timelineWorld — the 2022 -> 2026 (-> 2033) timeline that cut 15
@@ -411,10 +448,21 @@ export const figurePose = ({
   };
   const neckBase: P = { x: x + p.torsoW * 0.1 + leanX(torsoTop), y: torsoTop + p.neckW * 0.3 };
   const headSink = p.headD * lerp(0.1, 0, a);
+  // The mark's top sits where the round head's top was (so the figure's height
+  // is unchanged) and its solid bottom band overlaps the neck / body by 10% of
+  // its size, so nothing of the body shows through the knot's open gaps. That
+  // makes it 1.0x the old head for the child and 1.11x for the adult.
+  const headSpan = p.headD - headSink;
+  const markSize = Math.max(p.headD, (headSpan / 0.9) * (HEAD_MARK_SCALE / 1.1));
+  const markTop = torsoTop - p.neck - headSpan;
   const head: P = {
     x: x + p.torsoW * 0.12 + leanX(torsoTop) * 1.25,
-    y: torsoTop - p.neck - p.headD * 0.5 + headSink,
+    y: markTop + markSize / 2,
   };
+  const markX = head.x - markSize / 2;
+  const markY = head.y - markSize / 2;
+  const eyeAt = (u: { x: number; y: number }) => ({ x: markX + (u.x * markSize) / 24, y: markY + (u.y * markSize) / 24 });
+  const eyes = { back: eyeAt(EYE_UNITS.back), front: eyeAt(EYE_UNITS.front), r: (EYE_UNITS.r * markSize) / 24 };
   const shoulder: P = {
     x: x + p.torsoW * 0.04 + leanX(torsoTop + p.torsoW * 0.25),
     y: torsoTop + p.torsoW * 0.25,
@@ -554,8 +602,10 @@ export const figurePose = ({
     p,
     torso,
     head,
-    headR: p.headD / 2,
-    neck: [neckBase, head],
+    headR: markSize / 2,
+    mark: { x: markX, y: markY, size: markSize },
+    eyes,
+    neck: [neckBase, { x: head.x, y: Math.max(neckBase.y - 0.01, head.y + markSize * 0.38 + p.neckW / 2) }],
     legs,
     farArm: [farShoulder, farElbow, farHand],
     nearArm: [shoulder, nearElbow, nearHand],
@@ -578,7 +628,7 @@ export const figurePose = ({
     straw,
     strawL,
     backX,
-    top: head.y - p.headD / 2,
+    top: markY,
   };
 };
 
@@ -603,6 +653,10 @@ export const AiFigure: React.FC<{
   opacity?: number;
   /** override any of `identityAt(age)` (prop opacities / morphs) */
   identity?: Partial<ReturnType<typeof identityAt>>;
+  /** the two eyes on the head mark (default on) */
+  eyes?: boolean;
+  /** the front eye's closure, 0 open .. 1 closed (a wink) */
+  wink?: number;
 }> = ({
   id,
   k,
@@ -618,6 +672,8 @@ export const AiFigure: React.FC<{
   dashOffset = 0,
   opacity = 1,
   identity,
+  eyes = true,
+  wink = 0,
 }) => {
   const g = figurePose({ x, groundY, age, feet, gait, breathT, drinkMorph, identity });
   const t = toneT ?? clamp01(age);
@@ -639,8 +695,17 @@ export const AiFigure: React.FC<{
       {g.id.child > 0.004 ? <path d={poly(g.backpack)} fill={INK} opacity={g.id.child} /> : null}
       {limb(g.neck, p.neckW, nearC, "nk")}
       <path d={poly(g.torso)} fill={nearC} />
-      <circle cx={g.bun.x} cy={g.bun.y} r={g.bun.r} fill={nearC} />
-      <circle cx={g.head.x} cy={g.head.y} r={g.headR} fill={nearC} />
+      <g transform={`translate(${g.mark.x.toFixed(3)} ${g.mark.y.toFixed(3)}) scale(${(g.mark.size / 24).toFixed(5)})`}>
+        {HEAD_MARK.paths.map((d, i) => (
+          <path key={i} d={d} fill={nearC} fillRule="evenodd" />
+        ))}
+      </g>
+      {eyes ? (
+        <>
+          <path d={eyePath(g.eyes.back.x, g.eyes.back.y, g.eyes.r, 0)} fill={EYE_TONE} />
+          <path d={eyePath(g.eyes.front.x, g.eyes.front.y, g.eyes.r, wink)} fill={EYE_TONE} />
+        </>
+      ) : null}
       {limb(legPts("near"), p.legT, nearC, "nl")}
       <ellipse cx={g.footNear.cx} cy={g.footNear.cy} rx={g.footNear.rx} ry={g.footNear.ry} fill={nearC} />
     </>
@@ -704,13 +769,22 @@ export const AiFigure: React.FC<{
     );
   }
   // dashed: stroke every part's outline with dashes, then mask out the
-  // silhouette's interior so only its outer edge is left
+  // silhouette's interior so only its outer edge is left. The head is the
+  // exception: dashing every edge of the OpenAI mark's thin bands scribbles it,
+  // so the forecast's head is the mark as a ghost fill (DASHED_HEAD_OPACITY),
+  // no eyes; it stays in the mask so the torso's dashes never cross it.
   const dash = STROKE_W * 2.2;
   const sw = STROKE_W * 2; // half of it is masked away, so it reads at STROKE_W
   const outline = (
     <g fill="none" stroke={near} strokeWidth={sw} strokeDasharray={`${dash} ${dash * 0.7}`} strokeDashoffset={dashOffset}>
       <path d={poly(g.torso)} />
-      <circle cx={g.head.x} cy={g.head.y} r={g.headR} />
+    </g>
+  );
+  const ghostHead = (
+    <g transform={`translate(${g.mark.x.toFixed(3)} ${g.mark.y.toFixed(3)}) scale(${(g.mark.size / 24).toFixed(5)})`}>
+      {HEAD_MARK.paths.map((d, i) => (
+        <path key={i} d={d} fill={near} fillOpacity={DASHED_HEAD_OPACITY} fillRule="evenodd" />
+      ))}
     </g>
   );
   return (
@@ -720,7 +794,11 @@ export const AiFigure: React.FC<{
           <rect x={-20000} y={-20000} width={40000} height={40000} fill="white" />
           <g fill="black" stroke="black">
             <path d={poly(g.torso)} strokeWidth={0} />
-            <circle cx={g.head.x} cy={g.head.y} r={g.headR} strokeWidth={0} />
+            <g transform={`translate(${g.mark.x.toFixed(3)} ${g.mark.y.toFixed(3)}) scale(${(g.mark.size / 24).toFixed(5)})`}>
+              {HEAD_MARK.paths.map((d, i) => (
+                <path key={i} d={d} fillRule="evenodd" strokeWidth={0} />
+              ))}
+            </g>
           </g>
         </mask>
       </defs>
@@ -739,6 +817,7 @@ export const AiFigure: React.FC<{
           />
         ))}
       </g>
+      {ghostHead}
     </g>
   );
 };
@@ -860,32 +939,50 @@ export const HeightBar: React.FC<{
 // --- cut 15's camera -------------------------------------------------------------
 // One coarse key track through the kit's damped follow, k / cy / cx all keyed
 // per frame. cy is solved from the rule's target SCREEN y and k, so the rule
-// (and the year labels under it, which must stay above the caption band at
-// 1080) is placed exactly at every zoom.
+// is placed exactly at every zoom.
+//
+// Revision 3 (the user's notes): the whole composition sits ~190 px lower on
+// screen (every ruleScreenY +190; the year labels now reach into the caption
+// band, which the user asked for), and on "to a" (f73) the camera pushes in
+// "a little" on the intern so the wink at f88-f98 reads: keys f73 -> f84 to
+// k 1.29 (warp 0.8, so the damper is ~90% there by f88), then a slow drift to
+// k 1.295 by f103. The push is framed so the 2023 label's left edge and the
+// cup's right edge both keep ~65-70 px to the frame edges; 2022 leaves the
+// frame on the left during the push.
 export const CAM15 = {
-  open: { k: 1.3, cx: X_2022 + (540 - 430) / 1.3, ruleScreenY: 948 },
-  rest: { k: 1.0, cx: 503, ruleScreenY: 980 },
-  end: { k: 1.02, cx: 510, ruleScreenY: 982 },
+  open: { k: 1.3, cx: X_2022 + (540 - 430) / 1.3, ruleScreenY: 1138 },
+  rest: { k: 1.0, cx: 503, ruleScreenY: 1170 },
+  /** the creep's end, where the push starts (f73) */
+  prePush: { k: 1.01, cx: 506, ruleScreenY: 1171 },
+  /** the push's keys end here (f84) */
+  zoom: { k: 1.29, cx: 602, ruleScreenY: 1232 },
+  end: { k: 1.295, cx: 603.5, ruleScreenY: 1234 },
   pullF1: 38, // the pull-back's keys end here (the damper settles it ~f46)
+  pushF0: 73, // "to a"
+  pushF1: 84,
   creepF1: 103,
 };
+/** the composition's downward shift on screen against revision 2 */
+export const CAM15_SHIFT_Y = 190;
 const cyFor = (k: number, ruleScreenY: number) => RULE_Y - (ruleScreenY - 960) / k;
 const CAM15_F: number[] = [];
 const CAM15_K: number[] = [];
 const CAM15_CX: number[] = [];
 const CAM15_CY: number[] = [];
+const CAM15_SEGS = [
+  { f0: 0, f1: CAM15.pullF1, a: CAM15.open, b: CAM15.rest, warp: 0.65 },
+  { f0: CAM15.pullF1, f1: CAM15.pushF0, a: CAM15.rest, b: CAM15.prePush, warp: 1 },
+  { f0: CAM15.pushF0, f1: CAM15.pushF1, a: CAM15.prePush, b: CAM15.zoom, warp: 0.8 },
+  { f0: CAM15.pushF1, f1: CAM15.creepF1, a: CAM15.zoom, b: CAM15.end, warp: 1 },
+];
 for (let f = 0; f <= CAM15.creepF1; f++) {
-  const a = f <= CAM15.pullF1 ? CAM15.open : CAM15.rest;
-  const b = f <= CAM15.pullF1 ? CAM15.rest : CAM15.end;
-  const u =
-    f <= CAM15.pullF1
-      ? camEase(f / CAM15.pullF1, 0.65)
-      : camEase((f - CAM15.pullF1) / (CAM15.creepF1 - CAM15.pullF1), 1);
-  const k = lerp(a.k, b.k, u);
+  const sg = CAM15_SEGS.find((q) => f <= q.f1) ?? CAM15_SEGS[CAM15_SEGS.length - 1];
+  const u = camEase((f - sg.f0) / (sg.f1 - sg.f0), sg.warp);
+  const k = lerp(sg.a.k, sg.b.k, u);
   CAM15_F.push(f);
   CAM15_K.push(k);
-  CAM15_CX.push(lerp(a.cx, b.cx, u));
-  CAM15_CY.push(cyFor(k, lerp(a.ruleScreenY, b.ruleScreenY, u)));
+  CAM15_CX.push(lerp(sg.a.cx, sg.b.cx, u));
+  CAM15_CY.push(cyFor(k, lerp(sg.a.ruleScreenY, sg.b.ruleScreenY, u)));
 }
 /** cut 15's camera at frame f (before sway): the same damper as `runCamera`,
  *  run on cx too. */
