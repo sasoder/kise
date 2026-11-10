@@ -61,15 +61,17 @@ export const DURATION = 287;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
-// seven lines for the 9:16 card (the opening mark is printed from f0 by the card); no line is a lone word
+// rev 2 (user: more padding): eight lines for the narrower, more padded card (the opening mark is printed from f0 by
+// the card); no line is a lone word. Was seven lines at 58 px in a 960-wide card.
 const LINES = [
   "While current AI systems",
   "are starting to automate",
-  "mathematical proof, there is",
-  "currently very little evidence",
-  "that they can ask powerful",
-  "questions or find profound new",
-  "fields of mathematical enquiry.”",
+  "mathematical proof, there",
+  "is currently very little",
+  "evidence that they can ask",
+  "powerful questions or find",
+  "profound new fields of",
+  "mathematical enquiry.”",
 ];
 
 const WORDS: QuoteWord[] = [
@@ -109,7 +111,9 @@ checkWords(LINES, WORDS);
 
 const ATTRIBUTION = ["Toby Ord, “Mathematics is Much More than Proof”"];
 
-const LAYOUT: QuoteCardLayout = { w: 960, padX: 62, fontSize: 58, lineH: 72 };
+// rev 2: the shared card's padding and width (quoteShared CARD_DEFAULTS: w 876, padX 110, padY 136); type 58/72 ->
+// 50/62 to fit, the credit 30 -> 26 in proportion
+const LAYOUT: QuoteCardLayout = { fontSize: 50, lineH: 62, attrSize: 26 };
 const G = quoteCardGeometry(LINES.length, ATTRIBUTION.length, LAYOUT);
 
 // Other papers on the same wall, cut 25's family in another arrangement: one hanging above the card's left half from

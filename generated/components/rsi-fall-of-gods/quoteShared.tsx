@@ -161,29 +161,40 @@ export type QuoteCardLayout = {
   lineH?: number;
   /** left/right padding inside the card, world px */
   padX?: number;
+  /** paper above the rule and below the credit, world px */
+  padY?: number;
   /** the attribution's size, world px */
   attrSize?: number;
   /** the quote's Spectral weight (300, 400 or 500 are loaded) */
   weight?: number;
 };
 
+// rev 2 (user, Nov 10: "can you add a bit more padding to these?"): the paper breathes round the text like the show's
+// printed card. Inside padding ~1.7x on all sides (padX 66 -> 110, paper above the rule 80 -> 136 and below the
+// credit 71 -> 136, now its own `padY` instead of a multiple of the type size), the card narrower (940 -> 876, ~910
+// screen px at the end of the push, ~85 px of wall each side), and the type down to fit the four lines in the
+// narrower column (64/80 -> 52/65, the credit 30 -> 24 in proportion). The centre, the rule, the pin and the
+// leading ratio are unchanged.
 export const CARD_DEFAULTS = {
   cx: 540,
   cy: 950,
-  w: 940,
-  fontSize: 64,
-  lineH: 80, // 1.25 of the size: the show's leading (q1.jpg: line width / line pitch 9.9)
-  padX: 66,
-  attrSize: 30,
+  w: 876,
+  fontSize: 52,
+  lineH: 65, // 1.25 of the size: the show's leading (q1.jpg: line width / line pitch 9.9)
+  padX: 110,
+  padY: 136,
+  attrSize: 24,
   weight: QUOTE_WEIGHT,
 };
+/** the pin's head centre below the card's top edge, world px */
+export const PIN_INSET = 38;
 
 /** Every measure of the card, in world px, from its layout and its line count. A tall quote (5-6 lines) just grows
  *  the card about its centre: the camera stays on `cy`. */
 export const quoteCardGeometry = (lineCount: number, attrLines: number, layout: QuoteCardLayout = {}) => {
   const L = { ...CARD_DEFAULTS, ...layout };
   const fs = L.fontSize;
-  const padTop = Math.round(fs * 1.25); // paper above the rule
+  const padTop = L.padY; // paper above the rule
   const ruleW = Math.round(fs * 1.5);
   const ruleH = Math.max(3, Math.round(fs * 0.06));
   const ruleToText = Math.round(fs * 0.62); // rule bottom -> first line box top
@@ -192,7 +203,7 @@ export const quoteCardGeometry = (lineCount: number, attrLines: number, layout: 
   const attrGap = Math.round(fs * 0.62);
   const attrLineH = Math.round(L.attrSize * 1.3);
   const attrTop = textTop + textH + attrGap;
-  const padBottom = Math.round(fs * 1.25);
+  const padBottom = L.padY; // paper below the credit's ink
   const h = attrTop + attrLines * attrLineH + padBottom - (attrLineH - L.attrSize);
   const x = L.cx - L.w / 2;
   const y = L.cy - h / 2;
@@ -209,7 +220,7 @@ export const quoteCardGeometry = (lineCount: number, attrLines: number, layout: 
     attrTop,
     attrLineH,
     /** the pin's head centre, world px */
-    pin: { x: L.cx, y: y + Math.round(fs * 0.6) },
+    pin: { x: L.cx, y: y + PIN_INSET },
   };
 };
 
