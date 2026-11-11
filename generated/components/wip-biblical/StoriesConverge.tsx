@@ -82,15 +82,16 @@ const SWAP_DUR = 22;
 const PW = 218;
 const PH = 298; // the baked sheet's aspect, 0.7315
 type Sheet = { id: number; x: number; y: number; r: number; ex: number; ey: number; er: number };
-// Start: a shallow zigzag across the top band (world px = screen px at f0). End: one pile at STACK, fanned.
+// Start: a shallow zigzag across the top band under the slip (world px = screen px at f0), y 250-730. End: one pile at
+// STACK, fanned, just under the slip.
 const STACK_X = 540;
-const STACK_Y = 430;
+const STACK_Y = 404;
 const SHEETS: Sheet[] = [
-  { id: 1, x: 205, y: 318, r: -4.5, ex: STACK_X - 9, ey: STACK_Y + 4, er: -3.6 },
-  { id: 2, x: 372, y: 492, r: 3, ex: STACK_X - 4, ey: STACK_Y - 3, er: -1.5 },
-  { id: 3, x: 540, y: 318, r: -1.8, ex: STACK_X + 1, ey: STACK_Y + 2, er: 1.5 },
-  { id: 4, x: 708, y: 492, r: 3.6, ex: STACK_X + 4, ey: STACK_Y, er: 0.4 },
-  { id: 5, x: 875, y: 318, r: -2.6, ex: STACK_X + 10, ey: STACK_Y - 2, er: 3.4 },
+  { id: 1, x: 205, y: 399, r: -4.5, ex: STACK_X - 9, ey: STACK_Y + 4, er: -3.6 },
+  { id: 2, x: 372, y: 573, r: 3, ex: STACK_X - 4, ey: STACK_Y - 3, er: -1.5 },
+  { id: 3, x: 540, y: 399, r: -1.8, ex: STACK_X + 1, ey: STACK_Y + 2, er: 1.5 },
+  { id: 4, x: 708, y: 573, r: 3.6, ex: STACK_X + 4, ey: STACK_Y, er: 0.4 },
+  { id: 5, x: 875, y: 399, r: -2.6, ex: STACK_X + 10, ey: STACK_Y - 2, er: 3.4 },
 ];
 const Z_ORDER = [1, 5, 3, 2, 4]; // bottom to top: the lower row lies over the upper row's corners, and stays on top
 const sheetAt = (s: Sheet, frame: number) => {
@@ -111,24 +112,21 @@ type Line = { y: number; h: number; words: Word[] };
 const K = 14; // word blocks per slot, padded with zero-width blocks
 const L = 26;
 const R = 192;
-const fill = (x0: number, x1: number, seed: string): Word[] => {
+const fill = (x0: number, x1: number, seed: string, big = false): Word[] => {
   const out: Word[] = [];
+  const gap = big ? 7 : 4;
   let x = x0;
   let k = 0;
   while (x < x1 - 0.5) {
-    let w = 8 + random(`${seed}-${k}`) ** 1.4 * 24;
-    if (x1 - (x + w + 4) < 8) w = x1 - x; // the line ends on a whole word
+    let w = big ? 22 + random(`${seed}-${k}`) * 26 : 8 + random(`${seed}-${k}`) ** 1.4 * 24;
+    if (x1 - (x + w + gap) < (big ? 18 : 8)) w = x1 - x; // the line ends on a whole word
     out.push({ x, w: Math.min(w, x1 - x) });
-    x += w + 4;
+    x += w + gap;
     k++;
   }
   return out;
 };
-const line = (x0: number, x1: number, y: number, seed: string, h = 5, bullet = false): Line => ({
-  y,
-  h,
-  words: bullet ? [{ x: 30, w: 5 }, ...fill(x0, x1, seed)] : fill(x0, x1, seed),
-});
+const line = (x0: number, x1: number, y: number, seed: string, h = 5): Line => ({ y, h, words: fill(x0, x1, seed) });
 const centred = (cx: number, w: number, y: number, seed: string, h = 5) => line(cx - w / 2, cx + w / 2, y, seed, h);
 const rnd = (seed: string, a: number, b: number) => a + random(seed) * (b - a);
 
@@ -162,50 +160,40 @@ const PROSE: Line[] = Array.from({ length: 16 }, (_, i) => {
   if (i === 15) return line(L, 104, y, `p2-${i}`);
   return line(L, R, y, `p2-${i}`);
 });
-// 3: dialogue, indented short exchanges around an illustration box (y 92-168)
-const DIALOGUE_SPEC: [number, number, number][] = [
-  [L, 150, 30],
-  [L, 176, 44],
-  [40, 118, 58],
-  [40, 164, 72],
-  [40, 96, 184],
-  [L, 170, 198],
-  [40, 132, 212],
-  [40, 180, 226],
-  [40, 88, 240],
-  [L, 150, 254],
-  [40, 120, 268],
+// 3: dialogue: short speaker tags at the margin, every speech deeply indented, round an illustration box (y 92-168)
+const DIALOGUE_SPEC: [number, number, number, number][] = [
+  [L, 58, 30, 6],
+  [76, 188, 44, 5],
+  [76, 150, 58, 5],
+  [L, 50, 72, 6],
+  [76, 176, 184, 5],
+  [L, 62, 198, 6],
+  [76, 190, 212, 5],
+  [76, 130, 226, 5],
+  [L, 54, 240, 6],
+  [76, 170, 254, 5],
+  [76, 120, 268, 5],
 ];
 const DIALOGUE: Line[] = Array.from({ length: 16 }, (_, i) =>
-  i < DIALOGUE_SPEC.length ? line(DIALOGUE_SPEC[i][0], DIALOGUE_SPEC[i][1], DIALOGUE_SPEC[i][2], `p3-${i}`) : empty(i),
+  i < DIALOGUE_SPEC.length ? line(DIALOGUE_SPEC[i][0], DIALOGUE_SPEC[i][1], DIALOGUE_SPEC[i][2], `p3-${i}`, DIALOGUE_SPEC[i][3]) : empty(i),
 );
-// 4: a list under a starred title; bullets are short blocks at x 30
-const LIST_SPEC: [number, number, boolean][] = [
-  [170, 60, true],
-  [120, 74, false],
-  [150, 94, true],
-  [180, 114, true],
-  [100, 128, false],
-  [140, 148, true],
-  [176, 168, true],
-  [130, 182, false],
-  [160, 202, true],
-  [120, 222, true],
-  [170, 242, true],
-  [96, 256, false],
-];
-const LIST: Line[] = [
+// 4: two columns under a starred title
+const TWO_COL: Line[] = [
   centred(109, 74, 30, "p4-0", 7),
-  ...Array.from({ length: 15 }, (_, i) =>
-    i < LIST_SPEC.length ? line(42, LIST_SPEC[i][0], LIST_SPEC[i][1], `p4-${i + 1}`, 5, LIST_SPEC[i][2]) : empty(i + 1),
-  ),
+  ...Array.from({ length: 15 }, (_, i) => {
+    const y = 56 + i * 14.4;
+    const lEnd = i === 6 ? 70 : 102;
+    const rEnd = i === 14 ? 150 : i === 7 ? 164 : R;
+    return { y, h: 5, words: [...fill(L, lEnd, `p4-l-${i}`), ...fill(116, rEnd, `p4-r-${i}`)] };
+  }),
 ];
-// 5: short ragged lines in two runs, an ornamental rule between them (y 146)
-const SHORT: Line[] = Array.from({ length: 16 }, (_, i) => {
-  const y = i < 8 ? 30 + i * 13 : 172 + (i - 8) * 13;
-  return line(L, L + rnd(`p5-w-${i}`, 40, 104), y, `p5-${i}`);
-});
-const LAYOUTS = [POEM, PROSE, DIALOGUE, LIST, SHORT];
+// 5: a large two-line heading, the ornamental rule under it (y 88), then ragged body text
+const HEADING: Line[] = [
+  { y: 38, h: 13, words: fill(52, 166, "p5-h0", true) },
+  { y: 62, h: 13, words: fill(70, 148, "p5-h1", true) },
+  ...Array.from({ length: 14 }, (_, i) => line(L, R - rnd(`p5-w-${i}`, 0, 52), 110 + i * 12.6, `p5-${i}`)),
+];
+const LAYOUTS = [POEM, PROSE, DIALOGUE, TWO_COL, HEADING];
 
 const pad = (ws: Word[], at: number): Word[] => [...ws, ...Array.from({ length: K - ws.length }, () => ({ x: at, w: 0 }))].slice(0, K);
 const lineEnd = (ln: Line) => (ln.words.length ? ln.words[ln.words.length - 1].x + ln.words[ln.words.length - 1].w : L);
@@ -306,16 +294,16 @@ const FLOURISHES: Flourish[] = [
       </g>
     ),
   },
-  // 5: an ornamental rule between the two runs
+  // 5: an ornamental rule under the heading
   {
-    at: [109, 146],
+    at: [109, 88],
     reach: 78,
     art: (
       <g stroke="currentColor" strokeWidth={STROKE} strokeLinecap="round">
-        <path d="M42 146 H98 M120 146 H176" fill="none" />
-        <path d="M109 138.5 L116 146 L109 153.5 L102 146 Z" fill="currentColor" stroke="none" />
-        <circle cx={38} cy={146} r={2.4} fill="currentColor" stroke="none" />
-        <circle cx={180} cy={146} r={2.4} fill="currentColor" stroke="none" />
+        <path d="M42 88 H98 M120 88 H176" fill="none" />
+        <path d="M109 80.5 L116 88 L109 95.5 L102 88 Z" fill="currentColor" stroke="none" />
+        <circle cx={38} cy={88} r={2.4} fill="currentColor" stroke="none" />
+        <circle cx={180} cy={88} r={2.4} fill="currentColor" stroke="none" />
       </g>
     ),
   },
@@ -376,10 +364,9 @@ const SheetView: React.FC<{ s: Sheet; frame: number }> = ({ s, frame }) => {
 };
 
 // -- the thread: a smooth line through each sheet's touch point, drawn by its tip, then carried by the sheets ------------
-// It comes in high from the upper left and leaves high to the upper right, so once the sheets gather it closes into a V on
-// the pile's ornament rather than striking through the top page.
-const THREAD_IN = { x: -90, y: 130 };
-const THREAD_OUT = { x: 1170, y: 120 };
+// It comes in from the upper left and leaves to the upper right, low enough that its arms pass under the slip.
+const THREAD_IN = { x: -90, y: 270 };
+const THREAD_OUT = { x: 1170, y: 262 };
 type P = { x: number; y: number };
 /** Centripetal Catmull-Rom through pts (no loops where points bunch up), `n` samples per span. */
 const spline = (pts: P[], n = 22): P[][] => {
@@ -487,10 +474,13 @@ const Thread: React.FC<{ frame: number; cam: WipCam }> = ({ frame, cam }) => {
 };
 
 // -- the slip naming the study -----------------------------------------------------------------------------------------------
+// In world space just above where the pile settles; the push-in is framed so its top sits ~90 px from the frame's top
+// on the settled frame (mono 36 px: cap height ~25 px at f0, ~38 px settled).
 const SLIP_X = 540;
-const SLIP_Y = 112;
-const SLIP_W = 370;
-const SLIP_H = 50;
+const SLIP_TOP = 176;
+const SLIP_W = 540;
+const SLIP_H = 58;
+const SLIP_Y = SLIP_TOP + SLIP_H / 2;
 const Slip: React.FC<{ frame: number }> = ({ frame }) => (
   <div
     style={{
@@ -514,7 +504,7 @@ const Slip: React.FC<{ frame: number }> = ({ frame }) => (
         justifyContent: "center",
         fontFamily: MONO,
         fontWeight: 400,
-        fontSize: 24,
+        fontSize: 36,
         letterSpacing: 0.4,
         whiteSpace: "nowrap",
         color: INK,
@@ -526,14 +516,16 @@ const Slip: React.FC<{ frame: number }> = ({ frame }) => (
 );
 
 // -- the camera: a slow creep while the thread works, then one push in onto the pile as the sheets gather -----------------
-// The pile (world 540, 430) lands at screen y ~420, about 380 x 500 px.
-const K_END = 1.55;
+// Settled (k ~1.53): the slip's top at screen y ~90, the pile under it at about y 215-690, about 335 x 460 px.
+const K_END = 1.5;
+/** The camera y that puts the slip's top at screen y 90 at zoom k. */
+const camYFor = (k: number) => SLIP_TOP + (960 - 90) / k;
 const camAt = runWipCamera(
   [
     { f: -24, x: 540, y: 960, k: 1 },
     { f: 40, x: 540, y: 952, k: 1.025, ease: "linear" },
-    { f: 100, x: 540, y: STACK_Y + 540 / K_END, k: K_END },
-    { f: DURATION + 40, x: 540, y: STACK_Y + 540 / 1.6, k: 1.6, ease: "linear" },
+    { f: 100, x: 540, y: camYFor(K_END), k: K_END },
+    { f: DURATION + 40, x: 540, y: camYFor(1.56), k: 1.56, ease: "linear" },
   ],
   DURATION,
 );
