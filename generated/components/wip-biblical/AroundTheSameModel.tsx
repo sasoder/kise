@@ -2,8 +2,6 @@
 // AroundTheSameModel (wip-biblical, cut 54). Works in Progress style (styles/works-in-progress.md; kit
 // generated/components/kits/works-in-progress/wipShared.tsx).
 // Opaque 1080x1920, 24 fps, 96 frames.
-// DRAFT: the near-ring people are a PLACEHOLDER (the Victorians MP cut-out, wip-victorians/ptp_mp.png, with a drawn phone)
-// until the person on a phone lands in animation_source/assets_raw/ai/.
 //
 // CHECK LINE: "Hundreds of millions of separate people are all talking into the same one thing, the way the tribe sat round
 // one voice." With no sound: one person on a phone, then a vast gathering, every red thread running to a single OpenAI mark
@@ -16,11 +14,12 @@
 //
 // THE MOTION: one camera pull-back on one decelerating curve, moving at f0 and settling on f79, then a slow creep outward
 // to the cut. It opens close on one person on a phone, a thin red thread running from the phone out of frame to the right;
-// pulling back shows the thread ends in the OpenAI mark (in shot from about f20) at the centre of a near ring of thirteen
+// pulling back shows the thread ends in the OpenAI mark (edging in from about f10, whole by f22) at the centre of a near ring of twelve
 // cut-out people, each with its own red thread to the mark, and beyond them the crowd as rings of ink dots on concentric
 // ellipses that run out past the top band, down the side strips and off every edge. Every dot has a fine red thread
 // pointing at the mark: strongest on the near ring, a short fading tail on the dots (a full-length thread per dot would
-// pile into a red sun around the mark). From "talk" (f34) tiny red packets leave the phones and the dots and run inward
+// pile into a red sun around the mark). Each near thread is drawn from its phone, heavier there and fine at
+// the mark, so the bond reads person -> model. From "talk" (f34) round red beads swell out of the phones and the dots and run inward
 // along the threads into the mark, a steady trickle that keeps the settled frame alive.
 // Contact frames: the phone's first packet leaves f26 and enters the mark about f60 ("same" 61); the other near-ring phones
 // from f30, the dots from f34. Packets enter the mark by passing under its edge.
@@ -30,11 +29,16 @@
 // (540, 420) (the same numbers as tribeShared's rim), the mark where the storyteller stood, world (540, 400), 180 px (about 178 px on screen once settled).
 //
 // SOURCES: OpenAI mark: animation_source/assets_raw/models/openai_lobehub-1.102.0.svg (lobehub icons 1.102.0), inlined.
-// Person on a phone: placeholder until assets_raw/ai/ lands. No figures on screen.
+// The phone person: assets_raw/ai/TypingPhone_WomanTextingOnStreet_SanFrancisco2008.jpg (Ed Yourdon, CC BY-SA 2.0). The ring:
+// broll/B13_GroupOnPhones.mov and its source video "group of people using their phones together" (RoyaltyFree4K, YouTube
+// ZseLLgwQA9w, CC BY). Cut out and graded by scripts/clips/wip-biblical/bake-around-54.py: seven distinct people as
+// bust prints, five of them repeated mirrored at another size. B14_CrowdLitByPhones is unused (no one in it comes away
+// clean from the person behind). The open is at 5.6x: at 6.8x the print's grain broke up. No figures on screen.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { random, useCurrentFrame } from "remotion";
 import { z } from "zod";
+import { AROUND_PEOPLE } from "./aroundPeopleBake";
 import {
   CaptionBandsDebug,
   CutOut,
@@ -77,38 +81,56 @@ const MARK_EDGE = 101; // threads end, and packets go under, at this radius from
 const OPENAI_D =
   "M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z";
 
-// -- the near ring: twelve people, open at the front so the mark stays in view. Spaced evenly by a metric that counts
-// vertical distance at 0.42 (people are tall), so the side pairs never overlap (min clearance ~50 px); the phone person's
-// neighbours sit off both edges of the opening close-up. --------------------------------------
-// PLACEHOLDER figure until assets_raw/ai/ lands.
-const FIG = { src: "wip-victorians/ptp_mp.png", aspect: 0.3278, footF: 0.99, facesRight: true };
-const PERSON_H = 150; // world px at depthQ 1
+// -- the near ring: twelve people on their phones, half-figure bust prints standing on the ring (straight bottom edge),
+// open at the front so the mark stays in view. Seven real people (aroundPeopleBake.ts), five of them used twice, the
+// second time mirrored and at another size. Spaced evenly by a metric that counts vertical distance at 0.42, so neighbours
+// barely touch in the hold (the back row's prints may lap a few px, pasted one over the next); in the opening close-up the
+// phone person's neighbours show only at the frame edges.
+type BakedName = keyof typeof AROUND_PEOPLE;
+const BUST_H = 160; // world px at depthQ 1: about 135-180 px on screen in the hold (back to front), so each reads as a person on a phone
 const PHONE_DEG = 222;
-const RING_DEGS = [118, 140, 183, 222, 244, 262, 279, 296, 318, 357, 40, 62];
+const RING: { deg: number; who: BakedName; size: number; flip: boolean }[] = [
+  { deg: 118, who: "curly", size: 1, flip: false },
+  { deg: 140, who: "bald", size: 1.04, flip: false },
+  { deg: 183, who: "sweater", size: 0.9, flip: false },
+  { deg: 222, who: "woman", size: 1.1, flip: false }, // her print runs to the hip, so a little larger to read as big as the rest
+  { deg: 247, who: "redhead", size: 1, flip: false },
+  { deg: 265, who: "blueshirt", size: 0.97, flip: false },
+  { deg: 282, who: "vest", size: 1.03, flip: false },
+  { deg: 299, who: "curly", size: 0.95, flip: true },
+  { deg: 318, who: "bald", size: 1, flip: true },
+  { deg: 357, who: "blueshirt", size: 1.04, flip: true },
+  { deg: 40, who: "redhead", size: 0.97, flip: true },
+  { deg: 62, who: "vest", size: 1, flip: true },
+];
 type Person = {
   deg: number;
+  src: string;
+  aspect: number;
   feet: { x: number; y: number };
   h: number;
   w: number;
   flipX: boolean;
-  hand: { x: number; y: number };
+  hand: { x: number; y: number }; // the phone
   over: boolean; // its thread runs in front of the people (it comes towards the viewer), or behind them
   phone: boolean;
 };
-const PEOPLE: Person[] = RING_DEGS.map((deg) => {
+const PEOPLE: Person[] = RING.map(({ deg, who, size, flip }) => {
+  const b = AROUND_PEOPLE[who];
   const feet = ringPt(NEAR_R, deg);
-  const q = depthQ(feet.y);
-  const h = PERSON_H * q;
-  const w = h * FIG.aspect;
-  const toward = Math.sign(HUB.x - feet.x) || 1;
+  const h = BUST_H * depthQ(feet.y) * size;
+  const w = h * b.aspect;
+  const fx = flip ? 1 - b.phoneFx : b.phoneFx;
   const a = (deg * Math.PI) / 180;
   return {
     deg,
+    src: b.src,
+    aspect: b.aspect,
     feet,
     h,
     w,
-    flipX: FIG.facesRight ? toward < 0 : toward > 0,
-    hand: { x: feet.x + toward * 0.22 * w, y: feet.y - 0.56 * h },
+    flipX: flip,
+    hand: { x: feet.x - w / 2 + fx * w, y: feet.y - h + b.phoneFy * h },
     over: Math.sin(a) < 0.25 || deg === PHONE_DEG,
     phone: deg === PHONE_DEG,
   };
@@ -125,15 +147,15 @@ const toEdge = (p: { x: number; y: number }) => {
 };
 
 // -- the camera: one decelerating pull-back from f0, settling on f79, then a slow creep outward ---------------------------
-const K0 = 6.8;
+const K0 = 4.6; // 6.8 broke the print up (the cut-out's grain is drawn in print px, so it grows with the zoom)
 const K1 = 1.04; // with the creep: k 0.99 at the settle (f79), 0.98 at f95
 const SETTLE = 79;
 const POWER = 2.3;
 const CREEP = 0.0006; // per frame, on k, from f0 (so the settle has no corner)
-// The camera keeps one world point at one screen point: at f0 the phone at screen (470, 500), close on the phone person's
-// head, hands and phone (the neighbours at 183 and 244 deg off the left and right edges); settled, the mark at screen
+// The camera keeps one world point at one screen point: at f0 the phone at screen (460, 500), close on the phone person's
+// head, hands and phone (the neighbours at 183 and 247 deg only at the frame edges); settled, the mark at screen
 // (540, 420), k 0.99, the near ring spanning about x 90-990. The anchor slides from phone to mark on the same curve as the zoom, so the top band always holds the action.
-const ANCHOR0 = { wx: PHONE.hand.x, wy: PHONE.hand.y, sx: 470, sy: 500 };
+const ANCHOR0 = { wx: PHONE.hand.x, wy: PHONE.hand.y, sx: 460, sy: 500 };
 const ANCHOR1 = { wx: HUB.x, wy: HUB.y, sx: 540, sy: 420 };
 const ANCHOR_LAG = 0.4;
 const camAt = (frame: number): WipCam => {
@@ -242,6 +264,7 @@ const DOTS_D = DOTS.map((d) => circlePath(d.x, d.y, d.r)).join("");
 // Each dot's thread: a short red tail aimed at the mark, strongest at the dot and fading in steps towards the centre.
 const TAIL_ROWS = 1.7;
 const TAIL_ALPHA = [0.62, 0.46, 0.3, 0.15];
+const TAIL_TAPER = [1.35, 1.1, 0.85, 0.6]; // the tails thin towards the mark too (weight per band, dot end first)
 // Far rings print fainter (three groups by ring radius), so the field recedes and the near ring stays the strongest.
 const TAIL_GROUPS = [
   { upTo: 900, k: 1 },
@@ -296,20 +319,20 @@ const DOT_EMIT = DOTS.filter((d) => random(`emit-${d.seed}`) < 0.2)
   }))
   .filter((e) => e.tail.end - e.tail.start > 8);
 const PACKET_ALPHA = [1, 0.78, 0.5, 0.24];
-const dotPackets = (frame: number) => {
+const dotPackets = (frame: number, dotBeadR: number) => {
   const bins: string[][] = TAIL_GROUPS.flatMap(() => PACKET_ALPHA.map(() => []));
   for (const e of DOT_EMIT) {
     if (frame < e.first) continue;
     const span = e.tail.end - e.tail.start;
     const n = Math.floor((frame - e.first) / e.period);
     for (let m = n; m >= 0; m--) {
-      const head = e.tail.start + (frame - (e.first + m * e.period)) * e.v;
-      if (head - 9 * e.q > e.tail.end) break;
-      const h = Math.min(e.tail.end, head);
-      const tl = Math.max(e.tail.start, head - 9 * e.q);
-      if (h <= tl) continue;
-      const band = Math.min(PACKET_ALPHA.length - 1, Math.floor((((h + tl) / 2 - e.tail.start) / span) * PACKET_ALPHA.length));
-      bins[e.group * PACKET_ALPHA.length + band].push(bandSeg(e.tail, tl, h));
+      const at = e.tail.start + (frame - (e.first + m * e.period)) * e.v;
+      if (at > e.tail.end) break;
+      const band = Math.min(PACKET_ALPHA.length - 1, Math.floor(((at - e.tail.start) / span) * PACKET_ALPHA.length));
+      const grow = Math.min(1, (at - e.tail.start) / (6 * e.q));
+      bins[e.group * PACKET_ALPHA.length + band].push(
+        circlePath(e.tail.x0 + e.tail.ux * at, e.tail.y0 + e.tail.uy * at, dotBeadR * e.q * Math.sqrt(grow)),
+      );
     }
   }
   return bins.map((b, i) => ({
@@ -317,22 +340,38 @@ const dotPackets = (frame: number) => {
     alpha: PACKET_ALPHA[i % PACKET_ALPHA.length] * TAIL_GROUPS[Math.floor(i / PACKET_ALPHA.length)].k,
   }));
 };
-const packetsPath = (emitters: Emitter[], frame: number, dash: number, startAt: (e: Emitter) => number) => {
+const BEAD_GROW = 14; // world px: a bead swells out of the phone over this distance
+const BEAD_SINK = 18; // and shrinks into the mark's edge over this one, so it is plainly taken in there
+/** The near ring's packets: round beads, born at the phone and taken in at the mark. r = the full bead radius. */
+const packetsPath = (emitters: Emitter[], frame: number, r: number) => {
   const parts: string[] = [];
   for (const e of emitters) {
     if (frame < e.first) continue;
     const n = Math.floor((frame - e.first) / e.period);
     // every packet still in flight (a long thread can carry more than one)
     for (let m = n; m >= 0; m--) {
-      const s = startAt(e) + (frame - (e.first + m * e.period)) * e.v;
-      const head = Math.min(e.len, s);
-      const tail = Math.max(startAt(e), s - dash * e.q);
-      if (tail >= e.len) break;
-      if (head <= tail) continue;
-      parts.push(`M${f2(e.x0 + e.ux * tail)} ${f2(e.y0 + e.uy * tail)}L${f2(e.x0 + e.ux * head)} ${f2(e.y0 + e.uy * head)}`);
+      const s = (frame - (e.first + m * e.period)) * e.v;
+      if (s >= e.len) break;
+      const grow = Math.min(1, s / BEAD_GROW);
+      const sink = Math.min(1, (e.len - s) / BEAD_SINK);
+      const br = r * Math.min(Math.sqrt(grow), sink);
+      if (br < 0.05) continue;
+      parts.push(circlePath(e.x0 + e.ux * s, e.y0 + e.uy * s, br));
     }
   }
   return parts.join("");
+};
+/** A near thread as a drawn line from the phone: w0 wide at the phone (a round end there), w1 at the mark. */
+const taperPath = (e: Emitter, w0: number, w1: number) => {
+  const nx = -e.uy;
+  const ny = e.ux;
+  const x1 = e.x0 + e.ux * e.len;
+  const y1 = e.y0 + e.uy * e.len;
+  return (
+    `M${f2(e.x0 + (nx * w0) / 2)} ${f2(e.y0 + (ny * w0) / 2)}L${f2(x1 + (nx * w1) / 2)} ${f2(y1 + (ny * w1) / 2)}` +
+    `L${f2(x1 - (nx * w1) / 2)} ${f2(y1 - (ny * w1) / 2)}L${f2(e.x0 - (nx * w0) / 2)} ${f2(e.y0 - (ny * w0) / 2)}Z` +
+    circlePath(e.x0, e.y0, w0 / 2)
+  );
 };
 
 // -- preview aid: the presenter's rough silhouette, keyed over the plate in the finished video ---------------------------
@@ -352,13 +391,15 @@ const AroundTheSameModel: React.FC<z.infer<typeof schema>> = ({ bands, mask }) =
   // thread weights in screen px, so a close-up does not turn them into ropes
   const nearW = (2.2 + 0.5 * Math.log(cam.k / K1)) / cam.k;
   const tailW = 1.05 / cam.k;
-  // a packet is a bead on its thread: the same red, three times the weight, so it reads as something travelling
-  const beadW = nearW * 3;
-  const dotBeadW = tailW * 3;
+  // a packet is a round bead on its thread (no dash, nothing arrow-like): the same red, about three times the thread's weight
+  const beadR = nearW * 2.2;
+  // the cut-outs' print grain is drawn in print px: thin it while the camera is close so the print never breaks up
+  const printGrain = 0.13 * Math.min(1, 2.2 / cam.k);
+  const dotBeadR = tailW * 1.6;
   const nearUnder = NEAR_EMIT.filter((e) => !e.over);
   const nearOver = NEAR_EMIT.filter((e) => e.over);
-  const threads = (list: typeof NEAR_EMIT) =>
-    list.map((e) => `M${f2(e.x0)} ${f2(e.y0)}L${f2(e.x0 + e.ux * e.len)} ${f2(e.y0 + e.uy * e.len)}`).join("");
+  // each near thread is drawn from the phone: heavier there, fine where it reaches the mark
+  const threads = (list: typeof NEAR_EMIT) => list.map((e) => taperPath(e, nearW * 1.7, nearW * 0.45)).join("");
   return (
     <>
       <WipFilmLife frame={frame}>
@@ -368,13 +409,13 @@ const AroundTheSameModel: React.FC<z.infer<typeof schema>> = ({ bands, mask }) =
           <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
             <path d={DOTS_D} fill={DEEP_INK} />
             {TAILS.map((t, i) => (
-              <path key={i} d={t.d} stroke={RED_INK} strokeOpacity={t.alpha} strokeWidth={tailW} fill="none" />
+              <path key={i} d={t.d} stroke={RED_INK} strokeOpacity={t.alpha} strokeWidth={tailW * TAIL_TAPER[i % TAIL_TAPER.length]} fill="none" />
             ))}
-            {dotPackets(frame).map((p, i) => (
-              <path key={`dp${i}`} d={p.d} stroke={RED_INK} strokeOpacity={p.alpha} strokeWidth={dotBeadW} strokeLinecap="round" fill="none" />
+            {dotPackets(frame, dotBeadR).map((p, i) => (
+              <path key={`dp${i}`} d={p.d} fill={RED_INK} fillOpacity={p.alpha} />
             ))}
-            <path d={threads(nearUnder)} stroke={RED_INK} strokeWidth={nearW} fill="none" strokeLinecap="round" />
-            <path d={packetsPath(nearUnder, frame, 10, () => 0)} stroke={RED_INK} strokeWidth={beadW} strokeLinecap="round" fill="none" />
+            <path d={threads(nearUnder)} fill={RED_INK} />
+            <path d={packetsPath(nearUnder, frame, beadR)} fill={RED_INK} />
           </svg>
           <InkPrint x={HUB.x - MARK_SIZE / 2} y={HUB.y - MARK_SIZE / 2} w={MARK_SIZE} h={MARK_SIZE} ink={INK} seed="openai" rough={1} wear={0.2} misregister={1.2}>
             <svg width="100%" height="100%" viewBox="0 0 24 24" style={{ position: "absolute", left: 0, top: 0 }}>
@@ -386,39 +427,15 @@ const AroundTheSameModel: React.FC<z.infer<typeof schema>> = ({ bands, mask }) =
         <WipPlane cam={cam}>
           {PEOPLE.map((p) => (
             <React.Fragment key={p.deg}>
-              <CutOut
-                src={FIG.src}
-                x={p.feet.x}
-                y={p.feet.y - (p.h * FIG.footF) / 2}
-                w={p.w}
-                aspect={FIG.aspect}
-                flipX={p.flipX}
-                border={3}
-                seed={`p${p.deg}`}
-              />
-              {p.phone ? (
-                // PLACEHOLDER phone, until the real person on a phone lands
-                <div
-                  style={{
-                    position: "absolute",
-                    left: p.hand.x - 5,
-                    top: p.hand.y - 8,
-                    width: 10,
-                    height: 16,
-                    borderRadius: 2,
-                    background: "#1A2320",
-                    transform: `rotate(${p.flipX ? 20 : -20}deg)`,
-                  }}
-                />
-              ) : null}
+              <CutOut src={p.src} x={p.feet.x} y={p.feet.y - p.h / 2} w={p.w} aspect={p.aspect} flipX={p.flipX} border={3} grain={printGrain} seed={`p${p.deg}`} />
             </React.Fragment>
           ))}
         </WipPlane>
         {/* the threads that come towards the viewer run in front of their own people */}
         <WipPlane cam={cam} ink>
           <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-            <path d={threads(nearOver)} stroke={RED_INK} strokeWidth={nearW} fill="none" strokeLinecap="round" />
-            <path d={packetsPath(nearOver, frame, 10, () => 0)} stroke={RED_INK} strokeWidth={beadW} strokeLinecap="round" fill="none" />
+            <path d={threads(nearOver)} fill={RED_INK} />
+            <path d={packetsPath(nearOver, frame, beadR)} fill={RED_INK} />
           </svg>
         </WipPlane>
       </WipFilmLife>
