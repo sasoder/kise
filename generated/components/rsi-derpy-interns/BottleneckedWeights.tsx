@@ -35,6 +35,7 @@
 // SOURCES: none (no figures).
 // THE WORLD is `sessionWorld.tsx` (cut 6's, imported read-only; see notes/SESSION_READY.md).
 // ---------------------------------------------------------------------------
+import { DERPY_SHIFT_Y } from "./screenShift";
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
@@ -420,7 +421,8 @@ const CAM = (() => {
 // the caption band (y 1080-1250) stays clear: the panel's bottom edge (+ the sway's 5 px) above 1078 on every frame
 CAM.forEach((c, f) => {
   const bot = c.ry + (PANEL_BOT - RULE_Y) * c.k + 5 + SW * c.k;
-  if (bot > 1072.01) throw new Error(`BottleneckedWeights: the weights' panel reaches y ${bot.toFixed(1)} at f${f}`);
+  // after the user's 190 px shift the panel sits in the first caption band by choice; the second band (1360) stays clear
+  if (bot + DERPY_SHIFT_Y > 1350) throw new Error(`BottleneckedWeights: the weights' panel reaches y ${(bot + DERPY_SHIFT_Y).toFixed(1)} at f${f}`);
 });
 const CX_REST = CAM[0].cx;
 const CY_REST = CAM[0].cy;
@@ -486,7 +488,7 @@ const BottleneckedWeights: React.FC<z.infer<typeof schema>> = () => {
             width: 1080,
             height: 1920,
             transformOrigin: "0 0",
-            transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+            transform: `translate(${tx}px, ${ty + DERPY_SHIFT_Y}px) scale(${k})`,
           }}
         >
           <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>

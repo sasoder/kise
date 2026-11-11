@@ -32,6 +32,7 @@
 // two dips, so the best-so-far line visibly ratchets. Mark: brandGlyphs OPENAI. Glyph: lucide `refresh-cw` (ISC),
 // the same loop cut 85 uses for continual learning. Check: jumpWorld `CheckMark` (lucide `check`).
 // ---------------------------------------------------------------------------
+import { DERPY_SHIFT_Y } from "./screenShift";
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
@@ -269,7 +270,7 @@ const CleanVerifiableProxies: React.FC<z.infer<typeof schema>> = () => {
             width: 1080,
             height: 1920,
             transformOrigin: "0 0",
-            transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+            transform: `translate(${tx}px, ${ty + DERPY_SHIFT_Y}px) scale(${k})`,
           }}
         >
           <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>

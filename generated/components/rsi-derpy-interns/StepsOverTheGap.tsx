@@ -41,6 +41,7 @@
 // `jumpWorld.tsx` (HumanFigure's build), imported read-only, plus this cut's `gapShared.tsx` (a footfall walk with
 // one long step; the researcher figure with a white -> orange tone).
 // ---------------------------------------------------------------------------
+import { DERPY_SHIFT_Y } from "./screenShift";
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
@@ -317,7 +318,7 @@ const StepsOverTheGap: React.FC<z.infer<typeof schema>> = () => {
             width: 1080,
             height: 1920,
             transformOrigin: "0 0",
-            transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+            transform: `translate(${tx}px, ${ty + DERPY_SHIFT_Y}px) scale(${k})`,
           }}
         >
           <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>

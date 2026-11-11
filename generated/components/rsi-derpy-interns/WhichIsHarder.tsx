@@ -21,6 +21,7 @@
 //
 // SOURCES: none (no figures). Glyphs: lucide `wind`, `refresh-cw` (ISC), inlined on the 24 grid.
 // ---------------------------------------------------------------------------
+import { DERPY_SHIFT_Y } from "./screenShift";
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
@@ -239,7 +240,7 @@ const WhichIsHarder: React.FC<z.infer<typeof schema>> = () => {
     width: 1080,
     height: 1920,
     transformOrigin: "0 0",
-    transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+    transform: `translate(${tx}px, ${ty + DERPY_SHIFT_Y}px) scale(${k})`,
   };
   const svgStyle = { position: "absolute" as const, left: 0, top: 0, overflow: "visible" as const };
   return (

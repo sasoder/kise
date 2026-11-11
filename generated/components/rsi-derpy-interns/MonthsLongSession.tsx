@@ -33,6 +33,7 @@
 // SOURCES: none (no figures; the calendar words are generic).
 // THE WORLD is `sessionWorld.tsx` (cut 6's; see notes/SESSION_READY.md). Nothing in it is changed.
 // ---------------------------------------------------------------------------
+import { DERPY_SHIFT_Y } from "./screenShift";
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
@@ -466,7 +467,7 @@ const MonthsLongSession: React.FC<z.infer<typeof schema>> = () => {
             width: 1080,
             height: 1920,
             transformOrigin: "0 0",
-            transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+            transform: `translate(${tx}px, ${ty + DERPY_SHIFT_Y}px) scale(${k})`,
           }}
         >
           <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>

@@ -34,6 +34,7 @@
 // intern), all imported read-only. The intern is redrawn here from its pose so its near arm can hold the card
 // and its face can go derpy (lopsided eyes, head cock, badge swing).
 // ---------------------------------------------------------------------------
+import { DERPY_SHIFT_Y } from "./screenShift";
 import React from "react";
 import { AbsoluteFill, Easing, useCurrentFrame } from "remotion";
 import { z } from "zod";
@@ -393,7 +394,7 @@ const DerpySavantInterns: React.FC<z.infer<typeof schema>> = () => {
     width: 1080,
     height: 1920,
     transformOrigin: "0 0",
-    transform: `translate(${tx + s.dx}px, ${ty + s.dy}px) scale(${k})`,
+    transform: `translate(${tx + s.dx}px, ${ty + s.dy + DERPY_SHIFT_Y}px) scale(${k})`,
   };
   const svgStyle = { position: "absolute" as const, left: 0, top: 0, overflow: "visible" as const };
 

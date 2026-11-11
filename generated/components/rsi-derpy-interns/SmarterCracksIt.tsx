@@ -55,6 +55,7 @@
 // THE WORLD is `millenniumWorld.tsx` (this clip, shared with cut 107) on rsi-another-jump's timelineWorld
 // (the intern figure, its walk) and jumpWorld (the forecast contour), imported read-only.
 // ---------------------------------------------------------------------------
+import { DERPY_SHIFT_Y } from "./screenShift";
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
@@ -232,7 +233,7 @@ const SmarterCracksIt: React.FC<z.infer<typeof schema>> = () => {
     width: 1080,
     height: 1920,
     transformOrigin: "0 0",
-    transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+    transform: `translate(${tx}px, ${ty + DERPY_SHIFT_Y}px) scale(${k})`,
   };
   const svgStyle = { position: "absolute" as const, left: 0, top: 0, overflow: "visible" as const };
 
