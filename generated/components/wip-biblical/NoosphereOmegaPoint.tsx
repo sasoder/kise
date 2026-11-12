@@ -3,6 +3,9 @@
 // generated/components/kits/works-in-progress/wipShared.tsx). The globe comes from ./globeShared (cut 43's), the red
 // point from ./ProphetsPointedHere (cut 86's).
 // Opaque 1080x1920, 24 fps, 139 frames.
+// REV 2 (Nov 12, user: "bring everything down ever so slightly, like 1 cm"): the whole picture is drawn BIBLICAL_SHIFT_Y =
+// 100 px lower through <ShiftDown> (./biblicalShift), around the paper and every layer. Every screen value below is the
+// unshifted one: add 100 to y (the point now ends at screen (540, 250), where cut 86 starts; f0 = cut 43's REV 2 f184).
 //
 // CHECK LINE: "Teilhard's idea: one layer of minds wraps the whole Earth and draws together into a single point, Omega."
 // With no sound: the wired globe from cut 43 grows a continuous red skin, the skin's lines rise and meet in one point
@@ -84,6 +87,7 @@ import {
   wireLength,
   wirePartial,
 } from "./globeShared";
+import { ShiftDown } from "./biblicalShift";
 import { SingularityPoint, SINGULARITY_POINT } from "./ProphetsPointedHere";
 import { LISTENERS, OPERATOR, camAt as camAt43 } from "./WiredIntoOneTribe";
 
@@ -465,72 +469,75 @@ const NoosphereOmegaPoint: React.FC<z.infer<typeof schema>> = ({ bands, shape, m
   return (
     <>
       <WipFilmLife frame={F43 + 1 + frame}>
-        <PaperGround cam={cam} />
-        {/* the skin's wash and lines, and 43's ring: under the people, who stand behind the globe */}
-        <WipPlane cam={cam} ink>
-          {arcs.length > 0 ? (
-            <div style={{ position: "absolute", left: 0, top: 0, opacity: WASH }}>
-              <InkPrint x={BX} y={BY} w={BW} h={BH} ink={RED} seed="skin73" rough={1.2} wear={0.45} misregister={0}>
-                <svg width={BW} height={BH} style={{ position: "absolute", left: 0, top: 0 }}>
-                  {washArcs.map(([a, b], i) => (
-                    <path key={i} d={annulusD(R_IN, RING_R, a, b)} fill="currentColor" fillRule="evenodd" />
-                  ))}
-                </svg>
-              </InkPrint>
+        {/* REV 2 (user, Nov 12): the whole picture 100 px lower, paper and every layer (biblicalShift.tsx) */}
+        <ShiftDown>
+          <PaperGround cam={cam} />
+          {/* the skin's wash and lines, and 43's ring: under the people, who stand behind the globe */}
+          <WipPlane cam={cam} ink>
+            {arcs.length > 0 ? (
+              <div style={{ position: "absolute", left: 0, top: 0, opacity: WASH }}>
+                <InkPrint x={BX} y={BY} w={BW} h={BH} ink={RED} seed="skin73" rough={1.2} wear={0.45} misregister={0}>
+                  <svg width={BW} height={BH} style={{ position: "absolute", left: 0, top: 0 }}>
+                    {washArcs.map(([a, b], i) => (
+                      <path key={i} d={annulusD(R_IN, RING_R, a, b)} fill="currentColor" fillRule="evenodd" />
+                    ))}
+                  </svg>
+                </InkPrint>
+              </div>
+            ) : null}
+            <InkLines x={BX} y={BY} w={BW} h={BH} ink={RED} seed="skinlines73" rough={0.7} misregister={0.6}>
+              {linePaths.length ? <path d={linePaths.join(" ")} fill="none" stroke="currentColor" strokeWidth={LINE_W} strokeLinejoin="round" /> : null}
+              {liftPaths.length ? <path d={liftPaths.join(" ")} fill="none" stroke="currentColor" strokeWidth={LINE_W} strokeLinejoin="round" /> : null}
+            </InkLines>
+            <InkLines x={B43.x} y={B43.y} w={B43.w} h={B43.w} ink={RED} seed="ring43" rough={1}>
+              <path d={ringD} fill="currentColor" />
+            </InkLines>
+            {showPoint ? <SingularityPoint x={P.x} y={P.y} scale={P_SCALE * pointGrow} /> : null}
+          </WipPlane>
+          <WipPlane cam={cam} style={{ clipPath: DISC_CLIP }}>
+            {[OPERATOR as Person, ...LISTENERS].map((p) => {
+              if (slide(frame, SINK_AT[p.id] ?? 0, SINK) >= 1) return null;
+              const at = personAt(p, frame);
+              return <CutOut key={p.id} src={p.src} x={at.x} y={at.y} w={p.w} aspect={p.aspect} rotate={p.rotate} flipX={p.flipX} border={5} seed={p.id} />;
+            })}
+            {frame >= TEIL.start ? (
+              <CutOut src={TEIL.src} x={teil.x} y={teil.y} w={TEIL.w} aspect={TEIL.aspect} rotate={TEIL.rotate} flipX border={6} seed="teilhard" />
+            ) : null}
+          </WipPlane>
+          <EarthPrint cam={cam} rotate={rot} />
+          <WipPlane cam={cam} ink>
+            <InkPrint x={B43.x} y={B43.y} w={B43.w} h={B43.w} ink={INDIGO} seed="grat43" rough={0.8} wear={0.3} misregister={0}>
+              <svg width={B43.w} height={B43.w} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+                <path d={geoD(proj, GRATICULE)} fill="none" stroke="currentColor" strokeWidth={1.1} opacity={0.55} />
+                <circle cx={GLOBE_X - B43.x} cy={GLOBE_Y - B43.y} r={GLOBE_R} fill="none" stroke="currentColor" strokeWidth={1.6} />
+              </svg>
+            </InkPrint>
+            <InkLines x={B43.x} y={B43.y} w={B43.w} h={B43.w} ink={RED} seed="wires43" rough={0.9}>
+              <path d={wirePaths.join(" ")} fill="none" stroke="currentColor" strokeWidth={wireW} strokeLinecap="round" strokeLinejoin="round" />
+            </InkLines>
+          </WipPlane>
+          {/* the Omega, beside the point, in the page's deep ink */}
+          <WipPlane cam={cam}>
+            <div
+              style={{
+                position: "absolute",
+                left: P.x - 92 / K_END - 60,
+                top: P.y - 60 - 10,
+                width: 120,
+                height: 120,
+                textAlign: "center",
+                lineHeight: "120px",
+                fontFamily: SERIF,
+                fontWeight: SERIF_WEIGHT,
+                fontSize: 84,
+                color: THEMES.mint.ink,
+                ...textRise(frame, 108, 14, 18),
+              }}
+            >
+              Ω
             </div>
-          ) : null}
-          <InkLines x={BX} y={BY} w={BW} h={BH} ink={RED} seed="skinlines73" rough={0.7} misregister={0.6}>
-            {linePaths.length ? <path d={linePaths.join(" ")} fill="none" stroke="currentColor" strokeWidth={LINE_W} strokeLinejoin="round" /> : null}
-            {liftPaths.length ? <path d={liftPaths.join(" ")} fill="none" stroke="currentColor" strokeWidth={LINE_W} strokeLinejoin="round" /> : null}
-          </InkLines>
-          <InkLines x={B43.x} y={B43.y} w={B43.w} h={B43.w} ink={RED} seed="ring43" rough={1}>
-            <path d={ringD} fill="currentColor" />
-          </InkLines>
-          {showPoint ? <SingularityPoint x={P.x} y={P.y} scale={P_SCALE * pointGrow} /> : null}
-        </WipPlane>
-        <WipPlane cam={cam} style={{ clipPath: DISC_CLIP }}>
-          {[OPERATOR as Person, ...LISTENERS].map((p) => {
-            if (slide(frame, SINK_AT[p.id] ?? 0, SINK) >= 1) return null;
-            const at = personAt(p, frame);
-            return <CutOut key={p.id} src={p.src} x={at.x} y={at.y} w={p.w} aspect={p.aspect} rotate={p.rotate} flipX={p.flipX} border={5} seed={p.id} />;
-          })}
-          {frame >= TEIL.start ? (
-            <CutOut src={TEIL.src} x={teil.x} y={teil.y} w={TEIL.w} aspect={TEIL.aspect} rotate={TEIL.rotate} flipX border={6} seed="teilhard" />
-          ) : null}
-        </WipPlane>
-        <EarthPrint cam={cam} rotate={rot} />
-        <WipPlane cam={cam} ink>
-          <InkPrint x={B43.x} y={B43.y} w={B43.w} h={B43.w} ink={INDIGO} seed="grat43" rough={0.8} wear={0.3} misregister={0}>
-            <svg width={B43.w} height={B43.w} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-              <path d={geoD(proj, GRATICULE)} fill="none" stroke="currentColor" strokeWidth={1.1} opacity={0.55} />
-              <circle cx={GLOBE_X - B43.x} cy={GLOBE_Y - B43.y} r={GLOBE_R} fill="none" stroke="currentColor" strokeWidth={1.6} />
-            </svg>
-          </InkPrint>
-          <InkLines x={B43.x} y={B43.y} w={B43.w} h={B43.w} ink={RED} seed="wires43" rough={0.9}>
-            <path d={wirePaths.join(" ")} fill="none" stroke="currentColor" strokeWidth={wireW} strokeLinecap="round" strokeLinejoin="round" />
-          </InkLines>
-        </WipPlane>
-        {/* the Omega, beside the point, in the page's deep ink */}
-        <WipPlane cam={cam}>
-          <div
-            style={{
-              position: "absolute",
-              left: P.x - 92 / K_END - 60,
-              top: P.y - 60 - 10,
-              width: 120,
-              height: 120,
-              textAlign: "center",
-              lineHeight: "120px",
-              fontFamily: SERIF,
-              fontWeight: SERIF_WEIGHT,
-              fontSize: 84,
-              color: THEMES.mint.ink,
-              ...textRise(frame, 108, 14, 18),
-            }}
-          >
-            Ω
-          </div>
-        </WipPlane>
+          </WipPlane>
+        </ShiftDown>
       </WipFilmLife>
       <CaptionBandsDebug on={bands} />
       {mask ? (
