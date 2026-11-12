@@ -26,6 +26,7 @@
 // f82-f106, last seen leaving the upper-left edge. The slip slides up f0-f12.
 // SPOT INK: red = the AI thread and what it leaves on the pages (the clip's red: the bond that makes many one). No indigo.
 // The only type is the slip naming the study.
+// SHIFT (Nov 12, user): everything prints BIBLICAL_SHIFT_Y = 100 px lower via <ShiftDown>; the screen px above are before it.
 //
 // SOURCES: Doshi, A. R. & Hauser, O. P. (2024), "Generative AI enhances individual creativity but reduces the collective
 // diversity of novel content", Science Advances 10(28), eadn5290, 12 July 2024, doi 10.1126/sciadv.adn5290 (CC BY 4.0;
@@ -55,6 +56,7 @@ import {
   slide,
   textRise,
 } from "../kits/works-in-progress/wipShared";
+import { ShiftDown } from "./biblicalShift";
 
 export const FPS = 24;
 export const DURATION = 121;
@@ -548,14 +550,16 @@ const StoriesConverge: React.FC<z.infer<typeof schema>> = ({ bands, mask }) => {
   return (
     <>
       <WipFilmLife frame={frame}>
-        <PaperGround cam={cam} />
-        <WipPlane cam={cam}>
-          <Slip frame={frame} />
-          {Z_ORDER.map((id) => (
-            <SheetView key={id} s={byId(id)} frame={frame} />
-          ))}
-          <Thread frame={frame} cam={cam} />
-        </WipPlane>
+        <ShiftDown>
+          <PaperGround cam={cam} />
+          <WipPlane cam={cam}>
+            <Slip frame={frame} />
+            {Z_ORDER.map((id) => (
+              <SheetView key={id} s={byId(id)} frame={frame} />
+            ))}
+            <Thread frame={frame} cam={cam} />
+          </WipPlane>
+        </ShiftDown>
       </WipFilmLife>
       <SpeakerMask on={mask} />
       <CaptionBandsDebug on={bands} />
