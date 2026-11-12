@@ -22,6 +22,7 @@
 // camera's pan and his slide read as one move; he lands on "prophets" (f91) with his raised finger just below-left of the
 // timeline's AD 1 end, pointing along it toward the laptop. Settled at f91 (screen px): Ezekiel x 58-469, print foot
 // y 816; timeline y ~168, x ~467-698 (about 11.4 px a century); laptop x 503-1003. The reply's block cursor blinks slowly.
+// SHIFT (Nov 12, user): everything prints BIBLICAL_SHIFT_Y = 100 px lower via <ShiftDown>; the screen px above are before it.
 // Contact frames: none; a 26 px gap (settled) separates the fingertip from the timeline's left end, which sits 10 px above it.
 // SPOT INK: red = the AI's words (the clip's AI thread). Indigo = the printed century rule. Deep green = the user's
 // question bubble and the empty prompt bar.
@@ -39,6 +40,7 @@ import { interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { CaptionBandsDebug, CutOut, INDIGO, MONO, PaperGround, WipFilmLife, WipPlane, depthTransform, inkOn, runWipCamera, slide, textRise, type WipCamKey } from "../kits/works-in-progress/wipShared";
 import { ChatScreen, REPLY_WORDS, SCREEN_H, SCREEN_W, quadMatrix3d, type Pt } from "./chatScreen";
+import { ShiftDown } from "./biblicalShift";
 import { CenturyRule, ProphetCutOut, PROPHETS } from "./prophetShared";
 
 export const FPS = 24;
@@ -161,38 +163,40 @@ const NewStageForetold: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   return (
     <>
       <WipFilmLife frame={frame}>
-        <PaperGround cam={cam} />
-        <WipPlane cam={cam} ink>
-          <CenturyRule
-            x0={RULE_X0}
-            x1={RULE_X1}
-            y={RULE_Y}
-            weight={RULE_W}
-            tick={RULE_TICK}
-            endTick={1}
-            span={RULE_SPAN}
-            major={5}
-            majorTick={RULE_MAJOR}
-            misregister={0.5}
-          />
-          <div style={{ position: "absolute", left: RULE_X0 - 1, top: LABEL_TOP, ...LABEL, ...textRise(frame, LABEL_AD1, 12, 10 / K_SET) }}>AD 1</div>
-          <div style={{ position: "absolute", left: RULE_X1 - 16 / K_SET - 200, width: 200, textAlign: "right", top: LABEL_TOP, ...LABEL, ...textRise(frame, LABEL_2026, 12, 10 / K_SET) }}>
-            2026
-          </div>
-        </WipPlane>
-        <WipPlane cam={cam}>
-          <CutOut src="wip-biblical/nsf_laptop.png" x={LAPTOP_CX} y={LAPTOP_CY} w={LAP_W} aspect={LAP_PX_W / LAP_PX_H} border={5} grain={0.05} seed="laptop" />
-        </WipPlane>
-        <WipPlane cam={cam} ink>
-          <div style={{ position: "absolute", left: 0, top: 0, width: SCREEN_W, height: SCREEN_H, transformOrigin: "0 0", transform: quadMatrix3d(SCREEN_W, SCREEN_H, QUAD) }}>
-            <ChatScreen shown={shown} cursor={cursor} />
-          </div>
-        </WipPlane>
-        {frame >= SLIDE_START ? (
-          <WipPlane cam={cam}>
-            <ProphetCutOut name={PROPHET} x={pLeft + P_W / 2} footY={P_FOOT} height={P_H} lift={(1 - along) * 0.3} />
+        <ShiftDown>
+          <PaperGround cam={cam} />
+          <WipPlane cam={cam} ink>
+            <CenturyRule
+              x0={RULE_X0}
+              x1={RULE_X1}
+              y={RULE_Y}
+              weight={RULE_W}
+              tick={RULE_TICK}
+              endTick={1}
+              span={RULE_SPAN}
+              major={5}
+              majorTick={RULE_MAJOR}
+              misregister={0.5}
+            />
+            <div style={{ position: "absolute", left: RULE_X0 - 1, top: LABEL_TOP, ...LABEL, ...textRise(frame, LABEL_AD1, 12, 10 / K_SET) }}>AD 1</div>
+            <div style={{ position: "absolute", left: RULE_X1 - 16 / K_SET - 200, width: 200, textAlign: "right", top: LABEL_TOP, ...LABEL, ...textRise(frame, LABEL_2026, 12, 10 / K_SET) }}>
+              2026
+            </div>
           </WipPlane>
-        ) : null}
+          <WipPlane cam={cam}>
+            <CutOut src="wip-biblical/nsf_laptop.png" x={LAPTOP_CX} y={LAPTOP_CY} w={LAP_W} aspect={LAP_PX_W / LAP_PX_H} border={5} grain={0.05} seed="laptop" />
+          </WipPlane>
+          <WipPlane cam={cam} ink>
+            <div style={{ position: "absolute", left: 0, top: 0, width: SCREEN_W, height: SCREEN_H, transformOrigin: "0 0", transform: quadMatrix3d(SCREEN_W, SCREEN_H, QUAD) }}>
+              <ChatScreen shown={shown} cursor={cursor} />
+            </div>
+          </WipPlane>
+          {frame >= SLIDE_START ? (
+            <WipPlane cam={cam}>
+              <ProphetCutOut name={PROPHET} x={pLeft + P_W / 2} footY={P_FOOT} height={P_H} lift={(1 - along) * 0.3} />
+            </WipPlane>
+          ) : null}
+        </ShiftDown>
       </WipFilmLife>
       <CaptionBandsDebug on={bands} />
     </>
