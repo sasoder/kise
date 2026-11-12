@@ -114,46 +114,56 @@ const TUBE_RUN = 30; // the neck runs this far right before it bends
 const BEND_R = 60; // the neck's centreline bend radius
 const X_E = X_N + TUBE_RUN + BEND_R; // the vertical neck's centre x
 
-// the brain (the AI's own weights): a lobed white outline with folds, up and right of the intern's head (310, 532),
-// outside the door's right post (x 385), above the funnel's mouth (top y 592)
+// the brain (the AI's own weights): a drawn, iconic side-view brain (rev Nov 12: the first, lumpy outline read as
+// "a bit sloppy"; the user wants it cleaner, NOT more realistic): a smooth bean with three gentle lobes on top, the
+// front to the right (the neck enters there), a few deliberate folds, a small cerebellum and stem at the back-bottom,
+// a faint fill so it reads as one object. Up and right of the intern's head (310, 532), outside the door's right post
+// (x 385), above the funnel's mouth (top y 592). Local coords (centre 0,0), offset to (BR_CX, BR_CY).
 const BR_CX = 602;
 const BR_CY = 408;
-const BR_A = 108; // half width
-const BR_B = 80; // half height
-const ENTRY_Y = BR_CY + 16; // the neck enters the brain's right side here
+const ENTRY_Y = BR_CY + 16; // the neck enters the brain's front here
 const Y2 = ENTRY_Y + BEND_R; // the second bend's centre y
-const lobe = (t: number) => 1 + 0.06 * Math.cos(9 * t);
-const brainPt = (t: number): Pt => {
-  const sy = Math.sin(t);
-  return { x: BR_CX + BR_A * Math.cos(t) * lobe(t), y: BR_CY + BR_B * sy * lobe(t) * (sy > 0 ? 0.86 : 1) };
-};
-/** the brain outline's x on its right side at height y */
+type Seg = [number, number, number, number, number, number];
+const BRAIN_START: [number, number] = [96, 44];
+const BRAIN_SEGS: Seg[] = [
+  [120, 30, 126, -12, 108, -38],
+  [96, -62, 70, -76, 44, -74],
+  [30, -84, 0, -88, -18, -80],
+  [-38, -86, -74, -80, -94, -60],
+  [-122, -36, -122, 14, -100, 30],
+  [-84, 42, -58, 40, -40, 36],
+  [-20, 34, 0, 40, 18, 50],
+  [40, 62, 80, 62, 96, 44],
+];
+const BRAIN_D = `M${BRAIN_START.join(" ")} ${BRAIN_SEGS.map((c) => `C${c.join(" ")}`).join(" ")} Z`;
+const BRAIN_FOLDS = [
+  "M100 18 C72 6 38 8 10 26", // the side fissure over the temporal lobe
+  "M8 -84 C-2 -68 14 -56 6 -40 C0 -28 -8 -22 -4 -12",
+  "M72 -66 C60 -54 74 -42 66 -30 C62 -24 60 -20 62 -14",
+  "M-52 -80 C-60 -64 -44 -54 -52 -40 C-56 -32 -60 -28 -58 -20",
+  "M-106 -12 C-88 -18 -80 2 -92 20",
+  "M74 50 C58 38 40 38 28 44",
+];
+const BRAIN_BACK = "M-30 40 C-26 64 -46 80 -68 78 C-92 76 -106 58 -98 34"; // the cerebellum
+const BRAIN_BACK_FOLDS = ["M-50 50 C-64 57 -78 57 -90 50", "M-48 63 C-58 68 -70 68 -80 63"];
+const BRAIN_STEM = "M-20 44 C-18 64 -22 80 -32 98 M2 48 C2 66 -4 84 -12 100";
+/** the brain outline's x at its front (right side) at world height y */
 const brainRightX = (y: number) => {
   let best = { x: BR_CX, d: 1e9 };
-  for (let i = -200; i <= 200; i++) {
-    const p = brainPt((i / 200) * (Math.PI / 2));
-    const d = Math.abs(p.y - y);
-    if (d < best.d) best = { x: p.x, d };
+  let p0 = BRAIN_START;
+  for (const c of BRAIN_SEGS) {
+    for (let i = 0; i <= 60; i++) {
+      const t = i / 60;
+      const u = 1 - t;
+      const x = u * u * u * p0[0] + 3 * u * u * t * c[0] + 3 * u * t * t * c[2] + t * t * t * c[4];
+      const yy = u * u * u * p0[1] + 3 * u * u * t * c[1] + 3 * u * t * t * c[3] + t * t * t * c[5];
+      const d = Math.abs(BR_CY + yy - y);
+      if (x > 60 && d < best.d) best = { x: BR_CX + x, d };
+    }
+    p0 = [c[4], c[5]];
   }
   return best.x;
 };
-const BRAIN_D = (() => {
-  const N = 180;
-  const pts: string[] = [];
-  for (let i = 0; i <= N; i++) {
-    const p = brainPt((i / N) * Math.PI * 2);
-    pts.push(`${p.x.toFixed(2)} ${p.y.toFixed(2)}`);
-  }
-  return `M${pts.join(" L")} Z`;
-})();
-// the folds: a wavy central fissure from the top, two short curls each side, a small cerebellum line at the back
-const BRAIN_FOLDS = [
-  `M${BR_CX - 6} ${BR_CY - BR_B + 6} C${BR_CX + 18} ${BR_CY - 40} ${BR_CX - 22} ${BR_CY - 14} ${BR_CX + 2} ${BR_CY + 10} S${BR_CX - 12} ${BR_CY + 40} ${BR_CX + 4} ${BR_CY + 56}`,
-  `M${BR_CX - 78} ${BR_CY - 22} C${BR_CX - 60} ${BR_CY - 42} ${BR_CX - 38} ${BR_CY - 30} ${BR_CX - 44} ${BR_CY - 10}`,
-  `M${BR_CX - 82} ${BR_CY + 24} C${BR_CX - 62} ${BR_CY + 4} ${BR_CX - 40} ${BR_CY + 20} ${BR_CX - 50} ${BR_CY + 40}`,
-  `M${BR_CX + 40} ${BR_CY - 48} C${BR_CX + 62} ${BR_CY - 52} ${BR_CX + 76} ${BR_CY - 34} ${BR_CX + 66} ${BR_CY - 18}`,
-  `M${BR_CX + 34} ${BR_CY + 8} C${BR_CX + 52} ${BR_CY - 6} ${BR_CX + 74} ${BR_CY + 6} ${BR_CX + 70} ${BR_CY + 30}`,
-];
 // the thought dots, from the head's upper right to the brain's lower left
 const DOTS = [
   { x: 414, y: 494, r: 8 },
@@ -575,17 +585,19 @@ const BottleneckedWeights: React.FC<z.infer<typeof schema>> = () => {
                 <circle key={i} cx={d.x} cy={d.y + 2 * Math.sin((frame + 9 * i) / 14)} r={d.r} fill={INK} />
               ))}
               <g
-                transform={`translate(${BR_CX} ${BR_CY}) scale(${(1 + 0.012 * Math.sin(frame / 17)).toFixed(4)}) translate(${-BR_CX} ${-BR_CY})`}
+                transform={`translate(${BR_CX} ${BR_CY}) scale(${(1 + 0.012 * Math.sin(frame / 17)).toFixed(4)})`}
                 fill="none"
                 stroke={INK}
                 strokeWidth={SW}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d={BRAIN_D} />
-                <g opacity={INK_HI}>
-                  {BRAIN_FOLDS.map((d, i) => (
-                    <path key={i} d={d} strokeWidth={SW * 0.8} />
+                <path d={BRAIN_STEM} />
+                <path d={BRAIN_BACK} fill={INK} fillOpacity={0.12} />
+                <path d={BRAIN_D} fill={INK} fillOpacity={0.12} />
+                <g opacity={INK_HI} strokeWidth={SW * 0.8}>
+                  {[...BRAIN_FOLDS, ...BRAIN_BACK_FOLDS].map((d, i) => (
+                    <path key={i} d={d} />
                   ))}
                 </g>
               </g>
