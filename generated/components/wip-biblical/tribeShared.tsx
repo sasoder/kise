@@ -13,9 +13,9 @@
 //   level from s = VOICE_LAND. The ink lies on the page under every print, so a ring still in the air shows only where it
 //   leaves his face (he faces left). The first ring stops at the rim (RIM_FORMED) and stays printed there as the boundary;
 //   every later ring thins into it over its last RIM_MERGE ring px and ends there.
-// THE PEOPLE: all from one real photograph, "Vieux conteur breton, auditoire attentif" (postcard, E.L.D., 1910s, PD): the
-//   old storyteller (seated, in profile, facing left) and six child listeners, each a print hand-cut straight across where
-//   the photo goes on behind a neighbour; each print's height is set per seat (SEATS) so faces read at phone size.
+// THE PEOPLE (rev 3, cavemen): wood engravings from Louis Figuier, "Primitive Man" (1876; Emile Bayard; PD): the
+//   storyteller (bearded, in skins, standing, facing left, his arm flung back) and six listeners of all ages, each a print hand-cut straight
+//   across where the plate goes on behind a neighbour; each print's height is set per seat (SEATS) so faces read at phone size.
 // LAYERS, bottom to top (TribeLayers draws them all): paper | ink plane: the rings and the rim, printed on the page |
 //   the people, far to near (TRIBE_DRAW_ORDER), the storyteller among them by his feet's depth.
 // ---------------------------------------------------------------------------
@@ -64,27 +64,31 @@ export type TribeFigure = {
   footF: number;
 };
 
-/** The storyteller's print height (world px), seated, hat to the hand-cut bottom at his knees. */
-export const STORYTELLER_H = 206;
-/** World px per postcard px: every print keeps the photograph's one scale (times its depth on the ellipse). */
-export const TRIBE_SCALE = STORYTELLER_H / TRIBE_BAKE.storyteller.srcH;
 const st = TRIBE_BAKE.storyteller;
-/** His print's centre sits this far left of the ground's centre, so his body (not his outstretched knees) is on it. */
-const ST_DX = -12;
+/** Where his mouth is (world px): fixed since rev 2, because GovernedBySound's camera is framed on it (its opening, and
+ * GBS_LAST_CAM, which cut 23 opens on). A new print is fitted to this point, not the other way round. */
+const MOUTH_AT = { x: 496.58130024, y: 269.7172 };
+const ST_FEET_Y = TRIBE_CY + 5;
+/** The storyteller's print height (world px): standing in the middle, hair to the hand-cut bottom at his thighs (rev 3:
+ * the height that puts his mouth on MOUTH_AT, about 190). */
+export const STORYTELLER_H = (ST_FEET_Y - MOUTH_AT.y) / (1 - st.mouthFy);
+/** World px per plate px of the storyteller's engraving (the listeners' heights are set per seat, not by this). */
+export const TRIBE_SCALE = STORYTELLER_H / st.srcH;
 const stW = STORYTELLER_H * st.aspect;
-/** The storyteller: in the middle, his print's cut bottom at the ground's centre, facing left. */
+/** The storyteller: in the middle, his print's cut bottom at the ground's centre, facing left, his mouth on MOUTH_AT
+ * (which puts his body, not his arm flung back, on the ground's centre). */
 export const STORYTELLER: TribeFigure & { mouth: { x: number; y: number } } = {
-  name: "storyteller",
-  src: "wip-biblical/tr_storyteller.png",
-  sil: "wip-biblical/tr_storyteller_sil.png",
+  name: st.name,
+  src: `wip-biblical/tr_${st.name}.png`,
+  sil: `wip-biblical/tr_${st.name}_sil.png`,
   aspect: st.aspect,
-  x: TRIBE_CX + ST_DX,
-  feetY: TRIBE_CY + 5,
+  x: MOUTH_AT.x - (st.mouthFx - 0.5) * stW,
+  feetY: ST_FEET_Y,
   h: STORYTELLER_H,
   flipX: false,
   row: "back",
   footF: 1,
-  mouth: { x: TRIBE_CX + ST_DX + (st.mouthFx - 0.5) * stW, y: TRIBE_CY + 5 - STORYTELLER_H + st.mouthFy * STORYTELLER_H },
+  mouth: MOUTH_AT,
 };
 
 /** Depth on the ellipse: the back of the circle a little smaller, the front a little larger. */
@@ -92,16 +96,17 @@ export const depthFactor = (feetY: number) =>
   interpolate(feetY, [TRIBE_CY - LISTEN_R * FLAT, TRIBE_CY + LISTEN_R * FLAT], [0.9, 1.15], clamp);
 
 /** Where each listener sits (angle on the LISTEN_R ring) so that each looks in towards him. */
-// h = the print's world height: chosen per child (not the photo's one scale), so the two back children's heads read at
-// phone size (about 120 screen px at the settled zoom 1.6) and the near ones do not swamp the circle. He faces left: the
-// space before his mouth (left and back-left) stays open for the voice; the back two sit behind his shoulder, to the right.
+// h = the print's world height, chosen per listener: the back three are busts, so their heads read at phone size (about
+// 120 screen px at the settled zoom 1.6). He faces left: the space before his mouth (left and back-left) stays open for
+// the voice; his arm goes back towards the woman behind his shoulder and ends in open paper, about 35 world px (58 screen
+// px settled) short of her print.
 const SEATS: { name: keyof typeof TRIBE_BAKE.listeners; deg: number; h: number }[] = [
-  { name: "coif_girl", deg: 148, h: 225 },
-  { name: "hat_boy", deg: 195, h: 216 },
-  { name: "curly_child", deg: 287, h: 140 },
-  { name: "smiling_boy", deg: 308, h: 122 },
-  { name: "standing_girl", deg: 8, h: 161 },
-  { name: "front_girl", deg: 52, h: 170 },
+  { name: "mother", deg: 140, h: 175 },
+  { name: "carver", deg: 215, h: 130 },
+  { name: "seated_woman", deg: 335, h: 145 },
+  { name: "crouching_boy", deg: 50, h: 120 },
+  { name: "reclining_man", deg: 20, h: 115 },
+  { name: "child", deg: 82, h: 160 },
 ];
 
 /** The listeners, far to near. */
@@ -229,6 +234,9 @@ export const VOICE_INK_BOX = { x: INK_X, y: INK_Y, w: INK_W, h: INK_H, seed: "tr
 /** Peak opacity of the red multiply on a listener's print while a ring passes under his feet, and what stays after. */
 export const TINT_PEAK = 0.16;
 export const TINT_REST = 0.04;
+/** Rev 3: the strength of that red multiply on the engraved prints, as a factor on listenerTint (the engravings are mostly
+ * white paper, so the full strength read as a pink cast; half reads as a faint red ink pass on the lights). */
+export const TINT_ENGRAVING = 0.5;
 const TINT_W = 17; // ring px either side of his feet over which the passing ring lights him
 /** How much red ink lies on this listener's print on `frame`, derived from the rings passing his feet. */
 export const listenerTint = (f: TribeFigure, frame: number, lastBirth?: number) => {
@@ -260,7 +268,7 @@ export const Person: React.FC<{ f: TribeFigure; tint?: number; border?: number; 
             width: b.w,
             height: b.h,
             maxWidth: "none",
-            opacity: tint,
+            opacity: tint * TINT_ENGRAVING,
             mixBlendMode: "multiply",
             transform: f.flipX ? "scaleX(-1)" : undefined,
           }}

@@ -11,10 +11,10 @@
 // by 60 · what 66 · he 70 · could 73 · hear 76. Cut to speaker at f88.
 // DURATION: the slot 16.042 -> 19.708 s = 3.667 s x 24 = 88 frames (f0..f87).
 //
-// THE MOTION: one camera pull-back. Close on the old storyteller in profile at f0 (k 3.7, his head and mouth large, mouth at
+// THE MOTION: one camera pull-back. Close on the bearded storyteller in profile at f0 (k 3.7, his head and mouth large, mouth at
 // screen (610, 400)), his voice already printing out of his mouth as thin red ink rings that widen at one constant speed
 // (3.65 ground px a frame, one every 20 frames, 3-4 alive) and settle onto the page as perspective ellipses round him. On
-// "governed by sound" the camera eases back (fastest ~f30) and the rings wash over the six listeners seated round him, each
+// "governed by sound" the camera eases back (fastest ~f30) and the rings wash over the six listeners round him, each
 // print taking a faint red tint as a ring passes under it. The first ring reaches the rim on "was" (f48) and stays printed
 // there, the edge of his world: beyond it, bare paper. Every later ring thins into the rim and ends there. Settled by ~f56
 // (k 1.61: rim x ~80-1000, tribe y ~140-690, back heads ~120-140 px), then a slow creep in (k 1.63 at f87) while a ring
@@ -26,17 +26,22 @@
 // derived from the zoom (his mouth at (610, 400) close, the ground's centre at (540, 540) wide), one curve.
 // REV 2 (director review 1): settle much closer (was k 0.99, a small scene in a big band) and open nearer (was k 5.4,
 // soft postcard, mostly hat and beard); the tribe was re-seated with per-child heights in tribeShared (SHARED_CHANGES.md).
+// REV 3 (user, Nov 12): cavemen instead of the 1910s postcard, and the whole graphic 100 px lower; motion unchanged.
 //
-// SOURCES: all people from one real photograph, "En Bretagne. Vieux conteur breton, auditoire attentif" (postcard no. 294,
-// E.L.D., 1910s, public domain), animation_source/assets_raw/tribe/Postcard1910s_VieuxConteurBreton_AuditoireAttentif.jpg:
-// the storyteller and six of his child listeners, hand-cut (scripts/clips/wip-biblical/bake-tribe.py; polygons + Apple
-// Vision matte + bake-photo grade). Each print's height is set per seat (tribeShared SEATS) so every face reads at
-// phone size.
+// SHIFT (Nov 12, user): everything prints BIBLICAL_SHIFT_Y = 100 px lower via <ShiftDown> (paper and ink inside it, the
+// grain outside); the screen px above are before it.
+// SOURCES (rev 3, Nov 12, user: "too modern ... more like cavemen"): wood engravings from Louis Figuier, "Primitive Man"
+// (New York: Putnam, 1876; drawings by Emile Bayard; PD; Internet Archive primitiveman00figurich), the clip's
+// animation_source/assets_raw/cavemen/ (SOURCES.txt): the storyteller is the bearded father of the frontispiece, mirrored to
+// face left; the six listeners come from the frontispiece, Fig. 39 and Fig. 68 (scripts/clips/wip-biblical/
+// bake-cavemen-16.py; polygons + Apple Vision matte + bake-photo grade). Each print's height is set per seat (tribeShared
+// SEATS); his mouth stays where rev 2's was, so the camera is unchanged.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { CaptionBandsDebug, PaperGround, WipCam, WipFilmLife, runWipCamera } from "../kits/works-in-progress/wipShared";
+import { ShiftDown } from "./biblicalShift";
 import { STORYTELLER, TRIBE_CX, TRIBE_CY, TribeLayers } from "./tribeShared";
 
 export const FPS = 24;
@@ -88,8 +93,10 @@ const GovernedBySound: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   return (
     <>
       <WipFilmLife frame={frame}>
-        <PaperGround cam={cam} />
-        <TribeLayers cam={cam} frame={frame} />
+        <ShiftDown>
+          <PaperGround cam={cam} />
+          <TribeLayers cam={cam} frame={frame} />
+        </ShiftDown>
       </WipFilmLife>
       <CaptionBandsDebug on={bands} />
     </>
