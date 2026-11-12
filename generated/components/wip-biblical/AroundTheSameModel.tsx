@@ -28,6 +28,7 @@
 // LAYOUT RHYME: TRIBE_READY.md did not exist at start, so the brief's fallback: the near ring is an 860 x 420 ellipse at
 // (540, 420) (the same numbers as tribeShared's rim), the mark where the storyteller stood, world (540, 400), 180 px (about 178 px on screen once settled).
 //
+// SHIFT (Nov 12, user): everything prints BIBLICAL_SHIFT_Y = 100 px lower via <ShiftDown>; the screen px above are before it.
 // SOURCES: OpenAI mark: animation_source/assets_raw/models/openai_lobehub-1.102.0.svg (lobehub icons 1.102.0), inlined.
 // The phone person: assets_raw/ai/TypingPhone_WomanTextingOnStreet_SanFrancisco2008.jpg (Ed Yourdon, CC BY-SA 2.0). The ring:
 // broll/B13_GroupOnPhones.mov and its source video "group of people using their phones together" (RoyaltyFree4K, YouTube
@@ -39,6 +40,7 @@ import React from "react";
 import { random, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AROUND_PEOPLE } from "./aroundPeopleBake";
+import { BIBLICAL_SHIFT_Y, ShiftDown } from "./biblicalShift";
 import {
   CaptionBandsDebug,
   CutOut,
@@ -178,6 +180,10 @@ const VIEW = (() => {
   return { x0: c.x - 540 / c.k - m, x1: c.x + 540 / c.k + m, y0: c.y - 960 / c.k - m, y1: c.y + 960 / c.k + m };
 })();
 const inView = (x: number, y: number, pad = 0) => x > VIEW.x0 - pad && x < VIEW.x1 + pad && y > VIEW.y0 - pad && y < VIEW.y1 + pad;
+// <ShiftDown> prints everything BIBLICAL_SHIFT_Y lower, so the frame now also shows that much more page above the old top
+const SHIFT_TOP = BIBLICAL_SHIFT_Y / camAt(DURATION - 1).k;
+const inShiftedView = (x: number, y: number, pad = 0) =>
+  x > VIEW.x0 - pad && x < VIEW.x1 + pad && y > VIEW.y0 - SHIFT_TOP - pad && y < VIEW.y1 + pad;
 
 // -- the crowd: many separate people seen from above. Dots seeded along concentric ellipses (the ring logic), then each
 // jittered along and across its ring and varied in size; the spacing along a ring widens with distance (the crowd thins
@@ -215,46 +221,52 @@ const DOTS: Dot[] = (() => {
         for (const d of grid.get(`${gx + i},${gy + j}`) ?? []) if (Math.hypot(d.x - x, d.y - y) < minD) return true;
     return false;
   };
-  let r = RING0;
-  let ring = 0;
-  while (r < 4200) {
-    const phase = random(`ring-${ring}`);
-    const steps = Math.ceil(r * 2.2);
-    const row = ROW(r);
-    let acc = phase * ARC;
-    let prev = ringPt(r, 0);
-    for (let i = 1; i <= steps; i++) {
-      const deg = (i / steps) * 360;
-      const p = ringPt(r, deg);
-      const q = depthQ(p.y);
-      const arc = ARC * q * THIN(r);
-      acc += Math.hypot(p.x - prev.x, p.y - prev.y);
-      prev = p;
-      if (acc < arc) continue;
-      acc -= arc;
-      const key = `${ring}-${i}`;
-      // jitter along the ring (in arc px) and across it (in ring px): a crowd, not a print grid
-      const along = (random(`da-${key}`) - 0.5) * 0.7 * arc;
-      const across = (random(`dc-${key}`) - 0.5) * 0.6 * row;
-      const rad = (deg * Math.PI) / 180;
-      const t = { x: -Math.sin(rad), y: FLAT * Math.cos(rad) };
-      const tl = Math.hypot(t.x, t.y);
-      const x = p.x + (t.x / tl) * along + Math.cos(rad) * across;
-      const y = p.y + (t.y / tl) * along + FLAT * Math.sin(rad) * across;
-      if (!inView(x, y, 40)) continue;
-      // small irregular gaps where the coarse noise is low, a little more often far out
-      const n = noise2(x, y, 150, "gap") * 0.75 + noise2(x, y, 55, "gap2") * 0.25;
-      if (n < 0.24 + 0.05 * Math.min(1, (r - RING0) / 1500)) continue;
-      const minD = Math.min(MIN_GAP * ARC * q * THIN(r), 0.8 * row * FLAT * q);
-      if (tooClose(x, y, minD)) continue;
-      const d: Dot = { x, y, q, r: DOT_R * q * (0.72 + 0.56 * random(`dr-${key}`)), seed: out.length, ring };
-      out.push(d);
-      const hk = `${Math.floor(x / HASH)},${Math.floor(y / HASH)}`;
-      grid.set(hk, [...(grid.get(hk) ?? []), d]);
+  // Two passes: the first is the crowd as it was before the shift (same dots, same seeds, so the same packets); the
+  // second only fills the strip the shift opened above the old top, against the same minimum spacing.
+  const pass = (accept: (x: number, y: number) => boolean, seedBase: number) => {
+    let r = RING0;
+    let ring = 0;
+    while (r < 4200) {
+      const phase = random(`ring-${ring}`);
+      const steps = Math.ceil(r * 2.2);
+      const row = ROW(r);
+      let acc = phase * ARC;
+      let prev = ringPt(r, 0);
+      for (let i = 1; i <= steps; i++) {
+        const deg = (i / steps) * 360;
+        const p = ringPt(r, deg);
+        const q = depthQ(p.y);
+        const arc = ARC * q * THIN(r);
+        acc += Math.hypot(p.x - prev.x, p.y - prev.y);
+        prev = p;
+        if (acc < arc) continue;
+        acc -= arc;
+        const key = `${ring}-${i}`;
+        // jitter along the ring (in arc px) and across it (in ring px): a crowd, not a print grid
+        const along = (random(`da-${key}`) - 0.5) * 0.7 * arc;
+        const across = (random(`dc-${key}`) - 0.5) * 0.6 * row;
+        const rad = (deg * Math.PI) / 180;
+        const t = { x: -Math.sin(rad), y: FLAT * Math.cos(rad) };
+        const tl = Math.hypot(t.x, t.y);
+        const x = p.x + (t.x / tl) * along + Math.cos(rad) * across;
+        const y = p.y + (t.y / tl) * along + FLAT * Math.sin(rad) * across;
+        if (!accept(x, y)) continue;
+        // small irregular gaps where the coarse noise is low, a little more often far out
+        const n = noise2(x, y, 150, "gap") * 0.75 + noise2(x, y, 55, "gap2") * 0.25;
+        if (n < 0.24 + 0.05 * Math.min(1, (r - RING0) / 1500)) continue;
+        const minD = Math.min(MIN_GAP * ARC * q * THIN(r), 0.8 * row * FLAT * q);
+        if (tooClose(x, y, minD)) continue;
+        const d: Dot = { x, y, q, r: DOT_R * q * (0.72 + 0.56 * random(`dr-${key}`)), seed: seedBase + out.length, ring };
+        out.push(d);
+        const hk = `${Math.floor(x / HASH)},${Math.floor(y / HASH)}`;
+        grid.set(hk, [...(grid.get(hk) ?? []), d]);
+      }
+      r += ROW(r);
+      ring++;
     }
-    r += ROW(r);
-    ring++;
-  }
+  };
+  pass((x, y) => inView(x, y, 40), 0);
+  pass((x, y) => inShiftedView(x, y, 40) && !inView(x, y, 40), 100000);
   return out;
 })();
 const f2 = (v: number) => v.toFixed(2);
@@ -403,41 +415,43 @@ const AroundTheSameModel: React.FC<z.infer<typeof schema>> = ({ bands, mask }) =
   return (
     <>
       <WipFilmLife frame={frame}>
-        <PaperGround cam={cam} />
-        {/* printed on the page: the crowd, its threads, the packets on them, the mark */}
-        <WipPlane cam={cam} ink>
-          <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-            <path d={DOTS_D} fill={DEEP_INK} />
-            {TAILS.map((t, i) => (
-              <path key={i} d={t.d} stroke={RED_INK} strokeOpacity={t.alpha} strokeWidth={tailW * TAIL_TAPER[i % TAIL_TAPER.length]} fill="none" />
-            ))}
-            {dotPackets(frame, dotBeadR).map((p, i) => (
-              <path key={`dp${i}`} d={p.d} fill={RED_INK} fillOpacity={p.alpha} />
-            ))}
-            <path d={threads(nearUnder)} fill={RED_INK} />
-            <path d={packetsPath(nearUnder, frame, beadR)} fill={RED_INK} />
-          </svg>
-          <InkPrint x={HUB.x - MARK_SIZE / 2} y={HUB.y - MARK_SIZE / 2} w={MARK_SIZE} h={MARK_SIZE} ink={INK} seed="openai" rough={1} wear={0.2} misregister={1.2}>
-            <svg width="100%" height="100%" viewBox="0 0 24 24" style={{ position: "absolute", left: 0, top: 0 }}>
-              <path d={OPENAI_D} fill="currentColor" fillRule="evenodd" />
+        <ShiftDown>
+          <PaperGround cam={cam} />
+          {/* printed on the page: the crowd, its threads, the packets on them, the mark */}
+          <WipPlane cam={cam} ink>
+            <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+              <path d={DOTS_D} fill={DEEP_INK} />
+              {TAILS.map((t, i) => (
+                <path key={i} d={t.d} stroke={RED_INK} strokeOpacity={t.alpha} strokeWidth={tailW * TAIL_TAPER[i % TAIL_TAPER.length]} fill="none" />
+              ))}
+              {dotPackets(frame, dotBeadR).map((p, i) => (
+                <path key={`dp${i}`} d={p.d} fill={RED_INK} fillOpacity={p.alpha} />
+              ))}
+              <path d={threads(nearUnder)} fill={RED_INK} />
+              <path d={packetsPath(nearUnder, frame, beadR)} fill={RED_INK} />
             </svg>
-          </InkPrint>
-        </WipPlane>
-        {/* pasted on: the near ring, back to front */}
-        <WipPlane cam={cam}>
-          {PEOPLE.map((p) => (
-            <React.Fragment key={p.deg}>
-              <CutOut src={p.src} x={p.feet.x} y={p.feet.y - p.h / 2} w={p.w} aspect={p.aspect} flipX={p.flipX} border={3} grain={printGrain} seed={`p${p.deg}`} />
-            </React.Fragment>
-          ))}
-        </WipPlane>
-        {/* the threads that come towards the viewer run in front of their own people */}
-        <WipPlane cam={cam} ink>
-          <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-            <path d={threads(nearOver)} fill={RED_INK} />
-            <path d={packetsPath(nearOver, frame, beadR)} fill={RED_INK} />
-          </svg>
-        </WipPlane>
+            <InkPrint x={HUB.x - MARK_SIZE / 2} y={HUB.y - MARK_SIZE / 2} w={MARK_SIZE} h={MARK_SIZE} ink={INK} seed="openai" rough={1} wear={0.2} misregister={1.2}>
+              <svg width="100%" height="100%" viewBox="0 0 24 24" style={{ position: "absolute", left: 0, top: 0 }}>
+                <path d={OPENAI_D} fill="currentColor" fillRule="evenodd" />
+              </svg>
+            </InkPrint>
+          </WipPlane>
+          {/* pasted on: the near ring, back to front */}
+          <WipPlane cam={cam}>
+            {PEOPLE.map((p) => (
+              <React.Fragment key={p.deg}>
+                <CutOut src={p.src} x={p.feet.x} y={p.feet.y - p.h / 2} w={p.w} aspect={p.aspect} flipX={p.flipX} border={3} grain={printGrain} seed={`p${p.deg}`} />
+              </React.Fragment>
+            ))}
+          </WipPlane>
+          {/* the threads that come towards the viewer run in front of their own people */}
+          <WipPlane cam={cam} ink>
+            <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+              <path d={threads(nearOver)} fill={RED_INK} />
+              <path d={packetsPath(nearOver, frame, beadR)} fill={RED_INK} />
+            </svg>
+          </WipPlane>
+        </ShiftDown>
       </WipFilmLife>
       <SpeakerMask on={mask} />
       <CaptionBandsDebug on={bands} />
