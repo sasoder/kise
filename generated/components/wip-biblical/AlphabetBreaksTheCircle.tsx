@@ -20,8 +20,8 @@
 // gimel, dalet, he, waw) lift off its inscription in indigo and spread out both ways onto the rule, outermost first, so
 // the rule reads aleph..waw left to right; the stone slides back out the top. On "detached" the red rim (and the rings still in it) snaps open at its front, the two ends spring apart and the
 // halves slide off the left and right edges. On an even rhythm (every 7 frames from f42) the listeners are picked up
-// (lift, shadow spreads, red tint drains) and set down in a straight row, each on its own spot under its letter, all one
-// height, left to right in the order they sat; the storyteller dims and sinks out of the band before the middle spots
+// (lift, shadow spreads, red tint drains) and set down in a straight row, each in its own even slot under its letter,
+// left to right in the order they sat (a print lying on another is picked first); the storyteller dims and sinks out of the band before the middle spots
 // fill. The last lands on "encouraged"; the camera, a little in and left of centre during the lifts, then tracks right
 // along the row and settles with the whole row in frame; settled living frame to f137.
 // Contact frames: the rim snaps on f33 (BREAK), first spring-apart frame f34; halves start sliding f35. Each glyph leaves
@@ -29,13 +29,16 @@
 // frame (PICK) and is down on pick + CARRY_T.
 // SPOT INK: red = the bond of the tribe (rim and rings), broken and gone; indigo = the printed letters and their rule.
 //
-// SOURCES: people: cut 16's prints from "En Bretagne. Vieux conteur breton, auditoire attentif" (postcard no. 294, E.L.D.,
-// 1910s, PD). The stone: marble cippus with a Phoenician inscription, Kition (Cyprus), ca. 362-312 BC, The Metropolitan
+// SOURCES: people: cut 16's prints (rev 3, cavemen): wood engravings from Louis Figuier, "Primitive Man" (1876; Emile
+// Bayard; PD), see tribeShared.tsx. The stone: marble cippus with a Phoenician inscription, Kition (Cyprus), ca. 362-312 BC, The Metropolitan
 // Museum of Art 74.51.2294 (Cesnola Collection), CC0, animation_source/assets_raw/alphabet/
 // Phoenician_MarbleCippusInscription_Kition_4thC-BC_Met74.51.2294_front.jpg (museum's painted number "I." retouched off,
 // Apple Vision matte, one grade: scripts/clips/wip-biblical/bake-alphabet-23.py). Letters: Phoenician aleph..waw, outlines
 // from Noto Sans Phoenician (SIL OFL), generated/components/wip-biblical/alphabetGlyphs.ts. The row runs left to right
 // (the viewer's reading direction); real Phoenician was written right to left.
+// REV 3 (Nov 12, cut 16's cavemen): even-pitch row slots; the stone fitted over the teller's plate; the rim snaps at
+// 30 deg front-right (its front is behind the child and the presenter now); prints tinted x TINT_ENGRAVING; pick order
+// keeps a print on top of another lifted first; the whole graphic 100 px lower (<ShiftDown>, biblicalShift.tsx).
 // ---------------------------------------------------------------------------
 import React from "react";
 import { Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
@@ -54,6 +57,7 @@ import {
   runWipCamera,
 } from "../kits/works-in-progress/wipShared";
 import { PHOENICIAN } from "./alphabetGlyphs";
+import { BIBLICAL_SHIFT_Y, ShiftDown } from "./biblicalShift";
 import { GBS_LAST_CAM, GBS_LAST_FRAME, camAt as gbsCamAt } from "./GovernedBySound";
 import {
   FLAT,
@@ -63,6 +67,7 @@ import {
   RIM_RY,
   STORYTELLER,
   STORYTELLER_BORDER,
+  TINT_ENGRAVING,
   TRIBE_CX,
   TRIBE_CY,
   TRIBE_DRAW_ORDER,
@@ -101,16 +106,18 @@ const RIM_FRONT = TRIBE_CY + RIM_RY;
 
 // The layout is designed in screen px at the settled camera (K_END), then carried into world px.
 /** Screen px: the letters' height, the rule (y), the row's print height and feet (y), the row's span (x). */
-const S_GLYPH_H = 72;
+const S_GLYPH_H = 66;
 const S_RULE_Y = 356;
-const S_ROW_FEET = 646;
-const S_ROW_L = 82;
-const S_ROW_R = 998;
+const S_ROW_FEET = 594;
+const S_ROW_L = 76;
+const S_ROW_R = 1004;
 /** Screen px between neighbours in the row (edge to edge of the photos; the paper borders take ~10 of it). */
-const S_ROW_GAP = 26;
+const S_ROW_GAP = 24;
+/** Screen px: the tallest a print in the row may be (the narrow standing child). */
+const S_ROW_HMAX = 150;
 /** The opening framing (f~24): letters' top and the rim's front on screen. The zoom that fits both, then the end zoom. */
-const S_MID_TOP = 150;
-const S_MID_FRONT = 742;
+const S_MID_TOP = 110;
+const S_MID_FRONT = 680;
 /** The rule, world px: just above the tallest print of the circle, so the letters print on bare paper. */
 const RULE_GAP_W = 24 / K0;
 export const RULE_Y = TRIBE_TOP - RULE_GAP_W;
@@ -163,19 +170,48 @@ const ORDER = [...LISTENERS].sort((a, b) => a.x - b.x);
 const ROW_L = toWorldX(END, S_ROW_L);
 const ROW_R = toWorldX(END, S_ROW_R);
 const ROW_FEET = END.y + (S_ROW_FEET - 960) / K_END;
-/** One height for every print in the row (world px): the widest that fits the span with the gaps. */
+/**
+ * Rev 3 (cavemen): the engravings are mostly wide busts and one narrow standing child, so one height for all made the
+ * letters bunch unevenly. Now the row is set like monospaced type: six equal slots at one pitch, a letter centred over
+ * each, every print as big as fits its slot (slot width minus the gap, at most ROW_HMAX tall), all on one baseline.
+ */
 const ROW_GAP = S_ROW_GAP / K_END;
-export const ROW_H = (ROW_R - ROW_L - ROW_GAP * (ORDER.length - 1)) / ORDER.reduce((s, f) => s + f.aspect, 0);
-const rowW = ORDER.map((f) => ROW_H * f.aspect);
+export const ROW_PITCH = (ROW_R - ROW_L) / ORDER.length;
+export const ROW_HMAX = S_ROW_HMAX / K_END;
 export const SPOTS = ORDER.map((f, i) => {
-  const left = ROW_L + rowW.slice(0, i).reduce((s, v) => s + v + ROW_GAP, 0);
-  return { f, left, w: rowW[i], cx: left + rowW[i] / 2, top: ROW_FEET - ROW_H, h: ROW_H };
+  const cx = ROW_L + ROW_PITCH * (i + 0.5);
+  const w = Math.min(ROW_PITCH - ROW_GAP, ROW_HMAX * f.aspect);
+  const h = w / f.aspect;
+  return { f, left: cx - w / 2, w, cx, top: ROW_FEET - h, h };
 });
+export const ROW_H = Math.max(...SPOTS.map((s) => s.h));
 /** Pick frames (an even rhythm from "people") and the carry. */
 export const PICK0 = 42;
 export const PICK_EVERY = 7;
 export const CARRY_T = 18;
-export const pickOf = (i: number) => PICK0 + i * PICK_EVERY;
+/**
+ * Pick order: left to right, except that a print lying on top of another in the circle is lifted before the one under
+ * it (rev 3: the cavemen overlap), so no print ever jumps up through the one above it. A topological sort of the
+ * "lies on" relation (boxes overlap, later in TRIBE_DRAW_ORDER = on top), ties broken by x.
+ */
+const restOverlap = (a: TribeFigure, b: TribeFigure) => {
+  const A = figureBox(a);
+  const B = figureBox(b);
+  return Math.min(A.left + A.w, B.left + B.w) > Math.max(A.left, B.left) && Math.min(A.top + A.h, B.top + B.h) > Math.max(A.top, B.top);
+};
+const drawIdx = (f: TribeFigure) => TRIBE_DRAW_ORDER.findIndex((q) => q.name === f.name);
+const PICK_SEQ: number[] = (() => {
+  const seq: number[] = [];
+  while (seq.length < ORDER.length) {
+    const free = ORDER.map((_, i) => i).filter(
+      (i) => !seq.includes(i) && !ORDER.some((g, j) => j !== i && !seq.includes(j) && drawIdx(g) > drawIdx(ORDER[i]) && restOverlap(g, ORDER[i])),
+    );
+    seq.push(free.length ? free[0] : ORDER.findIndex((_, i) => !seq.includes(i)));
+  }
+  return seq;
+})();
+/** Pick frame of row spot i. */
+export const pickOf = (i: number) => PICK0 + PICK_SEQ.indexOf(i) * PICK_EVERY;
 
 /** Where listener i's print is on `frame`: centre, width, lift 0..1, carry progress u (0 in the circle, 1 in the row). */
 export const listenerAt = (i: number, frame: number) => {
@@ -216,7 +252,13 @@ const RINGS_AT_BREAK = voiceRings(G0 + BREAK_F, LAST_BIRTH).map((r) => {
   return { cx: c.x, cy: c.y, rx: r.s, ry: r.s * FLAT, w: VOICE_WEIGHT * Math.min(1, (RIM_RX - r.s) / RIM_MERGE) };
 });
 const ELLIPSES = [...RINGS_AT_BREAK, { cx: TRIBE_CX, cy: TRIBE_CY, rx: RIM_RX, ry: RIM_RY, w: VOICE_WEIGHT }];
-/** The ends spring apart (deg each side of the front), damped. */
+/**
+ * Where it snaps (deg, 0 right, 90 front): rev 3, front-right between the crouching boy and the reclining man, where the
+ * rim lies on open paper clear of the presenter's head (the front itself is behind the child's print and, shifted, behind
+ * her head). The opposite point, where the two pieces part, is under the carver's print.
+ */
+export const BREAK_DEG = 30;
+/** The ends spring apart (deg each side of the break), damped. */
 const springGap = (frame: number) => {
   const t = frame - BREAK_F;
   if (t <= 0) return 0;
@@ -232,16 +274,19 @@ const halfPath = (e: { cx: number; cy: number; rx: number; ry: number }, a0: num
   }
   return `M${pts.join("L")}`;
 };
-const SLIDE_D = 600 / K_END + RIM_RX * 0.1;
+// far enough that each piece's nearest point leaves the frame edge it slides to (the frame's world edges at the slide's end)
+const camSlid = myCam(SLIDE0 + SLIDE_T);
+const SLIDE_D = RIM_RX * Math.cos((BREAK_DEG * Math.PI) / 180) + Math.abs(camSlid.x - TRIBE_CX) + 540 / camSlid.k + 30 / K_END;
 const BrokenRim: React.FC<{ frame: number }> = ({ frame }) => {
   const g = springGap(frame);
   const t = interpolate(frame, [SLIDE0, SLIDE0 + SLIDE_T], [0, 1], clamp);
   const dx = SLIDE_D * t * t * (1.5 - 0.5 * t);
   const box = VOICE_INK_BOX;
-  // the back is where the two halves part second (behind the storyteller's print)
+  // the front piece (through 90) slides left, the back piece (through 270) slides right; they part second at the opposite
+  // point, hidden under the carver
   const halves = [
-    { side: -1, a0: 90 + g, a1: 270 },
-    { side: 1, a0: -90, a1: 90 - g },
+    { side: -1, a0: BREAK_DEG + g, a1: BREAK_DEG + 180 },
+    { side: 1, a0: BREAK_DEG + 180, a1: BREAK_DEG + 360 - g },
   ];
   return (
     <>
@@ -260,17 +305,22 @@ const BrokenRim: React.FC<{ frame: number }> = ({ frame }) => {
 
 // -- the stone and the letters ----------------------------------------------------------------------------------------
 const CIP_ASPECT = 0.6108; // public/wip-biblical/ab_cippus.png, 733 x 1200
-const CIP_W = 236 / K_END;
+// rev 3: from near his plate's left edge (his hip and fur sit there) to past his hand (the plate's right edge), so neither the head
+// nor the flung-back arm peeks out from under the stone
+const ST_PLATE = figureBox(STORYTELLER);
+const CIP_L = ST_PLATE.left + 0.05 * ST_PLATE.w;
+const CIP_R = ST_PLATE.left + ST_PLATE.w + 34 / K_END; // the stone's top-right corner is broken away: reach past his hand
+const CIP_W = CIP_R - CIP_L;
 const CIP_H = CIP_W / CIP_ASPECT;
 /** The stone rests over the storyteller, its top just under the rule. */
-const CIP_X = STORYTELLER.x;
-const CIP_Y = RULE_Y + 16 / K_END + CIP_H / 2;
+const CIP_X = (CIP_L + CIP_R) / 2;
+const CIP_Y = RULE_Y + 7 / K_END + CIP_H / 2;
 const CIP_IN = { f0: 0, t: 16 };
 const CIP_OUT = { f0: 28, t: 16 };
 // fully above the frame at f0 coming in, and at the end of its exit going out
-const CIP_FROM = -(CIP_Y + CIP_H / 2 - (GBS_LAST_CAM.y - 960 / K0)) - 40 / K_END;
+const CIP_FROM = -(CIP_Y + CIP_H / 2 - (GBS_LAST_CAM.y - (960 + BIBLICAL_SHIFT_Y) / K0)) - 40 / K_END;
 const camOut = myCam(CIP_OUT.f0 + CIP_OUT.t);
-const CIP_TO = -(CIP_Y + CIP_H / 2 - (camOut.y - 960 / camOut.k)) - 40 / K_END;
+const CIP_TO = -(CIP_Y + CIP_H / 2 - (camOut.y - (960 + BIBLICAL_SHIFT_Y) / camOut.k)) - 40 / K_END;
 export const cippusAt = (frame: number) => {
   const tin = interpolate(frame, [CIP_IN.f0, CIP_IN.f0 + CIP_IN.t], [0, 1], { ...clamp, easing: Easing.bezier(0.3, 0.3, 0.2, 1) });
   const tout = interpolate(frame, [CIP_OUT.f0, CIP_OUT.f0 + CIP_OUT.t], [0, 1], { ...clamp, easing: Easing.bezier(0.55, 0, 0.8, 0.4) });
@@ -409,55 +459,58 @@ const AlphabetBreaksTheCircle: React.FC<z.infer<typeof schema>> = ({ bands }) =>
   return (
     <>
       <WipFilmLife frame={g}>
-        <PaperGround cam={cam} />
-        {/* ink on the page: the voice (then its broken rim), the rule and the letters that have landed */}
-        <WipPlane cam={cam} ink>
-          {frame < BREAK_F ? <VoiceInk frame={g} lastBirth={LAST_BIRTH} /> : frame < SLIDE0 + SLIDE_T + 1 ? <BrokenRim frame={frame} /> : null}
-          <Rule frame={frame} />
-          {glyphs.filter((q) => q.at.landed).map((q) => <Glyph key={q.i} i={q.i} x={q.at.x} y={q.at.y} s={q.at.s} />)}
-        </WipPlane>
-        {/* the prints lying on the page: the circle (far to near), the storyteller, then the row */}
-        <WipPlane cam={cam}>
-          {order.map((name) => {
-            if (name === STORYTELLER.name) {
-              return (
-                <Print
-                  key={name}
-                  f={STORYTELLER}
-                  x={stBox.left + stBox.w / 2}
-                  y={stBox.top + stBox.h / 2 + st.dy}
-                  w={stBox.w}
-                  dim={st.dim}
-                  border={STORYTELLER_BORDER}
-                />
-              );
-            }
-            const p = people.find((q) => q.s.f.name === name)!;
-            if (p.at.u > 0) return null;
-            return (
-              <Print key={name} f={p.s.f} x={p.at.x} y={p.at.y} w={p.at.w} tint={listenerTint(p.s.f, tintFrame, LAST_BIRTH) * tintDrain} />
-            );
-          })}
-          {people.filter((p) => p.at.u >= 1).map((p) => <Print key={p.s.f.name} f={p.s.f} x={p.at.x} y={p.at.y} w={p.at.w} />)}
-        </WipPlane>
-        {/* the stone, lying over the storyteller while the letters leave it */}
-        {cip.on ? (
-          <WipPlane cam={cam}>
-            <CutOut src="wip-biblical/ab_cippus.png" x={cip.x} y={cip.y} w={CIP_W} aspect={CIP_ASPECT} lift={cip.lift} seed="ab-cippus" />
+        {/* the clip-wide 1 cm shift (biblicalShift.tsx): paper and every layer move down together */}
+        <ShiftDown>
+          <PaperGround cam={cam} />
+          {/* ink on the page: the voice (then its broken rim), the rule and the letters that have landed */}
+          <WipPlane cam={cam} ink>
+            {frame < BREAK_F ? <VoiceInk frame={g} lastBirth={LAST_BIRTH} /> : frame < SLIDE0 + SLIDE_T + 1 ? <BrokenRim frame={frame} /> : null}
+            <Rule frame={frame} />
+            {glyphs.filter((q) => q.at.landed).map((q) => <Glyph key={q.i} i={q.i} x={q.at.x} y={q.at.y} s={q.at.s} />)}
           </WipPlane>
-        ) : null}
-        {/* letters in flight, printed over the stone and the page */}
-        <WipPlane cam={cam} ink>
-          {glyphs.filter((q) => q.at.lifted && !q.at.landed).map((q) => <Glyph key={q.i} i={q.i} x={q.at.x} y={q.at.y} s={q.at.s} />)}
-        </WipPlane>
-        {/* people being carried: above everything */}
-        <WipPlane cam={cam}>
-          {people
-            .filter((p) => p.at.u > 0 && p.at.u < 1)
-            .map((p) => (
-              <Print key={p.s.f.name} f={p.s.f} x={p.at.x} y={p.at.y} w={p.at.w} lift={p.at.lift} tint={listenerTint(p.s.f, tintFrame, LAST_BIRTH) * tintDrain * (1 - p.at.u)} />
-            ))}
-        </WipPlane>
+          {/* the prints lying on the page: the circle (far to near), the storyteller, then the row */}
+          <WipPlane cam={cam}>
+            {order.map((name) => {
+              if (name === STORYTELLER.name) {
+                return (
+                  <Print
+                    key={name}
+                    f={STORYTELLER}
+                    x={stBox.left + stBox.w / 2}
+                    y={stBox.top + stBox.h / 2 + st.dy}
+                    w={stBox.w}
+                    dim={st.dim}
+                    border={STORYTELLER_BORDER}
+                  />
+                );
+              }
+              const p = people.find((q) => q.s.f.name === name)!;
+              if (p.at.u > 0) return null;
+              return (
+                <Print key={name} f={p.s.f} x={p.at.x} y={p.at.y} w={p.at.w} tint={listenerTint(p.s.f, tintFrame, LAST_BIRTH) * TINT_ENGRAVING * tintDrain} />
+              );
+            })}
+            {people.filter((p) => p.at.u >= 1).map((p) => <Print key={p.s.f.name} f={p.s.f} x={p.at.x} y={p.at.y} w={p.at.w} />)}
+          </WipPlane>
+          {/* the stone, lying over the storyteller while the letters leave it */}
+          {cip.on ? (
+            <WipPlane cam={cam}>
+              <CutOut src="wip-biblical/ab_cippus.png" x={cip.x} y={cip.y} w={CIP_W} aspect={CIP_ASPECT} lift={cip.lift} seed="ab-cippus" />
+            </WipPlane>
+          ) : null}
+          {/* letters in flight, printed over the stone and the page */}
+          <WipPlane cam={cam} ink>
+            {glyphs.filter((q) => q.at.lifted && !q.at.landed).map((q) => <Glyph key={q.i} i={q.i} x={q.at.x} y={q.at.y} s={q.at.s} />)}
+          </WipPlane>
+          {/* people being carried: above everything */}
+          <WipPlane cam={cam}>
+            {people
+              .filter((p) => p.at.u > 0 && p.at.u < 1)
+              .map((p) => (
+                <Print key={p.s.f.name} f={p.s.f} x={p.at.x} y={p.at.y} w={p.at.w} lift={p.at.lift} tint={listenerTint(p.s.f, tintFrame, LAST_BIRTH) * TINT_ENGRAVING * tintDrain * (1 - p.at.u)} />
+              ))}
+          </WipPlane>
+        </ShiftDown>
       </WipFilmLife>
       <CaptionBandsDebug on={bands} />
     </>
@@ -477,7 +530,11 @@ export const layoutAt = (frame: number) => {
     cam,
     people,
     storyteller: { l: stBox.left, r: stBox.left + stBox.w, t: stBox.top + st.dy, b: stBox.top + stBox.h + st.dy },
-    toScreen: (x: number, y: number) => toScreen(cam, x, y),
+    // on screen, including the clip-wide shift down
+    toScreen: (x: number, y: number) => {
+      const q = toScreen(cam, x, y);
+      return { x: q.x, y: q.y + BIBLICAL_SHIFT_Y };
+    },
   };
 };
 
