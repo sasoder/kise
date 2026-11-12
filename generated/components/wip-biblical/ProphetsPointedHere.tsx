@@ -24,6 +24,11 @@
 // Settled frame (screen px): point (540, 147), 27 px across; row x 89-982, heads y 360-400, feet on the rule y 742,
 // strip edge y 772; lines from Ezekiel's fingertip (518, 345), John's eyes (527, 414) and Jeremiah's hand (590, 348),
 // each starting just clear of his own outline: a narrow convergence of three.
+// SHIFT (user, Nov 12: "bring everything down ever so slightly, like 1 cm"): the whole picture, paper included, sits
+// BIBLICAL_SHIFT_Y = 100 screen px lower than the layout numbers in this header and below, through biblicalShift's
+// <ShiftDown> inside WipFilmLife (the grain stays put). On screen the point opens at (540, 250), where cut 73 ends; the
+// settled point is at about (540, 247), the row's heads at y 460-500, the rule at y 842. SINGULARITY_POINT keeps the
+// unshifted f0 position (540, 150) in this cut's layout px; the wrapper adds the 100 px, as it does in cut 73.
 // Contact frames: none. The prints slide paper on paper; each line's tip reaches the dot's edge on f95 and stops there.
 // SPOT INK: red = the singularity point and the three lines that join the up-looking prophets to it (the clip's bond). Indigo = the
 // printed century rule (cut 0's).
@@ -58,6 +63,7 @@ import {
   slide,
   type WipCam,
 } from "../kits/works-in-progress/wipShared";
+import { ShiftDown } from "./biblicalShift";
 import { InkLines } from "./globeShared";
 import { CenturyRule, PROPHETS, ProphetCutOut, centuryTickX, type Facing } from "./prophetShared";
 
@@ -255,52 +261,54 @@ const ProphetsPointedHere: React.FC<z.infer<typeof schema>> = ({ bands, mask, li
   return (
     <>
       <WipFilmLife frame={frame}>
-        <PaperGround cam={cam} />
-        <WipPlane cam={cam} ink>
-          <CenturyRule x0={RULE_X0} x1={RULE_X1} y={RULE_Y} n={RULE_N} weight={4.2} tick={14} />
-        </WipPlane>
-        <WipPlane cam={cam} d={POINT_D} ink>
-          <SingularityPoint x={POINT.x} y={POINT.y} scale={DOT_SCALE} />
-        </WipPlane>
-        <WipPlane cam={cam}>
-          {PRINT_ORDER.map((i) => {
-            const p = placed[i];
-            if (frame < p.start) return null;
-            const along = slide(frame, p.start, RISE);
-            const foot = p.footStart + (RULE_Y - p.footStart) * along;
-            return <ProphetCutOut key={p.name} name={p.name} x={p.centreX} footY={foot} height={p.h} facing={p.facing} lift={(1 - along) * 0.3} />;
-          })}
-          <GroundStrip />
-        </WipPlane>
-        {draw > 0 && lines !== "none" ? (
+        <ShiftDown>
+          <PaperGround cam={cam} />
           <WipPlane cam={cam} ink>
-            <InkLines x={0} y={0} w={1080} h={960} ink={RED} seed="prophet-lines" rough={0.8}>
-              {placed.filter((p) => p.line).map((p) => {
-                const dx = pw.x - p.aim.x;
-                const dy = pw.y - p.aim.y;
-                const len = Math.hypot(dx, dy);
-                const ux = dx / len;
-                const uy = dy / len;
-                const s0 = p.gap;
-                const s1 = len - pw.r + 0.5 - LINE_END_GAP;
-                const s = s0 + (s1 - s0) * draw;
-                return (
-                  <line
-                    key={p.name}
-                    x1={p.aim.x + ux * s0}
-                    y1={p.aim.y + uy * s0}
-                    x2={p.aim.x + ux * s}
-                    y2={p.aim.y + uy * s}
-                    stroke="currentColor"
-                    strokeWidth={LINE_W}
-                    strokeLinecap={lines === "dotted" ? "round" : "butt"}
-                    strokeDasharray={lines === "dotted" ? `0.01 ${LINE_W * 3.2}` : undefined}
-                  />
-                );
-              })}
-            </InkLines>
+            <CenturyRule x0={RULE_X0} x1={RULE_X1} y={RULE_Y} n={RULE_N} weight={4.2} tick={14} />
           </WipPlane>
-        ) : null}
+          <WipPlane cam={cam} d={POINT_D} ink>
+            <SingularityPoint x={POINT.x} y={POINT.y} scale={DOT_SCALE} />
+          </WipPlane>
+          <WipPlane cam={cam}>
+            {PRINT_ORDER.map((i) => {
+              const p = placed[i];
+              if (frame < p.start) return null;
+              const along = slide(frame, p.start, RISE);
+              const foot = p.footStart + (RULE_Y - p.footStart) * along;
+              return <ProphetCutOut key={p.name} name={p.name} x={p.centreX} footY={foot} height={p.h} facing={p.facing} lift={(1 - along) * 0.3} />;
+            })}
+            <GroundStrip />
+          </WipPlane>
+          {draw > 0 && lines !== "none" ? (
+            <WipPlane cam={cam} ink>
+              <InkLines x={0} y={0} w={1080} h={960} ink={RED} seed="prophet-lines" rough={0.8}>
+                {placed.filter((p) => p.line).map((p) => {
+                  const dx = pw.x - p.aim.x;
+                  const dy = pw.y - p.aim.y;
+                  const len = Math.hypot(dx, dy);
+                  const ux = dx / len;
+                  const uy = dy / len;
+                  const s0 = p.gap;
+                  const s1 = len - pw.r + 0.5 - LINE_END_GAP;
+                  const s = s0 + (s1 - s0) * draw;
+                  return (
+                    <line
+                      key={p.name}
+                      x1={p.aim.x + ux * s0}
+                      y1={p.aim.y + uy * s0}
+                      x2={p.aim.x + ux * s}
+                      y2={p.aim.y + uy * s}
+                      stroke="currentColor"
+                      strokeWidth={LINE_W}
+                      strokeLinecap={lines === "dotted" ? "round" : "butt"}
+                      strokeDasharray={lines === "dotted" ? `0.01 ${LINE_W * 3.2}` : undefined}
+                    />
+                  );
+                })}
+              </InkLines>
+            </WipPlane>
+          ) : null}
+        </ShiftDown>
       </WipFilmLife>
       <SpeakerMask on={mask} />
       <CaptionBandsDebug on={bands} />
