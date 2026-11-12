@@ -13,24 +13,25 @@
 // DURATION: the slot 50.550 -> 58.225 s = 7.675 s x 23.976 = 184 frames (f0..f183).
 //
 // THE MOTION: cut 6's world, one session seen close. The orange intern stands in a white session door (DAY 1 on its
-// sign) holding three orange note cards; under the floor (the calendar rule) sits the model's WEIGHTS, a white
-// network of nodes and thin links in a panel. On "bottlenecked" a white funnel draws head-led from in front of the
-// cards (its mouth three cards tall) toward the weights; where it gets narrower than a card its walls turn DASHED
-// (the breakthrough that would open it does not exist yet) and the dashed neck runs on, bends down through the
-// floor and lands on the panel by "breakthroughs" (f74); its dashes march. On "that would allow models to update
+// sign) holding three orange note cards; beside its head floats its own BRAIN (its weights), a white drawn brain tied
+// to the head by two thought dots (rev Nov 12: the user found the earlier WEIGHTS network panel under the floor
+// confusing and picked "its own head"). On "bottlenecked" a white funnel draws head-led from in front of the cards
+// (its mouth three cards tall); where it gets narrower than a card its walls turn DASHED (the breakthrough that would
+// open it does not exist yet) and the dashed neck runs on, bends UP and hooks back left into the brain by
+// "breakthroughs" (f74): the notes' only way back into its own head. Its dashes march. On "that would allow models to update
 // their own weights" the cards lift off the stack one after another and slide into the funnel's mouth: the first
-// jams where the dashes begin, the next two pile up behind it. Nothing gets through: the network stays white and
+// jams where the dashes begin, the next two pile up behind it. Nothing gets through: the brain stays white and
 // still. The camera pushes in on the jam. On "at the end of every session" the door swings shut behind the intern,
 // its arms drop, and the jammed cards drain to ACCENT_DEEP, slide back out of the mouth, tumble and fall behind the
 // floor (cut 6's drop) by f173. Resolved, alive f174-183: the intern empty-handed, the door shut, the dashed neck marching,
-// the weights untouched.
+// the brain untouched.
 // CAUSE -> EFFECT: card A's right corners touch the solid walls' ends (where the dashes begin) on f110 and it stops
 //   there; B stops against the pile on f123, C on f136, and on each contact the card in front jolts. The door's leaf
 //   swings f144-155 and meets the frame on f155; the arms drop from f155; the jam is let go on f155.6-156.2, springs
 //   back, slides down the lower wall, pivots on the lip and falls behind the floor (all three gone by f173).
 // FALL: the jam is held in by the AI's press while the session lasts; let go, it obeys cut 6's gravity (FALL_G) and
 //   drain (FALL_DRAIN), on a wall that slopes down to the mouth, so the notes come back OUT and drop, never down the neck.
-// Orange = the AI and its notes; white = the door, the calendar floor, the funnel, the weights, labels.
+// Orange = the AI and its notes; white = the door, the calendar floor, the funnel, the brain, the sign.
 //
 // SOURCES: none (no figures).
 // THE WORLD is `sessionWorld.tsx` (cut 6's, imported read-only; see notes/SESSION_READY.md).
@@ -54,11 +55,10 @@ import {
   hash,
   iconShadow,
   smoothstep,
-  squirclePath,
   sway,
   worldTransform,
 } from "../kits/dwarkesh/fieldShared";
-import { INK, INK_HI, INK_LO, Label, MARCH_PX_PER_F, worldPx } from "../kits/dwarkesh/alignShared";
+import { INK, INK_HI, MARCH_PX_PER_F, worldPx } from "../kits/dwarkesh/alignShared";
 import {
   CARD_H,
   CARD_W,
@@ -89,18 +89,18 @@ export const defaultProps = schema.parse({});
 const LAST = DURATION - 1;
 const RULE_Y = SESSION_RULE_Y;
 const SW = SESSION_SW;
-const THREAD = worldPx(3.25, SESSION_K);
 const DASH_ON = worldPx(24, SESSION_K);
 const DASH_OFF = worldPx(16, SESSION_K);
 const MARCH = worldPx(MARCH_PX_PER_F, SESSION_K);
 
 // --- the set (world px) ------------------------------------------------------------
+type Pt = { x: number; y: number };
 const HX = 300; // the intern's hip
 const DX = HX - 25; // the session door's centre (the intern stands in it, a little right of centre)
 
 // the funnel lies on its side in front of the cards: mouth at X_M (half-height H_M), straight walls narrowing to the
 // right. Where the gap gets smaller than a card (X_S) the walls turn dashed; they narrow on to the neck (X_N, half
-// H_N), run right, bend down through the floor and land on the weights' panel.
+// H_N), run right, bend up, rise, and bend left into the brain's right side.
 const AXIS_Y = 722;
 const X_M = HX + 230;
 const H_M = 130;
@@ -114,25 +114,58 @@ const TUBE_RUN = 30; // the neck runs this far right before it bends
 const BEND_R = 60; // the neck's centreline bend radius
 const X_E = X_N + TUBE_RUN + BEND_R; // the vertical neck's centre x
 
-// the weights: a white panel under the floor, three rows of nodes, every node linked to the row below
-const PANEL_TOP = 1012;
-const ROW_Y0 = PANEL_TOP + 44;
-const ROW_DY = 62;
-const ROWS = [5, 6, 5];
-const NODE_DX = 105;
-const PANEL_CX = X_E - NODE_DX; // the neck lands right above the top row's 4th node
-const PANEL_W = 640;
-const PANEL_BOT = ROW_Y0 + ROW_DY * (ROWS.length - 1) + 44;
-const NODE_R = worldPx(11, SESSION_K);
-const LABEL_SIZE = worldPx(46, SESSION_K);
-const LABEL_W = LABEL_SIZE * 3.9; // "WEIGHTS" in Roboto Condensed 700, measured on the render
+// the brain (the AI's own weights): a lobed white outline with folds, up and right of the intern's head (310, 532),
+// outside the door's right post (x 385), above the funnel's mouth (top y 592)
+const BR_CX = 602;
+const BR_CY = 408;
+const BR_A = 108; // half width
+const BR_B = 80; // half height
+const ENTRY_Y = BR_CY + 16; // the neck enters the brain's right side here
+const Y2 = ENTRY_Y + BEND_R; // the second bend's centre y
+const lobe = (t: number) => 1 + 0.06 * Math.cos(9 * t);
+const brainPt = (t: number): Pt => {
+  const sy = Math.sin(t);
+  return { x: BR_CX + BR_A * Math.cos(t) * lobe(t), y: BR_CY + BR_B * sy * lobe(t) * (sy > 0 ? 0.86 : 1) };
+};
+/** the brain outline's x on its right side at height y */
+const brainRightX = (y: number) => {
+  let best = { x: BR_CX, d: 1e9 };
+  for (let i = -200; i <= 200; i++) {
+    const p = brainPt((i / 200) * (Math.PI / 2));
+    const d = Math.abs(p.y - y);
+    if (d < best.d) best = { x: p.x, d };
+  }
+  return best.x;
+};
+const BRAIN_D = (() => {
+  const N = 180;
+  const pts: string[] = [];
+  for (let i = 0; i <= N; i++) {
+    const p = brainPt((i / N) * Math.PI * 2);
+    pts.push(`${p.x.toFixed(2)} ${p.y.toFixed(2)}`);
+  }
+  return `M${pts.join(" L")} Z`;
+})();
+// the folds: a wavy central fissure from the top, two short curls each side, a small cerebellum line at the back
+const BRAIN_FOLDS = [
+  `M${BR_CX - 6} ${BR_CY - BR_B + 6} C${BR_CX + 18} ${BR_CY - 40} ${BR_CX - 22} ${BR_CY - 14} ${BR_CX + 2} ${BR_CY + 10} S${BR_CX - 12} ${BR_CY + 40} ${BR_CX + 4} ${BR_CY + 56}`,
+  `M${BR_CX - 78} ${BR_CY - 22} C${BR_CX - 60} ${BR_CY - 42} ${BR_CX - 38} ${BR_CY - 30} ${BR_CX - 44} ${BR_CY - 10}`,
+  `M${BR_CX - 82} ${BR_CY + 24} C${BR_CX - 62} ${BR_CY + 4} ${BR_CX - 40} ${BR_CY + 20} ${BR_CX - 50} ${BR_CY + 40}`,
+  `M${BR_CX + 40} ${BR_CY - 48} C${BR_CX + 62} ${BR_CY - 52} ${BR_CX + 76} ${BR_CY - 34} ${BR_CX + 66} ${BR_CY - 18}`,
+  `M${BR_CX + 34} ${BR_CY + 8} C${BR_CX + 52} ${BR_CY - 6} ${BR_CX + 74} ${BR_CY + 6} ${BR_CX + 70} ${BR_CY + 30}`,
+];
+// the thought dots, from the head's upper right to the brain's lower left
+const DOTS = [
+  { x: 414, y: 494, r: 8 },
+  { x: 458, y: 470, r: 12.5 },
+];
+
 const RIM_RX = 20; // the mouth's rim, an upright ellipse (the funnel is a cone seen a little from the open end)
-const NODES = ROWS.map((n, r) => Array.from({ length: n }, (_, i) => ({ x: PANEL_CX + (i - (n - 1) / 2) * NODE_DX, y: ROW_Y0 + r * ROW_DY })));
 
 // --- the timeline ------------------------------------------------------------------
 const WALL_F0 = 34; // "bottlenecked": the solid walls draw from the mouth ...
 const WALL_F1 = 52; // ... to where the dashes begin
-const NECK_F1 = 74; // the dashed neck lands on the panel ("breakthroughs" 76)
+const NECK_F1 = 74; // the dashed neck lands on the brain ("breakthroughs" 76)
 const LIFT_F = [95, 108, 121]; // the cards lift off the stack (top / back card first)
 const FLIGHT = 15;
 const CONTACT_F = LIFT_F.map((f) => f + FLIGHT); // 110, 123, 136 (settled before "weights" 143)
@@ -162,7 +195,6 @@ const QUEUE: CardPlace[] = [
 ];
 if (QUEUE[2].cx - CARD_W / 2 < X_M + 2) throw new Error("BottleneckedWeights: card C sticks out of the mouth");
 
-type Pt = { x: number; y: number };
 const bez = (p0: Pt, p1: Pt, p2: Pt, p3: Pt, t: number): Pt => {
   const u = 1 - t;
   return {
@@ -297,7 +329,7 @@ const released = (j: number, f: number) => f >= RELEASE_F[j];
 const Z_SWITCH = 6;
 
 // --- the funnel geometry ---------------------------------------------------------------------
-/** points along a wall from the mouth: solid part [mouth -> X_S], dashed part [X_S -> neck -> bend -> panel] */
+/** points along a wall from the mouth: solid part [mouth -> X_S], dashed part [X_S -> neck -> up -> left -> brain] */
 const wallPaths = (side: -1 | 1) => {
   // side -1 = upper wall (outer on the bend), +1 = lower wall (inner on the bend)
   const solid: Pt[] = [
@@ -308,15 +340,24 @@ const wallPaths = (side: -1 | 1) => {
   dashed.push({ x: X_S, y: AXIS_Y + side * H_S });
   dashed.push({ x: X_N, y: AXIS_Y + side * H_N });
   dashed.push({ x: X_N + TUBE_RUN, y: AXIS_Y + side * H_N });
-  const r = BEND_R - side * H_N; // upper wall: the outer radius
+  // first bend, up: upper wall (-1) inner, lower wall (+1) outer
+  const r = BEND_R + side * H_N;
   const cxB = X_N + TUBE_RUN;
-  const cyB = AXIS_Y + BEND_R;
+  const cyB = AXIS_Y - BEND_R;
   const NB = 24;
   for (let i = 1; i <= NB; i++) {
-    const a = -Math.PI / 2 + (Math.PI / 2) * (i / NB);
+    const a = Math.PI / 2 - (Math.PI / 2) * (i / NB);
     dashed.push({ x: cxB + r * Math.cos(a), y: cyB + r * Math.sin(a) });
   }
-  dashed.push({ x: cxB + r, y: PANEL_TOP });
+  // up the vertical neck, then the second bend, left: the upper wall stays inner (left), the lower wall outer (right)
+  const c2x = X_E - BEND_R;
+  dashed.push({ x: c2x + r, y: Y2 });
+  for (let i = 1; i <= NB; i++) {
+    const a = -(Math.PI / 2) * (i / NB);
+    dashed.push({ x: c2x + r * Math.cos(a), y: Y2 + r * Math.sin(a) });
+  }
+  const wy = Y2 - r; // upper wall -> the pipe's lower side, lower wall -> its upper side
+  dashed.push({ x: brainRightX(wy) + 2, y: wy });
   return { solid, dashed };
 };
 const polyLen = (pts: Pt[]) => pts.reduce((s, p, i) => (i ? s + Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0), 0);
@@ -372,22 +413,19 @@ const leafAngle = (f: number) => {
 
 // --- the camera ------------------------------------------------------------------------------
 // One key track (k, cx, the rule's screen y `ry`) eased through camEase, then the kit damper (CAM_STIFF / CAM_DAMP).
-// Open a little close on the intern, ease back to the whole set while the funnel draws, push in on the jam
-// (f94-150), ease back a little at the door.
-// The rule's screen y is not keyed directly: it is solved from k so the weights' panel's bottom edge sits `lift` px
-// above y 1072 (the caption band starts at 1080; the sway adds up to 5 px), and `lift` is keyed instead.
-const ryFor = (k: number, lift: number) => 1072 - 5 - SW * k - (PANEL_BOT - RULE_Y) * k - lift;
+// Open a little close on the intern and its brain, ease back to the whole set while the funnel draws, push in on the
+// jam (f94-150), ease back a little at the door. The floor stays above the first caption band after the 190 px shift.
 const CAM_KEYS = [
-  { f: 0, k: 0.97, cx: HX + 290, lift: 0 },
-  { f: 66, k: 0.905, cx: HX + 325, lift: 6 },
-  { f: 94, k: 0.915, cx: HX + 330, lift: 4 },
-  { f: 152, k: 0.985, cx: HX + 345, lift: 0 },
-  { f: LAST, k: 0.935, cx: HX + 315, lift: 4 },
+  { f: 0, k: 1.14, cx: 515, ry: 838 },
+  { f: 66, k: 1.09, cx: 535, ry: 844 },
+  { f: 94, k: 1.1, cx: 540, ry: 844 },
+  { f: 152, k: 1.18, cx: 562, ry: 846 },
+  { f: LAST, k: 1.12, cx: 545, ry: 842 },
 ];
 const CAM = (() => {
   const K: number[] = [];
   const CX: number[] = [];
-  const LF: number[] = [];
+  const RY: number[] = [];
   for (let f = 0; f <= LAST; f++) {
     const i = Math.max(0, CAM_KEYS.findIndex((q, n) => n + 1 < CAM_KEYS.length && f <= CAM_KEYS[n + 1].f));
     const a = CAM_KEYS[i];
@@ -395,12 +433,12 @@ const CAM = (() => {
     const u = b.f > a.f ? camEase((f - a.f) / (b.f - a.f), 1) : 1;
     K.push(a.k + (b.k - a.k) * u);
     CX.push(a.cx + (b.cx - a.cx) * u);
-    LF.push(a.lift + (b.lift - a.lift) * u);
+    RY.push(a.ry + (b.ry - a.ry) * u);
   }
   const out: { k: number; cx: number; cy: number; ry: number }[] = [];
   let k = K[0];
   let cx = CX[0];
-  let lf = LF[0];
+  let ry = RY[0];
   let vk = 0;
   let vx = 0;
   let vl = 0;
@@ -410,25 +448,29 @@ const CAM = (() => {
       k += vk;
       vx += (CX[f] - cx) * CAM_STIFF - vx * CAM_DAMP;
       cx += vx;
-      vl += (LF[f] - lf) * CAM_STIFF - vl * CAM_DAMP;
-      lf += vl;
+      vl += (RY[f] - ry) * CAM_STIFF - vl * CAM_DAMP;
+      ry += vl;
     }
-    const ry = ryFor(k, Math.max(0, lf));
     out.push({ k, cx, ry, cy: RULE_Y - (ry - 960) / k });
   }
   return out;
 })();
-// the caption band (y 1080-1250) stays clear: the panel's bottom edge (+ the sway's 5 px) above 1078 on every frame
+// after the user's 190 px shift: the floor stays above the first caption band (1080) and the DAY 1 sign, the brain and
+// the neck stay in frame, on every frame (+ the sway's 5 px)
 CAM.forEach((c, f) => {
-  const bot = c.ry + (PANEL_BOT - RULE_Y) * c.k + 5 + SW * c.k;
-  // after the user's 190 px shift the panel sits in the first caption band by choice; the second band (1360) stays clear
-  if (bot + DERPY_SHIFT_Y > 1350) throw new Error(`BottleneckedWeights: the weights' panel reaches y ${(bot + DERPY_SHIFT_Y).toFixed(1)} at f${f}`);
+  const scr = (x: number, y: number) => ({ x: 540 + (x - c.cx) * c.k, y: c.ry + (y - RULE_Y) * c.k + DERPY_SHIFT_Y });
+  const floor = scr(0, RULE_Y).y + SW * c.k + 5;
+  if (floor > 1078) throw new Error(`BottleneckedWeights: the floor reaches y ${floor.toFixed(1)} at f${f}`);
+  const sign = scr(0, 236).y - 5;
+  const right = scr(X_E + BEND_R + H_N + SW, 0).x + 5;
+  const left = scr(165, 0).x - 5;
+  if (sign < 60 || right > 1040 || left < 40) throw new Error(`BottleneckedWeights: the set leaves the frame at f${f}`);
 });
 const CX_REST = CAM[0].cx;
 const CY_REST = CAM[0].cy;
 
 /** for the hand-off */
-export const SCHED = { X_M, X_S, X_N, X_E, QUEUE, LIFT_F, CONTACT_F, DOOR_SHUT, RELEASE_F, PANEL_BOT, CAM, FALLS };
+export const SCHED = { X_M, X_S, X_N, X_E, QUEUE, LIFT_F, CONTACT_F, DOOR_SHUT, RELEASE_F, CAM, FALLS };
 
 const BottleneckedWeights: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
@@ -527,27 +569,26 @@ const BottleneckedWeights: React.FC<z.infer<typeof schema>> = () => {
               </g>
             </g>
             <CalendarRule k={k} x0={HX - 1400} x1={HX + 1800} ticks={[]} />
-            {/* the weights */}
+            {/* the AI's own brain (its weights), tied to its head by two thought dots; it breathes, nothing reaches it */}
             <g style={{ filter: iconShadow(k) }}>
-              <path
-                d={squirclePath(PANEL_W, PANEL_BOT - PANEL_TOP)}
-                transform={`translate(${(PANEL_CX - PANEL_W / 2).toFixed(2)} ${PANEL_TOP.toFixed(2)})`}
+              {DOTS.map((d, i) => (
+                <circle key={i} cx={d.x} cy={d.y + 2 * Math.sin((frame + 9 * i) / 14)} r={d.r} fill={INK} />
+              ))}
+              <g
+                transform={`translate(${BR_CX} ${BR_CY}) scale(${(1 + 0.012 * Math.sin(frame / 17)).toFixed(4)}) translate(${-BR_CX} ${-BR_CY})`}
                 fill="none"
                 stroke={INK}
                 strokeWidth={SW}
-              />
-              <g opacity={INK_LO}>
-                {NODES.slice(0, -1).map((row, r) =>
-                  row.map((a, i) =>
-                    NODES[r + 1].map((b, m) => (
-                      <line key={`${r}-${i}-${m}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={INK} strokeWidth={THREAD} />
-                    )),
-                  ),
-                )}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d={BRAIN_D} />
+                <g opacity={INK_HI}>
+                  {BRAIN_FOLDS.map((d, i) => (
+                    <path key={i} d={d} strokeWidth={SW * 0.8} />
+                  ))}
+                </g>
               </g>
-              {NODES.flat().map((n, i) => (
-                <circle key={i} cx={n.x} cy={n.y} r={NODE_R} fill={INK} />
-              ))}
             </g>
             {/* the mouth's rim, far half (behind the cards) */}
             {solidT > 0 ? (
@@ -586,16 +627,6 @@ const BottleneckedWeights: React.FC<z.infer<typeof schema>> = () => {
             </g>
           </svg>
           <DoorSignText k={k} x={DX} inT={1} />
-          <Label
-            k={k}
-            x={PANEL_CX - PANEL_W / 2 - 24 - LABEL_W}
-            y={(PANEL_TOP + PANEL_BOT) / 2 - LABEL_SIZE * 0.5}
-            text="WEIGHTS"
-            inT={1}
-            size={LABEL_SIZE}
-            opacity={INK_HI}
-            align="left"
-          />
         </div>
       </AbsoluteFill>
       <Vignette />
