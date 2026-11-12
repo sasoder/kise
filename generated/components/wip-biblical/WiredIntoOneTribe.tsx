@@ -25,6 +25,9 @@
 // tail leaves its route's end 14 frames after the rise starts, runs over the globe to the rim under the listener and up to
 // the earphone or set, touching it 2-3 frames later. Ring f135 -> closed f171. Camera: the pull-back is anchored on the
 // tent (k 4.6 -> 1.0, settled ~f40); then a creep to k 1.03 about the tent.
+// SHIFT (user note Nov 12, rev 2): the whole picture, paper included, sits BIBLICAL_SHIFT_Y = 100 px lower on screen
+// (./biblicalShift.tsx, shared by all eight wip-biblical cuts so the joins match). World coordinates, globeShared and
+// camAt are unchanged; add 100 to any screen y worked out from them.
 // PEOPLE: every print stands behind the globe with its cut edges (the photo's bottom, and the chair's straight edge on
 // the 1938 telegrapher and Mrs Hult-Nylander) below the limb, solved per print so no cut edge is ever seen; the tent's
 // ground is bent to the rim's curve (scripts/clips/wip-biblical/bake-w43-tent.py) so it sits on it.
@@ -43,6 +46,7 @@ import React from "react";
 import { interpolate, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { CaptionBandsDebug, CutOut, INDIGO, InkPrint, PaperGround, RED, WipCam, WipFilmLife, WipPlane, runWipCamera, slide } from "../kits/works-in-progress/wipShared";
+import { ShiftDown } from "./biblicalShift";
 import {
   CITIES,
   EarthPrint,
@@ -271,40 +275,43 @@ const WiredIntoOneTribe: React.FC<z.infer<typeof schema>> = ({ bands }) => {
   return (
     <>
       <WipFilmLife frame={frame}>
-        <PaperGround cam={cam} />
-        {/* the ring, under the people: it runs behind them */}
-        <WipPlane cam={cam} ink>
-          {ringSweep > 0 ? (
-            <InkLines x={BX} y={BY} w={BW} h={BW} ink={RED} seed="ring43" rough={1}>
-              {ringSweep >= 360 ? (
-                <circle cx={GLOBE_X - BX} cy={GLOBE_Y - BY} r={RING_R} fill="none" stroke="currentColor" strokeWidth={RING_W} />
-              ) : (
-                <path d={ringD(ringSweep)} fill="none" stroke="currentColor" strokeWidth={RING_W} strokeLinecap="butt" />
-              )}
-            </InkLines>
-          ) : null}
-        </WipPlane>
-        <WipPlane cam={cam} style={{ clipPath: DISC_CLIP }}>
-          {[OPERATOR, ...LISTENERS].map((p) => {
-            if (frame < p.enter) return null;
-            const at = p.enter < 0 ? { x: p.x, y: p.y } : personAt(p, frame);
-            return <CutOut key={p.id} src={p.src} x={at.x} y={at.y} w={p.w} aspect={p.aspect} rotate={p.rotate} flipX={p.flipX} border={5} seed={p.id} />;
-          })}
-        </WipPlane>
-        <EarthPrint cam={cam} rotate={rot} />
-        <WipPlane cam={cam} ink>
-          <InkPrint x={BX} y={BY} w={BW} h={BW} ink={INDIGO} seed="grat43" rough={0.8} wear={0.3} misregister={0}>
-            <svg width={BW} height={BW} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-              <path d={geoD(proj, GRATICULE)} fill="none" stroke="currentColor" strokeWidth={1.1} opacity={0.55} />
-              <circle cx={GLOBE_X - BX} cy={GLOBE_Y - BY} r={GLOBE_R} fill="none" stroke="currentColor" strokeWidth={1.6} />
-            </svg>
-          </InkPrint>
-          {wirePaths.length > 0 ? (
-            <InkLines x={BX} y={BY} w={BW} h={BW} ink={RED} seed="wires43" rough={0.9}>
-              <path d={wirePaths.join(" ")} fill="none" stroke="currentColor" strokeWidth={WIRE_W} strokeLinecap="round" strokeLinejoin="round" />
-            </InkLines>
-          ) : null}
-        </WipPlane>
+        {/* user note Nov 12: everything 100 px lower on screen (paper included, so multiply still prints on it) */}
+        <ShiftDown>
+          <PaperGround cam={cam} />
+          {/* the ring, under the people: it runs behind them */}
+          <WipPlane cam={cam} ink>
+            {ringSweep > 0 ? (
+              <InkLines x={BX} y={BY} w={BW} h={BW} ink={RED} seed="ring43" rough={1}>
+                {ringSweep >= 360 ? (
+                  <circle cx={GLOBE_X - BX} cy={GLOBE_Y - BY} r={RING_R} fill="none" stroke="currentColor" strokeWidth={RING_W} />
+                ) : (
+                  <path d={ringD(ringSweep)} fill="none" stroke="currentColor" strokeWidth={RING_W} strokeLinecap="butt" />
+                )}
+              </InkLines>
+            ) : null}
+          </WipPlane>
+          <WipPlane cam={cam} style={{ clipPath: DISC_CLIP }}>
+            {[OPERATOR, ...LISTENERS].map((p) => {
+              if (frame < p.enter) return null;
+              const at = p.enter < 0 ? { x: p.x, y: p.y } : personAt(p, frame);
+              return <CutOut key={p.id} src={p.src} x={at.x} y={at.y} w={p.w} aspect={p.aspect} rotate={p.rotate} flipX={p.flipX} border={5} seed={p.id} />;
+            })}
+          </WipPlane>
+          <EarthPrint cam={cam} rotate={rot} />
+          <WipPlane cam={cam} ink>
+            <InkPrint x={BX} y={BY} w={BW} h={BW} ink={INDIGO} seed="grat43" rough={0.8} wear={0.3} misregister={0}>
+              <svg width={BW} height={BW} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+                <path d={geoD(proj, GRATICULE)} fill="none" stroke="currentColor" strokeWidth={1.1} opacity={0.55} />
+                <circle cx={GLOBE_X - BX} cy={GLOBE_Y - BY} r={GLOBE_R} fill="none" stroke="currentColor" strokeWidth={1.6} />
+              </svg>
+            </InkPrint>
+            {wirePaths.length > 0 ? (
+              <InkLines x={BX} y={BY} w={BW} h={BW} ink={RED} seed="wires43" rough={0.9}>
+                <path d={wirePaths.join(" ")} fill="none" stroke="currentColor" strokeWidth={WIRE_W} strokeLinecap="round" strokeLinejoin="round" />
+              </InkLines>
+            ) : null}
+          </WipPlane>
+        </ShiftDown>
       </WipFilmLife>
       <CaptionBandsDebug on={bands} />
     </>
