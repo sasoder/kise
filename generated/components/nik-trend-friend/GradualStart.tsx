@@ -11,7 +11,8 @@
 // DURATION: the slot 9.676 -> 11.762 s = 2.086 s x 23.976 = 50 frames (f0..f49).
 //
 // THE MOTION: the history is already drawn: all 40 earlier bets fan out of the origin to month 12, board tone, a
-// little dimmed, A's leader still a thin amber line high in the fan. One cream Revolut product tile (the R) creeps
+// little dimmed, A's leader still in the fan as a thin dull-amber line (5 px, no bloom, amber mixed toward the board:
+// context that stays warmer than the pack but never outshines the cream tile). One cream Revolut product tile (the R) creeps
 // right at constant speed from month 2.2 to month 5.2 (one month clock, never stops), drawing a nearly flat cream line
 // just above the axis rule: the same curve shape as the pack at a fifth of its median (a scaled copy, so it never
 // takes off). The camera does not pan with it: one long slight pull-back and drift (k 0.89 -> 0.79) keeps the origin
@@ -27,7 +28,7 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { COLOR, StoutStage, amberBandFor, bloomFilter } from "../kits/cheeky-pint/stoutShared";
+import { COLOR, StoutStage, amberBandFor, mixHex } from "../kits/cheeky-pint/stoutShared";
 import { UnionShadow, makeClockCam } from "../kits/cheeky-pint/museShared";
 import { Axis, BetLine, PackFan, monthX, pathTo, revY, samplerOf, shapeG } from "./betCurves";
 import { HERO } from "./RaceOnTheCurve";
@@ -53,7 +54,10 @@ export const CAM = makeClockCam({ x: 478, y: 30, k: 0.92 }, [{ f0: -40, f1: 90, 
 
 /** A's leader, kept high in the fan as a thin amber line (it worked: amber), drawn to month 12 like the history. */
 const LEADER_D = pathTo(samplerOf(HERO), 12, 0.04);
-const LEADER_PX = 9; // screen px: a little over a pack line (6.5), well under the cream product line
+const LEADER_PX = 5; // screen px: thinner than a pack line (6.5): context, never the subject
+/** A dull amber: amber mixed well toward the board and sunk a little toward the ground, no bloom. Warmer than the pack
+ *  lines, dimmer than the cream tile and its line (the cream product stays the brightest thing in frame). */
+const LEADER_TONE = mixHex(mixHex(COLOR.amberFoot, COLOR.board, 0.5), COLOR.ground, 0.2);
 
 const GradualStart: React.FC<z.infer<typeof schema>> = () => {
   const S = useCurrentFrame();
@@ -67,9 +71,7 @@ const GradualStart: React.FC<z.infer<typeof schema>> = () => {
       <Axis k={k} yTitle={false} />
       <PackFan month={12} k={k} dim={0.2} />
       <UnionShadow sil={[{ d: LEADER_D, stroke: W }]} s={0.35} elevation="rest" />
-      <g style={{ filter: bloomFilter(k) }}>
-        <path d={LEADER_D} fill="none" stroke={COLOR.amberTop} strokeWidth={W} strokeLinecap="round" strokeLinejoin="round" />
-      </g>
+      <path d={LEADER_D} fill="none" stroke={LEADER_TONE} strokeWidth={W} strokeLinecap="round" strokeLinejoin="round" />
       <BetLine rev={SLOW} month={m} k={k} band={amberBandFor(cam)} amber={0} />
     </StoutStage>
   );
