@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // TrendIsYourFriend (nik-trend-friend, cut 18). Cheeky Pint style (stout board) (styles/cheeky-pint.md).
 // Opaque 1080x1920, 23.976 fps, 113 frames. Palette B1 (the stoutShared default).
-// World: the clip's chart, betCurves.tsx (builder A's; imported, never edited). Same chart as cuts A and B.
+// World: the clip's chart, betCurves.tsx (imported; REV 2 added the optional Axis `numPx`). Same chart as cuts A and B.
 //
 // CHECK LINE: "The slope a product shows in its first two months is the slope it keeps: project the early line
 // forward and the product runs straight along it."
@@ -16,14 +16,19 @@
 // amber from the start: it is the signal) climbs out of the origin on one straight, steep line (revenue = SLOPE x
 // month) at one constant speed for the whole cut (month 0.8 at f0, 2 at f28, ~5.6 at f112). As its tile passes month 1
 // (lit f1-9) and month 2 (lit f24-33) that numeral lifts from the lo tone to cream (derived from the tile's month; both
-// in frame and lit through "first couple of months", f52-71; tracking phase f50 -> f112). From the pass of
+// in frame and lit through "first couple of months", f52-71; rise f65 -> f112). From the pass of
 // month 2 (starting f23 at the tile's top edge) a thin dashed cream projection of its own months-0-2 slope shoots
-// ahead of it, drawn by a moving tip ~2.3x the tile's speed (off the top of frame ~f45, ends at month 9, never caught);
-// the tile runs on exactly along it, its amber line covering the dashes. Camera, one move in two phases: f0 -> ~f60 a
-// pull-back around the origin (k ~1.17 -> 0.53) to the frame of "first couple of months" (lit 1 and 2, the short
-// steep line, the tile, a long run of dashes); then the zoom settles and the camera tracks the tile up the dashed line
-// (~15 px/f): the axis sinks out of the bottom after f71, the pack lines sweep down-left past the tile, the dashes
-// stream into it. The tile holds ~x 640, y 480-490 on screen, ~100 px, still running at the last frame.
+// ahead of it, drawn by a moving tip ~2.3x the tile's speed (past the keep-in box's top ~f30, off the frame ~f67, ends at month 9, never caught);
+// the tile runs on exactly along it, its amber line covering the dashes. REV 2 (safe zones, user's note Nov 13): the
+// camera is one move in two phases. f0 -> f71 a pull-back on the axis (k ~0.85 -> 0.24; the rule held at y ~950, so
+// the rule, the numerals and MONTHS SINCE LAUNCH sit inside the keep-in box, title foot <= y 1067) with the tile at
+// y ~360-460 and a run of dashes above it in the box; the title leaves by the house text exit over f36-46 and the rule
+// drops to y ~1000, so through "first couple of months" (f52-71) the lit 1 and 2 stand 44 -> 37 px apart. The lit 1
+// and 2 keep their 40 px size (Axis `numPx`) while the other numerals step down to 30 on the wide; numerals stop at 9
+// (`numTo`), ticks run on to 12. Then a rise and a slow push-in on the tile (k 0.24 -> ~0.36): the axis sinks out
+// through the bottom after f71, the pack's lines slide down past the tile, the dashes stream into it, and the tile
+// settles to ~x 530, y ~570 on screen, 100 px, still running at the last frame. On the wide the amber line keeps its
+// k-0.5 weight (~16 px) and the dashes are longer in the world (70/52) so they still read.
 // AMBER = the signal that a bet is working (traction); cream = the product / the projection; board = the pack.
 //
 // NO DATA: proxy shapes only (the pack and the product are unlabelled shapes). SOURCES: none. No numbers on screen;
@@ -37,7 +42,7 @@ import { ALPHA, COLOR, EDGE, FONT_NUM, GEO, SPACE, StoutStage, amberBandFor, blo
 import { UnionShadow } from "../kits/cheeky-pint/museShared";
 import { camEase, type Cam, type Glide } from "../kits/dwarkesh/outgrowShared";
 import { CAM_DAMP, CAM_STIFF } from "../kits/dwarkesh/fieldShared";
-import { AXIS_Y, Axis, PackFan, axisPx, lineWeight, monthX, pathTo, samplerOf } from "./betCurves";
+import { AXIS_PX, AXIS_Y, Axis, PackFan, lineWeight, monthX, pathTo, samplerOf } from "./betCurves";
 import { REVOLUT_R_BOX, REVOLUT_R_D } from "./revolutMark";
 
 export const FPS = 24000 / 1001;
@@ -72,24 +77,35 @@ export const projTip = (f: number) => {
   const run = t < PROJ_RAMP ? (t * t) / (2 * PROJ_RAMP) : t - PROJ_RAMP / 2;
   return Math.min(PROJ_M1, PROJ_M0 + PROJ_RATE * run);
 };
-/** Dash pattern in world px (fixed in the world, so the dashes never crawl). */
-const DASH = [46, 34];
+/** Dash pattern in world px (fixed in the world, so the dashes never crawl). REV 2: longer in the world (was 46/34)
+ *  so they still read as dashes on the wider framing: ~17/13 px on screen at k 0.24, ~25/19 px at k 0.36. */
+const DASH = [70, 52];
 
-// --- the camera: one continuous move in two phases -------------------------------------------------------------
-// Phase 1 (f0 -> ~f60): two overlapping glides pull back around the origin (k ~1.17 -> 0.53) until the frame holds
-// the lit 1 and 2, the short steep line, the tile and a long stretch of dashes. Phase 2 (~f50 -> f112): the zoom
-// eases out to a constant k 0.53 and a tracking term (its velocity eased in over TRACK_F0..TRACK_F1, then constant)
-// carries the look up and right with the tile, a touch slower in y than the tile so it keeps climbing a little on
-// screen. All of it through the house damped follower (CAM_STIFF / CAM_DAMP). Keyed, not derived from the tile.
+// --- the camera: one continuous move in two phases (REV 2, safe zones) -------------------------------------------
+// Phase 1 (f0 -> f71): two overlapping glides pull back on the axis (k ~0.85 -> 0.24) with the rule held at y ~950,
+// so the axis, the lit 1 and 2 and MONTHS SINCE LAUNCH stay inside the keep-in box (title foot <= y 1067) while the
+// tile climbs: the zoom follows the tile's height (k ~ 1/month), so the tile holds y ~360-460 with a run of dashes
+// above it in the box. As the title leaves (f36-46) a small rise drops the rule to y ~1000. The wider frame is forced:
+// at f71 the tile is 2500 world px above the axis, and the box is 780 px tall. Phase 2 (f65 -> f112): a rise (eased
+// glide plus a tracking term at the tile's own speed) sinks the axis out through the bottom while a slow push-in on the
+// tile (k 0.24 -> ~0.36) lets it settle to y ~570, still moving at the last frame. All of it through the house damped
+// follower (CAM_STIFF / CAM_DAMP). Keyed, not derived from the tile.
 const GLIDES: Glide[] = [
-  { f0: -30, f1: 55, dx: 150, dy: -405, k: 0.75 },
-  { f0: 5, f1: 75, dx: 70, dy: -600, k: 0.53 },
+  { f0: -20, f1: 40, dx: 290, dy: 14, k: 0.39 },
+  { f0: 10, f1: 74, dx: 300, dy: 20, k: 0.24 },
+  { f0: 36, f1: 58, dy: -190 }, // as the title leaves, the axis drops to y ~1000 (numerals' foot ~1055)
+  { f0: 65, f1: 109, dx: -250, dy: -1600 },
+  { f0: 70, f1: 122, k: 0.4 },
 ];
-const START = { x: 130, y: -475, k: 1.32 };
-const TRACK_F0 = 50;
-const TRACK_F1 = 76;
+const START = { x: 326, y: 10, k: 1.0 };
+const TRACK_F0 = 65;
+const TRACK_F1 = 91;
+/** MONTHS SINCE LAUNCH leaves by the house text exit over f36-46 (read for 1.5 s; "quickly" f44), so on the wide the
+ *  axis can sit lower and the zoom stay ~15 % closer: the lit 1 and 2 stand ~37-44 px apart through f52-71. */
+const TITLE_X0 = 36;
+const TITLE_XF = 10;
 /** World px per frame of the tracking term: the tile moves (6.43, -27.9) per frame. */
-const TRACK_V = { x: 6.3, y: -27.2 };
+const TRACK_V = { x: 6.4, y: -27.9 };
 const PRE = 40;
 const CAM_TRACK: Cam[] = (() => {
   const T: Cam[] = [];
@@ -143,9 +159,12 @@ const TILE_PX = 100;
 
 // --- a lit numeral: drawn over the axis's own numeral, same font and place -----------------------------------------
 const TICK_PX = 12; // betCurves' Axis: tick length (screen px)
+/** The lit numerals' screen size: the axis's own AXIS_PX (40, cap ~29 px), held on the wide (REV 2), where the rest
+ *  of the axis steps down to 30; passed to the Axis as `numPx` so the lit glyph sits exactly on the axis's own. */
+const LIT_PX = AXIS_PX;
 const LitNumeral: React.FC<{ n: number; k: number; lit: number }> = ({ n, k, lit }) => {
   if (lit <= 0.002) return null;
-  const px = axisPx(k);
+  const px = LIT_PX;
   const base = AXIS_Y + (TICK_PX + SPACE.AXIS + 0.729 * px) / k;
   return (
     <text
@@ -185,7 +204,10 @@ const Product: React.FC<{ month: number; k: number; band: [number, number]; lift
   const uid = `ty${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
   const d = pathTo(PRODUCT_AT, month, 0.05);
   const e = PRODUCT_AT(month);
-  const W = lineWeight(k);
+  // REV 2: the line's screen weight is held at its k-0.5 value (~16 px) on the wider framing (lineWeight alone would
+  // thin it to ~12.5 px at k 0.21); at k >= 0.5 it is lineWeight as before
+  const kw = Math.max(k, 0.5);
+  const W = (lineWeight(kw) * kw) / k;
   const T = TILE_PX / k;
   const R = (GEO.RADIUS * T) / GEO.TILE;
   const tx = e.x - T / 2;
@@ -225,6 +247,8 @@ const Product: React.FC<{ month: number; k: number; band: [number, number]; lift
   );
 };
 
+const LIT_NUM_PX = { 1: LIT_PX, 2: LIT_PX };
+
 /** The pack's dim: context, sunk toward the ground by tone (never opacity). */
 const PACK_DIM = 0.45;
 
@@ -237,7 +261,8 @@ const TrendIsYourFriend: React.FC<z.infer<typeof schema>> = () => {
   return (
     <StoutStage S={S} cam={cam} rest={CAM.rest} pool={{ x: tip.x - 40, y: tip.y + 260, strength: 1.4 }}>
       {/* no REVENUE up the origin (as in cut A): it would stand in the lower caption band */}
-      <Axis k={k} yTitle={false} />
+      {/* numerals 1..9 only: below k ~0.3 the two-digit 10 11 12 would touch (they were off frame in rev 1 too) */}
+      <Axis k={k} yTitle={false} numPx={LIT_NUM_PX} numTo={9} titleExit={clamp01((S - TITLE_X0) / TITLE_XF)} />
       <LitNumeral n={1} k={k} lit={litFor(1, m)} />
       <LitNumeral n={2} k={k} lit={litFor(2, m)} />
       <PackFan month={12} k={k} dim={PACK_DIM} />

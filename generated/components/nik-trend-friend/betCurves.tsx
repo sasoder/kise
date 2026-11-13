@@ -33,11 +33,15 @@
 //   keyedRev(keys)                 a highlighted bet keyed as [month, a] (monotone cubic, flat outside the keys)
 //   camOn(m, rev, k, sx?, sy?)     the camera centre that puts the chart point at screen (sx, sy) (default the middle)
 // EXPORTS (components; all world px, draw inside StoutStage)
-//   <Axis k dim? enter? yTitle? px? />  the rule, month ticks, numerals 1..12 and MONTHS SINCE LAUNCH (under months
+//   <Axis k dim? enter? yTitle? px? numPx? numTo? titleExit? />  the rule, month ticks, numerals 1..12 and MONTHS SINCE LAUNCH (under months
 //                                  0..4) at AXIS_PX 40 (axisPx(k) steps it to 30 on a wide, k < ~0.43; 40 is the
 //                                  chart's own size, one step above the kit's LABEL 30, accepted by the director),
 //                                  REVENUE up the left of the origin (yTitle={false} drops it: it is ~150 screen px
 //                                  tall, so keep it out of the caption bands). `enter` 0..1 = the house text entrance.
+//                                  `numPx` {n: px} (optional, REV 2 for cut C) keeps chosen numerals at their own
+//                                  screen size on a wide (the title drops to clear them); `numTo` (optional) the last
+//                                  numeral drawn (default 12; ticks always run to 12); `titleExit` 0..1 the title's
+//                                  house exit. Absent, nothing changes.
 //   <PackFan month k dim? tips? /> the 40 pack lines drawn from the origin to `month` (12 = the full history), one
 //                                  shared shadow, a board tile on every tip (tips={false} hides them). dim 0..1 sinks
 //                                  lines and tiles toward the ground by tone (never opacity).
@@ -74,27 +78,50 @@ export const AXIS_PX = 40;
 /** Default axis type at camera k: AXIS_PX, stepped down to the kit's LABEL (30) on a wide where the month numerals
  *  are closer than ~1.6 em (k < ~0.43), so "10 11 12" never touch. */
 export const axisPx = (k: number) => Math.max(TYPE.LABEL, Math.min(AXIS_PX, 0.62 * MX * k));
-export const Axis: React.FC<{ k: number; dim?: number; enter?: number; yTitle?: boolean; px?: number }> = ({ k, dim = 0, enter = 1, yTitle = true, px = axisPx(k) }) => {
+/** `numPx` (optional, cut C's REV 2): screen px for single numerals, e.g. {1: 40, 2: 40}, so the numerals a cut
+ *  lights stay readable on a wide where axisPx(k) steps the rest down to 30. Same cap top as the others; the title
+ *  drops to clear the largest numeral. `numTo` (optional, C's REV 2): the last numeral drawn (default 12; the ticks
+ *  always run to 12): on a wide below k ~0.3 the two-digit 10 11 12 would touch even at 30 px. Absent (A, B), the
+ *  axis draws exactly as before. `titleExit` (optional) 0..1 = the house text exit of MONTHS SINCE LAUNCH. */
+export const Axis: React.FC<{ k: number; dim?: number; enter?: number; yTitle?: boolean; px?: number; numPx?: Partial<Record<number, number>>; numTo?: number; titleExit?: number }> = ({
+  k,
+  dim = 0,
+  enter = 1,
+  yTitle = true,
+  px = axisPx(k),
+  numPx,
+  numTo = 12,
+  titleExit,
+}) => {
   const ink = mixHex(COLOR.rule, COLOR.ground, 0.5 * clamp01(dim));
   const sw = 2 / k;
   const ticks: string[] = [];
   for (let m = 1; m <= 12; m++) ticks.push(`M${n6(monthX(m))} ${n6(AXIS_Y)}V${n6(AXIS_Y + TICK_PX / k)}`);
   // numerals: their cap top SPACE.AXIS below the tick; the title's cap top SPACE.CLEAR + 8 under the numerals
   const numBase = AXIS_Y + (TICK_PX + SPACE.AXIS + 0.729 * px) / k;
-  const titleBase = numBase + (SPACE.CLEAR + 8 + 0.718 * px) / k;
+  const bigPx = numPx ? Math.max(px, ...Object.values(numPx).map((v) => v ?? px)) : px;
+  const titleBase = numBase + (SPACE.CLEAR + 8 + 0.718 * px) / k + (numPx ? (0.729 * (bigPx - px)) / k : 0);
   const numFs = px / k;
+  const own = (n: number) => (numPx && numPx[n] !== undefined ? (numPx[n] as number) : null);
   return (
     <g>
       <path d={`M${n6(-14 / k)} ${n6(AXIS_Y)}H${n6(monthX(AXIS_END_M))}`} stroke={ink} strokeWidth={n6(sw)} strokeLinecap="round" />
       <path d={ticks.join("")} stroke={ink} strokeWidth={n6(sw)} strokeLinecap="butt" />
       <g fontFamily={FONT_NUM} fontWeight={700} fontSize={n6(numFs)} fill={dim > 0 ? mixHex(COLOR.inkCreamLo, COLOR.ground, 0.5 * clamp01(dim)) : COLOR.inkCreamLo} textAnchor="middle" style={{ fontFeatureSettings: '"lnum" 1, "tnum" 1' }}>
-        {Array.from({ length: 12 }, (_, i) => (
-          <text key={i} x={n6(monthX(i + 1))} y={n6(numBase)}>
-            {i + 1}
-          </text>
-        ))}
+        {Array.from({ length: Math.min(12, numTo) }, (_, i) => {
+          const o = own(i + 1);
+          return o === null ? (
+            <text key={i} x={n6(monthX(i + 1))} y={n6(numBase)}>
+              {i + 1}
+            </text>
+          ) : (
+            <text key={i} x={n6(monthX(i + 1))} y={n6(AXIS_Y + (TICK_PX + SPACE.AXIS + 0.729 * o) / k)} fontSize={n6(o / k)}>
+              {i + 1}
+            </text>
+          );
+        })}
       </g>
-      <Label x={0} y={titleBase} k={k} px={px} text="Months since launch" anchor="start" tone="creamLo" enter={enter} />
+      <Label x={0} y={titleBase} k={k} px={px} text="Months since launch" anchor="start" tone="creamLo" enter={enter} exit={titleExit} />
       {yTitle ? (
         <g transform={`translate(${n6(-(SPACE.CLEAR + 8) / k)} ${n6(AXIS_Y)}) rotate(-90)`}>
           <Label x={0} y={0} k={k} px={px} text="Revenue" anchor="start" tone="creamLo" enter={enter} />
