@@ -9,8 +9,10 @@ import { REVOLUT_WORDMARK_BOX, REVOLUT_WORDMARK_D } from "./revolutWordmark";
 // rev 3 (the user: "look like the real Revolut cards"), read off Revolut's official card photos (clip folder images/
 // 16.8a/b/d, 20.2d, 23.2b): the cards are PORTRAIT, 54 x 85.6 mm with the ISO 3.18 mm corner; the "Revolut" wordmark
 // runs down the right edge from near the top, reading top to bottom (letter tops toward the right edge); the chip
-// stands upright (9 x 11.5 mm) in the upper part, just left of the wordmark. No R stamp, no contactless mark and no
-// plan name on the face (the real cards print none): the plan names are LABELS beside the cards (PlanLabel).
+// stands upright (9 x 11.5 mm) in the upper part, just left of the wordmark. No R stamp, no contactless mark.
+// rev 4 (the user: "on the card looks much better"): the plan's NAME is printed on the face again, horizontal, lower
+// left, in the kit's label font and the card's ink (`showName`, default on); in a stair it sits in the bottom strip
+// each lower card shows. PlanLabel (a name beside a card) stays exported but cut 21 no longer uses it.
 // The wordmark is Revolut's own (revolutWordmark.ts, Wikimedia Commons), printed one-colour.
 //
 // TONES (inside the stout rules: nothing black): Standard board, Plus board/cream (soft), Premium a cool silver-grey,
@@ -46,6 +48,9 @@ export const CARD = {
   CHIP_X: 0.545, // of W: the chip's left edge from the card's left edge
   CHIP_TOP: 0.15, // of H
   RIB_PITCH: 0.0075, // of W: Ultra's ribbing pitch (1.5 world px on a 200 card: ~3.5 px at k 2.35)
+  NAME_PX: 0.075, // of H: the plan name's font size (24 world px on a 200 card: ~45 px on screen at k 1.9)
+  NAME_INSET: 0.08, // of W: the name's left margin
+  NAME_BASE: 0.952, // of H from the top: the name's baseline, so its caps sit centred in a 48-54 px bottom strip
 } as const;
 export const cardH = (w: number = CARD.W) => w * CARD.ASPECT;
 export const cardRadius = (w: number = CARD.W) => w * CARD.RADIUS;
@@ -200,6 +205,10 @@ export type PlanCardProps = {
   sheen?: number;
   /** The one click: the kit's LightSweep across the card, progress 0 .. 1 (outside = off). */
   sweep?: number;
+  /** Print the plan's name on the card, lower left (default on). */
+  showName?: boolean;
+  /** How far the printed name has sunk, 0..1 (default = `dim`): lets a name go before its card's strip closes over it. */
+  nameDim?: number;
 };
 
 /**
@@ -219,6 +228,8 @@ export const PlanCard: React.FC<PlanCardProps> = ({
   glow = 0,
   sheen = 0.35,
   sweep = -1,
+  showName = true,
+  nameDim,
 }) => {
   const uid = `uc${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
   const T = PLAN_TONE[plan];
@@ -229,6 +240,9 @@ export const PlanCard: React.FC<PlanCardProps> = ({
   const foot = mixHex(T.foot, mixHex(T.dimTo, COLOR.ground, 0.06), d);
   // a dimmed wordmark sinks toward the card's own tone near the top, where it stands
   const ink = mixHex(T.ink, mixHex(top, foot, 0.25), d * DIM_INK_SINK);
+  // the printed name sinks toward the card's tone at its own height (near the foot)
+  const nameInk = mixHex(T.ink, mixHex(top, foot, CARD.NAME_BASE), clamp01(nameDim ?? d) * DIM_INK_SINK);
+  const nameFs = h * CARD.NAME_PX;
   const chip = mixHex(T.chip, top, d * 0.55);
   const chipLine = mixHex(T.chipLine, chip, 0.22 + d * 0.5);
   const [a, b, c, dd] = tiltMatrix(tilt);
@@ -313,6 +327,21 @@ export const PlanCard: React.FC<PlanCardProps> = ({
         <g transform={`translate(${fx(wmX)} ${fx(wmY)}) rotate(90) scale(${fx(wmS)})`}>
           <path d={REVOLUT_WORDMARK_D} fill={ink} fillRule="evenodd" />
         </g>
+        {/* the plan's name, printed lower left (in the stair it sits in the strip each lower card shows) */}
+        {showName && (nameDim ?? d) < 0.999 ? (
+          <text
+            x={f3(-w / 2 + w * CARD.NAME_INSET)}
+            y={f3(-h / 2 + h * CARD.NAME_BASE)}
+            fontFamily={FONT_LABEL}
+            fontWeight={500}
+            fontSize={f3(nameFs)}
+            letterSpacing={`${TRACK.label}em`}
+            fill={nameInk}
+            style={{ fontFeatureSettings: '"case" 1' }}
+          >
+            {PLAN_NAME[plan]}
+          </text>
+        ) : null}
         {/* the chip, upright: a rounded plate with its contact lines */}
         <path
           d={`M${f3(cx0 + cr)} ${f3(cy0)}H${f3(cx0 + cw - cr)}A${f3(cr)} ${f3(cr)} 0 0 1 ${f3(cx0 + cw)} ${f3(cy0 + cr)}V${f3(cy0 + ch - cr)}A${f3(cr)} ${f3(cr)} 0 0 1 ${f3(cx0 + cw - cr)} ${f3(cy0 + ch)}H${f3(cx0 + cr)}A${f3(cr)} ${f3(cr)} 0 0 1 ${f3(cx0)} ${f3(cy0 + ch - cr)}V${f3(cy0 + cr)}A${f3(cr)} ${f3(cr)} 0 0 1 ${f3(cx0 + cr)} ${f3(cy0)}Z`}
@@ -395,12 +424,12 @@ export const PlanLabel: React.FC<{ x: number; y: number; k: number; text: string
  * Values only (from UltraOnTop's camera track and Ultra's state at f119). Draw it as
  *   <StoutStage S={ULTRA_B_END.S} cam={ULTRA_B_END.cam} pool={ULTRA_B_END.pool}>
  *     <UltraCard {...ULTRA_B_END.card} k={ULTRA_B_END.cam.k} />
- * Cut B also shows, beside and beneath it, the dimmed tucked stack of the old plans (METAL showing under it) and
- * the ULTRA / METAL labels; a joined cut that drops them must say so.
+ * Cut B also shows, beneath it, the dimmed tucked stack of the old plans (METAL's strip and printed name showing under
+ * it); ULTRA is printed on the Ultra card. A joined cut that drops the stack must say so.
  */
 export const ULTRA_B_END = {
   S: 119,
-  cam: { x: 539.9984005838795, y: 1103.890568369124, k: 2.2710152080765336 },
+  cam: { x: 579.9984005838795, y: 1103.890568369124, k: 2.2710152080765336 },
   pool: { x: 580, y: 898, strength: 1.3 },
   card: {
     x: 580,
