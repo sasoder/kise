@@ -2,7 +2,7 @@
 // FeedbackComesLate (nik-trend-friend, cut 56). Cheeky Pint style (stout) (styles/cheeky-pint.md), the stout board.
 // Opaque 1080x1920, 23.976 fps, 146 frames. Palette B1 (the stoutShared default).
 // World: betLoop.tsx (owned by cut E LotOfBets; imported, never edited): the same loop, geometry and tones as E,
-// on another company's tile (the world's generic bank-building glyph, tile dim 0.3): the same machine run badly.
+// on another company's tile (the world's generic office-block mark, tile dim 0.3): the same machine run badly.
 //
 // CHECK LINE: "Another company places only a handful of bets, they take so long to come back that nothing has
 // returned yet, and by then a different manager is standing there."
@@ -13,36 +13,41 @@
 // and 56 · feedback 79 · loop 87 · is 93 · delayed 98 · plus 108 · management 116 · changes 122
 // DURATION: the slot 56.974 -> 63.063 s = 6.089 s x 23.976 = 146 frames (f0..f145).
 //
-// THE MOTION: one continuous motion on the loop. Eight chips (bets) leave the tile one at a time on the track's
-// centreline and crawl clockwise at a constant 14 world px/f (1/8 of E's speed), cooling from cream 42% of the
-// way toward board (the answer going stale; they stay the lightest things in the upper frame). None turns amber,
-// nothing comes home, and the world's empty stack slot (126 wide, a dark pocket) stays empty to the last frame.
-// The camera opens close on the tile (k 1.42, the tile's top at screen y 1468, as E opened) and runs one slow
-// pull-back and rise to the whole loop (k 1.08), leaning left while the chips climb the left leg, still creeping
-// at f145. The light pool follows the leading chips up the left and over the top, moves down to the swap on
-// "plus management changes" (f106-124), then settles between the swap and the chips. On "management changes" the
-// old manager (the world's bald round peg) sinks into its slot and a different person rises out of the same slot:
-// NewManagerPeg, drawn here, the same shoulders, a round head wearing a bob, darker kraft.
+// THE MOTION: one continuous motion: out with the chips, then back to the tile. Eight chips (bets) leave the tile
+// one at a time on the track's centreline and crawl clockwise at a constant 14 world px/f (1/8 of E's speed),
+// cooling from cream 42% of the way toward board (the answer going stale). None turns amber, nothing comes home.
+// CAMERA: f0-48 close on the tile (k 1.42, its top at screen y 1468, as E opened) while the eight leave; f48-87
+// it rises and pulls back with the crawl (k ~1.15), all eight strung up the left leg into the top bend with the
+// tile still at the bottom; f87-110 it comes back down and pushes in on the tile (one eased blend, no hold) to a
+// close frame: k 1.82, the tile ~74% of the width and wholly above the upper caption band (foot at y 1060), the
+// manager ~300 px tall, the world's empty slot pocket and both track ends at the tile in frame, the return one
+// empty, the chips gone out of the top; then a slow creep in to f145. The light pool follows the leading chips up
+// the left and over the top, then comes down with the camera onto the tile (between the empty slot and the peg).
+// THE SWAP happens in the close frame: the old manager (the world's dark ManagerPeg, round bald head) sinks into
+// its slot and a different person rises out of the same slot: NewManagerPeg, drawn here, the same shoulders in the
+// same ink family one step lighter, a round head wearing a bob in the darkest ink.
 //   f0     close on the tile and its manager; chip 1 already just out of the tile's left edge
 //   f36    chip 7 shows on "seven"; f43 chip 8 shows on "eight"; then no more
-//   f98    "delayed": the leader is only on the top bend
-//   f145   the eight chips strung over the top arc, upper left to upper right, still crawling
+//   f98    "delayed": the leader has barely reached the top; the camera is already heading back to the tile
+//   f110   the close frame settles (still creeping)
+//   f145   the new manager over an empty slot and an empty return track
 // DEPARTURES (leading edge shows past the tile's left edge -> trailing edge clears it), frames:
 //   chip 1 -4.6 -> -0.3 · 2 2.2 -> 6.5 · 3 9.0 -> 13.3 · 4 15.8 -> 20.1 · 5 22.6 -> 26.9 · 6 29.4 -> 33.7 ·
 //   7 36.2 -> 40.5 · 8 43.0 -> 47.3
-// THE SWAP (cause -> effect at the slot line): FIRST SINK f104 (the old peg goes into its slot, cut at the slot
-// line, never fading; gone at f116); FIRST RISE f116 (the new peg comes out of the same slot; fully up at f128).
+// THE SWAP (cause -> effect at the slot line): FIRST SINK f108 ("plus"; the old peg goes into its slot, cut at the
+// slot line, never fading; fully down f118); FIRST RISE f118 ("management"; the new peg comes out of the same
+// slot; fully up f130, a few frames after "changes" f122).
 // AMBER = the signal that a bet is working (a result that came back). None in this cut by design: nothing comes
-// back. Cream = the bets going out; board = the pegs, the stale chips, the dimmed company tile (anyone).
+// back. Cream = the bets going out; board = the stale chips, the dimmed company tile (anyone); ink = the managers.
 //
 // SOURCES: no real figures. "Seven, eight bets" is Nik's own estimate; eight chips are shown, no numeral on screen.
-// The company is the world's generic bank-building glyph (betLoop BuildingMark), not a real logo.
+// The company is the world's generic office-block mark (betLoop mark "office"), not a real logo.
 // ---------------------------------------------------------------------------
 import React, { useId } from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { ALPHA, COLOR, EDGE, ELEVATION, StoutStage, amberBandFor, clamp01, lerp, mixHex, smoothstep } from "../kits/cheeky-pint/stoutShared";
-import { PegSlot, PersonPeg, SEAT } from "../kits/cheeky-pint/talentShared";
+import { PegSlot, SEAT } from "../kits/cheeky-pint/talentShared";
 import type { Cam } from "../kits/dwarkesh/outgrowShared";
 import {
   Chips,
@@ -50,6 +55,7 @@ import {
   CompanyTile,
   LOOP_LEN,
   LoopTrack,
+  ManagerPeg,
   PEG_AT,
   camAnchored,
   chipAt,
@@ -77,11 +83,11 @@ export const EMITS = DEPART.map((t) => t - 30 / SPEED);
 const dimOf = (s: number) => 0.42 * smoothstep((s - 200) / 1300);
 
 // --- the manager swap -------------------------------------------------------------------------------------------
-export const SINK0 = 104;
-export const SINK_F = 12;
-export const RISE0 = 116;
+export const SINK0 = 108;
+export const SINK_F = 10;
+export const RISE0 = 118;
 export const RISE_F = 12;
-const PEG2 = { shade: 0.55 };
+const PEG2 = { shade: 0.5 };
 
 // --- the new manager: a different person by silhouette ----------------------------------------------------------
 // The world's peg (talentShared PersonPeg: round head, the META4 bust in a 429-unit box) is the old manager. The
@@ -134,13 +140,15 @@ const NewManagerPeg: React.FC<{ x: number; y: number; size: number; k: number; s
   const feet = y + s * (H + 2);
   const top = feet - H;
   const sh = clamp01(shade);
-  const cTop = mixHex(COLOR.board, COLOR.ground, sh * 0.7);
-  const cFoot = mixHex(COLOR.boardFoot, COLOR.ground, sh * 0.7);
-  const rim = (base: string) => mixHex(base, COLOR.edge, ALPHA.edgeBoard * (1 - 0.6 * sh));
+  // the world's manager ink family (betLoop managerTone), one step lighter for face and shoulders ...
+  const cTop = mixHex(mixHex(COLOR.inkDark, COLOR.boardFoot, 0.16), COLOR.boardFoot, 0.5 * sh);
+  const cFoot = mixHex(COLOR.inkDark, COLOR.boardFoot, 0.5 * sh);
+  const rim = (base: string) => mixHex(base, COLOR.board, 0.55);
   const e = EDGE.CREAM / k;
   const outline = bobPath(x, feet, size) + facePath(x, feet, size) + shouldersPath(x, feet, size);
-  const hTop = mixHex(cTop, COLOR.ground, 0.38);
-  const hFoot = mixHex(cFoot, COLOR.ground, 0.38);
+  // ... and the bob in the darkest ink: a clearly different step that frames the face
+  const hTop = mixHex(COLOR.inkDark, COLOR.boardFoot, 0.06);
+  const hFoot = COLOR.inkDark;
   const fringeY = headC(feet, size).cy + NH.fringe * headC(feet, size).r;
   const R = ELEVATION.rest;
   const ao = Math.min(EDGE.FOOT_AO / k, 0.2 * size);
@@ -202,10 +210,27 @@ const A1 = 1598; // ... at the end (the tile's foot ~ y 1890)
 const camP = (f: number) => 0.92 * smoothstep((f + 10) / 140) + 0.08 * clamp01((f + 10) / 155);
 /** The lean left while the chips climb the left leg: the world's x 540 sits right of centre, then returns. */
 const leanX = (f: number) => 50 * (1 - smoothstep((f - 55) / 75)) + 10 * (1 - clamp01(f / 40));
-export const camAt = (f: number): Cam => {
+/** Out with the chips: the pull-back and rise (as wide as all eight up the left leg + the tile, by ~f96). */
+const camOut = (f: number): Cam => {
   const p = camP(f);
   const k = Math.exp(lerp(Math.log(K0), Math.log(K1), p));
   return camAnchored(k, lerp(A0, A1, p), 540 + leanX(f));
+};
+/** Back on the tile: the close frame (the tile ~75% of the width, wholly above the upper caption band, its
+ *  foot at screen y CLOSE_FOOT), creeping in to the end. */
+export const K_CLOSE = 1.82;
+const CLOSE_FOOT = 1060;
+const CLOSE_X = 548; // world x at the frame centre: both track ends at the tile show as stubs (the return one empty)
+const camClose = (f: number): Cam => camAnchored(K_CLOSE * Math.exp(0.0016 * (f - BACK1)), CLOSE_FOOT, 540, CLOSE_X, 1770);
+/** The move back: one eased blend from the moving out-camera into the close frame, f BACK0 -> BACK1. */
+export const BACK0 = 87;
+export const BACK1 = 110;
+export const camAt = (f: number): Cam => {
+  const w = smoothstep((f - BACK0) / (BACK1 - BACK0));
+  if (w <= 0) return camOut(f);
+  const a = camOut(f);
+  const b = camClose(f);
+  return { x: lerp(a.x, b.x, w), y: lerp(a.y, b.y, w), k: Math.exp(lerp(Math.log(a.k), Math.log(b.k), w)) };
 };
 
 const FeedbackComesLate: React.FC<z.infer<typeof schema>> = () => {
@@ -217,12 +242,12 @@ const FeedbackComesLate: React.FC<z.infer<typeof schema>> = () => {
     const c = chipAt(f, t, LAP, 0);
     if (c.onTrack) chips.push({ x: c.x, y: c.y, amber: 0, dim: dimOf(c.s) });
   }
-  // the light pool, the eye's guide: just behind the leading chips, up the left side and over the top; on "plus
-  // management changes" (f106-124) down to the swap; then it settles between the swap and the chips
+  // the light pool, the eye's guide: just behind the leading chips, up the left side and over the top; with the
+  // move back (f92-115) down onto the tile, resting between the empty slot and the manager
   const lead = trackAt(Math.max(0, (f - EMITS[0]) * SPEED - 90));
-  const toPeg = smoothstep((f - 106) / 18) - 0.38 * smoothstep((f - 124) / 21);
-  const pegPt = { x: PEG_AT.x - 20, y: PEG_AT.y - 110 };
-  const pool = { x: lerp(lead.x, pegPt.x, toPeg), y: lerp(lead.y, pegPt.y, toPeg) };
+  const toTile = smoothstep((f - BACK0 + 4) / (BACK1 - BACK0));
+  const tilePt = { x: 600, y: 1610 };
+  const pool = { x: lerp(lead.x, tilePt.x, toTile), y: lerp(lead.y, tilePt.y, toTile) };
   // the managers: the old one sinks into the slot, then a different one rises out of it
   const sink1 = lerp(SEAT, 1, smoothstep((f - SINK0) / SINK_F));
   const sink2 = lerp(1, SEAT, smoothstep((f - RISE0) / RISE_F));
@@ -231,8 +256,8 @@ const FeedbackComesLate: React.FC<z.infer<typeof schema>> = () => {
       <LoopTrack k={cam.k} />
       <CompanyShadow count={0} />
       <Chips chips={chips} k={cam.k} band={band} />
-      <CompanyTile k={cam.k} band={band} mark="building" managers={[]} dim={0.3} />
-      <PersonPeg x={PEG_AT.x} y={PEG_AT.y} size={PEG_AT.size} k={cam.k} tone="kraft" sink={sink1} amberBand={band} />
+      <CompanyTile k={cam.k} band={band} mark="office" managers={[]} dim={0.3} />
+      <ManagerPeg x={PEG_AT.x} y={PEG_AT.y} size={PEG_AT.size} k={cam.k} sink={sink1} slot={false} />
       <NewManagerPeg x={PEG_AT.x} y={PEG_AT.y} size={PEG_AT.size} k={cam.k} sink={sink2} shade={PEG2.shade} />
       <PegSlot x={PEG_AT.x} y={PEG_AT.y} size={PEG_AT.size} k={cam.k} on="cream" />
     </StoutStage>
