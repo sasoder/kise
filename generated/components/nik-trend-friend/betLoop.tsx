@@ -6,8 +6,8 @@
 // THE WORLD (world px; the resolved whole-loop frame is LOOP_CAM = k 1 centred on (540, 960), so world px
 // = screen px there). Seen from the front and a little above, like the talentShared board:
 //   * the COMPANY TILE at the bottom centre: a wide cream card (TILE_BOX), its mark (the Revolut R, or a
-//     generic bank-building glyph) in ink on the left half, an ink-brown MANAGER PEG (ManagerPeg) standing in a peg slot on the
-//     right half, and a SLOT in its top edge at x 540 out of which the STACK rises (the slot joint).
+//     generic bank-building glyph) in ink on the left half, the MANAGER as a flat outline person glyph (ManagerGlyph,
+//     WORLD REV 3: the office mark's grammar and stroke) mirrored on the right half, and a SLOT in its top edge at x 540 out of which the STACK rises (the slot joint).
 //   * the LOOP: one closed track, a tall stadium cut into the board as a shallow groove. It leaves the
 //     tile's left edge, curves up the left leg, over the top semicircle, down the right leg and curves
 //     back into the tile's right edge. Travel is clockwise on screen. Two lanes, abreast (LANE_OFF either
@@ -37,7 +37,9 @@
 //   the drawn parts (LoopTrack, ChipShadows, ChipGlow, Chip, Chips, CompanyShadow, CompanyTile, ChipStack,
 //   BetLoopWorld), and the probe still (BetLoopProbe: empty / busy / building).
 // STATUS: FINAL (director, Nov 13, after REV 1) + WORLD REV 2 (cold review: ink-brown manager, bigger chevrons,
-// the "office" mark). Only render bugs from here, logged in SHARED_CHANGES.md.
+// the "office" mark) + WORLD REV 3 (the client's note: the manager becomes ManagerGlyph, a flat outline person in
+// the office mark's grammar, so the two icons on the tile are one set). Only render bugs from here, logged in
+// SHARED_CHANGES.md.
 // ---------------------------------------------------------------------------
 import React, { useId } from "react";
 import { random } from "remotion";
@@ -542,7 +544,100 @@ export const ManagerPeg: React.FC<{ x: number; y: number; size: number; k: numbe
   );
 };
 
-export type Manager = { sink?: number; shade?: number };
+// ---------------------------------------------------------------------------
+// THE MANAGER GLYPH (WORLD REV 3): the manager as a flat outline person glyph in the office mark's grammar
+// (Lucide "user": a head circle over a rounded shoulder block), drawn in the SAME 24-unit box, at the SAME
+// scale (MARK_H / 20 per unit) and the SAME stroke (2.6 units, butt caps, round joins, fill none, COLOR.inkDark)
+// as OfficeMark, so the two icons on the tile are one set. No shading, no rim, no shadow. It stands on the
+// mark's baseline, mirrored about the tile's centre (GLYPH_AT), in a slot line in the card at its feet: a
+// `sink` lowers it straight down behind that line (clipped there: it goes into the card, never fades).
+// `who` "first" = the manager; "second" = a visibly different person (a bob of hair framing a smaller face,
+// narrower shoulders), the same grammar and weight.
+// ---------------------------------------------------------------------------
+/** Glyph units -> world px (the office mark's scale: its 20-unit ink box is MARK_H tall). */
+export const GLYPH_SC = MARK_H / 20;
+/** The office mark's stroke, in glyph units (OfficeMark sw). */
+export const GLYPH_SW = 2.6;
+/** The manager glyph: centre x (mirrors MARK_BOX.cx about the tile's centre), its feet = the slot line (the
+ *  mark's baseline: the R's foot and the office mark's ground line), its 24-box scale. */
+export const GLYPH_AT = {
+  x: TILE_BOX.x + TILE_BOX.w - (MARK_BOX.cx - TILE_BOX.x),
+  y: MARK_BOX.cy + 10 * GLYPH_SC,
+  sc: GLYPH_SC,
+} as const;
+/** The glyph's foot in box units (the slot line) and its ink top (incl. half the stroke). */
+const G_FOOT = 22;
+const G_TOP = 1.2;
+export type ManagerWho = "first" | "second";
+/** The two people in 24-box units (foot at y 22, centre x 12). Strokes only, fill none. */
+const PERSON: Record<ManagerWho, { head: { cx: number; cy: number; r: number }; d: string[]; slotHalf: number }> = {
+  // Lucide "user", heavier: head r 4.4 at (12, 7); shoulders a rounded block x 4.3..19.7 from y 15.6 down into the slot
+  first: {
+    head: { cx: 12, cy: 6.9, r: 4.4 },
+    d: ["M4.3 22 V20.1 a4.5 4.5 0 0 1 4.5 -4.5 h6.4 a4.5 4.5 0 0 1 4.5 4.5 V22"],
+    slotHalf: 7.7,
+  },
+  // a different person: a smaller face inside a bob (a dome over the crown, straight sides falling to the jaw),
+  // narrower, rounder shoulders
+  second: {
+    head: { cx: 12, cy: 8.5, r: 3.9 },
+    d: ["M5.7 13.6 V8.5 a6.3 6.3 0 0 1 12.6 0 V13.6", "M5.9 22 V20.4 a3.8 3.8 0 0 1 3.8 -3.8 h4.6 a3.8 3.8 0 0 1 3.8 3.8 V22"],
+    slotHalf: 7.7,
+  },
+};
+/**
+ * ManagerGlyph — the manager in the office mark's ink grammar. (x, y) = its feet on the slot line (GLYPH_AT);
+ * `sink` SEAT..1 lowers it straight down behind the slot line (SEAT = standing, 1 = gone); `slot` draws the
+ * slot line (the card's joint, as PegSlot on cream) over its feet. CompanyTile draws the slot only when a manager moves (sink > SEAT):
+ * a manager who never moves (cut E) is a plain ink stamp like the R, no line under it.
+ */
+export const ManagerGlyph: React.FC<{ x?: number; y?: number; sc?: number; k: number; sink?: number; who?: ManagerWho; slot?: boolean; ground?: boolean }> = ({
+  x = GLYPH_AT.x,
+  y = GLYPH_AT.y,
+  sc = GLYPH_AT.sc,
+  k,
+  sink = SEAT,
+  who = "first",
+  slot = true,
+  ground = false,
+}) => {
+  const uid = uidOf(useId());
+  const p = PERSON[who];
+  const cut = ground ? y - (GLYPH_SW / 2) * sc : y; // the glyph goes behind the ground line's top edge
+  const s = clamp01((clamp01(sink) - SEAT) / (1 - SEAT));
+  const depth = s * (G_FOOT - G_TOP + 0.4) * sc;
+  const ox = x - 12 * sc;
+  const oy = y - G_FOOT * sc + depth;
+  const slotW = 2 * PERSON.first.slotHalf * sc + GLYPH_SW * sc + (2 * EDGE.SLOT_LIP) / k;
+  return (
+    <g>
+      {s < 0.999 ? (
+        <>
+          <defs>
+            <clipPath id={`${uid}c`}>
+              <rect x={f3(x - 20 * sc)} y={f3(cut - 40 * sc)} width={f3(40 * sc)} height={f3(40 * sc)} />
+            </clipPath>
+          </defs>
+          <g clipPath={`url(#${uid}c)`}>
+            <g transform={`translate(${fx(ox)} ${fx(oy)}) scale(${fx(sc)})`} fill="none" stroke={COLOR.inkDark} strokeWidth={GLYPH_SW} strokeLinecap="butt" strokeLinejoin="round">
+              <circle cx={p.head.cx} cy={p.head.cy} r={p.head.r} />
+              {p.d.map((d, i) => (
+                <path key={i} d={d} />
+              ))}
+            </g>
+          </g>
+        </>
+      ) : null}
+      {slot && ground ? (
+        <path d={`M${f3(x - (PERSON.first.slotHalf + GLYPH_SW / 2) * sc)} ${f3(y)}H${f3(x + (PERSON.first.slotHalf + GLYPH_SW / 2) * sc)}`} stroke={COLOR.inkDark} strokeWidth={f3(GLYPH_SW * sc)} strokeLinecap="butt" />
+      ) : slot ? (
+        <rect x={f3(x - slotW / 2)} y={f3(y - EDGE.SLOT / k / 2)} width={f3(slotW)} height={f3(EDGE.SLOT / k)} fill={COLOR.inkDark} fillOpacity={ALPHA.slot} />
+      ) : null}
+    </g>
+  );
+};
+
+export type Manager = { sink?: number; shade?: number; who?: ManagerWho };
 /**
  * CompanyTile — the company card (body only; its shadow is CompanyShadow): cream lit from above, its lit top
  * edge stopping at the stacks' slot (STACK_W 126 + lips, centred on x 540), the mark in ink on the left half
@@ -590,7 +685,7 @@ export const CompanyTile: React.FC<{ k: number; mark?: CompanyMark; managers?: M
         <OfficeMark cx={MARK_BOX.cx} cy={MARK_BOX.cy} h={MARK_H} />
       ) : null}
       {managers.map((m, i) => (
-        <ManagerPeg key={i} x={PEG_AT.x} y={PEG_AT.y} size={PEG_AT.size} k={k} sink={m.sink ?? SEAT} shade={m.shade ?? 0} slot={i === managers.length - 1} />
+        <ManagerGlyph key={i} k={k} sink={m.sink ?? SEAT} who={m.who ?? (m.shade ? "second" : "first")} slot={i === managers.length - 1 && managers.some((q) => (q.sink ?? SEAT) > SEAT)} />
       ))}
     </g>
   );
