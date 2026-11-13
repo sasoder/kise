@@ -397,9 +397,9 @@ export const OfficeChair: React.FC<{ floor: number }> = ({ floor }) => {
       {[-142, -51, 40].map((cx) => (
         <circle key={cx} cx={cx} cy={f3(floor - 13)} r={13} fill={mixHex(CHAIR, COLOR.shadow, 0.3)} />
       ))}
-      {/* the back on its post */}
-      <rect x={16} y={-100} width={12} height={120} rx={5} fill={METAL} />
-      <path d="M6 -176C6 -188 14 -194 26 -194L32 -194C42 -194 48 -186 46 -176L40 -104C38 -94 32 -90 24 -90L20 -90C12 -90 6 -96 6 -106Z" fill={`url(#${uid}c)`} />
+      {/* the back on its post: a low back, so it stays below and clear of a figure standing behind the chair */}
+      <rect x={16} y={-56} width={12} height={76} rx={5} fill={METAL} />
+      <path d="M6 -130C6 -142 14 -148 26 -148L32 -148C42 -148 48 -140 46 -130L40 -58C38 -48 32 -44 24 -44L20 -44C12 -44 6 -50 6 -60Z" fill={`url(#${uid}c)`} />
       {/* the seat cushion */}
       <path d="M-172 4C-172 -6 -164 -10 -154 -10L22 -10C34 -10 40 -2 40 8L40 20C40 28 34 32 26 32L-160 32C-168 32 -172 26 -172 18Z" fill={`url(#${uid}c)`} />
       <path d="M-162 -8L28 -8" stroke={topOf(CHAIR, 0.3)} strokeWidth={3} strokeLinecap="round" />

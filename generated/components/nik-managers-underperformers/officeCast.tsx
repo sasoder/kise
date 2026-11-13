@@ -86,7 +86,7 @@ export type FaceState = {
   /** the dot eye's offset (head-local px): where he looks */
   look?: P2;
   blink?: number;
-  mouth: "smile" | "flat" | "o" | "wobble";
+  mouth: "smile" | "flat" | "o" | "wobble" | "pucker";
   smile?: number;
 };
 const Head: React.FC<{ R: number; look: Look; face: FaceState; uid: string }> = ({ R, look, face, uid }) => {
@@ -94,9 +94,13 @@ const Head: React.FC<{ R: number; look: Look; face: FaceState; uid: string }> = 
   const closed = c01(face.closed);
   const blinkK = 1 - 0.85 * c01(face.blink ?? 0);
   const ink = mixHex(COLOR.inkDark, look.skin, 0.25);
-  const sm = c01(face.smile ?? 0);
+  // smile -0.3 (a tight down-turned line) .. 1 (a full smile)
+  const sm = Math.max(-0.3, Math.min(1, face.smile ?? 0));
   let mouth: React.ReactNode;
-  if (face.mouth === "o")
+  if (face.mouth === "pucker")
+    // a small closed pucker ("shh")
+    mouth = <ellipse cx={f3(-0.78 * R)} cy={f3(0.45 * R)} rx={f3(0.045 * R)} ry={f3(0.055 * R)} fill={mixHex(ink, look.skin, 0.3)} />;
+  else if (face.mouth === "o")
     mouth = <ellipse cx={f3(-0.74 * R)} cy={f3(0.48 * R)} rx={f3(0.075 * R)} ry={f3(0.1 * R)} fill={mixHex(COLOR.inkDark, look.skin, 0.2)} />;
   else if (face.mouth === "wobble")
     mouth = (
@@ -171,8 +175,9 @@ const Ramps: React.FC<{ uid: string; look: Look; R: number; torso: [number, numb
 
 /** a sleeve from the shoulder through the elbow to the wrist, and the hand */
 const Arm: React.FC<{ S: P2; E: P2; W: P2; sleeve: string; skin: string; far?: boolean; rolled?: boolean; noHand?: boolean }> = ({ S, E, W, sleeve, skin, far, rolled, noHand }) => {
-  const sl = far ? mixHex(sleeve, COLOR.shadow, 0.18) : sleeve;
-  const sk = far ? mixHex(skin, COLOR.shadow, 0.12) : mixHex(skin, COLOR.shadow, 0.06);
+  // the far limb: solid card, a clear step darker than the near one (never toward the wall tone, never see-through)
+  const sl = far ? footOf(sleeve) : sleeve;
+  const sk = far ? footOf(skin) : mixHex(skin, COLOR.shadow, 0.06);
   // rolled sleeves: the bare forearm, then the rolled cuff over the elbow (a fold a shade darker than the sleeve)
   const cuff: P2 = [E[0] + (W[0] - E[0]) * 0.16, E[1] + (W[1] - E[1]) * 0.16];
   return (
@@ -297,8 +302,8 @@ export const MGR = {
   /** hip to floor, standing */
   legs: 300,
   board: { w: 100, h: 134 },
-  /** his arms, a touch longer than the seated rig's, so with the board held up at his eyes the elbows hang forward and
-   *  low (the near upper arm runs under his chin, the forearms rise ahead of his face) */
+  /** his arms, a touch longer than the seated rig's, so with the board held up beside his face the elbows hang
+   *  forward and low (the near upper arm runs under his chin) */
   upper: 104,
   fore: 104,
   /** the far arm a little longer again, so its elbow tucks in beside the near one (it reads as a darker sleeve just
@@ -308,20 +313,21 @@ export const MGR = {
 export type ManagerPose = {
   lean: number;
   tilt: number;
-  /** the clipboard: centre (hip frame) and angle (deg, + = clockwise) */
-  board: { x: number; y: number; a: number };
-  nearHand: P2;
-  farHand: P2;
-  /** the hands' grip on the board: the near hand over its lower front corner, the far hand over its front edge
-   *  higher up (board-local points; the hands are drawn there, in front of the board, fingers wrapped over the edge) */
-  nearGrip: P2;
-  farGrip: P2;
+  /** the clipboard (when he holds one): centre (hip frame) and angle (deg, + = clockwise) */
+  board?: { x: number; y: number; a: number };
+  /** the hands (hip frame): where each sits, its angle, and which side its thumb is on (the thumb points toward what it
+   *  holds); the arms end there */
+  near: HandAt;
+  far: HandAt;
   closed: number;
   look: P2;
   mouth: FaceState["mouth"];
+  /** with mouth "smile": -0.3 tight .. 1 full */
+  smile?: number;
 };
+export type HandAt = { at: P2; a: number; thumb: 1 | -1; /** drawn behind his body (a far hand at his side) */ behind?: boolean };
 /** a point given in board-local coords (centre 0,0) -> the hip frame */
-export const boardToHip = (b: ManagerPose["board"], p: P2): P2 => {
+export const boardToHip = (b: NonNullable<ManagerPose["board"]>, p: P2): P2 => {
   const q = rot(p, b.a);
   return [b.x + q[0], b.y + q[1]];
 };
@@ -373,14 +379,15 @@ const Clipboard: React.FC<{ uid: string }> = ({ uid }) => {
   );
 };
 
-export const Manager: React.FC<{ x: number; y: number; s: number; look: Look; pose: ManagerPose }> = ({ x, y, s, look, pose }) => {
+/** `front`: drawn (hip frame) over the clipboard and under his near arm and hands, e.g. a sticker he holds or has stuck */
+export const Manager: React.FC<{ x: number; y: number; s: number; look: Look; pose: ManagerPose; front?: React.ReactNode }> = ({ x, y, s, look, pose, front }) => {
   const uid = uidOf(useId());
   const R = RIG.R * MGR.headK;
   const { lean, tilt } = pose;
   const S = rot(RIG.shoulder, lean);
   const FS = rot(RIG.farShoulder, lean);
-  const A = solveArm(S, pose.nearHand, MGR.upper, MGR.fore, -1);
-  const B = solveArm(FS, pose.farHand, MGR.farArm, MGR.farArm, -1);
+  const A = solveArm(S, pose.near.at, MGR.upper, MGR.fore, -1);
+  const B = solveArm(FS, pose.far.at, MGR.farArm, MGR.farArm, -1);
   const { head: headC } = managerEye(pose);
   const L = MGR.legs;
   const shoe = look.shoe ?? "#4A3326";
@@ -391,15 +398,15 @@ export const Manager: React.FC<{ x: number; y: number; s: number; look: Look; po
   );
   const shoeD = (x0: number) => `M${x0 - 34} ${L}C${x0 - 36} ${L - 20} ${x0 - 22} ${L - 32} ${x0 - 4} ${L - 32}L${x0 + 38} ${L - 32}C${x0 + 46} ${L - 32} ${x0 + 48} ${L - 24} ${x0 + 48} ${L - 14}L${x0 + 48} ${L}Z`;
   const shirt = look.top;
-  /** a hand gripping the board's edge: the back of the hand over the edge, the thumb on the board's face */
-  const grip = (p: P2, far: boolean, key: string) => {
-    const at = boardToHip(pose.board, p);
-    const sk = far ? mixHex(look.skin, COLOR.shadow, 0.12) : mixHex(look.skin, COLOR.shadow, 0.04);
-    const th = boardToHip(pose.board, [p[0] + (p[0] < 0 ? 11 : -11), p[1] - 4]);
+  /** a card hand: the back of the hand, and the thumb on the side of what it holds */
+  const hand = (h: HandAt, far: boolean, key: string) => {
+    const sk = far ? footOf(look.skin) : mixHex(look.skin, COLOR.shadow, 0.04);
+    const t = rot([h.thumb * 11, -4], h.a);
+    const th: P2 = [h.at[0] + t[0], h.at[1] + t[1]];
     return (
       <g key={key}>
-        <ellipse cx={f3(at[0])} cy={f3(at[1])} rx={13} ry={17} transform={`rotate(${f3(pose.board.a)} ${f3(at[0])} ${f3(at[1])})`} fill={sk} />
-        <ellipse cx={f3(th[0])} cy={f3(th[1])} rx={6.5} ry={9} transform={`rotate(${f3(pose.board.a + (p[0] < 0 ? 20 : -20))} ${f3(th[0])} ${f3(th[1])})`} fill={mixHex(sk, COLOR.shadow, 0.08)} />
+        <ellipse cx={f3(h.at[0])} cy={f3(h.at[1])} rx={13} ry={17} transform={`rotate(${f3(h.a)} ${f3(h.at[0])} ${f3(h.at[1])})`} fill={sk} />
+        <ellipse cx={f3(th[0])} cy={f3(th[1])} rx={6.5} ry={9} transform={`rotate(${f3(h.a + 20 * h.thumb)} ${f3(th[0])} ${f3(th[1])})`} fill={mixHex(sk, COLOR.shadow, 0.08)} />
       </g>
     );
   };
@@ -408,6 +415,7 @@ export const Manager: React.FC<{ x: number; y: number; s: number; look: Look; po
       <Ramps uid={uid} look={look} R={R} torso={[-215, 10]} legs={[-40, L]} />
       {/* the far arm (behind everything of his) */}
       <Arm S={FS} E={B.E} W={B.W} sleeve={look.top} skin={look.skin} far rolled={look.rolled} noHand />
+      {pose.far.behind ? hand(pose.far, true, "hfb") : null}
       {/* legs: the far one darker, then the near one; shoes pointing left */}
       {leg(-30, mixHex(look.pants, COLOR.shadow, 0.18), "fl")}
       <path d={shoeD(-30)} fill={mixHex(shoe, COLOR.shadow, 0.2)} />
@@ -421,16 +429,19 @@ export const Manager: React.FC<{ x: number; y: number; s: number; look: Look; po
         <path d="M-70 -197C-52 -187 -30 -187 -12 -199" stroke={footOf(look.top)} strokeWidth={5} fill="none" strokeLinecap="round" opacity={0.6} />
       </g>
       <g transform={`translate(${f3(headC[0])} ${f3(headC[1])}) rotate(${f3(lean + tilt)})`}>
-        <Head R={R} look={look} face={{ closed: pose.closed, mouth: pose.mouth, look: pose.look }} uid={uid} />
+        <Head R={R} look={look} face={{ closed: pose.closed, mouth: pose.mouth, smile: pose.smile, look: pose.look }} uid={uid} />
       </g>
-      {/* the clipboard (in front of his face when raised) */}
-      <g transform={`translate(${f3(pose.board.x)} ${f3(pose.board.y)}) rotate(${f3(pose.board.a)})`}>
-        <Clipboard uid={uid} />
-      </g>
-      {/* the near arm (in front of the board), then both hands, wrapped over the board's front edge */}
+      {/* the clipboard, when he holds one */}
+      {pose.board ? (
+        <g transform={`translate(${f3(pose.board.x)} ${f3(pose.board.y)}) rotate(${f3(pose.board.a)})`}>
+          <Clipboard uid={uid} />
+        </g>
+      ) : null}
+      {front}
+      {/* the near arm (in front of the board), then both hands */}
       <Arm S={S} E={A.E} W={A.W} sleeve={look.top} skin={look.skin} rolled={look.rolled} noHand />
-      {grip(pose.farGrip, true, "gf")}
-      {grip(pose.nearGrip, false, "gn")}
+      {pose.far.behind ? null : hand(pose.far, true, "hf")}
+      {hand(pose.near, false, "hn")}
     </g>
   );
 };
