@@ -30,7 +30,7 @@
 // the board's grammar for something above the card; on contact they join the scale's one union shadow.
 // Checked per frame (probe script): no two blocks overlap; each enters through the top edge inside the frame;
 // the pyramid clears the rods by >= 8 px; the low pan clears the foot by >= 22 px; pans < y 1052 incl. sway.
-// LABEL: "EXECUTION" (45 px, 1.5 x LABEL) in ink on the right pan's front face, rising out of the pan's lower
+// LABEL: none by default (the user, Nov 13: "we shouldn't write out execution"). Optional: "EXECUTION" (45 px) in ink on the right pan's front face, rising out of the pan's lower
 // edge f44 -> f56 (labels prop; "both" adds IDEA on the left pan by f10; "none").
 // CAMERA: k 1.38-1.41 on the bulb's pan (creeping in), out to the whole scale f10-36 (k 1), then a creep to
 // k ~1.01. The narrow foot dips into the top caption band during the opening close-up only (context, no detail).
@@ -69,7 +69,7 @@ export const DURATION = 74;
 export const schema = z.object({
   /** labels in ink on the pans' front faces, rising out of the pan's lower edge: EXECUTION lands on f56
    *  ("execution"), IDEA by f10. The bulb reads alone; the amber blocks need their name. */
-  labels: z.enum(["execution", "both", "none"]).default("execution"),
+  labels: z.enum(["execution", "both", "none"]).default("none"), // Nov 13: the user asked for no EXECUTION text
 });
 export const defaultProps = schema.parse({});
 
