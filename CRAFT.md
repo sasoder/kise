@@ -64,7 +64,17 @@ Numbers marked *hint* are starting points that worked once, not thresholds (prin
 
 ## Framing
 
-- The main focus sits at the true middle of the frame (y ≈ 960 of 1920). Action may range beyond it.
+- The main focus sits at the true middle of the frame (y ≈ 960 of 1920). Action may range beyond it. In a 9:16 clip
+  the safe zones below move that focus up to the middle of the keep-in box.
+- **Safe zones, 9:16 (1080x1920).** The clips are watched in TikTok / Reels / Shorts and the app covers the top and
+  the bottom: "the bottom fourth or bottom fifth, like that's not even really visible. And maybe the sixth top"
+  (user, Nov 13). Dead top **y 0–290**, dead bottom **y 1440–1920**, 65 px side margins, the right button column
+  x 955+ below y 900. With the caption bands this leaves the **keep-in box x 65–1015, y 290–1070**: the subject,
+  every mark, tile, numeral and word, every entrance and landing and the payoff sit wholly inside it on every frame
+  and camera state. y 1070–1440 takes only robust context (a line or track running on, stems, things passing in
+  motion, empty board). The dead zones still get picture (board, light, lines bleeding off): never letterbox. The
+  box is about 950 x 780, nearly square: design wide and compact from the first sketch (a ring as a 3 x 3 ellipse,
+  a loop as an arch over its tile, a chart with its axis at y ≈ 950) and fill it, focus around y 620–760.
 - **Caption bands.** Keep readable elements and important detail out of **y 1080–1250** and **y 1360–1460** of 1920
   (y 1270–1340 between them is tight; at another frame height keep the same proportions clear). A name tag is the one
   exception: it sits where `styles/name-tags.md` puts it. Check the bands along the whole camera path, not only at
