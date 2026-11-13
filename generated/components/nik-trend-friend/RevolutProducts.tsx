@@ -17,34 +17,49 @@
 //
 // THE MOTION: Revolut's real R on a cream hub tile, big, in the middle. The handle (f0..f76, t < 0) is the hub
 // alone under a very slow drift back that runs without a break into the cut's pull-back. From t0 eight product
-// tiles slide out from behind the hub tile, one after another, each along its own spoke to its seat on a tall
-// ring (round from the left, down through the bottom arc, up the right, across the top), trailing a cream stem,
-// while the camera pulls back in one long move (k 1.76 at t0 -> 1.02 at t88, still creeping). Each tile lights
-// its amber band from the frame it seats. From t73 the R sits ringed by eight products; nothing fades.
+// tiles slide out from behind the hub tile, one after another, each to its seat on a WIDE ring round the hub
+// (round from the left, down through the bottom arc, up the right, across the top), trailing a cream stem,
+// while the camera pulls back (k 1.65 at t0 -> 0.97 at t19, then easing into a creep: 0.872 at t88, still
+// moving). Each tile lights its amber band from the frame it seats. From t73 the R sits ringed by eight
+// products; nothing fades.
 // AMBER = "this one is working" (traction); cream = Revolut and its products; the board is everything else.
 //
+// SAFE ZONES (the user's note, Nov 13, round 3; COMMON.md): the hub and every tile, from its first visible
+// pixel, sit wholly inside the keep-in box (screen x 65-1015, y 290-1070; x <= 955 below y 900) on every frame,
+// sway included; nothing goes below y 1070, so the caption bands and the dead bottom are board and light only.
+// Ring (crossSellParts RP_RING, world px from the hub centre): card / savings at x -/+422 on the hub's height;
+// three across the top and three across the bottom at x 0, +/-305 (y -/+320 in the middle, -/+300 at the
+// corners). Resolved (t88): hub 262 px wide at (540, 680), R 153 px tall, tiles 183 px, ring x 81-999 by
+// y 310-1050, gaps tile-to-tile 78-83 px, tile-to-hub 44-57 px (146 at the sides).
+//
 // TILES (t; file frame = t + 77). leave = travel start, wholly behind the hub; out = first frame any of it
-// shows; seat = contact frame (travel ends); amber from seat + 1, a 10-frame tone step. Leaves ~8 frames apart:
-//   1 card       left          leave t-2  out t0   seat t19  (f75 / f77 / f96)
-//   2 exchange   bottom-left   leave t6   out t9   seat t35  (f83 / f86 / f112)
-//   3 stocks     bottom        leave t13  out t16  seat t41  (f90 / f93 / f118)
-//   4 crypto     bottom-right  leave t20  out t21  seat t47  (f97 / f98 / f124)
-//   5 savings    right         leave t27  out t29  seat t50  (f104 / f106 / f127)
-//   6 insurance  top-right     leave t37  out t39  seat t59  (f114 / f116 / f136)
-//   7 eSIM       top           leave t42  out t45  seat t64  (f119 / f122 / f141)
-//   8 stays      top-left      leave t52  out t55  seat t73  (f129 / f132 / f150)
-// The bottom tiles travel longest (24-29 frames, the long spokes under the caption hole); up to four are in
-// flight at once around t20. Each tile reads as arrived ~70 % into its window (restToRest's long landing).
-// Insurance and stays run their vertical ahead (riseLead) so they clear the seated side tile's corner. Each
-// tile is lifted one elevation while it travels (museShared travel) and settles over its last 30 %; its shadow
-// grows with the share of it outside the hub (a hidden tile casts nothing). No product shows before t0.
-// CAMERA: x and k on the house clock (makeClockCam, file frames); y from k with the hub's lower edge pinned at
-// screen y 1060 (the pull-back is anchored there; no tilt). Handle: k 1.93 -> 1.76 under 0.5 px/f until ~f62,
-// then the pull-back accelerates into t0 (peak ~t10) and decelerates into a creep to the last frame. A lean
-// left with the card (f68-98), back to centre as the right fills (f98-136).
-// Per-frame check (scratch sim): no seated tile in the caption bands or out of frame, no tile out of frame
-// while travelling, no mover over a seated tile or over another mover (beyond rounded-corner grazes),
-// tile screen speed <= 54 px/f.
+// shows; whole = first frame wholly out from behind the hub; seat = contact frame (travel ends); amber from
+// seat + 1, a 10-frame tone step:
+//   1 card       left          leave t-2  out t0   whole t8   seat t19  (f75 / f77 / f85 / f96)
+//   2 exchange   bottom-left   leave t6   out t8   whole t16  seat t35  (f83 / f85 / f93 / f112)
+//   3 stocks     bottom        leave t13  out t17  whole t31  seat t41  (f90 / f94 / f108 / f118)
+//   4 crypto     bottom-right  leave t20  out t22  whole t27  seat t47  (f97 / f99 / f104 / f124)
+//   5 savings    right         leave t28  out t30  whole t39  seat t50  (f105 / f107 / f116 / f127)
+//   6 insurance  top-right     leave t37  out t39  whole t45  seat t59  (f114 / f116 / f122 / f136)
+//   7 eSIM       top           leave t42  out t45  whole t56  seat t64  (f119 / f122 / f133 / f141)
+//   8 stays      top-left      leave t52  out t55  whole t66  seat t73  (f129 / f132 / f143 / f150)
+// Each tile reads as arrived ~70 % into its window (restToRest's long landing). The neighbours sit closer than a
+// tile's width, so each corner tile takes its own way out: exchange and insurance run their vertical ahead
+// (riseLead), clear of the seated card / savings; crypto runs its horizontal ahead (lead < 0), clear of stocks;
+// stays, the last, threads the one gap between the seated card and eSIM (a vertical leg 212 left of the hub
+// centre, then into its seat). Each tile is lifted one elevation while it travels (museShared travel) and
+// settles over its last 30 %; its shadow grows with the share of it outside the hub (a hidden tile casts
+// nothing). No product shows before t0.
+// CAMERA: x and k on the house clock (makeClockCam, file frames); y from k with the hub's centre pinned at
+// screen y 680, the middle of the keep-in box (no tilt). Handle: k 1.96 -> 1.90 (hub width -0.26 px/f) to
+// ~f64, then the pull-back accelerates into t0 (peak -13.8 px/f of hub width at ~t1) and has settled by t25
+// into the creep (-0.1 -> -0.21 px/f, still moving at t88). The card's seat (t19) is the ring's widest point,
+// so the camera has to be near the resolved scale by then. A lean toward the card (hub centre x 540 at f60 ->
+// 622 at t12 -> 540 by t45). camCheck: max screen speed 22.3 px/f, max |dv| 1.94 px/f^2.
+// Per-frame check (scratch sim, real parts module): keep-in excess 0 px on every frame (+/-3/5 px sway), the
+// hub in the box f0..f165; visible overlap between two tiles at most ~320 screen px^2 (an ~18 px corner
+// graze, crypto/savings t33-34, both in flight; the rest <= 100); no seated tile touched; tile screen speed
+// <= 37 px/f (was 54).
 //
 // SOURCES: the Revolut "R" (generated/components/nik-trend-friend/revolutMark.ts, from
 // commons.wikimedia.org/wiki/File:Revolut_logo.svg). The eight products are real Revolut products, per

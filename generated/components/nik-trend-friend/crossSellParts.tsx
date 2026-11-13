@@ -116,7 +116,15 @@ const pathPoint = (s: Seat, e: number): [number, number] => {
 export const AMBER_F = 10;
 /** A product's state on frame f: its centre, its lift, its seat progress, its amber, its share outside the hub. */
 export const productAt = (s: Seat, f: number) => {
-  const t = travel({ x: s.sx, y: s.sy }, { x: s.x, y: s.y }, f, s.f0, s.f1, { p: 2.5, settleFrom: 0.7, riseLead: s.lead });
+  // lead > 0: the vertical runs ahead; lead < 0 (RevolutProducts' corner seats): the HORIZONTAL runs ahead
+  // (the same travel with x and y swapped), so a corner tile swings out sideways clear of the middle tile
+  const t =
+    s.lead < 0
+      ? (() => {
+          const q = travel({ x: s.sy, y: s.sx }, { x: s.y, y: s.x }, f, s.f0, s.f1, { p: 2.5, settleFrom: 0.7, riseLead: -s.lead });
+          return { ...q, x: q.y, y: q.x };
+        })()
+      : travel({ x: s.sx, y: s.sy }, { x: s.x, y: s.y }, f, s.f0, s.f1, { p: 2.5, settleFrom: 0.7, riseLead: s.lead });
   if (s.via) {
     // a threaded path: the same eased progress, walked by arc length along the rounded polyline
     const q = pathPoint(s, (t.x - s.sx) / (s.x - s.sx));
@@ -402,7 +410,7 @@ export { lerp };
 // All timings below are in t = file frame - RP_LEAD (the user's in-point plays file frame 77).
 // ===========================================================================
 export const RP_LEAD = 77;
-/** The R's height on the hub tile (world px): ~300 screen px at t0, >= 150 in the resolved frame. */
+/** The R's height on the hub tile (world px): ~290 screen px at t0, >= 150 in the resolved frame. */
 export const RP_R_H = 176;
 /** A product seat whose start sits wholly behind the hub tile, as far toward its seat as it can (startFor):
  *  it shows its first edge a frame or two after it leaves, at rest, so it slides out from behind. */
@@ -418,39 +426,50 @@ const rpSeat = (kind: Kind, x: number, y: number, f0: number, f1: number, lead =
   lead,
   via,
 });
-/** Round the ring from the left, down through the bottom arc, up the right, across the top (f0 / f1 in t). */
+/** SAFE ZONES (Nov 13, round 3): a WIDE ring round the hub, all of it inside the keep-in box (screen x 65-1015,
+ *  y 290-1070; x <= 955 below y 900): the card and savings at the hub's height, three across the top, three
+ *  across the bottom (offsets from the hub centre, world px). Seated round the ring from the left, down through
+ *  the bottom arc, up the right, across the top (f0 / f1 in t). */
+export const RP_RING = { side: 422, cornerX: 305, cornerY: 300, midY: 320 } as const;
+const { side: RS, cornerX: RCX, cornerY: RCY, midY: RMY } = RP_RING;
+/** The one gap between the seated card and eSIM: a tile centred 212 left of the hub clears both (422 - PT >= 212 >= PT). */
+const RP_GATE_X = RS - PT;
 export const RP_SEATS: Seat[] = [
-  rpSeat("creditCard", 215, 900, -2, 19), // 1 card, left
-  rpSeat("exchange", 245, 1590, 6, 35), // 2 bottom-left
-  rpSeat("stocks", 540, 1640, 13, 41), // 3 bottom
-  rpSeat("crypto", 835, 1590, 20, 47), // 4 bottom-right
-  rpSeat("savings", 865, 900, 27, 50), // 5 right
-  rpSeat("insurance", 845, 505, 37, 59, 0.7), // 6 top-right
-  rpSeat("esim", 540, 400, 42, 64), // 7 top
-  rpSeat("stays", 235, 505, 52, 73, 0.15), // 8 top-left
+  rpSeat("creditCard", HUB.x - RS, HUB.y, -2, 19), // 1 card, left
+  rpSeat("exchange", HUB.x - RCX, HUB.y + RCY, 6, 35, 1.0), // 2 bottom-left: down first, clear of the card
+  rpSeat("stocks", HUB.x, HUB.y + RMY, 13, 41), // 3 bottom
+  rpSeat("crypto", HUB.x + RCX, HUB.y + RCY, 20, 47, -1.6), // 4 bottom-right: sideways first, clear of stocks
+  rpSeat("savings", HUB.x + RS, HUB.y, 28, 50), // 5 right
+  rpSeat("insurance", HUB.x + RCX, HUB.y - RCY, 37, 59, 0.9), // 6 top-right: up first, clear of savings
+  rpSeat("esim", HUB.x, HUB.y - RMY, 42, 64), // 7 top
+  // 8 top-left: the last tile threads the one gap between the seated card and eSIM (a vertical leg at x -212)
+  rpSeat("stays", HUB.x - RCX, HUB.y - RCY, 52, 73, 0, [
+    [HUB.x - RP_GATE_X, HUB.y - 60],
+    [HUB.x - RP_GATE_X, HUB.y - 250],
+  ]),
 ];
 
-/** The hub's lower edge sits at screen y 1060 in every frame (above the caption band 1080): the pull-back is
- *  anchored there, so the hub only grows down-to-up and the bottom arc lands inside the frame (no tilt). */
-export const RP_HUB_FOOT_SY = 1060;
+/** The hub's centre sits at screen y RP_HUB_SY in every frame (the middle of the keep-in box): the pull-back
+ *  is anchored there, so the ring grows evenly up and down (no tilt). */
+export const RP_HUB_SY = 680;
 const RP_CAMXK = makeClockCam(
-  { x: 540, y: 0, k: 1.98 },
+  { x: 540, y: 0, k: 2.0 },
   [
-    { f0: -80, f1: 120, k: 1.82 }, // the handle's very slow drift back (under 0.5 px/f at the hub's edge)
-    { f0: 66, f1: 128, k: 1.16, warp: 0.75 }, // the long pull-back: fastest while the first tiles fly out
-    { f0: 60, f1: 270, k: 0.88 }, // under it, the creep that carries on to the last frame
-    { f0: 68, f1: 98, dx: -90 }, // lean toward the card
-    { f0: 98, f1: 136, dx: 90 }, // and back to centre as the right side fills
+    { f0: -80, f1: 120, k: 1.88 }, // the handle's very slow drift back
+    { f0: 66, f1: 98, k: 0.9, warp: 0.85 }, // the pull-back: fastest as the card comes out (peak ~t1), near the resolved scale by its seat (t19)
+    { f0: 96, f1: 260, k: 0.82 }, // easing on into the creep that carries on to the last frame
+    { f0: 60, f1: 90, dx: -80 }, // lean toward the card
+    { f0: 90, f1: 114, dx: 80 }, // and back to centre as the right side fills
   ],
   166,
 );
 /** The camera on FILE frame F (x, k on the house clock; y from k). */
 export const rpCamAt = (F: number): Cam => {
   const c = RP_CAMXK.at(F);
-  return { x: c.x, y: HUB_RECT.y1 - (RP_HUB_FOOT_SY - 960) / c.k, k: c.k };
+  return { x: c.x, y: HUB.y - (RP_HUB_SY - 960) / c.k, k: c.k };
 };
 export const RP_CAM_REST: Cam = rpCamAt(0);
-export const rpPoolAt = (t: number) => ({ x: HUB.x, y: HUB.y + 120 * smoothstep((t - 10) / 70), strength: 1.6 });
+export const rpPoolAt = (t: number) => ({ x: HUB.x, y: HUB.y + 30 * smoothstep((t - 10) / 70), strength: 1.6 });
 
 /**
  * RevolutHub — the hub: a square cream card tile with Revolut's real R stamped large in ink (never recoloured),
