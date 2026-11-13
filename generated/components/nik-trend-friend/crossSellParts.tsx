@@ -35,7 +35,7 @@ export const BAND = 0.2;
 /** The cream stem: world width. */
 export const STEM_W = 7;
 
-export type GlyphId = "exchange" | "stocks" | "crypto" | "savings" | "insurance" | "esim" | "stays";
+export type GlyphId = "exchange" | "stocks" | "crypto" | "savings" | "insurance" | "esim" | "stays" | "creditCard";
 export type Kind = "card" | GlyphId;
 export type Seat = {
   kind: Kind;
@@ -153,7 +153,7 @@ const CAMXK = makeClockCam(
   [
     { f0: -24, f1: 150, k: 0.975, warp: 0.72 }, // the one long pull-back
     { f0: -16, f1: 36, dx: -96 }, // lean left with the card
-    { f0: 30, f1: 118, dx: 156 }, // then centre the ring as it closes round the right
+    { f0: 98, f1: 136, dx: 90 }, // then centre the ring as it closes round the right
   ],
   166,
 );
@@ -216,6 +216,8 @@ const GLYPHS: Record<GlyphId, { els: GEl[]; dx?: number; dy?: number }> = {
   },
   // Lucide "bed-double" (stays)
   stays: { els: ["M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8", "M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4", "M12 4v6", "M2 18h20"] },
+  // Lucide "credit-card": the rounded card and its stripe (RevolutProducts: the card is an ordinary product tile)
+  creditCard: { els: ["M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z", "M2 10h20"] },
 };
 /** A glyph in a square of `size` centred on (cx, cy), at the set's one weight. */
 export const ProductGlyph: React.FC<{ id: GlyphId; cx: number; cy: number; size: number; color?: string }> = ({ id, cx, cy, size, color = KNOCK }) => {
@@ -393,3 +395,91 @@ export const Customer: React.FC<{ k: number; warm: number; band: [number, number
 
 /** Lerp helper re-exported for the cut. */
 export { lerp };
+
+// ===========================================================================
+// REVOLUT PRODUCTS (RevolutProducts, Nov 13): Revolut's R at the hub, eight product tiles out of it.
+// The same world (HUB, PT, BAND, STEM_W, Product, Stem, productAt); new seats, timings, camera and the hub tile.
+// All timings below are in t = file frame - RP_LEAD (the user's in-point plays file frame 77).
+// ===========================================================================
+export const RP_LEAD = 77;
+/** The R's height on the hub tile (world px): ~300 screen px at t0, >= 150 in the resolved frame. */
+export const RP_R_H = 176;
+/** A product seat whose start sits wholly behind the hub tile, as far toward its seat as it can (startFor):
+ *  it shows its first edge a frame or two after it leaves, at rest, so it slides out from behind. */
+const rpSeat = (kind: Kind, x: number, y: number, f0: number, f1: number, lead = 0, via?: [number, number][]): Seat => ({
+  kind,
+  x,
+  y,
+  w: PT,
+  h: PT,
+  ...startFor(x, y, PT, PT),
+  f0,
+  f1,
+  lead,
+  via,
+});
+/** Round the ring from the left, down through the bottom arc, up the right, across the top (f0 / f1 in t). */
+export const RP_SEATS: Seat[] = [
+  rpSeat("creditCard", 215, 900, -2, 19), // 1 card, left
+  rpSeat("exchange", 245, 1590, 6, 35), // 2 bottom-left
+  rpSeat("stocks", 540, 1640, 13, 41), // 3 bottom
+  rpSeat("crypto", 835, 1590, 20, 47), // 4 bottom-right
+  rpSeat("savings", 865, 900, 27, 50), // 5 right
+  rpSeat("insurance", 845, 505, 37, 59, 0.7), // 6 top-right
+  rpSeat("esim", 540, 400, 42, 64), // 7 top
+  rpSeat("stays", 235, 505, 52, 73, 0.15), // 8 top-left
+];
+
+/** The hub's lower edge sits at screen y 1060 in every frame (above the caption band 1080): the pull-back is
+ *  anchored there, so the hub only grows down-to-up and the bottom arc lands inside the frame (no tilt). */
+export const RP_HUB_FOOT_SY = 1060;
+const RP_CAMXK = makeClockCam(
+  { x: 540, y: 0, k: 1.98 },
+  [
+    { f0: -80, f1: 120, k: 1.82 }, // the handle's very slow drift back (under 0.5 px/f at the hub's edge)
+    { f0: 66, f1: 128, k: 1.16, warp: 0.75 }, // the long pull-back: fastest while the first tiles fly out
+    { f0: 60, f1: 270, k: 0.88 }, // under it, the creep that carries on to the last frame
+    { f0: 68, f1: 98, dx: -90 }, // lean toward the card
+    { f0: 98, f1: 136, dx: 90 }, // and back to centre as the right side fills
+  ],
+  166,
+);
+/** The camera on FILE frame F (x, k on the house clock; y from k). */
+export const rpCamAt = (F: number): Cam => {
+  const c = RP_CAMXK.at(F);
+  return { x: c.x, y: HUB_RECT.y1 - (RP_HUB_FOOT_SY - 960) / c.k, k: c.k };
+};
+export const RP_CAM_REST: Cam = rpCamAt(0);
+export const rpPoolAt = (t: number) => ({ x: HUB.x, y: HUB.y + 120 * smoothstep((t - 10) / 70), strength: 1.6 });
+
+/**
+ * RevolutHub — the hub: a square cream card tile with Revolut's real R stamped large in ink (never recoloured),
+ * on its one rest shadow. It stays cream to the last frame.
+ */
+export const RevolutHub: React.FC<{ k: number }> = ({ k }) => {
+  const uid = uidOf(useId());
+  const { x, y, T } = HUB;
+  const x0 = x - T / 2;
+  const y0 = y - T / 2;
+  const r = 10;
+  const d = rectPath(x0, y0, T, T, r);
+  const rs = RP_R_H / REVOLUT_R_BOX.h;
+  const rw = REVOLUT_R_BOX.w * rs;
+  // optical centre: the R's bowl is heavy at the top-right, so it sits a touch right of the box centre
+  const rx = x - rw / 2 + 3;
+  const ry = y - RP_R_H / 2;
+  return (
+    <g>
+      <defs>
+        <linearGradient id={`${uid}g`} gradientUnits="userSpaceOnUse" x1="0" y1={f3(y0)} x2="0" y2={f3(y0 + T)}>
+          <stop offset="0" stopColor={COLOR.cream} />
+          <stop offset="1" stopColor={COLOR.creamFoot} />
+        </linearGradient>
+      </defs>
+      <UnionShadow sil={[{ d }]} s={T / TILE} elevation="rest" />
+      <path d={d} fill={`url(#${uid}g)`} />
+      <path d={`M${f3(x0 + r)} ${f3(y0 + EDGE.CREAM / k / 2)}H${f3(x0 + T - r)}`} stroke={COLOR.edge} strokeOpacity={f3(ALPHA.edge)} strokeWidth={f3(EDGE.CREAM / k)} />
+      <path d={REVOLUT_R_D} fillRule="evenodd" fill={KNOCK} transform={`translate(${fx(rx)} ${fx(ry)}) scale(${fx(rs)})`} />
+    </g>
+  );
+};
