@@ -9,52 +9,54 @@
 // account 109 · where 119.
 // DURATION: the slot 21.813 -> 26.818 s = 5.005 s x 23.976 = 120 frames (f0..f119).
 //
-// THE MOTION: Revolut's plan ladder, four real bank cards fanned as a rising stair (Standard at the bottom,
-// Plus, Premium, Metal on top), the camera already gliding up it toward Metal while easing back (k 1.9 -> 1.65,
-// f0-30: in 9:16 the height binds at Ultra's apex). The deck makes room (it nudges down and opens its steps,
-// f12-28) while the platinum ULTRA card rises out from behind Metal, clears it (lifted, f25) and arcs over onto the
-// top step, in front, touching down ON "Ultra" (f34); its amber edge glow comes up with the landing (f31-37). Then ONE
-// push-in on the Ultra card (f24-106, "effectively Ultra ... bank account") to ~860 px wide at screen y ~700,
-// with a slow 3D tilt lifting it off the deck; the old plans dim but stay readable (f34-62, ~40 %), sink (f62-82) before
-// the tuck (f44-100) closes over their names, Metal's name still reading under Ultra above the caption band. The one click: the light sweep
-// across its platinum on "bank" (f81-93). f104-119 the push, the tilt and the sheen creep on.
-//   Ultra cause chain: hidden exactly behind Metal f0-12 (no sliver) -> rises f10-25 -> its bottom edge 8 px
-//   clear of Metal's top edge at f24-25, only then it moves over and passes in front -> touches down f34.
-// CAPTION BANDS: Standard's name stays above y 1080 through f30 (~1000-1060); from f34 the lower names sink by
-// tone as the push carries them down; at rest only Metal's name (y ~1030) and plain card edges remain below Ultra.
+// THE MOTION (rev 3: the cards look like the real Revolut cards, portrait, the wordmark down the right edge, plan
+// names as a LEGEND beside them): Revolut's plan ladder, four portrait cards fanned as a rising stair (Standard at
+// the bottom, Plus, Premium, Metal on top), the STANDARD / PLUS / PREMIUM / METAL legend to the left, each label level
+// with its card's step. The camera eases back and right (k 1.9 -> 1.56, f0-26) as the deck makes room (it nudges
+// down and opens its steps, f10-26) and the platinum ULTRA card swings out sideways from behind Metal (f8-34, one
+// continuous arc: out to the right, clear of Metal's right edge at f21 where it passes in front, then back and up
+// onto the top step), touching down ON "Ultra" (f34); its amber edge glow comes up with the landing (f31-37) and the
+// ULTRA label enters at the top of the legend (f31-43). Then ONE push-in on the Ultra card (f22-106, "effectively
+// Ultra ... bank account") to k ~2.27, with a slow 3D tilt lifting it off the deck; the lower plans and their labels
+// dim but stay readable (f34-52 to ~40 %), sink the rest of the way (f58-76) while the tuck (f34-100) closes their
+// steps to thin edges under Metal; METAL's label stays (dim 0.4) beside the end. The one click: the light sweep
+// across Ultra's platinum on "bank" (f81-93). f104-119 the push, the tilt and the sheen creep on.
+// FRAMING: every frame's content inside x ~85-1060 and above y 1060 (the stack's lower edge peaks ~1057).
 // AMBER = what makes an idea work / gets backed: here the Ultra card's edge glow. Cream/board = the plans.
 //
 // SOURCES: Revolut's personal plans, bottom to top Standard, Plus, Premium, Metal, Ultra (revolut.com plans
 // pages; Ultra launched 16 June 2023 as the new top tier, its card platinum-plated). No prices on screen (Nik's
-// "50 euros" is approximate; Revolut lists EUR 55-70 by country). The "R" mark: nik-trend-friend/revolutMark.ts
-// (Wikimedia Commons, Revolut_logo.svg, public-domain text logo). Card proportions: ISO/IEC 7810 ID-1.
+// "50 euros" is approximate; Revolut lists EUR 55-70 by country). Card look read off Revolut's official card photos
+// in the clip's images/ folder (16.8a/b/d, 20.2d, 23.2b). The wordmark: ./revolutWordmark.ts, Wikimedia Commons
+// https://commons.wikimedia.org/wiki/File:Revolut_logo.svg (public-domain text logo). Card proportions: ISO/IEC
+// 7810 ID-1 (54 x 85.6 mm, r 3.18 mm).
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { ElevationShadow, StoutStage, clamp01, lerp, smoothstep } from "../kits/cheeky-pint/stoutShared";
 import { makeClockCam } from "../kits/cheeky-pint/museShared";
-import { CARD, PLANS, PlanCard, UltraCard, cardH, cardSilhouette, type PlanId, type Tilt } from "./ultraCards";
+import { CARD, PLANS, PLAN_NAME, PlanCard, PlanLabel, ULTRA_B_END, UltraCard, cardH, cardSilhouette, type PlanId, type Tilt } from "./ultraCards";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 120;
 export const schema = z.object({
-  /** Measurement only: the five cards flat in a column (the ultraCards probe). */
+  /** Measurement only: the five cards flat (the ultraCards probe). */
   probe: z.boolean().default(false),
 });
 export const defaultProps = schema.parse({});
 
-// --- the world -------------------------------------------------------------------------------------------
+// --- the world (rev 3: portrait cards, W 200 x H 317) -------------------------------------------------------
 const W = CARD.W;
 const H = cardH(W);
 const CX = 540;
-const DX = 22; // the stair's step to the right
+const DX = 20; // the stair's step to the right
 const Y0 = 1100; // Standard's centre at f0
-const STEP0 = 54; // the deck's step at f0 (each lower card shows its name strip)
-const STEP1 = 58; // the opened step
-const NUDGE = 20; // the deck nudges down as it makes room
+const STEP0 = 48; // the deck's step at f0 (each lower card shows a strip)
+const STEP1 = 54; // the opened step
+const NUDGE = 14; // the deck nudges down as it makes room
 const DECK: PlanId[] = ["standard", "plus", "premium", "metal"];
-const ROOM = { f0: 12, f1: 28 } as const; // the deck makes room
+const ROOM = { f0: 10, f1: 26 } as const; // the deck makes room
 const roomE = (f: number) => smoothstep((f - ROOM.f0) / (ROOM.f1 - ROOM.f0));
 /** The stair before it tucks in (Premium at the centre; Ultra, i 4, one step right of Metal). */
 const baseX = (i: number) => CX + (i - 2) * DX;
@@ -62,44 +64,46 @@ const baseY = (i: number, f: number) => {
   const e = roomE(f);
   return Y0 + NUDGE * e - i * lerp(STEP0, STEP1, e);
 };
-// Under the push-in the old plans tuck in beneath Ultra as they recede (f44-100): the stair straightens
+// Under the push-in the old plans tuck in beneath Ultra as they recede (f34-100): the stair straightens
 // (DX -> TUCK_DX, about Ultra's x) and the three lower plans close up to thin edges under Metal.
-const TUCK = { f0: 44, f1: 100 } as const;
+const TUCK = { f0: 34, f1: 100 } as const;
 const TUCK_DX = 6;
-const TUCK_STEP = 30;
+const TUCK_STEP = 12;
 const tuckE = (f: number) => smoothstep((f - TUCK.f0) / (TUCK.f1 - TUCK.f0));
-const xOf = (i: number, f = 0) => baseX(4) - (4 - i) * lerp(DX, TUCK_DX, tuckE(f));
+const dxAt = (f: number) => lerp(DX, TUCK_DX, tuckE(f));
+const xOf = (i: number, f = 0) => baseX(4) - (4 - i) * dxAt(f);
 const yOf = (i: number, f: number) => baseY(i, f) - (i < 3 ? (3 - i) * (STEP1 - TUCK_STEP) * tuckE(f) : 0);
 const Y_METAL_END = yOf(3, 999);
 const ULTRA_X = xOf(4);
 const ULTRA_Y = Y_METAL_END - STEP1; // the top step
 
-// --- Ultra's path: up from behind Metal, clear, then laid on the top step ---------------------------------
-// rev 2 (blind review): no stop at the apex (the arc's sideways move runs through it) and the touch-down ON "Ultra":
-// up f10-25, over the top f24-33, set down f25-34 (settled f34).
-const UP = { f0: 10, f1: 25 } as const;
-const DOWN = { f0: 25, f1: 34 } as const;
-const OVER = { f0: 24, f1: 33 } as const; // the sideways move onto the top step (starts once it is clear of Metal's top)
-const LIFT_SCALE = 0.04; // lifted toward the camera at the apex
-const APEX = Y_METAL_END - H / 2 - (H * (1 + LIFT_SCALE)) / 2 - 8; // its bottom edge 8 px above Metal's top edge
+// --- Ultra's path: out from behind Metal to the right, clear, and back onto the top step -------------------
+// One eased parameter s (f8 -> f34, rest to rest): x swings out XOUT and back (a sine), y rises one step with a
+// small extra lift. Its left edge clears Metal's right edge for s 0.45-0.55: it passes in front at f21 (s 0.5),
+// never overlapping. Settled on "Ultra" (f34). No stop on the way: x and y never both rest before f34.
+const ARC = { f0: 8, f1: 34 } as const;
+const XOUT = 200;
+const LIFT_SCALE = 0.04; // lifted toward the camera mid-swing
+const F_FRONT = 21;
 const ultraAt = (f: number) => {
-  const up = smoothstep((f - UP.f0) / (UP.f1 - UP.f0));
-  const down = smoothstep((f - DOWN.f0) / (DOWN.f1 - DOWN.f0));
-  const front = f >= DOWN.f0;
-  const y = !front ? lerp(yOf(3, f), APEX, up) : lerp(APEX, ULTRA_Y, down);
-  // lifted while it travels over, set down on landing
-  const lift = smoothstep((f - (UP.f0 + 5)) / 9) * (1 - smoothstep((f - (DOWN.f0 + 1)) / (DOWN.f1 - DOWN.f0 - 1)));
-  const x = lerp(xOf(3), ULTRA_X, smoothstep((f - OVER.f0) / (OVER.f1 - OVER.f0)));
-  return { x, y, lift, front };
+  const s = smoothstep((f - ARC.f0) / (ARC.f1 - ARC.f0));
+  const arc = Math.sin(Math.PI * s);
+  const x = lerp(xOf(3), ULTRA_X, s) + XOUT * arc;
+  const y = lerp(yOf(3, f), ULTRA_Y, s) - 24 * arc;
+  return { x, y, lift: arc, front: f >= F_FRONT };
 };
+// assert the pass in front is clean (the left edge clear of Metal's right edge on the switch frame)
+{
+  const u = ultraAt(F_FRONT);
+  const gap = u.x - (W * (1 + LIFT_SCALE * u.lift)) / 2 - (xOf(3) + W / 2);
+  if (gap < 2) throw new Error(`UltraOnTop: Ultra not clear of Metal at f${F_FRONT} (gap ${gap})`);
+}
 const GLOW = { f0: 31, f1: 37 } as const; // half on at the touch-down (f34)
-// the lower plans recede as the push brings them toward the caption bands (names sunk by f64); Metal only half,
-// its name still reading under Ultra to the end
-// rev 2: the lower three HOLD dimly readable (dim 0.6: ink ~40 % of its contrast) through the collapse, and sink
-// the rest of the way (f62-82) before the tuck closes over their names; Metal 0.4. The end state is unchanged.
+// The lower three HOLD dimly readable (dim 0.6: ~40 % of their value) through the collapse, and sink the rest of the
+// way (f58-76) before the tuck closes their steps; Metal 0.4 (its label still reads under Ultra to the end).
 const dimAt = (p: PlanId, f: number) =>
-  p === "metal" ? 0.4 * smoothstep((f - 34) / 30) : 0.6 * smoothstep((f - 34) / 18) + 0.4 * smoothstep((f - 62) / 20);
-const SWEEP = { f0: 81, f1: 93 } as const; // rev 2: enters the card on "bank" (f82), across in 12 f
+  p === "metal" ? 0.4 * smoothstep((f - 34) / 30) : 0.6 * smoothstep((f - 34) / 18) + 0.4 * smoothstep((f - 58) / 18);
+const SWEEP = { f0: 81, f1: 93 } as const; // enters the card on "bank" (f82), across in 12 f
 /** The slow 3D tilt (radians): from flat on the deck, a turn that lifts it off and keeps creeping. */
 const tiltAt = (f: number): Tilt => {
   const e = smoothstep((f - 40) / 72);
@@ -108,34 +112,71 @@ const tiltAt = (f: number): Tilt => {
 };
 const tiltLift = (f: number) => smoothstep((f - 40) / 40) * 0.6;
 
+// --- the labels: a legend column left of the stair, each level with its card's visible step ----------------
+const LABEL_PX = 36; // SCREEN px (TYPE.LABEL 30 is too small to read beside a card on a phone)
+const LABEL_GAP = 14; // SCREEN px from the stair's left edge
+const ULTRA_IN = { f0: 31, f1: 43 } as const; // ULTRA's label enters as the card lands
+/** World y of a plan's label baseline: the middle of its step's strip (the card's lower edge minus half a step). */
+const labelY = (i: number, f: number, k: number) => {
+  const yi = i === 4 ? ULTRA_Y : yOf(i, f);
+  const step = i === 4 || i === 3 ? STEP1 : yOf(i, f) - yOf(i + 1, f);
+  return yi + H / 2 - step / 2 + (0.718 * LABEL_PX) / k / 2;
+};
+
 // --- the camera (look = the frame's centre) ---------------------------------------------------------------
-// f0: the 4-card deck at k 1.9 (~68 % of the width), Standard's name above the caption band (~y 1000).
-// To f26 it glides up toward Metal while easing back (k 1.65) so Ultra's apex (top edge ~y 130) and Standard's name both stay
-// in clear frame: in 9:16 the height binds. Then ONE push-in on Ultra: ~860 px wide, centred ~y 700 by f106 so
-// Metal's name still reads just under it, above the band; the creep carries on to the last frame.
+// f0: the 4-card stair + legend at k 1.9, Standard's lower edge at y ~1050. f21: eased back to k 1.56 and right so
+// Ultra's swing out (right edge ~world 874) and the legend both stay in frame, everything above y 1060. Then ONE
+// push-in on Ultra to k ~2.27: Ultra + the tucked stack span y ~120-1057, Ultra centred ~y 490, the hero.
 const K0 = 1.9;
-const K_APEX = 1.65;
-const K_END = 860 / W;
-const NAME_DY = H * (CARD.NAME_BASE - 0.5); // a card's centre to its name's baseline
-const LOOK0 = { x: baseX(1.5), y: baseY(0, 0) + NAME_DY - (1000 - 960) / K0 };
-const LOOK_APEX = { x: baseX(2.5), y: baseY(0, 99) + NAME_DY - (1058 - 960) / K_APEX };
-const LOOK_END = { x: ULTRA_X, y: ULTRA_Y - (700 - 960) / K_END };
+const K_A = 1.56;
+const K_END = 2.26;
+const STACK_BOTTOM0 = Y0 + H / 2; // Standard's lower edge at f0
+const LOOK0 = { x: 468, y: STACK_BOTTOM0 - (1050 - 960) / K0 };
+const LOOK_A = { x: 564, y: STACK_BOTTOM0 + NUDGE - (1050 - 960) / K_A };
+const ULTRA_TOP_END = ULTRA_Y - (H / 2) * Math.cos(0.162);
+const LOOK_END = { x: 540, y: ULTRA_TOP_END + (960 - 140) / K_END };
 const CAM = makeClockCam(
   { ...LOOK0, k: K0 },
   [
-    { f0: -16, f1: 30, dx: LOOK_APEX.x - LOOK0.x, dy: LOOK_APEX.y - LOOK0.y, k: K_APEX }, // eases back and up as Ultra rises
-    { f0: 24, f1: 106, dx: LOOK_END.x - LOOK_APEX.x, dy: LOOK_END.y - LOOK_APEX.y, k: K_END }, // the push-in on Ultra
-    { f0: 96, f1: 170, dy: -4, k: K_END * 1.03 }, // the creep carrying on to the last frame
+    { f0: -16, f1: 26, dx: LOOK_A.x - LOOK0.x, dy: LOOK_A.y - LOOK0.y, k: K_A }, // eases back and right as Ultra swings out
+    { f0: 22, f1: 106, dx: LOOK_END.x - LOOK_A.x, dy: LOOK_END.y - LOOK_A.y, k: K_END, warp: 1.15 }, // the push-in on Ultra (warp: k grows a touch later, so the stack bottom stays above y 1060)
+    { f0: 96, f1: 170, dy: -3, k: K_END * 1.03 }, // the creep carrying on to the last frame
   ],
   DURATION,
 );
 
+// ULTRA_B_END (ultraCards.tsx) must be this cut's last frame: cut 30 opens on it.
+{
+  const c = CAM.at(DURATION - 1);
+  const u = ultraAt(DURATION - 1);
+  const t = tiltAt(DURATION - 1);
+  const E = ULTRA_B_END;
+  const bad =
+    Math.abs(c.x - E.cam.x) + Math.abs(c.y - E.cam.y) + Math.abs(c.k - E.cam.k) > 1e-6 ||
+    Math.abs(u.x - E.card.x) + Math.abs(u.y - E.card.y) > 1e-6 ||
+    Math.abs(t.rx - E.card.tilt.rx) + Math.abs(t.ry - E.card.tilt.ry) + Math.abs(t.rz - E.card.tilt.rz) > 1e-6 ||
+    Math.abs(0.18 + 0.0045 * (DURATION - 1) - E.card.sheen) > 1e-6 ||
+    Math.abs(Math.max(u.lift, tiltLift(DURATION - 1)) - E.card.lift) > 1e-6 ||
+    Math.abs(W * (1 + LIFT_SCALE * u.lift) - E.card.w) > 1e-6;
+  if (bad) throw new Error("UltraOnTop: ULTRA_B_END is out of date with the last frame");
+}
+
 const Probe: React.FC = () => {
-  const cam = { x: 540, y: 960, k: 1.55 };
+  const cam = { x: 540, y: 960, k: 1.3 };
+  const pos: [number, number][] = [
+    [540 - 300 / 1.3 - 30, 960 - 260],
+    [540, 960 - 260],
+    [540 + 300 / 1.3 + 30, 960 - 260],
+    [540 - 150, 960 + 230],
+    [540 + 150, 960 + 230],
+  ];
   return (
     <StoutStage S={0} cam={cam} sway={false} pool={{ x: 540, y: 960 }}>
       {PLANS.map((p, i) => (
-        <PlanCard key={p} plan={p} x={540} y={960 + (i - 2) * 236} k={cam.k} glow={p === "ultra" ? 1 : 0} />
+        <g key={p}>
+          <PlanCard plan={p} x={pos[i][0]} y={pos[i][1]} k={cam.k} glow={p === "ultra" ? 1 : 0} />
+          <PlanLabel x={pos[i][0]} y={pos[i][1] + H / 2 + 40} k={cam.k} text={PLAN_NAME[p]} px={LABEL_PX} anchor="middle" />
+        </g>
       ))}
     </StoutStage>
   );
@@ -167,9 +208,15 @@ const UltraOnTop: React.FC<z.infer<typeof schema>> = ({ probe }) => {
       sweep={(S - SWEEP.f0) / (SWEEP.f1 - SWEEP.f0)}
     />
   );
+  const labelX = xOf(0, S) - W / 2 - LABEL_GAP / k;
   const pool = { x: lerp(baseX(2), u.x, clamp01(S / 40)), y: lerp(yOf(2, S), u.y, clamp01((S - 4) / 36)), strength: 1.3 };
   return (
     <StoutStage S={S} cam={cam} rest={CAM.rest} pool={pool}>
+      {/* the legend */}
+      {DECK.map((p, i) => (
+        <PlanLabel key={p} x={labelX} y={labelY(i, S, k)} k={k} text={PLAN_NAME[p]} px={LABEL_PX} dim={dimAt(p, S)} />
+      ))}
+      <PlanLabel x={labelX} y={labelY(4, S, k)} k={k} text={PLAN_NAME.ultra} px={LABEL_PX} enter={(S - ULTRA_IN.f0) / (ULTRA_IN.f1 - ULTRA_IN.f0)} />
       {u.front ? null : ultra}
       <ElevationShadow silhouette={deckShadow} elevation="rest" />
       {deck.map((c, i) => (
