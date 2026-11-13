@@ -24,11 +24,14 @@
 //     the hot edge, rising up the middle of the loop. The tile and both stacks are ONE object with ONE
 //     union shadow (CompanyShadow).
 //
-// GEOMETRY (world px):  tile x 320..760, y 1500..1770 · lanes meet the tile at y 1584 ± 34 · legs x 220
-//   / 860 · corners r 100 at (320, 1484) / (760, 1484) · top semicircle r 320 at (540, 550) (centreline
-//   top y 230) · groove 144 wide (outer edges x 148..932, top 158) · chips r 30 · two stacks 60 wide at x
-//   507 / 573 (slot 126 + lips), UNIT 26 per chip (41 per stack reach y 434) · R 150 tall centred (430,
-//   1635) · peg 166 at (654, 1738).
+// GEOMETRY (world px; WORLD REV 4, the safe zones: the whole world inside x 88..992, y 300..1060, a wide arch
+//   over the tile):  tile x 320..760, y 820..1060 · lanes meet the tile at y 905 ± 34 · legs x 160 / 920
+//   (33 px short) · corners r 120 at (280, 785) / (800, 785), a 40 px straight from there under the tile ·
+//   top semicircle r 380 at (540, 752) (centreline top y 372) · groove 144 wide (outer edges x 88..992, top
+//   300; inner top 444) · chips r 30, HIDE 46.4 · lap 1809.6 (was 3307.5); chip timing by LAP FRACTION, so a
+//   chip's first showing, home and amber (AMBER_FRAC 0.6882..0.886) fall on the delivered frames · 7
+//   chevrons · two stacks 60 wide at x 507 / 573 (slot 126 + lips), UNIT 8 per chip (40.5 per stack reach
+//   y 496) · R 150 tall centred (430, 940) · manager glyph feet (650, 1015), the cap's top y 853.
 //
 // EXPORTS: geometry (TILE_BOX, LANE_Y, LEG_X, CORNER_R, TOP_C, TOP_R, LANE_OFF, CHIP_R, GROOVE_W, STACK_W (the slot),
 //   UNIT, STACK_X, MARK_BOX, PEG_AT, LOOP_LEN, S_AT, AMBER_S, PUSH_F, LOOP_CAM), the sampler (trackAt,
@@ -38,8 +41,9 @@
 //   BetLoopWorld), and the probe still (BetLoopProbe: empty / busy / building).
 // STATUS: FINAL (director, Nov 13, after REV 1) + WORLD REV 2 (cold review: ink-brown manager, bigger chevrons,
 // the "office" mark) + WORLD REV 3 (the client's note: the manager becomes ManagerGlyph, a flat outline person in
-// the office mark's grammar, so the two icons on the tile are one set). Only render bugs from here, logged in
-// SHARED_CHANGES.md.
+// the office mark's grammar, so the two icons on the tile are one set) + WORLD REV 4 (the safe zones: the
+// compact world above; the second manager wears a fedora instead of the bob). Only render bugs from here,
+// logged in SHARED_CHANGES.md.
 // ---------------------------------------------------------------------------
 import React, { useId } from "react";
 import { random } from "remotion";
@@ -71,22 +75,26 @@ const uidOf = (raw: string) => `bl${raw.replace(/[^A-Za-z0-9_-]/g, "_")}`;
 // ===========================================================================
 // GEOMETRY (world px)
 // ===========================================================================
-export const TILE_BOX = { x: 320, y: 1500, w: 440, h: 270 } as const;
+// WORLD REV 4 (safe zones): the compact world. Its whole frame (LOOP_CAM, k 1) spans x 88..992, y 300..1060,
+// inside the keep-in box (x 65..1015, y 290..1070).
+export const TILE_BOX = { x: 320, y: 820, w: 440, h: 240 } as const;
 export const TILE_R = 6; // the company card's corner radius (a big card: a touch more than GEO.RADIUS)
 /** Where the lanes' centreline meets the tile (both sides). */
-export const LANE_Y = 1584;
-export const LEG_X = { left: 220, right: 860 } as const;
-/** The bottom corners: the corner arc meets the tile edge exactly (LEG_X.left + CORNER_R = TILE_BOX.x). */
-export const CORNER_R = 100;
-export const TOP_R = (LEG_X.right - LEG_X.left) / 2; // 320
-export const TOP_C = { x: 540, y: 230 + TOP_R } as const; // the centreline's top at y 230
+export const LANE_Y = 905;
+export const LEG_X = { left: 160, right: 920 } as const;
+/** The bottom corners. REV 4: the corner arc ends LEG_X + CORNER_R = 280 / 800, 40 px outside the tile's edges; a
+ *  short straight runs from there under the tile. */
+export const CORNER_R = 120;
+export const TOP_R = (LEG_X.right - LEG_X.left) / 2; // 380
+export const TOP_C = { x: 540, y: 372 + TOP_R } as const; // the centreline's top at y 372 (groove's outer top y 300)
 /** The two lanes sit this far either side of the centreline (+ = toward the inside of the loop). */
 export const LANE_OFF = 34;
 export const CHIP_R = 30;
 /** The groove: both lanes + a margin. */
 export const GROOVE_W = 2 * LANE_OFF + 2 * CHIP_R + 16; // 144
-/** How far inside the tile's edge a chip starts / ends (fully hidden). */
-export const HIDE = 60;
+/** How far inside the tile's edge a chip starts / ends (fully hidden). REV 4: 46.4 (was 60), so a chip's first
+ *  showing and its home (push start) fall at the delivered lap fractions (HIDE - CHIP_R = 0.907 % of the lap). */
+export const HIDE = 46.4;
 /** The stacks (REV 1): TWO stacks side by side, one per lane, each one chip wide (the chips on the track),
  *  centred on STACK_X with a STACK_GAP between them. STACK_W = both stacks = the slot's width (lips aside).
  *  UNIT = one chip's thickness edge-on. Lane +1 (inside) feeds stack 0 (left), lane -1 feeds stack 1 (right). */
@@ -95,7 +103,9 @@ export const STACK_CHIP_W = 2 * CHIP_R; // 60
 export const STACK_GAP = 6;
 export const STACK_XS: readonly [number, number] = [STACK_X - (STACK_CHIP_W + STACK_GAP) / 2, STACK_X + (STACK_CHIP_W + STACK_GAP) / 2]; // 507, 573
 export const STACK_W = 2 * STACK_CHIP_W + STACK_GAP; // 126
-export const UNIT = 26;
+/** REV 4: thin chips (a real poker chip is ~1/12 of its diameter thick), so E's 40.5 per stack end at y 496,
+ *  ~50 px under the inside of the arch (groove's inner top y 444). */
+export const UNIT = 8;
 /** Which stack a lane feeds. */
 export const stackOfLane = (lane: number) => (lane >= 0 ? 0 : 1);
 /** The mark on the tile's left half: its box (world px). */
@@ -126,8 +136,8 @@ const arc = (cx: number, cy: number, r: number, a0deg: number, a1deg: number): S
 };
 const XL = LEG_X.left;
 const XR = LEG_X.right;
-const CL = { x: XL + CORNER_R, y: LANE_Y - CORNER_R }; // (320, 1484)
-const CR = { x: XR - CORNER_R, y: LANE_Y - CORNER_R }; // (760, 1484)
+const CL = { x: XL + CORNER_R, y: LANE_Y - CORNER_R }; // (280, 785)
+const CR = { x: XR - CORNER_R, y: LANE_Y - CORNER_R }; // (800, 785)
 const SEGS: Seg[] = [
   line(TILE_BOX.x + HIDE, LANE_Y, CL.x, LANE_Y), // out from under the tile (hidden start)
   arc(CL.x, CL.y, CORNER_R, 90, 180), // bottom-left corner, turning up
@@ -157,15 +167,18 @@ export const S_AT = {
   top: SEG_S0[3] + SEGS[3].len / 2,
   rightLeg0: SEG_S0[4],
   rightLeg1: SEG_S0[5],
-  /** the chip's leading edge first touches the tile's right edge (centre 1 r outside it; on the corner's last few px) */
+  /** the chip's leading edge first touches the tile's right edge (centre 1 r outside it; on the straight in) */
   contact: SEG_S0[6] - (TILE_BOX.x + TILE_BOX.w + CHIP_R - CR.x),
   /** the chip is wholly under the tile: it is home (the stack's push starts) */
   home: SEG_S0[6] + (CR.x - (TILE_BOX.x + TILE_BOX.w - CHIP_R)),
   /** the chip's trailing edge clears the tile's left edge on the way out */
   out: SEG_S0[0] + (TILE_BOX.x + HIDE - (TILE_BOX.x - CHIP_R)),
 } as const;
-/** Where the chip turns cream -> amber (the result is in): over the right leg. */
-export const AMBER_S: [number, number] = [S_AT.rightLeg0 + 120, S_AT.rightLeg1 - 160];
+/** Where the chip turns cream -> amber (the result is in): the last part of the way home. REV 4 keeps the
+ *  delivered LAP FRACTIONS (0.6882 .. 0.8860 of the lap), so in E every chip turns amber on the same frames as
+ *  before: now from the right flank of the arch into the bottom-right corner. */
+export const AMBER_FRAC: [number, number] = [0.6882, 0.886];
+export const AMBER_S: [number, number] = [AMBER_FRAC[0] * LOOP_LEN, AMBER_FRAC[1] * LOOP_LEN];
 
 export type TrackPt = { x: number; y: number; tx: number; ty: number };
 /** The centreline point and unit tangent at arc length s (clamped to the lap). */
@@ -265,10 +278,10 @@ export const CHIP_SHADOW_S = 0.7;
 // ===========================================================================
 // THE TRACK
 // ===========================================================================
-/** Chevron positions along the lap (arc length) on the centreline (WORLD REV 2): evenly spaced (~261 px) from
+/** Chevron positions along the lap (arc length) on the centreline (WORLD REV 2): evenly spaced (REV 4: ~180 px) from
  *  the foot of the left leg, over the top (the middle one sits at the top, pointing right), to the foot of
  *  the right leg. Static, part of the track; chips pass over them. */
-export const CHEVRON_N = 11;
+export const CHEVRON_N = 7; // REV 4: 7 on the shorter lap (~180 px apart; the middle one still at the top)
 export const CHEVRON_S: number[] = Array.from({ length: CHEVRON_N }, (_, i) => lerp(S_AT.leftLeg0, S_AT.rightLeg1, (i + 0.5) / CHEVRON_N));
 /** A chevron's size (world px): half-width across the track, depth along it, stroke; its tone. */
 export const CHEVRON = { half: 32, depth: 26, stroke: 13, opacity: 0.6 } as const;
@@ -551,8 +564,8 @@ export const ManagerPeg: React.FC<{ x: number; y: number; size: number; k: numbe
 // as OfficeMark, so the two icons on the tile are one set. No shading, no rim, no shadow. It stands on the
 // mark's baseline, mirrored about the tile's centre (GLYPH_AT), in a slot line in the card at its feet: a
 // `sink` lowers it straight down behind that line (clipped there: it goes into the card, never fades).
-// `who` "first" = the manager; "second" = a visibly different person (a bob of hair framing a smaller face,
-// narrower shoulders), the same grammar and weight.
+// `who` "first" = the manager; "second" = a visibly different person: REV 4, the same person wearing a plain
+// baseball cap with its visor pointing left (was a bob), the same grammar and weight.
 // ---------------------------------------------------------------------------
 /** Glyph units -> world px (the office mark's scale: its 20-unit ink box is MARK_H tall). */
 export const GLYPH_SC = MARK_H / 20;
@@ -565,25 +578,43 @@ export const GLYPH_AT = {
   y: MARK_BOX.cy + 10 * GLYPH_SC,
   sc: GLYPH_SC,
 } as const;
-/** The glyph's foot in box units (the slot line) and its ink top (incl. half the stroke). */
+/** The glyph's foot in box units (the slot line). Each person's ink top (incl. half the stroke) is its `top`. */
 const G_FOOT = 22;
-const G_TOP = 1.2;
 export type ManagerWho = "first" | "second";
-/** The two people in 24-box units (foot at y 22, centre x 12). Strokes only, fill none. */
-const PERSON: Record<ManagerWho, { head: { cx: number; cy: number; r: number }; d: string[]; slotHalf: number }> = {
+/** The two people in 24-box units (foot at y 22, centre x 12). Strokes only, fill none. `hat`: the head circle
+ *  shows only below `brimY` (the hat sits on it), and the hat's strokes. */
+type Person = { head: { cx: number; cy: number; r: number }; d: string[]; slotHalf: number; top: number; hat?: { brimY: number; fill: string[] } };
+const FIRST: Person = {
   // Lucide "user", heavier: head r 4.4 at (12, 7); shoulders a rounded block x 4.3..19.7 from y 15.6 down into the slot
-  first: {
-    head: { cx: 12, cy: 6.9, r: 4.4 },
-    d: ["M4.3 22 V20.1 a4.5 4.5 0 0 1 4.5 -4.5 h6.4 a4.5 4.5 0 0 1 4.5 4.5 V22"],
-    slotHalf: 7.7,
-  },
-  // a different person: a smaller face inside a bob (a dome over the crown, straight sides falling to the jaw),
-  // narrower, rounder shoulders
+  head: { cx: 12, cy: 6.9, r: 4.4 },
+  d: ["M4.3 22 V20.1 a4.5 4.5 0 0 1 4.5 -4.5 h6.4 a4.5 4.5 0 0 1 4.5 4.5 V22"],
+  slotHalf: 7.7,
+  top: 1.2,
+};
+const PERSON: Record<ManagerWho, Person> = {
+  first: FIRST,
+  // REV 4 (the user: "the changed person is like wearing a hat"; the director's blind check: a plain CAP): the
+  // SAME person (head, shoulders, stroke, base, baseline) wearing a baseball cap: one solid ink shape over the
+  // top third of the head, its peak to ONE side, pointing left (toward the company mark).
   second: {
-    head: { cx: 12, cy: 8.5, r: 3.9 },
-    d: ["M5.7 13.6 V8.5 a6.3 6.3 0 0 1 12.6 0 V13.6", "M5.9 22 V20.4 a3.8 3.8 0 0 1 3.8 -3.8 h4.6 a3.8 3.8 0 0 1 3.8 3.8 V22"],
-    slotHalf: 7.7,
+    ...FIRST,
+    top: 0.3,
+    hat: {
+      brimY: 4.0, // the head ring starts under the cap (its ends hidden), so the face is a clean circle segment below y 5
+      // ONE solid shape: a dome a little higher (top y 0.4) and wider (x 5.6..18.4) than the ring's top, its lower
+      // edge a straight line at brow level (y 5.0, the head's top third), the peak growing out of it to the left
+      // (toward the company mark) as a short rounded visor, thinner than the stroke, to x 2.0
+      fill: ["M18.4 5 C18.4 1.6 15.7 0.4 12 0.4 C8.7 0.4 6.3 1.4 5.8 3.6 L3.3 3.6 Q2 3.6 2 4.3 Q2 5 3.3 5 Z"],
+    },
   },
+};
+/** The head as drawn: the full circle, or (under a hat) only its arc below the brim. */
+const headPath = (p: Person) => {
+  const { cx, cy, r } = p.head;
+  if (!p.hat) return null;
+  const dy = p.hat.brimY - cy;
+  const dx = Math.sqrt(Math.max(0, r * r - dy * dy));
+  return `M${f3(cx - dx)} ${f3(p.hat.brimY)}A${r} ${r} 0 1 0 ${f3(cx + dx)} ${f3(p.hat.brimY)}`;
 };
 /**
  * ManagerGlyph — the manager in the office mark's ink grammar. (x, y) = its feet on the slot line (GLYPH_AT);
@@ -603,9 +634,13 @@ export const ManagerGlyph: React.FC<{ x?: number; y?: number; sc?: number; k: nu
 }) => {
   const uid = uidOf(useId());
   const p = PERSON[who];
-  const cut = ground ? y - (GLYPH_SW / 2) * sc : y; // the glyph goes behind the ground line's top edge
+  // REV 4 fix: the glyph is always clipped at its feet (y), the ground line's CENTRE, so the ground line (drawn
+  // on top, y +- SW/2) overlaps the shoulders' last half-stroke: the line IS the shoulder block's base, one bar
+  // with no seam, identical for both people at rest, and exactly that bar when nobody stands on it.
+  const cut = y;
   const s = clamp01((clamp01(sink) - SEAT) / (1 - SEAT));
-  const depth = s * (G_FOOT - G_TOP + 0.4) * sc;
+  const depth = s * (G_FOOT - p.top + 0.4) * sc;
+  const hp = headPath(p);
   const ox = x - 12 * sc;
   const oy = y - G_FOOT * sc + depth;
   const slotW = 2 * PERSON.first.slotHalf * sc + GLYPH_SW * sc + (2 * EDGE.SLOT_LIP) / k;
@@ -620,10 +655,11 @@ export const ManagerGlyph: React.FC<{ x?: number; y?: number; sc?: number; k: nu
           </defs>
           <g clipPath={`url(#${uid}c)`}>
             <g transform={`translate(${fx(ox)} ${fx(oy)}) scale(${fx(sc)})`} fill="none" stroke={COLOR.inkDark} strokeWidth={GLYPH_SW} strokeLinecap="butt" strokeLinejoin="round">
-              <circle cx={p.head.cx} cy={p.head.cy} r={p.head.r} />
+              {hp ? <path d={hp} /> : <circle cx={p.head.cx} cy={p.head.cy} r={p.head.r} />}
               {p.d.map((d, i) => (
                 <path key={i} d={d} />
               ))}
+              {p.hat?.fill.map((d, i) => <path key={`h${i}`} d={d} fill={COLOR.inkDark} stroke="none" />)}
             </g>
           </g>
         </>
@@ -716,7 +752,7 @@ export const ChipStack: React.FC<{ count?: number; counts?: Counts; k: number; b
   const b = clamp01(amber);
   const base = TILE_BOX.y;
   const W = STACK_CHIP_W;
-  const R = 5; // a chip's corner (its rounded rim, seen edge-on)
+  const R = Math.min(5, UNIT * 0.36); // a chip's corner (its rounded rim, seen edge-on); REV 4: thin chips
   const seamCol = mixHex(COLOR.boardFoot, COLOR.rung, b);
   const insertCol = mixHex(COLOR.cream, COLOR.amberHot, b);
   const fillTop = mixHex(COLOR.cream, COLOR.amberTop, b);
@@ -726,7 +762,7 @@ export const ChipStack: React.FC<{ count?: number; counts?: Counts; k: number; b
   const inserts: string[] = [];
   const tops: { x0: number; top: number }[] = [];
   const per = W / INSERTS;
-  const seamW = Math.max(2.4 / k, 2.2);
+  const seamW = Math.max(1.4 / k, 1.3); // REV 4: thinner seams for the thin chips
   cs.forEach((nIn, j) => {
     const n = Math.max(0, nIn);
     if (n <= 0.001) return;
@@ -856,7 +892,7 @@ export const BetLoopProbe: React.FC<{ variant: "empty" | "busy" | "building" | "
   }
   const count = variant === "busy" ? stackCount(f, emits.map((t) => arrivalOf(t, PROBE_LAP)), 0, 2) : 0;
   return (
-    <StoutStage S={0} cam={cam} rest={cam} pool={{ x: 540, y: 1100 }} sway={false}>
+    <StoutStage S={0} cam={cam} rest={cam} pool={{ x: 540, y: 760 }} sway={false}>
       <BetLoopWorld
         k={cam.k}
         band={band}

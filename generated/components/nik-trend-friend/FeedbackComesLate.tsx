@@ -14,28 +14,28 @@
 // DURATION: the slot 56.974 -> 63.063 s = 6.089 s x 23.976 = 146 frames (f0..f145).
 //
 // THE MOTION: one continuous motion: out with the chips, then back to the tile. Eight chips (bets) leave the tile
-// one at a time on the track's centreline and crawl clockwise at a constant 14 world px/f (1/8 of E's speed),
-// cooling from cream 42% of the way toward board (the answer going stale). None turns amber, nothing comes home.
-// CAMERA: f0-48 close on the tile (k 1.42, its top at screen y 1468, as E opened) while the eight leave; f48-87
-// it rises and pulls back with the crawl (k ~1.15), all eight strung up the left leg into the top bend with the
-// tile still at the bottom; f87-110 it comes back down and pushes in on the tile (one eased blend, no hold) to a
-// close frame: k 1.82, the tile ~74% of the width and wholly above the upper caption band (foot at y 1060), the
-// manager glyph ~300 px tall, the world's empty slot pocket and both track ends at the tile in frame, the return one
-// empty, the chips gone out of the top; then a slow creep in to f145. The light pool follows the leading chips up
-// the left and over the top, then comes down with the camera onto the tile (between the empty slot and the peg).
-// THE SWAP happens in the close frame (WORLD REV 3, the client's note: the two icons on the tile must be one set):
-// the managers are the world's flat outline ManagerGlyph, the office mark's grammar, scale and stroke, standing on
-// an ink ground line that mirrors the office mark's. The old manager ("first": a round head over a shoulder block)
-// slides straight down behind that line and a visibly different person ("second": a smaller face in a bob that
-// falls to the jaw, narrower shoulders) rises out of the same line.
+// one at a time on the track's centreline and crawl clockwise at a constant 10 world px/f (WORLD REV 4: the lap is
+// 1810, was 3308 at 14 px/f), cooling from cream 42% of the way toward board (the answer going stale). None turns
+// amber, nothing comes home (the leader is at the start of the right flank at f145).
+// CAMERA (WORLD REV 4, safe zones): the tile's FOOT anchored at screen y 1062, the foot of the keep-in box, so the
+// tile and its manager stay inside x 65-955 / y 290-1070 on every frame. f0-48 close on the tile (k 1.42, leaning
+// right so the chips leaving to the left stay in shot) while the eight leave; f48-94 it pulls back with the crawl
+// to the whole arch (k ~0.99), all eight strung up the left of the arch and over the top; f94-114 one eased blend
+// pushes in on the tile to the close frame: k 1.82, the tile ~74% of the width, foot at y 1060, the manager glyph
+// ~320 px tall, the chips gone out of the top; then a slow creep in to f145. The light pool follows the leading
+// chips, then comes down with the camera onto the tile.
+// THE SWAP happens in the close frame: the managers are the world's flat outline ManagerGlyph standing on an ink
+// ground line that mirrors the office mark's. The old manager ("first") slides straight down behind that line and
+// the new one rises out of it: the SAME outline person wearing a solid ink fedora (WORLD REV 4, the user's note:
+// "the changed person is like wearing a hat").
 //   f0     close on the tile and its manager; chip 1 already just out of the tile's left edge
 //   f36    chip 7 shows on "seven"; f43 chip 8 shows on "eight"; then no more
-//   f98    "delayed": the leader has barely reached the top; the camera is already heading back to the tile
-//   f110   the close frame settles (still creeping)
+//   f98    "delayed": the leader is just past the top of the arch, inside the box; the camera starts back
+//   f114   the close frame settles (still creeping)
 //   f145   the new manager over an empty slot and an empty return track
 // DEPARTURES (leading edge shows past the tile's left edge -> trailing edge clears it), frames:
-//   chip 1 -4.6 -> -0.3 · 2 2.2 -> 6.5 · 3 9.0 -> 13.3 · 4 15.8 -> 20.1 · 5 22.6 -> 26.9 · 6 29.4 -> 33.7 ·
-//   7 36.2 -> 40.5 · 8 43.0 -> 47.3
+//   chip 1 -4.6 -> 1.4 · 2 2.2 -> 8.2 · 3 9.0 -> 15.0 · 4 15.8 -> 21.8 · 5 22.6 -> 28.6 · 6 29.4 -> 35.4 ·
+//   7 36.2 -> 42.2 · 8 43.0 -> 49.0 (REV 4: 60 px at 10 px/f)
 // THE SWAP (cause -> effect at the slot line): FIRST SINK f108 ("plus"; the old manager goes down behind the slot's ink line, cut at the
 // ground line, never fading; fully down f118); FIRST RISE f118 ("management"; the new person comes out from behind
 // the same line; fully up f130, a few frames after "changes" f122).
@@ -52,8 +52,11 @@ import { StoutStage, amberBandFor, clamp01, lerp, smoothstep } from "../kits/che
 import { SEAT } from "../kits/cheeky-pint/talentShared";
 import type { Cam } from "../kits/dwarkesh/outgrowShared";
 import {
+  CHIP_R,
   Chips,
   CompanyShadow,
+  HIDE,
+  TILE_BOX,
   CompanyTile,
   LOOP_LEN,
   LoopTrack,
@@ -70,15 +73,17 @@ export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
 // --- the eight bets ---------------------------------------------------------------------------------------------
-/** The crawl: constant speed, world px per frame (E runs 110). */
-export const SPEED = 14;
+/** The crawl: constant speed, world px per frame (E runs ~58 on the REV 4 lap). REV 4: 10 (was 14 on the old,
+ *  1.83x longer lap): slow enough that the leader is only at the top bend by "delayed" and nothing is home by
+ *  f145, fast enough that chips leaving 6.8 f apart never touch (68 px apart, 60 wide). */
+export const SPEED = 10;
 export const LAP = LOOP_LEN / SPEED;
 /** The beat between departures (frames). */
 export const EVERY = 6.8;
 /** The frame each chip's leading edge first shows past the tile's left edge (chip 8 on "eight"). */
 export const DEPART = Array.from({ length: 8 }, (_, i) => 43 - (7 - i) * EVERY);
-/** The emission frame (s 0, wholly under the tile): the leading edge shows 30 px of track later. */
-export const EMITS = DEPART.map((t) => t - 30 / SPEED);
+/** The emission frame (s 0, wholly under the tile): the leading edge shows HIDE - CHIP_R of track later. */
+export const EMITS = DEPART.map((t) => t - (HIDE - CHIP_R) / SPEED);
 /** A chip cools from cream part of the way toward board as it crawls (the answer going stale); it stays a
  *  warm card grey, clearly the lightest thing in the upper frame. */
 const dimOf = (s: number) => 0.42 * smoothstep((s - 200) / 1300);
@@ -88,29 +93,31 @@ export const SINK0 = 108;
 export const SINK_F = 10;
 export const RISE0 = 118;
 export const RISE_F = 12;
-// --- the camera: one slow pull-back and rise, the tile's top anchored near the bottom ---------------------------
-const K0 = 1.42;
-const K1 = 1.08;
-const A0 = 1468; // the tile's top on screen at f0 (as E opened: below the lower caption band)
-const A1 = 1598; // ... at the end (the tile's foot ~ y 1890)
-const camP = (f: number) => 0.92 * smoothstep((f + 10) / 140) + 0.08 * clamp01((f + 10) / 155);
-/** The lean left while the chips climb the left leg: the world's x 540 sits right of centre, then returns. */
-const leanX = (f: number) => 50 * (1 - smoothstep((f - 55) / 75)) + 10 * (1 - clamp01(f / 40));
-/** Out with the chips: the pull-back and rise (as wide as all eight up the left leg + the tile, by ~f96). */
+// --- the camera (WORLD REV 4, safe zones): one pull-back with the chips, the tile's FOOT anchored at the foot of
+// the keep-in box, so the tile and its manager stay inside x 65-955 / y 290-1070 on every frame ------------------
+export const K0 = 1.42;
+export const K1 = 0.985;
+const A0 = 1062; // the tile's foot on screen (held: the world opens upward into the box)
+const FOOT_Y = TILE_BOX.y + TILE_BOX.h;
+const camP = (f: number) => 0.94 * smoothstep((f + 6) / 106) + 0.06 * clamp01((f + 6) / 110);
+/** The lean while the chips climb the left of the arch: the world's x 540 sits right of centre, then returns. */
+const leanX = (f: number) => 72 * (1 - smoothstep((f - 30) / 60));
+/** Out with the chips: the pull-back (the whole arch with all eight on it and the tile, by ~f80). */
 const camOut = (f: number): Cam => {
   const p = camP(f);
   const k = Math.exp(lerp(Math.log(K0), Math.log(K1), p));
-  return camAnchored(k, lerp(A0, A1, p), 540 + leanX(f));
+  return camAnchored(k, A0, 540 + leanX(f), 540, FOOT_Y);
 };
-/** Back on the tile: the close frame (the tile ~75% of the width, wholly above the upper caption band, its
- *  foot at screen y CLOSE_FOOT), creeping in to the end. */
+/** Back on the tile: the close frame (the tile ~75% of the width, its foot at screen y CLOSE_FOOT), creeping in
+ *  to the end. */
 export const K_CLOSE = 1.82;
 const CLOSE_FOOT = 1060;
 const CLOSE_X = 548; // world x at the frame centre: both track ends at the tile show as stubs (the return one empty)
-const camClose = (f: number): Cam => camAnchored(K_CLOSE * Math.exp(0.0016 * (f - BACK1)), CLOSE_FOOT, 540, CLOSE_X, 1770);
-/** The move back: one eased blend from the moving out-camera into the close frame, f BACK0 -> BACK1. */
-export const BACK0 = 87;
-export const BACK1 = 110;
+const camClose = (f: number): Cam => camAnchored(K_CLOSE * Math.exp(0.0016 * (f - BACK1)), CLOSE_FOOT, 540, CLOSE_X, FOOT_Y);
+/** The move back: one eased blend from the moving out-camera into the close frame, f BACK0 -> BACK1. REV 4: a few
+ *  frames later (was 87 -> 110), so the leader at the top bend is still inside the box on "delayed" (f98). */
+export const BACK0 = 94;
+export const BACK1 = 114;
 export const camAt = (f: number): Cam => {
   const w = smoothstep((f - BACK0) / (BACK1 - BACK0));
   if (w <= 0) return camOut(f);
@@ -132,7 +139,7 @@ const FeedbackComesLate: React.FC<z.infer<typeof schema>> = () => {
   // move back (f92-115) down onto the tile, resting between the empty slot and the manager
   const lead = trackAt(Math.max(0, (f - EMITS[0]) * SPEED - 90));
   const toTile = smoothstep((f - BACK0 + 4) / (BACK1 - BACK0));
-  const tilePt = { x: 600, y: 1610 };
+  const tilePt = { x: 600, y: TILE_BOX.y + 110 };
   const pool = { x: lerp(lead.x, tilePt.x, toTile), y: lerp(lead.y, tilePt.y, toTile) };
   // the managers: the old one sinks into the slot, then a different one rises out of it
   const sink1 = lerp(SEAT, 1, smoothstep((f - SINK0) / SINK_F));

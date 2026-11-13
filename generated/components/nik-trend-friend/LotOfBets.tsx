@@ -15,31 +15,31 @@
 // one pair every 3 f, ride the stadium track clockwise at constant speed (a lap in 31 f), turn amber down
 // the right leg (the result is in) and go back under the tile's right edge; every chip that comes home
 // pushes its own lane's amber stack one chip up out of the slot in the tile's top: two stacks of poker chips
-// side by side, each one chip wide, UNIT 26 per chip (stackCount over each lane's arrivals). The
-// camera opens close on the tile (k 1.37, the tile below the lower caption band) and pulls back, the tile's
-// top anchored near screen y 1468 -> 1500, so the eye climbs with the stacks' tops while the loop opens out:
-// the whole circuit is in frame from f57 (on "feedback loop" f71-78: cream out on the left, amber home on
+// side by side, each one chip wide, UNIT 8 per chip (WORLD REV 4: thin chips; stackCount over each lane's
+// arrivals). The camera opens close on the tile (k 1.38) and pulls back to k 0.975, the tile's FOOT anchored at
+// screen y 1062 (the foot of the keep-in box), so the tile, both marks and the stacks' top stay inside x 65-955 /
+// y 290-1070 on every frame while the loop opens out above them: the whole circuit is inside the box from ~f60 (on "feedback loop" f71-78: cream out on the left, amber home on
 // the right), and the camera settles into a slow creep to the end; the stream and the rise never stop.
 //   f0     already running: 20 chips on the track, a pair at the home corner, the stacks 5.5 chips each
-//          (11 in all; top y 1273). Counts below are chips in all (both stacks); each stack holds half.
+//          (11 in all; top y 776). Counts below are chips in all (both stacks); each stack holds half.
 //   f24    "bets": both legs beaded (a pair every ~320 world px per lane); 16 chips home in the cut, 27 in all
-//   f46    "we": the top arc entering, 42 in all (top y 857)
-//   f71-78 "feedback loop": the full circuit in frame, 58 -> 63 in all (top y 705 -> 662)
-//   f99    resolved: the whole loop, 77 in all (top y 508), still rising; f105: 81 chips home in the two
-//          stacks (40.5 each, top y 458; 70 of them came home during the cut). No numeral, no label.
+//   f46    "we": the top arc entering, 42 in all (top y 652)
+//   f71-78 "feedback loop": the full circuit in frame, 58 -> 63 in all (top y 588 -> 568)
+//   f99    resolved: the whole loop, 77 in all (top y 512), still rising; f105: 81 chips home in the two
+//          stacks (40.5 each, top y 496; 70 of them came home during the cut). No numeral, no label.
 // CAUSE -> EFFECT (a chip coming home): CONTACT = the first frame a home-coming chip overlaps the tile's right
 // edge; FIRST REACTION = the first frame of its push (it is wholly under the tile 0.56 f after contact; the
 // push eases over PUSH_F 4 f; each chip pushes its own lane's stack). First pair home in the cut: contact f1
-// (s 0.46), home 1.02 -> both stacks' push shows from f2. Every pair after: + 3 f (contact f4 / push f5,
+// (f0.46 on the old lap; f0.0 on the REV 4 lap, where a chip is a larger share of it), home 1.02 (unchanged) -> both stacks' push shows from f2. Every pair after: + 3 f (contact f4 / push f5,
 // f7 / f8, ...). The pair before it (home f-1.98) is still pushing at f0, so the stacks already rise on f0.
-// Each stack rises 1/3 chip per frame: its seams flow upward (every-frame sheet of the stack tops, f60-75).
-// STROBING: per-frame travel 107 world px vs same-lane spacing 320 (ratio 1/3): the beads flow forward
+// Each stack rises 1/3 chip (2.7 px) per frame.
+// STROBING: per-frame travel 58 world px vs same-lane spacing 175 (ratio 1/3): the beads flow forward
 // (every-frame strip of the left leg, f30-41). The pairs ride abreast, so no cross-lane match.
-// CAPTION BANDS: the tile (R, peg) stays below y 1468 throughout; only the track, chips in motion and the
-// stacks' shafts cross the bands. The stacks' TOP crosses the upper band (1250 -> 1080) on f2 -> f18 while
-// it rises at ~11 px/f: the steady rise cannot pass it faster.
+// SAFE ZONES (WORLD REV 4, the user's Nov 13 note): the tile, both marks and the stacks' top inside the keep-in
+// box on every frame (tile foot y 1062); only the track and chips in motion run through the dead top while the
+// camera is close (f0-~f55), and the bands below the tile hold empty board.
 // AMBER = the signal that a bet is working (the result came back): chips turn amber on the right leg, the
-// stacks of results are amber. Cream = the bets going out; board = the manager peg (context; it never moves).
+// stacks of results are amber. Cream = the bets going out; ink = the manager glyph (it never moves).
 //
 // SOURCES: the Revolut "R" (revolutMark.ts, from https://commons.wikimedia.org/wiki/File:Revolut_logo.svg,
 // public domain text logo). "About 100 bets" (historical data on ~100 bets): Nik, same episode, ~19:00
@@ -50,7 +50,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { StoutStage, amberBandFor, clamp01, lerp, smoothstep } from "../kits/cheeky-pint/stoutShared";
 import type { Cam } from "../kits/dwarkesh/outgrowShared";
-import { BetLoopWorld, TILE_BOX, arrivalOf, camAnchored, chipAt, pairStream, stackCount, stackTopOf, type ChipDraw } from "./betLoop";
+import { BetLoopWorld, STACK_X, TILE_BOX, arrivalOf, camAnchored, chipAt, pairStream, stackCount, stackTopOf, type ChipDraw } from "./betLoop";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 106;
@@ -67,17 +67,19 @@ export const T0 = -47.7;
 export const EMITS = pairStream(T0, EVERY, Math.ceil((DURATION + 2 - T0) / EVERY));
 export const ARRIVALS = EMITS.map((t) => arrivalOf(t, LAP));
 
-// --- the camera: a pull-back from the tile, its top anchored near the bottom of the frame -------------------
-const K0 = 1.38;
-const K1 = 0.99;
-const A0 = 1468; // the tile's top on screen at f0 (below the lower caption band)
-const A1 = 1500; // ... at rest
-/** Progress of the one move: an eased pull-back (f -8 .. 96) plus a slow creep that never stops. */
-const camP = (f: number) => 0.94 * smoothstep((f + 8) / 104) + 0.06 * clamp01((f + 8) / 113);
+// --- the camera (WORLD REV 4, safe zones): a pull-back from the tile, its FOOT anchored at the foot of the
+// keep-in box, so the tile, both marks and the stacks' top stay inside x 65-955 / y 290-1070 on every frame --
+export const K0 = 1.38;
+export const K1 = 0.975;
+const A0 = 1063; // the tile's foot on screen at f0
+const A1 = 1062; // ... at rest
+/** Progress of the one move: an eased pull-back (f -8 .. 80; the whole circuit inside the box from ~f60) plus a
+ *  slow creep that never stops. */
+const camP = (f: number) => 0.95 * smoothstep((f + 8) / 88) + 0.05 * clamp01((f + 8) / 113);
 export const camAt = (f: number): Cam => {
   const p = camP(f);
   const k = Math.exp(lerp(Math.log(K0), Math.log(K1), p));
-  return camAnchored(k, lerp(A0, A1, p));
+  return camAnchored(k, lerp(A0, A1, p), 540, STACK_X, TILE_BOX.y + TILE_BOX.h);
 };
 
 const LotOfBets: React.FC<z.infer<typeof schema>> = () => {
