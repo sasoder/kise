@@ -55,7 +55,9 @@ export const SLOTS: { dx: number; row: number }[] = [
 export const CONTACT = [47, 48, 48, 47, 50, 51, 50, 52, 53, 55] as const;
 /** the fall: a block enters from just above the frame's top edge already moving (V0), speeds up (G) and
  *  falls at a terminal speed VT (world px / frame; the house cap on a mover is ~70 screen px / frame) */
-export const FALL = { from: -2, v0: 54, g: 6, vt: 66 } as const;
+// `from` is 190 world px higher than the frame top because the cut is drawn 190 px lower (StoutStage dy, Nov 13);
+// at the fall the camera is at k 1, so the block still enters from just above the frame's top edge.
+export const FALL = { from: -2 - 190, v0: 54, g: 6, vt: 66 } as const;
 const T1 = (FALL.vt - FALL.v0) / FALL.g; // frames to reach the terminal speed
 const S1 = FALL.v0 * T1 + 0.5 * FALL.g * T1 * T1;
 /** distance fallen t frames after entering */

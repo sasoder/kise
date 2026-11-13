@@ -30,6 +30,9 @@ import { COLOR, ElevationShadow, Label, Numeral, SPACE, StoutStage, TYPE, bloomF
 import type { Cam } from "../kits/dwarkesh/outgrowShared";
 import { BULB, IdeaBulb, bulbGlassPath, bulbSilhouette } from "./ideaBulb";
 
+/** The user asked for everything 190 px lower (Nov 13): the whole picture shifts down in screen px (StoutStage dy). */
+const SHIFT_Y = 190;
+
 export const FPS = 24000 / 1001;
 export const DURATION = 95;
 export const schema = z.object({ probe: z.boolean().default(false) });
@@ -117,7 +120,7 @@ const NinetyNineYes: React.FC<z.infer<typeof schema>> = ({ probe }) => {
   const settle = smoothstep(S / 20);
   const swell = S > RIPPLE.f0 - 3 * RIPPLE.w && S < RIPPLE.f1 + 3 * RIPPLE.w;
   return (
-    <StoutStage S={S} cam={cam} rest={camAt(0)} pool={{ x: lerp(OX, 540, settle), y: lerp(OY, 640, settle), strength: lerp(1.2, 1.6, settle) }}>
+    <StoutStage dy={SHIFT_Y} S={S} cam={cam} rest={camAt(0)} pool={{ x: lerp(OX, 540, settle), y: lerp(OY, 640, settle), strength: lerp(1.2, 1.6, settle) }}>
       {/* one shadow layer for the whole grid */}
       <ElevationShadow silhouette={bulbs.flatMap((b) => bulbSilhouette(b.x, b.y, SIZE))} />
       {bulbs.map((b, i) => (

@@ -508,6 +508,8 @@ const groundCopies = (gx: number, gy: number, s: number) => {
  * cameraTrack returns it), the vignette, then grain on twos. `rest` is the act's opening camera
  * (the parallax origin). `sway` adds the house sway on S (off for stills).
  * `overlay` is drawn in SCREEN px above the world, under the vignette and grain.
+ * `dy` shifts the world, the light pool and the overlay down by that many SCREEN px (the ground stays put): the
+ * "move everything lower" knob, e.g. 190. Default 0 (no change).
  */
 export const StoutStage: React.FC<{
   S: number;
@@ -517,11 +519,12 @@ export const StoutStage: React.FC<{
   sway?: boolean;
   children?: React.ReactNode;
   overlay?: React.ReactNode;
-}> = ({ S, cam, rest = cam, pool = null, sway = true, children, overlay }) => {
+  dy?: number;
+}> = ({ S, cam, rest = cam, pool = null, sway = true, children, overlay, dy = 0 }) => {
   const k = cam.k;
   const sw = sway ? { dx: 3 * Math.sin(S / 23), dy: 5 * Math.sin(S / 19) } : { dx: 0, dy: 0 };
   const tx = 540 - cam.x * k + sw.dx;
-  const ty = 960 - cam.y * k + sw.dy;
+  const ty = 960 - cam.y * k + sw.dy + dy;
   // the ground: parallax against the act's rest camera, drift on S, a gentle zoom with k
   const gScale = Math.pow(k / rest.k, GROUND.zoom);
   const gx = -(cam.x - rest.x) * k * GROUND.parallax;
@@ -530,7 +533,7 @@ export const StoutStage: React.FC<{
   const g2 = GRAIN.onTwos ? Math.floor(S / 2) : S;
   const grx = (hash01(g2 + 1) * 2 - 1) * GRAIN.travel;
   const gry = (hash01(g2 + 7) * 2 - 1) * GRAIN.travel;
-  const p = pool ? { x: 540 + (pool.x - cam.x) * k + sw.dx, y: 960 + (pool.y - cam.y) * k + sw.dy, s: pool.strength ?? 1 } : null;
+  const p = pool ? { x: 540 + (pool.x - cam.x) * k + sw.dx, y: 960 + (pool.y - cam.y) * k + sw.dy + dy, s: pool.strength ?? 1 } : null;
   return (
     <AbsoluteFill style={{ backgroundColor: COLOR.ground, overflow: "hidden" }}>
       {/* GROUND_EDGE: mirrored copies past the sheet's edges, only when the frame needs them, under it */}
@@ -573,7 +576,7 @@ export const StoutStage: React.FC<{
       <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
         <g transform={`translate(${fx(tx)} ${fx(ty)}) scale(${fx(k)})`}>{GROUND_ONLY ? null : children}</g>
       </svg>
-      {GROUND_ONLY ? null : overlay}
+      {GROUND_ONLY ? null : dy ? <AbsoluteFill style={{ transform: `translateY(${fx(dy)}px)` }}>{overlay}</AbsoluteFill> : overlay}
       <AbsoluteFill style={{ background: VIGNETTE }} />
       <AbsoluteFill style={{ mixBlendMode: GRAIN.blend, opacity: GRAIN.opacity }}>
         <Img

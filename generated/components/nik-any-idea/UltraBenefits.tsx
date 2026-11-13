@@ -36,6 +36,9 @@ import { COLOR, EDGE, ALPHA, StoutStage, clamp01, lerp, rectPath, smoothstep } f
 import { GLYPH_FILL, GLYPH_STROKE, TILE, UnionShadow, makeClockCam, restToRest, toneFoot, toneTop, travel } from "../kits/cheeky-pint/museShared";
 import { ULTRA_B_END, UltraCard, cardH, type Tilt } from "./ultraCards";
 
+/** The user asked for everything 190 px lower (Nov 13): the whole picture shifts down in screen px (StoutStage dy). */
+const SHIFT_Y = 190;
+
 export const FPS = 24000 / 1001;
 export const DURATION = 61;
 export const schema = z.object({});
@@ -355,7 +358,7 @@ const UltraBenefits: React.FC<z.infer<typeof schema>> = () => {
     strength: lerp(ULTRA_B_END.pool.strength, 1.6, fan),
   };
   return (
-    <StoutStage S={S} cam={cam} rest={CAM.rest} pool={pool}>
+    <StoutStage dy={SHIFT_Y} S={S} cam={cam} rest={CAM.rest} pool={pool}>
       {order.map(({ s, i, st }) => (
         <PerkTile key={i} x={st.x} y={st.y} rot={st.rot} k={k} glyph={s.glyph} lift={st.lift} id={`ub-t${i}`} />
       ))}

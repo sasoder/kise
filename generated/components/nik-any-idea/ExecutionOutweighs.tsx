@@ -61,6 +61,9 @@ import { UnionShadow, makeClockCam, makePoolTrack, type SilItem } from "../kits/
 import { BULB, IdeaBulb, bulbGlass, bulbSilhouette } from "./ideaBulb";
 import { ARM, CONTACT, HANG, PAN, PIVOT, ROD_AT, ROD_W, blockAt, blockRect, endsAt, type BlockState } from "./executionScale";
 
+/** The user asked for everything 190 px lower (Nov 13): the whole picture shifts down in screen px (StoutStage dy). */
+const SHIFT_Y = 190;
+
 export const FPS = 24000 / 1001;
 export const DURATION = 74;
 export const schema = z.object({
@@ -183,7 +186,7 @@ const ExecutionOutweighs: React.FC<z.infer<typeof schema>> = ({ labels }) => {
   const warm = smoothstep((f + 1) / 7);
   const glow = smoothstep((f + 0.5) / 7);
   return (
-    <StoutStage S={f} cam={cam} rest={CAM.rest} pool={POOL(f)}>
+    <StoutStage dy={SHIFT_Y} S={f} cam={cam} rest={CAM.rest} pool={POOL(f)}>
       <defs>
         <linearGradient id={`${uid}c`} gradientUnits="userSpaceOnUse" x1="0" y1={PIVOT.y - 60} x2="0" y2={BASE.bottom}>
           <stop offset="0" stopColor={COLOR.cream} />

@@ -38,6 +38,9 @@ import { ElevationShadow, StoutStage, clamp01, lerp, smoothstep } from "../kits/
 import { makeClockCam } from "../kits/cheeky-pint/museShared";
 import { CARD, PLANS, PlanCard, ULTRA_B_END, UltraCard, cardH, cardSilhouette, type PlanId, type Tilt } from "./ultraCards";
 
+/** The user asked for everything 190 px lower (Nov 13): the whole picture shifts down in screen px (StoutStage dy). */
+const SHIFT_Y = 190;
+
 export const FPS = 24000 / 1001;
 export const DURATION = 120;
 export const schema = z.object({
@@ -204,7 +207,7 @@ const UltraOnTop: React.FC<z.infer<typeof schema>> = ({ probe }) => {
   );
   const pool = { x: lerp(baseX(2), u.x, clamp01(S / 40)), y: lerp(yOf(2, S), u.y, clamp01((S - 4) / 36)), strength: 1.3 };
   return (
-    <StoutStage S={S} cam={cam} rest={CAM.rest} pool={pool}>
+    <StoutStage dy={SHIFT_Y} S={S} cam={cam} rest={CAM.rest} pool={pool}>
       {u.front ? null : ultra}
       <ElevationShadow silhouette={deckShadow} elevation="rest" />
       {deck.map((c, i) => (
