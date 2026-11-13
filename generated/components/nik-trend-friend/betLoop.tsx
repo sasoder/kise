@@ -6,7 +6,7 @@
 // THE WORLD (world px; the resolved whole-loop frame is LOOP_CAM = k 1 centred on (540, 960), so world px
 // = screen px there). Seen from the front and a little above, like the talentShared board:
 //   * the COMPANY TILE at the bottom centre: a wide cream card (TILE_BOX), its mark (the Revolut R, or a
-//     generic bank-building glyph) in ink on the left half, a MANAGER PEG standing in a peg slot on the
+//     generic bank-building glyph) in ink on the left half, an ink-brown MANAGER PEG (ManagerPeg) standing in a peg slot on the
 //     right half, and a SLOT in its top edge at x 540 out of which the STACK rises (the slot joint).
 //   * the LOOP: one closed track, a tall stadium cut into the board as a shallow groove. It leaves the
 //     tile's left edge, curves up the left leg, over the top semicircle, down the right leg and curves
@@ -36,7 +36,8 @@
 //   (camAnchored), the stacks (STACK_CHIP_W, STACK_GAP, STACK_XS, stackOfLane, stackTop, stackTopOf, slotWidth),
 //   the drawn parts (LoopTrack, ChipShadows, ChipGlow, Chip, Chips, CompanyShadow, CompanyTile, ChipStack,
 //   BetLoopWorld), and the probe still (BetLoopProbe: empty / busy / building).
-// STATUS: FINAL (director, Nov 13, after REV 1). Only render bugs from here, logged in SHARED_CHANGES.md.
+// STATUS: FINAL (director, Nov 13, after REV 1) + WORLD REV 2 (cold review: ink-brown manager, bigger chevrons,
+// the "office" mark). Only render bugs from here, logged in SHARED_CHANGES.md.
 // ---------------------------------------------------------------------------
 import React, { useId } from "react";
 import { random } from "remotion";
@@ -58,7 +59,7 @@ import {
   type Elevation,
   type ShadowLayer,
 } from "../kits/cheeky-pint/stoutShared";
-import { PersonPeg, SEAT } from "../kits/cheeky-pint/talentShared";
+import { PegShadows, PegSlot, SEAT, pegPath, sinkDepth } from "../kits/cheeky-pint/talentShared";
 import { REVOLUT_R_BOX, REVOLUT_R_D } from "./revolutMark";
 
 const f3 = (v: number) => (Math.round(v * 1000) / 1000).toString();
@@ -262,23 +263,21 @@ export const CHIP_SHADOW_S = 0.7;
 // ===========================================================================
 // THE TRACK
 // ===========================================================================
-/** Chevron positions along the lap (arc length) on the centreline: two up the left leg, one at the top
- *  (pointing right), two down the right leg. Quiet: board tone, low. */
-export const CHEVRON_S: number[] = [
-  lerp(S_AT.leftLeg0, S_AT.leftLeg1, 0.3),
-  lerp(S_AT.leftLeg0, S_AT.leftLeg1, 0.78),
-  S_AT.top,
-  lerp(S_AT.rightLeg0, S_AT.rightLeg1, 0.22),
-  lerp(S_AT.rightLeg0, S_AT.rightLeg1, 0.7),
-];
+/** Chevron positions along the lap (arc length) on the centreline (WORLD REV 2): evenly spaced (~261 px) from
+ *  the foot of the left leg, over the top (the middle one sits at the top, pointing right), to the foot of
+ *  the right leg. Static, part of the track; chips pass over them. */
+export const CHEVRON_N = 11;
+export const CHEVRON_S: number[] = Array.from({ length: CHEVRON_N }, (_, i) => lerp(S_AT.leftLeg0, S_AT.rightLeg1, (i + 0.5) / CHEVRON_N));
+/** A chevron's size (world px): half-width across the track, depth along it, stroke; its tone. */
+export const CHEVRON = { half: 32, depth: 26, stroke: 13, opacity: 0.6 } as const;
 /**
  * LoopTrack — the groove cut into the board (a deeper brown band, a faint lit lip on its lower edge),
  * and the chevrons. `tone` 0..1 dims the whole track toward the ground (F may quiet it).
  */
 export const LoopTrack: React.FC<{ k: number; tone?: number; chevrons?: boolean }> = ({ k, tone = 1, chevrons = true }) => {
   const d = trackPath(0, LOOP_LEN, 5);
-  const ch = 13; // chevron half-width (world px)
-  const cl = 11; // chevron depth
+  const ch = CHEVRON.half;
+  const cl = CHEVRON.depth;
   return (
     <g opacity={f3(tone)}>
       {/* the groove's body: a deeper brown over the board's own fibres */}
@@ -304,8 +303,8 @@ export const LoopTrack: React.FC<{ k: number; tone?: number; chevrons?: boolean 
                 d={`M${f3(a.x)} ${f3(a.y)}L${f3(tip.x)} ${f3(tip.y)}L${f3(b.x)} ${f3(b.y)}`}
                 fill="none"
                 stroke={COLOR.board}
-                strokeOpacity={0.42}
-                strokeWidth={6}
+                strokeOpacity={CHEVRON.opacity}
+                strokeWidth={CHEVRON.stroke}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -470,6 +469,79 @@ const BuildingMark: React.FC<{ cx: number; cy: number; h: number }> = ({ cx, cy,
 /** The slot in the tile's top edge (world px, at camera k): both stacks + a lip each side. */
 export const slotWidth = (k: number) => STACK_W + (2 * EDGE.SLOT_LIP) / k;
 
+/** A generic company for F (WORLD REV 2): a plain multi-storey office block (Lucide "building-2" grammar: a
+ *  tall block with a grid of windows, a lower wing each side) at the R's ink weight. Reads as "a company". */
+const OfficeMark: React.FC<{ cx: number; cy: number; h: number }> = ({ cx, cy, h }) => {
+  const sc = h / 20; // ink box y 2..22
+  const ox = cx - 12 * sc;
+  const oy = cy - 12 * sc;
+  const sw = 2.6;
+  return (
+    <g transform={`translate(${fx(ox)} ${fx(oy)}) scale(${fx(sc)})`} fill="none" stroke={COLOR.inkDark} strokeWidth={sw} strokeLinecap="butt" strokeLinejoin="round">
+      <path d="M7 22 V4 a2 2 0 0 1 2 -2 h6 a2 2 0 0 1 2 2 V22 Z" />
+      <path d="M7 12 H4.5 a1.5 1.5 0 0 0 -1.5 1.5 V22 H7" />
+      <path d="M17 9 H19.5 a1.5 1.5 0 0 1 1.5 1.5 V22 H17" />
+      <path d="M2 22 H22" />
+      <g fill={COLOR.inkDark} stroke="none">
+        {[5.6, 9.6, 13.6, 17.6].map((y) => (
+          <React.Fragment key={y}>
+            <rect x={9.7} y={y - 0.9} width={1.6} height={1.8} />
+            <rect x={12.7} y={y - 0.9} width={1.6} height={1.8} />
+          </React.Fragment>
+        ))}
+      </g>
+    </g>
+  );
+};
+export type CompanyMark = "revolut" | "building" | "office" | "none";
+
+/** The manager's tone (WORLD REV 2): ink-brown card, the R stamp's ink family, so it separates from the cream
+ *  tile as clearly as the R. `shade` 0..1 lifts it toward a warm mid-brown (a second, different person). */
+const managerTone = (shade: number) => {
+  const top = mixHex(mixHex(COLOR.inkDark, COLOR.boardFoot, 0.16), COLOR.boardFoot, 0.5 * clamp01(shade));
+  const foot = mixHex(COLOR.inkDark, COLOR.boardFoot, 0.5 * clamp01(shade));
+  return { top, foot, rim: mixHex(top, COLOR.board, 0.55) };
+};
+/**
+ * ManagerPeg — the world's own person peg in ink-brown (talentShared's PersonPeg only does kraft / amber):
+ * the same silhouette (pegPath), the same slot and sink behaviour (cut at its slot line, `sink` 1 = gone),
+ * the same shadow (PegShadows) and slot (PegSlot on cream). A lit rim on its top edges (the body drawn again
+ * one rim lower, inside the silhouette).
+ */
+export const ManagerPeg: React.FC<{ x: number; y: number; size: number; k: number; sink?: number; shade?: number; slot?: boolean }> = ({ x, y, size, k, sink = SEAT, shade = 0, slot = true }) => {
+  const uid = uidOf(useId());
+  const s = clamp01(sink);
+  const feet = y + sinkDepth(s, size);
+  const t = managerTone(shade);
+  const e = Math.max(EDGE.CREAM / k, 1.6);
+  const top = feet - size;
+  if (s >= 0.995) return slot ? <PegSlot x={x} y={y} size={size} k={k} on="cream" /> : null;
+  return (
+    <g>
+      <defs>
+        <linearGradient id={`${uid}b`} gradientUnits="userSpaceOnUse" x1="0" y1={f3(top)} x2="0" y2={f3(feet)}>
+          <stop offset="0" stopColor={t.top} />
+          <stop offset="1" stopColor={t.foot} />
+        </linearGradient>
+        <clipPath id={`${uid}c`}>
+          <rect x={f3(x - size)} y={f3(y - 2 * size)} width={f3(2 * size)} height={f3(2 * size)} />
+        </clipPath>
+        <clipPath id={`${uid}s`}>
+          <path d={pegPath(x, feet, size)} />
+        </clipPath>
+      </defs>
+      <PegShadows pegs={[{ x, y, size, sink: s }]} />
+      <g clipPath={`url(#${uid}c)`}>
+        <path d={pegPath(x, feet, size)} fill={t.rim} />
+        <g clipPath={`url(#${uid}s)`}>
+          <path d={pegPath(x, feet + e, size)} fill={`url(#${uid}b)`} />
+        </g>
+      </g>
+      {slot ? <PegSlot x={x} y={y} size={size} k={k} on="cream" /> : null}
+    </g>
+  );
+};
+
 export type Manager = { sink?: number; shade?: number };
 /**
  * CompanyTile — the company card (body only; its shadow is CompanyShadow): cream lit from above, its lit top
@@ -479,7 +551,7 @@ export type Manager = { sink?: number; shade?: number };
  * order, so F can sink one and raise another). `dim` 0..1 turns the card toward board. With `slot` and no
  * stack, the empty slot shows as a dark pocket across the top edge.
  */
-export const CompanyTile: React.FC<{ k: number; mark?: "revolut" | "building" | "none"; managers?: Manager[]; dim?: number; slot?: boolean; band: [number, number] }> = ({
+export const CompanyTile: React.FC<{ k: number; mark?: CompanyMark; managers?: Manager[]; dim?: number; slot?: boolean; band: [number, number] }> = ({
   k,
   mark = "revolut",
   managers = [{ sink: SEAT }],
@@ -514,9 +586,11 @@ export const CompanyTile: React.FC<{ k: number; mark?: "revolut" | "building" | 
         <path d={REVOLUT_R_D} fillRule="evenodd" fill={COLOR.inkDark} transform={`translate(${fx(MARK_BOX.x)} ${fx(MARK_BOX.y)}) scale(${fx(MARK_BOX.sc)})`} />
       ) : mark === "building" ? (
         <BuildingMark cx={MARK_BOX.cx} cy={MARK_BOX.cy} h={MARK_H * 0.96} />
+      ) : mark === "office" ? (
+        <OfficeMark cx={MARK_BOX.cx} cy={MARK_BOX.cy} h={MARK_H} />
       ) : null}
       {managers.map((m, i) => (
-        <PersonPeg key={i} x={PEG_AT.x} y={PEG_AT.y} size={PEG_AT.size} k={k} tone="kraft" sink={m.sink ?? SEAT} shade={m.shade ?? 0} slot={i === managers.length - 1 ? "cream" : null} amberBand={band} />
+        <ManagerPeg key={i} x={PEG_AT.x} y={PEG_AT.y} size={PEG_AT.size} k={k} sink={m.sink ?? SEAT} shade={m.shade ?? 0} slot={i === managers.length - 1} />
       ))}
     </g>
   );
@@ -652,7 +726,7 @@ export const BetLoopWorld: React.FC<{
   chips: ChipDraw[];
   count?: number;
   counts?: Counts;
-  mark?: "revolut" | "building" | "none";
+  mark?: CompanyMark;
   managers?: Manager[];
   stackAmber?: number;
   trackTone?: number;
@@ -668,11 +742,12 @@ export const BetLoopWorld: React.FC<{
 
 // ===========================================================================
 // THE PROBE STILL — "empty": the loop with no chips and no stack; "busy": E's stream at its last frame;
-// "building": F's generic company mark, one manager half sunk and a second (shaded) standing
+// "building": F's bank-building mark, one manager half sunk and a second (shaded) standing; "office": F's
+// office-block mark (WORLD REV 2), one manager 40 % sunk
 // ===========================================================================
 export const PROBE_LAP = 31;
 export const PROBE_EVERY = 3;
-export const BetLoopProbe: React.FC<{ variant: "empty" | "busy" | "building" }> = ({ variant }) => {
+export const BetLoopProbe: React.FC<{ variant: "empty" | "busy" | "building" | "office" }> = ({ variant }) => {
   const cam = LOOP_CAM;
   const band = amberBandFor(cam);
   const f = 105;
@@ -692,8 +767,8 @@ export const BetLoopProbe: React.FC<{ variant: "empty" | "busy" | "building" }> 
         band={band}
         chips={chips}
         count={count}
-        mark={variant === "building" ? "building" : "revolut"}
-        managers={variant === "building" ? [{ sink: 0.55 }, { sink: SEAT, shade: 0.35 }] : undefined}
+        mark={variant === "building" ? "building" : variant === "office" ? "office" : "revolut"}
+        managers={variant === "building" ? [{ sink: 0.55 }, { sink: SEAT, shade: 0.35 }] : variant === "office" ? [{ sink: 0.4 }] : undefined}
       />
     </StoutStage>
   );
