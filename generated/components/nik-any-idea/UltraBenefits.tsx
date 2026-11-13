@@ -8,17 +8,18 @@
 // WORD -> FRAME: then 3 · it 6 · gives 9 · you 14 · additional 16 · a 29 · lot 34 · of 37 · additional 40 · benefits 47.
 // DURATION: the slot 30.405 -> 32.950 s = 2.545 s x 23.976 = 61 frames (f0..f60).
 //
-// THE MOTION: the platinum Ultra card of cut 21 (ultraCards.tsx, ULTRA_B_END: same card, size, tilt and amber edge
-// glow) sits large and centred. On "gives" (f9) cream perk tiles (~124 px, each turned a few degrees outward as if
-// on a ray from below the card, so the arch radiates from it) slide OUT FROM BEHIND it: the first wave of six
-// (lounge, flights, insurance, subscriptions, travel data, points) goes up out of the card's top edge to the top
-// row of an arch, centre first; its two end tiles slip out of the card's sides and curve up (landing f26-36). On
-// "a lot of" a second, larger wave of seven (out f24-33.5) fills the arch's inner row (its ends out of the card's
-// sides) and one leg beside each of the card's sides, the far row filled first so nothing passes over a seated
-// tile; all landed by "benefits" (f47). The camera eases back from the card (k 2.66 -> 2.09 by ~f36, then a creep
-// to ~2.07) to take the arch in while the card stays the hero (~650 px wide, centre ~y 818). Room: >= 60 px from
-// the frame's sides, >= 27 px between seated tiles, >= 21 px to the card. To f60 the tiles bob gently, the card's
-// tilt and sheen creep. No click: the amber glow is already on (cut 21's payoff).
+// THE MOTION: the portrait platinum Ultra card of cut 21 (ultraCards.tsx, ULTRA_B_END: same card, size, tilt and
+// amber edge glow) opens exactly on B's last picture (Ultra ~450 px wide, centre ~(631, 492)). The camera eases from
+// that state (f0-26) to settle the card as the hero (~422 px wide, centre ~(540, 705), its foot above y 1060) and the
+// tilt eases a touch flatter. On "gives" (f9) cream perk tiles (~104 px, each turned up to 6 deg outward along a ray
+// from the card's centre, so the burst radiates from it) slide OUT FROM BEHIND the card: the first wave of six
+// (lounge, flights, insurance, subscriptions, travel data, points) rises out of the card's top edge to an outer arc
+// over the card, centre first, its ends curving out of the card's sides (landing f26-39). On "a lot of" a second wave
+// of seven (out f24-33) fills the inner row over the card's top edge and a short leg down each upper side, the far
+// row filled first so nothing passes over a seated tile; all landed by "benefits" (f47). The card's lower half,
+// with the printed ULTRA, stays clear. Room: >= 60 px from the frame's sides, >= 20 px between seated tiles and to
+// the card, all above y 1060. To f60 the tiles bob gently, the card's tilt and sheen creep. No click: the amber glow
+// is already on (cut 21's payoff).
 //   Cause chain: each tile is wholly hidden behind the card until it departs (checked against the card's outline),
 //   and it emerges across the card's edge; the outer row lands before the inner tile under it leaves the card.
 // AMBER = what makes an idea work / gets backed: the Ultra card's edge glow. Cream = the perks; ink = their icons.
@@ -43,118 +44,93 @@ export const defaultProps = schema.parse({});
 const f3 = (v: number) => (Math.round(v * 1000) / 1000).toString();
 const fx = (v: number) => (Math.round(v * 1e6) / 1e6).toString();
 
-// --- the card (world px) -----------------------------------------------------------------------------------
-export const CARD_X = 540;
-export const CARD_Y = 960;
-export const CARD_W = ULTRA_B_END.card.w; // 320
-const CARD_HH = cardH(CARD_W) / 2; // 100.9
-/** Cut 21's last tilt, creeping a little flatter (the sheen slides with it). */
+// --- the card (world px): it stays where cut 21 left it; the camera moves ---------------------------------------
+export const CARD_X = ULTRA_B_END.card.x; // 580
+export const CARD_Y = ULTRA_B_END.card.y; // 898
+export const CARD_W = ULTRA_B_END.card.w; // 200 (portrait: 54 x 85.6)
+const CARD_HW = CARD_W / 2;
+const CARD_HH = cardH(CARD_W) / 2; // 158.5
+/** Cut 21's last tilt (exactly, at f0), creeping a little flatter (the sheen slides with it). */
 export const tiltAt = (f: number): Tilt => {
-  const e = smoothstep((f + 10) / 90);
+  const e = smoothstep(f / 90);
   const b = ULTRA_B_END.card.tilt;
   return { rx: lerp(b.rx, 0.12, e), ry: lerp(b.ry, -0.2, e), rz: b.rz };
 };
 
 // --- the camera (look = the frame's centre) --------------------------------------------------------------------
-// Opens at cut 21's last scale (the card ~836 px wide, centred ~y 780); eases back about the card (whose screen
-// centre drifts to ~y 818) so the arch's legs are in frame by the time the outer tiles reach them; then a creep.
-export const K0 = ULTRA_B_END.cam.k; // 2.7027
-const K1 = 2.09;
-const K_END = 2.03;
-/** The scale the arch is designed at (the camera's k near the end): the card ~660 px wide. */
-export const K_DESIGN = 2.07;
-const LOOK = { x: CARD_X, y: CARD_Y + (960 - 780) / K0 };
-const LOOK1_Y = CARD_Y + (960 - 818) / K1;
+// Opens on cut 21's last frame (ULTRA_B_END: the card ~454 px wide, upper middle, centred ~(631, 492)). From f0 it
+// glides down and a little left and eases back, so the card settles centred lower in the frame (~(540, 712), ~420
+// px wide) and the arch has room above and beside it; the move is soft over the quiet hand-off (f0-8) and has
+// done most of its travel before the far tiles land.
+export const K0 = ULTRA_B_END.cam.k; // 2.271
+const K1 = 2.17;
+const K_END = 2.13;
+/** The scale the arch is designed at (the camera's k near the end): the card ~420 px wide. */
+export const K_DESIGN = 2.15;
+const CARD_SY = 705; // the card's screen centre y at the end
+const LOOK1 = { x: CARD_X, y: CARD_Y + (960 - CARD_SY) / K1 };
 export const CAM = makeClockCam(
-  { ...LOOK, k: K0 },
+  { x: ULTRA_B_END.cam.x, y: ULTRA_B_END.cam.y, k: K0 },
   [
-    { f0: -10, f1: 32, dy: LOOK1_Y - LOOK.y, k: K1 },
-    { f0: 30, f1: 96, dy: 2, k: K_END },
+    { f0: 0, f1: 26, dx: LOOK1.x - ULTRA_B_END.cam.x, dy: LOOK1.y - ULTRA_B_END.cam.y, k: K1 },
+    { f0: 30, f1: 96, dy: 1.5, k: K_END },
   ],
   DURATION,
 );
 
-// --- the arch of perk tiles --------------------------------------------------------------------------------------
-// Designed in SCREEN px at K_DESIGN, relative to the card's centre (card ~660 x 416 px, top edge ~-208), then
-// stored in world px. Two rows over the card's top edge, each bowed up in the middle (TOP = the first wave, six;
-// INNER under it, five, on the gaps of the row above) and one tile beside each of the card's sides (the legs).
-// >= 60 px from the frame's sides, >= 20 px between seated tiles and from the card. Every tile turns a few degrees
-// outward, as if on a ray from a point below the card (FAN), so the arch radiates from the card.
-const TILE_PX = 124;
-export const T = TILE_PX / K_DESIGN; // ~59.9 world
-const FAN = { oy: 600, share: 0.3 } as const; // the rays' origin (px below the card's centre); the share of a ray's angle a tile takes
-// capped: the legs stand beside the card's sides, where a bigger turn would push a corner toward the frame edge
-const FAN_MAX = (4.5 * Math.PI) / 180;
-const fanRot = (x: number, y: number) => Math.max(-FAN_MAX, Math.min(FAN_MAX, FAN.share * Math.atan2(x, FAN.oy - y)));
+// --- the burst of perk tiles -----------------------------------------------------------------------------------
+// Designed in SCREEN px at K_DESIGN, relative to the card's centre (card ~420 x 680 px), stored in world px. Two
+// rings wrap the tall card's top and sides. INNER (the second wave, seven): a short row over the card's top edge and
+// two tiles down each side. OUTER (the first wave, six): an arc over the inner row, from beside the card's top
+// corners up over the top, its tiles on the gaps of the inner ring. Every tile sits on a ray from the card's centre
+// and leaves along it, turned a few degrees with it (FAN), so the perks radiate from the card. >= 60 px from the
+// frame's sides, >= 20 px between seated tiles and from the card.
+const TILE_PX = 104;
+export const T = TILE_PX / K_DESIGN; // ~48.4 world
+const FAN = { share: 0.1, max: (6 * Math.PI) / 180 } as const;
+const fanRot = (x: number, y: number) => Math.max(-FAN.max, Math.min(FAN.max, FAN.share * Math.atan2(x, -y)));
+/** Slot centres, screen px from the card's centre at K_DESIGN, left to right along each ring. */
+const OUTER_PX = [
+  { x: -345, y: -370 },
+  { x: -262, y: -505 },
+  { x: -66, y: -550 },
+  { x: 66, y: -550 },
+  { x: 262, y: -505 },
+  { x: 345, y: -370 },
+];
+const INNER_PX = [
+  { x: -290, y: -50 },
+  { x: -290, y: -210 },
+  { x: -128, y: -417 },
+  { x: 0, y: -418 },
+  { x: 128, y: -417 },
+  { x: 290, y: -210 },
+  { x: 290, y: -50 },
+];
 
-export type GlyphId =
-  | "lounge"
-  | "plane"
-  | "shield"
-  | "subs"
-  | "globe"
-  | "star"
-  | "headphones"
-  | "ticket"
-  | "luggage"
-  | "gift"
-  | "gem"
-  | "lock"
-  | "briefcase";
+export type GlyphId = "lounge" | "plane" | "shield" | "subs" | "globe" | "star" | "headphones" | "ticket" | "luggage" | "gift" | "gem" | "lock" | "briefcase";
 
-type Slot = {
-  x: number;
-  y: number;
-  rot: number;
-  glyph: GlyphId;
-  depart: number;
-  dur: number;
-  start: { x: number; y: number };
-  lead: number;
-};
-// the interior a hidden tile may wait in (its whole square inside the card, a margin for the tilt)
-const IN_X = (CARD_W / 2) * 0.95 - T / 2 - 6;
+type Slot = { x: number; y: number; rot: number; glyph: GlyphId; depart: number; dur: number; start: { x: number; y: number }; lead: number };
+// the interior a hidden tile waits in (its whole square inside the card, a margin for the tilt)
+const IN_X = CARD_HW * 0.95 - T / 2 - 6;
 const IN_Y = CARD_HH * 0.95 - T / 2 - 6;
-const clampIn = (v: number, m: number) => Math.max(-m, Math.min(m, v));
-const CORNER_Y = -20;
-const CORNER_LEAD = 0.45;
-// "top": out of the card's top edge, straight up its column; "corner": out of the card's side, then curving up
-// to an outer column (the horizontal runs ahead, so it clears the next column's lane); "side": out of the side.
-const slot = (px: number, py: number, glyph: GlyphId, depart: number, dur: number, from: "top" | "corner" | "side"): Slot => {
-  const x = px / K_DESIGN;
-  const y = py / K_DESIGN;
-  return {
-    x,
-    y,
-    // the legs stand right beside the card's sides: a smaller turn keeps their corners off the card and the frame edge
-    rot: from === "side" ? Math.sign(px) * Math.min(Math.abs(fanRot(px, py)), LEG_ROT) : fanRot(px, py),
-    glyph,
-    depart,
-    dur,
-    start:
-      from === "top"
-        ? { x: clampIn(x * 0.9, IN_X), y: -IN_Y }
-        : from === "corner"
-          ? { x: Math.sign(x) * IN_X, y: CORNER_Y }
-          : { x: Math.sign(x) * IN_X, y: clampIn(y, IN_Y) },
-    lead: from === "corner" ? CORNER_LEAD : 0,
-  };
+const slot = (p: { x: number; y: number }, glyph: GlyphId, depart: number, dur: number): Slot => {
+  const x = p.x / K_DESIGN;
+  const y = p.y / K_DESIGN;
+  // it waits at the nearest point of the interior box (so it leaves across the card's nearest edge, neighbours apart)
+  const start = { x: Math.max(-IN_X, Math.min(IN_X, x)), y: Math.max(-IN_Y, Math.min(IN_Y, y)) };
+  return { x, y, rot: fanRot(p.x, p.y), glyph, depart, dur, start, lead: 0 };
 };
-// the first wave (the top row), centre out: departs on "gives" (f9)
-const TOP = { x: [-385, -231, -77, 77, 231, 385], y: [-462, -480, -490, -490, -480, -462] };
-const TOP_GLYPHS: GlyphId[] = ["lounge", "plane", "shield", "subs", "globe", "star"];
-const TOP_DEPART = [18, 12.5, 9, 10, 13.5, 19];
-// the second wave (the inner row, then the legs): "a lot of" (f29-40)
-const INNER = { x: [-308, -154, 0, 154, 308], y: [-312, -326, -332, -326, -312] };
-const INNER_GLYPHS: GlyphId[] = ["headphones", "ticket", "luggage", "gift", "gem"];
-const INNER_DEPART = [28, 26, 24, 25, 27];
-const LEG = { x: 410, y: -110 };
-const LEG_ROT = (3 * Math.PI) / 180;
+// the first wave (the outer ring, left to right), from the upper diagonals in to the top: departs on "gives" (f9)
+const OUTER_GLYPHS: GlyphId[] = ["lounge", "plane", "shield", "subs", "globe", "star"];
+const OUTER_DEPART = [19, 14, 9, 11.5, 16.5, 21.5];
+// the second wave (the inner ring, left to right: a leg, over the top, the other leg): "a lot of" (f29-40)
+const INNER_GLYPHS: GlyphId[] = ["lock", "headphones", "ticket", "luggage", "gift", "gem", "briefcase"];
+const INNER_DEPART = [32, 28, 26, 24, 25, 27, 33];
+const INNER_DUR = [14, 13, 13, 13, 13, 13, 14];
 export const SLOTS: Slot[] = [
-  ...TOP.x.map((x, i) => slot(x, TOP.y[i], TOP_GLYPHS[i], TOP_DEPART[i], 17, i === 0 || i === 5 ? "corner" : "top")),
-  ...INNER.x.map((x, i) => slot(x, INNER.y[i], INNER_GLYPHS[i], INNER_DEPART[i], 13, i === 0 || i === 4 ? "corner" : "top")),
-  slot(-LEG.x, LEG.y, "lock", 33, 13.5, "side"),
-  slot(LEG.x, LEG.y, "briefcase", 33.5, 13.5, "side"),
+  ...OUTER_PX.map((p, i) => slot(p, OUTER_GLYPHS[i], OUTER_DEPART[i], 17)),
+  ...INNER_PX.map((p, i) => slot(p, INNER_GLYPHS[i], INNER_DEPART[i], INNER_DUR[i])),
 ];
 
 // --- a tile's state at frame f ----------------------------------------------------------------------------------
