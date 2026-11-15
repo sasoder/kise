@@ -940,7 +940,7 @@ export const SheetStack: React.FC<{ A: AirWorld; X: number; Z: number; n: number
       const mx = (p[0] + q[0]) / 2;
       const mz = (p[1] + q[1]) / 2;
       const facing = nx * (camX - mx) + nz * (camZ - mz);
-      if (facing * -1 <= 0) continue;
+      if (facing <= 0) continue;
       sides[k] += poly([P.p(p[0], yB, p[1]), P.p(q[0], yB, q[1]), P.p(q[0], yT, q[1]), P.p(p[0], yT, p[1])]);
       if (!sideCol[k]) {
         const nl = Math.hypot(nx, nz) || 1;
@@ -966,7 +966,7 @@ export const SheetStack: React.FC<{ A: AirWorld; X: number; Z: number; n: number
     const q = ring[(k + 1) % 4];
     const nx = q[2] - p[2];
     const nz = -(q[0] - p[0]);
-    if (-(nx * (camX - (p[0] + q[0]) / 2) + nz * (camZ - (p[2] + q[2]) / 2)) <= 0) continue;
+    if (nx * (camX - (p[0] + q[0]) / 2) + nz * (camZ - (p[2] + q[2]) / 2) <= 0) continue;
     band += poly([P.p(p[0], p[1], p[2]), P.p(q[0], q[1], q[2]), P.p(ringT[(k + 1) % 4][0], ringT[(k + 1) % 4][1], ringT[(k + 1) % 4][2]), P.p(ringT[k][0], ringT[k][1], ringT[k][2])]);
   }
   if (band) els.push(<path key="tb" d={band} fill={tone("#E2D8C4")} stroke={tone("#A4957A")} strokeWidth={f2(lw)} strokeOpacity={0.55} />);
