@@ -436,7 +436,7 @@ const streamPath = (sp: StreamSpec, t: number, ys: number, wob: number) => {
 const murkSpec = (p: PipeDef): StreamSpec => ({ X: p.Xn, tip: p.tip, W: W_MURK, q: (tau) => pipeQ(p, tau), tStart: p.open, tEnd: p.stop });
 const orangeSpec: StreamSpec = { X: ORANGE.X, tip: ORANGE.tip, W: ORANGE.W, q: orangeQ, tStart: -40, tEnd: 3.2 };
 
-const Stream: React.FC<{ sp: StreamSpec; t: number; ys: number; fill: string; lit: string; line: string; uid: string; lw: number }> = ({ sp, t, ys, fill, lit, line, uid, lw }) => {
+const Stream: React.FC<{ sp: StreamSpec; t: number; ys: number; fill: string; lit: string; line: string; uid: string; lw: number }> = ({ sp, t, ys, fill, lit, line, lw }) => {
   const s = streamPath(sp, t, ys, 0.9);
   if (!s) return null;
   // the sheen: a narrower band on the lit (left) side
