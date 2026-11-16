@@ -21,10 +21,11 @@ import { AIR, Paint } from "../dwarkesh-3d/dwarkesh3d";
  *
  * TRANSPARENT 1080x1920 overlay, 24000/1001 fps (FPS). House layout at full size as above; a Root bakes the 0.72x wrap
  * (styles/name-tags.md "Size and position"): `wrapFor(align)` gives the transform that puts the panel's outer bottom
- * corner on x 180 (or x 900 for right) at y 1280.
+ * corner on x 180 (or x 900 for right) at y 1280, moved by (dx, dy).
  *
  * MOTION (the common entrance, Easing.bezier(0.16, 1, 0.3, 1)): f0-20 the panel slides up 64 px and fades in; f3-18
- * the name slides up 24 px and fades in; f12-27 the descriptor the same. Settled by f27, then a completely static hold
+ * the name slides up 24 px and fades in; f12-27 the descriptor the same (`settle` scales these frames for a short
+ * slot: settle 8 = panel f0-5.9, name f0.9-5.3, descriptor f3.6-8). Settled by f27 (or `settle`), then a completely static hold
  * to the last frame: no exit, no idle motion, the texture is seeded and frozen, and at progress 1 no entrance style is
  * left on anything, so every hold frame is the same picture.
  *
@@ -40,6 +41,9 @@ export const schema = z.object({
   job: z.string(),
   durationInFrames: z.number().int().positive(),
   align: z.enum(["left", "right"]),
+  /** the frame the entrance has settled by (default 27, the common entrance); a short slot runs the same
+   *  choreography faster, scaled by settle / 27 (e.g. 8 for a 54 f lower third) */
+  settle: z.number().positive().optional(),
 });
 export type NameTagDwarkesh3dProps = z.infer<typeof schema>;
 export const defaultProps: NameTagDwarkesh3dProps = schema.parse({
@@ -73,9 +77,9 @@ export const TAG_SCALE = 0.72;
 
 /** the 0.72x house wrap (transform on a full-frame AbsoluteFill, origin 0 0): the panel's outer bottom corner at
  *  x 180 (left) or 900 (right), y 1280 + dy */
-export const wrapFor = (align: "left" | "right", dy = 0): React.CSSProperties => {
+export const wrapFor = (align: "left" | "right", dy = 0, dx = 0): React.CSSProperties => {
   const fromX = align === "right" ? 1080 - SIDE : SIDE;
-  const toX = align === "right" ? 1080 - 180 : 180;
+  const toX = (align === "right" ? 1080 - 180 : 180) + dx;
   const fromY = 1920 - BOTTOM;
   const toY = 1280 + dy;
   return {
@@ -86,8 +90,9 @@ export const wrapFor = (align: "left" | "right", dy = 0): React.CSSProperties =>
 
 // ---- the entrance ----
 const EASE = Easing.bezier(0.16, 1, 0.3, 1);
-const progress = (frame: number, start: number, travel: number) =>
-  interpolate(frame, [start, start + travel], [0, 1], { easing: EASE, extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+const FULL_SETTLE = 27;
+const progress = (frame: number, start: number, travel: number, k = 1) =>
+  interpolate(frame, [start * k, (start + travel) * k], [0, 1], { easing: EASE, extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 const enter = (t: number, rise: number): React.CSSProperties | undefined =>
   t >= 1 ? undefined : { opacity: t, transform: `translateY(${((1 - t) * rise).toFixed(3)}px)` };
 
@@ -146,9 +151,10 @@ const Panel: React.FC<{ uid: string }> = ({ uid }) => (
   </svg>
 );
 
-const NameTagDwarkesh3d: React.FC<NameTagDwarkesh3dProps> = ({ name, job, align }) => {
+const NameTagDwarkesh3d: React.FC<NameTagDwarkesh3dProps> = ({ name, job, align, settle = FULL_SETTLE }) => {
   const frame = useCurrentFrame();
   const right = align === "right";
+  const k = settle / FULL_SETTLE;
   const [handle] = useState(() => delayRender("NameTagDwarkesh3d: glyph check"));
 
   useEffect(() => {
@@ -172,16 +178,16 @@ const NameTagDwarkesh3d: React.FC<NameTagDwarkesh3dProps> = ({ name, job, align 
           position: "absolute",
           ...(right ? { right: SIDE } : { left: SIDE }),
           bottom: BOTTOM,
-          ...enter(progress(frame, 0, 20), 64),
+          ...enter(progress(frame, 0, 20, k), 64),
         }}
       >
         <Panel uid={uid} />
         <div style={{ position: "relative", padding: `${PAD_TOP}px ${PAD_H}px ${PAD_BOTTOM}px ${PAD_H}px` }}>
-          <Line base={lineStyle(700, NAME_PX)} t={progress(frame, 3, 15)} right={right}>
+          <Line base={lineStyle(700, NAME_PX)} t={progress(frame, 3, 15, k)} right={right}>
             {name}
           </Line>
           <div style={{ height: GAP }} />
-          <Line base={lineStyle(400, JOB_PX)} t={progress(frame, 12, 15)} right={right}>
+          <Line base={lineStyle(400, JOB_PX)} t={progress(frame, 12, 15, k)} right={right}>
             {job}
           </Line>
         </div>
