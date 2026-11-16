@@ -1,10 +1,11 @@
 // ---------------------------------------------------------------------------
-// TenfoldEveryYear (rsi-ten-earths, cut 89). Dwarkesh 3D style (styles/dwarkesh-3d.md).
-// Opaque 1080x1920, 23.976 fps, 156 frames. World: the clip's shared modules (read-only): tenEarthsGenius (the
-// Genius, GENIUS_POSES.front, the module's crowd sprites baked at this cut's sizes, the dot LOD) and tenEarthsHall
-// (YearPlate, U). The floor is cut 3's / cut 4's warm sand hall floor with no walls: it runs on and melts into the air.
+// TenfoldEveryYear (rsi-ten-earths, cut 89, REV 1). Dwarkesh 3D style (styles/dwarkesh-3d.md).
+// Opaque 1080x1920, 23.976 fps, 156 frames. One stage inside the misty teal air (AirStage, palette A, interior mood);
+// the cut's own world (floor grid, waves, entrances, camera) is the pure module ./tenfoldWorld.ts. The robot is the
+// clip's shared tenEarthsBot (read-only): live <Bot> figures near, its baked front sprites and a bean LOD far.
 //
-// CHECK LINE: "Every year there are ten times as many AIs: one, ten, a hundred, a thousand, ten thousand."
+// CHECK LINE: "One AI becomes ten, then a hundred, a thousand, ten thousand: tenfold every year, a sea of robots to the
+//   horizon."
 //
 // THE LINE: "you should expect the population of AIs at a given level of capabilities to roughly increase tenfold
 //   every year."
@@ -13,257 +14,191 @@
 //   to 68 · roughly 85 · increase 98 · tenfold 114 · every 132 · year. 143 · (So 155)
 // DURATION: the slot 89.0890 -> 95.5955 s = 6.5065 s x 23.976 = 156 frames (f0..f155).
 //
-// THE MOTION: powers of ten on one bare hall floor under one continuous pull-back and rise. f0 one Genius (v0) stands
-//   facing us, ~290 px (head top y ~760, feet y 1060). Every copy comes out from behind the formation at full size
-//   (never a pop, a scale-in or a fade), all the same size and look all cut long ("at a given level of capabilities"):
-//     x10 (f10-f31, "population ... AIs"): nine copies step out sideways, each from behind the one inside it (the
-//       first pair from behind him), nearest first: a row of ten (x ~95-985 at f31);
-//     x10 (f45-f67, "level of capabilities"): the row copies itself back into depth, nine rows peeling off one after
-//       another, each from behind the row before, nearest first: a block of 100 (x ~280-800, y ~765-1060 at f68);
-//     x10 (f94-f114, "increase tenfold"): nine blocks peel back one after another, each from behind the back row of the
-//       block before, into a column of ten blocks receding into the haze: 1,000; the plate "×10" slides up in the air
-//       above the horizon (f102-f114, landed on "tenfold", y ~370, 96 px type);
-//     x10 (f121-f141, "every year"): every block of the column repeats sideways, its new blocks fanning out from behind
-//       the column's outer files to both sides (block row b ends WIDTHS[b] blocks wide, nearest block row first): a
-//       field of 10,000 that fills the box's width (x ~85-995) from the front row (feet y 1060) to the haze (y ~555):
-//       sprites near, the dot LOD far, the back blocks melting into the air.
-//   Living hold f141-f155: the crowd breathes and shifts its weight in a slow wave running back through it, the camera
-//   creeps on.
-// Orange = the AIs only (COMMON.md): every Genius and the dot LOD. Floor warm sand, the air teal, type cream.
-//
-// DEPTH: a physical camera on one lens (F = 800 screen px per unit at distance 1): pure dolly + crane with lens
-//   shifts. The formation's front row is at Z 0 and stays there (every step grows sideways or backward). Per frame the
-//   front row's scale s (= F / D, one lobe in ln s, peak f61, settled f140, then a creep), its feet's screen row Yf and
-//   the horizon's row HY (one lobe, peak f45) are keyed; the eye height follows: h = (Yf - HY) / s. s 0.92 -> 0.19 (a
-//   Genius 287 -> 59 px), eye 1.6 m -> ~18 m, horizon y 805 -> 470, front feet held at y 1060. The vanishing point on
-//   X 66 (the block's axis, between the hero and his right neighbour); a lens shift centres the hero at f0 (gone by
-//   f40). londonDepth per frame: { eyeY: -h, dRef: D, kRef: k, dolly: 0 }, k = F / D. Interior mood (eyeT 0.17, cut
-//   3's), fog by world depth; the people by depth, the back blocks a further haze and fade into the air.
-// LAYOUT: pitch 0.74 m across (PX 132), 1.12 m deep (PZ 200); a block = 10 files x 10 rows; 10 block rows (1.7 m
-//   aisles, BZ 2300) of 3, 5, 5, 7, 9, 11, 13, 15, 15, 17 blocks (1.35 m aisles, BX 1560) = 100 blocks: each block row
-//   as wide as the box allows at its depth, so no file ever has to race across the frame. The hero = block (0, 0), file
-//   0, row 0. Tiers: the hero's front row of ten are live SVG Geniuses (front pose, breathing) on top; every other
-//   figure is a front sprite (the module's own bake at 7 sizes x 5 looks) on one canvas, drawn far to near with each
-//   copy behind its twin, crossfading to the module's dot at 13-16 px. Nothing changes tier except that crossfade.
-// CHECKS (scripts/clips/rsi-ten-earths/check-tenfold-every-year.ts): one lobe in ln s; 0 faces in the caption bands
-//   on any frame (all 10,000); front-row chins <= y 1014; the hero's block inside the keep-in box on every frame; the
-//   plate in the box, above the horizon, clear of every figure; screen speeds <= 45 px/f for figures >= 20 px.
+// THE MOTION: POWERS OF TEN on a raised data-center floor, under ONE continuous move, near steady in log space: the eye
+//   backs off (0.85 -> 67 m from the hero) and rises (1.25 -> 30 m) and stays GRAZING (the view's centre 11 -> 20 deg
+//   down, the horizon y 660 -> 594), with a slight orbit (yaw -9 -> +4.6 deg). f0: close and low on ONE robot (THE
+//   Bot, v0; 399 px, eye level, breathing idle) on its floor tile. Every new robot comes up out of the floor: its tile is
+//   the top of a lift, the hatch's two leaves slide apart, it rises on the lift into the light (the tile lands flush and
+//   shuts the hatch) and it boots up (bootUp: the bulb lights, the eyes open, one blink, the smile). Each x10 is a FRONT
+//   rippling outward from what is already there:
+//     x10 (f13-f36, "population ... AIs"): 9 rise beside and behind it: a 5 x 2 of ten (226 px robots on "AIs");
+//     x10 (f44-f78, "level of capabilities"): the 5 x 2 grows into the hero's 10 x 10 block of 100 (145 px on
+//       "capabilities"); the ten and the hundred never spill past x 65..1015 (a hatch opens only once it fits);
+//     x10 (f79-f107, "roughly increase"): from here on the field is environment: nine blocks rise around and IN FRONT of
+//       the hundred (5 x 2 blocks: 1,000), their near rows big (100-200 px) below the hero's group, running off both
+//       sides and back toward the haze;
+//     x10 (f98-f127, "tenfold"): 90 more blocks (10 x 10 blocks: 10,000), two block rows nearer still, the front
+//       sweeping toward us, off the sides and away to the horizon;
+//     and on (f118-f149, "every year"): the ripple keeps going, every slot in sight, out to the horizon: the sea.
+//   The far rows (closer than 4.5 px apart on screen) are a pre-filtered row texture, not sprites (no moire); the far
+//   waves' hatches come in with their robots.
+// CAUSE: a robot is never drawn before its hatch is open; it rises from under the floor (cropped at the hatch's near
+//   edge); its contact shadow arrives as it lands; the boot starts on the frame its lift stops.
+// Orange = THE AIs only (every robot); the floor warm grey (the hall's MAT_FLOOR), the hatches dark, the air teal.
 //
 // SOURCES: x10 per year = global AI compute ~x3 per year (Epoch AI, global AI computing capacity in H100-equivalents
-//   ~3.3x/yr since 2022, epoch.ai data insights) x compute needed for a given capability falling >3x per year (Epoch AI,
-//   algorithmic progress in language models, Ho et al. 2024; inference price per capability). The speaker: "roughly
-//   increase tenfold every year". On screen only "×10"; the counts 1 / 10 / 100 / 1,000 / 10,000 are illustrative
-//   powers of ten, not any year's real number.
+//   ~3.3x/yr since 2022) x the compute needed for a given capability falling >3x per year (Epoch AI, algorithmic
+//   progress in language models, Ho et al. 2024). The speaker: "roughly increase tenfold every year". No text on
+//   screen; the counts 1 / 10 / 100 / 1,000 / 10,000 are illustrative powers of ten.
 // ---------------------------------------------------------------------------
 import React, { useMemo } from "react";
-import { random, useCurrentFrame } from "remotion";
+import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { AIR, AirFloor, AirHorizonHazeW, AirStage, WorldSvg, airWorldOf, c01, hexRgb, swayCam, type AirWorld, type Cam, type DepthOpts, type Mat } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { U, YearPlate, yearPlateT } from "./tenEarthsHall";
-import { FolkCanvas, GENIUS_POSES as G, Genius, drawGeniusDot, geniusCrowdReqs, useGeniusSprites, type FolkFog, type Sprite } from "./tenEarthsGenius";
+import { AIR, AirStage, c01, hexRgb, makeAirView, mixHex, mixRgb, paintHorizonHaze, type AirView, type RGB } from "../kits/dwarkesh-3d/dwarkesh3d";
+import { sway } from "../kits/maps/incaShared";
+import { MAT_FLOOR } from "./tenEarthsHall";
+import { ACCENT, BOT_POSES, BOT_SCREEN, Bot, BotLayer, FolkCanvas, botCrowdReqs, drawBotDot, useBotSprites, type BotPose, type FolkFog, type Sprite } from "./tenEarthsBot";
+import { AISLE, BOT_H, DEPTH, DURATION as DUR, FIELD, FIELD_BOTS, FPS as FPS_W, SEA, T, TILE, WAVES, aisleX, entryAt, eyeAt, risenR, seedOf, sst, t0Of, toScreen, variantOf, xOf, zOf, type Eye } from "./tenfoldWorld";
 
-export const FPS = 24000 / 1001;
-export const DURATION = 156;
-export const schema = z.object({ camFrame: z.number().default(-1) });
+export const FPS = FPS_W;
+export const DURATION = DUR;
+export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
 const PAL = AIR.A;
-const sst = (a: number, b: number, v: number) => {
-  const u = c01((v - a) / (b - a));
-  return u * u * (3 - 2 * u);
+const SHADOW_RGB = hexRgb(PAL.shadow);
+
+// ===================================================================================================================
+// THE VIEW: the eye, the house sway, the air
+// ===================================================================================================================
+export type View = {
+  e: Eye;
+  dx: number;
+  dy: number;
+  v: AirView;
+  /** a world point on screen (sway included) */
+  P: (X: number, Y: number, Z: number) => { x: number; y: number; s: number; d: number } | null;
+  /** the eye's distance to its target (3D: the air thickens with the eye's height too) */
+  Dt: number;
+  /** the texture LOD's depth: beyond it a row of robots is closer than RP_TEX px to the next (they would beat into
+   *  moire), so the robots fade out over dTex / LOD_BAND .. dTex and the far texture takes over */
+  dTex: number;
+  fog: (d: number) => number;
+  air: (d: number, h?: number) => RGB;
+  figFog: (d: number) => number;
 };
-/** an eased 0..1 with a velocity lobe t^a (1-t)^b (integrated numerically; the sisters' helper) */
-const lobe = (a: number, b: number) => {
-  const N = 600;
-  const cum = [0];
-  for (let i = 1; i <= N; i++) {
-    const t = (i - 0.5) / N;
-    cum.push(cum[i - 1] + Math.pow(t, a) * Math.pow(1 - t, b));
-  }
-  const tot = cum[N];
-  return (t: number) => {
-    if (t <= 0) return 0;
-    if (t >= 1) return 1;
-    const x = t * N;
-    const i = Math.floor(x);
-    return (cum[i] + (cum[Math.min(N, i + 1)] - cum[i]) * (x - i)) / tot;
+const E0 = eyeAt(0);
+/** the screen pitch (px) between rows of robots below which they go to the far texture */
+const RP_TEX = 4.5;
+/** the robots fade out (and the texture in) over dTex / LOD_BAND .. dTex */
+const LOD_BAND = 1.3;
+const moteCam = (e: Eye) => ({ x: 0, y: 4 * 178 * Math.log(e.He / E0.He), z: -4 * 178 * Math.log(e.F / e.S / (E0.F / E0.S)) });
+export const viewAt = (f: number): View => {
+  const e = eyeAt(f);
+  const sw = sway(f);
+  const Dt = Math.hypot(e.F / e.S, e.He);
+  const scene = { look: "A" as const, mood: "interior" as const, F: e.F, fogNear: 0.8 * Dt, fogVis: 1.4 * Dt + 2500, fogMax: 0.9, hLow: 0, hHigh: 2300, moteUnit: 178, eyeT: 0.17 };
+  const v = makeAirView({ scene, frame: f, horizon: e.Hy + sw.dy, cam: moteCam(e), rest: moteCam(E0) });
+  const P = (X: number, Y: number, Z: number) => {
+    const p = toScreen(e, X, Y, Z);
+    return p ? { ...p, x: p.x + sw.dx, y: p.y + sw.dy } : null;
   };
+  const near = 1.05 * Dt;
+  const vis = 1.15 * Dt + 2500;
+  const dTex = Math.sqrt((e.He * e.F * T) / RP_TEX);
+  return { e, dx: sw.dx, dy: sw.dy, v, P, Dt, dTex, fog: (d) => c01(v.fogAt(d)), air: (d, h = 0) => v.airAt(d, h), figFog: (d) => 0.8 * (1 - Math.exp(-Math.max(0, d - near) / vis)) };
 };
 
 // ===================================================================================================================
-// THE FORMATION
+// THE FLOOR: one tone by distance (screen rows), melting into the air toward the horizon, and the tile joints
 // ===================================================================================================================
-/** pitch across / deep (units); a block is 10 files x 10 rows; aisles between blocks */
-export const PX = 132;
-export const PZ = 200;
-export const AX = 240;
-export const AZ = 300;
-export const BX = 10 * PX + AX;
-export const BZ = 10 * PZ + AZ;
-/** files i -4..5 in a block, rows r 0..9; block rows b 0..9; block columns c -w..w in block row b, WIDTHS[b] = 2w + 1
- *  blocks (3 + 5 + 5 + 7 + 9 + 11 + 13 + 15 + 15 + 17 = 100): each block row as wide as the box allows at its depth, so
- *  on screen the field keeps the box's width from the front row to the haze (perspective narrows the far rows as fast
- *  as they widen) and no file has to race sideways across the frame */
-export const WIDTHS = [3, 5, 5, 7, 9, 11, 13, 15, 15, 17];
-export const I0 = -4;
-export const I1 = 5;
-export const NR = 10;
-export const NB = 10;
-
-/** step 1: copies step out sideways, each from behind the one inside it (the first pair from behind the hero),
- *  nearest first */
-export const S1 = { t0: 10, lag: 2, dur: 13 };
-/** step 2: rows peel off backwards, each from behind the row before, nearest first */
-export const S2 = { t0: 45, lag: 1.5, dur: 10 };
-/** step 3: blocks peel off backwards, each from behind the block before (its back row), nearest first */
-export const S3 = { t0: 94, lag: 1.25, dur: 10 };
-/** step 4: every block of the column repeats sideways: block row b fans its new blocks out to each side from behind
- *  the column's outer files (its new files telescoping, one ease per block row), nearest block row first */
-export const S4 = { t0: 121, lag: 0.5, dur: 16 };
-const EASE_ROW = lobe(0.9, 0.9);
-const EASE_FAN = lobe(1.1, 1.1);
-const eAt = (f: number, a: number, dur: number, E = EASE_FAN) => E((f - a) / dur);
-export const e1 = (f: number, i: number) => (i === 0 ? 1 : eAt(f, S1.t0 + S1.lag * (Math.abs(i) - 1), S1.dur, EASE_ROW));
-/** the X of file i of the hero's block at frame f (nested: file i rides on file i -+ 1) */
-export const xFile0 = (f: number, i: number): number => (i === 0 ? 0 : xFile0(f, i - Math.sign(i)) + Math.sign(i) * PX * e1(f, i));
-export const e2 = (f: number, r: number) => eAt(f, S2.t0 + S2.lag * (r - 1), S2.dur, EASE_ROW);
-export const e3 = (f: number, b: number) => eAt(f, S3.t0 + S3.lag * (b - 1), S3.dur, EASE_ROW);
-export const e4 = (f: number, b: number) => eAt(f, S4.t0 + S4.lag * b, S4.dur, EASE_ROW);
-
-/** the depth of row (b, r) at frame f (the formation's front row stays at Z 0) */
-export const zRowsAt = (f: number): number[][] => {
-  const z: number[][] = [];
-  for (let b = 0; b < NB; b++) {
-    const row: number[] = [];
-    for (let r = 0; r < NR; r++) {
-      if (b === 0) row.push(r === 0 ? 0 : row[r - 1] + PZ * e2(f, r));
-      else row.push(z[b - 1][NR - 1] + (AZ + PZ + r * PZ) * e3(f, b));
+const FLOOR_LOCAL = mixHex(MAT_FLOOR.mid, MAT_FLOOR.dark, 0.18);
+const JOINT = mixHex(MAT_FLOOR.dark, PAL.shadow, 0.45);
+const floorMelt = (V: View, d: number) => Math.pow(sst(4 * V.Dt + 20000, 14 * V.Dt + 90000, d), 0.8);
+const rgbStr = (c: RGB, a = 1) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a.toFixed(3)})`;
+const toneRgb = (V: View, hex: string, d: number, h = 0) => mixRgb(hexRgb(hex), V.air(d, h), V.fog(d));
+const drawFloor = (ctx: CanvasRenderingContext2D, V: View) => {
+  const { e, v } = V;
+  const hy = e.Hy + V.dy;
+  const y0 = Math.max(0, Math.floor(hy));
+  for (let y = y0; y < 1920; y += 3) {
+    const ym = Math.max(hy + 0.5, y + 1.5);
+    const d = (e.F * e.He) / (ym - hy);
+    const c = mixRgb(toneRgb(V, FLOOR_LOCAL, d), v.airAtScreen(ym), floorMelt(V, d));
+    ctx.fillStyle = rgbStr(c);
+    ctx.fillRect(0, y, 1080, 3.6);
+  }
+  // the tile joints: lines along X (into depth) and across, each faded by its depth and by its screen spacing
+  const bins = [0, 0.6, 1, 1.6, 2.6, 4.2, 7, 12, 20].map((m) => m * V.Dt);
+  const dMin = (e.F * e.He) / (1960 - hy);
+  const lw = (d: number) => Math.max(0.5, Math.min(2.2, (1.5 * e.F) / d));
+  for (let b = 0; b < bins.length - 1; b++) {
+    const da = Math.max(dMin, bins[b]);
+    const db = bins[b + 1];
+    if (db <= da) continue;
+    const dm = (da + db) / 2;
+    const spacing = (TILE * e.F) / dm;
+    const rowSpacing = (e.He * e.F * TILE) / (dm * dm);
+    const aX = 0.38 * (1 - V.fog(dm)) * (1 - floorMelt(V, dm)) * sst(2.5, 7, spacing);
+    const aZ = 0.38 * (1 - V.fog(dm)) * (1 - floorMelt(V, dm)) * sst(2.5, 7, rowSpacing);
+    if (aX < 0.01 && aZ < 0.01) continue;
+    ctx.strokeStyle = rgbStr(toneRgb(V, JOINT, dm));
+    ctx.lineWidth = lw(dm);
+    // lines along Z (X = (i + 0.5) T) between depths da and db
+    if (aX >= 0.01) {
+      ctx.globalAlpha = aX;
+      ctx.beginPath();
+      const halfW = (620 * db) / e.F;
+      const cx = e.Xe + db * e.sn;
+      const i0 = Math.floor((cx - halfW / Math.max(0.5, e.cs)) / TILE) - 2;
+      const i1 = Math.ceil((cx + halfW / Math.max(0.5, e.cs)) / TILE) + 2;
+      for (let i = i0; i <= i1; i++) {
+        const X = i * TILE;
+        const Za = e.Ze + (da - (X - e.Xe) * e.sn) / e.cs;
+        const Zb = e.Ze + (db - (X - e.Xe) * e.sn) / e.cs;
+        const p = V.P(X, 0, Za);
+        const q = V.P(X, 0, Zb);
+        if (!p || !q) continue;
+        if ((p.x < -50 && q.x < -50) || (p.x > 1130 && q.x > 1130)) continue;
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(q.x, q.y);
+      }
+      ctx.stroke();
     }
-    z.push(row);
+    // lines across (Z = (j + 0.5) T) whose depth at the screen centre lies in this bin
+    if (aZ >= 0.01) {
+      ctx.globalAlpha = aZ;
+      ctx.beginPath();
+      const j0 = Math.floor((e.Ze + da * e.cs) / TILE);
+      const j1 = Math.ceil((e.Ze + db * e.cs) / TILE);
+      for (let j = j0; j <= j1; j++) {
+        const Z = j * TILE;
+        const dz = (Z - e.Ze) / e.cs;
+        if (dz < da || dz >= db) continue;
+        const Xc = e.Xe + (Z - e.Ze) * (e.sn / e.cs);
+        const half = (700 * dz) / e.F;
+        const p = V.P(Xc - half, 0, Z);
+        const q = V.P(Xc + half, 0, Z);
+        if (!p || !q) continue;
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(q.x, q.y);
+      }
+      ctx.stroke();
+    }
   }
-  return z;
-};
-/** the X of a figure at frame f: the hero's row fans out from behind him (step 1); a side block's files telescope
- *  out from behind the column's outer file on their side (step 4) */
-export const xOf = (f: number, c: number, i: number, b: number) => {
-  if (c === 0) return xFile0(f, i);
-  const a = xFile0(f, c > 0 ? I1 : I0);
-  return a + (c * BX + i * PX - (c > 0 ? I1 : I0) * PX) * e4(f, b);
-};
-export type Fig = { c: number; i: number; b: number; r: number; gi: number; v: number; seed: number; gen: number; Z1: number; X1: number };
-export const FIGS: Fig[] = (() => {
-  const out: Fig[] = [];
-  for (let b = 0; b < NB; b++)
-    for (let c = -(WIDTHS[b] - 1) / 2; c <= (WIDTHS[b] - 1) / 2; c++)
-      for (let i = I0; i <= I1; i++)
-        for (let r = 0; r < NR; r++) {
-          const gi = c * 10 + i;
-          const hero = gi === 0 && b === 0 && r === 0;
-          const gen = hero ? 0 : c !== 0 ? 4 : b > 0 ? 3 : r > 0 ? 2 : 1;
-          out.push({
-            c,
-            i,
-            b,
-            r,
-            gi,
-            v: hero ? 0 : Math.floor(random(`tey-v-${gi}-${b}-${r}`) * 5),
-            seed: random(`tey-s-${gi}-${b}-${r}`),
-            gen,
-            Z1: b * BZ + r * PZ,
-            X1: c * BX + i * PX,
-          });
-        }
-  return out;
-})();
-export type Placed = Fig & { X: number; Z: number; e: number };
-/** every figure standing at frame f (a copy that has not started is left out: it is coincident with, and hidden
- *  behind, its twin), with its own progress e (0..1) */
-export const figsAt = (f: number): Placed[] => {
-  const zr = zRowsAt(f);
-  const out: Placed[] = [];
-  for (const g of FIGS) {
-    const e = g.gen === 0 ? 1 : g.gen === 1 ? e1(f, g.i) : g.gen === 2 ? e2(f, g.r) : g.gen === 3 ? e3(f, g.b) : e4(f, g.b);
-    if (e <= 0) continue;
-    out.push({ ...g, X: xOf(f, g.c, g.i, g.b), Z: zr[g.b][g.r], e });
-  }
-  return out;
+  ctx.globalAlpha = 1;
+  // the far floor's haze: a deep band under a low horizon; a short one while the view tips down (the floor reads as
+  // floor, not as more sky)
+  paintHorizonHaze(ctx, v, 110 + 120 * sst(350, 550, e.Hy), 1);
 };
 
 // ===================================================================================================================
-// THE CAMERA: a physical camera on one lens, dolly + crane + lens shifts
+// THE ROBOTS ON THE CANVAS (sprites near-mid, a bean LOD far, a texture for the farthest sea) and their hatches
 // ===================================================================================================================
-export const F_LENS = 800;
-/** the vanishing point's X: between the hero (X 0) and his right neighbour: the row's and the block's axis */
-export const XV = 0.5 * PX;
-const S0 = 0.92;
-const S1F = 0.19;
-const YF0 = 1060;
-const YF1 = 1060;
-const HY0 = 805;
-const HY1 = 470;
-export const S_END = 140;
-const E_S = lobe(0.7, 0.9);
-const E_Y = lobe(0.9, 1.9);
-const E_X = lobe(1.0, 1.6);
-const X_END = 40;
-/** the creep after the settle (ln s per frame), blended in over f124-f140 so the speed never steps */
-const CREEP = -0.0012;
-const creepAt = (f: number) => {
-  const a = 124;
-  const b = 140;
-  if (f <= a) return 0;
-  const L = b - a;
-  const t = (Math.min(f, b) - a) / L;
-  return CREEP * (L * (t * t * t - 0.5 * t * t * t * t) + Math.max(0, f - b));
-};
-export type CamState = { s: number; D: number; h: number; HY: number; Yf: number; shift: number; k: number; cam: Cam; depth: DepthOpts };
-export const camState = (f: number): CamState => {
-  const ls = Math.log(S0) + (Math.log(S1F) - Math.log(S0)) * E_S(f / S_END) + creepAt(f);
-  const s = Math.exp(ls);
-  const D = F_LENS / s;
-  const ey = E_Y(f / S_END);
-  const HY = HY0 + (HY1 - HY0) * ey;
-  const Yf = YF0 + (YF1 - YF0) * ey;
-  const h = (Yf - HY) / s;
-  const k = s;
-  // f0: the hero (X 0) at x 540; then the row's axis (the VP) on the centre
-  const shift = s * XV * (1 - E_X(f / X_END));
-  const eyeY = -h;
-  const cam: Cam = { k, cx: XV, cy: eyeY - (HY - 960) / k };
-  return { s, D, h, HY, Yf, shift, k, cam, depth: { eyeY, dRef: D, kRef: k, dolly: 0 } };
-};
-/** a world point on screen (no sway): the checks' projection */
-export const screenOf = (C: CamState, X: number, Y: number, Z: number) => {
-  const d = C.D + Z;
-  return { x: 540 + C.shift + (F_LENS * (X - XV)) / d, y: C.HY + (F_LENS * (C.h + Y)) / d, s: F_LENS / d };
-};
-
-// ===================================================================================================================
-// THE PLATE: "×10" in the air above the horizon, deep and high (world space), landed on "tenfold"
-// ===================================================================================================================
-export const PLATE_F0 = 102;
-export const PLATE_DUR = 12;
-const plateAt = (f: number, sx: number, sy: number, px: number, Z: number) => {
-  const C = camState(f);
-  const d = C.D + Z;
-  return { X: XV + ((sx - 540 - C.shift) * d) / F_LENS, Y: -(C.h - ((sy - C.HY) * d) / F_LENS), Z, size: (px * d) / F_LENS };
-};
-export const PLATE = plateAt(S_END, 540, 370, 96, 26000);
-
-// ===================================================================================================================
-// THE CROWD SPRITES (the module's bake at this cut's sizes: front view, 5 looks) AND THEIR FOG
-// ===================================================================================================================
-const SIZES = [16, 26, 42, 68, 110, 176, 280];
-const SPRITE_FOG = 0.6;
+const SIZES = [12, 18, 26, 38, 56, 80, 112];
+/** live SVG robots at and above LIVE_HI px (crossfading from the sprite over LIVE_LO..LIVE_HI): the hero, the ten,
+ *  the hundred; the field's near rows (often hundreds of robots of 60-200 px) stay sprites until they are big */
+const LIVE_LO = 96;
+const LIVE_HI = 120;
 const FOGGED = new Map<string, HTMLCanvasElement>();
 const foggedOf = (key: string, src: HTMLCanvasElement, fog: FolkFog): HTMLCanvasElement => {
-  const amt = Math.round(c01(fog.amount * SPRITE_FOG) * 40) / 40;
+  const amt = Math.round(c01(fog.amount) * 24) / 24;
   if (amt <= 0) return src;
-  const rgb = (typeof fog.rgb === "string" ? hexRgb(fog.rgb) : fog.rgb).map((v) => Math.round(v / 6) * 6);
+  const rgb = (typeof fog.rgb === "string" ? hexRgb(fog.rgb) : fog.rgb).map((c) => Math.round(c / 6) * 6);
   const k = `${key}|${amt}|${rgb.join(",")}`;
   const hit = FOGGED.get(k);
   if (hit) return hit;
-  if (FOGGED.size > 5000) FOGGED.clear();
+  if (FOGGED.size > 4000) FOGGED.clear();
   const c = document.createElement("canvas");
   c.width = src.width;
   c.height = src.height;
@@ -280,137 +215,358 @@ const shadowSprite = () => {
   if (SHADOW) return SHADOW;
   const c = document.createElement("canvas");
   c.width = 64;
-  c.height = 20;
+  c.height = 64;
   const g = c.getContext("2d") as CanvasRenderingContext2D;
-  const gr = g.createRadialGradient(32, 10, 0, 32, 10, 32);
-  const sh = hexRgb(PAL.shadow).join(",");
-  gr.addColorStop(0, `rgba(${sh},0.5)`);
-  gr.addColorStop(0.6, `rgba(${sh},0.26)`);
-  gr.addColorStop(1, `rgba(${sh},0)`);
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, rgbStr(SHADOW_RGB, 0.62));
+  gr.addColorStop(0.6, rgbStr(SHADOW_RGB, 0.34));
+  gr.addColorStop(1, rgbStr(SHADOW_RGB, 0));
   g.fillStyle = gr;
-  g.save();
-  g.scale(1, 10 / 32);
-  g.beginPath();
-  g.arc(32, 32, 32, 0, Math.PI * 2);
-  g.fill();
-  g.restore();
+  g.fillRect(0, 0, 64, 64);
   SHADOW = c;
   return c;
 };
-/** the Genius's height (feet to crown, units) the LOD and the sprites are judged by */
-const GH = 312;
+
+/** one robot to draw this frame */
+export type Item = { X: number; Z: number; L: number; v: number; seed: number; t0: number; d: number; lod: number; x: number; yFloor: number; yFeet: number; yNear: number; s: number; h: number; open: number; rise: number; boot: number; u: number };
+const HATCH = T / 2 - 7;
+const itemOf = (V: View, f: number, X: number, Z: number, L: number, v: number, seed: number, t0: number): Item | null => {
+  const en = entryAt(f, t0, L);
+  if (L > 0 && en.u <= 0) return null;
+  const p = V.P(X, 0, Z);
+  if (!p) return null;
+  if (p.d >= V.dTex) return null;
+  const below = (1 - en.rise) * DEPTH;
+  const near = V.P(X, 0, Z - HATCH);
+  return { X, Z, L, v, seed, t0, d: p.d, lod: 1 - sst(V.dTex / LOD_BAND, V.dTex, p.d), x: p.x, yFloor: p.y, yFeet: p.y + below * p.s, yNear: near ? near.y : p.y + HATCH * p.s, s: p.s, h: BOT_H * p.s, open: L === 0 ? 1 : en.open, rise: L === 0 ? 1 : en.rise, boot: L === 0 ? 1 : en.boot, u: en.u };
+};
+/** the robot's fog: the air by its depth, darkened by the shaft while it is still under the floor */
+const fogOfItem = (V: View, it: Item): FolkFog => {
+  const air = V.air(it.d, 150);
+  const a = V.figFog(it.d);
+  const dark = it.rise >= 1 ? 0 : 0.55 * Math.pow(1 - it.rise, 0.7);
+  if (dark <= 0) return { rgb: air, amount: a };
+  const rgb = mixRgb(air, SHADOW_RGB, dark / Math.max(1e-3, dark + a));
+  return { rgb, amount: Math.min(0.95, a + dark * (1 - a)) };
+};
+
+/** every robot in sight this frame: the field (L0..L4) and, from the sea's wave on, the sea's slots in view */
+export const itemsAt = (V: View, f: number): Item[] => {
+  const out: Item[] = [];
+  for (const r of FIELD_BOTS) {
+    const it = itemOf(V, f, r.X, r.Z, r.L, r.v, r.seed, r.t0);
+    if (it && it.x > -80 && it.x < 1160 && it.yFloor < 2000) out.push(it);
+  }
+  if (f < WAVES[5].start) return out;
+  const { e } = V;
+  const hy = e.Hy + V.dy;
+  const dMin = (e.F * e.He) / (1990 - hy);
+  const xEdge = (Zr: number, x: number) => {
+    const rz = Zr - e.Ze;
+    const a = x - 540 - V.dx;
+    return e.Xe + (rz * (e.sn * e.F + a * e.cs)) / (e.cs * e.F - a * e.sn);
+  };
+  for (let j = SEA.j0; j <= SEA.j1; j++) {
+    const Z = zOf(j);
+    if (Z - e.Ze < 200) continue;
+    const xa = xEdge(Z, -70);
+    const xb = xEdge(Z, 1150);
+    const dc = (e.Xt - e.Xe) * e.sn + (Z - e.Ze) * e.cs;
+    if (dc < dMin * 0.9) continue;
+    // far rows go to the texture (drawFarTexture)
+    if (dc > V.dTex * 1.05) break;
+    const i0 = Math.floor(Math.min(xa, xb) / (T + AISLE / 10)) - 2;
+    const i1 = Math.ceil(Math.max(xa, xb) / (T + AISLE / 10)) + 2;
+    const inField = j >= FIELD.j0 && j <= FIELD.j1;
+    for (let i = i0; i <= i1; i++) {
+      if (inField && i >= FIELD.i0 && i <= FIELD.i1) continue;
+      const t0 = t0Of(i, j, 5);
+      if (f <= t0) continue;
+      const it = itemOf(V, f, xOf(i), Z, 5, variantOf(i, j), seedOf(i, j), t0);
+      if (it && it.yFloor < 2000 && it.yFloor > hy) out.push(it);
+    }
+  }
+  return out;
+};
+
+/** the hatch: the opening (its leaves sliding apart under the floor) and the lift's top coming up the shaft */
+const drawHatch = (ctx: CanvasRenderingContext2D, V: View, it: Item) => {
+  if (it.open <= 0 || it.rise >= 1) return;
+  const w = HATCH * it.open;
+  const q = [V.P(it.X - w, 0, it.Z - HATCH), V.P(it.X + w, 0, it.Z - HATCH), V.P(it.X + w, 0, it.Z + HATCH), V.P(it.X - w, 0, it.Z + HATCH)];
+  if (q.some((p) => !p)) return;
+  const pts = q as { x: number; y: number }[];
+  const span = Math.abs(pts[1].x - pts[0].x);
+  if (span < 0.6) return;
+  const a = 1 - V.fog(it.d);
+  // the far waves' hatches (the 1,000, the 10,000, the sea: a few px each) come in with their robots, never as a bare
+  // dark grid ahead of them
+  const withBot = it.L >= 3 ? sst(0, 0.45, it.rise) : 1;
+  ctx.globalAlpha = (0.55 + 0.45 * sst(14, 40, it.h)) * withBot * it.lod;
+  if (ctx.globalAlpha < 0.01) return;
+  ctx.fillStyle = rgbStr(mixRgb(mixRgb(SHADOW_RGB, hexRgb(FLOOR_LOCAL), 0.22), V.air(it.d, 0), 1 - a));
+  ctx.beginPath();
+  pts.forEach((p, k) => (k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  ctx.closePath();
+  ctx.fill();
+  // the lift's top (the tile) seen down the shaft as it comes up, clipped to the opening
+  if (it.rise > 0.02 && span > 2) {
+    const yb = (1 - it.rise) * DEPTH;
+    const t = [V.P(it.X - HATCH, yb, it.Z - HATCH), V.P(it.X + HATCH, yb, it.Z - HATCH), V.P(it.X + HATCH, yb, it.Z + HATCH), V.P(it.X - HATCH, yb, it.Z + HATCH)];
+    if (t.every((p) => p)) {
+      ctx.save();
+      ctx.clip();
+      const lit = mixRgb(SHADOW_RGB, toneRgb(V, FLOOR_LOCAL, it.d), Math.pow(it.rise, 1.6));
+      ctx.fillStyle = rgbStr(lit);
+      ctx.beginPath();
+      (t as { x: number; y: number }[]).forEach((p, k) => (k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  ctx.globalAlpha = 1;
+};
+const drawShadow = (ctx: CanvasRenderingContext2D, V: View, it: Item) => {
+  const a = 0.85 * (1 - V.fog(it.d)) * sst(0.7, 1, it.rise) * it.lod;
+  if (a < 0.02 || it.h < 2) return;
+  const rx = 56 * it.s;
+  const ry = Math.max(0.6, (26 * it.s * V.e.He) / Math.max(1, it.d));
+  const cx = it.x + 0.18 * rx;
+  const cy = it.yFloor + 0.2 * ry;
+  ctx.globalAlpha = a;
+  ctx.drawImage(shadowSprite(), cx - rx, cy - ry, 2 * rx, 2 * ry);
+  ctx.globalAlpha = 1;
+};
+/** the bean LOD (a barrel, a wider head block, the screen band): plain rects, cropped at the floor's near line */
+const drawBean = (ctx: CanvasRenderingContext2D, x: number, y: number, h: number, crop: number, body: string, screen: string, alpha: number) => {
+  if (alpha <= 0.01) return;
+  ctx.globalAlpha = alpha;
+  const rect = (x0: number, y0: number, x1: number, y1: number, c: string) => {
+    const b = Math.min(y1, crop);
+    if (b <= y0) return;
+    ctx.fillStyle = c;
+    ctx.fillRect(x0, y0, x1 - x0, b - y0);
+  };
+  rect(x - 0.16 * h, y - 0.56 * h, x + 0.16 * h, y - 0.03 * h, body);
+  rect(x - 0.23 * h, y - 0.97 * h, x + 0.23 * h, y - 0.58 * h, body);
+  if (h > 4.5) rect(x - 0.15 * h, y - 0.9 * h, x + 0.15 * h, y - 0.69 * h, screen);
+  ctx.globalAlpha = 1;
+};
+type Get = (key: string) => Sprite | undefined;
+const drawBody = (ctx: CanvasRenderingContext2D, V: View, get: Get, it: Item) => {
+  const liveA = it.L === 0 && it.h >= LIVE_LO ? 1 : sst(LIVE_LO, LIVE_HI, it.h);
+  if (liveA >= 0.999 || it.rise <= 0) return;
+  const crop = it.rise >= 1 ? 1e9 : it.yNear;
+  const fog = fogOfItem(V, it);
+  const fogRgb = typeof fog.rgb === "string" ? hexRgb(fog.rgb) : fog.rgb;
+  const spriteA = sst(10, 14, it.h) * it.lod;
+  const beanA = (1 - sst(12, 15, it.h)) * it.lod;
+  if (beanA > 0.01) {
+    if (it.rise >= 1) drawBotDot(ctx, it.x, it.yFeet, it.h, beanA, { rgb: fogRgb, amount: fog.amount });
+    else {
+      const body = rgbStr(mixRgb(hexRgb(ACCENT), fogRgb, 0.5 * fog.amount));
+      const scr = rgbStr(mixRgb(hexRgb(BOT_SCREEN), fogRgb, fog.amount));
+      drawBean(ctx, it.x, it.yFeet, it.h, crop, body, scr, beanA);
+    }
+  }
+  if (spriteA <= 0.01) return;
+  const size = SIZES.find((q) => q >= it.h / 1.15) ?? SIZES[SIZES.length - 1];
+  const key = `bt|${it.v}|front|0|${size}`;
+  const sp = get(key);
+  if (!sp) return;
+  const src = foggedOf(key, sp.c, { rgb: fogRgb, amount: 0.5 * fog.amount });
+  const k = it.h / sp.px;
+  const dw = sp.c.width * k;
+  const dh = sp.c.height * k;
+  const x0 = it.x - sp.ax * k;
+  const y0 = it.yFeet - sp.ay * k;
+  const vis = Math.min(dh, crop - y0);
+  if (vis <= 0.2) return;
+  ctx.globalAlpha = spriteA;
+  ctx.drawImage(src, 0, 0, sp.c.width, (vis / dh) * sp.c.height, x0, y0, dw, vis);
+  ctx.globalAlpha = 1;
+};
+
+/** the far robots as a texture by screen row (a pre-filtered LOD: the rows of robots beyond V.dTex sit closer than
+ *  RP_TEX px apart and would beat into moire). Each pixel row at its depth is filled where its world line crosses the
+ *  risen robots: the 10,000's rectangle within the 10,000's risen radius, and the sea's risen ring outside the field;
+ *  with gaps at the block aisles, fogged and melting into the air at the horizon; it fades in over the band where the
+ *  robots fade out (dTex / LOD_BAND .. dTex) */
+const SEA_TONE = mixHex(ACCENT, "#B8790C", 0.35);
+type Span = [number, number];
+const FIELD_X: Span = [xOf(FIELD.i0) - T / 2, xOf(FIELD.i1) + T / 2];
+const FIELD_Z: Span = [zOf(FIELD.j0) - T / 2, zOf(FIELD.j1) + T / 2];
+const drawFarTexture = (ctx: CanvasRenderingContext2D, V: View, f: number) => {
+  const R4 = f >= WAVES[4].start ? risenR(4, f) : 0;
+  const R5 = f >= WAVES[5].start ? risenR(5, f) : 0;
+  if (R4 <= 0 && R5 <= 0) return;
+  const { e } = V;
+  const hy = e.Hy + V.dy;
+  const dStart = V.dTex / LOD_BAND;
+  const yCut = hy + (e.F * e.He) / dStart;
+  // the mean of robots and the floor between their files: a shade under the robots' orange
+  const tone = mixRgb(hexRgb(SEA_TONE), SHADOW_RGB, 0.14);
+  for (let y = Math.floor(hy) + 1; y < Math.min(1920, yCut); y++) {
+    const d = (e.F * e.He) / (y + 0.5 - hy);
+    const texA = sst(dStart, V.dTex, d);
+    if (texA <= 0.01) continue;
+    // the screen row's world line: X(x) = bx + ax x, Z(x) = bz + az x
+    const Xr = (x: number) => e.Xe + (((x - 540 - V.dx) * d) / e.F) * e.cs + d * e.sn;
+    const Zr = (x: number) => e.Ze - (((x - 540 - V.dx) * d) / e.F) * e.sn + d * e.cs;
+    const bx = Xr(0);
+    const bz = Zr(0);
+    const ax = Xr(1) - bx;
+    const az = Zr(1) - bz;
+    const disc = (R: number): Span | null => {
+      if (R <= 0) return null;
+      if (!Number.isFinite(R)) return [-10, 1090];
+      const A = ax * ax + az * az;
+      const B = 2 * (ax * bx + az * bz);
+      const C = bx * bx + bz * bz - R * R;
+      const q = B * B - 4 * A * C;
+      if (q <= 0) return null;
+      return [(-B - Math.sqrt(q)) / (2 * A), (-B + Math.sqrt(q)) / (2 * A)];
+    };
+    /** the screen x span where the line's coordinate (b + a x) lies in [lo, hi] */
+    const band = (b0: number, a0: number, [lo, hi]: Span): Span | null => {
+      if (Math.abs(a0) < 1e-9) return b0 >= lo && b0 <= hi ? [-1e9, 1e9] : null;
+      const p = (lo - b0) / a0;
+      const q = (hi - b0) / a0;
+      return [Math.min(p, q), Math.max(p, q)];
+    };
+    const cut = (u: Span | null, v: Span | null): Span | null => {
+      if (!u || !v) return null;
+      const r: Span = [Math.max(u[0], v[0], -10), Math.min(u[1], v[1], 1090)];
+      return r[1] > r[0] ? r : null;
+    };
+    const rect = cut(band(bx, ax, FIELD_X), band(bz, az, FIELD_Z));
+    const field = cut(rect, disc(R4));
+    const sea = cut(disc(R5), [-10, 1090]);
+    const seaParts: Span[] = [];
+    if (sea) {
+      if (!rect || rect[1] <= sea[0] || rect[0] >= sea[1]) seaParts.push(sea);
+      else {
+        if (rect[0] > sea[0]) seaParts.push([sea[0], rect[0]]);
+        if (rect[1] < sea[1]) seaParts.push([rect[1], sea[1]]);
+      }
+    }
+    if (!field && !seaParts.length) continue;
+    const fogA = V.figFog(d);
+    const air = V.air(d, 120);
+    const melt = Math.pow(sst(6 * V.Dt + 30000, 14 * V.Dt + 110000, d), 0.7);
+    ctx.fillStyle = rgbStr(mixRgb(mixRgb(tone, air, 0.5 * fogA + 0.1), V.v.airAtScreen(y), melt));
+    const base = 0.66 * (1 - 0.85 * melt) * texA;
+    // a ring's front: its robots are still coming up (a soft edge, not a line)
+    const rMid = Math.hypot(Xr(540), Zr(540));
+    const frontA = (R: number) => (Number.isFinite(R) ? 0.25 + 0.75 * sst(R, R * 0.8, rMid) : 1);
+    // the block aisles (files with (i + 4) mod 11 = 10) as gaps
+    const gapPx = (AISLE * e.F) / (d * Math.max(0.5, e.cs));
+    const xOfX = (X: number) => 540 + V.dx + ((X - e.Xe - d * e.sn) / e.cs) * (e.F / d);
+    const fillSpan = ([xs0, xs1]: Span, alpha: number) => {
+      ctx.globalAlpha = alpha;
+      const c0 = Math.floor(Math.min(Xr(xs0), Xr(xs1)) / (10 * T + AISLE)) - 1;
+      const c1 = Math.ceil(Math.max(Xr(xs0), Xr(xs1)) / (10 * T + AISLE)) + 1;
+      const gaps: number[] = [];
+      for (let cc = c0; cc <= c1; cc++) gaps.push(xOfX(aisleX(cc)));
+      gaps.sort((p, q) => p - q);
+      let prev = xs0;
+      for (const g of gaps) {
+        const a0 = Math.max(prev, xs0);
+        const b0 = Math.min(g - gapPx / 2, xs1);
+        if (b0 > a0) ctx.fillRect(a0, y, b0 - a0, 1);
+        prev = Math.max(prev, g + gapPx / 2);
+      }
+      if (xs1 > prev) ctx.fillRect(prev, y, xs1 - prev, 1);
+    };
+    if (field) fillSpan(field, base * frontA(R4));
+    for (const sp of seaParts) fillSpan(sp, base * frontA(R5));
+  }
+  ctx.globalAlpha = 1;
+};
 
 // ===================================================================================================================
-// THE AIR
+// THE LIVE ROBOTS (SVG): the hero always while it is big, every robot of 54+ px, crossfading into its sprite below 70
 // ===================================================================================================================
-const FOG_VIS = 11000;
-const FIG_FOG = { near: 400, vis: 9000, max: 0.8 };
-/** the people's fog plus the deep haze: the back blocks sink into the air toward the horizon */
-const figFogOf = (A: AirWorld, Z: number): FolkFog => ({ ...A.folkFog(Z), amount: Math.min(1, A.figFog(Z) + 0.45 * sst(5000, 22000, Z)) });
-/** the very back melts away (alpha) */
-const meltOf = (Z: number) => 1 - 0.85 * sst(9000, 23000, Z);
-const MAT_SAND: Mat = { lit: "#A8966F", mid: "#8E7C5C", dark: "#5E5242" };
-/** the living hold: breath and weight shifts, ramped in over the last beats (scaled by each figure's own progress, so
- *  a copy still coincident with its twin never moves off it) */
-const LIFE = { a: 130, b: 148 };
-
-const isLive = (g: Fig) => g.c === 0 && g.b === 0 && g.r === 0;
-
-const TenfoldEveryYear: React.FC<z.infer<typeof schema>> = ({ camFrame }) => {
-  const frame = useCurrentFrame();
-  const cf = camFrame >= 0 ? camFrame : frame;
-  const reqs = useMemo(() => geniusCrowdReqs(["front"], SIZES), []);
-  const get = useGeniusSprites(reqs);
-  const C = camState(cf);
-  const R0 = camState(0);
-  const cam = swayCam(C.cam, cf);
-  const rest = swayCam(R0.cam, 0);
-  const A = airWorldOf({ cam, rest, depth: C.depth, frame, scene: { mood: "interior", eyeT: 0.17, fogVis: FOG_VIS }, fogBy: "depth", figFog: FIG_FOG });
-  const P = A.P;
-  const k = A.cam.k;
-  const sp = (X: number, Y: number, Z: number): [number, number] => {
-    const w = P.p(X, Y, Z);
-    return [540 + C.shift + (w[0] - A.cam.cx) * k, 960 + (w[1] - A.cam.cy) * k];
-  };
-  const figs = figsAt(frame);
-  const life = sst(LIFE.a, LIFE.b, frame);
-  // weight shifts: a slow wave running back through the crowd (by depth and across), each figure a little off phase
-  const sway = (g: Placed) => life * g.e * 7 * Math.sin(frame * 0.11 - g.Z1 * 0.00035 - g.X1 * 0.0002 + g.seed * 1.6);
-  const breath = (g: Placed) => 1 + g.e * 0.008 * Math.sin((frame / 101) * 6.283 + g.seed * 6.283);
-  const canvasFigs = figs.filter((g) => !isLive(g));
-  // far to near; at a tie (a copy still coincident with its twin) the copy first: its target deeper / farther out
-  canvasFigs.sort((p, q) => q.Z - p.Z || q.Z1 - p.Z1 || Math.abs(q.gi) - Math.abs(p.gi));
-  const draw = (ctx: CanvasRenderingContext2D) => {
-    const sh = shadowSprite();
-    // the contact shadows first (every figure's, the live row's too): on the floor under everyone
-    for (const g of figs) {
-      const s = P.r(g.Z) * k;
-      const hPx = GH * s;
-      if (hPx < 5) continue;
-      const fog = A.figFog(g.Z);
-      const a = (1 - fog) * g.e * g.e * meltOf(g.Z);
-      if (a <= 0.01) continue;
-      const [x, y] = sp(g.X + sway(g), 0, g.Z);
-      const w = hPx * 0.42;
-      ctx.globalAlpha = a;
-      ctx.drawImage(sh, x - w * 0.38, y - w * 0.12, w, w * (20 / 64));
-    }
-    ctx.globalAlpha = 1;
-    for (const g of canvasFigs) {
-      const s = P.r(g.Z) * k;
-      const hPx = GH * s;
-      if (hPx < 1.2) continue;
-      const [x, y] = sp(g.X + sway(g), 0, g.Z);
-      if (x < -60 || x > 1140 || y < 200) continue;
-      const fog = figFogOf(A, g.Z);
-      const ra = meltOf(g.Z);
-      const spriteA = sst(11, 15, hPx);
-      const dotA = 1 - sst(13, 16, hPx);
-      if (dotA > 0.003) drawGeniusDot(ctx, x, y, hPx, dotA * ra, fog);
-      if (spriteA <= 0.003) continue;
-      const size = SIZES.find((q) => q >= hPx / 1.15) ?? SIZES[SIZES.length - 1];
-      const key = `ge|${g.v}|front|0|${size}`;
-      const spr: Sprite | undefined = get(key);
-      if (!spr) continue;
-      const src = foggedOf(key, spr.c, fog);
-      const fx = hPx / spr.px;
-      const fy = fx * breath(g);
-      ctx.globalAlpha = spriteA * ra;
-      ctx.drawImage(src, x - spr.ax * fx, y - spr.ay * fy, spr.c.width * fx, spr.c.height * fy);
-    }
-    ctx.globalAlpha = 1;
-  };
-  // the live row (the hero's front row of ten), outer copies first so each comes out from behind the one inside it
-  const live = figs.filter(isLive).sort((p, q) => Math.abs(q.gi) - Math.abs(p.gi));
-  const tr = `translate(${(C.shift / C.k).toFixed(4)} 0)`;
-  const tPlate = yearPlateT(frame, PLATE_F0, PLATE_DUR);
+const livePose = (it: Item, frame: number): BotPose => {
+  const q = BOT_POSES.front(frame, it.L === 0 ? 0 : it.seed * 40);
+  return it.L === 0 ? q : { ...q, boot: it.boot };
+};
+const LiveBots: React.FC<{ V: View; items: Item[]; frame: number }> = ({ V, items, frame }) => {
+  const live = items.filter((it) => it.rise > 0 && it.h >= LIVE_LO);
+  if (!live.length) return null;
+  // groups of similar size share one gouache filter (BotLayer); groups run far to near, as the items do
+  const groups: { key: number; s: number; its: Item[] }[] = [];
+  for (const it of live) {
+    const key = it.L === 0 ? -1 : Math.floor(Math.log(it.h) / Math.log(1.18));
+    const g = groups[groups.length - 1];
+    if (g && g.key === key) g.its.push(it);
+    else groups.push({ key, s: it.s, its: [it] });
+  }
   return (
-    <AirStage v={A.v} bloom={0.22} shafts={0.3}>
-      <WorldSvg cam={cam}>
-        <g transform={tr}>
-          <AirFloor A={A} x0={-30000} x1={30000} z0={-20000} z1={42000} mat={MAT_SAND} course={0.6 * U} plank={0.6 * U} jointAmt={0.6} melt={0.5} />
-        </g>
-        <AirHorizonHazeW A={A} id="tey-haze" />
-      </WorldSvg>
+    <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0 }}>
+      {groups.map((g, gi) => {
+        const figs = g.its.map((it) => {
+          const a = it.L === 0 ? 1 : sst(LIVE_LO, LIVE_HI, it.h);
+          const uid = `tfb${it.X / T}_${it.Z / T}`.replace(/-/g, "m");
+          const clip = it.rise < 1;
+          return (
+            <g key={uid} opacity={a}>
+              {clip ? (
+                <defs>
+                  <clipPath id={`${uid}c`}>
+                    <rect x={it.x - 400} y={-4000} width={800} height={it.yNear + 4000} />
+                  </clipPath>
+                </defs>
+              ) : null}
+              <g clipPath={clip ? `url(#${uid}c)` : undefined}>
+                <Bot variant={it.v} pose={livePose(it, frame)} at={[it.x, it.yFeet]} scale={it.s} uid={uid} frame={frame} fog={fogOfItem(V, it)} unitPx={1} texture={g.key === -1 ? undefined : false} />
+              </g>
+            </g>
+          );
+        });
+        return g.key === -1 ? (
+          <g key={`g${gi}`}>{figs}</g>
+        ) : (
+          <BotLayer key={`g${gi}`} uid={`tfl${gi}`} unitPx={g.s}>
+            {figs}
+          </BotLayer>
+        );
+      })}
+    </svg>
+  );
+};
+
+// ===================================================================================================================
+// THE CUT
+// ===================================================================================================================
+export const TenfoldScene: React.FC<{ frame: number }> = ({ frame }) => {
+  const reqs = useMemo(() => botCrowdReqs(["front"], SIZES), []);
+  const get = useBotSprites(reqs);
+  const V = viewAt(frame);
+  const items = itemsAt(V, frame).sort((a, b) => b.d - a.d);
+  const draw = (ctx: CanvasRenderingContext2D) => {
+    drawFloor(ctx, V);
+    drawFarTexture(ctx, V, frame);
+    for (const it of items) {
+      drawHatch(ctx, V, it);
+      drawShadow(ctx, V, it);
+      drawBody(ctx, V, get, it);
+    }
+    // the far crowd melts into the air at the horizon (no hard top edge to the sea)
+    paintHorizonHaze(ctx, V.v, 150, 0.85);
+  };
+  return (
+    <AirStage v={V.v} bloom={0.22} shafts={0.35}>
       <FolkCanvas draw={draw} />
-      <WorldSvg cam={cam}>
-        <AirHorizonHazeW A={A} id="tey-haze2" strength={0.6} />
-      </WorldSvg>
-      <WorldSvg cam={cam}>
-        <g transform={tr}>
-          {live.map((g) => {
-            const { at, scale } = P.at(g.X + sway(g), g.Z);
-            return <Genius key={`l${g.gi}`} variant={g.v} pose={G.front(frame, g.seed * 40 * g.e)} at={at} scale={scale} uid={`tey${g.gi + 10}`} frame={frame} fog={A.folkFog(g.Z)} unitPx={k} />;
-          })}
-        </g>
-      </WorldSvg>
-      <WorldSvg cam={cam}>
-        <g transform={tr}>
-          <YearPlate A={A} X={PLATE.X} Y={PLATE.Y} Z={PLATE.Z} text="×10" t={tPlate} uid="tey-plate" size={PLATE.size} plate={0.55} />
-        </g>
-      </WorldSvg>
+      <LiveBots V={V} items={items} frame={frame} />
     </AirStage>
   );
+};
+
+const TenfoldEveryYear: React.FC<z.infer<typeof schema>> = () => {
+  const frame = useCurrentFrame();
+  return <TenfoldScene frame={frame} />;
 };
 
 export default TenfoldEveryYear;

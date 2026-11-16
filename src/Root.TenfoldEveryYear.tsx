@@ -1,7 +1,7 @@
 import {Composition} from 'remotion';
 import TenfoldEveryYear, {DURATION, FPS, defaultProps, schema} from '../generated/components/rsi-ten-earths/TenfoldEveryYear';
 
-// Private render entry for TenfoldEveryYear (rsi-ten-earths; Dwarkesh 3D style): one Genius becomes 10, 100, 1,000 and 10,000, copies coming out from behind the formation under one pull-back and rise; plate x10.
+// Private render entry for TenfoldEveryYear (rsi-ten-earths; Dwarkesh 3D style): one robot becomes 10, 100, 1,000, 10,000 and a sea, each rising out of the floor on its lift in a ripple, under one log-space crane up and back.
 // Opaque 1080x1920, 23.976 fps, 156 frames.
 export const RemotionRoot = () => (
   <Composition
