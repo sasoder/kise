@@ -1,34 +1,40 @@
-// check-compute-per-ai-falls: every-frame checks for ComputePerAIFalls (rsi-ten-earths, cut 64): the keep-in box
-// (racks, Genius head and feet, the year plate) and the threads' clearance from the plate's glyph box (padded 6 px).
-// Run: bun scripts/clips/rsi-ten-earths/check-compute-per-ai-falls.ts
-import { camState, screenAt, GENIUS, PLATE, F_LENS, BLOCK_RACKS, threadPathPool, threadPointPool } from "../../../generated/components/rsi-ten-earths/computeBlockState";
-import { threadHead } from "../../../generated/components/rsi-ten-earths/ComputePerAIFalls";
-import { RACK } from "../../../generated/components/rsi-ten-earths/tenEarthsHall";
-let minGap = 1e9, at = "";
-const w = { gHead: 1e9, gFeet: 0, xL: 1e9, xR: 0, top: 1e9, plTop: 1e9, plBot: 0, plL: 1e9, plR: 0, threadMaxY: 0 };
+// check-compute-per-ai-falls (rev 1): every frame of ComputePerAIFalls along camAt6: the robot and the floor year inside
+// the keep-in box (8 px sway margin), the robot face and the year clear of the caption bands, and each step's racks on
+// screen at their wave. Run: bun scripts/clips/rsi-ten-earths/check-compute-per-ai-falls.ts
+import { camAt6 } from "../../../generated/components/rsi-ten-earths/ComputePerAIFalls";
+import { screenOf3, scaleAt, HERO_STATION, YEAR_PAINT, RACKS, stepRacks, type BlockCam } from "../../../generated/components/rsi-ten-earths/computeBlockRev1";
+const M = 8, KX0 = 65, KX1 = 1015, KY0 = 290, KY1 = 1070;
+const BANDS = [[1080, 1250], [1360, 1460]];
+const an = HERO_STATION.an.at;
+const box = (c: BlockCam, pts: [number, number, number][]) => {
+  const s = pts.map((p) => screenOf3(c, ...p));
+  return { x0: Math.min(...s.map((q) => q[0])), x1: Math.max(...s.map((q) => q[0])), y0: Math.min(...s.map((q) => q[1])), y1: Math.max(...s.map((q) => q[1])) };
+};
+const inBand = (b: { y0: number; y1: number }) => BANDS.some(([a, z]) => b.y1 + M > a && b.y0 - M < z);
+const keep = (b: { x0: number; x1: number; y0: number; y1: number }) => b.x0 - M >= KX0 && b.x1 + M <= KX1 && b.y0 - M >= KY0 && b.y1 + M <= KY1;
+let bad = 0;
+const rows: string[] = [];
 for (let f = 0; f <= 141; f++) {
-  const c = camState(f);
-  const sg = F_LENS / (c.Dc + GENIUS.Z);
-  const feet = screenAt(c, GENIUS.X, 0, GENIUS.Z);
-  w.gHead = Math.min(w.gHead, feet[1] - 325 * sg); w.gFeet = Math.max(w.gFeet, feet[1]);
-  for (const rk of BLOCK_RACKS) {
-    const a = screenAt(c, rk.X - RACK.w / 2, -RACK.h, rk.Z), b = screenAt(c, rk.X + RACK.w / 2, 0, rk.Z), bb = screenAt(c, rk.X + RACK.w / 2, -RACK.h, rk.Z + RACK.d);
-    w.xL = Math.min(w.xL, a[0], bb[0]); w.xR = Math.max(w.xR, b[0], bb[0]); w.top = Math.min(w.top, a[1], bb[1]);
-  }
-  const sp = PLATE.size * F_LENS / (c.Dc + PLATE.Z), pc = screenAt(c, PLATE.X, PLATE.Y, PLATE.Z), tw = 4 * 0.62 * sp;
-  const box = { l: pc[0] - tw / 2 - 6, r: pc[0] + tw / 2 + 6, t: pc[1] - 0.38 * sp - 6, b: pc[1] + 0.34 * sp + 6 };
-  w.plTop = Math.min(w.plTop, box.t); w.plBot = Math.max(w.plBot, box.b); w.plL = Math.min(w.plL, box.l); w.plR = Math.max(w.plR, box.r);
-  for (const rk of BLOCK_RACKS) {
-    const head = threadHead(rk, f); if (head <= 0.004) continue;
-    const path = threadPathPool(rk);
-    for (let i = 0; i <= 80; i++) {
-      const u = (head * i) / 80; const p = threadPointPool(path, u); const s = screenAt(c, p[0], 0, p[1]);
-      w.threadMaxY = Math.max(w.threadMaxY, s[1]);
-      // distance outside the plate box (negative = inside)
-      const dx = Math.max(box.l - s[0], 0, s[0] - box.r), dy = Math.max(box.t - s[1], 0, s[1] - box.b);
-      const d = dx > 0 || dy > 0 ? Math.hypot(dx, dy) : -1;
-      if (d < minGap) { minGap = d; at = `f${f} rack ${rk.id} u ${u.toFixed(2)}`; }
-    }
-  }
+  const c = camAt6(f);
+  const robot = box(c, [[an.X - 70, -240, an.Z], [an.X + 70, -240, an.Z], [an.X - 70, 0, an.Z], [an.X + 70, 0, an.Z]]);
+  const face = box(c, [[an.X - 50, -235, an.Z], [an.X + 50, -150, an.Z]]);
+  const yr = box(c, [[YEAR_PAINT.x0, 0, YEAR_PAINT.z0], [YEAR_PAINT.x1, 0, YEAR_PAINT.z0], [YEAR_PAINT.x0, 0, YEAR_PAINT.z1], [YEAR_PAINT.x1, 0, YEAR_PAINT.z1]]);
+  const px = 235 * scaleAt(c, an.Z);
+  const issues: string[] = [];
+  if (!keep(robot)) issues.push("robot out of keep-in");
+  if (inBand(face)) issues.push("FACE IN BAND");
+  if (inBand(yr)) issues.push("YEAR IN BAND");
+  if (!keep(yr)) issues.push("year out of keep-in");
+  if (issues.length) bad++;
+  if (f % 10 === 0 || issues.length || f === 141) rows.push(`f${f} robot ${px.toFixed(0)}px x${robot.x0.toFixed(0)}-${robot.x1.toFixed(0)} y${robot.y0.toFixed(0)}-${robot.y1.toFixed(0)} | year x${yr.x0.toFixed(0)}-${yr.x1.toFixed(0)} y${yr.y0.toFixed(0)}-${yr.y1.toFixed(0)} ${issues.join(", ")}`);
 }
-console.log(Object.fromEntries(Object.entries(w).map(([k, v]) => [k, Math.round(v)])), "thread-plate min gap (px, box padded 6):", minGap.toFixed(1), at);
+console.log(rows.join("\n"));
+console.log(`frames with issues: ${bad}/142`);
+// each step's changing racks on screen at their wave
+const W = [68, 84, 96, 106];
+for (let i = 1; i <= 4; i++) {
+  const c = camAt6(W[i - 1] + 4);
+  const ids = stepRacks(i);
+  const vis = ids.filter((id) => { const r = RACKS[id]; const [x, y] = screenOf3(c, r.X, -178, r.Z + 89); return x > 0 && x < 1080 && y > 0 && y < 1920; });
+  console.log(`step ${i} (f${W[i - 1] + 4}): ${vis.length}/${ids.length} changing racks on screen`);
+}
