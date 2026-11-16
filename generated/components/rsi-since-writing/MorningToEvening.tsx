@@ -2,7 +2,7 @@
 // MorningToEvening (rsi-since-writing, cut 109). Dwarkesh 3D style (styles/dwarkesh-3d.md).
 // Opaque 1080x1920, 23.976 fps, 152 frames. The last graphic of the clip (the video ends after it).
 // Cut 1's office (sinceWritingWorld + sinceWritingFolk, read-only) inside the misty teal air (AirStage, palette A) on a
-// londonDepth one-point perspective, from the kit kits/dwarkesh-3d/dwarkesh3d; the Genius from rsi-ten-earths (read-only).
+// londonDepth one-point perspective, from the kit kits/dwarkesh-3d/dwarkesh3d; the robot (Bot v0, tenEarthsBot) from rsi-ten-earths (read-only).
 //
 // CHECK LINE: "One day of ours, from morning to evening, is years of work for a future AI."
 //
@@ -14,27 +14,27 @@
 // DURATION: the slot 109.6512 -> 115.9909 s = 6.340 s x 23.976 = 152 frames (f0..f151).
 //
 // THE MOTION: the office in the morning (sunT 0.07: the low sun at the window's left, cool sage light). YOU (Human v0)
-// stand at the end of the Genius's desk holding one cream sheet up, and hand it across: the arm reaches out (f10-30),
-// the sheet leaves the hand on f33 and is laid down flat in front of the Genius's keyboard, landing on f38 ("assignment")
-// on the frame the Genius's near hand touches it (his reach f29-38); he draws it in a little (f38-45) and types on
+// stand at the end of the robot's desk holding one cream sheet up, and hand it across: the arm reaches out (f10-30),
+// the sheet leaves the hand on f33 and is laid down flat in front of the robot's keyboard, landing on f38 ("assignment")
+// on the frame the robot's near mitten comes down onto it (its reach f29-38); it draws it in a little (f38-45) and types on
 // (continuously, every frame). From "then" (f56) the sun crosses the window in one eased arc to the low right (sunT 0.93
 // by f114), the light swinging from the morning sage through the day's teal into the umber-rose dusk (officeDusk from
-// ~f98), while the tall bookcase beside him fills with year binders, one per year: each rises from behind the steel
-// pedestal at his chair (hidden at launch), climbs forward over its top into a lane in front of the case, along to its
+// ~f98), while the tall bookcase beside it fills with year binders, one per year: each rises from behind the steel
+// pedestal at its chair (hidden at launch), climbs forward over its top into a lane in front of the case, along to its
 // own column and in, bottom row first (1 2 3 at the bottom ... 10 11 12 at the top), launched at an accelerating
 // cadence (gaps 4.8 -> 3.2 frames; landings f59 ... f110, LAND below); full on "many years". You stay at
-// the desk end (no exit and return: it crowded the line): you watch him take the sheet, follow the binders with your
+// the desk end (no exit and return: it crowded the line): you watch it take the sheet, follow the binders with your
 // eyes, and from f108 lean back a little and look up at the full shelf with a smile. Camera: one slow push in (k 1.58
 // -> 1.735, a small pan right) from the office (window, desk, bookcase) onto desk + shelf + window. Settled f110-151:
-// evening light, the full shelf, you looking up, the Genius typing; living hold (typing, breath, the air, the creep).
-// CAUSE -> EFFECT: the sheet rides your hand until f33 (the grip is the solved hand); the Genius's hand lands on the
+// evening light, the full shelf, you looking up, the robot typing; living hold (typing, breath, the air, the creep).
+// CAUSE -> EFFECT: the sheet rides your hand until f33 (the grip is the solved hand); the robot's mitten lands on the
 // sheet on f38, the sheet's landing frame. Each binder leaves from behind the pedestal (hidden at launch); the routes
 // never intersect each other, the case or the pedestal (each column of a row has its own lane in depth; per-frame check:
 // scripts/clips/rsi-since-writing/check-morning-to-evening.ts).
-// Orange = the AI only (the Genius); the sheet cream, the binders the world's slate / umber / teal / red-brown.
+// Orange = the AI only (the robot); the sheet cream, the binders the world's slate / umber / teal / red-brown.
 //
-// DEPTH: eye Y -260, dRef 1700 at kRef 1.32, dolly 0.5 (cut 1's), fog by the eye (officeScene(sunT)). The Genius X 0,
-// Z 0 (dir -1: his desk on his left, X -48..-173, monitor X -160); you X -214, Z -70 (in front of the monitor's plane,
+// DEPTH: eye Y -260, dRef 1700 at kRef 1.32, dolly 0.5 (cut 1's), fog by the eye (officeScene(sunT)). The desk X 0,
+// Z 0 (dir -1: the desk on its left, X -48..-173, monitor X -160), the robot 6 further in (X -6, its back on the chair's); you X -214, Z -70 (in front of the monitor's plane,
 // so the reaching arm passes in front of it), facing right. The pedestal X 54..92, Z -20..50, 100 tall. The bookcase
 // X 95..225, front Z 0, 60 deep, 4 rows of 3 binders (cut-local binders 36 x 76 x 54 units, 1.6x the world's
 // YearBinder so the spine numbers read on a phone); the flying lane Z -64.
@@ -46,7 +46,7 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirBox, AirShadow, AirStage, MAT, WorldSvg, airWorldOf, makeCamera, mixHex, swayCam, type AirWorld, type DepthOpts, type Mat, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { GENIUS_POSES, Genius, geniusAnchors, mirrorPose } from "../rsi-ten-earths/tenEarthsGenius";
+import { BOT_POSES, Bot, botAnchors, botGripTo, mirrorPose } from "../rsi-ten-earths/tenEarthsBot";
 import { Human, humanAnchors, type HumanPose } from "./sinceWritingFolk";
 import { POSES, breathe, covidGripTo, lerpPose } from "../kyle-covid/covidFolkBody";
 import { BINDER_MATS, MAT_LEG, MAT_SHELF, MAT_SKIRT, OFFICE, OfficeDesk, OfficeRoom, OfficeShafts, OfficeTint, PLATE_FONT, WorkSheet, officeDusk, officeScene, type SheetPose } from "./sinceWritingWorld";
@@ -117,7 +117,7 @@ const HAND_REST: P2 = [30, -158];
 const HAND_REACH: P2 = [102, -199];
 /** the sheet's centre from the grip (units, facing right): it hangs from his hand by its top left corner */
 const HELD_OFF: P2 = [15, 24];
-/** the sheet lying on the Genius's desk in front of his keyboard (and drawn in a little after his touch) */
+/** the sheet lying on the robot's desk in front of its keyboard (and drawn in a little after its touch) */
 export const SHEET_DESK = { X: -100, Y: -133.2, Z: -2, yaw: 4 };
 const SHEET_PULLED = -97;
 
@@ -184,17 +184,26 @@ export const sheetAt = (f: number): { pose: SheetPose; held: boolean } => {
 };
 
 // ---------------------------------------------------------------------------
-// THE GENIUS: typing every frame; the near hand reaches onto the sheet (touch on LANDED), draws it in, back to the keys
+// THE ROBOT: typing every frame; the near mitten reaches onto the sheet (touch on LANDED), draws it in, back to the keys.
+// It sits BOT_IN units further into the desk than the desk's sitter point (its back then meets the office chair's back
+// at x 30, BOT_DESK.chairBackX 38; its mittens on the office keyboard, x 54..78), and leans in 7 for the reach (its
+// arms are short: unleaned the mitten stops at x 73).
 // ---------------------------------------------------------------------------
-export const geniusAt = (f: number) => {
-  const typed = GENIUS_POSES.typeAtDesk(1, f);
+const BOT_IN = 6;
+export const BOT = { X: AI.X - BOT_IN, Z: AI.Z };
+/** its typing bursts (seed 5, 17 frames in): the mittens never rest more than one frame outside the reach */
+const TYPE_SEED = 5;
+const TYPE_OFF = 17;
+export const botAt = (f: number) => {
+  const typed = BOT_POSES.typeAtDesk(1, f + TYPE_OFF, TYPE_SEED);
   const w = sst(29, LANDED, f) * (1 - sst(45, 54, f));
   if (w <= 0) return mirrorPose(typed);
-  const own = geniusAnchors(0, typed, [0, 0], 1).handL;
-  const sx = -sheetAt(Math.max(f, LANDED)).pose.X; // the sheet's x in his (right-facing) units
-  const target: P2 = [sx - 14, -135.5];
-  const q = covidGripTo("officer", 3, { ...typed, look: [lerp(0.35, 0.55, w), lerp(0.05, 0.5, w)] }, { L: mix2(own, target, w) }, [0, 0], 1);
-  return mirrorPose({ ...q, armL: { ...q.armL, fist: lerp(0.15, 0.05, w), hand: lerp(18, 6, w) } } as typeof typed);
+  const own = botAnchors(0, typed, [0, 0], 1).handL;
+  const sx = BOT.X - sheetAt(Math.max(f, LANDED)).pose.X; // the sheet's x in its (right-facing) units
+  // over the landing spot, then down onto the sheet as it lands (it touches on LANDED, not before)
+  const target: P2 = [sx - 14, lerp(-148, -135.5, sst(36, LANDED, f))];
+  const lean = { ...typed, lean: (typed.lean ?? 0) + 7 * w, look: [lerp(0.35, 0.55, w), lerp(0.05, 0.5, w)] as P2 };
+  return mirrorPose(botGripTo(lean, { L: mix2(own, target, w) }));
 };
 
 // ---------------------------------------------------------------------------
@@ -430,7 +439,7 @@ const MorningToEvening: React.FC<z.infer<typeof schema>> = ({ guides }) => {
   const cam = camOf(frame);
   const A = airWorldOf({ cam, rest: REST, depth: DEPTH, frame, scene: officeScene(sunT) });
 
-  const ga = A.P.at(AI.X, AI.Z);
+  const ga = A.P.at(BOT.X, BOT.Z);
   const ya = A.P.at(YOU.X, YOU.Z);
   const you = youAt(frame);
   const sheet = sheetAt(frame);
@@ -465,10 +474,10 @@ const MorningToEvening: React.FC<z.infer<typeof schema>> = ({ guides }) => {
           {byZ(flyBehind)}
           <Pedestal A={A} />
           {byZ(flyFront)}
-          {/* the Genius at his desk */}
+          {/* the robot at its desk */}
           <OfficeDesk A={A} X={AI.X} Z={AI.Z} dir={-1} uid="gd" layer="back" />
           {!sheet.held ? sheetNode : null}
-          <Genius variant={0} pose={geniusAt(frame)} at={ga.at} scale={ga.scale} uid="ai" frame={frame} fog={A.folkFog(AI.Z)} unitPx={A.k} />
+          <Bot variant={0} pose={botAt(frame)} at={ga.at} scale={ga.scale} uid="ai" frame={frame} fog={A.folkFog(BOT.Z)} unitPx={A.k} />
           <OfficeDesk A={A} X={AI.X} Z={AI.Z} dir={-1} uid="gdf" layer="front" />
           {/* you, standing at the desk's end */}
           {sheet.held ? sheetNode : null}

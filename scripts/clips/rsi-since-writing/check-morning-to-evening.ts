@@ -1,15 +1,15 @@
 // MorningToEvening (rsi-since-writing, cut 109) per-frame checks, in screen px (sway included):
 // the camera (one push: log k never falls, the pan never reverses), the faces (both heads inside the keep-in box
 // x 65-1015, y 290-1070, never in the caption bands), the spine labels (every shelved and flying binder's label inside
-// the box, x <= 955 below y 900), you (feet planted: toes and heels still; the figure at x >= 65), the hand-over (the
-// sheet rides your hand to RELEASE; the Genius's near hand touches the sheet on LANDED), the Genius at work (his hands
+// the box, x <= 955 below y 900; none over the robot's head or antenna), you (feet planted: toes and heels still; the figure at x >= 65), the hand-over (the
+// sheet rides your hand to RELEASE; the robot's near mitten touches the sheet on LANDED), the robot at work (its mittens
 // move on every frame: no still stretch over 4 frames), the joints' frame-to-frame jumps (pops), the binders (each
 // hidden behind the pedestal on its launch frame; no binder box intersects another binder, the case's uprights and
 // boards, or the pedestal on any frame).
 // Run: bun scripts/clips/rsi-since-writing/check-morning-to-evening.ts
 import { airWorldOf } from "../../../generated/components/kits/dwarkesh-3d/dwarkesh3d";
-import { AI, BIN, CASE, DEPTH, DURATION, LAND, LANDED, PED, RELEASE, ROWS, SHEET_DESK, YOU, binderAt, camOf, flightOf, geniusAt, sheetAt, sunAt, youAt } from "../../../generated/components/rsi-since-writing/MorningToEvening";
-import { geniusAnchors } from "../../../generated/components/rsi-ten-earths/tenEarthsGenius";
+import { BOT, BIN, CASE, DEPTH, DURATION, LAND, LANDED, PED, RELEASE, ROWS, SHEET_DESK, YOU, binderAt, botAt, camOf, flightOf, sheetAt, sunAt, youAt } from "../../../generated/components/rsi-since-writing/MorningToEvening";
+import { botAnchors } from "../../../generated/components/rsi-ten-earths/tenEarthsBot";
 import { humanAnchors } from "../../../generated/components/rsi-since-writing/sinceWritingFolk";
 import { officeScene } from "../../../generated/components/rsi-since-writing/sinceWritingWorld";
 
@@ -45,6 +45,7 @@ let feetMax = 0;
 let gripMax = 0;
 let youMinX = 9999;
 let labMaxX = 0;
+let botGap = 1e9;
 const binPrev = new Map<number, P2>();
 const binPeak: number[] = [];
 let binFast = 0;
@@ -61,14 +62,16 @@ for (let f = 0; f < DURATION; f++) {
   const yR = (ay.headR as number) * cams[f].k;
   if (!inBox([yHead[0], yHead[1] - yR]) || !inBox([yHead[0], yHead[1] + yR]) || inBand(yHead[1] + yR)) issues.push(`f${f} your face out of the box/band: ${yHead.map((v) => v.toFixed(0))}`);
   for (const k of ["handL", "handR", "heelL", "toeL", "headC"]) youMinX = Math.min(youMinX, scr(ay[k] as P2)[0] - (k === "headC" ? yR : 0));
-  // the Genius
-  const ga = A.P.at(AI.X, AI.Z);
-  const gp = geniusAt(f);
-  const ag = geniusAnchors(0, gp, ga.at, ga.scale) as unknown as Record<string, P2 | number>;
-  const gu = geniusAnchors(0, gp, [0, 0], 1) as unknown as Record<string, P2>;
+  // the robot
+  const ga = A.P.at(BOT.X, BOT.Z);
+  const gp = botAt(f);
+  const ag = botAnchors(0, gp, ga.at, ga.scale) as unknown as Record<string, P2 | number>;
+  const gu = botAnchors(0, gp, [0, 0], 1) as unknown as Record<string, P2>;
   const gHead = scr(ag.headC as P2);
   const gR = (ag.headR as number) * cams[f].k;
-  if (!inBox([gHead[0], gHead[1] - gR]) || !inBox([gHead[0], gHead[1] + gR]) || inBand(gHead[1] + gR)) issues.push(`f${f} the Genius's face out of the box/band`);
+  if (!inBox([gHead[0], gHead[1] - gR]) || !inBox([gHead[0], gHead[1] + gR]) || inBand(gHead[1] + gR)) issues.push(`f${f} the robot's face out of the box/band`);
+  const ant = scr(ag.antennaTip as P2);
+  if (!inBox(ant)) issues.push(`f${f} the robot's antenna out of the box`);
   // pops (units / frame)
   const cy: Record<string, P2> = {};
   const cg: Record<string, P2> = {};
@@ -94,12 +97,12 @@ for (let f = 0; f < DURATION; f++) {
   }
   if (f === LANDED) {
     // (mirrorPose swaps the arms: his near, reaching hand is handR in the mirrored pose)
-    const touch: P2 = [AI.X + gu.handR[0], gu.handR[1]];
-    log.push(`f${LANDED} (landing): the Genius's near hand at X ${touch[0].toFixed(1)}, Y ${touch[1].toFixed(1)}; the sheet X ${sh.pose.X.toFixed(1)} +- 19, Y ${sh.pose.Y.toFixed(1)}`);
-    if (Math.abs(touch[0] - sh.pose.X) > 19 || Math.abs(touch[1] - sh.pose.Y) > 8) issues.push(`f${LANDED} the Genius's hand is not on the sheet`);
+    const touch: P2 = [BOT.X + gu.handR[0], gu.handR[1]];
+    log.push(`f${LANDED} (landing): the robot's near mitten at X ${touch[0].toFixed(1)}, Y ${touch[1].toFixed(1)}; the sheet X ${sh.pose.X.toFixed(1)} +- 19, Y ${sh.pose.Y.toFixed(1)}`);
+    if (Math.abs(touch[0] - sh.pose.X) > 19 || Math.abs(touch[1] - sh.pose.Y) > 8) issues.push(`f${LANDED} the robot's mitten is not on the sheet`);
   }
   if (f === LANDED - 1) {
-    const g = [AI.X + gu.handR[0], gu.handR[1]];
+    const g = [BOT.X + gu.handR[0], gu.handR[1]];
     if (Math.abs(g[0] - SHEET_DESK.X) < 19 && Math.abs(g[1] - SHEET_DESK.Y) < 4) issues.push(`f${f}: the hand is already on the sheet's place before it lands`);
   }
   // the binders: labels in the box; boxes never intersect
@@ -125,6 +128,18 @@ for (let f = 0; f < DURATION; f++) {
       }
     }
     binPrev.set(i, cen);
+    {
+      const r0 = scr(A.P.p(b.X - BIN.w / 2, b.Y - BIN.h, b.Z));
+      const r1 = scr(A.P.p(b.X + BIN.w / 2, b.Y, b.Z));
+      const hc = scr(ag.headC as P2);
+      const hr = (ag.headR as number) * cams[f].k * 1.25;
+      const dxh = Math.max(r0[0] - hc[0], 0, hc[0] - r1[0]);
+      const dyh = Math.max(r0[1] - hc[1], 0, hc[1] - r1[1]);
+      const at = scr(ag.antennaTip as P2);
+      const inAnt = at[0] > r0[0] - 8 && at[0] < r1[0] + 8 && at[1] > r0[1] - 8 && at[1] < r1[1] + 8;
+      botGap = Math.min(botGap, r0[0] - Math.max(hc[0] + hr, at[0]));
+      if (Math.hypot(dxh, dyh) < hr || inAnt) issues.push(`f${f} year ${i + 1} crosses the robot's head or antenna`);
+    }
     boxes.push({ i, x0: b.X - BIN.w / 2, x1: b.X + BIN.w / 2, y0: b.Y - BIN.h, y1: b.Y, z0: b.Z, z1: b.Z + BIN.d });
     // hidden at launch: inside the pedestal's silhouette
     const launch = LAND[i] - flightOf(i);
@@ -152,12 +167,12 @@ for (let f = 0; f < DURATION; f++) {
 }
 log.push(`your feet: max move ${feetMax.toFixed(2)} units/f; you at x >= ${youMinX.toFixed(0)}; the sheet off the grip by <= ${gripMax.toFixed(2)} units while held (to f${RELEASE})`);
 log.push(`labels: rightmost x ${labMaxX.toFixed(0)}; binders: fastest ${binFast.toFixed(0)} px/f (${binFastAt}); launches ${LAND.map((l, i) => (l - flightOf(i)).toFixed(1)).join(" ")}; landings ${LAND.map((l) => l.toFixed(1)).join(" ")}; peak px/f by year ${binPeak.map((v) => v.toFixed(0)).join(" ")}`);
-log.push(`the Genius's hands: longest still stretch ${stillMax} frames`);
+log.push(`the robot's mittens: longest still stretch ${stillMax} frames; nearest binder to its head/antenna: ${botGap.toFixed(0)} px`);
 log.push(`pops (units/f) you: ${Object.entries(popY).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(", ")}`);
-log.push(`pops (units/f) Genius: ${Object.entries(popG).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(", ")}`);
+log.push(`pops (units/f) robot: ${Object.entries(popG).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(", ")}`);
 if (feetMax > 0.3) issues.push(`your feet slide (${feetMax.toFixed(2)} units/f)`);
 if (youMinX < 65) issues.push(`you leave the box on the left (x ${youMinX.toFixed(0)})`);
-if (stillMax > 4) issues.push(`the Genius's hands rest ${stillMax} frames`);
+if (stillMax > 4) issues.push(`the robot's mittens rest ${stillMax} frames`);
 if (gripMax > 1) issues.push(`the held sheet drifts off the grip (${gripMax.toFixed(2)})`);
 console.log(log.join("\n"));
 console.log(issues.length ? `\n${issues.length} ISSUES\n${issues.slice(0, 60).join("\n")}` : "\nOK: no issues");
