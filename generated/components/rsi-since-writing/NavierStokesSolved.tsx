@@ -28,8 +28,12 @@
 // Right behind the order, an orange front climbs the core and the inner helices (f65 -> f99, visible from ~f68); the
 // outer sheath and the waist arms stay lit cream, the orange only touching the arms' roots (two-tone, like the user's
 // reference: an orange core inside the cooler outer tubes). Settled (f94-113): the vortex turning (core faster than
-// rim), a slow glint climbing the orange core; the filaments settle to half strength. One slow push-in (k 0.44 -> 0.5
-// about the vortex's middle, decelerating to rest by f110).
+// rim), a slow glint climbing the orange core; the filaments settle to half strength.
+// THE GLIMMER (round 2): one clear specular sweep across the finished swirl, foot-left to crown-right, f86 -> ~f97
+// (lands on "Navier-Stokes"): a narrow white glint along the tubes where their sides face the light, in a soft sheen.
+// THE CAMERA (round 2, three moves): f0-8 tight on the mark (~520 px wide, lit on "OpenAI"); one eased pull-back
+// f8 -> f50 to the whole stage (k 0.9 -> 0.45); a brief settle to f66; on "solved" a push-in on the vortex
+// (f66 -> f100, ease-in-out, k 0.45 -> ~0.57: the finished swirl ~815 px tall) carried into a slow creep to f113.
 // Orange = the AI only (COMMON.md): the mark, its filaments, the front on the tubes. The unsolved flow is cream.
 //
 // DEPTH: eye at Y -1150, dRef 3200 at kRef 0.5, dolly 0.35; fog "depth" (the vortex fogs from 420 behind its axis's
@@ -39,8 +43,11 @@
 // the horizon under the AirStage bloom). The waist arms come in opposite pairs (same reach, half a turn apart) on a
 // waist disc tilted toward the camera (half vortexSky's tilt), so the settled vortex is symmetric about its axis.
 //
-// CHECKS (revision 4 preview, every frame, scripts in the builder's scratch): every shown vortex point x 340-949,
-// y 333-1061; no stroke joins two broken pieces (max step between path points < 60 px); the mark's box x 107-423, y 750-1055 (bob +-8); nothing in the caption bands but
+// CHECKS (round 2 preview, every frame, scripts in the builder's scratch): the mark's box stays inside y 506-1062
+// on every frame (x 36-802; at f0 it is the subject, centre 540, 770); the vortex points reach y <= 1067 on every
+// frame (the cloud runs off the top and right while the camera is tight on the mark), at the end x 377-945,
+// y 240-1066 (its needle tip ~50 px into the dead top zone); no stroke joins two
+// broken pieces (max step between path points < 60 px); nothing in the caption bands but
 // floor and shadows. Frame-to-frame luma change smooth (no pops; the odd/even ripple is the stage's grain on twos).
 //
 // SOURCES / HONEST CHEATS: a picture of the flow, not a simulation: the tubes turn rigidly per family (core faster
@@ -88,22 +95,44 @@ const MHOVER = 150;
 export const MY = -(MHOVER + MS / 2);
 
 // ===================================================================================================================
-// THE CAMERA: one slow push-in about the vortex's middle (k 0.44 -> 0.5), decelerating to rest by f110
+// THE CAMERA: three moves. (1) f0-8 tight on the mark (~520 px wide, centre y 770); (2) one eased pull-back f8 -> f50
+// to the whole stage (k 0.45: the mark and the cloud it works on), a brief settle to f66; (3) on "solved" a push-in on
+// the vortex (f66 -> ~f100, ease-in-out: the finished swirl ~810 px tall, its axis at the frame's middle), carried
+// into a slow living creep (in and a little left) to the end, so it never stops dead.
+// Each key is solved for its subject's screen place (the eye follows cx, and the dolly changes Dc with k).
 // ===================================================================================================================
-const KR = 0.5;
-const K0 = 0.44;
-const PUSH_END = 110;
-/** the rest framing: the world front-plane point (REST_CX, REST_CY) at the screen centre */
-const REST_CX = -255;
-const REST_CY = -406;
-/** the push's fixed screen point (at rest): the vortex's middle */
-const FIX: P2 = [600, 760];
-const FIXW: P2 = [REST_CX + (FIX[0] - 540) / KR, REST_CY + (FIX[1] - 960) / KR];
+const persp = (k: number) => DEPTH.dRef * Math.pow(DEPTH.kRef / k, DEPTH.dolly);
+/** the camera that puts world point (X, Y, Z) at screen (sx, sy) at zoom k */
+const camOn = (k: number, X: number, Y: number, Z: number, sx: number, sy: number): Cam => {
+  const Dc = persp(k);
+  const r = Dc / (Dc + Z);
+  return { k, cx: X - (sx - 540) / (r * k), cy: DEPTH.eyeY + (Y - DEPTH.eyeY) * r - (sy - 960) / k };
+};
+/** the zoom at which the vortex stands `px` tall on screen */
+const kForVortex = (px: number) => {
+  let k = 0.5;
+  for (let i = 0; i < 30; i++) {
+    const Dc = persp(k);
+    k = px / (VH * (Dc / (Dc + VZ)));
+  }
+  return k;
+};
+const KEY0 = camOn(0.9, MX, MY, MZ, 540, 770);
+const KEY1 = camOn(0.45, VX, 0, VZ, 655, 1045);
+const K_END = kForVortex(815);
+const KEY3 = camOn(K_END, VX, 0, VZ, 650, 1066);
+const smoother = (u: number) => {
+  const v = c01(u);
+  return v * v * v * (v * (6 * v - 15) + 10);
+};
+const camLerp = (A: Cam, B: Cam, p: number): Cam => ({ k: A.k * Math.pow(B.k / A.k, p), cx: lerp(A.cx, B.cx, p), cy: lerp(A.cy, B.cy, p) });
+export const PULL = [8, 50] as const;
+export const PUSH = [66, 100] as const;
 export const camAt = (f: number): Cam => {
-  const u = c01(f / PUSH_END);
-  const p = 1 - Math.pow(1 - u, 2.2);
-  const k = K0 * Math.pow(KR / K0, p);
-  return { k, cx: FIXW[0] - (FIX[0] - 540) / k, cy: FIXW[1] - (FIX[1] - 960) / k };
+  if (f < PUSH[0]) return camLerp(KEY0, KEY1, smoother((f - PULL[0]) / (PULL[1] - PULL[0])));
+  // the push arrives at 95 % by f100 and creeps on (the last 5 %, linear from f88) to the end
+  const p = 0.95 * smoother((f - PUSH[0]) / (PUSH[1] - PUSH[0])) + 0.05 * c01((f - 88) / (DURATION - 1 - 88));
+  return camLerp(KEY1, KEY3, p);
 };
 const REST = swayCam(camAt(0), 0);
 
@@ -112,6 +141,19 @@ const REST = swayCam(camAt(0), 0);
 // ===================================================================================================================
 /** the mark brightens on "internal model" */
 export const markGlow = (f: number) => sst(46, 58, f);
+/** the mark lights on "OpenAI" (f1) */
+export const markLit = (f: number) => sst(0, 5, f);
+/** THE GLIMMER: one specular sweep across the finished swirl, foot-left to crown-right, f85 -> f102 (lands on
+ *  "Navier-Stokes"): its front on the sweep coordinate (height fraction + 0.45 x across), a narrow hot core (the
+ *  specular glint, strongest where a tube's side faces the light) inside a softer sheen */
+export const GLIM = [85, 102] as const;
+export const glimFront = (f: number) => {
+  const u = c01((f - GLIM[0]) / (GLIM[1] - GLIM[0]));
+  return lerp(-0.06, 1.38, 0.7 * u + 0.3 * u * u * (3 - 2 * u));
+};
+const GLIM_CORE = 0.05;
+const GLIM_SHEEN = 0.16;
+const GLIM_WHITE = "#FFFDF6";
 /** the filaments reach from the mark into the cloud's foot */
 const FIL_F0 = 50;
 const FIL_DUR = 12;
@@ -300,7 +342,7 @@ const OR_LIT = ACCENT;
 const ARM_ROOT = 0.14;
 const OR_SHD = "#B9660B";
 const HOT = "#FFE6A8";
-type Piece = { Z: number; d: string; w: number; fill: string; casing: string; op: number; glow?: number };
+type Piece = { Z: number; d: string; w: number; fill: string; casing: string; op: number; glow?: number; gc?: string };
 
 /** a broken piece's point u (0..1 along it) at frame f: a short kinked stroke drifting and turning in the cloud */
 const chaosAt = (sg: Seg, u: number, f: number): V3 => {
@@ -421,15 +463,26 @@ const vortexPieces = (A: AirWorld, f: number): Piece[] => {
         col = mixHex(CREAM_SHD, CREAM_LIT, 0.2 + 0.8 * kd);
         col = A.tone(col, Zf, hUp);
       }
+      // THE GLIMMER: a specular band sweeping across the swirl, strongest where a tube faces the light
+      const sig = hUp / VH + 0.45 * (W[m][0] - VX) / VH;
+      let spec = 0;
+      if (f > GLIM[0] - 1 && f < GLIM[1] + 2) {
+        const dsg = sig - glimFront(f);
+        const core = Math.exp(-Math.pow(dsg / GLIM_CORE, 2));
+        const sheenB = 0.2 * Math.exp(-Math.pow(dsg / GLIM_SHEEN, 2));
+        spec = om * Math.min(1, core * (0.2 + 0.8 * Math.pow(kd, 5)) * 1.3 + sheenB * kd * kd);
+      }
+      if (spec > 0.01) col = mixHex(col, GLIM_WHITE, spec);
       const r = P.r(Zm);
-      const wpx = 2 * rad * VH * r;
+      const wpx = 2 * rad * VH * r * (1 + 0.35 * spec);
       const casing = orange ? A.toneO(mixHex(ORANGE_LINE, PAL.shadow, 0.35), Zf, hUp) : A.tone(mixHex(PAL.shadow, "#3E4A46", 0.3), Zf, hUp);
       const linked = (j: number) => o[j] > 0.97 && o[j + 1] > 0.97;
       const a0 = a > 0 && (a % SEG !== 0 || linked(a - 1)) ? a - 1 : a;
       const b1 = b % SEG === 0 && !linked(b - 1) ? b - 1 : b;
       let d = "";
       for (let j = a0; j <= b1; j++) d += `${j === a0 ? "M" : "L"}${f2(S[j][0])},${f2(S[j][1])}`;
-      out.push({ Z: Zm, d, w: wpx, fill: col, casing, op: 1, glow: hot > 0.3 ? hot : undefined });
+      const glow = Math.max(hot > 0.3 ? hot : 0, spec > 0.6 ? spec : 0);
+      out.push({ Z: Zm, d, w: wpx, fill: col, casing, op: 1, glow: glow > 0 ? glow : undefined, gc: spec > hot ? GLIM_WHITE : undefined });
     }
   }
   return out;
@@ -488,7 +541,8 @@ const filamentPieces = (A: AirWorld, f: number): Piece[] => {
 // ===================================================================================================================
 const Mark: React.FC<{ A: AirWorld; f: number }> = ({ A, f }) => {
   const P = A.P;
-  const g = markGlow(f);
+  // the face: lit on "OpenAI" (f1), brighter again on "internal model"
+  const g = 0.5 * markLit(f) + 0.5 * markGlow(f);
   const bob = 8 * Math.sin((f / 40) * 6.283);
   const layers = 14;
   const at = (Z: number) => {
@@ -569,7 +623,7 @@ const NavierStokesSolved: React.FC<z.infer<typeof schema>> = () => {
     <g key={key}>
       {ps.map((p, i) => (
         <g key={i} opacity={p.op < 1 ? f2(p.op) : undefined}>
-          {p.glow ? <path d={p.d} fill="none" stroke={HOT} strokeOpacity={0.35 * p.glow} strokeWidth={f2(p.w * 3.2 + 2 * lw)} strokeLinecap="round" filter="url(#ns-soft)" /> : null}
+          {p.glow ? <path d={p.d} fill="none" stroke={p.gc ?? HOT} strokeOpacity={(p.gc ? 0.3 : 0.35) * p.glow} strokeWidth={f2(p.w * 3.2 + 2 * lw)} strokeLinecap="round" filter="url(#ns-soft)" /> : null}
           <path d={p.d} fill="none" stroke={p.casing} strokeOpacity={0.75} strokeWidth={f2(p.w + 1.6 * lw)} strokeLinecap="butt" strokeLinejoin="round" />
           <path d={p.d} fill="none" stroke={p.fill} strokeWidth={f2(p.w)} strokeLinecap="round" strokeLinejoin="round" />
         </g>
