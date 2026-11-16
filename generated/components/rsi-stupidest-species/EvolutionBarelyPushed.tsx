@@ -1,452 +1,893 @@
 // ---------------------------------------------------------------------------
-// EvolutionBarelyPushed (rsi-stupidest-species, cut 51). Dwarkesh 3D style (styles/dwarkesh-3d.md).
-// Opaque 1080x1920, 23.976 fps, 113 frames. Built on the shared world W1 THE SPECIES TOWER (speciesTower.tsx, read-only;
-// TOWER_READY.md is its API: TowerFloor, SpeciesTower, TowerHuman, the camera presets) and W2's Chimp (stupidestFolk.tsx,
-// read-only). The shared Hoist is OFF (its gallows read as a hanging, director's review): this cut draws its own MAST
-// LIFT (the director's spec), its camera, the chimp in its niche with a soft cool-cream niche light, the EVOLUTION plate
-// on a signpost. No dashed continuation (director's note: in this wide it never reaches the ceiling and its edges read
-// as cables hanging the tower): bright open air above the capital.
+// EvolutionBarelyPushed (rsi-stupidest-species, cut 51), REVISION 1b: THE MARCH, LEFT AS A LINEUP. Dwarkesh 3D style
+// (styles/dwarkesh-3d.md). Opaque 1080x1920, 23.976 fps, 113 frames. The march of progress, trucked like the COVID
+// walking man (kyle-covid SeveralDaysBeforeIllness: a truck with the walker, planted feet, parallax). No text.
 //
-// CHECK LINE: "Evolution only hoisted us a little way up: it never pushed hard for intelligence, and the tower above
-//   stays empty."
+// CHECK LINE: "Evolution walked us all the way from ape to modern human, but the glow of intelligence in our heads
+//   barely grew on the way."
 //
 // THE LINE: "The second reason is that human evolution just didn't optimize us that strongly for intelligence."
 // WORD -> FRAME: The -1 · second 3 · reason 8 · is 15 · that 25 · human 28 · evolution 34 · just 42 · didn't 56 ·
 //   optimize 61 · us 70 · that 78 · strongly 84 · for 92 · intelligence 98
-// DURATION: the slot 51.093 -> 55.806 s (sequence frames 1225-1338) = 4.713 s x 23.976 = 113 frames (f0..f112).
+// DURATION: the slot 51.093 -> 55.806 s = 113 frames (f0..f112).
 //
-// THE MOTION: one lift. f0 the foot of the tower: a timber mast (an iron rack up its edge, a chain up its front over a
-// sprocket at its top, 5.4 m, below the arriving human's head) with the crank wheel at its foot and the EVOLUTION plate
-// on a signpost beside it; the deck is cantilevered off an iron carriage collar on the mast (two knee braces under it,
-// nothing above anyone), at its lowest stop with the human on it, beside the chimp sitting in its niche (lit soft
-// cool cream). The crank turns slowly from f0, winding the chain's slack (its belly beside the mast straightens); the
-// chain pulls taut and the carriage lifts at LIFT (f28, "human"); the deck rises lazily up the face past the chimp's
-// niche (the chimp turns its head up to watch) while the camera rises with it and, from "optimize us", cranes up and
-// pulls back. On "that strongly" the crank slows to a stop and the deck arrives flush with the human's sill (~f94), a
-// small settle on the chain; the camera carries on up and out (settled ~f104) to the long empty face, the empty grand
-// niche, the stone capital and bright open air above it. f98-112 the living hold. One job: evolution lifted us
-// only a little way.
-// CAUSE BEFORE EFFECT: chain wound = -crank x the crank wheel's radius (LIFT.crank.R); the deck's rise = the chain wound
-// less the slack (SLACK0, taken up f0-27); the slack's belly is what is left of it; the pinion on the rack and the top
-// sprocket turn by the same travel. Lift-off f28 (the chain taut f27); the crank stops at PLAN.stopB (f95); the settle
-// starts as it stops (the crank held). The check script asserts deck = crank on every frame.
-// Orange = intelligence (the clip's rule): none in this cut (the dashed continuation is off). The human, the chimp, the
-// lift and the stone in the style's earthy timber, iron and stone. The human's niche keeps its warm cream light
-// (brighter); the chimp's niche a soft cool cream (dimmer, never orange).
-// THE CHIMP: W2's Chimp variant 0, CHIMP_POSES.sit, tucked to the left of its niche (CHIMP_U -0.58 m), the human a little
-// right of the deck's middle (RIDER_U 0.1 m). Measured (check script): the human's head and body never cover its face;
-// only the deck passes over it (f51-59). Its face stays above y 1050 on every frame. It watches: head and eyes turn up
-// after the human as he rises past (chimpUp, from the planned height: seek-safe).
-// SIZES (measured): the human ~220 px at f0, ~88 px in the resolved wide (50 px/m); the EVOLUTION plate's cap 43 px at
-// f0, >= 34 px to ~f72, ~17 px in the wide; the plate inside the keep-in box on every frame.
-// DASHES: none. The shared SpeciesTower's dashed part is off (show.dashed 0) and this cut draws no ghost continuation.
+// THE MOTION: one continuous camera, low (the eye at shin height, the walkers against the sky). A walker in profile
+// strides left to right and the camera trucks with him (his feet at x ~530, y 1045; the modern man ~430 px tall, the
+// chimp ~230). THE MARCH: THE CHIMP (stupidestFolk Chimp v0, the knuckle-walk) -> an EARLY HOMININ (this cut's furred,
+// stooped recolour of forager v4) -> a FORAGER (v0) -> a MODERN man (covidFolk Commuter v1). Each swap is hidden behind
+// a slim, sharp object standing on the ground close to the lens, only a little wider than the figure: a termite mound
+// (SWAPS[0]), a boulder (SWAPS[1]) and a cast-iron bollard (SWAPS[2], the modern man out by ~f74). AT EACH SWAP the
+// outgoing stage leaves an AFTERIMAGE where it went behind the object: a soft, cream-tinted, slightly transparent copy
+// frozen mid-stride, its head glow still faintly lit (a stroboscopic trail). The truck carries on, so the afterimages
+// slide off left behind him. The ground changes under him by world position (savannah -> stone paving from just
+// past the forager's afterimage to the right and into the depth: no slab); the far acacias fade into a far city once he is on the pavement.
+// INTELLIGENCE: every stage carries a soft ORANGE spot inside the head (~20 % of the head's width) that grows only a
+// little (the chimp's 65 % of the modern one's: GLOW_R).
+// f78-98 "that strongly": he slows to a stop while the truck decelerates and turns into one decelerating PULL-BACK and
+// RISE (the eye from shin height to head height, the camera drifting back) that reveals THE LINEUP in one frame:
+// chimp -> hominin -> forager -> modern man, left to right, each with its small orange glow (the famous image). The
+// rise also sinks the near objects out of the bottom of the frame. f91-102 "for intelligence": the four glows pulse
+// once together. f100-112 the living hold (his breath, the glows' shimmer, a slow creep).
+// Orange = intelligence (the clip's rule): only the head glows. People and animals never orange; the set in the
+// style's earthy materials (dry grass khaki-olive, termite clay, grey stone, slate iron).
 //
-// DEPTH: the tower's own depth camera (towerPersp: eye 0.85 x the frame centre's height + 0.6 m, >= 1.7 m; dRef 30000,
-// kRef 0.058, dolly 0.6), fog by world depth (towerAirOf). Depths: the platform's middle platZ().zM (~1.8 m in front of
-// the cornice face), the mast and the chain at the same depth, the crank 0.25 m nearer, the chimp 0.45 m inside its niche.
-// CAMERA: keys through the shared towerCamTrack (pchip on ln k / cx / cy + the house damped follow), the keys framed on
-// the platform's PLANNED height (never the bounce): f0 TOWER_CAM.F_open, a drift up, the rise, the pull-back to RES.
+// DEPTH: eye 45 units up through the walk (shin height), rising to 330 (head height) in the pull-back; dRef 800 at
+// kRef 1.3, dolly 0.35; fog by the eye's distance. Z: the walkers and the afterimages 0, the near objects at
+// r ~4.5-5.6 (Z ~ -640), near tufts -560..-300, the paving from the lens to the horizon, mid tufts and rocks
+// 240-1700, acacias 1300-2700, the far city 9000, hills 6000 / 12000.
 //
-// SOURCES: none (no real figures on screen).
+// SOURCES: none on screen (the march-of-progress image is the user's reference).
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { AirBox, AirShadow, AirStage, MAT, WorldSvg, c01, lineOf, smoothstep, swayCam, type AirWorld, type Cam, type Mat, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import {
-  SoftPlate,
-  SpeciesTower,
-  TOWER,
-  TOWER_CAM,
-  TowerFloor,
-  TowerHuman,
-  archUV,
-  deckH,
-  frameAt,
-  hy,
-  kForScale,
-  lwT,
-  m,
-  nicheOf,
-  nichePt,
-  platZ,
-  sillAnchor,
-  towerAirOf,
-  towerCamTrack,
-  type OccupantFn,
-} from "./speciesTower";
-import { CHIMP_POSES, Chimp } from "./stupidestFolk";
+  ACCENT,
+  ACCENT_DEEP,
+  AirFloor,
+  AirHorizonHazeW,
+  AirShadow,
+  AirStage,
+  MAT,
+  WorldSvg,
+  airWorldOf,
+  c01,
+  lerp,
+  mixHex,
+  smoothstep,
+  swayCam,
+  type AirWorld,
+  type Cam,
+  type DepthOpts,
+  type Mat,
+  type P2,
+} from "../kits/dwarkesh-3d/dwarkesh3d";
+import { CovidPaint, FU, POSES, buildCovidFolk, covidAnchors, lerpPose, walkPose, type CShape, type CovidPose } from "../kyle-covid/covidFolk";
+import { ellD } from "../kyle-covid/covidFolkBody";
+import { CHIMP_POSES, buildChimp, buildPerson, foragerLookOf, type ChimpPose, type PersonPose } from "./stupidestFolkBody";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 113;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
-// ===================================================================================================================
-// THE LIFT'S PLAN (pure: the check script imports it)
-// ===================================================================================================================
-/** the chain's winding speed (shape only; scaled below): slow from f0, lazy and steady through the rise, easing to a
- *  stop on "that strongly" */
-export const PLAN = { LIFT: 27, rampA: 6, rampB: 34, v0: 0.24, stopA: 72, stopB: 95, bounceA: 0.06, bounceT: 15, bounceTau: 7 };
-const vShape = (f: number) => (PLAN.v0 + (1 - PLAN.v0) * smoothstep(PLAN.rampA, PLAN.rampB, f)) * (1 - smoothstep(PLAN.stopA, PLAN.stopB, f));
-const STEP = 0.25;
-const I_TAB = (() => {
-  const tab = [0];
-  for (let i = 0; i * STEP < DURATION + 4; i++) tab.push(tab[i] + ((vShape(i * STEP) + vShape((i + 1) * STEP)) / 2) * STEP);
-  return tab;
-})();
-const Iraw = (f: number) => {
-  const x = Math.max(0, f) / STEP;
-  const i = Math.min(I_TAB.length - 2, Math.floor(x));
-  return I_TAB[i] + (I_TAB[i + 1] - I_TAB[i]) * Math.min(1, x - i);
+// ---- helpers ------------------------------------------------------------------------------------------------------
+const sst = smoothstep;
+/** a C2 smoother step */
+const sst5 = (a: number, b: number, v: number) => {
+  const u = c01((v - a) / (b - a));
+  return u * u * u * (u * (6 * u - 15) + 10);
 };
-// ===================================================================================================================
-// THE MAST LIFT (metres; X across, h up). A timber mast on the floor right of the deck, an iron rack of teeth up its
-// front-left edge; an iron-banded carriage collar rides it, the deck cantilevered out to the left of it on two knee
-// braces under the deck; a chain from the carriage runs up the mast's front, over a sprocket at its top (5.4 m, below the
-// arriving human's head) and down to the crank wheel at its foot. The crank winds the chain: chain wound = crank angle x
-// crank radius = the carriage's rise (+ the slack at f0), so the crank and the carriage always agree.
-// ===================================================================================================================
-export const LIFT = {
-  /** the deck: X span, thickness; its top at the lowest stop (the braces' feet and the collar's foot on the floor) */
-  deckX0: -1.15,
-  deckX1: 1.36,
-  deckT: 0.26,
-  braceDrop: 0.45,
-  deck0Top: 0.26 + 0.45,
-  /** the mast */
-  mastX0: 1.45,
-  mastX1: 1.75,
-  mastD: 0.3,
-  mastTop: 5.55,
-  /** the rack: iron teeth up the mast's front-left edge */
-  rackH0: 0.3,
-  rackH1: 5.3,
-  rackStep: 0.18,
-  /** the carriage collar round the mast: above the deck top by collarUp */
-  collarX0: 1.36,
-  collarX1: 1.84,
-  collarUp: 0.35,
-  /** the top sprocket (the chain over it) and the crank wheel at the foot */
-  topSpr: { X: 1.75, h: 5.38, R: 0.14 },
-  crank: { X: 2.23, h: 0.95, R: 0.34, arm: 0.5 },
-  /** the chain: the up strand on the mast's front, the down strand just right of the mast */
-  chainUpX: 1.61,
-  chainDownX: 1.89,
+const hash = (n: number) => {
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return s - Math.floor(s);
 };
-/** the platform's whole rise (m): the deck from its lowest stop to flush with the human's sill */
-export const RISE = TOWER.cornY - LIFT.deck0Top;
-const SCALE = RISE / (Iraw(PLAN.stopB + 2) - Iraw(PLAN.LIFT));
-/** the chain wound by the crank since f0 (m) */
-export const wound = (f: number) => Iraw(f) * SCALE;
-/** the slack in the chain at f0 (m): taken up by LIFT */
-export const SLACK0 = wound(PLAN.LIFT);
-/** the planned rise (m, no bounce) */
-export const risePlan = (f: number) => Math.max(0, wound(f) - SLACK0);
-/** the settle bounce (m): the crank stops, the carriage settles on the chain a moment */
-export const bounce = (f: number) => {
-  const u = f - (PLAN.stopB - 3);
-  if (u <= 0) return 0;
-  return PLAN.bounceA * smoothstep(0, 3, u) * Math.sin((2 * Math.PI * u) / PLAN.bounceT) * Math.exp(-u / PLAN.bounceTau);
-};
-/** the platform's height t (0 floor .. 1 the sill) */
-export const platT = (f: number) => (risePlan(f) + bounce(f)) / RISE;
-export const platTPlan = (f: number) => risePlan(f) / RISE;
-/** the deck's top (m) now and as planned (no bounce) */
-export const deckTopAt = (f: number) => LIFT.deck0Top + risePlan(f) + bounce(f);
-export const deckTopPlan = (f: number) => LIFT.deck0Top + risePlan(f);
-/** the crank (rad, screen sense: + = clockwise): the chain wound / the crank wheel's radius (crankFor's sense) */
-export const crankAt = (f: number) => -wound(f) / LIFT.crank.R;
-/** the slack's share left (1 at f0, 0 from LIFT): the chain's belly */
-export const slackAt = (f: number) => c01(1 - wound(f) / SLACK0);
-
-// ===================================================================================================================
-// THE CAMERA
-// ===================================================================================================================
-const ZP = platZ().zM;
-/** the camera that shows the platform plane at pxPerM px per metre, the deck (height dk m) at screen y sy, and world X
- *  xa (m) at the frame's centre column */
-export const camDeck = (pxPerM: number, xa: number, dk: number, sy: number): Cam => frameAt(kForScale(pxPerM, ZP), m(xa), hy(dk), ZP, 540, sy);
-const S_OPEN = 220 / 1.75;
-/** the resolved wide: the platform flush with the sill near y RES_Y, the stone capital high, open air above */
-export const RES = { px: 50, xa: 0.5, y: 945, creep: 1.012 };
-export const CAM_KEYS: { f: number; cam: Cam }[] = [
-  { f: 0, cam: TOWER_CAM.F_open },
-  { f: 26, cam: camDeck(S_OPEN * 1.015, 1.2, deckH(0) + 0.1, 1010) },
-  { f: 58, cam: camDeck(S_OPEN * 0.96, 1.0, deckH(platTPlan(58) * 0.86), 975) },
-  { f: 82, cam: camDeck(77, 0.72, deckH(platTPlan(82)), 895) },
-  { f: 104, cam: camDeck(RES.px, RES.xa, deckH(1), RES.y) },
-  { f: DURATION - 1, cam: (() => { const c = camDeck(RES.px, RES.xa, deckH(1), RES.y); return { ...c, k: c.k * RES.creep }; })() },
-];
-export const camTrack = towerCamTrack(CAM_KEYS, DURATION);
-const REST = swayCam(camTrack(0), 0);
-
-// ===================================================================================================================
-// THE CHIMP IN ITS NICHE
-// ===================================================================================================================
-/** the chimp's offset in its niche (m, - = screen left) and inset from the face (m) */
-export const CHIMP_U = -0.58;
-/** the human stands a little right of the deck's middle (m): clear of the chimp's face */
-export const RIDER_U = 0.1;
-export const CHIMP_INSET = 0.45;
-export const CHIMP_SPOT_F = sillAnchor("chimp", CHIMP_U, CHIMP_INSET);
-/** the chimp's eyes' height (m): its face ~2.4 m up (TOWER_READY) */
-const CHIMP_EYE_H = 2.4;
-/** how far its gaze has turned up to follow the human (0 = at him beside it, 1 = up at him above it) */
-export const chimpUp = (f: number) => smoothstep(-0.3, 2.2, deckTopPlan(f) + 1.55 - CHIMP_EYE_H);
-export const chimpPoseAt = (f: number) => {
-  const u = chimpUp(f);
-  return CHIMP_POSES.sit(1, f, { headYaw: 0.3 - 0.14 * u, look: [0.42 - 0.24 * u, -0.08 - 0.5 * u], pitch: -1 - 9 * u });
-};
-/** the chimp's niche light: a soft cool cream (dimmer than the human's warm cream; never orange) */
-export const CHIMP_LIGHT = { hi: "#E4E5D7", mid: "#C6CABB", lo: "#8F978C", a: 0.9, spill: 0.2 };
-const chimpNiche = nicheOf("chimp");
-const ChimpNicheGlow: React.FC<{ A: AirWorld }> = ({ A }) => {
-  const n = chimpNiche;
-  const back = archUV(n, 28).map(([u, v]) => A.P.p(...nichePt(n, u, v, n.depth)));
-  const c = A.P.p(...nichePt(n, 0, n.h * 0.5, n.depth));
-  const a = A.P.p(...nichePt(n, -n.w / 2, 0, 0));
-  const b = A.P.p(...nichePt(n, n.w / 2, 0, 0));
-  const wPx = Math.abs(b[0] - a[0]);
-  const d = `M${back.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join("L")}Z`;
-  return (
-    <g>
-      <defs>
-        <radialGradient id="ebpChGl" gradientUnits="userSpaceOnUse" cx={c[0].toFixed(2)} cy={c[1].toFixed(2)} r={(wPx * 0.85).toFixed(2)} gradientTransform={`translate(${c[0].toFixed(2)} ${c[1].toFixed(2)}) scale(1 1.45) translate(${(-c[0]).toFixed(2)} ${(-c[1]).toFixed(2)})`}>
-          <stop offset="0" stopColor={CHIMP_LIGHT.hi} stopOpacity={CHIMP_LIGHT.a} />
-          <stop offset="0.5" stopColor={CHIMP_LIGHT.mid} stopOpacity={0.6 * CHIMP_LIGHT.a} />
-          <stop offset="1" stopColor={CHIMP_LIGHT.lo} stopOpacity={0.22 * CHIMP_LIGHT.a} />
-        </radialGradient>
-      </defs>
-      <path d={d} fill="url(#ebpChGl)" />
-    </g>
-  );
-};
-/** the faint cool spill out of the chimp's niche onto the stone round it */
-const ChimpNicheSpill: React.FC<{ A: AirWorld }> = ({ A }) => {
-  const n = chimpNiche;
-  const c = A.P.p(...nichePt(n, 0, n.h * 0.45, 0));
-  const a = A.P.p(...nichePt(n, -n.w / 2, 0, 0));
-  const b = A.P.p(...nichePt(n, n.w / 2, 0, 0));
-  const wPx = Math.abs(b[0] - a[0]);
-  // never over the opening (the chimp): clipped outside the niche's front outline
-  const front = archUV(n, 28).map(([u, v]) => A.P.p(...nichePt(n, u, v, 0)));
-  const B = 1e6;
-  const cut = `M${-B},${-B}L${B},${-B}L${B},${B}L${-B},${B}Z M${front.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join("L")}Z`;
-  return (
-    <g clipPath="url(#ebpChSpCl)">
-      <defs>
-        <clipPath id="ebpChSpCl" clipPathUnits="userSpaceOnUse">
-          <path d={cut} clipRule="evenodd" />
-        </clipPath>
-        <radialGradient id="ebpChSp">
-          <stop offset="0" stopColor={CHIMP_LIGHT.hi} stopOpacity={CHIMP_LIGHT.spill} />
-          <stop offset="0.55" stopColor={CHIMP_LIGHT.hi} stopOpacity={CHIMP_LIGHT.spill * 0.4} />
-          <stop offset="1" stopColor={CHIMP_LIGHT.hi} stopOpacity={0} />
-        </radialGradient>
-      </defs>
-      <ellipse cx={c[0]} cy={c[1]} rx={wPx * 1.15} ry={wPx * 1.1} fill="url(#ebpChSp)" />
-    </g>
-  );
-};
-const chimpOccupant: OccupantFn = ({ A, frame }) => {
-  const s = CHIMP_SPOT_F;
-  const at = A.P.p(s.X, s.Y, s.Z);
-  return (
-    <g>
-      <ChimpNicheGlow A={A} />
-      <Chimp variant={0} pose={chimpPoseAt(frame)} at={at} scale={A.P.r(s.Z)} uid="ebpChimp" fog={A.folkFog(s.Z)} unitPx={A.cam.k} />
-    </g>
-  );
-};
-
-// ===================================================================================================================
-// THE MAST LIFT (drawing)
-// ===================================================================================================================
-const TIMBER = MAT.timber;
-const IRON = MAT.iron;
-type V3 = [number, number, number];
+const frac = (v: number) => v - Math.floor(v);
 const Pt = (v: P2) => `${v[0].toFixed(2)},${v[1].toFixed(2)}`;
 const polyD = (q: P2[], close = true) => `M${q.map(Pt).join("L")}${close ? "Z" : ""}`;
-/** a timber strut between two 3D points (width w world units): a quad, its lit band and outline */
-const Strut: React.FC<{ A: AirWorld; a: V3; b: V3; w: number; mt?: Mat }> = ({ A, a, b, w, mt = TIMBER }) => {
-  const pa = A.P.p(...a);
-  const pb = A.P.p(...b);
-  const dx = pb[0] - pa[0];
-  const dy = pb[1] - pa[1];
-  const l = Math.hypot(dx, dy) || 1;
-  const nx = -dy / l;
-  const ny = dx / l;
-  const wa = (w * A.P.r(a[2])) / 2;
-  const wb = (w * A.P.r(b[2])) / 2;
-  const s = nx * -0.55 + ny * -0.83 > 0 ? 1 : -1;
-  const q: P2[] = [
-    [pa[0] + nx * wa, pa[1] + ny * wa],
-    [pb[0] + nx * wb, pb[1] + ny * wb],
-    [pb[0] - nx * wb, pb[1] - ny * wb],
-    [pa[0] - nx * wa, pa[1] - ny * wa],
-  ];
-  const lit: P2[] = [q[s > 0 ? 0 : 3], q[s > 0 ? 1 : 2], [pb[0] + s * nx * wb * 0.1, pb[1] + s * ny * wb * 0.1], [pa[0] + s * nx * wa * 0.1, pa[1] + s * ny * wa * 0.1]];
-  const Z = (a[2] + b[2]) / 2;
-  const h = -(a[1] + b[1]) / 2;
-  const t = (hex: string) => A.tone(hex, Z, h);
-  return (
-    <g>
-      <path d={polyD(q)} fill={t(mt.mid)} />
-      <path d={polyD(lit)} fill={t(mt.lit)} fillOpacity={0.75} />
-      <path d={polyD(q)} fill="none" stroke={t(lineOf(mt))} strokeWidth={lwT(A, 1.0)} strokeLinejoin="round" />
-    </g>
-  );
-};
-/** an iron wheel on the chain's plane: rim, hub, spokes turned by `turn` */
-const Wheel: React.FC<{ A: AirWorld; X: number; h: number; Z: number; R: number; turn: number; spokes?: number; mt?: Mat }> = ({ A, X, h, Z, R, turn, spokes = 4, mt = IRON }) => {
-  const c = A.P.p(m(X), hy(h), Z);
-  const r = m(R) * A.P.r(Z);
-  let sp = "";
-  for (let j = 0; j < spokes; j++) {
-    const a = turn + (j * 2 * Math.PI) / spokes;
-    sp += `M${Pt([c[0] + 0.22 * r * Math.cos(a), c[1] + 0.22 * r * Math.sin(a)])}L${Pt([c[0] + 0.8 * r * Math.cos(a), c[1] + 0.8 * r * Math.sin(a)])}`;
+/** a smooth closed path through points (Catmull-Rom as cubic Beziers) */
+const smoothD = (q: P2[]) => {
+  const n = q.length;
+  let d = `M${Pt(q[0])}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = q[(i - 1 + n) % n];
+    const p1 = q[i];
+    const p2 = q[(i + 1) % n];
+    const p3 = q[(i + 2) % n];
+    const c1: P2 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2: P2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += `C${Pt(c1)} ${Pt(c2)} ${Pt(p2)}`;
   }
-  const t = (hex: string) => A.tone(hex, Z, m(h));
-  return (
-    <g>
-      <circle cx={c[0]} cy={c[1]} r={r} fill={t(mt.mid)} stroke={t(lineOf(mt))} strokeWidth={lwT(A, 1.1)} />
-      <circle cx={c[0]} cy={c[1]} r={r * 0.84} fill="none" stroke={t(mt.dark)} strokeWidth={lwT(A, 0.9)} strokeOpacity={0.55} />
-      <path d={sp} stroke={t(lineOf(mt))} strokeWidth={lwT(A, 1.3)} strokeLinecap="round" />
-      <circle cx={c[0]} cy={c[1]} r={r * 0.2} fill={t(IRON.dark)} />
-    </g>
-  );
-};
-/** an iron chain along a 3D polyline: a dark strand and links that travel with the chain (offset = chain wound, m) */
-const Chain: React.FC<{ A: AirWorld; pts: V3[]; travel: number }> = ({ A, pts, travel }) => {
-  const d = polyD(pts.map((q) => A.P.p(...q)), false);
-  const Z = pts[0][2];
-  const h = -pts.reduce((s, q) => s + q[1], 0) / pts.length;
-  const r = A.P.r(Z);
-  const w = Math.max(m(0.05) * r, 1.4 / A.k);
-  const link = m(0.13) * r;
-  const gap = m(0.11) * r;
-  return (
-    <g>
-      <path d={d} fill="none" stroke={A.tone(IRON.dark, Z, h)} strokeWidth={w * 1.25} strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke={A.tone(IRON.lit, Z, h)} strokeWidth={w * 0.6} strokeDasharray={`${link.toFixed(2)} ${gap.toFixed(2)}`} strokeDashoffset={(-m(travel) * r).toFixed(2)} strokeLinecap="round" />
-    </g>
-  );
-};
-/** the soft belly of a slack chain: a bow to the right (m) at the span's middle */
-const bowed = (a: V3, b: V3, bow: number, N = 14): V3[] =>
-  Array.from({ length: N + 1 }, (_, i) => {
-    const u = i / N;
-    return [a[0] + (b[0] - a[0]) * u + m(bow) * 4 * u * (1 - u), a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u] as V3;
-  });
-/** the whole lift at frame f, the rider on the deck */
-const MastLift: React.FC<{ A: AirWorld; frame: number; rider: React.ReactNode }> = ({ A, frame, rider }) => {
-  const L = LIFT;
-  const pz = platZ();
-  const zM = pz.zM;
-  const zMast0 = zM - m(L.mastD / 2);
-  const zMast1 = zM + m(L.mastD / 2);
-  const zChain = zMast0 - 8;
-  const dk = deckTopAt(frame);
-  const db = dk - L.deckT;
-  const rise = dk - L.deck0Top;
-  const collarTop = dk + L.collarUp;
-  const collarBot = db - L.braceDrop;
-  const travel = wound(frame);
-  const els: React.ReactNode[] = [];
-  // the deck's contact shadow while it sits low, the mast's and the crank's
-  els.push(<AirShadow key="sd" A={A} X={m((L.deckX0 + L.deckX1) / 2)} Z={zM} w={m(1.3)} d={m(0.75)} uid="ebpLsD" amt={0.5 * (1 - c01(rise / 0.9))} />);
-  els.push(<AirShadow key="sm" A={A} X={m((L.mastX0 + L.mastX1) / 2)} Z={zM} w={m(0.35)} d={m(0.3)} uid="ebpLsM" amt={0.6} />);
-  els.push(<AirShadow key="sc" A={A} X={m(L.crank.X)} Z={zChain - m(0.3)} w={m(0.75)} d={m(0.45)} uid="ebpLsC" amt={0.6} />);
-  // the back knee brace (behind the mast and the deck)
-  const braceTo = 0.45;
-  els.push(<Strut key="bb" A={A} a={[m(L.collarX0), hy(collarBot + 0.06), pz.zB - m(0.12)]} b={[m(braceTo), hy(db), pz.zB - m(0.12)]} w={m(0.13)} />);
-  // the mast, its rack and the chain's up strand on its front
-  els.push(<AirBox key="mast" A={A} X0={m(L.mastX0)} X1={m(L.mastX1)} Y0={hy(L.mastTop)} Y1={0} Z0={zMast0} Z1={zMast1} mat={TIMBER} uid="ebpMast" lw={lwT(A, 1.0)} />);
-  let teeth = "";
-  for (let h = L.rackH0; h <= L.rackH1 + 1e-6; h += L.rackStep) {
-    const a = A.P.p(m(L.mastX0 - 0.05), hy(h + 0.075), zMast0 - 4);
-    const b = A.P.p(m(L.mastX0 + 0.08), hy(h), zMast0 - 4);
-    teeth += `M${Pt(a)}L${Pt([b[0], a[1]])}L${Pt(b)}L${Pt([a[0], b[1]])}Z`;
-  }
-  els.push(<path key="rack" d={teeth} fill={A.tone(IRON.mid, zMast0, m(2.5))} stroke={A.tone(lineOf(IRON), zMast0, m(2.5))} strokeWidth={lwT(A, 0.7)} />);
-  const ts = L.topSpr;
-  els.push(<Chain key="cu" A={A} pts={[[m(L.chainUpX), hy(collarTop - 0.05), zChain], [m(L.chainUpX), hy(ts.h), zChain]]} travel={travel} />);
-  // the carriage collar (iron-banded timber) and its pinion on the rack
-  els.push(<AirBox key="col" A={A} X0={m(L.collarX0)} X1={m(L.collarX1)} Y0={hy(collarTop)} Y1={hy(collarBot)} Z0={zM - m(0.24)} Z1={zM + m(0.24)} mat={IRON} uid="ebpCol" lw={lwT(A, 1.0)} />);
-  const band = (h: number) => `M${Pt(A.P.p(m(L.collarX0), hy(h), zM - m(0.24) - 2))}L${Pt(A.P.p(m(L.collarX1), hy(h), zM - m(0.24) - 2))}`;
-  els.push(<path key="colb" d={band(collarTop - 0.1) + band(collarBot + 0.1)} stroke={A.tone(IRON.lit, zM, m(dk))} strokeWidth={lwT(A, 1.2)} strokeOpacity={0.7} />);
-  els.push(<Wheel key="pin" A={A} X={L.collarX0 + 0.13} h={db + 0.05} Z={zM - m(0.24) - 6} R={0.11} turn={-rise / 0.11} spokes={3} />);
-  // the deck (cantilevered off the collar) with its planks, the front knee brace under it, the rider on it
-  els.push(<AirBox key="deck" A={A} X0={m(L.deckX0)} X1={m(L.deckX1)} Y0={hy(dk)} Y1={hy(db)} Z0={pz.zF} Z1={pz.zB} mat={TIMBER} uid="ebpDeck" lw={lwT(A, 1.0)} />);
-  let planks = "";
-  for (let i = 1; i < 6; i++) {
-    const x = m(L.deckX0 + ((L.deckX1 - L.deckX0) * i) / 6);
-    planks += `M${Pt(A.P.p(x, hy(dk), pz.zF))}L${Pt(A.P.p(x, hy(db), pz.zF))}`;
-    if (hy(dk) > A.P.horizonY) planks += `M${Pt(A.P.p(x, hy(dk), pz.zF))}L${Pt(A.P.p(x, hy(dk), pz.zB))}`;
-  }
-  els.push(<path key="pl" d={planks} stroke={A.tone(lineOf(TIMBER), zM, m(dk))} strokeWidth={lwT(A, 0.8)} strokeOpacity={0.55} />);
-  els.push(<Strut key="bf" A={A} a={[m(L.collarX0), hy(collarBot + 0.06), pz.zF + m(0.12)]} b={[m(braceTo), hy(db), pz.zF + m(0.12)]} w={m(0.13)} />);
-  els.push(<g key="rider">{rider}</g>);
-  // the top sprocket, the chain over it and down (its slack belly at f0) to the crank wheel
-  const cr = L.crank;
-  const down = bowed([m(L.chainDownX), hy(ts.h), zChain], [m(L.chainDownX), hy(cr.h), zChain], 0.22 * slackAt(frame));
-  const over: V3[] = Array.from({ length: 7 }, (_, i) => {
-    const a = Math.PI - (Math.PI * i) / 6;
-    return [m(ts.X + ts.R * Math.cos(a)), hy(ts.h + ts.R * Math.sin(a)), zChain] as V3;
-  });
-  els.push(<Chain key="cd" A={A} pts={[...over, ...down.slice(1)]} travel={travel} />);
-  els.push(<Wheel key="ts" A={A} X={ts.X} h={ts.h} Z={zChain - 4} R={ts.R * 0.8} turn={-travel / ts.R} spokes={3} />);
-  // the crank: an A-trestle, the wheel (the chain wound on its hub), the iron arm and the timber handle
-  const zC = zChain - 10;
-  const legs = (zz: number, k: string) => (
-    <g key={k}>
-      <Strut A={A} a={[m(cr.X - 0.55), 0, zz]} b={[m(cr.X), hy(cr.h + 0.1), zz]} w={m(0.13)} />
-      <Strut A={A} a={[m(cr.X + 0.55), 0, zz]} b={[m(cr.X), hy(cr.h + 0.1), zz]} w={m(0.13)} />
-      <Strut A={A} a={[m(cr.X - 0.38), hy(0.32), zz]} b={[m(cr.X + 0.38), hy(0.32), zz]} w={m(0.1)} />
-    </g>
-  );
-  els.push(legs(zC + m(0.35), "lb"));
-  els.push(<Wheel key="cw" A={A} X={cr.X} h={cr.h} Z={zC} R={cr.R} turn={crankAt(frame)} spokes={5} mt={TIMBER} />);
-  els.push(legs(zC - m(0.3), "lf"));
-  const ca = crankAt(frame);
-  const cF = A.P.p(m(cr.X), hy(cr.h), zC - m(0.34));
-  const hx: P2 = [cF[0] + m(cr.arm) * A.P.r(zC - m(0.34)) * Math.cos(ca), cF[1] + m(cr.arm) * A.P.r(zC - m(0.34)) * Math.sin(ca)];
-  const hz = zC - m(0.34);
-  const hOut = A.P.p(m(cr.X) + m(cr.arm) * Math.cos(ca), hy(cr.h) + m(cr.arm) * Math.sin(ca), hz - m(0.4));
-  els.push(<path key="arm" d={`M${Pt(cF)}L${Pt(hx)}`} stroke={A.tone(IRON.mid, hz, m(cr.h))} strokeWidth={m(0.06) * A.P.r(hz)} strokeLinecap="round" />);
-  els.push(<circle key="ax" cx={cF[0]} cy={cF[1]} r={m(0.07) * A.P.r(hz)} fill={A.tone(IRON.dark, hz, m(cr.h))} />);
-  els.push(<path key="hd" d={`M${Pt(hx)}L${Pt(hOut)}`} stroke={A.tone(TIMBER.lit, hz, m(cr.h))} strokeWidth={m(0.075) * A.P.r(hz)} strokeLinecap="round" />);
-  return <g>{els}</g>;
+  return `${d}Z`;
 };
 
 // ===================================================================================================================
-// THE EVOLUTION PLATE (on its own short timber signpost right of the crank, at the mast's foot)
+// THE WALK: four stages, three swaps; the speed is each stage's own gait (planted feet), blended across each swap
+// while the near object covers him, then a raised-cosine stop (WALK_DEC)
 // ===================================================================================================================
-export const PLATE = { X: 3.35, h: 2.45, capM: 0.34, postW: 0.13 };
-const Plate: React.FC<{ A: AirWorld }> = ({ A }) => {
-  const Z = platZ().zM - m(0.45);
+export type StageKind = "chimp" | "hominin" | "forager" | "modern";
+type Stage = { kind: StageKind; stride: number; cycle: number; scale: number };
+/** the chimp's stride is its knuckle-walk's (58 units a cycle at scale 1); the people's is covidFolk's step (2 per
+ *  cycle). The people stride out (the march's long steps): the spacing of the lineup is the distance between swaps */
+export const STAGES: Stage[] = [
+  { kind: "chimp", stride: 58, cycle: 13, scale: 1.1 },
+  { kind: "hominin", stride: 58, cycle: 20, scale: 0.92 },
+  { kind: "forager", stride: 62, cycle: 21, scale: 1 },
+  { kind: "modern", stride: 64, cycle: 21, scale: 1 },
+];
+const speedOf = (s: Stage) => (s.kind === "chimp" ? (s.stride * s.scale) / s.cycle : (2 * s.stride * s.scale) / s.cycle);
+/** the swap frames: the new stage is drawn from this frame on (and the old one's afterimage) */
+export const SWAPS = [15, 42, 68];
+const SWAP_BLEND = 4;
+/** the stop: the speed falls in one raised-cosine lobe */
+export const WALK_DEC = [78, 95] as const;
+const decel = (f: number) => (f <= WALK_DEC[0] ? 1 : f >= WALK_DEC[1] ? 0 : 0.5 * (1 + Math.cos((Math.PI * (f - WALK_DEC[0])) / (WALK_DEC[1] - WALK_DEC[0]))));
+const speedAt = (f: number) => {
+  let v = speedOf(STAGES[0]);
+  SWAPS.forEach((s, i) => {
+    v += (speedOf(STAGES[i + 1]) - speedOf(STAGES[i])) * sst(s - SWAP_BLEND, s + SWAP_BLEND, f);
+  });
+  return v * decel(f);
+};
+/** the modern man's stride shortens into the stop */
+const strideAmt = (f: number) => lerp(1, 0.55, sst(WALK_DEC[0], WALK_DEC[1] - 2, f));
+const DT = 0.125;
+const NT = Math.ceil((DURATION + 4) / DT) + 2;
+/** X walked and the modern man's raw gait phase, tabulated (seek-safe: pure functions of f) */
+const TAB = (() => {
+  const X = [0];
+  const ph = [0];
+  for (let i = 0; i < NT; i++) {
+    const fm = (i + 0.5) * DT;
+    const v = speedAt(fm);
+    X.push(X[i] + v * DT);
+    const m = STAGES[3];
+    ph.push(ph[i] + (v * DT) / (2 * m.stride * m.scale * strideAmt(fm)));
+  }
+  return { X, ph };
+})();
+const tab = (arr: number[], f: number) => {
+  const x = Math.max(0, f) / DT;
+  const i = Math.min(arr.length - 2, Math.floor(x));
+  return lerp(arr[i], arr[i + 1], c01(x - i));
+};
+/** the walker's feet (world X; Z 0) */
+export const walkX = (f: number) => tab(TAB.X, f);
+export const stageAt = (f: number) => SWAPS.filter((s) => f >= s).length;
+/** the modern man comes to rest at mid-stance of his near foot (frac 0.25), the far foot mid-swing comes down */
+const MOD_PH0 = (() => {
+  const end = tab(TAB.ph, WALK_DEC[1]);
+  return 0.25 - frac(end) + 3;
+})();
+
+// ---- the poses ----------------------------------------------------------------------------------------------------
+/** the people's walk base: profile (the march), the modern man a touch toward us */
+const humanBase = (yaw: number): CovidPose => ({ ...POSES.walk(1, 0, 0), yaw, headYaw: yaw + 0.04, mouth: 0.2 });
+const HOM_BASE: CovidPose = { ...humanBase(0.9), lean: 9, crouch: 14, pitch: 7, look: [0.5, -0.05] };
+const FOR_BASE: CovidPose = { ...humanBase(0.88), look: [0.45, -0.05] };
+const MOD_BASE: CovidPose = { ...humanBase(0.8), look: [0.42, -0.05] };
+const humanPhase = (i: number, f: number) => (walkX(f) - walkX(SWAPS[i - 1])) / (2 * STAGES[i].stride * STAGES[i].scale) + 0.13 * i;
+const modWalk = (f: number) => walkPose(MOD_BASE, MOD_PH0 + tab(TAB.ph, f), strideAmt(f), STAGES[3].stride);
+/** standing after the stop: the stance foot stays, the swinging foot comes down beside it */
+const MOD_STOP: CovidPose = (() => {
+  const w = modWalk(WALK_DEC[1]);
+  return { ...w, footL: [w.footL[0], 0], footR: [w.footL[0] - 10, -1], liftL: 0, liftR: 0, crouch: 1, lean: 1 };
+})();
+/** the head's small turn toward us in the hold (he stays a marcher in profile) */
+const HEAD_TURN = [94, 108] as const;
+export type WalkerPose =
+  | { kind: "chimp"; pose: ChimpPose }
+  | { kind: "hominin" | "forager"; pose: PersonPose }
+  | { kind: "modern"; pose: CovidPose };
+export const walkerPose = (f: number): WalkerPose => {
+  const i = stageAt(f);
+  if (i === 0) {
+    // the knuckle-walk's own clock runs on the distance walked (planted knuckles and feet at any cadence)
+    const arg = (walkX(f) / (STAGES[0].stride * STAGES[0].scale)) * 32 + 9;
+    return { kind: "chimp", pose: CHIMP_POSES.knuckleWalk(1, arg, 1, { headYaw: 1.05, look: [0.55, -0.1] }) };
+  }
+  if (i === 1) return { kind: "hominin", pose: walkPose(HOM_BASE, humanPhase(1, f), 1, STAGES[1].stride) };
+  if (i === 2) return { kind: "forager", pose: walkPose(FOR_BASE, humanPhase(2, f), 1, STAGES[2].stride) };
+  let q = modWalk(f);
+  q = lerpPose(q, MOD_STOP, sst(WALK_DEC[1] - 11, WALK_DEC[1] - 2, f));
+  // the living hold: a breath and the head's small turn toward us
+  const t = f / FPS;
+  const b = Math.sin((t / 3.6) * 2 * Math.PI) * sst(WALK_DEC[1] - 2, WALK_DEC[1] + 6, f);
+  const ht = sst(HEAD_TURN[0], HEAD_TURN[1], f);
+  q = {
+    ...q,
+    crouch: q.crouch - 1.1 * b,
+    headYaw: lerp(q.headYaw, 0.6, ht),
+    look: [lerp(0.42, 0.2, ht), -0.05],
+    mouth: 0.2,
+  };
+  return { kind: "modern", pose: q };
+};
+
+// ===================================================================================================================
+// THE CAST: the chimp (W2), the early hominin (forager v4 recoloured here: furred, stooped, a brow ridge, a mane),
+// the forager (W2 v0) and the modern man (covidFolk Commuter v1)
+// ===================================================================================================================
+const HOM_VARIANT = 4;
+const FOR_VARIANT = 0;
+const MOD_KIND = "commuter" as const;
+const MOD_VARIANT = 1;
+const FUR = "#5E4837";
+const FUR_DK = "#3F3026";
+const hexDist = (a: string, b: string) => {
+  const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const A = p(a);
+  const B = p(b);
+  return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]);
+};
+/** a shape's control-point box (folk units) */
+const shapeBox = (d: string) => {
+  const n = (d.match(/-?\d+(\.\d+)?(e-?\d+)?/g) || []).map(Number);
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (let i = 0; i + 1 < n.length; i += 2) {
+    x0 = Math.min(x0, n[i]);
+    x1 = Math.max(x1, n[i]);
+    y0 = Math.min(y0, n[i + 1]);
+    y1 = Math.max(y1, n[i + 1]);
+  }
+  return { x0, x1, y0, y1 };
+};
+/** THE EARLY HOMININ: forager v4's build, the hide recoloured to fur (no belt), the limbs furred brown, the hair a fur
+ *  mane down the back of the head and neck, a heavy brow ridge; the face keeps its skin */
+export const buildHominin = (pose: PersonPose, frame: number) => {
+  const b = buildPerson("forager", pose, { variant: HOM_VARIANT, frame });
+  const a = b.anchors;
+  const look = foragerLookOf(HOM_VARIANT);
+  const hc = a.headC;
+  const R = a.headR;
+  const neckY = (hc[1] + R * 0.95) * FU;
+  const hideSet = new Set([look.hide.toLowerCase(), "#685745"]);
+  const cordSet = new Set([look.cord.toLowerCase(), "#5e4f41"]);
+  const shapes: CShape[] = b.shapes.map((s) => {
+    const fl = s.fill.toLowerCase();
+    if (s.grad || s.glow) return s;
+    if (hideSet.has(fl)) return { ...s, fill: fl === "#685745" ? mixHex(FUR, FUR_DK, 0.5) : FUR };
+    if (cordSet.has(fl)) return { ...s, fill: FUR };
+    if (fl === look.hair.toLowerCase()) return { ...s, fill: FUR_DK };
+    if (hexDist(fl, look.skin.toLowerCase()) < 42) {
+      const bx = shapeBox(s.d);
+      // the limbs furred (the hands and feet a little lighter), the face a darker weathered tan
+      if ((bx.y0 + bx.y1) / 2 > neckY) return { ...s, fill: mixHex(s.fill, FUR, bx.y0 > -40 * FU ? 0.62 : 0.84) };
+      return { ...s, fill: mixHex(s.fill, "#7E5E46", 0.38) };
+    }
+    return s;
+  });
+  const eyes = a.eyes;
+  const em: P2 = eyes.length ? [eyes.reduce((q, e) => q + e[0], 0) / eyes.length, eyes.reduce((q, e) => q + e[1], 0) / eyes.length] : [hc[0] + 18, hc[1]];
+  // the mane: fur down the back of the head and the neck onto the shoulders
+  const mane: CShape = { d: ellD([hc[0] - R * 0.45, hc[1] + R * 0.5], R * 0.95, R * 1.3, 14), fill: FUR_DK };
+  // the brow ridge: a short dark crescent over the eyes
+  const brow: CShape = { d: ellD([em[0] + 1, em[1] - R * 0.2], R * 0.34, R * 0.1, -8), fill: mixHex(FUR_DK, "#7E5E46", 0.2) };
+  // a ragged fur edge: tufts down the back, at the back of the shoulder and on the outer arm
+  const tuft = (c: P2, dir: P2, len: number, seed: number): CShape[] =>
+    [-0.5, 0, 0.5].map((o, k) => {
+      const ang = Math.atan2(dir[1], dir[0]) + o * 0.7 + (hash(seed * 7 + k) - 0.5) * 0.3;
+      const l = len * (0.7 + 0.5 * hash(seed * 3 + k));
+      const nx = -Math.sin(ang);
+      const ny = Math.cos(ang);
+      const w = len * 0.28;
+      const tip: P2 = [c[0] + Math.cos(ang) * l, c[1] + Math.sin(ang) * l];
+      const pts: P2[] = [[c[0] + nx * w, c[1] + ny * w], tip, [c[0] - nx * w, c[1] - ny * w]];
+      return { d: `M${pts.map((q) => `${(q[0] * FU).toFixed(2)} ${(q[1] * FU).toFixed(2)}`).join(" L ")} Z`, fill: k === 1 ? FUR_DK : FUR };
+    });
+  const neckB: P2 = [a.chest[0] - 24, hc[1] + R * 1.25];
+  const hipB: P2 = [a.hip[0] - 30, a.hip[1] - 14];
+  const back: CShape[] = [];
+  for (let k = 0; k < 4; k++) {
+    const t = (k + 0.5) / 4;
+    back.push(...tuft([lerp(neckB[0], hipB[0], t), lerp(neckB[1], hipB[1], t)], [-1, 0.35], 11, k + 1));
+  }
+  const elbowL: P2 = [(a.shoulderL[0] + a.wristL[0]) / 2 - 8, (a.shoulderL[1] + a.wristL[1]) / 2];
+  const arms: CShape[] = [...tuft([a.shoulderL[0] - 12, a.shoulderL[1] + 4], [-1, 0.6], 10, 11), ...tuft(elbowL, [-1, 0.8], 9, 12)];
+  return { shapes: [mane, ...shapes, ...back, ...arms, brow], anchors: a };
+};
+
+/** a figure built: shapes (folk units, feet at the origin), the head (units), the scale */
+export type Built = { shapes: CShape[]; headC: P2; headR: number; scale: number; kind: StageKind };
+export const buildWalker = (wp: WalkerPose, f: number): Built => {
+  if (wp.kind === "chimp") {
+    const b = buildChimp(0, wp.pose);
+    return { shapes: b.shapes, headC: b.anchors.headC, headR: b.anchors.headR, scale: STAGES[0].scale, kind: "chimp" };
+  }
+  if (wp.kind === "hominin") {
+    const b = buildHominin(wp.pose, f);
+    return { shapes: b.shapes, headC: b.anchors.headC, headR: b.anchors.headR, scale: STAGES[1].scale, kind: "hominin" };
+  }
+  if (wp.kind === "forager") {
+    const b = buildPerson("forager", wp.pose, { variant: FOR_VARIANT, frame: f });
+    return { shapes: b.shapes, headC: b.anchors.headC, headR: b.anchors.headR, scale: STAGES[2].scale, kind: "forager" };
+  }
+  const b = buildCovidFolk(MOD_KIND, MOD_VARIANT, wp.pose, { hold: { L: "none", R: "none" }, carry: "none", frame: f });
+  const a = covidAnchors(MOD_KIND, wp.pose, [0, 0], 1, { variant: MOD_VARIANT });
+  return { shapes: b.shapes, headC: a.headC, headR: a.headR, scale: STAGES[3].scale, kind: "modern" };
+};
+
+// ---- the glow of intelligence --------------------------------------------------------------------------------------
+/** the head glow's spot radius (world units): ~20 % of each head's width across, growing only a little across the
+ *  march (the chimp's 65 % of the modern man's) */
+export const GLOW_R = { chimp: 5.5, hominin: 6.6, forager: 7.5, modern: 8.4 } as const;
+/** the glow's faint halo reaches this many radii (the coverage checks use it) */
+export const GLOW_REACH = 2.7;
+/** the glow's centre: in the brain, a little up and back from the head's centre (world px) */
+export const glowOf = (b: Built, at: P2) => {
+  const c: P2 = [at[0] + (b.headC[0] - 0.24 * b.headR) * b.scale, at[1] + (b.headC[1] - 0.32 * b.headR) * b.scale];
+  const head: P2 = [at[0] + b.headC[0] * b.scale, at[1] + b.headC[1] * b.scale];
+  return { c, R: GLOW_R[b.kind], head, headR: b.headR * b.scale };
+};
+/** "for intelligence": the four glows pulse once together (peak ~f96) */
+export const PULSE = [90, 102] as const;
+export const pulseAt = (f: number) => Math.pow(Math.sin(Math.PI * c01((f - PULSE[0]) / (PULSE[1] - PULSE[0]))), 1.4);
+
+/** a built figure's screen box on a camera: its shapes, its glow's halo and its contact shadow */
+const SHADOW: Record<StageKind, { w: number; d: number }> = { chimp: { w: 77, d: 32 }, hominin: { w: 58, d: 28 }, forager: { w: 60, d: 30 }, modern: { w: 62, d: 30 } };
+export const boxOf = (b: Built, at: P2, cam: Cam) => {
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  const add = (p: P2) => {
+    const s = toScreen(cam, p);
+    x0 = Math.min(x0, s[0]);
+    x1 = Math.max(x1, s[0]);
+    y0 = Math.min(y0, s[1]);
+    y1 = Math.max(y1, s[1]);
+  };
+  for (const s of b.shapes) {
+    const bx = shapeBox(s.d);
+    if (!Number.isFinite(bx.x0)) continue;
+    add([at[0] + (bx.x0 / FU) * b.scale, at[1] + (bx.y0 / FU) * b.scale]);
+    add([at[0] + (bx.x1 / FU) * b.scale, at[1] + (bx.y1 / FU) * b.scale]);
+  }
+  const g = glowOf(b, at);
+  add([g.c[0] - g.R * GLOW_REACH, g.c[1] - g.R * GLOW_REACH]);
+  add([g.c[0] + g.R * GLOW_REACH, g.c[1] + g.R * GLOW_REACH]);
+  const sw = SHADOW[b.kind];
+  add([at[0] + 0.18 * sw.w - sw.w * 1.05, -8]);
+  add([at[0] + 0.18 * sw.w + sw.w * 1.05, 8]);
+  return { x0, x1, y0, y1 };
+};
+/** the world X extent of a built figure (its shapes) */
+const worldSpan = (b: Built, X: number) => {
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  for (const s of b.shapes) {
+    const bx = shapeBox(s.d);
+    if (!Number.isFinite(bx.x0)) continue;
+    x0 = Math.min(x0, X + (bx.x0 / FU) * b.scale);
+    x1 = Math.max(x1, X + (bx.x1 / FU) * b.scale);
+  }
+  return { x0, x1 };
+};
+
+// ===================================================================================================================
+// THE AFTERIMAGES: at each swap the outgoing stage is left behind, frozen mid-stride where it went behind the near
+// object (its pose and place on the frame before the swap, when it is fully covered), cream-tinted and soft
+// ===================================================================================================================
+const CREAM = "#F1E7CF";
+export type After = { from: number; X: number; b: Built; shapes: CShape[] };
+export const AFTER: After[] = SWAPS.map((s) => {
+  const f = s - 1;
+  const b = buildWalker(walkerPose(f), f);
+  const shapes = b.shapes.map((sh) => (sh.glow || sh.grad ? sh : { ...sh, fill: mixHex(sh.fill, CREAM, 0.45) }));
+  return { from: s, X: walkX(f), b, shapes };
+});
+const AFTER_OP = 0.68;
+/** the modern man where he stands at the end */
+const END_F = DURATION - 1;
+export const MOD_END = { X: walkX(END_F), b: buildWalker(walkerPose(END_F), END_F) };
+/** the lineup's world X extent at the end (the afterimages and the modern man) */
+export const LINEUP = (() => {
+  const spans = [...AFTER.map((a) => worldSpan(a.b, a.X)), worldSpan(MOD_END.b, MOD_END.X)];
+  return { x0: Math.min(...spans.map((q) => q.x0)), x1: Math.max(...spans.map((q) => q.x1)) };
+})();
+
+// ===================================================================================================================
+// THE CAMERA: low (shin height), a truck locked to his pace (his feet at x 575, y 1045: the trail behind him in
+// shot); from f78 it decelerates into one PULL-BACK and RISE (u: one C2 lobe) onto the lineup; then a slow creep
+// ===================================================================================================================
+export const K_WALK = 1.3;
+export const K_END = 1.27;
+export const EYE_W = -45;
+export const EYE_END = -330;
+const DREF = 800;
+const DOLLY = 0.35;
+const FEET_SX = 575;
+const FEET_SY = 1045;
+/** the lineup settles a little lower in the frame as the camera rises (the series sits low) */
+const FEET_SY_END = 1150;
+export const PULL = [78, 99] as const;
+export const RISE = [67, 83] as const;
+const followCx = (f: number) => walkX(f) - (FEET_SX - 540) / K_WALK;
+/** the end frame: the lineup's left end at x LINEUP_LEFT, the march's lead room ahead of the modern man on the right
+ *  (the camera barely has to come back: the trail is already on screen behind him) */
+const LINEUP_LEFT = 105;
+export const CX_END = LINEUP.x0 + (540 - LINEUP_LEFT) / K_END;
+export const rigAt = (f: number) => {
+  const u = sst5(PULL[0], PULL[1], f);
+  // the living hold: a slow creep (the pull carries on, a drift along the lineup)
+  const creep = sst(95, 118, f);
+  const k = K_WALK * Math.pow(K_END / K_WALK, u) * (1 - 0.03 * creep);
+  const cx = lerp(followCx(f), CX_END, u) + 9 * creep;
+  const cam: Cam = { k, cx, cy: (960 - lerp(FEET_SY, FEET_SY_END, u)) / k };
+  const depth: DepthOpts = { eyeY: lerp(EYE_W, EYE_END, sst5(RISE[0], RISE[1], f)), dRef: DREF, kRef: K_WALK, dolly: DOLLY };
+  return { cam, depth, u };
+};
+export const camAt = (f: number): Cam => swayCam(rigAt(f).cam, f);
+const REST = camAt(0);
+/** screen <-> world (2D, the Z 0 plane) on a camera */
+export const toScreen = (cam: Cam, p: P2): P2 => [540 + (p[0] - cam.cx) * cam.k, 960 + (p[1] - cam.cy) * cam.k];
+/** a depth's r on a frame's rig */
+export const rOf = (f: number, Z: number) => {
+  const { cam, depth } = rigAt(f);
+  const Dc = depth.dRef * Math.pow(depth.kRef / cam.k, depth.dolly);
+  return Dc / (Dc + Z);
+};
+
+// ===================================================================================================================
+// THE NEAR OBJECTS: three slim, sharp things standing on the ground close to the lens, each only a little wider than
+// the figures. Each is placed (X) and sized (half-width, the height its full width must reach) from the figures: it
+// covers the old figure on the frame before the swap, and the new one and the old one's afterimage on the swap frame
+// ===================================================================================================================
+export type OccKind = "mound" | "boulder" | "bollard";
+export type Occ = { kind: OccKind; swap: number; r: number; Z: number; X: number; hw: number; topY: number };
+const OCC_SPEC: { kind: OccKind; r: number }[] = [
+  { kind: "mound", r: 5.6 },
+  { kind: "boulder", r: 5.2 },
+  { kind: "bollard", r: 5.2 },
+];
+/** the coverage margin (screen px: the camera's sway and the painted edge) */
+export const OCC_MARGIN = 9;
+export const walkerBox = (f: number, cam: Cam = camAt(f), wp: WalkerPose = walkerPose(f)) => boxOf(buildWalker(wp, f), [walkX(f), 0], cam);
+/** an occluder's screen centre x on a frame */
+export const occCentre = (o: Occ, f: number, cam: Cam = camAt(f)) => 540 + (o.X - cam.cx) * rOf(f, o.Z) * cam.k;
+export const OCCS: Occ[] = OCC_SPEC.map((sp, i) => {
+  const s = SWAPS[i];
+  const camA = camAt(s - 1);
+  const camB = camAt(s);
+  const Bo = walkerBox(s - 1, camA);
+  const Bn = walkerBox(s, camB);
+  const Ba = boxOf(AFTER[i].b, [AFTER[i].X, 0], camB);
+  const Z = DREF * (1 / sp.r - 1);
+  // its screen centre per X: 540 + (X - cx) r k; one frame earlier it stood further right by d
+  const d = (camB.cx - camA.cx) * sp.r * camB.k;
+  const lo = Math.min(Bo.x0 - d, Bn.x0, Ba.x0);
+  const hi = Math.max(Bo.x1 - d, Bn.x1, Ba.x1);
+  const c = (lo + hi) / 2;
+  const hwS = (hi - lo) / 2 + OCC_MARGIN;
+  const X = camB.cx + (c - 540) / (sp.r * camB.k);
+  const hw = hwS / (sp.r * camB.k);
+  // the height its full width must reach: above the figures' tops (screen) with the margin
+  const topS = Math.min(Bo.y0, Bn.y0, Ba.y0) - OCC_MARGIN - 6;
+  const eyeY = rigAt(s).depth.eyeY;
+  // screen y = 960 + (eyeY + (Y - eyeY) r - cy) k  ->  Y
+  const topY = eyeY + (camB.cy + (topS - 960) / camB.k - eyeY) / sp.r;
+  return { kind: sp.kind, swap: s, r: sp.r, Z, X, hw, topY };
+});
+/** the near objects' outlines (x across in units of hw, y up in world units): full width from the ground to topY */
+export const occOutline = (o: Occ): P2[] => {
+  const h = o.hw;
+  const t = o.topY;
+  if (o.kind === "mound") {
+    // a termite mound: a fluted clay spire, a lumpy two-lobed crown
+    return [
+      [-1.5 * h, 4],
+      [-1.32 * h, -22],
+      [-1.14 * h, -46],
+      [-1.07 * h, t * 0.62],
+      [-1.03 * h, t],
+      [-0.86 * h, t - 0.3 * h],
+      [-0.52 * h, t - 0.62 * h],
+      [-0.14 * h, t - 0.86 * h],
+      [0.06 * h, t - 0.92 * h],
+      [0.3 * h, t - 0.74 * h],
+      [0.52 * h, t - 0.62 * h],
+      [0.7 * h, t - 0.54 * h],
+      [0.9 * h, t - 0.3 * h],
+      [1.05 * h, t],
+      [1.08 * h, t * 0.6],
+      [1.16 * h, -42],
+      [1.36 * h, -20],
+      [1.55 * h, 4],
+    ];
+  }
+  if (o.kind === "boulder") {
+    // a tall weathered boulder: a domed crown, a flat-ish facet on the right, a wide foot
+    return [
+      [-1.55 * h, 4],
+      [-1.36 * h, -16],
+      [-1.17 * h, -44],
+      [-1.1 * h, t * 0.7],
+      [-1.06 * h, t],
+      [-0.9 * h, t - 0.3 * h],
+      [-0.55 * h, t - 0.52 * h],
+      [-0.1 * h, t - 0.62 * h],
+      [0.36 * h, t - 0.58 * h],
+      [0.78 * h, t - 0.4 * h],
+      [1.04 * h, t - 0.1 * h],
+      [1.1 * h, t * 0.72],
+      [1.2 * h, -40],
+      [1.42 * h, -14],
+      [1.62 * h, 4],
+    ];
+  }
+  // a cast-iron bollard: a plinth, the body, a collar and a domed cap with a finial
+  return [
+    [-1.24 * h, 4],
+    [-1.24 * h, -14],
+    [-1.04 * h, -18],
+    [-1.02 * h, t],
+    [-0.96 * h, t - 0.34 * h],
+    [-0.7 * h, t - 0.66 * h],
+    [-0.3 * h, t - 0.84 * h],
+    [0.3 * h, t - 0.84 * h],
+    [0.7 * h, t - 0.66 * h],
+    [0.96 * h, t - 0.34 * h],
+    [1.02 * h, t],
+    [1.04 * h, -18],
+    [1.24 * h, -14],
+    [1.24 * h, 4],
+  ];
+};
+
+// ===================================================================================================================
+// THE SET
+// ===================================================================================================================
+const GROUND: Mat = { lit: "#8C805D", mid: "#706549", dark: "#3A3226" };
+const GRASS = { lit: "#A39A6E", mid: "#8A8460", dark: "#5F5C40", deep: "#4A4732" };
+const BARK = { lit: "#8C7258", mid: "#65503C", dark: "#3A2D22" };
+const CLAY = { lit: "#B39373", mid: "#8F7358", dark: "#5C4836" };
+const STONE_B = { lit: "#A39E92", mid: "#7F7A6F", dark: "#55514A" };
+const IRON = MAT.iron;
+const STONE_P = { lit: "#9C968A", mid: "#858073", dark: "#5C574D" };
+/** the eras by world position: the pavement starts past the forager's afterimage (the modern man steps onto it) */
+export const X_PAVE = AFTER[2].X + 62;
+/** the far acacias fade into a far city once he is on the pavement */
+const cityAmt = (f: number) => sst(66, 86, f);
+
+/** the savannah's tufts (deterministic): near (in front of him, the bottom of the frame) and behind */
+type Tuft = { X: number; Z: number; h: number; w: number; n: number; seed: number; lean: number };
+const TUFTS: Tuft[] = (() => {
+  const out: Tuft[] = [];
+  for (let i = 0; i < 70; i++) {
+    const X = -700 + hash(i * 3.1 + 1) * 2400;
+    const Z = -560 + hash(i * 5.7 + 2) * 260;
+    // low (under the eye): they stay below his feet's line in the low walk
+    out.push({ X, Z, h: 18 + 18 * hash(i * 1.9 + 3), w: 22 + 18 * hash(i * 2.3), n: 7 + Math.floor(5 * hash(i * 7.7)), seed: i, lean: (hash(i * 4.4) - 0.5) * 0.5 });
+  }
+  for (let i = 0; i < 90; i++) {
+    const X = -1500 + hash(i * 3.7 + 11) * 3600;
+    const Z = 240 + Math.pow(hash(i * 6.1 + 12), 1.4) * 1500;
+    out.push({ X, Z, h: 30 + 34 * hash(i * 1.3 + 13), w: 18 + 16 * hash(i * 2.9), n: 6 + Math.floor(4 * hash(i * 8.3)), seed: 100 + i, lean: (hash(i * 4.9) - 0.5) * 0.5 });
+  }
+  return out;
+})();
+const TuftG: React.FC<{ A: AirWorld; t: Tuft }> = ({ A, t }) => {
+  const P = A.P;
+  const r = P.r(t.Z);
+  const base = P.p(t.X, 0, t.Z);
+  const blades: React.ReactNode[] = [];
+  for (let j = 0; j < t.n; j++) {
+    const u = (j + 0.5) / t.n - 0.5;
+    const hj = t.h * (0.55 + 0.45 * hash(t.seed * 13 + j));
+    const tipX = (u * 1.7 + t.lean + (hash(t.seed * 7 + j) - 0.5) * 0.5) * t.w * 1.3;
+    const bx = u * t.w * 0.55;
+    const ww = 2.4 + 1.6 * hash(t.seed * 5 + j);
+    const q: P2[] = [
+      [base[0] + (bx - ww) * r, base[1]],
+      [base[0] + (bx + tipX * 0.45) * r, base[1] - hj * 0.55 * r],
+      [base[0] + tipX * r, base[1] - hj * r],
+      [base[0] + (bx + tipX * 0.45 + ww * 0.6) * r, base[1] - hj * 0.5 * r],
+      [base[0] + (bx + ww) * r, base[1]],
+    ];
+    const lit = hash(t.seed * 3 + j) > 0.55;
+    const col = lit ? mixHex(GRASS.lit, GRASS.mid, 0.3) : j % 2 ? GRASS.mid : GRASS.dark;
+    blades.push(<path key={j} d={`M${Pt(q[0])}Q${Pt(q[1])} ${Pt(q[2])}Q${Pt(q[3])} ${Pt(q[4])}Z`} fill={A.tone(col, t.Z, hj * 0.5)} />);
+  }
+  return <g>{blades}</g>;
+};
+
+/** low boulders behind him */
+const ROCKS = [
+  { X: -420, Z: 520, w: 70, h: 44, s: 1 },
+  { X: 260, Z: 880, w: 110, h: 60, s: 2 },
+  { X: 610, Z: 430, w: 52, h: 34, s: 3 },
+  { X: 1080, Z: 700, w: 90, h: 52, s: 4 },
+  { X: -980, Z: 1100, w: 120, h: 70, s: 5 },
+];
+const Rock: React.FC<{ A: AirWorld; X: number; Z: number; w: number; h: number; s: number }> = ({ A, X, Z, w, h, s }) => {
+  const P = A.P;
+  const N = 14;
+  const pts: P2[] = Array.from({ length: N }, (_, i) => {
+    const a = Math.PI + (Math.PI * i) / (N - 1);
+    const rr = 1 + 0.12 * (hash(s * 11 + i) - 0.5);
+    return P.p(X + Math.cos(a) * w * rr, Math.min(0, Math.sin(a) * h * rr), Z);
+  });
+  const lit: P2[] = pts.slice(0, 8).map((p, i) => [p[0] + 3 * P.r(Z), p[1] + (i === 0 ? 0 : 4 * P.r(Z))]);
   return (
     <g>
-      <AirShadow A={A} X={m(PLATE.X)} Z={Z} w={m(0.25)} d={m(0.2)} uid="ebpPlS" amt={0.55} />
-      <AirBox A={A} X0={m(PLATE.X - PLATE.postW / 2)} X1={m(PLATE.X + PLATE.postW / 2)} Y0={hy(PLATE.h)} Y1={0} Z0={Z} Z1={Z + m(PLATE.postW)} mat={TIMBER} uid="ebpPlP" lw={lwT(A, 1.0)} />
-      <SoftPlate A={A} X={m(PLATE.X)} Y={hy(PLATE.h)} Z={Z - 8} text="EVOLUTION" capM={PLATE.capM} t={1} uid="ebpPlate" />
+      <AirShadow A={A} X={X} Z={Z} w={w * 1.1} d={w * 0.5} uid={`rk${s}s`} amt={0.6} />
+      <path d={polyD(pts)} fill={A.tone(MAT.stone.mid, Z, h * 0.5)} />
+      <path d={polyD([...lit, P.p(X - w * 0.1, -h * 0.55, Z)])} fill={A.tone(MAT.stone.lit, Z, h * 0.7)} opacity={0.7} />
     </g>
   );
 };
+
+/** the acacias: a forked trunk, a wide flat crown in layers */
+const ACACIAS = [
+  { X: -1500, Z: 2300, h: 900, s: 1 },
+  { X: -420, Z: 1500, h: 760, s: 2 },
+  { X: 900, Z: 2700, h: 980, s: 3 },
+  { X: 1700, Z: 1300, h: 720, s: 4 },
+  { X: 2600, Z: 2200, h: 900, s: 5 },
+];
+const Acacia: React.FC<{ A: AirWorld; X: number; Z: number; h: number; s: number }> = ({ A, X, Z, h, s }) => {
+  const P = A.P;
+  const p = (x: number, y: number) => P.p(X + x, y, Z);
+  const tw = h * 0.028;
+  const trunk = `M${Pt(p(-tw, 0))}L${Pt(p(-tw * 0.7, -h * 0.45))}L${Pt(p(-h * 0.2, -h * 0.82))}L${Pt(p(-h * 0.17, -h * 0.84))}L${Pt(p(0, -h * 0.52))}L${Pt(p(h * 0.18, -h * 0.83))}L${Pt(p(h * 0.21, -h * 0.81))}L${Pt(p(tw * 0.7, -h * 0.45))}L${Pt(p(tw, 0))}Z`;
+  const crown = (cx: number, cy: number, rx: number, ry: number, col: string, k: number) => {
+    const N = 22;
+    const pts: P2[] = Array.from({ length: N }, (_, i) => {
+      const a = (2 * Math.PI * i) / N;
+      const wob = 1 + 0.08 * Math.sin(a * 5 + s * 2 + k) + 0.05 * Math.sin(a * 9 + s);
+      return p(cx + Math.cos(a) * rx * wob, cy + Math.sin(a) * ry * wob * (Math.sin(a) > 0 ? 0.55 : 1));
+    });
+    return <path key={k} d={polyD(pts)} fill={A.tone(col, Z, -cy)} />;
+  };
+  return (
+    <g>
+      <AirShadow A={A} X={X} Z={Z} w={h * 0.5} d={h * 0.12} uid={`ac${s}s`} amt={0.35} />
+      <path d={trunk} fill={A.tone(BARK.mid, Z, h * 0.4)} />
+      {crown(0, -h * 0.86, h * 0.62, h * 0.12, "#4C5236", 0)}
+      {crown(-h * 0.08, -h * 0.93, h * 0.48, h * 0.08, "#5E6442", 1)}
+      {crown(-h * 0.14, -h * 0.97, h * 0.3, h * 0.05, "#727650", 2)}
+    </g>
+  );
+};
+
+/** the far hills: two soft ridges sinking into the air */
+const Hills: React.FC<{ A: AirWorld }> = ({ A }) => {
+  const P = A.P;
+  const ridge = (Z: number, H: number, seed: number, col: string) => {
+    const pts: P2[] = [];
+    const X0 = A.cam.cx - 30000;
+    for (let i = 0; i <= 120; i++) {
+      const X = X0 + i * 500;
+      const y = -H * (0.45 + 0.3 * Math.sin(X / 2600 + seed) + 0.18 * Math.sin(X / 900 + seed * 2.3) + 0.07 * Math.sin(X / 330 + seed));
+      pts.push(P.p(X, y, Z));
+    }
+    pts.push(P.p(X0 + 60000, 0, Z), P.p(X0, 0, Z));
+    return <path d={polyD(pts)} fill={A.tone(col, Z, H * 0.4)} />;
+  };
+  return (
+    <g>
+      {ridge(12000, 3000, 1.3, "#56604E")}
+      {ridge(6000, 1500, 4.1, "#5D6450")}
+    </g>
+  );
+};
+
+/** ERA 3: the far city in the haze */
+const City: React.FC<{ A: AirWorld }> = ({ A }) => {
+  const P = A.P;
+  const Z = 9000;
+  const out: React.ReactNode[] = [];
+  let X = -9000;
+  let i = 0;
+  while (X < 12000) {
+    const w = 700 + 1500 * hash(i * 3.3 + 40);
+    const H = 900 + 3200 * Math.pow(hash(i * 7.1 + 41), 1.6);
+    if (hash(i * 2.1 + 42) > 0.25) out.push(<path key={i} d={polyD([P.p(X, 0, Z), P.p(X, -H, Z), P.p(X + w, -H, Z), P.p(X + w, 0, Z)])} fill={A.tone(i % 2 ? "#5D6260" : "#676A64", Z, H * 0.5)} />);
+    X += w + 120 + 500 * hash(i * 5.3 + 43);
+    i++;
+  }
+  return <g>{out}</g>;
+};
+
+/** THE CITY ERA: the ground is paved from X_PAVE on: a paved plain that runs off the right of the frame and into the
+ *  depth to the horizon (melting into the air with the ground), its near part past the lens (no edge, no corner in
+ *  frame): the change of era is the change of ground under his feet */
+const Pavement: React.FC<{ A: AirWorld }> = ({ A }) => {
+  const X0 = X_PAVE;
+  const X1 = A.cam.cx + 9000;
+  if (X1 <= X0) return null;
+  // the kit's floor stops at its near plane; let the paving run on toward the lens
+  const Ap: AirWorld = { ...A, P: { ...A.P, zNear: -0.97 * A.P.Dc } };
+  return <AirFloor A={Ap} x0={X0} x1={X1} z0={-0.97 * A.P.Dc} z1={14000} mat={STONE_P} course={124} plank={112} lw={1.3} jointAmt={1.4} melt={0.5} />;
+};
+
+// ---- the near objects, drawn (sharp, in the set's paint) -----------------------------------------------------------
+const OccluderG: React.FC<{ A: AirWorld; o: Occ }> = ({ A, o }) => {
+  const P = A.P;
+  const r = P.r(o.Z);
+  const p = (x: number, y: number) => P.p(o.X + x, y, o.Z);
+  const cxS = 540 + (p(0, 0)[0] - A.cam.cx) * A.cam.k;
+  const hwS = o.hw * r * A.cam.k;
+  if (cxS + hwS * 1.8 < -20 || cxS - hwS * 1.8 > 1100) return null;
+  const out = occOutline(o);
+  const body = smoothD(out.map(([x, y]) => p(x, y)));
+  const h = o.hw;
+  const t = o.topY;
+  const id = `ebpOcc${o.swap}`;
+  // the light: from the left, a lit band on the left, a core shadow on the right (both clipped to the outline)
+  const band = (u0: number, u1: number) => polyD([p(u0 * h, 20), p(u0 * h, t - 1.4 * h), p(u1 * h, t - 1.4 * h), p(u1 * h, 20)]);
+  const mat = o.kind === "mound" ? CLAY : o.kind === "boulder" ? STONE_B : IRON;
+  const detail: React.ReactNode[] = [];
+  if (o.kind === "mound") {
+    // the flutes: long vertical ridges of clay, a few pits
+    for (let i = 0; i < 9; i++) {
+      const u = -0.95 + (1.9 * (i + 0.5)) / 9 + (hash(i * 3.3) - 0.5) * 0.12;
+      const y0 = -6 - 20 * hash(i * 1.3);
+      const y1 = t - (0.2 + 0.7 * hash(i * 2.9)) * h * (1 - Math.abs(u));
+      const q = [0, 0.33, 0.66, 1].map((k): P2 => {
+        const y = lerp(y0, y1, k);
+        return p((u + 0.04 * Math.sin(k * 4 + i)) * h, y);
+      });
+      detail.push(<path key={`f${i}`} d={`M${Pt(q[0])}C${Pt(q[1])} ${Pt(q[2])} ${Pt(q[3])}`} fill="none" stroke={CLAY.dark} strokeWidth={(0.07 + 0.04 * hash(i)) * h * r} strokeOpacity={0.4} strokeLinecap="round" />);
+      detail.push(<path key={`g${i}`} d={`M${Pt(q[0])}C${Pt(q[1])} ${Pt(q[2])} ${Pt(q[3])}`} fill="none" stroke={CLAY.lit} strokeWidth={0.035 * h * r} strokeOpacity={0.4} strokeLinecap="round" transform={`translate(${(-0.06 * h * r).toFixed(2)} 0)`} />);
+    }
+    for (let i = 0; i < 6; i++) {
+      const c = p((hash(i * 7.1) - 0.5) * 1.4 * h, lerp(-30, t, hash(i * 5.3)));
+      detail.push(<ellipse key={`p${i}`} cx={c[0]} cy={c[1]} rx={0.07 * h * r} ry={0.1 * h * r} fill={CLAY.dark} opacity={0.55} />);
+    }
+  } else if (o.kind === "boulder") {
+    // a crack, a chipped facet, lichen
+    const crack = [p(0.2 * h, t - 0.6 * h), p(0.05 * h, t * 0.8), p(0.28 * h, t * 0.55), p(0.12 * h, t * 0.3)];
+    detail.push(<path key="c" d={`M${crack.map(Pt).join("L")}`} fill="none" stroke={STONE_B.dark} strokeWidth={0.05 * h * r} strokeOpacity={0.55} strokeLinejoin="round" strokeLinecap="round" />);
+    detail.push(<path key="fa" d={polyD([p(0.45 * h, t - 0.55 * h), p(1.0 * h, t - 0.1 * h), p(1.05 * h, t * 0.6), p(0.6 * h, t * 0.7)])} fill={STONE_B.dark} opacity={0.25} />);
+    for (let i = 0; i < 7; i++) {
+      const c = p((hash(i * 4.1) - 0.6) * 1.3 * h, lerp(t * 0.3, t - 0.5 * h, hash(i * 2.2)));
+      detail.push(<ellipse key={`l${i}`} cx={c[0]} cy={c[1]} rx={(0.08 + 0.08 * hash(i)) * h * r} ry={(0.05 + 0.05 * hash(i * 3)) * h * r} fill="#8E916C" opacity={0.5} />);
+    }
+  } else {
+    // the collar ring, the cap's seam, the finial
+    const ring = (y: number, w: number, key: string) => (
+      <path key={key} d={polyD([p(-w * h, y), p(w * h, y), p(w * h, y - 0.12 * h), p(-w * h, y - 0.12 * h)])} fill={IRON.dark} opacity={0.75} />
+    );
+    detail.push(ring(t + 0.05 * h, 1.08, "r1"));
+    detail.push(ring(-18, 1.06, "r2"));
+    const fin = p(0, t - 0.86 * h);
+    detail.push(<ellipse key="fin" cx={fin[0]} cy={fin[1]} rx={0.2 * h * r} ry={0.16 * h * r} fill={IRON.mid} />);
+    detail.push(<path key="sp" d={polyD([p(-0.62 * h, -20), p(-0.62 * h, t - 0.2 * h), p(-0.52 * h, t - 0.3 * h), p(-0.52 * h, -20)])} fill={IRON.lit} opacity={0.45} />);
+  }
+  const sh = p(0, 0);
+  return (
+    <g>
+      <defs>
+        <clipPath id={`${id}c`} clipPathUnits="userSpaceOnUse">
+          <path d={body} />
+        </clipPath>
+      </defs>
+      <ellipse cx={sh[0] + 0.1 * h * r} cy={sh[1] + 2 * r} rx={1.9 * h * r} ry={0.32 * h * r} fill="#2A241C" opacity={0.35} />
+      <path d={body} fill={mat.mid} />
+      <g clipPath={`url(#${id}c)`}>
+        <path d={band(-1.8, -0.5)} fill={mat.lit} opacity={0.55} />
+        <path d={band(0.42, 1.8)} fill={mat.dark} opacity={0.55} />
+        {detail}
+      </g>
+    </g>
+  );
+};
+
+// ---- the head glow -------------------------------------------------------------------------------------------------
+/** THE GLOW OF INTELLIGENCE: a soft orange spot inside the skull (the cranium, up and back of the face), its warm
+ *  light filling the head from within (clipped to the head's disc, as the COVID lungs light the chest) and a faint halo
+ *  past the skull. Its size is GLOW_R: it grows only a little across the march. pulse: the shared pulse */
+const HeadGlow: React.FC<{ c: P2; R: number; head: P2; headR: number; uid: string; amt?: number; pulse?: number }> = ({ c, R, head, headR, uid, amt = 1, pulse = 0 }) => {
+  const Rs = R * (1 + 0.3 * pulse);
+  return (
+    <g opacity={amt}>
+      <defs>
+        <radialGradient id={`${uid}h`}>
+          <stop offset="0" stopColor={ACCENT} stopOpacity={0.3} />
+          <stop offset="0.5" stopColor={ACCENT_DEEP} stopOpacity={0.1} />
+          <stop offset="1" stopColor={ACCENT_DEEP} stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id={`${uid}w`}>
+          <stop offset="0" stopColor={ACCENT} stopOpacity={0.34} />
+          <stop offset="0.55" stopColor={ACCENT} stopOpacity={0.12} />
+          <stop offset="1" stopColor={ACCENT_DEEP} stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id={`${uid}s`}>
+          <stop offset="0" stopColor={mixHex(ACCENT, "#FFEBC0", 0.6)} stopOpacity={1} />
+          <stop offset="0.38" stopColor={mixHex(ACCENT, "#FFD9A0", 0.25)} stopOpacity={1} />
+          <stop offset="0.72" stopColor={ACCENT} stopOpacity={0.92} />
+          <stop offset="1" stopColor={ACCENT_DEEP} stopOpacity={0} />
+        </radialGradient>
+        <clipPath id={`${uid}c`} clipPathUnits="userSpaceOnUse">
+          <circle cx={head[0]} cy={head[1]} r={headR * 1.02} />
+        </clipPath>
+      </defs>
+      <circle cx={c[0]} cy={c[1]} r={Rs * (GLOW_REACH + 1.4 * pulse)} fill={`url(#${uid}h)`} opacity={0.65 + 0.35 * pulse} />
+      <circle cx={c[0]} cy={c[1]} r={Rs * 3.4} fill={`url(#${uid}w)`} clipPath={`url(#${uid}c)`} />
+      <circle cx={c[0]} cy={c[1]} r={Rs * 1.3} fill={`url(#${uid}s)`} />
+    </g>
+  );
+};
+
+// ---- an afterimage, drawn ------------------------------------------------------------------------------------------
+const AfterG: React.FC<{ A: AirWorld; a: After; i: number; frame: number }> = ({ A, a, i, frame }) => {
+  const at: P2 = [a.X, 0];
+  const g = glowOf(a.b, at);
+  const sh = SHADOW[a.b.kind];
+  const shimmer = 1 + 0.03 * Math.sin(frame / 4.3 + i * 2.1) * sst(96, 104, frame);
+  const pulse = pulseAt(frame);
+  const id = `ebpAf${i}`;
+  return (
+    <g>
+      <defs>
+        <filter id={`${id}b`} x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation={(0.8 / A.cam.k).toFixed(3)} />
+        </filter>
+      </defs>
+      <g opacity={AFTER_OP} filter={`url(#${id}b)`}>
+        <AirShadow A={A} X={a.X} Z={0} w={sh.w} d={sh.d} uid={`${id}s`} amt={0.45} />
+        <CovidPaint shapes={a.shapes} at={at} scale={a.b.scale} uid={id} fog={A.folkFog(0)} unitPx={A.cam.k} />
+      </g>
+      <HeadGlow c={g.c} R={g.R * shimmer} head={g.head} headR={g.headR} uid={`${id}g`} amt={0.78 + 0.22 * pulse} pulse={pulse} />
+    </g>
+  );
+};
+
+// ===================================================================================================================
+// THE CUT
+// ===================================================================================================================
 const EvolutionBarelyPushed: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
-  const cam = swayCam(camTrack(frame), frame);
-  const A = towerAirOf({ cam, rest: REST, frame });
-  const spot = { X: m(RIDER_U), Y: hy(deckTopAt(frame)), Z: platZ().zM + 20 };
+  const rig = rigAt(frame);
+  const cam = swayCam(rig.cam, frame);
+  const A = airWorldOf({ cam, rest: REST, depth: rig.depth, frame });
+  const P = A.P;
+  const half = 560 / cam.k;
+  const onScreen = (X: number, Z: number, pad: number) => Math.abs(P.p(X, 0, Z)[0] - cam.cx) < half + pad * P.r(Z);
+  // the walker
+  const wp = walkerPose(frame);
+  const b = buildWalker(wp, frame);
+  const X = walkX(frame);
+  const at: P2 = [X, 0];
+  const g = glowOf(b, at);
+  const sh = SHADOW[b.kind];
+  const pulse = pulseAt(frame);
+  const shimmer = 1 + 0.03 * Math.sin(frame / 4.3 + 7) * sst(96, 104, frame);
+  const city = cityAmt(frame);
+  const behind = TUFTS.filter((t) => t.Z > 0 && t.X < X_PAVE && onScreen(t.X, t.Z, 120)).sort((a, c) => c.Z - a.Z);
+  const front = TUFTS.filter((t) => t.Z < 0 && t.X < X_PAVE && onScreen(t.X, t.Z, 120)).sort((a, c) => c.Z - a.Z);
   return (
     <AirStage v={A.v} bloom={0.22}>
       <WorldSvg cam={cam}>
-        <TowerFloor A={A} uid="ebpFl" />
-        <SpeciesTower A={A} frame={frame} show={{ dashed: 0 }} human={false} occupants={{ chimp: chimpOccupant }} uid="tw" />
-        <ChimpNicheSpill A={A} />
-        <MastLift A={A} frame={frame} rider={<TowerHuman A={A} spot={spot} frame={frame} uid="twRider" shadow={0.6} />} />
-        <Plate A={A} />
+        <Hills A={A} />
+        {city > 0.001 ? (
+          <g opacity={city}>
+            <City A={A} />
+          </g>
+        ) : null}
+        <path d={polyD([P.p(cam.cx - 3000, 0, P.zNear + 20), P.p(cam.cx + 3000, 0, P.zNear + 20), [cam.cx + 3000, cam.cy + 2000], [cam.cx - 3000, cam.cy + 2000]])} fill={A.tone(mixHex(mixHex(GROUND.lit, GROUND.mid, 0.3), GROUND.dark, 0.2), P.zNear, 0)} />
+        <AirFloor A={A} x0={cam.cx - 12000} x1={cam.cx + 12000} z0={-900} z1={14000} mat={GROUND} jointAmt={0} melt={0.5} />
+        <AirHorizonHazeW A={A} id="ebpHaze" />
+        {city < 0.999 ? <g opacity={1 - city}>{ACACIAS.map((a) => (onScreen(a.X, a.Z, a.h * 0.7) ? <Acacia key={a.s} A={A} {...a} /> : null))}</g> : null}
+        <Pavement A={A} />
+        {ROCKS.map((r) => (r.X + r.w < X_PAVE && onScreen(r.X, r.Z, r.w) ? <Rock key={r.s} A={A} {...r} /> : null))}
+        {behind.map((t) => (
+          <TuftG key={t.seed} A={A} t={t} />
+        ))}
+        {AFTER.map((a, i) => (frame >= a.from ? <AfterG key={i} A={A} a={a} i={i} frame={frame} /> : null))}
+        <AirShadow A={A} X={X} Z={0} w={sh.w} d={sh.d} uid="ebpWs" amt={0.85} />
+        <CovidPaint shapes={b.shapes} at={at} scale={b.scale} uid="ebpW" fog={A.folkFog(0)} unitPx={cam.k} />
+        <HeadGlow c={g.c} R={g.R * shimmer} head={g.head} headR={g.headR} uid="ebpHg" pulse={pulse} />
+        {front.map((t) => (
+          <TuftG key={t.seed} A={A} t={t} />
+        ))}
+        {OCCS.map((o) => (
+          <OccluderG key={o.swap} A={A} o={o} />
+        ))}
       </WorldSvg>
     </AirStage>
   );
