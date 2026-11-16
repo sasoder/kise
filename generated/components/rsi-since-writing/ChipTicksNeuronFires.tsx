@@ -86,19 +86,42 @@ const lobe = (a: number, b: number) => (f: number) => {
   const x = Math.max(0, Math.min(L2, f - a));
   return (x - (L2 / (2 * Math.PI)) * Math.sin((2 * Math.PI * x) / L2)) / L2;
 };
-type Lobe = readonly [number, number, number];
-const channel = (v0: number, lobes: readonly Lobe[]) => (f: number) => lobes.reduce((v, [a, b, d]) => v + d * lobe(a, b)(f), v0);
-/** f0: close on the chip (k 1.7, its centre at screen x 540); one lobe pulls back and pans left at once (f-6 -> 70);
- *  a slow drift on in the same directions (f50 -> 190) keeps the settled picture alive without a reversal */
-export const CAM = {
-  x: [183.3, [[-6, 70, -184.1], [50, 190, -8]]] as const,
-  lnk: [Math.log(1.28), [[-6, 70, -0.2559], [50, 190, Math.log(0.985)]]] as const,
-  y: [-383.3, [[-6, 70, -15.9], [50, 190, -2]]] as const,
+/** Round 2 (the user: "when it has zoomed out all the way, it should start zooming in slightly on the neuron, so we
+ *  keep the movement and tension"). f0: close on the chip (k 1.28); ONE lobe pulls back and pans left at once (f-6 -> 70)
+ *  to a settle a little wider than before (k ~0.84), which flows with no hold into a slow, steady push-in CENTRED ON THE
+ *  NEURON (its middle stays at one screen point while the zoom grows ~1.18x from the settle to f113). The out-move's
+ *  speed fades through zero (~f63) as the push's speed ramps in (f56 -> 80, then constant to the end). The push lands
+ *  on the approved resolved frame (CAM_END = revision 1's f113 camera) exactly, so the payoff frame is unchanged. */
+export const CAM_END: Cam = { k: 0.98502, cx: -4.0065, cy: -400.0016 };
+const CAM_START: Cam = { k: 1.2789529, cx: 182.71125, cy: -383.35085 };
+/** the push's pivot: the neuron's middle (world), and the push factor from the settle to the end */
+const PIVOT: P2 = [-283, -709];
+export const PUSH = 1.18;
+const PUSH_RAMP: readonly [number, number] = [56, 80];
+const PUSH_END = DURATION - 1;
+/** the push's progress 0..1 (f113 = 1): its speed ramps in by smoothstep over PUSH_RAMP, then stays constant */
+const pushRaw = (f: number) => {
+  const [a, b] = PUSH_RAMP;
+  if (f <= a) return 0;
+  if (f <= b) {
+    const x = (f - a) / (b - a);
+    return (b - a) * (x * x * x - (x * x * x * x) / 2);
+  }
+  return (b - a) / 2 + (f - b);
 };
-const CX = channel(CAM.x[0], CAM.x[1]);
-const LK = channel(CAM.lnk[0], CAM.lnk[1]);
-const CY = channel(CAM.y[0], CAM.y[1]);
-export const camBase = (f: number): Cam => ({ k: Math.exp(LK(f)), cx: CX(f), cy: CY(f) });
+const pushT = (f: number) => pushRaw(f) / pushRaw(PUSH_END);
+const PULL = lobe(-6, 70);
+/** the pivot's screen point at the start and at the end (held through the push) */
+const scr0: P2 = [540 + (PIVOT[0] - CAM_START.cx) * CAM_START.k, 960 + (PIVOT[1] - CAM_START.cy) * CAM_START.k];
+const scrE: P2 = [540 + (PIVOT[0] - CAM_END.cx) * CAM_END.k, 960 + (PIVOT[1] - CAM_END.cy) * CAM_END.k];
+const LN_PULL = Math.log(CAM_END.k / (CAM_START.k * PUSH));
+export const camBase = (f: number): Cam => {
+  const k = CAM_START.k * Math.exp(LN_PULL * PULL(f) + Math.log(PUSH) * pushT(f));
+  const u = PULL(f);
+  const sx = scr0[0] + (scrE[0] - scr0[0]) * u;
+  const sy = scr0[1] + (scrE[1] - scr0[1]) * u;
+  return { k, cx: PIVOT[0] - (sx - 540) / k, cy: PIVOT[1] - (sy - 960) / k };
+};
 export const camAt = (f: number): Cam => swayCam(camBase(f), f);
 const REST = camAt(0);
 /** the eye 3.1 men up (the horizon sits behind the pair), half of a zoom is a dolly */
