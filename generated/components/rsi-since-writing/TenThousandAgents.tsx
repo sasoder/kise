@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// TenThousandAgents (rsi-since-writing, cut 69), revision 2: THE THINKING HANDED OUT. Dwarkesh 3D style
+// TenThousandAgents (rsi-since-writing, cut 69), revision 3: THE THINKING HANDED OUT. Dwarkesh 3D style
 // (styles/dwarkesh-3d.md). Opaque 1080x1920, 23.976 fps, 88 frames. One stage in the misty teal air (AirStage,
 // palette A) on a one-point pinhole crane (tenThousandAgentsPlan.ts, mapped onto the kit's londonDepth perspective
 // every frame), from the kit kits/dwarkesh-3d/dwarkesh3d.
@@ -13,22 +13,28 @@
 //
 // THE MOTION: "this thinking" (f0-27): it opens TIGHT on ONE BIG PIECE OF THINKING, the paper filling the frame
 // while its handwriting draws itself on (every tile being written at once, a dot of fresh ink at each pen tip); one
-// continuous pull-back and slight crane up (easing out by ~f35) reveals the whole slab (a glowing cream slab of
-// work: 10 x 10 pads of the clip's cream sheets) hovering between us and a hall of low desks, then below and around
-// it the front rows and the hall receding in the haze; at every desk a robot (the sister clip's Bot) stands switched
-// off (screen dark, head tipped a little). By "split" the slab fills ~75 % of the width at y ~290-930. "split up" (f27-40): the slab cracks along its grid (f24.5-27.5) and its 100 pads fly off
-// one after another, the far row first, AWAY from us over the hall, fanning out and shrinking with depth, turning
-// flat; the camera cranes up and pushes in after them. "across 10,000 different" (f38-62): each pad stops over its
-// block of 10 x 10 desks and deals its 100 sheets, one onto each desk (the two near pads close in front of us, so we
-// watch them deal); as each sheet lands flat beside the keyboard the robot there switches on (bootUp: the bulb, the
-// eyes, the smile) with a small warm flare, a wave of lit robots running back through the rows (sprites near, dots
-// far). "10,000" is a cloth banner hung low over the hall between rows 9 and 10 (world space, square to the lens)
-// that unrolls at f45, after the near sheets have dropped below it. "parallel agents" (f62-88): every robot types at
-// once, a ripple of orange running back through the rows; the camera settles (horizon y ~330, the front robots ~220
-// px at the bottom of the keep-in, each with its own sheet on its desk), still creeping in and drifting at the cut.
+// continuous pull-back and slight crane up reveals the whole slab (a glowing cream slab of work, 10 x 10 tiles of the
+// clip's cream sheets) hovering between us and a hall of low desks; at every desk a robot (the sister clip's Bot)
+// stands switched off (screen dark, head tipped a little). "split up" (f26.5-54): after the crack (f24.5-27.5) the
+// slab lays itself back part of the way toward flat (it stays raised toward us like a page, never an edge-on bar) and
+// sinks to just above the heads while it glides away over the rows; the glide is solved so its height on screen
+// shrinks evenly, at most 11.8 % a frame, until it is behind the plate (from f49), where it hurries to the last row
+// out of sight, thinning as it deals. As it passes over each row, that row's sheets peel off its underside one by one
+// (scattered across its lower part, tilted like the slab, fading in over 3.5 frames while still under or just behind
+// it) and flutter down in one arc each, turning flat, just over the heads and always below the horizon, to land flat
+// on their own desks with a little settle (no speed left at landing). Each casts its own soft shadow on the desk top
+// below it. Time in the air is spent where the sheet is on screen (<= ~50 px a frame). Of the sheets whose desks are
+// never in the picture only one in five flies out of the frame from the slab (low, quickly, one by one); the rest
+// start outside the frame edge. Far sheets thin away into the haze below a pixel instead of vanishing; every sheet is
+// down by f69. As each sheet lands the robot there switches on (bootUp: the bulb, the eyes, the smile) with a small
+// warm flare, a wave of lit robots running back through the rows. "10,000" (f43-53) is a whole plate hung on two wires over the far hall
+// (world Z 2900, its own half fog), drawn in front of the hall and never cropped: it fades in over 3.5 frames while
+// lowering 520 units on an ease-out, then a small decaying swing. "parallel agents" (f62-88): every robot types at
+// once, a ripple of orange running back through the rows; the camera settles, still creeping in at the cut.
 // Orange = the robots only; the sheets are cream (COMMON.md).
-// Cause before effect: a robot boots only on the frame its own sheet lands; nothing pops: the pads leave the slab
-// they were part of, the sheets leave the pad, and the robots stand there (off) from f0.
+// Cause before effect: a robot boots only on the frame its own sheet lands; nothing pops: the sheets leave the slab
+// they were part of, every sheet is drawn on every frame from release to landing and then on its desk, and the robots
+// stand there (off) from f0.
 //
 // DEPTH: fog by world depth (fogBy "depth"); the pinhole has F = 1000 px and no pitch; f0 the eye 2.9 m up, 7.3 m in
 // front of the first desks; f87 4 m up, 5.4 m in front. The hall: 100 columns 220 apart (1.24 m) x 100 rows 300 apart
@@ -51,21 +57,22 @@ import {
   DESKS,
   DURATION as PLAN_DURATION,
   F,
-  LAYERS,
   N,
   PIECE,
-  SLAB,
   ROBOT_BACK,
-  STACKS,
   TILES,
+  colX,
+  rowZ,
+  COLS,
+  ROWS,
   bootAt,
   cam3At,
   crackAt,
   inkProgress,
   piecePose,
   restOn,
-  slabPt,
-  stackPose,
+  slabPoseAt,
+  bannerAt,
   sst,
   type BoxPose,
   type Cam3,
@@ -292,7 +299,7 @@ const CREAM_LO = "#D8CBB0";
 const INK_COL = "#6E6254";
 
 /** one piece (a cream card) given its centre and axes; ink when it is big enough and its face is toward us */
-const drawPiece = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, C: V3, a: V3, b: V3, tile: number, warm = 0) => {
+const drawPiece = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, C: V3, a: V3, b: V3, tile: number, warm = 0, alpha = 1) => {
   const hw = PIECE.w / 2;
   const hl = PIECE.l / 2;
   const pr = (u: number, v: number): [number, number] => {
@@ -308,17 +315,19 @@ const drawPiece = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, C: V3, a
   const front = n[0] * toCam[0] + n[1] * toCam[1] + n[2] * toCam[2] > 0;
   const hgt = -C[1];
   const sz = Math.hypot(pts[2][0] - pts[0][0], pts[2][1] - pts[0][1]);
-  if (sz < 0.6) return;
+  // a far sheet thins away into the haze below a pixel instead of vanishing
+  const al = alpha * sst(0.25, 1.1, sz);
+  if (al < 0.01) return;
   const base = front ? CREAM : CREAM_LO;
+  ctx.globalAlpha = al;
   poly(ctx, pts, A.tone(base, C[2], hgt), sz > 6 ? A.tone("#B5A68A", C[2], hgt) : undefined, Math.max(0.4, sz * 0.012));
   if (warm > 0) {
-    ctx.globalAlpha = warm;
+    ctx.globalAlpha = warm * al;
     poly(ctx, pts, "rgba(255,214,140,0.5)");
-    ctx.globalAlpha = 1;
   }
   if (front && sz > 18) {
     ctx.strokeStyle = A.tone(INK_COL, C[2], hgt);
-    ctx.globalAlpha = 0.42 * sst(18, 40, sz);
+    ctx.globalAlpha = 0.42 * sst(18, 40, sz) * al;
     ctx.lineWidth = Math.max(0.6, sz * 0.012);
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -329,8 +338,8 @@ const drawPiece = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, C: V3, a
       ctx.lineTo(p1[0], p1[1]);
     }
     ctx.stroke();
-    ctx.globalAlpha = 1;
   }
+  ctx.globalAlpha = 1;
 };
 
 /** a desk (a laminate top on four slim legs, its keyboard at the back edge) with, once its piece has landed, the
@@ -438,7 +447,7 @@ const drawRobot = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, i: numbe
   ctx.globalAlpha = 1;
 };
 
-/** one stack of sheets as a box (its inked top sheet, its paper edges); hide(dir) skips a side that a neighbour in
+/** one tile of the slab (a stack of sheets) as a box (its inked top sheet, its paper edges); hide(dir) skips a side that a neighbour in
  *  the slab covers (dir 0..3 = -a, +a, -b, +b) */
 const STACK_TOP = "#F6EEDC";
 const STACK_SIDE = "#E4D9C2";
@@ -560,19 +569,16 @@ const drawBox = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, P: BoxPose
   }
 };
 
-/** the slab: the stacks still in it, far to near, its glow in the air (fading as it empties) */
-const drawSlab = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, f: number, poses: (BoxPose | null)[]) => {
-  const inSlab = poses.map((p) => !!p && p.inSlab);
-  const left = inSlab.filter(Boolean).length;
-  if (left === 0) return;
+/** the slab: its 10 x 10 tiles on the slab pose (thinning as it deals), far to near, its glow in the air (fading as it empties) */
+const drawSlab = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, f: number, P: BoxPose & { left: number }) => {
+  if (P.left <= 0.002) return;
   const cam: V3 = [c.cx, -c.h, -c.d];
-  // the glow: around the slab's middle, fading as it empties
-  const m = slabPt(0, (TILES * PIECE.l) / 2, (LAYERS * SLAB.lt) / 2, f);
-  const s = F / Math.max(1, m[2] + c.d);
-  const mx = 540 + (m[0] - c.cx) * s;
-  const my = c.hy + (m[1] + c.h) * s;
+  // the glow: around the slab's middle, fading as it thins
+  const s = F / Math.max(1, P.C[2] + c.d);
+  const mx = 540 + (P.C[0] - c.cx) * s;
+  const my = c.hy + (P.C[1] + c.h) * s;
   const R = TILES * PIECE.l * 0.75 * s;
-  const gl = Math.pow(left / 100, 1.5) * (0.85 + 0.15 * Math.sin(f / 5));
+  const gl = Math.pow(P.left, 1.5) * (0.85 + 0.15 * Math.sin(f / 5));
   const gr = ctx.createRadialGradient(mx, my, R * 0.25, mx, my, R * 1.3);
   // full-strength stops faded by globalAlpha (tiny alphas in the stops band into colour rings)
   gr.addColorStop(0, "rgba(255,246,222,0.6)");
@@ -584,32 +590,30 @@ const drawSlab = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, f: number
   ctx.fillRect(mx - R * 1.35, my - R * 1.35, R * 2.7, R * 2.7);
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;
-  const order: number[] = [];
-  for (let k = 0; k < STACKS.length; k++) if (inSlab[k]) order.push(k);
-  const dist = (k: number) => {
-    const p = poses[k] as BoxPose;
-    return Math.hypot(p.C[0] - cam[0], p.C[1] - cam[1], p.C[2] - cam[2]);
-  };
-  order.sort((x, y) => dist(y) - dist(x));
-  for (const k of order) {
-    const S = STACKS[k];
-    const nb = (di: number, dj: number) => {
-      const i2 = S.ti + di;
-      const j2 = S.tj + dj;
-      if (i2 < 0 || j2 < 0 || i2 >= TILES || j2 >= TILES) return false;
-      return inSlab[i2 * TILES + j2];
-    };
-    // dir 0..3 = -a (left), +a (right), -b (down the face: the near edge), +b (up the face)
-    const hide = (dir: number) => (dir === 0 ? nb(-1, 0) : dir === 1 ? nb(1, 0) : dir === 2 ? nb(0, -1) : nb(0, 1));
-    const u = (S.ti - TILES / 2 + 0.5) * PIECE.w;
-    const v = (S.tj + 0.5) * PIECE.l;
-    drawBox(ctx, c, A, poses[k] as BoxPose, k, crackAt(u, v, f), hide, inkProgress(k, f));
+  // its 10 x 10 tiles (each with its own writing), far to near; only the slab's outer sides show
+  const tiles: { k: number; ti: number; tj: number; p: BoxPose; dist: number }[] = [];
+  for (let ti = 0; ti < TILES; ti++)
+    for (let tj = 0; tj < TILES; tj++) {
+      const u = (ti - TILES / 2 + 0.5) * PIECE.w;
+      const v = (tj + 0.5) * PIECE.l - (TILES * PIECE.l) / 2;
+      const C: V3 = [0, 1, 2].map((q) => P.C[q] + P.a[q] * u + P.b[q] * v) as V3;
+      tiles.push({ k: ti * TILES + tj, ti, tj, p: { C, a: P.a, b: P.b, n: P.n, thick: P.thick }, dist: Math.hypot(C[0] - cam[0], C[1] - cam[1], C[2] - cam[2]) });
+    }
+  tiles.sort((x, y) => y.dist - x.dist);
+  for (const t of tiles) {
+    const hide = (dir: number) => (dir === 0 ? t.ti > 0 : dir === 1 ? t.ti < TILES - 1 : dir === 2 ? t.tj > 0 : t.tj < TILES - 1);
+    const u = (t.ti - TILES / 2 + 0.5) * PIECE.w;
+    const v = (t.tj + 0.5) * PIECE.l;
+    drawBox(ctx, c, A, t.p, t.k, crackAt(u, v, f), hide, inkProgress(t.k, f));
   }
 };
 
 // ---- the painter: everything at depth > zMin and <= zMax, far to near ----
-type Item = { z: number; kind: 0 | 1 | 2 | 3 | 4; i: number };
-const drawWorld = (ctx: CanvasRenderingContext2D, A: AirWorld, c: Cam3, f: number, zMin: number, zMax: number) => {
+type Item = { z: number; kind: 0 | 1 | 2 | 3; i: number };
+const SHADOW_COL = "#2A2119";
+const CX_ = colX(1) - colX(0);
+const RZ_ = rowZ(1) - rowZ(0);
+const drawWorld = (ctx: CanvasRenderingContext2D, A: AirWorld, c: Cam3, f: number) => {
   const pr: Pr = (X, Y, Z) => {
     const s = F / Math.max(1, Z + c.d);
     return [540 + (X - c.cx) * s, c.hy + (Y + c.h) * s];
@@ -617,85 +621,120 @@ const drawWorld = (ctx: CanvasRenderingContext2D, A: AirWorld, c: Cam3, f: numbe
   const items: Item[] = [];
   for (let i = 0; i < N; i++) {
     const d = DESKS[i];
-    const zr = d.Z + ROBOT_BACK;
-    if (zr > zMin && zr <= zMax) items.push({ z: zr, kind: 0, i });
-    const zd = d.Z + DESK.d / 2;
-    if (zd > zMin && zd <= zMax) items.push({ z: zd, kind: 1, i });
+    items.push({ z: d.Z + ROBOT_BACK, kind: 0, i });
+    items.push({ z: d.Z + DESK.d / 2, kind: 1, i });
   }
+  const slab = slabPoseAt(f);
+  const slabOn = slab.left > 0.002;
   const poses: (ReturnType<typeof piecePose> | null)[] = new Array(N).fill(null);
   for (let i = 0; i < N; i++) {
     const p = piecePose(DESKS[i], f);
     if (!p) continue;
-    // a piece just above its desk draws over the desk (it is landing on its top)
     const d = DESKS[i];
-    const zk = Math.abs(p.C[2] - (d.Z + DESK.d / 2)) < DESK.d && p.C[1] < -DESK.h + 2 ? d.Z + DESK.d / 2 - 0.5 : p.C[2];
-    if (zk > zMin && zk <= zMax) {
-      poses[i] = p;
-      items.push({ z: zk, kind: 2, i });
-    }
+    // a sheet just above its desk draws over the desk (it is landing on its top); one just slipping out from under
+    // the slab draws behind the slab (the slab hides it until it drops clear)
+    let zk = Math.abs(p.C[2] - (d.Z + DESK.d / 2)) < DESK.d && p.C[1] < -DESK.h + 2 ? d.Z + DESK.d / 2 - 0.5 : p.C[2];
+    if (slabOn && p.t < 0.22) zk = Math.max(zk, slab.C[2] + 1);
+    poses[i] = p;
+    items.push({ z: zk, kind: 2, i });
   }
-  // the stacks: those still in the slab as one item (the slab), the flying ones each at its depth
-  const sp = STACKS.map((_, k) => stackPose(k, f));
-  let slabZ = -1e9;
-  sp.forEach((p, k) => {
-    if (!p) return;
-    if (p.inSlab) slabZ = Math.max(slabZ, p.C[2]);
-    else if (p.C[2] > zMin && p.C[2] <= zMax) items.push({ z: p.C[2], kind: 4, i: k });
-  });
-  if (slabZ > -1e9 && slabZ > zMin && slabZ <= zMax) items.push({ z: slabZ, kind: 3, i: 0 });
+  if (slabOn) items.push({ z: slab.C[2], kind: 3, i: 0 });
   items.sort((a, b) => b.z - a.z || a.kind - b.kind);
+  // each flying sheet's own soft shadow, straight below it on the desk top it is over (darker and tighter as it comes
+  // down), drawn with that desk
+  const deskSh = new Map<number, { pts: [number, number][]; al: number }[]>();
+  for (let i = 0; i < N; i++) {
+    const p = poses[i];
+    if (!p) continue;
+    const sz = PIECE.l * (F / Math.max(1, p.C[2] + c.d));
+    if (sz < 6) continue;
+    const cc = Math.round(p.C[0] / CX_ + 49.5);
+    const rr = Math.floor(p.C[2] / RZ_);
+    const overDesk = cc >= 0 && cc < COLS && rr >= 0 && rr < ROWS && Math.abs(p.C[0] - colX(cc)) < DESK.w / 2 && p.C[2] - rowZ(rr) > 0 && p.C[2] - rowZ(rr) < DESK.d;
+    // (only on a desk top: on the open floor in front of the rows a shadow of a sheet high above reads as a smudge)
+    if (!overDesk) continue;
+    const surfY = -DESK.h - 0.6;
+    const hgt = surfY - p.C[1];
+    if (hgt < 1) continue;
+    const al = 0.34 * p.alpha * (1 - c01(hgt / 320)) * (1 - A.folkFog(p.C[2]).amount) * sst(6, 14, sz);
+    if (al < 0.01) continue;
+    const grow = 1 + hgt / 500;
+    const pts: [number, number][] = [];
+    for (const [u, v] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const X = p.C[0] + (p.a[0] * u * PIECE.w * 0.5 + p.b[0] * v * PIECE.l * 0.5) * grow;
+      const Z = p.C[2] + (p.a[2] * u * PIECE.w * 0.5 + p.b[2] * v * PIECE.l * 0.5) * grow;
+      pts.push(pr(X, surfY, Z));
+    }
+    const k = rr * COLS + cc;
+    if (!deskSh.has(k)) deskSh.set(k, []);
+    deskSh.get(k)!.push({ pts, al });
+  }
+  const shade = (pts: [number, number][], al: number) => {
+    // a soft edge: a wider faint pass, then the core
+    const cx = (pts[0][0] + pts[1][0] + pts[2][0] + pts[3][0]) / 4;
+    const cy = (pts[0][1] + pts[1][1] + pts[2][1] + pts[3][1]) / 4;
+    ctx.globalAlpha = al * 0.45;
+    poly(ctx, pts.map(([x, y]) => [cx + (x - cx) * 1.3, cy + (y - cy) * 1.3] as [number, number]), SHADOW_COL);
+    ctx.globalAlpha = al * 0.65;
+    poly(ctx, pts, SHADOW_COL);
+    ctx.globalAlpha = 1;
+  };
   for (const it of items) {
     if (it.kind === 0) drawRobot(ctx, c, A, it.i, f);
-    else if (it.kind === 1) drawDesk(ctx, c, A, it.i, f, pr);
-    else if (it.kind === 2) {
+    else if (it.kind === 1) {
+      drawDesk(ctx, c, A, it.i, f, pr);
+      const sh = deskSh.get(it.i);
+      if (sh) for (const q of sh) shade(q.pts, q.al);
+    } else if (it.kind === 2) {
       const p = poses[it.i];
       const d = DESKS[it.i];
-      if (p) drawPiece(ctx, c, A, p.C, p.a, p.b, d.k);
-    } else if (it.kind === 4) drawBox(ctx, c, A, sp[it.i] as BoxPose, it.i, 0);
-    else drawSlab(ctx, c, A, f, sp);
+      if (p) drawPiece(ctx, c, A, p.C, p.a, p.b, d.k, 0, p.alpha);
+    } else drawSlab(ctx, c, A, f, slab);
   }
 };
 
 // ---- the banner: a slate cloth hung over the hall on two cords, unrolling down on "10,000" ----
 const Banner: React.FC<{ A: AirWorld; c: Cam3; f: number }> = ({ A, c, f }) => {
-  const t = c01((f - BANNER.f0) / BANNER.dur);
-  if (t <= 0) return null;
-  const e = 1 - Math.pow(1 - t, 2.4);
+  const st = bannerAt(f);
+  if (!st.on) return null;
   const s = F / (BANNER.Z + c.d);
   const pr = (X: number, Y: number): [number, number] => [540 + (X - c.cx) * s, c.hy + (Y + c.h) * s];
-  const [xl, yt] = pr(BANNER.X - BANNER.w / 2, BANNER.top);
-  const [xr] = pr(BANNER.X + BANNER.w / 2, BANNER.top);
+  const [xl, yt] = pr(BANNER.X - BANNER.w / 2, st.top);
+  const [xr] = pr(BANNER.X + BANNER.w / 2, st.top);
   const hFull = BANNER.h * s;
-  const yb = yt + hFull * e;
   const hz = -BANNER.top;
-  // the banner keeps half the fog of its depth (the plate must read)
+  // the banner keeps its own (half) fog and draws over the hall, never cropped by it
   const cloth = A.tone("#3E4B4C", BANNER.Z * 0.45, hz);
   const clothLo = A.tone("#2F3A3B", BANNER.Z * 0.45, hz);
   const cream = A.tone("#F2E9D4", BANNER.Z * 0.45, hz);
   const cord = A.tone("#2A2F2E", BANNER.Z * 0.45, hz);
   const fs = BANNER.h * 0.72 * s;
   const rod = Math.max(2, 22 * s);
+  // it swings about the middle of its rod; the wires run straight up from the rod's ends
+  const px = (xl + xr) / 2;
+  const py = yt;
+  const ang = (st.ang * Math.PI) / 180;
+  const rot = (x: number, y: number): [number, number] => [px + (x - px) * Math.cos(ang) - (y - py) * Math.sin(ang), py + (x - px) * Math.sin(ang) + (y - py) * Math.cos(ang)];
+  const wl = rot(xl + (xr - xl) * 0.08, yt);
+  const wr = rot(xr - (xr - xl) * 0.08, yt);
   return (
-    <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0 }}>
+    <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, opacity: st.alpha }}>
       <defs>
-        <clipPath id="ta-cloth">
-          <rect x={xl} y={yt} width={xr - xl} height={Math.max(0, yb - yt)} />
-        </clipPath>
         <linearGradient id="ta-clothg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={cloth} />
           <stop offset="1" stopColor={clothLo} />
         </linearGradient>
       </defs>
-      <line x1={xl + (xr - xl) * 0.08} y1={-10} x2={xl + (xr - xl) * 0.08} y2={yt} stroke={cord} strokeWidth={Math.max(1, 8 * s)} strokeOpacity={0.8} />
-      <line x1={xr - (xr - xl) * 0.08} y1={-10} x2={xr - (xr - xl) * 0.08} y2={yt} stroke={cord} strokeWidth={Math.max(1, 8 * s)} strokeOpacity={0.8} />
-      <rect x={xl - rod} y={yt - rod * 0.6} width={xr - xl + 2 * rod} height={rod * 1.2} rx={rod * 0.6} fill={cord} />
-      <g clipPath="url(#ta-cloth)">
+      <line x1={wl[0]} y1={-10} x2={wl[0]} y2={wl[1]} stroke={cord} strokeWidth={Math.max(1, 8 * s)} strokeOpacity={0.8} />
+      <line x1={wr[0]} y1={-10} x2={wr[0]} y2={wr[1]} stroke={cord} strokeWidth={Math.max(1, 8 * s)} strokeOpacity={0.8} />
+      <g transform={`rotate(${st.ang} ${px} ${py})`}>
         <rect x={xl} y={yt} width={xr - xl} height={hFull} fill="url(#ta-clothg)" />
         <text x={(xl + xr) / 2} y={yt + hFull * 0.5 + fs * 0.34} textAnchor="middle" fill={cream} style={{ fontFamily: PLATE_FONT, fontWeight: 700, fontSize: fs, letterSpacing: 0.02 * fs, fontVariantNumeric: "lining-nums" }}>
           10,000
         </text>
+        <rect x={xl - rod} y={yt - rod * 0.6} width={xr - xl + 2 * rod} height={rod * 1.2} rx={rod * 0.6} fill={cord} />
+        <rect x={xl - rod * 0.4} y={yt + hFull - rod * 0.7} width={xr - xl + rod * 0.8} height={rod * 1.4} rx={rod * 0.7} fill={clothLo} />
       </g>
-      <rect x={xl - rod * 0.4} y={yb - rod * 0.7} width={xr - xl + rod * 0.8} height={rod * 1.4} rx={rod * 0.7} fill={clothLo} />
     </svg>
   );
 };
@@ -720,9 +759,8 @@ const TenThousandAgents: React.FC<z.infer<typeof schema>> = () => {
         <AirFloor A={A} x0={-16000} x1={16000} z0={-1500} z1={34000} mat={MAT.ground} course={300} jointAmt={0.3} melt={0.45} />
         <AirHorizonHazeW A={A} id="ta-haze" />
       </WorldSvg>
-      <FolkCanvas draw={(ctx) => drawWorld(ctx, A, c, frame, BANNER.Z, 1e9)} />
+      <FolkCanvas draw={(ctx) => drawWorld(ctx, A, c, frame)} />
       <Banner A={A} c={c} f={frame} />
-      <FolkCanvas draw={(ctx) => drawWorld(ctx, A, c, frame, -1e9, BANNER.Z)} />
     </AirStage>
   );
 };

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
-// tenThousandAgentsPlan: the pure geometry of TenThousandAgents (rsi-since-writing, revision 2: THE THINKING HANDED
-// OUT): the hall, the slab of work, its 100 stacks and their 10,000 sheets, the robots' switch-on times and the
+// tenThousandAgentsPlan: the pure geometry of TenThousandAgents (rsi-since-writing, revision 3: THE THINKING HANDED
+// OUT): the hall, the slab of work and its 10,000 sheets, the robots' switch-on times and the
 // camera. No React, so a sheet script can import it. Units: the cast's (U = 178 per metre; the robot 240 = 1.35 m,
 // soles to head top); X across, Y height (floor 0, up is -Y), Z depth (toward the camera is -Z).
 //
@@ -8,18 +8,20 @@
 //   RZ = 300 apart in depth (1.7 m): row r's desk front at Z = r * RZ, its robot standing behind it at Z + ROBOT_BACK
 //   (the desk hides it below the waist; its mittens on the keyboard at the desk's back edge). Column c at
 //   X = (c - 49.5) * CX (the middle aisle at X 0).
-// THE SLAB: one big piece of thinking hovering between us and the hall, in front of the first row: 10 x 10 STACKS
-//   (each 100 cream sheets, PIECE 58 x 74, LT 0.26 thick: a pad 26 thick), its face (the top sheets, inked) tilted back SLAB.tilt from
-//   the vertical, the face's near (bottom) edge at (Y SLAB.ybot, Z SLAB.z).
-// THE HANDING OUT, in two steps (so it reads as one thing dealt out, not copies):
-//   1. the slab cracks along its grid and its 100 stacks fly off one after another, the far (top) row first, AWAY from
-//      us over the hall, fanning out: stack (i, j) (i across, j up the face) goes to BLOCK (i, 9 - j) of the hall
-//      (columns 10i..10i+9, rows 10(9-j)..+9: the top stacks feed the near blocks, the bottom ones the far blocks;
-//      left feeds left); it turns flat on the way and stops in the air over its block (the near blocks' stacks close in front of us);
-//   2. there it deals its 100 sheets, top sheet first, one onto each desk of its block (the near rows first); each
-//      sheet lands flat beside the keyboard and the robot at that desk switches on (bootUp over BOOT 16 frames).
+// THE SLAB: one b// THE SLAB: one big piece of thinking hovering between us and the hall, in front of the first row: 10 x 10 tiles of
+//   cream sheets (PIECE 58 x 74; STACK_T thick), its face (the top sheets, inked) tilted back SLAB.tilt from the
+//   vertical, the face's near (bottom) edge at (Y SLAB.ybot, Z SLAB.z).
+// THE HANDING OUT (slabPoseAt, piecePose): the slab lays itself back part of the way to flat (TIP) and sinks to
+//   GLIDE_Y while it glides away over the rows on a solved profile (its height on screen falls evenly, <= 11.8 % a
+//   frame, until it is behind the plate), thinning as it deals. Each desk's sheet peels off the slab's underside as
+//   the slab passes over its row and flies ONE arc to its desk (out sideways at its own cruise height just over the
+//   heads, turning flat, a last drop straight down onto its desk), on a smootherstep in time, warped so the time is
+//   spent where the sheet is on screen; it lands flat beside the keyboard and the robot there switches on (bootUp over
+//   BOOT 16 frames). A sheet whose desk is never in the picture (kind 1/2) mostly starts outside the frame edge; one in
+//   five flies out of the frame from the slab.
+// THE BANNER (bannerAt): a "10,000" plate on two wires at Z 2900, lowering on an ease-out with a small decaying swing.
 // THE CAMERA: one pinhole (focal F, no pitch) at (cx, -h, -d) looking down +Z; the front desks' foot line at screen
-//   y = ty (a lens shift). ONE crane up and push in following the stacks (log d, h on bell speed profiles: one
+//   y = ty (a lens shift). ONE crane up and push in following the slab (log d, h on bell speed profiles: one
 //   acceleration lobe, one long settle lobe still creeping at the cut); the horizon falls from y ~680 to ~330.
 // ---------------------------------------------------------------------------
 
@@ -129,7 +131,7 @@ export const FACE_H = TILES * PIECE.l;
 /** tile (i, j): its u range and v range */
 export const tileU0 = (i: number) => (i - TILES / 2) * PIECE.w;
 export const tileV0 = (j: number) => j * PIECE.l;
-/** the cracks: the grid lines draw out from the middle of the face over f24.5..f27.5 (before the first stack leaves) */
+/** the cracks: the grid lines draw out from the middle of the face over f24.5..f27.5 (before the slab tips flat) */
 export const CRACK = { f0: 24.5, f1: 27.5 };
 export const crackAt = (u: number, v: number, f: number) => {
   const dist = Math.hypot(u / (FACE_W / 2), (v - FACE_H / 2) / (FACE_H / 2)) / Math.SQRT2;
@@ -165,30 +167,11 @@ const along = (p: Float32Array, s: number): V3 => {
 const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const D2R = Math.PI / 180;
 
-// ---- step 1: the stacks ---------------------------------------------------------------------------------------------
-/** the height a stack waits at over its block (its bottom sheet), clear above the robots' heads (-266) */
-export const HOVER_Y = -500;
-export const NEAR_HOVER_Y = -440;
-export const DEAL = 5;
-/** the near block deals slower (it is the one we see close up) */
-export const DEAL_NEAR = 9;
-export type Stack = {
-  ti: number;
-  tj: number;
-  /** its block in the hall */
-  bi: number;
-  bj: number;
-  depart: number;
-  arrive: number;
-  dur: number;
-  path: Float32Array;
-  ph: number;
-  /** the frame each of its sheets leaves (sorted: the top sheet first) */
-  deals: Float32Array;
-};
-/** the frame stack (i, j) leaves: the top (far) row first (f29), the bottom row last (~f33.5), the middle a little
- *  before the outer ones */
-const departOfStack = (ti: number, tj: number) => 28 + (3.5 * (TILES - 1 - tj)) / (TILES - 1) + 0.5 * (Math.abs(ti - 4.5) / 4.5) + hash(ti * 31 + tj * 7 + 5) * 0.5;
+// ---- the handing out: the slab glides out over the hall, dealing its sheets ---------------------------------------
+/** the height the slab glides at (its centre), clear above the robots' heads (-266) and below the eye (h >= 520) */
+export const GLIDE_Y = -440;
+/** the sheets' cruise height on their way out sideways (just over the heads) */
+const CRUISE_Y = -320;
 /** where a sheet rests on its desk (its centre; flat, the long side along Z), left of the keyboard */
 export const restOn = (X: number, Z: number): V3 => [X - 34, -DESK.h - 1.2, Z + 46];
 export type Desk = {
@@ -196,108 +179,27 @@ export type Desk = {
   r: number;
   X: number;
   Z: number;
-  /** its stack (= tile index ti * TILES + tj) and its order in that stack's deal (0 = the top sheet) */
+  /** the ink pattern its sheet carries (one of the slab's tiles) */
   k: number;
-  order: number;
   depart: number;
   land: number;
   dur: number;
   /** 0..4 (the one in the middle front is v0, THE bot) */
   variant: number;
   path: Float32Array;
+  warp: Float32Array;
+  /** how its flight is seen: 0 its desk is in the picture (it flies from the slab, all of it on screen); 1 its desk is
+   *  never in the picture, one in five of those: it flies from the slab and leaves the frame low and quickly; 2 the
+   *  other four in five: it starts already outside the frame edge (never on screen) */
+  kind: 0 | 1 | 2;
+  /** the slab's turn (tipAt) when it leaves: it starts tilted like the slab and turns flat on the way */
+  u0: number;
   ph: number;
 };
-export const STACKS: Stack[] = [];
-export const DESKS: Desk[] = [];
-(() => {
-  for (let ti = 0; ti < TILES; ti++)
-    for (let tj = 0; tj < TILES; tj++) {
-      const bi = ti;
-      const bj = TILES - 1 - tj;
-      const P0 = slabPt(tileU0(ti) + PIECE.w / 2, tileV0(tj) + PIECE.l / 2, STACK_T / 2, 0);
-      // the near blocks' stacks come down close in front of us, over the second row near the middle aisle (where we
-      // watch them deal, below the banner); the others wait over their block's third row
-      const H: V3 = bj === 0 ? [colX(bi * 10 + 4.5) * 0.35, NEAR_HOVER_Y - STACK_T / 2, rowZ(1) + 40] : [colX(bi * 10 + 4.5), HOVER_Y - STACK_T / 2, rowZ(bj * 10 + 3) + 40];
-      const dist = Math.hypot(H[0] - P0[0], H[2] - P0[2]);
-      const q = Math.sqrt(dist / 28000);
-      const dur = 7 + 13 * q;
-      const depart = departOfStack(ti, tj);
-      // a hop off the face along its normal, then up and away over the hall in one arc (higher the farther it goes),
-      // fanning out sideways late, and down onto its spot
-      const cruise = mix(-640, -940, q) - 50 * hash(ti * 13 + tj * 101);
-      const lift = 110;
-      const path = sampledPath((v) => {
-        const hop = lift * Math.sin(Math.PI * 0.5 * Math.min(1, v / 0.12)) * (1 - sst(0.12, 0.45, v));
-        const ez = Math.pow(v, 1.12);
-        const ex = Math.pow(v, 1.5);
-        const base = mix(P0[1], H[1], Math.pow(v, 2.2));
-        const peak = Math.min(P0[1], H[1]) - cruise;
-        const arc = -peak * Math.pow(Math.sin(Math.PI * Math.pow(v, 0.75)), 1.1) * (v < 0.5 ? 1 : 1);
-        return [mix(P0[0], H[0], ex) + SN[0] * hop, base + arc * 0.9 + SN[1] * hop, mix(P0[2], H[2], ez) + SN[2] * hop];
-      }, PATH_N);
-      STACKS.push({ ti, tj, bi, bj, depart, arrive: depart + dur, dur, path, ph: hash(ti * 7 + tj * 59) * 6.283, deals: new Float32Array(LAYERS) });
-    }
-  // the desks, and each one's sheet: dealt off the top of its block's stack, the near rows first
-  const byStack: Desk[][] = STACKS.map(() => []);
-  for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++) {
-      const k = Math.floor(c / 10) * TILES + (TILES - 1 - Math.floor(r / 10));
-      const d: Desk = { c, r, X: colX(c), Z: rowZ(r), k, order: 0, depart: 0, land: 0, dur: 0, variant: c === 49 && r === 0 ? 0 : 1 + Math.floor(hash(c * 977 + r * 31) * 4), path: new Float32Array(0), ph: hash(c * 17 + r * 1013) * 6.283 };
-      DESKS.push(d);
-      byStack[k].push(d);
-    }
-  byStack.forEach((a, k) => {
-    const S = STACKS[k];
-    a.sort((p, q) => p.r + hash(p.c * 3 + p.r * 11) * 1.6 - (q.r + hash(q.c * 3 + q.r * 11) * 1.6));
-    a.forEach((d, m) => {
-      d.order = m;
-      d.depart = S.arrive + 0.6 + ((S.bj === 0 ? DEAL_NEAR : DEAL) * m) / LAYERS;
-      S.deals[m] = d.depart;
-      const top = stackCentre(S, d.depart);
-      const P0: V3 = [top[0], top[1] - STACK_T / 2 + (m + 0.5) * SLAB.lt, top[2]];
-      const T = restOn(d.X, d.Z);
-      const dist = Math.hypot(T[0] - P0[0], T[2] - P0[2]);
-      d.dur = 3.4 + 2.8 * Math.min(1, dist / 1900);
-      d.land = d.depart + d.dur;
-      // up off the stack, an arc out to above its desk, a last flat drop onto it
-      const up = 24 + 18 * hash(d.c + d.r * 7);
-      d.path = sampledPath((v) => {
-        const e = easeIO(Math.min(1, v / 0.88));
-        const y = mix(P0[1], T[1], Math.pow(v, 1.8)) - (up + 0.03 * dist) * Math.sin(Math.PI * Math.min(1, v / 0.9));
-        return [mix(P0[0], T[0], e), y, mix(P0[2], T[2], e)];
-      }, PATH_N);
-    });
-  });
-})();
-/** a stack's centre at frame f (its whole 100 sheets; it waits at its spot while it deals) */
-function stackCentre(S: Stack, f: number): V3 {
-  const t = (f - S.depart) / S.dur;
-  if (t <= 0) {
-    const p = slabPt(tileU0(S.ti) + PIECE.w / 2, tileV0(S.tj) + PIECE.l / 2, STACK_T / 2, f);
-    return p;
-  }
-  const s = t >= 1 ? 1 : t < 0.5 ? 0.5 * Math.pow(2 * t, 1.6) : 1 - 0.5 * Math.pow(2 * (1 - t), 2.2);
-  const C = along(S.path, s);
-  C[1] += slabBob(f) * (1 - sst(0, 0.3, s));
-  if (t >= 1) C[1] += 4 * Math.sin((2 * Math.PI * (f - S.arrive)) / 30 + S.ph) * sst(0, 3, f - S.arrive);
-  return C;
-}
-export const LAST_LAND = DESKS.reduce((m, d) => Math.max(m, d.land), 0);
-export const FIRST_LAND = DESKS.reduce((m, d) => Math.min(m, d.land), 1e9);
-export const FIRST_DEPART = STACKS.reduce((m, d) => Math.min(m, d.depart), 1e9);
-/** how many sheets stack k has dealt by frame f */
-export const dealtAt = (k: number, f: number) => {
-  const a = STACKS[k].deals;
-  let n = 0;
-  while (n < LAYERS && a[n] <= f) n++;
-  return n;
-};
-/** a box pose: centre, the across axis a, the along axis b (both in the sheet's plane), the normal n (out of the
- *  inked top sheet), the thickness; inSlab while it is still part of the slab */
-export type BoxPose = { C: V3; a: V3; b: V3; n: V3; thick: number; inSlab: boolean };
-/** the face's tilt turned to lying flat: the along axis b from the face's V to +Z, by the turn u (0..1) */
+/** the face's tilt turned toward lying flat: the along axis b from the face's V to +Z, by the turn u (0 = the slab's
+ *  hover tilt, 1 = flat) */
 const turnAxes = (u: number, flutter: number, roll: number, yaw: number) => {
-  const th = ((90 - SLAB.tilt) * (1 - easeIO(u)) + flutter) * D2R;
+  const th = ((90 - SLAB.tilt) * (1 - u) + flutter) * D2R;
   const b0: V3 = [0, -Math.sin(th), Math.cos(th)];
   const a0: V3 = [1, 0, 0];
   const n0 = cross(a0, b0);
@@ -312,38 +214,207 @@ const turnAxes = (u: number, flutter: number, roll: number, yaw: number) => {
   const n = cross(a, b);
   return { a, b, n };
 };
-/** stack k at frame f: null once it has dealt its last sheet */
-export const stackPose = (k: number, f: number): BoxPose | null => {
-  const S = STACKS[k];
-  const left = LAYERS - dealtAt(k, f);
-  if (left <= 0) return null;
-  const C = stackCentre(S, f);
-  const t = c01((f - S.depart) / S.dur);
-  const settle = Math.sin(Math.PI * t);
-  const ax = turnAxes(t / 0.85, 10 * Math.sin(2 * Math.PI * 1.1 * t + S.ph) * settle, 9 * Math.sin(2 * Math.PI * 0.9 * t + S.ph + 1) * settle, 14 * settle * Math.sin(S.ph));
-  const thick = left * SLAB.lt;
-  // it deals off the top: its bottom stays put
-  const off = (STACK_T - thick) / 2;
-  const Cn: V3 = [C[0] - ax.n[0] * off, C[1] - ax.n[1] * off, C[2] - ax.n[2] * off];
-  return { C: Cn, ...ax, thick, inSlab: f <= S.depart };
+/** the slab's tip (TIP) and glide (GLIDE). On "split" it lays itself back from SLAB.tilt toward flat, TIP.end of the
+ *  way (it stays a little raised toward us, so it reads as a sheet laying itself down, never an edge-on bar), sinking to
+ *  GLIDE_Y, over TIP.f0..f1, and glides away over the rows. The glide is SOLVED so that the slab's height on screen
+ *  shrinks evenly: its log height falls at GLIDE.rate a frame (eased in over 3 frames from GLIDE.f0; 1 - e^-0.125 =
+ *  11.8 % a frame at most, the tip and the camera included), until it is behind the plate (GLIDE.h0..h1), where it
+ *  speeds up (rate2 more) to finish the far rows out of sight. */
+const SLAB_C0 = slabPt(0, FACE_H / 2, STACK_T / 2, 0);
+export const TIP = { f0: 26.5, f1: 38.5, end: 0.55 };
+export const tipAt = (f: number) => TIP.end * sst(TIP.f0, TIP.f1, f);
+export const GLIDE = { f0: 26.5, rate: 0.125, h0: 49, h1: 52, rate2: 0.25, z1: rowZ(ROWS - 1) + 46 };
+const slabYAt = (f: number) => {
+  const g = sst(TIP.f0, TIP.f1, f);
+  return mix(SLAB_C0[1] + slabBob(f), GLIDE_Y, g) + 6 * Math.sin((2 * Math.PI * f) / 26) * g;
 };
-/** a sheet's pose at frame f: null before it leaves its stack and after it lands (it rests on the desk) */
-export type PiecePose = { C: V3; a: V3; b: V3 };
+/** the slab's height on screen (its 8 corners, at full thickness) at frame f if its centre were at depth Z */
+const slabHeightPx = (f: number, Z: number) => {
+  const c = cam3At(f);
+  const ax = turnAxes(tipAt(f), 0, 0, 0);
+  const Y = slabYAt(f);
+  let y0 = 1e9;
+  let y1 = -1e9;
+  for (const sg of [-1, 1])
+    for (const u of [-1, 1])
+      for (const v of [-1, 1]) {
+        const q = (i: number) => (i === 1 ? Y : i === 2 ? Z : 0) + ax.n[i] * sg * STACK_T * 0.5 + ax.a[i] * u * FACE_W * 0.5 + ax.b[i] * v * FACE_H * 0.5;
+        const y = c.hy + (q(1) + c.h) * (F / Math.max(1, q(2) + c.d));
+        y0 = Math.min(y0, y);
+        y1 = Math.max(y1, y);
+      }
+  return y1 - y0;
+};
+const GSTEP = 0.05;
+const GLIDE_TAB = (() => {
+  const n = Math.ceil(100 / GSTEP) + 1;
+  const tab = new Float64Array(n);
+  let Z = SLAB_C0[2];
+  let lg = Math.log(slabHeightPx(GLIDE.f0, Z));
+  for (let i = 0; i < n; i++) {
+    const f = i * GSTEP;
+    if (f > GLIDE.f0 && Z < GLIDE.z1 + 600) {
+      lg -= (GLIDE.rate * sst(GLIDE.f0, GLIDE.f0 + 3, f) + GLIDE.rate2 * sst(GLIDE.h0, GLIDE.h1, f)) * GSTEP;
+      // the depth that gives the target height (never back toward us: if the tip alone shrinks it enough, it waits)
+      if (slabHeightPx(f, Z) > Math.exp(lg)) {
+        let lo = Z;
+        let hi = GLIDE.z1 + 600;
+        for (let k = 0; k < 40; k++) {
+          const mid = (lo + hi) / 2;
+          if (slabHeightPx(f, mid) > Math.exp(lg)) lo = mid;
+          else hi = mid;
+        }
+        Z = hi;
+      }
+    }
+    tab[i] = Math.min(GLIDE.z1 + 600, Z);
+  }
+  return tab;
+})();
+export const slabZAt = (f: number) => {
+  const x = Math.max(0, f) / GSTEP;
+  const i = Math.min(GLIDE_TAB.length - 2, Math.floor(x));
+  return GLIDE_TAB[i] + (GLIDE_TAB[i + 1] - GLIDE_TAB[i]) * (x - i);
+};
+/** the frame the slab's middle passes over Z (the inverse of slabZAt) */
+const slabOverZ = (Z: number) => {
+  let i = 0;
+  while (i < GLIDE_TAB.length - 2 && GLIDE_TAB[i + 1] < Z) i++;
+  return (i + c01((Z - GLIDE_TAB[i]) / Math.max(1e-9, GLIDE_TAB[i + 1] - GLIDE_TAB[i]))) * GSTEP;
+};
+/** how many rows the slab has dealt by frame f (continuous, 0..100) */
+const rowsDealt = (f: number) => {
+  if (f <= TIP.f0) return 0;
+  const Z = slabZAt(f);
+  return c01((Z - 46) / (GLIDE.z1 - 46) + 0.01) * ROWS;
+};
+/** a box pose: centre, the across axis a, the along axis b (both in the sheet's plane), the normal n (out of the
+ *  inked top sheet), the thickness */
+export type BoxPose = { C: V3; a: V3; b: V3; n: V3; thick: number };
+/** the whole slab at frame f: hovering tilted (its writing toward us) until "split", then it turns flat and sinks to
+ *  GLIDE_Y while it glides away over the rows, thinning as it deals (null once it has dealt its last sheet) */
+export function slabPoseAt(f: number): BoxPose & { left: number } {
+  const ax = turnAxes(tipAt(f), 0, 0, 0);
+  const Y = slabYAt(f);
+  const left = 1 - rowsDealt(f) / ROWS;
+  const thick = STACK_T * left;
+  // it thins from the top: its underside stays where it was
+  const off = (STACK_T - thick) / 2;
+  const C: V3 = [-ax.n[0] * off, Y - ax.n[1] * off, slabZAt(f) - ax.n[2] * off];
+  return { C, ...ax, thick, left };
+}
+/** a sheet's pose at frame f: null before it leaves the slab and after it lands (it rests on the desk) */
+export type PiecePose = { C: V3; a: V3; b: V3; t: number; alpha: number };
 export const piecePose = (d: Desk, f: number): PiecePose | null => {
   const t = (f - d.depart) / d.dur;
   if (t <= 0 || t >= 1) return null;
-  const s = t < 0.5 ? 0.5 * Math.pow(2 * t, 1.3) : 1 - 0.5 * Math.pow(2 * (1 - t), 2.2);
+  // it peels off from rest under the slab, flies its arc and comes to rest on the desk with no speed left (s'(0) = 0,
+  // s' and s'' -> 0 at landing, so the last frame in the air is within a pixel or two of the landed sheet)
+  const u = t * t * t * (10 - 15 * t + 6 * t * t);
+  // time is spent where the sheet is on screen: it drifts across the picture and hurries only once it is out of it
+  // (a near sheet bound for a far column), so nothing on screen moves more than a sheet or two a frame
+  let i = 0;
+  while (i < PATH_N - 2 && d.warp[i + 1] < u) i++;
+  const s = (i + c01((u - d.warp[i]) / Math.max(1e-9, d.warp[i + 1] - d.warp[i]))) / (PATH_N - 1);
   const C = along(d.path, s);
-  const settle = Math.pow(1 - s, 1.4) * sst(0, 0.15, s);
-  const ax = turnAxes(1, 18 * Math.sin(2 * Math.PI * 1.2 * s + d.ph) * settle, 22 * Math.sin(2 * Math.PI * 1.0 * s + d.ph + 0.8) * settle, 24 * Math.sin(Math.PI * s) * Math.sin(d.ph));
-  return { C, a: ax.a, b: ax.b };
+  const settle = Math.pow(1 - s, 1.2);
+  const ax = turnAxes(mix(d.u0, 1, easeIO(c01(s / 0.5))), 20 * Math.sin(2 * Math.PI * 1.3 * s + d.ph) * settle, 24 * Math.sin(2 * Math.PI * 1.0 * s + d.ph + 0.8) * settle, 30 * Math.sin(Math.PI * s) * Math.sin(d.ph));
+  // it fades in over its first three and a half frames, while it is still under (or just behind) the moving slab
+  return { C, a: ax.a, b: ax.b, t, alpha: sst(0, 3.5, f - d.depart) };
 };
+export const DESKS: Desk[] = [];
+/** is the point P (a resting sheet) in the picture on any frame from f on (with a margin for the sheet's size)? */
+const seenFrom = (P: V3, f: number) => {
+  for (let ff = Math.max(0, Math.floor(f)); ff < DURATION; ff++) {
+    const c = cam3At(ff);
+    const k = F / Math.max(1, P[2] + c.d);
+    const x = 540 + (P[0] - c.cx) * k;
+    const y = c.hy + (P[1] + c.h) * k;
+    if (x > -90 && x < 1170 && y > -90 && y < 2010) return true;
+  }
+  return false;
+};
+(() => {
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) {
+      const X = colX(c);
+      const Z = rowZ(r);
+      const T = restOn(X, Z);
+      const depart = Math.max(TIP.f0 + 4 + 0.6 * hash(c * 17 + r * 5), slabOverZ(T[2]) - 0.4 + 0.8 * hash(c * 131 + r * 7 + 3));
+      const kind: 0 | 1 | 2 = seenFrom(T, depart + 8) ? 0 : hash(c * 53 + r * 19 + 7) < 0.2 ? 1 : 2;
+      const d: Desk = { c, r, X, Z, k: Math.floor(hash(c * 29 + r * 61) * TILES * TILES), depart, land: 0, dur: 0, variant: c === 49 && r === 0 ? 0 : 1 + Math.floor(hash(c * 977 + r * 31) * 4), path: new Float32Array(0), warp: new Float32Array(0), ph: hash(c * 17 + r * 1013) * 6.283, kind, u0: kind === 2 ? 1 : tipAt(depart) };
+      // it slips off the slab's underside (its lower part, near the side of its column) and flutters outward and down in
+      // one arc to its desk: out sideways just over the heads, a last drop straight down onto its desk. A sheet whose
+      // desk is never in the picture starts outside the frame edge, level with its desk, already flat (kind 2)
+      const sp = slabPoseAt(depart);
+      // (across its own side of the slab, scattered, so the sheets leave one by one rather than in a clump at a corner)
+      const u = Math.max(-FACE_W / 2 + 34, Math.min(FACE_W / 2 - 34, X * 0.12 + (X < 0 ? -1 : 1) * hash(c * 11 + r * 23) * (FACE_W / 2 - 34) * 0.85));
+      const v = (hash(c * 7 + r * 3) * 0.45 - 0.92) * FACE_H * 0.5;
+      const side = X < 0 ? -1 : 1;
+      const P0: V3 = kind === 2 ? [T[0] + side * 300, CRUISE_Y + 20, T[2]] : ([0, 1, 2].map((q) => sp.C[q] + sp.a[q] * u + sp.b[q] * v - sp.n[q] * (sp.thick / 2 + 1)) as V3);
+      const dx = Math.abs(T[0] - P0[0]);
+      // far sheets fly shorter (their way on screen is short), so the far rows' robots are on well before the cut
+      d.dur = mix(13, 8, sst(12, 45, r)) + 6 * Math.sqrt(Math.min(1, dx / 11000)) * (1 - 0.5 * sst(12, 45, r)) + 1.5 * hash(c + r * 5);
+      const flut = 10 + 8 * hash(c * 3 + r);
+      // each at its own height over the heads, so the sheets read one by one; the ones leaving the frame go low
+      const cruise = kind === 1 ? CRUISE_Y + 35 : CRUISE_Y + 25 + (hash(c * 41 + r * 13) - 0.5) * 60;
+      // it drops from the slab to its cruise height within its first ~300 units across (whatever the distance), so a
+      // long flight does not cross the picture at the slab's height
+      const Lxz = Math.max(1, Math.hypot(T[0] - P0[0], T[2] - P0[2]));
+      const dropBy = Math.min(0.45, 300 / Lxz);
+      // and comes down only over its last ~350 units (about its own desk), never down through other robots' heads; the
+      // last quarter of the drop is straight down onto its desk
+      const landFrom = Math.max(0.7, 1 - 350 / Lxz);
+      d.path = sampledPath((w) => {
+        const e = 1 - Math.pow(1 - Math.min(1, w / 0.86), 2);
+        const yC = mix(P0[1], Math.max(P0[1], cruise), sst(0, dropBy, e));
+        const y = mix(yC, T[1], 0.75 * sst(landFrom, 1, e) + 0.25 * sst(0.86, 1, w)) + flut * Math.sin(Math.PI * 3 * w + d.ph) * (1 - w) * sst(0, 0.15, w);
+        return [mix(P0[0], T[0], e), y, mix(P0[2], T[2], e)];
+      }, PATH_N);
+      const cm = cam3At(depart + 8);
+      const scr = (m: number) => {
+        const k = F / Math.max(1, d.path[m * 3 + 2] + cm.d);
+        return [540 + (d.path[m * 3] - cm.cx) * k, cm.hy + (d.path[m * 3 + 1] + cm.h) * k];
+      };
+      d.warp = new Float32Array(PATH_N);
+      for (let m = 1; m < PATH_N; m++) {
+        const a = scr(m - 1);
+        const b = scr(m);
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const mx = (a[0] + b[0]) / 2;
+        const my = (a[1] + b[1]) / 2;
+        const on = mx > -80 && mx < 1160 && my > -80 && my < 2000;
+        d.warp[m] = d.warp[m - 1] + (on ? len : 0.03 * len) + 0.05;
+      }
+      // a long way across the picture gets a longer flight (peak screen speed about 1.9 x the mean: <= ~45 px a frame
+      // for a sheet that lands in the picture; one that leaves it goes quicker, <= ~100 px a frame)
+      const onPx = d.warp[PATH_N - 1] - 0.05 * (PATH_N - 1);
+      // (every sheet is down by f69, so every robot is fully on, BOOT frames later, before the cut)
+      if (kind === 0) d.dur = Math.min(Math.max(d.dur, Math.min(24, (onPx * 1.9) / 45)), Math.max(8, 69 - depart));
+      else if (kind === 1) d.dur = Math.max(9 + 2 * hash(c * 5 + r), Math.min(16, (onPx * 1.9) / 100));
+      d.land = depart + d.dur;
+      for (let m = 1; m < PATH_N; m++) d.warp[m] /= d.warp[PATH_N - 1];
+      DESKS.push(d);
+    }
+})();
+export const LAST_LAND = DESKS.reduce((m, d) => Math.max(m, d.land), 0);
+export const FIRST_LAND = DESKS.reduce((m, d) => Math.min(m, d.land), 1e9);
+export const FIRST_DEPART = DESKS.reduce((m, d) => Math.min(m, d.depart), 1e9);
 /** the robot's switch-on (0 = off, its head bowed and its screen dark; 1 = on) */
 export const bootAt = (d: Desk, f: number) => c01((f - d.land) / BOOT);
 
-/** the plate "10,000": a banner hung low over the hall between rows 9 and 10 (its face square to us), its hem
- *  clear above the robots' heads, unrolling down after the near sheets have passed below it */
-export const BANNER = { X: 0, Z: 2900, top: -800, w: 2200, h: 430, f0: 45, dur: 8 } as const;
+/** the plate "10,000": a cloth banner hung low over the hall between rows 9 and 10 (its face square to us), its hem
+ *  clear above the robots' heads. It lowers whole on its two wires from DROP higher (fading in over its first frames,
+ *  an ease out over dur), then swings a little to rest about the middle of its rod */
+export const BANNER = { X: 0, Z: 2900, top: -800, w: 2200, h: 430, f0: 43, dur: 10, drop: 520, swing: 2.6 } as const;
+export const bannerAt = (f: number) => {
+  const t = c01((f - BANNER.f0) / BANNER.dur);
+  const e = 1 - Math.pow(1 - t, 3);
+  const top = BANNER.top - BANNER.drop * (1 - e);
+  const since = f - (BANNER.f0 + BANNER.dur * 0.7);
+  const ang = since > 0 ? BANNER.swing * Math.exp(-since / 9) * Math.sin((2 * Math.PI * since) / 16) : 0;
+  return { on: f > BANNER.f0, alpha: sst(BANNER.f0, BANNER.f0 + 3.5, f), top, ang };
+};
 
 /** the writing on the slab: how much of tile k's lines are written by frame f (0..1). Every tile is being written at
  *  once (many hands): part-written at f0, its lines drawing on until it is full between f20 and f26 */
