@@ -1,4 +1,5 @@
 import React from "react";
+import { AbsoluteFill } from "remotion";
 import { z } from "zod";
 import TitleCardCheekyPint from "../toto-mercedes-job/TitleCardCheekyPint";
 
@@ -12,7 +13,16 @@ import TitleCardCheekyPint from "../toto-mercedes-job/TitleCardCheekyPint";
  * Dreiviertelfett, strips slide up one after the other, then a static hold, no outro), with this clip's lines,
  * at the sequence's 23.976 fps. DURATION = 2.544208 s x 24000/1001 = 61 frames. Transparent 1080x1920 overlay;
  * the kit's entrance is timed in frames (last strip settles by ~f26), so the hold runs ~35 frames.
+ *
+ * Placement: the kit centres its stack at y 1310 (the Toto cards), which puts these strips at y 1162-1458, below the
+ * 9:16 keep-in box and across both caption bands. The Nov 13 safe-zone ruling (CRAFT.md Framing: keep-in box
+ * x 65-1015, y 290-1070) supersedes that centre, so this wrapper lifts the whole card by LIFT without touching the
+ * kit: strips y 757-1053 (centre ~905, soft shadow to ~1068), over Nik's chest, clear of the face and the bands.
+ * The stack is ~296 px tall, so the bottom edge (not the ~930 centre target) sets LIFT.
  */
+
+/** px the kit's card is lifted (its centre y 1310 -> ~905) */
+const LIFT = 405;
 
 export const FPS = 24000 / 1001;
 export const DURATION = 61;
@@ -29,7 +39,9 @@ export const defaultProps: WhatDoesRevolutsCeoDoProps = schema.parse({
 });
 
 const WhatDoesRevolutsCeoDo: React.FC<WhatDoesRevolutsCeoDoProps> = ({ lines }) => (
-  <TitleCardCheekyPint lines={lines} backdrop={false} />
+  <AbsoluteFill style={{ transform: `translateY(${-LIFT}px)` }}>
+    <TitleCardCheekyPint lines={lines} backdrop={false} />
+  </AbsoluteFill>
 );
 
 export default WhatDoesRevolutsCeoDo;
