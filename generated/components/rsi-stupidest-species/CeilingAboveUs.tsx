@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
-// CeilingAboveUs (rsi-stupidest-species, cut 2). Dwarkesh 3D style (styles/dwarkesh-3d.md).
+// CeilingAboveUs (rsi-stupidest-species, cut 2), REVISION 1. Dwarkesh 3D style (styles/dwarkesh-3d.md).
 // Opaque 1080x1920, 23.976 fps, 69 frames. Built on the shared world W1 THE SPECIES TOWER (speciesTower.tsx, read-only;
-// TOWER_READY.md is its API): this cut adds only its camera track and the human's glance.
+// TOWER_READY.md is its API). Everything this cut adds to the tower is drawn locally in this file.
 //
 // CHECK LINE: "Human intelligence sits low on a tower whose ceiling is far, far above us."
 //
@@ -10,233 +10,453 @@
 //   level 62 (Whisper onsets from the composition start; may run ~0.2-0.4 s early)
 // DURATION: the slot 2.336 -> 5.214 s (sequence frames 56-125) = 2.878 s x 23.976 = 69 frames (f0..f68).
 //
-// THE MOTION: one continuous camera. f0 opens close on the human (~300 px) in his lit niche low on the tower, the cornice
-// under his sill, the camera already rising; on "think the ceiling" (f2-16) he lifts his face to look up, and the
-// camera follows his gaze in ONE eased pull-back and crane-up along the face: the empty niches and the grand niche pass,
-// the stone capital, then the dashed orange continuation rising into the bright high air, the dashed ceiling entering at
-// the top (~f24) and landing near y 320 as the move settles (~f44, before "above" f48). f44-68 ("above human level"):
-// the living hold on the whole tower in one 9:16 frame, the lit niche small and low (sill y ~1040), a slow creep in,
-// the dashes breathing, the motes drifting. Its one job: the distance between human level and the ceiling.
-// Orange = intelligence (the clip's rule); DASHED orange = the superintelligence that does not exist yet. Everything
-// else in the style's earthy stone and air; the human is never orange. No labels, no numbers.
+// REV 1 (the user: "it's unclear what that higher ceiling is ... make the ceiling more technical ... a bit boring"),
+// second pass (the director: a beam with a line hanging from it read as a crane / plumb hook; the ceiling was only one
+// tower-height up; f0-12 was empty air):
+// THE CEILING is a vast horizontal blueprint grid plane seen from below at 70 m (~4.5 tower-heights above the floor):
+// crisp orange 5 m grid lines with a 1 m sub-grid, the lines along the depth converging on the vanishing point, the
+// plane fading as it recedes 85 m back (in the end frame the fine sub-grid reads down to y ~520, the far edge at
+// y ~551); its front face (the slab's 1.3 m thickness) a hatched band. Nothing hangs from it.
+// THE RULER (thin orange line, ticks on its left every metre from the human level, longer every 5 m, longest every
+// 10 m) RISES from the cream HUMAN LEVEL mark at the lit niche's sill, beside the tower with clear air between (the
+// cream mark runs out to its foot as an extension line), and touches the grid's front edge with a small end tick.
+// The ruler and the ceiling's front edge live in one front plane Z_F just in front of the stone, so they meet exactly.
+// Where the ruler crosses the receding grid on screen, a thin band of air behind it knocks the grid lines out, so it
+// reads in front of and below the ceiling until it touches. Under the tower a faint lit patch of floor and a soft dark
+// contact shadow (local Footing; the shared TowerScene is composed here from TowerFloor + SpeciesTower) ground it.
 //
-// CAMERA: one designed lobe (see camTrack): the progress integrates a skewed bump started at f -8 (so f0 already moves
-// at about half its peak speed; peak ~f16, settled f46); ln k runs linearly from TOWER_CAM.A_open (f0) to A_resolved
-// (f46) and the human's sill point is held on a straight screen path from y ~1004 to y 1040, so he never leaves the
-// keep-in box; then a 2 % creep in on the same anchor (smootherstep) to the end, plus the house swayCam.
-// Measured (camcheck in the builder's scratch): human 300 px at f0, ~120 px at f16, 41 px from f44; dashes enter the
-// top at ~f17, the ceiling band at ~f28, its top at y 320 at f46 and y ~310 at f68 (orange glow y >= 296 from f42).
-// DASHES (director, after a blind review read the rings as a birdcage / lampshade): no intermediate course rings;
-// only the two vertical dashed edges (fading to 45 % as they rise into the bright air) and the ceiling band.
-// OCCLUSION: the dashed part is drawn here, clipped outside the stone's projected silhouette (StoneCutDashes), because
-// the shared scene paints it over the stone (the back halves of the low rings showed on the cap at f12-16).
-// DEPTH: the tower's own depth camera (towerPersp: eye at 0.85 x the frame centre's height + 0.6 m, dRef 30000,
-// kRef 0.058, dolly 0.6), fog by world depth (towerAirOf); the human on HUMAN_SPOT (Z ~ the niche floor).
-// The chimp's niche stays empty: at f0 it sits in the lower frame and the pull-back would carry its face through
-// caption band 1 (cut B introduces it).
+// THE MOTION: one continuous camera. f0-12 close on the human in his lit niche, the cream mark running out to the
+// ruler's foot; on "ceiling" (f13) the tip shoots up and the camera cranes up with it (the ticks stream down past, the
+// capital drops away, a long stretch of open air on "probably way", the grid arriving from above), the tip easing to
+// touch the grid's front edge on "above" (f48); on "human level" (f51-64) the camera pulls back to the resolved frame:
+// the grid ceiling across the top (front edge y ~330, fading by y ~550), the long ruler, the tower small far below with
+// the tiny lit niche at y ~1040.
+// Orange = intelligence (the clip's rule): the ceiling and its measure. The human-level mark is cream. No labels.
+//
+// CAMERA: k (px/m on the front plane, kForPxm) on pchip keys; the anchor is the ruler's tip (X_D, h_tip, Z_F) held at a
+// keyed screen point, so the camera follows the tip without bobbing (both come from the same eased curves). The 1 m and
+// 5 m ticks thin out while the tip runs fast (up to ~3.2 m a frame) so they do not strobe; the 10 m ticks stay.
+// The tower's depth camera with the eye capped locally (eyeM: the shared eye rises with the frame centre and would
+// tilt the whole world under the ceiling), fog by world depth (airOf, a local copy of towerAirOf).
 //
 // SOURCES: none (no real figures on screen).
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { ACCENT, ACCENT_DEEP, AirStage, ORANGE_LINE, WorldSvg, mixHex, swayCam, type Cam } from "../kits/dwarkesh-3d/dwarkesh3d";
-import * as Covid from "../kyle-covid/covidFolk";
-import { HUMAN_SPOT, Rm, TOWER, TOWER_CAM, TowerScene, ZC, frameAt, hy, m, screenOf3, towerAirOf, towerPt, zFrontAt } from "./speciesTower";
-import type { AirWorld, P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
+import {
+  ACCENT,
+  ACCENT_DEEP,
+  AIR,
+  AirStage,
+  FIG_FOG,
+  ORANGE_LINE,
+  PandemicFolk,
+  WorldSvg,
+  airRamp,
+  makeAirView,
+  mixHex,
+  perspective,
+  pchip,
+  rgbHex,
+  swayCam,
+  type AirWorld,
+  type Cam,
+  type DepthOpts,
+  type P2,
+  type Persp,
+  type RGB,
+} from "../kits/dwarkesh-3d/dwarkesh3d";
+import { TOWER, TOWER_DEPTH, TOWER_RAMP, TOWER_SCENE, SpeciesTower, TowerFloor, U, hy, m, tOfHeight, zFrontAt } from "./speciesTower";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 69;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
-const sst = (a: number, b: number, f: number) => {
-  const u = Math.max(0, Math.min(1, (f - a) / (b - a)));
-  return u * u * (3 - 2 * u);
+
+// ---- the eye: the tower's crane eye, capped below the capital ------------------------------------------------------
+// The shared eye rises with the frame (0.85 x the frame centre's height + 0.6 m); under the ceiling that puts it above
+// the capital, so the opening looked down on the capital's top and the floor's horizon. Here it is the same up to 8 m
+// and then eases toward a cap of 11.5 m (a shifted lens looking up), identical in the resolved frame (eye ~7.3 m).
+// A local copy of towerAirOf / frameAt / screenOf3 on this eye (the shared module is read-only).
+const C01 = (x: number) => Math.max(0, Math.min(1, x));
+const EYE = { e0: 8, cap: 11.5 };
+export const eyeM = (cam: Cam) => {
+  const e = Math.max(1.7, 0.85 * (-cam.cy / U) + 0.6);
+  return e <= EYE.e0 ? e : EYE.e0 + (EYE.cap - EYE.e0) * Math.tanh((e - EYE.e0) / (EYE.cap - EYE.e0));
+};
+const depthOf = (cam: Cam): DepthOpts => ({ eyeY: -m(eyeM(cam)), ...TOWER_DEPTH });
+export const perspOf = (cam: Cam): Persp => perspective(cam, depthOf(cam));
+const DcOf = (k: number) => TOWER_DEPTH.dRef * Math.pow(TOWER_DEPTH.kRef / k, TOWER_DEPTH.dolly);
+/** the camera at zoom k that puts the 3D point (X, Y, Z) at screen (sx, sy), on this cut's eye */
+export const frameAtC = (k: number, X: number, Y: number, Z: number, sx: number, sy: number): Cam => {
+  const D = DcOf(k);
+  const r = D / (D + Z);
+  let cy = Y - (sy - 960) / k;
+  for (let i = 0; i < 60; i++) {
+    const e = -m(eyeM({ k, cx: 0, cy }));
+    cy = e + (Y - e) * r - (sy - 960) / k;
+  }
+  return { k, cx: X - (sx - 540) / (r * k), cy };
+};
+export const screenOfC = (cam: Cam, X: number, Y: number, Z: number): P2 => {
+  const q = perspOf(cam).p(X, Y, Z);
+  return [540 + (q[0] - cam.cx) * cam.k, 960 + (q[1] - cam.cy) * cam.k];
+};
+/** towerAirOf on this cut's eye (the same medium, height ramp and fogs) */
+const airOf = (o: { cam: Cam; rest: Cam; frame: number }): AirWorld => {
+  const { cam, rest, frame } = o;
+  const depth = depthOf(cam);
+  const P = perspOf(cam);
+  const P0 = perspOf(rest);
+  const toSY = (wy: number) => 960 + (wy - cam.cy) * cam.k;
+  const zM = (c: Cam) => -m(2.2) * Math.log(1 / c.k);
+  const base = makeAirView({
+    scene: { ...TOWER_SCENE, F: P.Dc * cam.k },
+    frame,
+    horizon: toSY(depth.eyeY),
+    cam: { x: cam.cx, y: -depth.eyeY, z: zM(cam) },
+    rest: { x: rest.cx, y: -P0.opts.eyeY, z: zM(rest) },
+  });
+  const rB = P.r(TOWER_RAMP.ZB);
+  const hAtScreen = (sy: number) => {
+    const wy = cam.cy + (sy - 960) / cam.k;
+    return -(depth.eyeY + (wy - depth.eyeY) / rB);
+  };
+  const airH = (h: number): RGB => airRamp("A", tOfHeight(h));
+  const v = { ...base, airAtScreen: (sy: number) => airH(hAtScreen(sy)), airAt: (_d: number, h = 0) => airH(h) };
+  const fog = (Z: number) => C01(base.fogAt(Math.max(0, Z)));
+  const airHex = (_Z: number, h = 0) => rgbHex(airH(h));
+  const tone = (hex: string, Z: number, h = 0) => mixHex(hex, airHex(Z, h), fog(Z));
+  const toneO = (hex: string, Z: number, h = 0) => mixHex(hex, airHex(Z, h), 0.45 * fog(Z));
+  const figFog = (Z: number) => FIG_FOG.max * (1 - Math.exp(-Math.max(0, Z - FIG_FOG.near) / FIG_FOG.vis));
+  const folkFog = (Z: number, feetH = 0) => ({ rgb: airHex(Z, feetH + 150), amount: figFog(Z) });
+  const workerInks = (Z: number, feetH = 0) => {
+    const air = airHex(Z, feetH + 160);
+    const t = figFog(Z);
+    return Object.fromEntries(Object.entries(PandemicFolk.WORKER_INKS).map(([key, c]) => [key, key === "orange" ? c : mixHex(c, air, t)])) as typeof PandemicFolk.WORKER_INKS;
+  };
+  return { v, P, cam, Dc: P.Dc, k: cam.k, fog, airHex, tone, toneO, screenAir: (wy) => rgbHex(v.airAtScreen(toSY(wy))), figFog, folkFog, workerInks, lw: (b = 1.1) => b / Math.pow(cam.k, 0.6) };
 };
 
-// ---- the camera ---------------------------------------------------------------------------------------------------
-// One eased lobe, already moving at f0: the progress s(f) integrates a skewed bump t^A (1 - t)^B over [F0, F1] (F0 < 0,
-// so the move started before the cut), renormalised so s(0) = 0 (= TOWER_CAM.A_open) and s(F1) = 1 (= A_resolved).
-// The framing is anchored on the human's sill point (HUMAN_SPOT): ln k runs linearly in s, and the sill's screen y runs
-// from its A_open place to its A_resolved place, so he stays low and inside the keep-in box on every frame. After F1
-// the living hold creeps in by CREEP (2 %) on the same anchor (a smootherstep, continuous with the stop).
-export const CAM = { A: 1.5, B: 2.0, F0: -8, F1: 46, CREEP: 1.02 };
-const N_INT = 1200;
-const S_TAB = (() => {
+// ---- the technical drawing's geometry (metres unless noted) ---------------------------------------------------------
+/** the front plane of the drawing (world Z units): just in front of the capital's cap; the ruler and the ceiling's
+ *  front edge both live in it, so the ruler's end tick meets the edge exactly */
+export const Z_F = zFrontAt(TOWER.capitalY) - m(1.45 + 0.4);
+export const GEO = {
+  /** the ruler's X: beside the tower with clear air between (an elevation drawing's dimension, reached by the cream
+   *  extension line), so it never reads as a cable the tower hangs from */
+  xD: 16.0,
+  /** the human level (the sill) and the ceiling's underside: ~4.5 tower-heights above the floor */
+  hHum: TOWER.cornY,
+  hCeil: 70.0,
+  /** the ceiling slab's thickness (its hatched front face) and how far back the grid runs before it fades (m) */
+  slab: 1.3,
+  depth: 85,
+  /** the human-level mark's X extent */
+  markX0: -1.6,
+  markX1: 16.6,
+};
+/** the k (px per metre on the front plane) for a zoom */
+const kForPxm = (pxm: number) => {
+  let lo = Math.log(0.002);
+  let hi = Math.log(10);
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    const k = Math.exp(mid);
+    const D = DcOf(k);
+    if (k * (D / (D + Z_F)) * U > pxm) hi = mid;
+    else lo = mid;
+  }
+  return Math.exp((lo + hi) / 2);
+};
+
+// ---- the ruler's tip: from the human level up to the ceiling --------------------------------------------------------
+/** it shoots off on "ceiling" (f13), runs fast through the open air and eases to touch the grid on "above" (f48) */
+export const TIP = { f0: 13, f1: 48, A: 0.85, B: 1.75 };
+const N_INT = 1000;
+const TIP_TAB = (() => {
   const tab = [0];
-  const v = (i: number) => {
-    const t = i / N_INT;
-    return Math.pow(t, CAM.A) * Math.pow(1 - t, CAM.B);
-  };
+  const v = (i: number) => Math.pow(i / N_INT, TIP.A) * Math.pow(1 - i / N_INT, TIP.B);
   for (let i = 0; i < N_INT; i++) tab.push(tab[i] + (v(i) + v(i + 1)) / 2);
   return tab.map((q) => q / tab[N_INT]);
 })();
-const sRaw = (f: number) => {
-  const x = ((f - CAM.F0) / (CAM.F1 - CAM.F0)) * N_INT;
+export const tipS = (f: number) => {
+  const x = ((f - TIP.f0) / (TIP.f1 - TIP.f0)) * N_INT;
   if (x <= 0) return 0;
   if (x >= N_INT) return 1;
   const i = Math.floor(x);
-  return S_TAB[i] + (S_TAB[i + 1] - S_TAB[i]) * (x - i);
+  return TIP_TAB[i] + (TIP_TAB[i + 1] - TIP_TAB[i]) * (x - i);
 };
-const S0 = sRaw(0);
-export const moveS = (f: number) => (sRaw(f) - S0) / (1 - S0);
-const smoother = (u: number) => {
-  const x = Math.max(0, Math.min(1, u));
-  return x * x * x * (x * (6 * x - 15) + 10);
-};
-const SILL_OPEN = screenOf3(TOWER_CAM.A_open, HUMAN_SPOT.X, HUMAN_SPOT.Y, HUMAN_SPOT.Z);
-const SILL_RES = screenOf3(TOWER_CAM.A_resolved, HUMAN_SPOT.X, HUMAN_SPOT.Y, HUMAN_SPOT.Z);
-const LNK_OPEN = Math.log(TOWER_CAM.A_open.k);
-const LNK_RES = Math.log(TOWER_CAM.A_resolved.k);
-export const camTrack = (f: number): Cam => {
-  const s = moveS(f);
-  const creep = Math.log(CAM.CREEP) * smoother((f - CAM.F1) / (DURATION - 1 - CAM.F1 + 10));
-  const k = Math.exp(LNK_OPEN + (LNK_RES - LNK_OPEN) * s + creep);
-  const sx = SILL_OPEN[0] + (SILL_RES[0] - SILL_OPEN[0]) * s;
-  const sy = SILL_OPEN[1] + (SILL_RES[1] - SILL_OPEN[1]) * s;
-  return frameAt(k, HUMAN_SPOT.X, HUMAN_SPOT.Y, HUMAN_SPOT.Z, sx, sy);
-};
+/** the ruler tip's height (m) at frame f */
+export const tipH = (f: number) => GEO.hHum + (GEO.hCeil - GEO.hHum) * tipS(f);
+
+// ---- the camera ---------------------------------------------------------------------------------------------------
+// One move anchored on the ruler's tip (X_D, tipH, Z_F) held at keyed screen points: close on the human (f0-12), the
+// crane up with the tip (f13-48), the pull-back to the whole span on "human level" (f55-66).
+const END = { tipY: 330, sillY: 1040 };
+export const PXM_END = (END.sillY - END.tipY) / (GEO.hCeil - GEO.hHum);
+const LNK = pchip([
+  [-10, Math.log(kForPxm(44))],
+  [0, Math.log(kForPxm(45))],
+  [12, Math.log(kForPxm(47))],
+  [22, Math.log(kForPxm(36))],
+  [34, Math.log(kForPxm(30))],
+  [47, Math.log(kForPxm(33))],
+  [51, Math.log(kForPxm(30))],
+  [64, Math.log(kForPxm(PXM_END))],
+  [84, Math.log(kForPxm(PXM_END * 1.03))],
+]);
+const TY = pchip([
+  [-10, 1000],
+  [0, 990],
+  [12, 965],
+  [22, 760],
+  [34, 600],
+  [47, 445],
+  [51, 432],
+  [64, END.tipY],
+  [84, END.tipY - 2],
+]);
+const TX = pchip([
+  [-10, 985],
+  [0, 985],
+  [12, 990],
+  [26, 760],
+  [40, 660],
+  [48, 640],
+  [66, 640],
+  [84, 640],
+]);
+export const camTrack = (f: number): Cam => frameAtC(Math.exp(LNK(f)), m(GEO.xD), hy(tipH(f)), Z_F, TX(f), TY(f));
 const REST = swayCam(camTrack(0), 0);
-
-// ---- the human: he lifts his face to the ceiling on "think the ceiling" -----------------------------------------------
-const humanPoseAt = (frame: number): Covid.CovidPose => {
-  const q = Covid.POSES.front();
-  const up = sst(0, 10, frame);
-  return Covid.breathe({ ...q, pitch: (q.pitch ?? 0) - 16 * up, look: [0.05 * up, -0.05 - 0.9 * up] }, frame);
-};
-
-// ---- the dashed part, occluded by the stone ---------------------------------------------------------------------------
-// The shared TowerScene paints the dashed continuation after the stone with no occlusion, so while the camera rises past
-// the capital (f12-f16) the faint back halves of the lowest course rings showed through the stone cap. Here the tower is
-// drawn with show.dashed 0 and the dashed part (GhostDashes, above) is drawn here, clipped (evenodd) outside the stone's silhouette: the convex
-// hull of every drum's outer circle projected under this frame's camera (the eye stays below the capital throughout).
-const SIL_RINGS: [number, number][] = [
-  [0, 1.1], [0.35, 1.1], [0.35, 0.6], [0.95, 0.6], [3.75, 0.35], [3.95, 0.8], [4.5, 0.8], [12.6, 0.4], [13.0, 1.15],
-  [15.0, 1.45], [15.6, 1.45],
-];
-const hull = (pts: P2[]): P2[] => {
-  const q = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const cross = (o: P2, a: P2, b: P2) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-  const lo: P2[] = [];
-  for (const p of q) {
-    while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
-    lo.push(p);
-  }
-  const up: P2[] = [];
-  for (const p of [...q].reverse()) {
-    while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop();
-    up.push(p);
-  }
-  return [...lo.slice(0, -1), ...up.slice(0, -1)];
-};
-// ---- the ghost continuation (director's note after the blind review) ------------------------------------------------
-// The shared DashedTower stacks three dashed course rings (20.0 / 24.4 / 28.8 m) between the capital and the ceiling; a
-// fresh viewer read them as a birdcage / wire lampshade. Here only the two vertical dashed edges (fading from full at the
-// capital to EDGE_TOP_A just under the ceiling) and the ceiling band (exactly as the shared module draws it at progress 1:
-// its lower ring, the band's top and bottom rings, the two band verticals) are drawn. DashStroke is a copy of the shared
-// module's (not exported): glow underlay, deep-orange edge, dash.
-const EDGE_TOP_A = 0.45;
-const DASH = { len: 1.5, gap: 0.95 };
-const DashStroke: React.FC<{ A: AirWorld; d: string; Z: number; h: number; px?: number; a?: number; dash?: [number, number] }> = ({ A, d, Z, h, px = 3.4, a = 1, dash }) => {
-  const wpx = px * Math.pow(A.k / 0.058, 0.3);
-  const w = wpx / A.k;
-  const da = dash ?? [m(DASH.len), m(DASH.gap)];
+// ---- strokes ------------------------------------------------------------------------------------------------------
+const PAL = AIR.A;
+const D = (q: P2[]) => `M${q.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join("L")}`;
+const seg = (a: P2, b: P2) => `M${a[0].toFixed(2)},${a[1].toFixed(2)}L${b[0].toFixed(2)},${b[1].toFixed(2)}`;
+/** screen px -> world units on the current camera, slightly growing with the zoom (the shared module's rule) */
+const pxW = (A: AirWorld, px: number) => (px * Math.pow(A.k / 0.058, 0.3)) / A.k;
+/** an orange stroke in world space: a soft glow underlay, a deep-orange edge, the core */
+const OStroke: React.FC<{ A: AirWorld; d: string; Z: number; h: number; px?: number; a?: number; glow?: number }> = ({ A, d, Z, h, px = 3.0, a = 1, glow = 1 }) => {
+  const w = pxW(A, px);
   const col = A.toneO(ACCENT, Z, h);
-  const edge = A.toneO(ACCENT_DEEP, Z, h);
-  const dash2 = `${da[0].toFixed(1)} ${da[1].toFixed(1)}`;
+  const edge = mixHex(A.toneO(ACCENT_DEEP, Z, h), ORANGE_LINE, 0.4);
   return (
     <g>
-      <path d={d} fill="none" stroke={col} strokeWidth={w * 3.4} strokeOpacity={0.14 * a} strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke={mixHex(edge, ORANGE_LINE, 0.4)} strokeWidth={w * 1.55} strokeOpacity={0.55 * a} strokeDasharray={dash2} strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke={col} strokeWidth={w} strokeOpacity={a} strokeDasharray={dash2} strokeLinecap="round" strokeLinejoin="round" />
-    </g>
-  );
-};
-const polyD = (q: P2[]) => `M${q.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join("L")}`;
-const GhostDashes: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
-  const P = A.P;
-  const br = 0.86 + 0.14 * Math.sin((2 * Math.PI * frame) / 64);
-  const h0 = TOWER.capitalY;
-  const C = TOWER.ceil;
-  const edge = (side: -1 | 1): P2[] => Array.from({ length: 11 }, (_, i) => {
-    const h = h0 + ((C.h0 - h0) * i) / 10;
-    return P.p(side * m(Rm(h)), hy(h), ZC);
-  });
-  const ring = (h: number, out: number) => {
-    const N = 24;
-    const arc = (a0: number, a1: number) => polyD(Array.from({ length: N + 1 }, (_, i) => {
-      const v = towerPt(a0 + ((a1 - a0) * i) / N, h, out);
-      return P.p(v[0], v[1], v[2]);
-    }));
-    return { front: arc(Math.PI, Math.PI / 2) + arc(0, Math.PI / 2), back: arc(Math.PI, 1.5 * Math.PI) + arc(0, -Math.PI / 2) };
-  };
-  const eL = edge(-1);
-  const eR = edge(1);
-  const yFoot = eL[0][1];
-  const yTop = eL[eL.length - 1][1];
-  const r0 = ring(C.h0, 0);
-  const r1 = ring(C.h0, C.out);
-  const r2 = ring(C.h1, C.out);
-  return (
-    <g>
-      <defs>
-        <linearGradient id="caEdgeFadeG" gradientUnits="userSpaceOnUse" x1={0} y1={yFoot} x2={0} y2={yTop}>
-          <stop offset="0" stopColor="#fff" stopOpacity={1} />
-          <stop offset="1" stopColor="#fff" stopOpacity={EDGE_TOP_A} />
-        </linearGradient>
-        <mask id="caEdgeFade" maskUnits="userSpaceOnUse" x={-1e6} y={-1e6} width={2e6} height={2e6}>
-          <rect x={-1e6} y={-1e6} width={2e6} height={2e6} fill="url(#caEdgeFadeG)" />
-        </mask>
-      </defs>
-      <g mask="url(#caEdgeFade)">
-        <DashStroke A={A} d={polyD(eL)} Z={ZC} h={m((h0 + C.h0) / 2)} a={br} />
-        <DashStroke A={A} d={polyD(eR)} Z={ZC} h={m((h0 + C.h0) / 2)} a={br} />
-      </g>
-      <DashStroke A={A} d={r0.back} Z={ZC + m(Rm(C.h0))} h={m(C.h0)} a={0.38 * br} px={2.6} />
-      <DashStroke A={A} d={r1.back} Z={ZC + m(Rm(C.h0) + C.out)} h={m(C.h0)} a={0.38 * br} px={2.6} />
-      <DashStroke A={A} d={r2.back} Z={ZC + m(Rm(C.h1) + C.out)} h={m(C.h1)} a={0.45 * br} px={2.8} />
-      <DashStroke A={A} d={r0.front} Z={zFrontAt(C.h0)} h={m(C.h0)} a={br} />
-      <DashStroke A={A} d={r1.front} Z={zFrontAt(C.h0) - m(C.out)} h={m(C.h0)} a={br} px={3.8} />
-      <DashStroke A={A} d={r2.front} Z={zFrontAt(C.h1) - m(C.out)} h={m(C.h1)} a={br} px={3.8} />
-      {([-1, 1] as const).map((sd) => (
-        <DashStroke
-          key={sd}
-          A={A}
-          d={`M${P.p(sd * m(Rm(C.h0) + C.out), hy(C.h0), ZC).map((v) => v.toFixed(2)).join(",")}L${P.p(sd * m(Rm(C.h1) + C.out), hy(C.h1), ZC).map((v) => v.toFixed(2)).join(",")}`}
-          Z={ZC}
-          h={m(C.h1)}
-          a={br}
-          px={3.8}
-          dash={[m(0.7), m(0.45)]}
-        />
-      ))}
+      {glow > 0 ? <path d={d} fill="none" stroke={col} strokeWidth={w * 3.4} strokeOpacity={0.14 * a * glow} strokeLinecap="round" strokeLinejoin="round" /> : null}
+      <path d={d} fill="none" stroke={edge} strokeWidth={w * 1.55} strokeOpacity={0.55 * a} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={col} strokeWidth={w} strokeOpacity={a} strokeLinecap="round" strokeLinejoin="round" />
     </g>
   );
 };
 
-const StoneCutDashes: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
-  const pts: P2[] = [];
-  for (const [h, out] of SIL_RINGS) {
-    if (h > TOWER.capitalY) continue;
-    for (let i = 0; i < 96; i++) {
-      const v = towerPt((2 * Math.PI * i) / 96, h, out);
-      pts.push(A.P.p(v[0], v[1], v[2]));
-    }
+// ---- THE CEILING: a vast blueprint grid plane seen from below -------------------------------------------------------
+// The underside of a slab at hCeil, from the front plane Z_F back GEO.depth metres: a 5 m grid of crisp orange lines with
+// a 1 m sub-grid, lines along the depth converging on the vanishing point, the whole plane fading as it recedes; its front
+// face (the slab's thickness) a hatched band. It always runs out of frame left and right.
+const Ceiling: React.FC<{ A: AirWorld; br: number }> = ({ A, br }) => {
+  const P = A.P;
+  const { hCeil, slab, depth } = GEO;
+  const Yc = hy(hCeil);
+  const Yt = hy(hCeil + slab);
+  const Z0 = Z_F;
+  const Z1 = Z_F + m(depth);
+  // X span that covers the frame at the far edge (the near edge needs less)
+  const halfX = 700 / (A.k * P.r(Z1));
+  const xa = Math.floor((A.cam.cx - halfX) / U) - 1;
+  const xb = Math.ceil((A.cam.cx + halfX) / U) + 1;
+  const yN = P.p(0, Yc, Z0)[1];
+  const yF = P.p(0, Yc, Z1)[1];
+  // screen spacing of 1 m at the near edge (px): the sub-grid fades out when it gets too dense
+  const sp1 = U * P.r(Z0) * A.k;
+  const subA = C01((sp1 - 5) / 9);
+  const major: string[] = [];
+  const minor: string[] = [];
+  for (let x = xa; x <= xb; x++) {
+    const d = seg(P.p(m(x), Yc, Z0), P.p(m(x), Yc, Z1));
+    (x % 5 === 0 ? major : minor).push(d);
   }
-  const H = hull(pts);
-  const B = 1e6;
-  const d = `M${-B},${-B}L${B},${-B}L${B},${B}L${-B},${B}Z M${H.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join("L")}Z`;
+  // lines across (constant depth), each with its own fade
+  const across: { d: string; a: number; maj: boolean }[] = [];
+  for (let z = 0; z <= depth; z++) {
+    const Z = Z0 + m(z);
+    const t = z / depth;
+    const maj = z % 5 === 0;
+    // the 1 m lines thin out where they crowd together far back (screen spacing under ~6 px)
+    const gap = Math.abs(P.p(0, Yc, Z)[1] - P.p(0, Yc, Z + m(1))[1]) * A.k;
+    const a = (1 - t * t) * (maj ? 1 : C01((gap - 2.5) / 4));
+    if (!maj && (subA <= 0.01 || a <= 0.01)) continue;
+    across.push({ d: seg(P.p(m(xa), Yc, Z), P.p(m(xb), Yc, Z)), a, maj });
+  }
+  // the front face: 45 deg hatching between the underside's front edge and the slab's top edge
+  const hatch: string[] = [];
+  const step = 0.6;
+  for (let x = xa - slab; x <= xb; x += step) {
+    const x0 = Math.max(xa, x);
+    const x1 = Math.min(xb, x + slab);
+    if (x1 <= x0) continue;
+    hatch.push(seg(P.p(m(x0), hy(hCeil + (x0 - x)), Z0), P.p(m(x1), hy(hCeil + (x1 - x)), Z0)));
+  }
+  const col = A.toneO(ACCENT, Z0, m(hCeil));
+  const colF = A.toneO(ACCENT, Z0 + m(depth * 0.5), m(hCeil));
+  const L = P.p(m(xa), Yc, Z0);
+  const R = P.p(m(xb), Yc, Z0);
   return (
     <g>
       <defs>
-        <clipPath id="caStoneCut" clipPathUnits="userSpaceOnUse">
-          <path d={d} clipRule="evenodd" />
-        </clipPath>
+        <linearGradient id="caGridFade" gradientUnits="userSpaceOnUse" x1={0} y1={yN} x2={0} y2={yF}>
+          <stop offset="0" stopColor={col} stopOpacity={1} />
+          <stop offset="0.6" stopColor={colF} stopOpacity={0.62} />
+          <stop offset="0.85" stopColor={colF} stopOpacity={0.3} />
+          <stop offset="1" stopColor={colF} stopOpacity={0} />
+        </linearGradient>
       </defs>
-      <g clipPath="url(#caStoneCut)">
-        <GhostDashes A={A} frame={frame} />
-      </g>
+      {/* along the depth: converging on the vanishing point */}
+      <path d={minor.join("")} fill="none" stroke="url(#caGridFade)" strokeWidth={pxW(A, 1.2)} strokeOpacity={0.6 * subA * br} />
+      <path d={major.join("")} fill="none" stroke="url(#caGridFade)" strokeWidth={pxW(A, 5.0)} strokeOpacity={0.12 * br} />
+      <path d={major.join("")} fill="none" stroke="url(#caGridFade)" strokeWidth={pxW(A, 2.3)} strokeOpacity={br} />
+      {/* across */}
+      {across.map((l, i) => (
+        <path key={i} d={l.d} fill="none" stroke={l.maj ? col : colF} strokeWidth={pxW(A, l.maj ? 2.3 : 1.2)} strokeOpacity={(l.maj ? 1 : 0.7 * subA) * l.a * br} />
+      ))}
+      {/* the front face */}
+      <path d={`${D([P.p(m(xa), Yc, Z0), P.p(m(xb), Yc, Z0), P.p(m(xb), Yt, Z0), P.p(m(xa), Yt, Z0)])}Z`} fill={col} fillOpacity={0.1 * br} />
+      <path d={hatch.join("")} fill="none" stroke={col} strokeWidth={pxW(A, 1.4)} strokeOpacity={0.75 * br} strokeLinecap="round" />
+      <OStroke A={A} d={seg(P.p(m(xa), Yt, Z0), P.p(m(xb), Yt, Z0))} Z={Z0} h={m(hCeil)} a={0.7 * br} px={1.4} glow={0} />
+      <OStroke A={A} d={seg(L, R)} Z={Z0} h={m(hCeil)} a={br} px={3.4} />
+    </g>
+  );
+};
+
+// ---- THE RULER: drawn up from the human level by its tip ------------------------------------------------------------
+const Ruler: React.FC<{ A: AirWorld; frame: number; br: number }> = ({ A, frame, br }) => {
+  const P = A.P;
+  const X = m(GEO.xD);
+  const hT = tipH(frame);
+  const base = P.p(X, hy(GEO.hHum), Z_F);
+  const tip = P.p(X, hy(hT), Z_F);
+  // ticks on the line's left: every metre from the human level, longer every 5 m, longest every 10 m. The tip runs at
+  // up to ~3.5 m a frame, so the 1 m and 5 m ticks would strobe (wagon wheel) while it is fast: they thin out with the
+  // speed and come back as it eases; the 10 m ticks (<= 0.35 spacing a frame) stay.
+  const speed = Math.abs(tipH(frame + 0.5) - tipH(frame - 0.5));
+  const a1 = Math.max(0.0, Math.min(1, 1 - (speed - 0.35) / 0.3));
+  const a5 = Math.max(0.15, Math.min(1, 1 - (speed - 1.5) / 0.8));
+  const t1: string[] = [];
+  const t5: string[] = [];
+  const t10: string[] = [];
+  const L1 = pxW(A, 7);
+  const L5 = pxW(A, 14);
+  const L10 = pxW(A, 22);
+  for (let i = 1; GEO.hHum + i < GEO.hCeil - 0.4; i++) {
+    const h = GEO.hHum + i;
+    if (h > hT - 0.15) break;
+    const q = P.p(X, hy(h), Z_F);
+    const kind = i % 10 === 0 ? 10 : i % 5 === 0 ? 5 : 1;
+    const Lk = kind === 10 ? L10 : kind === 5 ? L5 : L1;
+    (kind === 10 ? t10 : kind === 5 ? t5 : t1).push(`M${(q[0] - Lk).toFixed(2)},${q[1].toFixed(2)}L${q[0].toFixed(2)},${q[1].toFixed(2)}`);
+  }
+  const col = A.toneO(ACCENT, Z_F, m(20));
+  const moving = tipS(frame) > 0 && tipS(frame) < 1;
+  const glowR = pxW(A, 18);
+  // the end ticks: across the line at its foot, and at its top where it touches the ceiling
+  const eT = pxW(A, 9);
+  const touched = C01((frame - TIP.f1 + 1.5) / 3);
+  // where the ruler crosses the receding grid on screen, a thin band of air behind it knocks the grid lines out, so the
+  // ruler reads in front of and below the ceiling until its tip touches the front edge
+  const yN = P.p(X, hy(GEO.hCeil), Z_F)[1];
+  const yF = P.p(X, hy(GEO.hCeil), Z_F + m(GEO.depth))[1];
+  const k0 = Math.max(tip[1], yN);
+  const k1 = Math.min(base[1], yF);
+  const kn: [number, number] | null = k1 - k0 > 1 ? [k0, k1] : null;
+  return (
+    <g>
+      <defs>
+        {kn ? (
+          <linearGradient id="caKnock" gradientUnits="userSpaceOnUse" x1={0} y1={kn[0]} x2={0} y2={kn[1]}>
+            {[0, 0.25, 0.5, 0.75, 1].map((t) => (
+              <stop key={t} offset={t} stopColor={A.screenAir(kn[0] + (kn[1] - kn[0]) * t)} />
+            ))}
+          </linearGradient>
+        ) : null}
+        <radialGradient id="caTipGlow">
+          <stop offset="0" stopColor={PAL.orangeHot} stopOpacity={0.9} />
+          <stop offset="0.35" stopColor={ACCENT} stopOpacity={0.45} />
+          <stop offset="1" stopColor={ACCENT} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      {kn ? (
+        <path d={seg([base[0], kn[0]], [base[0], kn[1]])} fill="none" stroke="url(#caKnock)" strokeWidth={pxW(A, 9)} strokeOpacity={0.85} />
+      ) : null}
+      {hT > GEO.hHum + 0.05 ? <OStroke A={A} d={seg(base, tip)} Z={Z_F} h={m(20)} a={br} px={2.4} /> : null}
+      <path d={t1.join("")} fill="none" stroke={col} strokeWidth={pxW(A, 1.5)} strokeOpacity={0.85 * br * a1} strokeLinecap="round" />
+      <path d={t5.join("")} fill="none" stroke={col} strokeWidth={pxW(A, 2.0)} strokeOpacity={br * a5} strokeLinecap="round" />
+      <path d={t10.join("")} fill="none" stroke={col} strokeWidth={pxW(A, 2.4)} strokeOpacity={br} strokeLinecap="round" />
+      <OStroke A={A} d={seg([base[0] - eT, base[1]], [base[0] + eT, base[1]])} Z={Z_F} h={m(GEO.hHum)} a={br} px={2.4} glow={0} />
+      {moving ? <circle cx={tip[0]} cy={tip[1]} r={glowR} fill="url(#caTipGlow)" /> : null}
+      {moving ? <circle cx={tip[0]} cy={tip[1]} r={pxW(A, 3.2)} fill={PAL.orangeHot} /> : null}
+      {touched > 0 ? (
+        <g>
+          <circle cx={tip[0]} cy={tip[1]} r={glowR * (1 + 0.6 * touched)} fill="url(#caTipGlow)" opacity={0.9 * (1 - 0.6 * touched)} />
+          <OStroke A={A} d={seg([tip[0] - eT * touched, tip[1]], [tip[0] + eT * touched, tip[1]])} Z={Z_F} h={m(GEO.hCeil)} a={br} px={2.6} />
+        </g>
+      ) : null}
+    </g>
+  );
+};
+
+// ---- the human level: a cream mark across the tower at his sill, running out to the ruler's foot ----------------------
+const HumanMark: React.FC<{ A: AirWorld }> = ({ A }) => {
+  const P = A.P;
+  const Y = hy(GEO.hHum);
+  const a = P.p(m(GEO.markX0), Y, Z_F);
+  const b = P.p(m(GEO.markX1), Y, Z_F);
+  const col = A.tone(PAL.cream, Z_F, m(GEO.hHum));
+  const t = pxW(A, 6);
+  const fine: string[] = [];
+  for (const [x, L] of [[GEO.markX0, t * 1.8], [-1.35, t], [1.35, t]] as [number, number][]) {
+    const q = P.p(m(x), Y, Z_F);
+    fine.push(`M${q[0].toFixed(2)},${(q[1] - L).toFixed(2)}L${q[0].toFixed(2)},${(q[1] + L * 0.5).toFixed(2)}`);
+  }
+  return (
+    <g>
+      <path d={D([a, b])} fill="none" stroke={PAL.shadow} strokeOpacity={0.25} strokeWidth={pxW(A, 4.2)} strokeLinecap="round" />
+      <path d={D([a, b])} fill="none" stroke={col} strokeWidth={pxW(A, 2.2)} strokeLinecap="round" />
+      <path d={fine.join("")} fill="none" stroke={col} strokeWidth={pxW(A, 1.4)} strokeLinecap="round" />
+    </g>
+  );
+};
+
+// ---- the tower's footing: a faint lit patch of floor under it and a soft dark contact shadow at its base -------------
+// (in the wide end frame the small tower floated over the hazed floor; the shared scene draws no shadow under it)
+const Footing: React.FC<{ A: AirWorld }> = ({ A }) => {
+  const P = A.P;
+  const Zb = TOWER.zFront + m(TOWER.R0 * 0.35);
+  const c = P.p(TOWER.X, 0, Zb);
+  const ellipse = (rM: number, dM: number, minPx: number) => {
+    const rx = m(rM) * P.r(Zb);
+    const ry = Math.max(minPx / A.k, Math.abs(P.p(TOWER.X, 0, Zb - m(dM))[1] - P.p(TOWER.X, 0, Zb + m(dM))[1]) / 2);
+    return { rx, ry };
+  };
+  const lit = ellipse(TOWER.R0 * 2.4, TOWER.R0 * 1.6, 26);
+  const sh = ellipse(TOWER.R0 * 1.25, TOWER.R0 * 0.7, 9);
+  const floorLit = A.tone(mixHex(PAL.cream, PAL.shadow, 0.35), TOWER.zFront, 0);
+  return (
+    <g>
+      <defs>
+        <radialGradient id="caFootLit">
+          <stop offset="0" stopColor={floorLit} stopOpacity={0.42} />
+          <stop offset="0.55" stopColor={floorLit} stopOpacity={0.2} />
+          <stop offset="1" stopColor={floorLit} stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id="caFootShadow">
+          <stop offset="0" stopColor={PAL.shadow} stopOpacity={0.85} />
+          <stop offset="0.6" stopColor={PAL.shadow} stopOpacity={0.48} />
+          <stop offset="1" stopColor={PAL.shadow} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      <ellipse cx={c[0]} cy={c[1]} rx={lit.rx} ry={lit.ry} fill="url(#caFootLit)" />
+      <ellipse cx={c[0] + sh.rx * 0.08} cy={c[1]} rx={sh.rx} ry={sh.ry} fill="url(#caFootShadow)" />
     </g>
   );
 };
@@ -244,12 +464,18 @@ const StoneCutDashes: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) 
 const CeilingAboveUs: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const cam = swayCam(camTrack(frame), frame);
-  const A = towerAirOf({ cam, rest: REST, frame });
+  const A = airOf({ cam, rest: REST, frame });
+  const br = 0.88 + 0.12 * Math.sin((2 * Math.PI * frame) / 64);
   return (
     <AirStage v={A.v} bloom={0.22}>
       <WorldSvg cam={cam}>
-        <TowerScene A={A} frame={frame} show={{ dashed: 0 }} human={{ pose: humanPoseAt(frame) }} occupants={{}} />
-        <StoneCutDashes A={A} frame={frame} />
+        {/* the shared TowerScene's parts, with a contact shadow on the floor under the tower (it floated in the wide) */}
+        <TowerFloor A={A} uid="twfl" />
+        <Footing A={A} />
+        <SpeciesTower A={A} frame={frame} show={{ dashed: 0 }} human occupants={{}} uid="tw" />
+        <Ceiling A={A} br={br} />
+        <HumanMark A={A} />
+        <Ruler A={A} frame={frame} br={br} />
       </WorldSvg>
     </AirStage>
   );
