@@ -15,25 +15,29 @@
 //   the 119 · genius 121 · to 127 · unify 138 · whole 148 · branches 154 · of 164 · physics 168
 // DURATION: the slot 35.369 -> 42.793 s = 7.424 s x 24000/1001 = 178 frames (f0..f177).
 //
-// THE MOTION: ME (left) and EINSTEIN (right) stand side by side on the sandy floor, the same height, while one slow
-// push-in runs the whole cut (k 1.66 -> 1.765) and, from "Yet", drifts toward Einstein. They glance at each other as ONE
-// cream "=" is drawn between their bodies by a moving tip ("species", f7-f16); the two brains (v0 / v1, the same size)
-// rise from behind their head tops to float above the hair (f24-f45, never scaled in) while that same "=" is carried up
-// in one smooth move to sit between them (f28-f48, "design"); on "number" / "neurons" one soft plate 86 BILLION
-// NEURONS slides up under both brains (f78-f91). On "Yet" two cream branches grow in from the frame edges (f100-f118):
-// the left one from the left edge above Me's brain, the right one lower from the right edge, both sloping up toward a
-// point above Einstein's brain, their tips still apart. Einstein raises his hands (unify pose, up f102-f114, a short
-// hold) and gathers them (f118-f138); the branch tips bend in with his hands and meet at "unify" (f138), and from the
-// joint ONE orange stem grows straight up and out of the top of the frame (f138-f151, the orange running up it and a
-// little way back along each branch): two branches become one. The E = mc² plate (cap ~53 px) settles beside the joint, right of the stem (f141-f153)
-// and Einstein's brain glows faintly orange from inside (f132-f152). ME glances over at him (f100-f116) and, once the
-// idea has fused, gives a small shrug (f142-f175). Hold f152-f177: the pair, the brains, the plate, the orange stem;
-// the camera creeps.
-// CAUSE BEFORE EFFECT: the branch tips' bend is driven by Einstein's hands (the unify pose's "together" phase, t 0.45
-// -> 0.82 = f118 -> f138): contact (tips meet) f138, first orange f138 (the joint), the brain's glow from f132.
+// THE MOTION (rev 1): ME (left; the speaker's look: beard, cream sweater) and EINSTEIN (right) stand side by side on
+// the sandy floor, the same height. ONE camera move runs the whole cut: a slow lateral drift from Me toward Einstein
+// across "same species ... same basic brain design" (wx -60 -> -8, k 1.64 -> 1.675, f0-f50), a creep, a gentle push-in
+// onto Einstein from "Yet I don't have the genius" (f100-f124, k -> 1.755, wx -> 40) and a tilt up with the orange as it
+// joins and rises on "unify whole branches of physics" (wy -184 -> -205, f124-f177, k -> 1.79). They glance at each
+// other as ONE cream "=" is drawn between their bodies by a moving tip ("species", f7-f16); the two brains (v0 / v1, the
+// same size) rise from behind their head tops to float above the hair (f24-f45, never scaled in) while that same "=" is
+// carried up in one smooth move to sit between them (f28-f48, "design"); on "number" / "neurons" one soft plate 86
+// BILLION NEURONS slides up under both brains (f78-f91). On "Yet" two cream branches grow in from the frame edges
+// (f100-f118): the left one from the left edge above Me's brain, the right one lower from the right edge, both sloping up
+// toward a point above Einstein's brain, their tips still apart. Me glances over (f100-f116) and gives a small resigned
+// shrug on "I don't have" (f106-f118), held. On "to unify" Einstein's hands rise together on ONE eased arc (f123-f150:
+// up from the hang, then in, the elbows low and outside the whole way) and meet in front of his chest, palms in; the
+// branch tips are read off his hands every frame (bendAt: the hands' separation) and meet at the joint as the hands
+// meet (f150, "whole"), then a small settle of the hands (f150-f169). From the joint ONE orange stem grows straight up
+// and out of the top of the frame (f150-f163, the orange running up it and a little way back along each branch): two
+// branches become one. The E = mc² plate (cap ~53 px) settles beside the joint, right of the stem (f153-f165); Einstein's
+// brain glows faintly orange from inside (f144-f164); he lifts his eyes to it, and Me looks up at it (f150-f164). Hold
+// f165-f177 on the pair, the brains, the plate and the orange stem; the camera still tilting up.
+// CAUSE BEFORE EFFECT: the branch tips' bend is driven by Einstein's hands (the hands' separation, f131-f150): contact
+// (tips meet) f150, first orange f150 (the joint), the brain's glow from f144.
 // Orange = intelligence (COMMON.md): the joint, the one stem, the E = mc² type and Einstein's brain glow only. People
 // in their own colours, brains pink-oatmeal, the "=" mark and the two separate branches cream.
-//
 // DEPTH: floor Y = 0, the figures, brains, marks, plates and bough on the front plane Z = 0 (1 world px = 1 cast unit
 // at Z 0; a man 312 = 1.75 m). Eye at Y -220 (~1.2 m: the horizon behind the bodies, heads and brains against the air),
 // dRef 1800 at kRef 1.7, dolly 0.5, fog by the eye. ME at X -135, EINSTEIN at X +135, PAIR_YAW (0.2 / -0.2).
@@ -44,7 +48,7 @@
 // ---------------------------------------------------------------------------
 import React from "react";
 import { loadFont } from "@remotion/google-fonts/BarlowCondensed";
-import { Easing, interpolate, useCurrentFrame } from "remotion";
+import { Easing, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   ACCENT,
@@ -65,7 +69,7 @@ import {
   type P2,
 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { BRAIN_ASPECT, Brain } from "./brainShared";
-import { Einstein, Me, PAIR_YAW, PERSON_POSES, lerpPose, type PersonPose } from "./stupidestFolk";
+import { Einstein, Me, PAIR_YAW, PERSON_POSES, lerpPose, personAnchors, type PersonPose } from "./stupidestFolk";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 178;
@@ -74,7 +78,6 @@ export const defaultProps = schema.parse({});
 
 const { fontFamily: barlow } = loadFont("normal", { weights: ["600"], subsets: ["latin"] });
 const PAL = AIR.A;
-const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const ease = (t: number) => Easing.inOut(Easing.cubic)(c01(t));
 const easeOut = (t: number) => 1 - Math.pow(1 - c01(t), 3);
 const ramp = (f: number, a: number, b: number) => c01((f - a) / (b - a));
@@ -111,57 +114,9 @@ const BR_W = { root: 18, tip: 6, fused: 12 };
 /** the stem: from the joint straight up and out of the frame */
 export const STEM = { ctrl: [138, -660] as P2, top: [150, -800] as P2, w0: 14, w1: 9 };
 /** the E = mc² plate, beside the joint: right of the stem, above the right branch (cap ~55 px on screen at the hold) */
-export const EMC = { X: 245, Y: -542, cap: 30, padK: 0.22, track: 0, slide: 0.15 };
+export const EMC = { X: 238, Y: -548, cap: 30, padK: 0.22, track: 0, slide: 0.15 };
 
-// ---- timing ---------------------------------------------------------------------------------------------------------
-const T = {
-  eq1: [7, 12] as const, // the top bar of the "=" between the bodies (species 9)
-  eq2: [11, 16] as const,
-  rise: [24, 45] as const, // the brains rise from behind the heads (the 24 · brain 41)
-  eqMove: [28, 48] as const, // the same "=" carried up between the brains as they arrive (design 47)
-  neurons: [78, 91] as const, // number 82 · neurons 91
-  grow: [100, 118] as const, // Yet 102: the branches grow in
-  fuse: [138, 148] as const, // unify 138: the orange starts at the joint, a little way back along each branch
-  stem: [138, 151] as const, // ... and runs UP the one stem as it grows out of the joint
-  emc: [141, 153] as const,
-  glow: [132, 152] as const,
-};
-/** Einstein's unify t (UNIFY_T: up 0..0.3, apart 0.3..0.45, together 0.45..0.82, press 0.82..1) by frame */
-export const unifyT = (f: number) => interpolate(f, [102, 114, 118, 138, 150], [0, 0.3, 0.45, 0.82, 1], clamp);
-/** the branch tips' bend toward the joint follows the hands' "together" phase */
-export const bendAt = (f: number) => ease((unifyT(f) - 0.45) / (0.82 - 0.45));
-
-// ---- camera: one slow push-in, the drift toward Einstein from "Yet" -----------------------------------------------------
-const DEPTH: DepthOpts = { eyeY: -220, dRef: 1800, kRef: 1.7, dolly: 0.5 };
-const camAt = makeCamera(
-  [
-    { f: 0, k: 1.66, wx: 0, wy: -178 },
-    { f: 64, k: 1.715, wx: 0, wy: -178 },
-    { f: 146, k: 1.755, wx: 50, wy: -186 },
-    { f: DURATION - 1, k: 1.765, wx: 54, wy: -186 },
-  ].map((q) => ({ ...q, sy: 960 })),
-  true,
-);
-export const camOf = (f: number) => swayCam(camAt(f), f);
-const REST = swayCam(camAt(0), 0);
-
-// ---- poses ----------------------------------------------------------------------------------------------------------
-/** they glance at each other on "same species", then face out as the brains rise */
-const pairGlance = (f: number) => ease(ramp(f, 2, 18)) * (1 - ease(ramp(f, 30, 46)));
-export const mePose = (f: number): PersonPose => {
-  // he watches Einstein from "Yet" and, once the idea has fused, gives a small resigned shrug ("whole branches")
-  const up = ease(ramp(f, 142, 153)) * (1 - ease(ramp(f, 163, 175)));
-  const stand = PERSON_POSES.stand(PAIR_YAW.me, f);
-  const base = up > 0 ? (lerpPose(stand, PERSON_POSES.shrug("me", PAIR_YAW.me, 0.5, f), 0.7 * up) as PersonPose) : stand;
-  const g = Math.max(pairGlance(f), ease(ramp(f, 100, 116)));
-  return PERSON_POSES.glance(base, 1, g);
-};
-export const einPose = (f: number): PersonPose => {
-  const base = PERSON_POSES.unify(PAIR_YAW.einstein, unifyT(f), f);
-  return PERSON_POSES.glance(base, -1, pairGlance(f));
-};
-
-// ---- geometry helpers -------------------------------------------------------------------------------------------------
+// ---- curve helpers -------------------------------------------------------------------------------------------------
 const lerp2 = (a: P2, b: P2, t: number): P2 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 const quad = (p0: P2, c: P2, p1: P2, s: number): P2 => {
   const u = 1 - s;
@@ -171,6 +126,149 @@ const quadD = (p0: P2, c: P2, p1: P2, s: number): P2 => {
   const u = 1 - s;
   return [2 * u * (c[0] - p0[0]) + 2 * s * (p1[0] - c[0]), 2 * u * (c[1] - p0[1]) + 2 * s * (p1[1] - c[1])];
 };
+
+// ---- timing ---------------------------------------------------------------------------------------------------------
+const T = {
+  eq1: [7, 12] as const, // the top bar of the "=" between the bodies (species 9)
+  eq2: [11, 16] as const,
+  rise: [24, 45] as const, // the brains rise from behind the heads (the 24 · brain 41)
+  eqMove: [28, 48] as const, // the same "=" carried up between the brains as they arrive (design 47)
+  neurons: [78, 91] as const, // number 82 · neurons 91
+  grow: [100, 118] as const, // Yet 102: the branches grow in
+  meShrug: [106, 118] as const, // I 106 · don't 111 · have 116: Me's small shrug, held
+  gesture: [123, 150] as const, // to 127 · unify 138 · whole 148: Einstein's hands, one eased arc, meet at f150
+  fuse: [150, 160] as const, // the hands meet: the tips join, the orange starts at the joint, a little way back
+  stem: [150, 163] as const, // ... and runs UP the one stem as it grows out of the joint (branches 154 · of 164)
+  emc: [153, 165] as const,
+  glow: [144, 164] as const,
+  meLook: [150, 164] as const, // Me looks up at the orange
+};
+
+// ---- camera: one move. A slow lateral drift from Me to Einstein (species .. design), a creep, a gentle push-in onto
+// Einstein from "Yet" (f102-f124), and a tilt up with the orange as it joins and rises (f138-f170) -------------------------
+const DEPTH: DepthOpts = { eyeY: -220, dRef: 1800, kRef: 1.7, dolly: 0.5 };
+const camAt = makeCamera(
+  [
+    { f: 0, k: 1.64, wx: -60, wy: -178 },
+    { f: 50, k: 1.675, wx: -8, wy: -178 },
+    { f: 100, k: 1.7, wx: 4, wy: -180 },
+    { f: 124, k: 1.755, wx: 40, wy: -184 },
+    { f: 150, k: 1.78, wx: 53, wy: -195 },
+    { f: 170, k: 1.79, wx: 56, wy: -204 },
+    { f: DURATION - 1, k: 1.792, wx: 56.5, wy: -205 },
+  ].map((q) => ({ ...q, sy: 960 })),
+  true,
+);
+export const camOf = (f: number) => swayCam(camAt(f), f);
+const REST = swayCam(camAt(0), 0);
+
+// ---- poses ----------------------------------------------------------------------------------------------------------
+/** they glance at each other on "same species", then face out as the brains rise */
+const pairGlance = (f: number) => ease(ramp(f, 2, 18)) * (1 - ease(ramp(f, 30, 46)));
+/** Me's shrug: how far into the cast's small shrug he goes (kept small: his hand stays inside the frame) */
+const ME_SHRUG = 0.6;
+export const mePose = (f: number): PersonPose => {
+  // he watches Einstein from "Yet", gives a small resigned shrug on "I don't have" and holds it, then looks up at the
+  // orange as it joins and rises
+  const up = ease(ramp(f, T.meShrug[0], T.meShrug[1]));
+  const stand = PERSON_POSES.stand(PAIR_YAW.me, f);
+  const base = up > 0 ? (lerpPose(stand, PERSON_POSES.shrug("me", PAIR_YAW.me, 0.5, f), ME_SHRUG * up) as PersonPose) : stand;
+  const lu = ease(ramp(f, T.meLook[0], T.meLook[1]));
+  const g = Math.max(pairGlance(f), ease(ramp(f, 100, 116))) * (1 - 0.45 * lu);
+  const gl = PERSON_POSES.glance(base, 1, g);
+  return lu > 0 ? PERSON_POSES.lookUp(gl, 1, 0.75 * lu) : gl;
+};
+
+/** EINSTEIN'S GESTURE (the cut's own arms over the cast's stand; the cast's unify lifts the wrists out to shoulder
+ *  height and its soft elbows swing out and back as the hint crosses the arm line): both hands rise together on ONE
+ *  eased arc, a quadratic from the hang that first lifts (control straight above the hang) and then curves in, to meet
+ *  in front of his chest, palms in, fingers up, the mittens just touching. The elbow hint is set every frame on the
+ *  arm's own normal, always to the outside, with the soft-elbow bend b easing 0.45 (the stand's) -> 0.85: the elbows
+ *  stay low and to the outside the whole way (a forearm raised toward us reads foreshortened, never a wing) and never
+ *  flip; the thumbs stay on the same side. Then a small settle (a soft dip and return) and the hold.
+ *  Yaw-0 units for his right arm (armL, screen left; armR mirrored), the cast's yaw shift applied as its unify does. */
+const GEST = {
+  ctrl: [-55, -182] as P2, // the arc's control point: straight above the hang, so the hands rise first, then come in
+  meet: [-14, -194] as P2, // the wrist at the meet
+  shoulderX: 44.1, // the rig's shoulders (x +-44.1, y -247 at this yaw)
+  shoulderY: -247,
+  bend: [0.45, 0.85] as const, // the soft elbow's bend (0 straight .. 1 the full two-bone bend), hang -> meet
+  hand: -70, // the mitten's turn at the meet: fingers up, palms in
+  settle: 3, // the dip after the meet (units)
+};
+export const gestureU = (f: number) => ease(ramp(f, T.gesture[0], T.gesture[1]));
+export const einPose = (f: number): PersonPose => {
+  const base = PERSON_POSES.stand(PAIR_YAW.einstein, f);
+  const u = gestureU(f);
+  const yaw = PAIR_YAW.einstein;
+  const c = Math.cos(yaw);
+  const sh = 12 * Math.sin(yaw);
+  const fm = T.gesture[1];
+  const dip = GEST.settle * (ease(ramp(f, fm, fm + 7)) - 0.7 * ease(ramp(f, fm + 7, fm + 19)));
+  const arm = (side: -1 | 1) => {
+    const a0 = side < 0 ? base.armL : base.armR;
+    // the hang in yaw-0 left-arm units (undo the yaw shift, mirror the right arm)
+    const w0: P2 = [(-side * (a0.w[0] - sh)) / c, a0.w[1]];
+    const wl = quad(w0, GEST.ctrl, GEST.meet, u);
+    const w: P2 = [-side * wl[0] * c + sh, wl[1] + dip];
+    // the elbow hint on the arm's own normal, to the outside, sized for the bend b (elbowOf: v = n.hint / 0.55,
+    // b = 1 - (1 - v)^2)
+    const d: P2 = [w[0] - side * GEST.shoulderX, w[1] - GEST.shoulderY];
+    const l = Math.hypot(d[0], d[1]) || 1;
+    const n: P2 = [-d[1] / l, d[0] / l];
+    const out = n[0] * side > 0 ? 1 : -1; // n, or -n: whichever points to the outside of this arm
+    const b = GEST.bend[0] + (GEST.bend[1] - GEST.bend[0]) * u * u;
+    const v = 1 - Math.sqrt(1 - b);
+    const hint: P2 = [n[0] * out * 0.55 * v, n[1] * out * 0.55 * v];
+    return {
+      w,
+      elbow: hint,
+      fist: a0.fist + (0.05 - a0.fist) * u,
+      hand: a0.hand + ((side < 0 ? GEST.hand : -GEST.hand) - a0.hand) * u,
+    };
+  };
+  const look = ease(ramp(f, fm + 2, fm + 14));
+  const pose: PersonPose = {
+    ...base,
+    armL: arm(-1),
+    armR: arm(1),
+    // eyes on the hands as they come together, then up to the idea above him
+    pitch: base.pitch + 5 * u - 9 * look,
+    look: [0, 0.35 * u * (1 - look) - 0.7 * look],
+    mouth: base.mouth + 0.1 * u,
+  };
+  return PERSON_POSES.glance(pose, -1, pairGlance(f));
+};
+
+/** THE LOCK: the branch tips' bend toward the joint is read off Einstein's hands every frame: 0 while the hands are
+ *  still widening on the arc, then (peak separation - separation) / (peak - meet), so the tips close exactly as the
+ *  hands close and meet at the joint as the hands meet */
+const handSep = (f: number) => {
+  const a = personAnchors("einstein", einPose(f), [0, 0], 1);
+  return a.wristR[0] - a.wristL[0];
+};
+const SEP = (() => {
+  let peak = -1;
+  let fPeak = T.gesture[0];
+  for (let f = T.gesture[0]; f <= T.gesture[1]; f += 0.25) {
+    const s = handSep(f);
+    if (s > peak) {
+      peak = s;
+      fPeak = f;
+    }
+  }
+  return { peak, fPeak, meet: handSep(T.gesture[1]) };
+})();
+const bendCache = new Map<number, number>();
+export const bendAt = (f: number) => {
+  const hit = bendCache.get(f);
+  if (hit !== undefined) return hit;
+  const v = f <= SEP.fPeak ? 0 : f >= T.gesture[1] ? 1 : c01((SEP.peak - handSep(f)) / (SEP.peak - SEP.meet));
+  bendCache.set(f, v);
+  return v;
+};
+
+// ---- geometry helpers -------------------------------------------------------------------------------------------------
 /** the brain's anchor row by frame: from fully below the clip line (behind the head) up to BRAIN_Y */
 export const brainY = (f: number) => {
   const y0 = BRAIN_CLIP_Y + BRAIN_H + 2;
