@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
 // SixMonthsInFourDays (rsi-since-writing, cut 81). Dwarkesh 3D style (styles/dwarkesh-3d.md).
 // Opaque 1080x1920, 23.976 fps, 158 frames.
-// One stage inside the misty teal air (AirStage, palette A) on cut 3's one-point pinhole crane mapped onto the kit's
-// londonDepth perspective every frame (kits/dwarkesh-3d/dwarkesh3d); the calendar board and its compress motion are the
+// One stage inside the misty teal air (AirStage, palette A) on a keyed pinhole camera (variable focal length) mapped onto
+// the kit's londonDepth perspective every frame (kits/dwarkesh-3d/dwarkesh3d); the calendar board and its compress motion are the
 // clip's shared module sinceWritingCalendar.tsx (cut 3's board, "again compressed"); the human, his desk and the paper
 // are the clip's world (sinceWritingFolk / sinceWritingWorld); THE ROBOT is the sister clip's approved Bot
 // (rsi-ten-earths/tenEarthsBot, v0; BOT_READY.md).
@@ -16,14 +16,16 @@
 // four 137 · days. 146 · And 153 (Whisper; may run ~0.2-0.4 s early).
 // DURATION: the slot 81.4147 -> 88.0046 s = 6.590 s x 23.976 = 158 frames (f0..f157).
 //
-// THE MOTION (revision 1): cut 3's slate calendar board, now half a year: 26 week rows, and a header strip in front
+// THE MOTION (revision 2: same content as revision 1, only the camera is new): cut 3's slate calendar board, now half a year: 26 week rows, and a header strip in front
 // of the front week with the day names MON..SUN PAINTED on the slab top from f0 (in the board's plane: they
 // foreshorten, fog and move with it through the whole camera move; the weekend a step fainter). The human (v0, white
 // shirt) sits at his desk beside the board's left edge, writing, and his finished sheets (one cream WorkSheet = one
 // workday) lift one by one off the pad at the end of his desk and arc onto the weekday cells in a loose flock, the
-// front week first and then row by row away from the camera (weekends empty), the last week landing on f~90, while ONE
-// crane lifts and pulls back from his desk and the front weeks to the whole half-year (f0-~94). The first half is his
-// alone. Then the same camera comes back down and in (f~92-150), panning right; THE ROBOT (Bot v0, the AI, 240 units)
+// front week first and then row by row away from the camera (weekends empty), the last week landing on f~90. ONE
+// continuous camera: f0 CLOSE on the human writing (long lens, his figure ~620 px, the pen moving from f0), one eased
+// pull-back (f4-84) to the whole half-year, a brief wide drift (f84-90), an ease in on THE ROBOT as it arrives (~1.2x,
+// f90-110, a short settle to f115), then out wide as the half-year compresses (f115-148), ending on "4 DAYS", and a
+// slow living drift to the end (f148-157). The first half is his alone. THE ROBOT (Bot v0, the AI, 240 units)
 // scurries in from the right frame edge (short legs, planted feet; on screen from f~72, "for ... roughly", stops f102),
 // turns to the board and does the compressing: on "again" it winds its near arm up toward the far weeks, on
 // "compressed" ONE broad sweep down toward the front week (out ~f111; the first hops follow its mitten at f112) and
@@ -37,10 +39,11 @@
 // a week's sheets start to slide on the frame the release wave reaches it, after the sweep (mitten out f111, first hop
 // f112); every sheet lands exactly on its stack's top (stackTop), the stack's count switching on that frame.
 //
-// DEPTH: fog by world depth (fogBy "depth"); the pinhole has F = 1000 px and no pitch (cut 3's): f0 the eye ~1.9 m up
-// at ~3 m in front of the front plane; ~f94 the crane's top; settled 1.2 m up, ~1.9 m out. The board: 7 x 48 across
+// DEPTH: fog by world depth (fogBy "depth"); the pinhole has no pitch; each camera key holds one world point at one
+// screen point (CamKey), keys blend in log distance and log focal length, the crane height and framing lagging on the
+// pull-back so the painted names never cross the caption band. The board: 7 x 48 across
 // (X -174..174), 26 rows 64 deep, the header strip Z -72..-32 (front face Z -72, back end Z 1646). The painted names
-// stay above y 1060 on every frame (MON..THU caps >= 36 px). The human at X -420, Z 520 (his desk X -372..-247,
+// stay above y 1060 on every frame (MON..THU caps >= 30 px once the board is wide, f61 on). The human at X -420, Z 520 (his desk X -372..-247,
 // Z 490..740); the robot at X 235, Z 450 once in (walks in from X ~544, off frame until f~72), ~300 px tall settled.
 //
 // SOURCES: six months ~ 26 weeks x 5 workdays = 130 workdays (COMMON.md, the speaker's "roughly six months"); the
@@ -78,67 +81,113 @@ export const BOARD = calGeom(26, { marginFront: 40 });
 export const HEADER = { z0: BOARD.z0, z1: -BOARD.cellD / 2, Zc: BOARD.z0 + 21, size: 15, stretch: 2.1 };
 export const WEEKDAYS = [0, 1, 2, 3, 4];
 
-// ---- the camera: cut 3's pinhole (F, distance d to the front plane, eye height h, horizon hy, across cx) ----
+// ---- the human at his desk (beside the board's left edge), the pad his finished sheets leave from ----
+export const HUMAN = { X: -420, Z: 520 };
+export const PAD = { X: HUMAN.X + 142, Y: -HUMAN_DESK.deskH, Z: HUMAN.Z + 70, n: 6, seed: 5 };
+/** THE ROBOT's place once in, and its walk-in (see below) */
+export const BOT = { X: 235, Z: 450, walk0: 60, walk1: 102, stop: 8, cadence: 5.8 };
+/** his writing hands (the camera's first framing point) */
+export const HUMAN_HANDS: [number, number, number] = [HUMAN.X + 92, -150, HUMAN.Z];
+
+// ---- the camera: cut 3's pinhole (distance d to the front plane, eye height h, horizon hy, across cx), now with a
+// lens too (focal F px: a zoom), so the path can start long-lens close on the human and pull back to the half-year ----
 export const F = 1000;
-export type Cam3 = { d: number; h: number; hy: number; cx: number };
-/** a bell-shaped progress 0..1 over f0..f1: the integral of t^a (1-t)^b, normalised (cut 3's) */
-const bell = (f0: number, f1: number, a: number, b: number) => {
-  const N = 400;
-  const cum = new Float64Array(N + 1);
-  for (let i = 1; i <= N; i++) {
-    const t = (i - 0.5) / N;
-    cum[i] = cum[i - 1] + Math.pow(t, a) * Math.pow(1 - t, b);
-  }
-  const tot = cum[N];
-  return (f: number) => {
-    const t = c01((f - f0) / (f1 - f0)) * N;
-    const i = Math.min(N - 1, Math.floor(t));
-    return (cum[i] + (cum[i + 1] - cum[i]) * (t - i)) / tot;
+export type Cam3 = { d: number; F: number; h: number; hy: number; cx: number };
+/** a camera key: distance d, focal F, eye height h, and a world point T held at screen point s (the framing) */
+export type CamKey = { d: number; F: number; h: number; T: [number, number, number]; s: [number, number] };
+export const camOf = (q: CamKey): Cam3 => {
+  const k = q.F / (q.d + q.T[2]);
+  return { d: q.d, F: q.F, h: q.h, cx: q.T[0] - (q.s[0] - 540) / k, hy: q.s[1] - (q.T[1] + q.h) * k };
+};
+/** the key of cut 3's yF / yB framing (the board's front face foot at yF, its far end at yB; focal 1000), holding T */
+const keyOfSpec = (o: { d: number; cx: number; yF: number; yB: number }, T: [number, number, number]): CamKey => {
+  const a = F / (o.d + BOARD.z0);
+  const b = F / (o.d + BOARD.z1);
+  const h = (o.yF - o.yB + BOARD.top * b) / (a - b);
+  const hy = o.yF - h * a;
+  const k = F / (o.d + T[2]);
+  return { d: o.d, F, h, T, s: [540 + (T[0] - o.cx) * k, hy + (T[1] + h) * k] };
+};
+/** a key moved: framing point shifted, focal scaled (a zoom about s), distance scaled */
+const nudge = (q: CamKey, o: { ds?: number; zoom?: number; pivot?: [number, number]; sx?: number; sy?: number }): CamKey => {
+  const z = o.zoom ?? 1;
+  const P = o.pivot ?? q.s;
+  return {
+    d: q.d * (o.ds ?? 1),
+    F: q.F * z * (o.ds ?? 1),
+    h: q.h,
+    T: q.T,
+    s: [P[0] + (q.s[0] - P[0]) * z + (o.sx ?? 0), P[1] + (q.s[1] - P[1]) * z + (o.sy ?? 0)],
   };
 };
-/** three camera states: f0 (the desk and the front weeks), the crane's top (the half-year), settled (the four
- *  stacks). Each is keyed by its distance d, its across cx and two screen rows: yF = the board's front face foot
- *  (Y 0, Z z0) and yB = the board's far end (Y top, Z z1); the eye height and the horizon follow. Log distance. */
-export const CAMK = {
-  s0: { d: 440, cx: -50, yF: 1060, yB: 430 },
-  s1: { d: 480, cx: -110, yF: 1128, yB: 405 },
-  s2: { d: 340, cx: -72, yF: 1054, yB: 525 },
-  /** the lift and pull-back (one lobe), the descent and push-in (one lobe) */
-  up: bell(-10, 100, 1.3, 2.0),
-  down: bell(88, 166, 1.4, 2.8),
+/** tp: the framing point's lag (t^tp: the pull-back keeps the human where he is while the lens widens);
+ *  hp: the eye height's lag (t^hp: on the pull-back the crane rises after the lens has widened, so the board's front
+ *  edge with its painted names comes in from the side above the caption band, not up through it) */
+const lerpKey = (a: CamKey, b: CamKey, t: number, hp = 1, tp = 1): CamKey => {
+  const lg = (x: number, y: number) => Math.exp(Math.log(x) + (Math.log(y) - Math.log(x)) * t);
+  const u = Math.pow(t, tp);
+  return {
+    d: lg(a.d, b.d),
+    F: lg(a.F, b.F),
+    h: lerp(a.h, b.h, Math.pow(t, hp)),
+    T: [lerp(a.T[0], b.T[0], u), lerp(a.T[1], b.T[1], u), lerp(a.T[2], b.T[2], u)],
+    s: [lerp(a.s[0], b.s[0], u), lerp(a.s[1], b.s[1], u)],
+  };
 };
-/** the eye height and horizon that put the front foot at yF and the far end at yB, at distance d */
-const solveH = (d: number, yF: number, yB: number) => {
-  const a = F / (d + BOARD.z0);
-  const b = F / (d + BOARD.z1);
-  const h = (yF - yB + BOARD.top * b) / (a - b);
-  return { h, hy: yF - h * a };
+/** eases: in-out (cubic), and the slow drift (sine in-out) */
+const inOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const sineIO = (t: number) => 0.5 - 0.5 * Math.cos(Math.PI * t);
+const easeInSlow = (t: number) => t * t * (1.6 - 0.6 * t); // the final drift: eases in, still moving at the end
+/** THE PATH (one continuous camera; every move eased, each settling before the next):
+ *  CLOSE (f0, long lens on the human's hands and face) -> pull back to WIDE (the half-year, f4-84) -> a slight drift
+ *  (f84-90) -> ease in on THE ROBOT as it arrives (~x1.2, f90-110) -> settle (f110-115) -> pull back out to the
+ *  END framing as the half-year compresses, on "4 DAYS" (f115-148) -> a slow living drift (f148-157) */
+export const HP = 3;
+export const TP = 2;
+export const WIDE_YF = 1040;
+export const WIDE_YB = 380;
+export const ROBOT_K = 1.3;
+export const ROBOT_H = 260;
+export const ROBOT_S: [number, number] = [905, 520];
+export const KEYS = (() => {
+  const close: CamKey = { d: 1200, F: 2.4 * (1200 + HUMAN.Z), h: 185, T: [HUMAN_HANDS[0], HUMAN_HANDS[1], HUMAN_HANDS[2]], s: [600, 640] };
+  const wide = keyOfSpec({ d: 480, cx: -110, yF: WIDE_YF, yB: WIDE_YB }, [0, BOARD.top, rowZ(BOARD, 10)]);
+  const wide2 = nudge(wide, { zoom: 1.015, pivot: [540, 700] });
+  // in on the robot (x1.2 its wide size, toward the right), the crane a little lower so the board's front edge with its
+  // names stays above the band and MON..THU and the human stay in frame for the compress
+  const robot: CamKey = { d: 490, F: ROBOT_K * (490 + BOT.Z), h: ROBOT_H, T: [BOT.X, -120, BOT.Z], s: ROBOT_S };
+  const robot2 = nudge(robot, { zoom: 1.012, pivot: ROBOT_S });
+  const end = keyOfSpec({ d: 360, cx: -72, yF: 1054, yB: 510 }, [cellX(BOARD, 1.5), BOARD.top, 0]);
+  const end2 = nudge(end, { zoom: 1.02, sy: 4 });
+  return { close, wide, wide2, robot, robot2, end, end2 };
+})();
+const SEGS: [number, number, CamKey, CamKey, (t: number) => number, number?, number?][] = [
+  [4, 84, KEYS.close, KEYS.wide, sineIO, HP, TP],
+  [84, 90, KEYS.wide, KEYS.wide2, sineIO],
+  [90, 110, KEYS.wide2, KEYS.robot, sineIO],
+  [110, 115, KEYS.robot, KEYS.robot2, sineIO],
+  [115, 148, KEYS.robot2, KEYS.end, inOut],
+  [148, 158, KEYS.end, KEYS.end2, easeInSlow],
+];
+export const keyAt = (f: number): CamKey => {
+  if (f <= SEGS[0][0]) return SEGS[0][2];
+  for (const [f0, f1, a, b, e, hp, tp] of SEGS) if (f < f1) return f <= f0 ? a : lerpKey(a, b, e((f - f0) / (f1 - f0)), hp, tp);
+  const [f0, f1, a, b, e] = SEGS[SEGS.length - 1];
+  return lerpKey(a, b, e(Math.min(1, (f - f0) / (f1 - f0))));
 };
-export const cam3At = (f: number): Cam3 => {
-  const u = CAMK.up(f);
-  const w = CAMK.down(f);
-  const { s0, s1, s2 } = CAMK;
-  const lg = (a: number, b: number, c: number) => Math.exp(Math.log(a) + (Math.log(b) - Math.log(a)) * u + (Math.log(c) - Math.log(b)) * w);
-  const li = (a: number, b: number, c: number) => a + (b - a) * u + (c - b) * w;
-  const d = lg(s0.d, s1.d, s2.d);
-  const { h, hy } = solveH(d, li(s0.yF, s1.yF, s2.yF), li(s0.yB, s1.yB, s2.yB));
-  return { d, h, hy, cx: li(s0.cx, s1.cx, s2.cx) };
-};
+export const cam3At = (f: number): Cam3 => camOf(keyAt(f));
 /** the pinhole as a londonDepth perspective (Dc = d, k = F / d, the horizon at hy) (cut 3's) */
 export const kitCam = (c: Cam3): { cam: Cam; depth: DepthOpts } => {
-  const k = F / c.d;
+  const k = c.F / c.d;
   return { cam: { k, cx: c.cx, cy: (960 - c.hy) / k - c.h }, depth: { eyeY: -c.h, dRef: c.d, kRef: k, dolly: 1 } };
 };
 /** a world point on screen (px) for a camera state */
 export const proj = (c: Cam3, X: number, Y: number, Z: number): [number, number] => {
-  const k = F / (c.d + Z);
+  const k = c.F / (c.d + Z);
   return [540 + (X - c.cx) * k, c.hy + (Y + c.h) * k];
 };
-const REST = kitCam(cam3At(0)).cam;
+const REST = kitCam(camOf(KEYS.wide)).cam;
 
-// ---- the human at his desk (beside the board's left edge), the pad his finished sheets leave from ----
-export const HUMAN = { X: -420, Z: 520 };
-export const PAD = { X: HUMAN.X + 142, Y: -HUMAN_DESK.deskH, Z: HUMAN.Z + 70, n: 6, seed: 5 };
 const padTop = (): SheetPose => stackTop(PAD.X, PAD.Z, PAD.n + 1, PAD.Y, 0, PAD.seed);
 
 // ---- the laying: every weekday sheet of the half year, front week first, row by row away from the camera ----
@@ -198,7 +247,6 @@ export const pAt = (f: number) => c01((f - COMPRESS_F0) / COMPRESS_SPAN);
 
 // ---- THE ROBOT (the sister clip's Bot v0, 240 units): walks in from the right frame edge on "roughly" (planted
 // feet), stops, turns to the board, crams the half-year ----
-export const BOT = { X: 235, Z: 450, walk0: 60, walk1: 102, stop: 8, cadence: 5.8 };
 /** the walk's amount: full stride, easing to a standstill over the last `stop` frames */
 const walkAmt = (f: number) => 1 - sst(BOT.walk1 - BOT.stop, BOT.walk1, f);
 const walkPose = (f: number): BotPose => G.walk(-1, (Math.max(BOT.walk0, Math.min(f, BOT.walk1)) - BOT.walk0) * BOT.cadence, walkAmt(f));
