@@ -15,11 +15,12 @@
  *   37.671      cut to the shelves by the till            -> product wheel (until the cut at 40.474)
  *   39.6        "Perfekt." 38.92, at the till             -> 3 FÖR 2 confirmed, cash ticks down
  * DURATION: 0 -> 43.644 s x 30000/1001 = 1308 frames.
- * Motion: always-on HUD: weapon slot (a flexed arm, then the last product picked up), a game clock that runs a
+ * Motion: always-on HUD: weapon slot (a fist, then the last product picked up), a game clock that runs a
  * minute per second from the camera's 13:19 timestamp, armour and health bars and an 8-digit cash counter top right; a
  * round radar bottom left that walks the route to the store and turns with the camera cuts. v3 (Tom, Nov 16): no area
  * names, everything pulled in from the edges (top right / pickups down to y 318, radar up to y 1318), and a GTA V
- * selection wheel of the three products at the till instead of the menu column.
+ * selection wheel of the three products at the till instead of the menu column. v4 (Nov 16): packshots cut out, a fist
+ * for "unarmed" (slot and wheel), the wheel about 20 % smaller.
  * Figures: cash and price are placeholders (no price is spoken or visible). Product art: the client's packshots.
  */
 import {AbsoluteFill, Easing, Img, interpolate, random, spring, staticFile, useCurrentFrame} from 'remotion';
@@ -191,20 +192,33 @@ const Radar: React.FC<{t: number; frame: number}> = ({t, frame}) => {
 };
 
 // ---------------------------------------------------------------- top right
-const ArmIcon = () => (
-  <svg width={104} height={104} viewBox="0 0 100 100">
-    <path
-      d="M10,90 L10,70 C10,60 17,55 26,55 C30,41 47,37 56,47 L60,51 L61,33 C58,24 63,13 74,13 C86,13 92,22 90,33
-         L85,48 C83,58 82,67 82,75 C82,85 73,91 63,91 Z"
-      fill="#f3f3f0" stroke={INK} strokeWidth={5} strokeLinejoin="round" />
-    <path d="M30,62 C37,52 48,52 54,60" fill="none" stroke="#9a9a96" strokeWidth={4} strokeLinecap="round" />
-    <path d="M66,22 C71,20 77,21 81,25 M64,30 C70,28 77,29 82,33" fill="none" stroke="#9a9a96" strokeWidth={3.5}
-      strokeLinecap="round" />
+// "unarmed": a clenched fist seen from the front, light grey with ink outlines (drawn here, not game art)
+const FistIcon: React.FC<{size?: number}> = ({size = 104}) => (
+  <svg width={size} height={size} viewBox="0 0 100 100">
+    <g fill="#ecebe7" stroke={INK} strokeWidth={3.6} strokeLinejoin="round">
+      <path d="M30,78 L30,93 L70,93 L70,78 Z" />
+      <path d="M20,40 C20,30 24,24 32,24 L74,24 C81,24 84,30 84,38 L84,62 C84,74 76,82 64,82 L34,82 C24,82 20,74 20,64 Z" />
+      <rect x={22} y={22} width={17} height={24} rx={8} />
+      <rect x={38} y={19} width={17} height={27} rx={8} />
+      <rect x={54} y={20} width={17} height={26} rx={8} />
+      <rect x={69} y={24} width={15} height={23} rx={7.5} />
+      <rect x={24} y={43} width={16} height={17} rx={6} />
+      <rect x={39} y={43} width={16} height={17} rx={6} />
+      <rect x={54} y={43} width={16} height={17} rx={6} />
+      <rect x={69} y={43} width={14} height={16} rx={6} />
+      <path d="M14,56 C14,50 19,48 25,50 L58,58 C64,60 64,70 57,71 L28,72 C19,72 14,66 14,56 Z" />
+    </g>
+    <g fill="none" stroke="#9b9a96" strokeWidth={2.4} strokeLinecap="round">
+      <path d="M27,29 C30,27 33,27 35,29" />
+      <path d="M43,26 C46,24 49,24 51,26" />
+      <path d="M59,27 C62,25 65,25 67,27" />
+      <path d="M30,62 L50,63" />
+    </g>
   </svg>
 );
 
 const TopRight: React.FC<{t: number; frame: number; props: Props}> = ({t, frame, props}) => {
-  // slot: the arm, then the last product picked up (pops in)
+  // slot: the fist, then the last product picked up (pops in)
   let held = -1;
   props.products.forEach((p, i) => {
     if (t >= p.t) held = i;
@@ -233,7 +247,7 @@ const TopRight: React.FC<{t: number; frame: number; props: Props}> = ({t, frame,
         background: 'linear-gradient(#5d5f5c, #2c2d2b)', boxShadow: `0 0 0 5px ${INK}, inset 0 0 0 3px #8a8c88`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'}}>
         {held < 0 ? (
-          <ArmIcon />
+          <FistIcon />
         ) : (
           <Img src={staticFile(props.products[held].img)}
             style={{height: 118, width: 118, objectFit: 'contain', transform: `scale(${0.4 + 0.6 * swap})`,
@@ -323,7 +337,7 @@ const PickupBox: React.FC<{frame: number; products: Props['products']; menuIn: n
 };
 
 // ---------------------------------------------------------------- product wheel at the till
-// GTA V-style selection wheel, no weapons: the three products in the left / top / right slots, the arm ("unarmed")
+// GTA V-style selection wheel, no weapons: the three products in the left / top / right slots, the fist ("unarmed")
 // at the bottom. The highlight walks the products in pickup order, then all three confirm 3 FÖR 2.
 const sector = (r0: number, r1: number, a0: number, a1: number) => {
   // angles in degrees, 0 = up, clockwise
@@ -361,11 +375,11 @@ const ProductWheel: React.FC<{t: number; frame: number; props: Props}> = ({t, fr
   const buyF = Math.round(buyAt * FPS);
   const stamp = bought ? spring({frame: frame - buyF, fps: FPS, config: {damping: 10, stiffness: 220}}) : 0;
   const CX = 540;
-  const CY = 925;
-  const R0 = 185;
-  const R1 = 360;
+  const CY = 890;
+  const R0 = 146;
+  const R1 = 284;
   const GAP = 1.6; // degrees each side of a divider
-  // slots: product i at left / top / right, the arm at the bottom
+  // slots: product i at left / top / right, the fist at the bottom
   const slots = [
     {a: 270, kind: 'p', i: 0},
     {a: 0, kind: 'p', i: 1},
@@ -405,9 +419,9 @@ const ProductWheel: React.FC<{t: number; frame: number; props: Props}> = ({t, fr
           {bought
             ? slots.filter((sl) => sl.kind === 'p').map((sl, k) => (
                 <path key={k} d={arc(R1 + 9, sl.a - 45 + GAP, sl.a + 45 - GAP)} fill="none" stroke="#3f9a3c"
-                  strokeWidth={12} />
+                  strokeWidth={10} />
               ))
-            : <path d={arc(R1 + 9, selA - 45 + GAP, selA + 45 - GAP)} fill="none" stroke="#2f7fd8" strokeWidth={12} />}
+            : <path d={arc(R1 + 9, selA - 45 + GAP, selA + 45 - GAP)} fill="none" stroke="#2f7fd8" strokeWidth={10} />}
           <circle r={R1 + 2} fill="none" stroke="rgba(70,76,84,0.9)" strokeWidth={5} />
           <circle r={R0 - 2} fill="none" stroke="rgba(70,76,84,0.9)" strokeWidth={5} />
           {/* labels under each product */}
@@ -415,7 +429,7 @@ const ProductWheel: React.FC<{t: number; frame: number; props: Props}> = ({t, fr
             if (sl.kind !== 'p') return null;
             const [x, y] = polar((R0 + R1) / 2, sl.a);
             return (
-              <text key={k} x={x} y={y + 74} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={34}
+              <text key={k} x={x} y={y + 60} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={28}
                 fill="#fff" stroke={INK} strokeWidth={5} paintOrder="stroke">
                 3 FÖR 2
               </text>
@@ -424,15 +438,15 @@ const ProductWheel: React.FC<{t: number; frame: number; props: Props}> = ({t, fr
           {/* centre: name, 3 FÖR 2, ‹ n / 3 › */}
           {!bought ? (
             <g>
-              <text y={-38} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={44} fill="#fff"
+              <text y={-30} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={34} fill="#fff"
                 stroke={INK} strokeWidth={6} paintOrder="stroke">
                 {name}
               </text>
-              <text y={22} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={50} fill="#5cc457"
+              <text y={16} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={40} fill="#5cc457"
                 stroke={INK} strokeWidth={6} paintOrder="stroke">
                 3 FÖR 2
               </text>
-              <g transform="translate(0 78)">
+              <g transform="translate(0 62) scale(0.8)">
                 <path d="M-74,-16 L-90,0 L-74,16" fill="none" stroke="#2f7fd8" strokeWidth={8} strokeLinecap="round"
                   strokeLinejoin="round" />
                 <path d="M74,-16 L90,0 L74,16" fill="none" stroke="#2f7fd8" strokeWidth={8} strokeLinecap="round"
@@ -445,7 +459,7 @@ const ProductWheel: React.FC<{t: number; frame: number; props: Props}> = ({t, fr
             </g>
           ) : (
             <g transform={`scale(${stamp})`}>
-              <text y={30} textAnchor="middle" fontFamily={CHUNK} fontWeight={700} fontSize={104} fill={OBJ_YELLOW}
+              <text y={24} textAnchor="middle" fontFamily={CHUNK} fontWeight={700} fontSize={80} fill={OBJ_YELLOW}
                 stroke={INK} strokeWidth={10} paintOrder="stroke" letterSpacing={2}>
                 3 FÖR 2!
               </text>
@@ -453,7 +467,7 @@ const ProductWheel: React.FC<{t: number; frame: number; props: Props}> = ({t, fr
           )}
         </g>
       </svg>
-      {/* product art and the arm, as HTML images over the slots */}
+      {/* product art and the fist, as HTML images over the slots */}
       <div style={{position: 'absolute', left: CX, top: CY, transform: `scale(${0.86 + 0.14 * open})`,
         opacity: Math.min(1, open * 1.6)}}>
         {slots.map((sl, k) => {
@@ -461,18 +475,18 @@ const ProductWheel: React.FC<{t: number; frame: number; props: Props}> = ({t, fr
           const isSel = !bought && k === hi;
           if (sl.kind === 'arm') {
             return (
-              <div key={k} style={{position: 'absolute', left: x - 52, top: y - 52, opacity: 0.9}}>
-                <ArmIcon />
+              <div key={k} style={{position: 'absolute', left: x - 42, top: y - 42, opacity: 0.92}}>
+                <FistIcon size={84} />
               </div>
             );
           }
           const p = products[sl.i];
-          const H = 138;
+          const H = 108;
           return (
-            <div key={k} style={{position: 'absolute', left: x - 75, top: y - H / 2 - 20, width: 150, height: H,
+            <div key={k} style={{position: 'absolute', left: x - 60, top: y - H / 2 - 16, width: 120, height: H,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transform: `scale(${isSel ? 1.08 : 1})`}}>
-              <Img src={staticFile(p.img)} style={{maxHeight: H, maxWidth: 140, objectFit: 'contain',
+              <Img src={staticFile(p.img)} style={{maxHeight: H, maxWidth: 108, objectFit: 'contain',
                 filter: 'drop-shadow(0 5px 6px rgba(0,0,0,0.55))'}} />
             </div>
           );
