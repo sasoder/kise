@@ -1,60 +1,69 @@
 // ---------------------------------------------------------------------------
-// IntelligenceDiluted (rsi-stupidest-species, cut 74). Dwarkesh 3D style (styles/dwarkesh-3d.md).
-// Opaque 1080x1920, 23.976 fps, 101 frames.
-// One stage inside the misty teal air (AirStage, palette A) on a londonDepth one-point perspective, from the kit
-// kits/dwarkesh-3d/dwarkesh3d (its header is the API). No shared module.
+// IntelligenceDiluted (rsi-stupidest-species, cut 74), REVISION 1 (a new idea; notes/rev1_H.md). Dwarkesh 3D style
+// (styles/dwarkesh-3d.md). Opaque 1080x1920, 23.976 fps, 101 frames.
+// The clip's shared BRAIN (./brainShared, W3, read-only) and PELVIS; the stomach and the white blood cell are copies
+// of cut I2's drawings (./TwentyWatts.tsx, read-only), so cuts I1 and I2 pick up the same three pressures.
 //
-// CHECK LINE: "Whatever push evolution gave intelligence got watered down by pressures pulling the other way."
+// CHECK LINE: "Whatever push evolution gave our brains upward, other needs of the body grabbed hold and pulled it back
+//   down."
 //
 // THE LINE: "been diluted by the selection pressures that have opposed greater intelligence. For"
 // WORD -> FRAME: been 1 · diluted 6 · by 19 · the 27 · selection 29 · pressures 35 · that 50 · have 57 · opposed 60 ·
 //   greater 71 · intelligence 85 · For 98
 // DURATION: the slot 74.658 -> 78.870 s (sequence frames 1790-1891) = 101 frames at 24000/1001 (f0..f100).
 //
-// THE MOTION: one plain tall lab glass on a stone plinth holds a modest layer of glowing orange liquid; at f0 the last of an
-// orange trickle is falling into it from above (its tail drops in by ~f10). Two iron pipes reach in from the frame
-// edges above the glass (left lands f7, right f15) and pour a dull petrol-khaki liquid: the level climbs from y ~840 to
-// ~440, dull plumes curl down into the orange where the streams land and orange curls are dragged up into the murk;
-// f35-85 the pours thin and the mixing spreads until the murk wins: the whole volume is a dull olive grey-khaki (pond water) with only a faint warm trace low down;
-// f85-100 the last drips fall and slow swirls keep turning. The camera makes one slow, even push-in (k 1.00 -> 1.032), still creeping at the cut.
-// CAUSE BEFORE EFFECT: every stream is a column of parcels leaving the nozzle at the flow of that instant and falling
-//   under gravity (G 36 px/f^2); the level is the integral of the parcels that have LANDED, so the surface rises only
-//   while a stream touches it. Left pour: valve f7.4, contact ~f12.2 (first ripple, slick and plume the same frame);
-//   right: valve f15.3, contact ~f19.9. Plumes are tracers released at each landing point and carried by the jets'
-//   vortex pairs; the paling (mu) runs while the plumes spread.
-// Orange = INTELLIGENCE (the clip rule): only the orange liquid and its trickle glow. The murk, the iron pipes, the
-// stone plinth and the clear glass are in the style's muted local colours. No text.
+// THE MOTION (revision 1, final): one continuous camera. f0-19 ("been diluted"): close on the brain (~650 px, k 2.1),
+// glowing orange from inside, pushed up by an UPDRAFT with no body of its own: separate comets of orange light rising
+// under it (a bright head at the TOP tapering to nothing below) and a few small upward chevrons, fanning out a little;
+// the camera rises with it. f27-41 ("the selection pressures"): three cream-tan ropes shoot up from below, one after
+// another, each tip carrying a small cream BONE CLIP that bites the brain's lower edge on its hook frame (f35 / f38 /
+// f41); the last one taut arrests the rise and the ropes yank the brain down to a hang (damped, settled ~f52) while the
+// camera pulls back and down (k 1.7 -> 0.88 over f33-52) to show each rope running down to a weight on a low stone
+// block: the STOMACH, the PELVIS, an IMMUNE CELL (pale and lumpy, pseudopod bumps, a lobed purple nucleus); each >= 220
+// px wide from f50, the brain >= 265 px. f56-61 ("opposed"): the brain jerks UP against them (a stretch, the updraft
+// flares, glow and halo swell). f63-71 ("greater"): the first tug down, tilting toward the stomach rope (squash ~14%,
+// tilt ~9 deg); a small give back up; f75-83 ("intelligence"): the second tug wins, tilting toward the cell rope, a
+// damped settle. Over the two tugs the inner glow drops 1.0 -> 0.30 and the halo to half: a dimmer brain held down,
+// still faintly lit. The camera follows down and in a little (k 0.88 -> 0.98). f85-100: living hold: breathing, the
+// ropes quivering; the updraft, squeezed, fades out above the weights.
+// CAUSE BEFORE EFFECT: each rope's tip leaves its weight and travels to its clip point (contact = hook frame, then a
+// damped snap straight); the rise is arrested only when the last rope is taut; each drop follows a tug (the ropes'
+// quiver, the strain and the tilt toward the pulling side run with it).
+// Orange = INTELLIGENCE (the clip rule): only the brain's inner glow and its updraft. Ropes hemp, weights in their
+// earthy local colours (cream bone, muted red-brown stomach, ivory cell with a slate nucleus), plinths stone. No text.
 //
-// DEPTH: the eye at screen row ~150 (looking slightly down into the beaker), dRef 3800 at kRef 1, dolly 0.35, fog by
-//   depth (nothing is deep: the glass Z -236..236, the plinth -300..300). World units = f0 screen px (Y = sy - 1900).
+// DEPTH: a sand floor (Y = 0) receding to a soft horizon; everything that matters on the front plane (Z = 0): the
+// brain, the ropes, the weights (each on a low stone block, top Y -110, Z -70..70, at x -272 / 0 / 272). Eye at Y -480 (above the weights), dRef 2200
+// at kRef 1, dolly 0.4, fog by depth. World X = resolved screen x - 540, floor Y = 0.
 //
-// SOURCES: none (an illustrative lab beaker; no figures on screen).
+// SOURCES: none (no figures on screen). The pressures as the speaker names them next (cuts I1, I2): the birth canal
+//   (pelvis), the brain's energy budget against digestion and immunity.
 // ---------------------------------------------------------------------------
 import React from "react";
-import { random, useCurrentFrame } from "remotion";
+import { Easing, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   ACCENT,
-  ACCENT_DEEP,
+  AIR,
   AirBox,
+  AirFloor,
+  AirHorizonHazeW,
   AirShadow,
   AirStage,
   MAT,
-  ORANGE_LINE,
+  Paint,
   WorldSvg,
   airWorldOf,
   c01,
   lerp,
-  lineOf,
   makeCamera,
-  mixHex,
-  smoothstep,
   swayCam,
   type AirWorld,
   type Cam,
   type DepthOpts,
-  type Persp,
+  type P2,
 } from "../kits/dwarkesh-3d/dwarkesh3d";
+import { Brain, Pelvis, brainBox } from "./brainShared";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 101;
@@ -64,40 +73,133 @@ export const schema = z.object({
 });
 export const defaultProps = schema.parse({});
 
-// ===================================================================================================================
-// THE WORLD (units = f0 screen px; X = sx - 540, Y = sy - 1900, Z depth behind the glass axis)
-// ===================================================================================================================
-export const SY = (sy: number) => sy - 1900;
-export const R_OUT = 258;
-export const R_IN = 248;
-export const Y_RIM = SY(402);
-export const Y_FLOOR = SY(990);
-export const Y_BASE = SY(1013);
-export const DEPTH: DepthOpts = { eyeY: SY(150), dRef: 3800, kRef: 1, dolly: 0.35 };
-const PL = { cap: 304, capH: 34, capZ: 290, shaft: 244, shaftZ: 230 };
-
-// colours (before fog; nothing here is deep)
-const O_SURF = "#FFC03A";
-const M_STREAM = "#73745E";
-const M_STREAM_LIT = "#9A9B85";
-const M_STREAM_LINE = "#47483A";
-const M_LAYER = "#7A7A62";
-const M_SURF = "#87876F";
-const M_PLUME = "#6E6E58";
-/** the end: the murk wins, a dull olive grey-khaki (pond water), only a faint warm trace low down */
-const F = "#7B785F";
-const F_WARM_LOW = "#867657";
-const F_SURF = "#8A876F";
-const GLASS_EDGE = "#2F4A45";
+const PAL = AIR.A;
+const n2 = (v: number) => v.toFixed(2);
+const sstep = (u: number) => {
+  const v = c01(u);
+  return v * v * (3 - 2 * v);
+};
 
 // ===================================================================================================================
-// THE CAMERA: one slow push-in on the glass
+// THE WORLD
 // ===================================================================================================================
+export const DEPTH: DepthOpts = { eyeY: -480, dRef: 2200, kRef: 1, dolly: 0.4 };
+export const PLINTH = { top: -110, hw: 100, z: 70 };
+export const BRAIN_SIZE = 310;
+const BB = brainBox(BRAIN_SIZE);
+/** the three weights (centre x, and what sits on the plinth): each ~250 units wide, so >= 220 px from the reveal on */
+export const WEIGHTS = { stomach: -272, pelvis: 0, cell: 272 };
+const STOM_SCALE = 0.333;
+const STOM_LOCAL_CX = -63;
+const STOM_BOTTOM = 322;
+const PELVIS_W = 262;
+const CELL_SIZE = 325;
+/** where each rope is tied on its weight (world) */
+export const TIE: Record<keyof typeof WEIGHTS, P2> = {
+  stomach: [WEIGHTS.stomach + (92 - STOM_LOCAL_CX) * STOM_SCALE * 0.55, PLINTH.top - STOM_BOTTOM * STOM_SCALE + -360 * STOM_SCALE],
+  pelvis: [WEIGHTS.pelvis, PLINTH.top - 0.44 * PELVIS_W - 0.478 * PELVIS_W + 26],
+  cell: [WEIGHTS.cell, PLINTH.top - 0.94 * 0.37 * CELL_SIZE - 8 - 0.94 * 0.37 * CELL_SIZE + 14],
+};
+
+// ===================================================================================================================
+// TIMING (frames)
+// ===================================================================================================================
+export const T = {
+  ropes: [
+    { key: "stomach" as const, launch: 27, hook: 35 },
+    { key: "pelvis" as const, launch: 30, hook: 38 },
+    { key: "cell" as const, launch: 33, hook: 41 },
+  ],
+  caught: 41, // the last rope is taut: the rise is arrested and the ropes yank the brain down to a hang
+  resist: [56, 61] as const, // "opposed": the brain jerks UP against them, the updraft flares
+  tug1: [63, 71] as const, // "greater": the first pull
+  recover: [71, 75] as const, // a small give back up
+  tug2: [75, 83] as const, // "intelligence": the second pull wins
+};
+
+// ===================================================================================================================
+// THE BRAIN'S PATH (its box centre, world)
+// ===================================================================================================================
+const Y0 = -895;
+const Y_PEAK = -965;
+const Y_C = -850; // hanging on the taut ropes
+const Y_RES = -866;
+const Y_MID = -705;
+const Y_REC = -716;
+export const Y_HELD = -550;
+const tugEase = Easing.bezier(0.55, 0, 0.25, 1);
+const seg = (f: number, [a, b]: readonly [number, number], ease: (u: number) => number = sstep) => ease(c01((f - a) / (b - a)));
+const hump = (f: number, a: number, b: number) => Math.sin(Math.PI * c01((f - a) / (b - a)));
+export const brainAt = (f: number) => {
+  let y: number;
+  if (f <= T.caught) y = Y0 + (Y_PEAK - Y0) * (1 - Math.pow(1 - c01(f / T.caught), 1.45));
+  else {
+    const t = f - T.caught;
+    const pr = 1 - Math.exp(-t / 2.6) * (Math.cos(0.75 * t) + 0.35 * Math.sin(0.75 * t));
+    y = Y_PEAK + (Y_C - Y_PEAK) * pr;
+  }
+  y += (Y_RES - Y_C) * seg(f, T.resist);
+  y += (Y_MID - Y_RES) * seg(f, T.tug1, tugEase);
+  y += (Y_REC - Y_MID) * seg(f, T.recover);
+  y += (Y_HELD - Y_REC) * seg(f, T.tug2, tugEase);
+  const tb = f - T.tug2[1];
+  if (tb > 0) y += 9 * Math.exp(-tb / 3) * Math.sin(tb * 0.9);
+  if (f > 86) y += 4 * Math.sin((f - 86) / 5.5) * c01((f - 86) / 6);
+  // the fight: a stretch up while it resists, a squash and a tilt toward the pulling side on each tug, part of it kept
+  const rs = hump(f, 55, 64);
+  const s1 = hump(f, 63, 74);
+  const s2 = hump(f, 75, 87);
+  const rest = sstep((f - 80) / 7);
+  const strain = Math.max(s1, s2, 0.4 * rest);
+  const sqY = 1 - 0.14 * strain + 0.06 * rs;
+  const sqX = 1 + 0.09 * strain - 0.03 * rs;
+  const rot = 2.5 * rs - 9 * s1 + 8 * s2 * (1 - 0.5 * rest) - 2.5 * rest + 0.8 * Math.sin(f / 9) * rest;
+  const glow = 0.92 + 0.08 * hump(f, 55, 68) - 0.3 * sstep((f - 64) / 8) - 0.32 * sstep((f - 75) / 9);
+  const halo = 1 + 0.9 * hump(f, 55, 68) - 0.25 * sstep((f - 64) / 8) - 0.25 * sstep((f - 75) / 9);
+  const x = -3 * s1 + 3 * s2;
+  return { x, y, strain, glow, halo, rot, sqX, sqY, rs };
+};
+/** where each rope's bone clip bites the brain's lower edge (brain-local, about its centre: x in brain widths, y in
+ *  brain heights), and the clip's lean along the edge's outward normal (deg) */
+const EDGE: Record<keyof typeof WEIGHTS, { p: P2; lean: number }> = {
+  stomach: { p: [-0.27, 0.27], lean: 24 },
+  pelvis: { p: [0.02, 0.36], lean: 0 },
+  cell: { p: [0.27, 0.26], lean: -20 },
+};
+const CLIP = { half: 13, ring: 21 };
+const toWorld = (b: ReturnType<typeof brainAt>, [lx, ly]: P2): P2 => {
+  const px = lx * b.sqX;
+  const py = ly * b.sqY;
+  const a = (b.rot * Math.PI) / 180;
+  return [b.x + px * Math.cos(a) - py * Math.sin(a), b.y + px * Math.sin(a) + py * Math.cos(a)];
+};
+const edgeLocal = (key: keyof typeof WEIGHTS): P2 => [EDGE[key].p[0] * BRAIN_SIZE, EDGE[key].p[1] * BB.h];
+/** the clip on the edge (world) and the angle it hangs at */
+export const clipAt = (key: keyof typeof WEIGHTS, f: number) => {
+  const b = brainAt(f);
+  const e = edgeLocal(key);
+  return { p: toWorld(b, e), ang: b.rot + EDGE[key].lean };
+};
+/** the rope's end: the ring under the clip */
+export const hookAt = (key: keyof typeof WEIGHTS, f: number): P2 => {
+  const c = clipAt(key, f);
+  const a = (c.ang * Math.PI) / 180;
+  return [c.p[0] - Math.sin(a) * CLIP.ring, c.p[1] + Math.cos(a) * CLIP.ring];
+};
+
+// ===================================================================================================================
+// THE CAMERA: close on the rising brain, pull back and down to the weights, then follow the fight down and in
+// ===================================================================================================================
+const K = (f: number, k: number, wy: number, sy: number) => ({ f, k, wx: 0, wy, sx: 540, sy });
 export const camAt = makeCamera(
   [
-    { f: 0, k: 1.0, wx: 0, wy: SY(745), sy: 745 },
-    { f: 50, k: 1.018, wx: 0, wy: SY(742), sy: 751 },
-    { f: 100, k: 1.032, wx: 0, wy: SY(738), sy: 752 },
+    K(0, 2.1, Y0, 812),
+    K(19, 1.95, -942, 814),
+    K(33, 1.72, -952, 820),
+    K(52, 0.88, -226, 960),
+    K(62, 0.885, -230, 960),
+    K(85, 0.98, -197, 960),
+    K(100, 0.99, -195, 960),
   ],
   false,
 );
@@ -105,403 +207,331 @@ export const camOf = (f: number): Cam => swayCam(camAt(f), f);
 const REST = camOf(0);
 
 // ===================================================================================================================
-// THE POUR: sources, parcels under gravity, the level as the integral of what has landed
+// GEOMETRY HELPERS (copies of cut I2's)
 // ===================================================================================================================
-const G = 36;
-const V0 = 10;
-const dropOf = (a: number) => V0 * a + 0.5 * G * a * a;
-const ageOfDrop = (d: number) => (-V0 + Math.sqrt(V0 * V0 + 2 * G * Math.max(0, d))) / G;
-/** a falling jet narrows as it speeds up (continuity), softened so the stream keeps body */
-const widthFac = (a: number) => Math.sqrt((V0 + 24) / (V0 + G * a + 24));
-const ease = (u: number) => {
-  const v = c01(u);
-  return v * v * (3 - 2 * v);
+const pt3 = (p: P2) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`;
+const smoothClosed = (q: P2[], t = 1 / 6) => {
+  const n = q.length;
+  let d = `M${pt3(q[0])}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = q[(i - 1 + n) % n];
+    const p1 = q[i];
+    const p2 = q[(i + 1) % n];
+    const p3 = q[(i + 2) % n];
+    d += `C${pt3([p1[0] + (p2[0] - p0[0]) * t, p1[1] + (p2[1] - p0[1]) * t])} ${pt3([p2[0] - (p3[0] - p1[0]) * t, p2[1] - (p3[1] - p1[1]) * t])} ${pt3(p2)}`;
+  }
+  return `${d}Z`;
+};
+const crSample = (q: P2[], N = 60): P2[] => {
+  const n = q.length;
+  return Array.from({ length: N + 1 }, (_, j) => {
+    const s = Math.min(n - 1.0001, (j / N) * (n - 1));
+    const i = Math.floor(s);
+    const t = s - i;
+    const p0 = q[Math.max(0, i - 1)];
+    const p1 = q[i];
+    const p2 = q[i + 1];
+    const p3 = q[Math.min(n - 1, i + 2)];
+    const t2 = t * t;
+    const t3 = t2 * t;
+    const c = (a: number, b: number, cc: number, d: number) => 0.5 * (2 * b + (-a + cc) * t + (2 * a - 5 * b + 4 * cc - d) * t2 + (-a + 3 * b - 3 * cc + d) * t3);
+    return [c(p0[0], p1[0], p2[0], p3[0]), c(p0[1], p1[1], p2[1], p3[1])] as P2;
+  });
+};
+const tubeD = (q: P2[], w: (u: number) => number, N = 60, round = true) => {
+  const pts = crSample(q, N);
+  const L: P2[] = [];
+  const R: P2[] = [];
+  pts.forEach((p, i) => {
+    const a = pts[Math.max(0, i - 1)];
+    const b = pts[Math.min(N, i + 1)];
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const l = Math.hypot(dx, dy) || 1;
+    const hw = w(i / N) / 2;
+    L.push([p[0] - (dy / l) * hw, p[1] + (dx / l) * hw]);
+    R.push([p[0] + (dy / l) * hw, p[1] - (dx / l) * hw]);
+  });
+  const r0 = w(0) / 2;
+  const r1 = w(1) / 2;
+  const Rr = [...R].reverse();
+  if (!round) return `M${[...L, ...Rr].map(pt3).join("L")}Z`;
+  return `M${L.map(pt3).join("L")}A${n2(r1)},${n2(r1)} 0 0 0 ${pt3(Rr[0])}L${Rr.map(pt3).join("L")}A${n2(r0)},${n2(r0)} 0 0 0 ${pt3(L[0])}Z`;
 };
 
-export type PipeDef = { side: -1 | 1; Xn: number; Yp: number; tip: number; slide: [number, number]; D: number; open: number; slow: number; stop: number; drips: number[] };
-export const PIPES: PipeDef[] = [
-  { side: -1, Xn: -124, Yp: SY(318), tip: SY(376), slide: [-5, 7], D: 470, open: 7.4, slow: 33, stop: 82, drips: [88, 95.5] },
-  { side: 1, Xn: 120, Yp: SY(336), tip: SY(378), slide: [2, 15], D: 540, open: 15.3, slow: 37, stop: 85, drips: [91] },
+// ===================================================================================================================
+// THE STOMACH (a copy of cut I2's drawing, unlit, a slow living churn)
+// ===================================================================================================================
+const STOM_OUT: P2[] = [
+  [-40, -300],
+  [-60, -205],
+  [-112, -95],
+  [-195, -15],
+  [-292, 26],
+  [-372, 40],
+  [-405, 74],
+  [-398, 132],
+  [-300, 172],
+  [-150, 202],
+  [20, 192],
+  [172, 132],
+  [272, 22],
+  [312, -118],
+  [292, -250],
+  [212, -340],
+  [92, -372],
+  [16, -340],
 ];
-export const RP = 18;
-const RB = 24;
-const W_MURK = 28;
-/** the pipe's slide in from its frame edge (world px; 0 = home) */
-export const pipeDx = (p: PipeDef, t: number) => p.side * p.D * (1 - ease((t - p.slide[0]) / (p.slide[1] - p.slide[0])));
-/** the flow 0..1 leaving the nozzle at time t: a fast valve, a steady pour, then a thinning to nothing */
-export const pipeQ = (p: PipeDef, t: number) => {
-  if (t <= p.open || t >= p.stop) return 0;
-  const rise = ease((t - p.open) / 0.8);
-  const fall = t < p.slow ? 1 : Math.pow(1 - (t - p.slow) / (p.stop - p.slow), 2);
-  return rise * fall;
-};
-/** the orange trickle: from above the frame, already running at f0, cut off at the source f1.2-3.2 */
-export const ORANGE = { X: 10, tip: SY(-300), W: 15 };
-export const orangeQ = (t: number) => 1 - ease((t - 1.2) / 2);
-const ORANGE_RATE = 2.3;
-const VO0 = 150;
-const MURK_TOTAL = 382;
-
-const T0 = -24;
-const DT = 0.05;
-const NS = Math.round((106 - T0) / DT);
-type Sim = { V: Float64Array; Vo: Float64Array; QL: Float64Array[]; qmax: number; contact: number[]; tailLand: number[]; orangeTail: number; dripLand: number[][] };
-const SIM: Sim = (() => {
-  // the murk rate per unit flow, so the whole pour adds MURK_TOTAL px of level
-  let integ = 0;
-  for (let i = 0; i <= NS; i++) for (const p of PIPES) integ += pipeQ(p, T0 + i * DT) * DT;
-  const qmax = MURK_TOTAL / integ;
-  const V = new Float64Array(NS + 1);
-  const Vo = new Float64Array(NS + 1);
-  const QL = PIPES.map(() => new Float64Array(NS + 1));
-  const queues: { tau: number; vol: number; q: number }[][] = [[], [], []];
-  const contact = PIPES.map(() => Infinity);
-  const tailLand = PIPES.map(() => -Infinity);
-  let orangeTail = -Infinity;
-  let v = VO0;
-  let vo = VO0;
-  for (let i = 0; i <= NS; i++) {
-    const t = T0 + i * DT;
-    PIPES.forEach((p, s) => {
-      const q = pipeQ(p, t);
-      if (q > 0) queues[s].push({ tau: t, vol: qmax * q * DT, q });
-    });
-    const qo = orangeQ(t);
-    if (qo > 0.001) queues[2].push({ tau: t, vol: ORANGE_RATE * qo * DT, q: qo });
-    const ys = Y_FLOOR - v;
-    PIPES.forEach((p, s) => {
-      const Q = queues[s];
-      while (Q.length && p.tip + dropOf(t - Q[0].tau) >= ys) {
-        const c = Q.shift()!;
-        v += c.vol;
-        QL[s][i] += c.q;
-        if (contact[s] === Infinity) contact[s] = t;
-        tailLand[s] = t;
-      }
-    });
-    const Qo = queues[2];
-    while (Qo.length && ORANGE.tip + dropOf(t - Qo[0].tau) >= ys) {
-      const c = Qo.shift()!;
-      if (t >= 0) {
-        v += c.vol;
-        vo += c.vol;
-      }
-      orangeTail = t;
-    }
-    V[i] = v;
-    Vo[i] = vo;
-  }
-  // the landing flow, smoothed over one frame (parcels land in a lumpy cadence while the level moves)
-  const QLs = QL.map((a) => {
-    const out = new Float64Array(a.length);
-    const h = Math.round(0.5 / DT);
-    for (let i = 0; i < a.length; i++) {
-      let s = 0;
-      let n = 0;
-      for (let j = i - h; j <= i + h; j++) if (j >= 0 && j < a.length) {
-        s += a[j];
-        n++;
-      }
-      out[i] = s / n;
-    }
-    return out;
-  });
-  // drips: a bead swells on the nozzle for 3 frames, lets go at td and falls to the surface
-  const dripLand = PIPES.map((p) =>
-    p.drips.map((td) => {
-      for (let t = td; t < 110; t += DT) {
-        const i = Math.min(NS, Math.max(0, Math.round((t - T0) / DT)));
-        if (p.tip + dropOf(t - td) >= Y_FLOOR - V[i]) return t;
-      }
-      return Infinity;
-    }),
-  );
-  return { V, Vo, QL: QLs, qmax, contact, tailLand, orangeTail, dripLand };
-})();
-export { SIM };
-const sampleArr = (a: Float64Array, t: number) => {
-  const x = c01((t - T0) / (NS * DT)) * NS;
-  const i = Math.min(NS - 1, Math.floor(x));
-  return lerp(a[i], a[i + 1], x - i);
-};
-/** the surface's world Y (its row on the glass axis) */
-export const levelY = (t: number) => Y_FLOOR - sampleArr(SIM.V, t);
-/** the top of the orange layer (the interface's row on the axis) */
-export const interfaceY = (t: number) => Y_FLOOR - sampleArr(SIM.Vo, t);
-/** the normalised flow landing from pipe s now */
-export const landQ = (s: number, t: number) => sampleArr(SIM.QL[s], t);
-
-/** the dilution: how far the volume has gone to one murky colour (0 bright orange under murk .. 1 mixed) */
-export const muAt = (t: number) => {
-  const u = c01((t - 22) / (88 - 22));
-  return 0.5 - 0.5 * Math.cos(Math.PI * Math.pow(u, 0.9));
+const ESO: P2[] = [
+  [-14, -312],
+  [-22, -380],
+  [-40, -440],
+];
+const GUT: P2[] = [
+  [-388, 112],
+  [-438, 214],
+  [-352, 300],
+  [-150, 322],
+  [60, 300],
+  [176, 238],
+  [150, 150],
+];
+const RUGAE: P2[][] = [
+  [
+    [-300, 120],
+    [-150, 150],
+    [20, 140],
+    [160, 80],
+    [240, -30],
+  ],
+  [
+    [-200, 60],
+    [-60, 90],
+    [90, 60],
+    [190, -40],
+    [220, -150],
+  ],
+];
+const STOM_INK = { body: "#B07463", eso: "#A0675A", gut: "#C29A84", ruga: "#8E5648", rim: "#F3EBDD" };
+const Stomach: React.FC<{ x: number; y: number; scale: number; uid: string; unitPx: number; f: number; tug: number }> = ({ x, y, scale, uid, unitPx, f, tug }) => {
+  const ch = 0.012 * Math.sin((2 * Math.PI * f) / 26);
+  // a slight lift toward the rope while it pulls
+  const sq = (p: P2): P2 => [p[0] * (1 + ch), p[1] * (1 - ch * 0.8) - tug * 10 * c01((-p[1] - 100) / 300)];
+  const shapes: Paint.Shape[] = [
+    { d: tubeD(ESO.map(sq), () => 78, 20), fill: STOM_INK.eso, sh: 2.4 },
+    { d: tubeD(GUT, (u) => 74 - 8 * u, 90), fill: STOM_INK.gut, sh: 3 },
+    { d: smoothClosed(STOM_OUT.map(sq)), fill: STOM_INK.body, sh: 4 },
+  ];
+  for (const r of RUGAE) shapes.push({ d: tubeD(r.map(sq), (u) => 15 * Math.pow(Math.sin(Math.PI * u), 0.6) + 0.5, 40, false), fill: STOM_INK.ruga, sh: 0, op: 0.45 });
+  shapes.push({ d: tubeD([[264, -120], [262, -236], [200, -320], [100, -350]].map((p) => sq(p as P2)), (u) => 13 * Math.pow(Math.sin(Math.PI * u), 0.6) + 0.5, 30, false), fill: STOM_INK.rim, sh: 0, op: 0.45 });
+  const px = Math.max(0.2, (900 * scale * unitPx) / 520);
+  return <Paint.FolkPaint shapes={shapes} x={x} y={y} scale={scale} uid={uid} px={px} unitPx={unitPx} />;
 };
 
 // ===================================================================================================================
-// GEOMETRY HELPERS
+// THE WHITE BLOOD CELL (a copy of cut I2's drawing, unlit, living lobes)
 // ===================================================================================================================
-const Pt = (v: [number, number]) => `${v[0].toFixed(2)},${v[1].toFixed(2)}`;
-type Ell = { cx: number; cy: number; rx: number; ry: number };
-/** a horizontal circle of radius R at height Y around the glass axis, projected */
-export const ellOf = (P: Persp, Y: number, R: number): Ell => {
-  const f = P.p(0, Y, -R);
-  const b = P.p(0, Y, R);
-  const c = P.p(0, Y, 0);
-  return { cx: c[0], cy: (f[1] + b[1]) / 2, rx: R * P.r(0), ry: Math.abs(f[1] - b[1]) / 2 };
-};
-const L = (e: Ell): [number, number] => [e.cx - e.rx, e.cy];
-const Rt = (e: Ell): [number, number] => [e.cx + e.rx, e.cy];
-const A0 = (e: Ell, sweep: 0 | 1, to: [number, number]) => `A${e.rx.toFixed(2)},${e.ry.toFixed(2)} 0 0 ${sweep} ${Pt(to)}`;
-/** the front arc's row at x (screen-world x) */
-const frontY = (e: Ell, x: number) => e.cy + e.ry * Math.sqrt(c01(1 - Math.pow((x - e.cx) / e.rx, 2)));
-/** a cylinder silhouette between two rings (top ring fully, bottom ring's front arc) */
-const silhouette = (top: Ell, bot: Ell) => `M${Pt(L(top))}L${Pt(L(bot))}${A0(bot, 0, Rt(bot))}L${Pt(Rt(top))}${A0(top, 0, L(top))}Z`;
-/** the body below a ring's front arc down to the bottom ring's front arc */
-const bodyBelow = (top: Ell, bot: Ell) => `M${Pt(L(top))}${A0(top, 0, Rt(top))}L${Pt(Rt(bot))}${A0(bot, 1, L(bot))}Z`;
-const ellD = (e: Ell) => `M${Pt(L(e))}${A0(e, 0, Rt(e))}${A0(e, 0, L(e))}Z`;
-
-// ===================================================================================================================
-// THE MIXING: tracers in a flow of vortex pairs under each landing jet plus one slow stirring cell
-// ===================================================================================================================
-const VX = { sink: 5, d0: 20, dGrow: 85, dTau: 20, gam: 1500, gTau: 36, a0: 12, aGrow: 0.45, jet: 5, jetDecay: 60 };
-type Pair = { s: number; tb: number; x: number; y0: number; dTot: number; q: number };
-const PAIRS: Pair[] = (() => {
-  const out: Pair[] = [];
-  PIPES.forEach((p, s) => {
-    for (let tb = SIM.contact[s] + 0.4; tb < p.stop; tb += 7) {
-      const q = landQ(s, tb);
-      if (q < 0.18) continue;
-      const y0 = levelY(tb) + 14;
-      const target = Math.min(Y_FLOOR - 60, interfaceY(tb) + 140);
-      out.push({ s, tb, x: p.Xn, y0, dTot: Math.max(40, (target - y0) * Math.sqrt(q)), q });
-    }
-  });
-  return out;
-})();
-const cellAmp = (t: number) => 1.0 * smoothstep(14, 46, t) * (1 - 0.5 * smoothstep(70, 100, t));
-const CELL = { yT: SY(470), yB: Y_FLOOR - 4 };
-/** the flow (world px per frame) at (x, y) and time t; buoy: an extra lift for the orange curls */
-const flowAt = (x: number, y: number, t: number): [number, number] => {
-  let u = 0;
-  let v = 0;
-  for (const pr of PAIRS) {
-    const age = t - pr.tb;
-    if (age < 0 || age > 70) continue;
-    const yc = pr.y0 + pr.dTot * (1 - Math.exp((-age * VX.sink) / pr.dTot));
-    const d = VX.d0 + VX.dGrow * (1 - Math.exp(-age / VX.dTau));
-    const gam = VX.gam * pr.q * Math.exp(-age / VX.gTau) * smoothstep(0, 2, age);
-    const a2 = Math.pow(VX.a0 + VX.aGrow * age, 2);
-    for (const sg of [-1, 1]) {
-      const dx = x - (pr.x + sg * d);
-      const dy = y - yc;
-      const r2 = dx * dx + dy * dy + 1e-3;
-      const f = (1 - Math.exp(-r2 / a2)) / (2 * Math.PI * r2);
-      const g = -sg * gam; // left (sg -1) +, right -: down between them
-      u += -g * dy * f;
-      v += g * dx * f;
-    }
-  }
-  // the jets' own push below each landing point
-  PIPES.forEach((p, s) => {
-    const q = landQ(s, t);
-    if (q <= 0.001) return;
-    const ys = levelY(t);
-    v += VX.jet * q * Math.exp(-Math.pow((x - p.Xn) / 13, 2)) * Math.exp(-Math.max(0, y - ys) / VX.jetDecay);
-  });
-  // one slow stirring cell (clockwise), the living hold
-  const A = cellAmp(t);
-  if (A > 0) {
-    const xi = (x + R_IN) / (2 * R_IN);
-    const eta = c01((y - CELL.yT) / (CELL.yB - CELL.yT));
-    const H = CELL.yB - CELL.yT;
-    u += A * Math.sin(Math.PI * xi) * Math.cos(Math.PI * eta);
-    v += -A * (H / (2 * R_IN)) * Math.cos(Math.PI * xi) * Math.sin(Math.PI * eta);
-  }
-  return [u, v];
-};
-
-type Tracer = { t0: number; x0: number; y0: number; kind: 0 | 1; r0: number; line: number; pos: Float32Array };
-const TR_DT = 0.25;
-const TURB_AMP = 1.6;
-const DOT_GROW = 0.9;
-const TRACERS: Tracer[] = (() => {
-  const list: Omit<Tracer, "pos">[] = [];
-  let line = 0;
-  PIPES.forEach((p, s) => {
-    // the murk: two streaklines per jet, either side of its axis, released where the stream lands
-    let n = 0;
-    for (let t = SIM.contact[s] + 0.25; t < SIM.tailLand[s]; t += 0.5) {
-      const q = landQ(s, t);
-      if (q < 0.04) continue;
-      const aLand = ageOfDrop(levelY(t) - p.tip);
-      const w = W_MURK * Math.sqrt(q) * widthFac(aLand);
-      list.push({ t0: t, x0: p.Xn + (random(`m${s}-${n++}`) - 0.5) * 0.7 * w, y0: levelY(t) + 3, kind: 0, r0: 0.5 * w + 2, line });
-    }
-    line++;
-    // drips: a little puff each
-    SIM.dripLand[s].forEach((tl) => {
-      for (let k = 0; k < 6; k++) list.push({ t0: tl + k * 0.25, x0: p.Xn, y0: levelY(tl) + 3, kind: 0, r0: 3.5, line });
-      line++;
-    });
-  });
-  const out: Tracer[] = list.map((tr) => ({ ...tr, pos: new Float32Array(2 * (DURATION + 2)).fill(NaN) }));
-  const xs = out.map((tr) => tr.x0);
-  const ys = out.map((tr) => tr.y0);
-  const born = out.map(() => false);
-  const TURB = out.map((_, i) => [6.28 * random(`ta${i}`), 6.28 * random(`tb${i}`), 0.05 + 0.08 * random(`tc${i}`), 0.05 + 0.08 * random(`td${i}`)]);
-  const clampTo = (i: number, t: number) => {
-    const lim = R_IN - 9;
-    xs[i] = Math.max(-lim, Math.min(lim, xs[i]));
-    ys[i] = Math.max(levelY(t) + 4, Math.min(Y_FLOOR - 7, ys[i]));
-  };
-  const step = (i: number, t: number, h: number) => {
-    const tr = out[i];
-    const age = t - tr.t0;
-    const lift = 0;
-    // a smooth per-tracer eddy drift (the plume's turbulence), growing as it spreads, calming as the pour slows
-    const ph = TURB[i];
-    const ta = TURB_AMP * Math.min(1, age / 10) * (1 - 0.6 * smoothstep(60, 95, t));
-    const tu = ta * Math.sin(ph[0] + t * ph[2]);
-    const tv = 0.6 * ta * Math.sin(ph[1] + t * ph[3]);
-    const [u1, v1] = flowAt(xs[i], ys[i], t);
-    const xm = xs[i] + 0.5 * h * (u1 + tu);
-    const ym = ys[i] + 0.5 * h * (v1 + lift + tv);
-    const [u2, v2] = flowAt(xm, ym, t + 0.5 * h);
-    xs[i] += h * (u2 + tu);
-    ys[i] += h * (v2 + lift + tv);
-    clampTo(i, t + h);
-  };
-  const tStart = Math.floor(Math.min(...out.map((tr) => tr.t0))) - 1;
-  const perFrame = Math.round(1 / TR_DT);
-  for (let n = 0; tStart + n * TR_DT <= DURATION + 1; n++) {
-    const t = tStart + n * TR_DT;
-    for (let i = 0; i < out.length; i++) {
-      const tr = out[i];
-      if (!born[i]) {
-        if (tr.t0 > t + TR_DT) continue;
-        born[i] = true;
-        // first (partial) step from its own release time
-        const h = t + TR_DT - tr.t0;
-        if (h > 0) step(i, tr.t0, h);
-        continue;
-      }
-      step(i, t, TR_DT);
-    }
-    // record at integer frames
-    if ((n + 1) % perFrame === 0) {
-      const fi = tStart + (n + 1) / perFrame;
-      if (fi >= 0 && fi <= DURATION + 1)
-        for (let i = 0; i < out.length; i++) if (born[i]) {
-          out[i].pos[2 * fi] = xs[i];
-          out[i].pos[2 * fi + 1] = ys[i];
-        }
-    }
+const CELL_INK = { body: "#DDD6C8", nucleus: "#8C7FAA", rim: "#F6EEDC" };
+const cellOutline = (f: number, reach: number): P2[] => {
+  const N = 64;
+  const out: P2[] = [];
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * 2 * Math.PI;
+    const lobes = 0.025 * Math.sin(2 * a + 0.9 + f / 17) + (0.03 + 0.03 * reach) * Math.sin(7 * a + 2.1 - f / 13) + 0.015 * Math.sin(11 * a - f / 9);
+    const pod = (c: number, wd: number) => Math.exp(-Math.pow(Math.atan2(Math.sin(a - c), Math.cos(a - c)) / wd, 2));
+    const live = (ph: number) => 1 + 0.12 * Math.sin(f / 10 + ph);
+    const pods = (0.05 + 0.09 * reach) * live(0) * pod(-0.8, 0.3) + (0.04 + 0.08 * reach) * live(2) * pod(1.4, 0.3) + (0.05 + 0.08 * reach) * live(4) * pod(3.6, 0.32);
+    const r = 370 * (1 + lobes + pods);
+    out.push([r * Math.cos(a), r * Math.sin(a) * 0.94]);
   }
   return out;
-})();
-export { TRACERS };
-
-// ===================================================================================================================
-// THE STREAMS
-// ===================================================================================================================
-type StreamSpec = { X: number; tip: number; W: number; q: (t: number) => number; tStart: number; tEnd: number };
-/** a stream's outline at frame t: parcels from release tau (nozzle) down to the surface or its falling head */
-const streamPath = (sp: StreamSpec, t: number, ys: number, wob: number) => {
-  const aSurf = ageOfDrop(ys - sp.tip);
-  const tauLo = Math.max(sp.tStart, t - aSurf);
-  const tauHi = Math.min(t, sp.tEnd);
-  if (tauHi <= tauLo) return null;
-  const N = 48;
-  const left: [number, number][] = [];
-  const right: [number, number][] = [];
-  let maxW = 0;
-  for (let i = 0; i <= N; i++) {
-    const tau = lerp(tauHi, tauLo, i / N);
-    const a = t - tau;
-    const y = Math.min(ys, sp.tip + dropOf(a));
-    const w = sp.W * Math.sqrt(sp.q(tau)) * widthFac(a);
-    maxW = Math.max(maxW, w);
-    const xo = wob * Math.sin(y * 0.045 + t * 0.9) * Math.min(1, a / 1.2);
-    left.push([sp.X + xo - w / 2, y]);
-    right.push([sp.X + xo + w / 2, y]);
-  }
-  if (maxW < 0.6) return null;
-  const hitsSurface = t - tauLo >= aSurf - 1e-6;
-  const body = `M${left.map(Pt).join("L")}L${right.reverse().map(Pt).join("L")}Z`;
-  const headY = left[left.length - 1][1];
-  const headW = right[0][0] - left[left.length - 1][0];
-  return { body, hitsSurface, headY, headW, x: sp.X, left, right };
+};
+const nucleusD = (f: number) => {
+  const run: P2[] = [
+    [-175, 95],
+    [-120, -40],
+    [10, -120],
+    [160, -110],
+  ];
+  const wob = (q: P2[]) => q.map((p, i) => [p[0] + 5 * Math.sin(f / 15 + i), p[1] + 5 * Math.cos(f / 19 + i)] as P2);
+  return tubeD(wob(run), (u) => 72 + 118 * Math.pow(Math.abs(Math.sin(3 * Math.PI * (0.05 + 0.9 * u))), 0.7), 90);
+};
+const Cell: React.FC<{ x: number; y: number; size: number; uid: string; unitPx: number; f: number }> = ({ x, y, size, uid, unitPx, f }) => {
+  const scale = size / 1000;
+  const outline = cellOutline(f, 0.75);
+  const bodyD = smoothClosed(outline);
+  const shapes: Paint.Shape[] = [{ d: bodyD, fill: CELL_INK.body, sh: 4 }];
+  shapes.push({ d: nucleusD(f), fill: CELL_INK.nucleus, sh: 1.4 });
+  const rimRun = outline.slice(Math.round(outline.length * 0.53), Math.round(outline.length * 0.8)).map((p) => [p[0] * 0.965, p[1] * 0.965] as P2);
+  shapes.push({ d: tubeD(rimRun, (u) => 16 * Math.pow(Math.sin(Math.PI * u), 0.6) + 0.5, 40, false), fill: CELL_INK.rim, sh: 0, op: 0.6 });
+  const px = Math.max(0.2, (size * unitPx) / 520);
+  return <Paint.FolkPaint shapes={shapes} x={x} y={y} scale={scale} uid={uid} px={px} unitPx={unitPx} />;
 };
 
-const murkSpec = (p: PipeDef): StreamSpec => ({ X: p.Xn, tip: p.tip, W: W_MURK, q: (tau) => pipeQ(p, tau), tStart: p.open, tEnd: p.stop });
-const orangeSpec: StreamSpec = { X: ORANGE.X, tip: ORANGE.tip, W: ORANGE.W, q: orangeQ, tStart: -40, tEnd: 3.2 };
-
-const Stream: React.FC<{ sp: StreamSpec; t: number; ys: number; fill: string; lit: string; line: string; uid: string; lw: number }> = ({ sp, t, ys, fill, lit, line, lw }) => {
-  const s = streamPath(sp, t, ys, 0.9);
-  if (!s) return null;
-  // the sheen: a narrower band on the lit (left) side
-  const sheen = `M${s.left.map((q, i) => Pt([q[0] + 0.18 * (s.right[s.right.length - 1 - i][0] - q[0]), q[1]])).join("L")}L${s.left
-    .slice()
-    .reverse()
-    .map((q, i) => {
-      const rr = s.right[i][0];
-      return Pt([q[0] + 0.42 * (rr - q[0]), q[1]]);
-    })
-    .join("L")}Z`;
+// ===================================================================================================================
+// THE ROPES: hemp cords from each weight's tie to a hook under the brain
+// ===================================================================================================================
+const HEMP = { edge: "#6E5E44", body: "#CDBB92", lit: "#EDE2C6" };
+const ROPE_W = 13;
+/** the rope's run at frame f: null before launch; the tip travels from the tie to the hook, then it snaps taut */
+export const ropeAt = (i: number, f: number): P2[] | null => {
+  const r = T.ropes[i];
+  if (f < r.launch) return null;
+  const tie = TIE[r.key];
+  const hook = hookAt(r.key, f);
+  const u = c01((f - r.launch) / (r.hook - r.launch));
+  const e = 1 - Math.pow(1 - u, 2.2);
+  const tip: P2 = [lerp(tie[0], hook[0], e), lerp(tie[1], hook[1], e)];
+  // slack while flying (bellied sideways), then a damped snap to straight; a quiver under tension
+  const since = f - r.hook;
+  const slack = since < 0 ? 0.07 * Math.sin(Math.PI * Math.min(1, u * 1.3)) + 0.02 : 0.07 * Math.exp(-since / 3.2) * Math.cos(since * 1.9);
+  const pulling = Math.max(hump(f, 54, 66), hump(f, 62, 74), hump(f, 74, 86), 0.4 * sstep((f - 80) / 6));
+  const quiver = since < 0 ? 0 : (1.2 + 2.2 * pulling) * Math.sin(f * 1.15 + i * 1.7);
+  const dx = tip[0] - tie[0];
+  const dy = tip[1] - tie[1];
+  const L = Math.hypot(dx, dy) || 1;
+  const nx = -dy / L;
+  const ny = dx / L;
+  const side = i === 1 ? 1 : i === 0 ? -1 : 1;
+  const N = 24;
+  return Array.from({ length: N + 1 }, (_, j) => {
+    const s = j / N;
+    const off = side * slack * L * Math.sin(Math.PI * s) + quiver * Math.sin(Math.PI * s);
+    return [tie[0] + dx * s + nx * off, tie[1] + dy * s + ny * off] as P2;
+  });
+};
+/** the strand grooves: short slanted strokes every ~0.7 cord widths, measured from the tie (so they do not crawl) */
+const layD = (q: P2[], w = ROPE_W) => {
+  const step = w * 0.72;
+  const hw = w * 0.42;
+  let d = "";
+  let next = step * 0.5;
+  let acc = 0;
+  for (let i = 1; i < q.length; i++) {
+    const [ax, ay] = q[i - 1];
+    const [bx, by] = q[i];
+    const l = Math.hypot(bx - ax, by - ay);
+    if (l < 1e-6) continue;
+    const tx = (bx - ax) / l;
+    const ty = (by - ay) / l;
+    while (next <= acc + l) {
+      const s = next - acc;
+      const px = ax + tx * s;
+      const py = ay + ty * s;
+      d += `M${n2(px - ty * hw - tx * hw * 0.8)},${n2(py + tx * hw - ty * hw * 0.8)}L${n2(px + ty * hw + tx * hw * 0.8)},${n2(py - tx * hw + ty * hw * 0.8)}`;
+      next += step;
+    }
+    acc += l;
+  }
+  return d || "M0,0";
+};
+const Rope: React.FC<{ q: P2[]; lw: number }> = ({ q, lw }) => {
+  const d = `M${q.map(pt3).join("L")}`;
   return (
-    <g>
-      <path d={s.body} fill={fill} stroke={line} strokeWidth={lw} strokeOpacity={0.55} strokeLinejoin="round" />
-      <path d={sheen} fill={lit} opacity={0.5} />
-      {!s.hitsSurface && s.headW > 1 ? <ellipse cx={s.x} cy={s.headY} rx={s.headW * 0.55} ry={s.headW * 0.62} fill={fill} /> : null}
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} stroke={HEMP.edge} strokeWidth={ROPE_W + lw * 1.6} />
+      <path d={d} stroke={HEMP.body} strokeWidth={ROPE_W} />
+      {/* the lay of the strands: slanted grooves along the cord */}
+      <path d={layD(q)} stroke={HEMP.edge} strokeWidth={ROPE_W * 0.16} strokeOpacity={0.5} />
+      <path d={d} stroke={HEMP.lit} strokeWidth={ROPE_W * 0.3} strokeOpacity={0.7} transform={`translate(${n2(-ROPE_W * 0.18)} ${n2(-ROPE_W * 0.2)})`} />
     </g>
   );
 };
-
-// ===================================================================================================================
-// THE PIPES
-// ===================================================================================================================
-const pipeCenterline = (p: PipeDef) => {
-  const s = p.side;
-  const x0 = p.Xn + s * 1600;
-  const xe = p.Xn + s * RB;
-  const bend = `A${RB},${RB} 0 0 ${s === -1 ? 1 : 0} ${Pt([p.Xn, p.Yp + RB])}`;
-  return `M${Pt([x0, p.Yp])}L${Pt([xe, p.Yp])}${bend}L${Pt([p.Xn, p.tip - 10])}`;
-};
-const IronPipe: React.FC<{ A: AirWorld; p: PipeDef; dx: number; uid: string; bead: number }> = ({ A, p, dx, uid, bead }) => {
-  const m = MAT.iron;
-  const h = -p.Yp;
-  const t = (hex: string) => A.tone(hex, 0, h);
-  const d = pipeCenterline(p);
-  const ln = t(lineOf(m));
-  const flanges = [p.Xn + p.side * (RB + 64), p.Xn + p.side * (RB + 330)];
-  const Flange: React.FC<{ x: number; y: number; w: number; hh: number; vertical?: boolean }> = ({ x, y, w, hh }) => (
+/** the knot where a rope is tied on its weight */
+const Knot: React.FC<{ p: P2 }> = ({ p }) => {
+  const r = 1;
+  return (
     <g>
-      <rect x={x - w / 2} y={y - hh / 2} width={w} height={hh} rx={2.2} fill={t(m.mid)} stroke={ln} strokeWidth={1.3} />
-      <rect x={x - w / 2 + 1.2} y={y - hh / 2 + 1.2} width={w * 0.34} height={hh - 2.4} rx={1.2} fill={t(m.lit)} opacity={0.75} />
-      <rect x={x + w * 0.12} y={y - hh / 2 + 1.2} width={w * 0.36} height={hh - 2.4} rx={1.2} fill={t(m.dark)} opacity={0.6} />
-      <path d={`M${(x - w / 2 + 1.5).toFixed(2)},${(y - hh / 2 + 1).toFixed(2)}L${(x + w / 2 - 1.5).toFixed(2)},${(y - hh / 2 + 1).toFixed(2)}`} stroke="#F3EBDD" strokeWidth={1.4} strokeOpacity={0.55} />
+      <ellipse cx={p[0]} cy={p[1]} rx={9 * r} ry={7 * r} fill={HEMP.body} stroke={HEMP.edge} strokeWidth={2} />
+      <path d={`M${n2(p[0] - 5 * r)},${n2(p[1] - 2 * r)}Q${n2(p[0])},${n2(p[1] - 6 * r)} ${n2(p[0] + 5 * r)},${n2(p[1] - r)}`} stroke={HEMP.lit} strokeWidth={1.6} fill="none" strokeOpacity={0.8} />
     </g>
   );
+};
+/** the bone clip pinching the brain's lower edge, a ring under it for the rope */
+const BONE = { fill: "#EFE5CF", edge: "#9C8D70", lit: "#FBF7EC", slot: "#B8AA8C" };
+const Clip: React.FC<{ p: P2; ang: number; lw: number }> = ({ p, ang, lw }) => (
+  <g transform={`translate(${n2(p[0])} ${n2(p[1])}) rotate(${n2(ang)})`}>
+    <circle cx={0} cy={CLIP.ring} r={6.5} fill="none" stroke={BONE.edge} strokeWidth={5 + lw} />
+    <circle cx={0} cy={CLIP.ring} r={6.5} fill="none" stroke={BONE.fill} strokeWidth={4} />
+    <rect x={-10} y={-CLIP.half} width={20} height={CLIP.half * 2 + 2} rx={8} fill={BONE.fill} stroke={BONE.edge} strokeWidth={1.6 + lw} />
+    <path d={`M-6,-2L6,-2`} stroke={BONE.slot} strokeWidth={2.6} strokeLinecap="round" />
+    <path d={`M-5,${-CLIP.half + 4}Q0,${-CLIP.half + 1.5} 5,${-CLIP.half + 4}`} stroke={BONE.lit} strokeWidth={2} fill="none" strokeLinecap="round" />
+  </g>
+);
+
+// ===================================================================================================================
+// THE UPDRAFT: no body of its own, only separate streaks of orange light rising under the brain and fanning out as
+// they go (a push upward, not a thing the brain sits on); it flares when the brain resists
+// ===================================================================================================================
+const UP_L = 230;
+/** world Y above the weights' tops where the updraft has faded out */
+const UP_FLOOR = PLINTH.top - 270;
+const hash = (x: number) => {
+  const h = Math.sin(x * 12.9898 + 4.1) * 43758.5453;
+  return h - Math.floor(h);
+};
+const Updraft: React.FC<{ x: number; base: number; f: number; strength: number }> = ({ x, base, f, strength }) => {
+  const halfW = 0.55 * BB.w;
+  const heads: React.ReactNode[] = [];
+  const tails: React.ReactNode[] = [];
+  const N = 32;
+  for (let i = 0; i < N; i++) {
+    // decorrelated per-streak lane, speed and phase (so they never bunch)
+    const lane = (i + 0.5) / N * 2 - 1 + 0.06 * Math.sin(i * 7.3);
+    const v = 9 + 4 * hash(i * 3.1);
+    const s = (hash(i * 1.7 + 0.4) * UP_L + f * v) % UP_L; // risen from the foot
+    const u = s / UP_L;
+    const spread = 0.72 + 0.28 * u;
+    const xx = x + lane * halfW * spread + 2.5 * Math.sin(f / 7 + i * 1.3);
+    const yy = base + UP_L + 14 - s;
+    const dx = lane * halfW * 0.28;
+    const L = Math.hypot(dx, UP_L);
+    const tx = dx / L;
+    const ty = -UP_L / L;
+    const extra = i % 3 === 2 ? c01((strength - 1) / 0.4) : 1;
+    // the column never reaches down among the weights (it fades out above their tops)
+    const a = Math.pow(Math.sin(Math.PI * u), 0.8) * Math.min(1, 0.8 * strength) * extra * c01((UP_FLOOR - (base + UP_L + 14 - s)) / 50);
+    if (a < 0.01) continue;
+    const len = (46 + 30 * hash(i * 5.3)) * (0.7 + 0.35 * strength);
+    // a comet pointing UP: a round bright head at the top, tapering to nothing below it
+    const r = 3.6;
+    const hx = xx + tx * len * 0.5;
+    const hy = yy + ty * len * 0.5;
+    const ex = xx - tx * len * 0.5;
+    const ey = yy - ty * len * 0.5;
+    const nx = -ty;
+    const ny = tx;
+    const col = i % 3 === 0 ? "#FFD27A" : ACCENT;
+    tails.push(
+      <path key={i} d={`M${n2(hx + nx * r)},${n2(hy + ny * r)}L${n2(ex)},${n2(ey)}L${n2(hx - nx * r)},${n2(hy - ny * r)}Z`} fill={col} fillOpacity={(0.75 * a).toFixed(3)} stroke="none" />,
+    );
+    heads.push(<circle key={i} cx={n2(hx)} cy={n2(hy)} r={r * 1.15} fill="#FFE2A2" fillOpacity={a.toFixed(3)} stroke="none" />);
+  }
+  // a few small upward chevrons rising in the column
+  const chev: React.ReactNode[] = [];
+  const CH_LANES = [-0.32, 0.08, 0.36, -0.06, -0.42];
+  for (let j = 0; j < CH_LANES.length; j++) {
+    const s = (hash(j * 2.3 + 9) * UP_L + f * 6.5) % UP_L;
+    const u = s / UP_L;
+    const a = Math.pow(Math.sin(Math.PI * u), 1.2) * Math.min(1, 0.8 * strength) * 0.9 * c01((UP_FLOOR - (base + UP_L + 14 - s)) / 50);
+    if (a < 0.01) continue;
+    const cx = x + CH_LANES[j] * halfW * (0.72 + 0.28 * u);
+    const cy = base + UP_L + 14 - s;
+    chev.push(<path key={j} d={`M${n2(cx - 13)},${n2(cy + 6)}L${n2(cx)},${n2(cy - 6)}L${n2(cx + 13)},${n2(cy + 6)}`} stroke={ACCENT} strokeOpacity={a.toFixed(3)} strokeWidth={4.5} strokeLinejoin="round" />);
+  }
   return (
-    <g transform={`translate(${dx.toFixed(2)},0)`}>
+    <g fill="none" strokeLinecap="round">
       <defs>
-        <mask id={`${uid}-mk`} maskUnits="userSpaceOnUse" x={-2400} y={p.Yp - 200} width={4800} height={400}>
-          <path d={d} fill="none" stroke="#fff" strokeWidth={2 * RP} />
-        </mask>
+        <filter id="updraft-b" filterUnits="userSpaceOnUse" x={x - 800} y={base - 400} width={1600} height={UP_L + 800}>
+          <feGaussianBlur stdDeviation={6} />
+        </filter>
       </defs>
-      <path d={d} fill="none" stroke={ln} strokeWidth={2 * RP + 2.6} />
-      <path d={d} fill="none" stroke={t(m.mid)} strokeWidth={2 * RP} />
-      <g mask={`url(#${uid}-mk)`}>
-        <path d={d} transform={`translate(${(0.42 * RP).toFixed(2)},${(0.5 * RP).toFixed(2)})`} fill="none" stroke={t(mixHex(m.dark, "#22180F", 0.2))} strokeWidth={1.25 * RP} />
-        <path d={d} transform={`translate(${(-0.3 * RP).toFixed(2)},${(-0.46 * RP).toFixed(2)})`} fill="none" stroke={t(m.lit)} strokeWidth={0.75 * RP} opacity={0.9} />
-        <path d={d} transform={`translate(${(-0.62 * RP).toFixed(2)},${(-0.74 * RP).toFixed(2)})`} fill="none" stroke="#F3EBDD" strokeWidth={0.2 * RP} opacity={0.6} />
+      <g filter="url(#updraft-b)" opacity={0.7}>
+        {heads.map((h, i) => React.cloneElement(h as React.ReactElement<{ r: number }>, { key: `g${i}`, r: 9 }))}
       </g>
-      {flanges.map((x, i) => (
-        <Flange key={i} x={x} y={p.Yp} w={12} hh={2 * RP + 10} />
-      ))}
-      {/* the nozzle's lip */}
-      <Flange x={p.Xn} y={p.tip - 6} w={2 * RP + 8} hh={12} />
-      {bead > 0.05 ? <ellipse cx={p.Xn} cy={p.tip + bead * 4.2} rx={4 + bead * 3} ry={bead * 7} fill={M_STREAM} stroke={M_STREAM_LINE} strokeWidth={0.9} strokeOpacity={0.5} /> : null}
+      {tails}
+      {heads}
+      {chev}
     </g>
   );
 };
@@ -509,254 +539,69 @@ const IronPipe: React.FC<{ A: AirWorld; p: PipeDef; dx: number; uid: string; bea
 // ===================================================================================================================
 // THE CUT
 // ===================================================================================================================
-type Ripple = { t0: number; X: number; amp: number };
-const RIPPLES: Ripple[] = (() => {
-  const out: Ripple[] = [];
-  PIPES.forEach((p, s) => {
-    for (let t = SIM.contact[s]; t <= SIM.tailLand[s]; t += 3) out.push({ t0: t, X: p.Xn, amp: Math.sqrt(c01(landQ(s, t) + 0.15)) });
-    SIM.dripLand[s].forEach((tl) => out.push({ t0: tl, X: p.Xn, amp: 0.7 }));
-  });
-  for (let t = -18; t <= SIM.orangeTail; t += 3) out.push({ t0: t, X: ORANGE.X, amp: 0.55 });
-  return out;
-})();
+const Plinth: React.FC<{ A: AirWorld; x: number; uid: string }> = ({ A, x, uid }) => (
+  <g>
+    <AirShadow A={A} X={x} Z={0} w={PLINTH.hw * 1.15} d={PLINTH.z * 1.3} amt={0.8} uid={`${uid}s`} />
+    <AirBox A={A} X0={x - PLINTH.hw} X1={x + PLINTH.hw} Y0={PLINTH.top} Y1={0} Z0={-PLINTH.z} Z1={PLINTH.z} mat={MAT.stone} uid={uid} />
+    <AirShadow A={A} X={x} Z={0} w={PLINTH.hw * 0.8} d={PLINTH.z * 0.7} Y={PLINTH.top} amt={0.7} uid={`${uid}t`} />
+  </g>
+);
 
 const IntelligenceDiluted: React.FC<z.infer<typeof schema>> = ({ camFrame }) => {
   const frame = useCurrentFrame();
   const cf = camFrame >= 0 ? camFrame : frame;
   const cam = camOf(cf);
   const A = airWorldOf({ cam, rest: REST, depth: DEPTH, frame, fogBy: "depth" });
-  const P = A.P;
-  const t = frame;
-  const mu = muAt(t);
-  const ys = levelY(t);
-  const yI = interfaceY(t);
-
-  // rings
-  const rimO = ellOf(P, Y_RIM, R_OUT);
-  const rimI = ellOf(P, Y_RIM, R_IN);
-  const baseO = ellOf(P, Y_BASE, R_OUT);
-  const floorI = ellOf(P, Y_FLOOR, R_IN);
-  const surf = ellOf(P, ys, R_IN);
-  const intf = ellOf(P, yI, R_IN);
-
-  // colours of the moment
-  const upper = mixHex(M_LAYER, F, Math.pow(mu, 0.85));
-  const lower = mixHex(ACCENT, F, mu);
-  const lowerDeep = mixHex(ACCENT_DEEP, F_WARM_LOW, mu);
-  const surfMurk = mixHex(M_SURF, F_SURF, Math.pow(mu, 0.85));
-  const surfOrange = mixHex(O_SURF, F_SURF, mu);
-  // the mixing beyond the plumes: from ~f34 the boundary melts and the orange dulls from the top down
-  const mixG = smoothstep(34, 66, t);
-  // the plumes: cloudy murk a shade off the murk layer (a touch of the orange they carry), never the darkest thing
-  const plumeCol = mixHex(mixHex(M_LAYER, lower, 0.2), mixHex(F, M_PLUME, 0.18), mu);
-  const plumeOp = lerp(0.72, 0.3, mu);
-  const glowOp = 0.6 * (1 - mu) + 0.1;
-  const glowCol = mixHex("#FFE39A", "#A99068", mu);
+  const f = frame;
+  const k = cam.k;
   const lw = A.lw(1.2);
-  const glowY = Y_FLOOR - 70;
+  const b = brainAt(f);
+  const anchorY = b.y - BB.cy;
+  const updraftStrength = 0.92 + 0.75 * hump(f, 55, 70) - 0.17 * sstep((f - 66) / 16) + 0.07 * Math.sin(f / 4) * sstep((f - 70) / 10);
+  const tug = Math.max(hump(f, 62, 74), hump(f, 74, 86), 0.3 * sstep((f - 80) / 6));
+  const ropes = T.ropes.map((_, i) => ropeAt(i, f));
 
-  // the interface's front edge (the orange layer's top seen through the front wall): the ring's front arc, dipped
-  // under each landing jet and gently waving
-  const iN = 44;
-  const ipts: [number, number][] = [];
-  for (let i = 0; i <= iN; i++) {
-    const x = lerp(-R_IN - 4, R_IN + 4, i / iN);
-    let y = frontY(intf, Math.max(-R_IN, Math.min(R_IN, x)));
-    y += 4.5 * Math.sin(x / 31 + t * 0.19) * (0.4 + 0.6 * c01((t - 10) / 20));
-    PIPES.forEach((p, s) => {
-      // pushed down under the jet, heaved up in a lobe either side (the orange dragged up into the murk)
-      const q = landQ(s, t);
-      y += 30 * q * Math.exp(-Math.pow((x - p.Xn) / 40, 2));
-      y -= 20 * q * (Math.exp(-Math.pow((x - p.Xn - 78) / 30, 2)) + Math.exp(-Math.pow((x - p.Xn + 78) / 30, 2)));
-    });
-    ipts.push([x, y]);
-  }
-  // the path runs well past the walls and floor so its blur only softens the boundary, never the sides
-  const iL = ipts[0];
-  const iR = ipts[ipts.length - 1];
-  const lowerD = `M${Pt([-R_IN - 160, iL[1]])}L${ipts.map(Pt).join("L")}L${Pt([R_IN + 160, iR[1]])}L${R_IN + 160},${(Y_FLOOR + 220).toFixed(1)}L${-R_IN - 160},${(Y_FLOOR + 220).toFixed(1)}Z`;
-  const ifBlur = 1.6 + 34 * mixG + 6 * mu;
+  const stomY = PLINTH.top - STOM_BOTTOM * STOM_SCALE;
+  const pelvisY = PLINTH.top - 0.44 * PELVIS_W;
+  const cellY = PLINTH.top - 0.94 * 0.37 * CELL_SIZE - 8;
 
-  // slicks on the surface where each stream lands
-  const slicks = PIPES.map((p, s) => ({ x: p.Xn, r: t >= SIM.contact[s] ? 12 + 40 * (t - SIM.contact[s]) : 0 }));
-
-  // tracers at this frame
-  const fi = Math.max(0, Math.min(DURATION, frame));
-  // tongues: each tracer an ellipse stretched along its own motion, longer and thinner as it sinks
-  const dots = (kind: 0 | 1) =>
-    TRACERS.filter((tr) => tr.kind === kind && !Number.isNaN(tr.pos[2 * fi])).map((tr, i) => {
-      const age = fi - tr.t0;
-      const r = Math.min(46, tr.r0 + DOT_GROW * age);
-      const x = tr.pos[2 * fi];
-      const y = tr.pos[2 * fi + 1];
-      const pf = Math.max(0, fi - 2);
-      const hasPrev = !Number.isNaN(tr.pos[2 * pf]);
-      const vx = hasPrev ? (x - tr.pos[2 * pf]) / 2 : 0;
-      const vy = (hasPrev ? (y - tr.pos[2 * pf + 1]) / 2 : 0) + 0.35;
-      const ang = (Math.atan2(vy, vx) * 180) / Math.PI;
-      const along = r * Math.min(2.4, 0.85 + age / 22);
-      const across = r * Math.max(0.32, 0.72 - age / 140);
-      return <ellipse key={i} cx={x.toFixed(2)} cy={y.toFixed(2)} rx={along.toFixed(2)} ry={across.toFixed(2)} transform={`rotate(${ang.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)})`} />;
-    });
-
-  // ripples
-  const ripples = RIPPLES.filter((r) => t - r.t0 >= 0 && t - r.t0 < 15).map((r, i) => {
-    const age = t - r.t0;
-    const rho = 8 + 7.5 * age;
-    const a = r.amp * 0.5 * Math.pow(1 - age / 15, 1.5);
-    return <ellipse key={i} cx={r.X} cy={surf.cy} rx={rho} ry={(rho * surf.ry) / surf.rx} fill="none" stroke="#F3EBDD" strokeWidth={1.6} strokeOpacity={a} />;
-  });
-
-  // drips falling
-  const drips: React.ReactNode[] = [];
-  const beads = PIPES.map(() => 0);
-  PIPES.forEach((p, s) => {
-    p.drips.forEach((td, j) => {
-      if (t >= td - 3 && t < td) beads[s] = ease((t - (td - 3)) / 3);
-      const tl = SIM.dripLand[s][j];
-      if (t >= td && t < tl) {
-        const y = p.tip + dropOf(t - td) + 4;
-        const sp = Math.min(1, (t - td) / 0.6);
-        drips.push(<ellipse key={`${s}-${j}`} cx={p.Xn} cy={y} rx={5} ry={7 + 3 * sp} fill={M_STREAM} stroke={M_STREAM_LINE} strokeWidth={0.9} strokeOpacity={0.5} />);
-      }
-    });
-  });
-
-  // the glass
-  const glassSil = silhouette(rimO, baseO);
-  const liquidSil = silhouette(surf, floorI);
-  const bodyD = bodyBelow(surf, floorI);
-  const tint = mixHex(A.airHex(0, -Y_RIM + 300), "#F3EBDD", 0.22);
   return (
     <AirStage v={A.v} bloom={0.22}>
       <WorldSvg cam={cam}>
-        <defs>
-          <clipPath id="id-liq">
-            <path d={liquidSil} />
-          </clipPath>
-          <clipPath id="id-body">
-            <path d={bodyD} />
-          </clipPath>
-          <clipPath id="id-surf">
-            <path d={ellD(surf)} />
-          </clipPath>
-          <clipPath id="id-glass">
-            <path d={glassSil} />
-          </clipPath>
-          <filter id="id-ifb" filterUnits="userSpaceOnUse" x={-400} y={SY(250)} width={800} height={1100}>
-            <feGaussianBlur stdDeviation={ifBlur.toFixed(2)} />
-          </filter>
-          <filter id="id-goo" filterUnits="userSpaceOnUse" x={-400} y={SY(250)} width={800} height={1100} colorInterpolationFilters="sRGB">
-            <feGaussianBlur in="SourceGraphic" stdDeviation={(4.5 + 5 * mu).toFixed(2)} result="b" />
-            <feColorMatrix in="b" type="matrix" values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${lerp(3.4, 2.0, mu).toFixed(2)} ${lerp(-0.9, -0.35, mu).toFixed(2)}`} result="g" />
-            <feGaussianBlur in="g" stdDeviation={4} />
-          </filter>
-          <filter id="id-soft" filterUnits="userSpaceOnUse" x={-400} y={SY(250)} width={800} height={1100}>
-            <feGaussianBlur stdDeviation={7} />
-          </filter>
-          <linearGradient id="id-form" gradientUnits="userSpaceOnUse" x1={-R_IN} y1={0} x2={R_IN} y2={0}>
-            <stop offset="0" stopColor="#2A1F12" stopOpacity={0.34} />
-            <stop offset="0.13" stopColor="#2A1F12" stopOpacity={0} />
-            <stop offset="0.3" stopColor="#FFF3D6" stopOpacity={0.13} />
-            <stop offset="0.52" stopColor="#FFF3D6" stopOpacity={0} />
-            <stop offset="0.84" stopColor="#2A1F12" stopOpacity={0.12} />
-            <stop offset="1" stopColor="#2A1F12" stopOpacity={0.36} />
-          </linearGradient>
-          <mask id="id-plm" maskUnits="userSpaceOnUse" x={-400} y={SY(250)} width={800} height={1100}>
-            <rect x={-400} y={SY(250)} width={800} height={1100} fill="#fff" opacity={lerp(0.32, 0.85, mu)} />
-            <path d={lowerD} fill="#fff" filter="url(#id-ifb)" />
-          </mask>
-          <linearGradient id="id-lower" gradientUnits="userSpaceOnUse" x1={0} y1={yI} x2={0} y2={Y_FLOOR + 60}>
-            <stop offset="0" stopColor={mixHex(lower, upper, 0.6 * mixG)} />
-            <stop offset="0.5" stopColor={mixHex(lower, upper, 0.22 * mixG)} />
-            <stop offset="1" stopColor={lowerDeep} />
-          </linearGradient>
-          <linearGradient id="id-upper" gradientUnits="userSpaceOnUse" x1={0} y1={ys} x2={0} y2={yI + 40}>
-            <stop offset="0" stopColor={upper} />
-            <stop offset="0.6" stopColor={mixHex(upper, lower, 0.12 * mixG)} />
-            <stop offset="1" stopColor={mixHex(upper, lower, 0.4 * mixG)} />
-          </linearGradient>
-          <radialGradient id="id-glow">
-            <stop offset="0" stopColor={glowCol} stopOpacity={glowOp} />
-            <stop offset="0.6" stopColor={glowCol} stopOpacity={glowOp * 0.35} />
-            <stop offset="1" stopColor={glowCol} stopOpacity={0} />
-          </radialGradient>
-          <linearGradient id="id-veil" gradientUnits="userSpaceOnUse" x1={0} y1={SY(1150)} x2={0} y2={SY(1800)}>
-            {[0, 0.25, 0.5, 0.75, 1].map((s) => (
-              <stop key={s} offset={s} stopColor={A.screenAir(lerp(SY(1150), SY(1800), s))} stopOpacity={0.95 * Math.pow(s, 0.7)} />
-            ))}
-          </linearGradient>
-        </defs>
+        <AirFloor A={A} x0={-3600} x1={3600} z0={-3000} z1={6000} mat={MAT.ground} course={190} />
+        <AirHorizonHazeW A={A} id="haze" />
 
-        {/* the plinth, its foot sinking into the low air */}
-        <AirBox A={A} X0={-PL.shaft} X1={PL.shaft} Y0={Y_BASE + PL.capH} Y1={SY(2300)} Z0={-PL.shaftZ} Z1={PL.shaftZ} mat={MAT.stone} uid="shaft" />
-        <AirBox A={A} X0={-PL.cap} X1={PL.cap} Y0={Y_BASE} Y1={Y_BASE + PL.capH} Z0={-PL.capZ} Z1={PL.capZ} mat={MAT.stone} uid="cap" />
-        <AirShadow A={A} X={0} Z={0} w={262} d={250} Y={Y_BASE} amt={0.85} uid="gsh" />
-        <ellipse cx={baseO.cx} cy={baseO.cy + 8} rx={baseO.rx * 1.05} ry={baseO.ry * 1.1} fill={ACCENT} opacity={0.14 * (1 - mu)} filter="url(#id-soft)" />
-        <rect x={-900} y={SY(1150)} width={1800} height={1000} fill="url(#id-veil)" />
+        {/* the updraft under the brain */}
+        <Updraft x={b.x} base={b.y + BB.h / 2} f={f} strength={updraftStrength} />
 
-        {/* the glass: its tint and the back of the rim */}
-        <path d={glassSil} fill={tint} opacity={0.2} />
-        <path d={`M${Pt(L(rimO))}${A0(rimO, 0, Rt(rimO))}`} fill="none" stroke="#F3EBDD" strokeWidth={lw * 1.4} strokeOpacity={0} />
-        <path d={`M${Pt(Rt(rimI))}${A0(rimI, 0, L(rimI))}`} fill="none" stroke="#D9CDB4" strokeWidth={lw * 1.6} strokeOpacity={0.45} />
-        <path d={`M${Pt(Rt(rimO))}${A0(rimO, 0, L(rimO))}`} fill="none" stroke="#F3EBDD" strokeWidth={lw * 2} strokeOpacity={0.6} />
-
-        {/* the orange trickle (above the surface) */}
-        <Stream sp={orangeSpec} t={t} ys={ys} fill={ACCENT} lit="#FFE7A3" line={ORANGE_LINE} uid="ostream" lw={lw} />
-
-        {/* the liquid */}
-        <g clipPath="url(#id-liq)">
-          <rect x={-R_IN - 10} y={ys - 80} width={2 * R_IN + 20} height={Y_FLOOR - ys + 200} fill="url(#id-upper)" />
-          <path d={lowerD} fill="url(#id-lower)" filter="url(#id-ifb)" />
-          <g clipPath="url(#id-body)">
-            <ellipse cx={0} cy={glowY} rx={lerp(200, 230, mu)} ry={140} fill="url(#id-glow)" />
-            <g mask="url(#id-plm)">
-              <g filter="url(#id-goo)" fill={plumeCol} opacity={plumeOp}>
-                {dots(0)}
-              </g>
-            </g>
-            <rect x={-R_IN - 10} y={ys - 80} width={2 * R_IN + 20} height={Y_FLOOR - ys + 200} fill="url(#id-form)" />
-          </g>
-          {/* the surface: orange until the slicks spread, then the murk, then one murky colour */}
-          <path d={ellD(surf)} fill={mixHex(surfOrange, surfMurk, c01((yI - ys) / 30))} />
-          <g clipPath="url(#id-surf)">
-            {slicks.map((sl, i) => (sl.r > 0 ? <ellipse key={i} cx={sl.x} cy={surf.cy} rx={sl.r} ry={(sl.r * surf.ry) / surf.rx} fill={surfMurk} filter="url(#id-ifb)" /> : null))}
-            <ellipse cx={surf.cx - 0.3 * surf.rx} cy={surf.cy - 0.35 * surf.ry} rx={surf.rx * 0.45} ry={surf.ry * 0.32} fill="#F3EBDD" opacity={0.1} filter="url(#id-soft)" />
-            {ripples}
-          </g>
-          <path d={`M${Pt(L(surf))}${A0(surf, 0, Rt(surf))}`} fill="none" stroke="#F3EBDD" strokeWidth={lw * 1.6} strokeOpacity={0.45} />
-        </g>
-
-        {/* the murk streams and drips */}
-        {PIPES.map((p, s) => (
-          <Stream key={s} sp={murkSpec(p)} t={t} ys={ys} fill={M_STREAM} lit={M_STREAM_LIT} line={M_STREAM_LINE} uid={`m${s}`} lw={lw} />
+        {/* the weights on their plinths (in front of the updraft) */}
+        {(["stomach", "pelvis", "cell"] as const).map((key) => (
+          <Plinth key={key} A={A} x={WEIGHTS[key]} uid={`pl-${key}`} />
         ))}
-        {drips}
+        <Stomach x={WEIGHTS.stomach - STOM_LOCAL_CX * STOM_SCALE} y={stomY} scale={STOM_SCALE} uid="stom" unitPx={k} f={f} tug={ropes[0] && f >= T.ropes[0].hook ? tug : 0} />
+        <Pelvis x={WEIGHTS.pelvis} y={pelvisY} size={PELVIS_W} uid="pelv" unitPx={k} />
+        <Cell x={WEIGHTS.cell} y={cellY} size={CELL_SIZE} uid="cell" unitPx={k} f={f} />
 
-        {/* the glass in front: base slab, walls, highlights, the front of the rim */}
-        <path d={`M${Pt(L(floorI))}${A0(floorI, 0, Rt(floorI))}L${Pt(Rt(baseO))}${A0(baseO, 1, L(baseO))}Z`} fill={mixHex(tint, "#F3EBDD", 0.25)} opacity={0.42} />
-        <path d={`M${Pt(L(baseO))}${A0(baseO, 0, Rt(baseO))}`} fill="none" stroke="#F3EBDD" strokeWidth={lw * 1.6} strokeOpacity={0.4} />
-        <g clipPath="url(#id-glass)">
-          <rect x={-0.68 * R_OUT} y={Y_RIM} width={0.12 * R_OUT} height={Y_BASE - Y_RIM + 60} fill="#F3EBDD" opacity={0.16} filter="url(#id-soft)" />
-          <path d={`M${(-0.79 * R_OUT).toFixed(2)},${(Y_RIM + 30).toFixed(2)}L${(-0.79 * R_OUT).toFixed(2)},${(Y_BASE - 20).toFixed(2)}`} stroke="#F3EBDD" strokeWidth={3.2} strokeOpacity={0.42} strokeLinecap="round" />
-          <path d={`M${(0.84 * R_OUT).toFixed(2)},${(Y_RIM + 50).toFixed(2)}L${(0.84 * R_OUT).toFixed(2)},${(Y_BASE - 40).toFixed(2)}`} stroke="#F3EBDD" strokeWidth={5} strokeOpacity={0.14} strokeLinecap="round" />
-        </g>
-        {[-1, 1].map((sg) => (
-          <g key={sg}>
-            <path d={`M${(sg * rimO.rx).toFixed(2)},${rimO.cy.toFixed(2)}L${(sg * baseO.rx).toFixed(2)},${baseO.cy.toFixed(2)}`} stroke={GLASS_EDGE} strokeWidth={lw * 2.2} strokeOpacity={0.5} />
-            <path d={`M${(sg * rimI.rx).toFixed(2)},${rimI.cy.toFixed(2)}L${(sg * floorI.rx).toFixed(2)},${floorI.cy.toFixed(2)}`} stroke={GLASS_EDGE} strokeWidth={lw * 1.2} strokeOpacity={0.28} />
-          </g>
-        ))}
-        <path d={`M${Pt(L(rimI))}${A0(rimI, 0, Rt(rimI))}`} fill="none" stroke="#D9CDB4" strokeWidth={lw * 1.6} strokeOpacity={0.55} />
-        <path d={`M${Pt(L(rimO))}${A0(rimO, 0, Rt(rimO))}`} fill="none" stroke="#F3EBDD" strokeWidth={lw * 2.4} strokeOpacity={0.85} />
+        <Brain x={b.x} y={anchorY} size={BRAIN_SIZE} uid="brain" unitPx={k} glow={b.glow} halo={b.halo} rot={b.rot} squashX={b.sqX} squashY={b.sqY} pivot="center" />
 
-        {/* the pipes */}
-        {PIPES.map((p, s) => (
-          <IronPipe key={s} A={A} p={p} dx={pipeDx(p, t)} uid={`pipe${s}`} bead={beads[s]} />
-        ))}
+        {/* the ropes, each ending in a bone clip on the brain's lower edge; a knot at each weight */}
+        {ropes.map((q, i) => (q ? <Rope key={i} q={q} lw={lw} /> : null))}
+        {ropes.map((q, i) => (q ? <Knot key={`t${i}`} p={TIE[T.ropes[i].key]} /> : null))}
+        {ropes.map((q, i) => {
+          if (!q) return null;
+          const r = T.ropes[i];
+          // the clip rides on the rope's tip while it flies, and bites the edge on the hook frame
+          const c = clipAt(r.key, f);
+          const tip = q[q.length - 1];
+          const end = hookAt(r.key, f);
+          const off: P2 = [tip[0] - end[0], tip[1] - end[1]];
+          return <Clip key={`c${i}`} p={[c.p[0] + off[0], c.p[1] + off[1]]} ang={c.ang} lw={lw} />;
+        })}
       </WorldSvg>
     </AirStage>
   );
 };
 
 export default IntelligenceDiluted;
+
+export { PAL };
