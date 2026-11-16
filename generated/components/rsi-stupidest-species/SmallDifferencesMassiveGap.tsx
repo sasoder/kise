@@ -4,8 +4,7 @@
 // One stage inside the misty teal air (AirStage, palette A) on a londonDepth one-point perspective, from the kit
 // kits/dwarkesh-3d/dwarkesh3d; the two brains are the clip's shared W3 brain (./brainShared).
 //
-// CHECK LINE: "Two brains that are almost exactly the same can have wildly different abilities: a hair's difference at
-//   the bottom, a tower's difference at the top."
+// CHECK LINE: "Look at one brain, then another that looks just the same: yet one reaches a little and the other towers."
 //
 // THE LINE: "The first is that even small differences between human brains can produce massive differences in
 //   capability. For example, the"
@@ -14,26 +13,28 @@
 //   the 156
 // DURATION: the slot 25.192 -> 31.823 s = 6.631 s x 24000/1001 = 159 frames (f0..f158).
 //
-// THE MOTION: two near-identical brains (W3 variants: v0 left = the speaker's, v1 right = Einstein's, as cut E) stand
-// on two low stone plinths, large (~320 px, spanning the keep-in box); a slim cream calliper floats between them and
-// closes its jaws (f2-f30), backs off to a hair's gap on "differences" (f40) and holds it (settled f48) while the camera
-// creeps in (the calliper: ~300 px, its beam spanning brain to brain behind their inner edges, a matching lower and
-// upper pair of jaws so the same hair's gap shows twice). On "can" (f74) both brains light from inside (glow 0 -> 0.55 by f86, identical); from f76 a wide orange
-// column (~85 % of a brain's width) is pushed up out of the back of each plinth, BEHIND its brain, as a stack of
-// glowing courses (the courses ride up with the top: the stack grows from the plinth, never scales). The left brakes
-// to a stub (settled f104, ~165 px above its brain); the right keeps climbing and leaves the top of the frame (~f100),
-// its courses still streaming up until it comes to rest at f124. One eased camera move (f72-f128) cranes UP a little
-// with a slight pull-back (k 1.05 -> 0.95), so the resolved frame keeps the brains big (~290 px) and low (tops
-// ~y 850), the stub clear above the left brain, the right column towering out past the top edge. Hold f128-f158: a
-// slow creep, the orange breathing faintly, motes. The floor below the plinths sinks into the dense low air.
-// CAUSE BEFORE EFFECT: the brains' glow starts f72; the columns break out of the plinth tops at f76 (the brains light,
-//   then reach). The calliper's jaws: contact f30 (closed), back off to the gap f40.
+// THE MOTION (rev 1: the calliper is gone; one continuous camera, pan -> pull-back -> crane): two near-identical
+// brains (W3 variants: v0 left = the speaker's, v1 right = Einstein's, as cut E) on two low stone plinths. f0: CLOSE
+// on the left brain (~670 px wide, ~70 % of the keep-in width), the camera drifting right and pushing in a touch; it
+// trucks right (f18-f70, most of the travel over "small differences between human brains", peak ~41 px/f, parallax
+// on the plinths) and settles on the right brain at the same closeness (~720 px) on "brains": it looks the same. On
+// "can" (f72) both brains light from inside (glow 0 -> 0.55 by f86, identical) and the camera pulls back fast
+// (f70-f94, k 2.37 -> 1.06) to show both brains on their plinths, carrying on into v1's crane up (to f128). From f80
+// a wide orange column (~85 % of a brain's width) shoots up out of the back of each plinth, BEHIND its brain, as a
+// stack of glowing courses (the stack grows from the plinth, never scales); the left one is seen rising as it comes
+// into frame. The left brakes to a stub (settled f106, ~165 px above its brain); the right climbs on, leaves the top
+// of the frame (~f107) and comes to rest at f124. Resolved (as v1): brains ~290 px, low (tops ~y 845), the stub clear
+// above the left brain, the right column towering out past the top edge. Hold f128-f158: a slow creep, the orange
+// breathing faintly, motes. The floor below the plinths sinks into the dense low air.
+// CAUSE BEFORE EFFECT: the brains' glow starts f72; the columns break out of the plinth tops at f80 (the brains light,
+//   then reach).
 // Orange = intelligence / capability (COMMON.md): the two columns and the brains' inner glow only. Brains pink-oatmeal,
-// plinths stone, calliper cream. No text.
+// plinths stone. No text.
 //
 // DEPTH: floor Y = 0; eye from Y -300 (a little above the plinth tops) to -440 (rising with the crane); dRef 1800 at
-// kRef 1.05, dolly 0.5; fog by depth. Plinths Z -130..300; brains Z -20 (the front of the plinth top); columns Z 150,
-// R 128 (behind the brains); calliper Z -20.
+// kRef 1.05, dolly 0.5 (the camera is closer in the close-ups); the vanishing point travels with the camera centre, so
+// the pan is a truck. Fog by depth. Plinths Z -130..300; brains Z -20 (the front of the plinth top); columns Z 150,
+// R 128 (behind the brains).
 //
 // SOURCES: none on screen (an illustration of the speaker's claim; no numbers).
 // ---------------------------------------------------------------------------
@@ -82,7 +83,6 @@ export const BRAIN_Z = -20;
 export const PLINTH_H = 150;
 const PLINTH = { hw: 178, z0: -130, z1: 300 };
 const BRAIN_H = BRAIN_ASPECT * BRAIN_W;
-const BRAIN_MID = -PLINTH_H - BRAIN_H * 0.5;
 /** the columns: radius (~85 % of a brain's width), depth (behind the brain), base on the plinth top */
 export const COL_R = 128;
 export const COL_Z = 150;
@@ -93,34 +93,30 @@ export const RIGHT_TOP = -1480;
 /** the courses: the stack's block height (world units) */
 const COURSE = 150;
 
-const riseL = (f: number) => interpolate(f, [76, 104], [COL_BASE, LEFT_TOP], { ...clamp, easing: Easing.bezier(0.3, 0.45, 0.35, 1) });
-const climbR = (f: number) => interpolate(f, [82, 124], [0, RIGHT_TOP - LEFT_TOP], { ...clamp, easing: Easing.bezier(0.4, 0, 0.4, 1) });
+const riseL = (f: number) => interpolate(f, [80, 106], [COL_BASE, LEFT_TOP], { ...clamp, easing: Easing.bezier(0.3, 0.45, 0.35, 1) });
+const climbR = (f: number) => interpolate(f, [86, 124], [0, RIGHT_TOP - LEFT_TOP], { ...clamp, easing: Easing.bezier(0.4, 0, 0.4, 1) });
 /** the columns' tops (world Y): the same rise to ~f86, then the left brakes and the right climbs on */
 export const colTop = (side: 0 | 1, f: number) => (side === 0 ? riseL(f) : riseL(f) + climbR(f));
 
 /** the brains' inner glow: identical for both */
 export const glowAt = (f: number) => interpolate(f, [72, 86], [0, 0.55], { ...clamp, easing: Easing.inOut(Easing.sin) }) * (1 + 0.06 * Math.sin((f - 86) / 7) * interpolate(f, [86, 100], [0, 1], clamp));
 
-/** the calliper's opening between its jaws' inner faces (local units): it closes from wide (f2-f30, contact f30),
- *  backs off to a hair's gap on "differences" (f40) and holds it (settled f48) */
-export const GAP_FINAL = 8;
-export const sliderAt = (f: number) => {
-  const close = interpolate(f, [2, 30], [92, 0], { ...clamp, easing: Easing.bezier(0.45, 0, 0.25, 1) });
-  const back = interpolate(f, [30, 40, 48], [0, GAP_FINAL * 1.25, GAP_FINAL], { ...clamp, easing: Easing.inOut(Easing.sin) });
-  return close + back;
-};
-
 // ---- the camera -----------------------------------------------------------------------------------------------------
-// Keyed in screen terms: the zoom k (log) and the screen row B of the plinth tops under the brains; the camera's
-// centre is solved from them every frame. A creep in (f0-f70), then ONE eased move (f72-f128): a crane up (the brains
-// sink ~120 px) with a slight pull-back; a slow creep in the hold. The eye rises with the crane.
+// Keyed in screen terms: the zoom k (log), the screen row B of the plinth tops under the brains, and the world X the
+// camera is centred on (cx; the vanishing point travels with it, so the pan is a truck with parallax). ONE continuous
+// move: close on the left brain (a slow creep right), a truck right to the right brain at the same closeness (f18-f70,
+// most of it over "small differences between human brains"), settled at f70; then on "can produce" a fast pull-back
+// (f70-f100) that lands on v1's framing and carries on into v1's crane up (to f128); a slow creep in the hold.
 const DEPTH0 = { dRef: 1800, kRef: 1.05, dolly: 0.5 };
 const EYE0 = -300;
 const EYE1 = -440;
+/** the close-up zoom: a brain ~700 px wide (~74 % of the keep-in width) */
+export const KC = 2.3;
 const LOGK = pchip(
   [
-    [0, Math.log(1.03)],
-    [70, Math.log(1.055)],
+    [0, Math.log(KC * 0.95)],
+    [70, Math.log(KC * 1.03)],
+    [94, Math.log(1.06)],
     [128, Math.log(0.955)],
     [DURATION, Math.log(0.945)],
   ],
@@ -128,14 +124,26 @@ const LOGK = pchip(
 );
 const ROWB = pchip(
   [
-    [0, 935],
-    [70, 948],
+    [0, 1000],
+    [70, 1008],
+    [94, 1026],
     [128, 1064],
     [DURATION, 1068],
   ],
   true,
 );
-const CX = (f: number) => interpolate(f, [72, 128], [0, 14], { ...clamp, easing: Easing.inOut(Easing.sin) });
+const CX = pchip(
+  [
+    [0, BRAIN_X[0] - 32],
+    [18, BRAIN_X[0] - 6],
+    [66, BRAIN_X[1] - 6],
+    [70, BRAIN_X[1]],
+    [98, 30],
+    [128, 14],
+    [DURATION, 14],
+  ],
+  true,
+);
 const eyeAt = (f: number) => interpolate(f, [72, 128], [EYE0, EYE1], { ...clamp, easing: Easing.inOut(Easing.sin) });
 const camBase = (f: number) => {
   const k = Math.exp(LOGK(f));
@@ -201,67 +209,6 @@ const Column: React.FC<{ A: AirWorld; X: number; Z: number; R: number; Yb: numbe
   );
 };
 
-// ---- the calliper: a slim cream vernier calliper lying horizontally between the brains, a little below their
-// midlines, drawn BEHIND them so the beam's two ends tuck behind the brains' inner edges (it spans brain to brain).
-// Local units (x right, y down, the beam's centre line y = 0): the beam -150..175; the fixed head at the left with a
-// big lower jaw and a small upper (inside) jaw; the sliding head carries the matching pair, so the opening shows twice,
-// the same gap below and above the beam; vernier ticks along the beam, a window and a thumbwheel on the head.
-const CR = { lit: PAL.cream, mid: PAL.creamLo, dark: "#A89C82", line: "#6E6350" };
-const XF = -86; // the fixed jaws' inner face
-const Calliper: React.FC<{ A: AirWorld; X: number; Y: number; Z: number; s: number; gap: number }> = ({ A, X, Y, Z, s, gap }) => {
-  const P = A.P;
-  const r = P.r(Z);
-  const o = P.p(X, Y, Z);
-  const L = (x: number, y: number): P2 => [o[0] + x * s * r, o[1] + y * 1.3 * s * r];
-  const tn = (hex: string) => A.tone(hex, Z, -Y);
-  const lw = A.lw(1.0);
-  const xs = XF + gap; // the sliding jaws' inner face
-  const ln = tn(CR.line);
-  const poly = (q: P2[], fill: string, key: string) => <polygon key={key} points={pts(q)} fill={fill} stroke={ln} strokeWidth={lw} strokeLinejoin="round" />;
-  const seg = (a: P2, b: P2) => `M${n2(a[0])},${n2(a[1])}L${n2(b[0])},${n2(b[1])}`;
-  // the beam and its scale
-  const beam: P2[] = [L(-150, -8), L(175, -8), L(175, 8), L(-150, 8)];
-  let ticks = "";
-  for (let i = 0; i <= 32; i++) {
-    const x = -66 + i * 7.5;
-    if (x > 175 - 4) break;
-    if (x > xs - 4 && x < xs + 50) continue; // under the sliding head
-    ticks += seg(L(x, 8), L(x, i % 5 === 0 ? -1 : 3));
-  }
-  // the fixed head: lower jaw (tapering to a point at its inner face) and the small upper knife
-  const fixLow: P2[] = [L(XF - 34, 8), L(XF, 8), L(XF, 56), L(XF - 6, 60), L(XF - 22, 32)];
-  const fixUp: P2[] = [L(XF - 14, -8), L(XF, -8), L(XF, -36), L(XF - 3, -38), L(XF - 12, -20)];
-  const fixHead: P2[] = [L(XF - 40, -13), L(XF, -13), L(XF, 13), L(XF - 40, 13)];
-  // the sliding head and its pair of jaws, mirrored
-  const slLow: P2[] = [L(xs, 8), L(xs + 34, 8), L(xs + 22, 32), L(xs + 6, 60), L(xs, 56)];
-  const slUp: P2[] = [L(xs, -8), L(xs + 14, -8), L(xs + 12, -20), L(xs + 3, -38), L(xs, -36)];
-  const slHead: P2[] = [L(xs, -14), L(xs + 50, -14), L(xs + 50, 15), L(xs, 15)];
-  const win: P2[] = [L(xs + 7, 1), L(xs + 43, 1), L(xs + 43, 10), L(xs + 7, 10)];
-  let vt = "";
-  for (let i = 0; i <= 6; i++) vt += seg(L(xs + 9 + i * 5.5, 10), L(xs + 9 + i * 5.5, i % 3 === 0 ? 4 : 7));
-  const wheel = L(xs + 25, 22);
-  return (
-    <g>
-      {poly(beam, tn(CR.mid), "beam")}
-      <path d={ticks} stroke={ln} strokeWidth={lw * 0.8} strokeOpacity={0.75} />
-      <path d={seg(L(-149, -6.5), L(174, -6.5))} stroke={tn(CR.lit)} strokeWidth={lw * 1.3} strokeOpacity={0.9} strokeLinecap="round" />
-      {poly(fixLow, tn(CR.lit), "fl")}
-      {poly(fixUp, tn(CR.lit), "fu")}
-      {poly(fixHead, tn(mixHex(CR.mid, CR.lit, 0.4)), "fh")}
-      {poly(slLow, tn(CR.mid), "sl")}
-      {poly(slUp, tn(CR.mid), "su")}
-      <circle cx={n2(wheel[0])} cy={n2(wheel[1])} r={n2(8.5 * s * r)} fill={tn(mixHex(CR.mid, CR.dark, 0.6))} stroke={ln} strokeWidth={lw} />
-      {poly(slHead, tn(mixHex(CR.mid, CR.dark, 0.3)), "sh")}
-      {poly(win, tn(mixHex(CR.lit, CR.mid, 0.3)), "win")}
-      <path d={vt} stroke={ln} strokeWidth={lw * 0.7} strokeOpacity={0.8} />
-      <path d={seg(L(xs + 1, -12.5), L(xs + 49, -12.5))} stroke={tn(CR.lit)} strokeWidth={lw * 1.2} strokeOpacity={0.85} strokeLinecap="round" />
-      <path d={seg(L(XF - 39, -11.5), L(XF - 1, -11.5))} stroke={tn(CR.lit)} strokeWidth={lw * 1.2} strokeOpacity={0.85} strokeLinecap="round" />
-    </g>
-  );
-};
-/** the calliper's place: the beam a little below the brains' midlines, spanning brain to brain; local unit scale */
-export const CAL = { X: -14, Y: BRAIN_MID - 8, Z: BRAIN_Z + 4, s: 0.95 };
-
 const SmallDifferencesMassiveGap: React.FC<z.infer<typeof schema>> = ({ camFrame }) => {
   const frame = useCurrentFrame();
   const cf = camFrame >= 0 ? camFrame : frame;
@@ -296,7 +243,6 @@ const SmallDifferencesMassiveGap: React.FC<z.infer<typeof schema>> = ({ camFrame
         {plinth(1)}
         {column(0)}
         {column(1)}
-        <Calliper A={A} X={CAL.X} Y={CAL.Y} Z={CAL.Z} s={CAL.s} gap={sliderAt(frame)} />
         <AirShadow A={A} X={BRAIN_X[0] + 10} Z={BRAIN_Z} Y={-PLINTH_H} w={0.42 * BRAIN_W} d={0.16 * BRAIN_W} uid="bs0" amt={0.75} />
         <AirShadow A={A} X={BRAIN_X[1] + 10} Z={BRAIN_Z} Y={-PLINTH_H} w={0.42 * BRAIN_W} d={0.16 * BRAIN_W} uid="bs1" amt={0.75} />
         {brain(0)}
