@@ -1,8 +1,9 @@
 // ---------------------------------------------------------------------------
 // TwentyWatts (rsi-stupidest-species, cut 83). Dwarkesh 3D style (styles/dwarkesh-3d.md).
 // Opaque 1080x1920, 23.976 fps, 130 frames.
-// Inside the misty teal air (AirStage, palette A, no floor, the same air and camera hand as cut I1 TooBigToFit), the
-// clip's shared BRAIN (./brainShared, W3, read-only) and the body's power: one cream hub feeding three cream lines.
+// REVISION 1 (re-based on cut I1 TooBigToFit revision 1): I1's world carries on: the tiled sand floor, the horizon haze,
+// the misty teal air (AirStage, palette A, fog by depth, motes) and the low stone plinth; the clip's shared BRAIN
+// (./brainShared, W3, read-only) and the body's power: one cream hub on the plinth feeding three cream lines.
 //
 // CHECK LINE: "The brain gets a small fixed share of the body's power, about 20 watts, because digestion and immunity
 //   need theirs."
@@ -12,24 +13,23 @@
 //   energy 57 · lest 63 · functions 74 · like 80 · digestion 93 · and 103 · immunity 112 · which 119
 // DURATION: the slot 83.375 -> 88.797 s (sequence frames 1999-2129) = 5.422 s x 23.976 = 130 frames (f0..f129).
 //
-// THE JOIN: f0 is cut I1's last frame (f77) pixel for pixel: I1's camera, air frame, pelvis, contact rim and the
-// swollen, tilted brain jammed in the inlet are rebuilt here from I1's exported state (asserted at module load).
+// THE JOIN: f0 is cut I1's last frame (f77) pixel for pixel: I1's camera, air frame, floor, plinth, pelvis, contact rim
+// and the swollen, tilted brain jammed in the inlet are rebuilt here from I1's exported state (asserted at module load).
 //
-// THE MOTION: one continuous pull-back down a power line. f0-24 ("And the brain only gets"): the brain pops up out of
-// the inlet (no swell change: the same drawing as I1, it only untilts), the pelvis sinks away and drains into the dark
-// low air (gone by f15). f8-26: a thin cream cord is drawn up from below by its moving tip and docks on the brain stem
-// (CONTACT f26). The first cream bead arrives f30 ("consume" f27): the brain lights from inside with a modest orange
-// glow (0 -> ~0.45 by f42, a small swell of glow per bead, one bead every 10 frames). f37-49 ("20 watts"): the soft
-// plate 20 W slides up beside the brain while the camera pans to make room and starts its long pull-back down the
-// cord. f53-96 ("of energy, lest functions like"): the body's power rises into frame from below (entry ~40 px/frame in
-// the dead bottom zone, decelerating) and settles: a cream hub
-// low in frame feeding the thin cord and two much THICKER lines, to a stomach (left) and a white blood cell (right).
-// Each thick line starts flowing busy, fat beads; the first bead reaches the stomach on f93 ("digestion": it lights,
-// warms and churns) and the cell on f112 ("immunity": aura, pseudopods reach). f112-129: living hold, three
-// consumers on one source, the brain's thin trickle beside the two thick streams; camera creeps.
-// Camera: k 1.169 -> 0.675 (one lobe, f0 continues I1's camera with zero slope), pan right 540 -> 754 so the plate
-// fits, down 951 -> 1402 along the cord. Resolved: brain ~300 px at y ~430, plate cap ~60 px, organs ~270 px at
-// y ~860, hub at y ~1005.
+// THE MOTION: one continuous move. f0-24 ("And the brain only gets"): the brain pops up out of the inlet and rises
+// (the same drawing as I1, it only untilts and drifts left); the camera cranes up with it. The pelvis dissolves into the
+// air (gone by f14) and where it stood a squat cream hub rises out of the plinth's top (f6-20). f16-28: a thin cream
+// cord is drawn up from the hub by its moving tip and docks on the brain stem (CONTACT f28). The first cream bead arrives
+// f30 ("consume" f27): the brain lights from inside with a modest orange glow (0 -> ~0.45 by f42, a small swell of glow
+// per bead, one bead every 10 frames). f37-49 ("20 watts"): the soft plate 20 W slides up beside the brain. f40-102 ("of
+// energy, lest functions like"): the camera pulls back down the cord to the hub, and a stomach (left) and a white blood
+// cell (right) come forward out of the haze (f48-86 / f54-92) to hover either side of it. Each gets a much THICKER
+// line drawn out from the hub (f80-88 / f86-94) running busy, fat beads; the first bead reaches the stomach on f93
+// ("digestion": it lights, warms and churns) and the cell on f112 ("immunity": aura, pseudopods reach). f112-129:
+// living hold, three consumers on one source, the brain's thin trickle beside the two thick streams; camera creeps.
+// Camera: k 1.129 -> 0.675, up with the brain (cy -306 -> -662 by f20), then the long pull-back down the cord
+// (-> -218). Resolved: brain ~300 px at y ~430, plate cap ~61 px, organs ~270 px at y ~840, hub at y ~1000 on the
+// plinth.
 // Orange = intelligence only: the brain's inner glow is the one orange. The energy (cord, beads, hub) is cream;
 // digestion and immunity are earthy (muted red-brown stomach, ivory cell, slate nucleus) and light up in cream.
 //
@@ -41,7 +41,7 @@ import React from "react";
 import { loadFont } from "@remotion/google-fonts/BarlowCondensed";
 import { Easing, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { AIR, AirStage, MAT, Paint, WorldSvg, airWorldOf, c01, makeCamera, mixHex, swayCam, type AirWorld, type Cam, type DepthOpts, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
+import { AIR, AirBox, AirFloor, AirHorizonHazeW, AirShadow, AirStage, MAT, Paint, WorldSvg, airWorldOf, c01, makeCamera, mixHex, pchip, perspective, rgbHex, swayCam, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { Brain, Pelvis, brainBox } from "./brainShared";
 import * as I1 from "./TooBigToFit";
 
@@ -61,52 +61,47 @@ const sstep = (t: number) => {
 };
 
 // ===================================================================================================================
-// THE JOIN WITH CUT I1 (TooBigToFit): its last frame and the constants it does not export, asserted here
+// THE JOIN WITH CUT I1 (TooBigToFit rev 1): its last frame and the constants it does not export, asserted here
 // ===================================================================================================================
 /** I1's last frame: my f is I1's f + I1_LAST (air frame, camera sway, the brain's breath) */
 export const I1_LAST = I1.DURATION - 1;
 const I1_BX = I1.PELVIS_C[0] - 22;
-const I1_ROT = -9;
 const I1_PIVOT_Y = I1.PELVIS_C[1];
 const I1_YC = I1.PELVIS_C[1] + 46;
-const I1_DEPTH: DepthOpts = { eyeY: 200, dRef: 1800, kRef: 1, dolly: 0.5 };
+const I1_THICK = 20;
 {
   const b = I1.brainWorldBox(I1_LAST);
   if (Math.abs((b.left + b.right) / 2 - I1_BX) > 1e-6) throw new Error("TwentyWatts: I1 brain x moved");
   if (Math.abs(I1.brainY(I1_LAST) - (I1_YC + 5 * I1.pressAt(I1_LAST))) > 1e-6) throw new Error("TwentyWatts: I1 brain y moved");
-  if (I1.BRAIN_SIZE !== 270 || I1.PELVIS_W !== 800 || I1.TILT !== 0.68) throw new Error("TwentyWatts: I1 constants moved");
+  if (I1.BRAIN_SIZE !== 270 || I1.PELVIS_W !== 800 || I1.TILT !== 0.68 || I1.PLINTH.top !== -120 || I1.DEPTH.eyeY !== -640) throw new Error("TwentyWatts: I1 constants moved");
 }
 /** I1's contact-rim light (copied: not exported) */
 const i1RimAmt = (f: number) => {
   const t1 = f - I1.F_CONTACT;
-  const t2 = f - 48;
+  const t2 = f - I1.F_PRESS2;
   const flash = (t: number, a: number) => (t <= 0 ? 0 : a * Math.min(1, t / 2.5) * Math.exp(-Math.max(0, t - 2.5) / 6));
   const floor = t1 > 0 ? 0.28 * Math.min(1, t1 / 8) : 0;
-  return Math.min(1, Math.max(flash(t1, 1), flash(t2, 0.5), floor));
-};
-const swayOf = (f: number) => ({ dx: 3 * Math.sin(f / 23), dy: 5 * Math.sin(f / 19) });
-/** I1's camera before its sway at I1 frame g */
-const i1CamRaw = (g: number): Cam => {
-  const c = I1.camOf(g);
-  const s = swayOf(g);
-  return { k: c.k, cx: c.cx - s.dx / c.k, cy: c.cy - s.dy / c.k };
+  return Math.min(1, Math.max(flash(t1, 1), flash(t2, 0.7), floor));
 };
 const I1_REST = I1.camOf(0);
+const I1_B = I1.brainState(I1_LAST);
 
 // ===================================================================================================================
-// THE WORLD (world units = screen px at k 1; the brain and pelvis where I1 left them)
+// THE WORLD (I1's: X across, Y height with the floor Y = 0 (up -), Z depth; everything here on the front plane Z = 0
+// unless it comes out of the haze)
 // ===================================================================================================================
-/** the brain: I1's size and swell (the same drawing), anchor x, the anchor y it rises to */
+const PLINTH = I1.PLINTH;
+/** the brain: I1's size and swell (the same drawing); where it rises to (anchor = bottom centre) */
 export const BRAIN_SIZE = I1.BRAIN_SIZE;
-export const BRAIN_SWELL = I1.brainState(I1_LAST).swell;
-export const BX = I1_BX;
-export const BY_REST = 796;
+export const BRAIN_SWELL = I1_B.swell;
+export const BX_REST = -235;
+export const BY_REST = -824;
 const BB = brainBox(BRAIN_SIZE, BRAIN_SWELL);
 /** the stem tip relative to the anchor (brainShared's geometry at swell 0.99: the stem's lowest run, x / size) */
 const STEM_DX = 0.297 * BRAIN_SIZE;
 
-/** the plate: "20 W", beside the brain at its centre row (cap in world units: ~60 px at the resolved zoom) */
-export const PLATE = { cap: 88, track: 0.05, text: "20 W", X: 0, Y: BY_REST + BB.cy };
+/** the plate: "20 W", beside the brain at its centre row (cap in world units: ~61 px at the resolved zoom) */
+export const PLATE = { cap: 90, track: 0.05, text: "20 W", X: 0, Y: BY_REST + BB.cy };
 /** Barlow Condensed 600 advance widths (em) for the plate's glyphs */
 const ADV: Record<string, number> = { "2": 0.5, "0": 0.5, " ": 0.2, W: 0.74 };
 export const plateBox = () => {
@@ -115,12 +110,14 @@ export const plateBox = () => {
   const pad = PLATE.cap * 0.62;
   return { fs, w, wP: w + pad * 2, hP: PLATE.cap + pad * 1.9 };
 };
-PLATE.X = BX + BB.right + 58 + plateBox().wP / 2;
+PLATE.X = BX_REST + BB.right + 58 + plateBox().wP / 2;
 
-/** the body's power (rests at these world spots; rises into place as one rigid assembly by asmDy) */
-export const HUB = { x: 753, y: 1461, R: 100, H: 78, ry: 27 };
-export const STOMACH = { x: 318, y: 1226, scale: 0.55 };
-export const CELL = { x: 1180, y: 1238, size: 360 };
+/** the body's power: the hub stands on the plinth's top where the pelvis stood (base, full height, radius); the
+ *  organs hover either side of it on the front plane (they come forward out of the haze) */
+export const HUB = { x: 0, base: PLINTH.top, R: 96, H: 78 };
+export const HUB_MID = HUB.base - HUB.H / 2;
+export const STOMACH = { x: -398, y: -394, scale: 0.55 };
+export const CELL = { x: 427, y: -382, size: 360 };
 /** line widths (world): the brain's thin cord, the two thick lines */
 export const W_THIN = 7.5;
 export const W_THICK = 38;
@@ -129,81 +126,114 @@ export const W_THICK = 38;
 // THE CAMERA (keys: world point at screen centre; f -10 / f0 are I1's own camera so the move starts at zero slope)
 // ===================================================================================================================
 const K = (f: number, k: number, cx: number, cy: number) => ({ f, k, wx: cx, wy: cy, sx: 540, sy: 960 });
-const C_M10 = i1CamRaw(I1_LAST - 10);
-const C_0 = i1CamRaw(I1_LAST);
+const C_M10 = I1.camAt(I1_LAST - 10);
+const C_0 = I1.camAt(I1_LAST);
 const camAt = makeCamera(
   [
     K(-10, C_M10.k, C_M10.cx, C_M10.cy),
     K(0, C_0.k, C_0.cx, C_0.cy),
-    K(20, 1.085, 625, 958),
-    K(40, 0.962, 735, 1000),
-    K(102, 0.685, 753, 1392),
-    K(129, 0.675, 754, 1402),
+    K(20, 1.0775, -12, -662),
+    K(40, 0.9875, -15, -620),
+    K(102, 0.685, 0, -228),
+    K(129, 0.675, 1, -218),
   ],
   false,
 );
 export const camOf = (f: number) => swayCam(camAt(f), f + I1_LAST);
+export const DEPTH = I1.DEPTH;
 
 // ===================================================================================================================
 // TIMINGS
 // ===================================================================================================================
 export const T = {
-  lift: 24, // the brain has popped up and settled
-  pelvisOut: 15, // the pelvis has sunk and drained into the low air
-  cord0: 8, // the cord's tip leaves the frame bottom
-  cord1: 26, // CONTACT: the cord's plug docks on the brain stem
+  lift: 24, // the brain has popped up and risen
+  drift: 34, // ... and drifted left to its rest
+  pelvis0: 8, // the brain is clear of the inlet: the pelvis starts back into the haze
+  pelvisOut: 18, // ... gone
+  hub0: 9, // the hub's lid shows on the plinth's top
+  hub1: 22, // ... it has risen to full height
+  cord0: 17, // the cord's tip leaves the hub
+  cord1: 28, // CONTACT: the cord's plug docks on the brain stem
   bead0: 30, // the first bead reaches the brain (first glow)
   beadEvery: 10,
   plate0: 37, // the plate starts to slide up ("20" f36)
-  asm0: 46, // the power assembly's plan starts (enters the frame bottom ~f53)
-  asm1: 96, // it rests
+  stom0: 48, // the stomach starts forward out of the haze
+  stom1: 86, // ... it hovers in place
+  cell0: 54,
+  cell1: 92,
+  lineS0: 80, // the stomach's thick line is drawn out from the hub
+  lineS1: 88,
+  lineC0: 86,
+  lineC1: 94,
   stomachLit: 93, // the first fat bead reaches the stomach ("digestion")
   cellLit: 112, // ... and the cell ("immunity")
   thickEvery: 5,
 };
 const V_THIN = 14;
 const V_THICK = 18;
+/** how deep the organs start (world Z, in the haze) */
+const ORGAN_Z0 = 1700;
 
 // ===================================================================================================================
 // THE MOTION (pure functions of the frame, exported for the checks)
 // ===================================================================================================================
+/** the brain's rise (0..1): a quick pop out of the inlet (clear of the rim by f8), then easing up to its rest */
+const LIFT = pchip(
+  [
+    [0, 0],
+    [4, 0.05],
+    [8, 0.2],
+    [14, 0.56],
+    [T.lift, 1],
+    [T.lift + 6, 1],
+  ],
+  true,
+);
 /** the brain: anchor, tilt, I1's breath decaying, the squash, the glow */
 export const brainAt = (f: number) => {
   const press = I1.pressAt(I1_LAST + f) * (1 - sstep(f / 6));
-  const L = ease(c01(f / T.lift));
+  const pc = Math.max(-0.4, press);
+  const L = LIFT(f);
+  const LX = ease(c01(f / T.drift));
   const bob = 4 * Math.sin((2 * Math.PI * (f - 18)) / 52) * sstep((f - 18) / 14);
   const y = I1_YC + 5 * press + (BY_REST - I1_YC) * L + bob;
-  const rot = I1_ROT * (1 - ease(c01(f / 22)));
-  const sx = 1 + 0.025 * Math.max(-0.2, press);
-  const sy = 1 - 0.025 * Math.max(-0.2, press);
-  // glow: modest, from the first bead's arrival; each bead adds a small swell
+  const x = I1_BX + (BX_REST - I1_BX) * LX;
+  const rot = I1_B.rot * (1 - ease(c01(f / 22)));
+  return { x, y, rot, sx: 1 + 0.065 * pc, sy: 1 - 0.085 * pc, glow: glowAt(f) };
+};
+/** glow: modest, from the first bead's arrival; each bead adds a small swell */
+const glowAt = (f: number) => {
   let glow = 0.42 * sstep((f - T.bead0) / 12);
   for (let t = T.bead0; t <= f; t += T.beadEvery) glow += 0.07 * Math.exp(-(f - t) / 5) * c01((f - t) / 1.5 + 0.34);
-  return { x: BX, y, rot, sx, sy, glow: Math.min(1, glow) };
+  return Math.min(1, glow);
+};
+/** the brain's box in world units (after the squash about the rim row; rotation ignored), as I1's brainWorldBox */
+export const brainWorldBox = (f: number) => {
+  const s = brainAt(f);
+  const b = brainBox(BRAIN_SIZE, BRAIN_SWELL);
+  const sqY = (y: number) => I1_PIVOT_Y + (y - I1_PIVOT_Y) * s.sy;
+  return { left: s.x - (b.w / 2) * s.sx, right: s.x + (b.w / 2) * s.sx, top: sqY(s.y + b.top), bottom: sqY(s.y), w: b.w * s.sx };
 };
 /** the stem tip (world): where the cord docks */
 export const stemTip = (f: number): P2 => {
   const b = brainAt(f);
   return [b.x + STEM_DX, b.y - 1.5];
 };
-/** the pelvis's exit: sink (world), opacity, fog */
+/** the pelvis's exit: it holds while the brain pops out, then goes straight back into the haze (depth Z, accelerating)
+ *  and fades at the end; the bone's give decays */
 export const pelvisAt = (f: number) => {
-  const u = c01(f / T.pelvisOut);
-  return { sink: 420 * u * u, op: 1 - sstep((f - 0.45 * T.pelvisOut) / (0.55 * T.pelvisOut)), fog: 0.06 + 0.84 * sstep(f / (0.8 * T.pelvisOut)), give: 2 * Math.max(0, I1.pressAt(I1_LAST - 1)) * (1 - u) };
+  const u = c01((f - T.pelvis0) / (T.pelvisOut - T.pelvis0));
+  return { Z: 2600 * u * u, moved: f > T.pelvis0, op: 1 - sstep((f - T.pelvis0 - 4) / (T.pelvisOut - T.pelvis0 - 4)), give: 2 * Math.max(0, I1.pressAt(I1_LAST - 1 + f)) * (1 - sstep(f / 6)) };
 };
-/** the assembly's rise (world dy, + = below its rest): planned as a screen offset (a Hermite ease with an entry speed,
- *  zero speed and finite deceleration at rest) divided by the zoom; extended at the entry speed before asm0 */
-const ASM_DS = 1220;
-const ASM_V0T = 1500;
-export const asmDy = (f: number) => {
-  const T0 = T.asm0;
-  const TT = T.asm1 - T.asm0;
-  const k = camAt(f).k;
-  if (f >= T.asm1) return 0;
-  if (f < T0) return (ASM_DS + ((T0 - f) * ASM_V0T) / TT) / k;
-  const t = (f - T0) / TT;
-  const h = ASM_DS * (2 * t * t * t - 3 * t * t + 1) - ASM_V0T * (t * t * t - 2 * t * t + t);
-  return h / k;
+/** the hub: its lid's opacity and its height out of the plinth */
+export const hubAt = (f: number) => ({ lid: sstep((f - T.hub0) / 3), h: HUB.H * ease(c01((f - T.hub0 - 2) / (T.hub1 - T.hub0 - 2))) });
+/** an organ coming forward out of the haze: depth Z, opacity, and its projected place and scale now */
+export const organPose = (f: number, o: { x: number; y: number }, t0: number, t1: number) => {
+  const t = c01((f - t0) / (t1 - t0));
+  const Z = ORGAN_Z0 * (1 - easeOut(t));
+  const P = perspective(camOf(f), DEPTH);
+  const at = P.p(o.x, o.y, Z);
+  return { Z, op: f < t0 ? 0 : sstep(t / 0.3), at, r: P.r(Z) };
 };
 
 // ===================================================================================================================
@@ -359,45 +389,49 @@ const Beads: React.FC<{ p: Poly; f: number; first: number; every: number; v: num
 };
 
 // ===================================================================================================================
-// THE HUB: a squat cream drum, the body's one power source; three outlets (top: the cord; sides: the thick lines)
+// THE HUB: a squat cream drum on the plinth, the body's one power source; it rises out of the plinth's top (its lid
+// shows first, flush with the stone); three outlets (top: the cord; sides: the thick lines)
 // ===================================================================================================================
-const Hub: React.FC<{ x: number; y: number; tone: (hex: string) => string; pulse: number }> = ({ x, y, tone, pulse }) => {
-  const { R, H, ry } = HUB;
-  const yt = y - H / 2;
-  const yb = y + H / 2;
+const Hub: React.FC<{ h: number; lid: number; ry: number; pulse: number }> = ({ h, lid, ry, pulse }) => {
+  const { x, base, R, H } = HUB;
+  const yt = base - h;
+  const yb = base;
   const m = MAT.marble;
+  const ink = mixHex(m.dark, PAL.shadow, 0.3);
   const body = `M${n2(x - R)},${n2(yt)}L${n2(x - R)},${n2(yb)}A${n2(R)},${n2(ry)} 0 0 0 ${n2(x + R)},${n2(yb)}L${n2(x + R)},${n2(yt)}Z`;
+  const up = c01(h / H);
+  const stubA = c01((h - 0.7 * H) / (0.3 * H));
   const stub = (sx: number, dir: number) => {
     const L = 26;
     const hw = W_THICK / 2 + 7;
     const x0 = dir < 0 ? sx - L : sx;
-    return <rect x={x0} y={y - hw} width={L} height={hw * 2} rx={hw * 0.45} fill={tone(m.mid)} stroke={tone(mixHex(m.dark, PAL.shadow, 0.3))} strokeWidth={2.2} />;
+    return <rect x={x0} y={HUB_MID - hw} width={L} height={hw * 2} rx={hw * 0.45} fill={m.mid} stroke={ink} strokeWidth={2.2} opacity={stubA} />;
   };
   return (
-    <g>
+    <g opacity={lid}>
       <defs>
         <linearGradient id="hubg" gradientUnits="userSpaceOnUse" x1={x - R} y1="0" x2={x + R} y2="0">
-          <stop offset="0" stopColor={tone(m.mid)} />
-          <stop offset="0.25" stopColor={tone(m.lit)} />
-          <stop offset="0.55" stopColor={tone(mixHex(m.lit, m.mid, 0.6))} />
-          <stop offset="0.85" stopColor={tone(mixHex(m.dark, PAL.shadow, 0.1))} />
-          <stop offset="1" stopColor={tone(mixHex(m.mid, "#5F877D", 0.35))} />
+          <stop offset="0" stopColor={m.mid} />
+          <stop offset="0.25" stopColor={m.lit} />
+          <stop offset="0.55" stopColor={mixHex(m.lit, m.mid, 0.6)} />
+          <stop offset="0.85" stopColor={mixHex(m.dark, PAL.shadow, 0.1)} />
+          <stop offset="1" stopColor={mixHex(m.mid, "#5F877D", 0.35)} />
         </linearGradient>
         <radialGradient id="hubaura">
-          <stop offset="0" stopColor={CREAM} stopOpacity={0.32 + 0.1 * pulse} />
-          <stop offset="0.5" stopColor={CREAM} stopOpacity={0.12 + 0.05 * pulse} />
+          <stop offset="0" stopColor={CREAM} stopOpacity={(0.32 + 0.1 * pulse) * up} />
+          <stop offset="0.5" stopColor={CREAM} stopOpacity={(0.12 + 0.05 * pulse) * up} />
           <stop offset="1" stopColor={CREAM} stopOpacity={0} />
         </radialGradient>
       </defs>
-      <ellipse cx={x} cy={y} rx={R * 2.1} ry={R * 1.25} fill="url(#hubaura)" />
-      {stub(x - R + 4, -1)}
-      {stub(x + R - 4, 1)}
-      <path d={body} fill="url(#hubg)" stroke={tone(mixHex(m.dark, PAL.shadow, 0.3))} strokeWidth={2.4} strokeLinejoin="round" />
-      <ellipse cx={x} cy={yt} rx={R} ry={ry} fill={tone(mixHex(m.lit, CREAM, 0.4 + 0.2 * pulse))} stroke={tone(mixHex(m.dark, PAL.shadow, 0.3))} strokeWidth={2.4} />
-      <ellipse cx={x} cy={yt} rx={R * 0.62} ry={ry * 0.62} fill="none" stroke={tone(m.mid)} strokeWidth={2} strokeOpacity={0.6} />
+      <ellipse cx={x} cy={HUB_MID} rx={R * 2.1} ry={R * 1.25} fill="url(#hubaura)" />
+      {stubA > 0.002 ? stub(x - R + 4, -1) : null}
+      {stubA > 0.002 ? stub(x + R - 4, 1) : null}
+      {h > 0.3 ? <path d={body} fill="url(#hubg)" stroke={ink} strokeWidth={2.4} strokeLinejoin="round" /> : null}
+      <ellipse cx={x} cy={yt} rx={R} ry={ry} fill={mixHex(mixHex(m.lit, CREAM, 0.4 + 0.2 * pulse), MAT.stone.lit, 0.5 * (1 - up))} stroke={ink} strokeWidth={2.4} />
+      <ellipse cx={x} cy={yt} rx={R * 0.62} ry={ry * 0.62} fill="none" stroke={m.mid} strokeWidth={2} strokeOpacity={0.6} />
       {/* the cord's collar on top */}
-      <ellipse cx={x} cy={yt - 2} rx={13} ry={5} fill={tone(m.mid)} stroke={tone(mixHex(m.dark, PAL.shadow, 0.3))} strokeWidth={1.8} />
-      <path d={`M${n2(x - R * 0.96)},${n2(yt + 4)}L${n2(x - R * 0.96)},${n2(yb - 2)}`} stroke={CREAM} strokeWidth={3} strokeOpacity={0.45} />
+      <ellipse cx={x} cy={yt - 2} rx={13} ry={5} fill={m.mid} stroke={ink} strokeWidth={1.8} opacity={up} />
+      {h > 6 ? <path d={`M${n2(x - R * 0.96)},${n2(yt + 4)}L${n2(x - R * 0.96)},${n2(yb - 2)}`} stroke={CREAM} strokeWidth={3} strokeOpacity={0.45} /> : null}
     </g>
   );
 };
@@ -564,21 +598,22 @@ const Cell: React.FC<{ x: number; y: number; size: number; uid: string; unitPx: 
 };
 
 // ===================================================================================================================
-// THE ASSEMBLY'S LINES (world, at rest; the assembly moves rigidly by asmDy)
+// THE ASSEMBLY'S LINES (world, at rest on the front plane)
 // ===================================================================================================================
 const stomW = (p: P2): P2 => [STOMACH.x + p[0] * STOMACH.scale, STOMACH.y + p[1] * STOMACH.scale];
 const S_ATT = stomW(STOM_ATTACH);
 const C_ATT: P2 = [CELL.x - 0.3 * CELL.size, CELL.y + 0.27 * CELL.size];
 /** hub -> stomach and hub -> cell (each ends inside its organ: the organ covers the end) */
-export const LINE_S = polyOf(bez([HUB.x - HUB.R - 18, HUB.y], [HUB.x - HUB.R - 170, HUB.y + 6], [S_ATT[0] + 90, S_ATT[1] + 120], [S_ATT[0] - 20, S_ATT[1] - 25], 48));
-export const LINE_C = polyOf(bez([HUB.x + HUB.R + 18, HUB.y], [HUB.x + HUB.R + 150, HUB.y + 6], [C_ATT[0] - 90, C_ATT[1] + 110], [C_ATT[0] + 25, C_ATT[1] - 25], 48));
+export const LINE_S = polyOf(bez([HUB.x - HUB.R - 18, HUB_MID], [HUB.x - HUB.R - 170, HUB_MID + 6], [S_ATT[0] + 90, S_ATT[1] + 120], [S_ATT[0] - 20, S_ATT[1] - 25], 48));
+export const LINE_C = polyOf(bez([HUB.x + HUB.R + 18, HUB_MID], [HUB.x + HUB.R + 150, HUB_MID + 6], [C_ATT[0] - 90, C_ATT[1] + 110], [C_ATT[0] + 25, C_ATT[1] - 25], 48));
 /** where along each thick line its organ's edge sits (beads vanish into the organ there) */
 const S_EDGE = LINE_S.len - 40;
 const C_EDGE = LINE_C.len - 45;
+/** how much of a thick line is drawn out from the hub */
+const lineDrawn = (f: number, t0: number, t1: number, p: Poly) => (f <= t0 ? 0 : p.len * easeOut((f - t0) / (t1 - t0)));
 /** the thin cord (world, now): hub top -> stem tip */
 export const cordAt = (f: number) => {
-  const dy = asmDy(f);
-  const a: P2 = [HUB.x, HUB.y - HUB.H / 2 - 2 + dy];
+  const a: P2 = [HUB.x, HUB.base - hubAt(f).h - 2];
   const b = stemTip(f);
   const L = a[1] - b[1];
   return polyOf(bez(a, [a[0], a[1] - 0.42 * L], [b[0], b[1] + 0.5 * L], b, 60));
@@ -586,12 +621,12 @@ export const cordAt = (f: number) => {
 /** how much of the cord is drawn: its length from the hub up to the moving tip */
 export const cordDrawn = (f: number, p: Poly) => {
   const u = c01((f - T.cord0) / (T.cord1 - T.cord0));
-  const toGo = 1050 * Math.pow(1 - u, 1.7);
+  const toGo = 700 * Math.pow(1 - u, 1.7);
   return f < T.cord0 ? 0 : Math.max(0, p.len - toGo);
 };
 
 // ===================================================================================================================
-// THE PELVIS BLOCK (I1's drawing, rebuilt; fades out with pelvisAt)
+// THE PELVIS'S PATHS (I1's)
 // ===================================================================================================================
 const ellArcD = (cx: number, cy: number, rx: number, ry: number, a0: number, a1: number) => {
   const p = (a: number) => `${n2(cx + rx * Math.cos((a * Math.PI) / 180))},${n2(cy + ry * Math.sin((a * Math.PI) / 180))}`;
@@ -602,80 +637,6 @@ const visibleD = (cx: number, cy: number, rx: number, ry: number) =>
 const ellD = (cx: number, cy: number, rx: number, ry: number) => `M${n2(cx + rx)},${n2(cy)}A${n2(rx)},${n2(ry)} 0 1 1 ${n2(cx - rx)},${n2(cy)}A${n2(rx)},${n2(ry)} 0 1 1 ${n2(cx + rx)},${n2(cy)}Z`;
 const wallD = (cx: number, cy: number, rx: number, ry: number, drop: number) =>
   `M${n2(cx - rx)},${n2(cy)}A${n2(rx)},${n2(ry)} 0 0 1 ${n2(cx + rx)},${n2(cy)}L${n2(cx + rx)},${n2(cy + drop)}A${n2(rx)},${n2(ry)} 0 0 0 ${n2(cx - rx)},${n2(cy + drop)}Z`;
-
-const PelvisBack: React.FC<{ A: AirWorld; f: number; pc: P2; bbox: { left: number; right: number; top: number; bottom: number; w: number } }> = ({ A, f, pc, bbox }) => {
-  const pa = pelvisAt(f);
-  const R = I1.INLET_R;
-  const RY = I1.INLET_RY;
-  const tiltT = `translate(0 ${n2(pc[1])}) scale(1 ${I1.TILT}) translate(0 ${n2(-pc[1])})`;
-  // I1's own fog colour at f0, draining toward the low air behind the pelvis as it sinks
-  const pFog = { rgb: mixHex(MAT.ground.mid, A.screenAir(pc[1] + 60), c01(f / 4)), amount: pa.fog };
-  const holeA = 1 - (pa.fog - 0.06) / 0.84;
-  const wallLit = mixHex("#8C806A", A.airHex(900, 0), 0.25);
-  const wallDark = mixHex("#3A3229", A.airHex(900, 0), 0.2);
-  const deep = mixHex("#1B1D1A", A.airHex(900, 0), 0.25);
-  const shadowA = 1 - sstep(f / 7);
-  return (
-    <g opacity={pa.op}>
-      <defs>
-        <mask id="pmask" maskUnits="userSpaceOnUse" x={-500} y={-500} width={2100} height={3000}>
-          <rect x={-500} y={-500} width={2100} height={3000} fill="black" />
-          <g transform={tiltT}>
-            <Pelvis x={pc[0]} y={pc[1]} size={I1.PELVIS_W} uid="pm" />
-          </g>
-        </mask>
-        <radialGradient id="bshadow">
-          <stop offset="0" stopColor="#22180F" stopOpacity={0.42} />
-          <stop offset="0.55" stopColor="#22180F" stopOpacity={0.22} />
-          <stop offset="1" stopColor="#22180F" stopOpacity={0} />
-        </radialGradient>
-        <clipPath id="hole" clipPathUnits="userSpaceOnUse">
-          <path d={ellD(pc[0], pc[1], R, RY)} />
-        </clipPath>
-        <linearGradient id="wallg" gradientUnits="userSpaceOnUse" x1="0" y1={n2(pc[1] - RY)} x2="0" y2={n2(pc[1] + 0.2 * RY)}>
-          <stop offset="0" stopColor={wallLit} />
-          <stop offset="0.55" stopColor={wallDark} />
-          <stop offset="1" stopColor={deep} />
-        </linearGradient>
-        <radialGradient id="deepg" gradientUnits="userSpaceOnUse" cx={pc[0]} cy={pc[1] + RY * 0.4} r={R}>
-          <stop offset="0" stopColor={deep} />
-          <stop offset="1" stopColor={mixHex(deep, wallDark, 0.5)} />
-        </radialGradient>
-      </defs>
-      <g clipPath="url(#hole)" opacity={holeA}>
-        <path d={ellD(pc[0], pc[1], R + 2, RY + 2)} fill="url(#deepg)" />
-        <path d={wallD(pc[0], pc[1], R + 2, RY + 2, RY * 0.95)} fill="url(#wallg)" />
-      </g>
-      <g transform={tiltT}>
-        <Pelvis x={pc[0]} y={pc[1]} size={I1.PELVIS_W} uid="pb" unitPx={A.k} fog={pFog} />
-      </g>
-      {shadowA > 0.002 ? (
-        <g mask="url(#pmask)" opacity={shadowA}>
-          <ellipse cx={(bbox.left + bbox.right) / 2 + 16} cy={(bbox.top + bbox.bottom) / 2 + 26} rx={bbox.w * 0.56} ry={(bbox.bottom - bbox.top) * 0.6} fill="url(#bshadow)" />
-        </g>
-      ) : null}
-    </g>
-  );
-};
-const PelvisRim: React.FC<{ f: number; pc: P2 }> = ({ f, pc }) => {
-  const ra = i1RimAmt(I1_LAST) * (1 - sstep(f / 5)) * pelvisAt(f).op;
-  if (ra < 0.005) return null;
-  const R = I1.INLET_R;
-  const RY = I1.INLET_RY;
-  return (
-    <g mask="url(#pmask)">
-      <defs>
-        <filter id="rimblur" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation={2.4} />
-        </filter>
-      </defs>
-      <g opacity={ra} filter="url(#rimblur)">
-        <path d={ellArcD(pc[0], pc[1], R + 3, RY + 3, 0, 52)} fill="none" stroke="#F6EEDC" strokeWidth={9} strokeLinecap="round" />
-        <path d={ellArcD(pc[0], pc[1], R + 3, RY + 3, 128, 180)} fill="none" stroke="#F6EEDC" strokeWidth={9} strokeLinecap="round" />
-      </g>
-    </g>
-  );
-};
 
 // ===================================================================================================================
 // THE PLATE: cream type on a soft dark plate (the clip's soft-plate look), sliding up while fading in
@@ -712,68 +673,208 @@ const TwentyWatts: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const f = frame;
   const cam = camOf(f);
-  const A = airWorldOf({ cam, rest: I1_REST, depth: I1_DEPTH, frame: f + I1_LAST });
+  const A = airWorldOf({ cam, rest: I1_REST, depth: DEPTH, frame: f + I1_LAST, fogBy: "depth" });
   const k = cam.k;
-  // the brain
+  // the brain (I1's drawing: the squash about the rim row, the form light over it)
   const b = brainAt(f);
-  const bb = brainBox(BRAIN_SIZE, BRAIN_SWELL, b.sx, b.sy);
+  const bb = brainWorldBox(f);
   const sqT = `translate(${n2(b.x)} ${n2(I1_PIVOT_Y)}) scale(${b.sx.toFixed(5)} ${b.sy.toFixed(5)}) translate(${n2(-b.x)} ${n2(-I1_PIVOT_Y)})`;
-  const sqY = (y: number) => I1_PIVOT_Y + (y - I1_PIVOT_Y) * b.sy;
-  const bbox = { left: b.x + bb.left, right: b.x + bb.right, top: sqY(b.y + brainBox(BRAIN_SIZE, BRAIN_SWELL).top), bottom: sqY(b.y), w: bb.w };
-  // the pelvis
+  const brainEl = (uid: string) => <Brain x={b.x} y={b.y} size={BRAIN_SIZE} swell={BRAIN_SWELL} uid={uid} unitPx={k} rot={b.rot} glow={b.glow} />;
+  // the pelvis (I1's stack), dissolving into the air
   const pa = pelvisAt(f);
   const pelvisOn = pa.op > 0.002;
-  const pc: P2 = [I1.PELVIS_C[0], I1.PELVIS_C[1] + pa.give + pa.sink];
-  // the power assembly
-  const dy = asmDy(f);
-  const asmOn = 960 + (HUB.y - 620 + dy - cam.cy) * k < 2100;
-  const airAt = (wy: number) => A.screenAir(wy);
+  const pc: P2 = [I1.PELVIS_C[0], I1.PELVIS_C[1] + pa.give];
+  const tiltT = `translate(0 ${n2(pc[1])}) scale(1 ${I1.TILT}) translate(0 ${n2(-pc[1])})`;
+  const air = A.airHex(0, 300);
+  const pFog = { rgb: MAT.ground.mid, amount: 0.06 };
+  // going back: placed by the perspective about its base on the plinth's top, fogged by its depth as one piece
+  const pBase: P2 = [0, PLINTH.top];
+  const pPose = { at: A.P.p(pBase[0], pBase[1], pa.Z), r: A.P.r(pa.Z) };
+  const pFogA = pa.moved ? A.fog(pa.Z) : 0;
+  const placeT = (o: { x: number; y: number }, p: { at: P2; r: number }) => `translate(${n2(p.at[0])} ${n2(p.at[1])}) scale(${p.r.toFixed(5)}) translate(${n2(-o.x)} ${n2(-o.y)})`;
+  const pT = pa.moved ? placeT({ x: pBase[0], y: pBase[1] }, pPose) : undefined;
+  const R = I1.INLET_R;
+  const RY = I1.INLET_RY;
+  const wallLit = mixHex("#B8A98A", air, 0.15);
+  const wallDark = mixHex("#4A4033", air, 0.15);
+  const deep = mixHex("#1B1D1A", air, 0.2);
+  const ra = i1RimAmt(I1_LAST) * (1 - sstep(f / 5));
+  const opOf = (v: number) => (v >= 1 ? undefined : v);
+  // the hub on the plinth (its ellipses foreshortened as the plinth's top is seen now)
+  const hb = hubAt(f);
+  const hubOn = hb.lid > 0.002;
+  const ryAt = (Y: number) => Math.abs(A.P.p(HUB.x, Y, -HUB.R)[1] - A.P.p(HUB.x, Y, HUB.R)[1]) / 2;
+  const hubPulse = 0.5 + 0.5 * Math.sin((2 * Math.PI * f) / 20);
+  // the cord
   const tone = (hex: string) => hex;
   const cord = cordAt(f);
   const cordS = cordDrawn(f, cord);
+  // the organs, out of the haze
+  const sP = organPose(f, STOMACH, T.stom0, T.stom1);
+  const cP = organPose(f, CELL, T.cell0, T.cell1);
   const sLit = litAt(f, T.stomachLit);
   const cLit = litAt(f, T.cellLit);
-  // the assembly fogs a little toward the air until its organ lights (receded context)
-  const dimS = 0.32 * (1 - sLit);
-  const dimC = 0.32 * (1 - cLit);
-  const hubPulse = 0.5 + 0.5 * Math.sin((2 * Math.PI * f) / 20);
+  // the organs fog a little toward the air until they light (receded context); on the way in they come out of a light
+  // haze (the pale upper air), not a dark one, clearing as they come forward
+  const lightAir = rgbHex(A.v.airAtScreen(300));
+  const hazeOf = (Z: number) => Math.pow(c01(Z / ORGAN_Z0), 0.6);
+  const dimOf = (Z: number, lit: number) => 1 - (1 - 0.32 * (1 - lit)) * (1 - Math.max(A.fog(Z), 0.8 * hazeOf(Z)));
+  const airOf = (Z: number, row: number) => mixHex(A.screenAir(row), lightAir, hazeOf(Z));
+  const sDrawn = lineDrawn(f, T.lineS0, T.lineS1, LINE_S);
+  const cDrawn = lineDrawn(f, T.lineC0, T.lineC1, LINE_C);
+  const lineAir = A.screenAir(HUB_MID);
   return (
-    <AirStage v={A.v} bloom={0.22} motes={0.6}>
+    <AirStage v={A.v} bloom={0.22} motes={0.8}>
       <WorldSvg cam={cam}>
-        {asmOn ? (
-          <g transform={`translate(0 ${n2(dy)})`}>
-            <Conduit p={LINE_S} w={W_THICK} tone={(h) => mixHex(h, airAt(HUB.y + dy), dimS * 0.6)} lit={sLit} />
-            <Beads p={LINE_S} end={S_EDGE} f={f} first={T.stomachLit} every={T.thickEvery} v={V_THICK} w={W_THICK * 1.06} len={W_THICK * 1.45} uid="bs" tone={tone} />
-            <Conduit p={LINE_C} w={W_THICK} tone={(h) => mixHex(h, airAt(HUB.y + dy), dimC * 0.6)} lit={cLit} />
-            <Beads p={LINE_C} end={C_EDGE} f={f} first={T.cellLit} every={T.thickEvery} v={V_THICK} w={W_THICK * 1.06} len={W_THICK * 1.45} uid="bc" tone={tone} />
+        <defs>
+          <mask id="pmask" maskUnits="userSpaceOnUse" x={-1500} y={-1500} width={3000} height={3000}>
+            <rect x={-1500} y={-1500} width={3000} height={3000} fill="black" />
+            <g transform={tiltT}>
+              <Pelvis x={pc[0]} y={pc[1]} size={I1.PELVIS_W} uid="pm" />
+            </g>
+          </mask>
+          {pFogA > 0.002 ? (
+            <mask id="pfog" maskUnits="userSpaceOnUse" x={-1500} y={-1500} width={3000} height={3000}>
+              <rect x={-1500} y={-1500} width={3000} height={3000} fill="black" />
+              <g transform={`translate(0 ${I1_THICK})`}>
+                <g transform={tiltT}>
+                  <Pelvis x={pc[0]} y={pc[1]} size={I1.PELVIS_W} uid="pf1" />
+                </g>
+              </g>
+              <g transform={tiltT}>
+                <Pelvis x={pc[0]} y={pc[1]} size={I1.PELVIS_W} uid="pf2" />
+              </g>
+              <path d={ellD(pc[0], pc[1], R + 2, RY + 2)} fill="white" />
+            </mask>
+          ) : null}
+          <mask id="bmask" maskUnits="userSpaceOnUse" x={-1500} y={-1500} width={3000} height={3000}>
+            <rect x={-1500} y={-1500} width={3000} height={3000} fill="black" />
+            <g transform={sqT}>{brainEl("bm")}</g>
+          </mask>
+          <linearGradient id="bform" gradientUnits="userSpaceOnUse" x1={n2(bb.left)} y1={n2(bb.top)} x2={n2(bb.right)} y2={n2(bb.bottom)}>
+            <stop offset="0" stopColor="#FFF4E4" stopOpacity={0.34} />
+            <stop offset="0.42" stopColor="#FFF4E4" stopOpacity={0} />
+            <stop offset="0.7" stopColor="#3A2218" stopOpacity={0} />
+            <stop offset="1" stopColor="#3A2218" stopOpacity={0.36} />
+          </linearGradient>
+          <radialGradient id="bshadow">
+            <stop offset="0" stopColor="#22180F" stopOpacity={0.42} />
+            <stop offset="0.55" stopColor="#22180F" stopOpacity={0.22} />
+            <stop offset="1" stopColor="#22180F" stopOpacity={0} />
+          </radialGradient>
+          <clipPath id="vis" clipPathUnits="userSpaceOnUse">
+            <path d={visibleD(pc[0], pc[1], R, RY)} />
+          </clipPath>
+          <clipPath id="hole" clipPathUnits="userSpaceOnUse">
+            <path d={ellD(pc[0], pc[1], R, RY)} />
+          </clipPath>
+          <linearGradient id="wallg" gradientUnits="userSpaceOnUse" x1="0" y1={n2(pc[1] - RY)} x2="0" y2={n2(pc[1] + 0.25 * RY)}>
+            <stop offset="0" stopColor={wallLit} />
+            <stop offset="0.5" stopColor={wallDark} />
+            <stop offset="1" stopColor={deep} />
+          </linearGradient>
+          <linearGradient id="wallx" gradientUnits="userSpaceOnUse" x1={n2(pc[0] - R)} y1="0" x2={n2(pc[0] + R)} y2="0">
+            <stop offset="0" stopColor="#22180F" stopOpacity={0.35} />
+            <stop offset="0.45" stopColor="#22180F" stopOpacity={0} />
+            <stop offset="1" stopColor="#22180F" stopOpacity={0.15} />
+          </linearGradient>
+          <radialGradient id="deepg" gradientUnits="userSpaceOnUse" cx={pc[0]} cy={pc[1] + RY * 0.4} r={R}>
+            <stop offset="0" stopColor={deep} />
+            <stop offset="1" stopColor={mixHex(deep, wallDark, 0.5)} />
+          </radialGradient>
+          <filter id="rimblur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation={2.4} />
+          </filter>
+          <filter id="edgeblur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation={1.4} />
+          </filter>
+        </defs>
+        {/* the setting: I1's floor, air and plinth carry on */}
+        <AirFloor A={A} x0={-3600} x1={3600} z0={-3000} z1={6000} mat={MAT.ground} course={190} />
+        <AirHorizonHazeW A={A} id="haze" />
+        <AirShadow A={A} X={0} Z={0} w={PLINTH.hw * 1.12} d={PLINTH.z * 1.3} amt={0.85} uid="plS" />
+        <AirBox A={A} X0={-PLINTH.hw} X1={PLINTH.hw} Y0={PLINTH.top} Y1={0} Z0={-PLINTH.z} Z1={PLINTH.z} mat={MAT.stone} uid="pl" />
+        {/* the organs' soft shadows on the floor below them */}
+        {sP.op > 0.002 ? <AirShadow A={A} X={STOMACH.x} Z={sP.Z} w={190} d={80} amt={0.4 * sP.op} uid="sS" /> : null}
+        {cP.op > 0.002 ? <AirShadow A={A} X={CELL.x} Z={cP.Z} w={150} d={70} amt={0.4 * cP.op} uid="cS" /> : null}
+        {/* the hub on the plinth's top: its contact shadow, the two thick lines and their fat beads, the drum */}
+        {hubOn ? <AirShadow A={A} X={HUB.x} Z={0} Y={HUB.base} w={HUB.R * 1.1} d={HUB.R * 0.55} amt={0.7 * c01(hb.h / HUB.H)} uid="hS" /> : null}
+        {sDrawn > 0.5 ? (
+          <g>
+            <Conduit p={LINE_S} s1={sDrawn} w={W_THICK} tone={(h) => mixHex(h, lineAir, 0.32 * (1 - sLit) * 0.6)} lit={sLit} />
+            <Beads p={LINE_S} end={S_EDGE} f={f} first={T.stomachLit} every={T.thickEvery} v={V_THICK} w={W_THICK * 1.06} len={W_THICK * 1.45} sMax={sDrawn} uid="bs" tone={tone} />
+          </g>
+        ) : null}
+        {cDrawn > 0.5 ? (
+          <g>
+            <Conduit p={LINE_C} s1={cDrawn} w={W_THICK} tone={(h) => mixHex(h, lineAir, 0.32 * (1 - cLit) * 0.6)} lit={cLit} />
+            <Beads p={LINE_C} end={C_EDGE} f={f} first={T.cellLit} every={T.thickEvery} v={V_THICK} w={W_THICK * 1.06} len={W_THICK * 1.45} sMax={cDrawn} uid="bc" tone={tone} />
           </g>
         ) : null}
         {/* the brain's cord: drawn up from the hub by its tip; beads by their arrival at the stem */}
         <Conduit p={cord} s1={cordS} w={W_THIN} tone={tone} />
         <Beads p={cord} f={f} first={T.bead0} every={T.beadEvery} v={V_THIN} w={W_THIN * 1.9} len={W_THIN * 2.8} sMax={cordS} uid="bt" tone={tone} />
         {cordS > 1 && cordS < cord.len - 1 ? <circle cx={atS(cord, cordS).pt[0]} cy={atS(cord, cordS).pt[1]} r={W_THIN * 0.95} fill={CREAM} /> : null}
-        {asmOn ? (
-          <g transform={`translate(0 ${n2(dy)})`}>
-            <Hub x={HUB.x} y={HUB.y} tone={tone} pulse={hubPulse} />
-            <Stomach x={STOMACH.x} y={STOMACH.y} scale={STOMACH.scale} uid="st" unitPx={k} lit={sLit} f={f} dim={dimS} air={airAt(STOMACH.y + dy)} />
-            <Cell x={CELL.x} y={CELL.y} size={CELL.size} uid="ce" unitPx={k} lit={cLit} f={f} dim={dimC} air={airAt(CELL.y + dy)} />
+        {hubOn ? <Hub h={hb.h} lid={hb.lid} ry={ryAt(HUB.base)} pulse={hubPulse} /> : null}
+        {sP.op > 0.002 ? (
+          <g opacity={opOf(sP.op)} transform={placeT(STOMACH, sP)}>
+            <Stomach x={STOMACH.x} y={STOMACH.y} scale={STOMACH.scale} uid="st" unitPx={k * sP.r} lit={sLit} f={f} dim={dimOf(sP.Z, sLit)} air={airOf(sP.Z, sP.at[1])} />
           </g>
         ) : null}
-        {pelvisOn ? <PelvisBack A={A} f={f} pc={pc} bbox={bbox} /> : null}
-        {/* the brain: inside the inlet (I1's clip) while the pelvis is there */}
-        <g clipPath={pelvisOn ? "url(#vis)" : undefined}>
-          {pelvisOn ? (
-            <defs>
-              <clipPath id="vis" clipPathUnits="userSpaceOnUse">
-                <path d={visibleD(pc[0], pc[1], I1.INLET_R, I1.INLET_RY)} />
-              </clipPath>
-            </defs>
-          ) : null}
-          <g transform={sqT}>
-            <Brain x={b.x} y={b.y} size={BRAIN_SIZE} swell={BRAIN_SWELL} uid="br" unitPx={k} rot={b.rot} glow={b.glow} />
+        {cP.op > 0.002 ? (
+          <g opacity={opOf(cP.op)} transform={placeT(CELL, cP)}>
+            <Cell x={CELL.x} y={CELL.y} size={CELL.size} uid="ce" unitPx={k * cP.r} lit={cLit} f={f} dim={dimOf(cP.Z, cLit)} air={airOf(cP.Z, cP.at[1])} />
           </g>
+        ) : null}
+        {/* I1's pelvis going back into the haze as one piece (its shadow on the plinth fades as it leaves) */}
+        {pa.moved && pelvisOn ? <AirShadow A={A} X={0} Z={0} Y={PLINTH.top} w={I1.PELVIS_W * 0.4} d={PLINTH.z * 0.55} amt={0.8 * (1 - sstep((f - T.pelvis0) / 4))} uid="pvS" /> : null}
+        {pelvisOn ? (
+          <g opacity={opOf(pa.op)} transform={pT}>
+            {!pa.moved ? <AirShadow A={A} X={0} Z={0} Y={PLINTH.top} w={I1.PELVIS_W * 0.4} d={PLINTH.z * 0.55} amt={0.8} uid="pvS" /> : null}
+            <g transform={`translate(0 ${I1_THICK})`}>
+              <g transform={tiltT}>
+                <Pelvis x={pc[0]} y={pc[1]} size={I1.PELVIS_W} uid="pt" unitPx={k} fog={{ rgb: "#6E5F4B", amount: 0.5 }} />
+              </g>
+            </g>
+            <g clipPath="url(#hole)">
+              <path d={ellD(pc[0], pc[1], R + 2, RY + 2)} fill="url(#deepg)" />
+              <path d={wallD(pc[0], pc[1], R + 2, RY + 2, RY * 0.95)} fill="url(#wallg)" />
+              <path d={wallD(pc[0], pc[1], R + 2, RY + 2, RY * 0.95)} fill="url(#wallx)" />
+            </g>
+            <g transform={tiltT}>
+              <Pelvis x={pc[0]} y={pc[1]} size={I1.PELVIS_W} uid="pb" unitPx={k} fog={pFog} />
+            </g>
+            <g mask="url(#pmask)" filter="url(#edgeblur)">
+              <path d={ellArcD(pc[0], pc[1], R + 4, RY + 4, 30, 150)} fill="none" stroke="#FBF4E6" strokeWidth={5} strokeOpacity={0.55} strokeLinecap="round" />
+            </g>
+            <g clipPath="url(#hole)" filter="url(#edgeblur)">
+              <path d={ellArcD(pc[0], pc[1], R - 2, RY - 2, 195, 300)} fill="none" stroke="#FBF4E6" strokeWidth={4} strokeOpacity={0.4} strokeLinecap="round" />
+            </g>
+            {!pa.moved ? (
+              <g mask="url(#pmask)">
+                <ellipse cx={(bb.left + bb.right) / 2 + 16} cy={(bb.top + bb.bottom) / 2 + 26} rx={bb.w * 0.56} ry={(bb.bottom - bb.top) * 0.6} fill="url(#bshadow)" />
+              </g>
+            ) : null}
+            {pFogA > 0.002 ? (
+              <g mask="url(#pfog)">
+                <rect x={-1500} y={-1500} width={3000} height={3000} fill={A.airHex(pa.Z, 360)} opacity={pFogA} />
+              </g>
+            ) : null}
+          </g>
+        ) : null}
+        {/* the brain with I1's soft form light; inside the inlet (I1's clip) while the pelvis is there */}
+        <g clipPath={pelvisOn && !pa.moved ? "url(#vis)" : undefined}>
+          <g transform={sqT}>{brainEl("br")}</g>
+          <rect x={n2(bb.left - 60)} y={n2(bb.top - 60)} width={n2(bb.w + 120)} height={n2(bb.bottom - bb.top + 120)} fill="url(#bform)" mask="url(#bmask)" />
         </g>
-        {pelvisOn ? <PelvisRim f={f} pc={pc} /> : null}
+        {pelvisOn && !pa.moved && ra > 0.005 ? (
+          <g mask="url(#pmask)">
+            <g opacity={ra} filter="url(#rimblur)">
+              <path d={ellArcD(pc[0], pc[1], R + 3, RY + 3, 0, 52)} fill="none" stroke="#F6EEDC" strokeWidth={9} strokeLinecap="round" />
+              <path d={ellArcD(pc[0], pc[1], R + 3, RY + 3, 128, 180)} fill="none" stroke="#F6EEDC" strokeWidth={9} strokeLinecap="round" />
+            </g>
+          </g>
+        ) : null}
         <Plate t={(f - T.plate0) / 12} />
       </WorldSvg>
     </AirStage>
