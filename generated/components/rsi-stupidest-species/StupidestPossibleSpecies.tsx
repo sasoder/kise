@@ -47,6 +47,8 @@
 // CAMERA: stairCam specs (anchor, screen point, px per metre, the eye's distance and offset), interpolated by two
 // designed lobes (each s(f) integrates t^A (1 - t)^B), log px/m; the descent's anchor runs down the queue's chest
 // points (u = TOP_U -> 0), the pull-back keeps the human's chest and moves the spec. Plus the house sway (crop only).
+// Rev 2: the anchor's height follows a smooth line through the queue (chestH), not each step's body plan, so the
+// descent's vertical motion is one smooth lobe like the horizontal one (rev1 jolted at every half step).
 // Checked per frame by scripts/clips/rsi-stupidest-species/check-stupidest-possible.ts (faces out of the bands and in
 // the keep-in box from f107, the camera's speed profile, figure overlaps, the motes over faces; descent transits listed).
 //
@@ -84,9 +86,22 @@ export const CHIMP_SCALE = 1.2;
 export const QUEUE = Array.from({ length: STAIRS.TOP }, (_, k) => k + 1);
 
 // ---- the camera ----------------------------------------------------------------------------------------------------
-/** the queue's chest point at a continuous step position u (0 = the human, k >= 1 = the k-th species) */
+/** the queue's chest point at a continuous step position u (0 = the human, k >= 1 = the k-th species). Its height
+ *  follows a SMOOTH line through the queue (the base body plan's height, never the per-step plan's: the plans change
+ *  tall 0.8-1.2 step to step, which jolted the camera's Y at every half step in rev1): the human's 1.75 m to the base
+ *  2.0 m over u 0..1 (a cubic with matching slopes), then 2.0 + 0.07 (u - 1) m, smooth and monotone */
+const H_SLOPE = 0.07;
+const chestH = (u: number) => {
+  if (u >= 1) return 2.0 + H_SLOPE * (u - 1);
+  const t = c01(u);
+  // Hermite from (0, 1.75, slope 0) to (1, 2.0, slope H_SLOPE)
+  const h00 = 2 * t * t * t - 3 * t * t + 1;
+  const h01 = -2 * t * t * t + 3 * t * t;
+  const h11 = t * t * t - t * t;
+  return 1.75 * h00 + 2.0 * h01 + H_SLOPE * h11;
+};
 const chestAt = (u: number) => {
-  const H = u >= 1 ? speciesOf(u).H : lerp(1.75, speciesOf(1).H, c01(u));
+  const H = chestH(u);
   const back = STAIRS.STAND;
   const s = stepOf(0);
   const X = s.XC - m(u * STAIRS.D) + (u < 1 ? (1 - u) * HUMAN_AT.X : 0);
