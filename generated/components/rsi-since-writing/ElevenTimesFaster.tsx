@@ -27,8 +27,9 @@
 // both full rows (the expert's 11 cards, the AI's 11 orange ticks) and the robot in shot (its planted feet the swing's
 // anchor). It hurries on past the row's end, stops on a landing (~f163), steps its back foot up and turns to face the
 // camera, planted, head turned toward the expert, clear of the AI's 11th card so all 11 ticks show from f170. The
-// expert stands at the near end, larger, and ticks his ONE card in dark ink on "human experts" (f163-174), lowers the
-// pencil to his side and turns his head toward the orange row.
+// expert ticks his ONE card in dark ink while out of shot (f121-130) and lowers his arm to his side there; back in shot
+// (f153) at the near end, larger, he just stands (breath, a slow small weight shift, both hands at his sides, the tick
+// on his first card), and on "human experts" turns his head a little toward the orange row.
 // THE LABELS are all on the board plane (LABELS / LabelOnBoard: affine maps through the turned world, toned by their
 // distance), so they foreshorten, take the board's light and air and turn with it, and all but "11×" are there from
 // f0: HUMAN EXPERT and GPT-5.2 on label cards (the task cards' paper, two pins) in a column at the board's left, each
@@ -406,8 +407,14 @@ const writeInk = (w: Writing, f: number): P2[][] => {
   return out;
 };
 const G_WRITE: Writing = { lines: [[7.5, 9.8], [10.5, 12.6], [13.2, 14.0]], seed: 2 }; // a quick scribble, then ~2.5 frames across to the tick box
-const E_WRITE: Writing = { lines: [[9, 50], [55, 96], [101, 140]], seed: 0 };
-export const E_TICK = [163, 167.5, 174];
+// his third line and his ONE tick fall in the stretch where he is out of shot (f91-152): back in shot (f153) the
+// tick is already on his card and he only stands
+const E_WRITE: Writing = { lines: [[9, 50], [55, 96], [101, 118]], seed: 0 };
+export const E_TICK = [121, 124.5, 130];
+/** off-screen after the tick: his arm comes down to his side (done before he is back in shot) */
+export const E_DROP = [131, 139];
+/** on "human experts": a small head turn toward the orange row (no arm motion) */
+export const E_TURN = [167, 178];
 
 // ---- the robot's pose -----------------------------------------------------------------------------------------------
 const G_SMILE = BOT_POSES.stand(1, 0).mouth;
@@ -530,11 +537,11 @@ export const eTip = (f: number): { X: number; Y: number; Z: number; ang: number 
     const rest = up([LINES[0].x0 - 8, LINES[0].y + 14]);
     return { X: lerp(p.X, rest.X, lift), Y: lerp(p.Y, rest.Y, lift), Z: Z_CARD, ang: A0 + 10 * lift };
   }
-  // a pause over the card (he reads it back), then the tick (after it, expertPose takes the pencil off to his waist)
+  // a pause over the card (he reads it back), then the tick (after it, expertPose drops his arm to his side)
   if (f < E_TICK[0]) {
     const a = up([LINES[2].x1, LINES[2].y - 1]);
     const b = up(TICK[0]);
-    const u = sst(146, E_TICK[0], f);
+    const u = sst(E_TICK[0] - 4, E_TICK[0], f);
     return { X: lerp(a.X, b.X, u), Y: lerp(a.Y, b.Y, u) - 5 * Math.sin(Math.PI * u) + 1.2 * Math.sin(f * 0.21), Z: Z_CARD, ang: A0 };
   }
   const s = tickProg(f, E_TICK);
@@ -544,44 +551,42 @@ export const eTip = (f: number): { X: number; Y: number; Z: number; ang: number 
 export const expertPose = (f: number, at: P2, scale: number, A: AirWorld): PencilPose => {
   const base = HUMAN_POSES.stand(1, f) as PencilPose;
   const reach = sst(0, 8, f);
+  const drop = sst(E_DROP[0], E_DROP[1], f);
   const nod = Math.sin(Math.PI * sst(E_TICK[2] + 1, E_TICK[2] + 10, f)) ** 2;
-  // the hold: his head turns a little toward the long orange row (down and along the board)
-  const turn = sst(E_TICK[2] + 2, E_TICK[2] + 9, f);
-  const work: PencilPose = { ...base, headYaw: 0.78 + 0.12 * turn, pitch: base.pitch - 2 + 5 * nod + 3 * turn, look: mix2([0.62, -0.25], [0.8, 0.14], turn) };
+  // standing (after the drop): breath (stand), a slow small weight shift, and on "human experts" a small head turn
+  // toward the long orange row (down and along the board); the hands stay at his sides
+  const turn = sst(E_TURN[0], E_TURN[1], f);
+  const shift = drop * Math.sin(((f - E_DROP[0]) / 64) * 2 * Math.PI);
+  const look = mix2(mix2([0.62, -0.25], [0.66, -0.06], drop), [0.8, 0.14], turn);
+  const work: PencilPose = { ...base, headYaw: 0.78 + 0.08 * turn, pitch: base.pitch - 2 * (1 - drop) + 5 * nod + 2 * turn, look };
+  const idle: PencilPose = { ...work, roll: work.roll + 0.9 * shift, lean: work.lean + 0.3 * shift, pencil: { hand: "R", ang: 80 } };
+  if (drop >= 0.999) return { ...idle, mouth: base.mouth };
   const tgt = eTip(f);
   const tip2 = A.P.p(tgt.X, tgt.Y, tgt.Z);
   const tipCard: P2 = [(tip2[0] - at[0]) / scale, (tip2[1] - at[1]) / scale];
   // the raise (f0-8): the tip travels a curve out in front of his chest and up past the FRONT of his face (never across
   // it) to the card; the arm blends from its free swing onto that curve over the first third
-  // after the tick (f174): the pencil comes off the card out in front of him and down to his side, where it hung at
-  // the start (a curve in his own frame, never across his face; the tip turning down), held there through the hold,
-  // clear of the AI's first card in the oblique view
-  const low = sst(E_TICK[2] + 0.5, E_TICK[2] + 7.5, f);
-  const tipOff: P2 = (() => {
-    if (low <= 0) return tipCard;
-    const c: P2 = [tipCard[0] + 110, tipCard[1] - 10];
-    const r: P2 = [62, -150];
-    return [(1 - low) ** 2 * tipCard[0] + 2 * low * (1 - low) * c[0] + low * low * r[0], (1 - low) ** 2 * tipCard[1] + 2 * low * (1 - low) * c[1] + low * low * r[1]];
-  })();
   const tipL: P2 =
     reach >= 0.999
-      ? tipOff
+      ? tipCard
       : (() => {
           const u = reach;
           const p0: P2 = [62, -150];
           const pc: P2 = [150, -250];
           return [(1 - u) ** 2 * p0[0] + 2 * u * (1 - u) * pc[0] + u * u * tipCard[0], (1 - u) ** 2 * p0[1] + 2 * u * (1 - u) * pc[1] + u * u * tipCard[1]];
         })();
-  const ang = lerp(lerp(40, tgt.ang, reach), 40, low);
+  const ang = lerp(40, tgt.ang, reach);
   const dd: P2 = [Math.cos((ang * Math.PI) / 180), Math.sin((ang * Math.PI) / 180)];
   const grip: P2 = [tipL[0] - dd[0] * PENCIL_TIP, tipL[1] - dd[1] * PENCIL_TIP];
   // the FAR hand holds his pencil: the card is above his head, and the near arm would cross his face
   const solved = covidGripTo(KIND, VAR, { ...work, pencil: { hand: "R", ang } } as CovidPose, { R: grip }, [0, 0], 1) as PencilPose;
   const w = sst(0, 0.35, reach);
   let q: PencilPose = w >= 0.999 ? solved : (lerpPose(work, solved, w) as PencilPose);
-  q = { ...q, pencil: { hand: "R", ang: w >= 0.999 ? ang : lerp(80, ang, w) }, mouth: base.mouth };
+  q = { ...q, pencil: { hand: "R", ang: w >= 0.999 ? ang : lerp(80, ang, w) } };
   if (reach >= 0.999) q = { ...q, armR: { ...q.armR, fist: 0.7 } };
-  return q;
+  // the drop (f131-139, out of shot): the arm swings down from the card to hang at his side
+  if (drop > 0) q = { ...(lerpPose(q, idle, drop) as PencilPose), pencil: { hand: "R", ang: lerp(q.pencil?.ang ?? ang, 80, drop) } };
+  return { ...q, mouth: base.mouth };
 };
 
 // ===================================================================================================================

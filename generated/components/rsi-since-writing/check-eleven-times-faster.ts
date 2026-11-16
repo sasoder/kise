@@ -4,7 +4,8 @@
 // pencil tips on their IK targets while drawing, the robot's planted feet (no slide), its head vs the expert's card,
 // the rows of cards vs the bands, the labels (on the board plane: each text line's projected ink box and cap height)
 // vs the keep-in, the bands and the figures (never covered), and in the settled frame the AI's 11 cards clear of the
-// robot; "11×" clear of the robot's head and of every dust mote by 80 px from f140.
+// robot; "11×" clear of the robot's head and of every dust mote by 80 px from f140; from f140 the expert's hands,
+// wrists and pencil tip below his chest on every frame.
 import { botAnchors } from "../rsi-ten-earths/tenEarthsBot";
 import { humanAnchors } from "./sinceWritingFolk";
 import {
@@ -78,6 +79,7 @@ let moteGap = { d: 1e9, f: 0, id: "" };
 let paintHead = { d: 1e9, f: 0 };
 const textGap: Record<string, { d: number; f: number; by: string }> = {};
 const exitFrames: number[] = [];
+const handAudit: string[] = [];
 for (let f = 0; f < DURATION; f++) {
   const { cam, W } = worldAt(f, false);
   const A = W.A3;
@@ -96,6 +98,16 @@ for (let f = 0; f < DURATION; f++) {
     const tw = scr(A.P.p(et.X, et.Y, et.Z), cam);
     const ta = scr(ea.pencilTip as [number, number], cam);
     tipErrE = Math.max(tipErrE, Math.hypot(tw[0] - ta[0], tw[1] - ta[1]));
+  }
+  // round 3: from f140 (his tick done out of shot) his hands, wrists and pencil tip stay below his chest every frame
+  if (f >= 140) {
+    const cy = scr(ea.chest as [number, number], cam)[1];
+    const parts = ["handL", "handR", "wristL", "wristR", "pencilTip"] as const;
+    const ys = parts.map((k) => scr(ea[k] as [number, number], cam)[1] - cy);
+    const m = Math.min(...ys);
+    const xr = Math.max(...Object.values(ea).filter((v) => Array.isArray(v) && typeof v[0] === "number").map((v) => scr(v as [number, number], cam)[0]));
+    handAudit.push(`f${f} ${m.toFixed(0)}${xr < 0 ? "o" : ""}`);
+    if (m <= 0) fail(`f${f}: the expert's ${parts[ys.indexOf(m)]} at or above his chest (${m.toFixed(0)} px)`);
   }
   // ---- the robot ----
   const X = gX(f);
@@ -298,6 +310,7 @@ for (let f = 0; f < DURATION; f++) {
   if (f === DURATION - 1 || f === 0 || f === 136) console.log(`f${f}: expert ${(scr(ea.ankleL as [number, number], cam)[1] - eh[1] + er).toFixed(0)} px tall-ish, face y ${eh[1].toFixed(0)} x ${eh[0].toFixed(0)}; robot face y ${gh[1].toFixed(0)} x ${gh[0].toFixed(0)}`);
 }
 console.log(`ticks at ${TICK_T.map((t) => t.toFixed(1)).join(" ")}; the expert's tick ${E_TICK[0]}-${E_TICK[2]}`);
+console.log(`expert hands below his chest, f140-182 (min px below the chest; o = out of shot): ${handAudit.join(" ")}`);
 console.log(`pencil tip vs its target: robot max ${tipErrG.toFixed(2)} px, expert max ${tipErrE.toFixed(2)} px`);
 console.log(`robot planted-foot slide: max ${footSlide.toFixed(2)} units per frame (f${footF})`);
 console.log(`robot head vs the expert's card 0: min gap ${headCard === 999 ? "never under it" : headCard.toFixed(1) + " px"}`);
