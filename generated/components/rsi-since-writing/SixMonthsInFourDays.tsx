@@ -4,7 +4,8 @@
 // One stage inside the misty teal air (AirStage, palette A) on cut 3's one-point pinhole crane mapped onto the kit's
 // londonDepth perspective every frame (kits/dwarkesh-3d/dwarkesh3d); the calendar board and its compress motion are the
 // clip's shared module sinceWritingCalendar.tsx (cut 3's board, "again compressed"); the human, his desk and the paper
-// are the clip's world (sinceWritingFolk / sinceWritingWorld); the Genius is the sister clip's (rsi-ten-earths).
+// are the clip's world (sinceWritingFolk / sinceWritingWorld); THE ROBOT is the sister clip's approved Bot
+// (rsi-ten-earths/tenEarthsBot, v0; BOT_READY.md).
 //
 // CHECK LINE: "Each agent did about six months of a person's full-time work, squeezed into four days."
 //
@@ -15,42 +16,44 @@
 // four 137 · days. 146 · And 153 (Whisper; may run ~0.2-0.4 s early).
 // DURATION: the slot 81.4147 -> 88.0046 s = 6.590 s x 23.976 = 158 frames (f0..f157).
 //
-// THE MOTION: cut 3's slate calendar board, now half a year: 26 week rows (JAN..JUN plates at the rows where each
-// month starts: JAN, FEB, JUN off the board's left edge, MAR, APR, MAY on the empty weekend cells). The human (v0, white shirt) sits at his desk beside the board's left edge,
-// writing, and his finished sheets (one cream WorkSheet = one workday) lift one by one off the pad at the end of his
-// desk and arc onto the weekday cells in a loose flock, the front week first and then row by row away from the camera
-// (weekends empty), the last week landing on f~90, while ONE crane lifts and pulls back from his desk and the front
-// weeks to the whole half-year (f0-~94). Then the same camera comes back down and in (f~92-150), panning right; the Genius
-// (v0, THE AI) walks in briskly from the right frame edge (feet planted; enters on "roughly" f~79, stops f102), turns to the board and does the compressing:
-// on "again" he winds up toward the far weeks, on "compressed" ONE broad sweep down toward the front week (straight
-// out ~f111; the first hops follow his hand at f112) and conducts while the rows slide forward exactly as in cut 3 and
-// hop onto just FOUR stacks on the front week's MON..THU cells (130 sheets -> 32 / 32 / 33 / 33; f112-142); the
-// emptied weeks dim and their month plates drain into the air (all gone by f130); MON..THU slide up on the board's front face, the plate
-// "4 DAYS" slides up over the stacks (f131-143), he lowers his hand; living hold (the human still writing, small at
-// his desk at the left).
-// Orange = the AIs only (COMMON.md): the Genius; the sheets are cream, the board slate, the human in white and slate.
+// THE MOTION (revision 1): cut 3's slate calendar board, now half a year: 26 week rows, and a header strip in front
+// of the front week with the day names MON..SUN PAINTED on the slab top from f0 (in the board's plane: they
+// foreshorten, fog and move with it through the whole camera move; the weekend a step fainter). The human (v0, white
+// shirt) sits at his desk beside the board's left edge, writing, and his finished sheets (one cream WorkSheet = one
+// workday) lift one by one off the pad at the end of his desk and arc onto the weekday cells in a loose flock, the
+// front week first and then row by row away from the camera (weekends empty), the last week landing on f~90, while ONE
+// crane lifts and pulls back from his desk and the front weeks to the whole half-year (f0-~94). The first half is his
+// alone. Then the same camera comes back down and in (f~92-150), panning right; THE ROBOT (Bot v0, the AI, 240 units)
+// scurries in from the right frame edge (short legs, planted feet; on screen from f~72, "for ... roughly", stops f102),
+// turns to the board and does the compressing: on "again" it winds its near arm up toward the far weeks, on
+// "compressed" ONE broad sweep down toward the front week (out ~f111; the first hops follow its mitten at f112) and
+// conducts while the rows slide forward exactly as in cut 3 and hop onto just FOUR stacks on the labelled MON..THU
+// cells (130 sheets -> 32 / 32 / 33 / 33; f112-142); the emptied weeks dim; "4 DAYS" rises standing on the emptied
+// board behind the stacks (week 12, its foot and contact shadow on the slab top; f131-143); the arm lowers; living hold
+// (the human still writing, small at his desk at the left).
+// Orange = the AIs only (COMMON.md): the robot; the sheets and the painted names cream, the board slate, the human in
+// white and slate.
 // Cause before effect: a sheet leaves the pad's top and lands exactly on its cell (restPose) on its landing frame;
-// a week's sheets start to slide on the frame the release wave reaches it, after the sweep (hand straight out f111,
-// first hop f112); every sheet lands exactly on its stack's top (stackTop), the stack's count switching on that frame.
+// a week's sheets start to slide on the frame the release wave reaches it, after the sweep (mitten out f111, first hop
+// f112); every sheet lands exactly on its stack's top (stackTop), the stack's count switching on that frame.
 //
 // DEPTH: fog by world depth (fogBy "depth"); the pinhole has F = 1000 px and no pitch (cut 3's): f0 the eye ~1.9 m up
-// at ~3 m in front of the front plane; ~f94 the crane's top, ~4.4 m up and ~4.6 m out; settled 1.2 m up, ~1.9 m out,
-// the board's front face foot at y ~1062. The board: 7 x 48 across (X -174..174), 26 rows 64 deep (Z -46..1646).
-// The human at X -420, Z 520 (his desk X -372..-247, Z 490..740); the Genius at X 310, Z 650 once in (walks in from
-// X ~705, still off frame until f~79).
+// at ~3 m in front of the front plane; ~f94 the crane's top; settled 1.2 m up, ~1.9 m out. The board: 7 x 48 across
+// (X -174..174), 26 rows 64 deep, the header strip Z -72..-32 (front face Z -72, back end Z 1646). The painted names
+// stay above y 1060 on every frame (MON..THU caps >= 36 px). The human at X -420, Z 520 (his desk X -372..-247,
+// Z 490..740); the robot at X 235, Z 450 once in (walks in from X ~544, off frame until f~72), ~300 px tall settled.
 //
 // SOURCES: six months ~ 26 weeks x 5 workdays = 130 workdays (COMMON.md, the speaker's "roughly six months"); the
-// speaker's "four days". On screen: JAN..JUN, MON..THU, 4 DAYS.
+// speaker's "four days". On screen: MON..SUN, 4 DAYS.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { random, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { AirFloor, AirHorizonHazeW, AirShadow, AirStage, MAT, WorldSvg, airWorldOf, type AirWorld, type Cam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { GENIUS_POSES as G, Genius, lerpPose, type GeniusPose } from "../rsi-ten-earths/tenEarthsGenius";
-import { geniusAnchorsLocal } from "../rsi-ten-earths/tenEarthsGeniusBody";
-import { CalStack, CalendarBoard, CalendarSheets, DAY_NAMES, calGeom, cellX, compressAt, compressPlan, restPose, rowZ, stackSeed } from "./sinceWritingCalendar";
+import { AIR, AirFloor, AirHorizonHazeW, AirShadow, AirStage, MAT, WorldSvg, airWorldOf, type AirWorld, type Cam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
+import { BOT_POSES as G, BOT_SHADOW, Bot, botAnchorsLocal, botGripTo, lerpPose, type BotPose } from "../rsi-ten-earths/tenEarthsBot";
+import { CalStack, CalendarBoard, CalendarSheets, DAY_NAMES, WEEKEND, calGeom, cellX, compressAt, compressPlan, restPose, rowZ, stackSeed } from "./sinceWritingCalendar";
 import { HUMAN_DESK, HUMAN_POSES, Human } from "./sinceWritingFolk";
-import { OfficeDesk, Plate, SheetStack, WorkSheet, plateT, stackTop, type SheetPose } from "./sinceWritingWorld";
+import { OfficeDesk, PLATE_FONT, Plate, SheetStack, WorkSheet, plateT, stackTop, type SheetPose } from "./sinceWritingWorld";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 158;
@@ -66,8 +69,13 @@ const sst = (a: number, b: number, v: number) => {
 /** the medium's espresso low air (palette A, the low end of the ramp) */
 const LOW_AIR = "#3D342B";
 
-// ---- the calendar: half a year, 26 week rows ----
-export const BOARD = calGeom(26);
+// ---- the calendar: half a year, 26 week rows, and a header strip in front of the front week that carries the
+// painted day names (the slab's front margin widened from 14 to 40 units) ----
+export const BOARD = calGeom(26, { marginFront: 40 });
+/** the header strip on the slab top: Z from the front face to the front week's cells; the painted day names'
+ *  in-plane size (units across) and their stretch toward the camera (road-marking lettering, so they read upright
+ *  from the low camera) */
+export const HEADER = { z0: BOARD.z0, z1: -BOARD.cellD / 2, Zc: BOARD.z0 + 21, size: 15, stretch: 2.1 };
 export const WEEKDAYS = [0, 1, 2, 3, 4];
 
 // ---- the camera: cut 3's pinhole (F, distance d to the front plane, eye height h, horizon hy, across cx) ----
@@ -93,7 +101,7 @@ const bell = (f0: number, f1: number, a: number, b: number) => {
  *  (Y 0, Z z0) and yB = the board's far end (Y top, Z z1); the eye height and the horizon follow. Log distance. */
 export const CAMK = {
   s0: { d: 440, cx: -50, yF: 1060, yB: 430 },
-  s1: { d: 480, cx: -110, yF: 1165, yB: 405 },
+  s1: { d: 480, cx: -110, yF: 1128, yB: 405 },
   s2: { d: 340, cx: -72, yF: 1054, yB: 525 },
   /** the lift and pull-back (one lobe), the descent and push-in (one lobe) */
   up: bell(-10, 100, 1.3, 2.0),
@@ -182,41 +190,26 @@ export const layAt = (f: number) => {
   return { landed, flying };
 };
 
-// ---- the months: a plate at the row where each month starts, on the board's right ----
-export const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN"].map((t, m) => ({ t, r: Math.round(m * (26 / 6)) }));
-/** plate size (units) so every month reads the same (~52 px) from the crane's top */
-export const monthSize = (r: number) => 52 / (F / (CAMK.s1.d + rowZ(BOARD, r)));
-export const monthPos = (r: number) => {
-  const s = monthSize(r);
-  // JAN and FEB just off the board's left edge (the weekend side of the front weeks is out of frame at the crane's
-  // top); MAR, APR, MAY on the empty weekend cells (APR on the left would sit on the human's desk); JUN, far back,
-  // on the left again above the desk so it does not stack on MAY
-  const right = r >= MONTHS[2].r && r < MONTHS[5].r;
-  const X = right ? cellX(BOARD, 5.5) : BOARD.x0 - 8 - 0.9 * s;
-  // MAY stands a little taller so it clears APR in front of it as the perspective bunches the far rows up
-  const lift = r === MONTHS[4].r ? 0.6 * s : 0;
-  return { X, Y: BOARD.top - 0.8 * s - lift, Z: rowZ(BOARD, r) };
-};
-
 // ---- the compress (cut 3's motion; p 0..1 over f112..f142) ----
 export const COMPRESS_F0 = 112;
 export const COMPRESS_SPAN = 30;
 export const PLAN = compressPlan({ g: BOARD, dst: [0, 1, 2, 3], span: COMPRESS_SPAN, hop: [8, 5.5] });
 export const pAt = (f: number) => c01((f - COMPRESS_F0) / COMPRESS_SPAN);
 
-// ---- the Genius: walks in from the right frame edge (planted feet), stops, turns to the board, crams the half-year ----
-export const GENIUS = { X: 310, Z: 650, walk0: 66, walk1: 102, stop: 8, cadence: 3.9 };
+// ---- THE ROBOT (the sister clip's Bot v0, 240 units): walks in from the right frame edge on "roughly" (planted
+// feet), stops, turns to the board, crams the half-year ----
+export const BOT = { X: 235, Z: 450, walk0: 60, walk1: 102, stop: 8, cadence: 5.8 };
 /** the walk's amount: full stride, easing to a standstill over the last `stop` frames */
-const walkAmt = (f: number) => 1 - sst(GENIUS.walk1 - GENIUS.stop, GENIUS.walk1, f);
-const walkPose = (f: number): GeniusPose => G.walk(-1, (Math.max(GENIUS.walk0, Math.min(f, GENIUS.walk1)) - GENIUS.walk0) * GENIUS.cadence, walkAmt(f));
-/** his feet's x (units from `at`) and which one is planted, for the tracking below */
-const feet = (q: GeniusPose) => {
-  const a = geniusAnchorsLocal(0, q);
+const walkAmt = (f: number) => 1 - sst(BOT.walk1 - BOT.stop, BOT.walk1, f);
+const walkPose = (f: number): BotPose => G.walk(-1, (Math.max(BOT.walk0, Math.min(f, BOT.walk1)) - BOT.walk0) * BOT.cadence, walkAmt(f));
+/** its feet's x (units from `at`) and which one is planted, for the tracking below */
+const feet = (q: BotPose) => {
+  const a = botAnchorsLocal(0, q);
   return { x: [a.ankleL[0], a.ankleR[0]], y: [a.ankleL[1], a.ankleR[1]] };
 };
-/** `at` offsets (units) per frame: the planted foot stays put (tracked on half frames), 0 at walk1 */
+/** `at` offsets (units) per frame: the planted foot stays put (tracked on third frames), 0 at walk1 */
 const WALK_TAB: number[] = (() => {
-  const { walk0, walk1 } = GENIUS;
+  const { walk0, walk1 } = BOT;
   const sub = 3;
   const xs: number[] = [0];
   let x = 0;
@@ -231,35 +224,42 @@ const WALK_TAB: number[] = (() => {
   const end = xs[xs.length - 1];
   return xs.map((v) => v - end);
 })();
-export const geniusX = (f: number) => {
-  const { walk0, walk1 } = GENIUS;
+export const botX = (f: number) => {
+  const { walk0, walk1 } = BOT;
   const t = Math.max(0, Math.min(walk1 - walk0, f - walk0));
   const i = Math.min(walk1 - walk0 - 1, Math.floor(t));
-  return GENIUS.X + WALK_TAB[i] + (WALK_TAB[i + 1] - WALK_TAB[i]) * (t - i);
+  return BOT.X + WALK_TAB[i] + (WALK_TAB[i + 1] - WALK_TAB[i]) * (t - i);
 };
-/** his near arm's keys (armL, reaching toward the board): [frame, angle about the shoulder (screen degrees, 90 =
- *  hanging, 180 = straight out toward the board, 225 = up toward the far weeks), reach (units)]; null = his own arm */
+/** the robot's arm length (shoulder to mitten, units), for the reach keys below */
+export const BOT_ARM = (() => {
+  const a = botAnchorsLocal(0, G.stand(1, 0));
+  return Math.hypot(a.handL[0] - a.shoulderL[0], a.handL[1] - a.shoulderL[1]);
+})();
+/** its near arm's keys (armL, reaching toward the board): [frame, angle about the shoulder (screen degrees, 90 =
+ *  hanging, 180 = straight out toward the board, 225 = up toward the far weeks), reach (x the arm's length)];
+ *  null = its own arm */
 const ARM_KEYS: [number, number | null, number | null][] = [
   [103, null, null], // turned to the board, still hanging
-  [109, 214, 96], // "again": the wind-up, back and up toward the far weeks
-  [115, 136, 98], // "compressed": ONE broad sweep down toward the front week (straight out ~f111, the first hop f112)
-  [122, 160, 86], // the hand comes up a little and stays out over the stream: conducting
-  [134, 160, 86],
+  [109, 216, 0.96], // "again": the wind-up, back and up toward the far weeks
+  [115, 140, 0.98], // "compressed": ONE broad sweep down toward the front week (straight out ~f111, the first hop f112)
+  [122, 162, 0.9], // the mitten comes up a little and stays out over the stream: conducting
+  [134, 162, 0.9],
   [143, null, null], // lowered as the last sheets land (f142)
 ];
 const deg = Math.PI / 180;
-export const geniusPoseAt = (frame: number): GeniusPose => {
-  // the walk in (planted feet), then he turns to the board (f100-110) and looks down the weeks, then at the stacks
-  const turn = sst(GENIUS.walk1 - 4, GENIUS.walk1 + 8, frame);
+export const botPoseAt = (frame: number): BotPose => {
+  // the walk in (planted feet), then it turns to the board (f98-110) and looks down the weeks, then at the stacks
+  const turn = sst(BOT.walk1 - 4, BOT.walk1 + 8, frame);
   const walked = walkPose(frame);
-  const after = turn > 0 ? (lerpPose(walked, G.turnTo(-0.82, frame), turn) as GeniusPose) : walked;
+  const after = turn > 0 ? (lerpPose(walked, G.turnTo(-0.82, frame), turn) as BotPose) : walked;
   const look = 4 * turn + 4 * sst(108, 118, frame) + 3 * sst(136, 148, frame);
-  const base: GeniusPose = { ...after, pitch: after.pitch + look };
+  const base: BotPose = { ...after, pitch: after.pitch + look };
   if (frame <= ARM_KEYS[0][0] || frame >= ARM_KEYS[ARM_KEYS.length - 1][0]) return base;
-  const S = geniusAnchorsLocal(0, base).shoulderL;
-  const w0 = base.armL.w;
+  const an = botAnchorsLocal(0, base);
+  const S = an.shoulderL;
+  const w0 = an.handL;
   const th0 = Math.atan2(w0[1] - S[1], w0[0] - S[0]) / deg;
-  const R0 = Math.hypot(w0[0] - S[0], w0[1] - S[1]);
+  const R0 = Math.hypot(w0[0] - S[0], w0[1] - S[1]) / BOT_ARM;
   let k = 0;
   while (k < ARM_KEYS.length - 2 && frame >= ARM_KEYS[k + 1][0]) k++;
   const [fa, ta, ra] = ARM_KEYS[k];
@@ -269,25 +269,53 @@ export const geniusPoseAt = (frame: number): GeniusPose => {
   let R = (ra ?? R0) + ((rb ?? R0) - (ra ?? R0)) * u;
   const cond = sst(118, 124, frame) * (1 - sst(132, 140, frame));
   th += 6 * Math.sin(((frame - 118) / 24) * 2 * Math.PI) * cond;
-  R += 3 * Math.sin(((frame - 118) / 24) * 2 * Math.PI + 1.2) * cond;
-  const on = sst(103, 107, frame) * (1 - sst(138, 143, frame));
-  const w: [number, number] = [S[0] + R * Math.cos(th * deg), S[1] + R * Math.sin(th * deg)];
-  const el = base.armL.elbow;
-  return {
-    ...base,
-    armL: {
-      w,
-      elbow: [el[0] + (0.35 - el[0]) * on, el[1] + (1 - el[1]) * on],
-      fist: base.armL.fist + (0.05 - base.armL.fist) * on,
-      hand: base.armL.hand + (-14 * on - base.armL.hand) * on,
-    },
-  };
+  R += 0.03 * Math.sin(((frame - 118) / 24) * 2 * Math.PI + 1.2) * cond;
+  const L: [number, number] = [S[0] + R * BOT_ARM * Math.cos(th * deg), S[1] + R * BOT_ARM * Math.sin(th * deg)];
+  return botGripTo(base, { L });
 };
 
-// ---- the plate over the stacks, the day names ----
-export const PLATE = { X: cellX(BOARD, 1.5), Y: BOARD.top - 82.5 - 42, Z: 0, size: 20, f0: 131 };
-const LABELS = DAY_NAMES.map((t, c) => (c < 4 ? t : ""));
-const labelOn = (frame: number) => (c: number) => (c < 4 ? c01((frame - (134 + 2 * c)) / 10) : 0);
+// ---- "4 DAYS": standing on the emptied board behind the four stacks (week 12), its foot on the slab top ----
+export const PLATE = { X: cellX(BOARD, 1.5), Z: rowZ(BOARD, 12), size: 62, f0: 131 };
+export const PLATE_Y = BOARD.top - 0.34 * PLATE.size;
+
+/** the day names painted on the board's header strip (MON..SUN, cream, the weekend a step fainter): lettering in the
+ *  slab top's plane (each name mapped onto the board by the projection's local derivative at its centre), so it
+ *  foreshortens, fogs and moves with the board; a thin painted rule between the strip and the front week */
+const HeaderPaint: React.FC<{ A: AirWorld }> = ({ A }) => {
+  const P = A.P;
+  const Y = BOARD.top;
+  const { Zc, size, stretch } = HEADER;
+  const cream = AIR.A.cream;
+  const rz = HEADER.z1 - 3;
+  const r0 = P.p(BOARD.x0 + 8, Y, rz);
+  const r1 = P.p(BOARD.x1 - 8, Y, rz);
+  return (
+    <g>
+      <path d={`M${r0[0].toFixed(2)} ${r0[1].toFixed(2)}L${r1[0].toFixed(2)} ${r1[1].toFixed(2)}`} stroke={A.tone(cream, rz, -Y)} strokeOpacity={0.4} strokeWidth={Math.max(0.8, 1.6 * P.r(rz))} fill="none" />
+      {DAY_NAMES.map((t, c) => {
+        const X = cellX(BOARD, c);
+        const o = P.p(X, Y, Zc);
+        const du = P.p(X + 1, Y, Zc);
+        const dv = P.p(X, Y, Zc - 1); // toward the camera = down the letters
+        const m = [du[0] - o[0], du[1] - o[1], dv[0] - o[0], dv[1] - o[1], o[0], o[1]].map((v) => v.toFixed(4)).join(" ");
+        return (
+          <g key={t} transform={`matrix(${m}) scale(1 ${stretch})`}>
+            <text
+              x={0}
+              y={0.34 * size}
+              textAnchor="middle"
+              fill={A.tone(cream, Zc, -Y)}
+              opacity={WEEKEND.includes(c) ? 0.62 : 0.92}
+              style={{ fontFamily: PLATE_FONT, fontWeight: 700, fontSize: size, letterSpacing: 0.04 * size }}
+            >
+              {t}
+            </text>
+          </g>
+        );
+      })}
+    </g>
+  );
+};
 
 /** the floor under the board sinks into the dense low air toward the bottom edge (cut 3's) */
 const LowAir: React.FC<{ cam: Cam }> = ({ cam }) => {
@@ -355,24 +383,23 @@ const SixMonthsInFourDays: React.FC<z.infer<typeof schema>> = () => {
   const p = pAt(frame);
   const st = compressAt(PLAN, p);
   const human = <HumanAtDesk A={A} frame={frame} k={cam.k} />;
-  const gx = geniusX(frame);
-  const g = A.P.at(gx, GENIUS.Z);
-  const genius = (
+  const bx = botX(frame);
+  const g = A.P.at(bx, BOT.Z);
+  const bot = (
     <g>
-      <AirShadow A={A} X={gx} Z={GENIUS.Z} w={62} d={30} uid="gsh" amt={0.8} />
-      <Genius variant={0} pose={geniusPoseAt(frame)} at={g.at} scale={g.scale} uid="g0" frame={frame} fog={A.folkFog(GENIUS.Z)} unitPx={cam.k} />
+      <AirShadow A={A} X={bx} Z={BOT.Z} w={BOT_SHADOW.w} d={BOT_SHADOW.d} uid="bsh" amt={BOT_SHADOW.amt} />
+      <Bot variant={0} pose={botPoseAt(frame)} at={g.at} scale={g.scale} uid="b0" frame={frame} fog={A.folkFog(BOT.Z)} unitPx={cam.k} />
     </g>
   );
-  // a month's plate drains into the air as its weeks leave (JAN with the second week)
-  // and every plate is gone by f130, before "4 DAYS" rises into their place
-  const monthDrain = (r: number) => Math.max(st.rowDim(Math.max(1, r)), Math.min(1, Math.max(0, (frame - 121) / 9)));
+  const plateOn = plateT(frame, PLATE.f0, 12);
   return (
     <AirStage v={A.v} bloom={0.22} shafts={0.8}>
       <WorldSvg cam={cam}>
         <AirFloor A={A} x0={-3200} x1={3200} z0={-900} z1={7000} mat={MAT.ground} course={240} jointAmt={0.55} />
         <LowAir cam={cam} />
         <AirHorizonHazeW A={A} id="sm-haze" />
-        <CalendarBoard A={A} g={BOARD} uid="cal" dim={st.rowDim} labels={LABELS} labelOn={labelOn(frame)} />
+        <CalendarBoard A={A} g={BOARD} uid="cal" dim={st.rowDim} labels={null} />
+        <HeaderPaint A={A} />
         {frame < COMPRESS_F0 ? (
           <LaidSheets A={A} frame={frame} human={human} />
         ) : (
@@ -383,23 +410,13 @@ const SixMonthsInFourDays: React.FC<z.infer<typeof schema>> = () => {
             uid="cs"
             extras={[
               { Z: HUMAN.Z, node: human },
-              { Z: GENIUS.Z, node: genius },
+              { Z: BOT.Z, node: bot },
             ]}
           />
         )}
-        {frame < COMPRESS_F0 ? genius : null}
-        {MONTHS.map(({ t, r }) => {
-          const q = monthPos(r);
-          const on = plateT(frame, LAY_F0 + r * LAY_DR - 4, 12);
-          const dr = monthDrain(r);
-          if (on <= 0 || dr >= 1) return null;
-          return (
-            <g key={t} opacity={1 - dr}>
-              <Plate A={A} X={q.X} Y={q.Y} Z={q.Z} text={t} t={on} uid={`mo${t}`} size={monthSize(r)} />
-            </g>
-          );
-        })}
-        <Plate A={A} X={PLATE.X} Y={PLATE.Y} Z={PLATE.Z} text="4 DAYS" t={plateT(frame, PLATE.f0, 12)} uid="pl" size={PLATE.size} />
+        {frame < COMPRESS_F0 ? bot : null}
+        {plateOn > 0 ? <AirShadow A={A} X={PLATE.X - 0.18 * 110} Z={PLATE.Z + 6} w={110} d={12} Y={BOARD.top} uid="plsh" amt={0.5 * plateOn} /> : null}
+        <Plate A={A} X={PLATE.X} Y={PLATE_Y} Z={PLATE.Z} text="4 DAYS" t={plateOn} uid="pl" size={PLATE.size} />
       </WorldSvg>
     </AirStage>
   );
