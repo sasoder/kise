@@ -29,9 +29,11 @@
 //      log lying beside the lip. Idle before f138 (each man settles his weight, heads look along the line); in step
 //      from f138 (first heave peak f156 "large groups"), walking back with planted feet; the log moves with the rope.
 //   3. "think through abstract concepts and plan" (right, near): a man squats with a long stick (240 units, the grip
-//      sliding along it); idle: the tip taps the sand, he looks up to think (f60-150); the tip lifts f163-172 and draws
-//      a DASHED ORANGE plan: a river f172-188, a herd (three rings) f191-201, an arrow to the herd f202-213 (the head
-//      lands on "plan" f213). The tip is ON the ground on every drawing frame.
+//      sliding along it). REV 2: his DASHED ORANGE plan is already in the sand from f0 (a river, a herd of three rings,
+//      most of an arrow's route to the herd); idle, the tip taps the line's end and he looks up to think (f60-150);
+//      from f172 he draws the last stretch of the route and the arrowhead (out along one barb, back along it, out along
+//      the other) at a calm hand speed (<= 3.7 units/f, ~0.5 m/s; slower into each turn), the head done on "plan" f213.
+//      The tip is ON the line on every drawing frame.
 // REV 1 (the camera guides the eye): after the crane ONE continuous camera visits each thing on its words (TOUR keys,
 // pchip per channel, solved from a world focus point and its screen place): f61-88 down the stub with the footprints
 // to the lip; f88-109 in on the teaching pair (k 1.9, ~60% of the box, first strike f114 close); f121-146 an arc up
@@ -564,9 +566,6 @@ const Log: React.FC<{ A: AirWorld; X0: number; X1: number; Z: number; R: number 
 export const PLAN = { X: 262, Z: -290, v: 0 };
 /** the stick (units): longer than the pose's own, so the plan can be big enough to read */
 const STICK = 240;
-/** the stick's tip rests here (plan coords) until he starts, then moves (lifted) to the river's start */
-const PLAN_REST: G2 = [175, 8];
-const PLAN_LIFT_F = 163;
 /** the plan's strokes in (d, dz): d = units ahead of the planner (he faces screen left: X = PLAN.X - d), dz = depth */
 const stroke = (fn: (u: number) => [number, number], n = 24): G2[] => Array.from({ length: n + 1 }, (_, i) => fn(i / n));
 const RIVER = stroke((u) => [78 + 232 * u, 62 + 13 * Math.sin(u * Math.PI * 2.6) - 12 * u], 48);
@@ -586,21 +585,63 @@ const HEAD = (() => {
   const rotv = (a: number): G2 => [ARROW_B[0] - back * (ux * Math.cos(a) - uz * Math.sin(a)), ARROW_B[1] - back * (ux * Math.sin(a) + uz * Math.cos(a))];
   return [rotv(0.5), ARROW_B, rotv(-0.5)] as G2[];
 })();
-/** the drawing timeline: each stroke drawn over [f0, f1] (eased), pen-up moves between */
-export const PLAN_STROKES: { pts: G2[]; f0: number; f1: number }[] = [
-  { pts: RIVER, f0: 172, f1: 187 },
-  { pts: HERD[0], f0: 189.5, f1: 192 },
-  { pts: HERD[1], f0: 192.6, f1: 195 },
-  { pts: HERD[2], f0: 195.6, f1: 198 },
-  { pts: SHAFT, f0: 202, f1: 209 },
-  { pts: HEAD, f0: 210, f1: 213 },
-];
+/** REV 2: the plan is already in the sand from f0 (the river, the herd and most of the arrow's route); when the camera
+ *  reaches him he draws only the last stretch of the route and the arrowhead at a calm hand speed, the tip on the line
+ *  every frame. The pre-drawn strokes: */
+export const PLAN_STROKES: { pts: G2[] }[] = [{ pts: RIVER }, ...HERD.map((h) => ({ pts: h }))];
 const ease = (u: number) => u * u * (3 - 2 * u);
-const strokePoly = PLAN_STROKES.map((s) => polyOf(s.pts));
-/** how much of stroke i is drawn at frame f (0..1) */
-const drawnU = (i: number, f: number) => {
-  const s = PLAN_STROKES[i];
-  return f <= s.f0 ? 0 : f >= s.f1 ? 1 : 0.15 * ((f - s.f0) / (s.f1 - s.f0)) + 0.85 * ease((f - s.f0) / (s.f1 - s.f0));
+const strokePoly = PLAN_STROKES.map((q) => polyOf(q.pts));
+/** the arrow as ONE tip path: the route (shaft) to the point B, out along the first barb, back along it to B (the tip
+ *  retraces the drawn barb, so it never leaves the line), out along the second barb */
+const ARROW = polyOf([...SHAFT, HEAD[0], ARROW_B, HEAD[2]]);
+const L_SHAFT = polyOf(SHAFT).len;
+const BARB = Math.hypot(HEAD[0][0] - ARROW_B[0], HEAD[0][1] - ARROW_B[1]);
+/** how much of the route is in the sand from f0: all but the last LEFT units */
+const ARROW_LEFT = 32;
+const ARROW_PRE = L_SHAFT - ARROW_LEFT;
+/** the last stroke's frames: it ends on "plan" (f213) */
+export const ARROW_F0 = 172;
+export const ARROW_F1 = 213;
+/** a hand's natural drawing speed along the path: it starts and ends gently and slows into each turn (the point B,
+ *  the first barb's end, B again); the time for each bit of path is ds / v(s), scaled to fit [ARROW_F0, ARROW_F1] */
+const ARROW_TIME: { s: number[]; t: number[] } = (() => {
+  const corners = [L_SHAFT, L_SHAFT + BARB, L_SHAFT + 2 * BARB];
+  const v = (q: number) => {
+    let w = Math.min(1, 0.25 + (q - ARROW_PRE) / 14, 0.25 + (ARROW.len - q) / 14);
+    for (const c of corners) w = Math.min(w, 0.35 + Math.abs(q - c) / 12);
+    return Math.max(0.2, w);
+  };
+  const ss = [ARROW_PRE];
+  const tt = [0];
+  const ds = 0.25;
+  for (let q = ARROW_PRE; q < ARROW.len - 1e-6; q += ds) {
+    const d = Math.min(ds, ARROW.len - q);
+    ss.push(q + d);
+    tt.push(tt[tt.length - 1] + d / v(q + d / 2));
+  }
+  const T = tt[tt.length - 1];
+  return { s: ss, t: tt.map((x) => ARROW_F0 + ((ARROW_F1 - ARROW_F0) * x) / T) };
+})();
+/** the drawn length of the arrow path at frame f */
+const arrowDrawn = (f: number) => {
+  const { s: S, t: T } = ARROW_TIME;
+  if (f <= T[0]) return ARROW_PRE;
+  if (f >= T[T.length - 1]) return ARROW.len;
+  let lo = 0;
+  let hi = T.length - 1;
+  while (hi - lo > 1) {
+    const m = (lo + hi) >> 1;
+    if (T[m] <= f) lo = m;
+    else hi = m;
+  }
+  return S[lo] + ((S[hi] - S[lo]) * (f - T[lo])) / (T[hi] - T[lo]);
+};
+/** the drawn arrow as arc-length ranges of ARROW (the retrace back along the first barb adds no new line) */
+const arrowRanges = (f: number): [number, number][] => {
+  const D = arrowDrawn(f);
+  const out: [number, number][] = [[0, Math.min(D, L_SHAFT + BARB)]];
+  if (D > L_SHAFT + 2 * BARB) out.push([L_SHAFT + 2 * BARB, D]);
+  return out;
 };
 /** before he draws, the tip idly taps the sand (a quick lift and drop every 19 frames, quieter as he looks up to think) */
 const planTap = (f: number) => {
@@ -615,30 +656,12 @@ const planHead = (f: number) => {
   const w = 1 - c01((f - 158) / 8);
   return { yaw: -0.1 * think + w * 0.04 * Math.sin(f / 11), pitch: -14 * think, look: [0.1 * think, -0.75 * think] as P2 };
 };
-/** the stick tip at frame f: (d, dz) and how far it is lifted (units) */
-const tipAt = (f: number): { g: G2; lift: number } => {
-  const S = PLAN_STROKES;
-  if (f <= PLAN_LIFT_F) return { g: PLAN_REST, lift: planTap(f) };
-  if (f <= S[0].f0) {
-    const u = ease((f - PLAN_LIFT_F) / (S[0].f0 - PLAN_LIFT_F));
-    const b = S[0].pts[0];
-    return { g: [PLAN_REST[0] + (b[0] - PLAN_REST[0]) * u, PLAN_REST[1] + (b[1] - PLAN_REST[1]) * u], lift: 10 * Math.sin(Math.PI * u) };
-  }
-  for (let i = 0; i < S.length; i++) {
-    const s = S[i];
-    if (f <= s.f1) {
-      if (f >= s.f0) return { g: along(strokePoly[i], drawnU(i, f) * strokePoly[i].len).p, lift: 0 };
-      // pen up from the end of the previous stroke to the start of this one
-      const prev = S[i - 1];
-      const u = ease((f - prev.f1) / (s.f0 - prev.f1));
-      const a = prev.pts[prev.pts.length - 1];
-      const b = s.pts[0];
-      return { g: [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u], lift: 9 * Math.sin(Math.PI * u) };
-    }
-  }
-  // after the last stroke: the tip rises a little off the arrowhead's end and rests there
-  const last = S[S.length - 1];
-  return { g: last.pts[last.pts.length - 1], lift: 7 * ease(c01((f - last.f1) / 10)) };
+/** the stick tip at frame f: (d, dz) and how far it is lifted (units). It rests (tapping idly) on the end of the drawn
+ *  route, draws the rest from ARROW_F0 and lifts a little off the arrowhead's end after ARROW_F1 */
+export const tipAt = (f: number): { g: G2; lift: number } => {
+  if (f <= ARROW_F0) return { g: along(ARROW, ARROW_PRE).p, lift: planTap(f) };
+  if (f <= ARROW_F1) return { g: along(ARROW, arrowDrawn(f)).p, lift: 0 };
+  return { g: ARROW.pts[ARROW.pts.length - 1], lift: 7 * ease(c01((f - ARROW_F1) / 10)) };
 };
 /** the ground point of a plan coordinate */
 const planG = (q: G2): G2 => [PLAN.X - q[0], PLAN.Z + q[1]];
@@ -904,21 +927,22 @@ const NotMuchTime: React.FC<z.infer<typeof schema>> = () => {
   }
 
   // the dashed orange plan on the sand (drawn so far)
-  const planPaths = PLAN_STROKES.map((_, i) => {
-    const u = drawnU(i, frame);
-    if (u <= 0) return null;
-    const Pl = strokePoly[i];
-    const Lu = u * Pl.len;
+  const subPath = (Pl: Poly, a: number, b: number) => {
+    if (b - a < 0.5) return null;
     const pts: P2[] = [];
+    const g0 = planG(along(Pl, a).p);
+    pts.push(P.p(g0[0], 0, g0[1]));
     for (let j = 0; j < Pl.pts.length; j++) {
-      if (Pl.cum[j] >= Lu) break;
+      if (Pl.cum[j] <= a) continue;
+      if (Pl.cum[j] >= b) break;
       const g = planG(Pl.pts[j]);
       pts.push(P.p(g[0], 0, g[1]));
     }
-    const e = planG(along(Pl, Lu).p);
+    const e = planG(along(Pl, b).p);
     pts.push(P.p(e[0], 0, e[1]));
-    return pts.length > 1 ? `M${pts.map(pt).join("L")}` : null;
-  }).filter((d): d is string => d !== null);
+    return `M${pts.map(pt).join("L")}`;
+  };
+  const planPaths = [...strokePoly.map((Pl) => subPath(Pl, 0, Pl.len)), ...arrowRanges(frame).map(([a, b]) => subPath(ARROW, a, b))].filter((d): d is string => d !== null);
   const planCol = A.toneO(ACCENT, PLAN.Z, 0);
   const pr = P.r(PLAN.Z);
 
