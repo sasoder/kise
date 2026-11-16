@@ -15,29 +15,35 @@
 //
 // THE MOTION: a slate calendar board lies on the sand floor of the air: 52 week rows of 7 day cells (MON..SUN on its
 // front face), a full-time human year on it (one cream WorkSheet = one workday on every weekday cell, 260 in all; the
-// weekend cells empty), so the far rows read as a striped field running back into the haze; the Genius (v0, THE AI)
-// stands on the floor beside the board's weekend side from f0, and HE does the cramming: from "can" (f18) he turns to
-// the board; on "cram" he winds up toward the far weeks (f19-26) and makes ONE broad sweep down toward the front week
-// (f26-33, straight out at ~f29.5: the first hops follow his hand at f30), then keeps the hand out over the stream,
-// conducting in a slow small drift, and lowers it as the last sheets land (f104-113). On "cram" (f30)
+// weekend cells empty), so the far rows read as a striped field running back into the haze; the robot (tenEarthsBot
+// v0, THE AI; BOT_READY.md) stands on the floor beside the board's weekend side from f0, and IT does the cramming: the
+// near arm lifts from f15 and from "can" (f18) it turns to the board; on "cram" it winds up toward the far weeks
+// (f15-26) and makes ONE broad sweep down toward the front week (f26-33, straight out at ~f29.5: the first hops follow
+// its hand at f30), then keeps the hand out over the stream, conducting in a slow small drift, and lowers it as the
+// last sheets land (f104-113). On "cram" (f30)
 // the year starts to move: a release wave runs from the front week back, accelerating, and every week's sheets slide
 // forward along their columns, bunching up like a fanned deck as they near the front, then hop onto stacks on the
 // FRONT week's cells, dealt so all seven stacks rise evenly (SAT and SUN too: the first row already throws two sheets
 // into the weekend); row hops ~2.5 frames apart at first, a stream of ~0.75 frames at the end; the emptied weeks dim
-// behind. Through it ONE crane (log distance and height on bell speed profiles, the board's front face pinned at
-// y ~1062) cranes down and pushes in from a high three-quarter view down the board to a low view of the front week.
-// The last sheet lands at f111 (7 stacks: 38 + 6 x 37), the plate "1 YEAR OF WORK" slides up over them from f106
-// (settled f118, "calendar week"), and the camera creeps to the cut while the Genius stands looking at the stacks, breathing.
-// Orange = the AIs only (COMMON.md): the Genius; the sheets are cream, the board slate, the floor sand.
+// behind. The last sheet lands at f111 (7 stacks: 38 + 6 x 37), the plate "1 YEAR OF WORK" slides up over them from
+// f106 (settled f118, "calendar week"), and the camera holds to the cut while the robot stands looking at the stacks.
+// Orange = the AIs only (COMMON.md): the robot; the sheets are cream, the board slate, the floor sand.
 // Cause before effect: a week's sheets start to slide on the frame its release reaches it; each sheet leaves its cell
 // at rest and lands exactly on its stack's top (stackTop), the stack's count switching on that frame.
 //
-// DEPTH: fog by world depth (fogBy "depth"); the pinhole has F = 1000 px and no pitch; f0 the eye 2.5 m up (h 450) at
-// 3.1 m (d 560) in front of the front plane; settled (~f118) 1.4 m up (h 250) at 2.4 m (d ~427). The board: 7 x 48
-// across (X -174..174), 52 rows 64 deep (Z -46..3310), 20 thick. The Genius at X 320, Z 510 (beside week 8, off the
-// board), ~304 px tall at f0, ~349 px settled (head top y >= 296 on every frame, the raised hand >= 296; feet y
-// 606-666, above the stack tops); the plate
-// (Caslon, ~57 px) at X -34 over the stacks, y ~604.
+// THE CAMERA (rev 1, "more dynamic"): ONE continuous move, no cuts, the board's front face foot pinned at y 1062 every
+// frame. It opens close and low on the robot at work: a long lens (F 2000 px) from 0.6 of the robot's height (h 140)
+// at d 640, trucked right (cx 180) so the robot stands at x ~820, ~444 px tall, feet y 850, with the board's weekend
+// corner running off to the left. From "cram" it widens (F 2000 -> 1150, lobe A f26-92) and cranes up (h 140 -> ~370
+// at f80) while it trucks back to centre (cx 180 -> 0, f-6..112): the arc round as the year packs into the front week,
+// revealing the whole 52-week board by f60. Then it settles down and in (lobe B f60-124: F 1150 -> 1000, h -> 249,
+// d -> 421) onto the resolved frame by "calendar week" (f120), the same frame as v4: stacks x 127-953, plate x 459 /
+// y 604, robot ~278 px at x ~923 (feet y 687). Log d and log F and h on overlapping bell speed profiles, so it never
+// stops or jerks between lobes. Robot antenna y >= 314 (f85) on every frame, raised hand >= 484, right edge <= 990.
+//
+// DEPTH: fog by world depth (fogBy "depth"); the board: 7 x 48 across (X -174..174), 52 rows 64 deep
+// (Z -46..3310), 20 thick. The robot at X 330, Z 440 (240 units; beside week 8, off the board). The plate (Caslon,
+// ~57 px settled) at X -34 over the stacks.
 //
 // SOURCES: a full-time year ~ 52 weeks x 5 days = 260 workdays (~2,000 hours) (COMMON.md); the speaker: "about one
 // year of full-time work into every calendar week". On screen: MON..SUN, 1 YEAR OF WORK.
@@ -46,7 +52,9 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirFloor, AirHorizonHazeW, AirShadow, AirStage, MAT, WorldSvg, airWorldOf, type Cam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { GENIUS_POSES as G, Genius, lerpPose, type GeniusPose } from "../rsi-ten-earths/tenEarthsGenius";
+import { BOT_POSES as G, BOT_SHADOW, Bot, lerpPose, type BotPose } from "../rsi-ten-earths/tenEarthsBot";
+// the arm is posed in the covidFolk rig space the robot is solved on (BOT_READY: poses drive it unchanged); its shoulder
+// there is the rig's, read through the Genius body's anchors (same rig)
 import { geniusAnchorsLocal } from "../rsi-ten-earths/tenEarthsGeniusBody";
 import { CalendarBoard, CalendarSheets, calGeom, compressAt, compressPlan } from "./sinceWritingCalendar";
 import { Plate, plateT } from "./sinceWritingWorld";
@@ -68,8 +76,9 @@ export const PLAN = compressPlan({ g: BOARD, dst: [0, 1, 2, 3, 4, 5, 6], span: C
 export const pAt = (f: number) => c01((f - COMPRESS_F0) / COMPRESS_SPAN);
 
 // ---- the camera: a pinhole (F, distance d to the front plane, eye height h, horizon hy, across cx) ----
+/** the settled focal length (px); the camera's own F moves with it (Cam3.F, CAM.F) */
 export const F = 1000;
-export type Cam3 = { d: number; h: number; hy: number; cx: number };
+export type Cam3 = { d: number; h: number; hy: number; cx: number; F: number };
 /** a bell-shaped progress 0..1 over f0..f1: the integral of t^a (1-t)^b, normalised */
 const bell = (f0: number, f1: number, a: number, b: number) => {
   const N = 400;
@@ -85,22 +94,37 @@ const bell = (f0: number, f1: number, a: number, b: number) => {
     return (cum[i] + (cum[i + 1] - cum[i]) * (t - i)) / tot;
   };
 };
+/** ONE continuous move in two overlapping lobes (each a bell-shaped speed profile, so the move never stops between
+ *  them): OPEN close and low beside the robot, a little to its side of the board; LOBE A (from "cram in", ~f34-86) the
+ *  crane rises and pulls back while the camera swings round onto the board's axis (the truck), so the year is seen
+ *  from above packing into the week; LOBE B (~f62-122) it settles down and in onto the resolved frame, still by
+ *  "calendar week" (f109-120), then creeps. The board's front face foot is pinned at y `face` on every frame. */
 export const CAM = {
-  d: [560, 420],
-  h: [450, 248],
-  /** the board's front face foot (Y 0, Z z0) is pinned at this screen row on every frame */
+  d: [640, 560, 421] as const,
+  /** the focal length (px): a long lens at the open (the robot close, the board's perspective compressed), opening
+   *  out to the normal lens with lobe A and B */
+  F: [2000, 1150, 1000] as const,
+  h: [140, 430, 249] as const,
+  cx: [180, 0] as const,
   face: 1062,
-  pD: bell(-14, 150, 1.7, 2.3),
-  pH: bell(-10, 146, 1.6, 2.4),
+  pAd: bell(26, 84, 1.7, 2.1),
+  pAh: bell(36, 92, 1.9, 2.0),
+  pB: bell(60, 124, 1.9, 2.3),
+  pX: bell(-6, 112, 2.0, 2.0),
 };
 export const cam3At = (f: number): Cam3 => {
-  const d = Math.exp(Math.log(CAM.d[0]) + (Math.log(CAM.d[1]) - Math.log(CAM.d[0])) * CAM.pD(f));
-  const h = CAM.h[0] + (CAM.h[1] - CAM.h[0]) * CAM.pH(f);
-  return { d, h, hy: CAM.face - (h * F) / (d + BOARD.z0), cx: 0 };
+  const B = CAM.pB(f);
+  const ld = Math.log(CAM.d[0]) + (Math.log(CAM.d[1]) - Math.log(CAM.d[0])) * CAM.pAd(f) + (Math.log(CAM.d[2]) - Math.log(CAM.d[1])) * B;
+  const d = Math.exp(ld);
+  const lf = Math.log(CAM.F[0]) + (Math.log(CAM.F[1]) - Math.log(CAM.F[0])) * CAM.pAd(f) + (Math.log(CAM.F[2]) - Math.log(CAM.F[1])) * B;
+  const Fc = Math.exp(lf);
+  const h = CAM.h[0] + (CAM.h[1] - CAM.h[0]) * CAM.pAh(f) + (CAM.h[2] - CAM.h[1]) * B;
+  const cx = CAM.cx[0] + (CAM.cx[1] - CAM.cx[0]) * CAM.pX(f);
+  return { d, h, hy: CAM.face - (h * Fc) / (d + BOARD.z0), cx, F: Fc };
 };
-/** the pinhole as a londonDepth perspective (Dc = d, k = F / d, the horizon at hy) */
+/** the pinhole as a londonDepth perspective (Dc = d, k = c.F / d, the horizon at hy) */
 export const kitCam = (c: Cam3): { cam: Cam; depth: DepthOpts } => {
-  const k = F / c.d;
+  const k = c.F / c.d;
   return { cam: { k, cx: c.cx, cy: (960 - c.hy) / k - c.h }, depth: { eyeY: -c.h, dRef: c.d, kRef: k, dolly: 1 } };
 };
 const REST = kitCam(cam3At(0)).cam;
@@ -124,17 +148,17 @@ const LowAir: React.FC<{ cam: Cam }> = ({ cam }) => {
   );
 };
 
-// ---- the Genius: beside the board's weekend side, a little back; HE crams the year ----
-export const GENIUS = { X: 320, Z: 510 };
+// ---- the robot: beside the board's weekend side, a little back; IT crams the year ----
+export const ROBOT = { X: 330, Z: 440 };
 const sst = (a: number, b: number, v: number) => {
   const t = c01((v - a) / (b - a));
   return t * t * (3 - 2 * t);
 };
-/** his arm's keys (the near arm, armL: his right hand, reaching toward the board): [frame, angle about the shoulder
+/** its arm keys (the near arm, armL: its right hand, reaching toward the board): [frame, angle about the shoulder
  *  (screen degrees, 90 = hanging, 180 = straight out toward the board, 225 = up toward the far weeks), reach (units;
- *  the arm is ~107 long)]. null = his own hanging arm. Between keys a smoothstep (he eases into and out of each). */
+ *  the arm is ~107 long)]. null = its own hanging arm. Between keys a smoothstep (it eases into and out of each). */
 const ARM_KEYS: [number, number | null, number | null][] = [
-  [19, null, null], // still hanging; the turn has begun at f18 ("can")
+  [15, null, null], // still hanging; the wind-up leads the turn (f18, "can") by a few frames so it never snaps
   [26, 216, 96], // the reach back and up toward the far weeks (the wind-up)
   [33, 136, 98], // "cram": ONE broad sweep down toward the front week (passing straight out ~f29.5; the hops start f30)
   [41, 162, 86], // the hand comes up a little and stays out over the stream: conducting
@@ -142,15 +166,15 @@ const ARM_KEYS: [number, number | null, number | null][] = [
   [113, null, null], // lowered as the last sheets land (f111)
 ];
 const deg = Math.PI / 180;
-/** his pose at a frame: three-quarter to the left, breathing (f0-18); turns his body and head to the board (f18-30);
+/** its pose at a frame: three-quarter to the left, breathing (f0-18); turns its body and head to the board (f18-30);
  *  the wind-up and the sweep (f19-33); a slow small conducting drift of the raised hand while the stream runs
- *  (ramped in f40-52 and out f98-110, one sine, no loop seam); the hand lowered f104-113; he stands looking down at the
+ *  (ramped in f40-52 and out f98-110, one sine, no loop seam); the hand lowered f104-113; it stands looking down at the
  *  stacks for the hold */
-export const geniusPoseAt = (frame: number): GeniusPose => {
+export const robotPoseAt = (frame: number): BotPose => {
   const turn = sst(18, 30, frame);
-  const base0 = lerpPose(G.stand(-1, frame), G.turnTo(-0.86, frame), turn) as GeniusPose;
+  const base0 = lerpPose(G.stand(-1, frame), G.turnTo(-0.86, frame), turn) as BotPose;
   const look = 3 * turn + 5 * sst(27, 36, frame) + 2 * sst(106, 118, frame);
-  const base: GeniusPose = { ...base0, headYaw: base0.headYaw - 0.1 * turn, pitch: base0.pitch + look };
+  const base: BotPose = { ...base0, headYaw: base0.headYaw - 0.1 * turn, pitch: base0.pitch + look };
   if (frame <= ARM_KEYS[0][0] || frame >= ARM_KEYS[ARM_KEYS.length - 1][0]) return base;
   // the near arm about its shoulder (the shoulder of the turned, breathing body at this frame)
   const S = geniusAnchorsLocal(0, base).shoulderL;
@@ -168,8 +192,8 @@ export const geniusPoseAt = (frame: number): GeniusPose => {
   const cond = sst(40, 52, frame) * (1 - sst(98, 110, frame));
   th += 7 * Math.sin(((frame - 40) / 44) * 2 * Math.PI) * cond;
   R += 3 * Math.sin(((frame - 40) / 44) * 2 * Math.PI + 1.2) * cond;
-  // how far the arm is from his own hanging arm (0 = his own)
-  const on = sst(19, 24, frame) * (1 - sst(108, 113, frame));
+  // how far the arm is from its own hanging arm (0 = its own)
+  const on = sst(15, 23, frame) * (1 - sst(108, 113, frame));
   const w: [number, number] = [S[0] + R * Math.cos(th * deg), S[1] + R * Math.sin(th * deg)];
   const el = base.armL.elbow;
   return {
@@ -192,11 +216,11 @@ const YearIntoAWeek: React.FC<z.infer<typeof schema>> = () => {
   const A = airWorldOf({ cam, rest: REST, depth, frame, fogBy: "depth" });
   const p = pAt(frame);
   const st = compressAt(PLAN, p);
-  const g = A.P.at(GENIUS.X, GENIUS.Z);
-  const genius = (
+  const g = A.P.at(ROBOT.X, ROBOT.Z);
+  const robot = (
     <g>
-      <AirShadow A={A} X={GENIUS.X} Z={GENIUS.Z} w={62} d={30} uid="gsh" amt={0.8} />
-      <Genius variant={0} pose={geniusPoseAt(frame)} at={g.at} scale={g.scale} uid="g0" frame={frame} fog={A.folkFog(GENIUS.Z)} unitPx={cam.k} />
+      <AirShadow A={A} X={ROBOT.X} Z={ROBOT.Z} w={BOT_SHADOW.w} d={BOT_SHADOW.d} uid="gsh" amt={BOT_SHADOW.amt} />
+      <Bot variant={0} pose={robotPoseAt(frame)} at={g.at} scale={g.scale} uid="g0" frame={frame} fog={A.folkFog(ROBOT.Z)} unitPx={cam.k} />
     </g>
   );
   return (
@@ -206,7 +230,7 @@ const YearIntoAWeek: React.FC<z.infer<typeof schema>> = () => {
         <LowAir cam={cam} />
         <AirHorizonHazeW A={A} id="yw-haze" />
         <CalendarBoard A={A} g={BOARD} uid="cal" dim={st.rowDim} />
-        <CalendarSheets A={A} plan={PLAN} p={p} uid="cs" extras={[{ Z: GENIUS.Z, node: genius }]} />
+        <CalendarSheets A={A} plan={PLAN} p={p} uid="cs" extras={[{ Z: ROBOT.Z, node: robot }]} />
         <Plate A={A} X={PLATE.X} Y={PLATE.Y} Z={PLATE.Z} text="1 YEAR OF WORK" t={plateT(frame, PLATE.f0, 12)} uid="pl" size={PLATE.size} />
       </WorldSvg>
     </AirStage>
