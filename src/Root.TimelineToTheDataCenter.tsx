@@ -1,7 +1,7 @@
 import {Composition} from 'remotion';
 import TimelineToTheDataCenter, {DURATION, FPS, defaultProps, schema} from '../generated/components/rsi-ten-earths/TimelineToTheDataCenter';
 
-// Private render entry for TimelineToTheDataCenter (rsi-ten-earths; Dwarkesh 3D style): one forward dolly down a road past sinking 2026/2027/2028 year plates to a building whose front wall drops away on "a country of geniuses" to a lit hall of orange Geniuses typing and walking.
+// Private render entry for TimelineToTheDataCenter (rsi-ten-earths, rev 1; Dwarkesh 3D style): one continuous flight, low over a road with the years 2026-2030 painted on the asphalt, through the data center's rolling door as it rises, then a crane up and back over a hall of orange robots typing at desks between rack rows into the haze.
 // Opaque 1080x1920, 23.976 fps, 173 frames.
 export const RemotionRoot = () => (
   <Composition
