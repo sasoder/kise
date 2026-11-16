@@ -10,27 +10,34 @@
 // DURATION: the slot 4.379 -> 7.549 s (sequence f105-f181) = 3.170 s x 23.976 = 76 frames (f0..f75). Before: the speaker
 // on camera; after (f76): the minimal news card "45 days ago".
 //
-// THE MOTION: one continuous crane-up and pull-back over ONE 3D scene, projected orthographically: the b&w photo Earth
-// (a sphere re-projected per frame from the NASA EPIC full disc), the rocket's path (a 3D curve: the climb from the pad,
-// then a circular orbit round the Earth's centre) and its white exhaust trail, drawn by the nozzle. At f0 the camera
-// looks along the horizon from the south: the globe is huge, its limb across the lower frame, Vikram-1 (b&w cut-out,
-// hard shadow, ~540 px, wholly above the caption bands) standing on Sriharikota at the top of the limb. It lifts on "launched" (f3), climbs and pitches
-// over east (screen right) while the camera rises over the globe and pulls back (one log-zoom and one tilt, each a
-// smoothed key track creeping from f0), then swings a little round the Earth's axis as it settles: India comes to face
-// us just left of centre and the globe resolves into the whole disc (radius ~290, centre ~(1024, 350), its lower edge
-// crossing the first caption band). The destination orbit is there before the rocket: a DASHED ring (a planned path,
-// thinner and lighter than the trail) drawn on by a tip running once round it f8-f34, front half over the globe, back
-// half behind it. The rocket leads its own solid trail: it climbs, pitches over and merges tangentially into the ring's
-// crest (~f21), then flies on along it at a calm ~4-5 px/f, nose on the ring, its trail overwriting the dashes. On
-// "orbit" (f63) it is on the orbit, flying, in front of the globe on the upper arc, and its solid trail (the climb arc
-// and the orbit flown) takes the chain crown: three touching thin stripes stepping up out of its upper side. f63-f75:
-// it flies on, the globe turning a hair, film life on.
+// THE MOTION (rev 3): one continuous camera over ONE 3D scene, projected orthographically: the b&w photo Earth (a sphere
+// re-projected per frame from the NASA EPIC full disc), the rocket's path (a 3D curve: the climb from the pad, then a
+// circular orbit round the Earth's centre) and its white exhaust trail, drawn by the nozzle. No caption bands: the whole
+// 2048x1080 frame, balanced round its middle. Three phases that blend with no stall:
+//  1. f0-f6 LIFT-OFF: looking along the horizon from the south, the globe huge, its limb across the lower frame, Vikram-1
+//     (b&w cut-out, hard shadow, ~545 px) standing on Sriharikota at the top of the limb, its middle at the frame's
+//     middle. It lifts on "launched" (f3), gathering speed slowly.
+//  2. ~f6-f30 FOLLOW: the camera locks onto the rocket (caught up by f12) and climbs with it, the rocket just left of and
+//     below the middle (sky ahead), its trail streaming out of frame behind. The Earth falls away below, its curvature
+//     growing, the limb slipping just past the frame's bottom ~f20-f33 (at most ~50 px); the camera banks with the rocket
+//     round the Earth (the horizon under it stays level) as it gently pitches over east in a gravity turn, pointing along
+//     its flight (the trail flows straight out of the nozzle). The paper drifts down faintly.
+//  3. ~f30-f60 REVEAL: one pull-back (log zoom, one lobe) and a crane down (tilt 81 -> 64), still on the rocket, then
+//     easing onto a fixed point: the Earth comes back up as a big cap, its lower part out of frame (radius ~845, centre
+//     ~(1023, 1450)), the pad low on its left; the orbit (a near face-on circle, 1.42 Earth radii, tipped 25 deg toward
+//     us) sweeps across the frame above it, concentric with the cap, the rocket riding its crest near the middle (~(1000,
+//     380)) flying right. The planned orbit, DASHED (thinner, lighter than the trail), opens out from the join both ways
+//     f34-f56; the rocket merges into it tangentially ~f46 (from f28-f42 its nose eases onto the line ahead) and its solid
+//     trail overwrites the dashes.
+//  4. f60-f75 SETTLED: the camera creeps; the rocket glides on along the arc at ~5 px/f, the globe turning a hair, film
+//     life on. On "orbit" (f63) it is on the orbit, flying, and its solid trail (the climb arc and the orbit flown) takes
+//     the chain crown: three touching thin stripes stepping up out of its upper side.
 // CHAIN = SKYROOT'S OWN (skyrootShared legend): here the crown on Skyroot's own trail into orbit, once, on "orbit".
 //
 // SOURCES: FACTS.txt (animation_source/assets): Vikram-1's first flight ("Mission Aagaman") lifted off 18 Jul 2026 from the
 // First Launch Pad, Satish Dhawan Space Centre, Sriharikota (India's east coast; pad ~13.72 N 80.23 E), reached a ~450 km
 // LEO at 60 deg on the first attempt (ISRO; Al Jazeera; Space.com; SpaceNews; Bloomberg; Wikipedia "Vikram-1"). The orbit
-// here is collage scale (radius 2.15 Earth radii so it reads; the real one is 1.07) and is not a real ground track.
+// here is collage scale (radius 1.42 Earth radii so it reads; the real one is 1.07) and is not a real ground track.
 // Earth: NASA DSCOVR EPIC natural-colour full disc, 28 Mar 2024 07:15 UTC, centroid 11.2 N 74.8 E (public domain; NASA
 // EPIC Team; animation_source/assets/earth_india_disc.png). Rocket: skyrootShared VIKRAM1 (ISRO photo of the flight
 // vehicle on the pad, GODL-India).
@@ -38,11 +45,11 @@
 import React, { useId, useLayoutEffect, useRef, useState } from "react";
 import { AbsoluteFill, cancelRender, continueRender, delayRender, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { CHAIN, CaptionBands, EARTH, H, INK, RocketCutOut, SHADOW, SKYROOT_FILTER, SkyrootFilmLife, SkyrootPaper, VIKRAM1, W, chainProgress, clamp } from "./skyrootShared";
+import { CHAIN, EARTH, H, INK, RocketCutOut, SHADOW, SKYROOT_FILTER, SkyrootFilmLife, SkyrootPaper, VIKRAM1, W, chainProgress, clamp } from "./skyrootShared";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 76;
-export const schema = z.object({ bands: z.boolean().default(false), debug: z.boolean().default(false) });
+export const schema = z.object({ debug: z.boolean().default(false) });
 export const defaultProps = schema.parse({});
 
 // -- assets (skyrootShared) -----------------------------------------------------------------------------------------------
@@ -56,7 +63,6 @@ const add = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const mul = (a: V3, s: number): V3 => [a[0] * s, a[1] * s, a[2] * s];
 const dot = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const norm = (a: V3): V3 => mul(a, 1 / Math.hypot(a[0], a[1], a[2]));
 
 /** The EPIC frame E: the Earth's centre at the origin, radius 1; z toward EPIC's camera, x right, y up (north up). */
@@ -93,42 +99,50 @@ const track = (keys: [number, number][], win: number) => {
 };
 
 // -- the camera -------------------------------------------------------------------------------------------------------
+const ss = (t: number) => t * t * (3 - 2 * t);
+const c01 = (t: number) => Math.max(0, Math.min(1, t));
 /** Earth's radius on screen at f0 and at the resolved frame. */
 export const RS0 = 1500;
-export const R_END = 295;
+export const R_END = 850;
 const U_END = Math.log(RS0 / R_END);
-/** u = ln(RS0 / Rs): the log of the pull-back, creeping from f0, settled by ~f56, a creep after. */
+/** u = ln(RS0 / Rs): a slow ease out through the follow (the Earth falls away), then the reveal's one pull-back, its
+ *  speed peaking ~f40 and settled by ~f58, a creep after. */
 const U = track(
   [
-    [-40, -0.1],
+    [-40, -0.03],
     [0, 0],
-    [6, 0.12],
-    [12, 0.5],
-    [18, 1.0],
-    [24, 1.3],
-    [32, 1.5],
-    [42, U_END],
+    [10, 0.01],
+    [20, 0.04],
+    [28, 0.09],
+    [36, 0.22],
+    [44, 0.38],
+    [50, U_END - 0.07],
+    [56, U_END - 0.01],
+    [60, U_END],
     [75, U_END + 0.03],
-    [116, U_END + 0.06],
+    [116, U_END + 0.07],
   ],
   4,
 );
-/** The camera's tilt: 81 deg = looking along the horizon from the south (the pad on the limb), 0 = EPIC's own view. */
+/** The camera's tilt: 81 deg = looking along the horizon from the south (the pad on the limb), 0 = EPIC's own view. It
+ *  holds near the horizon through the follow (the limb falls straight away below the rocket), then cranes down in the
+ *  reveal so the Earth's cap shows its face, India on it. */
 const TAU = track(
   [
-    [-40, 82],
+    [-40, 81.5],
     [0, 81],
-    [6, 79],
-    [14, 62],
-    [22, 32],
-    [29, 11],
-    [36, 2.5],
-    [50, 0.5],
-    [116, -1.5],
+    [22, 80.5],
+    [30, 78.8],
+    [38, 74.5],
+    [46, 69],
+    [52, 66],
+    [58, 64.6],
+    [75, 64.1],
+    [116, 63.4],
   ],
   4,
 );
-/** The roll that stands the pad at 12 o'clock at f0; none at the end. */
+/** The roll that stands the pad at 12 o'clock (all through the lift-off and the follow) ... */
 const ROLL = (tau: number) => {
   const c = Math.cos(rad(tau));
   const s = Math.sin(rad(tau));
@@ -137,44 +151,33 @@ const ROLL = (tau: number) => {
 };
 /** The globe's own turn about its axis (texture only: the orbit and the trail are in space): a hair, eastward. */
 const SPIN_PER_F = 0.03; // degrees per frame
-/** The camera's swing round the Earth's axis as it settles (deg about E's y; none through the lift-off): India slides a
- *  little left of the disc's centre, so the climb from the coast has room to arc east into the orbit's crest and the
- *  rocket has the crest's gentle stretch to fly along. */
-export const YAW_END = -20;
-const YAW = (f: number) => {
-  const t = Math.max(0, Math.min(1, (f - 16) / 30));
-  return YAW_END * t * t * (3 - 2 * t);
-};
-
-/** The focus: Q (view coords, Earth radii, y up) sits at screen point S. Q moves from the rocket on the pad to just
- *  below the globe's centre, so the globe centre lands at (1024, ~400). */
-const QX = track(
+/** Where the focus sits on screen: the rocket's middle through the lift-off and the follow (a little left and low once
+ *  it has pitched over: sky ahead of it), rising to just above the frame's middle as the reveal resolves. */
+const SX = track(
   [
-    [-40, 0],
-    [0, 0],
-    [20, 0.08],
-    [32, 0.1],
-    [44, 0],
-    [116, 0],
+    [-40, 1024],
+    [0, 1024],
+    [12, 1024],
+    [30, 960],
+    [44, 975],
+    [58, 1000],
+    [116, 1006],
   ],
   4,
 );
-const QY = track(
+const SY = track(
   [
-    [-40, 1.02],
-    [0, 1.02],
-    [8, 1.06],
-    [14, 1.55],
-    [20, 1.6],
-    [27, 0.3],
-    [32, -0.45],
-    [38, -0.62],
-    [44, -0.66],
-    [116, -0.66],
+    [-40, 560],
+    [0, 560],
+    [12, 560],
+    [22, 575],
+    [32, 590],
+    [44, 505],
+    [58, 380],
+    [116, 376],
   ],
   4,
 );
-const S = { x: W / 2, y: 540 };
 
 type Mat = [V3, V3, V3]; // rows
 const matVec = (m: Mat, v: V3): V3 => [dot(m[0], v), dot(m[1], v), dot(m[2], v)];
@@ -200,15 +203,6 @@ const rotX = (deg: number): Mat => {
     [0, -s, c],
   ];
 };
-const rotY = (deg: number): Mat => {
-  const c = Math.cos(rad(deg));
-  const s = Math.sin(rad(deg));
-  return [
-    [c, 0, s],
-    [0, 1, 0],
-    [-s, 0, c],
-  ];
-};
 const rotZ = (deg: number): Mat => {
   const c = Math.cos(rad(deg));
   const s = Math.sin(rad(deg));
@@ -231,76 +225,70 @@ const rotAxis = (a: V3, deg: number): Mat => {
   ];
 };
 
-export const camAt = (f: number, qOverride?: { x: number; y: number }) => {
-  const u = U(f);
-  const Rs = RS0 * Math.exp(-u);
-  const tau = TAU(f);
-  const roll = ROLL(tau);
-  const yaw = YAW(f);
-  const M = matMul(matMul(rotZ(roll), rotX(tau)), rotY(yaw)); // E -> view
-  const qx = qOverride ? qOverride.x : QX(f);
-  const qy = qOverride ? qOverride.y : QY(f);
-  const C = { x: S.x - Rs * qx, y: S.y + Rs * qy };
-  const toView = (p: V3) => matVec(M, p);
-  const toScreen = (p: V3) => {
-    const v = matVec(M, p);
-    return { x: C.x + Rs * v[0], y: C.y - Rs * v[1], z: v[2] };
-  };
-  return { u, p: Math.max(0, Math.min(1, u / U_END)), Rs, tau, roll, M, C, toView, toScreen, spin: SPIN_PER_F * f };
-};
+/** The resolved view: the pad rolled ROLL_END deg round to the cap's upper left, so the rocket, flown on round the Earth,
+ *  rides the orbit's crest over the middle of the frame. */
+const ROLL_END = 55;
+const viewFrom = (tau: number, rollOff: number): Mat => matMul(rotZ(ROLL(tau) + rollOff), rotX(tau));
 
 // -- the path (static, in space) ------------------------------------------------------------------------------------------
-/** The orbit: a circle of radius RHO round the Earth's centre, tilted so the resolved frame shows a wide ellipse, its
- *  major axis rising a little to the right, the UPPER arc in front of the globe (the lower arc passes behind it). */
-export const RHO = 2.15;
-/** The ring as the RESOLVED camera sees it (after the swing): wide, tilted a hair (rising to the left), the upper arc in
- *  front of the globe; then turned back into E. */
-const ORBIT_N_END = norm([-0.03, 0.9, -0.33]);
-const A_END = norm(sub([1, 0, 0], mul(ORBIT_N_END, dot([1, 0, 0], ORBIT_N_END))));
-let B_END = cross(ORBIT_N_END, A_END);
-// travel clockwise on screen in the resolved view: x dy - y dx < 0 (y up)
-if (A_END[0] * B_END[1] - A_END[1] * B_END[0] > 0) B_END = mul(B_END, -1);
-const UNYAW = rotY(-YAW_END);
-const ORBIT_A = matVec(UNYAW, A_END);
-const ORBIT_B = matVec(UNYAW, B_END);
+/** The orbit: a circle of radius RHO round the Earth's centre, designed in the view of F_RING (the settled frame): nearly
+ *  face-on (its top tipped RING_TILT toward us), so its upper arc sweeps across the frame concentric with the Earth's cap,
+ *  in front of the globe. */
+export const RHO = 1.42;
+const RING_TILT = 25;
+const F_RING = 63;
+const M_RING = viewFrom(TAU(F_RING), ROLL_END);
+const ORBIT_A = matVec(transpose(M_RING), [1, 0, 0]);
+const ORBIT_B = matVec(transpose(M_RING), [0, Math.cos(rad(RING_TILT)), Math.sin(rad(RING_TILT))]);
+/** The plane through the pad and the same horizontal: the climb starts in it and turns into the orbit's own plane as it
+ *  rises (the two differ only in depth: seen face-on, a hair). */
+const PAD_B = norm(sub(PAD, mul(ORBIT_A, dot(PAD, ORBIT_A))));
 const orbitPt = (th: number): V3 => mul(add(mul(ORBIT_A, Math.cos(th)), mul(ORBIT_B, Math.sin(th))), RHO);
-const orbitTan = (th: number): V3 => norm(add(mul(ORBIT_A, -Math.sin(th)), mul(ORBIT_B, Math.cos(th))));
-/** Where the climb joins the orbit: the TOP of the resolved ellipse (max y in the E view, where its tangent is level):
- *  the climb can rise from India and turn right into it without a hook. */
-const TH_J = (() => {
-  let best = 0;
-  let by = -1e9;
-  for (let i = 0; i < 7200; i++) {
-    const th = (i / 7200) * 2 * Math.PI;
-    const p = orbitPt(th);
-    if (p[1] > by) {
-      by = p[1];
-      best = th;
-    }
+/** Flown clockwise on screen (theta decreasing: left to right over the top). */
+const DIR = -1;
+/** The climb, a gravity turn in the orbit's plane: from the pad (theta TH_P, radius 1) its heading leaves the local
+ *  vertical at once and tips over to the local horizontal, psi = 90 deg (1 - (1 - u)^TURN_P) over its length (u = 0..1),
+ *  so it pitches over low and early, then climbs on a long, gently curving arc and meets the orbit along it (psi 90,
+ *  its turn rate falling to the ring's own). Its length is solved so it ends at radius RHO; where it joins is J. */
+const TURN_P = 2.0;
+const TH_P = Math.atan2(dot(PAD, PAD_B), dot(PAD, ORBIT_A));
+const N_CLIMB = 600;
+const CLIMB: V3[] = (() => {
+  const psi = (u: number) => (Math.PI / 2) * (1 - (1 - u) ** TURN_P);
+  let ic = 0;
+  for (let i = 0; i < N_CLIMB; i++) ic += Math.cos(psi((i + 0.5) / N_CLIMB)) / N_CLIMB;
+  const len = (RHO - 1) / ic;
+  const out: V3[] = [];
+  let r = 1;
+  let th = TH_P;
+  let u = 0;
+  const at = () => {
+    const w = ss(u);
+    const b = norm(add(mul(PAD_B, 1 - w), mul(ORBIT_B, w)));
+    return mul(add(mul(ORBIT_A, Math.cos(th)), mul(b, Math.sin(th))), r);
+  };
+  out.push(at());
+  for (let i = 0; i < N_CLIMB; i++) {
+    const p = psi((i + 0.5) / N_CLIMB);
+    const ds = len / N_CLIMB;
+    const rm = r + (Math.cos(p) * ds) / 2;
+    r += Math.cos(p) * ds;
+    th += (DIR * Math.sin(p) * ds) / rm;
+    u = (i + 1) / N_CLIMB;
+    out.push(at());
   }
-  return best;
+  return out;
 })();
+const TH_J = Math.atan2(dot(CLIMB[N_CLIMB], ORBIT_B), dot(CLIMB[N_CLIMB], ORBIT_A));
 export const J = orbitPt(TH_J);
-const TJ = orbitTan(TH_J);
-/** The climb: a cubic Hermite from the pad (leaving radially, upright: mostly +z, toward EPIC's camera) to J (arriving
- *  along the orbit, level in the E view). The views turn about the screen x axis, so x (east) is shared by every view:
- *  x rises late and monotonically (the pitch-over east), z early (the climb), y in the middle (the rise in the E view). */
-const CLIMB_OUT = 0.7; // the start tangent's length (radial)
-const CLIMB_IN = 1.6; // the end tangent's length (along the orbit)
-const CB: V3[] = [PAD, mul(PAD, 1 + CLIMB_OUT / 3), sub(J, mul(TJ, CLIMB_IN / 3)), J];
-const bez = (t: number): V3 => {
-  const w = [(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t * t, t ** 3];
-  return [0, 1, 2].map((i) => w.reduce((a, wk, k) => a + wk * CB[k][i], 0)) as V3;
-};
 /** The path as a dense polyline with cumulative arc length: the climb, then 1.3 laps from J. */
 const PATH: V3[] = [];
 const PATH_S: number[] = [];
 {
-  const N_CLIMB = 600;
-  for (let i = 0; i <= N_CLIMB; i++) PATH.push(bez(i / N_CLIMB));
+  for (let i = 0; i < N_CLIMB; i++) PATH.push(CLIMB[i]);
+  PATH.push(J);
   const N_LAP = 1800;
-  const sign = Math.sign(dot(TJ, orbitTan(TH_J + 1e-3))) >= 0 ? 1 : -1;
-  for (let i = 1; i <= N_LAP * 1.3; i++) PATH.push(orbitPt(TH_J + sign * (i / N_LAP) * 2 * Math.PI));
+  for (let i = 1; i <= N_LAP * 1.3; i++) PATH.push(orbitPt(TH_J + DIR * (i / N_LAP) * 2 * Math.PI));
   let s = 0;
   PATH_S.push(0);
   for (let i = 1; i < PATH.length; i++) {
@@ -308,7 +296,7 @@ const PATH_S: number[] = [];
     PATH_S.push(s);
   }
 }
-export const S_J = PATH_S[600];
+export const S_J = PATH_S[N_CLIMB];
 /** Arc length at which the lap closes (back at J). */
 export const S_CLOSE = S_J + 2 * Math.PI * RHO;
 /** The path samples with their arc length (checks and plots). */
@@ -333,21 +321,19 @@ export const pathAt = (s: number) => {
   return { p, t: norm(sub(b, a)), i };
 };
 
-// -- the rocket's travel (arc length along the path) and the dashed ring's drawing tip ----- -------------------------------------------
-/** The rocket: still at f0, lifting on "launched" (f3), up to the lift-off pace V1 (screen px/f, world speed ~ 1/Rs while
- *  the camera pulls back), then from DEC0 it eases into its orbit and from DEC1 flies on at a calm GLIDE_PX, along the
- *  crest of the near (upper) arc, always in view in front of the globe. */
-const V1 = 93.2; // screen px per frame, the lift-off pace (v5's, kept)
-const DEC0 = 13;
-const DEC1 = 24;
-export const GLIDE_PX = 4.5; // screen px per frame once in orbit
-const ss = (t: number) => t * t * (3 - 2 * t);
-const c01 = (t: number) => Math.max(0, Math.min(1, t));
+// -- the rocket's travel (arc length along the path) -----------------------------------------------------------------------
+/** The rocket: still at f0, lifting on "launched" (f3), up to the climb pace V1 (screen px/f against the Earth; world
+ *  speed V1 / Rs), then from DEC0 it eases into its orbit and from DEC1 flies on at a calm GLIDE_PX. */
+const V1 = 40;
+const ACC_F = 24; // frames to reach V1 (a heavy rocket gathering speed: the Earth falls away gradually)
+const DEC0 = 34;
+const DEC1 = 56;
+export const GLIDE_PX = 5;
 const RsAt = (f: number) => RS0 * Math.exp(-U(f));
 const SUB = 20;
 const ROCKET_TABLE = (() => {
   const v = (f: number) => {
-    const acc = ss(c01(f / 12));
+    const acc = ss(c01(f / ACC_F));
     const dec = ss(c01((f - DEC0) / (DEC1 - DEC0)));
     return (V1 * acc * (1 - dec) + GLIDE_PX * dec) / RsAt(f);
   };
@@ -366,19 +352,82 @@ const lerpTable = (table: number[], f: number) => {
   return table[a] + (table[b] - table[a]) * (c - a);
 };
 export const sAt = (f: number) => lerpTable(ROCKET_TABLE, f);
-/** The planned orbit: a DASHED ring, drawn on ahead of time by a tip running once round it from J at a constant
- *  angular speed, RING_F0 to RING_F1 (front half over the globe, back half behind it), so it is there before the rocket
- *  arrives. Dashes sit at fixed places on the ring (they never crawl as the camera pulls back). */
-const RING_F0 = 8;
-const RING_F1 = 34;
-export const ringTipAt = (f: number) => 2 * Math.PI * c01((f - RING_F0) / (RING_F1 - RING_F0)); // radians past J
+export const L0 = 545; // rocket length on screen at f0
+export const L_POW = 0.44; // it shrinks slower than the Earth (collage scale): L = L0 (Rs/RS0)^L_POW
+/** From CHORD_F0 the rocket lies along the chord to the path point a rocket length ahead (its nose on the line). */
+const CHORD_F0 = 28;
+const CHORD_RAMP = 14;
+const LAt = (f: number) => L0 * Math.pow(RsAt(f) / RS0, L_POW);
+
+// -- the camera's focus and the camera ---------------------------------------------------------------------------------------
+/** The rocket's middle (world), as it is drawn: half a rocket length up its axis from the nozzle (the tangent, then from
+ *  CHORD_F0 the chord to the path point a rocket length ahead). */
+const midAt = (f: number) => {
+  const s = sAt(f);
+  const { p, t } = pathAt(s);
+  const lw = LAt(f) / RsAt(f);
+  const w = ss(c01((f - CHORD_F0) / CHORD_RAMP));
+  const tan = mul(t, lw / 2);
+  const chord = mul(sub(pathAt(s + lw).p, p), 0.5);
+  return add(p, add(mul(tan, 1 - w), mul(chord, w)));
+};
+const MID_REST = midAt(0);
+/** The focus (world): the rocket on the pad, then locking onto the climbing rocket (LOCK_IN, the camera catching up), held
+ *  through the follow and the reveal, then easing (LOCK_OUT) onto a fixed point, the rocket's middle at F_HOLD, so the
+ *  settled frame holds still and the rocket glides on along the arc. */
+const LOCK_IN: [number, number] = [2, 12];
+const LOCK_OUT: [number, number] = [40, 60];
+const F_HOLD = 63;
+const MID_HOLD = midAt(F_HOLD);
+const focusAt = (f: number): V3 => {
+  const li = ss(c01((f - LOCK_IN[0]) / (LOCK_IN[1] - LOCK_IN[0])));
+  const lo = ss(c01((f - LOCK_OUT[0]) / (LOCK_OUT[1] - LOCK_OUT[0])));
+  const m = midAt(f);
+  const q = add(MID_REST, mul(sub(m, MID_REST), li));
+  return add(q, mul(sub(MID_HOLD, q), lo));
+};
+
+/** The camera's roll follows the focus round the Earth (its angle about the resolved view's axis, from the pad's), so the
+ *  horizon under the climbing rocket stays level and the pitch-over reads against it; it reaches ROLL_END as the focus
+ *  settles. */
+const angRing = (p: V3) => {
+  const v = matVec(M_RING, p);
+  return (Math.atan2(v[0], v[1]) * 180) / Math.PI;
+};
+const ANG0 = angRing(MID_REST);
+const ANG_HOLD = angRing(MID_HOLD);
+const ROLL_OFF = (f: number) => (ROLL_END * (angRing(focusAt(f)) - ANG0)) / (ANG_HOLD - ANG0);
+/** The view rotation (E -> view) at frame f. */
+const viewM = (f: number): Mat => viewFrom(TAU(f), ROLL_OFF(f));
+
+export const camAt = (f: number) => {
+  const u = U(f);
+  const Rs = RS0 * Math.exp(-u);
+  const tau = TAU(f);
+  const roll = ROLL(tau) + ROLL_OFF(f);
+  const M = viewM(f); // E -> view
+  const qv = matVec(M, focusAt(f));
+  const C = { x: SX(f) - Rs * qv[0], y: SY(f) + Rs * qv[1] };
+  const toView = (p: V3) => matVec(M, p);
+  const toScreen = (p: V3) => {
+    const v = matVec(M, p);
+    return { x: C.x + Rs * v[0], y: C.y - Rs * v[1], z: v[2] };
+  };
+  return { u, p: Math.max(0, Math.min(1, u / U_END)), Rs, tau, roll, M, C, toView, toScreen, spin: SPIN_PER_F * f };
+};
+
+/** The planned orbit: a DASHED ring, drawn on during the pull-back by two tips running from J both ways round it at a
+ *  constant angular speed, RING_F0 to RING_F1, so it opens out across the frame as the reveal widens. Dashes sit at fixed
+ *  places on the ring (they never crawl as the camera moves). */
+const RING_F0 = 34;
+const RING_F1 = 56;
+export const ringTipAt = (f: number) => Math.PI * c01((f - RING_F0) / (RING_F1 - RING_F0)); // radians from J, each way
 const DASH_PERIOD_PX = 38; // dash + gap, measured along the ring as the resolved camera sees it (even there)
 const DASH_ON = 0.58; // the dash's share of a period
 
 
+
 // -- the rocket on screen ----------------------------------------------------------------------------------------------------
-export const L0 = 545; // rocket length on screen at f0
-export const L_POW = 0.44; // it shrinks slower than the Earth (collage scale): L = L0 (Rs/RS0)^L_POW
 /** The projected tangent (screen, unit) of the path at frame f, as the camera sees it then. */
 const screenDir = (f: number) => {
   const cam = camAt(f);
@@ -389,7 +438,7 @@ const screenDir = (f: number) => {
   const ty = -tv[1] / l;
   // once the orbit line is drawn ahead of it, the rocket lies along the CHORD to the path point a rocket length ahead
   // (its nose on the line, not overshooting the curve)
-  const w = ss(c01((f - CHORD_F0) / 8));
+  const w = ss(c01((f - CHORD_F0) / CHORD_RAMP));
   if (w <= 0) return { x: tx, y: ty, l };
   const L = L0 * Math.pow(cam.Rs / RS0, L_POW);
   const b = cam.toScreen(pathAt(s).p);
@@ -405,7 +454,6 @@ const screenDir = (f: number) => {
 };
 /** The rocket's heading: the projected tangent (from CHORD_F0 the chord) averaged over +-3 frames (a rigid body swings
  *  round the curve instead of snapping); its nozzle stays exactly on the path. */
-const CHORD_F0 = 18;
 const ROT_W = [1, 2, 3, 4, 3, 2, 1];
 export const rocketAt = (f: number) => {
   const cam = camAt(f);
@@ -661,7 +709,7 @@ const DASHES: [number, number][] = (() => {
   th.push(0);
   for (let i = 1; i <= n; i++) {
     const a = (i / n) * 2 * Math.PI;
-    const q = cam.toScreen(orbitPt(TH_J + a));
+    const q = cam.toScreen(orbitPt(TH_J + DIR * a));
     len.push(len[i - 1] + Math.hypot(q.x - prev.x, q.y - prev.y));
     th.push(a);
     prev = q;
@@ -682,14 +730,19 @@ export const ringDashes = (f: number): Dash[] => {
   const cam = camAt(f);
   const tip = ringTipAt(f);
   const out: Dash[] = [];
-  for (const [a, b0] of DASHES) {
-    if (a >= tip) break;
-    const b = Math.min(tip, b0);
+  for (const [a0, b0] of DASHES) {
+    // forward from J (ahead of the rocket) up to the tip, and backward from J (behind it) down to 2 pi - tip
+    let a = a0;
+    let b = b0;
+    if (a0 < tip) b = Math.min(tip, b0);
+    else if (b0 > 2 * Math.PI - tip) a = Math.max(a0, 2 * Math.PI - tip);
+    else continue;
+    if (b <= a) continue;
     const pts: string[] = [];
     const n = 5;
     let zMid = 0;
     for (let k = 0; k <= n; k++) {
-      const th = TH_J + a + ((b - a) * k) / n;
+      const th = TH_J + DIR * (a + ((b - a) * k) / n);
       const q = cam.toScreen(orbitPt(th));
       if (k === Math.floor(n / 2)) zMid = q.z;
       pts.push(`${q.x.toFixed(2)} ${q.y.toFixed(2)}`);
@@ -744,23 +797,22 @@ const Debug: React.FC<{ frame: number }> = ({ frame }) => {
 };
 
 // -- the cut ------------------------------------------------------------------------------------------------------------------
-/** The paper (the sky): a slow 5 % pull-back and a 40 px drop as the camera cranes up, through PaperGround's own
- *  parallax (scale 1 + (k - 1) 0.3, shift (y - y0) k 0.15). */
-const paperCam = (e: number) => {
+/** The paper (the sky): a faint 60 px drop from the lift-off to the settle (the camera climbing with the rocket) and a
+ *  slow 5 % pull-back, through PaperGround's own parallax (scale 1 + (k - 1) 0.3, shift (y - y0) k 0.15). */
+const paperCam = (frame: number) => {
+  const e = ss(c01((frame - 3) / 57));
   const k = 1 - e / 6;
-  return { x: W / 2, y: H / 2 - (40 * e) / (0.15 * k), k, x0: W / 2, y0: H / 2 };
+  return { x: W / 2, y: H / 2 - (60 * e) / (0.15 * k), k, x0: W / 2, y0: H / 2 };
 };
 
-const FirstPrivateToOrbit: React.FC<z.infer<typeof schema>> = ({ bands, debug }) => {
+const FirstPrivateToOrbit: React.FC<z.infer<typeof schema>> = ({ debug }) => {
   const frame = useCurrentFrame();
-  const cam = camAt(frame);
   const r = rocketAt(frame);
-  const ease = cam.p * cam.p * (3 - 2 * cam.p);
   const rocketBehind = r.z < 0;
   return (
     <AbsoluteFill>
       <SkyrootFilmLife frame={frame} seed="skyroot-4">
-        <SkyrootPaper frame={frame} cam={paperCam(ease)} />
+        <SkyrootPaper frame={frame} cam={paperCam(frame)} />
         <DashedRing frame={frame} front={false} />
         <Trail frame={frame} front={false} />
         {rocketBehind ? <Rocket frame={frame} /> : null}
@@ -771,7 +823,6 @@ const FirstPrivateToOrbit: React.FC<z.infer<typeof schema>> = ({ bands, debug })
         {rocketBehind ? null : <Rocket frame={frame} />}
         {debug ? <Debug frame={frame} /> : null}
       </SkyrootFilmLife>
-      <CaptionBands on={bands} />
     </AbsoluteFill>
   );
 };
