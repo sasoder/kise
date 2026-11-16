@@ -10,30 +10,38 @@
 //   which 58 · built 67 · India's 73 · largest 83 · rocket 90 · called 106 · LVM3 117 · speech ends ~135.
 // DURATION: the slot 17.142 -> 23.023 s (sequence f411-f552) = 5.881 s x 23.976 = 141 frames (f0..f140).
 //
-// THE MOTION (rev 3, after review 2: the team is one row of standing people). ONE continuous pull-back from f0 to ~f104,
-// then a slow creep. A log-zoom track u = ln k (keyed, box-smoothed) is already falling at f0, holds ~1.4 %/frame,
-// accelerates to ~2.6 %/frame at f61 and settles by ~f104 (one acceleration lobe, one settle lobe); the look-at point A
-// travels down the body from the mark to the founders on T, whose speed is shaped as 1 / k (moving at f0, easing out,
-// arrived f54), so the descent's screen speed stays level at <= ~35 px/frame (the world point under the frame's centre;
-// 2048 frame) while the zoom falls. f0: close on the white ISRO mark printed large on LVM3's core over the livery's own
-// small logo (k 4.95, the mark ~386 px wide, centre y ~380). The body slides up past the frame as it shrinks; the team
-// comes in at the bottom right at the rocket's foot: ONE row of eleven standing white full figures on the paper's ground
-// line, shoulder to shoulder just right of the pad like a team photo, each rising whole from behind the ground line in a
-// left-to-right ripple as the camera brings it in (f34-f50). At f51 (k 2.30) the figures are ~119 px tall and the two
-// nearest the rocket, the founders, sit just right of centre, wholly above y 600 (f49-f57): on "team" their chain crown
-// rises from behind them (from f41, formed f51). The pull-back carries on without a break: the row glides to its rest
-// below the caption bands, the whole LVM3 towers over the tiny team, the nose entering at the top on "rocket" (~f90),
-// settled by "LVM3" f117 (k ~1.000), then a creep out of ~0.07 % per frame to the last frame.
+// THE MOTION (rev 4, after the user's "make it more harmonious, write out the name, more going on"). ONE continuous
+// pull-back from f0 to ~f104, then a slow creep. A log-zoom track u = ln k (keyed, box-smoothed) is already falling at
+// f0, holds ~1.4 %/frame, accelerates to ~2.6 %/frame at f61 and settles by ~f104 (one acceleration lobe, one settle
+// lobe); the look-at point A travels down the body from the mark to the founders on T, whose speed is shaped as 1 / k
+// (moving at f0, easing out, arrived f54), so the descent's screen speed stays <= ~31 px/frame (the world point under
+// the frame's centre; 2048 frame) while the zoom falls. f0: close on the white ISRO mark printed large on LVM3's core
+// over the livery's own small logo (k 4.95, the mark ~386 px wide, centre y ~380). The body slides up past the frame as
+// it shrinks; the team comes in at the bottom right at the rocket's foot: ONE row of eleven standing white full figures
+// on the paper's ground line, shoulder to shoulder just right of the pad like a team photo, each rising whole from
+// behind the ground line in a left-to-right ripple (f34-f50). f51 ("team", k 2.30): a team photo at the pad, the
+// rocket's base left (x ~330-910), the row right (to x ~1750) on the ground at y ~782, figures ~119 px tall; the
+// founders' chain crown rises from behind them (from f41, formed f51). "which built" (f56-f84): three b&w prints of
+// LVM3 being built slide in one after another off the left frame edge and land pinned on the paper left of the rocket.
+// The pull-back carries on: the nose enters at the top on "rocket" (~f90), settled by f117 (k ~1.000), then a creep out
+// of ~0.07 % per frame to the last frame. "called" / "LVM3" (f103-f119): the name's rule is drawn, the name rises.
 // CHAIN = SKYROOT'S OWN (skyrootShared legend): here the two founders (their crown from "team" to the end). The stack
 // never changes: orange back (3 steps up), purple (2), blue (1), the hard shadow, the white core; the step is a constant
-// 4.6 world px (10.6 px at f51, 4.6 px in the resolved frame), so all three colours show at both scales.
-// SCALE (CHEATED): LVM3 894 px nose to base. skyrootShared's VISIBLE_M gives the PNG's span as ~40 m, so a 1.75 m person
-// would be ~39 px; the figures are 52 px (x1.33) so a full figure still reads as a person on a phone.
-// CAPTION BANDS: the mark at rest above them (f0 y ~195-565, f117 y ~495-570), the founders and their crown above y 600
-// from f49 to f57 and the whole team below y 830 from f78 on (crown top y ~924 at rest); only the rocket's body (and its
-// painted livery) crosses them at rest.
-//
-// SOURCES: LVM3 43.4 m tall, India's heaviest operational launcher (Wikipedia "LVM3"; animation_source/assets/FACTS.txt
+// 4.6 world px (10.6 px at f51, 4.6 px in the resolved frame), so all three colours show at both scales. No chain on
+// the name: LVM3 is ISRO's.
+// SCALE (CHEATED): LVM3 860 px nose to base. skyrootShared's VISIBLE_M gives the PNG's span as ~40 m, so a 1.75 m person
+// would be ~38 px; the figures are 52 px (x1.37) so a full figure still reads as a person on a phone.
+// COMPOSITION (no caption bands in this trailer; the resolved frame designed as one picture): the rocket left of
+// centre (axis x 730, x 610-862, nose y 85, base 945) on its pad; the ground line at y 968 with the team row right of
+// the pad (x 905-1228); the name LVM3 balancing the rocket on the right at its mid-height (ink x 1211-1831, y ~410-593,
+// its rule to y 624); the three prints quiet on the paper at the left (x ~160-493, y ~120-843: >= 150 px from the
+// frame's left edge, each overlapping its neighbour by <= 14 %), >= 72 px clear of the rocket's silhouette on every
+// frame. Hierarchy: rocket, name, team, prints.
+// SOURCES: the build prints: ISRO, GSLV Mk III-D1 campaign 2017 (GODL-India, via Wikimedia Commons; the working
+// folder's images/18.5a-c, credits in images/image_sources.txt): S200 strap-ons integrated with the L110 core, the L110
+// liquid stage and the C25 cryogenic stage at the stage preparation facility, baked by
+// scripts/clips/skyroot-trailer/bake-lvm3-build-prints.py -> public/skyroot-trailer/lvm3_build_{a,b,c}.jpg.
+// LVM3 43.4 m tall, India's heaviest operational launcher (Wikipedia "LVM3"; animation_source/assets/FACTS.txt
 // item 4). The founders' ISRO background: Pawan Kumar Chandana, ISRO 2012-2018, worked on GSLV Mk III (= LVM3; Tribune,
 // 19 Jul 2026); Naga Bharath Daka, avionics engineer at ISRO's VSSC 2012-2015 (Skyroot "About"); his own LVM3 link is not
 // documented (FACTS.txt). Photo: LVM3-M6 on the Second Launch Pad (ISRO, GODL-India), cut by
@@ -43,12 +51,11 @@
 // white on its hard shadow. People: drawn here (FigureGlyph), in the family of cerroShared Person.
 // ---------------------------------------------------------------------------
 import React from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { PaperGround } from "../kits/core-memory/cerroShared";
+import { BARLOW_CAP, PaperGround } from "../kits/core-memory/cerroShared";
 import {
   CHAIN,
-  CaptionBands,
   CutOut,
   EASE_LAND,
   H,
@@ -58,16 +65,18 @@ import {
   LogoMark,
   RocketCutOut,
   SHADOW,
+  STROKE,
   SKYROOT_FILTER,
   SkyrootFilmLife,
   W,
   clamp,
+  fontFamily,
   logoAspect,
 } from "./skyrootShared";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 141;
-export const schema = z.object({ bands: z.boolean().default(false) });
+export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
 // -- tracks: coarse keys, linearly interpolated, box-smoothed per frame at module load (deterministic) ----------------
@@ -98,17 +107,17 @@ const LVM3_PNG = LVM3;
 /** In the PNG: the core's centre line and the livery's ISRO logo (centre), src px. */
 const CORE_X_SRC = 378;
 const LOGO_Y_SRC = 1346;
-export const X_R = 960; // the PNG's axis (axisX)
-export const NOSE_Y = 72;
-export const BASE_Y = 966; // the flat foot of the core and both strap-ons (one row in the PNG), standing on the pad
+export const X_R = 730; // the PNG's axis (axisX): the rocket stands left of centre (rev 3)
+export const NOSE_Y = 85;
+export const BASE_Y = 945; // the flat foot of the core and both strap-ons (one row in the PNG), standing on the pad
 const RH_IMG = (BASE_Y - NOSE_Y) / (LVM3_PNG.baseY - LVM3_PNG.noseY); // the PNG's height in world px
 const RW_IMG = (RH_IMG * LVM3_PNG.w) / LVM3_PNG.h;
 const IMG_TOP = NOSE_Y - LVM3_PNG.noseY * RH_IMG;
 const IMG_LEFT = X_R - LVM3_PNG.axisX * RW_IMG;
 const ROCKET_SHADOW = 3;
 /** The vehicle's outer edges (strap-ons, src x 7..767), world px. */
-const ROCKET_L = IMG_LEFT + (7 / LVM3_PNG.w) * RW_IMG;
-const ROCKET_R = IMG_LEFT + (767 / LVM3_PNG.w) * RW_IMG;
+export const ROCKET_L = IMG_LEFT + (7 / LVM3_PNG.w) * RW_IMG;
+export const ROCKET_R = IMG_LEFT + (767 / LVM3_PNG.w) * RW_IMG;
 
 /** The white ISRO mark on the core, centred on the livery's own logo, printed large (~80 % of the core's width). */
 export const MARK = { x: IMG_LEFT + (CORE_X_SRC / LVM3_PNG.w) * RW_IMG, y: IMG_TOP + (LOGO_Y_SRC / LVM3_PNG.h) * RH_IMG, w: 78, h: 78 / logoAspect(ISRO_LOGO) };
@@ -117,7 +126,7 @@ const MARK_SHADOW = 1.5;
 const PATCH = { src: "skyroot-trailer/lvm3_logo_patch.png", x0: 300, y0: 1302, x1: 456, y1: 1414 };
 
 /** The paper's ground line (the team stands on it) and the pad. */
-export const G = 990;
+export const G = 968;
 const LINE_T = 3;
 const LINE_SH = 2;
 const PAD = { x0: ROCKET_L - 30, x1: ROCKET_R + 30, top: BASE_Y };
@@ -155,7 +164,7 @@ const FigureGlyph: React.FC<{ x: number; y: number; fill: string }> = ({ x, y, f
 };
 export const PITCH = 30;
 export const N_FIG = 11;
-export const FX0 = 1152; // the first figure's centre: the founder nearest the rocket, just clear of the pad
+export const FX0 = PAD.x1 + 25; // the first figure's centre: the founder nearest the rocket, just clear of the pad
 export const FOUNDERS = [0, 1];
 export const FOUNDER_C = { x: FX0 + PITCH / 2, y: G - FIG_H / 2 };
 type Fig = { x: number; i: number };
@@ -176,6 +185,106 @@ const CROWN_F = 41;
 const CROWN_STAGGER = 1;
 const CROWN_TRAVEL = 10;
 export const CROWN_STEP_W = 4.6;
+
+// -- the build prints (rev 3: "the team which built", made visible) -----------------------------------------------------
+// Three b&w prints of LVM3 being built (ISRO 2017, GODL-India; bake-lvm3-build-prints.py) pinned on the paper to the
+// left of the rocket: they live on the paper's plane (its parallax and scale), behind the world, and never touch the
+// rocket's silhouette. Each slides in off the left frame edge at full size on "which built" (one after another),
+// decelerating into place (ease-out quad, entering the frame at <= ~45 px/frame), turning its last degree as it lands.
+// A thin white border (the one STROKE weight) on the hard shadow: a photo print.
+const PRINT_SHADOW = 5;
+const PRINT_BORDER = STROKE;
+const PRINT_TRAVEL = 18;
+/** Paper-plane px at rest (f117), top-left, size, resting turn (deg), slide start frame. */
+const PRINTS = [
+  { src: "skyroot-trailer/lvm3_build_a.jpg", x: 238, y: 158, w: 262, h: 349, rot: -1.6, f0: 56 },
+  { src: "skyroot-trailer/lvm3_build_b.jpg", x: 216, y: 478, w: 320, h: 213, rot: 1.2, f0: 61 },
+  { src: "skyroot-trailer/lvm3_build_c.jpg", x: 204, y: 662, w: 320, h: 213, rot: -0.9, f0: 66 },
+] as const;
+export const printSlide = (pr: (typeof PRINTS)[number], f: number) => {
+  const t = interpolate(f, [pr.f0, pr.f0 + PRINT_TRAVEL], [0, 1], { easing: Easing.out(Easing.quad), ...clamp });
+  return { dx: -(pr.x + pr.w + 80) * (1 - t), rot: pr.rot + 2.5 * (1 - t), t };
+};
+export const PRINT_BOXES = PRINTS;
+const Prints: React.FC<{ frame: number; transform: string }> = ({ frame, transform }) => (
+  <div style={{ position: "absolute", left: 0, top: 0, width: W, height: H, transformOrigin: "50% 50%", transform }}>
+    {PRINTS.map((pr) => {
+      const m = printSlide(pr, frame);
+      if (m.t <= 0) return null;
+      return (
+        <div
+          key={pr.src}
+          style={{
+            position: "absolute",
+            left: pr.x + m.dx,
+            top: pr.y,
+            width: pr.w,
+            height: pr.h,
+            transform: `rotate(${m.rot}deg)`,
+          }}
+        >
+          <div style={{ position: "absolute", left: PRINT_SHADOW, top: PRINT_SHADOW, width: pr.w, height: pr.h, background: SHADOW }} />
+          <div style={{ position: "absolute", left: 0, top: 0, width: pr.w, height: pr.h, background: INK, padding: PRINT_BORDER, boxSizing: "border-box" }}>
+            <Img
+              src={staticFile(pr.src)}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: SKYROOT_FILTER }}
+            />
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
+
+// -- the name (rev 3: "since it's saying the name, it makes sense to write out a name") -----------------------------------
+// LVM3 set big in world space, right of the rocket at about its mid-height: Barlow 900 uppercase, white on its hard
+// shadow, over a white rule the word's width. The rule is drawn by its tip left to right (f103-f111, on "called" f106),
+// then the word rises whole from behind it (f109-f119, ease-out cubic: 97 % up by f116, settled on "LVM3" f117). No
+// chain: LVM3 is ISRO's. Cap height 183 px (Barlow 900 at 261 px, 0.9x of v3 so the rocket stays first), ink x 1211-1831,
+// y ~410-593, centred on the rocket's mid-height.
+/** ruleW / ruleDx: the rule spans the word's measured ink (world x 1211-1831), not its advance box. */
+export const TITLE = { x: 1520, base: 584, size: 261, shadow: 6, ruleGap: 29, ruleW: 620, ruleDx: 1 };
+const TITLE_CAP = TITLE.size * BARLOW_CAP;
+const RULE_F0 = 103;
+const RULE_FRAMES = 8;
+const TITLE_F0 = 109;
+const TITLE_FRAMES = 10;
+const Title: React.FC<{ frame: number }> = ({ frame }) => {
+  const r = interpolate(frame, [RULE_F0, RULE_F0 + RULE_FRAMES], [0, 1], { easing: Easing.inOut(Easing.cubic), ...clamp });
+  if (r <= 0) return null;
+  const t = interpolate(frame, [TITLE_F0, TITLE_F0 + TITLE_FRAMES], [0, 1], { easing: Easing.out(Easing.cubic), ...clamp });
+  const ruleY = TITLE.base + TITLE.ruleGap;
+  const x0 = TITLE.x + TITLE.ruleDx - TITLE.ruleW / 2;
+  const dy = (1 - t) * (TITLE.ruleGap + TITLE_CAP + TITLE.shadow + 8);
+  const txt = (fill: string, o: number) => (
+    <text
+      x={TITLE.x + o}
+      y={TITLE.base + dy + o}
+      fill={fill}
+      textAnchor="middle"
+      style={{ fontFamily, fontWeight: 900, fontSize: TITLE.size, textTransform: "uppercase" }}
+    >
+      LVM3
+    </text>
+  );
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+      <defs>
+        <clipPath id="t17-title">
+          <rect x={-1000} y={-2000} width={5000} height={ruleY + 2000} />
+        </clipPath>
+      </defs>
+      {t > 0 ? (
+        <g clipPath="url(#t17-title)">
+          {txt(SHADOW, TITLE.shadow)}
+          {txt(INK, 0)}
+        </g>
+      ) : null}
+      <rect x={x0 + TITLE.shadow} y={ruleY + TITLE.shadow} width={TITLE.ruleW * r} height={STROKE} fill={SHADOW} />
+      <rect x={x0} y={ruleY} width={TITLE.ruleW * r} height={STROKE} fill={INK} />
+    </svg>
+  );
+};
 
 // -- the camera ----------------------------------------------------------------------------------------------------------
 // ONE continuous pull-back from f0 (review 1: no whip). u = ln k falls from f0 (already moving), accelerates to ~f68 and
@@ -229,7 +338,7 @@ const T = (f: number) => {
   return T_TABLE[a] + (T_TABLE[Math.min(a + 1, ARRIVE)] - T_TABLE[a]) * (f - a);
 };
 const S_MARK = { x: W / 2, y: 380 };
-const S_TEAM = { x: 1130, y: 515 };
+const S_TEAM = { x: 1070, y: 720 };
 const U_TEAM = U(ARRIVE - 2);
 const smooth = (t: number) => t * t * (3 - 2 * t);
 export const camAt = (f: number) => {
@@ -312,26 +421,38 @@ const Rocket: React.FC = () => (
   </>
 );
 
+/** The paper's far plane: parallax 0.15 of the focus plane's travel, scale 1 + (k - 1) x 0.06 (never above 1.0x source). */
+export const paperOffset = (f: number) => {
+  const c = camAt(f);
+  const c0 = camAt(0);
+  return { x: -(c.x - c0.x) * c.k * 0.15, y: -(c.y - c0.y) * c.k * 0.15 };
+};
+/** The same plane for things pinned on the paper (PaperGround adds its own drift of -0.3 px/frame in y). */
+export const paperTransform = (f: number) => {
+  const o = paperOffset(f);
+  return `translate(${o.x}px, ${o.y - f * 0.3}px) scale(${1 + (camAt(f).k - 1) * 0.06})`;
+};
+
 // -- the cut ----------------------------------------------------------------------------------------------------------------
-const TeamThatBuiltLVM3: React.FC<z.infer<typeof schema>> = ({ bands }) => {
+const TeamThatBuiltLVM3: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const c = camAt(frame);
-  const c0 = camAt(0);
   const transform = `translate(${W / 2 - c.x * c.k}px, ${H / 2 - c.y * c.k}px) scale(${c.k})`;
   // the paper: a far plane (parallax 0.15 of the focus plane's travel, scale 1 + (k - 1) x 0.06: never above 1.0x source)
-  const paperOff = { x: -(c.x - c0.x) * c.k * 0.15, y: -(c.y - c0.y) * c.k * 0.15 };
+  const paperOff = paperOffset(frame);
   return (
     <AbsoluteFill>
       <SkyrootFilmLife frame={frame} seed="skyroot-17">
         <PaperGround frame={frame} cx={0} cy={0} cxRest={0} cyRest={0} k={1} offset={paperOff} scale={1 + (c.k - 1) * 0.06} />
+        <Prints frame={frame} transform={paperTransform(frame)} />
         <AbsoluteFill>
           <div style={{ position: "absolute", left: 0, top: 0, width: W, height: H, transformOrigin: "0 0", transform }}>
             <Team frame={frame} />
             <Rocket />
+            <Title frame={frame} />
           </div>
         </AbsoluteFill>
       </SkyrootFilmLife>
-      <CaptionBands on={bands} />
     </AbsoluteFill>
   );
 };

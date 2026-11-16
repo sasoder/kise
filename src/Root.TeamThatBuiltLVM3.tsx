@@ -1,7 +1,7 @@
 import {Composition} from 'remotion';
 import TeamThatBuiltLVM3, {DURATION, FPS, defaultProps, schema} from '../generated/components/skyroot-trailer/TeamThatBuiltLVM3';
 
-// Private render entry for TeamThatBuiltLVM3 (skyroot-trailer; Core memory podcast style): close on the ISRO mark on LVM3's core, down the body to the team at its foot (founders crowned), pull back to the whole rocket towering over them.
+// Private render entry for TeamThatBuiltLVM3 (skyroot-trailer; Core memory podcast style): close on the ISRO mark on LVM3's core, down the body to the team at its foot (founders crowned), build prints pinned beside it on "which built", pull back to the whole rocket towering over them, the name LVM3 rising on the word.
 // Opaque 2048x1080, 23.976 fps, 141 frames.
 export const RemotionRoot = () => (
   <Composition
