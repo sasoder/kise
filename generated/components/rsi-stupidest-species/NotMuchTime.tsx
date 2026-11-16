@@ -32,7 +32,12 @@
 //      sliding along it); idle: the tip taps the sand, he looks up to think (f60-150); the tip lifts f163-172 and draws
 //      a DASHED ORANGE plan: a river f172-188, a herd (three rings) f191-201, an arrow to the herd f202-213 (the head
 //      lands on "plan" f213). The tip is ON the ground on every drawing frame.
-// Resolved hold to f222. No text, no numbers.
+// REV 1 (the camera guides the eye): after the crane ONE continuous camera visits each thing on its words (TOUR keys,
+// pchip per channel, solved from a world focus point and its screen place): f61-88 down the stub with the footprints
+// to the lip; f88-109 in on the teaching pair (k 1.9, ~60% of the box, first strike f114 close); f121-146 an arc up
+// (eye 1040 -> 2150) and across to the haulers (heave peak f156 framed; the high eye drops the planner below the
+// caption bands); f163-180 down to the planner (the camera leans in and follows the stick's tip); a small ease back
+// after "plan" f213. No text, no numbers.
 // Orange = intelligence only: the only orange is the planner's dashed plan. People, chimps, log, rope and ground are in
 // muted earthy local colours; the "today" light and the footprints are cream.
 //
@@ -49,7 +54,7 @@
 import React from "react";
 import { random, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { ACCENT, AirFloor, AirShadow, AirStage, MAT, WorldSvg, airWorldOf, c01, lineOf, mixHex, swayCam, type AirWorld, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
+import { ACCENT, AirFloor, AirShadow, AirStage, MAT, WorldSvg, airWorldOf, c01, lineOf, mixHex, pchip, swayCam, type AirWorld, type Cam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
 import {
   CHIMP_POSES,
   Chimp,
@@ -100,31 +105,13 @@ const craneU = (f: number) => {
   const i = Math.max(0, Math.min(DURATION - 1, Math.floor(f)));
   return CRANE_U[i] + (CRANE_U[i + 1] - CRANE_U[i]) * (f - i);
 };
-/** the creep after the crane: 0 at f44 with zero speed, then steady to 1 at the end */
-const creep = (f: number) => {
-  const x = c01((f - 44) / (DURATION - 1 - 44));
-  const a = 0.25;
-  return (x < a ? (x * x) / (2 * a) : x - a / 2) / (1 - a / 2);
-};
-export const camState = (f: number) => {
+/** the crane alone (f0 ~50): eye height E, horizon row, zoom */
+const craneState = (f: number) => {
   const u = craneU(f);
-  const c = creep(f);
-  const k = Math.exp(Math.log(CAM.k0) + (Math.log(CAM.k1) - Math.log(CAM.k0)) * u + 0.016 * c);
-  const E = CAM.E0 + (CAM.E1 - CAM.E0) * u - 14 * c;
+  const k = Math.exp(Math.log(CAM.k0) + (Math.log(CAM.k1) - Math.log(CAM.k0)) * u);
+  const E = CAM.E0 + (CAM.E1 - CAM.E0) * u;
   const yH = CAM.yH0 + (CAM.yH1 - CAM.yH0) * u;
   return { cam: { k, cx: CAM.cx, cy: -E - (yH - 960) / k }, E };
-};
-/** the air: fog by the eye's distance from 2500 (vis 4800): the stage stays clear and the trunk sinks into haze */
-const SCENE = { fogNear: 2500, fogVis: 4800 };
-/** the people's fog by stage depth: the whole stage keeps its local colour, only the chimps up the fork sink a little */
-const FIG = { near: 700, vis: 3000, max: 0.75 };
-const REST = swayCam(camState(0).cam, 0);
-/** the medium of one frame (also read by the checks) */
-export const worldAt = (frame: number) => {
-  const st = camState(frame);
-  const cam = swayCam(st.cam, frame);
-  const depth: DepthOpts = { eyeY: -st.E, dRef: 2000, kRef: 1, dolly: 1 };
-  return airWorldOf({ cam, rest: REST, depth, frame, scene: SCENE, figFog: FIG });
 };
 
 // ===================================================================================================================
@@ -183,9 +170,89 @@ const TRUNK_R = [0.64, 0.54, 0.455, 0.385, 0.325, 0.275, 0.232, 0.196, 0.166, 0.
 const TRUNK = polyOf(catmull([FORK, ...TRUNK_R.map((r, i) => groundAtR(400 + (i % 2 ? -1 : 1) * 158 * Math.pow(0.95, i), r)), groundAtR(400, 0.044)], 16));
 /** OUR path: from the fork toward the camera, short; it ends at today (Z_TODAY, y ~800 resolved) */
 export const Z_TODAY = 0;
-const OURS = polyOf(catmull([FORK, groundAt(364, 560), groundAt(393, 650), groundAt(420, 730), [groundAt(436, 802)[0], Z_TODAY]], 14));
+const OURS = polyOf(catmull([FORK, groundAt(372, 560), groundAt(402, 650), groundAt(430, 730), [groundAt(446, 802)[0], Z_TODAY]], 14));
 /** the chimps' fork: off to the left at about the fork's depth, out of the frame's left edge */
 const LEFT = polyOf(catmull([FORK, groundAt(275, 468), groundAt(190, 452), groundAt(110, 438), groundAt(30, 425), groundAt(-80, 410), groundAt(-250, 395)], 14));
+
+// ===================================================================================================================
+// THE TOUR (rev 1): after the crane one continuous camera visits each thing ON its words. Each key says where a world
+// FOCUS point sits on screen (S) at zoom k and eye height E; the 2D camera (cx = the eye's X, cy) is solved from it, and
+// every channel runs on a pchip through the keys (eased, monotone between stops, still where a channel turns back)
+// ===================================================================================================================
+type CamSt = { cam: Cam; E: number };
+type TourKey = { f: number; k: number; E: number; F: [number, number, number]; S: P2 };
+const camFromFocus = (k: number, E: number, F: [number, number, number], S: P2): CamSt => {
+  const Dc = 2000 / k;
+  const r = Dc / (Dc + F[2]);
+  const cx = F[0] - (S[0] - 540) / (k * r);
+  const wy = -E + (F[1] + E) * r;
+  return { cam: { k, cx, cy: wy - (S[1] - 960) / k }, E };
+};
+/** where world (X, Y, Z) lands on screen under a camera state */
+const screenUnder = (st: CamSt, X: number, Y: number, Z: number): P2 => {
+  const Dc = 2000 / st.cam.k;
+  const r = Dc / (Dc + Z);
+  const wx = st.cam.cx + (X - st.cam.cx) * r;
+  const wy = -st.E + (Y + st.E) * r;
+  return [540 + (wx - st.cam.cx) * st.cam.k, 960 + (wy - st.cam.cy) * st.cam.k];
+};
+export const TOUR_START = 50;
+/** the eye's height while the haul is visited */
+const E_HAUL = 2150;
+const TOUR: TourKey[] = (() => {
+  const c0 = craneState(TOUR_START);
+  const forkF: [number, number, number] = [FORK[0], 0, FORK[1]];
+  const k0 = c0.cam.k;
+  const E = c0.E;
+  const lip = OURS.pts[OURS.pts.length - 1];
+  return [
+    // the crane's end: the fork where the crane leaves it
+    { f: TOUR_START, k: k0, E, F: forkF, S: screenUnder(c0, ...forkF) },
+    { f: 61, k: k0 * 1.015, E, F: forkF, S: [screenUnder(c0, ...forkF)[0], screenUnder(c0, ...forkF)[1] + 6] },
+    // "optimize us for our ability": down the short lit stub with the footprints, to the lip
+    { f: 88, k: 1.45, E, F: [lip[0], 0, lip[1] + 60], S: [560, 705] },
+    // "to learn from each other": in on the teaching pair (landed ~f108, the first strike f114 close)
+    { f: 109, k: 1.9, E, F: [-278, -80, 25], S: [540, 740] },
+    { f: 121, k: 1.96, E, F: [-274, -83, 25], S: [540, 742] },
+    // "or coordinate in large groups": an arc up and across to the haulers (landed ~f145, the heave peak f156 framed):
+    // the eye rises so the planner in front drops below the caption bands while the band is visited
+    { f: 146, k: 1.32, E: E_HAUL, F: [205, -150, 250], S: [540, 640] },
+    { f: 163, k: 1.36, E: E_HAUL, F: [220, -150, 260], S: [540, 642] },
+    // "or think through abstract concepts and plan": down to the planner (landed ~f179), the plan drawn close
+    { f: 180, k: 1.33, E, F: [140, -70, -295], S: [540, 790] },
+    // the camera leans in and follows the stick's tip a little as the plan grows across the sand
+    { f: 206, k: 1.37, E, F: [110, -70, -295], S: [540, 794] },
+    // a small ease back after "plan" (f213): the arrowhead stays in frame
+    { f: DURATION - 1, k: 1.32, E, F: [110, -70, -295], S: [540, 785] },
+  ];
+})();
+const tourCh = (get: (q: TourKey) => number) => pchip(TOUR.map((q) => [q.f, get(q)] as [number, number]), true);
+const TOUR_CH = {
+  lk: tourCh((q) => Math.log(q.k)),
+  E: tourCh((q) => q.E),
+  X: tourCh((q) => q.F[0]),
+  Y: tourCh((q) => q.F[1]),
+  Z: tourCh((q) => q.F[2]),
+  sx: tourCh((q) => q.S[0]),
+  sy: tourCh((q) => q.S[1]),
+};
+export const camState = (f: number): CamSt => {
+  if (f <= TOUR_START) return craneState(f);
+  const C = TOUR_CH;
+  return camFromFocus(Math.exp(C.lk(f)), C.E(f), [C.X(f), C.Y(f), C.Z(f)], [C.sx(f), C.sy(f)]);
+};
+/** the air: fog by the eye's distance from 2500 (vis 4800): the stage stays clear and the trunk sinks into haze */
+const SCENE = { fogNear: 2500, fogVis: 4800 };
+/** the people's fog by stage depth: the whole stage keeps its local colour, only the chimps up the fork sink a little */
+const FIG = { near: 700, vis: 3000, max: 0.75 };
+const REST = swayCam(camState(0).cam, 0);
+/** the medium of one frame (also read by the checks) */
+export const worldAt = (frame: number) => {
+  const st = camState(frame);
+  const cam = swayCam(st.cam, frame);
+  const depth: DepthOpts = { eyeY: -st.E, dRef: 2000, kRef: 1, dolly: 1 };
+  return airWorldOf({ cam, rest: REST, depth, frame, scene: SCENE, figFog: FIG });
+};
 
 /** the chimps' route: down the trunk's last leg to the fork, then off along the left fork (both lineages came down the
  *  same old trail; the chimps take the other branch) */
@@ -193,7 +260,7 @@ const CHIMP_FROM = 300;
 const CHIMP_ROUTE = polyOf([...TRUNK.pts.filter((_, i) => TRUNK.cum[i] <= CHIMP_FROM).reverse(), ...LEFT.pts.slice(1)]);
 
 const W_TRUNK = 120;
-const W_OURS = 116;
+const W_OURS = 100;
 const W_LEFT = 100;
 const TRAIL = { lit: "#B3A27E", mid: "#A08F6E" };
 
@@ -232,7 +299,7 @@ const Trail: React.FC<{ A: AirWorld; P: Poly; w: number; core?: number }> = ({ A
 // ===================================================================================================================
 // FOOTPRINTS ("to optimize us"): a faint cream trail of prints walks from the fork down our short path to today, fast
 // ===================================================================================================================
-const PRINT = { f0: 56, every: 2.5, stride: 56, side: 15, len: 25, w: 10, cream: "#F3EBDD" };
+const PRINT = { f0: 62, every: 2.4, stride: 56, side: 13, len: 25, w: 10, cream: "#F3EBDD" };
 const PRINTS = (() => {
   const out: { X: number; Z: number; t: G2; f: number; s: number }[] = [];
   for (let j = 0, d = 30; d < OURS.len - 20; j++, d += PRINT.stride) {
@@ -361,7 +428,7 @@ const TodayEdge: React.FC<{ A: AirWorld }> = ({ A }) => {
 // ===================================================================================================================
 // 1. TEACHING: a woman squats beside a child and knaps a flint core
 // ===================================================================================================================
-export const TEACH = { X: -377, Z: 30, v: 1, child: { X: -220, Z: 20, v: 2 }, act: 108, off: 16 };
+export const TEACH = { X: -377, Z: 30, v: 1, child: { X: -192, Z: 20, v: 2 }, act: 108, off: 16 };
 /** idle life before the knapping (f0-104): the woman shows the core, looks from it to the child and back with a small
  *  nod; the child fidgets (a head tilt, glances up at her, a wiggle of the mouth). Head channels only (the grips hold) */
 const teachIdle = (f: number) => {
@@ -506,11 +573,11 @@ const RIVER = stroke((u) => [78 + 232 * u, 62 + 13 * Math.sin(u * Math.PI * 2.6)
 const loop = (c: [number, number], r: number) => stroke((u) => [c[0] + r * Math.sin(u * Math.PI * 2), c[1] - r * Math.cos(u * Math.PI * 2)], 18);
 const HERD = [loop([250, 22], 11), loop([290, 30], 11), loop([272, -10], 11)];
 const bez = (a: G2, b: G2, c: G2) => (u: number): G2 => [(1 - u) * (1 - u) * a[0] + 2 * u * (1 - u) * b[0] + u * u * c[0], (1 - u) * (1 - u) * a[1] + 2 * u * (1 - u) * b[1] + u * u * c[1]];
-const ARROW_A: G2 = [100, -40];
+const ARROW_A: G2 = [138, -32];
 const ARROW_B: G2 = [236, 2];
-const SHAFT = stroke(bez(ARROW_A, [185, -62], ARROW_B), 24);
+const SHAFT = stroke(bez(ARROW_A, [200, -58], ARROW_B), 24);
 const HEAD = (() => {
-  const t0 = bez(ARROW_A, [185, -62], ARROW_B)(0.94);
+  const t0 = bez(ARROW_A, [200, -58], ARROW_B)(0.94);
   const dir = [ARROW_B[0] - t0[0], ARROW_B[1] - t0[1]];
   const L = Math.hypot(dir[0], dir[1]);
   const ux = dir[0] / L;
@@ -521,11 +588,11 @@ const HEAD = (() => {
 })();
 /** the drawing timeline: each stroke drawn over [f0, f1] (eased), pen-up moves between */
 export const PLAN_STROKES: { pts: G2[]; f0: number; f1: number }[] = [
-  { pts: RIVER, f0: 172, f1: 188 },
-  { pts: HERD[0], f0: 191, f1: 194 },
-  { pts: HERD[1], f0: 194.8, f1: 197.4 },
-  { pts: HERD[2], f0: 198.2, f1: 200.8 },
-  { pts: SHAFT, f0: 202.5, f1: 209 },
+  { pts: RIVER, f0: 172, f1: 187 },
+  { pts: HERD[0], f0: 189.5, f1: 192 },
+  { pts: HERD[1], f0: 192.6, f1: 195 },
+  { pts: HERD[2], f0: 195.6, f1: 198 },
+  { pts: SHAFT, f0: 202, f1: 209 },
   { pts: HEAD, f0: 210, f1: 213 },
 ];
 const ease = (u: number) => u * u * (3 - 2 * u);
@@ -587,7 +654,7 @@ const plannerPose = (A: AirWorld, f: number, tipW: P2) => {
   const dx = pref[0] - tipL[0];
   const dy = pref[1] - tipL[1];
   const L = Math.hypot(dx, dy) || 1;
-  const G = Math.max(88, Math.min(215, L));
+  const G = Math.max(60, Math.min(215, L));
   const hand: P2 = [tipL[0] + (dx / L) * G, tipL[1] + (dy / L) * G];
   const buttL: P2 = [tipL[0] + (dx / L) * STICK, tipL[1] + (dy / L) * STICK];
   const base = PERSON_POSES.drawPlan(1, 0.5, f, PLAN.v);
