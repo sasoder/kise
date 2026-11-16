@@ -270,8 +270,12 @@ export const LINE_POOL = [
 export type Item = { strokes: ChalkStroke[] };
 export type Column = { x: number; t0: number; T: number; items: Item[]; kind: "lines" | "diagram" };
 
-export const ROW_Y = [-314, -276, -238, -200];
-export const GLYPH_H = 18;
+/** the four rows' baselines (world Y): sized and placed for the robot's reach (rsi-ten-earths/tenEarthsBot, 240
+ *  tall, standing on the 110-unit dais: robot-relative baselines -150 / -126 / -102 / -78, below its head) */
+export const ROW_Y = [-260, -236, -212, -188];
+export const GLYPH_H = 14;
+/** the diagrams' size against the old (Genius-sized) board writing */
+const DS = 0.6;
 
 /** fill a column (x = its left edge) with four rows of lines, or a diagram over rows 1-2 and two lines */
 export const makeColumn = (x: number, seed: number, kind: "lines" | "diagram", width = 62, rows = [0, 1, 2, 3]): Item[] => {
@@ -279,23 +283,23 @@ export const makeColumn = (x: number, seed: number, kind: "lines" | "diagram", w
   const pick = (k: number) => LINE_POOL[Math.floor(rnd(seed, k) * LINE_POOL.length) % LINE_POOL.length];
   let startRow = 0;
   if (kind === "diagram") {
-    const top = ROW_Y[0] - GLYPH_H * 1.05;
-    const bot = ROW_Y[1] + 4;
+    const top = ROW_Y[0] - GLYPH_H * 0.85;
+    const bot = ROW_Y[1] + 3;
     const which = Math.floor(rnd(seed, 50) * 3);
     if (which === 0) {
       // a graph: axes, a decaying curve, a dashed level
-      const ax = freehand([[x + 4, top], [x + 4, bot], [x + width - 4, bot]], seed, 0.4, 2);
+      const ax = freehand([[x + 4 * DS, top], [x + 4 * DS, bot], [x + width - 4 * DS, bot]], seed, 0.4, 2);
       const cv = freehand(
         Array.from({ length: 7 }, (_, i): P2 => {
           const u = i / 6;
-          return [x + 8 + u * (width - 16), bot - (bot - top) * (0.15 + 0.78 * Math.exp(-3.2 * u))];
+          return [x + 8 * DS + u * (width - 16 * DS), bot - (bot - top) * (0.15 + 0.78 * Math.exp(-3.2 * u))];
         }),
         seed + 1,
         0.3,
         3,
       );
       items.push({ strokes: [ax, cv] });
-      items.push(layoutLine("t", x + width - 6, bot + 9, GLYPH_H * 0.8, seed + 2));
+      items.push(layoutLine("t", x + width - 6 * DS, bot + 9 * DS, GLYPH_H * 0.8, seed + 2));
     } else if (which === 1) {
       // a domain Ω with its boundary normal
       const cx = x + width * 0.45;
@@ -304,43 +308,44 @@ export const makeColumn = (x: number, seed: number, kind: "lines" | "diagram", w
         Array.from({ length: 9 }, (_, i): P2 => {
           const a = (i / 8) * 2 * Math.PI;
           const rr = 1 + 0.16 * Math.sin(3 * a + seed);
-          return [cx + Math.cos(a) * 25 * rr, cy + Math.sin(a) * 19 * rr];
+          return [cx + Math.cos(a) * 25 * DS * rr, cy + Math.sin(a) * 19 * DS * rr];
         }),
         seed,
         0.3,
         3,
       );
       items.push({ strokes: [loop] });
-      items.push(layoutLine("Ω", cx - 6, cy + 6, GLYPH_H * 0.85, seed + 3));
-      const nx = cx + 27;
-      items.push({ strokes: [freehand([[nx, cy - 6], [nx + 18, cy - 13]], seed + 4, 0.2, 1), freehand([[nx + 12, cy - 17], [nx + 18, cy - 13], [nx + 11, cy - 8]], seed + 5, 0.1, 1)] });
+      items.push(layoutLine("Ω", cx - 6 * DS, cy + 6 * DS, GLYPH_H * 0.85, seed + 3));
+      const nx = cx + 27 * DS;
+      const d = (v: number) => v * DS;
+      items.push({ strokes: [freehand([[nx, cy - d(6)], [nx + d(18), cy - d(13)]], seed + 4, 0.2, 1), freehand([[nx + d(12), cy - d(17)], [nx + d(18), cy - d(13)], [nx + d(11), cy - d(8)]], seed + 5, 0.1, 1)] });
     } else {
       // a vortex: a circle and three tangent arrows
       const cx = x + width * 0.42;
       const cy = (top + bot) / 2;
-      items.push({ strokes: [freehand(Array.from({ length: 9 }, (_, i): P2 => [cx + 22 * Math.cos((i / 8) * 2 * Math.PI), cy + 20 * Math.sin((i / 8) * 2 * Math.PI)]), seed, 0.3, 3)] });
+      items.push({ strokes: [freehand(Array.from({ length: 9 }, (_, i): P2 => [cx + 22 * DS * Math.cos((i / 8) * 2 * Math.PI), cy + 20 * DS * Math.sin((i / 8) * 2 * Math.PI)]), seed, 0.3, 3)] });
       for (let k = 0; k < 3; k++) {
         const a = (k / 3) * 2 * Math.PI + 0.4;
-        const px = cx + 22 * Math.cos(a);
-        const py = cy + 20 * Math.sin(a);
+        const px = cx + 22 * DS * Math.cos(a);
+        const py = cy + 20 * DS * Math.sin(a);
         const tx = -Math.sin(a);
         const ty = Math.cos(a);
-        items.push({ strokes: [freehand([[px - tx * 7 - Math.cos(a) * 4, py - ty * 7 - Math.sin(a) * 4], [px + tx * 3, py + ty * 3]], seed + k, 0.1, 1)] });
+        items.push({ strokes: [freehand([[px - (tx * 7 + Math.cos(a) * 4) * DS, py - (ty * 7 + Math.sin(a) * 4) * DS], [px + tx * 3 * DS, py + ty * 3 * DS]], seed + k, 0.1, 1)] });
       }
-      items.push(layoutLine("ω", x + width - 12, cy + 4, GLYPH_H * 0.8, seed + 7));
+      items.push(layoutLine("ω", x + width - 12 * DS, cy + 4 * DS, GLYPH_H * 0.8, seed + 7));
     }
     startRow = 2;
   }
   for (const r of rows) {
     if (r < startRow) continue;
     let src = pick(r + 1);
-    let out = layoutLine(src, x + 2 * sg(seed, r + 20), ROW_Y[r] + 2 * sg(seed, r + 40), GLYPH_H, seed * 13 + r);
+    let out = layoutLine(src, x + 1.5 * sg(seed, r + 20), ROW_Y[r] + 1.5 * sg(seed, r + 40), GLYPH_H, seed * 13 + r);
     // keep inside the column width: try another line, else shrink it
     for (let tries = 0; tries < 6 && out.w > width; tries++) {
       src = pick(r + 1 + 17 * (tries + 1));
-      out = layoutLine(src, x + 2 * sg(seed, r + 20), ROW_Y[r] + 2 * sg(seed, r + 40), GLYPH_H, seed * 13 + r);
+      out = layoutLine(src, x + 1.5 * sg(seed, r + 20), ROW_Y[r] + 1.5 * sg(seed, r + 40), GLYPH_H, seed * 13 + r);
     }
-    if (out.w > width) out = layoutLine(src, x + 2 * sg(seed, r + 20), ROW_Y[r] + 2 * sg(seed, r + 40), (GLYPH_H * width) / out.w, seed * 13 + r);
+    if (out.w > width) out = layoutLine(src, x + 1.5 * sg(seed, r + 20), ROW_Y[r] + 1.5 * sg(seed, r + 40), (GLYPH_H * width) / out.w, seed * 13 + r);
     items.push({ strokes: out.strokes });
   }
   return items;
@@ -349,7 +354,7 @@ export const makeColumn = (x: number, seed: number, kind: "lines" | "diagram", w
 // ---- the writing schedule ---------------------------------------------------------------------------------------------
 export type Job = { t0: number; T: number; strokes: ChalkStroke[]; color: "cream" | "orange"; ends: number[]; starts: number[] };
 /** time slots for a job's strokes: drawn length at 1, pen-up hops at LIFT (cheaper) */
-const LIFT = 0.45;
+const LIFT = 0.7;
 export const makeJob = (t0: number, T: number, items: Item[], color: "cream" | "orange" = "cream"): Job => {
   const strokes = items.flatMap((it) => it.strokes).filter((s) => s.pts.length > 1);
   let cost = 0;
