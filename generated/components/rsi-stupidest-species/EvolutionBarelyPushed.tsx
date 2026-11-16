@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// EvolutionBarelyPushed (rsi-stupidest-species, cut 51), REVISION 1b: THE MARCH, LEFT AS A LINEUP. Dwarkesh 3D style
+// EvolutionBarelyPushed (rsi-stupidest-species, cut 51), REVISION 2: THE MARCH, LEFT AS A LINEUP, INTO A CITY. Dwarkesh 3D style
 // (styles/dwarkesh-3d.md). Opaque 1080x1920, 23.976 fps, 113 frames. The march of progress, trucked like the COVID
 // walking man (kyle-covid SeveralDaysBeforeIllness: a truck with the walker, planted feet, parallax). No text.
 //
@@ -20,7 +20,11 @@
 // outgoing stage leaves an AFTERIMAGE where it went behind the object: a soft, cream-tinted, slightly transparent copy
 // frozen mid-stride, its head glow still faintly lit (a stroboscopic trail). The truck carries on, so the afterimages
 // slide off left behind him. The ground changes under him by world position (savannah -> stone paving from just
-// past the forager's afterimage to the right and into the depth: no slab); the far acacias fade into a far city once he is on the pavement.
+// past the forager's afterimage to the right and into the depth: no slab). REV 2: the right side of that split is a
+// modern city: his paving is a sidewalk with a kerb, a road beyond (a lane line, a zebra crossing behind him), a far
+// sidewalk with trees in planters, a street wall of mid-rise blocks with window grids and flat roofs receding into the
+// haze, towers behind; a streetlamp at the kerb beside him. The city grows out of the haze with the split (f60-96,
+// nearer first); the savannah's side keeps its acacias and hills (the contrast is the point).
 // INTELLIGENCE: every stage carries a soft ORANGE spot inside the head (~20 % of the head's width) that grows only a
 // little (the chimp's 65 % of the modern one's: GLOW_R).
 // f78-98 "that strongly": he slows to a stop while the truck decelerates and turns into one decelerating PULL-BACK and
@@ -34,7 +38,8 @@
 // DEPTH: eye 45 units up through the walk (shin height), rising to 330 (head height) in the pull-back; dRef 800 at
 // kRef 1.3, dolly 0.35; fog by the eye's distance. Z: the walkers and the afterimages 0, the near objects at
 // r ~4.5-5.6 (Z ~ -640), near tufts -560..-300, the paving from the lens to the horizon, mid tufts and rocks
-// 240-1700, acacias 1300-2700, the far city 9000, hills 6000 / 12000.
+// 240-1700, acacias 1300-2700, hills 6000 / 12000. The city: the lamp Z 150, the zebra 250-520, the street trees
+// 1900-5600, the street wall 1250-13000 (facades X 1660+), the towers 5200-13500.
 //
 // SOURCES: none on screen (the march-of-progress image is the user's reference).
 // ---------------------------------------------------------------------------
@@ -44,6 +49,7 @@ import { z } from "zod";
 import {
   ACCENT,
   ACCENT_DEEP,
+  AirBox,
   AirFloor,
   AirHorizonHazeW,
   AirShadow,
@@ -53,6 +59,7 @@ import {
   airWorldOf,
   c01,
   lerp,
+  lineOf,
   mixHex,
   smoothstep,
   swayCam,
@@ -328,7 +335,7 @@ export const pulseAt = (f: number) => Math.pow(Math.sin(Math.PI * c01((f - PULSE
 
 /** a built figure's screen box on a camera: its shapes, its glow's halo and its contact shadow */
 const SHADOW: Record<StageKind, { w: number; d: number }> = { chimp: { w: 77, d: 32 }, hominin: { w: 58, d: 28 }, forager: { w: 60, d: 30 }, modern: { w: 62, d: 30 } };
-export const boxOf = (b: Built, at: P2, cam: Cam) => {
+export const boxOf = (b: Built, at: P2, cam: Cam, withShadow = true) => {
   let x0 = Infinity;
   let x1 = -Infinity;
   let y0 = Infinity;
@@ -350,8 +357,10 @@ export const boxOf = (b: Built, at: P2, cam: Cam) => {
   add([g.c[0] - g.R * GLOW_REACH, g.c[1] - g.R * GLOW_REACH]);
   add([g.c[0] + g.R * GLOW_REACH, g.c[1] + g.R * GLOW_REACH]);
   const sw = SHADOW[b.kind];
-  add([at[0] + 0.18 * sw.w - sw.w * 1.05, -8]);
-  add([at[0] + 0.18 * sw.w + sw.w * 1.05, 8]);
+  if (withShadow) {
+    add([at[0] + 0.18 * sw.w - sw.w * 1.05, -8]);
+    add([at[0] + 0.18 * sw.w + sw.w * 1.05, 8]);
+  }
   return { x0, x1, y0, y1 };
 };
 /** the world X extent of a built figure (its shapes) */
@@ -549,8 +558,6 @@ const IRON = MAT.iron;
 const STONE_P = { lit: "#9C968A", mid: "#858073", dark: "#5C574D" };
 /** the eras by world position: the pavement starts past the forager's afterimage (the modern man steps onto it) */
 export const X_PAVE = AFTER[2].X + 62;
-/** the far acacias fade into a far city once he is on the pavement */
-const cityAmt = (f: number) => sst(66, 86, f);
 
 /** the savannah's tufts (deterministic): near (in front of him, the bottom of the frame) and behind */
 type Tuft = { X: number; Z: number; h: number; w: number; n: number; seed: number; lean: number };
@@ -675,33 +682,234 @@ const Hills: React.FC<{ A: AirWorld }> = ({ A }) => {
   );
 };
 
-/** ERA 3: the far city in the haze */
-const City: React.FC<{ A: AirWorld }> = ({ A }) => {
-  const P = A.P;
-  const Z = 9000;
-  const out: React.ReactNode[] = [];
-  let X = -9000;
-  let i = 0;
-  while (X < 12000) {
-    const w = 700 + 1500 * hash(i * 3.3 + 40);
-    const H = 900 + 3200 * Math.pow(hash(i * 7.1 + 41), 1.6);
-    if (hash(i * 2.1 + 42) > 0.25) out.push(<path key={i} d={polyD([P.p(X, 0, Z), P.p(X, -H, Z), P.p(X + w, -H, Z), P.p(X + w, 0, Z)])} fill={A.tone(i % 2 ? "#5D6260" : "#676A64", Z, H * 0.5)} />);
-    X += w + 120 + 500 * hash(i * 5.3 + 43);
-    i++;
-  }
-  return <g>{out}</g>;
+// ===================================================================================================================
+// REV 2: THE MODERN CITY, the right side of the split. The man's paving becomes a city sidewalk with a kerb; beyond it
+// a road (a lane line, a zebra crossing behind him), a far sidewalk with trees in planters, and a street wall of
+// mid-rise blocks receding into the depth, towers behind in the haze. A streetlamp at the kerb beside him. All right
+// of the split (X > X_PAVE): the savannah's side keeps its acacias. The buildings and the lamp grow out of the haze
+// with the split (CITY_IN), nearest first; the ground is there with the paving
+// ===================================================================================================================
+export const X_KERB = 640;
+const X_ROAD1 = 1440;
+const X_FRONT = 1660;
+const ASPHALT: Mat = { lit: "#6F736D", mid: "#5F635E", dark: "#3E423F" };
+const KERB: Mat = { lit: "#D3CBB7", mid: "#BDB5A1", dark: "#7D7768" };
+const PAINT = "#E6DDC8";
+const CONC: Mat = { lit: "#DCD2BC", mid: "#C2B79F", dark: "#7E7665" };
+const TEALG: Mat = { lit: "#A3B0AB", mid: "#84928D", dark: "#4E5B58" };
+const SANDB: Mat = { lit: "#CDB892", mid: "#AF9A76", dark: "#6E604A" };
+const GLASS = "#4D5B5A";
+const WARM = "#F0E2BC";
+/** the city's growing out of the haze: a building at depth Z appears over [t0, t0 + CITY_IN.dur], nearer first */
+export const CITY_IN = { t0: 60, t1: 80, dur: 16 } as const;
+export const cityIn = (f: number, Z: number) => {
+  const t0 = lerp(CITY_IN.t0, CITY_IN.t1, c01((Z - 1000) / 9000));
+  return sst(t0, t0 + CITY_IN.dur, f);
 };
 
-/** THE CITY ERA: the ground is paved from X_PAVE on: a paved plain that runs off the right of the frame and into the
- *  depth to the horizon (melting into the air with the ground), its near part past the lens (no edge, no corner in
- *  frame): the change of era is the change of ground under his feet */
+type Bld = { X0: number; X1: number; Z0: number; Z1: number; H: number; mat: Mat; bay: number; floor: number; seed: number; ribbon?: boolean; roof?: boolean };
+export const BUILDINGS: Bld[] = (() => {
+  const out: Bld[] = [];
+  // the street wall: facades on X_FRONT (setbacks), receding along the road, cross streets between
+  const wall: [number, number, number, Mat, boolean?][] = [
+    [1250, 2350, 2150, TEALG],
+    [2550, 3550, 1650, CONC],
+    [3550, 4250, 2700, SANDB, true],
+    [4500, 5500, 1900, CONC],
+    [5500, 6700, 3500, TEALG, true],
+    [7000, 8400, 2300, SANDB],
+    [8400, 10400, 4200, CONC, true],
+    [10700, 13000, 3000, TEALG],
+  ];
+  wall.forEach(([z0, z1, H, mat, ribbon], i) => {
+    const set = 60 * hash(i * 4.3 + 70);
+    out.push({ X0: X_FRONT + set, X1: X_FRONT + set + 1300, Z0: z0, Z1: z1, H, mat, bay: 230, floor: 300, seed: i, ribbon, roof: i % 2 === 1 });
+  });
+  // the towers behind and across the end of the street, in the haze
+  const towers: [number, number, number, number, Mat, boolean?][] = [
+    [2700, 3500, 5200, 4600, TEALG, true],
+    [3900, 4700, 7600, 6200, CONC],
+    [900, 1500, 7800, 3800, SANDB],
+    [5200, 6300, 4000, 5400, CONC, true],
+    [1500, 2300, 9800, 6800, TEALG, true],
+    [2900, 3900, 11500, 8200, CONC],
+    [600, 1200, 12500, 5200, TEALG],
+    [6800, 8000, 8600, 7200, SANDB, true],
+    [4600, 5600, 13500, 9000, TEALG, true],
+  ];
+  towers.forEach(([x0, x1, z0, H, mat, ribbon], i) => {
+    out.push({ X0: x0, X1: x1, Z0: z0, Z1: z0 + (x1 - x0) * 0.9, H, mat, bay: 230, floor: 300, seed: 20 + i, ribbon, roof: true });
+  });
+  return out.sort((a, b) => b.Z0 - a.Z0);
+})();
+
+/** a building's windows on its front (the Z0 plane) and its left face (the X0 plane): one dark path, one lit path */
+const Windows: React.FC<{ A: AirWorld; b: Bld; H: number }> = ({ A, b, H }) => {
+  const P = A.P;
+  const els: React.ReactNode[] = [];
+  const rows = Math.floor((H - 40) / b.floor);
+  // the front: columns across X
+  const face = (key: string, Zof: (c: number) => number, Xof: (c: number) => number, ncol: number, span: number, plane: "front" | "left") => {
+    let dark = "";
+    let lit = "";
+    let shop = "";
+    for (let c = 0; c < ncol; c++) {
+      const Zc = Zof(c + 0.5);
+      const px = b.floor * P.r(Zc) * A.k;
+      if (px < 5) continue;
+      for (let rr = 0; rr < rows; rr++) {
+        const y0 = -(rr * b.floor + (rr === 0 ? 40 : 0.3 * b.floor));
+        const y1 = -(rr * b.floor + 0.78 * b.floor);
+        const u0 = c + (rr === 0 ? 0.06 : 0.2);
+        const u1 = c + (rr === 0 ? 0.94 : b.ribbon ? 1.0 : 0.78);
+        const q: P2[] =
+          plane === "front"
+            ? [P.p(Xof(u0), y0, b.Z0), P.p(Xof(u1), y0, b.Z0), P.p(Xof(u1), y1, b.Z0), P.p(Xof(u0), y1, b.Z0)]
+            : [P.p(b.X0, y0, Zof(u0)), P.p(b.X0, y0, Zof(u1)), P.p(b.X0, y1, Zof(u1)), P.p(b.X0, y1, Zof(u0))];
+        const d = polyD(q);
+        if (rr === 0) shop += d;
+        else if (hash(b.seed * 97 + c * 13.1 + rr * 7.7) > 0.82) lit += d;
+        else dark += d;
+      }
+    }
+    const Zm = Zof(ncol / 2);
+    els.push(<path key={`${key}d`} d={dark} fill={A.tone(GLASS, Zm, H * 0.5)} opacity={0.8} />);
+    els.push(<path key={`${key}s`} d={shop} fill={A.tone(mixHex(GLASS, "#2E3836", 0.4), Zm, 40)} opacity={0.85} />);
+    els.push(<path key={`${key}l`} d={lit} fill={A.tone(WARM, Zm, H * 0.5)} opacity={0.7} />);
+    void span;
+  };
+  const nf = Math.max(1, Math.floor((b.X1 - b.X0) / b.bay));
+  const mf = (b.X1 - b.X0 - nf * b.bay) / 2;
+  face("f", () => b.Z0, (u) => b.X0 + mf + u * b.bay, nf, b.X1 - b.X0, "front");
+  if (b.X0 > P.vp[0]) {
+    const nl = Math.max(1, Math.floor((b.Z1 - b.Z0) / b.bay));
+    const ml = (b.Z1 - b.Z0 - nl * b.bay) / 2;
+    face("l", (u) => b.Z0 + ml + u * b.bay, () => b.X0, nl, b.Z1 - b.Z0, "left");
+  }
+  return <g>{els}</g>;
+};
+
+const Building: React.FC<{ A: AirWorld; b: Bld; frame: number }> = ({ A, b, frame }) => {
+  const amt = cityIn(frame, b.Z0);
+  if (amt < 0.002) return null;
+  const H = b.H;
+  return (
+    <g opacity={amt}>
+      <AirBox A={A} X0={b.X0} X1={b.X1} Y0={-H} Y1={0} Z0={b.Z0} Z1={b.Z1} mat={b.mat} uid={`ebpB${b.seed}`} rim={0.8} />
+      <Windows A={A} b={b} H={H} />
+      {b.roof ? (
+        <AirBox A={A} X0={lerp(b.X0, b.X1, 0.25)} X1={lerp(b.X0, b.X1, 0.6)} Y0={-H - 130} Y1={-H} Z0={lerp(b.Z0, b.Z1, 0.3)} Z1={lerp(b.Z0, b.Z1, 0.7)} mat={b.mat} uid={`ebpR${b.seed}`} rim={0.6} />
+      ) : null}
+    </g>
+  );
+};
+
+/** THE CITY ERA: the ground is paved from X_PAVE on: a sidewalk that runs into the depth to the horizon (melting into
+ *  the air with the ground), its near part past the lens (no edge, no corner in frame), a kerb, the road, the far
+ *  sidewalk: the change of era is the change of ground under his feet */
 const Pavement: React.FC<{ A: AirWorld }> = ({ A }) => {
-  const X0 = X_PAVE;
-  const X1 = A.cam.cx + 9000;
-  if (X1 <= X0) return null;
+  const P = A.P;
+  if (A.cam.cx + 9000 <= X_PAVE) return null;
   // the kit's floor stops at its near plane; let the paving run on toward the lens
-  const Ap: AirWorld = { ...A, P: { ...A.P, zNear: -0.97 * A.P.Dc } };
-  return <AirFloor A={Ap} x0={X0} x1={X1} z0={-0.97 * A.P.Dc} z1={14000} mat={STONE_P} course={124} plank={112} lw={1.3} jointAmt={1.4} melt={0.5} />;
+  const zn = -0.97 * A.P.Dc;
+  const Ap: AirWorld = { ...A, P: { ...A.P, zNear: zn } };
+  // the road's lane line and the zebra crossing behind him
+  const XM = (X_KERB + X_ROAD1) / 2;
+  const marks: React.ReactNode[] = [];
+  for (let Z = -400; Z < 9000; Z += 300) {
+    const z0 = Math.max(Z, -0.9 * A.P.Dc);
+    const z1 = Z + 160;
+    if (z1 <= z0) continue;
+    if (Z > 120 && Z < 760) continue;
+    const a = 1 - A.fog((z0 + z1) / 2);
+    marks.push(<path key={`ln${Z}`} d={polyD([P.p(XM - 9, 0, z0), P.p(XM + 9, 0, z0), P.p(XM + 9, 0, z1), P.p(XM - 9, 0, z1)])} fill={A.tone(PAINT, (z0 + z1) / 2, 0)} opacity={0.75 * a} />);
+  }
+  for (let X = X_KERB + 50; X + 50 < X_ROAD1; X += 105) {
+    marks.push(<path key={`zb${X}`} d={polyD([P.p(X, 0, 250), P.p(X + 58, 0, 250), P.p(X + 58, 0, 520), P.p(X, 0, 520)])} fill={A.tone(PAINT, 380, 0)} opacity={0.88} />);
+  }
+  // the kerb's drop: a dark line on the road side of the kerbstones (the step's shadow)
+  const drop: React.ReactNode[] = [];
+  for (let i = 0; i < 16; i++) {
+    const za = lerp(-0.9 * A.P.Dc, 9000, Math.pow(i / 16, 1.6));
+    const zb = lerp(-0.9 * A.P.Dc, 9000, Math.pow((i + 1) / 16, 1.6));
+    const a = 1 - A.fog((za + zb) / 2);
+    drop.push(<path key={`kd${i}`} d={polyD([P.p(X_KERB, 0, za), P.p(X_KERB + 10, 0, za), P.p(X_KERB + 10, 0, zb), P.p(X_KERB, 0, zb)])} fill={A.tone(ASPHALT.dark, (za + zb) / 2, 0)} opacity={0.8 * a} />);
+  }
+  return (
+    <g>
+      <AirFloor A={Ap} x0={X_PAVE} x1={X_KERB - 26} z0={zn} z1={14000} mat={STONE_P} course={124} plank={106.5} lw={1.3} jointAmt={1.4} melt={0.5} />
+      <AirFloor A={Ap} x0={X_KERB - 26} x1={X_KERB} z0={zn} z1={14000} mat={KERB} course={150} plank={26} lw={1.1} jointAmt={1.1} melt={0.5} />
+      <AirFloor A={Ap} x0={X_KERB} x1={X_ROAD1} z0={zn} z1={14000} mat={ASPHALT} jointAmt={0} melt={0.5} />
+      <AirFloor A={Ap} x0={X_ROAD1} x1={X_ROAD1 + 22} z0={zn} z1={14000} mat={KERB} course={150} plank={22} lw={1.1} jointAmt={1.1} melt={0.5} />
+      <AirFloor A={Ap} x0={X_ROAD1 + 22} x1={A.cam.cx + 9000} z0={zn} z1={14000} mat={STONE_P} course={124} plank={112} lw={1.3} jointAmt={1.2} melt={0.5} />
+      {drop}
+      {marks}
+    </g>
+  );
+};
+
+/** the streetlamp at the kerb beside him: a slim pole, an arm out over the road, a flat modern head */
+export const LAMP = { X: 612, Z: 150, H: 700, arm: 140 } as const;
+const Lamp: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
+  const amt = cityIn(frame, 0) * 1;
+  if (amt < 0.002) return null;
+  const P = A.P;
+  const { X, Z, H, arm } = LAMP;
+  const r = P.r(Z);
+  const p = (x: number, y: number) => P.p(X + x, y, Z);
+  const w = 8;
+  const pole = polyD([p(-w, 0), p(-w * 0.7, -H), p(w * 0.7, -H), p(w, 0)]);
+  const base = polyD([p(-17, 0), p(-15, -46), p(15, -46), p(17, 0)]);
+  const a0 = p(0, -H + 6);
+  const a1 = p(arm * 0.55, -H - 34);
+  const a2 = p(arm, -H - 30);
+  const head = polyD([p(arm - 52, -H - 38), p(arm + 26, -H - 34), p(arm + 24, -H - 20), p(arm - 50, -H - 24)]);
+  const lens = polyD([p(arm - 44, -H - 23), p(arm + 20, -H - 20), p(arm + 18, -H - 17), p(arm - 42, -H - 20)]);
+  const col = (h: string) => A.tone(h, Z, H * 0.5);
+  return (
+    <g opacity={amt}>
+      <AirShadow A={A} X={X} Z={Z} w={34} d={18} uid="ebpLs" amt={0.6} />
+      <path d={pole} fill={col(IRON.mid)} stroke={col(lineOf(IRON))} strokeWidth={0.9} />
+      <path d={polyD([p(-w * 0.15, -6), p(-w * 0.1, -H + 4), p(w * 0.55, -H + 4), p(w * 0.85, -6)])} fill={col(IRON.dark)} opacity={0.55} />
+      <path d={base} fill={col(IRON.dark)} />
+      <path d={`M${Pt(a0)}Q${Pt(a1)} ${Pt(a2)}`} fill="none" stroke={col(IRON.mid)} strokeWidth={9 * r} strokeLinecap="round" />
+      <path d={head} fill={col(IRON.dark)} />
+      <path d={lens} fill={col(WARM)} opacity={0.85} />
+    </g>
+  );
+};
+
+/** street trees in concrete planters on the far sidewalk */
+export const STREET_TREES = [
+  { X: 1555, Z: 1900, s: 1 },
+  { X: 1555, Z: 3050, s: 2 },
+  { X: 1555, Z: 4250, s: 3 },
+  { X: 1555, Z: 5600, s: 4 },
+];
+const StreetTree: React.FC<{ A: AirWorld; X: number; Z: number; s: number; frame: number }> = ({ A, X, Z, s, frame }) => {
+  const amt = cityIn(frame, Z);
+  if (amt < 0.002) return null;
+  const P = A.P;
+  const p = (x: number, y: number) => P.p(X + x, y, Z);
+  const h = 640 + 80 * hash(s * 3.3);
+  const crown = (cx: number, cy: number, R: number, col: string, k: number) => {
+    const N = 20;
+    const pts: P2[] = Array.from({ length: N }, (_, i) => {
+      const a = (2 * Math.PI * i) / N;
+      const wob = 1 + 0.06 * Math.sin(a * 5 + s * 2 + k) + 0.04 * Math.sin(a * 8 + s);
+      return p(cx + Math.cos(a) * R * wob, cy + Math.sin(a) * R * wob * 0.92);
+    });
+    return <path key={k} d={polyD(pts)} fill={A.tone(col, Z, -cy)} />;
+  };
+  return (
+    <g opacity={amt}>
+      <AirBox A={A} X0={X - 70} X1={X + 70} Y0={-80} Y1={0} Z0={Z - 70} Z1={Z + 70} mat={CONC} uid={`ebpPl${s}`} rim={0.7} />
+      <path d={polyD([p(-9, -80), p(-6, -h * 0.62), p(6, -h * 0.62), p(9, -80)])} fill={A.tone(BARK.mid, Z, h * 0.3)} />
+      {crown(0, -h * 0.72, h * 0.27, "#55603F", 0)}
+      {crown(-h * 0.05, -h * 0.77, h * 0.19, "#67714B", 1)}
+      {crown(-h * 0.09, -h * 0.82, h * 0.1, "#7A815A", 2)}
+    </g>
+  );
 };
 
 // ---- the near objects, drawn (sharp, in the set's paint) -----------------------------------------------------------
@@ -857,23 +1065,28 @@ const EvolutionBarelyPushed: React.FC<z.infer<typeof schema>> = () => {
   const sh = SHADOW[b.kind];
   const pulse = pulseAt(frame);
   const shimmer = 1 + 0.03 * Math.sin(frame / 4.3 + 7) * sst(96, 104, frame);
-  const city = cityAmt(frame);
   const behind = TUFTS.filter((t) => t.Z > 0 && t.X < X_PAVE && onScreen(t.X, t.Z, 120)).sort((a, c) => c.Z - a.Z);
   const front = TUFTS.filter((t) => t.Z < 0 && t.X < X_PAVE && onScreen(t.X, t.Z, 120)).sort((a, c) => c.Z - a.Z);
   return (
     <AirStage v={A.v} bloom={0.22}>
       <WorldSvg cam={cam}>
         <Hills A={A} />
-        {city > 0.001 ? (
-          <g opacity={city}>
-            <City A={A} />
-          </g>
-        ) : null}
         <path d={polyD([P.p(cam.cx - 3000, 0, P.zNear + 20), P.p(cam.cx + 3000, 0, P.zNear + 20), [cam.cx + 3000, cam.cy + 2000], [cam.cx - 3000, cam.cy + 2000]])} fill={A.tone(mixHex(mixHex(GROUND.lit, GROUND.mid, 0.3), GROUND.dark, 0.2), P.zNear, 0)} />
         <AirFloor A={A} x0={cam.cx - 12000} x1={cam.cx + 12000} z0={-900} z1={14000} mat={GROUND} jointAmt={0} melt={0.5} />
         <AirHorizonHazeW A={A} id="ebpHaze" />
-        {city < 0.999 ? <g opacity={1 - city}>{ACACIAS.map((a) => (onScreen(a.X, a.Z, a.h * 0.7) ? <Acacia key={a.s} A={A} {...a} /> : null))}</g> : null}
+        {ACACIAS.map((a) =>
+          onScreen(a.X, a.Z, a.h * 0.7) && (a.X < X_PAVE || cityIn(frame, a.Z) < 0.999) ? (
+            <g key={a.s} opacity={a.X < X_PAVE ? 1 : 1 - cityIn(frame, a.Z)}>
+              <Acacia A={A} {...a} />
+            </g>
+          ) : null,
+        )}
         <Pavement A={A} />
+        {BUILDINGS.map((bd) => (
+          <Building key={bd.seed} A={A} b={bd} frame={frame} />
+        ))}
+        {STREET_TREES.map((t) => (onScreen(t.X, t.Z, 300) ? <StreetTree key={t.s} A={A} {...t} frame={frame} /> : null))}
+        <Lamp A={A} frame={frame} />
         {ROCKS.map((r) => (r.X + r.w < X_PAVE && onScreen(r.X, r.Z, r.w) ? <Rock key={r.s} A={A} {...r} /> : null))}
         {behind.map((t) => (
           <TuftG key={t.seed} A={A} t={t} />
