@@ -12,38 +12,35 @@
 // coffee 105 · (slot ends 117) AIs 117
 // DURATION: the slot 2.2105 -> 7.0904 s (sequence frames 53-170) = 117 frames at 24000/1001 (f0..f116).
 //
-// THE MOTION: one office in morning light (sunT 0.15, the window high on the left: the low sun at the upper left, long
-// soft shafts), the world probe's cut-1 layout: two desks side by side a little apart, YOU (Human v0, white shirt) at the
-// left desk facing right with a steaming cream mug, the Genius (v0) at the right desk facing you, typing. Each finished
-// WorkSheet (one sheet = one workday) lifts off the pad by his keyboard and arcs, in a loose flock, onto a stack on the
-// floor in front of the gap between the desks. The landings follow an eased count: one by one at first (f6, 14, ...),
-// quickening to ~3 a frame on "100 workdays" (peak ~f52), 89 down by "done" (f68), then slowing so the last few land
-// alone and the 100th lands on f100 ("morning"); no 101st. On "100 workdays" (f46-58) a plate slides up in the air
-// directly above where the stack ends (pinned there in the world from its entrance) and counts the stack (it shows the
-// sheets that have landed); the stack grows up toward it and the 100th sheet lands just under it (the flights are
-// capped under the plate: FLIGHT_CEIL). The camera opens close on the Genius (k 2.15, his face at y ~670, the stack's
-// place at the left) with a slow creep, then makes one move f62-104 (one lobe): it pulls back to k 1.57 and eases left,
-// bringing you in from the left edge (f65-96): you take the mug (f70-75), lift it (f75-86) as your head turns toward
-// profile, tip it into your lips and drink (f86-98: the coffee drains, the steam thins out by f100), tip it back out
-// (held forward, clear of the face) and set it down empty on "coffee" (f98-107), letting go by f112. Resolved
-// f104-116: faces at y ~831, the desks and the stack's base in y 1100-1260, the plate "100 / WORKDAYS" at y 653-757
-// between the heads; you with the empty mug, the Genius still typing; living hold (typing, breath, the air, a creep).
+// THE MOTION (Revision 1: the robot, the contrast in the picture, one tag): one office in morning light (sunT 0.15,
+// the window high on the left, long soft shafts). Two desks a little apart, facing each other across the gap: YOU (Human
+// v0, white shirt) at the left desk with a full, steaming cream mug, your hand on it from f0; THE ROBOT (the sister
+// clip's tenEarthsBot v0, read-only) at the right desk, typing (BOT_POSES.typeAtDesk, mittens on the keyboard). No
+// monitors (the desks stay clear so the stack reads against the wall in the gap). Both are in shot from f0.
+// The robot's finished WorkSheets (one sheet = one workday) lift off the pad by its keyboard and arc, in a loose flock,
+// onto a stack on the floor in the gap: one by one at first (f6, 14, ...), quickening to ~5 a frame around "100
+// workdays" (peak ~f36-46), slowing so the last few land alone and the 100th lands on "done" (f68); no 101st.
+// You sip slowly through the whole slot (SIP): sip 1 f4-46 (the level drops 0.85 -> 0.45), the mug held in front of
+// your chest f46-62, sip 2 (the last) f62-105: it drains, you tip it back out and set the EMPTY mug down on "coffee"
+// (f105), letting go by f112. The steam thins out over the last sip (gone by f96).
+// The one label: a slate luggage tag "100 / WORKDAYS" (cream Caslon, PLATE_FONT) on a string from a binder clip on the
+// top sheets' front edge, in world space in front of the stack's face; it drops on as the 100th sheet lands (f68-73)
+// and swings to rest. No counter, no floating type.
+// THE CAMERA: one continuous slow push-in (k 1.64 -> 1.75, f0-102), then a creep; living hold (typing, breath, air).
 // CAUSE -> EFFECT: a sheet leaves the pad on its launch frame (flightOf: 20 frames for the first sheets, 14 in the
-// stream); the stack's count steps on the landing frame (the flyer's last frame is exactly at stackTop(n + 1)); the
-// plate's number is the stack's count. The mug rides his hand from the grasp (f75) to the release (f107-112).
-// Orange = the AI only (the Genius); the sheets and the mug cream, you in white and slate.
+// stream); the stack steps on the landing frame (the flyer's last frame is exactly at stackTop(n + 1)); the tag comes
+// with the 100th. The mug rides your hand while held (the grip re-solved on its handle every frame).
+// Orange = the AI only (the robot); the sheets and the mug cream, you in white and slate, the tag slate and cream.
 // THE MUG (cut-local): mugShapes' geometry at 1.45x (MUG_S) in cream, painted in the figure's build in place of the
-// pose's own mug (the near hand over its handle); the sip arm re-solved (covidGripTo) onto its bigger handle.
+// pose's own mug (the near hand over its handle); the sip arm solved with covidGripTo onto its handle.
 //
-// DEPTH: eye Y -260, dRef 1700 at kRef 1.32, dolly 0.5, fog by the eye (officeScene(0.15)). Seats at Z 0: you X -235
-// (dir 1), the Genius X +240 (dir -1); desks x 48..173 along each sitter's dir, Z -30..220; the pad on his desk X 132,
-// Z -2; the floor stack X 44, Z -200 (yaw 88: the A4's long side to us); the plate X 44, Z -220, numeral Y -318 (size
-// 42), WORKDAYS Y -286 (size 28: cap ~34 px at rest). The stack sits right of the gap's centre so the wide plate stays
-// in the keep-in box in the close opening (the human is still hidden off the left edge there). The window moved to
-// X -660..-130, Y -330..-600 (OfficeRoom's room prop; the module is unchanged).
-// CHECKS: scripts/clips/rsi-since-writing/check-coffee-hundred.ts (camera lobes, count, faces / plate / landing point
-// vs the keep-in box and caption bands, the plate vs the faces and the stack, you at x >= 65 once fully in, sheets vs
-// faces, the typing hands and the plate's type, every frame).
+// DEPTH: eye Y -260, dRef 1700 at kRef 1.32, dolly 0.5, fog by the eye (officeScene(0.15)). Seats at Z 0: you X -215
+// (dir 1), the robot X +200 (dir -1); desks x 48..173 along each sitter's dir, Z -30..220 (the gap X -42..27); the pad
+// on its desk X 92, Z -2; the floor stack X -8, Z -200 (yaw 88: the A4's long side to us); the tag at Z -222. The window
+// moved to X -660..-130, Y -330..-600 (OfficeRoom's room prop; the module is unchanged).
+// CHECKS: scripts/clips/rsi-since-writing/check-coffee-hundred.ts (camera, count, faces / tag / landing point vs the
+// keep-in box and caption bands, you at x >= 65, sheets vs faces and the mittens, the pop audit: mittens on the keys, the
+// mug riding the hand, the mug's speed, the mug down from f105).
 //
 // SOURCES: none on screen. 100 = the speaker's number (his own illustration).
 // ---------------------------------------------------------------------------
@@ -51,14 +48,15 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirStage, WorldSvg, airWorldOf, makeCamera, swayCam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { GENIUS_POSES, Genius } from "../rsi-ten-earths/tenEarthsGenius";
+import { BOT_POSES, Bot } from "../rsi-ten-earths/tenEarthsBot";
 import { HUMAN_DESK, HUMAN_POSES, buildHuman, type HumanPose, type MugState, type P2 } from "./sinceWritingFolk";
 import { CovidPaint } from "../kyle-covid/covidFolk";
 import { closedD, covidGripTo, ellPts, tubeD, type CShape } from "../kyle-covid/covidFolkBody";
 import { add, mix2, mul, rot } from "../kits/maps/stringsMotion";
 import { mixC } from "../kyle-pandemics/pandemicFolkPaint";
 import { MUG, mugShapes } from "./sinceWritingProps";
-import { OFFICE, OfficeDesk, OfficeRoom, OfficeShafts, OfficeTint, Plate, SheetStack, WorkSheet, MugSteam, officeScene, sheetFlight, stackTop, type SheetPose } from "./sinceWritingWorld";
+import { CREAM, OFFICE, OfficeDesk, OfficeRoom, OfficeShafts, OfficeTint, PLATE_FONT, SheetStack, WorkSheet, MugSteam, officeScene, sheetFlight, stackTop, type SheetPose } from "./sinceWritingWorld";
+import type { AirWorld } from "../kits/dwarkesh-3d/dwarkesh3d";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 117;
@@ -77,27 +75,28 @@ const sst = (a: number, b: number, x: number) => {
 export const SUN_T = 0.15;
 export const DEPTH: DepthOpts = { eyeY: -260, dRef: 1700, kRef: 1.32, dolly: 0.5 };
 /** the seats (the world probe's cut-1 layout): two desks side by side, the sitters facing each other across the gap */
-export const YOU = { X: -235, Z: 0 };
-export const AI = { X: 240, Z: 0 };
-/** the pad on his desk between the keyboard and the monitor (the source of the sheets) */
+export const YOU = { X: -215, Z: 0 };
+export const AI = { X: 200, Z: 0 };
+/** the pad on its desk between the keyboard and the monitor (the source of the sheets) */
 export const PAD = { X: AI.X - 108, Y: -132, Z: -2, n: 7, yaw: -3, seed: 7 };
 /** the stack on the floor in front of the gap between the desks (the long side of the A4 to us) */
-export const STACK = { X: 44, Z: -200, yaw: 88, seed: 3 };
-/** the counter plate in the air directly above where the stack ends (fixed from its entrance) */
-export const PLATE = { X: STACK.X, Z: -220, numY: -318, numSize: 42, labY: -286, labSize: 28, labSpacing: 0.04, f0: 46, dur: 12 };
+export const STACK = { X: -8, Z: -200, yaw: 88, seed: 3 };
+/** the one label: a luggage tag "100 / WORKDAYS" on a string from a binder clip on the top sheets' front edge, hanging
+ *  in front of the stack's face (world space: Z just in front of the face), dropped on as the 100th sheet lands */
+export const TAG = { Z: -222, drop: 22, W: 100, H: 70, numSize: 36, labSize: 13.5, labSpacing: 0.05, f0: 68 };
 /** the room: the window high on the left (the low morning sun at the upper left; the stack against the plain wall) */
 const ROOM = { ...OFFICE, win: { ...OFFICE.win, x0: -660, x1: -130, sill: -330, head: -600 } };
 export const TOTAL = 100;
 
 // ---------------------------------------------------------------------------
-// THE COUNT: landing frames of sheets 1..100 from an eased rate (a slow start, a peak ~f72, slowing to the 100th on
-// f100). N(f) = 1 + integral_6^f rate, rate = BASE + PEAK * exp(-((f - MID) / SIG)^2), PEAK solved so N(100) = 100.
+// THE COUNT: landing frames of sheets 1..100 from an eased rate (a slow start, a peak ~f36, slowing to the 100th on
+// f68 "done"). N(f) = 1 + integral_6^f rate, rate = BASE + PEAK * exp(-((f - MID) / SIG)^2), PEAK solved so N(68) = 100.
 // ---------------------------------------------------------------------------
 const F_FIRST = 6;
-const F_LAST = 100;
-const BASE = 0.12;
-const MID = 52;
-const SIG = 16;
+const F_LAST = 68;
+const BASE = 0.15;
+const MID = 36;
+const SIG = 12;
 /** flight frames of sheet i (0-based): the early, lone sheets float (20 frames, the close-up's long drop to the floor),
  *  the stream at the peak flies in 14 */
 export const flightOf = (i: number) => 14 + 6 * (1 - Math.min(1, i / 24));
@@ -143,27 +142,8 @@ const progress = (tau: number) => {
   const t = c01(tau);
   return 0.5 * t * t * (3 - 2 * t) + 0.5 * (1 - Math.pow(1 - t, 1.35));
 };
-/** the ceiling of the flights (world Y, down +): under the plate's label and its soft plate, which hang above the
- *  stack's end (the late sheets, landing just under the plate, rise onto the stack instead of arcing over it) */
-export const FLIGHT_CEIL = PLATE.labY + 0.55 * PLATE.labSize + 14;
-const keepCache = new Map<number, number>();
-/** a sheet's share of the arc: its own (0.25-0.8), cut so the whole flight stays under FLIGHT_CEIL */
-const keepOf = (from: SheetPose, to: SheetPose, seed: number, apex: number) => {
-  const own = 0.25 + 0.55 * hash(seed, 1);
-  const hit = keepCache.get(seed);
-  if (hit !== undefined) return hit;
-  let k = own;
-  for (let j = 1; j < 40; j++) {
-    const s = progress(j / 40);
-    const qy = sheetFlight(from, to, 1 - Math.pow(1 - s, 1 / 1.7), seed).Y;
-    const a = apex * 4 * s * (1 - s);
-    // Y = qy + (1 - k) a >= CEIL  ->  k <= 1 - (CEIL - qy) / a
-    if (a > 1e-6) k = Math.min(k, 1 - (FLIGHT_CEIL - qy) / a);
-  }
-  k = Math.max(0, k);
-  keepCache.set(seed, k);
-  return k;
-};
+/** a sheet's share of the arc's height (0.25-0.8, its own) */
+const keepOf = (seed: number) => 0.25 + 0.55 * hash(seed, 1);
 export const flightAt = (from: SheetPose, to: SheetPose, tau: number, seed: number): SheetPose => {
   const s = progress(tau);
   const u = 1 - Math.pow(1 - s, 1 / 1.7);
@@ -172,7 +152,7 @@ export const flightAt = (from: SheetPose, to: SheetPose, tau: number, seed: numb
   const apex = 30 + 0.32 * dist;
   // a loose flock, not one line: each sheet keeps its own share of the arc's height and drifts sideways a little
   // (zero at both ends, so it still leaves the pad and lands on the stack exactly)
-  const keep = keepOf(from, to, seed, apex);
+  const keep = keepOf(seed);
   const mid = Math.sin(Math.PI * s);
   return {
     ...q,
@@ -191,45 +171,44 @@ export const countAt = (f: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE CAMERA: one continuous move. A slow creep close on the Genius (f0-62, k 2.15 -> 2.06), the pull-back and pan
-// left in one lobe (f62-104, to k 1.57) that brings you in, then a slow creep.
+// THE CAMERA: one continuous move, both sitters in shot throughout: a slow push-in (one lobe, f0-102, k 1.48 -> 1.60)
+// as the stack rises between them, then a creep.
 // ---------------------------------------------------------------------------
 const camKeys = makeCamera([
-  { f: 0, k: 2.15, wx: 134, wy: -96, sx: 540, sy: 960 },
-  { f: 62, k: 2.06, wx: 131, wy: -104, sx: 540, sy: 960 },
-  { f: 104, k: 1.57, wx: -11, wy: -148, sx: 540, sy: 960 },
-  { f: 116, k: 1.56, wx: -13, wy: -148, sx: 540, sy: 960 },
+  { f: 0, k: 1.64, wx: -10, wy: -160, sx: 540, sy: 960 },
+  { f: 102, k: 1.75, wx: -10, wy: -165, sx: 540, sy: 960 },
+  { f: 116, k: 1.755, wx: -10, wy: -165, sx: 540, sy: 960 },
 ]);
 export const camOf = (f: number) => swayCam(camKeys(f), f);
 const REST = camOf(0);
 
 // ---------------------------------------------------------------------------
-// YOU: the sip, warped onto the words (seatedSip's t: grasp 0-0.1, lift 0.1-0.36, tip + drink 0.36-0.62, tip back +
-// lower 0.62-0.92, release 0.92-1)
+// YOU: two slow sips across the whole slot, the hand on the mug from f0. Each channel is eased between its keys (zero
+// speed at every key): e = where the mug is between the desk (0) and the lips (1), with a hold at e 0.3 in front of the
+// chest between the sips; tip = tipped into the lips; drink = the head's drink (eyes closing, head back); level = the
+// coffee (drops on each sip, empty on the second); hold = the hand's grip (lets go after "coffee").
 // ---------------------------------------------------------------------------
-const SIP_KEYS: [number, number][] = [
-  [70, 0],
-  [75, 0.1],
-  [86, 0.36],
-  [90, 0.44],
-  [94, 0.62],
-  [98, 0.74],
-  [107, 0.92],
-  [112, 1],
-];
-export const sipTAt = (f: number) => {
-  if (f <= SIP_KEYS[0][0]) return 0;
-  for (let i = 1; i < SIP_KEYS.length; i++) {
-    const [fa, ta] = SIP_KEYS[i - 1];
-    const [fb, tb] = SIP_KEYS[i];
-    if (f <= fb) return ta + (tb - ta) * ((f - fa) / (fb - fa));
+const keyed = (keys: [number, number][]) => (f: number) => {
+  if (f <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    const [fa, va] = keys[i - 1];
+    const [fb, vb] = keys[i];
+    if (f <= fb) return va + (vb - va) * sst(fa, fb, f);
   }
-  return 1;
+  return keys[keys.length - 1][1];
 };
-/** the coffee in the mug: drunk while the mug is tipped */
-const levelAt = (f: number) => 0.8 * (1 - sst(86, 96, f));
-const steamAt = (f: number) => 1 * (1 - sst(86, 101, f));
-
+/** sip 1: up f4-16, tip in f14-20, drink to f34, tip out f34-38, down to the hold f36-46; sip 2 (the last): up f62-72,
+ *  tip in f69-75, drink (it drains) to f94, tip out f94-98, down f97-105: the empty mug lands on "coffee" (f105) */
+export const SIP = {
+  e: keyed([[0, 0], [4, 0], [16, 1], [36, 1], [46, 0.3], [62, 0.3], [72, 1], [97, 1], [105, 0]]),
+  tip: keyed([[0, 0], [14, 0], [20, 1], [34, 1], [38, 0], [69, 0], [75, 1], [94, 1], [98, 0]]),
+  drink: keyed([[0, 0], [15, 0], [21, 1], [33, 1], [38, 0], [71, 0], [77, 1], [93, 1], [98, 0]]),
+  level: keyed([[0, 0.85], [20, 0.85], [33, 0.45], [76, 0.45], [93, 0]]),
+  hold: keyed([[0, 1], [105, 1], [112, 0]]),
+  steam: keyed([[0, 1], [74, 1], [96, 0]]),
+};
+/** the frame the empty mug lands on the desk ("coffee") */
+export const MUG_DOWN = 105;
 // ---------------------------------------------------------------------------
 // THE MUG (cut-local, Rev 1): a plain cream mug, 1.45x the props module's MUG so it reads at the resolved scale, drawn
 // here (mugShapes' geometry, scaled; the world modules are unchanged) and swapped into the figure's paint in place of
@@ -294,26 +273,34 @@ const sipMouth = (): P2 => {
 };
 /** your pose at frame f (the big mug in `mug`; `pose.mug` is the module's small mug, only a marker for the paint swap) */
 export const youAt = (f: number): { pose: HumanPose; mug: MugState } => {
-  const u = sipTAt(f);
-  const lvl = levelAt(f);
-  const src = HUMAN_POSES.seatedSip(1, u, f, lvl);
-  const grasp = sst(0, 0.1, u);
-  const lift = sst(0.1, 0.36, u) - sst(0.74, 0.92, u);
-  const tipA = sst(0.3, 0.42, u) - sst(0.62, 0.74, u);
-  const release = sst(0.92, 1, u);
-  const tilt = -62 * tipA;
-  const e = sst(0, 1, lift);
+  const e = SIP.e(f);
+  const tipA = SIP.tip(f);
+  const drink = SIP.drink(f);
+  const lvl = SIP.level(f);
+  const held = SIP.hold(f);
+  // the seated rest pose (seatedSip at t 0: the far hand on the desk, the breath), with the drinking head laid on as
+  // seatedSip does it (pitch back 9, lean back 2, lids 0.65, the smile off)
+  const src = HUMAN_POSES.seatedSip(1, 0, f, lvl);
+  const p0 = src.pose;
+  // the last sip tips steeper as the mug drains
+  const tilt = -(62 + 12 * sst(84, 94, f)) * tipA;
   const atMouth = bigBaseForRim(add(sipMouth(), [2, 1]), tilt, -1);
   const arc: P2 = [10 * Math.sin(Math.PI * e), -4 * Math.sin(Math.PI * e)];
   // held off the face (forward, away from it) whenever it is up but not tipped into the lips: it comes up in front of
   // the chin, tips in to drink, tips back out and leaves forward, never crossing the face
   const off: P2 = [AWAY * e * (1 - tipA), 0];
-  const mug: MugState = { base: add(add(mix2(HUMAN_DESK.mug, atMouth, e), arc), off), tilt, level: lvl * (1 - 0.06 * sst(0.4, 0.62, u)), handle: -1 };
-  const restHand = HUMAN_DESK.rest;
-  const grip = mix2(mix2(restHand, bigHandle(mug), grasp), add(restHand, [-4, 0]), release);
-  const turned: HumanPose = { ...src.pose, headYaw: src.pose.headYaw + PROFILE_TURN * sst(0, 0.55, lift) };
-  const q = covidGripTo("officer", 3, turned, { L: grip }, [0, 0], 1) as HumanPose;
-  return { pose: { ...q, armL: { ...q.armL, fist: src.pose.armL.fist, hand: src.pose.armL.hand }, armR: src.pose.armR, mug: src.mug }, mug };
+  const mug: MugState = { base: add(add(mix2(HUMAN_DESK.mug, atMouth, e), arc), off), tilt, level: lvl, handle: -1 };
+  const grip = mix2(add(HUMAN_DESK.rest, [-4, 0]), bigHandle(mug), held);
+  const head: HumanPose = {
+    ...p0,
+    pitch: p0.pitch - 9 * drink,
+    lean: p0.lean - 2 * drink,
+    lids: 0.65 * drink,
+    mouth: 0.18 * (1 - drink),
+    headYaw: p0.headYaw + PROFILE_TURN * sst(0.45, 0.95, e),
+  };
+  const q = covidGripTo("officer", 3, head, { L: grip }, [0, 0], 1) as HumanPose;
+  return { pose: { ...q, armL: { ...q.armL, fist: 0.2 + 0.65 * held, hand: 10 - 18 * held }, armR: p0.armR, mug: src.mug }, mug };
 };
 /** you, painted: the figure's build with its mug swapped for the big cream one */
 const You: React.FC<{ f: number; at: P2; scale: number; fog: ReturnType<ReturnType<typeof airWorldOf>["folkFog"]>; unitPx: number }> = ({ f, at, scale, fog, unitPx }) => {
@@ -323,6 +310,76 @@ const You: React.FC<{ f: number; at: P2; scale: number; fog: ReturnType<ReturnTy
   const i = b.shapes.findIndex((s) => s.d === small[0].d);
   const shapes = i >= 0 ? [...b.shapes.slice(0, i), ...bigMugShapes(y.mug), ...b.shapes.slice(i + small.length)] : [...b.shapes, ...bigMugShapes(y.mug)];
   return <CovidPaint shapes={shapes} at={at} scale={scale} uid="you" fog={fog} unitPx={unitPx} />;
+};
+
+// ---------------------------------------------------------------------------
+// THE TAG: "100 / WORKDAYS" on a slate luggage tag (cream Caslon, PLATE_FONT), its string from a binder clip on the top
+// sheets' front edge; it drops on as the 100th sheet lands (f68: in over 3 frames, the string goes taut by f73) and
+// swings to rest (a damped pendulum about the clip, settled by ~f90). One plane at TAG.Z: a uniform perspective scale.
+// ---------------------------------------------------------------------------
+const TAG_INK = { card: "#3C514E", rule: "#8FA39E", clip: "#262E2D", wire: "#A9B1AE", string: "#D9D1C0" };
+const easeOutBack = (x: number) => {
+  const c = 1.4;
+  const t = c01(x) - 1;
+  return 1 + (c + 1) * t * t * t + c * t * t;
+};
+/** the tag's state at frame f: on 0..1, the drop (units above its hang), the swing (deg) */
+export const tagAt = (f: number) => {
+  const t = f - TAG.f0;
+  if (t < 0) return { on: 0, lift: 0, ang: 0 };
+  const on = sst(0, 3, t);
+  const lift = 22 * (1 - easeOutBack(t / 5));
+  const ang = 11 * Math.exp(-Math.max(0, t - 2) / 7) * Math.sin(Math.max(0, t - 2) * 0.58);
+  return { on, lift, ang };
+};
+/** the clip's point (world units): the top sheet's front edge at the stack's centre */
+export const tagPin = () => {
+  const top = stackTop(STACK.X, STACK.Z, TOTAL, 0, STACK.yaw, STACK.seed);
+  return { X: top.X, Y: top.Y, Z: TAG.Z + 3 };
+};
+const StackTag: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
+  const st = tagAt(frame);
+  if (st.on <= 0) return null;
+  const pin = tagPin();
+  const r = A.P.r(TAG.Z);
+  const pc = A.P.p(pin.X, pin.Y, TAG.Z);
+  const tone = (hex: string) => A.tone(hex, TAG.Z, 200);
+  const { W, H, drop } = TAG;
+  const y0 = drop - st.lift;
+  // the card: a luggage tag, the top corners cut
+  const cut = 11;
+  const card = `M${-W / 2 + cut} ${y0} L${W / 2 - cut} ${y0} L${W / 2} ${y0 + cut} L${W / 2} ${y0 + H} L${-W / 2} ${y0 + H} L${-W / 2} ${y0 + cut} Z`;
+  const inset = 4.5;
+  const rule = `M${-W / 2 + cut + 1} ${y0 + inset} L${W / 2 - cut - 1} ${y0 + inset} L${W / 2 - inset} ${y0 + cut + 1} L${W / 2 - inset} ${y0 + H - inset} L${-W / 2 + inset} ${y0 + H - inset} L${-W / 2 + inset} ${y0 + cut + 1} Z`;
+  const hole: P2 = [0, y0 + 7];
+  return (
+    <g opacity={st.on} transform={`translate(${pc[0].toFixed(2)} ${pc[1].toFixed(2)}) scale(${r.toFixed(4)})`}>
+      <defs>
+        <filter id="tagsh" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation={2.2} />
+        </filter>
+      </defs>
+      <g transform={`rotate(${st.ang.toFixed(3)})`}>
+        {/* its soft shadow on the stack's face */}
+        <path d={card} transform="translate(2.5 3.5)" fill={tone("#2A2620")} opacity={0.32} filter="url(#tagsh)" />
+        {/* the string, the card, the reinforced hole */}
+        <path d={`M0 0 L${-1.2} ${hole[1]} M0 0 L${1.2} ${hole[1]}`} stroke={tone(TAG_INK.string)} strokeWidth={0.9} fill="none" />
+        <path d={card} fill={tone(TAG_INK.card)} />
+        <path d={rule} fill="none" stroke={tone(TAG_INK.rule)} strokeWidth={0.7} opacity={0.75} />
+        <circle cx={hole[0]} cy={hole[1]} r={3.2} fill={tone(TAG_INK.rule)} />
+        <circle cx={hole[0]} cy={hole[1]} r={1.6} fill={tone("#1E2625")} />
+        <text x={0} y={y0 + 17 + TAG.numSize * 0.66} textAnchor="middle" fill={tone(CREAM)} style={{ fontFamily: PLATE_FONT, fontWeight: 700, fontSize: TAG.numSize, fontVariantNumeric: "lining-nums" }}>
+          100
+        </text>
+        <text x={TAG.labSize * TAG.labSpacing * 0.5} y={y0 + H - 10} textAnchor="middle" fill={tone(CREAM)} style={{ fontFamily: PLATE_FONT, fontWeight: 700, fontSize: TAG.labSize, letterSpacing: TAG.labSize * TAG.labSpacing }}>
+          WORKDAYS
+        </text>
+      </g>
+      {/* the binder clip on the top sheets' front edge (it does not swing) */}
+      <path d="M-4 -6 L-6.5 -15 M4 -6 L6.5 -15" stroke={tone(TAG_INK.wire)} strokeWidth={1.1} fill="none" strokeLinecap="round" />
+      <path d="M-7.5 -5 L7.5 -5 L6.5 4 L-6.5 4 Z" fill={tone(TAG_INK.clip)} />
+    </g>
+  );
 };
 
 const Guides: React.FC = () => (
@@ -345,9 +402,9 @@ const CoffeeHundredWorkdays: React.FC<z.infer<typeof schema>> = ({ guides }) => 
   const ya = A.P.at(YOU.X, YOU.Z);
   const you = youAt(frame);
   const mugTop = bigMouth(you.mug).c;
-  // the Genius
+  // the robot
   const ga = A.P.at(AI.X, AI.Z);
-  const gPose = GENIUS_POSES.typeAtDesk(-1, frame);
+  const gPose = BOT_POSES.typeAtDesk(-1, frame);
 
   // the paper
   const n = countAt(frame);
@@ -362,8 +419,6 @@ const CoffeeHundredWorkdays: React.FC<z.infer<typeof schema>> = ({ guides }) => 
     const to = stackTop(STACK.X, STACK.Z, i + 1, 0, STACK.yaw, STACK.seed);
     flyers.push(<WorkSheet key={i} A={A} pose={flightAt(padTop, to, (frame - launch) / D, i + 1)} uid={`fl${i}`} shadowY={0} />);
   }
-  // the plate: slides up on "100 workdays" (f46), counts the stack
-  const plateIn = c01((frame - PLATE.f0) / PLATE.dur);
 
   return (
     <AbsoluteFill>
@@ -371,25 +426,20 @@ const CoffeeHundredWorkdays: React.FC<z.infer<typeof schema>> = ({ guides }) => 
         <WorldSvg cam={cam}>
           <OfficeRoom A={A} sunT={SUN_T} uid="room" room={ROOM} />
           {/* you, at the left desk */}
-          <OfficeDesk A={A} X={YOU.X} Z={YOU.Z} dir={1} uid="yd" layer="back" />
+          <OfficeDesk A={A} X={YOU.X} Z={YOU.Z} dir={1} uid="yd" layer="back" monitor={false} />
           <You f={frame} at={ya.at} scale={ya.scale} fog={A.folkFog(YOU.Z)} unitPx={A.k} />
-          <MugSteam at={[ya.at[0] + mugTop[0] * ya.scale, ya.at[1] + mugTop[1] * ya.scale]} scale={ya.scale * MUG_S} frame={frame} amount={steamAt(frame)} uid="steam" />
-          <MugSteam at={[ya.at[0] + mugTop[0] * ya.scale, ya.at[1] + mugTop[1] * ya.scale]} scale={ya.scale * MUG_S * 0.8} frame={frame + 40} amount={0.7 * steamAt(frame)} uid="steam2" />
-          <OfficeDesk A={A} X={YOU.X} Z={YOU.Z} dir={1} uid="ydf" layer="front" />
-          {/* the Genius, at the right desk, the pad by his keyboard */}
-          <OfficeDesk A={A} X={AI.X} Z={AI.Z} dir={-1} uid="gd" layer="back" />
+          <MugSteam at={[ya.at[0] + mugTop[0] * ya.scale, ya.at[1] + mugTop[1] * ya.scale]} scale={ya.scale * MUG_S} frame={frame} amount={SIP.steam(frame)} uid="steam" />
+          <MugSteam at={[ya.at[0] + mugTop[0] * ya.scale, ya.at[1] + mugTop[1] * ya.scale]} scale={ya.scale * MUG_S * 0.8} frame={frame + 40} amount={0.7 * SIP.steam(frame)} uid="steam2" />
+          <OfficeDesk A={A} X={YOU.X} Z={YOU.Z} dir={1} uid="ydf" layer="front" monitor={false} />
+          {/* the robot, at the right desk, the pad by its keyboard */}
+          <OfficeDesk A={A} X={AI.X} Z={AI.Z} dir={-1} uid="gd" layer="back" monitor={false} keyboard />
           <SheetStack A={A} X={PAD.X} Z={PAD.Z} Y={PAD.Y} n={PAD.n} yaw={PAD.yaw} seed={PAD.seed} uid="pad" />
-          <Genius variant={0} pose={gPose} at={ga.at} scale={ga.scale} uid="ai" frame={frame} fog={A.folkFog(AI.Z)} unitPx={A.k} />
-          <OfficeDesk A={A} X={AI.X} Z={AI.Z} dir={-1} uid="gdf" layer="front" />
-          {/* the stack on the floor, the sheets in flight, the counter */}
+          <Bot variant={0} pose={gPose} at={ga.at} scale={ga.scale} uid="ai" frame={frame} fog={A.folkFog(AI.Z)} unitPx={A.k} />
+          <OfficeDesk A={A} X={AI.X} Z={AI.Z} dir={-1} uid="gdf" layer="front" monitor={false} keyboard />
+          {/* the stack on the floor, the sheets in flight, the tag */}
           <SheetStack A={A} X={STACK.X} Z={STACK.Z} n={n} yaw={STACK.yaw} seed={STACK.seed} uid="stack" />
           {flyers}
-          {plateIn > 0 ? (
-            <>
-              <Plate A={A} X={PLATE.X} Y={PLATE.numY} Z={PLATE.Z} text={`${n}`} t={plateIn} uid="pn" size={PLATE.numSize} />
-              <Plate A={A} X={PLATE.X} Y={PLATE.labY} Z={PLATE.Z} text="WORKDAYS" t={plateIn} uid="pw" size={PLATE.labSize} plate={0.7} letterSpacing={PLATE.labSpacing} />
-            </>
-          ) : null}
+          <StackTag A={A} frame={frame} />
           <OfficeShafts A={A} sunT={SUN_T} uid="sh" room={ROOM} />
         </WorldSvg>
       </AirStage>
