@@ -1,14 +1,15 @@
 // CoffeeHundredWorkdays (rsi-since-writing, cut 2) per-frame checks, in screen px (sway included):
-// the camera (log k and cx: one move, no reversal), the count (100 landings, the 100th on f68 "done", none after), the
-// faces (you and the robot: inside the keep-in box x 65-1015, y 290-1070, never in the caption bands y 1080-1250 /
-// 1360-1460), the tag (the card's four corners inside the box and above y 1070, clear of both faces), the landing point
-// (x in the box, y 290-1440: the stack is context and may sit in the bands), you (the figure and the chair at x >= 65
-// on every frame), the flyers against both faces and the robot's mittens, and the pop audit: the robot's mittens on its
-// keys (units), the mug riding the hand (the grip on the handle while held), the mug's speed (units / frame), the mug on
-// the desk from "coffee" (f105) on.
+// the camera (log k and cx: one move, the push-in turning into the pull-back once, at the pan's start, cx never
+// reversing), the count (100 landings, the 100th on f98 "done", none after), the faces (the robot always, you once in
+// shot: inside the keep-in box x 65-1015, y 290-1070, never in the caption bands y 1080-1250 / 1360-1460), the tag (the
+// card's four corners inside the box and above y 1070, clear of both faces), the landing point (x in the box, y
+// 290-1440: the stack is context and may sit in the bands), you (wholly off the left edge before the pan, then the
+// figure and the chair at x >= 65 from the first frame you are fully in), the flyers against both faces and the robot's
+// mittens, and the pop audit: the robot's mittens on its keys (units), the mug riding the hand (the grip on the handle
+// while held), the mug's speed (units / frame), the mug on the desk from "coffee" (f135) on.
 // Run: bun scripts/clips/rsi-since-writing/check-coffee-hundred.ts
 import { airWorldOf } from "../../../generated/components/kits/dwarkesh-3d/dwarkesh3d";
-import { AI, DEPTH, DURATION, flightOf, LAND, MUG_DOWN, PAD, SIP, STACK, SUN_T, TAG, TOTAL, YOU, camOf, countAt, flightAt, tagAt, tagPin, youAt } from "../../../generated/components/rsi-since-writing/CoffeeHundredWorkdays";
+import { AI, DEPTH, DURATION, FLY, LAND, MUG_DOWN, PAD, SIP, STACK, SUN_T, TAG, TOTAL, YOU, camOf, countAt, flyersAt, tagAt, tagPin, youAt } from "../../../generated/components/rsi-since-writing/CoffeeHundredWorkdays";
 import { BOT_DESK, BOT_POSES, botAnchors } from "../../../generated/components/rsi-ten-earths/tenEarthsBot";
 import { HUMAN_DESK, buildHuman, humanAnchors } from "../../../generated/components/rsi-since-writing/sinceWritingFolk";
 import { FU } from "../../../generated/components/kyle-covid/covidFolkBody";
@@ -24,18 +25,40 @@ const onScreen = (p: P2) => p[0] > -40 && p[0] < 1120 && p[1] > -40 && p[1] < 19
 const cams = Array.from({ length: DURATION }, (_, f) => camOf(f));
 const lk = cams.map((c) => Math.log(c.k));
 const dk = lk.slice(1).map((v, i) => v - lk[i]);
-let rev = 0;
-for (let i = 1; i < dk.length; i++) if (dk[i] * dk[i - 1] < -1e-10 && Math.abs(dk[i]) > 1e-5 && Math.abs(dk[i - 1]) > 1e-5) rev++;
-if (rev) issues.push(`zoom reverses ${rev} times`);
+const sgn = (v: number) => (Math.abs(v) < 1e-6 ? 0 : Math.sign(v));
+const turns = (d: number[]) => {
+  const out: number[] = [];
+  let last = 0;
+  d.forEach((v, i) => {
+    const s0 = sgn(v);
+    if (s0 && last && s0 !== last) out.push(i);
+    if (s0) last = s0;
+  });
+  return out;
+};
+const zt = turns(dk);
+if (zt.length !== 1 || zt[0] < 88 || zt[0] > 102) issues.push(`zoom turns at ${zt.join(", ")} (want one, at the pan's start ~f98)`);
+const dcx = cams.slice(1).map((c, i) => c.cx - cams[i].cx);
+const ct = turns(dcx);
+if (ct.length) issues.push(`pan reverses at ${ct.join(", ")}`);
+log.push(`pan px/f by 6: ${dcx.filter((_, i) => i % 6 === 0).map((v, j) => Math.abs(v * cams[j * 6].k).toFixed(1)).join(" ")}`);
 log.push(`k ${cams[0].k.toFixed(3)} -> ${cams[DURATION - 1].k.toFixed(3)}; zoom %/f by 8: ${dk.filter((_, i) => i % 8 === 0).map((v) => (v * 100).toFixed(2)).join(" ")}`);
 
 // ---- the count ----
 if (LAND.length !== TOTAL) issues.push(`LAND has ${LAND.length}`);
-if (countAt(67.999) !== 99 || countAt(68) !== 100 || countAt(DURATION) !== 100) issues.push(`count at f67.999 ${countAt(67.999)}, f68 ${countAt(68)}, end ${countAt(DURATION)}`);
+if (countAt(97.999) !== 99 || countAt(98) !== 100 || countAt(DURATION) !== 100) issues.push(`count at f97.999 ${countAt(97.999)}, f98 ${countAt(98)}, end ${countAt(DURATION)}`);
 for (let i = 1; i < LAND.length; i++) if (LAND[i] < LAND[i - 1]) issues.push(`landing ${i + 1} before ${i}`);
 const perFrame = Array.from({ length: DURATION }, (_, f) => countAt(f) - (f ? countAt(f - 1) : 0));
-log.push(`landings per frame by 3: ${perFrame.filter((_, i) => i % 3 === 0).join(" ")}; count f46 ${countAt(46)}, f53 ${countAt(53)}, f60 ${countAt(60)}`);
-log.push(`last landings ${LAND.slice(-6).map((v) => v.toFixed(1)).join(", ")}`);
+log.push(`landings per frame by 3: ${perFrame.filter((_, i) => i % 3 === 0).join(" ")}; count f76 ${countAt(76)}, f83 ${countAt(83)}, f90 ${countAt(90)}`);
+log.push(`last landings ${LAND.slice(-6).map((v) => v.toFixed(1)).join(", ")}; flights ${FLY.length}, sizes ${FLY.map((g) => g.size).join("")}`);
+let maxAir = 0;
+let maxAirAt = 0;
+for (let f = 0; f < DURATION; f++) {
+  const air = FLY.filter((g) => g.land > f && g.land - g.D <= f).length;
+  if (air > maxAir) [maxAir, maxAirAt] = [air, f];
+}
+log.push(`most flights in the air ${maxAir} (f${maxAirAt})`);
+if (maxAir > 8) issues.push(`${maxAir} flights in the air at f${maxAirAt}`);
 
 // ---- per frame ----
 const scr = (cam: { k: number; cx: number; cy: number }, p: P2): P2 => [540 + (p[0] - cam.cx) * cam.k, 960 + (p[1] - cam.cy) * cam.k];
@@ -54,6 +77,7 @@ let maxFly = 0;
 let maxAt = "";
 let lastC = new Map<number, P2>();
 let minLeft = 1e9;
+let fullyIn = -1;
 let keyGap = 0;
 let gripGap = 0;
 let gripMin = 1e9;
@@ -61,6 +85,7 @@ let mugV = 0;
 let mugVAt = "";
 let prevMug: P2 | null = null;
 let tagLog = "";
+let landAbove = -1;
 const keys = BOT_DESK.keys.map((k) => [-k[0], k[1]] as P2); // facing left: the near mitten (keys[0]) is handR
 for (let f = 0; f < DURATION; f++) {
   const nextC = new Map<number, P2>();
@@ -97,12 +122,19 @@ for (let f = 0; f < DURATION; f++) {
   prevMug = m.base;
   if (f >= MUG_DOWN && (Math.abs(m.base[1] - HUMAN_DESK.mug[1]) > 0.3 || Math.abs(m.tilt) > 0.3)) issues.push(`f${f} the mug is not down on the desk (${m.base.map((v) => v.toFixed(1))}, tilt ${m.tilt.toFixed(1)})`);
   if (f === MUG_DOWN - 1 && Math.abs(m.base[1] - HUMAN_DESK.mug[1]) < 0.3) issues.push(`the mug is down before f${MUG_DOWN}`);
-  if (f >= 96 && m.level > 0.001) issues.push(`f${f} coffee left (${m.level.toFixed(3)})`);
+  if (f >= 123 && m.level > 0.001) issues.push(`f${f} coffee left (${m.level.toFixed(3)})`);
   const faces: { who: string; c: P2; r: number }[] = [
     { who: "you", c: scr(cam, yan.headC), r: (yan.headR as unknown as number) * cam.k },
     { who: "robot", c: scr(cam, gan.headC), r: (gan.headR as unknown as number) * cam.k },
   ];
+  // your rightmost point (the figure's paths and the mug) before the pan: wholly off the left edge
+  const yNums = buildHuman(0, you.pose, { frame: f }).shapes.flatMap((sh) => (sh.d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number));
+  let rx = -1e9;
+  for (let j = 0; j + 1 < yNums.length; j += 2) rx = Math.max(rx, yNums[j]);
+  const figR = Math.max(scr(cam, [ya.at[0] + (rx / FU) * ya.scale, ya.at[1]])[0], scr(cam, [ya.at[0] + (m.base[0] + 15) * ya.scale, ya.at[1]])[0]);
+  if (f < 94 && figR > -2) issues.push(`f${f} you in shot before the pan (x ${figR.toFixed(0)})`);
   for (const fc of faces) {
+    if (fc.who === "you" && fullyIn < 0) continue;
     if (!onScreen(fc.c)) issues.push(`f${f} ${fc.who}'s face off screen`);
     const yb = fc.c[1] + fc.r;
     worstFaceY = Math.max(worstFaceY, yb);
@@ -117,11 +149,14 @@ for (let f = 0; f < DURATION; f++) {
   const sxc = YOU.X - 2;
   const chairL = Math.min(scr(cam, A.P.p(sxc - 54, -5, YOU.Z))[0], scr(cam, A.P.p(sxc - 50, -12, YOU.Z - 4))[0], scr(cam, A.P.p(YOU.X - 38, -170, YOU.Z - 30))[0]);
   const left = Math.min(figL, chairL);
-  minLeft = Math.min(minLeft, left);
-  if (left < 65) issues.push(`f${f} you cut at the left (x ${left.toFixed(0)})`);
+  if (fullyIn < 0 && left >= 65) fullyIn = f;
+  if (fullyIn >= 0) {
+    minLeft = Math.min(minLeft, left);
+    if (left < 65) issues.push(`f${f} you cut at the left (x ${left.toFixed(0)})`);
+  }
   // the robot's right side (its chair back) inside the frame
   const botR = scr(cam, A.P.p(AI.X + 38, -170, AI.Z - 30))[0];
-  if (botR > 1015) issues.push(`f${f} the robot's chair past x 1015 (${botR.toFixed(0)})`);
+  if (f >= 120 && botR > 1015) issues.push(`f${f} the robot's chair past x 1015 (${botR.toFixed(0)})`);
   // the tag (when on): the card's corners, rotated about the clip, in screen px
   const st = tagAt(f);
   if (st.on > 0) {
@@ -138,23 +173,23 @@ for (let f = 0; f < DURATION; f++) {
     const b = { x0: Math.min(...cs.map((c) => c[0])), x1: Math.max(...cs.map((c) => c[0])), y0: Math.min(...cs.map((c) => c[1])), y1: Math.max(...cs.map((c) => c[1])) };
     if (b.x0 < 65 || b.x1 > 1015 || b.y0 < 290 || b.y1 > 1070) issues.push(`f${f} tag out of the box (${b.x0.toFixed(0)}-${b.x1.toFixed(0)}, ${b.y0.toFixed(0)}-${b.y1.toFixed(0)})`);
     for (const fc of faces) if (boxHitsCircle({ x0: b.x0 - 10, x1: b.x1 + 10, y0: b.y0 - 10, y1: b.y1 + 10 }, fc.c, fc.r)) issues.push(`f${f} tag over ${fc.who}'s face`);
-    if (f === DURATION - 1) tagLog = `tag at f116: x ${b.x0.toFixed(0)}-${b.x1.toFixed(0)}, y ${b.y0.toFixed(0)}-${b.y1.toFixed(0)}; "100" cap ${(0.66 * TAG.numSize * s).toFixed(0)} px, WORKDAYS cap ${(0.66 * TAG.labSize * s).toFixed(0)} px`;
+    if (f === TAG.f0 + 2 || f === DURATION - 1) tagLog += ` | f${f}: x ${b.x0.toFixed(0)}-${b.x1.toFixed(0)}, y ${b.y0.toFixed(0)}-${b.y1.toFixed(0)}`;
+    if (f === DURATION - 1) tagLog += ` | end: x ${b.x0.toFixed(0)}-${b.x1.toFixed(0)}, y ${b.y0.toFixed(0)}-${b.y1.toFixed(0)}; "100" cap ${(0.66 * TAG.numSize * s).toFixed(0)} px, WORKDAYS cap ${(0.66 * TAG.labSize * s).toFixed(0)} px`;
   }
   // the landing point while sheets are landing
-  const landing = LAND.some((l, i) => l > f && l - flightOf(i) <= f);
+  const landing = FLY.some((g) => g.land > f && g.land - g.D <= f);
   if (landing) {
     const top = stackTop(STACK.X, STACK.Z, countAt(f) + 1, 0, STACK.yaw, STACK.seed);
     const p = scr(cam, A.P.p(top.X, top.Y, top.Z));
-    if (p[1] > 1440 || p[1] < 290 || p[0] < 65 || p[0] > 1015) issues.push(`f${f} landing point out of the box (${p[0].toFixed(0)}, ${p[1].toFixed(0)})`);
+    // the close-up puts the floor low: the first sheets land below the caption bands (y > 1440, behind the app's bottom
+    // bar on a phone); log from when the landing point is above y 1440, and flag only a landing out of the frame
+    if (p[1] > 1920 || p[1] < 290 || p[0] < 0 || p[0] > 1080) issues.push(`f${f} landing point out of the frame (${p[0].toFixed(0)}, ${p[1].toFixed(0)})`);
+    if (p[1] <= 1440 && landAbove < 0) landAbove = f;
   }
   // the flyers against the faces and the mittens (a sheet's projected centre within its half-size of the part)
   const padTop = stackTop(PAD.X, PAD.Z, PAD.n + 1, PAD.Y, PAD.yaw, PAD.seed);
   const hands = [scr(cam, gan.handL), scr(cam, gan.handR)];
-  for (let i = 0; i < TOTAL; i++) {
-    const land = LAND[i];
-    const D = flightOf(i);
-    if (f < land - D || f >= land) continue;
-    const q = flightAt(padTop, stackTop(STACK.X, STACK.Z, i + 1, 0, STACK.yaw, STACK.seed), (f - (land - D)) / D, i + 1);
+  for (const { i, pose: q } of flyersAt(f, padTop)) {
     const c = scr(cam, A.P.p(q.X, q.Y, q.Z));
     const prevC = lastC.get(i);
     if (prevC) {
@@ -180,9 +215,10 @@ for (let f = 0; f < DURATION; f++) {
   lastC = nextC;
 }
 log.push(`fastest sheet in flight ${maxFly.toFixed(1)} px/frame (${maxAt}); flyer hits ${flyHits}`);
-log.push(`lowest face edge y ${worstFaceY.toFixed(0)}; your leftmost x ${minLeft.toFixed(0)}`);
+log.push(`lowest face edge y ${worstFaceY.toFixed(0)}; you fully in from f${fullyIn}, leftmost x after ${minLeft.toFixed(0)}`);
 log.push(`robot mittens off the keys max ${keyGap.toFixed(1)} units; your hand to the handle grip (held) ${gripMin.toFixed(1)}-${gripGap.toFixed(1)} units (the anchor's fixed offset; the spread is the slip); mug fastest ${mugV.toFixed(1)} units/f (${mugVAt})`);
-if (tagLog) log.push(tagLog);
+if (tagLog) log.push(`tag${tagLog}`);
+log.push(`landing point above y 1440 from f${landAbove} (count ${countAt(landAbove)})`);
 if (keyGap > 5.5) issues.push(`robot mittens ${keyGap.toFixed(1)} units off the keys`);
 if (gripGap - gripMin > 1) issues.push(`your hand slips ${(gripGap - gripMin).toFixed(1)} units on the mug's handle`);
 if (mugV > 18) issues.push(`mug moves ${mugV.toFixed(1)} units in one frame`);

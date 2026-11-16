@@ -1,46 +1,51 @@
 // ---------------------------------------------------------------------------
 // CoffeeHundredWorkdays (rsi-since-writing, cut 2). Dwarkesh 3D style (styles/dwarkesh-3d.md).
-// Opaque 1080x1920, 23.976 fps, 117 frames.
+// Opaque 1080x1920, 23.976 fps, 147 frames.
 // One office inside the misty teal air (AirStage, palette A, the shared world sinceWritingWorld + sinceWritingFolk,
 // read-only) on a londonDepth one-point perspective, from the kit kits/dwarkesh-3d/dwarkesh3d.
 //
 // CHECK LINE: "In the time you drink one morning coffee, an AI gets a hundred workdays done."
 //
-// THE LINE: "would have a huge edge if it could get 100 workdays done before you finish your morning coffee."
-// WORD -> FRAME (f0 = sequence frame 53, 2.2105 s): would -5 · have 2 · a 6 · huge 9 · edge 17 · if 27 · it 37 ·
-// could 38 · get 41 · 100 46 · workdays 53 · done 68 · before 74 · you 82 · finish 87 · your 93 · morning 100 ·
-// coffee 105 · (slot ends 117) AIs 117
-// DURATION: the slot 2.2105 -> 7.0904 s (sequence frames 53-170) = 117 frames at 24000/1001 (f0..f116).
+// THE LINE: "(Even an AI exactly) as smart as you would have a huge edge if it could get 100 workdays done before you
+// finish your morning coffee."
+// WORD -> FRAME (f0 = sequence frame 23, 0.959 s): as 6 · smart 13 · as 18 · you 21 · would 25 · have 32 · a 36 ·
+// huge 39 · edge 47 · if 57 · it 67 · could 68 · get 71 · 100 76 · workdays 83 · done 98 · before 104 · you 112 ·
+// finish 117 · your 123 · morning 130 · coffee 135 · (slot ends 147) AIs 147
+// DURATION: the slot 0.959 -> 7.090 s (sequence frames 23-170) = 147 frames at 24000/1001 (f0..f146).
 //
-// THE MOTION (Revision 1: the robot, the contrast in the picture, one tag): one office in morning light (sunT 0.15,
-// the window high on the left, long soft shafts). Two desks a little apart, facing each other across the gap: YOU (Human
-// v0, white shirt) at the left desk with a full, steaming cream mug, your hand on it from f0; THE ROBOT (the sister
-// clip's tenEarthsBot v0, read-only) at the right desk, typing (BOT_POSES.typeAtDesk, mittens on the keyboard). No
-// monitors (the desks stay clear so the stack reads against the wall in the gap). Both are in shot from f0.
-// The robot's finished WorkSheets (one sheet = one workday) lift off the pad by its keyboard and arc, in a loose flock,
-// onto a stack on the floor in the gap: one by one at first (f6, 14, ...), quickening to ~5 a frame around "100
-// workdays" (peak ~f36-46), slowing so the last few land alone and the 100th lands on "done" (f68); no 101st.
-// You sip slowly through the whole slot (SIP): sip 1 f4-46 (the level drops 0.85 -> 0.45), the mug held in front of
-// your chest f46-62, sip 2 (the last) f62-105: it drains, you tip it back out and set the EMPTY mug down on "coffee"
-// (f105), letting go by f112. The steam thins out over the last sip (gone by f96).
+// THE MOTION (Revision 2: tight on the robot, then the pan to you): one office in morning light (sunT 0.15, the
+// window high on the left, long soft shafts). Two desks a little apart, facing each other across the gap: YOU (Human
+// v0, white shirt) at the left desk with a steaming cream mug; THE ROBOT (the sister clip's tenEarthsBot v0, read-only)
+// at the right desk, typing (BOT_POSES.typeAtDesk, mittens on the keyboard). No monitors (the stack reads against the
+// wall in the gap).
+// f0-94: close on the robot at work and pushing in (k 3.4 -> 4.4, 1.29x, drifting a touch left; the robot ~810 px tall
+// at f0, its face at y ~730), its finished WorkSheets (one sheet = one workday) lifting off the pad by its keyboard
+// and arcing onto the growing stack on the floor at the left edge of frame (one solid pile from the floor up, a soft
+// contact shadow under it). You are out of shot to the left, sipping (sip 1 f34-76: the level drops 0.85 -> 0.45; the
+// mug held at the chest f76-92). The count: the first sheet lands f8, one at a time, then small loose sheaves (2-5)
+// around "100 workdays" (f76-83; never more than ~8 flights in the air, landing >= 2.3 frames apart, each on its own
+// arc), slowing so the last few land alone and the 100th lands alone on "done" (f98); no 101st. f94-130: one smooth
+// pan / truck left with a pull-back (k 4.4 -> 1.76, a gentle ease; peak ~14 px/f) to the two-shot: both desks, the stack
+// with its tag, you on the last sip (f92-128: it drains), setting the EMPTY mug down on "coffee" (f135), letting go by
+// f142; then a creep and a living hold (typing, breath, the air). The tag drops onto the stack at f103-106 (as the pan
+// brings the stack in from the edge: at f98 the tag would hang off the left edge) and swings to rest.
 // The one label: a slate luggage tag "100 / WORKDAYS" (cream Caslon, PLATE_FONT) on a string from a binder clip on the
-// top sheets' front edge, in world space in front of the stack's face; it drops on as the 100th sheet lands (f68-73)
-// and swings to rest. No counter, no floating type.
-// THE CAMERA: one continuous slow push-in (k 1.64 -> 1.75, f0-102), then a creep; living hold (typing, breath, air).
-// CAUSE -> EFFECT: a sheet leaves the pad on its launch frame (flightOf: 20 frames for the first sheets, 14 in the
-// stream); the stack steps on the landing frame (the flyer's last frame is exactly at stackTop(n + 1)); the tag comes
-// with the 100th. The mug rides your hand while held (the grip re-solved on its handle every frame).
+// top sheets' front edge, in world space in front of the stack's face. No counter, no floating type.
+// CAUSE -> EFFECT: a flight leaves the pad on its launch frame (FLY: 16-19 frames for the first sheets, 14-17 in the
+// stream); the stack steps on the landing frame (the flight's last frame is just above stackTop(n + 1), still moving);
+// the tag comes once the 100th is down. The mug rides your hand while held (the grip re-solved on its handle every frame).
 // Orange = the AI only (the robot); the sheets and the mug cream, you in white and slate, the tag slate and cream.
 // THE MUG (cut-local): mugShapes' geometry at 1.45x (MUG_S) in cream, painted in the figure's build in place of the
 // pose's own mug (the near hand over its handle); the sip arm solved with covidGripTo onto its handle.
 //
 // DEPTH: eye Y -260, dRef 1700 at kRef 1.32, dolly 0.5, fog by the eye (officeScene(0.15)). Seats at Z 0: you X -215
 // (dir 1), the robot X +200 (dir -1); desks x 48..173 along each sitter's dir, Z -30..220 (the gap X -42..27); the pad
-// on its desk X 92, Z -2; the floor stack X -8, Z -200 (yaw 88: the A4's long side to us); the tag at Z -222. The window
+// on its desk X 92, Z -2; the floor stack X 40, Z -165 (yaw 88: the A4's long side to us; in front of the robot's desk, so the close-up holds
+// it at the left edge); the tag at Z -187. The window
 // moved to X -660..-130, Y -330..-600 (OfficeRoom's room prop; the module is unchanged).
 // CHECKS: scripts/clips/rsi-since-writing/check-coffee-hundred.ts (camera, count, faces / tag / landing point vs the
 // keep-in box and caption bands, you at x >= 65, sheets vs faces and the mittens, the pop audit: mittens on the keys, the
-// mug riding the hand, the mug's speed, the mug down from f105).
+// mug riding the hand, the mug's speed, the mug down from f135).
 //
 // SOURCES: none on screen. 100 = the speaker's number (his own illustration).
 // ---------------------------------------------------------------------------
@@ -55,11 +60,11 @@ import { closedD, covidGripTo, ellPts, tubeD, type CShape } from "../kyle-covid/
 import { add, mix2, mul, rot } from "../kits/maps/stringsMotion";
 import { mixC } from "../kyle-pandemics/pandemicFolkPaint";
 import { MUG, mugShapes } from "./sinceWritingProps";
-import { CREAM, OFFICE, OfficeDesk, OfficeRoom, OfficeShafts, OfficeTint, PLATE_FONT, SheetStack, WorkSheet, MugSteam, officeScene, sheetFlight, stackTop, type SheetPose } from "./sinceWritingWorld";
+import { CREAM, OFFICE, SHEET, OfficeDesk, OfficeRoom, OfficeShafts, OfficeTint, PLATE_FONT, SheetStack, WorkSheet, MugSteam, officeScene, sheetFlight, stackTop, type SheetPose } from "./sinceWritingWorld";
 import type { AirWorld } from "../kits/dwarkesh-3d/dwarkesh3d";
 
 export const FPS = 24000 / 1001;
-export const DURATION = 117;
+export const DURATION = 147;
 export const schema = z.object({ guides: z.boolean().default(false) });
 export const defaultProps = schema.parse({});
 
@@ -80,26 +85,30 @@ export const AI = { X: 200, Z: 0 };
 /** the pad on its desk between the keyboard and the monitor (the source of the sheets) */
 export const PAD = { X: AI.X - 108, Y: -132, Z: -2, n: 7, yaw: -3, seed: 7 };
 /** the stack on the floor in front of the gap between the desks (the long side of the A4 to us) */
-export const STACK = { X: -8, Z: -200, yaw: 88, seed: 3 };
+export const STACK = { X: 40, Z: -165, yaw: 88, seed: 3 };
 /** the one label: a luggage tag "100 / WORKDAYS" on a string from a binder clip on the top sheets' front edge, hanging
  *  in front of the stack's face (world space: Z just in front of the face), dropped on as the 100th sheet lands */
-export const TAG = { Z: -222, drop: 22, W: 100, H: 70, numSize: 36, labSize: 13.5, labSpacing: 0.05, f0: 68 };
+export const TAG = { Z: STACK.Z - 22, drop: 12, W: 100, H: 70, numSize: 36, labSize: 13.5, labSpacing: 0.05, f0: 103 };
 /** the room: the window high on the left (the low morning sun at the upper left; the stack against the plain wall) */
 const ROOM = { ...OFFICE, win: { ...OFFICE.win, x0: -660, x1: -130, sill: -330, head: -600 } };
 export const TOTAL = 100;
 
 // ---------------------------------------------------------------------------
-// THE COUNT: landing frames of sheets 1..100 from an eased rate (a slow start, a peak ~f36, slowing to the 100th on
-// f68 "done"). N(f) = 1 + integral_6^f rate, rate = BASE + PEAK * exp(-((f - MID) / SIG)^2), PEAK solved so N(68) = 100.
+// THE COUNT: N(f) = 1 + integral_F_FIRST^f rate, rate = BASE + PEAK * exp(-((f - MID) / SIG)^2), PEAK solved so
+// N(98) = 100: a slow start, a peak ~f66, slowing so the last few land alone and the 100th lands alone on "done" (f98).
+// THE FLIGHTS: the sheets fly in groups (FLY) landing at least CADENCE frames apart: one sheet at a time while the rate
+// is low, a small sheaf of 2-3 (fanned, separating a little in the air) at the peak, so at most ~6-7 flights are ever in
+// the air. Each flight leaves the pad with an ease-in and lands with way on (no hover over the stack, no ladder), on
+// its own arc (height, sideways drift, flutter: its seed).
 // ---------------------------------------------------------------------------
-const F_FIRST = 6;
-const F_LAST = 68;
-const BASE = 0.15;
-const MID = 36;
-const SIG = 12;
-/** flight frames of sheet i (0-based): the early, lone sheets float (20 frames, the close-up's long drop to the floor),
- *  the stream at the peak flies in 14 */
-export const flightOf = (i: number) => 14 + 6 * (1 - Math.min(1, i / 24));
+const F_FIRST = 8;
+const F_LAST = 98;
+const BASE = 0.55;
+const MID = 58;
+const SIG = 20;
+const CADENCE = 2.3;
+/** the 99th lands by F_99 (the last few alone, slowing), the 100th alone on F_LAST */
+const F_99 = 94;
 const gaussInt = (a: number, b: number) => {
   // integral of exp(-((f - MID)/SIG)^2) from a to b (fine Riemann sum, module load only)
   let s = 0;
@@ -111,73 +120,121 @@ const gaussInt = (a: number, b: number) => {
   }
   return s;
 };
-const PEAK = (TOTAL - 1 - BASE * (F_LAST - F_FIRST)) / gaussInt(F_FIRST, F_LAST);
-export const LAND: number[] = (() => {
-  // invert N(f) by marching in small steps
-  const out: number[] = [F_FIRST];
-  let f = F_FIRST;
+const PEAK = (TOTAL - 2 - BASE * (F_99 - F_FIRST)) / gaussInt(F_FIRST, F_99);
+/** the continuous count N(f) (1 at F_FIRST, 99 at F_99) */
+const countN = (() => {
+  const h = 0.01;
+  const tab: number[] = [];
   let N = 1;
-  const h = 0.002;
-  while (out.length < TOTAL) {
-    const r = BASE + PEAK * Math.exp(-(((f + h / 2 - MID) / SIG) ** 2));
-    const next = N + r * h;
-    const target = out.length + 1;
-    if (next >= target) {
-      out.push(f + ((target - N) / r));
-    }
-    N = next;
-    f += h;
+  for (let f = F_FIRST; f <= F_99 + h; f += h) {
+    tab.push(N);
+    N += (BASE + PEAK * Math.exp(-(((f + h / 2 - MID) / SIG) ** 2))) * h;
   }
-  out[TOTAL - 1] = F_LAST;
-  return out;
+  const scale = (TOTAL - 2) / (tab[Math.round((F_99 - F_FIRST) / h)] - 1);
+  return (f: number) => (f <= F_FIRST ? 1 : 1 + (tab[Math.min(tab.length - 1, Math.round((f - F_FIRST) / h))] - 1) * scale);
 })();
-/** one sheet's flight at tau 0..1 on the world's sheetFlight, two changes made here (cut-local): the progress along the
- *  arc runs nearly even (sheetFlight eases out hard, which bunched the dense stream into a ladder over the stack) and
- *  the arc is lower (APEX_KEEP of its height: the stream passes under the monitor's screen). Exactly `to` at tau 1. */
 const hash = (i: number, k: number) => {
   const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453;
   return x - Math.floor(x);
 };
+/** one flight: sheets first..first+size-1 (0-based), landing at frame `land` after `D` frames in the air */
+export type Flight = { first: number; size: number; land: number; D: number; seed: number };
+export const FLY: Flight[] = (() => {
+  const out: Flight[] = [];
+  let count = 1;
+  let t = F_FIRST;
+  out.push({ first: 0, size: 1, land: t, D: 0, seed: 1 });
+  while (count < TOTAL - 1) {
+    // the next landing: no sooner than CADENCE after the last, and not before the next whole sheet is due
+    let tn = t + CADENCE;
+    while (countN(tn) < count + 1 - 1e-9 && tn < F_99) tn += 0.01;
+    tn = Math.min(tn, F_99);
+    const size = tn >= F_99 ? TOTAL - 1 - count : Math.max(1, Math.min(TOTAL - 1 - count, Math.floor(countN(tn) + 1e-6) - count));
+    out.push({ first: count, size, land: tn, D: 0, seed: out.length + 1 });
+    count += size;
+    t = tn;
+  }
+  // the 100th, alone, on "done"
+  out.push({ first: TOTAL - 1, size: 1, land: F_LAST, D: 0, seed: out.length + 1 });
+  // flight times: the first, lone sheets float (17-19 frames), the stream flies in 12-15
+  for (const g of out) g.D = 14 + 3 * hash(g.seed, 7) + 2 * (1 - Math.min(1, g.first / 12));
+  return out;
+})();
+/** landing frame of each sheet 1..100 (0-based index): its flight's */
+export const LAND: number[] = FLY.flatMap((g) => Array.from({ length: g.size }, () => g.land));
+/** sheets on the floor stack at frame f */
+export const countAt = (f: number) => {
+  let n = 0;
+  for (const g of FLY) if (g.land <= f + 1e-9) n += g.size;
+  return n;
+};
+/** progress along the arc: an ease-in off the pad, still moving at the stack (slope 0.3 at tau 1) */
 const progress = (tau: number) => {
   const t = c01(tau);
-  return 0.5 * t * t * (3 - 2 * t) + 0.5 * (1 - Math.pow(1 - t, 1.35));
+  return 0.7 * t * t * (3 - 2 * t) + 0.3 * t * t * (2 - t);
 };
-/** a sheet's share of the arc's height (0.25-0.8, its own) */
-const keepOf = (seed: number) => 0.25 + 0.55 * hash(seed, 1);
+/** a flight's share of the arc's height (0.6-0.97, its own: the close-up keeps the arcs low, under the robot's face) */
+const keepOf = (seed: number) => 0.6 + 0.37 * hash(seed, 1);
+/** one sheet's flight at tau 0..1 on the world's sheetFlight (cut-local: the progress above, each flight's own arc height
+ *  and sideways drift). Exactly `to` at tau 1. */
 export const flightAt = (from: SheetPose, to: SheetPose, tau: number, seed: number): SheetPose => {
   const s = progress(tau);
   const u = 1 - Math.pow(1 - s, 1 / 1.7);
   const q = sheetFlight(from, to, u, seed);
   const dist = Math.hypot(to.X - from.X, to.Z - from.Z, to.Y - from.Y);
   const apex = 30 + 0.32 * dist;
-  // a loose flock, not one line: each sheet keeps its own share of the arc's height and drifts sideways a little
-  // (zero at both ends, so it still leaves the pad and lands on the stack exactly)
   const keep = keepOf(seed);
   const mid = Math.sin(Math.PI * s);
   return {
     ...q,
-    X: q.X + (hash(seed, 2) - 0.5) * 50 * mid,
+    X: q.X + (hash(seed, 2) - 0.5) * 44 * mid,
     Y: q.Y + (1 - keep) * apex * 4 * s * (1 - s),
-    Z: q.Z + (hash(seed, 3) - 0.5) * 60 * mid,
-    yaw: q.yaw + (hash(seed, 4) - 0.5) * 70 * mid,
-    roll: q.roll + (hash(seed, 5) - 0.5) * 30 * mid,
+    Z: q.Z + (hash(seed, 3) - 0.5) * 40 * mid,
+    yaw: q.yaw + (hash(seed, 4) - 0.5) * 80 * mid,
+    roll: q.roll + (hash(seed, 5) - 0.5) * 34 * mid,
   };
 };
-/** sheets on the floor stack at frame f */
-export const countAt = (f: number) => {
-  let n = 0;
-  for (const l of LAND) if (l <= f + 1e-9) n++;
-  return n;
+/** the sheets in the air at frame f: sheet index and pose. A sheaf is ONE object in the air: its sheets lie on each
+ *  other (one sheet's thickness apart, a few degrees and units out of square), so it reads as a small loose bundle */
+export const flyersAt = (f: number, padTop: SheetPose) => {
+  const out: { i: number; pose: SheetPose }[] = [];
+  // the newest flights first, so the ones nearer the stack (nearer the camera) paint over the ones just leaving
+  for (const g of [...FLY].reverse()) {
+    const launch = g.land - g.D;
+    if (g.D <= 0 || f < launch || f >= g.land) continue;
+    const tau = (f - launch) / g.D;
+    const to = stackTop(STACK.X, STACK.Z, g.first + 1, 0, STACK.yaw, STACK.seed);
+    const q = flightAt(padTop, to, tau, g.seed);
+    const loose = Math.sin(Math.PI * c01(tau));
+    // the bottom sheet first (painted under the ones above it)
+    for (let j = 0; j < g.size; j++) {
+      out.push({
+        i: g.first + j,
+        pose: {
+          ...q,
+          X: q.X + (hash(g.seed, 10 + j) - 0.5) * 5 * loose,
+          Y: q.Y - j * 1.3,
+          Z: q.Z + (hash(g.seed, 20 + j) - 0.5) * 5 * loose,
+          yaw: q.yaw + (hash(g.seed, 30 + j) - 0.5) * 10 * loose,
+        },
+      });
+    }
+  }
+  return out;
 };
 
 // ---------------------------------------------------------------------------
-// THE CAMERA: one continuous move, both sitters in shot throughout: a slow push-in (one lobe, f0-102, k 1.48 -> 1.60)
-// as the stack rises between them, then a creep.
+// THE CAMERA: one continuous move: close on the robot, a visible push-in drifting a touch left (f0-94), then the pan /
+// truck left with a pull-back to the two-shot (f94-130, pchip: the push-in eases into the pull-back), then a creep.
+// The f106 key holds the pan back while the pull-back gets going, so the robot's face (moving right as we pan left) stays
+// inside the keep-in box.
 // ---------------------------------------------------------------------------
 const camKeys = makeCamera([
-  { f: 0, k: 1.64, wx: -10, wy: -160, sx: 540, sy: 960 },
-  { f: 102, k: 1.75, wx: -10, wy: -165, sx: 540, sy: 960 },
-  { f: 116, k: 1.755, wx: -10, wy: -165, sx: 540, sy: 960 },
+  { f: 0, k: 3.4, wx: 127, wy: -160, sx: 540, sy: 960 },
+  { f: 94, k: 4.4, wx: 114, wy: -172, sx: 540, sy: 960 },
+  { f: 106, k: 3.3, wx: 92, wy: -172, sx: 540, sy: 960 },
+  { f: 130, k: 1.76, wx: -8, wy: -165, sx: 540, sy: 960 },
+  { f: 146, k: 1.745, wx: -12, wy: -166, sx: 540, sy: 960 },
 ]);
 export const camOf = (f: number) => swayCam(camKeys(f), f);
 const REST = camOf(0);
@@ -197,18 +254,19 @@ const keyed = (keys: [number, number][]) => (f: number) => {
   }
   return keys[keys.length - 1][1];
 };
-/** sip 1: up f4-16, tip in f14-20, drink to f34, tip out f34-38, down to the hold f36-46; sip 2 (the last): up f62-72,
- *  tip in f69-75, drink (it drains) to f94, tip out f94-98, down f97-105: the empty mug lands on "coffee" (f105) */
+/** sip 1 (off screen): up f34-46, tip in f44-50, drink to f64, tip out f64-68, down to the hold f66-76; sip 2 (the last,
+ *  revealed by the pan): up f92-102, tip in f99-105, drink (it drains) to f124, tip out f124-128, down f127-135: the
+ *  empty mug lands on "coffee" (f135) */
 export const SIP = {
-  e: keyed([[0, 0], [4, 0], [16, 1], [36, 1], [46, 0.3], [62, 0.3], [72, 1], [97, 1], [105, 0]]),
-  tip: keyed([[0, 0], [14, 0], [20, 1], [34, 1], [38, 0], [69, 0], [75, 1], [94, 1], [98, 0]]),
-  drink: keyed([[0, 0], [15, 0], [21, 1], [33, 1], [38, 0], [71, 0], [77, 1], [93, 1], [98, 0]]),
-  level: keyed([[0, 0.85], [20, 0.85], [33, 0.45], [76, 0.45], [93, 0]]),
-  hold: keyed([[0, 1], [105, 1], [112, 0]]),
-  steam: keyed([[0, 1], [74, 1], [96, 0]]),
+  e: keyed([[0, 0], [34, 0], [46, 1], [66, 1], [76, 0.3], [92, 0.3], [102, 1], [127, 1], [135, 0]]),
+  tip: keyed([[0, 0], [44, 0], [50, 1], [64, 1], [68, 0], [99, 0], [105, 1], [124, 1], [128, 0]]),
+  drink: keyed([[0, 0], [45, 0], [51, 1], [63, 1], [68, 0], [101, 0], [107, 1], [123, 1], [128, 0]]),
+  level: keyed([[0, 0.85], [50, 0.85], [63, 0.45], [106, 0.45], [123, 0]]),
+  hold: keyed([[0, 1], [135, 1], [142, 0]]),
+  steam: keyed([[0, 1], [104, 1], [126, 0]]),
 };
 /** the frame the empty mug lands on the desk ("coffee") */
-export const MUG_DOWN = 105;
+export const MUG_DOWN = 135;
 // ---------------------------------------------------------------------------
 // THE MUG (cut-local, Rev 1): a plain cream mug, 1.45x the props module's MUG so it reads at the resolved scale, drawn
 // here (mugShapes' geometry, scaled; the world modules are unchanged) and swapped into the figure's paint in place of
@@ -283,7 +341,7 @@ export const youAt = (f: number): { pose: HumanPose; mug: MugState } => {
   const src = HUMAN_POSES.seatedSip(1, 0, f, lvl);
   const p0 = src.pose;
   // the last sip tips steeper as the mug drains
-  const tilt = -(62 + 12 * sst(84, 94, f)) * tipA;
+  const tilt = -(62 + 12 * sst(114, 124, f)) * tipA;
   const atMouth = bigBaseForRim(add(sipMouth(), [2, 1]), tilt, -1);
   const arc: P2 = [10 * Math.sin(Math.PI * e), -4 * Math.sin(Math.PI * e)];
   // held off the face (forward, away from it) whenever it is up but not tipped into the lips: it comes up in front of
@@ -314,8 +372,8 @@ const You: React.FC<{ f: number; at: P2; scale: number; fog: ReturnType<ReturnTy
 
 // ---------------------------------------------------------------------------
 // THE TAG: "100 / WORKDAYS" on a slate luggage tag (cream Caslon, PLATE_FONT), its string from a binder clip on the top
-// sheets' front edge; it drops on as the 100th sheet lands (f68: in over 3 frames, the string goes taut by f73) and
-// swings to rest (a damped pendulum about the clip, settled by ~f90). One plane at TAG.Z: a uniform perspective scale.
+// sheets' front edge; it drops on as the pan brings the finished stack in (f103: in over 3 frames, the string taut by
+// f108) and swings to rest (a damped pendulum about the clip, settled by ~f125). One plane at TAG.Z: a uniform perspective scale.
 // ---------------------------------------------------------------------------
 const TAG_INK = { card: "#3C514E", rule: "#8FA39E", clip: "#262E2D", wire: "#A9B1AE", string: "#D9D1C0" };
 const easeOutBack = (x: number) => {
@@ -382,6 +440,71 @@ const StackTag: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
   );
 };
 
+// ---------------------------------------------------------------------------
+// THE FLOOR STACK: the world's SheetStack, clipped to its own silhouette (the module's foot shadow sits off to the right
+// of the stack and does not grow), over a cut-local contact shadow: centred under the stack's footprint, soft and light,
+// spreading and darkening a little as the pile grows; nothing before the first sheet lands.
+// ---------------------------------------------------------------------------
+const hull = (pts: [number, number][]) => {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: [number, number][] = [];
+  for (const q of p) {
+    while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop();
+    lo.push(q);
+  }
+  const up: [number, number][] = [];
+  for (const q of [...p].reverse()) {
+    while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop();
+    up.push(q);
+  }
+  return [...lo.slice(0, -1), ...up.slice(0, -1)];
+};
+/** the stack's footprint corners (world X, Z), grown by `m` units on each side (covers the sheets' jitter) */
+const footprint = (m: number): [number, number][] => {
+  const a = STACK.yaw * (Math.PI / 180);
+  const hw = SHEET.w / 2 + m;
+  const hl = SHEET.l / 2 + m;
+  return [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ].map(([u, v]) => [STACK.X + u * hw * Math.cos(a) + v * hl * Math.sin(a), STACK.Z - u * hw * Math.sin(a) + v * hl * Math.cos(a)]);
+};
+const FloorStack: React.FC<{ A: AirWorld; n: number }> = ({ A, n }) => {
+  if (n <= 0) return null;
+  const P = A.P;
+  const topY = stackTop(STACK.X, STACK.Z, n, 0, STACK.yaw, STACK.seed).Y;
+  const fp = footprint(5);
+  const sil = hull([...fp.map(([x, z]) => P.p(x, 1, z) as [number, number]), ...fp.map(([x, z]) => P.p(x, topY - 1, z) as [number, number])]);
+  const grow = c01(n / 70);
+  const sh = footprint(6 + 10 * grow).map(([x, z]) => P.p(x, 0, z));
+  const cx = sh.reduce((t, q) => t + q[0], 0) / 4;
+  const cy = sh.reduce((t, q) => t + q[1], 0) / 4;
+  const rx = (Math.max(...sh.map((q) => q[0])) - Math.min(...sh.map((q) => q[0]))) / 2;
+  const ry = (Math.max(...sh.map((q) => q[1])) - Math.min(...sh.map((q) => q[1]))) / 2;
+  const a = (0.2 + 0.14 * grow) * (1 - A.fog(STACK.Z));
+  return (
+    <g>
+      <defs>
+        <radialGradient id="stk-cs">
+          <stop offset="0" stopColor="#2A2620" stopOpacity={a} />
+          <stop offset="0.55" stopColor="#2A2620" stopOpacity={0.55 * a} />
+          <stop offset="1" stopColor="#2A2620" stopOpacity={0} />
+        </radialGradient>
+        <clipPath id="stk-clip">
+          <path d={`M${sil.map((q) => `${q[0].toFixed(2)} ${q[1].toFixed(2)}`).join("L")}Z`} />
+        </clipPath>
+      </defs>
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry * 1.15} fill="url(#stk-cs)" />
+      <g clipPath="url(#stk-clip)">
+        <SheetStack A={A} X={STACK.X} Z={STACK.Z} n={n} yaw={STACK.yaw} seed={STACK.seed} uid="stack" />
+      </g>
+    </g>
+  );
+};
+
 const Guides: React.FC = () => (
   <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0 }}>
     <rect x={65} y={290} width={950} height={780} fill="none" stroke="#2B6F8F" strokeWidth={2} strokeDasharray="10 8" opacity={0.8} />
@@ -409,16 +532,8 @@ const CoffeeHundredWorkdays: React.FC<z.infer<typeof schema>> = ({ guides }) => 
   // the paper
   const n = countAt(frame);
   const padTop = stackTop(PAD.X, PAD.Z, PAD.n + 1, PAD.Y, PAD.yaw, PAD.seed);
-  const flyers: React.ReactNode[] = [];
-  // newest first, so the sheets nearer the stack (nearer the camera) paint over the ones just leaving
-  for (let i = TOTAL - 1; i >= 0; i--) {
-    const land = LAND[i];
-    const D = flightOf(i);
-    const launch = land - D;
-    if (frame < launch || frame >= land) continue;
-    const to = stackTop(STACK.X, STACK.Z, i + 1, 0, STACK.yaw, STACK.seed);
-    flyers.push(<WorkSheet key={i} A={A} pose={flightAt(padTop, to, (frame - launch) / D, i + 1)} uid={`fl${i}`} shadowY={0} />);
-  }
+  // no floor shadows under the sheets in the air (the only shadow on the floor is the stack's own)
+  const flyers = flyersAt(frame, padTop).map(({ i, pose }) => <WorkSheet key={i} A={A} pose={pose} uid={`fl${i}`} />);
 
   return (
     <AbsoluteFill>
@@ -437,7 +552,7 @@ const CoffeeHundredWorkdays: React.FC<z.infer<typeof schema>> = ({ guides }) => 
           <Bot variant={0} pose={gPose} at={ga.at} scale={ga.scale} uid="ai" frame={frame} fog={A.folkFog(AI.Z)} unitPx={A.k} />
           <OfficeDesk A={A} X={AI.X} Z={AI.Z} dir={-1} uid="gdf" layer="front" monitor={false} keyboard />
           {/* the stack on the floor, the sheets in flight, the tag */}
-          <SheetStack A={A} X={STACK.X} Z={STACK.Z} n={n} yaw={STACK.yaw} seed={STACK.seed} uid="stack" />
+          <FloorStack A={A} n={n} />
           {flyers}
           <StackTag A={A} frame={frame} />
           <OfficeShafts A={A} sunT={SUN_T} uid="sh" room={ROOM} />
