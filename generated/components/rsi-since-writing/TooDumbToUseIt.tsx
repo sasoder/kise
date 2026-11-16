@@ -2,7 +2,7 @@
 // TooDumbToUseIt (rsi-since-writing, cut 29). Dwarkesh 3D style (styles/dwarkesh-3d.md).
 // Opaque 1080x1920, 23.976 fps, 83 frames.
 // One office inside the misty teal air (AirStage, palette A, the shared world sinceWritingWorld, read-only) on a
-// londonDepth one-point perspective, from the kit kits/dwarkesh-3d/dwarkesh3d; the Genius from rsi-ten-earths.
+// londonDepth one-point perspective, from the kit kits/dwarkesh-3d/dwarkesh3d; the robot (tenEarthsBot v0) from rsi-ten-earths.
 //
 // CHECK LINE: "In most fields, all that speed just turns out work nobody can use."
 //
@@ -11,23 +11,23 @@
 //   stupid 31 · to 39 · make 48 · much 53 · use 58 · of 64 · this 67 · advantage. 70 · (slot ends 83) But 82 · in 87
 // DURATION: the slot 29.8632 -> 33.3250 s (sequence frames 716-799) = 83 frames at 24000/1001 (f0..f82).
 //
-// THE MOTION: the Genius (v0) types at full speed at his desk on the left, facing right, from before f0 to the last
-// frame. Finished WorkSheets (one sheet = one workday, cream) shoot off the pad by his keyboard in a steady stream, one
+// THE MOTION: the robot (tenEarthsBot v0, seated by BOT_DESK) types at full speed at its desk on the left, facing right, from before f0 to the last
+// frame. Finished WorkSheets (one sheet = one workday, cream) shoot off the pad by its keyboard in a steady stream, one
 // every 3.2 frames (constant cadence, launches from f-16): each is shot off fast, banking and swinging past the monitor
 // (a turning, curling sliver, never a sheet face-on), tips its inked face part way up, crumples into a ball in ~2.5
 // frames and drops toward the wire bin in front-right of the desk (a 19-frame flight). The bin is full and domed over
 // at f0; every ball lands on the dome and tumbles off it onto the floor (7-14 frames, by how far it rolls), so a heap
 // grows round the bin's foot: 0 balls at f0, 5 at f31, 12 at f50, 21 at f82, the stream still feeding it. About one
-// sheet in six only half crumples and settles flat-ish, a loose crinkled sheet among the balls. On "stupid" he glances
-// down at the heap, puzzled (f24-31 in, held to f50, back by f57: chin down, eyes down-right, brows up, a small head
-// tilt), his hands typing throughout: speed without use. The camera makes one slow push in from a medium shot of desk
-// and bin (k 1.65) to the bin and heap with the Genius in shot (k 2.3, f0 -> f70, one lobe), then a creep. Resolved:
-// his head y 550-850 (face ~y 650), the stream y 790-1000, the bin and heap y 985-1330 (the heap's front rows run
+// sheet in six only half crumples and settles flat-ish, a loose crinkled sheet among the balls. On "stupid" it glances
+// down at the heap, puzzled (f24-31 in, held to f50, back by f57: head dipped and tilted toward it, the dot eyes
+// down-right and squinted, the smile flat), its mittens typing throughout: speed without use. The camera makes one slow push in from a medium shot of desk
+// and bin (k 1.65) to the bin and heap with the robot in shot (k 2.3, f0 -> f70, one lobe), then a creep. Resolved:
+// its head y 556-862 (face screen ~y 650), the stream y 790-1000, the bin and heap y 985-1330 (the heap's front rows run
 // through the first caption band as context), the heap x 570-935.
 // CAUSE -> EFFECT: a sheet leaves the pad on its launch frame (its flight is a pure function of frame - launch); a ball
 // touches the dome on its contact frame (launch + 19) and tumbles from there, settling in its heap slot tumbleOf(i)
 // frames later; the heap's count is the number of settled balls.
-// Orange = the AI only (the Genius); the paper cream, the wasted paper greying toward DEAD; nothing else is orange.
+// Orange = the AI only (the robot); the paper cream, the wasted paper greying toward DEAD; nothing else is orange.
 // THE TONE: cream while it crumples, only ~30% toward DEAD by the time it lands, greying on to its own light DEAD
 // (52-82%) over ~45 frames in the heap, so the newest balls are the brightest; the bin's old balls 74-84%.
 // THE BALL (cut-local `Wad`, not the world's CrumpledSheet): round with a few soft lumps (low harmonics, no spikes), a
@@ -35,8 +35,8 @@
 // WorkSheet's own outline, ink and tone in its hand-over pose (check: 0.000 px), and it blends that outline (on
 // screen, never through an edge-on pose) to a resting pose as it falls; loose sheets keep crumple 0.62, squashed flat.
 //
-// DEPTH: eye Y -290, dRef 1700 at kRef 1.32, dolly 0.5, fog by the eye (officeScene(0.35)). The Genius at X -330,
-// Z 0 (dir 1); his desk x 48..173 along +X, Z -30..220, the monitor at x 160 (OfficeDesk); the pad at x 108, Z -4; the
+// DEPTH: eye Y -290, dRef 1700 at kRef 1.32, dolly 0.5, fog by the eye (officeScene(0.35)). The desk (and the robot's seat, BOT) at X -330,
+// Z 0 (dir 1; BOT_DESK's keys land on this desk's keyboard with no offset); the desk x 48..173 along +X, Z -30..220, the monitor at x 160 (OfficeDesk); the pad at x 108, Z -4; the
 // wire bin (R 36, H 72) at X G + 262, Z -130; the heap's slots in rings round its foot (52, 80, 108 units from its
 // axis, two layers up against it). The window moved to X -200..420, sill -330 (OfficeRoom's room prop).
 // CHECKS: scripts/clips/rsi-since-writing/check-too-dumb.ts (camera lobe, head vs keep-in box and bands, paper vs the
@@ -48,7 +48,7 @@ import React from "react";
 import { AbsoluteFill, random, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AIR, AirStage, WorldSvg, airWorldOf, c01, makeCamera, mixHex, swayCam, type AirWorld, type DepthOpts, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { GENIUS_POSES, Genius, type GeniusPose } from "../rsi-ten-earths/tenEarthsGenius";
+import { BOT_POSES, Bot, type BotPose } from "../rsi-ten-earths/tenEarthsBot";
 import { CREAM, DEAD, OFFICE, OfficeDesk, OfficeRoom, OfficeShafts, OfficeTint, SHEET, SheetStack, WireBin, WorkSheet, officeScene, stackTop, type SheetPose } from "./sinceWritingWorld";
 
 export const FPS = 24000 / 1001;
@@ -74,13 +74,17 @@ const hash = (i: number, k: number) => random(`tdu-${i}-${k}`);
 // ---------------------------------------------------------------------------
 export const SUN_T = 0.35;
 export const DEPTH: DepthOpts = { eyeY: -290, dRef: 1700, kRef: 1.32, dolly: 0.5 };
-/** the Genius's seat (the floor under his hips), facing right */
+/** the desk's (and the chair's) place, facing right; the robot sits at BOT below */
 export const G = { X: -330, Z: 0 };
-/** the pad on his desk between the keyboard and the monitor (the source of the sheets) */
+/** the robot's seat (the floor under its hips): BOT_DESK's keys sit 6 units nearer the body than GENIUS_DESK's,
+ *  BOT_DX shifts it from the desk's sitter point (0: its mittens already land on this desk's keyboard) */
+export const BOT_DX = 0;
+export const BOT = { X: G.X + BOT_DX, Z: G.Z };
+/** the pad on the desk between the keyboard and the monitor (the source of the sheets) */
 export const PAD = { X: G.X + 108, Y: -132, Z: -4, n: 7, yaw: 3, seed: 7 };
 /** the wire bin in front of the desk's right end */
 export const BIN = { X: G.X + 262, Z: -130, R: 36, H: 72 };
-/** the room: the window to the left, behind the Genius (the heap against the plain plaster) */
+/** the room: the window to the left, behind the robot (the heap against the plain plaster) */
 const ROOM = { ...OFFICE, win: { ...OFFICE.win, x0: -200, x1: 420, sill: -330, head: -680 } };
 
 // ---------------------------------------------------------------------------
@@ -348,20 +352,22 @@ export const camOf = (f: number) => swayCam(camKeys(f), f);
 const REST = camOf(0);
 
 // ---------------------------------------------------------------------------
-// THE GENIUS: typing the whole cut; the puzzled glance at the heap on "stupid"
+// THE ROBOT: typing the whole cut; the puzzled glance at the heap on "stupid"
 // ---------------------------------------------------------------------------
 export const glanceAt = (f: number) => sst(24, 31, f) * (1 - sst(50, 57, f));
-export const geniusAt = (f: number): GeniusPose => {
-  const q = GENIUS_POSES.typeAtDesk(1, f);
+/** the glance: its head dips and turns toward the heap with a small tilt, the dot eyes slide down-right and narrow
+ *  to a squint, the smile goes flat; its mittens keep typing */
+export const botAt = (f: number): BotPose => {
+  const q = BOT_POSES.typeAtDesk(1, f);
   const g = glanceAt(f);
   if (g <= 0) return q;
   return {
     ...q,
-    headYaw: q.headYaw + 0.1 * g,
+    headYaw: q.headYaw + 0.12 * g,
     pitch: q.pitch + 18 * g,
-    roll: q.roll + 8 * g,
-    look: [lerp(q.look?.[0] ?? 0, 0.55, g), lerp(q.look?.[1] ?? 0, 0.85, g)],
-    worry: 0.8 * g,
+    roll: q.roll + 9 * g,
+    look: [lerp(q.look?.[0] ?? 0, 0.8, g), lerp(q.look?.[1] ?? 0, 1, g)],
+    lids: Math.max(q.lids, 0.42 * g),
     mouth: lerp(q.mouth, 0, g),
   };
 };
@@ -552,8 +558,8 @@ const TooDumbToUseIt: React.FC<z.infer<typeof schema>> = ({ guides }) => {
   const frame = useCurrentFrame();
   const cam = camOf(frame);
   const A = airWorldOf({ cam, rest: REST, depth: DEPTH, frame, scene: officeScene(SUN_T) });
-  const ga = A.P.at(G.X, G.Z);
-  const gPose = geniusAt(frame);
+  const ga = A.P.at(BOT.X, BOT.Z);
+  const gPose = botAt(frame);
 
   // the paper: sort by distance from the eye, far first
   const eye = { X: A.P.vp[0], Y: DEPTH.eyeY, Z: -A.P.Dc };
@@ -578,7 +584,7 @@ const TooDumbToUseIt: React.FC<z.infer<typeof schema>> = ({ guides }) => {
           <OfficeRoom A={A} sunT={SUN_T} uid="room" room={ROOM} />
           <OfficeDesk A={A} X={G.X} Z={G.Z} dir={1} uid="gd" layer="back" />
           <SheetStack A={A} X={PAD.X} Z={PAD.Z} Y={PAD.Y} n={PAD.n} yaw={PAD.yaw} seed={PAD.seed} uid="pad" />
-          <Genius variant={0} pose={gPose} at={ga.at} scale={ga.scale} uid="ai" frame={frame} fog={A.folkFog(G.Z)} unitPx={A.k} />
+          <Bot variant={0} pose={gPose} at={ga.at} scale={ga.scale} uid="ai" frame={frame} fog={A.folkFog(BOT.Z)} unitPx={A.k} />
           <OfficeDesk A={A} X={G.X} Z={G.Z} dir={1} uid="gdf" layer="front" />
           <WireBin A={A} X={BIN.X} Z={BIN.Z} R={BIN.R} H={BIN.H} uid="bin" layer="back" />
           {inside.map(draw)}

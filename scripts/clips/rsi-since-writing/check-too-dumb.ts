@@ -1,5 +1,5 @@
 // TooDumbToUseIt (rsi-since-writing, cut 29) per-frame checks, in screen px (sway included):
-// the camera (log k: one push, no reversal; its speed as a sparkline), the Genius's head (inside the keep-in box
+// the camera (log k: one push, no reversal; its speed as a sparkline), the robot's head (inside the keep-in box
 // x 65-1015, y 290-1070, never in the caption bands y 1080-1250 / 1360-1460), the sheets and balls against his head
 // (no paper over the face on any frame), the stream's screen speed, the bin and the heap (count, where they sit), the
 // sheet -> ball hand-over (the WorkSheet's projected corners vs the ball's flat rectangle on the hand-over frame), and a
@@ -11,16 +11,15 @@ import {
   D_AIR,
   DEPTH,
   DURATION,
-  G,
   N_FLY,
   PREFILL,
   RB,
   SUN_T,
-  airPos,
   ballsAt,
   camOf,
   contactOf,
-  geniusAt,
+  botAt,
+  BOT,
   launchOf,
   restOf,
   restingAt,
@@ -31,7 +30,7 @@ import {
   wadOutline,
 } from "../../../generated/components/rsi-since-writing/TooDumbToUseIt";
 import { SHEET, officeScene } from "../../../generated/components/rsi-since-writing/sinceWritingWorld";
-import { geniusAnchors } from "../../../generated/components/rsi-ten-earths/tenEarthsGenius";
+import { botAnchors } from "../../../generated/components/rsi-ten-earths/tenEarthsBot";
 
 type P2 = [number, number];
 const issues: string[] = [];
@@ -51,6 +50,8 @@ for (let i = 1; i < dk.length - 1; i++) if (dk[i] > dk[i - 1] && dk[i] > dk[i + 
 log.push(`k ${cams[0].k.toFixed(3)} -> ${cams[DURATION - 1].k.toFixed(3)}; zoom %/f by 6: ${dk.filter((_, i) => i % 6 === 0).map((v) => (v * 100).toFixed(2)).join(" ")}; speed peaks ${lobes}`);
 
 // ---- per frame ----
+const botPrev = new Map<string, P2>();
+let botJump = { v: 0, at: "" };
 let worstHeadTop = 1e9;
 let worstHeadBot = 0;
 let headX: [number, number] = [1e9, -1e9];
@@ -67,12 +68,25 @@ let maxAcc = { v: 0, at: "" };
 for (let f = 0; f < DURATION; f++) {
   const cam = cams[f];
   const A = airWorldOf({ cam, rest: cams[0], depth: DEPTH, frame: f, scene: officeScene(SUN_T) });
-  const ga = A.P.at(G.X, G.Z);
-  const an = geniusAnchors(0, geniusAt(f), ga.at, ga.scale);
+  const ga = A.P.at(BOT.X, BOT.Z);
+  const an = botAnchors(0, botAt(f), ga.at, ga.scale);
   const hc = scr(cam, an.headC as P2);
   const hr = (an.headR as number) * cam.k;
   const top = scr(cam, an.headTop as P2);
   worstHeadTop = Math.min(worstHeadTop, top[1]);
+  // the robot's pop audit: its head, screen and mittens, per-frame screen jump (camera motion included)
+  for (const nm of ["headC", "screen", "handL", "handR", "hip"] as const) {
+    const v = (an as unknown as Record<string, P2>)[nm];
+    if (!v) continue;
+    const pt = scr(cam, v);
+    const k0 = `bot-${nm}`;
+    const q0 = botPrev.get(k0);
+    if (q0) {
+      const j = Math.hypot(pt[0] - q0[0], pt[1] - q0[1]);
+      if (j > botJump.v) botJump = { v: j, at: `f${f} ${nm}` };
+    }
+    botPrev.set(k0, pt);
+  }
   worstHeadBot = Math.max(worstHeadBot, hc[1] + hr);
   headX = [Math.min(headX[0], hc[0] - hr), Math.max(headX[1], hc[0] + hr)];
   if (top[1] < 290 || hc[1] + hr > 1070 || hc[0] - hr < 65 || hc[0] + hr > 1015) issues.push(`f${f} head outside the keep-in box (${hc.map((v) => v.toFixed(0))}, r ${hr.toFixed(0)})`);
@@ -107,7 +121,9 @@ for (let f = 0; f < DURATION; f++) {
     if (b.inside) domeTop = Math.min(domeTop, c[1] - RB * A.P.r(b.Z) * cam.k);
   }
 }
-if (paperOnFace) issues.push(`paper over the Genius's face on ${paperOnFace} ball-frames`);
+if (paperOnFace) issues.push(`paper over the robot's face on ${paperOnFace} ball-frames`);
+log.push(`robot pop audit: largest per-frame jump of head/screen/mittens/hip ${botJump.v.toFixed(1)} px (${botJump.at})`);
+if (botJump.v > 25) issues.push(`robot jump ${botJump.v.toFixed(1)} px at ${botJump.at}`);
 log.push(`head: top >= ${worstHeadTop.toFixed(0)}, bottom <= ${worstHeadBot.toFixed(0)}, x ${headX.map((v) => v.toFixed(0)).join("..")}`);
 log.push(`paper screen speed max ${maxSpeed.toFixed(1)} px/f (${maxSpeedAt}); largest jump ${maxJump.v.toFixed(1)} (${maxJump.at}); largest change of velocity ${maxAcc.v.toFixed(1)} px/f (${maxAcc.at})`);
 log.push(`heap: balls x ${heapX.map((v) => v.toFixed(0)).join("..")}, foot y <= ${heapBottom.toFixed(0)}; the bin's contents top y >= ${domeTop.toFixed(0)}`);
