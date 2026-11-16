@@ -6,7 +6,7 @@ import EonsInEightyEightHours, {
   schema,
 } from "../generated/components/rsi-since-writing/EonsInEightyEightHours";
 
-// Private render entry for EonsInEightyEightHours (rsi-since-writing; Dwarkesh 3D style): the orange line of the AIs' 88 hours runs back down a road of milestones to 3200 BC.
+// Private render entry for EonsInEightyEightHours (rsi-since-writing; Dwarkesh 3D style): the robot types through 88 hours (the window turns day to night four times, the clock races) while its sheets pile up as paper strata that lift its desk onto a pillar of paper falling away into the haze.
 // Opaque 1080x1920, 23.976 fps, 143 frames.
 export const RemotionRoot = () => (
   <Composition
