@@ -150,7 +150,9 @@ export const LABEL_F0 = (() => {
   // and not before the pan has brought the small plinth's face wholly into frame (f38)
   return Math.max(f0, 38);
 })();
-export const labelT = (f: number) => ease((f - LABEL_F0) / LABEL.fade);
+/** rev 1b (user, Nov 16): the stencils are painted on the plinths from the first frame; they never fade in.
+ *  (LABEL_F0 is kept for the check script: the frame from which the faces stay above the caption bands.) */
+export const labelT = (_f: number) => 1;
 
 // ===================================================================================================================
 // THE LIFTS (robot-local units; the bar's centre (y) and tilt (deg), the crouch, the face)

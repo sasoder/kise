@@ -108,7 +108,9 @@ export const litSOf = (power: Map<number, { power: number; relight: boolean }>) 
  *  (robot ~130 px at f108), then the big log-space push to the close-up on "every single year" (f110-f141), easing out
  *  onto END_RIG (cut 7's f0) */
 const HOLD0: Rig = { tx: 170, th: 0, tz: 1200, d: 4339, el: 32 * D2R, F: 1150, sx: 540, sy: 619 };
-const HOLD1: Rig = { tx: 170, th: 0, tz: 1050, d: 3866, el: 32 * D2R, F: 1150, sx: 540, sy: 620 };
+/** rev 1b (user, Nov 16): a subtle but visible push in through the hold so the frame never sits still before the
+ *  real push (was d 3866 / tz 1050, ~11 % closer by f108; now ~33 %). */
+const HOLD1: Rig = { tx: 170, th: 0, tz: 900, d: 3260, el: 32 * D2R, F: 1150, sx: 540, sy: 612 };
 /** halfway in (the robot ~257 px), its feet held at y ~1030 so the push never drops them toward the caption band */
 const PUSH_MID: Rig = { tx: 135, th: 75, tz: 470, d: 1837, el: 24.5 * D2R, F: 1150, sx: 540, sy: 639 };
 const PATH = rigPath([HOLD0, HOLD1, PUSH_MID, END_RIG]);
