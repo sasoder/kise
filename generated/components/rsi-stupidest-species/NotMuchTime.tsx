@@ -28,6 +28,9 @@
 //   2. "coordinate in large groups" (right, beyond the lip): six foragers on one rope that runs back into depth haul a
 //      log lying beside the lip. Idle before f138 (each man settles his weight, heads look along the line); in step
 //      from f138 (first heave peak f156 "large groups"), walking back with planted feet; the log moves with the rope.
+//      REV 3: the rope is a real tug line: from the log into each man's front fist (at the waist, HAUL_GRIP), back
+//      between his arm and body to his rear fist, on to the next man; painted in depth with the men, never over a head
+//      (haulScene; haulAudit checks it per frame with the grips).
 //   3. "think through abstract concepts and plan" (right, near): a man squats with a long stick (240 units, the grip
 //      sliding along it). REV 2: his DASHED ORANGE plan is already in the sand from f0 (a river, a herd of three rings,
 //      most of an arrow's route to the herd); idle, the tip taps the line's end and he looks up to think (f60-150);
@@ -481,7 +484,6 @@ export const HAUL_F: G2 = [210, 165];
 const HAUL_TH = 0.72;
 const HAUL_C = Math.cos(HAUL_TH);
 const HAUL_S = Math.sin(HAUL_TH);
-const HAUL_DIR = -1 as const;
 const HAUL_V = [4, 6, 5, 0, 7, 4];
 const HAUL_GAP = 60;
 const HAUL_START = 138;
@@ -525,6 +527,89 @@ const haulLog = (f: number) => {
   const X1 = m0[0] - HAUL.near - LOG.slack * HAUL_C;
   const Z = m0[1] - LOG.slack * HAUL_S - 10;
   return { X0: X1 - LOG.len, X1, Z };
+};
+
+/** the rope's width (units) */
+const HAUL_ROPE_W = 3;
+/** REV 3: where each hauler's fists hold the rope (units ahead of the feet, facing the log): at the waist, within the
+ *  arms' reach (the kit's HAUL.near 78 is out of reach, so the near fist fell short of the rope) */
+const HAUL_GRIP: { near: G2; far: G2 } = { near: [46, -150], far: [24, -149] };
+/** the haul at frame f, for the render and the audit: each man (feet X, Z, `at`, scale, pose, anchors in world px,
+ *  his front and rear grips) and the rope in PIECES. A real tug line: it comes from the log in front, into each man's
+ *  FRONT fist, back between his arm and his body (behind the torso) to his REAR fist (the back arm's, behind him),
+ *  and on back to the next man's front fist. Painted with the men far first (5 .. 0), per man i: his shadow; his
+ *  hands run (under him: his body and arms cover it, it shows between the front fist and the body); man i; the run
+ *  from man i-1's rear fist to his front fist (over him, under man i-1 and every nearer man, whose bodies and heads
+ *  cover it; man 0 gets the log and the tie run instead); his front fist painted again on top (the rope goes INTO
+ *  it). `over` = the first man whose head a piece is painted over (every man j >= over); the tail behind the last
+ *  man is painted first (over none) */
+const haulScene = (A: AirWorld, f: number) => {
+  const { P } = A;
+  const feet = haulMen(f);
+  const log = haulLog(f);
+  const men = HAUL_V.map((v, i) => {
+    const [X, Z] = feet[i];
+    const { at, scale } = P.at(X, Z);
+    // the haul pose (facing right), both fists re-gripped where the arms reach them at the waist (HAUL_GRIP), then
+    // turned to face the log; the head's idle look on top
+    const h1 = PERSON_POSES.haul(1, haulFrame(f, i), haulStep(f), v);
+    const g1 = personGripTo("forager", v, { ...h1, armL: { ...h1.armL, w: HAUL_GRIP.near }, armR: { ...h1.armR, w: HAUL_GRIP.far } } as PersonPose, { L: HAUL_GRIP.near, R: HAUL_GRIP.far });
+    const hp = mirrorPose(g1) as PersonPose;
+    const hh = haulHead(f, i);
+    const pose: PersonPose = { ...hp, headYaw: hp.headYaw + hh.yaw, pitch: hp.pitch + hh.pitch, look: [(hp.look?.[0] ?? 0) + hh.look, hp.look?.[1] ?? 0] };
+    const an = personAnchors("forager", pose, at, scale, { variant: v });
+    // the rope runs through the two grips: the front fist (toward the log, -X) and the rear one
+    const lFront = an.handL[0] < an.handR[0];
+    const [near, far] = lFront ? [an.handL, an.handR] : [an.handR, an.handL];
+    return { X, Z, at, scale, pose, an, front: lFront ? an.mittenL : an.mittenR, fistR: 8.5 * scale, near, far };
+  });
+  const last = feet[feet.length - 1];
+  const tie = P.p(log.X1 - 16, -LOG.R * 1.75, log.Z);
+  const tail = P.p(last[0] - HAUL_GRIP.far[0] + 26 * HAUL_C, HAUL_GRIP.far[1], last[1] + 26 * HAUL_S);
+  const pieces = {
+    hands: men.map((m) => [m.near, m.far]),
+    // back[i]: from man i-1's rear fist (the log's tie for i 0) to man i's front fist
+    back: men.map((m, i) => [i === 0 ? tie : men[i - 1].far, m.near]),
+    tail: [men[men.length - 1].far, tail],
+  };
+  const all: { pts: P2[]; over: number; name: string }[] = [
+    ...pieces.hands.map((pts, i) => ({ pts, over: i + 1, name: `hands${i}` })),
+    ...pieces.back.map((pts, i) => ({ pts, over: i, name: `back${i}` })),
+    { pts: pieces.tail, over: men.length, name: "tail" },
+  ];
+  return { men, log, pieces, all, Zf: feet[0][1] };
+};
+/** REV 3 audit at frame f (SCREEN px): ropeHead = the smallest gap between any rope piece painted OVER a head and
+ *  that head's silhouette (a circle of 1.15 x headR round headC, hair included; < 0 = the rope is on a head);
+ *  grip = the largest distance of a man's drawn fists (the mittens' centres) from the rope run through his grips */
+export const haulAudit = (f: number) => {
+  const A = worldAt(f);
+  const hs = haulScene(A, f);
+  const k = A.cam.k;
+  const segD = (q: P2, a: P2, b: P2) => {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const u = c01(((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / (dx * dx + dy * dy || 1));
+    return Math.hypot(q[0] - a[0] - u * dx, q[1] - a[1] - u * dy);
+  };
+  let ropeHead = 1e9;
+  let who = "";
+  hs.all.forEach((q) => {
+    hs.men.forEach((m, j) => {
+      if (j < q.over) return;
+      const half = (HAUL_ROPE_W / 2) * A.P.r(hs.Zf);
+      const g = (segD(m.an.headC, q.pts[0], q.pts[1]) - 1.15 * m.an.headR - half) * k;
+      if (g < ropeHead) {
+        ropeHead = g;
+        who = `${q.name} over head ${j}`;
+      }
+    });
+  });
+  let grip = 0;
+  hs.men.forEach((m) => {
+    grip = Math.max(grip, segD(m.an.mittenL, m.near, m.far) * k, segD(m.an.mittenR, m.near, m.far) * k);
+  });
+  return { ropeHead, who, grip };
 };
 
 const Log: React.FC<{ A: AirWorld; X0: number; X1: number; Z: number; R: number }> = ({ A, X0, X1, Z, R }) => {
@@ -759,7 +844,7 @@ export const keyPoints = (frame: number): Record<string, P2> => {
   men.forEach((m, i) => {
     out[`haul${i}.feet`] = S(P.p(m[0], 0, m[1]));
     out[`haul${i}.head`] = S(P.p(m[0] - 10, -312, m[1]));
-    out[`haul${i}.fist`] = S(P.p(m[0] - 78, -152, m[1]));
+    out[`haul${i}.fist`] = S(P.p(m[0] - HAUL_GRIP.near[0], HAUL_GRIP.near[1], m[1]));
   });
   out["haul.back"] = S(P.p(men[5][0] + 60, -150, men[5][1]));
   out["teach.head"] = S(P.p(TEACH.X + 55, -185, TEACH.Z));
@@ -829,44 +914,45 @@ const NotMuchTime: React.FC<z.infer<typeof schema>> = () => {
     );
   });
 
-  // the haul: the log, the six on one rope running back into depth, the rope through every fist
+  // the haul: the log, the six on one rope running back into depth. REV 3: the rope is painted piece by piece in depth
+  // with the men (far first, see haulScene): into each man's front fist, behind his body to his rear fist, back to
+  // the next man; never over a head
   {
-    const men = haulMen(frame);
-    const lg = haulLog(frame);
-    const Zf = men[0][1];
-    const nodes = HAUL_V.map((v, i) => {
-      const [X, Z] = men[i];
-      const { at, scale } = P.at(X, Z);
-      const hp = PERSON_POSES.haul(HAUL_DIR, haulFrame(frame, i), haulStep(frame), v);
-      const hh = haulHead(frame, i);
-      const pose: PersonPose = { ...hp, headYaw: hp.headYaw + hh.yaw, pitch: hp.pitch + hh.pitch, look: [(hp.look?.[0] ?? 0) + hh.look, hp.look?.[1] ?? 0] };
-      return (
-        <g key={`h${i}`}>
-          <AirShadow A={A} X={X} Z={Z} w={58} d={26} uid={`hs${i}`} amt={0.75} />
-          <Forager variant={v} pose={pose} at={at} scale={scale} uid={`hl${i}`} frame={frame} fog={A.folkFog(Z)} unitPx={k} />
-        </g>
-      );
-    });
-    // the rope: tie -> each man's near fist -> his far fist -> the next man's near fist ... -> a short tail
-    const rope: P2[] = [P.p(lg.X1 - 16, -LOG.R * 1.75, lg.Z)];
-    men.forEach(([X, Z]) => {
-      rope.push(P.p(X - HAUL.near, HAUL.y, Z));
-      rope.push(P.p(X - HAUL.far, HAUL.y + 1, Z));
-    });
-    const last = men[men.length - 1];
-    rope.push(P.p(last[0] - HAUL.far + 26 * HAUL_C, HAUL.y + 1, last[1] + 26 * HAUL_S));
-    const ropeCol = A.tone(MAT.hemp.mid, Zf, 150);
-    const wrap = [12, 22].map((dx) => `M${pt(P.p(lg.X1 - dx, -2 * LOG.R, lg.Z))}L${pt(P.p(lg.X1 - dx - 3, 0, lg.Z))}`).join("");
-    push(
-      Zf,
-      <g key="haul">
-        {nodes.slice().reverse()}
-        <AirShadow A={A} X={(lg.X0 + lg.X1) / 2} Z={lg.Z} w={LOG.len * 0.55} d={36} uid="logS" amt={0.7} />
-        <Log A={A} X0={lg.X0} X1={lg.X1} Z={lg.Z} R={LOG.R} />
-        <path d={wrap} fill="none" stroke={ropeCol} strokeWidth={3 * P.r(Zf)} strokeLinecap="round" />
-        <path d={`M${rope.map(pt).join("L")}`} fill="none" stroke={ropeCol} strokeWidth={3 * P.r(Zf)} strokeLinecap="round" strokeLinejoin="round" />
-      </g>,
+    const hs = haulScene(A, frame);
+    const ropeCol = A.tone(MAT.hemp.mid, hs.Zf, 150);
+    const ropeW = HAUL_ROPE_W * P.r(hs.Zf);
+    const ropeOf = (pts: P2[], key: string) => (
+      <path key={key} d={`M${pts.map(pt).join("L")}`} fill="none" stroke={ropeCol} strokeWidth={ropeW} strokeLinecap="round" strokeLinejoin="round" />
     );
+    const man = (i: number, uid: string) => {
+      const m = hs.men[i];
+      return <Forager variant={HAUL_V[i]} pose={m.pose} at={m.at} scale={m.scale} uid={uid} frame={frame} fog={A.folkFog(m.Z)} unitPx={k} />;
+    };
+    const wrap = [12, 22].map((dx) => `M${pt(P.p(hs.log.X1 - dx, -2 * LOG.R, hs.log.Z))}L${pt(P.p(hs.log.X1 - dx - 3, 0, hs.log.Z))}`).join("");
+    const layers: React.ReactNode[] = [ropeOf(hs.pieces.tail, "rtail")];
+    for (let i = HAUL_V.length - 1; i >= 0; i--) {
+      const m = hs.men[i];
+      layers.push(
+        <g key={`h${i}`}>
+          <AirShadow A={A} X={m.X} Z={m.Z} w={58} d={26} uid={`hs${i}`} amt={0.75} />
+          {ropeOf(hs.pieces.hands[i], `rh${i}`)}
+          {man(i, `hl${i}`)}
+          {i === 0 && (
+            <>
+              <AirShadow A={A} X={(hs.log.X0 + hs.log.X1) / 2} Z={hs.log.Z} w={LOG.len * 0.55} d={36} uid="logS" amt={0.7} />
+              <Log A={A} X0={hs.log.X0} X1={hs.log.X1} Z={hs.log.Z} R={LOG.R} />
+              <path d={wrap} fill="none" stroke={ropeCol} strokeWidth={ropeW} strokeLinecap="round" />
+            </>
+          )}
+          {ropeOf(hs.pieces.back[i], `rb${i}`)}
+          <clipPath id={`hfc${i}`}>
+            <circle cx={m.front[0]} cy={m.front[1]} r={m.fistR} />
+          </clipPath>
+          <g clipPath={`url(#hfc${i})`}>{man(i, `hf${i}`)}</g>
+        </g>,
+      );
+    }
+    push(hs.Zf, <g key="haul">{layers}</g>);
   }
 
   // the teaching pair and the flakes
