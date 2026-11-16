@@ -1,148 +1,157 @@
-// Per-frame checks for WorkOfBillions (rsi-ten-earths, cut 45).   bun scripts/clips/rsi-ten-earths/check-work-of-billions.ts
-//  * the camera: ln D speed (one acceleration lobe, one settle lobe, then the creep), eye height and lens shift peaks
-//  * faces vs the caption bands (y 1080-1250, 1360-1460) for every workstation on every frame, 5 px sway margin
-//  * both plates inside the keep-in box (x 65-1015, y 290-1070) and out of the bands on every frame
-//  * the pair: 2030's glide path never drops below the horizon (over the figures); its gap above "2.5 billion"
+// Per-frame checks for WorkOfBillions (rsi-ten-earths, cut 45, revision 1).
+//   bun scripts/clips/rsi-ten-earths/check-work-of-billions.ts
+// Reads the pure world (workOfBillionsWorld.ts) and checks, on every frame:
+//  * the camera: the log zoom's speed (one rise, one fall: no second surge), the eye's height, the horizon row
+//  * faces vs the caption bands (y 1080-1250, 1360-1460): every robot drawn in full detail (the hero's storey, every
+//    row and column whose face is inside its window and big enough to read: seated sprite >= 12 px); the other storeys'
+//    robots are warm silhouettes behind their glass (no faces), the city's are back views
+//  * the "2.5 billion" plate's text inside the keep-in box (x 65-1015, y 290-1070) and out of the bands, clear of the
+//    globe once landed
+//  * collisions: the eye never inside the hero's building or any city building (its footprint and height), never
+//    under the street
+//  * the globe: its bottom <= 1060 from the swap on (out of the caption bands); the hold keeps pulling back
 import {
-  camState,
-  colX,
-  rowZ,
-  NROWS,
-  XV,
-  F_LENS as F,
-  PLATE_2030,
-  PLATE_BN,
-  plate2030At,
+  BPITCH,
+  COL0,
+  COL1,
   DURATION,
-  S_END,
-} from "../../../generated/components/rsi-ten-earths/WorkOfBillions";
-const bands = [
+  F,
+  F_SWAP,
+  globeAt,
+  plateY,
+  PLATE_SIZE,
+  NROWS,
+  PLATE_DUR,
+  PLATE_F0,
+  R_END,
+  X_B0,
+  X_B1,
+  X_I0,
+  X_I1,
+  YS,
+  Z_BB,
+  Z_FACADE,
+  Z_GLASS,
+  colX,
+  eyeAt,
+  globeR,
+  glassBottom,
+  lambdaAt,
+  lotBuilding,
+  rowZ,
+  storeyCeil,
+  H_BLD,
+} from "../../../generated/components/rsi-ten-earths/workOfBillionsWorld";
+
+const BANDS = [
   [1080, 1250],
   [1360, 1460],
 ];
-const inBand = (a: number, b: number) => bands.some(([u, v]) => b > u && a < v);
-// camera
-const lnD: number[] = [],
-  H: number[] = [],
-  SH: number[] = [];
-for (let f = 0; f < DURATION; f++) {
-  const c = camState(f);
-  lnD.push(Math.log(c.D));
-  H.push(c.h);
-  SH.push(c.shift);
-}
-const d1 = (a: number[]) => a.slice(1).map((v, i) => v - a[i]);
-const lobes = (a: number[]) => {
-  const s = d1(a);
-  let n = 0;
-  for (let i = 1; i < s.length; i++) if (Math.sign(s[i]) !== Math.sign(s[i - 1]) && Math.abs(s[i]) > 1e-7) n++;
-  return n;
+const inBand = (a: number, b: number) => BANDS.some(([u, v]) => b > u && a < v);
+let fails = 0;
+const fail = (msg: string) => {
+  fails++;
+  if (fails <= 40) console.log("FAIL", msg);
 };
-const v = d1(lnD);
-const acc = d1(v);
-console.log(
-  "lnD speed peak f",
-  v.indexOf(Math.max(...v)),
-  "max",
-  Math.max(...v).toFixed(4),
-  "accel sign changes",
-  lobes(v),
-  "| h speed peak f",
-  d1(H).indexOf(Math.max(...d1(H))),
-  "| shift speed peak f",
-  d1(SH)
-    .map(Math.abs)
-    .indexOf(Math.max(...d1(SH).map(Math.abs))),
-);
-console.log(
-  "speed lnD per frame:",
-  v
-    .filter((_, i) => i % 6 === 0)
-    .map((x) => (x * 1000).toFixed(1))
-    .join(" "),
-);
-// faces
-let bad = 0;
-let worstHero = 0;
-const hits: string[] = [];
-for (let f = 0; f < DURATION; f++) {
-  const c = camState(f);
-  for (let r = 0; r < NROWS; r++)
-    for (let col = -40; col <= 40; col++) {
-      const Z = rowZ(r);
-      const d = c.D + Z;
-      const x = 540 + c.shift + (F * (colX(col) + 20 - XV)) / d;
-      if (x < -30 || x > 1110) continue;
-      const y0 = c.HY + (F * (c.h - 269)) / d,
-        y1 = c.HY + (F * (c.h - 193)) / d;
-      if (r === 0 && col === 0) worstHero = Math.max(worstHero, y1);
-      if (inBand(y0 - 5, y1 + 5)) {
-        bad++;
-        if (hits.length < 8) hits.push(`f${f} r${r} c${col} y ${y0.toFixed(0)}-${y1.toFixed(0)} x ${x.toFixed(0)}`);
+
+// ---- the camera ------------------------------------------------------------------------------------------------------
+const lam: number[] = [];
+for (let f = 0; f < DURATION; f++) lam.push(lambdaAt(f));
+const v = lam.slice(1).map((x, i) => x - lam[i]);
+let turns = 0;
+for (let i = 2; i < v.length; i++) if (Math.sign(v[i] - v[i - 1]) !== Math.sign(v[i - 1] - v[i - 2]) && Math.abs(v[i] - v[i - 1]) > 1e-6) turns++;
+const vPeak = v.indexOf(Math.max(...v));
+console.log(`camera: lambda 0 -> ${lam[DURATION - 1].toFixed(2)} (x${Math.exp(lam[DURATION - 1]).toExponential(2)} in distance), speed peak f${vPeak} (${v[vPeak].toFixed(3)}/f), speed turns ${turns} (1 = one lobe)`);
+if (turns > 1) fail(`the zoom speed has ${turns} turns`);
+for (const f of [0, 27, 35, 52, 67, 79, 84]) {
+  const e = eyeAt(f);
+  console.log(`  f${f}: D ${(e.Dr / 178).toFixed(1)} m, eye ${((e.He + YS) / 178).toFixed(1)} m over the street, horizon row ${e.yh.toFixed(0)}`);
+}
+
+// ---- faces vs the bands ------------------------------------------------------------------------------------------------
+let faceChecks = 0;
+let worstFace = { f: -1, y: 0, px: 0 };
+for (let f = 0; f <= F_SWAP; f++) {
+  const e = eyeAt(f);
+  const sGlass = F / (e.Dr + Z_GLASS);
+  const oy0 = e.yh + (storeyCeil(0) + e.He) * sGlass;
+  const oy1 = e.yh + (glassBottom(0) + e.He) * sGlass;
+  const ox0 = 540 + X_I0 * sGlass;
+  const ox1 = 540 + X_I1 * sGlass;
+  for (let j = 0; j < NROWS; j++) {
+    const Z = rowZ(j);
+    const s = F / (e.Dr + Z);
+    if (275 * s < 12) continue;
+    for (let c = COL0; c <= COL1; c++) {
+      const X = colX(c, j) + 53;
+      const x = 540 + X * s;
+      const yA = e.yh + (-250 + e.He) * s;
+      const yB = e.yh + (-200 + e.He) * s;
+      if (x < 0 || x > 1080 || x < ox0 || x > ox1) continue;
+      if (yB < oy0 || yA > oy1 || yB < 0 || yA > 1920) continue;
+      faceChecks++;
+      if (inBand(yA - 5, yB + 5)) {
+        fail(`f${f}: a face in a caption band (row ${j} col ${c}, y ${yA.toFixed(0)}-${yB.toFixed(0)}, ${(275 * s).toFixed(0)} px)`);
+        if (275 * s > worstFace.px) worstFace = { f, y: yA, px: 275 * s };
       }
     }
-}
-console.log("faces in bands (incl. 5 px sway):", bad, hits.join("; "), "| hero chin max y", worstHero.toFixed(0));
-// plates
-const W = (t: string) =>
-  [...t].reduce((a, ch) => a + (ch === " " ? 0.27 : /[0-9]/.test(ch) ? 0.62 : /[.,]/.test(ch) ? 0.28 : 0.52), 0);
-for (const [name, p0, txt] of [
-  ["2030", PLATE_2030, "2030"],
-  ["2.5 billion", PLATE_BN, "2.5 billion"],
-] as const) {
-  const p = p0;
-  let out = 0;
-  let minS = 1e9,
-    maxS = 0;
-  const ex: string[] = [];
-  for (let f = p.f0; f < DURATION; f++) {
-    const q = txt === "2030" ? plate2030At(f) : p;
-    const c = camState(f);
-    const d = c.D + q.Z;
-    const s = (q.size * F) / d;
-    const cx = 540 + c.shift + (F * (q.X - XV)) / d;
-    const cy = c.HY + (F * (c.h + q.Y)) / d;
-    const w = W(txt) * s;
-    const x0 = cx - w / 2,
-      x1 = cx + w / 2,
-      y0 = cy - 0.42 * s,
-      y1 = cy + 0.42 * s;
-    minS = Math.min(minS, s);
-    maxS = Math.max(maxS, s);
-    if (x0 < 65 || x1 > 1015 || y0 < 290 || y1 > 1070 || inBand(y0, y1)) {
-      out++;
-      if (ex.length < 3) ex.push(`f${f} [${x0.toFixed(0)},${x1.toFixed(0)}]x[${y0.toFixed(0)},${y1.toFixed(0)}]`);
-    }
-    if (f === p.f0 || f === S_END || f === DURATION - 1)
-      console.log(`  ${name} f${f}: centre (${cx.toFixed(0)}, ${cy.toFixed(0)}) type ${s.toFixed(0)} px`);
   }
-  console.log(
-    `plate ${name}: frames outside keep-in / in bands: ${out} ${ex.join(" ")} size ${minS.toFixed(0)}-${maxS.toFixed(0)} px`,
-  );
 }
-// the pair: 2030's bottom vs the horizon on every frame, and the gap to "2.5 billion" once both are up
-{
-  const scr = (f: number, p: { X: number; Y: number; Z: number; size: number }) => {
-    const c = camState(f);
-    const d = c.D + p.Z;
-    return { x: 540 + c.shift + (F * (p.X - XV)) / d, y: c.HY + (F * (c.h + p.Y)) / d, s: (p.size * F) / d, HY: c.HY };
-  };
-  let worst = 1e9,
-    wf = -1,
-    minGap = 1e9;
-  for (let f = 0; f < DURATION; f++) {
-    const a = scr(f, plate2030At(f));
-    const clr = a.HY - (a.y + 0.42 * a.s);
-    if (clr < worst) {
-      worst = clr;
-      wf = f;
-    }
-    if (f >= PLATE_BN.f0 + PLATE_BN.dur) {
-      const b = scr(f, PLATE_BN);
-      minGap = Math.min(minGap, b.y - 0.36 * b.s - (a.y + 0.34 * a.s));
-    }
-  }
-  console.log(
-    `pair: 2030 bottom above the horizon by >= ${worst.toFixed(0)} px (f${wf}); gap above 2.5 billion >= ${minGap.toFixed(0)} px once landed`,
-  );
+console.log(`faces: ${faceChecks} face placements checked over f0-${F_SWAP}${worstFace.f >= 0 ? `, worst f${worstFace.f} at y ${worstFace.y.toFixed(0)} (${worstFace.px.toFixed(0)} px)` : ", none in the bands"}`);
+
+// ---- the plate and the globe ---------------------------------------------------------------------------------------
+// the plate's text (Caslon, centred on its row: cap from row - 0.34 size to row + 0.34 size), sliding up from +0.5 size
+for (let f = PLATE_F0; f < DURATION; f++) {
+  const t = Math.max(0, Math.min(1, (f - PLATE_F0) / PLATE_DUR));
+  if (t <= 0) continue;
+  const lift = 0.5 * PLATE_SIZE * Math.pow(1 - t, 3);
+  const y = plateY(f);
+  const y0 = y - 0.34 * PLATE_SIZE + lift;
+  const y1 = y + 0.34 * PLATE_SIZE + lift;
+  const x0 = 540 - (5.43 * PLATE_SIZE) / 2;
+  const x1 = 540 + (5.43 * PLATE_SIZE) / 2;
+  if (t > 0.6 && (x0 < 65 || x1 > 1015 || y0 < 290 || y1 > 1070)) fail(`f${f}: the plate's text outside the keep-in (${x0.toFixed(0)}-${x1.toFixed(0)}, ${y0.toFixed(0)}-${y1.toFixed(0)})`);
+  if (inBand(y0, y1)) fail(`f${f}: the plate in a caption band`);
+  const g = globeAt(f);
+  if (t >= 1 && y1 > g.cy - g.r - 8) fail(`f${f}: the landed plate touches the globe (text bottom ${y1.toFixed(0)}, globe top ${(g.cy - g.r).toFixed(0)})`);
 }
+// the globe out of the caption bands from the swap on (its bottom <= 1060)
+for (let f = F_SWAP; f < DURATION; f++) {
+  const g = globeAt(f);
+  if (g.cy + g.r > 1060) fail(`f${f}: the globe's bottom at ${(g.cy + g.r).toFixed(0)}`);
+}
+console.log(`plate: "2.5 billion" text x ${(540 - 2.715 * PLATE_SIZE).toFixed(0)}-${(540 + 2.715 * PLATE_SIZE).toFixed(0)}, centre row ${plateY(109).toFixed(0)} (landed f109) -> ${plateY(DURATION - 1).toFixed(0)} (f148), cap ~${(0.68 * PLATE_SIZE).toFixed(0)} px`);
+
+// ---- collisions: the eye --------------------------------------------------------------------------------------------
+let near = Infinity;
+for (let f = 0; f <= F_SWAP + 4; f += 0.25) {
+  const e = eyeAt(f);
+  const ex = 0;
+  const ez = -e.Dr;
+  const ey = -e.He;
+  if (ey > YS - 20) fail(`f${f}: the eye at or under the street`);
+  // the hero's building (its glass line to the back, the roof)
+  if (ez > Z_FACADE - 10 && ez < Z_BB && ex > X_B0 && ex < X_B1 && ey > -H_BLD) fail(`f${f}: the eye inside the hero's building`);
+  near = Math.min(near, Z_FACADE - ez);
+  // the city: every lot near the eye
+  const bz0 = Math.floor((ez - Z_FACADE) / BPITCH);
+  for (let bz = bz0 - 1; bz <= bz0 + 1; bz++)
+    for (let bx = -1; bx <= 1; bx++)
+      for (let lx = 0; lx < 3; lx++)
+        for (let lz = 0; lz < 3; lz++) {
+          const b = lotBuilding(bx, bz, lx, lz);
+          if (!b) continue;
+          if (ex > b.x0 - 30 && ex < b.x1 + 30 && ez > b.z0 - 30 && ez < b.z1 + 30 && ey > YS - b.h - 30) fail(`f${f}: the eye inside lot (${bx},${bz},${lx},${lz}) h ${(b.h / 178).toFixed(0)} m, eye ${((YS - ey) / 178).toFixed(0)} m`);
+        }
+}
+console.log(`collisions: the eye's nearest approach to the facade ${(near / 178).toFixed(2)} m (f0)`);
+
+// ---- the globe ---------------------------------------------------------------------------------------------------------
+for (const f of [F_SWAP, 86, 88, 90, 95, 100, 106, 120, 148]) {
+  const g = globeAt(f);
+  console.log(`  globe f${f}: r ${g.r.toFixed(0)} (${(2 * g.r).toFixed(0)} px across), centre y ${g.cy.toFixed(0)}, bottom ${(g.cy + g.r).toFixed(0)}`);
+}
+// the hold never freezes: the zoom keeps moving and the globe keeps turning
+for (let f = 106; f < DURATION - 1; f++) if (lambdaAt(f + 1) - lambdaAt(f) < 0.001) fail(`f${f}: the pull-back stalls`);
+void R_END;
+console.log(fails ? `${fails} FAIL(s)` : "all checks pass");
