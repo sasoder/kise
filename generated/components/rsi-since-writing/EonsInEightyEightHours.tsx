@@ -1,10 +1,11 @@
 // ---------------------------------------------------------------------------
-// EonsInEightyEightHours (rsi-since-writing, cut 7; final 56_EonsInEightyEightHours.mov), REVISION 1 (a new
-// concept after the user's notes). Dwarkesh 3D style (styles/dwarkesh-3d.md). Opaque 1080x1920, 23.976 fps, 143
-// frames. One stage inside the misty teal air (AirStage) on a londonDepth one-point perspective, from the kit
-// kits/dwarkesh-3d/dwarkesh3d (its header is the API). THE ROBOT is the sister clip's tenEarthsBot (v0, read only;
-// BOT_READY.md); the desk, the paper sheets, the plate and the office's sun colours are this clip's world module
-// (sinceWritingWorld, read only). The tower of paper, the wall with its window and the clock are cut-local.
+// EonsInEightyEightHours (rsi-since-writing, cut 7; final 56_EonsInEightyEightHours.mov), REVISION 2 (after the
+// user's notes on rev 1: no room; time in the air and light itself; a hand-made, living pillar). Dwarkesh 3D style
+// (styles/dwarkesh-3d.md). Opaque 1080x1920, 23.976 fps, 143 frames. One stage inside the misty teal air (AirStage) on
+// a londonDepth one-point perspective, from the kit kits/dwarkesh-3d/dwarkesh3d (its header is the API). THE ROBOT is
+// the sister clip's tenEarthsBot (v0, read only; BOT_READY.md); the desk and monitor, the paper sheets and the plate
+// are this clip's world module (sinceWritingWorld, read only). The pillar, the sky, the desk clock and the clutter are
+// cut-local.
 //
 // CHECK LINE: "In just 88 hours the AIs packed in thinking that would take one person thousands of years."
 //
@@ -13,38 +14,40 @@
 // · 88 71 · hours, 84 · eons 98 · of 113 · cognitive 121 · work 130 · to 138 (· match 144, after the cut)
 // DURATION: the slot 56.3062 -> 62.2705 s = 5.964 s x 23.976 = 143 frames (f0..f142).
 //
-// THE MOTION: one orange robot (THE AI) types at an office desk on the top of a pillar of paper strata, in front of a
-// short free-standing office wall with a window and a wall clock; the pillar (2,800 wide) falls away below into the
-// haze, its foot never seen. Time runs fast: the window's sky goes day -> night four times across the slot (88 hours
-// from 08:00 on day one to midnight after day four; dawns and dusks four frames each, nights deep petrol with stars and
-// a moon; the whole stage only dims a little on a slow sine, never flickering) and the clock's hands race (the hour
-// hand turns 7.3 times; the minute hand is a blur). Under the clock a plate "88 HOURS" (world space, on the wall) fades
-// in f58-71 (legible on "88"). From f0 the top's front edge is in view under the desk: every finished sheet (drawn
-// 1.8x a real sheet, to read) lifts off the desk, sails down in front of it, lands on the top near the edge and spreads
-// flat into a new LAYER, the edge growing one band at a time (f0-60: 11 sheets), lifting the desk; on "compacting"
-// (f43-60) those layers press down to 40 % of their thickness (the desk dips, the bands squeeze), and from there the
-// sheets come faster and faster and the layers pile up as strata. The strata read as deep time from top to bottom: the
-// newest bands under the desk cream and crisp, the deeper ones thinner (more compressed), greyer and hazier, dissolving
-// into the air far below. By "eons" (f98) the desk has risen ~1,500 units (8 m). From "eons" the camera pulls back and
-// the frame slides down the pillar in one move (a dolly-zoom-out, the lens lengthening as it goes) until the tiny desk
-// and robot sit centred on the pillar's top (x ~450-630, y ~335-450) with the strata falling away past the bottom edge
-// (~6,900 units, 39 m, of the robot's paper in view); settled by ~f134, a living hold: the robot still typing, a sheet
-// or two still settling, the clock small and still racing, the window still turning day to night.
-// Orange = the robot only (COMMON.md). Paper cream, the desk and wall the world module's office; no other text.
+// THE MOTION: one orange robot (THE AI) types at its desk and computer on the top of a pillar of paper strata, out in
+// the open teal air (no room). Time runs fast in the air and light itself: 88 hours from 02:00 on day one to 18:00
+// on day four (it ends in the evening light); the whole sky and air cycle day -> night four times (warm day light, a rose dusk, a short deep petrol
+// night with a few stars, a rose dawn; never black), a soft sun glow and a pale moon arc across the sky behind, and
+// at night the monitor's glow is the light on the robot and the desk. The 88 hours are counted by a small desk clock
+// standing on a stack of reams beside the desk, its hands racing (the hour hand turns 7.3 times; the minute hand a
+// blur), a plate "88 HOURS" on the stack's front (world space; fades in f58-71, legible on "88"). The top round the
+// desk is lived in: stacks of reams, a crumpled sheet, loose sheets. From f0 the top's front edge is in view: every
+// finished sheet (drawn 1.8x a real sheet, to read) lifts off the desk, sails down in front of it, lands near the edge
+// and spreads flat into a new LAYER, the edge growing one band at a time (f0-60: 11 sheets), lifting the desk; on
+// "compacting" (f43-60) those layers press down to 40 % (the desk dips, the bands squeeze), then the sheets stream and
+// the layers pile up as strata. The pillar is hand-made, like a cliff built of reams: sediment bands (cream / oatmeal /
+// pale grey / warm white / sand, a light umber now and then, irregular thicknesses) whose boundaries bulge and dip,
+// each band leaning a little off the one under it (the offsets and bulges grow as a band is buried, so the top stays
+// clean), soft gouache mottling, a lit left side and a shadowed right, darker sheet-edge seams and lines, a lit top
+// edge per band, sheets sticking out of the face here and there, and a few sheets drifting down past it. The deeper
+// layers read older (greyer, hazier) and dissolve into the haze far below; the foot is never seen. By "eons" (f98) the
+// desk has risen ~1,500 units (8 m). From "eons" the camera pulls back and the frame slides down the pillar in one
+// move (a dolly-zoom-out) until the tiny desk and robot sit centred on the top (x ~450-630, y ~370-450) with the
+// strata falling away past the bottom edge (~6,900 units, 39 m, of the robot's paper in view); settled by ~f134, a
+// living hold: the robot typing, sheets drifting down, the clock racing, the sky still turning.
+// Orange = the robot only (COMMON.md). No text but "88 HOURS".
 //
-// DEPTH: one pinhole camera; per frame its eye X (cx = 60, the room's middle), its eye height above the pillar's top
-// (HR 200 -> 300 units), its distance D in front of the front plane (Z = 0, the robot's hips), its zoom k = F / D (the
-// front plane's screen scale) and the horizon's screen row (tracks K_AT, D_AT, YH_AT, HR_AT below). The eye rides the
-// top (H = lift + HR), lagging a little through f0-70 (tau 5 frames) so each new layer visibly lifts the desk and the
-// compaction visibly presses it down. f0: k 1.25, D 900, horizon y 700 (the robot ~335 px, the edge at y ~1030) ->
-// f98: k 0.85, D 1200 -> f142: k 0.19, D 8000, horizon y 390 (the robot ~51 px). Mapped onto londonDepth as eyeY = -H,
-// dRef = D, kRef = k, dolly 0. Everything ON the top (desk, robot, wall, clock, plate, sheets) is drawn in the top's
-// own frame with a lifted camera (eyeY + lift, cy + lift: exact, the same projection as Y - lift). Fog by depth;
-// the strata's fall into the haze is a screen-row ramp from the top edge down (greyer, then the air itself). World
-// units = the cast's (178 a metre; the robot 240 = 1.35 m). The pillar: X -1400..1400, Z -220..2600; heights are
-// above the paper the robot started on (older paper below it, already compressed to 60 %). The office wall: X
-// -480..500 at Z 300, 600 tall, the window X -400..80 (sill -200, head -520), the clock at (300, -470) R 60, the plate
-// at (300, -345) size 56.
+// DEPTH: one pinhole camera; per frame its eye X (cx, CX_AT), its eye height above the pillar's top (HR 250 -> 300),
+// its distance D in front of the front plane (Z = 0, the robot's hips), its zoom k = F / D (the front plane's screen
+// scale) and the horizon's screen row (tracks K_AT, D_AT, CX_AT, YH_AT, HR_AT below). The eye rides the top (H = lift
+// + HR), lagging a little through f0-70 (tau 5 frames) so each new layer visibly lifts the desk and the compaction
+// visibly presses it down. f0: k 1.25, D 900, horizon y 650 (the robot ~330 px, the edge at y ~1060) -> f98: k 0.85,
+// D 1200 -> f142: k 0.19, D 8000, horizon y 392 (the robot ~51 px). Mapped onto londonDepth as eyeY = -H, dRef = D,
+// kRef = k, dolly 0. Everything ON the top is drawn in the top's own frame with a lifted camera (eyeY + lift, cy +
+// lift: exact). Fog by depth; the strata's fall into the haze is a screen-row ramp from the top edge down. World units
+// = the cast's (178 a metre; the robot 240 = 1.35 m). The pillar: X -1400..1400, Z -220..2600; heights are above the
+// paper the robot started on (older paper below it, already compressed to 60 %). The clock stack: X 230..470, Z
+// 30..110, the clock at (350, -132, 70) R 62, the plate at (350, -36) size 40 on the stack's front.
 //
 // SOURCES: 88 hours = the speaker's own figure (OpenAI's internal model, the speaker's account); "eons" = the
 // speaker's next line (a human would have had to start when writing was invented): no years on screen.
@@ -72,18 +75,7 @@ import {
   type P2,
 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { BOT_POSES, Bot } from "../rsi-ten-earths/tenEarthsBot";
-import {
-  MAT_FRAME,
-  MAT_PLASTER,
-  MAT_SKIRT,
-  OfficeDesk,
-  Plate,
-  WorkSheet,
-  officeSun,
-  plateT,
-  sheetFlight,
-  type SheetPose,
-} from "./sinceWritingWorld";
+import { MAT_FRAME, OfficeDesk, Plate, WorkSheet, plateT, sheetFlight, type SheetPose } from "./sinceWritingWorld";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 143;
@@ -115,24 +107,18 @@ const screenOf = (p: P2, cam: Cam): P2 => [
 ];
 
 // ---------------------------------------------------------------------------
-// TIME: 88 hours across the slot, from 08:00 on the first day
+// TIME: 88 hours across the slot, from 02:00 on the first day (so it ends in the evening light, at 18:00)
 // ---------------------------------------------------------------------------
-export const HOUR0 = 8;
+export const HOUR0 = 2;
 export const hoursAt = (f: number) => HOUR0 + (88 * f) / DURATION;
-const hourOfDay = (f: number) => ((hoursAt(f) % 24) + 24) % 24;
-/** 1 by day, 0 by night (dawn 4.6-7 h, dusk 18.4-20.8 h: four frames each) */
-export const dayAt = (f: number) => {
-  const h = hourOfDay(f);
-  return sstep((h - 4.6) / 2.4) * (1 - sstep((h - 18.4) / 2.4));
-};
-/** the office's sunT through the daylight hours (0 morning .. 1 dusk) */
-const sunTAt = (f: number) => c01((hourOfDay(f) - 5.5) / 14);
-/** the warm light of dawn and dusk (0..1) */
-const glowAt = (f: number) => {
-  const h = hourOfDay(f);
-  const b = (c: number, w: number) => Math.max(0, 1 - Math.abs(h - c) / w);
-  return Math.max(b(19.4, 1.6), 0.6 * b(5.6, 1.2));
-};
+/** the sun's height in the sky, -1 (midnight) .. 1 (noon) */
+export const sunSinAt = (f: number) => Math.sin((2 * Math.PI * (hoursAt(f) - 6)) / 24);
+/** daylight 0..1: the nights kept short (under half light ~7.6 hours, ~12 frames; full night only ~4 frames), the
+ *  turns soft (~7 frames each, so the whole stage never flashes) */
+export const lightAt = (f: number) => sstep((sunSinAt(f) + 1.05) / 1.0);
+/** the rose of dawn and dusk 0..1 */
+export const roseAt = (f: number) => Math.exp(-Math.pow((sunSinAt(f) + 0.12) / 0.28, 2));
+
 
 
 // ---------------------------------------------------------------------------
@@ -267,22 +253,68 @@ export const BANDS: Band[] = (() => {
   return out;
 })();
 
+/** the hand-made look of each band, seeded: its lean (an X offset off the band under it), a little width wobble,
+ *  the bulge of its lower boundary, a sheet sticking out of the face, a gouache mottle */
+type Org = {
+  dx: number;
+  wl: number;
+  wr: number;
+  /** the top corners' lean off the bottom ones, and each side's bow (+ out, - pinched in) */
+  lean: number;
+  bl: number;
+  br: number;
+  ph1: number;
+  ph2: number;
+  L1: number;
+  L2: number;
+  amp: number;
+  stick: { X: number; w: number; s: number; yaw: number } | null;
+  blot: { u: number; rx: number; light: boolean } | null;
+};
+const ORG: Org[] = BANDS.map((_, i) => {
+  const r = (k: string) => random(`org${i}${k}`);
+  return {
+    dx: (r("dx") * 2 - 1) * 62,
+    wl: (r("wl") * 2 - 1) * 30,
+    wr: (r("wr") * 2 - 1) * 30,
+    lean: (r("ln") * 2 - 1) * 26,
+    bl: -12 + r("bl2") * 52,
+    br: -12 + r("br2") * 52,
+    ph1: r("p1") * 6.283,
+    ph2: r("p2") * 6.283,
+    L1: 330 + r("l1") * 420,
+    L2: 120 + r("l2") * 140,
+    amp: 0.6 + r("am") * 0.6,
+    stick: r("st") < 0.85 ? { X: lerp(-1300, 1250, r("sx")), w: 30 + r("sw") * 70, s: 6 + r("ss") * 16, yaw: (r("sy") * 2 - 1) * 16 } : null,
+    blot: r("bl") < 0.6 ? { u: 0.1 + r("bu") * 0.8, rx: 0.12 + r("br") * 0.2, light: r("bk") < 0.55 } : null,
+  };
+});
+
 // ---------------------------------------------------------------------------
 // THE WORLD (cast units, 178 a metre; Y up is -; Z depth, toward the camera -)
 // ---------------------------------------------------------------------------
-/** the pillar of paper under the office */
+/** the pillar of paper under the desk */
 export const TOWER = { x0: -1400, x1: 1400, zF: -220, zB: 2600 };
-/** the office wall standing on the top behind the desk (in the top's frame: Y = 0 is the paper's top) */
-export const WALL = {
-  x0: -480,
-  x1: 500,
-  z: 300,
-  t: 36,
-  h: 600,
-  win: { x0: -400, x1: 80, sill: -200, head: -520 },
-};
-export const CLOCK = { X: 300, Y: -470, R: 60 };
-export const PLATE88 = { X: 300, Y: -345, size: 56 };
+/** the stack of reams the desk clock stands on (in the top's frame: Y = 0 is the paper's top) */
+export const CLOCK_STACK = { x0: 230, x1: 470, z0: 30, z1: 110, reams: 3 };
+export const CLOCK = { X: 350, Y: -132, Z: 70, R: 62 };
+export const PLATE88 = { X: 350, Y: -36, Z: 28, size: 40 };
+/** the other stacks of reams on the top (lived in) */
+const STACKS = [
+  { x0: -380, x1: -240, z0: 130, z1: 230, reams: 5, uid: "s2" },
+  { x0: 560, x1: 700, z0: 320, z1: 420, reams: 4, uid: "s3" },
+  { x0: -760, x1: -610, z0: -150, z1: -60, reams: 2, uid: "s4" },
+  { x0: 820, x1: 950, z0: -40, z1: 60, reams: 3, uid: "s5" },
+];
+/** loose sheets lying on the top, and one crumpled sheet */
+const LOOSE = [
+  { X: -300, Z: 30, yaw: 28 },
+  { X: 520, Z: -90, yaw: -16 },
+  { X: -140, Z: 300, yaw: 52 },
+  { X: 300, Z: 230, yaw: 9 },
+  { X: -560, Z: 110, yaw: -38 },
+];
+const CRUMPLE = { X: -220, Z: -70, R: 24 };
 
 // ---------------------------------------------------------------------------
 // THE CAMERA
@@ -320,7 +352,12 @@ const D_AT = track(
   ],
   true,
 );
-const CX = 60;
+const CX_AT = track([
+  [0, 80],
+  [98, 100],
+  [116, 170],
+  [142, 205],
+]);
 const YH_AT = track([
   [0, 650],
   [60, 660],
@@ -355,7 +392,7 @@ export const eyeAt = (f: number): Eye => {
     D,
     F: k * D,
     k,
-    cx: CX,
+    cx: CX_AT(f),
     yh: YH_AT(f),
     lift: liftAt(f),
   };
@@ -400,9 +437,12 @@ export const frameState = (frame: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE PILLAR OF PAPER: the top (lit paper, by depth) and the front face of strata (seeded cream tones, thin
-// laminations, a fine screen-constant hatch of sheet edges); from the top edge down a screen-row ramp turns the bands
-// greyer, then into the air itself, so the pillar dissolves into the haze far below and its foot is never seen
+// THE PILLAR OF PAPER, hand-made: the top (lit paper, by depth) and the front face of strata. Each band is a polygon
+// whose lower boundary bulges and dips and which leans a little off the one under it (both growing as it is buried, so
+// the top edge stays clean); a lit side and a shadowed side, soft gouache mottles, a lit top edge, a darker seam and
+// fine sheet-edge lines, a fine screen-constant hatch of sheet edges, sheets sticking out here and there; from the top
+// edge down a screen-row ramp turns the bands greyer, then into the air itself, so the pillar dissolves into the haze
+// far below and its foot is never seen
 // ---------------------------------------------------------------------------
 const TOP_PAPER = "#E6DCC5";
 const SHADE = "#8F846F";
@@ -444,212 +484,302 @@ const Pillar: React.FC<{ A: AirWorld; frame: number; L: number }> = ({ A, frame,
   const cam = A.cam;
   const { x0, x1, zF, zB } = TOWER;
   const lw = A.lw(1.1) * 1.6;
+  const px = 1 / cam.k;
+  const rF = P.r(zF);
   const toS = (wy: number) => 960 + (wy - cam.cy) * cam.k;
   const toW = (sy: number) => cam.cy + (sy - 960) / cam.k;
   const yTopS = toS(P.p(0, -L, zF)[1]);
   // the strata keep half their colour through the air in front of them (they are the subject)
   const t = (hex: string, h: number) => mixHex(hex, A.tone(hex, zF, h), 0.5);
-  const px = 1 / cam.k;
   const c = compAt(frame);
   const M = massAt(frame);
-  // ---- the top ----
-  const NZ = 10;
-  const zs: number[] = [];
-  for (let i = 0; i <= NZ; i++) zs.push(zF + ((zB - zF) * i) / NZ);
-  const ya = P.p(0, -L, zF)[1];
-  const yb = P.p(0, -L, zB)[1];
-  const span = yb - ya;
-  // ---- the front face ----
-  const front: React.ReactNode[] = [];
-  let lowest = "";
+  const H = (m: number) => heightOf(m, frame);
+  const thick = (i: number) => H(Math.min(BANDS[i].m1, M)) - H(BANDS[i].m0);
+  /** how buried a height is (0 at the top .. 1 a few hundred units down): the hand-made irregularity grows with it */
+  const buried = (h: number) => sstep((L - h) / 420);
+  /** the height of band i's lower boundary at X (it bulges and dips) */
+  const yAt = (i: number, X: number) => {
+    const h = H(BANDS[i].m0);
+    if (i <= 0) return h;
+    const o = ORG[i];
+    const a = Math.min(22, 0.16 * Math.min(thick(i), thick(i - 1))) * o.amp * buried(h);
+    return h + a * (0.62 * Math.sin(X / o.L1 + o.ph1) + 0.38 * Math.sin(X / o.L2 + o.ph2));
+  };
+  const edges = (i: number, h1: number) => {
+    const g = buried(h1);
+    const o = ORG[i];
+    return [x0 + (o.dx + o.wl) * g, x1 + (o.dx + o.wr) * g] as const;
+  };
+  // ---- which bands are in the frame ----
+  type VB = { i: number; h0: number; h1: number; tone: string; top: boolean; xl: number; xr: number };
+  const vis: VB[] = [];
   for (let i = 0; i < BANDS.length; i++) {
     const b = BANDS[i];
     if (b.m0 >= M) break;
     const m1 = Math.min(b.m1, M);
-    const h0 = heightOf(b.m0, frame);
-    const h1 = heightOf(m1, frame);
-    const a = P.p(x0, -h1, zF);
-    const q = P.p(x1, -h0, zF);
-    const sa = toS(a[1]);
-    const sq = toS(q[1]);
-    if (sa > 1925) continue;
-    if (sq < -5) continue;
-    lowest = lowest || b.tone;
-    // the single sheets' layers darken a little as they are pressed
+    const h0 = H(b.m0);
+    const h1 = H(m1);
+    if (toS(P.p(0, -h1, zF)[1]) > 1940) continue;
+    if (toS(P.p(0, -h0, zF)[1]) < -20) continue;
+    const isSingle = b.m0 >= 0 && b.m0 < LAYER * (LAND.length + 1);
     // (the newest strata, just under the desk, are still fresh cream; their own tones come up as they are buried)
-    const fresh = b.m0 >= LAYER * (LAND.length + 1) ? 0.65 * (1 - sstep((M - m1) / 1800)) : 0;
-    const tone = b.m0 >= 0 && b.m0 < LAYER * (LAND.length + 1) ? mixHex(b.tone, "#C9BDA3", (0.35 * (1 - c)) / 0.6) : mixHex(b.tone, "#F3ECDC", fresh);
-    front.push(<rect key={`f${i}`} x={a[0].toFixed(2)} y={a[1].toFixed(2)} width={(q[0] - a[0]).toFixed(2)} height={(q[1] - a[1] + 0.6).toFixed(2)} fill={t(tone, h0)} />);
-    // a single sheet's new layer glows fresh as it forms at the edge, then settles to its tone
-    const j = Math.round(b.m0 / LAYER) - 1;
-    if (b.m0 > 0 && j < LAND.length && j >= 0) {
-      const g = sstep((frame - LAND[j]) / 3) * (1 - sstep((frame - LAND[j] - 5) / 9));
-      if (g > 0.01)
-        front.push(<rect key={`fg${i}`} x={a[0].toFixed(2)} y={a[1].toFixed(2)} width={(q[0] - a[0]).toFixed(2)} height={(q[1] - a[1]).toFixed(2)} fill="#FFFAF0" fillOpacity={0.75 * g} />);
+    const fresh = !isSingle && b.m0 >= 0 ? 0.65 * (1 - sstep((M - m1) / 1800)) : 0;
+    const tone = isSingle ? mixHex(b.tone, "#C9BDA3", (0.35 * (1 - c)) / 0.6) : mixHex(b.tone, "#F3ECDC", fresh);
+    const [xl, xr] = edges(i, h1);
+    vis.push({ i, h0, h1, tone, top: m1 >= M, xl, xr });
+  }
+  const NX = 12;
+  const topCurve = (v: VB) => {
+    const pts: P2[] = [];
+    for (let k = 0; k <= NX; k++) {
+      const X = lerp(v.xl, v.xr, k / NX);
+      pts.push(P.p(X, -(v.top ? L : yAt(v.i + 1, X)), zF));
     }
-    const bandPx = sq - sa;
-    // a slightly lit top edge on each band
-    if (bandPx > 5)
-      front.push(<path key={`ft${i}`} d={`M${f2(a[0])},${f2(a[1] + 1.4 * px)}L${f2(q[0])},${f2(a[1] + 1.4 * px)}`} stroke="#FFF8EA" strokeOpacity={0.6} strokeWidth={f2(1.3 * px)} />);
-    // the darker sheet-edge seam under it, and fine sheet-edge lines within it
-    front.push(<path key={`fb${i}`} d={`M${Pt(P.p(x0, -h0, zF))}L${Pt(P.p(x1, -h0, zF))}`} stroke={t(mixHex(tone, "#6A5E4C", 0.6), h0)} strokeWidth={f2(Math.max(lw, 1.7 * px))} />);
+    return pts;
+  };
+  const botCurve = (v: VB) => {
+    const pts: P2[] = [];
+    for (let k = 0; k <= NX; k++) {
+      const X = lerp(v.xl, v.xr, k / NX);
+      pts.push(P.p(X, -yAt(v.i, X), zF));
+    }
+    return pts;
+  };
+  const line = (q: P2[], dy = 0) => `M${q.map((p) => `${f2(p[0])},${f2(p[1] + dy)}`).join("L")}`;
+  // ---- the bands ----
+  const bands: React.ReactNode[] = [];
+  const lines: React.ReactNode[] = [];
+  const sticks: React.ReactNode[] = [];
+  const blots: React.ReactNode[] = [];
+  const outlineL: P2[] = [];
+  const outlineR: P2[] = [];
+  for (let n = vis.length - 1; n >= 0; n--) {
+    const v = vis[n];
+    const tc = topCurve(v);
+    const bc = botCurve(v);
+    // the sides lean and bow a little (a hand-squared ream, not a ruled box), growing as the band is buried
+    const og = ORG[v.i];
+    const gb = buried(v.h1);
+    const sideMid = (a: P2, b: P2, bow: number): P2 => [(a[0] + b[0]) / 2 + bow * gb * rF, (a[1] + b[1]) / 2];
+    const lean = og.lean * gb * rF;
+    tc[0] = [tc[0][0] + lean, tc[0][1]];
+    tc[NX] = [tc[NX][0] + lean, tc[NX][1]];
+    const cR = sideMid(tc[NX], bc[NX], og.br);
+    const cL = sideMid(bc[0], tc[0], -og.bl);
+    const d = `M${tc.map(Pt).join("L")}Q${Pt(cR)} ${Pt(bc[NX])}L${[...bc].reverse().map(Pt).join("L")}Q${Pt(cL)} ${Pt(tc[0])}Z`;
+    bands.push(<path key={`b${v.i}`} d={d} fill={t(v.tone, v.h0)} />);
+    bands.push(<path key={`bs${v.i}`} d={d} fill="url(#pl-shade)" />);
+    const qm = (a: P2, c: P2, b: P2): P2 => [0.25 * a[0] + 0.5 * c[0] + 0.25 * b[0], 0.25 * a[1] + 0.5 * c[1] + 0.25 * b[1]];
+    outlineL.push(tc[0], qm(tc[0], cL, bc[0]), bc[0]);
+    outlineR.push(tc[NX], qm(tc[NX], cR, bc[NX]), bc[NX]);
+    const bandPx = (bc[0][1] - tc[0][1]) * cam.k;
+    // a single sheet's new layer glows fresh as it forms at the edge, then settles to its tone
+    const j = Math.round(BANDS[v.i].m0 / LAYER) - 1;
+    if (BANDS[v.i].m0 > 0 && j >= 0 && j < LAND.length) {
+      const g = sstep((frame - LAND[j]) / 3) * (1 - sstep((frame - LAND[j] - 5) / 9));
+      if (g > 0.01) bands.push(<path key={`bg${v.i}`} d={d} fill="#FFFAF0" fillOpacity={0.5 * g} />);
+    }
+    // a slightly lit top edge, the darker sheet-edge seam under it, fine sheet-edge lines within it
+    if (bandPx > 5) lines.push(<path key={`lt${v.i}`} d={line(tc, 1.4 * px)} stroke="#FFF8EA" strokeOpacity={0.6} strokeWidth={f2(1.3 * px)} fill="none" />);
+    lines.push(<path key={`ls${v.i}`} d={line(bc)} stroke={t(mixHex(v.tone, "#6A5E4C", 0.6), v.h0)} strokeWidth={f2(Math.max(lw, 1.7 * px))} fill="none" />);
+    const b = BANDS[v.i];
     for (let k = 0; bandPx > 9 && k < b.lam.length; k++) {
-      const mm = b.m0 + b.lam[k] * (b.m1 - b.m0);
-      if (mm >= m1) continue;
-      const h = heightOf(mm, frame);
-      front.push(<path key={`fl${i}-${k}`} d={`M${Pt(P.p(x0, -h, zF))}L${Pt(P.p(x1, -h, zF))}`} stroke={t(mixHex(tone, "#7A6E5A", 0.42), h)} strokeWidth={f2(Math.max(lw * 0.6, 0.9 * px))} />);
+      const q = b.lam[k];
+      if (b.m0 + q * (b.m1 - b.m0) >= Math.min(b.m1, M)) continue;
+      const pts: P2[] = [];
+      for (let s = 0; s <= NX; s++) pts.push([tc[s][0], lerp(bc[s][1], tc[s][1], q * (b.m1 - b.m0) / (Math.min(b.m1, M) - b.m0))]);
+      lines.push(<path key={`ll${v.i}-${k}`} d={line(pts)} stroke={t(mixHex(v.tone, "#7A6E5A", 0.42), v.h0)} strokeWidth={f2(Math.max(lw * 0.6, 0.9 * px))} fill="none" />);
+    }
+    const o = ORG[v.i];
+    // a gouache mottle
+    if (o.blot && bandPx > 14) {
+      const X = lerp(v.xl, v.xr, o.blot.u);
+      const hc = (v.h0 + v.h1) / 2;
+      const cc = P.p(X, -hc, zF);
+      blots.push(<ellipse key={`bm${v.i}`} cx={f2(cc[0])} cy={f2(cc[1])} rx={f2(o.blot.rx * (x1 - x0) * rF)} ry={f2(0.42 * (v.h1 - v.h0) * rF)} fill={o.blot.light ? "url(#pl-blot-l)" : "url(#pl-blot-d)"} />);
+    }
+    // a sheet sticking out of the face at its lower boundary (only once buried a little)
+    if (o.stick && !v.top && v.i > 0) {
+      const g = buried(v.h1);
+      const s = o.stick.s * g;
+      if (s > 3) {
+        const X = Math.min(v.xr - o.stick.w - 30, Math.max(v.xl + 30, o.stick.X));
+        const h = yAt(v.i, X + o.stick.w / 2) + 1.5;
+        const sh = s * Math.tan((o.stick.yaw * Math.PI) / 180);
+        const q = [P.p(X, -h, zF + 4), P.p(X + o.stick.w, -h, zF + 4), P.p(X + o.stick.w + sh, -h, zF - s), P.p(X + sh, -h, zF - s)];
+        const under = [P.p(X + sh, -h + 3, zF - s), P.p(X + o.stick.w + sh, -h + 3, zF - s)];
+        sticks.push(
+          <g key={`st${v.i}`}>
+            <path d={`M${Pt(under[0])}L${Pt(under[1])}`} stroke={PAL.shadow} strokeOpacity={0.3} strokeWidth={f2(1.6 * px)} />
+            <path d={poly(q)} fill={t(mixHex(v.tone, "#F7F1E3", 0.55), v.h0)} stroke={t("#B3A68C", v.h0)} strokeWidth={f2(0.8 * px)} strokeOpacity={0.6} />
+          </g>,
+        );
+      }
     }
   }
   // below the oldest band drawn: the same paper on down, out of the frame
-  const fa = P.p(x0, -L, zF);
-  const bottomW = toW(1925);
-  const fb: P2 = [P.p(x1, 0, zF)[0], Math.max(bottomW, fa[1] + 1)];
+  const low = vis.length ? vis[0] : null;
+  const bottomW = toW(1940);
+  const lowY = low ? P.p(0, -low.h0, zF)[1] : P.p(0, -L, zF)[1];
+  const lowXl = low ? P.p(low.xl, 0, zF)[0] : P.p(x0, 0, zF)[0];
+  const lowXr = low ? P.p(low.xr, 0, zF)[0] : P.p(x1, 0, zF)[0];
+  outlineL.push([lowXl, Math.max(bottomW, lowY + 1)]);
+  outlineR.push([lowXr, Math.max(bottomW, lowY + 1)]);
+  const outline = `M${[...outlineL, ...outlineR.reverse()].map(Pt).join("L")}Z`;
   // the deep-time ramp, in screen rows from the top edge to the frame's bottom
   const NS = 24;
   const rampStops: React.ReactNode[] = [];
   for (let i = 0; i <= NS; i++) {
-    const sy = yTopS + ((1925 - yTopS) * i) / NS;
+    const sy = yTopS + ((1940 - yTopS) * i) / NS;
     const [toAir, o] = deepAt(sy - yTopS);
     rampStops.push(<stop key={i} offset={i / NS} stopColor={mixHex(DEEP_GREY, hazeBelow(A, sy), toAir)} stopOpacity={o} />);
   }
-  const hk = 1 / cam.k;
+  const fa = P.p(x0, -L, zF);
+  const xa = P.p(x0 - 40, 0, zF)[0];
+  const xb = P.p(x1 + 40, 0, zF)[0];
+  // the top
+  const NZ = 10;
+  const ya = P.p(0, -L, zF)[1];
+  const yb = P.p(0, -L, zB)[1];
+  const span = yb - ya;
   return (
     <g>
       <defs>
         <linearGradient id="pl-top" gradientUnits="userSpaceOnUse" x1="0" y1={f2(ya)} x2="0" y2={f2(yb)}>
-          {zs.map((Z, i) => (
-            <stop key={i} offset={c01(Math.abs(span) < 1e-3 ? 0 : (P.p(0, -L, Z)[1] - ya) / span)} stopColor={A.tone(TOP_PAPER, Z, L)} />
-          ))}
+          {Array.from({ length: NZ + 1 }, (_, i) => {
+            const Z = zF + ((zB - zF) * i) / NZ;
+            return <stop key={i} offset={c01(Math.abs(span) < 1e-3 ? 0 : (P.p(0, -L, Z)[1] - ya) / span)} stopColor={A.tone(TOP_PAPER, Z, L)} />;
+          })}
         </linearGradient>
-        <linearGradient id="pl-deep" gradientUnits="userSpaceOnUse" x1="0" y1={f2(fa[1])} x2="0" y2={f2(fb[1])}>
+        <linearGradient id="pl-shade" gradientUnits="userSpaceOnUse" x1={f2(xa)} y1="0" x2={f2(xb)} y2="0">
+          <stop offset="0" stopColor="#FFF6E4" stopOpacity={0.3} />
+          <stop offset="0.36" stopColor="#FFF6E4" stopOpacity={0} />
+          <stop offset="0.6" stopColor={PAL.shadow} stopOpacity={0} />
+          <stop offset="1" stopColor={PAL.shadow} stopOpacity={0.36} />
+        </linearGradient>
+        <radialGradient id="pl-blot-l">
+          <stop offset="0" stopColor="#FFF9EE" stopOpacity={0.16} />
+          <stop offset="1" stopColor="#FFF9EE" stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id="pl-blot-d">
+          <stop offset="0" stopColor="#7E705A" stopOpacity={0.12} />
+          <stop offset="1" stopColor="#7E705A" stopOpacity={0} />
+        </radialGradient>
+        <linearGradient id="pl-deep" gradientUnits="userSpaceOnUse" x1="0" y1={f2(fa[1])} x2="0" y2={f2(Math.max(bottomW, fa[1] + 1))}>
           {rampStops}
         </linearGradient>
-        <pattern id="pl-hatch" patternUnits="userSpaceOnUse" width={f2(6 * hk)} height={f2(3 * hk)}>
-          <rect x="0" y="0" width={f2(6 * hk)} height={f2(0.7 * hk)} fill={PAL.shadow} fillOpacity={0.09} />
+        <pattern id="pl-hatch" patternUnits="userSpaceOnUse" width={f2(6 * px)} height={f2(3 * px)}>
+          <rect x="0" y="0" width={f2(6 * px)} height={f2(0.7 * px)} fill={PAL.shadow} fillOpacity={0.08} />
         </pattern>
+        <clipPath id="pl-clip">
+          <path d={outline} />
+        </clipPath>
       </defs>
       <path d={poly([P.p(x0, -L, zF), P.p(x1, -L, zF), P.p(x1, -L, zB), P.p(x0, -L, zB)])} fill="url(#pl-top)" />
       <path d={`M${Pt(P.p(x0, -L, zB))}L${Pt(P.p(x1, -L, zB))}`} stroke={A.tone(SHADE, zB, L)} strokeOpacity={0.5} strokeWidth={lw} />
-      <rect x={f2(fa[0])} y={f2(fa[1])} width={f2(fb[0] - fa[0])} height={f2(fb[1] - fa[1])} fill={t(lowest ? mixHex(lowest, "#B9B2A2", 0.3) : TOP_PAPER, 0)} />
-      {front}
-      <rect x={f2(fa[0])} y={f2(fa[1])} width={f2(fb[0] - fa[0])} height={f2(fb[1] - fa[1])} fill="url(#pl-hatch)" />
-      <rect x={f2(fa[0])} y={f2(fa[1])} width={f2(fb[0] - fa[0])} height={f2(fb[1] - fa[1])} fill="url(#pl-deep)" />
+      {low && <rect x={f2(lowXl)} y={f2(lowY)} width={f2(lowXr - lowXl)} height={f2(Math.max(1, bottomW - lowY))} fill={t(mixHex(BANDS[low.i].tone, "#B9B2A2", 0.3), 0)} />}
+      {bands}
+      <g clipPath="url(#pl-clip)">
+        {blots}
+        <rect x={f2(xa)} y={f2(fa[1])} width={f2(xb - xa)} height={f2(Math.max(1, bottomW - fa[1]))} fill="url(#pl-hatch)" />
+      </g>
+      {lines}
+      {sticks}
+      <path d={outline} fill="url(#pl-deep)" />
       <path d={`M${Pt(P.p(x0, -L, zF))}L${Pt(P.p(x1, -L, zF))}`} stroke={PAL.cream} strokeOpacity={0.75} strokeWidth={lw * 1.3} strokeLinecap="round" />
     </g>
   );
 };
 
 // ---------------------------------------------------------------------------
-// THE OFFICE WALL (in the top's frame): oatmeal plaster with a skirting, one window whose sky runs the 88 hours (the
-// office's sun colours by day, deep petrol with stars and a pale moon by night), a slate frame
+// THE LIVED-IN TOP (in the top's frame): stacks of reams (each ream a little off the one under it), loose sheets, a
+// crumpled sheet
 // ---------------------------------------------------------------------------
-const NIGHT_TOP = "#1C303C";
-const NIGHT_LOW = "#2E4656";
-const STARS = Array.from({ length: 14 }, (_, i) => ({
-  u: random(`stx${i}`),
-  v: random(`sty${i}`) * 0.7,
-  s: 0.6 + random(`sts${i}`) * 0.8,
-}));
-const OfficeWall: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
+const ReamStack: React.FC<{ A: AirWorld; x0: number; x1: number; z0: number; z1: number; reams: number; uid: string }> = ({ A, x0, x1, z0, z1, reams, uid }) => {
   const P = A.P;
-  const { x0, x1, z: Zb, t: WT, h: WH, win: w } = WALL;
-  const day = dayAt(frame);
-  const sun = officeSun(sunTAt(frame));
-  const glow = glowAt(frame);
-  const tone = (hex: string, h: number) => A.tone(hex, Zb, h);
-  const wq = poly([P.p(x0, 0, Zb), P.p(x1, 0, Zb), P.p(x1, -WH, Zb), P.p(x0, -WH, Zb)]);
-  const hole = poly([P.p(w.x0, w.sill, Zb), P.p(w.x0, w.head, Zb), P.p(w.x1, w.head, Zb), P.p(w.x1, w.sill, Zb)]);
-  const wy0 = P.p(0, 0, Zb)[1];
-  const wy1 = P.p(0, -WH, Zb)[1];
-  const plaster = (s: number) => tone(mixHex(MAT_PLASTER.mid, MAT_PLASTER.lit, 0.15 + 0.5 * s), s * WH);
-  // the window's sky
-  const skyTop = mixHex(NIGHT_TOP, mixHex(sun.skyTop, "#C9A39A", 0.4 * glow), day);
-  const skyLow = mixHex(NIGHT_LOW, mixHex(sun.skyLow, "#E2BFAE", 0.5 * glow), day);
-  const ya = P.p(0, w.head, Zb)[1];
-  const yb = P.p(0, w.sill, Zb)[1];
-  const h = hourOfDay(frame);
-  const su = c01((h - 6) / 13);
-  const sunUp = sstep((h - 5.6) / 0.8) * (1 - sstep((h - 18.8) / 0.8));
-  const sunP = P.p(lerp(w.x0 + 60, w.x1 - 60, su), lerp(w.sill - 20, w.head + 70, Math.sin(Math.PI * su)), Zb + 40);
-  const r = P.r(Zb);
-  const night = 1 - day;
-  const mu = c01(((h + 24 - 19) % 24) / 11);
-  const moonP = P.p(lerp(w.x0 + 80, w.x1 - 90, mu), lerp(w.sill - 60, w.head + 90, Math.sin(Math.PI * mu)), Zb + 40);
-  const fr = tone(MAT_FRAME.mid, 360);
-  const fw = 9;
-  const xm = (w.x0 + w.x1) / 2;
-  const ymid = (w.sill + w.head) / 2;
-  const bar = (q: P2[], key: string) => <path key={key} d={poly(q)} fill={fr} />;
-  const Zi = Zb + WT;
+  const ex = P.vp[0];
+  const els: React.ReactNode[] = [];
+  let y = 0;
+  for (let k = 0; k < reams; k++) {
+    const hk = uid === "clk" ? 23 : 18 + random(`${uid}h${k}`) * 9;
+    const dx = k === 0 ? 0 : (random(`${uid}x${k}`) * 2 - 1) * 7;
+    const dz = k === 0 ? 0 : (random(`${uid}z${k}`) * 2 - 1) * 6;
+    const a0 = x0 + dx;
+    const a1 = x1 + dx;
+    const b0 = z0 + dz;
+    const b1 = z1 + dz;
+    const yb = -y;
+    const yt = -(y + hk);
+    const tn = (hex: string) => A.tone(hex, b0, y + hk / 2);
+    if (ex > a1) els.push(<path key={`r${k}`} d={poly([P.p(a1, yb, b0), P.p(a1, yb, b1), P.p(a1, yt, b1), P.p(a1, yt, b0)])} fill={tn("#D3C7AD")} />);
+    if (ex < a0) els.push(<path key={`l${k}`} d={poly([P.p(a0, yb, b0), P.p(a0, yb, b1), P.p(a0, yt, b1), P.p(a0, yt, b0)])} fill={tn("#E4DAC4")} />);
+    els.push(<path key={`f${k}`} d={poly([P.p(a0, yb, b0), P.p(a1, yb, b0), P.p(a1, yt, b0), P.p(a0, yt, b0)])} fill={tn(k % 2 ? "#EDE5D2" : "#F2EBDB")} />);
+    for (let q = 1; q < 3; q++) {
+      const yy = lerp(yb, yt, q / 3);
+      els.push(<path key={`fl${k}-${q}`} d={`M${Pt(P.p(a0, yy, b0))}L${Pt(P.p(a1, yy, b0))}`} stroke={tn("#B9AC92")} strokeOpacity={0.55} strokeWidth={A.lw(0.7)} />);
+    }
+    els.push(<path key={`fb${k}`} d={`M${Pt(P.p(a0, yb, b0))}L${Pt(P.p(a1, yb, b0))}`} stroke={tn("#8F826A")} strokeOpacity={0.6} strokeWidth={A.lw(0.9)} />);
+    els.push(<path key={`t${k}`} d={poly([P.p(a0, yt, b0), P.p(a1, yt, b0), P.p(a1, yt, b1), P.p(a0, yt, b1)])} fill={tn("#F7F2E6")} />);
+    y += hk;
+  }
+  // its soft contact shadow on the paper
+  const s0 = P.p(x0 - 10, 0, z0 - 6);
+  const s1 = P.p(x1 + 14, 0, z1 + 10);
   return (
     <g>
-      <defs>
-        <linearGradient id="ow-wall" gradientUnits="userSpaceOnUse" x1="0" y1={f2(wy0)} x2="0" y2={f2(wy1)}>
-          {[0, 0.3, 0.6, 1].map((s) => (
-            <stop key={s} offset={s} stopColor={plaster(s)} />
-          ))}
-        </linearGradient>
-        <linearGradient id="ow-sky" gradientUnits="userSpaceOnUse" x1="0" y1={f2(ya)} x2="0" y2={f2(yb)}>
-          <stop offset="0" stopColor={skyTop} />
-          <stop offset="1" stopColor={skyLow} />
-        </linearGradient>
-        <clipPath id="ow-pane">
-          <path d={hole} />
-        </clipPath>
-        <radialGradient id="ow-sun">
-          <stop offset="0" stopColor={sun.disc} stopOpacity={0.95} />
-          <stop offset="0.45" stopColor={sun.disc} stopOpacity={0.9} />
-          <stop offset="0.6" stopColor={sun.disc} stopOpacity={0.25} />
-          <stop offset="1" stopColor={sun.disc} stopOpacity={0} />
-        </radialGradient>
-      </defs>
-      {/* the sky beyond the glass */}
-      <path d={hole} fill="url(#ow-sky)" />
-      <g clipPath="url(#ow-pane)">
-        {sunUp > 0.01 && <circle cx={f2(sunP[0])} cy={f2(sunP[1])} r={f2(46 * r)} fill="url(#ow-sun)" opacity={sunUp} />}
-        {night > 0.02 &&
-          STARS.map((s, i) => {
-            const p = P.p(lerp(w.x0 + 10, w.x1 - 10, s.u), lerp(w.head + 10, w.sill - 10, s.v), Zb + 40);
-            return <circle key={i} cx={f2(p[0])} cy={f2(p[1])} r={f2(s.s * 3.2 * r)} fill={PAL.cream} opacity={0.85 * night} />;
-          })}
-        {night > 0.02 && (
-          <g opacity={night}>
-            <circle cx={f2(moonP[0])} cy={f2(moonP[1])} r={f2(26 * r)} fill="#EFE8D8" />
-            <circle cx={f2(moonP[0] + 11 * r)} cy={f2(moonP[1] - 6 * r)} r={f2(23 * r)} fill={skyTop} />
-          </g>
-        )}
-      </g>
-      {/* the reveals (the wall's thickness round the hole) */}
-      {w.x1 > P.vp[0] && <path d={poly([P.p(w.x1, w.sill, Zb), P.p(w.x1, w.head, Zb), P.p(w.x1, w.head, Zi), P.p(w.x1, w.sill, Zi)])} fill={tone(MAT_PLASTER.mid, 360)} />}
-      {w.x0 < P.vp[0] && <path d={poly([P.p(w.x0, w.sill, Zb), P.p(w.x0, w.head, Zb), P.p(w.x0, w.head, Zi), P.p(w.x0, w.sill, Zi)])} fill={tone(MAT_PLASTER.lit, 360)} />}
-      <path d={poly([P.p(w.x0, w.head, Zb), P.p(w.x1, w.head, Zb), P.p(w.x1, w.head, Zi), P.p(w.x0, w.head, Zi)])} fill={tone(mixHex(MAT_PLASTER.mid, MAT_PLASTER.dark, 0.3), 520)} />
-      {/* the frame: border, mullion, transom */}
-      {bar([P.p(w.x0, w.head, Zi - 6), P.p(w.x1, w.head, Zi - 6), P.p(w.x1, w.head + fw, Zi - 6), P.p(w.x0, w.head + fw, Zi - 6)], "bt")}
-      {bar([P.p(w.x0, w.sill - fw, Zi - 6), P.p(w.x1, w.sill - fw, Zi - 6), P.p(w.x1, w.sill, Zi - 6), P.p(w.x0, w.sill, Zi - 6)], "bb")}
-      {bar([P.p(w.x0, w.head, Zi - 6), P.p(w.x0 + fw, w.head, Zi - 6), P.p(w.x0 + fw, w.sill, Zi - 6), P.p(w.x0, w.sill, Zi - 6)], "bl")}
-      {bar([P.p(w.x1 - fw, w.head, Zi - 6), P.p(w.x1, w.head, Zi - 6), P.p(w.x1, w.sill, Zi - 6), P.p(w.x1 - fw, w.sill, Zi - 6)], "br")}
-      {bar([P.p(xm - fw / 2, w.head, Zi - 6), P.p(xm + fw / 2, w.head, Zi - 6), P.p(xm + fw / 2, w.sill, Zi - 6), P.p(xm - fw / 2, w.sill, Zi - 6)], "bm")}
-      {bar([P.p(w.x0, ymid - fw / 2, Zi - 6), P.p(w.x1, ymid - fw / 2, Zi - 6), P.p(w.x1, ymid + fw / 2, Zi - 6), P.p(w.x0, ymid + fw / 2, Zi - 6)], "bx")}
-      {/* the wall face (with the hole), its right end, the skirting, the sill */}
-      <path d={`${wq}${hole}`} fill="url(#ow-wall)" fillRule="evenodd" />
-      {P.vp[0] > x1 && <path d={poly([P.p(x1, 0, Zb), P.p(x1, -WH, Zb), P.p(x1, -WH, Zi), P.p(x1, 0, Zi)])} fill={tone(MAT_PLASTER.dark, 300)} />}
-      <path d={poly([P.p(x0, 0, Zb - 3), P.p(x1, 0, Zb - 3), P.p(x1, -26, Zb - 3), P.p(x0, -26, Zb - 3)])} fill={tone(MAT_SKIRT.mid, 13)} />
-      <path d={poly([P.p(w.x0 - 14, w.sill, Zb - 14), P.p(w.x1 + 14, w.sill, Zb - 14), P.p(w.x1 + 14, w.sill + 10, Zb - 14), P.p(w.x0 - 14, w.sill + 10, Zb - 14)])} fill={tone(MAT_PLASTER.lit, -w.sill)} />
-      <path d={`M${Pt(P.p(x0, -WH, Zb))}L${Pt(P.p(x1, -WH, Zb))}`} stroke={PAL.cream} strokeOpacity={0.55} strokeWidth={A.lw(1.1) * 1.4} strokeLinecap="round" />
+      <ellipse cx={f2((s0[0] + s1[0]) / 2 + 4 * P.r(z0))} cy={f2((s0[1] + s1[1]) / 2)} rx={f2(Math.abs(s1[0] - s0[0]) * 0.58)} ry={f2(Math.max(2, Math.abs(s1[1] - s0[1]) * 0.7))} fill="url(#eons-shadow)" opacity={0.22} />
+      {els}
     </g>
   );
 };
+const Crumple: React.FC<{ A: AirWorld }> = ({ A }) => {
+  const P = A.P;
+  const { X, Z, R } = CRUMPLE;
+  const n = 11;
+  const pts: P2[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const rr = R * (0.72 + 0.4 * random(`cr${i}`));
+    pts.push(P.p(X + Math.cos(a) * rr, -R * 0.75 - Math.sin(a) * rr * 0.8, Z));
+  }
+  const c = P.p(X, -R * 0.75, Z);
+  const tn = (hex: string) => A.tone(hex, Z, R);
+  let creases = "";
+  for (let i = 0; i < n; i += 2) creases += `M${Pt(c)}L${Pt([lerp(c[0], pts[i][0], 0.8), lerp(c[1], pts[i][1], 0.8)])}`;
+  const sh = P.p(X + 6, 0, Z + 4);
+  return (
+    <g>
+      <ellipse cx={f2(sh[0])} cy={f2(sh[1])} rx={f2(R * 1.3 * P.r(Z))} ry={f2(R * 0.4 * P.r(Z))} fill="url(#eons-shadow)" opacity={0.35} />
+      <path d={poly(pts)} fill={tn("#F1EADA")} stroke={tn("#A79A80")} strokeWidth={A.lw(0.8)} strokeLinejoin="round" />
+      <path d={`M${Pt(pts[3])}L${Pt(pts[6])}L${Pt(pts[9])}L${Pt(pts[1])}Z`} fill={tn("#DCD2BD")} fillOpacity={0.7} />
+      <path d={creases} stroke={tn("#9E9078")} strokeOpacity={0.6} strokeWidth={A.lw(0.6)} fill="none" />
+    </g>
+  );
+};
+const LooseSheets: React.FC<{ A: AirWorld; near: boolean }> = ({ A, near }) => (
+  <g>
+    {LOOSE.filter((s) => s.Z < 0 === near).map((s, i) => {
+      const pose: SheetPose = { X: s.X, Y: -0.5, Z: s.Z, yaw: s.yaw, pitch: 0, roll: 0, curl: 0.15 };
+      const cc = A.P.p(s.X, -0.5, s.Z);
+      return (
+        <g key={i} transform={`translate(${f2(cc[0])} ${f2(cc[1])}) scale(1.5) translate(${f2(-cc[0])} ${f2(-cc[1])})`}>
+          <WorkSheet A={A} pose={pose} uid={`lo${near ? "n" : "f"}${i}`} />
+        </g>
+      );
+    })}
+  </g>
+);
 
 // ---------------------------------------------------------------------------
-// THE CLOCK (in the top's frame, on the wall): the world module's wall-clock look (slate rim, cream face, 12 marks),
-// its hands racing: the hour hand turns once per 12 hours (18 degrees a frame), the minute hand is a motion blur
+// THE DESK CLOCK (in the top's frame, standing on its stack of reams): slate rim, cream face, 12 marks, its hands
+// racing: the hour hand turns once per 12 hours (18 degrees a frame), the minute hand is a motion blur
 // ---------------------------------------------------------------------------
-const RaceClock: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
+const DeskClock: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
   const P = A.P;
-  const Z = WALL.z - 4;
-  const c = P.p(CLOCK.X, CLOCK.Y, Z);
-  const r = CLOCK.R * P.r(Z);
-  const t = (hex: string) => A.tone(hex, Z, -CLOCK.Y);
+  const { X, Y, Z, R } = CLOCK;
+  const c = P.p(X, Y, Z);
+  const r = R * P.r(Z);
+  const t = (hex: string) => A.tone(hex, Z, -Y);
   const hrs = hoursAt(frame);
   const aH = (hrs / 12) * 360;
   const aM = hrs * 360;
@@ -660,37 +790,78 @@ const RaceClock: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
   };
   const marks: React.ReactNode[] = [];
   for (let i = 0; i < 12; i++) {
-    const a0 = at(i * 30, i % 3 === 0 ? 0.7 : 0.77);
-    const a1 = at(i * 30, 0.86);
-    marks.push(<line key={i} x1={f2(a0[0])} y1={f2(a0[1])} x2={f2(a1[0])} y2={f2(a1[1])} stroke={t("#3A3430")} strokeWidth={f2((i % 3 === 0 ? 0.075 : 0.045) * r)} strokeLinecap="round" />);
+    const a0 = at(i * 30, i % 3 === 0 ? 0.68 : 0.76);
+    const a1 = at(i * 30, 0.85);
+    marks.push(<line key={i} x1={f2(a0[0])} y1={f2(a0[1])} x2={f2(a1[0])} y2={f2(a1[1])} stroke={t("#3A3430")} strokeWidth={f2((i % 3 === 0 ? 0.08 : 0.05) * r)} strokeLinecap="round" />);
   }
-  // the minute hand's blur: a soft wedge trailing ~110 degrees behind it (it turns ~220 degrees a frame)
   const wedge: P2[] = [c];
   for (let i = 0; i <= 12; i++) wedge.push(at(aM - 110 + (110 * i) / 12, 0.66));
   const hEnd = at(aH, 0.46);
   const hBack = at(aH + 180, 0.08);
   const mEnd = at(aM, 0.68);
+  const back = P.p(X + 6, Y - 4, Z + 14);
+  const footL = P.p(X - R * 0.55, -70, Z);
+  const footR = P.p(X + R * 0.55, -70, Z);
   return (
     <g>
-      <defs>
-        <radialGradient id="rc-sh">
-          <stop offset="0.7" stopColor={PAL.shadow} stopOpacity={0.35} />
-          <stop offset="1" stopColor={PAL.shadow} stopOpacity={0} />
-        </radialGradient>
-      </defs>
-      <circle cx={f2(c[0] + 0.12 * r)} cy={f2(c[1] + 0.14 * r)} r={f2(r * 1.12)} fill="url(#rc-sh)" />
+      <circle cx={f2(back[0])} cy={f2(back[1])} r={f2(r * 1.02)} fill={t(MAT_FRAME.dark)} />
+      <path d={`M${Pt(at(200, 0.8))}L${Pt(footL)}`} stroke={t(MAT_FRAME.dark)} strokeWidth={f2(0.12 * r)} strokeLinecap="round" />
+      <path d={`M${Pt(at(160, 0.8))}L${Pt(footR)}`} stroke={t(MAT_FRAME.dark)} strokeWidth={f2(0.12 * r)} strokeLinecap="round" />
       <circle cx={f2(c[0])} cy={f2(c[1])} r={f2(r)} fill={t(MAT_FRAME.mid)} />
-      <circle cx={f2(c[0])} cy={f2(c[1])} r={f2(r * 0.9)} fill={t("#EFE7D6")} />
-      <path d={`M${f2(c[0] - 0.97 * r)},${f2(c[1] - 0.15 * r)}A${f2(0.97 * r)},${f2(0.97 * r)} 0 0 1 ${f2(c[0] + 0.15 * r)},${f2(c[1] - 0.97 * r)}`} fill="none" stroke={PAL.cream} strokeOpacity={0.5} strokeWidth={f2(0.05 * r)} strokeLinecap="round" />
+      <circle cx={f2(c[0])} cy={f2(c[1])} r={f2(r * 0.88)} fill={t("#EFE7D6")} />
+      <path d={`M${f2(c[0] - 0.95 * r)},${f2(c[1] - 0.15 * r)}A${f2(0.95 * r)},${f2(0.95 * r)} 0 0 1 ${f2(c[0] + 0.15 * r)},${f2(c[1] - 0.95 * r)}`} fill="none" stroke={PAL.cream} strokeOpacity={0.5} strokeWidth={f2(0.05 * r)} strokeLinecap="round" />
       {marks}
       <path d={poly(wedge)} fill={ink} fillOpacity={0.16} />
       <line x1={f2(c[0])} y1={f2(c[1])} x2={f2(mEnd[0])} y2={f2(mEnd[1])} stroke={ink} strokeOpacity={0.55} strokeWidth={f2(0.05 * r)} strokeLinecap="round" />
-      <line x1={f2(hBack[0])} y1={f2(hBack[1])} x2={f2(hEnd[0])} y2={f2(hEnd[1])} stroke={ink} strokeWidth={f2(0.08 * r)} strokeLinecap="round" />
+      <line x1={f2(hBack[0])} y1={f2(hBack[1])} x2={f2(hEnd[0])} y2={f2(hEnd[1])} stroke={ink} strokeWidth={f2(0.09 * r)} strokeLinecap="round" />
       <circle cx={f2(c[0])} cy={f2(c[1])} r={f2(0.06 * r)} fill={ink} />
     </g>
   );
 };
 
+// ---------------------------------------------------------------------------
+// SHEETS DRIFTING DOWN past the pillar's face (in the world's frame, falling away from the rising top)
+// ---------------------------------------------------------------------------
+const DRIFT = [80, 96, 108, 117, 125, 132].map((t0, i) => ({
+  t0,
+  X: lerp(-1150, 1050, random(`dr${i}x`)),
+  ph: random(`dr${i}p`) * 6.283,
+  Z: TOWER.zF - 70 - random(`dr${i}z`) * 60,
+}));
+const Drifters: React.FC<{ A: AirWorld; frame: number; L: number }> = ({ A, frame, L }) => {
+  const P = A.P;
+  const cam = A.cam;
+  const yTopS = 960 + (P.p(0, -L, TOWER.zF)[1] - cam.cy) * cam.k;
+  return (
+    <g>
+      {DRIFT.map((d, i) => {
+        const u = frame - d.t0;
+        if (u < 0) return null;
+        const drop = 30 * u + 0.9 * u * u;
+        const Y = -L + 20 + drop;
+        const X = d.X + 50 * Math.sin(u * 0.17 + d.ph);
+        const pose: SheetPose = {
+          X,
+          Y,
+          Z: d.Z,
+          yaw: d.ph * 40 + u * 7,
+          pitch: 28 * Math.sin(u * 0.23 + d.ph),
+          roll: 34 * Math.sin(u * 0.19 + d.ph * 1.3),
+          curl: 0.25,
+        };
+        const cc = P.p(X, Y, d.Z);
+        const sy = 960 + (cc[1] - cam.cy) * cam.k;
+        if (sy > 1990) return null;
+        const op = (1 - 0.85 * deepAt(sy - yTopS)[1]) * sstep(u / 3);
+        return (
+          <g key={i} opacity={op} transform={`translate(${f2(cc[0])} ${f2(cc[1])}) scale(1.8) translate(${f2(-cc[0])} ${f2(-cc[1])})`}>
+            <WorkSheet A={A} pose={pose} uid={`dr${i}`} />
+          </g>
+        );
+      })}
+    </g>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // THE SHEETS (in the top's frame), drawn 1.8x a real sheet so they read: each lifts off the desk beside the keyboard,
@@ -751,7 +922,7 @@ const Sheets: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
       const wx1 = lerp(fl.X + hw, lerp(fl.X + hw, x1, fl.spread), s);
       const wz0 = lerp(fl.Z - hl, zF, s);
       const wz1 = lerp(fl.Z + hl, fl.Z + hl + 260 * fl.spread, s);
-      const op = 0.8 * fl.spread * (1 - sstep(after / SPREAD)) * sstep(after / 1.5);
+      const op = 0.55 * fl.spread * (1 - sstep(after / SPREAD)) * sstep(after / 1.5);
       washes.push(
         <path key={`w${i}`} d={poly([P.p(wx0, -0.4, wz0), P.p(wx1, -0.4, wz0), P.p(wx1, -0.4, wz1), P.p(wx0, -0.4, wz1)])} fill="#FFF9EC" fillOpacity={op} />,
       );
@@ -790,18 +961,80 @@ const Sheets: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE NIGHTS: the stage dims a little and cools by night, warms at dawn and dusk (AirStage overlay)
+// THE SKY (behind the world, screen space: the sun and moon are at infinity): a soft sun glow and a pale moon arc
+// across it, a few stars at night
 // ---------------------------------------------------------------------------
-// (a slow sine over the day, not the window's quick dawns and dusks: the whole stage must never flicker)
-const DayVeil: React.FC<{ frame: number }> = ({ frame }) => {
-  const night = 0.5 - 0.5 * Math.cos((2 * Math.PI * (hoursAt(frame) - 13)) / 24);
+const STARS = Array.from({ length: 26 }, (_, i) => ({ x: 30 + random(`sx${i}`) * 1020, v: random(`sv${i}`), s: 1.2 + random(`ss${i}`) * 1.6, ph: random(`sp${i}`) * 6.283 }));
+const SkyCycle: React.FC<{ frame: number; yh: number }> = ({ frame, yh }) => {
+  const th = (2 * Math.PI * (hoursAt(frame) - 6)) / 24;
+  const s = Math.sin(th);
+  const cth = Math.cos(th);
+  const base = Math.min(yh - 30, 560);
+  const night = 1 - lightAt(frame);
+  const rose = roseAt(frame);
+  const sunA = sstep((s + 0.1) / 0.28);
+  const moonA = 0.9 * sstep((-s + 0.1) / 0.28);
+  const sx = 540 - 470 * cth;
+  const sy = base - 330 * s;
+  const mx = 540 + 470 * cth;
+  const my = base + 330 * s;
+  const sunCol = mixHex("#FFF2D8", "#F4BFA4", rose);
   return (
-    <AbsoluteFill style={{ pointerEvents: "none" }}>
-      <AbsoluteFill style={{ mixBlendMode: "multiply", background: `rgba(84,108,124,${(0.16 * night).toFixed(3)})` }} />
-    </AbsoluteFill>
+    <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0 }}>
+      <defs>
+        <radialGradient id="sky-sun">
+          <stop offset="0" stopColor={sunCol} stopOpacity={0.95} />
+          <stop offset="0.16" stopColor={sunCol} stopOpacity={0.85} />
+          <stop offset="0.3" stopColor={sunCol} stopOpacity={0.3} />
+          <stop offset="1" stopColor={sunCol} stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id="sky-moon">
+          <stop offset="0" stopColor="#EEF0E6" stopOpacity={0.5} />
+          <stop offset="1" stopColor="#EEF0E6" stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      {sunA > 0.01 && <circle cx={f2(sx)} cy={f2(sy)} r={170} fill="url(#sky-sun)" opacity={sunA} />}
+      {moonA > 0.01 && (
+        <g opacity={moonA}>
+          <circle cx={f2(mx)} cy={f2(my)} r={80} fill="url(#sky-moon)" />
+          <circle cx={f2(mx)} cy={f2(my)} r={17} fill="#F3F1E6" />
+          <circle cx={f2(mx + 7)} cy={f2(my - 4)} r={14} fill="#B9C9C6" fillOpacity={0.55} />
+        </g>
+      )}
+      {night > 0.02 &&
+        STARS.map((st, i) => {
+          const y = 24 + st.v * Math.max(40, yh - 110);
+          return <circle key={i} cx={f2(st.x)} cy={f2(y)} r={f2(st.s)} fill="#FBF7EC" opacity={0.95 * night * (0.7 + 0.3 * Math.sin(frame * 0.6 + st.ph))} />;
+        })}
+    </svg>
   );
 };
 
+// ---------------------------------------------------------------------------
+// THE LIGHT (AirStage overlay): a short deep petrol night over the whole stage (never black), warm day light, rose
+// dawns and dusks, and at night the monitor's glow is the light on the robot and the desk
+// ---------------------------------------------------------------------------
+const DayVeil: React.FC<{ frame: number; glow: { x: number; y: number; r: number } }> = ({ frame, glow }) => {
+  const light = lightAt(frame);
+  const night = 1 - light;
+  const rose = roseAt(frame);
+  const warm = light * c01(sunSinAt(frame));
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      {night > 0.005 && <AbsoluteFill style={{ mixBlendMode: "multiply", background: `rgba(48,74,94,${(0.38 * night).toFixed(3)})` }} />}
+      {warm > 0.005 && <AbsoluteFill style={{ mixBlendMode: "soft-light", background: `rgba(255,214,168,${(0.26 * warm).toFixed(3)})` }} />}
+      {rose > 0.005 && <AbsoluteFill style={{ mixBlendMode: "soft-light", background: `rgba(232,150,128,${(0.42 * rose).toFixed(3)})` }} />}
+      {night > 0.005 && (
+        <AbsoluteFill
+          style={{
+            mixBlendMode: "screen",
+            background: `radial-gradient(ellipse ${f2(glow.r)}px ${f2(glow.r * 0.85)}px at ${f2(glow.x)}px ${f2(glow.y)}px, rgba(240,236,220,${(0.42 * night).toFixed(3)}) 0%, rgba(240,236,220,${(0.14 * night).toFixed(3)}) 45%, rgba(240,236,220,0) 100%)`,
+          }}
+        />
+      )}
+    </AbsoluteFill>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // THE CUT
@@ -818,19 +1051,41 @@ const EonsInEightyEightHours: React.FC<z.infer<typeof schema>> = () => {
     rest: { x: REST.cam.cx, y: eyeAt(0).H, z: -eyeAt(0).D },
   });
   const sit = AL.P.at(0, 0);
+  const gw = screenOf(AL.P.p(120, -200, 0), camL);
+  const glow = { x: gw[0], y: gw[1], r: Math.max(60, 330 * camL.k) };
+  const yh = 960 + (A.P.opts.eyeY - cam.cy) * cam.k;
+  const behind = STACKS.filter((s) => s.z0 >= 0);
+  const front = STACKS.filter((s) => s.z0 < 0);
   return (
-    <AirStage v={v} bloom={0.22} shafts={0.6} overlay={<DayVeil frame={frame} />}>
+    <AirStage v={v} bloom={0.22} shafts={0.5} overlay={<DayVeil frame={frame} glow={glow} />}>
       <HazeSea A={A} />
+      <SkyCycle frame={frame} yh={yh} />
       <WorldSvg cam={cam}>
         <Pillar A={A} frame={frame} L={e.lift} />
+        <Drifters A={A} frame={frame} L={e.lift} />
       </WorldSvg>
       <WorldSvg cam={camL}>
-        <OfficeWall A={AL} frame={frame} />
-        <RaceClock A={AL} frame={frame} />
-        <Plate A={AL} X={PLATE88.X} Y={PLATE88.Y} Z={WALL.z - 4} text="88 HOURS" t={plateT(frame, 58, 13)} uid="pl88" size={PLATE88.size} />
+        <defs>
+          <radialGradient id="eons-shadow">
+            <stop offset="0" stopColor={PAL.shadow} stopOpacity={1} />
+            <stop offset="1" stopColor={PAL.shadow} stopOpacity={0} />
+          </radialGradient>
+        </defs>
+        {behind.map((s) => (
+          <ReamStack key={s.uid} A={AL} {...s} />
+        ))}
+        <LooseSheets A={AL} near={false} />
+        <ReamStack A={AL} {...CLOCK_STACK} uid="clk" />
+        <DeskClock A={AL} frame={frame} />
+        <Plate A={AL} X={PLATE88.X} Y={PLATE88.Y} Z={PLATE88.Z} text="88 HOURS" t={plateT(frame, 58, 13)} uid="pl88" size={PLATE88.size} />
         <OfficeDesk A={AL} X={0} Z={0} dir={1} uid="dk" layer="back" screen={1} />
         <Bot variant={0} pose={BOT_POSES.typeAtDesk(1, frame)} at={sit.at} scale={sit.scale} uid="bot" frame={frame} fog={AL.folkFog(0)} unitPx={camL.k} />
         <OfficeDesk A={AL} X={0} Z={0} dir={1} uid="dkf" layer="front" screen={1} />
+        {front.map((s) => (
+          <ReamStack key={s.uid} A={AL} {...s} />
+        ))}
+        <LooseSheets A={AL} near={true} />
+        <Crumple A={AL} />
         <Sheets A={AL} frame={frame} />
       </WorldSvg>
     </AirStage>
