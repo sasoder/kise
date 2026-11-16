@@ -1,17 +1,19 @@
 // check-eleven-times-faster.ts — per-frame checks of ElevenTimesFaster (rsi-since-writing, cut 12).
 // bun generated/components/rsi-since-writing/check-eleven-times-faster.ts
 // Every frame: the camera lobes (k, cx and their steps), both faces vs the caption bands and the keep-in box, the
-// pencil tips on their IK targets while drawing, the Genius's planted foot (no slide), his head vs the expert's card,
-// the rows of cards vs the bands, the plates vs the keep-in and the bands, and the Genius's exit (no lingering sliver).
-import { geniusAnchors } from "../rsi-ten-earths/tenEarthsGenius";
+// pencil tips on their IK targets while drawing, the robot's planted feet (no slide), its head vs the expert's card,
+// the rows of cards vs the bands, the labels (on the board plane: their projected text boxes and cap heights) vs the
+// keep-in and the bands, and in the settled frame the AI's 11 cards clear of the robot.
+import { botAnchors } from "../rsi-ten-earths/tenEarthsBot";
 import { humanAnchors } from "./sinceWritingFolk";
 import {
   CARD,
   DURATION,
   E_TICK,
-  PLATES,
-  plateSize,
-  plateX,
+  LABELS,
+  labelBox,
+  labelT,
+  clipMotes,
   ROW,
   TICK_T,
   UP_COLS,
@@ -25,7 +27,7 @@ import {
   expertPose,
   gTip,
   gX,
-  geniusPose,
+  aiPose,
   strokeTimes,
 } from "./ElevenTimesFaster";
 
@@ -46,7 +48,7 @@ let panMax = 0;
 let panF = 0;
 let accMax = 0;
 let prevV: number[] = [];
-const boardPts = [[450, -250], [colX(2), -207], [colX(12), -207]] as const;
+const boardPts = [[450, -250], [colX(2), ROW.lo], [colX(12), ROW.lo]] as const;
 const sp = (f: number) => {
   const { cam, W } = worldAt(f, false);
   return boardPts.map(([x, y]) => scr(W.A3.P.p(x, y, Z_CARD), cam));
@@ -72,6 +74,8 @@ let footF = 0;
 let headCard = 999;
 let sliverFrames = 0;
 const headPlate: string[] = [];
+let moteGap = { d: 1e9, f: 0, id: "" };
+let paintHead = { d: 1e9, f: 0 };
 const exitFrames: number[] = [];
 for (let f = 0; f < DURATION; f++) {
   const { cam, W } = worldAt(f, false);
@@ -92,15 +96,15 @@ for (let f = 0; f < DURATION; f++) {
     const ta = scr(ea.pencilTip as [number, number], cam);
     tipErrE = Math.max(tipErrE, Math.hypot(tw[0] - ta[0], tw[1] - ta[1]));
   }
-  // ---- the Genius ----
+  // ---- the robot ----
   const X = gX(f);
   const g = A.P.at(X, 0);
-  const gq = geniusPose(f, g.at, g.scale, A);
-  const ga = geniusAnchors(3, gq as never, g.at, g.scale);
+  const gq = aiPose(f, g.at, g.scale, A);
+  const ga = botAnchors(4, gq as never, g.at, g.scale);
   const gh = scr(ga.headC as [number, number], cam);
-  const gr = ga.headR * cam.k;
+  const gr = 1.25 * ga.headR * cam.k; // the head box is wider than its radius (+ ear discs)
   const gIn = gh[0] + gr > 0 && gh[0] - gr < 1080;
-  if (gIn && inBand(gh[1] - gr, gh[1] + gr)) fail(`f${f}: the Genius's face in a caption band`);
+  if (gIn && inBand(gh[1] - gr, gh[1] + gr)) fail(`f${f}: the robot's face in a caption band`);
   // his tip on the stroke while a tick is drawn
   for (let n = 0; n < 11; n++) {
     const t = strokeTimes(n);
@@ -116,16 +120,16 @@ for (let f = 0; f < DURATION; f++) {
     const pA = worldAt(f - 1, false).W.A3;
     const pX = gX(f - 1);
     const pg = pA.P.at(pX, 0);
-    const pq = geniusPose(f - 1, pg.at, pg.scale, pA);
-    const pa = geniusAnchors(3, pq as never, pg.at, pg.scale);
+    const pq = aiPose(f - 1, pg.at, pg.scale, pA);
+    const pa = botAnchors(4, pq as never, pg.at, pg.scale);
     // world units of each ankle: (anchor - at) / scale + X
     const wx = (a: typeof ga, at: [number, number], sc: number, XX: number, k: "ankleL" | "ankleR") => ((a[k] as [number, number])[0] - at[0]) / sc + XX;
     const wy = (a: typeof ga, at: [number, number], sc: number, k: "ankleL" | "ankleR") => ((a[k] as [number, number])[1] - at[1]) / sc;
     for (const k of ["ankleL", "ankleR"] as const) {
       const yNow = wy(ga, g.at as [number, number], g.scale, k);
       const yPrev = wy(pa, pg.at as [number, number], pg.scale, k);
-      // planted: on the floor now and before (ankle within 1.5 units of its lowest)
-      if (yNow > -16.2 && yPrev > -16.2) {
+      // planted: on the floor now and before (ankle within ~0.7 units of its lowest, -6.5)
+      if (yNow > -7.2 && yPrev > -7.2) {
         const dx = Math.abs(wx(ga, g.at as [number, number], g.scale, X, k) - wx(pa, pg.at as [number, number], pg.scale, pX, k));
         if (dx > footSlide) {
           footSlide = dx;
@@ -166,24 +170,24 @@ for (let f = 0; f < DURATION; f++) {
       return { x0: Math.min(...pts.map((p) => p[0])) - 6, x1: Math.max(...pts.map((p) => p[0])) + 6, y0: Math.min(...pts.map((p) => p[1])) - 10, y1: Math.max(...pts.map((p) => p[1])) };
     };
     // the expert's arm passes his row on its way down from the tick (f174-180): held from f181
-    const bodies = [{ n: "Genius", b: box(ga as never) }, ...(f >= E_TICK[2] + 7 ? [{ n: "expert", b: box(ea as never) }] : [])];
-    // the AI's 11 cards (each with its tick) fully visible from f170: the Genius's silhouette is wider than his joint
-    // anchors (shirt bulk, sleeves: measured on the f182 render, 24 px past the anchor box at a 40 px head radius),
-    // so his box is widened by 0.75 head radius and tested against the whole card
+    const bodies = [{ n: "robot", b: box(ga as never) }, ...(f >= E_TICK[2] + 7 ? [{ n: "expert", b: box(ea as never) }] : [])];
+    // the AI's 11 cards (each with its tick) fully visible from f170: the robot's silhouette is wider than its joint
+    // anchors (the head box and its ear discs: measured on the f170/f182 renders, 18-28 px past the anchor box at a
+    // 41 px head radius), so its box is widened by 0.7 head radius and tested against the whole card
     if (f >= 170) {
       const gb = box(ga as never);
-      const wx = 0.75 * gr;
+      const wx = 0.7 * ga.headR * cam.k;
       let minGap = 999;
       for (const c of LO_COLS) {
         const q0 = scr(A.P.p(colX(c), ROW.lo, Z_CARD), cam);
         const q1 = scr(A.P.p(colX(c) + CARD.w, ROW.lo + CARD.h, Z_CARD), cam);
         const yHit = q1[1] > gb.y0 && q0[1] < gb.y1;
         const gap = gb.x0 - wx - q1[0];
-        if (yHit && q1[0] > gb.x0 - wx && q0[0] < gb.x1 + wx) fail(`f${f}: the Genius occludes the AI's card lo${c} and its tick (by ${(q1[0] - (gb.x0 - wx)).toFixed(0)} px)`);
+        if (yHit && q1[0] > gb.x0 - wx && q0[0] < gb.x1 + wx) fail(`f${f}: the robot occludes the AI's card lo${c} and its tick (by ${(q1[0] - (gb.x0 - wx)).toFixed(0)} px)`);
         if (yHit && gap >= 0) minGap = Math.min(minGap, gap);
       }
-      if (f === 170 || f === DURATION - 1) console.log(`  f${f}: the Genius's silhouette clears the AI's last card by ${minGap.toFixed(0)} px (silhouette x ${(gb.x0 - wx).toFixed(0)}-${(gb.x1 + wx).toFixed(0)})`);
-      if (gb.x1 + wx > KEEP.x1) fail(`f${f}: the Genius past the keep-in on the right (x ${(gb.x1 + wx).toFixed(0)})`);
+      if (f === 170 || f === DURATION - 1) console.log(`  f${f}: the robot's silhouette clears the AI's last card by ${minGap.toFixed(0)} px (silhouette x ${(gb.x0 - wx).toFixed(0)}-${(gb.x1 + wx).toFixed(0)})`);
+      if (gb.x1 + wx > KEEP.x1) fail(`f${f}: the robot past the keep-in on the right (x ${(gb.x1 + wx).toFixed(0)})`);
     }
     for (const [r, cols, nm] of [[ROW.up, UP_COLS, "up"], [ROW.lo, LO_COLS, "lo"]] as const) {
       for (const c of cols) {
@@ -197,37 +201,62 @@ for (let f = 0; f < DURATION; f++) {
   // ---- a figure in shot on every frame (head and feet inside the frame)
   const fIn = (h: number[], r: number) => h[0] - r > 0 && h[0] + r < 1080;
   if (!fIn(eh, er) && !fIn(gh, gr)) fail(`f${f}: no figure in shot`);
-  if (f >= 136 && !fIn(gh, gr)) fail(`f${f}: the Genius's head leaves the frame`);
-  // ---- the plates (text box: centre +- half the measured width, +- the cap; widths measured on f182 at 1.345) ----
-  const plates = PLATES.map((p) => ({ ...p, name: p.text, t0: undefined as number | undefined }));
-  for (const p of plates) {
-    if (f < p.f0) continue;
-    const px = plateX(p, f);
-    const c = scr(A.P.p(px, p.Y, p.Z), cam);
-    const s = plateSize(p, f) * W.loc(px).P.r(p.Z) * cam.k;
-    const x0 = c[0] - (p.wEm * s) / 2;
-    const x1 = c[0] + (p.wEm * s) / 2;
-    const y0 = c[1] - 0.45 * s;
-    const y1 = c[1] + 0.42 * s;
+  if (f >= 136 && !fIn(gh, gr)) fail(`f${f}: the robot's head leaves the frame`);
+  // ---- the labels: on the board plane, their text boxes (the measured width x the cap band) projected through the
+  // turned world; the cap height on screen at each end of the text (the far end is the smaller under perspective)
+  for (const lb of LABELS) {
+    if (labelT(lb, f) <= 0) continue;
+    const bx = labelBox(lb);
+    const corners = [scr(A.P.p(bx.tx0, bx.cy0, bx.Z), cam), scr(A.P.p(bx.tx1, bx.cy0, bx.Z), cam), scr(A.P.p(bx.tx1, bx.cy1, bx.Z), cam), scr(A.P.p(bx.tx0, bx.cy1, bx.Z), cam)];
+    const x0 = Math.min(...corners.map((c) => c[0]));
+    const x1 = Math.max(...corners.map((c) => c[0]));
+    const y0 = Math.min(...corners.map((c) => c[1]));
+    const y1 = Math.max(...corners.map((c) => c[1]));
+    const capPx = Math.min(corners[3][1] - corners[0][1], corners[2][1] - corners[1][1]);
     const visible = x1 > 0 && x0 < 1080;
     if (!visible) continue;
-    // the Genius's head never covers a plate's text
-    if (p.t0 === undefined && gIn && f >= p.f0 && gh[0] + gr > x0 && gh[0] - gr < x1 && gh[1] + gr > y0 && gh[1] - gr < y1) headPlate.push(`${p.name}@f${f}(${(gh[1] + gr - y0).toFixed(0)}px)`);
-    // "11×" stays clear of his head on every frame (a 10 px margin)
-    if (p.name === "11×" && gIn && gh[0] + gr + 10 > x0 && gh[0] - gr - 10 < x1 && gh[1] + gr + 10 > y0 && gh[1] - gr - 10 < y1) fail(`f${f}: the Genius's head touches "11×"`);
-    if (inBand(y0, y1)) fail(`f${f}: plate ${p.name} in a caption band (y ${y0.toFixed(0)}-${y1.toFixed(0)})`);
-    if (y0 < KEEP.y0 || y1 > KEEP.y1) fail(`f${f}: plate ${p.name} outside the keep-in vertically`);
-    if (f >= 170 && (x0 < KEEP.x0 || x1 > KEEP.x1)) fail(`f${f}: plate ${p.name} outside the keep-in in the settled frame (x ${x0.toFixed(0)}-${x1.toFixed(0)})`);
-    if (f === DURATION - 1 || (p.name === "GDPval" && [100, 111, 124, 136].includes(f))) console.log(`  f${f} ${p.name}: font ${s.toFixed(0)} px, cap ~${(0.66 * s).toFixed(0)} px, x ${x0.toFixed(0)}-${x1.toFixed(0)}, y ${y0.toFixed(0)}-${y1.toFixed(0)}`);
+    // the robot's head over a label's text (logged), and never over the painted part of "11×" (a 10 px margin; the
+    // paint wipes on left to right over 12 frames, as LabelOnBoard draws it)
+    if (lb.kind === "paint") {
+      const rev = Math.min(bx.tx1, bx.x0 + (labelT(lb, f) ** 2 * (3 - 2 * labelT(lb, f))) * bx.w);
+      const pc = [scr(A.P.p(bx.tx0, bx.cy0, bx.Z), cam), scr(A.P.p(rev, bx.cy0, bx.Z), cam), scr(A.P.p(rev, bx.cy1, bx.Z), cam), scr(A.P.p(bx.tx0, bx.cy1, bx.Z), cam)];
+      const [px0, px1] = [Math.min(...pc.map((c) => c[0])), Math.max(...pc.map((c) => c[0]))];
+      const [py0, py1] = [Math.min(...pc.map((c) => c[1])), Math.max(...pc.map((c) => c[1]))];
+      const gap = Math.hypot(Math.max(px0 - gh[0], 0, gh[0] - px1), Math.max(py0 - gh[1], 0, gh[1] - py1)) - gr;
+      if (gIn && rev > bx.tx0 && gap < paintHead.d) paintHead = { d: gap, f };
+      if (gIn && rev > bx.tx0 && gap < 10) fail(`f${f}: the robot's head within ${gap.toFixed(0)} px of the painted "11×"`);
+    }
+    if (gIn && gh[0] + gr > x0 && gh[0] - gr < x1 && gh[1] + gr > y0 && gh[1] - gr < y1) headPlate.push(`${lb.text}@f${f}`);
+    if (inBand(y0, y1)) fail(`f${f}: label ${lb.text} in a caption band (y ${y0.toFixed(0)}-${y1.toFixed(0)})`);
+    if (y0 < KEEP.y0 || y1 > KEEP.y1) fail(`f${f}: label ${lb.text} outside the keep-in vertically (y ${y0.toFixed(0)}-${y1.toFixed(0)})`);
+    if (f >= 170 && (x0 < KEEP.x0 || x1 > KEEP.x1)) fail(`f${f}: label ${lb.text} outside the keep-in in the settled frame (x ${x0.toFixed(0)}-${x1.toFixed(0)})`);
+    const minCap = lb.text === "11×" ? 45 : 34;
+    if (f >= 170 && capPx < minCap) fail(`f${f}: label ${lb.text} cap ${capPx.toFixed(0)} px < ${minCap}`);
+    // no dust mote within 80 px of "11×" from f140 (the motes as drawn: the swayed view, the mid layer's odd half and
+    // the near layer, which sit over the world; each mote's full radius, the soft edge included)
+    if (lb.text === "11×" && f >= 140) {
+      const sw = worldAt(f, true);
+      const cs = [[bx.tx0, bx.cy0], [bx.tx1, bx.cy0], [bx.tx1, bx.cy1], [bx.tx0, bx.cy1]].map(([u, w]) => scr(sw.W.A3.P.p(u, w, bx.Z), sw.cam));
+      const [sx0, sx1] = [Math.min(...cs.map((c) => c[0])), Math.max(...cs.map((c) => c[0]))];
+      const [sy0, sy1] = [Math.min(...cs.map((c) => c[1])), Math.max(...cs.map((c) => c[1]))];
+      for (const m of [...clipMotes(sw.W.A.v, 1, 1), ...clipMotes(sw.W.A.v, 2)]) {
+        const d = Math.hypot(Math.max(sx0 - m.x, 0, m.x - sx1), Math.max(sy0 - m.y, 0, m.y - sy1)) - m.r;
+        if (d < moteGap.d) moteGap = { d, f, id: m.id };
+        if (d < 80) fail(`f${f}: mote ${m.id} ${d.toFixed(0)} px from "11×" (x ${m.x.toFixed(0)}, y ${m.y.toFixed(0)})`);
+      }
+    }
+    if (f === DURATION - 1 || f === 20 || (lb.text === "GDPval" && f === 111)) console.log(`  f${f} ${lb.text}: cap ${(corners[3][1] - corners[0][1]).toFixed(0)} -> ${(corners[2][1] - corners[1][1]).toFixed(0)} px (left -> right end), x ${x0.toFixed(0)}-${x1.toFixed(0)}, y ${y0.toFixed(0)}-${y1.toFixed(0)}`);
   }
-  if (f === DURATION - 1 || f === 0 || f === 136) console.log(`f${f}: expert ${(scr(ea.ankleL as [number, number], cam)[1] - eh[1] + er).toFixed(0)} px tall-ish, face y ${eh[1].toFixed(0)} x ${eh[0].toFixed(0)}; Genius face y ${gh[1].toFixed(0)} x ${gh[0].toFixed(0)}`);
+  if (f === DURATION - 1 || f === 0 || f === 136) console.log(`f${f}: expert ${(scr(ea.ankleL as [number, number], cam)[1] - eh[1] + er).toFixed(0)} px tall-ish, face y ${eh[1].toFixed(0)} x ${eh[0].toFixed(0)}; robot face y ${gh[1].toFixed(0)} x ${gh[0].toFixed(0)}`);
 }
 console.log(`ticks at ${TICK_T.map((t) => t.toFixed(1)).join(" ")}; the expert's tick ${E_TICK[0]}-${E_TICK[2]}`);
-console.log(`pencil tip vs its target: Genius max ${tipErrG.toFixed(2)} px, expert max ${tipErrE.toFixed(2)} px`);
-console.log(`Genius planted-foot slide: max ${footSlide.toFixed(2)} units per frame (f${footF})`);
-console.log(`Genius head vs the expert's card 0: min gap ${headCard === 999 ? "never under it" : headCard.toFixed(1) + " px"}`);
-console.log(`Genius head over a plate: ${headPlate.length ? headPlate.join(" ") : "never"}`);
-console.log(`Genius straddling the right edge: ${sliverFrames} frames (${exitFrames.join(",")})`);
-if (headCard < 4) fail(`the Genius's head comes within ${headCard.toFixed(1)} px of the expert's card`);
+console.log(`pencil tip vs its target: robot max ${tipErrG.toFixed(2)} px, expert max ${tipErrE.toFixed(2)} px`);
+console.log(`robot planted-foot slide: max ${footSlide.toFixed(2)} units per frame (f${footF})`);
+console.log(`robot head vs the expert's card 0: min gap ${headCard === 999 ? "never under it" : headCard.toFixed(1) + " px"}`);
+console.log(`robot head vs the painted "11×": min gap ${paintHead.d.toFixed(0)} px (f${paintHead.f})`);
+console.log(`nearest dust mote to "11×" from f140: ${moteGap.d.toFixed(0)} px (${moteGap.id} at f${moteGap.f})`);
+console.log(`robot head over a plate: ${headPlate.length ? headPlate.join(" ") : "never"}`);
+console.log(`robot straddling the right edge: ${sliverFrames} frames (${exitFrames.join(",")})`);
+if (headCard < 4) fail(`the robot's head comes within ${headCard.toFixed(1)} px of the expert's card`);
 if (tipErrG > 2 || tipErrE > 2) fail("a pencil tip leaves its stroke");
 console.log(fails.length ? `FAIL\n${fails.join("\n")}` : "PASS");

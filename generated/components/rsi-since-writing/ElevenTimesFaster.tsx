@@ -11,26 +11,29 @@
 //   faster 151 · than 160 · human 170 · experts. 175 · (Add 183)
 // DURATION: the slot 12.3874 -> 20.0200 s = 7.633 s x 23.976 = 183 frames (f0..f182).
 //
-// THE MOTION: one long GDPval task board on a plaster wall, two rows of identical cream task cards (each a few faint
-// lines and an empty tick box): the upper row (above the heads) the human expert's (oatmeal shirt, glasses; HUMAN
-// EXPERT), the lower row (waist height) the AI's (the Genius v3, no glasses: an older model; GPT-5.2), the AI's row
-// starting two cards right so the Genius never stands in front of the expert's card. Both raise their pencils from f0
-// (the expert's far hand, up in front of his face, never across it). The expert writes his first card's lines slowly
-// in dark ink. The Genius scribbles his first card in orange and ticks it (f20), then walks the row at one step per
-// card (a 10.6-frame step, stride = the card pitch, planted feet) and ticks every card as he passes (the pencil tip on
-// the stroke: IK on the card's world point each frame); the 11th tick lands on "11" (f136). The camera trucks right
-// with him in one lobe (k 1.85 -> 1.78, cx 160 -> 652 at f136), the expert falling out of shot left. From f132 one
-// continuous pull-back + pan (viewAt: the world turned 54 deg about X=Z=0, settled by ~f170, creep to f182) swings to
-// an oblique view down the board: it recedes to the right in one-point perspective into the haze, both full rows in
-// shot (the expert's 11 cards, the AI's 11 orange ticks), the Genius kept in shot all the way (his planted feet are the
-// swing's anchor). He walks two steps past the board's end, stops (f156), takes one more step on (back foot past, front
-// foot up beside it, f156-170) while turning to face the camera, and stands planted, ~320 px tall, head turned toward
-// the expert, clear of the AI's 11th card so all 11 ticks show from f170. The expert stands at the near end, larger,
-// and ticks his ONE card in dark ink on "human experts" (f163-174), lowers the pencil and turns his head toward the
-// orange row. GDPval fades in on the wall above the board on "OpenAI's" (f92), "11×" over the AI's row near its far
-// end on "times" (f138); HUMAN EXPERT and GPT-5.2 grow a little and HUMAN EXPERT slides along its row with the swing.
-// Living hold: breath, the head turns, the creep. Orange = the Genius and his ticks and scribble
-// only; the expert's ink is dark; nothing else is orange.
+// THE MOTION (revision 1: the AI is the robot, every label lives on the board): one long GDPval task board on a
+// plaster wall, two rows of identical cream task cards (each a few faint lines and an empty tick box): the upper row
+// (above the heads) the human expert's (oatmeal shirt, glasses), the lower row (at the robot's chest) the AI's (the
+// robot, tenEarthsBot v4: no antenna, a dial: an older model), the AI's row starting two cards right. Both raise
+// their pencils from f0 (the expert's far hand, up in front of his face, never across it). The expert writes his
+// first card's lines slowly in dark ink. The robot scribbles its first card in orange and ticks it (f20), then
+// scurries the row (two short steps per card at the old speed, 66 units per ~10.7 frames, planted feet) and ticks every
+// card as it passes (the pencil tip up and to the right, so its mitten stays under its wide head; IK on the card's
+// world point each frame); the 11th tick lands on "11" (f135). The camera trucks right with it in one lobe (k 1.85 ->
+// 1.78, cx 160 -> 652 at f136), the expert falling out of shot left. From f132 one continuous pull-back + pan (viewAt:
+// the world turned 54 deg about X=Z=0, settled by ~f170, creep to f182) swings to an oblique view down the board: it
+// recedes to the right in one-point perspective into the haze, both full rows in shot (the expert's 11 cards, the AI's
+// 11 orange ticks), the robot kept in shot all the way (its planted feet the swing's anchor). It hurries on past the
+// board's end, stops on a landing (~f163), steps its back foot up and turns to face the camera, planted, ~245 px tall,
+// head turned toward the expert, clear of the AI's 11th card so all 11 ticks show from f170. The expert stands at the
+// near end, larger, and ticks his ONE card in dark ink on "human experts" (f163-174), lowers the pencil and turns his
+// head toward the orange row.
+// THE LABELS are all on the board plane (LABELS / LabelOnBoard: strips of affine maps through the turned world, each
+// toned by its own distance), so they foreshorten, take the board's light and air and turn with it: HUMAN EXPERT and
+// GPT-5.2 pinned label cards at the starts of their rows (in from f6 / f2), a GDPval header card pinned at the board's
+// top on "OpenAI's" (f92), and "11×" painted in cream on the linen just above the AI row's last four cards, wiped on
+// from "times" (f140); no dust mote comes within 80 px of it (MOTE_SKIP). Living hold: breath, the head turns, the creep. Orange = the robot and its ticks and scribble only;
+// the expert's ink is dark; nothing else is orange.
 //
 // DEPTH: eye 300 units up (1.69 m), dRef 1700 at kRef 1, dolly 0.5, fog by the eye (officeScene(0.35) air). The figures
 // stand at Z 0, the board face (cards) at Z 33.5, the frame 34..46, the plaster wall at Z 46.
@@ -65,13 +68,14 @@ import {
   type P2,
 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import { POSES as CP, breathe, covidGripTo, lerpPose, walkPose, type CovidPose } from "../kyle-covid/covidFolkBody";
-import { Genius, GENIUS_POSES, PENCIL_TIP } from "../rsi-ten-earths/tenEarthsGenius";
+import { Bot, BOT_POSES, BOT_SHADOW, BOT_WALK_CYCLE, PENCIL_TIP, botBlink, botGripTo, botRig, botWalkAdvance, type BotPose } from "../rsi-ten-earths/tenEarthsBot";
+import { MOTE_LAYERS, hash01, smoothstep, type AirView } from "../kyle-pandemics/pandemicAir";
 import { HUMAN_POSES, Human } from "./sinceWritingFolk";
-import { MAT_FLOORWOOD, MAT_FRAME, MAT_PLASTER, Plate, officeScene } from "./sinceWritingWorld";
+import { MAT_FLOORWOOD, MAT_FRAME, MAT_PLASTER, PLATE_FONT, officeScene } from "./sinceWritingWorld";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 183;
-export const schema = z.object({});
+export const schema = z.object({ grid: z.boolean().default(false) });
 export const defaultProps = schema.parse({});
 
 // ===================================================================================================================
@@ -94,17 +98,17 @@ const VAR = 3;
 // ===================================================================================================================
 // THE BOARD (units: X across, Y up -, Z depth; the board plane is Z_CARD)
 // ===================================================================================================================
-export const PITCH = 66; // one card + its gap, = the Genius's step
+export const PITCH = 66; // one card + its gap (the robot takes two steps per card)
 export const CARD = { w: 56, h: 52 };
 const COL0 = 60;
 export const colX = (c: number) => COL0 + c * PITCH;
-export const ROW = { up: -387, lo: -207 }; // card tops: the expert's row above the heads, the AI's at chest height
+export const ROW = { up: -387, lo: -175 }; // card tops: the expert's row above the heads, the AI's at the robot's chest
 export const UP_COLS = Array.from({ length: 11 }, (_, i) => i); // the expert's 11
 export const LO_COLS = Array.from({ length: 11 }, (_, i) => i + 2); // the AI's 11
 export const Z_CARD = 33.5;
 const Z_FRAME = 34;
 const Z_WALL = 46;
-const BOARD = { x0: -150, x1: 1400, y0: -478, y1: -45 };
+const BOARD = { x0: -150, x1: 1400, y0: -548, y1: -45 };
 /** card-local (x right, y down from the card's top-left): the tick box, the printed lines, the tick's stroke */
 const BOX = { x0: 5, y0: 12, s: 30 };
 const LINES = [16, 26, 36].map((y) => ({ y, x0: 39, x1: 51.5 }));
@@ -121,7 +125,7 @@ const cardPt = (row: "up" | "lo", col: number, p: P2) => ({ X: colX(col) + p[0],
 // ===================================================================================================================
 export const DEPTH: DepthOpts = { eyeY: -300, dRef: 1700, kRef: 1, dolly: 0.5 };
 const WY_EYE = -284; // the head centre of a standing man at Z 0 (the faces' row)
-const SY_EYE = 800;
+const SY_EYE = 775;
 const LK = pchip(
   [
     [0, Math.log(1.85)],
@@ -140,20 +144,20 @@ const CXT = pchip(
   ],
   true,
 );
-/** the first half's 2D camera (f0-136: the truck right with the Genius; its keys past f136 only shape the curve) */
+/** the first half's 2D camera (f0-136: the truck right with the robot; its keys past f136 only shape the curve) */
 const camTruck = (f: number): Cam => {
   const k = Math.exp(LK(f));
   return { k, cx: CXT(f), cy: WY_EYE - (SY_EYE - 960) / k };
 };
-// THE SECOND HALF (T_SWING -> T_SET, creep to f182): one continuous pull-back + pan that swings round the Genius (who
-// plants at the far end of his row) to an oblique view, the board receding to the right toward its vanishing point.
+// THE SECOND HALF (T_SWING -> T_SET, creep to f182): one continuous pull-back + pan that swings round the robot (which
+// plants at the far end of its row) to an oblique view, the board receding to the right toward its vanishing point.
 // The camera is a pinhole: the world turned about X = Z = 0 by the yaw th (the board's far end goes deep), focal F
-// (px), the horizon's screen y H. The swing interpolates th, F, H, the Genius's depth from the camera dQ and his screen
-// x xQ, and solves the camera's place from them, so he stays in shot (screen x ~840 -> 870) while the expert swings in
+// (px), the horizon's screen y H. The swing interpolates th, F, H, the robot's depth from the camera dQ and its screen
+// x xQ, and solves the camera's place from them, so it stays in shot (screen x ~840 -> 870) while the expert swings in
 // from the left. At th 0 this is exactly camTruck.
 export const T_SWING = 132;
 const T_SET = 170;
-const QX = 945 + 40; // the anchor: the Genius's planted feet at the end (X, Z 0), past the board's last card
+const QX = 1010; // the anchor: the robot's planted feet at the end (X, Z 0), past the board's last card
 type Swing = { th: number; F: number; H: number; dQ: number; xQ: number };
 const swingOf = (c: Cam): Swing => {
   const Dc = DEPTH.dRef / Math.sqrt(c.k);
@@ -161,7 +165,7 @@ const swingOf = (c: Cam): Swing => {
   return { th: 0, F, H: 960 + (DEPTH.eyeY - c.cy) * c.k, dQ: Dc, xQ: 540 + (F * (QX - c.cx)) / Dc };
 };
 /** the settled oblique view (as yaw, focal, the camera's distance and X in the turned frame, the horizon) */
-const OBL = { th: (54 * Math.PI) / 180, F: 2100, Dc: 1300, cx: 220, H: 760 };
+const OBL = { th: (54 * Math.PI) / 180, F: 2200, Dc: 1300, cx: 220, H: 760 };
 const SW_A = swingOf(camTruck(T_SWING));
 const SW_B: Swing = (() => {
   const qx = QX * Math.cos(OBL.th);
@@ -229,67 +233,96 @@ export const worldAt = (f: number, sway = true) => {
 export const SCENE = officeScene(0.35);
 
 // ===================================================================================================================
-// THE GENIUS: stands at his first card, then walks the row, one step per card, ticking each as he passes
+// THE ROBOT (the AI: tenEarthsBot v4, no antenna: an older model): it stands at its first card, then scurries the
+// row (two short steps per card: the same speed as the old one-step-per-card walk), ticking each card as it passes
 // ===================================================================================================================
-export const XG0 = colX(2) + 24 - 86; // his feet at his first card (the stroke's middle 86 units to his right)
+/** the robot's leg scale: its retargeted feet move LEGK as far as the rig's (from its own walk advance) */
+const LEGK = (botWalkAdvance(1) * BOT_WALK_CYCLE) / 88;
+/** the tick stroke's middle, units to the right of its feet: a low reach, the mitten under its wide head */
+export const D_TICK = 56;
+export const XG0 = colX(2) + 23 - D_TICK; // its feet at its first card
 export const XE = 0; // the expert's feet
-const G_BASE: CovidPose = CP.walk(1, 0, 0); // covidFolk's walk base (yaw 0.9) at amount 0: his standing pose too
-const G_HALF = 10.6; // frames per step
+const G_BASE: CovidPose = CP.walk(1, 0, 0); // covidFolk's walk base (yaw 0.9) at amount 0: its standing pose too
+const G_HALF = 5.3; // frames per step (two steps per card)
 const G_WS = 23.7; // the walk starts (amount ramps in over the first step)
 const G_PH0 = 0.25; // phase at the start: weight on the near foot, the far foot swings first
-const G_STRIDE = PITCH;
-const G_WE = 1e9; // (no fade: the walk stops on a landing, F_STOP)
-const gAmt = (f: number) => sst(G_WS, G_WS + G_HALF, f) * (1 - sst(G_WE - G_HALF, G_WE, f));
-/** after the 11th tick he walks on two steps past the end of the board and stops on that landing (f156.2), clear of
- *  the row so all 11 ticks show beside him */
-export const F_STOP = G_WS + (13 - 2 * G_PH0) * G_HALF;
-const gPhase = (f: number) => G_PH0 + Math.max(0, Math.min(f, F_STOP) - G_WS) / (2 * G_HALF);
-/** the stance foot's local x (units; the base feet left out: constant within a stance) */
-export const stanceX = (f: number) => {
-  const p = gPhase(f);
+const G_STRIDE = PITCH / 2 / LEGK; // the rig's stride whose retargeted step is half a card
+const gAmt = (f: number) => sst(G_WS, G_WS + G_HALF, f);
+/** the phase rate: one step per G_HALF, a fifth quicker after the last tick (it hurries on past the board's end) */
+const gRate = (f: number) => (1 + 0.2 * sst(140, 150, f)) / (2 * G_HALF);
+const SUB = 8;
+const N_SUB = (DURATION + 4) * SUB;
+const tab = (T: number[], f: number) => {
+  const i = Math.max(0, Math.min(T.length - 2, f * SUB));
+  const i0 = Math.floor(i);
+  return lerp(T[i0], T[i0 + 1], i - i0);
+};
+/** the phase as it would run on (the rate integrated from the walk's start) */
+const PH_RAW: number[] = (() => {
+  const out = [G_PH0];
+  let p = G_PH0;
+  for (let i = 1; i <= N_SUB; i++) {
+    const a = Math.max(G_WS, (i - 1) / SUB);
+    const b = i / SUB;
+    if (b > a) p += gRate((a + b) / 2) * (b - a);
+    out.push(p);
+  }
+  return out;
+})();
+/** the stance foot's local x (world units, the robot's own; the base feet left out: constant within a stance) */
+const stanceOf = (p: number, amt: number) => {
   const uL = frac(p);
   const u = uL < 0.5 ? uL : frac(p + 0.5);
-  return { side: uL < 0.5 ? 0 : 1, x: gAmt(f) * G_STRIDE * (0.5 - 2 * u) };
+  return { side: uL < 0.5 ? 0 : 1, x: amt * G_STRIDE * LEGK * (0.5 - 2 * u) };
 };
-/** the body's X, integrated from the planted foot (it never slides): a table at quarter frames */
-const SUB = 8;
-const G_X: number[] = (() => {
+/** the body's X, integrated from the planted foot (it never slides): a table at SUB per frame */
+const xTable = (ph: (f: number) => number) => {
   const out = [XG0];
   let X = XG0;
-  let prev = stanceX(0);
-  for (let i = 1; i <= (DURATION + 4) * SUB; i++) {
-    const cur = stanceX(i / SUB);
+  let prev = stanceOf(ph(0), gAmt(0));
+  for (let i = 1; i <= N_SUB; i++) {
+    const cur = stanceOf(ph(i / SUB), gAmt(i / SUB));
     if (cur.side === prev.side) X -= cur.x - prev.x;
     prev = cur;
     out.push(X);
   }
   return out;
-})();
-const gXwalk = (f: number) => {
-  const i = Math.max(0, Math.min(G_X.length - 2, f * SUB));
-  const i0 = Math.floor(i);
-  return lerp(G_X[i0], G_X[i0 + 1], i - i0);
 };
-// ---- planted at the far end: his front foot stays, the body comes up over it and the back foot steps up beside it
-/** his turn toward us (the pose), the body over the front foot, the back foot's step */
-const G_TURN = [157, 170];
-const G_STEP = [156.5, 164.5]; // the back foot steps past the front one
-const G_STEP2 = [162.5, 169.5]; // then the front foot steps up beside it
-const G_SHIFT = [156.5, 169.5];
-/** how much further than the stop his last step takes him: his body clear of the AI's 11th card in the settled frame */
-const G_EXTRA = 72;
+/** where it stops: on the first landing past X_GOAL (clear of the AI's last card in the settled view) */
+const X_GOAL = 990;
+export const F_STOP = (() => {
+  const XR = xTable((f) => tab(PH_RAW, f));
+  let i = 0;
+  while (i < N_SUB && XR[i] < X_GOAL) i++;
+  const pStop = Math.ceil(PH_RAW[i] * 2) / 2;
+  let j = i;
+  while (j < N_SUB && PH_RAW[j + 1] < pStop) j++;
+  return (j + (pStop - PH_RAW[j]) / (PH_RAW[j + 1] - PH_RAW[j])) / SUB;
+})();
+const gPhase = (f: number) => tab(PH_RAW, Math.min(f, F_STOP));
+const G_X = xTable(gPhase);
+const gXwalk = (f: number) => tab(G_X, f);
+// ---- planted at the far end: its front foot stays, the body comes up over it, the back foot steps up beside it, and
+// it turns to face us
+const G_TURN = [F_STOP + 0.5, F_STOP + 8.5];
+const G_STEP = [F_STOP + 0.3, F_STOP + 6.3];
+const G_SHIFT = [F_STOP + 0.3, F_STOP + 7.5];
 const G_STOP_POSE = walkPose(G_BASE, gPhase(F_STOP), 1, G_STRIDE);
+const G_END_POSE = BOT_POSES.turnTo(0.34, 0) as CovidPose;
 const G_FRONT_L = G_STOP_POSE.footL[0] > G_STOP_POSE.footR[0];
-const g2 = (q: CovidPose) => (G_FRONT_L ? { front: q.footL, back: q.footR } : { front: q.footR, back: q.footL });
+type Leg = ReturnType<typeof botRig>["legL"];
+const legs = (q: CovidPose): { front: Leg; back: Leg } => {
+  const r = botRig(q as BotPose);
+  return G_FRONT_L ? { front: r.legL, back: r.legR } : { front: r.legR, back: r.legL };
+};
 const G_STOP_X = gXwalk(F_STOP);
-const G_FRONT_W = G_STOP_X + g2(G_STOP_POSE).front[0];
-const G_END_X = G_FRONT_W - g2(G_BASE).front[0] + 16 + G_EXTRA; // one more step on: the back foot lands ahead, the front foot steps up beside it
-const G_FRONT1_W = G_FRONT_W + G_EXTRA;
-const G_BACK0_W = G_STOP_X + g2(G_STOP_POSE).back[0];
-const G_BACK1_W = G_END_X + g2(G_BASE).back[0];
+const G_FRONT_W = G_STOP_X + legs(G_STOP_POSE).front.A[0];
+const G_BACK0_W = G_STOP_X + legs(G_STOP_POSE).back.A[0];
+const G_END_X = G_FRONT_W - legs(G_END_POSE).front.A[0];
+const G_BACK1_W = G_END_X + legs(G_END_POSE).back.A[0];
 const gShift = (f: number) => sst(G_SHIFT[0], G_SHIFT[1], f);
 export const gX = (f: number) => (f <= F_STOP ? gXwalk(f) : lerp(G_STOP_X, G_END_X, gShift(f)));
-/** the tick frames: card n (0..10) is ticked when his body is n pitches along (the first at his standstill) */
+/** the tick frames: card n (0..10) is ticked when its body is n pitches along (the first at its standstill) */
 export const TICK_T: number[] = (() => {
   const T = [20];
   for (let n = 1; n < 11; n++) {
@@ -363,19 +396,21 @@ const writeInk = (w: Writing, f: number): P2[][] => {
   });
   return out;
 };
-const G_WRITE: Writing = { lines: [[6.5, 9.6], [10.6, 13.7], [14.7, 15.9]], seed: 2 };
+const G_WRITE: Writing = { lines: [[7.5, 9.8], [10.5, 12.6], [13.2, 14.0]], seed: 2 }; // a quick scribble, then ~2.5 frames across to the tick box
 const E_WRITE: Writing = { lines: [[9, 50], [55, 96], [101, 140]], seed: 0 };
 export const E_TICK = [163, 167.5, 174];
 
-// ---- the Genius's pose ----------------------------------------------------------------------------------------------
-const G_SMILE = GENIUS_POSES.stand(1, 0).mouth;
+// ---- the robot's pose -----------------------------------------------------------------------------------------------
+const G_SMILE = BOT_POSES.stand(1, 0).mouth;
 const G_LAST = TICK_T[10];
 /** the pencil arm's weight (0 = swinging free, 1 = on the IK target) */
-const gReach = (f: number) => sst(0, 6, f) * (1 - sst(G_LAST + 2.5, G_LAST + 12, f));
+const gReach = (f: number) => sst(0, 7.5, f) * (1 - sst(G_LAST + 2.5, G_LAST + 12, f));
+/** the pencil's angle on the card (deg): tip up and to the right, so the mitten stays low, under its head */
+const G_ANG = -36;
 /** the tip's target as a 3D board point at frame f (writing, ticking, or travelling lifted between cards) */
 export const gTip = (f: number): { X: number; Y: number; Z: number; ang: number } => {
   const lo = (n: number, p: P2) => cardPt("lo", LO_COLS[n], p);
-  const A0 = 52;
+  const A0 = G_ANG;
   const t0 = strokeTimes(0);
   if (f < t0[0]) {
     // raise to the first card, then scribble its three lines
@@ -402,13 +437,26 @@ export const gTip = (f: number): { X: number; Y: number; Z: number; ang: number 
       const a = lo(n - 1, TICK[2]);
       const b = lo(n, TICK[0]);
       const e = ease(u);
-      return { X: lerp(a.X, b.X, e), Y: lerp(a.Y, b.Y, e) - 9 * Math.sin(Math.PI * u), Z: Z_CARD, ang: A0 - 6 + 6 * e };
+      return { X: lerp(a.X, b.X, e), Y: lerp(a.Y, b.Y, e) - 6 * Math.sin(Math.PI * u), Z: Z_CARD, ang: A0 - 6 + 6 * e };
     }
   }
-  // after the last tick: the hand lifts off to the right and down
+  // after the last tick: the hand comes off to the right and down
   const a = lo(10, TICK[2]);
   const u = c01((f - strokeTimes(10)[2]) / 10);
-  return { X: a.X + 10 * ease(u), Y: a.Y + 24 * ease(u), Z: Z_CARD, ang: A0 - 6 + 30 * ease(u) };
+  return { X: a.X + 8 * ease(u), Y: a.Y + 22 * ease(u), Z: Z_CARD, ang: A0 - 6 + 40 * ease(u) };
+};
+/** put the robot's feet on world X points (its ankles, retargeted): nudge the rig's foot x until the ankle lands */
+const plantFeet = (q: CovidPose, X: number, frontW: number, backW: number): CovidPose => {
+  let out = q;
+  for (let it = 0; it < 3; it++) {
+    const l = legs(out);
+    const fx = (frontW - X - l.front.A[0]) / LEGK;
+    const bx = (backW - X - l.back.A[0]) / LEGK;
+    out = G_FRONT_L
+      ? { ...out, footL: [out.footL[0] + fx, out.footL[1]] as P2, footR: [out.footR[0] + bx, out.footR[1]] as P2 }
+      : { ...out, footR: [out.footR[0] + fx, out.footR[1]] as P2, footL: [out.footL[0] + bx, out.footL[1]] as P2 };
+  }
+  return out;
 };
 const gBody = (f: number) => {
   const amt = gAmt(f);
@@ -417,45 +465,42 @@ const gBody = (f: number) => {
   // frames instead of growing with the amount (no shuffle along the floor)
   if (f > G_WS && f < G_WS + G_HALF) {
     const full = walkPose(G_BASE, gPhase(f), 1, G_STRIDE);
-    const u = sst(G_WS, G_WS + 3, f);
-    // the swing foot's height and toe angle at max(amount, u) of the full walk's
+    const u = sst(G_WS, G_WS + 2, f);
     const up = (wa: number, w1: number) => (u > amt ? wa + ((w1 - wa) * (u - amt)) / Math.max(1e-6, 1 - amt) : wa);
     w = { ...w, footR: [w.footR[0], up(w.footR[1], full.footR[1])] as P2, liftR: up(w.liftR, full.liftR) };
   }
   let q = breathe({ ...w, mouth: G_SMILE } as CovidPose, clock(f), 0.6) as PencilPose;
-  // planted at the far end: he turns three-quarter toward us, his front foot fixed in the world, the back foot
-  // stepping up beside it (a small lifted step), the body coming up over them
+  // planted at the far end: it turns toward us, its front foot fixed in the world, the back foot stepping up beside it
+  // (a small lifted step), the body coming up over them
   if (f > F_STOP) {
     const tu = sst(G_TURN[0], G_TURN[1], f);
     const ts = sst(G_STEP[0], G_STEP[1], f);
     const X = gX(f);
-    const end = { ...GENIUS_POSES.turnTo(lerp(0.9, 0.34, sst(G_TURN[0], G_TURN[1] + 6, f)), f), mouth: G_SMILE } as CovidPose;
+    const end = { ...BOT_POSES.turnTo(lerp(0.9, 0.34, sst(G_TURN[0], G_TURN[1] + 6, f)), f, 2), mouth: G_SMILE } as CovidPose;
     const m = lerpPose(q, end, tu) as PencilPose;
-    const fr = g2(G_STOP_POSE).front;
-    const bk = g2(G_STOP_POSE).back;
-    const t2 = sst(G_STEP2[0], G_STEP2[1], f);
-    const frontL: P2 = [lerp(G_FRONT_W, G_FRONT1_W, t2) - X, lerp(fr[1], g2(G_BASE).front[1], tu) - 7 * Math.sin(Math.PI * t2)];
-    const backL: P2 = [lerp(G_BACK0_W, G_BACK1_W, ts) - X, lerp(bk[1], g2(G_BASE).back[1], ts) - 8 * Math.sin(Math.PI * ts)];
-    q = (G_FRONT_L ? { ...m, footL: frontL, footR: backL } : { ...m, footR: frontL, footL: backL }) as PencilPose;
+    // the back foot's lift (rig units: the robot's legs are LEGK as long)
+    const lift = (18 * Math.sin(Math.PI * ts)) / 1;
+    const backL = G_FRONT_L ? m.footR : m.footL;
+    const lifted = (G_FRONT_L ? { ...m, footR: [backL[0], backL[1] - lift] } : { ...m, footL: [backL[0], backL[1] - lift] }) as PencilPose;
+    q = plantFeet(lifted, X, G_FRONT_W, lerp(G_BACK0_W, G_BACK1_W, ts)) as PencilPose;
   }
-  return q;
+  return { ...q, lids: Math.max(q.lids ?? 0, botBlink(f, 2)) } as PencilPose;
 };
-/** the pose of the Genius at frame f, standing at at/scale (world px), with the pencil tip on gTip */
-export const geniusPose = (f: number, at: P2, scale: number, A: AirWorld): PencilPose => {
+/** the pose of the robot at frame f, standing at at/scale (world px), with the pencil tip on gTip */
+export const aiPose = (f: number, at: P2, scale: number, A: AirWorld): PencilPose => {
   const body = gBody(f);
   const reach = gReach(f);
-  // his look: at the card he ticks, then ahead along the board
-  // turned toward us, his head looks back down the row (toward the expert)
+  // its look: at the card it ticks; turned toward us, its head looks back down the row (toward the expert)
   const tu = sst(G_TURN[0] + 4, G_TURN[1] + 8, f);
   const hy = lerp(lerp(0.78, body.headYaw, 0.3), body.headYaw - 0.45, tu);
-  const work: PencilPose = { ...body, headYaw: hy, pitch: body.pitch + 4 * reach, look: mix2([0.6, 0.05 * reach], [-0.5, 0.06], tu) };
+  const work: PencilPose = { ...body, headYaw: hy, pitch: body.pitch + 3 * reach, look: mix2([0.6, 0.05 * reach], [-0.5, 0.06], tu) };
   const tgt = gTip(f);
   const tip2 = A.P.p(tgt.X, tgt.Y, tgt.Z);
   const tipL: P2 = [(tip2[0] - at[0]) / scale, (tip2[1] - at[1]) / scale];
   const ang = tgt.ang;
   const dd: P2 = [Math.cos((ang * Math.PI) / 180), Math.sin((ang * Math.PI) / 180)];
   const grip: P2 = [tipL[0] - dd[0] * PENCIL_TIP, tipL[1] - dd[1] * PENCIL_TIP];
-  const solved = covidGripTo(KIND, VAR, { ...work, pencil: { hand: "L", ang } } as CovidPose, { L: grip }, [0, 0], 1) as PencilPose;
+  const solved = botGripTo({ ...work, pencil: { hand: "L", ang } } as BotPose, { L: grip }) as PencilPose;
   const restAng = 82;
   let q: PencilPose = reach >= 0.999 ? solved : (lerpPose(work, solved, reach) as PencilPose);
   q = { ...q, pencil: { hand: "L", ang: lerp(restAng, ang, reach) }, mouth: G_SMILE };
@@ -795,23 +840,172 @@ const Board: React.FC<{ W: TW; f: number; uid: string }> = ({ W, f, uid }) => {
   );
 };
 
-/** the labels (Y = the text's centre): each row's name just above its row, the board's name on the wall above it, the
- *  factor over the AI's row toward its far end; size grows to size2 with the swing (the settled caps stay >= 34 px);
- *  wEm = the measured text width in ems (for the check) */
-export const plateSize = (p: { size: number; size2: number }, f: number) => lerp(p.size, p.size2, swingU(f));
-/** X slides to X2 with the swing (HUMAN EXPERT keeps its approved first-half place, then moves along its row) */
-export const plateX = (p: { X: number; X2: number }, f: number) => lerp(p.X, p.X2, swingU(f));
-export const PLATES = [
-  { text: "HUMAN EXPERT", X: 200, X2: 250, Y: -430, Z: Z_CARD - 1, size: 36, size2: 40, f0: 6, uid: "plHE", wEm: 9.9 },
-  { text: "GPT-5.2", X: 300, X2: 300, Y: -224, Z: Z_CARD - 1, size: 34, size2: 42, f0: 2, uid: "plG", wEm: 4.4 },
-  { text: "GDPval", X: 440, X2: 440, Y: -530, Z: Z_WALL - 1, size: 46, size2: 46, f0: 92, uid: "plGD", wEm: 3.95 },
-  { text: "11×", X: 625, X2: 625, Y: -258, Z: Z_CARD - 1, size: 80, size2: 80, f0: 138, uid: "pl11", wEm: 1.75 },
+// ===================================================================================================================
+// THE MOTES: the stage's dust (pandemicAir Motes, same layers, hashes and drift), drawn here so that the five motes
+// whose paths would pass within 80 px of "11×" from f140 are left out for the whole cut (no pop): at this camera
+// speed a mote sweeps ~30 px a frame across the label's row, so no placement clears them all. The AirStage gets
+// motes={0}; the far layers go under the world, the mid layer's odd half and the near layer in its front slot.
+// ===================================================================================================================
+export const MOTE_SKIP = new Set(["1:1", "1:11", "1:95", "2:4", "2:11"]);
+export type ClipMote = { id: string; layer: number; x: number; y: number; r: number; a: number };
+export const clipMotes = (v: AirView, layer: 0 | 1 | 2, half?: 0 | 1): ClipMote[] => {
+  const L = MOTE_LAYERS[layer];
+  const F = v.scene.F;
+  const t = v.frame;
+  const md = v.mood;
+  const span = L.d1 - L.d0;
+  const Wb = (1.3 * 1080 * L.d1) / F;
+  const Hb = (2.3 * Math.max(v.horizon, 1920 - v.horizon) * L.d1) / F;
+  const n = Math.round(L.n * md.moteCount);
+  const mod = (a: number, m: number) => ((a % m) + m) % m;
+  const out: ClipMote[] = [];
+  for (let i = 0; i < n; i++) {
+    if (half !== undefined && i % 2 !== half) continue;
+    const id = `${layer}:${i}`;
+    if (MOTE_SKIP.has(id)) continue;
+    const h = L.seed + i * 7.13;
+    const sp = 0.7 + 0.6 * hash01(h + 3.1);
+    const wob = 0.06 * Math.sin(t * (0.03 + 0.03 * hash01(h + 4.4)) + hash01(h + 5.5) * 6.28);
+    const X = mod(hash01(h) * Wb + md.drift[0] * sp * t + wob - v.travel.x, Wb) - Wb / 2;
+    const Y = mod(hash01(h + 1.7) * Hb + md.drift[1] * sp * t - v.travel.y, Hb) - Hb / 2;
+    const Z = L.d0 + mod(hash01(h + 2.9) * span - md.drift[2] * t - v.travel.z, span);
+    const x = 540 + (F * X) / Z;
+    const y = v.horizon - (F * Y) / Z;
+    const r = (lerp(L.r[0], L.r[1], hash01(h + 6.6)) * md.moteSize * F) / Z;
+    if (x < -r * 2 || x > 1080 + r * 2 || y < -r * 2 || y > 1920 + r * 2) continue;
+    const ends = smoothstep(0, 0.14, (Z - L.d0) / span) * smoothstep(0, 0.2, (L.d1 - Z) / span);
+    const a = lerp(L.a[0], L.a[1], hash01(h + 8.8)) * (0.6 + 0.4 * (1 - c01(y / 1920))) * ends;
+    if (a < 0.01) continue;
+    out.push({ id, layer, x, y, r: Math.max(0.5, Math.min(layer === 2 ? 70 : 9, r)), a });
+  }
+  return out;
+};
+const MoteLayerSvg: React.FC<{ v: AirView; layer: 0 | 1 | 2; half?: 0 | 1 }> = ({ v, layer, half }) => {
+  const gid = `etfm${layer}${half ?? ""}`;
+  const L = MOTE_LAYERS[layer];
+  const f3 = (n: number) => (Math.round(n * 1000) / 1000).toString();
+  return (
+    <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0 }}>
+      <defs>
+        <radialGradient id={gid}>
+          <stop offset="0" stopColor={v.pal.cream} stopOpacity="1" />
+          <stop offset={f3(1 - L.soft)} stopColor={v.pal.cream} stopOpacity={layer === 2 ? "0.8" : "0.9"} />
+          <stop offset="1" stopColor={v.pal.cream} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {clipMotes(v, layer, half).map((m) => (
+        <circle key={m.id} cx={f3(m.x)} cy={f3(m.y)} r={f3(m.r)} fill={`url(#${gid})`} opacity={f3(m.a)} />
+      ))}
+    </svg>
+  );
+};
+
+// ===================================================================================================================
+// THE LABELS: all on the board, in its plane (Z), drawn through the turned world like the cards: they foreshorten,
+// take the board's light and air, and turn with it. GDPval a header card pinned at the board's top, HUMAN EXPERT and
+// GPT-5.2 label cards pinned at the starts of their rows, 11× painted in cream on the linen just above the AI row's
+// last four cards (baseline 28 units above their tops, its cap top 76 below the expert's row: it belongs to the AI's
+// row; it clears the robot's head on every frame, the robot past it before the wipe reaches it). Long labels are cut into strips along X, each strip its own affine map and tone (true perspective
+// across the label). X, Y = the label's centre; size = the font size (units); wEm = the measured text width in ems.
+// ===================================================================================================================
+export type BoardLabel = { id: string; text: string; kind: "card" | "paint"; X: number; Y: number; size: number; wEm: number; f0: number };
+export const LABELS: BoardLabel[] = [
+  { id: "plHE", text: "HUMAN EXPERT", kind: "card", X: 205, Y: -430, size: 41, wEm: 9.9, f0: 6 },
+  { id: "plG", text: "GPT-5.2", kind: "card", X: 330, Y: -268, size: 42, wEm: 4.4, f0: 2 },
+  { id: "plGD", text: "GDPval", kind: "card", X: 470, Y: -500, size: 46, wEm: 3.95, f0: 92 },
+  { id: "pl11", text: "11×", kind: "paint", X: 775, Y: -232, size: 84, wEm: 1.75, f0: 140 },
 ];
+/** a label's box in the board plane (units): the card (or the paint's extent) and the text's cap band */
+export const labelBox = (lb: BoardLabel) => {
+  const tw = lb.wEm * lb.size;
+  const padX = lb.kind === "card" ? 0.5 * lb.size : 0.08 * lb.size;
+  const w = tw + 2 * padX;
+  const h = lb.kind === "card" ? 1.3 * lb.size : 0.9 * lb.size;
+  const cap = 0.66 * lb.size;
+  return { x0: lb.X - w / 2, w, y0: lb.Y - h / 2, h, tx0: lb.X - tw / 2, tx1: lb.X + tw / 2, cy0: lb.Y - cap / 2, cy1: lb.Y + cap / 2, Z: lb.kind === "card" ? Z_CARD - 0.4 : Z_FRAME - 0.3 };
+};
+/** the entrance (0..1 over 12 frames): a card fades in as it drops onto its pins, the paint wipes on left to right */
+export const labelT = (lb: BoardLabel, f: number) => c01((f - lb.f0) / 12);
+const LabelOnBoard: React.FC<{ W: TW; lb: BoardLabel; f: number }> = ({ W, lb, f }) => {
+  const t = labelT(lb, f);
+  if (t <= 0) return null;
+  const b = labelBox(lb);
+  const card = lb.kind === "card";
+  const drop = card ? -9 * (1 - ease(t)) : 0;
+  const y0 = b.y0 + drop;
+  const N = W.th > 1e-4 ? Math.max(4, Math.ceil(b.w / 20)) : 1;
+  const reveal = card ? b.w : ease(t) * b.w;
+  const s = lb.size;
+  const strips: React.ReactNode[] = [];
+  for (let i = 0; i < N; i++) {
+    const ua = (b.w * i) / N;
+    const ub = (b.w * (i + 1)) / N;
+    if (ua >= reveal) break;
+    const L = W.loc(b.x0 + (ua + ub) / 2);
+    const tone = (hex: string) => L.tone(hex, b.Z, 250);
+    const ca = i === 0 ? -8 : ua - 0.12;
+    const cb = Math.min(reveal, i === N - 1 ? b.w + 8 : ub + 0.12);
+    const cid = `${lb.id}-c${i}`;
+    strips.push(
+      <g key={i} transform={rectMatrix(W, b.x0 + ua, y0, ub - ua, b.h, b.Z)}>
+        <defs>
+          <clipPath id={cid} clipPathUnits="userSpaceOnUse">
+            <rect x={f2(ca)} y={f2(-b.h)} width={f2(Math.max(0, cb - ca))} height={f2(3 * b.h)} />
+          </clipPath>
+        </defs>
+        <g transform={`translate(${f2(-ua)} 0)`} clipPath={`url(#${cid})`}>
+          {card ? (
+            <g>
+              <rect x={2.5} y={3} width={b.w} height={b.h} rx={1.6} fill={tone("#22180F")} opacity={0.28} />
+              <rect x={0} y={0} width={b.w} height={b.h} rx={1.3} fill={tone(CARD_C)} />
+              <rect x={0} y={0} width={b.w} height={2.4} fill={tone("#FFF8EC")} opacity={0.7} />
+              <rect x={0} y={b.h - 5} width={b.w} height={5} fill={tone("#D9CDB4")} opacity={0.45} />
+              {[11, b.w - 11].map((px) => (
+                <g key={px}>
+                  <circle cx={px} cy={6} r={2.6} fill={tone(PIN)} />
+                  <circle cx={px - 0.8} cy={5.2} r={0.9} fill={tone("#C9A898")} />
+                </g>
+              ))}
+              <text x={b.w / 2} y={b.h / 2 + 0.34 * s + 1.5} textAnchor="middle" fill={tone(INK)} style={{ fontFamily: PLATE_FONT, fontWeight: 700, fontSize: s, letterSpacing: "0.02em", fontVariantNumeric: "lining-nums" }}>
+                {lb.text}
+              </text>
+            </g>
+          ) : (
+            <text
+              x={b.w / 2}
+              y={b.h / 2 + 0.34 * s}
+              textAnchor="middle"
+              fill={tone(CARD_C)}
+              stroke={tone("#241C14")}
+              strokeOpacity={0.7}
+              strokeWidth={0.08 * s}
+              strokeLinejoin="round"
+              paintOrder="stroke"
+              style={{ fontFamily: PLATE_FONT, fontWeight: 700, fontSize: s, letterSpacing: "0.02em", fontVariantNumeric: "lining-nums" }}
+            >
+              {lb.text}
+            </text>
+          )}
+        </g>
+      </g>,
+    );
+  }
+  return <g opacity={card ? sst(0, 0.7, t) : 1}>{strips}</g>;
+};
+/** the board plane's grid (a check overlay: the labels sit on it) */
+const PlaneGrid: React.FC<{ W: TW }> = ({ W }) => {
+  const P = W.A3.P;
+  const Z = Z_CARD - 0.4;
+  const d: string[] = [];
+  for (let X = -100; X <= 1300; X += 50) d.push(pathOf([P.p(X, BOARD.y0, Z), P.p(X, BOARD.y1, Z)]));
+  for (let Y = -540; Y <= -50; Y += 25) d.push(pathOf([P.p(BOARD.x0, Y, Z), P.p(BOARD.x1, Y, Z)]));
+  return <path d={d.join("")} fill="none" stroke="#00E5FF" strokeWidth={1.2} opacity={0.7} />;
+};
 
 // ===================================================================================================================
 // THE CUT
 // ===================================================================================================================
-const ElevenTimesFaster: React.FC<z.infer<typeof schema>> = () => {
+const ElevenTimesFaster: React.FC<z.infer<typeof schema>> = ({ grid }) => {
   const frame = useCurrentFrame();
   const { cam, W } = worldAt(frame, true);
   const A3 = W.A3;
@@ -819,25 +1013,37 @@ const ElevenTimesFaster: React.FC<z.infer<typeof schema>> = () => {
   const e = A3.P.at(XE, 0);
   const g = A3.P.at(GX, 0);
   const eq = expertPose(frame, e.at, e.scale, A3);
-  const gq = geniusPose(frame, g.at, g.scale, A3);
-  const plateT = (f0: number) => c01((frame - f0) / 12);
+  const gq = aiPose(frame, g.at, g.scale, A3);
   const expert = <Human key="ex" variant={1} pose={eq as never} at={e.at} scale={e.scale} uid="ex" frame={frame} fog={W.loc(XE).folkFog(0)} unitPx={cam.k} />;
-  const genius = <Genius key="gn" variant={3} pose={gq as never} at={g.at} scale={g.scale} uid="gn" frame={frame} fog={W.loc(GX).folkFog(0)} unitPx={cam.k} />;
-  // the nearer figure is drawn last (side by side at the start: the Genius over the expert, as before)
-  const geniusFar = W.dz(GX, 0) > W.dz(XE, 0) + 1;
+  const bot = <Bot key="bt" variant={4} pose={gq as BotPose} at={g.at} scale={g.scale} uid="bt" frame={frame} fog={W.loc(GX).folkFog(0)} unitPx={cam.k} />;
+  // the nearer figure is drawn last (side by side at the start: the robot over the expert)
+  const botFar = W.dz(GX, 0) > W.dz(XE, 0) + 1;
   return (
-    <AirStage v={W.A.v} bloom={0.22} shafts={0.6}>
+    <AirStage
+      v={W.A.v}
+      bloom={0.22}
+      shafts={0.6}
+      motes={0}
+      front={
+        <>
+          <MoteLayerSvg v={W.A.v} layer={1} half={1} />
+          <MoteLayerSvg v={W.A.v} layer={2} />
+        </>
+      }
+    >
+      <MoteLayerSvg v={W.A.v} layer={0} />
+      <MoteLayerSvg v={W.A.v} layer={1} half={0} />
       <WorldSvg cam={cam}>
         <Floor W={W} uid="fl" />
         <Wall W={W} uid="wall" />
         <Board W={W} f={frame} uid="bd" />
-        {/* the labels (billboards at their world points): the rows' names, the board's name, the factor */}
-        {PLATES.map((p) => (
-          <Plate key={p.uid} A={W.loc(plateX(p, frame))} X={plateX(p, frame)} Y={p.Y} Z={p.Z} text={p.text} t={plateT(p.f0)} uid={p.uid} size={plateSize(p, frame)} />
+        {LABELS.map((lb) => (
+          <LabelOnBoard key={lb.id} W={W} lb={lb} f={frame} />
         ))}
+        {grid ? <PlaneGrid W={W} /> : null}
         <AirShadow A={W.loc(XE)} X={XE} Z={0} w={62} d={30} uid="se" amt={0.8} />
-        <AirShadow A={W.loc(GX)} X={GX} Z={0} w={62} d={30} uid="sg" amt={0.8} />
-        {geniusFar ? [genius, expert] : [expert, genius]}
+        <AirShadow A={W.loc(GX)} X={GX} Z={0} w={BOT_SHADOW.w} d={BOT_SHADOW.d} uid="sg" amt={BOT_SHADOW.amt} />
+        {botFar ? [bot, expert] : [expert, bot]}
       </WorldSvg>
     </AirStage>
   );
