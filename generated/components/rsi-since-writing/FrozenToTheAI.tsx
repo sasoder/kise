@@ -26,8 +26,9 @@
 // of it, the right hand takes it on and lays it on the DONE pile (its right), one sheet every 2.4 frames from f50,
 // every 1.6 frames from "times" (the pace steps up f87-98 as the plate lands) to the end: 42 sheets, IN 48 -> 5,
 // DONE 4 -> 46. Faint ghosts trail the flying sheet and the hands smear. On "thousands of times faster" a plate
-// "1,000×" slides up above it (f86-98). Camera: one continuous move from close on your frozen face and the pour
-// (k 2.3) right and back (f4-84, one lobe) to frame you and the busy robot side by side (k 1.98), then a slow creep.
+// "1,000×" slides up above it (f86-98). Camera: close on your frozen face and the pour (k 3.45) from f0, one eased
+// pull-back on an arc (f0-84) that reveals the clock and the working robot and lands on the side-by-side framing
+// (k 1.98), then a slow living drift (no hold).
 // CAUSE -> EFFECT: a sheet leaves the IN pile on the frame the left hand starts it (the pile steps down that frame) and
 // rides the left hand by its left end; at the read point the right hand holds its right end; it lands flat on the DONE
 // pile on the frame its carry ends (the pile steps up). Every hand path is continuous from sheet to sheet.
@@ -98,16 +99,32 @@ const clockT = (f: number) => 9 * 3600 + 41 * 60 + 17.3 + f / FPS / 1000;
 const airClock = (f: number) => 400 + f * 0.02;
 
 // ---------------------------------------------------------------------------
-// THE CAMERA: close on your face and the stream (a creep, f0-8), one move right and back (f8-104) that frames you and
-// the robot at its desk, a slow creep to the end.
+// THE CAMERA (round 2): close on your frozen face and the hanging stream (k 3.45, 1.5x the r1 opening k 2.3; tighter
+// pushes the walking robot's head past x 1015), then ONE eased pull-back on an arc (the pan right leads, the zoom next,
+// the drop last: the clock and the working robot come in) that lands on the r1 framing (k 1.98) by f84, the dolly
+// opening the depth as it goes; a slow living drift to the end. Every channel is monotone (no reversal); it moves from f0.
 // ---------------------------------------------------------------------------
-const camKeys = makeCamera([
-  { f: 0, k: 2.3, wx: -125, wy: -235, sx: 540, sy: 760 },
-  { f: 4, k: 2.29, wx: -123, wy: -236, sx: 540, sy: 760 },
-  { f: 36, k: 2.12, wx: -20, wy: -270, sx: 540, sy: 720 },
-  { f: 84, k: 1.98, wx: 5, wy: -285, sx: 540, sy: 700 },
-  { f: 130, k: 1.95, wx: 7, wy: -285, sx: 540, sy: 700 },
-]);
+/** a framing key -> its camera centre (makeCamera's own conversion) */
+const camAt = (q: { k: number; wx: number; wy: number; sx: number; sy: number }) => makeCamera([{ f: 0, ...q }, { f: 1, ...q }])(0);
+export const CAM_START = camAt({ k: 3.45, wx: -165, wy: -284, sx: 222, sy: 452 });
+export const CAM_LAND = camAt({ k: 1.98, wx: 5, wy: -285, sx: 540, sy: 700 });
+/** the main move 0..1 from f0 (exactly 0 there) to MOVE_END: an S-curve entered `early` frames in (so it is already
+ *  under way on f0: the larger, the faster it starts) */
+export const MOVE_END = 84;
+const moveAt = (f: number, early: number) => {
+  const u = (x: number) => sst(0, 1, (x + early) / (MOVE_END + early));
+  return c01((u(f) - u(0)) / (1 - u(0)));
+};
+/** the arc, every channel monotone, each its own lead (frames already under way at f0): the pan right leads (it keeps
+ *  the walking robot inside x 1015), the zoom next, the drop last (the path bends) */
+export const ARC = { k: 40, y: 20, x: 60 };
+/** the living drift under it all (zoom out ~6 %, a few units right and down over the slot: the same senses as the move) */
+const DRIFT = { lk: -0.06, cx: 14, cy: 4 };
+const camKeys = (f: number) => {
+  const t = f / (DURATION - 1);
+  const k = Math.exp(mix(Math.log(CAM_START.k), Math.log(CAM_LAND.k), moveAt(f, ARC.k)) + DRIFT.lk * t);
+  return { k, cx: mix(CAM_START.cx, CAM_LAND.cx, moveAt(f, ARC.x)) + DRIFT.cx * t, cy: mix(CAM_START.cy, CAM_LAND.cy, moveAt(f, ARC.y)) + DRIFT.cy * t };
+};
 export const camOf = (f: number) => swayCam(camKeys(f), f);
 const REST = camOf(0);
 
