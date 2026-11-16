@@ -24,9 +24,11 @@
 // own column and in, bottom row first (1 2 3 at the bottom ... 10 11 12 at the top), launched at an accelerating
 // cadence (gaps 4.8 -> 3.2 frames; landings f59 ... f110, LAND below); full on "many years". You stay at
 // the desk end (no exit and return: it crowded the line): you watch it take the sheet, follow the binders with your
-// eyes, and from f108 lean back a little and look up at the full shelf with a smile. Camera: one slow push in (k 1.58
-// -> 1.735, a small pan right) from the office (window, desk, bookcase) onto desk + shelf + window. Settled f110-151:
-// evening light, the full shelf, you looking up, the robot typing; living hold (typing, breath, the air, the creep).
+// eyes, and from f108 lean back a little and look up at the full shelf with a smile. Camera (round 2): one slow
+// pull-back with a drift right, from close on you and the sheet (k 2.8) out to the whole room (k 1.67 by f118, 1.635
+// at f151): you and the window first, the robot by the hand-over, the bookcase as the years start to land, the whole
+// room last (THE CAMERA below). From f118: evening light, the full shelf, you looking up, the robot typing; the
+// camera still drifting (typing, breath, the air, the creep).
 // CAUSE -> EFFECT: the sheet rides your hand until f33 (the grip is the solved hand); the robot's mitten lands on the
 // sheet on f38, the sheet's landing frame. Each binder leaves from behind the pedestal (hidden at launch); the routes
 // never intersect each other, the case or the pedestal (each column of a row has its own lane in depth; per-frame check:
@@ -81,14 +83,36 @@ export const sunAt = (f: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE CAMERA: one slow push in from the wide office to desk + shelf + window
+// THE CAMERA: one slow pull-back with a drift right and down (the frame's world centre cx, cy and the zoom k, each
+// monotone; the keys sample one smooth pull: ln k falls at 0.5 %/f from f0, peaks 0.72 %/f near f45, eases to
+// 0.32 by f75, 0.13 by f100 and 0.07 from f118 on; cx and cy follow the same progress, a little ahead of it, and cx
+// keeps a small drift right after f80 so the end never settles). It opens close
+// on you holding up the sheet (k 2.8, 1.77x r1's opening), the robot's face just inside the right of the frame, the
+// morning window's lower panes behind you; through the hand-over (k ~2.25 at f38, both faces and the sheet big) and
+// "then by the evening" it draws back and across as the sun starts over the window and the bookcase comes in from the
+// right ahead of the first year (its left edge on screen ~f30, column 3 inside before binder 3 lands); it keeps
+// easing out while the shelf fills, reaches the whole room around "many years" / "working" (f96-120; everything that
+// matters in y 290-1070, the floor under the captions) and drifts on
+// (0.07 %/f, ~0.3 px/f right) to f151 (k 1.647). The frame drifts down (cy -145 -> -75.5: the room rises on screen) so the bottom row's labels
+// stay above the button column (y <= 900) while they are right of x 955.
 // ---------------------------------------------------------------------------
 const camKeys = makeCamera([
-  { f: 0, k: 1.58, wx: -32, wy: -232, sx: 540, sy: 830 },
-  { f: 50, k: 1.62, wx: -20, wy: -232, sx: 540, sy: 832 },
-  { f: 112, k: 1.722, wx: -12.5, wy: -232, sx: 540, sy: 836 },
-  { f: 151, k: 1.735, wx: -12, wy: -232, sx: 540, sy: 838 },
+  { f: 0, k: 2.8, wx: -155, wy: -145, sx: 540, sy: 960 },
+  { f: 12, k: 2.6277, wx: -124.84, wy: -126.02, sx: 540, sy: 960 },
+  { f: 24, k: 2.4487, wx: -95, wy: -109.04, sx: 540, sy: 960 },
+  { f: 36, k: 2.2658, wx: -66.77, wy: -94.95, sx: 540, sy: 960 },
+  { f: 48, k: 2.0836, wx: -41.93, wy: -84.57, sx: 540, sy: 960 },
+  { f: 60, k: 1.9389, wx: -25.56, wy: -79.13, sx: 540, sy: 960 },
+  { f: 72, k: 1.8392, wx: -16.67, wy: -76.86, sx: 540, sy: 960 },
+  { f: 84, k: 1.7743, wx: -12.17, wy: -76.01, sx: 540, sy: 960 },
+  { f: 96, k: 1.731, wx: -8.96, wy: -75.68, sx: 540, sy: 960 },
+  { f: 108, k: 1.7046, wx: -6.4, wy: -75.57, sx: 540, sy: 960 },
+  { f: 120, k: 1.686, wx: -4.02, wy: -75.53, sx: 540, sy: 960 },
+  { f: 135, k: 1.6666, wx: -1.12, wy: -75.5, sx: 540, sy: 960 },
+  { f: 151, k: 1.6474, wx: 1.88, wy: -75.5, sx: 540, sy: 960 },
 ]);
+/** the camera before the house sway (the check audits its monotony) */
+export const camBaseOf = (f: number) => camKeys(f);
 export const camOf = (f: number) => swayCam(camKeys(f), f);
 const REST = camOf(0);
 

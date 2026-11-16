@@ -1,5 +1,5 @@
 // MorningToEvening (rsi-since-writing, cut 109) per-frame checks, in screen px (sway included):
-// the camera (one push: log k never falls, the pan never reverses), the faces (both heads inside the keep-in box
+// the camera (one pull-back: the base camera's k never rises, its centre never drifts back left or up), the faces (both heads inside the keep-in box
 // x 65-1015, y 290-1070, never in the caption bands), the spine labels (every shelved and flying binder's label inside
 // the box, x <= 955 below y 900; none over the robot's head or antenna), you (feet planted: toes and heels still; the figure at x >= 65), the hand-over (the
 // sheet rides your hand to RELEASE; the robot's near mitten touches the sheet on LANDED), the robot at work (its mittens
@@ -8,7 +8,7 @@
 // boards, or the pedestal on any frame).
 // Run: bun scripts/clips/rsi-since-writing/check-morning-to-evening.ts
 import { airWorldOf } from "../../../generated/components/kits/dwarkesh-3d/dwarkesh3d";
-import { BOT, BIN, CASE, DEPTH, DURATION, LAND, LANDED, PED, RELEASE, ROWS, SHEET_DESK, YOU, binderAt, botAt, camOf, flightOf, sheetAt, sunAt, youAt } from "../../../generated/components/rsi-since-writing/MorningToEvening";
+import { BOT, BIN, CASE, DEPTH, DURATION, LAND, LANDED, PED, RELEASE, ROWS, SHEET_DESK, YOU, binderAt, botAt, camBaseOf, camOf, flightOf, sheetAt, sunAt, youAt } from "../../../generated/components/rsi-since-writing/MorningToEvening";
 import { botAnchors } from "../../../generated/components/rsi-ten-earths/tenEarthsBot";
 import { humanAnchors } from "../../../generated/components/rsi-since-writing/sinceWritingFolk";
 import { officeScene } from "../../../generated/components/rsi-since-writing/sinceWritingWorld";
@@ -23,9 +23,15 @@ const inBox = (p: P2) => p[0] >= 65 && p[0] <= 1015 && p[1] >= 290 && p[1] <= 10
 const cams = Array.from({ length: DURATION }, (_, f) => camOf(f));
 const lk = cams.map((c) => Math.log(c.k));
 const dk = lk.slice(1).map((v, i) => v - lk[i]);
-if (dk.some((v) => v < -1e-6)) issues.push("the push reverses (k falls)");
+// one pull-back: the base camera's k falls, its centre drifts right (cx up) and rises (cy up), never back
+const bases = Array.from({ length: DURATION }, (_, f) => camBaseOf(f));
+for (let f = 1; f < DURATION; f++) {
+  if (bases[f].k > bases[f - 1].k + 1e-9) issues.push(`f${f} the pull-back reverses (k rises)`);
+  if (bases[f].cx < bases[f - 1].cx - 1e-9) issues.push(`f${f} the drift reverses (cx)`);
+  if (bases[f].cy < bases[f - 1].cy - 1e-9) issues.push(`f${f} the drift reverses (cy)`);
+}
 const dx = cams.slice(1).map((c, i) => c.cx - cams[i].cx);
-log.push(`k ${cams[0].k.toFixed(3)} -> ${cams[DURATION - 1].k.toFixed(3)}; zoom %/f by 6: ${dk.filter((_, i) => i % 6 === 0).map((v) => (v * 100).toFixed(2)).join(" ")}`);
+log.push(`k ${cams[0].k.toFixed(3)} -> ${cams[DURATION - 1].k.toFixed(3)}; pull %/f by 6: ${dk.filter((_, i) => i % 6 === 0).map((v) => (-v * 100).toFixed(2)).join(" ")}`);
 log.push(`pan px/f by 6 (incl. sway): ${dx.filter((_, i) => i % 6 === 0).map((v, i) => (v * cams[i * 6].k).toFixed(1)).join(" ")}`);
 
 const worldsOf = (f: number) => {
