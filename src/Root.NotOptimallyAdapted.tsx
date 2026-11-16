@@ -1,7 +1,7 @@
 import {Composition} from 'remotion';
 import NotOptimallyAdapted, {DURATION, FPS, defaultProps, schema} from '../generated/components/rsi-stupidest-species/NotOptimallyAdapted';
 
-// Private render entry for NotOptimallyAdapted (rsi-stupidest-species, revision 1; Dwarkesh 3D style, cut B's staircase world): the clumsy fire-keeper. He smothers his campfire with a far-too-big branch, the nearest lamp bowls dim, he fans and blows, singes his hand, and the fire barely comes back; one push-in and crane down to a medium close of him and his fire.
+// Private render entry for NotOptimallyAdapted (rsi-stupidest-species, revision 2; Dwarkesh 3D style, cut B's staircase world): the clumsy step-up. Seen side-on, he puts his hands flat on the lamp step, plants one foot then the other on the riser (scuffs), hauls up to straight arms and gets a knee onto the top (f27), wobbles back with his arms windmilling, catches himself on both hands and plops down on the edge between two lamps, out of breath (f61); one slow push from a raised eye to a medium of him sitting.
 // Opaque 1080x1920, 23.976 fps, 73 frames.
 export const RemotionRoot = () => (
   <Composition

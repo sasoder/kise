@@ -1,48 +1,44 @@
 // ---------------------------------------------------------------------------
-// NotOptimallyAdapted (rsi-stupidest-species, cut 19), REVISION 1: THE CLUMSY FIRE-KEEPER. Dwarkesh 3D style
+// NotOptimallyAdapted (rsi-stupidest-species, cut 19), REVISION 2: THE CLUMSY STEP-UP. Dwarkesh 3D style
 // (styles/dwarkesh-3d.md). Opaque 1080x1920, 23.976 fps, 73 frames. Built on cut B's world stupidestStairs.tsx
-// (read-only; STAIRS_READY.md) and B's own exports (StupidestPossibleSpecies.tsx: the cast's places, the lamp row, the
-// fire's size); the human is covidFolk's Commuter v0. No chimp in this cut (the director's call: it sat in caption band 1).
+// (read-only; STAIRS_READY.md) and B's exports (StupidestPossibleSpecies.tsx: the fire's place sets the lamp grid);
+// the human is covidFolk's Commuter v0 (read-only; every climbing pose is built here from its pose channels).
 //
-// CHECK LINE: "We got there first, but we're clumsy at it: the fire of civilization barely survives in our hands."
+// CHECK LINE: "We got there first, but we were not built for it: he only just makes it up onto the lit step."
 //
 // THE LINE: "not because we were in any sense optimally adapted to it."
 // WORD -> FRAME: not -2 · because 5 · we 12 · were 19 · in 22 · any 25 · sense 29 · optimally 35 · adapted 49 · to 56 ·
 //   it 67 (Whisper onsets from the composition start; may run ~0.2-0.4 s early)
 // DURATION: the slot 19.353 -> 22.397 s (sequence frames 464-537) = 3.044 s x 23.976 = 73 frames (f0..f72).
 //
-// THE PICTURE: B's resolved world, closer: the human on his step behind the row of lit stone lamp bowls (the threshold of
-// civilization), his campfire burning full, the first dashed orange species on the step above (pushed out of frame by f20).
-// THE MOTION (one continuous push-in and crane down, f0 -> f64, then a creep, landing on a medium close of him and his fire):
-//   f0-13   he already holds a big leafy bough, far too big for the little fire; he crouches with it (f0-10) and lets it
-//           drop onto the fire (released f10, lands LAND f13).
-//   f13-34  the fire chokes under it (flames 1 -> ~0.2 by f19), grey smoke rolls up from under the leaves, the lamps
-//           nearest him flicker and dim with it (the far ones barely); he jerks back, worried (f14-22), leans in again.
-//   f34-56  "optimally adapted": he fans it frantically with his near hand and blows (mouth open), the fire sputters;
-//           a flare licks his hand (FLARE f44-46): he yanks it up and shakes it, singed (f46-56), a wisp off his mitten.
-//   f52-72  "to it": the fire just barely comes back to a small flame, the lamps steady again; he sits back on his
-//           heels, relieved. Living hold: flicker, breathing, creep.
-// Cause before effect: the bough lands (f13) -> the flames shrink (f14) -> smoke and the lamps dim; the flare (f44) ->
-// the hand jerks (f45); the fire comes back -> the lamps steady.
-// Colour: orange = intelligence only (the dashed species). The fire and lamps are B's cream (FIRE_COL), the smoke a muted
-// warm grey, the bough timber umber with muted olive leaves; nobody is orange. No text.
+// THE PICTURE: B's staircase, low and close: the human on the step below the civilization step (step 0, its row of
+// lit stone lamp bowls), at a gap in the lamps. The riser is about his neck height (B's world: 1.45 m; he is 1.83 m).
+// Seen three-quarter from behind-side (facing screen right, his face in profile), so the effort shows.
+// THE ACTION (one thing, unhurried, every move >= 8 frames and eased):
+//   f0-24   hands on the ledge, he hauls himself up (the body rises 1 m) and swings his near knee up onto it
+//           (the knee planted on the tread from KNEE.on).
+//   f24-31  kneeling on one knee at the edge, the far leg dangling over the riser, he lets go and straightens up ...
+//   f28-40  ... and wobbles back, arms windmilling once, worried, mouth open (ONE wobble).
+//   f38-47  catches himself: lunges forward, both hands slapped down on the tread (planted from CATCH.on).
+//   f47-59  hauls the other leg up and swivels round, plopping down to sit on the edge between two lamps, facing us.
+//   f59-72  sits there out of breath (panting), glances down at the drop and back up.
+// Contacts: the hands on the ledge (grip, exact world points) f0-24 and f46-51, eased on and off; the knee on the tread
+// f24-47 (the figure translated so the knee joint sits on its point); the hips on the edge from f59. Pure per frame.
+// Colour: no orange on him (orange = intelligence: the dashed species, off-frame here). The lamps glow steadily.
 //
-// CAMERA: stairCam specs about a point between him and the fire (SPEC_OPEN -> SPEC_END, one designed lobe, ln px/m):
-// pushes in from B's height (150 px/m) to a medium close (400 px/m, him ~450-480 px crouched, face y ~640-690, the lamp
-// row y ~1025, the lamps either side of him and the fire) while the eye cranes down to just above his step; plus the
-// house sway on the crop (as B). Checked per frame by scripts/clips/rsi-stupidest-species/check-not-optimally-adapted.ts
-// (his head in the keep-in box and out of the bands, the zoom's one lobe, the fire, lamps and smoke in the box, the
-// dashed species fully out of frame from f20).
+// CAMERA: one slow push (stairCam, one designed lobe in ln px/m, moving at f0) from a full figure on the lower step to
+// a medium of him sitting between two lamps. Checked per frame by
+// scripts/clips/rsi-stupidest-species/check-not-optimally-adapted.ts.
 //
-// SOURCES: none (no figures on screen).
+// SOURCES: none.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { AIR, AirShadow, AirStage, WorldSvg, airRamp, mixHex, rgbHex, swayCam, type AirWorld, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
+import { AIR, AirShadow, AirStage, WorldSvg, airRamp, rgbHex, swayCam, type AirWorld, type P2 } from "../kits/dwarkesh-3d/dwarkesh3d";
 import * as Covid from "../kyle-covid/covidFolk";
-import { Campfire, DashedSpecies, HeadGlow, LAMPS, Lamp, LightPool, Stairs, U, inFront, speciesOf, stairCam, stairsAirOf, stepAnchor, stepOf, type StairCam } from "./stupidestStairs";
-import { FIRE_AT, FIRE_SIZE, HEAD_GLOW, HUMAN_AT, LAMP_XS, moteView } from "./StupidestPossibleSpecies";
+import { DashedSpecies, HeadGlow, Lamp, Stairs, U, inFront, lampXs, speciesOf, stairCam, stairsAirOf, stepAnchor, stepOf, type StairCam } from "./stupidestStairs";
+import { FIRE_AT, HEAD_GLOW, moteView } from "./StupidestPossibleSpecies";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 73;
@@ -58,43 +54,31 @@ const sst = (a: number, b: number, f: number) => {
 };
 const m = (v: number) => v * U;
 
-// ---- the beats ------------------------------------------------------------------------------------------------------
-export const CROUCH = { a: 0, b: 10 };
-/** the bough: let go on RELEASE, lands on the fire on LAND */
-export const BOUGH_T = { release: 10, land: 13 };
-export const RECOIL = { a: 14, b: 21, back: [25, 33] as [number, number] };
-export const FAN = { a: 33, b: 45, period: 4 };
-export const FLARE = { a: 43, peak: 45, b: 50 };
-export const SHAKE = { a: 45, up: 48, b: 56 };
-export const SITBACK = { a: 55, b: 66 };
+// ---- the place: a gap in the lamp row on the civilization step (step 0), climbed from the step below (-1) ------------
+/** between two lamp places right of B's fire (far from the dashed species on the steps above, which stay out of
+ *  frame); the two lamps either side of it are left out, so his gap is 2 m wide and his head never crosses a flame */
+export const CLIMB_X = FIRE_AT.X + m(1.34 + 0.335);
+export const LAMP_XS2 = lampXs([{ x: CLIMB_X, clear: 0.4 }], FIRE_AT.X);
+/** the lamps stand further back on the tread than B's (0.22 m), so the lit top reads as a surface in front of them */
+export const LAMP_BACK = 0.7;
+export const LEDGE_Y = stepOf(0).Y;
+export const FLOOR_Y = stepOf(-1).Y;
+export const RISER_M = (FLOOR_Y - LEDGE_Y) / U;
 
-// ---- the fire: full, choked under the bough, sputtering, a flare, then barely back ----------------------------------
-export const fireAt = (f: number) => {
-  let t = 1;
-  if (f >= BOUGH_T.land) t = lerp(1, 0.22, Math.pow(sst(BOUGH_T.land, BOUGH_T.land + 6, f), 0.8));
-  // sputter while it is choked (two incommensurate sines), a little livelier while he fans
-  const sp = sst(BOUGH_T.land + 4, BOUGH_T.land + 8, f) * (1 - sst(54, 62, f));
-  t += sp * (0.05 * Math.sin(f * 1.7) + 0.04 * Math.sin(f * 0.93 + 1.3) + 0.08 * sst(FAN.a, FAN.a + 6, f) * Math.max(0, Math.sin(f * 1.26)));
-  // the flare that licks his hand
-  t += 0.55 * sst(FLARE.a, FLARE.peak, f) * (1 - sst(FLARE.peak + 1, FLARE.b, f));
-  // it just barely comes back to a small flame
-  t += 0.22 * sst(50, 64, f);
-  return Math.max(0.16, t);
-};
-/** how lit the lamps can be from the fire (0 = dark when choked, 1 = steady): 1 at the small recovered flame */
-const fireNorm = (f: number) => c01((fireAt(f) - 0.2) / 0.2);
+// ---- the beats ------------------------------------------------------------------------------------------------------
+export const HAUL = { a: 1, b: 24 };
+export const KNEE = { swing: [15, 27] as [number, number], on: 27 };
+export const LETGO = { a: 26, b: 33 };
+export const WOBBLE = { a: 29, b: 41 };
+export const CATCH = { a: 35, b: 47, on: 47, off: [49, 55] as [number, number] };
+export const SWIVEL = { a: 49, b: 61 };
+export const REST_T = { look: [61, 70] as [number, number], back: [67, 77] as [number, number] };
 
 // ---- the camera ------------------------------------------------------------------------------------------------------
-/** the anchor between him and the fire, at his chest (standing) -> lower (crouched) */
-const ANCHOR = { X: (HUMAN_AT.X + FIRE_AT.X) / 2 + m(0.15), Z: HUMAN_AT.Z };
-type Spec = { sx: number; sy: number; pxm: number; dist: number; eyeRight: number; eyeUp: number; hM: number };
-export const SPEC_OPEN: Spec = { sx: 480, sy: 672, pxm: 150, dist: 8.5, eyeRight: -0.6, eyeUp: 1.2, hM: 1.05 };
-export const SPEC_END: Spec = { sx: 605, sy: 740, pxm: 400, dist: 9.5, eyeRight: -1.2, eyeUp: -0.5, hM: 0.7 };
-export const LOBE = { A: 1.0, B: 3.0, F0: -18, F1: 62 };
-export const CREEP = 0.012;
-/** the sideways reframe onto him and the fire lags the push (s^SX_LAG), so the dashed species on the step above leaves
- *  the frame's left edge early (gone by f20) */
-export const SX_LAG = 2.2;
+type Spec = { sx: number; sy: number; pxm: number; dist: number; eyeRight: number; eyeUp: number };
+export const SPEC_OPEN: Spec = { sx: 560, sy: 690, pxm: 205, dist: 7, eyeRight: -0.5, eyeUp: 3.1 };
+export const SPEC_END: Spec = { sx: 540, sy: 830, pxm: 330, dist: 7, eyeRight: -0.7, eyeUp: 2.7 };
+export const LOBE = { A: 1.5, B: 1.7, F0: -26, F1: 96 };
 const N_INT = 1200;
 const S_TAB = (() => {
   const tab = [0];
@@ -110,25 +94,17 @@ const sRaw = (f: number) => {
   return S_TAB[i] + (S_TAB[i + 1] - S_TAB[i]) * (x - i);
 };
 const S0 = sRaw(0);
-export const moveS = (f: number) => (sRaw(f) - S0) / (1 - S0);
+const S1 = sRaw(DURATION - 1);
+export const moveS = (f: number) => (sRaw(f) - S0) / (S1 - S0);
 export const specAt = (f: number): Spec => {
   const s = moveS(f);
-  const u = Math.max(0, (f - 40) / (DURATION - 1 - 40));
   const P = SPEC_OPEN;
   const Q = SPEC_END;
-  return {
-    sx: lerp(P.sx, Q.sx, Math.pow(s, SX_LAG)),
-    sy: lerp(P.sy, Q.sy, s),
-    pxm: Math.exp(lerp(Math.log(P.pxm), Math.log(Q.pxm), s) + CREEP * u * u),
-    dist: lerp(P.dist, Q.dist, s),
-    eyeRight: lerp(P.eyeRight, Q.eyeRight, s),
-    eyeUp: lerp(P.eyeUp, Q.eyeUp, s),
-    hM: lerp(P.hM, Q.hM, s),
-  };
+  return { sx: lerp(P.sx, Q.sx, s), sy: lerp(P.sy, Q.sy, s), pxm: Math.exp(lerp(Math.log(P.pxm), Math.log(Q.pxm), s)), dist: lerp(P.dist, Q.dist, s), eyeRight: lerp(P.eyeRight, Q.eyeRight, s), eyeUp: lerp(P.eyeUp, Q.eyeUp, s) };
 };
 export const camTrack = (f: number): StairCam => {
   const s = specAt(f);
-  return stairCam({ X: ANCHOR.X, Y: HUMAN_AT.Y - m(s.hM), Z: ANCHOR.Z, sx: s.sx, sy: s.sy, pxm: s.pxm, dist: s.dist, eyeRight: s.eyeRight, eyeUp: s.eyeUp });
+  return stairCam({ X: CLIMB_X, Y: LEDGE_Y, Z: 0, sx: s.sx, sy: s.sy, pxm: s.pxm, dist: s.dist, eyeRight: s.eyeRight, eyeUp: s.eyeUp });
 };
 export const camOf = (f: number): StairCam => {
   const c = camTrack(f);
@@ -137,389 +113,311 @@ export const camOf = (f: number): StairCam => {
 };
 const REST = camOf(0);
 
-// ---- the human ------------------------------------------------------------------------------------------------------
+// ---- the human's poses (figure units: 1 unit = 1 world unit at his depth; y up is negative) -------------------------
 const HUMAN_KIND: Covid.CovidKind = "commuter";
-/** standing turned to his fire (B's last stance), the bough held across in front of him in both fists */
-const holdStand = (): Covid.CovidPose => ({
-  ...Covid.POSES.turnTo(0.55),
-  headYaw: 0.5,
-  pitch: 12,
-  look: [0.5, 0.45],
-  armL: { w: [74, -150], elbow: [-0.3, 1], fist: 0.9, hand: 10 },
-  armR: { w: [100, -158], elbow: [-0.1, 1], fist: 0.9, hand: 10 },
+/** facing screen right and a little away (between profile and back three-quarter): the face in profile */
+const YAW = 1.62;
+const arm = (w: P2, elbow: P2, fist = 0.4, hand = 0): Covid.CovidPose["armL"] => ({ w, elbow, fist, hand });
+/** the hand bent down off the forearm, so the open mitten lies flat on the stone (palm down) */
+const PALM = -55;
+/** the far foot's pitch while it is pressed sole-on to the riser (toes up) */
+const RISER_LIFT = -62;
+/** the elbow hint while the hands are down on the stone: back and down (bent, behind the hands, never up past the head) */
+const ELB: P2 = [-0.8, 0.7];
+const base = (): Covid.CovidPose => ({ ...Covid.POSES.turnTo(YAW), headYaw: 1.35 });
+/** f0: on his toes at the riser, reaching up onto the ledge (the arms are solved onto the grips) */
+const pReach = (): Covid.CovidPose => ({ ...base(), crouch: 20, lean: 4, pitch: -16, look: [0.5, -0.7], liftL: -12, liftR: -12, footL: [-6, 0], footR: [10, 0], worry: 0.35, open: 0.1, lids: 0.2, brow: 0.5, armL: arm([60, -200], ELB, 0, PALM), armR: arm([70, -200], ELB, 0, PALM) });
+/** mid-haul: elbows up, the near knee coming up, the far leg hanging, gritted effort */
+const pHaul = (): Covid.CovidPose => ({ ...base(), crouch: 12, lean: 6, pitch: -4, look: [0.6, -0.3], footL: [40, -60], liftL: RISER_LIFT, footR: [10, -20], liftR: 0, worry: 0.6, open: 0.3, lids: 0.5, brow: 0.8, hunch: 0.45, armL: arm([60, -150], ELB, 0, PALM), armR: arm([70, -150], ELB, 0, PALM) });
+/** kneeling on the near knee at the edge (the shin back along the tread), the far leg dangling over the riser */
+const pKneel = (): Covid.CovidPose => ({ ...base(), crouch: 108, lean: 14, pitch: 6, look: [0.6, 0.1], footL: [-70, -24], liftL: 0, footR: [10, 60], liftR: 25, worry: 0.5, open: 0.3, lids: 0.3, brow: 0.5, hunch: 0.2 });
+/** the knee just landed on the edge: the thigh level on the top, the shin folded under over the edge, the hips still
+ *  low at the lip (then he hauls himself up over the knee into pUp) */
+const pMount = (): Covid.CovidPose => ({ ...pKneel(), crouch: 108, lean: 52, pitch: 14, footL: [-10, -5], liftL: 10, liftR: RISER_LIFT, worry: 0.6, open: 0.35, lids: 0.45, brow: 0.8, hunch: 0.4 });
+/** straightened up on the knee, arms coming free */
+const pUp = (): Covid.CovidPose => ({ ...pKneel(), crouch: 70, lean: 0, pitch: 0, look: [0.4, 0], worry: 0.4, open: 0.2, lids: 0.1, brow: 0, hunch: 0 });
+/** tipping back over the drop: the far leg kicking out, the face turned toward us, alarmed */
+const pWobble = (): Covid.CovidPose => ({ ...pKneel(), crouch: 70, lean: -21, pitch: -12, headYaw: 0.95, roll: -8, look: [-0.4, 0.6], footR: [40, 40], worry: 1, open: 0.85, lids: 0, brow: -0.8, hunch: 0 });
+/** lunged forward over the tread, both hands down on it */
+const pCatch = (): Covid.CovidPose => ({ ...pKneel(), armL: arm([90, -60], [-0.45, -1], 0, PALM), armR: arm([100, -60], [-0.45, -1], 0, PALM), crouch: 104, lean: 48, pitch: 22, headYaw: 1.25, roll: 4, look: [0.5, 0.4], worry: 0.8, open: 0.45, lids: 0.15, brow: -0.2 });
+/** sitting on the edge facing us, the legs dangling over the riser, hands on the edge beside him, out of breath */
+const pSit = (): Covid.CovidPose => ({
+  ...Covid.POSES.sit(1, 82),
+  yaw: 0.3,
+  headYaw: 0.15,
+  lean: 0,
+  pitch: 6,
+  look: [0, 0.1],
+  armL: arm([-48, -96], [-0.6, 1], 0.1, 20),
+  armR: arm([58, -96], [0.6, 1], 0.1, 20),
+  worry: 0.35,
+  open: 0.5,
+  lids: 0.35,
+  brow: 0.2,
+  mouth: 0.2,
+  hunch: 0.35,
 });
-/** squatting facing the fire (B's crouch), the bough in both fists low over the fire */
-const crouchBase = (): Covid.CovidPose => ({
-  ...Covid.POSES.sit(1, 22),
-  yaw: 0.86,
-  headYaw: 0.75,
-  lean: 20,
-  pitch: 16,
-  look: [0.55, 0.55],
-  armL: { w: [100, -82], elbow: [-0.2, 1], fist: 0.9, hand: 0 },
-  armR: { w: [116, -96], elbow: [-0.5, 0.8], fist: 0.9, hand: 0 },
-});
-/** the near hand's fanning stroke (wrist offset, hand angle) */
-const fanStroke = (f: number) => {
-  const ph = ((f - FAN.a) / FAN.period) * Math.PI * 2;
-  return { dx: 10 * Math.sin(ph + 0.6), dy: 26 * Math.sin(ph), hand: 55 * Math.sin(ph + 0.4) };
-};
-export const humanPoseAt = (f: number): Covid.CovidPose => {
-  const st = holdStand();
-  const cr = crouchBase();
-  let q = Covid.lerpPose(st, cr, sst(CROUCH.a, CROUCH.b, f));
-  // let go: the fists open
-  const open = sst(BOUGH_T.release - 1, BOUGH_T.release + 2, f);
-  q = { ...q, armL: { ...q.armL, fist: lerp(q.armL.fist, 0.05, open), hand: q.armL.hand + 20 * open }, armR: { ...q.armR, fist: lerp(q.armR.fist, 0.05, open), hand: q.armR.hand + 20 * open } };
-  // the recoil from the smoke: back, hands up, worried; then in again to fan
-  const rec = sst(RECOIL.a, RECOIL.b, f) * (1 - sst(RECOIL.back[0], RECOIL.back[1], f));
-  const worry = sst(RECOIL.a, RECOIL.b, f) * (1 - sst(SITBACK.a, SITBACK.b, f));
-  q = {
+
+/** the windmill: each wrist on a circle about its shoulder (local units), one turn over the wobble, eased in and out */
+const windmill = (q: Covid.CovidPose, f: number): Covid.CovidPose => {
+  const amt = sst(LETGO.a + 1, LETGO.b + 1, f) * (1 - sst(CATCH.a + 1, CATCH.a + 10, f));
+  if (amt < 1e-4) return q;
+  const a0 = Covid.covidAnchors(HUMAN_KIND, q, [0, 0], 1);
+  const th = 1.7 * Math.PI * sst(WOBBLE.a - 2, WOBBLE.b + 3, f);
+  const R = 76;
+  // the near arm circles backward (down-back-up-forward), the far arm half a turn behind
+  const wL: P2 = [a0.shoulderL[0] - R * Math.sin(th + 0.4), a0.shoulderL[1] - R * Math.cos(th + 0.4)];
+  const wR: P2 = [a0.shoulderR[0] - R * Math.sin(th + 0.4 + Math.PI * 0.85), a0.shoulderR[1] - R * Math.cos(th + 0.4 + Math.PI * 0.85)];
+  return {
     ...q,
-    lean: q.lean - 16 * rec,
-    pitch: q.pitch - 10 * rec,
-    worry,
-    open: 0.35 * rec,
-    look: [lerp(q.look?.[0] ?? 0, 0.45, rec), lerp(q.look?.[1] ?? 0, 0.1, rec)],
-    armL: { ...q.armL, w: lerp2(q.armL.w, [64, -150], rec), hand: q.armL.hand + 20 * rec },
-    armR: { ...q.armR, w: lerp2(q.armR.w, [86, -170], rec), hand: q.armR.hand + 20 * rec },
+    armL: { ...q.armL, w: lerp2(q.armL.w, wL, amt), elbow: lerp2(q.armL.elbow, [0.3, 1], amt), fist: lerp(q.armL.fist, 0, amt), hand: lerp(q.armL.hand, 10, amt) },
+    armR: { ...q.armR, w: lerp2(q.armR.w, wR, amt), elbow: lerp2(q.armR.elbow, [-0.3, 1], amt), fist: lerp(q.armR.fist, 0, amt), hand: lerp(q.armR.hand, 10, amt) },
   };
-  // fanning (the near hand, armL) and blowing (leaning in, mouth open), from FAN.a until the flare
-  const fan = sst(FAN.a, FAN.a + 3, f) * (1 - sst(SHAKE.a, SHAKE.a + 2, f));
-  if (fan > 0) {
-    const s = fanStroke(f);
-    q = {
-      ...q,
-      lean: q.lean + 8 * fan,
-      pitch: q.pitch + 4 * fan,
-      open: Math.max(q.open ?? 0, 0.6 * fan * (0.75 + 0.25 * Math.sin(f * 0.9))),
-      look: lerp2(q.look ?? [0, 0], [0.6, 0.6], fan),
-      armL: { ...q.armL, w: lerp2(q.armL.w, [112 + s.dx, -74 + s.dy], fan), elbow: [0.2, 1], fist: lerp(q.armL.fist, 0, fan), hand: lerp(q.armL.hand, -10 + s.hand, fan) },
-      armR: { ...q.armR, w: lerp2(q.armR.w, [70, -86], fan), fist: lerp(q.armR.fist, 0.3, fan) },
-    };
-  }
-  // singed: the near hand jerks up by his shoulder and shakes, he leans back a little, mouth "ow"
-  const sh = sst(SHAKE.a, SHAKE.up, f) * (1 - sst(SHAKE.b - 3, SHAKE.b + 2, f));
-  if (sh > 0) {
-    const jig = sst(SHAKE.up - 1, SHAKE.up + 1, f) * (1 - sst(SHAKE.b - 4, SHAKE.b, f));
-    const shake = jig * Math.sin(f * 2.6);
-    q = {
-      ...q,
-      lean: q.lean - 10 * sh,
-      pitch: q.pitch - 6 * sh,
-      open: Math.max(q.open ?? 0, 0.45 * sh),
-      worry: 1,
-      look: lerp2(q.look ?? [0, 0], [0.35, -0.2], sh),
-      armL: { ...q.armL, w: lerp2(q.armL.w, [70 + 10 * shake, -196 + 4 * shake], sh), fist: lerp(q.armL.fist, 0, sh), hand: q.armL.hand + 30 * shake * sh },
-    };
-  }
-  // sitting back on his heels, relieved: leaning back, hands to his knees, a small smile, eyes on the little flame
-  const sb = sst(SITBACK.a, SITBACK.b, f);
-  if (sb > 0) {
-    q = {
-      ...q,
-      lean: lerp(q.lean, -6, sb),
-      pitch: lerp(q.pitch, 6, sb),
-      open: lerp(q.open ?? 0, 0, sb),
-      mouth: lerp(q.mouth, 0.55, sb),
-      lids: lerp(q.lids, 0.3, sb),
-      look: lerp2(q.look ?? [0, 0], [0.55, 0.4], sb),
-      armL: { ...q.armL, w: lerp2(q.armL.w, [62, -92], sb), fist: lerp(q.armL.fist, 0.3, sb), hand: lerp(q.armL.hand, 20, sb) },
-      armR: { ...q.armR, w: lerp2(q.armR.w, [74, -88], sb), fist: lerp(q.armR.fist, 0.3, sb), hand: lerp(q.armR.hand, 20, sb) },
-    };
-  }
-  return Covid.breathe(q, f);
 };
-/** keep his feet planted: shift his standing point by the ankles' drift from the f0 stance */
-const ANKLE0 = (() => {
-  const a = Covid.covidAnchors(HUMAN_KIND, holdStand(), [0, 0], 1);
-  return (a.ankleL[0] + a.ankleR[0]) / 2;
-})();
-export const humanX = (f: number) => {
-  const a = Covid.covidAnchors(HUMAN_KIND, humanPoseAt(f), [0, 0], 1);
-  return HUMAN_AT.X - ((a.ankleL[0] + a.ankleR[0]) / 2 - ANKLE0);
+/** the arms while free on the knee (between the let-go and the windmill): out a little for balance */
+const freeArms = (q: Covid.CovidPose): Covid.CovidPose => {
+  const a0 = Covid.covidAnchors(HUMAN_KIND, q, [0, 0], 1);
+  return { ...q, armL: arm([a0.shoulderL[0] + 40, a0.shoulderL[1] + 80], [0.2, 1], 0.2, 10), armR: arm([a0.shoulderR[0] - 30, a0.shoulderR[1] + 86], [-0.2, 1], 0.2, 10) };
 };
-/** the human's anchors this frame (world px) */
+
+export const humanPoseAt = (f: number): Covid.CovidPose => {
+  let q = pReach();
+  q = Covid.lerpPose(q, pHaul(), sst(7, 16, f));
+  q = Covid.lerpPose(q, pMount(), sst(KNEE.swing[0], KNEE.swing[1], f));
+  // the near leg stays on its riser step until it lets go (FOOT.nearOff), then swings the knee up onto the top
+  const legS = sst(FOOT.nearOff[0], KNEE.on, f);
+  const qm = pMount();
+  const qh = Covid.lerpPose(pReach(), pHaul(), sst(7, 16, f));
+  q = { ...q, footL: lerp2(qh.footL, qm.footL, legS), liftL: lerp(qh.liftL ?? 0, qm.liftL ?? 0, legS) };
+  q = Covid.lerpPose(q, freeArms(pUp()), sst(LETGO.a, LETGO.b, f));
+  q = Covid.lerpPose(q, pWobble(), sst(WOBBLE.a, WOBBLE.a + 8, f));
+  q = Covid.lerpPose(q, pCatch(), sst(CATCH.a, CATCH.b, f));
+  q = windmill(q, f);
+  q = Covid.lerpPose(q, pSit(), sst(SWIVEL.a, SWIVEL.b, f));
+  // sitting: panting (the chest heaving, the mouth working), a glance down at the drop and back
+  const rest = sst(SWIVEL.b - 4, SWIVEL.b + 2, f);
+  if (rest > 0) {
+    const pant = rest * (1 - 0.45 * sst(60, 72, f));
+    const ph = ((f - SWIVEL.b) / 11) * 2 * Math.PI;
+    const down = sst(REST_T.look[0], REST_T.look[1], f) * (1 - sst(REST_T.back[0], REST_T.back[1], f));
+    q = {
+      ...q,
+      hunch: (q.hunch ?? 0) + pant * 0.25 * (0.5 + 0.5 * Math.sin(ph)),
+      open: (q.open ?? 0) + pant * 0.18 * Math.sin(ph + 0.6),
+      pitch: q.pitch + down * 16,
+      headYaw: q.headYaw + down * 0.25,
+      look: [lerp(q.look?.[0] ?? 0, 0.35, down), lerp(q.look?.[1] ?? 0, 0.85, down)],
+      lids: (q.lids ?? 0) + 0.15 * down,
+    };
+  }
+  return Covid.breathe(q, f, 1.2);
+};
+
+// ---- where he is: the world point under the figure, from his contacts --------------------------------------------------
+/** the standing place on the lower step (toes near the riser) */
+export const STAND = { X: CLIMB_X - m(0.68), Z: -m(0.22) };
+/** the knee's point on the tread (the joint's centre, a knee-cap above the stone), on the lit top in front of the lamps */
+export const KNEE_AT = { X: CLIMB_X - m(0.2), Z: m(0.2), up: 11 };
+/** the hands flat on the top: the haul (both in front of him) and the catch (further along) */
+export const GRIP_HAUL = { L: { X: CLIMB_X - m(0.11), Z: m(0.1) }, R: { X: CLIMB_X - m(0.15), Z: m(0.2) } };
+export const GRIP_CATCH = { L: { X: CLIMB_X + m(0.18), Z: m(0.32) }, R: { X: CLIMB_X + m(0.32), Z: m(0.38) } };
+/** the far foot pressed sole-on against the riser face while he heaves (the ankle a little off the stone) */
+export const FOOT_RISER = { X: CLIMB_X - m(0.3), Y: FLOOR_Y - m(1.3), Z: -m(0.07) };
+/** the near foot pressed flat on the riser first (low, in front of him, in plain view), the step he pushes off */
+export const NEAR_RISER = { X: CLIMB_X - m(0.4), Y: FLOOR_Y - m(0.55), Z: -m(0.07) };
+/** the near foot: up onto the low riser point (nearUp), pushing, off it into the knee swing (nearOff); the far foot:
+ *  up off the floor onto the high riser point once his hips rise (up), held there until the knee is down (off) */
+export const FOOT = { nearUp: [1, 9] as [number, number], nearOff: [16, 23] as [number, number], up: [9, 17] as [number, number], off: [29, 36] as [number, number] };
+/** the seat: his hips on the nosing */
+export const SEAT_AT = { X: CLIMB_X + m(0.02), Z: m(0.1), up: 16 };
+
+/** the figure's world point and depth this frame */
+/** the place with the knee pinned on its point (pose q) */
+const kneePinned = (A: AirWorld, q: Covid.CovidPose): P2 => {
+  const a0 = Covid.covidAnchors(HUMAN_KIND, q, [0, 0], 1);
+  const sk = A.P.r(KNEE_AT.Z);
+  const kp = A.P.p(KNEE_AT.X, LEDGE_Y - KNEE_AT.up, KNEE_AT.Z);
+  return [kp[0] - a0.kneeL[0] * sk, kp[1] - a0.kneeL[1] * sk];
+};
+export const placeAt = (A: AirWorld, f: number): { at: P2; Z: number; scale: number } => {
+  const q = humanPoseAt(f);
+  const a0 = Covid.covidAnchors(HUMAN_KIND, q, [0, 0], 1);
+  // the haul: from the standing place the body rises ~1 m toward the ledge and in (a slow pull in two goes: up to his
+  // chest at the edge, a stall and a small sag, then the second heave as the knee comes up)
+  // (up onto his toes off the floor foot, then the big heave off the far foot on the riser; a stall and a small sag
+  // between, where the effort shows)
+  const sag = 0.04 * sst(14, 17, f) * (1 - sst(18, 22, f));
+  const h = 0.04 * sst(4, 12, f) + 0.96 * sst(11, 27, f) - sag;
+  const Zh = lerp(STAND.Z, -m(0.1), sst(6, 28, f));
+  const ph = A.P.p(STAND.X + m(0.12) * h, FLOOR_Y - m(0.95) * h, Zh);
+  const wk = sst(12, KNEE.on, f);
+  const Zk = KNEE_AT.Z;
+  if (f <= SWIVEL.a) {
+    const at = lerp2(ph, kneePinned(A, q), wk);
+    const Z = lerp(Zh, Zk, wk);
+    return { at, Z, scale: A.P.r(Z) };
+  }
+  // the swivel: the hips travel from where they were on the knee to the edge (pinned by the hip), then the plop
+  const qs = humanPoseAt(SWIVEL.a);
+  const hipK = (() => {
+    const at = kneePinned(A, qs);
+    const sk = A.P.r(Zk);
+    const h0 = Covid.covidAnchors(HUMAN_KIND, qs, [0, 0], 1).hip;
+    return [at[0] + h0[0] * sk, at[1] + h0[1] * sk] as P2;
+  })();
+  const Zs = SEAT_AT.Z;
+  const seat = A.P.p(SEAT_AT.X, LEDGE_Y - SEAT_AT.up, Zs);
+  const ws = sst(SWIVEL.a, SWIVEL.b, f);
+  // the hips swing up and over in an arc (a lift mid-swivel) and land with a small plop
+  const lift = 26 * Math.sin(Math.PI * ws);
+  const plop = 7 * Math.sin(Math.PI * c01((f - (SWIVEL.b - 2)) / 10)) * (1 - c01((f - (SWIVEL.b - 2)) / 10));
+  const Z = lerp(Zk, Zs, ws);
+  const sc = A.P.r(Z);
+  const hip = lerp2(hipK, seat, ws);
+  const at: P2 = [hip[0] - a0.hip[0] * sc, hip[1] - a0.hip[1] * sc - lift * sc + plop * sc];
+  return { at, Z, scale: sc };
+};
+/** how much the hands are on the ledge (0 = free), and where */
+export const gripW = (f: number) => (1 - sst(LETGO.a, LETGO.b, f)) + sst(CATCH.on - 9, CATCH.on, f) * (1 - sst(CATCH.off[0], CATCH.off[1], f));
+export const gripAt = (A: AirWorld, f: number, free: { L: P2; R: P2 }): { L: P2; R: P2 } | undefined => {
+  const w = gripW(f);
+  if (w < 1e-3) return undefined;
+  const G = f < 35 ? GRIP_HAUL : GRIP_CATCH;
+  const L = A.P.p(G.L.X, LEDGE_Y - 5, G.L.Z);
+  const R = A.P.p(G.R.X, LEDGE_Y - 5, G.R.Z);
+  return { L: lerp2(free.L, L, w), R: lerp2(free.R, R, w) };
+};
+/** the feet's world targets this frame and how much each is held to its target (0 = the pose's own) */
+export const feetAt = (A: AirWorld, f: number) => {
+  // the floor points: where the ankles are at f0 (standing on STAND), as world points re-projected each frame
+  const a0 = Covid.covidAnchors(HUMAN_KIND, humanPoseAt(0), [0, 0], 1);
+  const floorOf = (l: P2): P2 => A.P.p(STAND.X + l[0], FLOOR_Y + l[1], STAND.Z);
+  const flL = floorOf(a0.ankleL);
+  const flR = floorOf(a0.ankleR);
+  const riser = A.P.p(FOOT_RISER.X, FOOT_RISER.Y, FOOT_RISER.Z);
+  const nRiser = A.P.p(NEAR_RISER.X, NEAR_RISER.Y, NEAR_RISER.Z);
+  const un = sst(FOOT.nearUp[0], FOOT.nearUp[1], f);
+  const rz = A.P.r(FOOT_RISER.Z);
+  // the near foot lifts up and forward onto the riser in an arc (out from the wall a little, then onto it)
+  const L: P2 = [lerp(flL[0], nRiser[0], un) - Math.sin(Math.PI * un) * 8 * rz, lerp(flL[1], nRiser[1], un) - Math.sin(Math.PI * un) * 10 * rz];
+  const u = sst(FOOT.up[0], FOOT.up[1], f);
+  // the far foot travels up in an arc (out from the wall a little, then onto it)
+  const R: P2 = [lerp(flR[0], riser[0], u) - Math.sin(Math.PI * u) * 10 * A.P.r(FOOT_RISER.Z), lerp(flR[1], riser[1], u) - Math.sin(Math.PI * u) * 14 * A.P.r(FOOT_RISER.Z)];
+  return {
+    L,
+    wL: 1 - sst(FOOT.nearOff[0], FOOT.nearOff[1], f),
+    R,
+    wR: 1 - sst(FOOT.off[0], FOOT.off[1], f),
+    // the scuffs: only once the sole is on the stone
+    scuffN: sst(FOOT.nearUp[1] - 2, FOOT.nearUp[1], f) * (1 - sst(FOOT.nearOff[0], FOOT.nearOff[0] + 3, f)),
+    scuffF: sst(FOOT.up[1] - 2, FOOT.up[1], f) * (1 - sst(FOOT.off[0], FOOT.off[0] + 3, f)),
+    nRiser,
+    riser,
+  };
+};
+/** the pose with the held feet solved onto their world points (the ankle offsets re-measured twice) */
+const withFeet = (A: AirWorld, f: number, q: Covid.CovidPose, at: P2, scale: number): Covid.CovidPose => {
+  const ft = feetAt(A, f);
+  let r = q;
+  for (let it = 0; it < 3; it++) {
+    const a = Covid.covidAnchors(HUMAN_KIND, r, at, scale);
+    const fix = (cur: P2, ank: P2, T: P2, w: number): P2 => (w < 1e-4 ? cur : [cur[0] + ((T[0] - ank[0]) / scale) * w, cur[1] + ((T[1] - ank[1]) / scale) * w]);
+    r = { ...r, footL: fix(r.footL, a.ankleL, ft.L, ft.wL), footR: fix(r.footR, a.ankleR, ft.R, ft.wR) };
+  }
+  return r;
+};
+/** the mittens' screen angle while they are down on the stone: lying flat along the top, fingers forward */
+const HAND_FLAT = 4;
+const angOf = (a: P2, b: P2) => (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+const wrap = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180;
 export const humanAnchorsAt = (A: AirWorld, f: number) => {
-  const at = A.P.p(humanX(f), HUMAN_AT.Y, HUMAN_AT.Z);
-  return Covid.covidAnchors(HUMAN_KIND, humanPoseAt(f), at, A.P.r(HUMAN_AT.Z));
-};
-
-// ---- the bough: far too big for the fire ----------------------------------------------------------------------------
-// Local metres: u along the limb (butt -0.85 .. tip 1.05), v up from it. Held at GRIP_U between his fists; let go on
-// RELEASE it falls onto the fire (LAND), its butt on the tread by his feet, the leafy crown propped up over the fire.
-const GRIP_U = -0.42;
-const LIMB: [number, number, number][] = [
-  // u, v, radius (m)
-  [-0.85, 0.0, 0.075],
-  [-0.4, 0.02, 0.066],
-  [0.05, 0.0, 0.055],
-  [0.5, 0.04, 0.04],
-  [1.0, 0.0, 0.02],
-];
-const FORKS: [number, number][][] = [
-  [
-    [0.2, 0.01],
-    [0.48, 0.2],
-    [0.72, 0.36],
-  ],
-  [
-    [0.42, 0.03],
-    [0.66, -0.12],
-    [0.9, -0.24],
-  ],
-  [
-    [0.62, 0.04],
-    [0.82, 0.14],
-  ],
-];
-/** leaf clusters: centre (u, v), radius (m), seed */
-const LEAVES: [number, number, number, number][] = [
-  [1.04, 0.02, 0.19, 1],
-  [0.74, 0.39, 0.17, 2],
-  [0.93, -0.27, 0.16, 3],
-  [0.84, 0.16, 0.15, 4],
-  [0.5, 0.22, 0.12, 5],
-  [0.6, -0.12, 0.11, 6],
-];
-const LEAF = { lit: "#9C9D6C", mid: "#7A7F55", dark: "#545A3C" };
-const BARK = { lit: "#7A6248", mid: "#5A4634", dark: "#3A2C20" };
-/** the bough's placement: grip point (world px, 2D), angle (rad, + = tip up), scale (world px per m) */
-type Place = { g: P2; ang: number; s: number; Z: number };
-const restPlace = (A: AirWorld): Place => {
-  // the butt on the tread 0.62 m left of the fire's centre, 0.05 m nearer; propped up 26 deg over the kindling
-  const Z = FIRE_AT.Z - m(0.05);
-  const ang = (26 * Math.PI) / 180;
-  const s = m(1) * A.P.r(Z);
-  const butt = A.P.p(FIRE_AT.X - m(0.62), FIRE_AT.Y - m(0.07), Z);
-  const du = GRIP_U - LIMB[0][0];
-  return { g: [butt[0] + Math.cos(ang) * du * s, butt[1] - Math.sin(ang) * du * s], ang, s, Z };
-};
-const heldPlace = (A: AirWorld, f: number): Place => {
-  const an = humanAnchorsAt(A, f);
-  const g: P2 = [(an.mittenL[0] + an.mittenR[0]) / 2, (an.mittenL[1] + an.mittenR[1]) / 2];
-  const Z = HUMAN_AT.Z;
-  return { g, ang: lerp(0.14, 0.05, sst(CROUCH.a, CROUCH.b, f)), s: m(1) * A.P.r(Z), Z };
-};
-export const boughPlace = (A: AirWorld, f: number): Place => {
-  if (f <= BOUGH_T.release) return heldPlace(A, f);
-  const h = heldPlace(A, BOUGH_T.release);
-  const r = restPlace(A);
-  // the fall: gravity (ease in) to the landing, a small bounce-settle after
-  const u = c01((f - BOUGH_T.release) / (BOUGH_T.land - BOUGH_T.release));
-  const fall = u * u;
-  const settle = f > BOUGH_T.land ? 0.04 * Math.sin(((f - BOUGH_T.land) / 4) * Math.PI) * (1 - sst(BOUGH_T.land, BOUGH_T.land + 4, f)) : 0;
-  return { g: lerp2(h.g, r.g, fall), ang: lerp(h.ang, r.ang, fall) - settle, s: lerp(h.s, r.s, fall), Z: lerp(h.Z, r.Z, fall) };
-};
-const Bough: React.FC<{ A: AirWorld; pl: Place; frame: number; char: number }> = ({ A, pl, frame, char }) => {
-  const { g, ang, s } = pl;
-  const ca = Math.cos(ang);
-  const sa = Math.sin(ang);
-  const W = (u: number, v: number): P2 => {
-    const du = u - GRIP_U;
-    return [g[0] + (du * ca - v * sa) * s, g[1] - (du * sa + v * ca) * s];
-  };
-  const tone = (hex: string) => A.tone(hex, pl.Z, -FIRE_AT.Y);
-  // the limb as a tapered ribbon
-  const top: P2[] = [];
-  const bot: P2[] = [];
-  for (const [u, v, r] of LIMB) {
-    top.push(W(u, v + r));
-    bot.push(W(u, v - r));
+  const pl = placeAt(A, f);
+  let q = withFeet(A, f, humanPoseAt(f), pl.at, pl.scale);
+  const free = Covid.covidAnchors(HUMAN_KIND, q, pl.at, pl.scale);
+  const grip = gripAt(A, f, { L: free.handL, R: free.handR });
+  if (!grip) return { q, pl, grip, an: free };
+  // palms down: turn each mitten (by the grip weight) until it lies flat on the stone, whatever the forearm does
+  const w = gripW(f);
+  for (let it = 0; it < 3; it++) {
+    const a = Covid.covidAnchors(HUMAN_KIND, q, pl.at, pl.scale, { grip });
+    q = {
+      ...q,
+      armL: { ...q.armL, hand: q.armL.hand + w * wrap(HAND_FLAT - angOf(a.wristL, a.mittenL)) },
+      armR: { ...q.armR, hand: q.armR.hand + w * wrap(HAND_FLAT - angOf(a.wristR, a.mittenR)) },
+    };
   }
-  const limbD = `M${[...top, ...bot.reverse()].map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join("L")}Z`;
-  const lw = 0.035 * s;
-  const sway = 0.012 * Math.sin(frame * 0.5);
-  return (
-    <g>
-      {FORKS.map((fk, k) => (
-        <path key={`fk${k}`} d={`M${fk.map(([u, v]) => W(u, v)).map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join("L")}`} stroke={tone(mixHex(BARK.mid, BARK.dark, char))} strokeWidth={lw * (k === 2 ? 0.7 : 1)} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      ))}
-      <path d={limbD} fill={tone(mixHex(BARK.mid, BARK.dark, char))} />
-      <path d={`M${top.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join("L")}`} stroke={tone(BARK.lit)} strokeWidth={lw * 0.45} strokeLinecap="round" fill="none" strokeOpacity={0.8} />
-      {LEAVES.map(([u, v, r, sd]) => {
-        const c = W(u, v + sway * sd);
-        const R = r * s;
-        // a cluster: three overlapping leaf ovals (dark, mid, a lit one upper left)
-        return (
-          <g key={`lf${sd}`}>
-            <ellipse cx={c[0] + 0.25 * R} cy={c[1] + 0.15 * R} rx={R * 0.95} ry={R * 0.62} fill={tone(mixHex(LEAF.dark, BARK.dark, 0.3 * char))} transform={`rotate(${(-20 + sd * 23) % 50} ${c[0].toFixed(2)} ${c[1].toFixed(2)})`} />
-            <ellipse cx={c[0]} cy={c[1]} rx={R * 0.8} ry={R * 0.55} fill={tone(mixHex(LEAF.mid, BARK.mid, 0.3 * char))} transform={`rotate(${(15 - sd * 17) % 45} ${c[0].toFixed(2)} ${c[1].toFixed(2)})`} />
-            <ellipse cx={c[0] - 0.3 * R} cy={c[1] - 0.25 * R} rx={R * 0.42} ry={R * 0.28} fill={tone(LEAF.lit)} fillOpacity={0.85} transform={`rotate(-25 ${c[0].toFixed(2)} ${c[1].toFixed(2)})`} />
-          </g>
-        );
-      })}
-    </g>
-  );
+  return { q, pl, grip, an: Covid.covidAnchors(HUMAN_KIND, q, pl.at, pl.scale, { grip }) };
 };
 
-// ---- the smoke: puffs rolling up from under the bough while the fire chokes; a wisp off his singed mitten ----------
-type Puff = { f0: number; life: number; u0: number; drift: number; rise: number; r0: number; r1: number; a: number; seed: number };
-/** puffs born at the fire while it is choked (denser at the choke and while he fans), each rising, growing, thinning */
-export const PUFFS: Puff[] = (() => {
-  const out: Puff[] = [];
-  const births = [14, 15.5, 17, 18.5, 20, 22, 24.5, 27, 30, 33, 35, 36.5, 38, 39.5, 41, 42.5, 47, 50, 53, 57];
-  births.forEach((f0, k) => {
-    const h = (n: number) => (Math.sin(k * 12.9898 + n * 78.233) * 43758.5453) % 1;
-    const r = (n: number) => Math.abs(h(n));
-    const late = f0 > 46 ? 0.55 : 1;
-    out.push({ f0, life: 20 + 8 * r(1), u0: -0.15 + 0.5 * r(2), drift: 0.3 + 0.4 * r(3) + (f0 >= 34 && f0 < 45 ? 0.3 : 0), rise: 1.05 + 0.5 * r(4), r0: 0.14 + 0.06 * r(5), r1: (0.45 + 0.2 * r(6)) * late, a: (0.8 + 0.15 * r(7)) * late, seed: k });
-  });
-  return out;
-})();
-const SMOKE = { lit: "#C9C1B2", mid: "#8E867A", dark: "#655E56" };
-const Smoke: React.FC<{ A: AirWorld; frame: number; uid: string }> = ({ A, frame, uid }) => {
-  const els: React.ReactNode[] = [];
-  const Z = FIRE_AT.Z;
-  const r1 = m(1) * A.P.r(Z);
-  PUFFS.forEach((p, k) => {
-    const t = (frame - p.f0) / p.life;
-    if (t <= 0 || t >= 1) return;
-    const e = 1 - Math.pow(1 - t, 1.6);
-    const X = FIRE_AT.X + m(p.u0 + p.drift * e + 0.06 * Math.sin(frame * 0.3 + p.seed));
-    const Y = FIRE_AT.Y - m(0.3 + p.rise * e);
-    const c = A.P.p(X, Y, Z);
-    const R = (p.r0 + (p.r1 - p.r0) * Math.pow(t, 0.6)) * r1;
-    const a = p.a * sst(0, 0.12, t) * (1 - sst(0.35, 1, t));
-    els.push(
-      <g key={k}>
-        <circle cx={c[0]} cy={c[1]} r={R} fill={`url(#${uid}sm)`} opacity={a} />
-        <circle cx={c[0] - 0.28 * R} cy={c[1] - 0.3 * R} r={R * 0.55} fill={`url(#${uid}sl)`} opacity={a * 0.8} />
-      </g>,
-    );
-  });
-  return (
-    <g>
-      <defs>
-        <radialGradient id={`${uid}sm`}>
-          <stop offset="0" stopColor={A.tone(SMOKE.mid, Z)} stopOpacity={0.95} />
-          <stop offset="0.6" stopColor={A.tone(SMOKE.dark, Z)} stopOpacity={0.6} />
-          <stop offset="1" stopColor={A.tone(SMOKE.dark, Z)} stopOpacity={0} />
-        </radialGradient>
-        <radialGradient id={`${uid}sl`}>
-          <stop offset="0" stopColor={A.tone(SMOKE.lit, Z)} stopOpacity={0.8} />
-          <stop offset="1" stopColor={A.tone(SMOKE.lit, Z)} stopOpacity={0} />
-        </radialGradient>
-      </defs>
-      {els}
-    </g>
-  );
-};
-/** the singe: a few small wisps curling up off his near mitten after the flare */
-const Singe: React.FC<{ A: AirWorld; frame: number; uid: string }> = ({ A, frame, uid }) => {
-  const els: React.ReactNode[] = [];
-  const r = A.P.r(HUMAN_AT.Z);
-  [FLARE.peak + 1, FLARE.peak + 4, FLARE.peak + 7].forEach((f0, k) => {
-    const t = (frame - f0) / 12;
-    if (t <= 0 || t >= 1) return;
-    const src = humanAnchorsAt(A, f0).mittenL;
-    const c: P2 = [src[0] + m(0.05) * r * Math.sin(t * 5 + k), src[1] - m(0.45) * r * t];
-    const R = m(0.04 + 0.08 * t) * r;
-    els.push(<circle key={k} cx={c[0]} cy={c[1]} r={R} fill={`url(#${uid}sg)`} opacity={0.7 * sst(0, 0.15, t) * (1 - sst(0.4, 1, t))} />);
-  });
-  return (
-    <g>
-      <defs>
-        <radialGradient id={`${uid}sg`}>
-          <stop offset="0" stopColor={A.tone(SMOKE.lit, HUMAN_AT.Z)} stopOpacity={0.9} />
-          <stop offset="1" stopColor={A.tone(SMOKE.mid, HUMAN_AT.Z)} stopOpacity={0} />
-        </radialGradient>
-      </defs>
-      {els}
-    </g>
-  );
-};
-
-/** his blowing: small pale breaths from his mouth toward the embers while he fans (FAN.a .. the flare) */
-export const BREATHS = [35, 38.5, 42];
-/** the sigh of relief once the little flame holds */
-export const SIGH = 61;
-const Breath: React.FC<{ A: AirWorld; frame: number; uid: string }> = ({ A, frame, uid }) => {
-  const els: React.ReactNode[] = [];
-  const r = A.P.r(HUMAN_AT.Z);
-  const fire = A.P.p(FIRE_AT.X - m(0.1), FIRE_AT.Y - m(0.35), FIRE_AT.Z);
-  BREATHS.forEach((f0, k) => {
-    const t = (frame - f0) / 7;
-    if (t <= 0 || t >= 1) return;
-    const an = humanAnchorsAt(A, Math.floor(f0));
-    const mouth: P2 = [an.headC[0] + 0.55 * an.headR, an.headC[1] + 0.45 * an.headR];
-    const c = lerp2(mouth, fire, 0.15 + 0.75 * t);
-    const R = m(0.035 + 0.06 * t) * r;
-    els.push(<ellipse key={k} cx={c[0]} cy={c[1]} rx={R * 1.6} ry={R} fill={`url(#${uid}br)`} opacity={0.75 * sst(0, 0.2, t) * (1 - sst(0.5, 1, t))} transform={`rotate(25 ${c[0].toFixed(2)} ${c[1].toFixed(2)})`} />);
-  });
-  // the sigh: one soft breath out and up, away from the fire
-  const ts = (frame - SIGH) / 12;
-  if (ts > 0 && ts < 1) {
-    const an = humanAnchorsAt(A, SIGH);
-    const c: P2 = [an.headC[0] + 0.5 * an.headR + m(0.12) * r * ts, an.headC[1] + 0.4 * an.headR - m(0.25) * r * ts];
-    const R = m(0.04 + 0.07 * ts) * r;
-    els.push(<ellipse key="sigh" cx={c[0]} cy={c[1]} rx={R * 1.5} ry={R} fill={`url(#${uid}br)`} opacity={0.8 * sst(0, 0.2, ts) * (1 - sst(0.45, 1, ts))} transform={`rotate(-30 ${c[0].toFixed(2)} ${c[1].toFixed(2)})`} />);
-  }
-  return (
-    <g>
-      <defs>
-        <radialGradient id={`${uid}br`}>
-          <stop offset="0" stopColor={FIRE_BREATH} stopOpacity={0.95} />
-          <stop offset="1" stopColor={FIRE_BREATH} stopOpacity={0} />
-        </radialGradient>
-      </defs>
-      {els}
-    </g>
-  );
-};
-const FIRE_BREATH = "#EFE9DC";
-
-// ---- the lamps: the nearest flicker and dim with his fire, the far ones barely ----------------------------------------
-/** each lamp's coupling to his fire: 1 next to it, falling off with distance (m) */
-export const LAMP_COUPLE = { fall: 1.25, flicker: 0.28 };
-export const lampBright = (k: number, f: number) => {
-  const d = Math.abs(LAMP_XS[k] - FIRE_AT.X) / U;
-  const w = Math.exp(-(d - 0.6) / LAMP_COUPLE.fall);
-  const lack = 1 - fireNorm(f);
-  const fl = LAMP_COUPLE.flicker * lack * (0.5 + 0.5 * Math.sin(f * 1.9 + k * 2.1)) * Math.sin(f * 0.77 + k);
-  return c01(1 - Math.min(1, w) * (lack * 0.85 + fl));
-};
-const DimLampRow: React.FC<{ A: AirWorld; frame: number; uid: string }> = ({ A, frame, uid }) => {
-  const s = stepOf(LAMPS.step);
-  const Z = s.Z0 + m(LAMPS.back);
-  if (!inFront(A, Z)) return null;
-  return (
-    <g>
-      {LAMP_XS.map((x, k) => {
-        const b = lampBright(k, frame);
-        const seed = k * 1.37 + 0.4;
-        return (
-          <g key={k}>
-            {b < 0.999 ? <Lamp A={A} X={x} Y={s.Y} Z={Z} lit={0} frame={frame} uid={`${uid}c${k}`} seed={seed} /> : null}
-            <g opacity={b}>
-              <Lamp A={A} X={x} Y={s.Y} Z={Z} lit={1} frame={frame} uid={`${uid}l${k}`} seed={seed} />
-            </g>
-          </g>
-        );
-      })}
-    </g>
-  );
-};
-
-// ---- the scene --------------------------------------------------------------------------------------------------------
 const HumanFig: React.FC<{ A: AirWorld; frame: number }> = ({ A, frame }) => {
-  const X = humanX(frame);
-  const at = A.P.p(X, HUMAN_AT.Y, HUMAN_AT.Z);
-  const scale = A.P.r(HUMAN_AT.Z);
-  const pose = humanPoseAt(frame);
-  const fog = A.folkFog(HUMAN_AT.Z, -HUMAN_AT.Y);
-  const an = Covid.covidAnchors(HUMAN_KIND, pose, at, scale);
+  const { q, pl, grip, an } = humanAnchorsAt(A, frame);
+  const fog = A.folkFog(pl.Z, -LEDGE_Y);
+  const onFloor = 1 - sst(6, 14, frame);
+  const onLedge = sst(KNEE.swing[1] - 6, KNEE.on, frame);
+  const ft = feetAt(A, frame);
+  const kneeDown = sst(KNEE.on - 3, KNEE.on, frame) * (1 - sst(SWIVEL.a, SWIVEL.a + 5, frame));
+  const gw = gripW(frame);
+  const G = frame < 35 ? GRIP_HAUL : GRIP_CATCH;
+  const rz = A.P.r(0);
   return (
     <g>
-      <AirShadow A={A} X={X} Z={HUMAN_AT.Z} Y={HUMAN_AT.Y} w={62} d={30} uid="noaHs" amt={0.8} />
+      {onFloor > 0.01 ? <AirShadow A={A} X={STAND.X} Z={STAND.Z} Y={FLOOR_Y} w={60} d={30} uid="noaHsF" amt={0.8 * onFloor} /> : null}
+      {onLedge > 0.01 ? <AirShadow A={A} X={lerp(KNEE_AT.X + m(0.1), SEAT_AT.X, sst(SWIVEL.a, SWIVEL.b, frame))} Z={lerp(KNEE_AT.Z, SEAT_AT.Z + m(0.06), sst(SWIVEL.a, SWIVEL.b, frame))} Y={LEDGE_Y} w={66} d={26} uid="noaHsL" amt={0.6 * onLedge} /> : null}
+      {kneeDown > 0.01 ? <AirShadow A={A} X={KNEE_AT.X} Z={KNEE_AT.Z} Y={LEDGE_Y} w={24} d={12} uid="noaHsK" amt={0.9 * kneeDown} /> : null}
+      {gw > 0.01 ? (
+        <g>
+          <AirShadow A={A} X={G.L.X} Z={G.L.Z} Y={LEDGE_Y} w={18} d={9} uid="noaHsHL" amt={0.8 * gw} />
+          <AirShadow A={A} X={G.R.X} Z={G.R.Z} Y={LEDGE_Y} w={18} d={9} uid="noaHsHR" amt={0.8 * gw} />
+        </g>
+      ) : null}
+      <defs>
+        <radialGradient id="noaScuff">
+          <stop offset="0" stopColor={AIR.A.shadow} stopOpacity={0.78} />
+          <stop offset="0.55" stopColor={AIR.A.shadow} stopOpacity={0.4} />
+          <stop offset="1" stopColor={AIR.A.shadow} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      {([[ft.nRiser, ft.scuffN], [ft.riser, ft.scuffF]] as [P2, number][]).map(([p, o], i) =>
+        o > 0.01 ? <ellipse key={i} opacity={o} cx={p[0] + 10 * rz} cy={p[1] + 14 * rz} rx={32 * rz} ry={17 * rz} fill="url(#noaScuff)" /> : null,
+      )}
       <HeadGlow c={an.headC} rW={an.headR} amt={HEAD_GLOW.human} uid="noaHg" />
-      <Covid.CovidFigure kind={HUMAN_KIND} variant={0} pose={pose} at={at} scale={scale} uid="noaHuman" fog={{ rgb: fog.rgb, amount: fog.amount }} unitPx={A.k} frame={frame} />
+      <Covid.CovidFigure kind={HUMAN_KIND} variant={0} pose={q} at={pl.at} scale={pl.scale} grip={grip} uid="noaHuman" fog={{ rgb: fog.rgb, amount: fog.amount }} unitPx={A.k} frame={frame} />
     </g>
   );
 };
 
-/** the lower frame sinks into the dense low air (the style: a big flat face in the bottom third reads as dead space):
- *  a soft screen-row gradient over the steps below his, from LOW_FADE.from to the bottom edge */
+/** the step's edge, so it reads at sheet size: the riser face a shade darker toward its foot, and a cream lip along
+ *  the nosing with a thin lit band on the top's front (drawn over the step's own block, under everything on it) */
+export const EDGE = { riserDark: [0.1, 0.24] as [number, number], lip: 0.022, band: 0.06, bandA: 0.32, lipA: 0.85 };
+const StepEdge: React.FC<{ A: AirWorld; i: number; uid: string; riser?: boolean; amt?: number }> = ({ A, i, uid, riser = true, amt = 1 }) => {
+  const s = stepOf(i);
+  const below = stepOf(i - 1).Y;
+  const P = A.P;
+  const pt = (q: P2) => `${q[0].toFixed(2)},${q[1].toFixed(2)}`;
+  const poly = (q: P2[]) => `M${q.map(pt).join("L")}Z`;
+  const a = P.p(s.X0, s.Y, s.Z0);
+  const b = P.p(s.X1, s.Y, s.Z0);
+  const c = P.p(s.X1, below, s.Z0);
+  const d = P.p(s.X0, below, s.Z0);
+  const bandB = P.p(s.X1, s.Y, s.Z0 + m(EDGE.band));
+  const bandA = P.p(s.X0, s.Y, s.Z0 + m(EDGE.band));
+  const cream = AIR.A.cream;
+  return (
+    <g>
+      <defs>
+        <linearGradient id={`${uid}rd`} gradientUnits="userSpaceOnUse" x1="0" y1={a[1].toFixed(2)} x2="0" y2={d[1].toFixed(2)}>
+          <stop offset="0" stopColor={AIR.A.shadow} stopOpacity={EDGE.riserDark[0] * amt} />
+          <stop offset="1" stopColor={AIR.A.shadow} stopOpacity={EDGE.riserDark[1] * amt} />
+        </linearGradient>
+      </defs>
+      {riser ? <path d={poly([a, b, c, d])} fill={`url(#${uid}rd)`} /> : null}
+      <path d={poly([a, b, bandB, bandA])} fill={cream} opacity={EDGE.bandA * amt} />
+      <path d={`M${pt(a)}L${pt(b)}`} stroke={cream} strokeWidth={m(EDGE.lip) * P.r(s.Z0)} strokeOpacity={EDGE.lipA * amt} strokeLinecap="round" />
+    </g>
+  );
+};
+
+/** the lower frame sinks into the dense low air (the style: a big flat face in the bottom third reads as dead space) */
 export const LOW_FADE = { from: 1180, to: 1920, amt: 0.62, t: 0.4 };
 const LowFade: React.FC<{ A: AirWorld; uid: string }> = ({ A, uid }) => {
   const c = A.cam;
@@ -544,33 +442,29 @@ const NotOptimallyAdapted: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const cam = camOf(frame);
   const A = stairsAirOf({ cam, rest: REST, frame });
-  const fire = fireAt(frame);
-  const fn = fireNorm(frame);
-  const pl = boughPlace(A, frame);
-  const char = 0.5 * sst(BOUGH_T.land, 40, frame);
   const onStep = (i: number): React.ReactNode => {
     if (i >= 1) {
       if (!inFront(A, stepAnchor(i).Z)) return null;
       const sp = speciesOf(i);
       return <DashedSpecies A={A} at={stepAnchor(i)} H={sp.H} headR={sp.headR} glow={sp.glow} a={sp.a} frame={frame} uid={`noaQ${i}`} seed={i} shape={sp.shape} brain={sp.brain} />;
     }
-    if (i === 0 && inFront(A, stepOf(0).Z0)) {
-      const s0 = stepOf(0);
-      const held = frame <= BOUGH_T.release;
+    if (i === 0)
       return (
         <g>
-          <LightPool A={A} X={HUMAN_AT.X + m(0.2)} Y={s0.Y} Z={HUMAN_AT.Z} rM={1.25} a={0.32 * (0.35 + 0.65 * Math.min(1, fn))} uid="noaPool" col={AIR.A.cream} />
-          <Campfire A={A} X={FIRE_AT.X} Y={FIRE_AT.Y} Z={FIRE_AT.Z} t={fire} frame={frame} uid="noaFire" size={FIRE_SIZE} />
-          {held ? null : <Bough A={A} pl={pl} frame={frame} char={char} />}
-          <HumanFig A={A} frame={frame} />
-          {held ? <Bough A={A} pl={pl} frame={frame} char={0} /> : null}
-          <Smoke A={A} frame={frame} uid="noaSmoke" />
-          <Singe A={A} frame={frame} uid="noaSinge" />
-          <Breath A={A} frame={frame} uid="noaBreath" />
-          <DimLampRow A={A} frame={frame} uid="noaLamp" />
+          <StepEdge A={A} i={0} uid="noaE0" />
+          {LAMP_XS2.map((x, k) => (
+            <Lamp key={k} A={A} X={x} Y={LEDGE_Y} Z={m(LAMP_BACK)} lit={1} frame={frame} uid={`noaLamp${k}`} seed={k * 1.37 + 0.4} />
+          ))}
         </g>
       );
-    }
+    // drawn after step 0 (its lamps) and the lower step's block: he is in front of both throughout
+    if (i === -1)
+      return (
+        <g>
+          <StepEdge A={A} i={-1} uid="noaE1" riser={false} amt={0.6} />
+          <HumanFig A={A} frame={frame} />
+        </g>
+      );
     return null;
   };
   return (
