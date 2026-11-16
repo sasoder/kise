@@ -2,67 +2,57 @@
 // NavierStokesSolved (rsi-since-writing, cut 42). Dwarkesh 3D style (styles/dwarkesh-3d.md).
 // Opaque 1080x1920, 23.976 fps, 114 frames.
 // One stage inside the misty teal air (AirStage, palette A, mood day) on a londonDepth one-point perspective, from the
-// kit kits/dwarkesh-3d/dwarkesh3d. The flow field is cut-local (below).
+// kit kits/dwarkesh-3d/dwarkesh3d. The vortex is cut-local (below), drawn as depth-sorted SVG tube pieces.
 //
-// CHECK LINE: "An AI solved Navier-Stokes, the famous unsolved equation of how fluids flow."
+// CHECK LINE: "OpenAI's own model solved Navier-Stokes: broken, disordered flow joins into one clean vortex."
 //
 // THE LINE: "OpenAI reported two months ago that an internal model solved the Navier-Stokes problem,"
 // WORD -> FRAME (f0 = sequence 42.3757 s): OpenAI 1 · reported 11 · two 19 · months 26 · ago 31 · that 36 · an 46 ·
 // internal 48 · model 56 · SOLVED 66 · the 83 · NAVIER-STOKES 86 · PROBLEM 102 · (slot ends; "one" 113)
 // DURATION: the slot 42.3757 -> 47.1304 s = 4.7547 s x 23.976 = 114 frames (f0..f113).
 //
-// THE MOTION: a plain round stone post (a smooth cylinder on the floor, the obstacle) stands in the air; the misty air streams past it from left to right as a sheet of
-// soft CREAM smoke lines (a smoke tunnel seen from above, ~45 deg down at rest) that part around the column and roll
-// up behind it into a von Karman street of alternating curls that grow as they drift downstream. The floor below sinks
-// into the dense low air (a low-air veil by screen row). The camera opens close (x1.8) on the near wake (the forming
-// curl and the first grown one, the column whole at the left edge) and pulls back in one deceleration lobe (f0 ->
-// ~f54, then a slow creep); the pull-back brings the equation plate, fully above the frame at f0, down into frame
-// (in the keep-in box by f38, near rest before "internal model"). On "solved" an ORANGE trace runs along every
-// streamline from the left edge to the right edge (f61 -> ~f94; visible from f64), following each line around the
-// column and into the curls. The payoff on the equation: as the trace reaches the right edge, the equation's glyphs
-// (main line and continuity line) warm from cream to orange left to right (a soft front, f91 -> f102: the AI's
-// solution), then an orange tick (~85 px tall) is written beside it (f99 -> f106). The label stays cream. Settled
-// (f106-113): every line's core traced in orange inside its cream smoke halo, each curl keeping a cream inner wisp
-// (the trace gives way to cream in a grown curl's core), the curls still drifting, the orange ticked equation.
-// Orange = the AI only (COMMON.md): the trace, the warmed equation, the tick. Everything else cream, stone, umber, air.
+// REVISION (user's notes): no formula, no text. The internal model = the OpenAI mark; the flow = the swirl (the
+// vertical vortex of many lit cream streamline tubes after the user's reference assets-src/sam-navier-stokes/
+// user_vortex.png). sam-navier-stokes/vortexSky's <Vortex> needs its own WebGL cruise sky and camera (VCtx), so it
+// cannot stand in this air world: this is a lighter SVG look-alike, its tube recipe COPIED from vortexSky buildTubes
+// ("hi": a rope of tight core helices, a sheath of middle helices, outer arms flaring wide on a tilted waist disc,
+// needle tips), one sense of rotation, the core turning faster than the rim.
 //
-// THE FLOW (analytic, seek-safe, no simulation state): each smoke line j has an upstream offset z0_j (world Z). Its
-// shape at frame f is a pure function of (z0_j, f): (1) the potential-flow streamline round a cylinder of radius R
-// (psi = z (1 - R^2 / (x^2 + z^2)) = z0, solved per x by bisection), stretched downstream so the lines close behind
-// the column over ~3.6 R (the dead-water bubble); (2) the vortex street as TWIRLS: vortex k is born at f = k * TB
-// behind the column on alternating sides, moves downstream at constant speed C, and rotates every point within its
-// radius rho by Gamma * (1 - (r / rho)^2)^3 (clockwise on the far side, counter-clockwise on the near side; Gamma and
-// rho grow with its age). Each twirl rotates whole rings, so it is a bijection: lines never cross, at any frame.
-// The smoke's puffs advect along each line at the free-stream speed U (density by the line's own upstream x).
-// The orange front is a world x (the line's own upstream x), so it follows each line through its winding.
+// THE MOTION: the OpenAI mark stands in the air at the left (a solid orange glyph with a perspective extrusion, a soft
+// glow, a contact shadow and a light pool on the floor). Beside it, the flow unsolved: a loose round cloud of short
+// broken cream streamline pieces (each tube of the vortex cut into 30-point pieces, ~38 % of them shown), each kinked,
+// pointing its own way, drifting and turning: no common axis, no helix. On "internal model" (f46-58) the mark
+// brightens and five orange filaments reach from it into the cloud's foot (f50 -> ~f66). On "solved" the pieces fly
+// to their places on the vortex, join up and wrap round the axis, from the foot (f59-70) to the crown (f83-94): order
+// appears bottom to top, the hidden pieces growing in as they join; the clean, symmetric vortex of the reference by f94.
+// Right behind the order, an orange front climbs the core and the inner helices (f65 -> f99, visible from ~f68); the
+// outer sheath and the waist arms stay lit cream, the orange only touching the arms' roots (two-tone, like the user's
+// reference: an orange core inside the cooler outer tubes). Settled (f94-113): the vortex turning (core faster than
+// rim), a slow glint climbing the orange core; the filaments settle to half strength. One slow push-in (k 0.44 -> 0.5
+// about the vortex's middle, decelerating to rest by f110).
+// Orange = the AI only (COMMON.md): the mark, its filaments, the front on the tubes. The unsolved flow is cream.
 //
-// DEPTH: eye 4000 above the sheet (Y -5100), dRef 4000 at kRef 0.5 (45 deg down at rest), dolly 0.3; fog "depth".
-// The post X 0, Z 0, R 130 (1.46 m), Y 0..-1500 (one smooth stone cylinder, no plinth or capital); the smoke sheet at Y -1100,
-// lines Z -488..646; the floor Y 0. The plate on the front plane (Z 0).
-// Painter's order: floor, the column, the smoke (bodies, cores, orange), the column again ABOVE the sheet (clipped to
-// the region above the sheet's front arc), the plate, the tick.
+// DEPTH: eye at Y -1150, dRef 3200 at kRef 0.5, dolly 0.35; fog "depth" (the vortex fogs from 420 behind its axis's
+// front, a cheat so its near tubes stay as crisp as the mark). The vortex's foot X 0, Z 700, height 1750 (waist arms
+// up to ~0.44 H from the axis, ARM 1.2 x vortexSky's); the mark X -877, Z 260, 640 tall, extrusion 110, hovering 150
+// above the floor. The mark's glow is stacked flat circles (an SVG blur or radial gradient on it drew a stray copy at
+// the horizon under the AirStage bloom). The waist arms come in opposite pairs (same reach, half a turn apart) on a
+// waist disc tilted toward the camera (half vortexSky's tilt), so the settled vortex is symmetric about its axis.
 //
-// SOURCES: the incompressible Navier-Stokes equations (momentum and continuity), as stated by the Clay Mathematics
-// Institute's Millennium Prize problem "Navier-Stokes existence and smoothness" (Fefferman, 2000). The OpenAI report
-// is the speaker's account: nothing about it on screen. Von Karman street: shedding at Strouhal ~0.2, the spacing
-// here tightened (1.6 D between alternate vortices) so ~4 curls fit the frame;
-// the curls grow with age (rho 0.8 -> 1.95 R) as they drift.
-// CHECKS (revision 2 preview): at rest the main line x 93-883 (~790 px), the tick to x ~1013, the label (0.64 em,
-// ~1.6x) from y ~320, the continuity line (0.86 em, ~1.3x, full opacity) to y ~567; the post's top cap whole on every
-// frame (f0 from y ~67, at rest ~625, below the plate); the plate is fully above the frame at f0 (its last line y < -12), enters f1, its main
-// line crosses the top edge ~f10 (ends ~8 px past the frame edges for ~2 frames, in the dead top zone), the whole
-// plate is inside the keep-in box from f38. The column whole in x on every frame (f0 x ~30-350). The curls' visible
-// spirals inside y ~340-1040 on every frame (their outer twirl radius reaches 1081 at rest, undeformed lines there).
-// Camera: one deceleration lobe f0-54, then a constant creep (k 0.90 -> 0.50).
+// CHECKS (revision 4 preview, every frame, scripts in the builder's scratch): every shown vortex point x 340-949,
+// y 333-1061; no stroke joins two broken pieces (max step between path points < 60 px); the mark's box x 107-423, y 750-1055 (bob +-8); nothing in the caption bands but
+// floor and shadows. Frame-to-frame luma change smooth (no pops; the odd/even ripple is the stage's grain on twos).
+//
+// SOURCES / HONEST CHEATS: a picture of the flow, not a simulation: the tubes turn rigidly per family (core faster
+// than rim) where a steady flow's streamlines would stand still; the broken pieces are the same tubes cut up and
+// scattered (analytic, seek-safe). The OpenAI report is the speaker's account: nothing about it on screen. The mark: kits/dwarkesh/brandGlyphs
+// OPENAI (Simple Icons, verbatim path).
 // ---------------------------------------------------------------------------
-import React, { useMemo } from "react";
-import { useCurrentFrame } from "remotion";
+import React from "react";
+import { random, useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { loadFont as loadMath } from "@remotion/google-fonts/LibertinusMath";
-import { AIR, ACCENT, AirCyl, AirFloor, AirShadow, AirStage, MAT, ORANGE_LINE, WorldSvg, airWorldOf, c01, mixHex, swayCam, type AirWorld, type Cam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { PLATE_FONT } from "../rsi-ten-earths/tenEarthsHall";
-
-const { fontFamily: MATH_FONT } = loadMath("normal", { weights: ["400"], subsets: ["latin", "math", "greek"] });
+import { AIR, ACCENT, ACCENT_DEEP, AirFloor, AirShadow, AirStage, MAT, ORANGE_LINE, WorldSvg, airWorldOf, c01, mixHex, swayCam, type AirWorld, type Cam, type DepthOpts } from "../kits/dwarkesh-3d/dwarkesh3d";
+import { OPENAI } from "../kits/dwarkesh/brandGlyphs";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 114;
@@ -70,463 +60,494 @@ export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
 const PAL = AIR.A;
-const LOW_AIR = "#33302A";
-const CREAM = PAL.cream;
 type P2 = [number, number];
+type V3 = [number, number, number];
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const sstep = (u: number) => {
-  const v = c01(u);
-  return v * v * (3 - 2 * v);
+const sst = (a: number, b: number, v: number) => {
+  const t = c01((v - a) / (b - a));
+  return t * t * (3 - 2 * t);
 };
 const f2 = (v: number) => v.toFixed(2);
 
 // ===================================================================================================================
 // THE WORLD
 // ===================================================================================================================
-const R = 130;
-export const SHEET_Y = -1100;
-const COL_TOP = -1500;
-/** the eye 4000 above the sheet at the rest distance 4000: looking down 45 deg on the sheet at rest */
-export const DEPTH: DepthOpts = { eyeY: SHEET_Y - 4000, dRef: 4000, kRef: 0.5, dolly: 0.3 };
+export const DEPTH: DepthOpts = { eyeY: -1150, dRef: 3200, kRef: 0.5, dolly: 0.35 };
+/** the vortex: foot on the floor at (VX, 0, VZ), height VH */
+export const VX = 0;
+export const VZ = 700;
+export const VH = 1750;
+/** the vortex fogs from its own front (a cheat: its nearest tubes as crisp as the mark) */
+const VFOG = 420;
+/** the mark: centre (MX, MY, MZ), size MS (its 24-unit box), extrusion depth MT */
+export const MX = -877;
+export const MZ = 260;
+export const MS = 640;
+const MT = 110;
+const MHOVER = 150;
+export const MY = -(MHOVER + MS / 2);
 
 // ===================================================================================================================
-// THE CAMERA: one pull-back about a fixed screen point (a zoom of x1.95 -> 1), one deceleration lobe into a creep.
-// f0: close on the near wake (the forming curl and the first grown one), the column whole at the left edge, the plate
-// fully above the frame; the pull-back brings the plate down into frame (in by ~f38, near rest by f46).
+// THE CAMERA: one slow push-in about the vortex's middle (k 0.44 -> 0.5), decelerating to rest by f110
 // ===================================================================================================================
 const KR = 0.5;
-const ZOOM0 = 1.8;
-/** the rest framing: the column's centre at the sheet (0, SHEET_Y) at screen (290, 880) */
-const REST_CX = 0 - (290 - 540) / KR;
-const REST_CY = SHEET_Y - (880 - 960) / KR;
-/** the zoom's fixed point (screen at rest): at f0 the column's centre lands at x ~190 (its capital whole), the two
- *  near-wake curls at x ~520 / ~880, y ~660, and the plate's last line above the frame (y < -20) */
-const FIX: P2 = [415, 1295];
+const K0 = 0.44;
+const PUSH_END = 110;
+/** the rest framing: the world front-plane point (REST_CX, REST_CY) at the screen centre */
+const REST_CX = -255;
+const REST_CY = -406;
+/** the push's fixed screen point (at rest): the vortex's middle */
+const FIX: P2 = [600, 760];
 const FIXW: P2 = [REST_CX + (FIX[0] - 540) / KR, REST_CY + (FIX[1] - 960) / KR];
-const PULL_END = 54;
-const progressAt = (f: number) => {
-  const u = c01(f / PULL_END);
-  return 0.975 * (1 - Math.pow(1 - u, 3)) + 0.025 * (f / (DURATION - 1));
-};
 export const camAt = (f: number): Cam => {
-  const k = KR * Math.pow(ZOOM0, 1 - progressAt(f));
+  const u = c01(f / PUSH_END);
+  const p = 1 - Math.pow(1 - u, 2.2);
+  const k = K0 * Math.pow(KR / K0, p);
   return { k, cx: FIXW[0] - (FIX[0] - 540) / k, cy: FIXW[1] - (FIX[1] - 960) / k };
 };
 const REST = swayCam(camAt(0), 0);
 
 // ===================================================================================================================
-// THE FLOW
+// THE BEATS
 // ===================================================================================================================
-const U = 8.2; // free stream, world units per frame
-const C = 0.85 * U; // the vortices' drift
-const A_SP = 400; // spacing along x between alternate vortices
-const TB = A_SP / C; // frames between sheddings
-/** the shedding phase: a curl aged 20 frames at f0 (with the next one 57 frames older) frames the opening */
-const PHASE = -20;
-const X_BIRTH = 1.75 * R;
-const GAMMA = 6.2; // radians at full strength (~1 turn at the core)
-const N_LINES = 37;
-const DZ = 31.5;
-/** upstream offsets: symmetric about the column's centre line, Z -488..646 */
-const Z0S = Array.from({ length: N_LINES }, (_, i) => (i - 16 + 0.5) * DZ);
-const X_MIN = -1500;
-const X_MAX = 2700;
+/** the mark brightens on "internal model" */
+export const markGlow = (f: number) => sst(46, 58, f);
+/** the filaments reach from the mark into the cloud's foot */
+const FIL_F0 = 50;
+const FIL_DUR = 12;
+/** the organising front (height fraction) climbs from the base on "solved" */
+/** ORDER APPEARS: each point of the flow flies from its broken piece into its place on the vortex over ORG_DUR frames,
+ *  starting at ORG_F0 + ORG_SPAN * (its height): the foot from f59, the crown done by f94 */
+const ORG_F0 = 59;
+const ORG_SPAN = 24;
+const ORG_DUR = 11;
+export const orgAt = (f: number, h: number) => sst(0, 1, (f - ORG_F0 - ORG_SPAN * c01(h)) / ORG_DUR);
+/** the orange front (height fraction), right behind the organising front; complete by f100 */
+export const fillLevel = (f: number) => lerp(-0.06, 1.08, 1 - Math.pow(1 - c01((f - 65) / 34), 1.4));
 
-type Vortex = { x: number; z: number; rho: number; gam: number; side: number; bulge: number };
-export const vorticesAt = (f: number): Vortex[] => {
-  const out: Vortex[] = [];
-  const kHi = Math.floor((f - PHASE) / TB);
-  for (let k = kHi; k > kHi - 16; k--) {
-    const age = f - (k * TB + PHASE);
-    if (age < 0) continue;
-    const x = X_BIRTH + C * age;
-    if (x > X_MAX + 400) break;
-    const side = k % 2 === 0 ? 1 : -1; // +1 the far side (Z +)
-    const grow = 1 - Math.exp(-age / 70);
-    out.push({
-      x,
-      z: side * R * (0.35 + 0.7 * grow),
-      rho: R * (0.8 + 1.05 * grow),
-      gam: -side * GAMMA * (1 - Math.exp(-age / 20)) * Math.exp(-age / 520),
-      side,
-      bulge: 0.55 * R * grow,
+// ===================================================================================================================
+// THE VORTEX GEOMETRY (local units: height 1, the axis on local Y up, the foot at the origin). Copied from
+// sam-navier-stokes/vortexSky buildTubes "hi" (seed 1), with fatter tubes (TK) for a 720 px tall vortex.
+// ===================================================================================================================
+type Seg = { c0: V3; v: V3; d: V3; n1: V3; n2: V3; L: number; kink: number; ku: number; wob: number; w: number; vis: number };
+type Tube = { c: V3[]; rad: number[]; h: number[]; s: number[]; lead: number; fam: number; root: number; ph: number; inner: boolean; segs: Seg[] };
+const TK = 2.1;
+/** the waist arms reach a little wider than vortexSky's (they fill the frame's width) */
+const ARM = 1.2;
+const SEED = 1;
+/** the inner share of the middle helices that the orange front takes (with the core); the outer sheath stays cream */
+const INNER_MID = 0.5;
+/** the broken pieces: SEG points each (a multiple of PIECE), the cloud's radius (local), the share shown in the chaos */
+const SEG = 30;
+const CLOUD_R = 0.4;
+const CHAOS_SHOW = 0.38;
+const unit = (v: V3): V3 => {
+  const n = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / n, v[1] / n, v[2] / n];
+};
+const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const buildTubes = (): Tube[] => {
+  const R0 = (k: string) => random(`vortex-${SEED}-${k}`);
+  const ch = {
+    width: lerp(0.92, 1.08, R0("w")),
+    turns: lerp(0.9, 1.12, R0("t")),
+    count: lerp(0.85, 1.15, R0("n")),
+    waist: lerp(0.47, 0.55, R0("waist")),
+    tilt: lerp(0.3, 0.45, R0("tilt")) * 0.5,
+    tiltDir: Math.PI / 2, // the waist disc dips toward / away from the camera: symmetric left and right
+  };
+  const R = (k: string) => random(`vortex-${SEED}-h-${k}`);
+  const D = { core: 18, mid: 18, outer: 34, segH: 300, segO: 160 };
+  const tubes: Tube[] = [];
+  const nCore = Math.max(4, Math.round(D.core * ch.count));
+  const nMid = Math.max(4, Math.round(D.mid * ch.count));
+  const nOut = Math.max(6, Math.round(D.outer * ch.count));
+  const W = ch.width;
+  const waist = ch.waist;
+  const spindle = (h: number) => {
+    if (h < waist) {
+      const d = c01((waist - h) / waist);
+      return lerp(1, 0.42, Math.pow(d, 2.2)) * (1 + 0.2 * (1 - sst(0, 0.12, h)));
+    }
+    const u = c01((h - waist) / (1 - waist));
+    return lerp(1, 0.42, Math.pow(u, 2.2));
+  };
+  const tilt = (r: number, th: number) => ch.tilt * r * Math.cos(th - ch.tiltDir);
+  const push = (t: Tube, r: number, th: number, h: number, rad: number, s: number) => {
+    t.c.push([r * Math.cos(th), h, r * Math.sin(th)]);
+    t.rad.push(rad);
+    t.h.push(h);
+    t.s.push(s);
+  };
+  const coreTurns = lerp(6.5, 7.5, R("ct")) * ch.turns;
+  for (let i = 0; i < nCore; i++) {
+    const k = `c${i}`;
+    const layer = (i % 3) / 2;
+    const r0 = lerp(0.008, 0.03, layer) * W * lerp(0.95, 1.05, R(k + "r"));
+    const h0 = 0.01 + 0.03 * R(k + "a");
+    const h1 = 0.98 + 0.04 * R(k + "b");
+    const th0 = ((i + 0.15 * R(k + "p")) / nCore) * Math.PI * 2;
+    const tr = lerp(0.0028, 0.0034, R(k + "w")) * TK;
+    const lead = 0.016 + lerp(-0.012, 0.012, R(k + "l"));
+    const N = D.segH;
+    const t: Tube = { c: [], rad: [], h: [], s: [], lead, fam: 0, root: 0, ph: R(k + "ph") * 6.283, inner: true, segs: [] };
+    for (let j = 0; j <= N; j++) {
+      const u = j / N;
+      const h = lerp(h0, h1, u);
+      const r = r0 * (0.3 + 0.7 * spindle(h)) * (1 + 0.8 * sst(0.92, 1.03, h));
+      push(t, r, th0 + coreTurns * Math.PI * 2 * (h - h0), h, tr * Math.pow(sst(0, 0.08, u), 0.8) * Math.pow(1 - sst(0.86, 1, u), 0.6), u);
+    }
+    tubes.push(t);
+  }
+  const midTurns = lerp(2.9, 3.3, R("mt")) * ch.turns;
+  for (let i = 0; i < nMid; i++) {
+    const k = `m${i}`;
+    const r0 = lerp(0.055, 0.15, (i + 0.4 * R(k + "r")) / nMid) * W;
+    const h0 = lerp(0.0, 0.07, R(k + "a"));
+    const h1 = lerp(0.86, 0.99, R(k + "b"));
+    const th0 = ((i * 0.618034) % 1) * Math.PI * 2;
+    const tr = lerp(0.0026, 0.0034, R(k + "w")) * TK;
+    const lead = lerp(-0.015, 0.015, R(k + "l"));
+    const N = Math.round(D.segH * 0.8);
+    const t: Tube = { c: [], rad: [], h: [], s: [], lead, fam: 1, root: 0, ph: R(k + "ph") * 6.283, inner: i < nMid * INNER_MID, segs: [] };
+    for (let j = 0; j <= N; j++) {
+      const u = j / N;
+      const hb = lerp(h0, h1, u);
+      const r = r0 * (0.12 + 0.88 * Math.pow(spindle(hb), 1.1));
+      const th = th0 + midTurns * Math.PI * 2 * (hb - h0);
+      const h = hb + tilt(r, th) * Math.exp(-Math.pow((hb - waist) / 0.2, 2));
+      push(t, r, th, h, tr * Math.pow(sst(0, 0.12, u), 0.8) * Math.pow(1 - sst(0.84, 1, u), 0.6), u);
+    }
+    tubes.push(t);
+  }
+  const outTurns = lerp(1.05, 1.2, R("ot")) * ch.turns;
+  for (let i = 0; i < nOut; i++) {
+    const k = `o${i}`;
+    const up = i % 2 === 0;
+    const hA = waist + (up ? 1 : -1) * lerp(0.1, 0.3, R(k + "a"));
+    const hW = waist + lerp(-0.035, 0.035, R(k + "hw"));
+    const rA = lerp(0.05, 0.09, R(k + "ra")) * W;
+    // arms in opposite pairs (same reach, half a turn apart, one rooted above the waist, one below): symmetric
+    const pr = Math.floor(i / 2);
+    const nPr = Math.ceil(nOut / 2);
+    const rM = lerp(0.19, 0.34, Math.pow((pr + 0.5 * R(`o${2 * pr}rm`)) / nPr, 0.9)) * W * ARM;
+    const th0 = ((pr * 0.381966) % 1) * Math.PI * 2 + (i % 2) * Math.PI;
+    const tr = lerp(0.0022, 0.003, R(k + "w")) * TK;
+    const lead = lerp(-0.03, 0.01, R(k + "l"));
+    const N = D.segO;
+    const t: Tube = { c: [], rad: [], h: [], s: [], lead, fam: 2, root: hA, ph: R(k + "ph") * 6.283, inner: false, segs: [] };
+    for (let j = 0; j <= N; j++) {
+      const u = j / N;
+      const r = lerp(rA, rM, Math.pow(u, 0.85));
+      const th = th0 + outTurns * Math.PI * 2 * u;
+      const toW = 1 - Math.pow(1 - u, 2.2);
+      const h = lerp(hA, hW, toW) + tilt(r, th) * toW;
+      push(t, r, th, h, tr * Math.pow(sst(0, 0.1, u), 0.8) * Math.pow(1 - u, 1.1) * 2.0, u);
+    }
+    tubes.push(t);
+  }
+  // THE BROKEN PIECES: every tube cut into SEG-point pieces, each with its own place in a loose cloud, drift,
+  // direction (all directions, no common axis), length and kink
+  tubes.forEach((t, ti) => {
+    for (let g = 0; g * SEG < t.c.length; g++) {
+      const Q = (k: string) => random(`ns-seg-${ti}-${g}-${k}`);
+      const y = lerp(0.08, 0.92, Q("y"));
+      const phi = Q("phi") * Math.PI * 2;
+      const rho = CLOUD_R * Math.sqrt(Q("rho")) * (0.3 + 0.7 * Math.sqrt(Math.max(0, 1 - Math.pow(2 * y - 1, 2)))); // a loose round cloud
+      const dir = unit([Q("dx") - 0.5, Q("dy") - 0.5, Q("dz") - 0.5]);
+      const n1 = unit(cross(dir, Math.abs(dir[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]));
+      const n2 = cross(dir, n1);
+      const vd = unit([Q("vx") - 0.5, Q("vy") - 0.5, Q("vz") - 0.5]);
+      const vs = lerp(0.0012, 0.003, Q("vs"));
+      t.segs.push({
+        c0: [rho * Math.cos(phi), y, rho * Math.sin(phi)],
+        v: [vd[0] * vs, vd[1] * vs * 0.7, vd[2] * vs],
+        d: dir,
+        n1,
+        n2,
+        L: lerp(0.07, 0.14, Q("L")),
+        kink: lerp(-0.45, 0.45, Q("k")),
+        ku: lerp(0.3, 0.7, Q("ku")),
+        wob: lerp(0.04, 0.1, Q("wb")),
+        w: lerp(-0.05, 0.05, Q("w")),
+        vis: Q("vis") < CHAOS_SHOW ? 1 : 0,
+      });
+    }
+  });
+  return tubes;
+};
+let TUBES_CACHE: Tube[] | null = null;
+const tubes = () => (TUBES_CACHE ??= buildTubes());
+
+
+/** the turn of each family (radians at frame f): the core faster than the rim */
+const SPIN = [0.026, 0.019, 0.014];
+const SPIN0 = 0.4;
+
+// ===================================================================================================================
+// THE PIECES: every tube cut into short pieces, each with its depth, colour and width; drawn far -> near
+// ===================================================================================================================
+const PIECE = 5;
+const LIGHT: V3 = (() => {
+  const v: V3 = [-0.55, 0.65, -0.5];
+  const n = Math.hypot(...v);
+  return [v[0] / n, v[1] / n, v[2] / n];
+})();
+const CREAM_LIT = "#F4E8CE";
+const CREAM_SHD = "#8E8774";
+const OR_LIT = ACCENT;
+/** how far along a waist arm the orange reaches (its root) */
+const ARM_ROOT = 0.14;
+const OR_SHD = "#B9660B";
+const HOT = "#FFE6A8";
+type Piece = { Z: number; d: string; w: number; fill: string; casing: string; op: number; glow?: number };
+
+/** a broken piece's point u (0..1 along it) at frame f: a short kinked stroke drifting and turning in the cloud */
+const chaosAt = (sg: Seg, u: number, f: number): V3 => {
+  const t = f - 40;
+  const c: V3 = [sg.c0[0] + sg.v[0] * t, sg.c0[1] + sg.v[1] * t, sg.c0[2] + sg.v[2] * t];
+  // the direction turns slowly about n2
+  const a = sg.w * t;
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
+  const d: V3 = [sg.d[0] * ca + sg.n1[0] * sa, sg.d[1] * ca + sg.n1[1] * sa, sg.d[2] * ca + sg.n1[2] * sa];
+  const n1: V3 = [sg.n1[0] * ca - sg.d[0] * sa, sg.n1[1] * ca - sg.d[1] * sa, sg.n1[2] * ca - sg.d[2] * sa];
+  const x = (u - 0.5) * sg.L;
+  // one sharp kink (a V) and a small wobble across
+  const kv = sg.kink * sg.L * (Math.abs(u - sg.ku) - 0.5 * Math.abs(sg.ku - 0.5) - 0.25);
+  const wb = sg.wob * sg.L * Math.sin(Math.PI * 2.2 * u + f * 0.08 + sg.kink * 9);
+  return [c[0] + d[0] * x + n1[0] * kv + sg.n2[0] * wb, Math.max(0.02, c[1] + d[1] * x + n1[1] * kv + sg.n2[1] * wb), c[2] + d[2] * x + n1[2] * kv + sg.n2[2] * wb];
+};
+/** one tube's world points at frame f and each point's order (0 = its broken piece in the cloud, 1 = on the vortex) */
+const tubeWorld = (t: Tube, f: number): { W: V3[]; o: number[] } => {
+  const sp = SPIN0 + SPIN[t.fam] * f;
+  const cs = Math.cos(sp);
+  const sn = Math.sin(sp);
+  const o: number[] = [];
+  const W = t.c.map((c, j) => {
+    const q: V3 = [c[0] * cs - c[2] * sn, c[1], c[0] * sn + c[2] * cs];
+    const hc = t.fam === 2 ? Math.max(t.root, t.h[j]) : t.h[j];
+    const oj = orgAt(f, hc);
+    o.push(oj);
+    if (oj < 1) {
+      const g = Math.floor(j / SEG);
+      const u = (j - g * SEG) / (SEG - 1);
+      const x = chaosAt(t.segs[g], Math.min(1, u), f);
+      q[0] = lerp(x[0], q[0], oj);
+      q[1] = lerp(x[1], q[1], oj);
+      q[2] = lerp(x[2], q[2], oj);
+    }
+    return [VX + q[0] * VH, -q[1] * VH, VZ + q[2] * VH] as V3;
+  });
+  return { W, o };
+};
+/** CHECKS: every vortex point and the mark's box on screen at frame f (no sway) */
+export const screenExtents = (f: number, P: { p: (X: number, Y: number, Z: number) => P2; r: (Z: number) => number }, cam: Cam) => {
+  const sc = (w: P2): P2 => [540 + (w[0] - cam.cx) * cam.k, 960 + (w[1] - cam.cy) * cam.k];
+  const box = { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 };
+  for (const t of tubes()) {
+    const { W, o } = tubeWorld(t, f);
+    W.forEach((w, j) => {
+      if (t.rad[j] < 1e-4) return;
+      if (o[j] < 0.3 && !t.segs[Math.floor(j / SEG)].vis) return;
+      const s2 = sc(P.p(w[0], w[1], w[2]));
+      box.x0 = Math.min(box.x0, s2[0]);
+      box.x1 = Math.max(box.x1, s2[0]);
+      box.y0 = Math.min(box.y0, s2[1]);
+      box.y1 = Math.max(box.y1, s2[1]);
     });
+  }
+  const mc = sc(P.p(MX, MY, MZ));
+  const mh = (MS / 2) * P.r(MZ) * cam.k;
+  return { vortex: box, mark: { x0: mc[0] - mh, x1: mc[0] + mh, y0: mc[1] - mh, y1: mc[1] + mh } };
+};
+
+const vortexPieces = (A: AirWorld, f: number): Piece[] => {
+  const P = A.P;
+  const out: Piece[] = [];
+  const Lf = fillLevel(f);
+  const ts = tubes();
+  for (const t of ts) {
+    const { W, o } = tubeWorld(t, f);
+    const n = W.length;
+    const S: P2[] = W.map((w) => P.p(w[0], w[1], w[2]));
+    for (let a = 0; a < n - 1; a += PIECE) {
+      const b = Math.min(n - 1, a + PIECE);
+      const m = Math.floor((a + b) / 2);
+      // the broken pieces: a piece's ends are not joined until both sides are in place; half the pieces are hidden in
+      // the chaos and grow in as they join; each piece tapers to its ends while broken
+      const g = Math.floor(a / SEG);
+      const sg = t.segs[g];
+      const om = o[m];
+      const uIn = (m - g * SEG + 0.5) / SEG;
+      const show = lerp(sg.vis, 1, sst(0.3, 1, om)) * lerp(Math.pow(Math.sin(Math.PI * c01(uIn)), 0.6), 1, om);
+      const rad = t.rad[m] * show;
+      if (rad <= 1e-5) continue;
+      const wa = W[a];
+      const wb = W[b];
+      const T: V3 = [wb[0] - wa[0], wb[1] - wa[1], wb[2] - wa[2]];
+      const tl = Math.hypot(...T) || 1;
+      const td = (T[0] * LIGHT[0] - T[1] * LIGHT[1] + T[2] * LIGHT[2]) / tl;
+      const kd = Math.sqrt(Math.max(0, 1 - td * td));
+      const Zm = W[m][2];
+      const Zf = Math.max(0, Zm - VFOG);
+      const hUp = -W[m][1];
+      // the orange front: by height on the core and the sheath; along the arm (from its root) on the waist arms
+      const hc = t.h[m];
+      let orange = false;
+      let hot = 0;
+      if (t.fam === 2) {
+        // the waist arms stay cream: the orange only touches their roots
+        const reach = ARM_ROOT * c01((Lf + t.lead - t.root) / 0.06);
+        orange = Lf + t.lead > t.root && t.s[m] < reach;
+        hot = orange && reach < ARM_ROOT ? sst(reach - 0.05, reach, t.s[m]) : 0;
+      } else if (!t.inner) {
+        orange = false;
+      } else {
+        const lv = Lf + t.lead;
+        orange = hc < lv;
+        hot = orange ? sst(lv - 0.035, lv, hc) * c01((1.0 - lv) / 0.05 + 1) : 0;
+      }
+      // the settled glint: a slow bright band climbing the tubes
+      const glint = orange ? 0.5 + 0.5 * Math.sin(6.283 * (hc * 2.2 - f / 30) + t.ph) : 0;
+      const sheen = Math.pow(kd, 3);
+      let col: string;
+      if (orange) {
+        col = mixHex(OR_SHD, OR_LIT, 0.25 + 0.75 * kd);
+        col = mixHex(col, CREAM_LIT, 0.22 * sheen + 0.1 * glint * sst(96, 104, f));
+        col = mixHex(col, HOT, hot);
+        col = A.toneO(col, Zf, hUp);
+      } else {
+        col = mixHex(CREAM_SHD, CREAM_LIT, 0.2 + 0.8 * kd);
+        col = A.tone(col, Zf, hUp);
+      }
+      const r = P.r(Zm);
+      const wpx = 2 * rad * VH * r;
+      const casing = orange ? A.toneO(mixHex(ORANGE_LINE, PAL.shadow, 0.35), Zf, hUp) : A.tone(mixHex(PAL.shadow, "#3E4A46", 0.3), Zf, hUp);
+      const linked = (j: number) => o[j] > 0.97 && o[j + 1] > 0.97;
+      const a0 = a > 0 && (a % SEG !== 0 || linked(a - 1)) ? a - 1 : a;
+      const b1 = b % SEG === 0 && !linked(b - 1) ? b - 1 : b;
+      let d = "";
+      for (let j = a0; j <= b1; j++) d += `${j === a0 ? "M" : "L"}${f2(S[j][0])},${f2(S[j][1])}`;
+      out.push({ Z: Zm, d, w: wpx, fill: col, casing, op: 1, glow: hot > 0.3 ? hot : undefined });
+    }
   }
   return out;
 };
 
-/** the potential-flow streamline round the column: z at x for the line psi = z0 (bisection) */
-const potZ = (x: number, z0: number) => {
-  const s = z0 >= 0 ? 1 : -1;
-  const a = Math.abs(z0);
-  const r2 = R * R;
-  let lo = Math.max(a, Math.sqrt(Math.max(0, r2 - x * x)));
-  let hi = a + R;
-  for (let i = 0; i < 34; i++) {
-    const m = (lo + hi) / 2;
-    const v = m - (r2 * m) / (x * x + m * m) - a;
-    if (v < 0) lo = m;
-    else hi = m;
-  }
-  return s * (lo + hi) / 2;
+// THE FILAMENTS: from the mark's right side into the cloud's foot (world 3D quadratic curves)
+const FILS = Array.from({ length: 5 }, (_, i) => {
+  const R = (k: string) => random(`ns-fil-${i}-${k}`);
+  const a = (i / 4 - 0.5) * 1.1;
+  const start: V3 = [MX + 0.36 * MS * Math.cos(a), MY + 0.36 * MS * Math.sin(a), MZ];
+  const hh = lerp(0.05, 0.3, (i + 0.5 * R("h")) / 5);
+  const ang = lerp(2.4, 3.6, R("a")); // the side facing the mark (-X)
+  const rr = lerp(0.03, 0.08, R("r"));
+  const end: V3 = [VX + rr * VH * Math.cos(ang), -hh * VH, VZ + rr * VH * Math.sin(ang)];
+  const mid: V3 = [lerp(start[0], end[0], 0.5), Math.min(start[1], end[1]) - lerp(120, 320, R("m")), lerp(start[2], end[2], 0.5) - lerp(60, 200, R("z"))];
+  return { start, mid, end, delay: i * 1.6 + 2 * R("d"), w: lerp(8, 11, R("w")) };
+});
+const bez = (a: V3, b: V3, c: V3, t: number): V3 => {
+  const u = 1 - t;
+  return [u * u * a[0] + 2 * u * t * b[0] + t * t * c[0], u * u * a[1] + 2 * u * t * b[1] + t * t * c[1], u * u * a[2] + 2 * u * t * b[2] + t * t * c[2]];
 };
-/** downstream the lines close more slowly (the bubble behind the column) */
-const xEff = (x: number) => (x <= 0 ? x : x / (1 + 0.8 * sstep(x / (2 * R))));
+const filamentPieces = (A: AirWorld, f: number): Piece[] => {
+  const P = A.P;
+  const out: Piece[] = [];
+  for (const F of FILS) {
+    const tt = c01((f - FIL_F0 - F.delay) / FIL_DUR);
+    if (tt <= 0) continue;
+    const head = 1 - Math.pow(1 - tt, 1.8);
+    const N = 36;
+    const n = Math.max(2, Math.ceil(N * head));
+    const pts: V3[] = Array.from({ length: n + 1 }, (_, j) => bez(F.start, F.mid, F.end, (head * j) / n));
+    for (let a = 0; a < n; a += 3) {
+      const b = Math.min(n, a + 3);
+      const m = pts[Math.floor((a + b) / 2)];
+      const r = P.r(m[2]);
+      const u = (a + b) / 2 / n;
+      // a pulse runs along the filament toward the flow
+      const pulse = 0.5 + 0.5 * Math.sin(6.283 * (u * 1.6 - f / 14));
+      const tipHot = sst(0.75, 1, u) * (1 - sst(0.98, 1, tt));
+      const col = A.toneO(mixHex(mixHex(OR_SHD, OR_LIT, 0.55 + 0.45 * pulse), HOT, tipHot), m[2], -m[1]);
+      let d = "";
+      const a0 = Math.max(0, a - 1);
+      for (let j = a0; j <= b; j++) {
+        const s = P.p(pts[j][0], pts[j][1], pts[j][2]);
+        d += `${j === a0 ? "M" : "L"}${f2(s[0])},${f2(s[1])}`;
+      }
+      const taper = 0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, u * 1.1));
+      out.push({ Z: m[2], d, w: F.w * r * taper, fill: col, casing: A.toneO(mixHex(ORANGE_LINE, PAL.shadow, 0.3), m[2], -m[1]), op: 1 - 0.5 * sst(98, 112, f), glow: tipHot > 0.3 ? tipHot : undefined });
+    }
+  }
+  return out;
+};
 
-/** the street's meander: the lines near each vortex lean toward its side (monotone in z: dz'/dz > 0.5) */
-const meander = (x: number, zz: number, vs: Vortex[]) => {
-  let d = 0;
-  for (const v of vs) {
-    const ux = (x - v.x) / (0.5 * A_SP);
-    const uz = (zz - v.z) / (2.4 * R);
-    d += v.side * v.bulge * Math.exp(-ux * ux - uz * uz);
-  }
-  return zz + d;
-};
-/** the twirls; also the WISP: how deep the point sits in a grown curl's core (0..1; the cream that stays) */
-const twirl = (p: P2, vs: Vortex[]): [number, number, number] => {
-  let [x, zz] = p;
-  let wisp = 0;
-  for (const v of vs) {
-    const dx = x - v.x;
-    const dz = zz - v.z;
-    const r2 = dx * dx + dz * dz;
-    const q = r2 / (v.rho * v.rho);
-    if (q >= 1) continue;
-    wisp = Math.max(wisp, (1 - sstep((Math.sqrt(q) - 0.14) / 0.34)) * c01(Math.abs(v.gam) / GAMMA));
-    const w = 1 - q;
-    const th = v.gam * w * w * w;
-    const cs = Math.cos(th);
-    const sn = Math.sin(th);
-    x = v.x + dx * cs - dz * sn;
-    zz = v.z + dx * sn + dz * cs;
-  }
-  return [x, zz, wisp];
-};
-
-type LinePt = { X: number; Z: number; x0: number; wisp: number };
-/** one smoke line at frame f: points along its own upstream x, warped */
-const lineAt = (z0: number, vs: Vortex[]): LinePt[] => {
-  const map = (x0: number): LinePt => {
-    const zp = meander(x0, potZ(xEff(x0), z0), vs);
-    const [X, Z, wisp] = twirl([x0, zp], vs);
-    return { X, Z, x0, wisp };
+// ===================================================================================================================
+// THE MARK: the OpenAI glyph as a solid object (a perspective extrusion: back layers in deep orange, the face lit)
+// ===================================================================================================================
+const Mark: React.FC<{ A: AirWorld; f: number }> = ({ A, f }) => {
+  const P = A.P;
+  const g = markGlow(f);
+  const bob = 8 * Math.sin((f / 40) * 6.283);
+  const layers = 14;
+  const at = (Z: number) => {
+    const c = P.p(MX, MY + bob, Z);
+    const s = (MS / 24) * P.r(Z);
+    return `translate(${f2(c[0])} ${f2(c[1])}) scale(${s.toFixed(4)}) translate(-12 -12)`;
   };
-  const pts: LinePt[] = [];
-  const push = (a: LinePt, b: LinePt, depth: number) => {
-    const d = Math.hypot(b.X - a.X, b.Z - a.Z);
-    if (d > 5 && depth < 5) {
-      const m = map((a.x0 + b.x0) / 2);
-      push(a, m, depth + 1);
-      push(m, b, depth + 1);
-    } else pts.push(b);
-  };
-  let prev = map(X_MIN);
-  pts.push(prev);
-  let x = X_MIN;
-  while (x < X_MAX) {
-    const step = x < -2.2 * R ? 14 : 5;
-    x = Math.min(X_MAX, x + step);
-    const cur = map(x);
-    push(prev, cur, 0);
-    prev = cur;
-  }
-  return pts;
-};
-
-/** the smoke's density along a line (advects with the free stream) */
-const densAt = (x0: number, j: number, f: number) => {
-  const s = x0 - U * f;
-  const a = 0.5 + 0.5 * Math.sin((2 * Math.PI * s) / 560 + j * 2.39);
-  const b = 0.5 + 0.5 * Math.sin((2 * Math.PI * s) / 1370 + j * 1.13 + 0.7);
-  return 0.45 + 0.55 * (0.55 * a + 0.45 * b);
-};
-
-// ===================================================================================================================
-// THE ORANGE TRACE: a front in the lines' own upstream x
-// ===================================================================================================================
-const TRACE_F0 = 61;
-const TRACE_X0 = -700;
-const TRACE_V = 84; // world units per frame (constant after a 6-frame start)
-/** each line's trace runs a little ahead or behind the mean front (a ragged front of separate traces) */
-const traceLag = (j: number) => 75 * Math.sin(j * 2.13 + 0.4) + 55 * Math.sin(j * 0.71 + 1.9);
-export const traceFront = (f: number) => {
-  const u = f - TRACE_F0;
-  if (u <= 0) return -1e9;
-  const ramp = 6;
-  return TRACE_X0 + (u < ramp ? (TRACE_V * u * u) / (2 * ramp) : TRACE_V * (u - ramp / 2));
-};
-const HEAD = 80;
-/** the outer lines thin out (the smoke rake's edges) */
-const edgeFade = (j: number) => sstep((j + 0.6) / 6) * sstep((N_LINES - 1 - j + 0.6) / 7);
-
-// ===================================================================================================================
-// THE PLATE (world space, the front plane Z 0): the label, the momentum equation, the continuity line, the tick
-// ===================================================================================================================
-const restWorld = (sx: number, sy: number): P2 => [REST_CX + (sx - 540) / KR, REST_CY + (sy - 960) / KR];
-const EQ_S = 158; // the main line's font size (world; 79 px at rest: the main line ~790 px wide)
-export const EQ_C = restWorld(485, 436); // the main line's centre (x) and math axis (y) at rest
-/** the payoff: the equation's glyphs warm cream -> orange left to right as the trace reaches the right edge (~f91-93) */
-export const WARM_F0 = 91;
-export const WARM_DUR = 11;
-const WARM_EDGE = 0.8; // the warm front's soft half-width (em)
-export const TICK_F0 = 99;
-export const TICK_DUR = 7;
-/** the tick's points relative to (tx, axis), in em of the main size; tx = the main line's right end + TICK_GAP */
-export const TICK_GAP = 0.42;
-export const TICK_SHAPE: P2[] = [
-  [0, 0.03],
-  [0.36, 0.45],
-  [1.08, -0.63],
-];
-
-const PD = "∂";
-const NABLA = "∇";
-const BU = "\u{1D42E}"; // bold u
-const IT = "\u{1D461}"; // italic t
-const IP = "\u{1D45D}"; // italic p
-const RHO = "\u{1D70C}";
-const NU = "\u{1D708}";
-const CDOT = "⋅";
-const MINUS = "−";
-const THIN = "\u2009";
-
-const MathText: React.FC<{ x: number; y: number; s: number; anchor?: "start" | "middle" | "end"; children: React.ReactNode; font?: string; weight?: number; ls?: number; op?: number; fill?: string }> = ({
-  x,
-  y,
-  s,
-  anchor = "start",
-  children,
-  font = MATH_FONT,
-  weight = 400,
-  ls = 0,
-  op = 1,
-  fill = CREAM,
-}) => (
-  <text
-    x={f2(x)}
-    y={f2(y)}
-    textAnchor={anchor}
-    fill={fill}
-    fillOpacity={op}
-    stroke={PAL.shadow}
-    strokeOpacity={0.8 * op}
-    strokeWidth={f2(s * 0.12)}
-    strokeLinejoin="round"
-    paintOrder="stroke"
-    style={{ fontFamily: font, fontWeight: weight, fontSize: s, letterSpacing: ls * s }}
-  >
-    {children}
-  </text>
-);
-
-/** a stacked fraction centred at x on the math axis y */
-const Frac: React.FC<{ x: number; y: number; s: number; w: number; num: string; den: string; fill: string }> = ({ x, y, s, w, num, den, fill }) => {
-  const fs = s * 0.82;
-  return (
-    <g>
-      <MathText x={x} y={y - s * 0.17} s={fs} anchor="middle" fill={fill}>
-        {num}
-      </MathText>
-      <rect x={f2(x - w / 2 - s * 0.02)} y={f2(y - s * 0.05)} width={f2(w + s * 0.04)} height={f2(s * 0.09)} fill={PAL.shadow} fillOpacity={0.8} rx={s * 0.04} />
-      <rect x={f2(x - w / 2)} y={f2(y - s * 0.028)} width={f2(w)} height={f2(s * 0.056)} fill={fill} />
-      <MathText x={x} y={y + s * 0.71} s={fs} anchor="middle" fill={fill}>
-        {den}
-      </MathText>
-    </g>
-  );
-};
-
-/** the equation's layout in em of the main size (Libertinus Math advances, tuned on stills) */
-export const EQ_LAYOUT = (() => {
-  const L = {
-    frac1: 1.02, // dU/dt
-    plus1: 0.86,
-    conv: 2.62, // (u . nabla) u
-    eq: 0.92,
-    minus: 0.72,
-    frac2: 1.0, // nabla p / rho
-    plus2: 0.86,
-    visc: 2.0, // nu nabla^2 u
-  };
-  const total = Object.values(L).reduce((a, b) => a + b, 0);
-  let acc = -total / 2;
-  const at: Record<string, number> = {};
-  for (const [k, v] of Object.entries(L)) {
-    at[k] = acc;
-    acc += v;
-  }
-  return { L, at, total };
-})();
-
-const Equation: React.FC<{ frame: number }> = ({ frame }) => {
-  const s = EQ_S;
-  const [cx, ay] = EQ_C;
-  const { L, at, total } = EQ_LAYOUT;
-  const X = (k: string) => cx + at[k] * s;
-  const base = ay + s * 0.26; // the main baseline (the math axis ~0.26 em above it)
-  // the tick: one stroke written by a moving tip, beside the main line
-  const tx = cx + (total / 2) * s + TICK_GAP * s;
-  const tickPts: P2[] = TICK_SHAPE.map(([u, v]) => [tx + u * s, ay + v * s]);
-  // the warm front: a soft cream -> orange edge sweeping the main line (and the continuity line) left to right
-  const half = (total / 2) * s;
-  const e = WARM_EDGE * s;
-  const wt = c01((frame - WARM_F0) / WARM_DUR);
-  const wf = lerp(cx - half - e, cx + half + e, wt * wt * (3 - 2 * wt));
-  const paint = frame >= WARM_F0 ? "url(#ns-warm)" : CREAM;
-  const seg1 = Math.hypot(tickPts[1][0] - tickPts[0][0], tickPts[1][1] - tickPts[0][1]);
-  const seg2 = Math.hypot(tickPts[2][0] - tickPts[1][0], tickPts[2][1] - tickPts[1][1]);
-  const tt = c01((frame - TICK_F0) / TICK_DUR);
-  const te = 1 - Math.pow(1 - tt, 1.6);
-  const len = te * (seg1 + seg2);
-  let tick: P2[] = [];
-  if (len > 0.5) {
-    if (len <= seg1) tick = [tickPts[0], [lerp(tickPts[0][0], tickPts[1][0], len / seg1), lerp(tickPts[0][1], tickPts[1][1], len / seg1)]];
-    else tick = [tickPts[0], tickPts[1], [lerp(tickPts[1][0], tickPts[2][0], (len - seg1) / seg2), lerp(tickPts[1][1], tickPts[2][1], (len - seg1) / seg2)]];
-  }
-  const td = tick.map((p, i) => `${i ? "L" : "M"}${f2(p[0])},${f2(p[1])}`).join("");
-  const tip = tick.length ? tick[tick.length - 1] : null;
-  const glowA = tt > 0 ? 0.55 * (1 - 0.6 * sstep((frame - TICK_F0 - TICK_DUR) / 8)) : 0;
+  const faceLit = mixHex(mixHex(ACCENT_DEEP, "#9A6A2A", 0.35), ACCENT, g);
+  const faceHi = mixHex(mixHex(ACCENT, ACCENT_DEEP, 0.55), "#FFD36A", g);
+  const sideA = mixHex(ORANGE_LINE, ACCENT_DEEP, 0.25 + 0.3 * g);
+  const sideB = mixHex(ORANGE_LINE, PAL.shadow, 0.35);
+  const c = P.p(MX, MY + bob, MZ);
+  const rG = MS * P.r(MZ);
+  const gl = 0.16 + 0.34 * g;
   return (
     <g>
       <defs>
-        <radialGradient id="ns-plate">
-          <stop offset="0" stopColor={PAL.shadow} stopOpacity={0.5} />
-          <stop offset="0.55" stopColor={PAL.shadow} stopOpacity={0.36} />
-          <stop offset="1" stopColor={PAL.shadow} stopOpacity={0} />
-        </radialGradient>
-        <radialGradient id="ns-tipglow">
-          <stop offset="0" stopColor="#FFE2A0" stopOpacity={1} />
-          <stop offset="0.4" stopColor={ACCENT} stopOpacity={0.6} />
-          <stop offset="1" stopColor={ACCENT} stopOpacity={0} />
-        </radialGradient>
-        <linearGradient id="ns-warm" gradientUnits="userSpaceOnUse" x1={f2(wf - e)} y1="0" x2={f2(wf + e)} y2="0">
-          <stop offset="0" stopColor={ACCENT} />
-          <stop offset="1" stopColor={CREAM} />
+        <linearGradient id="ns-mface" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={A.toneO(faceHi, MZ, -MY)} />
+          <stop offset="0.55" stopColor={A.toneO(faceLit, MZ, -MY)} />
+          <stop offset="1" stopColor={A.toneO(mixHex(faceLit, ACCENT_DEEP, 0.6), MZ, -MY)} />
         </linearGradient>
       </defs>
-      <ellipse cx={f2(cx + 0.2 * s)} cy={f2(ay + 0.05 * s)} rx={f2((total / 2) * s + 1.0 * s)} ry={f2(1.55 * s)} fill="url(#ns-plate)" />
-      <MathText x={cx} y={ay - 1.06 * s} s={0.64 * s} anchor="middle" font={PLATE_FONT} weight={700} ls={0.12} op={0.96}>
-        NAVIER–STOKES
-      </MathText>
-      <Frac x={X("frac1") + (L.frac1 * s) / 2} y={ay} s={s} w={0.86 * s} num={`${PD}${BU}`} den={`${PD}${IT}`} fill={paint} />
-      <MathText x={X("plus1") + (L.plus1 * s) / 2} y={base} s={s} anchor="middle" fill={paint}>
-        +
-      </MathText>
-      <MathText x={X("conv") + (L.conv * s) / 2} y={base} s={s} anchor="middle" fill={paint}>
-        {`(${BU}${CDOT}${NABLA})${BU}`}
-      </MathText>
-      <MathText x={X("eq") + (L.eq * s) / 2} y={base} s={s} anchor="middle" fill={paint}>
-        =
-      </MathText>
-      <MathText x={X("minus") + (L.minus * s) / 2} y={base} s={s} anchor="middle" fill={paint}>
-        {MINUS}
-      </MathText>
-      <Frac x={X("frac2") + (L.frac2 * s) / 2} y={ay} s={s} w={0.84 * s} num={`${NABLA}${IP}`} den={RHO} fill={paint} />
-      <MathText x={X("plus2") + (L.plus2 * s) / 2} y={base} s={s} anchor="middle" fill={paint}>
-        +
-      </MathText>
-      <MathText x={X("visc") + (L.visc * s) / 2} y={base} s={s} anchor="middle" fill={paint}>
-        {`${NU}${THIN}${NABLA}²${BU}`}
-      </MathText>
-      <MathText x={cx} y={ay + 1.58 * s} s={0.86 * s} anchor="middle" fill={paint}>
-        {`${NABLA}${CDOT}${BU} = 0`}
-      </MathText>
-      {td ? (
-        <g>
-          {tip ? <circle cx={f2(tip[0])} cy={f2(tip[1])} r={f2(0.6 * s)} fill="url(#ns-tipglow)" opacity={glowA} /> : null}
-          <path d={td} fill="none" stroke={ORANGE_LINE} strokeOpacity={0.85} strokeWidth={f2(0.26 * s)} strokeLinecap="round" strokeLinejoin="round" />
-          <path d={td} fill="none" stroke={ACCENT} strokeWidth={f2(0.17 * s)} strokeLinecap="round" strokeLinejoin="round" />
-        </g>
-      ) : null}
+      {Array.from({ length: 7 }, (_, i) => (
+        <circle key={i} cx={f2(c[0])} cy={f2(c[1])} r={f2(rG * (0.46 + 0.05 * i))} fill={ACCENT} opacity={f2(0.075 * gl)} />
+      ))}
+      {Array.from({ length: layers }, (_, i) => {
+        const t = 1 - i / (layers - 1);
+        const Z = MZ + t * MT;
+        return (
+          <g key={i} transform={at(Z)}>
+            <path d={OPENAI.paths[0]} fill={A.toneO(mixHex(sideA, sideB, t), Z, -MY)} fillRule="evenodd" />
+          </g>
+        );
+      })}
+      <g transform={at(MZ)}>
+        <path d={OPENAI.paths[0]} fill="url(#ns-mface)" fillRule="evenodd" stroke={A.toneO(mixHex(ACCENT, "#FFE6A8", 0.5 * g), MZ, -MY)} strokeWidth={0.12} strokeOpacity={0.35 + 0.4 * g} />
+      </g>
     </g>
   );
 };
 
-// ===================================================================================================================
-// THE SMOKE
-// ===================================================================================================================
-type Drawn = { pts: P2[]; Z: number[]; x0: number[]; wisp: number[] };
-const toD = (pts: P2[], a = 0, b = pts.length) => {
-  let d = "";
-  for (let i = a; i < b; i++) d += `${i === a ? "M" : "L"}${f2(pts[i][0])},${f2(pts[i][1])}`;
-  return d;
-};
-
-const Smoke: React.FC<{ A: AirWorld; lines: Drawn[]; frame: number }> = ({ A, lines, frame }) => {
-  const k = A.k;
-  const front0 = traceFront(frame);
-  const bodies: React.ReactNode[] = [];
-  const cores: React.ReactNode[] = [];
-  const orange: React.ReactNode[] = [];
-  const heads: React.ReactNode[] = [];
-  lines.forEach((ln, j) => {
-    const zMid = Z0S[j];
-    const r = A.P.r(zMid);
-    const fog = 0.6 * A.fog(Math.max(0, zMid));
-    const ef = edgeFade(j);
-    if (ef < 0.02) return;
-    const front = front0 - traceLag(j);
-    const col = A.tone(CREAM, zMid, -SHEET_Y);
-    const dim = mixHex(col, "#5F877D", 0.5);
-    // body: chunks (stroke colour = density), one group opacity so the chunks never bead at their joints
-    const n = ln.pts.length;
-    const CH = 14;
-    const chunks: React.ReactNode[] = [];
-    for (let a = 0; a < n - 1; a += CH) {
-      const b = Math.min(n, a + CH + 1);
-      const xm = ln.x0[Math.min(n - 1, a + (CH >> 1))];
-      const d = densAt(xm, j, frame);
-      chunks.push(<path key={a} d={toD(ln.pts, a, b)} stroke={mixHex(dim, col, d)} />);
-    }
-    bodies.push(
-      <g key={j} opacity={0.42 * (1 - 0.5 * fog) * ef} fill="none" strokeWidth={f2((7.5 / KR) * r)} strokeLinecap="round" strokeLinejoin="round">
-        {chunks}
-      </g>,
-    );
-    cores.push(<path key={j} d={toD(ln.pts)} fill="none" stroke={col} strokeOpacity={0.66 * (1 - 0.5 * fog) * ef} strokeWidth={f2((2.3 / KR) * r)} strokeLinejoin="round" />);
-    // the orange: every point whose own upstream x the front has passed
-    if (front > X_MIN) {
-      let iEnd = 0;
-      while (iEnd < n && ln.x0[iEnd] <= front) iEnd++;
-      if (iEnd > 1) {
-        const oc = A.toneO(ACCENT, zMid, -SHEET_Y);
-        // the trace rides the core (thinner than the cream core, so a cream edge and the smoke halo stay); in a grown
-        // curl's core it gives way to the cream (the inner wisp). Chunks of solid colour under one group opacity.
-        const OCH = 8;
-        const och: React.ReactNode[] = [];
-        for (let a = 0; a < iEnd - 1; a += OCH) {
-          const b = Math.min(iEnd, a + OCH + 1);
-          const w = ln.wisp[Math.min(iEnd - 1, a + (OCH >> 1))];
-          och.push(<path key={a} d={toD(ln.pts, a, b)} stroke={mixHex(oc, col, 0.92 * w)} />);
-        }
-        orange.push(
-          <g key={j} opacity={0.12 + 0.88 * ef} fill="none" strokeWidth={f2((1.45 / KR) * r)} strokeLinejoin="round" strokeLinecap="round">
-            {och}
-          </g>,
-        );
-        if (iEnd < n) {
-          let iH = iEnd - 1;
-          while (iH > 0 && ln.x0[iH] > front - HEAD) iH--;
-          heads.push(
-            <path key={j} d={toD(ln.pts, iH, iEnd)} fill="none" stroke="#FFD98A" strokeOpacity={0.85 * ef} strokeWidth={f2((3.6 / KR) * r)} strokeLinejoin="round" strokeLinecap="round" />,
-          );
-        }
-      }
-    }
-  });
-  void k;
+/** the mark's light pool on the floor */
+const MarkPool: React.FC<{ A: AirWorld; f: number }> = ({ A, f }) => {
+  const P = A.P;
+  const g = markGlow(f);
+  const c = P.p(MX + 60, 0, MZ + 40);
+  const rx = 520 * P.r(MZ);
+  const ry = Math.abs(P.p(MX, 0, MZ - 260)[1] - P.p(MX, 0, MZ + 260)[1]) / 2;
   return (
     <g>
       <defs>
-        <filter id="ns-soft" x="-5%" y="-20%" width="110%" height="140%">
-          <feGaussianBlur stdDeviation={f2(2.2 / A.k)} />
-        </filter>
+        <radialGradient id="ns-pool">
+          <stop offset="0" stopColor={ACCENT} stopOpacity={0.5} />
+          <stop offset="0.5" stopColor={ACCENT} stopOpacity={0.16} />
+          <stop offset="1" stopColor={ACCENT} stopOpacity={0} />
+        </radialGradient>
       </defs>
-      <g filter="url(#ns-soft)">{bodies}</g>
-      <g>{cores}</g>
-      <g>{orange}</g>
-      <g>{heads}</g>
+      <ellipse cx={f2(c[0])} cy={f2(c[1])} rx={f2(rx)} ry={f2(ry)} fill="url(#ns-pool)" opacity={0.12 + 0.3 * g} />
     </g>
   );
 };
@@ -538,55 +559,38 @@ const NavierStokesSolved: React.FC<z.infer<typeof schema>> = () => {
   const frame = useCurrentFrame();
   const cam = swayCam(camAt(frame), frame);
   const A = airWorldOf({ cam, rest: REST, depth: DEPTH, frame, fogBy: "depth" });
-  const P = A.P;
-  const lines = useMemo<Drawn[]>(() => {
-    const vs = vorticesAt(frame);
-    return Z0S.map((z0) => {
-      const L = lineAt(z0, vs);
-      return { pts: L.map((q) => P.p(q.X, SHEET_Y, q.Z)), Z: L.map((q) => q.Z), x0: L.map((q) => q.x0), wisp: L.map((q) => q.wisp) };
-    });
-  }, [frame, P]);
-  // the column above the sheet: clipped to the region above the sheet's front arc
-  const c = P.p(0, SHEET_Y, 0);
-  const rx = R * P.r(0);
-  const ry = Math.abs(P.p(0, SHEET_Y, -R)[1] - P.p(0, SHEET_Y, R)[1]) / 2;
-  const top = P.p(0, COL_TOP, 0)[1] - 400;
-  const clip = `M${f2(c[0] - rx - 60)},${f2(top)}L${f2(c[0] + rx + 60)},${f2(top)}L${f2(c[0] + rx + 60)},${f2(c[1])}L${f2(c[0] + rx)},${f2(c[1])}A${f2(rx)},${f2(ry)} 0 0 1 ${f2(c[0] - rx)},${f2(c[1])}L${f2(c[0] - rx - 60)},${f2(c[1])}Z`;
-  // the obstacle: a plain smooth stone post standing on the floor (no plinth, no capital, no flutes)
-  const shaft = (uid: string) => <AirCyl A={A} X={0} Z={0} R={R} Y0={COL_TOP} Y1={0} mat={MAT.stone} uid={uid} />;
-  // the low air: the floor sinks into the dense air toward the bottom of the frame (screen rows, in world units)
-  const wy = (sy: number) => cam.cy + (sy - 960) / cam.k;
-  const wx0 = cam.cx - 700 / cam.k;
-  const veil = (
-    <g>
-      <defs>
-        <linearGradient id="ns-low" gradientUnits="userSpaceOnUse" x1="0" y1={f2(wy(560))} x2="0" y2={f2(wy(1920))}>
-          <stop offset="0" stopColor={LOW_AIR} stopOpacity={0} />
-          <stop offset="0.3" stopColor={LOW_AIR} stopOpacity={0.3} />
-          <stop offset="0.55" stopColor={LOW_AIR} stopOpacity={0.55} />
-          <stop offset="1" stopColor={LOW_AIR} stopOpacity={0.82} />
-        </linearGradient>
-      </defs>
-      <rect x={f2(wx0)} y={f2(wy(560))} width={f2(1400 / cam.k)} height={f2(1400 / cam.k)} fill="url(#ns-low)" />
+  const pieces = [...vortexPieces(A, frame), ...filamentPieces(A, frame)];
+  pieces.sort((p, q) => q.Z - p.Z);
+  const lw = 1.3 / cam.k;
+  const markZ = MZ;
+  const back = pieces.filter((p) => p.Z >= markZ);
+  const front = pieces.filter((p) => p.Z < markZ);
+  const draw = (ps: Piece[], key: string) => (
+    <g key={key}>
+      {ps.map((p, i) => (
+        <g key={i} opacity={p.op < 1 ? f2(p.op) : undefined}>
+          {p.glow ? <path d={p.d} fill="none" stroke={HOT} strokeOpacity={0.35 * p.glow} strokeWidth={f2(p.w * 3.2 + 2 * lw)} strokeLinecap="round" filter="url(#ns-soft)" /> : null}
+          <path d={p.d} fill="none" stroke={p.casing} strokeOpacity={0.75} strokeWidth={f2(p.w + 1.6 * lw)} strokeLinecap="butt" strokeLinejoin="round" />
+          <path d={p.d} fill="none" stroke={p.fill} strokeWidth={f2(p.w)} strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      ))}
     </g>
   );
   return (
-    <AirStage v={A.v} bloom={0.22}>
+    <AirStage v={A.v} bloom={0.24}>
       <WorldSvg cam={cam}>
-        <AirFloor A={A} x0={-9000} x1={9000} z0={-2600} z1={22000} mat={MAT.ground} course={340} jointAmt={0.35} />
-        <AirShadow A={A} X={0} Z={0} w={300} d={170} uid="colS" amt={0.85} />
-        {shaft("col")}
-        {veil}
-        <Smoke A={A} lines={lines} frame={frame} />
         <defs>
-          <clipPath id="ns-upper">
-            <path d={clip} />
-          </clipPath>
+          <filter id="ns-soft" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation={f2(3 / cam.k)} />
+          </filter>
         </defs>
-        <g clipPath="url(#ns-upper)">
-          {shaft("col2")}
-        </g>
-        <Equation frame={frame} />
+        <AirFloor A={A} x0={-9000} x1={9000} z0={-2600} z1={22000} mat={MAT.ground} course={340} jointAmt={0.3} />
+        <AirShadow A={A} X={VX} Z={VZ} w={560} d={320} uid="vS" amt={0.75} />
+        <MarkPool A={A} f={frame} />
+        <AirShadow A={A} X={MX} Z={MZ} w={300} d={150} uid="mS" amt={0.7} />
+        {draw(back, "back")}
+        <Mark A={A} f={frame} />
+        {draw(front, "front")}
       </WorldSvg>
     </AirStage>
   );
