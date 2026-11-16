@@ -26,6 +26,11 @@
 //       block behind the line with white type on its hard shadow, purple and orange stepped above it as the chain
 //       crown (orange back, purple, blue = directly under the white core: the chain order). The highlighted line gets
 //       extra leading for its block and crown. Layouts A and B ignore `highlight` and are unchanged.
+//       DRAW-ON (the user, Nov 16: "the highlight of the words should get drawn in"): `hlReveal` = how far each chain
+//       layer (orange, purple, blue) has been drawn left to right, 0..1 (default all 1 = the still). The black line is
+//       clipped to the right of the blue's edge and its white copy (with its hard shadow) to the left of it, so the
+//       type turns white exactly where the blue has passed. `hlDraw(frame)` gives the house timing; `frame` drives
+//       the film life only (the paper stays still).
 // CHAIN (prop `chain`): "thin" = three touching thin stripes (orange / purple / blue, `chainStep` px each) behind
 //   the slip's top edge, the crown of the whole slip at a fraction of the usual 12 px step; "none" = no chain.
 //   The chain means SKYROOT'S OWN in this clip: both cards' stories are Skyroot's own rocket / company.
@@ -34,7 +39,7 @@
 // TYPE: Barlow 900 uppercase (`type`), black on white. Sizes are derived from one headline size; `size` caps it and
 //   the card shrinks it to fit the width / height budget, so a longer headline gets smaller type, never a new layout.
 // ---------------------------------------------------------------------------
-import React from "react";
+import React, { useId } from "react";
 import { AbsoluteFill, Img, staticFile } from "remotion";
 import { BLUE, ChainEcho, INK, ORANGE, PAPER_BASE, PURPLE, SHADOW, SHADOW_OFF, SKYROOT_FILTER, SkyrootFilmLife, SkyrootPaper, type } from "./skyrootShared";
 
@@ -96,6 +101,10 @@ export type SkyrootNewsCardProps = {
   film?: boolean;
   /** layout C: the index of the headline line set as the chain-colour marker (none if absent) */
   highlight?: number;
+  /** layout C: the drawn fraction of each marker layer [orange, purple, blue], 0..1 (default fully drawn) */
+  hlReveal?: [number, number, number];
+  /** the film life's frame (grain, weave, flicker); default 0 = the still */
+  frame?: number;
 };
 
 // -- an object on the paper: a w x h rectangle, centre (cx, cy) in frame px, turned `rot` deg about its centre -----
@@ -144,6 +153,22 @@ const HL_STEP = 8; // px per crown stripe (purple, then orange, above the blue b
 const HL_ABOVE = 0.32; // extra leading above the highlighted line (its pad and crown)
 const HL_BELOW = 0.14; // and below it (its pad)
 const HL_SHADOW = 3; // the white type's hard shadow on the blue block
+/**
+ * The marker's draw-on: each layer runs left to right at constant speed with a short ease-out at the end (HL_EASE of
+ * its travel, the velocity continuous), orange from `start`, purple `stagger` frames behind, blue another behind (the
+ * text sting's order), each over `travel` frames. Defaults: orange f3-16, purple f5-18, blue f7-20.
+ */
+const HL_EASE = 0.3;
+export const hlStroke = (t: number) => {
+  const u = Math.max(0, Math.min(1, t));
+  const v = 1 / (1 - HL_EASE / 2);
+  if (u <= 1 - HL_EASE) return v * u;
+  const tau = u - (1 - HL_EASE);
+  return Math.min(1, v * (1 - HL_EASE) + v * (tau - (tau * tau) / (2 * HL_EASE)));
+};
+export const hlDraw = (frame: number, start = 3, travel = 13, stagger = 2): [number, number, number] =>
+  [0, 1, 2].map((i) => hlStroke((frame - (start + i * stagger)) / travel)) as [number, number, number];
+
 /** layout C's slip metrics: the slipMetrics ladder with extra leading around the highlighted line */
 const slipMetricsC = (size: number, lines: number, hl: number) => {
   const base = slipMetrics(size, lines);
@@ -288,7 +313,8 @@ const Body: React.FC<{ o: Obj; chainStep?: number; children?: React.ReactNode }>
 );
 
 const SkyrootNewsCard: React.FC<SkyrootNewsCardProps> = (props) => {
-  const { outlet, date, headline, photo, chain = "thin", chainStep = 5, film = true } = props;
+  const { outlet, date, headline, photo, chain = "thin", chainStep = 5, film = true, hlReveal = [1, 1, 1], frame = 0 } = props;
+  const clipId = useId().replace(/:/g, "");
   const g = cardGeometry(props);
   const { size, m, slip, print, win, pf } = g;
   const hl = props.layout === "C" && props.highlight !== undefined && props.highlight >= 0 && props.highlight < headline.length ? props.highlight : -1;
@@ -319,19 +345,42 @@ const SkyrootNewsCard: React.FC<SkyrootNewsCardProps> = (props) => {
         {hlBox ? (
           <>
             {/* the chain crown above the marker: orange (back) two steps up, purple one, the blue block itself */}
-            <rect x={hlBox.x} y={hlBox.y - 2 * HL_STEP} width={hlBox.w} height={hlBox.h} fill={ORANGE} />
-            <rect x={hlBox.x} y={hlBox.y - HL_STEP} width={hlBox.w} height={hlBox.h} fill={PURPLE} />
-            <rect x={hlBox.x} y={hlBox.y} width={hlBox.w} height={hlBox.h} fill={BLUE} />
-            <text x={lineX + HL_SHADOW} y={m.bases[hl] + HL_SHADOW} fill={SHADOW} style={type(size, 900)}>
-              {headline[hl]}
-            </text>
+            {hlReveal[0] > 0 ? <rect x={hlBox.x} y={hlBox.y - 2 * HL_STEP} width={hlBox.w * hlReveal[0]} height={hlBox.h} fill={ORANGE} /> : null}
+            {hlReveal[1] > 0 ? <rect x={hlBox.x} y={hlBox.y - HL_STEP} width={hlBox.w * hlReveal[1]} height={hlBox.h} fill={PURPLE} /> : null}
+            {hlReveal[2] > 0 ? <rect x={hlBox.x} y={hlBox.y} width={hlBox.w * hlReveal[2]} height={hlBox.h} fill={BLUE} /> : null}
+            {/* the blue's edge splits the line: white (on its hard shadow) behind it, black ahead of it */}
+            <clipPath id={`${clipId}-done`}>
+              <rect x={-slip.w} y={-slip.h} width={slip.w + hlBox.x + hlBox.w * hlReveal[2]} height={3 * slip.h} />
+            </clipPath>
+            <clipPath id={`${clipId}-todo`}>
+              <rect x={hlBox.x + hlBox.w * hlReveal[2]} y={-slip.h} width={2 * slip.w} height={3 * slip.h} />
+            </clipPath>
+            {hlReveal[2] < 1 ? (
+              <g clipPath={`url(#${clipId}-todo)`}>
+                <text x={lineX} y={m.bases[hl]} fill={BLACK} style={type(size, 900)}>
+                  {headline[hl]}
+                </text>
+              </g>
+            ) : null}
+            {hlReveal[2] > 0 ? (
+              <g clipPath={`url(#${clipId}-done)`}>
+                <text x={lineX + HL_SHADOW} y={m.bases[hl] + HL_SHADOW} fill={SHADOW} style={type(size, 900)}>
+                  {headline[hl]}
+                </text>
+                <text x={lineX} y={m.bases[hl]} fill={INK} style={type(size, 900)}>
+                  {headline[hl]}
+                </text>
+              </g>
+            ) : null}
           </>
         ) : null}
-        {headline.map((line, i) => (
-          <text key={i} x={lineX} y={m.bases[i]} fill={i === hl ? INK : BLACK} style={type(size, 900)}>
-            {line}
-          </text>
-        ))}
+        {headline.map((line, i) =>
+          i === hl ? null : (
+            <text key={i} x={lineX} y={m.bases[i]} fill={BLACK} style={type(size, 900)}>
+              {line}
+            </text>
+          ),
+        )}
       </Body>
     </FrameSvg>
   );
@@ -380,7 +429,7 @@ const SkyrootNewsCard: React.FC<SkyrootNewsCardProps> = (props) => {
       {slipNode}
     </AbsoluteFill>
   );
-  return film ? <SkyrootFilmLife frame={0}>{scene}</SkyrootFilmLife> : scene;
+  return film ? <SkyrootFilmLife frame={frame}>{scene}</SkyrootFilmLife> : scene;
 };
 
 export default SkyrootNewsCard;
