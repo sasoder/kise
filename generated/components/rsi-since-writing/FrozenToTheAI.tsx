@@ -16,21 +16,22 @@
 // THE MOTION: you (Human v0) stand FROZEN mid-pour: the glass pot tipped over the empty cream mug in your other hand,
 // the front of the coffee column hanging in the air above the mug (it has not reached it yet), droplets suspended beside
 // it and in the gap below its front, your eyes mid-blink; the wall clock's second hand advances 1/1000 of its pace
-// (still); the air's motes nearly still (the grain keeps running on twos). The Genius (v0) moves at normal speed: on f0
-// he has just walked out from behind you (deeper in the room, Z 140), his head turned round to the pour and his eyes on
-// the hanging droplets as he goes (f0-20); his head comes back round dipping toward the desk, the eyes leading (f20-28,
-// never on us); he walks on to a standing desk on the right, his stride easing to a planted stop behind it (f26-38),
-// turns three-quarter toward us (f32-44) and works in a flurry, head down on the sheets: a two-hand relay, the left
-// hand takes the top sheet off the IN pile (his left) up to a glance-read in front of him, the right hand takes it on
-// and lays it on the DONE pile (his right), one sheet every 2.4 frames from f50, every 1.6 frames from "times" (the
-// pace steps up f87-98 as the plate lands) to the end: 42 sheets, IN 48 -> 5, DONE 4 -> 46. Faint ghosts trail the
-// flying sheet and the hands smear. On "thousands of times faster" a plate "1,000×" slides up above him (f86-98).
-// Camera: one continuous move from close on your frozen face and the pour (k 2.3) right and back (f4-84, one lobe) to
-// frame you and the busy Genius side by side (k 1.98), then a slow creep.
+// (still); the air's motes nearly still (the grain keeps running on twos). THE ROBOT (tenEarthsBot v0, the AI; revision
+// 1 swaps it in for the Genius, the concept unchanged) moves at normal speed: on f0 it has just walked out from behind
+// you (deeper in the room, Z 140), a quick short-legged walk with planted feet, its head turned round to the pour and
+// its screen eyes at the screen's left edge on the hanging droplets (f0-20); the head comes back round dipping, the
+// eyes leading right (f20-28, never on us), into near-profile toward its standing desk; its stride eases to a planted
+// stop behind the desk (f26-38), it turns three-quarter toward us (f32-44) and works in a flurry, eyes down on the
+// sheets: a two-hand relay, the left hand takes the top sheet off the IN pile (its left) up to a glance-read in front
+// of it, the right hand takes it on and lays it on the DONE pile (its right), one sheet every 2.4 frames from f50,
+// every 1.6 frames from "times" (the pace steps up f87-98 as the plate lands) to the end: 42 sheets, IN 48 -> 5,
+// DONE 4 -> 46. Faint ghosts trail the flying sheet and the hands smear. On "thousands of times faster" a plate
+// "1,000×" slides up above it (f86-98). Camera: one continuous move from close on your frozen face and the pour
+// (k 2.3) right and back (f4-84, one lobe) to frame you and the busy robot side by side (k 1.98), then a slow creep.
 // CAUSE -> EFFECT: a sheet leaves the IN pile on the frame the left hand starts it (the pile steps down that frame) and
 // rides the left hand by its left end; at the read point the right hand holds its right end; it lands flat on the DONE
 // pile on the frame its carry ends (the pile steps up). Every hand path is continuous from sheet to sheet.
-// Orange = the AI only (the Genius); the sheets, the plate and the mug cream; you in white and slate.
+// Orange = the AI only (the robot); the sheets, the plate and the mug cream; you in white and slate.
 //
 // CUT-LOCAL DRAWING (the world modules are unchanged): the big cream mug (cut 1's, copied), the coffee pot at 1.3x
 // (sinceWritingProps' geometry, copied, with a fine edge so the glass reads), the frozen stream (FrozenStream: a thicker
@@ -38,14 +39,14 @@
 // air (the AirStage's motes run on a near-still clock; its grain is off and redrawn here on twos), the walk's stop (the
 // stance ankle integrated into `at` while the stride eases out), the sheet work (covidGripTo on the sheet's grips, then
 // each wrist nudged until the drawn mitten sits on its grip), thin piles (ThinStack: the module's SheetStack with a
-// 1-unit sheet so 48 sheets stand chest-low), the ghosts and the hand smear.
+// 0.6-unit sheet so 48 sheets stay under the robot's short reach), the ghosts and the hand smear.
 // CHECKS: scripts/clips/rsi-since-writing/check-frozen-to-the-ai.ts (camera, faces / pour / plate vs the keep-in box and
 // the caption bands, plate vs clock and faces, stance slip, both hands on their grips, a per-anchor pop detector).
 //
 // DEPTH: cut 1's: eye Y -260, dRef 1700 at kRef 1.32, dolly 0.5, fog by the eye (officeScene(0.15)). You X -170 Z -40
-// (dir 1); the Genius walks at Z 140 from X 30 and stops at X ~159 behind the standing desk (top Y -150, X 40..270,
-// Z 50..112); IN pile X 98, DONE pile X 238 (Z 81, yaw 90), the read point X 158 Y -180 Z 70; the clock on the back
-// wall X -75 Y -500; the plate X 150, Y -400, Z 140 (cap ~75 px).
+// (dir 1); the robot (240 units, 1.35 m) walks at Z 140 from X 38 and stops at X ~125 behind the standing desk (top
+// Y -80 at its reach, X 18..228, Z 50..112); IN pile X 85, DONE pile X 179 (Z 81, yaw 90), the read point X 133 Y -103
+// Z 70; the clock on the back wall X -75 Y -500; the plate X 130, Y -330, Z 140 (cap ~75 px).
 //
 // SOURCES: none on screen beyond the speaker's own figure ("at least thousands of times": 1,000×).
 // ---------------------------------------------------------------------------
@@ -53,12 +54,11 @@ import React from "react";
 import { AbsoluteFill, Img, random, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { AirBox, AirShadow, AirStage, WorldSvg, airWorldOf, makeCamera, mixHex, swayCam, type AirWorld, type DepthOpts, type Persp } from "../kits/dwarkesh-3d/dwarkesh3d";
-import { Genius, geniusAnchors } from "../rsi-ten-earths/tenEarthsGenius";
-import { GENIUS_SKIN } from "../rsi-ten-earths/tenEarthsGeniusBody";
+import { BOT_SHADOW, BOT_SKIN, Bot, botAnchorsLocal, botGripTo, botRig } from "../rsi-ten-earths/tenEarthsBot";
 import { MAT_LAMINATE } from "../rsi-ten-earths/tenEarthsHall";
 import { HUMAN_POSES, buildHuman, type HumanPose, type MugState, type P2, type PotState } from "./sinceWritingFolk";
 import { CovidPaint } from "../kyle-covid/covidFolk";
-import { POSES, breathe, closedD, covidGripTo, covidRig, ellPts, lerpPose, tubeD, type CShape, type CovidPose } from "../kyle-covid/covidFolkBody";
+import { POSES, breathe, closedD, covidGripTo, ellPts, lerpPose, tubeD, type CShape, type CovidPose } from "../kyle-covid/covidFolkBody";
 import { add, mul, rot, sub } from "../kits/maps/stringsMotion";
 import { mixC } from "../kyle-pandemics/pandemicFolkPaint";
 import { MUG, mugShapes, potShapes } from "./sinceWritingProps";
@@ -87,11 +87,11 @@ const ROOM = { ...OFFICE, win: { ...OFFICE.win, x0: -660, x1: -130, sill: -330, 
 export const YOU = { X: -170, Z: -40 };
 export const AI_Z = 140;
 /** the standing desk: top surface Y (up -), X span, Z span */
-export const DESK = { top: -150, th: 7, x0: 40, x1: 270, z0: 50, z1: 112 };
-export const IN = { X: 98, Z: 81, yaw: 90, seed: 11, n0: 48 };
-export const DONE = { X: 238, Z: 81, yaw: 90, seed: 5, n0: 4 };
+export const DESK = { top: -80, th: 6, x0: 18, x1: 228, z0: 50, z1: 112 };
+export const IN = { X: 85, Z: 81, yaw: 90, seed: 11, n0: 48 };
+export const DONE = { X: 179, Z: 81, yaw: 90, seed: 5, n0: 4 };
 export const CLOCK = { X: -75, Y: -500, R: 48 };
-export const PLATE = { X: 150, Y: -400, Z: AI_Z, f0: 86, dur: 12, size: 64 };
+export const PLATE = { X: 130, Y: -330, Z: AI_Z, f0: 86, dur: 12, size: 64 };
 /** the frozen clock: 9:41:17, the second hand at 1/1000 of its pace */
 const clockT = (f: number) => 9 * 3600 + 41 * 60 + 17.3 + f / FPS / 1000;
 /** the air's clock (motes): nearly still */
@@ -99,7 +99,7 @@ const airClock = (f: number) => 400 + f * 0.02;
 
 // ---------------------------------------------------------------------------
 // THE CAMERA: close on your face and the stream (a creep, f0-8), one move right and back (f8-104) that frames you and
-// the Genius at his desk, a slow creep to the end.
+// the robot at its desk, a slow creep to the end.
 // ---------------------------------------------------------------------------
 const camKeys = makeCamera([
   { f: 0, k: 2.3, wx: -125, wy: -235, sx: 540, sy: 760 },
@@ -374,20 +374,18 @@ const FrozenStream: React.FC<{ at: P2; scale: number }> = ({ at, scale }) => {
 };
 
 // ---------------------------------------------------------------------------
-// THE GENIUS: a walk with planted feet (the rig's own stance ankle integrated into `at`), a glance back at the
-// droplets, a stop (the stride eases to nothing over one step), a turn three-quarter toward us, then the sheet work.
+// THE ROBOT: a walk with planted feet (the robot's own stance ankle, botRig, integrated into `at`), a glance back at
+// the droplets, a stop (the stride eases to nothing over one step), a turn three-quarter toward us, then the sheet work.
 // ---------------------------------------------------------------------------
-const KIND = "officer" as const;
-const VAR = 3;
-/** walk cadence (x the cast's 24-frame cycle: a brisk walk) */
-const CAD = 1.1;
+/** walk cadence (x the cast's 24-frame cycle: the robot's quick short-legged walk) */
+const CAD = 1.8;
 const PH0 = 0.08;
 const STOP0 = 26;
 const STOP1 = 38;
 /** the walk-to-work blend */
 const TURN0 = 32;
 const TURN1 = 44;
-export const X_START = 30;
+export const X_START = 38;
 const walkPhase = (f: number) => PH0 + (f * CAD) / 24;
 const walkAmt = (f: number) => 1 - sst(STOP0, STOP1, f);
 const walkRaw = (f: number): CovidPose => POSES.walk(1, walkPhase(Math.min(f, STOP1)), walkAmt(f));
@@ -396,7 +394,7 @@ const SHIFT: number[] = (() => {
   const SUB = 6;
   const out: number[] = [0];
   const ankles = (f: number): [number, number] => {
-    const { r } = covidRig(KIND, VAR, walkRaw(f));
+    const r = botRig(walkRaw(f));
     return [r.legL.A[0], r.legR.A[0]];
   };
   let s = 0;
@@ -421,17 +419,17 @@ export const aiX = (f: number) => {
 };
 export const AI_STOP_X = X_START + SHIFT[STOP1 + 1];
 
-/** the glance back at the droplets while he walks past */
+/** the glance back at the droplets while it walks past */
 const glanceAt = (f: number) => 1 - sst(20, 28, f);
 
 // ---- the sheet work: a relay flurry ----
-// The IN pile on his left, the DONE pile on his right, the read point between them in front of his chest. Sheet i
-// rides the LEFT hand (by its left end) off the IN top up to the read point, rolled up to face him (u 0-0.5), where the
+// The IN pile on its left, the DONE pile on its right, the read point between them in front of its chest. Sheet i
+// rides the LEFT hand (by its left end) off the IN top up to the read point, rolled up to face it (u 0-0.5), where the
 // RIGHT hand takes its right end and lays it on the DONE top (u 0.5-1); meanwhile the left hand drops back to the next
 // IN sheet and the right hand comes back up to the read point. The hands never cross; every path is continuous across
 // sheets (a sheet's lay grip IS the right hand's next start, the next IN top the left hand's return).
 /** one sheet's thickness in these piles (a ream reads as a ream: the module's 2.5 would stack 50 sheets shoulder high) */
-export const T_SHEET = 1.0;
+export const T_SHEET = 0.6;
 const jit = (i: number, seed: number) => ({ dx: (random(`sw-jx${seed}-${i}`) - 0.5) * 4, dz: (random(`sw-jz${seed}-${i}`) - 0.5) * 4, dyaw: (random(`sw-jy${seed}-${i}`) - 0.5) * 5 });
 const thinTop = (X: number, Z: number, n: number, Y: number, yaw: number, seed: number): SheetPose => {
   const i = Math.max(0, Math.round(n) - 1);
@@ -440,8 +438,8 @@ const thinTop = (X: number, Z: number, n: number, Y: number, yaw: number, seed: 
 };
 const inTop = (n: number) => thinTop(IN.X, IN.Z, n, DESK.top, IN.yaw, IN.seed);
 const doneTop = (n: number) => thinTop(DONE.X, DONE.Z, n, DESK.top, DONE.yaw, DONE.seed);
-/** the read point: in front of his chest, the sheet rolled up toward him and us */
-export const R0 = { X: 158, Y: -180, Z: 70, roll: 64 };
+/** the read point: in front of its chest, the sheet rolled up toward it and us */
+export const R0 = { X: 133, Y: -103, Z: 70, roll: 64 };
 export const WORK0 = 44;
 /** sheets per frame: one every 2.4 frames from f50, one every 1.6 from "times" (f98) to the end */
 export const RATE1 = 0.42;
@@ -537,34 +535,36 @@ const toLocal = (P: Persp, X0: number, Z0: number, q: V3o): P2 => {
   return [(w[0] - at[0]) / scale, (w[1] - at[1]) / scale];
 };
 
-/** the Genius's pose and X at frame f (P: this frame's perspective, for the hands on the sheets) */
+/** the robot's pose and X at frame f (P: this frame's perspective, for the hands on the sheets) */
 export const aiAt = (f: number, P: Persp): { X: number; pose: CovidPose } => {
   const X = aiX(f);
-  // walking: the glance turns his head round to the pour (screen left, down), the eyes on the hanging droplets
   const g = glanceAt(f);
   const w0 = walkRaw(f);
   const turnDown = f > 15 ? Math.sin(Math.PI * g) : 0;
-  const walk: CovidPose = { ...w0, mouth: 0.05, headYaw: mix(Math.min(w0.headYaw, 0.56), -0.75, g), pitch: w0.pitch + 12 * g + turnDown * 14, look: [-g + 1.1 * turnDown, Math.min(1, 0.7 * g + 0.8 * turnDown)] as P2, lids: 0.15 * g + 0.4 * turnDown };
-  // (as the head comes round it dips toward the desk and the eyes lead it right and down: they never rest on us)
+  // the robot's face is a screen: its dot eyes slide across it (look past 1 moves them further), so the glance puts
+  // the head round to screen left AND the eyes at the screen's left edge; walking on, it faces its desk (head in
+  // near-profile, eyes ahead and down). As the head comes round it dips and the eyes lead it right: never on us
+  const walk: CovidPose = { ...w0, mouth: 0.05, headYaw: mix(0.9, -0.9, g), pitch: w0.pitch + 12 * g + turnDown * 14, look: [mix(1.4, -2.5, g) + 1.6 * turnDown, Math.min(2.4, mix(0.9, 1.5, g) + 0.9 * turnDown)] as P2, lids: 0.1 * g + 0.35 * turnDown };
   if (f < TURN0) return { X, pose: walk };
-  // working: three-quarter toward us behind the desk, leaning in, head down on the read point, both hands on the sheets
+  // working: three-quarter toward us behind the desk, leaning in, the screen level with its eyes low (half-lidded, down
+  // on the read point), both hands on the sheets
   const wk = workAt(f);
-  const base = breathe({ ...POSES.turnTo(0.38), mouth: 0, lean: 7, pitch: 36, headYaw: 0.06, lids: 0.5, look: [-0.1, 1] as P2, footL: [-7, 0], footR: [9, -1] }, (f * (30000 / 1001)) / FPS, 0.7) as CovidPose;
+  const base = breathe({ ...POSES.turnTo(0.38), mouth: 0, lean: 5, pitch: 40, roll: -2, headYaw: 0.2, lids: 0.35, look: [0.1, 2.6] as P2, footL: [-7, 0], footR: [9, -1] }, (f * (30000 / 1001)) / FPS, 0.7) as CovidPose;
   // the elbows out to the sides (a sheet held up in front of the chest, both hands low over the piles)
-  base.armL = { ...base.armL, elbow: [-0.35, 1] as P2 };
-  base.armR = { ...base.armR, elbow: [0.35, 1] as P2 };
+  base.armL = { ...base.armL, elbow: [-1, 0.3] as P2 };
+  base.armR = { ...base.armR, elbow: [1, 0.3] as P2 };
   const hL = toLocal(P, X, AI_Z, wk.hands.L);
   const hR = toLocal(P, X, AI_Z, wk.hands.R);
-  const solved = covidGripTo(KIND, VAR, base, { L: hL, R: hR }, [0, 0], 1);
+  const solved = botGripTo({ ...base, armL: { ...base.armL, fist: 0.75, hand: 8 }, armR: { ...base.armR, fist: 0.75, hand: -8 } }, { L: hL, R: hR });
   let work: CovidPose = { ...solved, armL: { ...solved.armL, fist: 0.75, hand: 8 }, armR: { ...solved.armR, fist: 0.75, hand: -8 } };
-  // covidGripTo aims the wrist along the rig's own forearm; the drawn hand hangs off the soft elbow, so when the
-  // elbow folds the mitten lands off the grip: nudge each wrist by the drawn hand's miss until it sits on its grip
+  // botGripTo aims the wrist along the rig's own forearm; the drawn mitten hangs off the soft elbow, so when the elbow
+  // folds it lands off the grip: nudge each wrist (rig units: / the arm's 0.585) by the mitten's miss until it is on
   for (let it = 0; it < 14; it++) {
-    const an = geniusAnchors(0, work, [0, 0], 1);
+    const an = botAnchorsLocal(0, work);
     const eL = sub(hL, an.handL);
     const eR = sub(hR, an.handR);
-    if (Math.max(Math.hypot(eL[0], eL[1]), Math.hypot(eR[0], eR[1])) < 0.4) break;
-    work = { ...work, armL: { ...work.armL, w: add(work.armL.w, mul(eL, 0.7)) }, armR: { ...work.armR, w: add(work.armR.w, mul(eR, 0.7)) } };
+    if (Math.max(Math.hypot(eL[0], eL[1]), Math.hypot(eR[0], eR[1])) < 0.3) break;
+    work = { ...work, armL: { ...work.armL, w: add(work.armL.w, mul(eL, 0.7 / 0.585)) }, armR: { ...work.armR, w: add(work.armR.w, mul(eR, 0.7 / 0.585)) } };
   }
   const t = sst(TURN0, TURN1, f);
   return { X, pose: t >= 1 ? work : lerpPose(walk, work, t) };
@@ -636,8 +636,8 @@ const HandSmear: React.FC<{ A: AirWorld; p: number }> = ({ A, p }) => {
     }
     const len = pts.slice(1).reduce((s, v, k) => s + Math.hypot(v[0] - pts[k][0], v[1] - pts[k][1]), 0);
     if (len < 6) continue;
-    const w = 9 * A.P.r(AI_Z);
-    out.push(<path key={side} d={`M${pts.map(Pt).join("L")}`} stroke={GENIUS_SKIN} strokeOpacity={0.3} strokeWidth={f2(w)} fill="none" strokeLinecap="round" strokeLinejoin="round" />);
+    const w = 8 * A.P.r(AI_Z);
+    out.push(<path key={side} d={`M${pts.map(Pt).join("L")}`} stroke={BOT_SKIN} strokeOpacity={0.3} strokeWidth={f2(w)} fill="none" strokeLinecap="round" strokeLinejoin="round" />);
   }
   return <g>{out}</g>;
 };
@@ -706,9 +706,9 @@ const FrozenToTheAI: React.FC<z.infer<typeof schema>> = ({ guides }) => {
       <AirStage v={A.v} shafts={0} bloom={0.22} grain={0} overlay={<OfficeTint sunT={SUN_T} />}>
         <WorldSvg cam={cam}>
           <OfficeRoom A={A} sunT={SUN_T} uid="room" room={ROOM} clock={{ X: CLOCK.X, Y: CLOCK.Y, secondT: clockT(frame), R: CLOCK.R }} />
-          {/* the Genius, deeper in the room, behind you and then behind his desk */}
-          <AirShadow A={A} X={ai.X} Z={AI_Z} w={62} d={30} uid="ai-sh" amt={0.8} />
-          <Genius variant={0} pose={ai.pose} at={ga.at} scale={ga.scale} uid="ai" frame={frame} fog={A.folkFog(AI_Z)} unitPx={A.k} />
+          {/* the robot, deeper in the room, behind you and then behind its desk */}
+          <AirShadow A={A} X={ai.X} Z={AI_Z} w={BOT_SHADOW.w} d={BOT_SHADOW.d} uid="ai-sh" amt={BOT_SHADOW.amt} />
+          <Bot variant={0} pose={ai.pose} at={ga.at} scale={ga.scale} uid="ai" frame={frame} fog={A.folkFog(AI_Z)} unitPx={A.k} />
           <StandingDesk A={A} />
           <HandSmear A={A} p={wk.p} />
           <ThinStack A={A} X={IN.X} Z={IN.Z} Y={DESK.top} n={wk.nIn} yaw={IN.yaw} seed={IN.seed} uid="in" />

@@ -1,12 +1,12 @@
 // FrozenToTheAI (rsi-since-writing, cut 102) per-frame checks, in screen px (sway included):
 // the camera (k and the pan: one move, no reversal), the two faces (inside the keep-in box x 65-1015, y 290-1070, never
 // in the caption bands), the frozen stream and mug (in the box), the plate's type (in the box, cap height, clear of
-// both faces and the clock), the Genius's planted feet (stance-foot slip per frame in screen px), his hands vs the
+// both faces and the clock), the robot's planted feet (stance-foot slip per frame in screen px), its hands vs the
 // sheets (each hand on its grip of the sheet in flight), the extents of the picture (your back, the desk's right end).
 // Run: bun scripts/clips/rsi-since-writing/check-frozen-to-the-ai.ts
 import { airWorldOf } from "../../../generated/components/kits/dwarkesh-3d/dwarkesh3d";
 import { AI_Z, CLOCK, DEPTH, DESK, DURATION, FROZEN, PLATE, SUN_T, YOU, aiAt, camOf, workAt } from "../../../generated/components/rsi-since-writing/FrozenToTheAI";
-import { geniusAnchors } from "../../../generated/components/rsi-ten-earths/tenEarthsGenius";
+import { botAnchors } from "../../../generated/components/rsi-ten-earths/tenEarthsBot";
 import { humanAnchors } from "../../../generated/components/rsi-since-writing/sinceWritingFolk";
 import { OFFICE, officeScene } from "../../../generated/components/rsi-since-writing/sinceWritingWorld";
 
@@ -34,7 +34,7 @@ for (let f = 0; f < DURATION; f++) {
   const yan = humanAnchors(0, FROZEN.pose, ya.at, ya.scale);
   const ai = aiAt(f, A.P);
   const ga = A.P.at(ai.X, AI_Z);
-  const gan = geniusAnchors(0, ai.pose, ga.at, ga.scale);
+  const gan = botAnchors(0, ai.pose, ga.at, ga.scale);
   const faces = [
     { who: "you", c: scr(cam, yan.headC), r: (yan.headR as unknown as number) * cam.k },
     { who: "AI", c: scr(cam, gan.headC), r: (gan.headR as unknown as number) * cam.k },
@@ -70,7 +70,7 @@ for (let f = 0; f < DURATION; f++) {
     for (const fc of faces) if (Math.abs(fc.c[0] - c[0]) < w / 2 + fc.r && Math.abs(fc.c[1] - c[1]) < 0.5 * s + fc.r) issues.push(`f${f} plate over ${fc.who}'s face`);
     plateTxt = ` plate x ${box.x0.toFixed(0)}-${box.x1.toFixed(0)} y ${box.y0.toFixed(0)}-${box.y1.toFixed(0)} cap ${(0.66 * s).toFixed(0)}px; clock ${clockC[0].toFixed(0)},${clockC[1].toFixed(0)} r${clockR.toFixed(0)}`;
   }
-  // the Genius's feet: a planted foot does not slide (screen px against the floor; the camera's move removed by
+  // the robot's feet: a planted foot does not slide (screen px against the floor; the camera's move removed by
   // comparing with last frame's floor point under the same world X)
   const feet = { L: scr(cam, gan.ankleL as P2), R: scr(cam, gan.ankleR as P2) };
   if (prevFeet && f <= 62) {
