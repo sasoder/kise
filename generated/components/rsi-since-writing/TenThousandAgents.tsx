@@ -11,11 +11,12 @@
 // different 58 · parallel 62 · agents, 72 · and 86 (Whisper; may run ~0.2-0.4 s early).
 // DURATION: the slot 69.3610 -> 73.0313 s = 3.670 s x 23.976 = 88 frames (f0..f87).
 //
-// THE MOTION: "this thinking" (f0-27): ONE BIG PIECE OF THINKING, the hero: a glowing cream slab of work (10 x 10
-// pads of the clip's cream sheets, lines of writing on its face) hovers between us and a hall of low desks, filling
-// ~65 % of the width at y ~320-850; the front rows of desks just below it, the hall receding in the haze beside it;
-// at every desk a robot (the sister clip's Bot) stands switched off (screen dark, head tipped a little). A slow
-// push-in starts at f12. "split up" (f27-40): the slab cracks along its grid (f24.5-27.5) and its 100 pads fly off
+// THE MOTION: "this thinking" (f0-27): it opens TIGHT on ONE BIG PIECE OF THINKING, the paper filling the frame
+// while its handwriting draws itself on (every tile being written at once, a dot of fresh ink at each pen tip); one
+// continuous pull-back and slight crane up (easing out by ~f35) reveals the whole slab (a glowing cream slab of
+// work: 10 x 10 pads of the clip's cream sheets) hovering between us and a hall of low desks, then below and around
+// it the front rows and the hall receding in the haze; at every desk a robot (the sister clip's Bot) stands switched
+// off (screen dark, head tipped a little). By "split" the slab fills ~75 % of the width at y ~290-930. "split up" (f27-40): the slab cracks along its grid (f24.5-27.5) and its 100 pads fly off
 // one after another, the far row first, AWAY from us over the hall, fanning out and shrinking with depth, turning
 // flat; the camera cranes up and pushes in after them. "across 10,000 different" (f38-62): each pad stops over its
 // block of 10 x 10 desks and deals its 100 sheets, one onto each desk (the two near pads close in front of us, so we
@@ -24,7 +25,7 @@
 // far). "10,000" is a cloth banner hung low over the hall between rows 9 and 10 (world space, square to the lens)
 // that unrolls at f45, after the near sheets have dropped below it. "parallel agents" (f62-88): every robot types at
 // once, a ripple of orange running back through the rows; the camera settles (horizon y ~330, the front robots ~220
-// px at the bottom of the keep-in, each with its own sheet on its desk), still creeping at the cut.
+// px at the bottom of the keep-in, each with its own sheet on its desk), still creeping in and drifting at the cut.
 // Orange = the robots only; the sheets are cream (COMMON.md).
 // Cause before effect: a robot boots only on the frame its own sheet lands; nothing pops: the pads leave the slab
 // they were part of, the sheets leave the pad, and the robots stand there (off) from f0.
@@ -60,6 +61,7 @@ import {
   bootAt,
   cam3At,
   crackAt,
+  inkProgress,
   piecePose,
   restOn,
   slabPt,
@@ -271,6 +273,20 @@ const INK: [number, number, number][][] = (() => {
   }
   return out;
 })();
+/** the pen length along each tile's lines (each segment, a lift between segments, a return between lines) */
+const INK_AT: number[][] = INK.map((segs) => {
+  const at: number[] = [];
+  let acc = 0;
+  let lastV = -1;
+  for (const [u0, u1, v] of segs) {
+    if (lastV >= 0) acc += v !== lastV ? 14 : 3;
+    at.push(acc);
+    acc += u1 - u0;
+    lastV = v;
+  }
+  return at;
+});
+const INK_LEN: number[] = INK.map((segs, k) => (segs.length ? INK_AT[k][segs.length - 1] + segs[segs.length - 1][1] - segs[segs.length - 1][0] : 1));
 const CREAM = "#F2E9D4";
 const CREAM_LO = "#D8CBB0";
 const INK_COL = "#6E6254";
@@ -428,7 +444,7 @@ const STACK_TOP = "#F6EEDC";
 const STACK_SIDE = "#E4D9C2";
 const STACK_SIDE2 = "#DCD0B6";
 const STACK_EDGE = "#A4957A";
-const drawBox = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, P: BoxPose, k: number, crack: number, hide?: (dir: number) => boolean) => {
+const drawBox = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, P: BoxPose, k: number, crack: number, hide?: (dir: number) => boolean, write = 1) => {
   const hw = PIECE.w / 2;
   const hl = PIECE.l / 2;
   const ht = P.thick / 2;
@@ -489,17 +505,47 @@ const drawBox = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, P: BoxPose
   if (sz > 14) {
     ctx.strokeStyle = A.tone(INK_COL, C[2], hz);
     ctx.globalAlpha = 0.5 * sst(14, 34, sz);
-    ctx.lineWidth = Math.max(0.7, sz * 0.016);
+    ctx.lineWidth = Math.min(3.4, Math.max(0.7, sz * 0.014));
     ctx.lineCap = "round";
     ctx.beginPath();
-    for (const [u0, u1, v] of INK[k]) {
-      // the lines run across (a), read from the far edge of the face down (b reversed: the face's top line first)
+    // the pen: the lines in reading order, up to `write` of the tile's pen length; the line being written ends in a
+    // short partial stroke, with a dot of fresh ink at its tip
+    const segs = INK[k];
+    const lim = write * INK_LEN[k];
+    let tip: [number, number] | null = null;
+    for (let q = 0; q < segs.length; q++) {
+      const [u0, u1, v] = segs[q];
+      const s0 = INK_AT[k][q];
+      if (s0 >= lim) break;
+      const ue = Math.min(u1, u0 + (lim - s0));
       const p0 = pr(at(u0 - hw, hl - v, ht));
-      const p1 = pr(at(u1 - hw, hl - v, ht));
-      ctx.moveTo(p0[0], p0[1]);
-      ctx.lineTo(p1[0], p1[1]);
+      if (sz > 70) {
+        // close up it is handwriting: a cursive wobble along the line (tile units)
+        const nP = Math.max(2, Math.ceil((ue - u0) / 0.7));
+        ctx.moveTo(p0[0], p0[1]);
+        let pl = p0;
+        for (let j = 1; j <= nP; j++) {
+          const u = u0 + ((ue - u0) * j) / nP;
+          const wob = 1.25 * Math.sin(u * 2.3 + v * 1.7) * Math.abs(Math.sin(u * 0.55 + q));
+          pl = pr(at(u - hw, hl - v + wob, ht));
+          ctx.lineTo(pl[0], pl[1]);
+        }
+        if (ue < u1) tip = pl;
+      } else {
+        const p1 = pr(at(ue - hw, hl - v, ht));
+        ctx.moveTo(p0[0], p0[1]);
+        ctx.lineTo(p1[0], p1[1]);
+        if (ue < u1) tip = p1;
+      }
     }
     ctx.stroke();
+    if (tip && write < 1) {
+      ctx.globalAlpha = 0.8 * sst(14, 34, sz);
+      ctx.fillStyle = A.tone("#4A4036", C[2], hz);
+      ctx.beginPath();
+      ctx.arc(tip[0], tip[1], ctx.lineWidth * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.globalAlpha = 1;
   }
   if (crack > 0.01) {
@@ -557,7 +603,7 @@ const drawSlab = (ctx: CanvasRenderingContext2D, c: Cam3, A: AirWorld, f: number
     const hide = (dir: number) => (dir === 0 ? nb(-1, 0) : dir === 1 ? nb(1, 0) : dir === 2 ? nb(0, -1) : nb(0, 1));
     const u = (S.ti - TILES / 2 + 0.5) * PIECE.w;
     const v = (S.tj + 0.5) * PIECE.l;
-    drawBox(ctx, c, A, poses[k] as BoxPose, k, crackAt(u, v, f), hide);
+    drawBox(ctx, c, A, poses[k] as BoxPose, k, crackAt(u, v, f), hide, inkProgress(k, f));
   }
 };
 

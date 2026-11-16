@@ -60,7 +60,10 @@ const CAM_H0 = 510;
 const CAM_H1 = 712;
 const CAM_TY = 1072;
 const CAM_F0 = 12;
-const CAM_F1 = 80;
+const CAM_F1 = 92;
+/** the opening: tight on the slab's writing (the paper fills the frame), one continuous pull-back and slight
+ *  crane up that eases out by ~f36 into the crane (an offset on the crane, decaying from f0) */
+const OPEN = { d: 520, h: 470, hy: 1000, T: 35, k: 1.35 };
 const bell = (f0: number, f1: number, a: number, b: number) => {
   const M = 400;
   const cum = new Float64Array(M + 1);
@@ -84,10 +87,18 @@ const pH = bell(CAM_F0 + 2, CAM_F1 - 6, 2.2, 3.2);
 const pT = bell(CAM_F0, CAM_F1, 2, 2);
 export type Cam3 = { cx: number; h: number; d: number; hy: number; ty: number };
 export const cam3At = (f: number): Cam3 => {
-  const d = Math.exp(mix(Math.log(CAM_KEYS.d[0]), Math.log(CAM_KEYS.d[1]), pD(f)));
-  const h = Math.exp(mix(Math.log(CAM_KEYS.h[0]), Math.log(CAM_KEYS.h[1]), pH(f)));
+  // a slow creep in (and a touch of drift right) through the hold, so it never freezes
+  const creep = (f - 56) / 60;
+  const dB = Math.exp(mix(Math.log(CAM_KEYS.d[0]), Math.log(CAM_KEYS.d[1]), pD(f))) * (1 - 0.03 * Math.max(0, creep));
+  const hB = Math.exp(mix(Math.log(CAM_KEYS.h[0]), Math.log(CAM_KEYS.h[1]), pH(f)));
   const ty = mix(CAM_KEYS.ty[0], CAM_KEYS.ty[1], pT(f));
-  return { cx: 0, h, d, ty, hy: ty - (h * F) / d };
+  const hyB = ty - (hB * F) / dB;
+  // the opening offset: full at f0 (tight on the writing), gone by OPEN.T, fastest at the start (ease out)
+  const w = Math.pow(1 - c01(f / OPEN.T), OPEN.k);
+  const hy0 = CAM_KEYS.ty[0] - (CAM_KEYS.h[0] * F) / CAM_KEYS.d[0];
+  const d = dB * Math.exp(Math.log(OPEN.d / CAM_KEYS.d[0]) * w);
+  const h = hB * Math.exp(Math.log(OPEN.h / CAM_KEYS.h[0]) * w);
+  return { cx: 70 * Math.max(0, creep) * Math.max(0, creep), h, d, ty, hy: hyB + (OPEN.hy - hy0) * w };
 };
 export const project = (c: Cam3, X: number, Y: number, Z: number) => {
   const dd = Z + c.d;
@@ -333,3 +344,11 @@ export const bootAt = (d: Desk, f: number) => c01((f - d.land) / BOOT);
 /** the plate "10,000": a banner hung low over the hall between rows 9 and 10 (its face square to us), its hem
  *  clear above the robots' heads, unrolling down after the near sheets have passed below it */
 export const BANNER = { X: 0, Z: 2900, top: -800, w: 2200, h: 430, f0: 45, dur: 8 } as const;
+
+/** the writing on the slab: how much of tile k's lines are written by frame f (0..1). Every tile is being written at
+ *  once (many hands): part-written at f0, its lines drawing on until it is full between f20 and f26 */
+export const inkProgress = (k: number, f: number) => {
+  const p0 = 0.22 + 0.3 * hash(k * 53 + 11);
+  const fe = 20 + 6 * hash(k * 71 + 5);
+  return Math.min(1, p0 + ((1 - p0) * Math.max(0, f)) / fe);
+};
