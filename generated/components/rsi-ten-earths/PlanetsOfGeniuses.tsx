@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// PlanetsOfGeniuses (rsi-ten-earths, cut 27 at 27.07 s). Dwarkesh 3D style (styles/dwarkesh-3d.md).
+// PlanetsOfGeniuses (rsi-ten-earths, cut 27 at 27.07 s; REV 1). Dwarkesh 3D style (styles/dwarkesh-3d.md).
 // Opaque 1080x1920, 23.976 fps, 123 frames. One stage inside the misty teal air (AirStage, palette A) on a
 // londonDepth one-point perspective from the kit kits/dwarkesh-3d/dwarkesh3d; the world is the clip's shared modules,
 // read-only: tenEarthsHall (the HALL_COMPACT data-center building of cut 1, its roof with chillers and skylights) and
@@ -26,6 +26,11 @@
 // behind the crown and out); the two near outer ones; the two far outer ones; the two near inner ones last, filling
 // the arc between (landed f90 / f96, "geniuses" f94), so no Earth ever passes a settled one at its own depth. Living
 // hold: the planets turn slowly (0.15 deg/f) and bob ~4.5 px, out of phase, the skylights glow, the camera creeps back.
+// REV 1 (the user: "looks good"; "can we add like that kind of light flash glimmer effect? When he says geniuses"): on
+// "geniuses" (f94) a warm cream-white glint passes over the Earths left to right, each catching it by its screen x
+// (f93 far left .. f107 far right): a soft specular band sweeps across the disc and a small four-point star blooms and
+// fades on its lit upper-left limb (~10 f each; see THE GLINT). Nothing else changed (frames outside f94-f119 are
+// take 1's pixel for pixel).
 // CAUSE: the skylights' glow (the AIs inside) is on from f0; every Earth comes OUT of the building (from behind its
 //   roof), first visible frame = its top on the back parapet's line (EMERGE_F), never from an edge or from nothing.
 // Orange = THE AIs only (COMMON.md): the Earths and the skylights' glow from the Geniuses inside. The building
@@ -328,6 +333,93 @@ const RoadJoints: React.FC<{ A: AirWorld; z0: number; course: number }> = ({ A, 
 };
 
 // ===================================================================================================================
+// THE GLINT (rev 1, the user: "that kind of light flash glimmer effect ... when he says geniuses ... to just highlight
+// what he's talking about"). On "geniuses" (f94) a warm cream-white light passes over the Earths LEFT TO RIGHT, each
+// globe catching it in turn by its screen x (the far left f93, the far right f107: ~2 f apart on average): a soft
+// specular band crosses the sphere (clipped to its disc) and a small four-point star blooms and fades on its lit
+// upper-left limb (~10 f each). Screen-blended over the globe layer, under the building, inside the air's grade.
+// Nothing else changes: outside f94-f119 the cut renders exactly as take 1.
+// ===================================================================================================================
+export const GLINT = { f0: 93, spread: 14, x0: 150, x1: 932, band: 10, star: 11, starLag: 1 };
+const GLINT_HEX = "#FFF5E0";
+/** when a globe at screen x catches the light */
+export const glintStart = (x: number) => GLINT.f0 + GLINT.spread * c01((x - GLINT.x0) / (GLINT.x1 - GLINT.x0));
+const easeIO = (t: number) => 0.5 - 0.5 * Math.cos(Math.PI * c01(t));
+/** a four-point star of arm length L (long arms on the axes, short ones on the diagonals) */
+const starPath = (L: number) => {
+  const w = (0.13 * L).toFixed(2);
+  const l = L.toFixed(2);
+  return `M0,-${l}Q${w},-${w} ${l},0Q${w},${w} 0,${l}Q-${w},${w} -${l},0Q-${w},-${w} 0,-${l}Z`;
+};
+type GlintState = { i: number; cx: number; cy: number; r: number; veil: number; band: number; bandX: number; star: number; spin: number };
+export const glintsAt = (frame: number, globes: (GlobeSpec & { i: number; Z: number })[]): GlintState[] =>
+  globes
+    .map((g) => {
+      const t0 = glintStart(g.cx);
+      const u = (frame - t0) / GLINT.band;
+      const v = (frame - t0 - GLINT.starLag) / GLINT.star;
+      const band = u > 0 && u < 1 ? Math.pow(Math.sin(Math.PI * u), 0.8) : 0;
+      const star = v > 0 && v < 1 ? Math.pow(Math.sin(Math.PI * v), 1.6) : 0;
+      return { i: g.i, cx: g.cx, cy: g.cy, r: g.r, veil: 1 - 0.55 * (g.fog ?? 0), band, bandX: lerp(-1.45, 1.45, easeIO(u)), star, spin: 18 * c01(v) };
+    })
+    .filter((q) => q.band > 0 || q.star > 0);
+
+const Glints: React.FC<{ frame: number; globes: (GlobeSpec & { i: number; Z: number })[] }> = ({ frame, globes }) => {
+  const gs = glintsAt(frame, globes);
+  if (gs.length === 0) return null;
+  const TILT = 22; // the band leans like "/" (the light from the upper left)
+  return (
+    <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ position: "absolute", left: 0, top: 0, mixBlendMode: "screen" }}>
+      <defs>
+        <linearGradient id="pogGlintBand" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor={GLINT_HEX} stopOpacity={0} />
+          <stop offset="0.38" stopColor={GLINT_HEX} stopOpacity={0.55} />
+          <stop offset="0.5" stopColor={GLINT_HEX} stopOpacity={1} />
+          <stop offset="0.62" stopColor={GLINT_HEX} stopOpacity={0.55} />
+          <stop offset="1" stopColor={GLINT_HEX} stopOpacity={0} />
+        </linearGradient>
+        <radialGradient id="pogGlintGlow">
+          <stop offset="0" stopColor={GLINT_HEX} stopOpacity={0.9} />
+          <stop offset="0.35" stopColor={GLINT_HEX} stopOpacity={0.35} />
+          <stop offset="1" stopColor={GLINT_HEX} stopOpacity={0} />
+        </radialGradient>
+        {gs.map((g) => (
+          <clipPath key={g.i} id={`pogGlintClip${g.i}`}>
+            <circle cx={g.cx} cy={g.cy} r={g.r * 0.995} />
+          </clipPath>
+        ))}
+      </defs>
+      {gs.map((g) => {
+        const lx = g.cx - 0.66 * g.r;
+        const ly = g.cy - 0.66 * g.r;
+        const L = 0.4 * g.r;
+        return (
+          <g key={g.i} opacity={g.veil}>
+            {g.band > 0 ? (
+              <g clipPath={`url(#pogGlintClip${g.i})`}>
+                <g transform={`translate(${(g.cx + g.bandX * g.r).toFixed(2)} ${g.cy.toFixed(2)}) rotate(${TILT})`}>
+                  <rect x={-0.6 * g.r} y={-1.6 * g.r} width={1.2 * g.r} height={3.2 * g.r} fill="url(#pogGlintBand)" opacity={0.55 * g.band} />
+                  <rect x={-0.13 * g.r} y={-1.6 * g.r} width={0.26 * g.r} height={3.2 * g.r} fill="url(#pogGlintBand)" opacity={0.5 * g.band} />
+                </g>
+              </g>
+            ) : null}
+            {g.star > 0 ? (
+              <g transform={`translate(${lx.toFixed(2)} ${ly.toFixed(2)})`}>
+                <circle r={0.95 * L * g.star} fill="url(#pogGlintGlow)" opacity={0.85 * g.star} />
+                <g transform={`rotate(${g.spin.toFixed(2)}) scale(${(0.35 + 0.65 * g.star).toFixed(4)})`} opacity={Math.min(1, 1.6 * g.star)}>
+                  <path d={starPath(L)} fill={GLINT_HEX} />
+                  <path d={starPath(0.5 * L)} transform="rotate(45)" fill={GLINT_HEX} opacity={0.75} />
+                </g>
+              </g>
+            ) : null}
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+// ===================================================================================================================
 // THE CUT
 // ===================================================================================================================
 export const PlanetsScene: React.FC<{ frame: number }> = ({ frame }) => {
@@ -347,6 +439,7 @@ export const PlanetsScene: React.FC<{ frame: number }> = ({ frame }) => {
       </WorldSvg>
       {/* the Earths hang behind the building: it occludes them as they rise from behind its roof */}
       <GlobeLayer globes={s.globes} />
+      <Glints frame={frame} globes={s.globes} />
       <WorldSvg cam={cam}>
         <DataCenter A={A} frame={frame} uid="pog" hall={HALL} cutaway={0} skyGlow={{ color: ACCENT, amount: SKY_GLOW }} />
       </WorldSvg>

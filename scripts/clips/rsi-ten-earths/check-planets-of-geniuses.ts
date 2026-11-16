@@ -4,7 +4,7 @@
 // roof, screen speed, landing frames, the gaps between Earths (no two touching at rest; no overlap during flight between
 // two Earths of the same rank, i.e. nothing crosses another at its own depth), and the camera's speed lobe.
 // Run: bun scripts/clips/rsi-ten-earths/check-planets-of-geniuses.ts
-import { DURATION, EX0, EX1, EZ0, HALL, PARA_Y, PLANETS, camAt, eyeAt, parapetAt, sceneAt, toScreen } from "../../../generated/components/rsi-ten-earths/PlanetsOfGeniuses";
+import { DURATION, EX0, EX1, EZ0, HALL, PARA_Y, PLANETS, camAt, eyeAt, parapetAt, sceneAt, toScreen, glintsAt, glintStart } from "../../../generated/components/rsi-ten-earths/PlanetsOfGeniuses";
 
 const issues: string[] = [];
 const log: string[] = [];
@@ -80,5 +80,30 @@ let cv = "camera dlnD/frame x1000:";
 for (let f = 0; f < DURATION; f += 4) cv += ` ${f}:${((Math.log(eyeAt(f + 1).D) - Math.log(eyeAt(f).D)) * 1000).toFixed(2)}`;
 console.log(cv);
 console.log("far passing behind near during flight:", [...crossRank].join(" ") || "none");
+// rev 1: the glint on "geniuses": every star (arm 0.4 r at full bloom, centred on the upper-left limb) inside the
+// keep-in box and off the bands; the order left to right; the window f93-f119 and nothing outside it
+{
+  const starts: string[] = [];
+  let first = 1e9;
+  let last = -1;
+  for (let f = 0; f < DURATION; f++) {
+    const s = sceneAt(f);
+    const gl = glintsAt(f, s.globes);
+    if (gl.length) {
+      first = Math.min(first, f);
+      last = Math.max(last, f);
+    }
+    for (const g of gl) {
+      const L = 0.4 * g.r * (0.35 + 0.65 * g.star);
+      const x = g.cx - 0.66 * g.r;
+      const y = g.cy - 0.66 * g.r;
+      if (x - L < 65 || x + L > 1015 || y - L < 290 || y + L > 1070) issues.push(`f${f} glint star of ${g.i} outside the box`);
+    }
+  }
+  const s96 = sceneAt(96);
+  for (const g of [...s96.globes].sort((a, b) => a.cx - b.cx)) starts.push(`${g.i}@x${g.cx.toFixed(0)}:f${glintStart(g.cx).toFixed(1)}`);
+  log.push(`glint window f${first}-f${last}; starts ${starts.join(" ")}`);
+  console.log(log[log.length - 1]);
+}
 console.log("ISSUES", issues.length);
 console.log(issues.slice(0, 60).join("\n"));
