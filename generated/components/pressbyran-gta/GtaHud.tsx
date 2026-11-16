@@ -7,24 +7,23 @@
  *
  * Beats (sequence seconds; Swedish dialogue):
  *   0.3 - 3.0   mission title "Fyll på med protein"
- *   2.8 - 6.8   area name "Stockholm" + objective "Gå till Pressbyrån." (3.1 - 7.4)
- *   17.751      cut into the store                        -> area name "Pressbyrån" (17.8 - 21.4)
+ *   3.1 - 7.4   objective "Gå till Pressbyrån."
  *   21.6        takes a bag from the stand                -> pickup 1, Real Good salty cashews
  *   23.2        "Så, trea för två"                        -> objective "Ta 3 för 2 på protein." (22.4 - 26.0)
  *   29.5        first fridge                              -> pickup 2, Propud milkshake Marängsviss
  *   35.2        second fridge, hand to the shelf at 34.8  -> pickup 3, Chick'n Dip sesamkyckling
- *   37.671      cut to the shelves by the till            -> shop menu "Protein" (until the cut at 40.474)
+ *   37.671      cut to the shelves by the till            -> product wheel (until the cut at 40.474)
  *   39.6        "Perfekt." 38.92, at the till             -> 3 FÖR 2 confirmed, cash ticks down
  * DURATION: 0 -> 43.644 s x 30000/1001 = 1308 frames.
  * Motion: always-on HUD: weapon slot (a flexed arm, then the last product picked up), a game clock that runs a
  * minute per second from the camera's 13:19 timestamp, armour and health bars and an 8-digit cash counter top right; a
- * round radar bottom left that walks the route to the store and turns with the camera cuts.
+ * round radar bottom left that walks the route to the store and turns with the camera cuts. v3 (Tom, Nov 16): no area
+ * names, everything pulled in from the edges (top right / pickups down to y 318, radar up to y 1318), and a GTA V
+ * selection wheel of the three products at the till instead of the menu column.
  * Figures: cash and price are placeholders (no price is spoken or visible). Product art: the client's packshots.
  */
 import {AbsoluteFill, Easing, Img, interpolate, random, spring, staticFile, useCurrentFrame} from 'remotion';
 import {loadFont} from '@remotion/fonts';
-import {loadFont as loadGothic} from '@remotion/google-fonts/GrenzeGotisch';
-import {loadFont as loadBarlow} from '@remotion/google-fonts/Barlow';
 import {z} from 'zod';
 
 export const FPS = 30000 / 1001;
@@ -35,8 +34,6 @@ const SUB = 'GtaHudSans';
 loadFont({family: CHUNK, url: staticFile('pressbyran-gta/burbankbigcondensed_bold.otf'), weight: '700'});
 loadFont({family: SUB, url: staticFile('pressbyran-gta/BarlowCondensed-SemiBold.ttf'), weight: '600'});
 loadFont({family: SUB, url: staticFile('pressbyran-gta/BarlowCondensed-Bold.ttf'), weight: '700'});
-const {fontFamily: GOTHIC} = loadGothic('normal', {weights: ['600'], subsets: ['latin', 'latin-ext']});
-const {fontFamily: WIDE} = loadBarlow('normal', {weights: ['600', '700'], subsets: ['latin', 'latin-ext']});
 
 const CASH_GREEN = '#3f9a3c';
 const LOSS_RED = '#d8322b';
@@ -55,7 +52,6 @@ export const schema = z.object({
   buyAt: z.number(),
   missionTitle: z.string(),
   objectives: z.array(z.object({t0: z.number(), t1: z.number(), pre: z.string(), key: z.string(), post: z.string()})),
-  areas: z.array(z.object({t0: z.number(), t1: z.number(), name: z.string()})),
 });
 
 export const defaultProps = schema.parse({
@@ -74,11 +70,6 @@ export const defaultProps = schema.parse({
   objectives: [
     {t0: 3.1, t1: 7.4, pre: 'Gå till ', key: 'Pressbyrån', post: '.'},
     {t0: 22.4, t1: 26.0, pre: 'Ta ', key: '3 för 2', post: ' på protein.'},
-  ],
-  areas: [
-    {t0: 2.8, t1: 6.8, name: 'Stockholm'},
-    {t0: 17.8, t1: 21.4, name: 'Pressbyrån'},
-    {t0: 37.671, t1: 40.474, name: 'Pressbyrån'},
   ],
 });
 
@@ -166,7 +157,7 @@ const Radar: React.FC<{t: number; frame: number}> = ({t, frame}) => {
   const na = ((-hd - 90) * Math.PI) / 180;
   return (
     <svg width={2 * R + 40} height={2 * R + 40} viewBox={`${-R - 20} ${-R - 20} ${2 * R + 40} ${2 * R + 40}`}
-      style={{position: 'absolute', left: 178 - R - 20, top: 1430 - R - 20}}>
+      style={{position: 'absolute', left: 222 - R - 20, top: 1318 - R - 20}}>
       <defs>
         <clipPath id="radarClip"><circle r={R} /></clipPath>
       </defs>
@@ -237,7 +228,7 @@ const TopRight: React.FC<{t: number; frame: number; props: Props}> = ({t, frame,
     </div>
   );
   return (
-    <div style={{position: 'absolute', left: 632, top: 206, width: 380, height: 260}}>
+    <div style={{position: 'absolute', left: 596, top: 318, width: 380, height: 260}}>
       <div style={{position: 'absolute', left: 0, top: 0, width: 140, height: 140, borderRadius: 16,
         background: 'linear-gradient(#5d5f5c, #2c2d2b)', boxShadow: `0 0 0 5px ${INK}, inset 0 0 0 3px #8a8c88`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'}}>
@@ -289,18 +280,6 @@ const Objective: React.FC<{t: number; objectives: Props['objectives']}> = ({t, o
   );
 };
 
-const AreaName: React.FC<{t: number; areas: Props['areas']}> = ({t, areas}) => {
-  const a = areas.find((x) => t >= x.t0 && t < x.t1);
-  if (!a) return null;
-  const op = interpolate(t, [a.t0, a.t0 + 0.35, a.t1 - 0.4, a.t1], [0, 1, 1, 0], clamp);
-  return (
-    <div style={{position: 'absolute', right: 60, top: 1352, textAlign: 'right', opacity: op, fontFamily: GOTHIC,
-      fontWeight: 600, fontSize: 128, lineHeight: 1, color: '#fff', textShadow: outline(5) + ',4px 6px 0 #000'}}>
-      {a.name}
-    </div>
-  );
-};
-
 // ---------------------------------------------------------------- pickups
 const PickupBox: React.FC<{frame: number; products: Props['products']; menuIn: number}> = ({frame, products, menuIn}) => {
   let idx = -1;
@@ -316,7 +295,7 @@ const PickupBox: React.FC<{frame: number; products: Props['products']; menuIn: n
   const flash = interpolate(life, [0, 2, 8], [0, 0.7, 0], clamp);
   const pop = spring({frame: life - 2, fps: FPS, config: {damping: 9, stiffness: 260}});
   return (
-    <div style={{position: 'absolute', left: 44, top: 210, width: 520, opacity: out,
+    <div style={{position: 'absolute', left: 82, top: 318, width: 480, opacity: out,
       transform: `translateX(${(1 - inS) * -50}px)`}}>
       <div style={{position: 'relative', display: 'flex', alignItems: 'center', gap: 18, padding: '16px 22px 16px 14px',
         background: 'rgba(0,0,0,0.78)'}}>
@@ -343,70 +322,162 @@ const PickupBox: React.FC<{frame: number; products: Props['products']; menuIn: n
   );
 };
 
-// ---------------------------------------------------------------- shop menu at the till
-const ShopMenu: React.FC<{t: number; frame: number; props: Props}> = ({t, frame, props}) => {
+// ---------------------------------------------------------------- product wheel at the till
+// GTA V-style selection wheel, no weapons: the three products in the left / top / right slots, the arm ("unarmed")
+// at the bottom. The highlight walks the products in pickup order, then all three confirm 3 FÖR 2.
+const sector = (r0: number, r1: number, a0: number, a1: number) => {
+  // angles in degrees, 0 = up, clockwise
+  const P = (r: number, a: number) => {
+    const t = ((a - 90) * Math.PI) / 180;
+    return `${(Math.cos(t) * r).toFixed(2)},${(Math.sin(t) * r).toFixed(2)}`;
+  };
+  const large = a1 - a0 > 180 ? 1 : 0;
+  return `M${P(r1, a0)} A${r1},${r1} 0 ${large} 1 ${P(r1, a1)} L${P(r0, a1)} A${r0},${r0} 0 ${large} 0 ${P(r0, a0)} Z`;
+};
+const arc = (r: number, a0: number, a1: number) => {
+  const P = (a: number) => {
+    const t = ((a - 90) * Math.PI) / 180;
+    return `${(Math.cos(t) * r).toFixed(2)},${(Math.sin(t) * r).toFixed(2)}`;
+  };
+  return `M${P(a0)} A${r},${r} 0 0 1 ${P(a1)}`;
+};
+const polar = (r: number, a: number): [number, number] => {
+  const t = ((a - 90) * Math.PI) / 180;
+  return [Math.cos(t) * r, Math.sin(t) * r];
+};
+
+const ProductWheel: React.FC<{t: number; frame: number; props: Props}> = ({t, frame, props}) => {
   const {menuIn, menuOut, buyAt, products} = props;
   if (t < menuIn || t >= menuOut) return null;
+  const inF = Math.round(menuIn * FPS);
+  const open = spring({frame: frame - inF, fps: FPS, config: {damping: 16, stiffness: 240}});
   const local = t - menuIn;
-  // highlight walks the three rows, then all three confirm
   const steps = [0, 0.55, 1.15];
   let hi = 0;
-  steps.forEach((s, i) => {
-    if (local >= s) hi = i;
+  steps.forEach((s0, i) => {
+    if (local >= s0) hi = i;
   });
   const bought = t >= buyAt;
   const buyF = Math.round(buyAt * FPS);
   const stamp = bought ? spring({frame: frame - buyF, fps: FPS, config: {damping: 10, stiffness: 220}}) : 0;
-  const COL = 500;
-  const rowTop = 790;
-  const ROW = 128;
+  const CX = 540;
+  const CY = 925;
+  const R0 = 185;
+  const R1 = 360;
+  const GAP = 1.6; // degrees each side of a divider
+  // slots: product i at left / top / right, the arm at the bottom
+  const slots = [
+    {a: 270, kind: 'p', i: 0},
+    {a: 0, kind: 'p', i: 1},
+    {a: 90, kind: 'p', i: 2},
+    {a: 180, kind: 'arm', i: -1},
+  ];
+  const sel = slots[hi];
+  const selA = sel.a;
+  const name = products[hi].short;
   return (
     <AbsoluteFill>
-      {/* the black column with big blurred product shots above and below */}
-      <div style={{position: 'absolute', left: 0, top: 0, width: COL, height: 1920, background: '#000', overflow: 'hidden'}}>
-        {[[0, 30], [1, 260], [1, 1460], [2, 1690]].map(([pi, y], k) => (
-          <Img key={k} src={staticFile(products[pi].img)}
-            style={{position: 'absolute', left: 90, top: y - 40, width: 320, height: 300, objectFit: 'contain',
-              filter: 'blur(16px) saturate(1.2)', opacity: 0.85}} />
-        ))}
-      </div>
-      {/* menu panel: dark gradient that runs out over the picture */}
-      <div style={{position: 'absolute', left: 0, top: 560, width: 760, height: 800,
-        background: 'linear-gradient(90deg, rgba(18,18,18,0.97) 0%, rgba(30,30,30,0.93) 62%, rgba(30,30,30,0.0) 100%)'}} />
-      <div style={{position: 'absolute', left: 32, top: 590, fontFamily: GOTHIC, fontWeight: 600, fontSize: 150,
-        lineHeight: 1, color: '#fff', textShadow: '4px 5px 0 #000'}}>
-        Protein
-      </div>
-      {products.map((p, i) => {
-        const on = bought || i === hi;
-        return (
-          <div key={i} style={{position: 'absolute', left: 0, top: rowTop + i * ROW, width: 690, height: ROW - 8,
-            background: on ? (bought ? 'rgba(63,154,60,0.28)' : 'rgba(255,255,255,0.16)') : 'transparent',
-            display: 'flex', alignItems: 'center'}}>
-            <div style={{width: 120, height: ROW - 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginLeft: 18}}>
-              <Img src={staticFile(p.img)} style={{maxHeight: ROW - 18, maxWidth: 104, objectFit: 'contain'}} />
-            </div>
-            <div style={{marginLeft: 16}}>
-              <div style={{fontFamily: WIDE, fontWeight: 700, fontSize: 38, letterSpacing: 3, color: '#f2f2f2',
-                lineHeight: 1.05, whiteSpace: 'nowrap'}}>
-                {p.name}
-              </div>
-              <div style={{fontFamily: WIDE, fontWeight: 700, fontSize: 36, letterSpacing: 2, color: '#5cc457',
-                lineHeight: 1.15}}>
+      {/* the world slows and dims behind the wheel */}
+      <AbsoluteFill style={{background: 'rgba(10,14,20,0.32)', opacity: open}} />
+      <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{position: 'absolute', inset: 0}}>
+        <defs>
+          <radialGradient id="selBlue" cx="0" cy="0" r={R1} gradientUnits="userSpaceOnUse">
+            <stop offset={R0 / R1} stopColor="#9cc6f2" stopOpacity={0.55} />
+            <stop offset={1} stopColor="#3f8de0" stopOpacity={0.92} />
+          </radialGradient>
+          <radialGradient id="buyGreen" cx="0" cy="0" r={R1} gradientUnits="userSpaceOnUse">
+            <stop offset={R0 / R1} stopColor="#a8e3a0" stopOpacity={0.5} />
+            <stop offset={1} stopColor="#3f9a3c" stopOpacity={0.9} />
+          </radialGradient>
+        </defs>
+        <g transform={`translate(${CX} ${CY}) scale(${0.86 + 0.14 * open})`} opacity={Math.min(1, open * 1.6)}>
+          {/* ring shadow */}
+          <circle r={(R0 + R1) / 2} fill="none" stroke="rgba(0,0,0,0.28)" strokeWidth={R1 - R0 + 18} />
+          {slots.map((sl, k) => {
+            const isSel = !bought && k === hi;
+            const isBuy = bought && sl.kind === 'p';
+            return (
+              <path key={k} d={sector(R0, R1, sl.a - 45 + GAP, sl.a + 45 - GAP)}
+                fill={isBuy ? 'url(#buyGreen)' : isSel ? 'url(#selBlue)' : 'rgba(150,158,166,0.82)'} />
+            );
+          })}
+          {/* outer highlight arc under the selected slot (green for all three once bought) */}
+          {bought
+            ? slots.filter((sl) => sl.kind === 'p').map((sl, k) => (
+                <path key={k} d={arc(R1 + 9, sl.a - 45 + GAP, sl.a + 45 - GAP)} fill="none" stroke="#3f9a3c"
+                  strokeWidth={12} />
+              ))
+            : <path d={arc(R1 + 9, selA - 45 + GAP, selA + 45 - GAP)} fill="none" stroke="#2f7fd8" strokeWidth={12} />}
+          <circle r={R1 + 2} fill="none" stroke="rgba(70,76,84,0.9)" strokeWidth={5} />
+          <circle r={R0 - 2} fill="none" stroke="rgba(70,76,84,0.9)" strokeWidth={5} />
+          {/* labels under each product */}
+          {slots.map((sl, k) => {
+            if (sl.kind !== 'p') return null;
+            const [x, y] = polar((R0 + R1) / 2, sl.a);
+            return (
+              <text key={k} x={x} y={y + 74} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={34}
+                fill="#fff" stroke={INK} strokeWidth={5} paintOrder="stroke">
                 3 FÖR 2
+              </text>
+            );
+          })}
+          {/* centre: name, 3 FÖR 2, ‹ n / 3 › */}
+          {!bought ? (
+            <g>
+              <text y={-38} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={44} fill="#fff"
+                stroke={INK} strokeWidth={6} paintOrder="stroke">
+                {name}
+              </text>
+              <text y={22} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={50} fill="#5cc457"
+                stroke={INK} strokeWidth={6} paintOrder="stroke">
+                3 FÖR 2
+              </text>
+              <g transform="translate(0 78)">
+                <path d="M-74,-16 L-90,0 L-74,16" fill="none" stroke="#2f7fd8" strokeWidth={8} strokeLinecap="round"
+                  strokeLinejoin="round" />
+                <path d="M74,-16 L90,0 L74,16" fill="none" stroke="#2f7fd8" strokeWidth={8} strokeLinecap="round"
+                  strokeLinejoin="round" />
+                <text y={14} textAnchor="middle" fontFamily={SUB} fontWeight={700} fontSize={40} fill="#fff"
+                  stroke={INK} strokeWidth={5} paintOrder="stroke">
+                  {hi + 1} / {products.length}
+                </text>
+              </g>
+            </g>
+          ) : (
+            <g transform={`scale(${stamp})`}>
+              <text y={30} textAnchor="middle" fontFamily={CHUNK} fontWeight={700} fontSize={104} fill={OBJ_YELLOW}
+                stroke={INK} strokeWidth={10} paintOrder="stroke" letterSpacing={2}>
+                3 FÖR 2!
+              </text>
+            </g>
+          )}
+        </g>
+      </svg>
+      {/* product art and the arm, as HTML images over the slots */}
+      <div style={{position: 'absolute', left: CX, top: CY, transform: `scale(${0.86 + 0.14 * open})`,
+        opacity: Math.min(1, open * 1.6)}}>
+        {slots.map((sl, k) => {
+          const [x, y] = polar((R0 + R1) / 2, sl.a);
+          const isSel = !bought && k === hi;
+          if (sl.kind === 'arm') {
+            return (
+              <div key={k} style={{position: 'absolute', left: x - 52, top: y - 52, opacity: 0.9}}>
+                <ArmIcon />
               </div>
+            );
+          }
+          const p = products[sl.i];
+          const H = 138;
+          return (
+            <div key={k} style={{position: 'absolute', left: x - 75, top: y - H / 2 - 20, width: 150, height: H,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transform: `scale(${isSel ? 1.08 : 1})`}}>
+              <Img src={staticFile(p.img)} style={{maxHeight: H, maxWidth: 140, objectFit: 'contain',
+                filter: 'drop-shadow(0 5px 6px rgba(0,0,0,0.55))'}} />
             </div>
-          </div>
-        );
-      })}
-      {bought && (
-        <div style={{position: 'absolute', left: 40, top: rowTop + 3 * ROW + 26, transform: `scale(${stamp})`,
-          transformOrigin: 'left center', fontFamily: CHUNK, fontWeight: 700, fontSize: 92, lineHeight: 1,
-          color: OBJ_YELLOW, letterSpacing: 2, textShadow: outline(6)}}>
-          3 FÖR 2!
-        </div>
-      )}
+          );
+        })}
+      </div>
     </AbsoluteFill>
   );
 };
@@ -416,13 +487,12 @@ const GtaHud: React.FC<Props> = (props) => {
   const t = frame / FPS;
   return (
     <AbsoluteFill>
-      <ShopMenu t={t} frame={frame} props={props} />
+      <ProductWheel t={t} frame={frame} props={props} />
       <Radar t={t} frame={frame} />
       <TopRight t={t} frame={frame} props={props} />
       <PickupBox frame={frame} products={props.products} menuIn={props.menuIn} />
       <MissionTitle t={t} text={props.missionTitle} />
       <Objective t={t} objectives={props.objectives} />
-      <AreaName t={t} areas={props.areas} />
     </AbsoluteFill>
   );
 };
