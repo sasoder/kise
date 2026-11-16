@@ -20,6 +20,10 @@
 // LAYOUT (prop `layout`): "A" (default, as approved for card A) the slip alone; "B" the slip plus a modest print of
 // the article's lead photo tucked under the slip's right edge (not delivered for this card).
 // CHAIN = SKYROOT'S OWN: the headline is Skyroot's own company, so the slip carries the same thin crown as card A.
+// LAYOUT "C" (preview only, the pair of card A's V2; not the default): the headline re-broken so the phrase sits on
+// one line (`headlineC`), that line (`highlight`) on card A's blue marker with its purple / orange crown, the lead
+// photo as a print beside the slip (kept small, `printH`, because the source is only 1080 x 720), the pair centred
+// on the whole frame. Render it with --props '{"layout":"C","chain":"none"}'.
 //
 // SOURCES (headlines verbatim, set uppercase as house style):
 // - "techcrunch" (default): TechCrunch, 7 May 2026, Jagmeet Singh, h1 "India's first space tech unicorn emerges as
@@ -40,7 +44,16 @@ import SkyrootNewsCard, { type CardPhoto } from "./SkyrootNewsCard";
 export const FPS = 24000 / 1001;
 export const DURATION = 1;
 
-type Article = { outlet: string; date: string; headline: string[]; photo: CardPhoto };
+type Article = {
+  outlet: string;
+  date: string;
+  headline: string[];
+  photo: CardPhoto;
+  /** layout C: the same words re-broken so the highlighted phrase sits on one line, that line's index, the print */
+  headlineC: string[];
+  highlight: number;
+  photoC: CardPhoto;
+};
 
 /** the two articles, each as published (headline lines are natural phrases, ragged right) */
 export const ARTICLES: Record<"techcrunch" | "businesstoday", Article> = {
@@ -56,6 +69,18 @@ export const ARTICLES: Record<"techcrunch" | "businesstoday", Article> = {
       crop: { x0: 0.6, y0: 0.12, x1: 0.92, y1: 0.88 },
       credit: "Skyroot",
     },
+    headlineC: ["India’s first space tech unicorn", "emerges as Skyroot gears up", "for orbital launch"],
+    highlight: 0,
+    // the full height, the left sky trimmed (the lit SKYROOT sign and its mark, the astronaut on the facade): 913 x 720
+    // source px; the window 380 px tall = ~482 x 380 at 2048, ~1.05x the source at 4K, so the print stays sharp
+    photoC: {
+      src: "skyroot-trailer/newscard_techcrunch_unicorn_photo.jpg",
+      w: 1080,
+      h: 720,
+      crop: { x0: 0.155, y0: 0, x1: 1, y1: 1 },
+      credit: "Skyroot",
+      printH: 380,
+    },
   },
   businesstoday: {
     outlet: "Business Today",
@@ -70,12 +95,21 @@ export const ARTICLES: Record<"techcrunch" | "businesstoday", Article> = {
       crop: { x0: 0.355, y0: 0, x1: 0.665, y1: 1 },
       credit: "Skyroot Aerospace",
     },
+    headlineC: ["Skyroot becomes", "India’s first spacetech unicorn", "with $60 million funding", "ahead of Vikram-1 launch"],
+    highlight: 1,
+    photoC: {
+      src: "skyroot-trailer/newscard_businesstoday_unicorn_photo.jpg",
+      w: 1200,
+      h: 675,
+      credit: "Skyroot Aerospace",
+      printH: 330,
+    },
   },
 };
 
 export const schema = z.object({
   article: z.enum(["techcrunch", "businesstoday"]),
-  layout: z.enum(["A", "B"]),
+  layout: z.enum(["A", "B", "C"]),
   chain: z.enum(["thin", "none"]),
   rot: z.number(),
   film: z.boolean(),
@@ -98,11 +132,12 @@ const NewsCardTechCrunchUnicorn: React.FC<Props> = ({ article, layout, chain, ro
       layout={layout}
       outlet={a.outlet}
       date={a.date}
-      headline={a.headline}
+      headline={layout === "C" ? a.headlineC : a.headline}
+      highlight={layout === "C" ? a.highlight : undefined}
       chain={chain}
       rot={rot}
       film={film}
-      photo={{ ...a.photo, look: photoLook }}
+      photo={{ ...(layout === "C" ? a.photoC : a.photo), look: photoLook }}
     />
   );
 };

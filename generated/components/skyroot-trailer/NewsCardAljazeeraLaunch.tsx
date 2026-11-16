@@ -15,6 +15,13 @@
 // LAYOUT (prop `layout`): "A" the slip alone; "B" the slip plus a modest print of the article's lead photo
 // (Vikram-1 rising, its flame reflected in water), tucked under the slip's right edge. DEFAULT: see defaultProps.
 // CHAIN = SKYROOT'S OWN: the headline is Skyroot's own rocket, so the slip carries a thin crown (prop `chain`).
+// V2 (the user's note, Nov 16: "add the image that was in the article ... center it ... highlight launch of first
+// private-sector ... with the core memory colors"): layout "C". The headline re-broken (same words) so the phrase
+// sits on one line, INDIA ACHIEVES MILESTONE WITH / LAUNCH OF FIRST PRIVATE-SECTOR / ORBITAL ROCKET (`headlineC`),
+// that line (`highlight` 1) set white on a blue marker with purple and orange stepped above it (the chain crown:
+// Skyroot's own launch); the slip's thin edge crown dropped (`chain` "none") so the chain shows once. The lead photo
+// as a real print beside the slip (a gentle crop keeping the towers, the rocket and its whole reflection), the pair
+// centred on the whole frame (no caption bands at 16:9), the photo in the clip's grade (photoLook "grade").
 //
 // SOURCES: Al Jazeera, 18 July 2026 (AFP and Reuters), on-page h1 "India achieves milestone with launch of first
 // private-sector orbital rocket" (verbatim, set uppercase as house style),
@@ -31,7 +38,7 @@ export const FPS = 24000 / 1001;
 export const DURATION = 1;
 
 export const schema = z.object({
-  layout: z.enum(["A", "B"]),
+  layout: z.enum(["A", "B", "C"]),
   chain: z.enum(["thin", "none"]),
   rot: z.number(),
   film: z.boolean(),
@@ -40,18 +47,24 @@ export const schema = z.object({
   date: z.string(),
   /** the headline as published, one entry per line (natural phrases) */
   headline: z.array(z.string()),
+  /** layout C: the same words re-broken so the highlighted phrase sits on one line */
+  headlineC: z.array(z.string()),
+  /** layout C: the line of headlineC set as the chain-colour marker (-1 = none) */
+  highlight: z.number(),
   credit: z.string(),
 });
 export type Props = z.infer<typeof schema>;
 export const defaultProps: Props = schema.parse({
-  layout: "A",
-  chain: "thin",
+  layout: "C",
+  chain: "none",
   rot: -1,
   film: true,
-  photoLook: "colour",
+  photoLook: "grade", // V2: the clip's black-and-white photo grade, so the marker is the card's only colour
   outlet: "Al Jazeera",
   date: "18 July 2026",
   headline: ["India achieves milestone", "with launch of first", "private-sector", "orbital rocket"],
+  headlineC: ["India achieves milestone with", "launch of first private-sector", "orbital rocket"],
+  highlight: 1,
   credit: "R Satish Babu/AFP",
 });
 
@@ -63,17 +76,27 @@ export const PHOTO = {
   h: 4000,
   crop: { x0: 0.22, y0: 0.05, x1: 0.82, y1: 0.97 },
 };
+// layout C's print: nearly the whole photo (a sliver off each side and the top and bottom), so the three towers, the
+// rocket on its plume (x 0.52, nose y 0.08) and the whole reflection (to y 0.94) stay; the window 740 px tall
+export const PHOTO_C = {
+  src: PHOTO.src,
+  w: PHOTO.w,
+  h: PHOTO.h,
+  crop: { x0: 0.05, y0: 0.035, x1: 0.99, y1: 0.975 },
+  printH: 740,
+};
 
-const NewsCardAljazeeraLaunch: React.FC<Props> = ({ layout, chain, rot, film, photoLook, outlet, date, headline, credit }) => (
+const NewsCardAljazeeraLaunch: React.FC<Props> = ({ layout, chain, rot, film, photoLook, outlet, date, headline, headlineC, highlight, credit }) => (
   <SkyrootNewsCard
     layout={layout}
     outlet={outlet}
     date={date}
-    headline={headline}
+    headline={layout === "C" ? headlineC : headline}
+    highlight={layout === "C" ? highlight : undefined}
     chain={chain}
     rot={rot}
     film={film}
-    photo={{ ...PHOTO, credit, look: photoLook }}
+    photo={{ ...(layout === "C" ? PHOTO_C : PHOTO), credit, look: photoLook }}
   />
 );
 
