@@ -1,4 +1,4 @@
-// NotOptimallyAdapted (rsi-stupidest-species, cut 19, revision 2: the clumsy step-up) per-frame checks, in screen px
+// NotOptimallyAdapted (rsi-stupidest-species, cut 19, revision 3: the clumsy step-up, the fall polished) per-frame checks, in screen px
 // (sway included): the camera (one push: ln px/m never reverses, a single speed lobe, moving at f0); his head (the disc
 // inside the keep-in box x 65-1015, y 290-1070 and out of the caption bands y 1080-1250 / 1360-1460 on every frame);
 // the contacts (the feet still on the floor f0-4, the hands on their ledge points while gripping, the knee on its point

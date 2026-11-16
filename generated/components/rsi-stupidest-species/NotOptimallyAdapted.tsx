@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// NotOptimallyAdapted (rsi-stupidest-species, cut 19), REVISION 2: THE CLUMSY STEP-UP. Dwarkesh 3D style
+// NotOptimallyAdapted (rsi-stupidest-species, cut 19), REVISION 3: THE CLUMSY STEP-UP (rev 3 polishes the fall; 3b: the near arm flings wide round the face, a low swing round). Dwarkesh 3D style
 // (styles/dwarkesh-3d.md). Opaque 1080x1920, 23.976 fps, 73 frames. Built on cut B's world stupidestStairs.tsx
 // (read-only; STAIRS_READY.md) and B's exports (StupidestPossibleSpecies.tsx: the fire's place sets the lamp grid);
 // the human is covidFolk's Commuter v0 (read-only; every climbing pose is built here from its pose channels).
@@ -15,15 +15,22 @@
 // lit stone lamp bowls), at a gap in the lamps. The riser is about his neck height (B's world: 1.45 m; he is 1.83 m).
 // Seen three-quarter from behind-side (facing screen right, his face in profile), so the effort shows.
 // THE ACTION (one thing, unhurried, every move >= 8 frames and eased):
-//   f0-24   hands on the ledge, he hauls himself up (the body rises 1 m) and swings his near knee up onto it
-//           (the knee planted on the tread from KNEE.on).
-//   f24-31  kneeling on one knee at the edge, the far leg dangling over the riser, he lets go and straightens up ...
-//   f28-40  ... and wobbles back, arms windmilling once, worried, mouth open (ONE wobble).
-//   f38-47  catches himself: lunges forward, both hands slapped down on the tread (planted from CATCH.on).
-//   f47-59  hauls the other leg up and swivels round, plopping down to sit on the edge between two lamps, facing us.
-//   f59-72  sits there out of breath (panting), glances down at the drop and back up.
-// Contacts: the hands on the ledge (grip, exact world points) f0-24 and f46-51, eased on and off; the knee on the tread
-// f24-47 (the figure translated so the knee joint sits on its point); the hips on the edge from f59. Pure per frame.
+//   f0-27   hands flat on the top, the near foot then the far foot planted on the riser (scuffs), he presses up to
+//           straight arms and swings the near knee up onto the top (planted from KNEE.on = 27).
+//   f27-51  THE BALANCE, driven by two curves with set velocities (cubic Hermite: falls accelerate, stops decelerate):
+//           the thigh's angle about the planted knee (THIGH) and the torso's lean (TORSO). He comes up over the knee
+//           (f27-32); his weight drifts behind the knee and he tips back, hips and torso as one unit pivoting about the
+//           knee, the head lagging (f32-40); one reactive windmill of both arms (f33-43.5, a circle about each shoulder,
+//           the far arm a frame behind, its wrist trailing the elbow; the near arm on its own wide circle NEAR_ANG,
+//           flung out in front of the face at f37 and up behind the head at f38, so it never crosses the face); the hang (f40); he throws his weight forward,
+//           the head leading (f39.5-47), and the hands slap down onto the top (f47, coming in from above with their
+//           speed): a small overshoot squashes the arms (f48) and he settles onto them (f48-51).
+//   f51-61  he swings round off the knee, low and still leaned (SWING_LEAN, the chin tucked, the legs folded under
+//           until the seat is close): the hips arc across and down onto the edge (slow off the knee, faster as they
+//           drop, landing at f59), the seat gives (deepest ~f61), a little rebound; the dangling legs swing once and
+//           damp out; facing us, he sits out of breath (panting), glances down at the drop and back up (to f72).
+// Contacts: the hands on the stone (exact world points) f0-26 and f47-52, the knee on its point f27-51, the hips on the
+// edge from f59. Pure per frame.
 // Colour: no orange on him (orange = intelligence: the dashed species, off-frame here). The lamps glow steadily.
 //
 // CAMERA: one slow push (stairCam, one designed lobe in ln px/m, moving at f0) from a full figure on the lower step to
@@ -69,9 +76,12 @@ export const RISER_M = (FLOOR_Y - LEDGE_Y) / U;
 export const HAUL = { a: 1, b: 24 };
 export const KNEE = { swing: [15, 27] as [number, number], on: 27 };
 export const LETGO = { a: 26, b: 33 };
-export const WOBBLE = { a: 29, b: 41 };
-export const CATCH = { a: 35, b: 47, on: 47, off: [49, 55] as [number, number] };
-export const SWIVEL = { a: 49, b: 61 };
+/** the tip back over the drop (the hips pivoting back about the planted knee) and the hang at its far end */
+export const WOBBLE = { a: 32, b: 41 };
+/** the throw forward (a: the head leads), the hands slapping down on the top (on), planted until off */
+export const CATCH = { a: 39.5, b: 47, on: 47, off: [52, 57] as [number, number] };
+/** the swing round off the knee to sit: the hips arc over and land on the edge at land, the plop's low point ~b */
+export const SWIVEL = { a: 51, b: 61, land: 59.5 };
 export const REST_T = { look: [61, 70] as [number, number], back: [67, 77] as [number, number] };
 
 // ---- the camera ------------------------------------------------------------------------------------------------------
@@ -136,10 +146,11 @@ const pKneel = (): Covid.CovidPose => ({ ...base(), crouch: 108, lean: 14, pitch
 const pMount = (): Covid.CovidPose => ({ ...pKneel(), crouch: 108, lean: 52, pitch: 14, footL: [-10, -5], liftL: 10, liftR: RISER_LIFT, worry: 0.6, open: 0.35, lids: 0.45, brow: 0.8, hunch: 0.4 });
 /** straightened up on the knee, arms coming free */
 const pUp = (): Covid.CovidPose => ({ ...pKneel(), crouch: 70, lean: 0, pitch: 0, look: [0.4, 0], worry: 0.4, open: 0.2, lids: 0.1, brow: 0, hunch: 0 });
-/** tipping back over the drop: the far leg kicking out, the face turned toward us, alarmed */
-const pWobble = (): Covid.CovidPose => ({ ...pKneel(), crouch: 70, lean: -21, pitch: -12, headYaw: 0.95, roll: -8, look: [-0.4, 0.6], footR: [40, 40], worry: 1, open: 0.85, lids: 0, brow: -0.8, hunch: 0 });
-/** lunged forward over the tread, both hands down on it */
-const pCatch = (): Covid.CovidPose => ({ ...pKneel(), armL: arm([90, -60], [-0.45, -1], 0, PALM), armR: arm([100, -60], [-0.45, -1], 0, PALM), crouch: 104, lean: 48, pitch: 22, headYaw: 1.25, roll: 4, look: [0.5, 0.4], worry: 0.8, open: 0.45, lids: 0.15, brow: -0.2 });
+/** tipping back over the drop: the face turned toward us, alarmed (face and head channels; the body comes from the
+ *  balance curves below) */
+const pWobble = (): Covid.CovidPose => ({ ...pKneel(), pitch: -6, headYaw: 0.95, roll: -6, look: [-0.4, 0.6], worry: 1, open: 0.85, lids: 0, brow: -0.8, hunch: 0 });
+/** thrown forward over the tread, both hands down on it (face and head channels) */
+const pCatch = (): Covid.CovidPose => ({ ...pKneel(), pitch: 18, headYaw: 1.25, roll: 4, look: [0.5, 0.4], worry: 0.8, open: 0.45, lids: 0.15, brow: -0.2 });
 /** sitting on the edge facing us, the legs dangling over the riser, hands on the edge beside him, out of breath */
 const pSit = (): Covid.CovidPose => ({
   ...Covid.POSES.sit(1, 82),
@@ -158,26 +169,157 @@ const pSit = (): Covid.CovidPose => ({
   hunch: 0.35,
 });
 
-/** the windmill: each wrist on a circle about its shoulder (local units), one turn over the wobble, eased in and out */
-const windmill = (q: Covid.CovidPose, f: number): Covid.CovidPose => {
-  const amt = sst(LETGO.a + 1, LETGO.b + 1, f) * (1 - sst(CATCH.a + 1, CATCH.a + 10, f));
-  if (amt < 1e-4) return q;
-  const a0 = Covid.covidAnchors(HUMAN_KIND, q, [0, 0], 1);
-  const th = 1.7 * Math.PI * sst(WOBBLE.a - 2, WOBBLE.b + 3, f);
-  const R = 76;
-  // the near arm circles backward (down-back-up-forward), the far arm half a turn behind
-  const wL: P2 = [a0.shoulderL[0] - R * Math.sin(th + 0.4), a0.shoulderL[1] - R * Math.cos(th + 0.4)];
-  const wR: P2 = [a0.shoulderR[0] - R * Math.sin(th + 0.4 + Math.PI * 0.85), a0.shoulderR[1] - R * Math.cos(th + 0.4 + Math.PI * 0.85)];
-  return {
-    ...q,
-    armL: { ...q.armL, w: lerp2(q.armL.w, wL, amt), elbow: lerp2(q.armL.elbow, [0.3, 1], amt), fist: lerp(q.armL.fist, 0, amt), hand: lerp(q.armL.hand, 10, amt) },
-    armR: { ...q.armR, w: lerp2(q.armR.w, wR, amt), elbow: lerp2(q.armR.elbow, [-0.3, 1], amt), fist: lerp(q.armR.fist, 0, amt), hand: lerp(q.armR.hand, 10, amt) },
-  };
+// ---- the balance on the knee (f27-51): curves with set velocities at their keys (cubic Hermite), so falls accelerate,
+// stops decelerate and nothing moves linearly ----------------------------------------------------------------------------
+type Key = [number, number, number];
+/** cubic Hermite through [frame, value, slope per frame] keys (held flat outside them) */
+const herm = (keys: Key[], f: number): number => {
+  if (f <= keys[0][0]) return keys[0][1];
+  const n = keys.length - 1;
+  if (f >= keys[n][0]) return keys[n][1];
+  let i = 0;
+  while (f > keys[i + 1][0]) i++;
+  const [f0, v0, m0] = keys[i];
+  const [f1, v1, m1] = keys[i + 1];
+  const h = f1 - f0;
+  const t = (f - f0) / h;
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return (2 * t3 - 3 * t2 + 1) * v0 + (t3 - 2 * t2 + t) * h * m0 + (-2 * t3 + 3 * t2) * v1 + (t3 - t2) * h * m1;
 };
-/** the arms while free on the knee (between the let-go and the windmill): out a little for balance */
-const freeArms = (q: Covid.CovidPose): Covid.CovidPose => {
+/** the thigh's angle about the planted knee (rad, + = the hips forward of the knee, toward the lamps): up over the knee
+ *  from the mount (f27-32), the centre of mass drifting behind the knee and the tip back accelerating (f32-36), slowed
+ *  by the windmill to a hang (f39-41), the throw forward accelerating into the slap (f47), a small overshoot as the
+ *  hands take the weight (f48) and the settle onto them */
+/** the thrown-forward pose the hands catch in: the thigh's angle and the torso's lean */
+const CAUGHT = { th: 0.15, lean: 66 };
+export const THIGH: Key[] = [
+  [27, -0.835, 0],
+  [29.5, -0.36, 0.25],
+  [32.5, 0.07, 0],
+  [36, -0.14, -0.08],
+  [39, -0.29, -0.025],
+  [40, -0.305, 0],
+  [40.6, -0.3, 0.02],
+  [47, CAUGHT.th, 0.16],
+  [48, CAUGHT.th + 0.065, 0],
+  [50, CAUGHT.th + 0.03, 0],
+  [51, CAUGHT.th + 0.035, 0.005],
+];
+/** the torso's lean (deg, + = toward the lamps): with the thigh as one unit through the tip, further forward in the
+ *  throw (the reach) */
+export const TORSO: Key[] = [
+  [27, 52, 0],
+  [29.5, 26, -10],
+  [32.5, 1, 0],
+  [36, -12, -4.5],
+  [39, -20, -1.3],
+  [40, -21, 0],
+  [40.6, -20.6, 1.2],
+  [47, CAUGHT.lean, 10],
+  [48, CAUGHT.lean + 5, 0],
+  [50, CAUGHT.lean + 1, 0],
+  [51, CAUGHT.lean + 1.5, 0.2],
+];
+/** the windmill (fraction of each arm's turn): one reactive circle that starts after the tip does, fastest mid-fall,
+ *  ending with the hands hanging under the shoulders as the throw carries them down onto the top */
+const WIND: Key[] = [
+  [33, 0, 0],
+  [35.5, 0.17, 0.1],
+  [39, 0.62, 0.12],
+  [42, 0.94, 0.05],
+  [43.5, 1, 0],
+];
+/** the torso's lean through the swing round to sit (deg): it stays forward while the hips arc down, comes up only as
+ *  they land, and carries on a touch at the plop (the hips stop, the chest doesn't) before settling upright */
+const SWING_LEAN: Key[] = [
+  [51, CAUGHT.lean + 1.5, 0.2],
+  [54, 54, -6.5],
+  [57, 33, -7.5],
+  [59.5, 15, -5],
+  [61, 10, -1],
+  [64, 2.5, -1.5],
+  [67, 0, 0],
+];
+/** the near arm's own circle (the wrist's angle about the shoulder, deg, 0 = toward the lamps, -90 = up): the head sits
+ *  right over the near shoulder in this side view, so the near arm flings up wide (NEAR_OUT) and fast over the top,
+ *  out in front of the face on one frame (f37) and already up behind it on the next (f38), never across it */
+const NEAR_ANG: Key[] = [
+  [33.5, 63.4, 0],
+  [35, 52, -12],
+  [36, 28, -38],
+  [37, -22, -82],
+  [38, -128, -80],
+  [39, -175, -42],
+  [40, -203, -33],
+  [41, -242, -25],
+  [42, -261, -12],
+  [43.5, -270, 0],
+];
+/** how much further out the near arm's circle reaches over the top (units added to its radius) */
+const NEAR_OUT = 33;
+export const thighAt = (f: number) => herm(THIGH, f);
+export const torsoAt = (f: number) => herm(TORSO, f);
+/** the planted shin (knee to ankle, units) and the thigh's length */
+const SHIN: P2 = [-62, -22];
+const THIGH_L = 71;
+const KNEEL_CROUCH = 70;
+/** the far leg hanging from the hips over the drop, and how far it kicks forward-up as he tips back (2 frames late) */
+const FAR_HANG: P2 = [11, 95];
+const FAR_KICK: P2 = [48, -30];
+
+/** the kneeling body at f (f >= KNEE.on): the knee planted, the thigh at thighAt, the torso at torsoAt, the head lagging
+ *  the tip and leading the throw, the arms windmilling (circles about the shoulders, the hands trailing the elbows) */
+const kneelPose = (f: number): Covid.CovidPose => {
+  let q = Covid.lerpPose(pMount(), pUp(), sst(KNEE.on, 32, f));
+  q = Covid.lerpPose(q, pWobble(), sst(33, 37, f));
+  q = Covid.lerpPose(q, pCatch(), sst(CATCH.a + 1, CATCH.on - 1, f));
+  // the legs: the hips at thighAt about the knee, the shin flat behind it (hip = at + (0, crouch - 152), ankle = at +
+  // foot + (1, -15))
+  const th = thighAt(f);
+  const hipRel: P2 = [THIGH_L * Math.sin(th), -THIGH_L * Math.cos(th)];
+  const lift = 152 - KNEEL_CROUCH;
+  const footL: P2 = [SHIN[0] - hipRel[0] - 1, SHIN[1] - hipRel[1] - lift + 15];
+  const kick = sst(0, 1, c01((0.07 - thighAt(f - 2)) / 0.42));
+  const far: P2 = [FAR_HANG[0] + FAR_KICK[0] * kick, FAR_HANG[1] + FAR_KICK[1] * kick];
+  const footR: P2 = [far[0] - 1, far[1] + 15 - lift];
+  // the head: lags the tip (stays forward while the body goes back), then leads the throw (the chin goes first)
+  const lam = torsoAt(f);
+  const lag = f < CATCH.a ? torsoAt(f - 2) - lam : 0;
+  const lead = 16 * sst(CATCH.a - 1, CATCH.a + 3, f) * (1 - sst(CATCH.on, CATCH.on + 5, f));
+  const jolt = 5 * Math.max(0, Math.sin(Math.PI * c01((f - CATCH.on) / 3)));
+  q = { ...q, crouch: KNEEL_CROUCH, lean: lam, footL, liftL: 0, footR, pitch: q.pitch + 0.55 * lag + lead + jolt, roll: q.roll - 0.25 * lag };
+  // the arms: out for balance after letting go, then one circle (front, up, back, down, front) about each shoulder, the
+  // far arm 0.6 rad behind; each wrist trails its own circle by 1.2 frames and the elbow leads along the circle
   const a0 = Covid.covidAnchors(HUMAN_KIND, q, [0, 0], 1);
-  return { ...q, armL: arm([a0.shoulderL[0] + 40, a0.shoulderL[1] + 80], [0.2, 1], 0.2, 10), armR: arm([a0.shoulderR[0] - 30, a0.shoulderR[1] + 86], [-0.2, 1], 0.2, 10) };
+  // (each arm's circle runs front, up, back, down and ends hanging straight down: the far arm starts further back, so
+  // it turns further)
+  const swing = (sh: P2, rest: P2, behind: number, side: number): Covid.CovidPose["armL"] => {
+    const R = 0.8 * Math.hypot(rest[0], rest[1]);
+    const a0r = Math.atan2(rest[1], rest[0]);
+    const turn = a0r - Math.PI / 2 + 2 * Math.PI;
+    const al = a0r - turn * herm(WIND, f - 1.2 - behind);
+    const lead2 = a0r - turn * herm(WIND, f - behind);
+    const w: P2 = [sh[0] + R * Math.cos(al), sh[1] + R * Math.sin(al)];
+    const spin = c01(turn * (herm(WIND, f + 1 - behind) - herm(WIND, f - 1 - behind)));
+    const elbow = lerp2([0.2 * side, 1], [Math.sin(lead2), -Math.cos(lead2)], c01(spin * 2.5));
+    return arm(w, elbow, 0.1, 10);
+  };
+  // the near arm: its own wide circle (NEAR_ANG); the elbow leads as elsewhere, except over the top (f36-39) where it
+  // trails, low and out in front, then up behind the head, so neither bone crosses the face
+  const nearArm = (): Covid.CovidPose["armL"] => {
+    const sh = a0.shoulderL;
+    const R = 0.8 * Math.hypot(40, 80) + NEAR_OUT * sst(35, 37, f) * (1 - sst(38.6, 40.8, f));
+    const al = (herm(NEAR_ANG, f) * Math.PI) / 180;
+    const w: P2 = [sh[0] + R * Math.cos(al), sh[1] + R * Math.sin(al)];
+    const lead2 = (herm(NEAR_ANG, f + 1.2) * Math.PI) / 180;
+    const spin = (Math.abs(herm(NEAR_ANG, f + 1) - herm(NEAR_ANG, f - 1)) * Math.PI) / 180;
+    const trail = 1 - sst(37.2, 37.8, f);
+    const tang = lerp2([Math.sin(lead2), -Math.cos(lead2)], [-Math.sin(al), Math.cos(al)], trail);
+    return arm(w, lerp2([0.2, 1], tang, c01(spin * 2.5)), 0.1, 10);
+  };
+  q = { ...q, armL: nearArm(), armR: swing(a0.shoulderR, [-30, 86], 1.1, -1) };
+  return q;
 };
 
 export const humanPoseAt = (f: number): Covid.CovidPose => {
@@ -189,11 +331,33 @@ export const humanPoseAt = (f: number): Covid.CovidPose => {
   const qm = pMount();
   const qh = Covid.lerpPose(pReach(), pHaul(), sst(7, 16, f));
   q = { ...q, footL: lerp2(qh.footL, qm.footL, legS), liftL: lerp(qh.liftL ?? 0, qm.liftL ?? 0, legS) };
-  q = Covid.lerpPose(q, freeArms(pUp()), sst(LETGO.a, LETGO.b, f));
-  q = Covid.lerpPose(q, pWobble(), sst(WOBBLE.a, WOBBLE.a + 8, f));
-  q = Covid.lerpPose(q, pCatch(), sst(CATCH.a, CATCH.b, f));
-  q = windmill(q, f);
-  q = Covid.lerpPose(q, pSit(), sst(SWIVEL.a, SWIVEL.b, f));
+  if (f >= KNEE.on) q = kneelPose(f);
+  const qk = q;
+  q = Covid.lerpPose(q, pSit(), sst(SWIVEL.a, SWIVEL.land, f));
+  // the swing round stays low and leaned: the torso keeps its forward lean while the hips drop (SWING_LEAN), the chin
+  // tucked, the legs folded under until the seat is close, so he never stands up tall over the edge before the plop
+  if (f > SWIVEL.a) {
+    const sl = sst(SWIVEL.a + 2, SWIVEL.land + 0.5, f);
+    const qs = pSit();
+    const tuck = Math.sin(Math.PI * c01((f - SWIVEL.a) / (SWIVEL.land + 2 - SWIVEL.a)));
+    q = {
+      ...q,
+      lean: herm(SWING_LEAN, f),
+      pitch: q.pitch + 9 * tuck,
+      hunch: (q.hunch ?? 0) + 0.25 * tuck,
+      footL: lerp2(qk.footL, qs.footL, sl),
+      footR: lerp2(qk.footR, qs.footR, sl),
+      liftL: lerp(qk.liftL ?? 0, qs.liftL ?? 0, sl),
+      liftR: lerp(qk.liftR ?? 0, qs.liftR ?? 0, sl),
+      sit: lerp(qk.sit ?? 0, qs.sit ?? 0, sl),
+    };
+  }
+  // landed on the edge: the dangling legs swing forward once and damp out
+  if (f > SWIVEL.land) {
+    const t = f - SWIVEL.land;
+    const sw = 13 * Math.exp(-t / 4.5) * Math.sin((2 * Math.PI * t) / 9);
+    q = { ...q, footL: [q.footL[0] + sw, q.footL[1] - 0.25 * Math.abs(sw)], footR: [q.footR[0] + 0.85 * sw, q.footR[1] - 0.2 * Math.abs(sw)] };
+  }
   // sitting: panting (the chest heaving, the mouth working), a glance down at the drop and back
   const rest = sst(SWIVEL.b - 4, SWIVEL.b + 2, f);
   if (rest > 0) {
@@ -220,7 +384,7 @@ export const STAND = { X: CLIMB_X - m(0.68), Z: -m(0.22) };
 export const KNEE_AT = { X: CLIMB_X - m(0.2), Z: m(0.2), up: 11 };
 /** the hands flat on the top: the haul (both in front of him) and the catch (further along) */
 export const GRIP_HAUL = { L: { X: CLIMB_X - m(0.11), Z: m(0.1) }, R: { X: CLIMB_X - m(0.15), Z: m(0.2) } };
-export const GRIP_CATCH = { L: { X: CLIMB_X + m(0.18), Z: m(0.32) }, R: { X: CLIMB_X + m(0.32), Z: m(0.38) } };
+export const GRIP_CATCH = { L: { X: CLIMB_X + m(0.3), Z: m(0.32) }, R: { X: CLIMB_X + m(0.42), Z: m(0.38) } };
 /** the far foot pressed sole-on against the riser face while he heaves (the ankle a little off the stone) */
 export const FOOT_RISER = { X: CLIMB_X - m(0.3), Y: FLOOR_Y - m(1.3), Z: -m(0.07) };
 /** the near foot pressed flat on the riser first (low, in front of him, in plain view), the step he pushes off */
@@ -257,7 +421,9 @@ export const placeAt = (A: AirWorld, f: number): { at: P2; Z: number; scale: num
     const Z = lerp(Zh, Zk, wk);
     return { at, Z, scale: A.P.r(Z) };
   }
-  // the swivel: the hips travel from where they were on the knee to the edge (pinned by the hip), then the plop
+  // the swing round: the hips leave the knee and arc round and down onto the edge (a quadratic Bezier, bowed: across
+  // first, then down; slow off the knee, speeding up as they drop, landing at SWIVEL.land with their speed), then the plop: the seat gives a little (deepest
+  // ~f61), a small rebound, settled
   const qs = humanPoseAt(SWIVEL.a);
   const hipK = (() => {
     const at = kneePinned(A, qs);
@@ -267,25 +433,35 @@ export const placeAt = (A: AirWorld, f: number): { at: P2; Z: number; scale: num
   })();
   const Zs = SEAT_AT.Z;
   const seat = A.P.p(SEAT_AT.X, LEDGE_Y - SEAT_AT.up, Zs);
-  const ws = sst(SWIVEL.a, SWIVEL.b, f);
-  // the hips swing up and over in an arc (a lift mid-swivel) and land with a small plop
-  const lift = 26 * Math.sin(Math.PI * ws);
-  const plop = 7 * Math.sin(Math.PI * c01((f - (SWIVEL.b - 2)) / 10)) * (1 - c01((f - (SWIVEL.b - 2)) / 10));
-  const Z = lerp(Zk, Zs, ws);
+  const u = c01((f - SWIVEL.a) / (SWIVEL.land - SWIVEL.a));
+  const sB = u * u * (2 - u);
+  const ctl: P2 = [lerp(hipK[0], seat[0], 0.75), lerp(hipK[1], seat[1], 0.25)];
+  const bez = (t: number): P2 => [
+    (1 - t) * (1 - t) * hipK[0] + 2 * (1 - t) * t * ctl[0] + t * t * seat[0],
+    (1 - t) * (1 - t) * hipK[1] + 2 * (1 - t) * t * ctl[1] + t * t * seat[1],
+  ];
+  const tl = Math.max(0, f - SWIVEL.land);
+  const settle = f > SWIVEL.land ? 6 * Math.exp(-tl / 2.6) * Math.sin((Math.PI * tl) / 4.2) : 0;
+  const Z = lerp(Zk, Zs, sB);
   const sc = A.P.r(Z);
-  const hip = lerp2(hipK, seat, ws);
-  const at: P2 = [hip[0] - a0.hip[0] * sc, hip[1] - a0.hip[1] * sc - lift * sc + plop * sc];
+  const hip = bez(sB);
+  const at: P2 = [hip[0] - a0.hip[0] * sc, hip[1] - a0.hip[1] * sc + settle * sc];
   return { at, Z, scale: sc };
 };
 /** how much the hands are on the ledge (0 = free), and where */
-export const gripW = (f: number) => (1 - sst(LETGO.a, LETGO.b, f)) + sst(CATCH.on - 9, CATCH.on, f) * (1 - sst(CATCH.off[0], CATCH.off[1], f));
+/** the catch comes in accelerating (the hands slap down onto the top at CATCH.on with their speed) */
+const catchIn = (f: number) => c01((f - CATCH.a - 2.5) / (CATCH.on - CATCH.a - 2.5)) ** 2;
+export const gripW = (f: number) => (1 - sst(LETGO.a, LETGO.b, f)) + catchIn(f) * (1 - sst(CATCH.off[0], CATCH.off[1], f));
 export const gripAt = (A: AirWorld, f: number, free: { L: P2; R: P2 }): { L: P2; R: P2 } | undefined => {
   const w = gripW(f);
   if (w < 1e-3) return undefined;
   const G = f < 35 ? GRIP_HAUL : GRIP_CATCH;
   const L = A.P.p(G.L.X, LEDGE_Y - 5, G.L.Z);
   const R = A.P.p(G.R.X, LEDGE_Y - 5, G.R.Z);
-  return { L: lerp2(free.L, L, w), R: lerp2(free.R, R, w) };
+  // on and off the stone the hands travel on an arc from above (they come down onto it, they lift off it)
+  const up = 16 * A.P.r(G.L.Z) * Math.sin(Math.PI * c01(w));
+  const arc = (a: P2, b: P2): P2 => [lerp(a[0], b[0], w), lerp(a[1], b[1], w) - up];
+  return { L: arc(free.L, L), R: arc(free.R, R) };
 };
 /** the feet's world targets this frame and how much each is held to its target (0 = the pose's own) */
 export const feetAt = (A: AirWorld, f: number) => {
