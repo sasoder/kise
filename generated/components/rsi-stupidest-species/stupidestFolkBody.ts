@@ -13,9 +13,11 @@
 //   Einstein  officer v1 (the fuller older build) in a grey-brown suit, cream shirt, a loose dark tie; his own CLOUD of
 //             white hair (a soft mass behind and around the head, a receding cap, wisps at the hairline), a bushy
 //             white MOUSTACHE over the mouth, soft grey-white BROWS (a kind look).
-//   Me        youth v0 (the slimmer young build): a plain dark navy CREWNECK (the hoodie's neck opening with a rib
-//             collar; hood, pocket, drawstrings, earbuds removed), dark trousers, simple dark shoes, short black hair
-//             with a small QUIFF swept up at the front, warm medium-brown skin, clean-shaven.
+//   Me        youth v0 (the slimmer young build), after the speaker's footage (rev 1): an off-white CREAM knit
+//             CREWNECK (the hoodie's neck opening with a rib collar, rib cuffs; hood, pocket, drawstrings, earbuds
+//             removed), dark trousers, simple dark shoes, short black hair with a small QUIFF swept up at the front,
+//             warm medium skin, dark brows, a full neatly trimmed dark BEARD and moustache (one soft flat shape over
+//             the jaw, chin and cheeks to the sideburns, a small lip patch so the mouth still reads).
 //   Foragers  any build, every modern garment detail removed, the body re-inked as a HIDE TUNIC (this file's hull from
 //             the waist, knee length, a soft ragged hem, a cord belt with a knot), bare arms or long hide sleeves,
 //             bare legs, bare or hide-wrapped feet; hair shapes from the builds (crop, long, curly, ponytail) and a
@@ -1049,13 +1051,15 @@ const buildEinstein = (q: PersonPose, frame: number): PersonBuild => {
 
 // ---- ME ----------------------------------------------------------------------------------------------------------------
 export const ME_INKS = {
-  skin: "#B98763",
-  hair: "#2F2725",
-  top: "#37435C",
-  rib: "#4B5874",
-  lower: "#35363B",
-  shoe: "#3F332B",
-  sole: "#2A231E",
+  skin: "#C4946F",
+  hair: "#241D1B",
+  beard: "#362B26",
+  brow: "#2A211E",
+  top: "#E3D9C7",
+  rib: "#C9BCA4",
+  lower: "#34353A",
+  shoe: "#3A2F28",
+  sole: "#29221D",
 };
 const ME_TOP2 = "#0a0b0c";
 const meQuiff = (head: Head): CShape[] => {
@@ -1103,6 +1107,86 @@ const meQuiff = (head: Head): CShape[] => {
       clip: d,
     },
   ];
+};
+/** Me's full, neatly trimmed dark beard (one soft flat shape on the sphere: the jaw, the chin, the cheeks up to the
+ *  sideburns, the moustache over the upper lip), a small lip patch so the mouth still reads, and his dark brows (soft
+ *  tubes; the inner ends rise with worry). Drawn under the nose and the mouth. */
+const meFace = (head: Head, worry: number): CShape[] => {
+  const R = head.R;
+  const fs = R / 31.5;
+  const I = ME_INKS;
+  const out: CShape[] = [];
+  const g = (beta: number) => {
+    const a = Math.abs(beta);
+    if (a <= 0.2) return -0.27;
+    if (a <= 0.62) return mix(-0.27, -0.3, ease((a - 0.2) / 0.42));
+    if (a <= 1.2) return mix(-0.3, 0.02, ease((a - 0.62) / 0.58));
+    return mix(0.02, 0.3, ease(Math.min(1, (a - 1.2) / 0.32)));
+  };
+  const bp = regionPoly(
+    head,
+    (b, p) => Math.abs(b) < 1.6 && p < g(b),
+    "bottom",
+    1.04,
+  );
+  const parts: string[] = [];
+  if (bp.length > 2)
+    parts.push(closedD(cw(bp.map((u) => hToFig(head, u))), 0.9));
+  // a little fullness at the chin
+  const ch = hProj(head, 0, -0.86, 1.02);
+  if (ch.d > -0.3)
+    parts.push(
+      closedD(cw(ellPts(ch.p, 0.3 * R, 0.2 * R, head.roll, 16)), 0.95),
+    );
+  if (parts.length) {
+    const d = parts.join(" ");
+    out.push({ d, fill: I.beard, sh: 0.6 });
+    out.push({
+      d: ellD(hToFig(head, [-0.35, 0.6]), R * 0.42, R * 0.26, head.roll - 15),
+      fill: mixC(I.beard, "#9A8A7C", 0.35),
+      sh: 0,
+      op: 0.45,
+      blur: 4,
+      clip: d,
+    });
+  }
+  // the lip patch (foreshortened on the sphere), the mouth is drawn over it
+  const lp: { p: P2; d: number }[] = [];
+  for (let i = 0; i < 16; i++) {
+    const t = (2 * Math.PI * i) / 16;
+    lp.push(hProj(head, 0.22 * Math.cos(t), -0.4 + 0.065 * Math.sin(t), 1.05));
+  }
+  const lv = sst(0.15, 0.4, hProj(head, 0, -0.4).d);
+  if (lv > 0.01)
+    out.push({
+      d: closedD(
+        lp.map((v) => v.p),
+        0.9,
+      ),
+      fill: mixC(I.skin, "#C47A6C", 0.18),
+      sh: 0,
+      op: lv,
+    });
+  // the brows
+  for (const sgn of [-1, 1]) {
+    const pts = [
+      hProj(head, sgn * 0.16, 0.29 + 0.08 * worry),
+      hProj(head, sgn * 0.36, 0.33 + 0.03 * worry),
+      hProj(head, sgn * 0.58, 0.28 - 0.02 * worry),
+    ];
+    const vb = sst(0.1, 0.35, Math.min(pts[0].d, pts[2].d));
+    if (vb > 0.01)
+      out.push({
+        d: tubeD(
+          pts.map((v) => v.p),
+          [3.4 * fs, 4.2 * fs, 2.6 * fs],
+        ),
+        fill: I.brow,
+        sh: 0,
+        op: vb,
+      });
+  }
+  return out;
 };
 const buildMe = (q: PersonPose, frame: number): PersonBuild => {
   const { kind, variant } = BASE_OF.me;
@@ -1154,8 +1238,19 @@ const buildMe = (q: PersonPose, frame: number): PersonBuild => {
     }
   }
   ins(inserts, sec.iFront, meQuiff(head));
+  // under the nose and the mouth (with the nose turned away: under the hair, never over the front arms)
+  ins(
+    inserts,
+    Math.min(sec.iNose, sec.iHair, sec.iFront),
+    meFace(head, q.worry ?? 0),
+  );
   addHandProps(S, sec, b.anchors, q, inserts);
-  const drop = new Set(["#e2daca", "#eee9de"]);
+  // the hoodie's drawstrings and the earbuds; covidFolk's thin worry brows (his own brows carry the worry)
+  const drop = new Set([
+    "#e2daca",
+    "#eee9de",
+    lc(mixC(I.hair, "#2A201A", 0.2)),
+  ]);
   const shapes = assemble(
     S,
     (s, i) => {

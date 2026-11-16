@@ -12,9 +12,9 @@
 //   fours)), `scale` = world px per unit. On the depth kit: const { at, scale } = A.P.at(X, Z), fog={A.folkFog(Z)},
 //   unitPx={cam.k}, a contact shadow <AirShadow A X Z w={62} d={30} amt={0.8} /> (the chimp: w 70 d 30 on all fours).
 //   scaleForPx(px) = px / 312 (a man's height on screen); a chimp at the same scale is ~152 units tall (CHIMP_UNITS).
-//   Sizes on a phone (1080 x 1920): HERO 350-600 px tall (Einstein's moustache and brows, Me's quiff and rib collar,
+//   Sizes on a phone (1080 x 1920): HERO 350-600 px tall (Einstein's moustache and brows, Me's beard, brows and quiff,
 //   the chimp's face read), MID 120-200 px (Einstein reads by the white hair cloud + moustache + grey suit; Me by the
-//   navy crewneck and black hair; the chimp by the big ears, tan face, long arms; the foragers by the hide tunics and
+//   dark beard and the cream sweater; the chimp by the big ears, tan face, long arms; the foragers by the hide tunics and
 //   bare limbs), small 40-70 px (silhouettes: the cloud, the tunic, the chimp's hunched shape).
 //
 // FIGURES  <Einstein pose at scale uid ... />  <Me ... />  <Forager variant ... />  <Chimp variant pose ... />
@@ -23,8 +23,9 @@
 //          per-figure gouache filter, inside a shared <CovidFolkLayer>).
 //   Einstein  grey-brown suit, cream shirt, a loose dark tie, the white hair CLOUD (behind and round the head, a
 //             receding cap, wisps), the bushy white moustache, soft grey brows, warm light skin, dot eyes (kind).
-//   Me        navy crewneck (rib collar), dark trousers, dark shoes, short black hair with a small quiff swept up at the
-//             front, warm medium-brown skin, clean-shaven. The same height as Einstein (both builds 1.75 m).
+//   Me        (after the speaker's footage) a cream knit crewneck (rib collar and cuffs), dark trousers, dark shoes,
+//             short black hair with a small quiff swept up at the front, a full neatly trimmed dark beard and
+//             moustache, dark brows, warm medium skin. The same height as Einstein (both builds 1.75 m).
 //   Forager   variant 0..7 (FORAGER_LOOKS): v0 man (khaki tunic, bare arms, stubble), v1 woman (oatmeal, long hair),
 //             v2 child (umber, sleeves), v3 elder (white beard, hide wraps on the feet), v4 man (dark umber), v5 woman
 //             (khaki, ponytail), v6 youth (oatmeal, curls), v7 old woman (white curls). Hide tunics with a ragged
@@ -199,7 +200,7 @@ type PersonProps = Omit<React.ComponentProps<typeof Person>, "who" | "uid"> & {
 export const Einstein: React.FC<PersonProps> = ({ uid = "ein", ...p }) => (
   <Person who="einstein" uid={uid} {...p} />
 );
-/** ME, the speaker (cut E): navy crewneck, black hair with a small quiff */
+/** ME, the speaker (cut E): full dark beard, cream knit crewneck, black hair with a small quiff */
 export const Me: React.FC<PersonProps> = ({ uid = "me", ...p }) => (
   <Person who="me" uid={uid} {...p} />
 );
