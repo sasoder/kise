@@ -11,29 +11,32 @@
 //   faster 151 · than 160 · human 170 · experts. 175 · (Add 183)
 // DURATION: the slot 12.3874 -> 20.0200 s = 7.633 s x 23.976 = 183 frames (f0..f182).
 //
-// THE MOTION (revision 1: the AI is the robot, every label lives on the board): one long GDPval task board on a
-// plaster wall, two rows of identical cream task cards (each a few faint lines and an empty tick box): the upper row
-// (above the heads) the human expert's (oatmeal shirt, glasses), the lower row (at the robot's chest) the AI's (the
-// robot, tenEarthsBot v4: no antenna, a dial: an older model), the AI's row starting two cards right. Both raise
-// their pencils from f0 (the expert's far hand, up in front of his face, never across it). The expert writes his
-// first card's lines slowly in dark ink. The robot scribbles its first card in orange and ticks it (f20), then
-// scurries the row (two short steps per card at the old speed, 66 units per ~10.7 frames, planted feet) and ticks every
-// card as it passes (the pencil tip up and to the right, so its mitten stays under its wide head; IK on the card's
-// world point each frame); the 11th tick lands on "11" (f135). The camera trucks right with it in one lobe (k 1.85 ->
-// 1.78, cx 160 -> 652 at f136), the expert falling out of shot left. From f132 one continuous pull-back + pan (viewAt:
-// the world turned 54 deg about X=Z=0, settled by ~f170, creep to f182) swings to an oblique view down the board: it
-// recedes to the right in one-point perspective into the haze, both full rows in shot (the expert's 11 cards, the AI's
-// 11 orange ticks), the robot kept in shot all the way (its planted feet the swing's anchor). It hurries on past the
-// board's end, stops on a landing (~f163), steps its back foot up and turns to face the camera, planted, ~245 px tall,
-// head turned toward the expert, clear of the AI's 11th card so all 11 ticks show from f170. The expert stands at the
-// near end, larger, and ticks his ONE card in dark ink on "human experts" (f163-174), lowers the pencil and turns his
-// head toward the orange row.
-// THE LABELS are all on the board plane (LABELS / LabelOnBoard: strips of affine maps through the turned world, each
-// toned by its own distance), so they foreshorten, take the board's light and air and turn with it: HUMAN EXPERT and
-// GPT-5.2 pinned label cards at the starts of their rows (in from f6 / f2), a GDPval header card pinned at the board's
-// top on "OpenAI's" (f92), and "11×" painted in cream on the linen just above the AI row's last four cards, wiped on
-// from "times" (f140); no dust mote comes within 80 px of it (MOTE_SKIP). Living hold: breath, the head turns, the creep. Orange = the robot and its ticks and scribble only;
-// the expert's ink is dark; nothing else is orange.
+// THE MOTION (revision 2: the labels in their cards from f0, a calm board): one long GDPval task board on a plaster
+// wall, one even soft-slate surface in a neat frame, two even rows of identical cream task cards on one column grid
+// (each a few faint lines and an empty tick box, one pin): the upper row (above the heads) the human expert's
+// (oatmeal shirt, glasses), the lower row (at the robot's chest) the AI's (the robot, tenEarthsBot v4: no antenna, a
+// dial: an older model), the AI's row starting two columns right (the robot stands right of him). Both raise their
+// pencils from f0 (the expert's far hand, up in front of his face, never across it). The expert writes his first
+// card's lines slowly in dark ink. The robot scribbles its first card in orange and ticks it (f20), then scurries the
+// row (two short steps per card, 66 units per ~10.7 frames, planted feet) and ticks every card as it passes (the
+// pencil tip up and to the right, so its mitten stays under its wide head; IK on the card's world point each frame);
+// the 11th tick lands on "11" (f135). The camera holds (drifts) on the label cards and both figures to ~f22, then
+// trucks right with the robot in one lobe (k 1.85 -> 1.78, cx 40 -> 652 at f136), the expert falling out of shot
+// left. From f132 one continuous pull-back + pan (viewAt: the world turned 58 deg about X=Z=0, settled by ~f170,
+// creep to f182) swings to an oblique view down the board: it recedes to the right into the haze, the label column,
+// both full rows (the expert's 11 cards, the AI's 11 orange ticks) and the robot in shot (its planted feet the swing's
+// anchor). It hurries on past the row's end, stops on a landing (~f163), steps its back foot up and turns to face the
+// camera, planted, head turned toward the expert, clear of the AI's 11th card so all 11 ticks show from f170. The
+// expert stands at the near end, larger, and ticks his ONE card in dark ink on "human experts" (f163-174), lowers the
+// pencil to his side and turns his head toward the orange row.
+// THE LABELS are all on the board plane (LABELS / LabelOnBoard: affine maps through the turned world, toned by their
+// distance), so they foreshorten, take the board's light and air and turn with it, and all but "11×" are there from
+// f0: HUMAN EXPERT and GPT-5.2 on label cards (the task cards' paper, two pins) in a column at the board's left, each
+// in line with its row and flush with its bottom (left of the expert: no figure covers them, at the start or in the
+// oblique end, where he projects to the right of his place on the board); GDPval printed on a header card at the
+// board's top; "11×" painted in cream on the slate just above the AI row's last four cards, wiped on from "times"
+// (f140); no dust mote comes within 80 px of it (MOTE_SKIP). Living hold: breath, the head turns, the creep. Orange =
+// the robot and its ticks and scribble only; the expert's ink is dark; nothing else is orange.
 //
 // DEPTH: eye 300 units up (1.69 m), dRef 1700 at kRef 1, dolly 0.5, fog by the eye (officeScene(0.35) air). The figures
 // stand at Z 0, the board face (cards) at Z 33.5, the frame 34..46, the plaster wall at Z 46.
@@ -104,11 +107,13 @@ const COL0 = 60;
 export const colX = (c: number) => COL0 + c * PITCH;
 export const ROW = { up: -387, lo: -175 }; // card tops: the expert's row above the heads, the AI's at the robot's chest
 export const UP_COLS = Array.from({ length: 11 }, (_, i) => i); // the expert's 11
-export const LO_COLS = Array.from({ length: 11 }, (_, i) => i + 2); // the AI's 11
+/** the AI's row starts AI_COL0 columns right of the expert's (side by side at the start: the robot right of him) */
+export const AI_COL0 = 2;
+export const LO_COLS = Array.from({ length: 11 }, (_, i) => i + AI_COL0); // the AI's 11
 export const Z_CARD = 33.5;
 const Z_FRAME = 34;
 const Z_WALL = 46;
-const BOARD = { x0: -150, x1: 1400, y0: -548, y1: -45 };
+const BOARD = { x0: -256, x1: 1400, y0: -548, y1: -45 };
 /** card-local (x right, y down from the card's top-left): the tick box, the printed lines, the tick's stroke */
 const BOX = { x0: 5, y0: 12, s: 30 };
 const LINES = [16, 26, 36].map((y) => ({ y, x0: 39, x1: 51.5 }));
@@ -126,6 +131,9 @@ const cardPt = (row: "up" | "lo", col: number, p: P2) => ({ X: colX(col) + p[0],
 export const DEPTH: DepthOpts = { eyeY: -300, dRef: 1700, kRef: 1, dolly: 0.5 };
 const WY_EYE = -284; // the head centre of a standing man at Z 0 (the faces' row)
 const SY_EYE = 775;
+/** the opening's camera X: the label cards, the expert and the robot all in shot; it holds (drifts) while they work
+ *  their first cards, then trucks with the robot */
+const CX0 = 40;
 const LK = pchip(
   [
     [0, Math.log(1.85)],
@@ -137,10 +145,11 @@ const LK = pchip(
 );
 const CXT = pchip(
   [
-    [0, 160],
-    [136, 652],
-    [170, 250],
-    [182, 245],
+    [0, CX0],
+    [22, CX0 + 8],
+    [136, 652 + (AI_COL0 - 2) * PITCH],
+    [170, 250 + (AI_COL0 - 2) * PITCH],
+    [182, 245 + (AI_COL0 - 2) * PITCH],
   ],
   true,
 );
@@ -157,7 +166,7 @@ const camTruck = (f: number): Cam => {
 // from the left. At th 0 this is exactly camTruck.
 export const T_SWING = 132;
 const T_SET = 170;
-const QX = 1010; // the anchor: the robot's planted feet at the end (X, Z 0), past the board's last card
+const QX = 1010 + (AI_COL0 - 2) * PITCH; // the anchor: the robot's planted feet at the end (X, Z 0), past the board's last card
 type Swing = { th: number; F: number; H: number; dQ: number; xQ: number };
 const swingOf = (c: Cam): Swing => {
   const Dc = DEPTH.dRef / Math.sqrt(c.k);
@@ -165,7 +174,7 @@ const swingOf = (c: Cam): Swing => {
   return { th: 0, F, H: 960 + (DEPTH.eyeY - c.cy) * c.k, dQ: Dc, xQ: 540 + (F * (QX - c.cx)) / Dc };
 };
 /** the settled oblique view (as yaw, focal, the camera's distance and X in the turned frame, the horizon) */
-const OBL = { th: (54 * Math.PI) / 180, F: 2200, Dc: 1300, cx: 220, H: 760 };
+export const OBL = { th: (58 * Math.PI) / 180, F: 3080, Dc: 2100, cx: 155, H: 760 };
 const SW_A = swingOf(camTruck(T_SWING));
 const SW_B: Swing = (() => {
   const qx = QX * Math.cos(OBL.th);
@@ -240,7 +249,7 @@ export const SCENE = officeScene(0.35);
 const LEGK = (botWalkAdvance(1) * BOT_WALK_CYCLE) / 88;
 /** the tick stroke's middle, units to the right of its feet: a low reach, the mitten under its wide head */
 export const D_TICK = 56;
-export const XG0 = colX(2) + 23 - D_TICK; // its feet at its first card
+export const XG0 = colX(AI_COL0) + 23 - D_TICK; // its feet at its first card
 export const XE = 0; // the expert's feet
 const G_BASE: CovidPose = CP.walk(1, 0, 0); // covidFolk's walk base (yaw 0.9) at amount 0: its standing pose too
 const G_HALF = 5.3; // frames per step (two steps per card)
@@ -289,7 +298,7 @@ const xTable = (ph: (f: number) => number) => {
   return out;
 };
 /** where it stops: on the first landing past X_GOAL (clear of the AI's last card in the settled view) */
-const X_GOAL = 990;
+const X_GOAL = 990 + (AI_COL0 - 2) * PITCH;
 export const F_STOP = (() => {
   const XR = xTable((f) => tab(PH_RAW, f));
   let i = 0;
@@ -544,13 +553,14 @@ export const expertPose = (f: number, at: P2, scale: number, A: AirWorld): Penci
   const tipCard: P2 = [(tip2[0] - at[0]) / scale, (tip2[1] - at[1]) / scale];
   // the raise (f0-8): the tip travels a curve out in front of his chest and up past the FRONT of his face (never across
   // it) to the card; the arm blends from its free swing onto that curve over the first third
-  // after the tick (f174): the pencil comes off the card out in front of him and down to his waist (a curve in his own
-  // frame, never across his face), held there through the hold
+  // after the tick (f174): the pencil comes off the card out in front of him and down to his side, where it hung at
+  // the start (a curve in his own frame, never across his face; the tip turning down), held there through the hold,
+  // clear of the AI's first card in the oblique view
   const low = sst(E_TICK[2] + 0.5, E_TICK[2] + 7.5, f);
   const tipOff: P2 = (() => {
     if (low <= 0) return tipCard;
     const c: P2 = [tipCard[0] + 110, tipCard[1] - 10];
-    const r: P2 = [96, -168];
+    const r: P2 = [62, -150];
     return [(1 - low) ** 2 * tipCard[0] + 2 * low * (1 - low) * c[0] + low * low * r[0], (1 - low) ** 2 * tipCard[1] + 2 * low * (1 - low) * c[1] + low * low * r[1]];
   })();
   const tipL: P2 =
@@ -562,7 +572,7 @@ export const expertPose = (f: number, at: P2, scale: number, A: AirWorld): Penci
           const pc: P2 = [150, -250];
           return [(1 - u) ** 2 * p0[0] + 2 * u * (1 - u) * pc[0] + u * u * tipCard[0], (1 - u) ** 2 * p0[1] + 2 * u * (1 - u) * pc[1] + u * u * tipCard[1]];
         })();
-  const ang = lerp(40, tgt.ang, reach) - 18 * low;
+  const ang = lerp(lerp(40, tgt.ang, reach), 40, low);
   const dd: P2 = [Math.cos((ang * Math.PI) / 180), Math.sin((ang * Math.PI) / 180)];
   const grip: P2 = [tipL[0] - dd[0] * PENCIL_TIP, tipL[1] - dd[1] * PENCIL_TIP];
   // the FAR hand holds his pencil: the card is above his head, and the near arm would cross his face
@@ -577,7 +587,7 @@ export const expertPose = (f: number, at: P2, scale: number, A: AirWorld): Penci
 // ===================================================================================================================
 // DRAWING (everything in world units through the turned world W: at yaw 0 exactly the frontal drawing)
 // ===================================================================================================================
-const LINEN = { lit: "#7C725F", mid: "#625949", dark: "#39332A" }; // the pinboard: a muted grey-umber linen
+const SLATE = { lit: "#66706B", mid: "#5A635F", dark: "#454D4A" }; // the pinboard: one even soft slate (no texture)
 const CARD_C = "#F3EBDD";
 const INK = "#2E2721";
 const PRINT = "#B9AE99";
@@ -789,7 +799,7 @@ const Board: React.FC<{ W: TW; f: number; uid: string }> = ({ W, f, uid }) => {
   // the inks
   const gw = writeInk(G_WRITE, f);
   const ew = writeInk(E_WRITE, Math.min(f, E_WRITE.lines[2][1]));
-  // the linen in strips (each its own fog), then the light across it and the lips' shadows
+  // the slate in strips (each its own fog), then the lips' shadows
   const N = W.th > 1e-4 ? 24 : 1;
   const strips: React.ReactNode[] = [];
   for (let i = 0; i < N; i++) {
@@ -804,29 +814,19 @@ const Board: React.FC<{ W: TW; f: number; uid: string }> = ({ W, f, uid }) => {
       <g key={i}>
         <defs>
           <linearGradient id={`${uid}-ln${i}`} gradientUnits="userSpaceOnUse" x1="0" y1={f2(ya)} x2="0" y2={f2(yb)}>
-            <stop offset="0" stopColor={L.tone(mixHex(LINEN.lit, LINEN.mid, 0.2), Z_FRAME, 380)} />
-            <stop offset="0.55" stopColor={L.tone(LINEN.mid, Z_FRAME, 250)} />
-            <stop offset="1" stopColor={L.tone(mixHex(LINEN.mid, LINEN.dark, 0.35), Z_FRAME, 120)} />
+            <stop offset="0" stopColor={L.tone(mixHex(SLATE.lit, SLATE.mid, 0.5), Z_FRAME, 380)} />
+            <stop offset="1" stopColor={L.tone(mixHex(SLATE.mid, SLATE.dark, 0.2), Z_FRAME, 120)} />
           </linearGradient>
         </defs>
         <path d={polyOf([P.p(xa, iy0, Zl), P.p(xe, iy0, Zl), P.p(xe, iy1, Zl), P.p(xa, iy1, Zl)])} fill={`url(#${uid}-ln${i})`} />
       </g>,
     );
   }
-  const inset = [P.p(ix0, iy0, Zl), P.p(ix1, iy0, Zl), P.p(ix1, iy1, Zl), P.p(ix0, iy1, Zl)];
   return (
     <g>
       <AirBox A={W.A3} X0={b.x0} X1={b.x1} Y0={b.y0} Y1={b.y1} Z0={Z_FRAME} Z1={Z_WALL - 1} mat={MAT_FRAME} uid={`${uid}-fr`} rim={0.7} />
       <FogAlong W={W} x0={b.x0} x1={b.x1} y0={b.y0} y1={b.y1} Z={Z_FRAME} h={260} uid={`${uid}-frf`} />
       {strips}
-      <defs>
-        <linearGradient id={`${uid}-lnx`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#F3EBDD" stopOpacity={0.1} />
-          <stop offset="0.35" stopColor="#F3EBDD" stopOpacity={0} />
-          <stop offset="1" stopColor="#22180F" stopOpacity={0.08} />
-        </linearGradient>
-      </defs>
-      <path d={polyOf(inset)} fill={`url(#${uid}-lnx)`} />
       {/* the inner shadow under the frame's top and left lips */}
       <path d={polyOf([P.p(ix0, iy0, Zl), P.p(ix1, iy0, Zl), P.p(ix1, iy0 + 5, Zl), P.p(ix0, iy0 + 5, Zl)])} fill="#22180F" opacity={0.16} />
       <path d={polyOf([P.p(ix0, iy0, Zl), P.p(ix0 + 4, iy0, Zl), P.p(ix0 + 4, iy1, Zl), P.p(ix0, iy1, Zl)])} fill="#22180F" opacity={0.12} />
@@ -841,12 +841,12 @@ const Board: React.FC<{ W: TW; f: number; uid: string }> = ({ W, f, uid }) => {
 };
 
 // ===================================================================================================================
-// THE MOTES: the stage's dust (pandemicAir Motes, same layers, hashes and drift), drawn here so that the five motes
+// THE MOTES: the stage's dust (pandemicAir Motes, same layers, hashes and drift), drawn here so that the two motes
 // whose paths would pass within 80 px of "11×" from f140 are left out for the whole cut (no pop): at this camera
 // speed a mote sweeps ~30 px a frame across the label's row, so no placement clears them all. The AirStage gets
 // motes={0}; the far layers go under the world, the mid layer's odd half and the near layer in its front slot.
 // ===================================================================================================================
-export const MOTE_SKIP = new Set(["1:1", "1:11", "1:95", "2:4", "2:11"]);
+export const MOTE_SKIP = new Set(["1:95", "2:11"]);
 export type ClipMote = { id: string; layer: number; x: number; y: number; r: number; a: number };
 export const clipMotes = (v: AirView, layer: 0 | 1 | 2, half?: 0 | 1): ClipMote[] => {
   const L = MOTE_LAYERS[layer];
@@ -901,103 +901,133 @@ const MoteLayerSvg: React.FC<{ v: AirView; layer: 0 | 1 | 2; half?: 0 | 1 }> = (
 };
 
 // ===================================================================================================================
-// THE LABELS: all on the board, in its plane (Z), drawn through the turned world like the cards: they foreshorten,
-// take the board's light and air, and turn with it. GDPval a header card pinned at the board's top, HUMAN EXPERT and
-// GPT-5.2 label cards pinned at the starts of their rows, 11× painted in cream on the linen just above the AI row's
-// last four cards (baseline 28 units above their tops, its cap top 76 below the expert's row: it belongs to the AI's
-// row; it clears the robot's head on every frame, the robot past it before the wipe reaches it). Long labels are cut into strips along X, each strip its own affine map and tone (true perspective
-// across the label). X, Y = the label's centre; size = the font size (units); wEm = the measured text width in ems.
+// THE LABELS: all on the board, in its plane (Z), drawn through the turned world like the cards (they foreshorten,
+// take the board's light and air and turn with it), all there from f0 but "11×". Each row starts with its own label
+// card, the task cards' paper stock pinned in line and flush with the row's bottom: HUMAN EXPERT (two lines, just left
+// of the expert's first card, above his head) and GPT-5.2 (the AI row's first AI_COL0 slots, between the two figures
+// at the start), both texts left-aligned at the same inset and size. GDPval is printed on a header card at the
+// board's top. "11×" is painted in cream on the slate just above the AI row's last four cards (its baseline 28 units
+// over their tops), wiped on from "times" (f140). Long labels are cut into strips along X (each its own affine map
+// and tone). x0, y0, w, h = the card (the paint's box); size = the font size (units); lines = the text lines.
 // ===================================================================================================================
-export type BoardLabel = { id: string; text: string; kind: "card" | "paint"; X: number; Y: number; size: number; wEm: number; f0: number };
+/** Libre Caslon Text Bold, measured: the cap height and the ink widths (em, letter-spacing 0.02 em) */
+export const CAP_EM = 0.8;
+export const TEXT_EM: Record<string, number> = { HUMAN: 4.49, EXPERT: 4.58, "GPT-5.2": 4.18, GDPval: 4.02, "11×": 1.34 };
+const LABEL_SIZE = 30;
+const LABEL_H = 76;
+const LABEL_PAD = 10;
+const LABEL_LEAD = 1.1;
+/** the label column: both row labels the same card, right edge LEGEND_X1 (left of the expert, so neither figure
+ *  covers them at the start nor at the oblique end, where he projects to the right of his place on the board) */
+const LEGEND_W = 2 * LABEL_PAD + TEXT_EM.EXPERT * LABEL_SIZE;
+const LEGEND_X1 = -45;
+const GD = { size: 40, padX: 16, padY: 14, cx: (colX(0) + colX(AI_COL0 + 10) + CARD.w) / 2, y0: -493 };
+const P11 = { cx: (colX(AI_COL0 + 7) + colX(AI_COL0 + 10) + CARD.w) / 2, base: ROW.lo - 28, size: 84, wEm: 1.75 };
+export type BoardLabel = { id: string; lines: string[]; kind: "card" | "paint"; x0: number; y0: number; w: number; h: number; size: number; align: "left" | "center"; f0: number };
 export const LABELS: BoardLabel[] = [
-  { id: "plHE", text: "HUMAN EXPERT", kind: "card", X: 205, Y: -430, size: 41, wEm: 9.9, f0: 6 },
-  { id: "plG", text: "GPT-5.2", kind: "card", X: 330, Y: -268, size: 42, wEm: 4.4, f0: 2 },
-  { id: "plGD", text: "GDPval", kind: "card", X: 470, Y: -500, size: 46, wEm: 3.95, f0: 92 },
-  { id: "pl11", text: "11×", kind: "paint", X: 775, Y: -232, size: 84, wEm: 1.75, f0: 140 },
+  { id: "plHE", lines: ["HUMAN", "EXPERT"], kind: "card", x0: LEGEND_X1 - LEGEND_W, y0: ROW.up + CARD.h - LABEL_H, w: LEGEND_W, h: LABEL_H, size: LABEL_SIZE, align: "left", f0: -1e9 },
+  { id: "plG", lines: ["GPT-5.2"], kind: "card", x0: LEGEND_X1 - LEGEND_W, y0: ROW.lo + CARD.h - LABEL_H, w: LEGEND_W, h: LABEL_H, size: LABEL_SIZE, align: "left", f0: -1e9 },
+  { id: "plGD", lines: ["GDPval"], kind: "card", x0: GD.cx - GD.padX - (TEXT_EM.GDPval * GD.size) / 2, y0: GD.y0, w: 2 * GD.padX + TEXT_EM.GDPval * GD.size, h: 2 * GD.padY + CAP_EM * GD.size, size: GD.size, align: "center", f0: -1e9 },
+  { id: "pl11", lines: ["11×"], kind: "paint", x0: P11.cx - (P11.wEm / 2 + 0.08) * P11.size, y0: P11.base - 0.34 * P11.size - 0.45 * P11.size, w: (P11.wEm + 0.16) * P11.size, h: 0.9 * P11.size, size: P11.size, align: "center", f0: 140 },
 ];
-/** a label's box in the board plane (units): the card (or the paint's extent) and the text's cap band */
-export const labelBox = (lb: BoardLabel) => {
-  const tw = lb.wEm * lb.size;
-  const padX = lb.kind === "card" ? 0.5 * lb.size : 0.08 * lb.size;
-  const w = tw + 2 * padX;
-  const h = lb.kind === "card" ? 1.3 * lb.size : 0.9 * lb.size;
-  const cap = 0.66 * lb.size;
-  return { x0: lb.X - w / 2, w, y0: lb.Y - h / 2, h, tx0: lb.X - tw / 2, tx1: lb.X + tw / 2, cy0: lb.Y - cap / 2, cy1: lb.Y + cap / 2, Z: lb.kind === "card" ? Z_CARD - 0.4 : Z_FRAME - 0.3 };
+/** a label's text lines in the card's local units: each line's ink box (x0..x1, the cap top cy0, the baseline cy1) */
+export const labelLines = (lb: BoardLabel) => {
+  const s = lb.size;
+  if (lb.kind === "paint") {
+    const base = lb.h / 2 + 0.34 * s;
+    const tw = (TEXT_EM[lb.lines[0]] ?? 1.75) * s;
+    return [{ text: lb.lines[0], x0: lb.w / 2 - tw / 2, x1: lb.w / 2 + tw / 2, cy0: base - CAP_EM * s, cy1: base }];
+  }
+  const block = CAP_EM * s + (lb.lines.length - 1) * LABEL_LEAD * s;
+  const top = (lb.h - block) / 2;
+  return lb.lines.map((t, i) => {
+    const tw = (TEXT_EM[t] ?? 4) * s;
+    const x0 = lb.align === "left" ? LABEL_PAD : lb.w / 2 - tw / 2;
+    const cy1 = top + CAP_EM * s + i * LABEL_LEAD * s;
+    return { text: t, x0, x1: x0 + tw, cy0: cy1 - CAP_EM * s, cy1 };
+  });
 };
-/** the entrance (0..1 over 12 frames): a card fades in as it drops onto its pins, the paint wipes on left to right */
+/** a label's box in the board plane (units): the card (or the paint's extent), its text's ink box, its depth */
+export const labelBox = (lb: BoardLabel) => {
+  const ls = labelLines(lb);
+  return {
+    x0: lb.x0,
+    w: lb.w,
+    y0: lb.y0,
+    h: lb.h,
+    tx0: lb.x0 + Math.min(...ls.map((l) => l.x0)),
+    tx1: lb.x0 + Math.max(...ls.map((l) => l.x1)),
+    cy0: lb.y0 + Math.min(...ls.map((l) => l.cy0)),
+    cy1: lb.y0 + Math.max(...ls.map((l) => l.cy1)),
+    lines: ls.map((l) => ({ ...l, x0: lb.x0 + l.x0, x1: lb.x0 + l.x1, cy0: lb.y0 + l.cy0, cy1: lb.y0 + l.cy1 })),
+    Z: lb.kind === "card" ? Z_CARD - 0.4 : Z_FRAME - 0.3,
+  };
+};
+/** the paint's wipe (0..1 over 12 frames from f0, left to right); the cards are simply there */
 export const labelT = (lb: BoardLabel, f: number) => c01((f - lb.f0) / 12);
 const LabelOnBoard: React.FC<{ W: TW; lb: BoardLabel; f: number }> = ({ W, lb, f }) => {
   const t = labelT(lb, f);
   if (t <= 0) return null;
   const b = labelBox(lb);
   const card = lb.kind === "card";
-  const drop = card ? -9 * (1 - ease(t)) : 0;
-  const y0 = b.y0 + drop;
-  const N = W.th > 1e-4 ? Math.max(4, Math.ceil(b.w / 20)) : 1;
-  const reveal = card ? b.w : ease(t) * b.w;
+  // a card is one affine piece with one tone (strips would band its paper); the paint is cut into strips
+  const N = card || W.th < 1e-4 ? 1 : Math.max(4, Math.ceil(lb.w / 20));
+  const reveal = card ? lb.w : ease(t) * lb.w;
   const s = lb.size;
+  const ls = labelLines(lb);
+  const font = { fontFamily: PLATE_FONT, fontWeight: 700, fontSize: s, letterSpacing: "0.02em", fontVariantNumeric: "lining-nums" } as const;
   const strips: React.ReactNode[] = [];
   for (let i = 0; i < N; i++) {
-    const ua = (b.w * i) / N;
-    const ub = (b.w * (i + 1)) / N;
+    const ua = (lb.w * i) / N;
+    const ub = (lb.w * (i + 1)) / N;
     if (ua >= reveal) break;
-    const L = W.loc(b.x0 + (ua + ub) / 2);
+    const L = W.loc(lb.x0 + (ua + ub) / 2);
     const tone = (hex: string) => L.tone(hex, b.Z, 250);
     const ca = i === 0 ? -8 : ua - 0.12;
-    const cb = Math.min(reveal, i === N - 1 ? b.w + 8 : ub + 0.12);
+    const cb = Math.min(reveal, i === N - 1 ? lb.w + 8 : ub + 0.12);
     const cid = `${lb.id}-c${i}`;
     strips.push(
-      <g key={i} transform={rectMatrix(W, b.x0 + ua, y0, ub - ua, b.h, b.Z)}>
+      <g key={i} transform={rectMatrix(W, lb.x0 + ua, lb.y0, ub - ua, lb.h, b.Z)}>
         <defs>
           <clipPath id={cid} clipPathUnits="userSpaceOnUse">
-            <rect x={f2(ca)} y={f2(-b.h)} width={f2(Math.max(0, cb - ca))} height={f2(3 * b.h)} />
+            <rect x={f2(ca)} y={f2(-lb.h)} width={f2(Math.max(0, cb - ca))} height={f2(3 * lb.h)} />
           </clipPath>
         </defs>
         <g transform={`translate(${f2(-ua)} 0)`} clipPath={`url(#${cid})`}>
           {card ? (
             <g>
-              <rect x={2.5} y={3} width={b.w} height={b.h} rx={1.6} fill={tone("#22180F")} opacity={0.28} />
-              <rect x={0} y={0} width={b.w} height={b.h} rx={1.3} fill={tone(CARD_C)} />
-              <rect x={0} y={0} width={b.w} height={2.4} fill={tone("#FFF8EC")} opacity={0.7} />
-              <rect x={0} y={b.h - 5} width={b.w} height={5} fill={tone("#D9CDB4")} opacity={0.45} />
-              {[11, b.w - 11].map((px) => (
+              <rect x={2.5} y={3} width={lb.w} height={lb.h} rx={1.6} fill={tone("#22180F")} opacity={0.24} />
+              <rect x={0} y={0} width={lb.w} height={lb.h} rx={1.3} fill={tone(CARD_C)} />
+              <rect x={0} y={0} width={lb.w} height={2.2} fill={tone("#FFF8EC")} opacity={0.7} />
+              <rect x={0} y={lb.h - 5} width={lb.w} height={5} fill={tone("#D9CDB4")} opacity={0.45} />
+              {[11, lb.w - 11].map((px) => (
                 <g key={px}>
-                  <circle cx={px} cy={6} r={2.6} fill={tone(PIN)} />
-                  <circle cx={px - 0.8} cy={5.2} r={0.9} fill={tone("#C9A898")} />
+                  <circle cx={px} cy={3.6} r={2.4} fill={tone(PIN)} />
+                  <circle cx={px - 0.7} cy={2.9} r={0.8} fill={tone("#C9A898")} />
                 </g>
               ))}
-              <text x={b.w / 2} y={b.h / 2 + 0.34 * s + 1.5} textAnchor="middle" fill={tone(INK)} style={{ fontFamily: PLATE_FONT, fontWeight: 700, fontSize: s, letterSpacing: "0.02em", fontVariantNumeric: "lining-nums" }}>
-                {lb.text}
-              </text>
+              {ls.map((l) => (
+                <text key={l.text} x={f2(l.x0 - 0.04 * s)} y={f2(l.cy1)} fill={tone(INK)} style={font}>
+                  {l.text}
+                </text>
+              ))}
             </g>
           ) : (
-            <text
-              x={b.w / 2}
-              y={b.h / 2 + 0.34 * s}
-              textAnchor="middle"
-              fill={tone(CARD_C)}
-              stroke={tone("#241C14")}
-              strokeOpacity={0.7}
-              strokeWidth={0.08 * s}
-              strokeLinejoin="round"
-              paintOrder="stroke"
-              style={{ fontFamily: PLATE_FONT, fontWeight: 700, fontSize: s, letterSpacing: "0.02em", fontVariantNumeric: "lining-nums" }}
-            >
-              {lb.text}
+            <text x={lb.w / 2} y={ls[0].cy1} textAnchor="middle" fill={tone(CARD_C)} stroke={tone("#241C14")} strokeOpacity={0.7} strokeWidth={0.08 * s} strokeLinejoin="round" paintOrder="stroke" style={font}>
+              {ls[0].text}
             </text>
           )}
         </g>
       </g>,
     );
   }
-  return <g opacity={card ? sst(0, 0.7, t) : 1}>{strips}</g>;
+  return <g>{strips}</g>;
 };
-/** the board plane's grid (a check overlay: the labels sit on it) */
 const PlaneGrid: React.FC<{ W: TW }> = ({ W }) => {
   const P = W.A3.P;
   const Z = Z_CARD - 0.4;
   const d: string[] = [];
-  for (let X = -100; X <= 1300; X += 50) d.push(pathOf([P.p(X, BOARD.y0, Z), P.p(X, BOARD.y1, Z)]));
+  for (let X = -250; X <= 1300; X += 50) d.push(pathOf([P.p(X, BOARD.y0, Z), P.p(X, BOARD.y1, Z)]));
   for (let Y = -540; Y <= -50; Y += 25) d.push(pathOf([P.p(BOARD.x0, Y, Z), P.p(BOARD.x1, Y, Z)]));
   return <path d={d.join("")} fill="none" stroke="#00E5FF" strokeWidth={1.2} opacity={0.7} />;
 };
@@ -1022,7 +1052,7 @@ const ElevenTimesFaster: React.FC<z.infer<typeof schema>> = ({ grid }) => {
     <AirStage
       v={W.A.v}
       bloom={0.22}
-      shafts={0.6}
+      shafts={0.3}
       motes={0}
       front={
         <>

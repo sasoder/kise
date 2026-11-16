@@ -2,8 +2,9 @@
 // bun generated/components/rsi-since-writing/check-eleven-times-faster.ts
 // Every frame: the camera lobes (k, cx and their steps), both faces vs the caption bands and the keep-in box, the
 // pencil tips on their IK targets while drawing, the robot's planted feet (no slide), its head vs the expert's card,
-// the rows of cards vs the bands, the labels (on the board plane: their projected text boxes and cap heights) vs the
-// keep-in and the bands, and in the settled frame the AI's 11 cards clear of the robot.
+// the rows of cards vs the bands, the labels (on the board plane: each text line's projected ink box and cap height)
+// vs the keep-in, the bands and the figures (never covered), and in the settled frame the AI's 11 cards clear of the
+// robot; "11×" clear of the robot's head and of every dust mote by 80 px from f140.
 import { botAnchors } from "../rsi-ten-earths/tenEarthsBot";
 import { humanAnchors } from "./sinceWritingFolk";
 import {
@@ -48,7 +49,7 @@ let panMax = 0;
 let panF = 0;
 let accMax = 0;
 let prevV: number[] = [];
-const boardPts = [[450, -250], [colX(2), ROW.lo], [colX(12), ROW.lo]] as const;
+const boardPts = [[450, -250], [colX(LO_COLS[0]), ROW.lo], [colX(LO_COLS[10]), ROW.lo]] as const;
 const sp = (f: number) => {
   const { cam, W } = worldAt(f, false);
   return boardPts.map(([x, y]) => scr(W.A3.P.p(x, y, Z_CARD), cam));
@@ -73,9 +74,9 @@ let footSlide = 0;
 let footF = 0;
 let headCard = 999;
 let sliverFrames = 0;
-const headPlate: string[] = [];
 let moteGap = { d: 1e9, f: 0, id: "" };
 let paintHead = { d: 1e9, f: 0 };
+const textGap: Record<string, { d: number; f: number; by: string }> = {};
 const exitFrames: number[] = [];
 for (let f = 0; f < DURATION; f++) {
   const { cam, W } = worldAt(f, false);
@@ -202,39 +203,86 @@ for (let f = 0; f < DURATION; f++) {
   const fIn = (h: number[], r: number) => h[0] - r > 0 && h[0] + r < 1080;
   if (!fIn(eh, er) && !fIn(gh, gr)) fail(`f${f}: no figure in shot`);
   if (f >= 136 && !fIn(gh, gr)) fail(`f${f}: the robot's head leaves the frame`);
-  // ---- the labels: on the board plane, their text boxes (the measured width x the cap band) projected through the
-  // turned world; the cap height on screen at each end of the text (the far end is the smaller under perspective)
+  // ---- the figures as occluders (screen): head discs and limb / torso capsules from their anchors (world px)
+  type Cap = { a: number[]; b: number[]; r: number; who: string };
+  const P = (a: unknown) => scr(a as [number, number], cam);
+  const occ: Cap[] = [];
+  const limb = (who: string, pts: unknown[], r: number) => {
+    for (let i = 0; i + 1 < pts.length; i++) occ.push({ a: P(pts[i]), b: P(pts[i + 1]), r, who });
+  };
+  {
+    const k = cam.k;
+    occ.push({ a: eh, b: eh, r: 1.15 * er, who: "expert head" });
+    const eSh = Math.hypot(P(ea.shoulderR)[0] - P(ea.shoulderL)[0], P(ea.shoulderR)[1] - P(ea.shoulderL)[1]) / 2;
+    const midS = [(P(ea.shoulderL)[0] + P(ea.shoulderR)[0]) / 2, (P(ea.shoulderL)[1] + P(ea.shoulderR)[1]) / 2];
+    occ.push({ a: midS, b: P(ea.hip), r: eSh + 4, who: "expert body" });
+    limb("expert arm", [ea.shoulderL, ea.wristL, ea.handL], 10 * e.scale * k);
+    limb("expert arm", [ea.shoulderR, ea.wristR, ea.handR], 10 * e.scale * k);
+    limb("expert leg", [ea.hip, ea.kneeL, ea.ankleL], 12 * e.scale * k);
+    limb("expert leg", [ea.hip, ea.kneeR, ea.ankleR], 12 * e.scale * k);
+    occ.push({ a: gh, b: gh, r: 1.35 * ga.headR * k, who: "robot head" });
+    const gHem = Math.abs(P(ga.hemR)[0] - P(ga.hemL)[0]) / 2;
+    occ.push({ a: P(ga.chest), b: P(ga.hip), r: gHem + 3, who: "robot body" });
+    limb("robot arm", [ga.shoulderL, ga.wristL, ga.mittenL], 9 * g.scale * k);
+    limb("robot arm", [ga.shoulderR, ga.wristR, ga.mittenR], 9 * g.scale * k);
+  }
+  const boxGap = (x0: number, x1: number, y0: number, y1: number, c: Cap) => {
+    // the distance from a capsule's axis to the box, less its radius (sampled along the axis)
+    let d = 1e9;
+    for (let i = 0; i <= 8; i++) {
+      const px = c.a[0] + ((c.b[0] - c.a[0]) * i) / 8;
+      const py = c.a[1] + ((c.b[1] - c.a[1]) * i) / 8;
+      d = Math.min(d, Math.hypot(Math.max(x0 - px, 0, px - x1), Math.max(y0 - py, 0, py - y1)) - c.r);
+    }
+    return d;
+  };
+  // ---- the labels: on the board plane, each text line's ink box (the measured width x the cap band) projected
+  // through the turned world; the cap height on screen at each end of each line (the far end is the smaller)
   for (const lb of LABELS) {
     if (labelT(lb, f) <= 0) continue;
+    const name = lb.lines.join(" ");
     const bx = labelBox(lb);
-    const corners = [scr(A.P.p(bx.tx0, bx.cy0, bx.Z), cam), scr(A.P.p(bx.tx1, bx.cy0, bx.Z), cam), scr(A.P.p(bx.tx1, bx.cy1, bx.Z), cam), scr(A.P.p(bx.tx0, bx.cy1, bx.Z), cam)];
-    const x0 = Math.min(...corners.map((c) => c[0]));
-    const x1 = Math.max(...corners.map((c) => c[0]));
-    const y0 = Math.min(...corners.map((c) => c[1]));
-    const y1 = Math.max(...corners.map((c) => c[1]));
-    const capPx = Math.min(corners[3][1] - corners[0][1], corners[2][1] - corners[1][1]);
+    const quad = (u0: number, u1: number, v0: number, v1: number) => [scr(A.P.p(u0, v0, bx.Z), cam), scr(A.P.p(u1, v0, bx.Z), cam), scr(A.P.p(u1, v1, bx.Z), cam), scr(A.P.p(u0, v1, bx.Z), cam)];
+    const ext = (q: number[][]) => [Math.min(...q.map((c) => c[0])), Math.max(...q.map((c) => c[0])), Math.min(...q.map((c) => c[1])), Math.max(...q.map((c) => c[1]))];
+    const [x0, x1, y0, y1] = ext(quad(bx.tx0, bx.tx1, bx.cy0, bx.cy1));
+    let capPx = 1e9;
+    let capL = 0;
+    let capR = 0;
+    for (const l of bx.lines) {
+      const q = quad(l.x0, l.x1, l.cy0, l.cy1);
+      capL = q[3][1] - q[0][1];
+      capR = q[2][1] - q[1][1];
+      capPx = Math.min(capPx, capL, capR);
+      // the figures never cover a card label's text (wholly visible lines only: the camera crops them at the edges)
+      const [lx0, lx1, ly0, ly1] = ext(q);
+      if (lb.kind === "card" && lx0 > 0 && lx1 < 1080) {
+        for (const c of occ) {
+          const d = boxGap(lx0, lx1, ly0, ly1, c);
+          const key = l.text;
+          if (!textGap[key] || d < textGap[key].d) textGap[key] = { d, f, by: c.who };
+          if (d < 0) fail(`f${f}: the ${c.who} covers "${l.text}" (by ${(-d).toFixed(0)} px)`);
+        }
+      }
+    }
     const visible = x1 > 0 && x0 < 1080;
     if (!visible) continue;
-    // the robot's head over a label's text (logged), and never over the painted part of "11×" (a 10 px margin; the
-    // paint wipes on left to right over 12 frames, as LabelOnBoard draws it)
+    // the robot's head never over the painted part of "11×" (a 10 px margin; the paint wipes on left to right over
+    // 12 frames, as LabelOnBoard draws it)
     if (lb.kind === "paint") {
       const rev = Math.min(bx.tx1, bx.x0 + (labelT(lb, f) ** 2 * (3 - 2 * labelT(lb, f))) * bx.w);
-      const pc = [scr(A.P.p(bx.tx0, bx.cy0, bx.Z), cam), scr(A.P.p(rev, bx.cy0, bx.Z), cam), scr(A.P.p(rev, bx.cy1, bx.Z), cam), scr(A.P.p(bx.tx0, bx.cy1, bx.Z), cam)];
-      const [px0, px1] = [Math.min(...pc.map((c) => c[0])), Math.max(...pc.map((c) => c[0]))];
-      const [py0, py1] = [Math.min(...pc.map((c) => c[1])), Math.max(...pc.map((c) => c[1]))];
+      const [px0, px1, py0, py1] = ext(quad(bx.tx0, rev, bx.cy0, bx.cy1));
       const gap = Math.hypot(Math.max(px0 - gh[0], 0, gh[0] - px1), Math.max(py0 - gh[1], 0, gh[1] - py1)) - gr;
       if (gIn && rev > bx.tx0 && gap < paintHead.d) paintHead = { d: gap, f };
       if (gIn && rev > bx.tx0 && gap < 10) fail(`f${f}: the robot's head within ${gap.toFixed(0)} px of the painted "11×"`);
     }
-    if (gIn && gh[0] + gr > x0 && gh[0] - gr < x1 && gh[1] + gr > y0 && gh[1] - gr < y1) headPlate.push(`${lb.text}@f${f}`);
-    if (inBand(y0, y1)) fail(`f${f}: label ${lb.text} in a caption band (y ${y0.toFixed(0)}-${y1.toFixed(0)})`);
-    if (y0 < KEEP.y0 || y1 > KEEP.y1) fail(`f${f}: label ${lb.text} outside the keep-in vertically (y ${y0.toFixed(0)}-${y1.toFixed(0)})`);
-    if (f >= 170 && (x0 < KEEP.x0 || x1 > KEEP.x1)) fail(`f${f}: label ${lb.text} outside the keep-in in the settled frame (x ${x0.toFixed(0)}-${x1.toFixed(0)})`);
-    const minCap = lb.text === "11×" ? 45 : 34;
-    if (f >= 170 && capPx < minCap) fail(`f${f}: label ${lb.text} cap ${capPx.toFixed(0)} px < ${minCap}`);
+    if (inBand(y0, y1)) fail(`f${f}: label ${name} in a caption band (y ${y0.toFixed(0)}-${y1.toFixed(0)})`);
+    if (y0 < KEEP.y0 || y1 > KEEP.y1) fail(`f${f}: label ${name} outside the keep-in vertically (y ${y0.toFixed(0)}-${y1.toFixed(0)})`);
+    if (f >= 170 && (x0 < KEEP.x0 || x1 > KEEP.x1)) fail(`f${f}: label ${name} outside the keep-in in the settled frame (x ${x0.toFixed(0)}-${x1.toFixed(0)})`);
+    const minCap = lb.kind === "paint" ? 45 : 34;
+    if (f >= 170 && capPx < minCap) fail(`f${f}: label ${name} cap ${capPx.toFixed(0)} px < ${minCap}`);
     // no dust mote within 80 px of "11×" from f140 (the motes as drawn: the swayed view, the mid layer's odd half and
     // the near layer, which sit over the world; each mote's full radius, the soft edge included)
-    if (lb.text === "11×" && f >= 140) {
+    if (lb.kind === "paint" && f >= 140) {
       const sw = worldAt(f, true);
       const cs = [[bx.tx0, bx.cy0], [bx.tx1, bx.cy0], [bx.tx1, bx.cy1], [bx.tx0, bx.cy1]].map(([u, w]) => scr(sw.W.A3.P.p(u, w, bx.Z), sw.cam));
       const [sx0, sx1] = [Math.min(...cs.map((c) => c[0])), Math.max(...cs.map((c) => c[0]))];
@@ -245,7 +293,7 @@ for (let f = 0; f < DURATION; f++) {
         if (d < 80) fail(`f${f}: mote ${m.id} ${d.toFixed(0)} px from "11×" (x ${m.x.toFixed(0)}, y ${m.y.toFixed(0)})`);
       }
     }
-    if (f === DURATION - 1 || f === 20 || (lb.text === "GDPval" && f === 111)) console.log(`  f${f} ${lb.text}: cap ${(corners[3][1] - corners[0][1]).toFixed(0)} -> ${(corners[2][1] - corners[1][1]).toFixed(0)} px (left -> right end), x ${x0.toFixed(0)}-${x1.toFixed(0)}, y ${y0.toFixed(0)}-${y1.toFixed(0)}`);
+    if (f === DURATION - 1 || f === 20 || f === 111) console.log(`  f${f} ${name}: cap ${capPx.toFixed(0)} px min (last line ${capL.toFixed(0)} -> ${capR.toFixed(0)}), x ${x0.toFixed(0)}-${x1.toFixed(0)}, y ${y0.toFixed(0)}-${y1.toFixed(0)}`);
   }
   if (f === DURATION - 1 || f === 0 || f === 136) console.log(`f${f}: expert ${(scr(ea.ankleL as [number, number], cam)[1] - eh[1] + er).toFixed(0)} px tall-ish, face y ${eh[1].toFixed(0)} x ${eh[0].toFixed(0)}; robot face y ${gh[1].toFixed(0)} x ${gh[0].toFixed(0)}`);
 }
@@ -255,7 +303,7 @@ console.log(`robot planted-foot slide: max ${footSlide.toFixed(2)} units per fra
 console.log(`robot head vs the expert's card 0: min gap ${headCard === 999 ? "never under it" : headCard.toFixed(1) + " px"}`);
 console.log(`robot head vs the painted "11×": min gap ${paintHead.d.toFixed(0)} px (f${paintHead.f})`);
 console.log(`nearest dust mote to "11×" from f140: ${moteGap.d.toFixed(0)} px (${moteGap.id} at f${moteGap.f})`);
-console.log(`robot head over a plate: ${headPlate.length ? headPlate.join(" ") : "never"}`);
+console.log(`label text vs the figures (min gap, px): ${Object.entries(textGap).map(([k, v]) => `${k} ${v.d.toFixed(0)} (f${v.f}, ${v.by})`).join("; ")}`);
 console.log(`robot straddling the right edge: ${sliverFrames} frames (${exitFrames.join(",")})`);
 if (headCard < 4) fail(`the robot's head comes within ${headCard.toFixed(1)} px of the expert's card`);
 if (tipErrG > 2 || tipErrE > 2) fail("a pencil tip leaves its stroke");
