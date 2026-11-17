@@ -7,6 +7,8 @@ Writes RGBA PNGs to public/shruti-trailer/drowning/:
                                          it flips, so the heap shows paper where the turning sheet narrows
   <name>_sh.png                          each sprite's hard-shadow silhouette (pure black, its alpha)
   desk.png                               the office desk cut-out
+  person.png                             (--person) the woman at the desk, waist up (rev 4): an anonymous stand-in for
+                                         the reader of the applications
 Every sprite is pre-graded to the clip's photo grade (nealShared NEAL_FILTER: grayscale, sepia 0.14, contrast 0.9,
 brightness 1.04), so the component draws hundreds of sheets without a CSS filter each.
 
@@ -16,11 +18,19 @@ fall-off flattened), flipped/turned per sheet; the letter keeps its two fold cre
 slop sheet stays perfectly flat and clean (machine-made). Without --texture the paper is a drawn stand-in tone.
 --desk <png with alpha> uses the cut-out desk photo (the Vision matte: scripts/clips/neal-stephenson-trailer/
 neal-matte.swift + subject-cutout.py); without it a drawn stand-in desk.
+--person <png with alpha> the cut-out reader (rev 4): person_desk_a_SriLankaClerkReadingLedger.jpg (Peter van der
+Sluijs / Wikimedia Commons, CC BY-SA 3.0) through the Vision matte (neal-matte.swift fg) and subject-cutout.py:
+  subject-cutout.py <photo> <mask> assets-src/shruti-trailer/person_cutout.png 900 \
+      --cutpoly "395,672 600,672 600,710 395,710" --erode 5 --lo 0.45
+(the cutpoly drops the calculator under her right hand), then a local luminance key took a white wall sliver off the
+back of her hair (cut-out px x 652-720, y 90-270, lum > 140, grown 2 px). The bake lifts her mid-tones a little
+(gamma 0.8) before the grade, so a dark face and a purple sari still read in b&w.
 (--paper <jpg> ... would use whole photographed sheets as the originals; the delivered photos have none usable.)
 
 Run (system python + the user's site-packages; -I because the photos are downloaded data):
   /usr/bin/python3 -I scripts/clips/shruti-trailer/bake-drowning-sheets.py assets-src/shruti-trailer/openai_mark_black.png \
-      --texture <assets>/paper_scattered_sheets.jpg 2650 1700 3268 2500 --desk assets-src/shruti-trailer/desk_cutout.png
+      --texture <assets>/paper_scattered_sheets.jpg 2650 1700 3268 2500 --desk assets-src/shruti-trailer/desk_cutout.png \
+      --person assets-src/shruti-trailer/person_cutout.png
 """
 import os
 import sys
@@ -50,6 +60,7 @@ def opt_list(name):
 
 PAPERS = opt_list("--paper")
 DESK = (opt_list("--desk") or [None])[0]
+PERSON = (opt_list("--person") or [None])[0]
 TEXARG = opt_list("--texture")
 
 SW, SH = 360, 466  # sprite px (US letter 8.5 x 11)
@@ -289,6 +300,10 @@ save(sheet_slop(MARK), "slop")
 back = np.asarray(finish(shade(paper_canvas(7)[0], curl=0.06))).astype(np.float64)
 back[..., :3] *= 0.9  # the back, turned away from the light
 save(Image.fromarray(back.astype(np.uint8)), "back")
+if PERSON:
+    pa = np.asarray(Image.open(PERSON).convert("RGBA")).astype(np.float64)
+    pa[..., :3] = 255 * (pa[..., :3] / 255) ** 0.8  # lift the mid-tones before the grade
+    save(Image.fromarray(pa.round().astype(np.uint8)), "person")
 if DESK:
     save(Image.open(DESK).convert("RGBA"), "desk")
 else:

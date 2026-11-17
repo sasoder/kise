@@ -34,7 +34,17 @@
 // f64 the push-in runs to k ~1.9 at f139 (one smooth lobe, still creeping), so the heap-face sheets are ~280-310 px
 // tall at f118-139 and the knot (41 % of the copy's width, ~51 world px) is ~82 px at f118, ~88 px at f125, ~97 px
 // at f139 at 1920 wide.
-// No text, no counter, no person; the OpenAI knot is the only logo. CHAIN: none (the chain means India's outliers).
+// THE READER (rev 4, user note "a cutout of the person behind the desk ... a bit more personal"): an anonymous woman
+// (a stand-in for whoever reads the applications; never the speaker, never named) sits behind the desk, forearms on
+// its top, head bowed over her reading, 330 world px wide (shoulders ~1/3 of the desk), on the same +4/+4 hard shadow.
+// She is alive with two rigid transforms only: a slow breath (0.6 % stretch from her bottom edge) and a tiny sway
+// (+-0.6 deg). Desk-top sheets land around her, never over her face. The rising heap lifts her (she only rises,
+// smoothly, following the simulated heap across her shoulders), so from "drowning" on she is up to her chest and
+// shoulders in paper, head clear, and stays there through the wave and the push-in. Sheets that would cover her face
+// rest BEHIND her (a fixed per-sheet split: behind for the whole fall, or in front for the whole fall, no flicker),
+// and every sheet that comes to rest in front of her slides in from beside her, so none settles across her face.
+// Rev 4 aims the push-in ~120 world px higher (PUSH_Y), so her head sits in the upper middle of the frame to f139.
+// No text and no counter; the OpenAI knot is the only logo. CHAIN: none (the chain means India's outliers).
 //
 // SOURCES (all baked to public/shruti-trailer/drowning/ by scripts/clips/shruti-trailer/bake-drowning-sheets.py,
 // pre-graded to the archive look, each with a pure black shadow sprite):
@@ -44,7 +54,11 @@
 //     crop used as the texture of every sheet (the print layouts on it are drawn: three varied letters/forms and the
 //     one slop form);
 //   the OpenAI knot: <working>/animation_source/assets/openai_symbol.svg, rasterised black by
-//     scripts/clips/shruti-trailer/bake-drowning-mark.mjs to assets-src/shruti-trailer/openai_mark_black.png.
+//     scripts/clips/shruti-trailer/bake-drowning-mark.mjs to assets-src/shruti-trailer/openai_mark_black.png;
+//   the reader (rev 4): <working>/animation_source/assets/person_desk_a_SriLankaClerkReadingLedger.jpg, photo by
+//     Peter van der Sluijs / Wikimedia Commons, CC BY-SA 3.0; matted (Vision fg + subject-cutout.py, the calculator
+//     under her hand removed) to assets-src/shruti-trailer/person_cutout.png, graded b&w. THIS GRAPHIC IS A DERIVATIVE
+//     WORK OF THAT PHOTO AND IS SHARED UNDER CC BY-SA 3.0 (credit: Peter van der Sluijs / Wikimedia Commons).
 // ---------------------------------------------------------------------------
 import React from "react";
 import { AbsoluteFill, Img, random, staticFile, useCurrentFrame } from "remotion";
@@ -100,7 +114,7 @@ const camRev2 = (f: number): NealCam => {
   return { x: CAM0.x + 8 * b, y: CAM0.y - 60 * a - 62 * b, k: 1.0 - 0.1 * a + 0.52 * b, x0: CAM0.x, y0: CAM0.y };
 };
 const PUSH_K = 0.56;
-const PUSH_Y = 30;
+const PUSH_Y = -90;
 export const camAt = (f: number): NealCam => {
   const c0 = camRev2(f);
   const c = smoother((f - 64) / 100);
@@ -275,7 +289,7 @@ const WAVE_T0 = 84;
 const WAVE_T1 = 114;
 const WAVE_X0 = 120;
 const WAVE_X1 = 1800;
-const P_FLIP = 0.6;
+const P_FLIP = 0.7;
 const FLIP_DUR = 10;
 
 // the flight: duration from the drop, one ease (smooth rise and settle: from TonsOfTVShows rev 2)
@@ -362,6 +376,19 @@ const P_FLANK_SLIDE = 0.4;
 /** the share of the sheets that bury the desk's face which pour in from the heaps beside it */
 const P_POUR = 0.8;
 
+// THE READER (rev 4): a woman reading at the desk (an anonymous stand-in for whoever reads the applications), a b&w
+// cut-out, waist up, sitting behind the desk with her forearms on its top. world px; her bottom edge is the photo's
+// table line, laid on the middle of the desk's top surface.
+const PERSON = { x: 960, w: 330, aspect: 1131 / 900, bottom: 674 };
+const PERSON_H = PERSON.w / PERSON.aspect;
+/** her chin, as a fraction of the cut-out's height from its top */
+const CHIN_FR = 0.52;
+const CHIN0 = PERSON.bottom - PERSON_H * (1 - CHIN_FR);
+/** the middle of her head (cut-out x ~500 of 1131: she bows to her right) */
+const HEAD_X = PERSON.x + PERSON.w * ((500 - 565.5) / 1131);
+/** desk-top sheets keep this far (x) from her head: they land around her, never over her face */
+const HEAD_CLEAR = 140;
+
 const SIM = (() => {
   const AF: number[] = Array.from({ length: NCOL }, () => FLOOR);
   const AD: number[] = Array.from({ length: NCOL }, (_, i) => (Math.abs(colX(i) - DESK.cx) <= DESK_HALF ? DESK_SURF : Infinity));
@@ -377,6 +404,10 @@ const SIM = (() => {
     const sd = `sheet-${j}`;
     let onDesk = random(`${sd}-pile`) < table(P_DESK, tl);
     let x = DESK.cx + DESK_HALF * 1.08 * (2 * random(`${sd}-dx`) - 1);
+    if (onDesk && Math.abs(x - HEAD_X) < HEAD_CLEAR) {
+      // around the reader, not over her face: out to her elbows and beyond
+      x = HEAD_X + (x < HEAD_X ? -1 : 1) * (HEAD_CLEAR + 50 * random(`${sd}-dhx`));
+    }
     const avoid = random(`${sd}-avoid`) < table(P_AVOID_DESK, tl);
     if (!onDesk) {
       // the front mound: the sheet goes where the hill has most room under its plan (the best of a few seeded
@@ -397,6 +428,8 @@ const SIM = (() => {
     }
     // the desk-top pile only while it is above the front mound there
     if (onDesk && AF[colOf(x)] < AD[colOf(x)]) onDesk = false;
+    /** it will rest in front of the reader (or behind her): it arrives from beside her */
+    const nearHead = !onDesk && tl >= 40 && Math.abs(x - HEAD_X) < 150;
     const slopBorn = tl - 40 >= SLOP_SPAWN_T && random(`${sd}-slop`) < P_SLOP_BORN;
     const sprite = slopBorn ? -1 : Math.floor(random(`${sd}-sprite`) * SPRITES.length) % SPRITES.length;
     let rot = slopBorn ? 0 : Math.max(-32, Math.min(32, 13 * gauss(`${sd}-rot`)));
@@ -415,12 +448,21 @@ const SIM = (() => {
       x = DESK.cx + side * (DESK_HALF + 80 + 90 * random(`${sd}-slide`));
       R = restOn(AF, x, rot, scale);
       deposit(AF, R, (xx) => frontCap(xx, tl));
-    } else if (!onDesk && !avoid && Math.abs(x - DESK.cx) <= DESK_HALF + 60 && random(`${sd}-pour`) < P_POUR) {
+    } else if (
+      !onDesk &&
+      !avoid &&
+      (nearHead || (Math.abs(x - DESK.cx) <= DESK_HALF + 60 && random(`${sd}-pour`) < P_POUR))
+    ) {
       // the burial: it lands on the heap beside the desk and slides inward across the desk's face, so the heap
-      // closes over the desk from both sides (and the air over the desk stays clear until then)
+      // closes over the desk from both sides (and the air over the desk stays clear until then). Every sheet that
+      // comes to rest in front of the reader arrives this way (from beside her, once the desk is gone), so none
+      // settles slowly down across her face
       target = "pour";
-      const side = x === DESK.cx ? 1 : Math.sign(x - DESK.cx);
-      const imp = restOn(AF, DESK.cx + side * (DESK_HALF + 60 + 120 * random(`${sd}-pi`)), rot, scale);
+      const late = nearHead && tl > 56;
+      const c0 = late ? HEAD_X : DESK.cx;
+      const side = x === c0 ? 1 : Math.sign(x - c0);
+      const reach = late ? 170 + 110 * random(`${sd}-pi`) : DESK_HALF + 60 + 120 * random(`${sd}-pi`);
+      const imp = restOn(AF, c0 + side * reach, rot, scale);
       P1 = [imp.x, imp.y];
       if (!slopBorn) rot = -side * (8 + 12 * random(`${sd}-slrot`));
       R = restOn(AF, x, rot, scale);
@@ -490,6 +532,73 @@ const SIM = (() => {
 export const SHEETS = SIM.sheets;
 /** the front support line after all landings up to frame t */
 export const frontSupport = (t: number) => SIM.snaps[Math.max(0, Math.min(DURATION, Math.floor(t)))];
+
+// Her rise: as the heap reaches her, she is lifted with it (she only ever rises), her chin CHIN_ABOVE above the mean
+// heap surface across her shoulders, so from "drowning" on she is up to her neck in paper and stays there. The
+// target follows the simulated heap, made monotonic and smoothed (gaussian, sigma 7 frames: one soft, continuous move).
+const CHIN_ABOVE = 60;
+const LIFT: number[] = (() => {
+  const n = DURATION + 30;
+  const target: number[] = [];
+  for (let t = 0; t <= n; t++) {
+    const A = SIM.snaps[Math.min(DURATION, t)];
+    let sum = 0;
+    let k = 0;
+    for (let i = colOf(HEAD_X - 120); i <= colOf(HEAD_X + 120); i++) {
+      sum += A[i];
+      k++;
+    }
+    target.push(Math.max(0, CHIN0 - (sum / k - CHIN_ABOVE)));
+  }
+  for (let t = 1; t <= n; t++) target[t] = Math.max(target[t], target[t - 1]);
+  return target.map((_, t) => {
+    let a = 0;
+    let w = 0;
+    for (let d = -16; d <= 16; d++) {
+      const g = Math.exp(-(d * d) / 98);
+      a += g * target[Math.max(0, Math.min(n, t + d))];
+      w += g;
+    }
+    return a / w;
+  });
+})();
+export const liftAt = (f: number) => {
+  const t = Math.max(0, Math.min(LIFT.length - 1.001, f));
+  const i = Math.floor(t);
+  return lerp(LIFT[i], LIFT[i + 1], t - i);
+};
+const chinAt = (f: number) => CHIN0 - liftAt(f);
+/** the sheets that land on the heap BEHIND her: near her head and resting higher than just under her chin (they
+ * would cover her face). Fixed per sheet, so a sheet is behind her or in front of her for its whole fall. */
+export const BEHIND: ReadonlySet<number> = new Set(
+  SHEETS.filter((s) => s.target !== "desk" && Math.abs(s.C[3][0] - HEAD_X) < 150 && s.C[3][1] < chinAt(s.tl) + 60).map((s) => s.j),
+);
+
+/** the reader: her hard shadow and the graded cut-out, lifted by the heap; alive with a slow breath (a rigid
+ * stretch of 0.6% from her bottom edge) and a tiny sway of her whole figure (+-0.6 deg about her bottom centre) */
+const Reader: React.FC<{ frame: number; shadow: boolean }> = ({ frame, shadow }) => {
+  const off = shadow ? SHADOW_OFF : 0;
+  const breath = 1 + 0.006 * Math.sin((2 * Math.PI * frame) / 58);
+  const sway = 0.6 * Math.sin((2 * Math.PI * frame) / 86 + 0.7);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: PERSON.x - PERSON.w / 2 + off,
+        top: PERSON.bottom - liftAt(frame) - PERSON_H + off,
+        width: PERSON.w,
+        height: PERSON_H,
+        transformOrigin: "50% 100%",
+        transform: `rotate(${sway}deg) scale(1, ${breath})`,
+      }}
+    >
+      <Img
+        src={staticFile(DIR + (shadow ? "person_sh.png" : "person.png"))}
+        style={{ position: "absolute", left: 0, top: 0, width: PERSON.w, height: PERSON_H, maxWidth: "none" }}
+      />
+    </div>
+  );
+};
 
 const LEAN_MAX = 9; // deg: the most a sheet leans into its sideways drift
 const LEAN_V = 6; // world px a frame sideways at which the lean is ~3/4 of LEAN_MAX
@@ -586,11 +695,11 @@ const DrowningInApplications: React.FC<z.infer<typeof schema>> = ({ debug }) => 
   const frame = useCurrentFrame();
   const cam = camAt(frame);
   const depth = depthPath(frame);
-  const live: { j: number; st: SheetState; back: SheetState | null; tg: Sheet["target"] }[] = [];
+  const live: { j: number; st: SheetState; back: SheetState | null; tg: Sheet["target"]; behind: boolean }[] = [];
   for (const s of SHEETS) {
     if (s.ts > frame) continue;
     const st = sheetAt(s, frame);
-    if (st && onScreen(st, cam)) live.push({ j: s.j, st, back: backAt(s, frame), tg: s.target });
+    if (st && onScreen(st, cam)) live.push({ j: s.j, st, back: backAt(s, frame), tg: s.target, behind: BEHIND.has(s.j) });
   }
   return (
     <AbsoluteFill>
@@ -603,18 +712,31 @@ const DrowningInApplications: React.FC<z.infer<typeof schema>> = ({ debug }) => 
               <path d={depth} fill={DEPTH_FILL} />
             </NealSvg>
           ) : null}
-          {live.map(({ j, st, back }) => (
-            <React.Fragment key={j}>
-              {back ? <SheetImg st={back} shadow /> : null}
-              {back ? <SheetImg st={back} shadow={false} /> : null}
-              <SheetImg st={st} shadow />
-              <SheetImg st={st} shadow={false} />
+          {/* the sheets behind her, then the reader, then the sheets in front of her */}
+          {[true, false].map((behind) => (
+            <React.Fragment key={behind ? "behind" : "front"}>
+              {live
+                .filter((l) => l.behind === behind)
+                .map(({ j, st, back }) => (
+                  <React.Fragment key={j}>
+                    {back ? <SheetImg st={back} shadow /> : null}
+                    {back ? <SheetImg st={back} shadow={false} /> : null}
+                    <SheetImg st={st} shadow />
+                    <SheetImg st={st} shadow={false} />
+                  </React.Fragment>
+                ))}
+              {behind ? (
+                <>
+                  <Reader frame={frame} shadow />
+                  <Reader frame={frame} shadow={false} />
+                </>
+              ) : null}
             </React.Fragment>
           ))}
           {debug ? (
             <NealSvg>
               {live.map(({ j, st, tg }) => (
-                <circle key={j} cx={st.x} cy={st.y} r={st.landed ? 14 : 9} fill={tg === "desk" ? "red" : tg === "front" ? "blue" : tg === "pour" ? "orange" : "lime"} />
+                <circle key={j} cx={st.x} cy={st.y} r={st.landed ? 14 : 9} stroke={BEHIND.has(j) ? "black" : "none"} strokeWidth={5} fill={tg === "desk" ? "red" : tg === "front" ? "blue" : tg === "pour" ? "orange" : "lime"} />
               ))}
             </NealSvg>
           ) : null}
