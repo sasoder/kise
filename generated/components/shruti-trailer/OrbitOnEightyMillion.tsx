@@ -32,7 +32,8 @@
 // drift). It reveals the comparison row: five more stacks of the SAME bricks, upright on the limb right of Skyroot,
 // ascending left to right, each pushed up from behind the limb (one ease, duration ~ sqrt(height): one family of
 // speeds), staggered: Rocket Lab lands f112 ... Relativity tops out on "billion" (f176). Labels (white Barlow 900 on the
-// hard shadow) rise in over each stack as it lands: the company name only, plus one small line directly under the name
+// hard shadow; drawn in screen space through the stacks' own camera transform, v8, so each is rigidly tied to its stack)
+// rise in over each stack as it lands: the company name only, plus one small line directly under the name
 // at each end of the row: Skyroot's "1ST TRY" (its label rises as the pan starts, f98, just LEFT of its trail) and
 // Relativity's "NEVER REACHED ORBIT". NO DOLLAR AMOUNTS ARE PRINTED (v7, deliberate): Ashlee says "around 80 million"
 // on the audio, and a printed $160M read as contradicting him (his figure is probably Vikram-1's own development cost,
@@ -89,6 +90,7 @@ import {
   ChainPhotoCutOut,
   EASE_LAND,
   CROWN_STEP,
+  Inked,
   RiseText,
   SHADOW_OFF,
   Silhouette,
@@ -106,6 +108,8 @@ import {
   chainProgress,
   clamp,
   depthTransform,
+  textRise,
+  type,
 } from "../neal-stephenson-trailer/nealShared";
 import { EARTH, RocketCutOut, VIKRAM1 } from "../skyroot-trailer/skyrootShared";
 
@@ -750,17 +754,28 @@ const BARLOW_CAP = 0.7;
 export const LABEL = { name: 46, note: 32, gap: 11, lift: 24, header: 51 };
 /** A label block standing on `bottomY` (world): the name, with its note directly under it; each line rises in at f0.
  *  No amount is printed (v7): Ashlee says "around 80 million" on the audio, and a printed figure read as contradicting
- *  him; the heights alone carry the comparison. */
-const Label: React.FC<{ frame: number; f0: number; k: number; x: number; bottomY: number; name: string; note?: string; anchor?: "middle" | "end" }> = ({
+ *  him; the heights alone carry the comparison.
+ *  v8: drawn in SCREEN space (an untransformed svg, like the header), each line's world anchor pushed through the SAME
+ *  camera transform as the stacks' plane (depthTransform(cam).toScreen) and its size and hard shadow scaled by that k.
+ *  So a label is rigidly tied to its stack by arithmetic alone. Before v8 the labels were SVG text inside the CSS-scaled
+ *  world plane: a static text there is not re-laid out when only the ancestor's CSS transform changes, and in the 4K
+ *  multi-tab renders Chrome intermittently drew Skyroot's (static since f110) label from a stale layout, 8-15 px down-
+ *  right of its place on every 4th frame or so (one render tab): the "laggy" SKYROOT of v7. Here every attribute changes
+ *  with the camera, so each frame is laid out fresh. Right-aligned lines start at a world x fixed once (rightAlignedX);
+ *  the rise (24 screen px, textRise) is the only motion of their own. */
+const Label: React.FC<{ frame: number; f0: number; cam: NealCam; x: number; bottomY: number; name: string; note?: string; anchor?: "middle" | "end" }> = ({
   frame,
   f0,
-  k,
+  cam,
   x,
   bottomY,
   name,
   note,
   anchor = "middle",
 }) => {
+  const rise = textRise(frame, f0, 1);
+  if (rise.opacity <= 0) return null;
+  const t = depthTransform(cam);
   let y = bottomY;
   const lines: { text: string; y: number; size: number }[] = [];
   if (note) {
@@ -769,15 +784,35 @@ const Label: React.FC<{ frame: number; f0: number; k: number; x: number; bottomY
   }
   lines.push({ text: name, y, size: LABEL.name });
   return (
-    <>
-      {lines.map((l) => (
-        <RiseText key={l.text} frame={frame} f0={f0} k={k} text={l.text} x={x} y={l.y} size={l.size} weight={900} anchor={anchor} />
-      ))}
-    </>
+    <Inked
+      off={SHADOW_OFF * t.k}
+      opacity={rise.opacity}
+      render={(fill) => (
+        <>
+          {lines.map((l) => {
+            const p = t.toScreen(anchor === "end" ? rightAlignedX(x, l.text, l.size) : x, l.y);
+            return (
+              <text key={l.text} x={p.x} y={p.y + rise.dy} textAnchor={anchor === "end" ? "start" : "middle"} fill={fill} style={type(l.size * t.k, 900)}>
+                {l.text}
+              </text>
+            );
+          })}
+        </>
+      )}
+    />
   );
 };
+/** Barlow 900 advance widths per em, the font's own kern pairs included (fontTools on the shipped Barlow-900.otf,
+ *  public/mikkel-trailer/fonts; the same face loadFont serves). Only the right-aligned lines need them. */
+const BARLOW900_EM: Record<string, number> = { SKYROOT: 4.333, "1ST TRY": 3.574 };
+/** The world x where a right-aligned line starts so it ends at `right`: a constant per line (world units only). */
+const rightAlignedX = (right: number, text: string, size: number) => {
+  const em = BARLOW900_EM[text];
+  if (em === undefined) throw new Error(`OrbitOnEightyMillion: no Barlow 900 width for right-aligned "${text}"`);
+  return right - em * size;
+};
 /** The label blocks' rest geometry (world): bottom baseline y and the anchor x; Skyroot's stands just LEFT of the trail
- *  (right-aligned), clear of its rising line, above the crown's height. */
+ *  (its lines END at x), clear of its rising line, above the crown's height. Fixed world numbers, like the others'. */
 export const SKYROOT_LABEL = { x: X_S - 16, bottomY: limbY(X_S) - SMALL_H - 3 * CROWN_STEP - LABEL.lift, anchor: "end" as const };
 export const cmpLabel = (c: Cmp) => ({ x: c.x, bottomY: limbY(c.x) - cmpH(c) - LABEL.lift, anchor: "middle" as const });
 
@@ -822,14 +857,12 @@ const OrbitOnEightyMillion: React.FC<z.infer<typeof schema>> = ({ debug }) => {
             <Trail frame={frame} k={cam.k} />
           </NealSvg>
           <RocketCutOut rocket={VIKRAM1} x={r.base.x} y={r.base.y} height={r.L} rot={r.rot} pivot={0} shadow={4} filter={NEAL_FILTER} />
-          <NealSvg>
-            <Label frame={frame} f0={SKYROOT_LABEL_F} k={cam.k} {...SKYROOT_LABEL} name="SKYROOT" note="1ST TRY" />
-            {ROW.map((c) => (
-              <Label key={c.key} frame={frame} f0={labelF(c)} k={cam.k} {...cmpLabel(c)} name={c.name} note={c.note} />
-            ))}
-          </NealSvg>
         </NealPlane>
         <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+          <Label frame={frame} f0={SKYROOT_LABEL_F} cam={cam} {...SKYROOT_LABEL} name="SKYROOT" note="1ST TRY" />
+          {ROW.map((c) => (
+            <Label key={c.key} frame={frame} f0={labelF(c)} cam={cam} {...cmpLabel(c)} name={c.name} note={c.note} />
+          ))}
           <RiseText frame={frame} f0={HEADER_F} k={1} text="RAISED BEFORE FIRST ORBIT" x={HEADER_X} y={HEADER_Y} size={LABEL.header} weight={900} anchor="start" />
         </svg>
         {debug ? <Debug frame={frame} cam={cam} /> : null}
