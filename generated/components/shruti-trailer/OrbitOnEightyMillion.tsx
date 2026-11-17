@@ -37,7 +37,8 @@
 // at each end of the row: Skyroot's "1ST TRY" (its label rises as the pan starts, f98, just LEFT of its trail) and
 // Relativity's "NEVER REACHED ORBIT". NO DOLLAR AMOUNTS ARE PRINTED (v7, deliberate): Ashlee says "around 80 million"
 // on the audio, and a printed $160M read as contradicting him (his figure is probably Vikram-1's own development cost,
-// a different measure from money raised). The heights stay exactly true to the sourced figures below. Header top-left (screen), from f100: RAISED BEFORE FIRST ORBIT. The rocket keeps gliding on the
+// a different measure from money raised). The heights stay exactly true to the sourced figures below. NO HEADER (v9, user note on v8: the top-left "RAISED
+// BEFORE FIRST ORBIT" is removed; nothing replaces it). The rocket keeps gliding on the
 // orbit above the row (it drifts left on screen while the camera pans); every stack top stays well below the orbit
 // (Relativity's by 280 world px). f178-f190 settled and living: the rocket flies on, the camera drifts, the globe
 // turns a hair, the paper drifts, film life. Nothing fades.
@@ -91,7 +92,6 @@ import {
   EASE_LAND,
   CROWN_STEP,
   Inked,
-  RiseText,
   SHADOW_OFF,
   Silhouette,
   H,
@@ -354,12 +354,8 @@ export const cmpTopY = (c: Cmp, f: number) => {
   const hide = seatY(c.x) - limbY(c.x) + 2;
   return limbY(c.x) - cmpH(c) + (1 - e) * (cmpH(c) + hide);
 };
-/** The label timing: Skyroot's as the pan starts, each other as its stack lands; the header from f100. */
+/** The label timing: Skyroot's as the pan starts, each other as its stack lands. (No header since v9.) */
 export const SKYROOT_LABEL_F = 98;
-export const HEADER_F = 100;
-/** The header, screen px: top-left, above the orbit line. */
-export const HEADER_X = 64;
-export const HEADER_Y = 92;
 const LABEL_LEAD = 3;
 export const labelF = (c: Cmp) => c.t1 - LABEL_LEAD;
 
@@ -751,11 +747,11 @@ const Trail: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
 /** Sizes (world px, k ~1 in the wide): the name, and the note (1ST TRY / NEVER REACHED ORBIT) smaller under it. */
 /** Barlow's cap height per em (cerroShared BARLOW_CAP, not re-exported by nealShared). */
 const BARLOW_CAP = 0.7;
-export const LABEL = { name: 46, note: 32, gap: 11, lift: 24, header: 51 };
+export const LABEL = { name: 46, note: 32, gap: 11, lift: 24 };
 /** A label block standing on `bottomY` (world): the name, with its note directly under it; each line rises in at f0.
  *  No amount is printed (v7): Ashlee says "around 80 million" on the audio, and a printed figure read as contradicting
  *  him; the heights alone carry the comparison.
- *  v8: drawn in SCREEN space (an untransformed svg, like the header), each line's world anchor pushed through the SAME
+ *  v8: drawn in SCREEN space (an untransformed svg), each line's world anchor pushed through the SAME
  *  camera transform as the stacks' plane (depthTransform(cam).toScreen) and its size and hard shadow scaled by that k.
  *  So a label is rigidly tied to its stack by arithmetic alone. Before v8 the labels were SVG text inside the CSS-scaled
  *  world plane: a static text there is not re-laid out when only the ancestor's CSS transform changes, and in the 4K
@@ -863,7 +859,6 @@ const OrbitOnEightyMillion: React.FC<z.infer<typeof schema>> = ({ debug }) => {
           {ROW.map((c) => (
             <Label key={c.key} frame={frame} f0={labelF(c)} cam={cam} {...cmpLabel(c)} name={c.name} note={c.note} />
           ))}
-          <RiseText frame={frame} f0={HEADER_F} k={1} text="RAISED BEFORE FIRST ORBIT" x={HEADER_X} y={HEADER_Y} size={LABEL.header} weight={900} anchor="start" />
         </svg>
         {debug ? <Debug frame={frame} cam={cam} /> : null}
       </NealFilmLife>

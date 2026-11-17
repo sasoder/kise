@@ -3,11 +3,11 @@
 //     (never stops, never jumps) and its on-screen centre (table);
 //   * the row: each stack's height vs Skyroot's (ratios to the value), its top vs the dashed orbit (clearly below);
 //   * the labels: their boxes (Barlow 900 advance widths, cap height) never overlap each other, the orbit line, the
-//     rocket or the trail at rest, and are inside the final frame; the header too;
+//     rocket or the trail at rest, and are inside the final frame (no header since v9);
 //   * the camera: k, dk per frame; the final frame's content box vs (960, 540).
 //   bun scripts/clips/shruti-trailer/check-orbit-eighty.ts [--table]
 import {
-  DURATION, EX, EY, F_JOIN, HEADER_X, HEADER_Y, LABEL, PAN0, PAN1, RO, ROW, S_J, SKYROOT_LABEL, SKYROOT_USD, SMALL_H, STACK_W, TH_J, X_S,
+  DURATION, EX, EY, F_JOIN, LABEL, PAN0, PAN1, RO, ROW, S_J, SKYROOT_LABEL, SKYROOT_USD, SMALL_H, STACK_W, TH_J, X_S,
   camAt, cmpH, cmpLabel, cmpRise, cmpTopY, limbY, orbitY, pathAt, rocketAt, sAt, type Cmp,
 } from "../../../generated/components/shruti-trailer/OrbitOnEightyMillion";
 import { depthTransform } from "../../../generated/components/neal-stephenson-trailer/nealShared";
@@ -129,20 +129,4 @@ const crest = sc(EX, EY - RO);
 const rE = rocketAt(tl);
 const rc = sc((rE.base.x + rE.nose.x) / 2, (rE.base.y + rE.nose.y) / 2);
 console.log(`final: k ${tE.k.toFixed(3)}; content box x ${cx0.toFixed(0)}..${cx1.toFixed(0)} (centre ${((cx0 + cx1) / 2).toFixed(0)}), labels top ${cy0.toFixed(0)} .. bases ${cy1.toFixed(0)} (centre ${((cy0 + cy1) / 2).toFixed(0)}); orbit crest screen y ${crest.y.toFixed(0)}; rocket centre (${rc.x.toFixed(0)}, ${rc.y.toFixed(0)})`);
-console.log(`header: baseline y ${HEADER_Y}, x ${HEADER_X}..${(HEADER_X + textW("RAISED BEFORE FIRST ORBIT", LABEL.header)).toFixed(0)}`);
-// the header vs the orbit line / trail / rocket on screen, every frame from its rise
-const hb = { x0: HEADER_X, x1: HEADER_X + textW("RAISED BEFORE FIRST ORBIT", LABEL.header), y0: HEADER_Y - CAP * LABEL.header - 2, y1: HEADER_Y + 10 };
-for (let f = 100; f < DURATION; f++) {
-  const t = depthTransform(camAt(f));
-  for (let sx = hb.x0; sx <= hb.x1; sx += 6) {
-    const wx = (sx - 960) / t.k + camAt(f).x; // approximate inverse (focus plane)
-    const oy = t.toScreen(wx, orbitY(wx)).y;
-    if (oy - 12 * t.k < hb.y1 && oy + 12 * t.k > hb.y0) { issues.push(`f${f} header meets the orbit line at screen x ${sx.toFixed(0)}`); break; }
-  }
-  const r = rocketAt(f);
-  for (let q = 0; q <= 1; q += 0.1) {
-    const p = t.toScreen(r.base.x + (r.nose.x - r.base.x) * q, r.base.y + (r.nose.y - r.base.y) * q);
-    if (p.x > hb.x0 - 12 && p.x < hb.x1 + 12 && p.y > hb.y0 - 12 && p.y < hb.y1 + 12) { issues.push(`f${f} rocket over the header`); break; }
-  }
-}
 console.log(issues.length ? issues.join("\n") : "all checks clear");
