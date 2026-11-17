@@ -34,10 +34,10 @@ const lab = (c: Cmp) => {
   const l = cmpLabel(c);
   const lines: [string, number][] = [];
   if (c.note) lines.push([c.note, LABEL.note]);
-  lines.push([c.amount, LABEL.amount], [c.name, LABEL.name]);
+  lines.push([c.name, LABEL.name]); // v7: no amounts printed
   return labelBox(c.name, l.x, l.bottomY, "middle", lines);
 };
-const boxes: Box[] = [labelBox("SKYROOT", SKYROOT_LABEL.x, SKYROOT_LABEL.bottomY, "end", [["1ST TRY", LABEL.note], ["$160M", LABEL.amount], ["SKYROOT", LABEL.name]]), ...ROW.map(lab)];
+const boxes: Box[] = [labelBox("SKYROOT", SKYROOT_LABEL.x, SKYROOT_LABEL.bottomY, "end", [["1ST TRY", LABEL.note], ["SKYROOT", LABEL.name]]), ...ROW.map(lab)];
 const overlap = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 const issues: string[] = [];
 

@@ -32,15 +32,17 @@
 // drift). It reveals the comparison row: five more stacks of the SAME bricks, upright on the limb right of Skyroot,
 // ascending left to right, each pushed up from behind the limb (one ease, duration ~ sqrt(height): one family of
 // speeds), staggered: Rocket Lab lands f112 ... Relativity tops out on "billion" (f176). Labels (white Barlow 900 on the
-// hard shadow) rise in over each stack as it lands: name, amount a little smaller, and one small line at each end of
-// the row: Skyroot's "1ST TRY" (its label rises as the pan starts, f98, just LEFT of its trail) and Relativity's "NEVER
-// REACHED ORBIT". Header top-left (screen), from f100: RAISED BEFORE FIRST ORBIT. The rocket keeps gliding on the
+// hard shadow) rise in over each stack as it lands: the company name only, plus one small line directly under the name
+// at each end of the row: Skyroot's "1ST TRY" (its label rises as the pan starts, f98, just LEFT of its trail) and
+// Relativity's "NEVER REACHED ORBIT". NO DOLLAR AMOUNTS ARE PRINTED (v7, deliberate): Ashlee says "around 80 million"
+// on the audio, and a printed $160M read as contradicting him (his figure is probably Vikram-1's own development cost,
+// a different measure from money raised). The heights stay exactly true to the sourced figures below. Header top-left (screen), from f100: RAISED BEFORE FIRST ORBIT. The rocket keeps gliding on the
 // orbit above the row (it drifts left on screen while the camera pans); every stack top stays well below the orbit
 // (Relativity's by 280 world px). f178-f190 settled and living: the rocket flies on, the camera drifts, the globe
 // turns a hair, the paper drifts, film life. Nothing fades.
 //   Cause before effect: the rocket stands on the stack top (contact) until f4; it moves from f5. Each comparator stack
 //   is pushed up out of the Earth (its courses hidden behind the limb until its t0); its label rises as it lands.
-// HEIGHT = MONEY RAISED BEFORE FIRST ORBIT: one course = $80M, so Skyroot's 2 courses (58.53 world px, kept from v4) =
+// HEIGHT = MONEY RAISED BEFORE FIRST ORBIT (true to the sourced figures; the figures themselves are not printed): one course = $80M, so Skyroot's 2 courses (58.53 world px, kept from v4) =
 // its $160M. Same footprint (2 bricks wide), heights on each centre line from the limb up, exactly proportional:
 // Rocket Lab 150 (0.9375 x Skyroot), Firefly 350 (2.1875), Astra 600 (3.75), Isar 1000 (6.25), Relativity 1300
 // (8.125). A partial top course is a thinner bundle (its top edge over the lower part of its face). The stacks stand
@@ -51,8 +53,8 @@
 // THE COMPARISON (COST_TO_ORBIT_FACTS.md, compiled 2026-11-17, beside the brief). ONE measure for every stack: money the
 // company RAISED before its first successful orbital launch, nominal US$, not inflation-adjusted.
 //   SKYROOT $160M (Vikram-1, orbit 18 Jul 2026, 1st attempt): "$160 million" raised to date (Skyroot About page; Times
-//     of Oman / PTI; TechCrunch 7 May 2026: ~$10M of it structured debt). Ashlee's "$80M" has NO source and is not
-//     shown. "1ST TRY": orbit on its first attempt (and Ashlee says so just before this line in the episode).
+//     of Oman / PTI; TechCrunch 7 May 2026: ~$10M of it structured debt). Ashlee's "around 80 million" is probably
+//     Vikram-1's own development cost (a different measure); no figure is printed, so the card does not contradict him. "1ST TRY": orbit on its first attempt (and Ashlee says so just before this line in the episode).
 //   ROCKET LAB ~$150M (Electron, orbit 21 Jan 2018): ~$148M = ">$288M" total after the $140M Series E of Nov 2018
 //     (Via Satellite / TechCrunch, 15 Nov 2018); Inc42 (22 Jul 2026) independently "~$150 Mn".
 //   FIREFLY ~$350M (Alpha, orbit 1 Oct 2022): Noosphere ~$200M + $75M (May 2021, Bloomberg) + $75M (Mar 2022); a sum
@@ -323,6 +325,7 @@ export const crownProgress = (f: number): [number, number, number] => {
  *  baked by bake-cash-bricks.py compare: floor(courses) full courses + a partial top course (a thinner bundle) + 2 buried
  *  courses that stay behind the limb. t0..t1 = its push up from behind the limb, staggered left to right, one ease, the
  *  duration ~ sqrt(height) (one family of speeds); its label rises in as it lands. */
+/** `amount` is the sourced figure for the record only (see THE COMPARISON); it is NOT printed (v7). */
 export type Cmp = { key: string; name: string; amount: string; note?: string; usd: number; x: number; png: { w: number; h: number }; t0: number; t1: number };
 const CMP_SPEED = 1.95; // frames per sqrt(world px of height)
 const cmp = (key: string, name: string, amount: string, usd: number, x: number, png: { w: number; h: number }, t1: number, note?: string): Cmp => {
@@ -741,19 +744,20 @@ const Trail: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
 };
 
 // -- the labels (review 3) ------------------------------------------------------------------------------------------------------
-/** Sizes (world px, k ~1 in the wide): the name, the amount a little smaller under it, Relativity's note smaller still. */
+/** Sizes (world px, k ~1 in the wide): the name, and the note (1ST TRY / NEVER REACHED ORBIT) smaller under it. */
 /** Barlow's cap height per em (cerroShared BARLOW_CAP, not re-exported by nealShared). */
 const BARLOW_CAP = 0.7;
-export const LABEL = { name: 46, amount: 38, note: 32, gap: 11, lift: 24, header: 51 };
-/** A label block standing on `bottomY` (world): name over amount (over note); each line rises in at f0. */
-const Label: React.FC<{ frame: number; f0: number; k: number; x: number; bottomY: number; name: string; amount: string; note?: string; anchor?: "middle" | "end" }> = ({
+export const LABEL = { name: 46, note: 32, gap: 11, lift: 24, header: 51 };
+/** A label block standing on `bottomY` (world): the name, with its note directly under it; each line rises in at f0.
+ *  No amount is printed (v7): Ashlee says "around 80 million" on the audio, and a printed figure read as contradicting
+ *  him; the heights alone carry the comparison. */
+const Label: React.FC<{ frame: number; f0: number; k: number; x: number; bottomY: number; name: string; note?: string; anchor?: "middle" | "end" }> = ({
   frame,
   f0,
   k,
   x,
   bottomY,
   name,
-  amount,
   note,
   anchor = "middle",
 }) => {
@@ -763,8 +767,6 @@ const Label: React.FC<{ frame: number; f0: number; k: number; x: number; bottomY
     lines.push({ text: note, y, size: LABEL.note });
     y -= BARLOW_CAP * LABEL.note + LABEL.gap;
   }
-  lines.push({ text: amount, y, size: LABEL.amount });
-  y -= BARLOW_CAP * LABEL.amount + LABEL.gap;
   lines.push({ text: name, y, size: LABEL.name });
   return (
     <>
@@ -821,9 +823,9 @@ const OrbitOnEightyMillion: React.FC<z.infer<typeof schema>> = ({ debug }) => {
           </NealSvg>
           <RocketCutOut rocket={VIKRAM1} x={r.base.x} y={r.base.y} height={r.L} rot={r.rot} pivot={0} shadow={4} filter={NEAL_FILTER} />
           <NealSvg>
-            <Label frame={frame} f0={SKYROOT_LABEL_F} k={cam.k} {...SKYROOT_LABEL} name="SKYROOT" amount="$160M" note="1ST TRY" />
+            <Label frame={frame} f0={SKYROOT_LABEL_F} k={cam.k} {...SKYROOT_LABEL} name="SKYROOT" note="1ST TRY" />
             {ROW.map((c) => (
-              <Label key={c.key} frame={frame} f0={labelF(c)} k={cam.k} {...cmpLabel(c)} name={c.name} amount={c.amount} note={c.note} />
+              <Label key={c.key} frame={frame} f0={labelF(c)} k={cam.k} {...cmpLabel(c)} name={c.name} note={c.note} />
             ))}
           </NealSvg>
         </NealPlane>
