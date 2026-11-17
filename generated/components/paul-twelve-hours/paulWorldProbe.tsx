@@ -8,7 +8,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { OutsiderOnScreen, Outsider, WorkerOnScreen, outsiderCarry, outsiderReach, outsiderStand, outsiderWalk } from "./paulFolk";
 import { makeOutsider3D, outsiderCarry3D, outsiderReach3D, outsiderStand3D, outsiderWalk3D, walkPlan, type OutsiderPose3D } from "./paulOutsider3d";
-import { PaulStage, camTrack, clamp01, ease01, living, mix, orbitCam, type CamDef, type Orbit, type V3, type WorldSpec } from "./paulWorld";
+import { D2R, PaulStage, camTrack, clamp01, ease01, living, mix, orbitCam, type CamDef, type Orbit, type V3, type WorldSpec } from "./paulWorld";
 import {
   RULER,
   TOWER,
@@ -275,7 +275,7 @@ const TURN_SHOTS: Shot[] = [
   { pose: outsiderStand3D({ yaw: 90, frame: 30 }), cam: TURN_CAM },
   { pose: outsiderStand3D({ yaw: 180, frame: 30 }), cam: TURN_CAM },
   // S2's opening: tight on the head, the hood and the hand with the key (he faces a door off to screen left)
-  { pose: outsiderReach3D(0.92, { yaw: -38, keyTurn: 0.35, headYaw: -12, headPitch: 6, frame: 30 }), cam: { target: [-0.3, 0.98, 0.14], dist: 2.3, yaw: 6, pitch: 3, fov: 30 } },
+  { pose: outsiderReach3D(1, { yaw: -60, keyTurn: 0.5, headYaw: -12, headPitch: 6, frame: 30 }), at: [1.641, 0, 0.948], cam: { target: [1.17, 1.16, 1.2], dist: 2.4, yaw: -20, pitch: 3, fov: 30 } },
   // the pose sheet
   { pose: outsiderWalk3D(0, { yaw: 30 }), cam: TURN_CAM },
   { pose: outsiderWalk3D(6, { yaw: 30 }), cam: TURN_CAM },
@@ -285,6 +285,8 @@ const TURN_SHOTS: Shot[] = [
   { pose: outsiderCarry3D(30, "tote", { yaw: -30, toteCards: 3 }), cam: TURN_CAM },
   { pose: outsiderStand3D({ yaw: 15, fumble: 1, frame: 11 }), cam: TURN_CAM },
   { pose: outsiderReach3D(1, { yaw: 0, keyTurn: 1, frame: 30 }), cam: TURN_CAM },
+  // 13: S2's opening camera exactly as the cut has it (framed for the rev-1 toy's head)
+  { pose: outsiderReach3D(1, { yaw: -60, keyTurn: 0.5, headYaw: -12, headPitch: 6, frame: 30 }), at: [1.641, 0, 0.948], cam: { target: [1.27, 0.8, 1.02], dist: 3.3, yaw: -20, pitch: 3, fov: 30 } },
 ];
 const TURN_SPEC: WorldSpec = {
   fog: { near: 6, far: 30 },
@@ -429,30 +431,72 @@ export const PaulSlackBlack: React.FC = () => {
   return <PaulStage spec={S4B_SPEC} cam={cam} frame={f} />;
 };
 
-// ---- scale: the new outsider beside a vault and the tower, at cut scale (frame 1: the old 2D overlay beside him) --
-const SCALE_SPEC: WorldSpec = {
-  fog: { near: 14, far: 44 },
-  light: { center: [0, 1.6, 0.5], span: 7 },
+// ---- scale (rev 2): the mannequin at S1's end framing beside the open vaults (frame 0), at S2's end framing at the
+// tower foot among light contributors (frame 1), and close at the tower foot beside a light contributor (frame 2) ----
+const S1_END = orbitCam({ target: [-0.03, -0.02, 1.1], dist: 33.55, yaw: 1, pitch: 18, fov: 16 });
+const SCALE_S1_SPEC: WorldSpec = {
+  // LeakedSecrets moves the haze back with its camera: fog + (camD - 19.7)
+  fog: { near: 12 + 13.85, far: 40 + 13.85 },
+  light: { center: [0, 1, 1.1], span: 7 },
   build: (w) => {
-    const V = makeVault(w, { x: -2.6, brand: "openai" });
-    const T = makeMonorepo(w, { x: 1.9 });
+    const VO = makeVault(w, { x: -1.25, brand: "openai" });
+    const VA = makeVault(w, { x: 1.25, brand: "anthropic" });
     const O = makeOutsider3D(w);
     return () => {
-      V.update({ open: 1, bolts: 1, wheel: 4.2, cardsLeft: 10 });
-      T.update({});
-      O.update(outsiderStand3D({ yaw: 10, frame: 30 }), [-0.75, 0, 1.2]);
+      VO.update({ open: 1, bolts: 1, wheel: 4.2, cardsLeft: 2, ghost: 1 });
+      VA.update({ open: 1, bolts: 1, wheel: 4.2, cardsLeft: 2, ghost: 1 });
+      O.update(outsiderStand3D({ yaw: yawTo(S1_END, [0, 0, 0.95]) - 6, whoa: 0.85, frame: 30 }), [0, 0, 0.95]);
     };
   },
 };
-const SCALE_CAM = orbitCam({ target: [-0.25, 1.35, 0.6], dist: 19, yaw: 6, pitch: 8, fov: 28 });
+const S2_END = orbitCam({ target: [0.25, 0.3, 0.25], dist: 20.5, yaw: 13, pitch: 8, fov: 30 });
+const S2_CLOSE = orbitCam({ target: [1.95, 0.78, 0.9], dist: 5.4, yaw: -8, pitch: 4, fov: 26 });
+const S2_OUT_AT: V3 = [1.641, 0, 0.948];
+/** S2's contributors (TheMonorepo FEEDERS: at, height) plus one beside him for the close frame */
+const STAFF: [number, number, number][] = [
+  [-2.03, 1.3, 1.0],
+  [-1.7, -0.3, 1.0],
+  [-2.94, -2.6, 1.0],
+  [1.63, -2.7, 1.0],
+  [2.33, -0.7, 1.0],
+  [2.9, 1.0, 1.0],
+];
+const SCALE_S2_SPEC: WorldSpec = {
+  fog: { near: 12, far: 40 },
+  light: { center: [0.3, 1.6, 0.3], span: 6 },
+  build: (w) => {
+    const T = makeMonorepo(w);
+    const O = makeOutsider3D(w);
+    const staff = STAFF.map(([x, z, h]) => {
+      const fig = makeOutsider3D(w, { tone: "light" });
+      const at: V3 = [x, 0, z];
+      const toTower = Math.atan2(-x, -z) / D2R;
+      const toCam = yawTo(S2_END, at);
+      const yaw = toTower + 0.45 * (((toCam - toTower + 540) % 360) - 180);
+      return { fig, at, h, yaw };
+    });
+    // the close frame's light contributor, beside him at full height
+    const near = makeOutsider3D(w, { tone: "light" });
+    // frame 3: the rev-1 toy still builds (look "toy") in his place
+    const toy = makeOutsider3D(w, { look: "toy" });
+    return (f) => {
+      T.update({});
+      O.group.visible = f !== 3;
+      toy.group.visible = f === 3;
+      O.update(outsiderReach3D(0.12, { yaw: -60, frame: 40 }), S2_OUT_AT);
+      toy.update(outsiderReach3D(0.12, { yaw: -60, frame: 40 }), S2_OUT_AT);
+      staff.forEach((s, i) => {
+        s.fig.group.visible = f === 1;
+        s.fig.update(outsiderCarry3D(30 + 17 * i, "laptop", { yaw: s.yaw, typing: 1, headPitch: 14 }), s.at, s.h);
+      });
+      near.group.visible = f >= 2;
+      near.update(outsiderCarry3D(30, "laptop", { yaw: -30, typing: 1, headPitch: 14 }), [2.45, 0, 1.05]);
+    };
+  },
+};
 export const PaulOutsiderScale: React.FC = () => {
   const f = useCurrentFrame();
-  return (
-    <PaulStage
-      spec={SCALE_SPEC}
-      cam={SCALE_CAM}
-      frame={f}
-      overlay={f === 1 ? (P) => <Outsider P={P} at={[0.05, 0, 1.2]} heightM={1.45} pose={outsiderStand({ yaw: 10, frame: 30 })} uid="oldscale" /> : undefined}
-    />
-  );
+  if (f === 0) return <PaulStage key={0} spec={SCALE_S1_SPEC} cam={S1_END} frame={f} air={{ motes: 0.035 }} />;
+  return <PaulStage key={1} spec={SCALE_S2_SPEC} cam={f === 1 ? S2_END : S2_CLOSE} frame={f} />;
 };
+export const OUTSIDER_SCALE_N = 4;

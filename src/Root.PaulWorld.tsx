@@ -2,6 +2,7 @@ import { Composition, useCurrentFrame } from "remotion";
 import PaulWorldProbe, {
   FPS,
   OUTSIDER_LOOP_N,
+  OUTSIDER_SCALE_N,
   OUTSIDER_SHOTS,
   PaulOutsiderLoop,
   PaulOutsiderScale,
@@ -33,6 +34,6 @@ export const RemotionRoot = () => (
     <Composition id="PaulVaultStates" component={PaulVaultStates} durationInFrames={5} fps={FPS} width={1080} height={1920} />
     <Composition id="PaulVaultOpen" component={PaulVaultOpen} durationInFrames={VAULT_OPEN_N} fps={FPS} width={1080} height={1920} />
     <Composition id="PaulSlackBlack" component={PaulSlackBlack} durationInFrames={2} fps={FPS} width={1080} height={1920} />
-    <Composition id="PaulOutsiderScale" component={PaulOutsiderScale} durationInFrames={2} fps={FPS} width={1080} height={1920} />
+    <Composition id="PaulOutsiderScale" component={PaulOutsiderScale} durationInFrames={OUTSIDER_SCALE_N} fps={FPS} width={1080} height={1920} />
   </>
 );
