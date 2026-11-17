@@ -30,6 +30,8 @@
 //
 // REV 1 (user notes): the outsider is the 3D clay figure (paulOutsider3d) built in the spec, in place of the SVG;
 // the Slack mark on the cap is black like the Anthropic one (makeSlackStack mark "black").
+// REV 2 (user notes): the outsider is the world's black mannequin (makeOutsider3D default, rev 2); his faceless head
+// bows to the laptop while he types, then lifts and turns to the drawers (headPitch 24 -> -26, headYaw 0 -> 44, f44-68).
 //
 // SOURCES: Cathedral, reported by the Washington Post (Oct 26 2026): its AI agents got in within 12 hours via
 // third-party tools and reached Slack messages (COMMON.md facts). NOT "all of Slack": nothing says ALL and two of the
@@ -172,7 +174,7 @@ const OUT_YAW = yawTo(camOf(80), OUT_AT) + 22;
 const outPose = (f: number): OutsiderPose3D => {
   // typing, eyes on the screen; as the drawers open his head turns up and over to the stack (one lobe, f44-68)
   const look = ease01(44, 68, f);
-  return outsiderCarry3D(f, "laptop", { yaw: OUT_YAW, typing: 1, headPitch: 14 - 26 * look, headYaw: 26 * look });
+  return outsiderCarry3D(f, "laptop", { yaw: OUT_YAW, typing: 1, headPitch: 24 - 50 * look, headYaw: 44 * look });
 };
 
 const SlackInTwelveHours: React.FC<z.infer<typeof schema>> = ({ debug, pick }) => {
