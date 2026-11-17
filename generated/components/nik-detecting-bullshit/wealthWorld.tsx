@@ -5,47 +5,54 @@ import {
   EDGE,
   ElevationShadow,
   FONT_LABEL,
-  Numeral,
+  FONT_NUM,
   METRIC,
   SPACE,
   TRACK,
-  TYPE,
   bloomFilter,
   clamp01,
+  easeOutCubic,
   labelWidth,
   lerp,
+  mixHex,
   numeralWidth,
   rectPath,
   snapLen,
-  type Elevation,
 } from "../kits/cheeky-pint/stoutShared";
 import { makeClockCam, makePoolTrack, type Cam, type Glide, type PoolKey } from "../kits/cheeky-pint/museShared";
-import { PersonPeg, PegShadows, pegGeometry } from "../kits/cheeky-pint/talentShared";
 import { REVOLUT_R_BOX, REVOLUT_R_D } from "../nik-trend-friend/revolutMark";
 
 // ===========================================================================
-// wealthWorld — the shared growth world of "nik - my job is detecting bullshit" (Cheeky Pint S4E06, Nik
-// Storonsky), cuts B `GrewSixtyToEighty` (32.407-36.662 s) and C (46.004-51.426 s, another builder). Stout
-// board, palette B1, every colour / edge / shadow / bloom a stoutShared token. API + B's end state:
-// animation_source/notes/WEALTH_READY.md (clip notes folder). After WEALTH_READY no export's name or
-// geometry changes; additions are logged in animation_source/notes/SHARED_CHANGES.md.
+// wealthWorld REV 2 — the shared growth world of "nik - my job is detecting bullshit" (Cheeky Pint S4E06,
+// Nik Storonsky), cuts B `GrewSixtyToEighty` (32.407-36.662 s) and C `NewTeamThreeHundred` (46.004-51.426
+// s). Stout board, palette B1, every colour / edge / shadow / bloom a stoutShared token. API + B's end
+// state: animation_source/notes/WEALTH_READY.md (rev 2). Brief: animation_source/notes/brief_BC_rev2.md.
 //
-//   THE PRODUCT TILE  one wide cream card = Revolut's Wealth & Trading product: the real R (revolutMark,
-//                     Commons "Revolut_logo.svg", public-domain text logo) stamped in ink + "WEALTH &
-//                     TRADING" in ink Kräftig caps on its face. Along its top edge, left: the product
-//                     team (TEAM_OLD, board-tone PersonPegs in cream peg slots, ONE shadow layer);
-//                     right: three bar SLOTS (SLOT_X: last year, this year, cut C's).
-//   THE BARS          rise out of their slots (slot joint, never stickers). A bar is cream up to `cream`
-//                     (world px above the tile top) and AMBER above it (band gradient from amberBandFor,
-//                     fixed bloom, 2 px hot top edge): the amber is the growth. An empty slot is a dark
-//                     open pocket in the top edge; it closes to the 2 px joint line as a bar fills it.
-//   THE CLOCK         S = cut B's frame (0..B_LAST_S = 101). Cut C opens on B's last frame, so C's
-//                     S = B_LAST_S + its own frame (the 9.342 s of speaker between the cuts is NOT on
-//                     the clock: ground drift, sway and grain on twos continue from B's last frame).
-//   THE CAMERA        makeWealthCam(extraGlides, fEnd): B's glides + any C appends (f0 >= B_LAST_S), the
-//                     house superposed glides + damped follower (museShared makeClockCam: look = the
-//                     frame's middle). The track is identical through S = B_LAST_S whatever C appends,
-//                     and B's last creep glide runs on past B's end into C.
+// REV 2 (the user: the pegs on top of the tile look stuck on, two shadow systems, B and C don't go
+// together): ONE CENTRED, SYMMETRIC composition. The tile is centred on x 540 and every camera stays on
+// x 540; the three slots are symmetric about the tile's centre (last year LEFT, this year CENTRE, C's
+// RIGHT). The team lives INSIDE the tile's face: a recessed window (a darker inset, like a little display)
+// holding three picture-book busts (big round head, shoulders, flat fills, two dot eyes, a blush; no
+// outlines, no shadows), next to the R + "WEALTH & TRADING" print; the face row is centred on the tile.
+// One shadow system: the tile's (+ its contact) and each bar's; nothing else casts one.
+//
+//   THE PRODUCT TILE  one wide cream card = Revolut's Wealth & Trading product: the face row = the team
+//                     window + the real R (revolutMark, Commons "Revolut_logo.svg", public-domain text logo)
+//                     stamped in ink + "WEALTH & TRADING" in ink Kräftig caps.
+//   THE BARS          rise out of their slots (slot joint). Cream up to `cream`, AMBER above (band
+//                     gradient from amberBandFor, fixed bloom, 2 px hot top edge): the amber is the growth.
+//                     An empty slot is a dark open pocket in the top edge; it closes to the 2 px joint line
+//                     as a bar fills it.
+//   THE TEAM          FaceTeam: busts by window place (0 1 2), each with `drop` 0 (seated) .. 1 (wholly
+//                     below the window's bottom edge, masked by the window). C's swap: the old (kraft)
+//                     busts drop out, the new (cream) busts rise in (drop 1 -> 0), in the same places.
+//   THE LABELS        GrowthLabel: Dreiviertelfett at a SCREEN size (counter-scaled: the same px at any k),
+//                     amber with the bloom, `dim` 0..1 to the lo tone (glow off) at the same size.
+//   THE CLOCK         S = cut B's frame (0..B_LAST_S = 101). Cut C opens on B's last frame: C's S =
+//                     B_LAST_S + its own frame (the 9.342 s of speaker between is NOT on the clock).
+//   THE CAMERA        makeWealthCam(extraGlides, fEnd): B's glides + C's appends (f0 >= B_LAST_S); the
+//                     house glides + damped follower (museShared makeClockCam: look = the frame's middle).
+//                     Identical through S = B_LAST_S whatever C appends. B's glides have no dx: x stays 540.
 //                     The light pool: makeWealthPool(extraKeys, fEnd), same rule.
 // ===========================================================================
 
@@ -57,31 +64,32 @@ export const B_LAST_S = B_DURATION - 1; // 101
 export const C_GAP_S = 46.004 - 36.662;
 
 // --- geometry (WORLD px) ------------------------------------------------------------------------------
+/** The frame's (and the tile's) centre line. Every camera stays on it. */
+export const CENTRE_X = 540;
 /** The product tile: centre x, top edge, width, height. It stands on FLOOR. */
-export const TILE = { X: 540, TOP: 1200, W: 476, H: 60 } as const;
-export const TILE_X0 = TILE.X - TILE.W / 2; // 302
-export const TILE_X1 = TILE.X + TILE.W / 2; // 778
-export const FLOOR = TILE.TOP + TILE.H; // 1260
-/** Every bar's width (chunky: 144 screen px at REST_K). */
-export const BAR_W = 80;
-/** One unit of growth = last year's bar (world px). B: last 1.0, this 1.7; C: next 6.8. */
-export const BAR_UNIT = 88;
+export const TILE = { X: CENTRE_X, TOP: 1200, W: 414, H: 56 } as const;
+export const TILE_X0 = TILE.X - TILE.W / 2; // 333
+export const TILE_X1 = TILE.X + TILE.W / 2; // 747
+export const FLOOR = TILE.TOP + TILE.H; // 1256
+/** Every bar's width (120 screen px at REST_K; ~94 at C's suggested end). */
+export const BAR_W = 60;
+/** One unit of growth = last year's bar (world px; 110 screen px at REST_K). B: last 1.0, this 1.7; C: 6.8. */
+export const BAR_UNIT = 55;
 /** The k all data heights are snapped at (snapLen): B's resting framing. */
-export const REST_K = 1.8;
-/** Slot centres along the tile's top edge: [last year, this year, cut C's]. */
-export const SLOT_X = [512, 616, 720] as const;
-/** The team pegs' size (= height = shoulder width, world px). */
-export const PEG_SIZE = 40;
-/** The product team in B (board tone, feet on the tile's top edge, left of the slots). C swaps them. */
-export const TEAM_OLD: { x: number; y: number; size: number }[] = [340, 384, 428].map((x) => ({ x, y: TILE.TOP, size: PEG_SIZE }));
+export const REST_K = 2.0;
+/** Slot pitch: the slots sit symmetric about the tile's centre, spread wide so that in C the old label
+ *  (centred over the centre bar, LABEL_PX wide) clears the tall right bar at C's pulled-back zoom. */
+export const SLOT_PITCH = 152;
+/** Slot centres along the tile's top edge: [last year (left), this year (centre), cut C's (right)]. */
+export const SLOT_X = [TILE.X - SLOT_PITCH, TILE.X, TILE.X + SLOT_PITCH] as const;
 
 /** The bars' heights in units, and in world px (snapped at REST_K). `cream` = the cream part's height;
  *  above it the bar is amber (the growth). */
 export const UNITS = { last: 1.0, now: 1.7, next: 6.8 } as const;
 export const BAR_H = {
-  last: snapLen(UNITS.last * BAR_UNIT, REST_K), // 88
-  now: snapLen(UNITS.now * BAR_UNIT, REST_K), // 149.6 -> 149.444
-  next: snapLen(UNITS.next * BAR_UNIT, REST_K), // 598.4 -> 598.333 (C's suggestion: +300 %)
+  last: snapLen(UNITS.last * BAR_UNIT, REST_K), // 55 (110 px)
+  now: snapLen(UNITS.now * BAR_UNIT, REST_K), // 93.5 (187 px)
+  next: snapLen(UNITS.next * BAR_UNIT, REST_K), // 374 (C: +300 %)
 } as const;
 export const BAR_CREAM = {
   last: BAR_H.last, // all cream
@@ -89,8 +97,43 @@ export const BAR_CREAM = {
   next: BAR_H.now, // C: cream up to this year's 1.7, the 5.1 above it amber
 } as const;
 
-// --- the tile's face (WORLD px; it is printed on the card, so it scales with the world) ---------------
-export const FACE = { R_H: 27, GAP: 10, FS: 22, TEXT: "Wealth & Trading" } as const;
+// --- the tile's face row (WORLD px; printed on the card, so it scales with the world) -------------------
+/** The team window + R + name, one row centred on the tile.
+ *  WIN: the recessed window (w x h, corner r); BUST: head diameter, shoulders w x h, the head's overlap
+ *  into the shoulders, the bust pitch; R_H: the R's height; GAP_WR: window -> R; GAP_RT: R -> name; FS:
+ *  the name's size. */
+export const FACE = {
+  WIN: { w: 100, h: 42, r: 3 },
+  BUST: { head: 22, shW: 28, shH: 12, overlap: 3.5, pitch: 32 },
+  R_H: 24,
+  GAP_WR: 14,
+  GAP_RT: 8,
+  FS: 20,
+  TEXT: "Wealth & Trading",
+} as const;
+/** The face row's layout (world px): the window rect, its three bust x's (left .. right), the R box, the
+ *  name's baseline start. `bustBase` = the shoulders' bottom = the window's bottom edge. */
+export const faceLayout = () => {
+  const rw = (FACE.R_H * REVOLUT_R_BOX.w) / REVOLUT_R_BOX.h;
+  const tw = labelWidth(FACE.TEXT, FACE.FS) - TRACK.label * FACE.FS; // the advance minus the trailing track
+  const total = FACE.WIN.w + FACE.GAP_WR + rw + FACE.GAP_RT + tw;
+  const cy = TILE.TOP + TILE.H / 2;
+  const x0 = TILE.X - total / 2;
+  const win = { x: x0, y: cy - FACE.WIN.h / 2, w: FACE.WIN.w, h: FACE.WIN.h };
+  const wcx = win.x + win.w / 2;
+  const busts = [-1, 0, 1].map((i) => wcx + i * FACE.BUST.pitch);
+  const rx = win.x + win.w + FACE.GAP_WR;
+  return {
+    total,
+    win,
+    busts,
+    bustBase: win.y + win.h,
+    r: { x: rx, y: cy - FACE.R_H / 2, w: rw, h: FACE.R_H },
+    text: { x: rx + rw + FACE.GAP_RT, y: cy + (METRIC.cap * FACE.FS) / 2, w: tw },
+  };
+};
+/** A bust's whole height (shoulders + head - overlap), world px. A bust at drop 1 is this far down + 1. */
+export const BUST_H = FACE.BUST.shH + FACE.BUST.head - FACE.BUST.overlap;
 
 // --- B's beats (cut-B frames = S) ---------------------------------------------------------------------
 // think f7 · two f10 · or f16 · three f19 · years f21 · ago f27 · it f32 · grew f40 · up f45 · 60 % f50 ·
@@ -99,7 +142,6 @@ export const B_T = {
   RISE1: [-4, 26], // last year's bar, rest to rest, already emerging on f0 (two or three years ago)
   RISE2: [32, 66], // this year's bar, ONE rise: cream to 1.0 (~f47), amber on to 1.7, lands on "80" (f66)
   LABEL_IN: 56, // "+60–80%" blurs in + slides up 24 px over 12 f: in f56-68 (60 f50 .. 80 f66)
-  SWEEP: 66, // the click: a light sweep across the amber slice as the bar lands, 10 f
 } as const;
 /** ONE decelerating curve from rest to rest: p(t) = 1 - (1-t)^b (1 + b t), velocity ∝ t (1-t)^(b-1). */
 export const RISE_SHAPE = 3;
@@ -108,7 +150,7 @@ export const riseCurve = (t: number, b: number = RISE_SHAPE) => {
   return 1 - Math.pow(1 - u, b) * (1 + b * u);
 };
 const winT = (S: number, [a, b]: readonly [number, number] | readonly number[]) => (S - a) / (b - a);
-/** B's bar heights at story time S (world px): last year's, this year's. Constant after B (S > 101). */
+/** B's bar heights at story time S (world px): last year's, this year's. Constant after B's landing. */
 export const bBars = (S: number) => ({
   last: BAR_H.last * riseCurve(winT(S, B_T.RISE1)),
   now: BAR_H.now * riseCurve(winT(S, B_T.RISE2)),
@@ -120,17 +162,21 @@ export const riseLift = (S: number, win: readonly number[]) => {
   return t <= 0 || t >= 1 ? 0 : LIFT_PEAK * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.7)), 2);
 };
 
-// --- the label "+60–80%" (the speaker's own range), Dreiviertelfett SECONDARY, amber ------------------
-export const B_LABEL = { text: "+60–80%", px: TYPE.SECONDARY } as const;
-/** Its baseline (world y) under camera k: SPACE.CLEAR screen px above this year's bar top. */
-export const bLabelY = (k: number) => TILE.TOP - BAR_H.now - SPACE.CLEAR / k;
+// --- the labels: SCREEN-sized, so "+60–80%" and C's "+300%" are the same size on screen at any k ---------
+/** 80 SCREEN px, between the LABEL (30) and SECONDARY (136) tokens: at SECONDARY "+60–80%" is ~600 px
+ *  wide and in C (centred over the centre bar, the brief's rule) it would run into the 4x bar beside it. */
+export const LABEL_PX = 80;
+export const B_LABEL = { text: "+60–80%", px: LABEL_PX } as const;
+/** B's label baseline (world y) under camera k: SPACE.CLEAR screen px above this year's bar top
+ *  (+ `dy` screen px lower: C may tuck it toward its bar). */
+export const bLabelY = (k: number, dy = 0) => TILE.TOP - BAR_H.now - (SPACE.CLEAR - dy) / k;
 
 // --- camera (museShared makeClockCam: look = world point on the frame's middle) ------------------------
-/** The look and k before the pre-roll (the opening creep is already moving on f0). */
-export const B_CAM_START = { x: 541.5, y: 1296, k: 1.66 } as const;
+/** The look and k before the pre-roll (the opening creep is already moving on f0). x stays CENTRE_X. */
+export const B_CAM_START = { x: CENTRE_X, y: 1331, k: 1.85 } as const;
 export const B_CAM_GLIDES: Glide[] = [
-  { f0: -12, f1: 74, dx: 6, dy: -66, k: 1.775, warp: 1 }, // already drifting in on f0 (the tile + team centred, top y ~803), and tilting up with the bars (two or three years ago .. 80 %): the tile ends low (top y ~903)
-  { f0: 40, f1: 170, dx: 4, dy: 3.8, k: 1.86, warp: 1 }, // the creep: carries on through B's hold and past its end (into C)
+  { f0: -12, f1: 74, dy: -42, k: 1.95, warp: 1 }, // already drifting in on f0 (tile top y ~790), tilting up with the bars (two or three years ago .. 80 %): the tile ends at top y ~858
+  { f0: 40, f1: 170, dy: 1.6, k: 2.03, warp: 1 }, // the creep: carries on through B's hold and past its end (into C, unless C's glides take over)
 ];
 export const makeWealthCam = (extra: Glide[] = [], fEnd: number = B_LAST_S) => makeClockCam(B_CAM_START, [...B_CAM_GLIDES, ...extra], Math.max(fEnd, B_LAST_S));
 export const B_CAM = makeWealthCam();
@@ -138,32 +184,44 @@ export const B_CAM = makeWealthCam();
 export const B_END_CAM: Cam = B_CAM.at(B_LAST_S);
 /** The ground's parallax origin (StoutStage `rest`) for B and C. */
 export const WEALTH_REST: Cam = B_CAM.rest;
-/** A SUGGESTION for C's wide: the 6.8-unit bar + tile inside the keep-in box (tile bottom y ~1045, the
- *  tall bar's top y ~420, the tile centred). C owns its camera. */
-export const C_TALL_CAM: Cam = { x: TILE.X + 40, y: FLOOR - (1045 - 960) / 0.95, k: 0.95 };
+/** A SUGGESTION for C's end: 0.78 x B's end zoom (the brief's floor is 0.75), x 540, the tile's foot at y
+ *  1058. The 6.8-unit bar's top then sits at y ~400 with room for "+300%" above it (top >= ~300), and the
+ *  dimmed "+60–80%" centred over the centre bar clears the tall bar by >= 12 px. C owns its camera. */
+export const C_END_K = 0.78 * B_END_CAM.k;
+export const C_TALL_CAM: Cam = { x: CENTRE_X, y: FLOOR - (1058 - 960) / C_END_K, k: C_END_K };
 
 // --- the light pool (museShared makePoolTrack: eased keys + the pool's damped follower) -----------------
-export const B_POOL_START = { x: 470, y: TILE.TOP - 30, strength: 1.5 } as const;
+export const B_POOL_START = { x: CENTRE_X, y: TILE.TOP - 10, strength: 1.5 } as const;
 export const B_POOL_KEYS: PoolKey[] = [
-  { f0: 0, f1: 24, x: SLOT_X[0], y: TILE.TOP - 60 }, // onto last year's bar
-  { f0: 34, f1: 66, x: SLOT_X[1] - 10, y: TILE.TOP - 100 }, // up onto this year's bar as it grows
-  { f0: 66, f1: 120, x: (SLOT_X[0] + SLOT_X[1]) / 2 + 20, y: TILE.TOP - 96 }, // settles between the two
+  { f0: 0, f1: 24, x: (SLOT_X[0] + CENTRE_X) / 2, y: TILE.TOP - 40 }, // toward last year's bar
+  { f0: 34, f1: 66, x: CENTRE_X, y: TILE.TOP - 70 }, // up onto this year's bar as it grows
+  { f0: 66, f1: 120, x: CENTRE_X - 20, y: TILE.TOP - 60 }, // settles over the two
 ];
 export const makeWealthPool = (extra: PoolKey[] = [], fEnd: number = B_LAST_S) => makePoolTrack(B_POOL_START, [...B_POOL_KEYS, ...extra], Math.max(fEnd, B_LAST_S));
 export const B_POOL = makeWealthPool();
 
-// --- B's END state (S = 101), for C ----------------------------------------------------------------------
-export const B_END = {
-  S: B_LAST_S,
-  cam: B_END_CAM,
-  pool: B_POOL(B_LAST_S),
-  bars: [
-    { x: SLOT_X[0], h: BAR_H.last, cream: BAR_CREAM.last },
-    { x: SLOT_X[1], h: BAR_H.now, cream: BAR_CREAM.now },
-  ],
-  team: TEAM_OLD,
-  label: { text: B_LABEL.text, px: B_LABEL.px, x: SLOT_X[1], y: bLabelY(B_END_CAM.k) },
-} as const;
+// ===========================================================================
+// THE TEAM (busts in the face window)
+// ===========================================================================
+export type BustTone = "kraft" | "cream";
+export type BustHair = "crop" | "bun" | "fringe";
+/** A bust: its window place (0 left, 1 middle, 2 right), its tone, its hair, `drop` 0 (seated) .. 1
+ *  (wholly below the window's bottom edge). */
+export type BustSpec = { place: 0 | 1 | 2; tone: BustTone; hair?: BustHair; drop?: number; key?: string };
+/** B's team: three kraft busts (anyone, board tone), seated. C drops them out and raises its own. */
+export const TEAM_OLD: BustSpec[] = [
+  { place: 0, tone: "kraft", hair: "crop", key: "old0" },
+  { place: 1, tone: "kraft", hair: "bun", key: "old1" },
+  { place: 2, tone: "kraft", hair: "fringe", key: "old2" },
+];
+/** A suggestion for C's new team (cream = whoever the line is about). */
+export const TEAM_NEW: BustSpec[] = [
+  { place: 0, tone: "cream", hair: "fringe", key: "new0" },
+  { place: 1, tone: "cream", hair: "crop", key: "new1" },
+  { place: 2, tone: "cream", hair: "bun", key: "new2" },
+];
+/** The offset (world px, down) of a bust at `drop`. */
+export const bustDropY = (drop: number) => clamp01(drop) * (BUST_H + 1);
 
 // ===========================================================================
 // DRAWN PIECES
@@ -172,10 +230,89 @@ const f2 = (v: number) => (Math.round(v * 1000) / 1000).toString();
 const fx = (v: number) => (Math.round(v * 1e6) / 1e6).toString();
 const uidOf = (raw: string) => `ww${raw.replace(/[^A-Za-z0-9_-]/g, "_")}`;
 
+/** The window's ground: a dark recess (the board's ground mixed toward board). */
+export const WIN_FILL = mixHex(COLOR.ground, COLOR.board, 0.22);
+const toneOf = (t: BustTone) => (t === "cream" ? COLOR.cream : COLOR.board);
+const BLUSH = "#E39A82";
+
+/** One picture-book bust, shoulders' bottom centred on (x, base): flat fills, no outline, no shadow. */
+export const Bust: React.FC<{ x: number; base: number; tone: BustTone; hair?: BustHair }> = ({ x, base, tone, hair = "crop" }) => {
+  const uid = uidOf(useId());
+  const B = FACE.BUST;
+  const fill = toneOf(tone);
+  const hairC = mixHex(fill, COLOR.inkDark, tone === "cream" ? 0.42 : 0.5);
+  const r = B.head / 2;
+  const shTop = base - B.shH;
+  const hy = shTop - r + B.overlap; // head centre
+  const shR = Math.min(B.shH * 0.9, B.shW / 2);
+  const eye = B.head * 0.055;
+  const eyeDx = B.head * 0.17;
+  const eyeY = hy + B.head * 0.06;
+  // hair: a cap clipped to the head (crop: level; fringe: swept low on one side), a bun on top
+  const capY = hy - r * 0.28;
+  const cap =
+    hair === "fringe"
+      ? `M${f2(x - r - 1)} ${f2(hy + r * 0.05)}L${f2(x + r + 1)} ${f2(hy - r * 0.42)}L${f2(x + r + 1)} ${f2(hy - r - 1)}L${f2(x - r - 1)} ${f2(hy - r - 1)}Z`
+      : `M${f2(x - r - 1)} ${f2(capY)}H${f2(x + r + 1)}V${f2(hy - r - 1)}H${f2(x - r - 1)}Z`;
+  return (
+    <g>
+      <defs>
+        <clipPath id={`${uid}h`}>
+          <circle cx={f2(x)} cy={f2(hy)} r={f2(r)} />
+        </clipPath>
+      </defs>
+      <path d={rectPath(x - B.shW / 2, shTop, B.shW, B.shH + 1, shR, true, false)} fill={fill} />
+      {hair === "bun" ? <circle cx={f2(x)} cy={f2(hy - r * 0.98)} r={f2(r * 0.36)} fill={hairC} /> : null}
+      <circle cx={f2(x)} cy={f2(hy)} r={f2(r)} fill={fill} />
+      <path d={cap} fill={hairC} clipPath={`url(#${uid}h)`} />
+      <g fill={COLOR.inkDark}>
+        <circle cx={f2(x - eyeDx)} cy={f2(eyeY)} r={f2(eye)} />
+        <circle cx={f2(x + eyeDx)} cy={f2(eyeY)} r={f2(eye)} />
+      </g>
+      <g fill={BLUSH} fillOpacity={tone === "cream" ? 0.45 : 0.3}>
+        <ellipse cx={f2(x - B.head * 0.28)} cy={f2(eyeY + B.head * 0.15)} rx={f2(B.head * 0.085)} ry={f2(B.head * 0.05)} />
+        <ellipse cx={f2(x + B.head * 0.28)} cy={f2(eyeY + B.head * 0.15)} rx={f2(B.head * 0.085)} ry={f2(B.head * 0.05)} />
+      </g>
+    </g>
+  );
+};
+
+/** The team window: the recess (dark fill, the top wall's shade inside it), the busts masked by the
+ *  window (a bust at `drop` slides down out of its bottom edge), the window's lit front lip. */
+export const FaceTeam: React.FC<{ team: BustSpec[]; k: number }> = ({ team, k }) => {
+  const uid = uidOf(useId());
+  const L = faceLayout();
+  const w = L.win;
+  const shade = Math.min(w.h * 0.3, 7);
+  return (
+    <g>
+      <defs>
+        <clipPath id={`${uid}w`}>
+          <path d={rectPath(w.x, w.y, w.w, w.h, FACE.WIN.r)} />
+        </clipPath>
+        <linearGradient id={`${uid}s`} gradientUnits="userSpaceOnUse" x1="0" y1={f2(w.y)} x2="0" y2={f2(w.y + shade)}>
+          <stop offset="0" stopColor={COLOR.shadow} stopOpacity="0.55" />
+          <stop offset="1" stopColor={COLOR.shadow} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={rectPath(w.x, w.y, w.w, w.h, FACE.WIN.r)} fill={WIN_FILL} />
+      <g clipPath={`url(#${uid}w)`}>
+        {team.map((b, i) => {
+          const dy = bustDropY(b.drop ?? 0);
+          if (dy >= BUST_H + 0.99) return null;
+          return <Bust key={b.key ?? i} x={L.busts[b.place]} base={L.bustBase + dy} tone={b.tone} hair={b.hair} />;
+        })}
+        {/* the top wall's shade falls into the recess, over the busts' heads */}
+        <rect x={f2(w.x)} y={f2(w.y)} width={f2(w.w)} height={f2(shade)} fill={`url(#${uid}s)`} />
+      </g>
+      {/* the lit front lip (the cream's edge below the window, facing up into the light) */}
+      <path d={`M${f2(w.x + FACE.WIN.r)} ${f2(w.y + w.h + EDGE.CREAM / k / 2)}H${f2(w.x + w.w - FACE.WIN.r)}`} stroke={COLOR.edge} strokeOpacity={ALPHA.edge} strokeWidth={f2(EDGE.CREAM / k)} />
+    </g>
+  );
+};
+
 /** A bar in a slot: centre x, total height h above the tile top, cream up to `cream`, amber above. */
-export type BarSpec = { x: number; h: number; cream: number; lift?: number; key?: string };
-/** A team member: feet (x, y) on the tile top (y default TILE.TOP); PersonPeg's tone controls. */
-export type PegSpec = { x: number; y?: number; size?: number; blend?: number; shade?: number; sink?: number; elevation?: Elevation; lift?: number };
+export type BarSpec = { x: number; h: number; cream: number; lift?: number; key?: string; dim?: number };
 
 /** The slot opening's width (world): the bar + a lip each side (SCREEN px). */
 export const slotWidth = (k: number) => BAR_W + (2 * EDGE.SLOT_LIP) / k;
@@ -204,17 +341,19 @@ const HotEdge: React.FC<{ x: number; y: number; w: number; h: number; k: number;
 
 /** One bar's body: cream from the tile top up to `cream`, amber above (one bloom pass), its top edge
  *  (cream lit edge, or the hot edge once the amber is a few screen px tall: they cross over, no pop),
- *  the foot occlusion over the slot. Its shadow is BarShadow. */
+ *  the foot occlusion over the slot. `dim` 0..1 takes its amber to board by tone (bloom and hot edge
+ *  fade with it): C's old growth slice going to context. Its shadow is BarShadow. */
 export const SlotBar: React.FC<{ bar: BarSpec; k: number; band: [number, number] }> = ({ bar, k, band }) => {
   const uid = uidOf(useId());
   const h = bar.h;
   if (h * k <= 0.05) return null;
   const r = 4;
+  const dim = clamp01(bar.dim ?? 0);
   const x0 = bar.x - BAR_W / 2;
   const top = TILE.TOP - h;
   const amberH = Math.max(0, h - bar.cream);
   const creamH = h - amberH;
-  const amberOn = clamp01((amberH * k) / 6); // the edge crossover over the first 6 screen px of amber
+  const amberOn = clamp01((amberH * k) / 6) * (1 - dim); // the edge crossover over the first 6 screen px of amber
   const ao = Math.min(h, EDGE.FOOT_AO / k);
   return (
     <g>
@@ -224,8 +363,8 @@ export const SlotBar: React.FC<{ bar: BarSpec; k: number; band: [number, number]
           <stop offset="1" stopColor={COLOR.creamFoot} />
         </linearGradient>
         <linearGradient id={`${uid}a`} gradientUnits="userSpaceOnUse" x1="0" y1={f2(band[0])} x2="0" y2={f2(band[1])}>
-          <stop offset="0" stopColor={COLOR.amberTop} />
-          <stop offset="1" stopColor={COLOR.amberFoot} />
+          <stop offset="0" stopColor={mixHex(COLOR.amberTop, COLOR.board, dim)} />
+          <stop offset="1" stopColor={mixHex(COLOR.amberFoot, COLOR.boardFoot, dim)} />
         </linearGradient>
         <linearGradient id={`${uid}o`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={COLOR.shadow} stopOpacity="0" />
@@ -239,16 +378,21 @@ export const SlotBar: React.FC<{ bar: BarSpec; k: number; band: [number, number]
         <path d={rectPath(x0, top, BAR_W, h, r, true, false)} fill={`url(#${uid}c)`} />
       )}
       {amberH > 0 ? (
-        <g style={{ filter: bloomFilter(k) }}>
-          <path d={rectPath(x0, top, BAR_W, amberH, r, true, false)} fill={`url(#${uid}a)`} />
-        </g>
+        <>
+          {dim > 0.001 ? <path d={rectPath(x0, top, BAR_W, amberH, r, true, false)} fill={`url(#${uid}a)`} /> : null}
+          {dim < 0.999 ? (
+            <g style={{ filter: bloomFilter(k) }} opacity={dim > 0.001 ? f2(1 - dim) : undefined}>
+              <path d={rectPath(x0, top, BAR_W, amberH, r, true, false)} fill={`url(#${uid}a)`} />
+            </g>
+          ) : null}
+        </>
       ) : null}
-      {/* the top edge: the cream's lit edge fades as the hot edge comes up (amberOn) */}
+      {/* the top edge: the cream's (or board's) lit edge fades as the hot edge comes up (amberOn) */}
       {amberOn < 1 ? (
         <path
           d={`M${f2(x0 + r)} ${f2(top + EDGE.CREAM / k / 2)}H${f2(x0 + BAR_W - r)}`}
           stroke={COLOR.edge}
-          strokeOpacity={f2(ALPHA.edge * (1 - amberOn))}
+          strokeOpacity={f2(lerp(ALPHA.edge, amberH > 0 ? ALPHA.edgeBoard : ALPHA.edge, dim) * (1 - amberOn))}
           strokeWidth={f2(EDGE.CREAM / k)}
         />
       ) : null}
@@ -286,32 +430,17 @@ export const Slot: React.FC<{ x: number; k: number; fill: number }> = ({ x, k, f
   );
 };
 
-/** The R stamp + "WEALTH & TRADING" on the tile's face, centred (WORLD px). `scale` > 1 only if a cut
- *  must counter-scale the face to stay readable in a wide (default 1). */
-export const tileFace = (scale = 1) => {
-  const rh = FACE.R_H * scale;
-  const rw = (rh * REVOLUT_R_BOX.w) / REVOLUT_R_BOX.h;
-  const fs = FACE.FS * scale;
-  const tw = labelWidth(FACE.TEXT, fs) - TRACK.label * fs; // the advance minus the trailing track
-  const gap = FACE.GAP * scale;
-  const total = rw + gap + tw;
-  const cy = TILE.TOP + TILE.H / 2;
-  const x0 = TILE.X - total / 2;
-  return { rx: x0, ry: cy - rh / 2, rw, rh, tx: x0 + rw + gap, ty: cy + (METRIC.cap * fs) / 2, fs, total };
-};
-
-/** The product tile: one cream card on its one shadow (+ contact), the R stamp and the name in ink on
- *  its face, the lit top edge (broken at every bar slot), the slots. */
-export const WealthTile: React.FC<{ k: number; slotFill: number[]; faceScale?: number }> = ({ k, slotFill, faceScale = 1 }) => {
+/** The product tile: one cream card on its one shadow (+ contact), the face row (the team window with
+ *  `team` in it, the R stamp, the name in ink), the lit top edge (broken at every slot), the slots. */
+export const WealthTile: React.FC<{ k: number; slotFill: number[]; team: BustSpec[] }> = ({ k, slotFill, team }) => {
   const uid = uidOf(useId());
   const r = 4;
-  const face = tileFace(faceScale);
+  const L = faceLayout();
   const sw = slotWidth(k);
   const y = TILE.TOP + EDGE.CREAM / k / 2;
   // the lit edge, in segments between the slot openings
-  const cuts = SLOT_X.map((x) => [x - sw / 2, x + sw / 2]);
   let d = `M${f2(TILE_X0 + r)} ${f2(y)}`;
-  for (const [a, b] of cuts) d += `H${f2(a)}M${f2(b)} ${f2(y)}`;
+  for (const x of SLOT_X) d += `H${f2(x - sw / 2)}M${f2(x + sw / 2)} ${f2(y)}`;
   d += `H${f2(TILE_X1 - r)}`;
   return (
     <g>
@@ -327,19 +456,20 @@ export const WealthTile: React.FC<{ k: number; slotFill: number[]; faceScale?: n
         contact={{ x: TILE.X, y: FLOOR, w: (TILE.W + 16) / 1.16 }}
       />
       <path d={rectPath(TILE_X0, TILE.TOP, TILE.W, TILE.H, r)} fill={`url(#${uid}c)`} />
+      <FaceTeam team={team} k={k} />
       {/* the R, an ink stamp (evenodd), and the product's name in ink Kräftig caps */}
       <path
         d={REVOLUT_R_D}
-        transform={`translate(${fx(face.rx)} ${fx(face.ry)}) scale(${fx(face.rh / REVOLUT_R_BOX.h)})`}
+        transform={`translate(${fx(L.r.x)} ${fx(L.r.y)}) scale(${fx(L.r.h / REVOLUT_R_BOX.h)})`}
         fill={COLOR.inkDark}
         fillRule="evenodd"
       />
       <text
-        x={f2(face.tx)}
-        y={f2(face.ty)}
+        x={f2(L.text.x)}
+        y={f2(L.text.y)}
         fontFamily={FONT_LABEL}
         fontWeight={500}
-        fontSize={f2(face.fs)}
+        fontSize={f2(FACE.FS)}
         letterSpacing={`${TRACK.label}em`}
         fill={COLOR.inkDark}
         style={{ fontFeatureSettings: '"case" 1, "lnum" 1' }}
@@ -354,43 +484,19 @@ export const WealthTile: React.FC<{ k: number; slotFill: number[]; faceScale?: n
   );
 };
 
-/** The team: ONE shadow layer (PegShadows), then the board-tone pegs in their cream slots. */
-export const Team: React.FC<{ team: PegSpec[]; k: number; band: [number, number]; elevation?: Elevation; lift?: number }> = ({ team, k, band, elevation = "rest", lift = 0 }) => (
-  <g>
-    <PegShadows pegs={team.map((p) => ({ x: p.x, y: p.y ?? TILE.TOP, size: p.size ?? PEG_SIZE, sink: p.sink ?? 0 }))} elevation={elevation} lift={lift} />
-    {team.map((p, i) => (
-      <PersonPeg
-        key={i}
-        x={p.x}
-        y={p.y ?? TILE.TOP}
-        size={p.size ?? PEG_SIZE}
-        k={k}
-        blend={p.blend ?? 0}
-        shade={p.shade ?? 0}
-        sink={p.sink ?? 0}
-        elevation={p.elevation ?? "rest"}
-        lift={p.lift ?? 0}
-        shadow={false}
-        slot="cream"
-        amberBand={band}
-      />
-    ))}
-  </g>
-);
-
-/** The whole board object at one moment: tile (+ slots filled by `bars`), bar shadows, bars, team. */
-export const WealthBoard: React.FC<{ k: number; band: [number, number]; bars: BarSpec[]; team: PegSpec[]; faceScale?: number }> = ({ k, band, bars, team, faceScale }) => {
+/** The whole board object at one moment: bar shadows, the tile (+ its face row with `team`, slots filled
+ *  by `bars`), the bars. */
+export const WealthBoard: React.FC<{ k: number; band: [number, number]; bars: BarSpec[]; team: BustSpec[] }> = ({ k, band, bars, team }) => {
   const slotFill = SLOT_X.map((x) => bars.filter((b) => Math.abs(b.x - x) < 1).reduce((a, b) => Math.max(a, b.h), 0));
   return (
     <g>
       {bars.map((b, i) => (
         <BarShadow key={b.key ?? i} bar={b} />
       ))}
-      <WealthTile k={k} slotFill={slotFill} faceScale={faceScale} />
+      <WealthTile k={k} slotFill={slotFill} team={team} />
       {bars.map((b, i) => (
         <SlotBar key={b.key ?? i} bar={b} k={k} band={band} />
       ))}
-      <Team team={team} k={k} band={band} />
     </g>
   );
 };
@@ -403,38 +509,111 @@ export const bBarSpecs = (S: number): BarSpec[] => {
     { key: "now", x: SLOT_X[1], h: h.now, cream: BAR_CREAM.now, lift: riseLift(S, B_T.RISE2) },
   ];
 };
-/** "+60–80%" over this year's bar: amber Dreiviertelfett SECONDARY with the bloom, the stout entrance
- *  (`enter` 0..1 over 12 f) and its reverse (`exit`). Baseline bLabelY(k): it keeps SPACE.CLEAR screen px
- *  over the bar at any k. */
-export const BLabel: React.FC<{ k: number; enter?: number; exit?: number }> = ({ k, enter = 1, exit = 0 }) => (
-  <Numeral x={SLOT_X[1]} y={bLabelY(k)} k={k} px={B_LABEL.px} text={B_LABEL.text} tone="amber" glow enter={enter} exit={exit} />
+
+/**
+ * GrowthLabel — a growth figure in Dreiviertelfett at a SCREEN size (`px`, default LABEL_PX: the same size
+ * on screen at any k), centred on world x, baseline world y. Amber with the fixed bloom; `dim` 0..1 takes it
+ * to the lo tone by tone (the bloom fades with it), same size. The stout entrance (`enter` 0..1 over 12 f:
+ * slide up 24 px + fade + blur 6 -> 0) and its reverse (`exit`).
+ */
+export const GrowthLabel: React.FC<{ x: number; y: number; k: number; text: string; px?: number; enter?: number; exit?: number; dim?: number; anchor?: "start" | "middle" | "end" }> = ({
+  x,
+  y,
+  k,
+  text,
+  px = LABEL_PX,
+  enter = 1,
+  exit = 0,
+  dim = 0,
+  anchor = "middle",
+}) => {
+  const a = easeOutCubic(enter);
+  const e = easeOutCubic(exit);
+  const opacity = a * (1 - e);
+  if (opacity <= 0.002) return null;
+  const lift = (1 - a) * 24 + e * 24;
+  const blur = 6 * (1 - a) + 6 * e;
+  const d = clamp01(dim);
+  const fs = px / k;
+  const comp = anchor === "middle" ? (TRACK.numeral * fs) / 2 : anchor === "end" ? TRACK.numeral * fs : 0;
+  const t = (
+    <text
+      x={f2(x + comp)}
+      y={f2(y + lift / k)}
+      fontFamily={FONT_NUM}
+      fontWeight={700}
+      fontSize={f2(fs)}
+      letterSpacing={`${TRACK.numeral}em`}
+      textAnchor={anchor}
+      fill={mixHex(COLOR.amberTop, COLOR.inkCreamLo, d)}
+      style={{ fontFeatureSettings: '"lnum" 1' }}
+    >
+      {text}
+    </text>
+  );
+  return (
+    <g opacity={f2(opacity)} style={{ filter: blur > 0.05 ? `blur(${f2(blur / k)}px)` : undefined }}>
+      {d < 0.999 ? (
+        <g style={{ filter: bloomFilter(k) }} opacity={d > 0.001 ? f2(1 - d) : undefined}>
+          {t}
+        </g>
+      ) : null}
+      {d > 0.001 ? t : null}
+    </g>
+  );
+};
+/** "+60–80%" over this year's bar (B's label): GrowthLabel at bLabelY(k, dy). */
+export const BLabel: React.FC<{ k: number; enter?: number; exit?: number; dim?: number; dy?: number }> = ({ k, enter = 1, exit = 0, dim = 0, dy = 0 }) => (
+  <GrowthLabel x={SLOT_X[1]} y={bLabelY(k, dy)} k={k} text={B_LABEL.text} px={B_LABEL.px} enter={enter} exit={exit} dim={dim} />
 );
+
+// --- B's END state (S = 101), for C ----------------------------------------------------------------------
+export const B_END = {
+  S: B_LAST_S,
+  cam: B_END_CAM,
+  pool: B_POOL(B_LAST_S),
+  bars: bBarSpecs(B_LAST_S),
+  team: TEAM_OLD,
+  label: { text: B_LABEL.text, px: B_LABEL.px, x: SLOT_X[1], y: bLabelY(B_END_CAM.k) },
+} as const;
 
 // --- small screen helpers ------------------------------------------------------------------------------------
 export const SX = (c: Cam, wx: number) => 540 + (wx - c.x) * c.k;
 export const SY = (c: Cam, wy: number) => 960 + (wy - c.y) * c.k;
 /** The keep-in box (CRAFT.md / COMMON.md, 9:16): everything that matters inside it on every frame. */
 export const KEEP_IN = { x0: 65, x1: 1015, y0: 290, y1: 1070 } as const;
-/** The label's screen box (approx: Söhne advances; the top is the figures' height). */
-export const labelBox = (c: Cam, y: number = bLabelY(c.k)) => {
-  const w = numeralWidth(B_LABEL.text, B_LABEL.px);
-  const cx = SX(c, SLOT_X[1]);
-  return { x0: cx - w / 2, x1: cx + w / 2, y0: SY(c, y) - B_LABEL.px * METRIC.fig, y1: SY(c, y) };
+/** The lowest a tile face may end (the caption band starts at 1080). */
+export const FACE_MAX_Y = 1060;
+/** A growth label's screen box (approx: Söhne advances; the top is the figures' height). */
+export const growthLabelBox = (c: Cam, x: number, y: number, text: string, px: number = LABEL_PX, anchor: "start" | "middle" | "end" = "middle") => {
+  const w = numeralWidth(text, px);
+  const sx = SX(c, x);
+  const x0 = anchor === "middle" ? sx - w / 2 : anchor === "end" ? sx - w : sx;
+  return { x0, x1: x0 + w, y0: SY(c, y) - px * METRIC.fig, y1: SY(c, y) };
 };
+/** B's label's screen box. */
+export const labelBox = (c: Cam, y: number = bLabelY(c.k)) => growthLabelBox(c, SLOT_X[1], y, B_LABEL.text, B_LABEL.px);
 
-// --- load-time checks (B's geometry; C's suggestion fits) -----------------------------------------------------
+// --- load-time checks (the world's layout; C's suggestion fits) -------------------------------------------------
 {
   const fail = (m: string) => {
     throw new Error(`wealthWorld: ${m}`);
   };
   if (Math.abs(BAR_CREAM.now - BAR_H.last) > 1e-9) fail("this year's cream must end at last year's height");
-  if (SLOT_X[0] - BAR_W / 2 <= Math.max(...TEAM_OLD.map((p) => pegGeometry(p.x, p.y, p.size).right)) + 8) fail("the team crowds the first slot");
-  if (SLOT_X[2] + BAR_W / 2 > TILE_X1 - 8) fail("the third slot runs off the tile");
-  for (let i = 1; i < SLOT_X.length; i++) if (SLOT_X[i] - SLOT_X[i - 1] < BAR_W + 16) fail("slots too close");
-  const face = tileFace();
-  if (face.total > TILE.W - 40) fail("the face runs off the tile");
-  // C's suggested wide: the 6.8-unit bar and the tile inside the keep-in box
+  if (SLOT_X[0] - BAR_W / 2 < TILE_X0 + 24 || SLOT_X[2] + BAR_W / 2 > TILE_X1 - 24) fail("the slots run off the tile");
+  if (Math.abs(SLOT_X[0] + SLOT_X[2] - 2 * TILE.X) > 1e-9) fail("the slots are not symmetric");
+  const L = faceLayout();
+  if (L.total > TILE.W - 40) fail("the face row runs off the tile");
+  if (L.win.y < TILE.TOP + 5 || L.win.y + L.win.h > FLOOR - 5) fail("the window runs off the face");
+  if (L.bustBase - BUST_H < L.win.y + 4) fail("the busts' heads touch the window's top");
+  if (L.busts[2] + FACE.BUST.shW / 2 > L.win.x + L.win.w - 2 || L.busts[0] - FACE.BUST.shW / 2 < L.win.x + 2) fail("the busts run out of the window");
+  // B's end: the busts' heads >= 34 px on screen
+  if (FACE.BUST.head * B_END_CAM.k < 34) fail(`the busts' heads are ${(FACE.BUST.head * B_END_CAM.k).toFixed(1)} px at B's end`);
+  // C's suggested end: the tall bar + tile inside the keep-in box, the tile >= 55 % of the frame's width
   const c = C_TALL_CAM;
-  if (SY(c, FLOOR) > KEEP_IN.y1 || SY(c, TILE.TOP - BAR_H.next) < KEEP_IN.y0 + 100) fail("C_TALL_CAM does not fit the tall bar");
-  if (SX(c, TILE_X0) < KEEP_IN.x0 || SX(c, TILE_X1) > KEEP_IN.x1) fail("C_TALL_CAM: the tile runs out of the keep-in box");
+  if (SY(c, FLOOR) > FACE_MAX_Y) fail("C_TALL_CAM: the tile face ends in the caption band");
+  if (SY(c, TILE.TOP - BAR_H.next) - LABEL_PX * METRIC.fig - SPACE.CLEAR < 300) fail(`C_TALL_CAM: no room for a label over the tall bar (bar top ${SY(c, TILE.TOP - BAR_H.next).toFixed(0)})`);
+  if (TILE.W * c.k < 0.55 * 1080) fail("C_TALL_CAM: the tile is under 55 % of the frame's width");
+  const ob = labelBox(c, bLabelY(c.k));
+  if (SX(c, SLOT_X[2] - BAR_W / 2) - ob.x1 < 12) fail(`C_TALL_CAM: the old label runs into the tall bar (${(SX(c, SLOT_X[2] - BAR_W / 2) - ob.x1).toFixed(1)} px)`);
 }

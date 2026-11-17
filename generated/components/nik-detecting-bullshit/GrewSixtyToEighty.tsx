@@ -11,16 +11,19 @@
 // 60 % f50 · or f62 · 80 % f66 · year f75 · on f81 · year f83 · (ends ~f86) · and f88 · slot ends f102.
 // DURATION: the slot 32.407 -> 36.662 s = 4.255 s x 23.976 = 102 frames (f0..f101).
 //
-// THE MOTION: one wide cream product tile (the Revolut R stamped in ink, WEALTH & TRADING on its face, the
-// product team as three board pegs on its top edge, three empty slots), centred; the camera is already
-// drifting in on f0 and tilts up with the bars (the tile ends low, top y ~903; max 2.3 px/f).
-// Last year's cream bar rises out of the first slot to 1.0 unit (f-4..26, already emerging on f0, one decelerating curve, its shadow
-// lifted mid-rise, at rest on landing); then this year's bar rises out of the second slot in ONE continuous
-// rise (f32-66): cream up to last year's height (~f47), and on above it as an AMBER slice, the growth itself,
-// to 1.7 units, landing on "80" (f66) and just settling (no light sweep: the clip saves its one click for
-// cut C's +300 %; wealthWorld's B_T.SWEEP is unused here and stays only for compatibility). "+60–80%" (the
-// speaker's own range, amber Dreiviertelfett) blurs in and slides up above the slice f56-68. Then a living
-// hold (camera creep, light pool, sway, grain); the third slot stays empty and dark (cut C's).
+// THE MOTION (rev 2: one centred, symmetric composition shared with cut C): one wide cream product tile
+// centred on x 540, three symmetric slots on its top (last year left, this year centre, C's right); on its
+// face one centred row: a recessed window holding the product team as three picture-book busts (board-tone
+// kraft, big round heads, flat fills, no outlines or shadows), the Revolut R stamped in ink, WEALTH & TRADING.
+// The camera stays on x 540; it is already drifting in on f0 and tilts up with the bars in one eased glide
+// (k 1.85 -> 1.98, max 1.7 px/f; tile top ends y ~782, foot y ~893).
+// Last year's cream bar rises out of the left slot to 1.0 unit (f-4..26, already emerging on f0, one
+// decelerating curve, its shadow lifted mid-rise, at rest on landing); then this year's bar rises out of the
+// centre slot in ONE continuous rise (f32-66): cream up to last year's height (~f47), and on above it as an
+// AMBER slice, the growth itself, to 1.7 units, landing on "80" (f66) and just settling (no light sweep: the
+// clip saves its one click for cut C's +300 %). "+60–80%" (the speaker's own range, amber Dreiviertelfett at a
+// fixed 80 screen px, the size cut C keeps it at) blurs in and slides up, centred over the centre bar, f56-68.
+// Then a living hold (camera creep, light pool, sway, grain); the right slot stays empty and dark (cut C's).
 // Contacts: each bar is in its slot from its first frame (it emerges from the open pocket, which closes to
 // the joint line over its first 6 screen px); the amber starts where the bar's top passes last year's height.
 // AMBER = growth / the KPI going up (COMMON.md): the +0.7 slice and its label. Cream = the subject (the
@@ -44,6 +47,7 @@ import {
   B_POOL,
   B_T,
   FPS as WORLD_FPS,
+  FACE_MAX_Y,
   KEEP_IN,
   SX,
   SY,
@@ -96,8 +100,9 @@ export default GrewSixtyToEighty;
     const tx0 = SX(c, TILE_X0);
     const tx1 = SX(c, TILE_X1);
     if (tx0 < KEEP_IN.x0 || tx1 > 955) fail(`S${S}: the tile spans x ${tx0.toFixed(0)}-${tx1.toFixed(0)}`);
-    if (SY(c, FLOOR) > KEEP_IN.y1) fail(`S${S}: the tile's foot at y ${SY(c, FLOOR).toFixed(0)} (keep-in ends ${KEEP_IN.y1})`);
-    // the bars' tops and the pegs' heads inside it
+    if (Math.abs(tx0 + tx1 - 1080) > 0.5) fail(`S${S}: the tile is off the centre line`);
+    if (SY(c, FLOOR) > FACE_MAX_Y) fail(`S${S}: the tile face ends at y ${SY(c, FLOOR).toFixed(0)} (max ${FACE_MAX_Y})`);
+    // the bars' tops inside it
     if (SY(c, TILE.TOP - Math.max(b.last, b.now)) < KEEP_IN.y0) fail(`S${S}: a bar's top above the keep-in box`);
     // the label, once it is entering: inside the box, and clear of this year's bar top (>= 16 px)
     if (S >= B_T.LABEL_IN) {
