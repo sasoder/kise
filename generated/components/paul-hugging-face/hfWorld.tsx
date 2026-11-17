@@ -21,6 +21,8 @@ export const FONT = RC.fontFamily;
 
 export const W_PX = 1080;
 export const H_PX = 1920;
+/** REV2 (Nov 17): every cut's picture sits this many px lower than its camera keys say (added to sy in makeWorld) */
+export const SCREEN_DY = 190;
 export const ACCENT = "#FFB000";
 export const ACCENT_DEEP = "#D98A0C";
 export const ORANGE_LINE = "#8A4A0E";
@@ -126,8 +128,10 @@ export type WorldOpts = {
   yaw: number;
   pitch: number;
   F: number;
-  /** the target's screen row */
+  /** the target's screen row (before SCREEN_DY) */
   sy?: number;
+  /** override the shared screen-space offset (default SCREEN_DY) */
+  dy?: number;
   sx?: number;
   frame?: number;
   fog?: { near?: number; vis?: number; max?: number };
@@ -143,7 +147,9 @@ export const makeWorld = (o: WorldOpts): World => {
   const uu: V3 = dot(u, [0, 1, 0]) < 0 ? mul(u, -1) : u;
   const pos = sub(o.target, mul(f, o.dist));
   const cx = o.sx ?? 540;
-  const cy = o.sy ?? 700;
+  // REV2: the whole composed picture sits SCREEN_DY lower (a principal-point shift: subjects, shadows, light, grid and
+  // horizon move down together; AirStage's sky is painted from airAtScreen over the full frame, so the top fills)
+  const cy = (o.sy ?? 700) + (o.dy ?? SCREEN_DY);
   const horizon = cy - F * Math.tan(pitch);
   const fh = norm([f[0], 0, f[2]]);
   const L = norm(add(add(mul(r, -0.7), [0, 0.8, 0]), mul(fh, -0.16)));
@@ -545,11 +551,11 @@ export const GridFloor: React.FC<{ W: World; x0: number; x1: number; z0: number;
     );
   }
   const nearY = W.project([midX, 0, z0 + 2.5])[1];
-  const lowAir = mixHex(W.screenAir(H_PX), GRAPHITE.shadow, 0.35);
+  const lowAir = mixHex(W.screenAir(H_PX + SCREEN_DY), GRAPHITE.shadow, 0.35);
   return (
     <g>
       <defs>
-        <linearGradient id="floorNear" gradientUnits="userSpaceOnUse" x1="0" y1={n2(Math.min(nearY, 1150))} x2="0" y2={H_PX}>
+        <linearGradient id="floorNear" gradientUnits="userSpaceOnUse" x1="0" y1={n2(Math.min(nearY, 1150 + SCREEN_DY))} x2="0" y2={H_PX}>
           <stop offset="0" stopColor={lowAir} stopOpacity={0} />
           <stop offset="0.5" stopColor={lowAir} stopOpacity={0.45} />
           <stop offset="1" stopColor={lowAir} stopOpacity={0.78} />

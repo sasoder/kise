@@ -1,8 +1,9 @@
 // ---------------------------------------------------------------------------
 // SubvertTheGrader (paul-hugging-face, cut 23.941-28.362, deliver 23_SubvertTheGrader.mov). Look C "Graphite air" on
-// the clip's shared world (hfWorld.tsx + hfProps.tsx). Opaque 1080x1920, 23.976 fps, 106 frames.
+// the clip's shared world (hfWorld.tsx + hfProps.tsx). Opaque 1080x1920, 23.976 fps, 106 frames. ROUND 2 (REV2.md B):
+// one smooth motion, one robot, the grader's readout a big front GAUGE.
 //
-// CHECK LINE: the AIs studied how the grader catches cheaters, then turned the grader to their side.
+// CHECK LINE: the AI worked out how the grader decides, then rewired it so it reads "pass".
 //
 // THE LINE: "And spent a huge amount of effort trying to understand that process and then subvert that process,
 //   basically" (just before, on camera: "how will a grader detect and penalize cheating?")
@@ -10,30 +11,27 @@
 //   · and f62 · then f74 · subvert f76 · that f87 · process f89 · basically f103 (Whisper runs early: land on/after)
 // DURATION: the slot 23.941 -> 28.362 s = 4.421 s x 23.976 = 106 frames (f0..f105).
 //
-// THE MOTION (one continuous camera): open CLOSE on the grader's open side panel (hood lifted), a robot's face peering
-//   in, a cream scan light from its eyes sweeping the insides; the camera eases back (to ~f26) on the whole grader while
-//   its stamp comes down and prints a grey X on a task sheet (press f30-36, the X at f36). It never parks: from f26 it
-//   orbits on round toward the open side (yaw -0.78 -> -0.95 by f74), bringing the opening to centre-right and
-//   closing in. Meanwhile the scan rides each inner part in turn and leaves a thin glowing cream outline on it that
-//   stays (upper wire f18-30, top bar f30-40, middle f40-49, bottom f49-57, lower wire f57-66): by f66 the inside is
-//   mapped. The second robot, in front of the in-feed, leans over the line after the X sheet as the belt carries it
-//   onto the out-rack (f44-56), head tilted, studying it; it straightens and the orbit leaves it (out by ~f74). On
-//   "subvert", in one closer framing held from f72 (the machine across the box, the opening and the plugging robot in
-//   x 150-950, the insides ~245-265 px wide), the studying robot's orange thread flies into the insides (f64 ->
-//   plugged f76); orange runs through the insides (f77-85), along a wire over the top (f79-85) and up the stamp arm
-//   (f81-91); the orange stamp prints a big, bold orange TICK (long right arm) on the next sheet, one the grader would
-//   have crossed out (f92).
-//   The belt moves on (f95-104): the tick sheet slides up the out-rack in front of the crossed ones, large; the
-//   plugging robot stays fully in with a small happy squint (f93-99); the slow push runs to the last frame.
-// Orange = the AIs and what they have taken over (the thread, the insides, the stamp, the tick); the grader is the
-//   people's off-white machine.
+// THE MOTION (one camera move over all 106 frames: a slow orbit from the grader's open side round toward its front,
+//   with a gentle push-in, pchip-eased, never stopping): the robot stands at the grader's open side and leans in to
+//   study it (f2-18); a soft cream scan line sweeps across the open side panel from front to back (f6-42) and the
+//   insides it passes are traced in thin cream outlines that stay (three bars, two wires, and one short jumper cable
+//   from the top bar down to the bottom bar). Its pupils ride the scan. The big GAUGE on the front reads X (needle
+//   resting on the dark X zone, a faint idle tremble).
+//   Then it reaches in (f44-56) to the jumper's lower end, pulls it off the bottom bar and carries it up onto the
+//   middle bar (f57-66): one connection re-routed. A spark at the new plug (f66); orange spreads from its hand
+//   through the insides along the traced paths: up the jumper and forward along the middle bar (f66-75), out of the
+//   opening along the lead, round the front edge into the gauge (f73-83); the needle sweeps smoothly from X to the
+//   check (f80-94) and the check zone lights orange (f86-94): a fake pass. It lets go (f68-80); the needle holds on the
+//   orange check while the robot steps back a little with a small happy squint (f92-105); from ~f76 the orbit carries
+//   on round to face the dial (still moving at f105).
+// Orange = the AI and what it has taken over (the traced path, the lead, the lit check); the grader is the people's
+//   off-white machine with GRADER printed on its top.
 //
-// SET (metres, the grader's own frame = the world): the grader at the origin (body 2.2 x 1.5 x 2.0, GRADER printed on
-//   its top in perspective; its side opening on the +x face at z -0.38..0.82, y 0.38..1.22, the hood-door lifted; flow "right": in-feed belt at the left, the
-//   stamp at x 0.62 and the out-rack at x 1.58 in front of the right end, so stamp, rack, opening and plugger share
-//   one framing); R1 (studies, then plugs in) at (1.5, 0, 0.72) beside the opening's back edge, three-quarter toward
-//   it; R2 in front of the in-feed at (-0.3, 0, -2.25), studying the X sheet.
-//   Camera yaw -0.74 -> -0.95 (-0.93 at the end), pitch 0.26 -> 0.42 -> 0.6, dist 3.5 -> 7.7 -> 6.7 -> ~5.9 at f105.
+// SET (metres, the grader's own frame = the world): the grader at the origin (body 2.2 x 1.5 x 2.0, readout "gauge":
+//   the dial on the front face at x 0.2, y 0.77, R 0.6; the side opening on the +x face at z -0.38..0.82, y 0.38..1.22,
+//   its hood-door lifted). The robot at (1.42, 0, 0.98) beside the opening's back edge, three-quarter toward it.
+//   Camera yaw -1.0 -> -0.72 (f76) -> -0.3 (f105), pitch 0.33 -> 0.27, dist 6.5 -> 6.0; the dial ~71 deg off-axis at f0,
+//   ~30 deg at f105; SCREEN_DY (hfWorld) puts the picture 190 px lower.
 //
 // SOURCES: OpenAI, "The Hugging Face incident and the road ahead" (July 2026): the models worked out how the
 //   evaluation was graded and subverted it. Nothing numeric on screen.
@@ -43,59 +41,30 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { BOT_POSES, botGripTo, type BotPose } from "../rsi-ten-earths/tenEarthsBot";
 import { lerpPose } from "../kyle-covid/covidFolkBody";
-import { FloorShadow, GRAPHITE, HfStage, RobotAt, Svg, n2, ramp, robotFoot, worldAt, type CamKey, type P2, type V3 } from "./hfWorld";
-import { GRADER, Grader, Thread, beltSheets, botScreen, faceYaw, graderGeom, graderInside, graderInsideParts, graderShadows, type GraderOpts } from "./hfProps";
+import { ACCENT, FloorShadow, GRAPHITE, HfStage, MATS, ROBOT_U, RobotAt, Svg, add, lerp, mul, n2, ramp, robotFoot, sub, worldAt, type CamKey, type P2, type V3 } from "./hfWorld";
+import { GRADER, Grader, botScreen, faceYaw, gaugeGeom, graderGeom, graderInside, graderInsideParts, graderShadows, threadD, type GraderOpts } from "./hfProps";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 106;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
-// the camera, one continuous move in three lobes: the close start already moving (pre-roll key) and the pull-back
-// reveal (to ~f26); the orbit round toward the open side while the insides get mapped (f26-74: the opening travels
-// to centre-right and the camera closes in on the subvert framing, held from f72 to the tick); and the slow push to
-// the end (post-roll key: still moving at f105). Yaw only grows toward the open side until f74 (a slight ease back
-// after), so the camera never parks; the one slow point is the hand-over from the pull-back to the orbit (~f27).
+// the camera: one orbit from the open side round toward the front (yaw only grows, -1.0 -> -0.3) with a gentle
+// push-in; from ~f76 it carries on round faster so the dial faces us (~30 deg off-axis at f105, the orange check the
+// clearest thing in the last frame); pre- and post-roll keys keep it moving through f0 and f105
 const KEYS: CamKey[] = [
-  { f: -12, target: [1.35, 0.95, 0.55], dist: 3.5, yaw: -0.74, pitch: 0.26, F: 1750, sy: 640 },
-  { f: 26, target: [0.3, 0.8, -0.3], dist: 7.4, yaw: -0.78, pitch: 0.42, sy: 680 },
-  { f: 46, target: [0.45, 0.8, -0.25], dist: 7.7, yaw: -0.84, pitch: 0.42, sy: 690 },
-  { f: 74, target: [0.85, 0.8, -0.15], dist: 6.7, yaw: -0.95, pitch: 0.6, sy: 700 },
-  { f: 132, target: [1.0, 0.84, -0.45], dist: 5.6, yaw: -0.93, pitch: 0.62, sy: 740 },
+  { f: -16, target: [0.8, 0.8, 0.2], dist: 6.6, yaw: -1.02, pitch: 0.33, F: 1750, sy: 700 },
+  { f: 50, target: [0.7, 0.8, 0.06], dist: 6.3, yaw: -0.84, pitch: 0.31, F: 1750, sy: 700 },
+  { f: 76, target: [0.65, 0.79, -0.01], dist: 6.15, yaw: -0.72, pitch: 0.3, F: 1750, sy: 700 },
+  { f: 105, target: [0.6, 0.78, -0.12], dist: 6.0, yaw: -0.3, pitch: 0.27, F: 1750, sy: 700 },
+  { f: 124, target: [0.57, 0.78, -0.18], dist: 5.95, yaw: -0.18, pitch: 0.26, F: 1750, sy: 700 },
 ];
 
-const R1: V3 = [1.5, 0, 0.72];
-const R2: V3 = [-0.3, 0, -2.25];
+const R0: V3 = [1.42, 0, 0.98];
 const OPEN_C: V3 = [1.1, 0.8, 0.22];
 
-// the mapping: the scan light rides each inner part in turn (boustrophedon, so the spot runs on down the ends) and
-// leaves a thin cream outline on it that stays: upper wire, top bar, middle bar, bottom bar, lower wire
-const MAP: { kind: "wire" | "bar"; i: number; f0: number; f1: number; rev: boolean }[] = [
-  { kind: "wire", i: 0, f0: 18, f1: 30, rev: false },
-  { kind: "bar", i: 0, f0: 30, f1: 40, rev: true },
-  { kind: "bar", i: 1, f0: 40, f1: 49, rev: false },
-  { kind: "bar", i: 2, f0: 49, f1: 57, rev: true },
-  { kind: "wire", i: 1, f0: 57, f1: 66, rev: false },
-];
-
 const ease = (t: number) => t * t * (3 - 2 * t);
-/** a screen polyline sampled from a part (bars straight, wires as threadD's quadratic chain) */
-const sampleD = (pts: P2[], n = 24): P2[] => {
-  if (pts.length === 2) return Array.from({ length: n + 1 }, (_, i) => [pts[0][0] + (pts[1][0] - pts[0][0]) * (i / n), pts[0][1] + (pts[1][1] - pts[0][1]) * (i / n)] as P2);
-  const [a, b, c] = pts;
-  const m: P2 = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2];
-  const half = Math.floor(n * 0.6);
-  const out: P2[] = [];
-  for (let i = 0; i <= half; i++) {
-    const t = i / half;
-    out.push([(1 - t) * (1 - t) * a[0] + 2 * (1 - t) * t * b[0] + t * t * m[0], (1 - t) * (1 - t) * a[1] + 2 * (1 - t) * t * b[1] + t * t * m[1]]);
-  }
-  for (let i = 1; i <= n - half; i++) {
-    const t = i / (n - half);
-    out.push([m[0] + (c[0] - m[0]) * t, m[1] + (c[1] - m[1]) * t]);
-  }
-  return out;
-};
+const ease5 = (t: number) => t * t * t * (t * (6 * t - 15) + 10);
 /** the first fraction t of a polyline (by length) and its tip */
 const cutPoly = (pts: P2[], t: number): { pts: P2[]; tip: P2 } => {
   const seg = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]));
@@ -114,138 +83,161 @@ const cutPoly = (pts: P2[], t: number): { pts: P2[]; tip: P2 } => {
   }
   return { pts: out, tip: out[out.length - 1] };
 };
-/** a polyline offset sideways by d px (screen normals) */
-const offsetPoly = (pts: P2[], d: number): P2[] =>
-  pts.map((p, i) => {
-    const a = pts[Math.max(0, i - 1)];
-    const b = pts[Math.min(pts.length - 1, i + 1)];
-    const L = Math.max(1e-6, Math.hypot(b[0] - a[0], b[1] - a[1]));
-    return [p[0] - ((b[1] - a[1]) / L) * d, p[1] + ((b[0] - a[0]) / L) * d] as P2;
-  });
 const polyD = (pts: P2[]) => `M${pts.map((p) => `${n2(p[0])},${n2(p[1])}`).join("L")}`;
+/** a 3D quadratic (a, ctrl, b) sampled */
+const quad3 = (a: V3, c: V3, b: V3, n = 20): V3[] =>
+  Array.from({ length: n + 1 }, (_, i) => {
+    const t = i / n;
+    return add(add(mul(a, (1 - t) * (1 - t)), mul(c, 2 * (1 - t) * t)), mul(b, t * t));
+  });
+/** a 3D polyline sampled at n points per segment */
+const line3 = (a: V3, b: V3, n = 16): V3[] => Array.from({ length: n + 1 }, (_, i) => add(a, mul(sub(b, a), i / n)));
 
 const SubvertTheGrader: React.FC<z.infer<typeof schema>> = () => {
   const fr = useCurrentFrame();
   const W = worldAt(KEYS, fr);
 
-  // ---- the grader's clock ----
-  const press = (hit: number, down = 6, up = 6) => ramp(fr, hit - down, hit) * (1 - ramp(fr, hit + 1.5, hit + 1.5 + up));
-  const stamp = Math.max(press(36), press(92, 6, 4));
-  const belt = ramp(fr, 44, 56) + ramp(fr, 95, 104);
-  const sheets = beltSheets(belt, -2, 3, (i) =>
-    i < 0 ? { mark: "x" } : i === 0 ? { mark: "x", ink: ramp(fr, 35.5, 37) } : i === 1 ? { mark: "tick", ink: ramp(fr, 91.5, 93), orange: 1, markScale: 1.25, markWeight: 1.55, markStretch: 1.2 } : {},
-  );
-  const insides = ramp(fr, 77, 85);
-  const arm = ramp(fr, 81, 91);
-  const o: GraderOpts = { c: [0, 0, 0], label: "GRADER", panel: 1, door: "top", flow: "right", stamp, belt, sheets, insides, arm, glow: 0.7 };
-  const G = graderGeom(o);
+  // ---- the clock ----
+  const leanIn = ease(ramp(fr, 2, 18));
+  const sweep = ease(ramp(fr, 6, 42)); // the scan line across the opening, front -> back
+  const scanA = ramp(fr, 3, 8) * (1 - ramp(fr, 40, 48));
+  const reach = ease(ramp(fr, 44, 56)); // the hand to the jumper's lower end
+  const carry = ease(ramp(fr, 57, 66)); // the end from the bottom bar onto the middle bar
+  const release = ease(ramp(fr, 69, 81)); // the hand back
+  const spark = ramp(fr, 65.5, 67) * (1 - ramp(fr, 68, 74));
+  const flowJ = ease(ramp(fr, 66, 72)); // orange up the jumper
+  const flowB = ease(ramp(fr, 66, 75)); // orange forward along the middle bar
+  const feed = ease(ramp(fr, 73, 83)); // the lead into the gauge
+  const sweepN = ease5(ramp(fr, 80, 94)); // the needle X -> check
+  const lit = ease(ramp(fr, 86, 94));
+  const stepBack = ease(ramp(fr, 91, 104));
+  const happy = ramp(fr, 93, 100);
+  const tremble = (1 - ramp(fr, 70, 80)) * (0.012 * Math.sin(fr * 0.9) + 0.008 * Math.sin(fr * 2.3 + 1));
+  const gauge = sweepN + tremble;
 
-  // ---- the mapping: parts on screen, the spot's path ----
+  const o: GraderOpts = { c: [0, 0, 0], label: "GRADER", panel: 1, door: "top", flow: "right", readout: "gauge", gauge, gaugeLit: lit, gaugeFeed: feed, glow: 0.7 };
+  const G = graderGeom(o);
+  const GG = gaugeGeom(o);
   const parts = graderInsideParts(o);
   const kS = W.scaleAt(OPEN_C);
-  const partPts = MAP.map((m) => {
-    const w = (m.kind === "bar" ? parts.bars : parts.wires)[m.i].map(W.project);
-    const pts = sampleD(w);
-    return m.rev ? pts.slice().reverse() : pts;
-  });
-  const prog = MAP.map((m) => ease(ramp(fr, m.f0, m.f1)));
-  // the spot: on the part being mapped (before the first: the free sweep of the opening; after the last: its end)
-  const st = (fr - 2) / 54;
-  const sx = GRADER.op.x0 + 0.15 + (GRADER.op.x1 - GRADER.op.x0 - 0.3) * (0.5 + 0.5 * Math.cos(Math.PI * 2 * st * 1.15));
-  const sy = GRADER.op.y0 + 0.2 + (GRADER.op.y1 - GRADER.op.y0 - 0.4) * (0.5 - 0.5 * Math.cos(Math.PI * 2 * st * 0.55));
-  const free = W.project(graderInside(o, sx, sy, 0.22));
-  let mi = MAP.findIndex((m) => fr < m.f1);
-  if (mi < 0) mi = MAP.length - 1;
-  const onPart = cutPoly(partPts[mi], prog[mi]).tip;
-  const lock = ramp(fr, 10, 18);
-  const spot: P2 = [free[0] + (onPart[0] - free[0]) * lock, free[1] + (onPart[1] - free[1]) * lock];
-  const scanA = ramp(fr, 1, 7) * (1 - ramp(fr, 64, 70));
 
-  // ---- the robots ----
-  // R1 peers into the opening (head bowed a little, its pupils following the spot), studying; then it straightens,
-  // three-quarter toward the opening (clamped so its face screen stays toward us)
-  const y1 = Math.max(-0.62, Math.min(0.62, faceYaw(W, R1, OPEN_C)));
-  const base1 = BOT_POSES.turnTo(y1, fr, 1);
-  const peer = ramp(fr, 56, 64);
+  // ---- the jumper: from the top bar (S) to the bottom bar (A); re-routed onto the middle bar (B) ----
+  const barAt = (i: number, t: number): V3 => add(parts.bars[i][0], mul(sub(parts.bars[i][1], parts.bars[i][0]), t));
+  const S = barAt(0, 0.92);
+  const A = barAt(2, 0.95);
+  const B = barAt(1, 0.9);
+
+  const outN: V3 = [Math.cos(G.yaw), 0, Math.sin(G.yaw)]; // the right face's outward normal (+x at yaw 0)
+
+  // ---- the robot ----
+  const R: V3 = add(R0, [0.1 * stepBack, 0, 0.03 * stepBack]);
+  const lift = 0.035 * Math.sin(Math.PI * stepBack);
+  const y1 = Math.max(-0.62, Math.min(0.62, faceYaw(W, R, OPEN_C)));
+  const base = BOT_POSES.turnTo(y1, fr, 1);
   const sgn = y1 < 0 ? -1 : 1;
-  const a0 = botScreen(W, R1, base1, 0);
+  const feetS = W.project(R);
+  const scale = W.scaleAt(R) / ROBOT_U;
+  // the jumper's free end: on A, then carried to B (3D), the hand solved onto its projection
+  // carried in a small arc out of the opening and back in (so the move reads), its end landing on B
+  const E3: V3 = add(add(A, mul(sub(B, A), carry)), add(mul(outN, 0.16 * Math.sin(Math.PI * carry)), [0, 0.05 * Math.sin(Math.PI * carry), 0]));
+  const Es = W.project(E3);
+  const gripLocal: P2 = [(Es[0] - feetS[0]) / scale, (Es[1] - feetS[1]) / scale];
+  // which mitten: the one on the opening's side of the screen (handL is the screen-left one)
+  const useL = gripLocal[0] < 0;
+  // the scan line's spot for the eyes
+  const sxFace = lerp(GRADER.op.x0 + 0.06, GRADER.op.x1 - 0.06, sweep);
+  const spot = W.project(graderInside(o, sxFace, (GRADER.op.y0 + GRADER.op.y1) / 2, 0.15));
+  const a0 = botScreen(W, R, base, 0);
   const eye0: P2 = [(a0.eyes[0][0] + a0.eyes[1][0]) / 2, (a0.eyes[0][1] + a0.eyes[1][1]) / 2];
-  const lx = Math.max(-1, Math.min(1, (spot[0] - eye0[0]) / (0.5 * kS)));
-  const ly = Math.max(-0.4, Math.min(1, (spot[1] - eye0[1]) / (0.5 * kS)));
-  const look1: BotPose = {
-    ...base1,
-    pitch: base1.pitch + 9 * (1 - peer),
-    headYaw: (base1.headYaw ?? 0) + sgn * 0.12 * (1 - peer),
-    look: [lx * 0.85 * (1 - peer), ly * 0.6 * (1 - peer)] as [number, number],
-    brow: 0.25 * (1 - peer),
-    mouth: 0.4,
+  const lookAt = (p: P2): [number, number] => [Math.max(-1, Math.min(1, (p[0] - eye0[0]) / (0.5 * kS))) * 0.85, Math.max(-0.4, Math.min(1, (p[1] - eye0[1]) / (0.5 * kS))) * 0.6];
+  const lookScan = lookAt(spot);
+  const lookHand = lookAt(Es);
+  const lookGauge = lookAt(W.project(GG.c));
+  const lk: [number, number] = [
+    lerp(lerp(lookScan[0], lookHand[0], reach), lookGauge[0], ramp(fr, 78, 88)),
+    lerp(lerp(lookScan[1], lookHand[1], reach), lookGauge[1], ramp(fr, 78, 88)),
+  ];
+  const study: BotPose = {
+    ...base,
+    lean: base.lean + sgn * 11 * leanIn * (1 - 0.7 * stepBack),
+    pitch: base.pitch + 12 * leanIn * (1 - stepBack),
+    roll: base.roll + sgn * 8 * leanIn * (1 - ramp(fr, 60, 76)),
+    headYaw: (base.headYaw ?? 0) + sgn * 0.22 * leanIn * (1 - 0.5 * stepBack),
+    crouch: (base.crouch ?? 0) + 2 * leanIn * (1 - stepBack),
+    look: lk,
+    brow: 0.3 * leanIn * (1 - ramp(fr, 70, 84)),
+    mouth: 0.35,
   };
-  // then (f58-70) it lifts its mitten toward the opening and sends the orange thread in (f64-76); once the tick lands,
-  // a small happy squint (f93-99)
-  const reach1 = botGripTo({ ...look1, mouth: 0.8 }, { L: [y1 > 0 ? 66 : -66, -130] });
-  const happy = ramp(fr, 93, 99);
-  const p1r = lerpPose(look1, reach1, ramp(fr, 58, 70)) as BotPose;
-  const p1: BotPose = { ...p1r, laugh: 0.5 * happy, mouth: Math.max(p1r.mouth, happy) };
-  // R2 at the in-feed end, in front of the belt beside the stamp: it watches the X come down, then leans over the line
-  // after the crossed sheet as it rides off, head tilted, studying it; it straightens up as the orbit carries it out
-  // of frame (gone by ~f76)
-  const xSheet = Math.min(GRADER.rackX, GRADER.stampX + belt * GRADER.step);
-  const sheetP: V3 = G.P(xSheet, GRADER.top + 0.05, GRADER.lineZ);
-  const yaw2 = Math.max(-0.55, Math.min(0.75, faceYaw(W, R2, sheetP)));
-  const base2 = BOT_POSES.turnTo(yaw2 * 0.7, fr, 3);
-  const sp2 = W.project(sheetP);
-  const ft2 = W.project(R2);
-  const side2 = sp2[0] > ft2[0] ? 1 : -1;
-  const study = ramp(fr, 26, 40);
-  const bend = study * (1 - ramp(fr, 54, 64)); // it straightens up again as the camera leaves it
-  const p2: BotPose = {
-    ...base2,
-    headYaw: (base2.headYaw ?? 0) + yaw2 * 0.3,
-    lean: base2.lean + side2 * 9 * bend,
-    pitch: base2.pitch + 14 * study - 6 * (study - bend),
-    roll: base2.roll + side2 * 13 * ramp(fr, 34, 46) * (1 - 0.3 * ramp(fr, 52, 64)),
-    crouch: (base2.crouch ?? 0) + 3 * bend,
-    look: [side2 * 0.7, 0.55 * study] as [number, number],
-    brow: 0.35 * study,
-    mouth: 0.25,
+  const gripped = botGripTo({ ...study, mouth: 0.6 }, useL ? { L: gripLocal } : { R: gripLocal });
+  const p1r = lerpPose(study, gripped, reach * (1 - release)) as BotPose;
+  const pose: BotPose = { ...p1r, laugh: 0.55 * happy, mouth: Math.max(p1r.mouth, happy) };
+  const an = botScreen(W, R, pose, 0);
+  const hand = useL ? an.handL : an.handR;
+  // the end in the mitten while carried (it sits exactly in the hand), else on its plug
+  const holding = reach > 0.999 && release < 0.001;
+  const endS: P2 = holding ? hand : Es;
+
+  // ---- traced parts (screen polylines, front -> back) ----
+  const wireS = (w: V3[]) => {
+    // a wire's 3 points as threadD's quadratic chain, sampled in 3D
+    const [a, b, c] = w;
+    const m = mul(add(b, c), 0.5);
+    return [...quad3(a, b, m, 14), ...line3(m, c, 8).slice(1)];
   };
-
-  // R2 is drawn only while some of it is in frame (fully off to the left at the close start its drawing leaves a
-  // dark square in the corner)
-  const r2Mid: V3 = [R2[0], 0.7, R2[2]];
-  const r2X = W.project(r2Mid)[0];
-  const r2Shown = W.depth(r2Mid) > 1.5 && r2X + 0.5 * W.scaleAt(r2Mid) > 0 && r2X - 0.5 * W.scaleAt(r2Mid) < 1080;
-
-  // ---- the scan beam from R1's eyes (bigger and brighter) ----
-  const a1 = botScreen(W, R1, p1, 0);
-  const eye: P2 = [(a1.eyes[0][0] + a1.eyes[1][0]) / 2, (a1.eyes[0][1] + a1.eyes[1][1]) / 2];
-  const half = 0.24 * kS;
-  const dx = spot[0] - eye[0];
-  const dy = spot[1] - eye[1];
-  const L = Math.max(1, Math.hypot(dx, dy));
-  const nx = -dy / L;
-  const ny = dx / L;
-  const beam = `M${n2(eye[0] + nx * 0.01 * kS)},${n2(eye[1] + ny * 0.01 * kS)}L${n2(spot[0] + nx * half)},${n2(spot[1] + ny * half)}L${n2(spot[0] - nx * half)},${n2(spot[1] - ny * half)}L${n2(eye[0] - nx * 0.01 * kS)},${n2(eye[1] - ny * 0.01 * kS)}Z`;
-
-  // ---- the outlines: two thin cream lines along each mapped part's edges (they stay; dimmer once orange runs) ----
-  const outlines = MAP.map((m, j) => {
-    if (prog[j] <= 0.001) return null;
-    const halfW = ((m.kind === "bar" ? parts.barW : parts.wireW) / 2 + 0.026) * kS;
-    const cut = cutPoly(partPts[j], prog[j]);
-    return { a: offsetPoly(cut.pts, halfW), b: offsetPoly(cut.pts, -halfW), tip: cut.tip, drawing: prog[j] < 0.999, halfW };
+  const jumper3 = (e: V3): V3[] => quad3(S, add(mul(add(S, e), 0.5), mul(outN, 0.1)), e, 18);
+  type Part = { pts3: V3[]; w: number; x0: number; x1: number };
+  const faceX = (p: V3) => {
+    const f = G.faces.right;
+    return (p[0] - f.o[0]) * f.u[0] + (p[2] - f.o[2]) * f.u[2];
+  };
+  const mk = (pts3: V3[], w: number): Part => ({ pts3, w, x0: faceX(pts3[0]), x1: faceX(pts3[pts3.length - 1]) });
+  const P_ = [
+    mk(wireS(parts.wires[0]), parts.wireW),
+    mk(line3(parts.bars[0][0], parts.bars[0][1]), parts.barW),
+    mk(line3(parts.bars[1][0], parts.bars[1][1]), parts.barW),
+    mk(line3(parts.bars[2][0], parts.bars[2][1]), parts.barW),
+    mk(wireS(parts.wires[1]), parts.wireW),
+  ];
+  const sx = GRADER.op.x0 + (GRADER.op.x1 - GRADER.op.x0) * sweep;
+  const reveal = (p: Part) => {
+    const lo = Math.min(p.x0, p.x1);
+    const hi = Math.max(p.x0, p.x1);
+    return Math.max(0, Math.min(1, (sx * G.s - lo) / Math.max(1e-6, hi - lo)));
+  };
+    // a traced part: one thin cream line along its centre (a glow under it), its ends closed with a dot once done
+  const outlineOf = (pts: P2[], w: number) => ({ c: pts, w: Math.max(0.012, w * 0.32) * kS });
+  const traced = P_.map((p) => {
+    const t = reveal(p);
+    if (t <= 0.001) return null;
+    const pts = cutPoly(p.pts3.map(W.project), t);
+    return { ...outlineOf(pts.pts, p.w), done: t >= 0.999, tip: pts.tip };
   });
-  const lineW = 0.013 * kS;
-  const outOp = 1 - 0.45 * insides;
+  // the jumper: traced when the line passes it (its x ~ S / A), redrawn from wherever its end is
+  const jx = faceX(S) / G.s;
+  const jRev = ease(Math.max(0, Math.min(1, (sx - (jx - 0.12)) / 0.2)));
+  const jPts3 = jumper3(E3);
+  const jPtsS = jPts3.map(W.project);
+  jPtsS[jPtsS.length - 1] = endS;
+  const jOut = jRev > 0 ? outlineOf(cutPoly(jPtsS, jRev).pts, 0.03) : null;
 
-  // ---- the thread: from R1's mitten into the insides (draw f64-76), and the wire over the top to the stamp post ----
-  const plugW = graderInside(o, GRADER.op.x0 + 0.32, GRADER.op.y0 + (GRADER.op.y1 - GRADER.op.y0) * 0.52, 0.17);
-  const plug = W.project(plugW);
-  const k = W.scaleAt(plugW);
-  const mid: P2 = [(a1.handL[0] + plug[0]) / 2, Math.max(a1.handL[1], plug[1]) + 0.08 * k];
-  const throwT = ramp(fr, 64, 76);
-  const wire = [plugW, [1.1, 1.24, 0.12] as V3, [1.1, 1.505, 0.12] as V3, G.P(GRADER.stampX - 0.12, 1.505, 0.4)].map(W.project);
-  const wireT = ramp(fr, 79, 85);
-  const plugged = ramp(fr, 75, 77);
+  // ---- the orange path: from the plug B up the jumper (to S) and forward along the middle bar (B -> its front end) ----
+  const barFwd = line3(B, parts.bars[1][0], 16).map(W.project);
+  const jBack = jPtsS.slice().reverse();
+  const orJ = flowJ > 0 ? cutPoly(jBack, flowJ) : null;
+  const orB = flowB > 0 ? cutPoly(barFwd, flowB) : null;
+  const k = W.scaleAt(B);
+  const outOp = 1 - 0.35 * flowB;
+
+  // ---- the scan beam: from the robot's eyes to a vertical line on the opening ----
+  const an0 = botScreen(W, R, pose, 0);
+  const eye: P2 = [(an0.eyes[0][0] + an0.eyes[1][0]) / 2, (an0.eyes[0][1] + an0.eyes[1][1]) / 2];
+  const lineTop = W.project(graderInside(o, sxFace, GRADER.op.y0 + 0.06, 0.12));
+  const lineBot = W.project(graderInside(o, sxFace, GRADER.op.y1 - 0.06, 0.12));
+  const vx0 = Math.min(GRADER.op.x1, sx);
+  const vq = [graderInside(o, vx0, GRADER.op.y0, -0.004), graderInside(o, GRADER.op.x1, GRADER.op.y0, -0.004), graderInside(o, GRADER.op.x1, GRADER.op.y1, -0.004), graderInside(o, vx0, GRADER.op.y1, -0.004)].map(W.project);
+  const veil = `${polyD(vq)}Z`;
+  const veilA = 1 - ramp(fr, 40, 44);
+  const beam = `M${n2(eye[0])},${n2(eye[1] - 0.012 * kS)}L${n2(lineTop[0])},${n2(lineTop[1])}L${n2(lineBot[0])},${n2(lineBot[1])}L${n2(eye[0])},${n2(eye[1] + 0.012 * kS)}Z`;
 
   return (
     <HfStage
@@ -254,69 +246,73 @@ const SubvertTheGrader: React.FC<z.infer<typeof schema>> = () => {
       shadows={
         <>
           {graderShadows(W, o, "grS")}
-          <FloorShadow W={W} pts={robotFoot(R1, 0.24)} uid="r1S" soft={0.11} reach={0.2} />
-          <FloorShadow W={W} pts={robotFoot(R2, 0.24)} uid="r2S" soft={0.11} reach={0.2} />
+          <FloorShadow W={W} pts={robotFoot(R, 0.24)} uid="r1S" soft={0.11} reach={0.2} />
         </>
       }
     >
-      <Grader W={W} o={{ ...o, part: "body" }} uid="gb" />
-      {/* the wire over the top (behind the stamp post and the robots beside the machine) */}
-      <Svg id="wire" glow={0.8}>
-        <Thread pts={wire} w={0.022 * k} draw={wireT} />
+      <Grader W={W} o={o} uid="g" />
+      {/* before the scan the insides sit in the dark: a veil over the opening, wiped from the front edge by the line */}
+      <Svg id="veil">
+        {veilA > 0.01 ? <path d={veil} fill={W.tone(MATS.slate.dark, OPEN_C)} opacity={n2(0.72 * veilA)} /> : null}
       </Svg>
       <Svg id="scan">
         <defs>
           <filter id="scanBlur" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation={n2(0.035 * kS)} />
+            <feGaussianBlur stdDeviation={n2(0.03 * kS)} />
           </filter>
           <filter id="mapGlow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation={n2(0.016 * kS)} />
           </filter>
-          <radialGradient id="scanSpot">
-            <stop offset="0" stopColor={GRAPHITE.cream} stopOpacity={1} />
-            <stop offset="0.45" stopColor={GRAPHITE.cream} stopOpacity={0.55} />
-            <stop offset="1" stopColor={GRAPHITE.cream} stopOpacity={0} />
-          </radialGradient>
         </defs>
-        {/* the mapped outlines (under the beam) */}
+        {/* the jumper cable itself (graphite, like the inside wires), under its outline */}
+        <path d={threadD([jPtsS[0], jPtsS[Math.floor(jPtsS.length / 2)], endS])} fill="none" stroke={W.tone(MATS.greige.mid, OPEN_C)} strokeWidth={n2(0.03 * kS)} strokeLinecap="round" />
+        <circle cx={n2(W.project(S)[0])} cy={n2(W.project(S)[1])} r={n2(0.03 * kS)} fill={W.tone(MATS.graphite.mid, OPEN_C)} />
+        {/* the traced lines (they stay; dimmer once orange runs) */}
         <g opacity={n2(outOp)}>
-          {outlines.map((q, j) =>
+          {[...traced, jOut ? { ...jOut, done: jRev >= 0.999, tip: null } : null].map((q, j) =>
             q ? (
               <g key={j}>
-                <path d={`${polyD(q.a)}${polyD(q.b)}`} fill="none" stroke={GRAPHITE.cream} strokeWidth={n2(lineW * 3.2)} strokeLinecap="round" strokeLinejoin="round" opacity={0.75} filter="url(#mapGlow)" />
-                <path d={`${polyD(q.a)}${polyD(q.b)}`} fill="none" stroke={GRAPHITE.cream} strokeWidth={n2(lineW)} strokeLinecap="round" strokeLinejoin="round" />
-                {!q.drawing ? (
+                <path d={polyD(q.c)} fill="none" stroke={GRAPHITE.cream} strokeWidth={n2(q.w * 2.6)} strokeLinecap="round" strokeLinejoin="round" opacity={0.55} filter="url(#mapGlow)" />
+                <path d={polyD(q.c)} fill="none" stroke={GRAPHITE.cream} strokeWidth={n2(q.w)} strokeLinecap="round" strokeLinejoin="round" />
+                {q.done ? (
                   <>
-                    {/* the closed ends once a part is done */}
-                    <path d={polyD([q.a[0], q.b[0]])} stroke={GRAPHITE.cream} strokeWidth={n2(lineW)} strokeLinecap="round" />
-                    <path d={polyD([q.a[q.a.length - 1], q.b[q.b.length - 1]])} stroke={GRAPHITE.cream} strokeWidth={n2(lineW)} strokeLinecap="round" />
+                    <circle cx={n2(q.c[0][0])} cy={n2(q.c[0][1])} r={n2(q.w * 1.1)} fill={GRAPHITE.cream} />
+                    <circle cx={n2(q.c[q.c.length - 1][0])} cy={n2(q.c[q.c.length - 1][1])} r={n2(q.w * 1.1)} fill={GRAPHITE.cream} />
                   </>
-                ) : (
-                  <circle cx={n2(q.tip[0])} cy={n2(q.tip[1])} r={n2(q.halfW * 1.1)} fill={GRAPHITE.cream} opacity={1} filter="url(#mapGlow)" />
-                )}
+                ) : null}
               </g>
             ) : null,
           )}
         </g>
         {scanA > 0.01 ? (
           <g opacity={n2(scanA)}>
-            <path d={beam} fill={GRAPHITE.cream} opacity={0.7} filter="url(#scanBlur)" />
-            <ellipse cx={n2(spot[0])} cy={n2(spot[1])} rx={n2(half * 1.9)} ry={n2(half * 1.35)} fill="url(#scanSpot)" opacity={0.85} />
-            <ellipse cx={n2(spot[0])} cy={n2(spot[1])} rx={n2(half * 0.7)} ry={n2(half * 0.55)} fill="url(#scanSpot)" />
+            <path d={beam} fill={GRAPHITE.cream} opacity={0.32} filter="url(#scanBlur)" />
+            <path d={polyD([lineTop, lineBot])} stroke={GRAPHITE.cream} strokeWidth={n2(0.07 * kS)} strokeLinecap="round" opacity={0.6} filter="url(#scanBlur)" />
+            <path d={polyD([lineTop, lineBot])} stroke={GRAPHITE.cream} strokeWidth={n2(0.018 * kS)} strokeLinecap="round" opacity={0.95} />
           </g>
         ) : null}
       </Svg>
-      <Svg id="bot1" glow={0.4}>
-        <RobotAt W={W} p={R1} pose={p1} uid="r1" variant={0} />
+      {/* the orange run (glows) */}
+      <Svg id="orange" glow={0.9}>
+        {orJ ? <path d={polyD(orJ.pts)} fill="none" stroke={ACCENT} strokeWidth={n2(0.034 * k)} strokeLinecap="round" strokeLinejoin="round" /> : null}
+        {orB ? <path d={polyD(orB.pts)} fill="none" stroke={ACCENT} strokeWidth={n2(parts.barW * k * 0.9)} strokeLinecap="round" /> : null}
+        {orB && flowB < 1 ? <circle cx={n2(orB.tip[0])} cy={n2(orB.tip[1])} r={n2(0.06 * k)} fill={MATS.orange.lit} /> : null}
+        {flowB > 0 ? <circle cx={n2(W.project(B)[0])} cy={n2(W.project(B)[1])} r={n2(0.035 * k)} fill={ACCENT} /> : null}
+        {spark > 0 ? (
+          <>
+            <defs>
+              <radialGradient id="sparkG">
+                <stop offset="0" stopColor="#FFF3D6" stopOpacity={1} />
+                <stop offset="0.35" stopColor={MATS.orange.lit} stopOpacity={0.85} />
+                <stop offset="1" stopColor={ACCENT} stopOpacity={0} />
+              </radialGradient>
+            </defs>
+            <circle cx={n2(W.project(B)[0])} cy={n2(W.project(B)[1])} r={n2((0.05 + 0.06 * spark) * k)} fill="url(#sparkG)" opacity={n2(spark)} />
+          </>
+        ) : null}
       </Svg>
-      <Grader W={W} o={{ ...o, part: "front" }} uid="gf" />
-      {/* R2 stands in front of the line */}
-      <Svg id="bot2" glow={0.4}>
-        {r2Shown ? <RobotAt W={W} p={R2} pose={p2} uid="r2" variant={3} /> : null}
-      </Svg>
-      <Svg id="thread" glow={0.8}>
-        <Thread pts={[a1.handL, mid, plug]} w={0.03 * k} draw={throwT} />
-        {plugged > 0 ? <circle cx={n2(plug[0])} cy={n2(plug[1])} r={n2(0.04 * k)} fill="#FFB000" opacity={plugged} /> : null}
+      <Svg id="bot" glow={0.4}>
+        <RobotAt W={W} p={R} pose={pose} uid="r1" variant={0} lift={lift} />
       </Svg>
     </HfStage>
   );

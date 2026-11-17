@@ -9,7 +9,8 @@
 //   cards      cardFrame Card (orange 0..1) cardInk TICK CROSS AdminBadge (orange 0..1)
 //   threads    threadD sagPts Thread (draw 0..1, cream head)
 //   HF box     hfBoxGeom HFBoxBody HFBoxLid (open 0..1) HFBoxPlate aboveRimD HFBox
-//   grader     GraderOpts graderGeom Grader (panel, stamp, insides, arm, body spread, sheets) graderInside graderPlugs
+//   grader     GraderOpts graderGeom Grader (panel, stamp, insides, arm, body spread, sheets; readout "gauge": gauge,
+//              gaugeLit, gaugeFeed) graderInside graderPlugs graderInsideParts GAUGE gaugeGeom gaugeTip
 //              beltSheets graderStampTop
 //   racks      RACK Rack (units with lights 0..1, OpenAI end-cap) rackLights OpenAIMark
 //   robots     botLocal botScreen viewFor CrowdBots (sprites for 20-30 robots at the back)
@@ -566,6 +567,15 @@ export type GraderOpts = {
    *  from the front, mid-top, its stamp-side end under the stamp arm's run; it turns dark orange-brown with
    *  the body spread. Default undefined = no label (pixel-identical to before) */
   label?: string;
+  /** the readout: "stamp" (default: the shelf line, sheets and stamp arm, pixel-identical to before) or "gauge" (no
+   *  shelf / sheets / stamp; a big dial on the FRONT face, see GAUGE, with a lead from the side opening into it) */
+  readout?: "stamp" | "gauge";
+  /** gauge: the needle 0 = resting on the X zone .. 1 = on the check zone (the cut eases it; values past 0..1 overshoot) */
+  gauge?: number;
+  /** gauge: the check zone (and the needle) light orange 0..1 */
+  gaugeLit?: number;
+  /** gauge: orange running along the lead from the inside (the middle bar's front end) into the dial 0..1 */
+  gaugeFeed?: number;
 };
 export const GRADER = {
   body: { w: 2.2, h: 1.5, d: 2.0 },
@@ -618,6 +628,78 @@ export const graderInsideParts = (o: GraderOpts) => {
     [at(op.x0 + 0.12, op.y1 - 0.06, 0.24), at(op.x0 + 0.5, op.y1 - 0.2, 0.2), at(op.x1 - 0.1, op.y1 - 0.08, 0.26)],
   ];
   return { bars, wires, barW: 0.075, wireW: 0.022 };
+};
+// ---- THE GAUGE (REV2): the grader's readout as a big round dial standing out of its FRONT face, toward the side-opening
+// end (world right; not mirrored by flow). Left half of the arc = the X zone (dark, a cream X), right half = the check
+// zone (light clay, a dark check; lights orange), a heavy short needle on a hub; a lead (a fat cable) runs from the
+// middle bar inside the opening, over the opening's front lip, forward along the right face, round the front-right
+// edge and along the front face into the dial's right rim.
+export const GAUGE = {
+  /** dial centre on the front face (local m: x from the body centre toward the opening side, y up from the floor) */
+  x: 0.2,
+  y: 0.77,
+  R: 0.6,
+  /** the housing's depth out of the face */
+  house: 0.12,
+  /** angles (deg, counter-clockwise from the right, seen from the front): needle at X / at check; the arc's ends; gap */
+  aX: 122,
+  aT: 50,
+  a0: 192,
+  a1: -12,
+  gap: 5,
+  /** the needle's pivot below the dial centre (x R): the arc fills the face */
+  py: -0.18,
+  /** the zone band (fractions of R, from the pivot), the glyphs' radius and size, the needle's reach */
+  band: [0.58, 0.88] as [number, number],
+  glyphR: 0.73,
+  glyph: 0.27,
+  /** the glyphs' angles, clear of the needle's two rest angles */
+  gX: 166,
+  gT: 14,
+  /** the needle's tip radius (inside the zone band) */
+  needle: 0.82,
+  lead: 0.04,
+};
+export const gaugeGeom = (o: GraderOpts) => {
+  const s = o.s ?? 1;
+  const { u, v } = axes(o.yaw ?? 0);
+  const Q = (x: number, y: number, z: number): V3 => add(add(add(o.c, mul(u, x * s)), mul(v, z * s)), [0, y * s, 0]);
+  const hw = GRADER.body.w / 2;
+  const hd = GRADER.body.d / 2;
+  const n = mul(v, -1);
+  const c = Q(GAUGE.x, GAUGE.y, -hd - 0.004);
+  const R = GAUGE.R * s;
+  const face = add(c, mul(n, GAUGE.house * s + 0.003 * s));
+  /** a point on the dial: deg (counter-clockwise from the right, seen from the front), r (x R) from the needle's
+   *  pivot (GAUGE.py below the centre; ring = true: from the dial's centre), lifted dz m (x s) */
+  const polar = (deg: number, r: number, dz = 0, ring = false): V3 => {
+    const a = (deg * Math.PI) / 180;
+    const oy = ring ? 0 : GAUGE.py;
+    return add(add(add(face, mul(u, Math.cos(a) * r * R)), [0, (Math.sin(a) * r + oy) * R, 0]), mul(n, dz * s));
+  };
+  const angle = (g: number) => lerp(GAUGE.aX, GAUGE.aT, g);
+  // the lead, each point with its surface normal (for the seen test)
+  const rr = GAUGE.lead;
+  const yl = GAUGE.y;
+  const bar = graderInsideParts(o).bars[1][0];
+  const lead: { p: V3; n: V3 }[] = [{ p: bar, n: u }];
+  lead.push({ p: Q(hw - 0.03, yl + 0.005, -hd + GRADER.op.x0 - 0.03), n: u });
+  for (let z = -hd + GRADER.op.x0 - 0.1; z > -hd + 0.2; z -= 0.08) lead.push({ p: Q(hw + rr, yl, z), n: u });
+  for (let i = 0; i <= 8; i++) {
+    const a = (-i / 8) * (Math.PI / 2);
+    const cx = hw - 0.2;
+    const cz = -hd + 0.2;
+    const nn: V3 = add(mul(u, Math.cos(a)), mul(v, Math.sin(a)));
+    lead.push({ p: Q(cx + (0.2 + rr) * Math.cos(a), yl, cz + (0.2 + rr) * Math.sin(a)), n: nn });
+  }
+  for (let x = hw - 0.28; x > GAUGE.x + GAUGE.R * 1.02; x -= 0.08) lead.push({ p: Q(x, yl, -hd - rr), n });
+  lead.push({ p: Q(GAUGE.x + GAUGE.R * 1.0, yl, -hd - rr), n });
+  return { s, u, v, n, c, R, face, polar, angle, lead };
+};
+/** the needle's tip (world) at gauge g: aim the camera / the beat at it */
+export const gaugeTip = (o: GraderOpts, g = o.gauge ?? 0) => {
+  const G = gaugeGeom(o);
+  return G.polar(G.angle(g), GAUGE.needle, 0.03);
 };
 /** the stamp head's bottom centre (world) at stamp position p */
 export const graderStampTop = (o: GraderOpts, p = 0) => graderGeom(o).P(GRADER.stampX, GRADER.top + GRADER.sheet.t + (1 - c01(p)) * 0.42, GRADER.lineZ);
@@ -742,6 +824,134 @@ const GraderSheetEl: React.FC<{ W: World; o: GraderOpts; sh: GraderSheet; uid: s
     </div>
   );
 };
+/** the lead (a fat cable): graphite, the orange run growing from its inside end by o.gaugeFeed */
+const GraderLead: React.FC<{ W: World; o: GraderOpts; orange: boolean }> = ({ W, o, orange }) => {
+  const G = gaugeGeom(o);
+  const feed = orange ? 1 : c01(o.gaugeFeed ?? 0);
+  const pts = G.lead;
+  const seen = pts.map((q) => dot(q.n, sub(W.pos, q.p)) > 0);
+  const sideSeen = faceSeen(W, graderGeom(o).faces.right);
+  // cumulative length (world) for the orange run
+  const L: number[] = [0];
+  for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(...sub(pts[i].p, pts[i - 1].p)));
+  const tot = L[L.length - 1];
+  const runs: P2[][] = [];
+  let cur: P2[] = [];
+  pts.forEach((q, i) => {
+    const ok = seen[i] && (i > 1 || sideSeen);
+    if (ok) cur.push(W.project(q.p));
+    else if (cur.length) (runs.push(cur), (cur = []));
+  });
+  if (cur.length) runs.push(cur);
+  const d = (r: P2[]) => `M${r.map((p) => `${n2(p[0])},${n2(p[1])}`).join("L")}`;
+  const mid = pts[Math.floor(pts.length / 2)].p;
+  const k = W.scaleAt(mid);
+  const w = 2 * GAUGE.lead * G.s * k;
+  // the orange part: points up to feed * tot (cut inside the segment)
+  const orangePts: P2[] = [];
+  let head: P2 | null = null;
+  if (feed > 0) {
+    const goal = feed * tot;
+    for (let i = 0; i < pts.length; i++) {
+      if (L[i] <= goal) {
+        if (seen[i] && (i > 1 || sideSeen)) orangePts.push(W.project(pts[i].p));
+      } else {
+        const t = (goal - L[i - 1]) / Math.max(1e-6, L[i] - L[i - 1]);
+        const p = add(pts[i - 1].p, mul(sub(pts[i].p, pts[i - 1].p), t));
+        if (seen[i]) (orangePts.push(W.project(p)), (head = W.project(p)));
+        break;
+      }
+    }
+  }
+  const base = W.tone(MATS.graphite.mid, mid);
+  const lit = W.tone(MATS.graphite.lit, mid);
+  return (
+    <g>
+      {runs.map((r, i) => (
+        <g key={i}>
+          <path d={d(r)} fill="none" stroke={base} strokeWidth={n2(w)} strokeLinecap="round" strokeLinejoin="round" />
+          <path d={d(r.map((p) => [p[0], p[1] - 0.25 * w] as P2))} fill="none" stroke={lit} strokeWidth={n2(0.35 * w)} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.8} />
+        </g>
+      ))}
+      {orangePts.length > 1 ? (
+        <>
+          <path d={d(orangePts)} fill="none" stroke={W.toneO(ACCENT, mid)} strokeWidth={n2(w * 1.02)} strokeLinecap="round" strokeLinejoin="round" />
+          <path d={d(orangePts.map((p) => [p[0], p[1] - 0.25 * w] as P2))} fill="none" stroke={W.toneO(MATS.orange.lit, mid)} strokeWidth={n2(0.35 * w)} strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      ) : null}
+      {head && feed < 1 ? <circle cx={n2((head as P2)[0])} cy={n2((head as P2)[1])} r={n2(w * 0.85)} fill={W.toneO(MATS.orange.lit, mid)} /> : null}
+    </g>
+  );
+};
+/** the dial: housing, face, the two zones with their glyphs, the needle and its hub */
+const GraderGauge: React.FC<{ W: World; o: GraderOpts; uid: string; orange: boolean }> = ({ W, o, uid, orange }) => {
+  const G = gaugeGeom(o);
+  const { s, u, n, c, R } = G;
+  const lit = c01(o.gaugeLit ?? 0);
+  const k = W.scaleAt(c);
+  const poly = (pts: V3[]) => `M${pts.map(W.project).map((p) => `${n2(p[0])},${n2(p[1])}`).join("L")}Z`;
+  const disc = (r: number, dz: number, seg = 56, ring = true) => poly(Array.from({ length: seg }, (_, i) => G.polar((i / seg) * 360, r, dz, ring)));
+  const sector = (a: number, b: number, r0: number, r1: number, dz: number) => {
+    const N = Math.max(6, Math.ceil(Math.abs(b - a) / 4));
+    const outer = Array.from({ length: N + 1 }, (_, i) => G.polar(lerp(a, b, i / N), r1, dz));
+    const inner = Array.from({ length: N + 1 }, (_, i) => G.polar(lerp(b, a, i / N), r0, dz));
+    return poly([...outer, ...inner]);
+  };
+  // a glyph drawn in dial coordinates (x right, y up, x R) around (deg, glyphR): a thick polyline, its points projected
+  const gl = (deg: number, pts: P2[][], dz: number) => {
+    const a = (deg * Math.PI) / 180;
+    const cx = Math.cos(a) * GAUGE.glyphR;
+    const cy = Math.sin(a) * GAUGE.glyphR + GAUGE.py;
+    const at = (x: number, y: number) => W.project(add(add(G.face, mul(u, (cx + x) * R)), add([0, (cy + y) * R, 0], mul(n, dz * s))));
+    return pts.map((l) => `M${l.map(([x, y]) => at(x, y)).map((p) => `${n2(p[0])},${n2(p[1])}`).join("L")}`).join("");
+  };
+  const g = GAUGE.glyph;
+  const X: P2[][] = [
+    [[-0.34 * g, 0.34 * g], [0.34 * g, -0.34 * g]],
+    [[0.34 * g, 0.34 * g], [-0.34 * g, -0.34 * g]],
+  ];
+  const T: P2[][] = [[[-0.42 * g, 0.0], [-0.12 * g, -0.32 * g], [0.46 * g, 0.36 * g]]];
+  const mid = c;
+  const t = (hex: string) => W.tone(hex, mid);
+  const xBand = t(MATS.graphite.mid);
+  const xInk = t(GRAPHITE.cream);
+  const okBand = mixHexL(t("#B8B1A5"), W.toneO(ACCENT, mid), lit);
+  const okInk = mixHexL(t("#55504A"), t("#6B3A0C"), lit);
+  // the needle stays dark ink with a cream edge (the readout against both zones); only its cap warms
+  const needleC = t("#2A2826");
+  // the needle: tip at GAUGE.needle, a broad base at the hub, a short tail
+  const ang = G.angle(o.gauge ?? 0);
+  const ar = (ang * Math.PI) / 180;
+  const dir: P2 = [Math.cos(ar), Math.sin(ar)];
+  const nor: P2 = [-dir[1], dir[0]];
+  const np = (along: number, side: number, dz: number) =>
+    add(add(G.face, mul(u, (dir[0] * along + nor[0] * side) * R)), add([0, (dir[1] * along + nor[1] * side + GAUGE.py) * R, 0], mul(n, dz * s)));
+  // a slim pointer: a clear tip in the zone band, tapering from the pivot, a short tail
+  const needle = (dz: number, grow = 1) => [np(GAUGE.needle, 0, dz), np(GAUGE.needle - 0.1, 0.022 * grow, dz), np(0.1, 0.07 * grow, dz), np(-0.03, 0.075 * grow, dz), np(-0.17, 0.05 * grow, dz), np(-0.17, -0.05 * grow, dz), np(-0.03, -0.075 * grow, dz), np(0.1, -0.07 * grow, dz), np(GAUGE.needle - 0.1, -0.022 * grow, dz)];
+  // its shadow on the face: pushed toward the lower right (light from the upper left)
+  const sh = (pts: V3[]) => pts.map((p) => add(add(p, mul(u, 0.03 * R)), [0, -0.035 * R, 0]));
+  const sw = Math.max(1, 0.016 * k * s);
+  const edge = t(GRAPHITE.cream);
+  return (
+    <g>
+      <Prism W={W} outline={circleOutline(R * 1.08, 56)} o={c} u={u} v={UP} n={n} depth={GAUGE.house * s} mat={orange ? MATS.orange : MATS.clayWarm} uid={`${uid}gh`} ao={0.15} rim={0.6} orange={orange} emissive={orange ? 0.35 : 0} />
+      {/* the bezel ring and the face */}
+      <path d={disc(1.0, 0)} fill={t(MATS.graphite.dark)} />
+      <path d={disc(0.95, 0.001)} fill={t("#ECE6DC")} />
+      {/* the zones */}
+      <path d={sector(GAUGE.a0, 90 + GAUGE.gap / 2, GAUGE.band[0], GAUGE.band[1], 0.002)} fill={xBand} />
+      <path d={sector(90 - GAUGE.gap / 2, GAUGE.a1, GAUGE.band[0], GAUGE.band[1], 0.002)} fill={okBand} />
+      <path d={gl(GAUGE.gX, X, 0.003)} fill="none" stroke={xInk} strokeWidth={n2(0.075 * R * k)} strokeLinecap="round" />
+      <path d={gl(GAUGE.gT, T, 0.003)} fill="none" stroke={okInk} strokeWidth={n2(0.085 * R * k)} strokeLinecap="round" strokeLinejoin="round" />
+      {/* the needle, its shadow, the hub */}
+      <path d={poly(sh(needle(0.004)))} fill={t(GRAPHITE.shadow)} fillOpacity={0.28} />
+      <path d={poly(needle(0.03))} fill={needleC} stroke={edge} strokeWidth={n2(sw)} strokeLinejoin="round" />
+      {/* the pivot cap */}
+      <path d={disc(0.09, 0.04, 28, false)} fill={t(MATS.slate.dark)} stroke={edge} strokeWidth={n2(sw)} />
+      <path d={disc(0.04, 0.045, 20, false)} fill={mixHexL(t(MATS.slate.lit), W.toneO(MATS.orange.mid, mid), lit)} />
+    </g>
+  );
+};
 /** a radial reveal mask (screen px) for the orange copy of a part */
 const SpreadMask: React.FC<{ id: string; c: P2; r: number }> = ({ id, c, r }) => (
   <defs>
@@ -771,7 +981,8 @@ export const Grader: React.FC<{ W: World; o: GraderOpts; uid: string }> = ({ W, 
   const R = bodyT >= 0.999 ? 99999 : bodyT * 3.4 * s * k;
   const mid = `${uid}spread`;
   const glow = o.glow ?? 0.6;
-  const anyOrange = bodyT > 0 || armT > 0 || (o.insides ?? 0) > 0;
+  const gaugeOn = o.readout === "gauge";
+  const anyOrange = bodyT > 0 || armT > 0 || (o.insides ?? 0) > 0 || (gaugeOn && ((o.gaugeLit ?? 0) > 0 || (o.gaugeFeed ?? 0) > 0));
   // a part drawn white, then (when the spread reaches it) its orange copy through the round mask
   const two = (key: string, el: (orange: boolean) => React.ReactNode) =>
     bodyT <= 0 ? (
@@ -823,7 +1034,8 @@ export const Grader: React.FC<{ W: World; o: GraderOpts; uid: string }> = ({ W, 
   };
   const part = o.part ?? "all";
   const showBody = part !== "front";
-  const showFront = part !== "body";
+  const showFront = part !== "body" && !gaugeOn;
+  const frontSeen = faceSeen(W, g.faces.front);
   return (
     <>
       <Svg id={`${uid}A${part}`} glow={anyOrange ? glow : 0}>
@@ -833,6 +1045,8 @@ export const Grader: React.FC<{ W: World; o: GraderOpts; uid: string }> = ({ W, 
         ))}
         {showBody && o.label && faceSeen(W, g.faces.top) ? two("label", (or) => <GraderLabel W={W} o={o} text={o.label ?? ""} orange={or} />) : null}
         {showBody && sideSeen ? two("side", (or) => <GraderSide W={W} o={o} uid={`${uid}sd${or ? "o" : ""}`} orange={or} />) : null}
+        {showBody && gaugeOn ? two("lead", (or) => <GraderLead W={W} o={o} orange={or} />) : null}
+        {showBody && gaugeOn && frontSeen ? two("gauge", (or) => <GraderGauge W={W} o={o} uid={`${uid}gg${or ? "o" : ""}`} orange={or} />) : null}
         {/* the shelf line: the conveyor (legs, belt, slats), the tray, the out-rack */}
         {showFront && two("shelf", (or) => (
           <>
@@ -962,7 +1176,7 @@ export const graderShadows = (W: World, o: GraderOpts, uid: string) => {
   return (
     <>
       <FloorShadow W={W} pts={fp(-body.w / 2, body.w / 2, -body.d / 2, body.d / 2)} uid={`${uid}b`} soft={0.32 * s} reach={0.6 * s} />
-      <FloorShadow W={W} pts={fp(belt.x0, belt.x1, lineZ - 0.3, lineZ + 0.3)} uid={`${uid}c`} soft={0.15 * s} reach={0.4 * s} tight={0.5} />
+      {o.readout === "gauge" ? null : <FloorShadow W={W} pts={fp(belt.x0, belt.x1, lineZ - 0.3, lineZ + 0.3)} uid={`${uid}c`} soft={0.15 * s} reach={0.4 * s} tight={0.5} />}
     </>
   );
 };
