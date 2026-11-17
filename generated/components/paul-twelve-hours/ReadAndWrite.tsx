@@ -14,7 +14,7 @@
 // DURATION: the slot 23.023 -> 29.363 s = 6.340 s x 23.976 = 152 frames (f0..f151).
 //
 // THE MOTION: close on the upper panels of the OpenAI code tower, the cap and its mark above. A reading lens is
-// already gliding down the face (f0), its glass magnifying the very bars behind it ~2.2x (a true magnifier: the view
+// already gliding down the face (f0), its glass magnifying the face behind it ~1.6x (a true magnifier: the view
 // is the face under the lens, re-projected every frame); it slows over the orange line of layer 9 ("see ... source
 // code", f40-70), reads on to layer 7-8 (f80), and on "but" bows out down and to the right, accelerating off the
 // frame's right edge (f80-~97; hidden from f102). The cause first: a thick slate foreign panel carrying the HACKTRON
@@ -37,11 +37,13 @@
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
+import { loadFont as loadMono } from "@remotion/google-fonts/JetBrainsMono";
 import { z } from "zod";
 import { C, D2R, PaulStage, THREE, camTrack, clamp01, ease01, living, mix3, orbitCam, screenScale, type Any, type CamDef, type Orbit, type V3, type World, type WorldSpec } from "./paulWorld";
 import { TOWER, codeRowOfLayer, layerY, makeMonorepo, makeThread, type Monorepo } from "./paulWorldSets";
 
 export const FPS = 24000 / 1001;
+const { fontFamily: MONO, waitUntilDone: monoReady } = loadMono("normal", { weights: ["600"], subsets: ["latin"] });
 export const DURATION = 152;
 export const schema = z.object({ debug: z.boolean(), pick: z.array(z.number()) });
 export const defaultProps = schema.parse({ debug: false, pick: [] });
@@ -112,10 +114,31 @@ const makeForeignPanel = (w: World, tower: Monorepo) => {
 
 // ===================================================================================================================
 // THE READING LENS (this cut's: a true magnifier. The glass shows the tower face under it at MAG, re-projected along
-// the camera ray through the lens centre every frame, so the enlarged bars slide as the lens moves)
+// the camera ray through the lens centre every frame, so what it shows slides as the lens moves. In the glass the
+// bars resolve into the code they stand for: one monospace line per bar, at the bar's place, indent and length, dark
+// ink on the panel, the orange bars as glowing orange lines; outside the glass they stay bars)
 // ===================================================================================================================
-const LENS = { R: 0.34, MAG: 2.2, Z: 1.2 };
-const FACE = { X0: -TOWER.W / 2, X1: TOWER.W / 2, Y0: 1.9, Y1: 3.98, PPM: 1000, Z: TOWER.D / 2 + 0.03 };
+const LENS = { R: 0.34, MAG: 1.6, Z: 1.2 };
+// the painted face: the whole front plus air to the right (the lens bows out across the tower's right edge)
+const FACE = { X0: -1.2, X1: 1.6, Y0: 0.95, Y1: 3.98, PPM: 1600, GPPM: 800, Z: TOWER.D / 2 + 0.03 };
+/** the code each bar stands for (invented, generic training-loop code; NOT real OpenAI code). Rows follow CODE (from
+ *  the top, row k = layer 11 - k), one string per bar; orange bars are the "secret" lines. Lengths are chosen to fill
+ *  their bar at ~0.0345 m per character (the residue is a small horizontal fit, 0.85-1.15). */
+const CODE_TEXT: string[][] = [
+  ["def train_step(b):"],
+  ["x, y=batch", "out = net(x)"],
+  ["opt.lr=", "cosine(t, peak=3e-4)"],
+  ["loss = xent(out, y).mean()"],
+  ["if step", "% accum", "==0: sync()"],
+  ["opt.zero_grad()"],
+  ["w = W_SECRET[m]", "# private"],
+  ["for p,q in", "zip(ema, model):"],
+  ["q.lerp_(p, 1-decay)"],
+  ["tok=", "tokenize(x, vocab=V_PRIV)"],
+  ["return loss.item(), t"],
+  ["log.write(t,", "loss, t)"],
+];
+const CODE_CAP = 0.042; // world cap height of a code line (m): ~30-36 px caps in the glass while reading
 const makeReader = (w: World) => {
   const { K, T, scene } = w;
   const R = LENS.R;
@@ -123,26 +146,37 @@ const makeReader = (w: World) => {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(R, 0.05, 20, 72), K.clay(C.clay));
   g.add(ring);
   K.cyl(0.045, 0.05, 0.5, K.clay(C.clayWarm), [R * 1.24, -R * 1.24, 0], { rot: [0, 0, 45], parent: g, seg: 24 });
-  // the face, painted once at FACE.PPM: panels, recesses, bars (the same geometry as the world's codeBars)
-  const cw = Math.round((FACE.X1 - FACE.X0) * FACE.PPM);
-  const ch = Math.round((FACE.Y1 - FACE.Y0) * FACE.PPM);
-  const X = (x: number) => (x - FACE.X0) * FACE.PPM;
-  const Y = (y: number) => (FACE.Y1 - y) * FACE.PPM;
   const capBase = layerY(TOWER.NL - 1) + TOWER.LH / 2 + 0.04;
-  const paint = (c: CanvasRenderingContext2D, glow: boolean) => {
-    c.fillStyle = glow ? "#000" : "#8E8A83";
-    c.fillRect(0, 0, cw, ch);
-    if (!glow) {
-      // the cap
+  /** paint the face at ppm: air, recesses, panels and cap; then each bar's code line (glow: only the orange lines,
+   *  white on black, for the emissive map) */
+  const paint = (c: CanvasRenderingContext2D, ppm: number, glow: boolean) => {
+    const cw = c.canvas.width;
+    const ch = c.canvas.height;
+    const X = (x: number) => (x - FACE.X0) * ppm;
+    const Y = (y: number) => (FACE.Y1 - y) * ppm;
+    if (glow) {
+      c.fillStyle = "#000";
+      c.fillRect(0, 0, cw, ch);
+    } else {
+      // the air beside the tower (lighter high, denser low), then the recess behind the panels
+      const air = c.createLinearGradient(0, 0, 0, ch);
+      air.addColorStop(0, "#A6A29C");
+      air.addColorStop(1, "#6E6A65");
+      c.fillStyle = air;
+      c.fillRect(0, 0, cw, ch);
+      c.fillStyle = "#8E8A83";
+      c.fillRect(X(-TOWER.W / 2), 0, TOWER.W * ppm, Y(TOWER.BASE));
       c.fillStyle = C.clay;
-      c.fillRect(0, Y(capBase + TOWER.CAP_H), cw, TOWER.CAP_H * FACE.PPM);
+      c.fillRect(X(-TOWER.W / 2 - 0.08), Y(capBase + TOWER.CAP_H), (TOWER.W + 0.16) * ppm, TOWER.CAP_H * ppm);
     }
+    const em = CODE_CAP / 0.73; // JetBrains Mono caps are ~0.73 em
+    c.font = `600 ${em * ppm}px "${MONO}"`;
+    c.textBaseline = "alphabetic";
     for (let i = 0; i < TOWER.NL; i++) {
       const yc = layerY(i);
-      if (yc + 0.2 < FACE.Y0) continue;
       if (!glow) {
         const top = Y(yc + TOWER.LH / 2);
-        const hh = TOWER.LH * FACE.PPM;
+        const hh = TOWER.LH * ppm;
         const gr = c.createLinearGradient(0, top, 0, top + hh);
         const base = i % 2 === 1 ? C.clay : C.clayAlt;
         gr.addColorStop(0, "#F6F2EA");
@@ -151,22 +185,40 @@ const makeReader = (w: World) => {
         gr.addColorStop(1, "#C9C4BB");
         c.fillStyle = gr;
         c.beginPath();
-        c.roundRect(-40, top, cw + 80, hh, 0.035 * FACE.PPM);
+        c.roundRect(X(-TOWER.W / 2), top, TOWER.W * ppm, hh, 0.035 * ppm);
         c.fill();
       }
-      codeRowOfLayer(i).forEach(([ind, len, o]) => {
+      const k = TOWER.NL - 1 - i;
+      codeRowOfLayer(i).forEach(([ind, len, o], j) => {
         if (glow && !o) return;
+        const str = CODE_TEXT[k][j];
         const x0 = -TOWER.W / 2 + 0.22 + ind * 0.1;
         const wd = len * 0.1 - 0.05;
-        c.fillStyle = glow ? "#fff" : o ? C.orange : C.slate;
-        c.beginPath();
-        c.roundRect(X(x0), Y(yc + 0.0375), wd * FACE.PPM, 0.075 * FACE.PPM, 0.017 * FACE.PPM);
-        c.fill();
+        const sx = (wd * ppm) / c.measureText(str).width;
+        c.fillStyle = glow ? "#fff" : o ? "#E88E00" : C.ink;
+        c.save();
+        c.translate(X(x0), Y(yc - CODE_CAP / 2));
+        c.scale(Math.min(1.15, sx), 1);
+        c.fillText(str, 0, 0);
+        c.restore();
       });
     }
   };
-  const faceT = T.draw(cw, ch, (c) => paint(c, false));
-  const glowT = T.draw(cw, ch, (c) => paint(c, true));
+  const cw = Math.round((FACE.X1 - FACE.X0) * FACE.PPM);
+  const ch = Math.round((FACE.Y1 - FACE.Y0) * FACE.PPM);
+  const faceT = T.draw(cw, ch, () => undefined);
+  const glowT = T.draw(Math.round((FACE.X1 - FACE.X0) * FACE.GPPM), Math.round((FACE.Y1 - FACE.Y0) * FACE.GPPM), () => undefined);
+  // paint once the monospace face is loaded (the world awaits T.pending before its first frame)
+  (T as Any).pending.push(
+    monoReady()
+      .then(() => document.fonts.load(`600 80px "${MONO}"`))
+      .then(() => {
+        paint(faceT.tex.image.getContext("2d"), FACE.PPM, false);
+        paint(glowT.tex.image.getContext("2d"), FACE.GPPM, true);
+        faceT.tex.needsUpdate = true;
+        glowT.tex.needsUpdate = true;
+      }),
+  );
   const viewMat = new THREE.MeshStandardMaterial({ map: faceT.tex, emissive: new THREE.Color("#FF9A00"), emissiveMap: glowT.tex, emissiveIntensity: 0.6, roughness: 0.88 });
   // the flat painting renders ~20 % darker than the modelled face (no rims, no bounce): lift it to match
   viewMat.color.setScalar(1.25);
@@ -195,7 +247,7 @@ const makeReader = (w: World) => {
     const t = (FACE.Z - cz) / (p.pos[2] - cz);
     const fx = cx + (p.pos[0] - cx) * t;
     const fy = cy + (p.pos[1] - cy) * t;
-    // the face patch seen: radius R*0.97 / MAG (and the depth ratio, so the glass reads as a true 2.2x)
+    // the face patch seen: radius R*0.97 / MAG (and the depth ratio, so the glass reads as a true 1.6x)
     const rv = (R * 0.97 * t) / LENS.MAG;
     const W2 = FACE.X1 - FACE.X0;
     const H2 = FACE.Y1 - FACE.Y0;
