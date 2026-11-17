@@ -17,6 +17,13 @@
 // REV 1 (the user's notes on V1): both objects are the same object now (no thermometer): two glass columns
 // rising out of slots in cream tiles, text only ("INFLATION", "CREDIT RATE"; the landmark icon is gone), and
 // a more dynamic camera that opens close on inflation and hands off to the credit rate.
+// REV 2 (the user's note at 16:04, ~f111): from f106 (after "Yes" f107) one eased push onto the CREDIT RATE
+// column (k 1.26 -> 1.6, f106-142, settled ~f148) so the amber growth and the sweep land on a close framing:
+// the column whole from its tile to the amber top, its axis at x ~518, MARGIN (now a 10 gap / 20 padding card)
+// inside x 65. INFLATION recedes toward board as it leaves; its word recedes into the tile's tone (f106-121) while
+// still whole in frame, so no frame shows a cut-off word; from f120 the whole object recedes into the board's
+// ground tone (gone by f140), so the settled left edge is just board with the hairline running in.
+// Every frame up to f106 is rev 1's.
 //
 // THE MOTION: LEFT the INFLATION column (cream fill only), RIGHT 440 world px away the CREDIT RATE column (a
 // cream body with the bank's amber MARGIN slice on top). A faint cream hairline runs level from the inflation
@@ -62,6 +69,7 @@ import {
   easeOutCubic,
   labelWidth,
   lerp,
+  mixHex,
   rectPath,
   smoothstep,
 } from "../kits/cheeky-pint/stoutShared";
@@ -170,6 +178,7 @@ export const KEYS = {
   fill: lookFor(XI, 540, 926, 1.97), // creeping in and up as it fills
   hand: lookFor(PAIR_X, 540, 952, 1.24), // the hand-off: the pair framed whole, credit right of centre
   end: lookFor(PAIR_X, 540, 980, 1.262), // a slow tilt up toward the amber with a hint of push; INFLATION stays whole
+  close: lookFor(XC, 518, 958, 1.6), // REV 2: the push onto credit, centred; MARGIN inside x 65, INFLATION's word out left
 };
 const dOf = (a: { x: number; y: number }, b: { x: number; y: number; k: number }) => ({ dx: b.x - a.x, dy: b.y - a.y, k: b.k });
 export const CAM = makeClockCam(
@@ -178,6 +187,7 @@ export const CAM = makeClockCam(
     { f0: -24, f1: 52, ...dOf(KEYS.open, KEYS.fill) }, // the creep in and up while inflation fills (already moving on f0)
     { f0: 34, f1: 72, ...dOf(KEYS.fill, KEYS.hand) }, // the hand-off: pan right with a pull (then credit ...)
     { f0: 60, f1: 176, ...dOf(KEYS.hand, KEYS.end), warp: 0.85 }, // the slow tilt up toward the amber (from its climb on), still moving at the cut
+    { f0: 106, f1: 142, ...dOf(KEYS.end, KEYS.close) }, // REV 2: one eased push onto credit after "Yes"; lands ~f148, the tilt's tail is the creep
   ],
   DURATION,
 );
@@ -194,7 +204,7 @@ const POOL = makePoolTrack(
 // PIECES
 // ===========================================================================
 /** Ink caps in a card, world px (a part of the card: it scales with it). Baseline y. */
-const InkText: React.FC<{ x: number; y: number; text: string }> = ({ x, y, text }) => (
+const InkText: React.FC<{ x: number; y: number; text: string; fill?: string }> = ({ x, y, text, fill = COLOR.inkDark }) => (
   <text
     x={f3(x + (TRACK.label * FONT_W) / 2)}
     y={f3(y)}
@@ -203,7 +213,7 @@ const InkText: React.FC<{ x: number; y: number; text: string }> = ({ x, y, text 
     fontSize={FONT_W}
     letterSpacing={`${TRACK.label}em`}
     textAnchor="middle"
-    fill={COLOR.inkDark}
+    fill={fill}
     style={{ fontFeatureSettings: '"case" 1, "lnum" 1' }}
   >
     {text}
@@ -212,7 +222,7 @@ const InkText: React.FC<{ x: number; y: number; text: string }> = ({ x, y, text 
 const capBaseline = (cy: number) => cy + (FONT_W * METRIC.cap) / 2;
 
 /** A cream tile (its gradient by tone), the lit top edge broken by the slot, the slot line, its label in ink. */
-const Tile: React.FC<{ id: string; cx: number; k: number; dim: number; label: string }> = ({ id, cx, k, dim, label }) => {
+const Tile: React.FC<{ id: string; cx: number; k: number; dim: number; label: string; fade?: number }> = ({ id, cx, k, dim, label, fade = 0 }) => {
   const x = cx - TILE_W / 2;
   const r = R_TILE;
   const ey = Y0 + EDGE.CREAM / k / 2;
@@ -234,7 +244,10 @@ const Tile: React.FC<{ id: string; cx: number; k: number; dim: number; label: st
         strokeWidth={f3(EDGE.CREAM / k)}
       />
       <rect x={f3(sx0)} y={f3(Y0 - EDGE.SLOT / k / 2)} width={f3(sx1 - sx0)} height={f3(EDGE.SLOT / k)} fill={COLOR.inkDark} fillOpacity={ALPHA.slot} />
-      <InkText x={cx} y={capBaseline(Y0 + TILE_H / 2)} text={label} />
+      {/* REV 2: the label's ink recedes into its own tile's tone (fade 1) before the push carries it out of frame */}
+      {fade < 0.98 && (
+        <InkText x={cx} y={capBaseline(Y0 + TILE_H / 2)} text={label} fill={fade > 0 ? mixHex(COLOR.inkDark, mixHex(toneTop(dim), toneFoot(dim), 0.5), clamp01(fade)) : COLOR.inkDark} />
+      )}
     </g>
   );
 };
@@ -256,7 +269,8 @@ const ColumnBack: React.FC<{ cx: number; k: number; fill: number }> = ({ cx, k, 
 
 /** A column's front: the cream fill (lit top edge when it is the top), the amber margin if any (bloom, rungs,
  *  hot edge, the sweep), the tile, the glass. */
-const ColumnFront: React.FC<{ uid: string; cx: number; k: number; body: number; slice: number; dim: number; band: [number, number]; sweep: number; label: string }> = ({
+const ColumnFront: React.FC<{ uid: string; cx: number; k: number; body: number; slice: number; dim: number; band: [number, number]; sweep: number; label: string; fade?: number }> = ({
+  fade = 0,
   uid,
   cx,
   k,
@@ -319,7 +333,7 @@ const ColumnFront: React.FC<{ uid: string; cx: number; k: number; body: number; 
           <LightSweep x={x0} y={sliceTop} w={FILL_W} h={slice} k={k} t={sweep} on="amber" r={r} />
         </>
       ) : null}
-      <Tile id={`${uid}t`} cx={cx} k={k} dim={dim} label={label} />
+      <Tile id={`${uid}t`} cx={cx} k={k} dim={dim} label={label} fade={fade} />
       <GlassColumn x={cx} baseY={Y0} w={COL.w} h={COL.glass} k={k} role={dim > 0.3 ? "lo" : "hi"} shadow={0} part="front" />
     </g>
   );
@@ -333,15 +347,16 @@ const LevelLine: React.FC<{ k: number; level: number }> = ({ k, level }) => {
   return <rect x={f3(x0)} y={f3(y - 1.25 / k)} width={f3(x1 - x0)} height={f3(2.5 / k)} fill={COLOR.inkCream} fillOpacity={0.62} />;
 };
 
-/** MARGIN in ink on a small cream card beside the slice (left of the glass), riding the slice's middle. */
-const MARGIN_W = Math.ceil(labelWidth("MARGIN", FONT_W) + 2 * 22);
+/** MARGIN in ink on a small cream card beside the slice (left of the glass, a 10 gap and 20 padding so the close framing can
+ * hold it inside x 65 while INFLATION's word is out left), riding the slice's middle. */
+const MARGIN_W = Math.ceil(labelWidth("MARGIN", FONT_W) + 2 * 20);
 const MARGIN_H = 60;
 const MarginCard: React.FC<{ k: number; cy: number; enter: number }> = ({ k, cy, enter }) => {
   if (enter <= 0.001) return null;
   const a = easeOutCubic(enter);
   const lift = ((1 - a) * 24) / k;
   const blur = 6 * (1 - a);
-  const x1 = XC - COL.w / 2 - 16;
+  const x1 = XC - COL.w / 2 - 10;
   const x0 = x1 - MARGIN_W;
   const y0 = cy - MARGIN_H / 2 + lift;
   const d = rectPath(x0, y0, MARGIN_W, MARGIN_H, 8);
@@ -365,13 +380,23 @@ const MarginsEvenHigher: React.FC<z.infer<typeof schema>> = () => {
   const k = cam.k;
   const band = amberBandFor(cam);
   const L = levelsAt(S);
-  const dim = T.DIM[2] * smoothstep((S - T.DIM[0]) / T.DIM[1]);
+  // REV 2: as the push carries INFLATION out, it recedes on toward board (0.45 -> 0.95, f108-130) and its word
+  // recedes into the tile's tone (f106-121) before the frame edge reaches it (~f123): no cut-off word on any frame
+  const dim = T.DIM[2] * smoothstep((S - T.DIM[0]) / T.DIM[1]) + 0.5 * smoothstep((S - 108) / 22);
+  const inflFade = smoothstep((S - 106) / 15);
+  // REV 2 fix: from ~f120, as the push carries it out, the whole INFLATION object (tile, fill, glass, shadow, composited
+  // as one group) recedes into the board's own ground tone, gone by f140: the left edge is just board + the hairline
+  const inflExit = smoothstep((S - 120) / 20);
   const marginIn = clamp01((S - T.MARGIN_IN) / ENTER_F);
   const sweep = (S - T.SWEEP[0]) / (T.SWEEP[1] - T.SWEEP[0]);
   return (
     <StoutStage S={S} cam={cam} rest={CAM.rest} pool={POOL(S)}>
-      <ColumnBack cx={XI} k={k} fill={L.infl} />
-      <ColumnFront uid={`${uid}i`} cx={XI} k={k} body={L.infl} slice={0} dim={dim} band={band} sweep={0} label="INFLATION" />
+      {inflExit < 0.999 && (
+        <g opacity={inflExit > 0 ? f3(1 - inflExit) : undefined}>
+          <ColumnBack cx={XI} k={k} fill={L.infl} />
+          <ColumnFront uid={`${uid}i`} cx={XI} k={k} body={L.infl} slice={0} dim={dim} band={band} sweep={0} label="INFLATION" fade={inflFade} />
+        </g>
+      )}
       <ColumnBack cx={XC} k={k} fill={L.top} />
       <LevelLine k={k} level={L.infl} />
       <ColumnFront uid={`${uid}c`} cx={XC} k={k} body={L.body} slice={L.slice} dim={0} band={band} sweep={sweep} label="CREDIT RATE" />
