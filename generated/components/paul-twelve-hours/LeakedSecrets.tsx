@@ -19,7 +19,7 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { makeOutsider3D, walkPlan, type OutsiderPose3D } from "./paulOutsider3d";
+import { OUT3D, makeOutsider3D, walkPlan, type OutsiderPose3D } from "./paulOutsider3d";
 import { C, PaulStage, THREE, camTrack, clamp01, ease01, hash01, living, mix, orbitCam, type Any, type V3, type World, type WorldSpec } from "./paulWorld";
 import { VAULT, makeVault, secretCard, yawTo } from "./paulWorldSets";
 
@@ -34,18 +34,19 @@ const D2R = Math.PI / 180;
 // f0     close on the OpenAI vault's round door, the camera already easing back (and orbiting a little right); a faint
 //        warm glow breathes in the seam round the closed door (the secrets inside; Anthropic's too, off-phase) and fades
 //        as each door opens. The wheel stays still until "access".
-// f24-60 on "unsophisticated actors" the small hooded outsider (the world's 3D clay figure) walks in from the right,
-//        near profile, a stumble at f40-46 (a fumble of the arms, a head dip and roll), an eased stop between the
-//        vaults behind the open box (walkPlan, feet planted, f60), then a shuffling turn to face us (f56-74).
+// f24-60 on "unsophisticated actors" the outsider, the world's black artist's mannequin (faceless, matte near-black),
+//        walks in from the right, near profile, a toe-catch at f40-47 (the head dips to his feet, the hands lift a
+//        little and settle), an eased stop between the vaults behind the open box (walkPlan with his look and height,
+//        feet planted, f60), then a shuffling turn to face us (f56-74).
 // f64-78 on "access" the OpenAI wheel spins a turn and a half; the bolts retract (f76-86); the door swings open away
-//        from him (f84-104) on the glowing stack. He startles (f84-92, a small whoa). Anthropic does the same 2 f early.
+//        from him (f84-104) on the glowing stack. He starts back a little (f83-91). Anthropic does the same 2 f early.
 // f94    on "extract" the top card slides off the stack, along the shelf and over the sill, and hops in a low arc into
 //        the box (first lands f119); one every 3.6 f from each vault (Anthropic half a beat behind), two ribbons
 //        converging on the box, each card lower than the one behind it
 //        while the camera pulls back and pans right onto a longer lens (26 -> 16 deg, f70-120) so both open doors sit
 //        inside x 65-1015 in the wide with him ~287 px tall; the haze moves back with the camera to keep its depth;
-//        the Anthropic vault is whole in frame by ~f111. His hands come up
-//        (whoa, f104-116) and he looks down into the box as it fills.
+//        the Anthropic vault is whole in frame by ~f111. His hands half rise
+//        (f104-118) and he looks down into the box as it fills.
 // f134+  by "developments" both stacks are down to three with dashed outlines of the full stacks; a last card from
 //        each vault trickles in (lands f148 / f150), stacks at two; a slow creep back to f157.
 // CAUSE -> EFFECT: wheel -> bolts -> door -> first card; a card leaves only after the card above it; each card lands on
@@ -57,7 +58,7 @@ const X_A = 1.25;
 const BOX = { x: 0, z: 2.1, L: 1.0, D: 0.56, H: 0.24, t: 0.02 };
 const BOX_FLOOR = 0.02;
 const OUT_H = 1.45;
-const SPOT: V3 = [0.0, 0, 0.95];
+const SPOT: V3 = [0.0, 0, 0.82];
 
 // ---- the vault beats ----------------------------------------------------------------------------------------------
 const doorAt = (f: number, lead: number) => ({
@@ -67,27 +68,31 @@ const doorAt = (f: number, lead: number) => ({
 });
 
 // ---- the outsider -------------------------------------------------------------------------------------------------
-const WALK = walkPlan({ from: [1.3, 0, 0.78], to: SPOT, f0: 24, f1: 60, rampIn: 0, rampOut: 14 });
+const WALK = walkPlan({ from: [1.3, 0, 0.78], to: SPOT, f0: 24, f1: 60, rampIn: 0, rampOut: 14, look: "mannequin", heightM: OUT_H });
+/** the black mannequin: clumsy in a quiet way. Small, deliberate gestures (no flailing): a toe-catch at f43 (the head
+ *  dips to the feet, the hands lift a little and settle), a held stop, a shuffling turn to face us, a small start
+ *  back as the first wheel bites (f87), and on the flood a guarded half-raise of the hands while he looks down into
+ *  the box. The fumble jiggle is kept tiny: it reads as a hitch, not a wobble. */
 const poseAt = (f: number, camYaw: number): OutsiderPose3D => {
   const w = WALK(f);
-  const stumble = Math.exp(-Math.pow((f - 43) / 3, 2));
+  const stumble = Math.exp(-Math.pow((f - 43) / 3.2, 2));
+  const catchUp = Math.exp(-Math.pow((f - 47) / 3, 2)); // the head comes back up after the catch
   const turn = ease01(56, 74, f);
-  const startle = Math.exp(-Math.pow((f - 87) / 3.5, 2));
-  const whoa = ease01(104, 116, f);
-  const look = ease01(100, 118, f);
+  const startle = Math.exp(-Math.pow((f - 87) / 4, 2));
+  const whoa = ease01(104, 118, f);
+  const look = ease01(100, 120, f);
   return {
-    hood: "up",
     carry: "none",
     frame: f,
     yaw: mix(w.yaw, camYaw - 6, turn),
-    walk: w.walk + 0.3 * Math.max(0, f - 60),
+    walk: w.walk + OUT3D.RATE * Math.max(0, f - 60),
     walkAmt: w.walkAmt,
-    shuffle: 0.85 * Math.sin(Math.PI * clamp01((f - 56) / 18)),
-    fumble: Math.min(1, stumble + 0.5 * startle + 0.12 * whoa),
-    whoa: Math.min(1, 0.45 * stumble + 0.45 * startle + 0.85 * whoa),
-    headPitch: 2 + 20 * stumble - 8 * startle + 10 * look,
-    headYaw: 10 * Math.sin(Math.PI * clamp01((f - 96) / 30)) * (1 - look * 0.5),
-    headRoll: 10 * stumble,
+    shuffle: 0.7 * Math.sin(Math.PI * clamp01((f - 56) / 18)),
+    fumble: 0.3 * stumble,
+    whoa: Math.min(1, 0.32 * stumble + 0.3 * startle + 0.5 * whoa),
+    headPitch: 2 + 14 * stumble - 3 * catchUp - 6 * startle + 12 * look,
+    headYaw: 7 * Math.sin(Math.PI * clamp01((f - 96) / 30)) * (1 - look * 0.5),
+    headRoll: 4 * stumble,
   };
 };
 
@@ -222,7 +227,7 @@ const buildBox = (w: World) => {
 // ---- the seam glow: the secrets inside, a faint warm light breathing through the gap round the closed door ----------
 /** three soft translucent orange rings hugging the door's edge on the collar's face (core, halo, wide halo); fade as it opens */
 /** the dust: the world's motes thinned to a few, so no speck ever crosses his head or face (checked f0-157 against the
- *  stage's mote layout and this camera; the layout has no seed, and the speck over his hood at f43-70 is mote 5 of
+ *  stage's mote layout and this camera; the layout has no seed, and the speck over his head at f43-70 is mote 5 of
  *  the front layer, present at any density above ~0.04) */
 const AIR = { motes: 0.035 };
 const SEAM = { r: VAULT.DOOR_R + 0.008, z: VAULT.D / 2 + 0.072 };
@@ -258,7 +263,7 @@ const SPEC: WorldSpec = {
     const O = buildSide(w, X_O, "openai");
     const A = buildSide(w, X_A, "anthropic");
     buildBox(w);
-    const man = makeOutsider3D(w);
+    const man = makeOutsider3D(w, { look: "mannequin", tone: "black" });
     const all = [...O.movers, ...A.movers];
     const seamO = buildSeamGlow(w, X_O);
     const seamA = buildSeamGlow(w, X_A);
