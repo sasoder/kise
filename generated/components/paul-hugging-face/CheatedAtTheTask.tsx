@@ -17,32 +17,37 @@
 //   ~f62, the back by ~f96) with a clear lane to the lock. From f75 a push-in on the lock (~140 -> ~210 px wide by f98,
 //   "to hack a particular piece of software"): the tugger beside it, three-quarter to us, grips it (contact f80) and
 //   heaves twice (f84, f98; again f128, f146 in the background), leaning and sliding back; the lock swings on its
-//   shackle and holds; a leaner on each side leans in. From f98 the camera orbits right and in round the block's
-//   front-right: the Hugging Face box (out at the block's front-right, off frame until then) enters at ~f112 ("They")
-//   and is whole in frame by ~f122, three robots at it (the third walks up, f112 -> f134). The lifter's mittens reach
-//   the lid's free edge (contact f122), lift it and flick it open (wide by f134, small rebound); its mittens drop to
-//   the ANSWER KEY's top corners (grip f135; the card prints ANSWERS over four ticked rows, an answer sheet) and
-//   raise it out of the box (f136 -> f148) while orange spreads into the card from its grips (f137 -> f149); the
-//   lifter's happy squint from f148; the camera keeps creeping in. End frame: block + padlock (still locked) on the
-//   left, the lifter with the key (~240 px wide) over the open box (HF mark ~130 px) centre-right.
-// Orange = the AIs and what they have taken (the answer key). Off-white = the people's task and the HF box.
+//   shackle and holds; a leaner on each side leans in. NEW CHEAT: the lock is never opened, they go round it. From f98
+//   the camera orbits right round the block's front-right corner (side face in view from ~f112, "They"; round by
+//   ~f124) onto its RIGHT side, where two robots who were hidden behind it have already unscrewed a panel in the
+//   side's rear half (loose screws on the floor below). The lifter's mittens on the panel's top edge (f117), a short
+//   pull (f117 -> f123), then it lets go and the panel falls open outward onto the floor (f123 -> f129, one small
+//   bounce) as a ramp; warm orange light spills out of the opening, across the panel's inner face and the floor. The
+//   lifter reaches in (f128) and slides the big orange FLAG out through the opening hand over hand, cloth end first
+//   (f133 -> f144), then swings it upright and lifts it high over its head (f143 -> f150): a 1.05 x 0.68 m cloth on a
+//   1.5 m pole, unfurling and waving, bright orange with a soft bloom (theirs now); happy squint from f150, the helper
+//   cheers, hands up. Meanwhile the tugger keeps heaving at the padlock (f128, f146) and it
+//   stays shut. End frame: the padlock still hanging locked at the block's front on the left (x ~190-280, the tugger
+//   whole beside it), the open side with the light and the ramp centre-right, the lifter with the flag held high
+//   (pole top ~y 590, feet ~y 1100, ramp tip ~y 1215, helper inside x 1000).
+// Orange = the AIs and what they have taken (the flag). Off-white = the people's task (the strongbox).
 //
 // CAMERA: worldAt keys (pchip, moving pre/post-roll keys at f-12 and f182): f0 close/low on the stream -> f42
 //   pull-back + crane -> f74 the fan + block from its left (yaw +0.2, dist 10) -> f98 push-in on the lock (dist 7.8)
-//   -> f130 orbit right and round (yaw -0.6) onto the box in the foreground -> f163 a creep in. Every channel is
-//   monotone except dist (pull-back into push-in at f75) and the target's z (it turns from the lock toward the box
-//   at f99, the orbit's curve).
+//   -> f126 orbit right round the corner onto the right side (yaw -0.92, dist 7.6, target up to the side's opening)
+//   -> f163 a slow creep in and on round (yaw -1.01, dist 7.47). Every channel is monotone except dist (pull-back
+//   into push-in at f75).
 //
 // SOURCES: OpenAI, "The Hugging Face incident and the road ahead" (July 2026): the ExploitGym cyber evaluation; the
 //   models broke out of the test environment and hacked Hugging Face to get the evaluation's answers. Nothing numeric
-//   on screen. Logo: HUGGINGFACE (kits/dwarkesh/brandGlyphs) on the box's plate in its real yellow.
+//   on screen. No logos (the HF box is gone from this cut).
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { BOT_POSES, botGripTo, lerpPose, type BotPose } from "../rsi-ten-earths/tenEarthsBot";
-import { FONT, FloorShadow, HfStage, ROBOT_U, RobotAt, Svg, add, c01, lerp, mul, norm, robotFoot, sst, sub, worldAt, type CamKey, type P2, type V3, type World } from "./hfWorld";
-import { Card, HFBox, HF_LID_OPEN, TASK, TICK, TaskBlock, axes, cardFrame, cardInk, faceYaw, footPts, hfBoxGeom, type CardFrame } from "./hfProps";
+import { ACCENT, ACCENT_DEEP, FloorShadow, HfStage, MATS, Prism, ROBOT_U, RobotAt, Svg, add, c01, dot, lerp, mixHexL as mixHex, mixMat, mul, n2, norm, robotFoot, rrect, sst, sub, worldAt, type CamKey, type P2, type V3, type World } from "./hfWorld";
+import { TASK, TaskBlock, faceYaw, footPts } from "./hfProps";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 164;
@@ -57,26 +62,32 @@ const FRONT_Z = -TASK.d / 2;
 /** the padlock in face-local metres (as TaskBlock draws it) */
 const LK = { cx: TASK.lock.cx, cy: TASK.lock.cy, s: TASK.lock.s, bh: TASK.lock.s * 0.78, t: TASK.lock.s * 0.2 };
 const LOCK_FLOOR: V3 = [BLOCK_C[0] - TASK.w / 2 + LK.cx, 0, FRONT_Z];
-/** the HF box out to the block's front-right: off frame right while the camera works the lock from the left, then the
- *  orbit brings it in close (foreground right, front turned toward the end camera) */
-const BOX = hfBoxGeom([3.26, 0, -3.3], 1.05, 0.6, 0.74, 0.45);
-const HF_PLATE = 0.38;
-const BOX_AX = axes(BOX.yaw);
-const CARD = { w: 0.84, h: 0.7 };
+/** the strongbox's way round: a panel in the rear half of its RIGHT side (screws already out), hinged at its bottom
+ *  edge, that falls open outward onto the floor; the prize inside is an orange flag (capture the flag) */
+const SIDE_X = BLOCK_C[0] + TASK.w / 2;
+const HOLE = { z0: 0.2, z1: 0.75, y0: 0.35, y1: 1.45 };
+const HOLE_ZC = (HOLE.z0 + HOLE.z1) / 2;
+const PANEL_H = HOLE.y1 - HOLE.y0;
+const PANEL_W = HOLE.z1 - HOLE.z0;
+const PANEL_T = 0.05;
+/** the angle (from upright, outward) at which the falling panel's top edge meets the floor */
+const PANEL_LAND = Math.acos(-(HOLE.y0 - 0.02) / PANEL_H);
+const FLAG = { pole: 1.5, w: 1.05, h: 0.68 };
+const HOLE_C: V3 = [SIDE_X, (HOLE.y0 + HOLE.y1) / 2, HOLE_ZC];
 
 // ===================================================================================================================
 // THE CAMERA
 // ===================================================================================================================
 const KEYS: CamKey[] = [
   // a pre-roll key: the pull-back is already under way at f0; a post-roll key: still creeping in at f163. The camera
-  // works the lock from the block's LEFT side (yaw +) with the HF box off frame right; from f98 it orbits right
-  // (yaw -0.6) and in, which brings the box into the foreground right
+  // works the lock from the block's LEFT side (yaw +), the crew behind the block's right rear hidden by it; from f98 it
+  // orbits right round the front-right corner (yaw -1.0) onto the right side, the padlock still in view on the left
   { f: -12, target: [-2.5, 0.48, -3.2], dist: 3.6, yaw: 0.22, pitch: 0.12, F: 1700, sy: 785 },
   { f: 42, target: [-1.2, 0.62, -2.3], dist: 7.6, pitch: 0.34, sy: 700 },
   { f: 74, target: [-0.4, 0.7, -1.4], dist: 10.0, yaw: 0.2, pitch: 0.47, sy: 660 },
   { f: 98, target: [-0.3, 0.8, -1.1], dist: 7.8, yaw: 0.16, sy: 500 },
-  { f: 130, target: [1.8, 1.35, -2.3], dist: 7.75, yaw: -0.6, sy: 468 },
-  { f: 182, target: [1.9, 1.35, -2.4], dist: 7.35, yaw: -0.64, sy: 468 },
+  { f: 126, target: [1.15, 2.0, 0.05], dist: 7.6, yaw: -0.92, pitch: 0.36, sy: 500 },
+  { f: 182, target: [1.2, 2.0, 0.1], dist: 7.45, yaw: -1.02, pitch: 0.34, sy: 500 },
 ];
 
 // ===================================================================================================================
@@ -151,7 +162,7 @@ const CROWD: Walker[] = (() => {
 /** the three at the lock (they led the stream): the tugger left of it, a leaner on each side of it */
 const TUGGER: Walker = { seat: TUG_SEAT, arrive: 54, dir: norm(sub(TUG_SEAT, ORIGIN)), size: 1.12, variant: 0, seed: 11 };
 const LN_SEATS: V3[] = [
-  [0.7, 0, FRONT_Z - 0.35],
+  [0.3, 0, FRONT_Z - 0.82],
   [-1.35, 0, FRONT_Z - 0.65],
 ];
 const LEANERS: Walker[] = [
@@ -202,6 +213,36 @@ const lockSwing = (f: number) => {
   }
   return a;
 };
+/** the padlock's screen outline (convex hull of its body and shackle), for drawing it again over robots that stand
+ *  behind it once the camera is round on the right */
+const hull = (pts: P2[]): P2[] => {
+  const q = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const crossZ = (o: P2, a: P2, b: P2) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: P2[] = [];
+  for (const p of q) {
+    while (lo.length >= 2 && crossZ(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
+    lo.push(p);
+  }
+  const up: P2[] = [];
+  for (const p of [...q].reverse()) {
+    while (up.length >= 2 && crossZ(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop();
+    up.push(p);
+  }
+  return [...lo.slice(0, -1), ...up.slice(0, -1)];
+};
+const lockHull = (W: World, shake: number, tug: number): P2[] => {
+  const bodyY = LK.cy + LK.bh * 0.18;
+  const shR = LK.s * 0.3;
+  const shY = LK.cy + LK.bh * 0.18 - LK.bh / 2;
+  const pts: V3[] = [];
+  for (const x of [LK.cx - LK.s / 2, LK.cx + LK.s / 2]) for (const y of [bodyY - LK.bh / 2, bodyY + LK.bh / 2]) for (const z of [0, LK.t]) pts.push(lockPoint(x, y, z, shake, tug));
+  for (let i = 0; i <= 8; i++) {
+    const a = Math.PI + (Math.PI * i) / 8;
+    pts.push(lockPoint(LK.cx + (shR + LK.s * 0.07) * Math.cos(a), shY - shR * 0.55 + (shR + LK.s * 0.07) * Math.sin(a), LK.t * 0.5, shake, tug));
+  }
+  return hull(pts.map(W.project));
+};
+
 /** a world point on the padlock body (face-local x right, y down, z out of the face), with the swing and tug */
 const lockPoint = (x: number, y: number, zOut: number, shake: number, tug: number): V3 => {
   const shR = LK.s * 0.3;
@@ -216,79 +257,244 @@ const lockPoint = (x: number, y: number, zOut: number, shake: number, tug: numbe
 };
 
 // ===================================================================================================================
-// THE HF BOX + THE LIFTER: lid open (0..1 of HF_LID_OPEN), the card's rise and orange
+// THE WAY ROUND: the side panel (pulled, then falling open), the light inside, the flag pulled out and held up
 // ===================================================================================================================
-const LIFTER = { p: add(add(BOX.c, mul(BOX_AX.v, 0.66)), mul(BOX_AX.u, 0.05)), size: 1.28, variant: 0, seed: 21 };
-const HELPER = { p: add(add(BOX.c, mul(BOX_AX.u, 0.8)), mul(BOX_AX.v, 0.4)), size: 0.86, variant: 2, seed: 22 };
-/** the third walks in from off frame right to the box's right side */
-const WB_SEAT: V3 = add(add(BOX.c, mul(BOX_AX.u, 0.95)), mul(BOX_AX.v, -0.25));
-const WALKER_B: Walker = { seat: WB_SEAT, arrive: 134, dir: norm([-1, 0, -0.33]), size: 0.84, variant: 4, seed: 23 };
-
-const LID_A1 = 0.72; // the lifter's own lift (rad), then a flick carries it open
-const LID0 = 122; // the mittens on the lid's free edge (contact); first lid motion LID0 + 1
-const LID1 = LID0 + 7; // the lifter's own lift ends: the flick
-const LID2 = LID1 + 5; // wide open on its stop
-const REACH0 = LID0 - 8;
-const lidAngle = (f: number) => {
-  if (f <= LID0) return 0;
-  if (f <= LID1) return LID_A1 * sst(LID0, LID1, f) ** 1.15;
-  if (f <= LID2) return lerp(LID_A1, HF_LID_OPEN, sst(LID1, LID2, f));
-  // it lands on its stop: one small rebound
-  return HF_LID_OPEN - 0.1 * Math.sin(Math.PI * c01((f - LID2) / 6)) * Math.exp(-(f - LID2) / 8);
-};
-/** a point on the lid's free edge (along the box depth: s -1..1) at angle a */
-const lidEdge = (a: number, s: number): V3 => {
-  const hp = add(add(BOX.c, mul(BOX_AX.u, -BOX.w / 2)), [0, BOX.h, 0]);
-  const dir = add(mul(BOX_AX.u, Math.cos(a)), [0, Math.sin(a), 0]);
-  return add(add(hp, mul(dir, BOX.w)), mul(BOX_AX.v, (s * BOX.d) / 2));
-};
-const RISE0 = LID1 + 6; // the mittens on the card's sides (contact)
-const RISE1 = 148;
-const cardRise = (f: number) => sst(RISE0 + 1, RISE1, f);
-const cardOrange = (f: number) => sst(RISE0 + 2, RISE1 + 1, f);
-/** the card's centre: inside the box (top just under the rim) -> held up over the box, a little toward the lifter */
-const cardCentre = (f: number): V3 => {
-  const r = cardRise(f);
-  const inY = BOX.h - CARD.h / 2 - 0.03;
-  const upY = BOX.h + CARD.h / 2 - 0.02;
-  const bob = 0.012 * Math.sin((f - RISE1) * 0.16) * sst(RISE1, RISE1 + 8, f);
-  return add(add(BOX.c, mul(BOX_AX.v, 0.04 - 0.1 * r)), [0, lerp(inY, upY, r) + bob, 0]);
+/** the crew at the block's right rear (hidden by the block until the orbit): the lifter and a helper */
+const LIFTER = { p: [1.97, 0, 1.0] as V3, size: 1.15, variant: 0, seed: 31 };
+const HELPER = { p: [2.32, 0, 1.42] as V3, size: 0.9, variant: 2, seed: 32 };
+/** facings fixed in the world, given as the yaw the END camera (f163) sees */
+const WEND = worldAt(KEYS, 163);
+const lookEnd = (p: V3, y: number): V3 => {
+  const fh = norm([WEND.f[0], 0, WEND.f[2]]);
+  return add(p, add(mul(WEND.r, Math.sin(y)), mul(fh, -Math.cos(y))));
 };
 
+const REACH0 = 110; // the lifter reaches for the panel's top edge
+const GRIP0 = 117; // mittens on it; it pulls the top out a little
+const FALL0 = 123; // let go: the panel falls open
+const FALL1 = 129; // it hits the floor (one small bounce)
+const IN0 = 128; // the lifter reaches in
+const FLAG0 = 133; // mittens on the pole; out through the hole and up
+const FLAG1 = 150; // held high
+const PULL_A = 0.14;
+const panelAngle = (f: number) => {
+  if (f <= GRIP0) return 0;
+  if (f <= FALL0) return PULL_A * sst(GRIP0, FALL0, f);
+  if (f <= FALL1) return PULL_A + (PANEL_LAND - PULL_A) * ((f - FALL0) / (FALL1 - FALL0)) ** 2;
+  return PANEL_LAND - 0.16 * Math.abs(Math.sin((Math.PI * (f - FALL1)) / 5)) * Math.exp(-(f - FALL1) / 4);
+};
+/** the light from inside: a crack of it as the panel is pulled, full once it is down */
+const lightAt = (f: number) => 0.25 * sst(GRIP0 + 2, FALL0, f) + 0.75 * sst(FALL0, FALL1 + 3, f);
+/** a point on the panel's outer face: along its width (z) and up it (h 0..PANEL_H), at angle a */
+const panelPt = (a: number, zz: number, h: number): V3 => [SIDE_X + h * Math.sin(a), HOLE.y0 + h * Math.cos(a), zz];
+
+/** the flag: its pole base and pole direction at a frame (inside, then out through the hole and up) */
+/** the line the pole slides out along: through the opening low in its rear part, outward and a little up */
+const SLIDE_X: V3 = [SIDE_X, 0.78, 0.47];
+const SLIDE_D: V3 = norm([0.9, 0.4, 0.12]);
+const SLIDE_C = FLAG.pole + 0.12;
+/** where the lifter's mittens work the pole while it slides out (the pole runs through them) */
+const PULL_AT: V3 = [2.12, 1.0, 0.78];
+const flagState = (f: number): { base: V3; dir: V3; s: number; s1: number; s2: number } => {
+  // lying inside along the slide line, top (cloth) end at the opening: slid out top first along the line (it
+  // crosses the side always inside the opening), then swung upright and lifted high
+  const s1 = sst(FLAG0, FLAG0 + 11, f);
+  const s2 = sst(FLAG0 + 10, FLAG1, f);
+  const c = SLIDE_C * s1;
+  const top1 = add(SLIDE_X, mul(SLIDE_D, c - 0.07));
+  const base1 = sub(top1, mul(SLIDE_D, FLAG.pole));
+  const upP: V3 = [1.95, 1.25, 0.55];
+  const base: V3 = [lerp(base1[0], upP[0], s2), lerp(base1[1], upP[1], s2), lerp(base1[2], upP[2], s2)];
+  // upright, leaning a little out to the end camera's left and toward it (clear of the lifter's head and the wall)
+  const sw = 0.03 * Math.sin((f - FLAG1) * 0.16) * sst(FLAG1 - 2, FLAG1 + 6, f);
+  const toCam = norm([-WEND.f[0], 0, -WEND.f[2]]);
+  const dirUp: V3 = norm(add(add([0, 1, 0], mul(WEND.r, -(0.15 + sw))), mul(toCam, 0.15)));
+  const dir = norm(add(mul(SLIDE_D, 1 - s2), mul(dirUp, s2)));
+  // how far the cloth is unfurled (it opens as it comes out, fully once upright)
+  const s = 0.55 * sst(0.2, 1, s1) + 0.45 * s2;
+  return { base, dir, s, s1, s2 };
+};
+/** the lifter's two grip points on the pole: where the pole passes its mittens while sliding, then fixed low on the
+ *  pole once it swings it up */
+const flagGrips = (f: number): [V3, V3] => {
+  const { base, dir, s2 } = flagState(f);
+  const u = Math.min(FLAG.pole - 0.04, Math.max(0.12, dot(sub(PULL_AT, base), dir)));
+  const slide: [number, number] = [u - 0.12, u + 0.04];
+  const hold: [number, number] = [0.28, 0.46];
+  const t = sst(0, 0.6, s2);
+  return [add(base, mul(dir, lerp(slide[0], hold[0], t))), add(base, mul(dir, lerp(slide[1], hold[1], t)))];
+};
+/** the flag's world geometry: the pole and the cloth as vertical strips (furled inside, unfurling and waving once out) */
+const flagGeom = (f: number) => {
+  const { base, dir, s } = flagState(f);
+  const top = add(base, mul(dir, FLAG.pole));
+  const N = 7;
+  const w = FLAG.w * lerp(0.3, 1, s);
+  const wave = (t: number) => (0.01 + 0.075 * s) * t * Math.sin(Math.PI * 2 * (t * 1.1 - f * 0.07));
+  const edge = (t: number, y: number): V3 => add(sub(top, mul(dir, y)), [wave(t), 0, t * w]);
+  const strips: { q: V3[]; shade: number }[] = [];
+  for (let i = 0; i < N; i++) {
+    const t0 = i / N;
+    const t1 = (i + 1) / N;
+    const q: V3[] = [edge(t0, 0), edge(t1, 0)];
+    // a swallow-tail notch cut into the free end
+    if (i === N - 1) q.push(edge(t1 - 0.13, FLAG.h / 2));
+    q.push(edge(t1, FLAG.h), edge(t0, FLAG.h));
+    const slope = Math.cos(Math.PI * 2 * (((t0 + t1) / 2) * 1.1 - f * 0.07));
+    strips.push({ q, shade: slope });
+  }
+  return { base, top, strips, s };
+};
+/** keep the part of a polygon on one side of the plane x = SIDE_X */
+const clipX = (poly: V3[], keepOut: boolean): V3[] => {
+  const inside = (p: V3) => (keepOut ? p[0] >= SIDE_X : p[0] < SIDE_X);
+  const out: V3[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const ia = inside(a);
+    const ib = inside(b);
+    if (ia) out.push(a);
+    if (ia !== ib) {
+      const t = (SIDE_X - a[0]) / (b[0] - a[0]);
+      out.push([SIDE_X, lerp(a[1], b[1], t), lerp(a[2], b[2], t)]);
+    }
+  }
+  return out;
+};
+/** the part of the segment a-b on one side of the plane x = SIDE_X */
+const FLAG_LIT = "#FFE07A";
+const FLAG_MID = "#FFBE1A";
+const FLAG_DARK = "#E08600";
+const clipSegX = (a: V3, b: V3, keepOut: boolean): [V3, V3] | null => {
+  const q = clipX([a, b], keepOut);
+  return q.length >= 2 ? [q[0], q[1]] : null;
+};
+const FlagArt: React.FC<{ W: World; f: number; part: "in" | "out" }> = ({ W, f, part }) => {
+  const g = flagGeom(f);
+  const keepOut = part === "out";
+  const pole = clipSegX(g.base, g.top, keepOut);
+  const k = W.scaleAt(g.top);
+  const tone = (hex: string) => W.toneO(hex, g.top);
+  const P = (q: V3) => {
+    const p2 = W.project(q);
+    return `${n2(p2[0])},${n2(p2[1])}`;
+  };
+  const topIn = g.top[0] >= SIDE_X === keepOut;
+  return (
+    <g>
+      <defs>
+        <filter id={`bloom${part}`} x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation={n2(0.09 * k)} />
+        </filter>
+      </defs>
+      {pole ? <path d={`M${P(pole[0])}L${P(pole[1])}`} stroke={W.tone("#3A342E", g.base)} strokeWidth={n2(0.055 * k)} strokeLinecap="round" fill="none" /> : null}
+      {/* a soft bloom behind the cloth (stronger as it unfurls) */}
+      <g filter={`url(#bloom${part})`} opacity={0.35 + 0.55 * g.s}>
+        {g.strips.map((st, i) => {
+          const q = clipX(st.q, keepOut);
+          return q.length < 3 ? null : <path key={i} d={`M${q.map(P).join("L")}Z`} fill="#FFB000" stroke="#FFB000" strokeWidth={n2(0.06 * k)} strokeLinejoin="round" />;
+        })}
+      </g>
+      {g.strips.map((st, i) => {
+        const q = clipX(st.q, keepOut);
+        if (q.length < 3) return null;
+        const fill = st.shade > 0 ? mixHex(FLAG_MID, FLAG_LIT, 0.8 * st.shade) : mixHex(FLAG_MID, FLAG_DARK, -0.5 * st.shade);
+        return <path key={i} d={`M${q.map(P).join("L")}Z`} fill={tone(fill)} stroke={tone(fill)} strokeWidth={0.8} strokeLinejoin="round" />;
+      })}
+      {topIn ? <circle cx={n2(W.project(g.top)[0])} cy={n2(W.project(g.top)[1])} r={n2(0.032 * k)} fill={tone("#FFD27A")} /> : null}
+    </g>
+  );
+};
+
+/** the side panel at its angle: a thin slab hinged at its bottom outer edge, with the four screw holes on its face */
+const PanelArt: React.FC<{ W: World; a: number; light: number }> = ({ W, a, light }) => {
+  const up: V3 = [Math.sin(a), Math.cos(a), 0];
+  const out: V3 = [Math.cos(a), -Math.sin(a), 0];
+  const hinge: V3 = [SIDE_X, HOLE.y0, HOLE_ZC];
+  const o = sub(hinge, mul(out, PANEL_T));
+  const mat = MATS.clay;
+  const capMat = mixMat(mat, { lit: "#FFE2A6", mid: "#F2C27A", dark: "#B7864A" }, 0.55 * light * c01(a / 0.6));
+  const outerSeen = dot(out, sub(W.pos, hinge)) > 0;
+  const hs = [
+    [HOLE.z0 + 0.07, 0.08],
+    [HOLE.z1 - 0.07, 0.08],
+    [HOLE.z1 - 0.07, PANEL_H - 0.08],
+    [HOLE.z0 + 0.07, PANEL_H - 0.08],
+  ].map(([zz, h]) => panelPt(a, zz, h));
+  const k = W.scaleAt(hinge);
+  return (
+    <Svg id="panel">
+      <Prism W={W} outline={rrect(PANEL_W, PANEL_H, 0.03, 5, 0, PANEL_H / 2)} o={o} u={[0, 0, 1]} v={up} n={out} depth={PANEL_T} mat={mat} capMat={capMat} uid="panel" line={1} ao={0} />
+      {outerSeen
+        ? hs.map((h, i) => {
+            const p2 = W.project(h);
+            return <circle key={i} cx={n2(p2[0])} cy={n2(p2[1])} r={n2(0.017 * k)} fill={W.tone("#4A453F", h)} />;
+          })
+        : null}
+    </Svg>
+  );
+};
+
+/** loose screws on the floor below the opening (they came out before we got round) */
+const SCREWS: [V3, number][] = [
+  [[1.93, 0, 0.08], 0.3],
+  [[2.16, 0, -0.04], 1.6],
+  [[2.42, 0, 0.14], 2.4],
+  [[2.58, 0, 0.66], 0.9],
+];
+const Screws: React.FC<{ W: World }> = ({ W }) => (
+  <Svg id="screws">
+    {SCREWS.map(([p, ang], i) => {
+      const d: V3 = [Math.cos(ang) * 0.07, 0, Math.sin(ang) * 0.07];
+      const a = W.project(add(p, [0, 0.012, 0]));
+      const b = W.project(add(add(p, d), [0, 0.01, 0]));
+      const k = W.scaleAt(p);
+      return (
+        <g key={i}>
+          <path d={`M${n2(a[0])},${n2(a[1])}L${n2(b[0])},${n2(b[1])}`} stroke={W.tone("#6E6861", p)} strokeWidth={n2(0.014 * k)} strokeLinecap="round" />
+          <ellipse cx={n2(a[0])} cy={n2(a[1])} rx={n2(0.024 * k)} ry={n2(0.013 * k)} fill={W.tone("#B9B2A7", p)} stroke={W.tone("#57524C", p)} strokeWidth={0.8} />
+        </g>
+      );
+    })}
+  </Svg>
+);
+
+/** the lifter: reaches for the panel's top edge, pulls it out until it falls, reaches into the hole and pulls the flag
+ *  out and up, holds it high (happy squint) */
 const lifterPose = (W: World, f: number): BotPose => {
   const { p, size, seed } = LIFTER;
-  const look = BOX.c;
-  const base: BotPose = { ...BOT_POSES.turnTo(faceYaw(W, p, look) * 0.5, f, seed), look: [0, 0.5] };
-  // the reach to the lid's free edge (REACH0 -> LID0), riding it up to LID1, then down into the box to the card
-  const a = lidAngle(f);
-  const edgeL = toLocal(W, p, size, lidEdge(Math.min(a, LID_A1), -0.25));
-  const edgeR = toLocal(W, p, size, lidEdge(Math.min(a, LID_A1), 0.25));
-  const fr = cardFrame(W, cardCentre(f), CARD.w, CARD.h);
-  // the mittens over the card's top edge, near its corners (curled over it from behind)
-  const side = (sgn: number) => add(add(fr.c, mul(fr.u, sgn * (CARD.w / 2 - 0.11))), mul(fr.v, CARD.h / 2 + 0.07));
-  const gL = toLocal(W, p, size, side(-1));
-  const gR = toLocal(W, p, size, side(1));
-  const L = (a2: P2, b2: P2, t: number): P2 => [lerp(a2[0], b2[0], t), lerp(a2[1], b2[1], t)];
+  const base: BotPose = { ...BOT_POSES.turnTo(faceYaw(W, p, lookEnd(p, -0.75)), f, seed), look: [-0.5, 0.2] };
+  const loc = (q: V3) => toLocal(W, p, size, q);
   const rest = botGripTo(base, {});
+  const a = panelAngle(f);
+  const onEdge = (aa: number) => botGripTo(base, { L: loc(panelPt(aa, HOLE.z1 - 0.2, PANEL_H)), R: loc(panelPt(aa, HOLE.z1 - 0.04, PANEL_H)) });
+  const [gL, gR] = flagGrips(f);
+  const onPole = botGripTo(base, { L: loc(gL), R: loc(gR) });
+  const blend = (q0: BotPose, q1: BotPose, t: number): BotPose => (t <= 0.001 ? q0 : t >= 0.999 ? q1 : (lerpPose(q0, q1, t) as BotPose));
   let q: BotPose;
-  if (f < REACH0) q = rest;
-  else if (f < LID1) {
-    const reach = sst(REACH0, LID0, f);
-    const onLid = botGripTo(base, { L: edgeL, R: edgeR });
-    q = reach >= 0.999 ? onLid : (lerpPose(rest, onLid, reach) as BotPose);
+  let lean = 0;
+  if (f < GRIP0) q = blend(rest, onEdge(0), sst(REACH0, GRIP0, f));
+  else if (f < FALL0) {
+    q = onEdge(a);
+    lean = 6 * sst(GRIP0, FALL0, f);
+  } else if (f < FLAG0) {
+    // let go (hands up a moment as it falls), then reach in for the pole
+    const free = blend(onEdge(PULL_A), rest, sst(FALL0, FALL0 + 4, f));
+    q = blend(free, onPole, sst(IN0, FLAG0, f));
+    lean = 6 * (1 - sst(FALL0, FALL0 + 4, f)) - 7 * sst(IN0, FLAG0, f);
   } else {
-    const t = sst(LID1, RISE0, f);
-    const lidEnd: [P2, P2] = [toLocal(W, p, size, lidEdge(LID_A1, -0.25)), toLocal(W, p, size, lidEdge(LID_A1, 0.25))];
-    q = botGripTo(base, { L: L(lidEnd[0], gL, t), R: L(lidEnd[1], gR, t) });
+    q = onPole;
+    lean = -7 * (1 - sst(FLAG0, FLAG0 + 6, f)) + 3 * sst(FLAG0 + 6, FLAG1, f);
   }
-  const happy = sst(RISE1, RISE1 + 10, f);
-  return { ...q, laugh: 0.55 * happy, look: [0, lerp(0.5, 0.1, sst(RISE0, RISE1, f))], mouth: 0.22 + 0.2 * happy };
+  const happy = sst(FLAG1 - 2, FLAG1 + 8, f);
+  return { ...q, lean: (q.lean ?? 0) + lean, laugh: 0.55 * happy, look: [lerp(-0.5, 0.1, sst(FLAG0, FLAG1, f)), lerp(0.2, -0.3, sst(FLAG0, FLAG1, f))], mouth: 0.15 + 0.25 * happy };
 };
 
 // ===================================================================================================================
 // THE CUT
 // ===================================================================================================================
-type Item = { d: number; kind: "bot" | "box"; node: React.ReactNode; behind: boolean };
+type Item = { d: number; kind: "bot" | "prop"; node: React.ReactNode; behind: boolean };
 /** does the segment from the camera to p pass through the task block (its box, a little shrunk for the round edges)? */
 const BLK_MIN: V3 = [BLOCK_C[0] - TASK.w / 2 + 0.05, 0, BLOCK_C[2] - TASK.d / 2 + 0.05];
 const BLK_MAX: V3 = [BLOCK_C[0] + TASK.w / 2 - 0.05, TASK.h - 0.05, BLOCK_C[2] + TASK.d / 2 - 0.05];
@@ -349,54 +555,54 @@ const CheatedAtTheTask: React.FC<z.infer<typeof schema>> = () => {
     return { w, p: s.p, pose: { ...s.pose, lean: (s.pose.lean ?? 0) + LN_SIDE[i] * 8 * lean, pitch: (s.pose.pitch ?? 0) + 6 * lean, worry: 0.45 * lean, look: [LN_SIDE[i] * 0.6, 0.1] } as BotPose };
   });
 
-  // --- the box trio
+  // --- the crew at the side
   const lifter = lifterPose(W, frame);
-  const helperPose: BotPose = { ...BOT_POSES.turnTo(faceYaw(W, HELPER.p, BOX.c), frame, HELPER.seed), laugh: 0.4 * sst(RISE1 - 4, RISE1 + 6, frame), look: [-0.3, lerp(0.4, -0.2, sst(RISE0, RISE1, frame))] };
-  const wb = walkerState(W, WALKER_B, frame, BOX.c);
+  const cheer = sst(FLAG1 - 3, FLAG1 + 7, frame);
+  const helperPose: BotPose = { ...BOT_POSES.turnTo(faceYaw(W, HELPER.p, lookEnd(HELPER.p, -0.45)), frame, HELPER.seed), look: [-0.5, lerp(0.3, -0.3, sst(FLAG0, FLAG1, frame))], laugh: 0.45 * cheer, mouth: 0.15 + 0.2 * cheer };
+  const helper = botGripTo(helperPose, cheer > 0.01 ? { L: [lerp(-34, -40, cheer), lerp(-70, -128, cheer)], R: [lerp(34, 40, cheer), lerp(-70, -128, cheer)] } : {});
 
-  // --- the card: white inside the box; orange spreads in from the lifter's grips as it rises
-  const fr: CardFrame = cardFrame(W, cardCentre(frame), CARD.w, CARD.h);
-  const og = cardOrange(frame);
-  const res = 500;
-  // the print: ANSWERS over a rule and four ticked answer rows (an answer sheet, readable at the end framing)
-  const W_L = CARD.w * res;
-  const ROWS = [0.46, 0.53, 0.36, 0.49];
-  const tick = (ink: string) => (
-    <g>
-      <text x={W_L / 2} y={0.165 * res} textAnchor="middle" fontFamily={FONT} fontWeight={700} fontSize={0.13 * res} letterSpacing={0.0052 * res} fill={ink}>
-        ANSWERS
-      </text>
-      <rect x={0.08 * res} y={0.2 * res} width={W_L - 0.16 * res} height={0.012 * res} rx={0.006 * res} fill={ink} opacity={0.8} />
-      {ROWS.map((len, i) => {
-        const cy = (0.29 + i * 0.094) * res;
-        return (
-          <g key={i}>
-            <path d={TICK(0.15 * res, cy, 0.075 * res)} fill="none" stroke={ink} strokeWidth={0.019 * res} strokeLinecap="round" strokeLinejoin="round" />
-            <rect x={0.23 * res} y={cy - 0.014 * res} width={len * res} height={0.028 * res} rx={0.014 * res} fill={ink} opacity={0.72} />
-          </g>
-        );
-      })}
-    </g>
-  );
-  const gripsS = [-1, 1].map((sgn) => W.project(add(add(fr.c, mul(fr.u, sgn * (CARD.w / 2 - 0.11))), mul(fr.v, CARD.h / 2))));
-  const spreadR = og * 1.15 * CARD.w * W.scaleAt(fr.c);
-  const circ = (c: P2, r: number) => `M${c[0] - r},${c[1]}a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0`;
-  const card = (
-    <>
-      <Card W={W} fr={fr} uid="keyW" orange={0} res={res}>
-        {tick(cardInk(0))}
-      </Card>
-      {og > 0.001 ? (
-        <div style={{ position: "absolute", inset: 0, clipPath: `path('${gripsS.map((c) => circ(c, Math.max(0.5, spreadR))).join("")}')` }}>
-          <Card W={W} fr={fr} uid="keyO" orange={1} res={res}>
-            {tick(cardInk(1))}
-          </Card>
-        </div>
-      ) : null}
-    </>
-  );
+  // --- the panel, the light, the flag
+  const pa = panelAngle(frame);
+  const light = lightAt(frame);
+  const sideSeen = W.pos[0] > SIDE_X + 0.05;
+  const holeQ = [
+    [HOLE.z0, HOLE.y0],
+    [HOLE.z1, HOLE.y0],
+    [HOLE.z1, HOLE.y1],
+    [HOLE.z0, HOLE.y1],
+  ].map(([zz, y]) => W.project([SIDE_X + 0.003, y, zz]));
+  const holeD = `M${holeQ.map((q) => `${n2(q[0])},${n2(q[1])}`).join("L")}Z`;
+  const kH = W.scaleAt([SIDE_X, (HOLE.y0 + HOLE.y1) / 2, HOLE_ZC]);
+  const glowC = W.project([SIDE_X - 0.3, HOLE.y0 + 0.35, HOLE_ZC]);
+  const holeLayer =
+    sideSeen && pa > 0.004 ? (
+      <Svg id="hole">
+        <defs>
+          <filter id="holeHalo" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation={n2(0.14 * kH)} />
+          </filter>
+          <radialGradient id="holeLight" gradientUnits="userSpaceOnUse" cx={n2(glowC[0])} cy={n2(glowC[1])} r={n2(0.8 * kH)}>
+            <stop offset="0" stopColor="#FFF0C8" stopOpacity={light} />
+            <stop offset="0.4" stopColor="#FFC94D" stopOpacity={light} />
+            <stop offset="1" stopColor={ACCENT_DEEP} stopOpacity={light} />
+          </radialGradient>
+          <clipPath id="holeClip">
+            <path d={holeD} />
+          </clipPath>
+        </defs>
+        {/* warm light on the block's side round the opening */}
+        <path d={holeD} fill={ACCENT} opacity={0.75 * light} filter="url(#holeHalo)" />
+        <path d={holeD} fill={W.tone("#2A2119", HOLE_C)} />
+        <path d={holeD} fill="url(#holeLight)" />
+        {/* the wall's thickness: a shaded lip along the top and the far edge */}
+        <path d={`M${n2(holeQ[3][0])},${n2(holeQ[3][1])}L${n2(holeQ[2][0])},${n2(holeQ[2][1])}`} stroke={ACCENT_DEEP} strokeOpacity={0.8} strokeWidth={n2(0.05 * kH)} clipPath="url(#holeClip)" />
+        <g clipPath="url(#holeClip)">
+          <FlagArt W={W} f={frame} part="in" />
+        </g>
+      </Svg>
+    ) : null;
 
-  // --- painter's order: the block, then every robot and the box by depth (far first)
+  // --- painter's order: the block, then every robot and prop by depth (far first)
   const items: Item[] = [];
   const bot = (key: string, p: V3, pose: BotPose, variant: number, size: number) => {
     const hgt = 1.35 * size;
@@ -412,17 +618,41 @@ const CheatedAtTheTask: React.FC<z.infer<typeof schema>> = () => {
   bot("tug", tg.p, tugPose, TUGGER.variant, TUGGER.size);
   leaners.forEach((l, i) => bot(`ln${i}`, l.p, l.pose, l.w.variant, l.w.size));
   bot("lifter", LIFTER.p, lifter, LIFTER.variant, LIFTER.size);
-  bot("helper", HELPER.p, helperPose, HELPER.variant, HELPER.size);
-  bot("wb", wb.p, wb.pose, WALKER_B.variant, WALKER_B.size);
-  const boxSamples: V3[] = [...footPts(BOX.c, BOX.w, BOX.d, BOX.yaw), ...footPts(BOX.c, BOX.w, BOX.d, BOX.yaw).map((q) => add(q, [0, BOX.h, 0])), add(cardCentre(frame), [0, CARD.h / 2, 0])];
-  items.push({
-    d: W.depth(add(BOX.c, [0, 0.3, 0])),
-    kind: "box",
-    behind: behindBlock(W, boxSamples),
-    node: (
-      <HFBox key="box" W={W} g={BOX} uid="hfbox" open={lidAngle(frame) / HF_LID_OPEN} inside={card} plate={HF_PLATE} />
-    ),
-  });
+  bot("helper", HELPER.p, helper, HELPER.variant, HELPER.size);
+  // the panel: hidden by the block while the camera is on the left; drawn over the side face once round
+  if (sideSeen) {
+    const mid = panelPt(pa, HOLE_ZC, PANEL_H / 2);
+    items.push({ d: W.depth(mid), kind: "prop", behind: false, node: <PanelArt key="panel" W={W} a={pa} light={light} /> });
+  }
+  // the flag's outside part: just behind the lifter (his mittens over the pole)
+  const fg = flagGeom(frame);
+  const fs = flagState(frame);
+  if (sideSeen && fg.top[0] > SIDE_X) {
+    items.push({
+      d: W.depth(add(LIFTER.p, [0, 0.5, 0])) + 0.02,
+      kind: "prop",
+      behind: false,
+      node: (
+        <Svg key="flagOut" id="flagOut" glow={lerp(0.6, 1.6, fs.s)}>
+          <FlagArt W={W} f={frame} part="out" />
+        </Svg>
+      ),
+    });
+  }
+  // the padlock again, clipped to its outline, at its own depth: the tugger's grip side is behind it from the right
+  if (W.pos[0] > 0.5) {
+    const hl = lockHull(W, shake, tug);
+    items.push({
+      d: W.depth(lockPoint(LK.cx, LK.cy, LK.t, shake, tug)),
+      kind: "prop",
+      behind: false,
+      node: (
+        <div key="lockAgain" style={{ position: "absolute", inset: 0, clipPath: `polygon(${hl.map((q) => `${n2(q[0])}px ${n2(q[1])}px`).join(",")})` }}>
+          <TaskBlock W={W} c={BLOCK_C} uid="task2" shake={shake} tug={tug} />
+        </div>
+      ),
+    });
+  }
   items.sort((a, b) => b.d - a.d);
   // two groups: behind the block (drawn before it, its silhouette hides them) and in front; within each, far first;
   // consecutive robots share one glowing layer
@@ -446,20 +676,35 @@ const CheatedAtTheTask: React.FC<z.infer<typeof schema>> = () => {
   const back = stack(items.filter((i) => i.behind), "bk");
   const front = stack(items.filter((i) => !i.behind), "fr");
 
-  const robotsAt: V3[] = [...crowd.map((c) => c.p), tg.p, ...leaners.map((l) => l.p), LIFTER.p, HELPER.p, wb.p];
+  // the light's spill on the floor out of the opening
+  const spillP: V3 = [SIDE_X + 0.55, 0, HOLE_ZC];
+  const spillC = W.project(spillP);
+  const spillK = W.scaleAt(spillP);
+  const robotsAt: V3[] = [...crowd.map((c) => c.p), tg.p, ...leaners.map((l) => l.p), LIFTER.p, HELPER.p];
   const shadows = (
     <>
       <FloorShadow W={W} pts={footPts(BLOCK_C, TASK.w, TASK.d)} uid="blkS" soft={0.35} reach={0.7} />
-      <FloorShadow W={W} pts={footPts(BOX.c, BOX.w, BOX.d, BOX.yaw)} uid="boxS" soft={0.14} reach={0.25} />
       {robotsAt.map((p, i) => (
         <FloorShadow key={i} W={W} pts={robotFoot(p, 0.2)} uid={`rS${i}`} soft={0.1} reach={0.18} />
       ))}
+      {sideSeen && light > 0.01 ? (
+        <Svg id="spill">
+          <defs>
+            <filter id="spillBlur" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation={n2(0.22 * spillK)} />
+            </filter>
+          </defs>
+          <ellipse cx={n2(spillC[0])} cy={n2(spillC[1])} rx={n2(0.85 * spillK)} ry={n2(0.32 * spillK)} fill={ACCENT} opacity={0.42 * light} filter="url(#spillBlur)" />
+        </Svg>
+      ) : null}
+      {W.pos[0] > SIDE_X ? <Screws W={W} /> : null}
     </>
   );
   return (
     <HfStage W={W} floor={{ pool: [0.6, 0, -0.6], poolR: 5, oz: 0.1 }} shadows={shadows}>
       {back}
       <TaskBlock W={W} c={BLOCK_C} uid="task" shake={shake} tug={tug} />
+      {holeLayer}
       {front}
     </HfStage>
   );
