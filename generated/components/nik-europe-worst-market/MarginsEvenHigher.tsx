@@ -85,6 +85,9 @@ const f3 = (v: number) => (Math.round(v * 1000) / 1000).toString();
 // ===========================================================================
 // THE WORLD (world px)
 // ===========================================================================
+/** REV 3 (the user's note: "move it down slightly like we usually do"): the whole picture 190 px lower in screen px
+ *  (StoutStage dy: world, light pool; the board and grain stay full-frame). Camera and timing are rev 2's. */
+const SHIFT_Y = 190;
 const Y0 = 1000; // the slot line: both tiles' top edge
 const TILE_H = 68;
 const R_TILE = 10;
@@ -390,7 +393,7 @@ const MarginsEvenHigher: React.FC<z.infer<typeof schema>> = () => {
   const marginIn = clamp01((S - T.MARGIN_IN) / ENTER_F);
   const sweep = (S - T.SWEEP[0]) / (T.SWEEP[1] - T.SWEEP[0]);
   return (
-    <StoutStage S={S} cam={cam} rest={CAM.rest} pool={POOL(S)}>
+    <StoutStage dy={SHIFT_Y} S={S} cam={cam} rest={CAM.rest} pool={POOL(S)}>
       {inflExit < 0.999 && (
         <g opacity={inflExit > 0 ? f3(1 - inflExit) : undefined}>
           <ColumnBack cx={XI} k={k} fill={L.infl} />
