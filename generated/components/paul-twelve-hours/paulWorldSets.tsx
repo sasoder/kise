@@ -6,8 +6,8 @@
 //
 //   CARDS     secretCard(w, size?, parent?)                      one orange card (CARD = [0.46, 0.04, 0.33])
 //             makeCardStream(w, { path, n, size?, flat? })       update({ ts: number[] | (i) => t, tumble? })
-//   S1        makeVault(w, { x, z?, brand, maxCards? })          update({ hatchOpen, cardsLeft, ghost, glow })
-//                 .rampPath  world points from the stack's front down the open hatch to the floor beyond it
+//   S1        makeVault(w, { x, z?, brand, maxCards?, hinge? })  update({ wheel, bolts, open, cardsLeft, ghost, glow })
+//                 .sill / .sillNormal / .stackTop() / .rampPath  where the cards leave the round door (rev 1)
 //   S2 / S3   makeMonorepo(w, { x?, z? })                        update({ gapAt, gapOpen, rewrite[], lift })
 //             makeContributors(w, tower, { n, seed?, rMin?, rMax?, front? })   update({ lit, beads })
 //             makeOutsiderDoor(w, tower, { x? })                 update({ glow, open, keyIn, keyTurn })
@@ -15,7 +15,7 @@
 //             makeLens(w, { r? })                                update({ pos, rot, read, row })
 //             makeHacktronPanel(w, tower, { gapAt? })            update({ insert, glint })
 //   S4        makeDial(w, { pos, yaw?, R? })                     update({ sweep })
-//             makeSlackStack(w, { x?, z?, n? })                  update({ open: number[] | (i) => open })
+//             makeSlackStack(w, { x?, z?, n?, mark? })           update({ open: number[] | (i) => open })  mark "colour" | "black"
 //   LABELS    makeNamePlate(w, { text | image, at, ... })        update({ show, yaw, text })
 //   S5-S7     makeRuler(w, { months? })                          RULER geometry, monthZ(m)
 //             makeFlagToken(w, { kind, lane, flyLeft? })         update({ month, y, yaw, wave, show })
@@ -76,89 +76,270 @@ export const makeCardStream = (w: World, o: { path: V3[]; n: number; size?: V3; 
 };
 
 // ===================================================================================================================
-// S1: THE LAB VAULTS
+// S1: THE LAB VAULTS (rev 1: real bank vaults)
 // ===================================================================================================================
-/** a vault: plinth, back, two sides, a lintel with the lab's mark; the hatch (with a window) hinged at its foot falls
- *  forward into a ramp. Inside, a stack of maxCards cards; a dashed ghost of the full stack. Front face at z + D/2. */
-export const VAULT = { W: 1.5, H: 2.0, D: 1.3, HINGE_Y: 0.2, CARD: [0.86, 0.04, 0.7] as V3, PITCH: 0.044, X_OPENAI: -0.92, X_ANTHROPIC: 0.92 };
-export const makeVault = (w: World, o: { x: number; z?: number; brand: "openai" | "anthropic"; maxCards?: number }) => {
+/** a bank vault in the world's clay: a heavy rounded steel-clay body (warm grey) on a plinth, bored through by a round
+ *  chamber; on its front a raised collar ring with a ring of rivets, and the big ROUND door (stepped rim, recessed
+ *  field) with a 4-spoke wheel handle at its centre, 8 radial locking bolts that stick out of its edge over the collar
+ *  and slide in when unlocking, hinged on a chunky barrel at one side (left for a vault at x < 0, right otherwise, so
+ *  the doors open away from the middle). The lab's mark (black, true colour) on the body above the door. Inside, a
+ *  shelf running to the doorway carries a neat stack of glowing orange cards; the chamber lining warms when open, and
+ *  a soft orange spill falls on the floor in front of the open door.
+ *  update({ wheel (rad), bolts 0..1 (retracted), open 0..1 (door swing to OPEN_DEG), cardsLeft, ghost 0..1, glow 0..1 })
+ *  (hatchOpen is still read, as `open`, for rev-0 cuts). Anchors: sill / sillNormal (where cards leave: the shelf's
+ *  front edge in the doorway, world), stackTop() (the top card, world), doorCentre, top (the full stack's top y). */
+export const VAULT = {
+  W: 1.5,
+  H: 2.0,
+  D: 1.3,
+  /** rev 0 (the hatch); unused */
+  HINGE_Y: 0.2,
+  CARD: [0.44, 0.04, 0.34] as V3,
+  PITCH: 0.044,
+  X_OPENAI: -0.92,
+  X_ANTHROPIC: 0.92,
+  /** the door's centre height, the chamber's bore radius, the door's radius, the collar's outer radius */
+  DOOR_Y: 0.88,
+  BORE: 0.44,
+  DOOR_R: 0.53,
+  COLLAR_R: 0.68,
+  /** the shelf's top (the stack's floor) and the door's full swing (deg) */
+  SHELF_TOP: 0.56,
+  OPEN_DEG: 100,
+};
+export const makeVault = (w: World, o: { x: number; z?: number; brand: "openai" | "anthropic"; maxCards?: number; hinge?: "left" | "right" }) => {
   const { K, T, scene } = w;
-  const { W: VW, H: VH, D: VD } = VAULT;
+  const { W: VW, H: VH, D: VD, DOOR_Y: DY, BORE: RB, DOOR_R: RD, COLLAR_R: RC, SHELF_TOP } = VAULT;
   const z0 = o.z ?? 0;
-  const max = o.maxCards ?? 24;
+  const max = o.maxCards ?? 10;
+  const side = o.hinge ? (o.hinge === "left" ? -1 : 1) : o.x < 0 ? -1 : 1;
   const g = K.group(scene, [o.x, 0, z0]);
-  const body = K.clay(C.clay);
-  const inner = K.clay(C.clayWarm);
+  const F = VD / 2;
+  // the body's clay: warm grey, its mottle at the boxes' scale (the extrusion's UVs run in metres)
+  const fine = T.mottle.clone();
+  fine.repeat.set(1.6, 1.6);
+  fine.needsUpdate = true;
+  const steel = new THREE.MeshStandardMaterial({ color: new THREE.Color("#D4CFC7"), roughness: 0.88, metalness: 0, map: fine });
+  const bright = K.clay(C.clay);
+  const warm = K.clay(C.clayWarm);
+  const stone = K.clay(C.stone);
   const P = { parent: g };
-  K.box([VW, 0.2, VD], body, [0, 0.1, 0], { r: 0.05, ...P });
-  K.box([VW, VH - 0.2, 0.16], inner, [0, 0.2 + (VH - 0.2) / 2, -VD / 2 + 0.08], { r: 0.04, ...P });
-  K.box([0.16, VH - 0.2, VD], body, [-VW / 2 + 0.08, 0.2 + (VH - 0.2) / 2, 0], { r: 0.05, ...P });
-  K.box([0.16, VH - 0.2, VD], body, [VW / 2 - 0.08, 0.2 + (VH - 0.2) / 2, 0], { r: 0.05, ...P });
-  K.box([VW, 0.5, VD], body, [0, VH - 0.25, 0], { r: 0.06, ...P });
+  // the plinth
+  K.box([VW + 0.1, 0.2, VD + 0.1], warm, [0, 0.1, 0], { r: 0.06, ...P });
+  // the body: a rounded slab extruded front to back, bored through by the round chamber
+  const bev = 0.075;
+  const x0 = -VW / 2 + bev;
+  const x1 = VW / 2 - bev;
+  const y0 = 0.2 + bev;
+  const y1 = VH - bev;
+  const cr = 0.12;
+  const shape = new THREE.Shape();
+  shape.moveTo(x0 + cr, y0);
+  shape.lineTo(x1 - cr, y0);
+  shape.absarc(x1 - cr, y0 + cr, cr, -Math.PI / 2, 0, false);
+  shape.lineTo(x1, y1 - cr);
+  shape.absarc(x1 - cr, y1 - cr, cr, 0, Math.PI / 2, false);
+  shape.lineTo(x0 + cr, y1);
+  shape.absarc(x0 + cr, y1 - cr, cr, Math.PI / 2, Math.PI, false);
+  shape.lineTo(x0, y0 + cr);
+  shape.absarc(x0 + cr, y0 + cr, cr, Math.PI, 1.5 * Math.PI, false);
+  const hole = new THREE.Path();
+  hole.absarc(0, DY, RB + bev, 0, 2 * Math.PI, true);
+  shape.holes.push(hole);
+  const bodyGeo = new THREE.ExtrudeGeometry(shape, { depth: VD - 2 * bev, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 6, curveSegments: 72 });
+  const body = new THREE.Mesh(bodyGeo, steel);
+  body.position.z = -VD / 2 + bev;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  g.add(body);
+  // the chamber: a lining (warm clay that glows a little when open), a back disc, the shelf running to the doorway
+  const zBack = -VD / 2 + 0.12;
+  const liningMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(C.clayWarm), roughness: 0.9, side: THREE.BackSide, emissive: new THREE.Color("#FF9A00"), emissiveIntensity: 0, map: T.mottle });
+  const lining = new THREE.Mesh(new THREE.CylinderGeometry(RB - 0.003, RB - 0.003, F - zBack, 72, 1, true), liningMat);
+  lining.rotation.x = Math.PI / 2;
+  lining.position.set(0, DY, (F + zBack) / 2);
+  lining.receiveShadow = true;
+  g.add(lining);
+  const backMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(C.clayWarm), roughness: 0.9, emissive: new THREE.Color("#FF9A00"), emissiveIntensity: 0, map: T.mottle });
+  const back = new THREE.Mesh(new THREE.CircleGeometry(RB, 72), backMat);
+  back.position.set(0, DY, zBack);
+  back.receiveShadow = true;
+  g.add(back);
+  const shelfLen = F - 0.03 - zBack;
+  K.box([0.54, 0.05, shelfLen], bright, [0, SHELF_TOP - 0.025, zBack + shelfLen / 2], { r: 0.018, ...P });
+  K.box([0.24, SHELF_TOP - 0.05 - (DY - RB) + 0.04, shelfLen - 0.1], warm, [0, (SHELF_TOP - 0.05 + DY - RB - 0.04) / 2, zBack + shelfLen / 2], { r: 0.02, ...P });
+  // the collar: a raised ring round the bore, rounded outer edge (lathe about z)
+  const lathe = (pts: [number, number][], seg = 96) => {
+    const geo = new THREE.LatheGeometry(
+      pts.map(([r, h]) => new THREE.Vector2(r, h)),
+      seg,
+    );
+    geo.rotateX(Math.PI / 2);
+    return geo;
+  };
+  const collarMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(C.clayAlt), roughness: 0.88, metalness: 0, map: fine });
+  const collar = new THREE.Mesh(
+    lathe([
+      [RC, -0.03],
+      [RC, 0.028],
+      [RC - 0.012, 0.055],
+      [RC - 0.04, 0.066],
+      [RB + 0.035, 0.066],
+      [RB + 0.008, 0.052],
+      [RB, 0.03],
+      [RB, -0.03],
+    ]),
+    collarMat,
+  );
+  collar.position.set(0, DY, F);
+  collar.castShadow = true;
+  collar.receiveShadow = true;
+  g.add(collar);
+  // the ring of rivets on the collar (between the bolts' angles)
+  for (let i = 0; i < 24; i++) {
+    const a = (i * 15 * Math.PI) / 180;
+    const rv = K.sphere(0.019, stone, [Math.cos(a) * 0.607, DY + Math.sin(a) * 0.607, F + 0.064], g);
+    rv.scale.set(1, 1, 0.62);
+  }
+  // the hinge barrel (static, at the door's side) and its two mounts on the body
+  const HX = 0.715;
+  const HZ = F + 0.13;
+  K.cyl(0.056, 0.056, 0.58, warm, [side * HX, DY, HZ], { parent: g, seg: 40 });
+  [-1, 1].forEach((k) => {
+    K.puck(0.06, 0.035, 0.014, warm, [side * HX, DY + k * 0.29 + (k < 0 ? -0.035 : 0), HZ], { parent: g });
+    K.box([0.11, 0.08, 0.14], warm, [side * (HX - 0.02), DY + k * 0.205, F + 0.07], { r: 0.025, ...P });
+  });
+  // THE DOOR: pivots about the barrel's axis; door-local origin = the centre of its back face
+  const pivot = K.group(g, [side * HX, DY, HZ]);
+  const door = K.group(pivot, [-side * HX, 0, F + 0.06 - HZ]);
+  const DT = 0.14;
+  const doorMesh = new THREE.Mesh(
+    lathe([
+      [0, 0],
+      [RD - 0.03, 0],
+      [RD, 0.03],
+      [RD, DT - 0.036],
+      [RD - 0.036, DT],
+      [RD - 0.088, DT],
+      [RD - 0.104, DT - 0.024],
+      [0.175, DT - 0.024],
+      [0.155, DT - 0.01],
+      [0, DT - 0.01],
+    ]),
+    bright,
+  );
+  doorMesh.castShadow = true;
+  doorMesh.receiveShadow = true;
+  door.add(doorMesh);
+  // the straps from the barrel across the door's face
+  [-1, 1].forEach((k) => {
+    const x0s = side * 0.3;
+    const x1s = side * (HX - 0.02);
+    K.box([Math.abs(x1s - x0s), 0.075, 0.032], warm, [(x0s + x1s) / 2, k * 0.2, DT + 0.01], { r: 0.014, parent: door });
+    K.sphere(0.018, stone, [side * 0.33, k * 0.2, DT + 0.028], door).scale.set(1, 1, 0.6);
+  });
+  // the locking bolts: radial capsules at mid-depth, out over the collar when locked (bolts 0), flush when retracted
+  const bolts = Array.from({ length: 8 }, (_, i) => {
+    const bg = K.group(door, [0, 0, 0.048]);
+    bg.rotation.z = ((22.5 + i * 45) * Math.PI) / 180;
+    const holder = K.group(bg);
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.034, 0.13, 6, 18), stone);
+    m.rotation.z = -Math.PI / 2;
+    m.castShadow = true;
+    m.receiveShadow = true;
+    holder.add(m);
+    return holder;
+  });
+  // the wheel handle: a hub, four spokes ending in knobs, a rim
+  const wheel = K.group(door, [0, 0, DT - 0.01]);
+  K.cyl(0.066, 0.072, 0.09, warm, [0, 0, 0.045], { rot: [90, 0, 0], parent: wheel, seg: 36 });
+  K.sphere(0.05, stone, [0, 0, 0.09], wheel).scale.set(1, 1, 0.55);
+  const rimT = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.022, 16, 72), stone);
+  rimT.position.z = 0.07;
+  rimT.castShadow = true;
+  rimT.receiveShadow = true;
+  wheel.add(rimT);
+  for (let i = 0; i < 4; i++) {
+    const a = (i * Math.PI) / 2 + Math.PI / 4;
+    K.rod([Math.cos(a) * 0.05, Math.sin(a) * 0.05, 0.07], [Math.cos(a) * 0.232, Math.sin(a) * 0.232, 0.07], 0.018, stone, wheel);
+    K.sphere(0.03, warm, [Math.cos(a) * 0.245, Math.sin(a) * 0.245, 0.07], wheel);
+  }
+  // the lab's mark on the body above the door (true colour, black)
   const mark = T.glyph((o.brand === "openai" ? OPENAI : ANTHROPIC).paths, { color: "#141414" });
-  K.print(mark, 0.4, [0, VH - 0.25, VD / 2 + 0.003], [0, 0, 0], { ...P, trueColour: true });
-  // the hatch: a frame round a window, hinged at its foot
-  const hinge = K.group(g, [0, VAULT.HINGE_Y, VD / 2 + 0.02]);
-  const HW = 1.18;
-  const HH = 1.3;
-  const winW = 0.7;
-  const winH = 0.56;
-  const winY = 0.74;
-  const st_ = (HW - winW) / 2;
-  K.box([st_, HH, 0.14], body, [-HW / 2 + st_ / 2, HH / 2, 0], { r: 0.04, parent: hinge });
-  K.box([st_, HH, 0.14], body, [HW / 2 - st_ / 2, HH / 2, 0], { r: 0.04, parent: hinge });
-  K.box([winW + 0.02, winY - winH / 2, 0.14], body, [0, (winY - winH / 2) / 2, 0], { r: 0.03, parent: hinge });
-  K.box([winW + 0.02, HH - winY - winH / 2, 0.14], body, [0, winY + winH / 2 + (HH - winY - winH / 2) / 2, 0], { r: 0.03, parent: hinge });
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(winW, winH), new THREE.MeshStandardMaterial({ color: new THREE.Color("#E4E2DC"), transparent: true, opacity: 0.34, roughness: 0.12, depthWrite: false }));
-  glass.position.set(0, winY, 0.02);
-  hinge.add(glass);
-  [-0.4, 0, 0.4].forEach((x) => K.cyl(0.04, 0.04, 0.16, K.clay(C.stone), [x, HH + 0.02, 0], { parent: hinge, seg: 24 }));
-  // the stack inside, and the ghost of the full stack (its front face, dashed)
-  const y0 = 0.2;
+  K.print(mark, 0.34, [0, (DY + RC + VH) / 2 + 0.01, F + 0.003], [0, 0, 0], { ...P, trueColour: true });
+  // the stack on the shelf, and the dashed ghost of the full stack (its front face)
   const stack = Array.from({ length: max }, (_, i) => {
-    const c = K.group(g, [0.02 * Math.sin(i * 2.1), y0 + VAULT.CARD[1] / 2 + 0.001 + i * VAULT.PITCH, 0.02]);
-    c.rotation.y = (hash01(i + o.x * 7) - 0.5) * 8 * D2R;
+    const c = K.group(g, [0.012 * Math.sin(i * 2.1), SHELF_TOP + VAULT.CARD[1] / 2 + 0.001 + i * VAULT.PITCH, 0]);
+    c.rotation.y = (hash01(i + o.x * 7) - 0.5) * 7 * D2R;
     secretCard(w, VAULT.CARD, c, 0.5);
     return c;
   });
-  const top = y0 + max * VAULT.PITCH + 0.02;
+  const top = SHELF_TOP + max * VAULT.PITCH + 0.02;
   const ghost = K.group(g);
+  const gx = VAULT.CARD[0] / 2 + 0.025;
+  const gz = VAULT.CARD[2] / 2 + 0.03;
   K.dashes(
     [
-      [-0.45, y0 + 0.03, 0.39],
-      [-0.45, top, 0.39],
-      [0.45, top, 0.39],
-      [0.45, y0 + 0.03, 0.39],
+      [-gx, SHELF_TOP + 0.02, gz],
+      [-gx, top, gz],
+      [gx, top, gz],
+      [gx, SHELF_TOP + 0.02, gz],
     ],
-    { dash: 0.1, gap: 0.065, r: 0.014, parent: ghost },
+    { dash: 0.08, gap: 0.055, r: 0.011, parent: ghost },
   );
-  K.blob(o.x + 0.06, z0 + 0.06, VW * 1.3, VD * 1.25, 0.6);
+  // contact shadows; the open door's warm spill on the floor in front
+  K.blob(o.x + 0.06, z0 + 0.06, VW * 1.32, VD * 1.3, 0.62);
   K.pool(o.x, z0 + 0.4, 2.0, 0.16);
-  /** from the stack's front, down the fallen hatch, onto the floor beyond its lip (world) */
+  const spillMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.orange), alphaMap: T.blob, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+  const spill = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 1.0), spillMat);
+  spill.rotation.x = -Math.PI / 2;
+  spill.position.set(0, 0.006, F + 0.55);
+  spill.renderOrder = 2;
+  g.add(spill);
+  /** from the stack's front, along the shelf, over the sill and down to the floor in front (world) */
   const rampPath: V3[] = [
-    [o.x, 0.32, z0 + 0.1],
-    [o.x, 0.3, z0 + VD / 2 + 0.05],
-    [o.x, 0.2, z0 + VD / 2 + 0.6],
-    [o.x, 0.08, z0 + VD / 2 + HH - 0.05],
-    [o.x, 0.02, z0 + VD / 2 + HH + 0.45],
+    [o.x, SHELF_TOP + 0.03, z0 + 0.05],
+    [o.x, SHELF_TOP + 0.03, z0 + 0.4],
+    [o.x, SHELF_TOP + 0.02, z0 + F + 0.1],
+    [o.x, 0.34, z0 + F + 0.4],
+    [o.x, 0.04, z0 + F + 0.7],
+    [o.x, 0.02, z0 + F + 1.1],
   ];
-  const st = { hatchOpen: 0, cardsLeft: max, ghost: 0 };
-  const update = (p: { hatchOpen?: number; cardsLeft?: number; ghost?: number }) => {
-    Object.assign(st, Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined)));
-    hinge.rotation.x = 98 * D2R * clamp01(st.hatchOpen);
+  const sill: V3 = [o.x, SHELF_TOP, z0 + F + 0.066];
+  const sillNormal: V3 = [0, 0, 1];
+  const doorCentre: V3 = [o.x, DY, z0 + F + 0.06 + DT];
+  const st = { open: 0, wheel: 0, bolts: 0, cardsLeft: max, ghost: 0, glow: 1 };
+  const update = (p: { open?: number; hatchOpen?: number; wheel?: number; bolts?: number; cardsLeft?: number; ghost?: number; glow?: number }) => {
+    if (p.open !== undefined) st.open = p.open;
+    else if (p.hatchOpen !== undefined) st.open = p.hatchOpen;
+    if (p.wheel !== undefined) st.wheel = p.wheel;
+    if (p.bolts !== undefined) st.bolts = p.bolts;
+    if (p.cardsLeft !== undefined) st.cardsLeft = p.cardsLeft;
+    if (p.ghost !== undefined) st.ghost = p.ghost;
+    if (p.glow !== undefined) st.glow = p.glow;
+    const op = clamp01(st.open);
+    pivot.rotation.y = side * VAULT.OPEN_DEG * D2R * op;
+    wheel.rotation.z = st.wheel;
+    bolts.forEach((b) => (b.position.x = 0.548 - 0.115 * clamp01(st.bolts)));
+    liningMat.emissiveIntensity = 0.13 * st.glow * clamp01(op * 3);
+    backMat.emissiveIntensity = 0.2 * st.glow * clamp01(op * 3);
+    spillMat.opacity = 0.2 * st.glow * lobe(op);
+    spill.visible = op > 0.01 && st.glow > 0.01;
     const n = Math.max(0, Math.min(max, st.cardsLeft));
     const full = Math.floor(n);
     const frac = n - full;
     stack.forEach((c, i) => {
       c.visible = i < full || (i === full && frac > 0.001);
-      // the top partial card: being pulled out toward the hatch
-      c.position.z = i === full ? 0.02 + (1 - frac) * 0.5 : 0.02;
+      // the top partial card: sliding out along the shelf toward the doorway
+      c.position.z = i === full ? (1 - frac) * 0.5 : 0;
     });
     ghost.visible = st.ghost > 0.02;
     ghost.children.forEach((m: Any, i: number) => (m.visible = i / ghost.children.length <= st.ghost));
   };
   update({});
-  return { group: g, hinge, update, rampPath, top };
+  const stackTop = (): V3 => [o.x, SHELF_TOP + Math.max(0, Math.min(max, st.cardsLeft)) * VAULT.PITCH, z0];
+  /** hinge: the door's pivot group (rev 0 cuts read it; it has no cylinder children of its own) */
+  return { group: g, hinge: pivot, door, wheel, bolts, update, rampPath, top, sill, sillNormal, stackTop, doorCentre, side };
 };
 
 // ===================================================================================================================
@@ -551,9 +732,10 @@ export const makeDial = (w: World, o: { pos: V3; yaw?: number; R?: number; label
   return { group: g, update };
 };
 
-/** the Slack stack: n channel tiles round an orange core under a cap with the Slack mark (four colours) and the
- *  Anthropic mark. open per tile 0..1: the tile slides out like a drawer and its message bar lights. */
-export const makeSlackStack = (w: World, o: { x?: number; z?: number; n?: number } = {}) => {
+/** the Slack stack: n channel tiles round an orange core under a cap with the Slack mark (four colours, or black
+ *  like the Anthropic mark beside it: mark "black", rev 1) and the Anthropic mark. open per tile 0..1: the tile slides
+ *  out like a drawer and its message bar lights. */
+export const makeSlackStack = (w: World, o: { x?: number; z?: number; n?: number; mark?: "colour" | "black" } = {}) => {
   const { K, T, scene } = w;
   const sx = o.x ?? 1.02;
   const sz = o.z ?? 0;
@@ -577,7 +759,7 @@ export const makeSlackStack = (w: World, o: { x?: number; z?: number; n?: number
   });
   const capY = y0 + n * pitch + 0.03 + 0.26;
   K.box([1.9, 0.5, 1.5], K.clay(C.clay), [sx, capY, sz + 0.12], { r: 0.07 });
-  const slack = T.image("paul-twelve-hours/slack.svg", 1, { px: 512 });
+  const slack = T.image(o.mark === "black" ? "paul-twelve-hours/slack_black.svg" : "paul-twelve-hours/slack.svg", 1, { px: 512 });
   K.print(slack, 0.3, [sx - 0.3, capY, sz + 0.12 + 0.752], [0, 0, 0], { trueColour: true });
   K.print(T.glyph(ANTHROPIC.paths, { color: "#141414" }), 0.36, [sx + 0.3, capY, sz + 0.12 + 0.752], [0, 0, 0], { trueColour: true });
   K.blob(sx + 0.12, sz + 0.25, 2.5, 2.0, 0.6);

@@ -7,7 +7,8 @@ import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { OutsiderOnScreen, Outsider, WorkerOnScreen, outsiderCarry, outsiderReach, outsiderStand, outsiderWalk } from "./paulFolk";
-import { PaulStage, camTrack, ease01, living, orbitCam, type CamDef, type Orbit, type WorldSpec } from "./paulWorld";
+import { makeOutsider3D, outsiderCarry3D, outsiderReach3D, outsiderStand3D, outsiderWalk3D, walkPlan, type OutsiderPose3D } from "./paulOutsider3d";
+import { PaulStage, camTrack, clamp01, ease01, living, mix, orbitCam, type CamDef, type Orbit, type V3, type WorldSpec } from "./paulWorld";
 import {
   RULER,
   TOWER,
@@ -261,3 +262,197 @@ const PaulWorldProbe: React.FC<z.infer<typeof schema> & { frameOverride?: number
   }
 };
 export default PaulWorldProbe;
+
+// ===================================================================================================================
+// REV 1 PROBES: the 3D clay outsider, the bank vaults, the black Slack mark, scale beside the sets
+// ===================================================================================================================
+// ---- the outsider: turnaround, head close-up and a pose sheet (one shot per frame) --------------------------------
+type Shot = { pose: OutsiderPose3D; cam: Orbit; at?: V3 };
+const TURN_CAM: Orbit = { target: [0, 0.74, 0], dist: 4.6, yaw: 0, pitch: 5, fov: 24 };
+const TURN_SHOTS: Shot[] = [
+  { pose: outsiderStand3D({ yaw: 0, frame: 30 }), cam: TURN_CAM },
+  { pose: outsiderStand3D({ yaw: 42, frame: 30 }), cam: TURN_CAM },
+  { pose: outsiderStand3D({ yaw: 90, frame: 30 }), cam: TURN_CAM },
+  { pose: outsiderStand3D({ yaw: 180, frame: 30 }), cam: TURN_CAM },
+  // S2's opening: tight on the head, the hood and the hand with the key (he faces a door off to screen left)
+  { pose: outsiderReach3D(0.92, { yaw: -38, keyTurn: 0.35, headYaw: -12, headPitch: 6, frame: 30 }), cam: { target: [-0.3, 0.98, 0.14], dist: 2.3, yaw: 6, pitch: 3, fov: 30 } },
+  // the pose sheet
+  { pose: outsiderWalk3D(0, { yaw: 30 }), cam: TURN_CAM },
+  { pose: outsiderWalk3D(6, { yaw: 30 }), cam: TURN_CAM },
+  { pose: outsiderStand3D({ yaw: 18, whoa: 1, frame: 30 }), cam: TURN_CAM },
+  { pose: outsiderCarry3D(30, "laptop", { yaw: 20 }), cam: TURN_CAM },
+  { pose: outsiderCarry3D(30, "laptop", { yaw: 20, typing: 1 }), cam: TURN_CAM },
+  { pose: outsiderCarry3D(30, "tote", { yaw: -30, toteCards: 3 }), cam: TURN_CAM },
+  { pose: outsiderStand3D({ yaw: 15, fumble: 1, frame: 11 }), cam: TURN_CAM },
+  { pose: outsiderReach3D(1, { yaw: 0, keyTurn: 1, frame: 30 }), cam: TURN_CAM },
+];
+const TURN_SPEC: WorldSpec = {
+  fog: { near: 6, far: 30 },
+  light: { center: [0, 0.8, 0], span: 2.6 },
+  build: (w) => {
+    const O = makeOutsider3D(w);
+    return (f) => {
+      const s = TURN_SHOTS[Math.max(0, Math.min(TURN_SHOTS.length - 1, Math.round(f)))];
+      O.update(s.pose, s.at ?? [0, 0, 0]);
+    };
+  },
+};
+export const OUTSIDER_SHOTS = TURN_SHOTS.length;
+export const PaulOutsiderShots: React.FC = () => {
+  const f = useCurrentFrame();
+  const s = TURN_SHOTS[Math.min(TURN_SHOTS.length - 1, f)];
+  return <PaulStage spec={TURN_SPEC} cam={orbitCam(s.cam)} frame={f} air={{ foreground: 0, lowAir: 0.5 }} />;
+};
+
+// ---- the outsider in motion: walk in, ease to a stop, turn, reach + key turn, whoa, fumble; a second figure hugs a
+// laptop, stops and opens it to type; a third crosses behind with a tote ------------------------------------------
+const LOOP_N = 150;
+const WA = walkPlan({ from: [-1.3, 0, 0.6], to: [-0.3, 0, 0.6], f0: 0, f1: 44, rampIn: 0, rampOut: 18 });
+const WB = walkPlan({ from: [2.2, 0, -2.7], to: [0.2, 0, -2.6], f0: 6, f1: 58, rampIn: 0, rampOut: 16 });
+const WC = walkPlan({ from: [2.6, 0, 2.0], to: [1.1, 0, 2.0], f0: 14, f1: 92, rampIn: 0, rampOut: 18 });
+const poseA = (f: number): OutsiderPose3D => {
+  const w = WA(f);
+  const turn = ease01(40, 60, f);
+  const reach = ease01(56, 68, f) * (1 - ease01(84, 96, f));
+  const whoa = ease01(90, 102, f) * (1 - ease01(112, 124, f));
+  const fum = Math.sin(Math.PI * clamp01((f - 114) / 22));
+  return {
+    yaw: mix(w.yaw, -30, turn) + 40 * ease01(124, 146, f),
+    walk: w.walk + 0.26 * Math.max(0, f - 44),
+    walkAmt: w.walkAmt,
+    shuffle: Math.sin(Math.PI * clamp01((f - 40) / 20)) * 0.9,
+    reach,
+    keyTurn: ease01(64, 76, f) * (1 - ease01(86, 96, f)),
+    whoa,
+    fumble: fum,
+    headYaw: -10 * reach + 8 * ease01(126, 146, f),
+    headPitch: 2 - 6 * ease01(126, 146, f),
+    frame: f,
+  };
+};
+const poseB = (f: number): OutsiderPose3D => {
+  const w = WB(f);
+  const turn = ease01(56, 76, f);
+  return { carry: "laptop", yaw: mix(w.yaw, -28, turn), walk: w.walk + 0.26 * Math.max(0, f - 58), walkAmt: w.walkAmt, shuffle: Math.sin(Math.PI * clamp01((f - 56) / 20)) * 0.8, typing: ease01(80, 104, f), headPitch: 2 + 14 * ease01(84, 104, f), frame: f + 40 };
+};
+const LOOP_SPEC: WorldSpec = {
+  fog: { near: 9, far: 34 },
+  light: { center: [0, 0.8, 0], span: 4.5 },
+  build: (w) => {
+    const A = makeOutsider3D(w);
+    const B = makeOutsider3D(w);
+    const Cc = makeOutsider3D(w);
+    return (f) => {
+      A.update(poseA(f), WA(f).at);
+      B.update(poseB(f), WB(f).at);
+      const c = WC(f);
+      const ct = ease01(88, 108, f);
+      Cc.update({ carry: "tote", toteCards: 3, yaw: mix(c.yaw, -18, ct), walk: c.walk + 0.26 * Math.max(0, f - 92), walkAmt: c.walkAmt, shuffle: 0.8 * Math.sin(Math.PI * clamp01((f - 88) / 20)), frame: f + 80 }, c.at);
+    };
+  },
+};
+const LOOP_CAM: Orbit = { target: [0.2, 0.7, -0.2], dist: 10, yaw: 6, pitch: 7, fov: 31 };
+export const PaulOutsiderLoop: React.FC = () => {
+  const f = useCurrentFrame();
+  return <PaulStage spec={LOOP_SPEC} cam={orbitCam(living(LOOP_CAM, f))} frame={f} />;
+};
+export const OUTSIDER_LOOP_N = LOOP_N;
+
+// ---- the vaults: closed, unlocking, open (S1 wide); close on the OpenAI door; the open motion -------------------
+type VaultState = { wheel: number; bolts: number; open: number };
+const V_STATES: VaultState[] = [
+  { wheel: 0, bolts: 0, open: 0 },
+  { wheel: 2.4, bolts: 0.55, open: 0 },
+  { wheel: 4.2, bolts: 1, open: 1 },
+  { wheel: 0, bolts: 0, open: 0 },
+  { wheel: 4.2, bolts: 1, open: 1 },
+];
+const V_WIDE = orbitCam({ target: [0.3, -0.35, 1.0], dist: 17, yaw: 3, pitch: 12, fov: 26 });
+const V_CLOSE = orbitCam({ target: [VAULT.X_OPENAI + 0.05, 1.0, 0.7], dist: 6.2, yaw: 16, pitch: 7, fov: 28 });
+const VAULT_SPEC: WorldSpec = {
+  fog: { near: 10, far: 36 },
+  light: { center: [0, 1, 1], span: 6 },
+  build: (w) => {
+    const A = makeVault(w, { x: VAULT.X_OPENAI, brand: "openai" });
+    const B = makeVault(w, { x: VAULT.X_ANTHROPIC, brand: "anthropic" });
+    const O = makeOutsider3D(w);
+    return (f) => {
+      const s = V_STATES[Math.max(0, Math.min(V_STATES.length - 1, Math.round(f)))];
+      A.update({ ...s, cardsLeft: 10, ghost: 0 });
+      B.update({ ...s, cardsLeft: 10, ghost: 0 });
+      O.update(outsiderStand3D({ yaw: -24, frame: 30 }), [1.75, 0, 2.5], 1.42);
+    };
+  },
+};
+export const PaulVaultStates: React.FC = () => {
+  const f = useCurrentFrame();
+  return <PaulStage spec={VAULT_SPEC} cam={f >= 3 ? V_CLOSE : V_WIDE} frame={f} />;
+};
+// the open motion (60 f): the wheel spins a turn and a half, the bolts slide in, the door swings out on the stack
+const VO_N = 60;
+const VO_SPEC: WorldSpec = {
+  fog: { near: 10, far: 36 },
+  light: { center: [0, 1, 1], span: 6 },
+  build: (w) => {
+    const A = makeVault(w, { x: VAULT.X_OPENAI, brand: "openai" });
+    makeVault(w, { x: VAULT.X_ANTHROPIC, brand: "anthropic" });
+    return (f) => {
+      A.update({ wheel: 1.5 * 2 * Math.PI * ease01(2, 28, f), bolts: ease01(20, 32, f), open: ease01(30, 54, f), cardsLeft: 10 });
+    };
+  },
+};
+const VO_TRACK = camTrack({ target: [VAULT.X_OPENAI + 0.05, 1.0, 0.7], dist: 5.4, yaw: 12, pitch: 6, fov: 28 }, [{ from: 0, to: 70, key: { dist: 6.6, yaw: 20, pitch: 8, target: [VAULT.X_OPENAI + 0.15, 0.95, 0.8] } }]);
+export const PaulVaultOpen: React.FC = () => {
+  const f = useCurrentFrame();
+  return <PaulStage spec={VO_SPEC} cam={orbitCam(living(VO_TRACK(f), f))} frame={f} />;
+};
+export const VAULT_OPEN_N = VO_N;
+
+// ---- S4 with the black Slack mark (wide, and close on the cap) --------------------------------------------------
+const S4B_SPEC: WorldSpec = {
+  fog: { near: 10, far: 36 },
+  light: { center: [0, 1.5, 0.5], span: 7 },
+  build: (w) => {
+    const D = makeDial(w, { pos: [-1.3, 1.28, 0.7], yaw: 16 });
+    const Sl = makeSlackStack(w, { x: 0.95, mark: "black" });
+    const O = makeOutsider3D(w);
+    return (f) => {
+      D.update({ sweep: 0.82 });
+      Sl.update({ open: [0, 1, 0.3, 1, 0, 0.8, 0] });
+      O.update(outsiderCarry3D(f + 30, "laptop", { yaw: 20, typing: 0 }), S4_OUT);
+    };
+  },
+};
+export const PaulSlackBlack: React.FC = () => {
+  const f = useCurrentFrame();
+  const cam = f === 0 ? S4_CAM : orbitCam({ target: [0.95, 2.95, 0.7], dist: 6.5, yaw: 4, pitch: 4, fov: 28 });
+  return <PaulStage spec={S4B_SPEC} cam={cam} frame={f} />;
+};
+
+// ---- scale: the new outsider beside a vault and the tower, at cut scale (frame 1: the old 2D overlay beside him) --
+const SCALE_SPEC: WorldSpec = {
+  fog: { near: 14, far: 44 },
+  light: { center: [0, 1.6, 0.5], span: 7 },
+  build: (w) => {
+    const V = makeVault(w, { x: -2.6, brand: "openai" });
+    const T = makeMonorepo(w, { x: 1.9 });
+    const O = makeOutsider3D(w);
+    return () => {
+      V.update({ open: 1, bolts: 1, wheel: 4.2, cardsLeft: 10 });
+      T.update({});
+      O.update(outsiderStand3D({ yaw: 10, frame: 30 }), [-0.75, 0, 1.2]);
+    };
+  },
+};
+const SCALE_CAM = orbitCam({ target: [-0.25, 1.35, 0.6], dist: 19, yaw: 6, pitch: 8, fov: 28 });
+export const PaulOutsiderScale: React.FC = () => {
+  const f = useCurrentFrame();
+  return (
+    <PaulStage
+      spec={SCALE_SPEC}
+      cam={SCALE_CAM}
+      frame={f}
+      overlay={f === 1 ? (P) => <Outsider P={P} at={[0.05, 0, 1.2]} heightM={1.45} pose={outsiderStand({ yaw: 10, frame: 30 })} uid="oldscale" /> : undefined}
+    />
+  );
+};
