@@ -1,6 +1,6 @@
 /*
  * GtaHud (v2): a San Andreas-era game HUD over the Pressbyrån GTA cut (Pressbyrån/GTA/GTA.prproj, "GTA - 360 source").
- * Check: whole sequence 0 -> 43.644 s, transparent overlay on V2; the footage plays untouched underneath.
+ * Check: whole sequence 0 -> 45.812 s, transparent overlay on V3; the footage plays untouched underneath.
  * Brief (client): focus is 3 för 2 on Pressbyrån's protein products; game graphics, the mission is called
  * "Fyll på med protein"; at the till a shop menu (like the reference) with 3 för 2 on the products; "Mission Passed"
  * when it is done (that title is its own composition, GtaMissionPassed). Reference: "Real Life GTA in London" (SA HUD).
@@ -8,13 +8,15 @@
  * Beats (sequence seconds; Swedish dialogue):
  *   0.3 - 3.0   mission title "Fyll på med protein"
  *   3.1 - 7.4   objective "Gå till Pressbyrån."
- *   21.6        takes a bag from the stand                -> pickup 1, Real Good salty cashews
- *   23.2        "Så, trea för två"                        -> objective "Ta 3 för 2 på protein." (22.4 - 26.0)
- *   29.5        first fridge                              -> pickup 2, Propud milkshake Marängsviss
- *   35.2        second fridge, hand to the shelf at 34.8  -> pickup 3, Chick'n Dip sesamkyckling
- *   37.671      cut to the shelves by the till            -> product wheel (until the cut at 40.474)
- *   39.6        "Perfekt." 38.92, at the till             -> 3 FÖR 2 confirmed, cash ticks down
- * DURATION: 0 -> 43.644 s x 30000/1001 = 1308 frames.
+ *   21.9        takes a sandwich from the cooler (v5 shot) -> pickup 1, Proteinfralla
+ *   22.7 - 26.3                                           -> objective "Ta 3 för 2 på protein."
+ *   31.669      first fridge                              -> pickup 2, Propud milkshake Marängsviss
+ *   37.369      second fridge                             -> pickup 3, Chick'n Dip sesamkyckling
+ *   39.840      cut to the shelves by the till            -> product wheel (until the cut at 42.643)
+ *   41.769      at the till                               -> 3 FÖR 2 confirmed, cash ticks down
+ * DURATION: 0 -> 45.812 s x 30000/1001 = 1373 frames.
+ * v5 (Tom, Nov 17): the cashews shot is replaced by a new 6.54 s shot of him taking a Proteinfralla from the sandwich
+ * cooler; everything after 17.751 moved +2.169 s.
  * Motion: always-on HUD: weapon slot (a fist, then the last product picked up), a game clock that runs a
  * minute per second from the camera's 13:19 timestamp, armour and health bars and an 8-digit cash counter top right; a
  * round radar bottom left that walks the route to the store and turns with the camera cuts. v3 (Tom, Nov 16): no area
@@ -28,7 +30,7 @@ import {loadFont} from '@remotion/fonts';
 import {z} from 'zod';
 
 export const FPS = 30000 / 1001;
-export const DURATION = 1308;
+export const DURATION = 1373;
 
 const CHUNK = 'GtaChunk';
 const SUB = 'GtaHudSans';
@@ -60,17 +62,17 @@ export const defaultProps = schema.parse({
   price: 59,
   clockStart: 13 * 60 + 19,
   products: [
-    {name: 'REAL GOOD CASHEWS', short: 'Real Good Cashews', img: 'pressbyran-gta/p1_cashews.png', t: 21.6},
-    {name: 'PROPUD MARÄNGSVISS', short: 'Propud Marängsviss', img: 'pressbyran-gta/p2_propud.png', t: 29.5},
-    {name: "CHICK'N DIP SESAM", short: "Chick'n Dip Sesam", img: 'pressbyran-gta/p3_chikndip.png', t: 35.2},
+    {name: 'PROTEINFRALLA', short: 'Proteinfralla', img: 'pressbyran-gta/p1_proteinfralla.png', t: 21.9},
+    {name: 'PROPUD MARÄNGSVISS', short: 'Propud Marängsviss', img: 'pressbyran-gta/p2_propud.png', t: 31.669},
+    {name: "CHICK'N DIP SESAM", short: "Chick'n Dip Sesam", img: 'pressbyran-gta/p3_chikndip.png', t: 37.369},
   ],
-  menuIn: 37.671,
-  menuOut: 40.474,
-  buyAt: 39.6,
+  menuIn: 39.84,
+  menuOut: 42.643,
+  buyAt: 41.769,
   missionTitle: 'Fyll på med protein',
   objectives: [
     {t0: 3.1, t1: 7.4, pre: 'Gå till ', key: 'Pressbyrån', post: '.'},
-    {t0: 22.4, t1: 26.0, pre: 'Ta ', key: '3 för 2', post: ' på protein.'},
+    {t0: 22.7, t1: 26.3, pre: 'Ta ', key: '3 för 2', post: ' på protein.'},
   ],
 });
 
@@ -96,12 +98,12 @@ function mix(a: string, b: string, k: number) {
 
 // ---------------------------------------------------------------- radar
 // V1 cuts (sequence seconds) and each clip's Insta360 Reframe Pan, read from GTA.prproj.
-const CUTS = [0, 2.436, 3.77, 6.139, 7.708, 9.209, 13.046, 14.114, 15.282, 17.751, 22.122, 23.257, 29.396, 31.231,
-  36.403, 37.671, 38.472, 40.474];
-const PANS = [-11, 72, 79, 185, 185, 138, 106, 188, 128, 65, 200, 200, 200, 200, 200, 39, 108, -111];
+const CUTS = [0, 2.436, 3.77, 6.139, 7.708, 9.209, 13.046, 14.114, 15.282, 17.751, 24.291, 25.425, 31.565, 33.4,
+  38.572, 39.84, 40.641, 42.643];
+const PANS = [-11, 72, 79, 185, 185, 138, 106, 188, 128, 140, 200, 200, 200, 200, 200, 39, 108, -111];
 const PATH: [number, number, number][] = [
   [0, 0, 0], [2.4, 0, -40], [9.2, 0, -330], [13.0, 60, -470], [15.3, 150, -520], [17.7, 205, -560],
-  [22.1, 222, -572], [29.4, 238, -590], [37.7, 228, -585], [40.5, 214, -570], [43.7, 175, -548],
+  [24.3, 222, -572], [31.6, 238, -590], [39.9, 228, -585], [42.7, 214, -570], [45.9, 175, -548],
 ];
 const DEST: [number, number] = [214, -568];
 const pos = (t: number): [number, number] => {
