@@ -15,7 +15,9 @@ shows through the gaps as the joints. World sizes (the cut's world px): brick BW
 COLS * BW wide. The small stack is baked at 5 px / world px (it is seen up to k 3, finals --scale 2), the tower at
 2.5 px / world px (seen at k <= 1.15).
 
-  uv run --offline --with numpy --with pillow --with scipy python3 -I scripts/clips/shruti-trailer/bake-cash-bricks.py [standin|photo]
+  uv run --offline --with numpy --with pillow --with scipy python3 -I scripts/clips/shruti-trailer/bake-cash-bricks.py [standin|photo|compare]
+  compare  (review 3) the five comparator stacks cash_cmp_<key>.png from the same brick: $80M per course, a partial
+           top course as a thinner bundle, 2 buried courses under each; needs cash_brick.png (photo mode) first
 Outputs: public/shruti-trailer/cash_stack_small.png, public/shruti-trailer/cash_tower.png (+ cash_brick.png in photo mode)
 Memory: the largest arrays are the photo (2999 x 1294 x 3) and the brick (2340 x 970) in float32, < 100 MB.
 """
@@ -140,9 +142,68 @@ def stack(rows: int, scale: float, mode: str) -> Image.Image:
     return im
 
 
+# -- compare mode (review 3): the comparator stacks, money raised before first orbit ----------------------------------
+# One course = $80M (Skyroot's $160M = its 2 courses). The brick height matches the component's Skyroot stack on
+# screen: SMALL_H / 2, where SMALL_H = (limb-to-orbit height at x 410) * 2 / 25 with R_E 5500, ALT 730, EX 800.
+_R_E, _ALT, _EX = 5500.0, 730.0, 800.0
+_dx = 410.0 - _EX
+_limb = -((_R_E**2 - _dx**2) ** 0.5)
+_orbit = -(((_R_E + _ALT) ** 2 - _dx**2) ** 0.5)
+SMALL_H = (_limb - _orbit) * SMALL_ROWS / TOWER_ROWS
+CMP_BH = SMALL_H / SMALL_ROWS
+USD_PER_COURSE = 80.0
+COMPARE = [("rocketlab", 150.0), ("firefly", 350.0), ("astra", 600.0), ("isar", 1000.0), ("relativity", 1300.0)]
+BURIED = 2  # extra full courses under the visible height: they stay behind the limb (the ground slopes under a stack)
+
+
+def partial_brick(w: int, full_h: int, h: int, variant: int, mode: str) -> Image.Image:
+    """A thinner bundle: the brick's top edge strip over the LOWER part of its face, h px high (h <= full_h)."""
+    full = standin_brick(w, full_h) if mode == "standin" else photo_brick(w, full_h, variant)
+    edge = int(round(full_h * EDGE_PX / BRICK_PX[1]))
+    if h <= edge + 2:
+        return full.crop((0, 0, w, h))
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    out.alpha_composite(full.crop((0, 0, w, edge)), (0, 0))
+    out.alpha_composite(full.crop((0, full_h - (h - edge), w, full_h)), (0, edge))
+    return out
+
+
+def compare_stack(courses: float, scale: float, mode: str) -> Image.Image:
+    """BURIED + floor(courses) full courses and one partial course on top (a thinner bundle) of `courses % 1`."""
+    full = int(np.floor(courses + 1e-9))
+    frac = courses - full
+    rows = BURIED + full
+    W = int(round(COLS * BW * scale))
+    H = int(round((rows + frac) * CMP_BH * scale))
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    g = GAP * scale
+    bw = int(round(BW * scale - g))
+    for r in range(rows + (1 if frac > 1e-6 else 0)):
+        for c in range(COLS):
+            x0 = c * BW * scale + g / 2
+            y1 = H - r * CMP_BH * scale - g / 2
+            hh = CMP_BH if r < rows else frac * CMP_BH
+            y0 = y1 - hh * scale + g
+            bh = int(round(y1 - y0))
+            v = (r * 7 + c * 3) % 4
+            if r < rows:
+                b = standin_brick(bw, bh) if mode == "standin" else photo_brick(bw, bh, v)
+            else:
+                b = partial_brick(bw, int(round(CMP_BH * scale - g)), bh, v, mode)
+            im.alpha_composite(b, (int(round(x0)), int(round(y0))))
+    return im
+
+
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "standin"
     os.makedirs(OUT, exist_ok=True)
+    if mode == "compare":
+        for key, usd in COMPARE:
+            im = compare_stack(usd / USD_PER_COURSE, 2.5, "photo")
+            im.save(os.path.join(OUT, f"cash_cmp_{key}.png"), optimize=True)
+            print(key, usd, "courses", usd / USD_PER_COURSE, im.size)
+        print("CMP_BH", CMP_BH)
+        return
     if mode == "photo":
         bake_brick()
     small = stack(SMALL_ROWS, 5.0, mode)

@@ -3,9 +3,10 @@
 // SKYROOT trailer look, on ../neal-stephenson-trailer/nealShared). Opaque 1920x1080, 23.976 fps, 191 frames; finals
 // --scale 2 (3840x2160).
 //
-// CHECK LINE: Skyroot reached orbit off a tiny pile of money; everyone else has needed a pile of money that reaches all
-// the way up to orbit. (Sound off: "the small rocket got to space on a little stack of cash; the usual price is a tower
-// of cash twelve times taller.")
+// CHECK LINE: Skyroot got to orbit on a small pile of money; the Western and European launch startups of the last decade
+// raised piles several times taller before their first orbit, and the tallest never got there. (Sound off: "a little
+// stack of cash launches a rocket into orbit; then a row of other companies' stacks, each taller, the last one never
+// made it.")
 //
 // THE LINE (Ashlee Vance, about Skyroot): "[And] they got to orbit on, I believe, around 80 million or less dollars. I
 // don't think anyone, especially in the last 20 years, has done that for less than a billion dollars."
@@ -15,45 +16,78 @@
 // DURATION: the slot 13.096 -> 21.063 s (sequence f314-f505) = 7.967 s x 23.976 = 191 frames (f0..f190). Before and
 // after: the speaker on camera (hard cuts).
 //
-// THE MOTION: one world, one continuous camera. The lower part of the b&w photo Earth (the NASA EPIC disc re-projected
-// as a sphere, India on its face) is a big curved limb across the bottom, its crest under the small stack; a DASHED white
-// orbit is concentric with it high above (crest ~y 172 in the wide, limb ~y 902), its altitude = what a billion dollars
-// of $100 bricks reaches. f0 close and low (k 3) on a SMALL stack of cash bricks standing upright on the limb a little
-// left of centre (x 800), Vikram-1 standing on it as its launch pad; it lifts on "got" (f5), upright, drawing its chunky
-// white trail (plain white on its hard shadow), and flies a gravity turn: one smooth widening quarter-ellipse to the
-// RIGHT, tangent with the orbit at ~x 1089 of the wide (f41), while the camera follows up and pulls back (one smoothed
-// log-zoom to k ~1.08). It never stops: eased into a steady orbital pace (~2.4-2.7 px/f on screen) it flies on along
-// the orbit, drawing its trail behind it (one long sweep: up from the stack, over, along the orbit), to ~x 1626 at f190,
-// still moving. The rocket is collage scale (~228 screen px in the wide, like SKYROOT), a plain b&w cut-out. The ONE
-// chain moment: on "80 million" (f43-) the crown steps up out of the small stack's top (brick silhouettes, orange /
-// purple / blue, CROWN_STEP apart) and rests there. From f92 the billion tower of the SAME bricks is pushed straight up
-// out from behind the limb on the LEFT (x 410), accelerating then easing in, its top meeting the dashed orbit exactly
-// on "billion" (f176). f56-f185 one long slow camera creep (k 1.08 -> 1.0, a hair right). f176-f190 living: the rocket
-// flies on, the globe turns a hair, the paper drifts, film life. Nothing fades.
-//   Cause before effect: the rocket stands on the stack top (contact) until f4; it moves from f5. The tower is pushed up
-//   out of the Earth (its hidden courses are behind the limb from f0); its top touches the orbit line at f176.
-// HEIGHT = COST: tower : small stack = 25 : 2 courses = 1000 : 80 = 12.5 : 1, same footprint (2 bricks wide). Both stand
-// upright on screen, seated on the limb (the lower bottom corner touches, the rest tucked behind the limb) with a soft
-// contact shadow; heights on each centre line from the limb up: the tower 731.6 world px (limb to orbit at x 410), the
-// small stack 58.5 = 1/12.5 of it.
-// CHAIN = INDIA'S OUTLIERS (COMMON.md): here Skyroot's small pile of money, once, on "80 million": the crown on the stack.
-// No numbers on screen.
+// THE MOTION: one world, one continuous camera. f0-f97 is v4 (bar the first ~3 px of v4's tower, gone, at f95-f97).
+// The lower part of the b&w photo Earth (the NASA EPIC disc re-projected as a sphere, India on its face) is a big curved limb across the bottom, its crest under the
+// small stack; a DASHED white orbit is concentric with it high above (crest ~y 172 in the wide, limb ~y 902). f0 close
+// and low (k 3) on Skyroot's SMALL stack of cash bricks standing upright on the limb (x 800), Vikram-1 standing on it
+// as its launch pad; it lifts on "got" (f5), upright, drawing its chunky white trail (plain white on its hard shadow),
+// and flies a gravity turn to the RIGHT, tangent with the orbit at ~x 1089 (f41), while the camera follows up and pulls
+// back (one smoothed log-zoom to k ~1.08). It never stops: at a steady orbital pace (2.8 world px/f) it flies on along
+// the orbit to the end, its trail one long sweep behind it; a plain b&w cut-out, collage scale (~228 px). The ONE chain
+// moment: on "80 million" (f43-) the crown steps up out of the small stack's top (brick silhouettes, orange / purple /
+// blue, CROWN_STEP apart) and rests there; during the pan (f98-f111) it steps back down into the stack, the exact
+// reverse of its entrance, so from Rocket Lab's landing (f112) Skyroot is bare bricks like the others.
+//   From f97 (just before "I don't think", f98) ONE continuous camera move, eased, riding on the slow creep (no hold-move-
+// hold): a pan right along the limb with a gentle pull-back (k ~1.05 -> 0.94, to f184, then the same slow living
+// drift). It reveals the comparison row: five more stacks of the SAME bricks, upright on the limb right of Skyroot,
+// ascending left to right, each pushed up from behind the limb (one ease, duration ~ sqrt(height): one family of
+// speeds), staggered: Rocket Lab lands f112 ... Relativity tops out on "billion" (f176). Labels (white Barlow 900 on the
+// hard shadow) rise in over each stack as it lands: name, amount a little smaller, and one small line at each end of
+// the row: Skyroot's "1ST TRY" (its label rises as the pan starts, f98, just LEFT of its trail) and Relativity's "NEVER
+// REACHED ORBIT". Header top-left (screen), from f100: RAISED BEFORE FIRST ORBIT. The rocket keeps gliding on the
+// orbit above the row (it drifts left on screen while the camera pans); every stack top stays well below the orbit
+// (Relativity's by 280 world px). f178-f190 settled and living: the rocket flies on, the camera drifts, the globe
+// turns a hair, the paper drifts, film life. Nothing fades.
+//   Cause before effect: the rocket stands on the stack top (contact) until f4; it moves from f5. Each comparator stack
+//   is pushed up out of the Earth (its courses hidden behind the limb until its t0); its label rises as it lands.
+// HEIGHT = MONEY RAISED BEFORE FIRST ORBIT: one course = $80M, so Skyroot's 2 courses (58.53 world px, kept from v4) =
+// its $160M. Same footprint (2 bricks wide), heights on each centre line from the limb up, exactly proportional:
+// Rocket Lab 150 (0.9375 x Skyroot), Firefly 350 (2.1875), Astra 600 (3.75), Isar 1000 (6.25), Relativity 1300
+// (8.125). A partial top course is a thinner bundle (its top edge over the lower part of its face). The stacks stand
+// upright and seated on the limb as it curves away (the lower bottom corner touches, the rest tucked behind it), with a
+// soft contact shadow along the slope.
+// CHAIN = INDIA'S OUTLIERS (COMMON.md): Skyroot's small pile of money, once, on "80 million": the crown on its stack.
+//
+// THE COMPARISON (COST_TO_ORBIT_FACTS.md, compiled 2026-11-17, beside the brief). ONE measure for every stack: money the
+// company RAISED before its first successful orbital launch, nominal US$, not inflation-adjusted.
+//   SKYROOT $160M (Vikram-1, orbit 18 Jul 2026, 1st attempt): "$160 million" raised to date (Skyroot About page; Times
+//     of Oman / PTI; TechCrunch 7 May 2026: ~$10M of it structured debt). Ashlee's "$80M" has NO source and is not
+//     shown. "1ST TRY": orbit on its first attempt (and Ashlee says so just before this line in the episode).
+//   ROCKET LAB ~$150M (Electron, orbit 21 Jan 2018): ~$148M = ">$288M" total after the $140M Series E of Nov 2018
+//     (Via Satellite / TechCrunch, 15 Nov 2018); Inc42 (22 Jul 2026) independently "~$150 Mn".
+//   FIREFLY ~$350M (Alpha, orbit 1 Oct 2022): Noosphere ~$200M + $75M (May 2021, Bloomberg) + $75M (Mar 2022); a sum
+//     of reports (low-medium confidence; the facts file flags it for a re-check).
+//   ASTRA $600M+ (Rocket 3.3, orbit 20 Nov 2021): >$100M VC by Feb 2020 (TechCrunch) + ~$500M SPAC/PIPE cash (Jun-Jul
+//     2021, GeekWire / Global Venturing); a floor, summed.
+//   ISAR ~$1B (Spectrum, orbit 5 Sep 2026): >EUR 600M by Jun 2025 (TNW/Dealroom, incl. a EUR 150M convertible) + EUR 270M
+//     Series D (Isar, 9 Jun 2026) = ~EUR 870M ~ $1B.
+//   RELATIVITY $1.3B (Terran 1, failed 22 Mar 2023, retired): "raised at least $1.3 billion" (Bloomberg via BNN,
+//     23 Mar 2023). NEVER REACHED ORBIT.
+// SCOPE: deliberately the Western / European launch startups, which matches the episode's framing (Ashlee: India vs
+// capital-intensive projects "in the UK, Canada, or the United States"; Shruti: India "does space on a shoestring
+// budget"). NOT shown, on purpose: SpaceX Falcon 1 (2008, ~$90M dev / ~$120M capital), Galactic Energy (China, ~$75M
+// before Ceres-1, 2020) and iSpace (China, ~$100M before Hyperbola-1, 2019): each is at or below Skyroot, so the row
+// claims "less than these Western/European startups", not "less than anyone". Government / legacy budgets (Ariane 6,
+// H3, SSLV, Vulcan, New Glenn, Starship) and Virgin Orbit's owner spend are different measures and are not mixed in.
 //
 // FACTS / SOURCES: Skyroot Vikram-1, Mission Aagaman, lifted off 18 Jul 2026 from the First Launch Pad, Sriharikota, and
 // reached orbit on the first attempt (SKYROOT trailer FACTS.txt: ISRO, Al Jazeera, Space.com, SpaceNews, Bloomberg).
-// "$80 million or less" and "a billion" are Ashlee's own estimates: the stack heights follow his words; no figure is
-// printed. Rocket: skyrootShared VIKRAM1 (ISRO photo of the flight vehicle on the pad, GODL-India). Earth: NASA DSCOVR
+// Rocket: skyrootShared VIKRAM1 (ISRO photo of the flight vehicle on the pad, GODL-India). Earth: NASA DSCOVR
 // EPIC natural-colour full disc, 28 Mar 2024, India centred (public domain), skyrootShared EARTH. Orbit and stack sizes
 // are collage scale. Cash bricks: public/shruti-trailer/cash_*.png, baked by
 // scripts/clips/shruti-trailer/bake-cash-bricks.py from a real Series 2013 $100 note (Wikimedia Commons
 // "Series_2013_$100_bill_front.jpg", public domain, photo Cyfraw): the note's face cut out flat, greyscale, a pale paper
-// strap round each bundle and its top edge of paper layers; both stacks are the same brick sprite.
+// strap round each bundle and its top edge of paper layers; every stack is the same brick sprite
+// (the comparator stacks: bake-cash-bricks.py compare -> public/shruti-trailer/cash_cmp_<key>.png).
 // ---------------------------------------------------------------------------
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { AbsoluteFill, Easing, cancelRender, continueRender, delayRender, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   ChainPhotoCutOut,
+  EASE_LAND,
+  CROWN_STEP,
+  RiseText,
   SHADOW_OFF,
   Silhouette,
   H,
@@ -96,31 +130,27 @@ export const polar = (th: number, r: number) => ({ x: EX + r * Math.sin(th), y: 
 /** The limb's and the orbit's y at world x. */
 export const limbY = (x: number) => EY - Math.sqrt(R_E * R_E - (x - EX) * (x - EX));
 export const orbitY = (x: number) => EY - Math.sqrt(RO * RO - (x - EX) * (x - EX));
-/** The two stacks stand UPRIGHT on screen, 2 bricks wide (same footprint): the small one on the crest a little left of
- *  centre, the billion tower on the left. Heights are measured on each stack's centre line from the limb up: the tower
- *  reaches the orbit there (TOWER_H), the small stack is exactly 1/12.5 of it (25 : 2 courses = 1000 : 80). */
+/** The stacks stand UPRIGHT on screen, 2 bricks wide (one footprint), seated on the limb. Skyroot's small stack (kept
+ *  exactly from v4) is 2 courses = SMALL_H 58.53 world px (2/25 of the limb-to-orbit height at x 410); ONE COURSE =
+ *  $80M, so its 2 courses = Skyroot's $160M raised. Heights are measured on each stack's centre line from the limb up. */
 export const BW = 60.5;
 export const COLS = 2;
 export const STACK_W = COLS * BW;
 export const X_S = 800;
-export const X_T = 410;
-export const TOWER_ROWS = 25;
+const REF_X = 410;
 export const SMALL_ROWS = 2;
-export const TOWER_H = limbY(X_T) - orbitY(X_T);
-export const SMALL_H = (TOWER_H * SMALL_ROWS) / TOWER_ROWS;
-export const BH = TOWER_H / TOWER_ROWS;
+export const SMALL_H = ((limbY(REF_X) - orbitY(REF_X)) * SMALL_ROWS) / 25;
+export const COURSE_H = SMALL_H / SMALL_ROWS;
+export const USD_PER_COURSE = 80; // $M
 /** Seated on the limb: the sprite's bottom edge sits at the LOWER of its two bottom corners' limb y (that corner touches),
  *  the rest of the bottom tucked behind the limb; SINK = how far below the centre line's limb point the bottom edge is. */
-const seatY = (x: number) => Math.max(limbY(x - STACK_W / 2), limbY(x + STACK_W / 2));
+export const seatY = (x: number) => Math.max(limbY(x - STACK_W / 2), limbY(x + STACK_W / 2));
 export const SINK_S = seatY(X_S) - limbY(X_S);
-export const SINK_T = seatY(X_T) - limbY(X_T);
 export const SMALL_SPRITE_H = SMALL_H + SINK_S;
-export const TOWER_SPRITE_H = TOWER_H + SINK_T;
 /** The small stack's angle about the Earth's centre (the climb starts radially from its top: here straight up). */
 export const TH_S = Math.asin((X_S - EX) / R_E);
 
 const SPRITE_SMALL = { src: "shruti-trailer/cash_stack_small.png", w: 605, h: 292 };
-const SPRITE_TOWER = { src: "shruti-trailer/cash_tower.png", w: 302.5, h: 1825 }; // content 2 x 60.5 x 2.5 px wide
 
 // -- the rocket's path: the climb (a gravity turn) then the orbit, in polar coordinates -----------------------------------
 /** The climb is a quarter-ellipse in the local frame of the small stack: from its top (radius r0, angle TH_S)
@@ -271,18 +301,60 @@ export const ROCKET_HALF_W_PER_L = (VIKRAM1.bodyW * (VIKRAM1.w / VIKRAM1.h)) / (
  *  the end (brick silhouettes, orange / purple / blue, CROWN_STEP apart). */
 export const CROWN_START = 43;
 const CROWN_TRAVEL = 16;
+/** v6: the crown steps back DOWN into the stack during the pan (so Skyroot reads as bare bricks, the same as the others,
+ *  before Rocket Lab lands at f112): the exact time-reverse of its entrance (each colour's EASE_LAND curve played
+ *  backwards, the last colour in the first out: blue, purple, orange, RETRACT_STAGGER apart), RETRACT_TRAVEL frames each:
+ *  done by f111. */
+export const RETRACT_START = 98;
+const RETRACT_TRAVEL = 11;
+const RETRACT_STAGGER = 1;
+export const crownProgress = (f: number): [number, number, number] => {
+  const inP = chainProgress(f, CROWN_START, { travel: CROWN_TRAVEL });
+  // orange (i 0) leaves last, blue (i 2) first
+  const out = (i: number) => {
+    const s0 = RETRACT_START + (2 - i) * RETRACT_STAGGER;
+    return EASE_LAND(c01(1 - (f - s0) / RETRACT_TRAVEL));
+  };
+  return [Math.min(inP[0], out(0)), Math.min(inP[1], out(1)), Math.min(inP[2], out(2))];
+};
 
-// -- the tower ----------------------------------------------------------------------------------------------------------------
-/** The tower's height above the limb: pushed up out of the Earth from T0 (already moving on "I don't think anyone"),
- *  accelerating then easing in, its top on the orbit line at T1 ("billion" f176). */
-export const T0 = 92;
-export const T1 = 176;
-const TOWER_EASE = Easing.bezier(0.45, 0, 0.3, 1);
-const towerEase = (t: number) => TOWER_EASE(c01(t));
-/** The tower's bottom edge y (world): pushed straight up out from behind the limb (+2 px hidden at f0). */
-export const towerBottomY = (f: number) => seatY(X_T) + (TOWER_SPRITE_H + 2) * (1 - towerEase((f - T0) / (T1 - T0)));
-/** The tower's visible height on its centre line (from the limb to its top). */
-export const towerRise = (f: number) => Math.max(0, limbY(X_T) - (towerBottomY(f) - TOWER_SPRITE_H));
+// -- the comparison (review 3): money raised before first orbit, one measure, US$ nominal ------------------------------------
+/** Left to right ascending from Skyroot (whose small stack stands for its $160M). Each new stack is the same bricks,
+ *  baked by bake-cash-bricks.py compare: floor(courses) full courses + a partial top course (a thinner bundle) + 2 buried
+ *  courses that stay behind the limb. t0..t1 = its push up from behind the limb, staggered left to right, one ease, the
+ *  duration ~ sqrt(height) (one family of speeds); its label rises in as it lands. */
+export type Cmp = { key: string; name: string; amount: string; note?: string; usd: number; x: number; png: { w: number; h: number }; t0: number; t1: number };
+const CMP_SPEED = 1.95; // frames per sqrt(world px of height)
+const cmp = (key: string, name: string, amount: string, usd: number, x: number, png: { w: number; h: number }, t1: number, note?: string): Cmp => {
+  const h = (COURSE_H * usd) / USD_PER_COURSE;
+  return { key, name, amount, note, usd, x, png, t0: t1 - CMP_SPEED * Math.sqrt(h), t1 };
+};
+export const ROW: Cmp[] = [
+  cmp("rocketlab", "ROCKET LAB", "~$150M", 150, 1100, { w: 302, h: 284 }, 112),
+  cmp("firefly", "FIREFLY", "~$350M", 350, 1400, { w: 302, h: 466 }, 128),
+  cmp("astra", "ASTRA", "$600M+", 600, 1700, { w: 302, h: 695 }, 144),
+  cmp("isar", "ISAR", "~$1B", 1000, 2000, { w: 302, h: 1061 }, 160),
+  cmp("relativity", "RELATIVITY", "$1.3B", 1300, 2300, { w: 302, h: 1335 }, 176, "NEVER REACHED ORBIT"),
+];
+export const SKYROOT_USD = 160;
+export const cmpH = (c: Cmp) => (COURSE_H * c.usd) / USD_PER_COURSE;
+const CMP_EASE = Easing.bezier(0.45, 0, 0.25, 1);
+/** The visible height on its centre line (limb to top) at frame f. */
+export const cmpRise = (c: Cmp, f: number) => cmpH(c) * CMP_EASE(c01((f - c.t0) / (c.t1 - c.t0)));
+/** Its top y (world): at rest limb - height; before t0 hidden behind the limb (its top below the lower top corner's limb). */
+export const cmpTopY = (c: Cmp, f: number) => {
+  const e = CMP_EASE(c01((f - c.t0) / (c.t1 - c.t0)));
+  const hide = seatY(c.x) - limbY(c.x) + 2;
+  return limbY(c.x) - cmpH(c) + (1 - e) * (cmpH(c) + hide);
+};
+/** The label timing: Skyroot's as the pan starts, each other as its stack lands; the header from f100. */
+export const SKYROOT_LABEL_F = 98;
+export const HEADER_F = 100;
+/** The header, screen px: top-left, above the orbit line. */
+export const HEADER_X = 64;
+export const HEADER_Y = 92;
+const LABEL_LEAD = 3;
+export const labelF = (c: Cmp) => c.t1 - LABEL_LEAD;
 
 // -- the camera: coarse keys, linearly interpolated, box-smoothed per frame at module load ---------------------------------
 const PRE = 40;
@@ -306,7 +378,7 @@ const track = (keys: [number, number][], win: number) => {
   };
 };
 /** ln k: close (k 3) on the stack and rocket, one pull-back lobe (fastest ~f20-f30, settling ~f55), then ONE long slow
- *  creep out through the quiet stretch and the tower's rise (the same lobe's tail: its speed only falls). */
+ *  creep out (the same lobe's tail: its speed only falls); the pan below rides on it. */
 const LNK = track(
   [
     [-40, Math.log(3.0)],
@@ -350,7 +422,26 @@ const CY = track(
   ],
   7,
 );
-export const camAt = (f: number): NealCam => ({ x: CX(f), y: CY(f), k: Math.exp(LNK(f)), x0: CX(0), y0: CY(0) });
+/** THE PAN (review 3): from PAN0, one continuous eased move right along the limb with a gentle pull-back, onto the
+ *  balanced wide of the whole row (PAN_X, PAN_Y, PAN_K at PAN1); it rides on the base creep above, so it starts out of
+ *  a moving camera and settles into the same slow living drift (no hold-move-hold). Through PAN0 the camera is v4's. */
+export const PAN0 = 97;
+export const PAN1 = 184;
+export const PAN_X = 1525;
+export const PAN_Y = 620;
+export const PAN_K = 0.94;
+const PAN_EASE = Easing.bezier(0.42, 0, 0.28, 1);
+const panE = (f: number) => PAN_EASE(c01((f - PAN0) / (PAN1 - PAN0)));
+export const camAt = (f: number): NealCam => {
+  const e = panE(f);
+  return {
+    x: CX(f) + e * (PAN_X - CX(PAN1)),
+    y: CY(f) + e * (PAN_Y - CY(PAN1)),
+    k: Math.exp(LNK(f) + e * (Math.log(PAN_K) - LNK(PAN1))),
+    x0: CX(0),
+    y0: CY(0),
+  };
+};
 /** The paper's camera: the same move, its zoom eased (k 3 -> 1.8) so the squares never go above 1.0x of source. */
 const paperCam = (cam: NealCam): NealCam => ({ ...cam, k: 1 + (cam.k - 1) * 0.4 });
 
@@ -568,10 +659,10 @@ const DashedOrbit: React.FC = () => (
 );
 
 // -- the stacks -------------------------------------------------------------------------------------------------------------
-/** The tower: the baked sprite stretched to TOWER_SPRITE_H (+0.5 %), upright, its bottom centre at (X_T, bottomY), on the
+/** A comparator stack: its baked sprite, upright, its top at cmpTopY (the buried courses stay behind the limb), on the
  *  Core Memory hard shadow. */
-const Tower: React.FC<{ bottomY: number }> = ({ bottomY }) => (
-  <PhotoCutOut src={SPRITE_TOWER.src} x={X_T} y={bottomY} w={STACK_W} aspect={STACK_W / TOWER_SPRITE_H} filter={NEAL_FILTER} />
+const CmpStack: React.FC<{ c: Cmp; frame: number }> = ({ c, frame }) => (
+  <PhotoCutOut src={`shruti-trailer/cash_cmp_${c.key}.png`} x={c.x - STACK_W / 2} y={cmpTopY(c, frame)} w={STACK_W} aspect={c.png.w / c.png.h} anchor="top-left" filter={NEAL_FILTER} />
 );
 /** The small stack with the chain crown stepping up out of its top: back to front the hard shadow, orange, purple, blue
  *  brick silhouettes (CROWN_STEP apart, straight up), then the photo bricks. */
@@ -583,7 +674,7 @@ const SmallStack: React.FC<{ frame: number }> = ({ frame }) => {
       <Silhouette {...pl} colour={SHADOW} dx={SHADOW_OFF} dy={SHADOW_OFF} />
       {/* the copies show only above the stack's top (else they peek through the gaps between courses) */}
       <div style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, clipPath: `polygon(-9999px -9999px, 9999px -9999px, 9999px ${topY}px, -9999px ${topY}px)` }}>
-        <ChainPhotoCutOut {...pl} core="none" progress={chainProgress(frame, CROWN_START, { travel: CROWN_TRAVEL })} />
+        <ChainPhotoCutOut {...pl} core="none" progress={crownProgress(frame)} />
       </div>
       <PhotoCutOut {...pl} hardShadow={false} filter={NEAL_FILTER} />
     </>
@@ -596,8 +687,10 @@ const Contact: React.FC<{ x: number; on: number }> = ({ x, on }) => {
   const y = limbY(x);
   return (
     <g clipPath="url(#oe-earth)" opacity={on}>
-      <ellipse cx={x + 3} cy={y + 2} rx={STACK_W * 0.66} ry={9} fill="url(#oe-contact)" />
-      <ellipse cx={x + 2} cy={y + 1} rx={STACK_W * 0.52} ry={3.5} fill="url(#oe-contact-core)" />
+      <g transform={`rotate(${deg(Math.atan((x - EX) / Math.sqrt(R_E * R_E - (x - EX) * (x - EX)))).toFixed(3)} ${x} ${y})`}>
+        <ellipse cx={x + 3} cy={y + 2} rx={STACK_W * 0.66} ry={9} fill="url(#oe-contact)" />
+        <ellipse cx={x + 2} cy={y + 1} rx={STACK_W * 0.52} ry={3.5} fill="url(#oe-contact-core)" />
+      </g>
     </g>
   );
 };
@@ -647,6 +740,45 @@ const Trail: React.FC<{ frame: number; k: number }> = ({ frame, k }) => {
   );
 };
 
+// -- the labels (review 3) ------------------------------------------------------------------------------------------------------
+/** Sizes (world px, k ~1 in the wide): the name, the amount a little smaller under it, Relativity's note smaller still. */
+/** Barlow's cap height per em (cerroShared BARLOW_CAP, not re-exported by nealShared). */
+const BARLOW_CAP = 0.7;
+export const LABEL = { name: 46, amount: 38, note: 32, gap: 11, lift: 24, header: 51 };
+/** A label block standing on `bottomY` (world): name over amount (over note); each line rises in at f0. */
+const Label: React.FC<{ frame: number; f0: number; k: number; x: number; bottomY: number; name: string; amount: string; note?: string; anchor?: "middle" | "end" }> = ({
+  frame,
+  f0,
+  k,
+  x,
+  bottomY,
+  name,
+  amount,
+  note,
+  anchor = "middle",
+}) => {
+  let y = bottomY;
+  const lines: { text: string; y: number; size: number }[] = [];
+  if (note) {
+    lines.push({ text: note, y, size: LABEL.note });
+    y -= BARLOW_CAP * LABEL.note + LABEL.gap;
+  }
+  lines.push({ text: amount, y, size: LABEL.amount });
+  y -= BARLOW_CAP * LABEL.amount + LABEL.gap;
+  lines.push({ text: name, y, size: LABEL.name });
+  return (
+    <>
+      {lines.map((l) => (
+        <RiseText key={l.text} frame={frame} f0={f0} k={k} text={l.text} x={x} y={l.y} size={l.size} weight={900} anchor={anchor} />
+      ))}
+    </>
+  );
+};
+/** The label blocks' rest geometry (world): bottom baseline y and the anchor x; Skyroot's stands just LEFT of the trail
+ *  (right-aligned), clear of its rising line, above the crown's height. */
+export const SKYROOT_LABEL = { x: X_S - 16, bottomY: limbY(X_S) - SMALL_H - 3 * CROWN_STEP - LABEL.lift, anchor: "end" as const };
+export const cmpLabel = (c: Cmp) => ({ x: c.x, bottomY: limbY(c.x) - cmpH(c) - LABEL.lift, anchor: "middle" as const });
+
 const Debug: React.FC<{ frame: number; cam: NealCam }> = ({ frame, cam }) => {
   const r = rocketAt(frame);
   return (
@@ -654,7 +786,7 @@ const Debug: React.FC<{ frame: number; cam: NealCam }> = ({ frame, cam }) => {
       <line x1={W / 2} y1={0} x2={W / 2} y2={H} stroke="#f0f" strokeWidth={1} />
       <line x1={0} y1={H / 2} x2={W} y2={H / 2} stroke="#f0f" strokeWidth={1} />
       <text x={20} y={50} fill="#f0f" fontSize={30} fontFamily="monospace">
-        f{frame} k {cam.k.toFixed(3)} cam ({cam.x.toFixed(0)}, {cam.y.toFixed(0)}) s {r.s.toFixed(0)}/{S_J.toFixed(0)} rot {r.rot.toFixed(1)} tower {towerRise(frame).toFixed(0)}
+        f{frame} k {cam.k.toFixed(3)} cam ({cam.x.toFixed(0)}, {cam.y.toFixed(0)}) s {r.s.toFixed(0)}/{S_J.toFixed(0)} rot {r.rot.toFixed(1)}
       </text>
     </svg>
   );
@@ -673,7 +805,7 @@ const OrbitOnEightyMillion: React.FC<z.infer<typeof schema>> = ({ debug }) => {
           <NealSvg>
             <DashedOrbit />
           </NealSvg>
-          <Tower bottomY={towerBottomY(frame)} />
+          {ROW.map((c) => (frame >= c.t0 ? <CmpStack key={c.key} c={c} frame={frame} /> : null))}
           <SmallStack frame={frame} />
         </NealPlane>
         <GlobeShadow frame={frame} />
@@ -682,11 +814,22 @@ const OrbitOnEightyMillion: React.FC<z.infer<typeof schema>> = ({ debug }) => {
           <NealSvg>
             <ContactDefs />
             <Contact x={X_S} on={1} />
-            <Contact x={X_T} on={c01(towerRise(frame) / 12)} />
+            {ROW.map((c) => (
+              <Contact key={c.key} x={c.x} on={c01(cmpRise(c, frame) / 12)} />
+            ))}
             <Trail frame={frame} k={cam.k} />
           </NealSvg>
           <RocketCutOut rocket={VIKRAM1} x={r.base.x} y={r.base.y} height={r.L} rot={r.rot} pivot={0} shadow={4} filter={NEAL_FILTER} />
+          <NealSvg>
+            <Label frame={frame} f0={SKYROOT_LABEL_F} k={cam.k} {...SKYROOT_LABEL} name="SKYROOT" amount="$160M" note="1ST TRY" />
+            {ROW.map((c) => (
+              <Label key={c.key} frame={frame} f0={labelF(c)} k={cam.k} {...cmpLabel(c)} name={c.name} amount={c.amount} note={c.note} />
+            ))}
+          </NealSvg>
         </NealPlane>
+        <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+          <RiseText frame={frame} f0={HEADER_F} k={1} text="RAISED BEFORE FIRST ORBIT" x={HEADER_X} y={HEADER_Y} size={LABEL.header} weight={900} anchor="start" />
+        </svg>
         {debug ? <Debug frame={frame} cam={cam} /> : null}
       </NealFilmLife>
     </AbsoluteFill>
