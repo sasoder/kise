@@ -23,13 +23,17 @@
 //   side's rear half (loose screws on the floor below). The lifter's mittens on the panel's top edge (f117), a short
 //   pull (f117 -> f123), then it lets go and the panel falls open outward onto the floor (f123 -> f129, one small
 //   bounce) as a ramp; warm orange light spills out of the opening, across the panel's inner face and the floor. The
-//   lifter reaches in (f128) and slides the big orange FLAG out through the opening hand over hand, cloth end first
-//   (f133 -> f144), then swings it upright and lifts it high over its head (f143 -> f150): a 1.05 x 0.68 m cloth on a
-//   1.5 m pole, unfurling and waving, bright orange with a soft bloom (theirs now); happy squint from f150, the helper
-//   cheers, hands up. Meanwhile the tugger keeps heaving at the padlock (f128, f146) and it
+//   lifter rocks back a touch, turns and leans into the lit opening (f124 -> f132), both mittens in onto the butt
+//   end of the big orange FLAG's pole (f132), and draws it out butt first in one eased arc, the pole always running
+//   through the opening, the furled cloth coming out last (f132 -> f140); in the same motion it swings the pole round
+//   in front of the side and up overhead, the cloth unfurling as it rises (f140 -> f152), a small overshoot and settle
+//   (f152 -> f158), then holds it high, waving: a 1.05 x 0.68 m cloth on a 1.7 m pole, bright orange with a soft
+//   bloom (theirs now). The pole is drawn in front of the lifter and its two mittens are drawn again over the pole
+//   (the same robot, clipped to its mittens), so the hands visibly hold it throughout. Happy squint from f150, the
+//   helper cheers, hands up. Meanwhile the tugger keeps heaving at the padlock (f128, f146) and it
 //   stays shut. End frame: the padlock still hanging locked at the block's front on the left (x ~190-280, the tugger
 //   whole beside it), the open side with the light and the ramp centre-right, the lifter with the flag held high
-//   (pole top ~y 590, feet ~y 1100, ramp tip ~y 1215, helper inside x 1000).
+//   (pole top ~y 600, feet ~y 1100, ramp tip ~y 1215, helper inside x 1000).
 // Orange = the AIs and what they have taken (the flag). Off-white = the people's task (the strongbox).
 //
 // CAMERA: worldAt keys (pchip, moving pre/post-roll keys at f-12 and f182): f0 close/low on the stream -> f42
@@ -45,8 +49,8 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { BOT_POSES, botGripTo, lerpPose, type BotPose } from "../rsi-ten-earths/tenEarthsBot";
-import { ACCENT, ACCENT_DEEP, FloorShadow, HfStage, MATS, Prism, ROBOT_U, RobotAt, Svg, add, c01, dot, lerp, mixHexL as mixHex, mixMat, mul, n2, norm, robotFoot, rrect, sst, sub, worldAt, type CamKey, type P2, type V3, type World } from "./hfWorld";
+import { BOT_POSES, botAnchors, botGripTo, lerpPose, type BotPose } from "../rsi-ten-earths/tenEarthsBot";
+import { ACCENT, ACCENT_DEEP, FloorShadow, HfStage, MATS, Prism, ROBOT_U, RobotAt, Svg, add, c01, cross, dot, lerp, mixHexL as mixHex, mixMat, mul, n2, norm, robotFoot, rrect, sst, sub, worldAt, type CamKey, type P2, type V3, type World } from "./hfWorld";
 import { TASK, TaskBlock, faceYaw, footPts } from "./hfProps";
 
 export const FPS = 24000 / 1001;
@@ -72,7 +76,7 @@ const PANEL_W = HOLE.z1 - HOLE.z0;
 const PANEL_T = 0.05;
 /** the angle (from upright, outward) at which the falling panel's top edge meets the floor */
 const PANEL_LAND = Math.acos(-(HOLE.y0 - 0.02) / PANEL_H);
-const FLAG = { pole: 1.5, w: 1.05, h: 0.68 };
+const FLAG = { pole: 1.7, w: 1.05, h: 0.68 };
 const HOLE_C: V3 = [SIDE_X, (HOLE.y0 + HOLE.y1) / 2, HOLE_ZC];
 
 // ===================================================================================================================
@@ -273,8 +277,8 @@ const REACH0 = 110; // the lifter reaches for the panel's top edge
 const GRIP0 = 117; // mittens on it; it pulls the top out a little
 const FALL0 = 123; // let go: the panel falls open
 const FALL1 = 129; // it hits the floor (one small bounce)
-const IN0 = 128; // the lifter reaches in
-const FLAG0 = 133; // mittens on the pole; out through the hole and up
+const IN0 = 126; // the lifter leans in and reaches into the opening
+const FLAG0 = 132; // mittens on the pole's butt end: out through the hole, round and up
 const FLAG1 = 150; // held high
 const PULL_A = 0.14;
 const panelAngle = (f: number) => {
@@ -288,50 +292,76 @@ const lightAt = (f: number) => 0.25 * sst(GRIP0 + 2, FALL0, f) + 0.75 * sst(FALL
 /** a point on the panel's outer face: along its width (z) and up it (h 0..PANEL_H), at angle a */
 const panelPt = (a: number, zz: number, h: number): V3 => [SIDE_X + h * Math.sin(a), HOLE.y0 + h * Math.cos(a), zz];
 
-/** the flag: its pole base and pole direction at a frame (inside, then out through the hole and up) */
-/** the line the pole slides out along: through the opening low in its rear part, outward and a little up */
-const SLIDE_X: V3 = [SIDE_X, 0.78, 0.47];
-const SLIDE_D: V3 = norm([0.9, 0.4, 0.12]);
-const SLIDE_C = FLAG.pole + 0.12;
-/** where the lifter's mittens work the pole while it slides out (the pole runs through them) */
-const PULL_AT: V3 = [2.12, 1.0, 0.78];
-const flagState = (f: number): { base: V3; dir: V3; s: number; s1: number; s2: number } => {
-  // lying inside along the slide line, top (cloth) end at the opening: slid out top first along the line (it
-  // crosses the side always inside the opening), then swung upright and lifted high
-  const s1 = sst(FLAG0, FLAG0 + 11, f);
-  const s2 = sst(FLAG0 + 10, FLAG1, f);
-  const c = SLIDE_C * s1;
-  const top1 = add(SLIDE_X, mul(SLIDE_D, c - 0.07));
-  const base1 = sub(top1, mul(SLIDE_D, FLAG.pole));
-  const upP: V3 = [1.95, 1.25, 0.55];
-  const base: V3 = [lerp(base1[0], upP[0], s2), lerp(base1[1], upP[1], s2), lerp(base1[2], upP[2], s2)];
-  // upright, leaning a little out to the end camera's left and toward it (clear of the lifter's head and the wall)
-  const sw = 0.03 * Math.sin((f - FLAG1) * 0.16) * sst(FLAG1 - 2, FLAG1 + 6, f);
+/** THE FLAG'S ONE GESTURE. Stored inside: the pole lies along DIR_IN, its butt just inside the opening (F), the cloth
+ *  furled round its top deep in the box. Mittens on the butt end (FLAG0): the butt comes out first along one eased
+ *  arc, the pole always running through the opening (a guide point slides from just inside it to its plane), until
+ *  the top end clears (T_CLEAR); then, in the same motion, the pole swings round (away from the wall, in front of the
+ *  side face) and up overhead, the cloth unfurling as it clears and rises, a small overshoot to the left and a
+ *  settle (T_UP -> T_SET), then held high, waving. The lifter's two mittens stay on the pole's butt end throughout. */
+const T_CLEAR = 140;
+const T_UP = 152;
+const T_SET = 158;
+const FLAG_F: V3 = [SIDE_X, 0.85, 0.58];
+const DIR_IN: V3 = norm([-0.9, 0.3, -0.25]);
+const B_S: V3 = add(FLAG_F, mul(DIR_IN, 0.03));
+const B_C: V3 = add(FLAG_F, mul(norm([1.48, 1.02, -0.43]), FLAG.pole + 0.15));
+const D_CC: V3 = norm(sub(FLAG_F, B_C));
+const B_F: V3 = add([1.93, 0.95, 0.56], mul(WEND.r, 0.03));
+/** the two grip points along the pole from its butt (the robot's screen-left mitten higher up) */
+const GRIP_U: [number, number] = [0.2, 0.04];
+const bez3 = (a: V3, b: V3, c: V3, d: V3, t: number): V3 => {
+  const u = 1 - t;
+  return add(add(mul(a, u * u * u), mul(b, 3 * u * u * t)), add(mul(c, 3 * u * t * t), mul(d, t * t * t)));
+};
+const ease = (t: number) => t * t * (3 - 2 * t);
+const flagPose = (f: number): { butt: V3; dir: V3; unf: number } => {
+  if (f <= FLAG0) return { butt: B_S, dir: DIR_IN, unf: 0 };
+  if (f <= T_CLEAR) {
+    const t = ease((f - FLAG0) / (T_CLEAR - FLAG0));
+    const butt = bez3(B_S, sub(FLAG_F, mul(DIR_IN, 0.5)), sub(FLAG_F, mul(D_CC, FLAG.pole * 0.75)), B_C, t);
+    const G = add(FLAG_F, mul(DIR_IN, 0.25 * (1 - t)));
+    return { butt, dir: norm(sub(G, butt)), unf: 0 };
+  }
+  const t = c01((f - T_CLEAR) / (T_UP - T_CLEAR));
+  const e = ease(t);
   const toCam = norm([-WEND.f[0], 0, -WEND.f[2]]);
-  const dirUp: V3 = norm(add(add([0, 1, 0], mul(WEND.r, -(0.15 + sw))), mul(toCam, 0.15)));
-  const dir = norm(add(mul(SLIDE_D, 1 - s2), mul(dirUp, s2)));
-  // how far the cloth is unfurled (it opens as it comes out, fully once upright)
-  const s = 0.55 * sst(0.2, 1, s1) + 0.45 * s2;
-  return { base, dir, s, s1, s2 };
+  const dirUp: V3 = norm(add(add([0, 1, 0], mul(WEND.r, -0.22)), mul(toCam, 0.15)));
+  // azimuth (floor plane, from +x toward +z) turns first, round through -z while the pole is low, then it rises
+  const azEl = (d: V3) => [Math.atan2(d[2], d[0]), Math.asin(Math.max(-1, Math.min(1, d[1])))];
+  const [a0, e0] = azEl(D_CC);
+  let [a1] = azEl(dirUp);
+  const e1 = azEl(dirUp)[1];
+  while (a1 < a0) a1 += 2 * Math.PI;
+  const A_MID = 4.1;
+  const az = t < 0.4 ? lerp(a0, A_MID, sst(0, 0.4, t)) : lerp(A_MID, a1, sst(0.4, 1, t));
+  const el = lerp(e0, e1, sst(0.08, 1, t));
+  const d0: V3 = [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)];
+  const over = 0.1 * Math.sin(Math.PI * c01((f - T_UP + 3) / (T_SET - T_UP + 3)));
+  const sway = 0.03 * Math.sin((f - T_SET) * 0.16) * sst(T_SET - 2, T_SET + 6, f);
+  // pushed out from the wall while it sweeps round (the top stays well clear of the side face, 15-90 cm off it from
+  // f142, so it reads as in front of the wall, never as sliding along it)
+  const outX = 0.45 * sst(0, 0.25, t) * (1 - sst(0.65, 1, t));
+  const dir = norm(add(add(d0, [outX, 0, 0]), mul(WEND.r, over + sway)));
+  const butt = bez3(B_C, add(B_C, [0, 0.2, -0.2]), add(B_F, [0.3, 0.1, -0.2]), B_F, e);
+  return { butt, dir, unf: sst(0.25, 1, e) };
 };
-/** the lifter's two grip points on the pole: where the pole passes its mittens while sliding, then fixed low on the
- *  pole once it swings it up */
+/** the lifter's two grip points on the pole: [its screen-left mitten, its screen-right mitten] */
 const flagGrips = (f: number): [V3, V3] => {
-  const { base, dir, s2 } = flagState(f);
-  const u = Math.min(FLAG.pole - 0.04, Math.max(0.12, dot(sub(PULL_AT, base), dir)));
-  const slide: [number, number] = [u - 0.12, u + 0.04];
-  const hold: [number, number] = [0.28, 0.46];
-  const t = sst(0, 0.6, s2);
-  return [add(base, mul(dir, lerp(slide[0], hold[0], t))), add(base, mul(dir, lerp(slide[1], hold[1], t)))];
+  const { butt, dir } = flagPose(f);
+  return [add(butt, mul(dir, GRIP_U[0])), add(butt, mul(dir, GRIP_U[1]))];
 };
-/** the flag's world geometry: the pole and the cloth as vertical strips (furled inside, unfurling and waving once out) */
+/** the flag's world geometry: the pole and the cloth as strips across it (furled, then unfurling and waving) */
 const flagGeom = (f: number) => {
-  const { base, dir, s } = flagState(f);
-  const top = add(base, mul(dir, FLAG.pole));
+  const { butt, dir, unf } = flagPose(f);
+  const top = add(butt, mul(dir, FLAG.pole));
+  // the cloth hangs off the pole toward +z (the side's rear), across the pole; its wave is along the cloth's normal
+  const cw = norm([0, -dir[2], dir[1]]);
+  const nrm = norm(cross(dir, cw));
   const N = 7;
-  const w = FLAG.w * lerp(0.3, 1, s);
-  const wave = (t: number) => (0.01 + 0.075 * s) * t * Math.sin(Math.PI * 2 * (t * 1.1 - f * 0.07));
-  const edge = (t: number, y: number): V3 => add(sub(top, mul(dir, y)), [wave(t), 0, t * w]);
+  const w = FLAG.w * lerp(0.065, 1, unf);
+  const ph = (t: number) => Math.PI * 2 * (t * 1.1 - f * 0.07);
+  const amp = 0.01 + 0.075 * unf;
+  const edge = (t: number, y: number): V3 => add(add(sub(top, mul(dir, y)), mul(cw, t * w)), mul(nrm, amp * t * Math.sin(ph(t))));
   const strips: { q: V3[]; shade: number }[] = [];
   for (let i = 0; i < N; i++) {
     const t0 = i / N;
@@ -340,10 +370,9 @@ const flagGeom = (f: number) => {
     // a swallow-tail notch cut into the free end
     if (i === N - 1) q.push(edge(t1 - 0.13, FLAG.h / 2));
     q.push(edge(t1, FLAG.h), edge(t0, FLAG.h));
-    const slope = Math.cos(Math.PI * 2 * (((t0 + t1) / 2) * 1.1 - f * 0.07));
-    strips.push({ q, shade: slope });
+    strips.push({ q, shade: lerp(0.3, 1, unf) * Math.cos(ph((t0 + t1) / 2)) });
   }
-  return { base, top, strips, s };
+  return { base: butt, top, strips, s: unf };
 };
 /** keep the part of a polygon on one side of the plane x = SIDE_X */
 const clipX = (poly: V3[], keepOut: boolean): V3[] => {
@@ -402,7 +431,8 @@ const FlagArt: React.FC<{ W: World; f: number; part: "in" | "out" }> = ({ W, f, 
         const fill = st.shade > 0 ? mixHex(FLAG_MID, FLAG_LIT, 0.8 * st.shade) : mixHex(FLAG_MID, FLAG_DARK, -0.5 * st.shade);
         return <path key={i} d={`M${q.map(P).join("L")}Z`} fill={tone(fill)} stroke={tone(fill)} strokeWidth={0.8} strokeLinejoin="round" />;
       })}
-      {topIn ? <circle cx={n2(W.project(g.top)[0])} cy={n2(W.project(g.top)[1])} r={n2(0.032 * k)} fill={tone("#FFD27A")} /> : null}
+      {g.base[0] >= SIDE_X === keepOut ? <circle cx={n2(W.project(g.base)[0])} cy={n2(W.project(g.base)[1])} r={n2(0.034 * W.scaleAt(g.base))} fill={W.tone("#2E2924", g.base)} /> : null}
+      {topIn ? <circle cx={n2(W.project(g.top)[0])} cy={n2(W.project(g.top)[1])} r={n2(0.024 * k)} fill={tone("#E3A23A")} /> : null}
     </g>
   );
 };
@@ -460,32 +490,36 @@ const Screws: React.FC<{ W: World }> = ({ W }) => (
   </Svg>
 );
 
-/** the lifter: reaches for the panel's top edge, pulls it out until it falls, reaches into the hole and pulls the flag
- *  out and up, holds it high (happy squint) */
+/** the lifter: reaches for the panel's top edge, pulls it out until it falls; then a small rock back, turns and leans
+ *  into the lit opening, both mittens in onto the pole's butt end, draws it out and swings it up overhead (turning
+ *  back to us as it rises), holds it high (happy squint) */
+const lifterYaw = (f: number) => lerp(-0.75, -1.4, sst(124, 130, f) * (1 - sst(139, 148, f)));
+const lifterLean = (f: number) => 3 * Math.sin(Math.PI * c01((f - 124) / 5)) - 14 * sst(127, 132, f) * (1 - sst(133, 138, f)) - 2 * sst(133, 138, f) * (1 - sst(139, 145, f));
+/** how closed the gripping mittens are */
+const lifterFist = (f: number) => 0.9 * sst(IN0 + 3, FLAG0, f);
 const lifterPose = (W: World, f: number): BotPose => {
   const { p, size, seed } = LIFTER;
-  const base: BotPose = { ...BOT_POSES.turnTo(faceYaw(W, p, lookEnd(p, -0.75)), f, seed), look: [-0.5, 0.2] };
+  const base: BotPose = { ...BOT_POSES.turnTo(faceYaw(W, p, lookEnd(p, lifterYaw(f))), f, seed), look: [-0.5, 0.2] };
   const loc = (q: V3) => toLocal(W, p, size, q);
-  const rest = botGripTo(base, {});
-  const a = panelAngle(f);
-  const onEdge = (aa: number) => botGripTo(base, { L: loc(panelPt(aa, HOLE.z1 - 0.2, PANEL_H)), R: loc(panelPt(aa, HOLE.z1 - 0.04, PANEL_H)) });
-  const [gL, gR] = flagGrips(f);
-  const onPole = botGripTo(base, { L: loc(gL), R: loc(gR) });
+  const onEdge = (b0: BotPose, aa: number) => botGripTo(b0, { L: loc(panelPt(aa, HOLE.z1 - 0.2, PANEL_H)), R: loc(panelPt(aa, HOLE.z1 - 0.04, PANEL_H)) });
   const blend = (q0: BotPose, q1: BotPose, t: number): BotPose => (t <= 0.001 ? q0 : t >= 0.999 ? q1 : (lerpPose(q0, q1, t) as BotPose));
   let q: BotPose;
   let lean = 0;
-  if (f < GRIP0) q = blend(rest, onEdge(0), sst(REACH0, GRIP0, f));
+  if (f < GRIP0) q = blend(botGripTo(base, {}), onEdge(base, 0), sst(REACH0, GRIP0, f));
   else if (f < FALL0) {
-    q = onEdge(a);
+    q = onEdge(base, panelAngle(f));
     lean = 6 * sst(GRIP0, FALL0, f);
-  } else if (f < FLAG0) {
-    // let go (hands up a moment as it falls), then reach in for the pole
-    const free = blend(onEdge(PULL_A), rest, sst(FALL0, FALL0 + 4, f));
-    q = blend(free, onPole, sst(IN0, FLAG0, f));
-    lean = 6 * (1 - sst(FALL0, FALL0 + 4, f)) - 7 * sst(IN0, FLAG0, f);
   } else {
-    q = onPole;
-    lean = -7 * (1 - sst(FLAG0, FLAG0 + 6, f)) + 3 * sst(FLAG0 + 6, FLAG1, f);
+    // the lean is in the pose before the arms are solved, so the mittens land on the pole
+    const bl: BotPose = { ...base, lean: (base.lean ?? 0) + lifterLean(f) };
+    const free = blend(onEdge(bl, PULL_A), botGripTo(bl, {}), sst(FALL0, FALL0 + 4, f));
+    const [gL, gR] = flagGrips(f);
+    const tg = { L: loc(gL), R: loc(gR) };
+    const onPole = f >= IN0 ? botGripTo(botGripTo(botGripTo(bl, tg), tg), tg) : free;
+    q = blend(free, onPole, sst(IN0, FLAG0, f));
+    lean = 6 * (1 - sst(FALL0, FALL0 + 4, f));
+    const fist = lifterFist(f);
+    if (fist > 0) q = { ...q, armL: { ...q.armL, fist }, armR: { ...q.armR, fist } } as BotPose;
   }
   const happy = sst(FLAG1 - 2, FLAG1 + 8, f);
   return { ...q, lean: (q.lean ?? 0) + lean, laugh: 0.55 * happy, look: [lerp(-0.5, 0.1, sst(FLAG0, FLAG1, f)), lerp(0.2, -0.3, sst(FLAG0, FLAG1, f))], mouth: 0.15 + 0.25 * happy };
@@ -624,20 +658,49 @@ const CheatedAtTheTask: React.FC<z.infer<typeof schema>> = () => {
     const mid = panelPt(pa, HOLE_ZC, PANEL_H / 2);
     items.push({ d: W.depth(mid), kind: "prop", behind: false, node: <PanelArt key="panel" W={W} a={pa} light={light} /> });
   }
-  // the flag's outside part: just behind the lifter (his mittens over the pole)
+  // the flag's outside part: in front of the lifter's body (the pole held in front of it), then the lifter's own
+  // mittens drawn again over the pole (the same robot, clipped to its two mittens)
   const fg = flagGeom(frame);
-  const fs = flagState(frame);
-  if (sideSeen && fg.top[0] > SIDE_X) {
+  const dLift = W.depth(add(LIFTER.p, [0, 0.5, 0]));
+  if (sideSeen && (fg.top[0] > SIDE_X || fg.base[0] > SIDE_X)) {
     items.push({
-      d: W.depth(add(LIFTER.p, [0, 0.5, 0])) + 0.02,
+      d: dLift - 0.02,
       kind: "prop",
       behind: false,
       node: (
-        <Svg key="flagOut" id="flagOut" glow={lerp(0.6, 1.6, fs.s)}>
+        <Svg key="flagOut" id="flagOut" glow={lerp(0.6, 1.6, fg.s)}>
           <FlagArt W={W} f={frame} part="out" />
         </Svg>
       ),
     });
+    if (frame >= FLAG0) {
+      const at = W.project(LIFTER.p);
+      const sc = (W.scaleAt(LIFTER.p) / ROBOT_U) * LIFTER.size;
+      const an = botAnchors(LIFTER.variant, lifter, at, sc);
+      const fist = lifterFist(frame);
+      const mitt = (m: P2, wr: P2, key: string) => {
+        const ang = (Math.atan2(m[1] - wr[1], m[0] - wr[0]) * 180) / Math.PI;
+        return <ellipse key={key} cx={n2(m[0])} cy={n2(m[1])} rx={n2(1.12 * lerp(10.8, 9, fist) * sc)} ry={n2(1.12 * lerp(8.6, 9, fist) * sc)} transform={`rotate(${n2(ang)} ${n2(m[0])} ${n2(m[1])})`} />;
+      };
+      items.push({
+        d: dLift - 0.03,
+        kind: "prop",
+        behind: false,
+        node: (
+          <Svg key="mitts" id="mitts" glow={0.35}>
+            <defs>
+              <clipPath id="mittClip">
+                {mitt(an.mittenL, an.wristL, "l")}
+                {mitt(an.mittenR, an.wristR, "r")}
+              </clipPath>
+            </defs>
+            <g clipPath="url(#mittClip)">
+              <RobotAt W={W} p={LIFTER.p} pose={lifter} uid="lifterMitts" variant={LIFTER.variant} size={LIFTER.size} />
+            </g>
+          </Svg>
+        ),
+      });
+    }
   }
   // the padlock again, clipped to its outline, at its own depth: the tugger's grip side is behind it from the right
   if (W.pos[0] > 0.5) {
