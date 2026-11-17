@@ -62,6 +62,7 @@ import {
   bBarSpecs,
   bBars,
   labelBox,
+  SHIFT_Y,
 } from "./wealthWorld";
 
 export const FPS = 24000 / 1001;
@@ -78,7 +79,7 @@ const GrewSixtyToEighty: React.FC<z.infer<typeof schema>> = () => {
   const band = amberBandFor(cam);
   const bars = bBarSpecs(S);
   return (
-    <StoutStage S={S} cam={cam} rest={WEALTH_REST} pool={B_POOL(S)}>
+    <StoutStage dy={SHIFT_Y} S={S} cam={cam} rest={WEALTH_REST} pool={B_POOL(S)}>
       <WealthBoard k={k} band={band} bars={bars} team={TEAM_OLD} />
       <BLabel k={k} enter={clamp01((S - B_T.LABEL_IN) / ENTER_F)} />
     </StoutStage>

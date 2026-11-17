@@ -75,6 +75,7 @@ import {
   riseLift,
   type BarSpec,
   type BustSpec,
+  SHIFT_Y,
 } from "./wealthWorld";
 
 export const FPS = 24000 / 1001;
@@ -152,7 +153,7 @@ const NewTeamThreeHundred: React.FC<z.infer<typeof schema>> = () => {
     { key: "next", x: SLOT_X[2], h: h3, cream: BAR_CREAM.next, lift: riseLift(f, C_T.RISE3) },
   ];
   return (
-    <StoutStage S={S} cam={cam} rest={WEALTH_REST} pool={C_POOL(S)}>
+    <StoutStage dy={SHIFT_Y} S={S} cam={cam} rest={WEALTH_REST} pool={C_POOL(S)}>
       <WealthBoard k={k} band={band} bars={bars} team={teamAt(f)} />
       <BLabel k={k} dim={r} />
       {/* the click on the tall slice, once it has settled */}

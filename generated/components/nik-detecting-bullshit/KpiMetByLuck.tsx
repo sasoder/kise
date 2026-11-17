@@ -58,6 +58,7 @@ import {
   TargetLine,
   TeamBusts,
   type Piece,
+  SHIFT_Y,
 } from "./kpiWorld";
 
 export const FPS = 24000 / 1001;
@@ -178,7 +179,7 @@ const KpiMetByLuck: React.FC<z.infer<typeof schema>> = () => {
   const pieces = piecesAt(S, k);
   const lit = litAt(S);
   return (
-    <StoutStage S={S} cam={cam} rest={CAM.rest} pool={POOL(S)}>
+    <StoutStage dy={SHIFT_Y} S={S} cam={cam} rest={CAM.rest} pool={POOL(S)}>
       <TargetLine k={k} lit={lit} band={band} flagTone={lit / LINE.HALF} />
       <StackShadows pieces={pieces} />
       <KpiTile k={k} namePx={NAME_PX} />

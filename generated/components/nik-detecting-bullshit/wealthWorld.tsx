@@ -102,34 +102,48 @@ export const BAR_CREAM = {
  *  WIN: the recessed window (w x h, corner r); BUST: head diameter, shoulders w x h, the head's overlap
  *  into the shoulders, the bust pitch; R_H: the R's height; GAP_WR: window -> R; GAP_RT: R -> name; FS:
  *  the name's size. */
+/*  REV 3 (the user, Nov 17: "make the text look more harmonious next to the Revolut logo, now it's not aligned
+ *  super well and the size is maybe wrong"): the bare R was 1.67x the caps' height, hung below the baseline
+ *  and was lighter than the caps; shrunk to cap height it read as a letter of the name. Now the logo is an
+ *  app-icon badge (ink rounded square, the cream R centred in it, R = BADGE_R x its height), the name's
+ *  caps centred on the badge's middle, one row: window | badge | name, the gaps in proportion.
+ *  BADGE: the badge's side, R_H: the R inside it, GAP_WR: window -> badge, GAP_RT: badge -> name. */
+const FACE_BADGE = 28;
 export const FACE = {
   WIN: { w: 100, h: 42, r: 3 },
   BUST: { head: 22, shW: 28, shH: 12, overlap: 3.5, pitch: 32 },
-  R_H: 24,
+  BADGE: FACE_BADGE,
+  BADGE_R: 7,
+  R_H: 0.56 * FACE_BADGE,
   GAP_WR: 14,
-  GAP_RT: 8,
+  GAP_RT: 9,
   FS: 20,
   TEXT: "Wealth & Trading",
 } as const;
+/** REV 3: the whole scene sits this many SCREEN px lower in B and C (StoutStage dy; the user's usual "move
+ *  it down slightly"). Same in both cuts, so the B -> C join stays exact. The checks below and in B / C are
+ *  the composition before this shift: the face row now lands in caption band 1, the user's choice. */
+export const SHIFT_Y = 190;
 /** The face row's layout (world px): the window rect, its three bust x's (left .. right), the R box, the
  *  name's baseline start. `bustBase` = the shoulders' bottom = the window's bottom edge. */
 export const faceLayout = () => {
   const rw = (FACE.R_H * REVOLUT_R_BOX.w) / REVOLUT_R_BOX.h;
   const tw = labelWidth(FACE.TEXT, FACE.FS) - TRACK.label * FACE.FS; // the advance minus the trailing track
-  const total = FACE.WIN.w + FACE.GAP_WR + rw + FACE.GAP_RT + tw;
+  const total = FACE.WIN.w + FACE.GAP_WR + FACE.BADGE + FACE.GAP_RT + tw;
   const cy = TILE.TOP + TILE.H / 2;
   const x0 = TILE.X - total / 2;
   const win = { x: x0, y: cy - FACE.WIN.h / 2, w: FACE.WIN.w, h: FACE.WIN.h };
   const wcx = win.x + win.w / 2;
   const busts = [-1, 0, 1].map((i) => wcx + i * FACE.BUST.pitch);
-  const rx = win.x + win.w + FACE.GAP_WR;
+  const bx = win.x + win.w + FACE.GAP_WR;
   return {
     total,
     win,
     busts,
     bustBase: win.y + win.h,
-    r: { x: rx, y: cy - FACE.R_H / 2, w: rw, h: FACE.R_H },
-    text: { x: rx + rw + FACE.GAP_RT, y: cy + (METRIC.cap * FACE.FS) / 2, w: tw },
+    badge: { x: bx, y: cy - FACE.BADGE / 2, s: FACE.BADGE },
+    r: { x: bx + (FACE.BADGE - rw) / 2, y: cy - FACE.R_H / 2, w: rw, h: FACE.R_H },
+    text: { x: bx + FACE.BADGE + FACE.GAP_RT, y: cy + (METRIC.cap * FACE.FS) / 2, w: tw },
   };
 };
 /** A bust's whole height (shoulders + head - overlap), world px. A bust at drop 1 is this far down + 1. */
@@ -457,11 +471,12 @@ export const WealthTile: React.FC<{ k: number; slotFill: number[]; team: BustSpe
       />
       <path d={rectPath(TILE_X0, TILE.TOP, TILE.W, TILE.H, r)} fill={`url(#${uid}c)`} />
       <FaceTeam team={team} k={k} />
-      {/* the R, an ink stamp (evenodd), and the product's name in ink Kräftig caps */}
+      {/* the Revolut badge (ink rounded square, the cream R in it) and the product's name in ink Kräftig caps */}
+      <path d={rectPath(L.badge.x, L.badge.y, L.badge.s, L.badge.s, FACE.BADGE_R)} fill={COLOR.inkDark} />
       <path
         d={REVOLUT_R_D}
         transform={`translate(${fx(L.r.x)} ${fx(L.r.y)}) scale(${fx(L.r.h / REVOLUT_R_BOX.h)})`}
-        fill={COLOR.inkDark}
+        fill={COLOR.cream}
         fillRule="evenodd"
       />
       <text
@@ -605,6 +620,8 @@ export const labelBox = (c: Cam, y: number = bLabelY(c.k)) => growthLabelBox(c, 
   const L = faceLayout();
   if (L.total > TILE.W - 40) fail("the face row runs off the tile");
   if (L.win.y < TILE.TOP + 5 || L.win.y + L.win.h > FLOOR - 5) fail("the window runs off the face");
+  if (L.badge.s > FACE.WIN.h || L.badge.s < 2 * METRIC.cap * FACE.FS * 0.9) fail("the badge is out of proportion with the window / the caps");
+  if (Math.abs(L.win.x - TILE_X0 - (TILE_X1 - L.text.x - L.text.w)) > 0.5) fail("the face row is off the tile's centre");
   if (L.bustBase - BUST_H < L.win.y + 4) fail("the busts' heads touch the window's top");
   if (L.busts[2] + FACE.BUST.shW / 2 > L.win.x + L.win.w - 2 || L.busts[0] - FACE.BUST.shW / 2 < L.win.x + 2) fail("the busts run out of the window");
   // B's end: the busts' heads >= 34 px on screen

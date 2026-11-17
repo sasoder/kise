@@ -38,6 +38,11 @@ import { GLYPH_STROKE, bustPaths } from "../kits/cheeky-pint/museShared";
 // All geometry in WORLD px; the cut's camera maps it at k ~1.72-1.85.
 // ===========================================================================
 
+/** REV 2 (the user, Nov 17: "move everything down slightly like we usually do"): both cuts' scenes sit this
+ *  many SCREEN px lower (StoutStage dy). The cuts' load-time checks are the composition before the shift;
+ *  the tile faces now land in caption band 1, the user's choice. */
+export const SHIFT_Y = 190;
+
 /** The k all rest lengths are snapped at (the payoff's framing). */
 export const REST_K = 1.8;
 

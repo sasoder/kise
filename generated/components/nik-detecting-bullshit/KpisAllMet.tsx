@@ -1,23 +1,30 @@
 // ---------------------------------------------------------------------------
 // KpisAllMet (nik-detecting-bullshit, cut 7). Cheeky Pint style (stout) (styles/cheeky-pint.md).
-// Opaque 1080x1920, 23.976 fps, 66 frames. Palette B1 (the stoutShared default).
+// Opaque 1080x1920, 23.976 fps, 89 frames. Palette B1 (the stoutShared default).
+//
+// REV 2 (the user, Nov 17): "remove the header text and only make it say 'Key performance indicators'",
+// start at 00:00:06:04 (23 frames earlier, "so the viewer has a bit more time to see and understand
+// everything"), and "move everything down slightly like we usually do" (StoutStage dy SHIFT_Y = 190).
+// The "KPIs*" heading and its footnote are gone; ONE line "Key performance indicators" (sentence case,
+// Dreiviertelfett, cream) enters first, f2-14, over the empty row; the bars then rise one by one and meet
+// their lines on the same words as before (good / is / met, now f58 / f73 / f78).
 // World: ./kpiWorld.tsx, shared with cut 20 `KpiMetByLuck`: this row's middle tile (REVENUE) IS cut 20's tile
 // (same tile, bar, target line, face print, at the same world size; cut 20 is a ~2.4x closer look at it).
 //
 // CHECK LINE: "These are a company's KPIs — the key numbers a team is judged by — and every one of them hits
 // its target."
 //
-// THE LINE (sequence 7.132-9.885 s): "is rosy, KPIs are good, everything is met,"
-// WORD -> FRAME: is f7 · rosy f10 · KPIs f22 · are f32 · good f35 · everything f44 · is f50 · met f55 ·
-// (met ends ~f62) · But f66 = slot end.
-// DURATION: the slot 7.132 -> 9.885 s = 2.753 s x 23.976 = 66 frames (f0..f65).
+// THE LINE (sequence 6.173-9.885 s): "(when) everything is rosy, KPIs are good, everything is met,"
+// WORD -> FRAME: everything f8 · is f30 · rosy f34 · KPIs f45 · are f55 · good f58 · everything f67 · is f73 ·
+// met f78 · (met ends ~f85) · But f89 = slot end. Placed 6.173-9.801 (f0..f86, the user's selection end).
+// DURATION: 00:00:06:04 (sequence frame 148) -> 9.885 s = 89 frames (f0..f88).
 //
 // THE MOTION: three cream KPI tiles in a row (USERS · REVENUE · RETENTION in ink on their faces), each with a
-// dashed target line and a pennant. All three bars are already rising out of their slots on f0, each ONE
-// decelerating rise, staggered so they meet their lines one after another; each line lights amber outward
-// from its bar's contact point: left lit by ~f31 ("good" f35), middle by ~f49 ("is" f50), right by ~f54 ("met"
-// f55). "KPIs*" (Dreiviertelfett) comes in over the row by "KPIs" (f10-22) and its two-line footnote (38-40 px, cream
-// at 85 %) under it right after (f18-30). One slow push-in toward the middle tile the whole cut (k 0.69 -> 0.73, +6 %); living hold to f65.
+// dashed target line and a pennant, in shot from f0 with empty slots. "Key performance indicators" comes in
+// over the row first (f2-14). Then each bar makes ONE eased rise out of its slot (starts f8 / f13 / f18),
+// staggered so they meet their lines one after another; each line lights amber outward from its bar's
+// contact point: left by "good" (f58), middle by "is" (f73), right on "met" (f78). One slow push-in toward
+// the middle tile the whole cut (k 0.69 -> 0.73); living hold to f88.
 // Contacts: a line's light starts on the frame its bar's gap drops under 1.5 screen px.
 // AMBER = a KPI being met (COMMON.md): only the lit lines. Cream = the KPIs.
 //
@@ -26,25 +33,24 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { COLOR, FONT_LABEL, FONT_NUM, METRIC, StoutStage, TYPE, amberBandFor, clamp01, easeOutCubic, mixHex, subWidth } from "../kits/cheeky-pint/stoutShared";
+import { COLOR, FONT_NUM, METRIC, StoutStage, amberBandFor, clamp01, easeOutCubic } from "../kits/cheeky-pint/stoutShared";
 import { makeClockCam, makePoolTrack, winU, type Cam } from "../kits/cheeky-pint/museShared";
-import { BAR_W, FLAG, FLOOR, KpiTile, LINE, PieceBody, RADIUS, ROW, StackShadows, TILE, TargetLine, inkEntrance, type Piece } from "./kpiWorld";
+import { BAR_W, FLAG, FLOOR, KpiTile, LINE, PieceBody, RADIUS, ROW, SHIFT_Y, STACK_H, StackShadows, TILE, TargetLine, inkEntrance, type Piece } from "./kpiWorld";
 
 export const FPS = 24000 / 1001;
-export const DURATION = 66;
+export const DURATION = 89;
 export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
 // --- timing (cut frames) --------------------------------------------------------------------------------
 /** Each bar's one rise (rest to rest; all already rising on f0) and the frame its line must be lit by. */
 const RISES = [
-  { win: [-8, 32] as const, litBy: 35 }, // USERS, by "good"
-  { win: [-8, 46] as const, litBy: 50 }, // REVENUE (cut 20's tile), by "is"
-  { win: [-8, 51] as const, litBy: 55 }, // RETENTION, on "met"
+  { win: [8, 55] as const, litBy: 58 }, // USERS, by "good"
+  { win: [13, 69] as const, litBy: 73 }, // REVENUE (cut 20's tile), by "is"
+  { win: [18, 74] as const, litBy: 78 }, // RETENTION, on "met"
 ];
 const LIGHT_F = 5;
-const HEAD_IN = 10; // "KPIs*" in over 12 f: landed f22 ("KPIs")
-const FOOT_IN = 18; // the footnote: landed f30
+const HEAD_IN = 2; // "Key performance indicators" in over 12 f: landed f14, read before the bars move much
 const ENTER_F = 12;
 
 const RISE_B = 3;
@@ -61,19 +67,17 @@ const barH = (S: number, i: number) => ROW[i].h * riseCurve(winU(S, RISES[i].win
 // --- camera + light pool ---------------------------------------------------------------------------------
 const K0 = 0.69;
 const K1 = 0.73;
-const CAM = makeClockCam({ x: TILE.X, y: 1235, k: K0 }, [{ f0: -10, f1: 96, k: K1, dy: -4 }], DURATION);
-const POOL = makePoolTrack({ x: TILE.X, y: TILE.TOP - 200 }, [{ f0: 0, f1: 60, x: TILE.X, y: TILE.TOP - 150 }], DURATION);
+const CAM = makeClockCam({ x: TILE.X, y: 1235, k: K0 }, [{ f0: -10, f1: 119, k: K1, dy: -4 }], DURATION);
+const POOL = makePoolTrack({ x: TILE.X, y: TILE.TOP - 200 }, [{ f0: 0, f1: 83, x: TILE.X, y: TILE.TOP - 150 }], DURATION);
 
-// --- the heading and its footnote (WORLD px; sizes at the final k are the TYPE tokens) ---------------------
-const HEAD = { text: "KPIs*", fs: TYPE.SECONDARY / K1, y: 572 } as const;
-/** The footnote: two centred lines, 38 -> 40 screen px with the push-in, cream at 85 % (a tone mixed into
- *  the ground, not a transparency). */
-const FOOT_LINES = ["*Key performance indicators:", "the numbers a team is judged by"] as const;
-const FOOT_PX = 38 / K0;
-const FOOT_LEAD = 1.22 * FOOT_PX;
-const FOOT_Y = HEAD.y + (24 + METRIC.cap * 39) / K1; // the first line's baseline
-const FOOT_LAST_Y = FOOT_Y + (FOOT_LINES.length - 1) * FOOT_LEAD;
-const FOOT_COLOR = mixHex(COLOR.ground, COLOR.inkCream, 0.85);
+// --- the heading (WORLD px) ------------------------------------------------------------------------------
+/** One line, sentence case, cream Dreiviertelfett at HEAD_PX SCREEN px at the final k; its baseline HEAD_GAP
+ *  screen px over the middle pennant's top (the row's highest point). */
+const HEAD_PX = 60;
+const HEAD_GAP = 92;
+const HEAD = { text: "Key performance indicators", fs: HEAD_PX / K1, y: TILE.TOP - STACK_H - FLAG.POLE - HEAD_GAP / K1 } as const;
+/** The heading's advance per em (Söhne Dreiviertelfett, measured on a render: see the sheet). */
+const HEAD_EM_W = 12.9;
 
 const contactOf = (i: number) => {
   for (let s = RISES[i].win[0]; s <= RISES[i].win[1]; s += 0.05) if ((ROW[i].h - barH(s, i)) * CAM.at(Math.max(0, s)).k < 1.5) return s;
@@ -107,18 +111,11 @@ const KpisAllMet: React.FC<z.infer<typeof schema>> = () => {
     lift: liftEnv(S, RISES[i].win, 0.5),
   }));
   return (
-    <StoutStage S={S} cam={cam} rest={CAM.rest} pool={POOL(S)}>
+    <StoutStage dy={SHIFT_Y} S={S} cam={cam} rest={CAM.rest} pool={POOL(S)}>
       <Entering enter={(S - HEAD_IN) / ENTER_F} k={k}>
-        <text x={TILE.X} y={HEAD.y} fontFamily={FONT_NUM} fontWeight={700} fontSize={HEAD.fs.toFixed(3)} letterSpacing="-0.015em" textAnchor="middle" fill={COLOR.inkCream}>
+        <text x={TILE.X} y={HEAD.y.toFixed(3)} fontFamily={FONT_NUM} fontWeight={700} fontSize={HEAD.fs.toFixed(3)} letterSpacing="-0.01em" textAnchor="middle" fill={COLOR.inkCream}>
           {HEAD.text}
         </text>
-      </Entering>
-      <Entering enter={(S - FOOT_IN) / ENTER_F} k={k}>
-        {FOOT_LINES.map((t, i) => (
-          <text key={i} x={TILE.X} y={(FOOT_Y + i * FOOT_LEAD).toFixed(3)} fontFamily={FONT_LABEL} fontWeight={500} fontSize={FOOT_PX.toFixed(3)} textAnchor="middle" fill={FOOT_COLOR}>
-            {t}
-          </text>
-        ))}
       </Entering>
       {ROW.map((t, i) => (
         <TargetLine key={t.name} k={k} cx={t.x} y={TILE.TOP - t.h} lit={LINE.HALF * easeOutCubic((S - CONTACT[i]) / LIGHT_F)} band={band} flagTone={easeOutCubic((S - CONTACT[i]) / LIGHT_F)} />
@@ -145,9 +142,9 @@ const SY = (c: Cam, wy: number) => 960 + (wy - c.y) * c.k;
   };
   RISES.forEach((r, i) => {
     if (CONTACT[i] + LIGHT_F > r.litBy) fail(`${ROW[i].name}'s line is lit only by f${(CONTACT[i] + LIGHT_F).toFixed(1)} (want <= f${r.litBy})`);
-    if (barH(0, i) * K0 < 8) fail(`${ROW[i].name}'s bar is not visibly rising on f0`);
+    if (barH(r.win[0] + 6, i) * K0 < 4) fail(`${ROW[i].name}'s bar is not visibly rising 6 f after its start`);
   });
-  const footW = Math.max(...FOOT_LINES.map((t) => subWidth(t, FOOT_PX)));
+  if (HEAD_IN + ENTER_F > 24) fail("the heading lands after the first second");
   for (let S = 0; S < DURATION; S += 0.5) {
     const c = CAM.at(S);
     const L = ROW[0].x - TILE.W / 2;
@@ -156,9 +153,8 @@ const SY = (c: Cam, wy: number) => 960 + (wy - c.y) * c.k;
     if (SY(c, FLOOR) + 5 > 1068) fail(`S${S}: the tiles' foot at y ${SY(c, FLOOR).toFixed(0)}`);
     const headTop = SY(c, HEAD.y - HEAD.fs * METRIC.cap) - 5;
     if (headTop < 300) fail(`S${S}: the heading's top at y ${headTop.toFixed(0)}`);
-    const fw = footW * c.k;
-    if (540 - fw / 2 - 3 < 65 || 540 + fw / 2 + 3 > 1015) fail(`S${S}: the footnote is ${fw.toFixed(0)} px wide`);
-    for (const t of ROW) if (SY(c, FOOT_LAST_Y + 0.22 * FOOT_PX) > SY(c, TILE.TOP - t.h - FLAG.POLE) - 40) fail(`S${S}: the footnote crowds the pennants`);
+    const hw = HEAD_EM_W * HEAD.fs * c.k;
+    if (540 - hw / 2 - 3 < 65 || 540 + hw / 2 + 3 > 1015) fail(`S${S}: the heading is ${hw.toFixed(0)} px wide`);
     if (BAR_W * c.k < 80) fail(`S${S}: the bars are thin`);
   }
 }
