@@ -11,20 +11,21 @@
 // DURATION: the slot 11.762 -> 16.350 s = 4.588 s x 23.976 = 110 frames (f0..f109).
 //
 // THE MOTION (rev 1, user notes Nov 17: "start with a tight shot on him, then zoom out and reveal the entire thing";
-// the outsider is the world's 3D clay figure, built in the scene). TIGHT on his hooded head and his right hand at the
+// rev 2, "all of them look perfect now except for the character": the outsider is the world's black artist's
+// mannequin, built in the scene). TIGHT on his faceless head and his right hand at the
 // lock on the door's right jamb, the shut door's seam glowing beside the hand. From f0 he turns the key (f0-10) while
 // the seam warms; the door swings out (f10-26) on the lit passage ("got access": inner jambs, a short receding corridor
 // brightest at its far wall, code bars glimpsed there, warm light on the floor and on his face from a weak lamp at the
 // threshold). He turns the key back (f15-21), draws it out (f19-34) and looks up as ONE eased pull-back (f20-80)
 // reveals the door at the tower's foot, the tower rising, the OpenAI cap arriving on "OpenAI" (true ~f58) and the whole
-// tower. Three contributors a side (the same clay figure, 1 m, in sand hoodies, typing at laptops) draw faint thin feed
+// tower. Three contributors a side (the same mannequin in the light tone, 1 m, typing at laptops: the staff) draw faint thin feed
 // lines into a side panel each (f56-85), and cream commit beads with a short glowing trail ride them in, landings
 // staggered f80-97 and repeating to f109 ("shared", true ~f89); each landing rewrites its panel's bars (one lobe, 12 f)
 // - "shared and iterated on". Living drift only after f80.
 // Orange = the American labs' algorithmic secrets (the code's orange lines, the light inside the tower); the outsider,
 // contributors, feed lines and beads are neutral.
 //
-// CAMERA: the world's orbit camera (camTrack + living). Opening dist 3.3, yaw -20 (head and key hand in the keep-in
+// CAMERA: the world's orbit camera (camTrack + living). Opening dist 3.2, yaw -20 (head and key hand in the keep-in
 // box, his body running down through the caption bands), held f0-20; then one pull-back built as two overlapping lobes
 // (dolly-out + orbit + crane f20-76, target drift onto the tower f30-80) to the whole tower (cap top ~y 325, base
 // ~y 1026, his feet ~y 1040).
@@ -37,7 +38,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { C, D2R, PaulStage, THREE, camTrack, clamp01, ease01, living, mix3, orbitCam, type Any, type Orbit, type V3, type World, type WorldSpec } from "./paulWorld";
 import { TOWER, makeMonorepo, makeThread, yawTo } from "./paulWorldSets";
-import { OUT3D_INKS, makeOutsider3D, type OutsiderPose3D } from "./paulOutsider3d";
+import { makeOutsider3D, type OutsiderPose3D } from "./paulOutsider3d";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 110;
@@ -165,7 +166,7 @@ const makeLock = (w: World, tip: V3, dir: V3) => {
 // THE CONTRIBUTORS (this cut's: placed so both sides read in the final wide; each feeds one panel)
 // ===================================================================================================================
 type Feeder = { at: [number, number]; h: number; face: "left" | "right"; layer: number; u: number; period: number; phase: number };
-// people at laptops, the same clay figure as the outsider at a smaller size (1 m), three a side spaced ~70 px apart
+// people at laptops, the same mannequin as the outsider in the light tone at a smaller size (1 m), three a side spaced ~70 px apart
 // across the final wide at three depths (near ones larger by perspective), clear of the base and of the outsider. In turn round the tower: left front -> left back -> right back ->
 // right front. Layers all different (one feeder per panel), periods >= REWRITE so a rewrite never restarts mid-lobe.
 const FEEDERS: Feeder[] = [
@@ -173,7 +174,7 @@ const FEEDERS: Feeder[] = [
   { at: [-1.7, -0.3], h: 1.0, face: "left", layer: 3, u: 0.0, period: 14, phase: 37 },
   { at: [-2.94, -2.6], h: 1.0, face: "left", layer: 5, u: -0.7, period: 16, phase: 71 },
   { at: [1.63, -2.7], h: 1.0, face: "right", layer: 2, u: -0.8, period: 15, phase: 19 },
-  { at: [2.33, -0.7], h: 1.0, face: "right", layer: 4, u: -0.3, period: 13, phase: 53 },
+  { at: [2.5, 0.15], h: 1.0, face: "right", layer: 4, u: -0.1, period: 13, phase: 53 },
   { at: [2.9, 1.0], h: 1.0, face: "right", layer: 6, u: 0.2, period: 14, phase: 88 },
 ];
 const TRAVEL = 14; // frames for a bead from contributor to panel (constant pace along its line)
@@ -184,33 +185,8 @@ const launches = (i: number) => Array.from({ length: 4 }, (_, n) => 66 + i * 3.5
 const TRAIL_M = 0.55; // metres of glowing band behind a bead
 /** a contributor's pose: typing at the laptop held level, head down to the screen (breath and blinks from frame) */
 const feederPose = (F: Feeder, yaw: number, f: number): OutsiderPose3D => ({ hood: "up", carry: "laptop", typing: 1, yaw, frame: f + F.phase, headPitch: 14 });
-/** the contributors wear warm sand hoodies and stone trousers (this cut's own tinted copies of the figure's
- * materials), so they read as the people who work on the repo, apart from the slate outsider */
-const STAFF_TINT: [string, string][] = [
-  [OUT3D_INKS.hoodie, "#C2B9A8"],
-  [OUT3D_INKS.hoodieDeep, "#ADA493"],
-  [OUT3D_INKS.hoodieRib, "#B5AC9B"],
-  [OUT3D_INKS.hoodIn, "#8E8577"],
-  [OUT3D_INKS.trousers, "#6F6A62"],
-];
-const tintStaff = (fig: ReturnType<typeof makeOutsider3D>, cache: Map<string, Any>) => {
-  const keys = new Map(STAFF_TINT.map(([a, b]) => [new THREE.Color(a).getHexString(), b]));
-  fig.group.traverse((o: Any) => {
-    const m = o.isMesh ? o.material : null;
-    if (!m || !m.color) return;
-    const to = keys.get(m.color.getHexString());
-    if (!to) return;
-    if (!cache.has(m.uuid)) {
-      const c = m.clone();
-      c.color.set(to);
-      cache.set(m.uuid, c);
-    }
-    o.material = cache.get(m.uuid);
-  });
-};
 const makeFeeders = (w: World, tower: ReturnType<typeof makeMonorepo>, camEnd: Any) => {
   const { scene } = w;
-  const tints = new Map<string, Any>();
   const beadMat = new THREE.MeshStandardMaterial({ color: new THREE.Color("#FFF8EC"), emissive: new THREE.Color("#FFF3DE"), emissiveIntensity: 0.95, roughness: 0.5 });
   const trailMats = [0.7, 0.42, 0.18].map((o) => new THREE.MeshBasicMaterial({ color: new THREE.Color("#FFF6E8"), transparent: true, opacity: o, depthWrite: false }));
   return FEEDERS.map((F, i) => {
@@ -220,8 +196,7 @@ const makeFeeders = (w: World, tower: ReturnType<typeof makeMonorepo>, camEnd: A
     const toTower = Math.atan2(tower.x - px, tower.z - pz) / D2R;
     const toCam = yawTo(camEnd, at);
     const yaw = toTower + 0.45 * (((toCam - toTower + 540) % 360) - 180);
-    const fig = makeOutsider3D(w);
-    tintStaff(fig, tints);
+    const fig = makeOutsider3D(w, { tone: "light" });
     fig.update(feederPose(F, yaw, 0), at, F.h);
     const lp = new THREE.Vector3();
     fig.rig.lap.getWorldPosition(lp);
@@ -268,7 +243,7 @@ const makeFeeders = (w: World, tower: ReturnType<typeof makeMonorepo>, camEnd: A
 };
 
 // ===================================================================================================================
-// THE OUTSIDER (the world's 3D clay figure): beside the right jamb, three-quarter to us, his right hand reaching to
+// THE OUTSIDER (the world's black mannequin): beside the right jamb, three-quarter to us, his right hand reaching to
 // the lock on the jamb's corner with the key; he turns it, the door swings, he turns it back and draws the key out,
 // then looks up the tower as we pull away. Feet planted all cut (no walk, no turn).
 // ===================================================================================================================
@@ -292,15 +267,15 @@ const outPose = (f: number): OutsiderPose3D => {
 /** where his key's bit is at the lock (contact pose): on the right jamb's outer side, near its front corner */
 const TIP_AT: [number, number] = [JAMB_CORNER[0] + 0.035, JAMB_CORNER[1] - 0.12];
 /** his feet: TIP_AT minus the bit's offset from the feet in the contact pose (measured at build; see makeStage) */
-const OUT_AT: V3 = [1.641, 0, 0.948];
+const OUT_AT: V3 = [1.786, 0, 0.838];
 
 // ===================================================================================================================
-// THE CAMERA: tight on his hooded head and the key hand at the lock (the door's seam glowing beside the hand), held with
+// THE CAMERA: tight on his faceless head and the key hand at the lock (the door's seam glowing beside the hand), held with
 // living drift through the turn and the door opening, then ONE eased pull-back (dist in log space, a slight crane up
 // and a drift of the target onto the tower) f20-80 that reveals the door at the tower's foot, the tower rising, the
 // cap on "OpenAI" and lands on the whole tower before the contributors light. Only living drift after.
 // ===================================================================================================================
-const START: Orbit = { target: [1.27, 0.8, 1.02], dist: 3.3, yaw: -20, pitch: 3, fov: 30 };
+const START: Orbit = { target: [1.32, 0.92, 1.0], dist: 3.2, yaw: -20, pitch: 3, fov: 30 };
 const END: Orbit = { target: [0.25, 0.3, 0.25], dist: 20.5, yaw: 13, pitch: 8, fov: 30 };
 // one pull-back as two overlapping lobes: the dolly-out with its orbit and crane (f20-76) and the target's drift onto
 // the tower (f30-80), so the drift happens once the lens is wide (his head stays within ~80 px of its x all the way)
