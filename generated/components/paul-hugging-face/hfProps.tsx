@@ -522,6 +522,10 @@ export type GraderSheet = {
   stack?: number;
   /** the mark's size x (default 1) */
   markScale?: number;
+  /** the mark's stroke weight x on top of markScale (default 1): a bold tick reads at phone size */
+  markWeight?: number;
+  /** the mark's width x across the sheet (default 1): widen it where the camera sees the sheet edge-on-ish */
+  markStretch?: number;
   key?: string;
 };
 export type GraderOpts = {
@@ -558,6 +562,10 @@ export type GraderOpts = {
    *  right end) or "left" (mirrored: conveyor at the right, out-rack and stamp mirrored to the left; the side
    *  opening stays on the right face, the print still reads left to right) */
   flow?: "right" | "left";
+  /** a name printed on the body's top face (Roboto Condensed 700 caps, dark warm-grey ink, in perspective), reading
+   *  from the front, mid-top, its stamp-side end under the stamp arm's run; it turns dark orange-brown with
+   *  the body spread. Default undefined = no label (pixel-identical to before) */
+  label?: string;
 };
 export const GRADER = {
   body: { w: 2.2, h: 1.5, d: 2.0 },
@@ -647,6 +655,48 @@ const sheetPose = (o: GraderOpts, sh: GraderSheet) => {
   const c = add(g.P(x, y, z), mul(n, off * g.s));
   return { c, a, b, n, s: g.s, tilt };
 };
+/** TICK widened across by `st` (same points, x scaled about the centre; the stroke stays round) */
+const tickStretched = (x: number, y: number, s: number, st: number) =>
+  `M${n2(x - s * 0.42 * st)},${n2(y + s * 0.02)}L${n2(x - s * 0.12 * st)},${n2(y + s * 0.32)}L${n2(x + s * 0.46 * st)},${n2(y - s * 0.34)}`;
+/** the grader's printed name on its top face: one SVG <text> per letter, each under its own affine fitted to the
+ *  face's projection at that letter (a piecewise perspective, so it can sit in the same <Svg> as the body) */
+const GRADER_ADV: Record<string, number> = { G: 0.6, R: 0.57, A: 0.58, D: 0.58, E: 0.49, " ": 0.25 };
+const GraderLabel: React.FC<{ W: World; o: GraderOpts; text: string; orange: boolean }> = ({ W, o, text, orange }) => {
+  const g = graderGeom(o);
+  const f = g.faces.top;
+  const s = g.s;
+  const capH = 0.24 * s;
+  const fs = capH / 0.711;
+  const track = 0.04 * fs;
+  const adv = [...text].map((ch) => (GRADER_ADV[ch] ?? 0.56) * fs + track);
+  const total = adv.reduce((a, b) => a + b, 0) - track;
+  // centred 0.14 m toward the stamp side of the top (its stamp-side end under the arm, which runs above it: from a camera on the stamp side
+  // farther letters would hide behind the arm), its baseline on the middle line (z ~0), clear of the stem that drops to
+  // the stamp head at the front (the face's v runs from the back edge forward)
+  const cx = f.w / 2 + (o.flow === "left" ? -1 : 1) * 0.14 * s;
+  const y0 = f.h / 2 + 0.05 * s - capH;
+  const R = 1000;
+  const cen = add(add(f.o, mul(f.u, cx)), mul(f.v, y0 + capH / 2));
+  const ink = W.tone(orange ? "#6B3A0C" : "#5E5750", cen);
+  let x = cx - total / 2;
+  return (
+    <g>
+      {[...text].map((ch, i) => {
+        const wl = adv[i] - track;
+        const TL = W.project(add(add(f.o, mul(f.u, x)), mul(f.v, y0)));
+        const TR = W.project(add(add(f.o, mul(f.u, x + wl)), mul(f.v, y0)));
+        const BL = W.project(add(add(f.o, mul(f.u, x)), mul(f.v, y0 + capH)));
+        x += adv[i];
+        const m = [(TR[0] - TL[0]) / (wl * R), (TR[1] - TL[1]) / (wl * R), (BL[0] - TL[0]) / (capH * R), (BL[1] - TL[1]) / (capH * R), TL[0], TL[1]].map((v) => v.toFixed(5)).join(" ");
+        return (
+          <text key={i} transform={`matrix(${m})`} x={(wl * R) / 2} y={capH * R} fontFamily={FONT} fontWeight={700} fontSize={fs * R} textAnchor="middle" fill={ink}>
+            {ch}
+          </text>
+        );
+      })}
+    </g>
+  );
+};
 const GraderSheetEl: React.FC<{ W: World; o: GraderOpts; sh: GraderSheet; uid: string; mask?: string }> = ({ W, o, sh, uid }) => {
   const { sheet } = GRADER;
   const p = sheetPose(o, sh);
@@ -674,9 +724,16 @@ const GraderSheetEl: React.FC<{ W: World; o: GraderOpts; sh: GraderSheet; uid: s
           {sh.mark && ink > 0.01 ? (
             <g opacity={n2(ink)}>
               {sh.mark === "x" ? (
-                <path d={CROSS(W0 * 0.5 * res, H0 * 0.62 * res, 0.36 * res * (sh.markScale ?? 1))} stroke={markC} strokeWidth={0.06 * res * (sh.markScale ?? 1)} strokeLinecap="round" fill="none" />
+                <path d={CROSS(W0 * 0.5 * res, H0 * 0.62 * res, 0.36 * res * (sh.markScale ?? 1))} stroke={markC} strokeWidth={0.06 * res * (sh.markScale ?? 1) * (sh.markWeight ?? 1)} strokeLinecap="round" fill="none" />
               ) : (
-                <path d={TICK(W0 * 0.5 * res, H0 * 0.6 * res, 0.44 * res * (sh.markScale ?? 1))} stroke={markC} strokeWidth={0.07 * res * (sh.markScale ?? 1)} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                <path
+                  d={sh.markStretch !== undefined ? tickStretched(W0 * 0.5 * res, H0 * 0.6 * res, 0.44 * res * (sh.markScale ?? 1), sh.markStretch) : TICK(W0 * 0.5 * res, H0 * 0.6 * res, 0.44 * res * (sh.markScale ?? 1))}
+                  stroke={markC}
+                  strokeWidth={0.07 * res * (sh.markScale ?? 1) * (sh.markWeight ?? 1)}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
               )}
             </g>
           ) : null}
@@ -774,6 +831,7 @@ export const Grader: React.FC<{ W: World; o: GraderOpts; uid: string }> = ({ W, 
         {showBody && two("body", (or) => (
           <RBox W={W} c={o.c} w={sw(body.w)} h={sw(body.h)} d={sw(body.d)} r={0.2 * s} yaw={yaw} mat={om(or, MATS.clay)} uid={`${uid}body${or ? "o" : ""}`} ao={0.8} orange={or} emissive={em(or)} />
         ))}
+        {showBody && o.label && faceSeen(W, g.faces.top) ? two("label", (or) => <GraderLabel W={W} o={o} text={o.label ?? ""} orange={or} />) : null}
         {showBody && sideSeen ? two("side", (or) => <GraderSide W={W} o={o} uid={`${uid}sd${or ? "o" : ""}`} orange={or} />) : null}
         {/* the shelf line: the conveyor (legs, belt, slats), the tray, the out-rack */}
         {showFront && two("shelf", (or) => (
