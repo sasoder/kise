@@ -12,13 +12,13 @@
 //
 // THE MOTION: close on the 12-hour dial standing on its "12 HOURS" block, set back on the left of the stage; its hand is
 // already moving at f0 and sweeps the face cream in one eased move (sweep = lobe f-8..45: ~1/3 at "hours", full at f45).
-// The camera pulls back and swings right in the same lobe (dolly f0-46, pan/orbit f2-56) and the outsider (hood up,
-// laptop hugged), the CATHEDRAL plate and the Anthropic Slack stack come in from the right, landing on the two-shot.
+// The camera pulls back and swings right in the same lobe (dolly f0-46, pan/orbit f2-56) and the outsider (rev 1: the
+// world's 3D clay figure, typing on his open laptop, its lid toward him), the CATHEDRAL plate and the Anthropic Slack stack come in from the right, landing on the two-shot.
 // The cause is the sweep closing: the moment it reaches 12 (f45, "get access" true ~f46) the stack's channel tiles
 // slide out like drawers one after another, bottom up (first moves f46, then every 5 f, 13 f each, last settled f79):
 // each front's # and message bar turn orange and glowing message bars show on the drawer's top. Five of the seven
 // open; the bottom tile (behind the plate) and the fifth stay shut with their slate bars. The outsider turns his head
-// up to the drawers (f44-68). From f56 only a slow continuing orbit + creep in (to f120) and the living drift.
+// up from his screen to the drawers (f44-68). From f56 only a slow continuing orbit + creep in (to f120) and the living drift.
 // Orange = the American labs' algorithmic secrets: here the messages inside Anthropic's Slack (and the stack's core).
 // The dial, outsider and plate are neutral.
 //
@@ -28,9 +28,12 @@
 // top ~y 320, stack base ~y 1015, dial ~325 px wide (x ~85-410), outsider feet ~y 1040, plate y ~950-1040,
 // x ~515-1010 (caps ~49 px). The plate crosses the lower edge of the keep-in only while sliding in (f25-35).
 //
+// REV 1 (user notes): the outsider is the 3D clay figure (paulOutsider3d) built in the spec, in place of the SVG;
+// the Slack mark on the cap is black like the Anthropic one (makeSlackStack mark "black").
+//
 // SOURCES: Cathedral, reported by the Washington Post (Oct 26 2026): its AI agents got in within 12 hours via
 // third-party tools and reached Slack messages (COMMON.md facts). NOT "all of Slack": nothing says ALL and two of the
-// seven channel tiles stay shut. Marks: public/paul-twelve-hours/slack.svg (four colours) and the Anthropic glyph on
+// seven channel tiles stay shut. Marks: public/paul-twelve-hours/slack_black.svg (rev 1, black) and the Anthropic glyph on
 // the world's stack cap; public/paul-twelve-hours/cathedral.png (the wordmark, white on a slate plate).
 // ---------------------------------------------------------------------------
 import React from "react";
@@ -38,7 +41,7 @@ import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { C, D2R, PaulStage, THREE, camTrack, clamp01, ease01, living, orbitCam, type Any, type Orbit, type V3, type WorldSpec } from "./paulWorld";
 import { makeDial, makeSlackStack, yawTo } from "./paulWorldSets";
-import { Outsider, outsiderCarry, type OutsiderPose } from "./paulFolk";
+import { makeOutsider3D, outsiderCarry3D, type OutsiderPose3D } from "./paulOutsider3d";
 
 export const FPS = 24000 / 1001;
 export const DURATION = 91;
@@ -76,7 +79,9 @@ const SPEC: WorldSpec = {
   build: (w) => {
     const { K, T } = w;
     const Dl = makeDial(w, { pos: DIAL, yaw: DIAL_YAW });
-    const Sl = makeSlackStack(w, { x: STACK.X, z: STACK.Z });
+    const Sl = makeSlackStack(w, { x: STACK.X, z: STACK.Z, mark: "black" });
+    // the outsider: the world's 3D clay figure (rev 1), at the stack's foot beside the plate, typing on his laptop
+    const Out = makeOutsider3D(w);
     // the CATHEDRAL plate: a slate slab with the white wordmark, tight round it so it fits under the stack's width;
     // sized so its caps are ~50 px in the end two-shot (w.legible only as a floor), turned to the final camera
     const plateRoot = K.group(w.scene, PLATE_AT, yawTo(camOf(80), PLATE_AT));
@@ -145,6 +150,7 @@ const SPEC: WorldSpec = {
         e.top.visible = v > 0.01;
         e.glow.emissiveIntensity = 0.9 * clamp01(v * 1.5);
       });
+      Out.update(outPose(f), OUT_AT, 1.45);
     };
   },
 };
@@ -160,10 +166,13 @@ const TRACK = camTrack(START, [
 ]);
 const camOf = (f: number) => orbitCam(living(TRACK(f), f));
 
-const outPose = (f: number): OutsiderPose => {
-  // he turns his head up toward the drawers as they open (one lobe, f44-68)
+// his body: turned from the end camera a little toward the stack (world yaw, fixed so he does not swivel with the
+// camera); the laptop opens toward him, so its lid faces him and its back faces us
+const OUT_YAW = yawTo(camOf(80), OUT_AT) + 22;
+const outPose = (f: number): OutsiderPose3D => {
+  // typing, eyes on the screen; as the drawers open his head turns up and over to the stack (one lobe, f44-68)
   const look = ease01(44, 68, f);
-  return outsiderCarry(f, "laptop", { yaw: 24, headPitch: 2 - 10 * look, headYaw: 22 * look });
+  return outsiderCarry3D(f, "laptop", { yaw: OUT_YAW, typing: 1, headPitch: 14 - 26 * look, headYaw: 26 * look });
 };
 
 const SlackInTwelveHours: React.FC<z.infer<typeof schema>> = ({ debug, pick }) => {
@@ -184,7 +193,6 @@ const SlackInTwelveHours: React.FC<z.infer<typeof schema>> = ({ debug, pick }) =
         const pl = P(PLATE_AT);
         return (
           <>
-            <Outsider P={P} at={OUT_AT} heightM={1.45} pose={outPose(f)} uid="s4o" />
             {debug ? (
               <text x={20} y={60} fontSize={30} fill="red">{`f${f} cap ${capTop[1].toFixed(0)} base ${base[1].toFixed(0)} dial ${dl[0].toFixed(0)}-${dr[0].toFixed(0)} feet ${ft[1].toFixed(0)} plate ${P([PLATE_AT[0] - 1.13, 0, PLATE_AT[2]])[0].toFixed(0)}-${P([PLATE_AT[0] + 1.13, 0, PLATE_AT[2]])[0].toFixed(0)} y${pl[1].toFixed(0)}`}</text>
             ) : null}
