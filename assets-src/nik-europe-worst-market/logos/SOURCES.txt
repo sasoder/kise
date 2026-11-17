@@ -1,0 +1,4 @@
+Monzo_2022_logo.svg            https://commons.wikimedia.org/wiki/File:Monzo_2022_logo.svg            public domain (text logo)
+N26_Logo_Black.svg             https://commons.wikimedia.org/wiki/File:N26_Logo_Black.svg             public domain (text logo)
+Starling_Bank_Logo.svg         https://commons.wikimedia.org/wiki/File:Starling_Bank_Logo.svg         public domain (simple geometry); the circle mark = Starling's app icon
+Starling_Bank_Wordmark_Logo.svg https://commons.wikimedia.org/wiki/File:Starling_Bank_Wordmark_Logo.svg public domain (text logo)

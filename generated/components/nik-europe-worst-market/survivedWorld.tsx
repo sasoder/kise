@@ -6,7 +6,9 @@
 //   a bank tile: a phone (portrait ~1:2.5, one small corner radius, a darker screen inset by a thin bezel, a small
 //     camera pill under the screen's top edge), the same soft clay and key light as the slab; the style's dark tone by default
 //     (ground mixed toward board, so the crowd stands out on the lit map), cream for a survivor, amber for Revolut's
-//     payoff; the Revolut phone carries the real R (nik-trend-friend/revolutMark) in ink on its screen.
+//     payoff. Each survivor carries its real mark in ink on its screen (survivedLogos.ts: Revolut's R from f0, Monzo,
+//     Starling and N26 inking in with their cream); the field's screens stay blank. A survivor turns to face the
+//     camera as it orbits (its yaw, from 0 up), so its mark reads face-on in the end frame; the field never turns.
 //   sinking: the tile drops straight down through a slot in the slab (the slab's top face hides what is below it),
 //     darkening toward the dark tone as it goes; the slot opens under it and closes behind it (no hole left).
 //   shadows: nuclearWorld's SoftShadows (MAX-blended alpha: a touching group casts one shadow), a contact strip along
@@ -20,12 +22,13 @@ import * as THREE from "three";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { COLOR } from "../kits/cheeky-pint/stoutShared";
 import { KEY_LIGHT, SHADOW_DIR, SHADOW_LEN, SoftShadows, type NuclearCam, type ShadowItem } from "../scott-nolan-uranium/nuclearWorld";
-import { REVOLUT_R_BOX, REVOLUT_R_D } from "../nik-trend-friend/revolutMark";
 import { SINK_DEPTH, SINK_GONE, SLAB_TOP, TILE, type PlacedBank } from "./survivedGeo";
+import { LOGOS, logoPlacement, type LogoId } from "./survivedLogos";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
 const c01 = (v: number) => Math.max(0, Math.min(1, v));
+const D2R = Math.PI / 180;
 const smooth = (a: number, b: number, v: number) => {
   const t = c01((v - a) / (b - a));
   return t * t * (3 - 2 * t);
@@ -115,30 +118,39 @@ const tileGeometry = () => {
   return g;
 };
 
-// --- the R: the real mark as an ink alpha texture, drawn once ----------------------------------------------------------
-let rTex: Any = null;
-const rTexture = () => {
-  if (rTex) return rTex;
-  const N = 512;
+// --- the marks: each survivor's real mark as an ink alpha texture, drawn once ---------------------------------------
+// The square texture spans the screen's width at the screen's middle; the mark is placed by the family's optical rule.
+const logoTex: Partial<Record<LogoId, Any>> = {};
+const logoTexture = (id: LogoId) => {
+  const have = logoTex[id];
+  if (have) return have;
+  const N = 1024;
   const cv = document.createElement("canvas");
   cv.width = N;
   cv.height = N;
   const ctx = cv.getContext("2d") as CanvasRenderingContext2D;
   ctx.clearRect(0, 0, N, N);
-  // the R fills R_FILL of the screen's width (a square at the screen's middle), optically centred (a hair right: its bowl carries the weight)
-  const R_FILL = 0.64;
-  const sc = (N * R_FILL) / REVOLUT_R_BOX.h;
-  ctx.translate(N / 2 - (REVOLUT_R_BOX.w * sc) / 2 + N * 0.012, N / 2 - (REVOLUT_R_BOX.h * sc) / 2);
-  ctx.scale(sc, sc);
+  const m = LOGOS[id];
+  const pl = logoPlacement(id, N);
+  ctx.translate(pl.tx, pl.ty);
+  ctx.scale(pl.sc, pl.sc);
   ctx.fillStyle = "#fff";
-  ctx.fill(new Path2D(REVOLUT_R_D), "evenodd");
+  if (m.disc) {
+    // Starling: the ink disc, its two strokes knocked out to the tile
+    ctx.beginPath();
+    ctx.arc(m.disc[0], m.disc[1], m.disc[2], 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "destination-out";
+  }
+  for (const d of m.paths) ctx.fill(new Path2D(d), m.rule);
+  ctx.globalCompositeOperation = "source-over";
   const t = new THREE.CanvasTexture(cv);
   t.generateMipmaps = true;
   t.minFilter = THREE.LinearMipmapLinearFilter;
   t.magFilter = THREE.LinearFilter;
   t.anisotropy = 8;
   t.needsUpdate = true;
-  rTex = t;
+  logoTex[id] = t;
   return t;
 };
 
@@ -161,7 +173,7 @@ uniform float uCr;     // dark 0 .. cream 1
 uniform float uAmb;    // amber 0..1
 uniform float uDark;   // sinking: 0 .. the deep tone 1
 uniform float uSweep;  // the light sweep's position across the tile, -0.25 .. 1.25 (off below -0.5)
-uniform float uHasR;
+uniform float uLogoA;  // the mark's ink 0..1 (none on the field)
 uniform sampler2D uR;
 uniform vec4 uScreen;  // screen half width, half height, centre y, corner radius
 uniform vec3 uNotch;   // camera pill half width, half height, centre y
@@ -211,9 +223,9 @@ void main() {
     vec3 pill = mix(face * 1.08, mix(scr, uInk, 0.8), lightTone);
     float pa = (1.0 - smoothstep(-fwidth(sn), fwidth(sn), sn)) * inside;
     col = mix(col, pill, pa);
-    if (uHasR > 0.5) {
+    if (uLogoA > 0.001) {
       vec2 uv = q / (2.0 * uScreen.x) + 0.5;
-      float a = texture2D(uR, uv).a * inside;
+      float a = texture2D(uR, uv).a * inside * uLogoA;
       col = mix(col, uInk, a);
     }
   }
@@ -268,6 +280,8 @@ export type TileState = {
   lift: number;
   /** -1 off, else the sweep position 0..1 */
   sweep: number;
+  /** the mark's ink on the screen, 0..1 (survivors only) */
+  logo: number;
 };
 
 type TileObj = { mesh: Any; mat: Any; slot: Any; slotMat: Any };
@@ -276,7 +290,7 @@ export const BankField: React.FC<{ cam: NuclearCam; banks: PlacedBank[]; states:
   U.uFogRange.value.set(cam.d * fog[0], cam.d * fog[1]);
   const objs = useMemo(() => {
     const geo = tileGeometry();
-    const rt = rTexture();
+    const blank = logoTexture("revolut");
     const slotGeo = new THREE.PlaneGeometry(2 * SLOT_HALF[0] + 0.6, 2 * SLOT_HALF[1] + 0.6);
     const out: Record<string, TileObj> = {};
     for (const b of banks) {
@@ -290,8 +304,8 @@ export const BankField: React.FC<{ cam: NuclearCam; banks: PlacedBank[]; states:
           uAmb: { value: 0 },
           uDark: { value: 0 },
           uSweep: { value: -1 },
-          uHasR: { value: b.revolut ? 1 : 0 },
-          uR: { value: rt },
+          uLogoA: { value: 0 },
+          uR: { value: b.logo ? logoTexture(b.logo) : blank },
           uScreen: { value: new THREE.Vector4(TILE.W / 2 - TILE.BEZEL, TILE.H / 2 - TILE.BEZEL * 1.35, TILE.H / 2, TILE.SCREEN_R) },
           uNotch: { value: new THREE.Vector3(TILE.NOTCH_W / 2, TILE.NOTCH_H / 2, TILE.H - TILE.BEZEL * 1.35 - 0.3 - TILE.NOTCH_H / 2) },
           uH: { value: TILE.H },
@@ -332,6 +346,11 @@ export const BankField: React.FC<{ cam: NuclearCam; banks: PlacedBank[]; states:
     const gone = s.sink >= SINK_GONE;
     o.mesh.visible = !gone;
     o.mesh.position.set(b.x, SLAB_TOP + s.lift - s.sink * (TILE.H + SINK_DEPTH), -b.z);
+    // a survivor faces the orbiting camera (its yaw from 0 up; before the push the camera's yaw is <= ~2, so it stands
+    // as the field does); the field never turns
+    const face = b.survivor ? Math.max(0, cam.yaw) * D2R : 0;
+    o.mesh.rotation.y = -face;
+    o.mat.uniforms.uLogoA.value = b.logo ? c01(s.logo) : 0;
     o.mat.uniforms.uCr.value = c01(s.cream);
     o.mat.uniforms.uAmb.value = c01(s.amber);
     // darkens a step as it goes (half way to the deep tone): the last stub reads as a phone going down, not a hole
@@ -352,8 +371,11 @@ export const BankField: React.FC<{ cam: NuclearCam; banks: PlacedBank[]; states:
     const liftA = 1 / (1 + s.lift * 0.35);
     const vis = smooth(0, 0.6, hv);
     const r = TILE.D / 2 + 0.3;
-    // the contact strip along the base
-    shadows.push({ x: b.x - TILE.W / 2 + r + ox, z: b.z + oz, len: TILE.W - 2 * r, r: r * liftSoft, soft: 0.3 * liftSoft, alpha: vis * liftA, dirX: 1, dirZ: 0 });
+    // the contact strip along the base (turned with a survivor's facing; map z is north)
+    const ux = Math.cos(face);
+    const uz = -Math.sin(face);
+    const hw = TILE.W / 2 - r;
+    shadows.push({ x: b.x - hw * ux + ox, z: b.z - hw * uz + oz, len: TILE.W - 2 * r, r: r * liftSoft, soft: 0.3 * liftSoft, alpha: vis * liftA, dirX: ux, dirZ: uz });
     // the cast toward SHADOW_DIR from the tile's body
     shadows.push({ x: b.x + ox, z: b.z + oz, len: L + TILE.W * 0.42, r: (TILE.D / 2 + 0.45) * liftSoft, soft: 0.6 * liftSoft, alpha: vis * 0.9 * liftA });
   }

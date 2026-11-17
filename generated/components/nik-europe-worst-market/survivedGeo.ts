@@ -4,6 +4,7 @@
 // whose track is private; d and f in log space; it runs from F_PRE so f0 is already moving).
 import type { NuclearCam } from "../scott-nolan-uranium/nuclearWorld";
 import { mapProjectTall } from "../nik-revolut-ipo/revolutGeo";
+import type { LogoId } from "./survivedLogos";
 
 export const DURATION = 223;
 const c01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -16,26 +17,30 @@ export const TILE = { W: 5.0, H: 12.6, D: 1.1, R: 0.55, BEZEL: 0.4, SCREEN_R: 0.
 /** the slab top (WORLD_SLAB.T): the tiles stand on it */
 export const SLAB_TOP = 3.4;
 
-// --- the banks: capitals and big cities, one tile each (London, Paris, Berlin get a few); no names, no logos -------
-export type Bank = { id: string; lon: number; lat: number; dx?: number; dz?: number; survivor?: boolean; revolut?: boolean };
+// --- the banks: capitals and big cities, one tile each (London, Paris, Berlin get a few) ----------------------------
+// The field is anonymous (no names, no logos). The four survivors are the real ones from Revolut's European cohort, each
+// at its home city, with its mark on the cream face (survivedLogos.ts): Revolut (London), Monzo (London), Starling Bank
+// (London) and N26 (Berlin). London's three stand in one short row running north-west from Revolut's tile (min spacing,
+// no overlaps), so from the end camera (looking east-north-east) they read as three phones side by side.
+export type Bank = { id: string; lon: number; lat: number; dx?: number; dz?: number; survivor?: boolean; revolut?: boolean; logo?: LogoId };
 // coastal cities are nudged a little inland so every footprint stands wholly on the land (probe: footprint check)
 export const BANKS: Bank[] = [
-  { id: "london-revolut", lon: -0.12, lat: 51.51, dx: -1.0, dz: 0.4, revolut: true, survivor: true },
-  { id: "london-2", lon: -0.12, lat: 51.51, dx: -7.1, dz: 1.8, survivor: true },
-  { id: "london-3", lon: -0.12, lat: 51.51, dx: -3.6, dz: 4.9 },
-  { id: "manchester", lon: -2.24, lat: 53.48, dx: 0.8, dz: 0.0 },
+  { id: "london-revolut", lon: -0.12, lat: 51.51, dx: -1.0, dz: 0.4, revolut: true, survivor: true, logo: "revolut" },
+  { id: "london-monzo", lon: -0.12, lat: 51.51, dx: -5.0, dz: 5.4, survivor: true, logo: "monzo" },
+  { id: "london-starling", lon: -0.12, lat: 51.51, dx: -7.0, dz: 11.4, survivor: true, logo: "starling" },
+  { id: "cardiff", lon: -3.18, lat: 51.48, dx: -0.1, dz: -0.2 },
   { id: "edinburgh", lon: -3.3, lat: 55.9, dx: -2.2, dz: -2.2 },
   { id: "dublin", lon: -6.6, lat: 53.35, dx: -4.9, dz: -0.7 },
-  { id: "paris", lon: 2.35, lat: 48.86, survivor: true },
+  { id: "paris", lon: 2.35, lat: 48.86 },
   { id: "paris-2", lon: 2.35, lat: 48.86, dx: 6.1, dz: 1.8 },
   { id: "lyon", lon: 4.84, lat: 45.76 },
   { id: "marseille", lon: 5.6, lat: 43.75, dx: -0.4, dz: 1.0 },
   { id: "bordeaux", lon: -0.4, lat: 44.84, dx: 0.8, dz: 0.0 },
   { id: "toulouse", lon: 1.44, lat: 43.6 },
-  { id: "amsterdam", lon: 5.1, lat: 52.2, dx: 1.8, dz: 0.0, survivor: true },
+  { id: "amsterdam", lon: 5.1, lat: 52.2, dx: 1.8, dz: 0.0 },
   { id: "brussels", lon: 4.35, lat: 50.85, dx: 0.4 },
   { id: "luxembourg", lon: 6.13, lat: 49.61 },
-  { id: "berlin", lon: 13.4, lat: 52.52 },
+  { id: "berlin-n26", lon: 13.4, lat: 52.52, survivor: true, logo: "n26" },
   { id: "berlin-2", lon: 13.4, lat: 52.52, dx: 6.5, dz: 1.2 },
   { id: "hamburg", lon: 10.0, lat: 53.55 },
   { id: "munich", lon: 11.58, lat: 48.14 },
@@ -79,22 +84,23 @@ export const PLACED: PlacedBank[] = BANKS.map((b, i) => {
 export const REVOLUT = PLACED.find((b) => b.revolut) as PlacedBank;
 
 // --- the sinking front: one contracting ring from the edges of the continent in toward the survivors ---------------
-/** the ring's centre: the survivors' middle (London, Paris, Amsterdam) */
-export const FRONT_C: [number, number] = (() => {
-  const s = PLACED.filter((b) => b.survivor);
-  return [s.reduce((a, b) => a + b.x, 0) / s.length, s.reduce((a, b) => a + b.z, 0) / s.length];
-})();
+/** the ring's centre, kept where the approved V1 had it (the middle of its London / Paris / Amsterdam survivors), so
+ *  the front runs exactly as approved; N26 simply stands where Berlin's tile was */
+export const FRONT_C: [number, number] = [-30.852, 142.896];
 const distC = (b: PlacedBank) => Math.hypot(b.x - FRONT_C[0], (b.z - FRONT_C[1]) * 1.15);
 const SINKERS = PLACED.filter((b) => !b.survivor);
-const D_MAX = Math.max(...SINKERS.map(distC));
-const D_MIN = Math.min(...SINKERS.map(distC));
+const byId = (id: string) => PLACED.find((b) => b.id === id) as PlacedBank;
+/** V1's outermost and innermost sinkers (Helsinki, Brussels) fix the ring's run; Paris and Amsterdam, now sinkers
+ *  inside it, go with the innermost */
+const D_MAX = distC(byId("helsinki"));
+const D_MIN = distC(byId("brussels"));
 /** the front reaches the outermost bank on FRONT_ON and the innermost on FRONT_OFF; each sinks over SINK_LEN */
 export const FRONT_ON = 116;
 export const FRONT_OFF = 139;
 export const SINK_LEN = 9;
 /** the frame each bank starts down (survivors: never) */
 export const SINK_AT: Record<string, number> = Object.fromEntries(
-  SINKERS.map((b) => [b.id, FRONT_ON + (FRONT_OFF - FRONT_ON) * Math.pow((D_MAX - distC(b)) / (D_MAX - D_MIN), 0.85)]),
+  SINKERS.map((b) => [b.id, FRONT_ON + (FRONT_OFF - FRONT_ON) * Math.pow(c01((D_MAX - distC(b)) / (D_MAX - D_MIN)), 0.85)]),
 );
 /** 0 standing .. 1 gone: an ease-in drop (it starts slowly, then falls through the slot) */
 export const sinkAt = (id: string, f: number) => {
@@ -107,7 +113,8 @@ export const sinkAt = (id: string, f: number) => {
  *  frame its slot closes and it stops drawing (nothing is left on the map after a tile's last visible frame) */
 export const SINK_DEPTH = 0.4;
 export const SINK_GONE = TILE.H / (TILE.H + SINK_DEPTH);
-/** the survivors warm board -> cream while the field empties (f124 -> f146, settled before "survived" ends ~151) */
+/** the survivors warm dark -> cream while the field empties (f124 -> f146, settled before "survived" ends ~151); their
+ *  marks ink in with the second half of the warm (none before the cream) */
 export const WARM: [number, number] = [124, 146];
 
 // --- the Revolut payoff: lift one level and turn amber on "really survived" (f163 -> landed f176), one sweep --------
@@ -122,10 +129,10 @@ const CAM_STIFF = 0.145;
 const CAM_DAMP = 0.59;
 const smoothstep = (t: number) => t * t * (3 - 2 * t);
 const camEase = (u: number, warp = 1) => smoothstep(Math.pow(c01(u), warp));
-type Glide = { f0: number; f1: number; to: Partial<NuclearCam>; warp?: number };
+export type Glide = { f0: number; f1: number; to: Partial<NuclearCam>; warp?: number };
 const LOG = ["d", "f"];
 const F_PRE = -24;
-const track = (start: NuclearCam, glides: Glide[], frames: number): NuclearCam[] => {
+export const track = (start: NuclearCam, glides: Glide[], frames: number): NuclearCam[] => {
   const keys = Object.keys(start) as (keyof NuclearCam)[];
   const tr = (k: string, v: number) => (LOG.includes(k) ? Math.log(v) : v);
   const pos: Record<string, number> = {};
@@ -157,7 +164,7 @@ const track = (start: NuclearCam, glides: Glide[], frames: number): NuclearCam[]
   return out;
 };
 
-const at = (lon: number, lat: number, dx = 0, dz = 0) => {
+export const at = (lon: number, lat: number, dx = 0, dz = 0) => {
   const p = mapProjectTall(lon, lat);
   return { tx: p[0] + dx, tz: p[1] + dz };
 };
@@ -168,10 +175,11 @@ export const CAM_KEYS = {
   wide: { ...at(8.2, 48.9), ty: 0, d: 452, yaw: -3, pitch: 50, cy: 796 } as Partial<NuclearCam>,
   /** the slow drift over the full field while it empties (a turn and a small rise; it runs into the push) */
   drift: { yaw: 2, d: 462, tx: at(7.8, 48.9).tx } as Partial<NuclearCam>,
-  /** the push back in on London: the survivors in shot, Revolut lower middle */
-  end: { ...at(0.7, 50.9), ty: 3.4, d: 140, yaw: 14, pitch: 33, cy: 905 } as Partial<NuclearCam>,
+  /** the push back in on London, turning to look east-north-east so Berlin runs into depth: London's three side by side
+   *  lower left (Revolut nearest the middle), N26 smaller upper right, all four in the keep-in box (probe) */
+  end: { ...at(0.7, 50.9), ty: 3.4, d: 122, yaw: 55, pitch: 32, cx: 574, cy: 962 } as Partial<NuclearCam>,
   /** the living hold: a slow creep on past the last frame (a little closer, a little more yaw) */
-  creep: { d: 130, yaw: 16.5 } as Partial<NuclearCam>,
+  creep: { d: 114, yaw: 57.5 } as Partial<NuclearCam>,
 };
 export const CAM_TRACK = track(
   CAM_KEYS.start,

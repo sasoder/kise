@@ -23,23 +23,31 @@
 // tone so Europe is the lit stage; small islands (Corsica, Sardinia and specks) are dropped (survivedLand.ts).
 // f0 is already moving, close and low on London (the Revolut phone ~240 px tall); one pull-up
 // and out (f-16 -> ~f104) lands on the whole crowded field filling the keep-in box at "50 digital banks". From f116 ONE
-// contracting front runs from the edges of the continent in toward London/Paris/Amsterdam: each tile drops straight
-// down through a slot in the slab exactly its own footprint, darkening to the dark tone (9 f each; the last is down
-// by f148); the slot shuts the frame the tile's top passes below the slab surface, so no mark is left behind.
-// The three anonymous survivors (a second London tile, Paris, Amsterdam) warm dark -> cream as
-// the field empties (f124-146). From f124 the camera pushes back in on London (settled ~f200, then a slow creep); on
-// "really survived" the Revolut tile lifts one level and turns amber (f162 -> landed f175, the R stays ink), one
-// LightSweep crosses the amber at the landing (f175-191, the only click), and the other survivors drop a step dimmer
-// (still cream, still in shot). f191-222: the living hold (camera creep, light pool, grain).
+// contracting front runs from the edges of the continent in toward London (the ring as approved in V1): each tile drops
+// straight down through a slot in the slab exactly its own footprint, darkening to the dark tone (9 f each; the last is
+// down by f148); the slot shuts the frame the tile's top passes below the slab surface, so no mark is left behind.
+// The other three survivors are the real peers from Revolut's European cohort, each at its home city: Monzo and
+// Starling Bank in a short row north-west of Revolut's London tile, N26 in Berlin. They warm dark -> cream as the field
+// empties (f124-146), their marks inking in with the second half of the warm (survivedLogos.ts). From f122 the camera
+// pushes back in on London and turns to look east-north-east (yaw 2 -> 55, settled ~f200, then a slow creep), so
+// Berlin runs into depth: London's three side by side lower left, N26 upper right, all four in the keep-in box; the
+// survivors turn with the camera so their marks read face-on. On "really survived" the Revolut tile lifts one level and
+// turns amber (f162 -> landed f175, the R stays ink), one LightSweep crosses the amber at the landing (f175-191, the
+// only click), and the other survivors drop a step dimmer (still cream, marks at full ink, still in shot).
+// f191-222: the living hold (camera creep, light pool, grain).
 // AMBER = Revolut, the bank that survived (COMMON.md); cream = the survivors; dark tone = everyone else; board = the slab.
 // No numerals on screen: Nik's "50" and "three or four" are his estimates (CRAFT.md); the count of tiles carries them
 // (50 tiles; 4 left).
 //
-// SOURCES: Revolut was founded (2015) and is headquartered in London (its tile stands in London). The R: the 2023
-// Revolut mark, nik-trend-friend/revolutMark.ts (Wikimedia Commons, Revolut_logo.svg, public domain text logo). Land:
+// SOURCES: Revolut was founded (2015) and is headquartered in London (its tile stands in London). Monzo: founded 2015 in
+// London as Mondo, a UK-licensed bank, headquartered in London. Starling Bank: founded 2014 in London by Anne Boden, a
+// UK-licensed bank. N26: founded 2013 in Berlin as Number26, headquartered in Berlin. Marks (public domain on Wikimedia
+// Commons; SVGs and SOURCES.txt in assets-src/nik-europe-worst-market/logos/, path data inline in survivedLogos.ts):
+// File:Revolut_logo.svg (the R, nik-trend-friend/revolutMark.ts), File:Monzo_2022_logo.svg (the "monzo" wordmark),
+// File:Starling_Bank_Logo.svg (the circle mark only), File:N26_Logo_Black.svg (the wordmark with its bars). Land:
 // world-atlas countries-50m (Natural Earth) on nik-revolut-ipo's tall Miller map. City lon/lat: standard values, coastal
-// ones nudged inland so each footprint and its shadow stand wholly on the land (survivedGeo.ts). The banks are anonymous
-// on purpose: no other bank's name or logo.
+// ones nudged inland so each footprint and its shadow stand wholly on the land (survivedGeo.ts). The field (the 46 that
+// sink) is anonymous: no other bank's name or logo.
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
@@ -102,15 +110,26 @@ const statesAt = (f: number): Record<string, TileState> => {
         amber: smooth(LIFT_ON + 1, LIFT_OFF - 2, f),
         lift: LIFT_H * lift,
         sweep: sw > 0 && sw < 1 ? lerp(-0.25, 1.25, sw) : -1,
+        logo: 1,
       };
     } else if (b.survivor) {
-      st[b.id] = { sink: 0, slot: 0, cream: smooth(WARM[0], WARM[1], f) * (1 - SURVIVOR_DIM * smooth(LIFT_ON, LIFT_OFF, f)), amber: 0, lift: 0, sweep: -1 };
+      // the mark inks in with the second half of the warm (on cream, never on the dark face) and stays at full ink
+      // through the dim
+      st[b.id] = {
+        sink: 0,
+        slot: 0,
+        cream: smooth(WARM[0], WARM[1], f) * (1 - SURVIVOR_DIM * smooth(LIFT_ON, LIFT_OFF, f)),
+        amber: 0,
+        lift: 0,
+        sweep: -1,
+        logo: smooth(lerp(WARM[0], WARM[1], 0.4), WARM[1], f),
+      };
     } else {
       // the slot is the tile's own footprint: open while the tile goes down through it, shut the frame the tile's top
       // passes below the slab surface (SINK_GONE), so nothing is left on the map after the tile's last visible frame
       const sink = sinkAt(b.id, f);
       const slot = sink > 0 && sink < SINK_GONE ? smooth(0, 0.03, sink) : 0;
-      st[b.id] = { sink, slot, cream: 0, amber: 0, lift: 0, sweep: -1 };
+      st[b.id] = { sink, slot, cream: 0, amber: 0, lift: 0, sweep: -1, logo: 0 };
     }
   }
   return st;
