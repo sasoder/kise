@@ -20,10 +20,12 @@
 // faint static grain, the Cheeky Pint tile shadow. The Hugging Face mark (its real yellow face, hfWorld HFMark) ends
 // the last strip. Cap height ~92 px (font 124 px); the widest strip row ~845 px.
 //
-// THE MOTION: the name tag's entrance, one strip after the other: each strip slides up 64 px and fades in over 20 f
-// (ease bezier(0.16, 1, 0.3, 1)); its line slides up 24 px and fades over 15 f, 3 f behind it. Starts: "What if" f0,
-// "GPT-10" f3, "did the Hugging" f6, "Face hack?" f12 (rows STAGGER 6 f, the accent 3 f behind its row-mate), so the
-// last strip has settled by ~f26, before "scale it up" (f25-34). Then a static hold to f58: no outro, no idle motion.
+// THE MOTION (round 3, the user: "it should come in a lot faster ... from the first, maybe three frames, you should be
+// able to see the entire text"): a quick snap of the name tag's entrance. Each strip and its line rise 20 px together
+// over 2.5 f (ease bezier(0.16, 1, 0.3, 1)) while the opacity reaches 1 in 1.5 f (cubic ease-out); the strips follow
+// each other 0.75 f apart in reading order ("What if" from f-0.75, "GPT-10" f0, "did the Hugging" f0.75, "Face hack?"
+// f1.5). So f0 is already partly in, the whole title reads by f2-3 (every strip opaque by f3), the last motion ends at
+// f4, and f4-f58 is a static hold: no outro, no idle motion.
 //
 // PLACEMENT: one centred column, stack centred at CENTER_Y over the chest (the user: graphics "down a bit like we
 // usually do"); checked over notes/title_backdrop_f29.png so the top strip stays below the beard.
@@ -77,20 +79,21 @@ const GRAIN = `url("data:image/svg+xml;utf8,${encodeURIComponent(
 const EASE = Easing.bezier(0.16, 1, 0.3, 1);
 const progress = (frame: number, start: number, travel: number) =>
   interpolate(frame, [start, start + travel], [0, 1], { easing: EASE, extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-const STAGGER = 6;
-const PAIR_LAG = 3;
-const STRIP_TRAVEL = 20;
-const STRIP_RISE = 64;
-const TEXT_LAG = 3;
-const TEXT_TRAVEL = 15;
-const TEXT_RISE = 24;
-/** row r starts at r * STAGGER, the second strip in a row PAIR_LAG later (one strip at a time) */
-const startOf = (r: number, i: number) => r * STAGGER + i * PAIR_LAG;
+const fadeIn = (frame: number, start: number, travel: number) =>
+  interpolate(frame, [start, start + travel], [0, 1], { easing: Easing.out(Easing.cubic), extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+const STAGGER = 0.75;
+const FIRST = -0.75;
+const RISE_TRAVEL = 2.5;
+const FADE_TRAVEL = 1.5;
+const RISE = 20;
+/** the k-th strip in reading order starts at FIRST + k * STAGGER */
+const startOf = (k: number) => FIRST + k * STAGGER;
 
 const TitleStrip: React.FC<{ text: string; accent: boolean; hf: boolean; start: number }> = ({ text, accent, hf, start }) => {
   const frame = useCurrentFrame();
-  const s = progress(frame, start, STRIP_TRAVEL);
-  const t = progress(frame, start + TEXT_LAG, TEXT_TRAVEL);
+  // strip and line move as one: the rise eases out over RISE_TRAVEL, the opacity is full after FADE_TRAVEL
+  const rise = (1 - progress(frame, start, RISE_TRAVEL)) * RISE;
+  const op = fadeIn(frame, start, FADE_TRAVEL);
   const ink = accent ? ACCENT_INK : STRIP_INK;
   const mark = TITLE_PX * 0.86;
   return (
@@ -102,8 +105,8 @@ const TitleStrip: React.FC<{ text: string; accent: boolean; hf: boolean; start: 
           background: accent ? ACCENT : STRIP_BG,
           borderRadius: RADIUS,
           filter: TILE_FILTER,
-          opacity: s,
-          transform: `translateY(${((1 - s) * STRIP_RISE).toFixed(3)}px)`,
+          opacity: op,
+          transform: `translateY(${rise.toFixed(3)}px)`,
           overflow: "hidden",
         }}
       >
@@ -122,8 +125,8 @@ const TitleStrip: React.FC<{ text: string; accent: boolean; hf: boolean; start: 
           letterSpacing: 0,
           whiteSpace: "nowrap",
           color: ink,
-          opacity: t,
-          transform: `translateY(${((1 - t) * TEXT_RISE).toFixed(3)}px)`,
+          opacity: op,
+          transform: `translateY(${rise.toFixed(3)}px)`,
         }}
       >
         {text}
@@ -155,7 +158,7 @@ const WhatIfGptTen: React.FC<WhatIfGptTenProps> = ({ rows }) => (
       {rows.map((row, r) => (
         <div key={r} style={{ display: "flex", flexDirection: "row", gap: GAP }}>
           {row.map((l, i) => (
-            <TitleStrip key={i} text={l.text} accent={l.accent} hf={l.hf} start={startOf(r, i)} />
+            <TitleStrip key={i} text={l.text} accent={l.accent} hf={l.hf} start={startOf(rows.slice(0, r).reduce((n, row) => n + row.length, 0) + i)} />
           ))}
         </div>
       ))}
