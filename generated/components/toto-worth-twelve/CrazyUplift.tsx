@@ -12,8 +12,8 @@
 // DURATION: the slot 11.280 -> 17.200 s = 5.92 s x 25 = 148 frames (f0..f147).
 //
 // THE MOTION: one surge. Mercedes' tile stands in the middle with its modest amber value column already
-// settled; the camera, close on it, eases back as a FOOTBALL league tile slides in from the left ("NFL",
-// lands f22) and a BASKETBALL tile from the right ("NBA", lands f38), each lifted while it travels and
+// settled; the camera, close on it, eases back as the NFL tile (the shield) slides in from the left ("NFL",
+// lands f22) and the NBA tile (its logo) from the right ("NBA", lands f38), each lifted while it travels and
 // settling on its contact shadow, then a cream column rises out of each slot to a bit above Mercedes'
 // (f18-40, f34-56). Calm beat ("in its latest"): the camera creeps in and a faint board marker line is
 // drawn out from Mercedes' top across both cream columns (f60-80), so its level is marked. On "crazy
@@ -26,20 +26,22 @@
 // two are one gesture but not a mirror); camera tilt f88-170 (still creeping at f147). No click: the
 // payoff is cream (a sweep on cream is invisible) and the amber is not the subject here.
 // AMBER = Mercedes' money (here its value); cream = the leagues the line names; board = the marker.
-// No numbers, no text: the league glyphs carry NFL / NBA.
+// No numbers, no text: the real NFL shield and NBA logo, stamped in ink on the league tiles (leagueLogos.ts),
+// carry NFL / NBA (user note, Nov 18).
 //
 // SOURCES / DATA: heights are illustrative of direction only (brief): Mercedes' column is its $6B
 // valuation at worthShared VALUE (Kurtz deal, Nov 2025: GBP 4.57B / $5.97B, CNBC 20 Nov 2025); the
 // league columns start a rung above it (US league values rose ~20-40% in a year: Forbes 2025 NFL / NBA
 // lists, Celtics $6.1B, Lakers $10B) and their surge is the "crazy", not a figure. No numeral on screen.
 // ---------------------------------------------------------------------------
-import React from "react";
+import React, { useId } from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { COLOR, GEO, STROKE, StoutStage, amberBandFor, clamp01, easeOutCubic, lerp, smoothstep } from "../kits/cheeky-pint/stoutShared";
+import { COLOR, GEO, STROKE, StoutStage, amberBandFor, clamp01, easeOutCubic, lerp, opticalFit, smoothstep } from "../kits/cheeky-pint/stoutShared";
 import { makeClockCam, makePoolTrack } from "../kits/cheeky-pint/museShared";
 import type { Cam } from "../kits/dwarkesh/outgrowShared";
 import { DATA, DY, FIG, FLOOR, PITCH, TILE_TOP, ValueColumn, X_MERC, sxOf, syOf, valueH } from "./worthShared";
+import { NBA_STAMP, NFL_STAMP, type LeagueStamp } from "./leagueLogos";
 
 export const FPS = 25;
 export const DURATION = 148;
@@ -128,14 +130,53 @@ const offRight = (c: Cam) => c.x + 540 / c.k + GEO.TILE / 2 + 24;
 const X_IN_L = offLeft(CAM.at(BEAT.slideL));
 const X_IN_R = offRight(CAM.at(BEAT.slideR));
 
+// --- the league marks (user note, Nov 18: "add the NBA and NFL logos") -------------------------------------
+// The league tiles are blank ValueColumn tiles (figure "none"); the real mark is stamped on them in
+// COLOR.inkDark (dark parts ink, light parts tile, background dropped), sized by the kit's opticalFit so the
+// shield and the NBA logo read as one family with the Mercedes lockup. Measured: the kit's knocked-out marks
+// show the ground at ~rgb(48,34,14) on the rendered tile, inkDark is (46,30,20): the same stamp.
+/** worthShared ValueColumn's LIFT_DY (not exported): a lifted body rises 6 world px by smoothstep(lift). */
+const VC_LIFT_DY = 6;
+const fitOf = (s: LeagueStamp) => {
+  const [bx, by, bw, bh] = s.box;
+  const fit = opticalFit(bw, bh, s.fill, s.cy, GEO.TILE);
+  return { sc: fit.sc, ox: fit.cx - (bx + bw / 2) * fit.sc, oy: fit.cy - (by + bh / 2) * fit.sc };
+};
+const FIT = { NFL: fitOf(NFL_STAMP), NBA: fitOf(NBA_STAMP) };
+const LeagueMark: React.FC<{ x: number; lift: number; stamp: LeagueStamp; fit: { sc: number; ox: number; oy: number } }> = ({ x, lift, stamp, fit }) => {
+  const id = `lg${useId().replace(/[^A-Za-z0-9_-]/g, "_")}`;
+  const T = GEO.TILE;
+  const x0 = x - T / 2;
+  const y0 = FLOOR - VC_LIFT_DY * smoothstep(lift) - T;
+  return (
+    <g>
+      <defs>
+        <mask id={id} maskUnits="userSpaceOnUse" x={x0} y={y0} width={T} height={T}>
+          <g transform={`translate(${x0 + fit.ox} ${y0 + fit.oy}) scale(${fit.sc})`}>
+            <g transform={stamp.transform}>
+              {stamp.ink.map((d, i) => (
+                <path key={`i${i}`} d={d} fill="#fff" />
+              ))}
+              {stamp.holes.map((d, i) => (
+                <path key={`h${i}`} d={d} fill="#000" />
+              ))}
+            </g>
+          </g>
+        </mask>
+      </defs>
+      <rect x={x0} y={y0} width={T} height={T} fill={COLOR.inkDark} mask={`url(#${id})`} />
+    </g>
+  );
+};
+
 const CrazyUplift: React.FC<z.infer<typeof schema>> = () => {
   const f = useCurrentFrame();
   const cam = CAM.at(f);
   const k = cam.k;
   const band = amberBandFor(cam);
   const leagues = [
-    { x: slide(f, BEAT.slideL, X_IN_L, XL), t: (f - BEAT.slideL) / BEAT.slideF, h: leagueH(f, 0), fig: FIG.NFL },
-    { x: slide(f, BEAT.slideR, X_IN_R, XR), t: (f - BEAT.slideR) / BEAT.slideF, h: leagueH(f, 1), fig: FIG.NBA },
+    { x: slide(f, BEAT.slideL, X_IN_L, XL), t: (f - BEAT.slideL) / BEAT.slideF, h: leagueH(f, 0), stamp: NFL_STAMP, fit: FIT.NFL },
+    { x: slide(f, BEAT.slideR, X_IN_R, XR), t: (f - BEAT.slideR) / BEAT.slideF, h: leagueH(f, 1), stamp: NBA_STAMP, fit: FIT.NBA },
   ];
   // the marker: drawn out both ways from Mercedes' top edge by a moving tip
   const m = smoothstep((f - BEAT.mark0) / BEAT.markF);
@@ -147,18 +188,20 @@ const CrazyUplift: React.FC<z.infer<typeof schema>> = () => {
       <ValueColumn x={XM} k={k} figure={FIG.MERC} glass={HM} fill={HM} fillTone="amber" glassHi={1} amberBand={band} />
       {leagues.map((L, i) =>
         L.t <= 0 ? null : (
-          <ValueColumn
-            key={i}
-            x={L.x}
-            k={k}
-            figure={L.fig}
-            glass={L.h}
-            fill={L.h}
-            fillTone="cream"
-            glassHi={1}
-            lift={1 - smoothstep(L.t)}
-            amberBand={band}
-          />
+          <g key={i}>
+            <ValueColumn
+              x={L.x}
+              k={k}
+              figure={{ kind: "none" }}
+              glass={L.h}
+              fill={L.h}
+              fillTone="cream"
+              glassHi={1}
+              lift={1 - smoothstep(L.t)}
+              amberBand={band}
+            />
+            <LeagueMark x={L.x} lift={1 - smoothstep(L.t)} stamp={L.stamp} fit={L.fit} />
+          </g>
         ),
       )}
       {m > 0 ? (
