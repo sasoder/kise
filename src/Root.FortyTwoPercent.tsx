@@ -1,7 +1,7 @@
 import {Composition} from 'remotion';
 import FortyTwoPercent, {DURATION, FPS, defaultProps, schema} from '../generated/components/toto-female-fans/FortyTwoPercent';
 
-// Private render entry for FortyTwoPercent (toto-female-fans; Cheeky Pint style (stout)): the screen over the full stand rolls up 42%, the men drain to board and the 42 women keep their amber.
+// Private render entry for FortyTwoPercent (toto-female-fans; Cheeky Pint style (stout)): a pie chart on the stout board: the amber 42% slice sweeps open with its odometer and lifts out as FEMALE FANS.
 // Opaque 1080x1920, 25 fps, 65 frames.
 export const RemotionRoot = () => (
   <Composition
