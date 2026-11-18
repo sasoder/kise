@@ -14,8 +14,8 @@
 // THE MOTION: f0 close on the modest grandstand (five tiers stepping up and back, stairs in three aisles, a cantilever
 // roof on thin posts; ~840 px wide), tiers 0-2 seated, the top two tiers' sage seats still empty, a file of fans
 // climbing each side aisle's stairs out of the concourse behind the front wall and filing into its half-tier; each
-// block sits down together (tier 3 ~f7, tier 4 ~f19: the stand is full before "in"). On the big screen above the
-// roof the race is live: a cream F1 car crosses the screen's track every 44 frames. From f20 the bank beside and behind
+// block sits down together (tier 3 ~f7, tier 4 ~f19: the stand is full before "in"). (r0-r3: the big screen above the roof showed the race;
+// removed in rev 1, see below.) From f20 the bank beside and behind
 // the stand fills, row by row from the bottom: each row a file walking in from beyond both frame edges at one
 // constant pace (BANK_V 46 px/f, an eased 4-frame stop), the rows level with the stand stopping tucked against its
 // stepped side, the higher rows meeting behind the screen; each row stops 4 frames after the pulling-out frame
@@ -27,6 +27,14 @@
 // band from f88 on), a cream island in a bank of fans that climbs to the crest at y ~195 and runs off both frame
 // edges, a thin band of trees and sky above, the track thinned below; flags waving, bodies swaying, the race still
 // running on the screen.
+// REV 1 (user, Nov 18: "the TV screen ... isn't necessary. Have cars going by on the actual track"): the big screen
+// and its posts are gone (FansStage screen={false}; the bank's fans behind where it stood are drawn). Instead cut 34's
+// cream F1 card car (paddockWorld's F1Card, imported: livery stripe, halo, helmet, wings) races past on the real track
+// in front of the stand, in the near lane (z -1288, the middle of the asphalt's near half), left to right at one
+// constant 90 world px a frame (0.9 m), entering and leaving through the frame edges, never stopping: pass 1 one car
+// (in frame f9-21), pass 2 two cars nose to tail (f55-77), pass 3 one car (f88-105); f106-118 the track is clear.
+// Their ground line runs y ~1725 (f0-48, the dead bottom zone), rises with the tilt to ~1380 (f72) and rests ~1180
+// (f88+): moving context through the caption bands, nothing parked there. Every other frame value is as approved.
 // CAUSE: every fan arrives on foot (up the stairs out of the concourse, or walking in from beyond the frame edge);
 // nobody appears in place. Nothing passes over a seated fan (each half-tier fills an empty tier).
 // AMBER = F1's fans (every fan's scarf); cream = the stand (what was built), board = context. No text, no numbers.
@@ -36,8 +44,10 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
-import { clamp01 } from "../kits/cheeky-pint/stoutShared";
-import { FansStage, type FanCam, type Terrace } from "./fansWorld";
+import { COLOR, clamp01, mixHex } from "../kits/cheeky-pint/stoutShared";
+import { FansStage, TRACK_Z, kAt, layerTransform, type FanCam, type Terrace } from "./fansWorld";
+import { F1Card, F1_DIM } from "./paddockWorld";
+import { M as PADDOCK_M } from "../toto-champion-eight/champShared";
 
 export const FPS = 25;
 export const DURATION = 119;
@@ -107,9 +117,52 @@ export const hillT44 = (t: Terrace) => {
   return v;
 };
 
+// --- rev 1: the race on the actual track (the screen is gone) ----------------------------------------------------
+/** the near lane: the middle of the asphalt's near half (world depth z), and the cars' one constant speed (world px a
+ *  frame, M = 100 px/m: 0.9 m a frame) */
+export const RACE44 = {
+  z: TRACK_Z.near + (TRACK_Z.near - TRACK_Z.far) * -0.25,
+  v: 90,
+} as const;
+/** each car: the frame its cockpit crosses world x 0 (the stand's centre line), and its livery (cut 34's three cars) */
+const CARS = [
+  { tc: 16, tone: COLOR.cream, accent: "#C47B5A", helmet: "#737D8A" },
+  { tc: 62, tone: COLOR.cream, accent: "#C47B5A", helmet: "#737D8A" },
+  { tc: 69, tone: mixHex(COLOR.cream, COLOR.board, 0.12), accent: "#737D8A", helmet: "#C47B5A" },
+  { tc: 97, tone: mixHex(COLOR.cream, COLOR.board, 0.22), accent: "#949A6A", helmet: "#9A6878" },
+] as const;
+/** a car's cockpit x (fans world px) at frame f */
+export const carX = (tc: number, f: number) => RACE44.v * (f - tc);
+/** the car's ends from its cockpit (fans world px; the card car is drawn in champShared's M = 400 px/m) */
+const CAR_REAR = F1_DIM.rear * 100;
+const CAR_FRONT = F1_DIM.front * 100;
+const PK = 100 / PADDOCK_M;
+const raceOnTrack = (f: number) => (c: FanCam) => {
+  const kz = kAt(c, RACE44.z);
+  const half = 560 / kz;
+  return (
+    <g transform={layerTransform(c, RACE44.z)}>
+      {CARS.map((car, i) => ({ car, i }))
+        .slice()
+        .reverse()
+        .map(({ car, i }) => {
+          const x = carX(car.tc, f);
+          // only while some of it is in frame (it enters and leaves through the frame's edges, never parked)
+          if (x + CAR_FRONT < c.x - half || x + CAR_REAR > c.x + half) return null;
+          // the spokes turn a steady 21 deg a frame (forward under the 72 deg spoke symmetry), as cut 34
+          return (
+            <g key={i} transform={`translate(${x.toFixed(3)} 0) scale(${PK})`}>
+              <F1Card x={0} y={0} tone={car.tone} accent={car.accent} helmet={car.helmet} spin={(f * 21 + i * 40) % 360} bob={1.4 * Math.sin(f * 2.3 + i)} />
+            </g>
+          );
+        })}
+    </g>
+  );
+};
+
 const BiggerThanTheStands: React.FC<z.infer<typeof schema>> = () => {
   const S = useCurrentFrame();
-  return <FansStage S={S} T={S} cam={camAt(S)} screenLit={0} hillT={hillT44} />;
+  return <FansStage S={S} T={S} cam={camAt(S)} screen={false} onTrack={raceOnTrack(S)} hillT={hillT44} />;
 };
 
 export default BiggerThanTheStands;

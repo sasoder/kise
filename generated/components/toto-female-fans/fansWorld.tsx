@@ -32,6 +32,9 @@ import { CLOTH, HAIR, SKIN, type HairStyle } from "../scott-free-wifi/cabinCast"
 //   FanCam      { x, k, gy, dx?, dy? }: the world x on the frame's centre column, the scale on the stand's plane
 //               (screen px per world px), and the screen y of the ground line under the stand.
 //
+//   screen      (default true) the big screen on its posts; false = no screen, and the bank behind it is drawn.
+//   onTrack     (c) => nodes drawn over the track's asphalt (TRACK_Z: far -650 .. near -1500), e.g. cut 44 rev 1's cars.
+//
 // UNITS. World px, M = 100 px per metre. x runs right (0 = the stand's centre), y is DOWN (0 = the ground; heights are
 // negative y), z is the depth from the stand's front plane (0) away from the camera (+ = farther). A level pinhole
 // camera D = 25 m in front of the stand: a plane at depth z scales by k * D / (D + z) about the frame's centre.
@@ -649,7 +652,15 @@ export type FansStageProps = {
   fenceRow?: boolean;
   /** each bank row's stop frame on the crowd clock */
   hillT?: (t: Terrace) => number;
+  /** the big screen on its posts above the roof (default true; cut 44 rev 1 passes false: no screen, no posts, and the
+   *  bank's fans behind where it stood are drawn) */
+  screen?: boolean;
+  /** drawn over the track's asphalt (screen space, after the near verge): cut 44 rev 1's cars racing past. Use
+   *  `layerTransform(c, z)` for a depth's transform. */
+  onTrack?: (c: FanCam) => React.ReactNode;
 };
+/** the track's asphalt: its far edge (by the tyre wall) and its near edge (world depth z) */
+export const TRACK_Z = { far: -650, near: -1500 } as const;
 
 const CLOUDS = [
   { x: 150, h: 2300, w: 420, t: 26, a: 0.3, v: 0.16 },
@@ -658,7 +669,7 @@ const CLOUDS = [
   { x: 1300, h: 3150, w: 480, t: 14, a: 0.24, v: 0.08 },
 ];
 
-export const FansStage: React.FC<FansStageProps> = ({ S, T, cam, screenLit = 0, screenOverlay, wave, fenceRow = true, hillT = defaultHillT }) => {
+export const FansStage: React.FC<FansStageProps> = ({ S, T, cam, screenLit = 0, screenOverlay, wave, fenceRow = true, hillT = defaultHillT, screen: withScreen = true, onTrack }) => {
   const uid = uidOf(useId());
   const c = cam;
   const k0 = kAt(c, 0);
@@ -752,7 +763,7 @@ export const FansStage: React.FC<FansStageProps> = ({ S, T, cam, screenLit = 0, 
         if (headTop > CREST(xr) - 8) continue;
         // hidden behind the stand or the screen
         if (headTop < STAND.ROOF_TOP && Math.abs(xr) + halfW < standHW(headTop)) continue;
-        if (feet > -SCREEN.bottom + 10 && headTop < -SCREEN.top && Math.abs(xr) + halfW < SCREEN.x1) continue;
+        if (withScreen && feet > -SCREEN.bottom + 10 && headTop < -SCREEN.top && Math.abs(xr) + halfW < SCREEN.x1) continue;
         const woman = hash(sd * 4.3) < 0.42;
         const spec = fanSpec(sd, woman, 0.05);
         // a file faces where it walked in, before and after it stops (no flip on the stop)
@@ -1043,8 +1054,8 @@ export const FansStage: React.FC<FansStageProps> = ({ S, T, cam, screenLit = 0, 
     }
     return <g key={key}>{out}</g>;
   };
-  const asphaltFar = -650;
-  const asphaltNear = -1500;
+  const asphaltFar = TRACK_Z.far;
+  const asphaltNear = TRACK_Z.near;
   const fore = (
     <g key="fore">
       {band(-110, 0, mixHex(TRACK_COLOR.asphaltLight, COLOR.cream, 0.45), "walk")}
@@ -1112,7 +1123,7 @@ export const FansStage: React.FC<FansStageProps> = ({ S, T, cam, screenLit = 0, 
           <path d={hillD} fill={`url(#${uid}hill)`} />
           {terraceLines}
           {hillRows}
-          {screen}
+          {withScreen ? screen : null}
           {standBack}
           {roof}
           {rows}
@@ -1124,6 +1135,7 @@ export const FansStage: React.FC<FansStageProps> = ({ S, T, cam, screenLit = 0, 
         {fore2}
         {tyreWall}
         {track}
+        {onTrack ? onTrack(c) : null}
       </svg>
       <AbsoluteFill style={{ background: VIGNETTE }} />
       <FansGrain S={S} />

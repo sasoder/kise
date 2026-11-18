@@ -16,8 +16,10 @@
 // from behind three-quarter, leaning in, glued to the race. The screen's light turns them and the room AMBER, rising
 // with the pull to full by "factor" (f50): soft gradient light, no strokes, on the wall round the TV, the sideboard
 // top, the screen-facing side of each head (the cheek of the faces in profile) and shoulders, and the sofa back's top.
-// The daughter's arm rises from behind the sofa in one eased lift (one vertical plane, the elbow never flaring out)
-// and points at the screen (f34-48, pointing by "factor"). f56-64 a slow creep in: the race still running.
+// On "Netflix" (f42) the daughter bounces up onto her knees and leans toward the screen: one eased hop (rise from
+// f37, the peak f43, a small dip and settle by ~f54), her shoulders rising ~0.08 m and moving 0.12 m toward the TV,
+// her pigtails flicking. No arm or hand is ever drawn: her hands stay below the sofa back the whole cut (rev 1: the
+// raised pointing arm read as a rude gesture and was cut). f56-64 a slow creep in: the race still running.
 // AMBER = F1's fans: the screen's light on the family and on the room (one bloom, fixed); nothing else glows. The
 // race in the screen carries no grain of its own: the room's grain is the one grain layer.
 //
@@ -26,7 +28,7 @@
 // (toto-champion-eight). No text, no numbers.
 // ---------------------------------------------------------------------------
 import React from "react";
-import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { AbsoluteFill, spring, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { COLOR, clamp01, smoothstep } from "../kits/cheeky-pint/stoutShared";
 import { CLOTH, HAIR, SKIN, ROOM, RoomBack, RoomFinish, RoomFront, TvGlass, TvShow, type Member, type RoomCam } from "./livingRoom";
@@ -41,8 +43,7 @@ export const BEAT = {
   pullTo: 50,
   amberFrom: 10,
   amberTo: 50, // full by "factor" f48
-  pointFrom: 34,
-  pointTo: 48, // the hand points at the screen by "factor"
+  hopFrom: 37, // the daughter's bounce onto her knees: rising from f37, up by "Netflix" f42, settled ~f54
 } as const;
 
 // --- the camera: one pull back from f0, part dolly (the camera backs away over the family's heads: true parallax),
@@ -100,10 +101,16 @@ const blink = (f: number, at: number[]) => {
   }
   return 0;
 };
-export const pointAt = (f: number) => clamp01((f - BEAT.pointFrom) / (BEAT.pointTo - BEAT.pointFrom));
+/** the daughter's bounce: a spring from 0 (seated) to 1 (up on her knees) with one small overshoot (the hop) and a
+ *  settle; `lean` toward the screen follows a softer spring so the body rises first, then reaches forward */
+export const hopAt = (f: number) =>
+  f <= BEAT.hopFrom ? 0 : spring({ frame: f - BEAT.hopFrom, fps: FPS, config: { damping: 11, stiffness: 170, mass: 0.9 } });
+export const reachAt = (f: number) =>
+  f <= BEAT.hopFrom ? 0 : spring({ frame: f - BEAT.hopFrom - 2, fps: FPS, config: { damping: 16, stiffness: 90 } });
 const familyAt = (f: number): Member[] => {
   const l = lean(f);
-  const pu = pointAt(f);
+  const hu = hopAt(f);
+  const ru = reachAt(f);
   const breathe = (s: number) => 0.004 * Math.sin(f / 9 + s);
   return [
     {
@@ -122,8 +129,8 @@ const familyAt = (f: number): Member[] => {
     },
     {
       x: 0.02,
-      z: -2.5 + 0.05 * l,
-      shoulder: 0.92 - 0.02 * l + breathe(2),
+      z: -2.5 + 0.05 * l + 0.12 * ru,
+      shoulder: 0.92 - 0.02 * l + breathe(2) + 0.08 * hu,
       R: 0.14,
       hw: 0.16,
       skin: SKIN.light,
@@ -131,10 +138,13 @@ const familyAt = (f: number): Member[] => {
       style: "pony",
       top: CLOTH.terracotta,
       turn: 0,
-      tilt: -2 * pu,
+      tilt: -2 * Math.min(1, ru),
       blink: 0,
-      point: { hand: [0.3, 1.4, -1.85], u: pu },
-      ponySwing: 5 * Math.sin(f / 6) * Math.exp(-Math.max(0, f - 40) / 18) * (f > 36 ? 1 : 0.3),
+      point: null,
+      // the pigtails: the old idle swing, then a flick that follows the hop's vertical speed (they lag the head)
+      ponySwing:
+        5 * Math.sin(f / 6) * Math.exp(-Math.max(0, f - 40) / 18) * (f > 36 ? 1 : 0.3) +
+        60 * (hopAt(f - 1) - hopAt(f - 2)),
     },
     {
       x: 0.57,
