@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------
 // TwelveMonthShow (toto-female-fans, cut 10). Cheeky Pint style, the picture-book world (styles/cheeky-pint.md).
-// Opaque 1080x1920, 25 fps, 140 frames. World: paddockWorld.tsx (the season street, on trackWorld's circuit and camera).
+// Opaque 1080x1920, 25 fps, 140 frames. World: paddockWorld.tsx (THE ONE SHOW: one motorhome wall, its flip calendar,
+// the two bosses, one camera op, one season tree), on trackWorld's stage (sky, grain, vignette).
 //
 // CHECK LINE: "F1's off-track drama runs all year round, and the cameras film every bit of it."
 //
@@ -10,46 +11,32 @@
 // basically 65 · a 73 · 12 78 · month 84 · live 92 · reality 109 · show 120 (ends ~130) · But 137.
 // DURATION: the slot 10.400 -> 16.000 s = 5.60 s x 25 = 140 frames (f0..f139).
 //
-// THE MOTION (round 2: no pull-out to a wide). f0 ("politics outside of the sport"): close on JANUARY (its pennant
-// overhead, snow on the roof): two team bosses in headsets nose to nose, centred and unblocked (~450 px tall), the left one
-// jabbing a finger and shouting, the right one leaning back with arms folded; a camera op and a boom op film them from the
-// left, a camera op from the right (amber tallies), a walking crew passes in the foreground. A slow creep. From f22 the
-// camera eases into one constant truck to the right (full speed by f46) while settling from the close (k 0.63) to the
-// street scale (k 0.50, figures ~360 px), and the YEAR PASSES at a readable size, ~8.5 frames a month: each month one
-// unit front, one big pennant (cap ~44 px), one drama in one pose, one crew filming it; walking TV crews in the
-// foreground (nearer, larger, cut by the bottom) slide past faster (parallax). FEB contract signing, MAR press
-// conference, APR "no comment", MAY boss on the phone, JUN driver storming out of the garage, JUL handshake with
-// crossed fingers, AUG protest letter, SEP whisper, OCT sulking driver, NOV driver leaving with a box, DEC a boss on the
-// phone in the snow beside a snowman. The truck eases out f104-f130 with DECEMBER centred, still filmed, and next
-// JANUARY's pennant and crew entering at the right edge: the year starts over. Settled and alive to f139 (snow falls,
-// gestures, a slow creep on).
-// AMBER = F1's fans, the audience: only the TV cameras' tally lights glow; cream = the subject, board = context.
+// THE MOTION (revision 1: "a bit overwhelming ... make it more easy to understand"). ONE place, one slow push-in from f0
+// (x1.16 by f139, eased out, still creeping at the end). A team motorhome wall; on it a big flip calendar (cream pages,
+// the month in ink, Kräftig caps); under it two team bosses in headsets arguing; on the left ONE TV camera op filming
+// them, its tally amber; on the right ONE tree carrying the seasons. The calendar turns JAN -> FEB -> ... -> DEC, every
+// change a page turning over the top (it lifts off the pad, foreshortens, flips over the binding showing its back and
+// drops behind the board): slow at first (pages turn f14, f36, f56: FEB, MAR, APR), then faster and faster from
+// "12 month" (f75 MAY ... f110 DEC, the last turns ~5 frames apart). The season is driven by the pages turned (cause:
+// the calendar): buds then blossom (FEB-APR), leaves (APR-MAY), a pale summer sun rising over the roof (MAY-AUG),
+// autumn colour (AUG-SEP), the leaves coming off and fluttering down (SEP-NOV), bare. Snow begins to fall from f97 (the
+// flakes enter from above the frame), and settles on the roof (f104+), the calendar's board, the branches, the bosses'
+// heads and shoulders (f120+) and the floor (f124+). DEC holds in the snow; on "show" the page turns once more to JAN
+// (f126-f136: the show never stops), settled and alive to f139 (snow falling, the argument, the camera rolling).
+// The bosses change pose every few months (one eased blend each, 7-10 frames): A jabs / B arms folded (f0); B jabs
+// back / A folds (f30); B turns away, a card turn, arms folded, and steps off / A pleads (f60); B turns back, both jab (f86); A throws
+// up his hands, spread wide / B folds (f102); A jabs / B folds again (f118), as at the start.
+// AMBER = F1's fans, the audience: only the camera's tally light glows. No numbers; the months are the only text.
 //
-// SOURCES: none (no figures, no logos; team-neutral units).
+// SOURCES: the calendar's day grids follow 2026 (Mon-first weeks). No figures, no logos (team-neutral).
 // ---------------------------------------------------------------------------
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { z } from "zod";
 import { clamp01, lerp, smoothstep } from "../kits/cheeky-pint/stoutShared";
-import { OnLane, TrackStage, laneK, truck, type TrackCam } from "../toto-champion-eight/trackWorld";
+import { TrackStage, type TrackCam } from "../toto-champion-eight/trackWorld";
 import { M } from "../toto-champion-eight/champShared";
-import {
-  BoomOp,
-  CAST,
-  CameraOp,
-  MW,
-  MonthStreet,
-  MonthUnit,
-  PADDOCK,
-  PaddockFence,
-  PaddockFloor,
-  SeasonBunting,
-  SeasonSnow,
-  dramaX,
-  mi,
-  paddockCam,
-  type FigSpec,
-} from "./paddockWorld";
+import { OneShowScene, SHOW, SnowFlurry, bossAt, pageTheta, paddockCam, type BossKey, type ShowSnow } from "./paddockWorld";
 
 export const FPS = 25;
 export const DURATION = 140;
@@ -57,118 +44,103 @@ export const schema = z.object({});
 export const defaultProps = schema.parse({});
 
 const ss = (a: number, b: number, f: number) => smoothstep((f - a) / (b - a));
-const ss5 = (a: number, b: number, f: number) => {
-  const u = clamp01((f - a) / (b - a));
-  return u * u * u * (u * (6 * u - 15) + 10);
-};
 
-// --- the camera: one truck along the street (ease in, constant, ease out), the close settling to the street scale --------
-const STREET = PADDOCK.street;
-const HOMES = PADDOCK.street + 0.9 * M;
-const KS = [0.63, 0.5] as const;
-const ZOOM = [20, 54] as const;
+// --- the calendar: each page's turn [start frame, frames] (page j turns month j over to month j + 1) ----------------------
+export const FLIPS: [number, number][] = [
+  [14, 14], // JAN -> FEB ("outside")
+  [36, 13], // -> MAR ("sport")
+  [56, 12], // -> APR ("that is")
+  [75, 10], // -> MAY ("12 month": faster and faster)
+  [83, 9],
+  [89.5, 8],
+  [95, 7],
+  [99.5, 6.5],
+  [103.5, 6],
+  [107, 5.5],
+  [110.5, 6], // -> DEC (lands f116.5)
+  [126, 10], // DEC -> JAN again (on "show")
+];
+export const turnsAt = (f: number) => FLIPS.map(([a, d]) => clamp01((f - a) / d));
+/** calendar time (0 = JAN .. 12 = the next JAN): the pages turned so far, each counted as it passes over */
+export const calAt = (f: number) => turnsAt(f).reduce((acc, p) => acc + smoothstep(pageTheta(p) / 180), 0);
+
+// --- the snow: flakes from f97; settling on each surface once the flakes reach it -------------------------------------
+const SNOW_START = 97;
+export const snowAt = (f: number): ShowSnow => ({
+  roof: ss(104, 120, f),
+  cal: ss(106, 120, f),
+  tree: ss(108, 124, f),
+  people: ss(120, 136, f),
+  ground: ss(124, 140, f),
+});
+
+// --- the camera: one slow push-in on the calendar and the bosses, from f0, eased out (still creeping at the end) ------------
+const ZP = -19 * M;
 const DS = 8 * M;
 const EYE = 1.6 * M;
-/** the street's ground line on screen (the feet), after the clip's 190 px shift */
-const GY = 1070;
-const X0 = dramaX(0);
-/** the end: December's drama a touch left of centre (its snowman and boss centred), next January entering at the right */
-const X1 = dramaX(11) - 70;
-const T_END = 130;
-const prof = (f: number) => 0.015 + 0.985 * ss(22, 46, f) - 0.965 * ss(104, T_END, f);
-const V = (X1 - X0) / truck(T_END, prof);
-export const camX = (f: number) => X0 + V * truck(f, prof);
-const zoomP = (f: number) => ss5(ZOOM[0], ZOOM[1], f);
-const ksAt = (f: number) => Math.exp(lerp(Math.log(KS[0]), Math.log(KS[1]), zoomP(f))) * (1 + 0.012 * ss(0, 22, f)) * (1 + 0.02 * ss(124, 139, f));
-export const camAt = (f: number): TrackCam => paddockCam({ x: camX(f), ks: ksAt(f), Ds: DS, eye: EYE, gy: GY });
-
-// --- the walking crews in the foreground: a nearer layer (k x 1.32 of the street, feet low in the frame, cut by the bottom),
-// walking right along the street, slower than the camera trucks, so they slide past faster than the street (parallax) -----
-const FG_K = 1.32;
-const FG_GAP = 1500;
-const FG_WALK = 20;
-const FG0 = -600;
-/** January's right-hand camera op at the opening: nearer (the foreground lane), bottom right, filming the bosses */
-const FG_RIGHT_X = dramaX(0) + 330 / (KS[0] * FG_K);
-const fgK = (f: number) => ksAt(f) * FG_K;
-const fgGround = (f: number) => lerp(1690, 1585, zoomP(f));
-const FG_SPECS: FigSpec[] = [CAST.camB, CAST.camA, CAST.camC];
-const STEP = 354;
-
-const FgCrew: React.FC<{ j: number; f: number }> = ({ j, f }) => {
-  const x = FG0 + j * FG_GAP + FG_WALK * f;
-  const ph = (x / STEP) * Math.PI * 2;
-  const k = fgK(f);
-  const spec = FG_SPECS[((j % 3) + 3) % 3];
-  const withBoom = ((j % 2) + 2) % 2 === 0;
-  return (
-    <g>
-      {withBoom ? (
-        <BoomOp x={x - 260} over={x + 380} face={1} k={k} S={f} spec={{ ...CAST.boom, top: CAST.boom.top }} seed={j * 3 + 1} walk={ph + 1.9} stride={0.75} ang={-3} />
-      ) : null}
-      <CameraOp x={x} y={0} spec={spec} face={1} k={k} walk={ph} stride={0.75} aim={-10 + 1.5 * Math.sin(f * 0.07 + j)} camSize={0.9} />
-    </g>
-  );
+const KS0 = 0.66;
+/** the people's ground line at f0 (screen, after the clip's 190 px shift) and the push's fixed point */
+const GY0 = 1235;
+const FY = 700;
+const PUSH = 1.14;
+const pushE = (f: number) => {
+  const u = clamp01(f / (DURATION - 1));
+  return 0.85 * (1 - Math.pow(1 - u, 1.8)) + 0.15 * u;
 };
+export const camAt = (f: number): TrackCam => {
+  const e = pushE(f);
+  const r = Math.exp(Math.log(PUSH) * e);
+  return paddockCam({ x: lerp(0, -30, e), ks: KS0 * r, Ds: DS, eye: EYE, gy: FY + (GY0 - FY) * r, lane: ZP });
+};
+
+// --- the argument ------------------------------------------------------------------------------------------------------
+const KEYS_A: BossKey[] = [
+  { f: 0, pose: "jab", face: 1 },
+  { f: 30, pose: "fold", face: 1, dur: 10 },
+  { f: 60, pose: "plead", face: 1, dur: 10 },
+  { f: 86, pose: "jab", face: 1, dur: 8 },
+  { f: 102, pose: "handsUp", face: 1, dur: 7 },
+  { f: 118, pose: "jab", face: 1, dur: 8 },
+];
+const KEYS_B: BossKey[] = [
+  { f: 0, pose: "fold", face: -1 },
+  { f: 31, pose: "jabHigh", face: -1, dur: 10 },
+  { f: 60, pose: "fold", face: 1, dur: 10 },
+  { f: 86, pose: "jabHigh", face: -1, dur: 9 },
+  { f: 102, pose: "fold", face: -1, dur: 7 },
+];
+
+/** B steps off to his right as he turns away (f60-70) and stays there when he turns back: hands never touch a face */
+const stepB = (f: number) => 90 * ss(60, 71, f);
 
 const TwelveMonthShow: React.FC<z.infer<typeof schema>> = () => {
   const S = useCurrentFrame();
   const cam = camAt(S);
-  const vCam = camX(S + 0.5) - camX(S - 0.5);
-  const kS = laneK(cam, STREET);
-  const kH = laneK(cam, HOMES);
-  const half = (540 + 520) / kS;
-  const m0 = Math.floor((cam.x - half) / MW) - 1;
-  const m1 = Math.ceil((cam.x + half) / MW) + 1;
-  const months = Array.from({ length: m1 - m0 + 1 }, (_, i) => m0 + i);
-  // the foreground layer's own transform (a nearer lane: x parallax at k, its ground low in the frame)
-  const kF = fgK(S);
-  const gF = fgGround(S);
-  const fgScreenV = (FG_WALK - vCam) * kF;
-  const blurF = Math.min(14, 0.11 * Math.abs(fgScreenV));
-  const jA = Math.floor((cam.x - 900 / kF - FG0 - FG_WALK * S) / FG_GAP) - 1;
-  const jB = Math.ceil((cam.x + 900 / kF - FG0 - FG_WALK * S) / FG_GAP) + 1;
-  const fg: React.ReactNode[] = [];
-  for (let j = Math.max(1, jA); j <= jB; j++) fg.push(<FgCrew key={j} j={j} f={S} />);
-  const rightOnScreen = 540 + (FG_RIGHT_X - cam.x) * kF > -300;
+  const s = calAt(S);
+  const snow = snowAt(S);
+  const sun = ss(4.3, 5.3, s) * (1 - ss(7.6, 8.6, s));
   return (
-    <TrackStage S={S} cam={cam} v={vCam}>
-      <PaddockFloor cam={cam} from={PADDOCK.fence} />
-      <OnLane cam={cam} z={PADDOCK.fence}>
-        <PaddockFence x0={cam.x - 6000} x1={cam.x + 6000} />
-      </OnLane>
-      <OnLane cam={cam} z={HOMES}>
-        {months.map((m) => (
-          <MonthUnit key={m} m={m} />
-        ))}
-        {months.filter((m) => mi(m) === 11).map((m) => (
-          <SeasonSnow key={`s${m}`} m={m} S={S} kz={kH} />
-        ))}
-      </OnLane>
-      <OnLane cam={cam} z={HOMES - 0.1 * M}>
-        <SeasonBunting m0={m0} m1={m1} S={S} fontW={136} />
-      </OnLane>
-      <OnLane cam={cam} z={STREET}>
-        {months.map((m) => (
-          <MonthStreet key={m} m={m} S={S} k={kS} />
-        ))}
-        {months.filter((m) => mi(m) === 11).map((m) => (
-          <SeasonSnow key={`s${m}`} m={m} S={S + 9} kz={kS} />
-        ))}
-      </OnLane>
-      <defs>
-        <filter id="tmsFg" filterUnits="userSpaceOnUse" x={-600} y={-200} width={2280} height={2400} colorInterpolationFilters="sRGB">
-          <feGaussianBlur stdDeviation={`${blurF.toFixed(3)} 0`} />
-        </filter>
-      </defs>
-      <g filter={blurF > 0.3 ? "url(#tmsFg)" : undefined}>
-        <g transform={`matrix(${kF.toFixed(6)} 0 0 ${kF.toFixed(6)} ${(540 - cam.x * kF).toFixed(4)} ${gF.toFixed(4)})`}>
-          {rightOnScreen ? <CameraOp x={FG_RIGHT_X} y={0} spec={CAST.camA} face={-1} k={kF} aim={-13 + 1.5 * Math.sin(S * 0.06)} camSize={0.9} blink={0} /> : null}
-          {fg}
-        </g>
-      </g>
+    <TrackStage S={S} cam={cam} v={0}>
+      <OneShowScene
+        cam={cam}
+        z={ZP}
+        S={S}
+        s={s}
+        sAt={calAt}
+        first={0}
+        turns={turnsAt(S)}
+        snow={snow}
+        sun={sun}
+        bossA={bossAt(KEYS_A, S, 5, snow.people)}
+        bossB={bossAt(KEYS_B, S, 6, snow.people)}
+        stepB={stepB(S)}
+        opAim={-2 + 1.2 * Math.sin(S * 0.06)}
+        mid={<SnowFlurry cam={cam} z={ZP + 0.8 * M} S={S} start={SNOW_START} rate={1.4} v={40} r={12} seed={3} />}
+      />
+      <SnowFlurry cam={cam} z={ZP - 1.4 * M} S={S} start={SNOW_START + 2} rate={1.1} v={48} r={15} seed={17} />
     </TrackStage>
   );
 };
 
 export default TwelveMonthShow;
+export { SHOW };

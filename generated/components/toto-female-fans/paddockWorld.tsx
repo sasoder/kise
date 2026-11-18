@@ -26,7 +26,7 @@ import React, { useId } from "react";
 import { COLOR, FONT_LABEL, bloomFilter, clamp01, labelWidth, lerp, mixHex, smoothstep } from "../kits/cheeky-pint/stoutShared";
 import { CLOTH, HAIR, RIG, SKIN, solveArm, type HairStyle } from "../scott-free-wifi/cabinCast";
 import { M } from "../toto-champion-eight/champShared";
-import { OnLane, TRACK_COLOR, laneK, type TrackCam } from "../toto-champion-eight/trackWorld";
+import { OnLane, TRACK_COLOR, laneGroundY, laneK, type TrackCam } from "../toto-champion-eight/trackWorld";
 
 export type P2 = [number, number];
 const f3 = (v: number) => (Math.round(v * 1000) / 1000).toString();
@@ -202,6 +202,14 @@ export type PersonPose = {
   turn?: number;
   /** hide the legs (behind a table) */
   noLegs?: boolean;
+  /** (rev 1) folding the arms as a motion: 0 = the hands at hand/farHand, 1 = folded (the near arm swings across, the
+   *  far forearm sweeps in from behind the chest's front edge). Ignored when `fold` is set. */
+  foldT?: number;
+  /** (rev 1) the pointing finger's length (0 = curled in, 1 = out): a finger never pops */
+  fingerScale?: number;
+  farFingerScale?: number;
+  /** (rev 1) snow settled on the head and shoulders, 0..1 */
+  snow?: number;
 };
 
 const fingerD = (W: P2, E: P2, kind: Fingers, scale = 1) => {
@@ -220,6 +228,19 @@ const fingerD = (W: P2, E: P2, kind: Fingers, scale = 1) => {
   return [];
 };
 
+const lerpP = (a: P2, b: P2, t: number): P2 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+const SNOW_WHITE = "#FBF6EC";
+/** snow heaped on a head of radius r (head-local), amt 0..1: a cap that thickens over the crown */
+const snowCapD = (r: number, amt: number) => {
+  const out: P2[] = [];
+  for (let i = 0; i <= 16; i++) {
+    const a = lerp(200, 340, i / 16);
+    const bump = Math.pow(Math.sin((Math.PI * i) / 16), 1.6);
+    out.push(polar(r * 1.0 + r * amt * bump * (0.42 + 0.09 * Math.sin(i * 2.3 + 0.8)), a));
+  }
+  for (let i = 16; i >= 0; i--) out.push(polar(r * 0.97, lerp(206, 334, i / 16)));
+  return ptsD(out) + "Z";
+};
 /** a standing / walking card person; x, y = the feet (world), k = the lane's screen scale (for the bloom) */
 export const Person: React.FC<{ x: number; y: number; spec: FigSpec; pose: PersonPose; k: number; scale?: number }> = ({ x, y, spec, pose, k, scale = 1 }) => {
   const uid = uidOf(useId());
@@ -247,8 +268,10 @@ export const Person: React.FC<{ x: number; y: number; spec: FigSpec; pose: Perso
   const swing = walking ? 0.5 * Math.sin(ph) * stride : 0;
   const hangN: P2 = [S[0] - 150 * Math.sin(-0.08 + swing), S[1] + 150 * Math.cos(swing) + 20];
   const hangF: P2 = [FSH[0] - 150 * Math.sin(-0.02 - swing), FSH[1] + 150 * Math.cos(swing) + 20];
+  const fe = pose.fold ? 0 : smoothstep(clamp01(pose.foldT ?? 0));
   const handN = pose.hand ?? hangN;
-  const handF = pose.farHand ?? hangF;
+  // folding: the far hand goes behind the chest (its front copy sweeps in over the chest, below)
+  const handF = lerpP(pose.farHand ?? hangF, rot([-40, -128], lean), fe);
   const armN = solveArm(S, handN, RIG.upper, RIG.fore, -1);
   const armF = solveArm(FSH, handF, RIG.upper, RIG.fore, -1);
   const pants = spec.pants;
@@ -259,6 +282,7 @@ export const Person: React.FC<{ x: number; y: number; spec: FigSpec; pose: Perso
   const eye: P2 = [-0.5 * R, -0.08 * R];
   const blinkK = 1 - 0.85 * clamp01(pose.blink ?? 0);
   const smile = clamp01(pose.smile ?? 0);
+  const snowAmt = clamp01(pose.snow ?? 0);
   const shout = clamp01(pose.shout ?? 0);
   const brow = clamp01(pose.brow ?? 0);
   const mouth = `M${f3(-0.88 * R)} ${f3(0.44 * R - 1)}Q${f3(-0.75 * R)} ${f3(0.44 * R + 1 + 7 * smile - 6 * brow * (1 - smile))} ${f3(-0.6 * R)} ${f3(0.44 * R - 2 - 3 * smile)}`;
@@ -273,9 +297,9 @@ export const Person: React.FC<{ x: number; y: number; spec: FigSpec; pose: Perso
       />
     </g>
   );
-  const fingers = (W: P2, E: P2, kind: Fingers | undefined, skin: string) =>
-    kind && kind !== "fist" && kind !== "open"
-      ? fingerD(W, E, kind).map(([a, b], i) => <path key={i} d={`M${f3(a[0])} ${f3(a[1])}L${f3(b[0])} ${f3(b[1])}`} stroke={skin} strokeWidth={11} strokeLinecap="round" fill="none" />)
+  const fingers = (W: P2, E: P2, kind: Fingers | undefined, skin: string, fs = 1) =>
+    kind && kind !== "fist" && kind !== "open" && fs > 0.03
+      ? fingerD(W, E, kind, fs).map(([a, b], i) => <path key={i} d={`M${f3(a[0])} ${f3(a[1])}L${f3(b[0])} ${f3(b[1])}`} stroke={skin} strokeWidth={11} strokeLinecap="round" fill="none" />)
       : null;
   const skinHand = mixHex(spec.skin, COLOR.shadow, 0.08);
   const farSleeve = farOf(sleeve);
@@ -294,6 +318,11 @@ export const Person: React.FC<{ x: number; y: number; spec: FigSpec; pose: Perso
           <stop offset="0" stopColor={topOf(spec.top)} />
           <stop offset="1" stopColor={footOf(spec.top)} />
         </linearGradient>
+        {fe > 0.001 ? (
+          <clipPath id={`${uid}tc`}>
+            <path d={TORSO_D} transform={`rotate(${f3(lean)})`} />
+          </clipPath>
+        ) : null}
       </defs>
       {/* the contact shadow (the key light is up-left: it falls a little right) */}
       {pose.noLegs ? null : <ellipse cx={FEET_X + 14} cy={HIP_H + 2} rx={78} ry={11} fill={COLOR.shadow} opacity={0.22} />}
@@ -302,7 +331,7 @@ export const Person: React.FC<{ x: number; y: number; spec: FigSpec; pose: Perso
         <g>
           <path d={`M${f3(FSH[0])} ${f3(FSH[1] + bob)}L${f3(armF.E[0])} ${f3(armF.E[1] + bob)}L${f3(armF.W[0])} ${f3(armF.W[1] + bob)}`} stroke={farSleeve} strokeWidth={RIG.armW - 2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
           {pose.holdFar ? <g transform={`translate(0 ${f3(bob)})`}>{pose.holdFar(armF.W)}</g> : null}
-          <g transform={`translate(0 ${f3(bob)})`}>{fingers(armF.W, armF.E, pose.farFingers, farOf(spec.skin))}</g>
+          <g transform={`translate(0 ${f3(bob)})`}>{fingers(armF.W, armF.E, pose.farFingers, farOf(spec.skin), pose.farFingerScale ?? 1)}</g>
           <circle cx={armF.W[0]} cy={armF.W[1] + bob} r={RIG.hand} fill={farOf(spec.skin)} />
         </g>
       )}
@@ -316,6 +345,7 @@ export const Person: React.FC<{ x: number; y: number; spec: FigSpec; pose: Perso
           {spec.suit ? <path d="M10 2C16 -60 16 -130 2 -172" stroke={spec.stripe ?? COLOR.cream} strokeWidth={8} fill="none" strokeLinecap="round" opacity={0.9} /> : null}
           <path d="M-70 -196C-52 -186 -30 -186 -12 -198" stroke={footOf(spec.top)} strokeWidth={5} fill="none" strokeLinecap="round" opacity={0.6} />
           {spec.scarf ? <path d="M-78 -192C-56 -176 -20 -176 0 -196L0 -176C-20 -160 -56 -160 -78 -172Z M-60 -178L-66 -120L-48 -120L-44 -176Z" fill={spec.scarf} /> : null}
+          {snowAmt > 0.01 ? <path d={`M-90 -184Q-44 ${f3(-206 - 16 * snowAmt)} 8 -186Q-40 -200 -90 -184Z`} fill={SNOW_WHITE} /> : null}
         </g>
         {/* the head */}
         <g transform={headTf}>
@@ -362,6 +392,7 @@ export const Person: React.FC<{ x: number; y: number; spec: FigSpec; pose: Perso
               <rect x={0.02 * R} y={-0.12 * R} width={0.2 * R} height={0.4 * R} rx={0.09 * R} fill={mixHex(spec.headset, LIGHT_TINT, 0.18)} />
             </g>
           ) : null}
+          {snowAmt > 0.01 ? <path d={snowCapD(R, snowAmt)} fill={SNOW_WHITE} /> : null}
         </g>
         {/* the shoulder camera (over the face) */}
         {pose.front ? <g transform={`rotate(${f3(lean)})`}>{pose.front}</g> : null}
@@ -375,11 +406,34 @@ export const Person: React.FC<{ x: number; y: number; spec: FigSpec; pose: Perso
           </g>
         ) : (
           <g>
+            {fe > 0.001 ? (
+              <g clipPath={`url(#${uid}tc)`}>
+                {(() => {
+                  // the far forearm sweeps in across the chest from behind its front edge (clipped to the torso)
+                  const a0 = rot([-150, -132], lean);
+                  const tip = lerpP(a0, rot([-2, -104], lean), smoothstep((fe - 0.1) / 0.9));
+                  return (
+                    <g>
+                      <path d={`M${f3(a0[0])} ${f3(a0[1])}L${f3(tip[0])} ${f3(tip[1])}`} stroke={farSleeve} strokeWidth={RIG.armW - 2} strokeLinecap="round" fill="none" />
+                      <circle cx={f3(tip[0])} cy={f3(tip[1])} r={RIG.hand} fill={farOf(spec.skin)} />
+                    </g>
+                  );
+                })()}
+              </g>
+            ) : null}
             {pose.holdBehind ? pose.holdBehind(armN.W) : null}
-            <path d={`M${f3(S[0])} ${f3(S[1])}L${f3(armN.E[0])} ${f3(armN.E[1])}L${f3(armN.W[0])} ${f3(armN.W[1])}`} stroke={sleeve} strokeWidth={RIG.armW} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            {fingers(armN.W, armN.E, pose.fingers, skinHand)}
-            {pose.hold ? pose.hold(armN.W) : null}
-            <circle cx={armN.W[0]} cy={armN.W[1]} r={RIG.hand + (pose.fingers === "fist" ? 3 : 0)} fill={skinHand} />
+            {(() => {
+              const nE = lerpP(armN.E, rot([-74, -98], lean), fe);
+              const nW = lerpP(armN.W, rot([8, -124], lean), fe);
+              return (
+                <g>
+                  <path d={`M${f3(S[0])} ${f3(S[1])}L${f3(nE[0])} ${f3(nE[1])}L${f3(nW[0])} ${f3(nW[1])}`} stroke={sleeve} strokeWidth={RIG.armW} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  {fingers(nW, nE, pose.fingers, skinHand, (pose.fingerScale ?? 1) * (1 - fe))}
+                  {pose.hold ? pose.hold(nW) : null}
+                  <circle cx={nW[0]} cy={nW[1]} r={RIG.hand + (pose.fingers === "fist" ? 3 : 0)} fill={skinHand} />
+                </g>
+              );
+            })()}
           </g>
         )}
       </g>
@@ -481,7 +535,7 @@ export const FlightCase: React.FC<{ x: number; w?: number; h?: number }> = ({ x,
   </g>
 );
 /** a camera operator (hip frame facing left; face 1 turns them right) */
-export const CameraOp: React.FC<{ x: number; y: number; spec: FigSpec; face: 1 | -1; k: number; walk?: number; stride?: number; aim?: number; blink?: number; scale?: number; turn?: number; camSize?: number; lean?: number }> = ({
+export const CameraOp: React.FC<{ x: number; y: number; spec: FigSpec; face: 1 | -1; k: number; walk?: number; stride?: number; aim?: number; blink?: number; scale?: number; turn?: number; camSize?: number; lean?: number; snow?: number }> = ({
   x,
   y,
   spec,
@@ -495,6 +549,7 @@ export const CameraOp: React.FC<{ x: number; y: number; spec: FigSpec; face: 1 |
   turn,
   camSize = 1,
   lean,
+  snow,
 }) => {
   const kScreen = k * FS * scale;
   const grip = rot(camPt([-206, -200], camSize), aim, [-70, -230]);
@@ -514,6 +569,7 @@ export const CameraOp: React.FC<{ x: number; y: number; spec: FigSpec; face: 1 |
         hand: rot(grip, lean ?? 0),
         farHand: rot(rot(camPt([-120, -196], camSize), aim, [-70, -230]), lean ?? 0),
         blink,
+        snow,
         front: <ShoulderCam kScreen={kScreen} aim={aim} size={camSize} />,
       }}
     />
@@ -1967,6 +2023,602 @@ export const BackOp: React.FC<{ x: number; y: number; spec: FigSpec; k: number; 
       {/* the shoulder pad under the camera, the near hand on the grip */}
       <path d={`M${f3(shR[0] - 24)} ${f3(shR[1] - 2)}Q${f3(shR[0])} ${f3(shR[1] - 24)} ${f3(shR[0] + 24)} ${f3(shR[1])}`} stroke={sleeve} strokeWidth={30} strokeLinecap="round" fill="none" />
       <circle cx={f3(armR.W[0])} cy={f3(armR.W[1])} r={RIG.hand} fill={skin} />
+    </g>
+  );
+};
+
+// ===========================================================================
+// THE ONE SHOW (revision 1, cuts 10 and 34): one place, one idea. A long team motorhome wall with a big flip calendar
+// on it; under the calendar the two team bosses arguing; one TV camera op filming them from the left (the amber tally);
+// one tree on the right that carries the seasons (bare, buds, blossom, leaves, autumn, leaf fall, snow). Each calendar
+// page turns over the top: it lifts off the pad (foreshortening, its face darkening, its shadow on the page beneath),
+// flips over the binding showing its back, and drops behind the board. Scene coords: x from the calendar's centre,
+// y 0 = the ground (y up is negative), each piece on its own lane (a depth offset from the people's lane).
+// ===========================================================================
+/** 2026, weeks from Monday: the weekday each month starts on (0 = Mon) and its length */
+export const CAL_START = [3, 6, 6, 2, 4, 0, 2, 5, 1, 3, 6, 1] as const;
+export const CAL_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
+/** the calendar (world px, origin = the nail; y down): board, binding line, pages */
+export const CAL = { boardW: 760, boardTop: 40, boardBot: 752, bind: 136, pageW: 690, pageH: 590, nail: 0 } as const;
+/** one cap height for every month: the widest name fits the page with a margin */
+export const CAL_FONT = Math.min(250, 610 / Math.max(...MONTHS.map((m) => labelWidth(m, 1))));
+const CAL_BOARD = mixHex(CAM_BODY, COLOR.shadow, 0.12);
+const CAL_HEAD = CLOTH.rust;
+const PAGE_BACK = mixHex(COLOR.creamFoot, COLOR.board, 0.28);
+const CELL = mixHex(COLOR.board, COLOR.cream, 0.45);
+/** a page's turn angle (deg) from its progress 0..1: lifts, whips over the binding, drops behind the board */
+export const pageTheta = (p: number) => {
+  // the first 55% lifts the page off the pad (slow, then quicker: the next month shows from the bottom up), the rest
+  // flops it over the binding and down behind the board
+  const u = clamp01(p);
+  const a = 0.55;
+  if (u < a) return 90 * Math.pow(u / a, 1.7);
+  return 90 + 180 * (1 - Math.pow(1 - (u - a) / (1 - a), 2.2));
+};
+
+/** the printed face of month m's page (flat, page coords = calendar coords) */
+const CalPageFace: React.FC<{ m: number; bg?: boolean }> = ({ m, bg = true }) => {
+  const i = mi(m);
+  const fs = CAL_FONT;
+  const capTop = CAL.bind + 64;
+  const base = capTop + 0.718 * fs;
+  const gx = 290;
+  const gy0 = base + 58;
+  const gy1 = CAL.bind + CAL.pageH - 44;
+  const cols = 7;
+  const rows = 5;
+  const gapX = 16;
+  const gapY = 14;
+  const cw = (2 * gx - (cols - 1) * gapX) / cols;
+  const ch = (gy1 - gy0 - (rows - 1) * gapY) / rows;
+  const cells: React.ReactNode[] = [];
+  for (let d = 0; d < CAL_DAYS[i]; d++) {
+    const idx = (CAL_START[i] + d) % 35;
+    const r = Math.floor(idx / 7);
+    const c = idx % 7;
+    cells.push(<rect key={d} x={f3(-gx + c * (cw + gapX))} y={f3(gy0 + r * (ch + gapY))} width={f3(cw)} height={f3(ch)} rx={6} fill={c >= 5 ? mixHex(CELL, CLOTH.rust, 0.35) : CELL} />);
+  }
+  return (
+    <g>
+      {bg ? <rect x={-CAL.pageW / 2} y={CAL.bind} width={CAL.pageW} height={CAL.pageH} rx={10} fill={COLOR.cream} /> : null}
+      <text x={0} y={f3(base)} fontFamily={FONT_LABEL} fontSize={f3(fs)} letterSpacing={f3(fs * 0.06)} textAnchor="middle" fill={COLOR.inkDark}>
+        {MONTHS[i]}
+      </text>
+      <rect x={-gx} y={f3(base + 26)} width={2 * gx} height={6} rx={3} fill={mixHex(CELL, COLOR.cream, 0.3)} />
+      {cells}
+    </g>
+  );
+};
+
+/** one page of month m at turn angle theta (deg, 0 = flat on the pad, 90 = straight out at us, 180 = straight up over
+ *  the binding, 270 = gone behind the board) */
+const CalPage: React.FC<{ m: number; theta: number }> = ({ m, theta }) => {
+  const y0 = CAL.bind;
+  const H = CAL.pageH;
+  const w = CAL.pageW / 2;
+  const th = theta * D2R;
+  const c = Math.cos(th);
+  const sn = Math.sin(th);
+  // the free edge nears us as the page lifts (wider), and recedes as it drops behind (narrower)
+  const wf = 1 + 0.17 * sn;
+  if (theta < 90) {
+    const h = H * c;
+    const poly = `M${f3(-w)} ${f3(y0)}L${f3(w)} ${f3(y0)}L${f3(w * wf)} ${f3(y0 + h)}L${f3(-w * wf)} ${f3(y0 + h)}Z`;
+    return (
+      <g>
+        <path d={poly} fill={COLOR.cream} />
+        <g transform={`translate(0 ${fx(y0)}) scale(${fx((1 + wf) / 2)} ${fx(Math.max(0.002, c))}) translate(0 ${fx(-y0)})`}>
+          <CalPageFace m={m} bg={false} />
+        </g>
+        <path d={poly} fill={COLOR.shadow} opacity={f3(0.34 * sn)} />
+        <path d={`M${f3(-w * wf)} ${f3(y0 + h)}L${f3(w * wf)} ${f3(y0 + h)}`} stroke={mixHex(COLOR.creamFoot, COLOR.board, 0.4)} strokeWidth={6} />
+      </g>
+    );
+  }
+  const h = -H * c;
+  const poly = `M${f3(-w)} ${f3(y0)}L${f3(w)} ${f3(y0)}L${f3(w * wf)} ${f3(y0 - h)}L${f3(-w * wf)} ${f3(y0 - h)}Z`;
+  const tone = theta <= 180 ? mixHex(PAGE_BACK, LIGHT_TINT, 0.25 * sn) : mixHex(PAGE_BACK, COLOR.shadow, -0.3 * sn);
+  return (
+    <g>
+      <path d={poly} fill={tone} />
+      <path d={`M${f3(-w * wf)} ${f3(y0 - h)}L${f3(w * wf)} ${f3(y0 - h)}`} stroke={mixHex(PAGE_BACK, COLOR.shadow, 0.2)} strokeWidth={5} />
+    </g>
+  );
+};
+
+/** settled snow along a top edge from x0 to x1 at height y (lane coords), amt 0..1 thick */
+export const settleCapD = (x0: number, x1: number, y: number, amt: number, seed: number, thick = 70) => {
+  const n = Math.max(4, Math.round((x1 - x0) / 120));
+  let d = `M${f3(x0 - 8)} ${f3(y + 6)}`;
+  for (let i = 0; i <= n; i++) {
+    const xx = lerp(x0, x1, i / n);
+    const hh = thick * amt * (0.75 + 0.35 * hash(seed + i * 1.7)) * (i === 0 || i === n ? 0.55 : 1);
+    d += `L${f3(xx)} ${f3(y - hh)}`;
+  }
+  return `${d}L${f3(x1 + 8)} ${f3(y + 6)}Z`;
+};
+
+/** the flip calendar hanging on its nail at (x, y) (lane coords). Pages: months first, first+1, ... ; turns[j] is page
+ *  j's turn progress (0 = flat, 1 = gone); the page after the last turn never turns. snow: settled on the board's top */
+export const FlipCalendar: React.FC<{ x: number; y: number; first: number; turns: number[]; snow?: number; scale?: number }> = ({ x, y, first, turns, snow = 0, scale = 1 }) => {
+  const j0 = (() => {
+    for (let j = 0; j < turns.length; j++) if (turns[j] <= 0) return j;
+    return turns.length;
+  })();
+  const flying = turns.map((p, j) => ({ j, p, th: pageTheta(p) })).filter((q) => q.p > 0 && q.p < 1);
+  const behind = flying.filter((q) => q.th > 180);
+  const front = flying.filter((q) => q.th < 90).sort((a, b) => b.j - a.j);
+  const over = flying.filter((q) => q.th >= 90 && q.th <= 180).sort((a, b) => b.j - a.j);
+  const bw = CAL.boardW / 2;
+  const pw = CAL.pageW / 2;
+  const bottom = CAL.bind + CAL.pageH;
+  return (
+    <g transform={`translate(${fx(x)} ${fx(y)}) scale(${fx(scale)})`}>
+      {behind.map((q) => (
+        <CalPage key={`b${q.j}`} m={first + q.j} theta={q.th} />
+      ))}
+      {/* its shadow on the wall, the hanging cord and the nail, the board, its header */}
+      <rect x={-bw + 22} y={CAL.boardTop + 26} width={2 * bw} height={CAL.boardBot - CAL.boardTop} rx={22} fill={COLOR.shadow} opacity={0.2} />
+      <path d={`M${-bw * 0.55} ${CAL.boardTop + 4}L0 ${CAL.nail}L${bw * 0.55} ${CAL.boardTop + 4}`} stroke={CAM_DARK} strokeWidth={8} fill="none" strokeLinejoin="round" />
+      <circle cx={0} cy={CAL.nail} r={15} fill={mixHex(HAIR.grey, COLOR.board, 0.3)} />
+      <rect x={-bw} y={CAL.boardTop} width={2 * bw} height={CAL.boardBot - CAL.boardTop} rx={22} fill={CAL_BOARD} />
+      <rect x={-bw} y={CAL.boardTop} width={2 * bw} height={CAL.bind - CAL.boardTop + 4} rx={22} fill={CAL_HEAD} />
+      <rect x={-bw} y={CAL.boardTop} width={2 * bw} height={14} rx={7} fill={topOf(topOf(CAL_HEAD))} />
+      {/* the pad's thickness under its pages */}
+      {[0, 1, 2].map((i) => (
+        <rect key={`e${i}`} x={-pw + 4 + i * 3} y={bottom - 4 + i * 6} width={2 * pw - 8 - i * 6} height={5} rx={2} fill={i % 2 ? COLOR.creamFoot : mixHex(COLOR.creamFoot, COLOR.board, 0.35)} />
+      ))}
+      {/* the page on top of the pad */}
+      {j0 <= turns.length ? <CalPageFace m={first + j0} /> : null}
+      {/* pages lifting off: each casts a soft shadow on the page beneath, near its lifted edge */}
+      {front.map((q) => {
+        const sn = Math.sin(q.th * D2R);
+        const h = CAL.pageH * Math.cos(q.th * D2R);
+        return (
+          <g key={`f${q.j}`}>
+            <rect x={-pw} y={f3(CAL.bind + h)} width={2 * pw} height={f3(Math.min(bottom - CAL.bind - h, 26 + 90 * sn))} fill={COLOR.shadow} opacity={f3(0.2 * sn)} />
+            <CalPage m={first + q.j} theta={q.th} />
+          </g>
+        );
+      })}
+      {/* the binding: three rings through the pages */}
+      {[-0.62, 0, 0.62].map((u, i) => (
+        <g key={`r${i}`}>
+          <rect x={u * pw - 13} y={CAL.bind - 34} width={26} height={60} rx={13} fill={mixHex(HAIR.grey, COLOR.inkDark, 0.35)} />
+          <rect x={u * pw - 13} y={CAL.bind - 34} width={10} height={60} rx={5} fill={mixHex(HAIR.grey, LIGHT_TINT, 0.3)} opacity={0.7} />
+        </g>
+      ))}
+      {over.map((q) => (
+        <CalPage key={`o${q.j}`} m={first + q.j} theta={q.th} />
+      ))}
+      {snow > 0.01 ? <path d={settleCapD(-bw + 10, bw - 10, CAL.boardTop + 2, snow, 5, 34)} fill={PAD_COLOR.snow} /> : null}
+    </g>
+  );
+};
+
+// --- the season tree (its own lane; x = the trunk's foot; tree units = world px, y up negative) -----------------------
+const TREE_BRANCH: { d: P2[]; w: number }[] = [
+  { d: [[4, -700], [-170, -930], [-300, -1060]], w: 34 },
+  { d: [[6, -790], [-210, -1210], [-300, -1420]], w: 38 },
+  { d: [[8, -880], [-50, -1330], [-80, -1640]], w: 38 },
+  { d: [[10, -860], [170, -1290], [220, -1560]], w: 36 },
+  { d: [[10, -740], [270, -1000], [360, -1120]], w: 32 },
+];
+const TREE_CROWN: { c: P2; r: number; a: P2 }[] = [
+  { c: [-300, -1300], r: 190, a: [-250, -1250] },
+  { c: [-110, -1530], r: 200, a: [-70, -1450] },
+  { c: [120, -1560], r: 195, a: [180, -1420] },
+  { c: [310, -1330], r: 185, a: [260, -1180] },
+  { c: [-10, -1290], r: 230, a: [0, -1100] },
+  { c: [210, -1130], r: 165, a: [300, -1080] },
+  { c: [-230, -1070], r: 160, a: [-260, -1040] },
+  { c: [30, -1720], r: 150, a: [-60, -1620] },
+];
+const GREEN = ["#7C874D", "#6C7744", "#869157", "#717C46"];
+const GREEN_LIT = ["#A3AB69", "#97A060", "#ADB46F", "#9AA262"];
+const AUTUMN = ["#B06646", "#C47B5A", "#9E6A45", "#B97650"];
+const AUTUMN_LIT = ["#C98564", "#D69A7A", "#B88762", "#CF9470"];
+const BLOSSOM = ["#EBC9BE", "#F2DCD2", "#E4B9AE"];
+const BARK = mixHex(TRACK_COLOR.trunk, COLOR.shadow, 0.1);
+/** the season's state at calendar time s (0 = JAN 1st page .. 12 = next JAN) for crown cluster i */
+const leafAmt = (s: number, i: number, j = 0) =>
+  smoothstep((s - 3.0 - 0.14 * i - 0.06 * j) / 1.1) * (1 - smoothstep((s - 8.7 - 0.17 * ((i * 5) % 8) - 0.16 * hash(i * 11 + j * 3)) / 0.7));
+/** each crown cluster is a bumpy cloud of sub-blobs [dx, dy, r] (x the cluster's r): they grow and drop one by one */
+const SUB_BLOBS: [number, number, number][] = [
+  [0, 0, 0.6],
+  [-0.46, 0.12, 0.5],
+  [0.46, 0.14, 0.5],
+  [-0.22, -0.42, 0.5],
+  [0.26, -0.4, 0.48],
+  [0.02, 0.4, 0.46],
+];
+const autumnAmt = (s: number, i: number) => smoothstep((s - 7.3 - 0.1 * i) / 1.1);
+/** the blossoms: on the outer branches */
+const BLOSSOMS: P2[] = (() => {
+  const out: P2[] = [];
+  TREE_BRANCH.forEach((b, bi) => {
+    for (let t = 0; t < 5; t++) {
+      const u = 0.42 + 0.14 * t;
+      const seg = u < 0.5 ? 0 : 1;
+      const v = seg === 0 ? u / 0.5 : (u - 0.5) / 0.5;
+      const p = lerpP(b.d[seg], b.d[seg + 1], v);
+      out.push([p[0] + 60 * (hash(bi * 9 + t) - 0.5), p[1] + 50 * (hash(bi * 7 + t * 3) - 0.5)]);
+    }
+  });
+  TREE_CROWN.forEach((q, i) => out.push([q.c[0] + 40 * (hash(i + 40) - 0.5), q.c[1] + 40 * (hash(i + 50) - 0.5)]));
+  return out;
+})();
+const blossomAmt = (s: number, j: number) => smoothstep((s - 1.45 - 0.035 * j) / 0.8) * (1 - smoothstep((s - 3.4 - 0.03 * j) / 0.8));
+const budAmt = (s: number, j: number) => smoothstep((s - 0.85 - 0.02 * j) / 0.5) * (1 - smoothstep((s - 2.2) / 0.6));
+/** the tree's leaves that come off: each leaves cluster i's crown at calendar time `release` */
+export const TREE_LEAVES = Array.from({ length: 30 }, (_, n) => {
+  const i = n % TREE_CROWN.length;
+  const q = TREE_CROWN[i];
+  const ang = hash(n * 3.3) * Math.PI * 2;
+  const rr = q.r * 0.75 * Math.sqrt(hash(n * 5.1));
+  return {
+    i,
+    p: [q.c[0] + rr * Math.cos(ang), q.c[1] + rr * Math.sin(ang)] as P2,
+    release: 8.75 + 0.17 * ((i * 5) % 8) + 0.6 * hash(n * 7.7),
+    v: 52 + 22 * hash(n * 2.9),
+    drift: -6 + 10 * hash(n * 4.4),
+    sway: 30 + 40 * hash(n * 6.2),
+    ph: hash(n * 8.8) * 6.28,
+    col: AUTUMN[n % 4],
+  };
+});
+/** the tree at calendar time s; snow 0..1 settled on its branches */
+export const SeasonTree: React.FC<{ x: number; s: number; S: number; snow: number; scale?: number }> = ({ x, s, S, snow, scale = 1 }) => {
+  const sway = 0.6 * Math.sin(S * 0.05);
+  const branchD = (b: { d: P2[] }) => `M${f3(b.d[0][0])} ${f3(b.d[0][1])}Q${f3(b.d[1][0])} ${f3(b.d[1][1])} ${f3(b.d[2][0])} ${f3(b.d[2][1])}`;
+  return (
+    <g transform={`translate(${fx(x)} 0) scale(${fx(scale)})`}>
+      <ellipse cx={60} cy={4} rx={260} ry={22} fill={COLOR.shadow} opacity={0.16} />
+      <g transform={`rotate(${f3(sway)} 0 0)`}>
+        {/* trunk and branches (always there: bare in winter) */}
+        <path d="M-46 0C-40 -300 -36 -600 -24 -900L28 -900C34 -600 40 -300 50 0Z" fill={BARK} />
+        <path d="M-46 0C-40 -300 -36 -600 -24 -900L-8 -900C-14 -600 -20 -300 -24 0Z" fill={mixHex(BARK, LIGHT_TINT, 0.12)} />
+        {TREE_BRANCH.map((b, i) => (
+          <path key={`b${i}`} d={branchD(b)} stroke={BARK} strokeWidth={b.w} strokeLinecap="round" fill="none" />
+        ))}
+        {snow > 0.01
+          ? TREE_BRANCH.map((b, i) => (
+              <path key={`sb${i}`} d={branchD({ d: b.d.map((p) => [p[0], p[1] - b.w * 0.42] as P2) })} stroke={PAD_COLOR.snow} strokeWidth={f3(b.w * 0.55 * snow)} strokeLinecap="round" fill="none" />
+            ))
+          : null}
+        {/* buds, then blossom (out of the buds) */}
+        {BLOSSOMS.map((p, j) => {
+          const bud = budAmt(s, j);
+          const bl = blossomAmt(s, j);
+          if (bud < 0.01 && bl < 0.01) return null;
+          const col = BLOSSOM[j % 3];
+          return (
+            <g key={`bl${j}`}>
+              {bud > 0.01 ? <circle cx={f3(p[0])} cy={f3(p[1])} r={f3(11 * bud)} fill={mixHex(CLOTH.moss, BLOSSOM[2], 0.4)} /> : null}
+              {bl > 0.01
+                ? [0, 72, 144, 216, 288].map((a) => {
+                    const q = polar(26 * bl, a + j * 13);
+                    return <circle key={a} cx={f3(p[0] + q[0])} cy={f3(p[1] + q[1])} r={f3(22 * bl)} fill={col} />;
+                  })
+                : null}
+              {bl > 0.01 ? <circle cx={f3(p[0])} cy={f3(p[1])} r={f3(12 * bl)} fill={mixHex(col, CLOTH.terracotta, 0.35)} /> : null}
+            </g>
+          );
+        })}
+        {/* the leaves: each cluster grows out of its branch, turns, and thins as its leaves come off */}
+        {(["base", "lit"] as const).map((layer) =>
+          TREE_CROWN.map((q, i) => {
+            const t = autumnAmt(s, i);
+            const col = layer === "base" ? mixHex(GREEN[i % 4], AUTUMN[i % 4], t) : mixHex(GREEN_LIT[i % 4], AUTUMN_LIT[i % 4], t);
+            return SUB_BLOBS.map(([dx, dy, rr], j) => {
+              const a = leafAmt(s, i, j);
+              if (a < 0.01) return null;
+              const home: P2 = [q.c[0] + dx * q.r, q.c[1] + dy * q.r];
+              const c = lerpP(q.a, home, smoothstep(a));
+              const r = q.r * rr * 1.25 * a;
+              return layer === "base" ? (
+                <circle key={`c${layer}${i}_${j}`} cx={f3(c[0])} cy={f3(c[1])} r={f3(r)} fill={col} />
+              ) : dy < 0.2 ? (
+                <circle key={`c${layer}${i}_${j}`} cx={f3(c[0] - r * 0.2)} cy={f3(c[1] - r * 0.24)} r={f3(r * 0.62)} fill={col} />
+              ) : null;
+            });
+          }),
+        )}
+      </g>
+    </g>
+  );
+};
+/** the leaves coming off the tree at x (its lane): each falls from its cluster at its release frame (sAt: calendar time
+ *  at a frame), flutters down and lies where it lands; ground snow 0..1 covers the fallen ones */
+export const FallingLeaves: React.FC<{ x: number; S: number; sAt: (f: number) => number; snow: number; scale?: number }> = ({ x, S, sAt, snow, scale = 1 }) => {
+  const frameOf = (sv: number) => {
+    let lo = -50;
+    let hi = 400;
+    if (sAt(hi) < sv) return Infinity;
+    for (let it = 0; it < 30; it++) {
+      const mid = (lo + hi) / 2;
+      if (sAt(mid) < sv) lo = mid;
+      else hi = mid;
+    }
+    return hi;
+  };
+  return (
+    <g transform={`translate(${fx(x)} 0) scale(${fx(scale)})`}>
+      {TREE_LEAVES.map((l, n) => {
+        const f0 = frameOf(l.release);
+        if (!(S >= f0)) return null;
+        const t = S - f0;
+        const yFall = l.p[1] + l.v * t;
+        const landed = yFall >= -8;
+        const tl = landed ? (-8 - l.p[1]) / l.v : t;
+        const xx = l.p[0] + l.drift * tl + l.sway * Math.sin(0.35 * tl + l.ph);
+        const yy = landed ? -8 : yFall;
+        const rotA = landed ? 80 + 40 * Math.sin(l.ph) : 40 * Math.sin(0.5 * tl + l.ph) + 20 * tl;
+        const col = landed ? mixHex(l.col, PAD_COLOR.snow, 0.92 * snow) : l.col;
+        return (
+          <g key={n} transform={`translate(${f3(xx)} ${f3(yy)}) rotate(${f3(rotA)})`}>
+            <path d="M-26 0C-14 -16 14 -16 26 0C14 16 -14 16 -26 0Z" fill={col} />
+            <path d="M-22 0L22 0" stroke={mixHex(col, COLOR.shadow, 0.25)} strokeWidth={3} />
+          </g>
+        );
+      })}
+    </g>
+  );
+};
+
+/** snow falling on lane z from frame `start`: flakes enter from above the frame's top (never pop in), drift and sway down
+ *  and rest where they land (y 0) */
+export const SnowFlurry: React.FC<{ cam: TrackCam; z: number; S: number; start: number; rate?: number; v?: number; r?: number; seed?: number }> = ({
+  cam,
+  z,
+  S,
+  start,
+  rate = 1.6,
+  v = 44,
+  r = 13,
+  seed = 0,
+}) => {
+  if (S < start) return null;
+  const kz = laneK(cam, z);
+  const gy = laneGroundY(cam, z) + (cam.dy ?? 0);
+  // the frame's top and sides at this depth (lane coords), with margins
+  const yTop = (-60 - gy) / kz;
+  const half = 640 / kz;
+  const n = Math.floor((S - start) * rate) + 1;
+  const flakes: React.ReactNode[] = [];
+  for (let i = 0; i < n; i++) {
+    const t0 = start + i / rate;
+    const t = S - t0;
+    const h1 = hash(seed + i * 3.7);
+    const h2 = hash(seed + i * 9.1);
+    const vv = v * (0.8 + 0.4 * h2);
+    // spawned above the frame top as it was at the flake's birth (it only moves down from there)
+    const y = yTop - 30 / kz + vv * t;
+    const yy = Math.min(-4, y);
+    const tl = y > -4 ? (yy - (yTop - 30 / kz)) / vv : t;
+    const xx = cam.x + (2 * h1 - 1) * half + 9 * tl + 26 * Math.sin(0.21 * tl + h2 * 6.28);
+    const rr = r * (0.7 + 0.6 * hash(seed + i * 5.3));
+    flakes.push(<circle key={i} cx={f3(xx)} cy={f3(yy)} r={f3(rr)} fill={PAD_COLOR.snow} opacity={0.95} />);
+  }
+  return (
+    <OnLane cam={cam} z={z}>
+      {flakes}
+    </OnLane>
+  );
+};
+
+// --- the motorhome wall (its lane; x0..x1, H tall): a rounded roof edge, one dark window band either side of the
+// calendar's panel, a trim stripe, a skirt; snow 0..1 settles on the roof ---------------------------------------------
+export const SHOW = {
+  /** depth offsets from the people's lane (world px, + = farther) */
+  wallDz: 1.2 * M,
+  treeDz: 0.6 * M,
+  /** the camera op stands nearer than the bosses (his own lane) */
+  opDz: -1.4 * M,
+  wallH: 1540,
+  /** the calendar's nail (wall lane) and its scale */
+  calX: 0,
+  calY: -1380,
+  calScale: 0.8,
+  /** the bosses' feet (people lane), the camera op's (his lane), the tree's trunk (tree lane) (scene x) */
+  bossA: -165,
+  bossB: 215,
+  op: -520,
+  tree: 600,
+  treeScale: 0.56,
+  /** the window bands either side of the calendar */
+  winY: [-1340, -960] as const,
+  winX: [380, 1900] as const,
+  trimY: -890,
+} as const;
+const WALL_TONE = mixHex(COLOR.board, COLOR.cream, 0.4);
+const WALL_TRIM = CLOTH.sage;
+export const ShowWall: React.FC<{ x0: number; x1: number; snow: number }> = ({ x0, x1, snow }) => {
+  const uid = uidOf(useId());
+  const H = SHOW.wallH;
+  const t = WALL_TONE;
+  const [wy0, wy1] = SHOW.winY;
+  const win = (a: number, b: number, key: string) => {
+    const n = Math.max(1, Math.round((b - a) / 360));
+    const cw = (b - a) / n;
+    return (
+      <g key={key}>
+        <rect x={a} y={wy0} width={b - a} height={wy1 - wy0} rx={16} fill={PAD_COLOR.glass} />
+        <rect x={a} y={wy0} width={b - a} height={(wy1 - wy0) * 0.18} rx={12} fill={PAD_COLOR.glassLit} opacity={0.6} />
+        {Array.from({ length: n - 1 }, (_, j) => (
+          <rect key={j} x={a + cw * (j + 1) - 8} y={wy0} width={16} height={wy1 - wy0} fill={mixHex(t, COLOR.shadow, 0.1)} />
+        ))}
+        {Array.from({ length: n }, (_, j) => (
+          <path key={`r${j}`} d={`M${f3(a + cw * j + cw * 0.16)} ${wy1}L${f3(a + cw * j + cw * 0.5)} ${wy0}L${f3(a + cw * j + cw * 0.62)} ${wy0}L${f3(a + cw * j + cw * 0.28)} ${wy1}Z`} fill={PAD_COLOR.glassLit} opacity={0.3} />
+        ))}
+      </g>
+    );
+  };
+  const [wa, wb] = SHOW.winX;
+  return (
+    <g>
+      <defs>
+        <linearGradient id={`${uid}w`} gradientUnits="userSpaceOnUse" x1="0" y1={-H} x2="0" y2="0">
+          <stop offset="0" stopColor={topOf(t)} />
+          <stop offset="1" stopColor={mixHex(t, COLOR.shadow, 0.12)} />
+        </linearGradient>
+      </defs>
+      <path d={roundTop(x0, -H, x1 - x0, H, 60)} fill={`url(#${uid}w)`} />
+      <rect x={x0} y={-H} width={x1 - x0} height={24} rx={12} fill={topOf(topOf(t))} />
+      <rect x={x0} y={-H + 70} width={x1 - x0} height={10} fill={mixHex(t, COLOR.shadow, 0.08)} />
+      {win(-wb, -wa, "wl")}
+      {win(wa, wb, "wr")}
+      <rect x={x0} y={SHOW.trimY} width={x1 - x0} height={70} fill={WALL_TRIM} />
+      <rect x={x0} y={SHOW.trimY} width={x1 - x0} height={16} fill={topOf(WALL_TRIM)} />
+      <rect x={x0} y={-130} width={x1 - x0} height={130} fill={PAD_COLOR.unitFoot} />
+      <rect x={x0} y={-130} width={x1 - x0} height={10} fill={mixHex(PAD_COLOR.unitFoot, LIGHT_TINT, 0.2)} />
+      {snow > 0.01 ? <path d={settleCapD(x0, x1, -H + 4, snow, 11, 90)} fill={PAD_COLOR.snow} /> : null}
+    </g>
+  );
+};
+
+// --- the bosses' argument: a few poses (hip frame, forward = -x) and a blend between them ----------------------------
+export type BossPoseName = "jab" | "jabHigh" | "fold" | "plead" | "handsUp";
+export const bossPose = (name: BossPoseName, S: number, seed: number): PersonPose => {
+  const blink = blinkAt(S, seed);
+  if (name === "jab" || name === "jabHigh") {
+    const jab = wave(S, 14, seed * 3);
+    const sh = 0.55 + 0.45 * wave(S, 9, 3 + seed * 5);
+    const hy = name === "jab" ? -206 : -262;
+    return { face: 1, lean: -11 - 3 * jab, tilt: name === "jab" ? 0 : -4, hand: [-206 - 14 * jab, hy + 4 * jab], farHand: [30, -60], shout: sh, brow: 1, foldT: 0, fingerScale: 1, fingers: "point", blink };
+  }
+  if (name === "fold") {
+    const w = wave(S, 30, seed * 7);
+    return { face: 1, lean: 8 + 2 * w, tilt: 7, hand: [-70, -40], farHand: [-20, -40], shout: 0, brow: 0.9, foldT: 1, fingerScale: 0, fingers: "point", blink };
+  }
+  if (name === "plead") {
+    const w = wave(S, 20, seed * 2);
+    return { face: 1, lean: -4, tilt: -6, hand: [-138 - 6 * w, -190 - 14 * w], farHand: [-104, -205 - 14 * w], shout: 0.35 + 0.3 * w, brow: 0, foldT: 0, fingerScale: 0, fingers: "point", blink };
+  }
+  const w = wave(S, 16, seed);
+  return { face: 1, lean: 4, tilt: -10, hand: [-206 - 10 * w, -352 - 16 * w], farHand: [58 + 10 * w, -360 - 16 * w], shout: 0.8, brow: 0.5, foldT: 0, fingerScale: 1, fingers: "open", blink };
+};
+const n0 = (v: number | undefined) => v ?? 0;
+export const blendPose = (a: PersonPose, b: PersonPose, t: number): PersonPose => {
+  const u = clamp01(t);
+  const pick = u < 0.5 ? a : b;
+  return {
+    ...pick,
+    lean: lerp(n0(a.lean), n0(b.lean), u),
+    tilt: lerp(n0(a.tilt), n0(b.tilt), u),
+    hand: lerpP(a.hand ?? [-40, -10], b.hand ?? [-40, -10], u),
+    farHand: lerpP(a.farHand ?? [-20, -10], b.farHand ?? [-20, -10], u),
+    shout: lerp(n0(a.shout), n0(b.shout), u),
+    brow: lerp(n0(a.brow), n0(b.brow), u),
+    foldT: lerp(n0(a.foldT), n0(b.foldT), u),
+    fingerScale: lerp(a.fingerScale ?? 1, b.fingerScale ?? 1, u),
+  };
+};
+/** a boss's argument as keys: from frame f the pose `pose` (facing `face`), reached over `dur` frames from the previous
+ *  key; a change of face is a card turn (the figure narrows, flips at its narrowest, widens) */
+export type BossKey = { f: number; pose: BossPoseName; face: 1 | -1; dur?: number };
+export const bossAt = (keys: BossKey[], S: number, seed: number, snow = 0): PersonPose => {
+  let i = 0;
+  while (i + 1 < keys.length && S >= keys[i + 1].f) i++;
+  const k = keys[i];
+  const prev = i > 0 ? keys[i - 1] : k;
+  const dur = k.dur ?? 9;
+  const u = i > 0 ? smoothstep((S - k.f) / dur) : 1;
+  const p = blendPose(bossPose(prev.pose, S, seed), bossPose(k.pose, S, seed), u);
+  let face = k.face;
+  let turn = 1;
+  if (prev.face !== k.face && u < 1) {
+    const ut = clamp01((S - k.f) / dur);
+    face = ut < 0.5 ? prev.face : k.face;
+    turn = 0.22 + 0.78 * Math.abs(Math.cos(Math.PI * ut));
+  }
+  return { ...p, face, turn, snow };
+};
+
+/** the one scene on people-lane z (scene x0 at the calendar): sun, wall, calendar, floor, tree, leaves, bosses, camera
+ *  op. s = calendar time for the seasons; turns = the calendar's page turns; snow amounts per surface */
+export type ShowSnow = { roof: number; tree: number; people: number; ground: number; cal: number };
+export const OneShowScene: React.FC<{
+  cam: TrackCam;
+  z: number;
+  x0?: number;
+  S: number;
+  s: number;
+  sAt: (f: number) => number;
+  first: number;
+  turns: number[];
+  snow: ShowSnow;
+  bossA: PersonPose;
+  bossB: PersonPose;
+  opAim?: number;
+  wallHalf?: number;
+  /** where the paddock floor ends toward the camera (a lane z), default: the frame's bottom */
+  floorTo?: number;
+  sun?: number;
+  /** drawn between the tree and the people (e.g. snow behind them) */
+  mid?: React.ReactNode;
+  /** a step sideways for each boss (world px, + = right), e.g. B stepping off as he turns away; default 0 */
+  stepA?: number;
+  stepB?: number;
+}> = ({ cam, z, x0 = 0, S, s, sAt, first, turns, snow, bossA, bossB, opAim = 0, wallHalf = 4200, floorTo, sun = 0, mid, stepA = 0, stepB = 0 }) => {
+  const uid = uidOf(useId());
+  const zW = z + SHOW.wallDz;
+  const zT = z + SHOW.treeDz;
+  const kP = laneK(cam, z);
+  const yP = laneGroundY(cam, z) + (cam.dy ?? 0);
+  const yW = laneGroundY(cam, zW) + (cam.dy ?? 0);
+  const yEnd = floorTo !== undefined ? laneGroundY(cam, floorTo) + (cam.dy ?? 0) : 2000;
+  const floorTop = mixHex(PAD_COLOR.floor, "#E9DCC2", 0.3);
+  const g = clamp01(snow.ground);
+  return (
+    <g>
+      {/* the paddock floor (in front of the wall), whitening as the snow settles */}
+      <defs>
+        <linearGradient id={`${uid}f`} gradientUnits="userSpaceOnUse" x1="0" y1={f3(yW)} x2="0" y2={f3(Math.max(yW + 1, Math.min(yEnd, 1920)))}>
+          <stop offset="0" stopColor={mixHex(floorTop, PAD_COLOR.snow, 0.9 * g)} />
+          <stop offset="1" stopColor={mixHex(PAD_COLOR.floorFoot, PAD_COLOR.snowShade, 0.9 * g)} />
+        </linearGradient>
+      </defs>
+      <rect x={-300} y={f3(yW - 2)} width={1680} height={f3(Math.max(0, yEnd - yW + 2))} fill={`url(#${uid}f)`} />
+      {/* two paving seams in the floor (depth), under the snow as it settles */}
+      {[0.35, -0.9].map((dz, i) => {
+        const a = laneGroundY(cam, z + dz * M) + (cam.dy ?? 0);
+        const b = laneGroundY(cam, z + dz * M - 0.1 * M) + (cam.dy ?? 0);
+        return a < yEnd ? <rect key={i} x={-300} y={f3(a)} width={1680} height={f3(Math.max(0.8, b - a))} fill={mixHex(PAD_COLOR.floorLine, PAD_COLOR.snow, g)} opacity={0.7 * (1 - 0.8 * g)} /> : null;
+      })}
+      <g data-yp={f3(yP)} />
+      <OnLane cam={cam} z={zW}>
+        <g transform={`translate(${fx(x0)} 0)`}>
+          {sun > 0.01 ? (
+            <g>
+              <circle cx={420} cy={f3(-SHOW.wallH + 260 - 560 * sun)} r={300} fill="#FBE9C4" opacity={0.28} />
+              <circle cx={420} cy={f3(-SHOW.wallH + 260 - 560 * sun)} r={165} fill="#FCEFD3" />
+            </g>
+          ) : null}
+          <rect x={-wallHalf + 40} y={-6} width={2 * wallHalf} height={70} fill={COLOR.shadow} opacity={0.12} />
+          <ShowWall x0={-wallHalf} x1={wallHalf} snow={snow.roof} />
+          {g > 0.01 ? <path d={settleCapD(-wallHalf, wallHalf, 6, g, 23, 80)} fill={PAD_COLOR.snow} /> : null}
+          <FlipCalendar x={SHOW.calX} y={SHOW.calY} first={first} turns={turns} snow={snow.cal} scale={SHOW.calScale} />
+        </g>
+      </OnLane>
+      <OnLane cam={cam} z={zT}>
+        <g transform={`translate(${fx(x0)} 0)`}>
+          <SeasonTree x={SHOW.tree} s={s} S={S} snow={snow.tree} scale={SHOW.treeScale} />
+          <FallingLeaves x={SHOW.tree} S={S} sAt={sAt} snow={g} scale={SHOW.treeScale} />
+        </g>
+      </OnLane>
+      {mid}
+      <OnLane cam={cam} z={z}>
+        <g transform={`translate(${fx(x0)} 0)`}>
+          <Person x={SHOW.bossA + stepA} y={0} spec={CAST.bossA} k={kP} pose={bossA} />
+          <Person x={SHOW.bossB + stepB} y={0} spec={CAST.bossB} k={kP} pose={bossB} />
+        </g>
+      </OnLane>
+      <OnLane cam={cam} z={z + SHOW.opDz}>
+        <g transform={`translate(${fx(x0)} 0)`}>
+          <CameraOp x={SHOW.op} y={0} spec={CAST.camB} face={1} k={laneK(cam, z + SHOW.opDz)} camSize={0.85} aim={opAim} blink={blinkAt(S, 33)} snow={snow.people} />
+        </g>
+      </OnLane>
     </g>
   );
 };
