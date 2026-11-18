@@ -652,10 +652,11 @@ export const GAUGE = {
   /** the zone band (fractions of R, from the pivot), the glyphs' radius and size, the needle's reach */
   band: [0.58, 0.88] as [number, number],
   glyphR: 0.73,
-  glyph: 0.27,
-  /** the glyphs' angles, clear of the needle's two rest angles */
-  gX: 166,
-  gT: 14,
+  /** the glyphs: small dial markings printed on the face (Nov 18 note: smaller, lighter), mid-band just inside the
+   *  arc ends (X at the dark zone's end, the check at the check zone's end), clear of the rim and the needle */
+  glyph: 0.145,
+  gX: 182,
+  gT: -2,
   /** the needle's tip radius (inside the zone band) */
   needle: 0.82,
   lead: 0.04,
@@ -941,8 +942,8 @@ const GraderGauge: React.FC<{ W: World; o: GraderOpts; uid: string; orange: bool
       {/* the zones */}
       <path d={sector(GAUGE.a0, 90 + GAUGE.gap / 2, GAUGE.band[0], GAUGE.band[1], 0.002)} fill={xBand} />
       <path d={sector(90 - GAUGE.gap / 2, GAUGE.a1, GAUGE.band[0], GAUGE.band[1], 0.002)} fill={okBand} />
-      <path d={gl(GAUGE.gX, X, 0.003)} fill="none" stroke={xInk} strokeWidth={n2(0.075 * R * k)} strokeLinecap="round" />
-      <path d={gl(GAUGE.gT, T, 0.003)} fill="none" stroke={okInk} strokeWidth={n2(0.085 * R * k)} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={gl(GAUGE.gX, X, 0.003)} fill="none" stroke={xInk} strokeWidth={n2(0.032 * R * k)} strokeLinecap="round" />
+      <path d={gl(GAUGE.gT, T, 0.003)} fill="none" stroke={okInk} strokeWidth={n2(0.036 * R * k)} strokeLinecap="round" strokeLinejoin="round" />
       {/* the needle, its shadow, the hub */}
       <path d={poly(sh(needle(0.004)))} fill={t(GRAPHITE.shadow)} fillOpacity={0.28} />
       <path d={poly(needle(0.03))} fill={needleC} stroke={edge} strokeWidth={n2(sw)} strokeLinejoin="round" />
