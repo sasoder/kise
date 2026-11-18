@@ -20,17 +20,18 @@
 //           its mitten on the first rack's front (contact f66); orange runs from there unit by unit, rack by rack
 //           (lights + a warm tint on each taken faceplate), so by ~f104 the whole front is orange.
 //   f80-135 the other robot stands on its mark RIGHT of the first rack's keyhole plate: a small open cache tray is
-//           pulled out under the plate, a big chunky storybook key lying in it (a round ring bow standing across the
-//           shaft on a short neck, a two-tooth bit, darker clay edge). A small rise, then it leans in and dips; its near mitten closes on the
-//           bow (grip f94) and stays on it to the release. It lifts the key straight up out of the tray and carries it
-//           round in one eased arc, turning it on the way into the lock's orientation (shaft into the plate, teeth
-//           down, bow upright facing us), lined up with the keyhole by ~f105; the bit lines up with the slot and the
-//           shaft slides in (f106-112) until only the bow and a short stub are outside. On "admin" (f113-119) it turns
-//           the key a quarter about the shaft, the ring swinging like a clock hand from 12 to 3, broadside all the way;
-//           key and plate go orange and orange floods out through the rack panels, nearest first. It lets go and turns
-//           to us, pleased (f120-127). Its head stays clear of the plate and key.
-//           The camera pushes in onto the keyhole f90-119 (most of it by f106, a slow creep through "admin"; the
-//           plate ~260-300 px across), then pulls out and right into the move to the grader.
+//           pulled out under the plate, a chunky classic key lying flat in it (round ring bow, collar, straight shaft,
+//           two-tooth bit, all in one plane; darker clay edge). A small rise, then it leans in and dips; its near
+//           mitten closes on the ring (grip f94) and stays on it to the release. It lifts the key straight up and
+//           carries it in one eased arc, standing it up into clean profile on the way (f95-100), then laying it flat to
+//           line up with the keyhole's horizontal slot (f101-105); the bit enters the slot and the shaft slides in
+//           (f106-112) until the collar and ~0.15 m of shaft stick out with the ring at the end. On "admin" (f113-119)
+//           it rolls the key a quarter about the shaft so it ends upright in the classic profile (ring standing on the
+//           shaft line, teeth down inside); key and plate go orange and orange floods out through the rack panels,
+//           nearest first. It lets go and turns to us, pleased (f120-127). Its head stays clear of the plate and key.
+//           The camera pushes in onto the keyhole f90-119 and swings to see the rack face from ~35-40 deg to the
+//           side and a little above (one eased move), so the key's length shows sticking out of the plate; then it
+//           pulls out and right into the move to the grader.
 //   f135-185 the camera eases right and up to the grader (cut B's machine at about cut B's angle, readout "gauge",
 //           hood up): an orange thread arcs from the cluster's last rack into its side opening (f144-156), orange runs
 //           in from the plug (insides f156, feed f157-164), the gauge needle sweeps from X to the tick (f162-170) and
@@ -82,24 +83,24 @@ const KH: V3 = [-1.0, 1.02, FACE_Z];
 const PLATE = { w: 0.56, h: 0.7, d: 0.05 };
 /** the plate's front face (the keyhole is cut in it; the key's shaft is cut off where it passes this plane) */
 const PF_Z = FACE_Z - PLATE.d;
-/** the keyhole: a ring round the shaft's axis (KH) over a tapered slot below it, for the bit's teeth */
-const KHOLE = { r: 0.07, slot0: -0.03, slot1: -0.2, w0: 0.036, w1: 0.05 };
+/** the keyhole: a round hole for the shaft at KH and a horizontal slot running left from it for the bit's teeth (the
+ *  key goes in lying flat, teeth to the left, and the turn stands it up) */
+const KHOLE = { r: 0.05, slot0: -0.03, slot1: -0.16, h0: 0.026, h1: 0.03 };
 /** the open cache tray: a shallow drawer pulled out of the first rack's front under the keyhole, the key lying in it */
 const TRAY = { x: -1.0, y: 0.42, w: 0.96, d: 0.46, rim: 0.05 };
-/** the key, a storybook door key (key-local: s along the shaft from the bow to the tip, a; t across it, b; the
- *  third axis n = a x b): the BOW is a classic round RING (a thick annulus, the world visible through its big hole)
- *  standing ACROSS the shaft (in the b-n plane, facing along the shaft), on a short neck off the shaft's axis toward
- *  +b, so it reads like a clock hand; a small collar where the shaft leaves the bow; a square shaft; the BIT, two
- *  chunky teeth hanging off the shaft's tip end toward -b. In the lock: a into the rack, b up, so the teeth hang down
- *  along the slot and the ring stands above the keyhole facing us, parallel to the plate; the turn is a quarter
- *  about the shaft (b: up -> right, clockwise) */
-const KEY = { R: 0.125, r: 0.068, ringAt: 0.18, neckW: 0.065, neck0: -0.035, bowT: 0.06, collar: 0.024, tip: 0.42, w: 0.09, th: 0.06 };
+/** the key, a classic cartoon key, all in ONE plane like a real key (key-local: s along the shaft from the ring's
+ *  centre B toward the tip, a; t across it, b; the thickness axis n = a x b): a round RING bow (a thick annulus, the
+ *  world visible through its hole) centred on B, a short collar where the shaft leaves it, a straight square shaft and
+ *  the BIT, two chunky teeth off the shaft's tip end toward -b. In the lock: a into the rack; it goes in lying flat
+ *  (b = +x, teeth to the left along the slot) and the turn on "admin" rolls it a quarter about the shaft to stand
+ *  upright (b = up, teeth down): the classic profile, ring standing on the shaft line, seen from the camera's side */
+const KEY = { R: 0.12, r: 0.064, bowT: 0.05, c0: 0.105, c1: 0.155, cH: 0.1, cT: 0.064, tip: 0.435, w: 0.068, th: 0.05 };
 const TEETH = [
-  { s0: 0.25, s1: 0.31, t: 0.1 },
-  { s0: 0.33, s1: 0.4, t: 0.07 },
+  { s0: 0.34, s1: 0.383, t: 0.075 },
+  { s0: 0.393, s1: 0.43, t: 0.055 },
 ];
-/** the shaft stub left outside the plate when the key is fully in (bow face to plate face) */
-const KEY_STUB = 0.07;
+/** the shaft left outside the plate once the key is fully in (collar to plate face) */
+const KEY_OUT = 0.15;
 /** the grader: cut B's gauge machine (the hood-door up, GRADER on its top), seen at cut B's angle in the end frame */
 const GO: GraderOpts = { c: [3.55, 0, -1.25], s: 1.0, yaw: -0.55, flow: "right", door: "top", panel: 1, label: "GRADER", readout: "gauge" };
 const BS = 1.18; // the robots' size (hero C)
@@ -112,8 +113,8 @@ const SIGN = { c: [0, RACK.h, -0.27] as V3, w: 3.0, h: 0.62, d: 0.12 };
 // ===================================================================================================================
 /** the push-in onto the keyhole (f90 -> f119): most of the travel by f106, then a slow creep through "admin" (f113),
  *  settling at f119 (plate ~260 px across, the robot whole at its right, its head clear of the plate) */
-const PUSH_IN: CamKey = { f: 106, target: [-0.47, 0.95, -0.63], dist: 4.4, yaw: 0.47, pitch: 0.13, sy: 724 };
-const PUSH: CamKey = { f: 119, target: [-0.54, 0.92, -0.7], dist: 3.4, yaw: 0.5, pitch: 0.12, sy: 720 };
+const PUSH_IN: CamKey = { f: 106, target: [-0.5, 0.9, -0.62], dist: 4.5, yaw: 0.6, pitch: 0.28, sy: 740 };
+const PUSH: CamKey = { f: 119, target: [-0.6, 0.85, -0.75], dist: 3.6, yaw: 0.72, pitch: 0.36, sy: 760 };
 const KEYS: CamKey[] = [
   { f: -14, target: [-2.85, 0.5, -1.6], dist: 4.0, yaw: 0.12, pitch: 0.18, F: 1800, sy: 800 },
   { f: 36, target: [-2.0, 0.8, -1.3], dist: 5.6, yaw: 0.22, pitch: 0.2, sy: 780 },
@@ -171,7 +172,7 @@ const walkAt = (w: Walk, f: number) => {
   return { p: lerpV(w.p0, w.p1, s / D), v, v0, clock: s / ADV + w.seed * 5 };
 };
 /** the key robot: to its mark right of the keyhole and the cache tray under it */
-const W1: Walk = { p0: [-2.15, 0, -1.8], p1: [-0.05, 0, -0.8], f1: 66, stop: 12, seed: 0 };
+const W1: Walk = { p0: [-2.15, 0, -1.8], p1: [-0.1, 0, -0.8], f1: 66, stop: 12, seed: 0 };
 /** the toucher: to the row's left end, its mitten on the first rack's end face near the front */
 const W2: Walk = { p0: [-2.95, 0, -1.15], p1: [-2.02, 0, -0.32], f1: 58, stop: 12, seed: 1 };
 const TOUCH = { reach0: 57, contact: 66, at: [-RACK.w * 1.5 - 0.006, 1.0, -0.2] as V3 };
@@ -248,86 +249,89 @@ const bez3 = (p0: V3, p1: V3, p2: V3, p3: V3, t: number): V3 => {
   const u = 1 - t;
   return add(add(mul(p0, u * u * u), mul(p1, 3 * u * u * t)), add(mul(p2, 3 * u * t * t), mul(p3, t * t * t)));
 };
-/** the key at rest in the tray: lying on its side, the bow standing on its rim at the tray's right end, the shaft
- *  sloping down to the left so its tip rests on the tray floor, the teeth toward the rack */
+/** the key at rest in the tray: lying flat on the floor, the ring at the tray's right end, the tip to the left,
+ *  the teeth toward the rack */
 const KEY_REST = (() => {
-  const floor = TRAY.y + 0.01;
-  const axisY = floor + KEY.R;
-  const sl = Math.asin((KEY.R - KEY.th / 2) / KEY.tip);
-  const a = norm([-Math.cos(sl), -Math.sin(sl), 0]);
+  const a: V3 = [-1, 0, 0];
   const b: V3 = [0, 0, -1];
-  const n = cross(a, b);
-  const B: V3 = [TRAY.x + TRAY.w / 2 - 0.06 - KEY.bowT / 2, axisY, FACE_Z - 0.15];
-  return { B, a, b, n };
+  const B: V3 = [TRAY.x + TRAY.w / 2 - 0.05 - KEY.R, TRAY.y + 0.01 + KEY.cT / 2, FACE_Z - TRAY.d / 2 - 0.02];
+  return { B, a, b, n: cross(a, b) };
 })();
-/** in the lock's orientation: shaft into the rack (+z), b up (teeth down) */
-const KEY_LOCK = { a: [0, 0, 1] as V3, b: [0, 1, 0] as V3, n: cross([0, 0, 1], [0, 1, 0]) };
+/** held up in clean profile on the way (the key's plane square to the camera, tip toward the keyhole, teeth down) */
+const KEY_PROF = (() => {
+  const a: V3 = norm([-0.88, -0.04, 0.48]);
+  const b: V3 = norm(sub([0, 1, 0], mul(a, dot([0, 1, 0], a))));
+  return { a, b, n: cross(a, b) };
+})();
+/** lined up with the keyhole: shaft into the rack (+z), lying flat, teeth to the left along the slot */
+const KEY_LOCK = { a: [0, 0, 1] as V3, b: [1, 0, 0] as V3, n: cross([0, 0, 1], [1, 0, 0]) };
 const Q_REST = quatOf(KEY_REST.a, KEY_REST.b, KEY_REST.n);
+const Q_PROF = quatOf(KEY_PROF.a, KEY_PROF.b, KEY_PROF.n);
 const Q_LOCK = quatOf(KEY_LOCK.a, KEY_LOCK.b, KEY_LOCK.n);
-/** the key's pose: B the bow's centre on the shaft axis, a along the shaft, b the teeth-up axis, n = a x b.
- *  Lift out of the tray (straight up first), one eased arc round to the keyhole while it turns into the lock's
- *  orientation (lined up by ~f104), slide in along the shaft (f106-112), a quarter turn about the shaft on "admin" */
+/** the key's pose: B the ring's centre, a along the shaft, b across (the teeth on -b), n = a x b.
+ *  Lift straight up out of the tray and one eased arc to the keyhole; on the way it stands up into clean profile
+ *  (f95-100), then lines up flat with the slot (f101-105); slide in along the shaft (f106-112); on "admin" a quarter
+ *  roll about the shaft stands it upright (f113-119) */
 const keyPose = (f: number) => {
-  const pre: V3 = [KH[0], KH[1], PF_Z - KEY.tip - 0.06];
-  const inn: V3 = [KH[0], KH[1], PF_Z - KEY_STUB - KEY.bowT / 2];
+  const pre: V3 = [KH[0], KH[1], PF_Z - KEY.tip - 0.04];
+  const inn: V3 = [KH[0], KH[1], PF_Z - KEY.c1 - KEY_OUT];
   const l = ease(sst(K.grip, K.lift1, f));
-  const B0 = bez3(KEY_REST.B, add(KEY_REST.B, [0, 0.3, -0.03]), add(pre, [-0.04, 0.0, -0.06]), pre, l);
+  const B0 = bez3(KEY_REST.B, add(KEY_REST.B, [0, 0.32, -0.04]), add(pre, [0.02, 0.04, -0.1]), pre, l);
   const B = lerpV(B0, inn, ease(sst(K.lift1, K.in1, f)));
-  // the turn into the lock's orientation starts once the key is clear of the tray's rim and is done before the slide
-  const r = ease(sst(K.grip + 2, K.lift1 - 1, f));
-  let { a, b, n } = frameOf(slerp(Q_REST, Q_LOCK, r));
+  const q = f <= 100.5 ? slerp(Q_REST, Q_PROF, ease(sst(K.grip + 1, 100, f))) : slerp(Q_PROF, Q_LOCK, ease(sst(101, K.lift1 - 1, f)));
+  let { a, b, n } = frameOf(q);
   if (f > K.turn0) {
     const th = (Math.PI / 2) * ease5(sst(K.turn0, K.turn1, f));
     a = [0, 0, 1];
-    b = [Math.sin(th), Math.cos(th), 0];
+    b = [Math.cos(th), Math.sin(th), 0];
     n = cross(a, b);
   }
   return { B, a, b, n };
 };
-/** the mitten's hold on the key, key-local (along b, along n): the ring's lower outer rim on the robot's side (top of
- *  the ring as it lies in the tray), within the arm's reach all the way through the turn */
-const GRIP_AT: P2 = [KEY.ringAt - 0.6 * KEY.R, -0.8 * KEY.R - 0.01];
-/** the chunky key; its shaft and bit are cut off where they pass the plate's front face (only near the keyhole) */
+/** the mitten's hold on the key, key-local (along a, along b): the ring's rim on its +b side (the near side in the
+ *  tray, the top in profile, the right side in the lock, rising to the top through the turn) */
+const GRIP_AT: P2 = [-0.3 * KEY.R, KEY.R + 0.012];
+/** the chunky key, all parts in its plane; the shaft and bit are cut off where they pass the plate's front face */
 const KeyEl: React.FC<{ W: World; B: V3; a: V3; b: V3; n: V3; glow: number }> = ({ W, B, a, b, n, glow }) => {
   const mat = mixMat(MATS.clayWarm, MATS.orange, glow);
   const nearHole = Math.hypot(B[0] - KH[0], B[1] - KH[1]) < 0.03 && a[2] > 0.95;
   const smax = nearHole ? Math.min(KEY.tip, (PF_Z - B[2]) / a[2] - 0.003) : KEY.tip;
-  const sh0 = KEY.bowT / 2 + KEY.collar - 0.005;
-  const common = { W, o: add(B, mul(n, -KEY.th / 2)), u: a, v: b, n, depth: KEY.th, mat, orange: glow > 0.5, emissive: 0.5 * glow, ao: 0, rim: 0.7 };
-  // the bow, in the b-n plane, extruded along the shaft (u = b, v = n, extrusion a = b x n): the neck, then the ring
-  // built from 24 annular sectors (simple outlines, so every wall faces the right way): all their outer and inner
-  // walls far to near, then all their faces on top, the seams between sectors dropped
-  const bowP = { W, o: add(B, mul(a, -KEY.bowT / 2)), u: b, v: n, n: a, depth: KEY.bowT, mat, orange: glow > 0.5, emissive: 0.5 * glow, ao: 0, rim: 0.7 };
+  const part = (depth: number) => ({ W, o: add(B, mul(n, -depth / 2)), u: a, v: b, n, depth, mat, orange: glow > 0.5, emissive: 0.5 * glow, ao: 0, rim: 0.7 });
+  // the ring from 24 annular sectors (simple outlines, so every wall faces the right way): the outer and inner walls
+  // far to near, then all the faces on top, the seams between sectors dropped
   const SEC = 24;
   const ringFaces = Array.from({ length: SEC }, (_, i) => {
     const t0 = (2 * Math.PI * i) / SEC;
     const t1 = (2 * Math.PI * (i + 1)) / SEC;
-    const ring = (rad: number, t: number): P2 => [KEY.ringAt + rad * Math.cos(t), rad * Math.sin(t)];
-    return prismFaces({ ...bowP, uid: `kR${i}`, outline: [ring(KEY.R, t0), ring(KEY.R, t1), ring(KEY.r, t1), ring(KEY.r, t0)] }).faces.map((fc) => ({ ...fc, key: `r${i}${fc.key}` }));
+    const at = (rad: number, t: number): P2 => [rad * Math.cos(t), rad * Math.sin(t)];
+    return prismFaces({ ...part(KEY.bowT), uid: `kR${i}`, outline: [at(KEY.R, t0), at(KEY.R, t1), at(KEY.r, t1), at(KEY.r, t0)] }).faces.map((fc) => ({ ...fc, key: `r${i}${fc.key}` }));
   }).flat();
-  // walls: s0 outer, s2 inner (s1, s3 are the seams between sectors)
   const walls = ringFaces.filter((fc) => fc.key.endsWith("s0") || fc.key.endsWith("s2")).sort((p, q) => W.depth(q.mid) - W.depth(p.mid));
-  const faces = ringFaces.filter((fc) => fc.cap);
+  const caps = ringFaces.filter((fc) => fc.cap);
   const pd = (q: P2[]) => `M${q.map((x) => `${n2(x[0])},${n2(x[1])}`).join("L")}Z`;
-  const neckTop = KEY.ringAt - KEY.R + 0.02;
+  const ringEl = (
+    <>
+      {[...walls, ...caps].map((fc) => (
+        <path key={fc.key} d={pd(fc.q)} fill={fc.fill} stroke={fc.fill} strokeWidth={0.9} strokeLinejoin="round" />
+      ))}
+    </>
+  );
+  const sh0 = KEY.c1 - 0.01;
+  const teeth = TEETH.map((q) => ({ ...q, s1: Math.min(q.s1, smax) })).filter((q) => q.s1 > q.s0 + 0.005);
+  const blade = (
+    <>
+      {smax > sh0 + 0.01 ? <Prism {...part(KEY.th)} outline={rrect(smax - sh0, KEY.w, 0.012, 4, (sh0 + smax) / 2, 0)} uid="kShaft" /> : null}
+      {teeth.map((q, i) => (
+        <Prism key={i} {...part(KEY.th)} outline={rrect(q.s1 - q.s0, q.t, 0.01, 4, (q.s0 + q.s1) / 2, -KEY.w / 2 - q.t / 2 + 0.01)} uid={`kT${i}`} />
+      ))}
+    </>
+  );
+  const collar = smax > KEY.c0 + 0.01 ? <Prism {...part(KEY.cT)} outline={rrect(Math.min(KEY.c1, smax) - KEY.c0, KEY.cH, 0.015, 4, (KEY.c0 + Math.min(KEY.c1, smax)) / 2, 0)} uid="kCollar" /> : null;
   const edge = W.tone(mixMat(MATS.clayWarm, MATS.orange, glow).dark, B);
   const ew = Math.max(1.2, 0.011 * W.scaleAt(B));
   const fid = "keyEdge";
-  // which end is nearer the camera: the tip side draws last when we look at it from there
+  // the end nearer the camera draws last: the ring end or the tip end
   const tipNear = dot(a, sub(W.pos, B)) > 0;
-  const teeth = TEETH.map((q) => ({ ...q, s1: Math.min(q.s1, smax) })).filter((q) => q.s1 > q.s0 + 0.005);
-  const collarP = { ...bowP, o: add(B, mul(a, KEY.bowT / 2 - 0.004)), depth: KEY.collar };
-  const collarEl = <Prism {...collarP} outline={rrect(0.13, 0.11, 0.03, 4, 0, 0)} uid="kCollar" />;
-  const bowEl = (
-    <>
-      {tipNear ? null : collarEl}
-      <Prism {...bowP} outline={rrect(neckTop - KEY.neck0, KEY.neckW, 0.02, 4, (KEY.neck0 + neckTop) / 2, 0)} uid="kNeck" />
-      {[...walls, ...faces].map((fc) => (
-        <path key={fc.key} d={pd(fc.q)} fill={fc.fill} stroke={fc.fill} strokeWidth={0.9} strokeLinejoin="round" />
-      ))}
-      {tipNear ? collarEl : null}
-    </>
-  );
   return (
     <g filter={`url(#${fid})`}>
       <defs>
@@ -341,12 +345,19 @@ const KeyEl: React.FC<{ W: World; B: V3; a: V3; b: V3; n: V3; glow: number }> = 
           </feMerge>
         </filter>
       </defs>
-      {tipNear ? bowEl : null}
-      {teeth.map((q, i) => (
-        <Prism key={i} {...common} outline={rrect(q.s1 - q.s0, q.t, 0.012, 4, (q.s0 + q.s1) / 2, -KEY.w / 2 - q.t / 2 + 0.01)} uid={`kT${i}`} />
-      ))}
-      {smax > sh0 + 0.01 ? <Prism {...common} outline={rrect(smax - sh0, KEY.w, 0.015, 5, (sh0 + smax) / 2, 0)} uid="kShaft" /> : null}
-      {tipNear ? null : bowEl}
+      {tipNear ? (
+        <>
+          {ringEl}
+          {collar}
+          {blade}
+        </>
+      ) : (
+        <>
+          {blade}
+          {collar}
+          {ringEl}
+        </>
+      )}
     </g>
   );
 };
@@ -395,7 +406,7 @@ const AdminOnTheCluster: React.FC<z.infer<typeof schema>> = () => {
     };
     // the near (screen-left) mitten holds the bow at one key-local point from the grip to the release, so it rides the
     // lift, the arc, the slide and the turn with the key
-    const gL = W.project(add(add(kp.B, mul(kp.b, GRIP_AT[0])), mul(kp.n, GRIP_AT[1])));
+    const gL = W.project(add(add(kp.B, mul(kp.a, GRIP_AT[0])), mul(kp.b, GRIP_AT[1])));
     const grip = botGripTo(base, { L: localOf(W, feet1, gL) });
     const on = ease(sst(K.reach0 + 2, K.grip - 1, frame)) * (1 - ease(sst(K.rel0, K.rel1, frame)));
     const q = lerpPose(base, grip, on) as BotPose;
@@ -421,7 +432,7 @@ const AdminOnTheCluster: React.FC<z.infer<typeof schema>> = () => {
   const khP = (x: number, y: number) => W.project([KH[0] + x, KH[1] + y, pf.o[2] - 0.002]);
   const holeD = (() => {
     const ring = circleOutline(KHOLE.r, 22).map(([x, y]) => khP(x, y));
-    const slot = [khP(-KHOLE.w0, KHOLE.slot0), khP(KHOLE.w0, KHOLE.slot0), khP(KHOLE.w1, KHOLE.slot1), khP(-KHOLE.w1, KHOLE.slot1)];
+    const slot = [khP(KHOLE.slot0, KHOLE.h0), khP(KHOLE.slot1, KHOLE.h1), khP(KHOLE.slot1, -KHOLE.h1), khP(KHOLE.slot0, -KHOLE.h0)];
     return `M${ring.map((q) => `${n2(q[0])},${n2(q[1])}`).join("L")}ZM${slot.map((q) => `${n2(q[0])},${n2(q[1])}`).join("L")}Z`;
   })();
   items.push({
